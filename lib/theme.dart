@@ -91,7 +91,7 @@ class BeeTheme {
         backgroundColor: Colors.transparent, // 悬浮胶囊样式，外层透明
         elevation: 0,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: Colors.black,             // ⭐ 改为纯黑卡片
         elevation: 0,
         shape: RoundedRectangleBorder(

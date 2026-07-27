@@ -35,7 +35,7 @@ android {
         applicationId = "com.tntlikely.beecount"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 23  // Required by record_android for voice recording
+        minSdkVersion = flutter.minSdkVersion  // Required by record_android for voice recording
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -160,11 +160,16 @@ android {
     }
 
     // 当存在 flavors 时，assembleDebug 会聚合构建所有 debug 变体（devDebug、prodDebug），
-    // 这会让 Flutter 工具无法确定唯一 APK 路径。这里忽略 prodDebug，仅保留 devDebug，
+    // 这会让 Flutter 工具无法确定唯一 APK 路径。默认忽略 prodDebug，仅保留 devDebug，
     // 从而让不带 --flavor 的 `flutter run` 正常工作并默认使用 dev。
+    // 但若显式请求 assembleProdDebug（如 `flutter build apk --debug --flavor prod`），
+    // 则不忽略，以支持显式构建 prod 风味的 debug 包。
     variantFilter { variant ->
         def names = variant.flavors*.name
-        if (variant.buildType.name == 'debug' && names.contains('prod')) {
+        def explicitlyRequestedProdDebug = gradle.startParameter.taskNames.any {
+            it.toLowerCase().contains("proddebug")
+        }
+        if (variant.buildType.name == 'debug' && names.contains('prod') && !explicitlyRequestedProdDebug) {
             setIgnore(true)
         }
     }

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' hide SyncStatus;
 
 import '../../providers.dart';
+import '../../providers/encryption_providers.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/biz.dart';
 import '../../styles/tokens.dart';
@@ -13,6 +14,7 @@ import '../../services/billing/post_processor.dart';
 import '../../cloud/sync_service.dart';
 import '../../cloud/transactions_sync_manager.dart';
 import '../auth/login_page.dart';
+import 'encryption_settings_page.dart';
 import 'sync_preview_dialog.dart';
 
 /// 云同步与备份二级页面 - 包含所有同步操作
@@ -734,6 +736,67 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                         ],
                       ),
                     ),
+                    // 同步加密入口（仅路径 A：S3/WebDAV/Supabase/iCloud）
+                    // 路径 B（BeeCount Cloud）服务端需做 LWW 合并与共享账本，不加密
+                    if (canUseCloud && !isBeeCountCloud)
+                      Consumer(builder: (ctx, r, _) {
+                        final encEnabledAsync =
+                            r.watch(encryptionEnabledProvider);
+                        final encEnabled =
+                            encEnabledAsync.valueOrNull ?? false;
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: SectionCard(
+                            margin: EdgeInsets.zero,
+                            child: AppListTile(
+                              leading: encEnabled
+                                  ? Icons.lock
+                                  : Icons.lock_open,
+                              title: AppLocalizations.of(context)
+                                  .cloudSyncEncryptTitle,
+                              subtitle: encEnabled
+                                  ? AppLocalizations.of(context)
+                                      .cloudSyncEncryptMultiDeviceHint
+                                  : AppLocalizations.of(context)
+                                      .cloudSyncEncryptSubtitle,
+                              trailing: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: encEnabled
+                                      ? Colors.green.withValues(alpha: 0.12)
+                                      : Colors.grey.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  encEnabled
+                                      ? AppLocalizations.of(context)
+                                          .cloudSyncEncryptEnabled
+                                      : AppLocalizations.of(context)
+                                          .cloudSyncEncryptDisabled,
+                                  style: TextStyle(
+                                    color: encEnabled
+                                        ? Colors.green
+                                        : Colors.grey,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const EncryptionSettingsPage(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        );
+                      }),
                   ],
                 ));
                 },

@@ -31,6 +31,7 @@ import 'tag_providers.dart';
 import 'ui_state_providers.dart';
 import 'statistics_providers.dart';
 import 'currency_providers.dart';
+import 'encryption_providers.dart';
 
 /// SyncEngine 对外广播事件流(PR 1 引入)。
 ///
@@ -479,9 +480,16 @@ final syncServiceProvider = Provider<SyncService>((ref) {
   }
 
   // 其他 provider → TransactionsSyncManager（快照同步）
+  // 注入 EncryptionService 用于 E2EE（_initialize 内会按需包装 CloudProvider）
   final db = ref.watch(databaseProvider);
   final repo = ref.watch(repositoryProvider);
-  return TransactionsSyncManager(config: config, db: db, repo: repo);
+  final encryptionService = ref.watch(encryptionServiceProvider);
+  return TransactionsSyncManager(
+    config: config,
+    db: db,
+    repo: repo,
+    encryptionService: encryptionService,
+  );
 });
 
 /// 已初始化的 BeeCountCloudProvider 实例

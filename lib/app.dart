@@ -22,6 +22,8 @@ import 'widgets/ui/speed_dial_fab.dart';
 import 'cloud/sync_service.dart';
 import 'cloud/transactions_sync_manager.dart';
 import 'cloud/sync/sync_engine.dart';
+import 'cloud/startup_sync_checker.dart';
+import 'cloud/startup_sync_overlay.dart';
 import 'providers/sync_providers.dart' as sp;
 import 'utils/voice_billing_helper.dart';
 import 'utils/image_billing_helper.dart';
@@ -104,7 +106,95 @@ class _BeeAppState extends ConsumerState<BeeApp>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _setupAppLinkListener();
       _setupQuickActions();
+      // 启动时检查路径 A 的云端更新（仅路径 A，路径 B 走现有 _triggerInitialCloudSync）
+      _triggerStartupSyncCheck();
     });
+  }
+
+  /// 启动时云端数据拉取检查是否已触发（BeeApp 实例级幂等标志）
+  ///
+  /// 用于避免 microtask 触发与 listenManual 触发重复执行。
+  /// StartupSyncChecker 内部也有 _done 标志，但因每次创建新实例，
+  /// 这里在 BeeApp 层加一道闸门。
+  bool _startupSyncCheckTriggered = false;
+
+  /// 当前启动检查的 controller（用于在 dispose 时清理 overlay）
+  StartupSyncController? _startupSyncController;
+
+  /// 启动时云端数据拉取检查（仅路径 A：S3/WebDAV/Supabase/iCloud）
+  ///
+  /// 与 _refreshLedgersStatusInBackground 并行执行，等 syncServiceProvider 就绪为
+  /// TransactionsSyncManager 后触发；若启动时已是 TransactionsSyncManager 则立即触发。
+  /// 通过 overlay 全屏阻断用户交互，检查完成或用户确认后关闭。
+  void _triggerStartupSyncCheck() {
+    Future.microtask(() async {
+      if (_startupSyncCheckTriggered) return;
+      try {
+        final syncService = ref.read(sp.syncServiceProvider);
+        if (syncService is! TransactionsSyncManager) {
+          // syncService 尚未就绪（LocalOnlySyncService），等 listenManual 兜底
+          return;
+        }
+        if (!mounted) return;
+        _startupSyncCheckTriggered = true;
+        await _runStartupSyncCheck(syncService);
+      } catch (e, st) {
+        logger.warning('StartupSyncCheck', '启动检查失败: $e\n$st');
+      }
+    });
+
+    // 兜底：syncServiceProvider 从 LocalOnly 变成 TransactionsSyncManager 时再触发一次
+    ref.listenManual<SyncService>(
+      sp.syncServiceProvider,
+      (prev, next) {
+        // 仅在从非 TransactionsSyncManager 变为 TransactionsSyncManager 时触发
+        if (prev is TransactionsSyncManager) return;
+        if (next is! TransactionsSyncManager) return;
+        if (_startupSyncCheckTriggered) return;
+        _startupSyncCheckTriggered = true;
+        Future.microtask(() async {
+          if (!mounted) return;
+          try {
+            await _runStartupSyncCheck(next);
+          } catch (e, st) {
+            logger.warning('StartupSyncCheck', '启动检查失败（listen 触发）: $e\n$st');
+          }
+        });
+      },
+    );
+  }
+
+  /// 执行启动检查：创建 controller + overlay，运行 checker，管理生命周期
+  Future<void> _runStartupSyncCheck(TransactionsSyncManager syncService) async {
+    final controller = StartupSyncController();
+    _startupSyncController = controller;
+
+    // 监听 controller 状态变化，管理 overlay 生命周期
+    controller.addListener(() {
+      final state = controller.state;
+      if (state is DoneState) {
+        // 完成态：1.5 秒后自动 dismiss
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          if (controller.state is! DismissedState) {
+            controller.dismiss();
+          }
+        });
+      } else if (state is DismissedState) {
+        // 已关闭：detach overlay
+        controller.detach();
+        _startupSyncController = null;
+      }
+    });
+
+    // 挂载 overlay 到全局 Overlay
+    final overlay = Overlay.of(context, rootOverlay: true);
+    controller.attach(overlay);
+
+    // 运行检查
+    await StartupSyncChecker(
+      deps: WidgetRefDeps(ref, syncService, context),
+      controller: controller,
+    ).runIfNeeded();
   }
 
   /// 设置快捷操作
@@ -581,6 +671,8 @@ class _BeeAppState extends ConsumerState<BeeApp>
     _drainTimer?.cancel();
     _appLinkSubscription?.close();
     _removeOverlay();
+    _startupSyncController?.detach();
+    _startupSyncController = null;
     _expandController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();

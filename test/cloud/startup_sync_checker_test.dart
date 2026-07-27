@@ -1,0 +1,699 @@
+// 启动时云端数据拉取检查编排器的单元测试
+//
+// 测试策略：通过抽象 StartupSyncCheckerDeps 接口注入假实现，
+// 使用真实的 StartupSyncController 监听状态变化，
+// 验证 StartupSyncChecker 的编排逻辑（候选收集、汇总弹窗分支、
+// 一键应用全部、逐个确认、错误隔离、幂等性），
+// 不依赖真实网络 / 数据库 / UI 框架。
+
+import 'dart:async';
+
+import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' hide SyncStatus;
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:beecount/cloud/startup_sync_checker.dart';
+import 'package:beecount/cloud/startup_sync_overlay.dart';
+import 'package:beecount/cloud/sync_diff_service.dart';
+import 'package:beecount/cloud/sync_service.dart';
+import 'package:beecount/data/db.dart';
+import 'package:beecount/services/data_import_service.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  late _FakeDeps deps;
+  late StartupSyncController controller;
+  late StartupSyncChecker checker;
+
+  /// 状态变化监听器：当 checker 推送 HasUpdatesState 时自动完成 completer
+  /// 并捕获候选账本供测试断言
+  void onStateChange() {
+    final state = controller.state;
+    if (state is HasUpdatesState && !state.completer.isCompleted) {
+      // 捕获候选账本
+      deps.lastCandidates = state.candidates;
+      state.completer.complete(deps.summaryChoice);
+    }
+  }
+
+  setUp(() {
+    deps = _FakeDeps();
+    controller = StartupSyncController();
+    checker = StartupSyncChecker(deps: deps, controller: controller);
+
+    // 监听 controller 状态变化，自动响应 HasUpdatesState
+    controller.addListener(onStateChange);
+  });
+
+  tearDown(() {
+    controller.removeListener(onStateChange);
+    controller.dispose();
+  });
+
+  Ledger _ledger(int id, String name) => Ledger(
+        id: id,
+        name: name,
+        currency: 'CNY',
+        type: 'general',
+        createdAt: DateTime(2026, 1, 1),
+        myRole: 'owner',
+        memberCount: 1,
+        isShared: false,
+        monthStartDay: 1,
+      );
+
+  SyncStatus _status(SyncDiff diff) => SyncStatus(
+        diff: diff,
+        localCount: 0,
+        localFingerprint: 'local-fp',
+      );
+
+  SyncPreview _preview({int added = 0, int modified = 0, int deleted = 0}) {
+    final changes = <SyncChange>[];
+    for (var i = 0; i < added; i++) {
+      changes.add(SyncChange(type: SyncChangeType.added));
+    }
+    for (var i = 0; i < modified; i++) {
+      changes.add(SyncChange(type: SyncChangeType.modified));
+    }
+    for (var i = 0; i < deleted; i++) {
+      changes.add(SyncChange(type: SyncChangeType.deleted));
+    }
+    return SyncPreview(changes: changes);
+  }
+
+  group('跳过条件', () {
+    test('配置为 local 时直接跳过，不查账本', () async {
+      deps.activeConfig = const CloudServiceConfig(
+        type: CloudBackendType.local,
+        name: 'local',
+      );
+
+      await checker.runIfNeeded();
+
+      expect(deps.getAllLedgersCalled, isFalse);
+      expect(deps.getStatusCallCount, 0);
+      expect(controller.state, isA<DismissedState>());
+      expect(deps.applyPreviewChangesCallCount, 0);
+    });
+
+    test('配置为 beecountCloud 时直接跳过（路径 B 不处理）', () async {
+      deps.activeConfig = const CloudServiceConfig(
+        type: CloudBackendType.beecountCloud,
+        name: 'beecount',
+        beecountCloudBaseUrl: 'https://example.com',
+      );
+
+      await checker.runIfNeeded();
+
+      expect(deps.getAllLedgersCalled, isFalse);
+      expect(controller.state, isA<DismissedState>());
+    });
+
+    test('配置为 supabase 但 invalid 时跳过', () async {
+      deps.activeConfig = const CloudServiceConfig(
+        type: CloudBackendType.supabase,
+        name: 'supabase',
+        // 缺少 url + anonKey → invalid
+      );
+
+      await checker.runIfNeeded();
+
+      expect(deps.getAllLedgersCalled, isFalse);
+      expect(controller.state, isA<DismissedState>());
+    });
+
+    test('账本列表为空时跳过', () async {
+      deps.activeConfig = const CloudServiceConfig(
+        type: CloudBackendType.s3,
+        name: 's3',
+        s3Endpoint: 'https://s3.example.com',
+        s3AccessKey: 'ak',
+        s3SecretKey: 'sk',
+        s3Bucket: 'b',
+      );
+      deps.ledgers = [];
+
+      await checker.runIfNeeded();
+
+      expect(deps.getStatusCallCount, 0);
+      expect(controller.state, isA<DismissedState>());
+    });
+
+    test('syncService 不是 TransactionsSyncManager 时跳过', () async {
+      deps.activeConfig = const CloudServiceConfig(
+        type: CloudBackendType.s3,
+        name: 's3',
+        s3Endpoint: 'https://s3.example.com',
+        s3AccessKey: 'ak',
+        s3SecretKey: 'sk',
+        s3Bucket: 'b',
+      );
+      deps.ledgers = [_ledger(1, 'L1')];
+      deps.syncServiceIsPathA = false;
+
+      await checker.runIfNeeded();
+
+      expect(deps.getStatusCallCount, 0);
+      expect(controller.state, isA<DismissedState>());
+    });
+  });
+
+  group('候选收集', () {
+    test('所有账本 inSync 时不进入 HasUpdatesState', () async {
+      deps.activeConfig = const CloudServiceConfig(
+        type: CloudBackendType.s3,
+        name: 's3',
+        s3Endpoint: 'https://s3.example.com',
+        s3AccessKey: 'ak',
+        s3SecretKey: 'sk',
+        s3Bucket: 'b',
+      );
+      deps.ledgers = [_ledger(1, 'L1'), _ledger(2, 'L2')];
+      deps.statusByLedger = {
+        1: _status(SyncDiff.inSync),
+        2: _status(SyncDiff.inSync),
+      };
+
+      await checker.runIfNeeded();
+
+      expect(deps.getStatusCallCount, 2);
+      expect(controller.state, isA<DismissedState>());
+    });
+
+    test('cloudNewer 和 different 的账本都被收集为候选', () async {
+      deps.activeConfig = const CloudServiceConfig(
+        type: CloudBackendType.s3,
+        name: 's3',
+        s3Endpoint: 'https://s3.example.com',
+        s3AccessKey: 'ak',
+        s3SecretKey: 'sk',
+        s3Bucket: 'b',
+      );
+      deps.ledgers = [
+        _ledger(1, 'L1'),
+        _ledger(2, 'L2'),
+        _ledger(3, 'L3'),
+      ];
+      deps.statusByLedger = {
+        1: _status(SyncDiff.cloudNewer),
+        2: _status(SyncDiff.inSync),
+        3: _status(SyncDiff.different),
+      };
+      deps.summaryChoice = SummaryChoice.skip;
+
+      await checker.runIfNeeded();
+
+      // 验证 HasUpdatesState 期间 candidates 包含 L1 和 L3
+      expect(deps.lastCandidates.length, 2);
+      expect(deps.lastCandidates.map((c) => c.ledger.id), containsAll([1, 3]));
+    });
+
+    test('noRemote / localNewer / error 不被收集', () async {
+      deps.activeConfig = const CloudServiceConfig(
+        type: CloudBackendType.s3,
+        name: 's3',
+        s3Endpoint: 'https://s3.example.com',
+        s3AccessKey: 'ak',
+        s3SecretKey: 'sk',
+        s3Bucket: 'b',
+      );
+      deps.ledgers = [
+        _ledger(1, 'L1'),
+        _ledger(2, 'L2'),
+        _ledger(3, 'L3'),
+        _ledger(4, 'L4'),
+      ];
+      deps.statusByLedger = {
+        1: _status(SyncDiff.noRemote),
+        2: _status(SyncDiff.localNewer),
+        3: _status(SyncDiff.error),
+        4: _status(SyncDiff.notLoggedIn),
+      };
+      deps.summaryChoice = SummaryChoice.skip;
+
+      await checker.runIfNeeded();
+
+      expect(deps.lastCandidates, isEmpty);
+      expect(controller.state, isA<DismissedState>());
+    });
+
+    test('getStatus 抛异常时该账本被跳过，其他账本继续', () async {
+      deps.activeConfig = const CloudServiceConfig(
+        type: CloudBackendType.s3,
+        name: 's3',
+        s3Endpoint: 'https://s3.example.com',
+        s3AccessKey: 'ak',
+        s3SecretKey: 'sk',
+        s3Bucket: 'b',
+      );
+      deps.ledgers = [_ledger(1, 'L1'), _ledger(2, 'L2')];
+      deps.statusByLedger = {2: _status(SyncDiff.cloudNewer)};
+      deps.statusThrowForLedgerIds = {1};
+      deps.summaryChoice = SummaryChoice.skip;
+
+      await checker.runIfNeeded();
+
+      expect(deps.lastCandidates.length, 1);
+      expect(deps.lastCandidates.first.ledger.id, 2);
+      expect(deps.errorLog, contains(predicate((s) => s.toString().contains('L1'))));
+    });
+
+    test('检查中状态推送进度', () async {
+      deps.activeConfig = const CloudServiceConfig(
+        type: CloudBackendType.s3,
+        name: 's3',
+        s3Endpoint: 'https://s3.example.com',
+        s3AccessKey: 'ak',
+        s3SecretKey: 'sk',
+        s3Bucket: 'b',
+      );
+      deps.ledgers = [_ledger(1, 'L1'), _ledger(2, 'L2')];
+      deps.statusByLedger = {
+        1: _status(SyncDiff.inSync),
+        2: _status(SyncDiff.inSync),
+      };
+      deps.summaryChoice = SummaryChoice.skip;
+
+      final states = <StartupSyncState>[];
+      controller.addListener(() => states.add(controller.state));
+
+      await checker.runIfNeeded();
+
+      // 应该有 CheckingState 出现
+      expect(states.any((s) => s is CheckingState), isTrue);
+    });
+  });
+
+  group('一键应用全部（applyAll）', () {
+    setUp(() {
+      deps.activeConfig = const CloudServiceConfig(
+        type: CloudBackendType.s3,
+        name: 's3',
+        s3Endpoint: 'https://s3.example.com',
+        s3AccessKey: 'ak',
+        s3SecretKey: 'sk',
+        s3Bucket: 'b',
+      );
+      deps.ledgers = [_ledger(1, 'L1'), _ledger(2, 'L2')];
+      deps.statusByLedger = {
+        1: _status(SyncDiff.cloudNewer),
+        2: _status(SyncDiff.cloudNewer),
+      };
+      deps.summaryChoice = SummaryChoice.applyAll;
+      deps.previewByLedger = {
+        1: (
+          preview: _preview(added: 2, modified: 1),
+          importData: const ImportData(),
+          version: 6,
+        ),
+        2: (
+          preview: _preview(deleted: 3),
+          importData: const ImportData(),
+          version: 6,
+        ),
+      };
+    });
+
+    test('对每个候选账本调用 applyPreviewChanges，全部选中', () async {
+      await checker.runIfNeeded();
+
+      expect(deps.applyPreviewChangesCallCount, 2);
+      // L1: 2 added + 1 modified = 3 全选
+      // L2: 3 deleted = 3 全选
+      expect(deps.appliedForLedger[1]!.length, 3);
+      expect(deps.appliedForLedger[2]!.length, 3);
+    });
+
+    test('每次 apply 后触发 runAfterDownload', () async {
+      await checker.runIfNeeded();
+
+      expect(deps.runAfterDownloadCallCount, 2);
+    });
+
+    test('最后状态为 DoneState 显示汇总结果', () async {
+      await checker.runIfNeeded();
+
+      expect(controller.state, isA<DoneState>());
+      final done = controller.state as DoneState;
+      expect(done.message, contains('已合并 2 个账本'));
+      expect(done.message, contains('6 条变更'));
+    });
+
+    test('推送 ApplyingState 进度', () async {
+      final states = <StartupSyncState>[];
+      controller.addListener(() => states.add(controller.state));
+
+      await checker.runIfNeeded();
+
+      expect(states.any((s) => s is ApplyingState), isTrue);
+    });
+
+    test('preview == null 的账本走全量替换', () async {
+      deps.previewByLedger = {
+        1: (preview: null, importData: const ImportData(), version: 5),
+        2: (preview: _preview(added: 1), importData: const ImportData(), version: 6),
+      };
+
+      await checker.runIfNeeded();
+
+      expect(deps.downloadAndRestoreCallCount, 1);
+      expect(deps.applyPreviewChangesCallCount, 1);
+    });
+
+    test('preview.isEmpty 的账本被跳过', () async {
+      deps.previewByLedger = {
+        1: (preview: _preview(), importData: const ImportData(), version: 6),
+        2: (preview: _preview(added: 1), importData: const ImportData(), version: 6),
+      };
+
+      await checker.runIfNeeded();
+
+      expect(deps.applyPreviewChangesCallCount, 1);
+      expect(deps.appliedForLedger[2]!.length, 1);
+    });
+
+    test('单个账本 apply 抛异常不影响其他账本，最终 DoneState 包含失败计数', () async {
+      deps.applyThrowForLedgerIds = {1};
+
+      await checker.runIfNeeded();
+
+      expect(deps.applyPreviewChangesCallCount, 2);
+      expect(deps.appliedForLedger[2]!.length, 3);
+      expect(controller.state, isA<DoneState>());
+      final done = controller.state as DoneState;
+      expect(done.message, contains('1 个失败'));
+    });
+
+    test('downloadAndPreview 抛异常时该账本计入失败，其他账本继续', () async {
+      deps.downloadAndPreviewThrowForLedgerIds = {1};
+
+      await checker.runIfNeeded();
+
+      expect(deps.applyPreviewChangesCallCount, 1);
+      expect(deps.appliedForLedger[2]!.length, 3);
+      // 1 个成功，1 个失败 → DoneState
+      expect(controller.state, isA<DoneState>());
+    });
+  });
+
+  group('逐个确认（confirmEach）', () {
+    setUp(() {
+      deps.activeConfig = const CloudServiceConfig(
+        type: CloudBackendType.s3,
+        name: 's3',
+        s3Endpoint: 'https://s3.example.com',
+        s3AccessKey: 'ak',
+        s3SecretKey: 'sk',
+        s3Bucket: 'b',
+      );
+      deps.ledgers = [_ledger(1, 'L1'), _ledger(2, 'L2')];
+      deps.statusByLedger = {
+        1: _status(SyncDiff.cloudNewer),
+        2: _status(SyncDiff.cloudNewer),
+      };
+      deps.summaryChoice = SummaryChoice.confirmEach;
+      deps.previewByLedger = {
+        1: (
+          preview: _preview(added: 2),
+          importData: const ImportData(),
+          version: 6,
+        ),
+        2: (
+          preview: _preview(modified: 1),
+          importData: const ImportData(),
+          version: 6,
+        ),
+      };
+    });
+
+    test('用户在每个账本弹窗选 viewDetail 时调用 showSyncPreviewDialog', () async {
+      deps.perLedgerChoice = LedgerDialogChoice.viewDetail;
+      deps.syncPreviewReturn = [SyncChange(type: SyncChangeType.added)];
+
+      await checker.runIfNeeded();
+
+      expect(deps.showSyncPreviewDialogCallCount, 2);
+      expect(deps.applyPreviewChangesCallCount, 2);
+    });
+
+    test('用户选 skip 时该账本不 apply，继续下一个', () async {
+      deps.perLedgerChoice = LedgerDialogChoice.skip;
+
+      await checker.runIfNeeded();
+
+      expect(deps.showSyncPreviewDialogCallCount, 0);
+      expect(deps.applyPreviewChangesCallCount, 0);
+    });
+
+    test('用户选 skipRest 时立即跳出循环，后续账本不处理', () async {
+      deps.perLedgerChoice = LedgerDialogChoice.skipRest;
+
+      await checker.runIfNeeded();
+
+      expect(deps.perLedgerDialogCallCount, 1);
+      expect(deps.applyPreviewChangesCallCount, 0);
+    });
+
+    test('showSyncPreviewDialog 返回 null 时视为取消，不 apply', () async {
+      deps.perLedgerChoice = LedgerDialogChoice.viewDetail;
+      deps.syncPreviewReturn = null;
+
+      await checker.runIfNeeded();
+
+      expect(deps.showSyncPreviewDialogCallCount, 2);
+      expect(deps.applyPreviewChangesCallCount, 0);
+    });
+
+    test('showSyncPreviewDialog 返回空列表时视为取消', () async {
+      deps.perLedgerChoice = LedgerDialogChoice.viewDetail;
+      deps.syncPreviewReturn = [];
+
+      await checker.runIfNeeded();
+
+      expect(deps.applyPreviewChangesCallCount, 0);
+    });
+
+    test('preview == null 时走全量替换确认流程', () async {
+      deps.previewByLedger = {
+        1: (preview: null, importData: const ImportData(), version: 5),
+      };
+      deps.perLedgerChoice = LedgerDialogChoice.viewDetail;
+
+      await checker.runIfNeeded();
+
+      // 用户选 viewDetail 确认全量替换
+      expect(deps.downloadAndRestoreCallCount, 1);
+    });
+
+    test('confirmEach 流程中应用成功后弹 legacy info', () async {
+      deps.perLedgerChoice = LedgerDialogChoice.viewDetail;
+      deps.syncPreviewReturn = [SyncChange(type: SyncChangeType.added)];
+
+      await checker.runIfNeeded();
+
+      expect(deps.legacyInfoShownCount, 2);
+    });
+
+    test('confirmEach 流程中抛异常时弹 legacy error', () async {
+      deps.perLedgerChoice = LedgerDialogChoice.viewDetail;
+      deps.syncPreviewReturn = [SyncChange(type: SyncChangeType.added)];
+      deps.applyThrowForLedgerIds = {1};
+
+      await checker.runIfNeeded();
+
+      expect(deps.legacyErrorShownCount, greaterThanOrEqualTo(1));
+      // L2 仍然能正常处理
+      expect(deps.applyPreviewChangesCallCount, 2);
+    });
+  });
+
+  group('幂等性', () {
+    test('第二次调用 runIfNeeded 是 no-op', () async {
+      deps.activeConfig = const CloudServiceConfig(
+        type: CloudBackendType.s3,
+        name: 's3',
+        s3Endpoint: 'https://s3.example.com',
+        s3AccessKey: 'ak',
+        s3SecretKey: 'sk',
+        s3Bucket: 'b',
+      );
+      deps.ledgers = [_ledger(1, 'L1')];
+      deps.statusByLedger = {1: _status(SyncDiff.cloudNewer)};
+      deps.summaryChoice = SummaryChoice.skip;
+
+      await checker.runIfNeeded();
+      // 第一次有 HasUpdatesState（被监听器自动 skip → DismissedState）
+      expect(deps.lastCandidates.length, 1);
+
+      // 重置标志位，验证第二次调用不会再次执行
+      deps.lastCandidates = [];
+      await checker.runIfNeeded();
+
+      expect(deps.lastCandidates, isEmpty);
+    });
+  });
+
+  group('skip 选项', () {
+    test('汇总弹窗选 skip 时不做任何 apply', () async {
+      deps.activeConfig = const CloudServiceConfig(
+        type: CloudBackendType.s3,
+        name: 's3',
+        s3Endpoint: 'https://s3.example.com',
+        s3AccessKey: 'ak',
+        s3SecretKey: 'sk',
+        s3Bucket: 'b',
+      );
+      deps.ledgers = [_ledger(1, 'L1')];
+      deps.statusByLedger = {1: _status(SyncDiff.cloudNewer)};
+      deps.summaryChoice = SummaryChoice.skip;
+
+      await checker.runIfNeeded();
+
+      expect(deps.applyPreviewChangesCallCount, 0);
+      expect(deps.downloadAndRestoreCallCount, 0);
+      expect(deps.runAfterDownloadCallCount, 0);
+      expect(controller.state, isA<DismissedState>());
+    });
+  });
+}
+
+/// 测试用的假依赖实现
+class _FakeDeps implements StartupSyncCheckerDeps {
+  CloudServiceConfig activeConfig = const CloudServiceConfig(
+    type: CloudBackendType.local,
+    name: 'local',
+  );
+
+  bool syncServiceIsPathA = true;
+
+  List<Ledger> ledgers = const [];
+
+  Map<int, SyncStatus> statusByLedger = {};
+  Set<int> statusThrowForLedgerIds = {};
+
+  Map<int, ({SyncPreview? preview, ImportData importData, int version})>
+      previewByLedger = {};
+  Set<int> downloadAndPreviewThrowForLedgerIds = {};
+
+  Set<int> applyThrowForLedgerIds = {};
+
+  SummaryChoice summaryChoice = SummaryChoice.skip;
+  LedgerDialogChoice perLedgerChoice = LedgerDialogChoice.skip;
+  List<SyncChange>? syncPreviewReturn;
+
+  // 调用记录
+  bool getAllLedgersCalled = false;
+  int getStatusCallCount = 0;
+  List<LedgerCandidate> lastCandidates = [];
+  int applyPreviewChangesCallCount = 0;
+  Map<int, List<SyncChange>> appliedForLedger = {};
+  int downloadAndRestoreCallCount = 0;
+  int runAfterDownloadCallCount = 0;
+  int showSyncPreviewDialogCallCount = 0;
+  int perLedgerDialogCallCount = 0;
+  int legacyInfoShownCount = 0;
+  int legacyErrorShownCount = 0;
+  List<String> errorLog = [];
+
+  @override
+  Future<CloudServiceConfig> getActiveConfig() async => activeConfig;
+
+  @override
+  bool get isSyncServicePathA => syncServiceIsPathA;
+
+  @override
+  Future<List<Ledger>> getAllLedgers() async {
+    getAllLedgersCalled = true;
+    return ledgers;
+  }
+
+  @override
+  Future<SyncStatus> getStatus(int ledgerId) async {
+    getStatusCallCount++;
+    if (statusThrowForLedgerIds.contains(ledgerId)) {
+      throw Exception('getStatus boom for ledger $ledgerId');
+    }
+    return statusByLedger[ledgerId] ??
+        SyncStatus(
+          diff: SyncDiff.inSync,
+          localCount: 0,
+          localFingerprint: '',
+        );
+  }
+
+  @override
+  Future<({SyncPreview? preview, ImportData importData, int version})?>
+      downloadAndPreview(int ledgerId) async {
+    if (downloadAndPreviewThrowForLedgerIds.contains(ledgerId)) {
+      throw Exception('downloadAndPreview boom for ledger $ledgerId');
+    }
+    return previewByLedger[ledgerId];
+  }
+
+  @override
+  Future<SyncApplyResult> applyPreviewChanges({
+    required int ledgerId,
+    required List<SyncChange> selectedChanges,
+    required ImportData importData,
+  }) async {
+    applyPreviewChangesCallCount++;
+    if (applyThrowForLedgerIds.contains(ledgerId)) {
+      throw Exception('applyPreviewChanges boom for ledger $ledgerId');
+    }
+    appliedForLedger[ledgerId] = selectedChanges;
+    return SyncApplyResult(
+      addedCount: selectedChanges
+          .where((c) => c.type == SyncChangeType.added)
+          .length,
+      modifiedCount: selectedChanges
+          .where((c) => c.type == SyncChangeType.modified)
+          .length,
+      deletedCount: selectedChanges
+          .where((c) => c.type == SyncChangeType.deleted)
+          .length,
+    );
+  }
+
+  @override
+  Future<({int inserted, int deletedDup})> downloadAndRestoreToCurrentLedger({
+    required int ledgerId,
+  }) async {
+    downloadAndRestoreCallCount++;
+    return (inserted: 0, deletedDup: 0);
+  }
+
+  @override
+  Future<LedgerDialogChoice> showPerLedgerDialog({
+    required Ledger ledger,
+    required SyncPreview preview,
+  }) async {
+    perLedgerDialogCallCount++;
+    return perLedgerChoice;
+  }
+
+  @override
+  Future<List<SyncChange>?> showSyncPreviewDialog(SyncPreview preview) async {
+    showSyncPreviewDialogCallCount++;
+    return syncPreviewReturn;
+  }
+
+  @override
+  void runAfterDownload() => runAfterDownloadCallCount++;
+
+  @override
+  void showLegacyError(String message) {
+    legacyErrorShownCount++;
+    errorLog.add(message);
+  }
+
+  @override
+  void showLegacyInfo(String message) {
+    legacyInfoShownCount++;
+  }
+
+  @override
+  void log(String message) {
+    errorLog.add(message);
+  }
+}

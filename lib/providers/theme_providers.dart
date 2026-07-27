@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/note_history.dart';
 import '../services/system/logger_service.dart';
-import '../theme.dart';
 import '../widget/widget_manager.dart';
 import '../providers.dart';
 
@@ -45,7 +44,8 @@ final themeModeInitProvider = FutureProvider<void>((ref) async {
 });
 
 // 可变主色（个性化换装使用）
-final primaryColorProvider = StateProvider<Color>((ref) => BeeTheme.honeyGold);
+// 默认值：晴空蓝（与 personalize_page.dart 中 personalizeThemeBlue 选项一致）
+final primaryColorProvider = StateProvider<Color>((ref) => const Color(0xFF2196F3));
 
 // 是否隐藏金额显示
 final hideAmountsProvider = StateProvider<bool>((ref) => false);

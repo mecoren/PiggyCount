@@ -760,6 +760,14 @@
   "cloudAnonKeyLabel": "Anon Key",
   "cloudCannotOpenLink": "無法開啟連結",
   "cloudConfigInvalidMessage": "請填寫完整資訊",
+  "fieldCannotBeEmpty": "{field}不能為空",
+  "@fieldCannotBeEmpty": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      }
+    }
+  },
   "cloudConfigInvalidTitle": "無效設定",
   "cloudConfigSaved": "設定已儲存",
   "cloudConfigureS3Title": "設定 S3",
@@ -1023,6 +1031,54 @@
   "commonEdit": "編輯",
   "commonEmpty": "暫無資料",
   "commonError": "錯誤",
+  "startupSyncCheckTitle": "雲端有更新",
+  "startupSyncCheckSummaryMessage": "偵測到 {count} 個帳本有雲端更新，是否合併到本地？",
+  "@startupSyncCheckSummaryMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "startupSyncCheckLedgerMessage": "帳本「{ledger}」偵測到雲端有 {added} 筆新增、{modified} 筆修改、{deleted} 筆刪除，是否合併到本地？",
+  "@startupSyncCheckLedgerMessage": {
+    "placeholders": {
+      "ledger": {
+        "type": "String"
+      },
+      "added": {
+        "type": "int"
+      },
+      "modified": {
+        "type": "int"
+      },
+      "deleted": {
+        "type": "int"
+      }
+    }
+  },
+  "startupSyncCheckApplyAll": "一鍵套用全部",
+  "startupSyncCheckConfirmEach": "逐一確認",
+  "startupSyncCheckViewDetail": "查看詳情並套用",
+  "startupSyncCheckSkip": "暫不合併",
+  "startupSyncCheckSkipRest": "跳過剩餘",
+  "startupSyncCheckCheckingTitle": "正在檢查雲端更新",
+  "startupSyncCheckCheckingHint": "請稍候...",
+  "startupSyncCheckCheckingProgress": "正在檢查 {checked}/{total}",
+  "@startupSyncCheckCheckingProgress": {
+    "placeholders": {
+      "checked": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "startupSyncCheckApplyingTitle": "正在合併雲端資料",
+  "startupSyncCheckApplyingProgress": "正在合併 {applied}/{total}",
+  "@startupSyncCheckApplyingProgress": {
+    "placeholders": {
+      "applied": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
   "commonFailed": "失敗",
   "commonFinish": "完成",
   "commonGoSettings": "前往設定",
@@ -2907,5 +2963,34 @@
   "currencyLSL": "萊索托洛蒂",
   "currencySZL": "斯威士蘭里蘭吉尼",
   "currencyMGA": "马達加斯加阿里亞里",
-  "currencyMRU": "毛里塔尼亞烏吉亞"
+  "currencyMRU": "毛里塔尼亞烏吉亞",
+  "cloudSyncEncryptTitle": "同步加密",
+  "cloudSyncEncryptSubtitle": "用密碼加密雲端備份，保護帳本隱私",
+  "cloudSyncEncryptEnable": "開啟同步加密",
+  "cloudSyncEncryptEnableSubtitle": "開啟後上傳的備份將以密文儲存",
+  "cloudSyncEncryptEnabled": "已開啟",
+  "cloudSyncEncryptDisabled": "未開啟",
+  "cloudSyncEncryptSettings": "加密設定",
+  "cloudSyncEncryptSetPassword": "設定密碼",
+  "cloudSyncEncryptChangePassword": "修改密碼",
+  "cloudSyncEncryptResetEncryption": "重置加密",
+  "cloudSyncEncryptPasswordLabel": "密碼",
+  "cloudSyncEncryptConfirmPasswordLabel": "確認密碼",
+  "cloudSyncEncryptOldPasswordLabel": "舊密碼",
+  "cloudSyncEncryptNewPasswordLabel": "新密碼",
+  "cloudSyncEncryptPasswordHint": "至少 6 個字元",
+  "cloudSyncEncryptPasswordMismatch": "兩次輸入的密碼不一致",
+  "cloudSyncEncryptPasswordTooShort": "密碼至少 6 個字元",
+  "cloudSyncEncryptWrongPassword": "密碼錯誤",
+  "cloudSyncEncryptEnableSuccess": "加密已開啟",
+  "cloudSyncEncryptDisableSuccess": "加密已關閉，新上傳不再加密",
+  "cloudSyncEncryptChangeSuccess": "密碼已修改",
+  "cloudSyncEncryptResetConfirmTitle": "重置加密",
+  "cloudSyncEncryptResetConfirmMessage": "重置將清空雲端所有帳本備份且不可復原，確定繼續嗎？",
+  "cloudSyncEncryptResetSuccess": "加密已重置",
+  "cloudSyncEncryptDecryptFailed": "解密失敗，請檢查密碼",
+  "cloudSyncEncryptMultiDeviceHint": "在其他裝置上用相同密碼即可解密",
+  "cloudSyncEncryptLegacyHint": "雲端如有未加密資料，開啟後將自動轉為密文",
+  "cloudSyncEncryptReencrypting": "正在重新加密雲端資料…",
+  "cloudSyncEncryptReencryptPartialFailed": "加密已開啟，但有 {count} 個雲端檔案重新加密失敗，下次同步時會自動重試。"
 }

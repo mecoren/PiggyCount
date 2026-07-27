@@ -1516,13 +1516,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
       final email = result['email'] as String;
       final password = result['password'] as String;
 
-      if (url.isEmpty) {
-        if (mounted) {
-          await AppDialog.error(context, title: AppLocalizations.of(context).cloudConfigInvalidTitle, message: AppLocalizations.of(context).cloudConfigInvalidMessage);
-        }
-        return;
-      }
-
+      // 对话框已进行内联校验，此处 cfg.valid 作为防御性检查
       final cfg = CloudServiceConfig(
         type: CloudBackendType.beecountCloud,
         name: AppLocalizations.of(context).cloudBeeCountCloudTitle,
@@ -1614,13 +1608,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
       final key = result['key'] as String;
       final bucket = result['bucket'] as String;
 
-      if (url.isEmpty || key.isEmpty) {
-        if (mounted) {
-          await AppDialog.error(context, title: AppLocalizations.of(context).cloudConfigInvalidTitle, message: AppLocalizations.of(context).cloudConfigInvalidMessage);
-        }
-        return;
-      }
-
+      // 对话框已进行内联校验，此处 cfg.valid 作为防御性检查
       final cfg = CloudServiceConfig(
         type: CloudBackendType.supabase,
         name: AppLocalizations.of(context).cloudCustomSupabaseTitle,
@@ -1671,13 +1659,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
       final password = result['password'] as String;
       final path = result['path'] as String;
 
-      if (url.isEmpty || username.isEmpty || password.isEmpty) {
-        if (mounted) {
-          await AppDialog.error(context, title: AppLocalizations.of(context).cloudConfigInvalidTitle, message: AppLocalizations.of(context).cloudConfigInvalidMessage);
-        }
-        return;
-      }
-
+      // 对话框已进行内联校验，此处 cfg.valid 作为防御性检查
       final cfg = CloudServiceConfig(
         type: CloudBackendType.webdav,
         name: AppLocalizations.of(context).cloudCustomWebdavTitle,
@@ -1735,16 +1717,10 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
       final useSSL = result['useSSL'] as bool;
       final port = result['port'] as int?;
 
-      if (endpoint.isEmpty || accessKey.isEmpty || secretKey.isEmpty || bucket.isEmpty) {
-        if (mounted) {
-          await AppDialog.error(context, title: AppLocalizations.of(context).cloudConfigInvalidTitle, message: AppLocalizations.of(context).cloudConfigInvalidMessage);
-        }
-        return;
-      }
-
       // 自动去除 endpoint 中的 http:// 或 https:// 前缀
       endpoint = endpoint.replaceFirst(RegExp(r'^https?://'), '');
 
+      // 对话框已进行内联校验，此处 cfg.valid 作为防御性检查
       final cfg = CloudServiceConfig(
         type: CloudBackendType.s3,
         name: AppLocalizations.of(context).cloudCustomS3Title,
@@ -2011,6 +1987,9 @@ class _BeeCountCloudConfigDialogState extends State<_BeeCountCloudConfigDialog> 
   late final TextEditingController passwordController;
   bool obscurePassword = true;
 
+  // 内联校验错误状态：BeeCount Cloud 必填字段仅为 URL
+  bool _urlError = false;
+
   @override
   void initState() {
     super.initState();
@@ -2029,10 +2008,21 @@ class _BeeCountCloudConfigDialogState extends State<_BeeCountCloudConfigDialog> 
     super.dispose();
   }
 
+  // 校验必填字段，返回是否全部通过
+  bool _validate() {
+    bool hasError = false;
+    setState(() {
+      _urlError = urlController.text.trim().isEmpty;
+      hasError = _urlError;
+    });
+    return !hasError;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AlertDialog(
-      title: Text(AppLocalizations.of(context).cloudConfigureBeeCountCloudTitle),
+      title: Text(l10n.cloudConfigureBeeCountCloudTitle),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -2040,10 +2030,16 @@ class _BeeCountCloudConfigDialogState extends State<_BeeCountCloudConfigDialog> 
             TextField(
               controller: urlController,
               decoration: InputDecoration(
-                labelText: AppLocalizations.of(context).cloudBeeCountCloudUrlLabel,
-                hintText: AppLocalizations.of(context).cloudBeeCountCloudUrlHint,
+                labelText: l10n.cloudBeeCountCloudUrlLabel,
+                hintText: l10n.cloudBeeCountCloudUrlHint,
+                errorText: _urlError
+                    ? l10n.fieldCannotBeEmpty(l10n.cloudBeeCountCloudUrlLabel)
+                    : null,
               ),
               keyboardType: TextInputType.url,
+              onChanged: (_) {
+                if (_urlError) setState(() => _urlError = false);
+              },
             ),
             // API Prefix 输入框移除 —— 后端固定 /api/v1,前端用户没有配置场景;
             // 保留 apiPrefixController(默认 /api/v1)让 save 流程不破。
@@ -2051,8 +2047,8 @@ class _BeeCountCloudConfigDialogState extends State<_BeeCountCloudConfigDialog> 
             TextField(
               controller: emailController,
               decoration: InputDecoration(
-                labelText: AppLocalizations.of(context).cloudBeeCountCloudEmailLabel,
-                hintText: AppLocalizations.of(context).cloudBeeCountCloudEmailHint,
+                labelText: l10n.cloudBeeCountCloudEmailLabel,
+                hintText: l10n.cloudBeeCountCloudEmailHint,
               ),
               keyboardType: TextInputType.emailAddress,
             ),
@@ -2060,8 +2056,8 @@ class _BeeCountCloudConfigDialogState extends State<_BeeCountCloudConfigDialog> 
             TextField(
               controller: passwordController,
               decoration: InputDecoration(
-                labelText: AppLocalizations.of(context).cloudBeeCountCloudPasswordLabel,
-                hintText: AppLocalizations.of(context).cloudBeeCountCloudPasswordHint,
+                labelText: l10n.cloudBeeCountCloudPasswordLabel,
+                hintText: l10n.cloudBeeCountCloudPasswordHint,
                 suffixIcon: IconButton(
                   icon: Icon(
                     obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
@@ -2082,18 +2078,20 @@ class _BeeCountCloudConfigDialogState extends State<_BeeCountCloudConfigDialog> 
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(null),
-          child: Text(AppLocalizations.of(context).commonCancel),
+          child: Text(l10n.commonCancel),
         ),
         FilledButton(
           onPressed: () {
-            Navigator.of(context).pop({
-              'url': urlController.text.trim(),
-              'apiPrefix': apiPrefixController.text.trim(),
-              'email': emailController.text.trim(),
-              'password': passwordController.text.trim(),
-            });
+            if (_validate()) {
+              Navigator.of(context).pop({
+                'url': urlController.text.trim(),
+                'apiPrefix': apiPrefixController.text.trim(),
+                'email': emailController.text.trim(),
+                'password': passwordController.text.trim(),
+              });
+            }
           },
-          child: Text(AppLocalizations.of(context).commonSave),
+          child: Text(l10n.commonSave),
         ),
       ],
     );
@@ -2120,6 +2118,10 @@ class _SupabaseConfigDialogState extends State<_SupabaseConfigDialog> {
   late final TextEditingController keyController;
   late final TextEditingController bucketController;
 
+  // 内联校验错误状态：Supabase 必填字段为 URL 和 Anon Key
+  bool _urlError = false;
+  bool _keyError = false;
+
   @override
   void initState() {
     super.initState();
@@ -2136,10 +2138,22 @@ class _SupabaseConfigDialogState extends State<_SupabaseConfigDialog> {
     super.dispose();
   }
 
+  // 校验必填字段，返回是否全部通过
+  bool _validate() {
+    bool hasError = false;
+    setState(() {
+      _urlError = urlController.text.trim().isEmpty;
+      _keyError = keyController.text.trim().isEmpty;
+      hasError = _urlError || _keyError;
+    });
+    return !hasError;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AlertDialog(
-      title: Text(AppLocalizations.of(context).cloudConfigureSupabaseTitle),
+      title: Text(l10n.cloudConfigureSupabaseTitle),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -2147,28 +2161,40 @@ class _SupabaseConfigDialogState extends State<_SupabaseConfigDialog> {
             TextField(
               controller: urlController,
               decoration: InputDecoration(
-                labelText: AppLocalizations.of(context).cloudSupabaseUrlLabel,
-                hintText: AppLocalizations.of(context).cloudSupabaseUrlHint,
+                labelText: l10n.cloudSupabaseUrlLabel,
+                hintText: l10n.cloudSupabaseUrlHint,
+                errorText: _urlError
+                    ? l10n.fieldCannotBeEmpty(l10n.cloudSupabaseUrlLabel)
+                    : null,
               ),
               keyboardType: TextInputType.url,
+              onChanged: (_) {
+                if (_urlError) setState(() => _urlError = false);
+              },
             ),
             const SizedBox(height: 16),
             TextField(
               controller: keyController,
               decoration: InputDecoration(
-                labelText: AppLocalizations.of(context).cloudAnonKeyLabel,
-                hintText: AppLocalizations.of(context).cloudSupabaseAnonKeyHintLong,
+                labelText: l10n.cloudAnonKeyLabel,
+                hintText: l10n.cloudSupabaseAnonKeyHintLong,
+                errorText: _keyError
+                    ? l10n.fieldCannotBeEmpty(l10n.cloudAnonKeyLabel)
+                    : null,
               ),
               keyboardType: TextInputType.text,
               minLines: 1,
               maxLines: 5,
+              onChanged: (_) {
+                if (_keyError) setState(() => _keyError = false);
+              },
             ),
             const SizedBox(height: 16),
             TextField(
               controller: bucketController,
               decoration: InputDecoration(
-                labelText: AppLocalizations.of(context).cloudSupabaseBucketLabel,
-                hintText: AppLocalizations.of(context).cloudSupabaseBucketHint,
+                labelText: l10n.cloudSupabaseBucketLabel,
+                hintText: l10n.cloudSupabaseBucketHint,
               ),
               keyboardType: TextInputType.text,
             ),
@@ -2178,17 +2204,19 @@ class _SupabaseConfigDialogState extends State<_SupabaseConfigDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(null),
-          child: Text(AppLocalizations.of(context).commonCancel),
+          child: Text(l10n.commonCancel),
         ),
         FilledButton(
           onPressed: () {
-            Navigator.of(context).pop({
-              'url': urlController.text.trim(),
-              'key': keyController.text.trim(),
-              'bucket': bucketController.text.trim(),
-            });
+            if (_validate()) {
+              Navigator.of(context).pop({
+                'url': urlController.text.trim(),
+                'key': keyController.text.trim(),
+                'bucket': bucketController.text.trim(),
+              });
+            }
           },
-          child: Text(AppLocalizations.of(context).commonSave),
+          child: Text(l10n.commonSave),
         ),
       ],
     );
@@ -2220,6 +2248,11 @@ class _WebdavConfigDialogState extends State<_WebdavConfigDialog> {
   late final TextEditingController pathController;
   bool obscurePassword = true;
 
+  // 内联校验错误状态：true 表示该字段有错误（为空）
+  bool _urlError = false;
+  bool _usernameError = false;
+  bool _passwordError = false;
+
   @override
   void initState() {
     super.initState();
@@ -2238,10 +2271,24 @@ class _WebdavConfigDialogState extends State<_WebdavConfigDialog> {
     super.dispose();
   }
 
+  // 校验必填字段，返回是否全部通过
+  bool _validate() {
+    bool hasError = false;
+    setState(() {
+      _urlError = urlController.text.trim().isEmpty;
+      _usernameError = usernameController.text.trim().isEmpty;
+      _passwordError = passwordController.text.trim().isEmpty;
+      hasError = _urlError || _usernameError || _passwordError;
+    });
+    // 有错误时不弹出对话框，让用户看到内联错误提示
+    return !hasError;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AlertDialog(
-      title: Text(AppLocalizations.of(context).cloudConfigureWebdavTitle),
+      title: Text(l10n.cloudConfigureWebdavTitle),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -2249,22 +2296,37 @@ class _WebdavConfigDialogState extends State<_WebdavConfigDialog> {
             TextField(
               controller: urlController,
               decoration: InputDecoration(
-                labelText: AppLocalizations.of(context).cloudWebdavUrlLabel,
-                hintText: AppLocalizations.of(context).cloudWebdavUrlHint,
+                labelText: l10n.cloudWebdavUrlLabel,
+                hintText: l10n.cloudWebdavUrlHint,
+                errorText: _urlError
+                    ? l10n.fieldCannotBeEmpty(l10n.cloudWebdavUrlLabel)
+                    : null,
               ),
+              onChanged: (_) {
+                if (_urlError) setState(() => _urlError = false);
+              },
             ),
             const SizedBox(height: 16),
             TextField(
               controller: usernameController,
               decoration: InputDecoration(
-                labelText: AppLocalizations.of(context).cloudWebdavUsernameLabel,
+                labelText: l10n.cloudWebdavUsernameLabel,
+                errorText: _usernameError
+                    ? l10n.fieldCannotBeEmpty(l10n.cloudWebdavUsernameLabel)
+                    : null,
               ),
+              onChanged: (_) {
+                if (_usernameError) setState(() => _usernameError = false);
+              },
             ),
             const SizedBox(height: 16),
             TextField(
               controller: passwordController,
               decoration: InputDecoration(
-                labelText: AppLocalizations.of(context).cloudWebdavPasswordLabel,
+                labelText: l10n.cloudWebdavPasswordLabel,
+                errorText: _passwordError
+                    ? l10n.fieldCannotBeEmpty(l10n.cloudWebdavPasswordLabel)
+                    : null,
                 suffixIcon: IconButton(
                   icon: Icon(
                     obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
@@ -2278,14 +2340,17 @@ class _WebdavConfigDialogState extends State<_WebdavConfigDialog> {
                 ),
               ),
               obscureText: obscurePassword,
+              onChanged: (_) {
+                if (_passwordError) setState(() => _passwordError = false);
+              },
             ),
             const SizedBox(height: 16),
             TextField(
               controller: pathController,
               decoration: InputDecoration(
-                labelText: AppLocalizations.of(context).cloudWebdavRemotePathLabel,
-                hintText: AppLocalizations.of(context).cloudWebdavPathHint,
-                helperText: AppLocalizations.of(context).cloudWebdavRemotePathHelperText,
+                labelText: l10n.cloudWebdavRemotePathLabel,
+                hintText: l10n.cloudWebdavPathHint,
+                helperText: l10n.cloudWebdavRemotePathHelperText,
               ),
             ),
           ],
@@ -2294,18 +2359,20 @@ class _WebdavConfigDialogState extends State<_WebdavConfigDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(null),
-          child: Text(AppLocalizations.of(context).commonCancel),
+          child: Text(l10n.commonCancel),
         ),
         FilledButton(
           onPressed: () {
-            Navigator.of(context).pop({
-              'url': urlController.text.trim(),
-              'username': usernameController.text.trim(),
-              'password': passwordController.text.trim(),
-              'path': pathController.text.trim(),
-            });
+            if (_validate()) {
+              Navigator.of(context).pop({
+                'url': urlController.text.trim(),
+                'username': usernameController.text.trim(),
+                'password': passwordController.text.trim(),
+                'path': pathController.text.trim(),
+              });
+            }
           },
-          child: Text(AppLocalizations.of(context).commonSave),
+          child: Text(l10n.commonSave),
         ),
       ],
     );
@@ -2346,6 +2413,12 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
   late bool useSSL;
   bool obscureSecretKey = true;
 
+  // 内联校验错误状态：S3 必填字段为 endpoint、accessKey、secretKey、bucket
+  bool _endpointError = false;
+  bool _accessKeyError = false;
+  bool _secretKeyError = false;
+  bool _bucketError = false;
+
   @override
   void initState() {
     super.initState();
@@ -2369,10 +2442,24 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
     super.dispose();
   }
 
+  // 校验必填字段，返回是否全部通过
+  bool _validate() {
+    bool hasError = false;
+    setState(() {
+      _endpointError = endpointController.text.trim().isEmpty;
+      _accessKeyError = accessKeyController.text.trim().isEmpty;
+      _secretKeyError = secretKeyController.text.trim().isEmpty;
+      _bucketError = bucketController.text.trim().isEmpty;
+      hasError = _endpointError || _accessKeyError || _secretKeyError || _bucketError;
+    });
+    return !hasError;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AlertDialog(
-      title: Text(AppLocalizations.of(context).cloudConfigureS3Title),
+      title: Text(l10n.cloudConfigureS3Title),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -2380,33 +2467,48 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
             TextField(
               controller: endpointController,
               decoration: InputDecoration(
-                labelText: AppLocalizations.of(context).cloudS3EndpointLabel,
-                hintText: AppLocalizations.of(context).cloudS3EndpointHint,
+                labelText: l10n.cloudS3EndpointLabel,
+                hintText: l10n.cloudS3EndpointHint,
+                errorText: _endpointError
+                    ? l10n.fieldCannotBeEmpty(l10n.cloudS3EndpointLabel)
+                    : null,
               ),
               keyboardType: TextInputType.url,
+              onChanged: (_) {
+                if (_endpointError) setState(() => _endpointError = false);
+              },
             ),
             const SizedBox(height: 16),
             TextField(
               controller: regionController,
               decoration: InputDecoration(
-                labelText: AppLocalizations.of(context).cloudS3RegionLabel,
-                hintText: AppLocalizations.of(context).cloudS3RegionHint,
+                labelText: l10n.cloudS3RegionLabel,
+                hintText: l10n.cloudS3RegionHint,
               ),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: accessKeyController,
               decoration: InputDecoration(
-                labelText: AppLocalizations.of(context).cloudS3AccessKeyLabel,
-                hintText: AppLocalizations.of(context).cloudS3AccessKeyHint,
+                labelText: l10n.cloudS3AccessKeyLabel,
+                hintText: l10n.cloudS3AccessKeyHint,
+                errorText: _accessKeyError
+                    ? l10n.fieldCannotBeEmpty(l10n.cloudS3AccessKeyLabel)
+                    : null,
               ),
+              onChanged: (_) {
+                if (_accessKeyError) setState(() => _accessKeyError = false);
+              },
             ),
             const SizedBox(height: 16),
             TextField(
               controller: secretKeyController,
               decoration: InputDecoration(
-                labelText: AppLocalizations.of(context).cloudS3SecretKeyLabel,
-                hintText: AppLocalizations.of(context).cloudS3SecretKeyHint,
+                labelText: l10n.cloudS3SecretKeyLabel,
+                hintText: l10n.cloudS3SecretKeyHint,
+                errorText: _secretKeyError
+                    ? l10n.fieldCannotBeEmpty(l10n.cloudS3SecretKeyLabel)
+                    : null,
                 suffixIcon: IconButton(
                   icon: Icon(
                     obscureSecretKey ? Icons.visibility_outlined : Icons.visibility_off_outlined,
@@ -2420,20 +2522,29 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
                 ),
               ),
               obscureText: obscureSecretKey,
+              onChanged: (_) {
+                if (_secretKeyError) setState(() => _secretKeyError = false);
+              },
             ),
             const SizedBox(height: 16),
             TextField(
               controller: bucketController,
               decoration: InputDecoration(
-                labelText: AppLocalizations.of(context).cloudS3BucketLabel,
-                hintText: AppLocalizations.of(context).cloudS3BucketHint,
+                labelText: l10n.cloudS3BucketLabel,
+                hintText: l10n.cloudS3BucketHint,
+                errorText: _bucketError
+                    ? l10n.fieldCannotBeEmpty(l10n.cloudS3BucketLabel)
+                    : null,
               ),
+              onChanged: (_) {
+                if (_bucketError) setState(() => _bucketError = false);
+              },
             ),
             const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
-                  child: Text(AppLocalizations.of(context).cloudS3UseSSLLabel),
+                  child: Text(l10n.cloudS3UseSSLLabel),
                 ),
                 Switch(
                   value: useSSL,
@@ -2449,8 +2560,8 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
             TextField(
               controller: portController,
               decoration: InputDecoration(
-                labelText: AppLocalizations.of(context).cloudS3PortLabel,
-                hintText: AppLocalizations.of(context).cloudS3PortHint,
+                labelText: l10n.cloudS3PortLabel,
+                hintText: l10n.cloudS3PortHint,
               ),
               keyboardType: TextInputType.number,
             ),
@@ -2460,24 +2571,26 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(null),
-          child: Text(AppLocalizations.of(context).commonCancel),
+          child: Text(l10n.commonCancel),
         ),
         FilledButton(
           onPressed: () {
-            final portText = portController.text.trim();
-            final port = portText.isEmpty ? null : int.tryParse(portText);
+            if (_validate()) {
+              final portText = portController.text.trim();
+              final port = portText.isEmpty ? null : int.tryParse(portText);
 
-            Navigator.of(context).pop({
-              'endpoint': endpointController.text.trim(),
-              'region': regionController.text.trim(),
-              'accessKey': accessKeyController.text.trim(),
-              'secretKey': secretKeyController.text.trim(),
-              'bucket': bucketController.text.trim(),
-              'useSSL': useSSL,
-              'port': port,
-            });
+              Navigator.of(context).pop({
+                'endpoint': endpointController.text.trim(),
+                'region': regionController.text.trim(),
+                'accessKey': accessKeyController.text.trim(),
+                'secretKey': secretKeyController.text.trim(),
+                'bucket': bucketController.text.trim(),
+                'useSSL': useSSL,
+                'port': port,
+              });
+            }
           },
-          child: Text(AppLocalizations.of(context).commonSave),
+          child: Text(l10n.commonSave),
         ),
       ],
     );

@@ -1,0 +1,534 @@
+// 启动时云端数据拉取检查编排器
+//
+// 仅适用于路径 A（S3 / WebDAV / Supabase / iCloud）。
+// 路径 B（BeeCount Cloud）保持现有 _triggerInitialCloudSync 自动同步，
+// 不在本编排器范围内。
+//
+// 设计原则：
+// - 通过 StartupSyncCheckerDeps 接口注入所有外部依赖，
+//   使核心编排逻辑可在无 UI / 无网络环境下单元测试。
+// - 通过 StartupSyncController 推送状态变化给 overlay widget，
+//   不直接调用 showDialog，解耦 UI 渲染。
+// - 错误隔离：单个账本失败不影响其他账本。
+
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' hide SyncStatus;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../cloud/sync_diff_service.dart';
+import '../cloud/sync_service.dart';
+import '../cloud/transactions_sync_manager.dart';
+import '../data/db.dart';
+import '../l10n/app_localizations.dart';
+import '../pages/cloud/sync_preview_dialog.dart' as spd;
+import '../providers/database_providers.dart';
+import '../providers/sync_providers.dart';
+import '../services/billing/post_processor.dart';
+import '../services/data_import_service.dart';
+import '../services/system/logger_service.dart';
+import '../styles/tokens.dart';
+import '../widgets/ui/dialog.dart';
+import 'startup_sync_overlay.dart';
+
+/// 汇总弹窗三选项
+enum SummaryChoice {
+  /// 一键应用全部账本
+  applyAll,
+
+  /// 逐个账本确认
+  confirmEach,
+
+  /// 暂不合并
+  skip,
+}
+
+/// 逐账本弹窗用户选择
+enum LedgerDialogChoice {
+  /// 查看详情并应用（含全量替换确认流程）
+  viewDetail,
+
+  /// 暂不合并此账本
+  skip,
+
+  /// 跳过剩余所有账本
+  skipRest,
+}
+
+/// 单个候选账本（有云端更新）
+class LedgerCandidate {
+  final Ledger ledger;
+  final SyncStatus status;
+
+  const LedgerCandidate({required this.ledger, required this.status});
+}
+
+/// downloadAndPreview 返回类型别名
+typedef DownloadAndPreviewResult =
+    ({SyncPreview? preview, ImportData importData, int version});
+
+/// 启动检查编排器的外部依赖接口
+///
+/// 抽象出来便于单元测试用假实现注入，生产环境用 WidgetRefDeps 包装。
+abstract class StartupSyncCheckerDeps {
+  Future<CloudServiceConfig> getActiveConfig();
+
+  /// syncService 是否为 TransactionsSyncManager（路径 A）
+  bool get isSyncServicePathA;
+
+  Future<List<Ledger>> getAllLedgers();
+
+  Future<SyncStatus> getStatus(int ledgerId);
+
+  Future<DownloadAndPreviewResult?> downloadAndPreview(int ledgerId);
+
+  Future<SyncApplyResult> applyPreviewChanges({
+    required int ledgerId,
+    required List<SyncChange> selectedChanges,
+    required ImportData importData,
+  });
+
+  Future<({int inserted, int deletedDup})> downloadAndRestoreToCurrentLedger({
+    required int ledgerId,
+  });
+
+  /// 逐账本弹窗：显示该账本变更汇总，让用户选择 viewDetail / skip / skipRest
+  ///
+  /// 仅在 confirmEach 模式下使用，overlay 已暂时关闭。
+  Future<LedgerDialogChoice> showPerLedgerDialog({
+    required Ledger ledger,
+    required SyncPreview preview,
+  });
+
+  /// 同步预览弹窗（showSyncPreviewDialog 的可 mock 接口）
+  /// 返回用户选中的变更列表，null 表示取消
+  ///
+  /// 仅在 confirmEach 模式下使用，overlay 已暂时关闭。
+  Future<List<SyncChange>?> showSyncPreviewDialog(SyncPreview preview);
+
+  /// 应用变更后刷新 UI providers
+  void runAfterDownload();
+
+  /// confirmEach 模式下弹出错误提示（overlay 已关闭，直接用 showDialog）
+  void showLegacyError(String message);
+
+  /// confirmEach 模式下弹出信息提示
+  void showLegacyInfo(String message);
+
+  /// 日志
+  void log(String message);
+}
+
+/// 启动时云端数据拉取检查编排器
+///
+/// 用法：
+/// ```dart
+/// final controller = StartupSyncController();
+/// controller.attach(Overlay.of(context));
+/// await StartupSyncChecker(
+///   deps: WidgetRefDeps(ref, context),
+///   controller: controller,
+/// ).runIfNeeded();
+/// controller.detach();
+/// ```
+class StartupSyncChecker {
+  StartupSyncChecker({required this.deps, required this.controller});
+
+  final StartupSyncCheckerDeps deps;
+  final StartupSyncController controller;
+
+  /// 启动级幂等标志：本次进程内只执行一次
+  bool _done = false;
+
+  /// 执行启动检查。若已执行过则直接返回。
+  Future<void> runIfNeeded() async {
+    if (_done) return;
+    _done = true;
+
+    try {
+      await _runInternal();
+    } catch (e, st) {
+      deps.log('StartupSyncChecker 顶层异常: $e\n$st');
+      controller.error('启动检查失败: $e');
+    }
+  }
+
+  Future<void> _runInternal() async {
+    // 1. 检查云端配置：仅路径 A（s3/webdav/supabase/icloud）+ valid 才执行
+    final config = await deps.getActiveConfig();
+    if (!_isPathA(config)) {
+      deps.log('StartupSyncChecker: 非路径 A 配置（${config.type}），跳过');
+      controller.dismiss();
+      return;
+    }
+    if (!config.valid) {
+      deps.log('StartupSyncChecker: 配置 invalid，跳过');
+      controller.dismiss();
+      return;
+    }
+
+    // 2. 确认 syncService 是 TransactionsSyncManager
+    if (!deps.isSyncServicePathA) {
+      deps.log('StartupSyncChecker: syncService 非 TransactionsSyncManager，跳过');
+      controller.dismiss();
+      return;
+    }
+
+    // 3. 获取所有账本
+    final ledgers = await deps.getAllLedgers();
+    if (ledgers.isEmpty) {
+      deps.log('StartupSyncChecker: 无账本，跳过');
+      controller.dismiss();
+      return;
+    }
+
+    // 4. 收集候选账本（cloudNewer / different），推送进度
+    controller.startChecking(ledgers.length);
+    final candidates = <LedgerCandidate>[];
+    var checked = 0;
+    for (final ledger in ledgers) {
+      try {
+        final status = await deps.getStatus(ledger.id);
+        if (status.diff == SyncDiff.cloudNewer ||
+            status.diff == SyncDiff.different) {
+          candidates.add(LedgerCandidate(ledger: ledger, status: status));
+        }
+      } catch (e) {
+        // 单账本 getStatus 失败不影响其他账本
+        deps.log('StartupSyncChecker: 账本 ${ledger.name}（id=${ledger.id}）'
+            'getStatus 失败: $e');
+      }
+      checked++;
+      controller.updateCheckingProgress(checked, ledgers.length);
+    }
+
+    if (candidates.isEmpty) {
+      deps.log('StartupSyncChecker: 无候选账本，跳过');
+      controller.dismiss();
+      return;
+    }
+
+    deps.log('StartupSyncChecker: 发现 ${candidates.length} 个候选账本');
+
+    // 5. 弹汇总对话框，让用户选择模式
+    final completer = Completer<SummaryChoice>();
+    controller.showHasUpdates(candidates, completer);
+    final choice = await completer.future;
+
+    switch (choice) {
+      case SummaryChoice.skip:
+        deps.log('StartupSyncChecker: 用户选择 skip，跳过所有');
+        controller.dismiss();
+        return;
+      case SummaryChoice.applyAll:
+        await _applyAll(candidates);
+        break;
+      case SummaryChoice.confirmEach:
+        // confirmEach 模式：先关闭 overlay，让 showDialog 接管
+        controller.dismiss();
+        // 等一帧让 overlay 消失，避免 dialog 被遮罩阻挡
+        await Future.delayed(Duration.zero);
+        await _confirmEach(candidates);
+        break;
+    }
+  }
+
+  /// 一键应用全部：跳过逐账本预览，串行 apply 所有候选账本
+  Future<void> _applyAll(List<LedgerCandidate> candidates) async {
+    controller.startApplying(candidates.length);
+
+    var successCount = 0;
+    var failCount = 0;
+    var totalChanges = 0;
+    var applied = 0;
+
+    for (final c in candidates) {
+      controller.updateApplyingProgress(
+        applied,
+        candidates.length,
+        c.ledger.name,
+        totalChanges,
+      );
+
+      try {
+        final previewResult = await deps.downloadAndPreview(c.ledger.id);
+        if (previewResult == null) {
+          // 云端无数据，跳过
+          deps.log('StartupSyncChecker: 账本 ${c.ledger.name} 云端无数据，跳过');
+          applied++;
+          continue;
+        }
+
+        if (previewResult.preview == null) {
+          // 旧格式（v5 及以下）：走全量替换
+          await deps.downloadAndRestoreToCurrentLedger(ledgerId: c.ledger.id);
+          deps.runAfterDownload();
+          successCount++;
+          deps.log('StartupSyncChecker: 账本 ${c.ledger.name} 全量替换完成');
+          applied++;
+          continue;
+        }
+
+        final preview = previewResult.preview!;
+        if (preview.isEmpty) {
+          deps.log('StartupSyncChecker: 账本 ${c.ledger.name} preview 为空，跳过');
+          applied++;
+          continue;
+        }
+
+        // 一键应用：所有变更都选中（selected 字段默认 true）
+        final selected = preview.changes.where((ch) => ch.selected).toList();
+        if (selected.isEmpty) {
+          applied++;
+          continue;
+        }
+
+        final result = await deps.applyPreviewChanges(
+          ledgerId: c.ledger.id,
+          selectedChanges: selected,
+          importData: previewResult.importData,
+        );
+        totalChanges += result.totalCount;
+        deps.runAfterDownload();
+        successCount++;
+        applied++;
+      } catch (e) {
+        failCount++;
+        deps.log('StartupSyncChecker: 账本 ${c.ledger.name} applyAll 失败: $e');
+        // applyAll 模式下错误不弹独立 dialog，最终汇总提示
+      }
+    }
+
+    if (failCount == 0) {
+      controller.done('已合并 $successCount 个账本'
+          '${totalChanges > 0 ? '，共 $totalChanges 条变更' : ''}');
+    } else if (successCount == 0) {
+      controller.error('全部 $failCount 个账本合并失败');
+    } else {
+      controller.done('已合并 $successCount 个账本，$failCount 个失败'
+          '${totalChanges > 0 ? '，共 $totalChanges 条变更' : ''}');
+    }
+  }
+
+  /// 逐个确认：每个账本独立弹窗，用户可分项勾选
+  ///
+  /// 调用前 overlay 已被 dismiss，showDialog 接管交互。
+  Future<void> _confirmEach(List<LedgerCandidate> candidates) async {
+    for (final c in candidates) {
+      try {
+        final previewResult = await deps.downloadAndPreview(c.ledger.id);
+        if (previewResult == null) {
+          deps.log('StartupSyncChecker: 账本 ${c.ledger.name} 云端无数据，跳过');
+          continue;
+        }
+
+        if (previewResult.preview == null) {
+          // 旧格式：弹全量替换确认
+          await _handleLegacyFormat(c.ledger);
+          continue;
+        }
+
+        final preview = previewResult.preview!;
+        if (preview.isEmpty) {
+          deps.log('StartupSyncChecker: 账本 ${c.ledger.name} preview 为空，跳过');
+          continue;
+        }
+
+        // 弹逐账本汇总对话框
+        final choice = await deps.showPerLedgerDialog(
+          ledger: c.ledger,
+          preview: preview,
+        );
+        switch (choice) {
+          case LedgerDialogChoice.skip:
+            continue;
+          case LedgerDialogChoice.skipRest:
+            return;
+          case LedgerDialogChoice.viewDetail:
+            // 走同步预览弹窗
+            final selected = await deps.showSyncPreviewDialog(preview);
+            if (selected == null || selected.isEmpty) {
+              continue;
+            }
+            final result = await deps.applyPreviewChanges(
+              ledgerId: c.ledger.id,
+              selectedChanges: selected,
+              importData: previewResult.importData,
+            );
+            deps.runAfterDownload();
+            deps.showLegacyInfo(
+                '账本「${c.ledger.name}」已应用 ${result.totalCount} 条变更');
+            break;
+        }
+      } catch (e) {
+        deps.showLegacyError(_formatErrorMessage(c.ledger.name, e));
+        deps.log('StartupSyncChecker: 账本 ${c.ledger.name} confirmEach 失败: $e');
+      }
+    }
+  }
+
+  /// 旧格式（v5 及以下）的全量替换流程
+  Future<void> _handleLegacyFormat(Ledger ledger) async {
+    await deps.downloadAndRestoreToCurrentLedger(ledgerId: ledger.id);
+    deps.runAfterDownload();
+    deps.log('StartupSyncChecker: 账本 ${ledger.name} 旧格式全量替换完成');
+  }
+
+  /// 判断配置是否为路径 A
+  bool _isPathA(CloudServiceConfig config) {
+    switch (config.type) {
+      case CloudBackendType.s3:
+      case CloudBackendType.webdav:
+      case CloudBackendType.supabase:
+      case CloudBackendType.icloud:
+        return true;
+      case CloudBackendType.local:
+      case CloudBackendType.beecountCloud:
+        return false;
+    }
+  }
+
+  /// 格式化错误消息
+  String _formatErrorMessage(String ledgerName, Object error) {
+    return '账本「$ledgerName」处理失败：$error';
+  }
+}
+
+/// StartupSyncCheckerDeps 上用于 confirmEach 流程的扩展方法
+///
+/// confirmEach 模式下 overlay 已关闭，需要直接用 showDialog 弹窗，
+/// 这两个方法封装了 showDialog 调用，避免污染核心接口。
+/// 已废弃：直接放到 StartupSyncCheckerDeps 接口里。
+
+/// 生产环境依赖：包装 WidgetRef + 现有 UI 组件
+class WidgetRefDeps implements StartupSyncCheckerDeps {
+  WidgetRefDeps(this._ref, this._syncManager, this._context);
+
+  final WidgetRef _ref;
+  final TransactionsSyncManager _syncManager;
+  final BuildContext _context;
+
+  @override
+  Future<CloudServiceConfig> getActiveConfig() async {
+    return await _ref.read(activeCloudConfigProvider.future);
+  }
+
+  @override
+  bool get isSyncServicePathA => true; // 调用方已确认是 TransactionsSyncManager
+
+  @override
+  Future<List<Ledger>> getAllLedgers() async {
+    return _ref.read(repositoryProvider).getAllLedgers();
+  }
+
+  @override
+  Future<SyncStatus> getStatus(int ledgerId) =>
+      _syncManager.getStatus(ledgerId: ledgerId);
+
+  @override
+  Future<DownloadAndPreviewResult?> downloadAndPreview(int ledgerId) =>
+      _syncManager.downloadAndPreview(ledgerId: ledgerId);
+
+  @override
+  Future<SyncApplyResult> applyPreviewChanges({
+    required int ledgerId,
+    required List<SyncChange> selectedChanges,
+    required ImportData importData,
+  }) =>
+      _syncManager.applyPreviewChanges(
+        ledgerId: ledgerId,
+        selectedChanges: selectedChanges,
+        importData: importData,
+      );
+
+  @override
+  Future<({int inserted, int deletedDup})> downloadAndRestoreToCurrentLedger({
+    required int ledgerId,
+  }) =>
+      _syncManager.downloadAndRestoreToCurrentLedger(ledgerId: ledgerId);
+
+  @override
+  Future<LedgerDialogChoice> showPerLedgerDialog({
+    required Ledger ledger,
+    required SyncPreview preview,
+  }) async {
+    final l10n = AppLocalizations.of(_context);
+    final message = l10n.startupSyncCheckLedgerMessage(
+      ledger.name,
+      preview.addedCount,
+      preview.modifiedCount,
+      preview.deletedCount,
+    );
+
+    // 三按钮：跳过剩余 / 暂不合并 / 查看详情并应用
+    return await showDialog<LedgerDialogChoice>(
+          context: _context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            backgroundColor: BeeTokens.surfaceElevated(ctx),
+            title: Text(l10n.startupSyncCheckTitle),
+            content: Text(message),
+            actions: [
+              OutlinedButton(
+                onPressed: () =>
+                    Navigator.pop(ctx, LedgerDialogChoice.skipRest),
+                child: Text(l10n.startupSyncCheckSkipRest),
+              ),
+              OutlinedButton(
+                onPressed: () => Navigator.pop(ctx, LedgerDialogChoice.skip),
+                child: Text(l10n.startupSyncCheckSkip),
+              ),
+              FilledButton(
+                onPressed: () =>
+                    Navigator.pop(ctx, LedgerDialogChoice.viewDetail),
+                child: Text(l10n.startupSyncCheckViewDetail),
+              ),
+            ],
+          ),
+        ) ??
+        LedgerDialogChoice.skip;
+  }
+
+  @override
+  Future<List<SyncChange>?> showSyncPreviewDialog(SyncPreview preview) {
+    return spd.showSyncPreviewDialog(
+      _context,
+      preview: preview,
+      primaryColor: Theme.of(_context).colorScheme.primary,
+    );
+  }
+
+  @override
+  void runAfterDownload() {
+    PostProcessor.runAfterDownload(_ref);
+  }
+
+  @override
+  void showLegacyError(String message) {
+    final l10n = AppLocalizations.of(_context);
+    AppDialog.error<void>(
+      _context,
+      title: l10n.startupSyncCheckTitle,
+      message: message,
+    );
+  }
+
+  @override
+  void showLegacyInfo(String message) {
+    final l10n = AppLocalizations.of(_context);
+    AppDialog.info<void>(
+      _context,
+      title: l10n.startupSyncCheckTitle,
+      message: message,
+    );
+  }
+
+  @override
+  void log(String message) {
+    logger.info('StartupSyncCheck', message);
+  }
+}

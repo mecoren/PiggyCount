@@ -1,7 +1,19 @@
 allprojects {
     repositories {
+        // 国内镜像：必须放在 google()/mavenCentral() 之前以加速依赖解析
+        // 解决问题：integration_test 用动态版本 androidx.test:runner:1.2+，
+        // 某些三方插件声明的 jitpack.io 在国内 DNS 不可达 → 构建中断。
+        // 阿里云 public 镜像已聚合 google/mavenCentral/jcenter，可解析 androidx 依赖。
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/public' }
+        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
         google()
         mavenCentral()
+    }
+    // 移除子项目/插件声明的 jitpack.io 仓库（国内不可达，且无需它即可解析 androidx.test）
+    // 用 removeIf 避免迭代时修改集合抛 ConcurrentModificationException
+    repositories.removeIf { repo ->
+        repo.url != null && repo.url.toString().contains('jitpack.io')
     }
 }
 

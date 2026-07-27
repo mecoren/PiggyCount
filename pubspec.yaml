@@ -17,7 +17,7 @@ dependencies:
   sqlite3_flutter_libs: ^0.5.24
   path_provider: ^2.1.4
   path: ^1.9.0
-  intl: ^0.19.0
+  intl: ^0.20.2
   decimal: ^3.0.0
   fl_chart: ^0.68.0
   shared_preferences: ^2.3.2
@@ -83,6 +83,10 @@ dependencies:
   webview_flutter_wkwebview: ^3.23.0
   country_flags: ^3.2.0
   jovial_svg: ^1.1.29
+  # E2EE 同步加密: AES-256-GCM + Argon2id (pure Dart, 全平台)
+  cryptography: ^2.7.0
+  # 密钥安全存储: iOS Keychain / Android Keystore
+  flutter_secure_storage: ^9.2.2
 
 dev_dependencies:
   flutter_test:
@@ -93,8 +97,6 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.4
   # Testing framework enhancements
   mocktail: ^1.0.4
-  integration_test:
-    sdk: flutter
 
 dependency_overrides:
   # Fix record_linux compatibility issue (we target iOS/Android only)

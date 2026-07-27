@@ -5,7 +5,9 @@ import 'package:drift/drift.dart' as drift;
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' as fcs;
 
 import '../data/db.dart';
+import '../data/encryption/encrypted_cloud_provider.dart';
 import '../data/repositories/base_repository.dart';
+import '../domain/encryption/encryption_service.dart';
 import '../models/ledger_display_item.dart';
 import '../services/data_import_service.dart';
 import '../services/system/logger_service.dart';
@@ -21,8 +23,20 @@ class TransactionsSyncManager implements SyncService {
   final BeeDatabase db;
   final BaseRepository repo;
 
+  /// 可选的加密服务。若非 null 且加密已开启，会在 _initialize() 中
+  /// 用 [EncryptedCloudProvider] 包装原 CloudProvider，使云端只见密文。
+  final EncryptionService? encryptionService;
+
   fcs.CloudSyncManager<int>? _syncManager;
   fcs.CloudProvider? _provider;
+
+  /// 未装饰的原始 storage（装饰前缓存），供 [rawStorage] getter 暴露
+  ///
+  /// 用途：[EncryptionService.enableFromCloud] 需要下载密文字符串本身
+  /// （而非 EncryptedCloudStorageService 解密后的明文）来提取 salt，
+  /// 因此必须传入未装饰的 raw storage。
+  fcs.CloudStorageService? _rawStorage;
+
   bool _isInitializing = false;
   bool _isInitialized = false;
 
@@ -34,6 +48,7 @@ class TransactionsSyncManager implements SyncService {
     required this.config,
     required this.db,
     required this.repo,
+    this.encryptionService,
   });
 
   @override
@@ -43,6 +58,109 @@ class TransactionsSyncManager implements SyncService {
     } else {
       _statusCache.clear();
     }
+  }
+
+  /// 未装饰的原始 storage（用于 [EncryptionService.enableFromCloud] 探测云端密文）
+  ///
+  /// 返回值：
+  /// - 非 null：raw storage 可用，可传给 `enableFromCloud`
+  /// - null：provider 尚未初始化（需先调 [ensureInitialized]）或不可用
+  ///         （如 iCloud 未登录），调用方应回退到 [EncryptionService.enable]
+  ///
+  /// 注意：返回的是**未装饰**的 storage，download 会返回原始密文字符串
+  /// （BEECRYPT1:...），不会自动解密。这正是 enableFromCloud 所需。
+  fcs.CloudStorageService? get rawStorage => _rawStorage;
+
+  /// 触发延迟初始化（公开入口，供 UI 层在调用 rawStorage 前预热）
+  ///
+  /// 幂等：已初始化时立即返回，正在初始化时等待完成。
+  Future<void> ensureInitialized() => _ensureInitialized();
+
+  /// 强制重新初始化（用于加密开关变更后立即生效）
+  ///
+  /// 场景：用户在 [EncryptionSettingsPage] 开启/关闭/修改加密密码后，
+  /// 装饰器必须用新的加密状态重建才能生效。本方法：
+  /// 1. 标记 _isInitialized = false，使下次方法调用触发 _ensureInitialized
+  /// 2. dispose 当前 _provider（释放网络连接/资源）
+  /// 3. 清空缓存，避免读到旧的状态
+  ///
+  /// 重初始化是惰性的：本方法不立即重建，而是在下次 upload/download/getStatus
+  /// 等方法被调用时按需重建。这样可避免在用户没立即触发同步时浪费资源。
+  ///
+  /// 注意：调用方应保证在调用此方法期间没有正在进行的同步操作。
+  /// 若有，正在进行的操作仍会使用旧 provider 完成自身流程（不会中断），
+  /// 但其结果可能反映旧的加密状态。
+  Future<void> reinitializeForEncryption() async {
+    _isInitialized = false;
+    _isInitializing = false;
+
+    // 释放旧 provider（会触发 EncryptedCloudProvider.dispose → inner.dispose）
+    // 不 await：dispose 失败不应阻塞重初始化流程
+    try {
+      await _provider?.dispose();
+    } catch (e) {
+      logger.warning('CloudSync', '旧 provider dispose 失败（忽略）: $e');
+    }
+    _provider = null;
+    _syncManager = null;
+    _rawStorage = null;
+
+    // 清空所有缓存状态
+    _statusCache.clear();
+    _recentLocalChangeAt.clear();
+    _recentUpload.clear();
+
+    logger.info('CloudSync', '已标记需重新初始化（加密状态变更）');
+  }
+
+  /// 开启加密后的全量重加密 + 重新初始化（原子流程）
+  ///
+  /// 专为 [EncryptionService.enable] 之后的流程设计，组合两个步骤：
+  /// 1. 用当前（未装饰的）_provider.storage 调用
+  ///    [EncryptionService.reEncryptExistingCloudData]，把云端所有
+  ///    ledger_*.json 重加密为 BEECRYPT1: 格式
+  /// 2. 调用 [reinitializeForEncryption]，让下次同步使用新的加密装饰器
+  ///
+  /// 关键点：必须使用未装饰的 raw storage，否则会双重加密。
+  /// 当前 _provider 是未装饰的（因为 enable 之前加密是关闭的，
+  /// _initialize 不会包装 EncryptedCloudProvider）。
+  ///
+  /// 返回值：
+  /// - 非 null：重加密完成，含 success/failed/skipped 计数
+  /// - null：_provider 未初始化（如 iCloud 未登录），跳过重加密，
+  ///   但仍执行了 reinitializeForEncryption
+  ///
+  /// 注意：此方法仅适用于 enable 流程。changePassword 流程需不同的
+  /// 处理（需先用旧 key 解密，再切新 key 加密），不在此方法范畴。
+  Future<ReEncryptResult?> reEncryptCloudAndReinit({
+    required EncryptionService encryptionService,
+  }) async {
+    // 取当前 raw storage（不调 _ensureInitialized，避免在加密已开启时
+    // 触发重新初始化导致 _provider 被包装）
+    final rawStorage = _provider?.storage;
+
+    ReEncryptResult? result;
+    if (rawStorage != null) {
+      try {
+        result = await encryptionService.reEncryptExistingCloudData(
+          storage: rawStorage,
+        );
+        logger.info(
+          'CloudSync',
+          '云端重加密完成: success=${result.success}, '
+          'failed=${result.failed}, skipped=${result.skipped}',
+        );
+      } catch (e, stack) {
+        logger.error('CloudSync', '云端重加密失败', e);
+        logger.error('CloudSync', '堆栈', stack);
+        // 重加密失败仍继续 reinit，保证下次同步用新的加密状态
+      }
+    } else {
+      logger.warning('CloudSync', 'provider 未初始化，跳过云端重加密');
+    }
+
+    await reinitializeForEncryption();
+    return result;
   }
 
   /// 确保服务已初始化（延迟初始化）
@@ -74,6 +192,24 @@ class TransactionsSyncManager implements SyncService {
       // Provider 创建失败（如 iCloud 未登录），标记为已初始化但无法使用
       logger.warning('CloudSync', 'Provider not available for ${config.type}');
       return;
+    }
+
+    // 装饰前缓存原始 storage 引用，供 [rawStorage] getter 暴露
+    // 用途：enableFromCloud 需要未装饰的 storage 来下载密文字符串本身
+    _rawStorage = _provider!.storage;
+
+    // E2EE: 若加密服务已注入且加密已开启，用 EncryptedCloudProvider 包装一层。
+    // 装饰器只重写 storage getter，其余方法透传，对 CloudSyncManager 完全透明。
+    // 加密未开启时直接用原 provider，避免无谓的包装开销。
+    if (encryptionService != null) {
+      final enabled = await encryptionService!.isEnabled;
+      if (enabled) {
+        _provider = EncryptedCloudProvider(
+          inner: _provider!,
+          encryptionService: encryptionService!,
+        );
+        logger.info('CloudSync', 'E2EE enabled, provider wrapped');
+      }
     }
 
     _syncManager = fcs.CloudSyncManager<int>(

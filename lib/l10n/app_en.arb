@@ -26,6 +26,54 @@
   "commonNo": "No",
   "commonEmpty": "No data",
   "commonError": "Error",
+  "startupSyncCheckTitle": "Cloud update available",
+  "startupSyncCheckSummaryMessage": "Detected cloud updates for {count} ledger(s). Merge to local?",
+  "@startupSyncCheckSummaryMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "startupSyncCheckLedgerMessage": "Ledger \"{ledger}\" has {added} added, {modified} modified, {deleted} deleted on cloud. Merge to local?",
+  "@startupSyncCheckLedgerMessage": {
+    "placeholders": {
+      "ledger": {
+        "type": "String"
+      },
+      "added": {
+        "type": "int"
+      },
+      "modified": {
+        "type": "int"
+      },
+      "deleted": {
+        "type": "int"
+      }
+    }
+  },
+  "startupSyncCheckApplyAll": "Apply all",
+  "startupSyncCheckConfirmEach": "Confirm each",
+  "startupSyncCheckViewDetail": "View detail & apply",
+  "startupSyncCheckSkip": "Skip",
+  "startupSyncCheckSkipRest": "Skip rest",
+  "startupSyncCheckCheckingTitle": "Checking cloud updates",
+  "startupSyncCheckCheckingHint": "Please wait...",
+  "startupSyncCheckCheckingProgress": "Checking {checked}/{total}",
+  "@startupSyncCheckCheckingProgress": {
+    "placeholders": {
+      "checked": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "startupSyncCheckApplyingTitle": "Merging cloud data",
+  "startupSyncCheckApplyingProgress": "Merging {applied}/{total}",
+  "@startupSyncCheckApplyingProgress": {
+    "placeholders": {
+      "applied": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
   "commonSuccess": "Success",
   "commonFailed": "Failed",
   "commonBack": "Back",
@@ -184,6 +232,16 @@
   "searchNoResults": "No matching results found",
   "searchBatchMode": "Batch Operations",
   "searchBatchModeWithCount": "Batch Operations ({selected}/{total})",
+  "@searchBatchModeWithCount": {
+    "placeholders": {
+      "selected": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "searchExitBatchMode": "Exit Batch Mode",
   "searchSelectAll": "Select All",
   "searchDeselectAll": "Deselect All",
@@ -459,8 +517,12 @@
   "mineGreetingNamed": "{greeting}, {name}",
   "@mineGreetingNamed": {
     "placeholders": {
-      "greeting": { "type": "String" },
-      "name": { "type": "String" }
+      "greeting": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
     }
   },
   "mineProfileEditTitle": "Edit profile",
@@ -1598,6 +1660,14 @@
   "cloudSwitchFailedConfigMissing": "Please configure this cloud service first",
   "cloudConfigInvalidTitle": "Invalid Configuration",
   "cloudConfigInvalidMessage": "Please fill in complete information",
+  "fieldCannotBeEmpty": "{field} cannot be empty",
+  "@fieldCannotBeEmpty": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      }
+    }
+  },
   "cloudSaveFailed": "Save Failed",
   "cloudSwitchedTo": "Switched to {type}",
   "@cloudSwitchedTo": {
@@ -1825,23 +1895,43 @@
   "autoBillingNotifyProcessFailedTitle": "❌ Processing failed",
   "autoBillingNotifyProcessFailedBody": "Error: {error}",
   "@autoBillingNotifyProcessFailedBody": {
-    "placeholders": { "error": { "type": "String" } }
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "autoBillingNotifySuccessSingleTitle": "✅ Auto billing succeeded ¥{amount}",
   "@autoBillingNotifySuccessSingleTitle": {
-    "placeholders": { "amount": { "type": "String" } }
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
   },
   "autoBillingNotifySuccessMultiTitle": "✅ Auto billing succeeded ({count} entries)",
   "@autoBillingNotifySuccessMultiTitle": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "autoBillingNotifySuccessMultiBody": "Total ¥{amount}",
   "@autoBillingNotifySuccessMultiBody": {
-    "placeholders": { "amount": { "type": "String" } }
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
   },
   "autoBillingNotifySuccessSingleBodyNote": "Note: {note}",
   "@autoBillingNotifySuccessSingleBodyNote": {
-    "placeholders": { "note": { "type": "String" } }
+    "placeholders": {
+      "note": {
+        "type": "String"
+      }
+    }
   },
   "autoBillingNotifySuccessSingleBodyDefault": "Record created automatically",
   "aiOcrNoLedger": "Ledger not found",
@@ -1894,8 +1984,12 @@
   "cloudSyncComplete": "Sync complete: pushed {pushed}, pulled {pulled}",
   "@cloudSyncComplete": {
     "placeholders": {
-      "pushed": {"type": "int"},
-      "pulled": {"type": "int"}
+      "pushed": {
+        "type": "int"
+      },
+      "pulled": {
+        "type": "int"
+      }
     }
   },
   "cloudAutoSyncHint": "Auto-sync to cloud after data changes",
@@ -1974,13 +2068,17 @@
   "productPromoEmailSubject": "Beta access request - {productName}",
   "@productPromoEmailSubject": {
     "placeholders": {
-      "productName": { "type": "String" }
+      "productName": {
+        "type": "String"
+      }
     }
   },
   "productPromoEmailBody": "Hi,\n\nI'd like to join the closed beta for {productName} on Google Play. My Google account email is:\n\n(please fill in your Gmail / Google account email)\n\nThanks!",
   "@productPromoEmailBody": {
     "placeholders": {
-      "productName": { "type": "String" }
+      "productName": {
+        "type": "String"
+      }
     }
   },
   "logCenterTitle": "Log Center",
@@ -2848,7 +2946,6 @@
   "budgetManagementDesc": "Set monthly budget and control spending",
   "budgetSetupHint": "Set a budget to control monthly spending",
   "budgetSetupAction": "Set up",
-
   "cloudCollabDevicesPageTitle": "Device Sessions",
   "cloudCollabDevicesPageSubtitle": "Manage active devices",
   "cloudCollabDevicesViewAllSessions": "Show all sessions",
@@ -2860,65 +2957,86 @@
   "cloudCollabDeviceAppVersion": "App: {version}",
   "@cloudCollabDeviceAppVersion": {
     "placeholders": {
-      "version": { "type": "String" }
+      "version": {
+        "type": "String"
+      }
     }
   },
   "cloudCollabDeviceOsVersion": "OS: {version}",
   "@cloudCollabDeviceOsVersion": {
     "placeholders": {
-      "version": { "type": "String" }
+      "version": {
+        "type": "String"
+      }
     }
   },
   "cloudCollabDeviceModel": "Model: {model}",
   "@cloudCollabDeviceModel": {
     "placeholders": {
-      "model": { "type": "String" }
+      "model": {
+        "type": "String"
+      }
     }
   },
   "cloudCollabDeviceLastIp": "IP: {ip}",
   "@cloudCollabDeviceLastIp": {
     "placeholders": {
-      "ip": { "type": "String" }
+      "ip": {
+        "type": "String"
+      }
     }
   },
   "cloudCollabDeviceSessionCount": "Sessions: {count}",
   "@cloudCollabDeviceSessionCount": {
     "placeholders": {
-      "count": { "type": "String" }
+      "count": {
+        "type": "String"
+      }
     }
   },
   "cloudCollabDeviceLastSeen": "Last seen: {time}",
   "@cloudCollabDeviceLastSeen": {
     "placeholders": {
-      "time": { "type": "String" }
+      "time": {
+        "type": "String"
+      }
     }
   },
   "cloudCollabDeviceCreatedAt": "Created: {time}",
   "@cloudCollabDeviceCreatedAt": {
     "placeholders": {
-      "time": { "type": "String" }
+      "time": {
+        "type": "String"
+      }
     }
   },
   "cloudCollabDeviceRevokeTitle": "Revoke Device",
   "cloudCollabDeviceRevokeMessage": "Revoke device {name} ({id})?",
   "@cloudCollabDeviceRevokeMessage": {
     "placeholders": {
-      "name": { "type": "String" },
-      "id": { "type": "String" }
+      "name": {
+        "type": "String"
+      },
+      "id": {
+        "type": "String"
+      }
     }
   },
   "cloudCollabDeviceRevokeMultipleMessage": "Revoke {count} sessions for device {name}?",
   "@cloudCollabDeviceRevokeMultipleMessage": {
     "placeholders": {
-      "name": { "type": "String" },
-      "count": { "type": "String" }
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
     }
   },
   "cloudCollabDeviceRevoked": "Device revoked",
   "cloudCollabUnavailableMessage": "Cloud sync is unavailable.",
   "cloudCollabScopeDeniedHint": "Server has not enabled ALLOW_APP_RW_SCOPES, so device sessions are unavailable.",
   "cloudCollabScopeDeniedAction": "Set ALLOW_APP_RW_SCOPES=true in server .env, restart the service, then sign in again.",
-
   "syncHealthTitle": "Sync status",
   "cloudSyncHelpTitle": "How sync works · Why it sometimes stalls",
   "cloudSyncHelpModesTitle": "Three sync modes",
@@ -2933,7 +3051,9 @@
   "syncHealthCheckFailed": "Check failed: {msg}",
   "@syncHealthCheckFailed": {
     "placeholders": {
-      "msg": { "type": "String" }
+      "msg": {
+        "type": "String"
+      }
     }
   },
   "syncHealthHasDiff": "Diff detected; auto-synced",
@@ -2951,17 +3071,22 @@
   "syncHealthValue": "Local {local} · Cloud {remote}",
   "@syncHealthValue": {
     "placeholders": {
-      "local": { "type": "int" },
-      "remote": { "type": "int" }
+      "local": {
+        "type": "int"
+      },
+      "remote": {
+        "type": "int"
+      }
     }
   },
   "syncHealthValueRemoteMissing": "Local {local} · Cloud —",
   "@syncHealthValueRemoteMissing": {
     "placeholders": {
-      "local": { "type": "int" }
+      "local": {
+        "type": "int"
+      }
     }
   },
-
   "twofaChallengeTitle": "Two-factor authentication",
   "twofaMethodTotp": "Code",
   "twofaMethodRecovery": "Recovery code",
@@ -2972,7 +3097,9 @@
   "twofaCountdown": "Time remaining {time}",
   "@twofaCountdown": {
     "placeholders": {
-      "time": { "type": "String" }
+      "time": {
+        "type": "String"
+      }
     }
   },
   "twofaVerifyButton": "Verify",
@@ -2982,7 +3109,9 @@
   "twofaStatusEnabledAt": "Enabled on {date}",
   "@twofaStatusEnabledAt": {
     "placeholders": {
-      "date": { "type": "String" }
+      "date": {
+        "type": "String"
+      }
     }
   },
   "twofaStatusManageHint": "Manage from the Web app (enable / disable / regenerate recovery codes)",
@@ -2999,17 +3128,53 @@
   "sharedJoinPreviewButton": "Verify code",
   "sharedJoinAcceptButton": "Join",
   "sharedJoinInvitedBy": "{name} invited you to join",
-  "@sharedJoinInvitedBy": { "placeholders": { "name": { "type": "String" } } },
+  "@sharedJoinInvitedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "sharedJoinRoleLine": "Role: {role}",
-  "@sharedJoinRoleLine": { "placeholders": { "role": { "type": "String" } } },
+  "@sharedJoinRoleLine": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
   "sharedJoinExpiresInMinutes": "Expires in {n} min",
-  "@sharedJoinExpiresInMinutes": { "placeholders": { "n": { "type": "int" } } },
+  "@sharedJoinExpiresInMinutes": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "sharedJoinExpiresInHours": "Expires in {n}h",
-  "@sharedJoinExpiresInHours": { "placeholders": { "n": { "type": "int" } } },
+  "@sharedJoinExpiresInHours": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "sharedJoinExpiresInDays": "Expires in {n}d",
-  "@sharedJoinExpiresInDays": { "placeholders": { "n": { "type": "int" } } },
+  "@sharedJoinExpiresInDays": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "sharedJoinSuccess": "Joined \"{name}\"",
-  "@sharedJoinSuccess": { "placeholders": { "name": { "type": "String" } } },
+  "@sharedJoinSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "sharedJoinCodeFormatError": "Invite code must be 6 letters/digits.",
   "sharedJoinInvalidOrExpired": "Invite code is invalid or expired. Ask the inviter for a new one.",
   "sharedJoinAlreadyMember": "You are already a member of this ledger.",
@@ -3018,24 +3183,48 @@
   "sharedInviteFormRole": "Role",
   "sharedInviteFormExpiry": "Valid for",
   "sharedInviteExpiryHours": "{n} h",
-  "@sharedInviteExpiryHours": { "placeholders": { "n": { "type": "int" } } },
+  "@sharedInviteExpiryHours": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "sharedInviteExpiryDays": "{n} day",
-  "@sharedInviteExpiryDays": { "placeholders": { "n": { "type": "int" } } },
+  "@sharedInviteExpiryDays": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "sharedInviteGenerate": "Generate invite code",
   "sharedInviteGenerateAnother": "Generate another code",
   "sharedInviteCopyCode": "Copy code",
   "sharedInviteCopyLink": "Copy link",
   "sharedInviteShareLink": "Share link",
   "sharedInviteExpiresAt": "Expires at {dt}",
-  "@sharedInviteExpiresAt": { "placeholders": { "dt": { "type": "String" } } },
+  "@sharedInviteExpiresAt": {
+    "placeholders": {
+      "dt": {
+        "type": "String"
+      }
+    }
+  },
   "sharedInviteWarning": "⚠️ Don't post invite codes to public groups / social. Anyone with the code can join. Revoke and regenerate from Members if leaked.",
   "sharedInviteInstruction": "Send the code or short link to the other person. After they install BeeCount, they can tap the link or enter the code from \"Me → Join shared ledger\".",
   "sharedInviteShareText": "I'm inviting you to BeeCount shared ledger \"{ledger}\".\n\nCode: {code}\nLink: {url}\n\nTap the link, or open BeeCount → Me → Join shared ledger and enter this code.",
   "@sharedInviteShareText": {
     "placeholders": {
-      "ledger": { "type": "String" },
-      "code": { "type": "String" },
-      "url": { "type": "String" }
+      "ledger": {
+        "type": "String"
+      },
+      "code": {
+        "type": "String"
+      },
+      "url": {
+        "type": "String"
+      }
     }
   },
   "sharedMembersPageTitle": "Members",
@@ -3044,27 +3233,69 @@
   "sharedMembersLeaveCta": "Leave ledger",
   "sharedMembersLeaveTitle": "Leave ledger",
   "sharedMembersLeaveConfirm": "After leaving \"{name}\" you won't be able to access its transactions. Continue?",
-  "@sharedMembersLeaveConfirm": { "placeholders": { "name": { "type": "String" } } },
+  "@sharedMembersLeaveConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "sharedMembersLeaveDone": "Left the ledger",
   "sharedMembersRemoveTitle": "Remove member",
   "sharedMembersRemoveCta": "Remove this member",
   "sharedMembersRemoveConfirm": "Remove {name}? They will immediately lose access to this ledger.",
-  "@sharedMembersRemoveConfirm": { "placeholders": { "name": { "type": "String" } } },
+  "@sharedMembersRemoveConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "sharedMembersRemoved": "Member removed",
   "sharedMembersTransferTitle": "Transfer ownership",
   "sharedMembersTransferTo": "Transfer to this member",
   "sharedMembersTransferConfirm": "Transfer ownership to {name}? You will become an editor and can no longer invite, rename, or delete the ledger.",
-  "@sharedMembersTransferConfirm": { "placeholders": { "name": { "type": "String" } } },
+  "@sharedMembersTransferConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "sharedMembersTransferConfirmCta": "Transfer",
   "sharedMembersTransferDone": "Ownership transferred",
   "sharedTxRecordedBy": "recorded by {name}",
-  "@sharedTxRecordedBy": { "placeholders": { "name": { "type": "String" } } },
+  "@sharedTxRecordedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "sharedTxCreatedBy": "Created by {name}",
-  "@sharedTxCreatedBy": { "placeholders": { "name": { "type": "String" } } },
+  "@sharedTxCreatedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "sharedTxEditedBy": "Last edited by {name}",
-  "@sharedTxEditedBy": { "placeholders": { "name": { "type": "String" } } },
+  "@sharedTxEditedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "sharedTxCreatedAndEditedBy": "Created and edited by {name}",
-  "@sharedTxCreatedAndEditedBy": { "placeholders": { "name": { "type": "String" } } },
+  "@sharedTxCreatedAndEditedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "sharedRequiresCloudSync": "Please enable cloud sync first",
   "sharedMembersStatsTitle": "Member balances",
   "sharedMembersStatsEmpty": "No transactions yet",
@@ -3072,7 +3303,13 @@
   "sharedMembersStatsIncome": "Income",
   "sharedMembersStatsExpense": "Expense",
   "sharedMembersStatsTxCount": "{count} tx",
-  "@sharedMembersStatsTxCount": { "placeholders": { "count": { "type": "int" } } },
+  "@sharedMembersStatsTxCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "maintenanceOrphanCleanupTitle": "Data Cleanup",
   "maintenanceOrphanCleanupSubtitle": "Detect and clean local orphan data",
   "maintenanceOrphanRescan": "Rescan",
@@ -3081,56 +3318,152 @@
   "maintenanceOrphanGroupFile": "File orphans",
   "maintenanceOrphanGroupSync": "Sync state orphans",
   "maintenanceOrphanSummary": "Found {count} issue(s)",
-  "@maintenanceOrphanSummary": { "placeholders": { "count": { "type": "int" } } },
+  "@maintenanceOrphanSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "maintenanceOrphanSummarySize": "Reclaimable space ~ {size}",
-  "@maintenanceOrphanSummarySize": { "placeholders": { "size": { "type": "String" } } },
+  "@maintenanceOrphanSummarySize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
   "maintenanceOrphanSelectAll": "Select all",
   "maintenanceOrphanDeselectAll": "Deselect all",
   "maintenanceOrphanDeleteOne": "Delete this",
   "maintenanceOrphanSelectedHint": "{count} selected",
-  "@maintenanceOrphanSelectedHint": { "placeholders": { "count": { "type": "int" } } },
+  "@maintenanceOrphanSelectedHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "maintenanceOrphanCleanSelected": "Clean selected",
   "maintenanceOrphanConfirmTitle": "Confirm cleanup",
   "maintenanceOrphanConfirmDeleteOne": "Delete \"{title}\"? This cannot be undone.",
-  "@maintenanceOrphanConfirmDeleteOne": { "placeholders": { "title": { "type": "String" } } },
+  "@maintenanceOrphanConfirmDeleteOne": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "maintenanceOrphanConfirmDeleteBatch": "Delete the {count} selected item(s)? This cannot be undone.",
-  "@maintenanceOrphanConfirmDeleteBatch": { "placeholders": { "count": { "type": "int" } } },
+  "@maintenanceOrphanConfirmDeleteBatch": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "maintenanceOrphanCleanSuccess": "Cleaned {count} item(s)",
-  "@maintenanceOrphanCleanSuccess": { "placeholders": { "count": { "type": "int" } } },
+  "@maintenanceOrphanCleanSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "maintenanceOrphanCleanPartial": "Cleaned {ok} item(s), {fail} failed",
-  "@maintenanceOrphanCleanPartial": { "placeholders": { "ok": { "type": "int" }, "fail": { "type": "int" } } },
+  "@maintenanceOrphanCleanPartial": {
+    "placeholders": {
+      "ok": {
+        "type": "int"
+      },
+      "fail": {
+        "type": "int"
+      }
+    }
+  },
   "syncProgressTitle": "Syncing",
   "syncProgressCount": "{applied} / {total}",
-  "@syncProgressCount": { "placeholders": { "applied": { "type": "int" }, "total": { "type": "int" } } },
+  "@syncProgressCount": {
+    "placeholders": {
+      "applied": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "exchangeRatePageTitle": "Exchange Rates",
   "exchangeRateEntrySubtitle": "Auto-fetched rates with manual override",
   "baseCurrencyLabel": "Primary Currency",
   "rateSourceAuto": "Auto",
   "rateSourceManual": "Manual",
   "rateUpdatedAt": "Updated {date}",
-  "@rateUpdatedAt": {"placeholders": {"date": {"type": "String"}}},
+  "@rateUpdatedAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "rateNotFetched": "Not fetched",
   "rateTapToSet": "Tap to set manually",
   "rateEditTitle": "Edit Rate",
   "rateInverseHint": "Inverse: 1 {base} ≈ {rate} {quote}",
-  "@rateInverseHint": {"placeholders": {"base": {"type": "String"}, "rate": {"type": "String"}, "quote": {"type": "String"}}},
+  "@rateInverseHint": {
+    "placeholders": {
+      "base": {
+        "type": "String"
+      },
+      "rate": {
+        "type": "String"
+      },
+      "quote": {
+        "type": "String"
+      }
+    }
+  },
   "rateResetToAuto": "Reset to auto",
   "rateRefreshSuccess": "Rates updated",
   "rateRefreshFailed": "Fetch failed, you can set rates manually",
   "ratesEmptyHint": "Rates appear here once your accounts use different currencies",
   "rateDisclaimer": "Source: open exchange-rate data, updated daily. Conversion is for reference only and may differ from bank rates.",
   "convertedNetWorth": "Net worth (in {currency})",
-  "@convertedNetWorth": {"placeholders": {"currency": {"type": "String"}}},
+  "@convertedNetWorth": {
+    "placeholders": {
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
   "convertedFootnote": "Converted at {date} rates, tap to manage",
-  "@convertedFootnote": {"placeholders": {"date": {"type": "String"}}},
+  "@convertedFootnote": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "convertedPartialWarning": "{currencies} not converted, tap to set rates",
-  "@convertedPartialWarning": {"placeholders": {"currencies": {"type": "String"}}},
+  "@convertedPartialWarning": {
+    "placeholders": {
+      "currencies": {
+        "type": "String"
+      }
+    }
+  },
   "unconvertedBadge": "Not converted",
   "commonDetail": "Detail",
   "conversionDetailTitle": "Conversion Details",
   "assetConversionToggle": "Convert to primary currency",
   "rateManualApplied": "Applied {count} manual rates",
-  "@rateManualApplied": {"placeholders": {"count": {"type": "int"}}},
+  "@rateManualApplied": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "netWorthTrendTitle": "Net Worth Trend",
   "netWorthTrend3M": "3M",
   "netWorthTrend6M": "6M",
@@ -3151,20 +3484,37 @@
   "txCurrencyLabel": "Currency",
   "txRateLabel": "Rate",
   "txConvertedPreview": "≈ {amount} {currency}",
-  "@txConvertedPreview": { "placeholders": { "amount": {}, "currency": {} } },
+  "@txConvertedPreview": {
+    "placeholders": {
+      "amount": {},
+      "currency": {}
+    }
+  },
   "txRateMissingHint": "Please enter the rate for this entry before saving",
   "txCrossCurrencyTransferBlocked": "Cross-currency transfers are not supported yet. Record two entries or use same-currency accounts.",
   "ledgerBaseCurrencyLabel": "Primary currency",
   "statsConvertedFootnote": "Includes foreign currency, converted to {currency} at entry-time rates",
-  "@statsConvertedFootnote": { "placeholders": { "currency": {} } },
+  "@statsConvertedFootnote": {
+    "placeholders": {
+      "currency": {}
+    }
+  },
   "ledgerCurrencyChangeRecalcHint": "Changing the base currency will reconvert all history at current rates",
   "recalcForeignTxBanner": "Unconverted foreign-currency transactions detected in this ledger",
   "recalcForeignTxAction": "Reconvert at current rates",
   "recalcForeignTxDone": "Reconverted {count} foreign-currency transactions",
-  "@recalcForeignTxDone": { "placeholders": { "count": {} } },
+  "@recalcForeignTxDone": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "txCurrencyPickerTitle": "Select currency",
   "recalcSyncCountHint": "{count} transactions will be reconverted and synced",
-  "@recalcSyncCountHint": { "placeholders": { "count": {} } },
+  "@recalcSyncCountHint": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "exportCsvHeaderCurrency": "Currency",
   "importFieldCurrency": "Currency",
   "currencyMOP": "Macau Pataca",
@@ -3271,5 +3621,146 @@
   "currencyLSL": "Basotho Loti",
   "currencySZL": "Swazi Lilangeni",
   "currencyMGA": "Malagasy Ariary",
-  "currencyMRU": "Mauritanian Ouguiya"
+  "currencyMRU": "Mauritanian Ouguiya",
+  "cloudSyncEncryptTitle": "Sync Encryption",
+  "cloudSyncEncryptSubtitle": "Encrypt cloud backups with a password to protect ledger privacy",
+  "cloudSyncEncryptEnable": "Enable sync encryption",
+  "cloudSyncEncryptEnableSubtitle": "New uploads will be stored as ciphertext after enabling",
+  "cloudSyncEncryptEnabled": "Enabled",
+  "cloudSyncEncryptDisabled": "Disabled",
+  "cloudSyncEncryptSettings": "Encryption Settings",
+  "cloudSyncEncryptSetPassword": "Set Password",
+  "cloudSyncEncryptChangePassword": "Change Password",
+  "cloudSyncEncryptResetEncryption": "Reset Encryption",
+  "cloudSyncEncryptPasswordLabel": "Password",
+  "cloudSyncEncryptConfirmPasswordLabel": "Confirm Password",
+  "cloudSyncEncryptOldPasswordLabel": "Old Password",
+  "cloudSyncEncryptNewPasswordLabel": "New Password",
+  "cloudSyncEncryptPasswordHint": "At least 6 characters",
+  "cloudSyncEncryptPasswordMismatch": "Passwords do not match",
+  "cloudSyncEncryptPasswordTooShort": "Password must be at least 6 characters",
+  "cloudSyncEncryptWrongPassword": "Wrong password",
+  "cloudSyncEncryptEnableSuccess": "Encryption enabled",
+  "cloudSyncEncryptDisableSuccess": "Encryption disabled; new uploads will not be encrypted",
+  "cloudSyncEncryptChangeSuccess": "Password changed",
+  "cloudSyncEncryptResetConfirmTitle": "Reset Encryption",
+  "cloudSyncEncryptResetConfirmMessage": "Reset will clear all cloud ledger backups and cannot be undone. Continue?",
+  "cloudSyncEncryptResetSuccess": "Encryption has been reset",
+  "cloudSyncEncryptDecryptFailed": "Decryption failed, please check your password",
+  "cloudSyncEncryptMultiDeviceHint": "Use the same password on other devices to decrypt",
+  "cloudSyncEncryptLegacyHint": "Existing unencrypted cloud data will be automatically converted to ciphertext",
+  "cloudSyncEncryptReencrypting": "Re-encrypting cloud data...",
+  "cloudSyncEncryptReencryptPartialFailed": "Encryption enabled, but {count} cloud file(s) failed to re-encrypt. They will be automatically retried on the next sync.",
+  "@cloudSyncEncryptReencryptPartialFailed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@searchSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@searchBatchDeleteConfirmMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@searchBatchSetNoteMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@searchBatchDeleteSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@searchBatchDeleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchBatchSetNoteSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@searchBatchSetNoteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchBatchChangeCategorySuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@searchBatchChangeCategoryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchResultsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@ledgersClearMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@ledgersDeleteLocalMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@categoryClearUnusedMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@categoryClearUnusedSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@categoryShareSuccess": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  }
 }
