@@ -88,320 +88,283 @@ class _AboutPageState extends ConsumerState<AboutPage> {
 
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),
-      body: Column(
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.aboutPageTitle,
+        showBack: true,
+      ),
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(
+          16.0.scaled(context, ref),
+          MediaQuery.of(context).padding.top + 56 + 16,
+          16.0.scaled(context, ref),
+          16.0.scaled(context, ref) + MediaQuery.of(context).padding.bottom,
+        ),
         children: [
-          PrimaryHeader(
-            title: l10n.aboutPageTitle,
-            subtitle: l10n.aboutPageSubtitle,
-            showBack: true,
-          ),
-          Expanded(
-            child: SafeArea(
-              top: false,
-              child: ListView(
-                padding: EdgeInsets.fromLTRB(
-                  16.0.scaled(context, ref),
-                  8.0.scaled(context, ref),
-                  16.0.scaled(context, ref),
-                  16.0.scaled(context, ref),
+          // ===== 顶部:图标 + 应用名 + 版本号(与原版一致)=====
+          Padding(
+            padding: EdgeInsets.symmetric(
+              vertical: 24.0.scaled(context, ref),
+            ),
+            child: Column(
+              children: [
+                BeeIcon(
+                  color: primary,
+                  size: 80.0.scaled(context, ref),
                 ),
-                children: [
-                  // ===== 顶部:图标 + 应用名 + 版本号(与原版一致)=====
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      vertical: 24.0.scaled(context, ref),
-                    ),
-                    child: Column(
-                      children: [
-                        BeeIcon(
-                          color: primary,
-                          size: 80.0.scaled(context, ref),
-                        ),
-                        SizedBox(height: 16.0.scaled(context, ref)),
-                        GestureDetector(
-                          onTap: () => _showDeveloperStory(context),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                l10n.appName,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineSmall
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      color: BeeTokens.textPrimary(context),
-                                    ),
-                              ),
-                              SizedBox(width: 4.0.scaled(context, ref)),
-                              Icon(
-                                Icons.auto_stories_outlined,
-                                size: 18.0.scaled(context, ref),
-                                color: BeeTokens.textTertiary(context),
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(height: 8.0.scaled(context, ref)),
-                        Text(
-                          _versionDisplay.isEmpty
-                              ? l10n.aboutPageLoadingVersion
-                              : _versionDisplay,
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: BeeTokens.textSecondary(context),
-                                  ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // ===== 圆形图标按钮行(真实品牌 logo)=====
-                  Padding(
-                    padding: EdgeInsets.only(bottom: 20.0.scaled(context, ref)),
-                    child: Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 22.0.scaled(context, ref),
-                      runSpacing: 14.0.scaled(context, ref),
-                      children: [
-                        _socialButton(
-                          context,
-                          icon: Icons.language_rounded,
-                          label: l10n.aboutWebsite,
-                          onTap: () =>
-                              _tryOpenUrl(Uri.parse(WebsiteUrls.home(locale))),
-                        ),
-                        _socialButton(
-                          context,
-                          svgAsset: 'assets/icons/social/github.svg',
-                          label: 'GitHub',
-                          onTap: () => _tryOpenUrl(Uri.parse(
-                              'https://github.com/TNT-Likely/BeeCount')),
-                        ),
-                        if (showTelegram)
-                          _socialButton(
-                            context,
-                            svgAsset: 'assets/icons/social/telegram.svg',
-                            label: l10n.aboutTelegram,
-                            onTap: () =>
-                                _tryOpenUrl(Uri.parse('https://t.me/beecount')),
-                          ),
-                        _socialButton(
-                          context,
-                          svgAsset: 'assets/icons/social/xiaohongshu.svg',
-                          label: l10n.aboutXiaohongshu,
-                          onTap: () => _tryOpenUrl(
-                              Uri.parse('https://xhslink.com/m/8K1ekg7EFOq')),
-                        ),
-                        _socialButton(
-                          context,
-                          svgAsset: 'assets/icons/social/douyin.svg',
-                          label: l10n.aboutDouyin,
-                          onTap: () => _tryOpenUrl(
-                              Uri.parse('https://v.douyin.com/YG7tUweYYyQ/')),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // ===== 功能卡 =====
-                  SectionCard(
-                    margin: EdgeInsets.zero,
-                    child: Column(
-                      children: [
-                        // iOS 与 Google Play 版本隐藏检查更新(走应用商店分发)
-                        if (!Platform.isIOS && !_isGooglePlayBuild) ...[
-                          Consumer(builder: (context, ref2, child) {
-                            final isLoading =
-                                ref2.watch(checkUpdateLoadingProvider);
-                            final downloadProgress =
-                                ref2.watch(updateProgressProvider);
-
-                            bool showProgress = false;
-                            String title = l10n.mineCheckUpdate;
-                            String? subtitle;
-                            IconData icon = Icons.system_update_alt_outlined;
-                            Widget? trailing;
-
-                            if (isLoading) {
-                              title = l10n.mineCheckUpdateDetecting;
-                              subtitle = l10n.mineCheckUpdateSubtitleDetecting;
-                              icon = Icons.hourglass_empty;
-                              trailing = const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2));
-                            } else if (downloadProgress.isActive) {
-                              showProgress = true;
-                              title = l10n.mineUpdateDownloadTitle;
-                              icon = Icons.download_outlined;
-                              trailing = SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    value: downloadProgress.progress,
-                                  ));
-                            }
-
-                            return Column(
-                              children: [
-                                AppListTile(
-                                  leading: icon,
-                                  title: title,
-                                  subtitle: showProgress
-                                      ? downloadProgress.status
-                                      : subtitle,
-                                  trailing: trailing,
-                                  onTap: (isLoading || showProgress)
-                                      ? null
-                                      : () async {
-                                          await UpdateService.checkUpdateWithUI(
-                                            context,
-                                            setLoading: (loading) => ref2
-                                                .read(checkUpdateLoadingProvider
-                                                    .notifier)
-                                                .state = loading,
-                                            setProgress: (progress, status) {
-                                              if (status.isEmpty) {
-                                                ref2
-                                                        .read(
-                                                            updateProgressProvider
-                                                                .notifier)
-                                                        .state =
-                                                    UpdateProgress.idle();
-                                              } else {
-                                                ref2
-                                                        .read(
-                                                            updateProgressProvider
-                                                                .notifier)
-                                                        .state =
-                                                    UpdateProgress.active(
-                                                        progress, status);
-                                              }
-                                            },
-                                          );
-                                        },
-                                ),
-                                BeeTokens.cardDivider(context),
-                              ],
-                            );
-                          }),
-                        ],
-                        AppListTile(
-                          leading: Icons.favorite_border,
-                          title: l10n.aboutSupportDevelopment,
-                          subtitle: l10n.aboutSupportDevelopmentSubtitle,
-                          onTap: () async {
-                            final lc = locale.languageCode;
-                            final docUrl = lc == 'zh'
-                                ? 'https://github.com/TNT-Likely/BeeCount/blob/main/docs/donate/README_ZH.md'
-                                : 'https://github.com/TNT-Likely/BeeCount/blob/main/docs/donate/README_EN.md';
-                            await _tryOpenUrl(Uri.parse(docUrl));
-                          },
-                        ),
-                        BeeTokens.cardDivider(context),
-                        AppListTile(
-                          leading: Icons.feedback_outlined,
-                          title: l10n.mineFeedback,
-                          subtitle: l10n.mineFeedbackSubtitle,
-                          onTap: () => _tryOpenUrl(Uri.parse(
-                              'https://github.com/TNT-Likely/BeeCount/issues')),
-                        ),
-                        BeeTokens.cardDivider(context),
-                        AppListTile(
-                          leading: Icons.bug_report_outlined,
-                          title: l10n.logCenterTitle,
-                          subtitle: l10n.logCenterSubtitle,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const LogCenterPage(),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  // ===== 相关产品 =====
-                  SizedBox(height: 28.0.scaled(context, ref)),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 4, bottom: 12),
-                    child: Text(
-                      l10n.aboutRelatedProducts,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: BeeTokens.textSecondary(context),
-                            fontWeight: FontWeight.w500,
-                          ),
-                    ),
-                  ),
-                  _buildProductPromos(context),
-                  // ===== 底部:更新日志 · 隐私政策 文字链接 + 备案号 =====
-                  SizedBox(height: 24.0.scaled(context, ref)),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                SizedBox(height: 16.0.scaled(context, ref)),
+                GestureDetector(
+                  onTap: () => _showDeveloperStory(context),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      _footerLink(
-                        context,
-                        label: l10n.aboutChangelog,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => HelpCenterPage(
-                                title: l10n.aboutChangelog,
-                                initialUrl: WebsiteUrls.changelogEmbed(
-                                  locale,
-                                  dark: BeeTokens.isDark(context),
-                                  primaryHex: _hex(primary),
-                                ),
-                              ),
+                      Text(
+                        l10n.appName,
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineSmall
+                            ?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: BeeTokens.textPrimary(context),
                             ),
-                          );
-                        },
                       ),
-                      Padding(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: 10.0.scaled(context, ref)),
-                        child: Text(
-                          '·',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: BeeTokens.textTertiary(context),
-                                  ),
-                        ),
-                      ),
-                      _footerLink(
-                        context,
-                        label: l10n.aboutPrivacyPolicy,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const PrivacyPolicyPage()),
-                          );
-                        },
+                      SizedBox(width: 4.0.scaled(context, ref)),
+                      Icon(
+                        Icons.auto_stories_outlined,
+                        size: 18.0.scaled(context, ref),
+                        color: BeeTokens.textTertiary(context),
                       ),
                     ],
                   ),
-                  if (isSimplifiedZh) ...[
-                    SizedBox(height: 12.0.scaled(context, ref)),
-                    Center(
-                      child: Text(
-                        '浙ICP备2025214907号-2A',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: BeeTokens.textTertiary(context),
-                              fontSize: 11,
-                            ),
-                      ),
-                    ),
-                  ],
-                  SizedBox(height: 8.0.scaled(context, ref)),
-                ],
-              ),
+                ),
+                SizedBox(height: 8.0.scaled(context, ref)),
+                Text(
+                  _versionDisplay.isEmpty
+                      ? l10n.aboutPageLoadingVersion
+                      : _versionDisplay,
+                  style:
+                      Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: BeeTokens.textSecondary(context),
+                          ),
+                ),
+              ],
             ),
           ),
+          // ===== 圆形图标按钮行(真实品牌 logo)=====
+          Padding(
+            padding: EdgeInsets.only(bottom: 20.0.scaled(context, ref)),
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 22.0.scaled(context, ref),
+              runSpacing: 14.0.scaled(context, ref),
+              children: [
+                _socialButton(
+                  context,
+                  icon: Icons.language_rounded,
+                  label: l10n.aboutWebsite,
+                  onTap: () =>
+                      _tryOpenUrl(Uri.parse(WebsiteUrls.home(locale))),
+                ),
+                _socialButton(
+                  context,
+                  svgAsset: 'assets/icons/social/github.svg',
+                  label: 'GitHub',
+                  onTap: () => _tryOpenUrl(Uri.parse(
+                      'https://github.com/TNT-Likely/BeeCount')),
+                ),
+                if (showTelegram)
+                  _socialButton(
+                    context,
+                    svgAsset: 'assets/icons/social/telegram.svg',
+                    label: l10n.aboutTelegram,
+                    onTap: () =>
+                        _tryOpenUrl(Uri.parse('https://t.me/beecount')),
+                  ),
+                _socialButton(
+                  context,
+                  svgAsset: 'assets/icons/social/xiaohongshu.svg',
+                  label: l10n.aboutXiaohongshu,
+                  onTap: () => _tryOpenUrl(
+                      Uri.parse('https://xhslink.com/m/8K1ekg7EFOq')),
+                ),
+                _socialButton(
+                  context,
+                  svgAsset: 'assets/icons/social/douyin.svg',
+                  label: l10n.aboutDouyin,
+                  onTap: () => _tryOpenUrl(
+                      Uri.parse('https://v.douyin.com/YG7tUweYYyQ/')),
+                ),
+              ],
+            ),
+          ),
+          // ===== 功能卡 =====
+          SettingsCard(
+            children: [
+              // iOS 与 Google Play 版本隐藏检查更新(走应用商店分发)
+              if (!Platform.isIOS && !_isGooglePlayBuild)
+                Consumer(builder: (context, ref2, child) {
+                  final isLoading = ref2.watch(checkUpdateLoadingProvider);
+                  final downloadProgress = ref2.watch(updateProgressProvider);
+
+                  bool showProgress = false;
+                  String title = l10n.mineCheckUpdate;
+                  String? subtitle;
+                  IconData icon = Icons.system_update_alt_outlined;
+                  Widget? trailing;
+
+                  if (isLoading) {
+                    title = l10n.mineCheckUpdateDetecting;
+                    subtitle = l10n.mineCheckUpdateSubtitleDetecting;
+                    icon = Icons.hourglass_empty;
+                    trailing = const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2));
+                  } else if (downloadProgress.isActive) {
+                    showProgress = true;
+                    title = l10n.mineUpdateDownloadTitle;
+                    icon = Icons.download_outlined;
+                    trailing = SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          value: downloadProgress.progress,
+                        ));
+                  }
+
+                  return SettingsNavItem(
+                    icon: icon,
+                    title: title,
+                    subtitle:
+                        showProgress ? downloadProgress.status : subtitle,
+                    trailing: trailing,
+                    enabled: !(isLoading || showProgress),
+                    onTap: (isLoading || showProgress)
+                        ? null
+                        : () async {
+                            await UpdateService.checkUpdateWithUI(
+                              context,
+                              setLoading: (loading) => ref2
+                                  .read(
+                                      checkUpdateLoadingProvider.notifier)
+                                  .state = loading,
+                              setProgress: (progress, status) {
+                                if (status.isEmpty) {
+                                  ref2
+                                      .read(updateProgressProvider.notifier)
+                                      .state = UpdateProgress.idle();
+                                } else {
+                                  ref2
+                                      .read(updateProgressProvider.notifier)
+                                      .state = UpdateProgress.active(
+                                          progress, status);
+                                }
+                              },
+                            );
+                          },
+                  );
+                }),
+              SettingsNavItem(
+                icon: Icons.favorite_border,
+                title: l10n.aboutSupportDevelopment,
+                subtitle: l10n.aboutSupportDevelopmentSubtitle,
+                onTap: () async {
+                  final lc = locale.languageCode;
+                  final docUrl = lc == 'zh'
+                      ? 'https://github.com/TNT-Likely/BeeCount/blob/main/docs/donate/README_ZH.md'
+                      : 'https://github.com/TNT-Likely/BeeCount/blob/main/docs/donate/README_EN.md';
+                  await _tryOpenUrl(Uri.parse(docUrl));
+                },
+              ),
+              SettingsNavItem(
+                icon: Icons.feedback_outlined,
+                title: l10n.mineFeedback,
+                subtitle: l10n.mineFeedbackSubtitle,
+                onTap: () => _tryOpenUrl(Uri.parse(
+                    'https://github.com/TNT-Likely/BeeCount/issues')),
+              ),
+              SettingsNavItem(
+                icon: Icons.bug_report_outlined,
+                title: l10n.logCenterTitle,
+                subtitle: l10n.logCenterSubtitle,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const LogCenterPage(),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          // ===== 相关产品 =====
+          SizedBox(height: 28.0.scaled(context, ref)),
+          SettingsSectionLabel(l10n.aboutRelatedProducts),
+          SizedBox(height: 8.0.scaled(context, ref)),
+          _buildProductPromos(context),
+          // ===== 底部:更新日志 · 隐私政策 文字链接 + 备案号 =====
+          SizedBox(height: 24.0.scaled(context, ref)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _footerLink(
+                context,
+                label: l10n.aboutChangelog,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => HelpCenterPage(
+                        title: l10n.aboutChangelog,
+                        initialUrl: WebsiteUrls.changelogEmbed(
+                          locale,
+                          dark: BeeTokens.isDark(context),
+                          primaryHex: _hex(primary),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              Padding(
+                padding: EdgeInsets.symmetric(
+                    horizontal: 10.0.scaled(context, ref)),
+                child: Text(
+                  '·',
+                  style:
+                      Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: BeeTokens.textTertiary(context),
+                          ),
+                ),
+              ),
+              _footerLink(
+                context,
+                label: l10n.aboutPrivacyPolicy,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const PrivacyPolicyPage()),
+                  );
+                },
+              ),
+            ],
+          ),
+          if (isSimplifiedZh) ...[
+            SizedBox(height: 12.0.scaled(context, ref)),
+            Center(
+              child: Text(
+                '浙ICP备2025214907号-2A',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: BeeTokens.textTertiary(context),
+                      fontSize: 11,
+                    ),
+              ),
+            ),
+          ],
+          SizedBox(height: 8.0.scaled(context, ref)),
         ],
       ),
     );

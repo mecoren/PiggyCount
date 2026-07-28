@@ -331,252 +331,246 @@ class _ConfigImportExportPageState
 
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),
-      body: Column(
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.configImportExportTitle,
+        showBack: true,
+      ),
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          MediaQuery.of(context).padding.top + 56 + 16,
+          16,
+          16 + MediaQuery.of(context).padding.bottom,
+        ),
         children: [
-          PrimaryHeader(
-            title: l10n.configImportExportTitle,
-            subtitle: l10n.configImportExportSubtitle,
-            showBack: true,
-          ),
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.symmetric(
-                horizontal: 12.0.scaled(context, ref),
-                vertical: 8.0.scaled(context, ref),
-              ),
-              children: [
-                // 说明卡片
-                SectionCard(
-                  margin: EdgeInsets.zero,
-                  child: Padding(
-                    padding: EdgeInsets.all(12.0.scaled(context, ref)),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          // 说明卡片
+          SettingsCard(
+            children: [
+              Padding(
+                padding: EdgeInsets.all(12.0.scaled(context, ref)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.info_outline,
-                              size: 20.0.scaled(context, ref),
-                              color: ref.watch(primaryColorProvider),
-                            ),
-                            SizedBox(width: 8.0.scaled(context, ref)),
-                            Text(
-                              l10n.configImportExportInfoTitle,
-                              style: TextStyle(
-                                fontSize: 16.0.scaled(context, ref),
-                                fontWeight: FontWeight.w600,
-                                color: BeeTokens.textPrimary(context),
-                              ),
-                            ),
-                          ],
+                        Icon(
+                          Icons.info_outline,
+                          size: 20.0.scaled(context, ref),
+                          color: ref.watch(primaryColorProvider),
                         ),
-                        SizedBox(height: 8.0.scaled(context, ref)),
+                        SizedBox(width: 8.0.scaled(context, ref)),
                         Text(
-                          l10n.configImportExportInfoMessage,
-                          style: TextStyle(
-                            fontSize: 14.0.scaled(context, ref),
-                            color: BeeTokens.textSecondary(context),
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                SizedBox(height: 8.0.scaled(context, ref)),
-                // 功能按钮
-                SectionCard(
-                  margin: EdgeInsets.zero,
-                  child: Column(
-                    children: [
-                      // 导出配置
-                      AppListTile(
-                        leading: Icons.upload_file,
-                        title: l10n.configExportTitle,
-                        subtitle: l10n.configExportSubtitle,
-                        trailing: _isExporting
-                            ? SizedBox(
-                                width: 20.0.scaled(context, ref),
-                                height: 20.0.scaled(context, ref),
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: ref.watch(primaryColorProvider),
-                                ),
-                              )
-                            : null,
-                        onTap: _isExporting ? null : _exportConfig,
-                      ),
-                      // Android平台显示导出路径和打开按钮
-                      if (Platform.isAndroid && _lastExportedFilePath != null) ...[
-                        BeeTokens.cardDivider(context),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 16.0.scaled(context, ref),
-                            vertical: 12.0.scaled(context, ref),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.check_circle,
-                                    size: 16.0.scaled(context, ref),
-                                    color: Colors.green,
-                                  ),
-                                  SizedBox(width: 8.0.scaled(context, ref)),
-                                  Expanded(
-                                    child: Text(
-                                      l10n.configExportSavedTo(_lastExportedFilePath!.replaceAll('/storage/emulated/0/', '')),
-                                      style: TextStyle(
-                                        fontSize: 13.0.scaled(context, ref),
-                                        color: BeeTokens.textSecondary(context),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 8.0.scaled(context, ref)),
-                              SizedBox(
-                                width: double.infinity,
-                                child: OutlinedButton.icon(
-                                  onPressed: _viewExportedContent,
-                                  icon: const Icon(Icons.visibility_outlined, size: 18),
-                                  label: Text(l10n.configExportViewContent),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: ref.watch(primaryColorProvider),
-                                    side: BorderSide(
-                                      color: ref.watch(primaryColorProvider).withValues(alpha: 0.5),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                      BeeTokens.cardDivider(context),
-                      // 导入配置
-                      AppListTile(
-                        leading: Icons.download_outlined,
-                        title: l10n.configImportTitle,
-                        subtitle: l10n.configImportSubtitle,
-                        trailing: _isImporting
-                            ? SizedBox(
-                                width: 20.0.scaled(context, ref),
-                                height: 20.0.scaled(context, ref),
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: ref.watch(primaryColorProvider),
-                                ),
-                              )
-                            : null,
-                        onTap: _isImporting ? null : _importConfig,
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 8.0.scaled(context, ref)),
-                // 包含的配置项
-                SectionCard(
-                  margin: EdgeInsets.zero,
-                  child: Padding(
-                    padding: EdgeInsets.all(12.0.scaled(context, ref)),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.configImportExportIncludesTitle,
+                          l10n.configImportExportInfoTitle,
                           style: TextStyle(
                             fontSize: 16.0.scaled(context, ref),
                             fontWeight: FontWeight.w600,
                             color: BeeTokens.textPrimary(context),
                           ),
                         ),
-                        SizedBox(height: 12.0.scaled(context, ref)),
-                        _buildConfigItem(
-                          context,
-                          ref,
-                          Icons.book_outlined,
-                          l10n.configIncludeLedgers,
-                        ),
-                        SizedBox(height: 8.0.scaled(context, ref)),
-                        _buildConfigItem(
-                          context,
-                          ref,
-                          Icons.cloud_outlined,
-                          l10n.configIncludeSupabase,
-                        ),
-                        SizedBox(height: 8.0.scaled(context, ref)),
-                        _buildConfigItem(
-                          context,
-                          ref,
-                          Icons.folder_outlined,
-                          l10n.configIncludeWebdav,
-                        ),
-                        SizedBox(height: 8.0.scaled(context, ref)),
-                        _buildConfigItem(
-                          context,
-                          ref,
-                          Icons.storage,
-                          l10n.configIncludeS3,
-                        ),
-                        SizedBox(height: 8.0.scaled(context, ref)),
-                        _buildConfigItem(
-                          context,
-                          ref,
-                          Icons.smart_toy_outlined,
-                          l10n.configIncludeAI,
-                        ),
-                        SizedBox(height: 8.0.scaled(context, ref)),
-                        _buildConfigItem(
-                          context,
-                          ref,
-                          Icons.settings_outlined,
-                          l10n.configIncludeAppSettings,
-                        ),
-                        SizedBox(height: 8.0.scaled(context, ref)),
-                        _buildConfigItem(
-                          context,
-                          ref,
-                          Icons.repeat,
-                          l10n.configIncludeRecurringTransactions,
-                        ),
-                        SizedBox(height: 8.0.scaled(context, ref)),
-                        _buildConfigItem(
-                          context,
-                          ref,
-                          Icons.account_balance_wallet_outlined,
-                          l10n.configIncludeAccounts,
-                        ),
-                        SizedBox(height: 8.0.scaled(context, ref)),
-                        _buildConfigItem(
-                          context,
-                          ref,
-                          Icons.category_outlined,
-                          l10n.configIncludeCategories,
-                        ),
-                        SizedBox(height: 8.0.scaled(context, ref)),
-                        _buildConfigItem(
-                          context,
-                          ref,
-                          Icons.label_outline,
-                          l10n.configIncludeTags,
-                        ),
-                        SizedBox(height: 8.0.scaled(context, ref)),
-                        _buildConfigItem(
-                          context,
-                          ref,
-                          Icons.account_balance_outlined,
-                          l10n.configIncludeBudgets,
-                        ),
                       ],
                     ),
+                    SizedBox(height: 8.0.scaled(context, ref)),
+                    Text(
+                      l10n.configImportExportInfoMessage,
+                      style: TextStyle(
+                        fontSize: 14.0.scaled(context, ref),
+                        color: BeeTokens.textSecondary(context),
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // 功能按钮
+          SettingsCard(
+            children: [
+              // 导出配置
+              SettingsNavItem(
+                icon: Icons.upload_file,
+                title: l10n.configExportTitle,
+                subtitle: l10n.configExportSubtitle,
+                trailing: _isExporting
+                    ? SizedBox(
+                        width: 20.0.scaled(context, ref),
+                        height: 20.0.scaled(context, ref),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: ref.watch(primaryColorProvider),
+                        ),
+                      )
+                    : null,
+                enabled: !_isExporting,
+                onTap: _isExporting ? null : _exportConfig,
+              ),
+              // Android平台显示导出路径和打开按钮
+              if (Platform.isAndroid && _lastExportedFilePath != null)
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16.0.scaled(context, ref),
+                    vertical: 12.0.scaled(context, ref),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.check_circle,
+                            size: 16.0.scaled(context, ref),
+                            color: Colors.green,
+                          ),
+                          SizedBox(width: 8.0.scaled(context, ref)),
+                          Expanded(
+                            child: Text(
+                              l10n.configExportSavedTo(_lastExportedFilePath!.replaceAll('/storage/emulated/0/', '')),
+                              style: TextStyle(
+                                fontSize: 13.0.scaled(context, ref),
+                                color: BeeTokens.textSecondary(context),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8.0.scaled(context, ref)),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: _viewExportedContent,
+                          icon: const Icon(Icons.visibility_outlined, size: 18),
+                          label: Text(l10n.configExportViewContent),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: ref.watch(primaryColorProvider),
+                            side: BorderSide(
+                              color: ref.watch(primaryColorProvider).withValues(alpha: 0.5),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              // 导入配置
+              SettingsNavItem(
+                icon: Icons.download_outlined,
+                title: l10n.configImportTitle,
+                subtitle: l10n.configImportSubtitle,
+                trailing: _isImporting
+                    ? SizedBox(
+                        width: 20.0.scaled(context, ref),
+                        height: 20.0.scaled(context, ref),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: ref.watch(primaryColorProvider),
+                        ),
+                      )
+                    : null,
+                enabled: !_isImporting,
+                onTap: _isImporting ? null : _importConfig,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // 包含的配置项
+          SettingsCard(
+            children: [
+              Padding(
+                padding: EdgeInsets.all(12.0.scaled(context, ref)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.configImportExportIncludesTitle,
+                      style: TextStyle(
+                        fontSize: 16.0.scaled(context, ref),
+                        fontWeight: FontWeight.w600,
+                        color: BeeTokens.textPrimary(context),
+                      ),
+                    ),
+                    SizedBox(height: 12.0.scaled(context, ref)),
+                    _buildConfigItem(
+                      context,
+                      ref,
+                      Icons.book_outlined,
+                      l10n.configIncludeLedgers,
+                    ),
+                    SizedBox(height: 8.0.scaled(context, ref)),
+                    _buildConfigItem(
+                      context,
+                      ref,
+                      Icons.cloud_outlined,
+                      l10n.configIncludeSupabase,
+                    ),
+                    SizedBox(height: 8.0.scaled(context, ref)),
+                    _buildConfigItem(
+                      context,
+                      ref,
+                      Icons.folder_outlined,
+                      l10n.configIncludeWebdav,
+                    ),
+                    SizedBox(height: 8.0.scaled(context, ref)),
+                    _buildConfigItem(
+                      context,
+                      ref,
+                      Icons.storage,
+                      l10n.configIncludeS3,
+                    ),
+                    SizedBox(height: 8.0.scaled(context, ref)),
+                    _buildConfigItem(
+                      context,
+                      ref,
+                      Icons.smart_toy_outlined,
+                      l10n.configIncludeAI,
+                    ),
+                    SizedBox(height: 8.0.scaled(context, ref)),
+                    _buildConfigItem(
+                      context,
+                      ref,
+                      Icons.settings_outlined,
+                      l10n.configIncludeAppSettings,
+                    ),
+                    SizedBox(height: 8.0.scaled(context, ref)),
+                    _buildConfigItem(
+                      context,
+                      ref,
+                      Icons.repeat,
+                      l10n.configIncludeRecurringTransactions,
+                    ),
+                    SizedBox(height: 8.0.scaled(context, ref)),
+                    _buildConfigItem(
+                      context,
+                      ref,
+                      Icons.account_balance_wallet_outlined,
+                      l10n.configIncludeAccounts,
+                    ),
+                    SizedBox(height: 8.0.scaled(context, ref)),
+                    _buildConfigItem(
+                      context,
+                      ref,
+                      Icons.category_outlined,
+                      l10n.configIncludeCategories,
+                    ),
+                    SizedBox(height: 8.0.scaled(context, ref)),
+                    _buildConfigItem(
+                      context,
+                      ref,
+                      Icons.label_outline,
+                      l10n.configIncludeTags,
+                    ),
+                    SizedBox(height: 8.0.scaled(context, ref)),
+                    _buildConfigItem(
+                      context,
+                      ref,
+                      Icons.account_balance_outlined,
+                      l10n.configIncludeBudgets,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),

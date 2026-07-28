@@ -193,90 +193,90 @@ class _StorageManagementPageState extends ConsumerState<StorageManagementPage> {
 
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: l10n.storageManagementTitle,
-            subtitle: l10n.storageManagementSubtitle,
-            showBack: true,
-          ),
-          Expanded(
-            child: _isScanning
-                ? const Center(child: CircularProgressIndicator())
-                : ListView(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 12.0.scaled(context, ref),
-                      vertical: 8.0.scaled(context, ref),
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.storageManagementTitle,
+        showBack: true,
+      ),
+      body: _isScanning
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                MediaQuery.of(context).padding.top + 56 + 16,
+                16,
+                16 + MediaQuery.of(context).padding.bottom,
+              ),
+              children: [
+                // AI模型
+                SettingsCard(
+                  children: [
+                    SettingsNavItem(
+                      icon: Icons.psychology_outlined,
+                      title: l10n.storageAIModels,
+                      subtitle: _aiModelFiles.isEmpty
+                          ? l10n.storageNoData
+                          : '${_aiModelFiles.length} ${l10n.storageFiles}',
+                      trailing: Text(
+                        _formatSize(_aiModelsSize),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: _aiModelsSize > 0
+                              ? ref.watch(primaryColorProvider)
+                              : BeeTokens.textSecondary(context),
+                        ),
+                      ),
+                      enabled: _aiModelsSize > 0,
+                      onTap: _aiModelsSize > 0 ? _clearAIModels : null,
                     ),
+                  ],
+                ),
+
+                // APK安装包(仅Android)
+                if (Platform.isAndroid) ...[
+                  SizedBox(height: 8.0.scaled(context, ref)),
+                  SettingsCard(
                     children: [
-                      // AI模型
-                      SectionCard(
-                        margin: EdgeInsets.zero,
-                        child: AppListTile(
-                          leading: Icons.psychology_outlined,
-                          title: l10n.storageAIModels,
-                          subtitle: _aiModelFiles.isEmpty
-                              ? l10n.storageNoData
-                              : '${_aiModelFiles.length} ${l10n.storageFiles}',
-                          trailing: Text(
-                            _formatSize(_aiModelsSize),
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: _aiModelsSize > 0
-                                  ? ref.watch(primaryColorProvider)
-                                  : BeeTokens.textSecondary(context),
-                            ),
-                          ),
-                          onTap: _aiModelsSize > 0 ? _clearAIModels : null,
-                        ),
-                      ),
-
-                      // APK安装包(仅Android)
-                      if (Platform.isAndroid) ...[
-                        SizedBox(height: 8.0.scaled(context, ref)),
-                        SectionCard(
-                          margin: EdgeInsets.zero,
-                          child: AppListTile(
-                            leading: Icons.android,
-                            title: l10n.storageAPKFiles,
-                            subtitle: _apkFiles.isEmpty
-                                ? l10n.storageNoData
-                                : '${_apkFiles.length} ${l10n.storageFiles}',
-                            trailing: Text(
-                              _formatSize(_apkFilesSize),
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: _apkFilesSize > 0
-                                    ? ref.watch(primaryColorProvider)
-                                    : BeeTokens.textSecondary(context),
-                              ),
-                            ),
-                            onTap: _apkFilesSize > 0 ? _clearAPKFiles : null,
-                          ),
-                        ),
-                      ],
-
-                      // 提示信息
-                      SizedBox(height: 16.0.scaled(context, ref)),
-                      Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 8.0.scaled(context, ref),
-                        ),
-                        child: Text(
-                          l10n.storageHint,
+                      SettingsNavItem(
+                        icon: Icons.android,
+                        title: l10n.storageAPKFiles,
+                        subtitle: _apkFiles.isEmpty
+                            ? l10n.storageNoData
+                            : '${_apkFiles.length} ${l10n.storageFiles}',
+                        trailing: Text(
+                          _formatSize(_apkFilesSize),
                           style: TextStyle(
-                            fontSize: 12,
-                            color: BeeTokens.textSecondary(context),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: _apkFilesSize > 0
+                                ? ref.watch(primaryColorProvider)
+                                : BeeTokens.textSecondary(context),
                           ),
-                        ),
+                        ),
+                        enabled: _apkFilesSize > 0,
+                        onTap: _apkFilesSize > 0 ? _clearAPKFiles : null,
                       ),
                     ],
                   ),
-          ),
-        ],
-      ),
+                ],
+
+                // 提示信息
+                SizedBox(height: 16.0.scaled(context, ref)),
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 8.0.scaled(context, ref),
+                  ),
+                  child: Text(
+                    l10n.storageHint,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: BeeTokens.textSecondary(context),
+                    ),
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }

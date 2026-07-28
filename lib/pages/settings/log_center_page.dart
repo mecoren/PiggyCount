@@ -6,7 +6,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../services/system/logger_service.dart';
 import '../../widgets/ui/ui.dart';
-import '../../widgets/biz/section_card.dart';
+import '../../widgets/biz/biz.dart';
 import '../../styles/tokens.dart';
 import '../../utils/ui_scale_extensions.dart';
 import '../../providers/theme_providers.dart';
@@ -82,27 +82,28 @@ class _LogCenterPageState extends ConsumerState<LogCenterPage> {
 
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.logCenterTitle,
+        showBack: true,
+        actions: [
+          // 导出日志
+          IconButton(
+            icon: const Icon(Icons.share_outlined),
+            onPressed: _exportLogs,
+            tooltip: l10n.logCenterExport,
+          ),
+          // 清空日志
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            onPressed: _clearLogs,
+            tooltip: l10n.logCenterClear,
+          ),
+        ],
+      ),
       body: Column(
         children: [
-          PrimaryHeader(
-            title: l10n.logCenterTitle,
-            subtitle: l10n.logCenterSubtitle,
-            showBack: true,
-            actions: [
-              // 导出日志
-              IconButton(
-                icon: const Icon(Icons.share_outlined),
-                onPressed: _exportLogs,
-                tooltip: l10n.logCenterExport,
-              ),
-              // 清空日志
-              IconButton(
-                icon: const Icon(Icons.delete_outline),
-                onPressed: _clearLogs,
-                tooltip: l10n.logCenterClear,
-              ),
-            ],
-          ),
+          SizedBox(height: MediaQuery.of(context).padding.top + 56),
           // 搜索框
           Padding(
             padding: EdgeInsets.symmetric(
@@ -139,88 +140,112 @@ class _LogCenterPageState extends ConsumerState<LogCenterPage> {
           // 过滤器
           Padding(
             padding: EdgeInsets.symmetric(
-              horizontal: 0.scaled(context, ref),
+              horizontal: 12.0.scaled(context, ref),
               vertical: 4.0.scaled(context, ref),
             ),
-            child: SectionCard(
-              margin: EdgeInsets.zero,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 日志级别过滤
-                  Padding(
-                    padding: EdgeInsets.only(bottom: 8.0.scaled(context, ref)),
-                    child: Text(
-                      l10n.logCenterFilterLevel,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: BeeTokens.textSecondary(context),
-                          ),
+            child: SettingsCard(
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 日志级别过滤
+                    Padding(
+                      padding: EdgeInsets.only(
+                          bottom: 8.0.scaled(context, ref),
+                          left: 16,
+                          right: 16,
+                          top: 16),
+                      child: Text(
+                        l10n.logCenterFilterLevel,
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelMedium
+                            ?.copyWith(
+                              color: BeeTokens.textSecondary(context),
+                            ),
+                      ),
                     ),
-                  ),
-                  Wrap(
-                    spacing: 8.0.scaled(context, ref),
-                    runSpacing: 4.0.scaled(context, ref),
-                    children: LogLevel.values.map((level) {
-                      final isSelected = _selectedLevels.contains(level);
-                      return FilterChip(
-                        label: Text(level.displayName),
-                        selected: isSelected,
-                        selectedColor: primaryColor.withOpacity(0.2),
-                        onSelected: (selected) {
-                          setState(() {
-                            if (selected) {
-                              _selectedLevels.add(level);
-                            } else {
-                              _selectedLevels.remove(level);
-                            }
-                          });
-                        },
-                      );
-                    }).toList(),
-                  ),
-                  SizedBox(height: 12.0.scaled(context, ref)),
-                  // 平台过滤
-                  Padding(
-                    padding: EdgeInsets.only(bottom: 8.0.scaled(context, ref)),
-                    child: Text(
-                      l10n.logCenterFilterPlatform,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: BeeTokens.textSecondary(context),
-                          ),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Wrap(
+                        spacing: 8.0.scaled(context, ref),
+                        runSpacing: 4.0.scaled(context, ref),
+                        children: LogLevel.values.map((level) {
+                          final isSelected = _selectedLevels.contains(level);
+                          return FilterChip(
+                            label: Text(level.displayName),
+                            selected: isSelected,
+                            selectedColor: primaryColor.withOpacity(0.2),
+                            onSelected: (selected) {
+                              setState(() {
+                                if (selected) {
+                                  _selectedLevels.add(level);
+                                } else {
+                                  _selectedLevels.remove(level);
+                                }
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ),
                     ),
-                  ),
-                  Wrap(
-                    spacing: 8.0.scaled(context, ref),
-                    runSpacing: 4.0.scaled(context, ref),
-                    children: LogPlatform.values.where((platform) {
-                      // 在 Android 上隐藏 iOS，在 iOS 上隐藏 Android
-                      if (Platform.isAndroid && platform == LogPlatform.ios) {
-                        return false;
-                      }
-                      if (Platform.isIOS && platform == LogPlatform.android) {
-                        return false;
-                      }
-                      return true;
-                    }).map((platform) {
-                      final isSelected = _selectedPlatforms.contains(platform);
-                      return FilterChip(
-                        label: Text(platform.displayName),
-                        selected: isSelected,
-                        selectedColor: primaryColor.withOpacity(0.2),
-                        onSelected: (selected) {
-                          setState(() {
-                            if (selected) {
-                              _selectedPlatforms.add(platform);
-                            } else {
-                              _selectedPlatforms.remove(platform);
-                            }
-                          });
-                        },
-                      );
-                    }).toList(),
-                  ),
-                ],
-              ),
+                    SizedBox(height: 12.0.scaled(context, ref)),
+                    // 平台过滤
+                    Padding(
+                      padding: EdgeInsets.only(
+                          bottom: 8.0.scaled(context, ref),
+                          left: 16,
+                          right: 16),
+                      child: Text(
+                        l10n.logCenterFilterPlatform,
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelMedium
+                            ?.copyWith(
+                              color: BeeTokens.textSecondary(context),
+                            ),
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.only(
+                          left: 16, right: 16, bottom: 16),
+                      child: Wrap(
+                        spacing: 8.0.scaled(context, ref),
+                        runSpacing: 4.0.scaled(context, ref),
+                        children: LogPlatform.values.where((platform) {
+                          // 在 Android 上隐藏 iOS，在 iOS 上隐藏 Android
+                          if (Platform.isAndroid &&
+                              platform == LogPlatform.ios) {
+                            return false;
+                          }
+                          if (Platform.isIOS &&
+                              platform == LogPlatform.android) {
+                            return false;
+                          }
+                          return true;
+                        }).map((platform) {
+                          final isSelected =
+                              _selectedPlatforms.contains(platform);
+                          return FilterChip(
+                            label: Text(platform.displayName),
+                            selected: isSelected,
+                            selectedColor: primaryColor.withOpacity(0.2),
+                            onSelected: (selected) {
+                              setState(() {
+                                if (selected) {
+                                  _selectedPlatforms.add(platform);
+                                } else {
+                                  _selectedPlatforms.remove(platform);
+                                }
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
           // 日志统计
@@ -340,8 +365,6 @@ class _LogEntryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
-
     // 根据日志级别选择颜色
     final levelColor = switch (log.level) {
       LogLevel.debug => Colors.grey,
@@ -350,103 +373,105 @@ class _LogEntryCard extends ConsumerWidget {
       LogLevel.error => Colors.red,
     };
 
-    return SectionCard(
+    return SettingsCard(
       margin: EdgeInsets.only(bottom: 8.0.scaled(context, ref)),
-      child: InkWell(
-        onTap: () => _showLogDetail(context),
-        onLongPress: () => _copyLog(context),
-        child: Padding(
-          padding: EdgeInsets.all(12.0.scaled(context, ref)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 头部：级别 + 平台 + 时间
-              Row(
-                children: [
-                  // 级别标签
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 6.0.scaled(context, ref),
-                      vertical: 2.0.scaled(context, ref),
+      children: [
+        InkWell(
+          onTap: () => _showLogDetail(context),
+          onLongPress: () => _copyLog(context),
+          child: Padding(
+            padding: EdgeInsets.all(12.0.scaled(context, ref)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 头部：级别 + 平台 + 时间
+                Row(
+                  children: [
+                    // 级别标签
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 6.0.scaled(context, ref),
+                        vertical: 2.0.scaled(context, ref),
+                      ),
+                      decoration: BoxDecoration(
+                        color: levelColor.withOpacity(0.1),
+                        borderRadius:
+                            BorderRadius.circular(4.0.scaled(context, ref)),
+                        border: Border.all(color: levelColor, width: 1),
+                      ),
+                      child: Text(
+                        log.level.displayName,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: levelColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
                     ),
-                    decoration: BoxDecoration(
-                      color: levelColor.withOpacity(0.1),
-                      borderRadius:
-                          BorderRadius.circular(4.0.scaled(context, ref)),
-                      border: Border.all(color: levelColor, width: 1),
+                    SizedBox(width: 6.0.scaled(context, ref)),
+                    // 平台标签
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 6.0.scaled(context, ref),
+                        vertical: 2.0.scaled(context, ref),
+                      ),
+                      decoration: BoxDecoration(
+                        color: BeeTokens.surfaceSecondary(context),
+                        borderRadius:
+                            BorderRadius.circular(4.0.scaled(context, ref)),
+                      ),
+                      child: Text(
+                        log.platform.displayName,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: BeeTokens.textSecondary(context),
+                            ),
+                      ),
                     ),
-                    child: Text(
-                      log.level.displayName,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: levelColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                  ),
-                  SizedBox(width: 6.0.scaled(context, ref)),
-                  // 平台标签
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 6.0.scaled(context, ref),
-                      vertical: 2.0.scaled(context, ref),
-                    ),
-                    decoration: BoxDecoration(
-                      color: BeeTokens.surfaceSecondary(context),
-                      borderRadius:
-                          BorderRadius.circular(4.0.scaled(context, ref)),
-                    ),
-                    child: Text(
-                      log.platform.displayName,
+                    const Spacer(),
+                    // 时间
+                    Text(
+                      _formatTime(log.timestamp),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             color: BeeTokens.textSecondary(context),
                           ),
                     ),
-                  ),
-                  const Spacer(),
-                  // 时间
-                  Text(
-                    _formatTime(log.timestamp),
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: BeeTokens.textSecondary(context),
-                        ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 8.0.scaled(context, ref)),
-              // Tag
-              Text(
-                '[${log.tag}]',
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: BeeTokens.textSecondary(context),
-                      fontWeight: FontWeight.w500,
-                    ),
-              ),
-              SizedBox(height: 4.0.scaled(context, ref)),
-              // 消息内容
-              Text(
-                log.message,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: BeeTokens.textPrimary(context),
-                    ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-              // 错误信息（如果有）
-              if (log.error != null) ...[
-                SizedBox(height: 4.0.scaled(context, ref)),
+                  ],
+                ),
+                SizedBox(height: 8.0.scaled(context, ref)),
+                // Tag
                 Text(
-                  'Error: ${log.error}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.red,
+                  '[${log.tag}]',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: BeeTokens.textSecondary(context),
+                        fontWeight: FontWeight.w500,
                       ),
-                  maxLines: 2,
+                ),
+                SizedBox(height: 4.0.scaled(context, ref)),
+                // 消息内容
+                Text(
+                  log.message,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: BeeTokens.textPrimary(context),
+                      ),
+                  maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
+                // 错误信息（如果有）
+                if (log.error != null) ...[
+                  SizedBox(height: 4.0.scaled(context, ref)),
+                  Text(
+                    'Error: ${log.error}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.red,
+                        ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
-      ),
+      ],
     );
   }
 

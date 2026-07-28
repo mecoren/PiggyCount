@@ -166,76 +166,75 @@ class _HelpCenterPageState extends ConsumerState<HelpCenterPage> {
       },
       child: Scaffold(
         backgroundColor: BeeTokens.scaffoldBackground(context),
-        body: Column(
-          children: [
-            PrimaryHeader(
-              title: widget.title ?? l10n.mineHelp,
-              showBack: true,
-              compact: true,
-              actions: [
-                IconButton(
-                  icon: Icon(Icons.open_in_browser,
-                      color: BeeTokens.iconPrimary(context), size: 20),
-                  tooltip: l10n.helpCenterOpenInBrowser,
-                  onPressed: _openInBrowser,
-                ),
-              ],
-            ),
-            Expanded(
-              child: Stack(
-                children: [
-                  if (_controller != null && !_failed)
-                    WebViewWidget(controller: _controller!),
-                  if (_failed)
-                    Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.wifi_off,
-                              size: 48,
-                              color: BeeTokens.textTertiary(context)),
-                          const SizedBox(height: 12),
-                          Text(
-                            l10n.helpCenterLoadFailed,
-                            style: TextStyle(
-                                color: BeeTokens.textSecondary(context)),
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                                backgroundColor: primary),
-                            onPressed: () {
-                              setState(() => _failed = false);
-                              _controller?.reload();
-                            },
-                            child: Text(l10n.helpCenterRetry,
-                                style:
-                                    const TextStyle(color: Colors.white)),
-                          ),
-                          TextButton(
-                            onPressed: _openInBrowser,
-                            child: Text(l10n.helpCenterOpenInBrowser,
-                                style: TextStyle(color: primary)),
-                          ),
-                        ],
-                      ),
-                    ),
-                  if (!_failed && _progress < 100)
-                    Positioned(
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      child: LinearProgressIndicator(
-                        value: _progress / 100,
-                        minHeight: 2,
-                        backgroundColor: Colors.transparent,
-                        color: primary,
-                      ),
-                    ),
-                ],
-              ),
+        extendBodyBehindAppBar: true,
+        appBar: GlassTitleBar(
+          title: widget.title ?? l10n.mineHelp,
+          showBack: true,
+          actions: [
+            IconButton(
+              icon: Icon(Icons.open_in_browser,
+                  color: BeeTokens.iconPrimary(context), size: 20),
+              tooltip: l10n.helpCenterOpenInBrowser,
+              onPressed: _openInBrowser,
             ),
           ],
+        ),
+        body: Padding(
+          padding: EdgeInsets.only(
+            top: MediaQuery.of(context).padding.top + 56,
+          ),
+          child: Stack(
+            children: [
+              if (_controller != null && !_failed)
+                WebViewWidget(controller: _controller!),
+              if (_failed)
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.wifi_off,
+                          size: 48,
+                          color: BeeTokens.textTertiary(context)),
+                      const SizedBox(height: 12),
+                      Text(
+                        l10n.helpCenterLoadFailed,
+                        style: TextStyle(
+                            color: BeeTokens.textSecondary(context)),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: primary),
+                        onPressed: () {
+                          setState(() => _failed = false);
+                          _controller?.reload();
+                        },
+                        child: Text(l10n.helpCenterRetry,
+                            style:
+                                const TextStyle(color: Colors.white)),
+                      ),
+                      TextButton(
+                        onPressed: _openInBrowser,
+                        child: Text(l10n.helpCenterOpenInBrowser,
+                            style: TextStyle(color: primary)),
+                      ),
+                    ],
+                  ),
+                ),
+              if (!_failed && _progress < 100)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: LinearProgressIndicator(
+                    value: _progress / 100,
+                    minHeight: 2,
+                    backgroundColor: Colors.transparent,
+                    color: primary,
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

@@ -63,13 +63,14 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage>
 
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: widget.title,
+        showBack: true,
+      ),
       body: Column(
         children: [
-          PrimaryHeader(
-            title: widget.title,
-            subtitle: l10n.attachmentPreviewSubtitle(totalCount),
-            showBack: true,
-          ),
+          SizedBox(height: MediaQuery.of(context).padding.top + 56),
           // Tab栏
           if (totalCount > 0)
             Container(

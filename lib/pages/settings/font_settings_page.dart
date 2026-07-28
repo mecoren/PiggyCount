@@ -27,54 +27,57 @@ class FontSettingsPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),
-      body: Column(
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: AppLocalizations.of(context)!.mineDisplayScale,
+        showBack: true,
+      ),
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          MediaQuery.of(context).padding.top + 56 + 16,
+          16,
+          16 + MediaQuery.of(context).padding.bottom,
+        ),
         children: [
-          PrimaryHeader(title: AppLocalizations.of(context)!.mineDisplayScale, showBack: true, compact: true),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              children: [
-                // 显示缩放设置部分
-                Text(AppLocalizations.of(context)!.mineDisplayScale,
-                    style: Theme.of(context)
-                        .textTheme
-                        .labelLarge
-                        ?.copyWith(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                Text(AppLocalizations.of(context)!.fontSettingsCurrentScale(eff.toStringAsFixed(2)),
-                    style: Theme.of(context).textTheme.bodySmall),
-                const SizedBox(height: 12),
-                _PreviewParagraph(level: level),
-                const SizedBox(height: 12),
-                _UIScaleInfo(),
-                const SizedBox(height: 12),
-                _MultiStylePreview(),
-                const SizedBox(height: 20),
-                Text(AppLocalizations.of(context)!.fontSettingsQuickLevel,
-                    style: Theme.of(context)
-                        .textTheme
-                        .labelLarge
-                        ?.copyWith(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                ...options.map((o) => _buildOption(context, ref, o, level)),
-                const SizedBox(height: 24),
-                Text(AppLocalizations.of(context)!.fontSettingsCustomAdjust,
-                    style: Theme.of(context)
-                        .textTheme
-                        .labelLarge
-                        ?.copyWith(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                _CustomScaleSlider(),
-                const SizedBox(height: 24),
-                Text(
-                    AppLocalizations.of(context)!.fontSettingsDescription,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: BeeTokens.textSecondary(context))),
-              ],
-            ),
-          ),
+          // 显示缩放设置部分
+          Text(AppLocalizations.of(context)!.mineDisplayScale,
+              style: Theme.of(context)
+                  .textTheme
+                  .labelLarge
+                  ?.copyWith(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Text(AppLocalizations.of(context)!.fontSettingsCurrentScale(eff.toStringAsFixed(2)),
+              style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 12),
+          _PreviewParagraph(level: level),
+          const SizedBox(height: 12),
+          _UIScaleInfo(),
+          const SizedBox(height: 12),
+          _MultiStylePreview(),
+          const SizedBox(height: 20),
+          Text(AppLocalizations.of(context)!.fontSettingsQuickLevel,
+              style: Theme.of(context)
+                  .textTheme
+                  .labelLarge
+                  ?.copyWith(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          ...options.map((o) => _buildOption(context, ref, o, level)),
+          const SizedBox(height: 24),
+          Text(AppLocalizations.of(context)!.fontSettingsCustomAdjust,
+              style: Theme.of(context)
+                  .textTheme
+                  .labelLarge
+                  ?.copyWith(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          _CustomScaleSlider(),
+          const SizedBox(height: 24),
+          Text(
+              AppLocalizations.of(context)!.fontSettingsDescription,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: BeeTokens.textSecondary(context))),
         ],
       ),
     );

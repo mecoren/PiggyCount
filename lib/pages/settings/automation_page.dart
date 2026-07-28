@@ -7,7 +7,6 @@ import '../../styles/tokens.dart';
 import '../transaction/recurring_transaction_page.dart';
 import '../settings/reminder_settings_page.dart';
 import '../../l10n/app_localizations.dart';
-import '../../utils/ui_scale_extensions.dart';
 
 /// 自动化功能二级页面
 class AutomationPage extends ConsumerWidget {
@@ -15,51 +14,47 @@ class AutomationPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),
-      body: Column(
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.automationPageTitle,
+        showBack: true,
+      ),
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          MediaQuery.of(context).padding.top + 56 + 16,
+          16,
+          16 + MediaQuery.of(context).padding.bottom,
+        ),
         children: [
-          PrimaryHeader(
-            title: AppLocalizations.of(context).automationPageTitle,
-            subtitle: AppLocalizations.of(context).automationPageSubtitle,
-            showBack: true,
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                SectionCard(
-                  margin: EdgeInsets.zero,
-                  child: Column(
-                    children: [
-                      // 周期记账
-                      AppListTile(
-                        leading: Icons.repeat,
-                        title: AppLocalizations.of(context).mineRecurringTransactions,
-                        subtitle: AppLocalizations.of(context).mineRecurringTransactionsSubtitle,
-                        onTap: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const RecurringTransactionPage()),
-                          );
-                        },
-                      ),
-                      BeeTokens.cardDivider(context),
-                      // 记账提醒
-                      AppListTile(
-                        leading: Icons.notifications_outlined,
-                        title: AppLocalizations.of(context).mineReminderSettings,
-                        subtitle: AppLocalizations.of(context).mineReminderSettingsSubtitle,
-                        onTap: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const ReminderSettingsPage()),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+          SettingsCard(
+            children: [
+              // 周期记账
+              SettingsNavItem(
+                icon: Icons.repeat,
+                title: l10n.mineRecurringTransactions,
+                subtitle: l10n.mineRecurringTransactionsSubtitle,
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const RecurringTransactionPage()),
+                  );
+                },
+              ),
+              // 记账提醒
+              SettingsNavItem(
+                icon: Icons.notifications_outlined,
+                title: l10n.mineReminderSettings,
+                subtitle: l10n.mineReminderSettingsSubtitle,
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ReminderSettingsPage()),
+                  );
+                },
+              ),
+            ],
           ),
         ],
       ),

@@ -54,50 +54,46 @@ class _PersonalizePageState extends ConsumerState<PersonalizePage> {
 
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),
-      body: Column(
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: AppLocalizations.of(context)!.personalizeTitle,
+        showBack: true,
+      ),
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          MediaQuery.of(context).padding.top + 56 + 16,
+          16,
+          16 + MediaQuery.of(context).padding.bottom,
+        ),
         children: [
-          PrimaryHeader(
-            title: AppLocalizations.of(context)!.personalizeTitle,
-            showBack: true,
-            leadingIcon: Icons.brush_outlined,
-            leadingPlain: true,
-            compact: true,
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 1.4,
-                  ),
-                  itemCount: options.length + 1, // +1 for custom color picker
-                  itemBuilder: (_, i) {
-                    if (i == options.length) {
-                      // Custom color picker card
-                      return _CustomColorCard(
-                        onTap: () => _showColorPicker(context, ref),
-                      );
-                    }
-                    final o = options[i];
-                    final selected = o.color == primary;
-                    return _ThemeCard(
-                      option: o,
-                      selected: selected,
-                      onTap: () => ref
-                          .read(primaryColorProvider.notifier)
-                          .state = o.color,
-                    );
-                  },
-                ),
-              ],
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: 1.4,
             ),
+            itemCount: options.length + 1, // +1 for custom color picker
+            itemBuilder: (_, i) {
+              if (i == options.length) {
+                // Custom color picker card
+                return _CustomColorCard(
+                  onTap: () => _showColorPicker(context, ref),
+                );
+              }
+              final o = options[i];
+              final selected = o.color == primary;
+              return _ThemeCard(
+                option: o,
+                selected: selected,
+                onTap: () => ref
+                    .read(primaryColorProvider.notifier)
+                    .state = o.color,
+              );
+            },
           ),
         ],
       ),

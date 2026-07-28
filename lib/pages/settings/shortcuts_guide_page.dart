@@ -22,39 +22,37 @@ class ShortcutsGuidePage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),
-      body: Column(
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.shortcutsGuide,
+        showBack: true,
+      ),
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          MediaQuery.of(context).padding.top + 56 + 16,
+          16,
+          16 + MediaQuery.of(context).padding.bottom,
+        ),
         children: [
-          PrimaryHeader(
-            title: l10n.shortcutsGuide,
-            showBack: true,
-            leadingIcon: Icons.app_shortcut,
-            leadingPlain: true,
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                // 简介
-                _buildIntroSection(context, l10n, theme),
-                const SizedBox(height: 16),
+          // 简介
+          _buildIntroSection(context, l10n, theme),
+          const SizedBox(height: 16),
 
-                // 可用快捷方式列表
-                _buildShortcutsSection(context, ref, l10n, theme, primaryColor),
-                const SizedBox(height: 16),
+          // 可用快捷方式列表
+          _buildShortcutsSection(context, ref, l10n, theme, primaryColor),
+          const SizedBox(height: 16),
 
-                // 自动记账 API 说明
-                _buildAutoAddSection(context, l10n, theme),
-                const SizedBox(height: 16),
+          // 自动记账 API 说明
+          _buildAutoAddSection(context, l10n, theme),
+          const SizedBox(height: 16),
 
-                // 添加指引
-                _buildAddGuideSection(context, l10n, theme),
-                const SizedBox(height: 16),
+          // 添加指引
+          _buildAddGuideSection(context, l10n, theme),
+          const SizedBox(height: 16),
 
-                // 说明文字
-                _buildDescriptionSection(context, l10n, theme),
-              ],
-            ),
-          ),
+          // 说明文字
+          _buildDescriptionSection(context, l10n, theme),
         ],
       ),
     );
@@ -65,39 +63,40 @@ class ShortcutsGuidePage extends ConsumerWidget {
     AppLocalizations l10n,
     ThemeData theme,
   ) {
-    return SectionCard(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.bolt,
-                  color: theme.colorScheme.primary,
-                  size: 24,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  l10n.shortcutsIntroTitle,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+    return SettingsCard(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.bolt,
+                    color: theme.colorScheme.primary,
+                    size: 24,
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              l10n.shortcutsIntroDesc,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                  const SizedBox(width: 8),
+                  Text(
+                    l10n.shortcutsIntroTitle,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              Text(
+                l10n.shortcutsIntroDesc,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -153,30 +152,31 @@ class ShortcutsGuidePage extends ConsumerWidget {
       ),
     ];
 
-    return SectionCard(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.availableShortcuts,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+    return SettingsCard(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.availableShortcuts,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            ...shortcuts.map((shortcut) => _buildShortcutTile(
-                  context,
-                  ref,
-                  l10n,
-                  theme,
-                  shortcut,
-                )),
-          ],
+              const SizedBox(height: 16),
+              ...shortcuts.map((shortcut) => _buildShortcutTile(
+                    context,
+                    ref,
+                    l10n,
+                    theme,
+                    shortcut,
+                  )),
+            ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -265,84 +265,85 @@ class ShortcutsGuidePage extends ConsumerWidget {
     AppLocalizations l10n,
     ThemeData theme,
   ) {
-    return SectionCard(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.auto_awesome,
-                  color: Colors.amber,
-                  size: 24,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  l10n.shortcutAutoAdd,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              l10n.shortcutAutoAddDesc,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
-            ),
-            const SizedBox(height: 12),
-            // 示例 URL
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return SettingsCard(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Text(
-                    l10n.shortcutAutoAddExample,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  Icon(
+                    Icons.auto_awesome,
+                    color: Colors.amber,
+                    size: 24,
                   ),
-                  const SizedBox(height: 8),
-                  SelectableText(
-                    'beecount://add?amount=100&type=expense&category=餐饮&note=午餐',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontFamily: 'monospace',
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                  const SizedBox(width: 8),
+                  Text(
+                    l10n.shortcutAutoAdd,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 12),
-            // 参数说明
-            Text(
-              l10n.shortcutAutoAddParams,
-              style: theme.textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+              const SizedBox(height: 12),
+              Text(
+                l10n.shortcutAutoAddDesc,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            _buildParamRow(theme, 'amount', l10n.shortcutParamAmount, true),
-            _buildParamRow(theme, 'type', l10n.shortcutParamType, false),
-            _buildParamRow(theme, 'category', l10n.shortcutParamCategory, false),
-            _buildParamRow(theme, 'note', l10n.shortcutParamNote, false),
-            _buildParamRow(theme, 'account', l10n.shortcutParamAccount, false),
-            _buildParamRow(theme, 'tags', l10n.shortcutParamTags, false),
-            _buildParamRow(theme, 'date', l10n.shortcutParamDate, false),
-          ],
+              const SizedBox(height: 12),
+              // 示例 URL
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.shortcutAutoAddExample,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SelectableText(
+                      'beecount://add?amount=100&type=expense&category=餐饮&note=午餐',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontFamily: 'monospace',
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              // 参数说明
+              Text(
+                l10n.shortcutAutoAddParams,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              _buildParamRow(theme, 'amount', l10n.shortcutParamAmount, true),
+              _buildParamRow(theme, 'type', l10n.shortcutParamType, false),
+              _buildParamRow(theme, 'category', l10n.shortcutParamCategory, false),
+              _buildParamRow(theme, 'note', l10n.shortcutParamNote, false),
+              _buildParamRow(theme, 'account', l10n.shortcutParamAccount, false),
+              _buildParamRow(theme, 'tags', l10n.shortcutParamTags, false),
+              _buildParamRow(theme, 'date', l10n.shortcutParamDate, false),
+            ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -389,50 +390,51 @@ class ShortcutsGuidePage extends ConsumerWidget {
     AppLocalizations l10n,
     ThemeData theme,
   ) {
-    return SectionCard(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.add_circle_outline,
-                  color: theme.colorScheme.primary,
-                  size: 24,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  l10n.howToAddShortcut,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+    return SettingsCard(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.add_circle_outline,
+                    color: theme.colorScheme.primary,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    l10n.howToAddShortcut,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              if (Platform.isIOS)
+                _buildIOSGuide(context, l10n, theme)
+              else
+                _buildAndroidGuide(context, l10n, theme),
+
+              // iOS 快捷指令 App 入口
+              if (Platform.isIOS) ...[
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _openShortcutsApp(),
+                    icon: const Icon(Icons.open_in_new),
+                    label: Text(l10n.shortcutOpenShortcutsApp),
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 16),
-            if (Platform.isIOS)
-              _buildIOSGuide(context, l10n, theme)
-            else
-              _buildAndroidGuide(context, l10n, theme),
-
-            // iOS 快捷指令 App 入口
-            if (Platform.isIOS) ...[
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () => _openShortcutsApp(),
-                  icon: const Icon(Icons.open_in_new),
-                  label: Text(l10n.shortcutOpenShortcutsApp),
-                ),
-              ),
             ],
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -523,44 +525,45 @@ class ShortcutsGuidePage extends ConsumerWidget {
     AppLocalizations l10n,
     ThemeData theme,
   ) {
-    return SectionCard(
-      margin: EdgeInsets.zero,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.info_outline,
-                  color: theme.colorScheme.primary,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  l10n.shortcutsTip,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
+    return SettingsCard(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
                     color: theme.colorScheme.primary,
+                    size: 20,
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.shortcutsTipDesc,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                  const SizedBox(width: 8),
+                  Text(
+                    l10n.shortcutsTip,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: 8),
+              Text(
+                l10n.shortcutsTipDesc,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }

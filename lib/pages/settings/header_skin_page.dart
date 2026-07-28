@@ -40,33 +40,32 @@ class HeaderSkinPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),
-      body: Column(
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.headerSkinTitle,
+        showBack: true,
+      ),
+      body: GridView.count(
+        crossAxisCount: 2,
+        padding: EdgeInsets.fromLTRB(
+          16,
+          MediaQuery.of(context).padding.top + 56 + 16,
+          16,
+          16 + MediaQuery.of(context).padding.bottom,
+        ),
+        mainAxisSpacing: 16,
+        crossAxisSpacing: 16,
+        childAspectRatio: 0.95,
         children: [
-          PrimaryHeader(
-            title: l10n.headerSkinTitle,
-            subtitle: l10n.headerSkinSubtitle,
-            showBack: true,
-          ),
-          Expanded(
-            child: GridView.count(
-              crossAxisCount: 2,
-              padding: const EdgeInsets.all(16),
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              childAspectRatio: 0.95,
-              children: [
-                for (final it in items)
-                  _SkinCard(
-                    name: it.name,
-                    preview: it.preview,
-                    selected: it.id == current,
-                    primary: primary,
-                    onTap: () =>
-                        ref.read(headerSkinProvider.notifier).state = it.id,
-                  ),
-              ],
+          for (final it in items)
+            _SkinCard(
+              name: it.name,
+              preview: it.preview,
+              selected: it.id == current,
+              primary: primary,
+              onTap: () =>
+                  ref.read(headerSkinProvider.notifier).state = it.id,
             ),
-          ),
         ],
       ),
     );

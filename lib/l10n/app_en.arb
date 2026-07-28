@@ -493,6 +493,10 @@
     }
   },
   "mineTitle": "Mine",
+  "mineCloudBackupSection": "Cloud & Backup",
+  "mineFunctionSection": "Features",
+  "mineHelpSection": "Help & Info",
+  "mineSupportSection": "Support Us",
   "mineReminder": "Reminder Settings",
   "mineImport": "Import Data",
   "mineExport": "Export Data",

@@ -23,7 +23,7 @@ import '../../widget/widget_data_service.dart'
         QuickAddCategoryItem,
         RecentTransactionItem;
 import '../../widget/widget_spec.dart' show HWSize;
-import '../../widgets/biz/section_card.dart';
+import '../../widgets/biz/biz.dart';
 import '../../widgets/ui/ui.dart';
 
 /// 小组件管理页 ——「组件库」画廊。
@@ -50,221 +50,215 @@ class WidgetManagementPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),
-      body: Column(
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.widgetManagement,
+        showBack: true,
+      ),
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          MediaQuery.of(context).padding.top + 56 + 16,
+          16,
+          16 + MediaQuery.of(context).padding.bottom,
+        ),
         children: [
-          PrimaryHeader(
-            title: l10n.widgetManagement,
-            subtitle: l10n.widgetManagementDesc,
-            showBack: true,
-            leadingIcon: Icons.widgets_outlined,
-            leadingPlain: true,
-          ),
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.symmetric(
-                horizontal: 12.0.scaled(context, ref),
-                vertical: 8.0.scaled(context, ref),
-              ),
-              children: [
-                _buildGalleryHeader(context, ref, l10n),
-                SizedBox(height: 10.0.scaled(context, ref)),
+          _buildGalleryHeader(context, ref, l10n),
+          SizedBox(height: 10.0.scaled(context, ref)),
 
-                // 1. 收支速览
-                _buildGalleryCard(
-                  context,
-                  ref,
-                  title: l10n.widgetGalleryGlanceTitle,
-                  subtitle: l10n.widgetGalleryGlanceDesc,
-                  sizeLabel: l10n.widgetSizeMedium,
-                  previewSize: const Size(364, 169),
-                  preview: GlanceView.medium(
-                    todayExpense: '¥88.5',
-                    todayIncome: '¥0',
-                    monthExpense: '¥3,200.5',
-                    monthIncome: '¥8,000',
-                    themeColor: primaryColor,
-                    redForIncome: redForIncome,
-                    dark: dark,
-                    titleLabel: l10n.widgetGalleryGlanceTitle,
-                    monthSuffix: l10n.widgetMonthSuffix,
-                    todayLabel: l10n.widgetToday,
-                    todayExpenseLabel: l10n.widgetTodayExpense,
-                    todayIncomeLabel: l10n.widgetTodayIncome,
-                    monthExpenseLabel: l10n.widgetMonthExpense,
-                    monthIncomeLabel: l10n.widgetMonthIncome,
-                    width: 364,
-                    height: 169,
-                  ),
-                ),
-                SizedBox(height: 12.0.scaled(context, ref)),
-
-                // 1.5 收支速览·小号(独立可添加档位:Android 是单独的
-                // provider、iOS 是同 kind 的 systemSmall family,画廊里单独
-                // 露出一卡,让用户知道有这个小方块可加)
-                _buildGalleryCard(
-                  context,
-                  ref,
-                  title: l10n.widgetGalleryGlanceTitle,
-                  subtitle: l10n.widgetGalleryGlanceDesc,
-                  sizeLabel: l10n.widgetSizeSmall,
-                  previewSize: const Size(155, 155),
-                  preview: GlanceView.small(
-                    todayExpense: '¥88.5',
-                    monthExpense: '¥3,200.5',
-                    monthIncome: '¥8,000',
-                    themeColor: primaryColor,
-                    redForIncome: redForIncome,
-                    dark: dark,
-                    todayLabel: l10n.widgetToday,
-                    todayExpenseLabel: l10n.widgetTodayExpense,
-                    monthExpenseLabel: l10n.widgetMonthExpense,
-                    monthIncomeLabel: l10n.widgetMonthIncome,
-                    width: 155,
-                    height: 155,
-                  ),
-                ),
-                SizedBox(height: 12.0.scaled(context, ref)),
-
-                // 2. 净资产
-                _buildGalleryCard(
-                  context,
-                  ref,
-                  title: l10n.accountTotalBalance,
-                  subtitle: l10n.widgetGalleryNetWorthDesc,
-                  sizeLabel: l10n.widgetSizeLarge,
-                  previewSize: const Size(364, 382),
-                  preview: NetWorthView(
-                    size: HWSize.large,
-                    netWorth: 82345.67,
-                    totalAssets: 102345.67,
-                    totalLiabilities: 20000,
-                    baseCurrency: 'CNY',
-                    trend: _sampleNetWorthTrend(),
-                    topAccounts: _sampleNetWorthAccounts(),
-                    themeColor: primaryColor,
-                    redForIncome: redForIncome,
-                    dark: dark,
-                    netWorthLabel: l10n.accountTotalBalance,
-                    totalAssetsLabel: l10n.totalAssets,
-                    totalLiabilitiesLabel: l10n.totalLiabilities,
-                    noAccountsLabel: l10n.widgetNoAccounts,
-                    width: 364,
-                    height: 382,
-                  ),
-                ),
-                SizedBox(height: 12.0.scaled(context, ref)),
-
-                // 3. 快速记账
-                _buildGalleryCard(
-                  context,
-                  ref,
-                  title: l10n.widgetGalleryQuickAddTitle,
-                  subtitle: l10n.widgetGalleryQuickAddDesc,
-                  sizeLabel: l10n.widgetSizeMedium,
-                  previewSize: const Size(364, 169),
-                  preview: QuickAddView(
-                    size: HWSize.medium,
-                    categories: _sampleQuickAddCategories(),
-                    themeColor: primaryColor,
-                    dark: dark,
-                    addLabel: l10n.widgetQuickAddLabel,
-                    titleLabel: l10n.widgetGalleryQuickAddTitle,
-                    width: 364,
-                    height: 169,
-                  ),
-                ),
-                SizedBox(height: 12.0.scaled(context, ref)),
-
-                // 4. 预算进度
-                _buildGalleryCard(
-                  context,
-                  ref,
-                  title: l10n.budgetMonthlyBudget,
-                  subtitle: l10n.widgetGalleryBudgetDesc,
-                  sizeLabel: l10n.widgetSizeMedium,
-                  previewSize: const Size(364, 169),
-                  preview: BudgetView(
-                    size: HWSize.medium,
-                    overview: _sampleBudgetOverview(),
-                    currencyCode: 'CNY',
-                    themeColor: primaryColor,
-                    redForIncome: redForIncome,
-                    dark: dark,
-                    budgetLabel: l10n.budgetMonthlyBudget,
-                    usedLabel: l10n.budgetUsed,
-                    totalLabel: l10n.widgetBudgetTotal,
-                    remainingLabel: l10n.widgetBudgetRemaining,
-                    noBudgetLabel: l10n.widgetNoBudget,
-                    width: 364,
-                    height: 169,
-                  ),
-                ),
-                SizedBox(height: 12.0.scaled(context, ref)),
-
-                // 5. 最近交易
-                _buildGalleryCard(
-                  context,
-                  ref,
-                  title: l10n.widgetRecentTransactions,
-                  subtitle: l10n.widgetGalleryRecentDesc,
-                  sizeLabel: l10n.widgetSizeLarge,
-                  previewSize: const Size(364, 382),
-                  preview: RecentView(
-                    size: HWSize.large,
-                    items: _sampleRecentItems(),
-                    defaultCurrency: 'CNY',
-                    themeColor: primaryColor,
-                    redForIncome: redForIncome,
-                    dark: dark,
-                    uncategorizedLabel: l10n.commonUncategorized,
-                    emptyLabel: l10n.widgetNoTransactions,
-                    titleLabel: l10n.widgetRecentTransactions,
-                    width: 364,
-                    height: 382,
-                  ),
-                ),
-                SizedBox(height: 12.0.scaled(context, ref)),
-
-                // 6. 综合仪表盘
-                _buildGalleryCard(
-                  context,
-                  ref,
-                  title: l10n.widgetGalleryDashboardTitle,
-                  subtitle: l10n.widgetGalleryDashboardDesc,
-                  sizeLabel: l10n.widgetSizeLarge,
-                  previewSize: const Size(364, 382),
-                  preview: DashboardView(
-                    data: _sampleDashboardData(),
-                    defaultCurrency: 'CNY',
-                    themeColor: primaryColor,
-                    redForIncome: redForIncome,
-                    dark: dark,
-                    monthExpenseLabel: l10n.widgetMonthExpense,
-                    monthIncomeLabel: l10n.widgetMonthIncome,
-                    recentLabel: l10n.widgetRecentTransactions,
-                    uncategorizedLabel: l10n.commonUncategorized,
-                    noTransactionsLabel: l10n.widgetNoTransactions,
-                    quickAddLabel: l10n.widgetQuickAddLabel,
-                    titleLabel: l10n.widgetDashboardTitle,
-                    width: 364,
-                    height: 382,
-                  ),
-                ),
-                SizedBox(height: 20.0.scaled(context, ref)),
-
-                // 添加指引
-                _buildAddGuideSection(context, ref, l10n),
-                SizedBox(height: 16.0.scaled(context, ref)),
-
-                // 快捷记账说明
-                _buildQuickEntrySection(context, ref, l10n),
-                SizedBox(height: 16.0.scaled(context, ref)),
-
-                // 说明文字
-                _buildDescriptionSection(context, ref, l10n),
-              ],
+          // 1. 收支速览
+          _buildGalleryCard(
+            context,
+            ref,
+            title: l10n.widgetGalleryGlanceTitle,
+            subtitle: l10n.widgetGalleryGlanceDesc,
+            sizeLabel: l10n.widgetSizeMedium,
+            previewSize: const Size(364, 169),
+            preview: GlanceView.medium(
+              todayExpense: '¥88.5',
+              todayIncome: '¥0',
+              monthExpense: '¥3,200.5',
+              monthIncome: '¥8,000',
+              themeColor: primaryColor,
+              redForIncome: redForIncome,
+              dark: dark,
+              titleLabel: l10n.widgetGalleryGlanceTitle,
+              monthSuffix: l10n.widgetMonthSuffix,
+              todayLabel: l10n.widgetToday,
+              todayExpenseLabel: l10n.widgetTodayExpense,
+              todayIncomeLabel: l10n.widgetTodayIncome,
+              monthExpenseLabel: l10n.widgetMonthExpense,
+              monthIncomeLabel: l10n.widgetMonthIncome,
+              width: 364,
+              height: 169,
             ),
           ),
+          SizedBox(height: 12.0.scaled(context, ref)),
+
+          // 1.5 收支速览·小号(独立可添加档位:Android 是单独的
+          // provider、iOS 是同 kind 的 systemSmall family,画廊里单独
+          // 露出一卡,让用户知道有这个小方块可加)
+          _buildGalleryCard(
+            context,
+            ref,
+            title: l10n.widgetGalleryGlanceTitle,
+            subtitle: l10n.widgetGalleryGlanceDesc,
+            sizeLabel: l10n.widgetSizeSmall,
+            previewSize: const Size(155, 155),
+            preview: GlanceView.small(
+              todayExpense: '¥88.5',
+              monthExpense: '¥3,200.5',
+              monthIncome: '¥8,000',
+              themeColor: primaryColor,
+              redForIncome: redForIncome,
+              dark: dark,
+              todayLabel: l10n.widgetToday,
+              todayExpenseLabel: l10n.widgetTodayExpense,
+              monthExpenseLabel: l10n.widgetMonthExpense,
+              monthIncomeLabel: l10n.widgetMonthIncome,
+              width: 155,
+              height: 155,
+            ),
+          ),
+          SizedBox(height: 12.0.scaled(context, ref)),
+
+          // 2. 净资产
+          _buildGalleryCard(
+            context,
+            ref,
+            title: l10n.accountTotalBalance,
+            subtitle: l10n.widgetGalleryNetWorthDesc,
+            sizeLabel: l10n.widgetSizeLarge,
+            previewSize: const Size(364, 382),
+            preview: NetWorthView(
+              size: HWSize.large,
+              netWorth: 82345.67,
+              totalAssets: 102345.67,
+              totalLiabilities: 20000,
+              baseCurrency: 'CNY',
+              trend: _sampleNetWorthTrend(),
+              topAccounts: _sampleNetWorthAccounts(),
+              themeColor: primaryColor,
+              redForIncome: redForIncome,
+              dark: dark,
+              netWorthLabel: l10n.accountTotalBalance,
+              totalAssetsLabel: l10n.totalAssets,
+              totalLiabilitiesLabel: l10n.totalLiabilities,
+              noAccountsLabel: l10n.widgetNoAccounts,
+              width: 364,
+              height: 382,
+            ),
+          ),
+          SizedBox(height: 12.0.scaled(context, ref)),
+
+          // 3. 快速记账
+          _buildGalleryCard(
+            context,
+            ref,
+            title: l10n.widgetGalleryQuickAddTitle,
+            subtitle: l10n.widgetGalleryQuickAddDesc,
+            sizeLabel: l10n.widgetSizeMedium,
+            previewSize: const Size(364, 169),
+            preview: QuickAddView(
+              size: HWSize.medium,
+              categories: _sampleQuickAddCategories(),
+              themeColor: primaryColor,
+              dark: dark,
+              addLabel: l10n.widgetQuickAddLabel,
+              titleLabel: l10n.widgetGalleryQuickAddTitle,
+              width: 364,
+              height: 169,
+            ),
+          ),
+          SizedBox(height: 12.0.scaled(context, ref)),
+
+          // 4. 预算进度
+          _buildGalleryCard(
+            context,
+            ref,
+            title: l10n.budgetMonthlyBudget,
+            subtitle: l10n.widgetGalleryBudgetDesc,
+            sizeLabel: l10n.widgetSizeMedium,
+            previewSize: const Size(364, 169),
+            preview: BudgetView(
+              size: HWSize.medium,
+              overview: _sampleBudgetOverview(),
+              currencyCode: 'CNY',
+              themeColor: primaryColor,
+              redForIncome: redForIncome,
+              dark: dark,
+              budgetLabel: l10n.budgetMonthlyBudget,
+              usedLabel: l10n.budgetUsed,
+              totalLabel: l10n.widgetBudgetTotal,
+              remainingLabel: l10n.widgetBudgetRemaining,
+              noBudgetLabel: l10n.widgetNoBudget,
+              width: 364,
+              height: 169,
+            ),
+          ),
+          SizedBox(height: 12.0.scaled(context, ref)),
+
+          // 5. 最近交易
+          _buildGalleryCard(
+            context,
+            ref,
+            title: l10n.widgetRecentTransactions,
+            subtitle: l10n.widgetGalleryRecentDesc,
+            sizeLabel: l10n.widgetSizeLarge,
+            previewSize: const Size(364, 382),
+            preview: RecentView(
+              size: HWSize.large,
+              items: _sampleRecentItems(),
+              defaultCurrency: 'CNY',
+              themeColor: primaryColor,
+              redForIncome: redForIncome,
+              dark: dark,
+              uncategorizedLabel: l10n.commonUncategorized,
+              emptyLabel: l10n.widgetNoTransactions,
+              titleLabel: l10n.widgetRecentTransactions,
+              width: 364,
+              height: 382,
+            ),
+          ),
+          SizedBox(height: 12.0.scaled(context, ref)),
+
+          // 6. 综合仪表盘
+          _buildGalleryCard(
+            context,
+            ref,
+            title: l10n.widgetGalleryDashboardTitle,
+            subtitle: l10n.widgetGalleryDashboardDesc,
+            sizeLabel: l10n.widgetSizeLarge,
+            previewSize: const Size(364, 382),
+            preview: DashboardView(
+              data: _sampleDashboardData(),
+              defaultCurrency: 'CNY',
+              themeColor: primaryColor,
+              redForIncome: redForIncome,
+              dark: dark,
+              monthExpenseLabel: l10n.widgetMonthExpense,
+              monthIncomeLabel: l10n.widgetMonthIncome,
+              recentLabel: l10n.widgetRecentTransactions,
+              uncategorizedLabel: l10n.commonUncategorized,
+              noTransactionsLabel: l10n.widgetNoTransactions,
+              quickAddLabel: l10n.widgetQuickAddLabel,
+              titleLabel: l10n.widgetDashboardTitle,
+              width: 364,
+              height: 382,
+            ),
+          ),
+          SizedBox(height: 20.0.scaled(context, ref)),
+
+          // 添加指引
+          _buildAddGuideSection(context, ref, l10n),
+          SizedBox(height: 16.0.scaled(context, ref)),
+
+          // 快捷记账说明
+          _buildQuickEntrySection(context, ref, l10n),
+          SizedBox(height: 16.0.scaled(context, ref)),
+
+          // 说明文字
+          _buildDescriptionSection(context, ref, l10n),
         ],
       ),
     );
@@ -318,78 +312,74 @@ class WidgetManagementPage extends ConsumerWidget {
     required Size previewSize,
     required Widget preview,
   }) {
-    return SectionCard(
-      margin: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 15.0.scaled(context, ref),
-                        fontWeight: FontWeight.w600,
-                        color: BeeTokens.textPrimary(context),
-                      ),
+    return SettingsCard(
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 15.0.scaled(context, ref),
+                      fontWeight: FontWeight.w600,
+                      color: BeeTokens.textPrimary(context),
                     ),
-                    SizedBox(height: 3.0.scaled(context, ref)),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 12.0.scaled(context, ref),
-                        color: BeeTokens.textSecondary(context),
-                      ),
+                  ),
+                  SizedBox(height: 3.0.scaled(context, ref)),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12.0.scaled(context, ref),
+                      color: BeeTokens.textSecondary(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(width: 8.0.scaled(context, ref)),
+            _buildSizeBadge(context, ref, sizeLabel, previewSize),
+          ],
+        ),
+        SizedBox(height: 14.0.scaled(context, ref)),
+        Center(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final displayWidth = constraints.maxWidth.clamp(0.0, 400.0);
+              final displayHeight =
+                  displayWidth * previewSize.height / previewSize.width;
+              return Container(
+                width: displayWidth,
+                height: displayHeight,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.10),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
                     ),
                   ],
                 ),
-              ),
-              SizedBox(width: 8.0.scaled(context, ref)),
-              _buildSizeBadge(context, ref, sizeLabel, previewSize),
-            ],
-          ),
-          SizedBox(height: 14.0.scaled(context, ref)),
-          Center(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final displayWidth = constraints.maxWidth.clamp(0.0, 400.0);
-                final displayHeight =
-                    displayWidth * previewSize.height / previewSize.width;
-                return Container(
-                  width: displayWidth,
-                  height: displayHeight,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.10),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: FittedBox(
-                      fit: BoxFit.contain,
-                      child: SizedBox(
-                        width: previewSize.width,
-                        height: previewSize.height,
-                        child: preview,
-                      ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: FittedBox(
+                    fit: BoxFit.contain,
+                    child: SizedBox(
+                      width: previewSize.width,
+                      height: previewSize.height,
+                      child: preview,
                     ),
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            },
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -430,46 +420,50 @@ class WidgetManagementPage extends ConsumerWidget {
     AppLocalizations l10n,
   ) {
     final primaryColor = ref.watch(primaryColorProvider);
-    return SectionCard(
-      margin: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return SettingsCard(
+      children: [
+        Padding(
+          padding: EdgeInsets.all(14.0.scaled(context, ref)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                Icons.add_circle_outline,
-                color: primaryColor,
-                size: 22.0.scaled(context, ref),
+              Row(
+                children: [
+                  Icon(
+                    Icons.add_circle_outline,
+                    color: primaryColor,
+                    size: 22.0.scaled(context, ref),
+                  ),
+                  SizedBox(width: 8.0.scaled(context, ref)),
+                  Text(
+                    l10n.howToAddWidget,
+                    style: TextStyle(
+                      fontSize: 15.0.scaled(context, ref),
+                      fontWeight: FontWeight.w600,
+                      color: BeeTokens.textPrimary(context),
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(width: 8.0.scaled(context, ref)),
-              Text(
-                l10n.howToAddWidget,
-                style: TextStyle(
-                  fontSize: 15.0.scaled(context, ref),
-                  fontWeight: FontWeight.w600,
-                  color: BeeTokens.textPrimary(context),
-                ),
-              ),
+              SizedBox(height: 14.0.scaled(context, ref)),
+              if (Platform.isIOS)
+                _buildStepList(context, ref, [
+                  l10n.iosWidgetStep1,
+                  l10n.iosWidgetStep2,
+                  l10n.iosWidgetStep3,
+                  l10n.iosWidgetStep4,
+                ])
+              else
+                _buildStepList(context, ref, [
+                  l10n.androidWidgetStep1,
+                  l10n.androidWidgetStep2,
+                  l10n.androidWidgetStep3,
+                  l10n.androidWidgetStep4,
+                ]),
             ],
           ),
-          SizedBox(height: 14.0.scaled(context, ref)),
-          if (Platform.isIOS)
-            _buildStepList(context, ref, [
-              l10n.iosWidgetStep1,
-              l10n.iosWidgetStep2,
-              l10n.iosWidgetStep3,
-              l10n.iosWidgetStep4,
-            ])
-          else
-            _buildStepList(context, ref, [
-              l10n.androidWidgetStep1,
-              l10n.androidWidgetStep2,
-              l10n.androidWidgetStep3,
-              l10n.androidWidgetStep4,
-            ]),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -530,40 +524,44 @@ class WidgetManagementPage extends ConsumerWidget {
     AppLocalizations l10n,
   ) {
     final primaryColor = ref.watch(primaryColorProvider);
-    return SectionCard(
-      margin: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return SettingsCard(
+      children: [
+        Padding(
+          padding: EdgeInsets.all(14.0.scaled(context, ref)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                Icons.touch_app_outlined,
-                color: primaryColor,
-                size: 22.0.scaled(context, ref),
+              Row(
+                children: [
+                  Icon(
+                    Icons.touch_app_outlined,
+                    color: primaryColor,
+                    size: 22.0.scaled(context, ref),
+                  ),
+                  SizedBox(width: 8.0.scaled(context, ref)),
+                  Text(
+                    l10n.widgetQuickEntryTitle,
+                    style: TextStyle(
+                      fontSize: 15.0.scaled(context, ref),
+                      fontWeight: FontWeight.w600,
+                      color: BeeTokens.textPrimary(context),
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(width: 8.0.scaled(context, ref)),
+              SizedBox(height: 10.0.scaled(context, ref)),
               Text(
-                l10n.widgetQuickEntryTitle,
+                l10n.widgetQuickEntryDesc,
                 style: TextStyle(
-                  fontSize: 15.0.scaled(context, ref),
-                  fontWeight: FontWeight.w600,
-                  color: BeeTokens.textPrimary(context),
+                  fontSize: 13.0.scaled(context, ref),
+                  color: BeeTokens.textSecondary(context),
+                  height: 1.5,
                 ),
               ),
             ],
           ),
-          SizedBox(height: 10.0.scaled(context, ref)),
-          Text(
-            l10n.widgetQuickEntryDesc,
-            style: TextStyle(
-              fontSize: 13.0.scaled(context, ref),
-              color: BeeTokens.textSecondary(context),
-              height: 1.5,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

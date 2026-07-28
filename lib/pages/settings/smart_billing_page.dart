@@ -130,24 +130,20 @@ class SmartBillingPage extends ConsumerWidget {
     final settings = ref.watch(voiceBillingSettingsProvider);
     final isAuto = settings.triggerMode == VoiceTriggerMode.auto;
 
-    return SectionCard(
-      margin: EdgeInsets.zero,
-      child: Column(
-        children: [
-          AppListTile(
-            leading: Icons.mic_none_outlined,
-            title: l10n.smartBillingVoiceTrigger,
-            subtitle: isAuto
-                ? l10n.voiceTriggerModeAuto
-                : l10n.voiceTriggerModeHold,
-            onTap: () => _showVoiceTriggerDialog(context, ref, settings.triggerMode),
-          ),
-          if (isAuto) ...[
-            BeeTokens.cardDivider(context),
-            const _VoiceSilenceTimeoutSlider(),
-          ],
+    return SettingsCard(
+      children: [
+        SettingsNavItem(
+          icon: Icons.mic_none_outlined,
+          title: l10n.smartBillingVoiceTrigger,
+          subtitle: isAuto
+              ? l10n.voiceTriggerModeAuto
+              : l10n.voiceTriggerModeHold,
+          onTap: () => _showVoiceTriggerDialog(context, ref, settings.triggerMode),
+        ),
+        if (isAuto) ...[
+          const _VoiceSilenceTimeoutSlider(),
         ],
-      ),
+      ],
     );
   }
 
@@ -210,201 +206,175 @@ class SmartBillingPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),
-      body: Column(
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.smartBillingPageTitle,
+        showBack: true,
+      ),
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          MediaQuery.of(context).padding.top + 56 + 16,
+          16,
+          16 + MediaQuery.of(context).padding.bottom,
+        ),
         children: [
-          PrimaryHeader(
-            title: l10n.smartBillingPageTitle,
-            subtitle: l10n.smartBillingPageSubtitle,
-            showBack: true,
+          // AI设置卡片
+          SettingsCard(
+            children: [
+              // AI智能识别设置
+              SettingsNavItem(
+                icon: Icons.psychology_outlined,
+                title: l10n.aiSettingsTitle,
+                subtitle: l10n.aiSettingsSubtitle,
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AISettingsPage()),
+                  );
+                },
+              ),
+            ],
           ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                // AI设置卡片
-                SectionCard(
-                  margin: EdgeInsets.zero,
-                  child: Column(
-                    children: [
-                      // AI智能识别设置
-                      AppListTile(
-                        leading: Icons.psychology_outlined,
-                        title: l10n.aiSettingsTitle,
-                        subtitle: l10n.aiSettingsSubtitle,
-                        onTap: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const AISettingsPage()),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
 
-                const SizedBox(height: 16),
+          const SizedBox(height: 16),
 
-                // 快速记账功能引导
-                SectionCard(
-                  margin: EdgeInsets.zero,
-                  child: Column(
-                    children: [
-                      // 图片记账
-                      AppListTile(
-                        leading: Icons.photo_library_outlined,
-                        title: l10n.smartBillingImageBilling,
-                        subtitle: l10n.smartBillingImageBillingDesc,
-                        onTap: () {
-                          _showFeatureGuideDialog(
-                            context,
-                            l10n.smartBillingImageBilling,
-                            l10n.smartBillingImageBillingGuide,
-                            l10n.smartBillingVisionAIRequired,
-                            true,
-                          );
-                        },
-                      ),
-                      BeeTokens.cardDivider(context),
+          // 快速记账功能引导
+          SettingsCard(
+            children: [
+              // 图片记账
+              SettingsNavItem(
+                icon: Icons.photo_library_outlined,
+                title: l10n.smartBillingImageBilling,
+                subtitle: l10n.smartBillingImageBillingDesc,
+                onTap: () {
+                  _showFeatureGuideDialog(
+                    context,
+                    l10n.smartBillingImageBilling,
+                    l10n.smartBillingImageBillingGuide,
+                    l10n.smartBillingVisionAIRequired,
+                    true,
+                  );
+                },
+              ),
 
-                      // 拍照记账
-                      AppListTile(
-                        leading: Icons.camera_alt_outlined,
-                        title: l10n.smartBillingCameraBilling,
-                        subtitle: l10n.smartBillingCameraBillingDesc,
-                        onTap: () {
-                          _showFeatureGuideDialog(
-                            context,
-                            l10n.smartBillingCameraBilling,
-                            l10n.smartBillingCameraBillingGuide,
-                            l10n.smartBillingVisionAIRequired,
-                            true,
-                          );
-                        },
-                      ),
-                      BeeTokens.cardDivider(context),
+              // 拍照记账
+              SettingsNavItem(
+                icon: Icons.camera_alt_outlined,
+                title: l10n.smartBillingCameraBilling,
+                subtitle: l10n.smartBillingCameraBillingDesc,
+                onTap: () {
+                  _showFeatureGuideDialog(
+                    context,
+                    l10n.smartBillingCameraBilling,
+                    l10n.smartBillingCameraBillingGuide,
+                    l10n.smartBillingVisionAIRequired,
+                    true,
+                  );
+                },
+              ),
 
-                      // 语音记账
-                      AppListTile(
-                        leading: Icons.mic_outlined,
-                        title: l10n.smartBillingVoiceBilling,
-                        subtitle: l10n.smartBillingVoiceBillingDesc,
-                        onTap: () {
-                          _showFeatureGuideDialog(
-                            context,
-                            l10n.smartBillingVoiceBilling,
-                            l10n.smartBillingVoiceBillingGuide,
-                            l10n.smartBillingAIRequired,
-                            true,
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // 截图自动记账
-                SectionCard(
-                  margin: EdgeInsets.zero,
-                  child: Column(
-                    children: [
-                      // 分享记账（Android：门槛低、GP 版唯一截图类入口，置顶）
-                      if (Platform.isAndroid) ...[
-                        AppListTile(
-                          leading: Icons.share_outlined,
-                          title: l10n.shareBilling,
-                          subtitle: l10n.shareBillingDesc,
-                          onTap: () {
-                            _showFeatureGuideDialog(
-                              context,
-                              l10n.shareBilling,
-                              l10n.shareBillingGuide,
-                              l10n.smartBillingVisionAIRequired,
-                              true,
-                              actionHint: l10n.shareBillingActionHint,
-                            );
-                          },
-                        ),
-                        BeeTokens.cardDivider(context),
-                      ],
-                      // 截图自动记账
-                      if (!(Platform.isAndroid && _isGooglePlayBuild)) ...[
-                        AppListTile(
-                          leading: Icons.auto_fix_high,
-                          title: Platform.isAndroid
-                              ? l10n.autoScreenshotBilling
-                              : l10n.autoScreenshotBillingIosTitle,
-                          subtitle: Platform.isAndroid
-                              ? l10n.autoScreenshotBillingDesc
-                              : l10n.autoScreenshotBillingIosDesc,
-                          onTap: () async {
-                            await Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const AutoBillingSettingsPage()),
-                            );
-                          },
-                        ),
-                        BeeTokens.cardDivider(context),
-                      ],
-                      // 快捷指令
-                      AppListTile(
-                        leading: Icons.app_shortcut,
-                        title: l10n.shortcutsGuide,
-                        subtitle: l10n.shortcutsGuideDesc,
-                        onTap: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const ShortcutsGuidePage()),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // 智能记账通用设置
-                SectionCard(
-                  margin: EdgeInsets.zero,
-                  child: Column(
-                    children: [
-                      // 自动关联标签
-                      AppListTile(
-                        leading: Icons.label_outline,
-                        title: l10n.smartBillingAutoTags,
-                        subtitle: l10n.smartBillingAutoTagsDesc,
-                        trailing: Switch.adaptive(
-                          value: ref.watch(smartBillingAutoTagsProvider),
-                          activeColor: ref.watch(primaryColorProvider),
-                          onChanged: (value) {
-                            ref.read(smartBillingAutoTagsProvider.notifier).state = value;
-                          },
-                        ),
-                      ),
-                      BeeTokens.cardDivider(context),
-                      // 自动添加附件
-                      AppListTile(
-                        leading: Icons.attachment_outlined,
-                        title: l10n.smartBillingAutoAttachment,
-                        subtitle: l10n.smartBillingAutoAttachmentDesc,
-                        trailing: Switch.adaptive(
-                          value: ref.watch(smartBillingAutoAttachmentProvider),
-                          activeColor: ref.watch(primaryColorProvider),
-                          onChanged: (value) {
-                            ref.read(smartBillingAutoAttachmentProvider.notifier).state = value;
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // 语音记账设置（触发方式 + 静音灵敏度）
-                _buildVoiceBillingSection(context, ref),
-              ],
-            ),
+              // 语音记账
+              SettingsNavItem(
+                icon: Icons.mic_outlined,
+                title: l10n.smartBillingVoiceBilling,
+                subtitle: l10n.smartBillingVoiceBillingDesc,
+                onTap: () {
+                  _showFeatureGuideDialog(
+                    context,
+                    l10n.smartBillingVoiceBilling,
+                    l10n.smartBillingVoiceBillingGuide,
+                    l10n.smartBillingAIRequired,
+                    true,
+                  );
+                },
+              ),
+            ],
           ),
+
+          const SizedBox(height: 16),
+
+          // 截图自动记账
+          SettingsCard(
+            children: [
+              // 分享记账（Android：门槛低、GP 版唯一截图类入口，置顶）
+              if (Platform.isAndroid)
+                SettingsNavItem(
+                  icon: Icons.share_outlined,
+                  title: l10n.shareBilling,
+                  subtitle: l10n.shareBillingDesc,
+                  onTap: () {
+                    _showFeatureGuideDialog(
+                      context,
+                      l10n.shareBilling,
+                      l10n.shareBillingGuide,
+                      l10n.smartBillingVisionAIRequired,
+                      true,
+                      actionHint: l10n.shareBillingActionHint,
+                    );
+                  },
+                ),
+              // 截图自动记账
+              if (!(Platform.isAndroid && _isGooglePlayBuild))
+                SettingsNavItem(
+                  icon: Icons.auto_fix_high,
+                  title: Platform.isAndroid
+                      ? l10n.autoScreenshotBilling
+                      : l10n.autoScreenshotBillingIosTitle,
+                  subtitle: Platform.isAndroid
+                      ? l10n.autoScreenshotBillingDesc
+                      : l10n.autoScreenshotBillingIosDesc,
+                  onTap: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const AutoBillingSettingsPage()),
+                    );
+                  },
+                ),
+              // 快捷指令
+              SettingsNavItem(
+                icon: Icons.app_shortcut,
+                title: l10n.shortcutsGuide,
+                subtitle: l10n.shortcutsGuideDesc,
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ShortcutsGuidePage()),
+                  );
+                },
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // 智能记账通用设置
+          SettingsCard(
+            children: [
+              // 自动关联标签
+              SettingsToggleItem(
+                icon: Icons.label_outline,
+                title: l10n.smartBillingAutoTags,
+                subtitle: l10n.smartBillingAutoTagsDesc,
+                value: ref.watch(smartBillingAutoTagsProvider),
+                onChanged: (value) {
+                  ref.read(smartBillingAutoTagsProvider.notifier).state = value;
+                },
+              ),
+              // 自动添加附件
+              SettingsToggleItem(
+                icon: Icons.attachment_outlined,
+                title: l10n.smartBillingAutoAttachment,
+                subtitle: l10n.smartBillingAutoAttachmentDesc,
+                value: ref.watch(smartBillingAutoAttachmentProvider),
+                onChanged: (value) {
+                  ref.read(smartBillingAutoAttachmentProvider.notifier).state = value;
+                },
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // 语音记账设置（触发方式 + 静音灵敏度）
+          _buildVoiceBillingSection(context, ref),
         ],
       ),
     );

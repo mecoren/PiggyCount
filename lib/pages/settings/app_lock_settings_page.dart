@@ -172,150 +172,67 @@ class _AppLockSettingsPageState extends ConsumerState<AppLockSettingsPage> {
     final enabled = ref.watch(appLockEnabledProvider);
     final biometricEnabled = ref.watch(appLockBiometricEnabledProvider);
     final timeout = ref.watch(appLockTimeoutProvider);
-    final primaryColor = ref.watch(primaryColorProvider);
 
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: l10n.appLockTitle,
-            showBack: true,
-          ),
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.only(
-                top: 8.0.scaled(context, ref),
-                bottom: 16.0.scaled(context, ref),
-              ),
-              children: [
-                // 应用锁开关
-                SectionCard(
-                  child: Column(
-                    children: [
-                      _SwitchTile(
-                        icon: Icons.lock_outline,
-                        title: l10n.appLockEnable,
-                        subtitle: l10n.appLockEnableDesc,
-                        value: enabled,
-                        onChanged: _toggleAppLock,
-                        primaryColor: primaryColor,
-                      ),
-                    ],
-                  ),
-                ),
-                if (enabled) ...[
-                  SizedBox(height: 8.0.scaled(context, ref)),
-                  // PIN 管理
-                  SectionCard(
-                    child: Column(
-                      children: [
-                        AppListTile(
-                          leading: Icons.dialpad,
-                          title: l10n.appLockChangePin,
-                          trailing: Icon(Icons.chevron_right,
-                              color: BeeTokens.iconTertiary(context),
-                              size: 20),
-                          onTap: _changePin,
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 8.0.scaled(context, ref)),
-                  // 生物识别 + 超时
-                  SectionCard(
-                    child: Column(
-                      children: [
-                        if (_canUseBiometrics) ...[
-                          _SwitchTile(
-                            icon: Icons.fingerprint,
-                            title: l10n.appLockBiometric,
-                            subtitle: l10n.appLockBiometricDesc,
-                            value: biometricEnabled,
-                            onChanged: _toggleBiometric,
-                            primaryColor: primaryColor,
-                          ),
-                          BeeTokens.cardDivider(context),
-                        ],
-                        AppListTile(
-                          leading: Icons.timer_outlined,
-                          title: l10n.appLockTimeout,
-                          subtitle: _timeoutLabel(timeout),
-                          trailing: Icon(Icons.chevron_right,
-                              color: BeeTokens.iconTertiary(context),
-                              size: 20),
-                          onTap: _showTimeoutPicker,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.appLockTitle,
+        showBack: true,
       ),
-    );
-  }
-}
-
-/// 带开关的设置项
-class _SwitchTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-  final Color primaryColor;
-
-  const _SwitchTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.value,
-    required this.onChanged,
-    required this.primaryColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          MediaQuery.of(context).padding.top + 56 + 16,
+          16,
+          16 + MediaQuery.of(context).padding.bottom,
+        ),
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: primaryColor.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: primaryColor, size: 20),
+          // 应用锁开关
+          SettingsCard(
+            children: [
+              SettingsToggleItem(
+                icon: Icons.lock_outline,
+                title: l10n.appLockEnable,
+                subtitle: l10n.appLockEnableDesc,
+                value: enabled,
+                onChanged: _toggleAppLock,
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          if (enabled) ...[
+            const SizedBox(height: 16),
+            // PIN 管理
+            SettingsCard(
               children: [
-                Text(
-                  title,
-                  style: BeeTextTokens.title(context)
-                      .copyWith(color: BeeTokens.textPrimary(context)),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: BeeTextTokens.label(context)
-                      .copyWith(color: BeeTokens.textSecondary(context)),
+                SettingsNavItem(
+                  icon: Icons.dialpad,
+                  title: l10n.appLockChangePin,
+                  onTap: _changePin,
                 ),
               ],
             ),
-          ),
-          Switch.adaptive(
-            value: value,
-            onChanged: onChanged,
-            activeColor: primaryColor,
-          ),
+            const SizedBox(height: 16),
+            // 生物识别 + 超时
+            SettingsCard(
+              children: [
+                if (_canUseBiometrics)
+                  SettingsToggleItem(
+                    icon: Icons.fingerprint,
+                    title: l10n.appLockBiometric,
+                    subtitle: l10n.appLockBiometricDesc,
+                    value: biometricEnabled,
+                    onChanged: _toggleBiometric,
+                  ),
+                SettingsNavItem(
+                  icon: Icons.timer_outlined,
+                  title: l10n.appLockTimeout,
+                  subtitle: _timeoutLabel(timeout),
+                  onTap: _showTimeoutPicker,
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -375,46 +292,46 @@ class _PinVerifyPageState extends ConsumerState<_PinVerifyPage> {
 
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: l10n.appLockVerifyPin,
-            showBack: true,
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.appLockVerifyPin,
+        showBack: true,
+      ),
+      body: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.only(
+            top: MediaQuery.of(context).padding.top + 56,
           ),
-          Expanded(
-            child: SafeArea(
-              top: false,
-              child: Column(
-                children: [
-                  const Spacer(flex: 2),
-                  Text(
-                    l10n.appLockVerifyCurrentPin,
-                    style: TextStyle(
-                      fontSize: 18.0.scaled(context, ref),
-                      fontWeight: FontWeight.w600,
-                      color: BeeTokens.textPrimary(context),
-                    ),
-                  ),
-                  SizedBox(height: 32.0.scaled(context, ref)),
-                  PinDotIndicator(
-                    filledCount: _pin.length,
-                    isError: _isError,
-                  ),
-                  const Spacer(flex: 1),
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                        horizontal: 40.0.scaled(context, ref)),
-                    child: NumberPad(
-                      onNumberTap: _onNumberTap,
-                      onDelete: _onDelete,
-                    ),
-                  ),
-                  SizedBox(height: 32.0.scaled(context, ref)),
-                ],
+          child: Column(
+            children: [
+              const Spacer(flex: 2),
+              Text(
+                l10n.appLockVerifyCurrentPin,
+                style: TextStyle(
+                  fontSize: 18.0.scaled(context, ref),
+                  fontWeight: FontWeight.w600,
+                  color: BeeTokens.textPrimary(context),
+                ),
               ),
-            ),
+              SizedBox(height: 32.0.scaled(context, ref)),
+              PinDotIndicator(
+                filledCount: _pin.length,
+                isError: _isError,
+              ),
+              const Spacer(flex: 1),
+              Padding(
+                padding: EdgeInsets.symmetric(
+                    horizontal: 40.0.scaled(context, ref)),
+                child: NumberPad(
+                  onNumberTap: _onNumberTap,
+                  onDelete: _onDelete,
+                ),
+              ),
+              SizedBox(height: 32.0.scaled(context, ref)),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

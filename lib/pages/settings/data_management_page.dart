@@ -20,7 +20,6 @@ import '../settings/storage_management_page.dart';
 import '../settings/attachment_preview_page.dart';
 import '../maintenance/orphan_cleanup_page.dart';
 import '../../l10n/app_localizations.dart';
-import '../../utils/ui_scale_extensions.dart';
 import '../../services/attachment_export_import_service.dart';
 
 /// 数据管理二级页面
@@ -43,187 +42,173 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),
-      body: Column(
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.dataManagementPageTitle,
+        showBack: true,
+      ),
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          MediaQuery.of(context).padding.top + 56 + 16,
+          16,
+          16 + MediaQuery.of(context).padding.bottom,
+        ),
         children: [
-          PrimaryHeader(
-            title: AppLocalizations.of(context).dataManagementPageTitle,
-            subtitle: AppLocalizations.of(context).dataManagementPageSubtitle,
-            showBack: true,
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                // 提示文案
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Text(
-                    AppLocalizations.of(context).dataManagementAttachmentHint,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: BeeTokens.textTertiary(context),
-                    ),
-                  ),
-                ),
-                // 导入导出
-                SectionCard(
-                  margin: EdgeInsets.zero,
-                  child: Column(
-                    children: [
-                      // 导入数据
-                      Consumer(builder: (ctx, r, _) {
-                        final p = r.watch(importProgressProvider);
-                        if (!p.running && p.total == 0) {
-                          return AppListTile(
-                            leading: Icons.file_upload_outlined,
-                            title: AppLocalizations.of(context).mineImport,
-                            onTap: () async {
-                              await Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const ImportPage()),
-                              );
-                            },
-                          );
-                        }
-                        if (p.running) {
-                          final percent =
-                              p.total == 0 ? null : (p.done / p.total).clamp(0.0, 1.0);
-                          return AppListTile(
-                            leading: Icons.upload_outlined,
-                            title: AppLocalizations.of(context).mineImportProgressTitle,
-                            subtitle: AppLocalizations.of(context)
-                                .mineImportProgressSubtitle(p.done, p.fail, p.ok, p.total),
-                            trailing: SizedBox(
-                                width: 72, child: LinearProgressIndicator(value: percent)),
-                            onTap: null,
-                          );
-                        }
-                        final allOk = (p.done == p.total) && (p.fail == 0);
-                        if (allOk) return const _ImportSuccessTile();
-                        return AppListTile(
-                          leading: Icons.info_outline,
-                          title: AppLocalizations.of(context).mineImportCompleteTitle,
-                          subtitle:
-                              '${AppLocalizations.of(context).commonSuccess} ${p.ok}，${AppLocalizations.of(context).commonFailed} ${p.fail}',
-                          onTap: null,
-                        );
-                      }),
-                      BeeTokens.cardDivider(context),
-                      // 导出数据
-                      AppListTile(
-                        leading: Icons.file_download_outlined,
-                        title: AppLocalizations.of(context).mineExport,
-                        onTap: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const ExportPage()),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 8.0.scaled(context, ref)),
-                // 附件导出导入
-                _buildAttachmentSection(context, ref),
-                SizedBox(height: 8.0.scaled(context, ref)),
-                // 分类管理
-                SectionCard(
-                  margin: EdgeInsets.zero,
-                  child: Column(
-                    children: [
-                      // 分类管理
-                      AppListTile(
-                        leading: Icons.category_outlined,
-                        title: AppLocalizations.of(context).mineCategoryManagement,
-                        subtitle: AppLocalizations.of(context).mineCategoryManagementSubtitle,
-                        onTap: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const CategoryManagePage()),
-                          );
-                        },
-                      ),
-                      BeeTokens.cardDivider(context),
-                      // 分类迁移
-                      AppListTile(
-                        leading: Icons.swap_horiz,
-                        title: AppLocalizations.of(context).mineCategoryMigration,
-                        subtitle: AppLocalizations.of(context).mineCategoryMigrationSubtitle,
-                        onTap: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const CategoryMigrationPage()),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 8.0.scaled(context, ref)),
-                // 标签管理
-                SectionCard(
-                  margin: EdgeInsets.zero,
-                  child: AppListTile(
-                    leading: Icons.label_outline,
-                    title: AppLocalizations.of(context).tagManageTitle,
-                    subtitle: AppLocalizations.of(context).tagManageSubtitle,
-                    onTap: () async {
-                      await Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const TagManagePage()),
-                      );
-                    },
-                  ),
-                ),
-                SizedBox(height: 8.0.scaled(context, ref)),
-                // 配置管理
-                SectionCard(
-                  margin: EdgeInsets.zero,
-                  child: Column(
-                    children: [
-                      // 配置导入导出
-                      AppListTile(
-                        leading: Icons.settings_backup_restore,
-                        title: AppLocalizations.of(context).configImportExportTitle,
-                        subtitle: AppLocalizations.of(context).configImportExportSubtitle,
-                        onTap: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const ConfigImportExportPage()),
-                          );
-                        },
-                      ),
-                      BeeTokens.cardDivider(context),
-                      // 存储空间管理
-                      AppListTile(
-                        leading: Icons.storage_outlined,
-                        title: AppLocalizations.of(context).storageManagementTitle,
-                        subtitle: AppLocalizations.of(context).storageManagementSubtitle,
-                        onTap: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const StorageManagementPage()),
-                          );
-                        },
-                      ),
-                      BeeTokens.cardDivider(context),
-                      // 数据清理(孤儿数据)
-                      AppListTile(
-                        leading: Icons.cleaning_services_outlined,
-                        title: AppLocalizations.of(context)
-                            .maintenanceOrphanCleanupTitle,
-                        subtitle: AppLocalizations.of(context)
-                            .maintenanceOrphanCleanupSubtitle,
-                        onTap: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => const OrphanCleanupPage()),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                // 应用锁已挪到「个性化设置」页面(语义上属于应用偏好)。
-              ],
+          // 提示文案
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              l10n.dataManagementAttachmentHint,
+              style: TextStyle(
+                fontSize: 12,
+                color: BeeTokens.textTertiary(context),
+              ),
             ),
           ),
+          // 导入导出
+          SettingsCard(
+            children: [
+              // 导入数据
+              Consumer(builder: (ctx, r, _) {
+                final p = r.watch(importProgressProvider);
+                if (!p.running && p.total == 0) {
+                  return SettingsNavItem(
+                    icon: Icons.file_upload_outlined,
+                    title: l10n.mineImport,
+                    onTap: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const ImportPage()),
+                      );
+                    },
+                  );
+                }
+                if (p.running) {
+                  final percent =
+                      p.total == 0 ? null : (p.done / p.total).clamp(0.0, 1.0);
+                  return SettingsNavItem(
+                    icon: Icons.upload_outlined,
+                    title: l10n.mineImportProgressTitle,
+                    subtitle: l10n
+                        .mineImportProgressSubtitle(p.done, p.fail, p.ok, p.total),
+                    trailing: SizedBox(
+                        width: 72, child: LinearProgressIndicator(value: percent)),
+                    enabled: false,
+                  );
+                }
+                final allOk = (p.done == p.total) && (p.fail == 0);
+                if (allOk) return const _ImportSuccessTile();
+                return SettingsNavItem(
+                  icon: Icons.info_outline,
+                  title: l10n.mineImportCompleteTitle,
+                  subtitle:
+                      '${l10n.commonSuccess} ${p.ok}，${l10n.commonFailed} ${p.fail}',
+                  enabled: false,
+                );
+              }),
+              // 导出数据
+              SettingsNavItem(
+                icon: Icons.file_download_outlined,
+                title: l10n.mineExport,
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ExportPage()),
+                  );
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // 附件导出导入
+          _buildAttachmentSection(context, ref),
+          const SizedBox(height: 16),
+          // 分类管理
+          SettingsCard(
+            children: [
+              // 分类管理
+              SettingsNavItem(
+                icon: Icons.category_outlined,
+                title: l10n.mineCategoryManagement,
+                subtitle: l10n.mineCategoryManagementSubtitle,
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const CategoryManagePage()),
+                  );
+                },
+              ),
+              // 分类迁移
+              SettingsNavItem(
+                icon: Icons.swap_horiz,
+                title: l10n.mineCategoryMigration,
+                subtitle: l10n.mineCategoryMigrationSubtitle,
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const CategoryMigrationPage()),
+                  );
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // 标签管理
+          SettingsCard(
+            children: [
+              SettingsNavItem(
+                icon: Icons.label_outline,
+                title: l10n.tagManageTitle,
+                subtitle: l10n.tagManageSubtitle,
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const TagManagePage()),
+                  );
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // 配置管理
+          SettingsCard(
+            children: [
+              // 配置导入导出
+              SettingsNavItem(
+                icon: Icons.settings_backup_restore,
+                title: l10n.configImportExportTitle,
+                subtitle: l10n.configImportExportSubtitle,
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ConfigImportExportPage()),
+                  );
+                },
+              ),
+              // 存储空间管理
+              SettingsNavItem(
+                icon: Icons.storage_outlined,
+                title: l10n.storageManagementTitle,
+                subtitle: l10n.storageManagementSubtitle,
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const StorageManagementPage()),
+                  );
+                },
+              ),
+              // 数据清理(孤儿数据)
+              SettingsNavItem(
+                icon: Icons.cleaning_services_outlined,
+                title: l10n.maintenanceOrphanCleanupTitle,
+                subtitle: l10n.maintenanceOrphanCleanupSubtitle,
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (_) => const OrphanCleanupPage()),
+                  );
+                },
+              ),
+            ],
+          ),
+          // 应用锁已挪到「个性化设置」页面(语义上属于应用偏好)。
         ],
       ),
     );
@@ -237,104 +222,101 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
     final l10n = AppLocalizations.of(context);
     final primary = ref.watch(primaryColorProvider);
 
-    return SectionCard(
-      margin: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 导出附件
-          AppListTile(
-            leading: Icons.upload_file,
-            title: l10n.attachmentExportTitle,
-            subtitle: l10n.attachmentExportSubtitle,
-            trailing: _isExporting
-                ? SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: primary,
-                    ),
-                  )
-                : IconButton(
-                    icon: Icon(Icons.preview, color: primary),
-                    onPressed: _handleExportPreview,
-                  ),
-            onTap: _isExporting ? null : _handleExport,
-          ),
-          // 导出进度
-          if (_isExporting && _exportTotal > 0)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  LinearProgressIndicator(
-                    value: _exportProgress / _exportTotal,
-                    backgroundColor: BeeTokens.divider(context),
+    return SettingsCard(
+      children: [
+        // 导出附件
+        SettingsNavItem(
+          icon: Icons.upload_file,
+          title: l10n.attachmentExportTitle,
+          subtitle: l10n.attachmentExportSubtitle,
+          trailing: _isExporting
+              ? SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
                     color: primary,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _exportAttachmentCount > 0 || _exportIconCount > 0
-                        ? l10n.attachmentExportProgressDetail(
-                            _exportAttachmentCount,
-                            _exportIconCount,
-                            _exportProgress,
-                            _exportTotal,
-                          )
-                        : l10n.attachmentExportProgress(_exportProgress, _exportTotal),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: BeeTokens.textSecondary(context),
-                    ),
+                )
+              : IconButton(
+                  icon: Icon(Icons.preview, color: primary),
+                  onPressed: _handleExportPreview,
+                ),
+          onTap: _isExporting ? null : _handleExport,
+          enabled: !_isExporting,
+        ),
+        // 导出进度
+        if (_isExporting && _exportTotal > 0)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                LinearProgressIndicator(
+                  value: _exportProgress / _exportTotal,
+                  backgroundColor: BeeTokens.divider(context),
+                  color: primary,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _exportAttachmentCount > 0 || _exportIconCount > 0
+                      ? l10n.attachmentExportProgressDetail(
+                          _exportAttachmentCount,
+                          _exportIconCount,
+                          _exportProgress,
+                          _exportTotal,
+                        )
+                      : l10n.attachmentExportProgress(_exportProgress, _exportTotal),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: BeeTokens.textSecondary(context),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          BeeTokens.cardDivider(context),
-          // 导入附件
-          AppListTile(
-            leading: Icons.download,
-            title: l10n.attachmentImportTitle,
-            subtitle: l10n.attachmentImportSubtitle,
-            trailing: _isImporting
-                ? SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: primary,
-                    ),
-                  )
-                : null,
-            onTap: _isImporting ? null : _selectImportFile,
           ),
-          // 导入进度
-          if (_isImporting && _importTotal > 0)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  LinearProgressIndicator(
-                    value: _importProgress / _importTotal,
-                    backgroundColor: BeeTokens.divider(context),
+        // 导入附件
+        SettingsNavItem(
+          icon: Icons.download,
+          title: l10n.attachmentImportTitle,
+          subtitle: l10n.attachmentImportSubtitle,
+          trailing: _isImporting
+              ? SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
                     color: primary,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    l10n.attachmentImportProgress(_importProgress, _importTotal),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: BeeTokens.textSecondary(context),
-                    ),
+                )
+              : null,
+          onTap: _isImporting ? null : _selectImportFile,
+          enabled: !_isImporting,
+        ),
+        // 导入进度
+        if (_isImporting && _importTotal > 0)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                LinearProgressIndicator(
+                  value: _importProgress / _importTotal,
+                  backgroundColor: BeeTokens.divider(context),
+                  color: primary,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  l10n.attachmentImportProgress(_importProgress, _importTotal),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: BeeTokens.textSecondary(context),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 
@@ -696,10 +678,10 @@ class _ImportSuccessTile extends StatelessWidget {
       duration: const Duration(milliseconds: 900),
       curve: Curves.easeOutCubic,
       builder: (ctx, v, child) {
-        return AppListTile(
-          leading: Icons.check_circle_outline,
+        return SettingsNavItem(
+          icon: Icons.check_circle_outline,
           title: AppLocalizations.of(ctx).mineImportCompleteTitle,
-          subtitle: AppLocalizations.of(ctx).mineImportCompleteAllSuccess,
+          subtitle: AppLocalizations.of(ctx).mineImportCompleteAllSuccess,
           trailing: SizedBox(
             width: 72,
             child: LinearProgressIndicator(
