@@ -2,6 +2,7 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 
+import '../../styles/tokens.dart';
 import '../widget_spec.dart' show HWSize;
 import 'widget_view_style.dart';
 
@@ -116,7 +117,7 @@ class GlanceView extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -235,7 +236,7 @@ class GlanceView extends StatelessWidget {
         height: 169,
         decoration: BoxDecoration(
           color: widgetCardBackground(dark),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
         ),
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -256,7 +257,7 @@ class GlanceView extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: widgetDivider(dark),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -352,7 +353,7 @@ class GlanceView extends StatelessWidget {
         color: dark
             ? Colors.white.withValues(alpha: 0.07)
             : const Color(0xFFF7F7F8),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
         boxShadow: dark
             ? null
             : [
@@ -386,7 +387,7 @@ class GlanceView extends StatelessWidget {
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                 ),
                 child: Icon(icon, size: 10, color: color),
               ),

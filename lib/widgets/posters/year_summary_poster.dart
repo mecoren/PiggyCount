@@ -4,6 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../../styles/tokens.dart';
 
 import '../../services/export/share_poster_types.dart';
 import '../../services/data/category_service.dart';
@@ -179,7 +180,7 @@ class YearSummaryPoster extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
                     ),
                     child: Text(
                       '${data.year}',
@@ -220,7 +221,7 @@ class YearSummaryPoster extends StatelessWidget {
         ),
         // 右侧二维码
         ClipRRect(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
           child: Container(
             decoration: BoxDecoration(
               boxShadow: [
@@ -253,7 +254,7 @@ class YearSummaryPoster extends StatelessWidget {
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(BeeDimens.radius3xl),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.15),
@@ -342,7 +343,7 @@ class YearSummaryPoster extends StatelessWidget {
           height: 45,
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
           ),
           child: Icon(icon, color: color, size: 24),
         ),
@@ -441,7 +442,7 @@ class YearSummaryPoster extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: balanceColor.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
       ),
       child: Row(
         children: [
@@ -528,7 +529,7 @@ class YearSummaryPoster extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
       ),
       child: Row(
         children: [
@@ -606,7 +607,7 @@ class YearSummaryPoster extends StatelessWidget {
       padding: const EdgeInsets.all(25),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
       ),
       child: Column(
         children: [

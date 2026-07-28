@@ -768,7 +768,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                   color: encEnabled
                                       ? Colors.green.withValues(alpha: 0.12)
                                       : Colors.grey.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(4),
+                                  borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                                 ),
                                 child: Text(
                                   encEnabled

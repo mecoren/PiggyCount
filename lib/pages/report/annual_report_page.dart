@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../styles/tokens.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
@@ -332,7 +333,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
       ),
       child: DropdownButton<int>(
         value: _selectedYear,
@@ -398,7 +399,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
           height: 8,
           decoration: BoxDecoration(
             color: isActive ? Colors.white : Colors.white.withValues(alpha: 0.4),
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
           ),
         );
       }),
@@ -418,7 +419,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             backgroundColor: Colors.white,
             foregroundColor: ref.watch(primaryColorProvider),
             padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusLg)),
           ),
         ),
       ),
@@ -444,7 +445,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.1),
@@ -636,7 +637,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
       ),
       child: Column(
         children: [
@@ -693,7 +694,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
       ),
       child: Row(
         children: [
@@ -702,7 +703,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             height: 48,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
             ),
             child: Icon(icon, color: color, size: 24),
           ),
@@ -866,7 +867,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
       ),
       child: Row(
         children: [
@@ -875,7 +876,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             height: 48,
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
             ),
             child: Icon(icon, color: Colors.white, size: 24),
           ),
@@ -1032,7 +1033,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: const Color(0xFF4CAF50).withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                           ),
                           child: const Text(
                             '收入最高',
@@ -1048,7 +1049,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFF5252).withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                           ),
                           child: const Text(
                             '支出最高',
@@ -1071,7 +1072,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                               height: 16,
                               decoration: BoxDecoration(
                                 color: Colors.white.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(4),
+                                borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                               ),
                             ),
                             FractionallySizedBox(
@@ -1080,7 +1081,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                                 height: 16,
                                 decoration: BoxDecoration(
                                   color: const Color(0xFF4CAF50),
-                                  borderRadius: BorderRadius.circular(4),
+                                  borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                                 ),
                               ),
                             ),
@@ -1112,7 +1113,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                               height: 16,
                               decoration: BoxDecoration(
                                 color: Colors.white.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(4),
+                                borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                               ),
                             ),
                             FractionallySizedBox(
@@ -1121,7 +1122,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                                 height: 16,
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFFF5252),
-                                  borderRadius: BorderRadius.circular(4),
+                                  borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                                 ),
                               ),
                             ),
@@ -1197,7 +1198,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
                 ),
                 child: Row(
                   children: [
@@ -1348,7 +1349,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
             ),
             child: Column(
               children: [
@@ -1373,7 +1374,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                                       : m.month == minMonth
                                           ? const Color(0xFF4CAF50)
                                           : Colors.white.withValues(alpha: 0.6),
-                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXs)),
                                 ),
                               ),
                               const SizedBox(height: 8),
@@ -1409,7 +1410,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1523,7 +1524,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1535,7 +1536,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                 height: 40,
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                 ),
                 child: Icon(icon, color: color, size: 20),
               ),
@@ -1659,7 +1660,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: unlocked ? Colors.white : Colors.white.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
       ),
       child: Row(
         children: [
@@ -1823,7 +1824,7 @@ class _AnnualReportPosterPreviewState extends State<_AnnualReportPosterPreview> 
               // 海报预览
               Flexible(
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
                   child: Stack(
                     children: [
                       InteractiveViewer(
@@ -1856,7 +1857,7 @@ class _AnnualReportPosterPreviewState extends State<_AnnualReportPosterPreview> 
                             color: Colors.transparent,
                             child: InkWell(
                               onTap: _toggleHideIncome,
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
@@ -1864,7 +1865,7 @@ class _AnnualReportPosterPreviewState extends State<_AnnualReportPosterPreview> 
                                 ),
                                 decoration: BoxDecoration(
                                   color: Colors.black.withValues(alpha: 0.5),
-                                  borderRadius: BorderRadius.circular(20),
+                                  borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -1966,7 +1967,7 @@ class _AnnualReportPosterPreviewState extends State<_AnnualReportPosterPreview> 
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           decoration: BoxDecoration(
             color: bgColor,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(BeeDimens.radius3xl),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.1),

@@ -646,7 +646,7 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
 
     return InkWell(
       onTap: _pickCustomIcon,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -657,7 +657,7 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
             color: isSelected ? primaryColor : BeeTokens.border(context),
             width: isSelected ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
         ),
         child: Row(
           children: [
@@ -667,7 +667,7 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
               height: 48,
               decoration: BoxDecoration(
                 color: BeeTokens.surfaceHeader(context),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                 border: Border.all(color: BeeTokens.border(context)),
               ),
               child: _isPickingImage
@@ -694,7 +694,7 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
                             }
 
                             return ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
+                              borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                               child: Image.file(
                                 File(snapshot.data!),
                                 width: 48,
@@ -1481,7 +1481,7 @@ class _GroupedIconGrid extends StatelessWidget {
 
                 return InkWell(
                   onTap: () => onIconSelected(iconData.key),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                   child: Container(
                     decoration: BoxDecoration(
                       color: isSelected
@@ -1496,7 +1496,7 @@ class _GroupedIconGrid extends StatelessWidget {
                             : Colors.grey.withValues(alpha: 0.3),
                         width: isSelected ? 2 : 1,
                       ),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                     ),
                     child: Icon(
                       iconData.iconData,

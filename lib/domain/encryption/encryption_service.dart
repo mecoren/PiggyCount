@@ -164,6 +164,45 @@ class DecryptionException implements Exception {
   String toString() => 'DecryptionException: $message';
 }
 
+/// Salt 不匹配异常（US-2）
+///
+/// 多设备同步场景：设备 B 本地密钥的 salt 与云端密文头中的 salt 不一致，
+/// 说明设备 B 的密码可能错误或密钥已过期，需要引导用户重新输入密码。
+///
+/// 继承自 [DecryptionException]，保证已有 `catch DecryptionException` 的
+/// 代码仍能捕获；UI 层可单独 `catch SaltMismatchException` 触发密码重输流程。
+class SaltMismatchException extends DecryptionException {
+  /// 密文头中携带的 salt（base64），供 UI 层提示或调用 activateKey 使用
+  final String ciphertextSaltBase64;
+
+  const SaltMismatchException(
+    String message, {
+    required this.ciphertextSaltBase64,
+    Object? cause,
+  }) : super(message, cause: cause);
+
+  @override
+  String toString() => 'SaltMismatchException: $message';
+}
+
+/// enableFromCloud 探测失败异常（US-3）
+///
+/// 设备 B 加入时云端探测失败（网络/权限），不应静默回退到 [EncryptionService.enable]，
+/// 否则会生成新 salt 并 reEncrypt 全量云端数据，孤立其他持有旧 salt 的设备。
+///
+/// UI 层应 catch 此异常并提示用户确认：
+/// - 用户确认"以首设备身份继续" → 调用 [EncryptionService.enable] + reEncrypt
+/// - 用户选择"重试" → 重新调用 [EncryptionService.enableFromCloud]
+class EnableFromCloudProbeFailedException implements Exception {
+  final String message;
+  final Object? cause;
+
+  const EnableFromCloudProbeFailedException(this.message, {this.cause});
+
+  @override
+  String toString() => 'EnableFromCloudProbeFailedException: $message';
+}
+
 /// 加密未配置异常
 ///
 /// 加密已开启但密钥不可用时抛出。

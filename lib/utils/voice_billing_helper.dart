@@ -534,7 +534,7 @@ class _VoiceRecordingDialogState extends ConsumerState<_VoiceRecordingDialog> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: BeeTokens.surface(context),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
         border: Border.all(color: BeeTokens.border(context)),
       ),
       child: Column(

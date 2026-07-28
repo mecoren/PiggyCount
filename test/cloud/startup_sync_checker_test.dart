@@ -27,12 +27,16 @@ void main() {
 
   /// 状态变化监听器：当 checker 推送 HasUpdatesState 时自动完成 completer
   /// 并捕获候选账本供测试断言
+  ///
+  /// 支持 summaryChoiceSequence：若设置，按序列依次返回不同选择，
+  /// 用于 US-7 取消后回退到 SummaryView 重新选择的场景。
   void onStateChange() {
     final state = controller.state;
     if (state is HasUpdatesState && !state.completer.isCompleted) {
       // 捕获候选账本
       deps.lastCandidates = state.candidates;
-      state.completer.complete(deps.summaryChoice);
+      final choice = deps.nextSummaryChoice();
+      state.completer.complete(choice);
     }
   }
 
@@ -397,6 +401,147 @@ void main() {
     });
   });
 
+  group('applyAll 冲突高亮与二次确认（US-7）', () {
+    setUp(() {
+      deps.activeConfig = const CloudServiceConfig(
+        type: CloudBackendType.s3,
+        name: 's3',
+        s3Endpoint: 'https://s3.example.com',
+        s3AccessKey: 'ak',
+        s3SecretKey: 'sk',
+        s3Bucket: 'b',
+      );
+      deps.ledgers = [_ledger(1, 'L1'), _ledger(2, 'L2')];
+      deps.summaryChoice = SummaryChoice.applyAll;
+      deps.previewByLedger = {
+        1: (
+          preview: _preview(added: 1),
+          importData: const ImportData(),
+          version: 6,
+        ),
+        2: (
+          preview: _preview(added: 1),
+          importData: const ImportData(),
+          version: 6,
+        ),
+      };
+    });
+
+    test('AC-7.6: 全 cloudNewer 不弹二次确认对话框', () async {
+      deps.statusByLedger = {
+        1: _status(SyncDiff.cloudNewer),
+        2: _status(SyncDiff.cloudNewer),
+      };
+      deps.conflictConfirmReturn = true; // 即使返回 true 也不应被调用
+
+      await checker.runIfNeeded();
+
+      expect(deps.conflictConfirmCallCount, 0,
+          reason: '全 cloudNewer 无冲突，不应弹二次确认');
+      expect(deps.applyPreviewChangesCallCount, 2);
+      expect(controller.state, isA<DoneState>());
+    });
+
+    test('AC-7.4: 含 different 账本时弹二次确认对话框，传入冲突账本名', () async {
+      deps.statusByLedger = {
+        1: _status(SyncDiff.cloudNewer),
+        2: _status(SyncDiff.different),
+      };
+      deps.conflictConfirmReturn = true; // 用户确认
+
+      await checker.runIfNeeded();
+
+      expect(deps.conflictConfirmCallCount, 1,
+          reason: '含 different 账本应弹二次确认');
+      // 仅传入 different 账本名（L2），不包含 cloudNewer 的 L1
+      expect(deps.lastConflictLedgerNames, ['L2']);
+      expect(deps.applyPreviewChangesCallCount, 2);
+      expect(controller.state, isA<DoneState>());
+    });
+
+    test('AC-7.5: 用户取消二次确认 → 中止 applyAll，回退到 SummaryView', () async {
+      deps.statusByLedger = {
+        1: _status(SyncDiff.cloudNewer),
+        2: _status(SyncDiff.different),
+      };
+      deps.conflictConfirmReturn = false; // 用户取消
+      // 序列：第一次选 applyAll（触发冲突确认→取消），第二次选 skip（退出循环）
+      deps.summaryChoiceSequence = [
+        SummaryChoice.applyAll,
+        SummaryChoice.skip,
+      ];
+
+      final states = <StartupSyncState>[];
+      controller.addListener(() => states.add(controller.state));
+
+      await checker.runIfNeeded();
+
+      expect(deps.conflictConfirmCallCount, 1);
+      expect(deps.applyPreviewChangesCallCount, 0,
+          reason: '用户取消后不应执行任何 apply');
+      // 验证状态历史：HasUpdatesState 应出现至少 2 次
+      // （第一次原始显示，第二次取消后回退到 SummaryView）
+      final hasUpdatesCount =
+          states.whereType<HasUpdatesState>().length;
+      expect(hasUpdatesCount, greaterThanOrEqualTo(2),
+          reason: '取消后应回退到 SummaryView（HasUpdatesState 出现至少 2 次）');
+      // 最终用户选 skip 退出
+      expect(controller.state, isA<DismissedState>());
+    });
+
+    test('AC-7.4: 多个 different 账本时传入全部冲突账本名', () async {
+      deps.ledgers = [_ledger(1, 'L1'), _ledger(2, 'L2'), _ledger(3, 'L3')];
+      deps.statusByLedger = {
+        1: _status(SyncDiff.cloudNewer),
+        2: _status(SyncDiff.different),
+        3: _status(SyncDiff.different),
+      };
+      deps.previewByLedger = {
+        1: (
+          preview: _preview(added: 1),
+          importData: const ImportData(),
+          version: 6,
+        ),
+        2: (
+          preview: _preview(added: 1),
+          importData: const ImportData(),
+          version: 6,
+        ),
+        3: (
+          preview: _preview(added: 1),
+          importData: const ImportData(),
+          version: 6,
+        ),
+      };
+      deps.conflictConfirmReturn = true;
+
+      await checker.runIfNeeded();
+
+      expect(deps.lastConflictLedgerNames, containsAll(['L2', 'L3']));
+      expect(deps.lastConflictLedgerNames!.length, 2);
+      expect(deps.applyPreviewChangesCallCount, 3);
+    });
+
+    test('AC-7.1/7.2: LedgerCandidate 携带 diffType 字段', () async {
+      deps.statusByLedger = {
+        1: _status(SyncDiff.cloudNewer),
+        2: _status(SyncDiff.different),
+      };
+      deps.summaryChoice = SummaryChoice.skip; // 不进入 applyAll，只验证候选构建
+
+      await checker.runIfNeeded();
+
+      expect(deps.lastCandidates.length, 2);
+      // 验证 diffType 字段已从 status.diff 填充
+      final l1Candidate =
+          deps.lastCandidates.firstWhere((c) => c.ledger.id == 1);
+      final l2Candidate =
+          deps.lastCandidates.firstWhere((c) => c.ledger.id == 2);
+      expect(l1Candidate.diffType, SyncDiff.cloudNewer);
+      expect(l2Candidate.diffType, SyncDiff.different);
+    });
+  });
+
   group('逐个确认（confirmEach）', () {
     setUp(() {
       deps.activeConfig = const CloudServiceConfig(
@@ -579,8 +724,30 @@ class _FakeDeps implements StartupSyncCheckerDeps {
   Set<int> applyThrowForLedgerIds = {};
 
   SummaryChoice summaryChoice = SummaryChoice.skip;
+  /// US-7: 选择序列，用于测试取消后回退到 SummaryView 的场景
+  /// 若非空，nextSummaryChoice 按序列依次返回；用尽后回退到 summaryChoice
+  List<SummaryChoice>? summaryChoiceSequence;
+  int _summaryChoiceIndex = 0;
   LedgerDialogChoice perLedgerChoice = LedgerDialogChoice.skip;
   List<SyncChange>? syncPreviewReturn;
+
+  /// 返回下一次 HasUpdatesState 的用户选择
+  /// 优先使用 summaryChoiceSequence，用尽后回退到 summaryChoice
+  SummaryChoice nextSummaryChoice() {
+    if (summaryChoiceSequence != null &&
+        _summaryChoiceIndex < summaryChoiceSequence!.length) {
+      return summaryChoiceSequence![_summaryChoiceIndex++];
+    }
+    return summaryChoice;
+  }
+
+  // US-7: applyAll 二次确认 mock
+  /// 控制二次确认对话框返回值（true=确认，false=取消）
+  bool conflictConfirmReturn = true;
+  /// 二次确认对话框调用次数
+  int conflictConfirmCallCount = 0;
+  /// 最近一次传入二次确认对话框的账本名列表
+  List<String>? lastConflictLedgerNames;
 
   // 调用记录
   bool getAllLedgersCalled = false;
@@ -676,6 +843,13 @@ class _FakeDeps implements StartupSyncCheckerDeps {
   Future<List<SyncChange>?> showSyncPreviewDialog(SyncPreview preview) async {
     showSyncPreviewDialogCallCount++;
     return syncPreviewReturn;
+  }
+
+  @override
+  Future<bool> showConflictConfirmDialog(List<String> ledgerNames) async {
+    conflictConfirmCallCount++;
+    lastConflictLedgerNames = List<String>.from(ledgerNames);
+    return conflictConfirmReturn;
   }
 
   @override

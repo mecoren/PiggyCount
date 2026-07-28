@@ -1130,7 +1130,7 @@ class _DetailChartTab extends StatelessWidget {
           color: isSelected
               ? primaryColor.withValues(alpha: 0.15)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
           border: Border.all(
             color: isSelected ? primaryColor : BeeTokens.border(context),
           ),

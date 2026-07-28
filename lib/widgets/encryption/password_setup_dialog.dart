@@ -212,7 +212,7 @@ class _PasswordSetupDialogState extends ConsumerState<PasswordSetupDialog> {
                   color: Theme.of(context).colorScheme.error.withValues(
                         alpha: 0.08,
                       ),
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,7 +303,7 @@ class _PasswordSetupDialogState extends ConsumerState<PasswordSetupDialog> {
           onPressed: onToggle,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 12, vertical: 14),

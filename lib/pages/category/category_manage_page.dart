@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../providers.dart';
 import '../../widgets/ui/ui.dart';
+import '../../widgets/ui/wait_sliding_segmented_control.dart';
 import '../../data/db.dart' as db;
 import '../../services/billing/post_processor.dart';
 import '../../services/category_package_service.dart';
@@ -30,26 +31,15 @@ class CategoryManagePage extends ConsumerStatefulWidget {
   ConsumerState<CategoryManagePage> createState() => _CategoryManagePageState();
 }
 
-class _CategoryManagePageState extends ConsumerState<CategoryManagePage> with TickerProviderStateMixin {
-  late TabController _tabController;
+class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
+  /// 当前选中的类型：'expense' | 'income'
+  /// 由 widget.initialTabIndex 初始化（0: 支出, 1: 收入）
+  late String _selectedKind;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(
-      length: 2,
-      vsync: this,
-      initialIndex: widget.initialTabIndex,
-    );
-    _tabController.addListener(() {
-      setState(() {}); // 重新构建以更新按钮状态
-    });
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+    _selectedKind = widget.initialTabIndex == 1 ? 'income' : 'expense';
   }
 
   @override
@@ -73,14 +63,16 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> with Ti
               _buildMoreMenu(context, l10n, primaryColor),
             ],
           ),
-          TabBar(
-            controller: _tabController,
-            labelColor: BeeTokens.textPrimary(context),
-            unselectedLabelColor: BeeTokens.textSecondary(context),
-            tabs: [
-              Tab(text: l10n.categoryExpense),
-              Tab(text: l10n.categoryIncome),
-            ],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: WaitSlidingSegmentedControl<String>(
+              selected: _selectedKind,
+              segments: [
+                WaitSlidingSegment(value: 'expense', label: l10n.categoryExpense),
+                WaitSlidingSegment(value: 'income', label: l10n.categoryIncome),
+              ],
+              onValueChanged: (value) => setState(() => _selectedKind = value),
+            ),
           ),
           _buildTransferIconSetting(context, l10n, primaryColor),
           Expanded(
@@ -88,8 +80,8 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> with Ti
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, stack) => Center(child: Text(l10n.categoryLoadFailed(error.toString()))),
               data: (categoriesWithCount) {
-                return TabBarView(
-                  controller: _tabController,
+                return IndexedStack(
+                  index: _selectedKind == 'expense' ? 0 : 1,
                   children: [
                     _CategoryGridView(
                       categoriesWithCount: categoriesWithCount,
@@ -110,7 +102,7 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> with Ti
   }
 
   void _addCategory() async {
-    final kind = _tabController.index == 0 ? 'expense' : 'income';
+    final kind = _selectedKind;
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => CategoryEditPage(kind: kind),
@@ -175,7 +167,7 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> with Ti
           children: [
             ListTile(
               leading: const Icon(Icons.filter_list),
-              title: Text(_tabController.index == 0
+              title: Text(_selectedKind == 'expense'
                   ? l10n.categoryShareScopeExpense
                   : l10n.categoryShareScopeIncome),
               onTap: () => Navigator.pop(context, 'current'),
@@ -204,7 +196,7 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> with Ti
       // 确定过滤类型
       String? filterKind;
       if (scope == 'current') {
-        filterKind = _tabController.index == 0 ? 'expense' : 'income';
+        filterKind = _selectedKind;
       }
 
       // 生成文件名
@@ -480,12 +472,12 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> with Ti
                 ? primaryColor.withValues(alpha: 0.3)
                 : BeeTokens.border(context),
             ),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
           ),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
               onTap: () async {
                 await Navigator.of(context).push(
                   MaterialPageRoute(
@@ -808,11 +800,11 @@ class _CategoryCard extends ConsumerWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
       child: Container(
         decoration: BoxDecoration(
           color: backgroundColor,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
           border: Border.all(
             color: item.isSubCategory
                 ? Colors.orange.withValues(alpha: 0.3)
@@ -960,7 +952,7 @@ class _SubcategoryDialogState extends ConsumerState<_SubcategoryDialog> {
     final l10n = AppLocalizations.of(context);
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
       child: Container(
         width: MediaQuery.of(context).size.width * 0.85,
         constraints: const BoxConstraints(maxWidth: 400),
@@ -1075,11 +1067,11 @@ class _DialogActionButton extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
       child: Container(
         decoration: BoxDecoration(
           color: BeeTokens.surface(context),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
           border: Border.all(
             color: isDark ? BeeTokens.border(context) : Colors.grey[300]!,
             width: 1,
@@ -1125,11 +1117,11 @@ class _DialogSubCategoryCard extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
       child: Container(
         decoration: BoxDecoration(
           color: BeeTokens.surface(context),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
           border: Border.all(
             color: isDark ? BeeTokens.border(context) : Colors.grey[300]!,
             width: 1,

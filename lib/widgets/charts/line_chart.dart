@@ -123,7 +123,7 @@ class LineChart extends StatelessWidget {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: BeeTokens.dividerStatic,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                 ),
                 child: Padding(
                   padding:

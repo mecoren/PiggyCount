@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../widgets/ui/ui.dart';
+import '../../widgets/ui/wait_sliding_segmented_control.dart';
 import '../../styles/tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/ui_scale_extensions.dart';
@@ -30,9 +31,9 @@ class AttachmentPreviewPage extends ConsumerStatefulWidget {
   ConsumerState<AttachmentPreviewPage> createState() => _AttachmentPreviewPageState();
 }
 
-class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
+  /// 当前选中的标签：'attachment' | 'customIcon'
+  String _selectedTab = 'attachment';
   int? _selectedIndex;
 
   int get attachmentCount => widget.exportData?.attachments.length ??
@@ -44,18 +45,6 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage>
       0;
 
   int get totalCount => attachmentCount + customIconCount;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -71,19 +60,24 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage>
       body: Column(
         children: [
           SizedBox(height: MediaQuery.of(context).padding.top + 56),
-          // Tab栏
+          // 滑动分段选择器
           if (totalCount > 0)
-            Container(
-              color: BeeTokens.surface(context),
-              child: TabBar(
-                controller: _tabController,
-                indicatorColor: ref.watch(primaryColorProvider),
-                labelColor: ref.watch(primaryColorProvider),
-                unselectedLabelColor: BeeTokens.textSecondary(context),
-                tabs: [
-                  Tab(text: '${l10n.attachmentImportTitle} ($attachmentCount)'),
-                  Tab(text: '自定义图标 ($customIconCount)'),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: WaitSlidingSegmentedControl<String>(
+                selected: _selectedTab,
+                segments: [
+                  WaitSlidingSegment(
+                    value: 'attachment',
+                    label: '${l10n.attachmentImportTitle} ($attachmentCount)',
+                  ),
+                  WaitSlidingSegment(
+                    value: 'customIcon',
+                    label: '自定义图标 ($customIconCount)',
+                  ),
                 ],
+                onValueChanged: (value) =>
+                    setState(() => _selectedTab = value),
               ),
             ),
           Expanded(
@@ -97,8 +91,8 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage>
                       ),
                     ),
                   )
-                : TabBarView(
-                    controller: _tabController,
+                : IndexedStack(
+                    index: _selectedTab == 'attachment' ? 0 : 1,
                     children: [
                       // 附件预览
                       _buildGridView(true),
@@ -150,7 +144,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage>
       onTap: () => _showImageDetail(context, index, isAttachment),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
           border: isSelected
               ? Border.all(
                   color: ref.watch(primaryColorProvider),
@@ -159,7 +153,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage>
               : null,
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
           child: _buildImage(index, isAttachment),
         ),
       ),
@@ -255,7 +249,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage>
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.black54,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
               ),
               child: Text(
                 fileName,

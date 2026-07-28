@@ -537,11 +537,47 @@ class BeeTokens {
 
 /// 间距、圆角等尺寸令牌
 class BeeDimens {
+  // ========== 间距令牌 ==========
+  static const double p4 = 4;
   static const double p8 = 8;
   static const double p12 = 12;
   static const double p16 = 16;
-  static const double radius12 = 12;
-  static const double radius16 = 16;
+  static const double p20 = 20;
+  static const double p24 = 24;
+
+  // ========== 圆角令牌（语义化分档） ==========
+  //
+  // 项目统一圆角标准，按视觉层级分 7 档。
+  // 所有 BorderRadius.circular 调用应使用这些令牌，禁止魔法数字。
+  //
+  // 使用示例：
+  //   borderRadius: BorderRadius.circular(BeeDimens.radiusXl)
+
+  /// 极小圆角 - 徽章、状态点、小指示器（原 4/6 合并）
+  static const double radiusXs = 4;
+
+  /// 小圆角 - 输入框、小卡片、列表项容器
+  static const double radiusSm = 8;
+
+  /// 中小圆角 - 图标盒（设置页风格）
+  static const double radiusMd = 10;
+
+  /// 中圆角 - 按钮、次级卡片、导航项涟漪、菜单项
+  static const double radiusLg = 12;
+
+  /// 大圆角 - 主卡片、Dialog、BottomSheet 顶部
+  static const double radiusXl = 16;
+
+  /// 超大圆角 - 海报、日历选中态、特殊突出元素
+  static const double radius2xl = 20;
+
+  /// 最大圆角 - 启动页、AI 聊天气泡、大分类头像
+  static const double radius3xl = 24;
+
+  // 兼容别名（指向新令牌，保留以避免破坏旧引用）
+  static const double radius12 = radiusLg;
+  static const double radius16 = radiusXl;
+
   // 列表相关：分组头与行的统一垂直内边距
   static const double listHeaderVertical = 6;
   static const double listRowVertical = 8;

@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../styles/tokens.dart';
 import '../../providers.dart';
 import '../../data/db.dart';
 import '../../l10n/app_localizations.dart';
@@ -45,7 +46,7 @@ class AccountPicker extends ConsumerStatefulWidget {
       context: context,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
       ),
       isScrollControlled: true,
       builder: (_) => AccountPicker(

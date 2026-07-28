@@ -98,14 +98,14 @@ class _SkinCard extends StatelessWidget {
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
                 border: Border.all(
                   color: selected ? primary : BeeTokens.border(context),
                   width: selected ? 2.5 : 1,
                 ),
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                 child: Stack(
                   fit: StackFit.expand,
                   children: [

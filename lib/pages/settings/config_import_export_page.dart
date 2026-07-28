@@ -629,8 +629,8 @@ class _ConfigContentDialog extends StatelessWidget {
             decoration: BoxDecoration(
               color: BeeTokens.surfaceElevated(context),
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(4),
-                topRight: Radius.circular(4),
+                topLeft: Radius.circular(BeeDimens.radiusXs),
+                topRight: Radius.circular(BeeDimens.radiusXs),
               ),
             ),
             child: Row(
@@ -677,8 +677,8 @@ class _ConfigContentDialog extends StatelessWidget {
             decoration: BoxDecoration(
               color: BeeTokens.surfaceElevated(context),
               borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(4),
-                bottomRight: Radius.circular(4),
+                bottomLeft: Radius.circular(BeeDimens.radiusXs),
+                bottomRight: Radius.circular(BeeDimens.radiusXs),
               ),
             ),
             child: Row(
@@ -724,8 +724,8 @@ class _ConfigPreviewDialogState extends State<_ConfigPreviewDialog> {
             decoration: BoxDecoration(
               color: BeeTokens.surfaceElevated(context),
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(4),
-                topRight: Radius.circular(4),
+                topLeft: Radius.circular(BeeDimens.radiusXs),
+                topRight: Radius.circular(BeeDimens.radiusXs),
               ),
             ),
             child: Row(
@@ -761,7 +761,7 @@ class _ConfigPreviewDialogState extends State<_ConfigPreviewDialog> {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: Colors.orange.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                       border: Border.all(
                         color: Colors.orange.withValues(alpha: 0.3),
                       ),
@@ -793,7 +793,7 @@ class _ConfigPreviewDialogState extends State<_ConfigPreviewDialog> {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: BeeTokens.surface(context),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                       border: Border.all(color: BeeTokens.border(context)),
                     ),
                     child: SelectableText(
@@ -816,8 +816,8 @@ class _ConfigPreviewDialogState extends State<_ConfigPreviewDialog> {
             decoration: BoxDecoration(
               color: BeeTokens.surfaceElevated(context),
               borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(4),
-                bottomRight: Radius.circular(4),
+                bottomLeft: Radius.circular(BeeDimens.radiusXs),
+                bottomRight: Radius.circular(BeeDimens.radiusXs),
               ),
             ),
             child: Row(
@@ -869,7 +869,7 @@ class _ExportOptionsDialogState extends State<_ExportOptionsDialog> {
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusLg)),
       backgroundColor: BeeTokens.surfaceElevated(context),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -880,8 +880,8 @@ class _ExportOptionsDialogState extends State<_ExportOptionsDialog> {
             decoration: BoxDecoration(
               color: BeeTokens.surfaceElevated(context),
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
+                topLeft: Radius.circular(BeeDimens.radiusLg),
+                topRight: Radius.circular(BeeDimens.radiusLg),
               ),
             ),
             child: Row(
@@ -1041,7 +1041,7 @@ class _ExportPreviewDialog extends StatelessWidget {
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusLg)),
       backgroundColor: BeeTokens.surfaceElevated(context),
       child: Column(
         children: [
@@ -1051,8 +1051,8 @@ class _ExportPreviewDialog extends StatelessWidget {
             decoration: BoxDecoration(
               color: BeeTokens.surfaceElevated(context),
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
+                topLeft: Radius.circular(BeeDimens.radiusLg),
+                topRight: Radius.circular(BeeDimens.radiusLg),
               ),
             ),
             child: Row(
@@ -1086,7 +1086,7 @@ class _ExportPreviewDialog extends StatelessWidget {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: BeeTokens.surface(context),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                   border: Border.all(color: BeeTokens.border(context)),
                 ),
                 child: SelectableText(
@@ -1173,7 +1173,7 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusLg)),
       backgroundColor: BeeTokens.surfaceElevated(context),
       child: Column(
         children: [
@@ -1183,8 +1183,8 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
             decoration: BoxDecoration(
               color: BeeTokens.surfaceElevated(context),
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
+                topLeft: Radius.circular(BeeDimens.radiusLg),
+                topRight: Radius.circular(BeeDimens.radiusLg),
               ),
             ),
             child: Row(
@@ -1221,7 +1221,7 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: Colors.orange.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                       border: Border.all(
                         color: Colors.orange.withValues(alpha: 0.3),
                       ),
@@ -1255,7 +1255,7 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                     constraints: const BoxConstraints(maxHeight: 200),
                     decoration: BoxDecoration(
                       color: BeeTokens.surface(context),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                       border: Border.all(color: BeeTokens.border(context)),
                     ),
                     child: SingleChildScrollView(
@@ -1386,8 +1386,8 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
             decoration: BoxDecoration(
               color: BeeTokens.surfaceElevated(context),
               borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(12),
-                bottomRight: Radius.circular(12),
+                bottomLeft: Radius.circular(BeeDimens.radiusLg),
+                bottomRight: Radius.circular(BeeDimens.radiusLg),
               ),
             ),
             child: Row(

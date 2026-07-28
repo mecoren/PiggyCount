@@ -227,7 +227,7 @@ class BudgetPage extends ConsumerWidget {
               color: BeeTokens.isDark(context)
                   ? Colors.white.withValues(alpha: 0.05)
                   : Colors.grey.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

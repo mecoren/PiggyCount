@@ -95,7 +95,7 @@ class FontSettingsPage extends ConsumerWidget {
       elevation: isDark ? 0 : 1,
       color: BeeTokens.surface(context),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
         side: isDark ? BorderSide(color: BeeTokens.border(context)) : BorderSide.none,
       ),
       child: ListTile(

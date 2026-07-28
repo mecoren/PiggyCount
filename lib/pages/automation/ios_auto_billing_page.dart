@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../styles/tokens.dart';
 import '../../providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/platform_info.dart';
@@ -282,7 +283,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.green.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                 border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
               ),
               child: Row(
@@ -363,7 +364,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
             await launchUrl(url, mode: LaunchMode.externalApplication);
           }
         },
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -373,7 +374,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
                 height: 48,
                 decoration: BoxDecoration(
                   color: primaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                 ),
                 child: Icon(
                   Icons.play_circle_outline,
@@ -422,7 +423,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.orange.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
         border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
       ),
       child: Row(

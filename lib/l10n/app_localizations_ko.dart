@@ -127,6 +127,28 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get startupSyncConflictTooltip => '로컬 변경사항이 클라우드로 덮어씌워집니다';
+
+  @override
+  String get startupSyncConflictConfirmTitle => '덮어쓰기 확인';
+
+  @override
+  String startupSyncConflictConfirmMessage(int count, String names) {
+    return '$count개 장부의 로컬 변경사항($names)을 클라우드 버전으로 덮어씁니다. 계속하시겠습니까?';
+  }
+
+  @override
+  String get startupSyncConflictConfirmOk => '로컬 덮어쓰기';
+
+  @override
+  String get startupSyncConflictConfirmCancel => '취소';
+
+  @override
+  String startupSyncConflictAndMore(int count) {
+    return '외 $count개';
+  }
+
+  @override
   String get commonSuccess => '성공';
 
   @override
@@ -7750,4 +7772,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String cloudSyncEncryptReencryptPartialFailed(int count) {
     return '암호화가 활성화되었지만 $count개의 클라우드 파일 재암호화에 실패했습니다. 다음 동기화 시 자동으로 재시도됩니다.';
   }
+
+  @override
+  String get cloudSyncEncryptProbeFailedTitle => '클라우드 탐지 실패';
+
+  @override
+  String get cloudSyncEncryptProbeFailedMessage =>
+      '클라우드에 이미 암호화된 데이터가 있는지 탐지할 수 없습니다(네트워크 또는 권한 문제일 수 있음). 다른 기기에서 암호화가 활성화된 경우 계속하면 새 비밀번호로 클라우드 데이터가 재암호화되어 다른 기기에서 해독할 수 없게 될 수 있습니다. 계속하시겠습니까?';
+
+  @override
+  String get cloudSyncEncryptProbeFailedContinue => '첫 기기로 계속';
 }

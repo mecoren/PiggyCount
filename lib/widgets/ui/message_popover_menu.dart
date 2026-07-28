@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../styles/tokens.dart';
 
 /// 消息长按弹出菜单项
 class PopoverMenuItem {
@@ -211,7 +212,7 @@ class _PopoverOverlayState extends State<_PopoverOverlay>
               child: Container(
                 decoration: BoxDecoration(
                   color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.15),
@@ -221,7 +222,7 @@ class _PopoverOverlayState extends State<_PopoverOverlay>
                   ],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: widget.items.asMap().entries.map((entry) {

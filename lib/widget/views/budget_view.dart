@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../styles/tokens.dart';
 import '../../data/repositories/budget_repository.dart'
     show BudgetOverview, BudgetUsage, CategoryBudgetUsage;
 import '../../utils/currencies.dart' show getCurrencySymbol;
@@ -128,7 +129,7 @@ class BudgetView extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: widgetCardBackground(dark),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
       ),
       child: child,
     );
@@ -353,7 +354,7 @@ class BudgetView extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
           color: color.withValues(alpha: dark ? 0.2 : 0.1),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

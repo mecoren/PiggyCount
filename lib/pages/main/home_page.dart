@@ -297,7 +297,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 4, 12, 8),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
         color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         boxShadow: isDark
             ? null
@@ -310,7 +310,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
         child: Stack(
           children: [
             // 左侧装饰条
@@ -419,7 +419,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 4, 12, 8),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
         color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         boxShadow: isDark
             ? null
@@ -432,7 +432,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
         child: Stack(
           children: [
             // 左侧装饰条
@@ -525,7 +525,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 4, 12, 8),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
         color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         boxShadow: isDark
             ? null
@@ -538,7 +538,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
         child: Stack(
           children: [
             // 左侧装饰条
@@ -762,7 +762,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                                                   : Colors.black
                                                       .withValues(alpha: 0.05),
                                               borderRadius:
-                                                  BorderRadius.circular(14),
+                                                  BorderRadius.circular(BeeDimens.radiusXl),
                                             ),
                                             child: Row(
                                               mainAxisSize: MainAxisSize.min,
@@ -931,7 +931,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       InkWell(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                         onTap: _isJumping ? null : _handleDateSelection,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,

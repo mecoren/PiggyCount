@@ -22,7 +22,7 @@ class LedgerPickerDialog extends ConsumerWidget {
 
     return Dialog(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
       ),
       backgroundColor: BeeTokens.surface(context),
       child: ConstrainedBox(
@@ -170,7 +170,7 @@ class LedgerPickerDialog extends ConsumerWidget {
         );
       },
       borderRadius: const BorderRadius.vertical(
-        bottom: Radius.circular(20),
+        bottom: Radius.circular(BeeDimens.radius2xl),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),

@@ -375,6 +375,58 @@ void main() {
         throwsA(isA<DecryptionException>()),
       );
     });
+
+    test('US-2: salt 不匹配时抛出 SaltMismatchException（可被 UI 单独捕获）', () async {
+      // A 设备：用密码 A 加密
+      await service.enable(password: 'passwordA');
+      const plaintext = '{"version":6,"items":[]}';
+      final ciphertext = await service.encrypt(plaintext);
+
+      // B 设备：用密码 B 激活（生成不同 salt 的密钥）
+      final storageB = InMemorySecureKeyStorage();
+      final serviceB = EncryptionServiceImpl(
+        storage: storageB,
+        keyDerivation: Argon2KeyDerivation.forTesting(),
+        cipher: AesGcmCipher(),
+      );
+      // B 设备自行 enable，生成自己的 salt（与 A 不同）
+      await serviceB.enable(password: 'passwordB');
+
+      // B 设备尝试解密 A 的密文 → salt 不匹配
+      expect(
+        () => serviceB.decrypt(ciphertext),
+        throwsA(isA<SaltMismatchException>()),
+        reason: 'salt 不匹配时应抛出 SaltMismatchException，让 UI 可单独捕获'
+            '并引导用户重新输入密码',
+      );
+    });
+
+    test('US-2: SaltMismatchException 是 DecryptionException 的子类（向后兼容）',
+        () async {
+      // 已有代码 catch DecryptionException 时仍能捕获 SaltMismatchException
+      await service.enable(password: 'passwordA');
+      const plaintext = '{"version":6,"items":[]}';
+      final ciphertext = await service.encrypt(plaintext);
+
+      final storageB = InMemorySecureKeyStorage();
+      final serviceB = EncryptionServiceImpl(
+        storage: storageB,
+        keyDerivation: Argon2KeyDerivation.forTesting(),
+        cipher: AesGcmCipher(),
+      );
+      await serviceB.enable(password: 'passwordB');
+
+      // 用 catch DecryptionException 捕获，验证 SaltMismatchException 也被捕获
+      var caught = false;
+      try {
+        await serviceB.decrypt(ciphertext);
+      } on DecryptionException {
+        caught = true;
+      }
+      expect(caught, isTrue,
+          reason: 'SaltMismatchException 应继承自 DecryptionException，'
+              '保证已有 catch DecryptionException 的代码仍能工作');
+    });
   });
 
   group('EncryptionServiceImpl.reEncryptExistingCloudData', () {

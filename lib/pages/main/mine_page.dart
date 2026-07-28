@@ -516,7 +516,7 @@ void _showGitHubStarGuide(BuildContext context) {
               const SizedBox(height: 16),
               // 引导图片
               ClipRRect(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                 child: Image.asset(
                   'assets/images/github_star_guide.png',
                   fit: BoxFit.contain,

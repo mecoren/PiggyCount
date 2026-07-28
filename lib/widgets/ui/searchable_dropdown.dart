@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../styles/tokens.dart';
 
 typedef SearchableDropdownItemBuilder<T> = Widget Function(T item);
 typedef SearchableDropdownFilter<T> = bool Function(T item, String query);
@@ -88,12 +89,12 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
         width: size.width,
         child: Material(
           elevation: 8,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
           child: Container(
             constraints: const BoxConstraints(maxHeight: 300),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
               border: Border.all(
                 color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
               ),
@@ -110,7 +111,7 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
                       hintText: '搜索...',
                       prefixIcon: const Icon(Icons.search),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                         borderSide: BorderSide(
                           color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
                         ),
@@ -177,7 +178,7 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
           border: Border.all(
             color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
           ),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
           color: widget.enabled 
             ? Theme.of(context).colorScheme.surface 
             : Theme.of(context).colorScheme.surface.withOpacity(0.5),

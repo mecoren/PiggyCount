@@ -369,7 +369,7 @@ class _TypeButton extends ConsumerWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         decoration: BoxDecoration(
@@ -382,7 +382,7 @@ class _TypeButton extends ConsumerWidget {
                 : BeeTokens.border(context),
             width: isSelected ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -434,7 +434,7 @@ class _CategorySelectorButton extends ConsumerWidget {
 
     return InkWell(
       onTap: enabled ? onTap : null,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -445,7 +445,7 @@ class _CategorySelectorButton extends ConsumerWidget {
                 : BeeTokens.border(context),
             width: category != null ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
         ),
         child: Row(
           children: [
@@ -457,7 +457,7 @@ class _CategorySelectorButton extends ConsumerWidget {
                 color: category != null
                     ? primaryColor.withValues(alpha: 0.1)
                     : BeeTokens.surface(context),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
               ),
               child: Icon(
                 category != null

@@ -654,7 +654,7 @@ class _SortButton extends StatelessWidget {
           color: isSelected
             ? Theme.of(context).colorScheme.primary
             : Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
           border: Border.all(
             color: isSelected
               ? Theme.of(context).colorScheme.primary

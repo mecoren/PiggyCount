@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
+import 'styles/tokens.dart';
 import 'widgets/biz/login_2fa_challenge_view.dart';
 import 'widgets/ui/toast.dart';
 import 'theme.dart';
@@ -511,7 +512,7 @@ class MainApp extends ConsumerWidget {
       ),
       dialogTheme: base.dialogTheme.copyWith(
         backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
         titleTextStyle: baseTextTheme.titleMedium?.copyWith(
             color: const Color(0xFF111827), fontWeight: FontWeight.w600),
         contentTextStyle:
@@ -528,7 +529,23 @@ class MainApp extends ConsumerWidget {
           backgroundColor: primary,
           foregroundColor: Colors.white,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusLg)),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: primary,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusLg)),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primary,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusLg)),
         ),
       ),
       floatingActionButtonTheme: base.floatingActionButtonTheme.copyWith(
@@ -542,7 +559,7 @@ class MainApp extends ConsumerWidget {
       cardTheme: base.cardTheme.copyWith(
         color: Colors.white,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
         margin: EdgeInsets.zero,
       ),
     );

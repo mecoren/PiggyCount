@@ -1034,11 +1034,11 @@ class _BeeBottomBar extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: bgColor,
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(BeeDimens.radius3xl),
             boxShadow: BeeTokens.tabBarShadow,
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(BeeDimens.radius3xl),
             child: Row(
               children: [
                 _buildTabItem(
@@ -1075,7 +1075,7 @@ class _BeeBottomBar extends StatelessWidget {
               color: isActive
                   ? primaryColor.withValues(alpha: 0.12)
                   : Colors.transparent,
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1173,7 +1173,7 @@ class _BeeBottomBar extends StatelessWidget {
               color: isActive
                   ? primaryColor.withValues(alpha: 0.12)
                   : Colors.transparent,
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,

@@ -535,13 +535,13 @@ class _TagCard extends StatelessWidget {
 
     return Material(
       color: BeeTokens.surface(context),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
             border: Border.all(
               color: tagColor.withValues(alpha: isDark ? 0.4 : 0.3),
               width: 1.5,

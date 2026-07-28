@@ -4,6 +4,7 @@ import 'dart:ui' show PlatformDispatcher;
 
 import 'package:flutter/material.dart';
 import 'package:home_widget/home_widget.dart';
+import '../styles/tokens.dart';
 import '../data/repositories/base_repository.dart';
 import '../l10n/app_localizations.dart';
 import '../services/system/logger_service.dart';
@@ -943,7 +944,7 @@ class _WidgetRenderFallbackCard extends StatelessWidget {
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: dark ? const Color(0xFF1A1712) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
       ),
       child: Icon(Icons.refresh, size: 28, color: themeColor),
     );

@@ -246,7 +246,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
 
     return InkWell(
       onTap: disabled ? null : () => setState(() => _type = type),
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
       child: Opacity(
         opacity: disabled ? 0.4 : 1.0,
         child: Container(
@@ -255,7 +255,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
             color: isSelected && !disabled
                 ? primary.withValues(alpha: 0.1)
                 : BeeTokens.surface(context),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
             border: Border.all(
               color: isSelected && !disabled ? primary : BeeTokens.border(context),
               width: isSelected && !disabled ? 2 : 1,
@@ -287,12 +287,12 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
   Widget _buildCategorySelector(BuildContext context, AppLocalizations l10n) {
     return InkWell(
       onTap: _selectCategory,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
       child: Container(
         padding: EdgeInsets.all(12.0.scaled(context, ref)),
         decoration: BoxDecoration(
           color: BeeTokens.surface(context),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
           border: Border.all(color: BeeTokens.border(context)),
         ),
         child: Row(
@@ -303,7 +303,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
                 height: 36.0.scaled(context, ref),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                 ),
                 child: Icon(
                   CategoryService.getCategoryIcon(_selectedCategoryIcon),
@@ -364,7 +364,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
       isScrollControlled: true,
       backgroundColor: BeeTokens.surface(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
       ),
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.6,
@@ -408,7 +408,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
                             .colorScheme
                             .primary
                             .withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                       ),
                       child: Icon(
                         CategoryService.getCategoryIcon(category.icon),

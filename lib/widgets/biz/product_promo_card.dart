@@ -179,7 +179,7 @@ class ProductPromoLauncher {
                 Row(
                   children: [
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                       child: Image.asset(
                         info.logoAsset,
                         width: 44,
@@ -252,7 +252,7 @@ class ProductPromoLauncher {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: BeeTokens.surface(ctx).withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                       border: Border.all(
                         color: themeColor.withValues(alpha: 0.15),
                       ),
@@ -310,7 +310,7 @@ class ProductPromoLauncher {
                             side: BorderSide(color: themeColor),
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                             ),
                           ),
                           child: Text(texts.testFlightButton),
@@ -327,7 +327,7 @@ class ProductPromoLauncher {
                             backgroundColor: themeColor,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                             ),
                           ),
                           child: Text(texts.openStoreButton),
@@ -437,7 +437,7 @@ class _ScreenshotThumb extends StatelessWidget {
         );
       },
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
         child: AspectRatio(
           aspectRatio: 9 / 16,
           child: DecoratedBox(
@@ -540,7 +540,7 @@ class _ScreenshotGalleryPageState extends State<_ScreenshotGalleryPage> {
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: Colors.black.withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
                           ),
                           child: Text(
                             '${page + 1} / ${widget.assets.length}',
@@ -578,12 +578,12 @@ class _CopyableEmailRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onCopied,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: accentColor.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
           border: Border.all(color: accentColor.withValues(alpha: 0.25), width: 1),
         ),
         child: Row(
@@ -703,7 +703,7 @@ class _ProductPromoCardState extends State<ProductPromoCard>
                   color.withValues(alpha: 0.05),
                 ],
               ),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
               border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
             ),
             child: Row(
@@ -791,7 +791,7 @@ class _ProductPromoCompactState extends State<ProductPromoCompact> {
                 color.withValues(alpha: 0.04),
               ],
             ),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
             border: Border.all(color: color.withValues(alpha: 0.25), width: 1),
           ),
           child: Row(

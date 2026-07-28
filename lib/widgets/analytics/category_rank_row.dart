@@ -225,7 +225,7 @@ class _CategoryRankRowState extends ConsumerState<CategoryRankRow> {
                   ),
                   const SizedBox(height: 6),
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                     child: Stack(
                       children: [
                         Container(

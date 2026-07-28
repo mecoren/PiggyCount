@@ -247,7 +247,7 @@ class _AccountSelectorState extends ConsumerState<AccountSelector> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
           color: isSelected ? primaryColor : BeeTokens.surfaceChip(context),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
         ),
         child: Center(
           child: Row(

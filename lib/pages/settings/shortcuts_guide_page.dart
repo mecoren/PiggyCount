@@ -194,12 +194,12 @@ class ShortcutsGuidePage extends ConsumerWidget {
           Clipboard.setData(ClipboardData(text: shortcut.url));
           showToast(context, l10n.shortcutUrlCopied);
         },
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
             border: Border.all(
               color: theme.colorScheme.outline.withValues(alpha: 0.2),
             ),
@@ -211,7 +211,7 @@ class ShortcutsGuidePage extends ConsumerWidget {
                 height: 48,
                 decoration: BoxDecoration(
                   color: shortcut.color.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                 ),
                 child: Icon(
                   shortcut.icon,
@@ -301,7 +301,7 @@ class ShortcutsGuidePage extends ConsumerWidget {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -359,7 +359,7 @@ class ShortcutsGuidePage extends ConsumerWidget {
               color: required
                   ? Colors.red.withValues(alpha: 0.1)
                   : theme.colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
             ),
             child: Text(
               param,
@@ -531,7 +531,7 @@ class ShortcutsGuidePage extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

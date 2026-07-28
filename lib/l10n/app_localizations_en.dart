@@ -127,6 +127,29 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get startupSyncConflictTooltip =>
+      'Local changes will be overwritten by cloud';
+
+  @override
+  String get startupSyncConflictConfirmTitle => 'Overwrite confirmation';
+
+  @override
+  String startupSyncConflictConfirmMessage(int count, String names) {
+    return 'This will overwrite local changes in $count ledger(s) ($names) with cloud version. Continue?';
+  }
+
+  @override
+  String get startupSyncConflictConfirmOk => 'Overwrite local';
+
+  @override
+  String get startupSyncConflictConfirmCancel => 'Cancel';
+
+  @override
+  String startupSyncConflictAndMore(int count) {
+    return 'and $count more';
+  }
+
+  @override
   String get commonSuccess => 'Success';
 
   @override
@@ -7969,4 +7992,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String cloudSyncEncryptReencryptPartialFailed(int count) {
     return 'Encryption enabled, but $count cloud file(s) failed to re-encrypt. They will be automatically retried on the next sync.';
   }
+
+  @override
+  String get cloudSyncEncryptProbeFailedTitle => 'Cloud Probe Failed';
+
+  @override
+  String get cloudSyncEncryptProbeFailedMessage =>
+      'Unable to probe whether the cloud already has encrypted data (possibly a network or permission issue). If other devices have encryption enabled, continuing will re-encrypt cloud data with a new password, which may prevent other devices from decrypting. Continue anyway?';
+
+  @override
+  String get cloudSyncEncryptProbeFailedContinue => 'Continue as first device';
 }

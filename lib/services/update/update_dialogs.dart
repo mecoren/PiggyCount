@@ -63,7 +63,7 @@ class UpdateDialogs {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.blue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                 ),
                 child: Row(
                   children: [
@@ -93,7 +93,7 @@ class UpdateDialogs {
             style: TextButton.styleFrom(
               foregroundColor: Theme.of(context).primaryColor,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
               ),
             ),
             onPressed: () => Navigator.of(context).pop(),
@@ -114,7 +114,7 @@ class UpdateDialogs {
           height: 20,
           decoration: BoxDecoration(
             color: Colors.blue,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
           ),
           child: Center(
             child: Text(
@@ -170,7 +170,7 @@ class UpdateDialogs {
               foregroundColor: Theme.of(context).primaryColor,
               side: BorderSide(color: Theme.of(context).primaryColor),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
               ),
             ),
             onPressed: () => Navigator.of(context).pop(false),
@@ -180,7 +180,7 @@ class UpdateDialogs {
           FilledButton.icon(
             style: FilledButton.styleFrom(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
               ),
             ),
             onPressed: () => Navigator.of(context).pop(true),
@@ -212,7 +212,7 @@ class UpdateDialogs {
               foregroundColor: Theme.of(context).primaryColor,
               side: BorderSide(color: Theme.of(context).primaryColor),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
               ),
             ),
             onPressed: () => Navigator.of(context).pop(false),
@@ -222,7 +222,7 @@ class UpdateDialogs {
           FilledButton.icon(
             style: FilledButton.styleFrom(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
               ),
             ),
             onPressed: () => Navigator.of(context).pop(true),
@@ -535,7 +535,7 @@ class _DownloadConfirmDialogState extends State<_DownloadConfirmDialog> {
               color: Colors.transparent,
               child: InkWell(
                 onTap: _openMirrorSelect,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -547,7 +547,7 @@ class _DownloadConfirmDialogState extends State<_DownloadConfirmDialog> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                     border: Border.all(
                       color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                       width: 1,
@@ -561,7 +561,7 @@ class _DownloadConfirmDialogState extends State<_DownloadConfirmDialog> {
                         height: 36,
                         decoration: BoxDecoration(
                           color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                         ),
                         child: Icon(
                           Icons.rocket_launch_rounded,
@@ -602,7 +602,7 @@ class _DownloadConfirmDialogState extends State<_DownloadConfirmDialog> {
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
                           color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                         ),
                         child: Icon(
                           Icons.chevron_right_rounded,
@@ -624,7 +624,7 @@ class _DownloadConfirmDialogState extends State<_DownloadConfirmDialog> {
             foregroundColor: Theme.of(context).primaryColor,
             side: BorderSide(color: Theme.of(context).primaryColor),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
             ),
           ),
           onPressed: () => Navigator.of(context).pop(false),
@@ -634,7 +634,7 @@ class _DownloadConfirmDialogState extends State<_DownloadConfirmDialog> {
         FilledButton(
           style: FilledButton.styleFrom(
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
             ),
           ),
           onPressed: () => Navigator.of(context).pop(true),

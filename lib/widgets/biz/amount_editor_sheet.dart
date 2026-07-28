@@ -470,13 +470,13 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     ref.watch(currentLedgerCurrencyProvider); // 账本切换时重建
     final txCurrency = _txCurrency();
     return InkWell(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
       onTap: _pickCurrency,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
           color: BeeTokens.surfaceKeySecondary(context),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -707,9 +707,9 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
         padding: const EdgeInsets.all(6),
         child: Material(
           color: bg ?? BeeTokens.surfaceKey(context),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
           child: InkWell(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
             onTap: onTap,
             child: Container(
               height: 60,
@@ -747,9 +747,9 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
         padding: const EdgeInsets.all(6),
         child: Material(
           color: BeeTokens.surfaceKeySecondary(context),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
           child: InkWell(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
             onTap: () => applyOp(activeOp),
             // 双击 / 长按都是「切到另一组运算符并直接应用」(一步用上另一个);
             // applyOp 内部已带触感/声音。
@@ -904,7 +904,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                 hintStyle: TextStyle(color: BeeTokens.textTertiary(context)),
                 isDense: true,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
@@ -997,9 +997,9 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                     padding: const EdgeInsets.all(6),
                     child: Material(
                       color: BeeTokens.surfaceKeySecondary(context),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                       child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                         onTap: () {
                           SystemSound.play(SystemSoundType.click);
                           _pickDate();
@@ -1041,9 +1041,9 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                     padding: const EdgeInsets.all(6),
                     child: Material(
                       color: BeeTokens.surfaceKey(context),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                       child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                         onTap: _backspace,
                         child: SizedBox(
                           height: 60,
@@ -1067,9 +1067,9 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                   padding: const EdgeInsets.all(6),
                   child: Material(
                     color: isEnabled ? primary : BeeTokens.surfaceDisabled(context),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                       onTap: isEnabled
                           ? () async {
                               if (isInCalcMode) {
@@ -1349,7 +1349,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: BeeTokens.surfaceInput(context),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
       ),
       child: Row(
         children: [

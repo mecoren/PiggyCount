@@ -535,7 +535,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const NetWorthTrendPage()),
           ),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
           child: SizedBox(
             height: 180.0.scaled(context, ref),
             child: LineChart(
@@ -593,7 +593,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
               vertical: 6.0.scaled(context, ref)),
           decoration: BoxDecoration(
             color: on ? primary.withValues(alpha: 0.15) : Colors.transparent,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
             border: Border.all(
                 color: on ? primary : BeeTokens.border(context), width: 1),
           ),
@@ -1124,7 +1124,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
       context: context,
       backgroundColor: BeeTokens.surfaceSheet(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
       ),
       builder: (sheetContext) {
         return Consumer(
@@ -1500,7 +1500,7 @@ void _showConversionDetailSheet(
     context: context,
     backgroundColor: BeeTokens.surfaceSheet(context),
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
     ),
     builder: (sheetContext) {
       return SafeArea(

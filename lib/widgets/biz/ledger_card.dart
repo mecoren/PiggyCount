@@ -69,7 +69,7 @@ class LedgerCard extends ConsumerWidget {
         ),
         decoration: BoxDecoration(
           color: BeeTokens.surface(context),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
           border: BeeTokens.isDark(context)
               ? Border.all(color: BeeTokens.border(context), width: 1)
               : null,
@@ -84,7 +84,7 @@ class LedgerCard extends ConsumerWidget {
                 ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
           child: Stack(
             children: [
               // 左侧色条：仅选中时显示
@@ -98,8 +98,8 @@ class LedgerCard extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: primaryColor,
                       borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(12),
-                        bottomLeft: Radius.circular(12),
+                        topLeft: Radius.circular(BeeDimens.radiusLg),
+                        bottomLeft: Radius.circular(BeeDimens.radiusLg),
                       ),
                     ),
                   ),
@@ -228,7 +228,7 @@ class LedgerCard extends ConsumerWidget {
                   child: Container(
                     decoration: BoxDecoration(
                       color: BeeTokens.surface(context).withValues(alpha: 0.85),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,

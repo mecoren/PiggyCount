@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../styles/tokens.dart';
 import '../../data/db.dart';
 import '../../providers.dart';
 import '../../l10n/app_localizations.dart';
@@ -44,7 +45,7 @@ class LedgerSelectorDialog extends ConsumerWidget {
         final ledgers = snapshot.data!;
         if (ledgers.isEmpty) {
           return SimpleDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
             title: Text(l10n.ledgerSelectTitle),
             children: [
               Padding(
@@ -56,7 +57,7 @@ class LedgerSelectorDialog extends ConsumerWidget {
         }
 
         return SimpleDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
           title: Text(l10n.ledgerSelectTitle),
           children: ledgers.map((ledger) {
             final isSelected = ledger.id == currentLedgerId;

@@ -272,7 +272,7 @@ class _CategorySelectorState extends ConsumerState<CategorySelector> {
                       ),
                     );
                   },
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(BeeDimens.radius3xl),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Row(
@@ -363,7 +363,7 @@ class _SubcategorySelectorCard extends ConsumerWidget {
     return Container(
       decoration: BoxDecoration(
         color: BeeTokens.surfacePopoverCard(context),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
         boxShadow: isDark
             ? null
             : [

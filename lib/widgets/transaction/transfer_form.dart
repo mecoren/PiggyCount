@@ -490,7 +490,7 @@ class _TransferFormState extends ConsumerState<TransferForm> {
           await _openAmountSheet();
         }
       },
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
       child: Container(
         decoration: BoxDecoration(
           // 未选中跟随页面底色(亮色白/暗黑纯黑),避免暗黑模式下突兀的白卡片
@@ -501,7 +501,7 @@ class _TransferFormState extends ConsumerState<TransferForm> {
             color: isSelected ? primary : BeeTokens.borderStrong(context),
             width: isSelected ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

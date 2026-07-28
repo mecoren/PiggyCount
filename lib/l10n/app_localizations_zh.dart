@@ -127,6 +127,28 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get startupSyncConflictTooltip => '本地有改动将被云端覆盖';
+
+  @override
+  String get startupSyncConflictConfirmTitle => '覆盖确认';
+
+  @override
+  String startupSyncConflictConfirmMessage(int count, String names) {
+    return '将用云端覆盖 $count 个账本的本地改动（$names），是否继续？';
+  }
+
+  @override
+  String get startupSyncConflictConfirmOk => '覆盖本地';
+
+  @override
+  String get startupSyncConflictConfirmCancel => '取消';
+
+  @override
+  String startupSyncConflictAndMore(int count) {
+    return '等 $count 个';
+  }
+
+  @override
   String get commonSuccess => '成功';
 
   @override
@@ -7663,6 +7685,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String cloudSyncEncryptReencryptPartialFailed(int count) {
     return '加密已开启，但有 $count 个云端文件重加密失败，下次同步时会自动重试。';
   }
+
+  @override
+  String get cloudSyncEncryptProbeFailedTitle => '探测云端失败';
+
+  @override
+  String get cloudSyncEncryptProbeFailedMessage =>
+      '无法探测云端是否已有加密数据（可能是网络或权限问题）。如果其他设备已开启加密，继续将以新密码重加密云端数据，可能导致其他设备无法解密。确定继续吗？';
+
+  @override
+  String get cloudSyncEncryptProbeFailedContinue => '以首设备继续';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -7785,6 +7817,28 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String startupSyncCheckApplyingProgress(int applied, int total) {
     return '正在合併 $applied/$total';
+  }
+
+  @override
+  String get startupSyncConflictTooltip => '本地有改動將被雲端覆蓋';
+
+  @override
+  String get startupSyncConflictConfirmTitle => '覆蓋確認';
+
+  @override
+  String startupSyncConflictConfirmMessage(int count, String names) {
+    return '將用雲端覆蓋 $count 個帳本的本地改動（$names），是否繼續？';
+  }
+
+  @override
+  String get startupSyncConflictConfirmOk => '覆蓋本地';
+
+  @override
+  String get startupSyncConflictConfirmCancel => '取消';
+
+  @override
+  String startupSyncConflictAndMore(int count) {
+    return '等 $count 個';
   }
 
   @override
@@ -15324,4 +15378,14 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String cloudSyncEncryptReencryptPartialFailed(int count) {
     return '加密已開啟，但有 $count 個雲端檔案重新加密失敗，下次同步時會自動重試。';
   }
+
+  @override
+  String get cloudSyncEncryptProbeFailedTitle => '探測雲端失敗';
+
+  @override
+  String get cloudSyncEncryptProbeFailedMessage =>
+      '無法探測雲端是否已有加密資料（可能是網路或權限問題）。如果其他裝置已開啟加密，繼續將以新密碼重新加密雲端資料，可能導致其他裝置無法解密。確定繼續嗎？';
+
+  @override
+  String get cloudSyncEncryptProbeFailedContinue => '以首裝置繼續';
 }

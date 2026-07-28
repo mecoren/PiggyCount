@@ -93,7 +93,7 @@ class BeePopupMenu extends StatelessWidget {
       ),
       tooltip: tooltip,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
       ),
       color: BeeTokens.surface(context),
       elevation: isDark ? 8 : 4,
@@ -136,7 +136,7 @@ class BeePopupMenu extends StatelessWidget {
             height: 32,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
             ),
             child: Icon(item.icon, size: 18, color: color),
           ),

@@ -33,7 +33,7 @@ Future<DateTime?> showWheelDatePicker(
     context: context,
     backgroundColor: BeeTokens.surfaceElevated(context),
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
     ),
     isScrollControlled: true,
     builder: (_) => WheelDatePicker(
@@ -269,7 +269,7 @@ Future<DateTime?> showWheelDateTimePicker(
     context: context,
     backgroundColor: BeeTokens.surfaceElevated(context),
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
     ),
     isScrollControlled: true,
     builder: (_) => _DateStepPicker(
@@ -285,7 +285,7 @@ Future<DateTime?> showWheelDateTimePicker(
     context: context,
     backgroundColor: BeeTokens.surfaceElevated(context),
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
     ),
     isScrollControlled: true,
     builder: (_) => _TimeStepPicker(
@@ -553,7 +553,7 @@ class _TimeStepPickerState extends State<_TimeStepPicker> {
     return Container(
       decoration: BoxDecoration(
         color: BeeTokens.surfaceElevated(context),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
       ),
       child: SafeArea(
         child: Column(

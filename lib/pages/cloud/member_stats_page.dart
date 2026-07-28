@@ -9,7 +9,7 @@ import '../../providers/shared_ledger_providers.dart';
 import '../../providers/sync_providers.dart' show beecountCloudProviderInstance;
 import '../../styles/tokens.dart';
 import '../../widgets/biz/biz.dart';
-import '../../widgets/ui/capsule_switcher.dart';
+import '../../widgets/ui/wait_sliding_segmented_control.dart';
 import '../../widgets/ui/ui.dart';
 
 class MemberStatsPage extends ConsumerStatefulWidget {
@@ -56,14 +56,14 @@ class _MemberStatsPageState extends ConsumerState<MemberStatsPage> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-            child: CapsuleSwitcher<String>(
-              selectedValue: _scope,
-              options: [
-                CapsuleOption(value: 'month', label: l10n.analyticsMonth),
-                CapsuleOption(value: 'year', label: l10n.analyticsYear),
-                CapsuleOption(value: 'all', label: l10n.analyticsAll),
+            child: WaitSlidingSegmentedControl<String>(
+              selected: _scope,
+              segments: [
+                WaitSlidingSegment(value: 'month', label: l10n.analyticsMonth),
+                WaitSlidingSegment(value: 'year', label: l10n.analyticsYear),
+                WaitSlidingSegment(value: 'all', label: l10n.analyticsAll),
               ],
-              onChanged: (v) => setState(() => _scope = v),
+              onValueChanged: (v) => setState(() => _scope = v),
             ),
           ),
           Expanded(

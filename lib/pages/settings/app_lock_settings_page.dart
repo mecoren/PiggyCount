@@ -110,7 +110,7 @@ class _AppLockSettingsPageState extends ConsumerState<AppLockSettingsPage> {
       context: context,
       backgroundColor: BeeTokens.surfaceElevated(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
       ),
       builder: (ctx) {
         return SafeArea(

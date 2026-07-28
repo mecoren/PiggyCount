@@ -58,7 +58,7 @@ class SmartBillingPage extends ConsumerWidget {
                 color: requiresAI
                     ? Colors.orange.withValues(alpha: 0.1)
                     : Colors.blue.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                 border: Border.all(
                   color: requiresAI ? Colors.orange : Colors.blue,
                   width: 1,
@@ -89,7 +89,7 @@ class SmartBillingPage extends ConsumerWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
               ),
               child: Row(
                 children: [

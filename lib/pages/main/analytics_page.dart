@@ -9,7 +9,7 @@ import '../../widgets/charts/line_chart.dart';
 import '../../widgets/charts/category_pie_chart.dart';
 import '../../widgets/analytics/analytics_summary.dart';
 import '../../widgets/analytics/category_rank_row.dart';
-import '../../widgets/ui/capsule_switcher.dart';
+import '../../widgets/ui/wait_sliding_segmented_control.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/export/share_poster_service.dart';
 import '../../data/db.dart' as db;
@@ -72,7 +72,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
       padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
       child: Material(
         color: BeeTokens.surface(context),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
@@ -600,23 +600,23 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
             padding: EdgeInsets.zero,
             bottom: Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-              child: CapsuleSwitcher<String>(
-                selectedValue: _scope,
-                options: [
-                  CapsuleOption(
+              child: WaitSlidingSegmentedControl<String>(
+                selected: _scope,
+                segments: [
+                  WaitSlidingSegment(
                     value: 'month',
                     label: AppLocalizations.of(context).analyticsMonth,
                   ),
-                  CapsuleOption(
+                  WaitSlidingSegment(
                     value: 'year',
                     label: AppLocalizations.of(context).analyticsYear,
                   ),
-                  CapsuleOption(
+                  WaitSlidingSegment(
                     value: 'all',
                     label: AppLocalizations.of(context).analyticsAll,
                   ),
                 ],
-                onChanged: (value) => setState(() => _scope = value),
+                onValueChanged: (value) => setState(() => _scope = value),
               ),
             ),
           ),

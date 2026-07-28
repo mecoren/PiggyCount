@@ -4,6 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../../styles/tokens.dart';
 
 import '../../services/export/share_poster_types.dart';
 import '../../services/data/category_service.dart';
@@ -145,7 +146,7 @@ class MonthSummaryPoster extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
                     decoration: BoxDecoration(
                       color: primaryColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
                     ),
                     child: Text(
                       yearFormat.format(date),
@@ -161,7 +162,7 @@ class MonthSummaryPoster extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
                     decoration: BoxDecoration(
                       color: primaryColor,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
                     ),
                     child: Text(
                       monthFormat.format(date),
@@ -193,7 +194,7 @@ class MonthSummaryPoster extends StatelessWidget {
         ),
         // 右侧二维码
         ClipRRect(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
           child: Container(
             decoration: BoxDecoration(
               boxShadow: [
@@ -226,7 +227,7 @@ class MonthSummaryPoster extends StatelessWidget {
       padding: const EdgeInsets.all(35),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(BeeDimens.radius3xl),
         boxShadow: [
           BoxShadow(
             color: primaryColor.withValues(alpha: 0.08),
@@ -420,7 +421,7 @@ class MonthSummaryPoster extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
         border: Border.all(
           color: primaryColor.withValues(alpha: 0.15),
           width: 1.5,
@@ -434,7 +435,7 @@ class MonthSummaryPoster extends StatelessWidget {
             height: 32,
             decoration: BoxDecoration(
               color: primaryColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
             ),
             child: Center(
               child: Text(
@@ -502,7 +503,7 @@ class MonthSummaryPoster extends StatelessWidget {
       padding: const EdgeInsets.all(25),
       decoration: BoxDecoration(
         color: primaryColor.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
         border: Border.all(
           color: primaryColor.withValues(alpha: 0.1),
           width: 1,

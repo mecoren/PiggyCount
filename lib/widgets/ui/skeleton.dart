@@ -131,7 +131,7 @@ class SkeletonBar extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         color: BeeTokens.surfaceSecondary(context),
-        borderRadius: borderRadius ?? BorderRadius.circular(6),
+        borderRadius: borderRadius ?? BorderRadius.circular(BeeDimens.radiusXs),
       ),
     );
     if (widthFactor != null) {

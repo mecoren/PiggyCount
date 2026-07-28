@@ -167,7 +167,7 @@ class _TypeChip extends StatelessWidget {
           color: isSelected
               ? primaryColor.withValues(alpha: 0.15)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
           border: Border.all(
             color: isSelected ? primaryColor : BeeTokens.border(context),
           ),

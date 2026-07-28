@@ -44,7 +44,7 @@ class SubcategoryContainer extends ConsumerWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: primaryColor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -108,11 +108,11 @@ class _ActionButton extends ConsumerWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
       child: Container(
         decoration: BoxDecoration(
           color: BeeTokens.surfacePopoverCard(context),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
           border: Border.all(
             color: BeeTokens.border(context),
             width: 1,
@@ -160,11 +160,11 @@ class _SubCategoryCard extends ConsumerWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
       child: Container(
         decoration: BoxDecoration(
           color: BeeTokens.surfacePopoverCard(context),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
           border: Border.all(
             color: BeeTokens.border(context),
             width: 1,

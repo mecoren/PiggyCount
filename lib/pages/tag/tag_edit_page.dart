@@ -103,7 +103,7 @@ class _TagEditPageState extends ConsumerState<TagEditPage> {
                           decoration: InputDecoration(
                             hintText: l10n.tagNameHint,
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                             ),
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 12,

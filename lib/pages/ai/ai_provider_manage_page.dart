@@ -112,7 +112,7 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
       margin: EdgeInsets.zero,
       child: InkWell(
         onTap: () => _editProvider(context, provider),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -141,7 +141,7 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: primaryColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                       ),
                       child: Text(
                         l10n.aiProviderBuiltIn,
@@ -193,7 +193,7 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: Colors.orange.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                   ),
                   child: Row(
                     children: [
@@ -243,7 +243,7 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
         color: enabled
             ? primaryColor.withValues(alpha: 0.1)
             : BeeTokens.textTertiary(context).withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -526,7 +526,7 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
                               color: Colors.red.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(6),
+                              borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                             ),
                             child: Text(
                               _textTestError!,
@@ -879,7 +879,7 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: Colors.red.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
             ),
             child: Text(
               testError,

@@ -178,7 +178,7 @@ class _AttachmentPickerState extends ConsumerState<AttachmentPicker> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: BeeTokens.surfaceInput(context),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
         ),
         child: Row(
           children: [

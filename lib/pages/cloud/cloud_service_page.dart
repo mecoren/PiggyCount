@@ -12,7 +12,7 @@ import '../../providers/sync_providers.dart';
 import '../../providers/database_providers.dart';
 import '../../services/system/logger_service.dart';
 import '../../widgets/ui/ui.dart';
-import '../../widgets/ui/capsule_switcher.dart';
+import '../../widgets/ui/wait_sliding_segmented_control.dart';
 import '../../widgets/biz/section_card.dart';
 import '../../styles/tokens.dart';
 import '../../l10n/app_localizations.dart';
@@ -118,17 +118,17 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                   : null,
             ),
           ),
-          // 胶囊切换器
+          // 滑动分段选择器
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: CapsuleSwitcher<String>(
-              selectedValue: _selectedTab,
-              options: [
-                CapsuleOption(value: 'offline', label: AppLocalizations.of(context).cloudTabOffline),
-                CapsuleOption(value: 'backup', label: AppLocalizations.of(context).cloudTabBackup),
-                CapsuleOption(value: 'cloud', label: AppLocalizations.of(context).cloudTabCloudSync),
+            child: WaitSlidingSegmentedControl<String>(
+              selected: _selectedTab,
+              segments: [
+                WaitSlidingSegment(value: 'offline', label: AppLocalizations.of(context).cloudTabOffline),
+                WaitSlidingSegment(value: 'backup', label: AppLocalizations.of(context).cloudTabBackup),
+                WaitSlidingSegment(value: 'cloud', label: AppLocalizations.of(context).cloudTabCloudSync),
               ],
-              onChanged: (value) => setState(() => _selectedTab = value),
+              onValueChanged: (value) => setState(() => _selectedTab = value),
             ),
           ),
           Expanded(
@@ -329,7 +329,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: statusColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                 border: Border.all(color: statusColor.withValues(alpha: 0.3)),
               ),
               child: Row(
@@ -379,7 +379,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: BeeTokens.warning(context).withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
           border: Border.all(
             color: BeeTokens.warning(context).withValues(alpha: 0.3),
           ),
@@ -600,13 +600,13 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
       child: Container(
         decoration: BoxDecoration(
           border: isSelected ? Border.all(color: BeeTokens.success(context), width: 2) : null,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
         ),
         child: SectionCard(
           margin: EdgeInsets.zero,
           child: InkWell(
             onTap: isDisabled ? null : onTap,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -619,7 +619,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                         height: 48,
                         decoration: BoxDecoration(
                           color: iconColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                         ),
                         child: Icon(icon, color: iconColor, size: 24),
                       ),
@@ -645,7 +645,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                     decoration: BoxDecoration(
                                       color: BeeTokens.textTertiary(context).withValues(alpha: 0.2),
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                                     ),
                                     child: Text(
                                       '不可用',
@@ -733,13 +733,13 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
       child: Container(
         decoration: BoxDecoration(
           border: isSelected ? Border.all(color: BeeTokens.success(context), width: 2) : null,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
         ),
         child: SectionCard(
           margin: EdgeInsets.zero,
           child: InkWell(
             onTap: isDisabled ? null : () => _switchService(CloudBackendType.icloud),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -752,7 +752,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                         height: 48,
                         decoration: BoxDecoration(
                           color: BeeTokens.brandIcloud.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                         ),
                         child: Icon(Icons.cloud, color: BeeTokens.brandIcloud, size: 24),
                       ),
@@ -778,7 +778,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                     decoration: BoxDecoration(
                                       color: BeeTokens.textTertiary(context).withValues(alpha: 0.2),
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                                     ),
                                     child: Text(
                                       '不可用',
@@ -897,7 +897,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: BeeTokens.brandSupabase.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                 ),
                 child: Row(
                   children: [
@@ -970,7 +970,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: BeeTokens.brandCloud.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -997,7 +997,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: BeeTokens.brandCloud.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1144,7 +1144,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: BeeTokens.brandWebdav.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                 ),
                 child: Row(
                   children: [
@@ -1225,7 +1225,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: BeeTokens.brandIcloud.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                 ),
                 child: Row(
                   children: [
@@ -1310,7 +1310,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: BeeTokens.brandS3.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                 ),
                 child: Row(
                   children: [

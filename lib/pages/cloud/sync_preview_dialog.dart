@@ -71,7 +71,7 @@ class _SyncPreviewDialogState extends State<_SyncPreviewDialog> {
 
     return AlertDialog(
       backgroundColor: BeeTokens.surface(context),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
       title: Text(
         l10n.syncPreviewTitle,
         style: TextStyle(
@@ -198,7 +198,7 @@ class _SyncPreviewDialogState extends State<_SyncPreviewDialog> {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
       ),
       child: Text(
         text,

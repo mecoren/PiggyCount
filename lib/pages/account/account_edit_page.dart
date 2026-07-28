@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers.dart';
 import '../../widgets/ui/ui.dart';
+import '../../widgets/ui/wait_sliding_segmented_control.dart';
 import '../../widgets/biz/section_card.dart';
 import '../../data/db.dart' as db;
 import '../../l10n/app_localizations.dart';
@@ -199,37 +200,6 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
         color: BeeTokens.textPrimary(context),
       );
 
-  /// 资产/负债 分段标签
-  Widget _segTab(BuildContext context,
-      {required String label,
-      required bool selected,
-      required Color primaryColor,
-      required VoidCallback onTap}) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: EdgeInsets.symmetric(vertical: 8.0.scaled(context, ref)),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: selected ? BeeTokens.surfaceElevated(context) : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-              color: selected ? primaryColor : BeeTokens.textSecondary(context),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -273,26 +243,21 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: BeeTokens.surfaceInput(context),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Row(
-                              children: [
-                                _segTab(context,
-                                    label: l10n.accountGroupTradable,
-                                    selected: _typeTab == 0,
-                                    primaryColor: primaryColor,
-                                    onTap: () => setState(() => _typeTab = 0)),
-                                _segTab(context,
-                                    label: l10n.accountTabValuation,
-                                    selected: _typeTab == 1,
-                                    primaryColor: primaryColor,
-                                    onTap: () => setState(() => _typeTab = 1)),
-                              ],
-                            ),
+                          WaitSlidingSegmentedControl<int>(
+                            selected: _typeTab,
+                            accentColor: primaryColor,
+                            segments: [
+                              WaitSlidingSegment(
+                                value: 0,
+                                label: l10n.accountGroupTradable,
+                              ),
+                              WaitSlidingSegment(
+                                value: 1,
+                                label: l10n.accountTabValuation,
+                              ),
+                            ],
+                            onValueChanged: (value) =>
+                                setState(() => _typeTab = value),
                           ),
                           SizedBox(height: 16.0.scaled(context, ref)),
                           GridView.count(
@@ -356,7 +321,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                               SizedBox(
                                 width: 120.0.scaled(context, ref),
                                 child: InkWell(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                                   onTap: () async {
                                     // 同账单日：开选择器前先收键盘
                                     FocusManager.instance.primaryFocus?.unfocus();
@@ -1063,7 +1028,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
       isScrollControlled: true,
       backgroundColor: BeeTokens.surfaceElevated(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
       ),
       builder: (bctx) {
         String query = '';
@@ -1145,7 +1110,7 @@ InputDecoration _filledDecoration(
   String? errorText,
 }) {
   OutlineInputBorder b(Color c, double w) => OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
         borderSide: w == 0 ? BorderSide.none : BorderSide(color: c, width: w),
       );
   return InputDecoration(
@@ -1187,7 +1152,7 @@ class _DayPickerTile extends ConsumerWidget {
     final hasValue = value != null;
     return InkWell(
       onTap: () => _showDayPicker(context, l10n),
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
       child: InputDecorator(
         decoration: _filledDecoration(context, primaryColor, label: label),
         child: Row(
@@ -1223,7 +1188,7 @@ class _DayPickerTile extends ConsumerWidget {
       context: context,
       backgroundColor: BeeTokens.surfaceElevated(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
       ),
       builder: (ctx) {
         return SizedBox(
@@ -1259,7 +1224,7 @@ class _DayPickerTile extends ConsumerWidget {
                           color: isSelected
                               ? primaryColor
                               : Colors.transparent,
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                           border: Border.all(
                             color: isSelected
                                 ? primaryColor

@@ -7,7 +7,7 @@
 // - TC-M4: 云端有 BEECRYPT1 密文 + 错误密码 → 抛 ArgumentError，不写 secure storage
 // - TC-M5: 加入后能解密云端所有同 salt 密文
 // - TC-M6: 加入后 verifier 可通过 verifyPassword 验证
-// - TC-M7: list 抛异常 → 回退到 enable（US-M3 探测失败回退）
+// - TC-M7: list 抛异常 → 抛 EnableFromCloudProbeFailedException（US-3 探测失败不自动回退）
 // - TC-M8: list 成功但 download 抛异常 → 透传异常
 //
 // 多设备模拟方式：
@@ -224,19 +224,27 @@ void main() {
     });
   });
 
-  group('TC-M7: list 抛异常 - 回退到 enable（US-M3 探测失败回退）', () {
-    test('list 抛异常 → enableFromCloud 回退到 enable，enabled=true', () async {
+  group('TC-M7: list 抛异常 - 抛 EnableFromCloudProbeFailedException（US-3）', () {
+    test('list 抛异常 → enableFromCloud 抛 EnableFromCloudProbeFailedException，不自动回退 enable',
+        () async {
       cloud.throwOnList = true;
 
-      await deviceB.enableFromCloud(
-        password: 'mypassword',
-        cloudStorage: cloud,
+      // US-3: 探测失败不应静默回退 enable()，否则会生成新 salt 并 reEncrypt
+      // 全量云端数据，孤立其他持有旧 salt 的设备。
+      // 应抛异常让 UI 引导用户确认是否以首设备身份继续。
+      expect(
+        () => deviceB.enableFromCloud(
+          password: 'mypassword',
+          cloudStorage: cloud,
+        ),
+        throwsA(isA<EnableFromCloudProbeFailedException>()),
       );
 
-      // 回退到 enable 流程，应正常开启
-      expect(await deviceB.isEnabled, isTrue);
-      expect(await deviceBStorage.getKey(), isNotNull);
-      expect(deviceB.activeSalt, isNotNull);
+      // 不应写入 secure storage（未开启加密）
+      expect(await deviceB.isEnabled, isFalse);
+      expect(await deviceBStorage.getKey(), isNull);
+      expect(await deviceBStorage.getSalt(), isNull);
+      expect(deviceB.activeSalt, isNull);
     });
   });
 

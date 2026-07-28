@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../styles/tokens.dart';
 import '../../services/data/category_service.dart' show CategoryService;
 import '../widget_data_service.dart' show QuickAddCategoryItem;
 import '../widget_spec.dart' show HWSize;
@@ -67,7 +68,7 @@ class QuickAddView extends StatelessWidget {
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: widgetCardBackground(dark),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
       ),
       child: child,
     );
@@ -171,7 +172,7 @@ class QuickAddView extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: themeColor.withValues(alpha: dark ? 0.2 : 0.1),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
       ),
       padding: EdgeInsets.symmetric(horizontal: 4, vertical: _cellVPad),
       child: Column(
@@ -200,7 +201,7 @@ class QuickAddView extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: widgetDivider(dark),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
       ),
       child: Center(
         child: Icon(Icons.more_horiz, size: 18, color: widgetTextTertiary(dark)),
@@ -212,7 +213,7 @@ class QuickAddView extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: themeColor,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
       ),
       padding: EdgeInsets.symmetric(horizontal: 4, vertical: _cellVPad),
       child: Column(

@@ -74,6 +74,23 @@
       "total": {"type": "int"}
     }
   },
+  "startupSyncConflictTooltip": "Local changes will be overwritten by cloud",
+  "startupSyncConflictConfirmTitle": "Overwrite confirmation",
+  "startupSyncConflictConfirmMessage": "This will overwrite local changes in {count} ledger(s) ({names}) with cloud version. Continue?",
+  "@startupSyncConflictConfirmMessage": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "names": {"type": "String"}
+    }
+  },
+  "startupSyncConflictConfirmOk": "Overwrite local",
+  "startupSyncConflictConfirmCancel": "Cancel",
+  "startupSyncConflictAndMore": "and {count} more",
+  "@startupSyncConflictAndMore": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "commonSuccess": "Success",
   "commonFailed": "Failed",
   "commonBack": "Back",
@@ -3662,6 +3679,9 @@
       }
     }
   },
+  "cloudSyncEncryptProbeFailedTitle": "Cloud Probe Failed",
+  "cloudSyncEncryptProbeFailedMessage": "Unable to probe whether the cloud already has encrypted data (possibly a network or permission issue). If other devices have encryption enabled, continuing will re-encrypt cloud data with a new password, which may prevent other devices from decrypting. Continue anyway?",
+  "cloudSyncEncryptProbeFailedContinue": "Continue as first device",
   "@searchSelectedCount": {
     "placeholders": {
       "count": {

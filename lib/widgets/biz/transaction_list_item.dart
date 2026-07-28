@@ -108,7 +108,7 @@ class TransactionListItem extends ConsumerWidget {
         color: BeeTokens.isDark(context)
             ? Colors.white.withValues(alpha: 0.1)
             : Colors.black.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
       ),
       child: Text(
         label,
@@ -313,7 +313,7 @@ class TransactionListItem extends ConsumerWidget {
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: ref.watch(primaryColorProvider).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(4),
+                              borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                             ),
                             child: Text(
                               ledgerName!,

@@ -120,7 +120,7 @@ class _RecurringTransactionCard extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: BeeTokens.surface(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
         border: BeeTokens.isDark(context)
             ? Border.all(
                 color: recurring.enabled
@@ -153,7 +153,7 @@ class _RecurringTransactionCard extends ConsumerWidget {
               ref.invalidate(allRecurringTransactionsProvider);
             }
           },
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Row(

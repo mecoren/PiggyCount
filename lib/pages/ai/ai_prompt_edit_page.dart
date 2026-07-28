@@ -191,8 +191,8 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
                 decoration: BoxDecoration(
                   color: primaryColor.withValues(alpha: 0.1),
                   borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(12),
-                    topRight: Radius.circular(12),
+                    topLeft: Radius.circular(BeeDimens.radiusLg),
+                    topRight: Radius.circular(BeeDimens.radiusLg),
                   ),
                 ),
                 child: Row(
@@ -236,8 +236,8 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
                 decoration: BoxDecoration(
                   color: BeeTokens.surfaceHeader(context),
                   borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(12),
-                    bottomRight: Radius.circular(12),
+                    bottomLeft: Radius.circular(BeeDimens.radiusLg),
+                    bottomRight: Radius.circular(BeeDimens.radiusLg),
                   ),
                 ),
                 child: Text(
@@ -356,7 +356,7 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: primaryColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                           ),
                           child: Text(
                             v['name']!,
@@ -413,7 +413,7 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: Colors.orange.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                     ),
                     child: Text(
                       l10n.aiPromptUnsaved,

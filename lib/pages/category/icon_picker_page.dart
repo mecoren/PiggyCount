@@ -290,7 +290,7 @@ class _IconGrid extends StatelessWidget {
                     : BeeTokens.border(context),
                 width: isSelected ? 2 : 1,
               ),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,

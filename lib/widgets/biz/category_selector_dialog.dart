@@ -301,7 +301,7 @@ class _CategorySelectorDialogState extends ConsumerState<CategorySelectorDialog>
 
     return Dialog(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
       ),
       backgroundColor: BeeTokens.scaffoldBackground(context),
       child: Container(
@@ -309,7 +309,7 @@ class _CategorySelectorDialogState extends ConsumerState<CategorySelectorDialog>
         height: MediaQuery.of(context).size.height * 0.75,
         decoration: BoxDecoration(
           color: BeeTokens.scaffoldBackground(context),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
         ),
         child: Column(
         children: [
@@ -318,7 +318,7 @@ class _CategorySelectorDialogState extends ConsumerState<CategorySelectorDialog>
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: BeeTokens.surfaceElevated(context),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
               border: Border(
                 bottom: BorderSide(
                   color: BeeTokens.divider(context),
@@ -371,13 +371,13 @@ class _CategorySelectorDialogState extends ConsumerState<CategorySelectorDialog>
                             )
                           : null,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                         borderSide: BorderSide(
                           color: BeeTokens.border(context),
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                         borderSide: BorderSide(
                           color: ref.watch(primaryColorProvider),
                         ),
@@ -617,7 +617,7 @@ class _CategoryTile extends StatelessWidget {
                     color: isSelected
                         ? primaryColor.withValues(alpha: 0.15)
                         : primaryColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                     // 选中状态添加边框
                     border: isSelected
                         ? Border.all(color: primaryColor, width: 1.5)
@@ -651,7 +651,7 @@ class _CategoryTile extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: BeeTokens.surface(context),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                     ),
                     child: Text(
                       AppLocalizations.of(context).tagTransactionCount(transactionCount),

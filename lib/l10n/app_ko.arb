@@ -70,6 +70,23 @@
       "total": {"type": "int"}
     }
   },
+  "startupSyncConflictTooltip": "로컬 변경사항이 클라우드로 덮어씌워집니다",
+  "startupSyncConflictConfirmTitle": "덮어쓰기 확인",
+  "startupSyncConflictConfirmMessage": "{count}개 장부의 로컬 변경사항({names})을 클라우드 버전으로 덮어씁니다. 계속하시겠습니까?",
+  "@startupSyncConflictConfirmMessage": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "names": {"type": "String"}
+    }
+  },
+  "startupSyncConflictConfirmOk": "로컬 덮어쓰기",
+  "startupSyncConflictConfirmCancel": "취소",
+  "startupSyncConflictAndMore": "외 {count}개",
+  "@startupSyncConflictAndMore": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "commonSuccess": "성공",
   "commonFailed": "실패",
   "commonBack": "뒤로",
@@ -2258,5 +2275,8 @@
   "cloudSyncEncryptMultiDeviceHint": "다른 기기에서 동일한 비밀번호를 사용하여 복호화하세요",
   "cloudSyncEncryptLegacyHint": "기존 암호화되지 않은 클라우드 데이터는 자동으로 암호문으로 변환됩니다",
   "cloudSyncEncryptReencrypting": "클라우드 데이터를 다시 암호화하는 중...",
-  "cloudSyncEncryptReencryptPartialFailed": "암호화가 활성화되었지만 {count}개의 클라우드 파일 재암호화에 실패했습니다. 다음 동기화 시 자동으로 재시도됩니다."
+  "cloudSyncEncryptReencryptPartialFailed": "암호화가 활성화되었지만 {count}개의 클라우드 파일 재암호화에 실패했습니다. 다음 동기화 시 자동으로 재시도됩니다.",
+  "cloudSyncEncryptProbeFailedTitle": "클라우드 탐지 실패",
+  "cloudSyncEncryptProbeFailedMessage": "클라우드에 이미 암호화된 데이터가 있는지 탐지할 수 없습니다(네트워크 또는 권한 문제일 수 있음). 다른 기기에서 암호화가 활성화된 경우 계속하면 새 비밀번호로 클라우드 데이터가 재암호화되어 다른 기기에서 해독할 수 없게 될 수 있습니다. 계속하시겠습니까?",
+  "cloudSyncEncryptProbeFailedContinue": "첫 기기로 계속"
 }

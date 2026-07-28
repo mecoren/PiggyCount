@@ -6,6 +6,7 @@ import 'dart:io';
 import '../../l10n/app_localizations.dart';
 import '../../utils/file_picker_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../styles/tokens.dart';
 import '../../providers/ui_state_providers.dart';
 import '../../providers/language_provider.dart';
 import '../../providers/database_providers.dart';
@@ -87,7 +88,7 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
                       color: _currentPage == index
                           ? Colors.white
                           : Colors.white.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                     ),
                   ),
                 ),
@@ -242,7 +243,7 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
             constraints: const BoxConstraints(maxHeight: 200),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
             ),
             child: ListView.separated(
               shrinkWrap: true,
@@ -382,7 +383,7 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
               ),
               child: ListView.separated(
                 itemCount: currencies.length,
@@ -460,10 +461,10 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
           Container(
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
             ),
             child: InkWell(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
               onTap: () {
                 setState(() {
                   _createDefaultLedger = !_createDefaultLedger;
@@ -1128,14 +1129,14 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
           _categoryMode = mode;
         });
       },
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isSelected
               ? Colors.white.withValues(alpha: 0.3)
               : Colors.white.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
           border: Border.all(
             color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.3),
             width: 2,

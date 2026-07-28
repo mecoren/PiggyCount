@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../styles/tokens.dart';
 import '../../l10n/app_localizations.dart';
 
 class SplashPage extends ConsumerWidget {
@@ -25,7 +26,7 @@ class SplashPage extends ConsumerWidget {
                 height: 120,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(BeeDimens.radius3xl),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.1),
@@ -73,7 +74,7 @@ class SplashPage extends ConsumerWidget {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
                   border: Border.all(
                     color: Colors.white.withOpacity(0.3),
                     width: 1,

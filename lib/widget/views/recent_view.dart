@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../styles/tokens.dart';
 import '../../utils/currencies.dart' show getCurrencySymbol;
 import '../../widgets/biz/format_money.dart' show formatMoneyCompact;
 import '../widget_data_service.dart' show RecentTransactionItem;
@@ -80,7 +81,7 @@ class RecentView extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: widgetCardBackground(dark),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -100,7 +100,7 @@ class ReminderSettingsPage extends ConsumerWidget {
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                       ),
                     ),
                     child: Text(
@@ -206,7 +206,7 @@ class ReminderSettingsPage extends ConsumerWidget {
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                         ),
                       ),
                       child: Text(
@@ -322,7 +322,7 @@ class ReminderSettingsPage extends ConsumerWidget {
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                         ),
                       ),
                       child: Text(
@@ -356,7 +356,7 @@ class ReminderSettingsPage extends ConsumerWidget {
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                         ),
                       ),
                       child: Text(
@@ -380,7 +380,7 @@ class ReminderSettingsPage extends ConsumerWidget {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: BeeTokens.surfaceSecondary(context),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
               border: isDark
                   ? null
                   : Border.all(

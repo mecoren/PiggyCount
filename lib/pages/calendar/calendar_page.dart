@@ -462,12 +462,12 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
           Material(
             color: Colors.transparent,
             child: InkWell(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
               onTap: _addTransactionForSelectedDate,
               child: Ink(
                 decoration: BoxDecoration(
                   color: primaryColor,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
                   boxShadow: [
                     BoxShadow(
                       color: primaryColor.withValues(alpha: 0.28),

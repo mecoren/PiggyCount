@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../styles/tokens.dart';
 import 'startup_sync_checker.dart' show LedgerCandidate, SummaryChoice;
+import 'sync_service.dart' show SyncDiff;
 
 /// 启动同步状态机的状态抽象
 sealed class StartupSyncState {}
@@ -267,24 +268,45 @@ class _HasUpdatesView extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         ...state.candidates.map(
-          (c) => Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Row(
-              children: [
-                Icon(Icons.book_outlined,
-                    size: 14, color: BeeTokens.textTertiary(context)),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    c.ledger.name,
-                    style: Theme.of(context).textTheme.bodySmall,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+          (c) {
+            // US-7: 对 different 账本显示警告图标 + tooltip
+            // cloudNewer/localNewer 为单向覆盖，无冲突，保持原样
+            final isConflict = c.diffType == SyncDiff.different;
+            return Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Row(
+                children: [
+                  Icon(
+                    isConflict
+                        ? Icons.warning_amber
+                        : Icons.book_outlined,
+                    size: 14,
+                    color: isConflict
+                        ? Colors.orange
+                        : BeeTokens.textTertiary(context),
                   ),
-                ),
-              ],
-            ),
-          ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      c.ledger.name,
+                      style: Theme.of(context).textTheme.bodySmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (isConflict)
+                    Tooltip(
+                      message: l10n.startupSyncConflictTooltip,
+                      child: Icon(
+                        Icons.info_outline,
+                        size: 12,
+                        color: BeeTokens.textTertiary(context),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
         ),
         const SizedBox(height: 20),
         // 主按钮：一键应用全部

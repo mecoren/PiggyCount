@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../../styles/tokens.dart';
 import '../../widgets/ui/primary_header.dart';
 import '../../widgets/ui/toast.dart';
 import '../../providers.dart';
@@ -284,7 +285,7 @@ class _AndroidAutoBillingPageState extends ConsumerState<AndroidAutoBillingPage>
               height: 48,
               decoration: BoxDecoration(
                 color: primaryColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
               ),
               child: Icon(icon, color: primaryColor, size: 28),
             ),
@@ -332,7 +333,7 @@ class _AndroidAutoBillingPageState extends ConsumerState<AndroidAutoBillingPage>
               height: 48,
               decoration: BoxDecoration(
                 color: (_isBatteryOptimizationIgnored ? Colors.green : Colors.orange).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
               ),
               child: Icon(
                 _isBatteryOptimizationIgnored ? Icons.check_circle : Icons.battery_saver,

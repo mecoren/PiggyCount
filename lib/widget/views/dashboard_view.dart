@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../styles/tokens.dart';
 import '../../utils/currencies.dart' show getCurrencySymbol;
 import '../../widgets/biz/format_money.dart' show formatMoneyCompact;
 import '../widget_data_service.dart'
@@ -107,7 +108,7 @@ class DashboardView extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: widgetCardBackground(dark),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -263,7 +264,7 @@ class DashboardView extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
         color: themeColor.withValues(alpha: dark ? 0.2 : 0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -287,7 +288,7 @@ class DashboardView extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
         color: themeColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

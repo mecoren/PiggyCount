@@ -65,7 +65,7 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
       ),
       decoration: BoxDecoration(
         color: BeeTokens.surfaceElevated(context),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -126,7 +126,7 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
                 hintText: l10n.commonSearch,
                 prefixIcon: const Icon(Icons.search, size: 20),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
@@ -270,7 +270,7 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
   Widget _buildCreateNew(AppLocalizations l10n) {
     return InkWell(
       onTap: _createNewTag,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
@@ -278,7 +278,7 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
             color: BeeTokens.border(context),
             style: BorderStyle.solid,
           ),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,

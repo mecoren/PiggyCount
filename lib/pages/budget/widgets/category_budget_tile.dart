@@ -28,7 +28,7 @@ class CategoryBudgetTile extends ConsumerWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
       child: Padding(
         padding: EdgeInsets.symmetric(
           vertical: 12.0.scaled(context, ref),

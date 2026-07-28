@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../styles/tokens.dart';
 
 import '../../data/db.dart';
 import '../../l10n/app_localizations.dart';
@@ -316,7 +317,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,

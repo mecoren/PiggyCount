@@ -355,7 +355,7 @@ class WidgetManagementPage extends ConsumerWidget {
                 width: displayWidth,
                 height: displayHeight,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.10),
@@ -365,7 +365,7 @@ class WidgetManagementPage extends ConsumerWidget {
                   ],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
                   child: FittedBox(
                     fit: BoxFit.contain,
                     child: SizedBox(
@@ -396,7 +396,7 @@ class WidgetManagementPage extends ConsumerWidget {
       ),
       decoration: BoxDecoration(
         color: BeeTokens.surfaceSecondary(context),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
       ),
       child: Text(
         '$label · ${size.width.toInt()}×${size.height.toInt()}',
@@ -574,7 +574,7 @@ class WidgetManagementPage extends ConsumerWidget {
     return Container(
       decoration: BoxDecoration(
         color: primaryColor.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
         border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
       ),
       padding: EdgeInsets.all(14.0.scaled(context, ref)),

@@ -318,6 +318,42 @@ abstract class AppLocalizations {
   /// **'Merging {applied}/{total}'**
   String startupSyncCheckApplyingProgress(int applied, int total);
 
+  /// No description provided for @startupSyncConflictTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Local changes will be overwritten by cloud'**
+  String get startupSyncConflictTooltip;
+
+  /// No description provided for @startupSyncConflictConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Overwrite confirmation'**
+  String get startupSyncConflictConfirmTitle;
+
+  /// No description provided for @startupSyncConflictConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This will overwrite local changes in {count} ledger(s) ({names}) with cloud version. Continue?'**
+  String startupSyncConflictConfirmMessage(int count, String names);
+
+  /// No description provided for @startupSyncConflictConfirmOk.
+  ///
+  /// In en, this message translates to:
+  /// **'Overwrite local'**
+  String get startupSyncConflictConfirmOk;
+
+  /// No description provided for @startupSyncConflictConfirmCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get startupSyncConflictConfirmCancel;
+
+  /// No description provided for @startupSyncConflictAndMore.
+  ///
+  /// In en, this message translates to:
+  /// **'and {count} more'**
+  String startupSyncConflictAndMore(int count);
+
   /// No description provided for @commonSuccess.
   ///
   /// In en, this message translates to:
@@ -14388,6 +14424,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Encryption enabled, but {count} cloud file(s) failed to re-encrypt. They will be automatically retried on the next sync.'**
   String cloudSyncEncryptReencryptPartialFailed(int count);
+
+  /// No description provided for @cloudSyncEncryptProbeFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud Probe Failed'**
+  String get cloudSyncEncryptProbeFailedTitle;
+
+  /// No description provided for @cloudSyncEncryptProbeFailedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to probe whether the cloud already has encrypted data (possibly a network or permission issue). If other devices have encryption enabled, continuing will re-encrypt cloud data with a new password, which may prevent other devices from decrypting. Continue anyway?'**
+  String get cloudSyncEncryptProbeFailedMessage;
+
+  /// No description provided for @cloudSyncEncryptProbeFailedContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue as first device'**
+  String get cloudSyncEncryptProbeFailedContinue;
 }
 
 class _AppLocalizationsDelegate

@@ -111,14 +111,18 @@ class EncryptionServiceImpl implements EncryptionService {
     _validatePassword(password);
 
     // 1. 探测云端文件列表
-    //    失败时静默回退到 [enable]（首设备流程），符合 US-M3 探测失败回退
+    //    US-3: 探测失败（网络/权限）不再静默回退到 [enable]，否则会生成新 salt
+    //    并 reEncrypt 全量云端数据，孤立其他持有旧 salt 的设备。
+    //    抛 [EnableFromCloudProbeFailedException] 让 UI 引导用户确认。
     final List<CloudFile> files;
     try {
       files = await cloudStorage.list(path: '');
     } catch (e) {
-      // 探测失败 → 视为首设备场景，走 enable 生成新 salt
-      await enable(password: password);
-      return false;
+      throw EnableFromCloudProbeFailedException(
+        '探测云端文件失败，无法判断是否为首设备。请检查网络/权限后重试，'
+        '或确认以首设备身份继续（将生成新 salt 并重加密云端数据）。',
+        cause: e,
+      );
     }
 
     // 2. 遍历文件，下载并识别第一个 ledger_*.json 的 BEECRYPT1 密文
@@ -360,9 +364,11 @@ class EncryptionServiceImpl implements EncryptionService {
 
     // 检查 salt 是否匹配
     // 若 _activeSalt 已知且与密文头 salt 不同，说明密钥不匹配
+    // 抛 SaltMismatchException（US-2）让 UI 层可单独捕获并引导重输密码
     if (_activeSalt != null && !_listsEqual(_activeSalt!, decoded.salt)) {
-      throw const DecryptionException(
+      throw SaltMismatchException(
         '密文 salt 与当前密钥不匹配，可能需要重新输入密码',
+        ciphertextSaltBase64: base64.encode(decoded.salt),
       );
     }
 

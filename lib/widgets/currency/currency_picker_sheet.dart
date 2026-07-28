@@ -27,7 +27,7 @@ Future<String?> showCurrencyPickerSheet(
     isScrollControlled: true,
     backgroundColor: BeeTokens.surfaceSheet(context),
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
     ),
     builder: (bctx) {
       String query = '';

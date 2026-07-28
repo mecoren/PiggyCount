@@ -23,7 +23,7 @@ Future<TimeOfDay?> showWheelTimePicker(
     context: context,
     backgroundColor: BeeTokens.surfaceElevated(context),
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
     ),
     isScrollControlled: true,
     builder: (ctx) => WheelTimePicker(
@@ -60,7 +60,7 @@ class _WheelTimePickerState extends State<WheelTimePicker> {
     return Container(
       decoration: BoxDecoration(
         color: BeeTokens.surfaceElevated(context),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
       ),
       child: SafeArea(
         child: Column(

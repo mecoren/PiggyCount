@@ -66,7 +66,7 @@ class SettingsCard extends StatelessWidget {
       margin: margin ?? EdgeInsets.zero,
       decoration: BoxDecoration(
         color: BeeTokens.surface(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
       ),
       child: Column(children: children),
     );
@@ -123,7 +123,7 @@ class SettingsNavItem extends StatelessWidget {
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: accent.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusMd),
         ),
         child: Icon(icon, size: 20, color: accent),
       );
@@ -179,7 +179,7 @@ class SettingsNavItem extends StatelessWidget {
       opacity: enabled ? 1 : 0.5,
       child: InkWell(
         onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
         child: tile,
       ),
     );

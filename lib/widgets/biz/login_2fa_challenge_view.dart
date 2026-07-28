@@ -199,7 +199,7 @@ class _Login2FAChallengeDialogState
                     : l10n.twofaRecoveryInputPlaceholder,
                 hintStyle: hintStyle,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                     horizontal: 12, vertical: 14),
@@ -224,7 +224,7 @@ class _Login2FAChallengeDialogState
                   color: Theme.of(context).colorScheme.error.withValues(
                         alpha: 0.08,
                       ),
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,

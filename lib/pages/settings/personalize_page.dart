@@ -136,11 +136,11 @@ class _ThemeCard extends StatelessWidget {
     final isDark = BeeTokens.isDark(context);
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
       child: Ink(
         decoration: BoxDecoration(
           color: BeeTokens.surface(context),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
           border: isDark ? Border.all(color: BeeTokens.border(context)) : null,
           boxShadow: isDark
               ? null
@@ -160,8 +160,8 @@ class _ThemeCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: option.color,
                   borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(12),
-                    topRight: Radius.circular(12),
+                    topLeft: Radius.circular(BeeDimens.radiusLg),
+                    topRight: Radius.circular(BeeDimens.radiusLg),
                   ),
                 ),
                 child: Align(
@@ -200,11 +200,11 @@ class _CustomColorCard extends StatelessWidget {
     final isDark = BeeTokens.isDark(context);
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
       child: Ink(
         decoration: BoxDecoration(
           color: BeeTokens.surface(context),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
           border: Border.all(
             color: isDark ? BeeTokens.border(context) : Colors.grey[300]!,
             width: isDark ? 1 : 2,
@@ -226,8 +226,8 @@ class _CustomColorCard extends StatelessWidget {
               child: Container(
                 decoration: const BoxDecoration(
                   borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(12),
-                    topRight: Radius.circular(12),
+                    topLeft: Radius.circular(BeeDimens.radiusLg),
+                    topRight: Radius.circular(BeeDimens.radiusLg),
                   ),
                 ),
                 child: Icon(
@@ -279,7 +279,7 @@ class _ColorPickerState extends State<_ColorPicker> {
             height: 80,
             decoration: BoxDecoration(
               color: currentColor.toColor(),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
               border: Border.all(color: BeeTokens.borderStrong(context), width: 1),
             ),
             child: Center(
@@ -300,7 +300,7 @@ class _ColorPickerState extends State<_ColorPicker> {
           Container(
             height: 40,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
               gradient: LinearGradient(
                 colors: List.generate(7, (index) => HSVColor.fromAHSV(1.0, index * 60.0, 1.0, 1.0).toColor()),
               ),
@@ -332,7 +332,7 @@ class _ColorPickerState extends State<_ColorPicker> {
           Container(
             height: 40,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
               gradient: LinearGradient(
                 colors: [
                   HSVColor.fromAHSV(1.0, currentColor.hue, 0.0, currentColor.value).toColor(),
@@ -367,7 +367,7 @@ class _ColorPickerState extends State<_ColorPicker> {
           Container(
             height: 40,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
               gradient: LinearGradient(
                 colors: [
                   HSVColor.fromAHSV(1.0, currentColor.hue, currentColor.saturation, 0.0).toColor(),
@@ -407,7 +407,7 @@ class _ColorPickerState extends State<_ColorPicker> {
                 foregroundColor: currentColor.value > 0.5 ? Colors.black : Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                 ),
               ),
               child: Text(AppLocalizations.of(context)!.personalizeSelectColor, style: const TextStyle(fontWeight: FontWeight.bold)),

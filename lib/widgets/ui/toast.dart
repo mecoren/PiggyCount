@@ -34,7 +34,7 @@ void showToastOnOverlay(OverlayState overlay, String message,
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.85),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                   // 暗黑模式下添加白色阴影，提升可见度
                   boxShadow: dark ? [
                     BoxShadow(

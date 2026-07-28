@@ -153,6 +153,35 @@ void main() {
         throwsA(isA<DecryptionException>()),
       );
     });
+
+    test('US-2: salt 不匹配时 download 抛出 SaltMismatchException（可被 UI 单独捕获）',
+        () async {
+      // 设备 A 加密
+      await encryptionService.enable(password: 'passwordA');
+      const plaintext = '{"version":6,"items":[]}';
+      final ciphertext = await encryptionService.encrypt(plaintext);
+
+      // 设备 B：不同密码 enable（生成不同 salt）
+      final storageB = InMemorySecureKeyStorage();
+      final serviceB = EncryptionServiceImpl(
+        storage: storageB,
+        keyDerivation: Argon2KeyDerivation.forTesting(),
+        cipher: AesGcmCipher(),
+      );
+      await serviceB.enable(password: 'passwordB');
+
+      final decoratedB = EncryptedCloudStorageService(
+        inner: inner,
+        encryptionService: serviceB,
+      );
+      inner.stored['ledger_1.json'] = ciphertext;
+
+      // download 应抛 SaltMismatchException，UI 层可 catch 此异常引导重输密码
+      expect(
+        () => decoratedB.download(path: 'ledger_1.json'),
+        throwsA(isA<SaltMismatchException>()),
+      );
+    });
   });
 
   group('EncryptedCloudStorageService 往返测试', () {

@@ -746,12 +746,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                   )
                                 : null,
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                               borderSide: BorderSide(
                                   color: Colors.grey.withValues(alpha: 0.3)),
                             ),
                             focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                               borderSide: BorderSide(
                                   color: Theme.of(context).colorScheme.primary),
                             ),

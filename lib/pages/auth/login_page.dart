@@ -207,7 +207,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final primary = ref.watch(primaryColorProvider);
-    final radius = BorderRadius.circular(12);
+    final radius = BorderRadius.circular(BeeDimens.radiusLg);
 
     // 检测云服务类型
     final cloudConfig = ref.watch(activeCloudConfigProvider);
@@ -228,7 +228,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
                       color: BeeTokens.surface(context),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                       boxShadow: BeeTokens.isDark(context) ? null : [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.04),
@@ -293,7 +293,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
                     decoration: BoxDecoration(
                       color: BeeTokens.surface(context),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                       boxShadow: BeeTokens.isDark(context) ? null : [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.04),

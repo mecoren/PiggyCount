@@ -279,11 +279,11 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
     final cardBg = isDark ? Colors.black : primary;
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
       child: Container(
         decoration: BoxDecoration(
           color: cardBg,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
         ),
         child: Stack(
           children: [

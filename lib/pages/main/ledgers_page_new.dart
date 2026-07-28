@@ -217,7 +217,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
               style: OutlinedButton.styleFrom(
                 minimumSize: Size(double.infinity, 40.0.scaled(context, ref)),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                 ),
               ),
             ),
@@ -449,7 +449,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       builder: (dctx) {
         final primary = Theme.of(dctx).colorScheme.primary;
         return SimpleDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
           title: Text(AppLocalizations.of(context).ledgersActions),
           children: [
             if (isOwner)
@@ -620,7 +620,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       builder: (dctx) {
         final primary = Theme.of(dctx).colorScheme.primary;
         return SimpleDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
           title: Text(AppLocalizations.of(context).ledgersActions),
           children: [
             SimpleDialogOption(
@@ -1141,7 +1141,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       builder: (ctx) {
         final primary = Theme.of(ctx).colorScheme.primary;
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
           contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
           content: StatefulBuilder(builder: (ctx, setState) {
             return Column(
@@ -1237,7 +1237,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       context: context,
       backgroundColor: BeeTokens.surfaceElevated(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
       ),
       builder: (ctx) {
         final primary = Theme.of(ctx).colorScheme.primary;
@@ -1265,13 +1265,13 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                     final isSelected = initial == day;
                     return InkWell(
                       onTap: () => Navigator.pop(ctx, day),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                       child: Container(
                         width: 40,
                         height: 40,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                           color: isSelected
                               ? primary.withValues(alpha: 0.12)
                               : Colors.transparent,
@@ -1303,7 +1303,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       isScrollControlled: true,
       backgroundColor: BeeTokens.surfaceElevated(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
       ),
       builder: (bctx) {
         String query = '';
@@ -1397,7 +1397,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
             bool isProcessing = false;
 
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
               title: Row(
                 children: [
                   const Icon(Icons.warning, color: Colors.red, size: 28),
@@ -1421,7 +1421,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: Colors.blue[50],
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1449,7 +1449,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: Colors.orange[50],
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1626,7 +1626,7 @@ class _SectionHeader extends ConsumerWidget {
               ),
               decoration: BoxDecoration(
                 color: BeeTokens.surfaceSecondary(context),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
               ),
               child: Text(
                 trailing!,

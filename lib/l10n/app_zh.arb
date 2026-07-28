@@ -71,6 +71,23 @@
       "total": {"type": "int"}
     }
   },
+  "startupSyncConflictTooltip": "本地有改动将被云端覆盖",
+  "startupSyncConflictConfirmTitle": "覆盖确认",
+  "startupSyncConflictConfirmMessage": "将用云端覆盖 {count} 个账本的本地改动（{names}），是否继续？",
+  "@startupSyncConflictConfirmMessage": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "names": {"type": "String"}
+    }
+  },
+  "startupSyncConflictConfirmOk": "覆盖本地",
+  "startupSyncConflictConfirmCancel": "取消",
+  "startupSyncConflictAndMore": "等 {count} 个",
+  "@startupSyncConflictAndMore": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "commonSuccess": "成功",
   "commonFailed": "失败",
   "commonBack": "返回",
@@ -3284,5 +3301,8 @@
   "cloudSyncEncryptMultiDeviceHint": "在其他设备上用相同密码即可解密",
   "cloudSyncEncryptLegacyHint": "云端如有未加密数据，开启后将自动转为密文",
   "cloudSyncEncryptReencrypting": "正在重加密云端数据…",
-  "cloudSyncEncryptReencryptPartialFailed": "加密已开启，但有 {count} 个云端文件重加密失败，下次同步时会自动重试。"
+  "cloudSyncEncryptReencryptPartialFailed": "加密已开启，但有 {count} 个云端文件重加密失败，下次同步时会自动重试。",
+  "cloudSyncEncryptProbeFailedTitle": "探测云端失败",
+  "cloudSyncEncryptProbeFailedMessage": "无法探测云端是否已有加密数据（可能是网络或权限问题）。如果其他设备已开启加密，继续将以新密码重加密云端数据，可能导致其他设备无法解密。确定继续吗？",
+  "cloudSyncEncryptProbeFailedContinue": "以首设备继续"
 }

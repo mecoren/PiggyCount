@@ -136,7 +136,7 @@ class AppDialog {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: BeeTokens.surfaceElevated(ctx),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
         contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
         content: ConstrainedBox(
           constraints: BoxConstraints(
@@ -178,7 +178,7 @@ class AppDialog {
                             foregroundColor: primary,
                             side: BorderSide(color: primary),
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10)),
+                                borderRadius: BorderRadius.circular(BeeDimens.radiusLg)),
                           ),
                           child: Text(a.label),
                         );
@@ -188,7 +188,7 @@ class AppDialog {
                           onPressed: a.onTap,
                           style: FilledButton.styleFrom(
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10)),
+                                borderRadius: BorderRadius.circular(BeeDimens.radiusLg)),
                           ),
                           child: Text(a.label)),
                     const SizedBox(width: 12),

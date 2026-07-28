@@ -10,6 +10,7 @@ import '../../data/db.dart';
 import '../../data/repositories/local/local_repository.dart';
 import '../../utils/shared_ledger_picker_filter.dart';
 import '../../widgets/ui/ui.dart';
+import '../../widgets/ui/wait_sliding_segmented_control.dart';
 import '../../widgets/biz/amount_editor_sheet.dart';
 import '../../widgets/category/category_selector.dart';
 import '../../widgets/transaction/transfer_form.dart';
@@ -60,23 +61,16 @@ class TransactionEditorPage extends ConsumerStatefulWidget {
   ConsumerState<TransactionEditorPage> createState() => _TransactionEditorPageState();
 }
 
-class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage>
-    with SingleTickerProviderStateMixin {
-  late TabController _tab;
+class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
+  /// 当前选中的类型：'expense' | 'income' | 'transfer'
+  String _selectedKind = 'expense';
   bool _autoOpened = false;
 
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 3, vsync: this);
-    // 设置初始tab: 0=支出, 1=收入, 2=转账
-    if (widget.initialKind == 'income') {
-      _tab.index = 1;
-    } else if (widget.initialKind == 'transfer') {
-      _tab.index = 2;
-    } else {
-      _tab.index = 0;
-    }
+    // 设置初始选中类型
+    _selectedKind = widget.initialKind;
 
     // 若需要自动打开金额输入，则在首帧后查询分类并触发
     // 注意：转账类型不走这个逻辑
@@ -93,13 +87,13 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage>
           c = await repo.getCategoryById(widget.initialCategoryId!);
         }
         if (c != null && mounted) {
-          // 切换到对应的 tab
-          final idx = c.kind == 'income' ? 1 : 0;
-          if (_tab.index != idx) _tab.animateTo(idx);
+          // 切换到对应的类型（提前取出 kind 避免 closure 内流分析丢失非空信息）
+          final kind = c.kind;
+          setState(() => _selectedKind = kind);
           _autoOpened = true;
           // 直接调用 onPick 逻辑，打开金额输入
           // ignore: use_build_context_synchronously
-          await _onCategorySelected(context, c, c.kind);
+          await _onCategorySelected(context, c, kind);
         }
       });
     }
@@ -111,35 +105,36 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage>
     return Scaffold(
       body: Column(
         children: [
-          // 紧凑顶部：去除多余留白 + 选中下划线
+          // 紧凑顶部：去除多余留白 + 滑动分段选择器
           PrimaryHeader(
             title: '',
             padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
             bottom: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(
-                  height: 44,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Row(
                     children: [
                       Expanded(
-                        child: Center(
-                          child: TabBar(
-                            controller: _tab,
-                            isScrollable: false,
-                            labelColor: BeeTokens.textPrimary(context),
-                            unselectedLabelColor: BeeTokens.textSecondary(context),
-                            indicator: UnderlineTabIndicator(
-                              borderSide:
-                                  BorderSide(width: 2, color: BeeTokens.textPrimary(context)),
-                              insets: const EdgeInsets.symmetric(horizontal: 0),
+                        child: WaitSlidingSegmentedControl<String>(
+                          selected: _selectedKind,
+                          segments: [
+                            WaitSlidingSegment(
+                              value: 'expense',
+                              label: AppLocalizations.of(context)!.categoryExpense,
                             ),
-                            tabs: [
-                              Tab(text: AppLocalizations.of(context)!.categoryExpense),
-                              Tab(text: AppLocalizations.of(context)!.categoryIncome),
-                              Tab(text: AppLocalizations.of(context)!.transferTitle),
-                            ],
-                          ),
+                            WaitSlidingSegment(
+                              value: 'income',
+                              label: AppLocalizations.of(context)!.categoryIncome,
+                            ),
+                            WaitSlidingSegment(
+                              value: 'transfer',
+                              label: AppLocalizations.of(context)!.transferTitle,
+                            ),
+                          ],
+                          onValueChanged: (value) =>
+                              setState(() => _selectedKind = value),
                         ),
                       ),
                       TextButton(
@@ -154,8 +149,10 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage>
             ),
           ),
           Expanded(
-            child: TabBarView(
-              controller: _tab,
+            child: IndexedStack(
+              index: _selectedKind == 'expense'
+                  ? 0
+                  : (_selectedKind == 'income' ? 1 : 2),
               children: [
                 CategorySelector(
                   kind: 'expense',
@@ -238,7 +235,7 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage>
       isScrollControlled: true,
       backgroundColor: BeeTokens.surfaceSheet(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
       ),
       builder: (ctx) => AmountEditorSheet(
         categoryName: c.name,

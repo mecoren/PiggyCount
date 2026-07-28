@@ -57,11 +57,20 @@ enum LedgerDialogChoice {
 }
 
 /// 单个候选账本（有云端更新）
+///
+/// [diffType] US-7: 来自 [SyncStatus.diff]，用于 SummaryView 冲突高亮 + applyAll 二次确认。
+/// - [SyncDiff.cloudNewer] / [SyncDiff.localNewer]：单向覆盖，无冲突
+/// - [SyncDiff.different]：双向都有改动，applyAll 全选会覆盖本地独有改动 → 需二次确认
 class LedgerCandidate {
   final Ledger ledger;
   final SyncStatus status;
+  final SyncDiff diffType;
 
-  const LedgerCandidate({required this.ledger, required this.status});
+  const LedgerCandidate({
+    required this.ledger,
+    required this.status,
+    required this.diffType,
+  });
 }
 
 /// downloadAndPreview 返回类型别名
@@ -106,6 +115,16 @@ abstract class StartupSyncCheckerDeps {
   ///
   /// 仅在 confirmEach 模式下使用，overlay 已暂时关闭。
   Future<List<SyncChange>?> showSyncPreviewDialog(SyncPreview preview);
+
+  /// US-7: applyAll 二次确认弹窗
+  ///
+  /// 当候选账本中存在 [SyncDiff.different]（本地与云端都有改动）时，
+  /// applyAll 全选会用云端版本覆盖本地独有改动。
+  /// 此方法在执行前提示用户确认，避免静默覆盖。
+  ///
+  /// [ledgerNames] 冲突账本名列表（仅 different 类型），用于在文案中展示。
+  /// 返回 true 表示用户确认覆盖，false 表示取消（applyAll 中止，回退到 SummaryView）。
+  Future<bool> showConflictConfirmDialog(List<String> ledgerNames);
 
   /// 应用变更后刷新 UI providers
   void runAfterDownload();
@@ -192,7 +211,12 @@ class StartupSyncChecker {
         final status = await deps.getStatus(ledger.id);
         if (status.diff == SyncDiff.cloudNewer ||
             status.diff == SyncDiff.different) {
-          candidates.add(LedgerCandidate(ledger: ledger, status: status));
+          // US-7: 携带 diffType 用于 SummaryView 冲突高亮 + applyAll 二次确认
+          candidates.add(LedgerCandidate(
+            ledger: ledger,
+            status: status,
+            diffType: status.diff,
+          ));
         }
       } catch (e) {
         // 单账本 getStatus 失败不影响其他账本
@@ -212,30 +236,61 @@ class StartupSyncChecker {
     deps.log('StartupSyncChecker: 发现 ${candidates.length} 个候选账本');
 
     // 5. 弹汇总对话框，让用户选择模式
-    final completer = Completer<SummaryChoice>();
-    controller.showHasUpdates(candidates, completer);
-    final choice = await completer.future;
+    // US-7: 使用循环支持 applyAll 取消后回退到 SummaryView 重新选择
+    while (true) {
+      final completer = Completer<SummaryChoice>();
+      controller.showHasUpdates(candidates, completer);
+      final choice = await completer.future;
 
-    switch (choice) {
-      case SummaryChoice.skip:
-        deps.log('StartupSyncChecker: 用户选择 skip，跳过所有');
-        controller.dismiss();
-        return;
-      case SummaryChoice.applyAll:
-        await _applyAll(candidates);
-        break;
-      case SummaryChoice.confirmEach:
-        // confirmEach 模式：先关闭 overlay，让 showDialog 接管
-        controller.dismiss();
-        // 等一帧让 overlay 消失，避免 dialog 被遮罩阻挡
-        await Future.delayed(Duration.zero);
-        await _confirmEach(candidates);
-        break;
+      switch (choice) {
+        case SummaryChoice.skip:
+          deps.log('StartupSyncChecker: 用户选择 skip，跳过所有');
+          controller.dismiss();
+          return;
+        case SummaryChoice.applyAll:
+          // US-7: _applyAll 返回 false 表示用户取消二次确认，循环回退到 SummaryView
+          final completed = await _applyAll(candidates);
+          if (completed) return;
+          break;
+        case SummaryChoice.confirmEach:
+          // confirmEach 模式：先关闭 overlay，让 showDialog 接管
+          controller.dismiss();
+          // 等一帧让 overlay 消失，避免 dialog 被遮罩阻挡
+          await Future.delayed(Duration.zero);
+          await _confirmEach(candidates);
+          return;
+      }
     }
   }
 
   /// 一键应用全部：跳过逐账本预览，串行 apply 所有候选账本
-  Future<void> _applyAll(List<LedgerCandidate> candidates) async {
+  ///
+  /// US-7: 执行前扫描候选列表，若存在 [SyncDiff.different] 的账本，
+  /// 弹出二次确认对话框提示"将用云端覆盖本地独有改动"。
+  ///
+  /// 返回值：
+  /// - true：applyAll 已执行（无论成功/部分失败）
+  /// - false：用户取消二次确认，调用方应回退到 SummaryView 让用户重新选择
+  Future<bool> _applyAll(List<LedgerCandidate> candidates) async {
+    // US-7: 扫描冲突账本（diffType == different）
+    // cloudNewer / localNewer 为单向覆盖语义，无冲突，不触发确认
+    final conflictLedgers = candidates
+        .where((c) => c.diffType == SyncDiff.different)
+        .map((c) => c.ledger.name)
+        .toList();
+
+    if (conflictLedgers.isNotEmpty) {
+      deps.log('StartupSyncChecker: applyAll 检测到 ${conflictLedgers.length} '
+          '个冲突账本（different），弹二次确认');
+      final confirmed =
+          await deps.showConflictConfirmDialog(conflictLedgers);
+      if (!confirmed) {
+        // 用户取消：返回 false，调用方循环回退到 SummaryView
+        deps.log('StartupSyncChecker: 用户取消 applyAll 二次确认，回退到 SummaryView');
+        return false;
+      }
+    }
+
     controller.startApplying(candidates.length);
 
     var successCount = 0;
@@ -309,6 +364,7 @@ class StartupSyncChecker {
       controller.done('已合并 $successCount 个账本，$failCount 个失败'
           '${totalChanges > 0 ? '，共 $totalChanges 条变更' : ''}');
     }
+    return true;
   }
 
   /// 逐个确认：每个账本独立弹窗，用户可分项勾选
@@ -467,7 +523,7 @@ class WidgetRefDeps implements StartupSyncCheckerDeps {
           barrierDismissible: false,
           builder: (ctx) => AlertDialog(
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
             ),
             backgroundColor: BeeTokens.surfaceElevated(ctx),
             title: Text(l10n.startupSyncCheckTitle),
@@ -500,6 +556,28 @@ class WidgetRefDeps implements StartupSyncCheckerDeps {
       preview: preview,
       primaryColor: Theme.of(_context).colorScheme.primary,
     );
+  }
+
+  @override
+  Future<bool> showConflictConfirmDialog(List<String> ledgerNames) async {
+    final l10n = AppLocalizations.of(_context);
+    // 文案：仅显示前 3 个账本名 + "等 N 个"，避免大量账本时文案过长
+    final displayNames = ledgerNames.length > 3
+        ? '${ledgerNames.sublist(0, 3).join('、')} '
+            '${l10n.startupSyncConflictAndMore(ledgerNames.length - 3)}'
+        : ledgerNames.join('、');
+    final message = l10n.startupSyncConflictConfirmMessage(
+      ledgerNames.length,
+      displayNames,
+    );
+    final result = await AppDialog.confirm<bool>(
+      _context,
+      title: l10n.startupSyncConflictConfirmTitle,
+      message: message,
+      okLabel: l10n.startupSyncConflictConfirmOk,
+      cancelLabel: l10n.startupSyncConflictConfirmCancel,
+    );
+    return result ?? false;
   }
 
   @override

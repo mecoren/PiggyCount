@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/ui/ui.dart';
-import '../../widgets/ui/capsule_switcher.dart';
+import '../../widgets/ui/wait_sliding_segmented_control.dart';
 import '../../utils/xlsx_reader.dart';
 import '../../services/import/file_reader.dart';
 import '../../styles/tokens.dart';
@@ -62,26 +62,26 @@ class _ImportPageState extends ConsumerState<ImportPage> {
                           style:
                               TextStyle(fontSize: 14, color: BeeTokens.textSecondary(context))),
                       const SizedBox(height: 8),
-                      CapsuleSwitcher<BillSourceType>(
-                        selectedValue: _billType,
-                        options: [
-                          CapsuleOption(
+                      WaitSlidingSegmentedControl<BillSourceType>(
+                        selected: _billType,
+                        segments: [
+                          WaitSlidingSegment(
                             value: BillSourceType.generic,
                             label: AppLocalizations.of(context)!
                                 .importBillTypeGeneric,
                           ),
-                          CapsuleOption(
+                          WaitSlidingSegment(
                             value: BillSourceType.alipay,
                             label: AppLocalizations.of(context)!
                                 .importBillTypeAlipay,
                           ),
-                          CapsuleOption(
+                          WaitSlidingSegment(
                             value: BillSourceType.wechat,
                             label: AppLocalizations.of(context)!
                                 .importBillTypeWechat,
                           ),
                         ],
-                        onChanged: (BillSourceType value) {
+                        onValueChanged: (BillSourceType value) {
                           setState(() {
                             _billType = value;
                           });
@@ -124,7 +124,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: BeeTokens.surfaceElevated(context),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                           ),
                           width: 320,
                           child: Column(

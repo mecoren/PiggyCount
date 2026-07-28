@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../cloud/transactions_sync_manager.dart';
+import '../../domain/encryption/encryption_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/encryption_providers.dart';
 import '../../providers/sync_providers.dart' as sync_p;
@@ -56,11 +57,29 @@ class _EncryptionSettingsPageState
         await sync.ensureInitialized();
         final rawStorage = sync.rawStorage;
         if (rawStorage != null) {
-          isNewDevice = await service.enableFromCloud(
-            password: result.password,
-            cloudStorage: rawStorage,
-          );
-          usedEnableFromCloud = true;
+          try {
+            isNewDevice = await service.enableFromCloud(
+              password: result.password,
+              cloudStorage: rawStorage,
+            );
+            usedEnableFromCloud = true;
+          } on EnableFromCloudProbeFailedException {
+            // US-3: 探测失败不自动回退 enable()，改为提示用户确认。
+            // 若用户确认"以首设备继续"，走 enable + reEncrypt 流程；
+            // 若用户取消，则不开启加密。
+            if (!mounted) return;
+            final confirmed = await AppDialog.confirm<bool>(
+              context,
+              title: l10n.cloudSyncEncryptProbeFailedTitle,
+              message: l10n.cloudSyncEncryptProbeFailedMessage,
+              okLabel: l10n.cloudSyncEncryptProbeFailedContinue,
+            );
+            if (confirmed != true || !mounted) return;
+            // 用户确认以首设备身份继续 → 走 enable 流程
+            await service.enable(password: result.password);
+            usedEnableFromCloud = true;
+            isNewDevice = false;
+          }
         }
       }
 
@@ -258,7 +277,7 @@ class _EncryptionSettingsPageState
                         color: isEnabled
                             ? Colors.green.withValues(alpha: 0.12)
                             : Colors.grey.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                       ),
                       child: Text(
                         isEnabled
@@ -295,7 +314,7 @@ class _EncryptionSettingsPageState
                           .colorScheme
                           .error
                           .withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                     ),
                     child: Row(
                       children: [

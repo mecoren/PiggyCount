@@ -430,7 +430,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
               p.total == 0 ? 0.0 : (p.done / p.total).clamp(0.0, 1.0);
           return AlertDialog(
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusLg)),
             title: Text(AppLocalizations.of(context)!.importInProgress),
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -987,11 +987,11 @@ class _PreviewTable extends StatelessWidget {
     const double cellWidth = 140;
     final isDark = BeeTokens.isDark(context);
     return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
       child: Container(
         decoration: BoxDecoration(
           border: Border.all(color: BeeTokens.border(context)),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
         ),
         child: Column(
           children: [
