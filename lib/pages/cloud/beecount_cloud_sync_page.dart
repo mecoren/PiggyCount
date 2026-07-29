@@ -423,7 +423,7 @@ class _BeeCountCloudSyncPageState extends ConsumerState<BeeCountCloudSyncPage> {
           const SizedBox(height: 8),
           Text(
             l10n.syncHealthCheckFailed(effective.error ?? ''),
-            style: const TextStyle(color: Colors.red, fontSize: 12),
+            style: TextStyle(color: BeeTokens.error(context), fontSize: 12),
           ),
         ],
       );
@@ -442,7 +442,7 @@ class _BeeCountCloudSyncPageState extends ConsumerState<BeeCountCloudSyncPage> {
           style: TextStyle(
             fontSize: 12,
             color: effective.hasDiff
-                ? Colors.orange
+                ? BeeTokens.warning(context)
                 : BeeTokens.textSecondary(context),
           ),
         ),
@@ -507,7 +507,7 @@ class _BeeCountCloudSyncPageState extends ConsumerState<BeeCountCloudSyncPage> {
               style: TextStyle(
                 fontSize: 13,
                 color: mismatch
-                    ? Colors.orange
+                    ? BeeTokens.warning(context)
                     : BeeTokens.textPrimary(context),
                 fontWeight: mismatch ? FontWeight.w600 : FontWeight.w400,
               ),
@@ -540,7 +540,7 @@ class _BeeCountCloudSyncPageState extends ConsumerState<BeeCountCloudSyncPage> {
               style: TextStyle(
                 fontSize: 13,
                 color: highlight
-                    ? Colors.orange
+                    ? BeeTokens.warning(context)
                     : BeeTokens.textPrimary(context),
                 fontWeight: highlight ? FontWeight.w600 : FontWeight.w400,
               ),

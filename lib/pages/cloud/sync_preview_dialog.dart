@@ -129,18 +129,18 @@ class _SyncPreviewDialogState extends State<_SyncPreviewDialog> {
                   children: [
                     if (addedChanges.isNotEmpty) ...[
                       _buildSectionHeader(
-                          context, l10n.syncPreviewAdded, Colors.green),
+                          context, l10n.syncPreviewAdded, BeeTokens.success(context)),
                       ...addedChanges.map((c) => _buildChangeItem(context, c)),
                     ],
                     if (modifiedChanges.isNotEmpty) ...[
                       _buildSectionHeader(
-                          context, l10n.syncPreviewModified, Colors.blue),
+                          context, l10n.syncPreviewModified, BeeTokens.info(context)),
                       ...modifiedChanges
                           .map((c) => _buildChangeItem(context, c)),
                     ],
                     if (deletedChanges.isNotEmpty) ...[
                       _buildSectionHeader(
-                          context, l10n.syncPreviewDeleted, Colors.red),
+                          context, l10n.syncPreviewDeleted, BeeTokens.error(context)),
                       ...deletedChanges
                           .map((c) => _buildChangeItem(context, c)),
                     ],
@@ -182,13 +182,13 @@ class _SyncPreviewDialogState extends State<_SyncPreviewDialog> {
       spacing: 12,
       children: [
         if (added > 0)
-          _buildBadge(context, l10n.syncPreviewAddedCount(added), Colors.green),
+          _buildBadge(context, l10n.syncPreviewAddedCount(added), BeeTokens.success(context)),
         if (modified > 0)
           _buildBadge(
-              context, l10n.syncPreviewModifiedCount(modified), Colors.blue),
+              context, l10n.syncPreviewModifiedCount(modified), BeeTokens.info(context)),
         if (deleted > 0)
           _buildBadge(
-              context, l10n.syncPreviewDeletedCount(deleted), Colors.red),
+              context, l10n.syncPreviewDeletedCount(deleted), BeeTokens.error(context)),
       ],
     );
   }

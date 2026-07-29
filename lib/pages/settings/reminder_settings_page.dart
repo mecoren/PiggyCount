@@ -96,7 +96,7 @@ class ReminderSettingsPage extends ConsumerWidget {
                       }
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).primaryColor,
+                      backgroundColor: BeeTokens.primary(context),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
@@ -163,8 +163,8 @@ class ReminderSettingsPage extends ConsumerWidget {
                                             .reminderBatteryNotIgnored,
                                     style: TextStyle(
                                       color: (batteryInfo['isIgnoring'] == true)
-                                          ? Colors.green
-                                          : Colors.orange,
+                                          ? BeeTokens.success(context)
+                                          : BeeTokens.warning(context),
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),

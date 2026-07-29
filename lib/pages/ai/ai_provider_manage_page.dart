@@ -192,16 +192,16 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.1),
+                    color: BeeTokens.warning(context).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.warning_amber, size: 16, color: Colors.orange[700]),
+                      Icon(Icons.warning_amber, size: 16, color: BeeTokens.warning(context)),
                       const SizedBox(width: 6),
                       Text(
                         l10n.aiProviderNoApiKey,
-                        style: TextStyle(fontSize: 12, color: Colors.orange[700]),
+                        style: TextStyle(fontSize: 12, color: BeeTokens.warning(context)),
                       ),
                     ],
                   ),
@@ -307,7 +307,7 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(foregroundColor: BeeTokens.error(context)),
             child: Text(l10n.commonDelete),
           ),
         ],
@@ -525,7 +525,7 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
                             width: double.infinity,
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.red.withValues(alpha: 0.08),
+                              color: BeeTokens.error(context).withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                             ),
                             child: Text(
@@ -878,7 +878,7 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
             width: double.infinity,
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.red.withValues(alpha: 0.08),
+              color: BeeTokens.error(context).withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
             ),
             child: Text(
@@ -917,11 +917,11 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
       buttonText = l10n.aiProviderTestRunning;
       buttonIcon = Icons.sync;
     } else if (allSuccess) {
-      buttonColor = Colors.green;
+      buttonColor = BeeTokens.success(context);
       buttonText = l10n.aiProviderTestSuccess;
       buttonIcon = Icons.check_circle;
     } else if (anyFailed) {
-      buttonColor = Colors.orange;
+      buttonColor = BeeTokens.warning(context);
       buttonText = l10n.aiProviderTestAllRetry;
       buttonIcon = Icons.refresh;
     } else {
@@ -982,9 +982,9 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
         case TestStatus.testing:
           return primaryColor;
         case TestStatus.success:
-          return Colors.green;
+          return BeeTokens.success(context);
         case TestStatus.failed:
-          return Colors.red;
+          return BeeTokens.error(context);
       }
     }
 

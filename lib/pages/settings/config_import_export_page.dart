@@ -421,7 +421,7 @@ class _ConfigImportExportPageState
                           Icon(
                             Icons.check_circle,
                             size: 16.0.scaled(context, ref),
-                            color: Colors.green,
+                            color: BeeTokens.success(context),
                           ),
                           SizedBox(width: 8.0.scaled(context, ref)),
                           Expanded(
@@ -760,10 +760,10 @@ class _ConfigPreviewDialogState extends State<_ConfigPreviewDialog> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.1),
+                      color: BeeTokens.warning(context).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                       border: Border.all(
-                        color: Colors.orange.withValues(alpha: 0.3),
+                        color: BeeTokens.warning(context).withValues(alpha: 0.3),
                       ),
                     ),
                     child: Row(
@@ -771,7 +771,7 @@ class _ConfigPreviewDialogState extends State<_ConfigPreviewDialog> {
                       children: [
                         Icon(
                           Icons.warning_amber_rounded,
-                          color: Colors.orange[700],
+                          color: BeeTokens.warning(context),
                           size: 20,
                         ),
                         const SizedBox(width: 8),
@@ -780,7 +780,7 @@ class _ConfigPreviewDialogState extends State<_ConfigPreviewDialog> {
                             '导入将覆盖现有配置，建议先备份当前配置。',
                             style: TextStyle(
                               fontSize: 13,
-                              color: Colors.orange[900],
+                              color: BeeTokens.warning(context),
                             ),
                           ),
                         ),
@@ -1220,10 +1220,10 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.1),
+                      color: BeeTokens.warning(context).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                       border: Border.all(
-                        color: Colors.orange.withValues(alpha: 0.3),
+                        color: BeeTokens.warning(context).withValues(alpha: 0.3),
                       ),
                     ),
                     child: Row(
@@ -1231,7 +1231,7 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                       children: [
                         Icon(
                           Icons.warning_amber_rounded,
-                          color: Colors.orange[700],
+                          color: BeeTokens.warning(context),
                           size: 20,
                         ),
                         const SizedBox(width: 8),
@@ -1240,7 +1240,7 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                             '导入将覆盖现有配置，建议先备份当前配置。',
                             style: TextStyle(
                               fontSize: 13,
-                              color: Colors.orange[900],
+                              color: BeeTokens.warning(context),
                             ),
                           ),
                         ),

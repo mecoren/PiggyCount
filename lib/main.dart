@@ -499,24 +499,25 @@ class MainApp extends ConsumerWidget {
     final baseTextTheme = base.textTheme;
 
     // ⭐ 亮色主题
+    // 注意：scaffoldBackgroundColor / dividerColor / cardTheme.color 已在
+    // BeeTheme.lightTheme 中通过 BeeTokens 静态常量统一设置，这里不再覆盖。
+    // 仅覆盖动态主色（primaryColor / colorScheme.primary）等需要 Riverpod 驱动的属性。
     final theme = base.copyWith(
       textTheme: baseTextTheme,
       colorScheme: base.colorScheme.copyWith(primary: primary),
       primaryColor: primary,
-      scaffoldBackgroundColor: Colors.white,
-      dividerColor: Colors.black.withOpacity(0.06),
       listTileTheme: ListTileThemeData(
         dense: true,
         contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-        iconColor: const Color(0xFF111827),
+        iconColor: BeeTokens.primaryTextStatic,
       ),
       dialogTheme: base.dialogTheme.copyWith(
-        backgroundColor: Colors.white,
+        backgroundColor: BeeTokens.cardBackgroundLightStatic,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
         titleTextStyle: baseTextTheme.titleMedium?.copyWith(
-            color: const Color(0xFF111827), fontWeight: FontWeight.w600),
+            color: BeeTokens.primaryTextStatic, fontWeight: FontWeight.w600),
         contentTextStyle:
-            baseTextTheme.bodyMedium?.copyWith(color: const Color(0xFF6B7280)),
+            baseTextTheme.bodyMedium?.copyWith(color: BeeTokens.secondaryTextStatic),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
@@ -557,7 +558,7 @@ class MainApp extends ConsumerWidget {
         type: BottomNavigationBarType.fixed,
       ),
       cardTheme: base.cardTheme.copyWith(
-        color: Colors.white,
+        color: BeeTokens.cardBackgroundLightStatic,
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
         margin: EdgeInsets.zero,

@@ -38,7 +38,7 @@ class SmartBillingPage extends ConsumerWidget {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.info_outline, color: Theme.of(context).colorScheme.primary),
+            Icon(Icons.info_outline, color: BeeTokens.primary(context)),
             const SizedBox(width: 8),
             Text(title),
           ],
@@ -56,11 +56,11 @@ class SmartBillingPage extends ConsumerWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: requiresAI
-                    ? Colors.orange.withValues(alpha: 0.1)
-                    : Colors.blue.withValues(alpha: 0.1),
+                    ? BeeTokens.warning(context).withValues(alpha: 0.1)
+                    : BeeTokens.info(context).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                 border: Border.all(
-                  color: requiresAI ? Colors.orange : Colors.blue,
+                  color: requiresAI ? BeeTokens.warning(context) : BeeTokens.info(context),
                   width: 1,
                 ),
               ),
@@ -68,7 +68,7 @@ class SmartBillingPage extends ConsumerWidget {
                 children: [
                   Icon(
                     requiresAI ? Icons.warning_amber : Icons.psychology,
-                    color: requiresAI ? Colors.orange : Colors.blue,
+                    color: requiresAI ? BeeTokens.warning(context) : BeeTokens.info(context),
                     size: 20,
                   ),
                   const SizedBox(width: 8),
@@ -77,7 +77,7 @@ class SmartBillingPage extends ConsumerWidget {
                       aiRequirement,
                       style: TextStyle(
                         fontSize: 13,
-                        color: requiresAI ? Colors.orange[900] : Colors.blue[900],
+                        color: requiresAI ? BeeTokens.warning(context) : BeeTokens.info(context),
                       ),
                     ),
                   ),
@@ -88,14 +88,14 @@ class SmartBillingPage extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                color: BeeTokens.primary(context).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
               ),
               child: Row(
                 children: [
                   Icon(
                     Icons.touch_app,
-                    color: Theme.of(context).colorScheme.primary,
+                    color: BeeTokens.primary(context),
                     size: 20,
                   ),
                   const SizedBox(width: 8),
@@ -104,7 +104,7 @@ class SmartBillingPage extends ConsumerWidget {
                       hint,
                       style: TextStyle(
                         fontSize: 13,
-                        color: Theme.of(context).colorScheme.primary,
+                        color: BeeTokens.primary(context),
                         fontWeight: FontWeight.w500,
                       ),
                     ),

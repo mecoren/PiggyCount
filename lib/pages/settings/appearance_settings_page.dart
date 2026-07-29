@@ -642,7 +642,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
                         l10n.appearanceNoteHistoryLimitInvalid,
                         textAlign: TextAlign.right,
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
+                          color: BeeTokens.error(context),
                           fontSize: 12.scaled(context, ref),
                         ),
                       ),

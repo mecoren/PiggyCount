@@ -766,8 +766,8 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                 ),
                                 decoration: BoxDecoration(
                                   color: encEnabled
-                                      ? Colors.green.withValues(alpha: 0.12)
-                                      : Colors.grey.withValues(alpha: 0.12),
+                                      ? BeeTokens.success(context).withValues(alpha: 0.12)
+                                      : BeeTokens.textTertiary(context).withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                                 ),
                                 child: Text(
@@ -778,8 +778,8 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                           .cloudSyncEncryptDisabled,
                                   style: TextStyle(
                                     color: encEnabled
-                                        ? Colors.green
-                                        : Colors.grey,
+                                        ? BeeTokens.success(context)
+                                        : BeeTokens.textTertiary(context),
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
                                   ),

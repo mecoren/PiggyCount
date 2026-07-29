@@ -20,13 +20,12 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final primaryColor = ref.watch(primaryColorProvider);
     final l10n = AppLocalizations.of(context);
     final supportsAppIntents = PlatformInfo.supportsAppIntents;
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: BeeTokens.surface(context),
       body: Column(
         children: [
           PrimaryHeader(
@@ -127,7 +126,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
             Text(
               l10n.iosAutoImportDesc,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                color: BeeTokens.textPrimary(context).withValues(alpha: 0.7),
                 height: 1.5,
               ),
             ),
@@ -185,7 +184,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
             Text(
               l10n.iosAutoBackTapDesc,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                color: BeeTokens.textPrimary(context).withValues(alpha: 0.7),
                 height: 1.5,
               ),
             ),
@@ -226,7 +225,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
             Text(
               content,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                color: BeeTokens.textPrimary(context).withValues(alpha: 0.7),
                 height: 1.5,
               ),
             ),
@@ -260,7 +259,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
             Text(
               l10n.iosAutoManualConfigDesc,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                color: BeeTokens.textPrimary(context).withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 16),
@@ -268,7 +267,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
               l10n.iosAutoShortcutConfigTitle,
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: Colors.green.shade700,
+                color: BeeTokens.success(context),
               ),
             ),
             const SizedBox(height: 8),
@@ -282,20 +281,20 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.1),
+                color: BeeTokens.success(context).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
-                border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                border: Border.all(color: BeeTokens.success(context).withValues(alpha: 0.3)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.check_circle_outline, color: Colors.green, size: 20),
+                  Icon(Icons.check_circle_outline, color: BeeTokens.success(context), size: 20),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       l10n.iosAutoShortcutRecommendedTip,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.green.shade800,
+                        color: BeeTokens.success(context),
                         height: 1.4,
                       ),
                     ),
@@ -321,7 +320,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
             width: 24,
             height: 24,
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withValues(alpha: 0.1),
+              color: BeeTokens.primary(context).withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -329,7 +328,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
                 number,
                 style: theme.textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.primary,
+                  color: BeeTokens.primary(context),
                 ),
               ),
             ),
@@ -339,7 +338,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
             child: Text(
               text,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                color: BeeTokens.textPrimary(context).withValues(alpha: 0.7),
               ),
             ),
           ),
@@ -397,7 +396,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
                     Text(
                       l10n.iosAutoTutorialDesc,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: BeeTokens.textPrimary(context).withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -405,7 +404,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
               ),
               Icon(
                 Icons.open_in_new,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                color: BeeTokens.textPrimary(context).withValues(alpha: 0.4),
                 size: 20,
               ),
             ],
@@ -422,14 +421,14 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.orange.withValues(alpha: 0.1),
+        color: BeeTokens.warning(context).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
-        border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+        border: Border.all(color: BeeTokens.warning(context).withValues(alpha: 0.3)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 24),
+          Icon(Icons.warning_amber_rounded, color: BeeTokens.warning(context), size: 24),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -439,14 +438,14 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
                   l10n.iosVersionWarningTitle,
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: Colors.orange.shade800,
+                    color: BeeTokens.warning(context),
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   l10n.iosVersionWarningDesc,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: Colors.orange.shade700,
+                    color: BeeTokens.warning(context),
                     height: 1.4,
                   ),
                 ),

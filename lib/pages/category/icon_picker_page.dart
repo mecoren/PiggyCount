@@ -276,17 +276,17 @@ class _IconGrid extends StatelessWidget {
       itemBuilder: (context, index) {
         final icon = icons[index];
         final isSelected = selectedIcon == icon.key;
-        
+
         return InkWell(
           onTap: () => onIconSelected(icon.key),
           child: Container(
             decoration: BoxDecoration(
-              color: isSelected 
-                  ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+              color: isSelected
+                  ? BeeTokens.primary(context).withValues(alpha: 0.1)
                   : null,
               border: Border.all(
                 color: isSelected
-                    ? Theme.of(context).colorScheme.primary
+                    ? BeeTokens.primary(context)
                     : BeeTokens.border(context),
                 width: isSelected ? 2 : 1,
               ),
@@ -298,16 +298,16 @@ class _IconGrid extends StatelessWidget {
                 Icon(
                   icon.iconData,
                   size: 32,
-                  color: isSelected 
-                      ? Theme.of(context).colorScheme.primary
-                      : Theme.of(context).iconTheme.color,
+                  color: isSelected
+                      ? BeeTokens.primary(context)
+                      : BeeTokens.iconPrimary(context),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   icon.label,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: isSelected 
-                        ? Theme.of(context).colorScheme.primary
+                    color: isSelected
+                        ? BeeTokens.primary(context)
                         : null,
                   ),
                   textAlign: TextAlign.center,

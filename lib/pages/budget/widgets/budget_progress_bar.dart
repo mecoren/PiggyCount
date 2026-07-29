@@ -24,7 +24,7 @@ class BudgetProgressBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final rate = budget > 0 ? (used / budget).clamp(0.0, 1.0) : 0.0;
-    final color = _getColor(rate);
+    final color = _getColor(context, rate);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,10 +52,10 @@ class BudgetProgressBar extends ConsumerWidget {
     );
   }
 
-  Color _getColor(double rate) {
-    if (rate >= 1.0) return Colors.red[700]!;
-    if (rate >= 0.9) return Colors.red;
-    if (rate >= 0.7) return Colors.orange;
-    return Colors.green;
+  Color _getColor(BuildContext context, double rate) {
+    if (rate >= 1.0) return BeeTokens.error(context);
+    if (rate >= 0.9) return BeeTokens.error(context);
+    if (rate >= 0.7) return BeeTokens.warning(context);
+    return BeeTokens.success(context);
   }
 }

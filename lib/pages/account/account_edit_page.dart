@@ -680,7 +680,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                       child: OutlinedButton(
                         onPressed: _saving ? null : _delete,
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
+                          foregroundColor: BeeTokens.error(context),
                           side: const BorderSide(color: Colors.red, width: 1.5),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(
@@ -854,7 +854,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              style: TextButton.styleFrom(foregroundColor: BeeTokens.error(context)),
               child: Text(l10n.commonDelete),
             ),
           ],
@@ -877,7 +877,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              style: TextButton.styleFrom(foregroundColor: BeeTokens.error(context)),
               child: Text(l10n.commonDelete),
             ),
           ],
@@ -1127,8 +1127,8 @@ InputDecoration _filledDecoration(
     border: b(Colors.transparent, 0),
     enabledBorder: b(Colors.transparent, 0),
     focusedBorder: b(primary, 1.5),
-    errorBorder: b(Colors.red, 1),
-    focusedErrorBorder: b(Colors.red, 1.5),
+    errorBorder: b(BeeTokens.error(context), 1),
+    focusedErrorBorder: b(BeeTokens.error(context), 1.5),
   );
 }
 

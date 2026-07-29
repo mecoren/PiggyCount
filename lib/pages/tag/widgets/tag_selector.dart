@@ -286,13 +286,13 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
             Icon(
               Icons.add,
               size: 18,
-              color: Theme.of(context).colorScheme.primary,
+              color: BeeTokens.primary(context),
             ),
             const SizedBox(width: 8),
             Text(
               l10n.tagSelectCreateNew,
               style: TextStyle(
-                color: Theme.of(context).colorScheme.primary,
+                color: BeeTokens.primary(context),
                 fontWeight: FontWeight.w500,
               ),
             ),

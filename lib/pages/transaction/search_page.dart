@@ -467,7 +467,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               Navigator.pop(context);
               await _executeBatchDelete();
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(foregroundColor: BeeTokens.error(context)),
             child: Text(l10n.commonDelete),
           ),
         ],
@@ -718,7 +718,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                 color: BeeTokens.surfaceElevated(context),
                 boxShadow: BeeTokens.isDark(context) ? null : [
                   BoxShadow(
-                    color: Colors.grey.withValues(alpha: 0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -748,12 +748,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                               borderSide: BorderSide(
-                                  color: Colors.grey.withValues(alpha: 0.3)),
+                                  color: BeeTokens.divider(context)),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
                               borderSide: BorderSide(
-                                  color: Theme.of(context).colorScheme.primary),
+                                  color: BeeTokens.primary(context)),
                             ),
                             contentPadding: const EdgeInsets.symmetric(
                                 vertical: 12, horizontal: 16),
@@ -965,7 +965,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                             TextButton(
                               onPressed: _toggleBatchMode,
                               style: TextButton.styleFrom(
-                                foregroundColor: Colors.blue,
+                                foregroundColor: BeeTokens.textLink(context),
                               ),
                               child: Text(l10n.searchBatchMode),
                             ),
@@ -1061,7 +1061,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                     label: Text(l10n.commonDelete,
                                         style: const TextStyle(fontSize: 13)),
                                     style: OutlinedButton.styleFrom(
-                                      foregroundColor: Colors.red,
+                                      foregroundColor: BeeTokens.error(context),
                                       padding: const EdgeInsets.symmetric(
                                           vertical: 6, horizontal: 8),
                                       minimumSize: const Size(0, 36),

@@ -352,7 +352,7 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
                         l10n.aiProviderNoApiKey,
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.orange[700],
+                          color: BeeTokens.warning(context),
                         ),
                       ),
                 onTap: () async {

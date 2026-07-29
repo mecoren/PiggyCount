@@ -412,14 +412,14 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.1),
+                      color: BeeTokens.warning(context).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                     ),
                     child: Text(
                       l10n.aiPromptUnsaved,
                       style: TextStyle(
                         fontSize: 11,
-                        color: Colors.orange[700],
+                        color: BeeTokens.warning(context),
                       ),
                     ),
                   ),

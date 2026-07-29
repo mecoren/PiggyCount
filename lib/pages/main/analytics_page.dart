@@ -873,8 +873,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                         isBalance: _type == 'balance',
                         total: sum,
                         avg: computeSeriesAverage(filteredSeriesRaw),
-                        expenseColor: Theme.of(context).colorScheme.primary,
-                        incomeColor: Theme.of(context).colorScheme.primary,
+                        expenseColor: BeeTokens.primary(context),
+                        incomeColor: BeeTokens.primary(context),
                       ),
                       const SizedBox(height: 12),
                       SizedBox(
@@ -884,7 +884,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                           xLabels: xLabels,
                           highlightIndex: highlightIndex,
                           hideAmounts: hide,
-                          themeColor: Theme.of(context).colorScheme.primary,
+                          themeColor: BeeTokens.primary(context),
                           // 使用统一图表令牌
                           lineWidth: BeeChartTokens.lineWidth,
                           dotRadius: BeeChartTokens.dotRadius,
@@ -994,7 +994,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                             name: item.name,
                             value: item.total,
                             percent: sum == 0 ? 0 : item.total / sum,
-                            color: Theme.of(context).colorScheme.primary,
+                            color: BeeTokens.primary(context),
                             start: start,
                             end: end,
                             scope: _scope,

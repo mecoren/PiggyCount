@@ -205,12 +205,12 @@ class BillCardWidget extends ConsumerWidget {
         ),
         decoration: BoxDecoration(
           color: canChange
-              ? ref.watch(primaryColorProvider).withOpacity(0.1)
-              : BeeTokens.textSecondary(context).withOpacity(0.1),
+              ? ref.watch(primaryColorProvider).withValues(alpha: 0.1)
+              : BeeTokens.textSecondary(context).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12.0.scaled(context, ref)),
           border: canChange
               ? Border.all(
-                  color: ref.watch(primaryColorProvider).withOpacity(0.3),
+                  color: ref.watch(primaryColorProvider).withValues(alpha: 0.3),
                   width: 1,
                 )
               : null,

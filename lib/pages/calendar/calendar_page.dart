@@ -234,7 +234,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
       calendarStyle: CalendarStyle(
         // 今天样式
         todayDecoration: BoxDecoration(
-          color: primaryColor.withOpacity(0.2),
+          color: primaryColor.withValues(alpha: 0.2),
           shape: BoxShape.circle,
         ),
         todayTextStyle: TextStyle(
@@ -257,7 +257,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
           color: BeeTokens.textPrimary(context),
         ),
         outsideTextStyle: TextStyle(
-          color: BeeTokens.textTertiary(context).withOpacity(0.3),
+          color: BeeTokens.textTertiary(context).withValues(alpha: 0.3),
         ),
 
         // 周末样式
@@ -340,7 +340,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     } else if (isToday) {
       textColor = primaryColor;
     } else if (isOutside) {
-      textColor = BeeTokens.textTertiary(context).withOpacity(0.3);
+      textColor = BeeTokens.textTertiary(context).withValues(alpha: 0.3);
     } else {
       textColor = BeeTokens.textPrimary(context);
     }
@@ -362,7 +362,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                   )
                 : isToday
                     ? BoxDecoration(
-                        color: primaryColor.withOpacity(0.15),
+                        color: primaryColor.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                       )
                     : null,

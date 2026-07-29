@@ -400,7 +400,7 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(foregroundColor: BeeTokens.error(context)),
             child: Text(l10n.commonDelete),
           ),
         ],
@@ -796,7 +796,7 @@ class _CategoryCard extends ConsumerWidget {
     // 二级分类：使用浅色背景
     final backgroundColor = item.isSubCategory
         ? Colors.orange[50]
-        : Theme.of(context).colorScheme.surface;
+        : BeeTokens.surface(context);
 
     return InkWell(
       onTap: onTap,
@@ -807,8 +807,8 @@ class _CategoryCard extends ConsumerWidget {
           borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
           border: Border.all(
             color: item.isSubCategory
-                ? Colors.orange.withValues(alpha: 0.3)
-                : Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                ? BeeTokens.warning(context).withValues(alpha: 0.3)
+                : BeeTokens.borderStrong(context),
             width: 1,
           ),
         ),
@@ -825,16 +825,16 @@ class _CategoryCard extends ConsumerWidget {
                     height: item.isSubCategory ? 28 : 32,
                     decoration: BoxDecoration(
                       color: item.isSubCategory
-                          ? Colors.orange.withValues(alpha: 0.2)
-                          : Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                          ? BeeTokens.warning(context).withValues(alpha: 0.2)
+                          : BeeTokens.primary(context).withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: CategoryIconWidget(
                       category: item.category,
                       size: item.isSubCategory ? 16.0 : 18.0,
                       color: item.isSubCategory
-                          ? Colors.orange[700]!
-                          : Theme.of(context).colorScheme.primary,
+                          ? BeeTokens.warning(context)
+                          : BeeTokens.primary(context),
                       circular: true,
                     ),
                   ),
@@ -845,7 +845,7 @@ class _CategoryCard extends ConsumerWidget {
                       CategoryUtils.getDisplayName(item.category.name, context),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             fontSize: item.isSubCategory ? 10 : 12,
-                            color: item.isSubCategory ? Colors.orange[900] : null,
+                            color: item.isSubCategory ? BeeTokens.warning(context) : null,
                           ),
                       textAlign: TextAlign.center,
                       maxLines: 1,
@@ -857,8 +857,8 @@ class _CategoryCard extends ConsumerWidget {
                     AppLocalizations.of(context).categoryMigrationTransactionLabel(item.transactionCount),
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: item.isSubCategory
-                              ? Colors.orange[700]
-                              : Theme.of(context).colorScheme.outline,
+                              ? BeeTokens.warning(context)
+                              : BeeTokens.borderStrong(context),
                           fontSize: item.isSubCategory ? 9 : 10,
                         ),
                     textAlign: TextAlign.center,
@@ -875,13 +875,13 @@ class _CategoryCard extends ConsumerWidget {
                   width: 18,
                   height: 18,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary,
+                    color: BeeTokens.primary(context),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.more_horiz,
                     size: 14,
-                    color: Colors.white,
+                    color: BeeTokens.textOnPrimary(context),
                   ),
                 ),
               ),
@@ -948,7 +948,7 @@ class _SubcategoryDialogState extends ConsumerState<_SubcategoryDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
+    final primaryColor = BeeTokens.primary(context);
     final l10n = AppLocalizations.of(context);
 
     return Dialog(
@@ -1062,8 +1062,7 @@ class _DialogActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
-    final isDark = BeeTokens.isDark(context);
+    final primaryColor = BeeTokens.primary(context);
 
     return InkWell(
       onTap: onTap,
@@ -1073,7 +1072,7 @@ class _DialogActionButton extends StatelessWidget {
           color: BeeTokens.surface(context),
           borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
           border: Border.all(
-            color: isDark ? BeeTokens.border(context) : Colors.grey[300]!,
+            color: BeeTokens.borderStrong(context),
             width: 1,
           ),
         ),
@@ -1112,8 +1111,7 @@ class _DialogSubCategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
-    final isDark = BeeTokens.isDark(context);
+    final primaryColor = BeeTokens.primary(context);
 
     return InkWell(
       onTap: onTap,
@@ -1123,7 +1121,7 @@ class _DialogSubCategoryCard extends StatelessWidget {
           color: BeeTokens.surface(context),
           borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
           border: Border.all(
-            color: isDark ? BeeTokens.border(context) : Colors.grey[300]!,
+            color: BeeTokens.borderStrong(context),
             width: 1,
           ),
         ),
@@ -1158,7 +1156,7 @@ class _DialogSubCategoryCard extends StatelessWidget {
             Text(
               AppLocalizations.of(context).categoryMigrationTransactionLabel(transactionCount),
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Theme.of(context).colorScheme.outline,
+                color: BeeTokens.borderStrong(context),
                 fontSize: 9,
               ),
             ),

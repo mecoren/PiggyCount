@@ -96,7 +96,7 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
               color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
               border: Border.all(
-                color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
               ),
             ),
             child: Column(
@@ -113,7 +113,7 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                         borderSide: BorderSide(
-                          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
                         ),
                       ),
                       isDense: true,
@@ -176,12 +176,12 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
           border: Border.all(
-            color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
           ),
           borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
           color: widget.enabled 
             ? Theme.of(context).colorScheme.surface 
-            : Theme.of(context).colorScheme.surface.withOpacity(0.5),
+            : Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
         ),
         child: Row(
           children: [
@@ -197,7 +197,7 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: widget.value != null 
                     ? Theme.of(context).colorScheme.onSurface
-                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
             ),
@@ -205,7 +205,7 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
               _isOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
               color: widget.enabled 
                 ? Theme.of(context).colorScheme.onSurface
-                : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ],
         ),

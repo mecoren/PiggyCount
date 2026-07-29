@@ -55,7 +55,7 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
 
   Color _parseTagColor(String? colorHex) {
     if (colorHex == null || colorHex.isEmpty) {
-      return Theme.of(context).colorScheme.primary;
+      return BeeTokens.primary(context);
     }
     try {
       String hex = colorHex;
@@ -67,7 +67,7 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
       }
       return Color(int.parse(hex, radix: 16));
     } catch (e) {
-      return Theme.of(context).colorScheme.primary;
+      return BeeTokens.primary(context);
     }
   }
 
@@ -235,7 +235,7 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
                       value: stats != null
                           ? l10n.tagTransactionCount(stats.count)
                           : '-',
-                      color: Theme.of(context).colorScheme.primary,
+                      color: BeeTokens.primary(context),
                     ),
                   ),
                   Expanded(

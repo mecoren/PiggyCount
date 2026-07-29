@@ -175,7 +175,7 @@ class _LogCenterPageState extends ConsumerState<LogCenterPage> {
                           return FilterChip(
                             label: Text(level.displayName),
                             selected: isSelected,
-                            selectedColor: primaryColor.withOpacity(0.2),
+                            selectedColor: primaryColor.withValues(alpha: 0.2),
                             onSelected: (selected) {
                               setState(() {
                                 if (selected) {
@@ -229,7 +229,7 @@ class _LogCenterPageState extends ConsumerState<LogCenterPage> {
                           return FilterChip(
                             label: Text(platform.displayName),
                             selected: isSelected,
-                            selectedColor: primaryColor.withOpacity(0.2),
+                            selectedColor: primaryColor.withValues(alpha: 0.2),
                             onSelected: (selected) {
                               setState(() {
                                 if (selected) {
@@ -368,9 +368,9 @@ class _LogEntryCard extends ConsumerWidget {
     // 根据日志级别选择颜色
     final levelColor = switch (log.level) {
       LogLevel.debug => Colors.grey,
-      LogLevel.info => Colors.blue,
-      LogLevel.warning => Colors.orange,
-      LogLevel.error => Colors.red,
+      LogLevel.info => BeeTokens.info(context),
+      LogLevel.warning => BeeTokens.warning(context),
+      LogLevel.error => BeeTokens.error(context),
     };
 
     return SettingsCard(
@@ -394,7 +394,7 @@ class _LogEntryCard extends ConsumerWidget {
                         vertical: 2.0.scaled(context, ref),
                       ),
                       decoration: BoxDecoration(
-                        color: levelColor.withOpacity(0.1),
+                        color: levelColor.withValues(alpha: 0.1),
                         borderRadius:
                             BorderRadius.circular(4.0.scaled(context, ref)),
                         border: Border.all(color: levelColor, width: 1),
@@ -461,7 +461,7 @@ class _LogEntryCard extends ConsumerWidget {
                   Text(
                     'Error: ${log.error}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.red,
+                          color: BeeTokens.error(context),
                         ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,

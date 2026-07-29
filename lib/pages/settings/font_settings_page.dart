@@ -246,11 +246,11 @@ class _ListTileMock extends StatelessWidget {
             height: 36,
             decoration: BoxDecoration(
               color:
-                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
+                  BeeTokens.primary(context).withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             child: Icon(Icons.brush_outlined,
-                color: Theme.of(context).colorScheme.primary, size: 18),
+                color: BeeTokens.primary(context), size: 18),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -299,7 +299,7 @@ class _UIScaleInfo extends ConsumerWidget {
             Container(
               padding: EdgeInsets.all(8.0.scaled(context, ref)),
               decoration: BoxDecoration(
-                color: Colors.blue.withValues(alpha: 0.1),
+                color: BeeTokens.info(context).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8.0.scaled(context, ref)),
               ),
               child: Row(
@@ -308,7 +308,7 @@ class _UIScaleInfo extends ConsumerWidget {
                     width: 24.0.scaled(context, ref),
                     height: 24.0.scaled(context, ref),
                     decoration: BoxDecoration(
-                      color: Colors.blue,
+                      color: BeeTokens.info(context),
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -368,10 +368,10 @@ class _CustomScaleSlider extends ConsumerWidget {
             const SizedBox(height: 12),
             SliderTheme(
               data: SliderTheme.of(context).copyWith(
-                activeTrackColor: Theme.of(context).colorScheme.primary,
+                activeTrackColor: BeeTokens.primary(context),
                 inactiveTrackColor: Colors.grey.withValues(alpha: 0.3),
-                thumbColor: Theme.of(context).colorScheme.primary,
-                overlayColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                thumbColor: BeeTokens.primary(context),
+                overlayColor: BeeTokens.primary(context).withValues(alpha: 0.2),
                 trackHeight: 6,
                 thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
               ),

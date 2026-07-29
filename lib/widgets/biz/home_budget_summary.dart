@@ -40,11 +40,11 @@ class _BudgetProgressBar extends ConsumerWidget {
   final BudgetUsage usage;
   const _BudgetProgressBar({required this.usage});
 
-  Color _progressColor(double rate) {
-    if (rate >= 1.0) return const Color(0xFFB71C1C);
-    if (rate >= 0.9) return const Color(0xFFD32F2F);
-    if (rate >= 0.7) return const Color(0xFFF57C00);
-    return const Color(0xFF4CAF50);
+  Color _progressColor(double rate, BuildContext context) {
+    if (rate >= 1.0) return BeeTokens.error(context);
+    if (rate >= 0.9) return BeeTokens.error(context);
+    if (rate >= 0.7) return BeeTokens.warning(context);
+    return BeeTokens.success(context);
   }
 
   @override
@@ -52,7 +52,7 @@ class _BudgetProgressBar extends ConsumerWidget {
     final isDark = BeeTokens.isDark(context);
     final rate = usage.rate.clamp(0.0, 1.5);
     final displayRate = (usage.rate * 100).toInt();
-    final color = _progressColor(usage.rate);
+    final color = _progressColor(usage.rate, context);
     const barHeight = 14.0;
 
     return GestureDetector(

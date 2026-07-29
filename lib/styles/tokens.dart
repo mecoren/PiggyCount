@@ -33,13 +33,13 @@ class BeeTokens {
   /// - 亮色模式：#FAFAFA (灰50)
   /// - 暗黑模式：#000000 (纯黑)
   static Color scaffoldBackground(BuildContext context) =>
-      isDark(context) ? Colors.black : Colors.grey.shade50;
+      isDark(context) ? scaffoldBackgroundDarkStatic : scaffoldBackgroundLightStatic;
 
   /// 卡片背景色（贴在页面上的卡片）
   /// - 亮色模式：#FFFFFF (白色)
   /// - 暗黑模式：#1C1C1E (深灰，与纯黑背景形成对比)
   static Color surface(BuildContext context) =>
-      isDark(context) ? const Color(0xFF1C1C1E) : Colors.white;
+      isDark(context) ? const Color(0xFF1C1C1E) : cardBackgroundLightStatic;
 
   /// 次级背景色（嵌套卡片、输入框背景）
   /// - 亮色模式：#F5F5F5 (灰100)
@@ -527,8 +527,25 @@ class BeeTokens {
   /// 54% 黑色（亮色模式，兼容 Colors.black54）
   static const Color black54Static = Color(0x8A000000);
 
-  /// 分割线颜色（亮色模式）
+  /// Scaffold 背景色（亮色模式）— #FAFAFA (灰50)
+  /// 单一来源：BeeTokens.scaffoldBackground(context) 与 BeeTheme.lightTheme 共享
+  static const Color scaffoldBackgroundLightStatic = Color(0xFFFAFAFA);
+
+  /// Scaffold 背景色（暗色模式）— 纯黑
+  /// 单一来源：BeeTokens.scaffoldBackground(context) 与 BeeTheme.darkTheme 共享
+  static const Color scaffoldBackgroundDarkStatic = Colors.black;
+
+  /// 卡片背景色（亮色模式）— #FFFFFF
+  static const Color cardBackgroundLightStatic = Colors.white;
+
+  /// 卡片背景色（暗色模式）— 纯黑
+  static const Color cardBackgroundDarkStatic = Colors.black;
+
+  /// 分割线颜色（亮色模式）— black 6%
   static Color get dividerStatic => Colors.black.withValues(alpha: 0.06);
+
+  /// 分割线颜色（暗色模式）— white 12%
+  static Color get dividerDarkStatic => Colors.white.withValues(alpha: 0.12);
 }
 
 // ============================================================================
@@ -581,6 +598,17 @@ class BeeDimens {
   // 列表相关：分组头与行的统一垂直内边距
   static const double listHeaderVertical = 6;
   static const double listRowVertical = 8;
+
+  // ========== 语义化 EdgeInsets 常量（消除重复字面量） ==========
+
+  /// 首页提醒卡片统一外边距（home_page 三张卡片共用）
+  static const EdgeInsets cardMargin = EdgeInsets.fromLTRB(12, 4, 12, 8);
+
+  /// 通用卡片内边距
+  static const EdgeInsets cardPadding = EdgeInsets.all(16);
+
+  /// 通用水平外边距（页面主体两侧）
+  static const EdgeInsets pageHorizontalMargin = EdgeInsets.symmetric(horizontal: 12);
 }
 
 /// 阴影令牌

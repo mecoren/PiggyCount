@@ -279,7 +279,7 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
                       child: ListTile(
                         leading: Icon(
                           Icons.arrow_upward,
-                          color: Theme.of(context).colorScheme.primary,
+                          color: BeeTokens.primary(context),
                         ),
                         title: Text(AppLocalizations.of(context)
                             .categoryParentCategoryTitle),
@@ -381,13 +381,13 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
                     Text(
                       AppLocalizations.of(context).categoryDangerousOperations,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Colors.red,
+                            color: BeeTokens.error(context),
                           ),
                     ),
                     const SizedBox(height: 8),
                     Card(
                       child: ListTile(
-                        leading: const Icon(Icons.delete, color: Colors.red),
+                        leading: Icon(Icons.delete, color: BeeTokens.error(context)),
                         title: Text(
                             AppLocalizations.of(context).categoryDeleteTitle),
                         subtitle: Text(AppLocalizations.of(context)
@@ -408,12 +408,12 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
             child: FilledButton(
               onPressed: (_saving || _isDuplicateName) ? null : _saveCategory,
               child: _saving
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white,
+                        color: BeeTokens.textOnPrimary(context),
                       ),
                     )
                   : Text(AppLocalizations.of(context).commonSave),
@@ -642,7 +642,7 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
   Widget _buildCustomIconSection(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final isSelected = _iconType == 'custom';
-    final primaryColor = Theme.of(context).colorScheme.primary;
+    final primaryColor = BeeTokens.primary(context);
 
     return InkWell(
       onTap: _pickCustomIcon,
@@ -1460,7 +1460,7 @@ class _GroupedIconGrid extends StatelessWidget {
               child: Text(
                 group.title,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
+                      color: BeeTokens.primary(context),
                       fontWeight: FontWeight.bold,
                     ),
               ),
@@ -1485,15 +1485,12 @@ class _GroupedIconGrid extends StatelessWidget {
                   child: Container(
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withValues(alpha: 0.1)
+                          ? BeeTokens.primary(context).withValues(alpha: 0.1)
                           : null,
                       border: Border.all(
                         color: isSelected
-                            ? Theme.of(context).colorScheme.primary
-                            : Colors.grey.withValues(alpha: 0.3),
+                            ? BeeTokens.primary(context)
+                            : BeeTokens.borderStrong(context),
                         width: isSelected ? 2 : 1,
                       ),
                       borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
@@ -1502,8 +1499,8 @@ class _GroupedIconGrid extends StatelessWidget {
                       iconData.iconData,
                       size: 20,
                       color: isSelected
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).iconTheme.color,
+                          ? BeeTokens.primary(context)
+                          : BeeTokens.iconPrimary(context),
                     ),
                   ),
                 );

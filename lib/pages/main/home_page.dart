@@ -292,14 +292,13 @@ class _HomePageState extends ConsumerState<HomePage> {
     final lastMonth = DateTime(currentLabel.year, currentLabel.month - 1, 1);
     final monthFormat = DateFormat.MMMM(l10n.localeName);
     final primaryColor = ref.watch(primaryColorProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+      margin: BeeDimens.cardMargin,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
-        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        boxShadow: isDark
+        color: BeeTokens.surface(context),
+        boxShadow: BeeTokens.isDark(context)
             ? null
             : [
                 BoxShadow(
@@ -352,9 +351,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                                 TextSpan(
                                   text: ' ${l10n.homeLastMonthReportSubtitle}',
                                   style: TextStyle(
-                                    color: isDark
-                                        ? Colors.white70
-                                        : Colors.black54,
+                                    color: BeeTokens.textSecondary(context),
                                   ),
                                 ),
                               ],
@@ -396,7 +393,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     child: Icon(
                       Icons.close,
                       size: 18,
-                      color: isDark ? Colors.white38 : Colors.black26,
+                      color: BeeTokens.textDisabled(context),
                     ),
                   ),
                 ],
@@ -414,14 +411,13 @@ class _HomePageState extends ConsumerState<HomePage> {
     final now = DateTime.now();
     final reportYear = now.month == 1 ? now.year - 1 : now.year;
     final primaryColor = ref.watch(primaryColorProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+      margin: BeeDimens.cardMargin,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
-        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        boxShadow: isDark
+        color: BeeTokens.surface(context),
+        boxShadow: BeeTokens.isDark(context)
             ? null
             : [
                 BoxShadow(
@@ -465,7 +461,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                             l10n.homeAnnualReportReminder(reportYear),
                             style: TextStyle(
                               fontSize: 14,
-                              color: isDark ? Colors.white70 : Colors.black54,
+                              color: BeeTokens.textSecondary(context),
                             ),
                           ),
                         ),
@@ -504,7 +500,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     child: Icon(
                       Icons.close,
                       size: 18,
-                      color: isDark ? Colors.white38 : Colors.black26,
+                      color: BeeTokens.textDisabled(context),
                     ),
                   ),
                 ],
@@ -520,14 +516,13 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget _buildBudgetSetupHintCard(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final primaryColor = ref.watch(primaryColorProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+      margin: BeeDimens.cardMargin,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
-        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        boxShadow: isDark
+        color: BeeTokens.surface(context),
+        boxShadow: BeeTokens.isDark(context)
             ? null
             : [
                 BoxShadow(
@@ -571,7 +566,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                             l10n.budgetSetupHint,
                             style: TextStyle(
                               fontSize: 14,
-                              color: isDark ? Colors.white70 : Colors.black54,
+                              color: BeeTokens.textSecondary(context),
                             ),
                           ),
                         ),
@@ -605,7 +600,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     child: Icon(
                       Icons.close,
                       size: 18,
-                      color: isDark ? Colors.white38 : Colors.black26,
+                      color: BeeTokens.textDisabled(context),
                     ),
                   ),
                 ],
@@ -670,7 +665,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     });
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor, // ⭐ 自适应背景色
+      backgroundColor: BeeTokens.scaffoldBackground(context), // ⭐ 自适应背景色
       body: Column(
         children: [
           Consumer(builder: (context, ref, _) {
@@ -690,7 +685,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                         // 左侧：BeeIcon + 标题 + 账本切换胶囊（用 Expanded 包住，
                         // 标题在空间富余时显示自然宽度，仅在不够时 ellipsis）
                         BeeIcon(
-                          color: Theme.of(context).colorScheme.primary,
+                          color: BeeTokens.primary(context),
                           size: 28,
                         ),
                         const SizedBox(width: 4),
@@ -754,13 +749,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                                                     horizontal: 10,
                                                     vertical: 6),
                                             decoration: BoxDecoration(
-                                              color: Theme.of(context)
-                                                          .brightness ==
-                                                      Brightness.dark
-                                                  ? Colors.white
-                                                      .withValues(alpha: 0.1)
-                                                  : Colors.black
-                                                      .withValues(alpha: 0.05),
+                                              color: BeeTokens.surfaceCapsule(context),
                                               borderRadius:
                                                   BorderRadius.circular(BeeDimens.radiusXl),
                                             ),
@@ -813,7 +802,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                                                         .textTheme
                                                         .bodyMedium
                                                         ?.color
-                                                        ?.withOpacity(0.7),
+                                                        ?.withValues(alpha: 0.7),
                                                   ),
                                                   const SizedBox(width: 1),
                                                   Text(
@@ -824,7 +813,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                                                           .textTheme
                                                           .bodyMedium
                                                           ?.color
-                                                          ?.withOpacity(0.7),
+                                                          ?.withValues(alpha: 0.7),
                                                     ),
                                                   ),
                                                 ],
@@ -838,7 +827,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                                                         .textTheme
                                                         .bodyMedium
                                                         ?.color
-                                                        ?.withOpacity(0.5),
+                                                        ?.withValues(alpha: 0.5),
                                                   ),
                                                 ],
                                               ],
@@ -947,7 +936,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                                             .textTheme
                                             .bodyMedium
                                             ?.color
-                                            ?.withOpacity(0.6), // ⭐ 自适应次要文字颜色
+                                            ?.withValues(alpha: 0.6), // ⭐ 自适应次要文字颜色
                                         fontSize: 13,
                                         fontWeight: FontWeight.w500)),
                             const SizedBox(height: 2),
@@ -989,7 +978,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                                             .textTheme
                                             .bodyMedium
                                             ?.color
-                                            ?.withOpacity(0.6), // ⭐ 自适应次要颜色
+                                            ?.withValues(alpha: 0.6), // ⭐ 自适应次要颜色
                                       ),
                               ],
                             ),
@@ -1000,8 +989,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                         margin: const EdgeInsets.symmetric(horizontal: 12),
                         width: 1,
                         height: 36,
-                        color: Theme.of(context).dividerTheme.color ??
-                            Theme.of(context).dividerColor, // ⭐ 自适应分割线颜色
+                        color: BeeTokens.divider(context), // ⭐ 自适应分割线颜色
                       ),
                       const Expanded(child: _HeaderCenterSummary()),
                     ],

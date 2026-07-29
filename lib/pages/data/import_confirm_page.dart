@@ -985,7 +985,6 @@ class _PreviewTable extends StatelessWidget {
   Widget build(BuildContext context) {
     if (rows.isEmpty) return const SizedBox.shrink();
     const double cellWidth = 140;
-    final isDark = BeeTokens.isDark(context);
     return ClipRRect(
       borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
       child: Container(
@@ -998,7 +997,7 @@ class _PreviewTable extends StatelessWidget {
             for (int r = 0; r < rows.length; r++)
               Container(
                 color: r == 0
-                    ? (isDark ? Colors.grey.shade800 : Colors.grey.shade100)
+                    ? BeeTokens.surfaceSecondary(context)
                     : BeeTokens.surfaceElevated(context),
                 padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
                 child: Row(

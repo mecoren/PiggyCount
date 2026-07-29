@@ -212,7 +212,7 @@ class BudgetPage extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: budget.remaining >= 0 ? Colors.green : Colors.red,
+                      color: budget.remaining >= 0 ? BeeTokens.success(context) : BeeTokens.error(context),
                     ),
                   ),
                 ],

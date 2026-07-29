@@ -447,7 +447,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     final action = await showDialog<String>(
       context: context,
       builder: (dctx) {
-        final primary = Theme.of(dctx).colorScheme.primary;
+        final primary = BeeTokens.primary(dctx);
         return SimpleDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
           title: Text(AppLocalizations.of(context).ledgersActions),
@@ -543,7 +543,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                 onPressed: () => Navigator.pop(dctx, 'delete'),
                 child: Row(
                   children: [
-                    const Icon(Icons.delete_forever_outlined, color: Colors.redAccent),
+                    Icon(Icons.delete_forever_outlined, color: BeeTokens.error(context)),
                     const SizedBox(width: 8),
                     Text(AppLocalizations.of(context).ledgersDelete),
                   ],
@@ -618,7 +618,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     final action = await showDialog<String>(
       context: context,
       builder: (dctx) {
-        final primary = Theme.of(dctx).colorScheme.primary;
+        final primary = BeeTokens.primary(dctx);
         return SimpleDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
           title: Text(AppLocalizations.of(context).ledgersActions),
@@ -637,7 +637,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
               onPressed: () => Navigator.pop(dctx, 'delete'),
               child: Row(
                 children: [
-                  const Icon(Icons.delete_forever_outlined, color: Colors.redAccent),
+                  Icon(Icons.delete_forever_outlined, color: BeeTokens.error(context)),
                   const SizedBox(width: 8),
                   Text(AppLocalizations.of(context).ledgersDeleteRemote),
                 ],
@@ -1139,7 +1139,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) {
-        final primary = Theme.of(ctx).colorScheme.primary;
+        final primary = BeeTokens.primary(ctx);
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
           contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
@@ -1240,7 +1240,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
       ),
       builder: (ctx) {
-        final primary = Theme.of(ctx).colorScheme.primary;
+        final primary = BeeTokens.primary(ctx);
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -1420,7 +1420,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.blue[50],
+                        color: BeeTokens.info(context),
                         borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                       ),
                       child: Column(
@@ -1448,7 +1448,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.orange[50],
+                          color: BeeTokens.warning(context),
                           borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                         ),
                         child: Column(

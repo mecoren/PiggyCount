@@ -126,7 +126,7 @@ class _DonationPageState extends ConsumerState<DonationPage> {
           children: [
             Icon(
               Icons.favorite,
-              color: Colors.red,
+              color: BeeTokens.error(context),
               size: 24.0.scaled(context, ref),
             ),
             SizedBox(width: 8.0.scaled(context, ref)),

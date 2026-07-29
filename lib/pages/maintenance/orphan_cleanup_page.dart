@@ -131,7 +131,7 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
         child: Row(
           children: [
             Icon(Icons.warning_amber_outlined,
-                color: Colors.orange,
+                color: BeeTokens.warning(context),
                 size: 22.0.scaled(context, ref)),
             SizedBox(width: 12.0.scaled(context, ref)),
             Expanded(
@@ -253,7 +253,7 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
     final selectedCount = report.all
         .where((r) => _selected.contains(r.uniqueKey))
         .length;
-    final primary = Theme.of(context).colorScheme.primary;
+    final primary = BeeTokens.primary(context);
     return SafeArea(
       child: Container(
         padding: EdgeInsets.symmetric(

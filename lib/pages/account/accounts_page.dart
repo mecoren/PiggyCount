@@ -791,7 +791,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
           style: TextStyle(
             fontSize: 11,
             color: (hasMissing || isStale)
-                ? Colors.orange
+                ? BeeTokens.warning(context)
                 : BeeTokens.textTertiary(context),
           ),
         ),
@@ -853,7 +853,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
               Icon(
                 Icons.warning_amber_rounded,
                 size: 14.0.scaled(context, ref),
-                color: Colors.orange,
+                color: BeeTokens.warning(context),
               ),
               SizedBox(width: 4.0.scaled(context, ref)),
             ],
@@ -1466,7 +1466,7 @@ class _ConversionDetailRow extends ConsumerWidget {
                 vertical: 1.0.scaled(context, ref),
               ),
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.orange, width: 1),
+                border: Border.all(color: BeeTokens.warning(context), width: 1),
                 borderRadius: BorderRadius.circular(4.0.scaled(context, ref)),
               ),
               child: Text(

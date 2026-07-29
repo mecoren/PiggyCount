@@ -135,7 +135,7 @@ class _LanguageOption extends StatelessWidget {
       trailing: isSelected
           ? Icon(
               Icons.check_circle,
-              color: Theme.of(context).colorScheme.primary,
+              color: BeeTokens.primary(context),
             )
           : null,
       onTap: onTap,

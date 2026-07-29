@@ -242,7 +242,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
     bool disabled = false,
   }) {
     final isSelected = _type == type;
-    final primary = Theme.of(context).colorScheme.primary;
+    final primary = BeeTokens.primary(context);
 
     return InkWell(
       onTap: disabled ? null : () => setState(() => _type = type),
@@ -302,13 +302,13 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
                 width: 36.0.scaled(context, ref),
                 height: 36.0.scaled(context, ref),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                  color: BeeTokens.primary(context).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
                 ),
                 child: Icon(
                   CategoryService.getCategoryIcon(_selectedCategoryIcon),
                   size: 20.0.scaled(context, ref),
-                  color: Theme.of(context).colorScheme.primary,
+                  color: BeeTokens.primary(context),
                 ),
               ),
               SizedBox(width: 12.0.scaled(context, ref)),
@@ -412,14 +412,14 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
                       ),
                       child: Icon(
                         CategoryService.getCategoryIcon(category.icon),
-                        color: Theme.of(context).colorScheme.primary,
+                        color: BeeTokens.primary(context),
                       ),
                     ),
                     title: Text(category.name),
                     trailing: _selectedCategoryId == category.id
                         ? Icon(
                             Icons.check_circle,
-                            color: Theme.of(context).colorScheme.primary,
+                            color: BeeTokens.primary(context),
                           )
                         : null,
                     onTap: () => Navigator.pop(context, category),
@@ -522,7 +522,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(foregroundColor: BeeTokens.error(context)),
             child: Text(l10n.commonDelete),
           ),
         ],

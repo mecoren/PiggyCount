@@ -158,7 +158,7 @@ class _InvitePageState extends ConsumerState<InvitePage> {
             if (_error != null) ...[
               const SizedBox(height: 12),
               Text(_error!,
-                  style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
+                  style: TextStyle(color: BeeTokens.error(context), fontSize: 13)),
             ],
             const SizedBox(height: 16),
             Text(

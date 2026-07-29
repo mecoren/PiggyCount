@@ -8,28 +8,30 @@ class SplashPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final primaryColor = theme.primaryColor;
-    
+    // 在主色背景上展示，文字与图标均使用 onPrimary（白色）
+    final onPrimary = BeeTokens.textOnPrimary(context);
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
-      backgroundColor: primaryColor,
+      backgroundColor: BeeTokens.primary(context),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
           child: Column(
             children: [
               const Spacer(flex: 2),
-              
+
               // Logo区域
               Container(
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: BeeTokens.cardBackgroundLightStatic,
                   borderRadius: BorderRadius.circular(BeeDimens.radius3xl),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      // 阴影色保留黑色（不应随主题切换）
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 20,
                       offset: const Offset(0, 8),
                     ),
@@ -43,40 +45,41 @@ class SplashPage extends ConsumerWidget {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 32),
-              
+
               // 应用名称
               Text(
                 AppLocalizations.of(context).splashAppName,
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  color: Colors.white,
+                style: textTheme.headlineMedium?.copyWith(
+                  color: onPrimary,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 2,
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Slogan
               Text(
                 AppLocalizations.of(context).splashSlogan,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: Colors.white.withOpacity(0.9),
+                style: textTheme.titleMedium?.copyWith(
+                  color: onPrimary.withValues(alpha: 0.9),
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              
+
               const Spacer(flex: 3),
-              
+
               // 数据安全说明
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  // 装饰性半透明白色，保留为字面量（不属于语义色 Token 范畴）
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
                   border: Border.all(
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                     width: 1,
                   ),
                 ),
@@ -87,14 +90,14 @@ class SplashPage extends ConsumerWidget {
                       children: [
                         Icon(
                           Icons.security_outlined,
-                          color: Colors.white,
+                          color: onPrimary,
                           size: 20,
                         ),
                         const SizedBox(width: 8),
                         Text(
                           AppLocalizations.of(context).splashSecurityTitle,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            color: Colors.white,
+                          style: textTheme.titleSmall?.copyWith(
+                            color: onPrimary,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -105,36 +108,36 @@ class SplashPage extends ConsumerWidget {
                       '${AppLocalizations.of(context).splashSecurityFeature1}\n'
                       '${AppLocalizations.of(context).splashSecurityFeature2}\n'
                       '${AppLocalizations.of(context).splashSecurityFeature3}',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withOpacity(0.9),
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: onPrimary.withValues(alpha: 0.9),
                         height: 1.5,
                       ),
                     ),
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // 加载指示器
               SizedBox(
                 width: 24,
                 height: 24,
                 child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  valueColor: AlwaysStoppedAnimation<Color>(onPrimary),
                   strokeWidth: 2,
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               Text(
                 AppLocalizations.of(context).splashInitializing,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.white.withOpacity(0.8),
+                style: textTheme.bodyMedium?.copyWith(
+                  color: onPrimary.withValues(alpha: 0.8),
                 ),
               ),
-              
+
               const Spacer(flex: 1),
             ],
           ),

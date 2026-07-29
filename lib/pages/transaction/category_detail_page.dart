@@ -212,7 +212,7 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
                 children: [
                   Icon(
                     Icons.bar_chart,
-                    color: Theme.of(context).colorScheme.primary,
+                    color: BeeTokens.primary(context),
                     size: 20,
                   ),
                   const SizedBox(width: 8),
@@ -235,7 +235,7 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
                     child: _SummaryItem(
                       label: AppLocalizations.of(context).categoryDetailTotalCount,
                       value: AppLocalizations.of(context).categoryMigrationTransactionLabel(summary.totalCount),
-                      color: Theme.of(context).colorScheme.primary,
+                      color: BeeTokens.primary(context),
                     ),
                   ),
                   Expanded(
@@ -253,7 +253,7 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
                       label: AppLocalizations.of(context).categoryDetailAverageAmount,
                       value: summary.averageAmount,
                       isAmount: true,
-                      color: Theme.of(context).colorScheme.outline,
+                      color: BeeTokens.textTertiary(context),
                     ),
                   ),
                 ],
@@ -273,13 +273,13 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
           Icon(
             Icons.sort,
             size: 16,
-            color: Theme.of(context).colorScheme.outline,
+            color: BeeTokens.textTertiary(context),
           ),
           const SizedBox(width: 8),
           Text(
             AppLocalizations.of(context).categoryDetailSortTitle,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.outline,
+              color: BeeTokens.textTertiary(context),
             ),
           ),
           const SizedBox(width: 12),
@@ -575,7 +575,7 @@ class _SummaryItem extends ConsumerWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.outline,
+            color: BeeTokens.textTertiary(context),
           ),
         ),
       ],
@@ -652,21 +652,21 @@ class _SortButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected
-            ? Theme.of(context).colorScheme.primary
-            : Theme.of(context).colorScheme.surface,
+            ? BeeTokens.primary(context)
+            : BeeTokens.surface(context),
           borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
           border: Border.all(
             color: isSelected
-              ? Theme.of(context).colorScheme.primary
-              : Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+              ? BeeTokens.primary(context)
+              : BeeTokens.divider(context),
           ),
         ),
         child: Text(
           label,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: isSelected
-              ? Colors.white
-              : Theme.of(context).colorScheme.onSurface,
+              ? BeeTokens.textOnPrimary(context)
+              : BeeTokens.textPrimary(context),
             fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
           ),
         ),

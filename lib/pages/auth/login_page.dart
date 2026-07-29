@@ -243,7 +243,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                         Icon(
                           Icons.check_circle_outline,
                           size: 64,
-                          color: theme.colorScheme.primary,
+                          color: BeeTokens.primary(context),
                         ),
                         const SizedBox(height: 24),
                         Text(

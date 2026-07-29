@@ -24,7 +24,7 @@ class CategoryBudgetTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final budget = usage.usage;
-    final statusColor = _getStatusColor(budget.status);
+    final statusColor = _getStatusColor(context, budget.status);
 
     return InkWell(
       onTap: onTap,
@@ -43,7 +43,7 @@ class CategoryBudgetTile extends ConsumerWidget {
               width: 36.0.scaled(context, ref),
               height: 36.0.scaled(context, ref),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                color: BeeTokens.primary(context).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8.0.scaled(context, ref)),
               ),
               alignment: Alignment.center,
@@ -51,12 +51,12 @@ class CategoryBudgetTile extends ConsumerWidget {
                   ? CategoryIconWidget(
                       category: usage.category,
                       size: 20.0.scaled(context, ref),
-                      color: Theme.of(context).colorScheme.primary,
+                      color: BeeTokens.primary(context),
                     )
                   : Icon(
                       CategoryService.getCategoryIcon(usage.categoryIcon),
                       size: 20.0.scaled(context, ref),
-                      color: Theme.of(context).colorScheme.primary,
+                      color: BeeTokens.primary(context),
                     ),
             ),
             SizedBox(width: 12.0.scaled(context, ref)),
@@ -103,16 +103,16 @@ class CategoryBudgetTile extends ConsumerWidget {
     );
   }
 
-  Color _getStatusColor(String status) {
+  Color _getStatusColor(BuildContext context, String status) {
     switch (status) {
       case 'exceeded':
-        return Colors.red[700]!;
+        return BeeTokens.error(context);
       case 'danger':
-        return Colors.red;
+        return BeeTokens.error(context);
       case 'warning':
-        return Colors.orange;
+        return BeeTokens.warning(context);
       default:
-        return Colors.green;
+        return BeeTokens.success(context);
     }
   }
 }

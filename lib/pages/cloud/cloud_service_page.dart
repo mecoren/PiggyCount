@@ -440,7 +440,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
           children: [
             Icon(
               Icons.info_outline,
-              color: Theme.of(context).colorScheme.primary,
+              color: BeeTokens.primary(context),
               size: 24,
             ),
             const SizedBox(width: 12),
@@ -479,7 +479,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                 _buildGuideSection(
                   context,
                   icon: Icons.check_circle_outline,
-                  iconColor: Colors.green,
+                  iconColor: BeeTokens.success(context),
                   title: l10n.cloudSyncGuideCorrect,
                   items: [
                     l10n.cloudSyncGuideCorrectItem1,
@@ -493,7 +493,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                 _buildGuideSection(
                   context,
                   icon: Icons.cancel_outlined,
-                  iconColor: Colors.red,
+                  iconColor: BeeTokens.error(context),
                   title: l10n.cloudSyncGuideWrong,
                   items: [
                     l10n.cloudSyncGuideWrongItem1,
@@ -525,7 +525,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
             child: Text(
               l10n.cloudSyncGuideGotIt,
               style: TextStyle(
-                color: Theme.of(context).colorScheme.primary,
+                color: BeeTokens.primary(context),
               ),
             ),
           ),

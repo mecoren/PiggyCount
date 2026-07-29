@@ -161,12 +161,11 @@ class _AndroidAutoBillingPageState extends ConsumerState<AndroidAutoBillingPage>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final primaryColor = ref.watch(primaryColorProvider);
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: BeeTokens.surface(context),
       body: Column(
         children: [
           PrimaryHeader(
@@ -253,7 +252,7 @@ class _AndroidAutoBillingPageState extends ConsumerState<AndroidAutoBillingPage>
             Text(
               content,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                color: BeeTokens.textPrimary(context).withValues(alpha: 0.7),
                 height: 1.5,
               ),
             ),
@@ -304,7 +303,7 @@ class _AndroidAutoBillingPageState extends ConsumerState<AndroidAutoBillingPage>
                   Text(
                     subtitle,
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: value ? primaryColor : theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                      color: value ? primaryColor : BeeTokens.textPrimary(context).withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -332,12 +331,12 @@ class _AndroidAutoBillingPageState extends ConsumerState<AndroidAutoBillingPage>
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: (_isBatteryOptimizationIgnored ? Colors.green : Colors.orange).withValues(alpha: 0.1),
+                color: (_isBatteryOptimizationIgnored ? BeeTokens.success(context) : BeeTokens.warning(context)).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
               ),
               child: Icon(
                 _isBatteryOptimizationIgnored ? Icons.check_circle : Icons.battery_saver,
-                color: _isBatteryOptimizationIgnored ? Colors.green : Colors.orange,
+                color: _isBatteryOptimizationIgnored ? BeeTokens.success(context) : BeeTokens.warning(context),
                 size: 28,
               ),
             ),
@@ -359,8 +358,8 @@ class _AndroidAutoBillingPageState extends ConsumerState<AndroidAutoBillingPage>
                         : l10n.reminderBatteryNotIgnored,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: _isBatteryOptimizationIgnored
-                          ? Colors.green
-                          : theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                          ? BeeTokens.success(context)
+                          : BeeTokens.textPrimary(context).withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -368,7 +367,7 @@ class _AndroidAutoBillingPageState extends ConsumerState<AndroidAutoBillingPage>
             ),
             Icon(
               _isBatteryOptimizationIgnored ? Icons.check : Icons.warning_amber,
-              color: _isBatteryOptimizationIgnored ? Colors.green : Colors.orange,
+              color: _isBatteryOptimizationIgnored ? BeeTokens.success(context) : BeeTokens.warning(context),
             ),
           ],
         ),
@@ -402,7 +401,7 @@ class _AndroidAutoBillingPageState extends ConsumerState<AndroidAutoBillingPage>
             Text(
               l10n.autoBillingBatteryDesc,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                color: BeeTokens.textPrimary(context).withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 16),
@@ -430,7 +429,7 @@ class _AndroidAutoBillingPageState extends ConsumerState<AndroidAutoBillingPage>
                                   ? l10n.reminderBatteryIgnored
                                   : l10n.reminderBatteryNotIgnored,
                               style: TextStyle(
-                                color: (batteryInfo['isIgnoring'] == true) ? Colors.green : Colors.orange,
+                                color: (batteryInfo['isIgnoring'] == true) ? BeeTokens.success(context) : BeeTokens.warning(context),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -508,7 +507,7 @@ class _AndroidAutoBillingPageState extends ConsumerState<AndroidAutoBillingPage>
               child: Text(
                 item,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                  color: BeeTokens.textPrimary(context).withValues(alpha: 0.7),
                 ),
               ),
             )),

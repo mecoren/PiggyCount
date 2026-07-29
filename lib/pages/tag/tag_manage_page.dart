@@ -445,7 +445,7 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(foregroundColor: BeeTokens.error(context)),
             child: Text(l10n.commonDelete),
           ),
         ],
@@ -511,7 +511,7 @@ class _TagCard extends StatelessWidget {
 
   Color _parseColor(BuildContext context) {
     if (tag.color == null || tag.color!.isEmpty) {
-      return Theme.of(context).colorScheme.primary;
+      return BeeTokens.primary(context);
     }
     try {
       String hex = tag.color!;
@@ -523,7 +523,7 @@ class _TagCard extends StatelessWidget {
       }
       return Color(int.parse(hex, radix: 16));
     } catch (e) {
-      return Theme.of(context).colorScheme.primary;
+      return BeeTokens.primary(context);
     }
   }
 

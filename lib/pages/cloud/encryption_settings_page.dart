@@ -275,7 +275,7 @@ class _EncryptionSettingsPageState
                       ),
                       decoration: BoxDecoration(
                         color: isEnabled
-                            ? Colors.green.withValues(alpha: 0.12)
+                            ? BeeTokens.success(context).withValues(alpha: 0.12)
                             : Colors.grey.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
                       ),
@@ -284,7 +284,7 @@ class _EncryptionSettingsPageState
                             ? l10n.cloudSyncEncryptEnabled
                             : l10n.cloudSyncEncryptDisabled,
                         style: TextStyle(
-                          color: isEnabled ? Colors.green : Colors.grey,
+                          color: isEnabled ? BeeTokens.success(context) : Colors.grey,
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                         ),

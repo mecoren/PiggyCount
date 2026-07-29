@@ -27,10 +27,14 @@ class BeeTheme {
       colorScheme: base.colorScheme.copyWith(
         primary: honeyGold,
         secondary: energyOrange,
-        surface: Colors.white,
+        surface: BeeTokens.cardBackgroundLightStatic,
       ),
       primaryColor: honeyGold,
-      scaffoldBackgroundColor: paperIvory,
+      scaffoldBackgroundColor: BeeTokens.scaffoldBackgroundLightStatic,
+      dividerTheme: DividerThemeData(
+        color: BeeTokens.dividerStatic,
+        thickness: 1,
+      ),
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.white,
         foregroundColor: textDark,
@@ -68,11 +72,11 @@ class BeeTheme {
         primaryContainer: honeyGoldDark,     // ⭐ Switch thumb 等组件使用
         onPrimaryContainer: Colors.black,    // ⭐ primaryContainer 上的前景色
         secondary: energyOrangeDark,         // ⭐ 辅助色
-        surface: Colors.black,               // ⭐ 改为纯黑
+        surface: BeeTokens.cardBackgroundDarkStatic, // ⭐ 改为纯黑
         onSurface: Colors.white,
       ),
       primaryColor: honeyGoldDark,     // ⭐ 主题色
-      scaffoldBackgroundColor: Colors.black, // ⭐ 纯黑背景（OLED 友好）
+      scaffoldBackgroundColor: BeeTokens.scaffoldBackgroundDarkStatic, // ⭐ 纯黑背景（OLED 友好）
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.black,  // ⭐ 改为纯黑
         foregroundColor: Colors.white,
@@ -92,10 +96,10 @@ class BeeTheme {
         elevation: 0,
       ),
       cardTheme: CardThemeData(
-        color: Colors.black,             // ⭐ 改为纯黑卡片
+        color: BeeTokens.cardBackgroundDarkStatic, // ⭐ 改为纯黑卡片
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+          borderRadius: BorderRadius.circular(BeeDimens.radiusXl), // ⭐ 与亮色统一为 radiusXl
           side: BorderSide(
             color: Colors.white.withValues(alpha: 0.1), // ⭐ 白色边框
             width: 1,
@@ -125,7 +129,7 @@ class BeeTheme {
         ),
       ),
       dividerTheme: DividerThemeData(
-        color: Colors.white.withValues(alpha: 0.12), // ⭐ 白色分割线
+        color: BeeTokens.dividerDarkStatic, // ⭐ 白色分割线（与 Token 单一来源）
         thickness: 1,
       ),
       iconTheme: const IconThemeData(
