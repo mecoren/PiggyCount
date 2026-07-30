@@ -43,7 +43,7 @@ class _PiggyCountCloudSyncPageState extends ConsumerState<PiggyCountCloudSyncPag
   void initState() {
     super.initState();
     // 页面一进来就拉一次 sync health,让"同步状态"面板开屏即有内容。
-    // server 版本号改用 [beecountCloudServerVersionProvider] 自动获取(它依赖
+    // server 版本号改用 [piggycountCloudServerVersionProvider] 自动获取(它依赖
     // syncStatusRefreshProvider,每次同步完成自动重新拉一次),不再用本地
     // setState 缓存的死值——server 升级后用户在 app 内任何同步操作完都会刷新。
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -65,7 +65,7 @@ class _PiggyCountCloudSyncPageState extends ConsumerState<PiggyCountCloudSyncPag
       // Step 1: 对账 profile。把"server 上缺但本地有"的字段补推上去。
       if (!mounted) return;
       await reconcileProfileToServer(
-        cloudProviderFuture: ref.read(beecountCloudProviderInstance.future),
+        cloudProviderFuture: ref.read(piggycountCloudProviderInstance.future),
         currentThemeColor: ref.read(primaryColorProvider),
         currentIncomeIsRed: ref.read(incomeExpenseColorSchemeProvider),
         currentHeaderStyle: ref.read(headerDecorationStyleProvider),
@@ -208,7 +208,7 @@ class _PiggyCountCloudSyncPageState extends ConsumerState<PiggyCountCloudSyncPag
                         // 动刷新,不依赖死缓存。
                         Consumer(builder: (ctx, r, _) {
                           final v = r
-                              .watch(beecountCloudServerVersionProvider)
+                              .watch(piggycountCloudServerVersionProvider)
                               .valueOrNull;
                           if (v == null || v.isEmpty) {
                             return const SizedBox.shrink();
@@ -241,8 +241,8 @@ class _PiggyCountCloudSyncPageState extends ConsumerState<PiggyCountCloudSyncPag
   Widget _buildAccountSection(BuildContext context, CloudUser? user) {
     final l10n = AppLocalizations.of(context);
     final cfg = ref.watch(activeCloudConfigProvider).valueOrNull;
-    final cachedEmail = cfg?.beecountCloudEmail ?? '';
-    final cachedPassword = cfg?.beecountCloudPassword ?? '';
+    final cachedEmail = cfg?.piggycountCloudEmail ?? '';
+    final cachedPassword = cfg?.piggycountCloudPassword ?? '';
     final hasCredentials = cachedEmail.isNotEmpty && cachedPassword.isNotEmpty;
 
     if (user != null) {
@@ -260,7 +260,7 @@ class _PiggyCountCloudSyncPageState extends ConsumerState<PiggyCountCloudSyncPag
         subtitle: cachedEmail,
         onTap: () async {
           final provider =
-              ref.read(beecountCloudProviderInstance).valueOrNull;
+              ref.read(piggycountCloudProviderInstance).valueOrNull;
           if (provider == null) {
             if (mounted) showToast(context, l10n.cloudReloginFailed);
             return;
@@ -582,7 +582,7 @@ class _TwoFactorStatusRowState extends ConsumerState<_TwoFactorStatusRow> {
   Future<void> _load() async {
     try {
       final provider =
-          await ref.read(beecountCloudProviderInstance.future);
+          await ref.read(piggycountCloudProviderInstance.future);
       if (provider == null) {
         if (mounted) {
           setState(() {

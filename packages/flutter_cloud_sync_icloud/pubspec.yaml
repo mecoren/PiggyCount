@@ -2,8 +2,8 @@ name: flutter_cloud_sync_icloud
 description: iCloud provider for flutter_cloud_sync - iOS only
 version: 0.1.0
 publish_to: none
-homepage: https://github.com/TNT-Likely/BeeCount
-repository: https://github.com/TNT-Likely/BeeCount/tree/main/packages/flutter_cloud_sync_icloud
+homepage: https://github.com/TNT-Likely/PiggyCount
+repository: https://github.com/TNT-Likely/PiggyCount/tree/main/packages/flutter_cloud_sync_icloud
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

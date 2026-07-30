@@ -440,7 +440,7 @@ class StartupSyncChecker {
       case CloudBackendType.icloud:
         return true;
       case CloudBackendType.local:
-      case CloudBackendType.beecountCloud:
+      case CloudBackendType.piggycountCloud:
         return false;
     }
   }

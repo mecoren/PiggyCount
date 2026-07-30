@@ -140,7 +140,7 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
   Future<void> _syncAvatarToCloud(String absolutePath) async {
     try {
       final providerInstance =
-          await ref.read(sp.beecountCloudProviderInstance.future);
+          await ref.read(sp.piggycountCloudProviderInstance.future);
       if (providerInstance == null) {
         logger.debug('avatar_sync', '非 PiggyCount Cloud 模式，跳过头像云同步');
         return;

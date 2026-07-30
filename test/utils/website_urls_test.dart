@@ -26,16 +26,16 @@ void main() {
       );
     });
 
-    test('繁体中文同样无前缀 + beecount-cloud topic + 暗黑', () {
+    test('繁体中文同样无前缀 + piggycount-cloud topic + 暗黑', () {
       final url = WebsiteUrls.docsCloudSyncEmbed(
-        'beecount-cloud',
+        'piggycount-cloud',
         const Locale('zh', 'TW'),
         dark: true,
         primaryHex: '123456',
       );
       expect(
         url,
-        'https://count.beejz.com/docs/cloud-sync/beecount-cloud'
+        'https://count.beejz.com/docs/cloud-sync/piggycount-cloud'
         '?embed=1&theme=dark&primary=123456',
       );
     });

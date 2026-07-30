@@ -30,8 +30,8 @@
     <key>provisioningProfiles</key>
     <dict>
         <!-- 需要替换为实际的 Bundle ID 和 Provisioning Profile 名称 -->
-        <key>com.tntlikely.beecount</key>
-        <string>BeeCount_AppStore</string>
+        <key>com.wait.piggycount</key>
+        <string>PiggyCount_AppStore</string>
     </dict>
 </dict>
 </plist>

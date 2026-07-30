@@ -2675,7 +2675,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cloudS3BucketLabel => '存储桶名称';
 
   @override
-  String get cloudS3BucketHint => 'beecount-data';
+  String get cloudS3BucketHint => 'piggycount-data';
 
   @override
   String get cloudS3UseSSLLabel => '使用 HTTPS';
@@ -2690,7 +2690,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cloudSupabaseBucketLabel => 'Storage Bucket 名称';
 
   @override
-  String get cloudSupabaseBucketHint => '留空使用默认值 beecount-backups';
+  String get cloudSupabaseBucketHint => '留空使用默认值 piggycount-backups';
 
   @override
   String get authRememberAccount => '记住账号密码';
@@ -4153,7 +4153,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get widgetQuickEntryDesc =>
-      '点击小组件左侧区域可快速新建支出，点击右侧区域可快速新建收入。也可通过快捷指令使用 beecount://new?type=transfer 快速发起转账。';
+      '点击小组件左侧区域可快速新建支出，点击右侧区域可快速新建收入。也可通过快捷指令使用 piggycount://new?type=transfer 快速发起转账。';
 
   @override
   String get appName => '小猪记账';
@@ -5998,7 +5998,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get iosShortcutStep3 => '添加「打开 URL」操作';
 
   @override
-  String get iosShortcutStep4 => '粘贴上方复制的链接（如 beecount://voice）';
+  String get iosShortcutStep4 => '粘贴上方复制的链接（如 piggycount://voice）';
 
   @override
   String get iosShortcutStep5 => '保存后，可添加到桌面使用';
@@ -6010,7 +6010,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get androidShortcutStep2 => '选择「URL 快捷方式」';
 
   @override
-  String get androidShortcutStep3 => '粘贴上方复制的链接（如 beecount://voice）';
+  String get androidShortcutStep3 => '粘贴上方复制的链接（如 piggycount://voice）';
 
   @override
   String get androidShortcutStep4 => '设置图标和名称后添加到桌面';
@@ -10369,7 +10369,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get cloudS3BucketLabel => '儲存桶名稱';
 
   @override
-  String get cloudS3BucketHint => 'beecount-data';
+  String get cloudS3BucketHint => 'piggycount-data';
 
   @override
   String get cloudS3UseSSLLabel => '使用 HTTPS';
@@ -10384,7 +10384,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get cloudSupabaseBucketLabel => 'Storage Bucket 名稱';
 
   @override
-  String get cloudSupabaseBucketHint => '留空使用預設值 beecount-backups';
+  String get cloudSupabaseBucketHint => '留空使用預設值 piggycount-backups';
 
   @override
   String get authRememberAccount => '記住帳號密碼';
@@ -11847,7 +11847,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get widgetQuickEntryDesc =>
-      '點擊小組件左側區域可快速新建支出，點擊右側區域可快速新建收入。也可透過捷徑使用 beecount://new?type=transfer 快速發起轉帳。';
+      '點擊小組件左側區域可快速新建支出，點擊右側區域可快速新建收入。也可透過捷徑使用 piggycount://new?type=transfer 快速發起轉帳。';
 
   @override
   String get appName => '小豬記帳';
@@ -13692,7 +13692,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get iosShortcutStep3 => '加入「開啟 URL」動作';
 
   @override
-  String get iosShortcutStep4 => '貼上上方複製的連結（如 beecount://voice）';
+  String get iosShortcutStep4 => '貼上上方複製的連結（如 piggycount://voice）';
 
   @override
   String get iosShortcutStep5 => '儲存後，可加入桌面使用';
@@ -13704,7 +13704,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get androidShortcutStep2 => '選擇「URL 捷徑」';
 
   @override
-  String get androidShortcutStep3 => '貼上上方複製的連結（如 beecount://voice）';
+  String get androidShortcutStep3 => '貼上上方複製的連結（如 piggycount://voice）';
 
   @override
   String get androidShortcutStep4 => '設定圖示和名稱後加入桌面';

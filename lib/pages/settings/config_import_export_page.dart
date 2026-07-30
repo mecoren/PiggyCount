@@ -89,7 +89,7 @@ class _ConfigImportExportPageState
 
       // Step 4: 执行导出
       final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
-      final fileName = 'beecount_config_$timestamp.yml';
+      final fileName = 'piggycount_config_$timestamp.yml';
 
       if (Platform.isAndroid) {
         // Android: 直接保存到 Download/PiggyCount 目录

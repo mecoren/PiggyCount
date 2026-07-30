@@ -32,7 +32,7 @@ final sharedResourceRefreshProvider = StateProvider<int>((ref) => 0);
 final ledgerMembersProvider = FutureProvider.autoDispose
     .family<List<PiggyCountCloudLedgerMember>, String>((ref, ledgerId) async {
   ref.watch(sharedResourceRefreshProvider);
-  final cloud = await ref.watch(beecountCloudProviderInstance.future);
+  final cloud = await ref.watch(piggycountCloudProviderInstance.future);
   if (cloud == null) return const [];
   return cloud.listMembers(ledgerId: ledgerId);
 });
@@ -65,7 +65,7 @@ class MemberStatsKey {
 final memberStatsProvider = FutureProvider.autoDispose
     .family<PiggyCountCloudMemberStats?, MemberStatsKey>((ref, key) async {
   ref.watch(sharedResourceRefreshProvider);
-  final cloud = await ref.watch(beecountCloudProviderInstance.future);
+  final cloud = await ref.watch(piggycountCloudProviderInstance.future);
   if (cloud == null) return null;
   return cloud.fetchMemberStats(
     ledgerId: key.ledgerId,
@@ -77,7 +77,7 @@ final memberStatsProvider = FutureProvider.autoDispose
 /// 列出某账本"当前 active"邀请(仅 owner)。
 final ledgerInvitesProvider = FutureProvider.autoDispose
     .family<List<PiggyCountCloudInvite>, String>((ref, ledgerId) async {
-  final cloud = await ref.watch(beecountCloudProviderInstance.future);
+  final cloud = await ref.watch(piggycountCloudProviderInstance.future);
   if (cloud == null) return const [];
   try {
     return await cloud.listInvites(ledgerId: ledgerId);
@@ -94,7 +94,7 @@ Future<PiggyCountCloudInvite> createInviteAndRefresh(
   required String role,
   required int expiresInHours,
 }) async {
-  final cloud = await ref.read(beecountCloudProviderInstance.future);
+  final cloud = await ref.read(piggycountCloudProviderInstance.future);
   if (cloud == null) {
     throw StateError('PiggyCount Cloud not configured');
   }
@@ -113,7 +113,7 @@ Future<void> revokeInviteAndRefresh(
   required String ledgerId,
   required String code,
 }) async {
-  final cloud = await ref.read(beecountCloudProviderInstance.future);
+  final cloud = await ref.read(piggycountCloudProviderInstance.future);
   if (cloud == null) return;
   await cloud.revokeInvite(ledgerId: ledgerId, code: code);
   ref.invalidate(ledgerInvitesProvider(ledgerId));
@@ -124,7 +124,7 @@ Future<PiggyCountCloudInviteAcceptResult> acceptInvite(
   WidgetRef ref, {
   required String code,
 }) async {
-  final cloud = await ref.read(beecountCloudProviderInstance.future);
+  final cloud = await ref.read(piggycountCloudProviderInstance.future);
   if (cloud == null) {
     throw StateError('PiggyCount Cloud not configured');
   }
@@ -139,7 +139,7 @@ Future<PiggyCountCloudInvitePreview> previewInvite(
   WidgetRef ref, {
   required String code,
 }) async {
-  final cloud = await ref.read(beecountCloudProviderInstance.future);
+  final cloud = await ref.read(piggycountCloudProviderInstance.future);
   if (cloud == null) {
     throw StateError('PiggyCount Cloud not configured');
   }
@@ -152,7 +152,7 @@ Future<void> removeMemberAndRefresh(
   required String ledgerId,
   required String userId,
 }) async {
-  final cloud = await ref.read(beecountCloudProviderInstance.future);
+  final cloud = await ref.read(piggycountCloudProviderInstance.future);
   if (cloud == null) return;
   await cloud.removeMember(ledgerId: ledgerId, userId: userId);
   ref.invalidate(ledgerMembersProvider(ledgerId));

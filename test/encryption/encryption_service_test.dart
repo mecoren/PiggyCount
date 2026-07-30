@@ -638,36 +638,36 @@ class InMemorySecureKeyStorage implements SecureKeyStorage {
 
   @override
   Future<void> saveKey(List<int> key) async {
-    _store['beecount_enc_key'] = base64.encode(key);
+    _store['piggycount_enc_key'] = base64.encode(key);
   }
 
   @override
   Future<List<int>?> getKey() async {
-    final value = _store['beecount_enc_key'];
+    final value = _store['piggycount_enc_key'];
     if (value == null) return null;
     return base64.decode(value);
   }
 
   @override
   Future<void> saveVerifier(List<int> verifier) async {
-    _store['beecount_enc_verifier'] = base64.encode(verifier);
+    _store['piggycount_enc_verifier'] = base64.encode(verifier);
   }
 
   @override
   Future<List<int>?> getVerifier() async {
-    final value = _store['beecount_enc_verifier'];
+    final value = _store['piggycount_enc_verifier'];
     if (value == null) return null;
     return base64.decode(value);
   }
 
   @override
   Future<void> saveSalt(List<int> salt) async {
-    _store['beecount_enc_salt'] = base64.encode(salt);
+    _store['piggycount_enc_salt'] = base64.encode(salt);
   }
 
   @override
   Future<List<int>?> getSalt() async {
-    final value = _store['beecount_enc_salt'];
+    final value = _store['piggycount_enc_salt'];
     if (value == null) return null;
     return base64.decode(value);
   }

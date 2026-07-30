@@ -21,7 +21,7 @@ import '../../domain/encryption/encryption_service.dart';
 /// - changePassword: 验证旧密码 → 生成新 salt + key → 更新 verifier → 持久化
 /// - activateKey: 内存中切换 key（用于改密流程中重加密云端密文）
 class EncryptionServiceImpl implements EncryptionService {
-  static const String _enabledKey = 'beecount_enc_enabled';
+  static const String _enabledKey = 'piggycount_enc_enabled';
   static const String _verifierPlaintext = 'BEECOUNT_VERIFIER_v1';
   static const int _minPasswordLength = 6;
 

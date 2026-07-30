@@ -123,7 +123,7 @@ final supabaseConfigProvider = FutureProvider<CloudServiceConfig?>((ref) async {
 });
 
 // PiggyCount Cloud 配置(不管是否激活)
-final beecountCloudConfigProvider =
+final piggycountCloudConfigProvider =
     FutureProvider<CloudServiceConfig?>((ref) async {
   final store = ref.watch(cloudServiceStoreProvider);
   return store.loadPiggyCountCloud();
@@ -177,8 +177,8 @@ final syncServiceProvider = Provider<SyncService>((ref) {
   }
 
   // PiggyCount Cloud → SyncEngine（增量同步）
-  if (config.type == CloudBackendType.beecountCloud) {
-    final providerAsync = ref.watch(beecountCloudProviderInstance);
+  if (config.type == CloudBackendType.piggycountCloud) {
+    final providerAsync = ref.watch(piggycountCloudProviderInstance);
     if (!providerAsync.hasValue || providerAsync.value == null) {
       // Provider 尚未初始化，返回 LocalOnly 等待
       return LocalOnlySyncService();
@@ -303,7 +303,7 @@ final syncServiceProvider = Provider<SyncService>((ref) {
     AIProviderManager.onConfigChanged = () {
       unawaited(() async {
         try {
-          final cloud = await ref.read(beecountCloudProviderInstance.future);
+          final cloud = await ref.read(piggycountCloudProviderInstance.future);
           if (cloud == null) return;
           final snapshot = await AIProviderManager.snapshotForSync();
           await cloud.updateMyProfileAiConfig(aiConfig: snapshot);
@@ -374,7 +374,7 @@ final syncServiceProvider = Provider<SyncService>((ref) {
       // 不只是头像,会引发头像组件无谓重渲)。
       await engine.syncMyProfile();
       await reconcileProfileToServer(
-        cloudProviderFuture: ref.read(beecountCloudProviderInstance.future),
+        cloudProviderFuture: ref.read(piggycountCloudProviderInstance.future),
         currentThemeColor: ref.read(primaryColorProvider),
         currentIncomeIsRed: ref.read(incomeExpenseColorSchemeProvider),
         currentHeaderStyle: ref.read(headerDecorationStyleProvider),
@@ -494,13 +494,13 @@ final syncServiceProvider = Provider<SyncService>((ref) {
 
 /// 已初始化的 PiggyCountCloudProvider 实例
 /// 用于 SyncEngine 和其他需要直接访问 PiggyCount Cloud API 的场景
-final beecountCloudProviderInstance =
+final piggycountCloudProviderInstance =
     FutureProvider<PiggyCountCloudProvider?>((ref) async {
   final configAsync = ref.watch(activeCloudConfigProvider);
   if (!configAsync.hasValue) return null;
 
   final config = configAsync.value!;
-  if (!config.valid || config.type != CloudBackendType.beecountCloud) {
+  if (!config.valid || config.type != CloudBackendType.piggycountCloud) {
     return null;
   }
 
@@ -509,8 +509,8 @@ final beecountCloudProviderInstance =
     if (services.provider is! PiggyCountCloudProvider) return null;
     final provider = services.provider as PiggyCountCloudProvider;
 
-    final email = config.beecountCloudEmail;
-    final password = config.beecountCloudPassword;
+    final email = config.piggycountCloudEmail;
+    final password = config.piggycountCloudPassword;
 
     // 把邮密交给 auth service,让它在任何时刻发现 session 失效都能自动重登。
     // 这是解决"token 过期后必须到配置页点一下才能恢复"的关键:auth service
@@ -553,13 +553,13 @@ final beecountCloudProviderInstance =
 /// 不需要重登/手动到云配置页点确认,下一次同步触发后版本号就更新了。
 ///
 /// /version 是个轻量 endpoint,跟着每次 sync 多发一次 HTTP 请求开销可忽略。
-final beecountCloudServerVersionProvider =
+final piggycountCloudServerVersionProvider =
     FutureProvider<String?>((ref) async {
   // server 升级后用户在 app 内做任何会触发同步的操作(加交易 / 切账本 / 进
   // Mine 页面 bump refresh 等)都能让版本号刷新。
   ref.watch(syncStatusRefreshProvider);
 
-  final cloud = await ref.watch(beecountCloudProviderInstance.future);
+  final cloud = await ref.watch(piggycountCloudProviderInstance.future);
   if (cloud == null) return null;
   try {
     final v = await cloud.fetchServerVersion();
@@ -870,7 +870,7 @@ final cloudMyProfileProvider =
     FutureProvider<PiggyCountCloudProfile?>((ref) async {
   ref.watch(syncStatusRefreshProvider);
   final config = await ref.watch(activeCloudConfigProvider.future);
-  if (!config.valid || config.type != CloudBackendType.beecountCloud) {
+  if (!config.valid || config.type != CloudBackendType.piggycountCloud) {
     return null;
   }
   // TODO(cloud-v2): 在 Phase 2 通过 SyncEngine 获取用户资料
@@ -944,11 +944,11 @@ final remoteLedgersProvider =
   final activeAsync = ref.watch(activeCloudConfigProvider);
   if (!activeAsync.hasValue) return const [];
   final config = activeAsync.value!;
-  if (!config.valid || config.type != CloudBackendType.beecountCloud) {
+  if (!config.valid || config.type != CloudBackendType.piggycountCloud) {
     return const [];
   }
 
-  final providerAsync = ref.watch(beecountCloudProviderInstance);
+  final providerAsync = ref.watch(piggycountCloudProviderInstance);
   if (!providerAsync.hasValue || providerAsync.value == null) {
     return const [];
   }

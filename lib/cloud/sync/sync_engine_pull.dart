@@ -78,7 +78,7 @@ class AppCursorStore {
     final apiPrefix = _provider.apiPrefix ?? 'unknown';
     final raw = '$baseUrl|$apiPrefix|$userId|$deviceId';
     final digest = sha1.convert(utf8.encode(raw)).toString();
-    return 'beecount_cloud_pull_cursor_$digest';
+    return 'piggycount_cloud_pull_cursor_$digest';
   }
 }
 

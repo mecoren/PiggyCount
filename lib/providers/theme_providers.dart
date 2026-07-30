@@ -91,7 +91,7 @@ final primaryColorInitProvider = FutureProvider<void>((ref) async {
     unawaited(() async {
       try {
         final cloudProvider =
-            await ref.read(beecountCloudProviderInstance.future);
+            await ref.read(piggycountCloudProviderInstance.future);
         if (cloudProvider == null) return;
         final hex = _colorToHex(next);
         await cloudProvider.updateMyProfileThemeColor(hex: hex);
@@ -338,7 +338,7 @@ void _pushAppearanceToCloud(Ref ref) {
   unawaited(() async {
     try {
       final cloudProvider =
-          await ref.read(beecountCloudProviderInstance.future);
+          await ref.read(piggycountCloudProviderInstance.future);
       if (cloudProvider == null) return;
       final appearance = <String, dynamic>{
         'header_decoration_style': ref.read(headerDecorationStyleProvider),
@@ -400,7 +400,7 @@ final incomeExpenseColorSchemeInitProvider = FutureProvider<void>((ref) async {
     unawaited(() async {
       try {
         final cloudProvider =
-            await ref.read(beecountCloudProviderInstance.future);
+            await ref.read(piggycountCloudProviderInstance.future);
         if (cloudProvider == null) return;
         await cloudProvider.updateMyProfileIncomeColorScheme(
           incomeIsRed: next,
@@ -443,7 +443,7 @@ void _pushDisplayNameToCloud(Ref ref, String name) {
   unawaited(() async {
     try {
       final cloudProvider =
-          await ref.read(beecountCloudProviderInstance.future);
+          await ref.read(piggycountCloudProviderInstance.future);
       if (cloudProvider == null) return;
       await cloudProvider.updateMyProfileDisplayName(displayName: trimmed);
       logger.info('theme_providers', 'display name pushed to server: $trimmed');

@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/shared_ledger_providers.dart';
-import '../../providers/sync_providers.dart' show beecountCloudProviderInstance;
+import '../../providers/sync_providers.dart' show piggycountCloudProviderInstance;
 import '../../styles/tokens.dart';
 import '../../widgets/biz/biz.dart';
 import '../../widgets/ui/wait_sliding_segmented_control.dart';
@@ -283,7 +283,7 @@ class _StatsAvatar extends ConsumerWidget {
     if (relativeUrl == null || relativeUrl.isEmpty) {
       return CircleAvatar(child: Text(letter));
     }
-    final cloudAsync = ref.watch(beecountCloudProviderInstance);
+    final cloudAsync = ref.watch(piggycountCloudProviderInstance);
     final cloud = cloudAsync.valueOrNull;
     final base = cloud?.baseUrl;
     if (base == null || base.isEmpty) {

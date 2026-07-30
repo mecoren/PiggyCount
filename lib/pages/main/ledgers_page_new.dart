@@ -187,7 +187,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
      // S3 / Supabase 等)就算扫码也走不通,按钮藏起来避免误导。
     final cloudConfigAsync = ref.watch(activeCloudConfigProvider);
     final isPiggyCountCloud =
-        cloudConfigAsync.valueOrNull?.type == CloudBackendType.beecountCloud;
+        cloudConfigAsync.valueOrNull?.type == CloudBackendType.piggycountCloud;
 
     return ListView(
       padding: EdgeInsets.symmetric(
@@ -443,7 +443,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     // (local / WebDAV / S3 / Supabase 等)直接隐藏这些入口。
     final cloudConfig = ref.read(activeCloudConfigProvider).valueOrNull;
     final isPiggyCountCloud =
-        cloudConfig?.type == CloudBackendType.beecountCloud;
+        cloudConfig?.type == CloudBackendType.piggycountCloud;
     final action = await showDialog<String>(
       context: context,
       builder: (dctx) {

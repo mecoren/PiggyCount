@@ -92,7 +92,7 @@ class UpdateService {
       final uri = Uri.parse(downloadUrl);
       final originalFileName = uri.pathSegments.last;
       String? version;
-      final versionMatch = RegExp(r'beecount-([0-9]+\.[0-9]+\.[0-9]+)\.apk')
+      final versionMatch = RegExp(r'piggycount-([0-9]+\.[0-9]+\.[0-9]+)\.apk')
           .firstMatch(originalFileName);
       if (versionMatch != null) {
         version = versionMatch.group(1);

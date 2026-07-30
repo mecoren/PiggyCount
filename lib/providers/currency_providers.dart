@@ -56,7 +56,7 @@ void _pushBaseCurrencyToCloud(Ref ref, String code) {
   unawaited(() async {
     try {
       final cloudProvider =
-          await ref.read(beecountCloudProviderInstance.future);
+          await ref.read(piggycountCloudProviderInstance.future);
       if (cloudProvider == null) return;
       await cloudProvider.updateMyProfileBaseCurrency(
           primaryCurrency: normalized);
@@ -326,7 +326,7 @@ Future<bool> _fetchAndStoreRatesForBase({
     Map<String, String> baseToQuote;
     Map<String, dynamic>? serverBody;
     try {
-      final cloudProvider = await readFuture(beecountCloudProviderInstance);
+      final cloudProvider = await readFuture(piggycountCloudProviderInstance);
       serverBody = cloudProvider == null
           ? null
           : await cloudProvider.fetchExchangeRates(base: base);

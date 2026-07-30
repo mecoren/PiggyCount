@@ -96,7 +96,7 @@ class _JoinSharedLedgerPageState extends ConsumerState<JoinSharedLedgerPage> {
       // 不阻塞"加入成功"体验,下次启动会自动 sync。
       try {
         final cloud =
-            await ref.read(beecountCloudProviderInstance.future);
+            await ref.read(piggycountCloudProviderInstance.future);
         if (cloud != null) {
           final engine = ref.read(cloud_sync.syncEngineProvider(cloud));
           await engine.onInviteAccepted(preview.ledgerExternalId);

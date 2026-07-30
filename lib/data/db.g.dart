@@ -6674,7 +6674,7 @@ class $SyncStateTable extends SyncState
       'provider_type', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: false,
-      defaultValue: const Constant('beecount_cloud'));
+      defaultValue: const Constant('piggycount_cloud'));
   static const VerificationMeta _serverCursorMeta =
       const VerificationMeta('serverCursor');
   @override
@@ -12628,7 +12628,8 @@ class $$ConversationsTableTableManager extends RootTableManager<
     ),
     Conversation,
     PrefetchHooks Function()> {
-  $$ConversationsTableTableManager(_$PiggyDatabase db, $ConversationsTable table)
+  $$ConversationsTableTableManager(
+      _$PiggyDatabase db, $ConversationsTable table)
       : super(TableManagerState(
           db: db,
           table: table,
@@ -12939,7 +12940,8 @@ class $$TagsTableFilterComposer extends Composer<_$PiggyDatabase, $TagsTable> {
       column: $table.syncId, builder: (column) => ColumnFilters(column));
 }
 
-class $$TagsTableOrderingComposer extends Composer<_$PiggyDatabase, $TagsTable> {
+class $$TagsTableOrderingComposer
+    extends Composer<_$PiggyDatabase, $TagsTable> {
   $$TagsTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -14274,7 +14276,8 @@ class $$LedgerMembersTableTableManager extends RootTableManager<
     ),
     LedgerMember,
     PrefetchHooks Function()> {
-  $$LedgerMembersTableTableManager(_$PiggyDatabase db, $LedgerMembersTable table)
+  $$LedgerMembersTableTableManager(
+      _$PiggyDatabase db, $LedgerMembersTable table)
       : super(TableManagerState(
           db: db,
           table: table,
@@ -15749,7 +15752,8 @@ class $$ExchangeRatesTableTableManager extends RootTableManager<
     ),
     ExchangeRate,
     PrefetchHooks Function()> {
-  $$ExchangeRatesTableTableManager(_$PiggyDatabase db, $ExchangeRatesTable table)
+  $$ExchangeRatesTableTableManager(
+      _$PiggyDatabase db, $ExchangeRatesTable table)
       : super(TableManagerState(
           db: db,
           table: table,

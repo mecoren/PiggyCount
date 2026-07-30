@@ -54,7 +54,7 @@ void main() {
       repositoryProvider.overrideWithValue(repo),
       exchangeRateServiceProvider.overrideWithValue(fake),
       usedCurrenciesProvider.overrideWith((ref) => Future.value({'CNY'})),
-      // beecountCloudProviderInstance 走真实 provider 链会因未配置返回 null →
+      // piggycountCloudProviderInstance 走真实 provider 链会因未配置返回 null →
       // 下滑到 exchangeRateServiceProvider(fake),正好覆盖公网链路径。
     ]);
     addTearDown(container.dispose);

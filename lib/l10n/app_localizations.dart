@@ -5047,7 +5047,7 @@ abstract class AppLocalizations {
   /// No description provided for @cloudS3BucketHint.
   ///
   /// In en, this message translates to:
-  /// **'beecount-data'**
+  /// **'piggycount-data'**
   String get cloudS3BucketHint;
 
   /// No description provided for @cloudS3UseSSLLabel.
@@ -5077,7 +5077,7 @@ abstract class AppLocalizations {
   /// No description provided for @cloudSupabaseBucketHint.
   ///
   /// In en, this message translates to:
-  /// **'Leave blank for default: beecount-backups'**
+  /// **'Leave blank for default: piggycount-backups'**
   String get cloudSupabaseBucketHint;
 
   /// No description provided for @authRememberAccount.
@@ -7862,7 +7862,7 @@ abstract class AppLocalizations {
   /// No description provided for @widgetQuickEntryDesc.
   ///
   /// In en, this message translates to:
-  /// **'Tap the left side of the widget to quickly add an expense, or tap the right side to add an income. You can also use beecount://new?type=transfer via Shortcuts to quickly start a transfer.'**
+  /// **'Tap the left side of the widget to quickly add an expense, or tap the right side to add an income. You can also use piggycount://new?type=transfer via Shortcuts to quickly start a transfer.'**
   String get widgetQuickEntryDesc;
 
   /// No description provided for @appName.
@@ -11320,7 +11320,7 @@ abstract class AppLocalizations {
   /// No description provided for @iosShortcutStep4.
   ///
   /// In en, this message translates to:
-  /// **'Paste the copied URL (e.g., beecount://voice)'**
+  /// **'Paste the copied URL (e.g., piggycount://voice)'**
   String get iosShortcutStep4;
 
   /// No description provided for @iosShortcutStep5.
@@ -11344,7 +11344,7 @@ abstract class AppLocalizations {
   /// No description provided for @androidShortcutStep3.
   ///
   /// In en, this message translates to:
-  /// **'Paste the copied URL (e.g., beecount://voice)'**
+  /// **'Paste the copied URL (e.g., piggycount://voice)'**
   String get androidShortcutStep3;
 
   /// No description provided for @androidShortcutStep4.

@@ -38,7 +38,7 @@ enum AppLinkAction {
   newTransaction,
 
   /// 打开指定页面（净资产/预算/最近交易明细），配合小组件点击深链使用：
-  /// `beecount://open?page=assets|budget|detail`
+  /// `piggycount://open?page=assets|budget|detail`
   open,
 
   /// 未知
@@ -63,7 +63,7 @@ class AddTransactionParams {
   final bool silent;
 
   /// 快速记账预填的分类 id（仅 [AppLinkAction.newTransaction] 使用，来自
-  /// `beecount://new?type=...&category=<id>` 中的 int id）。
+  /// `piggycount://new?type=...&category=<id>` 中的 int id）。
   ///
   /// 与上面的 [category] 字段语义不同——那个是 [AppLinkAction.add] 自动记账
   /// 场景下按分类**名称**匹配用的字符串，这里是小组件「快速记账」点击某个
@@ -149,21 +149,21 @@ class AppLinkResult {
 
 /// AppLink 服务
 ///
-/// 处理所有 beecount:// 开头的链接
+/// 处理所有 piggycount:// 开头的链接
 ///
 /// 支持的链接格式:
-/// - beecount://voice - 语音记账
-/// - beecount://image - 图片记账（从相册）
-/// - beecount://camera - 拍照记账
-/// - beecount://ai-chat - AI 小助手
-/// - beecount://new?type=expense - 手动记账（支出/收入）
-/// - beecount://new?type=expense&category=12 - 手动记账并预填分类（小组件
+/// - piggycount://voice - 语音记账
+/// - piggycount://image - 图片记账（从相册）
+/// - piggycount://camera - 拍照记账
+/// - piggycount://ai-chat - AI 小助手
+/// - piggycount://new?type=expense - 手动记账（支出/收入）
+/// - piggycount://new?type=expense&category=12 - 手动记账并预填分类（小组件
 ///   「快速记账」点分类格用，category 为分类 id）
-/// - beecount://add?amount=100&type=expense&category=餐饮 - 自动记账
-/// - beecount://open?page=assets|budget|detail - 打开指定页面（小组件点击
+/// - piggycount://add?amount=100&type=expense&category=餐饮 - 自动记账
+/// - piggycount://open?page=assets|budget|detail - 打开指定页面（小组件点击
 ///   净资产/预算/最近交易卡片用）
-/// - beecount://auto-billing?text=... - 文本自动记账（兼容旧版）
-/// - beecount://quick-billing - 快速记账（兼容旧版）
+/// - piggycount://auto-billing?text=... - 文本自动记账（兼容旧版）
+/// - piggycount://quick-billing - 快速记账（兼容旧版）
 ///
 /// 同时监听 iOS AppIntents EventChannel 处理快捷指令传入的图片
 class AppLinkService {
@@ -579,7 +579,7 @@ class AppLinkService {
 
 /// 生成 AppLink URL
 class AppLinkBuilder {
-  static const String scheme = 'beecount';
+  static const String scheme = 'piggycount';
 
   /// 语音记账链接
   static String voice() => '$scheme://voice';

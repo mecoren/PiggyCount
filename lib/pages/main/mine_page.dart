@@ -77,7 +77,7 @@ class MinePage extends ConsumerWidget {
                 // 一眼看到 cloud 哪版。其它模式没版本概念,保留原文案。
                 Consumer(builder: (ctx, r, _) {
                   final cloudVersion =
-                      r.watch(beecountCloudServerVersionProvider).valueOrNull;
+                      r.watch(piggycountCloudServerVersionProvider).valueOrNull;
                   return SettingsNavItem(
                     icon: Icons.cloud_queue_outlined,
                     title: AppLocalizations.of(sectionContext).mineCloudService,
@@ -101,7 +101,7 @@ class MinePage extends ConsumerWidget {
                                 .mineCloudServiceCustom;
                           case CloudBackendType.s3:
                             return 'S3';
-                          case CloudBackendType.beecountCloud:
+                          case CloudBackendType.piggycountCloud:
                             return cloudVersion != null && cloudVersion.isNotEmpty
                                 ? 'PiggyCount Cloud v$cloudVersion'
                                 : 'PiggyCount Cloud';
@@ -254,7 +254,7 @@ class MinePage extends ConsumerWidget {
                                   .valueOrNull;
                               final isPiggyCount = cfg != null &&
                                   cfg.type ==
-                                      CloudBackendType.beecountCloud;
+                                      CloudBackendType.piggycountCloud;
                               await Navigator.of(sectionContext).push(
                                 MaterialPageRoute(
                                     builder: (_) => isPiggyCount

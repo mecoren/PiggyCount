@@ -201,7 +201,7 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
 
       // 生成文件名
       final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
-      final fileName = 'beecount_categories_$timestamp.zip';
+      final fileName = 'piggycount_categories_$timestamp.zip';
 
       String outputPath;
       if (Platform.isAndroid) {

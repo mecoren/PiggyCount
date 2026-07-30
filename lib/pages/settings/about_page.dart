@@ -178,7 +178,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                     svgAsset: 'assets/icons/social/telegram.svg',
                     label: l10n.aboutTelegram,
                     onTap: () =>
-                        _tryOpenUrl(Uri.parse('https://t.me/beecount')),
+                        _tryOpenUrl(Uri.parse('https://t.me/piggycount')),
                   ),
                 _socialButton(
                   context,

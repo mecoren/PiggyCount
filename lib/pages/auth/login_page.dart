@@ -42,12 +42,12 @@ class _AuthPageState extends ConsumerState<AuthPage> {
       if (cloudConfig.type == CloudBackendType.supabase) {
         savedEmail = cloudConfig.supabaseEmail;
         savedPassword = cloudConfig.supabasePassword;
-      } else if (cloudConfig.type == CloudBackendType.beecountCloud) {
+      } else if (cloudConfig.type == CloudBackendType.piggycountCloud) {
         // PiggyCount Cloud：跟 Supabase 一样，勾选"记住账号"时同时存邮箱+密码，
-        // 作为 token 失效时的兜底登录途径（见 beecountCloudProviderInstance
+        // 作为 token 失效时的兜底登录途径（见 piggycountCloudProviderInstance
         // 里的 fallback signInWithEmail）。
-        savedEmail = cloudConfig.beecountCloudEmail;
-        savedPassword = cloudConfig.beecountCloudPassword;
+        savedEmail = cloudConfig.piggycountCloudEmail;
+        savedPassword = cloudConfig.piggycountCloudPassword;
       } else {
         return;
       }
@@ -78,7 +78,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
           name: cloudConfig.name,
           supabaseUrl: cloudConfig.supabaseUrl,
           supabaseAnonKey: cloudConfig.supabaseAnonKey,
-          supabaseBucket: cloudConfig.supabaseBucket ?? 'beecount-backups',
+          supabaseBucket: cloudConfig.supabaseBucket ?? 'piggycount-backups',
           supabaseEmail: _rememberAccount ? email : null,
           supabasePassword: _rememberAccount ? password : null,
         );
@@ -89,20 +89,20 @@ class _AuthPageState extends ConsumerState<AuthPage> {
         return;
       }
 
-      if (cloudConfig.type == CloudBackendType.beecountCloud) {
+      if (cloudConfig.type == CloudBackendType.piggycountCloud) {
         // PiggyCount Cloud：勾选"记住账号"时存邮箱+密码 —— token 机制平时够用，
         // 但 token 失效 / 老版本升级 / 本地 SharedPreferences 被清等场景都靠
         // 这份密码做兜底自动登录。
         final updatedConfig = CloudServiceConfig(
           type: cloudConfig.type,
           name: cloudConfig.name,
-          beecountCloudBaseUrl: cloudConfig.beecountCloudBaseUrl,
-          beecountCloudApiPrefix: cloudConfig.beecountCloudApiPrefix,
-          beecountCloudEmail: _rememberAccount ? email : null,
-          beecountCloudPassword: _rememberAccount ? password : null,
+          piggycountCloudBaseUrl: cloudConfig.piggycountCloudBaseUrl,
+          piggycountCloudApiPrefix: cloudConfig.piggycountCloudApiPrefix,
+          piggycountCloudEmail: _rememberAccount ? email : null,
+          piggycountCloudPassword: _rememberAccount ? password : null,
         );
         await store.saveOnly(updatedConfig);
-        ref.invalidate(beecountCloudConfigProvider);
+        ref.invalidate(piggycountCloudConfigProvider);
         ref.invalidate(activeCloudConfigProvider);
         logger.info('auth',
             'PiggyCount Cloud 账号密码保存状态：${_rememberAccount ? "已保存" : "已清除"}');
@@ -175,8 +175,8 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     switch (type) {
       case CloudBackendType.supabase:
         return 'supabase';
-      case CloudBackendType.beecountCloud:
-        return 'beecount-cloud';
+      case CloudBackendType.piggycountCloud:
+        return 'piggycount-cloud';
       default:
         return 'overview';
     }

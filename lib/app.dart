@@ -242,19 +242,19 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
   /// 后台刷新账本同步状态 / 触发首次同步
   ///
   /// 坑点：syncServiceProvider 只在 cloud_sync_page 里被 watch。重启 app 后
-  /// 这里是一次 ref.read，等 beecountCloudProviderInstance 异步就绪再重建时没有
+  /// 这里是一次 ref.read，等 piggycountCloudProviderInstance 异步就绪再重建时没有
   /// 监听者，provider 内部的 auto-sync 块永远跑不到 —— 用户看到"app 启动没同步本地
   /// 数据到 PiggyCount Cloud"。这里 listenManual 保持 provider 活跃，并在它从占位
   /// 对象变成真正的 SyncEngine 时主动触发一次 sync。
   void _refreshLedgersStatusInBackground() {
-    // 冷启动时先 eager-await beecountCloudProviderInstance 一次，强制让这个
+    // 冷启动时先 eager-await piggycountCloudProviderInstance 一次，强制让这个
     // FutureProvider 真正跑起来。否则只是"被定义"但没人读，
     // PiggyCountCloudAuthService.initialize() 永远不会跑，session 不会从
     // SharedPreferences 恢复 —— 就是之前用户感受到的"必须打开配置保存才会
     // 登录"bug 的根因。后面的 listenManual 再做后续响应式逻辑。
     Future.microtask(() async {
       try {
-        await ref.read(sp.beecountCloudProviderInstance.future);
+        await ref.read(sp.piggycountCloudProviderInstance.future);
       } catch (_) {
         // 非 PiggyCount Cloud 配置或初始化失败：忽略，让下面的 listenManual 兜住。
       }
@@ -643,7 +643,7 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
     }
   }
 
-  /// 小组件「净资产 / 预算 / 最近交易」卡片点击 → `beecount://open?page=` 的
+  /// 小组件「净资产 / 预算 / 最近交易」卡片点击 → `piggycount://open?page=` 的
   /// 落地页路由。detail(最近交易)先落统计页,后续可按需换成专门的明细列表页。
   void _openPageForDeepLink(NavigatorState nav, String? page) {
     switch (page) {

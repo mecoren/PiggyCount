@@ -905,7 +905,7 @@ class WidgetManager {
     // Handle widget tap events
     // Could be used to navigate to specific pages
     // 图片方案下点击目前靠深链跳转(services/platform/app_link_service.dart),
-    // 真正的交互入口是各原生壳拼的 beecount:// 深链,不经过这里。这个回调
+    // 真正的交互入口是各原生壳拼的 piggycount:// 深链,不经过这里。这个回调
     // 只是 `home_widget` 交互式组件 API 的注册要求,当前阶段先落一条日志
     // 占位,预留给未来"组件内即时记账"(不在本阶段范围,见 D8/P5)。
     //

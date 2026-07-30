@@ -169,7 +169,7 @@ class AttachmentExportImportService {
       // 保存到临时目录
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final exportDir = await _getExportDirectory();
-      final exportPath = '${exportDir.path}/beecount_attachments_$timestamp.tar.gz';
+      final exportPath = '${exportDir.path}/piggycount_attachments_$timestamp.tar.gz';
 
       final exportFile = File(exportPath);
       await exportFile.writeAsBytes(gzData);

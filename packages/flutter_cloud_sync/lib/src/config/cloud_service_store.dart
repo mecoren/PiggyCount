@@ -5,8 +5,8 @@ import 'cloud_service_config.dart';
 /// 支持类型: 本地存储、PiggyCount Cloud、自定义 Supabase、自定义 WebDAV、iCloud、S3
 class CloudServiceStore {
   static const _kActiveType =
-      'cloud_active_type'; // local | beecount_cloud | supabase | webdav | icloud | s3
-  static const _kPiggyCountCloudCfg = 'cloud_beecount_cloud_cfg';
+      'cloud_active_type'; // local | piggycount_cloud | supabase | webdav | icloud | s3
+  static const _kPiggyCountCloudCfg = 'cloud_piggycount_cloud_cfg';
   static const _kSupabaseCfg = 'cloud_supabase_cfg';
   static const _kWebdavCfg = 'cloud_webdav_cfg';
   static const _kS3Cfg = 'cloud_s3_cfg';
@@ -20,7 +20,7 @@ class CloudServiceStore {
       case 'local':
         return CloudServiceConfig.localStorage();
 
-      case 'beecount_cloud':
+      case 'piggycount_cloud':
         final raw = sp.getString(_kPiggyCountCloudCfg);
         if (raw != null) {
           try {
@@ -137,9 +137,9 @@ class CloudServiceStore {
         // Provider 会在下次使用时自动初始化
         break;
 
-      case CloudBackendType.beecountCloud:
+      case CloudBackendType.piggycountCloud:
         await sp.setString(_kPiggyCountCloudCfg, encodeCloudConfig(cfg));
-        await sp.setString(_kActiveType, 'beecount_cloud');
+        await sp.setString(_kActiveType, 'piggycount_cloud');
         break;
 
       case CloudBackendType.supabase:
@@ -176,7 +176,7 @@ class CloudServiceStore {
         // 本地存储无需保存
         break;
 
-      case CloudBackendType.beecountCloud:
+      case CloudBackendType.piggycountCloud:
         await sp.setString(_kPiggyCountCloudCfg, encodeCloudConfig(cfg));
         break;
 
@@ -207,13 +207,13 @@ class CloudServiceStore {
         await sp.setString(_kActiveType, 'local');
         return true;
 
-      case CloudBackendType.beecountCloud:
+      case CloudBackendType.piggycountCloud:
         final raw = sp.getString(_kPiggyCountCloudCfg);
         if (raw == null) return false;
         try {
           final cfg = decodeCloudConfig(raw);
           if (!cfg.valid) return false;
-          await sp.setString(_kActiveType, 'beecount_cloud');
+          await sp.setString(_kActiveType, 'piggycount_cloud');
           return true;
         } catch (e) {
           return false;

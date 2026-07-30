@@ -113,10 +113,10 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                 final isLocalMode = cloudConfig.hasValue &&
                     cloudConfig.value!.type == CloudBackendType.local;
                 final isPiggyCountCloud = cloudConfig.hasValue &&
-                    cloudConfig.value!.type == CloudBackendType.beecountCloud;
+                    cloudConfig.value!.type == CloudBackendType.piggycountCloud;
                 final needsLogin = cloudConfig.hasValue &&
                     (cloudConfig.value!.type == CloudBackendType.supabase ||
-                     cloudConfig.value!.type == CloudBackendType.beecountCloud);
+                     cloudConfig.value!.type == CloudBackendType.piggycountCloud);
                 // Supabase 和 PiggyCount Cloud 需要登录，其他云服务（iCloud/S3/WebDAV）使用配置文件认证
                 final canUseCloud = !isLocalMode && (!needsLogin || user != null);
 
@@ -297,8 +297,8 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                             Consumer(builder: (ctx, r, _) {
                               final userNow = user;
                               final cfg = r.watch(activeCloudConfigProvider).valueOrNull;
-                              final cachedEmail = cfg?.beecountCloudEmail ?? '';
-                              final cachedPassword = cfg?.beecountCloudPassword ?? '';
+                              final cachedEmail = cfg?.piggycountCloudEmail ?? '';
+                              final cachedPassword = cfg?.piggycountCloudPassword ?? '';
                               final hasCachedCredentials = cachedEmail.isNotEmpty &&
                                   cachedPassword.isNotEmpty;
                               if (userNow != null) {
@@ -325,7 +325,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                       subtitle: cachedEmail,
                                       onTap: () async {
                                         final providerAsync = ref
-                                            .read(beecountCloudProviderInstance);
+                                            .read(piggycountCloudProviderInstance);
                                         final provider = providerAsync.valueOrNull;
                                         if (provider == null) {
                                           showToast(context,

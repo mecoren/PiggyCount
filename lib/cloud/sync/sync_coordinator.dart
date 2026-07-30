@@ -10,7 +10,7 @@ import 'sync_engine.dart';
 /// 设计动机:在引入 SyncCoordinator 之前,触发同步的责任散落在 21+ 个
 /// UI 调用点 (`PostProcessor.sync(...)`)。任何漏掉一处都会导致"已经写
 /// 进 local_changes 但永远不推"的 bug —— CSV 导入和"清空账本"就是这
-/// 类典型故障 (见 plans/beecount-cloud-app-clever-crayon.md)。
+/// 类典型故障 (见 plans/piggycount-cloud-app-clever-crayon.md)。
 ///
 /// 把触发逻辑挪到数据层之后,**任何写入 local_changes 表的代码路径**
 /// 都自动获得同步触发能力,UI 不需要再操心。Repository 层的 mutation

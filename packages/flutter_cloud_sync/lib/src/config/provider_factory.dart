@@ -29,11 +29,11 @@ Future<({CloudProvider? provider, CloudAuthService? auth})> createCloudServices(
     case CloudBackendType.local:
       return (provider: null, auth: null);
 
-    case CloudBackendType.beecountCloud:
+    case CloudBackendType.piggycountCloud:
       final provider = PiggyCountCloudProvider();
       await provider.initialize({
-        'baseUrl': config.beecountCloudBaseUrl!,
-        'apiPrefix': config.beecountCloudApiPrefix ?? '/api/v1',
+        'baseUrl': config.piggycountCloudBaseUrl!,
+        'apiPrefix': config.piggycountCloudApiPrefix ?? '/api/v1',
       });
       return (provider: provider, auth: provider.auth);
 
@@ -44,7 +44,7 @@ Future<({CloudProvider? provider, CloudAuthService? auth})> createCloudServices(
       await provider.initialize({
         'url': config.supabaseUrl!,
         'anonKey': config.supabaseAnonKey!,
-        'bucket': config.supabaseBucket ?? 'beecount-backups', // 兼容老配置，提供默认值
+        'bucket': config.supabaseBucket ?? 'piggycount-backups', // 兼容老配置，提供默认值
         'pathPrefix': null, // 使用默认的 users/{userId}/ 结构，基础包支持但业务层不配置
       });
 

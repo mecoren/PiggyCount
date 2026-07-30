@@ -60,7 +60,7 @@ final _txAuthorInfoProvider =
   if (ledgerSyncId == null || ledgerSyncId.isEmpty) return null;
   if (tx.createdByUserId == null && tx.lastEditedByUserId == null) return null;
 
-  final cloud = await ref.watch(beecountCloudProviderInstance.future);
+  final cloud = await ref.watch(piggycountCloudProviderInstance.future);
   if (cloud == null) return null;
   ref.watch(sharedResourceRefreshProvider);
   final me = await cloud.auth.currentUser;
@@ -97,7 +97,7 @@ class _TxAuthorAvatars extends ConsumerWidget {
     // 单人(创建 == 编辑)且就是自己 → 整体不显示
     if (sameUser && creatorId == meId) return const SizedBox.shrink();
 
-    final cloud = ref.watch(beecountCloudProviderInstance).valueOrNull;
+    final cloud = ref.watch(piggycountCloudProviderInstance).valueOrNull;
     final baseUrl = cloud?.baseUrl;
 
     final widgets = <Widget>[];

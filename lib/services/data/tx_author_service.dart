@@ -37,7 +37,7 @@ class TxAuthorService {
     required bool isCreate,
   }) async {
     try {
-      final cloud = await ref.read(beecountCloudProviderInstance.future);
+      final cloud = await ref.read(piggycountCloudProviderInstance.future);
       if (cloud == null) return;
       final me = await cloud.auth.currentUser;
       final userId = me?.id;
@@ -61,7 +61,7 @@ class TxAuthorService {
     required bool isCreate,
   }) async {
     try {
-      final cloud = await c.read(beecountCloudProviderInstance.future);
+      final cloud = await c.read(piggycountCloudProviderInstance.future);
       if (cloud == null) return;
       final me = await cloud.auth.currentUser;
       final userId = me?.id;

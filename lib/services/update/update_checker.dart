@@ -187,17 +187,17 @@ class UpdateChecker {
   /// 从 GitHub Release assets 列表里挑出适配当前设备的 APK。
   ///
   /// v3.2.1 起 Release 含多个按 ABI 拆分的 APK:
-  ///   - beecount-<ver>.apk             主分发(arm64-v8a,99% 现役真机)
-  ///   - beecount-<ver>-armeabi-v7a.apk armv7 老 32-bit 设备
-  ///   - beecount-<ver>-x86_64.apk      Intel/Win/Linux 模拟器
-  ///   - beecount-<ver>-universal.apk   三 ABI 全打,兜底
+  ///   - piggycount-<ver>.apk             主分发(arm64-v8a,99% 现役真机)
+  ///   - piggycount-<ver>-armeabi-v7a.apk armv7 老 32-bit 设备
+  ///   - piggycount-<ver>-x86_64.apk      Intel/Win/Linux 模拟器
+  ///   - piggycount-<ver>-universal.apk   三 ABI 全打,兜底
   ///
   /// 历史 bug:之前 `endsWith('.apk') break` 取第一个,因 GitHub assets 按
   /// 字母序排列,第一个就是 `-armeabi-v7a.apk` — arm64 真机装上跑 32-bit 兼容
   /// 模式 CPU 指令集降级 + 寄存器宽度从 64bit 切 32bit,体感严重卡顿。
   ///
   /// 选择策略(按优先级):
-  ///   1. `beecount-<ver>.apk` 主包(arm64)— 现役真机 99% 是 arm64
+  ///   1. `piggycount-<ver>.apk` 主包(arm64)— 现役真机 99% 是 arm64
   ///   2. universal — 主包不存在时兜底
   ///   3. 任何 .apk — 都没有时取第一个
   static String? _pickApkUrl(List assets, String version) {
@@ -210,8 +210,8 @@ class UpdateChecker {
     }
     if (apkByName.isEmpty) return null;
 
-    final mainPkgName = 'beecount-$version.apk';
-    final universalName = 'beecount-$version-universal.apk';
+    final mainPkgName = 'piggycount-$version.apk';
+    final universalName = 'piggycount-$version-universal.apk';
 
     if (apkByName.containsKey(mainPkgName)) return apkByName[mainPkgName];
     if (apkByName.containsKey(universalName)) return apkByName[universalName];

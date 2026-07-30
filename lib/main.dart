@@ -335,15 +335,15 @@ void _setupImageShareHandler(ProviderContainer container) {
 
 /// 设置 URL 监听（用于 AppLink）
 ///
-/// 监听 beecount:// URL Scheme 调用
+/// 监听 piggycount:// URL Scheme 调用
 /// 支持的URL格式:
-/// - beecount://voice - 语音记账
-/// - beecount://image - 图片记账（从相册）
-/// - beecount://camera - 拍照记账
-/// - beecount://ai-chat - AI 小助手
-/// - beecount://add?amount=100&type=expense - 自动记账
-/// - beecount://auto-billing?text=... - 文本自动记账（兼容旧版）
-/// - beecount://quick-billing - 快速记账（兼容旧版）
+/// - piggycount://voice - 语音记账
+/// - piggycount://image - 图片记账（从相册）
+/// - piggycount://camera - 拍照记账
+/// - piggycount://ai-chat - AI 小助手
+/// - piggycount://add?amount=100&type=expense - 自动记账
+/// - piggycount://auto-billing?text=... - 文本自动记账（兼容旧版）
+/// - piggycount://quick-billing - 快速记账（兼容旧版）
 void _setupUrlListener(ProviderContainer container) {
   try {
     logger.info('AppLink', '初始化URL监听...');

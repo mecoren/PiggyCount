@@ -3,7 +3,7 @@ import 'dart:convert';
 /// 云服务后端类型
 enum CloudBackendType {
   local, // 本地存储(不同步)
-  beecountCloud, // PiggyCount Cloud（自建云服务）
+  piggycountCloud, // PiggyCount Cloud（自建云服务）
   supabase, // Supabase (自建)
   webdav, // WebDAV (坚果云、Nextcloud、群晖等)
   icloud, // iCloud (iOS only)
@@ -15,10 +15,10 @@ class CloudServiceConfig {
   final String name; // UI 展示名称
 
   // PiggyCount Cloud 配置
-  final String? beecountCloudBaseUrl;
-  final String? beecountCloudApiPrefix;
-  final String? beecountCloudEmail; // 保存的账号（用于记住账号功能）
-  final String? beecountCloudPassword; // 保存的密码（用于记住账号功能）
+  final String? piggycountCloudBaseUrl;
+  final String? piggycountCloudApiPrefix;
+  final String? piggycountCloudEmail; // 保存的账号（用于记住账号功能）
+  final String? piggycountCloudPassword; // 保存的密码（用于记住账号功能）
 
   // Supabase 配置
   final String? supabaseUrl;
@@ -46,10 +46,10 @@ class CloudServiceConfig {
     required this.type,
     required this.name,
     // PiggyCount Cloud
-    this.beecountCloudBaseUrl,
-    this.beecountCloudApiPrefix,
-    this.beecountCloudEmail,
-    this.beecountCloudPassword,
+    this.piggycountCloudBaseUrl,
+    this.piggycountCloudApiPrefix,
+    this.piggycountCloudEmail,
+    this.piggycountCloudPassword,
     // Supabase
     this.supabaseUrl,
     this.supabaseAnonKey,
@@ -77,8 +77,8 @@ class CloudServiceConfig {
     switch (type) {
       case CloudBackendType.local:
         return true; // 本地存储始终有效
-      case CloudBackendType.beecountCloud:
-        return (beecountCloudBaseUrl?.isNotEmpty ?? false);
+      case CloudBackendType.piggycountCloud:
+        return (piggycountCloudBaseUrl?.isNotEmpty ?? false);
       case CloudBackendType.supabase:
         return (supabaseUrl?.isNotEmpty ?? false) &&
             (supabaseAnonKey?.isNotEmpty ?? false);
@@ -100,10 +100,10 @@ class CloudServiceConfig {
         'type': type.name,
         'name': name,
         // PiggyCount Cloud
-        'beecountCloudBaseUrl': beecountCloudBaseUrl,
-        'beecountCloudApiPrefix': beecountCloudApiPrefix,
-        'beecountCloudEmail': beecountCloudEmail,
-        'beecountCloudPassword': beecountCloudPassword,
+        'piggycountCloudBaseUrl': piggycountCloudBaseUrl,
+        'piggycountCloudApiPrefix': piggycountCloudApiPrefix,
+        'piggycountCloudEmail': piggycountCloudEmail,
+        'piggycountCloudPassword': piggycountCloudPassword,
         // Supabase
         'supabaseUrl': supabaseUrl,
         'supabaseAnonKey': supabaseAnonKey,
@@ -137,10 +137,10 @@ class CloudServiceConfig {
           .firstWhere((e) => e.name == j['type'] as String),
       name: j['name'] as String,
       // PiggyCount Cloud
-      beecountCloudBaseUrl: j['beecountCloudBaseUrl'] as String?,
-      beecountCloudApiPrefix: j['beecountCloudApiPrefix'] as String?,
-      beecountCloudEmail: j['beecountCloudEmail'] as String?,
-      beecountCloudPassword: j['beecountCloudPassword'] as String?,
+      piggycountCloudBaseUrl: j['piggycountCloudBaseUrl'] as String?,
+      piggycountCloudApiPrefix: j['piggycountCloudApiPrefix'] as String?,
+      piggycountCloudEmail: j['piggycountCloudEmail'] as String?,
+      piggycountCloudPassword: j['piggycountCloudPassword'] as String?,
       // Supabase
       supabaseUrl: j['supabaseUrl'] as String?,
       supabaseAnonKey: j['supabaseAnonKey'] as String?,
@@ -173,16 +173,16 @@ class CloudServiceConfig {
     switch (type) {
       case CloudBackendType.local:
         return '__LOCAL_DEVICE__';
-      case CloudBackendType.beecountCloud:
-        if (beecountCloudBaseUrl == null || beecountCloudBaseUrl!.isEmpty) {
+      case CloudBackendType.piggycountCloud:
+        if (piggycountCloudBaseUrl == null || piggycountCloudBaseUrl!.isEmpty) {
           return '__NOT_CONFIGURED__';
         }
         try {
-          final uri = Uri.parse(beecountCloudBaseUrl!);
-          if (uri.host.isEmpty) return beecountCloudBaseUrl!;
+          final uri = Uri.parse(piggycountCloudBaseUrl!);
+          if (uri.host.isEmpty) return piggycountCloudBaseUrl!;
           return uri.host;
         } catch (_) {
-          return beecountCloudBaseUrl!;
+          return piggycountCloudBaseUrl!;
         }
       case CloudBackendType.supabase:
         if (supabaseUrl == null || supabaseUrl!.isEmpty) {

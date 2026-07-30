@@ -108,7 +108,7 @@ class SharePosterService {
     try {
       // 获取临时目录
       final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/beecount_share_${DateTime.now().millisecondsSinceEpoch}.png');
+      final file = File('${tempDir.path}/piggycount_share_${DateTime.now().millisecondsSinceEpoch}.png');
 
       // 写入文件
       await file.writeAsBytes(imageBytes);

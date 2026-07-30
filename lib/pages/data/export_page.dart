@@ -241,7 +241,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
 
       final csvStr = const ListToCsvConverter(eol: '\n').convert(rows);
       final ts = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-      final path = p.join(directory, 'beecount_$ts.csv');
+      final path = p.join(directory, 'piggycount_$ts.csv');
       
       // 添加UTF-8 BOM标记，确保Excel正确识别中文编码
       const utf8Bom = '\uFEFF';

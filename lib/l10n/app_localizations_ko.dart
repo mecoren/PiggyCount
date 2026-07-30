@@ -2687,7 +2687,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get cloudS3BucketLabel => '버킷 이름';
 
   @override
-  String get cloudS3BucketHint => 'beecount-data';
+  String get cloudS3BucketHint => 'piggycount-data';
 
   @override
   String get cloudS3UseSSLLabel => 'HTTPS 사용';
@@ -2702,7 +2702,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get cloudSupabaseBucketLabel => '저장소 버킷 이름';
 
   @override
-  String get cloudSupabaseBucketHint => '기본값을 사용하려면 비워두세요: beecount-backups';
+  String get cloudSupabaseBucketHint => '기본값을 사용하려면 비워두세요: piggycount-backups';
 
   @override
   String get authRememberAccount => '계정 기억하기';
@@ -4188,7 +4188,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get widgetQuickEntryDesc =>
-      '위젯의 왼쪽을 누르면 지출을 빠르게 추가하고, 오른쪽을 누르면 수입을 추가합니다. 단축어에서 beecount://new?type=transfer 를 사용해 이체를 빠르게 시작할 수도 있습니다.';
+      '위젯의 왼쪽을 누르면 지출을 빠르게 추가하고, 오른쪽을 누르면 수입을 추가합니다. 단축어에서 piggycount://new?type=transfer 를 사용해 이체를 빠르게 시작할 수도 있습니다.';
 
   @override
   String get appName => 'PiggyCount';
@@ -6062,7 +6062,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get iosShortcutStep3 => '\'URL 열기\' 동작을 추가하세요';
 
   @override
-  String get iosShortcutStep4 => '복사한 URL을 붙여넣으세요 (예: beecount://voice)';
+  String get iosShortcutStep4 => '복사한 URL을 붙여넣으세요 (예: piggycount://voice)';
 
   @override
   String get iosShortcutStep5 => '저장하고 홈 화면에 추가하세요';
@@ -6074,7 +6074,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get androidShortcutStep2 => '\'URL 바로가기\'를 선택하세요';
 
   @override
-  String get androidShortcutStep3 => '복사한 URL을 붙여넣으세요 (예: beecount://voice)';
+  String get androidShortcutStep3 => '복사한 URL을 붙여넣으세요 (예: piggycount://voice)';
 
   @override
   String get androidShortcutStep4 => '아이콘과 이름을 설정하고 홈 화면에 추가하세요';

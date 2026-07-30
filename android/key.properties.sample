@@ -3,5 +3,5 @@
 # Paths are relative to the android/ directory.
 storeFile=app/release.keystore
 storePassword=YOUR_STORE_PASSWORD
-keyAlias=beecount
+keyAlias=piggycount
 keyPassword=YOUR_KEY_PASSWORD

@@ -269,7 +269,7 @@ class WidgetDataService {
   /// (复用 [BaseRepository.totalsByCategory] 已有的降序排序)。
   ///
   /// "未分类"桶(`id == null`)被剔除:快速记账格点开即需跳转
-  /// `beecount://new?type=expense&category=<id>`,没有具体分类 id 无法深链。
+  /// `piggycount://new?type=expense&category=<id>`,没有具体分类 id 无法深链。
   static Future<List<QuickAddCategoryItem>> gatherQuickAddCategories({
     required BaseRepository repository,
     required int ledgerId,

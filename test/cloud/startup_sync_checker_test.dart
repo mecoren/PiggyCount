@@ -101,11 +101,11 @@ void main() {
       expect(deps.applyPreviewChangesCallCount, 0);
     });
 
-    test('配置为 beecountCloud 时直接跳过（路径 B 不处理）', () async {
+    test('配置为 piggycountCloud 时直接跳过（路径 B 不处理）', () async {
       deps.activeConfig = const CloudServiceConfig(
-        type: CloudBackendType.beecountCloud,
-        name: 'beecount',
-        beecountCloudBaseUrl: 'https://example.com',
+        type: CloudBackendType.piggycountCloud,
+        name: 'piggycount',
+        piggycountCloudBaseUrl: 'https://example.com',
       );
 
       await checker.runIfNeeded();

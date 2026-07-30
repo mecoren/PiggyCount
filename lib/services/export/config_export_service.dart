@@ -45,7 +45,7 @@ class ExportOptions {
   /// 是否把 PiggyCount Cloud 的登录态（access/refresh token）一起导出。
   /// 默认 false —— 只导出 base_url + email，密码 / token 不写进 yaml。
   /// 测试或跨设备快速登录时显式勾选。
-  final bool beecountCloudCredentials;
+  final bool piggycountCloudCredentials;
 
   const ExportOptions({
     this.ledgers = true,
@@ -56,7 +56,7 @@ class ExportOptions {
     this.budgets = true,
     this.appSettings = true,
     this.ai = true,
-    this.beecountCloudCredentials = false,
+    this.piggycountCloudCredentials = false,
   });
 
   /// 全选
@@ -80,7 +80,7 @@ class AppConfig {
   final SupabaseConfig? supabase;
   final WebdavConfig? webdav;
   final S3Config? s3;
-  final PiggyCountCloudConfig? beecountCloud;
+  final PiggyCountCloudConfig? piggycountCloud;
   final AIConfig? ai;
   final AppSettingsConfig? appSettings;
   final LedgersConfig? ledgers;
@@ -94,7 +94,7 @@ class AppConfig {
     this.supabase,
     this.webdav,
     this.s3,
-    this.beecountCloud,
+    this.piggycountCloud,
     this.ai,
     this.appSettings,
     this.ledgers,
@@ -112,8 +112,8 @@ class AppConfig {
       map['supabase'] = supabase!.toMap();
     }
 
-    if (beecountCloud != null) {
-      map['beecount_cloud'] = beecountCloud!.toMap();
+    if (piggycountCloud != null) {
+      map['piggycount_cloud'] = piggycountCloud!.toMap();
     }
 
     if (webdav != null) {
@@ -173,9 +173,9 @@ class AppConfig {
           ? S3Config.fromMap(
               Map<String, dynamic>.from(yaml['s3'] as Map))
           : null,
-      beecountCloud: yaml.containsKey('beecount_cloud')
+      piggycountCloud: yaml.containsKey('piggycount_cloud')
           ? PiggyCountCloudConfig.fromMap(
-              Map<String, dynamic>.from(yaml['beecount_cloud'] as Map))
+              Map<String, dynamic>.from(yaml['piggycount_cloud'] as Map))
           : null,
       ai: yaml.containsKey('ai')
           ? AIConfig.fromMap(_convertToStringDynamicMap(yaml['ai'] as Map))
@@ -1306,22 +1306,22 @@ class ConfigExportService {
 
     // 读取 PiggyCount Cloud 配置。base_url + email 总是导出（方便 B 设备导入
     // 快速填回登录表单）；access/refresh token 属于登录态，需 options 显式
-    // 勾选才带上。当前实现：cloud_beecount_cloud_cfg 里只存 base_url+email，
+    // 勾选才带上。当前实现：cloud_piggycount_cloud_cfg 里只存 base_url+email，
     // session token 另一把 SharedPreferences key 管 —— 导出 yaml 只取前者。
-    PiggyCountCloudConfig? beecountCloudConfig;
-    final beecountCfgRaw = prefs.getString('cloud_beecount_cloud_cfg');
-    if (beecountCfgRaw != null) {
+    PiggyCountCloudConfig? piggycountCloudConfig;
+    final piggycountCfgRaw = prefs.getString('cloud_piggycount_cloud_cfg');
+    if (piggycountCfgRaw != null) {
       try {
-        final cfg = decodeCloudConfig(beecountCfgRaw);
-        final baseUrl = cfg.beecountCloudBaseUrl ?? '';
+        final cfg = decodeCloudConfig(piggycountCfgRaw);
+        final baseUrl = cfg.piggycountCloudBaseUrl ?? '';
         if (baseUrl.isNotEmpty) {
-          beecountCloudConfig = PiggyCountCloudConfig(
+          piggycountCloudConfig = PiggyCountCloudConfig(
             baseUrl: baseUrl,
-            email: cfg.beecountCloudEmail,
+            email: cfg.piggycountCloudEmail,
             // 跟 Supabase 一样：如果用户在 mobile 勾过 "记住账号密码"，
-            // beecountCloudPassword 就会在 SharedPreferences 里，带上它方便
+            // piggycountCloudPassword 就会在 SharedPreferences 里，带上它方便
             // B 设备导入后无感登录。没勾就是 null，yaml 也不写这一行。
-            password: cfg.beecountCloudPassword,
+            password: cfg.piggycountCloudPassword,
             // access/refresh token 走独立 session storage（key 里带 baseUrl
             // sha1），跨设备迁移风险高，导出 yaml 不带。
           );
@@ -1708,8 +1708,8 @@ class ConfigExportService {
     final exportSupabase = options.appSettings ? supabaseConfig : null;
     final exportWebdav = options.appSettings ? webdavConfig : null;
     final exportS3 = options.appSettings ? s3Config : null;
-    final exportBeecountCloud =
-        options.appSettings ? beecountCloudConfig : null;
+    final exportPiggycountCloud =
+        options.appSettings ? piggycountCloudConfig : null;
     final exportAi = options.ai ? aiConfig : null;
     final exportAppSettings = options.appSettings ? appSettings : null;
 
@@ -1722,7 +1722,7 @@ class ConfigExportService {
       supabase: exportSupabase,
       webdav: exportWebdav,
       s3: exportS3,
-      beecountCloud: exportBeecountCloud,
+      piggycountCloud: exportPiggycountCloud,
       ai: exportAi,
       appSettings: exportAppSettings,
       ledgers: ledgersConfig,
@@ -1748,7 +1748,7 @@ class ConfigExportService {
       buffer.writeln('  url: "${sb['url']}"');
       buffer.writeln('  anon_key: "${sb['anon_key']}"');
       if (sb.containsKey('bucket')) {
-        buffer.writeln('  # Storage bucket 名称，留空则使用默认值 beecount-backups');
+        buffer.writeln('  # Storage bucket 名称，留空则使用默认值 piggycount-backups');
         buffer.writeln('  bucket: "${sb['bucket']}"');
       }
       if (sb.containsKey('email') || sb.containsKey('password')) {
@@ -1792,9 +1792,9 @@ class ConfigExportService {
       buffer.writeln();
     }
 
-    if (yamlMap.containsKey('beecount_cloud')) {
-      buffer.writeln('beecount_cloud:');
-      final bc = yamlMap['beecount_cloud'] as Map<String, dynamic>;
+    if (yamlMap.containsKey('piggycount_cloud')) {
+      buffer.writeln('piggycount_cloud:');
+      final bc = yamlMap['piggycount_cloud'] as Map<String, dynamic>;
       buffer.writeln('  # PiggyCount Cloud 自部署后端配置');
       buffer.writeln('  base_url: "${bc['base_url']}"');
       if (bc.containsKey('email') || bc.containsKey('password')) {
@@ -2224,7 +2224,7 @@ class ConfigExportService {
         name: 'Supabase',
         supabaseUrl: config.supabase!.url,
         supabaseAnonKey: config.supabase!.anonKey,
-        supabaseBucket: config.supabase!.bucket ?? 'beecount-backups',  // 导入时也提供默认值
+        supabaseBucket: config.supabase!.bucket ?? 'piggycount-backups',  // 导入时也提供默认值
         supabaseEmail: config.supabase!.email,
         supabasePassword: config.supabase!.password,
       );
@@ -2267,21 +2267,21 @@ class ConfigExportService {
     // 导入 PiggyCount Cloud 配置（base_url + 可选 email/password）。
     // 有 email+password 时跟 Supabase 一样，导入后 app 启动可自动登录；
     // 只有 email 时登录页预填邮箱，等用户输密码。
-    if (options.appSettings && config.beecountCloud != null) {
+    if (options.appSettings && config.piggycountCloud != null) {
       final bcCfg = CloudServiceConfig(
-        type: CloudBackendType.beecountCloud,
+        type: CloudBackendType.piggycountCloud,
         name: 'PiggyCount Cloud',
-        beecountCloudBaseUrl: config.beecountCloud!.baseUrl,
-        beecountCloudEmail: config.beecountCloud!.email,
-        beecountCloudPassword: config.beecountCloud!.password,
+        piggycountCloudBaseUrl: config.piggycountCloud!.baseUrl,
+        piggycountCloudEmail: config.piggycountCloud!.email,
+        piggycountCloudPassword: config.piggycountCloud!.password,
       );
       await prefs.setString(
-          'cloud_beecount_cloud_cfg', encodeCloudConfig(bcCfg));
+          'cloud_piggycount_cloud_cfg', encodeCloudConfig(bcCfg));
       logger.info(
           'ConfigImport',
-          'PiggyCount Cloud 配置已导入 url=${config.beecountCloud!.baseUrl} '
-              'hasEmail=${config.beecountCloud!.email != null} '
-              'hasPassword=${config.beecountCloud!.password != null}');
+          'PiggyCount Cloud 配置已导入 url=${config.piggycountCloud!.baseUrl} '
+              'hasEmail=${config.piggycountCloud!.email != null} '
+              'hasPassword=${config.piggycountCloud!.password != null}');
     }
 
     // 导入AI配置

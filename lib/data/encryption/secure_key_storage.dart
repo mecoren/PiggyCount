@@ -11,7 +11,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// - 密钥以 base64 字符串形式存储（secure_storage 只支持 String）
 /// - 提供 DI 友好的构造函数，便于测试注入 mock
 class SecureKeyStorage {
-  static const String _keyPrefix = 'beecount_enc_';
+  static const String _keyPrefix = 'piggycount_enc_';
   static const String _keyKey = '${_keyPrefix}key';
   static const String _verifierKey = '${_keyPrefix}verifier';
   static const String _saltKey = '${_keyPrefix}salt';

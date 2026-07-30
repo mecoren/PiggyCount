@@ -2760,7 +2760,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cloudS3BucketLabel => 'Bucket Name';
 
   @override
-  String get cloudS3BucketHint => 'beecount-data';
+  String get cloudS3BucketHint => 'piggycount-data';
 
   @override
   String get cloudS3UseSSLLabel => 'Use HTTPS';
@@ -2776,7 +2776,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cloudSupabaseBucketHint =>
-      'Leave blank for default: beecount-backups';
+      'Leave blank for default: piggycount-backups';
 
   @override
   String get authRememberAccount => 'Remember account';
@@ -4316,7 +4316,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get widgetQuickEntryDesc =>
-      'Tap the left side of the widget to quickly add an expense, or tap the right side to add an income. You can also use beecount://new?type=transfer via Shortcuts to quickly start a transfer.';
+      'Tap the left side of the widget to quickly add an expense, or tap the right side to add an income. You can also use piggycount://new?type=transfer via Shortcuts to quickly start a transfer.';
 
   @override
   String get appName => 'PiggyCount';
@@ -6250,7 +6250,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get iosShortcutStep4 =>
-      'Paste the copied URL (e.g., beecount://voice)';
+      'Paste the copied URL (e.g., piggycount://voice)';
 
   @override
   String get iosShortcutStep5 => 'Save and add to home screen';
@@ -6264,7 +6264,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get androidShortcutStep3 =>
-      'Paste the copied URL (e.g., beecount://voice)';
+      'Paste the copied URL (e.g., piggycount://voice)';
 
   @override
   String get androidShortcutStep4 =>

@@ -42,7 +42,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
       final activeAsync = ref.read(activeCloudConfigProvider);
       if (activeAsync.hasValue) {
         final active = activeAsync.value!;
-        if (active.type == CloudBackendType.beecountCloud) {
+        if (active.type == CloudBackendType.piggycountCloud) {
           setState(() => _selectedTab = 'cloud');
         } else if (active.type != CloudBackendType.local) {
           setState(() => _selectedTab = 'backup');
@@ -74,7 +74,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
   @override
   Widget build(BuildContext context) {
     final activeAsync = ref.watch(activeCloudConfigProvider);
-    final beecountCloudAsync = ref.watch(beecountCloudConfigProvider);
+    final piggycountCloudAsync = ref.watch(piggycountCloudConfigProvider);
     final supabaseAsync = ref.watch(supabaseConfigProvider);
     final webdavAsync = ref.watch(webdavConfigProvider);
     final s3Async = ref.watch(s3ConfigProvider);
@@ -160,7 +160,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                     children: [
                       // 多设备同步警告
                       if (active.type != CloudBackendType.local &&
-                          active.type != CloudBackendType.beecountCloud) ...[
+                          active.type != CloudBackendType.piggycountCloud) ...[
                         _buildMultiDeviceWarning(context),
                         const SizedBox(height: 12),
                       ],
@@ -256,7 +256,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                   return ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
-                      beecountCloudAsync.when(
+                      piggycountCloudAsync.when(
                         loading: () => const SizedBox(height: 100, child: Center(child: CircularProgressIndicator())),
                         error: (e, _) => const SizedBox.shrink(),
                         data: (bcCfg) => _buildServiceCard(
@@ -267,14 +267,14 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                           subtitle: bcCfg?.valid == true
                               ? bcCfg!.obfuscatedUrl()
                               : AppLocalizations.of(context).cloudPiggyCountCloudSubtitle,
-                          isSelected: active.type == CloudBackendType.beecountCloud,
+                          isSelected: active.type == CloudBackendType.piggycountCloud,
                           isConfigured: bcCfg?.valid == true,
                           isDisabled: false,
                           onTap: () => bcCfg?.valid == true
-                              ? _switchService(CloudBackendType.beecountCloud)
-                              : _configureService(CloudBackendType.beecountCloud),
+                              ? _switchService(CloudBackendType.piggycountCloud)
+                              : _configureService(CloudBackendType.piggycountCloud),
                           onConfigure: bcCfg?.valid == true
-                              ? () => _configureService(CloudBackendType.beecountCloud)
+                              ? () => _configureService(CloudBackendType.piggycountCloud)
                               : null,
                           onShowGuide: _showPiggyCountCloudHelpDialog,
                         ),
@@ -1484,7 +1484,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
 
   Future<void> _configureService(CloudBackendType type) async {
     // 根据类型显示配置对话框
-    if (type == CloudBackendType.beecountCloud) {
+    if (type == CloudBackendType.piggycountCloud) {
       await _showPiggyCountCloudConfigDialog();
     } else if (type == CloudBackendType.supabase) {
       await _showSupabaseConfigDialog();
@@ -1496,17 +1496,17 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
   }
 
   Future<void> _showPiggyCountCloudConfigDialog() async {
-    final existing = await ref.read(beecountCloudConfigProvider.future);
+    final existing = await ref.read(piggycountCloudConfigProvider.future);
 
     if (!mounted) return;
 
     final result = await showDialog<Map<String, dynamic>?>(
       context: context,
       builder: (dialogContext) => _PiggyCountCloudConfigDialog(
-        initialUrl: existing?.beecountCloudBaseUrl ?? '',
-        initialApiPrefix: existing?.beecountCloudApiPrefix ?? '/api/v1',
-        initialEmail: existing?.beecountCloudEmail ?? '',
-        initialPassword: existing?.beecountCloudPassword ?? '',
+        initialUrl: existing?.piggycountCloudBaseUrl ?? '',
+        initialApiPrefix: existing?.piggycountCloudApiPrefix ?? '/api/v1',
+        initialEmail: existing?.piggycountCloudEmail ?? '',
+        initialPassword: existing?.piggycountCloudPassword ?? '',
       ),
     );
 
@@ -1518,12 +1518,12 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
 
       // 对话框已进行内联校验，此处 cfg.valid 作为防御性检查
       final cfg = CloudServiceConfig(
-        type: CloudBackendType.beecountCloud,
+        type: CloudBackendType.piggycountCloud,
         name: AppLocalizations.of(context).cloudPiggyCountCloudTitle,
-        beecountCloudBaseUrl: url,
-        beecountCloudApiPrefix: apiPrefix.isEmpty ? '/api/v1' : apiPrefix,
-        beecountCloudEmail: email.isNotEmpty ? email : null,
-        beecountCloudPassword: password.isNotEmpty ? password : null,
+        piggycountCloudBaseUrl: url,
+        piggycountCloudApiPrefix: apiPrefix.isEmpty ? '/api/v1' : apiPrefix,
+        piggycountCloudEmail: email.isNotEmpty ? email : null,
+        piggycountCloudPassword: password.isNotEmpty ? password : null,
       );
 
       if (!cfg.valid) {
@@ -1535,7 +1535,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
 
       try {
         await ref.read(cloudServiceStoreProvider).saveOnly(cfg);
-        ref.invalidate(beecountCloudConfigProvider);
+        ref.invalidate(piggycountCloudConfigProvider);
         ref.invalidate(activeCloudConfigProvider);
         if (mounted) showToast(context, AppLocalizations.of(context).cloudConfigSaved);
 
@@ -1614,7 +1614,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
         name: AppLocalizations.of(context).cloudCustomSupabaseTitle,
         supabaseUrl: url,
         supabaseAnonKey: key,
-        supabaseBucket: bucket.isEmpty ? 'beecount-backups' : bucket,  // 业务层提供默认值
+        supabaseBucket: bucket.isEmpty ? 'piggycount-backups' : bucket,  // 业务层提供默认值
       );
 
       if (!cfg.valid) {
@@ -1766,7 +1766,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
         return 'iCloud';
       case CloudBackendType.s3:
         return 'S3';
-      case CloudBackendType.beecountCloud:
+      case CloudBackendType.piggycountCloud:
         return 'PiggyCount Cloud';
     }
   }
@@ -1788,7 +1788,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
           case CloudBackendType.supabase:
             // Supabase 连接测试 - 查询不存在的表验证 URL 和 anon key
             // 200 或 404 表示连接正常且 key 有效，401/403 表示 key 无效
-            final testUrl = Uri.parse('${config.supabaseUrl}/rest/v1/_beecount_health_check?select=id&limit=1');
+            final testUrl = Uri.parse('${config.supabaseUrl}/rest/v1/_piggycount_health_check?select=id&limit=1');
             final response = await http.get(
               testUrl,
               headers: {
@@ -1854,7 +1854,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
             }
             break;
 
-          case CloudBackendType.beecountCloud:
+          case CloudBackendType.piggycountCloud:
             // PiggyCount Cloud 连接测试 - 调用健康检查接口
             try {
               final services = await createCloudServices(config);

@@ -456,7 +456,7 @@ v25 之前 Editor 选择 Owner 资源会 mirror 到主表,v25 改为只写 `*Syn
 | `lib/widget/widget_manager.dart` | Dart 层小组件管理 |
 | `ios/PiggyCountWidget/` | iOS WidgetExtension |
 | `android/app/src/main/res/xml/piggycount_widget_info.xml` | Android 小组件配置 |
-| `android/app/src/main/kotlin/.../BeecountWidgetProvider.kt` | Android 小组件实现 |
+| `android/app/src/main/kotlin/.../PiggyCountWidgetProvider.kt` | Android 小组件实现 |
 
 #### 3.11.3 关键设计
 
@@ -703,7 +703,7 @@ flowchart TD
 | 1 | `lib/services/` 各 Service 之间的完整调用关系图未绘制 | §3 | 可选,通过 grep 统计 import 关系 |
 | 2 | AI 执行策略的 6 种类型在代码中的具体实现差异未展开 | §3.7.3 | 阅读 `packages/flutter_ai_kit/lib/src/strategies/` 各文件 |
 | 3 | 共享账本的成员统计 `fetchMemberStats` 实现细节未展开 | §3.9 | 阅读 `piggycount_cloud_provider.dart` `fetchMemberStats` |
-| 4 | 桌面小组件的 iOS WidgetExtension 与 Android AppWidgetProvider 实现细节未展开 | §3.11 | 阅读 `ios/PiggyCountWidget/` 与 `android/app/src/main/kotlin/.../BeecountWidgetProvider.kt` |
+| 4 | 桌面小组件的 iOS WidgetExtension 与 Android AppWidgetProvider 实现细节未展开 | §3.11 | 阅读 `ios/PiggyCountWidget/` 与 `android/app/src/main/kotlin/.../PiggyCountWidgetProvider.kt` |
 | 5 | 信用卡账单日 / 还款日提醒的具体触发逻辑未展开 | §3.12.2 | 阅读 `lib/providers/credit_card_reminder_providers.dart` |
 | 6 | 导入模块的支付宝 / 微信 / 通用 CSV 解析规则未展开 | §3.10 | 阅读 `lib/services/import/bill_parser.dart` |
 

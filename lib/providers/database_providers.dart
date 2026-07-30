@@ -26,7 +26,7 @@ final repositoryProvider = Provider<BaseRepository>((ref) {
   // 仅 PiggyCount Cloud 后端激活时注入 ChangeTracker(记录增量变更供同步引擎推送)。
   // 其它备份后端(iCloud / WebDAV / S3 / Supabase)走快照备份路径,不需要变更追踪。
   final config = ref.watch(activeCloudConfigProvider).valueOrNull;
-  final tracker = (config?.type == CloudBackendType.beecountCloud && config!.valid)
+  final tracker = (config?.type == CloudBackendType.piggycountCloud && config!.valid)
       ? ChangeTracker(db)
       : null;
   logger.info('RepositoryProvider', '✅ LocalRepository (changeTracker=${tracker != null})');

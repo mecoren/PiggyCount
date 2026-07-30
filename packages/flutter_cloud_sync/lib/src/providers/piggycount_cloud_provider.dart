@@ -81,7 +81,7 @@ class PiggyCountCloudProvider implements CloudProvider {
   PiggyCountCloudRealtimeClient? _realtime;
 
   @override
-  String get providerId => 'beecount_cloud';
+  String get providerId => 'piggycount_cloud';
 
   @override
   String get providerName => 'PiggyCount Cloud';
@@ -1165,13 +1165,13 @@ class PiggyCountCloudAuthService implements CloudAuthService {
   String get _sessionStorageKey {
     final raw = '$baseUrl|$apiPrefix';
     final digest = sha1.convert(utf8.encode(raw)).toString();
-    return 'beecount_cloud_session_$digest';
+    return 'piggycount_cloud_session_$digest';
   }
 
   String get _localDeviceIdStorageKey {
     final raw = '$baseUrl|$apiPrefix';
     final digest = sha1.convert(utf8.encode(raw)).toString();
-    return 'beecount_cloud_local_device_id_$digest';
+    return 'piggycount_cloud_local_device_id_$digest';
   }
 
   Future<void> initialize() async {
@@ -1787,7 +1787,7 @@ class PiggyCountCloudAuthService implements CloudAuthService {
       id: session.userId,
       email: session.email,
       metadata: {
-        'provider': 'beecount_cloud',
+        'provider': 'piggycount_cloud',
         'deviceId': session.deviceId,
       },
     );
@@ -3263,7 +3263,7 @@ class PiggyCountCloudStorageService implements CloudStorageService {
     final deviceId = auth.currentDeviceId ?? 'unknown';
     final raw = '$baseUrl|$apiPrefix|$userId|$deviceId';
     final digest = sha1.convert(utf8.encode(raw)).toString();
-    return 'beecount_cloud_pull_cursor_$digest';
+    return 'piggycount_cloud_pull_cursor_$digest';
   }
 
   Future<int> _loadCursor() async {

@@ -277,7 +277,7 @@ class WidgetSpec {
   ///
   /// home_widget(0.9.x `HomeWidgetPlugin.kt` getInstalledWidgets)返回的是
   /// `ComponentName.shortClassName`:当 applicationId 与类所在包名相同时
-  /// (**prod 商店包** `com.tntlikely.beecount` 正是如此),它是带前导点的
+  /// (**prod 商店包** `com.tntlikely.piggycount` 正是如此),它是带前导点的
   /// 短名 `.PiggyCountWidgetProvider` 而**不是**全限定名;dev/debug 因
   /// applicationIdSuffix(`.dev`/`.debug`)与类包名不同才返回全名。此前只按
   /// 全限定名精确比对,商店包上所有条目都匹配不到 → 被当成"一个组件都没装"

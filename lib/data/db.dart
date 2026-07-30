@@ -233,7 +233,7 @@ class LocalChanges extends Table {
 class SyncState extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get deviceId => text()();         // 设备唯一标识
-  TextColumn get providerType => text().withDefault(const Constant('beecount_cloud'))(); // 防止不同 provider 的 cursor 冲突
+  TextColumn get providerType => text().withDefault(const Constant('piggycount_cloud'))(); // 防止不同 provider 的 cursor 冲突
   IntColumn get serverCursor => integer().withDefault(const Constant(0))(); // 服务端变更游标
   DateTimeColumn get lastPushAt => dateTime().nullable()();
   DateTimeColumn get lastPullAt => dateTime().nullable()();
@@ -1240,12 +1240,12 @@ class PiggyDatabase extends _$PiggyDatabase {
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dir = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dir.path, 'beecount.sqlite'));
+    final file = File(p.join(dir.path, 'piggycount.sqlite'));
 
     // 开发环境：如果检测到锁文件，尝试删除（仅用于调试）
     try {
-      final shmFile = File(p.join(dir.path, 'beecount.sqlite-shm'));
-      final walFile = File(p.join(dir.path, 'beecount.sqlite-wal'));
+      final shmFile = File(p.join(dir.path, 'piggycount.sqlite-shm'));
+      final walFile = File(p.join(dir.path, 'piggycount.sqlite-wal'));
 
       if (shmFile.existsSync() || walFile.existsSync()) {
         logger.warning('db', '检测到 SQLite 临时文件，可能存在锁定');
@@ -1263,8 +1263,8 @@ LazyDatabase _openConnection() {
 Future<void> clearDatabaseLockFiles() async {
   try {
     final dir = await getApplicationDocumentsDirectory();
-    final shmFile = File(p.join(dir.path, 'beecount.sqlite-shm'));
-    final walFile = File(p.join(dir.path, 'beecount.sqlite-wal'));
+    final shmFile = File(p.join(dir.path, 'piggycount.sqlite-shm'));
+    final walFile = File(p.join(dir.path, 'piggycount.sqlite-wal'));
 
     if (shmFile.existsSync()) {
       await shmFile.delete();

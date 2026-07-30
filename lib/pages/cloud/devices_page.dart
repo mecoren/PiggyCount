@@ -80,10 +80,10 @@ class _DevicesPageState extends ConsumerState<DevicesPage> {
         .toList(growable: false);
   }
 
-  /// 获取 PiggyCountCloudProvider 实例（仅 beecountCloud 后端可用）
+  /// 获取 PiggyCountCloudProvider 实例（仅 piggycountCloud 后端可用）
   Future<PiggyCountCloudProvider> _getCloudProvider() async {
     final config = await ref.read(activeCloudConfigProvider.future);
-    if (!config.valid || config.type != CloudBackendType.beecountCloud) {
+    if (!config.valid || config.type != CloudBackendType.piggycountCloud) {
       throw StateError(
           AppLocalizations.of(context).cloudCollabUnavailableMessage);
     }

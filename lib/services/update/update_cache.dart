@@ -26,9 +26,9 @@ class UpdateCache {
       }
       downloadDir ??= await getApplicationDocumentsDirectory();
 
-      // 从URL文件名提取版本号（格式如 beecount-0.8.1.apk）
+      // 从URL文件名提取版本号（格式如 piggycount-0.8.1.apk）
       String? version;
-      final versionMatch = RegExp(r'beecount-([0-9]+\.[0-9]+\.[0-9]+)\.apk')
+      final versionMatch = RegExp(r'piggycount-([0-9]+\.[0-9]+\.[0-9]+)\.apk')
           .firstMatch(fileName);
       if (versionMatch != null) {
         version = versionMatch.group(1);

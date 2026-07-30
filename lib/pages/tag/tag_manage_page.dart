@@ -271,7 +271,7 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
 
       // 生成文件并分享
       final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
-      final fileName = 'beecount_tags_$timestamp.yml';
+      final fileName = 'piggycount_tags_$timestamp.yml';
 
       if (Platform.isAndroid) {
         final downloadPath = '/storage/emulated/0/Download/PiggyCount';
