@@ -93,7 +93,7 @@ class UpdateNotifications {
       final details =
           NotificationDetails(android: androidDetails, iOS: iosDetails);
 
-      final title = 'BeeCount Update Download';
+      final title = 'PiggyCount Update Download';
       final body = indeterminate ? 'Downloading new version...' : 'Download progress: $progress%';
 
       logger.info('UpdateNotifications',

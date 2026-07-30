@@ -69,7 +69,7 @@ void main() {
           'url': 'https://nextcloud.example.com',
           'username': 'user@example.com',
           'password': 'password',
-          'remotePath': '/BeeCount/',
+          'remotePath': '/PiggyCount/',
         }),
         isTrue,
       );

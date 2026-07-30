@@ -1,6 +1,6 @@
 /// iCloud provider for flutter_cloud_sync
 ///
-/// This package provides iCloud Document Storage support for BeeCount.
+/// This package provides iCloud Document Storage support for PiggyCount.
 /// iOS/iPadOS only - uses user's private iCloud space.
 library flutter_cloud_sync_icloud;
 

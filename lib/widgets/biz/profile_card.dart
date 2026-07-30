@@ -26,7 +26,7 @@ import '../ui/toast.dart';
 /// - 昵称点击直接编辑
 /// - 小眼睛切换金额隐藏
 /// - 3 列统计（天数 / 记录数 / 余额）
-/// - BeeCount Cloud 模式下头像自动云同步
+/// - PiggyCount Cloud 模式下头像自动云同步
 class ProfileCard extends ConsumerStatefulWidget {
   const ProfileCard({super.key});
 
@@ -135,14 +135,14 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
     }
   }
 
-  /// 头像同步到 BeeCount Cloud（走 /api/v1/profile/avatar）。
+  /// 头像同步到 PiggyCount Cloud（走 /api/v1/profile/avatar）。
   /// 失败仅记日志，不阻塞用户使用本地头像；iCloud/WebDAV/Supabase 场景跳过。
   Future<void> _syncAvatarToCloud(String absolutePath) async {
     try {
       final providerInstance =
           await ref.read(sp.beecountCloudProviderInstance.future);
       if (providerInstance == null) {
-        logger.debug('avatar_sync', '非 BeeCount Cloud 模式，跳过头像云同步');
+        logger.debug('avatar_sync', '非 PiggyCount Cloud 模式，跳过头像云同步');
         return;
       }
       final file = File(absolutePath);
@@ -212,7 +212,7 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
     );
   }
 
-  /// 编辑用户昵称。保存写入 displayNameProvider —— 本地持久化与(仅 BeeCount
+  /// 编辑用户昵称。保存写入 displayNameProvider —— 本地持久化与(仅 PiggyCount
   /// Cloud 模式)云推送由 provider 的 listener 自动完成。v1 不支持清空已设昵称:
   /// trim 为空则不改动。
   ///

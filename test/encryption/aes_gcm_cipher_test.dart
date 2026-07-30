@@ -63,7 +63,7 @@ void main() {
     test('encrypt 后 decrypt 还原原文', () async {
       final cipher = AesGcmCipher();
       final key = List<int>.generate(32, (i) => 0x40 + i);
-      const plaintext = 'BeeCount 账本数据 v6';
+      const plaintext = 'PiggyCount 账本数据 v6';
 
       final encrypted =
           await cipher.encrypt(plaintext: utf8.encode(plaintext), key: key);

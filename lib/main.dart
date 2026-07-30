@@ -39,7 +39,7 @@ import 'package:path_provider/path_provider.dart';
 
 
 /// 全局 navigator key — 给 service 层(没有 BuildContext)push 路由使用。
-/// 当前用途:BeeCount Cloud 登录拿到 requires_2fa 时弹出 [Login2FAChallengeView]。
+/// 当前用途:PiggyCount Cloud 登录拿到 requires_2fa 时弹出 [Login2FAChallengeView]。
 final GlobalKey<NavigatorState> globalNavigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
@@ -138,7 +138,7 @@ Future<void> main() async {
   // 启动 URL 监听（用于快捷指令/AppLink 自动记账）
   _setupUrlListener(container);
 
-  // 注册 BeeCount Cloud 2FA challenge handler。当 server 返回 requires_2fa=true,
+  // 注册 PiggyCount Cloud 2FA challenge handler。当 server 返回 requires_2fa=true,
   // service 层会调这个 handler 弹出 Login2FAChallengeDialog 让用户输码。
   // 验证失败留在对话框就地展示错误,验证通过 / 用户取消才关闭。详见 .docs/2fa-design.md
   PiggyCountCloudProvider.globalTwoFactorHandler = (request) async {

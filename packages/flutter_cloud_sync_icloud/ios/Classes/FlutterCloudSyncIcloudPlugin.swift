@@ -6,7 +6,7 @@ public class FlutterCloudSyncIcloudPlugin: NSObject, FlutterPlugin {
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(
-            name: "com.beecount.app/icloud",
+            name: "com.piggycount.app/icloud",
             binaryMessenger: registrar.messenger()
         )
         let instance = FlutterCloudSyncIcloudPlugin()

@@ -17,13 +17,13 @@ final databaseProvider = Provider<PiggyDatabase>((ref) {
   return db;
 });
 
-// 仓储Provider — 一律 LocalRepository(本地优先 + ChangeTracker 推 BeeCount Cloud)。
-// 历史上还有过 CloudRepository(数据全存 Supabase),但 BeeCount Cloud 上线后
+// 仓储Provider — 一律 LocalRepository(本地优先 + ChangeTracker 推 PiggyCount Cloud)。
+// 历史上还有过 CloudRepository(数据全存 Supabase),但 PiggyCount Cloud 上线后
 // 整条范式从「云优先」迁到「本地优先 + 推送」,Cloud* 仓库整组随之删掉。
 final repositoryProvider = Provider<BaseRepository>((ref) {
   final db = ref.watch(databaseProvider);
 
-  // 仅 BeeCount Cloud 后端激活时注入 ChangeTracker(记录增量变更供同步引擎推送)。
+  // 仅 PiggyCount Cloud 后端激活时注入 ChangeTracker(记录增量变更供同步引擎推送)。
   // 其它备份后端(iCloud / WebDAV / S3 / Supabase)走快照备份路径,不需要变更追踪。
   final config = ref.watch(activeCloudConfigProvider).valueOrNull;
   final tracker = (config?.type == CloudBackendType.beecountCloud && config!.valid)

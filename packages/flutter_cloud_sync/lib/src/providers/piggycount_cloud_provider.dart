@@ -16,7 +16,7 @@ import '../core/storage_service.dart';
 import '../utils/path_helper.dart';
 
 // ============================================================================
-// 2FA(TOTP)— 见 BeeCount 主仓 .docs/2fa-design.md
+// 2FA(TOTP)— 见 PiggyCount 主仓 .docs/2fa-design.md
 // ============================================================================
 // 设计要点:
 // - 启用 / 管理 UI 只在 Web 端;App 仅承担"登录时若 server 要 2FA → 弹出输码视图"
@@ -84,7 +84,7 @@ class PiggyCountCloudProvider implements CloudProvider {
   String get providerId => 'beecount_cloud';
 
   @override
-  String get providerName => 'BeeCount Cloud';
+  String get providerName => 'PiggyCount Cloud';
 
   /// 拼接绝对 URL 用 — 头像 / 附件下载等场景。null = 未初始化。
   String? get baseUrl => _auth?.baseUrl;
@@ -95,7 +95,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final auth = _auth;
     if (auth == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud provider is not initialized.');
+          'PiggyCount Cloud provider is not initialized.');
     }
     return auth;
   }
@@ -105,7 +105,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud provider is not initialized.');
+          'PiggyCount Cloud provider is not initialized.');
     }
     return storage;
   }
@@ -114,7 +114,7 @@ class PiggyCountCloudProvider implements CloudProvider {
   Future<void> initialize(Map<String, dynamic> config) async {
     if (!validateConfig(config)) {
       throw CloudConfigurationException(
-          'Invalid BeeCount Cloud config. Required: baseUrl');
+          'Invalid PiggyCount Cloud config. Required: baseUrl');
     }
 
     final rawBaseUrl = (config['baseUrl'] as String).trim();
@@ -178,7 +178,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final realtime = _realtime;
     if (realtime == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud realtime is not initialized.');
+          'PiggyCount Cloud realtime is not initialized.');
     }
     await realtime.start();
   }
@@ -191,7 +191,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.getMyProfile();
   }
@@ -201,7 +201,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final auth = _auth;
     if (auth == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud auth is not initialized.');
+          'PiggyCount Cloud auth is not initialized.');
     }
     return auth.getTwoFactorStatus();
   }
@@ -212,7 +212,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.updateMyProfileDisplayName(displayName: displayName);
   }
@@ -225,7 +225,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.updateMyProfileBaseCurrency(
         primaryCurrency: primaryCurrency);
@@ -238,7 +238,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.fetchExchangeRates(base: base);
   }
@@ -251,7 +251,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.uploadMyAvatar(
       bytes: bytes,
@@ -268,7 +268,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.updateMyProfileIncomeColorScheme(
       incomeIsRed: incomeIsRed,
@@ -283,7 +283,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.updateMyProfileThemeColor(hex: hex);
   }
@@ -296,7 +296,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.updateMyProfileAppearance(appearance: appearance);
   }
@@ -309,7 +309,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.updateMyProfileAiConfig(aiConfig: aiConfig);
   }
@@ -326,7 +326,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.downloadMyAvatar(userId: userId, version: version);
   }
@@ -336,7 +336,7 @@ class PiggyCountCloudProvider implements CloudProvider {
   /// [persistCursor] 默认 true 兼容老 caller。传 false 时,本方法返回 cursor
   /// 但**不**持久化到 SharedPreferences,由 caller 自己在 apply 成功后决定何时
   /// 推进。这是为了避免"cursor 已推进但本地 apply 失败"导致这一页 change 永远
-  /// 拉不回的经典 bug,详见 BeeCount 项目 `.docs/full-pull-refactor/`。
+  /// 拉不回的经典 bug,详见 PiggyCount 项目 `.docs/full-pull-refactor/`。
   Future<PiggyCountCloudPullResult> pullChanges({
     int? since,
     int limit = 1000,
@@ -345,7 +345,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.pullChanges(
       since: since,
@@ -361,7 +361,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.pushEntityChanges(changes: changes);
   }
@@ -373,7 +373,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.attachmentBatchExists(
       ledgerId: ledgerId,
@@ -390,7 +390,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.uploadAttachment(
       ledgerId: ledgerId,
@@ -409,7 +409,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.uploadCategoryIcon(
       bytes: bytes,
@@ -422,7 +422,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.downloadAttachment(fileId: fileId);
   }
@@ -434,7 +434,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.listDevices(
       view: view,
@@ -446,7 +446,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.revokeDevice(deviceId: deviceId);
   }
@@ -455,7 +455,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.readLedgers();
   }
@@ -466,7 +466,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.readLedgerDetail(ledgerId: ledgerId);
   }
@@ -477,18 +477,18 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.readLedgerStats(ledgerId: ledgerId);
   }
 
   /// 拉 server 版本号(公开端点,不需要 token)。用在设置页展示
-  /// "BeeCount Cloud vX.Y.Z"。失败抛,调用方自己 swallow。
+  /// "PiggyCount Cloud vX.Y.Z"。失败抛,调用方自己 swallow。
   Future<PiggyCountCloudServerVersion> fetchServerVersion() async {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.fetchServerVersion();
   }
@@ -505,7 +505,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.createInvite(
       ledgerId: ledgerId, role: role, expiresInHours: expiresInHours,
@@ -515,7 +515,7 @@ class PiggyCountCloudProvider implements CloudProvider {
   Future<List<PiggyCountCloudInvite>> listInvites({required String ledgerId}) async {
     final storage = _storage;
     if (storage == null) {
-      throw CloudConfigurationException('BeeCount Cloud storage is not initialized.');
+      throw CloudConfigurationException('PiggyCount Cloud storage is not initialized.');
     }
     return storage.listInvites(ledgerId: ledgerId);
   }
@@ -523,7 +523,7 @@ class PiggyCountCloudProvider implements CloudProvider {
   Future<void> revokeInvite({required String ledgerId, required String code}) async {
     final storage = _storage;
     if (storage == null) {
-      throw CloudConfigurationException('BeeCount Cloud storage is not initialized.');
+      throw CloudConfigurationException('PiggyCount Cloud storage is not initialized.');
     }
     return storage.revokeInvite(ledgerId: ledgerId, code: code);
   }
@@ -531,7 +531,7 @@ class PiggyCountCloudProvider implements CloudProvider {
   Future<PiggyCountCloudInvitePreview> previewInvite({required String code}) async {
     final storage = _storage;
     if (storage == null) {
-      throw CloudConfigurationException('BeeCount Cloud storage is not initialized.');
+      throw CloudConfigurationException('PiggyCount Cloud storage is not initialized.');
     }
     return storage.previewInvite(code: code);
   }
@@ -539,7 +539,7 @@ class PiggyCountCloudProvider implements CloudProvider {
   Future<PiggyCountCloudInviteAcceptResult> acceptInvite({required String code}) async {
     final storage = _storage;
     if (storage == null) {
-      throw CloudConfigurationException('BeeCount Cloud storage is not initialized.');
+      throw CloudConfigurationException('PiggyCount Cloud storage is not initialized.');
     }
     return storage.acceptInvite(code: code);
   }
@@ -547,7 +547,7 @@ class PiggyCountCloudProvider implements CloudProvider {
   Future<List<PiggyCountCloudLedgerMember>> listMembers({required String ledgerId}) async {
     final storage = _storage;
     if (storage == null) {
-      throw CloudConfigurationException('BeeCount Cloud storage is not initialized.');
+      throw CloudConfigurationException('PiggyCount Cloud storage is not initialized.');
     }
     return storage.listMembers(ledgerId: ledgerId);
   }
@@ -559,7 +559,7 @@ class PiggyCountCloudProvider implements CloudProvider {
   }) async {
     final storage = _storage;
     if (storage == null) {
-      throw CloudConfigurationException('BeeCount Cloud storage is not initialized.');
+      throw CloudConfigurationException('PiggyCount Cloud storage is not initialized.');
     }
     return storage.updateMemberRole(ledgerId: ledgerId, userId: userId, role: role);
   }
@@ -567,7 +567,7 @@ class PiggyCountCloudProvider implements CloudProvider {
   Future<void> removeMember({required String ledgerId, required String userId}) async {
     final storage = _storage;
     if (storage == null) {
-      throw CloudConfigurationException('BeeCount Cloud storage is not initialized.');
+      throw CloudConfigurationException('PiggyCount Cloud storage is not initialized.');
     }
     return storage.removeMember(ledgerId: ledgerId, userId: userId);
   }
@@ -575,7 +575,7 @@ class PiggyCountCloudProvider implements CloudProvider {
   Future<PiggyCountCloudSharedResources> fetchSharedResources({required String ledgerId}) async {
     final storage = _storage;
     if (storage == null) {
-      throw CloudConfigurationException('BeeCount Cloud storage is not initialized.');
+      throw CloudConfigurationException('PiggyCount Cloud storage is not initialized.');
     }
     return storage.fetchSharedResources(ledgerId: ledgerId);
   }
@@ -588,7 +588,7 @@ class PiggyCountCloudProvider implements CloudProvider {
   }) async {
     final storage = _storage;
     if (storage == null) {
-      throw CloudConfigurationException('BeeCount Cloud storage is not initialized.');
+      throw CloudConfigurationException('PiggyCount Cloud storage is not initialized.');
     }
     return storage.fetchMemberStats(
       ledgerId: ledgerId,
@@ -610,7 +610,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.readTransactions(
       ledgerId: ledgerId,
@@ -629,7 +629,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.readAccounts(ledgerId: ledgerId);
   }
@@ -640,7 +640,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.readCategories(ledgerId: ledgerId);
   }
@@ -651,7 +651,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.readTags(ledgerId: ledgerId);
   }
@@ -665,7 +665,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.writeCreateLedger(
       ledgerId: ledgerId,
@@ -686,7 +686,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.writeLedgerMeta(
       ledgerId: ledgerId,
@@ -723,7 +723,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.writeCreateTransaction(
       ledgerId: ledgerId,
@@ -775,7 +775,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.writeUpdateTransaction(
       ledgerId: ledgerId,
@@ -812,7 +812,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.writeDeleteTransaction(
       ledgerId: ledgerId,
@@ -836,7 +836,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.writeCreateAccount(
       ledgerId: ledgerId,
@@ -864,7 +864,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.writeUpdateAccount(
       ledgerId: ledgerId,
@@ -889,7 +889,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.writeDeleteAccount(
       ledgerId: ledgerId,
@@ -919,7 +919,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.writeCreateCategory(
       ledgerId: ledgerId,
@@ -959,7 +959,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.writeUpdateCategory(
       ledgerId: ledgerId,
@@ -990,7 +990,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.writeDeleteCategory(
       ledgerId: ledgerId,
@@ -1012,7 +1012,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.writeCreateTag(
       ledgerId: ledgerId,
@@ -1036,7 +1036,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.writeUpdateTag(
       ledgerId: ledgerId,
@@ -1059,7 +1059,7 @@ class PiggyCountCloudProvider implements CloudProvider {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
-          'BeeCount Cloud storage is not initialized.');
+          'PiggyCount Cloud storage is not initialized.');
     }
     return storage.writeDeleteTag(
       ledgerId: ledgerId,
@@ -1071,8 +1071,8 @@ class PiggyCountCloudProvider implements CloudProvider {
   }
 }
 
-class _BeeCountDeviceMetadata {
-  const _BeeCountDeviceMetadata({
+class _PiggyCountDeviceMetadata {
+  const _PiggyCountDeviceMetadata({
     required this.deviceId,
     required this.deviceName,
     required this.platform,
@@ -1131,8 +1131,8 @@ class PiggyCountCloudAuthService implements CloudAuthService {
       StreamController<CloudUser?>.broadcast();
 
   _PiggyCountCloudSession? _session;
-  _BeeCountDeviceMetadata? _deviceMetadataCache;
-  Future<_BeeCountDeviceMetadata>? _deviceMetadataFuture;
+  _PiggyCountDeviceMetadata? _deviceMetadataCache;
+  Future<_PiggyCountDeviceMetadata>? _deviceMetadataFuture;
 
   /// 离线恢复凭证:token 全部失效(refresh_token 过期 / server 认不出来)时,
   /// 如果注入了邮密,currentUser/requireAccessToken 会用这对凭证自动再登一次,
@@ -1157,7 +1157,7 @@ class PiggyCountCloudAuthService implements CloudAuthService {
     _recoveryEmail = (email != null && email.isNotEmpty) ? email : null;
     _recoveryPassword =
         (password != null && password.isNotEmpty) ? password : null;
-    // 凭证更新 = 用户在 cloud 配置页保存了新邮密 / 切回 BeeCount,清掉旧冷却,
+    // 凭证更新 = 用户在 cloud 配置页保存了新邮密 / 切回 PiggyCount,清掉旧冷却,
     // 让下一次 currentUser 立刻尝试一次新凭证的登录。
     _silentRecoveryCooldownUntil = null;
   }
@@ -1338,7 +1338,7 @@ class PiggyCountCloudAuthService implements CloudAuthService {
     };
   }
 
-  Future<_BeeCountDeviceMetadata> _resolveDeviceMetadata() {
+  Future<_PiggyCountDeviceMetadata> _resolveDeviceMetadata() {
     final cached = _deviceMetadataCache;
     if (cached != null) {
       return Future.value(cached);
@@ -1359,9 +1359,9 @@ class PiggyCountCloudAuthService implements CloudAuthService {
     });
   }
 
-  Future<_BeeCountDeviceMetadata> _loadDeviceMetadata() async {
+  Future<_PiggyCountDeviceMetadata> _loadDeviceMetadata() async {
     final localDeviceId = await _resolveOrCreateLocalDeviceId();
-    String deviceName = 'BeeCount App';
+    String deviceName = 'PiggyCount App';
     String platform = 'flutter';
     String? appVersion;
     String? osVersion;
@@ -1484,7 +1484,7 @@ class PiggyCountCloudAuthService implements CloudAuthService {
       // Ignore device info failure and keep fallback values.
     }
 
-    return _BeeCountDeviceMetadata(
+    return _PiggyCountDeviceMetadata(
       deviceId: localDeviceId,
       deviceName: deviceName,
       platform: platform,
@@ -1584,13 +1584,13 @@ class PiggyCountCloudAuthService implements CloudAuthService {
   @override
   Future<void> sendPasswordResetEmail({required String email}) async {
     throw CloudAuthException(
-        'BeeCount Cloud v1 does not support password reset.');
+        'PiggyCount Cloud v1 does not support password reset.');
   }
 
   @override
   Future<void> resendEmailVerification({required String email}) async {
     throw CloudAuthException(
-        'BeeCount Cloud v1 does not require email verification.');
+        'PiggyCount Cloud v1 does not require email verification.');
   }
 
   void dispose() {
@@ -1754,7 +1754,7 @@ class PiggyCountCloudAuthService implements CloudAuthService {
     await prefs.setString(_localDeviceIdStorageKey, session.deviceId);
     final metadata = _deviceMetadataCache;
     if (metadata != null && metadata.deviceId != session.deviceId) {
-      _deviceMetadataCache = _BeeCountDeviceMetadata(
+      _deviceMetadataCache = _PiggyCountDeviceMetadata(
         deviceId: session.deviceId,
         deviceName: metadata.deviceName,
         platform: metadata.platform,
@@ -3686,7 +3686,7 @@ class PiggyCountCloudServerVersion {
 
   factory PiggyCountCloudServerVersion.fromJson(Map<String, dynamic> json) {
     return PiggyCountCloudServerVersion(
-      name: (json['name'] as String?)?.trim() ?? 'BeeCount Cloud',
+      name: (json['name'] as String?)?.trim() ?? 'PiggyCount Cloud',
       version: (json['version'] as String?)?.trim() ?? '',
     );
   }

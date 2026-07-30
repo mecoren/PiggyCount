@@ -19,7 +19,7 @@ class ICloudManager {
     private var containerURL: URL?
 
     // iCloud container identifier - must match entitlements
-    private let containerIdentifier = "iCloud.com.tntlikely.beecount"
+    private let containerIdentifier = "iCloud.com.wait.piggycount"
 
     // MARK: - Initialization
 
@@ -170,7 +170,7 @@ class ICloudManager {
 
             // Get iCloud container URL with specific identifier
             if let url = self.fileManager.url(forUbiquityContainerIdentifier: self.containerIdentifier) {
-                self.containerURL = url.appendingPathComponent("Documents/BeeCount")
+                self.containerURL = url.appendingPathComponent("Documents/PiggyCount")
                 print("iCloud: Initialized container at \(self.containerURL!)")
 
                 // Create base directory if needed

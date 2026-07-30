@@ -711,9 +711,9 @@ void main() {
       await _generatePack(tester, _en);
 
       // 同步一份到 iOS 扩展 bundle(添加页静态预览,见 WidgetPreviewAssets):
-      // Android 语言目录 → ios/BeeCountWidget/Previews/<base>_{zh,en}.png,
+      // Android 语言目录 → ios/PiggyCountWidget/Previews/<base>_{zh,en}.png,
       // 避免双份资产漂移(iOS 那份最初是手工拷的快照,现在随生成器自动同步)。
-      const iosDir = 'ios/BeeCountWidget/Previews';
+      const iosDir = 'ios/PiggyCountWidget/Previews';
       Directory(iosDir).createSync(recursive: true);
       var synced = 0;
       for (final pack in [_zh, _en]) {

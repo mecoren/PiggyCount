@@ -101,16 +101,16 @@ class PostProcessor {
     ref.read(syncStatusRefreshProvider.notifier).state++;
     ref.read(ledgerListRefreshProvider.notifier).state++;
 
-    // BeeCount Cloud：始终自动双向同步
+    // PiggyCount Cloud：始终自动双向同步
     if (sync is SyncEngine) {
       final refresh = ref.read(syncStatusRefreshProvider.notifier);
       Future(() async {
         try {
           await sync.sync(ledgerId: ledgerId.toString());
           refresh.state++;
-          logger.info('PostProcessor', 'BeeCount Cloud 自动同步完成', 'ledgerId=$ledgerId');
+          logger.info('PostProcessor', 'PiggyCount Cloud 自动同步完成', 'ledgerId=$ledgerId');
         } catch (e) {
-          logger.error('PostProcessor', 'BeeCount Cloud 自动同步失败', e);
+          logger.error('PostProcessor', 'PiggyCount Cloud 自动同步失败', e);
         }
       });
       return;
@@ -141,16 +141,16 @@ class PostProcessor {
     c.read(syncStatusRefreshProvider.notifier).state++;
     c.read(ledgerListRefreshProvider.notifier).state++;
 
-    // BeeCount Cloud：始终自动双向同步
+    // PiggyCount Cloud：始终自动双向同步
     if (sync is SyncEngine) {
       final refresh = c.read(syncStatusRefreshProvider.notifier);
       Future(() async {
         try {
           await sync.sync(ledgerId: ledgerId.toString());
           refresh.state++;
-          logger.info('PostProcessor', 'BeeCount Cloud 自动同步完成', 'ledgerId=$ledgerId');
+          logger.info('PostProcessor', 'PiggyCount Cloud 自动同步完成', 'ledgerId=$ledgerId');
         } catch (e) {
-          logger.error('PostProcessor', 'BeeCount Cloud 自动同步失败', e);
+          logger.error('PostProcessor', 'PiggyCount Cloud 自动同步失败', e);
         }
       });
       return;
@@ -181,16 +181,16 @@ class PostProcessor {
     ref.read(syncStatusRefreshProvider.notifier).state++;
     ref.read(ledgerListRefreshProvider.notifier).state++;
 
-    // BeeCount Cloud：始终自动双向同步
+    // PiggyCount Cloud：始终自动双向同步
     if (sync is SyncEngine) {
       final refresh = ref.read(syncStatusRefreshProvider.notifier);
       Future(() async {
         try {
           await sync.sync(ledgerId: ledgerId.toString());
           refresh.state++;
-          logger.info('PostProcessor', 'BeeCount Cloud 自动同步完成', 'ledgerId=$ledgerId');
+          logger.info('PostProcessor', 'PiggyCount Cloud 自动同步完成', 'ledgerId=$ledgerId');
         } catch (e) {
-          logger.error('PostProcessor', 'BeeCount Cloud 自动同步失败', e);
+          logger.error('PostProcessor', 'PiggyCount Cloud 自动同步失败', e);
         }
       });
       return;

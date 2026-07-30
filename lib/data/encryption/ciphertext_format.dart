@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-/// BeeCount 同步加密的密文格式
+/// PiggyCount 同步加密的密文格式
 ///
 /// 格式：`BEECRYPT1:<base64(salt(16))>:<base64(nonce(12) || ciphertext || mac(16))>`
 ///

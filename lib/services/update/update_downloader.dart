@@ -63,7 +63,7 @@ class UpdateDownloader {
       }
       downloadDir ??= await getApplicationDocumentsDirectory();
 
-      final filePath = '${downloadDir.path}/BeeCount_$fileName.apk';
+      final filePath = '${downloadDir.path}/PiggyCount_$fileName.apk';
       logger.info('UpdateDownloader', '下载路径: $filePath');
 
       // 只删除当前要下载的文件（如果存在），保留其他版本的缓存
@@ -148,7 +148,7 @@ class UpdateDownloader {
             'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
             'Cache-Control': 'no-cache',
             'Pragma': 'no-cache',
-            'Referer': 'https://github.com/TNT-Likely/BeeCount/releases',
+            'Referer': 'https://github.com/TNT-Likely/PiggyCount/releases',
           },
         ),
         onReceiveProgress: (received, total) {

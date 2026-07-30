@@ -170,7 +170,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                   svgAsset: 'assets/icons/social/github.svg',
                   label: 'GitHub',
                   onTap: () => _tryOpenUrl(Uri.parse(
-                      'https://github.com/TNT-Likely/BeeCount')),
+                      'https://github.com/TNT-Likely/PiggyCount')),
                 ),
                 if (showTelegram)
                   _socialButton(
@@ -272,8 +272,8 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                 onTap: () async {
                   final lc = locale.languageCode;
                   final docUrl = lc == 'zh'
-                      ? 'https://github.com/TNT-Likely/BeeCount/blob/main/docs/donate/README_ZH.md'
-                      : 'https://github.com/TNT-Likely/BeeCount/blob/main/docs/donate/README_EN.md';
+                      ? 'https://github.com/TNT-Likely/PiggyCount/blob/main/docs/donate/README_ZH.md'
+                      : 'https://github.com/TNT-Likely/PiggyCount/blob/main/docs/donate/README_EN.md';
                   await _tryOpenUrl(Uri.parse(docUrl));
                 },
               ),
@@ -282,7 +282,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                 title: l10n.mineFeedback,
                 subtitle: l10n.mineFeedbackSubtitle,
                 onTap: () => _tryOpenUrl(Uri.parse(
-                    'https://github.com/TNT-Likely/BeeCount/issues')),
+                    'https://github.com/TNT-Likely/PiggyCount/issues')),
               ),
               SettingsNavItem(
                 icon: Icons.bug_report_outlined,

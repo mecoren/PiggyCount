@@ -18,7 +18,7 @@ import 'transactions_json.dart';
 
 /// 账本交易的云同步管理器
 ///
-/// 使用 flutter_cloud_sync 包实现云同步，保留 BeeCount 特定的业务逻辑
+/// 使用 flutter_cloud_sync 包实现云同步，保留 PiggyCount 特定的业务逻辑
 class TransactionsSyncManager implements SyncService {
   final fcs.CloudServiceConfig config;
   final PiggyDatabase db;
@@ -551,7 +551,7 @@ class TransactionsSyncManager implements SyncService {
           localUpdatedAt: await _computeLocalUpdatedAt(ledgerId),
           forceRefresh: true);
 
-      // 转换包的 SyncStatus 为 BeeCount 的 SyncStatus
+      // 转换包的 SyncStatus 为 PiggyCount 的 SyncStatus
       final status = _convertSyncStatus(fcsStatus);
 
       // 错误状态不写入 _statusCache：
@@ -584,7 +584,7 @@ class TransactionsSyncManager implements SyncService {
     }
   }
 
-  /// 转换包的 SyncStatus 为 BeeCount 的 SyncStatus
+  /// 转换包的 SyncStatus 为 PiggyCount 的 SyncStatus
   SyncStatus _convertSyncStatus(fcs.SyncStatus fcsStatus) {
     SyncDiff diff;
 

@@ -1276,8 +1276,8 @@ class SyncEngine implements app.SyncService {
 
   /// 从 change_id=0 起把整段 sync_changes 重拉一遍并幂等应用。
   /// 用在"账本刚从 server 拉到本地、本地 tx 为空但 cursor 已经被推到顶"
-  /// 的恢复场景。跟 S3/WebDAV 的 `_fullPull` 不同，这里走的还是 BeeCount
-  /// Cloud 的增量日志，只是把起点拨回 0，符合 BeeCount Cloud 的同步模型。
+  /// 的恢复场景。跟 S3/WebDAV 的 `_fullPull` 不同，这里走的还是 PiggyCount
+  /// Cloud 的增量日志，只是把起点拨回 0，符合 PiggyCount Cloud 的同步模型。
   Future<int> replayAllChanges() async {
     logger.info('SyncEngine', 'replayAllChanges: 从 0 开始重拉 sync_changes');
     return pull('', sinceOverride: 0);

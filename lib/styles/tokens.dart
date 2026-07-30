@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/theme_providers.dart';
 
-/// BeeCount Design Token 系统
+/// PiggyCount Design Token 系统
 ///
 /// 设计理念：类似 CSS Design Tokens，通过语义化命名统一管理颜色。
 /// 所有 UI 组件都应该使用 Token 而非直接使用颜色值。

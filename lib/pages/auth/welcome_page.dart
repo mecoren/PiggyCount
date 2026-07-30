@@ -698,7 +698,7 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
 
   /// 打开GitHub链接
   Future<void> _launchGitHub(BuildContext context) async {
-    final url = Uri.parse('https://github.com/TNT-Likely/BeeCount');
+    final url = Uri.parse('https://github.com/TNT-Likely/PiggyCount');
     try {
       if (await canLaunchUrl(url)) {
         await launchUrl(url, mode: LaunchMode.externalApplication);

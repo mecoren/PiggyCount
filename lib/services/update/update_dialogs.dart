@@ -240,7 +240,7 @@ class UpdateDialogs {
 
   /// 启动GitHub Releases页面
   static Future<void> launchGitHubReleases(BuildContext context) async {
-    const url = 'https://github.com/TNT-Likely/BeeCount/releases';
+    const url = 'https://github.com/TNT-Likely/PiggyCount/releases';
     try {
       if (await canLaunchUrl(Uri.parse(url))) {
         await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);

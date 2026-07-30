@@ -185,7 +185,7 @@ extension SyncEngineSerializationExt on SyncEngine {
         // 按 entityId 反查行,跟 account 分支同款;行已删(delete change)
         // 返回空 payload(delete 路径 server 只看 action,不读 payload)。
         // server 端 projection.upsert_exchange_rate_override 对缺字段静默 return
-        // (BeeCount-Cloud Task 3 防御分支),空 payload upsert 无害。
+        // (PiggyCount-Cloud Task 3 防御分支),空 payload upsert 无害。
         final override = await (db.select(db.exchangeRateOverrides)
               ..where((o) => o.id.equals(entityId)))
             .getSingleOrNull();

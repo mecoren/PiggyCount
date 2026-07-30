@@ -90,8 +90,8 @@ class _ExportPageState extends ConsumerState<ExportPage> {
         directory = docDir.path;
         shareAfter = true;
       } else {
-        // Android: 直接保存到公共 Download/BeeCount 目录
-        const downloadPath = '/storage/emulated/0/Download/BeeCount';
+        // Android: 直接保存到公共 Download/PiggyCount 目录
+        const downloadPath = '/storage/emulated/0/Download/PiggyCount';
         final dir = Directory(downloadPath);
         if (!await dir.exists()) {
           await dir.create(recursive: true);

@@ -555,7 +555,7 @@ class _LiquidGlassTitleBarState extends State<LiquidGlassTitleBar>
 }
 
 /// 移植自 wait-home AppDimens 的尺寸常量
-/// 保留为私有常量避免污染 BeeCount 的 PiggyDimens Token 体系
+/// 保留为私有常量避免污染 PiggyCount 的 PiggyDimens Token 体系
 class _Dimens {
   _Dimens._();
 

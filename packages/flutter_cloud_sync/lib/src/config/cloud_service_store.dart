@@ -2,7 +2,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'cloud_service_config.dart';
 
 /// 云服务配置持久化存储
-/// 支持类型: 本地存储、BeeCount Cloud、自定义 Supabase、自定义 WebDAV、iCloud、S3
+/// 支持类型: 本地存储、PiggyCount Cloud、自定义 Supabase、自定义 WebDAV、iCloud、S3
 class CloudServiceStore {
   static const _kActiveType =
       'cloud_active_type'; // local | beecount_cloud | supabase | webdav | icloud | s3
@@ -79,7 +79,7 @@ class CloudServiceStore {
     }
   }
 
-  /// 加载 BeeCount Cloud 配置(不管是否激活)
+  /// 加载 PiggyCount Cloud 配置(不管是否激活)
   Future<CloudServiceConfig?> loadPiggyCountCloud() async {
     final sp = await SharedPreferences.getInstance();
     final raw = sp.getString(_kPiggyCountCloudCfg);

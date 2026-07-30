@@ -124,7 +124,7 @@ struct PiggyCountWidgetEntryView : View {
                         Image(systemName: "chart.bar.fill")
                             .font(.system(size: 32))
                             .foregroundColor(.white)
-                        Text("蜜蜂记账")
+                        Text("小猪记账")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.white)
                     }
@@ -149,7 +149,7 @@ struct PiggyCountWidget: Widget {
                 PiggyCountWidgetEntryView(entry: entry)
             }
         }
-        .configurationDisplayName("蜜蜂记账")
+        .configurationDisplayName("小猪记账")
         .description("显示今日和本月的收支情况")
         .supportedFamilies([.systemSmall, .systemMedium])
         .contentMarginsDisabled()  // Remove default padding/margins in iOS 17+

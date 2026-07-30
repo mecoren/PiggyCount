@@ -122,7 +122,7 @@ final supabaseConfigProvider = FutureProvider<CloudServiceConfig?>((ref) async {
   return store.loadSupabase();
 });
 
-// BeeCount Cloud 配置(不管是否激活)
+// PiggyCount Cloud 配置(不管是否激活)
 final beecountCloudConfigProvider =
     FutureProvider<CloudServiceConfig?>((ref) async {
   final store = ref.watch(cloudServiceStoreProvider);
@@ -176,7 +176,7 @@ final syncServiceProvider = Provider<SyncService>((ref) {
     return LocalOnlySyncService();
   }
 
-  // BeeCount Cloud → SyncEngine（增量同步）
+  // PiggyCount Cloud → SyncEngine（增量同步）
   if (config.type == CloudBackendType.beecountCloud) {
     final providerAsync = ref.watch(beecountCloudProviderInstance);
     if (!providerAsync.hasValue || providerAsync.value == null) {
@@ -417,7 +417,7 @@ final syncServiceProvider = Provider<SyncService>((ref) {
           // Step 1.5: 如果有新账本插进来，要从 cursor=0 把 sync_changes 重放
           // 一遍。否则 B 设备的全局 cursor 可能已经被早期 pull 推到顶，增量
           // `_pull` 再也拿不回这些账本的历史 tx/category/account。
-          // BeeCount Cloud 的 apply 是按 entity_sync_id upsert 幂等的，重放
+          // PiggyCount Cloud 的 apply 是按 entity_sync_id upsert 幂等的，重放
           // 安全。
           if (newLedgerCount > 0) {
             try {
@@ -493,7 +493,7 @@ final syncServiceProvider = Provider<SyncService>((ref) {
 });
 
 /// 已初始化的 PiggyCountCloudProvider 实例
-/// 用于 SyncEngine 和其他需要直接访问 BeeCount Cloud API 的场景
+/// 用于 SyncEngine 和其他需要直接访问 PiggyCount Cloud API 的场景
 final beecountCloudProviderInstance =
     FutureProvider<PiggyCountCloudProvider?>((ref) async {
   final configAsync = ref.watch(activeCloudConfigProvider);
@@ -530,12 +530,12 @@ final beecountCloudProviderInstance =
       try {
         final user = await services.auth!.currentUser;
         if (user != null) {
-          logger.info('CloudSync', 'BeeCount Cloud session ready: ${user.email}');
+          logger.info('CloudSync', 'PiggyCount Cloud session ready: ${user.email}');
         } else if (email != null && email.isNotEmpty) {
-          logger.info('CloudSync', 'BeeCount Cloud 未登录,等首次 API 触发恢复');
+          logger.info('CloudSync', 'PiggyCount Cloud 未登录,等首次 API 触发恢复');
         }
       } catch (e, st) {
-        logger.warning('CloudSync', 'BeeCount Cloud 初始 currentUser 失败: $e', st);
+        logger.warning('CloudSync', 'PiggyCount Cloud 初始 currentUser 失败: $e', st);
       }
     }
     return provider;
@@ -545,8 +545,8 @@ final beecountCloudProviderInstance =
   return null;
 });
 
-/// BeeCount Cloud 服务端版本号。Mine 页面 / 云同步页都能直接用;失败就
-/// null,UI 自己隐藏。非 BeeCount Cloud 模式直接 null。
+/// PiggyCount Cloud 服务端版本号。Mine 页面 / 云同步页都能直接用;失败就
+/// null,UI 自己隐藏。非 PiggyCount Cloud 模式直接 null。
 ///
 /// **自动刷新**:依赖 [syncStatusRefreshProvider],每次同步完成会 bump 这个
 /// ticker,版本号 provider 重新跑 fetchServerVersion。这样 server 升级后用户
@@ -930,7 +930,7 @@ final localLedgersProvider =
 
 /// 远程账本列表（慢速，网络请求）
 ///
-/// 调用 BeeCount Cloud 的 `/read/ledgers` 取 server 上当前用户所有账本，再
+/// 调用 PiggyCount Cloud 的 `/read/ledgers` 取 server 上当前用户所有账本，再
 /// 跟本地 Drift ledgers 表按 `syncId` 对齐，把**已经在本地存在**的那部分过滤
 /// 掉，只把**纯远程**的账本作为 remote-only 展示在账本页。
 ///

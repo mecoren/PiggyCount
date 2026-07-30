@@ -51,12 +51,12 @@ void main() {
     test('把平台已安装信息映射为目录 spec,丢弃匹配不到的条目', () {
       final infos = [
         HomeWidgetInfo(
-          iOSKind: 'BeeCountWidget',
+          iOSKind: 'PiggyCountWidget',
           iOSFamily: 'systemMedium',
         ),
         HomeWidgetInfo(iOSKind: '尚未注册的未来类型'),
         HomeWidgetInfo(
-          androidClassName: 'com.tntlikely.beecount.BeeCountWidgetProvider',
+          androidClassName: 'com.wait.piggycount.PiggyCountWidgetProvider',
           androidWidgetId: 42,
         ),
       ];
@@ -73,11 +73,11 @@ void main() {
     test('与 selectSpecsToRender 组合:Android 同 provider 多实例只渲一次', () {
       final infos = [
         HomeWidgetInfo(
-          androidClassName: 'com.tntlikely.beecount.BeeCountWidgetProvider',
+          androidClassName: 'com.wait.piggycount.PiggyCountWidgetProvider',
           androidWidgetId: 1,
         ),
         HomeWidgetInfo(
-          androidClassName: 'com.tntlikely.beecount.BeeCountWidgetProvider',
+          androidClassName: 'com.wait.piggycount.PiggyCountWidgetProvider',
           androidWidgetId: 2,
         ),
       ];
@@ -94,7 +94,7 @@ void main() {
       final infos = [
         HomeWidgetInfo(
           androidClassName:
-              'com.tntlikely.beecount.BeeCountNetWorthWidgetProvider',
+              'com.wait.piggycount.PiggyCountNetWorthWidgetProvider',
           androidWidgetId: 7,
         ),
       ];
@@ -111,7 +111,7 @@ void main() {
     test('iOS 多尺寸类型:kind+family 仍只精确命中单一尺寸(对照 Android)', () {
       final infos = [
         HomeWidgetInfo(
-          iOSKind: 'BeeCountNetWorthWidget',
+          iOSKind: 'PiggyCountNetWorthWidget',
           iOSFamily: 'systemLarge',
         ),
       ];
@@ -123,14 +123,14 @@ void main() {
         '不影响中号', () {
       expect(
         matchInstalledSpecs([
-          HomeWidgetInfo(iOSKind: 'BeeCountWidget', iOSFamily: 'systemSmall'),
+          HomeWidgetInfo(iOSKind: 'PiggyCountWidget', iOSFamily: 'systemSmall'),
         ]),
         [WidgetSpec.glanceSmall],
       );
       // 存量中号仍精确命中 glanceMedium(D2 back-compat 不受小号补全影响)。
       expect(
         matchInstalledSpecs([
-          HomeWidgetInfo(iOSKind: 'BeeCountWidget', iOSFamily: 'systemMedium'),
+          HomeWidgetInfo(iOSKind: 'PiggyCountWidget', iOSFamily: 'systemMedium'),
         ]),
         [WidgetSpec.glanceMedium],
       );
@@ -141,7 +141,7 @@ void main() {
         matchInstalledSpecs([
           HomeWidgetInfo(
             androidClassName:
-                'com.tntlikely.beecount.BeeCountGlanceSmallWidgetProvider',
+                'com.wait.piggycount.PiggyCountGlanceSmallWidgetProvider',
             androidWidgetId: 9,
           ),
         ]),
@@ -156,7 +156,7 @@ void main() {
         matchInstalledSpecs([
           HomeWidgetInfo(
             androidClassName:
-                'com.tntlikely.beecount.BeeCountNetWorthLargeWidgetProvider',
+                'com.wait.piggycount.PiggyCountNetWorthLargeWidgetProvider',
             androidWidgetId: 11,
           ),
         ]).toSet(),
@@ -170,7 +170,7 @@ void main() {
         matchInstalledSpecs([
           HomeWidgetInfo(
             androidClassName:
-                'com.tntlikely.beecount.BeeCountBudgetMediumWidgetProvider',
+                'com.wait.piggycount.PiggyCountBudgetMediumWidgetProvider',
             androidWidgetId: 12,
           ),
         ]).toSet(),

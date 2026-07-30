@@ -90,7 +90,7 @@ class AppCursorStore {
 ///
 /// pull 路径上整页 apply 抛错(不可恢复异常,例如 TypeError /
 /// FormatException / FK 解析失败)时,把"造成失败的 change + 错误信息"写入
-/// 这张表。UI 据此显示 banner + 详情列表,**只读不可处置** —— BeeCount Cloud
+/// 这张表。UI 据此显示 banner + 详情列表,**只读不可处置** —— PiggyCount Cloud
 /// 的核心是全自动同步,不引入"跳过"等人工干预入口。开发者从 server log 按
 /// change_id 修脏数据 + 推新版本,app 自然下发新 change 后覆盖。
 class SyncErrorStore {

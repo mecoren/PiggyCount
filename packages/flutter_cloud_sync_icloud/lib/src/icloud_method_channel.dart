@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 /// Method Channel for iCloud native communication
 class ICloudMethodChannel {
   static const MethodChannel _channel =
-      MethodChannel('com.beecount.app/icloud');
+      MethodChannel('com.piggycount.app/icloud');
 
   /// Check if iCloud is available
   /// Returns false if there's any error (including plugin not registered)

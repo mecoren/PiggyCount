@@ -104,7 +104,7 @@ class _StorageManagementPageState extends ConsumerState<StorageManagementPage> {
           .listSync()
           .where((entity) =>
               entity is File &&
-              entity.path.contains('BeeCount_') &&
+              entity.path.contains('PiggyCount_') &&
               entity.path.endsWith('.apk'))
           .toList();
 

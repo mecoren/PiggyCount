@@ -11,8 +11,8 @@ export 'tag_repository.dart';
 
 // Local 实现
 //
-// 历史上还有 Cloud* 系列(数据完全存 Supabase)。BeeCount Cloud 上线后,
-// 同步范式统一到「LocalRepository + ChangeTracker 推 BeeCount Cloud」,
+// 历史上还有 Cloud* 系列(数据完全存 Supabase)。PiggyCount Cloud 上线后,
+// 同步范式统一到「LocalRepository + ChangeTracker 推 PiggyCount Cloud」,
 // Cloud* 仓库整组已删,这里不再 export。
 export 'local/local_repository.dart';
 export 'local/local_ledger_repository.dart';

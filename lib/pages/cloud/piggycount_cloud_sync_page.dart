@@ -14,10 +14,10 @@ import '../../services/system/logger_service.dart';
 import '../auth/login_page.dart';
 import '../settings/log_center_page.dart';
 
-/// BeeCount Cloud 专属同步页
+/// PiggyCount Cloud 专属同步页
 ///
 /// 跟老的 `cloud_sync_page.dart` 分开:老页面服务于 iCloud / WebDAV / 本地
-/// 备份,UI 语义是"整包快照上传/下载";BeeCount Cloud 是增量 sync_changes 日志,
+/// 备份,UI 语义是"整包快照上传/下载";PiggyCount Cloud 是增量 sync_changes 日志,
 /// 全自动,用户感知不到"上传/下载"这个动作,所以单独一个页面。
 ///
 /// 页面结构:
@@ -202,7 +202,7 @@ class _PiggyCountCloudSyncPageState extends ConsumerState<PiggyCountCloudSyncPag
                         SectionCard(
                           child: _buildSyncHelpSection(context),
                         ),
-                        // BeeCount Cloud server 版本号,底部弱展示。
+                        // PiggyCount Cloud server 版本号,底部弱展示。
                         // 跟 web header 的 vX.Y.Z 对齐,方便确认 server 哪版。
                         // 通过 provider 监听,server 升级后跟着 sync ticker 自
                         // 动刷新,不依赖死缓存。
@@ -217,7 +217,7 @@ class _PiggyCountCloudSyncPageState extends ConsumerState<PiggyCountCloudSyncPag
                             padding: const EdgeInsets.only(top: 16, bottom: 8),
                             child: Center(
                               child: Text(
-                                'BeeCount Cloud v$v',
+                                'PiggyCount Cloud v$v',
                                 style: TextStyle(
                                   fontSize: 11,
                                   color: PiggyTokens.textTertiary(context),
@@ -555,7 +555,7 @@ class _PiggyCountCloudSyncPageState extends ConsumerState<PiggyCountCloudSyncPag
 /// 2FA 状态展示行(只读)。
 ///
 /// 拉取 GET /auth/2fa/status,展示「已启用 ✓ · 启用于 YYYY-MM-DD」或「未启用」。
-/// 拉取失败(未登录 / 网络错 / 不是 BeeCount Cloud)→ 整行隐藏,不展示假数据。
+/// 拉取失败(未登录 / 网络错 / 不是 PiggyCount Cloud)→ 整行隐藏,不展示假数据。
 ///
 /// 监听 [syncStatusRefreshProvider] tick(用户重新登录 / 同步成功后会 bump),
 /// 自动重新拉取,所以切换云方案再切回来也能拿到最新状态。
@@ -627,7 +627,7 @@ class _TwoFactorStatusRowState extends ConsumerState<_TwoFactorStatusRow> {
     // 监听它就能让切换云方案后回来 / 用户重新登录后自动重新拉取 2FA 状态。
     ref.listen<int>(syncStatusRefreshProvider, (_, __) => _load());
 
-    // 还没加载完 / 拉取失败 / 未登录 / 不是 BeeCount Cloud → 整行隐藏。
+    // 还没加载完 / 拉取失败 / 未登录 / 不是 PiggyCount Cloud → 整行隐藏。
     // 不显示 loading 占位避免初次进入页面时闪一下。
     if (!_loaded || _status == null) {
       return const SizedBox.shrink();

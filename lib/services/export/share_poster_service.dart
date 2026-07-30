@@ -116,7 +116,7 @@ class SharePosterService {
       // 分享文件
       await Share.shareXFiles(
         [XFile(file.path)],
-        text: 'BeeCount - 蜜蜂记账',
+        text: 'PiggyCount - 小猪记账',
       );
     } catch (e) {
       // 忽略错误

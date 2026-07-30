@@ -96,7 +96,7 @@ Future<PiggyCountCloudInvite> createInviteAndRefresh(
 }) async {
   final cloud = await ref.read(beecountCloudProviderInstance.future);
   if (cloud == null) {
-    throw StateError('BeeCount Cloud not configured');
+    throw StateError('PiggyCount Cloud not configured');
   }
   final invite = await cloud.createInvite(
     ledgerId: ledgerId,
@@ -126,7 +126,7 @@ Future<PiggyCountCloudInviteAcceptResult> acceptInvite(
 }) async {
   final cloud = await ref.read(beecountCloudProviderInstance.future);
   if (cloud == null) {
-    throw StateError('BeeCount Cloud not configured');
+    throw StateError('PiggyCount Cloud not configured');
   }
   final result = await cloud.acceptInvite(code: code);
   // 接受后整个账本列表(本地 ledger / remote ledgers)都可能变,失效兜底
@@ -141,7 +141,7 @@ Future<PiggyCountCloudInvitePreview> previewInvite(
 }) async {
   final cloud = await ref.read(beecountCloudProviderInstance.future);
   if (cloud == null) {
-    throw StateError('BeeCount Cloud not configured');
+    throw StateError('PiggyCount Cloud not configured');
   }
   return cloud.previewInvite(code: code);
 }

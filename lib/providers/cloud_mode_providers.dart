@@ -4,8 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// 应用模式枚举
 ///
 /// 历史上还有过一个 `cloud`(仅云端模式)值,数据完全存 Supabase。
-/// 但 BeeCount Cloud 上线后,所有云同步统一走「LocalRepository + ChangeTracker
-/// + 推送到 BeeCount Cloud」 — 离线优先 + 多设备实时秒同步,跟「数据存远端」
+/// 但 PiggyCount Cloud 上线后,所有云同步统一走「LocalRepository + ChangeTracker
+/// + 推送到 PiggyCount Cloud」 — 离线优先 + 多设备实时秒同步,跟「数据存远端」
 /// 完全是两条范式,cloud-only 没有用户入口,清理时已删。
 ///
 /// 保留 enum 而非改 bool 是为了:

@@ -133,12 +133,12 @@ class UpdateInstaller {
       }
       downloadDir ??= await getApplicationDocumentsDirectory();
 
-      // 查找所有BeeCount APK文件
+      // 查找所有PiggyCount APK文件
       final files = downloadDir.listSync();
       final apkFiles = files
           .where((file) =>
               file is File &&
-              file.path.contains('BeeCount') &&
+              file.path.contains('PiggyCount') &&
               file.path.endsWith('.apk'))
           .cast<File>()
           .toList();

@@ -684,7 +684,7 @@ class AttachmentExportImportService {
   Future<Directory> _getExportDirectory() async {
     if (Platform.isAndroid) {
       // Android: 使用公共下载目录
-      final dir = Directory('/storage/emulated/0/Download/BeeCount');
+      final dir = Directory('/storage/emulated/0/Download/PiggyCount');
       if (!await dir.exists()) {
         await dir.create(recursive: true);
       }

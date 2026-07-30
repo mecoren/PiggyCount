@@ -103,7 +103,7 @@ class UpdateChecker {
         try {
           logger.info('UpdateChecker', '尝试第$attempts次请求GitHub API...');
           resp = await _dio.get(
-            'https://api.github.com/repos/TNT-Likely/BeeCount/releases/latest',
+            'https://api.github.com/repos/TNT-Likely/PiggyCount/releases/latest',
             options: Options(
               headers: {
                 'Accept': 'application/vnd.github+json',

@@ -72,7 +72,7 @@ class MinePage extends ConsumerWidget {
 
             return SettingsCard(
               children: [
-                // 云服务 —— BeeCount Cloud 模式下 subtitle 带上
+                // 云服务 —— PiggyCount Cloud 模式下 subtitle 带上
                 // server 版本号(从 fetchServerVersion 拉的 FutureProvider),
                 // 一眼看到 cloud 哪版。其它模式没版本概念,保留原文案。
                 Consumer(builder: (ctx, r, _) {
@@ -245,19 +245,19 @@ class MinePage extends ConsumerWidget {
                             enabled: !isLocalMode,
                             trailing: trailingWidget,
                             onTap: () async {
-                              // BeeCount Cloud 专属页跟老的
+                              // PiggyCount Cloud 专属页跟老的
                               // iCloud/WebDAV/Supabase 页语义完全不同,
                               // 路由按 config.type 分叉,避免 UI 里
                               // 大段 if-else 分支。
                               final cfg = ref
                                   .read(activeCloudConfigProvider)
                                   .valueOrNull;
-                              final isBeeCount = cfg != null &&
+                              final isPiggyCount = cfg != null &&
                                   cfg.type ==
                                       CloudBackendType.beecountCloud;
                               await Navigator.of(sectionContext).push(
                                 MaterialPageRoute(
-                                    builder: (_) => isBeeCount
+                                    builder: (_) => isPiggyCount
                                         ? const PiggyCountCloudSyncPage()
                                         : const CloudSyncPage()),
                               );
@@ -530,7 +530,7 @@ void _showGitHubStarGuide(BuildContext context) {
         FilledButton(
           onPressed: () {
             Navigator.pop(context);
-            _tryOpenUrl(Uri.parse('https://github.com/TNT-Likely/BeeCount'));
+            _tryOpenUrl(Uri.parse('https://github.com/TNT-Likely/PiggyCount'));
           },
           child: Text(l10n.githubStarGuideButton),
         ),
@@ -554,7 +554,7 @@ Future<void> _rateApp(BuildContext context) async {
     // 直接打开应用商店评分页面（更可靠，不受系统限制）
     if (Platform.isIOS) {
       await inAppReview.openStoreListing(
-        appStoreId: '6754611670', // BeeCount的App Store ID
+        appStoreId: '6754611670', // PiggyCount的App Store ID
       );
       logger.info('MinePage', '已打开App Store评分页面');
     } else {

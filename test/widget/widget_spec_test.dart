@@ -82,7 +82,7 @@ void main() {
   group('WidgetSpec.matchInstalled', () {
     test('iOS kind+family 精确匹配 glance-medium', () {
       final info = HomeWidgetInfo(
-        iOSKind: 'BeeCountWidget',
+        iOSKind: 'PiggyCountWidget',
         iOSFamily: 'systemMedium',
       );
       expect(WidgetSpec.matchInstalled(info), WidgetSpec.glanceMedium);
@@ -92,7 +92,7 @@ void main() {
       // glance kind 只注册了 small/medium 两个 family(small 是补全新增,
       // 见 glanceSmall 文档),large 对该 kind 不存在,应匹配不到任何 spec。
       final info = HomeWidgetInfo(
-        iOSKind: 'BeeCountWidget',
+        iOSKind: 'PiggyCountWidget',
         iOSFamily: 'systemLarge',
       );
       expect(WidgetSpec.matchInstalled(info), isNull);
@@ -100,7 +100,7 @@ void main() {
 
     test('iOS glance systemSmall(补全新增)匹配 glanceSmall', () {
       final info = HomeWidgetInfo(
-        iOSKind: 'BeeCountWidget',
+        iOSKind: 'PiggyCountWidget',
         iOSFamily: 'systemSmall',
       );
       expect(WidgetSpec.matchInstalled(info), WidgetSpec.glanceSmall);
@@ -108,7 +108,7 @@ void main() {
 
     test('Android class name 匹配 glance-medium', () {
       final info = HomeWidgetInfo(
-        androidClassName: 'com.tntlikely.beecount.BeeCountWidgetProvider',
+        androidClassName: 'com.wait.piggycount.PiggyCountWidgetProvider',
         androidWidgetId: 1,
       );
       expect(WidgetSpec.matchInstalled(info), WidgetSpec.glanceMedium);
@@ -117,7 +117,7 @@ void main() {
     test('未知 kind/class 不匹配任何目录条目', () {
       final iosInfo = HomeWidgetInfo(iOSKind: 'SomeFutureWidget');
       final androidInfo = HomeWidgetInfo(
-        androidClassName: 'com.tntlikely.beecount.SomeFutureProvider',
+        androidClassName: 'com.wait.piggycount.SomeFutureProvider',
       );
       expect(WidgetSpec.matchInstalled(iosInfo), isNull);
       expect(WidgetSpec.matchInstalled(androidInfo), isNull);
@@ -131,7 +131,7 @@ void main() {
     group('Android shortClassName(prod 商店包形态)', () {
       test('前导点短名匹配 glance-medium', () {
         final info = HomeWidgetInfo(
-          androidClassName: '.BeeCountWidgetProvider',
+          androidClassName: '.PiggyCountWidgetProvider',
           androidWidgetId: 1,
         );
         expect(WidgetSpec.matchInstalled(info), WidgetSpec.glanceMedium);
@@ -139,7 +139,7 @@ void main() {
 
       test('前导点短名 matchInstalledAll 返回该类型全部尺寸(含子类入口)', () {
         final main = HomeWidgetInfo(
-          androidClassName: '.BeeCountNetWorthWidgetProvider',
+          androidClassName: '.PiggyCountNetWorthWidgetProvider',
           androidWidgetId: 2,
         );
         expect(
@@ -151,7 +151,7 @@ void main() {
           ]),
         );
         final sized = HomeWidgetInfo(
-          androidClassName: '.BeeCountNetWorthLargeWidgetProvider',
+          androidClassName: '.PiggyCountNetWorthLargeWidgetProvider',
           androidWidgetId: 3,
         );
         expect(WidgetSpec.matchInstalledAll(sized), isNotEmpty);
@@ -159,9 +159,9 @@ void main() {
 
       test('短名后缀比对有点号边界,不误匹配前缀撞名类', () {
         final info = HomeWidgetInfo(
-          // 全限定候选都以 .BeeCountWidgetProvider 结尾才算命中,这里的
-          // .FakeBeeCountWidgetProvider 不应命中任何 spec。
-          androidClassName: '.FakeBeeCountWidgetProvider',
+          // 全限定候选都以 .PiggyCountWidgetProvider 结尾才算命中,这里的
+          // .FakePiggyCountWidgetProvider 不应命中任何 spec。
+          androidClassName: '.FakePiggyCountWidgetProvider',
         );
         expect(WidgetSpec.matchInstalled(info), isNull);
         expect(WidgetSpec.matchInstalledAll(info), isEmpty);

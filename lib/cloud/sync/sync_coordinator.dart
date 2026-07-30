@@ -22,7 +22,7 @@ import 'sync_engine.dart';
 /// - [SyncEngine._scheduleAutoSync]:2s,合并 WS 重连 / connectivity
 ///   恢复 / 反应式触发等多个上游事件
 ///
-/// 仅在 BeeCount Cloud (SyncEngine) 模式下启用。本地 only / 旧 provider
+/// 仅在 PiggyCount Cloud (SyncEngine) 模式下启用。本地 only / 旧 provider
 /// (S3 / WebDAV) 走的是 snapshot 同步,不读 local_changes 表,这里没意义。
 class SyncCoordinator {
   final PiggyDatabase db;

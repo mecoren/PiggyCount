@@ -18,8 +18,8 @@ import '../../styles/tokens.dart';
 import '../../l10n/app_localizations.dart';
 
 // GitHub配置教程链接
-const _kSupabaseGuideUrl = 'https://github.com/TNT-Likely/BeeCount/wiki/Supabase-%E4%BA%91%E5%90%8C%E6%AD%A5%E9%85%8D%E7%BD%AE';
-const _kWebdavGuideUrl = 'https://github.com/TNT-Likely/BeeCount/wiki/WebDAV-%E4%BA%91%E5%90%8C%E6%AD%A5%E9%85%8D%E7%BD%AE';
+const _kSupabaseGuideUrl = 'https://github.com/TNT-Likely/PiggyCount/wiki/Supabase-%E4%BA%91%E5%90%8C%E6%AD%A5%E9%85%8D%E7%BD%AE';
+const _kWebdavGuideUrl = 'https://github.com/TNT-Likely/PiggyCount/wiki/WebDAV-%E4%BA%91%E5%90%8C%E6%AD%A5%E9%85%8D%E7%BD%AE';
 
 class CloudServicePage extends ConsumerStatefulWidget {
   const CloudServicePage({super.key});
@@ -252,7 +252,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                     ],
                   );
                 } else {
-                  // ===== 云端协同 (BeeCount Cloud) =====
+                  // ===== 云端协同 (PiggyCount Cloud) =====
                   return ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
@@ -1563,7 +1563,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                   ref.read(syncStatusRefreshProvider.notifier).state++;
                   ref.read(ledgerListRefreshProvider.notifier).state++;
                 } catch (e) {
-                  logger.error('CloudServicePage', 'BeeCount Cloud 首次同步失败', e);
+                  logger.error('CloudServicePage', 'PiggyCount Cloud 首次同步失败', e);
                 }
               });
 
@@ -1855,11 +1855,11 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
             break;
 
           case CloudBackendType.beecountCloud:
-            // BeeCount Cloud 连接测试 - 调用健康检查接口
+            // PiggyCount Cloud 连接测试 - 调用健康检查接口
             try {
               final services = await createCloudServices(config);
               if (services.provider == null) {
-                throw Exception('BeeCount Cloud provider 初始化失败');
+                throw Exception('PiggyCount Cloud provider 初始化失败');
               }
               // 尝试列出文件验证连接
               await services.provider!.storage.list(path: '');
@@ -1987,7 +1987,7 @@ class _PiggyCountCloudConfigDialogState extends State<_PiggyCountCloudConfigDial
   late final TextEditingController passwordController;
   bool obscurePassword = true;
 
-  // 内联校验错误状态：BeeCount Cloud 必填字段仅为 URL
+  // 内联校验错误状态：PiggyCount Cloud 必填字段仅为 URL
   bool _urlError = false;
 
   @override

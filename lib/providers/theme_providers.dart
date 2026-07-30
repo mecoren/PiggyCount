@@ -282,17 +282,17 @@ final noteHistoryPreferencesInitProvider = FutureProvider<void>((ref) async {
   await prefs.setInt('noteHistoryLimit', limit);
 
   ref.listen<NoteHistoryScope>(noteHistoryScopeProvider, (prev, next) async {
-    // 用户选择变化后写本机偏好，并在 BeeCount Cloud 模式下同步。
+    // 用户选择变化后写本机偏好，并在 PiggyCount Cloud 模式下同步。
     await prefs.setString('noteHistoryScope', next.name);
     _pushAppearanceToCloud(ref);
   });
   ref.listen<NoteHistorySort>(noteHistorySortProvider, (prev, next) async {
-    // 用户选择变化后写本机偏好，并在 BeeCount Cloud 模式下同步。
+    // 用户选择变化后写本机偏好，并在 PiggyCount Cloud 模式下同步。
     await prefs.setString('noteHistorySort', next.name);
     _pushAppearanceToCloud(ref);
   });
   ref.listen<int>(noteHistoryLimitProvider, (prev, next) async {
-    // 用户修改数量后写本机偏好，并在 BeeCount Cloud 模式下同步。
+    // 用户修改数量后写本机偏好，并在 PiggyCount Cloud 模式下同步。
     await prefs.setInt('noteHistoryLimit', next);
     _pushAppearanceToCloud(ref);
   });
@@ -312,7 +312,7 @@ final headerDecorationStyleInitProvider = FutureProvider<void>((ref) async {
 });
 
 // 头部皮肤:跟随主题色的装饰层 id;'none' = 纯主题色。见 lib/styles/header_skins.dart。
-// 本地持久化 + 并入 appearance 包,随 BeeCount Cloud 多设备同步。
+// 本地持久化 + 并入 appearance 包,随 PiggyCount Cloud 多设备同步。
 final headerSkinProvider = StateProvider<String>((ref) => 'none');
 
 final headerSkinInitProvider = FutureProvider<void>((ref) async {
@@ -328,7 +328,7 @@ final headerSkinInitProvider = FutureProvider<void>((ref) async {
 });
 
 /// 把 header_decoration_style / compact_amount / show_transaction_time
-/// 的当前值打包推给 server 的 /profile/me。非 BeeCount Cloud 模式 provider
+/// 的当前值打包推给 server 的 /profile/me。非 PiggyCount Cloud 模式 provider
 /// 返回 null 直接跳过。fire-and-forget,失败只打 warning。
 ///
 /// 用整包 PATCH 是故意的:三者属于同一组"外观",任何一个改动都重发全量,server
@@ -395,7 +395,7 @@ final incomeExpenseColorSchemeInitProvider = FutureProvider<void>((ref) async {
       // Silently fail
     }
 
-    // BeeCount Cloud 模式下把配色偏好推给 server；web 端会通过 WS
+    // PiggyCount Cloud 模式下把配色偏好推给 server；web 端会通过 WS
     // profile_change 事件实时刷新。非 Cloud 模式 provider 返回 null，跳过。
     unawaited(() async {
       try {
@@ -415,7 +415,7 @@ final incomeExpenseColorSchemeInitProvider = FutureProvider<void>((ref) async {
   });
 });
 
-// 用户显示名(昵称)。本地真值存 prefs 'displayName';BeeCount Cloud 模式下改动
+// 用户显示名(昵称)。本地真值存 prefs 'displayName';PiggyCount Cloud 模式下改动
 // 会推到 server,其余云模式 / 纯本地只存本地。空串 = 未设置。v1 不支持"清空已设
 // 昵称"——不会推空串给 server,因此无需改后端 / 包层(包层对空串本就 throw)。
 final displayNameProvider = StateProvider<String>((ref) => '');
@@ -434,7 +434,7 @@ final displayNameInitProvider = FutureProvider<void>((ref) async {
   });
 });
 
-/// 把显示名推给 server 的 /profile/me(仅 BeeCount Cloud 模式)。非 cloud 模式
+/// 把显示名推给 server 的 /profile/me(仅 PiggyCount Cloud 模式)。非 cloud 模式
 /// provider 返回 null 直接跳过;空串不推(v1 不支持清空,且包层对空串会 throw)。
 /// fire-and-forget,失败只打 warning。
 void _pushDisplayNameToCloud(Ref ref, String name) {

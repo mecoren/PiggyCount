@@ -1,4 +1,4 @@
-// BeeCount 家族产品推广信息的中央注册表。
+// PiggyCount 家族产品推广信息的中央注册表。
 //
 // 所有用 `ProductPromoCard` / `ProductPromoCompact` / `ProductPromoLauncher`
 // 的页面都从这里取数据,避免 logoAsset / appStoreId / 邮箱地址 / 域名等关键

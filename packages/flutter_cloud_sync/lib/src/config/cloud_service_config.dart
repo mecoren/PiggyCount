@@ -3,7 +3,7 @@ import 'dart:convert';
 /// 云服务后端类型
 enum CloudBackendType {
   local, // 本地存储(不同步)
-  beecountCloud, // BeeCount Cloud（自建云服务）
+  beecountCloud, // PiggyCount Cloud（自建云服务）
   supabase, // Supabase (自建)
   webdav, // WebDAV (坚果云、Nextcloud、群晖等)
   icloud, // iCloud (iOS only)
@@ -14,7 +14,7 @@ class CloudServiceConfig {
   final CloudBackendType type;
   final String name; // UI 展示名称
 
-  // BeeCount Cloud 配置
+  // PiggyCount Cloud 配置
   final String? beecountCloudBaseUrl;
   final String? beecountCloudApiPrefix;
   final String? beecountCloudEmail; // 保存的账号（用于记住账号功能）
@@ -45,7 +45,7 @@ class CloudServiceConfig {
   const CloudServiceConfig({
     required this.type,
     required this.name,
-    // BeeCount Cloud
+    // PiggyCount Cloud
     this.beecountCloudBaseUrl,
     this.beecountCloudApiPrefix,
     this.beecountCloudEmail,
@@ -99,7 +99,7 @@ class CloudServiceConfig {
   Map<String, dynamic> toJson() => {
         'type': type.name,
         'name': name,
-        // BeeCount Cloud
+        // PiggyCount Cloud
         'beecountCloudBaseUrl': beecountCloudBaseUrl,
         'beecountCloudApiPrefix': beecountCloudApiPrefix,
         'beecountCloudEmail': beecountCloudEmail,
@@ -136,7 +136,7 @@ class CloudServiceConfig {
       type: CloudBackendType.values
           .firstWhere((e) => e.name == j['type'] as String),
       name: j['name'] as String,
-      // BeeCount Cloud
+      // PiggyCount Cloud
       beecountCloudBaseUrl: j['beecountCloudBaseUrl'] as String?,
       beecountCloudApiPrefix: j['beecountCloudApiPrefix'] as String?,
       beecountCloudEmail: j['beecountCloudEmail'] as String?,

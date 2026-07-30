@@ -10,7 +10,7 @@ import '../../styles/tokens.dart';
 /// - [SettingsNavItem]：导航项（图标 + 标题/副标题 + chevron）
 /// - [SettingsToggleItem]：开关项（导航项变体，trailing 为 Switch）
 ///
-/// 与 BeeCount 现有的 [AppListTile] / [SectionCard] 并存，互不影响。
+/// 与 PiggyCount 现有的 [AppListTile] / [SectionCard] 并存，互不影响。
 /// 仅用于设置页（MinePage + lib/pages/settings/*）。
 
 /// 分组小标题

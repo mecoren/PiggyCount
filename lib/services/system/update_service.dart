@@ -164,7 +164,7 @@ class UpdateService {
       }
 
       // 使用版本号作为文件名，如果没有提取到版本号则使用默认名称
-      final fileName = version != null ? 'v$version' : 'BeeCount_Update';
+      final fileName = version != null ? 'v$version' : 'PiggyCount_Update';
       final downloadResult = await UpdateDownloader.downloadApk(
         context,
         downloadUrl,

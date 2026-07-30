@@ -14,7 +14,7 @@ import 'sync_providers.dart';
 /// 多币种 MVP 的 provider 层(.docs/multi-currency/02-tech-design-app.md §五/§六)。
 /// 主币种链照 displayName(theme_providers.dart:275-312)同款。
 
-/// 用户主币种(大写 ISO code)。本地真值存 prefs 'baseCurrency';BeeCount Cloud
+/// 用户主币种(大写 ISO code)。本地真值存 prefs 'baseCurrency';PiggyCount Cloud
 /// 模式下改动会推到 server,其余云模式 / 纯本地只存本地。
 final baseCurrencyProvider = StateProvider<String>((ref) => 'CNY');
 
@@ -47,7 +47,7 @@ final baseCurrencyInitProvider = FutureProvider<void>((ref) async {
   });
 });
 
-/// 把主币种推给 server 的 /profile/me(仅 BeeCount Cloud 模式)。非 cloud 模式
+/// 把主币种推给 server 的 /profile/me(仅 PiggyCount Cloud 模式)。非 cloud 模式
 /// provider 返回 null 直接跳过。fire-and-forget,失败只打 warning。照
 /// _pushDisplayNameToCloud(theme_providers.dart)的写法。
 void _pushBaseCurrencyToCloud(Ref ref, String code) {

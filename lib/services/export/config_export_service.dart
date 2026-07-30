@@ -42,7 +42,7 @@ class ExportOptions {
   final bool budgets;
   final bool appSettings; // 包含云服务配置等
   final bool ai; // AI 服务商配置、能力绑定等
-  /// 是否把 BeeCount Cloud 的登录态（access/refresh token）一起导出。
+  /// 是否把 PiggyCount Cloud 的登录态（access/refresh token）一起导出。
   /// 默认 false —— 只导出 base_url + email，密码 / token 不写进 yaml。
   /// 测试或跨设备快速登录时显式勾选。
   final bool beecountCloudCredentials;
@@ -254,7 +254,7 @@ class SupabaseConfig {
       );
 }
 
-/// BeeCount Cloud 配置（自部署 FastAPI 后端的 base URL + 可选登录态）
+/// PiggyCount Cloud 配置（自部署 FastAPI 后端的 base URL + 可选登录态）
 ///
 /// 多设备同步测试的便利入口：A 设备导出配置，B 设备导入就能直接进入 Cloud 模式
 /// 而不用再手动敲 server URL / 登录。
@@ -1304,7 +1304,7 @@ class ConfigExportService {
       }
     }
 
-    // 读取 BeeCount Cloud 配置。base_url + email 总是导出（方便 B 设备导入
+    // 读取 PiggyCount Cloud 配置。base_url + email 总是导出（方便 B 设备导入
     // 快速填回登录表单）；access/refresh token 属于登录态，需 options 显式
     // 勾选才带上。当前实现：cloud_beecount_cloud_cfg 里只存 base_url+email，
     // session token 另一把 SharedPreferences key 管 —— 导出 yaml 只取前者。
@@ -1327,7 +1327,7 @@ class ConfigExportService {
           );
         }
       } catch (e) {
-        logger.warning('ConfigExport', '读取 BeeCount Cloud 配置失败: $e');
+        logger.warning('ConfigExport', '读取 PiggyCount Cloud 配置失败: $e');
       }
     }
 
@@ -1738,7 +1738,7 @@ class ConfigExportService {
 
     // 手动构建YAML字符串以保持良好格式
     final buffer = StringBuffer();
-    buffer.writeln('# BeeCount 应用配置');
+    buffer.writeln('# PiggyCount 应用配置');
     buffer.writeln('# 导出时间: ${DateTime.now().toIso8601String()}');
     buffer.writeln();
 
@@ -1795,7 +1795,7 @@ class ConfigExportService {
     if (yamlMap.containsKey('beecount_cloud')) {
       buffer.writeln('beecount_cloud:');
       final bc = yamlMap['beecount_cloud'] as Map<String, dynamic>;
-      buffer.writeln('  # BeeCount Cloud 自部署后端配置');
+      buffer.writeln('  # PiggyCount Cloud 自部署后端配置');
       buffer.writeln('  base_url: "${bc['base_url']}"');
       if (bc.containsKey('email') || bc.containsKey('password')) {
         buffer.writeln('  # 记住账号密码功能：导入后登录页面会自动填充');
@@ -2264,7 +2264,7 @@ class ConfigExportService {
       logger.info('ConfigImport', 'S3配置已导入');
     }
 
-    // 导入 BeeCount Cloud 配置（base_url + 可选 email/password）。
+    // 导入 PiggyCount Cloud 配置（base_url + 可选 email/password）。
     // 有 email+password 时跟 Supabase 一样，导入后 app 启动可自动登录；
     // 只有 email 时登录页预填邮箱，等用户输密码。
     if (options.appSettings && config.beecountCloud != null) {
@@ -2279,7 +2279,7 @@ class ConfigExportService {
           'cloud_beecount_cloud_cfg', encodeCloudConfig(bcCfg));
       logger.info(
           'ConfigImport',
-          'BeeCount Cloud 配置已导入 url=${config.beecountCloud!.baseUrl} '
+          'PiggyCount Cloud 配置已导入 url=${config.beecountCloud!.baseUrl} '
               'hasEmail=${config.beecountCloud!.email != null} '
               'hasPassword=${config.beecountCloud!.password != null}');
     }

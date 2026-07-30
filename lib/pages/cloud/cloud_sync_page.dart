@@ -117,7 +117,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                 final needsLogin = cloudConfig.hasValue &&
                     (cloudConfig.value!.type == CloudBackendType.supabase ||
                      cloudConfig.value!.type == CloudBackendType.beecountCloud);
-                // Supabase 和 BeeCount Cloud 需要登录，其他云服务（iCloud/S3/WebDAV）使用配置文件认证
+                // Supabase 和 PiggyCount Cloud 需要登录，其他云服务（iCloud/S3/WebDAV）使用配置文件认证
                 final canUseCloud = !isLocalMode && (!needsLogin || user != null);
 
 
@@ -200,7 +200,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                   child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    // 提示文案（仅非 BeeCount Cloud 模式显示）
+                    // 提示文案（仅非 PiggyCount Cloud 模式显示）
                     if (!isPiggyCountCloud)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12),
@@ -291,7 +291,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                         message: lines.join('\n'));
                                   },
                           ),
-                          // ===== BeeCount Cloud 模式：同步状态 + 登录（无需手动操作） =====
+                          // ===== PiggyCount Cloud 模式：同步状态 + 登录（无需手动操作） =====
                           if (isPiggyCountCloud) ...[
                             // 登录（未登录时显示登录入口）
                             Consumer(builder: (ctx, r, _) {
@@ -703,7 +703,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                   ],
                                 );
                               }),
-                            // 自动同步 (非 BeeCount Cloud 的其他云服务)
+                            // 自动同步 (非 PiggyCount Cloud 的其他云服务)
                             if (!isLocalMode)
                               Consumer(builder: (ctx, r, _) {
                                 final autoSync = r.watch(autoSyncValueProvider);
@@ -737,7 +737,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                       ),
                     ),
                     // 同步加密入口（仅路径 A：S3/WebDAV/Supabase/iCloud）
-                    // 路径 B（BeeCount Cloud）服务端需做 LWW 合并与共享账本，不加密
+                    // 路径 B（PiggyCount Cloud）服务端需做 LWW 合并与共享账本，不加密
                     if (canUseCloud && !isPiggyCountCloud)
                       Consumer(builder: (ctx, r, _) {
                         final encEnabledAsync =

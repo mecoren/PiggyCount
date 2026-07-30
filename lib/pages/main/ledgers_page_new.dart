@@ -182,8 +182,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     bool remoteLoading = false,
     Object? remoteError,
   }) {
-    // 共享账本是 BeeCount Cloud 独有能力(server 端的成员管理 / WS fan-out
-     // 都在 BeeCount Cloud 后端),非 BeeCount Cloud 用户(local / WebDAV /
+    // 共享账本是 PiggyCount Cloud 独有能力(server 端的成员管理 / WS fan-out
+     // 都在 PiggyCount Cloud 后端),非 PiggyCount Cloud 用户(local / WebDAV /
      // S3 / Supabase 等)就算扫码也走不通,按钮藏起来避免误导。
     final cloudConfigAsync = ref.watch(activeCloudConfigProvider);
     final isPiggyCountCloud =
@@ -393,12 +393,12 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
 
       final syncService = ref.read(syncServiceProvider);
       if (syncService is SyncEngine) {
-        // BeeCount Cloud 路径（sync_changes 增量日志模型）：
+        // PiggyCount Cloud 路径（sync_changes 增量日志模型）：
         // 1) syncLedgersFromServer 把账本行插到本地 Drift
         // 2) replayAllChanges 从 cursor=0 重拉整段 sync_changes 并幂等应用，
         //    把历史 tx/account/category/tag 挂到刚刚插好的新账本上
         //
-        // 不走 `_fullPull`（整包 JSON 下载）—— 那是 S3/WebDAV 的玩法，BeeCount
+        // 不走 `_fullPull`（整包 JSON 下载）—— 那是 S3/WebDAV 的玩法，PiggyCount
         // Cloud 的模型就是 sync_changes，所有恢复都应该走这条日志。apply 是
         // 按 entity_sync_id upsert 幂等的，重放不会产生副本。
         await syncService.syncLedgersFromServer();
@@ -439,7 +439,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     // - Editor(共享账本 + myRole != owner):仅 members(看成员/退出),
     //   隐藏 edit / clear / deleteLocal / delete 4 项 owner-only 操作
     final isOwner = ledger.myRole == 'owner';
-    // 共享账本/成员管理是 BeeCount Cloud 独有能力,非 BeeCount Cloud 模式
+    // 共享账本/成员管理是 PiggyCount Cloud 独有能力,非 PiggyCount Cloud 模式
     // (local / WebDAV / S3 / Supabase 等)直接隐藏这些入口。
     final cloudConfig = ref.read(activeCloudConfigProvider).valueOrNull;
     final isPiggyCountCloud =
@@ -476,7 +476,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
               ),
             ),
             // v24 共享账本:成员管理入口(任意 member 可看,owner 可邀请 / 踢人,
-            // Editor 可看列表 + 退出账本)。非 BeeCount Cloud 模式没成员概念,
+            // Editor 可看列表 + 退出账本)。非 PiggyCount Cloud 模式没成员概念,
             // 整个入口隐藏。
             if (isPiggyCountCloud) ...[
               SimpleDialogOption(
@@ -1019,7 +1019,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       int success = 0;
       int failed = 0;
       if (syncService is SyncEngine) {
-        // BeeCount Cloud 批量（sync_changes 日志模型）：
+        // PiggyCount Cloud 批量（sync_changes 日志模型）：
         // 1) syncLedgersFromServer 把所有 remote-only ledger 插到本地
         // 2) replayAllChanges 一次性从 cursor=0 重拉历史 sync_changes，apply
         //    按 entity_sync_id 幂等 upsert，把所有账本的历史统一刷回来

@@ -212,13 +212,13 @@ void main() {
       await syncManager.upload(
         data: 123,
         path: 'test.json',
-        metadata: {'version': '1.0', 'app': 'BeeCount'},
+        metadata: {'version': '1.0', 'app': 'PiggyCount'},
       );
 
       // Assert
       final metadata = await mockStorage.getMetadata(path: 'test.json');
       expect(metadata!.metadata!['version'], equals('1.0'));
-      expect(metadata.metadata!['app'], equals('BeeCount'));
+      expect(metadata.metadata!['app'], equals('PiggyCount'));
       expect(metadata.metadata!['fingerprint'], isNotNull);
     });
   });

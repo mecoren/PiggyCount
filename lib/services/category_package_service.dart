@@ -329,7 +329,7 @@ class CategoryPackageService {
   /// 将 Map 转换为 YAML 字符串
   static String _toYaml(Map<String, dynamic> data) {
     final buffer = StringBuffer();
-    buffer.writeln('# BeeCount 分类包');
+    buffer.writeln('# PiggyCount 分类包');
     buffer.writeln('# 导出时间: ${data['exported_at']}');
     buffer.writeln();
     buffer.writeln('version: ${data['version']}');

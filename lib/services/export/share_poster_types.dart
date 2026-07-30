@@ -45,7 +45,7 @@ extension PosterTypeExtension on PosterType {
       case PosterType.ledgerSummary:
         return '分享你的账本统计';
       case PosterType.appPromo:
-        return '推荐蜜蜂记账给好友';
+        return '推荐小猪记账给好友';
       case PosterType.userProfile:
         return '分享你的记账档案';
     }

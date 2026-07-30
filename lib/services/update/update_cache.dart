@@ -40,9 +40,9 @@ class UpdateCache {
         return null;
       }
 
-      // 在下载目录中查找对应版本的BeeCount APK
-      // 文件名格式应该是 BeeCount_v{version}.apk
-      final targetFileName = 'BeeCount_v$version.apk';
+      // 在下载目录中查找对应版本的PiggyCount APK
+      // 文件名格式应该是 PiggyCount_v{version}.apk
+      final targetFileName = 'PiggyCount_v$version.apk';
       final expectedFilePath = '${downloadDir.path}/$targetFileName';
       final file = File(expectedFilePath);
 
@@ -57,7 +57,7 @@ class UpdateCache {
         final files = downloadDir.listSync();
         for (final checkFile in files) {
           if (checkFile is File &&
-              checkFile.path.contains('BeeCount') &&
+              checkFile.path.contains('PiggyCount') &&
               checkFile.path.endsWith('.apk') &&
               checkFile.path.contains(version)) {
             // 验证文件是否存在且可读

@@ -332,7 +332,7 @@ class LoggerService {
   /// 导出所有日志为文本
   String exportAsText() {
     final buffer = StringBuffer();
-    buffer.writeln('=== BeeCount 日志导出 ===');
+    buffer.writeln('=== PiggyCount 日志导出 ===');
     buffer.writeln('导出时间: ${DateTime.now()}');
     buffer.writeln('日志数量: ${_logs.length}');
     buffer.writeln('=' * 50);

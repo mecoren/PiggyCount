@@ -295,7 +295,7 @@ class AppPromoPoster extends StatelessWidget {
               ],
             ),
             child: QrImageView(
-              data: 'https://github.com/TNT-Likely/BeeCount?utm_source=share_poster&utm_medium=qr_code&utm_campaign=app_share',
+              data: 'https://github.com/TNT-Likely/PiggyCount?utm_source=share_poster&utm_medium=qr_code&utm_campaign=app_share',
               version: QrVersions.auto,
               size: 120,
               backgroundColor: Colors.white,
@@ -317,7 +317,7 @@ class AppPromoPoster extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'github.com/TNT-Likely/BeeCount',
+                  'github.com/TNT-Likely/PiggyCount',
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.white.withValues(alpha: 0.8),

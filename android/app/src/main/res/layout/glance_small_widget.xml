@@ -6,7 +6,7 @@
 
     <!--
         scaleType=fitCenter:
-          按 Flutter 渲染图的原比例完整显示,不裁减,道理同 beecount_widget.xml
+          按 Flutter 渲染图的原比例完整显示,不裁减,道理同 piggycount_widget.xml
           ——用户把 widget 放到跟渲染图比例不一致的格子时,居中留白(letterbox)
           而不是切内容或变形拉伸。
     -->

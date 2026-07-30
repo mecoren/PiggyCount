@@ -27,7 +27,7 @@ final githubStarCountProvider = FutureProvider<int>((ref) async {
   // 从GitHub API获取
   try {
     final response = await http
-        .get(Uri.parse('https://api.github.com/repos/TNT-Likely/BeeCount'))
+        .get(Uri.parse('https://api.github.com/repos/TNT-Likely/PiggyCount'))
         .timeout(const Duration(seconds: 5));
 
     if (response.statusCode == 200) {

@@ -3,7 +3,7 @@
     android:minWidth="320dp"
     android:minHeight="110dp"
     android:updatePeriodMillis="1800000"
-    android:initialLayout="@layout/beecount_widget"
+    android:initialLayout="@layout/piggycount_widget"
     android:previewImage="@drawable/widget_preview_glance"
     android:resizeMode="horizontal"
     android:widgetCategory="home_screen"

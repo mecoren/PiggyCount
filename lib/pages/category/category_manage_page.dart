@@ -205,7 +205,7 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
 
       String outputPath;
       if (Platform.isAndroid) {
-        final downloadPath = '/storage/emulated/0/Download/BeeCount';
+        final downloadPath = '/storage/emulated/0/Download/PiggyCount';
         final dir = Directory(downloadPath);
         if (!await dir.exists()) {
           await dir.create(recursive: true);

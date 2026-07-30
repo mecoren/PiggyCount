@@ -244,7 +244,7 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
   /// 坑点：syncServiceProvider 只在 cloud_sync_page 里被 watch。重启 app 后
   /// 这里是一次 ref.read，等 beecountCloudProviderInstance 异步就绪再重建时没有
   /// 监听者，provider 内部的 auto-sync 块永远跑不到 —— 用户看到"app 启动没同步本地
-  /// 数据到 BeeCount Cloud"。这里 listenManual 保持 provider 活跃，并在它从占位
+  /// 数据到 PiggyCount Cloud"。这里 listenManual 保持 provider 活跃，并在它从占位
   /// 对象变成真正的 SyncEngine 时主动触发一次 sync。
   void _refreshLedgersStatusInBackground() {
     // 冷启动时先 eager-await beecountCloudProviderInstance 一次，强制让这个
@@ -256,7 +256,7 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
       try {
         await ref.read(sp.beecountCloudProviderInstance.future);
       } catch (_) {
-        // 非 BeeCount Cloud 配置或初始化失败：忽略，让下面的 listenManual 兜住。
+        // 非 PiggyCount Cloud 配置或初始化失败：忽略，让下面的 listenManual 兜住。
       }
     });
 
@@ -334,7 +334,7 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
           return;
         }
         logger.info('AppStart',
-            'BeeCount Cloud 首次同步: 本地账本数=${ledgers.length}');
+            'PiggyCount Cloud 首次同步: 本地账本数=${ledgers.length}');
         final overallStart = DateTime.now();
 
         // ========== Phase 1: 用户级一次性 ==========
@@ -456,11 +456,11 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
         final totalMs =
             DateTime.now().difference(overallStart).inMilliseconds;
         logger.info('AppStart',
-            'BeeCount Cloud 首次同步完成: synced=${ledgers.length - skipped} skipped=$skipped pushed=$totalPushed 总耗时 ${totalMs}ms');
+            'PiggyCount Cloud 首次同步完成: synced=${ledgers.length - skipped} skipped=$skipped pushed=$totalPushed 总耗时 ${totalMs}ms');
         ref.read(syncStatusRefreshProvider.notifier).state++;
         ref.read(ledgerListRefreshProvider.notifier).state++;
       } catch (e, st) {
-        logger.error('AppStart', 'BeeCount Cloud 首次同步异常', e, st);
+        logger.error('AppStart', 'PiggyCount Cloud 首次同步异常', e, st);
       }
     });
   }

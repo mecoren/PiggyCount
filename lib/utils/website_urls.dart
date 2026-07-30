@@ -29,7 +29,7 @@ class WebsiteUrls {
 
   /// 文档首页 — App 内嵌(embed)模式。
   /// 文档站会隐藏 navbar/footer 等带外链的 chrome(审核风险),并跟随 App 的
-  /// 暗黑模式与主题色,站点侧实现见 BeeCount-Website docusaurus.config.ts。
+  /// 暗黑模式与主题色,站点侧实现见 PiggyCount-Website docusaurus.config.ts。
   static String docsEmbed(Locale? locale,
           {required bool dark, required String primaryHex}) =>
       '$baseUrl${_langPrefix(locale)}/docs/intro'
@@ -54,7 +54,7 @@ class WebsiteUrls {
   /// 云同步文档 — App 内嵌(embed)模式。
   /// 用于登录页「注册指引」按当前云后端跳对应文档(supabase / beecount-cloud /
   /// overview 兜底),复用帮助中心同款 embed 体验(隐藏外链 chrome、跟随暗黑与
-  /// 主题色),站点侧实现见 BeeCount-Website docusaurus.config.ts。
+  /// 主题色),站点侧实现见 PiggyCount-Website docusaurus.config.ts。
   static String docsCloudSyncEmbed(String topic, Locale? locale,
           {required bool dark, required String primaryHex}) =>
       '$baseUrl${_langPrefix(locale)}/docs/cloud-sync/$topic'
@@ -69,7 +69,7 @@ class WebsiteUrls {
       '$baseUrl${_langPrefix(locale)}/docs/changelog';
 
   /// 更新日志 — App 内嵌(embed)模式(隐藏 navbar/footer 外链,跟随暗黑与主题色)。
-  /// 复用帮助中心同款 WebView 体验,站点侧实现见 BeeCount-Website docusaurus.config.ts。
+  /// 复用帮助中心同款 WebView 体验,站点侧实现见 PiggyCount-Website docusaurus.config.ts。
   static String changelogEmbed(Locale? locale,
           {required bool dark, required String primaryHex}) =>
       '$baseUrl${_langPrefix(locale)}/docs/changelog'

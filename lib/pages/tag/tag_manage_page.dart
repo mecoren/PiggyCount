@@ -274,7 +274,7 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
       final fileName = 'beecount_tags_$timestamp.yml';
 
       if (Platform.isAndroid) {
-        final downloadPath = '/storage/emulated/0/Download/BeeCount';
+        final downloadPath = '/storage/emulated/0/Download/PiggyCount';
         final dir = Directory(downloadPath);
         if (!await dir.exists()) {
           await dir.create(recursive: true);
