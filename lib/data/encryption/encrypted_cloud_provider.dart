@@ -48,6 +48,10 @@ class EncryptedCloudProvider implements CloudProvider {
   @override
   Future<void> initialize(Map<String, dynamic> config) async {
     await inner.initialize(config);
+    // ATTACH-1 修复：inner 重新 initialize 后 inner.storage 实例已变更，
+    // 必须清空缓存的装饰器，否则后续 storage getter 仍返回旧实例，
+    // 造成数据写入错误的 session/bucket
+    _cachedStorage = null;
   }
 
   @override

@@ -43,119 +43,132 @@ class _ImportPageState extends ConsumerState<ImportPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          PrimaryHeader(
-              title: AppLocalizations.of(context)!.importTitle, showBack: true),
-          Expanded(
-            child: Stack(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(AppLocalizations.of(context)!.importSelectCsvFile),
-                      const SizedBox(height: 16),
-                      // 账单类型选择器
-                      Text(AppLocalizations.of(context)!.importBillType,
-                          style:
-                              TextStyle(fontSize: 14, color: PiggyTokens.textSecondary(context))),
-                      const SizedBox(height: 8),
-                      WaitSlidingSegmentedControl<BillSourceType>(
-                        selected: _billType,
-                        segments: [
-                          WaitSlidingSegment(
-                            value: BillSourceType.generic,
-                            label: AppLocalizations.of(context)!
-                                .importBillTypeGeneric,
-                          ),
-                          WaitSlidingSegment(
-                            value: BillSourceType.alipay,
-                            label: AppLocalizations.of(context)!
-                                .importBillTypeAlipay,
-                          ),
-                          WaitSlidingSegment(
-                            value: BillSourceType.wechat,
-                            label: AppLocalizations.of(context)!
-                                .importBillTypeWechat,
-                          ),
-                        ],
-                        onValueChanged: (BillSourceType value) {
-                          setState(() {
-                            _billType = value;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          FilledButton.icon(
-                            onPressed: _pickFile,
-                            icon: const Icon(Icons.folder_open),
-                            label: Text(
-                                AppLocalizations.of(context)!.importChooseFile),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              _picked?.name ??
-                                  AppLocalizations.of(context)!
-                                      .importNoFileSelected,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: AppLocalizations.of(context)!.importTitle,
+        showBack: true,
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 56,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: Stack(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(AppLocalizations.of(context)!.importSelectCsvFile),
+                        const SizedBox(height: 16),
+                        // 账单类型选择器
+                        Text(AppLocalizations.of(context)!.importBillType,
+                            style: TextStyle(
+                                fontSize: 14,
+                                color: PiggyTokens.textSecondary(context))),
+                        const SizedBox(height: 8),
+                        WaitSlidingSegmentedControl<BillSourceType>(
+                          selected: _billType,
+                          segments: [
+                            WaitSlidingSegment(
+                              value: BillSourceType.generic,
+                              label: AppLocalizations.of(context)!
+                                  .importBillTypeGeneric,
                             ),
-                          ),
-                        ],
-                      ),
-                      const Spacer(),
-                      if (_picked == null)
-                        Text(AppLocalizations.of(context)!.importHint,
-                            style: TextStyle(color: PiggyTokens.textTertiary(context))),
-                    ],
-                  ),
-                ),
-                if (_reading)
-                  Positioned.fill(
-                    child: Container(
-                      color: Colors.black.withValues(alpha: 0.4),
-                      child: Center(
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: PiggyTokens.surfaceElevated(context),
-                            borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-                          ),
-                          width: 320,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(AppLocalizations.of(context)!.importReading),
-                              const SizedBox(height: 12),
-                              LinearProgressIndicator(value: _readProgress),
-                              const SizedBox(height: 8),
-                              Text(_readProgress == null
-                                  ? AppLocalizations.of(context)!
-                                      .importPreparing
-                                  : '${((_readProgress ?? 0) * 100).clamp(0, 100).toStringAsFixed(0)}%'),
-                              const SizedBox(height: 12),
-                              TextButton(
-                                onPressed: () {
-                                  setState(() => _cancelRead = true);
-                                },
-                                child: Text(
-                                    AppLocalizations.of(context)!.commonCancel),
+                            WaitSlidingSegment(
+                              value: BillSourceType.alipay,
+                              label: AppLocalizations.of(context)!
+                                  .importBillTypeAlipay,
+                            ),
+                            WaitSlidingSegment(
+                              value: BillSourceType.wechat,
+                              label: AppLocalizations.of(context)!
+                                  .importBillTypeWechat,
+                            ),
+                          ],
+                          onValueChanged: (BillSourceType value) {
+                            setState(() {
+                              _billType = value;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            FilledButton.icon(
+                              onPressed: _pickFile,
+                              icon: const Icon(Icons.folder_open),
+                              label: Text(AppLocalizations.of(context)!
+                                  .importChooseFile),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                _picked?.name ??
+                                    AppLocalizations.of(context)!
+                                        .importNoFileSelected,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ],
+                            ),
+                          ],
+                        ),
+                        const Spacer(),
+                        if (_picked == null)
+                          Text(AppLocalizations.of(context)!.importHint,
+                              style: TextStyle(
+                                  color: PiggyTokens.textTertiary(context))),
+                      ],
+                    ),
+                  ),
+                  if (_reading)
+                    Positioned.fill(
+                      child: Container(
+                        color: Colors.black.withValues(alpha: 0.4),
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: PiggyTokens.surfaceElevated(context),
+                              borderRadius:
+                                  BorderRadius.circular(PiggyDimens.radiusLg),
+                            ),
+                            width: 320,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(AppLocalizations.of(context)!
+                                    .importReading),
+                                const SizedBox(height: 12),
+                                LinearProgressIndicator(value: _readProgress),
+                                const SizedBox(height: 8),
+                                Text(_readProgress == null
+                                    ? AppLocalizations.of(context)!
+                                        .importPreparing
+                                    : '${((_readProgress ?? 0) * 100).clamp(0, 100).toStringAsFixed(0)}%'),
+                                const SizedBox(height: 12),
+                                TextButton(
+                                  onPressed: () {
+                                    setState(() => _cancelRead = true);
+                                  },
+                                  child: Text(AppLocalizations.of(context)!
+                                      .commonCancel),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -6,7 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/shared_ledger_providers.dart';
-import '../../providers/sync_providers.dart' show piggycountCloudProviderInstance;
+import '../../providers/sync_providers.dart'
+    show piggycountCloudProviderInstance;
 import '../../styles/tokens.dart';
 import '../../widgets/biz/biz.dart';
 import '../../widgets/ui/wait_sliding_segmented_control.dart';
@@ -38,49 +39,55 @@ class _MemberStatsPageState extends ConsumerState<MemberStatsPage> {
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: l10n.sharedMembersStatsTitle,
-            subtitle: widget.ledgerName,
-            showBack: true,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: () => ref.invalidate(memberStatsProvider(
-                  MemberStatsKey(
-                      ledgerId: widget.ledgerExternalId, scope: _scope),
-                )),
-              ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-            child: WaitSlidingSegmentedControl<String>(
-              selected: _scope,
-              segments: [
-                WaitSlidingSegment(value: 'month', label: l10n.analyticsMonth),
-                WaitSlidingSegment(value: 'year', label: l10n.analyticsYear),
-                WaitSlidingSegment(value: 'all', label: l10n.analyticsAll),
-              ],
-              onValueChanged: (v) => setState(() => _scope = v),
-            ),
-          ),
-          Expanded(
-            child: statsAsync.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text('${l10n.commonError}: $e',
-                      textAlign: TextAlign.center),
-                ),
-              ),
-              data: (stats) => _buildBody(context, stats, l10n),
-            ),
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.sharedMembersStatsTitle,
+        subtitle: widget.ledgerName,
+        showBack: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => ref.invalidate(memberStatsProvider(
+              MemberStatsKey(ledgerId: widget.ledgerExternalId, scope: _scope),
+            )),
           ),
         ],
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 80,
+        ),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              child: WaitSlidingSegmentedControl<String>(
+                selected: _scope,
+                segments: [
+                  WaitSlidingSegment(
+                      value: 'month', label: l10n.analyticsMonth),
+                  WaitSlidingSegment(value: 'year', label: l10n.analyticsYear),
+                  WaitSlidingSegment(value: 'all', label: l10n.analyticsAll),
+                ],
+                onValueChanged: (v) => setState(() => _scope = v),
+              ),
+            ),
+            Expanded(
+              child: statsAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text('${l10n.commonError}: $e',
+                        textAlign: TextAlign.center),
+                  ),
+                ),
+                data: (stats) => _buildBody(context, stats, l10n),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -289,9 +296,8 @@ class _StatsAvatar extends ConsumerWidget {
     if (base == null || base.isEmpty) {
       return CircleAvatar(child: Text(letter));
     }
-    final absoluteUrl = relativeUrl.startsWith('http')
-        ? relativeUrl
-        : '$base$relativeUrl';
+    final absoluteUrl =
+        relativeUrl.startsWith('http') ? relativeUrl : '$base$relativeUrl';
     return CircleAvatar(
       backgroundImage: NetworkImage(absoluteUrl),
       onBackgroundImageError: (_, __) {},

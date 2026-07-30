@@ -186,240 +186,251 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
   Widget _buildScaffold(
       BuildContext context, String headerTitle, String? headerSubtitle) {
     return Scaffold(
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: headerTitle,
-            subtitle: headerSubtitle,
-            showBack: true,
-            actions: isEditing && widget.category != null
-                ? [
-                    // 分类详情按钮
-                    IconButton(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => CategoryDetailPage(
-                              categoryId: widget.category!.id,
-                              categoryName: widget.category!.name,
-                              allLedgers: true,
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.analytics_outlined),
-                      tooltip:
-                          AppLocalizations.of(context).categoryDetailTooltip,
-                    ),
-                    // 分类迁移按钮
-                    IconButton(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => CategoryMigrationPage(
-                              preselectedFromCategory: widget.category!,
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.move_down_outlined),
-                      tooltip:
-                          AppLocalizations.of(context).categoryMigrationTooltip,
-                    ),
-                  ]
-                : null,
-          ),
-          Expanded(
-            child: Form(
-              key: _formKey,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  // 分类类型提示
-                  Card(
-                    child: ListTile(
-                      leading: Icon(
-                        widget.kind == 'expense'
-                            ? Icons.trending_down
-                            : Icons.trending_up,
-                        color: widget.kind == 'expense'
-                            ? PiggyTokens.error(context)
-                            : PiggyTokens.success(context),
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: headerTitle,
+        subtitle: headerSubtitle,
+        showBack: true,
+        actions: isEditing && widget.category != null
+            ? [
+                // 分类详情按钮
+                IconButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => CategoryDetailPage(
+                          categoryId: widget.category!.id,
+                          categoryName: widget.category!.name,
+                          allLedgers: true,
+                        ),
                       ),
-                      title: Text(widget.kind == 'expense'
-                          ? AppLocalizations.of(context).categoryExpenseType
-                          : AppLocalizations.of(context).categoryIncomeType),
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // 二级分类开关
-                  Card(
-                    child: SwitchListTile(
-                      title: Text(AppLocalizations.of(context)
-                          .categorySubCategoryTitle),
-                      subtitle: Text(_isSubCategory
-                          ? AppLocalizations.of(context)
-                              .categorySubCategoryDescriptionEnabled
-                          : AppLocalizations.of(context)
-                              .categorySubCategoryDescriptionDisabled),
-                      value: _isSubCategory,
-                      // 从添加二级分类入口进来 或 编辑模式时不允许修改层级
-                      onChanged: (widget.parentCategory != null || isEditing)
-                          ? null
-                          : (value) => _onSubCategoryToggle(value),
-                    ),
-                  ),
-
-                  // 父分类选择器
-                  if (_isSubCategory) ...[
-                    const SizedBox(height: 16),
+                    );
+                  },
+                  icon: const Icon(Icons.analytics_outlined),
+                  tooltip: AppLocalizations.of(context).categoryDetailTooltip,
+                ),
+                // 分类迁移按钮
+                IconButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => CategoryMigrationPage(
+                          preselectedFromCategory: widget.category!,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.move_down_outlined),
+                  tooltip:
+                      AppLocalizations.of(context).categoryMigrationTooltip,
+                ),
+              ]
+            : null,
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top +
+              (headerSubtitle != null ? 80 : 56),
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: Form(
+                key: _formKey,
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    // 分类类型提示
                     Card(
                       child: ListTile(
                         leading: Icon(
-                          Icons.arrow_upward,
-                          color: PiggyTokens.primary(context),
+                          widget.kind == 'expense'
+                              ? Icons.trending_down
+                              : Icons.trending_up,
+                          color: widget.kind == 'expense'
+                              ? PiggyTokens.error(context)
+                              : PiggyTokens.success(context),
                         ),
-                        title: Text(AppLocalizations.of(context)
-                            .categoryParentCategoryTitle),
-                        subtitle: _selectedParentCategory != null
-                            ? Text(CategoryUtils.getDisplayName(
-                                _selectedParentCategory!.name, context))
-                            : Text(AppLocalizations.of(context)
-                                .categoryParentCategoryHint),
-                        trailing: const Icon(Icons.chevron_right),
-                        // 只有从添加二级分类入口进来时不允许修改，编辑模式可以修改
-                        enabled: widget.parentCategory == null,
-                        onTap: () => _selectParentCategory(),
+                        title: Text(widget.kind == 'expense'
+                            ? AppLocalizations.of(context).categoryExpenseType
+                            : AppLocalizations.of(context).categoryIncomeType),
                       ),
                     ),
-                  ],
 
-                  const SizedBox(height: 16),
-
-                  // 分类名称
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            AppLocalizations.of(context).categoryNameLabel,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            controller: _nameController,
-                            decoration: InputDecoration(
-                              hintText:
-                                  AppLocalizations.of(context).categoryNameHint,
-                              border: const OutlineInputBorder(),
-                              errorText: _duplicateErrorMessage,
-                            ),
-                            maxLength: 10,
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return AppLocalizations.of(context)
-                                    .categoryNameRequired;
-                              }
-                              if (value.trim().length > 10) {
-                                return AppLocalizations.of(context)
-                                    .categoryNameTooLong;
-                              }
-                              if (_isDuplicateName) {
-                                return _duplicateErrorMessage;
-                              }
-                              return null;
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 图标选择
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            AppLocalizations.of(context).categoryIconLabel,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 16),
-                          // 自定义图标选项
-                          _buildCustomIconSection(context),
-                          const SizedBox(height: 16),
-                          const Divider(),
-                          const SizedBox(height: 16),
-                          // Material 图标网格
-                          _GroupedIconGrid(
-                            selectedIcon:
-                                _iconType == 'material' ? _selectedIcon : null,
-                            kind: widget.kind,
-                            onIconSelected: (icon) {
-                              setState(() {
-                                _iconType = 'material';
-                                _selectedIcon = icon;
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  if (isEditing) ...[
-                    const SizedBox(height: 32),
-                    const Divider(),
                     const SizedBox(height: 16),
-                    Text(
-                      AppLocalizations.of(context).categoryDangerousOperations,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: PiggyTokens.error(context),
-                          ),
-                    ),
-                    const SizedBox(height: 8),
+
+                    // 二级分类开关
                     Card(
-                      child: ListTile(
-                        leading: Icon(Icons.delete, color: PiggyTokens.error(context)),
-                        title: Text(
-                            AppLocalizations.of(context).categoryDeleteTitle),
-                        subtitle: Text(AppLocalizations.of(context)
-                            .categoryDeleteSubtitle),
-                        onTap: _deleteCategory,
+                      child: SwitchListTile(
+                        title: Text(AppLocalizations.of(context)
+                            .categorySubCategoryTitle),
+                        subtitle: Text(_isSubCategory
+                            ? AppLocalizations.of(context)
+                                .categorySubCategoryDescriptionEnabled
+                            : AppLocalizations.of(context)
+                                .categorySubCategoryDescriptionDisabled),
+                        value: _isSubCategory,
+                        // 从添加二级分类入口进来 或 编辑模式时不允许修改层级
+                        onChanged: (widget.parentCategory != null || isEditing)
+                            ? null
+                            : (value) => _onSubCategoryToggle(value),
                       ),
                     ),
+
+                    // 父分类选择器
+                    if (_isSubCategory) ...[
+                      const SizedBox(height: 16),
+                      Card(
+                        child: ListTile(
+                          leading: Icon(
+                            Icons.arrow_upward,
+                            color: PiggyTokens.primary(context),
+                          ),
+                          title: Text(AppLocalizations.of(context)
+                              .categoryParentCategoryTitle),
+                          subtitle: _selectedParentCategory != null
+                              ? Text(CategoryUtils.getDisplayName(
+                                  _selectedParentCategory!.name, context))
+                              : Text(AppLocalizations.of(context)
+                                  .categoryParentCategoryHint),
+                          trailing: const Icon(Icons.chevron_right),
+                          // 只有从添加二级分类入口进来时不允许修改，编辑模式可以修改
+                          enabled: widget.parentCategory == null,
+                          onTap: () => _selectParentCategory(),
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 16),
+
+                    // 分类名称
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              AppLocalizations.of(context).categoryNameLabel,
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: _nameController,
+                              decoration: InputDecoration(
+                                hintText: AppLocalizations.of(context)
+                                    .categoryNameHint,
+                                border: const OutlineInputBorder(),
+                                errorText: _duplicateErrorMessage,
+                              ),
+                              maxLength: 10,
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return AppLocalizations.of(context)
+                                      .categoryNameRequired;
+                                }
+                                if (value.trim().length > 10) {
+                                  return AppLocalizations.of(context)
+                                      .categoryNameTooLong;
+                                }
+                                if (_isDuplicateName) {
+                                  return _duplicateErrorMessage;
+                                }
+                                return null;
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 图标选择
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              AppLocalizations.of(context).categoryIconLabel,
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            const SizedBox(height: 16),
+                            // 自定义图标选项
+                            _buildCustomIconSection(context),
+                            const SizedBox(height: 16),
+                            const Divider(),
+                            const SizedBox(height: 16),
+                            // Material 图标网格
+                            _GroupedIconGrid(
+                              selectedIcon: _iconType == 'material'
+                                  ? _selectedIcon
+                                  : null,
+                              kind: widget.kind,
+                              onIconSelected: (icon) {
+                                setState(() {
+                                  _iconType = 'material';
+                                  _selectedIcon = icon;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    if (isEditing) ...[
+                      const SizedBox(height: 32),
+                      const Divider(),
+                      const SizedBox(height: 16),
+                      Text(
+                        AppLocalizations.of(context)
+                            .categoryDangerousOperations,
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: PiggyTokens.error(context),
+                                ),
+                      ),
+                      const SizedBox(height: 8),
+                      Card(
+                        child: ListTile(
+                          leading: Icon(Icons.delete,
+                              color: PiggyTokens.error(context)),
+                          title: Text(
+                              AppLocalizations.of(context).categoryDeleteTitle),
+                          subtitle: Text(AppLocalizations.of(context)
+                              .categoryDeleteSubtitle),
+                          onTap: _deleteCategory,
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
-          ),
 
-          // 底部保存按钮
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            child: FilledButton(
-              onPressed: (_saving || _isDuplicateName) ? null : _saveCategory,
-              child: _saving
-                  ? SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: PiggyTokens.textOnPrimary(context),
-                      ),
-                    )
-                  : Text(AppLocalizations.of(context).commonSave),
+            // 底部保存按钮
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              child: FilledButton(
+                onPressed: (_saving || _isDuplicateName) ? null : _saveCategory,
+                child: _saving
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: PiggyTokens.textOnPrimary(context),
+                        ),
+                      )
+                    : Text(AppLocalizations.of(context).commonSave),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -694,7 +705,8 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
                             }
 
                             return ClipRRect(
-                              borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
+                              borderRadius:
+                                  BorderRadius.circular(PiggyDimens.radiusXs),
                               child: Image.file(
                                 File(snapshot.data!),
                                 width: 48,

@@ -19,7 +19,6 @@ import '../../l10n/app_localizations.dart';
 
 // GitHub配置教程链接
 const _kSupabaseGuideUrl = 'https://github.com/TNT-Likely/PiggyCount/wiki/Supabase-%E4%BA%91%E5%90%8C%E6%AD%A5%E9%85%8D%E7%BD%AE';
-const _kWebdavGuideUrl = 'https://github.com/TNT-Likely/PiggyCount/wiki/WebDAV-%E4%BA%91%E5%90%8C%E6%AD%A5%E9%85%8D%E7%BD%AE';
 
 class CloudServicePage extends ConsumerStatefulWidget {
   const CloudServicePage({super.key});
@@ -84,17 +83,20 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
       body: Column(
         children: [
           activeAsync.when(
-            loading: () => PrimaryHeader(
+            loading: () => GlassHeader(
               title: AppLocalizations.of(context).mineCloudService,
               showBack: true,
+              bottomOpaque: true,
             ),
-            error: (e, _) => PrimaryHeader(
+            error: (e, _) => GlassHeader(
               title: AppLocalizations.of(context).mineCloudService,
               showBack: true,
+              bottomOpaque: true,
             ),
-            data: (active) => PrimaryHeader(
+            data: (active) => GlassHeader(
               title: AppLocalizations.of(context).mineCloudService,
               showBack: true,
+              bottomOpaque: true,
               actions: active.type != CloudBackendType.local && active.valid
                   ? [
                       IconButton(
@@ -112,7 +114,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                   : null,
               content: active.type != CloudBackendType.local
                   ? Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                      padding: const EdgeInsets.fromLTRB(0, 8, 0, 16),
                       child: _buildConnectionStatus(active),
                     )
                   : null,
@@ -293,23 +295,19 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
   Widget _buildConnectionStatus(CloudServiceConfig config) {
     final testResult = _connectionTestResults[config.id];
     final Color statusColor;
-    final IconData statusIcon;
     final String statusText;
 
     if (testResult == null) {
       // 未测试
       statusColor = PiggyTokens.warning(context);
-      statusIcon = Icons.help_outline;
       statusText = AppLocalizations.of(context).cloudStatusNotTested;
     } else if (testResult) {
       // 测试成功
       statusColor = PiggyTokens.success(context);
-      statusIcon = Icons.check_circle_outline;
       statusText = AppLocalizations.of(context).cloudStatusNormal;
     } else {
       // 测试失败
       statusColor = PiggyTokens.error(context);
-      statusIcon = Icons.error_outline;
       statusText = AppLocalizations.of(context).cloudStatusFailed;
     }
 
@@ -430,7 +428,6 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
   void _showMultiDeviceDetailDialog(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final primaryText = PiggyTokens.textPrimary(context);
-    final secondaryText = PiggyTokens.textSecondary(context);
 
     showDialog(
       context: context,
@@ -1426,7 +1423,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
           await AppDialog.error(
             context,
             title: AppLocalizations.of(context).cloudIcloudNotAvailableTitle,
-            message: 'iCloud 检查失败: $e',
+            message: '${AppLocalizations.of(context).commonError}: $e',
           );
         }
         return;
@@ -1511,6 +1508,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
     );
 
     if (result != null) {
+      if (!mounted) return;
       final url = result['url'] as String;
       final apiPrefix = result['apiPrefix'] as String;
       final email = result['email'] as String;
@@ -1604,6 +1602,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
     );
 
     if (result != null) {
+      if (!mounted) return;
       final url = result['url'] as String;
       final key = result['key'] as String;
       final bucket = result['bucket'] as String;
@@ -1654,6 +1653,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
     );
 
     if (result != null) {
+      if (!mounted) return;
       final url = result['url'] as String;
       final username = result['username'] as String;
       final password = result['password'] as String;
@@ -1709,6 +1709,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
     );
 
     if (result != null) {
+      if (!mounted) return;
       var endpoint = result['endpoint'] as String;
       final region = result['region'] as String;
       final accessKey = result['accessKey'] as String;
@@ -1775,6 +1776,8 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
   Future<void> _testConnection(CloudServiceConfig config, {bool showDialog = true}) async {
     if (!config.valid || config.type == CloudBackendType.local) return;
 
+    // 在 async gap 前缓存 l10n，避免 dispose 后 context 失效
+    final l10n = AppLocalizations.of(context);
     setState(() => _testingConnection = true);
     try {
       bool connectionSuccess = false;
@@ -1800,9 +1803,9 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
             if (response.statusCode == 200 || response.statusCode == 404 || response.statusCode == 406) {
               connectionSuccess = true;
             } else if (response.statusCode == 401 || response.statusCode == 403) {
-              throw Exception(AppLocalizations.of(context).cloudErrorAuthFailed);
+              throw Exception(l10n.cloudErrorAuthFailed);
             } else {
-              throw Exception(AppLocalizations.of(context).cloudErrorServerStatus('${response.statusCode}'));
+              throw Exception(l10n.cloudErrorServerStatus('${response.statusCode}'));
             }
             break;
 
@@ -1824,16 +1827,16 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
               if (davHeader != null || response.headers.containsKey('allow')) {
                 connectionSuccess = true;
               } else {
-                throw Exception(AppLocalizations.of(context).cloudErrorWebdavNotSupported);
+                throw Exception(l10n.cloudErrorWebdavNotSupported);
               }
             } else if (response.statusCode == 401) {
-              throw Exception(AppLocalizations.of(context).cloudErrorAuthFailedCredentials);
+              throw Exception(l10n.cloudErrorAuthFailedCredentials);
             } else if (response.statusCode == 403) {
-              throw Exception(AppLocalizations.of(context).cloudErrorAccessDenied);
+              throw Exception(l10n.cloudErrorAccessDenied);
             } else if (response.statusCode == 404) {
-              throw Exception(AppLocalizations.of(context).cloudErrorPathNotFound(testUrl.path));
+              throw Exception(l10n.cloudErrorPathNotFound(testUrl.path));
             } else {
-              throw Exception(AppLocalizations.of(context).cloudErrorServerStatus('${response.statusCode}'));
+              throw Exception(l10n.cloudErrorServerStatus('${response.statusCode}'));
             }
             break;
 
@@ -1921,7 +1924,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
         }
       } on http.ClientException catch (e) {
         connectionSuccess = false;
-        errorDetail = AppLocalizations.of(context).cloudErrorNetwork(e.message);
+        errorDetail = l10n.cloudErrorNetwork(e.message);
       } on Exception catch (e) {
         connectionSuccess = false;
         errorDetail = e.toString().replaceFirst('Exception: ', '');
@@ -1930,30 +1933,34 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
         errorDetail = e.toString();
       }
 
-      setState(() {
-        _connectionTestResults[config.id] = connectionSuccess;
-      });
+      if (mounted) {
+        setState(() {
+          _connectionTestResults[config.id] = connectionSuccess;
+        });
+      }
 
       // 只在手动测试时显示对话框
       if (mounted && showDialog) {
         if (connectionSuccess) {
           await AppDialog.info(context,
-              title: AppLocalizations.of(context).cloudTestSuccessTitle,
-              message: AppLocalizations.of(context).cloudTestSuccessMessage);
+              title: l10n.cloudTestSuccessTitle,
+              message: l10n.cloudTestSuccessMessage);
         } else {
           await AppDialog.error(context,
-              title: AppLocalizations.of(context).cloudTestFailedTitle,
-              message: errorDetail ?? AppLocalizations.of(context).cloudTestFailedMessage);
+              title: l10n.cloudTestFailedTitle,
+              message: errorDetail ?? l10n.cloudTestFailedMessage);
         }
       }
     } catch (e) {
-      setState(() {
-        _connectionTestResults[config.id] = false;
-      });
+      if (mounted) {
+        setState(() {
+          _connectionTestResults[config.id] = false;
+        });
+      }
       // 只在手动测试时显示错误对话框
       if (mounted && showDialog) {
         await AppDialog.error(context,
-            title: AppLocalizations.of(context).cloudTestErrorTitle,
+            title: l10n.cloudTestErrorTitle,
             message: e.toString());
       }
     } finally {

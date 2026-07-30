@@ -7696,6 +7696,27 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get cloudSyncEncryptProbeFailedContinue => '以首设备继续';
+
+  @override
+  String get saltMismatchStatus => '加密密钥不匹配';
+
+  @override
+  String get saltMismatchNeedPasswordHint => '云端备份密钥与本地不匹配，点击重新输入密码';
+
+  @override
+  String get saltMismatchDialogTitle => '重新输入密码';
+
+  @override
+  String get saltMismatchRetrySuccess => '密钥已激活，正在重试同步...';
+
+  @override
+  String get saltMismatchRawStorageUnavailable => '云服务未初始化，无法恢复密钥';
+
+  @override
+  String get saltMismatchProbeFailed => '云端探测失败，请检查网络后重试';
+
+  @override
+  String get saltMismatchCloudCorrupted => '云端密文已损坏，无法恢复密钥';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -15390,4 +15411,25 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get cloudSyncEncryptProbeFailedContinue => '以首裝置繼續';
+
+  @override
+  String get saltMismatchStatus => '加密金鑰不匹配';
+
+  @override
+  String get saltMismatchNeedPasswordHint => '雲端備份金鑰與本地不匹配，點擊重新輸入密碼';
+
+  @override
+  String get saltMismatchDialogTitle => '重新輸入密碼';
+
+  @override
+  String get saltMismatchRetrySuccess => '金鑰已啟用，正在重試同步...';
+
+  @override
+  String get saltMismatchRawStorageUnavailable => '雲端服務未初始化，無法恢復金鑰';
+
+  @override
+  String get saltMismatchProbeFailed => '雲端探測失敗，請檢查網路後重試';
+
+  @override
+  String get saltMismatchCloudCorrupted => '雲端密文已損壞，無法恢復金鑰';
 }

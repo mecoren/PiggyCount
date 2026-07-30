@@ -17,78 +17,94 @@ class RecurringTransactionPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final recurringTransactionsAsync = ref.watch(allRecurringTransactionsProvider);
+    final recurringTransactionsAsync =
+        ref.watch(allRecurringTransactionsProvider);
 
     return Scaffold(
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: AppLocalizations.of(context)!.recurringTransactionTitle,
-            showBack: true,
-            actions: [
-              IconButton(
-                onPressed: () => _addRecurringTransaction(context, ref),
-                icon: const Icon(Icons.add),
-                tooltip: AppLocalizations.of(context)!.recurringTransactionAdd,
-              ),
-            ],
-          ),
-          Expanded(
-            child: recurringTransactionsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(
-                child: Text('Error: $error'),
-              ),
-              data: (recurringTransactions) {
-                if (recurringTransactions.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.repeat,
-                          size: 64,
-                          color: PiggyTokens.textTertiary(context),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          AppLocalizations.of(context)!.recurringTransactionEmpty,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: PiggyTokens.textSecondary(context),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          AppLocalizations.of(context)!.recurringTransactionEmptyHint,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: PiggyTokens.textTertiary(context),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                  itemCount: recurringTransactions.length + 1, // +1 for usage guide card
-                  itemBuilder: (context, index) {
-                    // 第一个显示使用说明卡片
-                    if (index == 0) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _UsageGuideCard(),
-                      );
-                    }
-                    // 后续显示周期记账卡片
-                    final recurring = recurringTransactions[index - 1];
-                    return _RecurringTransactionCard(recurring: recurring);
-                  },
-                );
-              },
-            ),
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: AppLocalizations.of(context)!.recurringTransactionTitle,
+        showBack: true,
+        actions: [
+          IconButton(
+            onPressed: () => _addRecurringTransaction(context, ref),
+            icon: const Icon(Icons.add),
+            tooltip: AppLocalizations.of(context)!.recurringTransactionAdd,
           ),
         ],
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 56,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: recurringTransactionsAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(
+                  child: Text('Error: $error'),
+                ),
+                data: (recurringTransactions) {
+                  if (recurringTransactions.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.repeat,
+                            size: 64,
+                            color: PiggyTokens.textTertiary(context),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            AppLocalizations.of(context)!
+                                .recurringTransactionEmpty,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                  color: PiggyTokens.textSecondary(context),
+                                ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            AppLocalizations.of(context)!
+                                .recurringTransactionEmptyHint,
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: PiggyTokens.textTertiary(context),
+                                    ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 16),
+                    itemCount: recurringTransactions.length +
+                        1, // +1 for usage guide card
+                    itemBuilder: (context, index) {
+                      // 第一个显示使用说明卡片
+                      if (index == 0) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _UsageGuideCard(),
+                        );
+                      }
+                      // 后续显示周期记账卡片
+                      final recurring = recurringTransactions[index - 1];
+                      return _RecurringTransactionCard(recurring: recurring);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -145,7 +161,8 @@ class _RecurringTransactionCard extends ConsumerWidget {
           onTap: () async {
             final result = await Navigator.of(context).push<bool>(
               MaterialPageRoute(
-                builder: (_) => RecurringTransactionEditPage(recurring: recurring),
+                builder: (_) =>
+                    RecurringTransactionEditPage(recurring: recurring),
               ),
             );
             // 如果返回 true，表示数据已更改，强制刷新列表
@@ -192,7 +209,8 @@ class _RecurringTransactionCard extends ConsumerWidget {
                               builder: (context, snapshot) {
                                 final categoryName = snapshot.data?.name ?? '';
                                 return Text(
-                                  CategoryUtils.getDisplayName(categoryName, context),
+                                  CategoryUtils.getDisplayName(
+                                      categoryName, context),
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
@@ -240,7 +258,8 @@ class _RecurringTransactionCard extends ConsumerWidget {
                           // 下次生成时间（如果有）
                           if (recurring.lastGeneratedDate != null) ...[
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 6),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 6),
                               child: Text(
                                 '·',
                                 style: TextStyle(
@@ -256,7 +275,8 @@ class _RecurringTransactionCard extends ConsumerWidget {
                             ),
                             const SizedBox(width: 3),
                             Text(
-                              DateFormat.Md().format(recurring.lastGeneratedDate!),
+                              DateFormat.Md()
+                                  .format(recurring.lastGeneratedDate!),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: primaryColor,
@@ -267,7 +287,8 @@ class _RecurringTransactionCard extends ConsumerWidget {
                         ],
                       ),
                       // 备注（如果有）
-                      if (recurring.note != null && recurring.note!.isNotEmpty) ...[
+                      if (recurring.note != null &&
+                          recurring.note!.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Text(
                           recurring.note!,
@@ -313,7 +334,8 @@ class _RecurringTransactionCard extends ConsumerWidget {
                       child: Switch(
                         value: recurring.enabled,
                         onChanged: (value) async {
-                          print('🔧 [周期记账] 开关点击: id=${recurring.id}, newValue=$value, repo类型=${repo.runtimeType}');
+                          print(
+                              '🔧 [周期记账] 开关点击: id=${recurring.id}, newValue=$value, repo类型=${repo.runtimeType}');
 
                           try {
                             await repo.toggleRecurringTransaction(
@@ -321,7 +343,8 @@ class _RecurringTransactionCard extends ConsumerWidget {
                             print('✅ [周期记账] toggleRecurringTransaction 完成');
 
                             // 给Realtime一点时间触发更新
-                            await Future.delayed(const Duration(milliseconds: 100));
+                            await Future.delayed(
+                                const Duration(milliseconds: 100));
 
                             ref.invalidate(allRecurringTransactionsProvider);
                             print('✅ [周期记账] Provider已invalidate');

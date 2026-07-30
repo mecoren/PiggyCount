@@ -52,103 +52,111 @@ class _TagEditPageState extends ConsumerState<TagEditPage> {
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: _isEditing ? l10n.tagEditTitle : l10n.tagAddTitle,
-            showBack: true,
-            actions: [
-              TextButton(
-                onPressed: _isSubmitting ? null : _submit,
-                child: Text(
-                  l10n.commonSave,
-                  style: TextStyle(
-                    color: _isSubmitting
-                        ? PiggyTokens.textTertiary(context)
-                        : PiggyTokens.textPrimary(context),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          Expanded(
-            child: Form(
-              key: _formKey,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  // 预览
-                  _buildPreview(),
-                  const SizedBox(height: 24),
-
-                  // 标签名称
-                  SectionCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(left: 4, bottom: 8),
-                          child: Text(
-                            l10n.tagNameLabel,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: PiggyTokens.textSecondary(context),
-                            ),
-                          ),
-                        ),
-                        TextFormField(
-                          controller: _nameController,
-                          decoration: InputDecoration(
-                            hintText: l10n.tagNameHint,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 12,
-                            ),
-                          ),
-                          maxLength: 20,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return l10n.tagNameRequired;
-                            }
-                            return null;
-                          },
-                          onChanged: (_) => setState(() {}),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 颜色选择
-                  SectionCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(left: 4, bottom: 12),
-                          child: Text(
-                            l10n.tagColorLabel,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: PiggyTokens.textSecondary(context),
-                            ),
-                          ),
-                        ),
-                        _buildColorPicker(),
-                      ],
-                    ),
-                  ),
-                ],
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: _isEditing ? l10n.tagEditTitle : l10n.tagAddTitle,
+        showBack: true,
+        actions: [
+          TextButton(
+            onPressed: _isSubmitting ? null : _submit,
+            child: Text(
+              l10n.commonSave,
+              style: TextStyle(
+                color: _isSubmitting
+                    ? PiggyTokens.textTertiary(context)
+                    : PiggyTokens.textPrimary(context),
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
         ],
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 56,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: Form(
+                key: _formKey,
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    // 预览
+                    _buildPreview(),
+                    const SizedBox(height: 24),
+
+                    // 标签名称
+                    SectionCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4, bottom: 8),
+                            child: Text(
+                              l10n.tagNameLabel,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: PiggyTokens.textSecondary(context),
+                              ),
+                            ),
+                          ),
+                          TextFormField(
+                            controller: _nameController,
+                            decoration: InputDecoration(
+                              hintText: l10n.tagNameHint,
+                              border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.circular(PiggyDimens.radiusSm),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                            ),
+                            maxLength: 20,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return l10n.tagNameRequired;
+                              }
+                              return null;
+                            },
+                            onChanged: (_) => setState(() {}),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 颜色选择
+                    SectionCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4, bottom: 12),
+                            child: Text(
+                              l10n.tagColorLabel,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: PiggyTokens.textSecondary(context),
+                              ),
+                            ),
+                          ),
+                          _buildColorPicker(),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

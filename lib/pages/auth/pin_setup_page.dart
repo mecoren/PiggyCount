@@ -117,51 +117,58 @@ class _PinSetupPageState extends ConsumerState<PinSetupPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: widget.mode == PinSetupMode.create
-                ? AppLocalizations.of(context).appLockSetPin
-                : AppLocalizations.of(context).appLockChangePin,
-            showBack: true,
-          ),
-          Expanded(
-            child: SafeArea(
-              top: false,
-              child: Column(
-                children: [
-                  const Spacer(flex: 2),
-                  // 步骤提示
-                  Text(
-                    _title,
-                    style: TextStyle(
-                      fontSize: 18.0.scaled(context, ref),
-                      fontWeight: FontWeight.w600,
-                      color: PiggyTokens.textPrimary(context),
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: widget.mode == PinSetupMode.create
+            ? AppLocalizations.of(context).appLockSetPin
+            : AppLocalizations.of(context).appLockChangePin,
+        showBack: true,
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 56,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  children: [
+                    const Spacer(flex: 2),
+                    // 步骤提示
+                    Text(
+                      _title,
+                      style: TextStyle(
+                        fontSize: 18.0.scaled(context, ref),
+                        fontWeight: FontWeight.w600,
+                        color: PiggyTokens.textPrimary(context),
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 32.0.scaled(context, ref)),
-                  // PIN 圆点
-                  PinDotIndicator(
-                    filledCount: _pin.length,
-                    isError: _isError,
-                  ),
-                  const Spacer(flex: 1),
-                  // 数字键盘
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                        horizontal: 40.0.scaled(context, ref)),
-                    child: NumberPad(
-                      onNumberTap: _onNumberTap,
-                      onDelete: _onDelete,
+                    SizedBox(height: 32.0.scaled(context, ref)),
+                    // PIN 圆点
+                    PinDotIndicator(
+                      filledCount: _pin.length,
+                      isError: _isError,
                     ),
-                  ),
-                  SizedBox(height: 32.0.scaled(context, ref)),
-                ],
+                    const Spacer(flex: 1),
+                    // 数字键盘
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 40.0.scaled(context, ref)),
+                      child: NumberPad(
+                        onNumberTap: _onNumberTap,
+                        onDelete: _onDelete,
+                      ),
+                    ),
+                    SizedBox(height: 32.0.scaled(context, ref)),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

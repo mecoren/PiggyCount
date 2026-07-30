@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' as fcs;
 
 import '../data/db.dart';
+import '../data/encryption/ciphertext_format.dart';
 import '../data/encryption/encrypted_cloud_provider.dart';
 import '../data/repositories/base_repository.dart';
 import '../domain/encryption/encryption_service.dart';
@@ -112,7 +113,7 @@ class TransactionsSyncManager implements SyncService {
     _isInitializing = false;
 
     // 释放旧 provider（会触发 EncryptedCloudProvider.dispose → inner.dispose）
-    // 不 await：dispose 失败不应阻塞重初始化流程
+    // dispose 失败仅记录 warning，不阻塞重初始化流程
     try {
       await _provider?.dispose();
     } catch (e) {
@@ -152,15 +153,19 @@ class TransactionsSyncManager implements SyncService {
   Future<ReEncryptResult?> reEncryptCloudAndReinit({
     required EncryptionService encryptionService,
   }) async {
-    // 取当前 raw storage（不调 _ensureInitialized，避免在加密已开启时
-    // 触发重新初始化导致 _provider 被包装）
-    final rawStorage = _provider?.storage;
+    // BUG-4 修复：必须使用未装饰的 _rawStorage，而非 _provider?.storage。
+    // 原代码取 _provider?.storage，在 _provider 已被 EncryptedCloudProvider
+    // 包装的情况下（如二次重加密、后台 _ensureInitialized 被触发后），
+    // 会返回已加密的 storage，导致 reEncryptExistingCloudData 内部
+    // download 自动解密 + upload 自动加密后又被 encrypt() 再加密一次，
+    // 产生双重加密。_rawStorage 在 _initialize 装饰前赋值，始终是原始 storage。
+    final rawStorage = _rawStorage;
 
     ReEncryptResult? result;
     if (rawStorage != null) {
       try {
         result = await encryptionService.reEncryptExistingCloudData(
-          storage: rawStorage,
+          cloudStorage: rawStorage,
         );
         logger.info(
           'CloudSync',
@@ -188,7 +193,14 @@ class TransactionsSyncManager implements SyncService {
       while (_isInitializing) {
         await Future.delayed(const Duration(milliseconds: 50));
       }
-      return;
+      // 竞态防护：等待期间若 reinitializeForEncryption 被并发调用，
+      // _isInitializing 会被强行置 false 但 _isInitialized 仍为 false。
+      // 此时不能直接 return，需递归重试一次初始化。
+      if (_isInitialized) return;
+      if (_isInitializing) {
+        // 另一个调用方已抢先进入初始化，递归等待
+        return _ensureInitialized();
+      }
     }
 
     _isInitializing = true;
@@ -255,6 +267,37 @@ class TransactionsSyncManager implements SyncService {
     return 'ledger_$ledgerId.json';
   }
 
+  /// 把下载到的原始内容规整为「可解析的明文」。
+  ///
+  /// 场景：reset/disable 加密后 provider 未被装饰，storage.download 返回原始内容。
+  /// - 非密文（legacy 明文）：原样返回。
+  /// - 密文且本地有可用密钥（加密开启，或 [EncryptionService.disable] 后仍保留
+  ///   secure storage 密钥）：调用 [EncryptionService.decrypt] 解密后返回。
+  ///   这保证了 disable 契约——关闭加密只停止新上传加密，存量密文仍可用原密钥
+  ///   恢复，用户不会在关闭加密后丢失云端备份访问。
+  /// - 密文但本地无可用密钥（reset 后密钥清空、未注入加密服务、或密钥与密文
+  ///   不匹配）：返回 null，由调用方跳过导入/恢复，避免 jsonDecode 崩溃。
+  ///
+  /// 取代原 [_isUnreadableCiphertext]：原实现仅以 `isEnabled` 判断，会把
+  /// 「disable 后密钥仍保留」的场景也判为不可读，导致关闭加密后无法再从云端
+  /// 恢复存量密文备份（即 BUG-1 的残余阻塞点）。
+  Future<String?> _decryptIfNeeded(String raw) async {
+    if (!CiphertextFormat.isEncrypted(raw)) return raw;
+    // 内容是密文：若加密服务可用且已开启，_provider 应已被装饰，
+    // download 返回的是解密后的明文，不会走到这里。
+    // 走到这里说明 provider 未装饰（加密未开启），需手动判断本地是否仍有密钥。
+    if (encryptionService == null) return null;
+    if (!await encryptionService!.hasActiveKey) return null;
+    try {
+      return await encryptionService!.decrypt(raw);
+    } on Exception catch (e) {
+      // 密钥存在但与密文不匹配（salt 错配/被其他设备用不同密码重加密等）：
+      // 本地确实无法解密，视为不可读，避免崩溃。
+      logger.warning('CloudSync', '本地密钥存在但密文解密失败，跳过: $e');
+      return null;
+    }
+  }
+
   /// 本地最大发生时间（用于 flutter_cloud_sync 的方向判断）。
   /// 取 `max(最近本地写入时间, SELECT MAX(happened_at) WHERE ledger=...)`。
   /// 之前只返回 `_recentLocalChangeAt`，冷启动时为 null，方向判断只能靠 count。
@@ -280,7 +323,10 @@ class TransactionsSyncManager implements SyncService {
   Future<void> uploadCurrentLedger({required int ledgerId}) async {
     await _ensureInitialized();
 
-    if (_syncManager == null) {
+    // 捕获到局部变量：防止执行期间 reinitializeForEncryption 把
+    // _syncManager 置 null 导致 NPE（ATTACH-2 竞态防护）
+    final manager = _syncManager;
+    if (manager == null) {
       throw fcs.CloudSyncException('云服务不可用，请检查配置或登录状态');
     }
 
@@ -299,7 +345,7 @@ class TransactionsSyncManager implements SyncService {
         logger.warning('CloudSync', '计算本地指纹失败: $e');
       }
 
-      await _syncManager!.upload(
+      await manager.upload(
         data: ledgerId,
         path: _pathForLedger(ledgerId),
         metadata: {
@@ -346,7 +392,10 @@ class TransactionsSyncManager implements SyncService {
       downloadAndRestoreToCurrentLedger({required int ledgerId}) async {
     await _ensureInitialized();
 
-    if (_provider == null) {
+    // 捕获到局部变量：防止执行期间 reinitializeForEncryption 把
+    // _provider 置 null 导致 NPE（ATTACH-2 竞态防护）
+    final provider = _provider;
+    if (provider == null) {
       throw fcs.CloudSyncException('云服务不可用，请检查配置或登录状态');
     }
 
@@ -354,11 +403,23 @@ class TransactionsSyncManager implements SyncService {
       logger.info('CloudSync', '开始下载账本 $ledgerId');
 
       // 直接使用 storage 下载原始 JSON 字符串
-      final jsonStr =
-          await _provider!.storage.download(path: _pathForLedger(ledgerId));
+      final raw =
+          await provider.storage.download(path: _pathForLedger(ledgerId));
 
-      if (jsonStr == null) {
+      if (raw == null) {
         logger.warning('CloudSync', '云端备份不存在');
+        return (inserted: 0, deletedDup: 0);
+      }
+
+      // 规整为可解析明文：disable 后密钥仍保留 → 解密存量密文并恢复；
+      // reset 后无密钥 → 跳过恢复（避免崩溃），提示用户重新开启加密或上传覆盖。
+      final jsonStr = await _decryptIfNeeded(raw);
+      if (jsonStr == null) {
+        logger.warning(
+          'CloudSync',
+          '云端存在加密密文但本地无可解密密钥，跳过恢复以避免崩溃。'
+          '请重新开启加密（使用原密码）或先上传本地数据覆盖云端。',
+        );
         return (inserted: 0, deletedDup: 0);
       }
 
@@ -366,13 +427,15 @@ class TransactionsSyncManager implements SyncService {
       // 清空 + 导入包裹在同一事务内：若导入失败，清空操作一并回滚，
       // 保证本地数据不会被部分清空。importTransactionsJson 内部的
       // db.transaction 会作为 savepoint 嵌套在本事务内。
-      final result = await db.transaction(() async {
-        await _clearLedgerTransactions(ledgerId);
-        return importTransactionsJson(repo, ledgerId, jsonStr);
+      final deletedDup = await db.transaction(() async {
+        final deleted = await _clearLedgerTransactions(ledgerId);
+        return (deleted, await importTransactionsJson(repo, ledgerId, jsonStr));
       });
 
+      final result = deletedDup.$2;
+
       logger.info('CloudSync',
-          '下载完成: inserted=${result.inserted}');
+          '下载完成: inserted=${result.inserted}, deletedDup=${deletedDup.$1}');
 
       // 清除缓存
       _statusCache.remove(ledgerId);
@@ -381,7 +444,7 @@ class TransactionsSyncManager implements SyncService {
 
       return (
         inserted: result.inserted,
-        deletedDup: 0,
+        deletedDup: deletedDup.$1,
       );
     } catch (e, stack) {
       logger.error('CloudSync', '下载失败: $ledgerId', e);
@@ -403,8 +466,10 @@ class TransactionsSyncManager implements SyncService {
   /// 避免追加式导入产生重复行。不记录 local_changes（这是为云端数据
   /// 腾位置的本地操作，不应反向回流到云端）。
   ///
+  /// 返回被删除的交易行数，供调用方填充 `deletedDup`（AC-1.3）。
+  ///
   /// 注意：调用方应将其与导入操作包裹在同一事务内，保证原子性。
-  Future<void> _clearLedgerTransactions(int ledgerId) async {
+  Future<int> _clearLedgerTransactions(int ledgerId) async {
     // 先查出本账本所有交易 id，用于级联删 transactionTags / attachments
     final txIds = await (db.selectOnly(db.transactions)
           ..addColumns([db.transactions.id])
@@ -412,7 +477,7 @@ class TransactionsSyncManager implements SyncService {
         .map((row) => row.read(db.transactions.id)!)
         .get();
 
-    if (txIds.isEmpty) return;
+    if (txIds.isEmpty) return 0;
 
     await (db.delete(db.transactionTags)
           ..where((t) => t.transactionId.isIn(txIds)))
@@ -424,6 +489,7 @@ class TransactionsSyncManager implements SyncService {
           ..where((t) => t.ledgerId.equals(ledgerId)))
         .go();
     logger.info('CloudSync', '恢复前清空账本 $ledgerId: 删除 $deleted 笔交易');
+    return deleted;
   }
 
   /// 下载云端数据并计算 diff 预览
@@ -436,19 +502,25 @@ class TransactionsSyncManager implements SyncService {
   }) async {
     await _ensureInitialized();
 
-    if (_provider == null) {
+    // 捕获到局部变量（ATTACH-2 竞态防护）
+    final provider = _provider;
+    if (provider == null) {
       throw fcs.CloudSyncException('云服务不可用，请检查配置或登录状态');
     }
 
     logger.info('CloudSync', '开始下载预览: $ledgerId');
 
-    final jsonStr =
-        await _provider!.storage.download(path: _pathForLedger(ledgerId));
+    final raw =
+        await provider.storage.download(path: _pathForLedger(ledgerId));
 
-    if (jsonStr == null) {
+    if (raw == null) {
       logger.warning('CloudSync', '云端备份不存在');
       return null;
     }
+
+    // 规整为可解析明文：disable 后密钥仍保留则解密；无密钥返回 null
+    final jsonStr = await _decryptIfNeeded(raw);
+    if (jsonStr == null) return null;
 
     // 解析 JSON
     final jsonData = jsonDecode(jsonStr) as Map<String, dynamic>;
@@ -497,8 +569,11 @@ class TransactionsSyncManager implements SyncService {
   Future<SyncStatus> getStatus({required int ledgerId}) async {
     await _ensureInitialized();
 
+    // 捕获到局部变量：防止执行期间 reinitializeForEncryption 把
+    // _syncManager/_provider 置 null 导致 NPE（ATTACH-2 竞态防护）
+    final manager = _syncManager;
     // 如果 provider 不可用，返回未登录状态
-    if (_syncManager == null || _provider == null) {
+    if (manager == null || _provider == null) {
       return SyncStatus(
         diff: SyncDiff.notLoggedIn,
         localCount: 0,
@@ -510,11 +585,11 @@ class TransactionsSyncManager implements SyncService {
     // 检查缓存
     final cached = _statusCache[ledgerId];
     if (cached != null) {
-      print('🟡 [getStatus] 缓存命中: ledgerId=$ledgerId, diff=${cached.diff}');
+      logger.debug('CloudSync', '缓存命中: ledgerId=$ledgerId, diff=${cached.diff}');
       return cached;
     }
 
-    print('🟡 [getStatus] 缓存未命中，开始计算: ledgerId=$ledgerId');
+    logger.debug('CloudSync', '缓存未命中，开始计算: ledgerId=$ledgerId');
 
     try {
       // 计算本地指纹
@@ -545,7 +620,7 @@ class TransactionsSyncManager implements SyncService {
       logger.info('CloudSync', '获取同步状态: $ledgerId');
 
       // 调用包的 getStatus，传入时间戳用于方向判断
-      final fcsStatus = await _syncManager!.getStatus(
+      final fcsStatus = await manager.getStatus(
           data: ledgerId,
           path: _pathForLedger(ledgerId),
           localUpdatedAt: await _computeLocalUpdatedAt(ledgerId),
@@ -553,6 +628,22 @@ class TransactionsSyncManager implements SyncService {
 
       // 转换包的 SyncStatus 为 PiggyCount 的 SyncStatus
       final status = _convertSyncStatus(fcsStatus);
+
+      // 缺口 1: fcs.CloudSyncManager 内部捕获 SaltMismatchException 后返回 error 状态，
+      // message 含原始异常文本（如 "Failed to get sync status: SaltMismatchException: ..."）。
+      // 检测并转为哨兵 message 'salt_mismatch_need_password' 供 UI 识别并弹密码对话框。
+      if (status.diff == SyncDiff.error &&
+          status.message != null &&
+          status.message!.contains('SaltMismatchException')) {
+        logger.warning('CloudSync',
+            'salt 不匹配，需引导用户重新输入密码: $ledgerId');
+        return SyncStatus(
+          diff: SyncDiff.error,
+          localCount: 0,
+          localFingerprint: '',
+          message: 'salt_mismatch_need_password',
+        );
+      }
 
       // 错误状态不写入 _statusCache：
       // fcs.CloudSyncManager 内部捕获 storage 异常后返回 error 状态（不抛出），
@@ -567,6 +658,18 @@ class TransactionsSyncManager implements SyncService {
       logger.debug('CloudSync', '本地数量: ${status.localCount}, 云端数量: ${status.cloudCount ?? "无"}');
 
       return status;
+    } on SaltMismatchException catch (e) {
+      // 缺口 1: SaltMismatchException 转为哨兵 message，供 UI 层识别
+      // 并弹出"重新输入密码"对话框（而非显示原始异常文本）。
+      // 不缓存（已由 US-6 原则保证：error 状态一律不缓存），
+      // 用户重输密码后应立即生效而非读到旧错误。
+      logger.warning('CloudSync', 'salt 不匹配，需引导用户重新输入密码: $ledgerId', e);
+      return SyncStatus(
+        diff: SyncDiff.error,
+        localCount: 0,
+        localFingerprint: '',
+        message: 'salt_mismatch_need_password',
+      );
     } catch (e, stack) {
       logger.error('CloudSync', '获取状态失败: $ledgerId', e);
       logger.error('CloudSync', '堆栈: $stack', null);
@@ -634,11 +737,17 @@ class TransactionsSyncManager implements SyncService {
       refreshCloudFingerprint({required int ledgerId}) async {
     await _ensureInitialized();
 
+    // 捕获到局部变量（ATTACH-2 竞态防护）
+    final manager = _syncManager;
+    if (manager == null) {
+      return (fingerprint: null, count: null, exportedAt: null);
+    }
+
     try {
       logger.info('CloudSync', '刷新云端指纹: $ledgerId');
 
       // 强制刷新状态
-      final status = await _syncManager!.getStatus(
+      final status = await manager.getStatus(
         data: ledgerId,
         path: _pathForLedger(ledgerId),
         localUpdatedAt: await _computeLocalUpdatedAt(ledgerId),
@@ -680,14 +789,16 @@ class TransactionsSyncManager implements SyncService {
   Future<void> deleteRemoteBackup({required int ledgerId}) async {
     await _ensureInitialized();
 
-    if (_syncManager == null) {
+    // 捕获到局部变量（ATTACH-2 竞态防护）
+    final manager = _syncManager;
+    if (manager == null) {
       throw fcs.CloudSyncException('云服务不可用，请检查配置或登录状态');
     }
 
     try {
       logger.info('CloudSync', '删除云端备份: $ledgerId');
 
-      await _syncManager!.deleteRemote(path: _pathForLedger(ledgerId));
+      await manager.deleteRemote(path: _pathForLedger(ledgerId));
 
       // 清除缓存
       _statusCache.remove(ledgerId);
@@ -945,11 +1056,25 @@ class TransactionsSyncManager implements SyncService {
       }
 
       // 下载数据
-      final jsonStr = await _provider!.storage.download(path: remotePath);
+      final raw = await _provider!.storage.download(path: remotePath);
 
-      if (jsonStr == null) {
+      if (raw == null) {
         logger.warning('CloudSync', '云端账本不存在: $remotePath');
         // 只有新创建的账本才需要删除
+        if (!reuseExistingByName) {
+          await (db.delete(db.ledgers)..where((t) => t.id.equals(ledgerId))).go();
+        }
+        return null;
+      }
+
+      // 规整为可解析明文：disable 后密钥仍保留则解密后导入；
+      // 无密钥（reset 等）跳过导入，避免崩溃
+      final jsonStr = await _decryptIfNeeded(raw);
+      if (jsonStr == null) {
+        logger.warning(
+          'CloudSync',
+          '云端账本 $remotePath 存在加密密文但本地无可解密密钥，跳过导入',
+        );
         if (!reuseExistingByName) {
           await (db.delete(db.ledgers)..where((t) => t.id.equals(ledgerId))).go();
         }

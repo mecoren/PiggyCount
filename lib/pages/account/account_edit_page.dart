@@ -83,8 +83,10 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
           ? widget.account!.creditLimit!.toStringAsFixed(2)
           : '',
     );
-    _bankNameController = TextEditingController(text: widget.account?.bankName ?? '');
-    _cardLastFourController = TextEditingController(text: widget.account?.cardLastFour ?? '');
+    _bankNameController =
+        TextEditingController(text: widget.account?.bankName ?? '');
+    _cardLastFourController =
+        TextEditingController(text: widget.account?.cardLastFour ?? '');
     _noteController = TextEditingController(text: widget.account?.note ?? '');
     _selectedType = widget.account?.type ?? 'cash';
     _selectedCurrency = widget.account?.currency ?? 'CNY';
@@ -97,8 +99,10 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
   Future<void> _loadReminderSettings() async {
     if (widget.account != null) {
       final prefs = await SharedPreferences.getInstance();
-      final enabled = prefs.getBool('cc_reminder_enabled_${widget.account!.id}') ?? false;
-      final daysBefore = prefs.getInt('cc_reminder_days_${widget.account!.id}') ?? 3;
+      final enabled =
+          prefs.getBool('cc_reminder_enabled_${widget.account!.id}') ?? false;
+      final daysBefore =
+          prefs.getInt('cc_reminder_days_${widget.account!.id}') ?? 3;
       if (mounted) {
         setState(() {
           _reminderEnabled = enabled;
@@ -185,7 +189,8 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
         _paymentDueDay = null;
         _reminderEnabled = false;
       }
-      final wasBankOrCredit = oldType == 'bank_card' || oldType == 'credit_card';
+      final wasBankOrCredit =
+          oldType == 'bank_card' || oldType == 'credit_card';
       final isBankOrCredit = type == 'bank_card' || type == 'credit_card';
       if (wasBankOrCredit && !isBankOrCredit) {
         _bankNameController.clear();
@@ -211,199 +216,38 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
         _filledDecoration(context, primaryColor,
             label: label, hint: hint, prefix: prefix, errorText: errorText);
 
-    final typesForTab = _typeTab == 0 ? tradableAccountTypes : valuationAccountTypes;
+    final typesForTab =
+        _typeTab == 0 ? tradableAccountTypes : valuationAccountTypes;
     final isCreditCard = _selectedType == 'credit_card';
     final isBankCard = _selectedType == 'bank_card';
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: isEditing ? l10n.accountEditTitle : l10n.accountNewTitle,
-            showBack: true,
-          ),
-          Expanded(
-            child: Form(
-              key: _formKey,
-              child: ListView(
-                padding: EdgeInsets.only(
-                  left: 12.0.scaled(context, ref),
-                  right: 12.0.scaled(context, ref),
-                  top: 8.0.scaled(context, ref),
-                  bottom: 8.0.scaled(context, ref) +
-                      MediaQuery.of(context).padding.bottom,
-                ),
-                children: [
-                  // ===== 账户类型（资产/负债 Tab + 缩小网格）=====
-                  SectionCard(
-                    margin: EdgeInsets.zero,
-                    child: Padding(
-                      padding: EdgeInsets.all(16.0.scaled(context, ref)),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          WaitSlidingSegmentedControl<int>(
-                            selected: _typeTab,
-                            accentColor: primaryColor,
-                            segments: [
-                              WaitSlidingSegment(
-                                value: 0,
-                                label: l10n.accountGroupTradable,
-                              ),
-                              WaitSlidingSegment(
-                                value: 1,
-                                label: l10n.accountTabValuation,
-                              ),
-                            ],
-                            onValueChanged: (value) =>
-                                setState(() => _typeTab = value),
-                          ),
-                          SizedBox(height: 16.0.scaled(context, ref)),
-                          GridView.count(
-                            crossAxisCount: 4,
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            mainAxisSpacing: 10.0.scaled(context, ref),
-                            crossAxisSpacing: 10.0.scaled(context, ref),
-                            childAspectRatio: 1.0,
-                            children: typesForTab.map((type) {
-                              final isSelected = _selectedType == type;
-                              // 编辑模式禁止跨“可交易 / 估值”大类切换（语义不同）
-                              final disabled = isEditing &&
-                                  isValuationOnlyType(type) !=
-                                      isValuationOnlyType(widget.account!.type);
-                              return _AccountTypeCard(
-                                type: type,
-                                label: getAccountTypeLabel(context, type),
-                                isSelected: isSelected,
-                                primaryColor: primaryColor,
-                                disabled: disabled,
-                                onTap: disabled ? () {} : () => _selectType(type),
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                      ),
-                    ),
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: isEditing ? l10n.accountEditTitle : l10n.accountNewTitle,
+        showBack: true,
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 56,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: Form(
+                key: _formKey,
+                child: ListView(
+                  padding: EdgeInsets.only(
+                    left: 12.0.scaled(context, ref),
+                    right: 12.0.scaled(context, ref),
+                    top: 8.0.scaled(context, ref),
+                    bottom: 8.0.scaled(context, ref) +
+                        MediaQuery.of(context).padding.bottom,
                   ),
-
-                  SizedBox(height: 8.0.scaled(context, ref)),
-
-                  // ===== 基本（名称 + 币种/余额）=====
-                  SectionCard(
-                    margin: EdgeInsets.zero,
-                    child: Padding(
-                      padding: EdgeInsets.all(16.0.scaled(context, ref)),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          TextFormField(
-                            controller: _nameController,
-                            decoration: filledDec(
-                              label: l10n.accountNameLabel,
-                              hint: l10n.accountNameHint,
-                              errorText: _nameErrorText,
-                            ),
-                            style: const TextStyle(fontSize: 16),
-                            onChanged: (value) => _checkNameDuplicate(value),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return l10n.accountNameRequired;
-                              }
-                              return null;
-                            },
-                          ),
-                          SizedBox(height: 12.0.scaled(context, ref)),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SizedBox(
-                                width: 120.0.scaled(context, ref),
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-                                  onTap: () async {
-                                    // 同账单日：开选择器前先收键盘
-                                    FocusManager.instance.primaryFocus?.unfocus();
-                                    if (isEditing) {
-                                      final repo = ref.read(repositoryProvider);
-                                      final hasTransactions = await repo
-                                          .hasTransactions(widget.account!.id);
-                                      if (hasTransactions) {
-                                        if (!context.mounted) return;
-                                        await AppDialog.info(
-                                          context,
-                                          title: l10n.commonNotice,
-                                          message: l10n.accountCurrencyLocked,
-                                        );
-                                        return;
-                                      }
-                                    }
-                                    if (!context.mounted) return;
-                                    final picked = await _showCurrencyPicker(
-                                        context,
-                                        initial: _selectedCurrency);
-                                    if (picked != null) {
-                                      setState(() => _selectedCurrency = picked);
-                                    }
-                                  },
-                                  child: InputDecorator(
-                                    decoration:
-                                        filledDec(label: l10n.ledgersCurrency),
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            displayCurrency(
-                                                _selectedCurrency, context),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(fontSize: 16),
-                                          ),
-                                        ),
-                                        Icon(Icons.expand_more,
-                                            size: 18.0.scaled(context, ref),
-                                            color:
-                                                PiggyTokens.iconTertiary(context)),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(width: 12.0.scaled(context, ref)),
-                              Expanded(
-                                child: TextFormField(
-                                  controller: _initialBalanceController,
-                                  decoration: filledDec(
-                                    label: _getInitialBalanceLabel(l10n),
-                                    hint: _getInitialBalanceHint(l10n),
-                                    prefix:
-                                        '${getCurrencySymbol(_selectedCurrency)} ',
-                                  ),
-                                  style: const TextStyle(fontSize: 16),
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                          decimal: true, signed: true),
-                                  validator: (value) {
-                                    if (value != null && value.trim().isNotEmpty) {
-                                      if (double.tryParse(value.trim()) == null) {
-                                        return '请输入有效的金额';
-                                      }
-                                    }
-                                    return null;
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // ===== 信用卡信息（仅 credit_card）=====
-                  if (isCreditCard) ...[
-                    SizedBox(height: 8.0.scaled(context, ref)),
+                  children: [
+                    // ===== 账户类型（资产/负债 Tab + 缩小网格）=====
                     SectionCard(
                       margin: EdgeInsets.zero,
                       child: Padding(
@@ -411,297 +255,488 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(l10n.creditCardSettings, style: _sectionTitle(context)),
-                            SizedBox(height: 12.0.scaled(context, ref)),
-                            // 信用额度（必填）
+                            WaitSlidingSegmentedControl<int>(
+                              selected: _typeTab,
+                              accentColor: primaryColor,
+                              segments: [
+                                WaitSlidingSegment(
+                                  value: 0,
+                                  label: l10n.accountGroupTradable,
+                                ),
+                                WaitSlidingSegment(
+                                  value: 1,
+                                  label: l10n.accountTabValuation,
+                                ),
+                              ],
+                              onValueChanged: (value) =>
+                                  setState(() => _typeTab = value),
+                            ),
+                            SizedBox(height: 16.0.scaled(context, ref)),
+                            GridView.count(
+                              crossAxisCount: 4,
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              mainAxisSpacing: 10.0.scaled(context, ref),
+                              crossAxisSpacing: 10.0.scaled(context, ref),
+                              childAspectRatio: 1.0,
+                              children: typesForTab.map((type) {
+                                final isSelected = _selectedType == type;
+                                // 编辑模式禁止跨“可交易 / 估值”大类切换（语义不同）
+                                final disabled = isEditing &&
+                                    isValuationOnlyType(type) !=
+                                        isValuationOnlyType(
+                                            widget.account!.type);
+                                return _AccountTypeCard(
+                                  type: type,
+                                  label: getAccountTypeLabel(context, type),
+                                  isSelected: isSelected,
+                                  primaryColor: primaryColor,
+                                  disabled: disabled,
+                                  onTap: disabled
+                                      ? () {}
+                                      : () => _selectType(type),
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: 8.0.scaled(context, ref)),
+
+                    // ===== 基本（名称 + 币种/余额）=====
+                    SectionCard(
+                      margin: EdgeInsets.zero,
+                      child: Padding(
+                        padding: EdgeInsets.all(16.0.scaled(context, ref)),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             TextFormField(
-                              controller: _creditLimitController,
+                              controller: _nameController,
                               decoration: filledDec(
-                                label: '${l10n.creditLimit} *',
-                                hint: l10n.creditLimitHint,
-                                prefix: '${getCurrencySymbol(_selectedCurrency)} ',
+                                label: l10n.accountNameLabel,
+                                hint: l10n.accountNameHint,
+                                errorText: _nameErrorText,
                               ),
                               style: const TextStyle(fontSize: 16),
-                              keyboardType: const TextInputType.numberWithOptions(
-                                  decimal: true),
+                              onChanged: (value) => _checkNameDuplicate(value),
                               validator: (value) {
-                                final t = value?.trim() ?? '';
-                                final parsed = double.tryParse(t);
-                                if (t.isEmpty || parsed == null || parsed <= 0) {
-                                  return l10n.creditLimitHint;
+                                if (value == null || value.trim().isEmpty) {
+                                  return l10n.accountNameRequired;
                                 }
                                 return null;
                               },
                             ),
                             SizedBox(height: 12.0.scaled(context, ref)),
-                            // 账单日 / 还款日（双列，必填）
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _DayPickerTile(
-                                    label: '${l10n.billingDay} *',
-                                    value: _billingDay,
-                                    primaryColor: primaryColor,
-                                    onChanged: (day) =>
-                                        setState(() => _billingDay = day),
-                                  ),
-                                ),
-                                SizedBox(width: 12.0.scaled(context, ref)),
-                                Expanded(
-                                  child: _DayPickerTile(
-                                    label: '${l10n.paymentDueDay} *',
-                                    value: _paymentDueDay,
-                                    primaryColor: primaryColor,
-                                    onChanged: (day) =>
-                                        setState(() => _paymentDueDay = day),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 12.0.scaled(context, ref)),
-                            // 开户行 / 卡号后四（双列）
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _bankNameController,
-                                    decoration: filledDec(
-                                      label: l10n.accountBankName,
-                                      hint: l10n.accountBankNameHint,
+                                SizedBox(
+                                  width: 120.0.scaled(context, ref),
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(
+                                        PiggyDimens.radiusLg),
+                                    onTap: () async {
+                                      // 同账单日：开选择器前先收键盘
+                                      FocusManager.instance.primaryFocus
+                                          ?.unfocus();
+                                      if (isEditing) {
+                                        final repo =
+                                            ref.read(repositoryProvider);
+                                        final hasTransactions =
+                                            await repo.hasTransactions(
+                                                widget.account!.id);
+                                        if (hasTransactions) {
+                                          if (!context.mounted) return;
+                                          await AppDialog.info(
+                                            context,
+                                            title: l10n.commonNotice,
+                                            message: l10n.accountCurrencyLocked,
+                                          );
+                                          return;
+                                        }
+                                      }
+                                      if (!context.mounted) return;
+                                      final picked = await _showCurrencyPicker(
+                                          context,
+                                          initial: _selectedCurrency);
+                                      if (picked != null) {
+                                        setState(
+                                            () => _selectedCurrency = picked);
+                                      }
+                                    },
+                                    child: InputDecorator(
+                                      decoration: filledDec(
+                                          label: l10n.ledgersCurrency),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              displayCurrency(
+                                                  _selectedCurrency, context),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style:
+                                                  const TextStyle(fontSize: 16),
+                                            ),
+                                          ),
+                                          Icon(Icons.expand_more,
+                                              size: 18.0.scaled(context, ref),
+                                              color: PiggyTokens.iconTertiary(
+                                                  context)),
+                                        ],
+                                      ),
                                     ),
-                                    style: const TextStyle(fontSize: 16),
                                   ),
                                 ),
                                 SizedBox(width: 12.0.scaled(context, ref)),
                                 Expanded(
                                   child: TextFormField(
-                                    controller: _cardLastFourController,
+                                    controller: _initialBalanceController,
                                     decoration: filledDec(
-                                      label: l10n.accountCardLastFour,
-                                      hint: l10n.accountCardLastFourHint,
-                                    ).copyWith(counterText: ''),
+                                      label: _getInitialBalanceLabel(l10n),
+                                      hint: _getInitialBalanceHint(l10n),
+                                      prefix:
+                                          '${getCurrencySymbol(_selectedCurrency)} ',
+                                    ),
                                     style: const TextStyle(fontSize: 16),
-                                    maxLength: 4,
-                                    keyboardType: TextInputType.number,
+                                    keyboardType:
+                                        const TextInputType.numberWithOptions(
+                                            decimal: true, signed: true),
+                                    validator: (value) {
+                                      if (value != null &&
+                                          value.trim().isNotEmpty) {
+                                        if (double.tryParse(value.trim()) ==
+                                            null) {
+                                          return '请输入有效的金额';
+                                        }
+                                      }
+                                      return null;
+                                    },
                                   ),
                                 ),
                               ],
                             ),
-                            SizedBox(height: 4.0.scaled(context, ref)),
-                            Divider(color: PiggyTokens.divider(context)),
-                            // 还款提醒
-                            SwitchListTile(
-                              dense: true,
-                              contentPadding: EdgeInsets.zero,
-                              title: Text(
-                                l10n.creditCardReminderTitle,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: PiggyTokens.textPrimary(context),
-                                ),
-                              ),
-                              subtitle: Text(
-                                l10n.creditCardReminderDesc,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: PiggyTokens.textTertiary(context),
-                                ),
-                              ),
-                              value: _reminderEnabled,
-                              activeColor: primaryColor,
-                              onChanged: (value) =>
-                                  setState(() => _reminderEnabled = value),
-                            ),
-                            if (_reminderEnabled) ...[
-                              SizedBox(height: 4.0.scaled(context, ref)),
-                              Wrap(
-                                spacing: 8.0.scaled(context, ref),
-                                children: [1, 3, 5, 7].map((days) {
-                                  final isSelected = _reminderDaysBefore == days;
-                                  return ChoiceChip(
-                                    label: Text(
-                                        l10n.creditCardReminderDaysBefore(days)),
-                                    selected: isSelected,
-                                    selectedColor:
-                                        primaryColor.withValues(alpha: 0.15),
-                                    labelStyle: TextStyle(
-                                      fontSize: 12,
-                                      color: isSelected
-                                          ? primaryColor
-                                          : PiggyTokens.textSecondary(context),
-                                      fontWeight: isSelected
-                                          ? FontWeight.w600
-                                          : FontWeight.normal,
-                                    ),
-                                    onSelected: (_) => setState(
-                                        () => _reminderDaysBefore = days),
-                                  );
-                                }).toList(),
-                              ),
-                            ],
                           ],
                         ),
                       ),
                     ),
-                  ],
 
-                  // ===== 卡信息（仅 bank_card）=====
-                  if (isBankCard) ...[
+                    // ===== 信用卡信息（仅 credit_card）=====
+                    if (isCreditCard) ...[
+                      SizedBox(height: 8.0.scaled(context, ref)),
+                      SectionCard(
+                        margin: EdgeInsets.zero,
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0.scaled(context, ref)),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(l10n.creditCardSettings,
+                                  style: _sectionTitle(context)),
+                              SizedBox(height: 12.0.scaled(context, ref)),
+                              // 信用额度（必填）
+                              TextFormField(
+                                controller: _creditLimitController,
+                                decoration: filledDec(
+                                  label: '${l10n.creditLimit} *',
+                                  hint: l10n.creditLimitHint,
+                                  prefix:
+                                      '${getCurrencySymbol(_selectedCurrency)} ',
+                                ),
+                                style: const TextStyle(fontSize: 16),
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
+                                validator: (value) {
+                                  final t = value?.trim() ?? '';
+                                  final parsed = double.tryParse(t);
+                                  if (t.isEmpty ||
+                                      parsed == null ||
+                                      parsed <= 0) {
+                                    return l10n.creditLimitHint;
+                                  }
+                                  return null;
+                                },
+                              ),
+                              SizedBox(height: 12.0.scaled(context, ref)),
+                              // 账单日 / 还款日（双列，必填）
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _DayPickerTile(
+                                      label: '${l10n.billingDay} *',
+                                      value: _billingDay,
+                                      primaryColor: primaryColor,
+                                      onChanged: (day) =>
+                                          setState(() => _billingDay = day),
+                                    ),
+                                  ),
+                                  SizedBox(width: 12.0.scaled(context, ref)),
+                                  Expanded(
+                                    child: _DayPickerTile(
+                                      label: '${l10n.paymentDueDay} *',
+                                      value: _paymentDueDay,
+                                      primaryColor: primaryColor,
+                                      onChanged: (day) =>
+                                          setState(() => _paymentDueDay = day),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 12.0.scaled(context, ref)),
+                              // 开户行 / 卡号后四（双列）
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _bankNameController,
+                                      decoration: filledDec(
+                                        label: l10n.accountBankName,
+                                        hint: l10n.accountBankNameHint,
+                                      ),
+                                      style: const TextStyle(fontSize: 16),
+                                    ),
+                                  ),
+                                  SizedBox(width: 12.0.scaled(context, ref)),
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _cardLastFourController,
+                                      decoration: filledDec(
+                                        label: l10n.accountCardLastFour,
+                                        hint: l10n.accountCardLastFourHint,
+                                      ).copyWith(counterText: ''),
+                                      style: const TextStyle(fontSize: 16),
+                                      maxLength: 4,
+                                      keyboardType: TextInputType.number,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 4.0.scaled(context, ref)),
+                              Divider(color: PiggyTokens.divider(context)),
+                              // 还款提醒
+                              SwitchListTile(
+                                dense: true,
+                                contentPadding: EdgeInsets.zero,
+                                title: Text(
+                                  l10n.creditCardReminderTitle,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: PiggyTokens.textPrimary(context),
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  l10n.creditCardReminderDesc,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: PiggyTokens.textTertiary(context),
+                                  ),
+                                ),
+                                value: _reminderEnabled,
+                                activeColor: primaryColor,
+                                onChanged: (value) =>
+                                    setState(() => _reminderEnabled = value),
+                              ),
+                              if (_reminderEnabled) ...[
+                                SizedBox(height: 4.0.scaled(context, ref)),
+                                Wrap(
+                                  spacing: 8.0.scaled(context, ref),
+                                  children: [1, 3, 5, 7].map((days) {
+                                    final isSelected =
+                                        _reminderDaysBefore == days;
+                                    return ChoiceChip(
+                                      label: Text(l10n
+                                          .creditCardReminderDaysBefore(days)),
+                                      selected: isSelected,
+                                      selectedColor:
+                                          primaryColor.withValues(alpha: 0.15),
+                                      labelStyle: TextStyle(
+                                        fontSize: 12,
+                                        color: isSelected
+                                            ? primaryColor
+                                            : PiggyTokens.textSecondary(
+                                                context),
+                                        fontWeight: isSelected
+                                            ? FontWeight.w600
+                                            : FontWeight.normal,
+                                      ),
+                                      onSelected: (_) => setState(
+                                          () => _reminderDaysBefore = days),
+                                    );
+                                  }).toList(),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    // ===== 卡信息（仅 bank_card）=====
+                    if (isBankCard) ...[
+                      SizedBox(height: 8.0.scaled(context, ref)),
+                      SectionCard(
+                        margin: EdgeInsets.zero,
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0.scaled(context, ref)),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(l10n.accountMetaInfo,
+                                  style: _sectionTitle(context)),
+                              SizedBox(height: 12.0.scaled(context, ref)),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _bankNameController,
+                                      decoration: filledDec(
+                                        label: l10n.accountBankName,
+                                        hint: l10n.accountBankNameHint,
+                                      ),
+                                      style: const TextStyle(fontSize: 16),
+                                    ),
+                                  ),
+                                  SizedBox(width: 12.0.scaled(context, ref)),
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _cardLastFourController,
+                                      decoration: filledDec(
+                                        label: l10n.accountCardLastFour,
+                                        hint: l10n.accountCardLastFourHint,
+                                      ).copyWith(counterText: ''),
+                                      style: const TextStyle(fontSize: 16),
+                                      maxLength: 4,
+                                      keyboardType: TextInputType.number,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    // ===== 备注（所有类型）=====
                     SizedBox(height: 8.0.scaled(context, ref)),
                     SectionCard(
                       margin: EdgeInsets.zero,
                       child: Padding(
                         padding: EdgeInsets.all(16.0.scaled(context, ref)),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(l10n.accountMetaInfo, style: _sectionTitle(context)),
-                            SizedBox(height: 12.0.scaled(context, ref)),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _bankNameController,
-                                    decoration: filledDec(
-                                      label: l10n.accountBankName,
-                                      hint: l10n.accountBankNameHint,
-                                    ),
-                                    style: const TextStyle(fontSize: 16),
-                                  ),
-                                ),
-                                SizedBox(width: 12.0.scaled(context, ref)),
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _cardLastFourController,
-                                    decoration: filledDec(
-                                      label: l10n.accountCardLastFour,
-                                      hint: l10n.accountCardLastFourHint,
-                                    ).copyWith(counterText: ''),
-                                    style: const TextStyle(fontSize: 16),
-                                    maxLength: 4,
-                                    keyboardType: TextInputType.number,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                        child: TextFormField(
+                          controller: _noteController,
+                          decoration: filledDec(
+                            label: l10n.accountNote,
+                            hint: l10n.accountNoteHint,
+                          ),
+                          style: const TextStyle(fontSize: 16),
+                          maxLines: 3,
+                          minLines: 1,
                         ),
                       ),
                     ),
-                  ],
 
-                  // ===== 备注（所有类型）=====
-                  SizedBox(height: 8.0.scaled(context, ref)),
-                  SectionCard(
-                    margin: EdgeInsets.zero,
-                    child: Padding(
-                      padding: EdgeInsets.all(16.0.scaled(context, ref)),
-                      child: TextFormField(
-                        controller: _noteController,
-                        decoration: filledDec(
-                          label: l10n.accountNote,
-                          hint: l10n.accountNoteHint,
+                    SizedBox(height: 24.0.scaled(context, ref)),
+
+                    // 保存按钮
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48.0.scaled(context, ref),
+                      child: ElevatedButton(
+                        onPressed: (_saving || _isNameDuplicate) ? null : _save,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: Colors.grey[400],
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(8.0.scaled(context, ref)),
+                          ),
                         ),
-                        style: const TextStyle(fontSize: 16),
-                        maxLines: 3,
-                        minLines: 1,
-                      ),
-                    ),
-                  ),
-
-                  SizedBox(height: 24.0.scaled(context, ref)),
-
-                  // 保存按钮
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48.0.scaled(context, ref),
-                    child: ElevatedButton(
-                      onPressed: (_saving || _isNameDuplicate) ? null : _save,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor: Colors.grey[400],
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(8.0.scaled(context, ref)),
-                        ),
-                      ),
-                      child: _saving
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white),
-                            )
-                          : Text(
-                              l10n.commonSave,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
+                        child: _saving
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white),
+                              )
+                            : Text(
+                                l10n.commonSave,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
+                      ),
                     ),
-                  ),
 
-                  // 隐藏/恢复 + 删除按钮（仅编辑时显示；账户隐藏 #240,产品设计
-                  // 01 §3.2:隐藏=留数据、可恢复、仍计资产,删除=硬删除且不可逆;
-                  // 二者并列,删除按钮样式保持原样不变）
-                  if (isEditing) ...[
-                    SizedBox(height: 12.0.scaled(context, ref)),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48.0.scaled(context, ref),
-                      child: OutlinedButton(
-                        onPressed: _saving ? null : _toggleHidden,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: primaryColor,
-                          side: BorderSide(color: primaryColor, width: 1.5),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                                8.0.scaled(context, ref)),
+                    // 隐藏/恢复 + 删除按钮（仅编辑时显示；账户隐藏 #240,产品设计
+                    // 01 §3.2:隐藏=留数据、可恢复、仍计资产,删除=硬删除且不可逆;
+                    // 二者并列,删除按钮样式保持原样不变）
+                    if (isEditing) ...[
+                      SizedBox(height: 12.0.scaled(context, ref)),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48.0.scaled(context, ref),
+                        child: OutlinedButton(
+                          onPressed: _saving ? null : _toggleHidden,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: primaryColor,
+                            side: BorderSide(color: primaryColor, width: 1.5),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                  8.0.scaled(context, ref)),
+                            ),
                           ),
-                        ),
-                        child: Text(
-                          widget.account!.hidden ? l10n.accountUnhide : l10n.accountHide,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 12.0.scaled(context, ref)),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48.0.scaled(context, ref),
-                      child: OutlinedButton(
-                        onPressed: _saving ? null : _delete,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: PiggyTokens.error(context),
-                          side: const BorderSide(color: Colors.red, width: 1.5),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                                8.0.scaled(context, ref)),
-                          ),
-                        ),
-                        child: Text(
-                          l10n.commonDelete,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                          child: Text(
+                            widget.account!.hidden
+                                ? l10n.accountUnhide
+                                : l10n.accountHide,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                      SizedBox(height: 12.0.scaled(context, ref)),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48.0.scaled(context, ref),
+                        child: OutlinedButton(
+                          onPressed: _saving ? null : _delete,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: PiggyTokens.error(context),
+                            side:
+                                const BorderSide(color: Colors.red, width: 1.5),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                  8.0.scaled(context, ref)),
+                            ),
+                          ),
+                          child: Text(
+                            l10n.commonDelete,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -742,7 +777,8 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
         String? currencyToUpdate;
         if (_selectedCurrency != widget.account!.currency) {
           // 币种变化了，需要再次检查是否有交易
-          final hasTransactions = await repo.hasTransactions(widget.account!.id);
+          final hasTransactions =
+              await repo.hasTransactions(widget.account!.id);
           if (hasTransactions) {
             if (mounted) {
               setState(() => _saving = false);
@@ -763,11 +799,15 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
         final clearCreditCardFields = wasCreditCard && !isCreditCard;
 
         // 元信息字段
-        final isBankOrCredit = _selectedType == 'bank_card' || _selectedType == 'credit_card';
-        final wasBankOrCredit = widget.account!.type == 'bank_card' || widget.account!.type == 'credit_card';
+        final isBankOrCredit =
+            _selectedType == 'bank_card' || _selectedType == 'credit_card';
+        final wasBankOrCredit = widget.account!.type == 'bank_card' ||
+            widget.account!.type == 'credit_card';
         final clearMetadataFields = wasBankOrCredit && !isBankOrCredit;
-        final bankName = isBankOrCredit ? _bankNameController.text.trim() : null;
-        final cardLastFour = isBankOrCredit ? _cardLastFourController.text.trim() : null;
+        final bankName =
+            isBankOrCredit ? _bankNameController.text.trim() : null;
+        final cardLastFour =
+            isBankOrCredit ? _cardLastFourController.text.trim() : null;
         final noteText = _noteController.text.trim();
 
         await repo.updateAccount(
@@ -781,7 +821,9 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
           paymentDueDay: isCreditCard ? _paymentDueDay : null,
           clearCreditCardFields: clearCreditCardFields,
           bankName: bankName != null && bankName.isNotEmpty ? bankName : null,
-          cardLastFour: cardLastFour != null && cardLastFour.isNotEmpty ? cardLastFour : null,
+          cardLastFour: cardLastFour != null && cardLastFour.isNotEmpty
+              ? cardLastFour
+              : null,
           note: noteText.isNotEmpty ? noteText : null,
           clearMetadataFields: clearMetadataFields,
         );
@@ -791,9 +833,12 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
           await _saveReminderSettings(widget.account!.id);
         }
       } else {
-        final isBankOrCredit = _selectedType == 'bank_card' || _selectedType == 'credit_card';
-        final bankNameText = isBankOrCredit ? _bankNameController.text.trim() : null;
-        final cardLastFourText = isBankOrCredit ? _cardLastFourController.text.trim() : null;
+        final isBankOrCredit =
+            _selectedType == 'bank_card' || _selectedType == 'credit_card';
+        final bankNameText =
+            isBankOrCredit ? _bankNameController.text.trim() : null;
+        final cardLastFourText =
+            isBankOrCredit ? _cardLastFourController.text.trim() : null;
         final noteText = _noteController.text.trim();
 
         final id = await repo.createAccount(
@@ -805,8 +850,12 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
           creditLimit: creditLimit,
           billingDay: isCreditCard ? _billingDay : null,
           paymentDueDay: isCreditCard ? _paymentDueDay : null,
-          bankName: bankNameText != null && bankNameText.isNotEmpty ? bankNameText : null,
-          cardLastFour: cardLastFourText != null && cardLastFourText.isNotEmpty ? cardLastFourText : null,
+          bankName: bankNameText != null && bankNameText.isNotEmpty
+              ? bankNameText
+              : null,
+          cardLastFour: cardLastFourText != null && cardLastFourText.isNotEmpty
+              ? cardLastFourText
+              : null,
           note: noteText.isNotEmpty ? noteText : null,
         );
 
@@ -854,7 +903,8 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              style: TextButton.styleFrom(foregroundColor: PiggyTokens.error(context)),
+              style: TextButton.styleFrom(
+                  foregroundColor: PiggyTokens.error(context)),
               child: Text(l10n.commonDelete),
             ),
           ],
@@ -877,7 +927,8 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              style: TextButton.styleFrom(foregroundColor: PiggyTokens.error(context)),
+              style: TextButton.styleFrom(
+                  foregroundColor: PiggyTokens.error(context)),
               child: Text(l10n.commonDelete),
             ),
           ],
@@ -1022,13 +1073,15 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
   }
 
   /// 显示币种选择器（复用账本页面的实现）
-  Future<String?> _showCurrencyPicker(BuildContext context, {String? initial}) async {
+  Future<String?> _showCurrencyPicker(BuildContext context,
+      {String? initial}) async {
     return showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       backgroundColor: PiggyTokens.surfaceElevated(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
       ),
       builder: (bctx) {
         String query = '';
@@ -1188,7 +1241,8 @@ class _DayPickerTile extends ConsumerWidget {
       context: context,
       backgroundColor: PiggyTokens.surfaceElevated(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
       ),
       builder: (ctx) {
         return SizedBox(
@@ -1221,10 +1275,9 @@ class _DayPickerTile extends ConsumerWidget {
                       },
                       child: Container(
                         decoration: BoxDecoration(
-                          color: isSelected
-                              ? primaryColor
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+                          color: isSelected ? primaryColor : Colors.transparent,
+                          borderRadius:
+                              BorderRadius.circular(PiggyDimens.radiusSm),
                           border: Border.all(
                             color: isSelected
                                 ? primaryColor
@@ -1236,7 +1289,9 @@ class _DayPickerTile extends ConsumerWidget {
                           '$day',
                           style: TextStyle(
                             fontSize: 14,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                             color: isSelected
                                 ? Colors.white
                                 : PiggyTokens.textPrimary(ctx),

@@ -7,7 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/shared_ledger_providers.dart';
-import '../../providers/sync_providers.dart' show piggycountCloudProviderInstance;
+import '../../providers/sync_providers.dart'
+    show piggycountCloudProviderInstance;
 import '../../styles/tokens.dart';
 import '../../widgets/biz/biz.dart';
 import '../../widgets/ui/ui.dart';
@@ -30,34 +31,41 @@ class MemberListPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: l10n.sharedMembersPageTitle,
-            subtitle: ledgerName,
-            showBack: true,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: () =>
-                    ref.invalidate(ledgerMembersProvider(ledgerExternalId)),
-              ),
-            ],
-          ),
-          Expanded(
-            child: membersAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text('${l10n.commonError}: $e',
-                      textAlign: TextAlign.center),
-                ),
-              ),
-              data: (members) => _buildList(context, ref, members, l10n),
-            ),
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.sharedMembersPageTitle,
+        subtitle: ledgerName,
+        showBack: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () =>
+                ref.invalidate(ledgerMembersProvider(ledgerExternalId)),
           ),
         ],
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 80,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: membersAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text('${l10n.commonError}: $e',
+                        textAlign: TextAlign.center),
+                  ),
+                ),
+                data: (members) => _buildList(context, ref, members, l10n),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -114,10 +122,10 @@ class MemberListPage extends ConsumerWidget {
         if (me != null && !amOwner)
           SectionCard(
             child: ListTile(
-              leading: const Icon(Icons.logout, color: Colors.redAccent),
+              leading: Icon(Icons.logout, color: PiggyTokens.error(context)),
               title: Text(
                 l10n.sharedMembersLeaveCta,
-                style: const TextStyle(color: Colors.redAccent),
+                style: TextStyle(color: PiggyTokens.error(context)),
               ),
               onTap: () => _confirmLeave(context, ref, me, l10n),
             ),
@@ -136,15 +144,15 @@ class MemberListPage extends ConsumerWidget {
       context: context,
       builder: (_) => AlertDialog(
         title: Text(l10n.sharedMembersRemoveTitle),
-        content: Text(l10n.sharedMembersRemoveConfirm(
-            target.displayName ?? target.email)),
+        content: Text(l10n
+            .sharedMembersRemoveConfirm(target.displayName ?? target.email)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: Text(l10n.commonCancel),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: FilledButton.styleFrom(backgroundColor: PiggyTokens.error(context)),
             onPressed: () => Navigator.pop(context, true),
             child: Text(l10n.commonRemove),
           ),
@@ -174,8 +182,8 @@ class MemberListPage extends ConsumerWidget {
       context: context,
       builder: (_) => AlertDialog(
         title: Text(l10n.sharedMembersTransferTitle),
-        content: Text(l10n.sharedMembersTransferConfirm(
-            target.displayName ?? target.email)),
+        content: Text(l10n
+            .sharedMembersTransferConfirm(target.displayName ?? target.email)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -213,7 +221,7 @@ class MemberListPage extends ConsumerWidget {
             child: Text(l10n.commonCancel),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: FilledButton.styleFrom(backgroundColor: PiggyTokens.error(context)),
             onPressed: () => Navigator.pop(context, true),
             child: Text(l10n.sharedMembersLeaveCta),
           ),
@@ -283,7 +291,8 @@ class _MemberTile extends ConsumerWidget {
       ),
       subtitle: Text(
         member.email,
-        style: TextStyle(color: PiggyTokens.textSecondary(context), fontSize: 12),
+        style:
+            TextStyle(color: PiggyTokens.textSecondary(context), fontSize: 12),
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -330,9 +339,8 @@ class _MemberAvatar extends ConsumerWidget {
     if (base == null || base.isEmpty) {
       return CircleAvatar(child: Text(letter));
     }
-    final absoluteUrl = relativeUrl.startsWith('http')
-        ? relativeUrl
-        : '$base$relativeUrl';
+    final absoluteUrl =
+        relativeUrl.startsWith('http') ? relativeUrl : '$base$relativeUrl';
     return CircleAvatar(
       backgroundImage: NetworkImage(absoluteUrl),
       onBackgroundImageError: (_, __) {/* fallback child 显示 */},

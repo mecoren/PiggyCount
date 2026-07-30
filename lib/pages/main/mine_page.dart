@@ -509,7 +509,7 @@ void _showGitHubStarGuide(BuildContext context) {
               Text(
                 l10n.githubStarGuideContent,
                 style: TextStyle(
-                  color: Colors.grey[600],
+                  color: PiggyTokens.textSecondary(context),
                   fontSize: 14,
                 ),
               ),

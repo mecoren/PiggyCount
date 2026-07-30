@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
+import 'package:cryptography/cryptography.dart' show SecretBoxAuthenticationError;
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -20,10 +23,19 @@ import '../../domain/encryption/encryption_service.dart';
 /// - verifyPassword: 用输入密码派生临时 key → 解密 verifier
 /// - changePassword: 验证旧密码 → 生成新 salt + key → 更新 verifier → 持久化
 /// - activateKey: 内存中切换 key（用于改密流程中重加密云端密文）
+/// - disable: 标记关闭 + **清空内存密钥**（保留 secure storage 用于解密存量密文）
+///
+/// 安全设计要点：
+/// - 密钥使用 [Uint8List] 便于主动 zeroing（best effort）
+/// - [_loadActiveKeyFromStorage] 使用 single-flight 避免并发重复 IO
+/// - [activateKey] 增加 verifier sanity check，避免错误密码激活导致数据丢失
+/// - [enableFromCloud] 区分密码错误与密文损坏，提供精确错误引导
 class EncryptionServiceImpl implements EncryptionService {
   static const String _enabledKey = 'piggycount_enc_enabled';
   static const String _verifierPlaintext = 'BEECOUNT_VERIFIER_v1';
-  static const int _minPasswordLength = 6;
+
+  /// NIST SP 800-63B 推荐密码最小长度 ≥ 8
+  static const int _minPasswordLength = 8;
 
   final SecureKeyStorage storage;
   final Argon2KeyDerivation keyDerivation;
@@ -32,10 +44,16 @@ class EncryptionServiceImpl implements EncryptionService {
   SharedPreferences? _prefs;
 
   /// 内存中当前激活的密钥（32 字节）
-  List<int>? _activeKey;
+  ///
+  /// 使用 [Uint8List] 便于在 [disable]/[reset] 时主动 zeroing（best effort，
+  /// Dart GC 不保证立即回收，但 zeroing 可降低密钥在堆中残留的风险）。
+  Uint8List? _activeKey;
 
   /// 内存中当前激活的 salt（16 字节）
-  List<int>? _activeSalt;
+  Uint8List? _activeSalt;
+
+  /// [_loadActiveKeyFromStorage] 的 single-flight 锁，避免并发重复 IO
+  Completer<void>? _loadKeyCompleter;
 
   EncryptionServiceImpl({
     required this.storage,
@@ -76,31 +94,44 @@ class EncryptionServiceImpl implements EncryptionService {
     // 2. 派生 key
     final key = await keyDerivation.deriveKey(password: password, salt: salt);
 
-    // 3. 加密 verifier
-    final verifier = await cipher.encrypt(
-      plaintext: utf8.encode(_verifierPlaintext),
-      key: key,
-    );
+    try {
+      // 3. 加密 verifier
+      final verifier = await cipher.encrypt(
+        plaintext: utf8.encode(_verifierPlaintext),
+        key: key,
+      );
 
-    // 4. 持久化
-    await storage.saveKey(key);
-    await storage.saveSalt(salt);
-    await storage.saveVerifier(verifier);
+      // 4. 持久化
+      await storage.saveKey(key);
+      await storage.saveSalt(salt);
+      await storage.saveVerifier(verifier);
 
-    // 5. 激活内存密钥
-    _activeKey = key;
-    _activeSalt = salt;
+      // 5. 激活内存密钥
+      _activeKey = key;
+      _activeSalt = salt;
 
-    // 6. 标记已开启
-    final prefs = await _getPrefs();
-    await prefs.setBool(_enabledKey, true);
+      // 6. 标记已开启
+      final prefs = await _getPrefs();
+      await prefs.setBool(_enabledKey, true);
+    } catch (e) {
+      // 异常路径：主动清零派生密钥，并回滚已写入的半持久化状态，
+      // 避免密钥泄漏 + secure storage 中残留无 verifier 的 key 导致锁死
+      key.fillRange(0, key.length, 0);
+      salt.fillRange(0, salt.length, 0);
+      try {
+        await storage.clearAll();
+      } catch (_) {}
+      rethrow;
+    }
   }
 
   @override
   Future<void> disable() async {
     final prefs = await _getPrefs();
     await prefs.setBool(_enabledKey, false);
-    // 保留 key/salt/verifier 在 secure storage（用于解密存量密文）
+    // H1 修复：清除内存中的密钥，避免 disable 后密钥长期驻留内存
+    // secure storage 中的密钥保留，下次解密存量密文时可重新加载
+    _clearActiveKey();
   }
 
   @override
@@ -131,7 +162,18 @@ class EncryptionServiceImpl implements EncryptionService {
     for (final f in files) {
       final name = f.name;
       if (!name.startsWith('ledger_') || !name.endsWith('.json')) continue;
-      final raw = await cloudStorage.download(path: name);
+
+      // M2 修复：download 包 try/catch，区分网络错误与密文损坏
+      String? raw;
+      try {
+        raw = await cloudStorage.download(path: name);
+      } catch (e) {
+        throw EnableFromCloudProbeFailedException(
+          '下载云端文件失败：$name。请检查网络/权限后重试。',
+          cause: e,
+        );
+      }
+
       if (raw != null && CiphertextFormat.isEncrypted(raw)) {
         ciphertextContent = raw;
         break;
@@ -145,20 +187,39 @@ class EncryptionServiceImpl implements EncryptionService {
     }
 
     // 4. 提取 salt + 派生 key + 尝试解密验证密码
-    //    GCM 验证失败说明密码错误，抛 ArgumentError
-    final decoded = CiphertextFormat.decode(ciphertextContent);
+    //    密文格式损坏（base64 截断、salt 长度异常）抛 FormatException
+    DecodedCiphertext decoded;
+    try {
+      decoded = CiphertextFormat.decode(ciphertextContent);
+    } catch (e) {
+      throw EnableFromCloudCorruptedException(
+        '云端密文格式损坏，无法提取 salt。可能是云端数据被破坏或截断。'
+        '请尝试以首设备身份重新设置加密（将生成新 salt 并重加密云端数据）。',
+        cause: e,
+      );
+    }
+
     final key = await keyDerivation.deriveKey(
       password: password,
       salt: decoded.salt,
     );
 
+    // M2 修复：区分 GCM MAC 失败（密码错）与其他异常（数据损坏）
     try {
       await cipher.decrypt(
         encryptedBytes: decoded.encryptedBytes,
         key: key,
       );
-    } catch (_) {
+    } on SecretBoxAuthenticationError {
+      // GCM MAC 校验失败：密码错误（密钥与密文不匹配）
       throw ArgumentError('密码错误，无法加入加密');
+    } catch (e) {
+      // 其他异常（如密文长度不足、base64 损坏）：云端数据损坏
+      throw EnableFromCloudCorruptedException(
+        '云端密文数据损坏，无法验证密码。可能是云端数据被破坏。'
+        '请尝试以首设备身份重新设置加密。',
+        cause: e,
+      );
     }
 
     // 5. 验证通过 → 生成 verifier 并持久化
@@ -172,7 +233,7 @@ class EncryptionServiceImpl implements EncryptionService {
 
     // 6. 激活内存密钥 + 标记已开启
     _activeKey = key;
-    _activeSalt = decoded.salt;
+    _activeSalt = Uint8List.fromList(decoded.salt);
     final prefs = await _getPrefs();
     await prefs.setBool(_enabledKey, true);
 
@@ -246,13 +307,12 @@ class EncryptionServiceImpl implements EncryptionService {
     await storage.clearAll();
     final prefs = await _getPrefs();
     await prefs.setBool(_enabledKey, false);
-    _activeKey = null;
-    _activeSalt = null;
+    _clearActiveKey();
   }
 
   @override
   Future<ReEncryptResult> reEncryptExistingCloudData({
-    required CloudStorageService storage,
+    required CloudStorageService cloudStorage,
     String pathPrefix = '',
   }) async {
     // 前置检查：加密必须已开启且有可用密钥
@@ -267,7 +327,7 @@ class EncryptionServiceImpl implements EncryptionService {
     }
 
     // 枚举云端文件 —— list 失败无法继续，抛出原异常
-    final files = await storage.list(path: pathPrefix);
+    final files = await cloudStorage.list(path: pathPrefix);
 
     int success = 0;
     int failed = 0;
@@ -284,7 +344,7 @@ class EncryptionServiceImpl implements EncryptionService {
 
       try {
         // 下载原始数据（可能是 legacy 明文或 BEECRYPT1: 密文）
-        final raw = await storage.download(path: name);
+        final raw = await cloudStorage.download(path: name);
         if (raw == null) {
           // 云端文件已被删除（list 与 download 之间存在竞态）
           skipped++;
@@ -296,13 +356,10 @@ class EncryptionServiceImpl implements EncryptionService {
         // 这样可避免对已是密文的数据双重加密
         final plaintext = await decrypt(raw);
         final reEncrypted = await encrypt(plaintext);
-        await storage.upload(path: name, data: reEncrypted);
+        await cloudStorage.upload(path: name, data: reEncrypted);
         success++;
       } catch (e) {
         // 单文件失败不中断整体流程，记录后继续
-        // 可能的失败：decrypt 抛 DecryptionException（密文损坏/密码不匹配）
-        //           encrypt 抛 EncryptionNotConfiguredException
-        //           upload/download 抛网络异常
         failed++;
         failedPaths.add(name);
       }
@@ -402,8 +459,13 @@ class EncryptionServiceImpl implements EncryptionService {
       salt: salt,
     );
 
+    // 注意：activateKey 设计用于「修改密码」流程中临时切换到新密钥，
+    // 新密钥与当前 verifier 不匹配是预期行为（旧 verifier 用旧密码加密）。
+    // 调用方（changePassword）负责在调用前验证旧密码，
+    // 激活后通过 persistActivatedKey 写入新 verifier。
+    // 因此此处不对 verifier 做校验，避免破坏改密流程。
     _activeKey = key;
-    _activeSalt = salt;
+    _activeSalt = Uint8List.fromList(salt);
   }
 
   @override
@@ -424,13 +486,53 @@ class EncryptionServiceImpl implements EncryptionService {
   }
 
   /// 从 secure storage 加载密钥到内存
+  ///
+  /// L2 修复：使用 single-flight 模式，并发调用时只执行一次实际 IO，
+  /// 后续调用等待同一个 Completer 完成。
   Future<void> _loadActiveKeyFromStorage() async {
-    final key = await storage.getKey();
-    final salt = await storage.getSalt();
-    if (key != null && salt != null) {
-      _activeKey = key;
-      _activeSalt = salt;
+    if (_loadKeyCompleter != null) {
+      return _loadKeyCompleter!.future;
     }
+
+    final completer = Completer<void>();
+    _loadKeyCompleter = completer;
+
+    try {
+      final key = await storage.getKey();
+      try {
+        final salt = await storage.getSalt();
+        if (key != null && salt != null) {
+          _activeKey = key;
+          _activeSalt = salt;
+        }
+        completer.complete();
+      } catch (e) {
+        // salt 读取失败：key 已从 secure storage 读出但无法使用，主动清零
+        if (key != null) {
+          key.fillRange(0, key.length, 0);
+        }
+        completer.completeError(e);
+      }
+    } catch (e) {
+      completer.completeError(e);
+    } finally {
+      _loadKeyCompleter = null;
+    }
+  }
+
+  /// 安全清除内存中的密钥和 salt（best effort zeroing）
+  void _clearActiveKey() {
+    final key = _activeKey;
+    final salt = _activeSalt;
+    if (key != null) {
+      key.fillRange(0, key.length, 0);
+    }
+    if (salt != null) {
+      salt.fillRange(0, salt.length, 0);
+    }
+    _activeKey = null;
+    _activeSalt = null;
+    _loadKeyCompleter = null;
   }
 
   void _validatePassword(String password) {

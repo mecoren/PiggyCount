@@ -73,151 +73,159 @@ class _ExchangeRatePageState extends ConsumerState<ExchangeRatePage> {
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: l10n.exchangeRatePageTitle,
-            showBack: true,
-            compact: true,
-            actions: [
-              if (_refreshing)
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: 12.0.scaled(context, ref)),
-                  child: SizedBox(
-                    width: 18.0.scaled(context, ref),
-                    height: 18.0.scaled(context, ref),
-                    child: const CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  ),
-                )
-              else
-                IconButton(
-                  onPressed: _onRefresh,
-                  icon: const Icon(Icons.refresh),
-                  tooltip: l10n.exchangeRatePageTitle,
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.exchangeRatePageTitle,
+        showBack: true,
+        compact: true,
+        actions: [
+          if (_refreshing)
+            Padding(
+              padding:
+                  EdgeInsets.symmetric(horizontal: 12.0.scaled(context, ref)),
+              child: SizedBox(
+                width: 18.0.scaled(context, ref),
+                height: 18.0.scaled(context, ref),
+                child: const CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
-            ],
-          ),
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.symmetric(
-                horizontal: 12.0.scaled(context, ref),
-                vertical: 8.0.scaled(context, ref),
               ),
-              children: [
-                // 1. 主币种
-                SectionCard(
-                  margin: EdgeInsets.zero,
-                  child: InkWell(
-                    onTap: () => _pickBaseCurrency(context),
-                    borderRadius: BorderRadius.circular(8.0.scaled(context, ref)),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        vertical: 8.0.scaled(context, ref),
-                      ),
-                      child: Row(
-                        children: [
-                          Text(
-                            l10n.baseCurrencyLabel,
-                            style: TextStyle(
-                              fontSize: 15,
-                              color: PiggyTokens.textPrimary(context),
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            displayCurrency(base, context),
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: PiggyTokens.textSecondary(context),
-                            ),
-                          ),
-                          SizedBox(width: 4.0.scaled(context, ref)),
-                          Icon(
-                            Icons.chevron_right,
-                            size: 18.0.scaled(context, ref),
-                            color: PiggyTokens.iconTertiary(context),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+            )
+          else
+            IconButton(
+              onPressed: _onRefresh,
+              icon: const Icon(Icons.refresh),
+              tooltip: l10n.exchangeRatePageTitle,
+            ),
+        ],
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 56,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: 12.0.scaled(context, ref),
+                  vertical: 8.0.scaled(context, ref),
                 ),
-                SizedBox(height: 12.0.scaled(context, ref)),
-
-                // 2. 汇率列表 / 空态
-                if (quotes.isEmpty)
+                children: [
+                  // 1. 主币种
                   SectionCard(
                     margin: EdgeInsets.zero,
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        vertical: 32.0.scaled(context, ref),
-                        horizontal: 16.0.scaled(context, ref),
-                      ),
-                      child: Center(
-                        child: Text(
-                          l10n.ratesEmptyHint,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: PiggyTokens.textTertiary(context),
-                            height: 1.4,
-                          ),
+                    child: InkWell(
+                      onTap: () => _pickBaseCurrency(context),
+                      borderRadius:
+                          BorderRadius.circular(8.0.scaled(context, ref)),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          vertical: 8.0.scaled(context, ref),
+                        ),
+                        child: Row(
+                          children: [
+                            Text(
+                              l10n.baseCurrencyLabel,
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: PiggyTokens.textPrimary(context),
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              displayCurrency(base, context),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: PiggyTokens.textSecondary(context),
+                              ),
+                            ),
+                            SizedBox(width: 4.0.scaled(context, ref)),
+                            Icon(
+                              Icons.chevron_right,
+                              size: 18.0.scaled(context, ref),
+                              color: PiggyTokens.iconTertiary(context),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  )
-                else
-                  SectionCard(
-                    margin: EdgeInsets.zero,
-                    padding: EdgeInsets.zero,
-                    child: Column(
-                      children: [
-                        for (int i = 0; i < quotes.length; i++) ...[
-                          if (i > 0)
-                            Divider(
-                              height: 1,
-                              indent: 12.0.scaled(context, ref),
-                              endIndent: 12.0.scaled(context, ref),
-                              color: PiggyTokens.divider(context),
-                            ),
-                          _RateRow(
-                            quote: quotes[i],
-                            base: base,
-                            eff: rates[quotes[i]],
-                            primary: primary,
-                            fmt6: _fmt6,
-                            onTap: () =>
-                                _editRate(context, quotes[i], base, rates[quotes[i]]),
-                          ),
-                        ],
-                      ],
-                    ),
                   ),
+                  SizedBox(height: 12.0.scaled(context, ref)),
 
-                SizedBox(height: 16.0.scaled(context, ref)),
-                // 3. 免责声明
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 4.0.scaled(context, ref),
-                  ),
-                  child: Text(
-                    l10n.rateDisclaimer,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: PiggyTokens.textTertiary(context),
-                      height: 1.4,
+                  // 2. 汇率列表 / 空态
+                  if (quotes.isEmpty)
+                    SectionCard(
+                      margin: EdgeInsets.zero,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          vertical: 32.0.scaled(context, ref),
+                          horizontal: 16.0.scaled(context, ref),
+                        ),
+                        child: Center(
+                          child: Text(
+                            l10n.ratesEmptyHint,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: PiggyTokens.textTertiary(context),
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    SectionCard(
+                      margin: EdgeInsets.zero,
+                      padding: EdgeInsets.zero,
+                      child: Column(
+                        children: [
+                          for (int i = 0; i < quotes.length; i++) ...[
+                            if (i > 0)
+                              Divider(
+                                height: 1,
+                                indent: 12.0.scaled(context, ref),
+                                endIndent: 12.0.scaled(context, ref),
+                                color: PiggyTokens.divider(context),
+                              ),
+                            _RateRow(
+                              quote: quotes[i],
+                              base: base,
+                              eff: rates[quotes[i]],
+                              primary: primary,
+                              fmt6: _fmt6,
+                              onTap: () => _editRate(
+                                  context, quotes[i], base, rates[quotes[i]]),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+
+                  SizedBox(height: 16.0.scaled(context, ref)),
+                  // 3. 免责声明
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 4.0.scaled(context, ref),
+                    ),
+                    child: Text(
+                      l10n.rateDisclaimer,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: PiggyTokens.textTertiary(context),
+                        height: 1.4,
+                      ),
                     ),
                   ),
-                ),
-                SizedBox(height: 8.0.scaled(context, ref)),
-              ],
+                  SizedBox(height: 8.0.scaled(context, ref)),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -253,9 +261,8 @@ class _ExchangeRatePageState extends ConsumerState<ExchangeRatePage> {
         hadManual: eff?.manual ?? false,
         // 预填:手动值回填原始字符串(保留用户精度);自动值用 _fmt6 展示(6 位有效,
         // 编辑后会被新输入覆盖,截断无妨);无汇率则留空。
-        initialText: eff == null
-            ? ''
-            : (eff.manual ? eff.rate : _fmt6(eff.rate)),
+        initialText:
+            eff == null ? '' : (eff.manual ? eff.rate : _fmt6(eff.rate)),
       ),
     );
     if (result == null || !mounted) return; // 取消/遮罩关闭
@@ -357,8 +364,7 @@ class _RateEditDialogState extends ConsumerState<_RateEditDialog> {
       actions: [
         if (widget.hadManual)
           TextButton(
-            onPressed: () =>
-                Navigator.pop(context, (reset: true, rate: '')),
+            onPressed: () => Navigator.pop(context, (reset: true, rate: '')),
             child: Text(
               l10n.rateResetToAuto,
               style: TextStyle(color: PiggyTokens.textSecondary(context)),
@@ -430,7 +436,8 @@ class _RateRow extends ConsumerWidget {
     if (eff == null) {
       subtitle = Text.rich(
         TextSpan(
-          style: TextStyle(fontSize: 12, color: PiggyTokens.textTertiary(context)),
+          style:
+              TextStyle(fontSize: 12, color: PiggyTokens.textTertiary(context)),
           children: [
             TextSpan(text: l10n.rateNotFetched),
             const TextSpan(text: ' · '),
@@ -453,7 +460,9 @@ class _RateRow extends ConsumerWidget {
         '${l10n.rateSourceAuto} · ${l10n.rateUpdatedAt(eff!.rateDate ?? '')}',
         style: TextStyle(
           fontSize: 12,
-          color: stale ? PiggyTokens.warning(context) : PiggyTokens.textTertiary(context),
+          color: stale
+              ? PiggyTokens.warning(context)
+              : PiggyTokens.textTertiary(context),
         ),
       );
     }
@@ -503,9 +512,7 @@ class _RateRow extends ConsumerWidget {
             SizedBox(width: 8.0.scaled(context, ref)),
             // 右:汇率值
             Text(
-              eff == null
-                  ? '—'
-                  : '1 $quote = ${fmt6(eff!.rate)} $base',
+              eff == null ? '—' : '1 $quote = ${fmt6(eff!.rate)} $base',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,

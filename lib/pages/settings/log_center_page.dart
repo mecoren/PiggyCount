@@ -524,11 +524,11 @@ class _LogEntryCard extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => _copyLog(context),
-            child: const Text('复制'),
+            child: Text(AppLocalizations.of(context).configExportCopyContent),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('关闭'),
+            child: Text(AppLocalizations.of(context).commonClose),
           ),
         ],
       ),

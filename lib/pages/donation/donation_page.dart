@@ -155,118 +155,125 @@ class _DonationPageState extends ConsumerState<DonationPage> {
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: l10n.donationTitle,
-            subtitle: l10n.donationSubtitle,
-            showBack: true,
-          ),
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _products.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.info_outline,
-                              size: 48.0.scaled(context, ref),
-                              color: PiggyTokens.iconSecondary(context),
-                            ),
-                            SizedBox(height: 16.0.scaled(context, ref)),
-                            Text(
-                              l10n.donationNoProducts,
-                              style: TextStyle(
-                                fontSize: 16.0.scaled(context, ref),
-                                color: PiggyTokens.textSecondary(context),
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.donationTitle,
+        subtitle: l10n.donationSubtitle,
+        showBack: true,
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 80,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _products.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                size: 48.0.scaled(context, ref),
+                                color: PiggyTokens.iconSecondary(context),
                               ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 12.0.scaled(context, ref),
-                          vertical: 8.0.scaled(context, ref),
-                        ),
-                        children: [
-                          // 说明卡片
-                          SectionCard(
-                            child: Padding(
-                              padding: EdgeInsets.all(16.0.scaled(context, ref)),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.info_outline,
-                                        size: 20.0.scaled(context, ref),
-                                        color: ref.watch(primaryColorProvider),
-                                      ),
-                                      SizedBox(width: 8.0.scaled(context, ref)),
-                                      Text(
-                                        l10n.donationDescription,
-                                        style: TextStyle(
-                                          fontSize: 16.0.scaled(context, ref),
-                                          fontWeight: FontWeight.w600,
-                                          color: PiggyTokens.textPrimary(context),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  SizedBox(height: 12.0.scaled(context, ref)),
-                                  Text(
-                                    l10n.donationDescriptionDetail,
-                                    style: TextStyle(
-                                      fontSize: 14.0.scaled(context, ref),
-                                      color: PiggyTokens.textSecondary(context),
-                                      height: 1.5,
-                                    ),
-                                  ),
-                                  SizedBox(height: 8.0.scaled(context, ref)),
-                                  Text(
-                                    l10n.donationNoFeatures,
-                                    style: TextStyle(
-                                      fontSize: 13.0.scaled(context, ref),
-                                      color: PiggyTokens.textTertiary(context),
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
-                                ],
+                              SizedBox(height: 16.0.scaled(context, ref)),
+                              Text(
+                                l10n.donationNoProducts,
+                                style: TextStyle(
+                                  fontSize: 16.0.scaled(context, ref),
+                                  color: PiggyTokens.textSecondary(context),
+                                ),
                               ),
-                            ),
+                            ],
                           ),
-                          SizedBox(height: 16.0.scaled(context, ref)),
-                          // 商品列表
-                          SectionCard(
-                            child: Column(
-                              children: _products.asMap().entries.map((entry) {
-                                final index = entry.key;
-                                final product = entry.value;
-                                final isPurchasing =
-                                    _purchasing && _purchasingProductId == product.id;
-
-                                return Column(
+                        )
+                      : ListView(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12.0.scaled(context, ref),
+                            vertical: 8.0.scaled(context, ref),
+                          ),
+                          children: [
+                            // 说明卡片
+                            SectionCard(
+                              child: Padding(
+                                padding: EdgeInsets.all(16.0.scaled(context, ref)),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    if (index > 0) PiggyTokens.cardDivider(context),
-                                    _ProductTile(
-                                      product: product,
-                                      isPurchasing: isPurchasing,
-                                      onTap: () => _handleDonate(product),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.info_outline,
+                                          size: 20.0.scaled(context, ref),
+                                          color: ref.watch(primaryColorProvider),
+                                        ),
+                                        SizedBox(width: 8.0.scaled(context, ref)),
+                                        Text(
+                                          l10n.donationDescription,
+                                          style: TextStyle(
+                                            fontSize: 16.0.scaled(context, ref),
+                                            fontWeight: FontWeight.w600,
+                                            color: PiggyTokens.textPrimary(context),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: 12.0.scaled(context, ref)),
+                                    Text(
+                                      l10n.donationDescriptionDetail,
+                                      style: TextStyle(
+                                        fontSize: 14.0.scaled(context, ref),
+                                        color: PiggyTokens.textSecondary(context),
+                                        height: 1.5,
+                                      ),
+                                    ),
+                                    SizedBox(height: 8.0.scaled(context, ref)),
+                                    Text(
+                                      l10n.donationNoFeatures,
+                                      style: TextStyle(
+                                        fontSize: 13.0.scaled(context, ref),
+                                        color: PiggyTokens.textTertiary(context),
+                                        fontStyle: FontStyle.italic,
+                                      ),
                                     ),
                                   ],
-                                );
-                              }).toList(),
+                                ),
+                              ),
                             ),
-                          ),
-                          SizedBox(height: 16.0.scaled(context, ref)),
-                        ],
-                      ),
-          ),
-        ],
+                            SizedBox(height: 16.0.scaled(context, ref)),
+                            // 商品列表
+                            SectionCard(
+                              child: Column(
+                                children: _products.asMap().entries.map((entry) {
+                                  final index = entry.key;
+                                  final product = entry.value;
+                                  final isPurchasing =
+                                      _purchasing && _purchasingProductId == product.id;
+
+                                  return Column(
+                                    children: [
+                                      if (index > 0) PiggyTokens.cardDivider(context),
+                                      _ProductTile(
+                                        product: product,
+                                        isPurchasing: isPurchasing,
+                                        onTap: () => _handleDonate(product),
+                                      ),
+                                    ],
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                            SizedBox(height: 16.0.scaled(context, ref)),
+                          ],
+                        ),
+            ),
+          ],
+        ),
       ),
     );
   }

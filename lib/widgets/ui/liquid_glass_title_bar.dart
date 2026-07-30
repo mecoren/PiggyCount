@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'gradient_backdrop_filter.dart';
 
@@ -26,10 +27,17 @@ class LiquidGlassTitleBar extends StatefulWidget
     this.showBack = true,
     this.showMenu = false,
     this.backIcon,
+    this.leadingIcon,
+    this.leadingPlain = false,
     // 第一行 - 标题
     this.title,
+    this.subtitle,
     this.titleWidget,
     this.centerTitle = false,
+    this.compact = false,
+    // 第一行 - 自定义内容（showTitleSection=false 时启用）
+    this.showTitleSection = true,
+    this.content,
     // 第一行 - 搜索
     this.showSearch = false,
     this.onSearchChanged,
@@ -45,15 +53,21 @@ class LiquidGlassTitleBar extends StatefulWidget
     this.showSecondRow = true,
     this.secondRowLeading,
     this.secondRowTrailing,
+    // bottom 槽位（标题栏底部独立区域，用于 TabBar / 分段选择器）
+    this.bottom,
+    this.bottomHeight = 0,
     // 渐变模糊
     this.blur = true,
     this.maxSigma = _Dimens.blurTitleBarMax,
     this.minSigma = _Dimens.blurTitleBarMin,
     this.backgroundColor,
     this.showHighlightLine = true,
-    // 动态模糊：滚动偏移驱动渐显
+    this.bottomOpaque = false,
+    // 动态模糊（滚动驱动渐显）
     this.scrollOffsetListenable,
     this.blurFadeDistance = _Dimens.blurScrollFadeDistance,
+    // SafeArea
+    this.primary = false,
   });
 
   // ===== 第一行 - 左侧导航 =====
@@ -63,10 +77,35 @@ class LiquidGlassTitleBar extends StatefulWidget
   final bool showMenu;
   final Widget? backIcon;
 
+  /// 左侧导航图标（仅当 showBack/showMenu 均为 false 且此参数非空时使用）。
+  /// 用于迁移 PrimaryHeader 的 leadingIcon 场景。
+  final IconData? leadingIcon;
+
+  /// leadingIcon 是否以"纯图标"形式渲染（无圆形背景容器）。
+  /// 对应 PrimaryHeader 的 leadingPlain 参数。
+  final bool leadingPlain;
+
   // ===== 第一行 - 标题 =====
   final String? title;
+
+  /// 副标题（可选）。存在时第一行高度从 56dp 增至 80dp，
+  /// 渲染在 title 下方作为小字。对应 PrimaryHeader 的 subtitle 参数。
+  final String? subtitle;
+
   final Widget? titleWidget;
   final bool centerTitle;
+
+  /// 是否使用紧凑内边距。对应 PrimaryHeader 的 compact 参数。
+  final bool compact;
+
+  // ===== 第一行 - 自定义内容 =====
+
+  /// 是否渲染默认标题行。为 false 时改用 [content] 自绘第一行内容，
+  /// 用于迁移 PrimaryHeader 的 showTitleSection=false 场景（首页/分析页）。
+  final bool showTitleSection;
+
+  /// 自定义第一行内容（仅当 [showTitleSection] 为 false 时启用）。
+  final Widget? content;
 
   // ===== 第一行 - 搜索 =====
   final bool showSearch;
@@ -92,6 +131,16 @@ class LiquidGlassTitleBar extends StatefulWidget
   final Widget? secondRowLeading;
   final Widget? secondRowTrailing;
 
+  // ===== bottom 槽位 =====
+
+  /// 标题栏底部独立区域（用于 TabBar / 分段选择器等）。
+  /// 对应 PrimaryHeader 的 bottom 参数。渲染在第一行/第二行下方。
+  final Widget? bottom;
+
+  /// [bottom] 的高度（不含在 firstRowHeight / secondRowHeight 内）。
+  /// preferredSize 会加上此值。
+  final double bottomHeight;
+
   // ===== 渐变模糊 =====
   final bool blur;
   final double maxSigma;
@@ -101,6 +150,10 @@ class LiquidGlassTitleBar extends StatefulWidget
   /// 是否显示底部高光线。底部抽屉等纯色背景场景应设为 false，
   /// 使标题栏与内容区无缝融合。
   final bool showHighlightLine;
+
+  /// 是否让模糊层底部保持不透明，隔绝下方组件颜色渗透。
+  /// 详见 [GradientBackdropFilter.bottomOpaque]。
+  final bool bottomOpaque;
 
   // ===== 动态模糊（滚动驱动渐显） =====
 
@@ -112,15 +165,26 @@ class LiquidGlassTitleBar extends StatefulWidget
   /// 模糊层从透明到完全显示的滚动偏移区间（像素），默认 32px。
   final double blurFadeDistance;
 
-  /// 第一行高度（不含状态栏）
-  static const double firstRowHeight = _Dimens.titleBarHeight;
+  /// 是否由外部（如 `AppBar` / `SafeArea`）处理状态栏避让。
+  ///
+  /// - `false`（默认）：组件自己读取状态栏高度并留出安全区，背景覆盖状态栏区域。
+  ///   适用于直接放在 `Scaffold.body` 中的场景（如 `GlassHeader`）。
+  /// - `true`：不自己处理状态栏，高度仅含内容行（56dp / 80dp）。
+  ///   用于 `Scaffold.appBar` 时避免与 `AppBar` 内置 `SafeArea` 重复计算。
+  final bool primary;
+
+  /// 第一行高度（不含状态栏）。有 subtitle 时为 80dp，否则 56dp。
+  double get firstRowHeight =>
+      (subtitle != null && showTitleSection) ? _Dimens.titleBarWithSubtitle : _Dimens.titleBarHeight;
 
   /// 第二行高度
   static const double secondRowHeight = _Dimens.titleBarSecondRow;
 
   @override
   Size get preferredSize => Size.fromHeight(
-        firstRowHeight + (showSecondRow ? secondRowHeight : 0),
+        firstRowHeight +
+            (showSecondRow ? secondRowHeight : 0) +
+            (bottom != null ? bottomHeight : 0),
       );
 
   @override
@@ -189,6 +253,7 @@ class _LiquidGlassTitleBarState extends State<LiquidGlassTitleBar>
               maxSigma: widget.maxSigma,
               minSigma: widget.minSigma,
               opacity: _mapOffsetToBlurOpacity(offset),
+              bottomOpaque: widget.bottomOpaque,
             );
           },
         ),
@@ -199,6 +264,7 @@ class _LiquidGlassTitleBarState extends State<LiquidGlassTitleBar>
       child: GradientBackdropFilter(
         maxSigma: widget.maxSigma,
         minSigma: widget.minSigma,
+        bottomOpaque: widget.bottomOpaque,
       ),
     );
   }
@@ -264,54 +330,76 @@ class _LiquidGlassTitleBarState extends State<LiquidGlassTitleBar>
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final statusBarHeight = MediaQuery.of(context).padding.top;
-    final totalContentHeight = LiquidGlassTitleBar.firstRowHeight +
-        (widget.showSecondRow ? LiquidGlassTitleBar.secondRowHeight : 0);
+    final statusBarHeight =
+        widget.primary ? 0.0 : MediaQuery.of(context).padding.top;
+    final totalContentHeight = widget.firstRowHeight +
+        (widget.showSecondRow ? LiquidGlassTitleBar.secondRowHeight : 0) +
+        (widget.bottom != null ? widget.bottomHeight : 0);
 
-    return RepaintBoundary(
-      child: SizedBox(
-        height: statusBarHeight + totalContentHeight,
-        child: Stack(
-          children: [
-            // 层 A：渐变毛玻璃背景（动态模糊时跟随滚动渐显）
-            _buildBlurLayer(context, colorScheme),
-            // 层 B：内容（第一行 + 第二行，始终完全显示）
-            Positioned(
-              top: statusBarHeight,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Column(
-                children: [
-                  SizedBox(
-                    height: LiquidGlassTitleBar.firstRowHeight,
-                    child: _buildFirstRow(context, colorScheme),
-                  ),
-                  if (widget.showSecondRow)
+    // 状态栏图标颜色：亮色模式深色图标，暗色模式浅色图标（对齐 PrimaryHeader 行为）
+    final statusBarIconBrightness =
+        isDark ? Brightness.light : Brightness.dark;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        systemStatusBarContrastEnforced: false,
+        statusBarIconBrightness: statusBarIconBrightness,
+        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+      ),
+      child: RepaintBoundary(
+        child: SizedBox(
+          height: statusBarHeight + totalContentHeight,
+          child: Stack(
+            children: [
+              // 层 A：渐变毛玻璃背景（动态模糊时跟随滚动渐显）
+              _buildBlurLayer(context, colorScheme),
+              // 层 B：内容（第一行 + 第二行 + bottom，始终完全显示）
+              Positioned(
+                top: statusBarHeight,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Column(
+                  children: [
                     SizedBox(
-                      height: LiquidGlassTitleBar.secondRowHeight,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: _Dimens.space16,
-                        ),
-                        child: Row(
-                          children: [
-                            if (widget.secondRowLeading != null)
-                              widget.secondRowLeading!,
-                            const Spacer(),
-                            if (widget.secondRowTrailing != null)
-                              widget.secondRowTrailing!,
-                          ],
+                      height: widget.firstRowHeight,
+                      child: widget.showTitleSection
+                          ? _buildFirstRow(context, colorScheme)
+                          : (widget.content ??
+                              const SizedBox.shrink()),
+                    ),
+                    if (widget.showSecondRow)
+                      SizedBox(
+                        height: LiquidGlassTitleBar.secondRowHeight,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: _Dimens.space16,
+                          ),
+                          child: Row(
+                            children: [
+                              if (widget.secondRowLeading != null)
+                                widget.secondRowLeading!,
+                              const Spacer(),
+                              if (widget.secondRowTrailing != null)
+                                widget.secondRowTrailing!,
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                    if (widget.bottom != null)
+                      SizedBox(
+                        height: widget.bottomHeight,
+                        child: widget.bottom!,
+                      ),
+                  ],
+                ),
               ),
-            ),
-            // 层 C：底部液态玻璃边缘高光线（跟随模糊层同步显隐）
-            if (widget.showHighlightLine)
-              _buildHighlightLine(context, isDark),
-          ],
+              // 层 C：底部液态玻璃边缘高光线（跟随模糊层同步显隐）
+              if (widget.showHighlightLine)
+                _buildHighlightLine(context, isDark),
+            ],
+          ),
         ),
       ),
     );
@@ -323,9 +411,12 @@ class _LiquidGlassTitleBarState extends State<LiquidGlassTitleBar>
     final title = _buildTitle(colorScheme);
     final trailing = _buildTrailing(colorScheme);
 
+    // compact 模式减小水平内边距（对齐 PrimaryHeader.compact 行为）
+    final horizontalPadding = widget.compact ? _Dimens.space8 : _Dimens.space16;
+
     return Container(
-      height: LiquidGlassTitleBar.firstRowHeight,
-      padding: const EdgeInsets.symmetric(horizontal: _Dimens.space16),
+      height: widget.firstRowHeight,
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -340,7 +431,7 @@ class _LiquidGlassTitleBarState extends State<LiquidGlassTitleBar>
     );
   }
 
-  /// 构建左侧：菜单键或返回键
+  /// 构建左侧：菜单键 / 返回键 / 自定义 leadingIcon
   Widget? _buildLeading() {
     if (widget.showMenu) {
       return IconButton(
@@ -357,18 +448,54 @@ class _LiquidGlassTitleBarState extends State<LiquidGlassTitleBar>
         onPressed: widget.onBack ?? () => Navigator.of(context).maybePop(),
       );
     }
+    // 迁移 PrimaryHeader.leadingIcon：无菜单/返回键时渲染自定义图标
+    if (widget.leadingIcon != null) {
+      final icon = Icon(widget.leadingIcon, size: _Dimens.iconSizeLg);
+      return Padding(
+        padding: const EdgeInsets.only(right: _Dimens.space8),
+        child: widget.leadingPlain
+            ? icon
+            : Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: icon,
+              ),
+      );
+    }
     return null;
   }
 
-  /// 构建标题（始终可见，搜索展开时仅按需截断）
+  /// 构建标题（始终可见，搜索展开时仅按需截断）。
+  /// 存在 [widget.subtitle] 时用 Column 包裹主标题 + 副标题小字。
   Widget _buildTitle(ColorScheme colorScheme) {
-    return widget.titleWidget ??
+    final mainTitle = widget.titleWidget ??
         Text(
           widget.title ?? '',
           style: _titleStyle(colorScheme),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         );
+
+    if (widget.subtitle == null) return mainTitle;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        mainTitle,
+        const SizedBox(height: 2),
+        Text(
+          widget.subtitle!,
+          style: _subtitleStyle(colorScheme),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
   }
 
   /// 构建搜索框（高度 36dp，与图标对齐）
@@ -552,6 +679,15 @@ class _LiquidGlassTitleBarState extends State<LiquidGlassTitleBar>
       color: colorScheme.onSurface,
     );
   }
+
+  /// 副标题样式（小字、次要颜色，对齐 PrimaryHeader 的 subStyle 视觉）
+  TextStyle _subtitleStyle(ColorScheme colorScheme) {
+    return TextStyle(
+      fontSize: _Defaults.subtitleFontSize,
+      fontWeight: FontWeight.w400,
+      color: colorScheme.onSurfaceVariant,
+    );
+  }
 }
 
 /// 移植自 wait-home AppDimens 的尺寸常量
@@ -564,6 +700,7 @@ class _Dimens {
   static const double space16 = 16;
   static const double touchTarget = 48;
   static const double titleBarHeight = 56;
+  static const double titleBarWithSubtitle = 80;
   static const double titleBarSecondRow = 46;
   static const double iconSizeSm = 18;
   static const double iconSizeMd = 22;
@@ -620,4 +757,7 @@ class _Defaults {
 
   /// 普通标题字号
   static const double titleFontSize = 17;
+
+  /// 副标题字号（小字，对齐 PrimaryHeader 的 subStyle）
+  static const double subtitleFontSize = 12;
 }

@@ -42,15 +42,19 @@ class AesGcmCipher {
     // 生成随机 nonce
     final nonce = _aesGcm.newNonce();
     final secretKey = SecretKey(Uint8List.fromList(key));
+    try {
+      final secretBox = await _aesGcm.encrypt(
+        Uint8List.fromList(plaintext),
+        secretKey: secretKey,
+        nonce: nonce,
+      );
 
-    final secretBox = await _aesGcm.encrypt(
-      Uint8List.fromList(plaintext),
-      secretKey: secretKey,
-      nonce: nonce,
-    );
-
-    // 拼接 nonce || ciphertext || mac
-    return [...secretBox.nonce, ...secretBox.cipherText, ...secretBox.mac.bytes];
+      // 拼接 nonce || ciphertext || mac
+      return [...secretBox.nonce, ...secretBox.cipherText, ...secretBox.mac.bytes];
+    } finally {
+      // 主动销毁 SecretKey，避免密钥字节在堆中残留（best-effort zeroing）
+      secretKey.destroy();
+    }
   }
 
   /// 解密
@@ -81,14 +85,19 @@ class AesGcmCipher {
     final mac = encryptedBytes.sublist(encryptedBytes.length - macLength);
 
     final secretKey = SecretKey(Uint8List.fromList(key));
-    final secretBox = SecretBox(
-      Uint8List.fromList(cipherText),
-      nonce: Uint8List.fromList(nonce),
-      mac: Mac(Uint8List.fromList(mac)),
-    );
+    try {
+      final secretBox = SecretBox(
+        Uint8List.fromList(cipherText),
+        nonce: Uint8List.fromList(nonce),
+        mac: Mac(Uint8List.fromList(mac)),
+      );
 
-    // decrypt 会校验 mac，失败抛 SecretBoxAuthenticationError
-    final plaintext = await _aesGcm.decrypt(secretBox, secretKey: secretKey);
-    return plaintext;
+      // decrypt 会校验 mac，失败抛 SecretBoxAuthenticationError
+      final plaintext = await _aesGcm.decrypt(secretBox, secretKey: secretKey);
+      return plaintext;
+    } finally {
+      // 主动销毁 SecretKey，避免密钥字节在堆中残留（best-effort zeroing）
+      secretKey.destroy();
+    }
   }
 }

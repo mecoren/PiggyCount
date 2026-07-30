@@ -455,13 +455,13 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
     return Scaffold(
       body: Column(
         children: [
-          PrimaryHeader(
-            title: _currentPeriodLabel(_scope, selMonth, context),
-            leadingIcon: Icons.bar_chart_outlined,
-            leadingPlain: true,
-            compact: true,
-            showTitleSection: false,
-            content: Padding(
+          GlassHeader(
+            bottomOpaque: true,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               child: Row(
                 children: [
@@ -597,8 +597,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                 ],
               ),
             ),
-            padding: EdgeInsets.zero,
-            bottom: Padding(
+                Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
               child: WaitSlidingSegmentedControl<String>(
                 selected: _scope,
@@ -619,6 +618,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                 onValueChanged: (value) => setState(() => _scope = value),
               ),
             ),
+                ],
+              ),
           ),
           // v30 L11:检测到未折算外币交易 → 补折算横幅(用户确认后按当前汇率重算)
           _buildRecalcForeignBanner(context),

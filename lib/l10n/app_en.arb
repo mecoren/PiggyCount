@@ -3682,6 +3682,13 @@
   "cloudSyncEncryptProbeFailedTitle": "Cloud Probe Failed",
   "cloudSyncEncryptProbeFailedMessage": "Unable to probe whether the cloud already has encrypted data (possibly a network or permission issue). If other devices have encryption enabled, continuing will re-encrypt cloud data with a new password, which may prevent other devices from decrypting. Continue anyway?",
   "cloudSyncEncryptProbeFailedContinue": "Continue as first device",
+  "saltMismatchStatus": "Encryption key mismatch",
+  "saltMismatchNeedPasswordHint": "Cloud backup key doesn't match local. Tap to re-enter password.",
+  "saltMismatchDialogTitle": "Re-enter Password",
+  "saltMismatchRetrySuccess": "Key activated. Retrying sync...",
+  "saltMismatchRawStorageUnavailable": "Cloud service not initialized, cannot recover key",
+  "saltMismatchProbeFailed": "Cloud probe failed, please check network and retry",
+  "saltMismatchCloudCorrupted": "Cloud ciphertext is corrupted, cannot recover key",
   "@searchSelectedCount": {
     "placeholders": {
       "count": {

@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/shared_ledger_providers.dart';
+import '../../services/system/logger_service.dart';
 import '../../styles/tokens.dart';
 import '../../widgets/biz/biz.dart';
 import '../../widgets/ui/ui.dart';
@@ -57,18 +58,30 @@ class _InvitePageState extends ConsumerState<InvitePage> {
   }
 
   Future<void> _copy(String value, AppLocalizations l10n) async {
-    await Clipboard.setData(ClipboardData(text: value));
+    try {
+      await Clipboard.setData(ClipboardData(text: value));
+    } catch (e) {
+      // Clipboard 在个别平台/场景会抛 MissingPluginException，吞掉避免未捕获异步异常
+      logger.warning('InvitePage', 'Clipboard.setData failed', e);
+    }
     if (!mounted) return;
     showToast(context, l10n.commonCopied);
   }
 
-  Future<void> _share(PiggyCountCloudInvite invite, AppLocalizations l10n) async {
+  Future<void> _share(
+      PiggyCountCloudInvite invite, AppLocalizations l10n) async {
     final message = l10n.sharedInviteShareText(
       widget.ledgerName,
       invite.formattedCode,
       invite.shareUrl,
     );
-    await Share.share(message);
+    try {
+      await Share.share(message);
+    } catch (e) {
+      // Share.share 在部分 Android 设备上会抛 MissingPluginException 或分享目标异常
+      if (!mounted) return;
+      showToast(context, '${l10n.commonFailed}: $e');
+    }
   }
 
   String _expiryLabel(int hours, AppLocalizations l10n) {
@@ -82,26 +95,33 @@ class _InvitePageState extends ConsumerState<InvitePage> {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: l10n.sharedInvitePageTitle,
-            subtitle: widget.ledgerName,
-            showBack: true,
-          ),
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                const SizedBox(height: 8),
-                if (_generated == null)
-                  _buildForm(l10n)
-                else
-                  _buildShareView(_generated!, l10n),
-              ],
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.sharedInvitePageTitle,
+        subtitle: widget.ledgerName,
+        showBack: true,
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 80,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  const SizedBox(height: 8),
+                  if (_generated == null)
+                    _buildForm(l10n)
+                  else
+                    _buildShareView(_generated!, l10n),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -109,139 +129,140 @@ class _InvitePageState extends ConsumerState<InvitePage> {
   Widget _buildForm(AppLocalizations l10n) {
     return SectionCard(
       child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(l10n.sharedInviteFormRole,
-                style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [
-                ChoiceChip(
-                  label: Text(l10n.sharedRoleEditor),
-                  selected: true,
-                  onSelected: (_) {},
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(l10n.sharedInviteFormExpiry,
-                style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [
-                for (final h in _expiryOptions)
-                  ChoiceChip(
-                    label: Text(_expiryLabel(h, l10n)),
-                    selected: _expiresInHours == h,
-                    onSelected: _busy
-                        ? null
-                        : (sel) {
-                            if (sel) setState(() => _expiresInHours = h);
-                          },
-                  ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: _busy ? null : _generate,
-              icon: const Icon(Icons.qr_code_2_outlined),
-              label: _busy
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(l10n.sharedInviteGenerate),
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Text(_error!,
-                  style: TextStyle(color: PiggyTokens.error(context), fontSize: 13)),
-            ],
-            const SizedBox(height: 16),
-            Text(
-              l10n.sharedInviteWarning,
-              style: TextStyle(
-                color: PiggyTokens.textTertiary(context),
-                fontSize: 12,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(l10n.sharedInviteFormRole,
+              style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: [
+              ChoiceChip(
+                label: Text(l10n.sharedRoleEditor),
+                selected: true,
+                onSelected: (_) {},
               ),
-            ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(l10n.sharedInviteFormExpiry,
+              style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: [
+              for (final h in _expiryOptions)
+                ChoiceChip(
+                  label: Text(_expiryLabel(h, l10n)),
+                  selected: _expiresInHours == h,
+                  onSelected: _busy
+                      ? null
+                      : (sel) {
+                          if (sel) setState(() => _expiresInHours = h);
+                        },
+                ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            onPressed: _busy ? null : _generate,
+            icon: const Icon(Icons.qr_code_2_outlined),
+            label: _busy
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(l10n.sharedInviteGenerate),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 12),
+            Text(_error!,
+                style:
+                    TextStyle(color: PiggyTokens.error(context), fontSize: 13)),
           ],
-        ),
+          const SizedBox(height: 16),
+          Text(
+            l10n.sharedInviteWarning,
+            style: TextStyle(
+              color: PiggyTokens.textTertiary(context),
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildShareView(PiggyCountCloudInvite invite, AppLocalizations l10n) {
     return SectionCard(
       child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: SelectableText(
-                invite.formattedCode,
-                style: const TextStyle(
-                  fontSize: 36,
-                  letterSpacing: 6,
-                  fontFamily: 'monospace',
-                  fontWeight: FontWeight.w700,
-                ),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: SelectableText(
+              invite.formattedCode,
+              style: const TextStyle(
+                fontSize: 36,
+                letterSpacing: 6,
+                fontFamily: 'monospace',
+                fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 8),
-            Center(
-              child: Text(
-                l10n.sharedInviteExpiresAt(
-                  invite.expiresAt.toLocal().toString().split('.').first,
-                ),
-                style: TextStyle(
-                    color: PiggyTokens.textTertiary(context), fontSize: 12),
+          ),
+          const SizedBox(height: 8),
+          Center(
+            child: Text(
+              l10n.sharedInviteExpiresAt(
+                invite.expiresAt.toLocal().toString().split('.').first,
               ),
+              style: TextStyle(
+                  color: PiggyTokens.textTertiary(context), fontSize: 12),
             ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.copy_outlined),
-                    label: Text(l10n.sharedInviteCopyCode),
-                    onPressed: () => _copy(invite.code, l10n),
-                  ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.copy_outlined),
+                  label: Text(l10n.sharedInviteCopyCode),
+                  onPressed: () => _copy(invite.code, l10n),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton.icon(
-                    icon: const Icon(Icons.share_outlined),
-                    label: Text(l10n.sharedInviteShareLink),
-                    onPressed: () => _share(invite, l10n),
-                  ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton.icon(
+                  icon: const Icon(Icons.share_outlined),
+                  label: Text(l10n.sharedInviteShareLink),
+                  onPressed: () => _share(invite, l10n),
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              icon: const Icon(Icons.link),
-              label: Text(l10n.sharedInviteCopyLink),
-              onPressed: () => _copy(invite.shareUrl, l10n),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              l10n.sharedInviteInstruction,
-              style: TextStyle(color: PiggyTokens.textSecondary(context)),
-            ),
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  _generated = null;
-                  _error = null;
-                });
-              },
-              child: Text(l10n.sharedInviteGenerateAnother),
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.link),
+            label: Text(l10n.sharedInviteCopyLink),
+            onPressed: () => _copy(invite.shareUrl, l10n),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            l10n.sharedInviteInstruction,
+            style: TextStyle(color: PiggyTokens.textSecondary(context)),
+          ),
+          const SizedBox(height: 16),
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _generated = null;
+                _error = null;
+              });
+            },
+            child: Text(l10n.sharedInviteGenerateAnother),
+          ),
+        ],
+      ),
     );
   }
 }

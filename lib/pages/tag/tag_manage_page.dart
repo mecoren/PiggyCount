@@ -34,36 +34,43 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: l10n.tagManageTitle,
-            subtitle: l10n.tagManageSubtitle,
-            showBack: true,
-            actions: [
-              IconButton(
-                onPressed: _shareTags,
-                icon: const Icon(Icons.share_outlined),
-                tooltip: l10n.tagShare,
-              ),
-              _buildMoreMenu(context, l10n, primaryColor),
-            ],
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.tagManageTitle,
+        subtitle: l10n.tagManageSubtitle,
+        showBack: true,
+        bottomOpaque: true,
+        actions: [
+          IconButton(
+            onPressed: _shareTags,
+            icon: const Icon(Icons.share_outlined),
+            tooltip: l10n.tagShare,
           ),
-          Expanded(
-            child: tagsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(
-                child: Text('${l10n.commonError}: $error'),
-              ),
-              data: (tags) {
-                if (tags.isEmpty) {
-                  return _buildEmptyState(l10n);
-                }
-                return _buildTagGrid(tags, l10n);
-              },
-            ),
-          ),
+          _buildMoreMenu(context, l10n, primaryColor),
         ],
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 80,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: tagsAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(
+                  child: Text('${l10n.commonError}: $error'),
+                ),
+                data: (tags) {
+                  if (tags.isEmpty) {
+                    return _buildEmptyState(l10n);
+                  }
+                  return _buildTagGrid(tags, l10n);
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

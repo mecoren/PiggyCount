@@ -215,74 +215,93 @@ class _AuthPageState extends ConsumerState<AuthPage> {
       // WebDAV 不需要登录页面
       return Scaffold(
         backgroundColor: PiggyTokens.scaffoldBackground(context),
-        body: Column(
-          children: [
-            PrimaryHeader(title: AppLocalizations.of(context).authLogin, showBack: true),
-            Expanded(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Container(
-                    constraints: const BoxConstraints(maxWidth: 420),
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: PiggyTokens.surface(context),
-                      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-                      boxShadow: PiggyTokens.isDark(context) ? null : [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        )
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.check_circle_outline,
-                          size: 64,
-                          color: PiggyTokens.primary(context),
-                        ),
-                        const SizedBox(height: 24),
-                        Text(
-                          AppLocalizations.of(context).webdavConfiguredTitle,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: PiggyTokens.textPrimary(context),
+        extendBodyBehindAppBar: true,
+        appBar: GlassTitleBar(
+          title: AppLocalizations.of(context).authLogin,
+          showBack: true,
+          bottomOpaque: true,
+        ),
+        body: Padding(
+          padding: EdgeInsets.only(
+            top: MediaQuery.of(context).padding.top + 56,
+          ),
+          child: Column(
+            children: [
+              Expanded(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 420),
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: PiggyTokens.surface(context),
+                        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+                        boxShadow: PiggyTokens.isDark(context) ? null : [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          )
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.check_circle_outline,
+                            size: 64,
+                            color: PiggyTokens.primary(context),
                           ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          AppLocalizations.of(context).webdavConfiguredMessage,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: PiggyTokens.textSecondary(context),
+                          const SizedBox(height: 24),
+                          Text(
+                            AppLocalizations.of(context).webdavConfiguredTitle,
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: PiggyTokens.textPrimary(context),
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 32),
-                        FilledButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: Text(AppLocalizations.of(context).commonBack),
-                        ),
-                      ],
+                          const SizedBox(height: 12),
+                          Text(
+                            AppLocalizations.of(context).webdavConfiguredMessage,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: PiggyTokens.textSecondary(context),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 32),
+                          FilledButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: Text(AppLocalizations.of(context).commonBack),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     }
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          PrimaryHeader(title: AppLocalizations.of(context).authLogin, showBack: true),
-          Expanded(
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: AppLocalizations.of(context).authLogin,
+        showBack: true,
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 56,
+        ),
+        child: Column(
+          children: [
+            Expanded(
             child: Center(
               child: Padding(
                 padding: const EdgeInsets.all(24.0),
@@ -497,6 +516,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

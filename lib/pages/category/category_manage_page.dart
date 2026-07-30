@@ -49,54 +49,61 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
     final primaryColor = ref.watch(primaryColorProvider);
 
     return Scaffold(
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: l10n.categoryTitle,
-            showBack: true,
-            actions: [
-              IconButton(
-                onPressed: _shareCategories,
-                icon: const Icon(Icons.share_outlined),
-                tooltip: l10n.categoryShare,
-              ),
-              _buildMoreMenu(context, l10n, primaryColor),
-            ],
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.categoryTitle,
+        showBack: true,
+        bottomOpaque: true,
+        actions: [
+          IconButton(
+            onPressed: _shareCategories,
+            icon: const Icon(Icons.share_outlined),
+            tooltip: l10n.categoryShare,
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: WaitSlidingSegmentedControl<String>(
-              selected: _selectedKind,
-              segments: [
-                WaitSlidingSegment(value: 'expense', label: l10n.categoryExpense),
-                WaitSlidingSegment(value: 'income', label: l10n.categoryIncome),
-              ],
-              onValueChanged: (value) => setState(() => _selectedKind = value),
-            ),
-          ),
-          _buildTransferIconSetting(context, l10n, primaryColor),
-          Expanded(
-            child: categoriesWithCountAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(child: Text(l10n.categoryLoadFailed(error.toString()))),
-              data: (categoriesWithCount) {
-                return IndexedStack(
-                  index: _selectedKind == 'expense' ? 0 : 1,
-                  children: [
-                    _CategoryGridView(
-                      categoriesWithCount: categoriesWithCount,
-                      kind: 'expense',
-                    ),
-                    _CategoryGridView(
-                      categoriesWithCount: categoriesWithCount,
-                      kind: 'income',
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
+          _buildMoreMenu(context, l10n, primaryColor),
         ],
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 56,
+        ),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: WaitSlidingSegmentedControl<String>(
+                selected: _selectedKind,
+                segments: [
+                  WaitSlidingSegment(value: 'expense', label: l10n.categoryExpense),
+                  WaitSlidingSegment(value: 'income', label: l10n.categoryIncome),
+                ],
+                onValueChanged: (value) => setState(() => _selectedKind = value),
+              ),
+            ),
+            _buildTransferIconSetting(context, l10n, primaryColor),
+            Expanded(
+              child: categoriesWithCountAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(child: Text(l10n.categoryLoadFailed(error.toString()))),
+                data: (categoriesWithCount) {
+                  return IndexedStack(
+                    index: _selectedKind == 'expense' ? 0 : 1,
+                    children: [
+                      _CategoryGridView(
+                        categoriesWithCount: categoriesWithCount,
+                        kind: 'expense',
+                      ),
+                      _CategoryGridView(
+                        categoriesWithCount: categoriesWithCount,
+                        kind: 'income',
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -25,8 +25,20 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
 
-  List<({Transaction t, Category? category, Account? account, Account? toAccount})> _searchResults = [];
-  List<({Transaction t, Category? category, Account? account, Account? toAccount})> _allTransactions = [];
+  List<
+      ({
+        Transaction t,
+        Category? category,
+        Account? account,
+        Account? toAccount
+      })> _searchResults = [];
+  List<
+      ({
+        Transaction t,
+        Category? category,
+        Account? account,
+        Account? toAccount
+      })> _allTransactions = [];
   bool _isSearching = false;
   String _searchText = '';
 
@@ -69,8 +81,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   /// 执行搜索
   void _performSearch() {
     // 如果没有任何搜索条件，清空结果
-    if (_searchText.isEmpty && _minAmount == null && _maxAmount == null &&
-        _startDate == null && _endDate == null && _selectedCategory == null) {
+    if (_searchText.isEmpty &&
+        _minAmount == null &&
+        _maxAmount == null &&
+        _startDate == null &&
+        _endDate == null &&
+        _selectedCategory == null) {
       setState(() {
         _searchResults = [];
         _totalExpense = 0.0;
@@ -126,13 +142,15 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       if (_startDate != null || _endDate != null) {
         final happenedAt = transaction.happenedAt;
         if (_startDate != null) {
-          final startOfDay = DateTime(_startDate!.year, _startDate!.month, _startDate!.day);
+          final startOfDay =
+              DateTime(_startDate!.year, _startDate!.month, _startDate!.day);
           if (happenedAt.isBefore(startOfDay)) {
             dateMatch = false;
           }
         }
         if (_endDate != null) {
-          final endOfDay = DateTime(_endDate!.year, _endDate!.month, _endDate!.day, 23, 59, 59);
+          final endOfDay = DateTime(
+              _endDate!.year, _endDate!.month, _endDate!.day, 23, 59, 59);
           if (happenedAt.isAfter(endOfDay)) {
             dateMatch = false;
           }
@@ -236,7 +254,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     dense: true,
                     title: Text(l10n.searchCategoryFilter),
                     subtitle: Text(tempSelectedCategory != null
-                        ? CategoryUtils.getDisplayName(tempSelectedCategory!.name, context)
+                        ? CategoryUtils.getDisplayName(
+                            tempSelectedCategory!.name, context)
                         : l10n.searchNotSet),
                     onTap: () async {
                       final selected = await showCategorySelector(
@@ -271,7 +290,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                   ),
                   const SizedBox(height: 16),
                   // 金额筛选
-                  Text(l10n.searchAmountFilter, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(l10n.searchAmountFilter,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -282,8 +302,10 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                             border: const OutlineInputBorder(),
                             isDense: true,
                           ),
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          controller: TextEditingController(text: tempMinAmount?.toString() ?? ''),
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          controller: TextEditingController(
+                              text: tempMinAmount?.toString() ?? ''),
                           onChanged: (value) {
                             tempMinAmount = double.tryParse(value);
                           },
@@ -300,8 +322,10 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                             border: const OutlineInputBorder(),
                             isDense: true,
                           ),
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          controller: TextEditingController(text: tempMaxAmount?.toString() ?? ''),
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          controller: TextEditingController(
+                              text: tempMaxAmount?.toString() ?? ''),
                           onChanged: (value) {
                             tempMaxAmount = double.tryParse(value);
                           },
@@ -311,7 +335,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                   ),
                   const SizedBox(height: 16),
                   // 时间筛选
-                  Text(l10n.searchDateFilter, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(l10n.searchDateFilter,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
@@ -467,7 +492,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               Navigator.pop(context);
               await _executeBatchDelete();
             },
-            style: TextButton.styleFrom(foregroundColor: PiggyTokens.error(context)),
+            style: TextButton.styleFrom(
+                foregroundColor: PiggyTokens.error(context)),
             child: Text(l10n.commonDelete),
           ),
         ],
@@ -681,476 +707,531 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          // 使用PrimaryHeader
-          PrimaryHeader(
-            title: _isBatchMode
-                ? l10n.searchBatchModeWithCount(
-                    _selectedIds.length, _searchResults.length)
-                : l10n.searchTitle,
-            showBack: !_isBatchMode,
-            actions: _isBatchMode && _searchResults.isNotEmpty
-                ? [
-                    TextButton(
-                      onPressed: _toggleSelectAll,
-                      child: Text(
-                        _selectedIds.length == _searchResults.length
-                            ? l10n.searchDeselectAll
-                            : l10n.searchSelectAll,
-                        style:
-                            TextStyle(color: ref.watch(primaryColorProvider)),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: _toggleBatchMode,
-                      tooltip: l10n.searchExitBatchMode,
-                    ),
-                  ]
-                : null,
-          ),
-          // 搜索框区域
-          if (!_isBatchMode) // 批量模式下隐藏搜索框
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-              decoration: BoxDecoration(
-                color: PiggyTokens.surfaceElevated(context),
-                boxShadow: PiggyTokens.isDark(context) ? null : [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: _isBatchMode
+            ? l10n.searchBatchModeWithCount(
+                _selectedIds.length, _searchResults.length)
+            : l10n.searchTitle,
+        showBack: !_isBatchMode,
+        actions: _isBatchMode && _searchResults.isNotEmpty
+            ? [
+                TextButton(
+                  onPressed: _toggleSelectAll,
+                  child: Text(
+                    _selectedIds.length == _searchResults.length
+                        ? l10n.searchDeselectAll
+                        : l10n.searchSelectAll,
+                    style: TextStyle(color: ref.watch(primaryColorProvider)),
                   ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  // 搜索框和筛选按钮
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _searchController,
-                          decoration: InputDecoration(
-                            hintText: AppLocalizations.of(context).searchHint,
-                            prefixIcon: Icon(Icons.search,
-                                color: PiggyTokens.textTertiary(context)),
-                            suffixIcon: _searchController.text.isNotEmpty
-                                ? IconButton(
-                                    onPressed: () {
-                                      _searchController.clear();
-                                    },
-                                    icon: Icon(Icons.clear,
-                                        color: PiggyTokens.textTertiary(context)),
-                                  )
-                                : null,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-                              borderSide: BorderSide(
-                                  color: PiggyTokens.divider(context)),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: _toggleBatchMode,
+                  tooltip: l10n.searchExitBatchMode,
+                ),
+              ]
+            : null,
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 56,
+        ),
+        child: Column(
+          children: [
+            // 搜索框区域
+            if (!_isBatchMode) // 批量模式下隐藏搜索框
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                decoration: BoxDecoration(
+                  color: PiggyTokens.surfaceElevated(context),
+                  boxShadow: PiggyTokens.isDark(context)
+                      ? null
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                ),
+                child: Column(
+                  children: [
+                    // 搜索框和筛选按钮
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            decoration: InputDecoration(
+                              hintText: AppLocalizations.of(context).searchHint,
+                              prefixIcon: Icon(Icons.search,
+                                  color: PiggyTokens.textTertiary(context)),
+                              suffixIcon: _searchController.text.isNotEmpty
+                                  ? IconButton(
+                                      onPressed: () {
+                                        _searchController.clear();
+                                      },
+                                      icon: Icon(Icons.clear,
+                                          color: PiggyTokens.textTertiary(
+                                              context)),
+                                    )
+                                  : null,
+                              border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.circular(PiggyDimens.radiusLg),
+                                borderSide: BorderSide(
+                                    color: PiggyTokens.divider(context)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.circular(PiggyDimens.radiusLg),
+                                borderSide: BorderSide(
+                                    color: PiggyTokens.primary(context)),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  vertical: 12, horizontal: 16),
                             ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-                              borderSide: BorderSide(
-                                  color: PiggyTokens.primary(context)),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                                vertical: 12, horizontal: 16),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      // 筛选按钮
-                      IconButton(
-                        onPressed: _showFilterDialog,
-                        icon: Icon(
-                          Icons.filter_list,
-                          color: (_minAmount != null || _maxAmount != null ||
-                                  _startDate != null || _endDate != null ||
-                                  _selectedCategory != null)
-                              ? ref.watch(primaryColorProvider)
-                              : PiggyTokens.iconPrimary(context),
+                        const SizedBox(width: 8),
+                        // 筛选按钮
+                        IconButton(
+                          onPressed: _showFilterDialog,
+                          icon: Icon(
+                            Icons.filter_list,
+                            color: (_minAmount != null ||
+                                    _maxAmount != null ||
+                                    _startDate != null ||
+                                    _endDate != null ||
+                                    _selectedCategory != null)
+                                ? ref.watch(primaryColorProvider)
+                                : PiggyTokens.iconPrimary(context),
+                          ),
+                          tooltip: l10n.searchFilterTitle,
                         ),
-                        tooltip: l10n.searchFilterTitle,
+                      ],
+                    ),
+                    // 显示已选筛选条件
+                    if (_minAmount != null ||
+                        _maxAmount != null ||
+                        _startDate != null ||
+                        _endDate != null ||
+                        _selectedCategory != null) ...[
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if (_selectedCategory != null)
+                            Chip(
+                              label: Text(
+                                '${l10n.searchCategoryFilter}: ${CategoryUtils.getDisplayName(_selectedCategory!.name, context)}',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: ref.watch(primaryColorProvider)),
+                              ),
+                              backgroundColor: ref
+                                  .watch(primaryColorProvider)
+                                  .withValues(alpha: 0.1),
+                              side: BorderSide(
+                                  color: ref.watch(primaryColorProvider),
+                                  width: 1),
+                              deleteIconColor: ref.watch(primaryColorProvider),
+                              deleteIcon: const Icon(Icons.close, size: 16),
+                              onDeleted: () {
+                                setState(() {
+                                  _selectedCategory = null;
+                                });
+                                _performSearch();
+                              },
+                            ),
+                          if (_minAmount != null || _maxAmount != null)
+                            Chip(
+                              label: Text(
+                                '${l10n.searchAmountFilter}: ${_minAmount?.toStringAsFixed(2) ?? '0'} ~ ${_maxAmount?.toStringAsFixed(2) ?? '∞'}',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: ref.watch(primaryColorProvider)),
+                              ),
+                              backgroundColor: ref
+                                  .watch(primaryColorProvider)
+                                  .withValues(alpha: 0.1),
+                              side: BorderSide(
+                                  color: ref.watch(primaryColorProvider),
+                                  width: 1),
+                              deleteIconColor: ref.watch(primaryColorProvider),
+                              deleteIcon: const Icon(Icons.close, size: 16),
+                              onDeleted: () {
+                                setState(() {
+                                  _minAmount = null;
+                                  _maxAmount = null;
+                                });
+                                _performSearch();
+                              },
+                            ),
+                          if (_startDate != null || _endDate != null)
+                            Chip(
+                              label: Text(
+                                '${l10n.searchDateFilter}: ${_startDate != null ? '${_startDate!.year}-${_startDate!.month.toString().padLeft(2, '0')}-${_startDate!.day.toString().padLeft(2, '0')}' : l10n.searchDateStart} ~ ${_endDate != null ? '${_endDate!.year}-${_endDate!.month.toString().padLeft(2, '0')}-${_endDate!.day.toString().padLeft(2, '0')}' : l10n.searchDateEnd}',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: ref.watch(primaryColorProvider)),
+                              ),
+                              backgroundColor: ref
+                                  .watch(primaryColorProvider)
+                                  .withValues(alpha: 0.1),
+                              side: BorderSide(
+                                  color: ref.watch(primaryColorProvider),
+                                  width: 1),
+                              deleteIconColor: ref.watch(primaryColorProvider),
+                              deleteIcon: const Icon(Icons.close, size: 16),
+                              onDeleted: () {
+                                setState(() {
+                                  _startDate = null;
+                                  _endDate = null;
+                                });
+                                _performSearch();
+                              },
+                            ),
+                        ],
                       ),
                     ],
-                  ),
-                  // 显示已选筛选条件
-                  if (_minAmount != null || _maxAmount != null ||
-                      _startDate != null || _endDate != null ||
-                      _selectedCategory != null) ...[
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        if (_selectedCategory != null)
-                          Chip(
-                            label: Text(
-                              '${l10n.searchCategoryFilter}: ${CategoryUtils.getDisplayName(_selectedCategory!.name, context)}',
-                              style: TextStyle(fontSize: 12, color: ref.watch(primaryColorProvider)),
-                            ),
-                            backgroundColor: ref.watch(primaryColorProvider).withValues(alpha: 0.1),
-                            side: BorderSide(color: ref.watch(primaryColorProvider), width: 1),
-                            deleteIconColor: ref.watch(primaryColorProvider),
-                            deleteIcon: const Icon(Icons.close, size: 16),
-                            onDeleted: () {
-                              setState(() {
-                                _selectedCategory = null;
-                              });
-                              _performSearch();
-                            },
-                          ),
-                        if (_minAmount != null || _maxAmount != null)
-                          Chip(
-                            label: Text(
-                              '${l10n.searchAmountFilter}: ${_minAmount?.toStringAsFixed(2) ?? '0'} ~ ${_maxAmount?.toStringAsFixed(2) ?? '∞'}',
-                              style: TextStyle(fontSize: 12, color: ref.watch(primaryColorProvider)),
-                            ),
-                            backgroundColor: ref.watch(primaryColorProvider).withValues(alpha: 0.1),
-                            side: BorderSide(color: ref.watch(primaryColorProvider), width: 1),
-                            deleteIconColor: ref.watch(primaryColorProvider),
-                            deleteIcon: const Icon(Icons.close, size: 16),
-                            onDeleted: () {
-                              setState(() {
-                                _minAmount = null;
-                                _maxAmount = null;
-                              });
-                              _performSearch();
-                            },
-                          ),
-                        if (_startDate != null || _endDate != null)
-                          Chip(
-                            label: Text(
-                              '${l10n.searchDateFilter}: ${_startDate != null ? '${_startDate!.year}-${_startDate!.month.toString().padLeft(2, '0')}-${_startDate!.day.toString().padLeft(2, '0')}' : l10n.searchDateStart} ~ ${_endDate != null ? '${_endDate!.year}-${_endDate!.month.toString().padLeft(2, '0')}-${_endDate!.day.toString().padLeft(2, '0')}' : l10n.searchDateEnd}',
-                              style: TextStyle(fontSize: 12, color: ref.watch(primaryColorProvider)),
-                            ),
-                            backgroundColor: ref.watch(primaryColorProvider).withValues(alpha: 0.1),
-                            side: BorderSide(color: ref.watch(primaryColorProvider), width: 1),
-                            deleteIconColor: ref.watch(primaryColorProvider),
-                            deleteIcon: const Icon(Icons.close, size: 16),
-                            onDeleted: () {
-                              setState(() {
-                                _startDate = null;
-                                _endDate = null;
-                              });
-                              _performSearch();
-                            },
-                          ),
-                      ],
-                    ),
                   ],
-                ],
+                ),
               ),
-            ),
-          // 搜索结果
-          Expanded(
-            child: StreamBuilder<List<({Transaction t, Category? category, Account? account, Account? toAccount})>>(
-              stream: repo.transactionsWithCategoryAll(ledgerId: ledgerId),
-              builder: (context, snapshot) {
-                if (snapshot.hasData) {
-                  _allTransactions = snapshot.data!;
-                  if ((_searchText.isNotEmpty ||
-                          _minAmount != null ||
-                          _maxAmount != null ||
-                          _startDate != null ||
-                          _endDate != null ||
-                          _selectedCategory != null) &&
-                      _searchResults.isEmpty &&
-                      !_isSearching &&
-                      !_hasScheduledSearch) {
-                    _hasScheduledSearch = true;
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) {
-                        _performSearch();
-                      }
-                    });
+            // 搜索结果
+            Expanded(
+              child: StreamBuilder<
+                  List<
+                      ({
+                        Transaction t,
+                        Category? category,
+                        Account? account,
+                        Account? toAccount
+                      })>>(
+                stream: repo.transactionsWithCategoryAll(ledgerId: ledgerId),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    _allTransactions = snapshot.data!;
+                    if ((_searchText.isNotEmpty ||
+                            _minAmount != null ||
+                            _maxAmount != null ||
+                            _startDate != null ||
+                            _endDate != null ||
+                            _selectedCategory != null) &&
+                        _searchResults.isEmpty &&
+                        !_isSearching &&
+                        !_hasScheduledSearch) {
+                      _hasScheduledSearch = true;
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          _performSearch();
+                        }
+                      });
+                    }
                   }
-                }
 
-                if (_isSearching) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+                  if (_isSearching) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-                if (_searchText.isEmpty &&
-                    _minAmount == null &&
-                    _maxAmount == null &&
-                    _startDate == null &&
-                    _endDate == null &&
-                    _selectedCategory == null) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.search,
-                            size: 64, color: PiggyTokens.textTertiary(context)),
-                        const SizedBox(height: 16),
-                        Text(
-                          AppLocalizations.of(context).searchNoInput,
-                          style: TextStyle(
-                              color: PiggyTokens.textTertiary(context), fontSize: 16),
-                        ),
-                      ],
-                    ),
-                  );
-                }
+                  if (_searchText.isEmpty &&
+                      _minAmount == null &&
+                      _maxAmount == null &&
+                      _startDate == null &&
+                      _endDate == null &&
+                      _selectedCategory == null) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.search,
+                              size: 64,
+                              color: PiggyTokens.textTertiary(context)),
+                          const SizedBox(height: 16),
+                          Text(
+                            AppLocalizations.of(context).searchNoInput,
+                            style: TextStyle(
+                                color: PiggyTokens.textTertiary(context),
+                                fontSize: 16),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
 
-                if (_searchResults.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.search_off,
-                            size: 64, color: PiggyTokens.textTertiary(context)),
-                        const SizedBox(height: 16),
-                        Text(
-                          AppLocalizations.of(context).searchNoResults,
-                          style: TextStyle(
-                              color: PiggyTokens.textTertiary(context), fontSize: 16),
-                        ),
-                      ],
-                    ),
-                  );
-                }
+                  if (_searchResults.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.search_off,
+                              size: 64,
+                              color: PiggyTokens.textTertiary(context)),
+                          const SizedBox(height: 16),
+                          Text(
+                            AppLocalizations.of(context).searchNoResults,
+                            style: TextStyle(
+                                color: PiggyTokens.textTertiary(context),
+                                fontSize: 16),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
 
-                // 显示搜索结果列表
-                return Column(
-                  children: [
-                    // 批量操作入口 - 仅在非批量模式且有搜索结果时显示
-                    if (!_isBatchMode)
-                      Container(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-                        decoration: BoxDecoration(
-                          color: PiggyTokens.surfaceElevated(context),
-                        ),
-                        child: Row(
-                          children: [
-                            Text(
-                              l10n.searchResultsCount(_searchResults.length),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    color: PiggyTokens.textTertiary(context),
-                                  ),
-                            ),
-                            SizedBox(width: 8.0.scaled(context, ref)),
-                            // 支出/收入汇总：Expanded 占满剩余空间，内层 Flexible(loose) 让 chip 正常取自然宽度，超长时截断而非溢出
-                            Expanded(
-                              child: Row(
-                                children: [
-                                  // 支出汇总
-                                  Flexible(
-                                    fit: FlexFit.loose,
-                                    child: _buildSummaryChip(
-                                      label: l10n.searchSummaryExpense,
-                                      amount: _totalExpense,
-                                      color: PiggyTokens.expenseColor(context, ref),
+                  // 显示搜索结果列表
+                  return Column(
+                    children: [
+                      // 批量操作入口 - 仅在非批量模式且有搜索结果时显示
+                      if (!_isBatchMode)
+                        Container(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                          decoration: BoxDecoration(
+                            color: PiggyTokens.surfaceElevated(context),
+                          ),
+                          child: Row(
+                            children: [
+                              Text(
+                                l10n.searchResultsCount(_searchResults.length),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: PiggyTokens.textTertiary(context),
                                     ),
+                              ),
+                              SizedBox(width: 8.0.scaled(context, ref)),
+                              // 支出/收入汇总：Expanded 占满剩余空间，内层 Flexible(loose) 让 chip 正常取自然宽度，超长时截断而非溢出
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    // 支出汇总
+                                    Flexible(
+                                      fit: FlexFit.loose,
+                                      child: _buildSummaryChip(
+                                        label: l10n.searchSummaryExpense,
+                                        amount: _totalExpense,
+                                        color: PiggyTokens.expenseColor(
+                                            context, ref),
+                                      ),
+                                    ),
+                                    SizedBox(width: 6.0.scaled(context, ref)),
+                                    // 收入汇总
+                                    Flexible(
+                                      fit: FlexFit.loose,
+                                      child: _buildSummaryChip(
+                                        label: l10n.searchSummaryIncome,
+                                        amount: _totalIncome,
+                                        color: PiggyTokens.incomeColor(
+                                            context, ref),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: _toggleBatchMode,
+                                style: TextButton.styleFrom(
+                                  foregroundColor:
+                                      PiggyTokens.textLink(context),
+                                ),
+                                child: Text(l10n.searchBatchMode),
+                              ),
+                            ],
+                          ),
+                        ),
+                      // 批量模式下的操作栏
+                      if (_isBatchMode)
+                        Container(
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                          decoration: BoxDecoration(
+                            color: PiggyTokens.surfaceElevated(context),
+                          ),
+                          child: Column(
+                            children: [
+                              // 全选按钮
+                              Row(
+                                children: [
+                                  Text(
+                                    l10n.searchSelectedCount(
+                                        _selectedIds.length),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color:
+                                              PiggyTokens.textTertiary(context),
+                                        ),
                                   ),
-                                  SizedBox(width: 6.0.scaled(context, ref)),
-                                  // 收入汇总
-                                  Flexible(
-                                    fit: FlexFit.loose,
-                                    child: _buildSummaryChip(
-                                      label: l10n.searchSummaryIncome,
-                                      amount: _totalIncome,
-                                      color: PiggyTokens.incomeColor(context, ref),
+                                  const Spacer(),
+                                  TextButton(
+                                    onPressed: _toggleSelectAll,
+                                    style: TextButton.styleFrom(
+                                      foregroundColor:
+                                          ref.watch(primaryColorProvider),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      minimumSize: const Size(0, 32),
+                                    ),
+                                    child: Text(
+                                      _selectedIds.length ==
+                                              _searchResults.length
+                                          ? l10n.searchDeselectAll
+                                          : l10n.searchSelectAll,
                                     ),
                                   ),
                                 ],
                               ),
-                            ),
-                            TextButton(
-                              onPressed: _toggleBatchMode,
-                              style: TextButton.styleFrom(
-                                foregroundColor: PiggyTokens.textLink(context),
-                              ),
-                              child: Text(l10n.searchBatchMode),
-                            ),
-                          ],
-                        ),
-                      ),
-                    // 批量模式下的操作栏
-                    if (_isBatchMode)
-                      Container(
-                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-                        decoration: BoxDecoration(
-                          color: PiggyTokens.surfaceElevated(context),
-                        ),
-                        child: Column(
-                          children: [
-                            // 全选按钮
-                            Row(
-                              children: [
-                                Text(
-                                  l10n.searchSelectedCount(_selectedIds.length),
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(
-                                        color: PiggyTokens.textTertiary(context),
+                              // 批量操作按钮 - 始终显示，未选择时禁用
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: _selectedIds.isEmpty
+                                          ? null
+                                          : _showBatchSetNoteDialog,
+                                      icon:
+                                          const Icon(Icons.edit_note, size: 16),
+                                      label: Text(l10n.searchBatchSetNote,
+                                          style: const TextStyle(fontSize: 13)),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor:
+                                            ref.watch(primaryColorProvider),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 6, horizontal: 8),
+                                        minimumSize: const Size(0, 36),
                                       ),
-                                ),
-                                const Spacer(),
-                                TextButton(
-                                  onPressed: _toggleSelectAll,
-                                  style: TextButton.styleFrom(
-                                    foregroundColor:
-                                        ref.watch(primaryColorProvider),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
-                                    minimumSize: const Size(0, 32),
+                                    ),
                                   ),
-                                  child: Text(
-                                    _selectedIds.length == _searchResults.length
-                                        ? l10n.searchDeselectAll
-                                        : l10n.searchSelectAll,
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: _selectedIds.isEmpty
+                                          ? null
+                                          : _showBatchChangeCategoryDialog,
+                                      icon:
+                                          const Icon(Icons.category, size: 16),
+                                      label: Text(
+                                          l10n.searchBatchChangeCategory,
+                                          style: const TextStyle(fontSize: 13)),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor:
+                                            ref.watch(primaryColorProvider),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 6, horizontal: 8),
+                                        minimumSize: const Size(0, 36),
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            // 批量操作按钮 - 始终显示，未选择时禁用
-                            const SizedBox(height: 4),
-                            Row(
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: _selectedIds.isEmpty
+                                          ? null
+                                          : _showBatchDeleteDialog,
+                                      icon: const Icon(Icons.delete_outline,
+                                          size: 16),
+                                      label: Text(l10n.commonDelete,
+                                          style: const TextStyle(fontSize: 13)),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor:
+                                            PiggyTokens.error(context),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 6, horizontal: 8),
+                                        minimumSize: const Size(0, 36),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      // 列表
+                      Expanded(
+                        child: ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(0, 8, 0, 0),
+                          itemCount: _searchResults.length,
+                          itemBuilder: (context, index) {
+                            final item = _searchResults[index];
+                            final isTransfer = item.t.type == 'transfer';
+                            final isExpense = item.t.type == 'expense';
+
+                            // 获取分类显示名称
+                            final categoryName = CategoryUtils.getDisplayName(
+                                item.category?.name, context);
+
+                            final subtitle = item.t.note ?? '';
+                            final isSelected = _selectedIds.contains(item.t.id);
+
+                            final iconData = getCategoryIconData(
+                                category: item.category,
+                                categoryName: categoryName);
+
+                            return Column(
                               children: [
-                                Expanded(
-                                  child: OutlinedButton.icon(
-                                    onPressed: _selectedIds.isEmpty
-                                        ? null
-                                        : _showBatchSetNoteDialog,
-                                    icon: const Icon(Icons.edit_note, size: 16),
-                                    label: Text(l10n.searchBatchSetNote,
-                                        style: const TextStyle(fontSize: 13)),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor:
-                                          ref.watch(primaryColorProvider),
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 6, horizontal: 8),
-                                      minimumSize: const Size(0, 36),
-                                    ),
-                                  ),
+                                TransactionListItem(
+                                  icon: iconData,
+                                  category: item.category,
+                                  title: subtitle,
+                                  categoryName: categoryName,
+                                  amount: item.t.amount,
+                                  currencyCode: item.t.currencyCode,
+                                  nativeAmount: item.t.nativeAmount,
+                                  isExpense: isExpense,
+                                  hide: hide,
+                                  happenedAt: item.t.happenedAt,
+                                  showFullDate: true,
+                                  isSelectionMode: _isBatchMode,
+                                  isSelected: isSelected,
+                                  onSelectionChanged: () =>
+                                      _toggleSelection(item.t.id),
+                                  onTap: _isBatchMode
+                                      ? null
+                                      : () async {
+                                          await TransactionEditUtils
+                                              .editTransaction(
+                                            context,
+                                            ref,
+                                            item.t,
+                                            item.category,
+                                          );
+                                        },
+                                  onCategoryTap: _isBatchMode ||
+                                          isTransfer ||
+                                          item.category?.id == null
+                                      ? null
+                                      : () {
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  CategoryDetailPage(
+                                                categoryId: item.category!.id,
+                                                categoryName: categoryName,
+                                              ),
+                                            ),
+                                          );
+                                        },
                                 ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: OutlinedButton.icon(
-                                    onPressed: _selectedIds.isEmpty
-                                        ? null
-                                        : _showBatchChangeCategoryDialog,
-                                    icon: const Icon(Icons.category, size: 16),
-                                    label: Text(l10n.searchBatchChangeCategory,
-                                        style: const TextStyle(fontSize: 13)),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor:
-                                          ref.watch(primaryColorProvider),
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 6, horizontal: 8),
-                                      minimumSize: const Size(0, 36),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: OutlinedButton.icon(
-                                    onPressed: _selectedIds.isEmpty
-                                        ? null
-                                        : _showBatchDeleteDialog,
-                                    icon: const Icon(Icons.delete_outline,
-                                        size: 16),
-                                    label: Text(l10n.commonDelete,
-                                        style: const TextStyle(fontSize: 13)),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: PiggyTokens.error(context),
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 6, horizontal: 8),
-                                      minimumSize: const Size(0, 36),
-                                    ),
-                                  ),
-                                ),
+                                if (index < _searchResults.length - 1)
+                                  PiggyDivider.short(
+                                      indent: 56 + 16, endIndent: 16),
                               ],
-                            ),
-                          ],
+                            );
+                          },
                         ),
                       ),
-                    // 列表
-                    Expanded(
-                      child: ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(0, 8, 0, 0),
-                        itemCount: _searchResults.length,
-                        itemBuilder: (context, index) {
-                          final item = _searchResults[index];
-                          final isTransfer = item.t.type == 'transfer';
-                          final isExpense = item.t.type == 'expense';
-
-                          // 获取分类显示名称
-                          final categoryName = CategoryUtils.getDisplayName(item.category?.name, context);
-
-                          final subtitle = item.t.note ?? '';
-                          final isSelected = _selectedIds.contains(item.t.id);
-
-                          final iconData = getCategoryIconData(
-                              category: item.category,
-                              categoryName: categoryName);
-
-                          return Column(
-                            children: [
-                              TransactionListItem(
-                                icon: iconData,
-                                category: item.category,
-                                title: subtitle,
-                                categoryName: categoryName,
-                                amount: item.t.amount,
-                                currencyCode: item.t.currencyCode,
-                                nativeAmount: item.t.nativeAmount,
-                                isExpense: isExpense,
-                                hide: hide,
-                                happenedAt: item.t.happenedAt,
-                                showFullDate: true,
-                                isSelectionMode: _isBatchMode,
-                                isSelected: isSelected,
-                                onSelectionChanged: () =>
-                                    _toggleSelection(item.t.id),
-                                onTap: _isBatchMode
-                                    ? null
-                                    : () async {
-                                        await TransactionEditUtils
-                                            .editTransaction(
-                                          context,
-                                          ref,
-                                          item.t,
-                                          item.category,
-                                        );
-                                      },
-                                onCategoryTap: _isBatchMode ||
-                                        isTransfer ||
-                                        item.category?.id == null
-                                    ? null
-                                    : () {
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (_) => CategoryDetailPage(
-                                              categoryId: item.category!.id,
-                                              categoryName: categoryName,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                              ),
-                              if (index < _searchResults.length - 1)
-                                PiggyDivider.short(
-                                    indent: 56 + 16, endIndent: 16),
-                            ],
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                );
-              },
+                    ],
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

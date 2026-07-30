@@ -11,6 +11,7 @@
 // 使用 Argon2KeyDerivation.forTesting() 保持测试快速。
 
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -289,16 +290,16 @@ void main() {
     test('activateKey 后 activeSalt 为传入的 salt', () async {
       final salt = List<int>.generate(16, (i) => 0x42);
 
-      await service.activateKey(password: 'testpw', salt: salt);
+      await service.activateKey(password: 'testpw88', salt: salt);
 
       expect(service.activeSalt, equals(salt));
     });
 
     test('activateKey 后 encrypt 可用（无需 enable）', () async {
-      await service.enable(password: 'temppw');
+      await service.enable(password: 'temppw88');
       final salt = List<int>.generate(16, (i) => 0x99);
 
-      await service.activateKey(password: 'newpass', salt: salt);
+      await service.activateKey(password: 'newpass88', salt: salt);
 
       const plaintext = 'test data';
       final ciphertext = await service.encrypt(plaintext);
@@ -306,10 +307,10 @@ void main() {
     });
 
     test('persistActivatedKey 后密钥持久化到 secure storage', () async {
-      await service.enable(password: 'temppw');
+      await service.enable(password: 'temppw88');
       final salt = List<int>.generate(16, (i) => 0x77);
 
-      await service.activateKey(password: 'newpass', salt: salt);
+      await service.activateKey(password: 'newpass88', salt: salt);
       await service.persistActivatedKey();
 
       expect(await storage.getKey(), isNotNull);
@@ -438,7 +439,7 @@ void main() {
 
     test('加密未开启时抛 StateError', () async {
       expect(
-        () => service.reEncryptExistingCloudData(storage: cloud),
+        () => service.reEncryptExistingCloudData(cloudStorage: cloud),
         throwsA(isA<StateError>()),
       );
     });
@@ -452,7 +453,7 @@ void main() {
         CloudFile(name: 'ledger_2.json', path: 'ledger_2.json'),
       ];
 
-      final result = await service.reEncryptExistingCloudData(storage: cloud);
+      final result = await service.reEncryptExistingCloudData(cloudStorage: cloud);
 
       expect(result.success, 2);
       expect(result.failed, 0);
@@ -474,7 +475,7 @@ void main() {
         CloudFile(name: 'ledger_2.json', path: 'ledger_2.json'),
       ];
 
-      final result = await service.reEncryptExistingCloudData(storage: cloud);
+      final result = await service.reEncryptExistingCloudData(cloudStorage: cloud);
 
       expect(result.success, 2);
       expect(result.failed, 0);
@@ -496,7 +497,7 @@ void main() {
         CloudFile(name: 'backup.old', path: 'backup.old'),
       ];
 
-      final result = await service.reEncryptExistingCloudData(storage: cloud);
+      final result = await service.reEncryptExistingCloudData(cloudStorage: cloud);
 
       expect(result.success, 1);
       expect(result.failed, 0);
@@ -512,7 +513,7 @@ void main() {
         CloudFile(name: 'ledger_1.json', path: 'ledger_1.json'),
       ];
 
-      final result = await service.reEncryptExistingCloudData(storage: cloud);
+      final result = await service.reEncryptExistingCloudData(cloudStorage: cloud);
 
       expect(result.success, 0);
       expect(result.skipped, 1);
@@ -529,7 +530,7 @@ void main() {
         CloudFile(name: 'ledger_2.json', path: 'ledger_2.json'),
       ];
 
-      final result = await service.reEncryptExistingCloudData(storage: cloud);
+      final result = await service.reEncryptExistingCloudData(cloudStorage: cloud);
 
       expect(result.success, 1); // ledger_2 成功
       expect(result.failed, 1); // ledger_1 失败
@@ -546,7 +547,7 @@ void main() {
         CloudFile(name: 'ledger_2.json', path: 'ledger_2.json'),
       ];
 
-      final result = await service.reEncryptExistingCloudData(storage: cloud);
+      final result = await service.reEncryptExistingCloudData(cloudStorage: cloud);
 
       expect(result.success, 1); // ledger_1 成功
       expect(result.failed, 1); // ledger_2 失败
@@ -559,7 +560,7 @@ void main() {
       final throwingStorage = _ThrowingListStorage();
 
       expect(
-        () => service.reEncryptExistingCloudData(storage: throwingStorage),
+        () => service.reEncryptExistingCloudData(cloudStorage: throwingStorage),
         throwsA(isA<Exception>()),
       );
     });
@@ -573,7 +574,7 @@ void main() {
       // 但若仅清 key 而保留 enabled flag，应抛 StateError
       // 这里通过 disable 后再 reset 来验证 enabled=false 时也会抛
       expect(
-        () => service.reEncryptExistingCloudData(storage: cloud),
+        () => service.reEncryptExistingCloudData(cloudStorage: cloud),
         throwsA(isA<StateError>()),
       );
     });
@@ -585,11 +586,11 @@ void main() {
         CloudFile(name: 'ledger_1.json', path: 'ledger_1.json'),
       ];
 
-      await service.reEncryptExistingCloudData(storage: cloud);
+      await service.reEncryptExistingCloudData(cloudStorage: cloud);
       final firstCipher = cloud.stored['ledger_1.json']!;
 
       // 再次调用
-      final result = await service.reEncryptExistingCloudData(storage: cloud);
+      final result = await service.reEncryptExistingCloudData(cloudStorage: cloud);
       expect(result.success, 1);
       // 仍是密文（可能因 nonce 不同而内容不同，但格式必须是密文）
       expect(CiphertextFormat.isEncrypted(cloud.stored['ledger_1.json']!), isTrue);
@@ -642,10 +643,10 @@ class InMemorySecureKeyStorage implements SecureKeyStorage {
   }
 
   @override
-  Future<List<int>?> getKey() async {
+  Future<Uint8List?> getKey() async {
     final value = _store['piggycount_enc_key'];
     if (value == null) return null;
-    return base64.decode(value);
+    return Uint8List.fromList(base64.decode(value));
   }
 
   @override
@@ -654,10 +655,10 @@ class InMemorySecureKeyStorage implements SecureKeyStorage {
   }
 
   @override
-  Future<List<int>?> getVerifier() async {
+  Future<Uint8List?> getVerifier() async {
     final value = _store['piggycount_enc_verifier'];
     if (value == null) return null;
-    return base64.decode(value);
+    return Uint8List.fromList(base64.decode(value));
   }
 
   @override
@@ -666,10 +667,10 @@ class InMemorySecureKeyStorage implements SecureKeyStorage {
   }
 
   @override
-  Future<List<int>?> getSalt() async {
+  Future<Uint8List?> getSalt() async {
     final value = _store['piggycount_enc_salt'];
     if (value == null) return null;
-    return base64.decode(value);
+    return Uint8List.fromList(base64.decode(value));
   }
 
   @override

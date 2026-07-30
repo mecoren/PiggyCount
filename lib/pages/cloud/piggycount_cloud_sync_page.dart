@@ -34,7 +34,8 @@ class PiggyCountCloudSyncPage extends ConsumerStatefulWidget {
       _PiggyCountCloudSyncPageState();
 }
 
-class _PiggyCountCloudSyncPageState extends ConsumerState<PiggyCountCloudSyncPage> {
+class _PiggyCountCloudSyncPageState
+    extends ConsumerState<PiggyCountCloudSyncPage> {
   SyncHealthReport? _latestReport;
   bool _checking = false;
   bool _autoSyncing = false;
@@ -119,6 +120,12 @@ class _PiggyCountCloudSyncPageState extends ConsumerState<PiggyCountCloudSyncPag
       if (mounted) {
         ref.read(syncStatusRefreshProvider.notifier).state++;
       }
+    } catch (e) {
+      // 外层兜底：reconcile/syncMyProfile/checkSyncHealth/backfill 等步骤抛错时，
+      // 避免 unawaited(_onRefresh()) 产生未捕获异步异常；给用户可见反馈。
+      if (mounted) {
+        showToast(context, '${AppLocalizations.of(context).commonFailed}: $e');
+      }
     } finally {
       if (mounted) setState(() => _checking = false);
     }
@@ -133,107 +140,122 @@ class _PiggyCountCloudSyncPageState extends ConsumerState<PiggyCountCloudSyncPag
     if (ledgerId == 0) {
       return Scaffold(
         backgroundColor: PiggyTokens.scaffoldBackground(context),
-        body: Column(
-          children: [
-            PrimaryHeader(
-              title: l10n.cloudSyncPageTitle,
-              subtitle: l10n.cloudSyncPageSubtitle,
-              showBack: true,
-            ),
-            Expanded(
-              child: Center(
-                child: Text(
-                  l10n.aiOcrNoLedger,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: PiggyTokens.textSecondary(context),
-                      ),
+        extendBodyBehindAppBar: true,
+        appBar: GlassTitleBar(
+          title: l10n.cloudSyncPageTitle,
+          subtitle: l10n.cloudSyncPageSubtitle,
+          showBack: true,
+          bottomOpaque: true,
+        ),
+        body: Padding(
+          padding: EdgeInsets.only(
+            top: MediaQuery.of(context).padding.top + 80,
+          ),
+          child: Column(
+            children: [
+              Expanded(
+                child: Center(
+                  child: Text(
+                    l10n.aiOcrNoLedger,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: PiggyTokens.textSecondary(context),
+                        ),
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     }
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: l10n.cloudSyncPageTitle,
-            subtitle: l10n.cloudSyncPageSubtitle,
-            showBack: true,
-          ),
-          Expanded(
-            child: authAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('$e')),
-              data: (auth) => FutureBuilder<CloudUser?>(
-                future: auth.currentUser,
-                builder: (ctx, snap) {
-                  if (snap.connectionState != ConnectionState.done) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  final user = snap.data;
-                  return RefreshIndicator(
-                    onRefresh: _onRefresh,
-                    child: ListView(
-                      // 横向交给 SectionCard 自带的 horizontal:12 margin,
-                      // 这里只给垂直 8 避免首尾贴屏幕。
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                        // Section 1: 账号
-                        SectionCard(
-                          child: _buildAccountSection(context, user),
-                        ),
-                        // Section 1.5: 2FA 状态行 — 内部根据是否能拉到 status 决定显示
-                        // 与否(未登录 / 拉取失败 → 自动隐藏)。不在外层 gate user,
-                        // 这样切换 cloud scheme 来回时,只要重新登录成功就会自动出现。
-                        const SizedBox(height: 8),
-                        const _TwoFactorStatusRow(),
-                        const SizedBox(height: 8),
-                        // Section 2: 同步状态(深度检测结果)
-                        SectionCard(
-                          child: _buildHealthSection(context),
-                        ),
-                        const SizedBox(height: 8),
-                        // Section 3: 同步说明(折叠) — 解释增量/全量、断点续传、排查
-                        SectionCard(
-                          child: _buildSyncHelpSection(context),
-                        ),
-                        // PiggyCount Cloud server 版本号,底部弱展示。
-                        // 跟 web header 的 vX.Y.Z 对齐,方便确认 server 哪版。
-                        // 通过 provider 监听,server 升级后跟着 sync ticker 自
-                        // 动刷新,不依赖死缓存。
-                        Consumer(builder: (ctx, r, _) {
-                          final v = r
-                              .watch(piggycountCloudServerVersionProvider)
-                              .valueOrNull;
-                          if (v == null || v.isEmpty) {
-                            return const SizedBox.shrink();
-                          }
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 16, bottom: 8),
-                            child: Center(
-                              child: Text(
-                                'PiggyCount Cloud v$v',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: PiggyTokens.textTertiary(context),
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.cloudSyncPageTitle,
+        subtitle: l10n.cloudSyncPageSubtitle,
+        showBack: true,
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 80,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: authAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(child: Text('$e')),
+                data: (auth) => FutureBuilder<CloudUser?>(
+                  future: auth.currentUser,
+                  builder: (ctx, snap) {
+                    if (snap.connectionState != ConnectionState.done) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    final user = snap.data;
+                    return RefreshIndicator(
+                      onRefresh: _onRefresh,
+                      child: ListView(
+                        // 横向交给 SectionCard 自带的 horizontal:12 margin,
+                        // 这里只给垂直 8 避免首尾贴屏幕。
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: [
+                          // Section 1: 账号
+                          SectionCard(
+                            child: _buildAccountSection(context, user),
+                          ),
+                          // Section 1.5: 2FA 状态行 — 内部根据是否能拉到 status 决定显示
+                          // 与否(未登录 / 拉取失败 → 自动隐藏)。不在外层 gate user,
+                          // 这样切换 cloud scheme 来回时,只要重新登录成功就会自动出现。
+                          const SizedBox(height: 8),
+                          const _TwoFactorStatusRow(),
+                          const SizedBox(height: 8),
+                          // Section 2: 同步状态(深度检测结果)
+                          SectionCard(
+                            child: _buildHealthSection(context),
+                          ),
+                          const SizedBox(height: 8),
+                          // Section 3: 同步说明(折叠) — 解释增量/全量、断点续传、排查
+                          SectionCard(
+                            child: _buildSyncHelpSection(context),
+                          ),
+                          // PiggyCount Cloud server 版本号,底部弱展示。
+                          // 跟 web header 的 vX.Y.Z 对齐,方便确认 server 哪版。
+                          // 通过 provider 监听,server 升级后跟着 sync ticker 自
+                          // 动刷新,不依赖死缓存。
+                          Consumer(builder: (ctx, r, _) {
+                            final v = r
+                                .watch(piggycountCloudServerVersionProvider)
+                                .valueOrNull;
+                            if (v == null || v.isEmpty) {
+                              return const SizedBox.shrink();
+                            }
+                            return Padding(
+                              padding:
+                                  const EdgeInsets.only(top: 16, bottom: 8),
+                              child: Center(
+                                child: Text(
+                                  'PiggyCount Cloud v$v',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: PiggyTokens.textTertiary(context),
+                                  ),
                                 ),
                               ),
-                            ),
-                          );
-                        }),
-                      ],
-                    ),
-                  );
-                },
+                            );
+                          }),
+                        ],
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -291,6 +313,7 @@ class _PiggyCountCloudSyncPageState extends ConsumerState<PiggyCountCloudSyncPag
         await Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const LoginPage()),
         );
+        if (!mounted) return;
         ref.read(syncStatusRefreshProvider.notifier).state++;
       },
     );
@@ -305,8 +328,8 @@ class _PiggyCountCloudSyncPageState extends ConsumerState<PiggyCountCloudSyncPag
       child: ExpansionTile(
         tilePadding: EdgeInsets.zero,
         childrenPadding: const EdgeInsets.only(bottom: 4),
-        leading: Icon(Icons.help_outline,
-            color: PiggyTokens.iconSecondary(context)),
+        leading:
+            Icon(Icons.help_outline, color: PiggyTokens.iconSecondary(context)),
         title: Text(
           l10n.cloudSyncHelpTitle,
           style: TextStyle(
@@ -429,9 +452,8 @@ class _PiggyCountCloudSyncPageState extends ConsumerState<PiggyCountCloudSyncPag
       );
     }
 
-    final summary = effective.hasDiff
-        ? l10n.syncHealthHasDiff
-        : l10n.syncHealthInSync;
+    final summary =
+        effective.hasDiff ? l10n.syncHealthHasDiff : l10n.syncHealthInSync;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -450,14 +472,17 @@ class _PiggyCountCloudSyncPageState extends ConsumerState<PiggyCountCloudSyncPag
         // 当前账本口径:tx / 附件 / 预算随 ledger 走
         _groupHeader(context, l10n.syncHealthGroupCurrentLedger),
         _pairRow(context, l10n.syncHealthRowTx, effective.ledgerTx),
-        _pairRow(context, l10n.syncHealthRowAttachment, effective.ledgerAttachments),
+        _pairRow(
+            context, l10n.syncHealthRowAttachment, effective.ledgerAttachments),
         _pairRow(context, l10n.syncHealthRowBudget, effective.ledgerBudgets),
         const SizedBox(height: 8),
         // 全部账本口径:tx/附件/预算 合计 + 用户级的 account/category/tag
         _groupHeader(context, l10n.syncHealthGroupAll),
         _pairRow(context, l10n.syncHealthRowTx, effective.totalTx),
-        _pairRow(context, l10n.syncHealthRowAttachment, effective.totalAttachments),
-        _pairRow(context, l10n.syncHealthRowCategoryIcon, effective.categoryAttachments),
+        _pairRow(
+            context, l10n.syncHealthRowAttachment, effective.totalAttachments),
+        _pairRow(context, l10n.syncHealthRowCategoryIcon,
+            effective.categoryAttachments),
         _pairRow(context, l10n.syncHealthRowBudget, effective.totalBudgets),
         _pairRow(context, l10n.syncHealthRowAccount, effective.accounts),
         _pairRow(context, l10n.syncHealthRowCategory, effective.categories),
@@ -502,8 +527,10 @@ class _PiggyCountCloudSyncPageState extends ConsumerState<PiggyCountCloudSyncPag
           Expanded(
             child: Text(
               pair.remote < 0
-                  ? AppLocalizations.of(context).syncHealthValueRemoteMissing(pair.local)
-                  : AppLocalizations.of(context).syncHealthValue(pair.local, pair.remote),
+                  ? AppLocalizations.of(context)
+                      .syncHealthValueRemoteMissing(pair.local)
+                  : AppLocalizations.of(context)
+                      .syncHealthValue(pair.local, pair.remote),
               style: TextStyle(
                 fontSize: 13,
                 color: mismatch
@@ -581,8 +608,7 @@ class _TwoFactorStatusRowState extends ConsumerState<_TwoFactorStatusRow> {
 
   Future<void> _load() async {
     try {
-      final provider =
-          await ref.read(piggycountCloudProviderInstance.future);
+      final provider = await ref.read(piggycountCloudProviderInstance.future);
       if (provider == null) {
         if (mounted) {
           setState(() {

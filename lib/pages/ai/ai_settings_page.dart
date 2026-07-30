@@ -51,40 +51,47 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: l10n.aiSettingsTitle,
-            subtitle: l10n.aiSettingsSubtitle,
-            showBack: true,
-          ),
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.symmetric(
-                horizontal: 12.0.scaled(context, ref),
-                vertical: 8.0.scaled(context, ref),
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.aiSettingsTitle,
+        subtitle: l10n.aiSettingsSubtitle,
+        showBack: true,
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 80,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: 12.0.scaled(context, ref),
+                  vertical: 8.0.scaled(context, ref),
+                ),
+                children: [
+                  // 1. 总开关
+                  _buildEnableSection(config),
+                  SizedBox(height: 8.0.scaled(context, ref)),
+
+                  // 2. 服务商管理入口
+                  _buildProviderManageEntry(),
+                  SizedBox(height: 8.0.scaled(context, ref)),
+
+                  // 3. 能力绑定
+                  _buildCapabilityBindingSection(),
+                  SizedBox(height: 8.0.scaled(context, ref)),
+
+                  // 4. 高级设置（可折叠）
+                  _buildAdvancedSettingsSection(config),
+
+                  SizedBox(height: 32.0.scaled(context, ref)),
+                ],
               ),
-              children: [
-                // 1. 总开关
-                _buildEnableSection(config),
-                SizedBox(height: 8.0.scaled(context, ref)),
-
-                // 2. 服务商管理入口
-                _buildProviderManageEntry(),
-                SizedBox(height: 8.0.scaled(context, ref)),
-
-                // 3. 能力绑定
-                _buildCapabilityBindingSection(),
-                SizedBox(height: 8.0.scaled(context, ref)),
-
-                // 4. 高级设置（可折叠）
-                _buildAdvancedSettingsSection(config),
-
-                SizedBox(height: 32.0.scaled(context, ref)),
-              ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

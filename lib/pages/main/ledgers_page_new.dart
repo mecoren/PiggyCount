@@ -74,39 +74,46 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     });
 
     return Scaffold(
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: AppLocalizations.of(context).ledgersTitle,
-            // 唯一入口是首页 ledger picker 的「管理账本」按钮通过 Navigator.push
-            // 进来,可以 pop。showBack=true 让用户回到首页。
-            showBack: true,
-            actions: [
-              // 新建账本
-              IconButton(
-                tooltip: AppLocalizations.of(context).ledgersCreate,
-                onPressed: () => _showCreateLedgerDialog(context),
-                icon: Icon(Icons.add, color: PiggyTokens.textPrimary(context)),
-              ),
-              // 刷新
-              IconButton(
-                onPressed: () {
-                  ref.read(ledgerListRefreshProvider.notifier).state++;
-                },
-                icon: Icon(Icons.refresh, color: PiggyTokens.textPrimary(context)),
-              ),
-            ],
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: AppLocalizations.of(context).ledgersTitle,
+        // 唯一入口是首页 ledger picker 的「管理账本」按钮通过 Navigator.push
+        // 进来,可以 pop。showBack=true 让用户回到首页。
+        showBack: true,
+        actions: [
+          // 新建账本
+          IconButton(
+            tooltip: AppLocalizations.of(context).ledgersCreate,
+            onPressed: () => _showCreateLedgerDialog(context),
+            icon: Icon(Icons.add, color: PiggyTokens.textPrimary(context)),
           ),
-          Expanded(
-            child: _buildProgressiveList(
-              context,
-              ref,
-              currentId,
-              localLedgersAsync,
-              remoteLedgersAsync,
-            ),
+          // 刷新
+          IconButton(
+            onPressed: () {
+              ref.read(ledgerListRefreshProvider.notifier).state++;
+            },
+            icon: Icon(Icons.refresh, color: PiggyTokens.textPrimary(context)),
           ),
         ],
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 56,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: _buildProgressiveList(
+                context,
+                ref,
+                currentId,
+                localLedgersAsync,
+                remoteLedgersAsync,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

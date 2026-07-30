@@ -106,49 +106,53 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          // ======== 简洁 Header ========
-          PrimaryHeader(
-            title: l10n.accountsTitle,
-            showBack: !widget.asTab,
-            compact: true,
-            // 顺序(左 → 右):加号 / 蜜蜂家当入口 / 设置。
-            // 设置放最右边(Material 设计惯例,溢出 / 设置类放最右),
-            // 蜜蜂家当放中间,顺手能点到但不抢主操作位。
-            actions: [
-              IconButton(
-                onPressed: () => _addAccount(context, ref, ledgerId),
-                icon: const Icon(Icons.add),
-                tooltip: l10n.accountAddTooltip,
-              ),
-              // 蜜蜂家当 BeeAssets 入口 — 行为走 ProductPromoLauncher
-              // (iOS 跳商店 / Android 弹窗)。
-              _BeeAssetsHeaderEntry(),
-              IconButton(
-                onPressed: () => _showSettingsSheet(context, ref, accountFeatureAsync, accountsAsync),
-                icon: const Icon(Icons.settings_outlined),
-                tooltip: l10n.commonSettings,
-              ),
-            ],
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.accountsTitle,
+        showBack: !widget.asTab,
+        compact: true,
+        bottomOpaque: true,
+        // 顺序(左 → 右):加号 / 蜜蜂家当入口 / 设置。
+        // 设置放最右边(Material 设计惯例,溢出 / 设置类放最右),
+        // 蜜蜂家当放中间,顺手能点到但不抢主操作位。
+        actions: [
+          IconButton(
+            onPressed: () => _addAccount(context, ref, ledgerId),
+            icon: const Icon(Icons.add),
+            tooltip: l10n.accountAddTooltip,
           ),
+          // 蜜蜂家当 BeeAssets 入口 — 行为走 ProductPromoLauncher
+          // (iOS 跳商店 / Android 弹窗)。
+          _BeeAssetsHeaderEntry(),
+          IconButton(
+            onPressed: () => _showSettingsSheet(context, ref, accountFeatureAsync, accountsAsync),
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: l10n.commonSettings,
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 56,
+        ),
+        child: Column(
+          children: [
+            // ======== 主内容 ========
+            Expanded(
+              child: accountsAsync.when(
+                skipLoadingOnReload: true,
+                data: (accounts) {
+                  final groups = _reorderingGroups ?? _groupAccounts(accounts);
 
-          // ======== 主内容 ========
-          Expanded(
-            child: accountsAsync.when(
-              skipLoadingOnReload: true,
-              data: (accounts) {
-                final groups = _reorderingGroups ?? _groupAccounts(accounts);
-
-                return ListView(
-                  padding: EdgeInsets.only(
-                    left: 12.0.scaled(context, ref),
-                    right: 12.0.scaled(context, ref),
-                    top: 8.0.scaled(context, ref),
-                    bottom: widget.asTab
-                        ? 8.0.scaled(context, ref) + 56 + MediaQuery.of(context).padding.bottom + 24
-                        : 8.0.scaled(context, ref),
-                  ),
+                  return ListView(
+                    padding: EdgeInsets.only(
+                      left: 12.0.scaled(context, ref),
+                      right: 12.0.scaled(context, ref),
+                      top: 8.0.scaled(context, ref),
+                      bottom: widget.asTab
+                          ? 8.0.scaled(context, ref) + 56 + MediaQuery.of(context).padding.bottom + 24
+                          : 8.0.scaled(context, ref),
+                    ),
                   children: [
                     if (accounts.isEmpty)
                       SizedBox(
@@ -264,6 +268,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
             ),
           ),
         ],
+        ),
       ),
     );
   }

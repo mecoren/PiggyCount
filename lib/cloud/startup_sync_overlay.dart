@@ -98,6 +98,13 @@ class StartupSyncController extends ChangeNotifier {
     _attached = false;
   }
 
+  @override
+  void dispose() {
+    // 资源释放：先移除 overlay entry 防止悬挂引用，再释放 ChangeNotifier
+    detach();
+    super.dispose();
+  }
+
   // ===== 状态推送方法 =====
 
   void startChecking(int total) =>

@@ -4,8 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../styles/tokens.dart';
-import '../../widgets/ui/primary_header.dart';
-import '../../widgets/ui/toast.dart';
+import '../../widgets/ui/ui.dart';
 import '../../providers.dart';
 import '../../services/platform/screenshot_monitor_service.dart';
 import '../../l10n/app_localizations.dart';
@@ -166,56 +165,63 @@ class _AndroidAutoBillingPageState extends ConsumerState<AndroidAutoBillingPage>
 
     return Scaffold(
       backgroundColor: PiggyTokens.surface(context),
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: l10n.autoScreenshotBillingTitle,
-            showBack: true,
-            leadingIcon: Icons.auto_fix_high,
-            leadingPlain: true,
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                // 功能说明卡片
-                _buildInfoCard(
-                  context,
-                  primaryColor,
-                  l10n,
-                  icon: Icons.info_outline,
-                  title: l10n.featureDescription,
-                  content: l10n.featureDescriptionContent,
-                ),
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.autoScreenshotBillingTitle,
+        showBack: true,
+        leadingIcon: Icons.auto_fix_high,
+        leadingPlain: true,
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 56,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  // 功能说明卡片
+                  _buildInfoCard(
+                    context,
+                    primaryColor,
+                    l10n,
+                    icon: Icons.info_outline,
+                    title: l10n.featureDescription,
+                    content: l10n.featureDescriptionContent,
+                  ),
 
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                // 开关卡片
-                _buildSwitchCard(
-                  context,
-                  primaryColor,
-                  l10n,
-                  icon: Icons.auto_awesome,
-                  title: l10n.autoBilling,
-                  subtitle: _isMonitorEnabled ? l10n.enabled : l10n.disabled,
-                  value: _isMonitorEnabled,
-                  onChanged: _isLoading ? null : _toggleMonitor,
-                ),
+                  // 开关卡片
+                  _buildSwitchCard(
+                    context,
+                    primaryColor,
+                    l10n,
+                    icon: Icons.auto_awesome,
+                    title: l10n.autoBilling,
+                    subtitle: _isMonitorEnabled ? l10n.enabled : l10n.disabled,
+                    value: _isMonitorEnabled,
+                    onChanged: _isLoading ? null : _toggleMonitor,
+                  ),
 
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                // 电池优化状态卡片
-                _buildBatteryOptimizationStatusCard(context, primaryColor, l10n),
+                  // 电池优化状态卡片
+                  _buildBatteryOptimizationStatusCard(context, primaryColor, l10n),
 
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                // 电池优化设置引导卡片
-                _buildBatteryOptimizationCard(context, primaryColor, l10n),
+                  // 电池优化设置引导卡片
+                  _buildBatteryOptimizationCard(context, primaryColor, l10n),
 
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

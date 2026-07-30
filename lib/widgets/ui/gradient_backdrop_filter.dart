@@ -22,6 +22,7 @@ class GradientBackdropFilter extends StatelessWidget {
     this.maxTintOpacity = _Defaults.maxTintOpacity,
     this.minTintOpacity = _Defaults.minTintOpacity,
     this.opacity = 1.0,
+    this.bottomOpaque = false,
     this.child,
   });
 
@@ -46,6 +47,16 @@ class GradientBackdropFilter extends StatelessWidget {
   /// 滚动中传 0.0~1.0 之间的值由 Opacity widget 控制整体显隐。
   /// 模糊 sigma 恒定不变，仅整体透明度变化，保证满帧。
   final double opacity;
+
+  /// 是否让底部保持不透明（隔绝下方组件颜色渗透）。
+  ///
+  /// 为 `false`（默认）时，模糊层从顶部 alpha=1.0 平滑过渡到底部 alpha=0.0，
+  /// 露出原始内容（适用于 body 有滚动内容透过标题栏的场景）。
+  ///
+  /// 为 `true` 时，模糊层全程 alpha=1.0，tint 也全程 `maxTintOpacity`，
+  /// 隔绝标题栏下方紧贴的彩色组件颜色（适用于 body 第一个组件是彩色卡片、
+  /// 无滚动内容透过的场景，例如设置页/列表页）。
+  final bool bottomOpaque;
 
   /// 叠加在模糊层之上的前景内容
   final Widget? child;
@@ -83,6 +94,26 @@ class GradientBackdropFilter extends StatelessWidget {
         }
 
         // 无级渐变模糊：ClipRect + BackdropFilter + ShaderMask(dstIn)
+        // bottomOpaque=true 时全程 alpha=1.0，隔绝下方颜色渗透；
+        // 否则顶 alpha=1.0 → 底 alpha=0.0，露出滚动内容。
+        final maskColors = bottomOpaque
+            ? const [Colors.white, Colors.white]
+            : const [
+                Colors.white,
+                Color(0xD9FFFFFF), // 顶部 1.0 → 中部 0.85 平滑过渡
+                Colors.transparent,
+              ];
+        final maskStops = bottomOpaque ? null : [0.0, 0.5, 1.0];
+        final tintColors = bottomOpaque
+            ? [
+                tintColor.withValues(alpha: maxTintOpacity),
+                tintColor.withValues(alpha: maxTintOpacity),
+              ]
+            : [
+                tintColor.withValues(alpha: maxTintOpacity),
+                tintColor.withValues(alpha: minTintOpacity),
+              ];
+
         return ClipRect(
           child: Stack(
             children: [
@@ -94,15 +125,11 @@ class GradientBackdropFilter extends StatelessWidget {
                     sigmaY: maxSigma,
                   ),
                   child: ShaderMask(
-                    shaderCallback: (bounds) => const LinearGradient(
+                    shaderCallback: (bounds) => LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.white,
-                        Color(0xD9FFFFFF), // 顶部 1.0 → 中部 0.85 平滑过渡
-                        Colors.transparent,
-                      ],
-                      stops: [0.0, 0.5, 1.0],
+                      colors: maskColors,
+                      stops: maskStops,
                     ).createShader(bounds),
                     blendMode: BlendMode.dstIn,
                     child: DecoratedBox(
@@ -110,10 +137,7 @@ class GradientBackdropFilter extends StatelessWidget {
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [
-                            tintColor.withValues(alpha: maxTintOpacity),
-                            tintColor.withValues(alpha: minTintOpacity),
-                          ],
+                          colors: tintColors,
                         ),
                       ),
                     ),

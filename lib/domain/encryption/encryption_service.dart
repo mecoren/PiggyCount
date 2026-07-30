@@ -22,7 +22,7 @@ abstract class EncryptionService {
   ///
   /// 抛出 [StateError] 当加密未开启或无激活密钥。
   Future<ReEncryptResult> reEncryptExistingCloudData({
-    required CloudStorageService storage,
+    required CloudStorageService cloudStorage,
     String pathPrefix = '',
   });
 
@@ -201,6 +201,20 @@ class EnableFromCloudProbeFailedException implements Exception {
 
   @override
   String toString() => 'EnableFromCloudProbeFailedException: $message';
+}
+
+/// enableFromCloud 云端密文损坏异常
+///
+/// 云端密文格式损坏（base64 截断、salt 长度异常、payload 损坏），
+/// 无法提取 salt 或验证密码。UI 层应提示用户以首设备身份重新设置加密。
+class EnableFromCloudCorruptedException implements Exception {
+  final String message;
+  final Object? cause;
+
+  const EnableFromCloudCorruptedException(this.message, {this.cause});
+
+  @override
+  String toString() => 'EnableFromCloudCorruptedException: $message';
 }
 
 /// 加密未配置异常

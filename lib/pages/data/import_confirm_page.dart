@@ -41,15 +41,15 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
     'date': null,
     'type': null,
     'amount': null,
-    'currency': null,            // v30 多币种:币种列(反馈10)
+    'currency': null, // v30 多币种:币种列(反馈10)
     'category': null,
-    'sub_category': null,       // 二级分类
+    'sub_category': null, // 二级分类
     'account': null,
     'from_account': null,
     'to_account': null,
     'note': null,
-    'tags': null,                // 标签（逗号分隔）
-    'attachments': null,         // 附件文件名（逗号分隔）
+    'tags': null, // 标签（逗号分隔）
+    'attachments': null, // 附件文件名（逗号分隔）
   };
   bool importing = false;
   int ok = 0, fail = 0, skipped = 0; // skipped: 跳过的非收支类型记录
@@ -117,17 +117,25 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
   Widget build(BuildContext context) {
     if (parsing) {
       return Scaffold(
-        body: Column(
-          children: [
-            PrimaryHeader(
-                title: AppLocalizations.of(context)!.importPreparing,
-                showBack: true),
-            Expanded(
-              child: Center(
-                child: CircularProgressIndicator(),
-              ),
-            )
-          ],
+        extendBodyBehindAppBar: true,
+        appBar: GlassTitleBar(
+          title: AppLocalizations.of(context)!.importPreparing,
+          showBack: true,
+          bottomOpaque: true,
+        ),
+        body: Padding(
+          padding: EdgeInsets.only(
+            top: MediaQuery.of(context).padding.top + 56,
+          ),
+          child: Column(
+            children: [
+              Expanded(
+                child: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            ],
+          ),
         ),
       );
     }
@@ -147,226 +155,259 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
         });
 
     return Scaffold(
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          PrimaryHeader(
-              title: step == 0
-                  ? AppLocalizations.of(context)!.importConfirmMapping
-                  : AppLocalizations.of(context)!.importCategoryMapping,
-              showBack: true),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              children: [
-                if (step == 0) ...[
-                  if (rows.isEmpty)
-                    Text(AppLocalizations.of(context)!.importNoDataParsed),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 8,
-                    children: [
-                      _mapRow(AppLocalizations.of(context)!.importFieldDate,
-                          'date', items()),
-                      _mapRow(AppLocalizations.of(context)!.importFieldType,
-                          'type', items()),
-                      _mapRow(AppLocalizations.of(context)!.importFieldAmount,
-                          'amount', items()),
-                      _mapRow(AppLocalizations.of(context)!.importFieldCurrency,
-                          'currency', items()),
-                      _mapRow(AppLocalizations.of(context)!.importFieldCategory,
-                          'category', items()),
-                      _mapRow(AppLocalizations.of(context)!.exportCsvHeaderSubCategory,
-                          'sub_category', items()),
-                      _mapRow(AppLocalizations.of(context)!.importFieldAccount,
-                          'account', items()),
-                      _mapRow(AppLocalizations.of(context)!.exportCsvHeaderFromAccount,
-                          'from_account', items()),
-                      _mapRow(AppLocalizations.of(context)!.exportCsvHeaderToAccount,
-                          'to_account', items()),
-                      _mapRow(AppLocalizations.of(context)!.importFieldNote,
-                          'note', items()),
-                      _mapRow(AppLocalizations.of(context)!.exportCsvHeaderTags,
-                          'tags', items()),
-                      _mapRow(AppLocalizations.of(context)!.exportCsvHeaderAttachments,
-                          'attachments', items()),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  // 预览仅展示前 N 行，避免大文件一次性渲染导致卡顿
-                  Text(AppLocalizations.of(context)!.importPreview,
-                      style: Theme.of(context).textTheme.labelLarge),
-                  const SizedBox(height: 6),
-                  SizedBox(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Builder(builder: (_) {
-                        const int maxPreview = 10; // 预览最多 100 行
-                        final totalRows = rows.length;
-                        final dataStart =
-                            widget.hasHeader ? (headerRow + 1) : 0;
-                        // 保证包含表头行 + 最多 maxPreview-1 行数据
-                        final header = widget.hasHeader
-                            ? [rows[headerRow]]
-                            : <List<String>>[];
-                        final body = totalRows > dataStart
-                            ? () {
-                                final take = (maxPreview - header.length);
-                                final end = (dataStart + take <= totalRows)
-                                    ? dataStart + take
-                                    : totalRows;
-                                return rows.sublist(dataStart, end);
-                              }()
-                            : const <List<String>>[];
-                        final limited = [...header, ...body];
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _PreviewTable(rows: limited),
-                            if (totalRows > limited.length)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 6.0),
-                                child: Text(
-                                  AppLocalizations.of(context)!
-                                      .importPreviewLimit(
-                                          limited.length, totalRows),
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(color: PiggyTokens.textTertiary(context)),
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: step == 0
+            ? AppLocalizations.of(context)!.importConfirmMapping
+            : AppLocalizations.of(context)!.importCategoryMapping,
+        showBack: true,
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 56,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                children: [
+                  if (step == 0) ...[
+                    if (rows.isEmpty)
+                      Text(AppLocalizations.of(context)!.importNoDataParsed),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      children: [
+                        _mapRow(AppLocalizations.of(context)!.importFieldDate,
+                            'date', items()),
+                        _mapRow(AppLocalizations.of(context)!.importFieldType,
+                            'type', items()),
+                        _mapRow(AppLocalizations.of(context)!.importFieldAmount,
+                            'amount', items()),
+                        _mapRow(
+                            AppLocalizations.of(context)!.importFieldCurrency,
+                            'currency',
+                            items()),
+                        _mapRow(
+                            AppLocalizations.of(context)!.importFieldCategory,
+                            'category',
+                            items()),
+                        _mapRow(
+                            AppLocalizations.of(context)!
+                                .exportCsvHeaderSubCategory,
+                            'sub_category',
+                            items()),
+                        _mapRow(
+                            AppLocalizations.of(context)!.importFieldAccount,
+                            'account',
+                            items()),
+                        _mapRow(
+                            AppLocalizations.of(context)!
+                                .exportCsvHeaderFromAccount,
+                            'from_account',
+                            items()),
+                        _mapRow(
+                            AppLocalizations.of(context)!
+                                .exportCsvHeaderToAccount,
+                            'to_account',
+                            items()),
+                        _mapRow(AppLocalizations.of(context)!.importFieldNote,
+                            'note', items()),
+                        _mapRow(
+                            AppLocalizations.of(context)!.exportCsvHeaderTags,
+                            'tags',
+                            items()),
+                        _mapRow(
+                            AppLocalizations.of(context)!
+                                .exportCsvHeaderAttachments,
+                            'attachments',
+                            items()),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // 预览仅展示前 N 行，避免大文件一次性渲染导致卡顿
+                    Text(AppLocalizations.of(context)!.importPreview,
+                        style: Theme.of(context).textTheme.labelLarge),
+                    const SizedBox(height: 6),
+                    SizedBox(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Builder(builder: (_) {
+                          const int maxPreview = 10; // 预览最多 100 行
+                          final totalRows = rows.length;
+                          final dataStart =
+                              widget.hasHeader ? (headerRow + 1) : 0;
+                          // 保证包含表头行 + 最多 maxPreview-1 行数据
+                          final header = widget.hasHeader
+                              ? [rows[headerRow]]
+                              : <List<String>>[];
+                          final body = totalRows > dataStart
+                              ? () {
+                                  final take = (maxPreview - header.length);
+                                  final end = (dataStart + take <= totalRows)
+                                      ? dataStart + take
+                                      : totalRows;
+                                  return rows.sublist(dataStart, end);
+                                }()
+                              : const <List<String>>[];
+                          final limited = [...header, ...body];
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _PreviewTable(rows: limited),
+                              if (totalRows > limited.length)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 6.0),
+                                  child: Text(
+                                    AppLocalizations.of(context)!
+                                        .importPreviewLimit(
+                                            limited.length, totalRows),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                            color: PiggyTokens.textTertiary(
+                                                context)),
+                                  ),
                                 ),
-                              ),
+                            ],
+                          );
+                        }),
+                      ),
+                    ),
+                  ] else ...[
+                    if (mapping['category'] == null)
+                      Text(AppLocalizations.of(context)!
+                          .importCategoryNotSelected),
+                    Text(AppLocalizations.of(context)!
+                        .importCategoryMappingDescription),
+                    const SizedBox(height: 8),
+                    FutureBuilder<List<schema.Category>>(
+                      future: allCategoriesFuture,
+                      builder: (context, snap) {
+                        final cats = snap.data ?? [];
+                        final l10n = AppLocalizations.of(context)!;
+                        final items = <DropdownMenuItem<int?>>[
+                          DropdownMenuItem(
+                              value: null,
+                              child: Text(l10n.importKeepOriginalName)),
+                          ...cats.map((c) => DropdownMenuItem<int?>(
+                                value: c.id,
+                                child: Text(
+                                    '${CategoryUtils.getDisplayName(c.name, context, kind: c.kind)} (${c.kind == 'income' ? l10n.categoryIncome : l10n.categoryExpense})'),
+                              )),
+                        ];
+                        // 为每个源分类预设自动匹配（仅在首次加载时执行）
+                        if (categoryMapping.values.every((v) => v == null) &&
+                            cats.isNotEmpty) {
+                          bool hasMatch = false;
+                          for (final sourceName in distinctCategories) {
+                            // 直接使用源分类名称查找匹配
+                            try {
+                              final matchingCategory = cats.firstWhere(
+                                (c) => c.name == sourceName,
+                              );
+                              categoryMapping[sourceName] = matchingCategory.id;
+                              hasMatch = true;
+                            } catch (e) {
+                              // 没有找到匹配的分类，保持为null
+                            }
+                          }
+                          // 如果有自动匹配，触发重建以显示预设的匹配
+                          if (hasMatch) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) setState(() {});
+                            });
+                          }
+                        }
+
+                        return Column(
+                          children: [
+                            for (final name in distinctCategories)
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 6),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                        child: Text(name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis)),
+                                    const SizedBox(width: 12),
+                                    DropdownButton<int?>(
+                                      value: categoryMapping[name],
+                                      items: items,
+                                      onChanged: (v) => setState(
+                                          () => categoryMapping[name] = v),
+                                    ),
+                                  ],
+                                ),
+                              )
                           ],
                         );
-                      }),
-                    ),
-                  ),
-                ] else ...[
-                  if (mapping['category'] == null)
-                    Text(AppLocalizations.of(context)!
-                        .importCategoryNotSelected),
-                  Text(AppLocalizations.of(context)!
-                      .importCategoryMappingDescription),
-                  const SizedBox(height: 8),
-                  FutureBuilder<List<schema.Category>>(
-                    future: allCategoriesFuture,
-                    builder: (context, snap) {
-                      final cats = snap.data ?? [];
-                      final l10n = AppLocalizations.of(context)!;
-                      final items = <DropdownMenuItem<int?>>[
-                        DropdownMenuItem(
-                            value: null,
-                            child: Text(l10n.importKeepOriginalName)),
-                        ...cats.map((c) => DropdownMenuItem<int?>(
-                              value: c.id,
-                              child: Text(
-                                  '${CategoryUtils.getDisplayName(c.name, context, kind: c.kind)} (${c.kind == 'income' ? l10n.categoryIncome : l10n.categoryExpense})'),
-                            )),
-                      ];
-                      // 为每个源分类预设自动匹配（仅在首次加载时执行）
-                      if (categoryMapping.values.every((v) => v == null) &&
-                          cats.isNotEmpty) {
-                        bool hasMatch = false;
-                        for (final sourceName in distinctCategories) {
-                          // 直接使用源分类名称查找匹配
-                          try {
-                            final matchingCategory = cats.firstWhere(
-                              (c) => c.name == sourceName,
-                            );
-                            categoryMapping[sourceName] = matchingCategory.id;
-                            hasMatch = true;
-                          } catch (e) {
-                            // 没有找到匹配的分类，保持为null
-                          }
-                        }
-                        // 如果有自动匹配，触发重建以显示预设的匹配
-                        if (hasMatch) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (mounted) setState(() {});
-                          });
-                        }
-                      }
-
-                      return Column(
-                        children: [
-                          for (final name in distinctCategories)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 6),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                      child: Text(name,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis)),
-                                  const SizedBox(width: 12),
-                                  DropdownButton<int?>(
-                                    value: categoryMapping[name],
-                                    items: items,
-                                    onChanged: (v) => setState(
-                                        () => categoryMapping[name] = v),
-                                  ),
-                                ],
-                              ),
-                            )
-                        ],
-                      );
-                    },
-                  ),
-                ],
-              ],
-            ),
-          ),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  if (importing)
-                    Text(
-                        AppLocalizations.of(context)!.importProgress(ok, fail)),
-                  const Spacer(),
-                  if (step == 0)
-                    FilledButton(
-                      onPressed: () {
-                        // 检查是否有分类列映射
-                        // 如果没有分类列，说明可能只有转账记录，跳过分类映射步骤，直接开始导入
-                        if (mapping['category'] == null) {
-                          // 如果没有分类列但有转账相关列，则直接开始导入
-                          if (mapping['from_account'] != null || mapping['to_account'] != null) {
-                            _startImport();
-                          } else {
-                            showToast(
-                                context,
-                                AppLocalizations.of(context)!
-                                    .importSelectCategoryFirst);
-                          }
-                          return;
-                        }
-                        _buildDistinctCategories();
-                        setState(() => step = 1);
                       },
-                      child: Text(AppLocalizations.of(context)!.importNextStep),
-                    )
-                  else ...[
-                    OutlinedButton(
-                      onPressed:
-                          importing ? null : () => setState(() => step = 0),
-                      child: Text(
-                          AppLocalizations.of(context)!.importPreviousStep),
-                    ),
-                    const SizedBox(width: 12),
-                    FilledButton(
-                      onPressed: importing ? null : _startImport,
-                      child:
-                          Text(AppLocalizations.of(context)!.importStartImport),
                     ),
                   ],
                 ],
               ),
             ),
-          ),
-        ],
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    if (importing)
+                      Text(AppLocalizations.of(context)!
+                          .importProgress(ok, fail)),
+                    const Spacer(),
+                    if (step == 0)
+                      FilledButton(
+                        onPressed: () {
+                          // 检查是否有分类列映射
+                          // 如果没有分类列，说明可能只有转账记录，跳过分类映射步骤，直接开始导入
+                          if (mapping['category'] == null) {
+                            // 如果没有分类列但有转账相关列，则直接开始导入
+                            if (mapping['from_account'] != null ||
+                                mapping['to_account'] != null) {
+                              _startImport();
+                            } else {
+                              showToast(
+                                  context,
+                                  AppLocalizations.of(context)!
+                                      .importSelectCategoryFirst);
+                            }
+                            return;
+                          }
+                          _buildDistinctCategories();
+                          setState(() => step = 1);
+                        },
+                        child:
+                            Text(AppLocalizations.of(context)!.importNextStep),
+                      )
+                    else ...[
+                      OutlinedButton(
+                        onPressed:
+                            importing ? null : () => setState(() => step = 0),
+                        child: Text(
+                            AppLocalizations.of(context)!.importPreviousStep),
+                      ),
+                      const SizedBox(width: 12),
+                      FilledButton(
+                        onPressed: importing ? null : _startImport,
+                        child: Text(
+                            AppLocalizations.of(context)!.importStartImport),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -429,8 +470,8 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
           final percent =
               p.total == 0 ? 0.0 : (p.done / p.total).clamp(0.0, 1.0);
           return AlertDialog(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
             title: Text(AppLocalizations.of(context)!.importInProgress),
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -457,8 +498,10 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
                   // 返回到数据管理页面继续后台导入
                   if (mounted) {
                     // Pop回DataManagementPage: ImportConfirmPage -> ImportPage
-                    Navigator.of(currentContext).pop(); // Close ImportConfirmPage
-                    Navigator.of(currentContext).pop(); // Close ImportPage, back to DataManagementPage
+                    Navigator.of(currentContext)
+                        .pop(); // Close ImportConfirmPage
+                    Navigator.of(currentContext)
+                        .pop(); // Close ImportPage, back to DataManagementPage
                   }
                 },
                 child:
@@ -504,7 +547,8 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
         onProgress: (processed, progressTotal) {
           done = processed;
           // 更新全局进度
-          container.read(importProgressProvider.notifier).state = ImportProgress(
+          container.read(importProgressProvider.notifier).state =
+              ImportProgress(
             running: true,
             total: total,
             done: done,
@@ -533,7 +577,8 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
     } catch (e) {
       // 导入失败
       if (mounted) {
-        showToast(context, AppLocalizations.of(context)!.importTransactionFailed('$e'));
+        showToast(context,
+            AppLocalizations.of(context)!.importTransactionFailed('$e'));
       }
       fail = total - ok; // 更新失败数
     }
@@ -593,10 +638,10 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
       final typeSkipped = skippedTypes.values.fold(0, (a, b) => a + b);
 
       if (typeSkipped > 0) {
-        final skippedList = skippedTypes.entries
-            .map((e) => '${e.key}(${e.value})')
-            .join('、');
-        message += '\n${l10nToast.importSkippedNonTransactionTypes(typeSkipped)}\n$skippedList';
+        final skippedList =
+            skippedTypes.entries.map((e) => '${e.key}(${e.value})').join('、');
+        message +=
+            '\n${l10nToast.importSkippedNonTransactionTypes(typeSkipped)}\n$skippedList';
       }
     }
 
@@ -612,7 +657,8 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
       // 关闭确认页 -> 返回到数据管理页面
       // Pop回DataManagementPage: ImportConfirmPage -> ImportPage
       Navigator.of(currentContext).pop(); // Close ImportConfirmPage
-      Navigator.of(currentContext).pop(); // Close ImportPage, back to DataManagementPage
+      Navigator.of(currentContext)
+          .pop(); // Close ImportPage, back to DataManagementPage
     } else {
       // 有失败或跳过: 使用弹窗显示详细信息,等待用户确认后再关闭页面
       await showDialog(
@@ -632,7 +678,8 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
       // 用户确认后再关闭页面
       if (currentContext.mounted) {
         Navigator.of(currentContext).pop(); // Close ImportConfirmPage
-        Navigator.of(currentContext).pop(); // Close ImportPage, back to DataManagementPage
+        Navigator.of(currentContext)
+            .pop(); // Close ImportPage, back to DataManagementPage
       }
     }
     // 返回后再显式刷新一次全局统计，确保顶部汇总即时更新
@@ -667,7 +714,8 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
     final uniqueAccountNames = <String>{};
     final uniqueTagNames = <String>{};
     // 收集分类信息（用于创建分类）
-    final categoryInfoMap = <String, ({String kind, String? icon, String? parentName})>{};
+    final categoryInfoMap =
+        <String, ({String kind, String? icon, String? parentName})>{};
 
     // 第一遍：收集账户、标签、分类信息
     for (int i = dataStart; i < rows.length; i++) {
@@ -711,16 +759,30 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
       final typeRaw = getBy('type') ?? 'expense';
       final typeStr = typeRaw.trim().toLowerCase();
       String? type;
-      if (typeStr == '收入' || typeStr == '收' || typeStr == '入账' || typeStr == '进账' ||
-          typeStr == '入帳' || typeStr == '進帳' ||  // 繁体
-          typeStr == 'income' || typeStr == 'revenue' || typeStr == 'earning') {
+      if (typeStr == '收入' ||
+          typeStr == '收' ||
+          typeStr == '入账' ||
+          typeStr == '进账' ||
+          typeStr == '入帳' ||
+          typeStr == '進帳' || // 繁体
+          typeStr == 'income' ||
+          typeStr == 'revenue' ||
+          typeStr == 'earning') {
         type = 'income';
-      } else if (typeStr == '支出' || typeStr == '支' || typeStr == '出账' ||
-                 typeStr == '消费' || typeStr == '花费' ||
-                 typeStr == '出帳' || typeStr == '消費' || typeStr == '花費' ||  // 繁体
-                 typeStr == 'expense' || typeStr == 'spending' || typeStr == 'expenditure') {
+      } else if (typeStr == '支出' ||
+          typeStr == '支' ||
+          typeStr == '出账' ||
+          typeStr == '消费' ||
+          typeStr == '花费' ||
+          typeStr == '出帳' ||
+          typeStr == '消費' ||
+          typeStr == '花費' || // 繁体
+          typeStr == 'expense' ||
+          typeStr == 'spending' ||
+          typeStr == 'expenditure') {
         type = 'expense';
-      } else if (typeStr == '转账' || typeStr == '轉帳' || typeStr == 'transfer') {  // 添加繁体
+      } else if (typeStr == '转账' || typeStr == '轉帳' || typeStr == 'transfer') {
+        // 添加繁体
         type = 'transfer';
       }
 
@@ -734,27 +796,33 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
         if (subCategoryName != null && categoryName != null) {
           // 有二级分类
           final parentKey = '$categoryName:$type';
-          categoryInfoMap.putIfAbsent(parentKey, () => (
-            kind: type!,
-            icon: categoryIcon,
-            parentName: null,
-          ));
+          categoryInfoMap.putIfAbsent(
+              parentKey,
+              () => (
+                    kind: type!,
+                    icon: categoryIcon,
+                    parentName: null,
+                  ));
           final subKey = '$subCategoryName:$type:$categoryName';
-          categoryInfoMap.putIfAbsent(subKey, () => (
-            kind: type!,
-            icon: subCategoryIcon,
-            parentName: categoryName,
-          ));
+          categoryInfoMap.putIfAbsent(
+              subKey,
+              () => (
+                    kind: type!,
+                    icon: subCategoryIcon,
+                    parentName: categoryName,
+                  ));
         } else if (categoryName != null) {
           // 只有一级分类（仅当用户选择"保持原名"时才需要创建）
           final chosen = categoryMapping[categoryName];
           if (chosen == null) {
             final key = '$categoryName:$type';
-            categoryInfoMap.putIfAbsent(key, () => (
-              kind: type!,
-              icon: categoryIcon,
-              parentName: null,
-            ));
+            categoryInfoMap.putIfAbsent(
+                key,
+                () => (
+                      kind: type!,
+                      icon: categoryIcon,
+                      parentName: null,
+                    ));
           }
         }
       }
@@ -836,16 +904,30 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
       // 类型识别
       final typeStr = typeRaw.trim().toLowerCase();
       String? type;
-      if (typeStr == '收入' || typeStr == '收' || typeStr == '入账' || typeStr == '进账' ||
-          typeStr == '入帳' || typeStr == '進帳' ||  // 繁体
-          typeStr == 'income' || typeStr == 'revenue' || typeStr == 'earning') {
+      if (typeStr == '收入' ||
+          typeStr == '收' ||
+          typeStr == '入账' ||
+          typeStr == '进账' ||
+          typeStr == '入帳' ||
+          typeStr == '進帳' || // 繁体
+          typeStr == 'income' ||
+          typeStr == 'revenue' ||
+          typeStr == 'earning') {
         type = 'income';
-      } else if (typeStr == '支出' || typeStr == '支' || typeStr == '出账' ||
-                 typeStr == '消费' || typeStr == '花费' ||
-                 typeStr == '出帳' || typeStr == '消費' || typeStr == '花費' ||  // 繁体
-                 typeStr == 'expense' || typeStr == 'spending' || typeStr == 'expenditure') {
+      } else if (typeStr == '支出' ||
+          typeStr == '支' ||
+          typeStr == '出账' ||
+          typeStr == '消费' ||
+          typeStr == '花费' ||
+          typeStr == '出帳' ||
+          typeStr == '消費' ||
+          typeStr == '花費' || // 繁体
+          typeStr == 'expense' ||
+          typeStr == 'spending' ||
+          typeStr == 'expenditure') {
         type = 'expense';
-      } else if (typeStr == '转账' || typeStr == '轉帳' || typeStr == 'transfer') {  // 添加繁体
+      } else if (typeStr == '转账' || typeStr == '轉帳' || typeStr == 'transfer') {
+        // 添加繁体
         type = 'transfer';
       } else {
         // 未识别的类型：记录并跳过
@@ -863,18 +945,30 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
       // 解析标签名称列表
       List<String>? tagNames;
       if (tagsStr != null && tagsStr.isNotEmpty) {
-        tagNames = tagsStr.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+        tagNames = tagsStr
+            .split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
       }
 
       // 解析附件文件名列表
       List<ImportAttachment>? attachments;
       if (attachmentsStr != null && attachmentsStr.isNotEmpty) {
-        final fileNames = attachmentsStr.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+        final fileNames = attachmentsStr
+            .split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
         if (fileNames.isNotEmpty) {
-          attachments = fileNames.asMap().entries.map((entry) => ImportAttachment(
-            fileName: entry.value,
-            sortOrder: entry.key,
-          )).toList();
+          attachments = fileNames
+              .asMap()
+              .entries
+              .map((entry) => ImportAttachment(
+                    fileName: entry.value,
+                    sortOrder: entry.key,
+                  ))
+              .toList();
         }
       }
 

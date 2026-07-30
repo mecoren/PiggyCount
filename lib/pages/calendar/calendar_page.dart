@@ -116,69 +116,75 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          // Header
-          PrimaryHeader(
-            title: l10n.calendarTitle,
-            showBack: true,
-            actions: [
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: TextButton(
-                  onPressed: _jumpToToday,
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                  ),
-                  child: Text(
-                    l10n.calendarToday,
-                    style: TextStyle(
-                      color: PiggyTokens.textPrimary(context),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.calendarTitle,
+        showBack: true,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: TextButton(
+              onPressed: _jumpToToday,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+              ),
+              child: Text(
+                l10n.calendarToday,
+                style: TextStyle(
+                  color: PiggyTokens.textPrimary(context),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-            ],
-          ),
-
-          // 日历主体
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.symmetric(
-                horizontal: 12.0.scaled(context, ref),
-                vertical: 8.0.scaled(context, ref),
-              ),
-              children: [
-                // 日历视图
-                SectionCard(
-                  margin: EdgeInsets.zero,
-                  child: dailyTotalsAsync.when(
-                    // 记账等触发 calendarRefreshProvider 时不切到 loading,
-                    // 旧统计保留,等新数据来无缝替换 — 避免日历整页 spinner 闪烁
-                    skipLoadingOnReload: true,
-                    data: (dailyTotals) =>
-                        _buildCalendar(context, dailyTotals, primaryColor),
-                    loading: () => _buildCalendarSkeleton(context),
-                    error: (err, stack) => Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Text('Error: $err'),
-                      ),
-                    ),
-                  ),
-                ),
-
-                SizedBox(height: 12.0.scaled(context, ref)),
-
-                // 选中日期的交易列表（无日期标题和统计）
-                if (_selectedDay != null)
-                  _buildDateTransactionsList(context, ledgerId, _selectedDay!),
-              ],
             ),
           ),
         ],
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 56,
+        ),
+        child: Column(
+          children: [
+            // 日历主体
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: 12.0.scaled(context, ref),
+                  vertical: 8.0.scaled(context, ref),
+                ),
+                children: [
+                  // 日历视图
+                  SectionCard(
+                    margin: EdgeInsets.zero,
+                    child: dailyTotalsAsync.when(
+                      // 记账等触发 calendarRefreshProvider 时不切到 loading,
+                      // 旧统计保留,等新数据来无缝替换 — 避免日历整页 spinner 闪烁
+                      skipLoadingOnReload: true,
+                      data: (dailyTotals) =>
+                          _buildCalendar(context, dailyTotals, primaryColor),
+                      loading: () => _buildCalendarSkeleton(context),
+                      error: (err, stack) => Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Text('Error: $err'),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  SizedBox(height: 12.0.scaled(context, ref)),
+
+                  // 选中日期的交易列表（无日期标题和统计）
+                  if (_selectedDay != null)
+                    _buildDateTransactionsList(
+                        context, ledgerId, _selectedDay!),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -422,7 +428,8 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   }
 
   // 构建选中日期的交易列表（上方含"日期 + 在该日记账"紧凑头）
-  Widget _buildDateTransactionsList(BuildContext context, int ledgerId, DateTime date) {
+  Widget _buildDateTransactionsList(
+      BuildContext context, int ledgerId, DateTime date) {
     final l10n = AppLocalizations.of(context);
     final primaryColor = ref.watch(primaryColorProvider);
     final localeName = Localizations.localeOf(context).toString();
@@ -477,8 +484,8 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                   ],
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -547,7 +554,8 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                   .toList();
 
               return TransactionListItem(
-                icon: getCategoryIconData(category: category, categoryName: categoryName),
+                icon: getCategoryIconData(
+                    category: category, categoryName: categoryName),
                 category: category,
                 title: isTransfer
                     ? (subtitle.isNotEmpty ? subtitle : l10n.transferTitle)
@@ -646,7 +654,8 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                   .toList();
 
               return TransactionListItem(
-                icon: getCategoryIconData(category: category, categoryName: categoryName),
+                icon: getCategoryIconData(
+                    category: category, categoryName: categoryName),
                 category: category,
                 title: isTransfer
                     ? (subtitle.isNotEmpty ? subtitle : l10n.transferTitle)
@@ -711,8 +720,8 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                       7,
                       (_) => const Expanded(
                         child: Padding(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 4, vertical: 4),
+                          padding:
+                              EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                           child: SkeletonBar(height: 56),
                         ),
                       ),

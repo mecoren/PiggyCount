@@ -701,6 +701,100 @@ void main() {
       expect(controller.state, isA<DismissedState>());
     });
   });
+
+  group('缺口 1: salt_mismatch 哨兵检测与恢复', () {
+    setUp(() {
+      deps.activeConfig = const CloudServiceConfig(
+        type: CloudBackendType.s3,
+        name: 's3',
+        s3Endpoint: 'https://s3.example.com',
+        s3AccessKey: 'ak',
+        s3SecretKey: 'sk',
+        s3Bucket: 'b',
+      );
+      deps.ledgers = [_ledger(1, 'L1')];
+      deps.summaryChoice = SummaryChoice.skip;
+    });
+
+    test('getStatus 返回 salt_mismatch_need_password 时调用 handleSaltMismatch，激活后重新检查', () async {
+      // Arrange: getStatus 返回 salt_mismatch 哨兵
+      deps.statusByLedger = {
+        1: SyncStatus(
+          diff: SyncDiff.error,
+          localCount: 0,
+          localFingerprint: '',
+          message: 'salt_mismatch_need_password',
+        ),
+      };
+      // handleSaltMismatch 返回 true（激活成功），并把状态改为 cloudNewer
+      deps.handleSaltMismatchReturn = true;
+      deps.statusAfterSaltMismatch = _status(SyncDiff.cloudNewer);
+
+      // Act
+      await checker.runIfNeeded();
+
+      // Assert: handleSaltMismatch 被调用了 1 次
+      expect(deps.handleSaltMismatchCallCount, 1,
+          reason: '检测到 salt_mismatch 应调用 handleSaltMismatch');
+      // Assert: 激活后重新检查，候选账本被收集（cloudNewer）
+      expect(deps.lastCandidates.length, 1,
+          reason: '激活后重新检查应收集到 cloudNewer 候选');
+      expect(deps.lastCandidates.first.diffType, SyncDiff.cloudNewer);
+    });
+
+    test('用户取消密码输入时不重新检查，直接返回', () async {
+      // Arrange
+      deps.statusByLedger = {
+        1: SyncStatus(
+          diff: SyncDiff.error,
+          localCount: 0,
+          localFingerprint: '',
+          message: 'salt_mismatch_need_password',
+        ),
+      };
+      deps.handleSaltMismatchReturn = false; // 用户取消
+
+      // Act
+      await checker.runIfNeeded();
+
+      // Assert: handleSaltMismatch 被调用
+      expect(deps.handleSaltMismatchCallCount, 1);
+      // Assert: 没有候选账本被收集
+      expect(deps.lastCandidates, isEmpty);
+      // Assert: controller 被 dismiss
+      expect(controller.state, isA<DismissedState>());
+    });
+
+    test('isRetry 模式下不再弹密码对话框（防止无限递归）', () async {
+      // Arrange: 持续返回 salt_mismatch（即使激活后仍不匹配）
+      deps.statusByLedger = {
+        1: SyncStatus(
+          diff: SyncDiff.error,
+          localCount: 0,
+          localFingerprint: '',
+          message: 'salt_mismatch_need_password',
+        ),
+      };
+      // 激活后状态仍为 salt_mismatch（密码再次错误）
+      deps.handleSaltMismatchReturn = true;
+      deps.statusAfterSaltMismatch = SyncStatus(
+        diff: SyncDiff.error,
+        localCount: 0,
+        localFingerprint: '',
+        message: 'salt_mismatch_need_password',
+      );
+
+      // Act
+      await checker.runIfNeeded();
+
+      // Assert: handleSaltMismatch 只被调用 1 次（isRetry 时不再次弹窗）
+      expect(deps.handleSaltMismatchCallCount, 1,
+          reason: 'isRetry 模式下不应再次调用 handleSaltMismatch');
+      // Assert: 没有候选账本（第二次检查仍为 error，不收集为候选）
+      expect(deps.lastCandidates, isEmpty);
+      expect(controller.state, isA<DismissedState>());
+    });
+  });
 }
 
 /// 测试用的假依赖实现
@@ -762,6 +856,13 @@ class _FakeDeps implements StartupSyncCheckerDeps {
   int legacyInfoShownCount = 0;
   int legacyErrorShownCount = 0;
   List<String> errorLog = [];
+
+  // SaltMismatch 处理记录
+  int handleSaltMismatchCallCount = 0;
+  bool handleSaltMismatchReturn = false;
+  /// 若非 null，handleSaltMismatch 返回 true 时把所有账本状态替换为此值
+  /// （模拟激活密钥后 getStatus 返回正常状态）
+  SyncStatus? statusAfterSaltMismatch;
 
   @override
   Future<CloudServiceConfig> getActiveConfig() async => activeConfig;
@@ -850,6 +951,18 @@ class _FakeDeps implements StartupSyncCheckerDeps {
     conflictConfirmCallCount++;
     lastConflictLedgerNames = List<String>.from(ledgerNames);
     return conflictConfirmReturn;
+  }
+
+  @override
+  Future<bool> handleSaltMismatch() async {
+    handleSaltMismatchCallCount++;
+    if (handleSaltMismatchReturn && statusAfterSaltMismatch != null) {
+      // 模拟激活密钥后 getStatus 返回正常状态
+      for (final id in statusByLedger.keys.toList()) {
+        statusByLedger[id] = statusAfterSaltMismatch!;
+      }
+    }
+    return handleSaltMismatchReturn;
   }
 
   @override

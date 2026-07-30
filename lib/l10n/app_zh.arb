@@ -3304,5 +3304,12 @@
   "cloudSyncEncryptReencryptPartialFailed": "加密已开启，但有 {count} 个云端文件重加密失败，下次同步时会自动重试。",
   "cloudSyncEncryptProbeFailedTitle": "探测云端失败",
   "cloudSyncEncryptProbeFailedMessage": "无法探测云端是否已有加密数据（可能是网络或权限问题）。如果其他设备已开启加密，继续将以新密码重加密云端数据，可能导致其他设备无法解密。确定继续吗？",
-  "cloudSyncEncryptProbeFailedContinue": "以首设备继续"
+  "cloudSyncEncryptProbeFailedContinue": "以首设备继续",
+  "saltMismatchStatus": "加密密钥不匹配",
+  "saltMismatchNeedPasswordHint": "云端备份密钥与本地不匹配，点击重新输入密码",
+  "saltMismatchDialogTitle": "重新输入密码",
+  "saltMismatchRetrySuccess": "密钥已激活，正在重试同步...",
+  "saltMismatchRawStorageUnavailable": "云服务未初始化，无法恢复密钥",
+  "saltMismatchProbeFailed": "云端探测失败，请检查网络后重试",
+  "saltMismatchCloudCorrupted": "云端密文已损坏，无法恢复密钥"
 }

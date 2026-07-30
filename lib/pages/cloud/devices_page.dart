@@ -82,15 +82,16 @@ class _DevicesPageState extends ConsumerState<DevicesPage> {
 
   /// 获取 PiggyCountCloudProvider 实例（仅 piggycountCloud 后端可用）
   Future<PiggyCountCloudProvider> _getCloudProvider() async {
+    // 在 async gap 前缓存 l10n，避免 dispose 后 context 失效
+    final l10n = AppLocalizations.of(context);
     final config = await ref.read(activeCloudConfigProvider.future);
     if (!config.valid || config.type != CloudBackendType.piggycountCloud) {
-      throw StateError(
-          AppLocalizations.of(context).cloudCollabUnavailableMessage);
+      throw StateError(l10n.cloudCollabUnavailableMessage);
     }
     final services = await createCloudServices(config);
-    if (services.provider == null || services.provider is! PiggyCountCloudProvider) {
-      throw StateError(
-          AppLocalizations.of(context).cloudCollabUnavailableMessage);
+    if (services.provider == null ||
+        services.provider is! PiggyCountCloudProvider) {
+      throw StateError(l10n.cloudCollabUnavailableMessage);
     }
     return services.provider as PiggyCountCloudProvider;
   }
@@ -205,179 +206,189 @@ class _DevicesPageState extends ConsumerState<DevicesPage> {
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: l10n.cloudCollabDevicesPageTitle,
-            subtitle: l10n.cloudCollabDevicesPageSubtitle,
-            showBack: true,
-            actions: [
-              IconButton(
-                onPressed: _loading ? null : _reload,
-                icon: const Icon(Icons.refresh),
-              ),
-            ],
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.cloudCollabDevicesPageTitle,
+        subtitle: l10n.cloudCollabDevicesPageSubtitle,
+        showBack: true,
+        actions: [
+          IconButton(
+            onPressed: _loading ? null : _reload,
+            icon: const Icon(Icons.refresh),
           ),
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _error != null
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                '${l10n.commonError}: $_error',
-                                textAlign: TextAlign.center,
-                              ),
-                              if (_scopeDenied) ...[
-                                const SizedBox(height: 8),
+        ],
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 80,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
                                 Text(
-                                  l10n.cloudCollabScopeDeniedAction,
+                                  '${l10n.commonError}: $_error',
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: PiggyTokens.textSecondary(context),
+                                ),
+                                if (_scopeDenied) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    l10n.cloudCollabScopeDeniedAction,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: PiggyTokens.textSecondary(context),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        )
+                      : rows.isEmpty
+                          ? Center(
+                              child: Text(
+                                l10n.cloudCollabNoDevices,
+                                style: TextStyle(
+                                    color: PiggyTokens.textSecondary(context)),
+                              ),
+                            )
+                          : Column(
+                              children: [
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                                  child: SectionCard(
+                                    margin: EdgeInsets.zero,
+                                    child: SwitchListTile.adaptive(
+                                      title: Text(l10n
+                                          .cloudCollabDevicesViewAllSessions),
+                                      subtitle: Text(
+                                        l10n.cloudCollabDevicesViewModeHint,
+                                        style: TextStyle(
+                                          color: PiggyTokens.textSecondary(
+                                              context),
+                                        ),
+                                      ),
+                                      value: _showAllSessions,
+                                      onChanged: _loading
+                                          ? null
+                                          : (value) {
+                                              setState(() {
+                                                _showAllSessions = value;
+                                              });
+                                              unawaited(_reload(
+                                                  keepLoadingState: false));
+                                            },
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: ListView.separated(
+                                    padding: const EdgeInsets.all(16),
+                                    itemCount: rows.length,
+                                    separatorBuilder: (_, __) =>
+                                        const SizedBox(height: 8),
+                                    itemBuilder: (context, index) {
+                                      final device = rows[index];
+                                      final isCurrent = _showAllSessions
+                                          ? device.id == _currentDeviceId
+                                          : _currentDeviceFingerprint != null &&
+                                              _fingerprint(device) ==
+                                                  _currentDeviceFingerprint;
+
+                                      final infoTags = <Widget>[
+                                        InfoTag(device.platform),
+                                        if ((device.appVersion ?? '')
+                                            .trim()
+                                            .isNotEmpty)
+                                          InfoTag(
+                                              l10n.cloudCollabDeviceAppVersion(
+                                                  device.appVersion!.trim())),
+                                        if ((device.osVersion ?? '')
+                                            .trim()
+                                            .isNotEmpty)
+                                          InfoTag(
+                                              l10n.cloudCollabDeviceOsVersion(
+                                                  device.osVersion!.trim())),
+                                        if ((device.deviceModel ?? '')
+                                            .trim()
+                                            .isNotEmpty)
+                                          InfoTag(l10n.cloudCollabDeviceModel(
+                                              device.deviceModel!.trim())),
+                                        if ((device.lastIp ?? '')
+                                            .trim()
+                                            .isNotEmpty)
+                                          InfoTag(l10n.cloudCollabDeviceLastIp(
+                                              device.lastIp!.trim())),
+                                        if (isCurrent)
+                                          InfoTag(
+                                              l10n.cloudCollabDeviceCurrentTag),
+                                        if (!_showAllSessions &&
+                                            device.sessionCount > 1)
+                                          InfoTag(l10n
+                                              .cloudCollabDeviceSessionCount(
+                                                  '${device.sessionCount}')),
+                                        InfoTag(l10n.cloudCollabDeviceLastSeen(
+                                            _formatDateTime(
+                                                device.lastSeenAt))),
+                                        InfoTag(l10n.cloudCollabDeviceCreatedAt(
+                                            _formatDateTime(device.createdAt))),
+                                      ];
+
+                                      return SectionCard(
+                                        margin: EdgeInsets.zero,
+                                        child: ListTile(
+                                          leading: Icon(
+                                            isCurrent
+                                                ? Icons.smartphone
+                                                : Icons.devices_outlined,
+                                            color: PiggyTokens.iconSecondary(
+                                                context),
+                                          ),
+                                          title: Text(
+                                            device.name.trim().isEmpty
+                                                ? l10n
+                                                    .cloudCollabUnknownDeviceName
+                                                : device.name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          subtitle: Padding(
+                                            padding:
+                                                const EdgeInsets.only(top: 6),
+                                            child: Wrap(
+                                              spacing: 6,
+                                              runSpacing: 6,
+                                              children: infoTags,
+                                            ),
+                                          ),
+                                          trailing: IconButton(
+                                            onPressed: () =>
+                                                _revokeDevice(device),
+                                            icon: const Icon(
+                                                Icons.mobile_off_outlined),
+                                            tooltip: l10n
+                                                .cloudCollabDeviceRevokeTitle,
+                                          ),
+                                        ),
+                                      );
+                                    },
                                   ),
                                 ),
                               ],
-                            ],
-                          ),
-                        ),
-                      )
-                    : rows.isEmpty
-                        ? Center(
-                            child: Text(
-                              l10n.cloudCollabNoDevices,
-                              style: TextStyle(
-                                  color: PiggyTokens.textSecondary(context)),
                             ),
-                          )
-                        : Column(
-                            children: [
-                              Padding(
-                                padding:
-                                    const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                                child: SectionCard(
-                                  margin: EdgeInsets.zero,
-                                  child: SwitchListTile.adaptive(
-                                    title: Text(
-                                        l10n.cloudCollabDevicesViewAllSessions),
-                                    subtitle: Text(
-                                      l10n.cloudCollabDevicesViewModeHint,
-                                      style: TextStyle(
-                                        color: PiggyTokens.textSecondary(context),
-                                      ),
-                                    ),
-                                    value: _showAllSessions,
-                                    onChanged: _loading
-                                        ? null
-                                        : (value) {
-                                            setState(() {
-                                              _showAllSessions = value;
-                                            });
-                                            unawaited(_reload(
-                                                keepLoadingState: false));
-                                          },
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                child: ListView.separated(
-                                  padding: const EdgeInsets.all(16),
-                                  itemCount: rows.length,
-                                  separatorBuilder: (_, __) =>
-                                      const SizedBox(height: 8),
-                                  itemBuilder: (context, index) {
-                                    final device = rows[index];
-                                    final isCurrent = _showAllSessions
-                                        ? device.id == _currentDeviceId
-                                        : _currentDeviceFingerprint != null &&
-                                            _fingerprint(device) ==
-                                                _currentDeviceFingerprint;
-
-                                    final infoTags = <Widget>[
-                                      InfoTag(device.platform),
-                                      if ((device.appVersion ?? '')
-                                          .trim()
-                                          .isNotEmpty)
-                                        InfoTag(
-                                            l10n.cloudCollabDeviceAppVersion(
-                                                device.appVersion!.trim())),
-                                      if ((device.osVersion ?? '')
-                                          .trim()
-                                          .isNotEmpty)
-                                        InfoTag(l10n.cloudCollabDeviceOsVersion(
-                                            device.osVersion!.trim())),
-                                      if ((device.deviceModel ?? '')
-                                          .trim()
-                                          .isNotEmpty)
-                                        InfoTag(l10n.cloudCollabDeviceModel(
-                                            device.deviceModel!.trim())),
-                                      if ((device.lastIp ?? '')
-                                          .trim()
-                                          .isNotEmpty)
-                                        InfoTag(l10n.cloudCollabDeviceLastIp(
-                                            device.lastIp!.trim())),
-                                      if (isCurrent)
-                                        InfoTag(
-                                            l10n.cloudCollabDeviceCurrentTag),
-                                      if (!_showAllSessions &&
-                                          device.sessionCount > 1)
-                                        InfoTag(
-                                            l10n.cloudCollabDeviceSessionCount(
-                                                '${device.sessionCount}')),
-                                      InfoTag(l10n.cloudCollabDeviceLastSeen(
-                                          _formatDateTime(device.lastSeenAt))),
-                                      InfoTag(l10n.cloudCollabDeviceCreatedAt(
-                                          _formatDateTime(device.createdAt))),
-                                    ];
-
-                                    return SectionCard(
-                                      margin: EdgeInsets.zero,
-                                      child: ListTile(
-                                        leading: Icon(
-                                          isCurrent
-                                              ? Icons.smartphone
-                                              : Icons.devices_outlined,
-                                          color:
-                                              PiggyTokens.iconSecondary(context),
-                                        ),
-                                        title: Text(
-                                          device.name.trim().isEmpty
-                                              ? l10n
-                                                  .cloudCollabUnknownDeviceName
-                                              : device.name,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        subtitle: Padding(
-                                          padding:
-                                              const EdgeInsets.only(top: 6),
-                                          child: Wrap(
-                                            spacing: 6,
-                                            runSpacing: 6,
-                                            children: infoTags,
-                                          ),
-                                        ),
-                                        trailing: IconButton(
-                                          onPressed: () =>
-                                              _revokeDevice(device),
-                                          icon: const Icon(
-                                              Icons.mobile_off_outlined),
-                                          tooltip:
-                                              l10n.cloudCollabDeviceRevokeTitle,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

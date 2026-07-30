@@ -86,150 +86,159 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: _isEditing ? l10n.budgetEditTitle : l10n.budgetAddTitle,
-            showBack: true,
-            compact: true,
-            actions: [
-              if (_isEditing)
-                IconButton(
-                  onPressed: _deleteBudget,
-                  icon: const Icon(Icons.delete_outline),
-                ),
-              TextButton(
-                onPressed: _isLoading ? null : _saveBudget,
-                child: Text(
-                  l10n.commonSave,
-                  style: TextStyle(
-                    color: PiggyTokens.textPrimary(context),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: _isEditing ? l10n.budgetEditTitle : l10n.budgetAddTitle,
+        showBack: true,
+        compact: true,
+        actions: [
+          if (_isEditing)
+            IconButton(
+              onPressed: _deleteBudget,
+              icon: const Icon(Icons.delete_outline),
+            ),
+          TextButton(
+            onPressed: _isLoading ? null : _saveBudget,
+            child: Text(
+              l10n.commonSave,
+              style: TextStyle(
+                color: PiggyTokens.textPrimary(context),
+                fontWeight: FontWeight.w600,
               ),
-            ],
+            ),
           ),
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.symmetric(
-                horizontal: 12.0.scaled(context, ref),
-                vertical: 8.0.scaled(context, ref),
-              ),
-              children: [
-                // 预算类型选择
-                if (!_isEditing) ...[
-                  SectionCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.budgetPeriodLabel,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: PiggyTokens.textSecondary(context),
-                          ),
-                        ),
-                        SizedBox(height: 12.0.scaled(context, ref)),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildTypeOption(
-                                context,
-                                l10n.budgetTypeTotalLabel,
-                                'total',
-                                Icons.account_balance_wallet_outlined,
-                                disabled: _hasTotalBudget, // 已有总预算时禁用
-                              ),
+        ],
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 56,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: 12.0.scaled(context, ref),
+                  vertical: 8.0.scaled(context, ref),
+                ),
+                children: [
+                  // 预算类型选择
+                  if (!_isEditing) ...[
+                    SectionCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.budgetPeriodLabel,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: PiggyTokens.textSecondary(context),
                             ),
-                            SizedBox(width: 12.0.scaled(context, ref)),
-                            Expanded(
-                              child: _buildTypeOption(
-                                context,
-                                l10n.budgetTypeCategoryLabel,
-                                'category',
-                                Icons.category_outlined,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 12.0.scaled(context, ref)),
-                ],
-                // 分类选择（仅分类预算）
-                if (_type == 'category') ...[
-                  SectionCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.budgetCategoryLabel,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: PiggyTokens.textSecondary(context),
                           ),
-                        ),
-                        SizedBox(height: 12.0.scaled(context, ref)),
-                        _buildCategorySelector(context, l10n),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 12.0.scaled(context, ref)),
-                ],
-                // 预算金额
-                SectionCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.budgetAmountLabel,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: PiggyTokens.textSecondary(context),
-                        ),
-                      ),
-                      SizedBox(height: 12.0.scaled(context, ref)),
-                      TextField(
-                        controller: _amountController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+                          SizedBox(height: 12.0.scaled(context, ref)),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildTypeOption(
+                                  context,
+                                  l10n.budgetTypeTotalLabel,
+                                  'total',
+                                  Icons.account_balance_wallet_outlined,
+                                  disabled: _hasTotalBudget, // 已有总预算时禁用
+                                ),
+                              ),
+                              SizedBox(width: 12.0.scaled(context, ref)),
+                              Expanded(
+                                child: _buildTypeOption(
+                                  context,
+                                  l10n.budgetTypeCategoryLabel,
+                                  'category',
+                                  Icons.category_outlined,
+                                ),
+                              ),
+                            ],
+                          ),
                         ],
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w600,
-                          color: PiggyTokens.textPrimary(context),
+                      ),
+                    ),
+                    SizedBox(height: 12.0.scaled(context, ref)),
+                  ],
+                  // 分类选择（仅分类预算）
+                  if (_type == 'category') ...[
+                    SectionCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.budgetCategoryLabel,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: PiggyTokens.textSecondary(context),
+                            ),
+                          ),
+                          SizedBox(height: 12.0.scaled(context, ref)),
+                          _buildCategorySelector(context, l10n),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 12.0.scaled(context, ref)),
+                  ],
+                  // 预算金额
+                  SectionCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.budgetAmountLabel,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: PiggyTokens.textSecondary(context),
+                          ),
                         ),
-                        decoration: InputDecoration(
-                          prefixText: '$currencySymbol ',
-                          prefixStyle: TextStyle(
+                        SizedBox(height: 12.0.scaled(context, ref)),
+                        TextField(
+                          controller: _amountController,
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                                RegExp(r'^\d+\.?\d{0,2}')),
+                          ],
+                          style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.w600,
                             color: PiggyTokens.textPrimary(context),
                           ),
-                          hintText: l10n.budgetAmountHint,
-                          hintStyle: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w400,
-                            color: PiggyTokens.textTertiary(context),
+                          decoration: InputDecoration(
+                            prefixText: '$currencySymbol ',
+                            prefixStyle: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w600,
+                              color: PiggyTokens.textPrimary(context),
+                            ),
+                            hintText: l10n.budgetAmountHint,
+                            hintStyle: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w400,
+                              color: PiggyTokens.textTertiary(context),
+                            ),
+                            border: InputBorder.none,
                           ),
-                          border: InputBorder.none,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                // 预算周期跟随「账本设置 → 每月起始日」(period-start-date 设计 D5),
-                // 不再提供 per-budget 起始日;独立覆盖若有需求走二期新列。
-              ],
+                  // 预算周期跟随「账本设置 → 每月起始日」(period-start-date 设计 D5),
+                  // 不再提供 per-budget 起始日;独立覆盖若有需求走二期新列。
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -257,7 +266,9 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
                 : PiggyTokens.surface(context),
             borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
             border: Border.all(
-              color: isSelected && !disabled ? primary : PiggyTokens.border(context),
+              color: isSelected && !disabled
+                  ? primary
+                  : PiggyTokens.border(context),
               width: isSelected && !disabled ? 2 : 1,
             ),
           ),
@@ -266,15 +277,21 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
               Icon(
                 icon,
                 size: 32.0.scaled(context, ref),
-                color: isSelected && !disabled ? primary : PiggyTokens.iconSecondary(context),
+                color: isSelected && !disabled
+                    ? primary
+                    : PiggyTokens.iconSecondary(context),
               ),
               SizedBox(height: 8.0.scaled(context, ref)),
               Text(
                 label,
                 style: TextStyle(
                   fontSize: 14,
-                  fontWeight: isSelected && !disabled ? FontWeight.w600 : FontWeight.w400,
-                  color: isSelected && !disabled ? primary : PiggyTokens.textSecondary(context),
+                  fontWeight: isSelected && !disabled
+                      ? FontWeight.w600
+                      : FontWeight.w400,
+                  color: isSelected && !disabled
+                      ? primary
+                      : PiggyTokens.textSecondary(context),
                 ),
               ),
             ],
@@ -364,7 +381,8 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
       isScrollControlled: true,
       backgroundColor: PiggyTokens.surface(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
       ),
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.6,
@@ -408,7 +426,8 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
                             .colorScheme
                             .primary
                             .withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+                        borderRadius:
+                            BorderRadius.circular(PiggyDimens.radiusSm),
                       ),
                       child: Icon(
                         CategoryService.getCategoryIcon(category.icon),
@@ -522,7 +541,8 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: PiggyTokens.error(context)),
+            style: TextButton.styleFrom(
+                foregroundColor: PiggyTokens.error(context)),
             child: Text(l10n.commonDelete),
           ),
         ],

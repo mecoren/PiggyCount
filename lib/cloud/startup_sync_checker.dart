@@ -21,9 +21,12 @@ import '../cloud/sync_diff_service.dart';
 import '../cloud/sync_service.dart';
 import '../cloud/transactions_sync_manager.dart';
 import '../data/db.dart';
+import '../domain/encryption/encryption_service.dart';
 import '../l10n/app_localizations.dart';
+import '../pages/cloud/encryption_dialogs.dart';
 import '../pages/cloud/sync_preview_dialog.dart' as spd;
 import '../providers/database_providers.dart';
+import '../providers/encryption_providers.dart';
 import '../providers/sync_providers.dart';
 import '../services/billing/post_processor.dart';
 import '../services/data_import_service.dart';
@@ -126,6 +129,16 @@ abstract class StartupSyncCheckerDeps {
   /// 返回 true 表示用户确认覆盖，false 表示取消（applyAll 中止，回退到 SummaryView）。
   Future<bool> showConflictConfirmDialog(List<String> ledgerNames);
 
+  /// SaltMismatch 恢复：弹密码对话框 + 从云端重提取 salt 激活密钥
+  ///
+  /// 当 getStatus 返回 'salt_mismatch_need_password' 哨兵，
+  /// 或 downloadAndPreview/downloadAndRestoreToCurrentLedger 抛出
+  /// SaltMismatchException 时调用。
+  ///
+  /// 返回 true 表示激活成功，调用方应重试原操作；
+  /// 返回 false 表示用户取消或密码错误，调用方应跳过当前账本。
+  Future<bool> handleSaltMismatch();
+
   /// 应用变更后刷新 UI providers
   void runAfterDownload();
 
@@ -173,7 +186,7 @@ class StartupSyncChecker {
     }
   }
 
-  Future<void> _runInternal() async {
+  Future<void> _runInternal({bool isRetry = false}) async {
     // 1. 检查云端配置：仅路径 A（s3/webdav/supabase/icloud）+ valid 才执行
     final config = await deps.getActiveConfig();
     if (!_isPathA(config)) {
@@ -209,6 +222,23 @@ class StartupSyncChecker {
     for (final ledger in ledgers) {
       try {
         final status = await deps.getStatus(ledger.id);
+        // 缺口 1: salt 不匹配是全局问题（影响所有账本），
+        // 首次检测到时弹密码对话框引导用户重输密码，激活后重新检查。
+        // isRetry 防止无限递归（用户再次输入错误密码时不再弹窗）。
+        if (status.message == 'salt_mismatch_need_password' && !isRetry) {
+          deps.log('StartupSyncChecker: 账本 ${ledger.name} salt 不匹配，'
+              '引导用户重新输入密码');
+          controller.dismiss();
+          await Future.delayed(Duration.zero); // 让 overlay 消失
+          final activated = await deps.handleSaltMismatch();
+          if (activated) {
+            // 激活成功，重新执行整个检查流程
+            return _runInternal(isRetry: true);
+          }
+          // 用户取消或密码错误：不继续检查，直接返回
+          controller.dismiss();
+          return;
+        }
         if (status.diff == SyncDiff.cloudNewer ||
             status.diff == SyncDiff.different) {
           // US-7: 携带 diffType 用于 SummaryView 冲突高亮 + applyAll 二次确认
@@ -348,6 +378,18 @@ class StartupSyncChecker {
         deps.runAfterDownload();
         successCount++;
         applied++;
+      } on SaltMismatchException {
+        // 缺口 1: salt 不匹配，弹密码对话框引导用户重输密码
+        controller.dismiss();
+        await Future.delayed(Duration.zero); // 让 overlay 消失
+        final activated = await deps.handleSaltMismatch();
+        failCount++;
+        deps.log('StartupSyncChecker: 账本 ${c.ledger.name} salt 不匹配'
+            '${activated ? "（已激活，请重新检查）" : "（用户取消）"}');
+        if (activated) {
+          // 恢复 overlay 继续剩余账本
+          controller.startApplying(candidates.length);
+        }
       } catch (e) {
         failCount++;
         deps.log('StartupSyncChecker: 账本 ${c.ledger.name} applyAll 失败: $e');
@@ -417,6 +459,18 @@ class StartupSyncChecker {
                 '账本「${c.ledger.name}」已应用 ${result.totalCount} 条变更');
             break;
         }
+      } on SaltMismatchException {
+        // 缺口 1: salt 不匹配，弹密码对话框引导用户重输密码
+        // confirmEach 模式下 overlay 已关闭，直接弹 dialog
+        final activated = await deps.handleSaltMismatch();
+        if (activated) {
+          deps.showLegacyInfo('账本「${c.ledger.name}」密钥已激活，请重新检查同步');
+        } else {
+          deps.showLegacyError(
+              _formatErrorMessage(c.ledger.name, 'salt 不匹配（用户取消）'));
+        }
+        deps.log('StartupSyncChecker: 账本 ${c.ledger.name} salt 不匹配'
+            '${activated ? "（已激活）" : "（用户取消）"}');
       } catch (e) {
         deps.showLegacyError(_formatErrorMessage(c.ledger.name, e));
         deps.log('StartupSyncChecker: 账本 ${c.ledger.name} confirmEach 失败: $e');
@@ -578,6 +632,17 @@ class WidgetRefDeps implements StartupSyncCheckerDeps {
       cancelLabel: l10n.startupSyncConflictConfirmCancel,
     );
     return result ?? false;
+  }
+
+  @override
+  Future<bool> handleSaltMismatch() async {
+    final encryptionService = _ref.read(encryptionServiceProvider);
+    return await promptPasswordAndActivate(
+      _context,
+      _ref,
+      service: encryptionService,
+      syncManager: _syncManager,
+    );
   }
 
   @override

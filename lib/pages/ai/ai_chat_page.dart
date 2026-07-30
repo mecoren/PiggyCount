@@ -148,20 +148,25 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          // Header
-          PrimaryHeader(
-            title: AppLocalizations.of(context).aiChatTitle,
-            showBack: true,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.delete_outline),
-                tooltip: AppLocalizations.of(context).aiChatClearHistory,
-                onPressed: _showClearHistoryDialog,
-              ),
-            ],
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: AppLocalizations.of(context).aiChatTitle,
+        showBack: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            tooltip: AppLocalizations.of(context).aiChatClearHistory,
+            onPressed: _showClearHistoryDialog,
           ),
+        ],
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 56,
+        ),
+        child: Column(
+          children: [
 
           // API配置警告横幅
           if (_apiValidation != null && !_apiValidation!.isValid)
@@ -325,7 +330,8 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
 
           // 输入区域
           _buildInputArea(),
-        ],
+          ],
+        ),
       ),
     );
   }

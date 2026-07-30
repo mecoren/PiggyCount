@@ -32,47 +32,54 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
     final reportAsync = ref.watch(orphanScanReportProvider);
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: l10n.maintenanceOrphanCleanupTitle,
-            subtitle: l10n.maintenanceOrphanCleanupSubtitle,
-            showBack: true,
-            actions: [
-              // 仅 debug build 显示:塞各类孤儿数据用于联调
-              if (kDebugMode)
-                IconButton(
-                  tooltip: 'Seed orphan data (debug)',
-                  onPressed: _cleaning ? null : _seedDebugOrphans,
-                  icon: const Icon(Icons.bug_report_outlined),
-                ),
-              IconButton(
-                tooltip: l10n.maintenanceOrphanRescan,
-                onPressed: _cleaning
-                    ? null
-                    : () => ref.invalidate(orphanScanReportProvider),
-                icon: const Icon(Icons.refresh),
-              ),
-            ],
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.maintenanceOrphanCleanupTitle,
+        subtitle: l10n.maintenanceOrphanCleanupSubtitle,
+        showBack: true,
+        actions: [
+          // 仅 debug build 显示:塞各类孤儿数据用于联调
+          if (kDebugMode)
+            IconButton(
+              tooltip: 'Seed orphan data (debug)',
+              onPressed: _cleaning ? null : _seedDebugOrphans,
+              icon: const Icon(Icons.bug_report_outlined),
+            ),
+          IconButton(
+            tooltip: l10n.maintenanceOrphanRescan,
+            onPressed: _cleaning
+                ? null
+                : () => ref.invalidate(orphanScanReportProvider),
+            icon: const Icon(Icons.refresh),
           ),
-          Expanded(
-            child: reportAsync.when(
-              skipLoadingOnReload: true,
-              data: (report) => _buildBody(context, ref, l10n, report),
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text('${l10n.commonError}: $err',
-                      textAlign: TextAlign.center),
+        ],
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 80,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: reportAsync.when(
+                skipLoadingOnReload: true,
+                data: (report) => _buildBody(context, ref, l10n, report),
+                loading: () =>
+                    const Center(child: CircularProgressIndicator()),
+                error: (err, _) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text('${l10n.commonError}: $err',
+                        textAlign: TextAlign.center),
+                  ),
                 ),
               ),
             ),
-          ),
-          if (reportAsync.hasValue)
-            _buildBottomBar(context, l10n, reportAsync.requireValue),
-        ],
+            if (reportAsync.hasValue)
+              _buildBottomBar(context, l10n, reportAsync.requireValue),
+          ],
+        ),
       ),
     );
   }

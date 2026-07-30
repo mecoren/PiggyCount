@@ -8002,4 +8002,29 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cloudSyncEncryptProbeFailedContinue => 'Continue as first device';
+
+  @override
+  String get saltMismatchStatus => 'Encryption key mismatch';
+
+  @override
+  String get saltMismatchNeedPasswordHint =>
+      'Cloud backup key doesn\'t match local. Tap to re-enter password.';
+
+  @override
+  String get saltMismatchDialogTitle => 'Re-enter Password';
+
+  @override
+  String get saltMismatchRetrySuccess => 'Key activated. Retrying sync...';
+
+  @override
+  String get saltMismatchRawStorageUnavailable =>
+      'Cloud service not initialized, cannot recover key';
+
+  @override
+  String get saltMismatchProbeFailed =>
+      'Cloud probe failed, please check network and retry';
+
+  @override
+  String get saltMismatchCloudCorrupted =>
+      'Cloud ciphertext is corrupted, cannot recover key';
 }

@@ -28,7 +28,11 @@ void main() {
 
   group('CiphertextFormat.isEncrypted', () {
     test('BEECRYPT1: 开头的字符串识别为密文', () {
-      const s = 'BEECRYPT1:YWJj:ZGVm';
+      // M4: isEncrypted 现在严格校验 salt(16B) 和 payload(≥28B) 长度
+      final salt = List<int>.filled(16, 1);
+      final payload = List<int>.filled(28, 2);
+      final s =
+          'BEECRYPT1:${base64.encode(salt)}:${base64.encode(payload)}';
       expect(CiphertextFormat.isEncrypted(s), isTrue);
     });
 

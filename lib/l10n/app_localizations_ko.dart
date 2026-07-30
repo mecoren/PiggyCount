@@ -7783,4 +7783,27 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get cloudSyncEncryptProbeFailedContinue => '첫 기기로 계속';
+
+  @override
+  String get saltMismatchStatus => '암호화 키 불일치';
+
+  @override
+  String get saltMismatchNeedPasswordHint =>
+      '클라우드 백업 키가 로컬과 일치하지 않습니다. 비밀번호를 다시 입력하세요.';
+
+  @override
+  String get saltMismatchDialogTitle => '비밀번호 재입력';
+
+  @override
+  String get saltMismatchRetrySuccess => '키가 활성화되었습니다. 동기화를 재시도하는 중...';
+
+  @override
+  String get saltMismatchRawStorageUnavailable =>
+      '클라우드 서비스가 초기화되지 않아 키를 복구할 수 없습니다';
+
+  @override
+  String get saltMismatchProbeFailed => '클라우드 탐지 실패, 네트워크 확인 후 재시도하세요';
+
+  @override
+  String get saltMismatchCloudCorrupted => '클라우드 암호문이 손상되어 키를 복구할 수 없습니다';
 }

@@ -20,10 +20,16 @@ class CiphertextFormat {
   /// salt 固定长度（字节）
   static const int saltLength = 16;
 
+  /// 加密负载最小长度（字节）：nonce(12) + mac(16) = 28
+  /// （明文为空时 ciphertext 长度为 0，但仍需 nonce 和 mac）
+  static const int minEncryptedBytesLength = 28;
+
   /// 判断字符串是否为加密密文
   ///
   /// 严格匹配：必须以 `BEECRYPT1:` 开头且包含两段 base64（用冒号分隔）。
-  /// 仅以 magic 开头但格式不全的字符串视为非密文，避免误判。
+  /// M4 修复：仅检查前缀和三段结构不足以排除误判（例如以 BEECRYPT1: 开头的
+  /// 合法明文笔记），需进一步校验 salt 长度（16 字节）和密文最小长度
+  /// （nonce 12 + mac 16 = 28 字节）。任何 base64 解码失败也视为非密文。
   static bool isEncrypted(String input) {
     if (!input.startsWith(magicHeader)) return false;
     // 严格校验：BEECRYPT1:<b64>:<b64> 三段结构
@@ -31,7 +37,15 @@ class CiphertextFormat {
     final parts = rest.split(':');
     if (parts.length != 2) return false;
     if (parts[0].isEmpty || parts[1].isEmpty) return false;
-    return true;
+    try {
+      final salt = base64.decode(parts[0]);
+      final payload = base64.decode(parts[1]);
+      // 校验 salt 长度与密文最小长度，排除碰巧以 magic 开头的明文
+      return salt.length == saltLength &&
+          payload.length >= minEncryptedBytesLength;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// 编码为密文格式字符串
@@ -46,9 +60,9 @@ class CiphertextFormat {
         'salt must be $saltLength bytes, got ${salt.length}',
       );
     }
-    if (encryptedBytes.isEmpty) {
+    if (encryptedBytes.length < minEncryptedBytesLength) {
       throw ArgumentError(
-        'encryptedBytes must not be empty (AES-GCM output is at least nonce+mac = 28 bytes)',
+        'encryptedBytes too short (min $minEncryptedBytesLength bytes for nonce+mac, got ${encryptedBytes.length})',
       );
     }
     final saltB64 = base64.encode(salt);

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -6,6 +7,12 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 ///
 /// 封装 `flutter_secure_storage`，提供密钥和校验块的存取。
 /// iOS 使用 Keychain，Android 使用 Keystore，平台级保护。
+///
+/// 平台安全配置：
+/// - **iOS**: `accessibility: first_unlock_this_device`（首次解锁后可访问，
+///   仅限本设备，不允许 iCloud Keychain 同步，避免密钥脱离设备控制）
+/// - **Android**: `encryptedSharedPreferences: true`（使用 EncryptedSharedPreferences，
+///   在低于 Android 7.0 的旧设备上提供更强保护）
 ///
 /// 设计要点：
 /// - 密钥以 base64 字符串形式存储（secure_storage 只支持 String）
@@ -19,7 +26,20 @@ class SecureKeyStorage {
   final FlutterSecureStorage _storage;
 
   SecureKeyStorage({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+      : _storage = storage ??
+            const FlutterSecureStorage(
+              // iOS: 禁止 iCloud Keychain 同步（synchronizable=false），
+              // 密钥绑定本设备；使用 first_unlock_this_device 避免设备被锁后无法解密
+              iOptions: IOSOptions(
+                accessibility: KeychainAccessibility.first_unlock_this_device,
+                synchronizable: false,
+              ),
+              // Android: 启用 EncryptedSharedPreferences，旧设备保护更强
+              aOptions: AndroidOptions(
+                encryptedSharedPreferences: true,
+                resetOnError: true,
+              ),
+            );
 
   /// 保存 AES-256 密钥（32 字节）
   Future<void> saveKey(List<int> key) async {
@@ -27,10 +47,10 @@ class SecureKeyStorage {
   }
 
   /// 读取密钥，不存在返回 null
-  Future<List<int>?> getKey() async {
+  Future<Uint8List?> getKey() async {
     final value = await _storage.read(key: _keyKey);
     if (value == null) return null;
-    return base64.decode(value);
+    return Uint8List.fromList(base64.decode(value));
   }
 
   /// 保存校验块（加密的已知明文）
@@ -39,10 +59,10 @@ class SecureKeyStorage {
   }
 
   /// 读取校验块，不存在返回 null
-  Future<List<int>?> getVerifier() async {
+  Future<Uint8List?> getVerifier() async {
     final value = await _storage.read(key: _verifierKey);
     if (value == null) return null;
-    return base64.decode(value);
+    return Uint8List.fromList(base64.decode(value));
   }
 
   /// 保存当前激活密钥对应的 salt（16 字节）
@@ -53,10 +73,10 @@ class SecureKeyStorage {
   }
 
   /// 读取 salt，不存在返回 null
-  Future<List<int>?> getSalt() async {
+  Future<Uint8List?> getSalt() async {
     final value = await _storage.read(key: _saltKey);
     if (value == null) return null;
-    return base64.decode(value);
+    return Uint8List.fromList(base64.decode(value));
   }
 
   /// 清除所有加密相关数据

@@ -671,10 +671,9 @@ class _HomePageState extends ConsumerState<HomePage> {
           Consumer(builder: (context, ref, _) {
             ref.watch(headerStyleProvider);
             final hide = ref.watch(hideAmountsProvider);
-            return PrimaryHeader(
-              title: '',
-              showTitleSection: false,
-              content: Column(
+            return GlassHeader(
+              bottomOpaque: true,
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // 头部 - 左: PiggyIcon + 账本切换, 右: 操作按钮
@@ -994,9 +993,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                       const Expanded(child: _HeaderCenterSummary()),
                     ],
                   ),
+                  const HomeBudgetSummary(),
                 ],
               ),
-              bottom: const HomeBudgetSummary(),
             );
           }),
           const SizedBox(height: 0),

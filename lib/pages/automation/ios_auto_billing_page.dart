@@ -26,53 +26,60 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
 
     return Scaffold(
       backgroundColor: PiggyTokens.surface(context),
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: l10n.autoScreenshotBillingIosTitle,
-            showBack: true,
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                // 视频教程（置顶）
-                _buildTutorialCard(context, primaryColor, l10n),
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.autoScreenshotBillingIosTitle,
+        showBack: true,
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 56,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  // 视频教程（置顶）
+                  _buildTutorialCard(context, primaryColor, l10n),
 
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                // iOS 15版本提示
-                if (!supportsAppIntents) _buildVersionWarning(context, primaryColor),
-                if (!supportsAppIntents) const SizedBox(height: 16),
+                  // iOS 15版本提示
+                  if (!supportsAppIntents) _buildVersionWarning(context, primaryColor),
+                  if (!supportsAppIntents) const SizedBox(height: 16),
 
-                // 一键获取快捷指令（主推路径）
-                _buildImportCard(context, primaryColor, l10n),
+                  // 一键获取快捷指令（主推路径）
+                  _buildImportCard(context, primaryColor, l10n),
 
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                // 功能说明
-                _buildInfoCard(
-                  context,
-                  primaryColor,
-                  icon: Icons.info_outline,
-                  title: l10n.featureDescription,
-                  content: l10n.iosAutoFeatureDesc,
-                ),
+                  // 功能说明
+                  _buildInfoCard(
+                    context,
+                    primaryColor,
+                    icon: Icons.info_outline,
+                    title: l10n.featureDescription,
+                    content: l10n.iosAutoFeatureDesc,
+                  ),
 
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                // 双击背部快速触发说明
-                _buildBackTapCard(context, primaryColor, l10n),
+                  // 双击背部快速触发说明
+                  _buildBackTapCard(context, primaryColor, l10n),
 
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                // 快捷指令配置指南
-                _buildShortcutsGuide(context, primaryColor),
+                  // 快捷指令配置指南
+                  _buildShortcutsGuide(context, primaryColor),
 
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

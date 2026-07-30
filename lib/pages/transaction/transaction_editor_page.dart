@@ -105,47 +105,42 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
     return Scaffold(
       body: Column(
         children: [
-          // 紧凑顶部：去除多余留白 + 滑动分段选择器
-          PrimaryHeader(
-            title: '',
-            padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
-            bottom: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: WaitSlidingSegmentedControl<String>(
-                          selected: _selectedKind,
-                          segments: [
-                            WaitSlidingSegment(
-                              value: 'expense',
-                              label: AppLocalizations.of(context)!.categoryExpense,
-                            ),
-                            WaitSlidingSegment(
-                              value: 'income',
-                              label: AppLocalizations.of(context)!.categoryIncome,
-                            ),
-                            WaitSlidingSegment(
-                              value: 'transfer',
-                              label: AppLocalizations.of(context)!.transferTitle,
-                            ),
-                          ],
-                          onValueChanged: (value) =>
-                              setState(() => _selectedKind = value),
+          // 紧凑顶部：去除多余留白 + 滑动分段选择器（玻璃风格）
+          GlassHeader(
+            bottomOpaque: true,
+            showHighlightLine: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: WaitSlidingSegmentedControl<String>(
+                      selected: _selectedKind,
+                      segments: [
+                        WaitSlidingSegment(
+                          value: 'expense',
+                          label: AppLocalizations.of(context)!.categoryExpense,
                         ),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: Text(AppLocalizations.of(context)!.commonCancel,
-                            style: TextStyle(color: PiggyTokens.textPrimary(context))),
-                      )
-                    ],
+                        WaitSlidingSegment(
+                          value: 'income',
+                          label: AppLocalizations.of(context)!.categoryIncome,
+                        ),
+                        WaitSlidingSegment(
+                          value: 'transfer',
+                          label: AppLocalizations.of(context)!.transferTitle,
+                        ),
+                      ],
+                      onValueChanged: (value) =>
+                          setState(() => _selectedKind = value),
+                    ),
                   ),
-                ),
-              ],
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(AppLocalizations.of(context)!.commonCancel,
+                        style: TextStyle(color: PiggyTokens.textPrimary(context))),
+                  )
+                ],
+              ),
             ),
           ),
           Expanded(

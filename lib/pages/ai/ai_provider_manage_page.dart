@@ -39,28 +39,35 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: l10n.aiProviderManageTitle,
-            subtitle: l10n.aiProviderManageSubtitle,
-            showBack: true,
-            actions: [
-              IconButton(
-                icon: Icon(Icons.add, color: PiggyTokens.iconPrimary(context)),
-                onPressed: () => _addProvider(context),
-                tooltip: l10n.aiProviderAdd,
-              ),
-            ],
-          ),
-          Expanded(
-            child: providersAsync.when(
-              data: (providers) => _buildProviderList(providers),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('$e')),
-            ),
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.aiProviderManageTitle,
+        subtitle: l10n.aiProviderManageSubtitle,
+        showBack: true,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.add, color: PiggyTokens.iconPrimary(context)),
+            onPressed: () => _addProvider(context),
+            tooltip: l10n.aiProviderAdd,
           ),
         ],
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 80,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: providersAsync.when(
+                data: (providers) => _buildProviderList(providers),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(child: Text('$e')),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -396,33 +403,39 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: _isEditing ? l10n.aiProviderEditTitle : l10n.aiProviderAddTitle,
-            showBack: true,
-            actions: [
-              TextButton(
-                onPressed: _saving || _isTesting ? null : _saveProvider,
-                child: _saving
-                    ? SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: PiggyTokens.iconPrimary(context),
-                        ),
-                      )
-                    : Text(
-                        l10n.commonSave,
-                        style: TextStyle(
-                          color: PiggyTokens.iconPrimary(context),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-              ),
-            ],
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: _isEditing ? l10n.aiProviderEditTitle : l10n.aiProviderAddTitle,
+        showBack: true,
+        actions: [
+          TextButton(
+            onPressed: _saving || _isTesting ? null : _saveProvider,
+            child: _saving
+                ? SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: PiggyTokens.iconPrimary(context),
+                    ),
+                  )
+                : Text(
+                    l10n.commonSave,
+                    style: TextStyle(
+                      color: PiggyTokens.iconPrimary(context),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
           ),
+        ],
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 56,
+        ),
+        child: Column(
+          children: [
           Expanded(
             child: ListView(
               padding: EdgeInsets.symmetric(
@@ -648,7 +661,8 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
               ],
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

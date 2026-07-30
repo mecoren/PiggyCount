@@ -40,44 +40,46 @@ class _IconPickerPageState extends State<IconPickerPage> with TickerProviderStat
     final categories = _getIconCategories();
     
     return Scaffold(
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: AppLocalizations.of(context)!.iconPickerTitle,
-            showBack: true,
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop(_selectedIcon);
-                },
-                child: Text(AppLocalizations.of(context)!.commonConfirm),
-              ),
-            ],
-            bottom: TabBar(
-              controller: _tabController,
-              isScrollable: true,
-              labelColor: PiggyTokens.textPrimary(context),
-              unselectedLabelColor: PiggyTokens.textSecondary(context),
-              tabs: categories.map((category) => Tab(text: category.name)).toList(),
-            ),
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: categories.map((category) {
-                return _IconGrid(
-                  icons: category.icons,
-                  selectedIcon: _selectedIcon,
-                  onIconSelected: (icon) {
-                    setState(() {
-                      _selectedIcon = icon;
-                    });
-                  },
-                );
-              }).toList(),
-            ),
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: AppLocalizations.of(context)!.iconPickerTitle,
+        showBack: true,
+        bottomOpaque: true,
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(_selectedIcon);
+            },
+            child: Text(AppLocalizations.of(context)!.commonConfirm),
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          labelColor: PiggyTokens.textPrimary(context),
+          unselectedLabelColor: PiggyTokens.textSecondary(context),
+          tabs: categories.map((category) => Tab(text: category.name)).toList(),
+        ),
+        bottomHeight: 48,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 56 + 48,
+        ),
+        child: TabBarView(
+          controller: _tabController,
+          children: categories.map((category) {
+            return _IconGrid(
+              icons: category.icons,
+              selectedIcon: _selectedIcon,
+              onIconSelected: (icon) {
+                setState(() {
+                  _selectedIcon = icon;
+                });
+              },
+            );
+          }).toList(),
+        ),
       ),
     );
   }

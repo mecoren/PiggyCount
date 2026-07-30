@@ -14442,6 +14442,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Continue as first device'**
   String get cloudSyncEncryptProbeFailedContinue;
+
+  /// No description provided for @saltMismatchStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Encryption key mismatch'**
+  String get saltMismatchStatus;
+
+  /// No description provided for @saltMismatchNeedPasswordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud backup key doesn\'t match local. Tap to re-enter password.'**
+  String get saltMismatchNeedPasswordHint;
+
+  /// No description provided for @saltMismatchDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-enter Password'**
+  String get saltMismatchDialogTitle;
+
+  /// No description provided for @saltMismatchRetrySuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Key activated. Retrying sync...'**
+  String get saltMismatchRetrySuccess;
+
+  /// No description provided for @saltMismatchRawStorageUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud service not initialized, cannot recover key'**
+  String get saltMismatchRawStorageUnavailable;
+
+  /// No description provided for @saltMismatchProbeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud probe failed, please check network and retry'**
+  String get saltMismatchProbeFailed;
+
+  /// No description provided for @saltMismatchCloudCorrupted.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud ciphertext is corrupted, cannot recover key'**
+  String get saltMismatchCloudCorrupted;
 }
 
 class _AppLocalizationsDelegate

@@ -3016,5 +3016,12 @@
   "cloudSyncEncryptReencryptPartialFailed": "加密已開啟，但有 {count} 個雲端檔案重新加密失敗，下次同步時會自動重試。",
   "cloudSyncEncryptProbeFailedTitle": "探測雲端失敗",
   "cloudSyncEncryptProbeFailedMessage": "無法探測雲端是否已有加密資料（可能是網路或權限問題）。如果其他裝置已開啟加密，繼續將以新密碼重新加密雲端資料，可能導致其他裝置無法解密。確定繼續嗎？",
-  "cloudSyncEncryptProbeFailedContinue": "以首裝置繼續"
+  "cloudSyncEncryptProbeFailedContinue": "以首裝置繼續",
+  "saltMismatchStatus": "加密金鑰不匹配",
+  "saltMismatchNeedPasswordHint": "雲端備份金鑰與本地不匹配，點擊重新輸入密碼",
+  "saltMismatchDialogTitle": "重新輸入密碼",
+  "saltMismatchRetrySuccess": "金鑰已啟用，正在重試同步...",
+  "saltMismatchRawStorageUnavailable": "雲端服務未初始化，無法恢復金鑰",
+  "saltMismatchProbeFailed": "雲端探測失敗，請檢查網路後重試",
+  "saltMismatchCloudCorrupted": "雲端密文已損壞，無法恢復金鑰"
 }

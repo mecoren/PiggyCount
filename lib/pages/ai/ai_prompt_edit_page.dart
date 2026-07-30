@@ -264,64 +264,78 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
     if (_loading) {
       return Scaffold(
         backgroundColor: PiggyTokens.scaffoldBackground(context),
-        body: Column(
-          children: [
-            PrimaryHeader(
-              title: l10n.aiPromptEditTitle,
-              showBack: true,
-            ),
-            const Expanded(
-              child: Center(child: CircularProgressIndicator()),
-            ),
-          ],
+        extendBodyBehindAppBar: true,
+        appBar: GlassTitleBar(
+          title: l10n.aiPromptEditTitle,
+          showBack: true,
+          bottomOpaque: true,
+        ),
+        body: Padding(
+          padding: EdgeInsets.only(
+            top: MediaQuery.of(context).padding.top + 56,
+          ),
+          child: Column(
+            children: [
+              const Expanded(
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: l10n.aiPromptEditTitle,
-            subtitle: l10n.aiPromptEditSubtitle,
-            showBack: true,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.share),
-                onPressed: _sharePrompt,
-              ),
-              IconButton(
-                icon: const Icon(Icons.paste),
-                onPressed: _pastePrompt,
-              ),
-            ],
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.aiPromptEditTitle,
+        subtitle: l10n.aiPromptEditSubtitle,
+        showBack: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share),
+            onPressed: _sharePrompt,
           ),
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.symmetric(
-                horizontal: 12.0.scaled(context, ref),
-                vertical: 8.0.scaled(context, ref),
-              ),
-              children: [
-                // 变量说明
-                _buildVariablesSection(primaryColor),
-
-                SizedBox(height: 8.0.scaled(context, ref)),
-
-                // 提示词编辑区
-                _buildPromptEditor(primaryColor),
-
-                SizedBox(height: 8.0.scaled(context, ref)),
-
-                // 操作按钮
-                _buildActionButtons(primaryColor),
-
-                SizedBox(height: 16.0.scaled(context, ref)),
-              ],
-            ),
+          IconButton(
+            icon: const Icon(Icons.paste),
+            onPressed: _pastePrompt,
           ),
         ],
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 80,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: 12.0.scaled(context, ref),
+                  vertical: 8.0.scaled(context, ref),
+                ),
+                children: [
+                  // 变量说明
+                  _buildVariablesSection(primaryColor),
+
+                  SizedBox(height: 8.0.scaled(context, ref)),
+
+                  // 提示词编辑区
+                  _buildPromptEditor(primaryColor),
+
+                  SizedBox(height: 8.0.scaled(context, ref)),
+
+                  // 操作按钮
+                  _buildActionButtons(primaryColor),
+
+                  SizedBox(height: 16.0.scaled(context, ref)),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

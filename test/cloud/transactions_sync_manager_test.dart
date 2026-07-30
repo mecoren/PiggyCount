@@ -5,12 +5,14 @@
 // 不依赖真实网络 / 真实云服务。
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:piggycount/cloud/transactions_sync_manager.dart';
 import 'package:piggycount/cloud/sync_service.dart';
 import 'package:piggycount/data/db.dart';
 import 'package:piggycount/data/repositories/base_repository.dart';
 import 'package:piggycount/data/repositories/local/local_repository.dart';
+import 'package:piggycount/domain/encryption/encryption_service.dart';
 import 'package:drift/drift.dart' as d;
 import 'package:drift/native.dart';
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' as fcs hide SyncStatus;
@@ -195,6 +197,251 @@ void main() {
           reason: '恢复后本地应只剩云端 JSON 中的 1 笔交易');
       expect(txs.first.syncId, 'cloud-1');
     });
+
+    test('缺口 2: deletedDup 应反映清空阶段的本地独有行数', () async {
+      // Arrange
+      final repo = LocalRepository(db);
+      await db.into(db.ledgers).insert(LedgersCompanion.insert(
+            id: const d.Value(1),
+            name: 'L',
+            currency: const d.Value('CNY'),
+          ));
+      // 本地有 3 笔独有交易（syncId 与云端不同）
+      for (var i = 1; i <= 3; i++) {
+        await db.into(db.transactions).insert(
+              TransactionsCompanion.insert(
+                ledgerId: 1,
+                type: 'expense',
+                amount: i * 10.0,
+                happenedAt: d.Value(DateTime(2026, 7, i)),
+                syncId: d.Value('local-$i'),
+              ),
+            );
+      }
+
+      // 云端 JSON 含 1 笔完全不同的交易
+      final cloudJson = _ledgerJsonWithOneTx(
+        ledgerId: 1,
+        syncId: 'cloud-1',
+        amount: 99.0,
+      );
+
+      final fakeStorage = _FakeStorage(returnJson: cloudJson);
+      final fakeProvider = _FakeCloudProvider(storage: fakeStorage);
+      final manager = TransactionsSyncManager(
+        config: const fcs.CloudServiceConfig(
+          type: fcs.CloudBackendType.supabase,
+          name: 'test',
+        ),
+        db: db,
+        repo: repo,
+      );
+      manager.setSyncManagerForTesting(
+        syncManager: fcs.CloudSyncManager<int>(
+          provider: fakeProvider,
+          serializer: _NoopSerializer(),
+        ),
+        provider: fakeProvider,
+      );
+
+      // Act
+      final result = await manager.downloadAndRestoreToCurrentLedger(ledgerId: 1);
+
+      // Assert: deletedDup 应为 3（清空的本地独有行数），而非 0
+      expect(result.deletedDup, 3,
+          reason: 'deletedDup 应反映清空阶段删除的本地交易行数（AC-1.3）');
+      expect(result.inserted, 1,
+          reason: 'inserted 应为云端导入的 1 笔');
+    });
+  });
+
+  group('BUG-1 残余: disable 后密钥仍保留应从云端密文恢复', () {
+    test('加密已关闭(disable)但密钥仍在 secure storage 时，恢复不应被跳过',
+        () async {
+      // Arrange: 用真实 LocalRepository 让 importTransactionsJson 走真实写入路径
+      final repo = LocalRepository(db);
+      await db.into(db.ledgers).insert(LedgersCompanion.insert(
+            id: const d.Value(1),
+            name: 'L',
+            currency: const d.Value('CNY'),
+          ));
+
+      final cloudJson = _ledgerJsonWithOneTx(
+        ledgerId: 1,
+        syncId: 'cloud-1',
+        amount: 99.0,
+      );
+
+      // 合法密文：BEECRYPT1:<16字节salt>:<≥28字节payload>
+      final saltB64 = base64.encode(List<int>.filled(16, 0));
+      final payloadB64 = base64.encode(List<int>.filled(32, 1));
+      final ciphertext = 'BEECRYPT1:$saltB64:$payloadB64';
+
+      // 模拟 disable 后的真实状态：
+      // - 云端仍是密文 → provider 未被装饰，storage.download 返回原始密文
+      // - 本地加密服务 isEnabled=false（provider 不被装饰），但 hasActiveKey=true
+      //   （disable 保留 secure storage 密钥），decrypt 可还原明文
+      final fakeStorage = _FakeStorage(returnJson: ciphertext);
+      final fakeProvider = _FakeCloudProvider(storage: fakeStorage);
+
+      final manager = TransactionsSyncManager(
+        config: const fcs.CloudServiceConfig(
+          type: fcs.CloudBackendType.supabase,
+          name: 'test',
+        ),
+        db: db,
+        repo: repo,
+        encryptionService:
+            _DisabledButKeyedEncryptionService(decrypted: cloudJson),
+      );
+      manager.setSyncManagerForTesting(
+        syncManager: fcs.CloudSyncManager<int>(
+          provider: fakeProvider,
+          serializer: _NoopSerializer(),
+        ),
+        provider: fakeProvider,
+      );
+
+      // Act: 恢复云端数据（此时加密已关闭）
+      final result =
+          await manager.downloadAndRestoreToCurrentLedger(ledgerId: 1);
+
+      // Assert: 密钥仍在，应从密文解密并恢复，而非被 _decryptIfNeeded 判为不可读跳过
+      expect(result.inserted, 1,
+          reason: 'disable 后密钥仍保留，应从云端密文解密恢复，inserted=1');
+      final txs = await db.select(db.transactions).get();
+      expect(txs.length, 1,
+          reason: '恢复后本地应只有云端那 1 笔交易');
+      expect(txs.first.amount, 99.0,
+          reason: '恢复的应是云端版本（amount=99）');
+    });
+
+    test('reset 后无密钥时，恢复应跳过（返回 0,0）而非崩溃', () async {
+      // Arrange
+      final repo = LocalRepository(db);
+      await db.into(db.ledgers).insert(LedgersCompanion.insert(
+            id: const d.Value(1),
+            name: 'L',
+            currency: const d.Value('CNY'),
+          ));
+
+      final saltB64 = base64.encode(List<int>.filled(16, 0));
+      final payloadB64 = base64.encode(List<int>.filled(32, 1));
+      final ciphertext = 'BEECRYPT1:$saltB64:$payloadB64';
+
+      // 模拟 reset 后的真实状态：isEnabled=false 且 hasActiveKey=false（密钥清空）
+      final fakeStorage = _FakeStorage(returnJson: ciphertext);
+      final fakeProvider = _FakeCloudProvider(storage: fakeStorage);
+
+      final manager = TransactionsSyncManager(
+        config: const fcs.CloudServiceConfig(
+          type: fcs.CloudBackendType.supabase,
+          name: 'test',
+        ),
+        db: db,
+        repo: repo,
+        encryptionService: _DisabledNoKeyEncryptionService(),
+      );
+      manager.setSyncManagerForTesting(
+        syncManager: fcs.CloudSyncManager<int>(
+          provider: fakeProvider,
+          serializer: _NoopSerializer(),
+        ),
+        provider: fakeProvider,
+      );
+
+      // Act: 恢复云端数据
+      final result =
+          await manager.downloadAndRestoreToCurrentLedger(ledgerId: 1);
+
+      // Assert: 无密钥，应跳过恢复（返回 0,0），不抛 FormatException
+      expect(result.inserted, 0);
+      expect(result.deletedDup, 0);
+      final txs = await db.select(db.transactions).get();
+      expect(txs.length, 0,
+          reason: 'reset 后无密钥，恢复被跳过，本地不应被污染');
+    });
+  });
+
+  group('缺口 1: getStatus 在 SaltMismatchException 时返回哨兵 message', () {
+    test('storage.download 抛 SaltMismatchException → message 为 salt_mismatch_need_password', () async {
+      // Arrange: 用一个抛 SaltMismatchException 的 fake storage
+      final fakeStorage = _SaltMismatchStorage();
+      final fakeProvider = _FakeCloudProvider(storage: fakeStorage);
+      final syncManager = fcs.CloudSyncManager<int>(
+        provider: fakeProvider,
+        serializer: _NoopSerializer(),
+      );
+
+      final manager = TransactionsSyncManager(
+        config: const fcs.CloudServiceConfig(
+          type: fcs.CloudBackendType.supabase,
+          name: 'test',
+        ),
+        db: db,
+        repo: _DummyRepo(),
+      );
+      manager.setSyncManagerForTesting(
+        syncManager: syncManager,
+        provider: fakeProvider,
+      );
+
+      // 预置 ledger 行
+      await db.into(db.ledgers).insert(LedgersCompanion.insert(
+            id: const d.Value(1),
+            name: 'test',
+            currency: const d.Value('CNY'),
+          ));
+
+      // Act
+      final status = await manager.getStatus(ledgerId: 1);
+
+      // Assert: 应返回 error + 哨兵 message，而非原始异常文本
+      expect(status.diff, SyncDiff.error);
+      expect(status.message, 'salt_mismatch_need_password',
+          reason: 'SaltMismatchException 应转为哨兵 message 供 UI 识别');
+    });
+
+    test('SaltMismatchException 哨兵状态不被缓存', () async {
+      // Arrange
+      final fakeStorage = _SaltMismatchStorage();
+      final fakeProvider = _FakeCloudProvider(storage: fakeStorage);
+      final syncManager = fcs.CloudSyncManager<int>(
+        provider: fakeProvider,
+        serializer: _NoopSerializer(),
+      );
+
+      final manager = TransactionsSyncManager(
+        config: const fcs.CloudServiceConfig(
+          type: fcs.CloudBackendType.supabase,
+          name: 'test',
+        ),
+        db: db,
+        repo: _DummyRepo(),
+      );
+      manager.setSyncManagerForTesting(
+        syncManager: syncManager,
+        provider: fakeProvider,
+      );
+
+      await db.into(db.ledgers).insert(LedgersCompanion.insert(
+            id: const d.Value(1),
+            name: 'test',
+            currency: const d.Value('CNY'),
+          ));
+
+      // Act: 第一次调用
+      final status1 = await manager.getStatus(ledgerId: 1);
+      expect(status1.message, 'salt_mismatch_need_password');
+
+      // Assert: 第二次调用应重新走完整流程（非读缓存）
+      // 如果缓存了，第二次会直接返回缓存的 error 而不再调用 download
+      final status2 = await manager.getStatus(ledgerId: 1);
+      expect(status2.message, 'salt_mismatch_need_password',
+          reason: '第二次调用应重新走流程，不应读缓存');
+      expect(fakeStorage.downloadCallCount, greaterThanOrEqualTo(2),
+          reason: '第二次调用应实际触发 download');
+    });
   });
 }
 
@@ -344,4 +591,80 @@ class _FakeStorage implements fcs.CloudStorageService {
       metadata: const {'uploadedAt': '2026-07-28T10:00:00Z'},
     );
   }
+}
+
+/// 模拟加密层 salt 不匹配：download 永远抛 SaltMismatchException
+class _SaltMismatchStorage implements fcs.CloudStorageService {
+  int downloadCallCount = 0;
+
+  @override
+  Future<String?> download({required String path}) async {
+    downloadCallCount++;
+    throw const SaltMismatchException(
+      '密文 salt 与当前密钥不匹配',
+      ciphertextSaltBase64: 'AAAAAAAAAAAAAAAAAAAAAA==',
+    );
+  }
+
+  @override
+  Future<void> upload({
+    required String path,
+    required String data,
+    Map<String, String>? metadata,
+  }) async {}
+
+  @override
+  Future<void> delete({required String path}) async {}
+
+  @override
+  Future<List<fcs.CloudFile>> list({required String path}) async => [];
+
+  @override
+  Future<bool> exists({required String path}) async => true;
+
+  @override
+  Future<fcs.CloudFile?> getMetadata({required String path}) async {
+    return fcs.CloudFile(
+      name: path,
+      path: path,
+      size: 100,
+      lastModified: DateTime.now(),
+      metadata: const {'uploadedAt': '2026-07-28T10:00:00Z'},
+    );
+  }
+}
+
+/// 模拟「已关闭加密(disable)但密钥仍保留」的加密服务：
+/// isEnabled=false（provider 不被装饰），hasActiveKey=true（secure storage 有密钥），
+/// decrypt 把 BEECRYPT1: 密文还原为预置的明文 JSON。
+class _DisabledButKeyedEncryptionService implements EncryptionService {
+  final String decrypted;
+  _DisabledButKeyedEncryptionService({required this.decrypted});
+
+  @override
+  Future<bool> get isEnabled => Future.value(false);
+
+  @override
+  Future<bool> get hasActiveKey => Future.value(true);
+
+  @override
+  Future<String> decrypt(String ciphertext) async => decrypted;
+
+  // 其余方法测试中不会触发
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
+}
+
+/// 模拟「reset 后密钥清空」的加密服务：
+/// isEnabled=false 且 hasActiveKey=false → 本地确实无法解密。
+class _DisabledNoKeyEncryptionService implements EncryptionService {
+  @override
+  Future<bool> get isEnabled => Future.value(false);
+
+  @override
+  Future<bool> get hasActiveKey => Future.value(false);
+
+  // 其余方法测试中不会触发
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
 }

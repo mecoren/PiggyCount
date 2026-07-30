@@ -11,6 +11,7 @@ import '../../widgets/biz/app_list_tile.dart';
 import '../../widgets/biz/section_card.dart';
 import '../../widgets/encryption/password_setup_dialog.dart';
 import '../../widgets/ui/dialog.dart';
+import '../../widgets/ui/glass_title_bar.dart';
 import '../../widgets/ui/toast.dart';
 
 /// 加密设置页 — 设置 / 修改 / 重置同步加密密码
@@ -183,6 +184,7 @@ class _EncryptionSettingsPageState
     // 重置前要求用户验证密码（若已开启加密）
     final service = ref.read(encryptionServiceProvider);
     final hasKey = await service.hasActiveKey;
+    if (!mounted) return;
     if (hasKey) {
       final password = await PasswordSetupDialog.showForVerify(context);
       if (password == null) return;
@@ -231,155 +233,168 @@ class _EncryptionSettingsPageState
     final hasKey = hasKeyAsync.valueOrNull ?? false;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.cloudSyncEncryptSettings),
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.cloudSyncEncryptSettings,
+        showBack: true,
+        bottomOpaque: true,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // 状态展示
-          SectionCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      isEnabled ? Icons.lock : Icons.lock_open,
-                      color: PiggyTokens.textSecondary(context),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n.cloudSyncEncryptTitle,
-                            style: PiggyTextTokens.title(context).copyWith(
-                              color: PiggyTokens.textPrimary(context),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 56,
+        ),
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            // 状态展示
+            SectionCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        isEnabled ? Icons.lock : Icons.lock_open,
+                        color: PiggyTokens.textSecondary(context),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.cloudSyncEncryptTitle,
+                              style: PiggyTextTokens.title(context).copyWith(
+                                color: PiggyTokens.textPrimary(context),
+                              ),
                             ),
+                            Text(
+                              l10n.cloudSyncEncryptSubtitle,
+                              style: PiggyTextTokens.label(context).copyWith(
+                                color: PiggyTokens.textSecondary(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isEnabled
+                              ? PiggyTokens.success(context)
+                                  .withValues(alpha: 0.12)
+                              : Colors.grey.withValues(alpha: 0.12),
+                          borderRadius:
+                              BorderRadius.circular(PiggyDimens.radiusXs),
+                        ),
+                        child: Text(
+                          isEnabled
+                              ? l10n.cloudSyncEncryptEnabled
+                              : l10n.cloudSyncEncryptDisabled,
+                          style: TextStyle(
+                            color: isEnabled
+                                ? PiggyTokens.success(context)
+                                : Colors.grey,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
                           ),
-                          Text(
-                            l10n.cloudSyncEncryptSubtitle,
-                            style: PiggyTextTokens.label(context).copyWith(
-                              color: PiggyTokens.textSecondary(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (isEnabled) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.cloudSyncEncryptMultiDeviceHint,
+                      style: TextStyle(
+                        color: PiggyTokens.textTertiary(context),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                  if (isEnabled && !hasKey) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .error
+                            .withValues(alpha: 0.08),
+                        borderRadius:
+                            BorderRadius.circular(PiggyDimens.radiusXs),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.warning_amber,
+                              size: 16,
+                              color: Theme.of(context).colorScheme.error),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              l10n.cloudSyncEncryptDecryptFailed,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                                fontSize: 12,
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isEnabled
-                            ? PiggyTokens.success(context).withValues(alpha: 0.12)
-                            : Colors.grey.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
-                      ),
-                      child: Text(
-                        isEnabled
-                            ? l10n.cloudSyncEncryptEnabled
-                            : l10n.cloudSyncEncryptDisabled,
-                        style: TextStyle(
-                          color: isEnabled ? PiggyTokens.success(context) : Colors.grey,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
                   ],
-                ),
-                if (isEnabled) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    l10n.cloudSyncEncryptMultiDeviceHint,
-                    style: TextStyle(
-                      color: PiggyTokens.textTertiary(context),
-                      fontSize: 12,
-                    ),
-                  ),
                 ],
-                if (isEnabled && !hasKey) ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .error
-                          .withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.warning_amber,
-                            size: 16,
-                            color: Theme.of(context).colorScheme.error),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            l10n.cloudSyncEncryptDecryptFailed,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          // 操作入口
-          SectionCard(
-            child: Column(
-              children: [
-                if (!isEnabled || !hasKey)
-                  AppListTile(
-                    leading: Icons.password,
-                    title: l10n.cloudSyncEncryptSetPassword,
-                    subtitle: l10n.cloudSyncEncryptPasswordHint,
-                    onTap: _busy ? null : _onSetPassword,
-                  ),
-                if (isEnabled && hasKey) ...[
-                  AppListTile(
-                    leading: Icons.edit,
-                    title: l10n.cloudSyncEncryptChangePassword,
-                    subtitle: l10n.cloudSyncEncryptPasswordHint,
-                    onTap: _busy ? null : _onChangePassword,
-                  ),
-                  PiggyTokens.cardDivider(context),
-                  AppListTile(
-                    leading: Icons.delete_outline,
-                    title: l10n.cloudSyncEncryptResetEncryption,
-                    subtitle: l10n.cloudSyncEncryptResetConfirmTitle,
-                    onTap: _busy ? null : _onResetEncryption,
-                  ),
-                ],
-              ],
-            ),
-          ),
-          if (_busy)
-            const Padding(
-              padding: EdgeInsets.only(top: 16),
-              child: Center(
-                child: SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
               ),
             ),
-        ],
+            const SizedBox(height: 16),
+            // 操作入口
+            SectionCard(
+              child: Column(
+                children: [
+                  if (!isEnabled || !hasKey)
+                    AppListTile(
+                      leading: Icons.password,
+                      title: l10n.cloudSyncEncryptSetPassword,
+                      subtitle: l10n.cloudSyncEncryptPasswordHint,
+                      onTap: _busy ? null : _onSetPassword,
+                    ),
+                  if (isEnabled && hasKey) ...[
+                    AppListTile(
+                      leading: Icons.edit,
+                      title: l10n.cloudSyncEncryptChangePassword,
+                      subtitle: l10n.cloudSyncEncryptPasswordHint,
+                      onTap: _busy ? null : _onChangePassword,
+                    ),
+                    PiggyTokens.cardDivider(context),
+                    AppListTile(
+                      leading: Icons.delete_outline,
+                      title: l10n.cloudSyncEncryptResetEncryption,
+                      subtitle: l10n.cloudSyncEncryptResetConfirmTitle,
+                      onTap: _busy ? null : _onResetEncryption,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (_busy)
+              const Padding(
+                padding: EdgeInsets.only(top: 16),
+                child: Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

@@ -7,6 +7,7 @@
 // 使用 FakeCloudProvider 真实模拟 CloudProvider 行为，验证 storage 经过加密装饰器。
 
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -214,10 +215,10 @@ class InMemorySecureKeyStorage implements SecureKeyStorage {
   }
 
   @override
-  Future<List<int>?> getKey() async {
+  Future<Uint8List?> getKey() async {
     final value = _store['piggycount_enc_key'];
     if (value == null) return null;
-    return base64.decode(value);
+    return Uint8List.fromList(base64.decode(value));
   }
 
   @override
@@ -226,10 +227,10 @@ class InMemorySecureKeyStorage implements SecureKeyStorage {
   }
 
   @override
-  Future<List<int>?> getVerifier() async {
+  Future<Uint8List?> getVerifier() async {
     final value = _store['piggycount_enc_verifier'];
     if (value == null) return null;
-    return base64.decode(value);
+    return Uint8List.fromList(base64.decode(value));
   }
 
   @override
@@ -238,10 +239,10 @@ class InMemorySecureKeyStorage implements SecureKeyStorage {
   }
 
   @override
-  Future<List<int>?> getSalt() async {
+  Future<Uint8List?> getSalt() async {
     final value = _store['piggycount_enc_salt'];
     if (value == null) return null;
-    return base64.decode(value);
+    return Uint8List.fromList(base64.decode(value));
   }
 
   @override

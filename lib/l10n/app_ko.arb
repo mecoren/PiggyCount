@@ -2278,5 +2278,12 @@
   "cloudSyncEncryptReencryptPartialFailed": "암호화가 활성화되었지만 {count}개의 클라우드 파일 재암호화에 실패했습니다. 다음 동기화 시 자동으로 재시도됩니다.",
   "cloudSyncEncryptProbeFailedTitle": "클라우드 탐지 실패",
   "cloudSyncEncryptProbeFailedMessage": "클라우드에 이미 암호화된 데이터가 있는지 탐지할 수 없습니다(네트워크 또는 권한 문제일 수 있음). 다른 기기에서 암호화가 활성화된 경우 계속하면 새 비밀번호로 클라우드 데이터가 재암호화되어 다른 기기에서 해독할 수 없게 될 수 있습니다. 계속하시겠습니까?",
-  "cloudSyncEncryptProbeFailedContinue": "첫 기기로 계속"
+  "cloudSyncEncryptProbeFailedContinue": "첫 기기로 계속",
+  "saltMismatchStatus": "암호화 키 불일치",
+  "saltMismatchNeedPasswordHint": "클라우드 백업 키가 로컬과 일치하지 않습니다. 비밀번호를 다시 입력하세요.",
+  "saltMismatchDialogTitle": "비밀번호 재입력",
+  "saltMismatchRetrySuccess": "키가 활성화되었습니다. 동기화를 재시도하는 중...",
+  "saltMismatchRawStorageUnavailable": "클라우드 서비스가 초기화되지 않아 키를 복구할 수 없습니다",
+  "saltMismatchProbeFailed": "클라우드 탐지 실패, 네트워크 확인 후 재시도하세요",
+  "saltMismatchCloudCorrupted": "클라우드 암호문이 손상되어 키를 복구할 수 없습니다"
 }

@@ -7,7 +7,7 @@ import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../cloud/sync/sync_engine.dart';  // for onInviteAccepted extension method
+import '../../cloud/sync/sync_engine.dart'; // for onInviteAccepted extension method
 import '../../cloud/sync/sync_providers.dart' as cloud_sync;
 import '../../l10n/app_localizations.dart';
 import '../../providers/shared_ledger_providers.dart';
@@ -53,7 +53,8 @@ class _JoinSharedLedgerPageState extends ConsumerState<JoinSharedLedgerPage> {
   /// 输入框显示 "ABC 123",发送 server 时 strip 空格。
   String _normalizeForInput(String raw) {
     final cleaned = raw.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
-    if (cleaned.length == 6) return '${cleaned.substring(0, 3)} ${cleaned.substring(3)}';
+    if (cleaned.length == 6)
+      return '${cleaned.substring(0, 3)} ${cleaned.substring(3)}';
     return cleaned;
   }
 
@@ -63,7 +64,8 @@ class _JoinSharedLedgerPageState extends ConsumerState<JoinSharedLedgerPage> {
   Future<void> _doPreview() async {
     final code = _normalizeForApi(_codeController.text);
     if (code.length != 6) {
-      setState(() => _error = AppLocalizations.of(context).sharedJoinCodeFormatError);
+      setState(() =>
+          _error = AppLocalizations.of(context).sharedJoinCodeFormatError);
       return;
     }
     setState(() {
@@ -95,12 +97,12 @@ class _JoinSharedLedgerPageState extends ConsumerState<JoinSharedLedgerPage> {
       // fetchSharedResources 全量灌进 SharedLedger* 镜像 + 拉历史 tx。失败
       // 不阻塞"加入成功"体验,下次启动会自动 sync。
       try {
-        final cloud =
-            await ref.read(piggycountCloudProviderInstance.future);
+        final cloud = await ref.read(piggycountCloudProviderInstance.future);
         if (cloud != null) {
           final engine = ref.read(cloud_sync.syncEngineProvider(cloud));
           await engine.onInviteAccepted(preview.ledgerExternalId);
         }
+        if (!mounted) return;
         // 强力 invalidate 所有 ledger 相关 provider,确保下一帧 UI 立即重渲染
         // (单纯 state++ 在 cached FutureProvider 上偶发不触发 reCompute,
         // invalidate 是无条件 dispose + 下次 watch 重新 build)
@@ -111,8 +113,7 @@ class _JoinSharedLedgerPageState extends ConsumerState<JoinSharedLedgerPage> {
         ref.read(statsRefreshProvider.notifier).state++;
       } catch (e) {
         // 静默,UI 自己刷不到下次 sync 再补;但 log 出来便于诊断
-        logger.warning('JoinSharedLedger',
-            'accept 后 sync/刷新失败 — 下次启动会兜底', e);
+        logger.warning('JoinSharedLedger', 'accept 后 sync/刷新失败 — 下次启动会兜底', e);
       }
       if (!mounted) return;
       final l10n = AppLocalizations.of(context);
@@ -174,26 +175,33 @@ class _JoinSharedLedgerPageState extends ConsumerState<JoinSharedLedgerPage> {
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: l10n.sharedJoinPageTitle,
-            subtitle: l10n.sharedJoinPageSubtitle,
-            showBack: true,
-          ),
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                const SizedBox(height: 8),
-                if (preview != null)
-                  _buildPreviewCard(preview, l10n)
-                else
-                  _buildInputCard(l10n),
-              ],
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.sharedJoinPageTitle,
+        subtitle: l10n.sharedJoinPageSubtitle,
+        showBack: true,
+        bottomOpaque: true,
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 80,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  const SizedBox(height: 8),
+                  if (preview != null)
+                    _buildPreviewCard(preview, l10n)
+                  else
+                    _buildInputCard(l10n),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -201,170 +209,174 @@ class _JoinSharedLedgerPageState extends ConsumerState<JoinSharedLedgerPage> {
   Widget _buildInputCard(AppLocalizations l10n) {
     return SectionCard(
       child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              l10n.sharedJoinEnterCode,
-              style: Theme.of(context).textTheme.titleMedium,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.sharedJoinEnterCode,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.sharedJoinEnterCodeHint,
+            style: TextStyle(color: PiggyTokens.textSecondary(context)),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _codeController,
+            autofocus: true,
+            textAlign: TextAlign.center,
+            maxLength: 7, // 6 chars + 1 space
+            textCapitalization: TextCapitalization.characters,
+            style: const TextStyle(
+              fontSize: 28,
+              letterSpacing: 6,
+              fontFamily: 'monospace',
+              fontWeight: FontWeight.w600,
             ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.sharedJoinEnterCodeHint,
-              style: TextStyle(color: PiggyTokens.textSecondary(context)),
+            decoration: InputDecoration(
+              hintText: 'ABC 123',
+              border: const OutlineInputBorder(),
+              counterText: '',
+              errorText: _error,
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _codeController,
-              autofocus: true,
-              textAlign: TextAlign.center,
-              maxLength: 7, // 6 chars + 1 space
-              textCapitalization: TextCapitalization.characters,
-              style: const TextStyle(
-                fontSize: 28,
-                letterSpacing: 6,
-                fontFamily: 'monospace',
-                fontWeight: FontWeight.w600,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(
+                RegExp(r'[A-Za-z2-9\s]'),
               ),
-              decoration: InputDecoration(
-                hintText: 'ABC 123',
-                border: const OutlineInputBorder(),
-                counterText: '',
-                errorText: _error,
-              ),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(
-                  RegExp(r'[A-Za-z2-9\s]'),
-                ),
-              ],
-              onChanged: (raw) {
-                final normalized = _normalizeForInput(raw);
-                if (normalized != raw) {
-                  _codeController.value = TextEditingValue(
-                    text: normalized,
-                    selection: TextSelection.collapsed(offset: normalized.length),
-                  );
-                }
-                if (_error != null) {
-                  setState(() => _error = null);
-                }
-              },
-              onSubmitted: (_) => _doPreview(),
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: _busy ? null : _doPreview,
-              child: _busy
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(l10n.sharedJoinPreviewButton),
-            ),
-          ],
-        ),
+            ],
+            onChanged: (raw) {
+              final normalized = _normalizeForInput(raw);
+              if (normalized != raw) {
+                _codeController.value = TextEditingValue(
+                  text: normalized,
+                  selection: TextSelection.collapsed(offset: normalized.length),
+                );
+              }
+              if (_error != null) {
+                setState(() => _error = null);
+              }
+            },
+            onSubmitted: (_) => _doPreview(),
+          ),
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: _busy ? null : _doPreview,
+            child: _busy
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(l10n.sharedJoinPreviewButton),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildPreviewCard(PiggyCountCloudInvitePreview preview, AppLocalizations l10n) {
+  Widget _buildPreviewCard(
+      PiggyCountCloudInvitePreview preview, AppLocalizations l10n) {
     return SectionCard(
       child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: CircleAvatar(
-                radius: 28,
-                child: Text(
-                  preview.invitedByDisplay.isNotEmpty
-                      ? preview.invitedByDisplay.substring(0, 1).toUpperCase()
-                      : '?',
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Center(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: CircleAvatar(
+              radius: 28,
               child: Text(
-                l10n.sharedJoinInvitedBy(preview.invitedByDisplay),
-                style: TextStyle(color: PiggyTokens.textSecondary(context)),
+                preview.invitedByDisplay.isNotEmpty
+                    ? preview.invitedByDisplay.substring(0, 1).toUpperCase()
+                    : '?',
               ),
             ),
-            const SizedBox(height: 8),
-            Center(
-              child: Text(
-                preview.ledgerName ?? preview.ledgerExternalId,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
+          ),
+          const SizedBox(height: 12),
+          Center(
+            child: Text(
+              l10n.sharedJoinInvitedBy(preview.invitedByDisplay),
+              style: TextStyle(color: PiggyTokens.textSecondary(context)),
             ),
-            const SizedBox(height: 12),
-            Center(
-              child: Chip(
-                label: Text(
-                  l10n.sharedJoinRoleLine(_formatRoleLabel(preview.targetRole, l10n)),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Center(
-              child: Text(
-                _formatExpiry(preview.expiresAt, l10n),
-                style: TextStyle(
-                  color: PiggyTokens.textTertiary(context),
-                  fontSize: 12,
-                ),
-              ),
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 8),
-              Center(
-                child: Text(
-                  _error!,
-                  style: TextStyle(color: PiggyTokens.error(context), fontSize: 13),
-                ),
-              ),
-            ],
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _busy
-                        ? null
-                        : () {
-                            setState(() {
-                              _preview = null;
-                              _error = null;
-                            });
-                          },
-                    child: Text(l10n.commonCancel),
+          ),
+          const SizedBox(height: 8),
+          Center(
+            child: Text(
+              preview.ledgerName ?? preview.ledgerExternalId,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: _busy ? null : _doAccept,
-                    child: _busy
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(l10n.sharedJoinAcceptButton),
-                  ),
-                ),
-              ],
             ),
+          ),
+          const SizedBox(height: 12),
+          Center(
+            child: Chip(
+              label: Text(
+                l10n.sharedJoinRoleLine(
+                    _formatRoleLabel(preview.targetRole, l10n)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Center(
+            child: Text(
+              _formatExpiry(preview.expiresAt, l10n),
+              style: TextStyle(
+                color: PiggyTokens.textTertiary(context),
+                fontSize: 12,
+              ),
+            ),
+          ),
+          if (_error != null) ...[
             const SizedBox(height: 8),
             Center(
               child: Text(
-                DateFormat('yyyy-MM-dd HH:mm').format(preview.expiresAt.toLocal()),
-                style: TextStyle(
-                    color: PiggyTokens.textTertiary(context), fontSize: 11),
+                _error!,
+                style:
+                    TextStyle(color: PiggyTokens.error(context), fontSize: 13),
               ),
             ),
           ],
-        ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _busy
+                      ? null
+                      : () {
+                          setState(() {
+                            _preview = null;
+                            _error = null;
+                          });
+                        },
+                  child: Text(l10n.commonCancel),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  onPressed: _busy ? null : _doAccept,
+                  child: _busy
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(l10n.sharedJoinAcceptButton),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Center(
+            child: Text(
+              DateFormat('yyyy-MM-dd HH:mm')
+                  .format(preview.expiresAt.toLocal()),
+              style: TextStyle(
+                  color: PiggyTokens.textTertiary(context), fontSize: 11),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

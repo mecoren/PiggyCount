@@ -32,28 +32,35 @@ class BudgetPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          PrimaryHeader(
-            title: l10n.budgetTitle,
-            showBack: true,
-            compact: true,
-            actions: [
-              if (!isEditorInShared)
-                IconButton(
-                  onPressed: () => _addBudget(context),
-                  icon: const Icon(Icons.add),
-                ),
-            ],
-          ),
-          Expanded(
-            child: overviewAsync.when(
-              data: (overview) => _buildContent(context, ref, overview),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: $e')),
+      extendBodyBehindAppBar: true,
+      appBar: GlassTitleBar(
+        title: l10n.budgetTitle,
+        showBack: true,
+        compact: true,
+        bottomOpaque: true,
+        actions: [
+          if (!isEditorInShared)
+            IconButton(
+              onPressed: () => _addBudget(context),
+              icon: const Icon(Icons.add),
             ),
-          ),
         ],
+      ),
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 56,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: overviewAsync.when(
+                data: (overview) => _buildContent(context, ref, overview),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(child: Text('Error: $e')),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
