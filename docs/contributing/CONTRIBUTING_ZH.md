@@ -1,6 +1,6 @@
 # 贡献指南
 
-感谢你考虑为蜜蜂记账做出贡献！🎉
+感谢你考虑为小猪记账做出贡献！🎉
 
 这份指南将帮助你了解如何参与项目开发、报告问题、提交代码等。我们欢迎所有形式的贡献，无论是代码、文档、翻译还是建议。
 
@@ -43,11 +43,11 @@
 
 ### 🐛 报告 Bug
 
-发现了问题？请通过 [GitHub Issues](https://github.com/TNT-Likely/BeeCount/issues) 告诉我们。
+发现了问题？请通过 [GitHub Issues](https://github.com/TNT-Likely/PiggyCount/issues) 告诉我们。
 
 ### 💡 提出新功能
 
-有好的想法？我们很乐意听到！请先查看 [Issues](https://github.com/TNT-Likely/BeeCount/issues) 和 [Discussions](https://github.com/TNT-Likely/BeeCount/discussions) 看看是否已经有人提出。
+有好的想法？我们很乐意听到！请先查看 [Issues](https://github.com/TNT-Likely/PiggyCount/issues) 和 [Discussions](https://github.com/TNT-Likely/PiggyCount/discussions) 看看是否已经有人提出。
 
 ### 💻 贡献代码
 
@@ -75,7 +75,7 @@
 
 #### 🎨 招募设计师 {#designer-recruitment}
 
-**我们正在寻找有才华的 UI/UX 设计师加入蜜蜂记账项目！**
+**我们正在寻找有才华的 UI/UX 设计师加入小猪记账项目！**
 
 📐 **参与内容：**
 
@@ -93,8 +93,8 @@
 
 💌 **联系方式：**
 
-- GitHub Issues: [提交设计建议](https://github.com/TNT-Likely/BeeCount/issues)
-- Telegram: [加入讨论群](https://t.me/beecount)
+- GitHub Issues: [提交设计建议](https://github.com/TNT-Likely/PiggyCount/issues)
+- Telegram: [加入讨论群](https://t.me/piggycount)
 
 ## 报告 Bug
 
@@ -102,8 +102,8 @@
 
 在提交 Bug 报告前，请先：
 
-1. 检查 [FAQ](https://github.com/TNT-Likely/BeeCount/wiki/常见问题-FAQ) 看看问题是否已有解决方案
-2. 搜索 [现有 Issues](https://github.com/TNT-Likely/BeeCount/issues) 确认问题未被报告
+1. 检查 [FAQ](https://github.com/TNT-Likely/PiggyCount/wiki/常见问题-FAQ) 看看问题是否已有解决方案
+2. 搜索 [现有 Issues](https://github.com/TNT-Likely/PiggyCount/issues) 确认问题未被报告
 3. 确保你使用的是最新版本
 
 ### 如何报告
@@ -160,7 +160,7 @@
 
 我们欢迎新功能建议！在提交前：
 
-1. 检查 [Discussions](https://github.com/TNT-Likely/BeeCount/discussions) 中的"Ideas"分类
+1. 检查 [Discussions](https://github.com/TNT-Likely/PiggyCount/discussions) 中的"Ideas"分类
 2. 确认功能符合项目定位（隐私优先、开源、自托管）
 3. 考虑功能的实用性和普遍性
 
@@ -192,14 +192,14 @@
 ### 2. Clone 到本地
 
 ```bash
-git clone https://github.com/你的用户名/BeeCount.git
-cd BeeCount
+git clone https://github.com/你的用户名/PiggyCount.git
+cd PiggyCount
 ```
 
 ### 3. 添加上游仓库
 
 ```bash
-git remote add upstream https://github.com/TNT-Likely/BeeCount.git
+git remote add upstream https://github.com/TNT-Likely/PiggyCount.git
 ```
 
 ### 4. 创建功能分支
@@ -274,8 +274,8 @@ flutter doctor
 2. **Clone 项目**
 
 ```bash
-git clone https://github.com/TNT-Likely/BeeCount.git
-cd BeeCount
+git clone https://github.com/TNT-Likely/PiggyCount.git
+cd PiggyCount
 ```
 
 3. **安装依赖**
@@ -567,7 +567,7 @@ Closes #123
 
 ## 翻译贡献
 
-蜜蜂记账官方维护 3 种语言（简体中文、繁体中文、English），并接受社区贡献的其他语言翻译。欢迎贡献新语言或改进现有翻译。
+小猪记账官方维护 3 种语言（简体中文、繁体中文、English），并接受社区贡献的其他语言翻译。欢迎贡献新语言或改进现有翻译。
 
 ### 当前支持的语言
 
@@ -602,7 +602,7 @@ lib/l10n/app_it.arb
 
 ```json
 {
-  "appName": "BeeCount",
+  "appName": "PiggyCount",
   "home": "Casa",
   "charts": "Grafici",
   "ledgers": "Conti",
@@ -695,7 +695,7 @@ git push origin docs/improve-supabase-guide
 
 ### 社区交流
 
-- [GitHub Discussions](https://github.com/TNT-Likely/BeeCount/discussions) - 项目讨论
+- [GitHub Discussions](https://github.com/TNT-Likely/PiggyCount/discussions) - 项目讨论
 - [V2EX 帖子](https://www.v2ex.com/t/1168480) - 中文社区
 - Email: sunxiaoyes@outlook.com - 直接联系
 
@@ -711,4 +711,4 @@ git push origin docs/improve-supabase-guide
 
 再次感谢你的贡献！🙏
 
-如有任何问题，欢迎通过 [Issues](https://github.com/TNT-Likely/BeeCount/issues) 或 [Discussions](https://github.com/TNT-Likely/BeeCount/discussions) 与我们联系。
+如有任何问题，欢迎通过 [Issues](https://github.com/TNT-Likely/PiggyCount/issues) 或 [Discussions](https://github.com/TNT-Likely/PiggyCount/discussions) 与我们联系。

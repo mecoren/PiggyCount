@@ -1,4 +1,4 @@
-/* 简中环境下的 app 名称 — 桌面图标 + 任务台显示「蜜蜂记账」。
+/* 简中环境下的 app 名称 — 桌面图标 + 任务台显示「小猪记账」。
    跟 App Store 中国大陆 storefront 的 marketplace name 保持一致。 */
-"CFBundleDisplayName" = "蜜蜂记账";
-"CFBundleName" = "蜜蜂记账";
+"CFBundleDisplayName" = "小猪记账";
+"CFBundleName" = "小猪记账";

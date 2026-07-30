@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""生成 BeeCount 测试数据集(中英文双语)。
+"""生成 PiggyCount 测试数据集(中英文双语)。
 
 包含:
   - store_setup_{zh,en}.yaml  — 账户 + 一级/二级分类 + 标签 配置
@@ -276,7 +276,7 @@ def build_yaml(lang: str, exported_at: str) -> str:
     idx_lang = 0 if lang == "zh" else 1
 
     lines = []
-    lines.append("# BeeCount 配置（测试 / 截图用）")
+    lines.append("# PiggyCount 配置（测试 / 截图用）")
     lines.append(f"# 语言 / 货币：{lang_label}")
     lines.append(f"# 导出时间：{exported_at}")
     lines.append("")

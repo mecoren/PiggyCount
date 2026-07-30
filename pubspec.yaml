@@ -1,5 +1,5 @@
-name: beecount
-description: "A new Flutter project."
+name: piggycount
+description: "PiggyCount - A simple personal ledger app."
 publish_to: 'none'
 version: 0.0.1
 

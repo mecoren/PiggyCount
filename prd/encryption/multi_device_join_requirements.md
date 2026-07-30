@@ -1,4 +1,4 @@
-# BeeCount 同步加密 - 多设备加入流程 需求文档
+# PiggyCount 同步加密 - 多设备加入流程 需求文档
 
 > 版本：v1.0  日期：2026-07-27
 > 关联设计：`/prd/encryption/multi_device_join_design.md`
@@ -32,7 +32,7 @@
 - 不引入独立的 salt 文件（如 `beecrypt_salt.bin`）——salt 已在密文头，无需额外同步机制
 - 不修改 `CloudStorageService` / `CloudProvider` / `SyncService` 接口
 - 不处理"改密后云端旧密文未重加密"的混合 salt 场景（属于 changePassword 流程的独立改造）
-- 不覆盖路径 B（BeeCount Cloud 增量同步）
+- 不覆盖路径 B（PiggyCount Cloud 增量同步）
 
 ## 2. 用户故事
 
@@ -114,7 +114,7 @@ Future<void> enableFromCloud({
   - GCM 验证失败 → 抛 `ArgumentError('密码错误，无法加入加密')`
 - 加密 verifier（`BEECOUNT_VERIFIER_v1`）→ 持久化 key + salt + verifier 到 secure storage
 - 激活内存中的 key + salt
-- 标记 `beecount_enc_enabled = true`
+- 标记 `piggycount_enc_enabled = true`
 
 异常：
 - `ArgumentError`：密码为空/过短/解密验证失败

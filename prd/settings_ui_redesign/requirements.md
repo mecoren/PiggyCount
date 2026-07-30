@@ -2,7 +2,7 @@
 
 ## 1. 用户需求理解
 
-参考 `C:\Develop\project\00_AI\wait-home\mobile` 项目的设置页面设计，对 BeeCount 的设置页面进行 UI 样式改造，**只动样式 UI，要一模一样，功能不能变**。
+参考 `C:\Develop\project\00_AI\wait-home\mobile` 项目的设置页面设计，对 PiggyCount 的设置页面进行 UI 样式改造，**只动样式 UI，要一模一样，功能不能变**。
 
 ## 2. 改造范围
 
@@ -29,10 +29,10 @@
 | 头部 | 头像点击 | 弹窗 | `_showProfileOptions`（4 选项：昵称/相册/拍照/删除） |
 | 头部 | 昵称点击 | 弹窗 | `_showEditDisplayName`（TextField + 保存到 `displayNameProvider`） |
 | 头部 | 小眼睛点击 | 切换 | 翻转 `hideAmountsProvider`（隐藏金额开关） |
-| 头部 | 头像同步 | 云端 | `_syncAvatarToCloud`（仅 BeeCount Cloud 模式调用 `providerInstance.uploadMyAvatar()`） |
+| 头部 | 头像同步 | 云端 | `_syncAvatarToCloud`（仅 PiggyCount Cloud 模式调用 `providerInstance.uploadMyAvatar()`） |
 | 头部 | 统计展示 | 数据 | 记账天数 / 总记录 / 当前余额（3 列 `_StatCell`） |
 | 云同步与备份 | 云服务 | push | `CloudServicePage()` |
-| 云同步与备份 | 同步状态 | 条件分叉 | `cfg.type` 为 BeeCount Cloud → `BeeCountCloudSyncPage()`；否则 → `CloudSyncPage()` |
+| 云同步与备份 | 同步状态 | 条件分叉 | `cfg.type` 为 PiggyCount Cloud → `PiggyCountCloudSyncPage()`；否则 → `CloudSyncPage()` |
 | 功能管理 | 智能记账 | push | `SmartBillingPage()` |
 | 功能管理 | 数据管理 | push | `DataManagementPage()` |
 | 功能管理 | 自动化 | push | `AutomationPage()` |
@@ -40,7 +40,7 @@
 | 帮助与信息 | 关于 | push | `AboutPage()` |
 | 帮助与信息 | 使用帮助 | 条件分叉 | `kHelpCenterInApp` true → `HelpCenterPage()`；false → `_tryOpenUrl(WebsiteUrls.docs(locale))` |
 | 支持我们 | 打赏（仅 iOS） | push | `DonationPage()` |
-| 支持我们 | GitHub Star | 弹窗 | `_showGitHubStarGuide` → 跳转 `https://github.com/TNT-Likely/BeeCount` |
+| 支持我们 | GitHub Star | 弹窗 | `_showGitHubStarGuide` → 跳转 `https://github.com/TNT-Likely/PiggyCount` |
 | 支持我们 | 年度账单 | push | `AnnualReportPage()` |
 | 支持我们 | 分享海报 | 服务调用 | `SharePosterService.showPosterCarouselPreview(context)` |
 | 支持我们 | 复制推广文案 | 剪贴板 | `Clipboard.setData` + `showToast(l10n.shareGuidanceCopied)` |
@@ -54,7 +54,7 @@
 
 ### 3.3 头部皮肤（headerSkinProvider）功能保留
 
-BeeCount 有头部皮肤（headerSkinProvider）功能，用户可选择不同头部背景样式。本次改造中：
+PiggyCount 有头部皮肤（headerSkinProvider）功能，用户可选择不同头部背景样式。本次改造中：
 - **MinePage**：头部皮肤作为 ProfileCard 的背景保留（圆角 16px 卡片形式）
 - **设置子页**：使用 GlassTitleBar 替代 PrimaryHeader，头部皮肤在子页不再显示（视觉一致性优先，皮肤功能在 MinePage 仍可见可切换）
 

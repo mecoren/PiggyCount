@@ -6,11 +6,11 @@
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
 	<string>$(APP_DISPLAY_NAME)</string>
-	<!-- 桌面图标 / 任务台显示的 app 名按系统语言本地化:简中显示「蜜蜂记账」、
-	     繁中「蜜蜂記帳」、英文 / 其它语言 fallback 到「BeeCount」。
+	<!-- 桌面图标 / 任务台显示的 app 名按系统语言本地化:简中显示「小猪记账」、
+	     繁中「小豬記帳」、英文 / 其它语言 fallback 到「PiggyCount」。
 	     真实文案在 Runner/{en,zh-Hans,zh-Hant}.lproj/InfoPlist.strings。
-	     解决 App Store 审核 2.3.8 — 英文环境下 marketplace 名 (BeeCount -
-	     Simple Ledger) 跟设备显示名 (蜜蜂记账) 不一致的问题。 -->
+	     解决 App Store 审核 2.3.8 — 英文环境下 marketplace 名 (PiggyCount -
+	     Simple Ledger) 跟设备显示名 (小猪记账) 不一致的问题。 -->
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>en</string>
@@ -70,19 +70,19 @@
 	</array>
 	<!-- Privacy - Photo Library Usage Description -->
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>蜜蜂记账需要访问您的照片库，以便导入或分享账单数据文件</string>
+	<string>小猪记账需要访问您的照片库，以便导入或分享账单数据文件</string>
 	<!-- Privacy - Photo Library Additions Usage Description -->
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>蜜蜂记账需要保存文件到您的照片库</string>
+	<string>小猪记账需要保存文件到您的照片库</string>
 	<!-- Privacy - Camera Usage Description -->
 	<key>NSCameraUsageDescription</key>
-	<string>蜜蜂记账需要使用相机拍摄支付凭证进行OCR识别</string>
+	<string>小猪记账需要使用相机拍摄支付凭证进行OCR识别</string>
 	<!-- Privacy - Microphone Usage Description -->
 	<key>NSMicrophoneUsageDescription</key>
-	<string>蜜蜂记账需要使用麦克风进行语音记账</string>
+	<string>小猪记账需要使用麦克风进行语音记账</string>
 	<!-- Privacy - Face ID Usage Description -->
 	<key>NSFaceIDUsageDescription</key>
-	<string>蜜蜂记账使用Face ID进行应用解锁</string>
+	<string>小猪记账使用Face ID进行应用解锁</string>
 	<!-- Background Modes for Notifications -->
 	<key>UIBackgroundModes</key>
 	<array>
@@ -96,22 +96,22 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string>com.tntlikely.beecount</string>
+			<string>com.wait.piggycount</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>beecount</string>
+				<string>piggycount</string>
 			</array>
 		</dict>
 	</array>
 	<!-- iCloud Document Storage Configuration -->
 	<key>NSUbiquitousContainers</key>
 	<dict>
-		<key>iCloud.com.tntlikely.beecount</key>
+		<key>iCloud.com.wait.piggycount</key>
 		<dict>
 			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
 			<true/>
 			<key>NSUbiquitousContainerName</key>
-			<string>BeeCount</string>
+			<string>PiggyCount</string>
 			<key>NSUbiquitousContainerSupportedFolderLevels</key>
 			<string>Any</string>
 		</dict>

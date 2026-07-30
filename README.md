@@ -1,48 +1,48 @@
-# 蜜蜂记账(BeeCount) &nbsp; [English](README_EN.md)
+# 小猪记账(PiggyCount) &nbsp; [English](README_EN.md)
 
 <div align="center">
 
-![GitHub stars](https://img.shields.io/github/stars/TNT-Likely/BeeCount?style=social)
+![GitHub stars](https://img.shields.io/github/stars/TNT-Likely/PiggyCount?style=social)
 ![License](https://img.shields.io/badge/license-Business%20Source%20License-orange.svg)
-![Release](https://img.shields.io/github/v/release/TNT-Likely/BeeCount?label=latest&color=green)
-![Downloads](https://img.shields.io/github/downloads/TNT-Likely/BeeCount/total?color=blue)
-![Last commit](https://img.shields.io/github/last-commit/TNT-Likely/BeeCount)
+![Release](https://img.shields.io/github/v/release/TNT-Likely/PiggyCount?label=latest&color=green)
+![Downloads](https://img.shields.io/github/downloads/TNT-Likely/PiggyCount/total?color=blue)
+![Last commit](https://img.shields.io/github/last-commit/TNT-Likely/PiggyCount)
 ![Flutter](https://img.shields.io/badge/Flutter-3.27%2B-02569B?logo=flutter)
 
 **你的数据,你做主的开源记账应用**
 
-支持 BeeCount Cloud 自建云端 / iCloud / Supabase / WebDAV / S3 五种同步方案
+支持 PiggyCount Cloud 自建云端 / iCloud / Supabase / WebDAV / S3 五种同步方案
 
 <br/>
 
 <a href="https://apps.apple.com/app/id6754611670">
   <img src="https://img.shields.io/badge/App%20Store-000000?style=for-the-badge&logo=app-store&logoColor=white" alt="Download on App Store" height="64"/>
 </a>
-<a href="https://play.google.com/store/apps/details?id=com.tntlikely.beecount">
+<a href="https://play.google.com/store/apps/details?id=com.wait.piggycount">
   <img src="https://img.shields.io/badge/Google%20Play-414141?style=for-the-badge&logo=google-play&logoColor=white" alt="Get it on Google Play" height="64"/>
 </a>
-<a href="https://github.com/TNT-Likely/BeeCount-Cloud">
+<a href="https://github.com/TNT-Likely/PiggyCount-Cloud">
   <img src="https://img.shields.io/badge/Web%20(Self--Hosted)-4A90E2?style=for-the-badge&logo=docker&logoColor=white" alt="Self-host Web" height="64"/>
 </a>
 
 <br/>
 <br/>
 
-[🌐 官网](https://count.beejz.com) · [📖 文档](https://count.beejz.com/docs/intro) · [💝 捐赠](#-捐赠支持) · [💬 Telegram](https://t.me/beecount) · [📦 APK](https://github.com/TNT-Likely/BeeCount/releases/latest) · [🚀 TestFlight](https://testflight.apple.com/join/Eaw2rWxa)
+[🌐 官网](https://count.beejz.com) · [📖 文档](https://count.beejz.com/docs/intro) · [💝 捐赠](#-捐赠支持) · [💬 Telegram](https://t.me/piggycount) · [📦 APK](https://github.com/TNT-Likely/PiggyCount/releases/latest) · [🚀 TestFlight](https://testflight.apple.com/join/Eaw2rWxa)
 
 </div>
 
 ---
 
-> 🤖 **新:[MCP](https://count.beejz.com/docs/mcp) 支持** — 搭配 [BeeCount Cloud](https://github.com/TNT-Likely/BeeCount-Cloud),用 LLM 直接管账本。
+> 🤖 **新:[MCP](https://count.beejz.com/docs/mcp) 支持** — 搭配 [PiggyCount Cloud](https://github.com/TNT-Likely/PiggyCount-Cloud),用 LLM 直接管账本。
 
 ---
 
-## 💡 为什么选择蜜蜂记账
+## 💡 为什么选择小猪记账
 
 一款轻量、开源、隐私可控的**个人财务管理**和**支出追踪** App。
 
-| 传统记账应用 | 蜜蜂记账 |
+| 传统记账应用 | 小猪记账 |
 |---|---|
 | ❌ 数据存第三方,无法审计 | ✅ **完全开源**,代码可审计 |
 | ❌ 隐私可能被分析利用 | ✅ **离线优先** + 自建云端,开发者无法访问 |
@@ -50,9 +50,9 @@
 | ❌ 高级功能付费墙 | ✅ **完全免费**(包括 AI / OCR / 语音记账) |
 | ❌ 广告 / 理财推荐 | ✅ **零广告 / 零追踪 / 零数据收集** |
 
-> **平台支持**:🤖 Android 5.0+ · 🍎 iOS 15.5+ · 🌐 Web(BeeCount Cloud 自带,见下文)
+> **平台支持**:🤖 Android 5.0+ · 🍎 iOS 15.5+ · 🌐 Web(PiggyCount Cloud 自带,见下文)
 >
-> ~~📱 HarmonyOS — [已停止更新](https://github.com/TNT-Likely/beecount-openharmony)~~
+> ~~📱 HarmonyOS — [已停止更新](https://github.com/TNT-Likely/piggycount-openharmony)~~
 
 ---
 
@@ -153,11 +153,11 @@
 
 ## ☁️ 云同步方案
 
-蜜蜂记账提供 5 种同步方案,所有方案数据完全由你掌控,**详细配置教程见 [docs/cloud-setup.md](docs/cloud-setup.md)**。
+小猪记账提供 5 种同步方案,所有方案数据完全由你掌控,**详细配置教程见 [docs/cloud-setup.md](docs/cloud-setup.md)**。
 
 | 方案 | 适用场景 | 特点 |
 |---|---|---|
-| **BeeCount Cloud** | 多端实时协同 + 自托管 + 多人共账 | Docker 一键、秒同步、自带 Web 端、多用户、**共享账本** |
+| **PiggyCount Cloud** | 多端实时协同 + 自托管 + 多人共账 | Docker 一键、秒同步、自带 Web 端、多用户、**共享账本** |
 | **iCloud** | iOS 单平台用户 | 零配置、原生集成 |
 | **Supabase** | 无 NAS 的跨平台用户 | 免费额度充足、配置简单 |
 | **WebDAV** | NAS 用户 | 数据本地化、群晖/绿联云/Nextcloud |
@@ -167,7 +167,7 @@
 
 ---
 
-## 🆕 BeeCount Cloud 自建云
+## 🆕 PiggyCount Cloud 自建云
 
 > **多端实时秒级同步 + Web 管理端 + 多用户独立 + AES-256 加密备份** — 推荐有 NAS / VPS / Docker 环境的用户。
 
@@ -183,7 +183,7 @@
 
 完整 Docker Compose 部署教程、备份系统、PWA、运维细节都在 Cloud 仓库:
 
-**[👉 BeeCount-Cloud 仓库 — 一键 Docker 部署 + 完整文档](https://github.com/TNT-Likely/BeeCount-Cloud)**
+**[👉 PiggyCount-Cloud 仓库 — 一键 Docker 部署 + 完整文档](https://github.com/TNT-Likely/PiggyCount-Cloud)**
 
 ### Web 管理端预览
 
@@ -224,7 +224,7 @@
 - **Flutter 3.27+** · 跨平台 UI 框架
 - **Riverpod** · 状态管理
 - **Drift (SQLite)** · 本地数据库 ORM
-- **Supabase / 自建 BeeCount Cloud / WebDAV / S3** · 云端同步多方案
+- **Supabase / 自建 PiggyCount Cloud / WebDAV / S3** · 云端同步多方案
 
 ### 快速开始
 
@@ -253,8 +253,8 @@ flutter build apk --flavor prod --release
 <details>
 <summary>欢迎所有形式的贡献</summary>
 
-- 🐛 [报告 Bug](https://github.com/TNT-Likely/BeeCount/issues/new)
-- 💡 [功能建议](https://github.com/TNT-Likely/BeeCount/discussions/new?category=ideas)
+- 🐛 [报告 Bug](https://github.com/TNT-Likely/PiggyCount/issues/new)
+- 💡 [功能建议](https://github.com/TNT-Likely/PiggyCount/discussions/new?category=ideas)
 - 💻 [代码贡献](docs/contributing/CONTRIBUTING_ZH.md#代码贡献流程) · 🌍 [翻译](docs/contributing/CONTRIBUTING_ZH.md#翻译贡献) · 📝 [文档](docs/contributing/CONTRIBUTING_ZH.md#文档贡献) · 🎨 [设计师招募](docs/contributing/CONTRIBUTING_ZH.md#designer-recruitment)
 
 **快速开始**:Fork → 创建 feature 分支 → 提交 → PR。详细规范见 [完整贡献指南](docs/contributing/CONTRIBUTING_ZH.md)。
@@ -289,14 +289,14 @@ A: 完全可以!应用默认本地存储,所有功能都能正常使用。可随
 **Q: 应该选哪个云方案?**
 A:
 - iOS 单设备 → **iCloud**(零配置)
-- 跨平台 + 多端实时协同 → **BeeCount Cloud**(自托管,推荐)
+- 跨平台 + 多端实时协同 → **PiggyCount Cloud**(自托管,推荐)
 - 跨平台无 NAS → **Supabase / S3**
 - 有 NAS → **WebDAV**
 
 **Q: 如何确保数据安全?**
-A: 使用自己的服务器 / Storage / Bucket,WebDAV 和 S3 建议 HTTPS 加密传输。BeeCount Cloud 备份默认 AES-256 加密。
+A: 使用自己的服务器 / Storage / Bucket,WebDAV 和 S3 建议 HTTPS 加密传输。PiggyCount Cloud 备份默认 AES-256 加密。
 
-更多详情见 [docs/cloud-setup.md](docs/cloud-setup.md) 或 [Issues](https://github.com/TNT-Likely/BeeCount/issues)。
+更多详情见 [docs/cloud-setup.md](docs/cloud-setup.md) 或 [Issues](https://github.com/TNT-Likely/PiggyCount/issues)。
 
 </details>
 
@@ -304,7 +304,7 @@ A: 使用自己的服务器 / Storage / Bucket,WebDAV 和 S3 建议 HTTPS 加密
 
 ## 💝 捐赠支持
 
-蜜蜂记账完全免费开源,**无广告无付费功能**。如果觉得有用,请作者喝杯咖啡 ☕ 支持持续开发。
+小猪记账完全免费开源,**无广告无付费功能**。如果觉得有用,请作者喝杯咖啡 ☕ 支持持续开发。
 
 ### 捐赠方式
 
@@ -337,7 +337,7 @@ A: 使用自己的服务器 / Storage / Bucket,WebDAV 和 S3 建议 HTTPS 加密
 | <img src="assets/avatars/qiao.svg" width="44"/> | <img src="assets/avatars/rui.svg" width="44"/> | <a href="https://github.com/fishdivinity"><img src="assets/avatars/fishdivinity.png" width="44"/></a> | <img src="assets/avatars/shao.svg" width="44"/> | <img src="assets/avatars/ge.svg" width="44"/> | <img src="assets/avatars/te.svg" width="44"/> | <img src="assets/avatars/wen.svg" width="44"/> | <img src="assets/avatars/anon.svg" width="44"/> | <a href="https://github.com/birdnofoots"><img src="https://github.com/birdnofoots.png" width="44"/></a> | <a href="https://github.com/charieswang72-pro"><img src="https://github.com/charieswang72-pro.png" width="44"/></a> | <a href="https://github.com/542474846"><img src="https://github.com/542474846.png" width="44"/></a> | <a href="https://github.com/JOHN-2025"><img src="https://github.com/JOHN-2025.png" width="44"/></a> | <a href="https://github.com/HowcanoeWang"><img src="https://github.com/HowcanoeWang.png" width="44"/></a> |
 | *桥 ¥12 | *睿 ¥720 | fishdivinity ¥100 | *邵 ¥15 | *哥 ¥6 | *特 ¥15 | *文 ¥50 | 匿名 ¥50 | birdnofoots ¥10 | Charies ¥10 | 542474846 ¥66 | JOHN-2025 ¥30 | 浩瀚猫 ¥98 |
 
-> 💡 已捐赠?[提交信息](https://github.com/TNT-Likely/BeeCount/issues/new?template=donation_info.yml) 展示在列表中。
+> 💡 已捐赠?[提交信息](https://github.com/TNT-Likely/PiggyCount/issues/new?template=donation_info.yml) 展示在列表中。
 
 ---
 
@@ -368,9 +368,9 @@ A: 使用自己的服务器 / Storage / Bucket,WebDAV 和 S3 建议 HTTPS 加密
 
 | 仓库 | 说明 |
 |---|---|
-| [BeeCount-Cloud](https://github.com/TNT-Likely/BeeCount-Cloud) | 自建云同步服务端 + Web 管理端(FastAPI + React) |
-| [BeeCount-Website](https://github.com/TNT-Likely/BeeCount-Website) | 官网 / 文档仓库 |
-| [beecount-openharmony](https://github.com/TNT-Likely/beecount-openharmony) | 鸿蒙版本(已停止更新) |
+| [PiggyCount-Cloud](https://github.com/TNT-Likely/PiggyCount-Cloud) | 自建云同步服务端 + Web 管理端(FastAPI + React) |
+| [PiggyCount-Website](https://github.com/TNT-Likely/PiggyCount-Website) | 官网 / 文档仓库 |
+| [piggycount-openharmony](https://github.com/TNT-Likely/piggycount-openharmony) | 鸿蒙版本(已停止更新) |
 | [BeeShot](https://github.com/TNT-Likely/BeeShot) | App Store 截图生成器 |
 | [honeycomb](https://github.com/TNT-Likely/honeycomb) | Claude Code 开发脚手架插件市场(本项目开发用的 skills/agents 集合) |
 
@@ -381,11 +381,11 @@ A: 使用自己的服务器 / Storage / Bucket,WebDAV 和 S3 建议 HTTPS 加密
 <details>
 <summary>查看 Star 历史曲线</summary>
 
-<a href="https://www.star-history.com/?repos=tnt-likely%2Fbeecount&type=date&legend=top-left">
+<a href="https://www.star-history.com/?repos=tnt-likely%2Fpiggycount&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=tnt-likely/beecount&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=tnt-likely/beecount&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=tnt-likely/beecount&type=date&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=tnt-likely/piggycount&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=tnt-likely/piggycount&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=tnt-likely/piggycount&type=date&legend=top-left" />
  </picture>
 </a>
 
@@ -397,8 +397,8 @@ A: 使用自己的服务器 / Storage / Bucket,WebDAV 和 S3 建议 HTTPS 加密
 
 感谢 [果核剥壳 - 互联网的净土](https://www.ghxi.com/)、[星之墨辰](https://mp.weixin.qq.com/s/HieVbKzpdUvnoaCa_9xjkA) 对本项目的宣传。
 
-感谢所有为蜜蜂记账项目贡献代码、提出建议和反馈问题的朋友们!
+感谢所有为小猪记账项目贡献代码、提出建议和反馈问题的朋友们!
 
-如有问题或建议,欢迎在 [Issues](https://github.com/TNT-Likely/BeeCount/issues) 中提出,或在 [Discussions](https://github.com/TNT-Likely/BeeCount/discussions) 中参与讨论。
+如有问题或建议,欢迎在 [Issues](https://github.com/TNT-Likely/PiggyCount/issues) 中提出,或在 [Discussions](https://github.com/TNT-Likely/PiggyCount/discussions) 中参与讨论。
 
-**蜜蜂记账 🐝 — 让记账变得简单而安全**
+**小猪记账 🐝 — 让记账变得简单而安全**

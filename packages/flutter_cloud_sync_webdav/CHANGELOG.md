@@ -27,5 +27,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Configuration validation for WebDAV servers
 - README with setup instructions for Nextcloud and ownCloud
 
-[Unreleased]: https://github.com/TNT-Likely/BeeCount/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/TNT-Likely/BeeCount/releases/tag/flutter_cloud_sync_webdav-v0.1.0
+[Unreleased]: https://github.com/TNT-Likely/PiggyCount/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/TNT-Likely/PiggyCount/releases/tag/flutter_cloud_sync_webdav-v0.1.0

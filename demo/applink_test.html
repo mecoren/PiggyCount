@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>BeeCount 快捷指令测试</title>
+    <title>PiggyCount 快捷指令测试</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -61,16 +61,16 @@
     </style>
 </head>
 <body>
-    <h1>BeeCount 快捷指令</h1>
+    <h1>PiggyCount 快捷指令</h1>
 
     <p class="note">
         在<b>已安装 App 的手机</b>上打开本页（手机浏览器 / MacroDroid / iOS 快捷指令均可），
-        点击下方任意条目即触发对应的 <code>beecount://</code> 链接。每条下方为实际链接，可直接复制到自动化工具。
+        点击下方任意条目即触发对应的 <code>piggycount://</code> 链接。每条下方为实际链接，可直接复制到自动化工具。
     </p>
 
     <h2>快捷记账</h2>
 
-    <a class="shortcut voice" href="beecount://voice">
+    <a class="shortcut voice" href="piggycount://voice">
         <div class="icon">🎤</div>
         <div class="content">
             <div class="title">语音记账</div>
@@ -78,7 +78,7 @@
         </div>
     </a>
 
-    <a class="shortcut image" href="beecount://image">
+    <a class="shortcut image" href="piggycount://image">
         <div class="icon">🖼</div>
         <div class="content">
             <div class="title">图片记账</div>
@@ -86,7 +86,7 @@
         </div>
     </a>
 
-    <a class="shortcut camera" href="beecount://camera">
+    <a class="shortcut camera" href="piggycount://camera">
         <div class="icon">📷</div>
         <div class="content">
             <div class="title">拍照记账</div>
@@ -94,11 +94,11 @@
         </div>
     </a>
 
-    <a class="shortcut ai" href="beecount://ai-chat">
+    <a class="shortcut ai" href="piggycount://ai-chat">
         <div class="icon">🤖</div>
         <div class="content">
             <div class="title">AI 小助手</div>
-            <div class="desc">beecount://ai-chat</div>
+            <div class="desc">piggycount://ai-chat</div>
         </div>
     </a>
 
@@ -106,36 +106,36 @@
 
     <p class="hint">
         预期行为：点开后<b>选择一个分类</b> → 弹出金额输入框 → 输入金额保存即完成记账。<br>
-        若选分类后<b>直接退回上一页</b>、无法输入金额，即为用户反馈的问题（macrodroid 用 <code>beecount://new?type=expense</code> 复现）。
+        若选分类后<b>直接退回上一页</b>、无法输入金额，即为用户反馈的问题（macrodroid 用 <code>piggycount://new?type=expense</code> 复现）。
     </p>
 
-    <a class="shortcut new" href="beecount://new?type=expense">
+    <a class="shortcut new" href="piggycount://new?type=expense">
         <div class="icon">➖</div>
         <div class="content">
             <div class="title">记一笔支出</div>
-            <div class="desc">beecount://new?type=expense</div>
+            <div class="desc">piggycount://new?type=expense</div>
         </div>
     </a>
 
-    <a class="shortcut new" href="beecount://new?type=income">
+    <a class="shortcut new" href="piggycount://new?type=income">
         <div class="icon">➕</div>
         <div class="content">
             <div class="title">记一笔收入</div>
-            <div class="desc">beecount://new?type=income</div>
+            <div class="desc">piggycount://new?type=income</div>
         </div>
     </a>
 
-    <a class="shortcut new" href="beecount://new?type=transfer">
+    <a class="shortcut new" href="piggycount://new?type=transfer">
         <div class="icon">🔄</div>
         <div class="content">
             <div class="title">转账</div>
-            <div class="desc">beecount://new?type=transfer</div>
+            <div class="desc">piggycount://new?type=transfer</div>
         </div>
     </a>
 
     <h2>自动记账</h2>
 
-    <a class="shortcut add" href="beecount://add?amount=88.5&type=expense&category=餐饮&note=午餐&account=微信&tags=日常,外卖">
+    <a class="shortcut add" href="piggycount://add?amount=88.5&type=expense&category=餐饮&note=午餐&account=微信&tags=日常,外卖">
         <div class="icon">💰</div>
         <div class="content">
             <div class="title">完整测试</div>
@@ -143,7 +143,7 @@
         </div>
     </a>
 
-    <a class="shortcut add" href="beecount://add?amount=100&type=expense">
+    <a class="shortcut add" href="piggycount://add?amount=100&type=expense">
         <div class="icon">💸</div>
         <div class="content">
             <div class="title">简单支出</div>
@@ -151,7 +151,7 @@
         </div>
     </a>
 
-    <a class="shortcut add" href="beecount://add?amount=5000&type=income&category=工资&note=月薪">
+    <a class="shortcut add" href="piggycount://add?amount=5000&type=income&category=工资&note=月薪">
         <div class="icon">💵</div>
         <div class="content">
             <div class="title">收入记录</div>
@@ -159,7 +159,7 @@
         </div>
     </a>
 
-    <a class="shortcut add" href="beecount://add?amount=35&type=expense&category=交通&note=打车&account=支付宝">
+    <a class="shortcut add" href="piggycount://add?amount=35&type=expense&category=交通&note=打车&account=支付宝">
         <div class="icon">🚕</div>
         <div class="content">
             <div class="title">交通支出</div>
@@ -169,19 +169,19 @@
 
     <h2>其他（兼容旧版 / 异常验证）</h2>
 
-    <a class="shortcut add" href="beecount://auto-billing?text=星巴克咖啡 35,打车 18">
+    <a class="shortcut add" href="piggycount://auto-billing?text=星巴克咖啡 35,打车 18">
         <div class="icon">📝</div>
         <div class="content">
             <div class="title">文本自动记账（旧版）</div>
-            <div class="desc">beecount://auto-billing?text=…（需开启 AI 识别）</div>
+            <div class="desc">piggycount://auto-billing?text=…（需开启 AI 识别）</div>
         </div>
     </a>
 
-    <a class="shortcut new" href="beecount://unknown-xyz">
+    <a class="shortcut new" href="piggycount://unknown-xyz">
         <div class="icon">⚠️</div>
         <div class="content">
             <div class="title">未知操作（应弹「未知的操作」提示）</div>
-            <div class="desc">beecount://unknown-xyz</div>
+            <div class="desc">piggycount://unknown-xyz</div>
         </div>
     </a>
 

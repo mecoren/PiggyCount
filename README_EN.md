@@ -1,48 +1,48 @@
-# BeeCount &nbsp; [中文](README.md)
+# PiggyCount &nbsp; [中文](README.md)
 
 <div align="center">
 
-![GitHub stars](https://img.shields.io/github/stars/TNT-Likely/BeeCount?style=social)
+![GitHub stars](https://img.shields.io/github/stars/TNT-Likely/PiggyCount?style=social)
 ![License](https://img.shields.io/badge/license-Business%20Source%20License-orange.svg)
-![Release](https://img.shields.io/github/v/release/TNT-Likely/BeeCount?label=latest&color=green)
-![Downloads](https://img.shields.io/github/downloads/TNT-Likely/BeeCount/total?color=blue)
-![Last commit](https://img.shields.io/github/last-commit/TNT-Likely/BeeCount)
+![Release](https://img.shields.io/github/v/release/TNT-Likely/PiggyCount?label=latest&color=green)
+![Downloads](https://img.shields.io/github/downloads/TNT-Likely/PiggyCount/total?color=blue)
+![Last commit](https://img.shields.io/github/last-commit/TNT-Likely/PiggyCount)
 ![Flutter](https://img.shields.io/badge/Flutter-3.27%2B-02569B?logo=flutter)
 
 **Your Data, Your Control — Open Source Accounting App**
 
-Sync via BeeCount Cloud (self-hosted) / iCloud / Supabase / WebDAV / S3
+Sync via PiggyCount Cloud (self-hosted) / iCloud / Supabase / WebDAV / S3
 
 <br/>
 
 <a href="https://apps.apple.com/app/id6754611670">
   <img src="https://img.shields.io/badge/App%20Store-000000?style=for-the-badge&logo=app-store&logoColor=white" alt="Download on App Store" height="64"/>
 </a>
-<a href="https://play.google.com/store/apps/details?id=com.tntlikely.beecount">
+<a href="https://play.google.com/store/apps/details?id=com.wait.piggycount">
   <img src="https://img.shields.io/badge/Google%20Play-414141?style=for-the-badge&logo=google-play&logoColor=white" alt="Get it on Google Play" height="64"/>
 </a>
-<a href="https://github.com/TNT-Likely/BeeCount-Cloud/blob/main/README.en.md">
+<a href="https://github.com/TNT-Likely/PiggyCount-Cloud/blob/main/README.en.md">
   <img src="https://img.shields.io/badge/Web%20(Self--Hosted)-4A90E2?style=for-the-badge&logo=docker&logoColor=white" alt="Self-host Web" height="64"/>
 </a>
 
 <br/>
 <br/>
 
-[🌐 Website](https://count.beejz.com/en/) · [📖 Docs](https://count.beejz.com/en/docs/intro) · [💝 Donate](#-donate) · [💬 Telegram](https://t.me/beecount) · [📦 APK](https://github.com/TNT-Likely/BeeCount/releases/latest) · [🚀 TestFlight](https://testflight.apple.com/join/Eaw2rWxa)
+[🌐 Website](https://count.beejz.com/en/) · [📖 Docs](https://count.beejz.com/en/docs/intro) · [💝 Donate](#-donate) · [💬 Telegram](https://t.me/piggycount) · [📦 APK](https://github.com/TNT-Likely/PiggyCount/releases/latest) · [🚀 TestFlight](https://testflight.apple.com/join/Eaw2rWxa)
 
 </div>
 
 ---
 
-> 🤖 **New: [MCP](https://count.beejz.com/en/docs/mcp) support** — pair with [BeeCount Cloud](https://github.com/TNT-Likely/BeeCount-Cloud) to drive your ledger from any MCP client.
+> 🤖 **New: [MCP](https://count.beejz.com/en/docs/mcp) support** — pair with [PiggyCount Cloud](https://github.com/TNT-Likely/PiggyCount-Cloud) to drive your ledger from any MCP client.
 
 ---
 
-## 💡 Why BeeCount
+## 💡 Why PiggyCount
 
 A lightweight, open-source, privacy-first **personal finance** and **expense tracking** app.
 
-| Traditional apps | BeeCount |
+| Traditional apps | PiggyCount |
 |---|---|
 | ❌ Data on third-party servers, no audit | ✅ **Fully open-source**, code auditable |
 | ❌ Privacy may be analyzed and exploited | ✅ **Offline-first** + self-hosted, developer can't access your data |
@@ -50,9 +50,9 @@ A lightweight, open-source, privacy-first **personal finance** and **expense tra
 | ❌ Premium features behind paywalls | ✅ **Completely free** (including AI / OCR / voice input) |
 | ❌ Ads / financial product recommendations | ✅ **Zero ads / zero tracking / zero data collection** |
 
-> **Platform support**: 🤖 Android 5.0+ · 🍎 iOS 15.5+ · 🌐 Web (built into BeeCount Cloud, see below)
+> **Platform support**: 🤖 Android 5.0+ · 🍎 iOS 15.5+ · 🌐 Web (built into PiggyCount Cloud, see below)
 >
-> ~~📱 HarmonyOS — [Discontinued](https://github.com/TNT-Likely/beecount-openharmony)~~
+> ~~📱 HarmonyOS — [Discontinued](https://github.com/TNT-Likely/piggycount-openharmony)~~
 
 ---
 
@@ -153,11 +153,11 @@ A lightweight, open-source, privacy-first **personal finance** and **expense tra
 
 ## ☁️ Sync Options
 
-BeeCount offers 5 sync options. Your data, your control. **See [docs/cloud-setup_EN.md](docs/cloud-setup_EN.md) for full setup guides.**
+PiggyCount offers 5 sync options. Your data, your control. **See [docs/cloud-setup_EN.md](docs/cloud-setup_EN.md) for full setup guides.**
 
 | Option | Best For | Highlights |
 |---|---|---|
-| **BeeCount Cloud** | Real-time multi-device + self-hosted + multi-user co-write | One-click Docker, sub-second sync, built-in Web, multi-user, **shared ledgers** |
+| **PiggyCount Cloud** | Real-time multi-device + self-hosted + multi-user co-write | One-click Docker, sub-second sync, built-in Web, multi-user, **shared ledgers** |
 | **iCloud** | iOS-only users | Zero config, native integration |
 | **Supabase** | Cross-platform without NAS | Generous free tier, easy setup |
 | **WebDAV** | NAS users | Local data, Synology/UGREEN/Nextcloud |
@@ -167,7 +167,7 @@ BeeCount offers 5 sync options. Your data, your control. **See [docs/cloud-setup
 
 ---
 
-## 🆕 BeeCount Cloud (Self-hosted)
+## 🆕 PiggyCount Cloud (Self-hosted)
 
 > **Sub-second multi-device sync + Web admin + multi-user isolation + AES-256 encrypted backup** — Recommended for users with NAS / VPS / Docker.
 
@@ -183,7 +183,7 @@ BeeCount offers 5 sync options. Your data, your control. **See [docs/cloud-setup
 
 Full Docker Compose deployment, backup system, PWA, and ops details live in the Cloud repo:
 
-**[👉 BeeCount-Cloud repo — One-click Docker deploy + full docs](https://github.com/TNT-Likely/BeeCount-Cloud)**
+**[👉 PiggyCount-Cloud repo — One-click Docker deploy + full docs](https://github.com/TNT-Likely/PiggyCount-Cloud)**
 
 ### Web Admin Preview
 
@@ -224,7 +224,7 @@ Full Docker Compose deployment, backup system, PWA, and ops details live in the 
 - **Flutter 3.27+** · Cross-platform UI framework
 - **Riverpod** · State management
 - **Drift (SQLite)** · Local database ORM
-- **Supabase / Self-hosted BeeCount Cloud / WebDAV / S3** · Multi-option cloud sync
+- **Supabase / Self-hosted PiggyCount Cloud / WebDAV / S3** · Multi-option cloud sync
 
 ### Quick Start
 
@@ -253,8 +253,8 @@ See [docs/contributing/CONTRIBUTING.md](docs/contributing/CONTRIBUTING.md) for d
 <details>
 <summary>All contributions welcome</summary>
 
-- 🐛 [Report a bug](https://github.com/TNT-Likely/BeeCount/issues/new)
-- 💡 [Feature request](https://github.com/TNT-Likely/BeeCount/discussions/new?category=ideas)
+- 🐛 [Report a bug](https://github.com/TNT-Likely/PiggyCount/issues/new)
+- 💡 [Feature request](https://github.com/TNT-Likely/PiggyCount/discussions/new?category=ideas)
 - 💻 [Code](docs/contributing/CONTRIBUTING.md#code-contribution-flow) · 🌍 [Translation](docs/contributing/CONTRIBUTING.md#translation-contributions) · 📝 [Docs](docs/contributing/CONTRIBUTING.md#documentation-contributions) · 🎨 [Designer recruitment](docs/contributing/CONTRIBUTING.md#designer-recruitment)
 
 **Quick start**: Fork → create feature branch → commit → PR. See the [full contributing guide](docs/contributing/CONTRIBUTING.md) for details.
@@ -289,14 +289,14 @@ A: Absolutely! The app uses local storage by default. All features work normally
 **Q: Which sync option should I pick?**
 A:
 - iOS single device → **iCloud** (zero config)
-- Cross-platform + real-time multi-device → **BeeCount Cloud** (self-hosted, recommended)
+- Cross-platform + real-time multi-device → **PiggyCount Cloud** (self-hosted, recommended)
 - Cross-platform without NAS → **Supabase / S3**
 - Have a NAS → **WebDAV**
 
 **Q: How is data security ensured?**
-A: Use your own server / Storage / Bucket. WebDAV and S3 should use HTTPS. BeeCount Cloud backups are AES-256 encrypted by default.
+A: Use your own server / Storage / Bucket. WebDAV and S3 should use HTTPS. PiggyCount Cloud backups are AES-256 encrypted by default.
 
-For more details, see [docs/cloud-setup_EN.md](docs/cloud-setup_EN.md) or [Issues](https://github.com/TNT-Likely/BeeCount/issues).
+For more details, see [docs/cloud-setup_EN.md](docs/cloud-setup_EN.md) or [Issues](https://github.com/TNT-Likely/PiggyCount/issues).
 
 </details>
 
@@ -304,7 +304,7 @@ For more details, see [docs/cloud-setup_EN.md](docs/cloud-setup_EN.md) or [Issue
 
 ## 💝 Donate
 
-BeeCount is completely free and open-source — **no ads, no paid features**. If you find it useful, buy the developer a coffee ☕ to support continued development.
+PiggyCount is completely free and open-source — **no ads, no paid features**. If you find it useful, buy the developer a coffee ☕ to support continued development.
 
 ### How to Donate
 
@@ -337,7 +337,7 @@ BeeCount is completely free and open-source — **no ads, no paid features**. If
 | <img src="assets/avatars/qiao.svg" width="44"/> | <img src="assets/avatars/rui.svg" width="44"/> | <a href="https://github.com/fishdivinity"><img src="assets/avatars/fishdivinity.png" width="44"/></a> | <img src="assets/avatars/shao.svg" width="44"/> | <img src="assets/avatars/ge.svg" width="44"/> | <img src="assets/avatars/te.svg" width="44"/> | <img src="assets/avatars/wen.svg" width="44"/> | <img src="assets/avatars/anon.svg" width="44"/> | <a href="https://github.com/birdnofoots"><img src="https://github.com/birdnofoots.png" width="44"/></a> | <a href="https://github.com/charieswang72-pro"><img src="https://github.com/charieswang72-pro.png" width="44"/></a> | <a href="https://github.com/542474846"><img src="https://github.com/542474846.png" width="44"/></a> | <a href="https://github.com/JOHN-2025"><img src="https://github.com/JOHN-2025.png" width="44"/></a> | <a href="https://github.com/HowcanoeWang"><img src="https://github.com/HowcanoeWang.png" width="44"/></a> |
 | *Qiao ¥12 | *Rui ¥720 | fishdivinity ¥100 | *Shao ¥15 | *Ge ¥6 | *Te ¥15 | *Wen ¥50 | Anonymous ¥50 | birdnofoots ¥10 | Charies ¥10 | 542474846 ¥66 | JOHN-2025 ¥30 | HowcanoeWang ¥98 |
 
-> 💡 Already donated? [Submit info](https://github.com/TNT-Likely/BeeCount/issues/new?template=donation_info.yml) to be displayed in the list.
+> 💡 Already donated? [Submit info](https://github.com/TNT-Likely/PiggyCount/issues/new?template=donation_info.yml) to be displayed in the list.
 
 ---
 
@@ -368,9 +368,9 @@ For commercial licensing pricing and process, see [COMMERCIAL_LICENSE.md](COMMER
 
 | Repository | Description |
 |---|---|
-| [BeeCount-Cloud](https://github.com/TNT-Likely/BeeCount-Cloud) | Self-hosted sync server + Web admin (FastAPI + React) |
-| [BeeCount-Website](https://github.com/TNT-Likely/BeeCount-Website) | Website / docs repo |
-| [beecount-openharmony](https://github.com/TNT-Likely/beecount-openharmony) | HarmonyOS version (discontinued) |
+| [PiggyCount-Cloud](https://github.com/TNT-Likely/PiggyCount-Cloud) | Self-hosted sync server + Web admin (FastAPI + React) |
+| [PiggyCount-Website](https://github.com/TNT-Likely/PiggyCount-Website) | Website / docs repo |
+| [piggycount-openharmony](https://github.com/TNT-Likely/piggycount-openharmony) | HarmonyOS version (discontinued) |
 | [BeeShot](https://github.com/TNT-Likely/BeeShot) | App Store screenshot generator |
 | [honeycomb](https://github.com/TNT-Likely/honeycomb) | Claude Code plugin marketplace (skills/agents used for developing this project) |
 
@@ -381,11 +381,11 @@ For commercial licensing pricing and process, see [COMMERCIAL_LICENSE.md](COMMER
 <details>
 <summary>View Star history chart</summary>
 
-<a href="https://www.star-history.com/?repos=tnt-likely%2Fbeecount&type=date&legend=top-left">
+<a href="https://www.star-history.com/?repos=tnt-likely%2Fpiggycount&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=tnt-likely/beecount&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=tnt-likely/beecount&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=tnt-likely/beecount&type=date&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=tnt-likely/piggycount&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=tnt-likely/piggycount&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=tnt-likely/piggycount&type=date&legend=top-left" />
  </picture>
 </a>
 
@@ -397,8 +397,8 @@ For commercial licensing pricing and process, see [COMMERCIAL_LICENSE.md](COMMER
 
 Thanks to [Guhe Bake (Internet Pure Land)](https://www.ghxi.com/) and [Star Mochen](https://mp.weixin.qq.com/s/HieVbKzpdUvnoaCa_9xjkA) for promoting this project.
 
-Thanks to everyone who has contributed code, suggestions, or feedback to BeeCount!
+Thanks to everyone who has contributed code, suggestions, or feedback to PiggyCount!
 
-For questions or suggestions, please raise an [Issue](https://github.com/TNT-Likely/BeeCount/issues) or join the [Discussions](https://github.com/TNT-Likely/BeeCount/discussions).
+For questions or suggestions, please raise an [Issue](https://github.com/TNT-Likely/PiggyCount/issues) or join the [Discussions](https://github.com/TNT-Likely/PiggyCount/discussions).
 
-**BeeCount 🐝 — Making accounting simple and secure**
+**PiggyCount 🐝 — Making accounting simple and secure**

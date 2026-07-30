@@ -78,7 +78,7 @@ jobs:
             }
 
             // 查之前的 bot 评论(magic marker),有就 update 避免刷屏
-            const MARKER = '<!-- beecount-issue-lint-bot -->';
+            const MARKER = '<!-- piggycount-issue-lint-bot -->';
             const existing = await github.paginate(
               github.rest.issues.listComments,
               { owner, repo, issue_number, per_page: 100 },

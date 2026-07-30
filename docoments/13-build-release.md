@@ -3,13 +3,13 @@
 > 文档版本：v1.0
 > 最后更新：2026-07-25
 > 作者：wait
-> 信息源：项目源码（d:\DevTools\project\BeeCount）+ CI 配置文件
+> 信息源：项目源码（d:\DevTools\project\PiggyCount）+ CI 配置文件
 
 ---
 
 ## 1. 背景
 
-BeeCount 是一款 Flutter 跨平台记账应用，同时支持 Android 与 iOS，并通过以下渠道分发：
+PiggyCount 是一款 Flutter 跨平台记账应用，同时支持 Android 与 iOS，并通过以下渠道分发：
 
 | 渠道 | 平台 | 产物 | 上传方式 |
 |---|---|---|---|
@@ -43,7 +43,7 @@ BeeCount 是一款 Flutter 跨平台记账应用，同时支持 Android 与 iOS�
 | **GOOGLE_PLAY** | AAB 构建专用 dart-define，用于关闭应用内更新入口 |
 | **GitHub Secrets** | CI 中存储签名证书、密码等敏感信息 |
 | **provisioning profile** | iOS 分发证书关联的描述文件 |
-| **OTA 更新** | Over-The-Air 应用内更新，BeeCount 通过 GitHub Releases 实现 |
+| **OTA 更新** | Over-The-Air 应用内更新，PiggyCount 通过 GitHub Releases 实现 |
 
 ---
 
@@ -69,7 +69,7 @@ flowchart TB
         A5 --> A6[pubspec 版本注入<br/>sed 替换]
         A6 --> A7[构建 APK<br/>flutter build apk --release --flavor prod]
         A7 --> A8[构建 AAB<br/>flutter build appbundle<br/>+ 动态 prod/AndroidManifest.xml]
-        A8 --> A9[重命名产物<br/>beecount-VERSION-ABI.apk]
+        A8 --> A9[重命名产物<br/>piggycount-VERSION-ABI.apk]
         A9 --> A10[Upload Artifact]
         A10 --> A11[Google Play 上传<br/>Python + service-account]
     end
@@ -117,9 +117,9 @@ flowchart TB
 
 ### 4.1 项目构建配置（pubspec.yaml）
 
-**实现位置**：[pubspec.yaml](file:///d:/DevTools/project/BeeCount/pubspec.yaml)
+**实现位置**：[pubspec.yaml](file:///d:/DevTools/project/PiggyCount/pubspec.yaml)
 
-- **应用名**：`beecount`（第 1 行）
+- **应用名**：`piggycount`（第 1 行）
 - **初始版本**：`version: 0.0.1`（第 4 行，CI 构建时会通过 `sed` 覆盖为 tag + run_number）
 - **Dart SDK**：`^3.6.0`（第 7 行）
 - **关键依赖**：drift、supabase_flutter、flutter_riverpod、in_app_purchase、flutter_local_notifications、home_widget、webview_flutter、local_auth、record 等
@@ -134,11 +134,11 @@ flowchart TB
 
 #### 4.2.1 android/app/build.gradle 关键配置
 
-**实现位置**：[android/app/build.gradle](file:///d:/DevTools/project/BeeCount/android/app/build.gradle)
+**实现位置**：[android/app/build.gradle](file:///d:/DevTools/project/PiggyCount/android/app/build.gradle)
 
 | 配置项 | 值 | 说明 |
 |---|---|---|
-| namespace / applicationId | `com.tntlikely.beecount` | 主包名 |
+| namespace / applicationId | `com.wait.piggycount` | 主包名 |
 | compileSdk | 36 | 编译 SDK |
 | ndkVersion | "27.0.12077973" | NDK 版本 |
 | minSdk | 23 | record_android 录音需要 |
@@ -149,7 +149,7 @@ flowchart TB
 
 #### 4.2.2 signingConfigs（签名配置）
 
-**实现位置**：[android/app/build.gradle:82-136](file:///d:/DevTools/project/BeeCount/android/app/build.gradle)
+**实现位置**：[android/app/build.gradle:82-136](file:///d:/DevTools/project/PiggyCount/android/app/build.gradle)
 
 ```gradle
 // 优先读 key.properties（不提交 VCS）
@@ -171,16 +171,16 @@ if (keystorePropertiesFile.exists()) {
 
 #### 4.2.3 buildTypes（构建类型）
 
-**实现位置**：[android/app/build.gradle:138-153](file:///d:/DevTools/project/BeeCount/android/app/build.gradle)
+**实现位置**：[android/app/build.gradle:138-153](file:///d:/DevTools/project/PiggyCount/android/app/build.gradle)
 
 | 类型 | 配置 |
 |---|---|
-| `debug` | 追加 `.debug` 后缀、`-debug` versionName 后缀、应用名 "蜜蜂记账测试版" |
+| `debug` | 追加 `.debug` 后缀、`-debug` versionName 后缀、应用名 "小猪记账测试版" |
 | `release` | 使用 `signingConfigs.release`、`minifyEnabled true`、`shrinkResources true`、ProGuard `proguard-android-optimize.txt` |
 
 #### 4.2.4 splits.abi（关键设计）
 
-**实现位置**：[android/app/build.gradle:73-80](file:///d:/DevTools/project/BeeCount/android/app/build.gradle)
+**实现位置**：[android/app/build.gradle:73-80](file:///d:/DevTools/project/PiggyCount/android/app/build.gradle)
 
 ```gradle
 splits {
@@ -197,7 +197,7 @@ splits {
 
 #### 4.2.5 16KB 页面大小支持
 
-**实现位置**：[android/app/build.gradle:156-160](file:///d:/DevTools/project/BeeCount/android/app/build.gradle)
+**实现位置**：[android/app/build.gradle:156-160](file:///d:/DevTools/project/PiggyCount/android/app/build.gradle)
 
 ```gradle
 packaging {
@@ -209,7 +209,7 @@ packaging {
 
 #### 4.2.6 variantFilter
 
-**实现位置**：[android/app/build.gradle:165-170](file:///d:/DevTools/project/BeeCount/android/app/build.gradle)
+**实现位置**：[android/app/build.gradle:165-170](file:///d:/DevTools/project/PiggyCount/android/app/build.gradle)
 
 ```gradle
 variantFilter { variant ->
@@ -221,7 +221,7 @@ variantFilter { variant ->
 
 #### 4.2.7 APK 命名规则
 
-**实现位置**：[android/app/build.gradle:178-202](file:///d:/DevTools/project/BeeCount/android/app/build.gradle)
+**实现位置**：[android/app/build.gradle:178-202](file:///d:/DevTools/project/PiggyCount/android/app/build.gradle)
 
 | ABI | 命名 |
 |---|---|
@@ -231,13 +231,13 @@ variantFilter { variant ->
 
 ### 4.3 AndroidManifest.xml
 
-**实现位置**：[android/app/src/main/AndroidManifest.xml](file:///d:/DevTools/project/BeeCount/android/app/src/main/AndroidManifest.xml)
+**实现位置**：[android/app/src/main/AndroidManifest.xml](file:///d:/DevTools/project/PiggyCount/android/app/src/main/AndroidManifest.xml)
 
 - **application label**：`@string/app_name`（由 flavor 的 resValue 注入）
 - **关键权限**：INTERNET、RECORD_AUDIO、WRITE_EXTERNAL_STORAGE（maxSdk=29）、READ_MEDIA_IMAGES、READ_EXTERNAL_STORAGE（maxSdk=32）、**REQUEST_INSTALL_PACKAGES**、POST_NOTIFICATIONS、SCHEDULE_EXACT_ALARM、USE_EXACT_ALARM、REQUEST_IGNORE_BATTERY_OPTIMIZATIONS、USE_BIOMETRIC 等
-- **MainActivity**：`singleTask` 启动模式、URL Scheme `beecount://`、接收图片分享 intent-filter
+- **MainActivity**：`singleTask` 启动模式、URL Scheme `piggycount://`、接收图片分享 intent-filter
 - **FileProvider**：authorities `${applicationId}.fileprovider`（支持按 flavor 切换）
-- **桌面小组件**：`BeeCountWidgetProvider`
+- **桌面小组件**：`PiggyCountWidgetProvider`
 - **queries**：声明 PROCESS_TEXT、VIEW https/http、SENDTO mailto（解决 url_launcher 在 Android 11+ 包可见性限制）
 
 **flavor 目录结构**：项目根目录下**仅存在 `main/`、`debug/`、`profile/` 三个 sourceSet**（不含 `prod/`、`dev/` 静态目录）。`prod/` 目录在 CI 构建 AAB 时**动态生成并删除**。
@@ -246,7 +246,7 @@ variantFilter { variant ->
 
 #### 4.4.1 ios/Runner/Info.plist
 
-**实现位置**：[ios/Runner/Info.plist](file:///d:/DevTools/project/BeeCount/ios/Runner/Info.plist)
+**实现位置**：[ios/Runner/Info.plist](file:///d:/DevTools/project/PiggyCount/ios/Runner/Info.plist)
 
 | 配置项 | 值 | 说明 |
 |---|---|---|
@@ -255,36 +255,36 @@ variantFilter { variant ->
 | CFBundleVersion | `$(FLUTTER_BUILD_NUMBER)` | Flutter 注入构建号 |
 | CFBundleIdentifier | `$(PRODUCT_BUNDLE_IDENTIFIER)` | 由 xcconfig 注入 |
 | CFBundleLocalizations | en、zh-Hans、zh-Hant | 解决 App Store 2.3.8 审核 |
-| URL Scheme | `beecount` | Deep Link |
-| iCloud 容器 | `iCloud.com.tntlikely.beecount` | CloudDocuments |
+| URL Scheme | `piggycount` | Deep Link |
+| iCloud 容器 | `iCloud.com.wait.piggycount` | CloudDocuments |
 | 隐私描述 | 照片库、相机、麦克风、Face ID | iOS 必需 |
 | NSAppTransportSecurity | `NSAllowsArbitraryLoads=true` | Supabase 用 |
 
 #### 4.4.2 Debug.xcconfig 与 Release.xcconfig
 
 **实现位置**：
-- [ios/Flutter/Debug.xcconfig](file:///d:/DevTools/project/BeeCount/ios/Flutter/Debug.xcconfig)
-- [ios/Flutter/Release.xcconfig](file:///d:/DevTools/project/BeeCount/ios/Flutter/Release.xcconfig)
+- [ios/Flutter/Debug.xcconfig](file:///d:/DevTools/project/PiggyCount/ios/Flutter/Debug.xcconfig)
+- [ios/Flutter/Release.xcconfig](file:///d:/DevTools/project/PiggyCount/ios/Flutter/Release.xcconfig)
 
 ```
 // Debug.xcconfig
-APP_DISPLAY_NAME=蜜蜂记账测试版
-PRODUCT_BUNDLE_IDENTIFIER=com.tntlikely.beecount.dev
+APP_DISPLAY_NAME=小猪记账测试版
+PRODUCT_BUNDLE_IDENTIFIER=com.wait.piggycount.dev
 #include "Generated.xcconfig"
 
 // Release.xcconfig
-APP_DISPLAY_NAME=蜜蜂记账
-PRODUCT_BUNDLE_IDENTIFIER=com.tntlikely.beecount
+APP_DISPLAY_NAME=小猪记账
+PRODUCT_BUNDLE_IDENTIFIER=com.wait.piggycount
 #include "Generated.xcconfig"
 ```
 
 **iOS flavor 同步策略**：iOS 端**没有用 Xcode flavor/scheme**，而是通过 `Debug` 与 `Release` 两个 build configuration 直接区分 dev/prod：
-- Debug：`com.tntlikely.beecount.dev`，显示名 "蜜蜂记账测试版"
-- Release：`com.tntlikely.beecount`，显示名 "蜜蜂记账"
+- Debug：`com.wait.piggycount.dev`，显示名 "小猪记账测试版"
+- Release：`com.wait.piggycount`，显示名 "小猪记账"
 
 #### 4.4.3 project.pbxproj 关键配置
 
-**实现位置**：[ios/Runner.xcodeproj/project.pbxproj](file:///d:/DevTools/project/BeeCount/ios/Runner.xcodeproj/project.pbxproj)
+**实现位置**：[ios/Runner.xcodeproj/project.pbxproj](file:///d:/DevTools/project/PiggyCount/ios/Runner.xcodeproj/project.pbxproj)
 
 | 配置项 | 值 |
 |---|---|
@@ -293,20 +293,20 @@ PRODUCT_BUNDLE_IDENTIFIER=com.tntlikely.beecount
 | CODE_SIGN_IDENTITY | `iPhone Developer` / `Apple Development`（CI 改为 `Apple Distribution`） |
 | CURRENT_PROJECT_VERSION | `$(FLUTTER_BUILD_NUMBER)` |
 | 主应用 PRODUCT_BUNDLE_IDENTIFIER | `$(PRODUCT_BUNDLE_IDENTIFIER)`（来自 xcconfig） |
-| Widget Extension | `com.tntlikely.beecount.BeeCountWidgetExtension`（Release） |
-| Widget Extension (Debug) | `com.tntlikely.beecount.dev.BeeCountWidgetExtension` |
+| Widget Extension | `com.wait.piggycount.PiggyCountWidgetExtension`（Release） |
+| Widget Extension (Debug) | `com.wait.piggycount.dev.PiggyCountWidgetExtension` |
 | IPHONEOS_DEPLOYMENT_TARGET | 15.5 |
 
 #### 4.4.4 ios/Runner/Runner.entitlements
 
-**实现位置**：[ios/Runner/Runner.entitlements](file:///d:/DevTools/project/BeeCount/ios/Runner/Runner.entitlements)
+**实现位置**：[ios/Runner/Runner.entitlements](file:///d:/DevTools/project/PiggyCount/ios/Runner/Runner.entitlements)
 
-- iCloud 容器 `iCloud.com.tntlikely.beecount`，CloudDocuments 服务
-- App Group：`group.com.tntlikely.beecount`（与 Widget 共享数据）
+- iCloud 容器 `iCloud.com.wait.piggycount`，CloudDocuments 服务
+- App Group：`group.com.wait.piggycount`（与 Widget 共享数据）
 
 #### 4.4.5 ios/Podfile
 
-**实现位置**：[ios/Podfile](file:///d:/DevTools/project/BeeCount/ios/Podfile)
+**实现位置**：[ios/Podfile](file:///d:/DevTools/project/PiggyCount/ios/Podfile)
 
 - **platform :ios, '15.5'**（注释说明：保留 15.5 是因 AppIntents API 仍要 iOS 16+ 弱链接 + 运行时回退）
 - `project 'Runner'` 映射 Debug/Profile/Release
@@ -317,9 +317,9 @@ PRODUCT_BUNDLE_IDENTIFIER=com.tntlikely.beecount
 
 **实现位置**：`ios/Runner/{en,zh-Hans,zh-Hant}.lproj/InfoPlist.strings`
 
-- `en.lproj/InfoPlist.strings`：`"BeeCount"`（解决 App Store 2.3.8 英文环境显示问题）
-- `zh-Hans.lproj/InfoPlist.strings`：`"蜜蜂记账"`
-- `zh-Hant.lproj/InfoPlist.strings`：`"蜜蜂記帳"`
+- `en.lproj/InfoPlist.strings`：`"PiggyCount"`（解决 App Store 2.3.8 英文环境显示问题）
+- `zh-Hans.lproj/InfoPlist.strings`：`"小猪记账"`
+- `zh-Hant.lproj/InfoPlist.strings`：`"小豬記帳"`
 
 ---
 
@@ -329,7 +329,7 @@ PRODUCT_BUNDLE_IDENTIFIER=com.tntlikely.beecount
 
 ### 5.1 release.yml（主发布流程）
 
-**实现位置**：[.github/workflows/release.yml](file:///d:/DevTools/project/BeeCount/.github/workflows/release.yml)
+**实现位置**：[.github/workflows/release.yml](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
 
 **触发**：tag push (`*`) 或 workflow_dispatch（手动，可选 tag_name、release_name、prerelease、create_release 输入）
 **并发**：`cancel-in-progress: true`
@@ -370,11 +370,11 @@ PRODUCT_BUNDLE_IDENTIFIER=com.tntlikely.beecount
 7. **动态修改 project.pbxproj 配置手动签名**（第 558-594 行）：sed 改 CODE_SIGN_STYLE 为 Manual、CODE_SIGN_IDENTITY 为 Apple Distribution，perl 注入 DEVELOPMENT_TEAM 和 PROVISIONING_PROFILE_SPECIFIER
 8. **xcodebuild archive**（第 596-619 行）：`xcodebuild archive -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release -archivePath build/ios/Runner.xcarchive`
 9. **xcodebuild -exportArchive**（第 621-657 行）：使用动态生成的 `ios/ExportOptions.plist`，method=app-store，manual signing
-10. **复制签名 IPA**：`beecount-${VERSION}-signed.ipa`（第 659-674 行）
+10. **复制签名 IPA**：`piggycount-${VERSION}-signed.ipa`（第 659-674 行）
 11. **Keychain 清理**（第 676-679 行）：`security delete-keychain`
 12. **iOS Debug Simulator 构建**：`flutter build ios --debug --simulator`（第 681-689 行）
-13. **打包 Runner.app（unsigned）**：`ditto -c -k` 生成 `beecount-${VERSION}-iphoneos.app.zip`，再用 zip 生成 `beecount-${VERSION}-unsigned.ipa`（第 691-707 行）
-14. **打包 Simulator 版本**：`beecount-${VERSION}-iphonesimulator.app.zip`（第 709-720 行）
+13. **打包 Runner.app（unsigned）**：`ditto -c -k` 生成 `piggycount-${VERSION}-iphoneos.app.zip`，再用 zip 生成 `piggycount-${VERSION}-unsigned.ipa`（第 691-707 行）
+14. **打包 Simulator 版本**：`piggycount-${VERSION}-iphonesimulator.app.zip`（第 709-720 行）
 15. **TestFlight 上传**（第 722-750 行）：`xcrun altool --upload-app`
 16. **Upload Artifact**（第 752-760 行）
 
@@ -405,7 +405,7 @@ flutter build apk --release --flavor prod \
   --dart-define=BUILD_TIME="$BUILD_TIME"
 ```
 
-**来源**：[release.yml 第 155-158 行](file:///d:/DevTools/project/BeeCount/.github/workflows/release.yml)
+**来源**：[release.yml 第 155-158 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
 
 Gradle `splits.abi` 自动产出 4 个 APK（arm64-v8a、armeabi-v7a、x86_64、universal）。
 
@@ -419,7 +419,7 @@ flutter build appbundle --release --flavor prod \
   --dart-define=GOOGLE_PLAY=true
 ```
 
-**来源**：[release.yml 第 187-191 行](file:///d:/DevTools/project/BeeCount/.github/workflows/release.yml)
+**来源**：[release.yml 第 187-191 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
 
 `GOOGLE_PLAY=true` 用于在 Dart 代码中通过 `bool.fromEnvironment('GOOGLE_PLAY')` 隐藏应用内更新入口与截屏自动记账功能。
 
@@ -445,7 +445,7 @@ flutter build appbundle --release --flavor prod \
 
 ### 7.1 Android flavor
 
-**实现位置**：[android/app/build.gradle:46-57](file:///d:/DevTools/project/BeeCount/android/app/build.gradle)
+**实现位置**：[android/app/build.gradle:46-57](file:///d:/DevTools/project/PiggyCount/android/app/build.gradle)
 
 ```gradle
 flavorDimensions += ["env"]
@@ -453,28 +453,28 @@ productFlavors {
     dev {
         dimension "env"
         applicationIdSuffix ".dev"
-        resValue "string", "app_name", "蜜蜂记账测试版"
+        resValue "string", "app_name", "小猪记账测试版"
     }
     prod {
         dimension "env"
-        resValue "string", "app_name", "蜜蜂记账"
+        resValue "string", "app_name", "小猪记账"
     }
 }
 ```
 
 | Flavor | applicationId | app_name | sourceSet 目录 |
 |--------|---------------|----------|----------------|
-| dev | `com.tntlikely.beecount.dev` | 蜜蜂记账测试版 | 无（共享 main） |
-| prod | `com.tntlikely.beecount` | 蜜蜂记账 | CI 时动态创建 prod/AndroidManifest.xml |
+| dev | `com.wait.piggycount.dev` | 小猪记账测试版 | 无（共享 main） |
+| prod | `com.wait.piggycount` | 小猪记账 | CI 时动态创建 prod/AndroidManifest.xml |
 
 **关键设计**：flavor 不通过独立 sourceSet 区分，而是用 `resValue` 注入 `app_name` 字符串资源，main AndroidManifest 引用 `@string/app_name`。`applicationIdSuffix ".dev"` 给 dev 加包名后缀，与生产包共存。
 
 ### 7.2 iOS flavor 同步
 
 iOS 不使用 Xcode scheme flavor，而是用 Debug/Release 配置区分：
-- Debug = dev（`com.tntlikely.beecount.dev`，"蜜蜂记账测试版"）
-- Release = prod（`com.tntlikely.beecount`，"蜜蜂记账"）
-- 实现：[ios/Flutter/Debug.xcconfig](file:///d:/DevTools/project/BeeCount/ios/Flutter/Debug.xcconfig) 与 [Release.xcconfig](file:///d:/DevTools/project/BeeCount/ios/Flutter/Release.xcconfig)
+- Debug = dev（`com.wait.piggycount.dev`，"小猪记账测试版"）
+- Release = prod（`com.wait.piggycount`，"小猪记账"）
+- 实现：[ios/Flutter/Debug.xcconfig](file:///d:/DevTools/project/PiggyCount/ios/Flutter/Debug.xcconfig) 与 [Release.xcconfig](file:///d:/DevTools/project/PiggyCount/ios/Flutter/Release.xcconfig)
 
 ### 7.3 图标差异
 
@@ -484,7 +484,7 @@ iOS 不使用 Xcode scheme flavor，而是用 Debug/Release 配置区分：
 
 ### 7.4 prod flavor 的临时 Manifest
 
-**实现位置**：[release.yml 第 170-185 行](file:///d:/DevTools/project/BeeCount/.github/workflows/release.yml)
+**实现位置**：[release.yml 第 170-185 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
 
 CI 构建 AAB 前动态写入 `android/app/src/prod/AndroidManifest.xml`，用 `tools:node="remove"` 移除：
 - `REQUEST_INSTALL_PACKAGES`
@@ -499,7 +499,7 @@ CI 构建 AAB 前动态写入 `android/app/src/prod/AndroidManifest.xml`，用 `
 
 ### 8.1 pubspec.yaml version 字段
 
-**实现位置**：[pubspec.yaml 第 4 行](file:///d:/DevTools/project/BeeCount/pubspec.yaml)
+**实现位置**：[pubspec.yaml 第 4 行](file:///d:/DevTools/project/PiggyCount/pubspec.yaml)
 
 ```yaml
 version: 0.0.1
@@ -509,7 +509,7 @@ version: 0.0.1
 
 ### 8.2 CI 自动更新版本号策略
 
-**实现位置**：[release.yml 第 132-146 行](file:///d:/DevTools/project/BeeCount/.github/workflows/release.yml)（Android）、第 427-440 行（iOS）
+**实现位置**：[release.yml 第 132-146 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)（Android）、第 427-440 行（iOS）
 
 ```bash
 CLEAN_VERSION=${VERSION#v}              # 去掉 tag 前缀 v
@@ -527,7 +527,7 @@ sed -i "s/^version: .*/version: ${CLEAN_VERSION}+${BUILD_NUMBER}/" pubspec.yaml
 
 ### 8.4 运行时版本读取
 
-**实现位置**：[lib/services/update/update_checker.dart:222-233](file:///d:/DevTools/project/BeeCount/lib/services/update/update_checker.dart)
+**实现位置**：[lib/services/update/update_checker.dart:222-233](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_checker.dart)
 
 ```dart
 static Future<AppInfo> _getAppInfo() async {
@@ -544,7 +544,7 @@ static Future<AppInfo> _getAppInfo() async {
 ```
 
 - 优先使用 CI 注入的 `CI_VERSION`，否则显示 `dev-{pubspec版本}`
-- 同样逻辑在 [lib/pages/settings/about_page.dart:460-474](file:///d:/DevTools/project/BeeCount/lib/pages/settings/about_page.dart) 重复实现
+- 同样逻辑在 [lib/pages/settings/about_page.dart:460-474](file:///d:/DevTools/project/PiggyCount/lib/pages/settings/about_page.dart) 重复实现
 
 ---
 
@@ -554,7 +554,7 @@ static Future<AppInfo> _getAppInfo() async {
 
 **配置文件**：`android/key.properties`（不提交 VCS，CI 动态生成）
 
-**CI 注入流程**（[release.yml 第 109-130 行](file:///d:/DevTools/project/BeeCount/.github/workflows/release.yml)）：
+**CI 注入流程**（[release.yml 第 109-130 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)）：
 
 ```bash
 echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/ci-release.keystore
@@ -570,13 +570,13 @@ printf '%s\n' \
 - `ANDROID_KEYSTORE_BASE64`：keystore 文件 base64 编码
 - `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`
 
-**Gradle 端读取**（[build.gradle 第 8-13 行](file:///d:/DevTools/project/BeeCount/android/app/build.gradle)）：通过 `Properties` 加载 `rootProject.file('key.properties')`。
+**Gradle 端读取**（[build.gradle 第 8-13 行](file:///d:/DevTools/project/PiggyCount/android/app/build.gradle)）：通过 `Properties` 加载 `rootProject.file('key.properties')`。
 
 **兜底**（无 secrets 时）：自动生成 `ci-debug.keystore`，保证 CI 不失败但产物不可上 Play。
 
 ### 9.2 iOS 签名
 
-**实现位置**：[release.yml 第 442-546 行](file:///d:/DevTools/project/BeeCount/.github/workflows/release.yml)
+**实现位置**：[release.yml 第 442-546 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
 
 **Secrets**：
 - `APPLE_CERTIFICATE_P12`：分发证书 P12 base64
@@ -591,20 +591,20 @@ printf '%s\n' \
 3. 安装 provisioning profile：`security cms -D` 提取 UUID，复制到 `~/Library/MobileDevice/Provisioning Profiles/${PP_UUID}.mobileprovision`
 4. 安装 Widget provisioning profile（同上）
 5. `security set-key-partition-list -S apple-tool:,apple:,codesign:`
-6. 动态生成 `ios/ExportOptions.plist`（method=app-store、signingStyle=manual、signingCertificate=Apple Distribution、provisioningProfiles 指定 BeeCount_AppStore 和 BeeCount_Widget_AppStore）
+6. 动态生成 `ios/ExportOptions.plist`（method=app-store、signingStyle=manual、signingCertificate=Apple Distribution、provisioningProfiles 指定 PiggyCount_AppStore 和 PiggyCount_Widget_AppStore）
 
-**project.pbxproj 修改**（[release.yml 第 558-594 行](file:///d:/DevTools/project/BeeCount/.github/workflows/release.yml)）：
+**project.pbxproj 修改**（[release.yml 第 558-594 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)）：
 - sed 改 `CODE_SIGN_STYLE = Automatic` → `Manual`
 - sed 改 `CODE_SIGN_IDENTITY[sdk=iphoneos*]` 从 `iPhone Developer` → `Apple Distribution`
 - perl 为所有 buildSettings 插入 `DEVELOPMENT_TEAM = ${APPLE_TEAM_ID}`
-- perl 在 `PRODUCT_BUNDLE_IDENTIFIER = com.tntlikely.beecount.BeeCountWidgetExtension` 前插入 `PROVISIONING_PROFILE_SPECIFIER = "BeeCount_Widget_AppStore"`
-- 在 `CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements` 前插入 `PROVISIONING_PROFILE_SPECIFIER = "BeeCount_AppStore"`
+- perl 在 `PRODUCT_BUNDLE_IDENTIFIER = com.wait.piggycount.PiggyCountWidgetExtension` 前插入 `PROVISIONING_PROFILE_SPECIFIER = "PiggyCount_Widget_AppStore"`
+- 在 `CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements` 前插入 `PROVISIONING_PROFILE_SPECIFIER = "PiggyCount_AppStore"`
 
 **清理**：`security delete-keychain $RUNNER_TEMP/app-signing.keychain-db`
 
 ### 9.3 Google Play 服务账号
 
-**实现位置**：[release.yml 第 257-349 行](file:///d:/DevTools/project/BeeCount/.github/workflows/release.yml)
+**实现位置**：[release.yml 第 257-349 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
 
 **Secret**：`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`（Google Play Developer API 服务账户 JSON）
 
@@ -616,31 +616,31 @@ printf '%s\n' \
 
 ### 10.1 Android APK 命名
 
-**实现位置**：[release.yml 第 205-246 行](file:///d:/DevTools/project/BeeCount/.github/workflows/release.yml)
+**实现位置**：[release.yml 第 205-246 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
 
 | Gradle 内部名 | 重命名为 | 说明 |
 |--------------|---------|------|
-| `app-prod-release-v<ver>(<code>).apk` | `beecount-<VERSION>.apk` | arm64-v8a 主分发 |
-| `app-prod-armeabi-v7a-release-v<ver>(<code>).apk` | `beecount-<VERSION>-armeabi-v7a.apk` | armv7 老设备 |
-| `app-prod-x86_64-release-v<ver>(<code>).apk` | `beecount-<VERSION>-x86_64.apk` | Intel/模拟器 |
-| `app-prod-universal-release-v<ver>(<code>).apk` | `beecount-<VERSION>-universal.apk` | 三 ABI 兜底 |
+| `app-prod-release-v<ver>(<code>).apk` | `piggycount-<VERSION>.apk` | arm64-v8a 主分发 |
+| `app-prod-armeabi-v7a-release-v<ver>(<code>).apk` | `piggycount-<VERSION>-armeabi-v7a.apk` | armv7 老设备 |
+| `app-prod-x86_64-release-v<ver>(<code>).apk` | `piggycount-<VERSION>-x86_64.apk` | Intel/模拟器 |
+| `app-prod-universal-release-v<ver>(<code>).apk` | `piggycount-<VERSION>-universal.apk` | 三 ABI 兜底 |
 
 ### 10.2 AAB 命名
 
-**实现位置**：[release.yml 第 240-244 行](file:///d:/DevTools/project/BeeCount/.github/workflows/release.yml)
+**实现位置**：[release.yml 第 240-244 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
 
-- `app-prod-release.aab` → `beecount-<VERSION>.aab`（AAB 不按 ABI 拆，Google Play 按设备分发）
+- `app-prod-release.aab` → `piggycount-<VERSION>.aab`（AAB 不按 ABI 拆，Google Play 按设备分发）
 
 ### 10.3 iOS 产物命名
 
-**实现位置**：[release.yml 第 659-674、691-720 行](file:///d:/DevTools/project/BeeCount/.github/workflows/release.yml)
+**实现位置**：[release.yml 第 659-674、691-720 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
 
 | 产物 | 命名 | 实现方式 |
 |------|------|---------|
-| 签名 IPA | `beecount-<VERSION>-signed.ipa` | xcodebuild -exportArchive 后 `cp` |
-| 未签名 IPA | `beecount-<VERSION>-unsigned.ipa` | `ditto` + `zip` 打包 Payload |
-| 真机 .app.zip | `beecount-<VERSION>-iphoneos.app.zip` | `ditto -c -k --sequesterRsrc --keepParent` |
-| 模拟器 .app.zip | `beecount-<VERSION>-iphonesimulator.app.zip` | 同上 |
+| 签名 IPA | `piggycount-<VERSION>-signed.ipa` | xcodebuild -exportArchive 后 `cp` |
+| 未签名 IPA | `piggycount-<VERSION>-unsigned.ipa` | `ditto` + `zip` 打包 Payload |
+| 真机 .app.zip | `piggycount-<VERSION>-iphoneos.app.zip` | `ditto -c -k --sequesterRsrc --keepParent` |
+| 模拟器 .app.zip | `piggycount-<VERSION>-iphonesimulator.app.zip` | 同上 |
 
 ---
 
@@ -648,7 +648,7 @@ printf '%s\n' \
 
 ### 11.1 Google Play 上传脚本
 
-**实现位置**：[release.yml 第 257-351 行](file:///d:/DevTools/project/BeeCount/.github/workflows/release.yml)
+**实现位置**：[release.yml 第 257-351 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
 
 **触发条件**：`(github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || github.event_name == 'workflow_dispatch'`
 
@@ -662,14 +662,14 @@ printf '%s\n' \
    - `service.edits().commit(...)` 提交
 
 **关键参数**：
-- `PACKAGE_NAME = 'com.tntlikely.beecount'`
+- `PACKAGE_NAME = 'com.wait.piggycount'`
 - `TRACK = 'production'`
 
 **清理**：`rm -f /tmp/service-account.json /tmp/upload_to_play.py`
 
 ### 11.2 GitHub Release Artifacts
 
-**实现位置**：[release.yml 第 876-889 行](file:///d:/DevTools/project/BeeCount/.github/workflows/release.yml)
+**实现位置**：[release.yml 第 876-889 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
 
 ```yaml
 - name: Create Release
@@ -688,7 +688,7 @@ printf '%s\n' \
 
 ### 11.3 TestFlight 上传
 
-**实现位置**：[release.yml 第 722-750 行](file:///d:/DevTools/project/BeeCount/.github/workflows/release.yml)
+**实现位置**：[release.yml 第 722-750 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
 
 ```bash
 xcrun altool --upload-app \
@@ -703,7 +703,7 @@ xcrun altool --upload-app \
 
 ### 11.4 Telegram 通知
 
-**实现位置**：[release.yml 第 891-934 行](file:///d:/DevTools/project/BeeCount/.github/workflows/release.yml)
+**实现位置**：[release.yml 第 891-934 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
 
 `curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`，发送 Markdown 格式消息，含版本号、release 链接、commit 列表（URL 编码换行符 `%0A`）。
 
@@ -711,18 +711,18 @@ xcrun altool --upload-app \
 
 ## 12. 应用更新机制（OTA）
 
-**目录**：[lib/services/update/](file:///d:/DevTools/project/BeeCount/lib/services/update/)（9 个文件）+ [lib/services/system/update_service.dart](file:///d:/DevTools/project/BeeCount/lib/services/system/update_service.dart)（编排层）
+**目录**：[lib/services/update/](file:///d:/DevTools/project/PiggyCount/lib/services/update/)（9 个文件）+ [lib/services/system/update_service.dart](file:///d:/DevTools/project/PiggyCount/lib/services/system/update_service.dart)（编排层）
 
 ### 12.1 update_checker.dart（版本检查）
 
-**实现位置**：[lib/services/update/update_checker.dart](file:///d:/DevTools/project/BeeCount/lib/services/update/update_checker.dart)
+**实现位置**：[lib/services/update/update_checker.dart](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_checker.dart)
 
-- **API**：`https://api.github.com/repos/TNT-Likely/BeeCount/releases/latest`
+- **API**：`https://api.github.com/repos/TNT-Likely/PiggyCount/releases/latest`
 - **重试机制**：最多 3 次，每次间隔 1 秒
 - **User-Agent 随机化**：9 个真实浏览器 UA 池，按时间戳取模，避免 GitHub 限流
 - **APK URL 选择策略**（`_pickApkUrl`）：
-  1. 优先 `beecount-<ver>.apk`（arm64 主包）
-  2. 其次 `beecount-<ver>-universal.apk`（兜底）
+  1. 优先 `piggycount-<ver>.apk`（arm64 主包）
+  2. 其次 `piggycount-<ver>-universal.apk`（兜底）
   3. 任意 `.apk`（最后兜底）
 
   **历史 bug 修复说明**：之前按字母序取第一个 APK，因 GitHub assets 字母序 `-armeabi-v7a.apk` 排第一，arm64 真机装上跑 32-bit 兼容层导致严重卡顿。
@@ -733,34 +733,34 @@ xcrun altool --upload-app \
 
 ### 12.2 update_downloader.dart（APK 下载）
 
-**实现位置**：[lib/services/update/update_downloader.dart](file:///d:/DevTools/project/BeeCount/lib/services/update/update_downloader.dart)
+**实现位置**：[lib/services/update/update_downloader.dart](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_downloader.dart)
 
 - 使用 **Dio** HTTP 客户端，超时：connect 30s、receive 10min（大文件）、send 2min
 - **下载路径**：Android 用 `getExternalStorageDirectory()`，其他用 `getApplicationDocumentsDirectory()`
-- **文件命名**：`BeeCount_<fileName>.apk`，例如 `BeeCount_v3.2.1.apk`
+- **文件命名**：`PiggyCount_<fileName>.apk`，例如 `PiggyCount_v3.2.1.apk`
 - **镜像加速**：先调 `GitHubMirrorService.getSelectedMirror()` 取镜像，再 `convertToMirrorUrl` 转换 URL
 - **进度通知**：1% 阈值更新，避免频繁刷新
 - **取消机制**：`CancelToken`，支持用户点击取消按钮
-- **请求头伪装**：模拟浏览器 Referer `https://github.com/TNT-Likely/BeeCount/releases`、随机 UA
+- **请求头伪装**：模拟浏览器 Referer `https://github.com/TNT-Likely/PiggyCount/releases`、随机 UA
 
 ### 12.3 update_installer.dart（APK 安装）
 
-**实现位置**：[lib/services/update/update_installer.dart](file:///d:/DevTools/project/BeeCount/lib/services/update/update_installer.dart)
+**实现位置**：[lib/services/update/update_installer.dart](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_installer.dart)
 
 - **双安装路径**：
   - 生产环境（`bool.fromEnvironment('dart.vm.product')`）：先尝试 `_installApkWithIntent`（MethodChannel 调原生 Android Intent），失败兜底 `OpenFilex.open`
   - 开发环境：直接 `OpenFilex.open`
-- **原生 MethodChannel**：`com.tntlikely.beecount/install`，方法 `installApk`，参数 `filePath`
-- **本地 APK 查找**（`showLocalApkInstallOption`）：扫描下载目录所有 BeeCount APK，按修改时间排序
+- **原生 MethodChannel**：`com.wait.piggycount/install`，方法 `installApk`，参数 `filePath`
+- **本地 APK 查找**（`showLocalApkInstallOption`）：扫描下载目录所有 PiggyCount APK，按修改时间排序
 - **缓存 APK 安装**（`showCachedApkInstallOption`）：从 `UpdateCache` 取缓存路径，确认后安装，成功后清理缓存
 - **完整日志埋点**：所有关键步骤打 `UPDATE_CRASH:` 前缀日志
 
 ### 12.4 update_cache.dart（版本检查缓存）
 
-**实现位置**：[lib/services/update/update_cache.dart](file:///d:/DevTools/project/BeeCount/lib/services/update/update_cache.dart)
+**实现位置**：[lib/services/update/update_cache.dart](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_cache.dart)
 
 - **SharedPreferences keys**：`cached_apk_path`、`cached_apk_version`、`cached_apk_timestamp`
-- **APK 文件查找**：从 URL 提取版本号（正则 `beecount-([0-9]+\.[0-9]+\.[0-9]+)\.apk`）
+- **APK 文件查找**：从 URL 提取版本号（正则 `piggycount-([0-9]+\.[0-9]+\.[0-9]+)\.apk`）
 - **APK 完整性验证**：
   - 文件大小范围：5MB - 200MB
   - ZIP 魔数检查（`PK` = 0x50 0x4B）
@@ -769,7 +769,7 @@ xcrun altool --upload-app \
 
 ### 12.5 github_mirror_service.dart（GitHub 镜像加速）
 
-**实现位置**：[lib/services/update/github_mirror_service.dart](file:///d:/DevTools/project/BeeCount/lib/services/update/github_mirror_service.dart)
+**实现位置**：[lib/services/update/github_mirror_service.dart](file:///d:/DevTools/project/PiggyCount/lib/services/update/github_mirror_service.dart)
 
 - **6 个镜像源**：
   1. `direct`：GitHub 直连（默认）
@@ -786,7 +786,7 @@ xcrun altool --upload-app \
 
 ### 12.6 update_notifications.dart（更新通知）
 
-**实现位置**：[lib/services/update/update_notifications.dart](file:///d:/DevTools/project/BeeCount/lib/services/update/update_notifications.dart)
+**实现位置**：[lib/services/update/update_notifications.dart](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_notifications.dart)
 
 - **通知渠道**：`update_download`，Importance.low，无声音无振动
 - **Android 13+ 权限请求**：`requestNotificationsPermission()`
@@ -796,7 +796,7 @@ xcrun altool --upload-app \
 
 ### 12.7 update_permissions.dart（安装权限）
 
-**实现位置**：[lib/services/update/update_permissions.dart](file:///d:/DevTools/project/BeeCount/lib/services/update/update_permissions.dart)
+**实现位置**：[lib/services/update/update_permissions.dart](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_permissions.dart)
 
 - **存储权限**：Android 10 及以下才申请 `Permission.storage`
 - **安装权限**：`Permission.requestInstallPackages`
@@ -804,18 +804,18 @@ xcrun altool --upload-app \
 
 ### 12.8 update_dialogs.dart（更新提示）
 
-**实现位置**：[lib/services/update/update_dialogs.dart](file:///d:/DevTools/project/BeeCount/lib/services/update/update_dialogs.dart)
+**实现位置**：[lib/services/update/update_dialogs.dart](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_dialogs.dart)
 
 - **`showInstallDialog`**：下载完成后的安装确认
 - **`showNotificationGuideDialog`**：通知权限被拒后的引导（3 步图文教程）
 - **`showDownloadConfirmDialog`**：发现新版本时的确认弹窗，含镜像选择入口
 - **`showUpdateErrorWithFallback` / `showDownloadErrorWithFallback`**：错误弹窗，提供"去 GitHub"兜底
-- **`launchGitHubReleases`**：`url_launcher` 打开 `https://github.com/TNT-Likely/BeeCount/releases`
+- **`launchGitHubReleases`**：`url_launcher` 打开 `https://github.com/TNT-Likely/PiggyCount/releases`
 - **`showMirrorSelectDialog`**：镜像选择对话框，支持单选、延迟测试、进度显示
 
 ### 12.9 update_result.dart（结果模型）
 
-**实现位置**：[lib/services/update/update_result.dart](file:///d:/DevTools/project/BeeCount/lib/services/update/update_result.dart)
+**实现位置**：[lib/services/update/update_result.dart](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_result.dart)
 
 - `UpdateResult` 类：hasUpdate、success、message、filePath、version、downloadUrl、releaseNotes、type
 - `UpdateResultType` 枚举：downloadSuccess、alreadyLatest、userCancelled、permissionDenied、downloadFailed、installFailed、checkFailed
@@ -824,7 +824,7 @@ xcrun altool --upload-app \
 
 ### 12.10 update_service.dart（编排层）
 
-**实现位置**：[lib/services/system/update_service.dart](file:///d:/DevTools/project/BeeCount/lib/services/system/update_service.dart)
+**实现位置**：[lib/services/system/update_service.dart](file:///d:/DevTools/project/PiggyCount/lib/services/system/update_service.dart)
 
 - **`checkUpdate`**：转发到 `UpdateChecker.checkUpdate`
 - **`downloadAndInstallUpdate`**（第 68-305 行）：完整流程编排
@@ -903,7 +903,7 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
-PACKAGE_NAME = 'com.tntlikely.beecount'
+PACKAGE_NAME = 'com.wait.piggycount'
 AAB_FILE = sys.argv[1]
 TRACK = 'production'
 
@@ -980,7 +980,7 @@ static Future<String> selectFastestMirror(String testUrl) async {
 
 ### 14.1 --dart-define 用法
 
-**注入位置**：[release.yml](file:///d:/DevTools/project/BeeCount/.github/workflows/release.yml)（Android 第 150-158、187-191 行；iOS 第 550-556、684-689 行）
+**注入位置**：[release.yml](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)（Android 第 150-158、187-191 行；iOS 第 550-556、684-689 行）
 
 | 变量名 | 类型 | 默认 | 来源 |
 |--------|------|------|------|
@@ -992,12 +992,12 @@ static Future<String> selectFastestMirror(String testUrl) async {
 ### 14.2 代码读取位置
 
 **`String.fromEnvironment` 使用文件**：
-- [lib/services/update/update_checker.dart:224-226](file:///d:/DevTools/project/BeeCount/lib/services/update/update_checker.dart)：`GIT_COMMIT`、`BUILD_TIME`、`CI_VERSION`
-- [lib/services/system/update_service.dart](file:///d:/DevTools/project/BeeCount/lib/services/system/update_service.dart)：`dart.vm.product`、`flavor`
-- [lib/services/update/update_installer.dart:48](file:///d:/DevTools/project/BeeCount/lib/services/update/update_installer.dart)：`dart.vm.product`（区分生产/开发安装路径）
-- [lib/pages/settings/about_page.dart:24, 463-465](file:///d:/DevTools/project/BeeCount/lib/pages/settings/about_page.dart)：`GOOGLE_PLAY`、`GIT_COMMIT`、`BUILD_TIME`、`CI_VERSION`
-- [lib/services/platform/screenshot_monitor_service.dart:9](file:///d:/DevTools/project/BeeCount/lib/services/platform/screenshot_monitor_service.dart)：`GOOGLE_PLAY`
-- [lib/pages/settings/smart_billing_page.dart:18](file:///d:/DevTools/project/BeeCount/lib/pages/settings/smart_billing_page.dart)：`GOOGLE_PLAY`
+- [lib/services/update/update_checker.dart:224-226](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_checker.dart)：`GIT_COMMIT`、`BUILD_TIME`、`CI_VERSION`
+- [lib/services/system/update_service.dart](file:///d:/DevTools/project/PiggyCount/lib/services/system/update_service.dart)：`dart.vm.product`、`flavor`
+- [lib/services/update/update_installer.dart:48](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_installer.dart)：`dart.vm.product`（区分生产/开发安装路径）
+- [lib/pages/settings/about_page.dart:24, 463-465](file:///d:/DevTools/project/PiggyCount/lib/pages/settings/about_page.dart)：`GOOGLE_PLAY`、`GIT_COMMIT`、`BUILD_TIME`、`CI_VERSION`
+- [lib/services/platform/screenshot_monitor_service.dart:9](file:///d:/DevTools/project/PiggyCount/lib/services/platform/screenshot_monitor_service.dart)：`GOOGLE_PLAY`
+- [lib/pages/settings/smart_billing_page.dart:18](file:///d:/DevTools/project/PiggyCount/lib/pages/settings/smart_billing_page.dart)：`GOOGLE_PLAY`
 
 ### 14.3 .env 文件
 
@@ -1009,7 +1009,7 @@ static Future<String> selectFastestMirror(String testUrl) async {
 
 ### 15.1 scripts/ 目录
 
-**位置**：[scripts/](file:///d:/DevTools/project/BeeCount/scripts/)
+**位置**：[scripts/](file:///d:/DevTools/project/PiggyCount/scripts/)
 
 | 文件 | 用途 |
 |------|------|
@@ -1025,7 +1025,7 @@ static Future<String> selectFastestMirror(String testUrl) async {
 
 ### 15.3 flutter_launcher_icons
 
-**配置位置**：[pubspec.yaml:102-110](file:///d:/DevTools/project/BeeCount/pubspec.yaml)
+**配置位置**：[pubspec.yaml:102-110](file:///d:/DevTools/project/PiggyCount/pubspec.yaml)
 
 ```yaml
 flutter_launcher_icons:
@@ -1037,15 +1037,15 @@ flutter_launcher_icons:
   adaptive_icon_monochrome: assets/icon/adaptive_monochrome.png
 ```
 
-**重要注意事项**（[pubspec.yaml:105-106](file:///d:/DevTools/project/BeeCount/pubspec.yaml) 注释）：legacy `mipmap ic_launcher.png` 已钉死为线上版本，重跑工具后必须 `git checkout main -- android/app/src/main/res/mipmap-*/ic_launcher.png` 恢复。
+**重要注意事项**（[pubspec.yaml:105-106](file:///d:/DevTools/project/PiggyCount/pubspec.yaml) 注释）：legacy `mipmap ic_launcher.png` 已钉死为线上版本，重跑工具后必须 `git checkout main -- android/app/src/main/res/mipmap-*/ic_launcher.png` 恢复。
 
 ---
 
 ## 16. 总结
 
-BeeCount 项目实现了**完整的 Flutter 跨平台构建发布流水线**：
+PiggyCount 项目实现了**完整的 Flutter 跨平台构建发布流水线**：
 
-1. **多渠道构建**：Android 通过 Gradle `productFlavors`（dev/prod）+ `applicationIdSuffix` 区分；iOS 通过 Debug/Release xcconfig 区分，两端包名一致（dev: `com.tntlikely.beecount.dev`、prod: `com.tntlikely.beecount`）
+1. **多渠道构建**：Android 通过 Gradle `productFlavors`（dev/prod）+ `applicationIdSuffix` 区分；iOS 通过 Debug/Release xcconfig 区分，两端包名一致（dev: `com.wait.piggycount.dev`、prod: `com.wait.piggycount`）
 2. **多产物**：Android 按 ABI 拆分 4 个 APK + 1 个 AAB；iOS 输出 signed IPA、unsigned IPA、真机 .app.zip、模拟器 .app.zip
 3. **完整签名**：Android keystore + iOS p12 + provisioning profile 均从 GitHub Secrets 注入，无 secrets 时有兜底策略保证 CI 不失败
 4. **多渠道分发**：Google Play（production track，Python + google-api-python-client）、TestFlight（xcrun altool）、GitHub Release（softprops/action-gh-release）、Telegram 通知
@@ -1067,20 +1067,20 @@ BeeCount 项目实现了**完整的 Flutter 跨平台构建发布流水线**：
 ## 17. 参考与延伸阅读
 
 ### 17.1 相关文档
-- [03-tech-stack.md](file:///d:/DevTools/project/BeeCount/docoments/03-tech-stack.md)：技术栈与依赖
-- [11-performance.md](file:///d:/DevTools/project/BeeCount/docoments/11-performance.md)：性能优化（APK 缓存等）
-- [12-security.md](file:///d:/DevTools/project/BeeCount/docoments/12-security.md)：安全机制（签名/凭证存储）
+- [03-tech-stack.md](file:///d:/DevTools/project/PiggyCount/docoments/03-tech-stack.md)：技术栈与依赖
+- [11-performance.md](file:///d:/DevTools/project/PiggyCount/docoments/11-performance.md)：性能优化（APK 缓存等）
+- [12-security.md](file:///d:/DevTools/project/PiggyCount/docoments/12-security.md)：安全机制（签名/凭证存储）
 
 ### 17.2 关键源码文件
-- [pubspec.yaml](file:///d:/DevTools/project/BeeCount/pubspec.yaml)：项目依赖与版本
-- [android/app/build.gradle](file:///d:/DevTools/project/BeeCount/android/app/build.gradle)：Android 构建配置
-- [android/app/src/main/AndroidManifest.xml](file:///d:/DevTools/project/BeeCount/android/app/src/main/AndroidManifest.xml)：Android 权限
-- [ios/Runner/Info.plist](file:///d:/DevTools/project/BeeCount/ios/Runner/Info.plist)：iOS 配置
-- [ios/Flutter/Debug.xcconfig](file:///d:/DevTools/project/BeeCount/ios/Flutter/Debug.xcconfig) / [Release.xcconfig](file:///d:/DevTools/project/BeeCount/ios/Flutter/Release.xcconfig)：iOS flavor 同步
-- [.github/workflows/release.yml](file:///d:/DevTools/project/BeeCount/.github/workflows/release.yml)：CI/CD 主流程
-- [lib/services/update/](file:///d:/DevTools/project/BeeCount/lib/services/update/)：OTA 更新模块
-- [lib/services/system/update_service.dart](file:///d:/DevTools/project/BeeCount/lib/services/system/update_service.dart)：更新编排层
-- [scripts/](file:///d:/DevTools/project/BeeCount/scripts/)：构建辅助脚本
+- [pubspec.yaml](file:///d:/DevTools/project/PiggyCount/pubspec.yaml)：项目依赖与版本
+- [android/app/build.gradle](file:///d:/DevTools/project/PiggyCount/android/app/build.gradle)：Android 构建配置
+- [android/app/src/main/AndroidManifest.xml](file:///d:/DevTools/project/PiggyCount/android/app/src/main/AndroidManifest.xml)：Android 权限
+- [ios/Runner/Info.plist](file:///d:/DevTools/project/PiggyCount/ios/Runner/Info.plist)：iOS 配置
+- [ios/Flutter/Debug.xcconfig](file:///d:/DevTools/project/PiggyCount/ios/Flutter/Debug.xcconfig) / [Release.xcconfig](file:///d:/DevTools/project/PiggyCount/ios/Flutter/Release.xcconfig)：iOS flavor 同步
+- [.github/workflows/release.yml](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)：CI/CD 主流程
+- [lib/services/update/](file:///d:/DevTools/project/PiggyCount/lib/services/update/)：OTA 更新模块
+- [lib/services/system/update_service.dart](file:///d:/DevTools/project/PiggyCount/lib/services/system/update_service.dart)：更新编排层
+- [scripts/](file:///d:/DevTools/project/PiggyCount/scripts/)：构建辅助脚本
 
 ### 17.3 外部参考
 - Flutter 构建发布：https://docs.flutter.dev/deployment

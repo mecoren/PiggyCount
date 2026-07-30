@@ -23,7 +23,7 @@ audience: 一年经验的开发者
 
 ### 1.1 为什么需要系统架构文档
 
-BeeCount 是一个功能复杂的 Flutter 应用,涉及记账业务、AI 多模态、五端同步、共享账本、桌面小组件等多个领域。如果没有清晰的架构文档,新加入的贡献者容易遇到以下困惑:
+PiggyCount 是一个功能复杂的 Flutter 应用,涉及记账业务、AI 多模态、五端同步、共享账本、桌面小组件等多个领域。如果没有清晰的架构文档,新加入的贡献者容易遇到以下困惑:
 
 - 不知道一个新功能应该放在哪一层
 - 不清楚 UI 层能不能直接访问数据库
@@ -31,7 +31,7 @@ BeeCount 是一个功能复杂的 Flutter 应用,涉及记账业务、AI 多模�
 - 不知道同步引擎为什么是旁路而不是串入主流程
 - 不清楚 `packages/` 子包与 `lib/` 主代码的边界
 
-本文档定义 BeeCount 的**分层架构、模块关系、依赖方向、关键设计模式**,让一年经验开发者能快速理解"代码应该写在哪里"。
+本文档定义 PiggyCount 的**分层架构、模块关系、依赖方向、关键设计模式**,让一年经验开发者能快速理解"代码应该写在哪里"。
 
 ### 1.2 与其他文档的边界
 
@@ -53,7 +53,7 @@ BeeCount 是一个功能复杂的 Flutter 应用,涉及记账业务、AI 多模�
 
 ### 2.1 分层架构总览
 
-BeeCount 采用**五层架构 + 同步引擎旁路**的设计:
+PiggyCount 采用**五层架构 + 同步引擎旁路**的设计:
 
 ```mermaid
 flowchart TD
@@ -104,11 +104,11 @@ flowchart TD
     ENGINE --> PROVIDER
 ```
 
-上图展示了 BeeCount 的五层架构与同步引擎旁路设计。UI 层只与 Provider 层交互,不直接访问 Service / Repository / 数据库;Provider 层通过 Riverpod 注入 Service 与 Repository;Service 层承载业务逻辑,可调用 Repository;Repository 层是数据访问的唯一入口;同步引擎作为旁路监听本地变更,异步推送到云端。这种分层让各层职责清晰,UI 不感知数据来源,Repository 不感知同步细节。
+上图展示了 PiggyCount 的五层架构与同步引擎旁路设计。UI 层只与 Provider 层交互,不直接访问 Service / Repository / 数据库;Provider 层通过 Riverpod 注入 Service 与 Repository;Service 层承载业务逻辑,可调用 Repository;Repository 层是数据访问的唯一入口;同步引擎作为旁路监听本地变更,异步推送到云端。这种分层让各层职责清晰,UI 不感知数据来源,Repository 不感知同步细节。
 
 ### 2.2 同步引擎旁路设计
 
-BeeCount 的同步引擎**不串入主流程**,而是作为旁路存在:
+PiggyCount 的同步引擎**不串入主流程**,而是作为旁路存在:
 
 ```mermaid
 flowchart LR
@@ -131,7 +131,7 @@ flowchart LR
 
 ### 2.3 多后端抽象
 
-BeeCount 通过 `CloudProvider` 抽象接口支持 5 种同步后端,详见 [06 数据同步与多设备离线机制](./06-data-sync-and-offline.md)。架构上,所有后端实现同一接口,SyncEngine 只与抽象交互:
+PiggyCount 通过 `CloudProvider` 抽象接口支持 5 种同步后端,详见 [06 数据同步与多设备离线机制](./06-data-sync-and-offline.md)。架构上,所有后端实现同一接口,SyncEngine 只与抽象交互:
 
 ```mermaid
 classDiagram
@@ -143,7 +143,7 @@ classDiagram
         +validateConfig()
         +dispose()
     }
-    class BeeCountCloudProvider {
+    class PiggyCountCloudProvider {
         +pullChanges()
         +pushChanges()
         +writeCreateLedger()
@@ -154,14 +154,14 @@ classDiagram
     class WebDAVProvider
     class S3Provider
 
-    CloudProvider <|.. BeeCountCloudProvider
+    CloudProvider <|.. PiggyCountCloudProvider
     CloudProvider <|.. ICloudProvider
     CloudProvider <|.. SupabaseProvider
     CloudProvider <|.. WebDAVProvider
     CloudProvider <|.. S3Provider
 ```
 
-只有 BeeCountCloudProvider 实现了完整的增量同步 + Realtime + 共享账本能力,其他 4 个 provider 只实现文件级 snapshot 备份能力。SyncEngine 只在 BeeCount Cloud 模式下激活,其他模式走 `TransactionsSyncManager` 快照路径。
+只有 PiggyCountCloudProvider 实现了完整的增量同步 + Realtime + 共享账本能力,其他 4 个 provider 只实现文件级 snapshot 备份能力。SyncEngine 只在 PiggyCount Cloud 模式下激活,其他模式走 `TransactionsSyncManager` 快照路径。
 
 依据:`packages/flutter_cloud_sync/lib/src/core/cloud_provider.dart`、`lib/cloud/sync/sync_engine.dart` L72、`lib/cloud/transactions_sync_manager.dart`。
 
@@ -305,7 +305,7 @@ classDiagram
 #### 3.4.3 Repository 层规则
 
 - **必须**通过 `BaseRepository` 抽象访问,UI 不直接持有 `LocalRepository`
-- **所有写操作**(create / update / delete)**必须**通过 ChangeTracker 记录变更(仅 BeeCount Cloud 模式)
+- **所有写操作**(create / update / delete)**必须**通过 ChangeTracker 记录变更(仅 PiggyCount Cloud 模式)
 - **不直接**调用 CloudProvider / SyncEngine(由 SyncCoordinator 监听变更表自动触发)
 - 多币种聚合方法(如 `recalcNativeAmountsForLedger`)放在 `BaseRepository` 而非子 Repository,因需同时访问交易表与汇率表
 
@@ -329,8 +329,8 @@ classDiagram
 非 Drift 表的配置项存放于 SharedPreferences:
 
 - 用户设置:主题色、外观、语言、字体大小、提醒设置、应用锁开关
-- 同步 cursor:`beecount_cloud_pull_cursor_$digest`(SHA1 hash key,per-device per-provider)
-- BeeCount Cloud profile:displayName、baseCurrency、themeColor、incomeColorScheme、appearance、aiConfig
+- 同步 cursor:`piggycount_cloud_pull_cursor_$digest`(SHA1 hash key,per-device per-provider)
+- PiggyCount Cloud profile:displayName、baseCurrency、themeColor、incomeColorScheme、appearance、aiConfig
 
 依据:`lib/data/db.dart`、`lib/cloud/sync/sync_engine_pull.dart` `AppCursorStore`。
 
@@ -379,7 +379,7 @@ flowchart TD
 |---|---|---|
 | Provider 抽象层 | `packages/flutter_cloud_sync/lib/src/core/` | 定义跨 provider 的统一契约,纯抽象接口 |
 | Manager 通用层 | `packages/flutter_cloud_sync/lib/src/manager/` | 业务无关的同步编排,泛型 `T` 表示业务数据类型 |
-| SyncEngine 业务层 | `lib/cloud/sync/` | BeeCount 自有的核心同步引擎,实现 `SyncService` 接口 |
+| SyncEngine 业务层 | `lib/cloud/sync/` | PiggyCount 自有的核心同步引擎,实现 `SyncService` 接口 |
 | Riverpod / UI 触发层 | `lib/providers/`、`lib/pages/cloud/` | UI 入口与 provider 装配 |
 
 #### 3.6.2 SyncEngine 的 part 文件拆分
@@ -457,7 +457,7 @@ flowchart TD
     L --> M[SyncEngine.push 异步]
 ```
 
-上图展示了数据访问的完整架构流程。读操作直接走 Drift,可返回 `Stream` 实现响应式;写操作先 Drift insert,再通过 ChangeTracker 记录变更到 `local_changes` 表。SyncCoordinator 独立监听 `local_changes` 表的 Drift reactive stream,自动触发 SyncEngine 推送。这种"写本地 + 记录变更 + 异步同步"的三步流程是 BeeCount 本地优先架构的核心。
+上图展示了数据访问的完整架构流程。读操作直接走 Drift,可返回 `Stream` 实现响应式;写操作先 Drift insert,再通过 ChangeTracker 记录变更到 `local_changes` 表。SyncCoordinator 独立监听 `local_changes` 表的 Drift reactive stream,自动触发 SyncEngine 推送。这种"写本地 + 记录变更 + 异步同步"的三步流程是 PiggyCount 本地优先架构的核心。
 
 依据:`lib/data/repositories/local/local_repository.dart`、`lib/cloud/sync/change_tracker.dart`、`lib/cloud/sync/sync_coordinator.dart`。
 
@@ -480,7 +480,7 @@ flowchart TD
     M --> N{500ms 防抖}
     N --> O[SyncEngine.triggerAutoSync]
 
-    P[用户手动同步] --> Q[BeeCountCloudSyncPage]
+    P[用户手动同步] --> Q[PiggyCountCloudSyncPage]
     Q --> R[SyncEngine.sync]
 
     G --> S[CloudProvider HTTP]
@@ -561,11 +561,11 @@ flowchart TD
 
 - **决策内容**:路由使用 Navigator 1.0(`MaterialPageRoute` + `Navigator.push`),不引入 go_router / auto_route。
 - **原因**:
-  - **简单直观**:BeeCount 是工具类应用,无复杂路由场景(如嵌套导航、Shell Route)
-  - **无 Web 端路由需求**:Web 通过 BeeCount Cloud PWA,不在本仓库构建
+  - **简单直观**:PiggyCount 是工具类应用,无复杂路由场景(如嵌套导航、Shell Route)
+  - **无 Web 端路由需求**:Web 通过 PiggyCount Cloud PWA,不在本仓库构建
   - **减少依赖**:go_router 引入额外学习成本与版本维护
 - **备选方案**:
-  - go_router:声明式路由,适合复杂场景,但 BeeCount 不需要
+  - go_router:声明式路由,适合复杂场景,但 PiggyCount 不需要
   - auto_route:code generation 路由,过重
 - **优缺点**:
   - Navigator 1.0:简单但深嵌套时 push/pop 管理繁琐
@@ -584,7 +584,7 @@ flowchart TD
 | UI 不直接访问数据库 | 必须通过 `ref.watch(repositoryProvider)` | 代码 review 拒绝 |
 | UI 不直接调用 CloudProvider | 必须通过 SyncEngine 间接调用 | 同步逻辑混乱 |
 | Service 不直接访问数据库 | 必须通过 `BaseRepository` 抽象 | 测试困难 |
-| Repository 写操作必须记录变更 | 通过 ChangeTracker(仅 BeeCount Cloud 模式) | 数据不同步 |
+| Repository 写操作必须记录变更 | 通过 ChangeTracker(仅 PiggyCount Cloud 模式) | 数据不同步 |
 | Repository 不调用 SyncEngine | 由 SyncCoordinator 反应式触发 | 循环依赖 |
 
 ### 6.2 子包与主代码的边界
@@ -598,8 +598,8 @@ flowchart TD
 
 ### 6.3 平台特定代码约束
 
-- Android 原生代码位于 `android/app/src/main/kotlin/com/tntlikely/beecount/`
-- iOS 原生代码位于 `ios/Runner/` 与 `ios/BeeCountWidget/`
+- Android 原生代码位于 `android/app/src/main/kotlin/com/tntlikely/piggycount/`
+- iOS 原生代码位于 `ios/Runner/` 与 `ios/PiggyCountWidget/`
 - 平台特定功能(如截图监听、AppLink)通过 method channel / app_links 桥接
 - 共享逻辑必须在 Dart 层,平台特定逻辑在原生层
 
@@ -620,7 +620,7 @@ flowchart TD
 | 1 | `lib/services/` 各 Service 之间的调用关系图未绘制 | §3.3 | 在 [05 核心模块详解](./05-core-modules.md) 中补充 |
 | 2 | `lib/widgets/` 通用 Widget 的复用关系未展开 | §3.1 | 可选,通过 grep 统计引用次数 |
 | 3 | `packages/flutter_cloud_sync` 内部 Manager 层(`CloudSyncManager` / `DatabaseSyncManager`)的实际使用情况未确认 | §3.6 | 在 [06 数据同步](./06-data-sync-and-offline.md) 中确认 |
-| 4 | SyncEngine 在非 BeeCount Cloud 模式下的替代路径(`TransactionsSyncManager`)未展开 | §3.6 | 在 [06 数据同步](./06-data-sync-and-offline.md) 中补充 |
+| 4 | SyncEngine 在非 PiggyCount Cloud 模式下的替代路径(`TransactionsSyncManager`)未展开 | §3.6 | 在 [06 数据同步](./06-data-sync-and-offline.md) 中补充 |
 | 5 | 原生层(Android Kotlin / iOS Swift)与 Dart 层的 method channel 完整清单未整理 | §6.3 | 在 [05 核心模块详解](./05-core-modules.md) 平台集成章节补充 |
 | 6 | Provider 层 30 个文件的完整清单与依赖关系未展开 | §3.2 | 可选,在 [08 接口与数据访问](./08-api-and-data-access.md) 中补充 |
 

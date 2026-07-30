@@ -4,8 +4,8 @@ contact_links:
     url: https://count.beejz.com/docs/intro
     about: 查看详细使用文档和常见问题。Detailed docs and FAQ.
   - name: 💬 讨论区 / Discussions
-    url: https://github.com/TNT-Likely/BeeCount/discussions
+    url: https://github.com/TNT-Likely/PiggyCount/discussions
     about: 分享使用经验、交流技巧、非 bug 求助请用 Discussions。Share experience, tips, non-bug questions.
   - name: ☁️ 云同步服务端问题 / Cloud Backend Issues
-    url: https://github.com/TNT-Likely/BeeCount-Cloud/issues
-    about: 自建 BeeCount Cloud 服务端 / Web 控制台相关的 bug 请去 Cloud 仓库。Self-hosted Cloud / Web console issues belong in the Cloud repo.
+    url: https://github.com/TNT-Likely/PiggyCount-Cloud/issues
+    about: 自建 PiggyCount Cloud 服务端 / Web 控制台相关的 bug 请去 Cloud 仓库。Self-hosted Cloud / Web console issues belong in the Cloud repo.

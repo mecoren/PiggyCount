@@ -23,9 +23,9 @@ audience: 一年经验的开发者
 
 ### 1.1 为什么单独写同步文档
 
-数据同步是 BeeCount 最复杂、最核心的模块,代码量占 `lib/cloud/` 整个目录,涉及:
+数据同步是 PiggyCount 最复杂、最核心的模块,代码量占 `lib/cloud/` 整个目录,涉及:
 
-- 5 种同步后端(BeeCount Cloud / iCloud / Supabase / WebDAV / S3)
+- 5 种同步后端(PiggyCount Cloud / iCloud / Supabase / WebDAV / S3)
 - 自研 `flutter_cloud_sync` 框架(4 层架构)
 - 增量同步(push / pull)+ 全量同步(fullPush / fullPull)
 - LWW 冲突解决 + 字段级合并
@@ -56,7 +56,7 @@ audience: 一年经验的开发者
 
 ### 2.1 同步引擎四层架构
 
-BeeCount 的同步体系由四层架构组成,从下到上依次为:Provider 抽象层 → 通用 Manager 层 → BeeCount 业务 SyncEngine 层 → Riverpod/UI 触发层。
+PiggyCount 的同步体系由四层架构组成,从下到上依次为:Provider 抽象层 → 通用 Manager 层 → PiggyCount 业务 SyncEngine 层 → Riverpod/UI 触发层。
 
 ```mermaid
 flowchart TD
@@ -88,7 +88,7 @@ flowchart TD
     end
 
     subgraph IMPL[5 种 Provider 实现]
-        BC[BeeCountCloudProvider]
+        BC[PiggyCountCloudProvider]
         IC[ICloudProvider]
         SUPA[SupabaseProvider]
         WEB[WebDAVProvider]
@@ -107,23 +107,23 @@ flowchart TD
     ABS -.-> IMPL
 ```
 
-上图展示了同步引擎的四层架构。L1 Provider 抽象层定义跨 provider 的统一契约(纯抽象接口);L2 Manager 通用层提供业务无关的同步编排;L3 SyncEngine 业务层是 BeeCount 自有的核心同步逻辑,实现 `SyncService` 接口;L4 Riverpod/UI 触发层是同步的入口与 UI 反馈。5 种 provider 实现同一 `CloudProvider` 抽象,但只有 BeeCountCloudProvider 实现了完整的增量同步 + Realtime + 共享账本能力。
+上图展示了同步引擎的四层架构。L1 Provider 抽象层定义跨 provider 的统一契约(纯抽象接口);L2 Manager 通用层提供业务无关的同步编排;L3 SyncEngine 业务层是 PiggyCount 自有的核心同步逻辑,实现 `SyncService` 接口;L4 Riverpod/UI 触发层是同步的入口与 UI 反馈。5 种 provider 实现同一 `CloudProvider` 抽象,但只有 PiggyCountCloudProvider 实现了完整的增量同步 + Realtime + 共享账本能力。
 
 依据:`lib/cloud/sync/sync_engine.dart` L72、`packages/flutter_cloud_sync/lib/src/core/cloud_provider.dart`。
 
 ### 2.2 五种同步后端对比
 
-| 维度 | BeeCount Cloud | iCloud | Supabase | WebDAV | S3 |
+| 维度 | PiggyCount Cloud | iCloud | Supabase | WebDAV | S3 |
 |---|---|---|---|---|---|
-| `providerId` | `beecount_cloud` | `icloud` | `supabase` | `webdav` | `s3` |
+| `providerId` | `piggycount_cloud` | `icloud` | `supabase` | `webdav` | `s3` |
 | 同步模型 | **变更日志**(sync_changes 表)+ JSON snapshot fallback | 文件级(snapshot) | Postgres 行级 CDC + Realtime | 文件级(snapshot) | 文件级(snapshot) |
 | 认证 | JWT + refresh token + 2FA TOTP | iCloud 账户 | Supabase Auth(PKCE) | Basic Auth | Access Key + Secret Key 签名 |
 | Realtime | **自实现 WebSocket 客户端** | 无 | Supabase SDK 内置 Postgres CDC | 无 | 无 |
-| 共享账本 | **支持** | 不支持 | 理论支持(BeeCount 未启用) | 不支持 | 不支持 |
+| 共享账本 | **支持** | 不支持 | 理论支持(PiggyCount 未启用) | 不支持 | 不支持 |
 | 2FA | **支持**(TOTP + recovery_code) | N/A | 需 Supabase Auth 配置 | N/A | N/A |
-| 在 BeeCount 中是否实际启用 | **主用**(SyncEngine 直接消费) | 历史支持 | 历史支持(已被 BeeCount Cloud 取代) | 历史支持 | 历史支持 |
+| 在 PiggyCount 中是否实际启用 | **主用**(SyncEngine 直接消费) | 历史支持 | 历史支持(已被 PiggyCount Cloud 取代) | 历史支持 | 历史支持 |
 
-**BeeCount Cloud 独有的关键能力**(其他 provider 都没有):
+**PiggyCount Cloud 独有的关键能力**(其他 provider 都没有):
 
 - `pushChanges` / `pullChanges` 增量变更日志协议
 - `readLedgers` / `readLedgerStats` / `fetchSharedResources` 业务专用 read API
@@ -135,16 +135,16 @@ flowchart TD
 - WebSocket Realtime(6 种事件类型)
 - 2FA TOTP
 
-依据:`packages/flutter_cloud_sync/lib/src/providers/beecount_cloud_provider.dart`、`packages/flutter_cloud_sync_*/lib/src/` 各 provider。
+依据:`packages/flutter_cloud_sync/lib/src/providers/piggycount_cloud_provider.dart`、`packages/flutter_cloud_sync_*/lib/src/` 各 provider。
 
 ### 2.3 同步激活条件
 
-SyncEngine 只在 BeeCount Cloud 模式下激活,其他 4 种后端走 `TransactionsSyncManager` 快照路径:
+SyncEngine 只在 PiggyCount Cloud 模式下激活,其他 4 种后端走 `TransactionsSyncManager` 快照路径:
 
 ```mermaid
 flowchart TD
     A[activeCloudConfigProvider] --> B{backend type}
-    B -->|beecount_cloud| C[SyncEngine 激活]
+    B -->|piggycount_cloud| C[SyncEngine 激活]
     B -->|icloud/supabase/webdav/s3| D[TransactionsSyncManager 快照同步]
     B -->|null| E[LocalOnlySyncService no-op]
 
@@ -159,7 +159,7 @@ flowchart TD
     D --> M[无共享账本]
 ```
 
-上图展示了同步的激活条件。`syncServiceProvider` 根据 `activeCloudConfigProvider` 判断后端类型:仅 BeeCount Cloud 激活完整的 SyncEngine + ChangeTracker;其他 4 种后端走快照同步,不注入 ChangeTracker;无后端时使用 `LocalOnlySyncService`(no-op 实现)。
+上图展示了同步的激活条件。`syncServiceProvider` 根据 `activeCloudConfigProvider` 判断后端类型:仅 PiggyCount Cloud 激活完整的 SyncEngine + ChangeTracker;其他 4 种后端走快照同步,不注入 ChangeTracker;无后端时使用 `LocalOnlySyncService`(no-op 实现)。
 
 依据:`lib/providers/sync_providers.dart` `syncServiceProvider`。
 
@@ -237,13 +237,13 @@ flowchart LR
 | `start()` | 启动监听 `db.select(db.localChanges)..where((c) => c.pushedAt.isNull()).watch()` |
 | `dispose()` | 取消订阅 + 取消防抖定时器 |
 
-仅在 BeeCount Cloud 模式启用;S3/WebDAV 走 snapshot 同步,不读 local_changes。
+仅在 PiggyCount Cloud 模式启用;S3/WebDAV 走 snapshot 同步,不读 local_changes。
 
 依据:`lib/cloud/sync/sync_coordinator.dart` L27。
 
 ### 3.3 SyncEngine 主类
 
-`SyncEngine` 是 BeeCount 自有的核心同步逻辑类,实现 `app.SyncService` 接口,直接消费 `BeeCountCloudProvider`。
+`SyncEngine` 是 PiggyCount 自有的核心同步逻辑类,实现 `app.SyncService` 接口,直接消费 `PiggyCountCloudProvider`。
 
 #### 3.3.1 SyncService 接口实现
 
@@ -439,7 +439,7 @@ flowchart TD
 ```mermaid
 sequenceDiagram
     participant Engine as SyncEngine
-    participant Provider as BeeCountCloudProvider
+    participant Provider as PiggyCountCloudProvider
     participant Storage as StorageService
     participant Import as importTransactionsJson
     participant DB as BeeDatabase
@@ -483,7 +483,7 @@ sequenceDiagram
 
 ### 3.9 WebSocket Realtime 机制
 
-`BeeCountCloudRealtimeClient`(`beecount_cloud_provider.dart:4151`)是自实现的 WebSocket 客户端,负责连接 / 重连 / 心跳 / 事件分发。
+`PiggyCountCloudRealtimeClient`(`piggycount_cloud_provider.dart:4151`)是自实现的 WebSocket 客户端,负责连接 / 重连 / 心跳 / 事件分发。
 
 #### 3.9.1 连接管理
 
@@ -492,7 +492,7 @@ sequenceDiagram
 | URL | `{ws|wss}://{baseUrl}/{apiPrefix}/ws?token={accessToken}` |
 | 心跳 | 20s 定时 `ping`,`pong` 响应(`_onMessage` 显式过滤 `message == 'pong'`) |
 | 重连 | 连接断开 / onError → `_scheduleReconnect`,3 秒后先 `tryRefreshSession()` 再 `_connect()` |
-| `connected` 事件 | 连接成功后 `_events.add(BeeCountCloudRealtimeEvent(type: 'connected'))`,SyncEngine 收到后触发 `_scheduleAutoSync(reason: 'ws_connected')` flush 离线 local_changes |
+| `connected` 事件 | 连接成功后 `_events.add(PiggyCountCloudRealtimeEvent(type: 'connected'))`,SyncEngine 收到后触发 `_scheduleAutoSync(reason: 'ws_connected')` flush 离线 local_changes |
 
 #### 3.9.2 事件类型与处理
 
@@ -513,7 +513,7 @@ sequenceDiagram
 | `_autoSyncDebounce` | 2s | WS 重连 / 网络恢复,合并连续上线信号 |
 | `_autoPulling` / `_autoSyncing` flag | — | 防重入 |
 
-依据:`lib/cloud/sync/sync_engine_realtime.dart`、`packages/flutter_cloud_sync/lib/src/providers/beecount_cloud_provider.dart` L4151。
+依据:`lib/cloud/sync/sync_engine_realtime.dart`、`packages/flutter_cloud_sync/lib/src/providers/piggycount_cloud_provider.dart` L4151。
 
 ### 3.10 离线优先与补偿机制
 
@@ -531,7 +531,7 @@ sequenceDiagram
 #### 3.10.3 Pull 失败隔离
 
 - **AppCursorStore**(SharedPreferences 持久化,SHA1 hash key = `baseUrl|userId|deviceId`)— **整页 apply 成功后才 commit**,而非 provider 内部 `_saveCursor`
-- **SyncErrorStore**(`sync_pull_errors` 表 DAO)— 整页 apply 抛错时 record,UI 显示 banner + 详情列表,**只读不可处置**(BeeCount Cloud 全自动同步,不引入"跳过"等人工干预入口),`update-first` 防 race(并发 record 同 change_id)
+- **SyncErrorStore**(`sync_pull_errors` 表 DAO)— 整页 apply 抛错时 record,UI 显示 banner + 详情列表,**只读不可处置**(PiggyCount Cloud 全自动同步,不引入"跳过"等人工干预入口),`update-first` 防 race(并发 record 同 change_id)
 - **整页 retry**:SQLite busy/locked 单条 retry 2 次,指数退避 50ms/100ms
 
 依据:`lib/cloud/sync/sync_engine_realtime.dart`、`lib/cloud/sync/sync_engine_status.dart`、`lib/cloud/sync/sync_engine_pull.dart`。
@@ -620,7 +620,7 @@ flowchart LR
 ```mermaid
 sequenceDiagram
     participant Owner as Owner 设备
-    participant Server as BeeCount Cloud
+    participant Server as PiggyCount Cloud
     participant Editor as Editor 设备
 
     Note over Owner: 修改分类"餐饮"图标
@@ -667,7 +667,7 @@ sequenceDiagram
 
 ### 决策 2:增量同步 + JSON snapshot 双轨
 
-- **决策内容**:BeeCount Cloud 同时支持增量同步(sync_changes 表)和 JSON snapshot 全量同步(fullPush/fullPull)。
+- **决策内容**:PiggyCount Cloud 同时支持增量同步(sync_changes 表)和 JSON snapshot 全量同步(fullPush/fullPull)。
 - **原因**:
   - **增量同步**:日常场景高效,只推变更
   - **JSON snapshot**:备份恢复场景需要,整体导入导出
@@ -705,7 +705,7 @@ sequenceDiagram
 
 ### 决策 5:WebSocket 而非轮询
 
-- **决策内容**:BeeCount Cloud 使用自实现 WebSocket 客户端实现 Realtime,而非 HTTP 轮询。
+- **决策内容**:PiggyCount Cloud 使用自实现 WebSocket 客户端实现 Realtime,而非 HTTP 轮询。
 - **原因**:
   - **实时性**:WS 推送延迟 < 1s,轮询延迟 = 轮询间隔
   - **省电省流量**:WS 长连接,轮询频繁唤醒
@@ -713,24 +713,24 @@ sequenceDiagram
 - **备选方案**:
   - HTTP 长轮询:实现简单但延迟高
   - SSE(Server-Sent Events):单向推送,无法双向通信
-  - Supabase Realtime:已用于 Supabase provider,但 BeeCount Cloud 是自建后端
+  - Supabase Realtime:已用于 Supabase provider,但 PiggyCount Cloud 是自建后端
 - **优缺点**:
   - WS:实时性好但需自管心跳/重连
   - 轮询:简单但延迟高、省电差
 - **最终取舍**:自实现 WS 客户端,20s 心跳 + 3s 重连。
-- **依据**:`packages/flutter_cloud_sync/lib/src/providers/beecount_cloud_provider.dart` L4151 `BeeCountCloudRealtimeClient`。
+- **依据**:`packages/flutter_cloud_sync/lib/src/providers/piggycount_cloud_provider.dart` L4151 `PiggyCountCloudRealtimeClient`。
 
 ### 决策 6:五种 provider 但能力分层
 
-- **决策内容**:支持 5 种同步后端,但只有 BeeCount Cloud 提供完整能力(增量同步 + Realtime + 共享账本 + 2FA),其他 4 种只提供文件级 snapshot 备份。
+- **决策内容**:支持 5 种同步后端,但只有 PiggyCount Cloud 提供完整能力(增量同步 + Realtime + 共享账本 + 2FA),其他 4 种只提供文件级 snapshot 备份。
 - **原因**:
   - **实现成本**:5 种都实现完整能力成本过高
   - **后端限制**:iCloud / WebDAV / S3 不支持 WebSocket,无法 Realtime
-  - **用户选择权**:让用户根据需求选择,需要实时协同选 BeeCount Cloud,只需备份选其他
+  - **用户选择权**:让用户根据需求选择,需要实时协同选 PiggyCount Cloud,只需备份选其他
 - **备选方案**:
-  - 只支持 BeeCount Cloud:用户失去选择权,且需自部署 server
+  - 只支持 PiggyCount Cloud:用户失去选择权,且需自部署 server
   - 5 种都实现完整能力:成本过高,部分后端(iCloud/WebDAV)技术上不可行
-- **最终取舍**:5 种并存,BeeCount Cloud 完整能力,其他 4 种轻量备份。
+- **最终取舍**:5 种并存,PiggyCount Cloud 完整能力,其他 4 种轻量备份。
 - **依据**:`packages/flutter_cloud_sync*/` 子包结构。
 
 ---
@@ -741,9 +741,9 @@ sequenceDiagram
 
 | 约束 | 说明 |
 |---|---|
-| SyncEngine 只在 BeeCount Cloud 模式激活 | 其他后端走 TransactionsSyncManager 快照同步 |
-| ChangeTracker 只在 BeeCount Cloud 模式注入 | 其他后端不读 local_changes 表 |
-| 共享账本仅 BeeCount Cloud 支持 | 其他后端不支持 |
+| SyncEngine 只在 PiggyCount Cloud 模式激活 | 其他后端走 TransactionsSyncManager 快照同步 |
+| ChangeTracker 只在 PiggyCount Cloud 模式注入 | 其他后端不读 local_changes 表 |
+| 共享账本仅 PiggyCount Cloud 支持 | 其他后端不支持 |
 | 截图自动记账仅 Android 且 Google Play 版本砍掉 | 受系统限制 + 权限裁剪 |
 | WS server 不持久化离线事件 | 重连时需 `_refreshAllSharedResourcesAfterReconnect` 兜底 |
 
@@ -780,14 +780,14 @@ sequenceDiagram
 |---|---|---|---|
 | 1 | `sync_engine_attachments.dart` 附件上传/下载/清理的并发模型、retry 策略、sha256 去重细节未直接核对 | §3.4.2 | 阅读该 part 文件补充 |
 | 2 | `entity_serializer.dart` 各实体的 server payload 字段完整清单未直接核对 | §3.4.2 | 阅读该文件,对照 apply 路径反推 |
-| 3 | `BeeCountCloudAuthService` 完整 token refresh / 2FA / device 注册流程未读取 | §2.2 | 阅读 `beecount_cloud_provider.dart:1116` 开始的 `BeeCountCloudAuthService` 类 |
-| 4 | `BeeCountCloudStorageService` 的 cursor 持久化逻辑(`_loadCursor` / `_saveCursor`)未读取 | §3.5 | 阅读该类的 cursor 相关方法 |
+| 3 | `PiggyCountCloudAuthService` 完整 token refresh / 2FA / device 注册流程未读取 | §2.2 | 阅读 `piggycount_cloud_provider.dart:1116` 开始的 `PiggyCountCloudAuthService` 类 |
+| 4 | `PiggyCountCloudStorageService` 的 cursor 持久化逻辑(`_loadCursor` / `_saveCursor`)未读取 | §3.5 | 阅读该类的 cursor 相关方法 |
 | 5 | Supabase / WebDAV / S3 的具体 auth/storage service 实现未读取 | §2.2 | 阅读各 provider 的 `*_service.dart` 文件 |
 | 6 | `flutter_cloud_sync` 包的 config 子目录(`cloud_service_config.dart` / `cloud_service_store.dart` / `provider_factory.dart`)未读取 | §2.1 | 阅读 `packages/flutter_cloud_sync/lib/src/config/` |
-| 7 | `lib/cloud/transactions_sync_manager.dart` 非 BeeCount Cloud 模式的快照同步实现未展开 | §2.3 | 阅读该文件补充 |
+| 7 | `lib/cloud/transactions_sync_manager.dart` 非 PiggyCount Cloud 模式的快照同步实现未展开 | §2.3 | 阅读该文件补充 |
 | 8 | `lib/cloud/sync_diff_service.dart` 未读取 | — | 阅读该文件确认 diff 服务职责 |
 | 9 | `.docs/` 目录不存在,代码注释引用的设计文档(concurrent-fullpush-bloat / full-pull-refactor / user-global-refactor / 2fa-design)无法核对 | 全文 | 用户确认是否补提交设计文档 |
-| 10 | BeeCount Cloud server 端代码不在本仓库,接口只能基于 client 调用反推 | §3.4-3.7 | 标注 `[推断: 基于 client provider 调用反推 server API]` |
+| 10 | PiggyCount Cloud server 端代码不在本仓库,接口只能基于 client 调用反推 | §3.4-3.7 | 标注 `[推断: 基于 client provider 调用反推 server API]` |
 
 ---
 
@@ -798,7 +798,7 @@ sequenceDiagram
 - [04 系统架构设计](./04-system-architecture.md) — 同步引擎在架构中的位置
 - [05 核心模块详解](./05-core-modules.md) — 同步模块与其他模块的协作
 - [07 数据模型设计](./07-data-model.md) — 同步相关表(local_changes / sync_state / sync_pull_errors)
-- [08 接口与数据访问设计](./08-api-and-data-access.md) — BeeCountCloudProvider API 详解
+- [08 接口与数据访问设计](./08-api-and-data-access.md) — PiggyCountCloudProvider API 详解
 - [09 错误处理与容错策略](./09-error-handling.md) — 同步错误处理
 - [11 性能优化方案](./11-performance.md) — 同步性能优化
 - [INDEX](./INDEX.md) — 完整文档索引

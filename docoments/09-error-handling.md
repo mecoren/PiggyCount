@@ -23,7 +23,7 @@ audience: 一年经验的开发者
 
 ### 1.1 为什么单独写错误处理文档
 
-BeeCount 是一款离线优先的记账应用,涉及本地数据库、云同步、AI 调用、附件上传等多个可能失败的场景。如果没有清晰的错误处理策略,会导致:
+PiggyCount 是一款离线优先的记账应用,涉及本地数据库、云同步、AI 调用、附件上传等多个可能失败的场景。如果没有清晰的错误处理策略,会导致:
 
 - 同步失败时数据不一致
 - 网络异常时用户体验差
@@ -31,7 +31,7 @@ BeeCount 是一款离线优先的记账应用,涉及本地数据库、云同步�
 - AI 调用失败时无法回退
 - 附件上传失败时数据丢失
 
-本文档梳理 BeeCount 的错误处理与容错策略,包括:
+本文档梳理 PiggyCount 的错误处理与容错策略,包括:
 
 - CloudSyncException 异常体系
 - sync_pull_errors 表的失败隔离
@@ -58,7 +58,7 @@ BeeCount 是一款离线优先的记账应用,涉及本地数据库、云同步�
 
 ### 1.4 项目实际 vs 建议方案
 
-> **重要**:BeeCount **没有统一的错误处理框架**,错误处理分散在各模块。本文档区分:
+> **重要**:PiggyCount **没有统一的错误处理框架**,错误处理分散在各模块。本文档区分:
 > - **项目实际**:基于代码确认的实现
 > - **[建议方案]**:当前代码未明确实现,以下为推荐实践
 
@@ -68,11 +68,11 @@ BeeCount 是一款离线优先的记账应用,涉及本地数据库、云同步�
 
 ### 2.1 错误分类总览
 
-BeeCount 的错误可分为五大类:
+PiggyCount 的错误可分为五大类:
 
 ```mermaid
 flowchart TD
-    Root[BeeCount 错误分类]
+    Root[PiggyCount 错误分类]
 
     Root --> Sync[同步错误]
     Root --> DB[数据库错误]
@@ -102,7 +102,7 @@ flowchart TD
     Biz --> B3[校验失败]
 ```
 
-上图展示了 BeeCount 错误的五大分类。同步错误是最复杂的部分,有专门的异常体系和失败隔离表;数据库错误主要是 Drift/SQLite 异常;网络错误集中在 401/超时/WS 断连;AI 调用错误包括 Provider 失败和 JSON 解析失败;业务错误主要是重名冲突和校验失败。后续章节按类别详细说明处理策略。
+上图展示了 PiggyCount 错误的五大分类。同步错误是最复杂的部分,有专门的异常体系和失败隔离表;数据库错误主要是 Drift/SQLite 异常;网络错误集中在 401/超时/WS 断连;AI 调用错误包括 Provider 失败和 JSON 解析失败;业务错误主要是重名冲突和校验失败。后续章节按类别详细说明处理策略。
 
 ### 2.2 容错策略总览
 
@@ -156,7 +156,7 @@ classDiagram
 
 | 异常 | 处理 | 实现位置 |
 |---|---|---|
-| `CloudNotAuthenticatedException` | 自动 refresh token,失败则跳转登录 | `BeeCountCloudStorageService._authedRequest` |
+| `CloudNotAuthenticatedException` | 自动 refresh token,失败则跳转登录 | `PiggyCountCloudStorageService._authedRequest` |
 | `CloudConfigurationException` | UI 显示配置错误提示 | provider 初始化时 |
 | `CloudStorageException` | 记录日志 + UI 显示存储错误 | 附件上传/下载 |
 | `CloudAuthException` | UI 显示认证错误(如 2FA 失败) | 登录流程 |
@@ -188,7 +188,7 @@ flowchart TD
 
 #### 3.2.2 关键设计
 
-- **只读不可处置**:BeeCount Cloud 全自动同步,不引入"跳过"等人工干预入口
+- **只读不可处置**:PiggyCount Cloud 全自动同步,不引入"跳过"等人工干预入口
 - **`update-first` 防 race**:并发 record 同 change_id 时用 `INSERT OR REPLACE`
 - **attemptCount 字段**:记录尝试次数,用于判断是否需特殊处理
 - **userAction 字段**:预留用户操作,目前未使用
@@ -283,17 +283,17 @@ WS 断连时:
 
 ### 3.6 401 自动 refresh token
 
-`BeeCountCloudStorageService._authedRequest` 内置了 401 自动 refresh token 机制。
+`PiggyCountCloudStorageService._authedRequest` 内置了 401 自动 refresh token 机制。
 
 #### 3.6.1 流程
 
 ```mermaid
 sequenceDiagram
     participant Caller as 调用方
-    participant Storage as BeeCountCloudStorageService
-    participant Auth as BeeCountCloudAuthService
+    participant Storage as PiggyCountCloudStorageService
+    participant Auth as PiggyCountCloudAuthService
     participant HTTP as dio
-    participant Server as BeeCount Cloud
+    participant Server as PiggyCount Cloud
 
     Caller->>Storage: _authedRequest(method, path, data)
     Storage->>Auth: getAccessToken()
@@ -329,7 +329,7 @@ sequenceDiagram
 
 上图展示了 401 自动 refresh token 的流程。`_authedRequest` 在请求返回 401 时自动调用 `refreshToken()` 刷新访问令牌,然后重试原请求。refresh 失败则抛 `CloudNotAuthenticatedException`,调用方跳转登录页。这种设计让上层 SyncEngine 无需感知认证细节。
 
-依据:`packages/flutter_cloud_sync/lib/src/providers/beecount_cloud_provider.dart` `_authedRequest`。
+依据:`packages/flutter_cloud_sync/lib/src/providers/piggycount_cloud_provider.dart` `_authedRequest`。
 
 ### 3.7 应用启动容错
 
@@ -371,8 +371,8 @@ AI 调用涉及多个失败场景,错误处理分散在各处:
 |---|---|---|
 | AI Provider 调用失败 | 按执行策略回退(如 `local_first` 回退到本地) | `packages/flutter_ai_kit/lib/src/strategies/` |
 | JSON 解析失败 | 显示错误提示,不创建交易 | `lib/ai/core/ai_extraction_engine.dart` |
-| 2FA challenge | 弹 `Login2FAChallengeView` | `beecount_cloud_provider.dart` `globalTwoFactorHandler` |
-| 网络超时 | dio 超时配置 | `BeeCountCloudStorageService` |
+| 2FA challenge | 弹 `Login2FAChallengeView` | `piggycount_cloud_provider.dart` `globalTwoFactorHandler` |
+| 网络超时 | dio 超时配置 | `PiggyCountCloudStorageService` |
 | 用户取消 | 不创建交易,保留对话历史 | `lib/pages/ai/ai_chat_page.dart` |
 
 ### 3.9 业务错误处理
@@ -423,7 +423,7 @@ flowchart TD
 
 上图展示了同步错误的完整处理流程。错误分三个层面:页面 apply 层(SQLite busy/locked retry + 整页 rollback + record error)、HTTP 层(401 自动 refresh + 网络超时重试)、WS 层(3s 重连)。三层独立处理,互不干扰。
 
-依据:`lib/cloud/sync/sync_engine_apply.dart`、`lib/cloud/sync/sync_engine_pull.dart`、`beecount_cloud_provider.dart`。
+依据:`lib/cloud/sync/sync_engine_apply.dart`、`lib/cloud/sync/sync_engine_pull.dart`、`piggycount_cloud_provider.dart`。
 
 ### 4.2 数据库迁移错误处理
 
@@ -470,7 +470,7 @@ flowchart TD
 
 - **决策内容**:`sync_pull_errors` 表对用户只读,不提供"跳过"等人工干预入口。
 - **原因**:
-  - **自动化优先**:BeeCount Cloud 全自动同步,不引入人工干预增加心智负担
+  - **自动化优先**:PiggyCount Cloud 全自动同步,不引入人工干预增加心智负担
   - **最终一致**:失败的 change 会随下次 pull 重试,最终要么成功要么持续失败(需开发者修复)
   - **避免误操作**:用户跳过可能导致数据不一致
 - **备选方案**:
@@ -489,7 +489,7 @@ flowchart TD
   - 直接跳转登录:用户体验差
   - 让上层处理:增加上层复杂度
 - **最终取舍**:自动 refresh,失败才跳转。
-- **依据**:`beecount_cloud_provider.dart` `_authedRequest`。
+- **依据**:`piggycount_cloud_provider.dart` `_authedRequest`。
 
 ### 决策 4:启动容错而非快速失败
 
@@ -543,12 +543,12 @@ flowchart TD
 | 编号 | 缺口描述 | 影响章节 | 建议补充方式 |
 |---|---|---|---|
 | 1 | `lib/data/repositories/exceptions.dart` 完整异常清单未读取 | §3.9 | 阅读该文件补充 |
-| 2 | `dio` 拦截器的完整错误处理链未展开 | §3.6 | 阅读 `BeeCountCloudStorageService` 拦截器配置 |
+| 2 | `dio` 拦截器的完整错误处理链未展开 | §3.6 | 阅读 `PiggyCountCloudStorageService` 拦截器配置 |
 | 3 | `LoggerService` 的错误记录格式与级别未展开 | §3.7 | 在 [14 日志规范](./14-logging-observability.md) 补充 |
 | 4 | 普通 Repository 调用是否内置 retry 未确认 | §3.4.2 | grep `retry` 在 `local_repository.dart` 中的使用 |
 | 5 | 迁移失败的回滚机制是否存在未确认 | §4.2 | 阅读 `MigrationStrategy` 完整实现 |
 | 6 | AI 调用错误的完整处理链未展开 | §3.8 | 阅读 `flutter_ai_kit` 各 strategy 实现 |
-| 7 | 2FA challenge 的完整流程未展开 | §3.8 | 阅读 `beecount_cloud_provider.dart` `globalTwoFactorHandler` |
+| 7 | 2FA challenge 的完整流程未展开 | §3.8 | 阅读 `piggycount_cloud_provider.dart` `globalTwoFactorHandler` |
 | 8 | 错误处理的测试覆盖率未统计 | — | 在 [10 测试策略](./10-testing-strategy.md) 补充 |
 
 ---

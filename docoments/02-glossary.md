@@ -23,14 +23,14 @@ audience: 一年经验的开发者
 
 ### 1.1 为什么需要术语表
 
-BeeCount 涉及记账业务、数据同步、AI 多模态、跨平台等多个领域,代码中同时存在中英文混合命名、业务术语与技术术语交叉、相似概念容易混淆等情况。如果没有统一的术语表,会导致:
+PiggyCount 涉及记账业务、数据同步、AI 多模态、跨平台等多个领域,代码中同时存在中英文混合命名、业务术语与技术术语交叉、相似概念容易混淆等情况。如果没有统一的术语表,会导致:
 
 - 文档间相同概念用不同名称,读者困惑
 - 代码 review 时命名冲突难以裁决
 - 新贡献者理解业务边界困难
 - 中英文混用导致搜索困难
 
-本文档作为**所有后续文档的术语权威来源**,任何 BeeCount 文档(包括代码注释)中出现的术语必须与本表保持一致。
+本文档作为**所有后续文档的术语权威来源**,任何 PiggyCount 文档(包括代码注释)中出现的术语必须与本表保持一致。
 
 ### 1.2 适用范围
 
@@ -55,11 +55,11 @@ BeeCount 涉及记账业务、数据同步、AI 多模态、跨平台等多个�
 
 ### 2.1 术语分类总览
 
-BeeCount 的术语可分为五大类,下图展示了各类之间的关系:
+PiggyCount 的术语可分为五大类,下图展示了各类之间的关系:
 
 ```mermaid
 flowchart TD
-    Root[BeeCount 术语体系]
+    Root[PiggyCount 术语体系]
 
     Root --> Biz[业务实体类]
     Root --> Sync[同步相关类]
@@ -90,7 +90,7 @@ flowchart TD
     Data --> D5[schemaVersion 模式版本]
 ```
 
-上图将 BeeCount 的术语按业务实体、同步机制、数据层、AI、平台五大类组织。业务实体类是记账应用的核心,对应 `db.dart` 中的 Drift 表;同步相关类是 BeeCount 区别于普通记账应用的特色;数据层类描述了 Drift ORM 与 Repository 模式;syncId 是跨设备同步的关键标识。后续章节按类别详细定义每个术语。
+上图将 PiggyCount 的术语按业务实体、同步机制、数据层、AI、平台五大类组织。业务实体类是记账应用的核心,对应 `db.dart` 中的 Drift 表;同步相关类是 PiggyCount 区别于普通记账应用的特色;数据层类描述了 Drift ORM 与 Repository 模式;syncId 是跨设备同步的关键标识。后续章节按类别详细定义每个术语。
 
 ### 2.2 术语使用优先级
 
@@ -129,7 +129,7 @@ flowchart TD
 | 中文术语 | 英文术语 | 别名 | 推荐用法 | 说明 | 代码依据 |
 |---|---|---|---|---|---|
 | 同步 | Sync | 云同步 | **Sync** | 本地数据与远端数据保持一致的过程 | `lib/cloud/sync_service.dart` |
-| 同步引擎 | SyncEngine | — | **SyncEngine** | BeeCount Cloud 的核心同步逻辑类,实现 push/pull/fullPush | `lib/cloud/sync/sync_engine.dart` L72 |
+| 同步引擎 | SyncEngine | — | **SyncEngine** | PiggyCount Cloud 的核心同步逻辑类,实现 push/pull/fullPush | `lib/cloud/sync/sync_engine.dart` L72 |
 | 变更追踪 | ChangeTracker | — | **ChangeTracker** | 记录本地数据变更到 `local_changes` 表的组件 | `lib/cloud/sync/change_tracker.dart` L29 |
 | 同步协调器 | SyncCoordinator | — | **SyncCoordinator** | 反应式监听变更表并触发 SyncEngine 的组件 | `lib/cloud/sync/sync_coordinator.dart` L27 |
 | 云提供方 | Cloud Provider | provider | **Cloud Provider** | 同步后端的抽象接口,有 5 种实现 | `packages/flutter_cloud_sync/lib/src/core/cloud_provider.dart` |
@@ -223,9 +223,9 @@ classDiagram
 | 中文术语 | 英文术语 | 别名 | 推荐用法 | 说明 | 代码依据 |
 |---|---|---|---|---|---|
 | 应用锁 | App Lock | — | **App Lock** | 应用启动或后台恢复时的生物认证锁 | `lib/services/security/app_lock_service.dart` |
-| 双因子认证 | 2FA / Two-Factor | — | **2FA** | BeeCount Cloud 登录的 TOTP 二次验证 | `beecount_cloud_provider.dart` `globalTwoFactorHandler` |
+| 双因子认证 | 2FA / Two-Factor | — | **2FA** | PiggyCount Cloud 登录的 TOTP 二次验证 | `piggycount_cloud_provider.dart` `globalTwoFactorHandler` |
 | 桌面小组件 | Home Widget | — | **Home Widget** | iOS / Android 桌面快速记账小组件 | `lib/widget/widget_manager.dart` |
-| 应用链接 | App Link | Deep Link | **App Link** | `beecount://` URL Scheme 触发记账 | `lib/services/platform/app_link_service.dart` |
+| 应用链接 | App Link | Deep Link | **App Link** | `piggycount://` URL Scheme 触发记账 | `lib/services/platform/app_link_service.dart` |
 | 快捷操作 | Quick Action | — | **Quick Action** | 桌面长按图标的快捷方式 | `lib/services/platform/quick_actions_service.dart` |
 | 共享账本 | Shared Ledger | — | **Shared Ledger** | 多人协同的账本,有 Owner / Editor 双角色 | `db.dart` L32 `isShared`、`myRole` |
 | 邀请码 | Invite Code | — | **Invite Code** | 共享账本的加入凭证 | `lib/pages/cloud/invite_page.dart` |
@@ -254,7 +254,7 @@ flowchart TD
     K --> L[SyncEngine push 到远端]
 ```
 
-上图展示了核心业务实体在代码中的创建与关联流程。Ledger 是顶层容器,Account 属于 Ledger,Transaction 属于 Ledger 并关联 Account。Transaction 的 type 决定关联方式:expense/income 关联 Category + Tag,transfer 关联 toAccount。所有实体创建后通过 ChangeTracker 记录变更,SyncEngine 异步推送到远端。这种术语对应关系是理解 BeeCount 数据模型的基础。
+上图展示了核心业务实体在代码中的创建与关联流程。Ledger 是顶层容器,Account 属于 Ledger,Transaction 属于 Ledger 并关联 Account。Transaction 的 type 决定关联方式:expense/income 关联 Category + Tag,transfer 关联 toAccount。所有实体创建后通过 ChangeTracker 记录变更,SyncEngine 异步推送到远端。这种术语对应关系是理解 PiggyCount 数据模型的基础。
 
 依据:`lib/data/db.dart` 表定义、`lib/data/repositories/local/local_transaction_repository.dart`。
 
@@ -263,7 +263,7 @@ flowchart TD
 ```mermaid
 sequenceDiagram
     participant DeviceA as 设备 A
-    participant Server as BeeCount Cloud
+    participant Server as PiggyCount Cloud
     participant DeviceB as 设备 B
 
     DeviceA->>DeviceA: 创建交易 syncId=uuid-123
@@ -347,7 +347,7 @@ syncId 是跨设备同步的核心标识。设备 A 创建交易时生成 UUID �
 | user-global vs ledger-scoped | user-global 影响所有账本,ledger-scoped 影响单账本 |
 | syncId vs id | syncId 是跨设备 UUID,id 是本地自增 int |
 | LWW vs 字段级合并 | LWW 整体覆盖,字段级合并按 key 决定 |
-| App Link vs Deep Link | App Link 是 BeeCount 实现的 `beecount://` scheme,Deep Link 是通用术语 |
+| App Link vs Deep Link | App Link 是 PiggyCount 实现的 `piggycount://` scheme,Deep Link 是通用术语 |
 
 ### 6.3 新增术语流程
 

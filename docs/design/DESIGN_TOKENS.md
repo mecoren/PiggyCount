@@ -1,4 +1,4 @@
-# BeeCount Design Token 系统
+# PiggyCount Design Token 系统
 
 > 文件位置：`lib/styles/tokens.dart`
 >
@@ -328,7 +328,7 @@ final textTheme = BeeTypography.buildBase(
 
 ## 暗黑模式设计原则
 
-BeeCount 采用 **方案 D：纯黑背景 + 主题色边框** 的暗黑模式设计：
+PiggyCount 采用 **方案 D：纯黑背景 + 主题色边框** 的暗黑模式设计：
 
 1. **全黑背景** (`#000000`) - OLED 友好，极简风格
 2. **主题色点缀** - 通过边框展示用户个性化主题色

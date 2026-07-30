@@ -13,7 +13,7 @@
 		664641F92EDFCE22008D733D /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 664641F82EDFCE22008D733D /* StoreKit.framework */; };
 		66AF1DC82EBBA3CE00AD602F /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 66AF1DC72EBBA3CE00AD602F /* WidgetKit.framework */; };
 		66AF1DCA2EBBA3CE00AD602F /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 66AF1DC92EBBA3CE00AD602F /* SwiftUI.framework */; };
-		66AF1DD52EBBA3CF00AD602F /* BeeCountWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 66AF1DC62EBBA3CE00AD602F /* BeeCountWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		66AF1DD52EBBA3CF00AD602F /* PiggyCountWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 66AF1DC62EBBA3CE00AD602F /* PiggyCountWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		66BFFB7C2ED4A01A00CE5BB0 /* LoggerPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66BFFB7B2ED4A01A00CE5BB0 /* LoggerPlugin.swift */; };
 		66BFFCBA2ED6036500CE5BB0 /* AutoBillingAppIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66BFFCB92ED6036500CE5BB0 /* AutoBillingAppIntent.swift */; };
 		66BFFD0C2ED6082D00CE5BB0 /* AppIntentsBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66BFFD0B2ED6082D00CE5BB0 /* AppIntentsBridge.swift */; };
@@ -39,7 +39,7 @@
 			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 66AF1DC52EBBA3CE00AD602F;
-			remoteInfo = BeeCountWidgetExtension;
+			remoteInfo = PiggyCountWidgetExtension;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -50,7 +50,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				66AF1DD52EBBA3CF00AD602F /* BeeCountWidgetExtension.appex in Embed Foundation Extensions */,
+				66AF1DD52EBBA3CF00AD602F /* PiggyCountWidgetExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -77,11 +77,11 @@
 		59D5E7B97888E0B0A524FB70 /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
 		60110015E75245016A029594 /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
 		664641F82EDFCE22008D733D /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
-		66AF1DC62EBBA3CE00AD602F /* BeeCountWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BeeCountWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		66AF1DC62EBBA3CE00AD602F /* PiggyCountWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PiggyCountWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		66AF1DC72EBBA3CE00AD602F /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		66AF1DC92EBBA3CE00AD602F /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		66AF1DDC2EBBA47100AD602F /* Runner.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
-		66AF1DDD2EBBA49200AD602F /* BeeCountWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BeeCountWidgetExtension.entitlements; sourceTree = "<group>"; };
+		66AF1DDD2EBBA49200AD602F /* PiggyCountWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PiggyCountWidgetExtension.entitlements; sourceTree = "<group>"; };
 		66BFFB7B2ED4A01A00CE5BB0 /* LoggerPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoggerPlugin.swift; sourceTree = "<group>"; };
 		66BFFCB92ED6036500CE5BB0 /* AutoBillingAppIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoBillingAppIntent.swift; sourceTree = "<group>"; };
 		66BFFD0B2ED6082D00CE5BB0 /* AppIntentsBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIntentsBridge.swift; sourceTree = "<group>"; };
@@ -106,26 +106,26 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		66AF1DDA2EBBA3CF00AD602F /* Exceptions for "BeeCountWidget" folder in "BeeCountWidgetExtension" target */ = {
+		66AF1DDA2EBBA3CF00AD602F /* Exceptions for "PiggyCountWidget" folder in "PiggyCountWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 66AF1DC52EBBA3CE00AD602F /* BeeCountWidgetExtension */;
+			target = 66AF1DC52EBBA3CE00AD602F /* PiggyCountWidgetExtension */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		66AF1DCB2EBBA3CE00AD602F /* BeeCountWidget */ = {
+		66AF1DCB2EBBA3CE00AD602F /* PiggyCountWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				66AF1DDA2EBBA3CF00AD602F /* Exceptions for "BeeCountWidget" folder in "BeeCountWidgetExtension" target */,
+				66AF1DDA2EBBA3CF00AD602F /* Exceptions for "PiggyCountWidget" folder in "PiggyCountWidgetExtension" target */,
 			);
 			explicitFileTypes = {
 			};
 			explicitFolders = (
 			);
-			path = BeeCountWidget;
+			path = PiggyCountWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -195,10 +195,10 @@
 		97C146E51CF9000F007C117D = {
 			isa = PBXGroup;
 			children = (
-				66AF1DDD2EBBA49200AD602F /* BeeCountWidgetExtension.entitlements */,
+				66AF1DDD2EBBA49200AD602F /* PiggyCountWidgetExtension.entitlements */,
 				9740EEB11CF90186004384FC /* Flutter */,
 				97C146F01CF9000F007C117D /* Runner */,
-				66AF1DCB2EBBA3CE00AD602F /* BeeCountWidget */,
+				66AF1DCB2EBBA3CE00AD602F /* PiggyCountWidget */,
 				97C146EF1CF9000F007C117D /* Products */,
 				331C8082294A63A400263BE5 /* RunnerTests */,
 				828B803F0F044AED86DBBCD4 /* Pods */,
@@ -211,7 +211,7 @@
 			children = (
 				97C146EE1CF9000F007C117D /* Runner.app */,
 				331C8081294A63A400263BE5 /* RunnerTests.xctest */,
-				66AF1DC62EBBA3CE00AD602F /* BeeCountWidgetExtension.appex */,
+				66AF1DC62EBBA3CE00AD602F /* PiggyCountWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -270,9 +270,9 @@
 			productReference = 331C8081294A63A400263BE5 /* RunnerTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		66AF1DC52EBBA3CE00AD602F /* BeeCountWidgetExtension */ = {
+		66AF1DC52EBBA3CE00AD602F /* PiggyCountWidgetExtension */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 66AF1DDB2EBBA3CF00AD602F /* Build configuration list for PBXNativeTarget "BeeCountWidgetExtension" */;
+			buildConfigurationList = 66AF1DDB2EBBA3CF00AD602F /* Build configuration list for PBXNativeTarget "PiggyCountWidgetExtension" */;
 			buildPhases = (
 				66AF1DC22EBBA3CE00AD602F /* Sources */,
 				66AF1DC32EBBA3CE00AD602F /* Frameworks */,
@@ -283,11 +283,11 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				66AF1DCB2EBBA3CE00AD602F /* BeeCountWidget */,
+				66AF1DCB2EBBA3CE00AD602F /* PiggyCountWidget */,
 			);
-			name = BeeCountWidgetExtension;
-			productName = BeeCountWidgetExtension;
-			productReference = 66AF1DC62EBBA3CE00AD602F /* BeeCountWidgetExtension.appex */;
+			name = PiggyCountWidgetExtension;
+			productName = PiggyCountWidgetExtension;
+			productReference = 66AF1DC62EBBA3CE00AD602F /* PiggyCountWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 		97C146ED1CF9000F007C117D /* Runner */ = {
@@ -356,7 +356,7 @@
 			targets = (
 				97C146ED1CF9000F007C117D /* Runner */,
 				331C8080294A63A400263BE5 /* RunnerTests */,
-				66AF1DC52EBBA3CE00AD602F /* BeeCountWidgetExtension */,
+				66AF1DC52EBBA3CE00AD602F /* PiggyCountWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -540,7 +540,7 @@
 		};
 		66AF1DD42EBBA3CF00AD602F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 66AF1DC52EBBA3CE00AD602F /* BeeCountWidgetExtension */;
+			target = 66AF1DC52EBBA3CE00AD602F /* PiggyCountWidgetExtension */;
 			targetProxy = 66AF1DD32EBBA3CF00AD602F /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -661,7 +661,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.beecount.RunnerTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.piggycount.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -679,7 +679,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.beecount.RunnerTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.piggycount.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Runner.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Runner";
@@ -695,7 +695,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.beecount.RunnerTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.piggycount.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Runner.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Runner";
@@ -714,7 +714,7 @@
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CODE_SIGN_ENTITLEMENTS = BeeCountWidgetExtension.entitlements;
+				CODE_SIGN_ENTITLEMENTS = PiggyCountWidgetExtension.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -722,8 +722,8 @@
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = BeeCountWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = BeeCountWidget;
+				INFOPLIST_FILE = PiggyCountWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PiggyCountWidget;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.5;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -735,7 +735,7 @@
 				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = com.tntlikely.beecount.dev.BeeCountWidgetExtension;
+				PRODUCT_BUNDLE_IDENTIFIER = com.wait.piggycount.dev.PiggyCountWidgetExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
@@ -758,7 +758,7 @@
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CODE_SIGN_ENTITLEMENTS = BeeCountWidgetExtension.entitlements;
+				CODE_SIGN_ENTITLEMENTS = PiggyCountWidgetExtension.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -766,8 +766,8 @@
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = BeeCountWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = BeeCountWidget;
+				INFOPLIST_FILE = PiggyCountWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PiggyCountWidget;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.5;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -778,7 +778,7 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.0;
 				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = com.tntlikely.beecount.BeeCountWidgetExtension;
+				PRODUCT_BUNDLE_IDENTIFIER = com.wait.piggycount.PiggyCountWidgetExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -799,7 +799,7 @@
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CODE_SIGN_ENTITLEMENTS = BeeCountWidgetExtension.entitlements;
+				CODE_SIGN_ENTITLEMENTS = PiggyCountWidgetExtension.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -807,8 +807,8 @@
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = BeeCountWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = BeeCountWidget;
+				INFOPLIST_FILE = PiggyCountWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PiggyCountWidget;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.5;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -819,7 +819,7 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.0;
 				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = com.tntlikely.beecount.BeeCountWidgetExtension;
+				PRODUCT_BUNDLE_IDENTIFIER = com.wait.piggycount.PiggyCountWidgetExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1004,7 +1004,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		66AF1DDB2EBBA3CF00AD602F /* Build configuration list for PBXNativeTarget "BeeCountWidgetExtension" */ = {
+		66AF1DDB2EBBA3CF00AD602F /* Build configuration list for PBXNativeTarget "PiggyCountWidgetExtension" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				66AF1DD72EBBA3CF00AD602F /* Debug */,

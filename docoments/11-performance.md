@@ -3,13 +3,13 @@
 > 文档版本：v1.0
 > 最后更新：2026-07-25
 > 作者：wait
-> 信息源：项目源码（d:\DevTools\project\BeeCount）+ 代码静态审查
+> 信息源：项目源码（d:\DevTools\project\PiggyCount）+ 代码静态审查
 
 ---
 
 ## 1. 背景
 
-BeeCount 作为一款**离线优先**的个人记账应用，性能表现直接影响用户体验：
+PiggyCount 作为一款**离线优先**的个人记账应用，性能表现直接影响用户体验：
 - **首屏加载**：用户打开应用后应在 1-2 秒内看到月度统计与最近交易
 - **滚动流畅**：交易列表是高频交互页面，需保持 60fps 不掉帧
 - **同步效率**：多账本云同步不能阻塞 UI，并避免 N+1 查询
@@ -89,7 +89,7 @@ flowchart TB
 
 #### 4.1.1 索引设计
 
-**实现位置**：[db.dart](file:///d:/DevTools/project/BeeCount/lib/data/db.dart)（迁移脚本中声明）
+**实现位置**：[db.dart](file:///d:/DevTools/project/PiggyCount/lib/data/db.dart)（迁移脚本中声明）
 
 | 索引名 | 字段 | 用途 |
 |---|---|---|
@@ -114,13 +114,13 @@ flowchart TB
 
 #### 4.1.2 后台 Isolate 执行
 
-**实现位置**：[db.dart:1240-1260](file:///d:/DevTools/project/BeeCount/lib/data/db.dart)
+**实现位置**：[db.dart:1240-1260](file:///d:/DevTools/project/PiggyCount/lib/data/db.dart)
 
 ```dart
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dir = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dir.path, 'beecount.sqlite'));
+    final file = File(p.join(dir.path, 'piggycount.sqlite'));
     return NativeDatabase.createInBackground(file);  // 后台 Isolate
   });
 }
@@ -133,7 +133,7 @@ LazyDatabase _openConnection() {
 
 #### 4.1.3 整页事务 + busy retry
 
-**实现位置**：[sync_engine.dart:1222-1232](file:///d:/DevTools/project/BeeCount/lib/cloud/sync/sync_engine.dart)、[sync_engine.dart:1257-1275](file:///d:/DevTools/project/BeeCount/lib/cloud/sync/sync_engine.dart)
+**实现位置**：[sync_engine.dart:1222-1232](file:///d:/DevTools/project/PiggyCount/lib/cloud/sync/sync_engine.dart)、[sync_engine.dart:1257-1275](file:///d:/DevTools/project/PiggyCount/lib/cloud/sync/sync_engine.dart)
 
 ```dart
 // 整页事务：任何一条失败触发整页回滚
@@ -145,7 +145,7 @@ final result = await db.transaction(() async {
 });
 
 // SQLite busy/locked 指数退避
-Future<bool> _applyOneWithBusyRetry(BeeCountCloudSyncChange ch) async {
+Future<bool> _applyOneWithBusyRetry(PiggyCountCloudSyncChange ch) async {
   var attempts = 0;
   while (true) {
     try {
@@ -174,15 +174,15 @@ Future<bool> _applyOneWithBusyRetry(BeeCountCloudSyncChange ch) async {
 
 | 场景 | 分页/批量大小 | 文件位置 |
 |---|---|---|
-| 同步 pull 单页 | 500 条 | [sync_engine.dart:1121](file:///d:/DevTools/project/BeeCount/lib/cloud/sync/sync_engine.dart) |
-| 同步 push 分批 | 500 条 | [sync_engine_serialization.dart:583-595](file:///d:/DevTools/project/BeeCount/lib/cloud/sync/sync_engine_serialization.dart) |
-| 首屏预加载 | 20 条交易 | [ui_state_providers.dart:236](file:///d:/DevTools/project/BeeCount/lib/providers/ui_state_providers.dart) |
+| 同步 pull 单页 | 500 条 | [sync_engine.dart:1121](file:///d:/DevTools/project/PiggyCount/lib/cloud/sync/sync_engine.dart) |
+| 同步 push 分批 | 500 条 | [sync_engine_serialization.dart:583-595](file:///d:/DevTools/project/PiggyCount/lib/cloud/sync/sync_engine_serialization.dart) |
+| 首屏预加载 | 20 条交易 | [ui_state_providers.dart:236](file:///d:/DevTools/project/PiggyCount/lib/providers/ui_state_providers.dart) |
 | 账户详情页 | 50 条/页 | account_detail_page.dart:54 |
-| transaction_tags 批量插入 | `db.batch((b) => ...)` | [sync_engine_apply.dart:960](file:///d:/DevTools/project/BeeCount/lib/cloud/sync/sync_engine_apply.dart) |
+| transaction_tags 批量插入 | `db.batch((b) => ...)` | [sync_engine_apply.dart:960](file:///d:/DevTools/project/PiggyCount/lib/cloud/sync/sync_engine_apply.dart) |
 
 #### 4.1.5 WAL 模式
 
-**[未实现]**：项目代码中**没有**显式 `PRAGMA journal_mode=WAL` 配置。但 [db.dart:1247-1252](file:///d:/DevTools/project/BeeCount/lib/data/db.dart) 检测了 `.sqlite-shm` / `.sqlite-wal` 文件存在，说明实际运行时 SQLite 处于 WAL 模式（Drift `NativeDatabase` 默认启用）。
+**[未实现]**：项目代码中**没有**显式 `PRAGMA journal_mode=WAL` 配置。但 [db.dart:1247-1252](file:///d:/DevTools/project/PiggyCount/lib/data/db.dart) 检测了 `.sqlite-shm` / `.sqlite-wal` 文件存在，说明实际运行时 SQLite 处于 WAL 模式（Drift `NativeDatabase` 默认启用）。
 
 **建议**：显式声明避免不同平台/版本默认值差异。
 
@@ -192,7 +192,7 @@ Future<bool> _applyOneWithBusyRetry(BeeCountCloudSyncChange ch) async {
 
 #### 4.2.1 LookupCache 消除 N+1
 
-**实现位置**：[sync_engine_pull.dart:231-296](file:///d:/DevTools/project/BeeCount/lib/cloud/sync/sync_engine_pull.dart)
+**实现位置**：[sync_engine_pull.dart:231-296](file:///d:/DevTools/project/PiggyCount/lib/cloud/sync/sync_engine_pull.dart)
 
 ```dart
 class LookupCache {
@@ -215,7 +215,7 @@ class LookupCache {
 
 #### 4.2.2 Lazy prime 优化
 
-**实现位置**：[sync_engine.dart:1115-1128](file:///d:/DevTools/project/BeeCount/lib/cloud/sync/sync_engine.dart)
+**实现位置**：[sync_engine.dart:1115-1128](file:///d:/DevTools/project/PiggyCount/lib/cloud/sync/sync_engine.dart)
 
 ```dart
 // Lazy prime：先 HTTP 一次试探有没有数据。99% 场景(无变更)直接 return，
@@ -235,7 +235,7 @@ await cache.prime(db);
 
 #### 4.2.3 多层单飞锁
 
-**实现位置**：[sync_engine.dart:151-175](file:///d:/DevTools/project/BeeCount/lib/cloud/sync/sync_engine.dart)
+**实现位置**：[sync_engine.dart:151-175](file:///d:/DevTools/project/PiggyCount/lib/cloud/sync/sync_engine.dart)
 
 ```mermaid
 flowchart LR
@@ -257,7 +257,7 @@ flowchart LR
 
 #### 4.2.4 push 分批推送
 
-**实现位置**：[sync_engine_serialization.dart:583-595](file:///d:/DevTools/project/BeeCount/lib/cloud/sync/sync_engine_serialization.dart)
+**实现位置**：[sync_engine_serialization.dart:583-595](file:///d:/DevTools/project/PiggyCount/lib/cloud/sync/sync_engine_serialization.dart)
 
 ```dart
 const batchSize = 500;
@@ -274,7 +274,7 @@ for (var i = 0; i < syncChanges.length; i += batchSize) {
 
 #### 4.3.1 启动流程
 
-**实现位置**：[main.dart:43-154](file:///d:/DevTools/project/BeeCount/lib/main.dart)
+**实现位置**：[main.dart:43-154](file:///d:/DevTools/project/PiggyCount/lib/main.dart)
 
 ```mermaid
 sequenceDiagram
@@ -306,7 +306,7 @@ sequenceDiagram
 
 #### 4.3.2 Splash 并行预加载
 
-**实现位置**：[ui_state_providers.dart](file:///d:/DevTools/project/BeeCount/lib/providers/ui_state_providers.dart) `appSplashInitProvider`
+**实现位置**：[ui_state_providers.dart](file:///d:/DevTools/project/PiggyCount/lib/providers/ui_state_providers.dart) `appSplashInitProvider`
 
 ```dart
 final appSplashInitProvider = FutureProvider<void>((ref) async {
@@ -343,7 +343,7 @@ final appSplashInitProvider = FutureProvider<void>((ref) async {
 
 #### 4.3.3 Isolate 使用
 
-**实现位置**：[import_confirm_page.dart:71](file:///d:/DevTools/project/BeeCount/lib/pages/data/import_confirm_page.dart)
+**实现位置**：[import_confirm_page.dart:71](file:///d:/DevTools/project/PiggyCount/lib/pages/data/import_confirm_page.dart)
 
 ```dart
 final parsed = await compute(_parseRowsIsolate, widget.csvText);
@@ -359,7 +359,7 @@ final parsed = await compute(_parseRowsIsolate, widget.csvText);
 
 #### 4.4.1 FlutterListView 惰性渲染
 
-**实现位置**：[transaction_list.dart:358-584](file:///d:/DevTools/project/BeeCount/lib/widgets/biz/transaction_list.dart)
+**实现位置**：[transaction_list.dart:358-584](file:///d:/DevTools/project/PiggyCount/lib/widgets/biz/transaction_list.dart)
 
 ```dart
 return FlutterListView(
@@ -376,7 +376,7 @@ return FlutterListView(
 
 #### 4.4.2 预加载快照 + Stream 模式切换
 
-**实现位置**：[transaction_list.dart:70-79, 230-248](file:///d:/DevTools/project/BeeCount/lib/widgets/biz/transaction_list.dart)
+**实现位置**：[transaction_list.dart:70-79, 230-248](file:///d:/DevTools/project/PiggyCount/lib/widgets/biz/transaction_list.dart)
 
 ```dart
 Map<int, List<Tag>> _cachedTagsMap = {};
@@ -414,7 +414,7 @@ void switchToStreamMode() {
 
 #### 4.4.4 RepaintBoundary
 
-**实现位置**：[annual_report_page.dart:488, 1757](file:///d:/DevTools/project/BeeCount/lib/pages/report/annual_report_page.dart)、share_poster_service.dart
+**实现位置**：[annual_report_page.dart:488, 1757](file:///d:/DevTools/project/PiggyCount/lib/pages/report/annual_report_page.dart)、share_poster_service.dart
 
 **[待补充]**：交易列表、图表组件（`CategoryPieChart` 等）未使用 `RepaintBoundary` 包裹，长列表滚动时可能引发不必要的重绘。
 
@@ -424,7 +424,7 @@ void switchToStreamMode() {
 
 #### 4.5.1 autoDispose 使用
 
-**实现位置**：[statistics_providers.dart](file:///d:/DevTools/project/BeeCount/lib/providers/statistics_providers.dart)
+**实现位置**：[statistics_providers.dart](file:///d:/DevTools/project/PiggyCount/lib/providers/statistics_providers.dart)
 
 ```dart
 final ledgerCountProvider = FutureProvider.autoDispose<int>((ref) async { ... });
@@ -440,7 +440,7 @@ final accountStatsProvider = FutureProvider.family
 
 #### 4.5.2 keepAlive 模式
 
-**实现位置**：[ui_state_providers.dart:117-122, 137-141](file:///d:/DevTools/project/BeeCount/lib/providers/ui_state_providers.dart)
+**实现位置**：[ui_state_providers.dart:117-122, 137-141](file:///d:/DevTools/project/PiggyCount/lib/providers/ui_state_providers.dart)
 
 ```dart
 final searchAmountFilterEnabledProvider =
@@ -466,7 +466,7 @@ final searchAmountFilterEnabledProvider =
 
 #### 4.6.1 LRU 缓存
 
-**实现位置**：[lru_cache.dart](file:///d:/DevTools/project/BeeCount/lib/utils/lru_cache.dart)
+**实现位置**：[lru_cache.dart](file:///d:/DevTools/project/PiggyCount/lib/utils/lru_cache.dart)
 
 ```dart
 class LRUCache {
@@ -491,13 +491,13 @@ class LRUCache {
 
 #### 4.6.2 汇总数据缓存
 
-- `lastMonthlyTotalsProvider`（[statistics_providers.dart:68](file:///d:/DevTools/project/BeeCount/lib/providers/statistics_providers.dart)）：`StateProvider.family` 缓存上次月度收支总额
+- `lastMonthlyTotalsProvider`（[statistics_providers.dart:68](file:///d:/DevTools/project/PiggyCount/lib/providers/statistics_providers.dart)）：`StateProvider.family` 缓存上次月度收支总额
 - `cachedTransactionsProvider` / `cachedTransactionsWithCategoryProvider`（ui_state_providers.dart:174-179）：缓存首屏交易数据
-- `SyncEngine._statusCache`（[sync_engine.dart:79](file:///d:/DevTools/project/BeeCount/lib/cloud/sync/sync_engine.dart)）：`Map<int, SyncStatus>` 缓存同步状态，`_localChanged` 标记失效
+- `SyncEngine._statusCache`（[sync_engine.dart:79](file:///d:/DevTools/project/PiggyCount/lib/cloud/sync/sync_engine.dart)）：`Map<int, SyncStatus>` 缓存同步状态，`_localChanged` 标记失效
 
 #### 4.6.3 APK 更新缓存
 
-**实现位置**：[update_cache.dart](file:///d:/DevTools/project/BeeCount/lib/services/update/update_cache.dart)
+**实现位置**：[update_cache.dart](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_cache.dart)
 
 ```dart
 static Future<String?> getCachedApkPath() async {
@@ -522,7 +522,7 @@ static Future<bool> validateApkFile(String filePath) async {
 
 #### 4.7.1 缩略图生成
 
-**实现位置**：[attachment_service.dart:22, 40-47, 273-277](file:///d:/DevTools/project/BeeCount/lib/services/attachment_service.dart)
+**实现位置**：[attachment_service.dart:22, 40-47, 273-277](file:///d:/DevTools/project/PiggyCount/lib/services/attachment_service.dart)
 
 ```dart
 static const int thumbnailSize = 200;
@@ -546,7 +546,7 @@ final result = await FlutterImageCompress.compressAndGetFile(
 
 #### 4.7.2 双阶段压缩
 
-**实现位置**：[attachment_service.dart:19-21, 49-79, 349-351](file:///d:/DevTools/project/BeeCount/lib/services/attachment_service.dart)
+**实现位置**：[attachment_service.dart:19-21, 49-79, 349-351](file:///d:/DevTools/project/PiggyCount/lib/services/attachment_service.dart)
 
 ```dart
 static const int maxWidth = 1920;
@@ -562,7 +562,7 @@ Future<List<File>> pickFromGallery({int maxCount = 9}) async {
 }
 ```
 
-**urgent 模式优化**（[attachment_service.dart:85-90](file:///d:/DevTools/project/BeeCount/lib/services/attachment_service.dart)）：
+**urgent 模式优化**（[attachment_service.dart:85-90](file:///d:/DevTools/project/PiggyCount/lib/services/attachment_service.dart)）：
 
 ```dart
 /// [urgent] 紧急模式:跳过 FlutterImageCompress,直接 sync 文件复制。
@@ -577,7 +577,7 @@ Future<List<File>> pickFromGallery({int maxCount = 9}) async {
 
 #### 4.7.3 一次性 GC 清理孤立文件
 
-**实现位置**：[main.dart:606-707](file:///d:/DevTools/project/BeeCount/lib/main.dart)
+**实现位置**：[main.dart:606-707](file:///d:/DevTools/project/PiggyCount/lib/main.dart)
 
 ```dart
 Future<void> _runOrphanFileGcOnce(ProviderContainer container) async {
@@ -697,7 +697,7 @@ Future<int> push({required int ledgerId}) async {
 
 ### 6.1 Splash 阶段 timed 包装器
 
-**实现位置**：[ui_state_providers.dart](file:///d:/DevTools/project/BeeCount/lib/providers/ui_state_providers.dart)
+**实现位置**：[ui_state_providers.dart](file:///d:/DevTools/project/PiggyCount/lib/providers/ui_state_providers.dart)
 
 ```dart
 Future<T> timed<T>(String label, Future<T> future) async {
@@ -715,7 +715,7 @@ Future<T> timed<T>(String label, Future<T> future) async {
 
 ### 6.2 同步日志
 
-**实现位置**：[sync_engine.dart](file:///d:/DevTools/project/BeeCount/lib/cloud/sync/sync_engine.dart)
+**实现位置**：[sync_engine.dart](file:///d:/DevTools/project/PiggyCount/lib/cloud/sync/sync_engine.dart)
 
 ```dart
 logger.info('SyncEngine', 'pull: since=$nextSince 无新变更,跳过 LookupCache prime');
@@ -751,20 +751,20 @@ logger.info('SyncEngine', 'pull: applied ${page.changes.length} changes in ${sw.
 ## 8. 参考与延伸阅读
 
 ### 8.1 相关文档
-- [04-system-architecture.md](file:///d:/DevTools/project/BeeCount/docoments/04-system-architecture.md)：五层架构设计
-- [06-data-sync-and-offline.md](file:///d:/DevTools/project/BeeCount/docoments/06-data-sync-and-offline.md)：同步引擎详细设计
-- [09-error-handling.md](file:///d:/DevTools/project/BeeCount/docoments/09-error-handling.md)：busy retry 错误处理
-- [10-testing-strategy.md](file:///d:/DevTools/project/BeeCount/docoments/10-testing-strategy.md)：性能测试策略
+- [04-system-architecture.md](file:///d:/DevTools/project/PiggyCount/docoments/04-system-architecture.md)：五层架构设计
+- [06-data-sync-and-offline.md](file:///d:/DevTools/project/PiggyCount/docoments/06-data-sync-and-offline.md)：同步引擎详细设计
+- [09-error-handling.md](file:///d:/DevTools/project/PiggyCount/docoments/09-error-handling.md)：busy retry 错误处理
+- [10-testing-strategy.md](file:///d:/DevTools/project/PiggyCount/docoments/10-testing-strategy.md)：性能测试策略
 
 ### 8.2 关键源码文件
-- [lib/main.dart](file:///d:/DevTools/project/BeeCount/lib/main.dart)：启动入口
-- [lib/data/db.dart](file:///d:/DevTools/project/BeeCount/lib/data/db.dart)：数据库初始化与索引
-- [lib/cloud/sync/sync_engine.dart](file:///d:/DevTools/project/BeeCount/lib/cloud/sync/sync_engine.dart)：同步引擎
-- [lib/cloud/sync/sync_engine_pull.dart](file:///d:/DevTools/project/BeeCount/lib/cloud/sync/sync_engine_pull.dart)：LookupCache 实现
-- [lib/providers/ui_state_providers.dart](file:///d:/DevTools/project/BeeCount/lib/providers/ui_state_providers.dart)：Splash 预加载
-- [lib/widgets/biz/transaction_list.dart](file:///d:/DevTools/project/BeeCount/lib/widgets/biz/transaction_list.dart)：列表优化
-- [lib/services/attachment_service.dart](file:///d:/DevTools/project/BeeCount/lib/services/attachment_service.dart)：图片压缩
-- [lib/utils/lru_cache.dart](file:///d:/DevTools/project/BeeCount/lib/utils/lru_cache.dart)：LRU 缓存
+- [lib/main.dart](file:///d:/DevTools/project/PiggyCount/lib/main.dart)：启动入口
+- [lib/data/db.dart](file:///d:/DevTools/project/PiggyCount/lib/data/db.dart)：数据库初始化与索引
+- [lib/cloud/sync/sync_engine.dart](file:///d:/DevTools/project/PiggyCount/lib/cloud/sync/sync_engine.dart)：同步引擎
+- [lib/cloud/sync/sync_engine_pull.dart](file:///d:/DevTools/project/PiggyCount/lib/cloud/sync/sync_engine_pull.dart)：LookupCache 实现
+- [lib/providers/ui_state_providers.dart](file:///d:/DevTools/project/PiggyCount/lib/providers/ui_state_providers.dart)：Splash 预加载
+- [lib/widgets/biz/transaction_list.dart](file:///d:/DevTools/project/PiggyCount/lib/widgets/biz/transaction_list.dart)：列表优化
+- [lib/services/attachment_service.dart](file:///d:/DevTools/project/PiggyCount/lib/services/attachment_service.dart)：图片压缩
+- [lib/utils/lru_cache.dart](file:///d:/DevTools/project/PiggyCount/lib/utils/lru_cache.dart)：LRU 缓存
 
 ### 8.3 外部参考
 - Drift 性能优化：https://drift.simonbinder.eu/docs/advanced-features/isolates/

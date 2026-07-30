@@ -3,13 +3,13 @@
 > 文档版本：v1.0
 > 最后更新：2026-07-25
 > 作者：wait
-> 信息源：项目源码（d:\DevTools\project\BeeCount）+ 代码静态审查
+> 信息源：项目源码（d:\DevTools\project\PiggyCount）+ 代码静态审查
 
 ---
 
 ## 1. 背景
 
-BeeCount 作为离线优先、隐私优先的记账应用，**不集成任何远程崩溃上报**（无 Sentry / Crashlytics / Bugly），所有日志仅落本地。日志系统需在以下场景发挥作用：
+PiggyCount 作为离线优先、隐私优先的记账应用，**不集成任何远程崩溃上报**（无 Sentry / Crashlytics / Bugly），所有日志仅落本地。日志系统需在以下场景发挥作用：
 
 1. **用户排障**：用户反馈问题时通过日志中心导出文本分享给开发者
 2. **同步调试**：四层同步架构 + 5 个云后端，问题排查依赖详细日志链路
@@ -102,7 +102,7 @@ flowchart TB
 
 ### 4.1 LoggerService 类结构与单例
 
-**实现位置**：[lib/services/system/logger_service.dart:141-414](file:///d:/DevTools/project/BeeCount/lib/services/system/logger_service.dart)
+**实现位置**：[lib/services/system/logger_service.dart:141-414](file:///d:/DevTools/project/PiggyCount/lib/services/system/logger_service.dart)
 
 ```dart
 class LoggerService {
@@ -120,7 +120,7 @@ final logger = LoggerService();  // 全局单例
 
 ### 4.2 日志级别分级
 
-**实现位置**：[logger_service.dart:9-40](file:///d:/DevTools/project/BeeCount/lib/services/system/logger_service.dart)
+**实现位置**：[logger_service.dart:9-40](file:///d:/DevTools/project/PiggyCount/lib/services/system/logger_service.dart)
 
 ```dart
 enum LogLevel { debug, info, warning, error }
@@ -130,7 +130,7 @@ enum LogLevel { debug, info, warning, error }
 
 ### 4.3 日志输出方法
 
-**实现位置**：[logger_service.dart:278-324](file:///d:/DevTools/project/BeeCount/lib/services/system/logger_service.dart)
+**实现位置**：[logger_service.dart:278-324](file:///d:/DevTools/project/PiggyCount/lib/services/system/logger_service.dart)
 
 ```dart
 void debug(String tag, String message, [dynamic data]) {
@@ -155,7 +155,7 @@ void error(String tag, String message, [dynamic error, StackTrace? stackTrace]) 
 
 ### 4.4 日志格式
 
-**实现位置**：[logger_service.dart:109-134](file:///d:/DevTools/project/BeeCount/lib/services/system/logger_service.dart)
+**实现位置**：[logger_service.dart:109-134](file:///d:/DevTools/project/PiggyCount/lib/services/system/logger_service.dart)
 
 `LogEntry.toFormattedString()` 输出多行文本：
 
@@ -170,7 +170,7 @@ void error(String tag, String message, [dynamic error, StackTrace? stackTrace]) 
 
 ### 4.5 日志输出目标
 
-- **Console**：[logger_service.dart:202-205](file:///d:/DevTools/project/BeeCount/lib/services/system/logger_service.dart)，`if (kDebugMode) debugPrint(entry.toFormattedString())` —— 仅 debug 模式打 console
+- **Console**：[logger_service.dart:202-205](file:///d:/DevTools/project/PiggyCount/lib/services/system/logger_service.dart)，`if (kDebugMode) debugPrint(entry.toFormattedString())` —— 仅 debug 模式打 console
 - **内存缓冲**：`Queue<LogEntry>` 循环缓冲，最多 2000 条（`_maxLogs`，第 153 行）
 - **持久化**：`SharedPreferences` 异步落盘
 - **远程上报**：`[未实现]` —— 全项目无任何远程上报代码
@@ -181,7 +181,7 @@ void error(String tag, String message, [dynamic error, StackTrace? stackTrace]) 
 
 ### 5.1 持久化载体
 
-**实现位置**：[logger_service.dart:218-275](file:///d:/DevTools/project/BeeCount/lib/services/system/logger_service.dart)
+**实现位置**：[logger_service.dart:218-275](file:///d:/DevTools/project/PiggyCount/lib/services/system/logger_service.dart)
 
 日志通过 `SharedPreferences` 的 string key `app_logs`（第 149 行）以 JSON 数组形式保存，**不是文件**。
 
@@ -192,13 +192,13 @@ static const _maxStorageHours = 48; // 保留48小时
 
 ### 5.2 日志轮转
 
-- **按数量**：内存循环缓冲，超过 2000 条丢弃最旧（[logger_service.dart:195-198](file:///d:/DevTools/project/BeeCount/lib/services/system/logger_service.dart)）
+- **按数量**：内存循环缓冲，超过 2000 条丢弃最旧（[logger_service.dart:195-198](file:///d:/DevTools/project/PiggyCount/lib/services/system/logger_service.dart)）
 - **按时间**：48 小时过期窗口。加载时过滤（第 225-234 行），保存时再过滤一次（第 259-263 行）
 - **按文件大小 / 按天数滚动文件**：`[未实现]`（无文件，无文件轮转）
 
 ### 5.3 保存节流
 
-**实现位置**：[logger_service.dart:249-275](file:///d:/DevTools/project/BeeCount/lib/services/system/logger_service.dart)
+**实现位置**：[logger_service.dart:249-275](file:///d:/DevTools/project/PiggyCount/lib/services/system/logger_service.dart)
 
 ```dart
 // 每次 _addLog 重置一个 2 秒延时 Timer
@@ -210,7 +210,7 @@ static const _maxStorageHours = 48; // 保留48小时
 
 ### 5.4 加载
 
-`_loadLogs()`（[logger_service.dart:215-247](file:///d:/DevTools/project/BeeCount/lib/services/system/logger_service.dart)）懒加载，首次访问 `logs` getter 时触发，反序列化后丢弃超过 48h 的条目；同时 `_isLoaded` 标志防重复加载。
+`_loadLogs()`（[logger_service.dart:215-247](file:///d:/DevTools/project/PiggyCount/lib/services/system/logger_service.dart)）懒加载，首次访问 `logs` getter 时触发，反序列化后丢弃超过 48h 的条目；同时 `_isLoaded` 标志防重复加载。
 
 ### 5.5 文件命名规则
 
@@ -220,13 +220,13 @@ static const _maxStorageHours = 48; // 保留48小时
 
 ## 6. 日志查看界面
 
-**实现位置**：[lib/pages/settings/log_center_page.dart](file:///d:/DevTools/project/BeeCount/lib/pages/settings/log_center_page.dart)（全文 554 行）
+**实现位置**：[lib/pages/settings/log_center_page.dart](file:///d:/DevTools/project/PiggyCount/lib/pages/settings/log_center_page.dart)（全文 554 行）
 
 ### 6.1 入口
 
 两处入口：
-- [beecount_cloud_sync_page.dart:332](file:///d:/DevTools/project/BeeCount/lib/pages/cloud/beecount_cloud_sync_page.dart) —— 云同步页面跳转
-- [about_page.dart:318](file:///d:/DevTools/project/BeeCount/lib/pages/settings/about_page.dart) —— 关于页面跳转
+- [piggycount_cloud_sync_page.dart:332](file:///d:/DevTools/project/PiggyCount/lib/pages/cloud/piggycount_cloud_sync_page.dart) —— 云同步页面跳转
+- [about_page.dart:318](file:///d:/DevTools/project/PiggyCount/lib/pages/settings/about_page.dart) —— 关于页面跳转
 
 ### 6.2 界面结构
 
@@ -252,7 +252,7 @@ static const _maxStorageHours = 48; // 保留48小时
 Future<void> _exportLogs() async {
   try {
     final text = logger.exportAsText();
-    await Share.share(text, subject: 'BeeCount 日志导出');
+    await Share.share(text, subject: 'PiggyCount 日志导出');
   } catch (e) {
     if (mounted) {
       showToast(context, AppLocalizations.of(context).logCenterExportFailed);
@@ -261,7 +261,7 @@ Future<void> _exportLogs() async {
 }
 ```
 
-使用 `share_plus` 调起系统分享面板（不是写文件、不是上传）。`logger.exportAsText()` 在 [logger_service.dart:333-347](file:///d:/DevTools/project/BeeCount/lib/services/system/logger_service.dart) 拼接全部日志为纯文本。
+使用 `share_plus` 调起系统分享面板（不是写文件、不是上传）。`logger.exportAsText()` 在 [logger_service.dart:333-347](file:///d:/DevTools/project/PiggyCount/lib/services/system/logger_service.dart) 拼接全部日志为纯文本。
 
 ### 6.6 清空
 
@@ -342,7 +342,7 @@ try {
 
 ### 7.5 反模式：堆栈单独记录
 
-**反模式示例**（[transactions_sync_manager.dart:185-186](file:///d:/DevTools/project/BeeCount/lib/cloud/transactions_sync_manager.dart)）：
+**反模式示例**（[transactions_sync_manager.dart:185-186](file:///d:/DevTools/project/PiggyCount/lib/cloud/transactions_sync_manager.dart)）：
 
 ```dart
 // ❌ 反模式
@@ -385,7 +385,7 @@ logger.info('GitHubMirror', '镜像 ${mirror.name} 测试成功，延迟: ${late
 
 ### 8.2 Splash / 首屏 timed 包装器
 
-**实现位置**：[lib/providers/ui_state_providers.dart:229-234](file:///d:/DevTools/project/BeeCount/lib/providers/ui_state_providers.dart)
+**实现位置**：[lib/providers/ui_state_providers.dart:229-234](file:///d:/DevTools/project/PiggyCount/lib/providers/ui_state_providers.dart)
 
 ```dart
 Future<T> timed<T>(String name, Future<T> future) async {
@@ -410,7 +410,7 @@ Future<T> timed<T>(String name, Future<T> future) async {
 
 ### 9.1 UPDATE_CRASH 前缀
 
-**Flutter 侧**（[lib/services/update/update_installer.dart:19-121](file:///d:/DevTools/project/BeeCount/lib/services/update/update_installer.dart)、[lib/services/system/update_service.dart:206-396](file:///d:/DevTools/project/BeeCount/lib/services/system/update_service.dart)）—— 共 60+ 条 `UPDATE_CRASH:` 前缀日志，覆盖 APK 安装流程的每个关键步骤：
+**Flutter 侧**（[lib/services/update/update_installer.dart:19-121](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_installer.dart)、[lib/services/system/update_service.dart:206-396](file:///d:/DevTools/project/PiggyCount/lib/services/system/update_service.dart)）—— 共 60+ 条 `UPDATE_CRASH:` 前缀日志，覆盖 APK 安装流程的每个关键步骤：
 
 ```dart
 logger.info('UpdateInstaller', 'UPDATE_CRASH: === 开始APK安装流程 ===');
@@ -426,11 +426,11 @@ logger.error('UpdateInstaller', 'UPDATE_CRASH: 异常堆栈: $stackTrace');  // 
 logger.error('UpdateInstaller', 'UPDATE_CRASH: PlatformException code: ${e.code}');
 ```
 
-**Android 原生侧**（`android/app/src/main/kotlin/com/tntlikely/beecount/MainActivity.kt:557-618`）—— 17 条 `UPDATE_CRASH:` 前缀 `android.util.Log.d/e`，覆盖：复制 APK → FileProvider 创建 URI → 启动 Intent → 失败分支。
+**Android 原生侧**（`android/app/src/main/kotlin/com/tntlikely/piggycount/MainActivity.kt:557-618`）—— 17 条 `UPDATE_CRASH:` 前缀 `android.util.Log.d/e`，覆盖：复制 APK → FileProvider 创建 URI → 启动 Intent → 失败分支。
 
 ### 9.2 关键步骤埋点
 
-**实现位置**：[update_service.dart:206-234](file:///d:/DevTools/project/BeeCount/lib/services/system/update_service.dart)
+**实现位置**：[update_service.dart:206-234](file:///d:/DevTools/project/PiggyCount/lib/services/system/update_service.dart)
 
 ```dart
 logger.info('UpdateService', 'UPDATE_CRASH: 🚀 用户确认安装，开始启动安装程序');
@@ -442,7 +442,7 @@ logger.info('UpdateService', 'UPDATE_CRASH: 当前flavor: ${const String.fromEnv
 
 ### 9.3 反模式提示
 
-[update_installer.dart:83/121](file:///d:/DevTools/project/BeeCount/lib/services/update/update_installer.dart) 把 stackTrace 拼进 message（`'UPDATE_CRASH: 异常堆栈: $stackTrace'`），未使用 `logger.error` 第 4 参数，导致详情页 Stack Trace 区为空。建议工程文档统一为 `logger.error(tag, msg, e, st)`。
+[update_installer.dart:83/121](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_installer.dart) 把 stackTrace 拼进 message（`'UPDATE_CRASH: 异常堆栈: $stackTrace'`），未使用 `logger.error` 第 4 参数，导致详情页 Stack Trace 区为空。建议工程文档统一为 `logger.error(tag, msg, e, st)`。
 
 ---
 
@@ -450,7 +450,7 @@ logger.info('UpdateService', 'UPDATE_CRASH: 当前flavor: ${const String.fromEnv
 
 ### 10.1 sync_engine.dart 主流程
 
-[lib/cloud/sync/sync_engine.dart](file:///d:/DevTools/project/BeeCount/lib/cloud/sync/sync_engine.dart) 内 50+ 处 `logger.*` 调用，级别使用规范：
+[lib/cloud/sync/sync_engine.dart](file:///d:/DevTools/project/PiggyCount/lib/cloud/sync/sync_engine.dart) 内 50+ 处 `logger.*` 调用，级别使用规范：
 
 - **info**：流程入口/出口、阶段性进度（如 `:204 上传账本`、`:221 上传完成：增量推送 $pushed 条变更`、`:372 开始同步`、`:497 同步完成: $result`）
 - **debug**：细粒度单条变更（如 `:747`、`:894 legacy backfill: 无需补登记`、`:964`）
@@ -480,7 +480,7 @@ logger.info('UpdateService', 'UPDATE_CRASH: 当前flavor: ${const String.fromEnv
 
 ### 11.1 kDebugMode 开关
 
-**实现位置**：[logger_service.dart:202-205](file:///d:/DevTools/project/BeeCount/lib/services/system/logger_service.dart)
+**实现位置**：[logger_service.dart:202-205](file:///d:/DevTools/project/PiggyCount/lib/services/system/logger_service.dart)
 
 ```dart
 if (kDebugMode) {
@@ -491,10 +491,10 @@ if (kDebugMode) {
 `kDebugMode` 来自 `package:flutter/foundation.dart`，等同于 `!bool.fromEnvironment('dart.vm.product') && !kReleaseMode`。
 
 其他使用点：
-- [lib/app.dart:784](file:///d:/DevTools/project/BeeCount/lib/app.dart) —— UI 行为开关
-- [lib/styles/header_skins.dart:149](file:///d:/DevTools/project/BeeCount/lib/styles/header_skins.dart) —— 调试皮肤
-- [lib/pages/maintenance/orphan_cleanup_page.dart:43](file:///d:/DevTools/project/BeeCount/lib/pages/maintenance/orphan_cleanup_page.dart) —— 维护入口可见性
-- [lib/services/maintenance/orphan_seeder.dart:7](file:///d:/DevTools/project/BeeCount/lib/services/maintenance/orphan_seeder.dart) —— 注释说明"kDebugMode 守门,正式包不会暴露入口"
+- [lib/app.dart:784](file:///d:/DevTools/project/PiggyCount/lib/app.dart) —— UI 行为开关
+- [lib/styles/header_skins.dart:149](file:///d:/DevTools/project/PiggyCount/lib/styles/header_skins.dart) —— 调试皮肤
+- [lib/pages/maintenance/orphan_cleanup_page.dart:43](file:///d:/DevTools/project/PiggyCount/lib/pages/maintenance/orphan_cleanup_page.dart) —— 维护入口可见性
+- [lib/services/maintenance/orphan_seeder.dart:7](file:///d:/DevTools/project/PiggyCount/lib/services/maintenance/orphan_seeder.dart) —— 注释说明"kDebugMode 守门,正式包不会暴露入口"
 
 ### 11.2 dart.vm.product 控制
 
@@ -590,18 +590,18 @@ Grep `^\s*print\(` 命中 80+ 处，主要集中在：
 ## 15. 参考与延伸阅读
 
 ### 15.1 相关文档
-- [09-error-handling.md](file:///d:/DevTools/project/BeeCount/docoments/09-error-handling.md)：错误处理与日志集成
-- [11-performance.md](file:///d:/DevTools/project/BeeCount/docoments/11-performance.md)：性能埋点（timed 包装器）
-- [13-build-release.md](file:///d:/DevTools/project/BeeCount/docoments/13-build-release.md)：UPDATE_CRASH 日志
+- [09-error-handling.md](file:///d:/DevTools/project/PiggyCount/docoments/09-error-handling.md)：错误处理与日志集成
+- [11-performance.md](file:///d:/DevTools/project/PiggyCount/docoments/11-performance.md)：性能埋点（timed 包装器）
+- [13-build-release.md](file:///d:/DevTools/project/PiggyCount/docoments/13-build-release.md)：UPDATE_CRASH 日志
 
 ### 15.2 关键源码文件
-- [lib/services/system/logger_service.dart](file:///d:/DevTools/project/BeeCount/lib/services/system/logger_service.dart)：日志服务核心
-- [lib/pages/settings/log_center_page.dart](file:///d:/DevTools/project/BeeCount/lib/pages/settings/log_center_page.dart)：日志中心 UI
-- [lib/cloud/sync/sync_engine.dart](file:///d:/DevTools/project/BeeCount/lib/cloud/sync/sync_engine.dart)：同步日志
-- [lib/services/update/update_installer.dart](file:///d:/DevTools/project/BeeCount/lib/services/update/update_installer.dart)：UPDATE_CRASH 日志
-- [lib/providers/ui_state_providers.dart](file:///d:/DevTools/project/BeeCount/lib/providers/ui_state_providers.dart)：timed 包装器
-- [android/app/src/main/kotlin/com/tntlikely/beecount/LoggerPlugin.kt](file:///d:/DevTools/project/BeeCount/android/app/src/main/kotlin/com/tntlikely/beecount/LoggerPlugin.kt)：Android 日志桥接
-- [ios/Runner/LoggerPlugin.swift](file:///d:/DevTools/project/BeeCount/ios/Runner/LoggerPlugin.swift)：iOS 日志桥接
+- [lib/services/system/logger_service.dart](file:///d:/DevTools/project/PiggyCount/lib/services/system/logger_service.dart)：日志服务核心
+- [lib/pages/settings/log_center_page.dart](file:///d:/DevTools/project/PiggyCount/lib/pages/settings/log_center_page.dart)：日志中心 UI
+- [lib/cloud/sync/sync_engine.dart](file:///d:/DevTools/project/PiggyCount/lib/cloud/sync/sync_engine.dart)：同步日志
+- [lib/services/update/update_installer.dart](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_installer.dart)：UPDATE_CRASH 日志
+- [lib/providers/ui_state_providers.dart](file:///d:/DevTools/project/PiggyCount/lib/providers/ui_state_providers.dart)：timed 包装器
+- [android/app/src/main/kotlin/com/tntlikely/piggycount/LoggerPlugin.kt](file:///d:/DevTools/project/PiggyCount/android/app/src/main/kotlin/com/tntlikely/piggycount/LoggerPlugin.kt)：Android 日志桥接
+- [ios/Runner/LoggerPlugin.swift](file:///d:/DevTools/project/PiggyCount/ios/Runner/LoggerPlugin.swift)：iOS 日志桥接
 
 ### 15.3 外部参考
 - Flutter 日志最佳实践：https://docs.flutter.dev/testing/errors

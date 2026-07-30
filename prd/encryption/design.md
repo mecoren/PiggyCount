@@ -1,14 +1,14 @@
-# BeeCount 同步加密（E2EE）设计文档
+# PiggyCount 同步加密（E2EE）设计文档
 
 > 版本：v1.0  日期：2026-07-27
 > 范围：路径 A（S3 / WebDAV / Supabase / iCloud）快照同步
-> 不在范围：路径 B（BeeCount Cloud 增量同步，保持不动）
+> 不在范围：路径 B（PiggyCount Cloud 增量同步，保持不动）
 
 ---
 
 ## 1. 需求理解
 
-为 BeeCount 的快照同步路径（4 个后端：S3 / WebDAV / Supabase / iCloud）增加端到端加密（E2EE），使云端只能看到密文，无法读取账本内容；用户只需记忆一个密码，多设备间通过相同密码即可解密彼此上传的数据。路径 B（BeeCount Cloud 增量同步）因服务端需做 LWW 合并、共享账本、实时推送，不在本次改造范围。
+为 PiggyCount 的快照同步路径（4 个后端：S3 / WebDAV / Supabase / iCloud）增加端到端加密（E2EE），使云端只能看到密文，无法读取账本内容；用户只需记忆一个密码，多设备间通过相同密码即可解密彼此上传的数据。路径 B（PiggyCount Cloud 增量同步）因服务端需做 LWW 合并、共享账本、实时推送，不在本次改造范围。
 
 ## 2. 现状分析
 
@@ -74,10 +74,10 @@ CloudSyncManager / TransactionsSyncManager
 | 项 | 存储位置 | key | 内容 |
 |----|----------|-----|------|
 | 加密密码（用户记忆） | 不存 | — | 只在输入时持有 |
-| 256-bit 派生密钥 | flutter_secure_storage | `beecount_enc_key` | 日常加解密直接使用 |
+| 256-bit 派生密钥 | flutter_secure_storage | `piggycount_enc_key` | 日常加解密直接使用 |
 | Argon2id salt | 跟随每条密文存云端 | — | 16B 随机，每次加密可重用或重生成 |
-| 校验块（加密的已知明文） | flutter_secure_storage | `beecount_enc_verifier` | `encrypt("BEECOUNT_VERIFIER_v1")`，用于改密时验证旧密码 |
-| 加密开关 | shared_preferences | `beecount_enc_enabled` | bool |
+| 校验块（加密的已知明文） | flutter_secure_storage | `piggycount_enc_verifier` | `encrypt("BEECOUNT_VERIFIER_v1")`，用于改密时验证旧密码 |
+| 加密开关 | shared_preferences | `piggycount_enc_enabled` | bool |
 
 **verifier 块用途澄清**：
 - 日常加解密：直接用 secure storage 里的 key，无需密码
@@ -162,7 +162,7 @@ CloudSyncManager / TransactionsSyncManager
    - Argon2id(password, salt) → key(256bit)
    - 加密 "BEECOUNT_VERIFIER_v1" → verifier
    - 存 key + verifier 到 secure storage
-   - shared_preferences.beecount_enc_enabled = true
+   - shared_preferences.piggycount_enc_enabled = true
 3. 后续 upload 自动走密文格式
 4. 云端存量明文会在下次 upload 时被覆盖为密文
 ```
@@ -187,7 +187,7 @@ CloudSyncManager / TransactionsSyncManager
 ### 5.3 关闭加密
 
 采用「**仅停止加密新上传，旧密文保留**」策略：
-- `shared_preferences.beecount_enc_enabled = false`
+- `shared_preferences.piggycount_enc_enabled = false`
 - 后续 upload 走明文（原行为）
 - 旧密文下载时仍靠 magic header 自动识别 + 解密（key 仍在 secure storage）
 
@@ -200,8 +200,8 @@ CloudSyncManager / TransactionsSyncManager
 2. 用户二次确认
 3. cloudStorage.list(path: '') → 列出所有 ledger_*.json
 4. for each file: cloudStorage.delete(path)
-5. secure_storage 删除 beecount_enc_key / beecount_enc_verifier
-6. shared_preferences.beecount_enc_enabled = false
+5. secure_storage 删除 piggycount_enc_key / piggycount_enc_verifier
+6. shared_preferences.piggycount_enc_enabled = false
 7. 引导用户重新设密码
 ```
 
@@ -267,6 +267,6 @@ flutter_secure_storage: ^9.2.2 # 密钥安全存储 (iOS Keychain / Android Keys
 
 ## 8. 不在本次范围
 
-- 路径 B（BeeCount Cloud）加密：服务端需读 payload 做 LWW 合并，架构性约束
+- 路径 B（PiggyCount Cloud）加密：服务端需读 payload 做 LWW 合并，架构性约束
 - 附件文件加密：附件走独立上传通道，本次仅覆盖账本 JSON
 - 密钥导出/导入：用户跨设备迁移仅靠密码 + 云端密文头 salt

@@ -3,13 +3,13 @@
 > 文档版本：v1.0
 > 最后更新：2026-07-25
 > 作者：wait
-> 信息源：项目源码（d:\DevTools\project\BeeCount）+ 代码静态审查
+> 信息源：项目源码（d:\DevTools\project\PiggyCount）+ 代码静态审查
 
 ---
 
 ## 1. 背景
 
-BeeCount 是一款**离线优先**、**隐私优先**的个人记账应用，遵循 **零数据收集** 原则（详见 [PRIVACY.md](file:///d:/DevTools/project/BeeCount/PRIVACY.md)）。但作为一款管理用户财务数据的应用，仍需在以下维度建立安全机制：
+PiggyCount 是一款**离线优先**、**隐私优先**的个人记账应用，遵循 **零数据收集** 原则（详见 [PRIVACY.md](file:///d:/DevTools/project/PiggyCount/PRIVACY.md)）。但作为一款管理用户财务数据的应用，仍需在以下维度建立安全机制：
 
 1. **本地数据安全**：防止设备丢失/被盗时数据泄露
 2. **应用锁**：防止他人借用设备时查看记账数据
@@ -22,7 +22,7 @@ BeeCount 是一款**离线优先**、**隐私优先**的个人记账应用，遵
 
 本文档梳理项目已实施的安全机制、关键代码位置、存在的安全风险与改进建议。
 
-> ⚠️ **重要说明**：经代码静态审查发现，[PRIVACY.md](file:///d:/DevTools/project/BeeCount/PRIVACY.md) 中的部分声明（如使用 Android Keystore、MIT License）与实际代码实现不符。本文档第 10 节"已知问题与建议"中详细列出，建议项目维护者尽快修订。
+> ⚠️ **重要说明**：经代码静态审查发现，[PRIVACY.md](file:///d:/DevTools/project/PiggyCount/PRIVACY.md) 中的部分声明（如使用 Android Keystore、MIT License）与实际代码实现不符。本文档第 10 节"已知问题与建议"中详细列出，建议项目维护者尽快修订。
 
 ---
 
@@ -81,7 +81,7 @@ flowchart TB
         T1[Supabase]
         T2[WebDAV]
         T3[S3]
-        T4[BeeCount Cloud]
+        T4[PiggyCount Cloud]
         T5[智谱 GLM AI]
     end
 
@@ -117,13 +117,13 @@ flowchart TB
 
 #### 4.1.1 SQLite 数据库（明文存储）
 
-**实现位置**：[lib/data/db.dart:1240-1260](file:///d:/DevTools/project/BeeCount/lib/data/db.dart)
+**实现位置**：[lib/data/db.dart:1240-1260](file:///d:/DevTools/project/PiggyCount/lib/data/db.dart)
 
 ```dart
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dir = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dir.path, 'beecount.sqlite'));
+    final file = File(p.join(dir.path, 'piggycount.sqlite'));
     return NativeDatabase.createInBackground(file);  // ← 明文 SQLite
   });
 }
@@ -143,13 +143,13 @@ LazyDatabase _openConnection() {
 **[未实现]**：全局 Grep `AndroidKeystore|iOSKeychain|Keystore|Keychain` 在 `lib/` 中 **零匹配**。
 
 **关键矛盾**：
-- [PRIVACY.md:93](file:///d:/DevTools/project/BeeCount/PRIVACY.md) 声称 "Authentication credentials are stored securely using Android Keystore"
+- [PRIVACY.md:93](file:///d:/DevTools/project/PiggyCount/PRIVACY.md) 声称 "Authentication credentials are stored securely using Android Keystore"
 - 但代码中 PIN 哈希、API Token、密码全部存储在 `SharedPreferences`（明文 XML 文件）
 - 这是一处**隐私政策与实现不符的严重问题**
 
 #### 4.1.3 数据库备份加密
 
-**[未实现]**：云同步（Supabase/WebDAV/BeeCount Cloud）上传的是业务数据 JSON / 二进制，**未发现任何对备份内容加密后再上传的代码**。备份内容受 HTTPS 传输保护，但服务端可见明文。
+**[未实现]**：云同步（Supabase/WebDAV/PiggyCount Cloud）上传的是业务数据 JSON / 二进制，**未发现任何对备份内容加密后再上传的代码**。备份内容受 HTTPS 传输保护，但服务端可见明文。
 
 ---
 
@@ -157,7 +157,7 @@ LazyDatabase _openConnection() {
 
 #### 4.2.1 PIN 码存储
 
-**实现位置**：[lib/services/security/app_lock_service.dart:26-37](file:///d:/DevTools/project/BeeCount/lib/services/security/app_lock_service.dart)
+**实现位置**：[lib/services/security/app_lock_service.dart:26-37](file:///d:/DevTools/project/PiggyCount/lib/services/security/app_lock_service.dart)
 
 ```dart
 /// SHA-256 哈希 PIN 码
@@ -179,11 +179,11 @@ static Future<void> setPin(String pin) async {
 - **缺点 1**：4 位 PIN 仅 10000 种组合，无盐 SHA-256 可在毫秒级被彩虹表/暴力破解 ✗
 - **缺点 2**：未使用 bcrypt / PBKDF2 / Argon2 等慢哈希 ✗
 - **缺点 3**：哈希存储在 `SharedPreferences`（明文 XML），root 设备可直接读取哈希后离线破解 ✗
-- **缺点 4**：PIN 长度硬编码为 4 位（[app_lock_screen.dart:57](file:///d:/DevTools/project/BeeCount/lib/pages/auth/app_lock_screen.dart) `if (_pin.length >= 4) return;`）✗
+- **缺点 4**：PIN 长度硬编码为 4 位（[app_lock_screen.dart:57](file:///d:/DevTools/project/PiggyCount/lib/pages/auth/app_lock_screen.dart) `if (_pin.length >= 4) return;`）✗
 
 #### 4.2.2 生物识别
 
-**实现位置**：[lib/services/security/app_lock_service.dart:127-153](file:///d:/DevTools/project/BeeCount/lib/services/security/app_lock_service.dart)
+**实现位置**：[lib/services/security/app_lock_service.dart:127-153](file:///d:/DevTools/project/PiggyCount/lib/services/security/app_lock_service.dart)
 
 ```dart
 static Future<bool> authenticateWithBiometrics(
@@ -211,7 +211,7 @@ static Future<bool> authenticateWithBiometrics(
 
 #### 4.2.3 自动锁定策略
 
-**实现位置**：[lib/services/security/app_lock_service.dart:95-124](file:///d:/DevTools/project/BeeCount/lib/services/security/app_lock_service.dart)、[lib/app.dart:658-688](file:///d:/DevTools/project/BeeCount/lib/app.dart)
+**实现位置**：[lib/services/security/app_lock_service.dart:95-124](file:///d:/DevTools/project/PiggyCount/lib/services/security/app_lock_service.dart)、[lib/app.dart:658-688](file:///d:/DevTools/project/PiggyCount/lib/app.dart)
 
 ```dart
 // app.dart 生命周期监听
@@ -236,7 +236,7 @@ void didChangeAppLifecycleState(AppLifecycleState state) {
 
 #### 4.2.4 隐私屏
 
-**实现位置**：[lib/main.dart:560-580](file:///d:/DevTools/project/BeeCount/lib/main.dart)
+**实现位置**：[lib/main.dart:560-580](file:///d:/DevTools/project/PiggyCount/lib/main.dart)
 
 ```dart
 if (showPrivacyScreen) {
@@ -261,7 +261,7 @@ if (showPrivacyScreen) {
 
 #### 4.2.6 失败次数限制（未实现）
 
-**[未实现]**：[app_lock_screen.dart:75-91](file:///d:/DevTools/project/BeeCount/lib/pages/auth/app_lock_screen.dart) 中 `_verifyPin` 失败仅 500ms 抖动后清空，**无失败计数、无指数退避、无 wipe 选项**。PIN 可被无限次暴力尝试。
+**[未实现]**：[app_lock_screen.dart:75-91](file:///d:/DevTools/project/PiggyCount/lib/pages/auth/app_lock_screen.dart) 中 `_verifyPin` 失败仅 500ms 抖动后清空，**无失败计数、无指数退避、无 wipe 选项**。PIN 可被无限次暴力尝试。
 
 ---
 
@@ -277,16 +277,16 @@ if (showPrivacyScreen) {
 | `cloud_supabase_cfg` | URL+anonKey+email+明文 password | 极高 |
 | `cloud_webdav_cfg` | URL+username+明文 password | 极高 |
 | `cloud_s3_cfg` | endpoint+accessKey+明文 secretKey | 极高 |
-| `cloud_beecount_cloud_cfg` | baseUrl+email+明文 password | 极高 |
-| BeeCount Cloud `_sessionStorageKey` | access_token + refresh_token JSON | 极高 |
+| `cloud_piggycount_cloud_cfg` | baseUrl+email+明文 password | 极高 |
+| PiggyCount Cloud `_sessionStorageKey` | access_token + refresh_token JSON | 极高 |
 | `ai_glm_api_key` / 自定义 provider apiKey | 明文 API Key | 高 |
 
-#### 4.3.2 BeeCount Cloud Token 存储
+#### 4.3.2 PiggyCount Cloud Token 存储
 
-**实现位置**：`packages/flutter_cloud_sync/lib/src/providers/beecount_cloud_provider.dart:1748-1754`
+**实现位置**：`packages/flutter_cloud_sync/lib/src/providers/piggycount_cloud_provider.dart:1748-1754`
 
 ```dart
-Future<void> _saveSession(_BeeCountCloudSession session) async {
+Future<void> _saveSession(_PiggyCountCloudSession session) async {
   _session = session;
   final prefs = await SharedPreferences.getInstance();
   await prefs.setString(_sessionStorageKey, jsonEncode(session.toJson()));  // ← access+refresh token 明文 JSON
@@ -294,9 +294,9 @@ Future<void> _saveSession(_BeeCountCloudSession session) async {
 }
 ```
 
-#### 4.3.3 Supabase / BeeCount Cloud 密码存储
+#### 4.3.3 Supabase / PiggyCount Cloud 密码存储
 
-**实现位置**：[lib/pages/auth/login_page.dart:69-113](file:///d:/DevTools/project/BeeCount/lib/pages/auth/login_page.dart)
+**实现位置**：[lib/pages/auth/login_page.dart:69-113](file:///d:/DevTools/project/PiggyCount/lib/pages/auth/login_page.dart)
 
 ```dart
 Future<void> _saveCredentials(String email, String password) async {
@@ -311,14 +311,14 @@ Future<void> _saveCredentials(String email, String password) async {
 
 #### 4.3.4 WebDAV / S3 / AI API Key
 
-- WebDAV 密码：[config_export_service.dart:1262-1279](file:///d:/DevTools/project/BeeCount/lib/services/export/config_export_service.dart) 读取 `cloud_webdav_cfg`，含明文 `webdavPassword`
-- S3 密钥：[config_export_service.dart:1283-1305](file:///d:/DevTools/project/BeeCount/lib/services/export/config_export_service.dart) 读取 `cloud_s3_cfg`，含 `s3AccessKey` + `s3SecretKey` 明文
-- AI API Key：[config_export_service.dart:1336](file:///d:/DevTools/project/BeeCount/lib/services/export/config_export_service.dart) `prefs.getString(AIConstants.keyGlmApiKey)`，明文存 SharedPreferences
+- WebDAV 密码：[config_export_service.dart:1262-1279](file:///d:/DevTools/project/PiggyCount/lib/services/export/config_export_service.dart) 读取 `cloud_webdav_cfg`，含明文 `webdavPassword`
+- S3 密钥：[config_export_service.dart:1283-1305](file:///d:/DevTools/project/PiggyCount/lib/services/export/config_export_service.dart) 读取 `cloud_s3_cfg`，含 `s3AccessKey` + `s3SecretKey` 明文
+- AI API Key：[config_export_service.dart:1336](file:///d:/DevTools/project/PiggyCount/lib/services/export/config_export_service.dart) `prefs.getString(AIConstants.keyGlmApiKey)`，明文存 SharedPreferences
 
 **风险**：
 - 全部凭证均为明文存储于 SharedPreferences XML 文件
 - 在 root 设备 / 备份提取 / 恶意应用利用 CVE 提权场景下，所有云服务凭证可被直接窃取
-- **严重不符合 [PRIVACY.md:93](file:///d:/DevTools/project/BeeCount/PRIVACY.md) 关于 "Android Keystore" 的声明**
+- **严重不符合 [PRIVACY.md:93](file:///d:/DevTools/project/PiggyCount/PRIVACY.md) 关于 "Android Keystore" 的声明**
 
 ---
 
@@ -329,11 +329,11 @@ Future<void> _saveCredentials(String email, String password) async {
 **实现位置**：全局 Grep `lib/**/*.dart` 中的 `https?://` 匹配 60 条，**全部为 `https://`**，未发现 `http://` 业务调用。
 
 **关键 URL**：
-- AI 默认：`https://open.bigmodel.cn/api/paas/v4`（[ai_provider_config.dart:49](file:///d:/DevTools/project/BeeCount/lib/ai/providers/ai_provider_config.dart)）
+- AI 默认：`https://open.bigmodel.cn/api/paas/v4`（[ai_provider_config.dart:49](file:///d:/DevTools/project/PiggyCount/lib/ai/providers/ai_provider_config.dart)）
 - 汇率：`https://latest.currency-api.pages.dev/...`（exchange_rate_service.dart:61）
-- 文档站：`https://count.beejz.com`（[website_urls.dart:11](file:///d:/DevTools/project/BeeCount/lib/utils/website_urls.dart)）
+- 文档站：`https://count.beejz.com`（[website_urls.dart:11](file:///d:/DevTools/project/PiggyCount/lib/utils/website_urls.dart)）
 
-**[待补充]**：未对用户自配置的 WebDAV/S3/Supabase/BeeCount Cloud URL 强制 `https://` 协议校验，用户可填入 `http://` 暴露凭证。
+**[待补充]**：未对用户自配置的 WebDAV/S3/Supabase/PiggyCount Cloud URL 强制 `https://` 协议校验，用户可填入 `http://` 暴露凭证。
 
 #### 4.4.2 证书锁定（未实现）
 
@@ -341,7 +341,7 @@ Future<void> _saveCredentials(String email, String password) async {
 
 **风险**：
 - 无证书锁定，理论上中间人攻击（CA 投毒、企业代理 CA、用户安装的根证书）可解密 HTTPS 流量
-- 对自部署的 BeeCount Cloud / WebDAV / S3 尤其敏感
+- 对自部署的 PiggyCount Cloud / WebDAV / S3 尤其敏感
 
 #### 4.4.3 请求超时
 
@@ -356,12 +356,12 @@ Future<void> _saveCredentials(String email, String password) async {
 
 #### 4.4.4 401 处理与 Token 刷新
 
-**实现位置**：`packages/flutter_cloud_sync/lib/src/providers/beecount_cloud_provider.dart:1745`
+**实现位置**：`packages/flutter_cloud_sync/lib/src/providers/piggycount_cloud_provider.dart:1745`
 
 ```mermaid
 sequenceDiagram
     participant App
-    participant Provider as BeeCountCloudProvider
+    participant Provider as PiggyCountCloudProvider
     participant Server
 
     App->>Provider: 业务请求
@@ -392,7 +392,7 @@ sequenceDiagram
 
 #### 4.5.1 同意流程
 
-**实现位置**：[lib/ai/privacy/ai_privacy_consent.dart](file:///d:/DevTools/project/BeeCount/lib/ai/privacy/ai_privacy_consent.dart)（全文 30 行）
+**实现位置**：[lib/ai/privacy/ai_privacy_consent.dart](file:///d:/DevTools/project/PiggyCount/lib/ai/privacy/ai_privacy_consent.dart)（全文 30 行）
 
 ```dart
 const int kAiPrivacyConsentVersion = 1;  // ← 文案版本号，变更时 +1 强制重新同意
@@ -417,7 +417,7 @@ class AiPrivacyConsentStore {
 
 #### 4.5.2 同意对话框
 
-**实现位置**：[lib/widgets/ai/ai_privacy_consent_dialog.dart:14-27](file:///d:/DevTools/project/BeeCount/lib/widgets/ai/ai_privacy_consent_dialog.dart)
+**实现位置**：[lib/widgets/ai/ai_privacy_consent_dialog.dart:14-27](file:///d:/DevTools/project/PiggyCount/lib/widgets/ai/ai_privacy_consent_dialog.dart)
 
 ```dart
 Future<bool> ensureAiPrivacyConsent(BuildContext context, WidgetRef ref) async {
@@ -442,12 +442,12 @@ Future<bool> ensureAiPrivacyConsent(BuildContext context, WidgetRef ref) async {
 #### 4.5.3 同意流程触发点
 
 **全局 Grep `ensureAiPrivacyConsent\(`**：仅在 3 处调用：
-1. [ai_privacy_consent_dialog.dart:14](file:///d:/DevTools/project/BeeCount/lib/widgets/ai/ai_privacy_consent_dialog.dart)（函数定义本身）
-2. [ai_settings_page.dart:40](file:///d:/DevTools/project/BeeCount/lib/pages/ai/ai_settings_page.dart)（进入 AI 设置页时检查已启用但未同意的存量用户）
-3. [ai_settings_page.dart:106](file:///d:/DevTools/project/BeeCount/lib/pages/ai/ai_settings_page.dart)（开启 AI 总开关时弹窗）
+1. [ai_privacy_consent_dialog.dart:14](file:///d:/DevTools/project/PiggyCount/lib/widgets/ai/ai_privacy_consent_dialog.dart)（函数定义本身）
+2. [ai_settings_page.dart:40](file:///d:/DevTools/project/PiggyCount/lib/pages/ai/ai_settings_page.dart)（进入 AI 设置页时检查已启用但未同意的存量用户）
+3. [ai_settings_page.dart:106](file:///d:/DevTools/project/PiggyCount/lib/pages/ai/ai_settings_page.dart)（开启 AI 总开关时弹窗）
 
 **关键问题**：
-- [ai_settings_page.dart:33](file:///d:/DevTools/project/BeeCount/lib/pages/ai/ai_settings_page.dart) 注释声称 "其它直接使用 AI 的入口由 AIProviderFactory 的二道关兜底(未同意即中止)"
+- [ai_settings_page.dart:33](file:///d:/DevTools/project/PiggyCount/lib/pages/ai/ai_settings_page.dart) 注释声称 "其它直接使用 AI 的入口由 AIProviderFactory 的二道关兜底(未同意即中止)"
 - **但阅读 `ai_provider_factory.dart` 全文（663 行），未发现任何 `isConsented` / `ensureAiPrivacyConsent` 检查**
 - 意味着用户一旦同意过一次，后续即使将 consent version 手动清零，直接调用 `AIProviderFactory.chat/vision/speechToText` 也不会被拦截
 - 同样地，从桌面小组件、分享扩展、Deep Link 触发的 AI 调用可能绕过同意流程
@@ -459,10 +459,10 @@ Future<bool> ensureAiPrivacyConsent(BuildContext context, WidgetRef ref) async {
 #### 4.5.5 敏感数据脱敏（未实现）
 
 **全局 Grep `redact|mask|脱敏|sanitize`**：
-- [lib/cloud/transactions_json.dart:14](file:///d:/DevTools/project/BeeCount/lib/cloud/transactions_json.dart) 的 `_sanitizeString` 仅做 JSON 安全转义，**不是隐私脱敏**
-- [lib/ai/core/json_response_parser.dart](file:///d:/DevTools/project/BeeCount/lib/ai/core/json_response_parser.dart) 的 `_sanitize` 是 AI 返回结果的字段校验，**不是发送前脱敏**
+- [lib/cloud/transactions_json.dart:14](file:///d:/DevTools/project/PiggyCount/lib/cloud/transactions_json.dart) 的 `_sanitizeString` 仅做 JSON 安全转义，**不是隐私脱敏**
+- [lib/ai/core/json_response_parser.dart](file:///d:/DevTools/project/PiggyCount/lib/ai/core/json_response_parser.dart) 的 `_sanitize` 是 AI 返回结果的字段校验，**不是发送前脱敏**
 
-**实际发送给 AI 的数据**（[PRIVACY.md:132](file:///d:/DevTools/project/BeeCount/PRIVACY.md) 自述）：
+**实际发送给 AI 的数据**（[PRIVACY.md:132](file:///d:/DevTools/project/PiggyCount/PRIVACY.md) 自述）：
 - 账单/截图图片
 - 语音录音
 - 用户输入文字
@@ -476,16 +476,16 @@ Future<bool> ensureAiPrivacyConsent(BuildContext context, WidgetRef ref) async {
 
 #### 4.6.1 配置导出含明文敏感字段
 
-**实现位置**：[lib/services/export/config_export_service.dart](file:///d:/DevTools/project/BeeCount/lib/services/export/config_export_service.dart)
+**实现位置**：[lib/services/export/config_export_service.dart](file:///d:/DevTools/project/PiggyCount/lib/services/export/config_export_service.dart)
 
 | 字段 | 行号 | 风险 |
 |---|---|---|
 | Supabase `password:` | 1761 | 明文 |
 | WebDAV `password:` | 1771 | 明文 |
 | S3 `secret_key:` | 1784 | 明文 |
-| BeeCount Cloud `password:` | 1807 | 明文 |
-| BeeCount Cloud `access_token:` | 1810 | 明文（需 `beecountCloudCredentials=true`） |
-| BeeCount Cloud `refresh_token:` | 1813 | 明文（需 `beecountCloudCredentials=true`） |
+| PiggyCount Cloud `password:` | 1807 | 明文 |
+| PiggyCount Cloud `access_token:` | 1810 | 明文（需 `piggycountCloudCredentials=true`） |
+| PiggyCount Cloud `refresh_token:` | 1813 | 明文（需 `piggycountCloudCredentials=true`） |
 | AI `apiKey:` | 1852 | 明文 |
 
 ```dart
@@ -499,19 +499,19 @@ if (bc.containsKey('access_token')) {
 ```
 
 **安全效果**：
-- 默认 `beecountCloudCredentials=false`，token 不导出 ✓
+- 默认 `piggycountCloudCredentials=false`，token 不导出 ✓
 - 但 Supabase/WebDAV/S3 密码与 AI API Key **默认导出且无加密** ✗
 - 导出的 YAML 文件无密码保护、无加密、无水印
 
 #### 4.6.2 CSV 导出
 
-CSV 导出（[lib/pages/data/export_page.dart](file:///d:/DevTools/project/BeeCount/lib/pages/data/export_page.dart)）按字段输出交易记录，**包含金额、备注、账户名、分类名**。CSV 文件本身明文，无加密选项。
+CSV 导出（[lib/pages/data/export_page.dart](file:///d:/DevTools/project/PiggyCount/lib/pages/data/export_page.dart)）按字段输出交易记录，**包含金额、备注、账户名、分类名**。CSV 文件本身明文，无加密选项。
 
 #### 4.6.3 数据导入校验
 
-**CSV 解析**：[lib/services/import/csv_parser.dart](file:///d:/DevTools/project/BeeCount/lib/services/import/csv_parser.dart) 主要做分隔符检测与引号转义，**未对字段内容做安全校验**（如长度上限、危险字符）。
+**CSV 解析**：[lib/services/import/csv_parser.dart](file:///d:/DevTools/project/PiggyCount/lib/services/import/csv_parser.dart) 主要做分隔符检测与引号转义，**未对字段内容做安全校验**（如长度上限、危险字符）。
 
-**数据库写入**：[config_export_service.dart:2461-2818](file:///d:/DevTools/project/BeeCount/lib/services/export/config_export_service.dart) 的导入逻辑使用 Drift `CategoriesCompanion.insert` / `AccountsCompanion.insert` 等**类型安全的参数化构造器**，SQL 注入风险低 ✓。
+**数据库写入**：[config_export_service.dart:2461-2818](file:///d:/DevTools/project/PiggyCount/lib/services/export/config_export_service.dart) 的导入逻辑使用 Drift `CategoriesCompanion.insert` / `AccountsCompanion.insert` 等**类型安全的参数化构造器**，SQL 注入风险低 ✓。
 
 #### 4.6.4 路径遍历防护（未实现）
 
@@ -530,7 +530,7 @@ CSV 导出（[lib/pages/data/export_page.dart](file:///d:/DevTools/project/BeeCo
 
 #### 4.7.1 AndroidManifest 权限清单
 
-**实现位置**：[android/app/src/main/AndroidManifest.xml:3-34](file:///d:/DevTools/project/BeeCount/android/app/src/main/AndroidManifest.xml)
+**实现位置**：[android/app/src/main/AndroidManifest.xml:3-34](file:///d:/DevTools/project/PiggyCount/android/app/src/main/AndroidManifest.xml)
 
 | 权限 | 用途 | 是否必要 |
 |---|---|---|
@@ -562,7 +562,7 @@ CSV 导出（[lib/pages/data/export_page.dart](file:///d:/DevTools/project/BeeCo
 
 #### 4.7.3 运行时权限请求
 
-[PRIVACY.md:60-85](file:///d:/DevTools/project/BeeCount/PRIVACY.md) 描述了权限用途说明，但代码中未发现统一的权限请求工具类。`RECORD_AUDIO` / `READ_MEDIA_IMAGES` / `POST_NOTIFICATIONS` 通常在 Flutter 插件层（`permission_handler` / `record` / `image_picker`）首次调用时触发系统对话框。
+[PRIVACY.md:60-85](file:///d:/DevTools/project/PiggyCount/PRIVACY.md) 描述了权限用途说明，但代码中未发现统一的权限请求工具类。`RECORD_AUDIO` / `READ_MEDIA_IMAGES` / `POST_NOTIFICATIONS` 通常在 Flutter 插件层（`permission_handler` / `record` / `image_picker`）首次调用时触发系统对话框。
 
 ---
 
@@ -570,7 +570,7 @@ CSV 导出（[lib/pages/data/export_page.dart](file:///d:/DevTools/project/BeeCo
 
 #### 4.8.1 SQL 注入防护 — Drift 参数化查询
 
-**实现位置**：[lib/data/repositories/local/local_transaction_repository.dart:700-735](file:///d:/DevTools/project/BeeCount/lib/data/repositories/local/local_transaction_repository.dart)
+**实现位置**：[lib/data/repositories/local/local_transaction_repository.dart:700-735](file:///d:/DevTools/project/PiggyCount/lib/data/repositories/local/local_transaction_repository.dart)
 
 ```dart
 final whereClauses = <String>[
@@ -606,7 +606,7 @@ final rows = await db.customSelect(
 
 #### 4.8.2 邮箱格式校验
 
-**实现位置**：[lib/pages/auth/login_page.dart:122-126](file:///d:/DevTools/project/BeeCount/lib/pages/auth/login_page.dart)
+**实现位置**：[lib/pages/auth/login_page.dart:122-126](file:///d:/DevTools/project/PiggyCount/lib/pages/auth/login_page.dart)
 
 ```dart
 bool isValidEmail(String s) {
@@ -625,12 +625,12 @@ bool isValidEmail(String s) {
 - 但 WebView 页面（`HelpCenterPage` 等）若加载用户可控 URL / 内容需另行评估
 
 **路径遍历** `[未实现]`：
-- `custom_icon_path`（[config_export_service.dart:1025](file:///d:/DevTools/project/BeeCount/lib/services/export/config_export_service.dart)）从 YAML 导入后直接使用，未校验是否包含 `../`
+- `custom_icon_path`（[config_export_service.dart:1025](file:///d:/DevTools/project/PiggyCount/lib/services/export/config_export_service.dart)）从 YAML 导入后直接使用，未校验是否包含 `../`
 - 附件文件名（`attachment_export_import_service.dart`）未发现规范化校验
 
 #### 4.8.4 数值边界校验
 
-**实现位置**：[local_transaction_repository.dart:699](file:///d:/DevTools/project/BeeCount/lib/data/repositories/local/local_transaction_repository.dart)
+**实现位置**：[local_transaction_repository.dart:699](file:///d:/DevTools/project/PiggyCount/lib/data/repositories/local/local_transaction_repository.dart)
 
 ```dart
 final effectiveLimit = limit.clamp(1, 100).toInt();  // ← 限制 1~100
@@ -644,23 +644,23 @@ final effectiveLimit = limit.clamp(1, 100).toInt();  // ← 限制 1~100
 
 #### 4.9.1 LICENSE 文件
 
-**实现位置**：[LICENSE](file:///d:/DevTools/project/BeeCount/LICENSE)（66 行）
+**实现位置**：[LICENSE](file:///d:/DevTools/project/PiggyCount/LICENSE)（66 行）
 
 ```
-BeeCount 软件许可协议
+PiggyCount 软件许可协议
 版本 1.0，生效日期：2025-01-29
 - 个人使用 / 学习研究 / 开源贡献：免费
 - 商业使用：需付费授权
 ```
 
 **重要矛盾**：
-- [PRIVACY.md:111](file:///d:/DevTools/project/BeeCount/PRIVACY.md) 声称 "BeeCount is fully open source under the MIT License"
+- [PRIVACY.md:111](file:///d:/DevTools/project/PiggyCount/PRIVACY.md) 声称 "PiggyCount is fully open source under the MIT License"
 - 实际 LICENSE 是**自定义的非商业许可协议**，**不是 MIT**
 - 这是隐私政策与许可证的**事实性冲突**，需修正其中一处
 
 #### 4.9.2 PRIVACY.md
 
-**实现位置**：[PRIVACY.md](file:///d:/DevTools/project/BeeCount/PRIVACY.md)（230 行，中英双语）
+**实现位置**：[PRIVACY.md](file:///d:/DevTools/project/PiggyCount/PRIVACY.md)（230 行，中英双语）
 
 **优点**：
 - 明确"零数据收集"原则
@@ -676,7 +676,7 @@ BeeCount 软件许可协议
 #### 4.9.3 代码可审计性
 
 **优点**：
-- 完整开源：`https://github.com/TNT-Likely/BeeCount`
+- 完整开源：`https://github.com/TNT-Likely/PiggyCount`
 - 代码结构清晰：`lib/services/security/`、`lib/ai/privacy/` 等安全相关代码独立成目录
 - 关键服务（`AppLockService`、`AiPrivacyConsentStore`）独立可测
 
@@ -837,7 +837,7 @@ final rows = await db.customSelect(
 | 5 | 配置导出含明文密码/API Key 且无加密 | 高 | 导出文件支持密码加密，或默认不导出凭证 |
 | 6 | 无 FLAG_SECURE 截屏保护 | 中 | MainActivity 中 `window.setFlags(FLAG_SECURE, FLAG_SECURE)` |
 | 7 | SQLite 数据库未加密 | 中 | 引入 `drift_sqlcipher` 或在备份导出时加密 |
-| 8 | 无证书锁定 | 中 | 对 BeeCount Cloud 默认域名做证书锁定 |
+| 8 | 无证书锁定 | 中 | 对 PiggyCount Cloud 默认域名做证书锁定 |
 | 9 | AI 数据发送前无脱敏 | 中 | 对账户名/备注做可选脱敏（如掩码）后再发送 |
 | 10 | 路径遍历防护缺失 | 中 | 导入 `custom_icon_path` 等字段时规范化路径 |
 | 11 | 配置导入无来源校验 | 中 | 导入前展示差异预览 + 二次确认 |
@@ -848,22 +848,22 @@ final rows = await db.customSelect(
 ## 8. 参考与延伸阅读
 
 ### 8.1 相关文档
-- [03-tech-stack.md](file:///d:/DevTools/project/BeeCount/docoments/03-tech-stack.md)：技术栈与依赖
-- [09-error-handling.md](file:///d:/DevTools/project/BeeCount/docoments/09-error-handling.md)：错误处理与 401 流程
-- [13-build-release.md](file:///d:/DevTools/project/BeeCount/docoments/13-build-release.md)：构建发布与签名
+- [03-tech-stack.md](file:///d:/DevTools/project/PiggyCount/docoments/03-tech-stack.md)：技术栈与依赖
+- [09-error-handling.md](file:///d:/DevTools/project/PiggyCount/docoments/09-error-handling.md)：错误处理与 401 流程
+- [13-build-release.md](file:///d:/DevTools/project/PiggyCount/docoments/13-build-release.md)：构建发布与签名
 
 ### 8.2 关键源码文件
-- [lib/services/security/app_lock_service.dart](file:///d:/DevTools/project/BeeCount/lib/services/security/app_lock_service.dart)：应用锁核心
-- [lib/providers/security_providers.dart](file:///d:/DevTools/project/BeeCount/lib/providers/security_providers.dart)：应用锁 providers
-- [lib/ai/privacy/ai_privacy_consent.dart](file:///d:/DevTools/project/BeeCount/lib/ai/privacy/ai_privacy_consent.dart)：AI 隐私同意
-- [lib/widgets/ai/ai_privacy_consent_dialog.dart](file:///d:/DevTools/project/BeeCount/lib/widgets/ai/ai_privacy_consent_dialog.dart)：AI 同意对话框
-- [lib/pages/auth/app_lock_screen.dart](file:///d:/DevTools/project/BeeCount/lib/pages/auth/app_lock_screen.dart)：解锁页面
-- [lib/pages/auth/pin_setup_page.dart](file:///d:/DevTools/project/BeeCount/lib/pages/auth/pin_setup_page.dart)：PIN 设置页面
-- [lib/services/export/config_export_service.dart](file:///d:/DevTools/project/BeeCount/lib/services/export/config_export_service.dart)：配置导出
-- [lib/data/db.dart](file:///d:/DevTools/project/BeeCount/lib/data/db.dart)：数据库初始化
-- [android/app/src/main/AndroidManifest.xml](file:///d:/DevTools/project/BeeCount/android/app/src/main/AndroidManifest.xml)：Android 权限
-- [PRIVACY.md](file:///d:/DevTools/project/BeeCount/PRIVACY.md)：隐私政策
-- [LICENSE](file:///d:/DevTools/project/BeeCount/LICENSE)：许可证
+- [lib/services/security/app_lock_service.dart](file:///d:/DevTools/project/PiggyCount/lib/services/security/app_lock_service.dart)：应用锁核心
+- [lib/providers/security_providers.dart](file:///d:/DevTools/project/PiggyCount/lib/providers/security_providers.dart)：应用锁 providers
+- [lib/ai/privacy/ai_privacy_consent.dart](file:///d:/DevTools/project/PiggyCount/lib/ai/privacy/ai_privacy_consent.dart)：AI 隐私同意
+- [lib/widgets/ai/ai_privacy_consent_dialog.dart](file:///d:/DevTools/project/PiggyCount/lib/widgets/ai/ai_privacy_consent_dialog.dart)：AI 同意对话框
+- [lib/pages/auth/app_lock_screen.dart](file:///d:/DevTools/project/PiggyCount/lib/pages/auth/app_lock_screen.dart)：解锁页面
+- [lib/pages/auth/pin_setup_page.dart](file:///d:/DevTools/project/PiggyCount/lib/pages/auth/pin_setup_page.dart)：PIN 设置页面
+- [lib/services/export/config_export_service.dart](file:///d:/DevTools/project/PiggyCount/lib/services/export/config_export_service.dart)：配置导出
+- [lib/data/db.dart](file:///d:/DevTools/project/PiggyCount/lib/data/db.dart)：数据库初始化
+- [android/app/src/main/AndroidManifest.xml](file:///d:/DevTools/project/PiggyCount/android/app/src/main/AndroidManifest.xml)：Android 权限
+- [PRIVACY.md](file:///d:/DevTools/project/PiggyCount/PRIVACY.md)：隐私政策
+- [LICENSE](file:///d:/DevTools/project/PiggyCount/LICENSE)：许可证
 
 ### 8.3 外部参考
 - flutter_secure_storage：https://pub.dev/packages/flutter_secure_storage

@@ -23,7 +23,7 @@ audience: 一年经验的开发者
 
 ### 1.1 为什么单独写数据模型文档
 
-BeeCount 的数据模型是整个应用的基石,涉及:
+PiggyCount 的数据模型是整个应用的基石,涉及:
 
 - 21 张 Drift 表(业务实体 + 同步表 + 共享账本镜像表)
 - 31 个 schemaVersion(从 v2 到 v31,30 段迁移块)
@@ -40,7 +40,7 @@ BeeCount 的数据模型是整个应用的基石,涉及:
 - 不知道修改表结构时如何写迁移
 - 不理解共享账本镜像表与主表的关系
 
-本文档系统梳理 BeeCount 的全部数据模型,让一年经验开发者能快速定位"字段在哪里、表关系是什么、迁移怎么写"。
+本文档系统梳理 PiggyCount 的全部数据模型,让一年经验开发者能快速定位"字段在哪里、表关系是什么、迁移怎么写"。
 
 ### 1.2 与其他文档的边界
 
@@ -62,11 +62,11 @@ BeeCount 的数据模型是整个应用的基石,涉及:
 
 ### 2.1 数据模型分类总览
 
-BeeCount 的 21 张表可分为五大类:
+PiggyCount 的 21 张表可分为五大类:
 
 ```mermaid
 flowchart TD
-    Root[BeeCount 数据模型 - 21 张表]
+    Root[PiggyCount 数据模型 - 21 张表]
 
     Root --> Biz[业务实体表 - 8 张]
     Root --> Rel[关联表 - 2 张]
@@ -103,11 +103,11 @@ flowchart TD
     Cache --> C1[ExchangeRates 汇率缓存]
 ```
 
-上图展示了 BeeCount 21 张表的五大分类。业务实体表是记账应用的核心;关联表实现多对多关系;同步表支撑 BeeCount Cloud 同步;共享账本镜像表支持多人协同;AI 表存储对话历史;缓存表存汇率(可整表重建)。后续章节按类别详细说明每张表。
+上图展示了 PiggyCount 21 张表的五大分类。业务实体表是记账应用的核心;关联表实现多对多关系;同步表支撑 PiggyCount Cloud 同步;共享账本镜像表支持多人协同;AI 表存储对话历史;缓存表存汇率(可整表重建)。后续章节按类别详细说明每张表。
 
 ### 2.2 syncId 与本地 id 的区别
 
-BeeCount 的每张业务表都有两种 id:
+PiggyCount 的每张业务表都有两种 id:
 
 | 字段 | 类型 | 作用域 | 用途 |
 |---|---|---|---|
@@ -515,7 +515,7 @@ erDiagram
     }
 ```
 
-上图展示了 BeeCount 核心业务表的 ER 关系。Ledgers 是顶层容器,与 Accounts / Transactions / Budgets / RecurringTransactions / LedgerMembers 形成 1:N 关系。Transactions 通过 accountId / toAccountId / categoryId / recurringId 与多表关联。Categories 自关联实现二级分类(parentId)。Transactions 与 Tags 通过 TransactionTags 关联表实现多对多。Conversations 与 Messages 是 AI 对话的 1:N 关系,Messages 通过 transactionId 关联已创建的交易(用于撤销记账)。
+上图展示了 PiggyCount 核心业务表的 ER 关系。Ledgers 是顶层容器,与 Accounts / Transactions / Budgets / RecurringTransactions / LedgerMembers 形成 1:N 关系。Transactions 通过 accountId / toAccountId / categoryId / recurringId 与多表关联。Categories 自关联实现二级分类(parentId)。Transactions 与 Tags 通过 TransactionTags 关联表实现多对多。Conversations 与 Messages 是 AI 对话的 1:N 关系,Messages 通过 transactionId 关联已创建的交易(用于撤销记账)。
 
 ---
 

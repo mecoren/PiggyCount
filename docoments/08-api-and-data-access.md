@@ -23,12 +23,12 @@ audience: 一年经验的开发者
 
 ### 1.1 为什么单独写接口与数据访问文档
 
-BeeCount 的数据访问采用 Repository 三层架构,涉及:
+PiggyCount 的数据访问采用 Repository 三层架构,涉及:
 
 - 11 个抽象接口(`lib/data/repositories/*.dart`)
 - 11 个本地实现(`lib/data/repositories/local/local_*.dart`)
 - 1 个聚合委托层(`local_repository.dart`,2807 行)
-- BeeCount Cloud HTTP API(基于 client 反推 server)
+- PiggyCount Cloud HTTP API(基于 client 反推 server)
 - Dart 方法签名、Repository 接口、异常体系
 
 新加入的贡献者面对 23 个 Repository 文件,常常遇到以下困惑:
@@ -36,10 +36,10 @@ BeeCount 的数据访问采用 Repository 三层架构,涉及:
 - 不知道一个数据操作应该调用哪个 Repository 方法
 - 不清楚 BaseRepository 与子 Repository 的委托关系
 - 不理解 ChangeTracker 如何注入到 Repository
-- 不知道 BeeCount Cloud 的 HTTP API 长什么样
+- 不知道 PiggyCount Cloud 的 HTTP API 长什么样
 - 不清楚异常类型与返回值语义
 
-本文档系统梳理 BeeCount 的接口与数据访问设计,让一年经验开发者能快速定位"方法在哪里、API 是什么、异常怎么处理"。
+本文档系统梳理 PiggyCount 的接口与数据访问设计,让一年经验开发者能快速定位"方法在哪里、API 是什么、异常怎么处理"。
 
 ### 1.2 与其他文档的边界
 
@@ -52,12 +52,12 @@ BeeCount 的数据访问采用 Repository 三层架构,涉及:
 - `lib/data/repositories/` 全部接口与实现文件
 - `lib/data/repositories/local/local_repository.dart` 聚合层(2807 行)
 - `lib/data/repositories/base_repository.dart` 聚合抽象基类
-- `packages/flutter_cloud_sync/lib/src/providers/beecount_cloud_provider.dart` HTTP API
+- `packages/flutter_cloud_sync/lib/src/providers/piggycount_cloud_provider.dart` HTTP API
 - `lib/data/repositories/exceptions.dart` 异常体系
 
 ### 1.4 项目无 HTTP API 的说明
 
-BeeCount 客户端**本身不对外暴露 HTTP API**,所有数据访问通过 Repository 内部接口。但 BeeCount Cloud 同步需要调用 server 端 HTTP API,server 端代码不在本仓库(独立仓库 `BeeCount-Cloud`)。本文档基于 client 调用反推 server API,标注 `[推断: 基于 client provider 调用反推 server API]`。
+PiggyCount 客户端**本身不对外暴露 HTTP API**,所有数据访问通过 Repository 内部接口。但 PiggyCount Cloud 同步需要调用 server 端 HTTP API,server 端代码不在本仓库(独立仓库 `PiggyCount-Cloud`)。本文档基于 client 调用反推 server API,标注 `[推断: 基于 client provider 调用反推 server API]`。
 
 ---
 
@@ -65,7 +65,7 @@ BeeCount 客户端**本身不对外暴露 HTTP API**,所有数据访问通过 Re
 
 ### 2.1 Repository 三层架构
 
-BeeCount 的数据访问采用三层架构:
+PiggyCount 的数据访问采用三层架构:
 
 ```mermaid
 flowchart TD
@@ -154,7 +154,7 @@ flowchart TD
     A[databaseProvider] --> B[创建 BeeDatabase 单例]
     B --> C[activeCloudConfigProvider 判断]
     C --> D{backend type}
-    D -->|beecount_cloud| E[注入 ChangeTracker]
+    D -->|piggycount_cloud| E[注入 ChangeTracker]
     D -->|其他后端| F[不注入 ChangeTracker]
     D -->|null| F
 
@@ -165,7 +165,7 @@ flowchart TD
     H --> J[所有写操作不记录变更]
 ```
 
-上图展示了 ChangeTracker 的注入策略。`databaseProvider` 中根据 `activeCloudConfigProvider` 判断:仅 BeeCount Cloud 后端激活时注入 ChangeTracker,走增量同步路径;其他后端不注入,走快照备份路径。`LocalExchangeRateRepository` 通过 `trackerGetter` 闭包注入 tracker,规避 `LocalRepository.changeTracker` 可变字段的时序问题。
+上图展示了 ChangeTracker 的注入策略。`databaseProvider` 中根据 `activeCloudConfigProvider` 判断:仅 PiggyCount Cloud 后端激活时注入 ChangeTracker,走增量同步路径;其他后端不注入,走快照备份路径。`LocalExchangeRateRepository` 通过 `trackerGetter` 闭包注入 tracker,规避 `LocalRepository.changeTracker` 可变字段的时序问题。
 
 依据:`lib/providers/database_providers.dart` `databaseProvider`、`repositoryProvider`。
 
@@ -348,11 +348,11 @@ abstract class StatisticsRepository {
 | `DuplicateNameException` | 重名冲突(分类、标签、账户等) |
 | 其他异常(待补充) | [待补充: 需要阅读 `exceptions.dart` 完整定义] |
 
-### 3.3 BeeCount Cloud HTTP API
+### 3.3 PiggyCount Cloud HTTP API
 
 > [推断: 基于 client provider 调用反推 server API]
 
-BeeCount Cloud server 端代码不在本仓库,以下 API 基于 `BeeCountCloudProvider` 的 client 调用反推。
+PiggyCount Cloud server 端代码不在本仓库,以下 API 基于 `PiggyCountCloudProvider` 的 client 调用反推。
 
 #### 3.3.1 同步核心 API
 
@@ -528,7 +528,7 @@ sequenceDiagram
     UI->>Ref: ref.read(repositoryProvider)
     Ref->>Provider: 创建 LocalRepository
     Provider->>Provider: 检查 activeCloudConfigProvider
-    alt BeeCount Cloud
+    alt PiggyCount Cloud
         Provider->>Tracker: 注入 ChangeTracker
     else 其他后端
         Provider->>Tracker: changeTracker = null
@@ -552,7 +552,7 @@ sequenceDiagram
     Repo-->>UI: int id
 ```
 
-上图展示了数据访问的完整流程。UI 通过 `ref.read(repositoryProvider)` 获取 LocalRepository 实例,Provider 层根据 `activeCloudConfigProvider` 判断是否注入 ChangeTracker。Repository 写操作先 Drift insert,再通过 ChangeTracker 记录变更到 `local_changes` 表(仅 BeeCount Cloud 模式)。这种设计让 Repository 层无需感知同步细节,ChangeTracker 的注入由 Provider 层统一管理。
+上图展示了数据访问的完整流程。UI 通过 `ref.read(repositoryProvider)` 获取 LocalRepository 实例,Provider 层根据 `activeCloudConfigProvider` 判断是否注入 ChangeTracker。Repository 写操作先 Drift insert,再通过 ChangeTracker 记录变更到 `local_changes` 表(仅 PiggyCount Cloud 模式)。这种设计让 Repository 层无需感知同步细节,ChangeTracker 的注入由 Provider 层统一管理。
 
 依据:`lib/providers/database_providers.dart`、`lib/data/repositories/local/local_repository.dart`。
 
@@ -664,9 +664,9 @@ flowchart TD
 
 ### 决策 5:抽象接口无 Cloud 实现
 
-- **决策内容**:Repository 抽象接口只有 Local 实现,没有 Cloud 实现(历史上曾存在 `Cloud*` 系列,在 BeeCount Cloud 上线后整组删除)。
+- **决策内容**:Repository 抽象接口只有 Local 实现,没有 Cloud 实现(历史上曾存在 `Cloud*` 系列,在 PiggyCount Cloud 上线后整组删除)。
 - **原因**:
-  - **架构演进**:BeeCount Cloud 上线后,同步范式从"数据完全存 Supabase"改为"LocalRepository + ChangeTracker 推 BeeCount Cloud"
+  - **架构演进**:PiggyCount Cloud 上线后,同步范式从"数据完全存 Supabase"改为"LocalRepository + ChangeTracker 推 PiggyCount Cloud"
   - **避免重复**:不再需要 Cloud* Repository 直接访问 Supabase
   - **统一数据访问**:所有数据访问通过 LocalRepository,同步由 ChangeTracker + SyncEngine 处理
 - **备选方案**:
@@ -727,13 +727,13 @@ flowchart TD
 | 编号 | 缺口描述 | 影响章节 | 建议补充方式 |
 |---|---|---|---|
 | 1 | `lib/data/repositories/exceptions.dart` 完整异常清单未读取 | §3.2 | 阅读该文件补充 |
-| 2 | BeeCount Cloud server 端代码不在本仓库,HTTP API 基于 client 调用反推 | §3.3 | 标注 `[推断: 基于 client provider 调用反推 server API]` |
+| 2 | PiggyCount Cloud server 端代码不在本仓库,HTTP API 基于 client 调用反推 | §3.3 | 标注 `[推断: 基于 client provider 调用反推 server API]` |
 | 3 | `entity_serializer.dart` 各实体的 server payload 字段完整清单未直接核对 | §3.3.1 | 阅读该文件,对照 apply 路径反推 |
-| 4 | `BeeCountCloudStorageService._authedRequest` 的完整拦截器链未展开 | §3.3 | 阅读 `beecount_cloud_provider.dart` 该方法 |
+| 4 | `PiggyCountCloudStorageService._authedRequest` 的完整拦截器链未展开 | §3.3 | 阅读 `piggycount_cloud_provider.dart` 该方法 |
 | 5 | `TransactionUpdateBySyncIdData`、`BatchAttachmentData` 等数据类的完整字段未展开 | §3.1.2 | 阅读 `transaction_repository.dart` 数据类定义 |
 | 6 | 各子 Repository 的完整方法签名未在本文档全部展开(只列了核心) | §3.1 | 阅读 `lib/data/repositories/*.dart` 各接口文件 |
 | 7 | Repository 层的统一错误处理是否已实现未确认 | §4.3 | grep `try.*catch` 在 `local_repository.dart` 中的使用情况 |
-| 8 | 401 自动 refresh token 的完整重试逻辑未展开 | §3.3 | 阅读 `BeeCountCloudStorageService._authedRequest` |
+| 8 | 401 自动 refresh token 的完整重试逻辑未展开 | §3.3 | 阅读 `PiggyCountCloudStorageService._authedRequest` |
 
 ---
 

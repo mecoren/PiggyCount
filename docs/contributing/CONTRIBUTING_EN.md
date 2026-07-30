@@ -1,6 +1,6 @@
 # Contributing Guide
 
-Thank you for considering contributing to BeeCount! 🎉
+Thank you for considering contributing to PiggyCount! 🎉
 
 This guide will help you understand how to participate in the project development, report issues, submit code, and more. We welcome all forms of contributions, whether it's code, documentation, translations, or suggestions.
 
@@ -43,11 +43,11 @@ Instances of unacceptable behavior may be reported by contacting the project tea
 
 ### 🐛 Report Bugs
 
-Found an issue? Please let us know through [GitHub Issues](https://github.com/TNT-Likely/BeeCount/issues).
+Found an issue? Please let us know through [GitHub Issues](https://github.com/TNT-Likely/PiggyCount/issues).
 
 ### 💡 Suggest New Features
 
-Have a great idea? We'd love to hear it! Please check [Issues](https://github.com/TNT-Likely/BeeCount/issues) and [Discussions](https://github.com/TNT-Likely/BeeCount/discussions) first to see if someone has already suggested it.
+Have a great idea? We'd love to hear it! Please check [Issues](https://github.com/TNT-Likely/PiggyCount/issues) and [Discussions](https://github.com/TNT-Likely/PiggyCount/discussions) first to see if someone has already suggested it.
 
 ### 💻 Contribute Code
 
@@ -75,7 +75,7 @@ Help us translate the app into more languages so more people can use it.
 
 #### 🎨 Designer Recruitment {#designer-recruitment}
 
-**We're looking for talented UI/UX designers to join the BeeCount project!**
+**We're looking for talented UI/UX designers to join the PiggyCount project!**
 
 📐 **What You'll Work On:**
 
@@ -93,7 +93,7 @@ Help us translate the app into more languages so more people can use it.
 
 💌 **Contact:**
 
-- GitHub Issues: [Submit design proposals](https://github.com/TNT-Likely/BeeCount/issues)
+- GitHub Issues: [Submit design proposals](https://github.com/TNT-Likely/PiggyCount/issues)
 
 ## Reporting Bugs
 
@@ -101,8 +101,8 @@ Help us translate the app into more languages so more people can use it.
 
 Before submitting a bug report, please:
 
-1. Check the [FAQ](https://github.com/TNT-Likely/BeeCount/wiki/FAQ) to see if there's already a solution
-2. Search [existing Issues](https://github.com/TNT-Likely/BeeCount/issues) to confirm the bug hasn't been reported
+1. Check the [FAQ](https://github.com/TNT-Likely/PiggyCount/wiki/FAQ) to see if there's already a solution
+2. Search [existing Issues](https://github.com/TNT-Likely/PiggyCount/issues) to confirm the bug hasn't been reported
 3. Ensure you're using the latest version
 
 ### How to Report
@@ -159,7 +159,7 @@ Should be able to save large amount transactions, or display amount limit warnin
 
 We welcome feature suggestions! Before submitting:
 
-1. Check the "Ideas" category in [Discussions](https://github.com/TNT-Likely/BeeCount/discussions)
+1. Check the "Ideas" category in [Discussions](https://github.com/TNT-Likely/PiggyCount/discussions)
 2. Ensure the feature aligns with project goals (privacy-first, open-source, self-hosted)
 3. Consider the feature's practicality and universality
 
@@ -191,14 +191,14 @@ Click the "Fork" button in the top right corner of the GitHub page to fork the r
 ### 2. Clone to Local
 
 ```bash
-git clone https://github.com/your-username/BeeCount.git
-cd BeeCount
+git clone https://github.com/your-username/PiggyCount.git
+cd PiggyCount
 ```
 
 ### 3. Add Upstream Repository
 
 ```bash
-git remote add upstream https://github.com/TNT-Likely/BeeCount.git
+git remote add upstream https://github.com/TNT-Likely/PiggyCount.git
 ```
 
 ### 4. Create Feature Branch
@@ -273,8 +273,8 @@ flutter doctor
 2. **Clone Project**
 
 ```bash
-git clone https://github.com/TNT-Likely/BeeCount.git
-cd BeeCount
+git clone https://github.com/TNT-Likely/PiggyCount.git
+cd PiggyCount
 ```
 
 3. **Install Dependencies**
@@ -566,7 +566,7 @@ Closes #123
 
 ## Translation Contributions
 
-BeeCount officially maintains 3 languages (Simplified Chinese, Traditional Chinese, English), plus additional community-contributed translations. We welcome contributions of new languages or improvements to existing ones.
+PiggyCount officially maintains 3 languages (Simplified Chinese, Traditional Chinese, English), plus additional community-contributed translations. We welcome contributions of new languages or improvements to existing ones.
 
 ### Currently Supported Languages
 
@@ -601,7 +601,7 @@ Copy the content of `app_en.arb` and translate all strings:
 
 ```json
 {
-  "appName": "BeeCount",
+  "appName": "PiggyCount",
   "home": "Casa",
   "charts": "Grafici",
   "ledgers": "Conti",
@@ -694,7 +694,7 @@ git push origin docs/improve-supabase-guide
 
 ### Community Communication
 
-- [GitHub Discussions](https://github.com/TNT-Likely/BeeCount/discussions) - Project discussions
+- [GitHub Discussions](https://github.com/TNT-Likely/PiggyCount/discussions) - Project discussions
 - [V2EX Thread](https://www.v2ex.com/t/1168480) - Chinese community
 - Email: sunxiaoyes@outlook.com - Direct contact
 
@@ -710,4 +710,4 @@ This project is dual-licensed: free for non-commercial use, paid license for com
 
 Thank you again for your contribution! 🙏
 
-If you have any questions, feel free to contact us through [Issues](https://github.com/TNT-Likely/BeeCount/issues) or [Discussions](https://github.com/TNT-Likely/BeeCount/discussions).
+If you have any questions, feel free to contact us through [Issues](https://github.com/TNT-Likely/PiggyCount/issues) or [Discussions](https://github.com/TNT-Likely/PiggyCount/discussions).

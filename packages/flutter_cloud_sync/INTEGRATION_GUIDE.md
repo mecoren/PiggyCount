@@ -1,6 +1,6 @@
-# BeeCount Cloud Sync Integration Guide
+# PiggyCount Cloud Sync Integration Guide
 
-本文档说明如何将新的 `flutter_cloud_sync` 包集成到 BeeCount 主应用中。
+本文档说明如何将新的 `flutter_cloud_sync` 包集成到 PiggyCount 主应用中。
 
 ## 目录
 
@@ -49,7 +49,7 @@ SyncService (interface)
 
 ### 1. 修改 pubspec.yaml
 
-在 BeeCount 的 `pubspec.yaml` 中添加：
+在 PiggyCount 的 `pubspec.yaml` 中添加：
 
 ```yaml
 dependencies:
@@ -70,7 +70,7 @@ dependencies:
 ### 2. 安装依赖
 
 ```bash
-cd /Users/matrix/code/mine/BeeCount
+cd /Users/matrix/code/mine/PiggyCount
 flutter pub get
 ```
 
@@ -87,7 +87,7 @@ import '../data/db.dart';
 import '../data/repository.dart';
 import 'sync.dart'; // 复用现有的导出/导入逻辑
 
-/// BeeCount 的数据序列化器
+/// PiggyCount 的数据序列化器
 /// T = int (ledgerId)
 class TransactionSerializer implements DataSerializer<int> {
   final BeeDatabase db;
@@ -140,7 +140,7 @@ Future<CloudProvider> createCloudProvider(CloudServiceConfig config) async {
       await provider.initialize({
         'url': config.supabaseUrl!,
         'anonKey': config.supabaseAnonKey!,
-        'bucket': 'beecount-data', // 自定义 bucket 名称
+        'bucket': 'piggycount-data', // 自定义 bucket 名称
       });
       return provider;
 
@@ -150,7 +150,7 @@ Future<CloudProvider> createCloudProvider(CloudServiceConfig config) async {
         'url': config.webdavUrl!,
         'username': config.webdavUsername!,
         'password': config.webdavPassword!,
-        'remotePath': config.webdavRemotePath ?? '/BeeCount/',
+        'remotePath': config.webdavRemotePath ?? '/PiggyCount/',
       });
       return provider;
   }
@@ -301,7 +301,7 @@ class CloudSyncServiceImpl implements SyncService {
         path: _pathForLedger(ledgerId),
       );
 
-      // 转换为 BeeCount 的 SyncStatus
+      // 转换为 PiggyCount 的 SyncStatus
       final status = _convertSyncStatus(
         fcsStatus,
         localCount,
@@ -385,7 +385,7 @@ class CloudSyncServiceImpl implements SyncService {
     }
   }
 
-  /// 转换 flutter_cloud_sync 的 SyncStatus 到 BeeCount 的 SyncStatus
+  /// 转换 flutter_cloud_sync 的 SyncStatus 到 PiggyCount 的 SyncStatus
   SyncStatus _convertSyncStatus(
     fcs.SyncStatus fcsStatus,
     int localCount,
@@ -469,7 +469,7 @@ final activeSyncServiceProvider = FutureProvider<SyncService>((ref) async {
 
 1. ✅ **添加依赖**
    ```bash
-   cd /Users/matrix/code/mine/BeeCount
+   cd /Users/matrix/code/mine/PiggyCount
    # 编辑 pubspec.yaml 添加新包
    flutter pub get
    ```
@@ -650,4 +650,4 @@ void main() {
 - [flutter_cloud_sync USAGE_GUIDE](USAGE_GUIDE.md)
 - [Supabase Provider README](../flutter_cloud_sync_supabase/README.md)
 - [WebDAV Provider README](../flutter_cloud_sync_webdav/README.md)
-- [BeeCount Architecture](../../.docs/architecture.md)
+- [PiggyCount Architecture](../../.docs/architecture.md)

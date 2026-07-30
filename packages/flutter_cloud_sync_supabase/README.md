@@ -190,4 +190,4 @@ See the [example app](example/) for a complete implementation.
 
 ## License
 
-This package is part of the BeeCount project and uses the same license.
+This package is part of the PiggyCount project and uses the same license.

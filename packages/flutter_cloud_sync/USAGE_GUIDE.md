@@ -207,7 +207,7 @@ await syncManager.upload(
   path: 'ledgers/$ledgerId.json',
   metadata: {
     'version': '1.0',
-    'app': 'BeeCount',
+    'app': 'PiggyCount',
   },
 );
 
@@ -533,4 +533,4 @@ await provider.storage.upload(
 - Explore [API Documentation](https://pub.dev/documentation/flutter_cloud_sync/latest/)
 - Read [Architecture Guide](../.docs/cloud/architecture.md)
 - Check [Example Code](example/)
-- Join discussions on [GitHub](https://github.com/TNT-Likely/BeeCount/discussions)
+- Join discussions on [GitHub](https://github.com/TNT-Likely/PiggyCount/discussions)

@@ -1,4 +1,4 @@
-# BeeCount 同步加密（E2EE）需求文档
+# PiggyCount 同步加密（E2EE）需求文档
 
 > 版本：v1.0  日期：2026-07-27
 > 关联设计：`/prd/encryption/design.md`
@@ -9,7 +9,7 @@
 
 ### 1.1 背景
 
-BeeCount 当前的快照同步路径（S3 / WebDAV / Supabase / iCloud）将账本 JSON 以明文形式存储在云端。用户对云端存储敏感财务数据的隐私顾虑成为采用的障碍。
+PiggyCount 当前的快照同步路径（S3 / WebDAV / Supabase / iCloud）将账本 JSON 以明文形式存储在云端。用户对云端存储敏感财务数据的隐私顾虑成为采用的障碍。
 
 ### 1.2 目标
 
@@ -21,7 +21,7 @@ BeeCount 当前的快照同步路径（S3 / WebDAV / Supabase / iCloud）将账�
 
 ### 1.3 非目标
 
-- 不覆盖路径 B（BeeCount Cloud 增量同步）
+- 不覆盖路径 B（PiggyCount Cloud 增量同步）
 - 不加密附件文件
 - 不提供密钥导出/导入功能
 
@@ -29,7 +29,7 @@ BeeCount 当前的快照同步路径（S3 / WebDAV / Supabase / iCloud）将账�
 
 ### US-1：首次开启加密
 
-**作为**一个注重隐私的 BeeCount 用户，
+**作为**一个注重隐私的 PiggyCount 用户，
 **我希望**在同步设置里开启端到端加密并设置一个密码，
 **以便**我上传到云端的账本数据无法被服务提供商读取。
 

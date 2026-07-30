@@ -66,12 +66,12 @@
                 <category android:name="android.intent.category.DEFAULT"/>
                 <data android:mimeType="image/*"/>
             </intent-filter>
-            <!-- URL Scheme: beecount:// -->
+            <!-- URL Scheme: piggycount:// -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="beecount"/>
+                <data android:scheme="piggycount"/>
             </intent-filter>
         </activity>
 
@@ -122,7 +122,7 @@
         </receiver>
 
         <!-- 桌面小组件 -->
-        <receiver android:name="com.tntlikely.beecount.BeeCountWidgetProvider"
+        <receiver android:name="com.wait.piggycount.PiggyCountWidgetProvider"
             android:label="@string/widget_name"
             android:exported="true">
             <intent-filter>
@@ -130,12 +130,12 @@
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/beecount_widget_info" />
+                android:resource="@xml/piggycount_widget_info" />
         </receiver>
 
         <!-- 桌面小组件:收支速览·小号(补全:老 provider 只有中号且不可改动,
-             小号独立成类,见 BeeCountGlanceSmallWidgetProvider 注释) -->
-        <receiver android:name=".BeeCountGlanceSmallWidgetProvider"
+             小号独立成类,见 PiggyCountGlanceSmallWidgetProvider 注释) -->
+        <receiver android:name=".PiggyCountGlanceSmallWidgetProvider"
             android:label="@string/widget_glance_small_name"
             android:exported="true">
             <intent-filter>
@@ -147,7 +147,7 @@
         </receiver>
 
         <!-- 桌面小组件:净资产 -->
-        <receiver android:name=".BeeCountNetWorthWidgetProvider"
+        <receiver android:name=".PiggyCountNetWorthWidgetProvider"
             android:label="@string/widget_networth_name"
             android:exported="true">
             <intent-filter>
@@ -159,7 +159,7 @@
         </receiver>
 
         <!-- 桌面小组件:快速记账 -->
-        <receiver android:name=".BeeCountQuickAddWidgetProvider"
+        <receiver android:name=".PiggyCountQuickAddWidgetProvider"
             android:label="@string/widget_quickadd_name"
             android:exported="true">
             <intent-filter>
@@ -171,7 +171,7 @@
         </receiver>
 
         <!-- 桌面小组件:预算进度 -->
-        <receiver android:name=".BeeCountBudgetWidgetProvider"
+        <receiver android:name=".PiggyCountBudgetWidgetProvider"
             android:label="@string/widget_budget_name"
             android:exported="true">
             <intent-filter>
@@ -183,7 +183,7 @@
         </receiver>
 
         <!-- 桌面小组件:最近交易 -->
-        <receiver android:name=".BeeCountRecentWidgetProvider"
+        <receiver android:name=".PiggyCountRecentWidgetProvider"
             android:label="@string/widget_recent_name"
             android:exported="true">
             <intent-filter>
@@ -195,9 +195,9 @@
         </receiver>
 
         <!-- 桌面小组件:按尺寸拆分的入口(空子类复用父类逻辑,见
-             BeeCountSizedWidgetProviders.kt 注释——Android 选择器不按尺寸
+             PiggyCountSizedWidgetProviders.kt 注释——Android 选择器不按尺寸
              分档,不拆 provider 中/大档位对用户形同不存在) -->
-        <receiver android:name=".BeeCountNetWorthMediumWidgetProvider"
+        <receiver android:name=".PiggyCountNetWorthMediumWidgetProvider"
             android:label="@string/widget_networth_medium_name"
             android:exported="true">
             <intent-filter>
@@ -207,7 +207,7 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/net_worth_medium_widget_info" />
         </receiver>
-        <receiver android:name=".BeeCountNetWorthLargeWidgetProvider"
+        <receiver android:name=".PiggyCountNetWorthLargeWidgetProvider"
             android:label="@string/widget_networth_large_name"
             android:exported="true">
             <intent-filter>
@@ -217,7 +217,7 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/net_worth_large_widget_info" />
         </receiver>
-        <receiver android:name=".BeeCountBudgetMediumWidgetProvider"
+        <receiver android:name=".PiggyCountBudgetMediumWidgetProvider"
             android:label="@string/widget_budget_medium_name"
             android:exported="true">
             <intent-filter>
@@ -227,7 +227,7 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/budget_medium_widget_info" />
         </receiver>
-        <receiver android:name=".BeeCountQuickAddMediumWidgetProvider"
+        <receiver android:name=".PiggyCountQuickAddMediumWidgetProvider"
             android:label="@string/widget_quickadd_medium_name"
             android:exported="true">
             <intent-filter>
@@ -237,7 +237,7 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/quick_add_medium_widget_info" />
         </receiver>
-        <receiver android:name=".BeeCountRecentLargeWidgetProvider"
+        <receiver android:name=".PiggyCountRecentLargeWidgetProvider"
             android:label="@string/widget_recent_large_name"
             android:exported="true">
             <intent-filter>
@@ -249,7 +249,7 @@
         </receiver>
 
         <!-- 桌面小组件:综合仪表盘 -->
-        <receiver android:name=".BeeCountDashboardWidgetProvider"
+        <receiver android:name=".PiggyCountDashboardWidgetProvider"
             android:label="@string/widget_dashboard_name"
             android:exported="true">
             <intent-filter>

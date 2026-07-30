@@ -56,7 +56,7 @@ await provider.initialize({
   'url': 'https://nextcloud.example.com',
   'username': 'user@example.com',
   'password': 'your-app-password',
-  'remotePath': '/BeeCount/', // optional
+  'remotePath': '/PiggyCount/', // optional
 });
 
 // After initialization, you're authenticated
@@ -103,9 +103,9 @@ Files are stored relative to the `remotePath`:
 {remotePath}/{your-path}
 ```
 
-Example with `remotePath: '/BeeCount/'`:
+Example with `remotePath: '/PiggyCount/'`:
 - You specify: `ledgers/123.json`
-- Actual path: `/BeeCount/ledgers/123.json`
+- Actual path: `/PiggyCount/ledgers/123.json`
 
 ## Configuration Options
 
@@ -149,7 +149,7 @@ await provider.initialize({
   'url': 'https://your-nextcloud.com/remote.php/dav/files/username',
   'username': 'username',
   'password': 'your-app-password', // Use app password, not account password
-  'remotePath': '/BeeCount/',
+  'remotePath': '/PiggyCount/',
 });
 ```
 
@@ -189,4 +189,4 @@ See the [example app](../flutter_cloud_sync/example/) for a complete implementat
 
 ## License
 
-This package is part of the BeeCount project and uses the same license.
+This package is part of the PiggyCount project and uses the same license.

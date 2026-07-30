@@ -1,5 +1,5 @@
 #!/usr/bin/env dart
-/// BeeCount 国际化翻译状态检查工具
+/// PiggyCount 国际化翻译状态检查工具
 ///
 /// 功能：
 /// 1. 检查各语言翻译文件的完整性和状态
@@ -16,7 +16,7 @@ import 'dart:convert';
 void main() async {
   print('');
   print('=' * 70);
-  print('  BeeCount 国际化翻译状态检查');
+  print('  PiggyCount 国际化翻译状态检查');
   print('=' * 70);
   print('');
 

@@ -3,15 +3,15 @@
 > 文档版本：v1.0
 > 最后更新：2026-07-25
 > 作者：wait
-> 信息源：项目源码（d:\DevTools\project\BeeCount）+ 前 15 篇工程文档中的 [未实现]/[待补充]/[待确认] 标记汇总
+> 信息源：项目源码（d:\DevTools\project\PiggyCount）+ 前 15 篇工程文档中的 [未实现]/[待补充]/[待确认] 标记汇总
 
 ---
 
 ## 1. 背景
 
-本文档系统化整理 BeeCount 项目当前已识别的**问题、未实现功能、技术债与改进建议**，按严重程度分级，便于项目维护者：
+本文档系统化整理 PiggyCount 项目当前已识别的**问题、未实现功能、技术债与改进建议**，按严重程度分级，便于项目维护者：
 
-1. **优先处理严重问题**：尤其是与 [PRIVACY.md](file:///d:/DevTools/project/BeeCount/PRIVACY.md) 声明不符的实现
+1. **优先处理严重问题**：尤其是与 [PRIVACY.md](file:///d:/DevTools/project/PiggyCount/PRIVACY.md) 声明不符的实现
 2. **规划迭代路线**：将中低优先级问题纳入后续版本
 3. **新开发者避坑**：开发时避免重复踩已知坑
 
@@ -34,16 +34,16 @@
 
 ### 3.1 隐私政策与代码实现严重不符
 
-**问题位置**：[PRIVACY.md](file:///d:/DevTools/project/BeeCount/PRIVACY.md) 多处声明 vs 项目源码
+**问题位置**：[PRIVACY.md](file:///d:/DevTools/project/PiggyCount/PRIVACY.md) 多处声明 vs 项目源码
 
 #### 3.1.1 Android Keystore 声明与实际不符
 
-- **声明位置**：[PRIVACY.md:93](file:///d:/DevTools/project/BeeCount/PRIVACY.md)
+- **声明位置**：[PRIVACY.md:93](file:///d:/DevTools/project/PiggyCount/PRIVACY.md)
   > "Authentication credentials are stored securely using Android Keystore"
 - **实际实现**：
   - 全局 Grep `AndroidKeystore|iOSKeychain|Keystore|Keychain` 在 `lib/` 中**零匹配**
   - 全部凭证（PIN 哈希、API Token、密码）存储在 `SharedPreferences`（明文 XML 文件）
-  - 文件位置：[lib/services/security/app_lock_service.dart:26-37](file:///d:/DevTools/project/BeeCount/lib/services/security/app_lock_service.dart)、[lib/pages/auth/login_page.dart:69-113](file:///d:/DevTools/project/BeeCount/lib/pages/auth/login_page.dart)、`packages/flutter_cloud_sync/lib/src/providers/beecount_cloud_provider.dart:1748-1754`
+  - 文件位置：[lib/services/security/app_lock_service.dart:26-37](file:///d:/DevTools/project/PiggyCount/lib/services/security/app_lock_service.dart)、[lib/pages/auth/login_page.dart:69-113](file:///d:/DevTools/project/PiggyCount/lib/pages/auth/login_page.dart)、`packages/flutter_cloud_sync/lib/src/providers/piggycount_cloud_provider.dart:1748-1754`
 - **风险**：
   - root 设备/备份提取场景下，所有云服务凭证可被直接窃取
   - **严重违反隐私政策声明，存在合规风险**
@@ -54,9 +54,9 @@
 
 #### 3.1.2 License 声明与实际不符
 
-- **声明位置**：[PRIVACY.md:111](file:///d:/DevTools/project/BeeCount/PRIVACY.md)
-  > "BeeCount is fully open source under the MIT License"
-- **实际实现**：[LICENSE](file:///d:/DevTools/project/BeeCount/LICENSE) 与 [README.md:333](file:///d:/DevTools/project/BeeCount/README.md)
+- **声明位置**：[PRIVACY.md:111](file:///d:/DevTools/project/PiggyCount/PRIVACY.md)
+  > "PiggyCount is fully open source under the MIT License"
+- **实际实现**：[LICENSE](file:///d:/DevTools/project/PiggyCount/LICENSE) 与 [README.md:333](file:///d:/DevTools/project/PiggyCount/README.md)
   > 本项目采用 **商业源代码许可证（Business Source License, BSL）**
   > 商业使用需要付费授权
 - **风险**：用户基于 PRIVACY.md 误判许可类型，可能造成商用合规风险
@@ -64,13 +64,13 @@
 
 #### 3.1.3 Supabase / WebDAV / S3 同步方案未在隐私政策中列出
 
-- **声明位置**：[PRIVACY.md:34-48](file:///d:/DevTools/project/BeeCount/PRIVACY.md) 仅列出 Supabase 与 WebDAV 两种
-- **实际实现**：[README.md:141-152](file:///d:/DevTools/project/BeeCount/README.md) 支持 5 种同步方案（BeeCount Cloud / iCloud / Supabase / WebDAV / S3）
-- **建议修复**：补全 BeeCount Cloud、iCloud、S3 的隐私声明
+- **声明位置**：[PRIVACY.md:34-48](file:///d:/DevTools/project/PiggyCount/PRIVACY.md) 仅列出 Supabase 与 WebDAV 两种
+- **实际实现**：[README.md:141-152](file:///d:/DevTools/project/PiggyCount/README.md) 支持 5 种同步方案（PiggyCount Cloud / iCloud / Supabase / WebDAV / S3）
+- **建议修复**：补全 PiggyCount Cloud、iCloud、S3 的隐私声明
 
 ### 3.2 PIN 码安全机制薄弱
 
-**问题位置**：[lib/services/security/app_lock_service.dart:26-37](file:///d:/DevTools/project/BeeCount/lib/services/security/app_lock_service.dart)
+**问题位置**：[lib/services/security/app_lock_service.dart:26-37](file:///d:/DevTools/project/PiggyCount/lib/services/security/app_lock_service.dart)
 
 ```dart
 static String hashPin(String pin) {
@@ -89,7 +89,7 @@ static String hashPin(String pin) {
 
 #### 3.2.2 无失败次数限制
 
-**问题位置**：[lib/pages/auth/app_lock_screen.dart:75-91](file:///d:/DevTools/project/BeeCount/lib/pages/auth/app_lock_screen.dart)
+**问题位置**：[lib/pages/auth/app_lock_screen.dart:75-91](file:///d:/DevTools/project/PiggyCount/lib/pages/auth/app_lock_screen.dart)
 
 - **现状**：`_verifyPin` 失败仅 500ms 抖动后清空，无失败计数、无指数退避、无 wipe 选项
 - **风险**：PIN 可被无限次暴力尝试
@@ -100,12 +100,12 @@ static String hashPin(String pin) {
 
 ### 3.3 SQLite 数据库明文存储
 
-**问题位置**：[lib/data/db.dart:1240-1260](file:///d:/DevTools/project/BeeCount/lib/data/db.dart)
+**问题位置**：[lib/data/db.dart:1240-1260](file:///d:/DevTools/project/PiggyCount/lib/data/db.dart)
 
 ```dart
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
-    final file = File(p.join(dir.path, 'beecount.sqlite'));
+    final file = File(p.join(dir.path, 'piggycount.sqlite'));
     return NativeDatabase.createInBackground(file);  // ← 明文 SQLite
   });
 }
@@ -129,20 +129,20 @@ LazyDatabase _openConnection() {
 
 - **现状**：全局 Grep `certificatePinning|badCertificateCallback|onCertificateCheck` **零匹配**
 - **风险**：理论上中间人攻击（CA 投毒、企业代理 CA、用户安装的根证书）可解密 HTTPS 流量
-- **影响范围**：所有云同步后端（BeeCount Cloud / Supabase / WebDAV / S3）与 AI 调用
+- **影响范围**：所有云同步后端（PiggyCount Cloud / Supabase / WebDAV / S3）与 AI 调用
 - **建议修复**：
-  1. 关键服务（如 GitHub Releases 更新检查、BeeCount Cloud 默认服务）启用证书锁定
+  1. 关键服务（如 GitHub Releases 更新检查、PiggyCount Cloud 默认服务）启用证书锁定
   2. 用户自配置服务提供"高级安全模式"选项启用锁定
 
 #### 4.1.2 用户自配置 URL 未强制 HTTPS
 
-- **现状**：用户配置 WebDAV/S3/Supabase/BeeCount Cloud URL 时无协议校验
+- **现状**：用户配置 WebDAV/S3/Supabase/PiggyCount Cloud URL 时无协议校验
 - **风险**：用户可填入 `http://`，凭证与数据明文传输
 - **建议修复**：URL 输入框强制 `https://` 前缀，提示用户不安全连接风险
 
 ### 4.2 AI 隐私保护不足
 
-**问题位置**：[lib/ai/privacy/ai_privacy_consent.dart](file:///d:/DevTools/project/BeeCount/lib/ai/privacy/ai_privacy_consent.dart)（全文 30 行）
+**问题位置**：[lib/ai/privacy/ai_privacy_consent.dart](file:///d:/DevTools/project/PiggyCount/lib/ai/privacy/ai_privacy_consent.dart)（全文 30 行）
 
 #### 4.2.1 发送前无二次确认
 
@@ -152,7 +152,7 @@ LazyDatabase _openConnection() {
 
 #### 4.2.2 无敏感数据脱敏
 
-- **现状**：发送给 AI 的上下文（[lib/ai/core/ai_extraction_context.dart](file:///d:/DevTools/project/BeeCount/lib/ai/core/ai_extraction_context.dart)）包含完整账户名、原始金额、备注
+- **现状**：发送给 AI 的上下文（[lib/ai/core/ai_extraction_context.dart](file:///d:/DevTools/project/PiggyCount/lib/ai/core/ai_extraction_context.dart)）包含完整账户名、原始金额、备注
 - **风险**：账户名可能包含真实姓名（如 "张三的工资卡"），备注可能包含敏感信息
 - **建议修复**：
   1. 账户名发送前替换为 `account_1`、`account_2` 等匿名标识
@@ -170,7 +170,7 @@ LazyDatabase _openConnection() {
 - **风险**：
   - Android 系统截屏、录屏、多任务缩略图未通过 `FLAG_SECURE` 阻止
   - 仅通过 `AppLifecycleState.inactive` 触发的模糊屏部分缓解（系统截屏快捷键可能不触发 inactive）
-- **建议修复**：在 [android/app/src/main/kotlin/.../MainActivity.kt](file:///d:/DevTools/project/BeeCount/android/app/src/main/kotlin/com/tntlikely/beecount/MainActivity.kt) `onCreate` 中添加：
+- **建议修复**：在 [android/app/src/main/kotlin/.../MainActivity.kt](file:///d:/DevTools/project/PiggyCount/android/app/src/main/kotlin/com/tntlikely/piggycount/MainActivity.kt) `onCreate` 中添加：
   ```kotlin
   window.setFlags(
     LayoutParams.FLAG_SECURE,
@@ -181,12 +181,12 @@ LazyDatabase _openConnection() {
 
 ### 4.4 数据库备份未加密
 
-- **现状**：云同步（Supabase/WebDAV/BeeCount Cloud）上传的是业务数据 JSON / 二进制，未发现任何对备份内容加密后再上传的代码
+- **现状**：云同步（Supabase/WebDAV/PiggyCount Cloud）上传的是业务数据 JSON / 二进制，未发现任何对备份内容加密后再上传的代码
 - **风险**：备份内容受 HTTPS 传输保护，但服务端可见明文
 - **建议修复**：
   1. 提供可选的"端到端加密备份"功能
   2. 加密密钥由用户密码派生（PBKDF2），不上传至服务端
-  3. BeeCount Cloud 已支持 AES-256 备份加密，应作为推荐方案
+  3. PiggyCount Cloud 已支持 AES-256 备份加密，应作为推荐方案
 
 ---
 
@@ -196,7 +196,7 @@ LazyDatabase _openConnection() {
 
 #### 5.1.1 transactions 表缺复合索引
 
-**问题位置**：[lib/data/db.dart](file:///d:/DevTools/project/BeeCount/lib/data/db.dart)
+**问题位置**：[lib/data/db.dart](file:///d:/DevTools/project/PiggyCount/lib/data/db.dart)
 
 - **现状**：`transactions` 表缺少 `(ledger_id, happened_at)` 复合索引
 - **影响**：首页交易列表按时间倒序分页查询的最热路径，数据量增长后会触发全表扫描
@@ -212,7 +212,7 @@ LazyDatabase _openConnection() {
 
 - **现状**：交易列表、图表组件（`CategoryPieChart` 等）未使用 `RepaintBoundary` 包裹
 - **影响**：长列表滚动时可能引发不必要的重绘
-- **建议修复**：在 [transaction_list.dart](file:///d:/DevTools/project/BeeCount/lib/widgets/biz/transaction_list.dart) 的 item 构建器外层加 `RepaintBoundary`
+- **建议修复**：在 [transaction_list.dart](file:///d:/DevTools/project/PiggyCount/lib/widgets/biz/transaction_list.dart) 的 item 构建器外层加 `RepaintBoundary`
 
 #### 5.1.3 WAL 模式未显式声明
 
@@ -222,7 +222,7 @@ LazyDatabase _openConnection() {
 
 #### 5.1.4 列表 Key 拼接 index
 
-**问题位置**：[lib/widgets/biz/transaction_list.dart](file:///d:/DevTools/project/BeeCount/lib/widgets/biz/transaction_list.dart)
+**问题位置**：[lib/widgets/biz/transaction_list.dart](file:///d:/DevTools/project/PiggyCount/lib/widgets/biz/transaction_list.dart)
 
 - **现状**：`Key('tx-${it.t.id}-$index')` 拼接了 index
 - **影响**：列表排序变化时失去复用意义
@@ -232,7 +232,7 @@ LazyDatabase _openConnection() {
 
 #### 5.2.1 LWW 冲突解决可能丢数据
 
-**问题位置**：[lib/cloud/sync/sync_conflict_resolver.dart](file:///d:/DevTools/project/BeeCount/lib/cloud/sync/sync_conflict_resolver.dart)
+**问题位置**：[lib/cloud/sync/sync_conflict_resolver.dart](file:///d:/DevTools/project/PiggyCount/lib/cloud/sync/sync_conflict_resolver.dart)
 
 - **现状**：使用 Last-Write-Wins（最后写入胜出）策略
 - **风险**：两台设备同时修改同一笔交易，后同步的覆盖先同步的，无合并机制
@@ -242,7 +242,7 @@ LazyDatabase _openConnection() {
 
 #### 5.2.2 sync_pull_errors 表隔离设计风险
 
-**问题位置**：[lib/data/db.dart](file:///d:/DevTools/project/BeeCount/lib/data/db.dart) `SyncPullErrors` 表
+**问题位置**：[lib/data/db.dart](file:///d:/DevTools/project/PiggyCount/lib/data/db.dart) `SyncPullErrors` 表
 
 - **现状**：失败的 pull 变更记录到独立表，不影响主表
 - **风险**：用户可能不知道有同步失败的记录，长期累积造成数据不一致
@@ -275,22 +275,22 @@ LazyDatabase _openConnection() {
 
 #### 5.4.1 全部凭证明文存储
 
-**问题位置**：[lib/services/export/config_export_service.dart:1262-1305](file:///d:/DevTools/project/BeeCount/lib/services/export/config_export_service.dart)
+**问题位置**：[lib/services/export/config_export_service.dart:1262-1305](file:///d:/DevTools/project/PiggyCount/lib/services/export/config_export_service.dart)
 
 | SharedPreferences 键 | 内容 | 风险 |
 |---|---|---|
 | `cloud_supabase_cfg` | URL+anonKey+email+明文 password | 极高 |
 | `cloud_webdav_cfg` | URL+username+明文 password | 极高 |
 | `cloud_s3_cfg` | endpoint+accessKey+明文 secretKey | 极高 |
-| `cloud_beecount_cloud_cfg` | baseUrl+email+明文 password | 极高 |
-| BeeCount Cloud `_sessionStorageKey` | access_token + refresh_token JSON | 极高 |
+| `cloud_piggycount_cloud_cfg` | baseUrl+email+明文 password | 极高 |
+| PiggyCount Cloud `_sessionStorageKey` | access_token + refresh_token JSON | 极高 |
 | `ai_glm_api_key` / 自定义 provider apiKey | 明文 API Key | 高 |
 
 - **建议修复**：全部迁移到 flutter_secure_storage
 
 #### 5.4.2 配置导出可能泄露凭证
 
-- **现状**：[config_export_service.dart](file:///d:/DevTools/project/BeeCount/lib/services/export/config_export_service.dart) 导出配置时可能包含明文凭证
+- **现状**：[config_export_service.dart](file:///d:/DevTools/project/PiggyCount/lib/services/export/config_export_service.dart) 导出配置时可能包含明文凭证
 - **建议修复**：
   1. 默认导出时移除所有敏感字段
   2. 提供"包含凭证（不推荐）"选项，需用户二次确认
@@ -304,20 +304,20 @@ LazyDatabase _openConnection() {
 
 #### 6.1.1 文件过长
 
-- **现状**：部分文件超过 1000 行（如 [annual_report_page.dart](file:///d:/DevTools/project/BeeCount/lib/pages/report/annual_report_page.dart)、`beecount_cloud_provider.dart`、[sync_engine.dart](file:///d:/DevTools/project/BeeCount/lib/cloud/sync/sync_engine.dart)）
+- **现状**：部分文件超过 1000 行（如 [annual_report_page.dart](file:///d:/DevTools/project/PiggyCount/lib/pages/report/annual_report_page.dart)、`piggycount_cloud_provider.dart`、[sync_engine.dart](file:///d:/DevTools/project/PiggyCount/lib/cloud/sync/sync_engine.dart)）
 - **建议修复**：按职责拆分为多个文件，单文件控制在 500 行内
 
 #### 6.1.2 TODO/FIXME 标记
 
 - **现状**：项目内 `TODO` / `FIXME` 标记较少（仅 2 处），但可能存在未标记的技术债
 - **位置**：
-  - [lib/providers/sync_providers.dart](file:///d:/DevTools/project/BeeCount/lib/providers/sync_providers.dart)
-  - [lib/widgets/biz/product_promo_card.dart](file:///d:/DevTools/project/BeeCount/lib/widgets/biz/product_promo_card.dart)
+  - [lib/providers/sync_providers.dart](file:///d:/DevTools/project/PiggyCount/lib/providers/sync_providers.dart)
+  - [lib/widgets/biz/product_promo_card.dart](file:///d:/DevTools/project/PiggyCount/lib/widgets/biz/product_promo_card.dart)
 - **建议修复**：清理所有 TODO，或转换为 GitHub Issue 跟踪
 
 #### 6.1.3 dependency_overrides 钉死版本
 
-**问题位置**：[pubspec.yaml](file:///d:/DevTools/project/BeeCount/pubspec.yaml) `dependency_overrides`
+**问题位置**：[pubspec.yaml](file:///d:/DevTools/project/PiggyCount/pubspec.yaml) `dependency_overrides`
 
 ```yaml
 dependency_overrides:
@@ -333,7 +333,7 @@ dependency_overrides:
 
 #### 6.2.1 docs/contributing/CONTRIBUTING_ZH.md 项目结构过时
 
-**问题位置**：[docs/contributing/CONTRIBUTING_ZH.md:307-328](file:///d:/DevTools/project/BeeCount/docs/contributing/CONTRIBUTING_ZH.md)
+**问题位置**：[docs/contributing/CONTRIBUTING_ZH.md:307-328](file:///d:/DevTools/project/PiggyCount/docs/contributing/CONTRIBUTING_ZH.md)
 
 ```markdown
 lib/
@@ -351,11 +351,11 @@ lib/
 │   └── supabase_sync.dart     ← 文件不存在
 ```
 
-- **建议修复**：更新为实际目录结构，参考 [15-development-guidelines.md](file:///d:/DevTools/project/BeeCount/docoments/15-development-guidelines.md) 第 5 节
+- **建议修复**：更新为实际目录结构，参考 [15-development-guidelines.md](file:///d:/DevTools/project/PiggyCount/docoments/15-development-guidelines.md) 第 5 节
 
 #### 6.2.2 PRIVACY.md 联系方式未填写
 
-**问题位置**：[PRIVACY.md:146](file:///d:/DevTools/project/BeeCount/PRIVACY.md)
+**问题位置**：[PRIVACY.md:146](file:///d:/DevTools/project/PiggyCount/PRIVACY.md)
 
 ```markdown
 - **Email**: (Add your email if you want, or remove this section)
@@ -367,7 +367,7 @@ lib/
 
 #### 6.3.1 鸿蒙版本已停止更新
 
-- **现状**：[README.md:55](file:///d:/DevTools/project/BeeCount/README.md) 标注 `beecount-openharmony` 仓库已停止更新
+- **现状**：[README.md:55](file:///d:/DevTools/project/PiggyCount/README.md) 标注 `piggycount-openharmony` 仓库已停止更新
 - **影响**：鸿蒙用户无法使用最新版本
 - **建议**：明确告知用户，引导至 Android 版本
 
@@ -379,14 +379,14 @@ lib/
 
 #### 6.3.3 Web 平台未原生支持
 
-- **现状**：BeeCount 本身无 Web 端，Web 端由 BeeCount Cloud 独立项目提供
+- **现状**：PiggyCount 本身无 Web 端，Web 端由 PiggyCount Cloud 独立项目提供
 - **建议**：在文档中明确说明
 
 ### 6.4 国际化不完整
 
 #### 6.4.1 韩语社区维护
 
-- **现状**：[lib/l10n/app_ko.arb](file:///d:/DevTools/project/BeeCount/lib/l10n/app_ko.arb) 由社区贡献
+- **现状**：[lib/l10n/app_ko.arb](file:///d:/DevTools/project/PiggyCount/lib/l10n/app_ko.arb) 由社区贡献
 - **风险**：可能存在翻译滞后、错误未及时修复
 - **建议**：
   1. 在 CI 中添加 .arb 文件 key 一致性检查
@@ -404,7 +404,7 @@ lib/
 
 - **现状**：CI 中使用 Flutter 3.27.3
 - **风险**：长期不升级错过新特性、安全修复
-- **建议**：定期升级，参考 [13-build-release.md](file:///d:/DevTools/project/BeeCount/docoments/13-build-release.md)
+- **建议**：定期升级，参考 [13-build-release.md](file:///d:/DevTools/project/PiggyCount/docoments/13-build-release.md)
 
 #### 6.5.2 部分依赖未及时升级
 
@@ -422,7 +422,7 @@ lib/
 | 同步引擎不支持 P2P | 架构选择，依赖云端中转 | 无网络时无法跨设备同步 |
 | AI 默认使用智谱 GLM | 国内可访问、无需翻墙 | 海外用户需自行配置 OpenAI 等 |
 | 桌面小组件功能有限 | iOS WidgetKit / Android AppWidget 限制 | 仅展示不能交互 |
-| 无 Web 端原生 | 由 BeeCount Cloud 独立项目提供 | 用户需部署 Cloud |
+| 无 Web 端原生 | 由 PiggyCount Cloud 独立项目提供 | 用户需部署 Cloud |
 
 ### 7.2 已知技术债
 
@@ -465,16 +465,16 @@ lib/
 
 发现新问题请通过：
 
-- **GitHub Issues**：[https://github.com/TNT-Likely/BeeCount/issues](https://github.com/TNT-Likely/BeeCount/issues)
-- **GitHub Discussions**：[https://github.com/TNT-Likely/BeeCount/discussions](https://github.com/TNT-Likely/BeeCount/discussions)
-- **Telegram**：[https://t.me/beecount](https://t.me/beecount)
+- **GitHub Issues**：[https://github.com/TNT-Likely/PiggyCount/issues](https://github.com/TNT-Likely/PiggyCount/issues)
+- **GitHub Discussions**：[https://github.com/TNT-Likely/PiggyCount/discussions](https://github.com/TNT-Likely/PiggyCount/discussions)
+- **Telegram**：[https://t.me/piggycount](https://t.me/piggycount)
 
 提交 Bug 时请包含：
 
 1. **环境信息**：操作系统、设备型号、应用版本、云服务配置
 2. **复现步骤**：详细到可重现
 3. **预期与实际**：分别说明
-4. **截图/日志**：日志可在 设置 → 日志中心 查看（参考 [14-logging.md](file:///d:/DevTools/project/BeeCount/docoments/14-logging.md)）
+4. **截图/日志**：日志可在 设置 → 日志中心 查看（参考 [14-logging.md](file:///d:/DevTools/project/PiggyCount/docoments/14-logging.md)）
 
 ---
 

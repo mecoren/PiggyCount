@@ -13,7 +13,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.tntlikely.beecount"
+    namespace = "com.wait.piggycount"
     compileSdk = 36
     // Keep in sync with plugins' required NDK to avoid build warnings/errors.
     ndkVersion = "27.0.12077973"
@@ -32,7 +32,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.tntlikely.beecount"
+        applicationId = "com.wait.piggycount"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdkVersion = flutter.minSdkVersion  // Required by record_android for voice recording
@@ -48,11 +48,11 @@ android {
         dev {
             dimension "env"
             applicationIdSuffix ".dev"
-            resValue "string", "app_name", "蜜蜂记账测试版"
+            resValue "string", "app_name", "小猪记账测试版"
         }
         prod {
             dimension "env"
-            resValue "string", "app_name", "蜜蜂记账"
+            resValue "string", "app_name", "小猪记账"
         }
     }
 
@@ -140,7 +140,7 @@ android {
             // Debug 构建追加独立后缀，名称显示为测试版，便于与生产包共存
             applicationIdSuffix ".debug"
             versionNameSuffix "-debug"
-            resValue "string", "app_name", "蜜蜂记账测试版"
+            resValue "string", "app_name", "小猪记账测试版"
         }
         release {
             // Use a stable release keystore so upgrades don't require uninstall

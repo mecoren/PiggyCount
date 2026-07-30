@@ -23,15 +23,15 @@ audience: 一年经验的开发者
 
 ### 1.1 项目定位
 
-BeeCount(蜜蜂记账)是一款**轻量、开源、隐私可控**的个人财务管理与支出追踪应用。项目由个人开发者维护,源代码托管于 GitHub:`https://github.com/mecoren/BeeCount`(本仓库本地路径 `d:\DevTools\project\BeeCount`)。应用以 Flutter 构建,同时支持 Android 5.0+ 与 iOS 15.5+,并通过 BeeCount Cloud 自带 PWA 提供 Web 端访问能力。
+PiggyCount(小猪记账)是一款**轻量、开源、隐私可控**的个人财务管理与支出追踪应用。项目由个人开发者维护,源代码托管于 GitHub:`https://github.com/mecoren/PiggyCount`(本仓库本地路径 `d:\DevTools\project\PiggyCount`)。应用以 Flutter 构建,同时支持 Android 5.0+ 与 iOS 15.5+,并通过 PiggyCount Cloud 自带 PWA 提供 Web 端访问能力。
 
 依据:`README.md` L41-55、`pubspec.yaml` L1-7。
 
 ### 1.2 解决的问题
 
-传统记账应用普遍存在以下痛点,BeeCount 针对性给出解决方案:
+传统记账应用普遍存在以下痛点,PiggyCount 针对性给出解决方案:
 
-| 传统应用痛点 | BeeCount 应对策略 |
+| 传统应用痛点 | PiggyCount 应对策略 |
 |---|---|
 | 数据存第三方,无法审计 | 完全开源,代码可审计(`LICENSE` Business Source License) |
 | 隐私可能被分析利用 | 离线优先 + 自建云端,应用本身不收集任何数据 |
@@ -47,7 +47,7 @@ BeeCount(蜜蜂记账)是一款**轻量、开源、隐私可控**的个人财务
 
 ### 1.4 阅读本文档能获得什么
 
-- 了解 BeeCount 的整体定位、核心能力、技术选型
+- 了解 PiggyCount 的整体定位、核心能力、技术选型
 - 掌握 5 种同步方案的差异与适用场景
 - 理解项目目录组织与分层架构
 - 明确本地优先、隐私优先的设计哲学
@@ -59,11 +59,11 @@ BeeCount(蜜蜂记账)是一款**轻量、开源、隐私可控**的个人财务
 
 ### 2.1 五大核心能力
 
-BeeCount 的能力可归纳为五大类,详细模块说明见 [05 核心模块详解](./05-core-modules.md)。
+PiggyCount 的能力可归纳为五大类,详细模块说明见 [05 核心模块详解](./05-core-modules.md)。
 
 ```mermaid
 flowchart LR
-    A[BeeCount] --> B[基础记账]
+    A[PiggyCount] --> B[基础记账]
     A --> C[AI 智能记账]
     A --> D[云同步与共享]
     A --> E[资产管理]
@@ -86,17 +86,17 @@ flowchart LR
     F --> F3[主题装扮]
 ```
 
-上图展示了 BeeCount 的五大能力域及其子能力。基础记账是核心底座,AI 与同步是增强能力,资产管理与体验个性化是横向能力。这种划分对应 `lib/pages/` 目录的业务页面组织。
+上图展示了 PiggyCount 的五大能力域及其子能力。基础记账是核心底座,AI 与同步是增强能力,资产管理与体验个性化是横向能力。这种划分对应 `lib/pages/` 目录的业务页面组织。
 
 依据:`README.md` L59-93、`lib/pages/` 目录结构。
 
 ### 2.2 五种同步方案
 
-BeeCount 提供五种云同步方案,所有方案数据完全由用户掌控:
+PiggyCount 提供五种云同步方案,所有方案数据完全由用户掌控:
 
 | 方案 | 适用场景 | 特点 | 实现位置 |
 |---|---|---|---|
-| **BeeCount Cloud** | 多端实时协同 + 自托管 + 多人共账 | Docker 一键、秒同步、自带 Web 端、多用户、共享账本 | `packages/flutter_cloud_sync/lib/src/providers/beecount_cloud_provider.dart` |
+| **PiggyCount Cloud** | 多端实时协同 + 自托管 + 多人共账 | Docker 一键、秒同步、自带 Web 端、多用户、共享账本 | `packages/flutter_cloud_sync/lib/src/providers/piggycount_cloud_provider.dart` |
 | **iCloud** | iOS 单平台用户 | 零配置、原生集成 | `packages/flutter_cloud_sync_icloud/` |
 | **Supabase** | 无 NAS 的跨平台用户 | 免费额度充足、配置简单 | `packages/flutter_cloud_sync_supabase/` |
 | **WebDAV** | NAS 用户 | 数据本地化、群晖/绿联云/Nextcloud | `packages/flutter_cloud_sync_webdav/` |
@@ -108,7 +108,7 @@ BeeCount 提供五种云同步方案,所有方案数据完全由用户掌控:
 
 - **Android 5.0+**:Google Play + GitHub APK 直发
 - **iOS 15.5+**:App Store + TestFlight
-- **Web**:BeeCount Cloud 自带 PWA(需用户自部署 server)
+- **Web**:PiggyCount Cloud 自带 PWA(需用户自部署 server)
 - ~~HarmonyOS~~:已停止更新
 
 依据:`README.md` L53-55、`.github/workflows/release.yml`。
@@ -128,7 +128,7 @@ BeeCount 提供五种云同步方案,所有方案数据完全由用户掌控:
 
 ### 3.1 整体架构概览
 
-BeeCount 采用**分层架构 + 同步引擎旁路**的设计,所有写操作先入本地 SQLite,再异步同步到云端。
+PiggyCount 采用**分层架构 + 同步引擎旁路**的设计,所有写操作先入本地 SQLite,再异步同步到云端。
 
 ```mermaid
 flowchart TD
@@ -151,7 +151,7 @@ flowchart TD
     CloudProvider -->|HTTP/WS| Remote[远端服务]
 ```
 
-上图展示了 BeeCount 的五层架构。UI 层只与 Provider 层交互,不直接访问数据;Provider 层通过 Riverpod 注入 Repository 与 Service;Repository 层是数据访问的唯一入口,所有写操作在完成后通知 ChangeTracker;同步引擎旁路监听本地变更表,异步推送到云端。这种设计保证了离线可用与数据一致性。
+上图展示了 PiggyCount 的五层架构。UI 层只与 Provider 层交互,不直接访问数据;Provider 层通过 Riverpod 注入 Repository 与 Service;Repository 层是数据访问的唯一入口,所有写操作在完成后通知 ChangeTracker;同步引擎旁路监听本地变更表,异步推送到云端。这种设计保证了离线可用与数据一致性。
 
 详细架构设计见 [04 系统架构设计](./04-system-architecture.md)。
 
@@ -159,7 +159,7 @@ flowchart TD
 
 ### 3.2 目录组织
 
-BeeCount 主代码位于 `lib/` 下,按职责分目录:
+PiggyCount 主代码位于 `lib/` 下,按职责分目录:
 
 | 目录 | 职责 | 关键文件 |
 |---|---|---|
@@ -183,7 +183,7 @@ BeeCount 主代码位于 `lib/` 下,按职责分目录:
 | `flutter_ai_kit` | AI 抽象层 + 6 种执行策略 |
 | `flutter_ai_kit_zhipu` | 智谱 GLM provider |
 | `flutter_ai_kit_openai` | OpenAI provider |
-| `flutter_cloud_sync` | 同步框架核心(含 BeeCountCloudProvider 内嵌) |
+| `flutter_cloud_sync` | 同步框架核心(含 PiggyCountCloudProvider 内嵌) |
 | `flutter_cloud_sync_supabase` | Supabase provider |
 | `flutter_cloud_sync_webdav` | WebDAV provider |
 | `flutter_cloud_sync_s3` | S3 / R2 / B2 / MinIO provider |
@@ -195,8 +195,8 @@ BeeCount 主代码位于 `lib/` 下,按职责分目录:
 
 | 平台 | 原生代码位置 | 关键内容 |
 |---|---|---|
-| Android | `android/app/src/main/kotlin/com/tntlikely/beecount/` | `MainActivity.kt`、`LoggerPlugin.kt`、桌面小组件、AppLink、截图监听服务 |
-| iOS | `ios/Runner/` + `ios/BeeCountWidget/` | `AppDelegate.swift`、`AppIntentsBridge.swift`、`AutoBillingAppIntent.swift`、WidgetExtension |
+| Android | `android/app/src/main/kotlin/com/tntlikely/piggycount/` | `MainActivity.kt`、`LoggerPlugin.kt`、桌面小组件、AppLink、截图监听服务 |
+| iOS | `ios/Runner/` + `ios/PiggyCountWidget/` | `AppDelegate.swift`、`AppIntentsBridge.swift`、`AutoBillingAppIntent.swift`、WidgetExtension |
 
 依据:`android/` 与 `ios/` 目录结构。
 
@@ -255,7 +255,7 @@ flowchart TD
     L --> M[ChangeTracker.recordLedgerChange]
     M --> N[SyncCoordinator 监听变更]
     N --> O[SyncEngine.push 异步推送]
-    O --> P[BeeCountCloudProvider HTTP]
+    O --> P[PiggyCountCloudProvider HTTP]
 ```
 
 记账流程统一收敛到 `repository.addTransaction`,无论输入方式是手动表单、AI 对话、OCR、语音还是截图自动识别。写库后通过 ChangeTracker 记录变更,SyncCoordinator 反应式监听变更表并触发异步推送。这种"写本地 + 异步同步"的设计保证了记账操作的响应速度,即使无网络也能完成记账。
@@ -264,14 +264,14 @@ flowchart TD
 
 ### 4.3 数据同步流程
 
-数据同步是 BeeCount 最复杂的模块,详见 [06 数据同步与多设备离线机制](./06-data-sync-and-offline.md)。这里仅给出高层流程:
+数据同步是 PiggyCount 最复杂的模块,详见 [06 数据同步与多设备离线机制](./06-data-sync-and-offline.md)。这里仅给出高层流程:
 
 ```mermaid
 flowchart LR
     A[本地写操作] --> B[ChangeTracker 记录]
     B --> C[SyncCoordinator 触发]
     C --> D[SyncEngine.push]
-    D --> E[BeeCountCloudProvider HTTP]
+    D --> E[PiggyCountCloudProvider HTTP]
     E --> F[markPushed]
 
     G[WS Realtime 事件] --> H[SyncEngine.pull]
@@ -316,16 +316,16 @@ flowchart LR
 
 ### 决策 3:五种同步方案并存
 
-- **决策内容**:同时支持 BeeCount Cloud / iCloud / Supabase / WebDAV / S3 五种同步方案。
-- **原因**:不同用户有不同的基础设施偏好(iOS 用户偏好 iCloud、NAS 用户偏好 WebDAV、极客偏好 S3、需要共享账本的偏好 BeeCount Cloud),让数据主权真正落到用户手中。
+- **决策内容**:同时支持 PiggyCount Cloud / iCloud / Supabase / WebDAV / S3 五种同步方案。
+- **原因**:不同用户有不同的基础设施偏好(iOS 用户偏好 iCloud、NAS 用户偏好 WebDAV、极客偏好 S3、需要共享账本的偏好 PiggyCount Cloud),让数据主权真正落到用户手中。
 - **备选方案**:
-  1. 只支持 BeeCount Cloud(自建服务)
+  1. 只支持 PiggyCount Cloud(自建服务)
   2. 只支持 Supabase(第三方 BaaS)
   3. 五种并存(当前选择)
 - **优缺点**:
-  - 单一方案:开发维护成本低,但用户失去选择权,且 BeeCount Cloud 需用户自部署。
-  - 五种并存:用户选择权最大,但开发维护成本高,五种 provider 能力不均(只有 BeeCount Cloud 支持实时协同与共享账本)。
-- **最终取舍**:五种并存,BeeCount Cloud 作为主推方案提供最完整能力,其他四种作为轻量备份方案。
+  - 单一方案:开发维护成本低,但用户失去选择权,且 PiggyCount Cloud 需用户自部署。
+  - 五种并存:用户选择权最大,但开发维护成本高,五种 provider 能力不均(只有 PiggyCount Cloud 支持实时协同与共享账本)。
+- **最终取舍**:五种并存,PiggyCount Cloud 作为主推方案提供最完整能力,其他四种作为轻量备份方案。
 - **依据**:`README.md` L141-153、`packages/flutter_cloud_sync*` 子包结构。
 
 ### 决策 4:Riverpod 作为唯一状态管理与 DI 方案
@@ -343,13 +343,13 @@ flowchart LR
 ### 6.1 项目实际约束
 
 1. **Flutter 版本约束**:SDK `^3.6.0`,CI 锁定 Flutter `3.27.3`。`image_cropper_platform_interface` 钉死 `7.1.0`(因 7.2.0 要求 Flutter >= 3.27.6)。依据:`pubspec.yaml` L6、L94-98、`release.yml` L35。
-2. **目标平台**:仅 iOS / Android(Web 通过 BeeCount Cloud PWA,不在本仓库构建)。`record_platform_interface` 钉死 `1.2.0` 修复 record_linux 兼容问题。
+2. **目标平台**:仅 iOS / Android(Web 通过 PiggyCount Cloud PWA,不在本仓库构建)。`record_platform_interface` 钉死 `1.2.0` 修复 record_linux 兼容问题。
 3. **iOS 图标手工维护**:`flutter_launcher_icons` 配置 `ios: false`,因为 0.14.x 会重写 `Contents.json` 格式。依据:`pubspec.yaml` L102-110。
 4. **Google Play 版本裁剪**:CI 构建时会移除 `REQUEST_INSTALL_PACKAGES`、`READ_MEDIA_IMAGES` 等权限,截屏自动记账功能在 Google Play 版本被砍掉。依据:`release.yml` L166-185。
 
 ### 6.2 文档使用约束
 
-1. **第一事实来源**:本地代码 `d:\DevTools\project\BeeCount` 是最高依据,网络资料与 GitHub 仓库如有冲突以本地代码为准。
+1. **第一事实来源**:本地代码 `d:\DevTools\project\PiggyCount` 是最高依据,网络资料与 GitHub 仓库如有冲突以本地代码为准。
 2. **不编造**:信息不足时使用 `[推断]`、`[建议方案]`、`[待补充]` 标注,绝不编造具体实现细节。
 3. **术语一致**:所有文档必须遵守 [02 术语表](./02-glossary.md) 的统一术语。
 4. **交叉引用**:文档间使用相对链接,相同概念只做摘要 + 链接原文,避免重复。
@@ -358,7 +358,7 @@ flowchart LR
 
 1. **隐私优先**:应用本身不收集任何用户数据,不上报崩溃、不内嵌广告 SDK、不做用户行为分析。AI 功能默认关闭,需用户主动配置 AI provider。依据:`PRIVACY.md` L7-13。
 2. **离线可用**:所有核心功能(记账、查询、统计)在无网络环境下完全可用,云同步仅作为增强能力。
-3. **数据主权**:云同步数据完全存储在用户自己的服务器(Supabase 项目 / WebDAV 服务器 / S3 桶 / BeeCount Cloud 自部署实例),开发者无法访问。
+3. **数据主权**:云同步数据完全存储在用户自己的服务器(Supabase 项目 / WebDAV 服务器 / S3 桶 / PiggyCount Cloud 自部署实例),开发者无法访问。
 
 ---
 
@@ -366,7 +366,7 @@ flowchart LR
 
 | 编号 | 缺口描述 | 影响章节 | 建议补充方式 |
 |---|---|---|---|
-| 1 | GitHub 仓库地址:任务描述 `mecoren/BeeCount` 与 README 引用 `TNT-Likely/BeeCount` 不一致,本文档以任务描述为准 | §1.1 | 用户确认仓库归属 |
+| 1 | GitHub 仓库地址:任务描述 `mecoren/PiggyCount` 与 README 引用 `TNT-Likely/PiggyCount` 不一致,本文档以任务描述为准 | §1.1 | 用户确认仓库归属 |
 | 2 | 项目版本号:`pubspec.yaml` 声明 `version: 0.0.1`,实际发布版本由 CI tag 注入,无法从代码确认当前线上版本 | §1.1 | 查 GitHub Release 页面 |
 | 3 | 作者信息:文档 `author` 字段统一写 `wait`,待用户补充 | 文档 frontmatter | 用户补充 |
 | 4 | CHANGELOG:项目根目录无 CHANGELOG.md,版本演进只能从 db.dart schemaVersion 与 git tag 反推 | §4.3、[17 版本演进](./17-roadmap.md) | 从 git log 或 Release Notes 提取 |

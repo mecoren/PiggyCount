@@ -1,3 +1,3 @@
-/* 繁中環境下的 app 名稱 — 桌面圖示 + 切換器顯示「蜜蜂記帳」。 */
-"CFBundleDisplayName" = "蜜蜂記帳";
-"CFBundleName" = "蜜蜂記帳";
+/* 繁中環境下的 app 名稱 — 桌面圖示 + 切換器顯示「小豬記帳」。 */
+"CFBundleDisplayName" = "小豬記帳";
+"CFBundleName" = "小豬記帳";

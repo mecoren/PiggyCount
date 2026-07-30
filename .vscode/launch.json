@@ -5,24 +5,24 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "BeeCount",
+      "name": "PiggyCount",
       "request": "launch",
       "type": "dart"
     },
     {
-      "name": "BeeCount (profile mode)",
+      "name": "PiggyCount (profile mode)",
       "request": "launch",
       "type": "dart",
       "flutterMode": "profile"
     },
     {
-      "name": "BeeCount (release mode)",
+      "name": "PiggyCount (release mode)",
       "request": "launch",
       "type": "dart",
       "flutterMode": "release"
     },
     {
-      "name": "BeeCount (Android dev)",
+      "name": "PiggyCount (Android dev)",
       "request": "launch",
       "type": "dart",
       "flutterMode": "debug",
@@ -32,7 +32,7 @@
       ]
     },
     {
-      "name": "BeeCount (iOS)",
+      "name": "PiggyCount (iOS)",
       "request": "launch",
       "type": "dart",
       "flutterMode": "debug"

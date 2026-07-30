@@ -48,5 +48,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Configuration validation
 - README with setup instructions and usage examples
 
-[Unreleased]: https://github.com/TNT-Likely/BeeCount/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/TNT-Likely/BeeCount/releases/tag/flutter_cloud_sync_supabase-v0.1.0
+[Unreleased]: https://github.com/TNT-Likely/PiggyCount/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/TNT-Likely/PiggyCount/releases/tag/flutter_cloud_sync_supabase-v0.1.0

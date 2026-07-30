@@ -1,4 +1,4 @@
-# BeeCount 启动时云端数据拉取提示需求文档
+# PiggyCount 启动时云端数据拉取提示需求文档
 
 > 版本：v1.0  日期：2026-07-27
 > 关联设计：`/prd/startup_sync_check/design.md`
@@ -9,7 +9,7 @@
 
 ### 1.1 背景
 
-BeeCount 当前启动流程中，路径 A（S3 / WebDAV / Supabase / iCloud）的首次同步仅在后台静默执行 `refreshAllLedgersStatus()` 预热状态，**不会主动拉取云端数据并与本地合并**。用户在新设备安装 App、或在多设备间切换后，必须手动进入「云端同步」页面点击下载按钮才能把云端最新数据拉到本地，体验割裂且容易遗忘，导致本地数据与云端长期不一致。
+PiggyCount 当前启动流程中，路径 A（S3 / WebDAV / Supabase / iCloud）的首次同步仅在后台静默执行 `refreshAllLedgersStatus()` 预热状态，**不会主动拉取云端数据并与本地合并**。用户在新设备安装 App、或在多设备间切换后，必须手动进入「云端同步」页面点击下载按钮才能把云端最新数据拉到本地，体验割裂且容易遗忘，导致本地数据与云端长期不一致。
 
 ### 1.2 目标
 
@@ -20,7 +20,7 @@ BeeCount 当前启动流程中，路径 A（S3 / WebDAV / Supabase / iCloud）�
 
 ### 1.3 非目标
 
-- **不覆盖路径 B（BeeCount Cloud）**：路径 B 保持现有的 `_triggerInitialCloudSync` 自动同步逻辑，不弹任何提示框（其增量同步无 preview 能力）
+- **不覆盖路径 B（PiggyCount Cloud）**：路径 B 保持现有的 `_triggerInitialCloudSync` 自动同步逻辑，不弹任何提示框（其增量同步无 preview 能力）
 - **不修改同步预览弹窗 UI**：复用现有 `showSyncPreviewDialog`，不改其接口和视觉
 - **不改变加密流程**：与已实现的 E2EE 装饰器解耦，加密透明
 - **不实现后台/定时检查**：仅在 App 冷启动时触发一次，不做周期性轮询
@@ -29,14 +29,14 @@ BeeCount 当前启动流程中，路径 A（S3 / WebDAV / Supabase / iCloud）�
 
 ### US-1：启动时检测云端更新
 
-**作为**一个配置了 S3/WebDAV/Supabase/iCloud 同步的 BeeCount 用户，
+**作为**一个配置了 S3/WebDAV/Supabase/iCloud 同步的 PiggyCount 用户，
 **我希望** App 启动进入主界面后能自动检查云端是否有更新，
 **以便**我不用每次手动进同步页面去拉数据。
 
 **验收标准**：
 - App 冷启动进入 `BeeApp` 主界面后触发检查
 - 仅当 `activeCloudConfigProvider` 返回的 `cfg.type` 属于路径 A（`s3` / `webdav` / `supabase` / `icloud`）且 `cfg.valid == true` 时执行
-- 路径 B（`beecountCloud`）和本地模式（`local`）跳过本功能
+- 路径 B（`piggycountCloud`）和本地模式（`local`）跳过本功能
 - 检查在后台执行，不阻塞首屏渲染
 
 ### US-2：强制提示用户是否合并
@@ -150,7 +150,7 @@ BeeCount 当前启动流程中，路径 A（S3 / WebDAV / Supabase / iCloud）�
 ### NFR-3：兼容性
 
 - 不破坏现有路径 A 同步流程
-- 不影响路径 B（BeeCount Cloud）用户
+- 不影响路径 B（PiggyCount Cloud）用户
 - 不影响未配置云端同步的本地用户
 - 不影响 E2EE 加密功能（密文格式 `BEECRYPT1:...` 透明解密）
 
@@ -165,7 +165,7 @@ BeeCount 当前启动流程中，路径 A（S3 / WebDAV / Supabase / iCloud）�
 | 场景 | 处理 |
 |------|------|
 | 用户首次安装，无任何账本 | 跳过检查（账本列表为空） |
-| 用户未登录（supabase/beecount_cloud 需登录） | 跳过（`needsLogin` 但 `user == null`） |
+| 用户未登录（supabase/piggycount_cloud 需登录） | 跳过（`needsLogin` 但 `user == null`） |
 | 账本在本地为空但云端有数据 | 视为 `cloudNewer`，正常弹窗 |
 | 账本在云端无备份（`noRemote`） | 跳过该账本 |
 | 云端数据为旧格式（v5 及以下，无 syncId） | 走全量替换确认流程（FR-3 步骤 2） |
@@ -184,7 +184,7 @@ BeeCount 当前启动流程中，路径 A（S3 / WebDAV / Supabase / iCloud）�
 - [ ] 应用后 UI 自动刷新（PostProcessor.runAfterDownload）
 - [ ] 多账本场景逐个弹窗，不叠加
 - [ ] 用户取消某账本后不影响后续账本检查
-- [ ] 路径 B（BeeCount Cloud）配置下不触发本功能
+- [ ] 路径 B（PiggyCount Cloud）配置下不触发本功能
 - [ ] 本地模式（local）下不触发本功能
 - [ ] 网络异常 / 加密异常时弹错误提示，不崩溃
 - [ ] 重复触发被幂等保护，不会重复弹窗

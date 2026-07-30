@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        > ⚠️ **Questions are better in [Discussions](https://github.com/TNT-Likely/BeeCount/discussions)** — issues are for bugs / features.
+        > ⚠️ **Questions are better in [Discussions](https://github.com/TNT-Likely/PiggyCount/discussions)** — issues are for bugs / features.
         >
         > If you do open an issue, please fill in details below.
 
@@ -17,7 +17,7 @@ body:
       options:
         - label: I read the [documentation](https://count.beejz.com/docs/intro) — no answer
           required: true
-        - label: I searched [Issues](https://github.com/TNT-Likely/BeeCount/issues) and [Discussions](https://github.com/TNT-Likely/BeeCount/discussions) — no similar question
+        - label: I searched [Issues](https://github.com/TNT-Likely/PiggyCount/issues) and [Discussions](https://github.com/TNT-Likely/PiggyCount/discussions) — no similar question
           required: true
 
   - type: textarea

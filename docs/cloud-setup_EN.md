@@ -2,13 +2,13 @@
 
 > 🌐 [中文](cloud-setup.md)
 
-BeeCount supports 5 cloud sync options. Choose based on your scenario.
+PiggyCount supports 5 cloud sync options. Choose based on your scenario.
 
 ## Comparison
 
 | Option | Best For | Highlights |
 |---|---|---|
-| **BeeCount Cloud** | Real-time multi-device + self-hosted | One-click Docker, sub-second sync, built-in Web, multi-user |
+| **PiggyCount Cloud** | Real-time multi-device + self-hosted | One-click Docker, sub-second sync, built-in Web, multi-user |
 | **iCloud** | iOS-only users | Zero config, native integration, Apple ecosystem |
 | **Supabase** | Cross-platform without NAS | Generous free tier, easy setup, hosted |
 | **WebDAV** | NAS users | Local data, Synology/Nextcloud/etc. |
@@ -16,7 +16,7 @@ BeeCount supports 5 cloud sync options. Choose based on your scenario.
 
 ---
 
-## 🆕 BeeCount Cloud (Self-hosted Sync + Web)
+## 🆕 PiggyCount Cloud (Self-hosted Sync + Web)
 
 > **Sub-second multi-device sync + Web admin + multi-user isolation.** Recommended for users with NAS / VPS / Docker.
 
@@ -25,8 +25,8 @@ BeeCount supports 5 cloud sync options. Choose based on your scenario.
 ```yaml
 # docker-compose.yml
 services:
-  beecount-cloud:
-    image: sunxiao0721/beecount-cloud:latest
+  piggycount-cloud:
+    image: sunxiao0721/piggycount-cloud:latest
     restart: unless-stopped
     ports:
       - "8869:8080"
@@ -36,13 +36,13 @@ services:
 
 ```bash
 docker compose up -d
-docker compose logs beecount-cloud | grep -A 10 "first launch"
+docker compose logs piggycount-cloud | grep -A 10 "first launch"
 ```
 
 Output similar to:
 
 ```
- BeeCount Cloud — first launch, admin account auto-created:
+ PiggyCount Cloud — first launch, admin account auto-created:
 
    Email:    owner@example.com
    Password: FIDodUnwprkw1zUi
@@ -51,7 +51,7 @@ Output similar to:
 With this account:
 
 - Open `http://<server-ip>:8869` in browser → **Web admin console**
-- In the App, choose "BeeCount Cloud", enter server URL + credentials
+- In the App, choose "PiggyCount Cloud", enter server URL + credentials
 
 ### Add Family / Teammates
 
@@ -61,8 +61,8 @@ Web console → "Users" → "Add User" with their email and password → tell th
 
 ```yaml
 services:
-  beecount-cloud:
-    image: sunxiao0721/beecount-cloud:latest
+  piggycount-cloud:
+    image: sunxiao0721/piggycount-cloud:latest
     restart: unless-stopped
     ports:
       - "8869:8080"
@@ -82,7 +82,7 @@ services:
 - **Data location**: SQLite + attachments + JWT secret all live in `./data/`. Migrate / back up the whole directory.
 - **Public deployment**: Front with nginx / caddy for HTTPS + domain.
 
-[📖 BeeCount-Cloud repo + backup system + audit reports →](https://github.com/TNT-Likely/BeeCount-Cloud)
+[📖 PiggyCount-Cloud repo + backup system + audit reports →](https://github.com/TNT-Likely/PiggyCount-Cloud)
 
 ---
 
@@ -100,10 +100,10 @@ services:
 **Setup**:
 
 1. Sign in to iCloud and enable iCloud Drive on the device
-2. Open BeeCount → Profile → Cloud Service
+2. Open PiggyCount → Profile → Cloud Service
 3. Choose **iCloud**
 
-> 💡 iCloud only works between iOS devices. For iOS + Android, use Supabase / S3 / BeeCount Cloud.
+> 💡 iCloud only works between iOS devices. For iOS + Android, use Supabase / S3 / PiggyCount Cloud.
 
 ---
 
@@ -119,7 +119,7 @@ services:
    - Get URL and anon key from project settings
 
 2. **Configure Storage**
-   - Create a bucket named `beecount-backups`
+   - Create a bucket named `piggycount-backups`
    - Set it to Private (don't check Public bucket)
    - **Configure RLS policies**: Create 4 policies so users can only access their own data
      - Go to bucket Policies tab
@@ -134,13 +134,13 @@ services:
        - **Policy definition**:
 
          ```sql
-         ((bucket_id = 'beecount-backups'::text) AND ((storage.foldername(name))[1] = 'users'::text) AND ((storage.foldername(name))[2] = (auth.uid())::text))
+         ((bucket_id = 'piggycount-backups'::text) AND ((storage.foldername(name))[1] = 'users'::text) AND ((storage.foldername(name))[2] = (auth.uid())::text))
          ```
 
-       - This ensures users only access `beecount-backups/users/<their-user-id>/`.
+       - This ensures users only access `piggycount-backups/users/<their-user-id>/`.
 
 3. **Configure in app**
-   - Open BeeCount → Profile → Cloud Service
+   - Open PiggyCount → Profile → Cloud Service
    - Tap "Add custom cloud service"
    - Service type: **Supabase**
    - Enter your URL and anon key
@@ -170,16 +170,16 @@ services:
    - Create or use an existing user account
 
 2. **Prepare directory** (optional)
-   - Create `BeeCount` folder under WebDAV root, or use any path
+   - Create `PiggyCount` folder under WebDAV root, or use any path
 
 3. **Configure in app**
-   - Open BeeCount → Profile → Cloud Service
+   - Open PiggyCount → Profile → Cloud Service
    - Tap "Add custom cloud service"
    - Service type: **WebDAV**
    - Fill in:
      - **WebDAV server URL**: e.g. `http://nas.local:5005`
      - **Username** / **Password**
-     - **Remote path**: e.g. `/home/BeeCount` or `/BeeCount`
+     - **Remote path**: e.g. `/home/PiggyCount` or `/PiggyCount`
    - Tap "Test connection" to verify
    - Save and enable. WebDAV doesn't need login — sync starts after configuration.
 
@@ -188,15 +188,15 @@ services:
 ```
 UGREEN NAS:
 - URL: http://your-nas:5005
-- Remote path: /home/BeeCount
+- Remote path: /home/PiggyCount
 
 Synology NAS:
 - URL: http://your-nas:5005 or https://your-domain
-- Remote path: /BeeCount
+- Remote path: /PiggyCount
 
 Jianguoyun:
 - URL: https://dav.jianguoyun.com/dav/
-- Remote path: /BeeCount
+- Remote path: /PiggyCount
 ```
 
 ---
@@ -218,7 +218,7 @@ Jianguoyun:
 1. **Create R2 bucket**
    - Log into [Cloudflare Dashboard](https://dash.cloudflare.com/)
    - Open **R2**
-   - Create a bucket like `beecount-backups`
+   - Create a bucket like `piggycount-backups`
    - Note the bucket name
 
 2. **Get API credentials**
@@ -231,14 +231,14 @@ Jianguoyun:
      - **Endpoint** (like `<account-id>.r2.cloudflarestorage.com`)
 
 3. **Configure in app**
-   - Open BeeCount → Profile → Cloud Service
+   - Open PiggyCount → Profile → Cloud Service
    - Tap "Add custom cloud service"
    - Service type: **S3 Protocol**
    - Fill in:
      - **Endpoint**: R2 endpoint (no `https://`)
      - **Region**: `auto`
      - **Access Key** / **Secret Key**
-     - **Bucket name**: e.g. `beecount-backups`
+     - **Bucket name**: e.g. `piggycount-backups`
      - **Use HTTPS**: enable (recommended)
      - **Port**: leave blank
    - Tap "Test connection" to verify
@@ -281,7 +281,7 @@ Aliyun OSS (S3-compatible):
 **Q: Which option should I pick?**
 
 - iOS single device → **iCloud**
-- Multi-device real-time + self-host → **BeeCount Cloud**
+- Multi-device real-time + self-host → **PiggyCount Cloud**
 - Cross-platform without NAS → **Supabase** or **S3**
 - Have a NAS → **WebDAV**
 
@@ -302,7 +302,7 @@ Aliyun OSS (S3-compatible):
 **Q: How to sync between devices?**
 
 - iCloud: log into the same Apple ID
-- BeeCount Cloud: same server URL + same account
+- PiggyCount Cloud: same server URL + same account
 - Supabase: same URL and anon key, same account
 - WebDAV: same server URL and credentials
 - S3: same endpoint, Access Key, and bucket
@@ -315,4 +315,4 @@ Aliyun OSS (S3-compatible):
 - 📦 Dropbox
 - 📦 OneDrive
 
-If you want to prioritize a service, please raise an [Issue](https://github.com/TNT-Likely/BeeCount/issues)!
+If you want to prioritize a service, please raise an [Issue](https://github.com/TNT-Likely/PiggyCount/issues)!

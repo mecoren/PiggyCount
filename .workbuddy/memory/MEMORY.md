@@ -1,4 +1,4 @@
-# BeeCount 项目长期记忆
+# PiggyCount 项目长期记忆
 
 ## 版本号机制（重要）
 - `pubspec.yaml` 的 `version: 0.0.1` 仅是本地/开发构建占位默认值，**不是线上版本来源**。

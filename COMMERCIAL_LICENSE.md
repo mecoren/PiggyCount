@@ -1,8 +1,8 @@
-# BeeCount 商业授权 / Commercial License
+# PiggyCount 商业授权 / Commercial License
 
 中文 | [English](#english)
 
-BeeCount 及 [BeeCount-Cloud](https://github.com/TNT-Likely/BeeCount-Cloud) 对个人使用、学习研究免费（见 [LICENSE](LICENSE)）。**任何商业使用均需购买商业授权**，包括：作为产品或服务提供给客户、在盈利性组织中使用、基于源码开发商业产品、集成进商业软件、提供付费云服务（SaaS）。
+PiggyCount 及 [PiggyCount-Cloud](https://github.com/TNT-Likely/PiggyCount-Cloud) 对个人使用、学习研究免费（见 [LICENSE](LICENSE)）。**任何商业使用均需购买商业授权**，包括：作为产品或服务提供给客户、在盈利性组织中使用、基于源码开发商业产品、集成进商业软件、提供付费云服务（SaaS）。
 
 ## 授权模式
 
@@ -23,7 +23,7 @@ BeeCount 及 [BeeCount-Cloud](https://github.com/TNT-Likely/BeeCount-Cloud) 对�
 - ✅ 闭源权：豁免「修改版必须开源」义务
 - ✅ 以自有品牌发布二进制产物（App Store / Google Play / 国内商店）
 - ❌ 不含版本更新与技术支持——可作为增值服务单独购买
-- ❌ 不含「BeeCount / 蜜蜂记账」名称、图标与商标——需更名换标发布
+- ❌ 不含「PiggyCount / 小猪记账」名称、图标与商标——需更名换标发布
 - ❌ 不含源码转售 / 再许可权
 - ℹ️ 第三方开源依赖按其各自协议授权（见 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)）
 
@@ -40,7 +40,7 @@ BeeCount 及 [BeeCount-Cloud](https://github.com/TNT-Likely/BeeCount-Cloud) 对�
 
 ## English
 
-BeeCount and [BeeCount-Cloud](https://github.com/TNT-Likely/BeeCount-Cloud) are free for personal use, learning and research (see [LICENSE_EN](LICENSE_EN)). **Any commercial use requires a paid commercial license**, including: offering it to customers as a product or service, using it within a for-profit organization, building commercial products on the source code, integrating it into commercial software, or operating a paid cloud service (SaaS).
+PiggyCount and [PiggyCount-Cloud](https://github.com/TNT-Likely/PiggyCount-Cloud) are free for personal use, learning and research (see [LICENSE_EN](LICENSE_EN)). **Any commercial use requires a paid commercial license**, including: offering it to customers as a product or service, using it within a for-profit organization, building commercial products on the source code, integrating it into commercial software, or operating a paid cloud service (SaaS).
 
 **Model**: one-time purchase of the source code at a specified git tag, perpetual for delivered versions, delivered AS IS and self-maintained. Updates, technical support, deployment help and custom development are optional paid add-ons, quoted on request.
 
@@ -50,6 +50,6 @@ BeeCount and [BeeCount-Cloud](https://github.com/TNT-Likely/BeeCount-Cloud) are 
 | **Commercial Product (single)** | Ship 1 closed-source app under your own brand, incl. companion cloud backend | **$1,399** |
 | **SaaS / OEM / Multi-product** | Paid cloud service, white-label resale, multiple products | **from $3,999**, negotiable |
 
-The "BeeCount" trademark is not included — products must ship under your own brand. Third-party dependencies remain under their own licenses (see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)).
+The "PiggyCount" trademark is not included — products must ship under your own brand. Third-party dependencies remain under their own licenses (see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)).
 
 Contact **sunxiaoyes@outlook.com** with your use case for a formal quote (incl. add-on pricing) and a contract sample. Prices may change over time; the emailed quote prevails, and existing licensees are unaffected.

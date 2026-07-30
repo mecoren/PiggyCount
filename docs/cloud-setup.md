@@ -2,13 +2,13 @@
 
 > 🌐 [English](cloud-setup_EN.md)
 
-BeeCount 支持 5 种云同步方案,根据你的使用场景选择最合适的一种。
+PiggyCount 支持 5 种云同步方案,根据你的使用场景选择最合适的一种。
 
 ## 方案对比
 
 | 方案 | 适用场景 | 特点 |
 |---|---|---|
-| **BeeCount Cloud** | 多端实时协同 + 自托管 | Docker 一键、多设备秒同步、自带 Web 端、多用户 |
+| **PiggyCount Cloud** | 多端实时协同 + 自托管 | Docker 一键、多设备秒同步、自带 Web 端、多用户 |
 | **iCloud** | iOS 单平台用户 | 零配置、原生集成、Apple 生态 |
 | **Supabase** | 无 NAS 的跨平台用户 | 免费额度充足、配置简单、云端托管 |
 | **WebDAV** | NAS 用户 | 数据本地化、群晖/绿联云/Nextcloud |
@@ -16,7 +16,7 @@ BeeCount 支持 5 种云同步方案,根据你的使用场景选择最合适的�
 
 ---
 
-## 🆕 BeeCount Cloud(自建云同步 + Web 端)
+## 🆕 PiggyCount Cloud(自建云同步 + Web 端)
 
 > **多端实时秒级同步 + Web 管理端 + 多用户独立**,推荐有 NAS / VPS / Docker 环境的用户。
 
@@ -25,8 +25,8 @@ BeeCount 支持 5 种云同步方案,根据你的使用场景选择最合适的�
 ```yaml
 # docker-compose.yml
 services:
-  beecount-cloud:
-    image: sunxiao0721/beecount-cloud:latest
+  piggycount-cloud:
+    image: sunxiao0721/piggycount-cloud:latest
     restart: unless-stopped
     ports:
       - "8869:8080"
@@ -36,13 +36,13 @@ services:
 
 ```bash
 docker compose up -d
-docker compose logs beecount-cloud | grep -A 10 "初次启动"
+docker compose logs piggycount-cloud | grep -A 10 "初次启动"
 ```
 
 输出类似:
 
 ```
- BeeCount Cloud — 初次启动,已自动创建管理员账号:
+ PiggyCount Cloud — 初次启动,已自动创建管理员账号:
 
    邮箱:    owner@example.com
    密码:    FIDodUnwprkw1zUi
@@ -51,7 +51,7 @@ docker compose logs beecount-cloud | grep -A 10 "初次启动"
 拿这个账号:
 
 - 浏览器访问 `http://<服务器 IP>:8869` 即可用 **Web 管理端**
-- App 里选「BeeCount Cloud」,填服务器地址 + 上面账号登录
+- App 里选「PiggyCount Cloud」,填服务器地址 + 上面账号登录
 
 ### 添加家人 / 队友
 
@@ -61,8 +61,8 @@ Web 后台 →「用户」→「新增用户」输入对方邮箱和密码 → �
 
 ```yaml
 services:
-  beecount-cloud:
-    image: sunxiao0721/beecount-cloud:latest
+  piggycount-cloud:
+    image: sunxiao0721/piggycount-cloud:latest
     restart: unless-stopped
     ports:
       - "8869:8080"
@@ -82,7 +82,7 @@ services:
 - **数据位置**:SQLite 数据库 + 附件 + JWT 密钥全部在 `./data/` 目录,迁移/备份整个目录就行
 - **公网部署**:建议在前面套一层 nginx / caddy 做 HTTPS + 域名
 
-[📖 BeeCount-Cloud 仓库 + 备份系统 + 代码审查报告 →](https://github.com/TNT-Likely/BeeCount-Cloud)
+[📖 PiggyCount-Cloud 仓库 + 备份系统 + 代码审查报告 →](https://github.com/TNT-Likely/PiggyCount-Cloud)
 
 ---
 
@@ -100,10 +100,10 @@ services:
 **使用方式**:
 
 1. 确保 iOS 设备已登录 iCloud 并开启 iCloud Drive
-2. 打开蜜蜂记账 → 个人中心 → 云服务
+2. 打开小猪记账 → 个人中心 → 云服务
 3. 选择 **iCloud**,即可开始同步
 
-> 💡 iCloud 同步仅支持 iOS 设备。需要 iOS + Android 跨平台请用 Supabase / S3 / BeeCount Cloud。
+> 💡 iCloud 同步仅支持 iOS 设备。需要 iOS + Android 跨平台请用 Supabase / S3 / PiggyCount Cloud。
 
 ---
 
@@ -119,7 +119,7 @@ services:
    - 在项目设置中获取 URL 和 anon key
 
 2. **配置 Storage**
-   - 在 Supabase 控制台创建名为 `beecount-backups` 的 Storage Bucket
+   - 在 Supabase 控制台创建名为 `piggycount-backups` 的 Storage Bucket
    - 设置为 Private(不勾选 Public bucket)
    - **配置 RLS 访问策略**:需要创建 4 条策略,确保用户只能访问自己的数据
      - 进入 bucket 的 Policies 标签页
@@ -134,13 +134,13 @@ services:
        - **Policy definition**: 输入以下表达式
 
          ```sql
-         ((bucket_id = 'beecount-backups'::text) AND ((storage.foldername(name))[1] = 'users'::text) AND ((storage.foldername(name))[2] = (auth.uid())::text))
+         ((bucket_id = 'piggycount-backups'::text) AND ((storage.foldername(name))[1] = 'users'::text) AND ((storage.foldername(name))[2] = (auth.uid())::text))
          ```
 
-       - 此策略确保用户只能访问 `beecount-backups/users/<自己的用户ID>/` 路径下的文件
+       - 此策略确保用户只能访问 `piggycount-backups/users/<自己的用户ID>/` 路径下的文件
 
 3. **应用内配置**
-   - 打开蜜蜂记账 → 个人中心 → 云服务
+   - 打开小猪记账 → 个人中心 → 云服务
    - 点击"添加自定义云服务"
    - 选择服务类型:**Supabase**
    - 填入你的 Supabase URL 和 anon key
@@ -170,18 +170,18 @@ services:
    - 创建或使用现有的用户账号
 
 2. **准备存储目录**(可选)
-   - 在 WebDAV 根目录下创建 `BeeCount` 文件夹
+   - 在 WebDAV 根目录下创建 `PiggyCount` 文件夹
    - 或使用任意路径(配置时指定即可)
 
 3. **应用内配置**
-   - 打开蜜蜂记账 → 个人中心 → 云服务
+   - 打开小猪记账 → 个人中心 → 云服务
    - 点击"添加自定义云服务"
    - 选择服务类型:**WebDAV**
    - 填写配置信息:
      - **WebDAV 服务器 URL**:如 `http://nas.local:5005`
      - **用户名**:你的 WebDAV 用户名
      - **密码**:你的 WebDAV 密码
-     - **远程路径**:存储路径(如 `/home/BeeCount` 或 `/BeeCount`)
+     - **远程路径**:存储路径(如 `/home/PiggyCount` 或 `/PiggyCount`)
    - 点击"测试连接"验证配置
    - 保存并启用配置
    - WebDAV 无需额外登录,配置后即可直接同步
@@ -191,15 +191,15 @@ services:
 ```
 绿联云 NAS:
 - URL: http://你的NAS地址:5005
-- 远程路径: /home/BeeCount
+- 远程路径: /home/PiggyCount
 
 群晖 NAS:
 - URL: http://你的NAS地址:5005 或 https://你的域名
-- 远程路径: /BeeCount
+- 远程路径: /PiggyCount
 
 坚果云:
 - URL: https://dav.jianguoyun.com/dav/
-- 远程路径: /BeeCount
+- 远程路径: /PiggyCount
 ```
 
 ---
@@ -221,7 +221,7 @@ services:
 1. **创建 R2 存储桶**
    - 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)
    - 进入 **R2** 服务
-   - 创建新存储桶(Bucket),如命名为 `beecount-backups`
+   - 创建新存储桶(Bucket),如命名为 `piggycount-backups`
    - 记录存储桶名称
 
 2. **获取 API 凭证**
@@ -234,7 +234,7 @@ services:
      - **Endpoint**(如 `<账户ID>.r2.cloudflarestorage.com`)
 
 3. **应用内配置**
-   - 打开蜜蜂记账 → 个人中心 → 云服务
+   - 打开小猪记账 → 个人中心 → 云服务
    - 点击"添加自定义云服务"
    - 选择服务类型:**S3 协议存储**
    - 填写配置信息:
@@ -242,7 +242,7 @@ services:
      - **区域**:`auto`(R2 自动选择区域)
      - **Access Key**:你的 Access Key ID
      - **Secret Key**:你的 Secret Access Key
-     - **存储桶名称**:创建的存储桶名称(如 `beecount-backups`)
+     - **存储桶名称**:创建的存储桶名称(如 `piggycount-backups`)
      - **使用 HTTPS**:开启(推荐)
      - **端口**:留空(使用默认端口)
    - 点击"测试连接"验证配置
@@ -285,7 +285,7 @@ MinIO(自建):
 **Q: 应该选哪个方案?**
 
 - iOS 单设备 → **iCloud**
-- 多端实时协同 + 自托管 → **BeeCount Cloud**
+- 多端实时协同 + 自托管 → **PiggyCount Cloud**
 - 跨平台无 NAS → **Supabase** 或 **S3**
 - 有 NAS → **WebDAV**
 
@@ -306,7 +306,7 @@ MinIO(自建):
 **Q: 如何在多设备间同步?**
 
 - iCloud:iOS 设备登录同一 Apple ID,数据自动同步
-- BeeCount Cloud:所有设备配置相同服务器地址 + 同账号登录
+- PiggyCount Cloud:所有设备配置相同服务器地址 + 同账号登录
 - Supabase:所有设备配置相同的 URL 和 anon key,登录同一账号
 - WebDAV:所有设备配置相同的 WebDAV 服务器地址和凭据
 - S3:所有设备配置相同的 S3 端点、Access Key 和存储桶名称
@@ -319,4 +319,4 @@ MinIO(自建):
 - 📦 Dropbox
 - 📦 OneDrive
 
-如果你希望优先支持某个云服务,欢迎在 [Issues](https://github.com/TNT-Likely/BeeCount/issues) 中提出需求!
+如果你希望优先支持某个云服务,欢迎在 [Issues](https://github.com/TNT-Likely/PiggyCount/issues) 中提出需求!

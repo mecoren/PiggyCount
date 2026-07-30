@@ -6,9 +6,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        感谢您对蜜蜂记账的支持！提交以下信息后，我们会将您添加到 README 的感谢支持者列表中。
+        感谢您对小猪记账的支持！提交以下信息后，我们会将您添加到 README 的感谢支持者列表中。
 
-        Thank you for supporting BeeCount! After submitting the following info, we'll add you to the supporters list in README.
+        Thank you for supporting PiggyCount! After submitting the following info, we'll add you to the supporters list in README.
 
   - type: textarea
     id: screenshot

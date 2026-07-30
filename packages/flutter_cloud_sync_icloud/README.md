@@ -31,19 +31,19 @@ dependencies:
 2. Select Runner target → Signing & Capabilities
 3. Click `+ Capability` → Select `iCloud`
 4. Check `iCloud Documents`
-5. Add container: `iCloud.com.beecount.app`
+5. Add container: `iCloud.com.piggycount.app`
 
 ### 3. Configure Info.plist
 
 ```xml
 <key>NSUbiquitousContainers</key>
 <dict>
-    <key>iCloud.com.beecount.app</key>
+    <key>iCloud.com.piggycount.app</key>
     <dict>
         <key>NSUbiquitousContainerIsDocumentScopePublic</key>
         <true/>
         <key>NSUbiquitousContainerName</key>
-        <string>BeeCount</string>
+        <string>PiggyCount</string>
         <key>NSUbiquitousContainerSupportedFolderLevels</key>
         <string>Any</string>
     </dict>

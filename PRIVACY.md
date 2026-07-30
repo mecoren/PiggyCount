@@ -1,12 +1,12 @@
-# Privacy Policy for BeeCount
+# Privacy Policy for PiggyCount
 
 **Last updated**: 2026-06-25
 
-BeeCount ("we", "our", or "the app") is committed to protecting your privacy. This Privacy Policy explains how we handle your data when you use our application.
+PiggyCount ("we", "our", or "the app") is committed to protecting your privacy. This Privacy Policy explains how we handle your data when you use our application.
 
 ## TL;DR (Summary)
 
-- **BeeCount itself does NOT collect your data and does NOT operate any servers**
+- **PiggyCount itself does NOT collect your data and does NOT operate any servers**
 - **We do NOT use any analytics or tracking**
 - **By default your data stays on your device; nothing is sent off-device**
 - **Only when you actively enable and configure AI features, the relevant data is sent to the third-party AI provider you choose**
@@ -17,7 +17,7 @@ BeeCount ("we", "our", or "the app") is committed to protecting your privacy. Th
 
 **We collect ZERO user data.**
 
-BeeCount is designed with privacy-first principles:
+PiggyCount is designed with privacy-first principles:
 - No user registration required (optional cloud sync only)
 - No server-side data collection
 - No analytics or crash reporting services
@@ -50,7 +50,7 @@ If you choose to enable cloud synchronization, your data is stored in:
 
 ## 3. Data Sharing
 
-BeeCount itself does not collect or sell your data, and we do not operate servers that receive it.
+PiggyCount itself does not collect or sell your data, and we do not operate servers that receive it.
 
 - By default, no data leaves your device.
 - If you enable **cloud sync**, data goes only to the server YOU configure (your own Supabase / WebDAV).
@@ -91,7 +91,7 @@ While we don't collect your data, we implement security best practices:
 - Local data is stored using SQLite with Android's built-in security
 - Cloud sync uses HTTPS/TLS encryption when communicating with your servers
 - Authentication credentials are stored securely using Android Keystore
-- The app is open source - you can audit our code: [GitHub Repository](https://github.com/TNT-Likely/BeeCount)
+- The app is open source - you can audit our code: [GitHub Repository](https://github.com/TNT-Likely/PiggyCount)
 
 ## 6. Children's Privacy
 
@@ -108,9 +108,9 @@ You have complete control over your data:
 
 ## 8. Open Source
 
-BeeCount is fully open source under the MIT License. You can:
+PiggyCount is fully open source under the MIT License. You can:
 
-- Review our entire codebase: https://github.com/TNT-Likely/BeeCount
+- Review our entire codebase: https://github.com/TNT-Likely/PiggyCount
 - Verify that we don't collect any data
 - Build the app yourself from source
 - Contribute improvements
@@ -124,16 +124,16 @@ We may update this Privacy Policy from time to time. We will notify you of any c
 
 ## 10. Third-Party Services
 
-BeeCount does NOT integrate any analytics, advertising, or crash-reporting SDKs.
+PiggyCount does NOT integrate any analytics, advertising, or crash-reporting SDKs.
 
 The following third parties are involved **only if you explicitly enable and configure the corresponding optional feature**, and each is controlled by YOU:
 
 ### AI features (optional, off by default)
-When you enable AI features and configure a provider, BeeCount sends — for the request you initiate — receipt/screenshot images, voice recordings, text you type, and the category names, account names and transaction records needed to complete recognition or analysis, to the AI provider you configured:
+When you enable AI features and configure a provider, PiggyCount sends — for the request you initiate — receipt/screenshot images, voice recordings, text you type, and the category names, account names and transaction records needed to complete recognition or analysis, to the AI provider you configured:
 - **Zhipu GLM** (default, `open.bigmodel.cn`, operated by Zhipu) — subject to Zhipu's privacy policy.
 - **Any other third-party AI service you configure** — subject to that provider's privacy policy.
 
-AI is OFF by default and requires your own API key. The app shows an in-app notice naming the provider and the data involved, and asks for your consent, before any data is sent. BeeCount itself neither stores nor receives this data.
+AI is OFF by default and requires your own API key. The app shows an in-app notice naming the provider and the data involved, and asks for your consent, before any data is sent. PiggyCount itself neither stores nor receives this data.
 
 ### Cloud sync (optional)
 - **Supabase**: subject to [Supabase Privacy Policy](https://supabase.com/privacy)
@@ -144,12 +144,12 @@ AI is OFF by default and requires your own API key. The app shows an in-app noti
 If you have any questions about this Privacy Policy, please contact us:
 
 - **Email**: (Add your email if you want, or remove this section)
-- **GitHub Issues**: https://github.com/TNT-Likely/BeeCount/issues
-- **GitHub Discussions**: https://github.com/TNT-Likely/BeeCount/discussions
+- **GitHub Issues**: https://github.com/TNT-Likely/PiggyCount/issues
+- **GitHub Discussions**: https://github.com/TNT-Likely/PiggyCount/discussions
 
 ## 12. Consent
 
-By using BeeCount, you consent to this Privacy Policy.
+By using PiggyCount, you consent to this Privacy Policy.
 
 Since we don't collect any data, there's actually nothing to consent to - your privacy is protected by default! 🔒
 
@@ -157,13 +157,13 @@ Since we don't collect any data, there's actually nothing to consent to - your p
 
 ## Privacy Policy (简体中文)
 
-**蜜蜂记账隐私政策**
+**小猪记账隐私政策**
 
 **最后更新时间**: 2026-06-25
 
 ### 简要说明
 
-- **蜜蜂记账自身不收集你的数据,也不运营任何服务器**
+- **小猪记账自身不收集你的数据,也不运营任何服务器**
 - **我们不使用任何分析或追踪服务**
 - **默认情况下,数据只保存在你的设备,不会外发**
 - **仅当你主动开启并配置 AI 功能时,相关数据才会发送给你选择的第三方 AI 服务商**
@@ -172,7 +172,7 @@ Since we don't collect any data, there's actually nothing to consent to - your p
 
 **我们收集零用户数据。**
 
-蜜蜂记账采用隐私优先原则设计：
+小猪记账采用隐私优先原则设计：
 - 无需用户注册（云同步功能可选）
 - 无服务器端数据收集
 - 无分析或崩溃报告服务
@@ -196,13 +196,13 @@ Since we don't collect any data, there's actually nothing to consent to - your p
 
 ### 3. 数据共享
 
-蜜蜂记账自身不收集、不出售你的数据,也不运营任何接收数据的服务器。
+小猪记账自身不收集、不出售你的数据,也不运营任何接收数据的服务器。
 
 - 默认情况下,数据不会离开你的设备。
 - 若你开启**云同步**,数据只发送到你自己配置的服务器(你的 Supabase / WebDAV)。
 - 若你开启 **AI 功能**,完成你发起的请求所需的数据,会发送给你配置的第三方 AI 服务商。
 
-**AI 功能(可选,默认关闭)**:开启并配置服务商后,蜜蜂记账会就你发起的请求,把账单/截图图片、语音录音、你输入的文字,以及完成识别/分析所需的分类名称、账户名称和相关交易记录,发送给你配置的服务商 —— 默认「智谱 GLM」(open.bigmodel.cn,智谱华章运营),或你自配的任意第三方 AI 服务商;各自适用其隐私政策。AI 默认关闭、需你自带 API Key;发送前 App 会以应用内提示点名服务商与所涉数据并征得你的同意。蜜蜂记账自身既不接收也不存储这些数据。
+**AI 功能(可选,默认关闭)**:开启并配置服务商后,小猪记账会就你发起的请求,把账单/截图图片、语音录音、你输入的文字,以及完成识别/分析所需的分类名称、账户名称和相关交易记录,发送给你配置的服务商 —— 默认「智谱 GLM」(open.bigmodel.cn,智谱华章运营),或你自配的任意第三方 AI 服务商;各自适用其隐私政策。AI 默认关闭、需你自带 API Key;发送前 App 会以应用内提示点名服务商与所涉数据并征得你的同意。小猪记账自身既不接收也不存储这些数据。
 
 ### 4. 权限请求
 
@@ -215,8 +215,8 @@ Since we don't collect any data, there's actually nothing to consent to - your p
 
 ### 5. 开源透明
 
-蜜蜂记账完全开源（MIT许可）：
-- 查看完整代码：https://github.com/TNT-Likely/BeeCount
+小猪记账完全开源（MIT许可）：
+- 查看完整代码：https://github.com/TNT-Likely/PiggyCount
 - 验证我们不收集任何数据
 - 从源代码自行构建
 - 贡献改进
@@ -224,8 +224,8 @@ Since we don't collect any data, there's actually nothing to consent to - your p
 ### 6. 联系我们
 
 如有任何问题，请通过以下方式联系我们：
-- GitHub Issues: https://github.com/TNT-Likely/BeeCount/issues
-- GitHub Discussions: https://github.com/TNT-Likely/BeeCount/discussions
+- GitHub Issues: https://github.com/TNT-Likely/PiggyCount/issues
+- GitHub Discussions: https://github.com/TNT-Likely/PiggyCount/discussions
 
 ---
 

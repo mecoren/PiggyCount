@@ -1,6 +1,6 @@
 # Skins &nbsp; [中文](README.md)
 
-> The "theme color + skin" decoration layer behind BeeCount's `PrimaryHeader`. This is the full authoring spec; the two main READMEs only carry a folded summary.
+> The "theme color + skin" decoration layer behind PiggyCount's `PrimaryHeader`. This is the full authoring spec; the two main READMEs only carry a folded summary.
 
 "Theme color + skin = the header banner": a skin is a decoration layer drawn on top of the header's theme-color base. Two kinds:
 

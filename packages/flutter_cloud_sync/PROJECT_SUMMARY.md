@@ -3,7 +3,7 @@
 ## 项目概述
 
 **项目名称**: Flutter Cloud Sync Package Extraction
-**目标**: 将 BeeCount 的云同步功能抽取为独立、可复用的 Flutter 包
+**目标**: 将 PiggyCount 的云同步功能抽取为独立、可复用的 Flutter 包
 **状态**: ✅ 已完成
 **完成日期**: 2025-01-XX
 
@@ -293,7 +293,7 @@ final ledgerSyncStatusProvider = FutureProvider.family<SyncStatus, int>(
 1. **阅读文档**
    - 查看 README 了解基本用法
    - 阅读 USAGE_GUIDE 了解高级特性
-   - 参考 INTEGRATION_GUIDE 了解如何集成到 BeeCount
+   - 参考 INTEGRATION_GUIDE 了解如何集成到 PiggyCount
 
 2. **运行示例**
    ```bash
@@ -312,9 +312,9 @@ final ledgerSyncStatusProvider = FutureProvider.family<SyncStatus, int>(
        path: packages/flutter_cloud_sync_webdav
    ```
 
-### 集成到 BeeCount（可选）
+### 集成到 PiggyCount（可选）
 
-如果决定集成到 BeeCount：
+如果决定集成到 PiggyCount：
 
 1. **准备阶段**（1-2天）
    - 添加依赖
@@ -351,7 +351,7 @@ final ledgerSyncStatusProvider = FutureProvider.family<SyncStatus, int>(
 
 ## 项目价值
 
-### 对 BeeCount 的价值
+### 对 PiggyCount 的价值
 
 1. **代码复用**
    - 其他项目可以复用云同步功能
@@ -418,12 +418,12 @@ final ledgerSyncStatusProvider = FutureProvider.family<SyncStatus, int>(
 
 ## 许可证
 
-根据 BeeCount 项目的许可证。
+根据 PiggyCount 项目的许可证。
 
 ## 联系方式
 
-- **GitHub**: https://github.com/TNT-Likely/BeeCount
-- **Issues**: https://github.com/TNT-Likely/BeeCount/issues
+- **GitHub**: https://github.com/TNT-Likely/PiggyCount
+- **Issues**: https://github.com/TNT-Likely/PiggyCount/issues
 
 ---
 
@@ -431,13 +431,13 @@ final ledgerSyncStatusProvider = FutureProvider.family<SyncStatus, int>(
 
 ✅ **项目已成功完成**
 
-已经成功将 BeeCount 的云同步功能抽取为三个独立、可复用的 Flutter 包：
+已经成功将 PiggyCount 的云同步功能抽取为三个独立、可复用的 Flutter 包：
 
 1. **flutter_cloud_sync** - 核心框架
 2. **flutter_cloud_sync_supabase** - Supabase 集成
 3. **flutter_cloud_sync_webdav** - WebDAV 集成
 
-所有包都经过充分测试，文档完善，可以立即使用。同时提供了详细的集成指南，方便未来集成到 BeeCount 主应用中。
+所有包都经过充分测试，文档完善，可以立即使用。同时提供了详细的集成指南，方便未来集成到 PiggyCount 主应用中。
 
 **交付质量**: ⭐⭐⭐⭐⭐
 - 代码质量：优秀

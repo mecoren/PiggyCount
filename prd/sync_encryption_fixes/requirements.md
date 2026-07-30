@@ -1,6 +1,6 @@
 # 同步与加密链路修复 需求文档
 
-> 范围：BeeCount 同步路径 A（S3/WebDAV/Supabase/iCloud）下，针对数据恢复、多设备加密、代码质量、同步透明度等 7 个已识别缺陷的修复。
+> 范围：PiggyCount 同步路径 A（S3/WebDAV/Supabase/iCloud）下，针对数据恢复、多设备加密、代码质量、同步透明度等 7 个已识别缺陷的修复。
 
 ## 1. 背景与问题清单
 
@@ -108,7 +108,7 @@
 
 ## 4. 范围外
 
-- 不修改路径 B（BeeCount Cloud）的同步逻辑
+- 不修改路径 B（PiggyCount Cloud）的同步逻辑
 - 不重构 `flutter_cloud_sync` 包内部
 - 不调整加密密文格式 `BEECRYPT1:<salt>:<nonce||ciphertext||mac>`
 - 不引入新的加密算法或密钥派生参数

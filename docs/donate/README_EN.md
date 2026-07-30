@@ -2,7 +2,7 @@
 
 English | [简体中文](README_ZH.md)
 
-Thank you for using BeeCount! If you find this project helpful, consider buying the developer a coffee.
+Thank you for using PiggyCount! If you find this project helpful, consider buying the developer a coffee.
 
 ---
 

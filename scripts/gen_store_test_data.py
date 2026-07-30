@@ -10,8 +10,8 @@
 用法：
   python3 scripts/gen_store_test_data.py
 
-为什么需要 YAML：BeeCount 的 CSV 导入链不识别"图标"列，且账户/标签字段
-缺乏必要属性（账户类型、标签颜色）。BeeCount 自带的「配置导入」功能
+为什么需要 YAML：PiggyCount 的 CSV 导入链不识别"图标"列，且账户/标签字段
+缺乏必要属性（账户类型、标签颜色）。PiggyCount 自带的「配置导入」功能
 （lib/services/export/config_export_service.dart）接受完整 YAML，能
 一次性导入分类（带 Material 图标）、账户（带类型）、标签（带颜色）。
 所以工作流：先导 YAML（建好账户/分类/标签的"骨架"），再导交易 CSV
@@ -514,7 +514,7 @@ def write_csv(entries: list[LogicalEntry], path: Path, lang: str) -> None:
 
 
 def _build_setup_yaml(lang: str) -> str:
-    """生成 BeeCount 配置导入用的完整 YAML（accounts + categories + tags）。
+    """生成 PiggyCount 配置导入用的完整 YAML（accounts + categories + tags）。
 
     格式与 lib/services/export/config_export_service.dart 的 toMap 输出一致：
       - 顶层 keys：version / exported_at / accounts / categories / tags
@@ -538,7 +538,7 @@ def _build_setup_yaml(lang: str) -> str:
 
     now_iso = datetime.now().isoformat()
     lines = [
-        "# BeeCount 配置（商店截图测试用）",
+        "# PiggyCount 配置（商店截图测试用）",
         f"# 语言 / 货币：{comment_lang}",
         f"# 导出时间：{now_iso}",
         "",
@@ -598,7 +598,7 @@ def _build_setup_yaml(lang: str) -> str:
 
 
 def write_setup_yaml(path: Path, lang: str) -> None:
-    """生成 BeeCount 配置 YAML。"""
+    """生成 PiggyCount 配置 YAML。"""
     yaml_content = _build_setup_yaml(lang)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(yaml_content, encoding="utf-8")
@@ -624,9 +624,9 @@ def main() -> None:
 
     print()
     print("完成。导入流程：")
-    print("  1. BeeCount 设置 → 配置导入 → 选 store_setup_<lang>.yaml")
+    print("  1. PiggyCount 设置 → 配置导入 → 选 store_setup_<lang>.yaml")
     print("     (会创建 5 账户、59 分类带图标、24 彩色标签)")
-    print("  2. BeeCount 设置 → 数据 → 导入 CSV → 选 store_test_<lang>.csv")
+    print("  2. PiggyCount 设置 → 数据 → 导入 CSV → 选 store_test_<lang>.csv")
     print("     (按名匹配到第 1 步刚导入的账户/分类/标签)")
     print("  （切换系统语言后再做 en 那一套，账户/分类/标签自动按语言区分）")
 

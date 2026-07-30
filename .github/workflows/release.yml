@@ -211,22 +211,22 @@ jobs:
           #   - app-prod-armeabi-v7a-release-vX.apk  armv7 老设备兼容
           #   - app-prod-x86_64-release-vX.apk       Intel/Win/Linux 模拟器
           #   - app-prod-universal-release-vX.apk    三 ABI 兜底
-          # 全部重命名成 beecount-<VERSION>-[<abi>].apk 上 Release。
+          # 全部重命名成 piggycount-<VERSION>-[<abi>].apk 上 Release。
           for src in "$APK_DIR"/app-prod-*.apk; do
             [ -f "$src" ] || continue
             name="$(basename "$src")"
             case "$name" in
               app-prod-release-v*.apk)
-                dest="$APK_DIR/beecount-${VERSION}.apk"
+                dest="$APK_DIR/piggycount-${VERSION}.apk"
                 ;;
               app-prod-armeabi-v7a-release-v*.apk)
-                dest="$APK_DIR/beecount-${VERSION}-armeabi-v7a.apk"
+                dest="$APK_DIR/piggycount-${VERSION}-armeabi-v7a.apk"
                 ;;
               app-prod-x86_64-release-v*.apk)
-                dest="$APK_DIR/beecount-${VERSION}-x86_64.apk"
+                dest="$APK_DIR/piggycount-${VERSION}-x86_64.apk"
                 ;;
               app-prod-universal-release-v*.apk)
-                dest="$APK_DIR/beecount-${VERSION}-universal.apk"
+                dest="$APK_DIR/piggycount-${VERSION}-universal.apk"
                 ;;
               *)
                 echo "Unknown APK pattern, skipping: $name"
@@ -239,11 +239,11 @@ jobs:
           # 重命名 AAB(AAB 不按 ABI 拆,Google Play 按设备分发)
           if [ -f build/app/outputs/bundle/prodRelease/app-prod-release.aab ]; then
             mv build/app/outputs/bundle/prodRelease/app-prod-release.aab \
-               build/app/outputs/bundle/prodRelease/beecount-${VERSION}.aab
-            echo "Renamed AAB to: beecount-${VERSION}.aab"
+               build/app/outputs/bundle/prodRelease/piggycount-${VERSION}.aab
+            echo "Renamed AAB to: piggycount-${VERSION}.aab"
           fi
           echo "=== Final Android artifacts ==="
-          find build/app/outputs -name "beecount-*"
+          find build/app/outputs -name "piggycount-*"
 
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
@@ -251,8 +251,8 @@ jobs:
           name: android
           if-no-files-found: error
           path: |
-            build/app/outputs/apk/prod/release/beecount-*.apk
-            build/app/outputs/bundle/prodRelease/beecount-*.aab
+            build/app/outputs/apk/prod/release/piggycount-*.apk
+            build/app/outputs/bundle/prodRelease/piggycount-*.aab
 
       - name: Upload AAB to Google Play Console
         if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || github.event_name == 'workflow_dispatch'
@@ -260,7 +260,7 @@ jobs:
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
           VERSION="${{ steps.meta.outputs.tag_name }}"
-          AAB_FILE="build/app/outputs/bundle/prodRelease/beecount-${VERSION}.aab"
+          AAB_FILE="build/app/outputs/bundle/prodRelease/piggycount-${VERSION}.aab"
 
           if [ -z "${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON:-}" ]; then
             echo "⚠️  GOOGLE_PLAY_SERVICE_ACCOUNT_JSON not set, skipping Google Play upload"
@@ -290,7 +290,7 @@ jobs:
           from googleapiclient.http import MediaFileUpload
 
           # 配置
-          PACKAGE_NAME = 'com.tntlikely.beecount'
+          PACKAGE_NAME = 'com.wait.piggycount'
           AAB_FILE = sys.argv[1]
           TRACK = 'production'  # internal, alpha, beta, production
 
@@ -529,10 +529,10 @@ jobs:
               '    <string>Apple Distribution</string>' \
               '    <key>provisioningProfiles</key>' \
               '    <dict>' \
-              '        <key>com.tntlikely.beecount</key>' \
-              '        <string>BeeCount_AppStore</string>' \
-              '        <key>com.tntlikely.beecount.BeeCountWidgetExtension</key>' \
-              '        <string>BeeCount_Widget_AppStore</string>' \
+              '        <key>com.wait.piggycount</key>' \
+              '        <string>PiggyCount_AppStore</string>' \
+              '        <key>com.wait.piggycount.PiggyCountWidgetExtension</key>' \
+              '        <string>PiggyCount_Widget_AppStore</string>' \
               '    </dict>' \
               '</dict>' \
               '</plist>' \
@@ -582,12 +582,12 @@ jobs:
           # 使用perl进行精确匹配和插入
           perl -i -pe '
             # Widget Extension: 在其Bundle ID行前插入Profile配置
-            if (/^\s+PRODUCT_BUNDLE_IDENTIFIER = com\.tntlikely\.beecount\.BeeCountWidgetExtension;/) {
-              print "\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = \"BeeCount_Widget_AppStore\";\n";
+            if (/^\s+PRODUCT_BUNDLE_IDENTIFIER = com\.tntlikely\.piggycount\.PiggyCountWidgetExtension;/) {
+              print "\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = \"PiggyCount_Widget_AppStore\";\n";
             }
             # 主应用: 主应用使用变量形式的Bundle ID,通过CODE_SIGN_ENTITLEMENTS识别
             elsif (/^\s+CODE_SIGN_ENTITLEMENTS = Runner\/Runner\.entitlements;/) {
-              print "\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = \"BeeCount_AppStore\";\n";
+              print "\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = \"PiggyCount_AppStore\";\n";
             }
           ' "$PROJECT_FILE"
 
@@ -664,9 +664,9 @@ jobs:
 
           # flutter build ipa 会在 build/ios/ipa 目录生成 IPA
           if [ -f build/ios/ipa/*.ipa ]; then
-            cp build/ios/ipa/*.ipa beecount-${VERSION}-signed.ipa
-            echo "✅ Copied signed IPA: beecount-${VERSION}-signed.ipa"
-            ls -lh beecount-${VERSION}-signed.ipa
+            cp build/ios/ipa/*.ipa piggycount-${VERSION}-signed.ipa
+            echo "✅ Copied signed IPA: piggycount-${VERSION}-signed.ipa"
+            ls -lh piggycount-${VERSION}-signed.ipa
           else
             echo "❌ Signed IPA not found in build/ios/ipa/"
             ls -la build/ios/ipa/ || true
@@ -699,12 +699,12 @@ jobs:
             exit 1
           fi
           # 生成包含版本号的文件名
-          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" beecount-${VERSION}-iphoneos.app.zip
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" piggycount-${VERSION}-iphoneos.app.zip
           mkdir -p Payload
           cp -R "$APP_PATH" Payload/
-          /usr/bin/zip -qry beecount-${VERSION}-unsigned.ipa Payload
+          /usr/bin/zip -qry piggycount-${VERSION}-unsigned.ipa Payload
           echo "Generated iOS artifacts:"
-          ls -la beecount-${VERSION}-*
+          ls -la piggycount-${VERSION}-*
 
       - name: Package iOS Simulator Runner.app (debug, unsigned)
         run: |
@@ -712,8 +712,8 @@ jobs:
           VERSION="${{ steps.meta.outputs.tag_name }}"
           SIM_APP_PATH="build/ios/iphonesimulator/Runner.app"
           if [ -d "$SIM_APP_PATH" ]; then
-            ditto -c -k --sequesterRsrc --keepParent "$SIM_APP_PATH" beecount-${VERSION}-iphonesimulator.app.zip
-            echo "Generated iOS Simulator artifact: beecount-${VERSION}-iphonesimulator.app.zip"
+            ditto -c -k --sequesterRsrc --keepParent "$SIM_APP_PATH" piggycount-${VERSION}-iphonesimulator.app.zip
+            echo "Generated iOS Simulator artifact: piggycount-${VERSION}-iphonesimulator.app.zip"
           else
             echo "Simulator Runner.app not found at $SIM_APP_PATH" >&2
             ls -la build/ios/iphonesimulator || true
@@ -727,7 +727,7 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="${{ steps.meta.outputs.tag_name }}"
-          IPA_FILE="beecount-${VERSION}-signed.ipa"
+          IPA_FILE="piggycount-${VERSION}-signed.ipa"
 
           if [ -z "${APPLE_ID:-}" ] || [ -z "${APPLE_APP_SPECIFIC_PASSWORD:-}" ]; then
             echo "⚠️  APPLE_ID or APPLE_APP_SPECIFIC_PASSWORD not set, skipping TestFlight upload"
@@ -754,10 +754,10 @@ jobs:
         with:
           name: ios
           path: |
-            beecount-*-iphoneos.app.zip
-            beecount-*-unsigned.ipa
-            beecount-*-signed.ipa
-            beecount-*-iphonesimulator.app.zip
+            piggycount-*-iphoneos.app.zip
+            piggycount-*-unsigned.ipa
+            piggycount-*-signed.ipa
+            piggycount-*-iphonesimulator.app.zip
 
   release:
     name: Create GitHub Release
@@ -913,9 +913,9 @@ jobs:
 
           # 构建消息
           if [ "$IS_PRERELEASE" == "true" ]; then
-            MESSAGE="🐝 *BeeCount ${TAG}* 发布（预览版）%0A%0A"
+            MESSAGE="🐝 *PiggyCount ${TAG}* 发布（预览版）%0A%0A"
           else
-            MESSAGE="🐝 *BeeCount ${TAG}* 发布%0A%0A"
+            MESSAGE="🐝 *PiggyCount ${TAG}* 发布%0A%0A"
           fi
 
           MESSAGE="${MESSAGE}🔗 [查看完整说明](${RELEASE_URL})%0A%0A"

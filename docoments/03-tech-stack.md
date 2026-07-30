@@ -23,14 +23,14 @@ audience: 一年经验的开发者
 
 ### 1.1 为什么单独写技术栈文档
 
-BeeCount 的 `pubspec.yaml` 直接依赖 60+ 个 package,加上 8 个本地 path 依赖子包(`packages/`),技术栈相当庞杂。新加入的贡献者面对这么多依赖,常常遇到以下困惑:
+PiggyCount 的 `pubspec.yaml` 直接依赖 60+ 个 package,加上 8 个本地 path 依赖子包(`packages/`),技术栈相当庞杂。新加入的贡献者面对这么多依赖,常常遇到以下困惑:
 
 - 不知道某个依赖是用来做什么的
 - 不清楚为什么选这个库而不选另一个(如为什么用 Drift 而不是 sqflite)
 - 不知道哪些依赖是核心、哪些是可选、哪些是平台特定
 - 修改依赖时不知道版本约束的来由(为什么有些库被钉死版本)
 
-本文档对 BeeCount 的全部技术栈进行分类梳理,标注每个依赖的用途、选型理由、版本约束来源,让一年经验开发者能快速建立全局认知。
+本文档对 PiggyCount 的全部技术栈进行分类梳理,标注每个依赖的用途、选型理由、版本约束来源,让一年经验开发者能快速建立全局认知。
 
 ### 1.2 信息来源
 
@@ -55,11 +55,11 @@ BeeCount 的 `pubspec.yaml` 直接依赖 60+ 个 package,加上 8 个本地 path
 
 ### 2.1 技术栈分类总览
 
-BeeCount 的技术栈可分为八大类:
+PiggyCount 的技术栈可分为八大类:
 
 ```mermaid
 flowchart TD
-    Root[BeeCount 技术栈]
+    Root[PiggyCount 技术栈]
 
     Root --> Core[核心框架]
     Root --> Data[数据层]
@@ -100,11 +100,11 @@ flowchart TD
     Dev --> Dev4[flutter_launcher_icons]
 ```
 
-上图展示了 BeeCount 技术栈的八大分类。核心框架是基础,数据层与状态管理是支撑,同步与 AI 是 BeeCount 区别于普通记账应用的特色能力,UI 与平台集成负责用户体验,开发工具保障工程质量。后续章节按类别详细说明。
+上图展示了 PiggyCount 技术栈的八大分类。核心框架是基础,数据层与状态管理是支撑,同步与 AI 是 PiggyCount 区别于普通记账应用的特色能力,UI 与平台集成负责用户体验,开发工具保障工程质量。后续章节按类别详细说明。
 
 ### 2.2 依赖管理策略
 
-BeeCount 采用**保守版本约束**策略:
+PiggyCount 采用**保守版本约束**策略:
 
 - 大多数依赖使用 `^x.y.z` 的兼容版本约束(允许 patch / minor 升级)
 - 少数有兼容性问题的依赖**钉死版本**(使用 `x.y.z` 不带 `^`)
@@ -133,7 +133,7 @@ BeeCount 采用**保守版本约束**策略:
 | `flutter_riverpod` | `^2.5.1` | 状态管理 + DI + Stream 监听 | 编译时安全、无 BuildContext 依赖、StreamProvider 原生支持 Drift reactive query | Provider(过时)、Bloc(事件驱动过重)、GetX(争议大) | 全 app 唯一状态管理方案 |
 | `riverpod_annotation` | `^2.3.5` | Riverpod codegen 注解 | 可选,用于生成 `@riverpod` provider | — | `pubspec.yaml` L15 |
 
-Riverpod 在 BeeCount 中的典型用法见 `lib/providers/`:
+Riverpod 在 PiggyCount 中的典型用法见 `lib/providers/`:
 
 - `Provider`(同步):`databaseProvider`、`repositoryProvider`
 - `StreamProvider`(异步响应式):`categoriesProvider`、`accountsStreamProvider`
@@ -160,11 +160,11 @@ Riverpod 在 BeeCount 中的典型用法见 `lib/providers/`:
 
 #### 3.4.1 自研同步框架
 
-BeeCount 的同步能力由自研 `flutter_cloud_sync` 框架提供,位于 `packages/` 下,通过 path 依赖引入:
+PiggyCount 的同步能力由自研 `flutter_cloud_sync` 框架提供,位于 `packages/` 下,通过 path 依赖引入:
 
 | 子包 | 路径 | 用途 |
 |---|---|---|
-| `flutter_cloud_sync` | `packages/flutter_cloud_sync` | 同步框架核心(含 BeeCountCloudProvider 内嵌) |
+| `flutter_cloud_sync` | `packages/flutter_cloud_sync` | 同步框架核心(含 PiggyCountCloudProvider 内嵌) |
 | `flutter_cloud_sync_supabase` | `packages/flutter_cloud_sync_supabase` | Supabase provider |
 | `flutter_cloud_sync_webdav` | `packages/flutter_cloud_sync_webdav` | WebDAV provider |
 | `flutter_cloud_sync_s3` | `packages/flutter_cloud_sync_s3` | S3 / R2 / B2 / MinIO / OSS / COS / Kodo provider |
@@ -176,17 +176,17 @@ BeeCount 的同步能力由自研 `flutter_cloud_sync` 框架提供,位于 `pack
 
 | 依赖 | 版本 | 用途 | 选型理由 | 备注 |
 |---|---|---|---|---|
-| `dio` | `^5.4.3+1` | HTTP 客户端 | 拦截器、FormData、取消 token、超时控制完善 | BeeCount Cloud 主用 |
+| `dio` | `^5.4.3+1` | HTTP 客户端 | 拦截器、FormData、取消 token、超时控制完善 | PiggyCount Cloud 主用 |
 | `http` | `^1.2.2` | 轻量 HTTP | Dart 官方包,无额外依赖 | 部分简单场景使用 |
 | `supabase_flutter` | `^2.5.6` | Supabase SDK | Auth + Storage + Realtime 一站式 | Supabase provider 使用 |
 | `webdav_client` | `^2.0.0` | WebDAV 客户端 | 现成 WebDAV 协议封装 | WebDAV provider 使用 |
-| `web_socket_channel` | `^3.0.1` | WebSocket 客户端 | BeeCount Cloud Realtime 自实现 WS 客户端 | `beecount_cloud_provider.dart` |
+| `web_socket_channel` | `^3.0.1` | WebSocket 客户端 | PiggyCount Cloud Realtime 自实现 WS 客户端 | `piggycount_cloud_provider.dart` |
 
-依据:`pubspec.yaml` L27、L34、L37、L70-71、`packages/flutter_cloud_sync/lib/src/providers/beecount_cloud_provider.dart` L4151。
+依据:`pubspec.yaml` L27、L34、L37、L70-71、`packages/flutter_cloud_sync/lib/src/providers/piggycount_cloud_provider.dart` L4151。
 
 ### 3.5 AI 集成
 
-BeeCount 的 AI 能力由自研 `flutter_ai_kit` 框架提供,支持 6 种执行策略(local_first / cloud_first / local_only / cloud_only / cost_optimized / custom_priority):
+PiggyCount 的 AI 能力由自研 `flutter_ai_kit` 框架提供,支持 6 种执行策略(local_first / cloud_first / local_only / cloud_only / cost_optimized / custom_priority):
 
 | 子包 | 路径 | 用途 |
 |---|---|---|
@@ -245,7 +245,7 @@ BeeCount 的 AI 能力由自研 `flutter_ai_kit` 框架提供,支持 6 种执行
 | `device_info_plus` | `^11.1.0` | 设备信息 | 全平台 | 同步 deviceId |
 | `url_launcher` | `^6.3.0` | 打开 URL | 全平台 | 跳转外部链接 |
 | `share_plus` | `^10.0.0` | 系统分享 | 全平台 | 海报分享 |
-| `app_links` | `^6.1.1` | App Link / Deep Link | iOS + Android | `beecount://` scheme |
+| `app_links` | `^6.1.1` | App Link / Deep Link | iOS + Android | `piggycount://` scheme |
 | `app_links_linux` | `^1.0.3` | Linux App Link | Linux | 桌面端兼容 |
 | `flutter_timezone` | `^3.0.1` | 获取系统时区 | 全平台 | 通知时区初始化 |
 
@@ -279,7 +279,7 @@ flowchart TD
     E --> F[databaseProvider 单例 BeeDatabase]
     F --> G[LocalRepository 实例化]
     G --> H{判断 activeCloudConfigProvider}
-    H -->|BeeCount Cloud| I[注入 ChangeTracker]
+    H -->|PiggyCount Cloud| I[注入 ChangeTracker]
     H -->|其他后端| J[不注入 ChangeTracker]
     I --> K[repositoryProvider 返回带 tracker 的 LocalRepository]
     J --> L[repositoryProvider 返回普通 LocalRepository]
@@ -287,7 +287,7 @@ flowchart TD
     L --> M
 ```
 
-上图展示了 BeeCount 的依赖注入流程。`main.dart` 在启动时用 `ProviderScope` 包裹 `runApp`,所有 Widget 通过 `ref.watch` / `ref.read` 获取依赖。`repositoryProvider` 是核心入口,内部根据 `activeCloudConfigProvider` 判断是否注入 ChangeTracker:仅 BeeCount Cloud 后端激活时注入(走增量同步路径),其他后端不注入(走快照备份路径)。这种设计让 Repository 层无需感知同步细节,ChangeTracker 的注入由 Provider 层统一管理。
+上图展示了 PiggyCount 的依赖注入流程。`main.dart` 在启动时用 `ProviderScope` 包裹 `runApp`,所有 Widget 通过 `ref.watch` / `ref.read` 获取依赖。`repositoryProvider` 是核心入口,内部根据 `activeCloudConfigProvider` 判断是否注入 ChangeTracker:仅 PiggyCount Cloud 后端激活时注入(走增量同步路径),其他后端不注入(走快照备份路径)。这种设计让 Repository 层无需感知同步细节,ChangeTracker 的注入由 Provider 层统一管理。
 
 依据:`lib/main.dart`、`lib/providers/database_providers.dart`。
 
@@ -318,20 +318,20 @@ sequenceDiagram
     Repo-->>UI: int id
 ```
 
-数据库访问流程严格遵循分层:UI → Provider → Repository(聚合)→ 子 Repository → Drift → SQLite。所有写操作在 Drift insert 成功后,通过 ChangeTracker 记录变更到 `local_changes` 表,供 SyncEngine 异步推送。这种"写本地 + 记录变更"的两步流程是 BeeCount 本地优先架构的核心。
+数据库访问流程严格遵循分层:UI → Provider → Repository(聚合)→ 子 Repository → Drift → SQLite。所有写操作在 Drift insert 成功后,通过 ChangeTracker 记录变更到 `local_changes` 表,供 SyncEngine 异步推送。这种"写本地 + 记录变更"的两步流程是 PiggyCount 本地优先架构的核心。
 
 依据:`lib/data/repositories/local/local_repository.dart`、`lib/cloud/sync/change_tracker.dart`。
 
-### 4.3 网络请求流程(BeeCount Cloud)
+### 4.3 网络请求流程(PiggyCount Cloud)
 
 ```mermaid
 sequenceDiagram
     participant Engine as SyncEngine
-    participant Provider as BeeCountCloudProvider
-    participant Storage as BeeCountCloudStorageService
-    participant Auth as BeeCountCloudAuthService
+    participant Provider as PiggyCountCloudProvider
+    participant Storage as PiggyCountCloudStorageService
+    participant Auth as PiggyCountCloudAuthService
     participant HTTP as dio HTTP
-    participant Server as BeeCount Cloud Server
+    participant Server as PiggyCount Cloud Server
 
     Engine->>Provider: pushChanges(changes)
     Provider->>Storage: _storage.pushChanges(...)
@@ -355,9 +355,9 @@ sequenceDiagram
     Provider-->>Engine: push result
 ```
 
-BeeCount Cloud 的网络请求流程内置了 token 自动刷新机制。当请求返回 401 时,`BeeCountCloudStorageService` 会自动调用 `BeeCountCloudAuthService.refreshToken()` 刷新访问令牌,然后重试原请求。这种设计让上层 SyncEngine 无需感知认证细节,只需关注业务逻辑。
+PiggyCount Cloud 的网络请求流程内置了 token 自动刷新机制。当请求返回 401 时,`PiggyCountCloudStorageService` 会自动调用 `PiggyCountCloudAuthService.refreshToken()` 刷新访问令牌,然后重试原请求。这种设计让上层 SyncEngine 无需感知认证细节,只需关注业务逻辑。
 
-依据:`packages/flutter_cloud_sync/lib/src/providers/beecount_cloud_provider.dart` `_authedRequest` 方法。
+依据:`packages/flutter_cloud_sync/lib/src/providers/piggycount_cloud_provider.dart` `_authedRequest` 方法。
 
 ---
 
@@ -369,7 +369,7 @@ BeeCount Cloud 的网络请求流程内置了 token 自动刷新机制。当请�
 - **原因**:
   - **类型安全**:Drift 生成类型安全的表定义与查询,编译时检查字段类型与表名
   - **Reactive query**:Drift 的 `watch()` 返回 `Stream<List<T>>`,数据库变更自动推送,Riverpod `StreamProvider` 原生支持
-  - **迁移支持完善**:`MigrationStrategy` + `schemaVersion` 机制,BeeCount 已用到 v31
+  - **迁移支持完善**:`MigrationStrategy` + `schemaVersion` 机制,PiggyCount 已用到 v31
   - **Code generation**:`db.g.dart` 自动生成,减少手写样板代码
 - **备选方案**:
   - `sqflite`:裸 SQL,无类型安全,无 reactive query,迁移需手写
@@ -400,7 +400,7 @@ BeeCount Cloud 的网络请求流程内置了 token 自动刷新机制。当请�
 
 - **决策内容**:同步能力由自研 `flutter_cloud_sync` 框架提供,而非直接依赖 Supabase SDK。
 - **原因**:
-  - **多后端支持**:BeeCount 需支持 5 种同步方案,自研框架抽象出 `CloudProvider` 接口,各后端独立实现
+  - **多后端支持**:PiggyCount 需支持 5 种同步方案,自研框架抽象出 `CloudProvider` 接口,各后端独立实现
   - **数据主权**:用户应能选择自己的同步后端,而非被锁定在 Supabase
   - **复用性**:`flutter_cloud_sync` 可独立发布,其他 Flutter 应用可复用
   - **可控性**:同步逻辑(冲突解决、cursor、单飞锁)需深度定制,直接用 Supabase 无法实现
@@ -417,7 +417,7 @@ BeeCount Cloud 的网络请求流程内置了 token 自动刷新机制。当请�
 
 - **决策内容**:同时使用 `dio: ^5.4.3+1` 与 `http: ^1.2.2` 两个 HTTP 客户端。
 - **原因**:
-  - **dio**:用于 BeeCount Cloud,需要拦截器(token 刷新)、FormData(文件上传)、超时控制、取消 token 等高级特性
+  - **dio**:用于 PiggyCount Cloud,需要拦截器(token 刷新)、FormData(文件上传)、超时控制、取消 token 等高级特性
   - **http**:用于部分轻量场景(如汇率 API、版本检查),无需 dio 的额外特性,http 是 Dart 官方包无额外依赖
 - **备选方案**:全部用 dio(增加依赖体积)、全部用 http(失去拦截器能力)
 - **最终取舍**:并存,dio 用于复杂场景,http 用于简单场景。

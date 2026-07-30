@@ -4,11 +4,11 @@
 
 ### 1.1 整体策略：移植 + 新建，不污染共享组件
 
-**决策**：将 wait-home 的液态玻璃标题栏组件**完整移植**到 BeeCount 的 `lib/widgets/ui/` 目录，并在 `lib/widgets/biz/` 新建设置专用组件（`SettingsCard` / `SettingsNavItem` / `SettingsToggleItem` / `SettingsSectionLabel`），**不修改**现有 `AppListTile` / `SectionCard` / `PrimaryHeader`。
+**决策**：将 wait-home 的液态玻璃标题栏组件**完整移植**到 PiggyCount 的 `lib/widgets/ui/` 目录，并在 `lib/widgets/biz/` 新建设置专用组件（`SettingsCard` / `SettingsNavItem` / `SettingsToggleItem` / `SettingsSectionLabel`），**不修改**现有 `AppListTile` / `SectionCard` / `PrimaryHeader`。
 
 **理由**：
 - 现有共享组件被全 App 大量使用（账户页、预算页、交易页等），直接修改会引发不可控的回归风险
-- wait-home 的设置项样式与 BeeCount 现有 `AppListTile`（36×36 圆形图标盒）差异较大，强行复用会破坏其他页面
+- wait-home 的设置项样式与 PiggyCount 现有 `AppListTile`（36×36 圆形图标盒）差异较大，强行复用会破坏其他页面
 - 新建专用组件可在设置页内统一风格，同时保持改动隔离、可回滚
 
 ### 1.2 标题栏移植策略
@@ -19,7 +19,7 @@
 - `lib/widgets/ui/glass_title_bar.dart`（薄包装：`GlassTitleBar` + `GlassHomeBar`）
 
 **适配点**：
-- wait-home 依赖 `AppDimens`（如 `titleBarHeight=56`、`blurTitleBarMax=20`、`space16` 等），BeeCount 移植时将这些常量**内联为字面量**或映射到 `BeeDimens`，避免引入 wait-home 的整套 Token 体系
+- wait-home 依赖 `AppDimens`（如 `titleBarHeight=56`、`blurTitleBarMax=20`、`space16` 等），PiggyCount 移植时将这些常量**内联为字面量**或映射到 `BeeDimens`，避免引入 wait-home 的整套 Token 体系
 - wait-home 的 `LiquidGlassTitleBar` 包含搜索框、第二行、功能键等设置页不需要的能力，移植时**保留完整 API**（未来可复用），但设置页仅用到 `title` / `showBack` / `onBack` / `actions` 字段
 
 ### 1.3 MinePage 头部处理
@@ -105,7 +105,7 @@ class SettingsToggleItem extends StatelessWidget {
 **理由**：
 - 4 个组件覆盖所有设置项场景（导航 / 开关 / 自定义 trailing）
 - `useIconBox` 参数兼容 wait-home 主页（裸图标）与子页（图标盒）两种风格
-- 组件签名贴近 BeeCount 现有 `AppListTile`（leading / title / subtitle / onTap / trailing），降低子页改造工作量
+- 组件签名贴近 PiggyCount 现有 `AppListTile`（leading / title / subtitle / onTap / trailing），降低子页改造工作量
 
 ## 2. 文件改动清单
 
@@ -114,7 +114,7 @@ class SettingsToggleItem extends StatelessWidget {
 | 文件路径 | 内容 | 来源 |
 |---|---|---|
 | `lib/widgets/ui/gradient_backdrop_filter.dart` | 无级渐变模糊背景组件 | 移植自 wait-home |
-| `lib/widgets/ui/liquid_glass_title_bar.dart` | 液态玻璃标题栏核心 | 移植自 wait-home（适配 BeeCount Token） |
+| `lib/widgets/ui/liquid_glass_title_bar.dart` | 液态玻璃标题栏核心 | 移植自 wait-home（适配 PiggyCount Token） |
 | `lib/widgets/ui/glass_title_bar.dart` | `GlassTitleBar` + `GlassHomeBar` 薄包装 | 移植自 wait-home |
 | `lib/widgets/biz/settings_widgets.dart` | `SettingsSectionLabel` / `SettingsCard` / `SettingsNavItem` / `SettingsToggleItem` | 新建 |
 | `lib/widgets/biz/profile_card.dart` | MinePage 头部 ProfileCard（头像+问候语+统计+头部皮肤背景） | 新建（从 mine_page.dart 抽取） |
@@ -158,7 +158,7 @@ class SettingsToggleItem extends StatelessWidget {
 ### 步骤 1：移植液态玻璃标题栏组件
 
 新建 3 个文件：
-- `lib/widgets/ui/gradient_backdrop_filter.dart`：从 wait-home 完整移植，将 `AppDimens.blurTitleBarMax`（20）/ `blurTitleBarMin`（2）替换为字面量或 BeeCount 等价 Token
+- `lib/widgets/ui/gradient_backdrop_filter.dart`：从 wait-home 完整移植，将 `AppDimens.blurTitleBarMax`（20）/ `blurTitleBarMin`（2）替换为字面量或 PiggyCount 等价 Token
 - `lib/widgets/ui/liquid_glass_title_bar.dart`：完整移植，将 `AppDimens.titleBarHeight`（56）/ `space16`（16）/ `space12`（12）/ `space8`（8）/ `iconSizeLg`（24）/ `iconSizeMd`（20）/ `iconSizeSm`（16）/ `touchTarget`（48）/ `durationSlow`（220）/ `durationNormal`（150）替换为字面量
 - `lib/widgets/ui/glass_title_bar.dart`：完整移植（薄包装，无需改 Token）
 
@@ -292,7 +292,7 @@ Scaffold(extendBodyBehindAppBar: true)
 
 ### 5.3 风险点 3：暗色模式下卡片与背景对比度
 
-- **风险**：wait-home 暗色模式页面背景纯黑、卡片 #181818，对比度较低；BeeCount 暗色模式页面背景纯黑、卡片 #1C1C1E，对比度也较低
+- **风险**：wait-home 暗色模式页面背景纯黑、卡片 #181818，对比度较低；PiggyCount 暗色模式页面背景纯黑、卡片 #1C1C1E，对比度也较低
 - **缓解**：直接复用 BeeToken 现有暗色值（#1C1C1E），与原 `SectionCard` 暗色表现一致，用户已习惯
 
 ### 5.4 风险点 4：`LiquidGlassTitleBar` 移植后搜索框/第二行 API 未使用

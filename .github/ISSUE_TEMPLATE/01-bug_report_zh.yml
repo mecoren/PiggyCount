@@ -1,5 +1,5 @@
 name: 🐛 Bug 报告(中文)
-description: 报告 BeeCount iOS / Android App 遇到的 bug
+description: 报告 PiggyCount iOS / Android App 遇到的 bug
 title: "[Bug] "
 labels: ["bug"]
 body:
@@ -8,7 +8,7 @@ body:
       value: |
         感谢提交 bug 报告!请填完下面所有 **必填** 项 —— 没有复现步骤的 issue 基本无法定位。
 
-        **自建 Cloud 服务端 / Web 控制台** 的问题请去 [BeeCount-Cloud](https://github.com/TNT-Likely/BeeCount-Cloud/issues)。
+        **自建 Cloud 服务端 / Web 控制台** 的问题请去 [PiggyCount-Cloud](https://github.com/TNT-Likely/PiggyCount-Cloud/issues)。
 
   - type: checkboxes
     id: preflight
@@ -17,7 +17,7 @@ body:
       options:
         - label: 我已查阅 [官方文档](https://count.beejz.com/docs/intro),确认不是使用方式问题
           required: true
-        - label: 我已搜过 [已有 Issues](https://github.com/TNT-Likely/BeeCount/issues?q=is%3Aissue),没有找到重复
+        - label: 我已搜过 [已有 Issues](https://github.com/TNT-Likely/PiggyCount/issues?q=is%3Aissue),没有找到重复
           required: true
         - label: 我已升级到最新版本,问题仍在
           required: true
@@ -100,7 +100,7 @@ body:
       description: 非云同步相关的 bug 可选"本地"
       options:
         - 本地(未开启云同步)
-        - BeeCount Cloud(自建)
+        - PiggyCount Cloud(自建)
         - iCloud
         - WebDAV
         - S3
@@ -111,8 +111,8 @@ body:
   - type: input
     id: cloud_version
     attributes:
-      label: BeeCount Cloud 服务端版本
-      description: "**只在同步方式选 BeeCount Cloud 时填**。Web 控制台健康检查页 / docker image tag 查看"
+      label: PiggyCount Cloud 服务端版本
+      description: "**只在同步方式选 PiggyCount Cloud 时填**。Web 控制台健康检查页 / docker image tag 查看"
       placeholder: "例:v3.0.1"
 
   - type: textarea

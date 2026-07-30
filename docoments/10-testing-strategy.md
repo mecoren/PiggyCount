@@ -23,7 +23,7 @@ audience: 一年经验的开发者
 
 ### 1.1 为什么单独写测试策略文档
 
-BeeCount 是一款涉及本地数据库、云同步、AI 调用、附件处理等多个复杂模块的记账应用,测试是保障质量的关键。但项目的测试现状存在以下问题:
+PiggyCount 是一款涉及本地数据库、云同步、AI 调用、附件处理等多个复杂模块的记账应用,测试是保障质量的关键。但项目的测试现状存在以下问题:
 
 - 测试文件 57 个、用例 451 个,但分布不均
 - 无 `integration_test/` 目录(已声明依赖但未使用)
@@ -32,7 +32,7 @@ BeeCount 是一款涉及本地数据库、云同步、AI 调用、附件处理�
 - db.dart 30 段迁移块只有 v30 有回归测试
 - CI 不跑测试(`.github/workflows/` 无 test.yml)
 
-本文档系统梳理 BeeCount 的测试现状、测试分层、测试技术、信息缺口与建议方案,让一年经验开发者能快速理解和参与测试开发。
+本文档系统梳理 PiggyCount 的测试现状、测试分层、测试技术、信息缺口与建议方案,让一年经验开发者能快速理解和参与测试开发。
 
 ### 1.2 与其他文档的边界
 
@@ -45,7 +45,7 @@ BeeCount 是一款涉及本地数据库、云同步、AI 调用、附件处理�
 - `test/` 目录 57 个测试文件
 - `pubspec.yaml` 测试依赖
 - `lib/data/db.dart` `BeeDatabase.forTesting` 构造函数
-- `test/cloud/sync/_fakes/fake_beecount_cloud_provider.dart` Fake 类
+- `test/cloud/sync/_fakes/fake_piggycount_cloud_provider.dart` Fake 类
 - `.github/workflows/` CI 配置
 
 ---
@@ -54,11 +54,11 @@ BeeCount 是一款涉及本地数据库、云同步、AI 调用、附件处理�
 
 ### 2.1 测试分层总览
 
-BeeCount 的测试可分为四层:
+PiggyCount 的测试可分为四层:
 
 ```mermaid
 flowchart TD
-    Root[BeeCount 测试分层]
+    Root[PiggyCount 测试分层]
 
     Root --> Unit[单元测试]
     Root --> Widget[Widget 测试]
@@ -84,7 +84,7 @@ flowchart TD
     E2 --> E2X[未实现]
 ```
 
-上图展示了 BeeCount 的测试分层。单元测试是主体(57 个文件中绝大多数),Widget 测试很少(3 个),集成测试只有 SyncEngine e2e 和迁移测试,端到端测试**完全缺失**(`integration_test/` 目录不存在)。后续章节按层级详细说明。
+上图展示了 PiggyCount 的测试分层。单元测试是主体(57 个文件中绝大多数),Widget 测试很少(3 个),集成测试只有 SyncEngine e2e 和迁移测试,端到端测试**完全缺失**(`integration_test/` 目录不存在)。后续章节按层级详细说明。
 
 ### 2.2 测试统计
 
@@ -94,7 +94,7 @@ flowchart TD
 | 测试用例总数 | **451 个** `test()` / `testWidgets()` / `group()` | — |
 | 集成测试目录 | **不存在** | `pubspec.yaml` 已声明 `integration_test` 依赖但未使用 |
 | Widget 测试文件 | **3 个** | `transfer_form_account_hidden_test`、`amount_editor_currency_test`、`header_skins_test` |
-| 测试 fake/辅助文件 | **1 个** | `fake_beecount_cloud_provider.dart` |
+| 测试 fake/辅助文件 | **1 个** | `fake_piggycount_cloud_provider.dart` |
 | 覆盖率工具配置 | **无** | 无 `.coveragerc` / `lcov.info` / `coverage/` |
 | CI 是否跑测试 | **否** | `.github/workflows/` 只有 `issue-lint.yml`、`pullfrog.yml`、`release.yml` |
 
@@ -108,7 +108,7 @@ flowchart TD
 | `mocktail` | `^1.0.4` | Mock 库 | 替代 mockito,无需 codegen |
 | `integration_test` | SDK | 集成测试 | 已声明但未使用 |
 | 内存数据库 | — | `BeeDatabase.forTesting(NativeDatabase.memory())` | 跳过文件系统副作用 |
-| Fake 类 | — | `FakeBeeCountCloudProvider` | extends 真类,覆盖 ~20 个方法 |
+| Fake 类 | — | `FakePiggyCountCloudProvider` | extends 真类,覆盖 ~20 个方法 |
 
 ---
 
@@ -232,7 +232,7 @@ void main() {
 
 ### 3.4 Widget 测试
 
-BeeCount 的 Widget 测试很少,只有 3 个:
+PiggyCount 的 Widget 测试很少,只有 3 个:
 
 | 文件 | 覆盖 | 类型 |
 |---|---|---|
@@ -257,7 +257,7 @@ BeeCount 的 Widget 测试很少,只有 3 个:
 
 ```mermaid
 flowchart TD
-    A[sync_engine_e2e_test] --> B[FakeBeeCountCloudProvider]
+    A[sync_engine_e2e_test] --> B[FakePiggyCountCloudProvider]
     B --> C[内存 BeeDatabase]
     C --> D[SyncEngine 实例]
 
@@ -271,7 +271,7 @@ flowchart TD
     D --> L[错误恢复测试]
 ```
 
-上图展示了 SyncEngine e2e 测试的结构。使用 `FakeBeeCountCloudProvider`(extends 真类,覆盖 ~20 个方法)模拟 server,内存数据库隔离副作用,SyncEngine 实例测试完整 push/pull/fullPush/fullPull 流程。44 个用例覆盖冲突解决、共享账本、多币种、错误恢复等场景。
+上图展示了 SyncEngine e2e 测试的结构。使用 `FakePiggyCountCloudProvider`(extends 真类,覆盖 ~20 个方法)模拟 server,内存数据库隔离副作用,SyncEngine 实例测试完整 push/pull/fullPush/fullPull 流程。44 个用例覆盖冲突解决、共享账本、多币种、错误恢复等场景。
 
 #### 3.5.2 迁移测试
 
@@ -290,11 +290,11 @@ test('v30 migration should backfill nativeAmount for existing transactions', () 
 
 ### 3.6 测试辅助文件
 
-#### 3.6.1 FakeBeeCountCloudProvider
+#### 3.6.1 FakePiggyCountCloudProvider
 
-`test/cloud/sync/_fakes/fake_beecount_cloud_provider.dart`:
+`test/cloud/sync/_fakes/fake_piggycount_cloud_provider.dart`:
 
-- extends 真实的 `BeeCountCloudProvider`
+- extends 真实的 `PiggyCountCloudProvider`
 - 覆盖 ~20 个方法(pullChanges / pushChanges / writeCreateLedger 等)
 - 模拟 server 状态(内存存储 changes)
 - 用于 SyncEngine e2e 测试
@@ -311,7 +311,7 @@ BeeDatabase.forTesting(QueryExecutor executor) : super(executor);
 - 供单元测试用 `NativeDatabase.memory()` 注入内存库
 - 测试间隔离,无状态污染
 
-依据:`lib/data/db.dart` L442、`test/cloud/sync/_fakes/fake_beecount_cloud_provider.dart`。
+依据:`lib/data/db.dart` L442、`test/cloud/sync/_fakes/fake_piggycount_cloud_provider.dart`。
 
 ### 3.7 测试工具配置
 
@@ -345,7 +345,7 @@ flowchart TD
     B -->|Service 逻辑| D[单元测试 + mocktail mock]
     B -->|Provider 逻辑| E[单元测试 + ProviderContainer]
     B -->|Widget 交互| F[Widget 测试 + testWidgets]
-    B -->|SyncEngine 流程| G[集成测试 + FakeBeeCountCloudProvider]
+    B -->|SyncEngine 流程| G[集成测试 + FakePiggyCountCloudProvider]
 
     C --> H[given-when-then 结构]
     D --> H
@@ -360,20 +360,20 @@ flowchart TD
     L --> I
 ```
 
-上图展示了测试的编写流程。先识别测试场景,根据类型选择测试方式:Repository 用内存数据库,Service 用 mocktail mock,Provider 用 ProviderContainer,Widget 用 testWidgets,SyncEngine 用 FakeBeeCountCloudProvider。所有测试遵循 given-when-then 结构。
+上图展示了测试的编写流程。先识别测试场景,根据类型选择测试方式:Repository 用内存数据库,Service 用 mocktail mock,Provider 用 ProviderContainer,Widget 用 testWidgets,SyncEngine 用 FakePiggyCountCloudProvider。所有测试遵循 given-when-then 结构。
 
 ### 4.2 SyncEngine e2e 测试流程
 
 ```mermaid
 sequenceDiagram
     participant Test as 测试用例
-    participant Fake as FakeBeeCountCloudProvider
+    participant Fake as FakePiggyCountCloudProvider
     participant Engine as SyncEngine
     participant DB as 内存 BeeDatabase
 
     Test->>DB: 初始化内存数据库
     Test->>DB: 插入测试数据(账本、账户、交易)
-    Test->>Fake: 初始化 FakeBeeCountCloudProvider
+    Test->>Fake: 初始化 FakePiggyCountCloudProvider
     Test->>Engine: 创建 SyncEngine(db, fake, tracker, repo)
 
     Test->>Engine: push(ledgerId)
@@ -394,7 +394,7 @@ sequenceDiagram
     Test->>DB: 验证数据一致性
 ```
 
-上图展示了 SyncEngine e2e 测试的流程。测试用例初始化内存数据库与 FakeBeeCountCloudProvider,创建 SyncEngine 实例,执行 push/pull 操作,然后验证数据一致性。FakeBeeCountCloudProvider 模拟 server 行为(内存存储 changes),让测试无需真实 server 即可验证完整同步流程。
+上图展示了 SyncEngine e2e 测试的流程。测试用例初始化内存数据库与 FakePiggyCountCloudProvider,创建 SyncEngine 实例,执行 push/pull 操作,然后验证数据一致性。FakePiggyCountCloudProvider 模拟 server 行为(内存存储 changes),让测试无需真实 server 即可验证完整同步流程。
 
 依据:`test/cloud/sync/sync_engine_e2e_test.dart`。
 
@@ -447,18 +447,18 @@ flutter test --coverage
 - **最终取舍**:内存数据库。
 - **依据**:`lib/data/db.dart` L442 `BeeDatabase.forTesting`。
 
-### 决策 3:FakeBeeCountCloudProvider 而非真实 server
+### 决策 3:FakePiggyCountCloudProvider 而非真实 server
 
-- **决策内容**:SyncEngine e2e 测试用 `FakeBeeCountCloudProvider` 模拟 server。
+- **决策内容**:SyncEngine e2e 测试用 `FakePiggyCountCloudProvider` 模拟 server。
 - **原因**:
-  - **无 server 依赖**:测试无需部署 BeeCount Cloud server
+  - **无 server 依赖**:测试无需部署 PiggyCount Cloud server
   - **可控性**:Fake 可精确控制 server 行为(如模拟冲突、错误)
   - **速度**:内存操作比 HTTP 快
 - **备选方案**:
   - 真实 server:需部署,CI 复杂
   - mocktail mock:无法模拟复杂 server 状态
 - **最终取舍**:Fake 类,extends 真实 Provider。
-- **依据**:`test/cloud/sync/_fakes/fake_beecount_cloud_provider.dart`。
+- **依据**:`test/cloud/sync/_fakes/fake_piggycount_cloud_provider.dart`。
 
 ### 决策 4:测试目录镜像 lib 结构
 
@@ -484,7 +484,7 @@ flutter test --coverage
 | 测试用内存数据库 | `BeeDatabase.forTesting(NativeDatabase.memory())` |
 | Mock 用 mocktail | 不用 mockito |
 | 测试目录镜像 lib | `test/cloud/sync/` 对应 `lib/cloud/sync/` |
-| SyncEngine 测试用 Fake | `FakeBeeCountCloudProvider` |
+| SyncEngine 测试用 Fake | `FakePiggyCountCloudProvider` |
 | 集成测试缺失 | `integration_test/` 不存在 |
 | CI 不跑测试 | 需手动 `flutter test` |
 

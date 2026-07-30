@@ -23,7 +23,7 @@ audience: 一年经验的开发者
 
 ### 1.1 为什么需要模块详解文档
 
-BeeCount 包含 12+ 个核心业务模块,新加入的贡献者面对 `lib/pages/` 20+ 业务目录、`lib/services/` 15+ 子域,常常遇到以下困惑:
+PiggyCount 包含 12+ 个核心业务模块,新加入的贡献者面对 `lib/pages/` 20+ 业务目录、`lib/services/` 15+ 子域,常常遇到以下困惑:
 
 - 不知道"创建一笔交易"涉及哪些模块协作
 - 不清楚 AI 记账的 4 种输入方式(对话/OCR/语音/截图)如何统一收敛
@@ -31,7 +31,7 @@ BeeCount 包含 12+ 个核心业务模块,新加入的贡献者面对 `lib/pages
 - 不知道同步模块在什么时候激活、什么时候不激活
 - 不清楚桌面小组件如何与主 App 通信
 
-本文档对 BeeCount 的 12 个核心模块逐一详解,说明每个模块的**职责边界、关键文件、与其他模块的交互关系**,让一年经验开发者能快速定位"功能在哪里实现"。
+本文档对 PiggyCount 的 12 个核心模块逐一详解,说明每个模块的**职责边界、关键文件、与其他模块的交互关系**,让一年经验开发者能快速定位"功能在哪里实现"。
 
 ### 1.2 与其他文档的边界
 
@@ -53,11 +53,11 @@ BeeCount 包含 12+ 个核心业务模块,新加入的贡献者面对 `lib/pages
 
 ### 2.1 模块全景图
 
-BeeCount 的核心模块可分为四大类:
+PiggyCount 的核心模块可分为四大类:
 
 ```mermaid
 flowchart TD
-    Root[BeeCount 核心模块]
+    Root[PiggyCount 核心模块]
 
     Root --> Core[核心业务模块]
     Root --> Enhance[增强能力模块]
@@ -85,7 +85,7 @@ flowchart TD
     Infra --> I3[国际化模块]
 ```
 
-上图展示了 BeeCount 的 12+ 核心模块分类。核心业务模块是记账应用的底座,增强能力模块是 BeeCount 区别于普通记账应用的特色,平台集成模块负责与原生系统交互,基础设施模块支撑全局。后续章节按类别详细说明。
+上图展示了 PiggyCount 的 12+ 核心模块分类。核心业务模块是记账应用的底座,增强能力模块是 PiggyCount 区别于普通记账应用的特色,平台集成模块负责与原生系统交互,基础设施模块支撑全局。后续章节按类别详细说明。
 
 ### 2.2 模块协作总览
 
@@ -123,7 +123,7 @@ flowchart LR
 
 #### 3.1.1 职责
 
-记账模块负责交易的创建、编辑、删除、查询,是 BeeCount 的核心模块。
+记账模块负责交易的创建、编辑、删除、查询,是 PiggyCount 的核心模块。
 
 #### 3.1.2 关键文件
 
@@ -360,7 +360,7 @@ AI 对话页面支持撤销记账(通过 `Messages.transactionId` 关联已创�
 
 ### 3.8 同步模块(Sync)
 
-同步模块是 BeeCount 最复杂的模块,详见 [06 数据同步与多设备离线机制](./06-data-sync-and-offline.md)。这里只说明模块位置与职责:
+同步模块是 PiggyCount 最复杂的模块,详见 [06 数据同步与多设备离线机制](./06-data-sync-and-offline.md)。这里只说明模块位置与职责:
 
 | 文件 | 职责 |
 |---|---|
@@ -378,7 +378,7 @@ AI 对话页面支持撤销记账(通过 `Messages.transactionId` 关联已创�
 | `lib/cloud/sync/sync_engine_status.dart` | 健康检查 + backfill |
 | `lib/cloud/sync/sync_engine_attachments.dart` | 附件上传/下载/清理 |
 | `lib/cloud/sync/sync_events.dart` | SyncEvent sealed class |
-| `lib/cloud/transactions_sync_manager.dart` | 非 BeeCount Cloud 的快照同步 manager |
+| `lib/cloud/transactions_sync_manager.dart` | 非 PiggyCount Cloud 的快照同步 manager |
 | `lib/cloud/transactions_json.dart` | fullPull 的 JSON 导入导出 |
 
 ### 3.9 共享账本模块(Shared Ledger)
@@ -454,8 +454,8 @@ v25 之前 Editor 选择 Owner 资源会 mirror 到主表,v25 改为只写 `*Syn
 | 文件 | 职责 |
 |---|---|
 | `lib/widget/widget_manager.dart` | Dart 层小组件管理 |
-| `ios/BeeCountWidget/` | iOS WidgetExtension |
-| `android/app/src/main/res/xml/beecount_widget_info.xml` | Android 小组件配置 |
+| `ios/PiggyCountWidget/` | iOS WidgetExtension |
+| `android/app/src/main/res/xml/piggycount_widget_info.xml` | Android 小组件配置 |
 | `android/app/src/main/kotlin/.../BeecountWidgetProvider.kt` | Android 小组件实现 |
 
 #### 3.11.3 关键设计
@@ -463,9 +463,9 @@ v25 之前 Editor 选择 Owner 资源会 mirror 到主表,v25 改为只写 `*Syn
 - 通过 `home_widget: ^0.7.0` 包与原生层通信
 - iOS 使用 WidgetExtension(独立进程,通过 App Group 共享数据)
 - Android 使用 AppWidgetProvider(BroadcastReceiver)
-- 点击小组件跳转到 `beecount://quick-add` App Link,触发记账页
+- 点击小组件跳转到 `piggycount://quick-add` App Link,触发记账页
 
-依据:`lib/widget/`、`ios/BeeCountWidget/`、`android/app/src/main/res/xml/`、`pubspec.yaml` L45。
+依据:`lib/widget/`、`ios/PiggyCountWidget/`、`android/app/src/main/res/xml/`、`pubspec.yaml` L45。
 
 ### 3.12 平台集成模块
 
@@ -552,7 +552,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant Owner as Owner 设备
-    participant Server as BeeCount Cloud
+    participant Server as PiggyCount Cloud
     participant Editor as Editor 设备
 
     Owner->>Owner: 创建账本 type=shared
@@ -672,7 +672,7 @@ flowchart TD
 | 记账模块是核心枢纽 | 几乎所有其他模块都直接或间接与它交互 |
 | 同步模块是横切关注点 | 所有写操作都通过 ChangeTracker 触发同步,无需 UI 显式调用 |
 | AI 模块默认关闭 | 需用户主动配置 AI provider(智谱 GLM / OpenAI) |
-| 共享账本仅 BeeCount Cloud 支持 | 其他 4 种同步后端不支持共享账本 |
+| 共享账本仅 PiggyCount Cloud 支持 | 其他 4 种同步后端不支持共享账本 |
 | 截图自动记账仅 Android 且 Google Play 版本砍掉 | 受系统限制 + 权限裁剪 |
 
 ### 6.2 模块边界
@@ -702,8 +702,8 @@ flowchart TD
 |---|---|---|---|
 | 1 | `lib/services/` 各 Service 之间的完整调用关系图未绘制 | §3 | 可选,通过 grep 统计 import 关系 |
 | 2 | AI 执行策略的 6 种类型在代码中的具体实现差异未展开 | §3.7.3 | 阅读 `packages/flutter_ai_kit/lib/src/strategies/` 各文件 |
-| 3 | 共享账本的成员统计 `fetchMemberStats` 实现细节未展开 | §3.9 | 阅读 `beecount_cloud_provider.dart` `fetchMemberStats` |
-| 4 | 桌面小组件的 iOS WidgetExtension 与 Android AppWidgetProvider 实现细节未展开 | §3.11 | 阅读 `ios/BeeCountWidget/` 与 `android/app/src/main/kotlin/.../BeecountWidgetProvider.kt` |
+| 3 | 共享账本的成员统计 `fetchMemberStats` 实现细节未展开 | §3.9 | 阅读 `piggycount_cloud_provider.dart` `fetchMemberStats` |
+| 4 | 桌面小组件的 iOS WidgetExtension 与 Android AppWidgetProvider 实现细节未展开 | §3.11 | 阅读 `ios/PiggyCountWidget/` 与 `android/app/src/main/kotlin/.../BeecountWidgetProvider.kt` |
 | 5 | 信用卡账单日 / 还款日提醒的具体触发逻辑未展开 | §3.12.2 | 阅读 `lib/providers/credit_card_reminder_providers.dart` |
 | 6 | 导入模块的支付宝 / 微信 / 通用 CSV 解析规则未展开 | §3.10 | 阅读 `lib/services/import/bill_parser.dart` |
 

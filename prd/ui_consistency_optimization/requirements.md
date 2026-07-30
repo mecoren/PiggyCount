@@ -2,7 +2,7 @@
 
 ## 一、需求理解
 
-根据 `prd/piggycount.md` 中识别的 UI 一致性问题清单，对 BeeCount Flutter 项目进行系统性优化，建立 **BeeTokens 作为颜色/间距的唯一来源**，消除三层主题（`tokens.dart` / `theme.dart` / `main.dart`）中的冲突值，并将散布在各页面中的硬编码颜色、旧 API、混用 `Theme.of(context)` 统一迁移到 Token 体系。
+根据 `prd/piggycount.md` 中识别的 UI 一致性问题清单，对 PiggyCount Flutter 项目进行系统性优化，建立 **BeeTokens 作为颜色/间距的唯一来源**，消除三层主题（`tokens.dart` / `theme.dart` / `main.dart`）中的冲突值，并将散布在各页面中的硬编码颜色、旧 API、混用 `Theme.of(context)` 统一迁移到 Token 体系。
 
 ## 二、优化范围（P0-P3 全覆盖）
 
