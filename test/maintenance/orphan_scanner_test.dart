@@ -10,20 +10,20 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:beecount/data/db.dart';
-import 'package:beecount/services/maintenance/orphan_record.dart';
-import 'package:beecount/services/maintenance/orphan_scanner.dart';
+import 'package:piggycount/data/db.dart';
+import 'package:piggycount/services/maintenance/orphan_record.dart';
+import 'package:piggycount/services/maintenance/orphan_scanner.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   SharedPreferences.setMockInitialValues({});
 
-  late BeeDatabase db;
+  late PiggyDatabase db;
   late Directory tmp;
   late OrphanScanner scanner;
 
   setUp(() async {
-    db = BeeDatabase.forTesting(NativeDatabase.memory());
+    db = PiggyDatabase.forTesting(NativeDatabase.memory());
     tmp = await Directory.systemTemp.createTemp('orphan_scanner_test_');
     scanner = OrphanScanner(
       db: db,

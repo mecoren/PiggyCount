@@ -5,7 +5,7 @@ import 'package:flutter_cloud_sync_supabase/flutter_cloud_sync_supabase.dart';
 import 'package:flutter_cloud_sync_webdav/flutter_cloud_sync_webdav.dart';
 import 'package:flutter_cloud_sync_icloud/flutter_cloud_sync_icloud.dart';
 import 'package:flutter_cloud_sync_s3/flutter_cloud_sync_s3.dart';
-import '../providers/beecount_cloud_provider.dart';
+import '../providers/piggycount_cloud_provider.dart';
 
 import '../core/auth_service.dart';
 import '../core/cloud_provider.dart';
@@ -30,7 +30,7 @@ Future<({CloudProvider? provider, CloudAuthService? auth})> createCloudServices(
       return (provider: null, auth: null);
 
     case CloudBackendType.beecountCloud:
-      final provider = BeeCountCloudProvider();
+      final provider = PiggyCountCloudProvider();
       await provider.initialize({
         'baseUrl': config.beecountCloudBaseUrl!,
         'apiPrefix': config.beecountCloudApiPrefix ?? '/api/v1',

@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:beecount/providers/voice_billing_providers.dart';
+import 'package:piggycount/providers/voice_billing_providers.dart';
 
 /// #252：语音触发方式 + 静音阈值
 void main() {

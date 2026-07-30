@@ -98,7 +98,7 @@ class _CategoryPieChartState extends ConsumerState<CategoryPieChart> {
       slices.add((
         name: '_other_',
         total: otherTotal,
-        color: BeeTokens.textTertiary(context),
+        color: PiggyTokens.textTertiary(context),
         originalIndex: -1,
       ));
     }
@@ -182,7 +182,7 @@ class _CategoryPieChartState extends ConsumerState<CategoryPieChart> {
                                 selectedSlice.name, context))
                         : l10n.analyticsTotalAmount,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: BeeTokens.textTertiary(context),
+                          color: PiggyTokens.textTertiary(context),
                           fontSize: 11,
                         ),
                     maxLines: 1,
@@ -196,7 +196,7 @@ class _CategoryPieChartState extends ConsumerState<CategoryPieChart> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: BeeTokens.textPrimary(context),
+                      color: PiggyTokens.textPrimary(context),
                     ),
                   ),
                 ],
@@ -230,7 +230,7 @@ class _CategoryPieChartState extends ConsumerState<CategoryPieChart> {
                 Text(
                   displayName,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: BeeTokens.textPrimary(context),
+                        color: PiggyTokens.textPrimary(context),
                         fontSize: 11,
                       ),
                 ),
@@ -241,14 +241,14 @@ class _CategoryPieChartState extends ConsumerState<CategoryPieChart> {
                   decimals: 0,
                   style: TextStyle(
                     fontSize: 11,
-                    color: BeeTokens.textSecondary(context),
+                    color: PiggyTokens.textSecondary(context),
                   ),
                 ),
                 const SizedBox(width: 2),
                 Text(
                   '($pct%)',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: BeeTokens.textTertiary(context),
+                        color: PiggyTokens.textTertiary(context),
                         fontSize: 10,
                       ),
                 ),

@@ -31,7 +31,7 @@ class BudgetPage extends ConsumerWidget {
         currentLedger.myRole != 'owner';
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           PrimaryHeader(
@@ -104,14 +104,14 @@ class BudgetPage extends ConsumerWidget {
           Icon(
             Icons.account_balance_wallet_outlined,
             size: 64,
-            color: BeeTokens.textTertiary(context),
+            color: PiggyTokens.textTertiary(context),
           ),
           const SizedBox(height: 16),
           Text(
             l10n.budgetEmptyHint,
             style: TextStyle(
               fontSize: 16,
-              color: BeeTokens.textSecondary(context),
+              color: PiggyTokens.textSecondary(context),
             ),
           ),
           const SizedBox(height: 24),
@@ -119,11 +119,11 @@ class BudgetPage extends ConsumerWidget {
             ElevatedButton.icon(
               onPressed: () => _addBudget(context),
               icon: Icon(Icons.add,
-                  color: BeeTokens.buttonPrimaryText(context)),
+                  color: PiggyTokens.buttonPrimaryText(context)),
               label: Text(l10n.budgetAddTotal),
               style: ElevatedButton.styleFrom(
-                backgroundColor: BeeTokens.buttonPrimary(context),
-                foregroundColor: BeeTokens.buttonPrimaryText(context),
+                backgroundColor: PiggyTokens.buttonPrimary(context),
+                foregroundColor: PiggyTokens.buttonPrimaryText(context),
               ),
             ),
         ],
@@ -153,7 +153,7 @@ class BudgetPage extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: BeeTokens.textPrimary(context),
+                  color: PiggyTokens.textPrimary(context),
                 ),
               ),
               if (!_isEditorInShared(ref))
@@ -184,7 +184,7 @@ class BudgetPage extends ConsumerWidget {
                     l10n.budgetUsed,
                     style: TextStyle(
                       fontSize: 12,
-                      color: BeeTokens.textSecondary(context),
+                      color: PiggyTokens.textSecondary(context),
                     ),
                   ),
                   Text(
@@ -192,7 +192,7 @@ class BudgetPage extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: BeeTokens.textPrimary(context),
+                      color: PiggyTokens.textPrimary(context),
                     ),
                   ),
                 ],
@@ -204,7 +204,7 @@ class BudgetPage extends ConsumerWidget {
                     l10n.budgetRemaining,
                     style: TextStyle(
                       fontSize: 12,
-                      color: BeeTokens.textSecondary(context),
+                      color: PiggyTokens.textSecondary(context),
                     ),
                   ),
                   Text(
@@ -212,7 +212,7 @@ class BudgetPage extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: budget.remaining >= 0 ? BeeTokens.success(context) : BeeTokens.error(context),
+                      color: budget.remaining >= 0 ? PiggyTokens.success(context) : PiggyTokens.error(context),
                     ),
                   ),
                 ],
@@ -224,10 +224,10 @@ class BudgetPage extends ConsumerWidget {
           Container(
             padding: EdgeInsets.all(12.0.scaled(context, ref)),
             decoration: BoxDecoration(
-              color: BeeTokens.isDark(context)
+              color: PiggyTokens.isDark(context)
                   ? Colors.white.withValues(alpha: 0.05)
                   : Colors.grey.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -236,7 +236,7 @@ class BudgetPage extends ConsumerWidget {
                   l10n.budgetDaysRemaining(overview.daysRemaining),
                   style: TextStyle(
                     fontSize: 14,
-                    color: BeeTokens.textSecondary(context),
+                    color: PiggyTokens.textSecondary(context),
                   ),
                 ),
                 Text(
@@ -245,7 +245,7 @@ class BudgetPage extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: BeeTokens.textPrimary(context),
+                    color: PiggyTokens.textPrimary(context),
                   ),
                 ),
               ],
@@ -276,7 +276,7 @@ class BudgetPage extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: BeeTokens.textPrimary(context),
+                  color: PiggyTokens.textPrimary(context),
                 ),
               ),
               if (!_isEditorInShared(ref))

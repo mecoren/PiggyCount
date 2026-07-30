@@ -246,8 +246,8 @@ class _AccountSelectorState extends ConsumerState<AccountSelector> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
-          color: isSelected ? primaryColor : BeeTokens.surfaceChip(context),
-          borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+          color: isSelected ? primaryColor : PiggyTokens.surfaceChip(context),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
         ),
         child: Center(
           child: Row(
@@ -259,7 +259,7 @@ class _AccountSelectorState extends ConsumerState<AccountSelector> {
                   size: 12,
                   color: isSelected
                       ? Colors.white70
-                      : BeeTokens.textTertiary(context),
+                      : PiggyTokens.textTertiary(context),
                 ),
                 const SizedBox(width: 4),
               ],
@@ -268,7 +268,7 @@ class _AccountSelectorState extends ConsumerState<AccountSelector> {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                  color: isSelected ? Colors.white : BeeTokens.textSecondary(context),
+                  color: isSelected ? Colors.white : PiggyTokens.textSecondary(context),
                   height: 1.2,
                 ),
               ),

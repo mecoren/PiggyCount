@@ -76,7 +76,7 @@ class _AccountCategoryPieChartState
               l10n.commonEmpty,
               style: TextStyle(
                 fontSize: 14,
-                color: BeeTokens.textTertiary(context),
+                color: PiggyTokens.textTertiary(context),
               ),
             ),
           ),
@@ -98,7 +98,7 @@ class _AccountCategoryPieChartState
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: BeeTokens.textPrimary(context),
+                    color: PiggyTokens.textPrimary(context),
                   ),
                 ),
                 const Spacer(),
@@ -127,7 +127,7 @@ class _AccountCategoryPieChartState
                     l10n.commonEmpty,
                     style: TextStyle(
                       fontSize: 14,
-                      color: BeeTokens.textTertiary(context),
+                      color: PiggyTokens.textTertiary(context),
                     ),
                   ),
                 ),
@@ -167,16 +167,16 @@ class _TypeChip extends StatelessWidget {
           color: isSelected
               ? primaryColor.withValues(alpha: 0.15)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
           border: Border.all(
-            color: isSelected ? primaryColor : BeeTokens.border(context),
+            color: isSelected ? primaryColor : PiggyTokens.border(context),
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 12,
-            color: isSelected ? primaryColor : BeeTokens.textSecondary(context),
+            color: isSelected ? primaryColor : PiggyTokens.textSecondary(context),
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
           ),
         ),

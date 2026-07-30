@@ -55,7 +55,7 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
 
   Color _parseTagColor(String? colorHex) {
     if (colorHex == null || colorHex.isEmpty) {
-      return BeeTokens.primary(context);
+      return PiggyTokens.primary(context);
     }
     try {
       String hex = colorHex;
@@ -67,7 +67,7 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
       }
       return Color(int.parse(hex, radix: 16));
     } catch (e) {
-      return BeeTokens.primary(context);
+      return PiggyTokens.primary(context);
     }
   }
 
@@ -80,7 +80,7 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
     final transactionsAsync = ref.watch(_tagTransactionsStreamProvider((tagId: widget.tagId, ledgerId: ledgerScope)));
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           // Header
@@ -157,13 +157,13 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
                       Icon(
                         Icons.receipt_long_outlined,
                         size: 16,
-                        color: BeeTokens.textTertiary(context),
+                        color: PiggyTokens.textTertiary(context),
                       ),
                       const SizedBox(width: 8),
                       Text(
                         l10n.tagDetailTransactionList,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: BeeTokens.textTertiary(context),
+                              color: PiggyTokens.textTertiary(context),
                             ),
                       ),
                     ],
@@ -235,7 +235,7 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
                       value: stats != null
                           ? l10n.tagTransactionCount(stats.count)
                           : '-',
-                      color: BeeTokens.primary(context),
+                      color: PiggyTokens.primary(context),
                     ),
                   ),
                   Expanded(
@@ -243,7 +243,7 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
                       label: l10n.tagDetailTotalExpense,
                       value: stats?.expense ?? 0.0,
                       isAmount: true,
-                      color: BeeTokens.expenseColor(context, ref),
+                      color: PiggyTokens.expenseColor(context, ref),
                     ),
                   ),
                   Expanded(
@@ -251,7 +251,7 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
                       label: l10n.tagDetailTotalIncome,
                       value: stats?.income ?? 0.0,
                       isAmount: true,
-                      color: BeeTokens.incomeColor(context, ref),
+                      color: PiggyTokens.incomeColor(context, ref),
                     ),
                   ),
                 ],
@@ -430,7 +430,7 @@ class _SummaryItem extends ConsumerWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: BeeTokens.textTertiary(context),
+                color: PiggyTokens.textTertiary(context),
               ),
         ),
       ],

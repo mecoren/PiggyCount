@@ -7,7 +7,7 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:home_widget/home_widget.dart';
 
-import 'package:beecount/widget/widget_spec.dart';
+import 'package:piggycount/widget/widget_spec.dart';
 
 void main() {
   group('WidgetSpec.imageKey', () {

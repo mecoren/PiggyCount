@@ -9,21 +9,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:beecount/data/db.dart';
-import 'package:beecount/data/repositories/local/local_repository.dart';
-import 'package:beecount/l10n/app_localizations.dart';
-import 'package:beecount/providers/database_providers.dart';
-import 'package:beecount/widgets/transaction/transfer_form.dart';
+import 'package:piggycount/data/db.dart';
+import 'package:piggycount/data/repositories/local/local_repository.dart';
+import 'package:piggycount/l10n/app_localizations.dart';
+import 'package:piggycount/providers/database_providers.dart';
+import 'package:piggycount/widgets/transaction/transfer_form.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   SharedPreferences.setMockInitialValues({});
 
-  late BeeDatabase db;
+  late PiggyDatabase db;
   late LocalRepository repo;
 
   setUp(() async {
-    db = BeeDatabase.forTesting(NativeDatabase.memory());
+    db = PiggyDatabase.forTesting(NativeDatabase.memory());
     repo = LocalRepository(db);
     await db.customStatement(
         "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");

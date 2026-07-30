@@ -1,4 +1,4 @@
-package com.tntlikely.beecount
+package com.wait.piggycount
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
@@ -19,13 +19,13 @@ import java.io.File
  * 图片分别写入 `widget_recent_medium` / `widget_recent_large` 两个 key。
  *
  * 两档宽度相同(364dp)、高度不同(169dp/382dp),因此只按高度分档,详见
- * [resolveImageKey]。尺寸判定机制同 [BeeCountNetWorthWidgetProvider]:
+ * [resolveImageKey]。尺寸判定机制同 [PiggyCountNetWorthWidgetProvider]:
  * Dart 侧 `matchInstalledAll` 为命中类名渲染该类型全部尺寸的图,任意缩放
  * 档位都有现成图可显。
  */
-open class BeeCountRecentWidgetProvider : HomeWidgetProvider() {
+open class PiggyCountRecentWidgetProvider : HomeWidgetProvider() {
     companion object {
-        private const val TAG = "BeeCountRecentWidget"
+        private const val TAG = "PiggyCountRecentWidget"
 
         // 阈值取自 widget_spec.dart 的 logicalSize:medium(364x169) 与
         // large(364x382) 高度的中点,只是粗略分档,不代表精确换算。
@@ -68,9 +68,9 @@ open class BeeCountRecentWidgetProvider : HomeWidgetProvider() {
 
                     // 整块点击 → 明细页。第一版不分区。
                     // TODO: 点单笔交易跳转到该笔详情是二期优化,需要按行分区深链
-                    // 并携带交易 id,例如 beecount://open?page=detail&id=<id>。
+                    // 并携带交易 id,例如 piggycount://open?page=detail&id=<id>。
                     try {
-                        val intent = createLaunchIntentWithDeepLink(context, "beecount://open?page=detail")
+                        val intent = createLaunchIntentWithDeepLink(context, "piggycount://open?page=detail")
                         val pending = PendingIntent.getActivity(
                             context, widgetId, intent,
                             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE

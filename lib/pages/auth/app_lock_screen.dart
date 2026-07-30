@@ -7,7 +7,7 @@ import '../../providers/security_providers.dart';
 import '../../providers/theme_providers.dart';
 import '../../services/security/app_lock_service.dart';
 import '../../widgets/biz/pin_entry_pad.dart';
-import '../../widgets/biz/bee_icon.dart';
+import '../../widgets/biz/piggy_icon.dart';
 import '../../l10n/app_localizations.dart';
 
 class AppLockScreen extends ConsumerStatefulWidget {
@@ -102,13 +102,13 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
     final showBiometric = _biometricAvailable && _biometricEnabled;
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: SafeArea(
         child: Column(
           children: [
             const Spacer(flex: 2),
             // Logo
-            BeeIcon(
+            PiggyIcon(
               color: primaryColor,
               size: 64.0.scaled(context, ref),
             ),
@@ -119,7 +119,7 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
               style: TextStyle(
                 fontSize: 18.0.scaled(context, ref),
                 fontWeight: FontWeight.w600,
-                color: BeeTokens.textPrimary(context),
+                color: PiggyTokens.textPrimary(context),
               ),
             ),
             SizedBox(height: 32.0.scaled(context, ref)),

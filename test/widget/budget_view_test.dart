@@ -6,10 +6,10 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:beecount/data/repositories/budget_repository.dart'
+import 'package:piggycount/data/repositories/budget_repository.dart'
     show BudgetOverview, BudgetUsage, CategoryBudgetUsage;
-import 'package:beecount/widget/views/budget_view.dart';
-import 'package:beecount/widget/widget_spec.dart' show HWSize;
+import 'package:piggycount/widget/views/budget_view.dart';
+import 'package:piggycount/widget/widget_spec.dart' show HWSize;
 
 void main() {
   Widget wrap(Widget child, Size size) {

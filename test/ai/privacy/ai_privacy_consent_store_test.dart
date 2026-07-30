@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:beecount/ai/privacy/ai_privacy_consent.dart';
+import 'package:piggycount/ai/privacy/ai_privacy_consent.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

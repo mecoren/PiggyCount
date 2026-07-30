@@ -126,7 +126,7 @@ class _DonationPageState extends ConsumerState<DonationPage> {
           children: [
             Icon(
               Icons.favorite,
-              color: BeeTokens.error(context),
+              color: PiggyTokens.error(context),
               size: 24.0.scaled(context, ref),
             ),
             SizedBox(width: 8.0.scaled(context, ref)),
@@ -154,7 +154,7 @@ class _DonationPageState extends ConsumerState<DonationPage> {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           PrimaryHeader(
@@ -173,14 +173,14 @@ class _DonationPageState extends ConsumerState<DonationPage> {
                             Icon(
                               Icons.info_outline,
                               size: 48.0.scaled(context, ref),
-                              color: BeeTokens.iconSecondary(context),
+                              color: PiggyTokens.iconSecondary(context),
                             ),
                             SizedBox(height: 16.0.scaled(context, ref)),
                             Text(
                               l10n.donationNoProducts,
                               style: TextStyle(
                                 fontSize: 16.0.scaled(context, ref),
-                                color: BeeTokens.textSecondary(context),
+                                color: PiggyTokens.textSecondary(context),
                               ),
                             ),
                           ],
@@ -212,7 +212,7 @@ class _DonationPageState extends ConsumerState<DonationPage> {
                                         style: TextStyle(
                                           fontSize: 16.0.scaled(context, ref),
                                           fontWeight: FontWeight.w600,
-                                          color: BeeTokens.textPrimary(context),
+                                          color: PiggyTokens.textPrimary(context),
                                         ),
                                       ),
                                     ],
@@ -222,7 +222,7 @@ class _DonationPageState extends ConsumerState<DonationPage> {
                                     l10n.donationDescriptionDetail,
                                     style: TextStyle(
                                       fontSize: 14.0.scaled(context, ref),
-                                      color: BeeTokens.textSecondary(context),
+                                      color: PiggyTokens.textSecondary(context),
                                       height: 1.5,
                                     ),
                                   ),
@@ -231,7 +231,7 @@ class _DonationPageState extends ConsumerState<DonationPage> {
                                     l10n.donationNoFeatures,
                                     style: TextStyle(
                                       fontSize: 13.0.scaled(context, ref),
-                                      color: BeeTokens.textTertiary(context),
+                                      color: PiggyTokens.textTertiary(context),
                                       fontStyle: FontStyle.italic,
                                     ),
                                   ),
@@ -251,7 +251,7 @@ class _DonationPageState extends ConsumerState<DonationPage> {
 
                                 return Column(
                                   children: [
-                                    if (index > 0) BeeTokens.cardDivider(context),
+                                    if (index > 0) PiggyTokens.cardDivider(context),
                                     _ProductTile(
                                       product: product,
                                       isPurchasing: isPurchasing,
@@ -330,7 +330,7 @@ class _ProductTile extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 16.0.scaled(context, ref),
                   fontWeight: FontWeight.w500,
-                  color: BeeTokens.textPrimary(context),
+                  color: PiggyTokens.textPrimary(context),
                 ),
               ),
             ),

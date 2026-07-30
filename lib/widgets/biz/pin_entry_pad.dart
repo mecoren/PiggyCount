@@ -28,8 +28,8 @@ class PinDotIndicator extends ConsumerWidget {
         final filled = index < filledCount;
         final dotSize = 14.0.scaled(context, ref);
         final color = isError
-            ? BeeTokens.error(context)
-            : (filled ? primaryColor : BeeTokens.border(context));
+            ? PiggyTokens.error(context)
+            : (filled ? primaryColor : PiggyTokens.border(context));
 
         return AnimatedContainer(
           duration: const Duration(milliseconds: 150),
@@ -86,7 +86,7 @@ class NumberPad extends ConsumerWidget {
                   child: showBiometric
                       ? Icon(Icons.fingerprint,
                           size: 28.0.scaled(context, ref),
-                          color: BeeTokens.textPrimary(context))
+                          color: PiggyTokens.textPrimary(context))
                       : const SizedBox.shrink(),
                   onTap: showBiometric ? onBiometric : null,
                 );
@@ -97,7 +97,7 @@ class NumberPad extends ConsumerWidget {
                   ref,
                   child: Icon(Icons.backspace_outlined,
                       size: 24.0.scaled(context, ref),
-                      color: BeeTokens.textPrimary(context)),
+                      color: PiggyTokens.textPrimary(context)),
                   onTap: onDelete,
                 );
               }
@@ -109,7 +109,7 @@ class NumberPad extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: 28.0.scaled(context, ref),
                     fontWeight: FontWeight.w400,
-                    color: BeeTokens.textPrimary(context),
+                    color: PiggyTokens.textPrimary(context),
                   ),
                 ),
                 onTap: () => onNumberTap(key),
@@ -142,7 +142,7 @@ class NumberPad extends ConsumerWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: onTap != null
-              ? BeeTokens.surfaceSecondary(context)
+              ? PiggyTokens.surfaceSecondary(context)
               : Colors.transparent,
         ),
         child: child,

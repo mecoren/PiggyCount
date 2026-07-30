@@ -301,15 +301,15 @@ class _CategorySelectorDialogState extends ConsumerState<CategorySelectorDialog>
 
     return Dialog(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
       ),
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       child: Container(
         width: MediaQuery.of(context).size.width * 0.9,
         height: MediaQuery.of(context).size.height * 0.75,
         decoration: BoxDecoration(
-          color: BeeTokens.scaffoldBackground(context),
-          borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+          color: PiggyTokens.scaffoldBackground(context),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
         ),
         child: Column(
         children: [
@@ -317,11 +317,11 @@ class _CategorySelectorDialogState extends ConsumerState<CategorySelectorDialog>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: BeeTokens.surfaceElevated(context),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
+              color: PiggyTokens.surfaceElevated(context),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
               border: Border(
                 bottom: BorderSide(
-                  color: BeeTokens.divider(context),
+                  color: PiggyTokens.divider(context),
                   width: 0.5,
                 ),
               ),
@@ -338,7 +338,7 @@ class _CategorySelectorDialogState extends ConsumerState<CategorySelectorDialog>
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: BeeTokens.textPrimary(context),
+                            color: PiggyTokens.textPrimary(context),
                           ),
                         ),
                       ),
@@ -346,7 +346,7 @@ class _CategorySelectorDialogState extends ConsumerState<CategorySelectorDialog>
                         onPressed: () => Navigator.pop(context),
                         icon: Icon(
                           Icons.close,
-                          color: BeeTokens.iconPrimary(context),
+                          color: PiggyTokens.iconPrimary(context),
                         ),
                       ),
                     ],
@@ -359,25 +359,25 @@ class _CategorySelectorDialogState extends ConsumerState<CategorySelectorDialog>
                       hintText: l10n.searchCategoryHint,
                       prefixIcon: Icon(
                         Icons.search,
-                        color: BeeTokens.iconTertiary(context),
+                        color: PiggyTokens.iconTertiary(context),
                       ),
                       suffixIcon: _searchText.isNotEmpty
                           ? IconButton(
                               onPressed: () => _searchController.clear(),
                               icon: Icon(
                                 Icons.clear,
-                                color: BeeTokens.iconTertiary(context),
+                                color: PiggyTokens.iconTertiary(context),
                               ),
                             )
                           : null,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                         borderSide: BorderSide(
-                          color: BeeTokens.border(context),
+                          color: PiggyTokens.border(context),
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                         borderSide: BorderSide(
                           color: ref.watch(primaryColorProvider),
                         ),
@@ -387,7 +387,7 @@ class _CategorySelectorDialogState extends ConsumerState<CategorySelectorDialog>
                         horizontal: 16,
                       ),
                       filled: true,
-                      fillColor: BeeTokens.surface(context),
+                      fillColor: PiggyTokens.surface(context),
                     ),
                   ),
                 ],
@@ -412,7 +412,7 @@ class _CategorySelectorDialogState extends ConsumerState<CategorySelectorDialog>
                         Icon(
                           Icons.search_off,
                           size: 64,
-                          color: BeeTokens.textTertiary(context),
+                          color: PiggyTokens.textTertiary(context),
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -420,7 +420,7 @@ class _CategorySelectorDialogState extends ConsumerState<CategorySelectorDialog>
                               ? l10n.searchNoResults
                               : l10n.categoryEmpty,
                           style: TextStyle(
-                            color: BeeTokens.textTertiary(context),
+                            color: PiggyTokens.textTertiary(context),
                             fontSize: 16,
                           ),
                         ),
@@ -594,7 +594,7 @@ class _CategoryTile extends StatelessWidget {
                 : null,
             border: Border(
               bottom: BorderSide(
-                color: BeeTokens.divider(context),
+                color: PiggyTokens.divider(context),
                 width: 0.5,
               ),
             ),
@@ -617,7 +617,7 @@ class _CategoryTile extends StatelessWidget {
                     color: isSelected
                         ? primaryColor.withValues(alpha: 0.15)
                         : primaryColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                    borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                     // 选中状态添加边框
                     border: isSelected
                         ? Border.all(color: primaryColor, width: 1.5)
@@ -641,7 +641,7 @@ class _CategoryTile extends StatelessWidget {
                           : (isChild ? FontWeight.normal : FontWeight.w500),
                       color: isSelected
                           ? primaryColor
-                          : BeeTokens.textPrimary(context),
+                          : PiggyTokens.textPrimary(context),
                     ),
                   ),
                 ),
@@ -650,14 +650,14 @@ class _CategoryTile extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: BeeTokens.surface(context),
-                      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                      color: PiggyTokens.surface(context),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                     ),
                     child: Text(
                       AppLocalizations.of(context).tagTransactionCount(transactionCount),
                       style: TextStyle(
                         fontSize: 12,
-                        color: BeeTokens.textSecondary(context),
+                        color: PiggyTokens.textSecondary(context),
                       ),
                     ),
                   ),
@@ -677,7 +677,7 @@ class _CategoryTile extends StatelessWidget {
                     padding: EdgeInsets.only(left: isSelected ? 0 : 8),
                     child: Icon(
                       isExpanded ? Icons.expand_less : Icons.expand_more,
-                      color: BeeTokens.iconSecondary(context),
+                      color: PiggyTokens.iconSecondary(context),
                     ),
                   ),
               ],

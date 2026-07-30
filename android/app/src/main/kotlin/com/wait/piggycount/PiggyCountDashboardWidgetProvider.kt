@@ -1,4 +1,4 @@
-package com.tntlikely.beecount
+package com.wait.piggycount
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
@@ -17,11 +17,11 @@ import java.io.File
  *
  * 对应 `lib/widget/widget_spec.dart` 的 `dashboardLarge`,渲染管线把图片
  * 写入固定 key `widget_dashboard_large`——只有一档尺寸,`onUpdate` 无需像
- * [BeeCountNetWorthWidgetProvider] 那样按 `getAppWidgetOptions` 分档。
+ * [PiggyCountNetWorthWidgetProvider] 那样按 `getAppWidgetOptions` 分档。
  */
-class BeeCountDashboardWidgetProvider : HomeWidgetProvider() {
+class PiggyCountDashboardWidgetProvider : HomeWidgetProvider() {
     companion object {
-        private const val TAG = "BeeCountDashboardWidget"
+        private const val TAG = "PiggyCountDashboardWidget"
         private const val IMAGE_KEY = "widget_dashboard_large"
     }
 
@@ -61,14 +61,14 @@ class BeeCountDashboardWidgetProvider : HomeWidgetProvider() {
                     // 明细,点记一笔进了洞察页):上部主体 → 明细,底部快捷
                     // 记账行 → 记支出。
                     try {
-                        val detailIntent = createLaunchIntentWithDeepLink(context, "beecount://open?page=detail")
+                        val detailIntent = createLaunchIntentWithDeepLink(context, "piggycount://open?page=detail")
                         val detailPending = PendingIntent.getActivity(
                             context, widgetId * 10 + 1, detailIntent,
                             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                         )
                         setOnClickPendingIntent(R.id.widget_click, detailPending)
 
-                        val expenseIntent = createLaunchIntentWithDeepLink(context, "beecount://new?type=expense")
+                        val expenseIntent = createLaunchIntentWithDeepLink(context, "piggycount://new?type=expense")
                         val expensePending = PendingIntent.getActivity(
                             context, widgetId * 10 + 2, expenseIntent,
                             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE

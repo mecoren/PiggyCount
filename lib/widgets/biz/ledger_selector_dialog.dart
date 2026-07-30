@@ -45,7 +45,7 @@ class LedgerSelectorDialog extends ConsumerWidget {
         final ledgers = snapshot.data!;
         if (ledgers.isEmpty) {
           return SimpleDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
             title: Text(l10n.ledgerSelectTitle),
             children: [
               Padding(
@@ -57,7 +57,7 @@ class LedgerSelectorDialog extends ConsumerWidget {
         }
 
         return SimpleDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
           title: Text(l10n.ledgerSelectTitle),
           children: ledgers.map((ledger) {
             final isSelected = ledger.id == currentLedgerId;

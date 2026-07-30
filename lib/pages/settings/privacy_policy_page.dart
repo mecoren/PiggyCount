@@ -40,12 +40,12 @@ class _PrivacyPolicyPageState extends ConsumerState<PrivacyPolicyPage> {
     final locale = Localizations.localeOf(context);
     _url = WebsiteUrls.privacy(
       locale,
-      dark: BeeTokens.isDark(context),
+      dark: PiggyTokens.isDark(context),
       primaryHex: _hex(ref.read(primaryColorProvider)),
     );
     final controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(BeeTokens.scaffoldBackground(context))
+      ..setBackgroundColor(PiggyTokens.scaffoldBackground(context))
       ..setNavigationDelegate(NavigationDelegate(
         onProgress: (p) {
           if (mounted) setState(() => _progress = p);
@@ -107,7 +107,7 @@ class _PrivacyPolicyPageState extends ConsumerState<PrivacyPolicyPage> {
         Navigator.of(context).pop();
       },
       child: Scaffold(
-        backgroundColor: BeeTokens.scaffoldBackground(context),
+        backgroundColor: PiggyTokens.scaffoldBackground(context),
         extendBodyBehindAppBar: true,
         appBar: GlassTitleBar(
           title: l10n.aboutPrivacyPolicy,
@@ -126,11 +126,11 @@ class _PrivacyPolicyPageState extends ConsumerState<PrivacyPolicyPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.wifi_off,
-                          size: 48, color: BeeTokens.textTertiary(context)),
+                          size: 48, color: PiggyTokens.textTertiary(context)),
                       const SizedBox(height: 12),
                       Text(l10n.helpCenterLoadFailed,
                           style: TextStyle(
-                              color: BeeTokens.textSecondary(context))),
+                              color: PiggyTokens.textSecondary(context))),
                       const SizedBox(height: 16),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(

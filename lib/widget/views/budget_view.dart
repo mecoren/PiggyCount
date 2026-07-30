@@ -129,7 +129,7 @@ class BudgetView extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: widgetCardBackground(dark),
-        borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
       ),
       child: child,
     );
@@ -354,7 +354,7 @@ class BudgetView extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
           color: color.withValues(alpha: dark ? 0.2 : 0.1),
-          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

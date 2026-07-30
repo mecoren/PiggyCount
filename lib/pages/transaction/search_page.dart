@@ -467,7 +467,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               Navigator.pop(context);
               await _executeBatchDelete();
             },
-            style: TextButton.styleFrom(foregroundColor: BeeTokens.error(context)),
+            style: TextButton.styleFrom(foregroundColor: PiggyTokens.error(context)),
             child: Text(l10n.commonDelete),
           ),
         ],
@@ -680,7 +680,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           // 使用PrimaryHeader
@@ -715,8 +715,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             Container(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
               decoration: BoxDecoration(
-                color: BeeTokens.surfaceElevated(context),
-                boxShadow: BeeTokens.isDark(context) ? null : [
+                color: PiggyTokens.surfaceElevated(context),
+                boxShadow: PiggyTokens.isDark(context) ? null : [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 4,
@@ -735,25 +735,25 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                           decoration: InputDecoration(
                             hintText: AppLocalizations.of(context).searchHint,
                             prefixIcon: Icon(Icons.search,
-                                color: BeeTokens.textTertiary(context)),
+                                color: PiggyTokens.textTertiary(context)),
                             suffixIcon: _searchController.text.isNotEmpty
                                 ? IconButton(
                                     onPressed: () {
                                       _searchController.clear();
                                     },
                                     icon: Icon(Icons.clear,
-                                        color: BeeTokens.textTertiary(context)),
+                                        color: PiggyTokens.textTertiary(context)),
                                   )
                                 : null,
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                              borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                               borderSide: BorderSide(
-                                  color: BeeTokens.divider(context)),
+                                  color: PiggyTokens.divider(context)),
                             ),
                             focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                              borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                               borderSide: BorderSide(
-                                  color: BeeTokens.primary(context)),
+                                  color: PiggyTokens.primary(context)),
                             ),
                             contentPadding: const EdgeInsets.symmetric(
                                 vertical: 12, horizontal: 16),
@@ -770,7 +770,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                   _startDate != null || _endDate != null ||
                                   _selectedCategory != null)
                               ? ref.watch(primaryColorProvider)
-                              : BeeTokens.iconPrimary(context),
+                              : PiggyTokens.iconPrimary(context),
                         ),
                         tooltip: l10n.searchFilterTitle,
                       ),
@@ -884,12 +884,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.search,
-                            size: 64, color: BeeTokens.textTertiary(context)),
+                            size: 64, color: PiggyTokens.textTertiary(context)),
                         const SizedBox(height: 16),
                         Text(
                           AppLocalizations.of(context).searchNoInput,
                           style: TextStyle(
-                              color: BeeTokens.textTertiary(context), fontSize: 16),
+                              color: PiggyTokens.textTertiary(context), fontSize: 16),
                         ),
                       ],
                     ),
@@ -902,12 +902,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.search_off,
-                            size: 64, color: BeeTokens.textTertiary(context)),
+                            size: 64, color: PiggyTokens.textTertiary(context)),
                         const SizedBox(height: 16),
                         Text(
                           AppLocalizations.of(context).searchNoResults,
                           style: TextStyle(
-                              color: BeeTokens.textTertiary(context), fontSize: 16),
+                              color: PiggyTokens.textTertiary(context), fontSize: 16),
                         ),
                       ],
                     ),
@@ -922,7 +922,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                       Container(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
                         decoration: BoxDecoration(
-                          color: BeeTokens.surfaceElevated(context),
+                          color: PiggyTokens.surfaceElevated(context),
                         ),
                         child: Row(
                           children: [
@@ -932,7 +932,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                   .textTheme
                                   .bodyMedium
                                   ?.copyWith(
-                                    color: BeeTokens.textTertiary(context),
+                                    color: PiggyTokens.textTertiary(context),
                                   ),
                             ),
                             SizedBox(width: 8.0.scaled(context, ref)),
@@ -946,7 +946,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                     child: _buildSummaryChip(
                                       label: l10n.searchSummaryExpense,
                                       amount: _totalExpense,
-                                      color: BeeTokens.expenseColor(context, ref),
+                                      color: PiggyTokens.expenseColor(context, ref),
                                     ),
                                   ),
                                   SizedBox(width: 6.0.scaled(context, ref)),
@@ -956,7 +956,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                     child: _buildSummaryChip(
                                       label: l10n.searchSummaryIncome,
                                       amount: _totalIncome,
-                                      color: BeeTokens.incomeColor(context, ref),
+                                      color: PiggyTokens.incomeColor(context, ref),
                                     ),
                                   ),
                                 ],
@@ -965,7 +965,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                             TextButton(
                               onPressed: _toggleBatchMode,
                               style: TextButton.styleFrom(
-                                foregroundColor: BeeTokens.textLink(context),
+                                foregroundColor: PiggyTokens.textLink(context),
                               ),
                               child: Text(l10n.searchBatchMode),
                             ),
@@ -977,7 +977,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                       Container(
                         padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
                         decoration: BoxDecoration(
-                          color: BeeTokens.surfaceElevated(context),
+                          color: PiggyTokens.surfaceElevated(context),
                         ),
                         child: Column(
                           children: [
@@ -990,7 +990,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                       .textTheme
                                       .bodyMedium
                                       ?.copyWith(
-                                        color: BeeTokens.textTertiary(context),
+                                        color: PiggyTokens.textTertiary(context),
                                       ),
                                 ),
                                 const Spacer(),
@@ -1061,7 +1061,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                     label: Text(l10n.commonDelete,
                                         style: const TextStyle(fontSize: 13)),
                                     style: OutlinedButton.styleFrom(
-                                      foregroundColor: BeeTokens.error(context),
+                                      foregroundColor: PiggyTokens.error(context),
                                       padding: const EdgeInsets.symmetric(
                                           vertical: 6, horizontal: 8),
                                       minimumSize: const Size(0, 36),
@@ -1138,7 +1138,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                       },
                               ),
                               if (index < _searchResults.length - 1)
-                                BeeDivider.short(
+                                PiggyDivider.short(
                                     indent: 56 + 16, endIndent: 16),
                             ],
                           );

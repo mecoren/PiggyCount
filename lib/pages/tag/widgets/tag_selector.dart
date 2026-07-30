@@ -64,8 +64,8 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
         maxHeight: MediaQuery.of(context).size.height * 0.7,
       ),
       decoration: BoxDecoration(
-        color: BeeTokens.surfaceElevated(context),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
+        color: PiggyTokens.surfaceElevated(context),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -76,7 +76,7 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: BeeTokens.divider(context),
+              color: PiggyTokens.divider(context),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -98,14 +98,14 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: BeeTokens.textPrimary(context),
+                        color: PiggyTokens.textPrimary(context),
                       ),
                     ),
                     Text(
                       l10n.tagSelectHint,
                       style: TextStyle(
                         fontSize: 12,
-                        color: BeeTokens.textTertiary(context),
+                        color: PiggyTokens.textTertiary(context),
                       ),
                     ),
                   ],
@@ -126,11 +126,11 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
                 hintText: l10n.commonSearch,
                 prefixIcon: const Icon(Icons.search, size: 20),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
-                fillColor: BeeTokens.surfaceSecondary(context),
+                fillColor: PiggyTokens.surfaceSecondary(context),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 8,
@@ -206,13 +206,13 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
           Icon(
             Icons.label_outline,
             size: 48,
-            color: BeeTokens.textTertiary(context),
+            color: PiggyTokens.textTertiary(context),
           ),
           const SizedBox(height: 12),
           Text(
             '暂无标签',
             style: TextStyle(
-              color: BeeTokens.textSecondary(context),
+              color: PiggyTokens.textSecondary(context),
             ),
           ),
           const SizedBox(height: 16),
@@ -237,7 +237,7 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
-              color: BeeTokens.textSecondary(context),
+              color: PiggyTokens.textSecondary(context),
             ),
           ),
         ),
@@ -270,15 +270,15 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
   Widget _buildCreateNew(AppLocalizations l10n) {
     return InkWell(
       onTap: _createNewTag,
-      borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+      borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           border: Border.all(
-            color: BeeTokens.border(context),
+            color: PiggyTokens.border(context),
             style: BorderStyle.solid,
           ),
-          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -286,13 +286,13 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
             Icon(
               Icons.add,
               size: 18,
-              color: BeeTokens.primary(context),
+              color: PiggyTokens.primary(context),
             ),
             const SizedBox(width: 8),
             Text(
               l10n.tagSelectCreateNew,
               style: TextStyle(
-                color: BeeTokens.primary(context),
+                color: PiggyTokens.primary(context),
                 fontWeight: FontWeight.w500,
               ),
             ),

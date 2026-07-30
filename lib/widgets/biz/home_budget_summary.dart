@@ -41,15 +41,15 @@ class _BudgetProgressBar extends ConsumerWidget {
   const _BudgetProgressBar({required this.usage});
 
   Color _progressColor(double rate, BuildContext context) {
-    if (rate >= 1.0) return BeeTokens.error(context);
-    if (rate >= 0.9) return BeeTokens.error(context);
-    if (rate >= 0.7) return BeeTokens.warning(context);
-    return BeeTokens.success(context);
+    if (rate >= 1.0) return PiggyTokens.error(context);
+    if (rate >= 0.9) return PiggyTokens.error(context);
+    if (rate >= 0.7) return PiggyTokens.warning(context);
+    return PiggyTokens.success(context);
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = BeeTokens.isDark(context);
+    final isDark = PiggyTokens.isDark(context);
     final rate = usage.rate.clamp(0.0, 1.5);
     final displayRate = (usage.rate * 100).toInt();
     final color = _progressColor(usage.rate, context);

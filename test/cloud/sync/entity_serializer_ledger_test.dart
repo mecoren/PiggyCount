@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:beecount/cloud/sync/entity_serializer.dart';
-import 'package:beecount/data/db.dart';
+import 'package:piggycount/cloud/sync/entity_serializer.dart';
+import 'package:piggycount/data/db.dart';
 
 void main() {
   test('serializeLedger 携带 monthStartDay', () {

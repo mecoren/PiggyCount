@@ -13,7 +13,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiConsentBody =>
-      'AI features need to send related data to the third-party AI provider you configure:\n\n• Who it goes to: by default Zhipu GLM (open.bigmodel.cn, operated by Zhipu); if you configure another third-party AI service, it goes to the provider you entered.\n• What is sent: the content you actively use for recognition/chat — receipt images, voice recordings, text you type, plus the category names, account names and relevant transaction records needed to complete recognition/analysis.\n• Purpose: only for bill recognition, bookkeeping and chats you initiate; BeeCount itself does not collect or store this data.\n\nThe data is processed by that third-party provider under its own privacy policy. Enabling means you consent to the data sharing above.';
+      'AI features need to send related data to the third-party AI provider you configure:\n\n• Who it goes to: by default Zhipu GLM (open.bigmodel.cn, operated by Zhipu); if you configure another third-party AI service, it goes to the provider you entered.\n• What is sent: the content you actively use for recognition/chat — receipt images, voice recordings, text you type, plus the category names, account names and relevant transaction records needed to complete recognition/analysis.\n• Purpose: only for bill recognition, bookkeeping and chats you initiate; PiggyCount itself does not collect or store this data.\n\nThe data is processed by that third-party provider under its own privacy policy. Enabling means you consent to the data sharing above.';
 
   @override
   String get aiConsentAgree => 'Agree & enable';
@@ -208,7 +208,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get voiceRecordingPermissionDeniedMessage =>
-      'Voice billing requires microphone permission. Please allow BeeCount to access the microphone in System Settings.';
+      'Voice billing requires microphone permission. Please allow PiggyCount to access the microphone in System Settings.';
 
   @override
   String voiceRecordingStartFailed(String error) {
@@ -1310,7 +1310,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mineShareApp => 'Share App';
 
   @override
-  String get mineShareWithFriends => 'Share BeeCount with friends';
+  String get mineShareWithFriends => 'Share PiggyCount with friends';
 
   @override
   String get mineCopyPromoText => 'Copy Promo Text';
@@ -1322,7 +1322,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mineShareGenerating => 'Generating share poster...';
 
   @override
-  String get sharePosterAppName => 'BeeCount';
+  String get sharePosterAppName => 'PiggyCount';
 
   @override
   String get sharePosterSlogan => 'Smart Accounting, Beautiful Life';
@@ -1400,7 +1400,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shareGuidanceCopyText =>
-      'Track my expenses with BeeCount - open source, free & ad-free! 🐝 Download: https://github.com/TNT-Likely/BeeCount';
+      'Track my expenses with PiggyCount - open source, free & ad-free! 🐝 Download: https://github.com/TNT-Likely/PiggyCount';
 
   @override
   String get shareGuidanceCopied => 'Text copied';
@@ -1971,7 +1971,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get categoryShareSubject => 'BeeCount Category Configuration';
+  String get categoryShareSubject => 'PiggyCount Category Configuration';
 
   @override
   String get categoryShareFailed => 'Share failed';
@@ -2730,7 +2730,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cloudWebdavPasswordLabel => 'Password';
 
   @override
-  String get cloudWebdavPathHint => '/BeeCount';
+  String get cloudWebdavPathHint => '/PiggyCount';
 
   @override
   String get cloudS3EndpointLabel => 'Endpoint';
@@ -2897,7 +2897,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exportCsvHeaderAttachments => 'Attachments';
 
   @override
-  String get exportShareText => 'BeeCount Export File';
+  String get exportShareText => 'PiggyCount Export File';
 
   @override
   String get exportSuccessTitle => 'Export Successful';
@@ -3132,7 +3132,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get updateManualVisit =>
-      'Please manually visit in browser:\\nhttps://github.com/TNT-Likely/BeeCount/releases';
+      'Please manually visit in browser:\\nhttps://github.com/TNT-Likely/PiggyCount/releases';
 
   @override
   String get updateNoLocalApkTitle => 'No Update Package Found';
@@ -3308,7 +3308,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Go to System Settings > App Management';
 
   @override
-  String get updateNotificationGuideStep2 => 'Find \\\"BeeCount\\\" app';
+  String get updateNotificationGuideStep2 => 'Find \\\"PiggyCount\\\" app';
 
   @override
   String get updateNotificationGuideStep3 => 'Enable notification permissions';
@@ -3592,78 +3592,78 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cloudCustomS3Subtitle => 'AWS S3 / Cloudflare R2 / MinIO';
 
   @override
-  String get cloudBeeCountCloudTitle => 'BeeCount Cloud';
+  String get cloudPiggyCountCloudTitle => 'PiggyCount Cloud';
 
   @override
-  String get cloudBeeCountCloudSubtitle =>
+  String get cloudPiggyCountCloudSubtitle =>
       'Self-hosted · Incremental sync · Multi-device';
 
   @override
-  String get cloudConfigureBeeCountCloudTitle => 'Configure BeeCount Cloud';
+  String get cloudConfigurePiggyCountCloudTitle => 'Configure PiggyCount Cloud';
 
   @override
-  String get cloudBeeCountCloudUrlLabel => 'Server URL';
+  String get cloudPiggyCountCloudUrlLabel => 'Server URL';
 
   @override
-  String get cloudBeeCountCloudUrlHint => 'https://your-server.com';
+  String get cloudPiggyCountCloudUrlHint => 'https://your-server.com';
 
   @override
-  String get cloudBeeCountCloudApiPrefixLabel => 'API Prefix';
+  String get cloudPiggyCountCloudApiPrefixLabel => 'API Prefix';
 
   @override
-  String get cloudBeeCountCloudApiPrefixHint => '/api/v1';
+  String get cloudPiggyCountCloudApiPrefixHint => '/api/v1';
 
   @override
-  String get cloudBeeCountCloudEmailLabel => 'Email';
+  String get cloudPiggyCountCloudEmailLabel => 'Email';
 
   @override
-  String get cloudBeeCountCloudEmailHint => 'your@email.com';
+  String get cloudPiggyCountCloudEmailHint => 'your@email.com';
 
   @override
-  String get cloudBeeCountCloudPasswordLabel => 'Password';
+  String get cloudPiggyCountCloudPasswordLabel => 'Password';
 
   @override
-  String get cloudBeeCountCloudPasswordHint => 'Enter password';
+  String get cloudPiggyCountCloudPasswordHint => 'Enter password';
 
   @override
-  String get cloudBeeCountCloudLoginSuccess => 'Login successful';
+  String get cloudPiggyCountCloudLoginSuccess => 'Login successful';
 
   @override
-  String get cloudBeeCountCloudLoginFailed => 'Login failed';
+  String get cloudPiggyCountCloudLoginFailed => 'Login failed';
 
   @override
-  String get cloudBeeCountCloudSyncSubtitle =>
+  String get cloudPiggyCountCloudSyncSubtitle =>
       'Incremental sync · Multi-device';
 
   @override
-  String get cloudBeeCountCloudConnected => 'Connected';
+  String get cloudPiggyCountCloudConnected => 'Connected';
 
   @override
-  String get cloudBeeCountCloudNotConnected => 'Not connected';
+  String get cloudPiggyCountCloudNotConnected => 'Not connected';
 
   @override
-  String get cloudBeeCountCloudNotConnectedHint =>
+  String get cloudPiggyCountCloudNotConnectedHint =>
       'Configure and login in cloud service settings';
 
   @override
-  String get cloudBeeCountCloudAutoSync => 'Incremental Sync';
+  String get cloudPiggyCountCloudAutoSync => 'Incremental Sync';
 
   @override
-  String get cloudBeeCountCloudAutoSyncHint =>
+  String get cloudPiggyCountCloudAutoSyncHint =>
       'Changes sync to cloud automatically';
 
   @override
-  String get cloudBeeCountCloudMultiDevice => 'Multi-device Sync';
+  String get cloudPiggyCountCloudMultiDevice => 'Multi-device Sync';
 
   @override
-  String get cloudBeeCountCloudMultiDeviceHint =>
+  String get cloudPiggyCountCloudMultiDeviceHint =>
       'Keep data consistent across devices';
 
   @override
-  String get cloudBeeCountCloudAttachment => 'Attachment Sync';
+  String get cloudPiggyCountCloudAttachment => 'Attachment Sync';
 
   @override
-  String get cloudBeeCountCloudAttachmentHint =>
+  String get cloudPiggyCountCloudAttachmentHint =>
       'Receipt images backed up to cloud automatically';
 
   @override
@@ -4161,7 +4161,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'The previously downloaded installation package is incomplete or corrupted. Delete and re-download?';
 
   @override
-  String get welcomeTitle => 'Welcome to BeeCount';
+  String get welcomeTitle => 'Welcome to PiggyCount';
 
   @override
   String get welcomeDescription =>
@@ -4197,7 +4197,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get welcomeCloudSyncDescription =>
-      'BeeCount supports multiple sync methods - your data, your control';
+      'PiggyCount supports multiple sync methods - your data, your control';
 
   @override
   String get welcomeCloudSyncFeature1 =>
@@ -4205,7 +4205,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get welcomeCloudSyncFeature2 =>
-      'BeeCount Cloud self-hosted (real-time multi-device + Web UI)';
+      'PiggyCount Cloud self-hosted (real-time multi-device + Web UI)';
 
   @override
   String get welcomeCloudSyncFeature3 =>
@@ -4287,7 +4287,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get iosWidgetStep2 => 'Tap the \"+\" button in upper left corner';
 
   @override
-  String get iosWidgetStep3 => 'Search and select \"BeeCount\"';
+  String get iosWidgetStep3 => 'Search and select \"PiggyCount\"';
 
   @override
   String get iosWidgetStep4 => 'Select medium widget and add to home screen';
@@ -4299,7 +4299,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get androidWidgetStep2 => 'Select \"Widgets\"';
 
   @override
-  String get androidWidgetStep3 => 'Find and long press \"BeeCount\" widget';
+  String get androidWidgetStep3 => 'Find and long press \"PiggyCount\" widget';
 
   @override
   String get androidWidgetStep4 => 'Drag to suitable position on home screen';
@@ -4319,7 +4319,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Tap the left side of the widget to quickly add an expense, or tap the right side to add an income. You can also use beecount://new?type=transfer via Shortcuts to quickly start a transfer.';
 
   @override
-  String get appName => 'BeeCount';
+  String get appName => 'PiggyCount';
 
   @override
   String get monthSuffix => '';
@@ -4411,11 +4411,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get iosAutoShortcutStep3 =>
-      'Search and add \"BeeCount - Auto Billing\" action';
+      'Search and add \"PiggyCount - Auto Billing\" action';
 
   @override
   String get iosAutoShortcutStep4 =>
-      'Set the screenshot parameter of \"BeeCount\" to the previous \"Screenshot\"';
+      'Set the screenshot parameter of \"PiggyCount\" to the previous \"Screenshot\"';
 
   @override
   String get iosAutoShortcutStep5 =>
@@ -4689,28 +4689,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cloudTutorialIntro =>
-      'BeeCount Cloud is a self-hosted sync server that supports real-time multi-device collaboration. The flow is simple:';
+      'PiggyCount Cloud is a self-hosted sync server that supports real-time multi-device collaboration. The flow is simple:';
 
   @override
   String get cloudTutorialStep1Title => 'Step 1: Deploy or join a server';
 
   @override
   String get cloudTutorialStep1Desc =>
-      'Self-host with one Docker command (see the Docker guide in GitHub README). Or join an existing BeeCount Cloud server run by a friend / team.';
+      'Self-host with one Docker command (see the Docker guide in GitHub README). Or join an existing PiggyCount Cloud server run by a friend / team.';
 
   @override
   String get cloudTutorialStep2Title => 'Step 2: Get an account';
 
   @override
   String get cloudTutorialStep2Desc =>
-      'BeeCount Cloud does NOT offer self-registration (to prevent abuse on public servers). If you self-host: the first Docker boot prints a random admin email + password to the logs — use that. Joining someone else\'s server: ask the admin to create an account for you in Web → Users.';
+      'PiggyCount Cloud does NOT offer self-registration (to prevent abuse on public servers). If you self-host: the first Docker boot prints a random admin email + password to the logs — use that. Joining someone else\'s server: ask the admin to create an account for you in Web → Users.';
 
   @override
   String get cloudTutorialStep3Title => 'Step 3: Login + enable sync';
 
   @override
   String get cloudTutorialStep3Desc =>
-      'In the app, pick BeeCount Cloud, enter the server URL and the account you got in step 2. First login uploads your entire local ledger; every subsequent edit is pushed in real time.';
+      'In the app, pick PiggyCount Cloud, enter the server URL and the account you got in step 2. First login uploads your entire local ledger; every subsequent edit is pushed in real time.';
 
   @override
   String get cloudTutorialStep4Title => 'Step 4: Login from other devices';
@@ -4874,11 +4874,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shareBillingGuide =>
-      'When you see a payment screenshot in Alipay, WeChat, Photos, etc., tap \"Share\" and choose \"BeeCount\" to auto-recognize the amount, merchant, and time and create a transaction — no need to save the screenshot first.';
+      'When you see a payment screenshot in Alipay, WeChat, Photos, etc., tap \"Share\" and choose \"PiggyCount\" to auto-recognize the amount, merchant, and time and create a transaction — no need to save the screenshot first.';
 
   @override
   String get shareBillingActionHint =>
-      'Recognized automatically in the background after sharing — no need to open BeeCount';
+      'Recognized automatically in the background after sharing — no need to open PiggyCount';
 
   @override
   String get automation => 'Automation';
@@ -4953,7 +4953,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aboutDeveloperStory =>
-      'I started tracking my expenses in 2015 as an intern, and I\'ve kept the habit for over a decade. Concerned about ads, paywalls, privacy risks, and apps shutting down, I decided to build my own — first as a small tool for myself and my family.\n\nIn September 2025, BeeCount launched its first version. Honestly, I had no idea if anyone would use it. But gradually, feedback started coming in — someone said they finally found a clean budgeting app, others offered great suggestions, and some quietly left five-star reviews. Every single message reminded me this was worth continuing.\n\nBeeCount is ad-free, subscription-free, and fully open source. All your data stays on your device and is never uploaded to any third-party server. But publishing and maintaining an app isn\'t free — developer accounts, servers, and other costs are currently covered by community donations, and every system update, bug fix, and new feature is built outside of my day job.\n\nIf BeeCount has been helpful to you, a rating, a share, or a donation would help this little project go further. Thank you for your trust.';
+      'I started tracking my expenses in 2015 as an intern, and I\'ve kept the habit for over a decade. Concerned about ads, paywalls, privacy risks, and apps shutting down, I decided to build my own — first as a small tool for myself and my family.\n\nIn September 2025, PiggyCount launched its first version. Honestly, I had no idea if anyone would use it. But gradually, feedback started coming in — someone said they finally found a clean budgeting app, others offered great suggestions, and some quietly left five-star reviews. Every single message reminded me this was worth continuing.\n\nPiggyCount is ad-free, subscription-free, and fully open source. All your data stays on your device and is never uploaded to any third-party server. But publishing and maintaining an app isn\'t free — developer accounts, servers, and other costs are currently covered by community donations, and every system update, bug fix, and new feature is built outside of my day job.\n\nIf PiggyCount has been helpful to you, a rating, a share, or a donation would help this little project go further. Thank you for your trust.';
 
   @override
   String get aboutRelatedProducts => 'More Products';
@@ -4966,7 +4966,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aboutBeeAssetsIntro =>
-      'BeeCount focuses on daily cash flow; BeeAssets is its sibling product, focused on asset portfolio visualization: net worth trends across accounts, property / investment / crypto classification, returns, holding period, and allocation breakdown.';
+      'PiggyCount focuses on daily cash flow; BeeAssets is its sibling product, focused on asset portfolio visualization: net worth trends across accounts, property / investment / crypto classification, returns, holding period, and allocation breakdown.';
 
   @override
   String get aboutBeeDNS => 'BeeDNS';
@@ -5087,7 +5087,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get configExportSubtitle => 'Export current config to YAML file';
 
   @override
-  String get configExportShareSubject => 'BeeCount Config File';
+  String get configExportShareSubject => 'PiggyCount Config File';
 
   @override
   String get configExportSuccess => 'Config exported successfully';
@@ -5554,7 +5554,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get donationDescriptionDetail =>
-      'Thank you for using BeeCount! If this app helps you, feel free to buy the developer a coffee as encouragement. Your support is my motivation to keep improving.';
+      'Thank you for using PiggyCount! If this app helps you, feel free to buy the developer a coffee as encouragement. Your support is my motivation to keep improving.';
 
   @override
   String get donationNoFeatures =>
@@ -5568,7 +5568,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String donationThankYouMessage(String productName) {
-    return 'Thank you for purchasing $productName! Your support means a lot to me. I will continue to improve BeeCount to make it even better!';
+    return 'Thank you for purchasing $productName! Your support means a lot to me. I will continue to improve PiggyCount to make it even better!';
   }
 
   @override
@@ -5941,7 +5941,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get tagShareSubject => 'BeeCount Tags Configuration';
+  String get tagShareSubject => 'PiggyCount Tags Configuration';
 
   @override
   String get tagShareFailed => 'Share failed';
@@ -7201,11 +7201,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sharedInviteInstruction =>
-      'Send the code or short link to the other person. After they install BeeCount, they can tap the link or enter the code from \"Me → Join shared ledger\".';
+      'Send the code or short link to the other person. After they install PiggyCount, they can tap the link or enter the code from \"Me → Join shared ledger\".';
 
   @override
   String sharedInviteShareText(String ledger, String code, String url) {
-    return 'I\'m inviting you to BeeCount shared ledger \"$ledger\".\n\nCode: $code\nLink: $url\n\nTap the link, or open BeeCount → Me → Join shared ledger and enter this code.';
+    return 'I\'m inviting you to PiggyCount shared ledger \"$ledger\".\n\nCode: $code\nLink: $url\n\nTap the link, or open PiggyCount → Me → Join shared ledger and enter this code.';
   }
 
   @override

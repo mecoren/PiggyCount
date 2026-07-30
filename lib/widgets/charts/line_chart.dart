@@ -122,8 +122,8 @@ class LineChart extends StatelessWidget {
               top: 8,
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: BeeTokens.dividerStatic,
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                  color: PiggyTokens.dividerStatic,
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                 ),
                 child: Padding(
                   padding:
@@ -131,20 +131,20 @@ class LineChart extends StatelessWidget {
                   child: Row(
                     children: [
                       Icon(Icons.swipe,
-                          size: 14, color: BeeTokens.textSecondary(context)),
+                          size: 14, color: PiggyTokens.textSecondary(context)),
                       const SizedBox(width: 4),
                       Text(
                         hintText ?? AppLocalizations.of(context)!.analyticsSwipeHint,
                         style: Theme.of(context)
                             .textTheme
                             .labelSmall
-                            ?.copyWith(color: BeeTokens.textSecondary(context)),
+                            ?.copyWith(color: PiggyTokens.textSecondary(context)),
                       ),
                       const SizedBox(width: 4),
                       InkWell(
                         onTap: onCloseHint,
                         child: Icon(Icons.close,
-                            size: 14, color: BeeTokens.textTertiary(context)),
+                            size: 14, color: PiggyTokens.textTertiary(context)),
                       ),
                     ],
                   ),
@@ -268,10 +268,10 @@ class _LinePainter extends CustomPainter {
   });
 
   // 获取主文字颜色（暗黑模式感知）
-  Color get primaryTextColor => isDark ? Colors.white : BeeTokens.primaryTextStatic;
+  Color get primaryTextColor => isDark ? Colors.white : PiggyTokens.primaryTextStatic;
 
   // 获取次要文字颜色（暗黑模式感知）
-  Color get secondaryTextColor => isDark ? Colors.white70 : BeeTokens.secondaryTextStatic;
+  Color get secondaryTextColor => isDark ? Colors.white70 : PiggyTokens.secondaryTextStatic;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -279,7 +279,7 @@ class _LinePainter extends CustomPainter {
     if (!minimal) {
       final rect = Offset.zero & size;
       final bgPaint =
-          Paint()..color = whiteBg ? Colors.white : BeeTokens.dividerStatic;
+          Paint()..color = whiteBg ? Colors.white : PiggyTokens.dividerStatic;
       canvas.drawRRect(
           RRect.fromRectAndRadius(rect, Radius.circular(cornerRadius)), bgPaint);
     }
@@ -287,7 +287,7 @@ class _LinePainter extends CustomPainter {
     // 网格（可选）
     if (showGrid) {
       final gridPaint = Paint()
-        ..color = BeeTokens.dividerStatic
+        ..color = PiggyTokens.dividerStatic
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1;
       const rows = 4;
@@ -412,7 +412,7 @@ class _LinePainter extends CustomPainter {
     // 左侧Y轴线（minimal 模式不画）
     if (!minimal) {
       final axisPaint = Paint()
-        ..color = BeeTokens.dividerStatic
+        ..color = PiggyTokens.dividerStatic
         ..strokeWidth = 1.0;
       canvas.drawLine(Offset(8, topPadding),
           Offset(8, size.height - bottomPadding), axisPaint);
@@ -422,7 +422,7 @@ class _LinePainter extends CustomPainter {
     if (!minimal) {
       final avgY = yFor(avgV);
       final avgLinePaint = Paint()
-        ..color = BeeTokens.secondaryTextStatic.withValues(alpha: 0.55)
+        ..color = PiggyTokens.secondaryTextStatic.withValues(alpha: 0.55)
         ..strokeWidth = 1.0
         ..style = PaintingStyle.stroke;
       _drawDashedLine(

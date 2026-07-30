@@ -23,8 +23,8 @@ class WheelPicker<T> extends StatefulWidget {
 }
 
 class _WheelPickerState<T> extends State<WheelPicker<T>> {
-  Color _textPrimary(BuildContext context) => BeeTokens.textPrimary(context);
-  Color _textTertiary(BuildContext context) => BeeTokens.textTertiary(context);
+  Color _textPrimary(BuildContext context) => PiggyTokens.textPrimary(context);
+  Color _textTertiary(BuildContext context) => PiggyTokens.textTertiary(context);
 
   late T selected;
   late FixedExtentScrollController _controller;
@@ -109,9 +109,9 @@ Future<T?> showWheelPicker<T>(
 }) {
   return showModalBottomSheet<T>(
     context: context,
-    backgroundColor: BeeTokens.surfaceElevated(context),
+    backgroundColor: PiggyTokens.surfaceElevated(context),
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
     ),
     isScrollControlled: true,
     builder: (_) => WheelPicker<T>(

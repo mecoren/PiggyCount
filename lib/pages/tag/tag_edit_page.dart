@@ -51,7 +51,7 @@ class _TagEditPageState extends ConsumerState<TagEditPage> {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           PrimaryHeader(
@@ -64,8 +64,8 @@ class _TagEditPageState extends ConsumerState<TagEditPage> {
                   l10n.commonSave,
                   style: TextStyle(
                     color: _isSubmitting
-                        ? BeeTokens.textTertiary(context)
-                        : BeeTokens.textPrimary(context),
+                        ? PiggyTokens.textTertiary(context)
+                        : PiggyTokens.textPrimary(context),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -94,7 +94,7 @@ class _TagEditPageState extends ConsumerState<TagEditPage> {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
-                              color: BeeTokens.textSecondary(context),
+                              color: PiggyTokens.textSecondary(context),
                             ),
                           ),
                         ),
@@ -103,7 +103,7 @@ class _TagEditPageState extends ConsumerState<TagEditPage> {
                           decoration: InputDecoration(
                             hintText: l10n.tagNameHint,
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                              borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                             ),
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 12,
@@ -136,7 +136,7 @@ class _TagEditPageState extends ConsumerState<TagEditPage> {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
-                              color: BeeTokens.textSecondary(context),
+                              color: PiggyTokens.textSecondary(context),
                             ),
                           ),
                         ),
@@ -183,7 +183,7 @@ class _TagEditPageState extends ConsumerState<TagEditPage> {
               shape: BoxShape.circle,
               border: isSelected
                   ? Border.all(
-                      color: BeeTokens.isDark(context)
+                      color: PiggyTokens.isDark(context)
                           ? Colors.white
                           : Colors.black,
                       width: 3,

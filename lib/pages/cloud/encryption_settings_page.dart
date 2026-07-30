@@ -246,7 +246,7 @@ class _EncryptionSettingsPageState
                   children: [
                     Icon(
                       isEnabled ? Icons.lock : Icons.lock_open,
-                      color: BeeTokens.textSecondary(context),
+                      color: PiggyTokens.textSecondary(context),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -255,14 +255,14 @@ class _EncryptionSettingsPageState
                         children: [
                           Text(
                             l10n.cloudSyncEncryptTitle,
-                            style: BeeTextTokens.title(context).copyWith(
-                              color: BeeTokens.textPrimary(context),
+                            style: PiggyTextTokens.title(context).copyWith(
+                              color: PiggyTokens.textPrimary(context),
                             ),
                           ),
                           Text(
                             l10n.cloudSyncEncryptSubtitle,
-                            style: BeeTextTokens.label(context).copyWith(
-                              color: BeeTokens.textSecondary(context),
+                            style: PiggyTextTokens.label(context).copyWith(
+                              color: PiggyTokens.textSecondary(context),
                             ),
                           ),
                         ],
@@ -275,16 +275,16 @@ class _EncryptionSettingsPageState
                       ),
                       decoration: BoxDecoration(
                         color: isEnabled
-                            ? BeeTokens.success(context).withValues(alpha: 0.12)
+                            ? PiggyTokens.success(context).withValues(alpha: 0.12)
                             : Colors.grey.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+                        borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                       ),
                       child: Text(
                         isEnabled
                             ? l10n.cloudSyncEncryptEnabled
                             : l10n.cloudSyncEncryptDisabled,
                         style: TextStyle(
-                          color: isEnabled ? BeeTokens.success(context) : Colors.grey,
+                          color: isEnabled ? PiggyTokens.success(context) : Colors.grey,
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                         ),
@@ -297,7 +297,7 @@ class _EncryptionSettingsPageState
                   Text(
                     l10n.cloudSyncEncryptMultiDeviceHint,
                     style: TextStyle(
-                      color: BeeTokens.textTertiary(context),
+                      color: PiggyTokens.textTertiary(context),
                       fontSize: 12,
                     ),
                   ),
@@ -314,7 +314,7 @@ class _EncryptionSettingsPageState
                           .colorScheme
                           .error
                           .withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                     ),
                     child: Row(
                       children: [
@@ -357,7 +357,7 @@ class _EncryptionSettingsPageState
                     subtitle: l10n.cloudSyncEncryptPasswordHint,
                     onTap: _busy ? null : _onChangePassword,
                   ),
-                  BeeTokens.cardDivider(context),
+                  PiggyTokens.cardDivider(context),
                   AppListTile(
                     leading: Icons.delete_outline,
                     title: l10n.cloudSyncEncryptResetEncryption,

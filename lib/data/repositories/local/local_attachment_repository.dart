@@ -6,7 +6,7 @@ import '../attachment_repository.dart';
 /// 本地附件Repository实现
 /// 基于 Drift 数据库实现
 class LocalAttachmentRepository implements AttachmentRepository {
-  final BeeDatabase db;
+  final PiggyDatabase db;
 
   LocalAttachmentRepository(this.db);
 

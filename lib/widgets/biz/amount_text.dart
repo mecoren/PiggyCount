@@ -41,7 +41,7 @@ class AmountText extends ConsumerWidget {
               Theme.of(context)
                   .textTheme
                   .bodyMedium
-                  ?.copyWith(color: BeeTokens.textPrimary(context)));
+                  ?.copyWith(color: PiggyTokens.textPrimary(context)));
     }
 
     String displayText;
@@ -101,10 +101,10 @@ class AmountText extends ConsumerWidget {
         Theme.of(context)
             .textTheme
             .bodyMedium
-            ?.copyWith(color: BeeTokens.textPrimary(context));
+            ?.copyWith(color: PiggyTokens.textPrimary(context));
 
     final finalStyle = (colorizeIncome && isIncome)
-        ? baseStyle?.copyWith(color: BeeTokens.incomeColor(context, ref))
+        ? baseStyle?.copyWith(color: PiggyTokens.incomeColor(context, ref))
         : baseStyle;
 
     return Text(

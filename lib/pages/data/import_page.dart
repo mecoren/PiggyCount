@@ -60,7 +60,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
                       // 账单类型选择器
                       Text(AppLocalizations.of(context)!.importBillType,
                           style:
-                              TextStyle(fontSize: 14, color: BeeTokens.textSecondary(context))),
+                              TextStyle(fontSize: 14, color: PiggyTokens.textSecondary(context))),
                       const SizedBox(height: 8),
                       WaitSlidingSegmentedControl<BillSourceType>(
                         selected: _billType,
@@ -111,7 +111,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
                       const Spacer(),
                       if (_picked == null)
                         Text(AppLocalizations.of(context)!.importHint,
-                            style: TextStyle(color: BeeTokens.textTertiary(context))),
+                            style: TextStyle(color: PiggyTokens.textTertiary(context))),
                     ],
                   ),
                 ),
@@ -123,8 +123,8 @@ class _ImportPageState extends ConsumerState<ImportPage> {
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: BeeTokens.surfaceElevated(context),
-                            borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                            color: PiggyTokens.surfaceElevated(context),
+                            borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                           ),
                           width: 320,
                           child: Column(

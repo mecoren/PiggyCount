@@ -317,7 +317,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+                borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -357,7 +357,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
           decoration: BoxDecoration(
             color: isActive
                 ? Colors.white
-                : (isPending ? BeeTokens.warning(context).withValues(alpha: 0.7) : Colors.white54),
+                : (isPending ? PiggyTokens.warning(context).withValues(alpha: 0.7) : Colors.white54),
             shape: BoxShape.circle,
           ),
         );

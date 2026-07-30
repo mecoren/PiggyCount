@@ -14,7 +14,7 @@ const _uuid = Uuid();
 /// 包装层(lib/data/repositories/local/local_repository.dart)在 CRUD 前后
 /// 统一 recordChange,保持跟 transaction / account 的代码结构一致。
 class LocalBudgetRepository implements BudgetRepository {
-  final BeeDatabase db;
+  final PiggyDatabase db;
 
   LocalBudgetRepository(this.db);
 

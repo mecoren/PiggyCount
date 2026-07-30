@@ -191,8 +191,8 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
                 decoration: BoxDecoration(
                   color: primaryColor.withValues(alpha: 0.1),
                   borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(BeeDimens.radiusLg),
-                    topRight: Radius.circular(BeeDimens.radiusLg),
+                    topLeft: Radius.circular(PiggyDimens.radiusLg),
+                    topRight: Radius.circular(PiggyDimens.radiusLg),
                   ),
                 ),
                 child: Row(
@@ -234,17 +234,17 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: BeeTokens.surfaceHeader(context),
+                  color: PiggyTokens.surfaceHeader(context),
                   borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(BeeDimens.radiusLg),
-                    bottomRight: Radius.circular(BeeDimens.radiusLg),
+                    bottomLeft: Radius.circular(PiggyDimens.radiusLg),
+                    bottomRight: Radius.circular(PiggyDimens.radiusLg),
                   ),
                 ),
                 child: Text(
                   l10n.aiPromptPreviewNote,
                   style: TextStyle(
                     fontSize: 12,
-                    color: BeeTokens.textSecondary(context),
+                    color: PiggyTokens.textSecondary(context),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -263,7 +263,7 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
 
     if (_loading) {
       return Scaffold(
-        backgroundColor: BeeTokens.scaffoldBackground(context),
+        backgroundColor: PiggyTokens.scaffoldBackground(context),
         body: Column(
           children: [
             PrimaryHeader(
@@ -279,7 +279,7 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
     }
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           PrimaryHeader(
@@ -356,7 +356,7 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: primaryColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+                            borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                           ),
                           child: Text(
                             v['name']!,
@@ -374,7 +374,7 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
                             v['desc']!,
                             style: TextStyle(
                               fontSize: 13,
-                              color: BeeTokens.textSecondary(context),
+                              color: PiggyTokens.textSecondary(context),
                             ),
                           ),
                         ),
@@ -412,14 +412,14 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: BeeTokens.warning(context).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+                      color: PiggyTokens.warning(context).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                     ),
                     child: Text(
                       l10n.aiPromptUnsaved,
                       style: TextStyle(
                         fontSize: 11,
-                        color: BeeTokens.warning(context),
+                        color: PiggyTokens.warning(context),
                       ),
                     ),
                   ),
@@ -503,7 +503,7 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
                 icon: const Icon(Icons.restore),
                 label: Text(l10n.aiPromptResetDefault),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: BeeTokens.textSecondary(context),
+                  foregroundColor: PiggyTokens.textSecondary(context),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),

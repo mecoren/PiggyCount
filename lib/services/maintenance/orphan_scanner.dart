@@ -26,7 +26,7 @@ class OrphanScanner {
     this.iconsDirOverride,
   });
 
-  final BeeDatabase db;
+  final PiggyDatabase db;
 
   /// 测试用:覆盖附件目录路径。生产环境从 path_provider 拿。
   final String? attachmentsDirOverride;

@@ -58,12 +58,12 @@ class _BalanceTrendChartState extends ConsumerState<BalanceTrendChart> {
         onSwipeLeft: () {},
         onSwipeRight: () {},
         showHint: false,
-        whiteBg: !BeeTokens.isDark(context),
+        whiteBg: !PiggyTokens.isDark(context),
         showGrid: true,
         showDots: widget.data.length <= 30,
         annotate: false,
         themeColor: primaryColor,
-        isDark: BeeTokens.isDark(context),
+        isDark: PiggyTokens.isDark(context),
       ),
     );
 
@@ -80,7 +80,7 @@ class _BalanceTrendChartState extends ConsumerState<BalanceTrendChart> {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: BeeTokens.textPrimary(context),
+                color: PiggyTokens.textPrimary(context),
               ),
             ),
             SizedBox(height: 12.0.scaled(context, ref)),

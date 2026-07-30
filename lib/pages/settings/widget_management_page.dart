@@ -46,10 +46,10 @@ class WidgetManagementPage extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final primaryColor = ref.watch(primaryColorProvider);
     final redForIncome = ref.watch(incomeExpenseColorSchemeProvider);
-    final dark = BeeTokens.isDark(context);
+    final dark = PiggyTokens.isDark(context);
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
       appBar: GlassTitleBar(
         title: l10n.widgetManagement,
@@ -283,7 +283,7 @@ class WidgetManagementPage extends ConsumerWidget {
             style: TextStyle(
               fontSize: 18.0.scaled(context, ref),
               fontWeight: FontWeight.w700,
-              color: BeeTokens.textPrimary(context),
+              color: PiggyTokens.textPrimary(context),
             ),
           ),
           SizedBox(height: 4.0.scaled(context, ref)),
@@ -291,7 +291,7 @@ class WidgetManagementPage extends ConsumerWidget {
             l10n.widgetGalleryDesc,
             style: TextStyle(
               fontSize: 12.5.scaled(context, ref),
-              color: BeeTokens.textTertiary(context),
+              color: PiggyTokens.textTertiary(context),
               height: 1.4,
             ),
           ),
@@ -326,7 +326,7 @@ class WidgetManagementPage extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 15.0.scaled(context, ref),
                       fontWeight: FontWeight.w600,
-                      color: BeeTokens.textPrimary(context),
+                      color: PiggyTokens.textPrimary(context),
                     ),
                   ),
                   SizedBox(height: 3.0.scaled(context, ref)),
@@ -334,7 +334,7 @@ class WidgetManagementPage extends ConsumerWidget {
                     subtitle,
                     style: TextStyle(
                       fontSize: 12.0.scaled(context, ref),
-                      color: BeeTokens.textSecondary(context),
+                      color: PiggyTokens.textSecondary(context),
                     ),
                   ),
                 ],
@@ -355,7 +355,7 @@ class WidgetManagementPage extends ConsumerWidget {
                 width: displayWidth,
                 height: displayHeight,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.10),
@@ -365,7 +365,7 @@ class WidgetManagementPage extends ConsumerWidget {
                   ],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
                   child: FittedBox(
                     fit: BoxFit.contain,
                     child: SizedBox(
@@ -395,15 +395,15 @@ class WidgetManagementPage extends ConsumerWidget {
         vertical: 4.0.scaled(context, ref),
       ),
       decoration: BoxDecoration(
-        color: BeeTokens.surfaceSecondary(context),
-        borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+        color: PiggyTokens.surfaceSecondary(context),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
       ),
       child: Text(
         '$label · ${size.width.toInt()}×${size.height.toInt()}',
         style: TextStyle(
           fontSize: 10.0.scaled(context, ref),
           fontWeight: FontWeight.w500,
-          color: BeeTokens.textTertiary(context),
+          color: PiggyTokens.textTertiary(context),
         ),
       ),
     );
@@ -411,7 +411,7 @@ class WidgetManagementPage extends ConsumerWidget {
 
   // -------------------------------------------------------------------
   // 添加指引 / 快捷记账说明 / 关于小组件(内容沿用旧页面,改用
-  // SectionCard/BeeTokens/.scaled() 重新皮肤)
+  // SectionCard/PiggyTokens/.scaled() 重新皮肤)
   // -------------------------------------------------------------------
 
   Widget _buildAddGuideSection(
@@ -440,7 +440,7 @@ class WidgetManagementPage extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 15.0.scaled(context, ref),
                       fontWeight: FontWeight.w600,
-                      color: BeeTokens.textPrimary(context),
+                      color: PiggyTokens.textPrimary(context),
                     ),
                   ),
                 ],
@@ -494,7 +494,7 @@ class WidgetManagementPage extends ConsumerWidget {
                   child: Text(
                     '${index + 1}',
                     style: TextStyle(
-                      color: BeeTokens.textOnPrimary(context),
+                      color: PiggyTokens.textOnPrimary(context),
                       fontSize: 11.0.scaled(context, ref),
                       fontWeight: FontWeight.bold,
                     ),
@@ -507,7 +507,7 @@ class WidgetManagementPage extends ConsumerWidget {
                   step,
                   style: TextStyle(
                     fontSize: 13.5.scaled(context, ref),
-                    color: BeeTokens.textPrimary(context),
+                    color: PiggyTokens.textPrimary(context),
                   ),
                 ),
               ),
@@ -544,7 +544,7 @@ class WidgetManagementPage extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 15.0.scaled(context, ref),
                       fontWeight: FontWeight.w600,
-                      color: BeeTokens.textPrimary(context),
+                      color: PiggyTokens.textPrimary(context),
                     ),
                   ),
                 ],
@@ -554,7 +554,7 @@ class WidgetManagementPage extends ConsumerWidget {
                 l10n.widgetQuickEntryDesc,
                 style: TextStyle(
                   fontSize: 13.0.scaled(context, ref),
-                  color: BeeTokens.textSecondary(context),
+                  color: PiggyTokens.textSecondary(context),
                   height: 1.5,
                 ),
               ),
@@ -574,7 +574,7 @@ class WidgetManagementPage extends ConsumerWidget {
     return Container(
       decoration: BoxDecoration(
         color: primaryColor.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
       ),
       padding: EdgeInsets.all(14.0.scaled(context, ref)),
@@ -604,7 +604,7 @@ class WidgetManagementPage extends ConsumerWidget {
             l10n.widgetDescription,
             style: TextStyle(
               fontSize: 12.0.scaled(context, ref),
-              color: BeeTokens.textSecondary(context),
+              color: PiggyTokens.textSecondary(context),
               height: 1.5,
             ),
           ),

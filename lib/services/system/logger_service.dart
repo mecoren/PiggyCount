@@ -145,7 +145,7 @@ class LoggerService {
     _setupNativeBridge();
   }
 
-  static const _channel = MethodChannel('com.beecount.logger');
+  static const _channel = MethodChannel('com.piggycount.logger');
   static const _storageKey = 'app_logs';
   static const _maxStorageHours = 48; // 保留48小时
 

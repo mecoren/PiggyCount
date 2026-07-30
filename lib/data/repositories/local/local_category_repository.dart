@@ -17,7 +17,7 @@ import '../exceptions.dart';
 /// 基于 Drift 数据库实现
 class LocalCategoryRepository implements CategoryRepository {
   static const _uuid = Uuid();
-  final BeeDatabase db;
+  final PiggyDatabase db;
 
   LocalCategoryRepository(this.db);
 

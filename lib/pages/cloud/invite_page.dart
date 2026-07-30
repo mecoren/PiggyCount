@@ -30,7 +30,7 @@ class InvitePage extends ConsumerStatefulWidget {
 class _InvitePageState extends ConsumerState<InvitePage> {
   static const _expiryOptions = <int>[24, 72, 168]; // 1d / 3d / 7d
   int _expiresInHours = 24;
-  BeeCountCloudInvite? _generated;
+  PiggyCountCloudInvite? _generated;
   bool _busy = false;
   String? _error;
 
@@ -62,7 +62,7 @@ class _InvitePageState extends ConsumerState<InvitePage> {
     showToast(context, l10n.commonCopied);
   }
 
-  Future<void> _share(BeeCountCloudInvite invite, AppLocalizations l10n) async {
+  Future<void> _share(PiggyCountCloudInvite invite, AppLocalizations l10n) async {
     final message = l10n.sharedInviteShareText(
       widget.ledgerName,
       invite.formattedCode,
@@ -81,7 +81,7 @@ class _InvitePageState extends ConsumerState<InvitePage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           PrimaryHeader(
@@ -158,13 +158,13 @@ class _InvitePageState extends ConsumerState<InvitePage> {
             if (_error != null) ...[
               const SizedBox(height: 12),
               Text(_error!,
-                  style: TextStyle(color: BeeTokens.error(context), fontSize: 13)),
+                  style: TextStyle(color: PiggyTokens.error(context), fontSize: 13)),
             ],
             const SizedBox(height: 16),
             Text(
               l10n.sharedInviteWarning,
               style: TextStyle(
-                color: BeeTokens.textTertiary(context),
+                color: PiggyTokens.textTertiary(context),
                 fontSize: 12,
               ),
             ),
@@ -173,7 +173,7 @@ class _InvitePageState extends ConsumerState<InvitePage> {
     );
   }
 
-  Widget _buildShareView(BeeCountCloudInvite invite, AppLocalizations l10n) {
+  Widget _buildShareView(PiggyCountCloudInvite invite, AppLocalizations l10n) {
     return SectionCard(
       child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -196,7 +196,7 @@ class _InvitePageState extends ConsumerState<InvitePage> {
                   invite.expiresAt.toLocal().toString().split('.').first,
                 ),
                 style: TextStyle(
-                    color: BeeTokens.textTertiary(context), fontSize: 12),
+                    color: PiggyTokens.textTertiary(context), fontSize: 12),
               ),
             ),
             const SizedBox(height: 24),
@@ -228,7 +228,7 @@ class _InvitePageState extends ConsumerState<InvitePage> {
             const SizedBox(height: 24),
             Text(
               l10n.sharedInviteInstruction,
-              style: TextStyle(color: BeeTokens.textSecondary(context)),
+              style: TextStyle(color: PiggyTokens.textSecondary(context)),
             ),
             const SizedBox(height: 16),
             TextButton(

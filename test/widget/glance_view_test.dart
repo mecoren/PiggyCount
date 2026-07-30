@@ -6,7 +6,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:beecount/widget/views/glance_view.dart';
+import 'package:piggycount/widget/views/glance_view.dart';
 
 void main() {
   Widget wrap(Widget child, Size size) {

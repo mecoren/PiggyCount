@@ -72,7 +72,7 @@ class _ExchangeRatePageState extends ConsumerState<ExchangeRatePage> {
     final rates = ratesAsync.valueOrNull ?? const <String, EffectiveRate>{};
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           PrimaryHeader(
@@ -124,7 +124,7 @@ class _ExchangeRatePageState extends ConsumerState<ExchangeRatePage> {
                             l10n.baseCurrencyLabel,
                             style: TextStyle(
                               fontSize: 15,
-                              color: BeeTokens.textPrimary(context),
+                              color: PiggyTokens.textPrimary(context),
                             ),
                           ),
                           const Spacer(),
@@ -132,14 +132,14 @@ class _ExchangeRatePageState extends ConsumerState<ExchangeRatePage> {
                             displayCurrency(base, context),
                             style: TextStyle(
                               fontSize: 14,
-                              color: BeeTokens.textSecondary(context),
+                              color: PiggyTokens.textSecondary(context),
                             ),
                           ),
                           SizedBox(width: 4.0.scaled(context, ref)),
                           Icon(
                             Icons.chevron_right,
                             size: 18.0.scaled(context, ref),
-                            color: BeeTokens.iconTertiary(context),
+                            color: PiggyTokens.iconTertiary(context),
                           ),
                         ],
                       ),
@@ -163,7 +163,7 @@ class _ExchangeRatePageState extends ConsumerState<ExchangeRatePage> {
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 13,
-                            color: BeeTokens.textTertiary(context),
+                            color: PiggyTokens.textTertiary(context),
                             height: 1.4,
                           ),
                         ),
@@ -182,7 +182,7 @@ class _ExchangeRatePageState extends ConsumerState<ExchangeRatePage> {
                               height: 1,
                               indent: 12.0.scaled(context, ref),
                               endIndent: 12.0.scaled(context, ref),
-                              color: BeeTokens.divider(context),
+                              color: PiggyTokens.divider(context),
                             ),
                           _RateRow(
                             quote: quotes[i],
@@ -208,7 +208,7 @@ class _ExchangeRatePageState extends ConsumerState<ExchangeRatePage> {
                     l10n.rateDisclaimer,
                     style: TextStyle(
                       fontSize: 11,
-                      color: BeeTokens.textTertiary(context),
+                      color: PiggyTokens.textTertiary(context),
                       height: 1.4,
                     ),
                   ),
@@ -321,10 +321,10 @@ class _RateEditDialogState extends ConsumerState<_RateEditDialog> {
         : '—';
 
     return AlertDialog(
-      backgroundColor: BeeTokens.surfaceElevated(context),
+      backgroundColor: PiggyTokens.surfaceElevated(context),
       title: Text(
         l10n.rateEditTitle,
-        style: TextStyle(color: BeeTokens.textPrimary(context)),
+        style: TextStyle(color: PiggyTokens.textPrimary(context)),
       ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -349,7 +349,7 @@ class _RateEditDialogState extends ConsumerState<_RateEditDialog> {
             l10n.rateInverseHint(widget.base, inverseText, widget.quote),
             style: TextStyle(
               fontSize: 12,
-              color: BeeTokens.textTertiary(context),
+              color: PiggyTokens.textTertiary(context),
             ),
           ),
         ],
@@ -361,14 +361,14 @@ class _RateEditDialogState extends ConsumerState<_RateEditDialog> {
                 Navigator.pop(context, (reset: true, rate: '')),
             child: Text(
               l10n.rateResetToAuto,
-              style: TextStyle(color: BeeTokens.textSecondary(context)),
+              style: TextStyle(color: PiggyTokens.textSecondary(context)),
             ),
           ),
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: Text(
             l10n.commonCancel,
-            style: TextStyle(color: BeeTokens.textSecondary(context)),
+            style: TextStyle(color: PiggyTokens.textSecondary(context)),
           ),
         ),
         TextButton(
@@ -430,7 +430,7 @@ class _RateRow extends ConsumerWidget {
     if (eff == null) {
       subtitle = Text.rich(
         TextSpan(
-          style: TextStyle(fontSize: 12, color: BeeTokens.textTertiary(context)),
+          style: TextStyle(fontSize: 12, color: PiggyTokens.textTertiary(context)),
           children: [
             TextSpan(text: l10n.rateNotFetched),
             const TextSpan(text: ' · '),
@@ -453,7 +453,7 @@ class _RateRow extends ConsumerWidget {
         '${l10n.rateSourceAuto} · ${l10n.rateUpdatedAt(eff!.rateDate ?? '')}',
         style: TextStyle(
           fontSize: 12,
-          color: stale ? BeeTokens.warning(context) : BeeTokens.textTertiary(context),
+          color: stale ? PiggyTokens.warning(context) : PiggyTokens.textTertiary(context),
         ),
       );
     }
@@ -481,7 +481,7 @@ class _RateRow extends ConsumerWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 15,
-                            color: BeeTokens.textPrimary(context),
+                            color: PiggyTokens.textPrimary(context),
                           ),
                         ),
                       ),
@@ -490,7 +490,7 @@ class _RateRow extends ConsumerWidget {
                         quote,
                         style: TextStyle(
                           fontSize: 12,
-                          color: BeeTokens.textTertiary(context),
+                          color: PiggyTokens.textTertiary(context),
                         ),
                       ),
                     ],
@@ -510,8 +510,8 @@ class _RateRow extends ConsumerWidget {
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: eff == null
-                    ? BeeTokens.textTertiary(context)
-                    : BeeTokens.textPrimary(context),
+                    ? PiggyTokens.textTertiary(context)
+                    : PiggyTokens.textPrimary(context),
               ),
             ),
           ],

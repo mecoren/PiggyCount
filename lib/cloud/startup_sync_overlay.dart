@@ -4,7 +4,7 @@
 // - 通过 StartupSyncController 推送状态变化
 // - overlay 渲染对应状态的卡片（checking / hasUpdates / applying / done / error）
 // - 遮罩强制阻断底层交互（AbsorbPointer + barrierDismissible:false）
-// - 样式遵循 BeeTokens 设计系统：圆角 16、surfaceElevated 背景、BeeShadows.card 阴影
+// - 样式遵循 PiggyTokens 设计系统：圆角 16、surfaceElevated 背景、PiggyShadows.card 阴影
 
 import 'dart:async';
 
@@ -172,9 +172,9 @@ class _StartupSyncOverlayView extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 24),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: BeeTokens.surfaceElevated(context),
-        borderRadius: BorderRadius.circular(BeeDimens.radius16),
-        boxShadow: BeeShadows.card,
+        color: PiggyTokens.surfaceElevated(context),
+        borderRadius: BorderRadius.circular(PiggyDimens.radius16),
+        boxShadow: PiggyShadows.card,
       ),
       child: switch (state) {
         CheckingState() => _CheckingView(state: state),
@@ -223,7 +223,7 @@ class _CheckingView extends StatelessWidget {
               ? l10n.startupSyncCheckCheckingProgress(state.checked, state.total)
               : l10n.startupSyncCheckCheckingHint,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: BeeTokens.textSecondary(context),
+                color: PiggyTokens.textSecondary(context),
               ),
         ),
       ],
@@ -263,7 +263,7 @@ class _HasUpdatesView extends StatelessWidget {
         Text(
           l10n.startupSyncCheckSummaryMessage(state.candidates.length),
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: BeeTokens.textSecondary(context),
+                color: PiggyTokens.textSecondary(context),
               ),
         ),
         const SizedBox(height: 12),
@@ -283,7 +283,7 @@ class _HasUpdatesView extends StatelessWidget {
                     size: 14,
                     color: isConflict
                         ? Colors.orange
-                        : BeeTokens.textTertiary(context),
+                        : PiggyTokens.textTertiary(context),
                   ),
                   const SizedBox(width: 6),
                   Expanded(
@@ -300,7 +300,7 @@ class _HasUpdatesView extends StatelessWidget {
                       child: Icon(
                         Icons.info_outline,
                         size: 12,
-                        color: BeeTokens.textTertiary(context),
+                        color: PiggyTokens.textTertiary(context),
                       ),
                     ),
                 ],
@@ -367,7 +367,7 @@ class _ApplyingView extends StatelessWidget {
           Text(
             state.currentLedgerName,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: BeeTokens.textSecondary(context),
+                  color: PiggyTokens.textSecondary(context),
                 ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -377,7 +377,7 @@ class _ApplyingView extends StatelessWidget {
           Text(
             l10n.startupSyncCheckApplyingProgress(state.applied, state.total),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: BeeTokens.textTertiary(context),
+                  color: PiggyTokens.textTertiary(context),
                 ),
           ),
       ],
@@ -397,7 +397,7 @@ class _DoneView extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(Icons.check_circle,
-            color: BeeTokens.success(context), size: 40),
+            color: PiggyTokens.success(context), size: 40),
         const SizedBox(height: 16),
         Text(
           state.message,
@@ -424,7 +424,7 @@ class _ErrorView extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Icon(Icons.error_outline, color: BeeTokens.error(context), size: 40),
+        Icon(Icons.error_outline, color: PiggyTokens.error(context), size: 40),
         const SizedBox(height: 16),
         Text(
           state.message,

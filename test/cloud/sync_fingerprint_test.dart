@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:beecount/cloud/sync_fingerprint.dart';
+import 'package:piggycount/cloud/sync_fingerprint.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

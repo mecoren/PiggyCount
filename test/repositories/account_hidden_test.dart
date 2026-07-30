@@ -14,10 +14,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:beecount/data/db.dart';
-import 'package:beecount/data/repositories/local/local_repository.dart';
-import 'package:beecount/cloud/sync/change_tracker.dart';
-import 'package:beecount/utils/shared_ledger_picker_filter.dart';
+import 'package:piggycount/data/db.dart';
+import 'package:piggycount/data/repositories/local/local_repository.dart';
+import 'package:piggycount/cloud/sync/change_tracker.dart';
+import 'package:piggycount/utils/shared_ledger_picker_filter.dart';
 
 void main() {
   // repo.createAccount 内部会 logger.debug(...),logger 单例首次使用时会
@@ -26,12 +26,12 @@ void main() {
   // 等既有测试)。
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  late BeeDatabase db;
+  late PiggyDatabase db;
   late LocalRepository repo;
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
-    db = BeeDatabase.forTesting(NativeDatabase.memory());
+    db = PiggyDatabase.forTesting(NativeDatabase.memory());
     repo = LocalRepository(db);
   });
 

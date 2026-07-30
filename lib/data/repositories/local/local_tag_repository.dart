@@ -11,7 +11,7 @@ import '../tag_repository.dart';
 /// 基于 Drift 数据库实现
 class LocalTagRepository implements TagRepository {
   static const _uuid = Uuid();
-  final BeeDatabase db;
+  final PiggyDatabase db;
 
   LocalTagRepository(this.db);
 

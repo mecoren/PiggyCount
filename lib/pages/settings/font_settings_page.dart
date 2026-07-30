@@ -26,7 +26,7 @@ class FontSettingsPage extends ConsumerWidget {
     ];
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
       appBar: GlassTitleBar(
         title: AppLocalizations.of(context)!.mineDisplayScale,
@@ -77,7 +77,7 @@ class FontSettingsPage extends ConsumerWidget {
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
-                  ?.copyWith(color: BeeTokens.textSecondary(context))),
+                  ?.copyWith(color: PiggyTokens.textSecondary(context))),
         ],
       ),
     );
@@ -86,23 +86,23 @@ class FontSettingsPage extends ConsumerWidget {
   Widget _buildOption(
       BuildContext context, WidgetRef ref, _FontOption o, int current) {
     final active = o.value == current;
-    final isDark = BeeTokens.isDark(context);
+    final isDark = PiggyTokens.isDark(context);
     final style = Theme.of(context).textTheme.bodyMedium?.copyWith(
           fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-          color: BeeTokens.textPrimary(context),
+          color: PiggyTokens.textPrimary(context),
         );
     return Card(
       elevation: isDark ? 0 : 1,
-      color: BeeTokens.surface(context),
+      color: PiggyTokens.surface(context),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
-        side: isDark ? BorderSide(color: BeeTokens.border(context)) : BorderSide.none,
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+        side: isDark ? BorderSide(color: PiggyTokens.border(context)) : BorderSide.none,
       ),
       child: ListTile(
         title: Text(o.label, style: style),
-        subtitle: Text(o.preview, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: BeeTokens.textSecondary(context))),
+        subtitle: Text(o.preview, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: PiggyTokens.textSecondary(context))),
         trailing:
-            active ? Icon(Icons.check_circle, color: BeeTokens.success(context)) : null,
+            active ? Icon(Icons.check_circle, color: PiggyTokens.success(context)) : null,
         onTap: () => ref.read(fontScaleLevelProvider.notifier).state = o.value,
       ),
     );
@@ -143,7 +143,7 @@ class _PreviewParagraph extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             Text(AppLocalizations.of(context)!.fontSettingsCurrentLevel(_levelName(context, level), scale.toStringAsFixed(2)),
-                style: theme.bodySmall?.copyWith(color: BeeTokens.textSecondary(context))),
+                style: theme.bodySmall?.copyWith(color: PiggyTokens.textSecondary(context))),
           ],
         ),
       ),
@@ -195,7 +195,7 @@ class _MultiStylePreview extends ConsumerWidget {
             _kv(context, AppLocalizations.of(context)!.fontSettingsLabelExample, '隐藏金额已开启', theme.labelMedium),
             const SizedBox(height: 6),
             _kv(context, AppLocalizations.of(context)!.fontSettingsStrongNumber, '1234.56',
-                BeeTextTokens.strongTitle(context).copyWith(fontSize: 18)),
+                PiggyTextTokens.strongTitle(context).copyWith(fontSize: 18)),
             const Divider(height: 20),
             _ListTileMock(),
           ],
@@ -214,17 +214,17 @@ class _MultiStylePreview extends ConsumerWidget {
               style: style != null
                   ? style.copyWith(
                       fontSize: (style.fontSize ?? 14) - 1,
-                      color: BeeTokens.textSecondary(context),
+                      color: PiggyTokens.textSecondary(context),
                     )
-                  : TextStyle(fontSize: 12, color: BeeTokens.textSecondary(context))),
+                  : TextStyle(fontSize: 12, color: PiggyTokens.textSecondary(context))),
         ),
         const SizedBox(width: 4),
         Expanded(
           child: Text(
             v,
             style: style != null
-                ? style.copyWith(color: BeeTokens.textPrimary(context))
-                : TextStyle(fontSize: 14, color: BeeTokens.textPrimary(context)),
+                ? style.copyWith(color: PiggyTokens.textPrimary(context))
+                : TextStyle(fontSize: 14, color: PiggyTokens.textPrimary(context)),
           ),
         )
       ],
@@ -235,8 +235,8 @@ class _MultiStylePreview extends ConsumerWidget {
 class _ListTileMock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final title = BeeTextTokens.title(context);
-    final label = BeeTextTokens.label(context);
+    final title = PiggyTextTokens.title(context);
+    final label = PiggyTextTokens.label(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
       child: Row(
@@ -246,11 +246,11 @@ class _ListTileMock extends StatelessWidget {
             height: 36,
             decoration: BoxDecoration(
               color:
-                  BeeTokens.primary(context).withValues(alpha: 0.12),
+                  PiggyTokens.primary(context).withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             child: Icon(Icons.brush_outlined,
-                color: BeeTokens.primary(context), size: 18),
+                color: PiggyTokens.primary(context), size: 18),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -265,7 +265,7 @@ class _ListTileMock extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Text('123.45', style: BeeTextTokens.strongTitle(context)),
+          Text('123.45', style: PiggyTextTokens.strongTitle(context)),
         ],
       ),
     );
@@ -299,7 +299,7 @@ class _UIScaleInfo extends ConsumerWidget {
             Container(
               padding: EdgeInsets.all(8.0.scaled(context, ref)),
               decoration: BoxDecoration(
-                color: BeeTokens.info(context).withValues(alpha: 0.1),
+                color: PiggyTokens.info(context).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8.0.scaled(context, ref)),
               ),
               child: Row(
@@ -308,7 +308,7 @@ class _UIScaleInfo extends ConsumerWidget {
                     width: 24.0.scaled(context, ref),
                     height: 24.0.scaled(context, ref),
                     decoration: BoxDecoration(
-                      color: BeeTokens.info(context),
+                      color: PiggyTokens.info(context),
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -334,8 +334,8 @@ class _UIScaleInfo extends ConsumerWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontSize: 12, color: BeeTokens.textTertiary(context))),
-          Text(value, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: BeeTokens.textPrimary(context))),
+          Text(label, style: TextStyle(fontSize: 12, color: PiggyTokens.textTertiary(context))),
+          Text(value, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: PiggyTokens.textPrimary(context))),
         ],
       ),
     );
@@ -368,10 +368,10 @@ class _CustomScaleSlider extends ConsumerWidget {
             const SizedBox(height: 12),
             SliderTheme(
               data: SliderTheme.of(context).copyWith(
-                activeTrackColor: BeeTokens.primary(context),
+                activeTrackColor: PiggyTokens.primary(context),
                 inactiveTrackColor: Colors.grey.withValues(alpha: 0.3),
-                thumbColor: BeeTokens.primary(context),
-                overlayColor: BeeTokens.primary(context).withValues(alpha: 0.2),
+                thumbColor: PiggyTokens.primary(context),
+                overlayColor: PiggyTokens.primary(context).withValues(alpha: 0.2),
                 trackHeight: 6,
                 thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
               ),

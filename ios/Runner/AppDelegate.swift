@@ -27,7 +27,7 @@ import UserNotifications
     // 设置日志插件
     let controller = window?.rootViewController as! FlutterViewController
     let loggerChannel = FlutterMethodChannel(
-      name: "com.beecount.logger",
+      name: "com.piggycount.logger",
       binaryMessenger: controller.binaryMessenger
     )
     LoggerPlugin.setup(channel: loggerChannel)

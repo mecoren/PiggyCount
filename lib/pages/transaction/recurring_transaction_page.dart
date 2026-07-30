@@ -48,20 +48,20 @@ class RecurringTransactionPage extends ConsumerWidget {
                         Icon(
                           Icons.repeat,
                           size: 64,
-                          color: BeeTokens.textTertiary(context),
+                          color: PiggyTokens.textTertiary(context),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           AppLocalizations.of(context)!.recurringTransactionEmpty,
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: BeeTokens.textSecondary(context),
+                            color: PiggyTokens.textSecondary(context),
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           AppLocalizations.of(context)!.recurringTransactionEmptyHint,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: BeeTokens.textTertiary(context),
+                            color: PiggyTokens.textTertiary(context),
                           ),
                         ),
                       ],
@@ -119,17 +119,17 @@ class _RecurringTransactionCard extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: BeeTokens.surface(context),
-        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
-        border: BeeTokens.isDark(context)
+        color: PiggyTokens.surface(context),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
+        border: PiggyTokens.isDark(context)
             ? Border.all(
                 color: recurring.enabled
                     ? primaryColor.withValues(alpha: 0.3)
-                    : BeeTokens.border(context),
+                    : PiggyTokens.border(context),
                 width: 1,
               )
             : null,
-        boxShadow: BeeTokens.isDark(context)
+        boxShadow: PiggyTokens.isDark(context)
             ? null
             : [
                 BoxShadow(
@@ -153,7 +153,7 @@ class _RecurringTransactionCard extends ConsumerWidget {
               ref.invalidate(allRecurringTransactionsProvider);
             }
           },
-          borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Row(
@@ -164,9 +164,9 @@ class _RecurringTransactionCard extends ConsumerWidget {
                   height: 48,
                   decoration: BoxDecoration(
                     color: recurring.type == 'expense'
-                        ? BeeTokens.error(context)
+                        ? PiggyTokens.error(context)
                         : recurring.type == 'income'
-                            ? BeeTokens.success(context)
+                            ? PiggyTokens.success(context)
                             : primaryColor,
                     borderRadius: BorderRadius.circular(1.5),
                   ),
@@ -184,7 +184,7 @@ class _RecurringTransactionCard extends ConsumerWidget {
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: BeeTokens.textPrimary(context),
+                                color: PiggyTokens.textPrimary(context),
                               ),
                             )
                           : FutureBuilder<Category?>(
@@ -196,7 +196,7 @@ class _RecurringTransactionCard extends ConsumerWidget {
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
-                                    color: BeeTokens.textPrimary(context),
+                                    color: PiggyTokens.textPrimary(context),
                                   ),
                                 );
                               },
@@ -214,7 +214,7 @@ class _RecurringTransactionCard extends ConsumerWidget {
                                 ledgerName,
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: BeeTokens.textTertiary(context),
+                                  color: PiggyTokens.textTertiary(context),
                                 ),
                               );
                             },
@@ -225,7 +225,7 @@ class _RecurringTransactionCard extends ConsumerWidget {
                               '·',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: BeeTokens.textTertiary(context),
+                                color: PiggyTokens.textTertiary(context),
                               ),
                             ),
                           ),
@@ -234,7 +234,7 @@ class _RecurringTransactionCard extends ConsumerWidget {
                             _getFrequencyDescription(context),
                             style: TextStyle(
                               fontSize: 12,
-                              color: BeeTokens.textTertiary(context),
+                              color: PiggyTokens.textTertiary(context),
                             ),
                           ),
                           // 下次生成时间（如果有）
@@ -245,7 +245,7 @@ class _RecurringTransactionCard extends ConsumerWidget {
                                 '·',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: BeeTokens.textTertiary(context),
+                                  color: PiggyTokens.textTertiary(context),
                                 ),
                               ),
                             ),
@@ -273,7 +273,7 @@ class _RecurringTransactionCard extends ConsumerWidget {
                           recurring.note!,
                           style: TextStyle(
                             fontSize: 11,
-                            color: BeeTokens.textSecondary(context),
+                            color: PiggyTokens.textSecondary(context),
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -299,10 +299,10 @@ class _RecurringTransactionCard extends ConsumerWidget {
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
                         color: recurring.type == 'expense'
-                            ? BeeTokens.error(context)
+                            ? PiggyTokens.error(context)
                             : recurring.type == 'income'
-                                ? BeeTokens.success(context)
-                                : BeeTokens.textPrimary(context),
+                                ? PiggyTokens.success(context)
+                                : PiggyTokens.textPrimary(context),
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -412,7 +412,7 @@ class _UsageGuideCard extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: BeeTokens.textPrimary(context),
+                    color: PiggyTokens.textPrimary(context),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -420,7 +420,7 @@ class _UsageGuideCard extends ConsumerWidget {
                   l10n.recurringTransactionUsageContent,
                   style: TextStyle(
                     fontSize: 13,
-                    color: BeeTokens.textSecondary(context),
+                    color: PiggyTokens.textSecondary(context),
                     height: 1.5,
                   ),
                 ),

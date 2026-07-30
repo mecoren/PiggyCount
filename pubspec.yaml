@@ -121,7 +121,7 @@ flutter:
   generate: true
   assets:
     - assets/logo.svg
-    - assets/bee.svg
+    - assets/piggy.svg
     - assets/logo2.png
     - assets/icons/
     - assets/icons/social/

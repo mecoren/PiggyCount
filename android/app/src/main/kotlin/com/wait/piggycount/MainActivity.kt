@@ -1,4 +1,4 @@
-package com.tntlikely.beecount
+package com.wait.piggycount
 
 import android.app.AlarmManager
 import android.app.NotificationChannel
@@ -20,10 +20,10 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity: FlutterFragmentActivity() {
     private val CHANNEL = "notification_channel"
-    private val INSTALL_CHANNEL = "com.tntlikely.beecount/install"
-    private val SCREENSHOT_CHANNEL = "com.tntlikely.beecount/screenshot"
-    private val LOGGER_CHANNEL = "com.beecount.logger"
-    private val SHARE_CHANNEL = "com.tntlikely.beecount/share"
+    private val INSTALL_CHANNEL = "com.wait.piggycount/install"
+    private val SCREENSHOT_CHANNEL = "com.wait.piggycount/screenshot"
+    private val LOGGER_CHANNEL = "com.piggycount.logger"
+    private val SHARE_CHANNEL = "com.wait.piggycount/share"
 
     private var screenshotObserver: ScreenshotObserver? = null
 

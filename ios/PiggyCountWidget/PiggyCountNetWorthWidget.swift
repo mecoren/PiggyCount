@@ -1,6 +1,6 @@
 //
-//  BeeCountNetWorthWidget.swift
-//  BeeCountWidget
+//  PiggyCountNetWorthWidget.swift
+//  PiggyCountWidget
 //
 //  Created by matrix on 2026/7/19.
 //
@@ -9,12 +9,12 @@ import WidgetKit
 import SwiftUI
 import UIKit
 
-struct BeeCountNetWorthEntry: TimelineEntry {
+struct PiggyCountNetWorthEntry: TimelineEntry {
     let date: Date
     let widgetImagePath: String
 }
 
-struct BeeCountNetWorthProvider: TimelineProvider {
+struct PiggyCountNetWorthProvider: TimelineProvider {
     /// 按 widget family 选渲染管线写入的图片 key（对应
     /// `lib/widget/widget_spec.dart` 的 `netWorthSmall/Medium/Large`）。
     private func imageKey(for family: WidgetFamily) -> String {
@@ -28,34 +28,34 @@ struct BeeCountNetWorthProvider: TimelineProvider {
         }
     }
 
-    func placeholder(in context: Context) -> BeeCountNetWorthEntry {
-        BeeCountNetWorthEntry(
+    func placeholder(in context: Context) -> PiggyCountNetWorthEntry {
+        PiggyCountNetWorthEntry(
             date: Date(),
             // 添加页预览:用 bundle 内静态资产(见 WidgetPreviewAssets 注释)。
             widgetImagePath: WidgetPreviewAssets.path(forImageKey: imageKey(for: context.family))
         )
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (BeeCountNetWorthEntry) -> ()) {
+    func getSnapshot(in context: Context, completion: @escaping (PiggyCountNetWorthEntry) -> ()) {
         // 添加页预览(isPreview):运行时图片在预览上下文读不到(App
         // Group 访问受限,添加页只会显示占位色块),改用 bundle 内静态
         // 预览资产,详见 WidgetPreviewAssets。
         if context.isPreview {
-            completion(BeeCountNetWorthEntry(
+            completion(PiggyCountNetWorthEntry(
                 date: Date(),
                 widgetImagePath: WidgetPreviewAssets.path(forImageKey: imageKey(for: context.family))))
             return
         }
-        let userDefaults = UserDefaults(suiteName: "group.com.tntlikely.beecount")
+        let userDefaults = UserDefaults(suiteName: "group.com.wait.piggycount")
         let imagePath = userDefaults?.string(forKey: imageKey(for: context.family)) ?? ""
-        let entry = BeeCountNetWorthEntry(date: Date(), widgetImagePath: imagePath)
+        let entry = PiggyCountNetWorthEntry(date: Date(), widgetImagePath: imagePath)
         completion(entry)
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
-        let userDefaults = UserDefaults(suiteName: "group.com.tntlikely.beecount")
+        let userDefaults = UserDefaults(suiteName: "group.com.wait.piggycount")
         let imagePath = userDefaults?.string(forKey: imageKey(for: context.family)) ?? ""
-        let entry = BeeCountNetWorthEntry(date: Date(), widgetImagePath: imagePath)
+        let entry = PiggyCountNetWorthEntry(date: Date(), widgetImagePath: imagePath)
 
         // 设置30分钟后刷新
         let nextUpdate = Calendar.current.date(byAdding: .minute, value: 30, to: Date())!
@@ -64,14 +64,14 @@ struct BeeCountNetWorthProvider: TimelineProvider {
     }
 }
 
-struct BeeCountNetWorthWidgetEntryView : View {
-    var entry: BeeCountNetWorthProvider.Entry
+struct PiggyCountNetWorthWidgetEntryView : View {
+    var entry: PiggyCountNetWorthProvider.Entry
     @Environment(\.widgetFamily) var widgetFamily
 
     // 净资产卡片点击 → 资产页。第一版整块点击、不分区；后续如需按账户明细
-    // 列表分区跳转，可参考 BeeCountWidget.swift 的 GeometryReader 分区写法。
+    // 列表分区跳转，可参考 PiggyCountWidget.swift 的 GeometryReader 分区写法。
     // TODO: 大号有账户明细列表时，考虑按行分区深链到具体账户。
-    private let assetsURL = URL(string: "beecount://open?page=assets")!
+    private let assetsURL = URL(string: "piggycount://open?page=assets")!
 
     var body: some View {
         if let uiImage = UIImage(contentsOfFile: entry.widgetImagePath) {
@@ -100,18 +100,18 @@ struct BeeCountNetWorthWidgetEntryView : View {
     }
 }
 
-struct BeeCountNetWorthWidget: Widget {
-    let kind: String = "BeeCountNetWorthWidget"
+struct PiggyCountNetWorthWidget: Widget {
+    let kind: String = "PiggyCountNetWorthWidget"
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: BeeCountNetWorthProvider()) { entry in
+        StaticConfiguration(kind: kind, provider: PiggyCountNetWorthProvider()) { entry in
             if #available(iOS 17.0, *) {
-                BeeCountNetWorthWidgetEntryView(entry: entry)
+                PiggyCountNetWorthWidgetEntryView(entry: entry)
                     .containerBackground(for: .widget) {
                         Color.clear
                     }
             } else {
-                BeeCountNetWorthWidgetEntryView(entry: entry)
+                PiggyCountNetWorthWidgetEntryView(entry: entry)
             }
         }
         .configurationDisplayName("净资产")

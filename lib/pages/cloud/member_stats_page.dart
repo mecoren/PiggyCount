@@ -37,7 +37,7 @@ class _MemberStatsPageState extends ConsumerState<MemberStatsPage> {
     ));
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           PrimaryHeader(
@@ -87,7 +87,7 @@ class _MemberStatsPageState extends ConsumerState<MemberStatsPage> {
 
   Widget _buildBody(
     BuildContext context,
-    BeeCountCloudMemberStats? stats,
+    PiggyCountCloudMemberStats? stats,
     AppLocalizations l10n,
   ) {
     if (stats == null || stats.items.isEmpty) {
@@ -97,7 +97,7 @@ class _MemberStatsPageState extends ConsumerState<MemberStatsPage> {
           child: Text(
             l10n.sharedMembersStatsEmpty,
             textAlign: TextAlign.center,
-            style: TextStyle(color: BeeTokens.textTertiary(context)),
+            style: TextStyle(color: PiggyTokens.textTertiary(context)),
           ),
         ),
       );
@@ -120,17 +120,17 @@ class _MemberStatsPageState extends ConsumerState<MemberStatsPage> {
                 _SummaryCell(
                   label: l10n.sharedMembersStatsIncome,
                   amount: '+$symbol${formatMoneyCompact(totalIncome)}',
-                  color: BeeTokens.incomeColor(context, ref),
+                  color: PiggyTokens.incomeColor(context, ref),
                 ),
                 Container(
                   width: 1,
                   height: 32,
-                  color: BeeTokens.divider(context),
+                  color: PiggyTokens.divider(context),
                 ),
                 _SummaryCell(
                   label: l10n.sharedMembersStatsExpense,
                   amount: '-$symbol${formatMoneyCompact(totalExpense)}',
-                  color: BeeTokens.expenseColor(context, ref),
+                  color: PiggyTokens.expenseColor(context, ref),
                 ),
               ],
             ),
@@ -175,7 +175,7 @@ class _SummaryCell extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            color: BeeTokens.textSecondary(context),
+            color: PiggyTokens.textSecondary(context),
             fontSize: 11,
           ),
         ),
@@ -201,7 +201,7 @@ class _MemberStatTile extends ConsumerWidget {
     required this.totalExpense,
   });
 
-  final BeeCountCloudMemberStatItem stat;
+  final PiggyCountCloudMemberStatItem stat;
   final String currency;
   final double totalExpense;
 
@@ -221,7 +221,7 @@ class _MemberStatTile extends ConsumerWidget {
       subtitle: Text(
         l10n.sharedMembersStatsTxCount(stat.txCount),
         style: TextStyle(
-          color: BeeTokens.textTertiary(context),
+          color: PiggyTokens.textTertiary(context),
           fontSize: 11,
         ),
       ),
@@ -233,7 +233,7 @@ class _MemberStatTile extends ConsumerWidget {
           Text(
             '+$symbol${formatMoneyCompact(stat.incomeTotal)}',
             style: TextStyle(
-              color: BeeTokens.incomeColor(context, ref),
+              color: PiggyTokens.incomeColor(context, ref),
               fontSize: 13,
               fontWeight: FontWeight.w500,
               fontFeatures: const [FontFeature.tabularFigures()],
@@ -247,7 +247,7 @@ class _MemberStatTile extends ConsumerWidget {
                 Text(
                   '${share.toStringAsFixed(0)}%',
                   style: TextStyle(
-                    color: BeeTokens.textTertiary(context),
+                    color: PiggyTokens.textTertiary(context),
                     fontSize: 10,
                   ),
                 ),
@@ -256,7 +256,7 @@ class _MemberStatTile extends ConsumerWidget {
               Text(
                 '-$symbol${formatMoneyCompact(stat.expenseTotal)}',
                 style: TextStyle(
-                  color: BeeTokens.expenseColor(context, ref),
+                  color: PiggyTokens.expenseColor(context, ref),
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                   fontFeatures: const [FontFeature.tabularFigures()],
@@ -273,7 +273,7 @@ class _MemberStatTile extends ConsumerWidget {
 class _StatsAvatar extends ConsumerWidget {
   const _StatsAvatar({required this.stat, required this.displayName});
 
-  final BeeCountCloudMemberStatItem stat;
+  final PiggyCountCloudMemberStatItem stat;
   final String displayName;
 
   @override

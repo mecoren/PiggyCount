@@ -21,10 +21,10 @@ class AppListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final titleStyle = BeeTextTokens.title(context)
-        .copyWith(color: BeeTokens.textPrimary(context)); // ⭐ 使用 Token
-    final subStyle = BeeTextTokens.label(context)
-        .copyWith(color: BeeTokens.textSecondary(context)); // ⭐ 使用 Token
+    final titleStyle = PiggyTextTokens.title(context)
+        .copyWith(color: PiggyTokens.textPrimary(context)); // ⭐ 使用 Token
+    final subStyle = PiggyTextTokens.label(context)
+        .copyWith(color: PiggyTokens.textSecondary(context)); // ⭐ 使用 Token
     final tile = Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -65,7 +65,7 @@ class AppListTile extends StatelessWidget {
           if (trailing != null)
             trailing!
           else if (enabled)
-            Icon(Icons.chevron_right, color: BeeTokens.iconTertiary(context)), // ⭐ 使用 Token
+            Icon(Icons.chevron_right, color: PiggyTokens.iconTertiary(context)), // ⭐ 使用 Token
         ],
       ),
     );

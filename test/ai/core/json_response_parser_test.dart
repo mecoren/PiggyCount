@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:beecount/ai/core/bill_info.dart';
-import 'package:beecount/ai/core/json_response_parser.dart';
+import 'package:piggycount/ai/core/bill_info.dart';
+import 'package:piggycount/ai/core/json_response_parser.dart';
 
 void main() {
   // logger 用了 MethodChannel + SharedPreferences,需要先 mock

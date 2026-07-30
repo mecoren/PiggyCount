@@ -27,7 +27,7 @@ import '../../services/system/logger_service.dart';
 /// 当前同步的账本跟 account.ledgerId 不一致时,`_push()` 两个查询都漏这条
 /// orphan change → 变更永远卡本地不推。详见 PR#? (2026-04-21 修复)。
 class ChangeTracker {
-  final BeeDatabase db;
+  final PiggyDatabase db;
 
   ChangeTracker(this.db);
 

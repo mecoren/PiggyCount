@@ -11,29 +11,29 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:drift/drift.dart' show Value;
 
-import 'package:beecount/cloud/sync/change_tracker.dart';
-import 'package:beecount/cloud/sync/entity_serializer.dart';
-import 'package:beecount/cloud/sync/sync_engine.dart';
-import 'package:beecount/data/db.dart';
-import 'package:beecount/data/repositories/local/local_repository.dart';
+import 'package:piggycount/cloud/sync/change_tracker.dart';
+import 'package:piggycount/cloud/sync/entity_serializer.dart';
+import 'package:piggycount/cloud/sync/sync_engine.dart';
+import 'package:piggycount/data/db.dart';
+import 'package:piggycount/data/repositories/local/local_repository.dart';
 
-import '../cloud/sync/_fakes/fake_beecount_cloud_provider.dart';
+import '../cloud/sync/_fakes/fake_piggycount_cloud_provider.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  late BeeDatabase db;
+  late PiggyDatabase db;
   late ChangeTracker changeTracker;
   late LocalRepository repo;
-  late FakeBeeCountCloudProvider provider;
+  late FakePiggyCountCloudProvider provider;
   late SyncEngine engine;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    db = BeeDatabase.forTesting(NativeDatabase.memory());
+    db = PiggyDatabase.forTesting(NativeDatabase.memory());
     changeTracker = ChangeTracker(db);
     repo = LocalRepository(db, changeTracker: changeTracker);
-    provider = FakeBeeCountCloudProvider();
+    provider = FakePiggyCountCloudProvider();
     engine = SyncEngine(
       db: db,
       provider: provider,

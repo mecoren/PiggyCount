@@ -140,7 +140,7 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
                       TextButton(
                         onPressed: () => Navigator.pop(context),
                         child: Text(AppLocalizations.of(context)!.commonCancel,
-                            style: TextStyle(color: BeeTokens.textPrimary(context))),
+                            style: TextStyle(color: PiggyTokens.textPrimary(context))),
                       )
                     ],
                   ),
@@ -233,9 +233,9 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: BeeTokens.surfaceSheet(context),
+      backgroundColor: PiggyTokens.surfaceSheet(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
       ),
       builder: (ctx) => AmountEditorSheet(
         categoryName: c.name,

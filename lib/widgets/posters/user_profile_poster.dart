@@ -194,7 +194,7 @@ class UserProfilePoster extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
                     ),
                     child: Text(
                       l10n.userProfilePosterRecordDays,
@@ -212,7 +212,7 @@ class UserProfilePoster extends StatelessWidget {
         ),
         // 右侧二维码
         ClipRRect(
-          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
           child: Container(
             decoration: BoxDecoration(
               boxShadow: [
@@ -289,7 +289,7 @@ class UserProfilePoster extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+                borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
               ),
               child: Text(
                 l10n.userProfilePosterStartDate(
@@ -325,7 +325,7 @@ class UserProfilePoster extends StatelessWidget {
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(BeeDimens.radius3xl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radius3xl),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.15),
@@ -384,7 +384,7 @@ class UserProfilePoster extends StatelessWidget {
           height: 50,
           decoration: BoxDecoration(
             color: primaryColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
           ),
           child: Icon(icon, color: primaryColor, size: 26),
         ),
@@ -444,7 +444,7 @@ class UserProfilePoster extends StatelessWidget {
       padding: const EdgeInsets.all(25),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
       ),
       child: Column(
         children: [

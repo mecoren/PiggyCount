@@ -57,7 +57,7 @@ class _AssetCompositionChartState extends ConsumerState<AssetCompositionChart> {
       slices.add((
         type: '_other_',
         value: otherTotal,
-        color: BeeTokens.textTertiary(context),
+        color: PiggyTokens.textTertiary(context),
       ));
     }
 
@@ -138,7 +138,7 @@ class _AssetCompositionChartState extends ConsumerState<AssetCompositionChart> {
                             : getAccountTypeLabel(context, selectedSlice.type))
                         : l10n.assetComposition,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: BeeTokens.textTertiary(context),
+                          color: PiggyTokens.textTertiary(context),
                           fontSize: 10,
                         ),
                     maxLines: 1,
@@ -152,7 +152,7 @@ class _AssetCompositionChartState extends ConsumerState<AssetCompositionChart> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: BeeTokens.textPrimary(context),
+                      color: PiggyTokens.textPrimary(context),
                     ),
                   ),
                 ],
@@ -185,7 +185,7 @@ class _AssetCompositionChartState extends ConsumerState<AssetCompositionChart> {
                 Text(
                   displayName,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: BeeTokens.textPrimary(context),
+                        color: PiggyTokens.textPrimary(context),
                         fontSize: 11,
                       ),
                 ),
@@ -193,7 +193,7 @@ class _AssetCompositionChartState extends ConsumerState<AssetCompositionChart> {
                 Text(
                   '$pct%',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: BeeTokens.textTertiary(context),
+                        color: PiggyTokens.textTertiary(context),
                         fontSize: 10,
                       ),
                 ),
@@ -220,7 +220,7 @@ class _AssetCompositionChartState extends ConsumerState<AssetCompositionChart> {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: BeeTokens.textPrimary(context),
+                color: PiggyTokens.textPrimary(context),
               ),
             ),
             SizedBox(height: 12.0.scaled(context, ref)),

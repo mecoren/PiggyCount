@@ -7,8 +7,8 @@ import '../../l10n/app_localizations.dart';
 import '../../providers/theme_providers.dart';
 import '../../styles/tokens.dart';
 
-/// 2FA 输码对话框 — 当 BeeCountCloudAuthService.signInWithEmail 收到 server 的
-/// requires_2fa=true 响应时,通过 [BeeCountCloudProvider.globalTwoFactorHandler]
+/// 2FA 输码对话框 — 当 PiggyCountCloudAuthService.signInWithEmail 收到 server 的
+/// requires_2fa=true 响应时,通过 [PiggyCountCloudProvider.globalTwoFactorHandler]
 /// 注册的回调把它弹出来,让用户输 6 位 TOTP 或 recovery code。
 ///
 /// 失败 → 内部调 [TwoFactorChallengeRequest.verify] 拿 server 错误消息,就地
@@ -114,7 +114,7 @@ class _Login2FAChallengeDialogState
         widget.request.availableMethods.contains('recovery_code');
 
     final hintStyle = TextStyle(
-      color: BeeTokens.textTertiary(context),
+      color: PiggyTokens.textTertiary(context),
       fontSize: 14,
       letterSpacing: 0,
       fontWeight: FontWeight.normal,
@@ -132,7 +132,7 @@ class _Login2FAChallengeDialogState
             Text(
               widget.request.email,
               style: TextStyle(
-                color: BeeTokens.textSecondary(context),
+                color: PiggyTokens.textSecondary(context),
                 fontSize: 12,
               ),
             ),
@@ -191,7 +191,7 @@ class _Login2FAChallengeDialogState
                 fontSize: _method == 'totp' ? 22 : 18,
                 letterSpacing: _method == 'totp' ? 6 : 1.5,
                 fontFamily: 'monospace',
-                color: BeeTokens.textPrimary(context),
+                color: PiggyTokens.textPrimary(context),
               ),
               decoration: InputDecoration(
                 hintText: _method == 'totp'
@@ -199,7 +199,7 @@ class _Login2FAChallengeDialogState
                     : l10n.twofaRecoveryInputPlaceholder,
                 hintStyle: hintStyle,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                     horizontal: 12, vertical: 14),
@@ -224,7 +224,7 @@ class _Login2FAChallengeDialogState
                   color: Theme.of(context).colorScheme.error.withValues(
                         alpha: 0.08,
                       ),
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -310,7 +310,7 @@ class _MethodTab extends StatelessWidget {
             style: TextStyle(
               color: selected
                   ? Theme.of(context).colorScheme.primary
-                  : BeeTokens.textSecondary(context),
+                  : PiggyTokens.textSecondary(context),
               fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
               fontSize: 14,
             ),

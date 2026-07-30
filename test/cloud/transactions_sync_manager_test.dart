@@ -6,27 +6,27 @@
 
 import 'dart:async';
 
-import 'package:beecount/cloud/transactions_sync_manager.dart';
-import 'package:beecount/cloud/sync_service.dart';
-import 'package:beecount/data/db.dart';
-import 'package:beecount/data/repositories/base_repository.dart';
-import 'package:beecount/data/repositories/local/local_repository.dart';
+import 'package:piggycount/cloud/transactions_sync_manager.dart';
+import 'package:piggycount/cloud/sync_service.dart';
+import 'package:piggycount/data/db.dart';
+import 'package:piggycount/data/repositories/base_repository.dart';
+import 'package:piggycount/data/repositories/local/local_repository.dart';
 import 'package:drift/drift.dart' as d;
 import 'package:drift/native.dart';
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' as fcs hide SyncStatus;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:beecount/cloud/sync_service.dart' show SyncStatus, SyncDiff;
+import 'package:piggycount/cloud/sync_service.dart' show SyncStatus, SyncDiff;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   SharedPreferences.setMockInitialValues({});
 
-  late BeeDatabase db;
+  late PiggyDatabase db;
 
   setUp(() {
-    db = BeeDatabase.forTesting(NativeDatabase.memory());
+    db = PiggyDatabase.forTesting(NativeDatabase.memory());
   });
 
   tearDown(() async {

@@ -80,7 +80,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
     final s3Async = ref.watch(s3ConfigProvider);
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           activeAsync.when(
@@ -144,7 +144,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                       _buildServiceCard(
                         context: context,
                         icon: Icons.phone_android,
-                        iconColor: BeeTokens.brandLocal,
+                        iconColor: PiggyTokens.brandLocal,
                         title: AppLocalizations.of(context).cloudLocalStorageTitle,
                         subtitle: AppLocalizations.of(context).cloudLocalStorageSubtitle,
                         isSelected: active.type == CloudBackendType.local,
@@ -178,7 +178,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                         data: (webdavCfg) => _buildServiceCard(
                           context: context,
                           icon: Icons.folder_shared,
-                          iconColor: BeeTokens.brandWebdav,
+                          iconColor: PiggyTokens.brandWebdav,
                           title: AppLocalizations.of(context).cloudCustomWebdavTitle,
                           subtitle: webdavCfg?.valid == true
                               ? webdavCfg!.obfuscatedUrl()
@@ -205,7 +205,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                         data: (s3Cfg) => _buildServiceCard(
                           context: context,
                           icon: Icons.storage,
-                          iconColor: BeeTokens.brandS3,
+                          iconColor: PiggyTokens.brandS3,
                           title: AppLocalizations.of(context).cloudCustomS3Title,
                           subtitle: s3Cfg?.valid == true
                               ? s3Cfg!.obfuscatedUrl()
@@ -232,7 +232,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                         data: (supabaseCfg) => _buildServiceCard(
                           context: context,
                           icon: Icons.cloud,
-                          iconColor: BeeTokens.brandSupabase,
+                          iconColor: PiggyTokens.brandSupabase,
                           title: AppLocalizations.of(context).cloudCustomSupabaseTitle,
                           subtitle: supabaseCfg?.valid == true
                               ? supabaseCfg!.obfuscatedUrl()
@@ -262,11 +262,11 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                         data: (bcCfg) => _buildServiceCard(
                           context: context,
                           icon: Icons.cloud_circle,
-                          iconColor: BeeTokens.brandCloud,
-                          title: AppLocalizations.of(context).cloudBeeCountCloudTitle,
+                          iconColor: PiggyTokens.brandCloud,
+                          title: AppLocalizations.of(context).cloudPiggyCountCloudTitle,
                           subtitle: bcCfg?.valid == true
                               ? bcCfg!.obfuscatedUrl()
-                              : AppLocalizations.of(context).cloudBeeCountCloudSubtitle,
+                              : AppLocalizations.of(context).cloudPiggyCountCloudSubtitle,
                           isSelected: active.type == CloudBackendType.beecountCloud,
                           isConfigured: bcCfg?.valid == true,
                           isDisabled: false,
@@ -276,7 +276,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                           onConfigure: bcCfg?.valid == true
                               ? () => _configureService(CloudBackendType.beecountCloud)
                               : null,
-                          onShowGuide: _showBeeCountCloudHelpDialog,
+                          onShowGuide: _showPiggyCountCloudHelpDialog,
                         ),
                       ),
                     ],
@@ -298,17 +298,17 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
 
     if (testResult == null) {
       // 未测试
-      statusColor = BeeTokens.warning(context);
+      statusColor = PiggyTokens.warning(context);
       statusIcon = Icons.help_outline;
       statusText = AppLocalizations.of(context).cloudStatusNotTested;
     } else if (testResult) {
       // 测试成功
-      statusColor = BeeTokens.success(context);
+      statusColor = PiggyTokens.success(context);
       statusIcon = Icons.check_circle_outline;
       statusText = AppLocalizations.of(context).cloudStatusNormal;
     } else {
       // 测试失败
-      statusColor = BeeTokens.error(context);
+      statusColor = PiggyTokens.error(context);
       statusIcon = Icons.error_outline;
       statusText = AppLocalizations.of(context).cloudStatusFailed;
     }
@@ -329,7 +329,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: statusColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                 border: Border.all(color: statusColor.withValues(alpha: 0.3)),
               ),
               child: Row(
@@ -361,7 +361,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
         Text(
           config.obfuscatedUrl(),
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: BeeTokens.textSecondary(context),
+            color: PiggyTokens.textSecondary(context),
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -378,17 +378,17 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: BeeTokens.warning(context).withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+          color: PiggyTokens.warning(context).withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
           border: Border.all(
-            color: BeeTokens.warning(context).withValues(alpha: 0.3),
+            color: PiggyTokens.warning(context).withValues(alpha: 0.3),
           ),
         ),
         child: Row(
           children: [
             Icon(
               Icons.warning_amber_rounded,
-              color: BeeTokens.warning(context),
+              color: PiggyTokens.warning(context),
               size: 24,
             ),
             const SizedBox(width: 12),
@@ -401,7 +401,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: BeeTokens.textPrimary(context),
+                      color: PiggyTokens.textPrimary(context),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -409,7 +409,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                     l10n.cloudMultiDeviceWarningMessage,
                     style: TextStyle(
                       fontSize: 12,
-                      color: BeeTokens.textSecondary(context),
+                      color: PiggyTokens.textSecondary(context),
                     ),
                   ),
                 ],
@@ -418,7 +418,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
             const SizedBox(width: 8),
             Icon(
               Icons.info_outline,
-              color: BeeTokens.warning(context),
+              color: PiggyTokens.warning(context),
               size: 20,
             ),
           ],
@@ -429,18 +429,18 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
 
   void _showMultiDeviceDetailDialog(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final primaryText = BeeTokens.textPrimary(context);
-    final secondaryText = BeeTokens.textSecondary(context);
+    final primaryText = PiggyTokens.textPrimary(context);
+    final secondaryText = PiggyTokens.textSecondary(context);
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: BeeTokens.surfaceElevated(context),
+        backgroundColor: PiggyTokens.surfaceElevated(context),
         title: Row(
           children: [
             Icon(
               Icons.info_outline,
-              color: BeeTokens.primary(context),
+              color: PiggyTokens.primary(context),
               size: 24,
             ),
             const SizedBox(width: 12),
@@ -479,7 +479,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                 _buildGuideSection(
                   context,
                   icon: Icons.check_circle_outline,
-                  iconColor: BeeTokens.success(context),
+                  iconColor: PiggyTokens.success(context),
                   title: l10n.cloudSyncGuideCorrect,
                   items: [
                     l10n.cloudSyncGuideCorrectItem1,
@@ -493,7 +493,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                 _buildGuideSection(
                   context,
                   icon: Icons.cancel_outlined,
-                  iconColor: BeeTokens.error(context),
+                  iconColor: PiggyTokens.error(context),
                   title: l10n.cloudSyncGuideWrong,
                   items: [
                     l10n.cloudSyncGuideWrongItem1,
@@ -506,7 +506,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                 _buildGuideSection(
                   context,
                   icon: Icons.warning_amber_rounded,
-                  iconColor: BeeTokens.warning(context),
+                  iconColor: PiggyTokens.warning(context),
                   title: l10n.cloudSyncGuideLimitations,
                   items: [
                     l10n.cloudSyncGuideLimitItem1,
@@ -525,7 +525,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
             child: Text(
               l10n.cloudSyncGuideGotIt,
               style: TextStyle(
-                color: BeeTokens.primary(context),
+                color: PiggyTokens.primary(context),
               ),
             ),
           ),
@@ -546,12 +546,12 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
       children: [
         Row(
           children: [
-            Icon(icon, size: 18, color: iconColor ?? BeeTokens.textSecondary(context)),
+            Icon(icon, size: 18, color: iconColor ?? PiggyTokens.textSecondary(context)),
             const SizedBox(width: 6),
             Text(
               title,
               style: TextStyle(
-                color: BeeTokens.textPrimary(context),
+                color: PiggyTokens.textPrimary(context),
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
               ),
@@ -564,12 +564,12 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('• ', style: TextStyle(color: BeeTokens.textSecondary(context), fontSize: 13)),
+                  Text('• ', style: TextStyle(color: PiggyTokens.textSecondary(context), fontSize: 13)),
                   Expanded(
                     child: Text(
                       item,
                       style: TextStyle(
-                        color: BeeTokens.textSecondary(context),
+                        color: PiggyTokens.textSecondary(context),
                         fontSize: 13,
                         height: 1.4,
                       ),
@@ -599,14 +599,14 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
       opacity: isDisabled ? 0.5 : 1.0,
       child: Container(
         decoration: BoxDecoration(
-          border: isSelected ? Border.all(color: BeeTokens.success(context), width: 2) : null,
-          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+          border: isSelected ? Border.all(color: PiggyTokens.success(context), width: 2) : null,
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         ),
         child: SectionCard(
           margin: EdgeInsets.zero,
           child: InkWell(
             onTap: isDisabled ? null : onTap,
-            borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -619,7 +619,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                         height: 48,
                         decoration: BoxDecoration(
                           color: iconColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                         ),
                         child: Icon(icon, color: iconColor, size: 24),
                       ),
@@ -644,14 +644,14 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: BeeTokens.textTertiary(context).withValues(alpha: 0.2),
-                                      borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                                      color: PiggyTokens.textTertiary(context).withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                                     ),
                                     child: Text(
                                       '不可用',
                                       style: TextStyle(
                                         fontSize: 11,
-                                        color: BeeTokens.textTertiary(context),
+                                        color: PiggyTokens.textTertiary(context),
                                       ),
                                     ),
                                   ),
@@ -661,7 +661,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                             Text(
                               subtitle,
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: BeeTokens.textSecondary(context),
+                                color: PiggyTokens.textSecondary(context),
                               ),
                             ),
                           ],
@@ -674,10 +674,10 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                           width: 28,
                           height: 28,
                           decoration: BoxDecoration(
-                            color: BeeTokens.success(context),
+                            color: PiggyTokens.success(context),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(Icons.check, color: BeeTokens.textOnPrimary(context), size: 18),
+                          child: Icon(Icons.check, color: PiggyTokens.textOnPrimary(context), size: 18),
                         ),
                     ],
                   ),
@@ -732,14 +732,14 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
       opacity: isDisabled ? 0.5 : 1.0,
       child: Container(
         decoration: BoxDecoration(
-          border: isSelected ? Border.all(color: BeeTokens.success(context), width: 2) : null,
-          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+          border: isSelected ? Border.all(color: PiggyTokens.success(context), width: 2) : null,
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         ),
         child: SectionCard(
           margin: EdgeInsets.zero,
           child: InkWell(
             onTap: isDisabled ? null : () => _switchService(CloudBackendType.icloud),
-            borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -751,10 +751,10 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: BeeTokens.brandIcloud.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                          color: PiggyTokens.brandIcloud.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                         ),
-                        child: Icon(Icons.cloud, color: BeeTokens.brandIcloud, size: 24),
+                        child: Icon(Icons.cloud, color: PiggyTokens.brandIcloud, size: 24),
                       ),
                       const SizedBox(width: 16),
 
@@ -777,14 +777,14 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: BeeTokens.textTertiary(context).withValues(alpha: 0.2),
-                                      borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                                      color: PiggyTokens.textTertiary(context).withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                                     ),
                                     child: Text(
                                       '不可用',
                                       style: TextStyle(
                                         fontSize: 11,
-                                        color: BeeTokens.textTertiary(context),
+                                        color: PiggyTokens.textTertiary(context),
                                       ),
                                     ),
                                   ),
@@ -796,7 +796,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                                   ? 'iCloud Drive'
                                   : AppLocalizations.of(context).cloudIcloudSubtitle,
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: BeeTokens.textSecondary(context),
+                                color: PiggyTokens.textSecondary(context),
                               ),
                             ),
                           ],
@@ -809,10 +809,10 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                           width: 28,
                           height: 28,
                           decoration: BoxDecoration(
-                            color: BeeTokens.success(context),
+                            color: PiggyTokens.success(context),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(Icons.check, color: BeeTokens.textOnPrimary(context), size: 18),
+                          child: Icon(Icons.check, color: PiggyTokens.textOnPrimary(context), size: 18),
                         ),
                     ],
                   ),
@@ -854,7 +854,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
       builder: (dialogContext) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.cloud, color: BeeTokens.brandSupabase),
+            Icon(Icons.cloud, color: PiggyTokens.brandSupabase),
             const SizedBox(width: 8),
             Text(l10n.cloudSupabaseHelpTitle),
           ],
@@ -896,19 +896,19 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: BeeTokens.brandSupabase.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                  color: PiggyTokens.brandSupabase.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, color: BeeTokens.brandSupabase, size: 20),
+                    Icon(Icons.info_outline, color: PiggyTokens.brandSupabase, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         l10n.cloudSupabaseHelpNote,
                         style: TextStyle(
                           fontSize: 13,
-                          color: BeeTokens.textSecondary(context),
+                          color: PiggyTokens.textSecondary(context),
                         ),
                       ),
                     ),
@@ -932,14 +932,14 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
     );
   }
 
-  void _showBeeCountCloudHelpDialog() {
+  void _showPiggyCountCloudHelpDialog() {
     final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.cloud_circle, color: BeeTokens.brandCloud),
+            Icon(Icons.cloud_circle, color: PiggyTokens.brandCloud),
             const SizedBox(width: 8),
             Text(l10n.cloudTutorialTitle),
           ],
@@ -954,7 +954,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                 l10n.cloudTutorialIntro,
                 style: TextStyle(
                   fontSize: 13,
-                  color: BeeTokens.textSecondary(context),
+                  color: PiggyTokens.textSecondary(context),
                   height: 1.5,
                 ),
               ),
@@ -969,8 +969,8 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: BeeTokens.brandCloud.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                  color: PiggyTokens.brandCloud.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -979,7 +979,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                       l10n.cloudTutorialFeaturesTitle,
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        color: BeeTokens.brandCloud,
+                        color: PiggyTokens.brandCloud,
                         fontSize: 13,
                       ),
                     ),
@@ -996,13 +996,13 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: BeeTokens.brandCloud.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                  color: PiggyTokens.brandCloud.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.info_outline, color: BeeTokens.brandCloud, size: 20),
+                    Icon(Icons.info_outline, color: PiggyTokens.brandCloud, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text.rich(
@@ -1013,14 +1013,14 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: BeeTokens.textSecondary(context),
+                                color: PiggyTokens.textSecondary(context),
                               ),
                             ),
                             TextSpan(
                               text: l10n.cloudTutorialTipDesc,
                               style: TextStyle(
                                 fontSize: 13,
-                                color: BeeTokens.textSecondary(context),
+                                color: PiggyTokens.textSecondary(context),
                               ),
                             ),
                           ],
@@ -1053,7 +1053,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
             width: 22,
             height: 22,
             decoration: BoxDecoration(
-              color: BeeTokens.brandCloud,
+              color: PiggyTokens.brandCloud,
               shape: BoxShape.circle,
             ),
             alignment: Alignment.center,
@@ -1081,7 +1081,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                   desc,
                   style: TextStyle(
                     fontSize: 12,
-                    color: BeeTokens.textSecondary(context),
+                    color: PiggyTokens.textSecondary(context),
                     height: 1.5,
                   ),
                 ),
@@ -1100,7 +1100,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
       builder: (dialogContext) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.folder_shared, color: BeeTokens.brandWebdav),
+            Icon(Icons.folder_shared, color: PiggyTokens.brandWebdav),
             const SizedBox(width: 8),
             Text(l10n.cloudWebdavHelpTitle),
           ],
@@ -1143,19 +1143,19 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: BeeTokens.brandWebdav.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                  color: PiggyTokens.brandWebdav.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, color: BeeTokens.brandWebdav, size: 20),
+                    Icon(Icons.info_outline, color: PiggyTokens.brandWebdav, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         l10n.cloudWebdavHelpNote,
                         style: TextStyle(
                           fontSize: 13,
-                          color: BeeTokens.textSecondary(context),
+                          color: PiggyTokens.textSecondary(context),
                         ),
                       ),
                     ),
@@ -1182,7 +1182,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
       builder: (dialogContext) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.cloud, color: BeeTokens.brandIcloud),
+            Icon(Icons.cloud, color: PiggyTokens.brandIcloud),
             const SizedBox(width: 8),
             Text(l10n.cloudIcloudHelpTitle),
           ],
@@ -1224,19 +1224,19 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: BeeTokens.brandIcloud.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                  color: PiggyTokens.brandIcloud.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, color: BeeTokens.brandIcloud, size: 20),
+                    Icon(Icons.info_outline, color: PiggyTokens.brandIcloud, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         l10n.cloudIcloudHelpNote,
                         style: TextStyle(
                           fontSize: 13,
-                          color: BeeTokens.textSecondary(context),
+                          color: PiggyTokens.textSecondary(context),
                         ),
                       ),
                     ),
@@ -1263,7 +1263,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
       builder: (dialogContext) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.storage, color: BeeTokens.brandS3),
+            Icon(Icons.storage, color: PiggyTokens.brandS3),
             const SizedBox(width: 8),
             Text(l10n.cloudS3HelpTitle),
           ],
@@ -1309,19 +1309,19 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: BeeTokens.brandS3.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                  color: PiggyTokens.brandS3.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, color: BeeTokens.brandS3, size: 20),
+                    Icon(Icons.info_outline, color: PiggyTokens.brandS3, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         l10n.cloudS3HelpNote,
                         style: TextStyle(
                           fontSize: 13,
-                          color: BeeTokens.textSecondary(context),
+                          color: PiggyTokens.textSecondary(context),
                         ),
                       ),
                     ),
@@ -1350,7 +1350,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
           style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 14,
-            color: BeeTokens.textPrimary(context),
+            color: PiggyTokens.textPrimary(context),
           ),
         ),
         const SizedBox(height: 8),
@@ -1360,7 +1360,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
             item,
             style: TextStyle(
               fontSize: 13,
-              color: BeeTokens.textSecondary(context),
+              color: PiggyTokens.textSecondary(context),
             ),
           ),
         )),
@@ -1485,7 +1485,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
   Future<void> _configureService(CloudBackendType type) async {
     // 根据类型显示配置对话框
     if (type == CloudBackendType.beecountCloud) {
-      await _showBeeCountCloudConfigDialog();
+      await _showPiggyCountCloudConfigDialog();
     } else if (type == CloudBackendType.supabase) {
       await _showSupabaseConfigDialog();
     } else if (type == CloudBackendType.webdav) {
@@ -1495,14 +1495,14 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
     }
   }
 
-  Future<void> _showBeeCountCloudConfigDialog() async {
+  Future<void> _showPiggyCountCloudConfigDialog() async {
     final existing = await ref.read(beecountCloudConfigProvider.future);
 
     if (!mounted) return;
 
     final result = await showDialog<Map<String, dynamic>?>(
       context: context,
-      builder: (dialogContext) => _BeeCountCloudConfigDialog(
+      builder: (dialogContext) => _PiggyCountCloudConfigDialog(
         initialUrl: existing?.beecountCloudBaseUrl ?? '',
         initialApiPrefix: existing?.beecountCloudApiPrefix ?? '/api/v1',
         initialEmail: existing?.beecountCloudEmail ?? '',
@@ -1519,7 +1519,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
       // 对话框已进行内联校验，此处 cfg.valid 作为防御性检查
       final cfg = CloudServiceConfig(
         type: CloudBackendType.beecountCloud,
-        name: AppLocalizations.of(context).cloudBeeCountCloudTitle,
+        name: AppLocalizations.of(context).cloudPiggyCountCloudTitle,
         beecountCloudBaseUrl: url,
         beecountCloudApiPrefix: apiPrefix.isEmpty ? '/api/v1' : apiPrefix,
         beecountCloudEmail: email.isNotEmpty ? email : null,
@@ -1568,14 +1568,14 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
               });
 
               if (mounted) {
-                showToast(context, AppLocalizations.of(context).cloudBeeCountCloudLoginSuccess);
+                showToast(context, AppLocalizations.of(context).cloudPiggyCountCloudLoginSuccess);
               }
             }
           } catch (e) {
             if (mounted) {
               await AppDialog.error(
                 context,
-                title: AppLocalizations.of(context).cloudBeeCountCloudLoginFailed,
+                title: AppLocalizations.of(context).cloudPiggyCountCloudLoginFailed,
                 message: e.toString(),
               );
             }
@@ -1767,7 +1767,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
       case CloudBackendType.s3:
         return 'S3';
       case CloudBackendType.beecountCloud:
-        return 'BeeCount Cloud';
+        return 'PiggyCount Cloud';
     }
   }
 
@@ -1963,13 +1963,13 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
 }
 
 // Supabase配置对话框(独立Widget,避免controller生命周期问题)
-class _BeeCountCloudConfigDialog extends StatefulWidget {
+class _PiggyCountCloudConfigDialog extends StatefulWidget {
   final String initialUrl;
   final String initialApiPrefix;
   final String initialEmail;
   final String initialPassword;
 
-  const _BeeCountCloudConfigDialog({
+  const _PiggyCountCloudConfigDialog({
     required this.initialUrl,
     required this.initialApiPrefix,
     this.initialEmail = '',
@@ -1977,10 +1977,10 @@ class _BeeCountCloudConfigDialog extends StatefulWidget {
   });
 
   @override
-  State<_BeeCountCloudConfigDialog> createState() => _BeeCountCloudConfigDialogState();
+  State<_PiggyCountCloudConfigDialog> createState() => _PiggyCountCloudConfigDialogState();
 }
 
-class _BeeCountCloudConfigDialogState extends State<_BeeCountCloudConfigDialog> {
+class _PiggyCountCloudConfigDialogState extends State<_PiggyCountCloudConfigDialog> {
   late final TextEditingController urlController;
   late final TextEditingController apiPrefixController;
   late final TextEditingController emailController;
@@ -2022,7 +2022,7 @@ class _BeeCountCloudConfigDialogState extends State<_BeeCountCloudConfigDialog> 
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return AlertDialog(
-      title: Text(l10n.cloudConfigureBeeCountCloudTitle),
+      title: Text(l10n.cloudConfigurePiggyCountCloudTitle),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -2030,10 +2030,10 @@ class _BeeCountCloudConfigDialogState extends State<_BeeCountCloudConfigDialog> 
             TextField(
               controller: urlController,
               decoration: InputDecoration(
-                labelText: l10n.cloudBeeCountCloudUrlLabel,
-                hintText: l10n.cloudBeeCountCloudUrlHint,
+                labelText: l10n.cloudPiggyCountCloudUrlLabel,
+                hintText: l10n.cloudPiggyCountCloudUrlHint,
                 errorText: _urlError
-                    ? l10n.fieldCannotBeEmpty(l10n.cloudBeeCountCloudUrlLabel)
+                    ? l10n.fieldCannotBeEmpty(l10n.cloudPiggyCountCloudUrlLabel)
                     : null,
               ),
               keyboardType: TextInputType.url,
@@ -2047,8 +2047,8 @@ class _BeeCountCloudConfigDialogState extends State<_BeeCountCloudConfigDialog> 
             TextField(
               controller: emailController,
               decoration: InputDecoration(
-                labelText: l10n.cloudBeeCountCloudEmailLabel,
-                hintText: l10n.cloudBeeCountCloudEmailHint,
+                labelText: l10n.cloudPiggyCountCloudEmailLabel,
+                hintText: l10n.cloudPiggyCountCloudEmailHint,
               ),
               keyboardType: TextInputType.emailAddress,
             ),
@@ -2056,8 +2056,8 @@ class _BeeCountCloudConfigDialogState extends State<_BeeCountCloudConfigDialog> 
             TextField(
               controller: passwordController,
               decoration: InputDecoration(
-                labelText: l10n.cloudBeeCountCloudPasswordLabel,
-                hintText: l10n.cloudBeeCountCloudPasswordHint,
+                labelText: l10n.cloudPiggyCountCloudPasswordLabel,
+                hintText: l10n.cloudPiggyCountCloudPasswordHint,
                 suffixIcon: IconButton(
                   icon: Icon(
                     obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,

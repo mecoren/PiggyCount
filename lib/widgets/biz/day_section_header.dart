@@ -49,14 +49,14 @@ class DaySectionHeader extends ConsumerWidget {
     // 优先使用传入的hide,否则使用全局状态
     final shouldHide = hide ?? ref.watch(hideAmountsProvider);
     String fmt(double v) => v == 0 ? '' : formatMoneyCompact(v, maxDecimals: 2);
-    final grey = BeeTokens.textSecondary(context);
+    final grey = PiggyTokens.textSecondary(context);
     final week = getWeekday(dateText);
     final l10n = AppLocalizations.of(context);
     return Container(
       // 不设背景色:与交易行一样透明,显示同一外层列表背景。否则暗黑下 header
       // 是 surface 深灰(#1C1C1E)、交易行是纯黑 scaffold 底,两者不协调。
       padding: const EdgeInsets.symmetric(
-          horizontal: 12, vertical: BeeDimens.listHeaderVertical),
+          horizontal: 12, vertical: PiggyDimens.listHeaderVertical),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

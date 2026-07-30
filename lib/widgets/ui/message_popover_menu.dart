@@ -212,7 +212,7 @@ class _PopoverOverlayState extends State<_PopoverOverlay>
               child: Container(
                 decoration: BoxDecoration(
                   color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.15),
@@ -222,7 +222,7 @@ class _PopoverOverlayState extends State<_PopoverOverlay>
                   ],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: widget.items.asMap().entries.map((entry) {

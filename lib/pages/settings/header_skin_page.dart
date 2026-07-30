@@ -17,7 +17,7 @@ class HeaderSkinPage extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final primary = ref.watch(primaryColorProvider);
     final current = ref.watch(headerSkinProvider);
-    final modeIsDark = BeeTokens.isDark(context);
+    final modeIsDark = PiggyTokens.isDark(context);
 
     // 预览底色与真实 header 基础色一致:亮=主题色,暗=纯黑。图案皮肤是透明叠加,
     // 必须垫底色才看得见。
@@ -39,7 +39,7 @@ class HeaderSkinPage extends ConsumerWidget {
     ];
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
       appBar: GlassTitleBar(
         title: l10n.headerSkinTitle,
@@ -98,14 +98,14 @@ class _SkinCard extends StatelessWidget {
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+                borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
                 border: Border.all(
-                  color: selected ? primary : BeeTokens.border(context),
+                  color: selected ? primary : PiggyTokens.border(context),
                   width: selected ? 2.5 : 1,
                 ),
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -132,7 +132,7 @@ class _SkinCard extends StatelessWidget {
             name,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: selected ? primary : BeeTokens.textPrimary(context),
+              color: selected ? primary : PiggyTokens.textPrimary(context),
               fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
             ),
           ),

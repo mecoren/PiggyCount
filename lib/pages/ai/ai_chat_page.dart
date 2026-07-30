@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' hide Column;
 
 import '../../widgets/ui/ui.dart';
-import '../../widgets/biz/bee_icon.dart';
+import '../../widgets/biz/piggy_icon.dart';
 import '../../widgets/ai/typewriter_text.dart';
 import '../../widgets/ai/bill_card_widget.dart';
 import '../../widgets/ai/ai_quick_commands_bar.dart';
@@ -139,7 +139,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
   Widget build(BuildContext context) {
     if (_conversationId == null) {
       return Scaffold(
-        backgroundColor: BeeTokens.scaffoldBackground(context),
+        backgroundColor: PiggyTokens.scaffoldBackground(context),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -147,7 +147,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
     final messagesAsync = ref.watch(messagesProvider(_conversationId!));
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           // Header
@@ -172,10 +172,10 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
               ),
               padding: EdgeInsets.all(12.0.scaled(context, ref)),
               decoration: BoxDecoration(
-                color: BeeTokens.error(context).withValues(alpha: 0.1),
+                color: PiggyTokens.error(context).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8.0.scaled(context, ref)),
                 border: Border.all(
-                  color: BeeTokens.error(context).withValues(alpha: 0.3),
+                  color: PiggyTokens.error(context).withValues(alpha: 0.3),
                   width: 1,
                 ),
               ),
@@ -183,7 +183,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
                 children: [
                   Icon(
                     Icons.warning_amber_rounded,
-                    color: BeeTokens.error(context),
+                    color: PiggyTokens.error(context),
                     size: 20.0.scaled(context, ref),
                   ),
                   SizedBox(width: 8.0.scaled(context, ref)),
@@ -191,7 +191,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
                     child: Text(
                       AppLocalizations.of(context).aiChatConfigWarning,
                       style: TextStyle(
-                        color: BeeTokens.error(context),
+                        color: PiggyTokens.error(context),
                         fontSize: 13.0.scaled(context, ref),
                       ),
                     ),
@@ -310,7 +310,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
                   Text(
                     AppLocalizations.of(context).aiChatThinking,
                     style: TextStyle(
-                      color: BeeTokens.textSecondary(context),
+                      color: PiggyTokens.textSecondary(context),
                       fontSize: 13.0.scaled(context, ref),
                     ),
                   ),
@@ -404,13 +404,13 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
                 decoration: BoxDecoration(
                   color: isUser
                       ? ref.watch(primaryColorProvider).withValues(alpha: 0.1)
-                      : BeeTokens.surface(context),
+                      : PiggyTokens.surface(context),
                   borderRadius:
                       BorderRadius.circular(12.0.scaled(context, ref)),
                   border: Border.all(
                     color: isUser
                         ? ref.watch(primaryColorProvider).withValues(alpha: 0.3)
-                        : BeeTokens.border(context),
+                        : PiggyTokens.border(context),
                   ),
                 ),
                 child: TypewriterText(
@@ -433,7 +433,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
                         }
                       : null,
                   style: TextStyle(
-                    color: BeeTokens.textPrimary(context),
+                    color: PiggyTokens.textPrimary(context),
                     fontSize: 14.0.scaled(context, ref),
                     height: 1.5,
                   ),
@@ -465,7 +465,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
         color: ref.watch(primaryColorProvider).withValues(alpha: 0.1),
       ),
       child: Center(
-        child: BeeIcon(
+        child: PiggyIcon(
           color: ref.watch(primaryColorProvider),
           size: 18.0.scaled(context, ref),
         ),
@@ -481,7 +481,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color: BeeTokens.border(context),
+          color: PiggyTokens.border(context),
           width: 1,
         ),
       ),
@@ -502,10 +502,10 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
     return Container(
       padding: EdgeInsets.all(16.0.scaled(context, ref)),
       decoration: BoxDecoration(
-        color: BeeTokens.surface(context),
+        color: PiggyTokens.surface(context),
         border: Border(
           top: BorderSide(
-            color: BeeTokens.divider(context),
+            color: PiggyTokens.divider(context),
           ),
         ),
       ),
@@ -519,7 +519,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
                 decoration: InputDecoration(
                   hintText: AppLocalizations.of(context).aiChatInputHint,
                   hintStyle: TextStyle(
-                    color: BeeTokens.textTertiary(context),
+                    color: PiggyTokens.textTertiary(context),
                   ),
                   border: OutlineInputBorder(
                     borderRadius:
@@ -527,7 +527,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
-                  fillColor: BeeTokens.scaffoldBackground(context),
+                  fillColor: PiggyTokens.scaffoldBackground(context),
                   contentPadding: EdgeInsets.symmetric(
                     horizontal: 16.0.scaled(context, ref),
                     vertical: 10.0.scaled(context, ref),
@@ -544,7 +544,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
               icon: Icon(
                 Icons.send,
                 color: _isLoading
-                    ? BeeTokens.textTertiary(context)
+                    ? PiggyTokens.textTertiary(context)
                     : ref.watch(primaryColorProvider),
               ),
               onPressed: _isLoading ? null : _sendMessage,
@@ -1034,7 +1034,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
         PopoverMenuItem(
           icon: Icons.delete_outline,
           label: l10n.commonDelete,
-          color: BeeTokens.error(context),
+          color: PiggyTokens.error(context),
           onTap: () => _deleteMessage(message),
         ),
       ],
@@ -1054,7 +1054,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
         PopoverMenuItem(
           icon: Icons.delete_outline,
           label: l10n.commonDelete,
-          color: BeeTokens.error(context),
+          color: PiggyTokens.error(context),
           onTap: () => _deleteMessage(message),
         ),
       ],

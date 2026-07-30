@@ -217,7 +217,7 @@ class _CategoryRankRowState extends ConsumerState<CategoryRankRow> {
                       Text(
                         '${(percent * 100).toStringAsFixed(1)}%',
                         style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: BeeTokens.textTertiary(context),
+                          color: PiggyTokens.textTertiary(context),
                           fontSize: isTopLevel ? 12 : 11,
                         ),
                       ),
@@ -225,7 +225,7 @@ class _CategoryRankRowState extends ConsumerState<CategoryRankRow> {
                   ),
                   const SizedBox(height: 6),
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+                    borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                     child: Stack(
                       children: [
                         Container(

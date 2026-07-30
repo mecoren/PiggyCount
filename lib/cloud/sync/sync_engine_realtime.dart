@@ -144,7 +144,7 @@ extension SyncEngineRealtime on SyncEngine {
   /// 处理 server 推过来的 `member_change` 事件:成员加入 / 角色变更 / 被移除。
   /// 被踢的当事人 → 清本地 ledger + SharedLedger* 行;其他场景触发拉成员列表
   /// 刷新 + 触发账本元数据重拉(memberCount 等可能变了)。
-  Future<void> _handleMemberChange(BeeCountCloudRealtimeEvent event) async {
+  Future<void> _handleMemberChange(PiggyCountCloudRealtimeEvent event) async {
     final ledgerExternalId = event.ledgerId;
     if (ledgerExternalId == null || ledgerExternalId.isEmpty) return;
     final changeType = event.rawData['changeType'] as String?;
@@ -191,7 +191,7 @@ extension SyncEngineRealtime on SyncEngine {
   /// 处理 Owner user-global category/account/tag 变更的 fan-out。
   /// 直接增量更新本地 SharedLedger{Categories,Accounts,Tags} 行(写主表是
   /// Owner 操作,Editor 端只镜像)。
-  Future<void> _handleSharedResourceChange(BeeCountCloudRealtimeEvent event) async {
+  Future<void> _handleSharedResourceChange(PiggyCountCloudRealtimeEvent event) async {
     final ledgerExternalId = event.ledgerId;
     if (ledgerExternalId == null || ledgerExternalId.isEmpty) return;
     final resourceType = event.rawData['resourceType'] as String?;
@@ -493,7 +493,7 @@ extension SyncEngineRealtime on SyncEngine {
   /// §7 决策 v25:撤回 mirror。Editor 接受邀请只把图标二进制下到 sha256
   /// cache(给 SharedLedgerCategories 行渲染用),不再写主 Categories 表。
   Future<void> _downloadCustomIconsForSharedSnapshot(
-      BeeCountCloudSharedResources snapshot) async {
+      PiggyCountCloudSharedResources snapshot) async {
     final iconSvc = CustomIconService();
     for (final c in snapshot.categories) {
       if (c.iconType != 'custom') continue;

@@ -1,4 +1,4 @@
-package com.tntlikely.beecount
+package com.wait.piggycount
 
 import android.content.Context
 import android.content.SharedPreferences

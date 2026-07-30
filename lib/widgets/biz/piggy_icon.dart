@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-class BeeIcon extends StatelessWidget {
+class PiggyIcon extends StatelessWidget {
   final Color color; // 类似 Web 中的 color 属性
   final double size;
 
-  const BeeIcon({super.key, required this.color, this.size = 256});
+  const PiggyIcon({super.key, required this.color, this.size = 256});
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final svg = SvgPicture.asset(
-      'assets/bee.svg',
+      'assets/piggy.svg',
       width: size,
       height: size,
       theme: SvgTheme(

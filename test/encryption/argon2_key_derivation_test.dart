@@ -12,7 +12,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:beecount/data/encryption/argon2_key_derivation.dart';
+import 'package:piggycount/data/encryption/argon2_key_derivation.dart';
 
 void main() {
   group('Argon2KeyDerivation.deriveKey', () {

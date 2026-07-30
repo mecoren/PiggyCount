@@ -1,4 +1,4 @@
-import 'package:beecount/widgets/biz/bee_icon.dart';
+import 'package:piggycount/widgets/biz/piggy_icon.dart';
 import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -26,7 +26,7 @@ class AppEmpty extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
-              child: BeeIcon(
+              child: PiggyIcon(
                 color: primary,
                 size: 52,
                 // child: SvgPicture.asset(

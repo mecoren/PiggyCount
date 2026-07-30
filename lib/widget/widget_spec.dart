@@ -40,7 +40,7 @@ class WidgetSpec {
   final Size logicalSize;
 
   /// iOS Widget `kind` 标识(对应 [HomeWidgetInfo.iOSKind])。只有已在原生壳
-  /// (`BeeCountWidgetBundle.swift`)注册的类型才有值;未注册类型此字段为
+  /// (`PiggyCountWidgetBundle.swift`)注册的类型才有值;未注册类型此字段为
   /// null,天然不会被 [matchInstalled] 匹配到——这正是 D5「只渲已安装」在
   /// 新类型还没有原生壳时的自然表现,不需要额外的"是否已实现"开关。
   final String? iosKind;
@@ -59,7 +59,7 @@ class WidgetSpec {
   final String? androidClassName;
 
   /// 同类型其它可承载本 spec 的 Android provider 类名(按尺寸拆分的空子类
-  /// 入口,见 `BeeCountSizedWidgetProviders.kt`)。所有入口都继承父类"按
+  /// 入口,见 `PiggyCountSizedWidgetProviders.kt`)。所有入口都继承父类"按
   /// 实际尺寸选图"的逻辑、可自由拉伸,故**类型下任一 provider 被安装,该
   /// 类型全部尺寸的图都要渲染**——[matchInstalledAll] 据此用
   /// [androidAllClassNames] 匹配,原生刷新触发也要覆盖这些子类。
@@ -85,7 +85,7 @@ class WidgetSpec {
   ///
   /// **例外(D2 back-compat)**:现有中号收支速览([glanceMedium])沿用旧 key
   /// `widgetImage`,**不**改成 `widget_glance_medium`——这样现有 iOS
-  /// `BeeCountWidget.swift` / Android `BeeCountWidgetProvider.kt` 原生壳
+  /// `PiggyCountWidget.swift` / Android `PiggyCountWidgetProvider.kt` 原生壳
   /// 完全不用改,存量用户桌面已放置的组件 100% 继续工作(原生壳读 key 的
   /// 改动不在本阶段范围,见 plan.md P3/P4)。其余所有新 spec 一律
   /// `widget_<type>_<size>`(枚举名直接拼接,如 `widget_netWorth_small`)。
@@ -97,159 +97,159 @@ class WidgetSpec {
   }
 
   // ---- 收支速览(glance):小/中 ----
-  /// 小号(补全新增):iOS 挂在**现有** kind `BeeCountWidget` 的 systemSmall
+  /// 小号(补全新增):iOS 挂在**现有** kind `PiggyCountWidget` 的 systemSmall
   /// family 下(增量注册,存量中号放置不受影响);Android 因老 provider 不可
   /// 改动(D2),用独立的 GlanceSmall provider 承载。
   static const glanceSmall = WidgetSpec._(
     type: HWType.glance,
     size: HWSize.small,
     logicalSize: Size(155, 155),
-    iosKind: 'BeeCountWidget',
+    iosKind: 'PiggyCountWidget',
     iosFamily: 'systemSmall',
     androidClassName:
-        'com.tntlikely.beecount.BeeCountGlanceSmallWidgetProvider',
+        'com.wait.piggycount.PiggyCountGlanceSmallWidgetProvider',
   );
 
   /// 现有唯一已上线的组件:中号收支速览。原生标识与升级前完全一致
-  /// (iOS kind `BeeCountWidget` / Android provider 类名
-  /// `BeeCountWidgetProvider`),存量桌面放置靠这两个标识存活,不可更改。
+  /// (iOS kind `PiggyCountWidget` / Android provider 类名
+  /// `PiggyCountWidgetProvider`),存量桌面放置靠这两个标识存活,不可更改。
   static const glanceMedium = WidgetSpec._(
     type: HWType.glance,
     size: HWSize.medium,
     logicalSize: Size(364, 169),
-    iosKind: 'BeeCountWidget',
+    iosKind: 'PiggyCountWidget',
     iosFamily: 'systemMedium',
-    androidClassName: 'com.tntlikely.beecount.BeeCountWidgetProvider',
+    androidClassName: 'com.wait.piggycount.PiggyCountWidgetProvider',
   );
 
   // ---- 净资产(netWorth):小/中/大 ----
-  // iOS 原生壳见 ios/BeeCountWidget/BeeCountNetWorthWidget.swift
-  // (kind BeeCountNetWorthWidget,supportedFamilies 小/中/大)。
+  // iOS 原生壳见 ios/PiggyCountWidget/PiggyCountNetWorthWidget.swift
+  // (kind PiggyCountNetWorthWidget,supportedFamilies 小/中/大)。
   static const netWorthSmall = WidgetSpec._(
     type: HWType.netWorth,
     size: HWSize.small,
     logicalSize: Size(155, 155),
-    iosKind: 'BeeCountNetWorthWidget',
+    iosKind: 'PiggyCountNetWorthWidget',
     iosFamily: 'systemSmall',
-    androidClassName: 'com.tntlikely.beecount.BeeCountNetWorthWidgetProvider',
+    androidClassName: 'com.wait.piggycount.PiggyCountNetWorthWidgetProvider',
     androidExtraClassNames: [
-      'com.tntlikely.beecount.BeeCountNetWorthMediumWidgetProvider',
-      'com.tntlikely.beecount.BeeCountNetWorthLargeWidgetProvider',
+      'com.wait.piggycount.PiggyCountNetWorthMediumWidgetProvider',
+      'com.wait.piggycount.PiggyCountNetWorthLargeWidgetProvider',
     ],
   );
   static const netWorthMedium = WidgetSpec._(
     type: HWType.netWorth,
     size: HWSize.medium,
     logicalSize: Size(364, 169),
-    iosKind: 'BeeCountNetWorthWidget',
+    iosKind: 'PiggyCountNetWorthWidget',
     iosFamily: 'systemMedium',
-    androidClassName: 'com.tntlikely.beecount.BeeCountNetWorthWidgetProvider',
+    androidClassName: 'com.wait.piggycount.PiggyCountNetWorthWidgetProvider',
     androidExtraClassNames: [
-      'com.tntlikely.beecount.BeeCountNetWorthMediumWidgetProvider',
-      'com.tntlikely.beecount.BeeCountNetWorthLargeWidgetProvider',
+      'com.wait.piggycount.PiggyCountNetWorthMediumWidgetProvider',
+      'com.wait.piggycount.PiggyCountNetWorthLargeWidgetProvider',
     ],
   );
   static const netWorthLarge = WidgetSpec._(
     type: HWType.netWorth,
     size: HWSize.large,
     logicalSize: Size(364, 382),
-    iosKind: 'BeeCountNetWorthWidget',
+    iosKind: 'PiggyCountNetWorthWidget',
     iosFamily: 'systemLarge',
-    androidClassName: 'com.tntlikely.beecount.BeeCountNetWorthWidgetProvider',
+    androidClassName: 'com.wait.piggycount.PiggyCountNetWorthWidgetProvider',
     androidExtraClassNames: [
-      'com.tntlikely.beecount.BeeCountNetWorthMediumWidgetProvider',
-      'com.tntlikely.beecount.BeeCountNetWorthLargeWidgetProvider',
+      'com.wait.piggycount.PiggyCountNetWorthMediumWidgetProvider',
+      'com.wait.piggycount.PiggyCountNetWorthLargeWidgetProvider',
     ],
   );
 
   // ---- 快速记账(quickAdd):小/中 ----
-  // iOS 原生壳见 ios/BeeCountWidget/BeeCountQuickAddWidget.swift
-  // (kind BeeCountQuickAddWidget,supportedFamilies 小/中)。
+  // iOS 原生壳见 ios/PiggyCountWidget/PiggyCountQuickAddWidget.swift
+  // (kind PiggyCountQuickAddWidget,supportedFamilies 小/中)。
   static const quickAddSmall = WidgetSpec._(
     type: HWType.quickAdd,
     size: HWSize.small,
     logicalSize: Size(155, 155),
-    iosKind: 'BeeCountQuickAddWidget',
+    iosKind: 'PiggyCountQuickAddWidget',
     iosFamily: 'systemSmall',
-    androidClassName: 'com.tntlikely.beecount.BeeCountQuickAddWidgetProvider',
+    androidClassName: 'com.wait.piggycount.PiggyCountQuickAddWidgetProvider',
     androidExtraClassNames: [
-      'com.tntlikely.beecount.BeeCountQuickAddMediumWidgetProvider',
+      'com.wait.piggycount.PiggyCountQuickAddMediumWidgetProvider',
     ],
   );
   static const quickAddMedium = WidgetSpec._(
     type: HWType.quickAdd,
     size: HWSize.medium,
     logicalSize: Size(364, 169),
-    iosKind: 'BeeCountQuickAddWidget',
+    iosKind: 'PiggyCountQuickAddWidget',
     iosFamily: 'systemMedium',
-    androidClassName: 'com.tntlikely.beecount.BeeCountQuickAddWidgetProvider',
+    androidClassName: 'com.wait.piggycount.PiggyCountQuickAddWidgetProvider',
     androidExtraClassNames: [
-      'com.tntlikely.beecount.BeeCountQuickAddMediumWidgetProvider',
+      'com.wait.piggycount.PiggyCountQuickAddMediumWidgetProvider',
     ],
   );
 
   // ---- 预算进度(budget):小/中 ----
-  // iOS 原生壳见 ios/BeeCountWidget/BeeCountBudgetWidget.swift
-  // (kind BeeCountBudgetWidget,supportedFamilies 小/中)。
+  // iOS 原生壳见 ios/PiggyCountWidget/PiggyCountBudgetWidget.swift
+  // (kind PiggyCountBudgetWidget,supportedFamilies 小/中)。
   static const budgetSmall = WidgetSpec._(
     type: HWType.budget,
     size: HWSize.small,
     logicalSize: Size(155, 155),
-    iosKind: 'BeeCountBudgetWidget',
+    iosKind: 'PiggyCountBudgetWidget',
     iosFamily: 'systemSmall',
-    androidClassName: 'com.tntlikely.beecount.BeeCountBudgetWidgetProvider',
+    androidClassName: 'com.wait.piggycount.PiggyCountBudgetWidgetProvider',
     androidExtraClassNames: [
-      'com.tntlikely.beecount.BeeCountBudgetMediumWidgetProvider',
+      'com.wait.piggycount.PiggyCountBudgetMediumWidgetProvider',
     ],
   );
   static const budgetMedium = WidgetSpec._(
     type: HWType.budget,
     size: HWSize.medium,
     logicalSize: Size(364, 169),
-    iosKind: 'BeeCountBudgetWidget',
+    iosKind: 'PiggyCountBudgetWidget',
     iosFamily: 'systemMedium',
-    androidClassName: 'com.tntlikely.beecount.BeeCountBudgetWidgetProvider',
+    androidClassName: 'com.wait.piggycount.PiggyCountBudgetWidgetProvider',
     androidExtraClassNames: [
-      'com.tntlikely.beecount.BeeCountBudgetMediumWidgetProvider',
+      'com.wait.piggycount.PiggyCountBudgetMediumWidgetProvider',
     ],
   );
 
   // ---- 最近交易(recent):中/大 ----
-  // iOS 原生壳见 ios/BeeCountWidget/BeeCountRecentWidget.swift
-  // (kind BeeCountRecentWidget,supportedFamilies 中/大)。
+  // iOS 原生壳见 ios/PiggyCountWidget/PiggyCountRecentWidget.swift
+  // (kind PiggyCountRecentWidget,supportedFamilies 中/大)。
   static const recentMedium = WidgetSpec._(
     type: HWType.recent,
     size: HWSize.medium,
     logicalSize: Size(364, 169),
-    iosKind: 'BeeCountRecentWidget',
+    iosKind: 'PiggyCountRecentWidget',
     iosFamily: 'systemMedium',
-    androidClassName: 'com.tntlikely.beecount.BeeCountRecentWidgetProvider',
+    androidClassName: 'com.wait.piggycount.PiggyCountRecentWidgetProvider',
     androidExtraClassNames: [
-      'com.tntlikely.beecount.BeeCountRecentLargeWidgetProvider',
+      'com.wait.piggycount.PiggyCountRecentLargeWidgetProvider',
     ],
   );
   static const recentLarge = WidgetSpec._(
     type: HWType.recent,
     size: HWSize.large,
     logicalSize: Size(364, 382),
-    iosKind: 'BeeCountRecentWidget',
+    iosKind: 'PiggyCountRecentWidget',
     iosFamily: 'systemLarge',
-    androidClassName: 'com.tntlikely.beecount.BeeCountRecentWidgetProvider',
+    androidClassName: 'com.wait.piggycount.PiggyCountRecentWidgetProvider',
     androidExtraClassNames: [
-      'com.tntlikely.beecount.BeeCountRecentLargeWidgetProvider',
+      'com.wait.piggycount.PiggyCountRecentLargeWidgetProvider',
     ],
   );
 
   // ---- 综合仪表盘(dashboard):仅大 ----
-  // iOS 原生壳见 ios/BeeCountWidget/BeeCountDashboardWidget.swift
-  // (kind BeeCountDashboardWidget,supportedFamilies 仅大)。
+  // iOS 原生壳见 ios/PiggyCountWidget/PiggyCountDashboardWidget.swift
+  // (kind PiggyCountDashboardWidget,supportedFamilies 仅大)。
   static const dashboardLarge = WidgetSpec._(
     type: HWType.dashboard,
     size: HWSize.large,
     logicalSize: Size(364, 382),
-    iosKind: 'BeeCountDashboardWidget',
+    iosKind: 'PiggyCountDashboardWidget',
     iosFamily: 'systemLarge',
-    androidClassName: 'com.tntlikely.beecount.BeeCountDashboardWidgetProvider',
+    androidClassName: 'com.wait.piggycount.PiggyCountDashboardWidgetProvider',
   );
 
   /// 全部合法 (type, size) 组合的目录(见 plan.md §二逐组件 spec)。
@@ -278,13 +278,13 @@ class WidgetSpec {
   /// home_widget(0.9.x `HomeWidgetPlugin.kt` getInstalledWidgets)返回的是
   /// `ComponentName.shortClassName`:当 applicationId 与类所在包名相同时
   /// (**prod 商店包** `com.tntlikely.beecount` 正是如此),它是带前导点的
-  /// 短名 `.BeeCountWidgetProvider` 而**不是**全限定名;dev/debug 因
+  /// 短名 `.PiggyCountWidgetProvider` 而**不是**全限定名;dev/debug 因
   /// applicationIdSuffix(`.dev`/`.debug`)与类包名不同才返回全名。此前只按
   /// 全限定名精确比对,商店包上所有条目都匹配不到 → 被当成"一个组件都没装"
   /// → 全部不渲染(dev 真机永远复现不了的发布级缺陷,2026-07 review 发现)。
   ///
   /// 短名以 `.` 开头,`candidate.endsWith(installed)` 自带点号边界,不会把
-  /// `XxxBeeCountWidgetProvider` 误匹配成 `BeeCountWidgetProvider`。
+  /// `XxxPiggyCountWidgetProvider` 误匹配成 `PiggyCountWidgetProvider`。
   static bool _androidClassMatches(String? installed, List<String> candidates) {
     if (installed == null || installed.isEmpty) return false;
     for (final c in candidates) {

@@ -21,7 +21,7 @@ import 'transactions_json.dart';
 /// 使用 flutter_cloud_sync 包实现云同步，保留 BeeCount 特定的业务逻辑
 class TransactionsSyncManager implements SyncService {
   final fcs.CloudServiceConfig config;
-  final BeeDatabase db;
+  final PiggyDatabase db;
   final BaseRepository repo;
 
   /// 可选的加密服务。若非 null 且加密已开启，会在 _initialize() 中
@@ -1125,7 +1125,7 @@ class TransactionsSyncManager implements SyncService {
 
 /// 账本交易数据序列化器
 class _TransactionSerializer implements fcs.DataSerializer<int> {
-  final BeeDatabase db;
+  final PiggyDatabase db;
 
   _TransactionSerializer(this.db);
 

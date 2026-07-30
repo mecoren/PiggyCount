@@ -26,15 +26,15 @@ import '../settings/log_center_page.dart';
 ///      / localAccounts / remoteAccounts / localCategories / remoteCategories
 ///      / localTags / remoteTags / localBudgets / remoteBudgets / unpushedChanges)
 ///   3. 下拉刷新:调 checkSyncHealth → 有差异就自动 sync()
-class BeeCountCloudSyncPage extends ConsumerStatefulWidget {
-  const BeeCountCloudSyncPage({super.key});
+class PiggyCountCloudSyncPage extends ConsumerStatefulWidget {
+  const PiggyCountCloudSyncPage({super.key});
 
   @override
-  ConsumerState<BeeCountCloudSyncPage> createState() =>
-      _BeeCountCloudSyncPageState();
+  ConsumerState<PiggyCountCloudSyncPage> createState() =>
+      _PiggyCountCloudSyncPageState();
 }
 
-class _BeeCountCloudSyncPageState extends ConsumerState<BeeCountCloudSyncPage> {
+class _PiggyCountCloudSyncPageState extends ConsumerState<PiggyCountCloudSyncPage> {
   SyncHealthReport? _latestReport;
   bool _checking = false;
   bool _autoSyncing = false;
@@ -132,7 +132,7 @@ class _BeeCountCloudSyncPageState extends ConsumerState<BeeCountCloudSyncPage> {
 
     if (ledgerId == 0) {
       return Scaffold(
-        backgroundColor: BeeTokens.scaffoldBackground(context),
+        backgroundColor: PiggyTokens.scaffoldBackground(context),
         body: Column(
           children: [
             PrimaryHeader(
@@ -145,7 +145,7 @@ class _BeeCountCloudSyncPageState extends ConsumerState<BeeCountCloudSyncPage> {
                 child: Text(
                   l10n.aiOcrNoLedger,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: BeeTokens.textSecondary(context),
+                        color: PiggyTokens.textSecondary(context),
                       ),
                 ),
               ),
@@ -156,7 +156,7 @@ class _BeeCountCloudSyncPageState extends ConsumerState<BeeCountCloudSyncPage> {
     }
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           PrimaryHeader(
@@ -220,7 +220,7 @@ class _BeeCountCloudSyncPageState extends ConsumerState<BeeCountCloudSyncPage> {
                                 'BeeCount Cloud v$v',
                                 style: TextStyle(
                                   fontSize: 11,
-                                  color: BeeTokens.textTertiary(context),
+                                  color: PiggyTokens.textTertiary(context),
                                 ),
                               ),
                             ),
@@ -306,13 +306,13 @@ class _BeeCountCloudSyncPageState extends ConsumerState<BeeCountCloudSyncPage> {
         tilePadding: EdgeInsets.zero,
         childrenPadding: const EdgeInsets.only(bottom: 4),
         leading: Icon(Icons.help_outline,
-            color: BeeTokens.iconSecondary(context)),
+            color: PiggyTokens.iconSecondary(context)),
         title: Text(
           l10n.cloudSyncHelpTitle,
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: BeeTokens.textPrimary(context),
+            color: PiggyTokens.textPrimary(context),
           ),
         ),
         children: [
@@ -358,7 +358,7 @@ class _BeeCountCloudSyncPageState extends ConsumerState<BeeCountCloudSyncPage> {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: BeeTokens.textPrimary(context),
+              color: PiggyTokens.textPrimary(context),
             ),
           ),
           const SizedBox(height: 4),
@@ -367,7 +367,7 @@ class _BeeCountCloudSyncPageState extends ConsumerState<BeeCountCloudSyncPage> {
             style: TextStyle(
               fontSize: 12.5,
               height: 1.5,
-              color: BeeTokens.textSecondary(context),
+              color: PiggyTokens.textSecondary(context),
             ),
           ),
         ],
@@ -382,11 +382,11 @@ class _BeeCountCloudSyncPageState extends ConsumerState<BeeCountCloudSyncPage> {
     final title = Row(
       children: [
         Icon(Icons.cloud_sync_outlined,
-            color: BeeTokens.iconSecondary(context), size: 20),
+            color: PiggyTokens.iconSecondary(context), size: 20),
         const SizedBox(width: 8),
         Text(l10n.syncHealthTitle,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: BeeTokens.textPrimary(context),
+                  color: PiggyTokens.textPrimary(context),
                   fontWeight: FontWeight.w600,
                 )),
         const Spacer(),
@@ -423,7 +423,7 @@ class _BeeCountCloudSyncPageState extends ConsumerState<BeeCountCloudSyncPage> {
           const SizedBox(height: 8),
           Text(
             l10n.syncHealthCheckFailed(effective.error ?? ''),
-            style: TextStyle(color: BeeTokens.error(context), fontSize: 12),
+            style: TextStyle(color: PiggyTokens.error(context), fontSize: 12),
           ),
         ],
       );
@@ -442,8 +442,8 @@ class _BeeCountCloudSyncPageState extends ConsumerState<BeeCountCloudSyncPage> {
           style: TextStyle(
             fontSize: 12,
             color: effective.hasDiff
-                ? BeeTokens.warning(context)
-                : BeeTokens.textSecondary(context),
+                ? PiggyTokens.warning(context)
+                : PiggyTokens.textSecondary(context),
           ),
         ),
         const SizedBox(height: 8),
@@ -476,7 +476,7 @@ class _BeeCountCloudSyncPageState extends ConsumerState<BeeCountCloudSyncPage> {
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
-          color: BeeTokens.textTertiary(context),
+          color: PiggyTokens.textTertiary(context),
           letterSpacing: 0.4,
         ),
       ),
@@ -495,7 +495,7 @@ class _BeeCountCloudSyncPageState extends ConsumerState<BeeCountCloudSyncPage> {
               label,
               style: TextStyle(
                 fontSize: 13,
-                color: BeeTokens.textSecondary(context),
+                color: PiggyTokens.textSecondary(context),
               ),
             ),
           ),
@@ -507,8 +507,8 @@ class _BeeCountCloudSyncPageState extends ConsumerState<BeeCountCloudSyncPage> {
               style: TextStyle(
                 fontSize: 13,
                 color: mismatch
-                    ? BeeTokens.warning(context)
-                    : BeeTokens.textPrimary(context),
+                    ? PiggyTokens.warning(context)
+                    : PiggyTokens.textPrimary(context),
                 fontWeight: mismatch ? FontWeight.w600 : FontWeight.w400,
               ),
             ),
@@ -530,7 +530,7 @@ class _BeeCountCloudSyncPageState extends ConsumerState<BeeCountCloudSyncPage> {
               AppLocalizations.of(context).syncHealthRowUnpushed,
               style: TextStyle(
                 fontSize: 13,
-                color: BeeTokens.textSecondary(context),
+                color: PiggyTokens.textSecondary(context),
               ),
             ),
           ),
@@ -540,8 +540,8 @@ class _BeeCountCloudSyncPageState extends ConsumerState<BeeCountCloudSyncPage> {
               style: TextStyle(
                 fontSize: 13,
                 color: highlight
-                    ? BeeTokens.warning(context)
-                    : BeeTokens.textPrimary(context),
+                    ? PiggyTokens.warning(context)
+                    : PiggyTokens.textPrimary(context),
                 fontWeight: highlight ? FontWeight.w600 : FontWeight.w400,
               ),
             ),

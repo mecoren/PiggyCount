@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:beecount/ai/providers/ai_provider_factory.dart';
+import 'package:piggycount/ai/providers/ai_provider_factory.dart';
 
 /// issue #312:推理模型(kimi-k2.5 / o1 / o3 / R1)锁 temperature=1,被拒时自适应摘参数。
 ///

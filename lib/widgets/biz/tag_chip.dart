@@ -60,7 +60,7 @@ class TagChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tagColor = _parseColor(context);
-    final isDark = BeeTokens.isDark(context);
+    final isDark = PiggyTokens.isDark(context);
 
     // 根据尺寸设置参数
     final double height;
@@ -218,7 +218,7 @@ class TagChipList extends StatelessWidget {
                 horizontal: size == TagChipSize.small ? 8 : (size == TagChipSize.medium ? 12 : 16),
               ),
               decoration: BoxDecoration(
-                color: BeeTokens.isDark(context)
+                color: PiggyTokens.isDark(context)
                     ? Colors.white.withValues(alpha: 0.1)
                     : Colors.black.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(
@@ -230,7 +230,7 @@ class TagChipList extends StatelessWidget {
                   '+$moreCount',
                   style: TextStyle(
                     fontSize: size == TagChipSize.small ? 11 : (size == TagChipSize.medium ? 13 : 15),
-                    color: BeeTokens.textSecondary(context),
+                    color: PiggyTokens.textSecondary(context),
                   ),
                 ),
               ),

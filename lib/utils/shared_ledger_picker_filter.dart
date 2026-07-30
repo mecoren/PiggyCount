@@ -45,7 +45,7 @@ class LedgerPickerContext {
   bool get isEditorInShared => isShared && myRole != 'owner';
 }
 
-extension SharedLedgerPickerFilter on BeeDatabase {
+extension SharedLedgerPickerFilter on PiggyDatabase {
   /// 从本地 ledgers 表解析当前 ledger 的 picker 上下文。
   Future<LedgerPickerContext?> loadLedgerPickerContext(int? ledgerId) async {
     if (ledgerId == null) return null;

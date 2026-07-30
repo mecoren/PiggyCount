@@ -197,7 +197,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
   TextStyle _sectionTitle(BuildContext context) => TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w600,
-        color: BeeTokens.textPrimary(context),
+        color: PiggyTokens.textPrimary(context),
       );
 
   @override
@@ -216,7 +216,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
     final isBankCard = _selectedType == 'bank_card';
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           PrimaryHeader(
@@ -321,7 +321,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                               SizedBox(
                                 width: 120.0.scaled(context, ref),
                                 child: InkWell(
-                                  borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                                  borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                                   onTap: () async {
                                     // 同账单日：开选择器前先收键盘
                                     FocusManager.instance.primaryFocus?.unfocus();
@@ -364,7 +364,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                                         Icon(Icons.expand_more,
                                             size: 18.0.scaled(context, ref),
                                             color:
-                                                BeeTokens.iconTertiary(context)),
+                                                PiggyTokens.iconTertiary(context)),
                                       ],
                                     ),
                                   ),
@@ -489,7 +489,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                               ],
                             ),
                             SizedBox(height: 4.0.scaled(context, ref)),
-                            Divider(color: BeeTokens.divider(context)),
+                            Divider(color: PiggyTokens.divider(context)),
                             // 还款提醒
                             SwitchListTile(
                               dense: true,
@@ -498,14 +498,14 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                                 l10n.creditCardReminderTitle,
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: BeeTokens.textPrimary(context),
+                                  color: PiggyTokens.textPrimary(context),
                                 ),
                               ),
                               subtitle: Text(
                                 l10n.creditCardReminderDesc,
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: BeeTokens.textTertiary(context),
+                                  color: PiggyTokens.textTertiary(context),
                                 ),
                               ),
                               value: _reminderEnabled,
@@ -529,7 +529,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                                       fontSize: 12,
                                       color: isSelected
                                           ? primaryColor
-                                          : BeeTokens.textSecondary(context),
+                                          : PiggyTokens.textSecondary(context),
                                       fontWeight: isSelected
                                           ? FontWeight.w600
                                           : FontWeight.normal,
@@ -680,7 +680,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                       child: OutlinedButton(
                         onPressed: _saving ? null : _delete,
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: BeeTokens.error(context),
+                          foregroundColor: PiggyTokens.error(context),
                           side: const BorderSide(color: Colors.red, width: 1.5),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(
@@ -854,7 +854,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              style: TextButton.styleFrom(foregroundColor: BeeTokens.error(context)),
+              style: TextButton.styleFrom(foregroundColor: PiggyTokens.error(context)),
               child: Text(l10n.commonDelete),
             ),
           ],
@@ -877,7 +877,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              style: TextButton.styleFrom(foregroundColor: BeeTokens.error(context)),
+              style: TextButton.styleFrom(foregroundColor: PiggyTokens.error(context)),
               child: Text(l10n.commonDelete),
             ),
           ],
@@ -1026,9 +1026,9 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
     return showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: BeeTokens.surfaceElevated(context),
+      backgroundColor: PiggyTokens.surfaceElevated(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
       ),
       builder: (bctx) {
         String query = '';
@@ -1110,25 +1110,25 @@ InputDecoration _filledDecoration(
   String? errorText,
 }) {
   OutlineInputBorder b(Color c, double w) => OutlineInputBorder(
-        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         borderSide: w == 0 ? BorderSide.none : BorderSide(color: c, width: w),
       );
   return InputDecoration(
     labelText: label,
     hintText: hint,
-    hintStyle: TextStyle(color: BeeTokens.textTertiary(context)),
+    hintStyle: TextStyle(color: PiggyTokens.textTertiary(context)),
     prefixText: prefix,
     errorText: errorText,
     filled: true,
-    fillColor: BeeTokens.surfaceInput(context),
+    fillColor: PiggyTokens.surfaceInput(context),
     isDense: true,
     floatingLabelBehavior: FloatingLabelBehavior.auto,
     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
     border: b(Colors.transparent, 0),
     enabledBorder: b(Colors.transparent, 0),
     focusedBorder: b(primary, 1.5),
-    errorBorder: b(BeeTokens.error(context), 1),
-    focusedErrorBorder: b(BeeTokens.error(context), 1.5),
+    errorBorder: b(PiggyTokens.error(context), 1),
+    focusedErrorBorder: b(PiggyTokens.error(context), 1.5),
   );
 }
 
@@ -1152,7 +1152,7 @@ class _DayPickerTile extends ConsumerWidget {
     final hasValue = value != null;
     return InkWell(
       onTap: () => _showDayPicker(context, l10n),
-      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
       child: InputDecorator(
         decoration: _filledDecoration(context, primaryColor, label: label),
         child: Row(
@@ -1165,14 +1165,14 @@ class _DayPickerTile extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 16,
                   color: hasValue
-                      ? BeeTokens.textPrimary(context)
-                      : BeeTokens.textTertiary(context),
+                      ? PiggyTokens.textPrimary(context)
+                      : PiggyTokens.textTertiary(context),
                 ),
               ),
             ),
             Icon(Icons.expand_more,
                 size: 18.0.scaled(context, ref),
-                color: BeeTokens.iconTertiary(context)),
+                color: PiggyTokens.iconTertiary(context)),
           ],
         ),
       ),
@@ -1186,9 +1186,9 @@ class _DayPickerTile extends ConsumerWidget {
     if (!context.mounted) return;
     await showModalBottomSheet(
       context: context,
-      backgroundColor: BeeTokens.surfaceElevated(context),
+      backgroundColor: PiggyTokens.surfaceElevated(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
       ),
       builder: (ctx) {
         return SizedBox(
@@ -1224,11 +1224,11 @@ class _DayPickerTile extends ConsumerWidget {
                           color: isSelected
                               ? primaryColor
                               : Colors.transparent,
-                          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                           border: Border.all(
                             color: isSelected
                                 ? primaryColor
-                                : BeeTokens.border(ctx),
+                                : PiggyTokens.border(ctx),
                           ),
                         ),
                         alignment: Alignment.center,
@@ -1239,7 +1239,7 @@ class _DayPickerTile extends ConsumerWidget {
                             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                             color: isSelected
                                 ? Colors.white
-                                : BeeTokens.textPrimary(ctx),
+                                : PiggyTokens.textPrimary(ctx),
                           ),
                         ),
                       ),
@@ -1277,16 +1277,16 @@ class _AccountTypeCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // 禁用态：灰底 + 浅边 + 灰字 + 图标淡化，明确区别于可选/选中
     final Color bg = disabled
-        ? BeeTokens.surfaceInput(context)
+        ? PiggyTokens.surfaceInput(context)
         : (isSelected
             ? primaryColor.withValues(alpha: 0.12)
-            : BeeTokens.surfaceElevated(context));
+            : PiggyTokens.surfaceElevated(context));
     final Color borderColor = disabled
-        ? BeeTokens.divider(context)
-        : (isSelected ? primaryColor : BeeTokens.border(context));
+        ? PiggyTokens.divider(context)
+        : (isSelected ? primaryColor : PiggyTokens.border(context));
     final Color fg = disabled
-        ? BeeTokens.textTertiary(context)
-        : (isSelected ? primaryColor : BeeTokens.textSecondary(context));
+        ? PiggyTokens.textTertiary(context)
+        : (isSelected ? primaryColor : PiggyTokens.textSecondary(context));
     return InkWell(
       onTap: disabled ? null : onTap,
       borderRadius: BorderRadius.circular(8.0.scaled(context, ref)),

@@ -105,7 +105,7 @@ class UpdateInstaller {
       }
 
       // 使用MethodChannel调用原生Android代码
-      const platform = MethodChannel('com.tntlikely.beecount/install');
+      const platform = MethodChannel('com.wait.piggycount/install');
 
       logger.info('UpdateInstaller', 'UPDATE_CRASH: 调用原生安装方法，文件路径: $filePath');
 

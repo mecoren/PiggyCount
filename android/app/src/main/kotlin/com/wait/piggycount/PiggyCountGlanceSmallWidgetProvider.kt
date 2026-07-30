@@ -1,4 +1,4 @@
-package com.tntlikely.beecount
+package com.wait.piggycount
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
@@ -17,13 +17,13 @@ import java.io.File
  *
  * 对应 `lib/widget/widget_spec.dart` 的 `glanceSmall`,渲染管线把图片写入
  * 固定 key `widget_glance_small`。之所以是独立 provider 而不是给历史的
- * [BeeCountWidgetProvider](中号)加尺寸分档:老 provider 承载着存量用户
+ * [PiggyCountWidgetProvider](中号)加尺寸分档:老 provider 承载着存量用户
  * 已放置的组件(D2 back-compat,零改动原则),小号作为补全新增单独成类,
  * 互不影响。
  */
-class BeeCountGlanceSmallWidgetProvider : HomeWidgetProvider() {
+class PiggyCountGlanceSmallWidgetProvider : HomeWidgetProvider() {
     companion object {
-        private const val TAG = "BeeCountGlanceSmall"
+        private const val TAG = "PiggyCountGlanceSmall"
         private const val IMAGE_KEY = "widget_glance_small"
     }
 
@@ -62,7 +62,7 @@ class BeeCountGlanceSmallWidgetProvider : HomeWidgetProvider() {
                     // 整块点击 → 记支出(小号主视觉是今日支出大数,没有中号的
                     // 左右分区语义;与 iOS 小号 family 的整卡 Link 行为一致)。
                     try {
-                        val intent = createLaunchIntentWithDeepLink(context, "beecount://new?type=expense")
+                        val intent = createLaunchIntentWithDeepLink(context, "piggycount://new?type=expense")
                         val pending = PendingIntent.getActivity(
                             context, widgetId, intent,
                             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE

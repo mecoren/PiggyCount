@@ -69,7 +69,7 @@ class _NetWorthTrendPageState extends ConsumerState<NetWorthTrendPage> {
         (ref.watch(usedCurrenciesProvider).valueOrNull?.length ?? 1) > 1;
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           PrimaryHeader(
@@ -82,7 +82,7 @@ class _NetWorthTrendPageState extends ConsumerState<NetWorthTrendPage> {
                     child: Text(
                       l10n.commonEmpty,
                       style:
-                          TextStyle(color: BeeTokens.textTertiary(context)),
+                          TextStyle(color: PiggyTokens.textTertiary(context)),
                     ),
                   );
                 }
@@ -108,14 +108,14 @@ class _NetWorthTrendPageState extends ConsumerState<NetWorthTrendPage> {
                           showCurrency: true,
                           style: TextStyle(
                               fontSize: 13,
-                              color: BeeTokens.textTertiary(context)),
+                              color: PiggyTokens.textTertiary(context)),
                         ),
                         Padding(
                           padding: EdgeInsets.symmetric(
                               horizontal: 6.0.scaled(context, ref)),
                           child: Icon(Icons.arrow_forward,
                               size: 14,
-                              color: BeeTokens.iconTertiary(context)),
+                              color: PiggyTokens.iconTertiary(context)),
                         ),
                         AmountText(
                           value: last,
@@ -124,7 +124,7 @@ class _NetWorthTrendPageState extends ConsumerState<NetWorthTrendPage> {
                           style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
-                              color: BeeTokens.textPrimary(context)),
+                              color: PiggyTokens.textPrimary(context)),
                         ),
                         const Spacer(),
                         // 期初净值为 0 时 pct 无意义(会显示误导的「+0.0%」),不显。
@@ -135,8 +135,8 @@ class _NetWorthTrendPageState extends ConsumerState<NetWorthTrendPage> {
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                                 color: delta >= 0
-                                    ? BeeTokens.incomeColor(context, ref)
-                                    : BeeTokens.expenseColor(context, ref)),
+                                    ? PiggyTokens.incomeColor(context, ref)
+                                    : PiggyTokens.expenseColor(context, ref)),
                           ),
                       ],
                     ),
@@ -155,8 +155,8 @@ class _NetWorthTrendPageState extends ConsumerState<NetWorthTrendPage> {
                         showHint: false,
                         hideAmounts: hide,
                         themeColor: primary,
-                        whiteBg: !BeeTokens.isDark(context),
-                        isDark: BeeTokens.isDark(context),
+                        whiteBg: !PiggyTokens.isDark(context),
+                        isDark: PiggyTokens.isDark(context),
                         showGrid: true,
                         showDots: true,
                         annotate: true,
@@ -170,7 +170,7 @@ class _NetWorthTrendPageState extends ConsumerState<NetWorthTrendPage> {
                           l10n.netWorthTrendMultiCurrencyNote,
                           style: TextStyle(
                               fontSize: 11,
-                              color: BeeTokens.textTertiary(context)),
+                              color: PiggyTokens.textTertiary(context)),
                         ),
                       ),
                   ],
@@ -181,7 +181,7 @@ class _NetWorthTrendPageState extends ConsumerState<NetWorthTrendPage> {
               error: (_, __) => Center(
                 child: Text(
                   l10n.commonError,
-                  style: TextStyle(color: BeeTokens.textTertiary(context)),
+                  style: TextStyle(color: PiggyTokens.textTertiary(context)),
                 ),
               ),
             ),
@@ -252,12 +252,12 @@ class _TrendChipSelector<T> extends StatelessWidget {
                 fontSize: 13,
                 color: selected == v
                     ? primaryColor
-                    : BeeTokens.textSecondary(context),
+                    : PiggyTokens.textSecondary(context),
                 fontWeight: selected == v ? FontWeight.w600 : FontWeight.normal,
               ),
               side: BorderSide(
                 color:
-                    selected == v ? primaryColor : BeeTokens.border(context),
+                    selected == v ? primaryColor : PiggyTokens.border(context),
               ),
               onSelected: (_) => onSelected(v),
             ),

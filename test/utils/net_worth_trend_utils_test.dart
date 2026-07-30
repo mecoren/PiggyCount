@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:beecount/utils/net_worth_trend_utils.dart';
+import 'package:piggycount/utils/net_worth_trend_utils.dart';
 
 /// 构造一条每日序列条目(net 用作可辨识的标记值)。
 ({DateTime date, double assets, double liabilities, double net}) _pt(

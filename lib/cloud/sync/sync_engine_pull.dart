@@ -24,7 +24,7 @@ part of 'sync_engine.dart';
 class AppCursorStore {
   AppCursorStore(this._provider);
 
-  final BeeCountCloudProvider _provider;
+  final PiggyCountCloudProvider _provider;
 
   /// 读取当前 cursor。未登录返 0(等价"从头开始")。
   Future<int> read() async {
@@ -60,7 +60,7 @@ class AppCursorStore {
   }
 
   Future<String?> _key() async {
-    final auth = _provider.auth as BeeCountCloudAuthService;
+    final auth = _provider.auth as PiggyCountCloudAuthService;
     final userId = auth.currentUserId;
     final deviceId = auth.currentDeviceId;
     if (userId == null || deviceId == null) return null;
@@ -71,7 +71,7 @@ class AppCursorStore {
   }
 
   Future<String?> _providerKey() async {
-    final auth = _provider.auth as BeeCountCloudAuthService;
+    final auth = _provider.auth as PiggyCountCloudAuthService;
     final userId = auth.currentUserId ?? 'unknown';
     final deviceId = auth.currentDeviceId ?? 'unknown';
     final baseUrl = _provider.baseUrl ?? 'unknown';
@@ -96,7 +96,7 @@ class AppCursorStore {
 class SyncErrorStore {
   SyncErrorStore(this._db);
 
-  final BeeDatabase _db;
+  final PiggyDatabase _db;
 
   /// 记录一条 apply 失败。同 [change.changeId] 已存在 → attempt_count++。
   ///
@@ -105,7 +105,7 @@ class SyncErrorStore {
   /// 改成 **update-first**:先按 changeId 尝试 update,affected=0 才 insert,
   /// insert 失败再降级为 update。
   Future<void> record({
-    required BeeCountCloudSyncChange change,
+    required PiggyCountCloudSyncChange change,
     required Object error,
     required StackTrace stackTrace,
   }) async {
@@ -198,7 +198,7 @@ class SyncErrorStore {
     return '${s.substring(0, max)}\n…(truncated)';
   }
 
-  String _encodeChange(BeeCountCloudSyncChange change) {
+  String _encodeChange(PiggyCountCloudSyncChange change) {
     return jsonEncode({
       'change_id': change.changeId,
       'ledger_id': change.ledgerId,
@@ -239,7 +239,7 @@ class LookupCache {
   /// 这是 10k 条 = 10k 次 SELECT,后期变慢的主因。改走 cache 一次性 prime。
   final Map<String, _TxCacheEntry> _tx = {};
 
-  Future<void> prime(BeeDatabase db) async {
+  Future<void> prime(PiggyDatabase db) async {
     final ledgers = await db.select(db.ledgers).get();
     for (final l in ledgers) {
       final s = l.syncId;

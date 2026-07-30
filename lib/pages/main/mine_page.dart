@@ -15,7 +15,7 @@ import '../settings/help_center_page.dart';
 import '../../services/export/share_poster_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../cloud/cloud_sync_page.dart';
-import '../cloud/beecount_cloud_sync_page.dart';
+import '../cloud/piggycount_cloud_sync_page.dart';
 import '../../utils/website_urls.dart';
 import '../../providers/github_star_provider.dart';
 import '../settings/data_management_page.dart';
@@ -44,7 +44,7 @@ class MinePage extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
       appBar: GlassTitleBar(
         title: l10n.mineTitle,
@@ -103,8 +103,8 @@ class MinePage extends ConsumerWidget {
                             return 'S3';
                           case CloudBackendType.beecountCloud:
                             return cloudVersion != null && cloudVersion.isNotEmpty
-                                ? 'BeeCount Cloud v$cloudVersion'
-                                : 'BeeCount Cloud';
+                                ? 'PiggyCount Cloud v$cloudVersion'
+                                : 'PiggyCount Cloud';
                         }
                       },
                     ),
@@ -258,7 +258,7 @@ class MinePage extends ConsumerWidget {
                               await Navigator.of(sectionContext).push(
                                 MaterialPageRoute(
                                     builder: (_) => isBeeCount
-                                        ? const BeeCountCloudSyncPage()
+                                        ? const PiggyCountCloudSyncPage()
                                         : const CloudSyncPage()),
                               );
                             },
@@ -516,7 +516,7 @@ void _showGitHubStarGuide(BuildContext context) {
               const SizedBox(height: 16),
               // 引导图片
               ClipRRect(
-                borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                 child: Image.asset(
                   'assets/images/github_star_guide.png',
                   fit: BoxFit.contain,

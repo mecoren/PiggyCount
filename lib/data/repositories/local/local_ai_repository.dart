@@ -6,7 +6,7 @@ import '../ai_repository.dart';
 /// 本地AI Repository实现
 /// 基于 Drift 数据库实现
 class LocalAIRepository implements AIRepository {
-  final BeeDatabase db;
+  final PiggyDatabase db;
 
   LocalAIRepository(this.db);
 

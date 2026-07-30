@@ -6,11 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:beecount/data/db.dart';
-import 'package:beecount/data/repositories/local/local_repository.dart';
-import 'package:beecount/providers/currency_providers.dart';
-import 'package:beecount/providers/database_providers.dart';
-import 'package:beecount/services/currency/exchange_rate_service.dart';
+import 'package:piggycount/data/db.dart';
+import 'package:piggycount/data/repositories/local/local_repository.dart';
+import 'package:piggycount/providers/currency_providers.dart';
+import 'package:piggycount/providers/database_providers.dart';
+import 'package:piggycount/services/currency/exchange_rate_service.dart';
 
 /// 假汇率源:固定返回 CNY 基准的几个币种(不打网络)。
 class _FakeRateService implements ExchangeRateService {
@@ -34,11 +34,11 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   SharedPreferences.setMockInitialValues({});
 
-  late BeeDatabase db;
+  late PiggyDatabase db;
   late LocalRepository repo;
 
   setUp(() {
-    db = BeeDatabase.forTesting(NativeDatabase.memory());
+    db = PiggyDatabase.forTesting(NativeDatabase.memory());
     repo = LocalRepository(db);
   });
 

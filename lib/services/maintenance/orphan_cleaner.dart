@@ -25,7 +25,7 @@ import 'orphan_record.dart';
 class OrphanCleaner {
   OrphanCleaner({required this.db});
 
-  final BeeDatabase db;
+  final PiggyDatabase db;
 
   /// 批量清理。返回 (成功数,失败列表)。
   Future<OrphanCleanResult> clean(List<OrphanRecord> records) async {

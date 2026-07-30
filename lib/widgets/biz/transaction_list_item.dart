@@ -105,16 +105,16 @@ class TransactionListItem extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: BeeTokens.isDark(context)
+        color: PiggyTokens.isDark(context)
             ? Colors.white.withValues(alpha: 0.1)
             : Colors.black.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
       ),
       child: Text(
         label,
         style: TextStyle(
           fontSize: 11,
-          color: BeeTokens.textTertiary(context),
+          color: PiggyTokens.textTertiary(context),
         ),
       ),
     );
@@ -147,7 +147,7 @@ class TransactionListItem extends ConsumerWidget {
     }
 
     final textStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
-      color: BeeTokens.textTertiary(context),
+      color: PiggyTokens.textTertiary(context),
       fontSize: 11,
     );
 
@@ -159,7 +159,7 @@ class TransactionListItem extends ConsumerWidget {
           Icon(
             Icons.image_outlined,
             size: 12,
-            color: BeeTokens.textTertiary(context),
+            color: PiggyTokens.textTertiary(context),
           ),
           const SizedBox(width: 2),
           Text('$attachmentCount', style: textStyle),
@@ -237,7 +237,7 @@ class TransactionListItem extends ConsumerWidget {
       onTap: isSelectionMode ? onSelectionChanged : onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(
-            horizontal: 12, vertical: BeeDimens.listRowVertical),
+            horizontal: 12, vertical: PiggyDimens.listRowVertical),
         child: Row(
           children: [
             // 选择模式下显示复选框，否则显示分类图标
@@ -290,13 +290,13 @@ class TransactionListItem extends ConsumerWidget {
                             return Text.rich(
                               TextSpan(
                                 text: composed.primary,
-                                style: BeeTextTokens.title(context),
+                                style: PiggyTextTokens.title(context),
                                 children: [
                                   if (composed.parenNote != null)
                                     TextSpan(
                                       text: '  (${composed.parenNote})',
                                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: BeeTokens.textSecondary(context),
+                                        color: PiggyTokens.textSecondary(context),
                                       ),
                                     ),
                                 ],
@@ -313,7 +313,7 @@ class TransactionListItem extends ConsumerWidget {
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: ref.watch(primaryColorProvider).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+                              borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                             ),
                             child: Text(
                               ledgerName!,
@@ -354,16 +354,16 @@ class TransactionListItem extends ConsumerWidget {
                     showCurrency: _isForeign(ref),
                     currencyCode: currencyCode,
                     decimals: 2,
-                    style: BeeTextTokens.title(context).copyWith(
+                    style: PiggyTextTokens.title(context).copyWith(
                       color: isAdjustment
                           ? (amount >= 0
-                              ? BeeTokens.incomeColor(context, ref)
-                              : BeeTokens.expenseColor(context, ref))
+                              ? PiggyTokens.incomeColor(context, ref)
+                              : PiggyTokens.expenseColor(context, ref))
                           : isTransfer
-                              ? BeeTokens.textPrimary(context)
+                              ? PiggyTokens.textPrimary(context)
                               : isExpense
-                                  ? BeeTokens.expenseColor(context, ref)
-                                  : BeeTokens.incomeColor(context, ref),
+                                  ? PiggyTokens.expenseColor(context, ref)
+                                  : PiggyTokens.incomeColor(context, ref),
                     )),
                 // 标签行 + ≈折算小字(反馈15:折算放标签右边,同一行;无标签时
                 // 折算独占该行)。隐藏金额开关开启时折算同样遮蔽。
@@ -397,7 +397,7 @@ class TransactionListItem extends ConsumerWidget {
                             '≈${nativeAmount!.toStringAsFixed(2)}',
                             style: TextStyle(
                               fontSize: 11,
-                              color: BeeTokens.textTertiary(context),
+                              color: PiggyTokens.textTertiary(context),
                             ),
                           ),
                       ],

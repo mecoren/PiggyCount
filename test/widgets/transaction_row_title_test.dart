@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:beecount/widgets/biz/transaction_row_title.dart';
+import 'package:piggycount/widgets/biz/transaction_row_title.dart';
 
 void main() {
   group('composeTransactionRowTitle', () {

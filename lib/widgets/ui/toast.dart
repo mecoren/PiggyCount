@@ -8,7 +8,7 @@ void showToast(BuildContext context, String message,
     Overlay.of(context, rootOverlay: true),
     message,
     duration: duration,
-    isDark: BeeTokens.isDark(context),
+    isDark: PiggyTokens.isDark(context),
   );
 }
 
@@ -18,7 +18,7 @@ void showToast(BuildContext context, String message,
 /// Overlay 之上,`Overlay.of` 找不到祖先 Overlay 会抛 "No Overlay widget found"。
 void showToastOnOverlay(OverlayState overlay, String message,
     {Duration duration = const Duration(seconds: 2), bool? isDark}) {
-  final dark = isDark ?? BeeTokens.isDark(overlay.context);
+  final dark = isDark ?? PiggyTokens.isDark(overlay.context);
 
   final entry = OverlayEntry(
     builder: (ctx) => Positioned.fill(
@@ -34,7 +34,7 @@ void showToastOnOverlay(OverlayState overlay, String message,
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.85),
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                   // 暗黑模式下添加白色阴影，提升可见度
                   boxShadow: dark ? [
                     BoxShadow(

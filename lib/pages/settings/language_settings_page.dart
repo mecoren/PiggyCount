@@ -15,7 +15,7 @@ class LanguageSettingsPage extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
       appBar: GlassTitleBar(
         title: l10n.languageTitle,
@@ -129,13 +129,13 @@ class _LanguageOption extends StatelessWidget {
         title,
         style: TextStyle(
           fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-          color: BeeTokens.textPrimary(context),
+          color: PiggyTokens.textPrimary(context),
         ),
       ),
       trailing: isSelected
           ? Icon(
               Icons.check_circle,
-              color: BeeTokens.primary(context),
+              color: PiggyTokens.primary(context),
             )
           : null,
       onTap: onTap,

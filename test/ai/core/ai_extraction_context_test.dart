@@ -2,20 +2,20 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:beecount/ai/core/ai_extraction_context.dart';
-import 'package:beecount/ai/providers/ai_constants.dart';
-import 'package:beecount/data/db.dart';
-import 'package:beecount/data/repositories/local/local_repository.dart';
+import 'package:piggycount/ai/core/ai_extraction_context.dart';
+import 'package:piggycount/ai/providers/ai_constants.dart';
+import 'package:piggycount/data/db.dart';
+import 'package:piggycount/data/repositories/local/local_repository.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  late BeeDatabase db;
+  late PiggyDatabase db;
   late LocalRepository repo;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    db = BeeDatabase.forTesting(NativeDatabase.memory());
+    db = PiggyDatabase.forTesting(NativeDatabase.memory());
     repo = LocalRepository(db);
   });
 

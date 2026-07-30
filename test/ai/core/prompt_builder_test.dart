@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:beecount/ai/core/ai_extraction_context.dart';
-import 'package:beecount/ai/core/prompt_builder.dart';
+import 'package:piggycount/ai/core/ai_extraction_context.dart';
+import 'package:piggycount/ai/core/prompt_builder.dart';
 
 void main() {
   group('PromptBuilder', () {

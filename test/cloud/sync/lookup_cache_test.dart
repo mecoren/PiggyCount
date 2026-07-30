@@ -9,18 +9,18 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:beecount/cloud/sync/sync_engine.dart';
-import 'package:beecount/data/db.dart';
+import 'package:piggycount/cloud/sync/sync_engine.dart';
+import 'package:piggycount/data/db.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   SharedPreferences.setMockInitialValues({});
 
-  late BeeDatabase db;
+  late PiggyDatabase db;
   late LookupCache cache;
 
   setUp(() async {
-    db = BeeDatabase.forTesting(NativeDatabase.memory());
+    db = PiggyDatabase.forTesting(NativeDatabase.memory());
     cache = LookupCache();
   });
 

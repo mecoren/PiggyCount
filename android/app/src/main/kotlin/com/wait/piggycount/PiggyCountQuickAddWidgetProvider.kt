@@ -1,4 +1,4 @@
-package com.tntlikely.beecount
+package com.wait.piggycount
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
@@ -18,14 +18,14 @@ import java.io.File
  * 对应 `lib/widget/widget_spec.dart` 的 `quickAddSmall/Medium`,渲染管线把
  * 图片分别写入 `widget_quickAdd_small` / `widget_quickAdd_medium` 两个 key。
  *
- * 尺寸判定机制同 [BeeCountNetWorthWidgetProvider]:本 provider 类名覆盖
+ * 尺寸判定机制同 [PiggyCountNetWorthWidgetProvider]:本 provider 类名覆盖
  * 两档尺寸,`onUpdate` 按 `AppWidgetManager.getAppWidgetOptions` 读到的实际
  * 尺寸选择图片 key(见 [resolveImageKey]);Dart 侧 `matchInstalledAll` 为
  * 命中类名渲染该类型全部尺寸的图,任意缩放档位都有现成图可显。
  */
-open class BeeCountQuickAddWidgetProvider : HomeWidgetProvider() {
+open class PiggyCountQuickAddWidgetProvider : HomeWidgetProvider() {
     companion object {
-        private const val TAG = "BeeCountQuickAddWidget"
+        private const val TAG = "PiggyCountQuickAddWidget"
 
         // 阈值取自 widget_spec.dart 的 logicalSize:small(155x155) 与
         // medium(364x169) 宽度的中点,只是粗略分档,不代表精确换算。
@@ -68,9 +68,9 @@ open class BeeCountQuickAddWidgetProvider : HomeWidgetProvider() {
 
                     // 整块点击 → 新建支出。第一版不分区。
                     // TODO: 常用分类格拆分点击区域后,改为按分类深链
-                    // beecount://new?type=expense&category=<id>。
+                    // piggycount://new?type=expense&category=<id>。
                     try {
-                        val intent = createLaunchIntentWithDeepLink(context, "beecount://new?type=expense")
+                        val intent = createLaunchIntentWithDeepLink(context, "piggycount://new?type=expense")
                         val pending = PendingIntent.getActivity(
                             context, widgetId, intent,
                             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE

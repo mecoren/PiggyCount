@@ -115,7 +115,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     );
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           // Header
@@ -133,7 +133,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                   child: Text(
                     l10n.calendarToday,
                     style: TextStyle(
-                      color: BeeTokens.textPrimary(context),
+                      color: PiggyTokens.textPrimary(context),
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
@@ -226,7 +226,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
         titleTextStyle: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w600,
-          color: BeeTokens.textPrimary(context),
+          color: PiggyTokens.textPrimary(context),
         ),
       ),
 
@@ -254,15 +254,15 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 
         // 日期文字样式
         defaultTextStyle: TextStyle(
-          color: BeeTokens.textPrimary(context),
+          color: PiggyTokens.textPrimary(context),
         ),
         outsideTextStyle: TextStyle(
-          color: BeeTokens.textTertiary(context).withValues(alpha: 0.3),
+          color: PiggyTokens.textTertiary(context).withValues(alpha: 0.3),
         ),
 
         // 周末样式
         weekendTextStyle: TextStyle(
-          color: BeeTokens.textPrimary(context),
+          color: PiggyTokens.textPrimary(context),
         ),
 
         // 标记样式
@@ -276,11 +276,11 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
       // 星期标题样式
       daysOfWeekStyle: DaysOfWeekStyle(
         weekdayStyle: TextStyle(
-          color: BeeTokens.textSecondary(context),
+          color: PiggyTokens.textSecondary(context),
           fontSize: 12,
         ),
         weekendStyle: TextStyle(
-          color: BeeTokens.textSecondary(context),
+          color: PiggyTokens.textSecondary(context),
           fontSize: 12,
         ),
       ),
@@ -340,9 +340,9 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     } else if (isToday) {
       textColor = primaryColor;
     } else if (isOutside) {
-      textColor = BeeTokens.textTertiary(context).withValues(alpha: 0.3);
+      textColor = PiggyTokens.textTertiary(context).withValues(alpha: 0.3);
     } else {
-      textColor = BeeTokens.textPrimary(context);
+      textColor = PiggyTokens.textPrimary(context);
     }
 
     return Padding(
@@ -390,7 +390,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                         ? '-${(expense / 1000).toStringAsFixed(1)}k'
                         : '-${expense.toInt()}',
                 style: TextStyle(
-                  color: BeeTokens.expenseColor(context, ref),
+                  color: PiggyTokens.expenseColor(context, ref),
                   fontSize: 10,
                   fontWeight: FontWeight.w600,
                   height: 1.1,
@@ -407,7 +407,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                         ? '+${(income / 1000).toStringAsFixed(1)}k'
                         : '+${income.toInt()}',
                 style: TextStyle(
-                  color: BeeTokens.incomeColor(context, ref),
+                  color: PiggyTokens.incomeColor(context, ref),
                   fontSize: 10,
                   fontWeight: FontWeight.w600,
                   height: 1.1,
@@ -443,7 +443,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                 Text(
                   dateLabel,
                   style: TextStyle(
-                    color: BeeTokens.textPrimary(context),
+                    color: PiggyTokens.textPrimary(context),
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                   ),
@@ -452,7 +452,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                 Text(
                   weekdayLabel,
                   style: TextStyle(
-                    color: BeeTokens.textTertiary(context),
+                    color: PiggyTokens.textTertiary(context),
                     fontSize: 12,
                   ),
                 ),
@@ -462,12 +462,12 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
           Material(
             color: Colors.transparent,
             child: InkWell(
-              borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+              borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
               onTap: _addTransactionForSelectedDate,
               child: Ink(
                 decoration: BoxDecoration(
                   color: primaryColor,
-                  borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
                   boxShadow: [
                     BoxShadow(
                       color: primaryColor.withValues(alpha: 0.28),
@@ -516,7 +516,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                 child: Text(
                   l10n.calendarNoTransactions,
                   style: TextStyle(
-                    color: BeeTokens.textTertiary(context),
+                    color: PiggyTokens.textTertiary(context),
                   ),
                 ),
               ),
@@ -615,7 +615,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                 child: Text(
                   l10n.calendarNoTransactions,
                   style: TextStyle(
-                    color: BeeTokens.textTertiary(context),
+                    color: PiggyTokens.textTertiary(context),
                   ),
                 ),
               ),

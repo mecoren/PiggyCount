@@ -11,12 +11,12 @@ import 'dart:async';
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' hide SyncStatus;
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:beecount/cloud/startup_sync_checker.dart';
-import 'package:beecount/cloud/startup_sync_overlay.dart';
-import 'package:beecount/cloud/sync_diff_service.dart';
-import 'package:beecount/cloud/sync_service.dart';
-import 'package:beecount/data/db.dart';
-import 'package:beecount/services/data_import_service.dart';
+import 'package:piggycount/cloud/startup_sync_checker.dart';
+import 'package:piggycount/cloud/startup_sync_overlay.dart';
+import 'package:piggycount/cloud/sync_diff_service.dart';
+import 'package:piggycount/cloud/sync_service.dart';
+import 'package:piggycount/data/db.dart';
+import 'package:piggycount/services/data_import_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

@@ -1,6 +1,6 @@
 // SyncEngine 端到端测试。
 //
-// 用 in-memory Drift + FakeBeeCountCloudProvider 跑完整 pull/push/apply
+// 用 in-memory Drift + FakePiggyCountCloudProvider 跑完整 pull/push/apply
 // 链路。Day 1:smoke test 验证 fake provider 能跟 SyncEngine 兜上,跑通空 pull
 // 路径。Day 2 加更多场景(脏数据 / 单飞 / web 新建账本 / busy retry 等)。
 
@@ -10,29 +10,29 @@ import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:beecount/cloud/sync/change_tracker.dart';
-import 'package:beecount/cloud/sync/sync_engine.dart';
-import 'package:beecount/cloud/sync_service.dart' show SyncDiff;
-import 'package:beecount/data/db.dart';
-import 'package:beecount/data/repositories/local/local_repository.dart';
+import 'package:piggycount/cloud/sync/change_tracker.dart';
+import 'package:piggycount/cloud/sync/sync_engine.dart';
+import 'package:piggycount/cloud/sync_service.dart' show SyncDiff;
+import 'package:piggycount/data/db.dart';
+import 'package:piggycount/data/repositories/local/local_repository.dart';
 
-import '_fakes/fake_beecount_cloud_provider.dart';
+import '_fakes/fake_piggycount_cloud_provider.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  late BeeDatabase db;
+  late PiggyDatabase db;
   late ChangeTracker changeTracker;
   late LocalRepository repo;
-  late FakeBeeCountCloudProvider provider;
+  late FakePiggyCountCloudProvider provider;
   late SyncEngine engine;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    db = BeeDatabase.forTesting(NativeDatabase.memory());
+    db = PiggyDatabase.forTesting(NativeDatabase.memory());
     changeTracker = ChangeTracker(db);
     repo = LocalRepository(db, changeTracker: changeTracker);
-    provider = FakeBeeCountCloudProvider();
+    provider = FakePiggyCountCloudProvider();
     engine = SyncEngine(
       db: db,
       provider: provider,
@@ -723,7 +723,7 @@ void main() {
           'categoryKind': 'expense',
         },
       );
-      provider.emitRealtimeEvent(BeeCountCloudRealtimeEvent(
+      provider.emitRealtimeEvent(PiggyCountCloudRealtimeEvent(
         type: 'sync_change',
         ledgerId: 'L1',
         rawData: const {},
@@ -794,7 +794,7 @@ void main() {
       await db.into(db.ledgers).insert(LedgersCompanion.insert(
           name: 'L', syncId: const Value('L1')));
       engine.startListeningRealtime();
-      provider.emitRealtimeEvent(BeeCountCloudRealtimeEvent(
+      provider.emitRealtimeEvent(PiggyCountCloudRealtimeEvent(
         type: 'sync_change',
         ledgerId: 'L1',
         rawData: const {},
@@ -833,7 +833,7 @@ void main() {
           'categoryKind': 'expense',
         },
       );
-      provider.emitRealtimeEvent(BeeCountCloudRealtimeEvent(
+      provider.emitRealtimeEvent(PiggyCountCloudRealtimeEvent(
         type: 'sync_change',
         ledgerId: 'L1',
         rawData: const {},

@@ -68,7 +68,7 @@ class QuickAddView extends StatelessWidget {
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: widgetCardBackground(dark),
-        borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
       ),
       child: child,
     );
@@ -172,7 +172,7 @@ class QuickAddView extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: themeColor.withValues(alpha: dark ? 0.2 : 0.1),
-        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
       ),
       padding: EdgeInsets.symmetric(horizontal: 4, vertical: _cellVPad),
       child: Column(
@@ -201,7 +201,7 @@ class QuickAddView extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: widgetDivider(dark),
-        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
       ),
       child: Center(
         child: Icon(Icons.more_horiz, size: 18, color: widgetTextTertiary(dark)),
@@ -213,7 +213,7 @@ class QuickAddView extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: themeColor,
-        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
       ),
       padding: EdgeInsets.symmetric(horizontal: 4, vertical: _cellVPad),
       child: Column(

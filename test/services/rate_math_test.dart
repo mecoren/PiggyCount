@@ -2,7 +2,7 @@
 // 折算剔除缺失币种并列名;base 自身 =1;脚注取参与折算的最旧日期。
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:beecount/services/currency/rate_math.dart';
+import 'package:piggycount/services/currency/rate_math.dart';
 
 void main() {
   test('invertRate 12 位有效数字', () {

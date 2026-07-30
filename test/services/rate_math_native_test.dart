@@ -2,7 +2,7 @@
 /// 同币种 → amount;缺失/非法 rate → null(L8 红线,绝不静默 1.0)。
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:beecount/services/currency/rate_math.dart';
+import 'package:piggycount/services/currency/rate_math.dart';
 
 void main() {
   test('账户币种==本位币 → 返回 amount(rate 1,不查表)', () {

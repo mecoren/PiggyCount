@@ -6,7 +6,7 @@ import 'cloud_service_config.dart';
 class CloudServiceStore {
   static const _kActiveType =
       'cloud_active_type'; // local | beecount_cloud | supabase | webdav | icloud | s3
-  static const _kBeeCountCloudCfg = 'cloud_beecount_cloud_cfg';
+  static const _kPiggyCountCloudCfg = 'cloud_beecount_cloud_cfg';
   static const _kSupabaseCfg = 'cloud_supabase_cfg';
   static const _kWebdavCfg = 'cloud_webdav_cfg';
   static const _kS3Cfg = 'cloud_s3_cfg';
@@ -21,7 +21,7 @@ class CloudServiceStore {
         return CloudServiceConfig.localStorage();
 
       case 'beecount_cloud':
-        final raw = sp.getString(_kBeeCountCloudCfg);
+        final raw = sp.getString(_kPiggyCountCloudCfg);
         if (raw != null) {
           try {
             return decodeCloudConfig(raw);
@@ -80,9 +80,9 @@ class CloudServiceStore {
   }
 
   /// 加载 BeeCount Cloud 配置(不管是否激活)
-  Future<CloudServiceConfig?> loadBeeCountCloud() async {
+  Future<CloudServiceConfig?> loadPiggyCountCloud() async {
     final sp = await SharedPreferences.getInstance();
-    final raw = sp.getString(_kBeeCountCloudCfg);
+    final raw = sp.getString(_kPiggyCountCloudCfg);
     if (raw == null) return null;
     try {
       return decodeCloudConfig(raw);
@@ -138,7 +138,7 @@ class CloudServiceStore {
         break;
 
       case CloudBackendType.beecountCloud:
-        await sp.setString(_kBeeCountCloudCfg, encodeCloudConfig(cfg));
+        await sp.setString(_kPiggyCountCloudCfg, encodeCloudConfig(cfg));
         await sp.setString(_kActiveType, 'beecount_cloud');
         break;
 
@@ -177,7 +177,7 @@ class CloudServiceStore {
         break;
 
       case CloudBackendType.beecountCloud:
-        await sp.setString(_kBeeCountCloudCfg, encodeCloudConfig(cfg));
+        await sp.setString(_kPiggyCountCloudCfg, encodeCloudConfig(cfg));
         break;
 
       case CloudBackendType.supabase:
@@ -208,7 +208,7 @@ class CloudServiceStore {
         return true;
 
       case CloudBackendType.beecountCloud:
-        final raw = sp.getString(_kBeeCountCloudCfg);
+        final raw = sp.getString(_kPiggyCountCloudCfg);
         if (raw == null) return false;
         try {
           final cfg = decodeCloudConfig(raw);

@@ -48,13 +48,13 @@ class PrimaryHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final primary = ref.watch(primaryColorProvider);
-    final titleStyle = BeeTextTokens.title(context);
-    final subStyle = BeeTextTokens.label(context);
+    final titleStyle = PiggyTextTokens.title(context);
+    final subStyle = PiggyTextTokens.label(context);
     final effectivePadding =
         compact ? const EdgeInsets.fromLTRB(8, 6, 8, 6) : padding;
 
     // ⭐ 使用 Token 系统
-    final isDark = BeeTokens.isDark(context);
+    final isDark = PiggyTokens.isDark(context);
 
     // ⭐ 头部皮肤:亮暗通用同一款(暗色由皮肤内部渲染成纯黑底 + 偏淡主题色图形)。
     // 'none' → null = 纯主题色 / 纯黑。
@@ -64,8 +64,8 @@ class PrimaryHeader extends ConsumerWidget {
     final headerBg = isDark ? Colors.black : primary;
 
     // ⭐ 文字和图标颜色（使用 Token）
-    final textColor = BeeTokens.textPrimary(context);
-    final iconColor = BeeTokens.iconPrimary(context);
+    final textColor = PiggyTokens.textPrimary(context);
+    final iconColor = PiggyTokens.iconPrimary(context);
 
     // ⭐ 状态栏图标颜色：亮色模式用深色图标，暗黑模式用浅色图标
     final statusBarBrightness = statusBarIconBrightness ??
@@ -155,7 +155,7 @@ class PrimaryHeader extends ConsumerWidget {
                                       child: Text(
                                         subtitle!,
                                         style: subStyle.copyWith(
-                                          color: BeeTokens.textSecondary(context),
+                                          color: PiggyTokens.textSecondary(context),
                                         ),
                                         overflow: TextOverflow.ellipsis,
                                       ),

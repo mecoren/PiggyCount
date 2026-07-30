@@ -8,7 +8,7 @@ import '../statistics_repository.dart';
 /// 本地统计Repository实现
 /// 基于 Drift 数据库实现
 class LocalStatisticsRepository implements StatisticsRepository {
-  final BeeDatabase db;
+  final PiggyDatabase db;
 
   LocalStatisticsRepository(this.db);
 

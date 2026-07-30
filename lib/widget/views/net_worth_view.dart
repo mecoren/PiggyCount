@@ -150,7 +150,7 @@ class NetWorthView extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: dark ? 0.24 : 0.12),
-        borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
       ),
       child: Text(
         '$arrow ${pct.abs().toStringAsFixed(1)}%',
@@ -188,7 +188,7 @@ class NetWorthView extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           ClipRRect(
-            borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final w = constraints.maxWidth * ratio.clamp(0.0, 1.0);

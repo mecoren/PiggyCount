@@ -19,7 +19,7 @@ import '../system/logger_service.dart';
 
 class OrphanSeeder {
   OrphanSeeder({required this.db});
-  final BeeDatabase db;
+  final PiggyDatabase db;
   final _rand = Random();
 
   /// 一键塞 ≥10 项孤儿,覆盖 A/B/C 各大类。返回汇总 log,方便 toast 显示。

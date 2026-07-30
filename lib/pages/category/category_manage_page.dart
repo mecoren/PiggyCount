@@ -113,24 +113,24 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
 
   /// 构建美化的更多菜单
   Widget _buildMoreMenu(BuildContext context, AppLocalizations l10n, Color primaryColor) {
-    return BeePopupMenu(
+    return PiggyPopupMenu(
       tooltip: l10n.commonMore,
       primaryColor: primaryColor,
       items: [
-        BeeMenuItem.tip(label: l10n.categoryReorderTip),
-        const BeeMenuItem.divider(),
-        BeeMenuItem.action(
+        PiggyMenuItem.tip(label: l10n.categoryReorderTip),
+        const PiggyMenuItem.divider(),
+        PiggyMenuItem.action(
           value: 'add',
           icon: Icons.add_circle_outline,
           label: l10n.categoryNew,
         ),
-        BeeMenuItem.action(
+        PiggyMenuItem.action(
           value: 'import',
           icon: Icons.download_outlined,
           label: l10n.categoryImport,
         ),
-        const BeeMenuItem.divider(),
-        BeeMenuItem.action(
+        const PiggyMenuItem.divider(),
+        PiggyMenuItem.action(
           value: 'clear_unused',
           icon: Icons.delete_sweep_outlined,
           label: l10n.categoryClearUnused,
@@ -400,7 +400,7 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: BeeTokens.error(context)),
+            style: TextButton.styleFrom(foregroundColor: PiggyTokens.error(context)),
             child: Text(l10n.commonDelete),
           ),
         ],
@@ -466,18 +466,18 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: BeeTokens.surface(context),
+            color: PiggyTokens.surface(context),
             border: Border.all(
-              color: BeeTokens.isDark(context)
+              color: PiggyTokens.isDark(context)
                 ? primaryColor.withValues(alpha: 0.3)
-                : BeeTokens.border(context),
+                : PiggyTokens.border(context),
             ),
-            borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
           ),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
               onTap: () async {
                 await Navigator.of(context).push(
                   MaterialPageRoute(
@@ -508,7 +508,7 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color: BeeTokens.textPrimary(context),
+                              color: PiggyTokens.textPrimary(context),
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -516,7 +516,7 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
                             l10n.transferIconSettingsDesc,
                             style: TextStyle(
                               fontSize: 13,
-                              color: BeeTokens.textSecondary(context),
+                              color: PiggyTokens.textSecondary(context),
                             ),
                           ),
                         ],
@@ -524,7 +524,7 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
                     ),
                     Icon(
                       Icons.chevron_right,
-                      color: BeeTokens.iconSecondary(context),
+                      color: PiggyTokens.iconSecondary(context),
                     ),
                   ],
                 ),
@@ -629,13 +629,13 @@ class _CategoryGridViewState extends ConsumerState<_CategoryGridView> {
             Icon(
               Icons.category_outlined,
               size: 64,
-              color: BeeTokens.textTertiary(context),
+              color: PiggyTokens.textTertiary(context),
             ),
             const SizedBox(height: 16),
             Text(
               AppLocalizations.of(context).categoryEmpty,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: BeeTokens.textSecondary(context),
+                color: PiggyTokens.textSecondary(context),
               ),
             ),
           ],
@@ -796,19 +796,19 @@ class _CategoryCard extends ConsumerWidget {
     // 二级分类：使用浅色背景
     final backgroundColor = item.isSubCategory
         ? Colors.orange[50]
-        : BeeTokens.surface(context);
+        : PiggyTokens.surface(context);
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
       child: Container(
         decoration: BoxDecoration(
           color: backgroundColor,
-          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
           border: Border.all(
             color: item.isSubCategory
-                ? BeeTokens.warning(context).withValues(alpha: 0.3)
-                : BeeTokens.borderStrong(context),
+                ? PiggyTokens.warning(context).withValues(alpha: 0.3)
+                : PiggyTokens.borderStrong(context),
             width: 1,
           ),
         ),
@@ -825,16 +825,16 @@ class _CategoryCard extends ConsumerWidget {
                     height: item.isSubCategory ? 28 : 32,
                     decoration: BoxDecoration(
                       color: item.isSubCategory
-                          ? BeeTokens.warning(context).withValues(alpha: 0.2)
-                          : BeeTokens.primary(context).withValues(alpha: 0.1),
+                          ? PiggyTokens.warning(context).withValues(alpha: 0.2)
+                          : PiggyTokens.primary(context).withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: CategoryIconWidget(
                       category: item.category,
                       size: item.isSubCategory ? 16.0 : 18.0,
                       color: item.isSubCategory
-                          ? BeeTokens.warning(context)
-                          : BeeTokens.primary(context),
+                          ? PiggyTokens.warning(context)
+                          : PiggyTokens.primary(context),
                       circular: true,
                     ),
                   ),
@@ -845,7 +845,7 @@ class _CategoryCard extends ConsumerWidget {
                       CategoryUtils.getDisplayName(item.category.name, context),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             fontSize: item.isSubCategory ? 10 : 12,
-                            color: item.isSubCategory ? BeeTokens.warning(context) : null,
+                            color: item.isSubCategory ? PiggyTokens.warning(context) : null,
                           ),
                       textAlign: TextAlign.center,
                       maxLines: 1,
@@ -857,8 +857,8 @@ class _CategoryCard extends ConsumerWidget {
                     AppLocalizations.of(context).categoryMigrationTransactionLabel(item.transactionCount),
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: item.isSubCategory
-                              ? BeeTokens.warning(context)
-                              : BeeTokens.borderStrong(context),
+                              ? PiggyTokens.warning(context)
+                              : PiggyTokens.borderStrong(context),
                           fontSize: item.isSubCategory ? 9 : 10,
                         ),
                     textAlign: TextAlign.center,
@@ -875,13 +875,13 @@ class _CategoryCard extends ConsumerWidget {
                   width: 18,
                   height: 18,
                   decoration: BoxDecoration(
-                    color: BeeTokens.primary(context),
+                    color: PiggyTokens.primary(context),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.more_horiz,
                     size: 14,
-                    color: BeeTokens.textOnPrimary(context),
+                    color: PiggyTokens.textOnPrimary(context),
                   ),
                 ),
               ),
@@ -948,11 +948,11 @@ class _SubcategoryDialogState extends ConsumerState<_SubcategoryDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = BeeTokens.primary(context);
+    final primaryColor = PiggyTokens.primary(context);
     final l10n = AppLocalizations.of(context);
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
       child: Container(
         width: MediaQuery.of(context).size.width * 0.85,
         constraints: const BoxConstraints(maxWidth: 400),
@@ -1062,17 +1062,17 @@ class _DialogActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = BeeTokens.primary(context);
+    final primaryColor = PiggyTokens.primary(context);
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
       child: Container(
         decoration: BoxDecoration(
-          color: BeeTokens.surface(context),
-          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+          color: PiggyTokens.surface(context),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
           border: Border.all(
-            color: BeeTokens.borderStrong(context),
+            color: PiggyTokens.borderStrong(context),
             width: 1,
           ),
         ),
@@ -1111,17 +1111,17 @@ class _DialogSubCategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = BeeTokens.primary(context);
+    final primaryColor = PiggyTokens.primary(context);
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
       child: Container(
         decoration: BoxDecoration(
-          color: BeeTokens.surface(context),
-          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+          color: PiggyTokens.surface(context),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
           border: Border.all(
-            color: BeeTokens.borderStrong(context),
+            color: PiggyTokens.borderStrong(context),
             width: 1,
           ),
         ),
@@ -1156,7 +1156,7 @@ class _DialogSubCategoryCard extends StatelessWidget {
             Text(
               AppLocalizations.of(context).categoryMigrationTransactionLabel(transactionCount),
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: BeeTokens.borderStrong(context),
+                color: PiggyTokens.borderStrong(context),
                 fontSize: 9,
               ),
             ),

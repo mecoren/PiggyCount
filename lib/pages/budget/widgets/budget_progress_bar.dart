@@ -44,7 +44,7 @@ class BudgetProgressBar extends ConsumerWidget {
             '$currencySymbol${used.toStringAsFixed(0)} / $currencySymbol${budget.toStringAsFixed(0)}',
             style: TextStyle(
               fontSize: 12,
-              color: BeeTokens.textSecondary(context),
+              color: PiggyTokens.textSecondary(context),
             ),
           ),
         ],
@@ -53,9 +53,9 @@ class BudgetProgressBar extends ConsumerWidget {
   }
 
   Color _getColor(BuildContext context, double rate) {
-    if (rate >= 1.0) return BeeTokens.error(context);
-    if (rate >= 0.9) return BeeTokens.error(context);
-    if (rate >= 0.7) return BeeTokens.warning(context);
-    return BeeTokens.success(context);
+    if (rate >= 1.0) return PiggyTokens.error(context);
+    if (rate >= 0.9) return PiggyTokens.error(context);
+    if (rate >= 0.7) return PiggyTokens.warning(context);
+    return PiggyTokens.success(context);
   }
 }

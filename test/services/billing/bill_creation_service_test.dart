@@ -13,22 +13,22 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:beecount/ai/core/bill_info.dart';
-import 'package:beecount/data/db.dart';
-import 'package:beecount/data/repositories/local/local_repository.dart';
-import 'package:beecount/services/billing/bill_creation_service.dart';
+import 'package:piggycount/ai/core/bill_info.dart';
+import 'package:piggycount/data/db.dart';
+import 'package:piggycount/data/repositories/local/local_repository.dart';
+import 'package:piggycount/services/billing/bill_creation_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  late BeeDatabase db;
+  late PiggyDatabase db;
   late LocalRepository repo;
   late BillCreationService service;
   late int ledgerId;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    db = BeeDatabase.forTesting(NativeDatabase.memory());
+    db = PiggyDatabase.forTesting(NativeDatabase.memory());
     repo = LocalRepository(db);
     service = BillCreationService(repo);
     ledgerId = await repo.createLedger(name: 'test', currency: 'CNY');

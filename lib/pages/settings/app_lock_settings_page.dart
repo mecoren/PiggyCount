@@ -108,9 +108,9 @@ class _AppLockSettingsPageState extends ConsumerState<AppLockSettingsPage> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: BeeTokens.surfaceElevated(context),
+      backgroundColor: PiggyTokens.surfaceElevated(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
       ),
       builder: (ctx) {
         return SafeArea(
@@ -124,7 +124,7 @@ class _AppLockSettingsPageState extends ConsumerState<AppLockSettingsPage> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: BeeTokens.textPrimary(ctx),
+                    color: PiggyTokens.textPrimary(ctx),
                   ),
                 ),
               ),
@@ -174,7 +174,7 @@ class _AppLockSettingsPageState extends ConsumerState<AppLockSettingsPage> {
     final timeout = ref.watch(appLockTimeoutProvider);
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
       appBar: GlassTitleBar(
         title: l10n.appLockTitle,
@@ -291,7 +291,7 @@ class _PinVerifyPageState extends ConsumerState<_PinVerifyPage> {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
       appBar: GlassTitleBar(
         title: l10n.appLockVerifyPin,
@@ -311,7 +311,7 @@ class _PinVerifyPageState extends ConsumerState<_PinVerifyPage> {
                 style: TextStyle(
                   fontSize: 18.0.scaled(context, ref),
                   fontWeight: FontWeight.w600,
-                  color: BeeTokens.textPrimary(context),
+                  color: PiggyTokens.textPrimary(context),
                 ),
               ),
               SizedBox(height: 32.0.scaled(context, ref)),

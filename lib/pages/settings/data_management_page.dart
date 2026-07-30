@@ -44,7 +44,7 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
       appBar: GlassTitleBar(
         title: l10n.dataManagementPageTitle,
@@ -65,7 +65,7 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
               l10n.dataManagementAttachmentHint,
               style: TextStyle(
                 fontSize: 12,
-                color: BeeTokens.textTertiary(context),
+                color: PiggyTokens.textTertiary(context),
               ),
             ),
           ),
@@ -254,7 +254,7 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
               children: [
                 LinearProgressIndicator(
                   value: _exportProgress / _exportTotal,
-                  backgroundColor: BeeTokens.divider(context),
+                  backgroundColor: PiggyTokens.divider(context),
                   color: primary,
                 ),
                 const SizedBox(height: 4),
@@ -269,7 +269,7 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                       : l10n.attachmentExportProgress(_exportProgress, _exportTotal),
                   style: TextStyle(
                     fontSize: 12,
-                    color: BeeTokens.textSecondary(context),
+                    color: PiggyTokens.textSecondary(context),
                   ),
                 ),
               ],
@@ -302,7 +302,7 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
               children: [
                 LinearProgressIndicator(
                   value: _importProgress / _importTotal,
-                  backgroundColor: BeeTokens.divider(context),
+                  backgroundColor: PiggyTokens.divider(context),
                   color: primary,
                 ),
                 const SizedBox(height: 4),
@@ -310,7 +310,7 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                   l10n.attachmentImportProgress(_importProgress, _importTotal),
                   style: TextStyle(
                     fontSize: 12,
-                    color: BeeTokens.textSecondary(context),
+                    color: PiggyTokens.textSecondary(context),
                   ),
                 ),
               ],
@@ -500,7 +500,7 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                         ),
                         style: TextStyle(
                           fontSize: 14,
-                          color: BeeTokens.textSecondary(ctx),
+                          color: PiggyTokens.textSecondary(ctx),
                         ),
                       ),
                       if (info.customIconCount > 0)
@@ -510,7 +510,7 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                             '自定义图标: ${info.customIconCount} 个',
                             style: TextStyle(
                               fontSize: 14,
-                              color: BeeTokens.textSecondary(ctx),
+                              color: PiggyTokens.textSecondary(ctx),
                             ),
                           ),
                         ),
@@ -521,7 +521,7 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                             '包含头像',
                             style: TextStyle(
                               fontSize: 14,
-                              color: BeeTokens.textSecondary(ctx),
+                              color: PiggyTokens.textSecondary(ctx),
                             ),
                           ),
                         ),
@@ -672,7 +672,7 @@ class _ImportSuccessTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primary = BeeTokens.primary(context);
+    final primary = PiggyTokens.primary(context);
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
       duration: const Duration(milliseconds: 900),

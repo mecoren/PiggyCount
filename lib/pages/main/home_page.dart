@@ -11,7 +11,7 @@ import '../settings/personalize_page.dart' show headerStyleProvider;
 import '../../data/db.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/biz.dart';
-import '../../widgets/biz/bee_icon.dart';
+import '../../widgets/biz/piggy_icon.dart';
 import '../../styles/tokens.dart';
 import '../transaction/search_page.dart';
 import '../ai/ai_chat_page.dart';
@@ -294,11 +294,11 @@ class _HomePageState extends ConsumerState<HomePage> {
     final primaryColor = ref.watch(primaryColorProvider);
 
     return Container(
-      margin: BeeDimens.cardMargin,
+      margin: PiggyDimens.cardMargin,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
-        color: BeeTokens.surface(context),
-        boxShadow: BeeTokens.isDark(context)
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+        color: PiggyTokens.surface(context),
+        boxShadow: PiggyTokens.isDark(context)
             ? null
             : [
                 BoxShadow(
@@ -309,7 +309,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         child: Stack(
           children: [
             // 左侧装饰条
@@ -351,7 +351,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                                 TextSpan(
                                   text: ' ${l10n.homeLastMonthReportSubtitle}',
                                   style: TextStyle(
-                                    color: BeeTokens.textSecondary(context),
+                                    color: PiggyTokens.textSecondary(context),
                                   ),
                                 ),
                               ],
@@ -393,7 +393,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     child: Icon(
                       Icons.close,
                       size: 18,
-                      color: BeeTokens.textDisabled(context),
+                      color: PiggyTokens.textDisabled(context),
                     ),
                   ),
                 ],
@@ -413,11 +413,11 @@ class _HomePageState extends ConsumerState<HomePage> {
     final primaryColor = ref.watch(primaryColorProvider);
 
     return Container(
-      margin: BeeDimens.cardMargin,
+      margin: PiggyDimens.cardMargin,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
-        color: BeeTokens.surface(context),
-        boxShadow: BeeTokens.isDark(context)
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+        color: PiggyTokens.surface(context),
+        boxShadow: PiggyTokens.isDark(context)
             ? null
             : [
                 BoxShadow(
@@ -428,7 +428,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         child: Stack(
           children: [
             // 左侧装饰条
@@ -461,7 +461,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                             l10n.homeAnnualReportReminder(reportYear),
                             style: TextStyle(
                               fontSize: 14,
-                              color: BeeTokens.textSecondary(context),
+                              color: PiggyTokens.textSecondary(context),
                             ),
                           ),
                         ),
@@ -500,7 +500,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     child: Icon(
                       Icons.close,
                       size: 18,
-                      color: BeeTokens.textDisabled(context),
+                      color: PiggyTokens.textDisabled(context),
                     ),
                   ),
                 ],
@@ -518,11 +518,11 @@ class _HomePageState extends ConsumerState<HomePage> {
     final primaryColor = ref.watch(primaryColorProvider);
 
     return Container(
-      margin: BeeDimens.cardMargin,
+      margin: PiggyDimens.cardMargin,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
-        color: BeeTokens.surface(context),
-        boxShadow: BeeTokens.isDark(context)
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+        color: PiggyTokens.surface(context),
+        boxShadow: PiggyTokens.isDark(context)
             ? null
             : [
                 BoxShadow(
@@ -533,7 +533,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         child: Stack(
           children: [
             // 左侧装饰条
@@ -566,7 +566,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                             l10n.budgetSetupHint,
                             style: TextStyle(
                               fontSize: 14,
-                              color: BeeTokens.textSecondary(context),
+                              color: PiggyTokens.textSecondary(context),
                             ),
                           ),
                         ),
@@ -600,7 +600,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     child: Icon(
                       Icons.close,
                       size: 18,
-                      color: BeeTokens.textDisabled(context),
+                      color: PiggyTokens.textDisabled(context),
                     ),
                   ),
                 ],
@@ -665,7 +665,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     });
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context), // ⭐ 自适应背景色
+      backgroundColor: PiggyTokens.scaffoldBackground(context), // ⭐ 自适应背景色
       body: Column(
         children: [
           Consumer(builder: (context, ref, _) {
@@ -677,15 +677,15 @@ class _HomePageState extends ConsumerState<HomePage> {
               content: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // 头部 - 左: BeeIcon + 账本切换, 右: 操作按钮
+                  // 头部 - 左: PiggyIcon + 账本切换, 右: 操作按钮
                   SizedBox(
                     height: 48,
                     child: Row(
                       children: [
-                        // 左侧：BeeIcon + 标题 + 账本切换胶囊（用 Expanded 包住，
+                        // 左侧：PiggyIcon + 标题 + 账本切换胶囊（用 Expanded 包住，
                         // 标题在空间富余时显示自然宽度，仅在不够时 ellipsis）
-                        BeeIcon(
-                          color: BeeTokens.primary(context),
+                        PiggyIcon(
+                          color: PiggyTokens.primary(context),
                           size: 28,
                         ),
                         const SizedBox(width: 4),
@@ -749,9 +749,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                                                     horizontal: 10,
                                                     vertical: 6),
                                             decoration: BoxDecoration(
-                                              color: BeeTokens.surfaceCapsule(context),
+                                              color: PiggyTokens.surfaceCapsule(context),
                                               borderRadius:
-                                                  BorderRadius.circular(BeeDimens.radiusXl),
+                                                  BorderRadius.circular(PiggyDimens.radiusXl),
                                             ),
                                             child: Row(
                                               mainAxisSize: MainAxisSize.min,
@@ -920,7 +920,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       InkWell(
-                        borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                        borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                         onTap: _isJumping ? null : _handleDateSelection,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -989,7 +989,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                         margin: const EdgeInsets.symmetric(horizontal: 12),
                         width: 1,
                         height: 36,
-                        color: BeeTokens.divider(context), // ⭐ 自适应分割线颜色
+                        color: PiggyTokens.divider(context), // ⭐ 自适应分割线颜色
                       ),
                       const Expanded(child: _HeaderCenterSummary()),
                     ],
@@ -1104,7 +1104,7 @@ class _HeaderCenterSummary extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(title,
-                textAlign: TextAlign.left, style: BeeTextTokens.label(context)),
+                textAlign: TextAlign.left, style: PiggyTextTokens.label(context)),
             const SizedBox(height: 2),
             FittedBox(
               fit: BoxFit.scaleDown,

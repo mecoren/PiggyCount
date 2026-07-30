@@ -944,7 +944,7 @@ class _WidgetRenderFallbackCard extends StatelessWidget {
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: dark ? const Color(0xFF1A1712) : Colors.white,
-        borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
       ),
       child: Icon(Icons.refresh, size: 28, color: themeColor),
     );

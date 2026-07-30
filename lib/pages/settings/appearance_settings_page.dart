@@ -69,7 +69,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
         : (headerSkinById(headerSkin)?.nameOf(l10n) ?? l10n.headerSkinNone);
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
       appBar: GlassTitleBar(
         title: l10n.appearanceSettingsPageTitle,
@@ -268,10 +268,10 @@ class AppearanceSettingsPage extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: BeeTokens.surfaceElevated(context),
+        backgroundColor: PiggyTokens.surfaceElevated(context),
         title: Text(
           l10n.appearanceThemeMode,
-          style: TextStyle(color: BeeTokens.textPrimary(context)),
+          style: TextStyle(color: PiggyTokens.textPrimary(context)),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -317,12 +317,12 @@ class AppearanceSettingsPage extends ConsumerWidget {
     return ListTile(
       leading: Icon(
         icon,
-        color: isSelected ? primaryColor : BeeTokens.iconSecondary(context),
+        color: isSelected ? primaryColor : PiggyTokens.iconSecondary(context),
       ),
       title: Text(
         title,
         style: TextStyle(
-          color: isSelected ? primaryColor : BeeTokens.textPrimary(context),
+          color: isSelected ? primaryColor : PiggyTokens.textPrimary(context),
           fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
         ),
       ),
@@ -343,10 +343,10 @@ class AppearanceSettingsPage extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: BeeTokens.surfaceElevated(context),
+        backgroundColor: PiggyTokens.surfaceElevated(context),
         title: Text(
           l10n.appearanceAmountFormat,
-          style: TextStyle(color: BeeTokens.textPrimary(context)),
+          style: TextStyle(color: PiggyTokens.textPrimary(context)),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -388,19 +388,19 @@ class AppearanceSettingsPage extends ConsumerWidget {
     return ListTile(
       leading: Icon(
         icon,
-        color: isSelected ? primaryColor : BeeTokens.iconSecondary(context),
+        color: isSelected ? primaryColor : PiggyTokens.iconSecondary(context),
       ),
       title: Text(
         title,
         style: TextStyle(
-          color: isSelected ? primaryColor : BeeTokens.textPrimary(context),
+          color: isSelected ? primaryColor : PiggyTokens.textPrimary(context),
           fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
         ),
       ),
       subtitle: Text(
         subtitle,
         style: TextStyle(
-          color: BeeTokens.textSecondary(context),
+          color: PiggyTokens.textSecondary(context),
           fontSize: 12,
         ),
       ),
@@ -420,10 +420,10 @@ class AppearanceSettingsPage extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: BeeTokens.surfaceElevated(context),
+        backgroundColor: PiggyTokens.surfaceElevated(context),
         title: Text(
           l10n.appearanceNoteDisplay,
-          style: TextStyle(color: BeeTokens.textPrimary(context)),
+          style: TextStyle(color: PiggyTokens.textPrimary(context)),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -462,17 +462,17 @@ class AppearanceSettingsPage extends ConsumerWidget {
     final isSelected = value == currentValue;
     final primaryColor = ref.watch(primaryColorProvider);
     return ListTile(
-      leading: Icon(icon, color: isSelected ? primaryColor : BeeTokens.iconSecondary(context)),
+      leading: Icon(icon, color: isSelected ? primaryColor : PiggyTokens.iconSecondary(context)),
       title: Text(
         title,
         style: TextStyle(
-          color: isSelected ? primaryColor : BeeTokens.textPrimary(context),
+          color: isSelected ? primaryColor : PiggyTokens.textPrimary(context),
           fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
         ),
       ),
       subtitle: Text(
         subtitle,
-        style: TextStyle(color: BeeTokens.textSecondary(context), fontSize: 12),
+        style: TextStyle(color: PiggyTokens.textSecondary(context), fontSize: 12),
       ),
       trailing: isSelected ? Icon(Icons.check, color: primaryColor) : null,
       onTap: () {
@@ -506,10 +506,10 @@ class AppearanceSettingsPage extends ConsumerWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: BeeTokens.surfaceElevated(context),
+          backgroundColor: PiggyTokens.surfaceElevated(context),
           title: Text(
             l10n.appearanceNoteHistory,
-            style: TextStyle(color: BeeTokens.textPrimary(context)),
+            style: TextStyle(color: PiggyTokens.textPrimary(context)),
           ),
           content: SingleChildScrollView(
             child: Column(
@@ -519,7 +519,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
                 Text(
                   l10n.appearanceNoteHistoryScope,
                   style: TextStyle(
-                    color: BeeTokens.textSecondary(context),
+                    color: PiggyTokens.textSecondary(context),
                     fontSize: 13.scaled(context, ref),
                   ),
                 ),
@@ -549,7 +549,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
                 Text(
                   l10n.appearanceNoteHistorySort,
                   style: TextStyle(
-                    color: BeeTokens.textSecondary(context),
+                    color: PiggyTokens.textSecondary(context),
                     fontSize: 13.scaled(context, ref),
                   ),
                 ),
@@ -585,14 +585,14 @@ class AppearanceSettingsPage extends ConsumerWidget {
                           Text(
                             l10n.appearanceNoteHistoryLimit,
                             style: TextStyle(
-                              color: BeeTokens.textPrimary(context),
+                              color: PiggyTokens.textPrimary(context),
                             ),
                           ),
                           SizedBox(height: 2.scaled(context, ref)),
                           Text(
                             l10n.appearanceNoteHistoryLimitHint,
                             style: TextStyle(
-                              color: BeeTokens.textSecondary(context),
+                              color: PiggyTokens.textSecondary(context),
                               fontSize: 12.scaled(context, ref),
                             ),
                           ),
@@ -642,7 +642,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
                         l10n.appearanceNoteHistoryLimitInvalid,
                         textAlign: TextAlign.right,
                         style: TextStyle(
-                          color: BeeTokens.error(context),
+                          color: PiggyTokens.error(context),
                           fontSize: 12.scaled(context, ref),
                         ),
                       ),
@@ -670,10 +670,10 @@ class AppearanceSettingsPage extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: BeeTokens.surfaceElevated(context),
+        backgroundColor: PiggyTokens.surfaceElevated(context),
         title: Text(
           l10n.appearanceColorScheme,
-          style: TextStyle(color: BeeTokens.textPrimary(context)),
+          style: TextStyle(color: PiggyTokens.textPrimary(context)),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -715,19 +715,19 @@ class AppearanceSettingsPage extends ConsumerWidget {
     return ListTile(
       leading: Icon(
         icon,
-        color: isSelected ? primaryColor : BeeTokens.iconSecondary(context),
+        color: isSelected ? primaryColor : PiggyTokens.iconSecondary(context),
       ),
       title: Text(
         title,
         style: TextStyle(
-          color: isSelected ? primaryColor : BeeTokens.textPrimary(context),
+          color: isSelected ? primaryColor : PiggyTokens.textPrimary(context),
           fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
         ),
       ),
       subtitle: Text(
         subtitle,
         style: TextStyle(
-          color: BeeTokens.textSecondary(context),
+          color: PiggyTokens.textSecondary(context),
           fontSize: 12,
         ),
       ),

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:beecount/utils/currencies.dart';
+import 'package:piggycount/utils/currencies.dart';
 
 void main() {
   group('currencies 全量 ISO 4217', () {

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:beecount/utils/month_range.dart';
+import 'package:piggycount/utils/month_range.dart';
 
 void main() {
   group('periodForLabel', () {

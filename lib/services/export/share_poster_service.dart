@@ -360,11 +360,11 @@ class _PosterPreviewDialogState extends State<_PosterPreviewDialog> {
     return Consumer(
       builder: (context, ref, child) {
         final primaryColor = ref.watch(primaryColorProvider);
-        final isDark = BeeTokens.isDark(context);
+        final isDark = PiggyTokens.isDark(context);
 
         // 按钮背景色：暗黑模式用深灰卡片色，亮色模式用白色
-        final secondaryButtonBg = isDark ? BeeTokens.surface(context) : Colors.white;
-        final secondaryButtonFg = isDark ? BeeTokens.textPrimary(context) : primaryColor;
+        final secondaryButtonBg = isDark ? PiggyTokens.surface(context) : Colors.white;
+        final secondaryButtonFg = isDark ? PiggyTokens.textPrimary(context) : primaryColor;
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -378,7 +378,7 @@ class _PosterPreviewDialogState extends State<_PosterPreviewDialog> {
             child: Container(
               constraints: const BoxConstraints(maxHeight: 600),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(BeeDimens.radius3xl),
+                borderRadius: BorderRadius.circular(PiggyDimens.radius3xl),
                 child: Image.memory(
                   widget.imageBytes,
                   fit: BoxFit.contain,
@@ -402,9 +402,9 @@ class _PosterPreviewDialogState extends State<_PosterPreviewDialog> {
                       backgroundColor: secondaryButtonBg,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                         side: isDark
-                            ? BorderSide(color: BeeTokens.border(context))
+                            ? BorderSide(color: PiggyTokens.border(context))
                             : BorderSide.none,
                       ),
                       elevation: 0,
@@ -431,7 +431,7 @@ class _PosterPreviewDialogState extends State<_PosterPreviewDialog> {
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                       ),
                       elevation: 0,
                     ),
@@ -752,10 +752,10 @@ class _PosterCarouselPreviewDialogState
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final primaryColor = ref.watch(primaryColorProvider);
-    final isDark = BeeTokens.isDark(context);
+    final isDark = PiggyTokens.isDark(context);
 
-    final secondaryButtonBg = isDark ? BeeTokens.surface(context) : Colors.white;
-    final secondaryButtonFg = isDark ? BeeTokens.textPrimary(context) : primaryColor;
+    final secondaryButtonBg = isDark ? PiggyTokens.surface(context) : Colors.white;
+    final secondaryButtonFg = isDark ? PiggyTokens.textPrimary(context) : primaryColor;
 
     final cachedPoster = _posterCache[_currentPage];
     final isGenerating = _generating.contains(_currentPage);
@@ -811,7 +811,7 @@ class _PosterCarouselPreviewDialogState
                       child: AspectRatio(
                         aspectRatio: 750 / 1334, // 海报的宽高比
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(BeeDimens.radius3xl),
+                          borderRadius: BorderRadius.circular(PiggyDimens.radius3xl),
                           child: Stack(
                             children: [
                               // 海报内容
@@ -884,7 +884,7 @@ class _PosterCarouselPreviewDialogState
                                         // 重新生成当前海报
                                         await _generatePosterAtIndex(index);
                                       },
-                                      borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+                                      borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 12,
@@ -892,7 +892,7 @@ class _PosterCarouselPreviewDialogState
                                         ),
                                         decoration: BoxDecoration(
                                           color: Colors.black.withValues(alpha: 0.5),
-                                          borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+                                          borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
                                         ),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
@@ -946,7 +946,7 @@ class _PosterCarouselPreviewDialogState
                   height: 8,
                   decoration: BoxDecoration(
                     color: isActive ? primaryColor : Colors.white.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+                    borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                   ),
                 );
               },
@@ -972,9 +972,9 @@ class _PosterCarouselPreviewDialogState
                       backgroundColor: secondaryButtonBg,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                         side: isDark
-                            ? BorderSide(color: BeeTokens.border(context))
+                            ? BorderSide(color: PiggyTokens.border(context))
                             : BorderSide.none,
                       ),
                       elevation: 0,
@@ -1003,7 +1003,7 @@ class _PosterCarouselPreviewDialogState
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                       ),
                       elevation: 0,
                     ),
@@ -1147,10 +1147,10 @@ class _DynamicPosterPreviewDialogState
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final primaryColor = ref.watch(primaryColorProvider);
-    final isDark = BeeTokens.isDark(context);
+    final isDark = PiggyTokens.isDark(context);
 
-    final secondaryButtonBg = isDark ? BeeTokens.surface(context) : Colors.white;
-    final secondaryButtonFg = isDark ? BeeTokens.textPrimary(context) : primaryColor;
+    final secondaryButtonBg = isDark ? PiggyTokens.surface(context) : Colors.white;
+    final secondaryButtonFg = isDark ? PiggyTokens.textPrimary(context) : primaryColor;
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -1164,7 +1164,7 @@ class _DynamicPosterPreviewDialogState
             child: Container(
               constraints: const BoxConstraints(maxHeight: 600),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(BeeDimens.radius3xl),
+                borderRadius: BorderRadius.circular(PiggyDimens.radius3xl),
                 child: Stack(
                   children: [
                     // 海报图片
@@ -1224,7 +1224,7 @@ class _DynamicPosterPreviewDialogState
                           color: Colors.transparent,
                           child: InkWell(
                             onTap: _toggleHideIncome,
-                            borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+                            borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
                             child: Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12,
@@ -1232,7 +1232,7 @@ class _DynamicPosterPreviewDialogState
                               ),
                               decoration: BoxDecoration(
                                 color: Colors.black.withValues(alpha: 0.5),
-                                borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+                                borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -1282,9 +1282,9 @@ class _DynamicPosterPreviewDialogState
                       backgroundColor: secondaryButtonBg,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                         side: isDark
-                            ? BorderSide(color: BeeTokens.border(context))
+                            ? BorderSide(color: PiggyTokens.border(context))
                             : BorderSide.none,
                       ),
                       elevation: 0,
@@ -1313,7 +1313,7 @@ class _DynamicPosterPreviewDialogState
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                       ),
                       elevation: 0,
                     ),

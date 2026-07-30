@@ -44,7 +44,7 @@ class SettingsSectionLabel extends StatelessWidget {
 ///
 /// 视觉规格：
 /// - 圆角 16px
-/// - 背景色 `BeeTokens.surface`
+/// - 背景色 `PiggyTokens.surface`
 /// - 无阴影、无边框（靠背景色对比分层）
 /// - 无默认 padding（children 自带 padding）
 /// - 卡片内项目之间不画 Divider，靠 padding 分隔
@@ -65,8 +65,8 @@ class SettingsCard extends StatelessWidget {
     return Container(
       margin: margin ?? EdgeInsets.zero,
       decoration: BoxDecoration(
-        color: BeeTokens.surface(context),
-        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+        color: PiggyTokens.surface(context),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
       ),
       child: Column(children: children),
     );
@@ -123,7 +123,7 @@ class SettingsNavItem extends StatelessWidget {
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: accent.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(BeeDimens.radiusMd),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusMd),
         ),
         child: Icon(icon, size: 20, color: accent),
       );
@@ -179,7 +179,7 @@ class SettingsNavItem extends StatelessWidget {
       opacity: enabled ? 1 : 0.5,
       child: InkWell(
         onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         child: tile,
       ),
     );

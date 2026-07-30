@@ -203,7 +203,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
     final isValuation = isValuationOnlyType(account.type);
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           // ======== 简洁头部 ========
@@ -216,7 +216,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
               IconButton(
                 icon: Icon(
                   Icons.edit_outlined,
-                  color: BeeTokens.iconPrimary(context),
+                  color: PiggyTokens.iconPrimary(context),
                   size: 20,
                 ),
                 onPressed: () async {
@@ -318,7 +318,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
             Container(
               width: 1,
               height: 36.0.scaled(context, ref),
-              color: BeeTokens.divider(context),
+              color: PiggyTokens.divider(context),
             ),
             Expanded(
               child: _DetailStatCell(
@@ -330,7 +330,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
             Container(
               width: 1,
               height: 36.0.scaled(context, ref),
-              color: BeeTokens.divider(context),
+              color: PiggyTokens.divider(context),
             ),
             Expanded(
               child: _DetailStatCell(
@@ -383,7 +383,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                 valueLabel,
                 style: TextStyle(
                   fontSize: 13,
-                  color: BeeTokens.textSecondary(context),
+                  color: PiggyTokens.textSecondary(context),
                 ),
               ),
               SizedBox(height: 6.0.scaled(context, ref)),
@@ -398,7 +398,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: BeeTokens.textPrimary(context),
+                    color: PiggyTokens.textPrimary(context),
                   ),
                 ),
                 loading: () => SizedBox(
@@ -416,7 +416,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                   ),
                   style: TextStyle(
                     fontSize: 12,
-                    color: BeeTokens.textTertiary(context),
+                    color: PiggyTokens.textTertiary(context),
                   ),
                 ),
               // 备注
@@ -426,7 +426,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                   account.note!,
                   style: TextStyle(
                     fontSize: 13,
-                    color: BeeTokens.textSecondary(context),
+                    color: PiggyTokens.textSecondary(context),
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 2,
@@ -556,7 +556,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
               if (hasMetadata) ...[
                 _buildMetadataInline(context, account),
                 if (hasTypeStats)
-                  Divider(height: 20, color: BeeTokens.divider(context)),
+                  Divider(height: 20, color: PiggyTokens.divider(context)),
               ],
               // 类型专属统计
               if (hasTypeStats)
@@ -597,7 +597,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
             parts.join(' · '),
             style: TextStyle(
               fontSize: 13,
-              color: BeeTokens.textSecondary(context),
+              color: PiggyTokens.textSecondary(context),
             ),
           ),
         if (account.note != null && account.note!.isNotEmpty) ...[
@@ -606,7 +606,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
             account.note!,
             style: TextStyle(
               fontSize: 12,
-              color: BeeTokens.textTertiary(context),
+              color: PiggyTokens.textTertiary(context),
             ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
@@ -658,7 +658,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
             children: [
               Text(
                 l10n.creditCardOwed,
-                style: TextStyle(fontSize: 13, color: BeeTokens.textSecondary(context)),
+                style: TextStyle(fontSize: 13, color: PiggyTokens.textSecondary(context)),
               ),
               const Spacer(),
               AmountText(
@@ -670,7 +670,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: BeeTokens.textPrimary(context),
+                  color: PiggyTokens.textPrimary(context),
                 ),
               ),
             ],
@@ -690,11 +690,11 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
               borderRadius: BorderRadius.circular(2),
               child: LinearProgressIndicator(
                 value: usageRate,
-                backgroundColor: BeeTokens.divider(context),
+                backgroundColor: PiggyTokens.divider(context),
                 valueColor: AlwaysStoppedAnimation<Color>(
-                  usageRate < 0.5 ? BeeTokens.success(context)
-                      : usageRate < 0.8 ? BeeTokens.warning(context)
-                      : BeeTokens.error(context),
+                  usageRate < 0.5 ? PiggyTokens.success(context)
+                      : usageRate < 0.8 ? PiggyTokens.warning(context)
+                      : PiggyTokens.error(context),
                 ),
                 minHeight: 4,
               ),
@@ -730,7 +730,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                             l10n.creditCardBillingInfo(account.billingDay!, account.paymentDueDay!),
                             style: TextStyle(
                               fontSize: 12,
-                              color: BeeTokens.textSecondary(context),
+                              color: PiggyTokens.textSecondary(context),
                             ),
                           ),
                         if (daysUntilPayment != null) ...[
@@ -743,9 +743,9 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                               color: daysUntilPayment <= 3
-                                  ? BeeTokens.error(context)
+                                  ? PiggyTokens.error(context)
                                   : daysUntilPayment <= 7
-                                      ? BeeTokens.warning(context)
+                                      ? PiggyTokens.warning(context)
                                       : primaryColor,
                             ),
                           ),
@@ -830,7 +830,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                       return SizedBox(
                         height: 180,
                         child: Center(
-                          child: Text('-', style: TextStyle(color: BeeTokens.textTertiary(context))),
+                          child: Text('-', style: TextStyle(color: PiggyTokens.textTertiary(context))),
                         ),
                       );
                     }
@@ -855,7 +855,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                       return SizedBox(
                         height: 180,
                         child: Center(
-                          child: Text('-', style: TextStyle(color: BeeTokens.textTertiary(context))),
+                          child: Text('-', style: TextStyle(color: PiggyTokens.textTertiary(context))),
                         ),
                       );
                     }
@@ -907,14 +907,14 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                 Icon(
                   Icons.receipt_long_outlined,
                   size: 48.0.scaled(context, ref),
-                  color: BeeTokens.textTertiary(context),
+                  color: PiggyTokens.textTertiary(context),
                 ),
                 SizedBox(height: 8.0.scaled(context, ref)),
                 Text(
                   l10n.accountNoTransactions,
                   style: TextStyle(
                     fontSize: 14,
-                    color: BeeTokens.textSecondary(context),
+                    color: PiggyTokens.textSecondary(context),
                   ),
                 ),
               ],
@@ -937,7 +937,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: BeeTokens.textPrimary(context),
+                    color: PiggyTokens.textPrimary(context),
                   ),
                 ),
                 const Spacer(),
@@ -970,7 +970,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
 
             return Column(
               children: [
-                if (index > 0) BeeTokens.cardDivider(context),
+                if (index > 0) PiggyTokens.cardDivider(context),
                 _TransactionTile(
                   transaction: tx,
                   currencyCode: currencyCode,
@@ -1005,7 +1005,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                   l10n.accountNoMoreData,
                   style: TextStyle(
                     fontSize: 12,
-                    color: BeeTokens.textTertiary(context),
+                    color: PiggyTokens.textTertiary(context),
                   ),
                 ),
               ),
@@ -1087,7 +1087,7 @@ class _OverviewStatCell extends ConsumerWidget {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: BeeTokens.textPrimary(context),
+            color: PiggyTokens.textPrimary(context),
           ),
         ),
         const SizedBox(height: 2),
@@ -1095,7 +1095,7 @@ class _OverviewStatCell extends ConsumerWidget {
           label,
           style: TextStyle(
             fontSize: 11,
-            color: BeeTokens.textTertiary(context),
+            color: PiggyTokens.textTertiary(context),
           ),
         ),
       ],
@@ -1130,16 +1130,16 @@ class _DetailChartTab extends StatelessWidget {
           color: isSelected
               ? primaryColor.withValues(alpha: 0.15)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
           border: Border.all(
-            color: isSelected ? primaryColor : BeeTokens.border(context),
+            color: isSelected ? primaryColor : PiggyTokens.border(context),
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 12,
-            color: isSelected ? primaryColor : BeeTokens.textSecondary(context),
+            color: isSelected ? primaryColor : PiggyTokens.textSecondary(context),
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
           ),
         ),
@@ -1175,7 +1175,7 @@ class _DetailStatCell extends ConsumerWidget {
           label,
           style: TextStyle(
             fontSize: 11,
-            color: BeeTokens.textTertiary(context),
+            color: PiggyTokens.textTertiary(context),
           ),
         ),
         SizedBox(height: 4.0.scaled(context, ref)),
@@ -1188,7 +1188,7 @@ class _DetailStatCell extends ConsumerWidget {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: BeeTokens.textPrimary(context),
+            color: PiggyTokens.textPrimary(context),
           ),
         ),
       ],
@@ -1234,18 +1234,18 @@ class _TransactionTile extends ConsumerWidget {
 
     switch (transaction.type) {
       case 'income':
-        amountColor = BeeTokens.incomeColor(context, ref);
+        amountColor = PiggyTokens.incomeColor(context, ref);
         break;
       case 'expense':
-        amountColor = BeeTokens.expenseColor(context, ref);
+        amountColor = PiggyTokens.expenseColor(context, ref);
         break;
       case 'transfer':
         amountColor = isTransferOut
-            ? BeeTokens.expenseColor(context, ref)
-            : BeeTokens.incomeColor(context, ref);
+            ? PiggyTokens.expenseColor(context, ref)
+            : PiggyTokens.incomeColor(context, ref);
         break;
       default:
-        amountColor = BeeTokens.textPrimary(context);
+        amountColor = PiggyTokens.textPrimary(context);
     }
 
     final category = transaction.type == 'transfer'
@@ -1337,7 +1337,7 @@ class _TransactionTile extends ConsumerWidget {
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w500,
-                              color: BeeTokens.textPrimary(context),
+                              color: PiggyTokens.textPrimary(context),
                             ),
                             children: [
                               if (noteSuffix != null)
@@ -1345,7 +1345,7 @@ class _TransactionTile extends ConsumerWidget {
                                   text: '  ($noteSuffix)',
                                   style: TextStyle(
                                     fontSize: 13,
-                                    color: BeeTokens.textSecondary(context),
+                                    color: PiggyTokens.textSecondary(context),
                                   ),
                                 ),
                             ],
@@ -1386,7 +1386,7 @@ class _TransactionTile extends ConsumerWidget {
                         displaySubtitle,
                         style: TextStyle(
                           fontSize: 12,
-                          color: BeeTokens.textSecondary(context),
+                          color: PiggyTokens.textSecondary(context),
                         ),
                       ),
                     ),
@@ -1397,7 +1397,7 @@ class _TransactionTile extends ConsumerWidget {
                       _formatDate(transaction.happenedAt),
                       style: TextStyle(
                         fontSize: 12,
-                        color: BeeTokens.textTertiary(context),
+                        color: PiggyTokens.textTertiary(context),
                       ),
                     ),
                   ),

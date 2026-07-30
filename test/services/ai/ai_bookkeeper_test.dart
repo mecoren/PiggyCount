@@ -4,13 +4,13 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:beecount/ai/core/ai_extraction_context.dart';
-import 'package:beecount/ai/core/ai_extraction_engine.dart';
-import 'package:beecount/ai/core/bill_info.dart';
-import 'package:beecount/data/db.dart';
-import 'package:beecount/data/repositories/local/local_repository.dart';
-import 'package:beecount/services/ai/ai_bookkeeper.dart';
-import 'package:beecount/services/billing/bill_creation_service.dart';
+import 'package:piggycount/ai/core/ai_extraction_context.dart';
+import 'package:piggycount/ai/core/ai_extraction_engine.dart';
+import 'package:piggycount/ai/core/bill_info.dart';
+import 'package:piggycount/data/db.dart';
+import 'package:piggycount/data/repositories/local/local_repository.dart';
+import 'package:piggycount/services/ai/ai_bookkeeper.dart';
+import 'package:piggycount/services/billing/bill_creation_service.dart';
 
 /// 可编程的 fake engine。不做 AI 调用,直接返回预设的 bills。
 class _FakeEngine implements AiExtractionEngine {
@@ -46,14 +46,14 @@ class _FakeEngine implements AiExtractionEngine {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  late BeeDatabase db;
+  late PiggyDatabase db;
   late LocalRepository repo;
   late BillCreationService persister;
   late int ledgerId;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    db = BeeDatabase.forTesting(NativeDatabase.memory());
+    db = PiggyDatabase.forTesting(NativeDatabase.memory());
     repo = LocalRepository(db);
     persister = BillCreationService(repo);
     ledgerId = await repo.createLedger(name: 'test');

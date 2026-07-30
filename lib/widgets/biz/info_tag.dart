@@ -10,14 +10,14 @@ class InfoTag extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
       ),
       child: Text(
         text,
         style: Theme.of(context)
             .textTheme
             .labelSmall
-            ?.copyWith(color: BeeTokens.textSecondary(context)),
+            ?.copyWith(color: PiggyTokens.textSecondary(context)),
       ),
     );
   }

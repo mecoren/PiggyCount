@@ -108,7 +108,7 @@ class DashboardView extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: widgetCardBackground(dark),
-        borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -264,7 +264,7 @@ class DashboardView extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
         color: themeColor.withValues(alpha: dark ? 0.2 : 0.1),
-        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -288,7 +288,7 @@ class DashboardView extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
         color: themeColor,
-        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

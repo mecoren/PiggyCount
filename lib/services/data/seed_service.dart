@@ -396,7 +396,7 @@ class SeedService {
 
   /// 生成默认账本
   static Future<int> createDefaultLedger(
-    BeeDatabase db,
+    PiggyDatabase db,
     AppLocalizations l10n,
     String currency,
   ) async {
@@ -411,7 +411,7 @@ class SeedService {
 
   /// 生成默认账户（3个：现金、银行卡、信用卡）
   static Future<void> createDefaultAccounts(
-    BeeDatabase db,
+    PiggyDatabase db,
     int ledgerId,
     AppLocalizations l10n,
     String currency,
@@ -608,7 +608,7 @@ class SeedService {
   }
 
   /// 生成默认分类（一级分类模式）
-  static Future<void> createFlatCategories(BeeDatabase db, AppLocalizations l10n) async {
+  static Future<void> createFlatCategories(PiggyDatabase db, AppLocalizations l10n) async {
     // 创建支出分类
     for (var i = 0; i < flatExpenseCategoryKeys.length; i++) {
       final key = flatExpenseCategoryKeys[i];
@@ -651,7 +651,7 @@ class SeedService {
   }
 
   /// 生成默认分类（二级分类模式）
-  static Future<void> createHierarchicalCategories(BeeDatabase db, AppLocalizations l10n) async {
+  static Future<void> createHierarchicalCategories(PiggyDatabase db, AppLocalizations l10n) async {
     // 创建支出分类
     var sortOrder = 0;
     for (final entry in hierarchicalExpenseCategories.entries) {
@@ -747,7 +747,7 @@ class SeedService {
   /// [currency] 默认货币代码（如 'CNY', 'USD'）
   /// [useHierarchicalCategories] 是否使用二级分类模式
   static Future<void> seedDatabase(
-    BeeDatabase db,
+    PiggyDatabase db,
     AppLocalizations l10n, {
     String currency = 'CNY',
     bool useHierarchicalCategories = false,
@@ -801,7 +801,7 @@ class SeedService {
   /// 创建虚拟转账分类
   /// 此分类不在普通分类列表中显示，仅用于存储转账的自定义图标
   static Future<void> createTransferCategory(
-    BeeDatabase db,
+    PiggyDatabase db,
     AppLocalizations l10n,
   ) async {
     // 检查是否已存在
@@ -832,7 +832,7 @@ class SeedService {
   /// 迁移历史转账记录的 category_id
   /// 将所有 type='transfer' 且 category_id 为 NULL 的记录设置为虚拟转账分类 ID
   /// 此方法设计为幂等，可以多次调用
-  static Future<void> migrateTransferTransactions(BeeDatabase db) async {
+  static Future<void> migrateTransferTransactions(PiggyDatabase db) async {
     // 获取虚拟转账分类
     final transferCategory = await (db.select(db.categories)
       ..where((t) => t.kind.equals('transfer')))

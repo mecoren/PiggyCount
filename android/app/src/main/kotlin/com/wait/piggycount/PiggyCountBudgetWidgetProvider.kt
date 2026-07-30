@@ -1,4 +1,4 @@
-package com.tntlikely.beecount
+package com.wait.piggycount
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
@@ -18,14 +18,14 @@ import java.io.File
  * 对应 `lib/widget/widget_spec.dart` 的 `budgetSmall/Medium`,渲染管线把
  * 图片分别写入 `widget_budget_small` / `widget_budget_medium` 两个 key。
  *
- * 尺寸判定机制同 [BeeCountNetWorthWidgetProvider]:本 provider 类名覆盖
+ * 尺寸判定机制同 [PiggyCountNetWorthWidgetProvider]:本 provider 类名覆盖
  * 两档尺寸,`onUpdate` 按 `AppWidgetManager.getAppWidgetOptions` 读到的实际
  * 尺寸选择图片 key(见 [resolveImageKey]);Dart 侧 `matchInstalledAll` 为
  * 命中类名渲染该类型全部尺寸的图,任意缩放档位都有现成图可显。
  */
-open class BeeCountBudgetWidgetProvider : HomeWidgetProvider() {
+open class PiggyCountBudgetWidgetProvider : HomeWidgetProvider() {
     companion object {
-        private const val TAG = "BeeCountBudgetWidget"
+        private const val TAG = "PiggyCountBudgetWidget"
 
         // 阈值取自 widget_spec.dart 的 logicalSize:small(155x155) 与
         // medium(364x169) 宽度的中点,只是粗略分档,不代表精确换算。
@@ -69,7 +69,7 @@ open class BeeCountBudgetWidgetProvider : HomeWidgetProvider() {
                     // 整块点击 → 预算页。第一版不分区。
                     // TODO: 中号有分类用量列表时,考虑按行分区深链到该分类的筛选明细。
                     try {
-                        val intent = createLaunchIntentWithDeepLink(context, "beecount://open?page=budget")
+                        val intent = createLaunchIntentWithDeepLink(context, "piggycount://open?page=budget")
                         val pending = PendingIntent.getActivity(
                             context, widgetId, intent,
                             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE

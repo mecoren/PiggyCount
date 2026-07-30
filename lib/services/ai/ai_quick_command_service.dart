@@ -10,7 +10,7 @@ import '../../data/repositories/local/local_repository.dart';
 
 /// AI快捷指令服务
 class AIQuickCommandService {
-  final BeeDatabase db;
+  final PiggyDatabase db;
   final int ledgerId;
   /// 读取账本每月起始日(走 repo 注入,不在本文件再扩 db 直查)
   final Future<int> Function() monthStartDayLoader;
@@ -297,7 +297,7 @@ ${trends.join('\n')}
 /// Provider for AIQuickCommandService
 final aiQuickCommandServiceProvider = Provider.family<AIQuickCommandService, int>((ref, ledgerId) {
   final repo = ref.watch(repositoryProvider);
-  // 注意: AIQuickCommandService 需要直接访问 BeeDatabase 实例进行查询
+  // 注意: AIQuickCommandService 需要直接访问 PiggyDatabase 实例进行查询
   return AIQuickCommandService(
     db: (repo as LocalRepository).db,
     ledgerId: ledgerId,

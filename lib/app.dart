@@ -36,14 +36,14 @@ import 'providers/security_providers.dart';
 import 'styles/tokens.dart';
 import 'providers/avatar_providers.dart';
 
-class BeeApp extends ConsumerStatefulWidget {
-  const BeeApp({super.key});
+class PiggyApp extends ConsumerStatefulWidget {
+  const PiggyApp({super.key});
 
   @override
-  ConsumerState<BeeApp> createState() => _BeeAppState();
+  ConsumerState<PiggyApp> createState() => _PiggyAppState();
 }
 
-class _BeeAppState extends ConsumerState<BeeApp>
+class _PiggyAppState extends ConsumerState<PiggyApp>
     with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   final _pages = const [
     HomePage(),
@@ -111,11 +111,11 @@ class _BeeAppState extends ConsumerState<BeeApp>
     });
   }
 
-  /// 启动时云端数据拉取检查是否已触发（BeeApp 实例级幂等标志）
+  /// 启动时云端数据拉取检查是否已触发（PiggyApp 实例级幂等标志）
   ///
   /// 用于避免 microtask 触发与 listenManual 触发重复执行。
   /// StartupSyncChecker 内部也有 _done 标志，但因每次创建新实例，
-  /// 这里在 BeeApp 层加一道闸门。
+  /// 这里在 PiggyApp 层加一道闸门。
   bool _startupSyncCheckTriggered = false;
 
   /// 当前启动检查的 controller（用于在 dispose 时清理 overlay）
@@ -199,27 +199,27 @@ class _BeeAppState extends ConsumerState<BeeApp>
 
   /// 设置快捷操作
   void _setupQuickActions() {
-    logger.info('QuickActions', 'BeeApp: 设置快捷操作服务...');
+    logger.info('QuickActions', 'PiggyApp: 设置快捷操作服务...');
     _quickActionsService.onNavigate = (action) {
       if (mounted) {
-        logger.info('QuickActions', 'BeeApp: 执行快捷操作 $action');
+        logger.info('QuickActions', 'PiggyApp: 执行快捷操作 $action');
         _handleAppLinkAction(action);
       }
     };
     _quickActionsService.initialize();
     // 处理可能在初始化前就触发的快捷操作
     _quickActionsService.processPendingAction();
-    logger.info('QuickActions', 'BeeApp: 快捷操作服务已设置');
+    logger.info('QuickActions', 'PiggyApp: 快捷操作服务已设置');
   }
 
   /// 设置 AppLink 监听
   void _setupAppLinkListener() {
-    logger.info('AppLink', 'BeeApp: 设置 AppLink 监听...');
+    logger.info('AppLink', 'PiggyApp: 设置 AppLink 监听...');
     _appLinkSubscription = ref.listenManual<AppLinkAction?>(
       pendingAppLinkActionProvider,
       (previous, next) {
         logger.info('AppLink',
-            'BeeApp: 监听触发 previous=$previous, next=$next, mounted=$mounted');
+            'PiggyApp: 监听触发 previous=$previous, next=$next, mounted=$mounted');
         if (next != null && mounted) {
           // 不在此处直接 push：冷启动 / 厂商主题变更(themeChanged)会重建页面树,
           // 此刻多半处于 inactive/hidden,push 的路由会被丢弃(deep-link「没打开」根因)。
@@ -236,7 +236,7 @@ class _BeeAppState extends ConsumerState<BeeApp>
       },
       fireImmediately: true,
     );
-    logger.info('AppLink', 'BeeApp: AppLink 监听已设置');
+    logger.info('AppLink', 'PiggyApp: AppLink 监听已设置');
   }
 
   /// 后台刷新账本同步状态 / 触发首次同步
@@ -249,7 +249,7 @@ class _BeeAppState extends ConsumerState<BeeApp>
   void _refreshLedgersStatusInBackground() {
     // 冷启动时先 eager-await beecountCloudProviderInstance 一次，强制让这个
     // FutureProvider 真正跑起来。否则只是"被定义"但没人读，
-    // BeeCountCloudAuthService.initialize() 永远不会跑，session 不会从
+    // PiggyCountCloudAuthService.initialize() 永远不会跑，session 不会从
     // SharedPreferences 恢复 —— 就是之前用户感受到的"必须打开配置保存才会
     // 登录"bug 的根因。后面的 listenManual 再做后续响应式逻辑。
     Future.microtask(() async {
@@ -475,7 +475,7 @@ class _BeeAppState extends ConsumerState<BeeApp>
         (_lastAppLinkHandleTime != null &&
             now.difference(_lastAppLinkHandleTime!) <
                 const Duration(seconds: 1))) {
-      logger.info('AppLink', 'BeeApp: 忽略重复的动作 $action');
+      logger.info('AppLink', 'PiggyApp: 忽略重复的动作 $action');
       return;
     }
     _isHandlingAppLink = true;
@@ -594,7 +594,7 @@ class _BeeAppState extends ConsumerState<BeeApp>
     final categoryId = (data['categoryId'] as num?)?.toInt();
     final page = data['page'] as String?;
     logger.info('AppLink',
-        'BeeApp: drain($trigger) 打开深链 $action type=$type categoryId=$categoryId page=$page');
+        'PiggyApp: drain($trigger) 打开深链 $action type=$type categoryId=$categoryId page=$page');
     _openDeepLink(action, type, categoryId: categoryId, page: page);
   }
 
@@ -1018,7 +1018,7 @@ class _BeeBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = BeeTokens.tabBarBackground(context);
+    final bgColor = PiggyTokens.tabBarBackground(context);
     final inactiveColor = isDark ? Colors.white70 : Colors.black54;
 
     const barHeight = 56.0;
@@ -1034,11 +1034,11 @@ class _BeeBottomBar extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: bgColor,
-            borderRadius: BorderRadius.circular(BeeDimens.radius3xl),
-            boxShadow: BeeTokens.tabBarShadow,
+            borderRadius: BorderRadius.circular(PiggyDimens.radius3xl),
+            boxShadow: PiggyTokens.tabBarShadow,
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(BeeDimens.radius3xl),
+            borderRadius: BorderRadius.circular(PiggyDimens.radius3xl),
             child: Row(
               children: [
                 _buildTabItem(
@@ -1075,7 +1075,7 @@ class _BeeBottomBar extends StatelessWidget {
               color: isActive
                   ? primaryColor.withValues(alpha: 0.12)
                   : Colors.transparent,
-              borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+              borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1173,7 +1173,7 @@ class _BeeBottomBar extends StatelessWidget {
               color: isActive
                   ? primaryColor.withValues(alpha: 0.12)
                   : Colors.transparent,
-              borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+              borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,

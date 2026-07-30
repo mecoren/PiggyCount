@@ -38,7 +38,7 @@ class SmartBillingPage extends ConsumerWidget {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.info_outline, color: BeeTokens.primary(context)),
+            Icon(Icons.info_outline, color: PiggyTokens.primary(context)),
             const SizedBox(width: 8),
             Text(title),
           ],
@@ -56,11 +56,11 @@ class SmartBillingPage extends ConsumerWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: requiresAI
-                    ? BeeTokens.warning(context).withValues(alpha: 0.1)
-                    : BeeTokens.info(context).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                    ? PiggyTokens.warning(context).withValues(alpha: 0.1)
+                    : PiggyTokens.info(context).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                 border: Border.all(
-                  color: requiresAI ? BeeTokens.warning(context) : BeeTokens.info(context),
+                  color: requiresAI ? PiggyTokens.warning(context) : PiggyTokens.info(context),
                   width: 1,
                 ),
               ),
@@ -68,7 +68,7 @@ class SmartBillingPage extends ConsumerWidget {
                 children: [
                   Icon(
                     requiresAI ? Icons.warning_amber : Icons.psychology,
-                    color: requiresAI ? BeeTokens.warning(context) : BeeTokens.info(context),
+                    color: requiresAI ? PiggyTokens.warning(context) : PiggyTokens.info(context),
                     size: 20,
                   ),
                   const SizedBox(width: 8),
@@ -77,7 +77,7 @@ class SmartBillingPage extends ConsumerWidget {
                       aiRequirement,
                       style: TextStyle(
                         fontSize: 13,
-                        color: requiresAI ? BeeTokens.warning(context) : BeeTokens.info(context),
+                        color: requiresAI ? PiggyTokens.warning(context) : PiggyTokens.info(context),
                       ),
                     ),
                   ),
@@ -88,14 +88,14 @@ class SmartBillingPage extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: BeeTokens.primary(context).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                color: PiggyTokens.primary(context).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
               ),
               child: Row(
                 children: [
                   Icon(
                     Icons.touch_app,
-                    color: BeeTokens.primary(context),
+                    color: PiggyTokens.primary(context),
                     size: 20,
                   ),
                   const SizedBox(width: 8),
@@ -104,7 +104,7 @@ class SmartBillingPage extends ConsumerWidget {
                       hint,
                       style: TextStyle(
                         fontSize: 13,
-                        color: BeeTokens.primary(context),
+                        color: PiggyTokens.primary(context),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -205,7 +205,7 @@ class SmartBillingPage extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
       appBar: GlassTitleBar(
         title: l10n.smartBillingPageTitle,
@@ -420,7 +420,7 @@ class _VoiceSilenceTimeoutSliderState
                       l10n.smartBillingVoiceSilenceTimeoutValue(seconds),
                       style: TextStyle(
                         fontSize: 12,
-                        color: BeeTokens.textTertiary(context),
+                        color: PiggyTokens.textTertiary(context),
                       ),
                     ),
                   ],

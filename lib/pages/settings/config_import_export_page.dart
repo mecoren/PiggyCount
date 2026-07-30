@@ -330,7 +330,7 @@ class _ConfigImportExportPageState
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
       appBar: GlassTitleBar(
         title: l10n.configImportExportTitle,
@@ -365,7 +365,7 @@ class _ConfigImportExportPageState
                           style: TextStyle(
                             fontSize: 16.0.scaled(context, ref),
                             fontWeight: FontWeight.w600,
-                            color: BeeTokens.textPrimary(context),
+                            color: PiggyTokens.textPrimary(context),
                           ),
                         ),
                       ],
@@ -375,7 +375,7 @@ class _ConfigImportExportPageState
                       l10n.configImportExportInfoMessage,
                       style: TextStyle(
                         fontSize: 14.0.scaled(context, ref),
-                        color: BeeTokens.textSecondary(context),
+                        color: PiggyTokens.textSecondary(context),
                         height: 1.5,
                       ),
                     ),
@@ -421,7 +421,7 @@ class _ConfigImportExportPageState
                           Icon(
                             Icons.check_circle,
                             size: 16.0.scaled(context, ref),
-                            color: BeeTokens.success(context),
+                            color: PiggyTokens.success(context),
                           ),
                           SizedBox(width: 8.0.scaled(context, ref)),
                           Expanded(
@@ -429,7 +429,7 @@ class _ConfigImportExportPageState
                               l10n.configExportSavedTo(_lastExportedFilePath!.replaceAll('/storage/emulated/0/', '')),
                               style: TextStyle(
                                 fontSize: 13.0.scaled(context, ref),
-                                color: BeeTokens.textSecondary(context),
+                                color: PiggyTokens.textSecondary(context),
                               ),
                             ),
                           ),
@@ -487,7 +487,7 @@ class _ConfigImportExportPageState
                       style: TextStyle(
                         fontSize: 16.0.scaled(context, ref),
                         fontWeight: FontWeight.w600,
-                        color: BeeTokens.textPrimary(context),
+                        color: PiggyTokens.textPrimary(context),
                       ),
                     ),
                     SizedBox(height: 12.0.scaled(context, ref)),
@@ -596,7 +596,7 @@ class _ConfigImportExportPageState
             text,
             style: TextStyle(
               fontSize: 14.0.scaled(context, ref),
-              color: BeeTokens.textPrimary(context),
+              color: PiggyTokens.textPrimary(context),
             ),
           ),
         ),
@@ -627,10 +627,10 @@ class _ConfigContentDialog extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: BeeTokens.surfaceElevated(context),
+              color: PiggyTokens.surfaceElevated(context),
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(BeeDimens.radiusXs),
-                topRight: Radius.circular(BeeDimens.radiusXs),
+                topLeft: Radius.circular(PiggyDimens.radiusXs),
+                topRight: Radius.circular(PiggyDimens.radiusXs),
               ),
             ),
             child: Row(
@@ -675,10 +675,10 @@ class _ConfigContentDialog extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: BeeTokens.surfaceElevated(context),
+              color: PiggyTokens.surfaceElevated(context),
               borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(BeeDimens.radiusXs),
-                bottomRight: Radius.circular(BeeDimens.radiusXs),
+                bottomLeft: Radius.circular(PiggyDimens.radiusXs),
+                bottomRight: Radius.circular(PiggyDimens.radiusXs),
               ),
             ),
             child: Row(
@@ -715,17 +715,17 @@ class _ConfigPreviewDialogState extends State<_ConfigPreviewDialog> {
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-      backgroundColor: BeeTokens.surfaceElevated(context),
+      backgroundColor: PiggyTokens.surfaceElevated(context),
       child: Column(
         children: [
           // 标题栏
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: BeeTokens.surfaceElevated(context),
+              color: PiggyTokens.surfaceElevated(context),
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(BeeDimens.radiusXs),
-                topRight: Radius.circular(BeeDimens.radiusXs),
+                topLeft: Radius.circular(PiggyDimens.radiusXs),
+                topRight: Radius.circular(PiggyDimens.radiusXs),
               ),
             ),
             child: Row(
@@ -760,10 +760,10 @@ class _ConfigPreviewDialogState extends State<_ConfigPreviewDialog> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: BeeTokens.warning(context).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                      color: PiggyTokens.warning(context).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                       border: Border.all(
-                        color: BeeTokens.warning(context).withValues(alpha: 0.3),
+                        color: PiggyTokens.warning(context).withValues(alpha: 0.3),
                       ),
                     ),
                     child: Row(
@@ -771,7 +771,7 @@ class _ConfigPreviewDialogState extends State<_ConfigPreviewDialog> {
                       children: [
                         Icon(
                           Icons.warning_amber_rounded,
-                          color: BeeTokens.warning(context),
+                          color: PiggyTokens.warning(context),
                           size: 20,
                         ),
                         const SizedBox(width: 8),
@@ -780,7 +780,7 @@ class _ConfigPreviewDialogState extends State<_ConfigPreviewDialog> {
                             '导入将覆盖现有配置，建议先备份当前配置。',
                             style: TextStyle(
                               fontSize: 13,
-                              color: BeeTokens.warning(context),
+                              color: PiggyTokens.warning(context),
                             ),
                           ),
                         ),
@@ -792,9 +792,9 @@ class _ConfigPreviewDialogState extends State<_ConfigPreviewDialog> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: BeeTokens.surface(context),
-                      borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
-                      border: Border.all(color: BeeTokens.border(context)),
+                      color: PiggyTokens.surface(context),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+                      border: Border.all(color: PiggyTokens.border(context)),
                     ),
                     child: SelectableText(
                       widget.yamlContent,
@@ -802,7 +802,7 @@ class _ConfigPreviewDialogState extends State<_ConfigPreviewDialog> {
                         fontFamily: 'monospace',
                         fontSize: 12,
                         height: 1.5,
-                        color: BeeTokens.textPrimary(context),
+                        color: PiggyTokens.textPrimary(context),
                       ),
                     ),
                   ),
@@ -814,10 +814,10 @@ class _ConfigPreviewDialogState extends State<_ConfigPreviewDialog> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: BeeTokens.surfaceElevated(context),
+              color: PiggyTokens.surfaceElevated(context),
               borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(BeeDimens.radiusXs),
-                bottomRight: Radius.circular(BeeDimens.radiusXs),
+                bottomLeft: Radius.circular(PiggyDimens.radiusXs),
+                bottomRight: Radius.circular(PiggyDimens.radiusXs),
               ),
             ),
             child: Row(
@@ -869,8 +869,8 @@ class _ExportOptionsDialogState extends State<_ExportOptionsDialog> {
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusLg)),
-      backgroundColor: BeeTokens.surfaceElevated(context),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
+      backgroundColor: PiggyTokens.surfaceElevated(context),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -878,10 +878,10 @@ class _ExportOptionsDialogState extends State<_ExportOptionsDialog> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: BeeTokens.surfaceElevated(context),
+              color: PiggyTokens.surfaceElevated(context),
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(BeeDimens.radiusLg),
-                topRight: Radius.circular(BeeDimens.radiusLg),
+                topLeft: Radius.circular(PiggyDimens.radiusLg),
+                topRight: Radius.circular(PiggyDimens.radiusLg),
               ),
             ),
             child: Row(
@@ -967,7 +967,7 @@ class _ExportOptionsDialogState extends State<_ExportOptionsDialog> {
                     l10n.configIncludeAISubtitle,
                     style: TextStyle(
                       fontSize: 12,
-                      color: BeeTokens.textSecondary(context),
+                      color: PiggyTokens.textSecondary(context),
                     ),
                   ),
                   secondary: Icon(Icons.smart_toy_outlined, color: primary),
@@ -982,7 +982,7 @@ class _ExportOptionsDialogState extends State<_ExportOptionsDialog> {
                     l10n.configIncludeOtherSettingsSubtitle,
                     style: TextStyle(
                       fontSize: 12,
-                      color: BeeTokens.textSecondary(context),
+                      color: PiggyTokens.textSecondary(context),
                     ),
                   ),
                   secondary: Icon(Icons.settings_outlined, color: primary),
@@ -1041,18 +1041,18 @@ class _ExportPreviewDialog extends StatelessWidget {
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusLg)),
-      backgroundColor: BeeTokens.surfaceElevated(context),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
+      backgroundColor: PiggyTokens.surfaceElevated(context),
       child: Column(
         children: [
           // 标题栏
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: BeeTokens.surfaceElevated(context),
+              color: PiggyTokens.surfaceElevated(context),
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(BeeDimens.radiusLg),
-                topRight: Radius.circular(BeeDimens.radiusLg),
+                topLeft: Radius.circular(PiggyDimens.radiusLg),
+                topRight: Radius.circular(PiggyDimens.radiusLg),
               ),
             ),
             child: Row(
@@ -1085,9 +1085,9 @@ class _ExportPreviewDialog extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: BeeTokens.surface(context),
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
-                  border: Border.all(color: BeeTokens.border(context)),
+                  color: PiggyTokens.surface(context),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+                  border: Border.all(color: PiggyTokens.border(context)),
                 ),
                 child: SelectableText(
                   yamlContent,
@@ -1095,7 +1095,7 @@ class _ExportPreviewDialog extends StatelessWidget {
                     fontFamily: 'monospace',
                     fontSize: 12,
                     height: 1.5,
-                    color: BeeTokens.textPrimary(context),
+                    color: PiggyTokens.textPrimary(context),
                   ),
                 ),
               ),
@@ -1173,18 +1173,18 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusLg)),
-      backgroundColor: BeeTokens.surfaceElevated(context),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
+      backgroundColor: PiggyTokens.surfaceElevated(context),
       child: Column(
         children: [
           // 标题栏
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: BeeTokens.surfaceElevated(context),
+              color: PiggyTokens.surfaceElevated(context),
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(BeeDimens.radiusLg),
-                topRight: Radius.circular(BeeDimens.radiusLg),
+                topLeft: Radius.circular(PiggyDimens.radiusLg),
+                topRight: Radius.circular(PiggyDimens.radiusLg),
               ),
             ),
             child: Row(
@@ -1220,10 +1220,10 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: BeeTokens.warning(context).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                      color: PiggyTokens.warning(context).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                       border: Border.all(
-                        color: BeeTokens.warning(context).withValues(alpha: 0.3),
+                        color: PiggyTokens.warning(context).withValues(alpha: 0.3),
                       ),
                     ),
                     child: Row(
@@ -1231,7 +1231,7 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                       children: [
                         Icon(
                           Icons.warning_amber_rounded,
-                          color: BeeTokens.warning(context),
+                          color: PiggyTokens.warning(context),
                           size: 20,
                         ),
                         const SizedBox(width: 8),
@@ -1240,7 +1240,7 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                             '导入将覆盖现有配置，建议先备份当前配置。',
                             style: TextStyle(
                               fontSize: 13,
-                              color: BeeTokens.warning(context),
+                              color: PiggyTokens.warning(context),
                             ),
                           ),
                         ),
@@ -1254,9 +1254,9 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                     padding: const EdgeInsets.all(12),
                     constraints: const BoxConstraints(maxHeight: 200),
                     decoration: BoxDecoration(
-                      color: BeeTokens.surface(context),
-                      borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
-                      border: Border.all(color: BeeTokens.border(context)),
+                      color: PiggyTokens.surface(context),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+                      border: Border.all(color: PiggyTokens.border(context)),
                     ),
                     child: SingleChildScrollView(
                       child: SelectableText(
@@ -1265,7 +1265,7 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                           fontFamily: 'monospace',
                           fontSize: 12,
                           height: 1.5,
-                          color: BeeTokens.textPrimary(context),
+                          color: PiggyTokens.textPrimary(context),
                         ),
                       ),
                     ),
@@ -1277,7 +1277,7 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: BeeTokens.textPrimary(context),
+                      color: PiggyTokens.textPrimary(context),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -1351,7 +1351,7 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                         l10n.configIncludeAISubtitle,
                         style: TextStyle(
                           fontSize: 12,
-                          color: BeeTokens.textSecondary(context),
+                          color: PiggyTokens.textSecondary(context),
                         ),
                       ),
                       secondary: Icon(Icons.smart_toy_outlined, color: primary),
@@ -1368,7 +1368,7 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                         l10n.configIncludeOtherSettingsSubtitle,
                         style: TextStyle(
                           fontSize: 12,
-                          color: BeeTokens.textSecondary(context),
+                          color: PiggyTokens.textSecondary(context),
                         ),
                       ),
                       secondary: Icon(Icons.settings_outlined, color: primary),
@@ -1384,10 +1384,10 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: BeeTokens.surfaceElevated(context),
+              color: PiggyTokens.surfaceElevated(context),
               borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(BeeDimens.radiusLg),
-                bottomRight: Radius.circular(BeeDimens.radiusLg),
+                bottomLeft: Radius.circular(PiggyDimens.radiusLg),
+                bottomRight: Radius.circular(PiggyDimens.radiusLg),
               ),
             ),
             child: Row(

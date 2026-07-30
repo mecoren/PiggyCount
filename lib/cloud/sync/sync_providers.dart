@@ -12,7 +12,7 @@ final changeTrackerProvider = Provider<ChangeTracker>((ref) {
   return ChangeTracker(db);
 });
 
-/// SyncEngine provider（需要已认证的 BeeCountCloudProvider）。
+/// SyncEngine provider（需要已认证的 PiggyCountCloudProvider）。
 ///
 /// 全 app 唯一来源。`providers/sync_providers.dart::syncServiceProvider`、
 /// `shared_ledger_providers.dart`、`join_shared_ledger_page.dart` 都通过这个
@@ -21,7 +21,7 @@ final changeTrackerProvider = Provider<ChangeTracker>((ref) {
 ///
 /// 注:disposal 责任归 family — engine.startListeningRealtime 在 syncService
 /// 装配 callback 后才启动,但 dispose 由 Riverpod GC family entry 时统一触发。
-final syncEngineProvider = Provider.family<SyncEngine, BeeCountCloudProvider>(
+final syncEngineProvider = Provider.family<SyncEngine, PiggyCountCloudProvider>(
   (ref, provider) {
     final db = ref.watch(databaseProvider);
     final tracker = ref.watch(changeTrackerProvider);

@@ -104,7 +104,7 @@ class _AttachmentPickerState extends ConsumerState<AttachmentPicker> {
         child: Text(
           l10n.commonError,
           style: TextStyle(
-            color: BeeTokens.textTertiary(context),
+            color: PiggyTokens.textTertiary(context),
             fontSize: 14.scaled(context, ref),
           ),
         ),
@@ -177,22 +177,22 @@ class _AttachmentPickerState extends ConsumerState<AttachmentPicker> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: BeeTokens.surfaceInput(context),
-          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+          color: PiggyTokens.surfaceInput(context),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         ),
         child: Row(
           children: [
             Icon(
               Icons.image_outlined,
               size: 18,
-              color: BeeTokens.iconSecondary(context),
+              color: PiggyTokens.iconSecondary(context),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 l10n.attachmentAdd,
                 style: TextStyle(
-                  color: BeeTokens.textTertiary(context),
+                  color: PiggyTokens.textTertiary(context),
                   fontSize: 14,
                 ),
               ),
@@ -200,7 +200,7 @@ class _AttachmentPickerState extends ConsumerState<AttachmentPicker> {
             Icon(
               Icons.add,
               size: 18,
-              color: BeeTokens.iconTertiary(context),
+              color: PiggyTokens.iconTertiary(context),
             ),
           ],
         ),
@@ -351,7 +351,7 @@ class _AttachmentThumbnail extends ConsumerWidget {
             width: size,
             height: size,
             decoration: BoxDecoration(
-              color: BeeTokens.surface(context),
+              color: PiggyTokens.surface(context),
               borderRadius: BorderRadius.circular(borderRadius),
               boxShadow: [
                 BoxShadow(
@@ -377,7 +377,7 @@ class _AttachmentThumbnail extends ConsumerWidget {
                   return Center(
                     child: Icon(
                       Icons.image_outlined,
-                      color: BeeTokens.iconTertiary(context),
+                      color: PiggyTokens.iconTertiary(context),
                       size: 24.scaled(context, ref),
                     ),
                   );
@@ -439,7 +439,7 @@ class _PendingFileThumbnail extends ConsumerWidget {
           width: size,
           height: size,
           decoration: BoxDecoration(
-            color: BeeTokens.surface(context),
+            color: PiggyTokens.surface(context),
             borderRadius: BorderRadius.circular(borderRadius),
             boxShadow: [
               BoxShadow(
@@ -527,17 +527,17 @@ class _AddButtonCompact extends ConsumerWidget {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: BeeTokens.surfaceInput(context),
+          color: PiggyTokens.surfaceInput(context),
           borderRadius: BorderRadius.circular(borderRadius),
           border: Border.all(
-            color: BeeTokens.border(context),
+            color: PiggyTokens.border(context),
             width: 1,
             style: BorderStyle.solid,
           ),
         ),
         child: Icon(
           Icons.add,
-          color: BeeTokens.iconSecondary(context),
+          color: PiggyTokens.iconSecondary(context),
           size: 24.scaled(context, ref),
         ),
       ),

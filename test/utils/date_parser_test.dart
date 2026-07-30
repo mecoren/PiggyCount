@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:beecount/utils/date_parser.dart';
+import 'package:piggycount/utils/date_parser.dart';
 
 /// DateParser 单测。
 ///

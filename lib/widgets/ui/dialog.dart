@@ -135,8 +135,8 @@ class AppDialog {
     return showDialog<T>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: BeeTokens.surfaceElevated(ctx),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
+        backgroundColor: PiggyTokens.surfaceElevated(ctx),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
         contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
         content: ConstrainedBox(
           constraints: BoxConstraints(
@@ -150,7 +150,7 @@ class AppDialog {
                 title,
                 textAlign: TextAlign.center,
                 style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600, color: BeeTokens.textPrimary(ctx)),
+                    fontWeight: FontWeight.w600, color: PiggyTokens.textPrimary(ctx)),
               ),
               const SizedBox(height: 12),
               Flexible(
@@ -159,7 +159,7 @@ class AppDialog {
                     message.replaceAll('\\n', '\n'),  // 处理转义的换行符
                     textAlign: TextAlign.left,
                     style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
-                      color: BeeTokens.textSecondary(ctx),
+                      color: PiggyTokens.textSecondary(ctx),
                     ),
                   ),
                 ),
@@ -178,7 +178,7 @@ class AppDialog {
                             foregroundColor: primary,
                             side: BorderSide(color: primary),
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(BeeDimens.radiusLg)),
+                                borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
                           ),
                           child: Text(a.label),
                         );
@@ -188,7 +188,7 @@ class AppDialog {
                           onPressed: a.onTap,
                           style: FilledButton.styleFrom(
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(BeeDimens.radiusLg)),
+                                borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
                           ),
                           child: Text(a.label)),
                     const SizedBox(width: 12),

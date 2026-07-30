@@ -12,7 +12,7 @@ import '../../styles/header_skins.dart';
 import '../../styles/tokens.dart';
 import '../../utils/ui_scale_extensions.dart';
 import 'amount_text.dart';
-import 'bee_icon.dart';
+import 'piggy_icon.dart';
 import '../ui/toast.dart';
 
 /// MinePage 顶部用户信息卡片
@@ -36,7 +36,7 @@ class ProfileCard extends ConsumerStatefulWidget {
 
 class _ProfileCardState extends ConsumerState<ProfileCard> {
   // 本地 optimistic 状态：用户自己刚选完图片时立刻更新到这里，配合 setState
-  // 让 UI 零延迟响应。后台同步（BeeCountCloud 拉下来的头像）落盘后通过
+  // 让 UI 零延迟响应。后台同步（PiggyCountCloud 拉下来的头像）落盘后通过
   // ref.watch(avatarPathProvider) 自动传播到这里；_avatarPath 只是初始化 /
   // optimistic override，渲染时 avatarPathProvider 的值优先。
   String? _avatarPath;
@@ -250,7 +250,7 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
     final l10n = AppLocalizations.of(context);
     final greeting = _greeting(l10n);
     final nameStyle = Theme.of(context).textTheme.titleMedium?.copyWith(
-          color: BeeTokens.textPrimary(context),
+          color: PiggyTokens.textPrimary(context),
           fontWeight: FontWeight.w600,
         );
     // 已设置=「问候,昵称」(与 web 一致),未设置=Slogan。
@@ -265,25 +265,25 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
 
     // 统计信息文字颜色
     final labelStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: BeeTokens.textSecondary(context),
+          color: PiggyTokens.textSecondary(context),
         );
-    final numStyle = BeeTextTokens.strongTitle(context)
-        .copyWith(fontSize: 20, color: BeeTokens.textPrimary(context));
+    final numStyle = PiggyTextTokens.strongTitle(context)
+        .copyWith(fontSize: 20, color: PiggyTokens.textPrimary(context));
 
     // 头部皮肤：亮暗通用同一款(暗色由皮肤内部渲染成纯黑底 + 偏淡主题色图形)。
     // 'none' → null = 纯主题色 / 纯黑。
     final skin = headerSkinById(ref.watch(headerSkinProvider));
-    final isDark = BeeTokens.isDark(context);
+    final isDark = PiggyTokens.isDark(context);
     final primary = Theme.of(context).colorScheme.primary;
     // ProfileCard 背景色：亮色模式用主题色，暗黑模式用纯黑（与原 PrimaryHeader 一致）
     final cardBg = isDark ? Colors.black : primary;
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+      borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
       child: Container(
         decoration: BoxDecoration(
           color: cardBg,
-          borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
         ),
         child: Stack(
           children: [
@@ -344,7 +344,7 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
                                         File(effectiveAvatarPath),
                                         fit: BoxFit.cover,
                                         errorBuilder: (context, error, stackTrace) {
-                                          return BeeIcon(
+                                          return PiggyIcon(
                                             color: Theme.of(context)
                                                 .colorScheme
                                                 .primary,
@@ -352,7 +352,7 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
                                           );
                                         },
                                       )
-                                    : BeeIcon(
+                                    : PiggyIcon(
                                         color:
                                             Theme.of(context).colorScheme.primary,
                                         size: 40.0.scaled(context, ref),
@@ -417,7 +417,7 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
                               ? Icons.visibility_off_outlined
                               : Icons.visibility_outlined,
                           size: 18,
-                          color: BeeTokens.textPrimary(context),
+                          color: PiggyTokens.textPrimary(context),
                         ),
                       ),
                     ],
@@ -453,8 +453,8 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
                           labelStyle: labelStyle,
                           numStyle: numStyle.copyWith(
                             color: balance >= 0
-                                ? BeeTokens.textPrimary(context)
-                                : BeeTokens.error(context),
+                                ? PiggyTokens.textPrimary(context)
+                                : PiggyTokens.error(context),
                           ),
                           centered: true,
                         ),

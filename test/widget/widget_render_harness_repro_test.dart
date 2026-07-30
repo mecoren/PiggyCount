@@ -17,28 +17,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:beecount/data/db.dart';
-import 'package:beecount/data/repositories/budget_repository.dart'
+import 'package:piggycount/data/db.dart';
+import 'package:piggycount/data/repositories/budget_repository.dart'
     show BudgetOverview, BudgetUsage;
-import 'package:beecount/data/repositories/local/local_repository.dart';
-import 'package:beecount/widget/views/budget_view.dart';
-import 'package:beecount/widget/views/dashboard_view.dart';
-import 'package:beecount/widget/views/glance_view.dart';
-import 'package:beecount/widget/views/net_worth_view.dart';
-import 'package:beecount/widget/views/quick_add_view.dart';
-import 'package:beecount/widget/views/recent_view.dart';
-import 'package:beecount/widget/widget_data_service.dart';
-import 'package:beecount/widget/widget_spec.dart' show HWSize;
+import 'package:piggycount/data/repositories/local/local_repository.dart';
+import 'package:piggycount/widget/views/budget_view.dart';
+import 'package:piggycount/widget/views/dashboard_view.dart';
+import 'package:piggycount/widget/views/glance_view.dart';
+import 'package:piggycount/widget/views/net_worth_view.dart';
+import 'package:piggycount/widget/views/quick_add_view.dart';
+import 'package:piggycount/widget/views/recent_view.dart';
+import 'package:piggycount/widget/widget_data_service.dart';
+import 'package:piggycount/widget/widget_spec.dart' show HWSize;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   SharedPreferences.setMockInitialValues({});
 
-  late BeeDatabase db;
+  late PiggyDatabase db;
   late LocalRepository repo;
 
   setUp(() {
-    db = BeeDatabase.forTesting(NativeDatabase.memory());
+    db = PiggyDatabase.forTesting(NativeDatabase.memory());
     repo = LocalRepository(db);
   });
 

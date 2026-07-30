@@ -70,12 +70,12 @@ class _SyncPreviewDialogState extends State<_SyncPreviewDialog> {
         changes.where((c) => c.type == SyncChangeType.deleted).toList();
 
     return AlertDialog(
-      backgroundColor: BeeTokens.surface(context),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
+      backgroundColor: PiggyTokens.surface(context),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
       title: Text(
         l10n.syncPreviewTitle,
         style: TextStyle(
-          color: BeeTokens.textPrimary(context),
+          color: PiggyTokens.textPrimary(context),
           fontSize: 18,
           fontWeight: FontWeight.w600,
         ),
@@ -110,7 +110,7 @@ class _SyncPreviewDialogState extends State<_SyncPreviewDialog> {
                         ? l10n.syncPreviewDeselectAll
                         : l10n.syncPreviewSelectAll,
                     style: TextStyle(
-                      color: BeeTokens.textSecondary(context),
+                      color: PiggyTokens.textSecondary(context),
                       fontSize: 13,
                     ),
                   ),
@@ -118,7 +118,7 @@ class _SyncPreviewDialogState extends State<_SyncPreviewDialog> {
               ),
             ),
             const SizedBox(height: 8),
-            Divider(color: BeeTokens.divider(context), height: 1),
+            Divider(color: PiggyTokens.divider(context), height: 1),
             const SizedBox(height: 4),
             // 变更列表
             Flexible(
@@ -129,18 +129,18 @@ class _SyncPreviewDialogState extends State<_SyncPreviewDialog> {
                   children: [
                     if (addedChanges.isNotEmpty) ...[
                       _buildSectionHeader(
-                          context, l10n.syncPreviewAdded, BeeTokens.success(context)),
+                          context, l10n.syncPreviewAdded, PiggyTokens.success(context)),
                       ...addedChanges.map((c) => _buildChangeItem(context, c)),
                     ],
                     if (modifiedChanges.isNotEmpty) ...[
                       _buildSectionHeader(
-                          context, l10n.syncPreviewModified, BeeTokens.info(context)),
+                          context, l10n.syncPreviewModified, PiggyTokens.info(context)),
                       ...modifiedChanges
                           .map((c) => _buildChangeItem(context, c)),
                     ],
                     if (deletedChanges.isNotEmpty) ...[
                       _buildSectionHeader(
-                          context, l10n.syncPreviewDeleted, BeeTokens.error(context)),
+                          context, l10n.syncPreviewDeleted, PiggyTokens.error(context)),
                       ...deletedChanges
                           .map((c) => _buildChangeItem(context, c)),
                     ],
@@ -156,7 +156,7 @@ class _SyncPreviewDialogState extends State<_SyncPreviewDialog> {
           onPressed: () => Navigator.pop(context, null),
           child: Text(
             l10n.commonCancel,
-            style: TextStyle(color: BeeTokens.textSecondary(context)),
+            style: TextStyle(color: PiggyTokens.textSecondary(context)),
           ),
         ),
         FilledButton(
@@ -182,13 +182,13 @@ class _SyncPreviewDialogState extends State<_SyncPreviewDialog> {
       spacing: 12,
       children: [
         if (added > 0)
-          _buildBadge(context, l10n.syncPreviewAddedCount(added), BeeTokens.success(context)),
+          _buildBadge(context, l10n.syncPreviewAddedCount(added), PiggyTokens.success(context)),
         if (modified > 0)
           _buildBadge(
-              context, l10n.syncPreviewModifiedCount(modified), BeeTokens.info(context)),
+              context, l10n.syncPreviewModifiedCount(modified), PiggyTokens.info(context)),
         if (deleted > 0)
           _buildBadge(
-              context, l10n.syncPreviewDeletedCount(deleted), BeeTokens.error(context)),
+              context, l10n.syncPreviewDeletedCount(deleted), PiggyTokens.error(context)),
       ],
     );
   }
@@ -198,7 +198,7 @@ class _SyncPreviewDialogState extends State<_SyncPreviewDialog> {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
       ),
       child: Text(
         text,
@@ -229,7 +229,7 @@ class _SyncPreviewDialogState extends State<_SyncPreviewDialog> {
           Text(
             title,
             style: TextStyle(
-              color: BeeTokens.textSecondary(context),
+              color: PiggyTokens.textSecondary(context),
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
@@ -305,7 +305,7 @@ class _SyncPreviewDialogState extends State<_SyncPreviewDialog> {
                   Text(
                     summary,
                     style: TextStyle(
-                      color: BeeTokens.textPrimary(context),
+                      color: PiggyTokens.textPrimary(context),
                       fontSize: 13,
                     ),
                     maxLines: 1,
@@ -315,7 +315,7 @@ class _SyncPreviewDialogState extends State<_SyncPreviewDialog> {
                     Text(
                       detail,
                       style: TextStyle(
-                        color: BeeTokens.textTertiary(context),
+                        color: PiggyTokens.textTertiary(context),
                         fontSize: 11,
                       ),
                       maxLines: 1,

@@ -13,7 +13,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:beecount/data/encryption/ciphertext_format.dart';
+import 'package:piggycount/data/encryption/ciphertext_format.dart';
 
 void main() {
   group('CiphertextFormat.magicHeader', () {

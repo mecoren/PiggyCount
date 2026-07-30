@@ -192,7 +192,7 @@ class _StorageManagementPageState extends ConsumerState<StorageManagementPage> {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
       appBar: GlassTitleBar(
         title: l10n.storageManagementTitle,
@@ -224,7 +224,7 @@ class _StorageManagementPageState extends ConsumerState<StorageManagementPage> {
                           fontWeight: FontWeight.w600,
                           color: _aiModelsSize > 0
                               ? ref.watch(primaryColorProvider)
-                              : BeeTokens.textSecondary(context),
+                              : PiggyTokens.textSecondary(context),
                         ),
                       ),
                       enabled: _aiModelsSize > 0,
@@ -251,7 +251,7 @@ class _StorageManagementPageState extends ConsumerState<StorageManagementPage> {
                             fontWeight: FontWeight.w600,
                             color: _apkFilesSize > 0
                                 ? ref.watch(primaryColorProvider)
-                                : BeeTokens.textSecondary(context),
+                                : PiggyTokens.textSecondary(context),
                           ),
                         ),
                         enabled: _apkFilesSize > 0,
@@ -271,7 +271,7 @@ class _StorageManagementPageState extends ConsumerState<StorageManagementPage> {
                     l10n.storageHint,
                     style: TextStyle(
                       fontSize: 12,
-                      color: BeeTokens.textSecondary(context),
+                      color: PiggyTokens.textSecondary(context),
                     ),
                   ),
                 ),

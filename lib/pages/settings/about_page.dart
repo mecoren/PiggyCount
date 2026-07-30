@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:beecount/widgets/biz/bee_icon.dart';
+import 'package:piggycount/widgets/biz/piggy_icon.dart';
 
 import '../../providers.dart';
 import '../../widgets/ui/ui.dart';
@@ -61,7 +61,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
           child: Text(
             l10n.aboutDeveloperStory,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: BeeTokens.textSecondary(context),
+                  color: PiggyTokens.textSecondary(context),
                   height: 1.7,
                 ),
           ),
@@ -87,7 +87,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
     final showTelegram = !isSimplifiedZh;
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
       appBar: GlassTitleBar(
         title: l10n.aboutPageTitle,
@@ -108,7 +108,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
             ),
             child: Column(
               children: [
-                BeeIcon(
+                PiggyIcon(
                   color: primary,
                   size: 80.0.scaled(context, ref),
                 ),
@@ -125,14 +125,14 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                             .headlineSmall
                             ?.copyWith(
                               fontWeight: FontWeight.w600,
-                              color: BeeTokens.textPrimary(context),
+                              color: PiggyTokens.textPrimary(context),
                             ),
                       ),
                       SizedBox(width: 4.0.scaled(context, ref)),
                       Icon(
                         Icons.auto_stories_outlined,
                         size: 18.0.scaled(context, ref),
-                        color: BeeTokens.textTertiary(context),
+                        color: PiggyTokens.textTertiary(context),
                       ),
                     ],
                   ),
@@ -144,7 +144,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                       : _versionDisplay,
                   style:
                       Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: BeeTokens.textSecondary(context),
+                            color: PiggyTokens.textSecondary(context),
                           ),
                 ),
               ],
@@ -320,7 +320,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                         title: l10n.aboutChangelog,
                         initialUrl: WebsiteUrls.changelogEmbed(
                           locale,
-                          dark: BeeTokens.isDark(context),
+                          dark: PiggyTokens.isDark(context),
                           primaryHex: _hex(primary),
                         ),
                       ),
@@ -335,7 +335,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                   '·',
                   style:
                       Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: BeeTokens.textTertiary(context),
+                            color: PiggyTokens.textTertiary(context),
                           ),
                 ),
               ),
@@ -358,7 +358,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
               child: Text(
                 '浙ICP备2025214907号-2A',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: BeeTokens.textTertiary(context),
+                      color: PiggyTokens.textTertiary(context),
                       fontSize: 11,
                     ),
               ),
@@ -410,7 +410,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
             label,
             style: TextStyle(
               fontSize: 10.5.scaled(context, ref),
-              color: BeeTokens.textTertiary(context),
+              color: PiggyTokens.textTertiary(context),
             ),
           ),
         ],

@@ -533,9 +533,9 @@ class _VoiceRecordingDialogState extends ConsumerState<_VoiceRecordingDialog> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: BeeTokens.surface(context),
-        borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
-        border: Border.all(color: BeeTokens.border(context)),
+        color: PiggyTokens.surface(context),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+        border: Border.all(color: PiggyTokens.border(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -554,7 +554,7 @@ class _VoiceRecordingDialogState extends ConsumerState<_VoiceRecordingDialog> {
             _recognizedText!,
             style: TextStyle(
               fontSize: 14,
-              color: BeeTokens.textPrimary(context),
+              color: PiggyTokens.textPrimary(context),
             ),
           ),
         ],
@@ -575,14 +575,14 @@ class _VoiceRecordingDialogState extends ConsumerState<_VoiceRecordingDialog> {
           fontSize: 14,
           color: _hasSpoken
               ? ref.watch(primaryColorProvider)
-              : BeeTokens.textSecondary(context),
+              : PiggyTokens.textSecondary(context),
           fontWeight: _hasSpoken ? FontWeight.bold : FontWeight.normal,
         ),
       ),
       const SizedBox(height: 8),
       Text(
         l10n.voiceRecordingDuration(_duration),
-        style: TextStyle(fontSize: 12, color: BeeTokens.textSecondary(context)),
+        style: TextStyle(fontSize: 12, color: PiggyTokens.textSecondary(context)),
       ),
     ];
   }
@@ -596,7 +596,7 @@ class _VoiceRecordingDialogState extends ConsumerState<_VoiceRecordingDialog> {
         const SizedBox(height: 8),
         Text(
           l10n.voiceRecordingDuration(_duration),
-          style: TextStyle(fontSize: 12, color: BeeTokens.textSecondary(context)),
+          style: TextStyle(fontSize: 12, color: PiggyTokens.textSecondary(context)),
         ),
         const SizedBox(height: 16),
       ] else
@@ -618,7 +618,7 @@ class _VoiceRecordingDialogState extends ConsumerState<_VoiceRecordingDialog> {
           child: Icon(
             Icons.mic,
             size: 40,
-            color: _isHolding ? BeeTokens.textOnPrimary(context) : primaryColor,
+            color: _isHolding ? PiggyTokens.textOnPrimary(context) : primaryColor,
           ),
         ),
       ),
@@ -629,7 +629,7 @@ class _VoiceRecordingDialogState extends ConsumerState<_VoiceRecordingDialog> {
             : l10n.voiceRecordingHoldToTalk,
         style: TextStyle(
           fontSize: 14,
-          color: _isRecording ? primaryColor : BeeTokens.textSecondary(context),
+          color: _isRecording ? primaryColor : PiggyTokens.textSecondary(context),
           fontWeight: _isRecording ? FontWeight.bold : FontWeight.normal,
         ),
       ),

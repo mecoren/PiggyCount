@@ -31,7 +31,7 @@ class JoinSharedLedgerPage extends ConsumerStatefulWidget {
 
 class _JoinSharedLedgerPageState extends ConsumerState<JoinSharedLedgerPage> {
   final TextEditingController _codeController = TextEditingController();
-  BeeCountCloudInvitePreview? _preview;
+  PiggyCountCloudInvitePreview? _preview;
   bool _busy = false;
   String? _error;
 
@@ -173,7 +173,7 @@ class _JoinSharedLedgerPageState extends ConsumerState<JoinSharedLedgerPage> {
     final preview = _preview;
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           PrimaryHeader(
@@ -210,7 +210,7 @@ class _JoinSharedLedgerPageState extends ConsumerState<JoinSharedLedgerPage> {
             const SizedBox(height: 8),
             Text(
               l10n.sharedJoinEnterCodeHint,
-              style: TextStyle(color: BeeTokens.textSecondary(context)),
+              style: TextStyle(color: PiggyTokens.textSecondary(context)),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -266,7 +266,7 @@ class _JoinSharedLedgerPageState extends ConsumerState<JoinSharedLedgerPage> {
     );
   }
 
-  Widget _buildPreviewCard(BeeCountCloudInvitePreview preview, AppLocalizations l10n) {
+  Widget _buildPreviewCard(PiggyCountCloudInvitePreview preview, AppLocalizations l10n) {
     return SectionCard(
       child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -285,7 +285,7 @@ class _JoinSharedLedgerPageState extends ConsumerState<JoinSharedLedgerPage> {
             Center(
               child: Text(
                 l10n.sharedJoinInvitedBy(preview.invitedByDisplay),
-                style: TextStyle(color: BeeTokens.textSecondary(context)),
+                style: TextStyle(color: PiggyTokens.textSecondary(context)),
               ),
             ),
             const SizedBox(height: 8),
@@ -310,7 +310,7 @@ class _JoinSharedLedgerPageState extends ConsumerState<JoinSharedLedgerPage> {
               child: Text(
                 _formatExpiry(preview.expiresAt, l10n),
                 style: TextStyle(
-                  color: BeeTokens.textTertiary(context),
+                  color: PiggyTokens.textTertiary(context),
                   fontSize: 12,
                 ),
               ),
@@ -320,7 +320,7 @@ class _JoinSharedLedgerPageState extends ConsumerState<JoinSharedLedgerPage> {
               Center(
                 child: Text(
                   _error!,
-                  style: TextStyle(color: BeeTokens.error(context), fontSize: 13),
+                  style: TextStyle(color: PiggyTokens.error(context), fontSize: 13),
                 ),
               ),
             ],
@@ -360,7 +360,7 @@ class _JoinSharedLedgerPageState extends ConsumerState<JoinSharedLedgerPage> {
               child: Text(
                 DateFormat('yyyy-MM-dd HH:mm').format(preview.expiresAt.toLocal()),
                 style: TextStyle(
-                    color: BeeTokens.textTertiary(context), fontSize: 11),
+                    color: PiggyTokens.textTertiary(context), fontSize: 11),
               ),
             ),
           ],

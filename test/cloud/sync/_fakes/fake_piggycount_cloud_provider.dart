@@ -1,7 +1,7 @@
-// FakeBeeCountCloudProvider — SyncEngine e2e 测试的 in-memory 替身。
+// FakePiggyCountCloudProvider — SyncEngine e2e 测试的 in-memory 替身。
 //
 // 设计:
-//   - extends BeeCountCloudProvider 真类(默认构造无副作用,_auth/_storage
+//   - extends PiggyCountCloudProvider 真类(默认构造无副作用,_auth/_storage
 //     在 initialize() 调用后才被设)
 //   - 覆盖 baseUrl / apiPrefix / auth / storage getter 返 fake 实例
 //   - 覆盖 SyncEngine 实际用到的 ~20 个方法,内存模拟 server 状态
@@ -19,11 +19,11 @@ import 'dart:typed_data';
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 
 // =====================================================================
-// FakeBeeCountCloudAuthService — extends 真类,覆盖 currentUserId/currentDeviceId
+// FakePiggyCountCloudAuthService — extends 真类,覆盖 currentUserId/currentDeviceId
 // =====================================================================
 
-class FakeBeeCountCloudAuthService extends BeeCountCloudAuthService {
-  FakeBeeCountCloudAuthService({
+class FakePiggyCountCloudAuthService extends PiggyCountCloudAuthService {
+  FakePiggyCountCloudAuthService({
     String? userId = 'test-user-id',
     String? deviceId = 'test-device-id',
   })  : _userId = userId,
@@ -33,7 +33,7 @@ class FakeBeeCountCloudAuthService extends BeeCountCloudAuthService {
   String? _userId;
   String? _deviceId;
 
-  // 覆盖 BeeCountCloudAuthService 自身的 getter(不在 CloudAuthService 接口
+  // 覆盖 PiggyCountCloudAuthService 自身的 getter(不在 CloudAuthService 接口
   // 内但 AppCursorStore 强 cast 后用到)
   @override
   String? get currentUserId => _userId;
@@ -54,10 +54,10 @@ class FakeBeeCountCloudAuthService extends BeeCountCloudAuthService {
 }
 
 // =====================================================================
-// FakeBeeCountCloudStorageService — 内存模拟 storage(用于 fullPush JSON 等)
+// FakePiggyCountCloudStorageService — 内存模拟 storage(用于 fullPush JSON 等)
 // =====================================================================
 
-class FakeBeeCountCloudStorageService implements CloudStorageService {
+class FakePiggyCountCloudStorageService implements CloudStorageService {
   final Map<String, String> _files = {};
   final Map<String, Map<String, String>?> _metadata = {};
 
@@ -109,31 +109,31 @@ class FakeBeeCountCloudStorageService implements CloudStorageService {
 }
 
 // =====================================================================
-// FakeBeeCountCloudProvider — 主入口
+// FakePiggyCountCloudProvider — 主入口
 // =====================================================================
 
-class FakeBeeCountCloudProvider extends BeeCountCloudProvider {
-  FakeBeeCountCloudProvider({
+class FakePiggyCountCloudProvider extends PiggyCountCloudProvider {
+  FakePiggyCountCloudProvider({
     String? userId = 'test-user-id',
     String? deviceId = 'test-device-id',
   }) {
-    _fakeAuth = FakeBeeCountCloudAuthService(
+    _fakeAuth = FakePiggyCountCloudAuthService(
       userId: userId,
       deviceId: deviceId,
     );
-    _fakeStorage = FakeBeeCountCloudStorageService();
+    _fakeStorage = FakePiggyCountCloudStorageService();
   }
 
-  late final FakeBeeCountCloudAuthService _fakeAuth;
-  late final FakeBeeCountCloudStorageService _fakeStorage;
+  late final FakePiggyCountCloudAuthService _fakeAuth;
+  late final FakePiggyCountCloudStorageService _fakeStorage;
 
   /// In-memory server 状态:全部 sync_changes 流。
   /// 测试通过 [pushFakeChange] 往里塞;[pullChanges] 按 since 切片返回。
-  final List<BeeCountCloudSyncChange> _serverChanges = [];
+  final List<PiggyCountCloudSyncChange> _serverChanges = [];
 
   /// 在线 ledger list(server 端 `/sync/ledgers` 返回)。
   /// 测试通过 [pushFakeLedger] 注入。
-  final List<BeeCountCloudReadLedger> _serverLedgers = [];
+  final List<PiggyCountCloudReadLedger> _serverLedgers = [];
 
   /// 历次 push 操作记录(用于断言"几次 push" / "推了哪些 change")
   final List<List<Map<String, dynamic>>> pushedBatches = [];
@@ -147,10 +147,10 @@ class FakeBeeCountCloudProvider extends BeeCountCloudProvider {
   /// 控制 storage.list 是否抛错
   Exception? storageListError;
 
-  final StreamController<BeeCountCloudRealtimeEvent> _realtimeController =
-      StreamController<BeeCountCloudRealtimeEvent>.broadcast();
+  final StreamController<PiggyCountCloudRealtimeEvent> _realtimeController =
+      StreamController<PiggyCountCloudRealtimeEvent>.broadcast();
 
-  // ====== 覆盖 BeeCountCloudProvider getter ======
+  // ====== 覆盖 PiggyCountCloudProvider getter ======
 
   @override
   String? get baseUrl => 'https://fake.test';
@@ -173,7 +173,7 @@ class FakeBeeCountCloudProvider extends BeeCountCloudProvider {
   // ====== 覆盖 SyncEngine 用到的方法 ======
 
   @override
-  Future<BeeCountCloudPullResult> pullChanges({
+  Future<PiggyCountCloudPullResult> pullChanges({
     int? since,
     int limit = 1000,
     bool persistCursor = true,
@@ -188,7 +188,7 @@ class FakeBeeCountCloudProvider extends BeeCountCloudProvider {
     final from = since ?? 0;
     final unread = _serverChanges.where((c) => c.changeId > from).toList();
     final slice = unread.take(limit).toList();
-    return BeeCountCloudPullResult(
+    return PiggyCountCloudPullResult(
       changes: slice,
       serverCursor:
           slice.isEmpty ? from : slice.last.changeId,
@@ -204,12 +204,12 @@ class FakeBeeCountCloudProvider extends BeeCountCloudProvider {
   }
 
   @override
-  Future<List<BeeCountCloudReadLedger>> readLedgers() async {
+  Future<List<PiggyCountCloudReadLedger>> readLedgers() async {
     return List.unmodifiable(_serverLedgers);
   }
 
   @override
-  Stream<BeeCountCloudRealtimeEvent> get realtimeEvents =>
+  Stream<PiggyCountCloudRealtimeEvent> get realtimeEvents =>
       _realtimeController.stream;
 
   @override
@@ -221,7 +221,7 @@ class FakeBeeCountCloudProvider extends BeeCountCloudProvider {
 
   /// 模拟 server 推一条 sync_change(`change_id` 自增)。
   /// caller 通过 [WS 触发](调 [emitRealtimeEvent])或者让 client 主动 pull 拉到。
-  BeeCountCloudSyncChange pushFakeChange({
+  PiggyCountCloudSyncChange pushFakeChange({
     String entityType = 'transaction',
     required String entitySyncId,
     String ledgerId = '',
@@ -229,7 +229,7 @@ class FakeBeeCountCloudProvider extends BeeCountCloudProvider {
     Map<String, dynamic>? payload,
     String updatedByDeviceId = 'remote-device',
   }) {
-    final change = BeeCountCloudSyncChange(
+    final change = PiggyCountCloudSyncChange(
       changeId: _serverChanges.length + 1,
       ledgerId: ledgerId,
       entityType: entityType,
@@ -255,7 +255,7 @@ class FakeBeeCountCloudProvider extends BeeCountCloudProvider {
     int? monthStartDay,
     DateTime? updatedAt,
   }) {
-    _serverLedgers.add(BeeCountCloudReadLedger(
+    _serverLedgers.add(PiggyCountCloudReadLedger(
       ledgerId: ledgerId,
       ledgerName: ledgerName,
       currency: currency,
@@ -272,7 +272,7 @@ class FakeBeeCountCloudProvider extends BeeCountCloudProvider {
   }
 
   /// 模拟 server 推 WS 事件
-  void emitRealtimeEvent(BeeCountCloudRealtimeEvent event) {
+  void emitRealtimeEvent(PiggyCountCloudRealtimeEvent event) {
     _realtimeController.add(event);
   }
 
@@ -307,7 +307,7 @@ class FakeBeeCountCloudProvider extends BeeCountCloudProvider {
   final List<String> uploadAttachmentCalls = [];
 
   @override
-  Future<BeeCountCloudAttachmentUploadResult> uploadAttachment({
+  Future<PiggyCountCloudAttachmentUploadResult> uploadAttachment({
     required String ledgerId,
     required Uint8List bytes,
     required String fileName,
@@ -317,7 +317,7 @@ class FakeBeeCountCloudProvider extends BeeCountCloudProvider {
     final fileId =
         'fake-attachment-${uploadedAttachments.length + 1}-$fileName';
     uploadedAttachments[fileId] = bytes;
-    return BeeCountCloudAttachmentUploadResult(
+    return PiggyCountCloudAttachmentUploadResult(
       fileId: fileId,
       ledgerId: ledgerId,
       sha256: 'fakesha256-$fileId',
@@ -338,14 +338,14 @@ class FakeBeeCountCloudProvider extends BeeCountCloudProvider {
   }
 
   @override
-  Future<BeeCountCloudAttachmentUploadResult> uploadCategoryIcon({
+  Future<PiggyCountCloudAttachmentUploadResult> uploadCategoryIcon({
     required Uint8List bytes,
     required String fileName,
     String? mimeType,
   }) async {
     final fileId = 'fake-icon-${uploadedAttachments.length + 1}-$fileName';
     uploadedAttachments[fileId] = bytes;
-    return BeeCountCloudAttachmentUploadResult(
+    return PiggyCountCloudAttachmentUploadResult(
       fileId: fileId,
       ledgerId: '',
       sha256: 'fakesha256-$fileId',
@@ -357,16 +357,16 @@ class FakeBeeCountCloudProvider extends BeeCountCloudProvider {
 
   // ====== fullPush 路径用 ======
 
-  final List<BeeCountCloudWriteCommitMeta> writeCreateLedgerCalls = [];
+  final List<PiggyCountCloudWriteCommitMeta> writeCreateLedgerCalls = [];
 
   @override
-  Future<BeeCountCloudWriteCommitMeta> writeCreateLedger({
+  Future<PiggyCountCloudWriteCommitMeta> writeCreateLedger({
     String? ledgerId,
     required String ledgerName,
     String currency = 'CNY',
     String? idempotencyKey,
   }) async {
-    final meta = BeeCountCloudWriteCommitMeta(
+    final meta = PiggyCountCloudWriteCommitMeta(
       ledgerId: ledgerId ?? 'auto-$ledgerName',
       baseChangeId: 0,
       newChangeId: _serverChanges.length + 1,
@@ -378,19 +378,19 @@ class FakeBeeCountCloudProvider extends BeeCountCloudProvider {
   }
 
   @override
-  Future<BeeCountCloudProfile> getMyProfile() async {
+  Future<PiggyCountCloudProfile> getMyProfile() async {
     throw UnimplementedError('FakeProvider.getMyProfile');
   }
 
   @override
-  Future<BeeCountCloudLedgerStats> readLedgerStats({
+  Future<PiggyCountCloudLedgerStats> readLedgerStats({
     required String ledgerId,
   }) async {
     throw UnimplementedError('FakeProvider.readLedgerStats');
   }
 
   @override
-  Future<BeeCountCloudSharedResources> fetchSharedResources({
+  Future<PiggyCountCloudSharedResources> fetchSharedResources({
     required String ledgerId,
   }) async {
     throw UnimplementedError('FakeProvider.fetchSharedResources');
@@ -401,7 +401,7 @@ class FakeBeeCountCloudProvider extends BeeCountCloudProvider {
 /// 调用时检查注入错误)。
 class _StorageProxy implements CloudStorageService {
   _StorageProxy(this._real, this._errorGetter);
-  final FakeBeeCountCloudStorageService _real;
+  final FakePiggyCountCloudStorageService _real;
   final Exception? Function() _errorGetter;
 
   @override

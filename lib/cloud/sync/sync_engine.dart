@@ -70,8 +70,8 @@ enum SyncEngineStatus { idle, pushing, pulling, syncing, error }
 /// 核心同步编排器 — 实现 SyncService 接口
 /// 负责 push 本地变更到服务端、pull 远程变更到本地
 class SyncEngine implements app.SyncService {
-  final BeeDatabase db;
-  final BeeCountCloudProvider provider;
+  final PiggyDatabase db;
+  final PiggyCountCloudProvider provider;
   final ChangeTracker changeTracker;
   final BaseRepository repo;
 
@@ -80,7 +80,7 @@ class SyncEngine implements app.SyncService {
   bool _localChanged = false;
 
   /// WebSocket 实时监听
-  StreamSubscription<BeeCountCloudRealtimeEvent>? _realtimeSubscription;
+  StreamSubscription<PiggyCountCloudRealtimeEvent>? _realtimeSubscription;
   Timer? _pullDebounce;
 
   /// 当前正在自动拉取的 ledgerId（防止重复触发）
@@ -1142,17 +1142,17 @@ class SyncEngine implements app.SyncService {
   Future<int> _runPullLoop(
     String ledgerId,
     int? nextSince, {
-    BeeCountCloudPullResult? firstPage,
+    PiggyCountCloudPullResult? firstPage,
   }) async {
     int totalApplied = 0;
     bool hasMore = true;
     int pageIndex = 0;
     final loopStart = DateTime.now();
-    BeeCountCloudPullResult? reuseResult = firstPage;
+    PiggyCountCloudPullResult? reuseResult = firstPage;
     while (hasMore) {
       pageIndex++;
       final pageStart = DateTime.now();
-      final BeeCountCloudPullResult result;
+      final PiggyCountCloudPullResult result;
       if (reuseResult != null) {
         // 第一轮:复用 _doPull 的探针结果,不再发一次 HTTP
         result = reuseResult;
@@ -1213,10 +1213,10 @@ class SyncEngine implements app.SyncService {
   /// - 不可恢复异常 → rollback + 错误入 [pullErrors] + return blocked
   /// - SQLite busy/locked → 单条 retry 2 次
   Future<_PullPageOutcome> _applyPullPage(
-      List<BeeCountCloudSyncChange> changes) async {
+      List<PiggyCountCloudSyncChange> changes) async {
     int applied = 0;
     int skipped = 0;
-    BeeCountCloudSyncChange? failingChange;
+    PiggyCountCloudSyncChange? failingChange;
 
     try {
       await db.transaction(() async {
@@ -1254,7 +1254,7 @@ class SyncEngine implements app.SyncService {
   ///
   /// 用 `e.toString()` 探测 SqliteException 类型,避免引入 sqlite3 包依赖
   /// (Drift 内部用,但这里直接 import 会触发 depend_on_referenced_packages)。
-  Future<bool> _applyOneWithBusyRetry(BeeCountCloudSyncChange ch) async {
+  Future<bool> _applyOneWithBusyRetry(PiggyCountCloudSyncChange ch) async {
     var attempts = 0;
     while (true) {
       try {

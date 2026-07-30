@@ -12,7 +12,7 @@ part of 'sync_engine.dart';
 /// 等 @override 接口实现必须留在主类里。
 ///
 /// 注意:extension 名是 **public**(没有 `_` 前缀)——因为方法本身是 public
-/// 且会被外部 caller(beecount_cloud_sync_page.dart)调用,private 扩展
+/// 且会被外部 caller(piggycount_cloud_sync_page.dart)调用,private 扩展
 /// 在 library 外不可见。命名特意避开顶层 `SyncEngineStatus` enum,叫
 /// `SyncEngineHealthChecks` 区分。
 extension SyncEngineHealthChecks on SyncEngine {

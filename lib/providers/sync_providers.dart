@@ -126,7 +126,7 @@ final supabaseConfigProvider = FutureProvider<CloudServiceConfig?>((ref) async {
 final beecountCloudConfigProvider =
     FutureProvider<CloudServiceConfig?>((ref) async {
   final store = ref.watch(cloudServiceStoreProvider);
-  return store.loadBeeCountCloud();
+  return store.loadPiggyCountCloud();
 });
 
 // WebDAV配置(不管是否激活)
@@ -492,10 +492,10 @@ final syncServiceProvider = Provider<SyncService>((ref) {
   );
 });
 
-/// 已初始化的 BeeCountCloudProvider 实例
+/// 已初始化的 PiggyCountCloudProvider 实例
 /// 用于 SyncEngine 和其他需要直接访问 BeeCount Cloud API 的场景
 final beecountCloudProviderInstance =
-    FutureProvider<BeeCountCloudProvider?>((ref) async {
+    FutureProvider<PiggyCountCloudProvider?>((ref) async {
   final configAsync = ref.watch(activeCloudConfigProvider);
   if (!configAsync.hasValue) return null;
 
@@ -506,8 +506,8 @@ final beecountCloudProviderInstance =
 
   try {
     final services = await createCloudServices(config);
-    if (services.provider is! BeeCountCloudProvider) return null;
-    final provider = services.provider as BeeCountCloudProvider;
+    if (services.provider is! PiggyCountCloudProvider) return null;
+    final provider = services.provider as PiggyCountCloudProvider;
 
     final email = config.beecountCloudEmail;
     final password = config.beecountCloudPassword;
@@ -516,8 +516,8 @@ final beecountCloudProviderInstance =
     // 这是解决"token 过期后必须到配置页点一下才能恢复"的关键:auth service
     // 内部会在 currentUser / requireAccessToken 触发时尝试恢复,不再等 Provider
     // 重建。
-    if (services.auth is BeeCountCloudAuthService) {
-      (services.auth as BeeCountCloudAuthService).setRecoveryCredentials(
+    if (services.auth is PiggyCountCloudAuthService) {
+      (services.auth as PiggyCountCloudAuthService).setRecoveryCredentials(
         email: email,
         password: password,
       );
@@ -540,7 +540,7 @@ final beecountCloudProviderInstance =
     }
     return provider;
   } catch (e, st) {
-    logger.error('CloudSync', 'BeeCountCloudProvider 初始化失败', e, st);
+    logger.error('CloudSync', 'PiggyCountCloudProvider 初始化失败', e, st);
   }
   return null;
 });
@@ -583,7 +583,7 @@ final beecountCloudServerVersionProvider =
 /// 参数 [read] 接受 Ref.read 或 WidgetRef.read(两者签名相同,共用实现),
 /// 这样 bootstrap FutureProvider 和 UI 下拉刷新都能调。
 Future<void> reconcileProfileToServer({
-  required Future<BeeCountCloudProvider?> cloudProviderFuture,
+  required Future<PiggyCountCloudProvider?> cloudProviderFuture,
   required Color currentThemeColor,
   required bool currentIncomeIsRed,
   required String currentHeaderStyle,
@@ -867,7 +867,7 @@ final pendingAvatarUploadErrorProvider = StateProvider<String?>((ref) => null);
 
 /// 当前用户云端资料
 final cloudMyProfileProvider =
-    FutureProvider<BeeCountCloudProfile?>((ref) async {
+    FutureProvider<PiggyCountCloudProfile?>((ref) async {
   ref.watch(syncStatusRefreshProvider);
   final config = await ref.watch(activeCloudConfigProvider.future);
   if (!config.valid || config.type != CloudBackendType.beecountCloud) {

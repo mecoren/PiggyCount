@@ -85,7 +85,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
     final currencySymbol = getCurrencySymbol(currencyCode);
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           PrimaryHeader(
@@ -103,7 +103,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
                 child: Text(
                   l10n.commonSave,
                   style: TextStyle(
-                    color: BeeTokens.textPrimary(context),
+                    color: PiggyTokens.textPrimary(context),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -128,7 +128,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: BeeTokens.textSecondary(context),
+                            color: PiggyTokens.textSecondary(context),
                           ),
                         ),
                         SizedBox(height: 12.0.scaled(context, ref)),
@@ -170,7 +170,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: BeeTokens.textSecondary(context),
+                            color: PiggyTokens.textSecondary(context),
                           ),
                         ),
                         SizedBox(height: 12.0.scaled(context, ref)),
@@ -190,7 +190,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
-                          color: BeeTokens.textSecondary(context),
+                          color: PiggyTokens.textSecondary(context),
                         ),
                       ),
                       SizedBox(height: 12.0.scaled(context, ref)),
@@ -203,20 +203,20 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.w600,
-                          color: BeeTokens.textPrimary(context),
+                          color: PiggyTokens.textPrimary(context),
                         ),
                         decoration: InputDecoration(
                           prefixText: '$currencySymbol ',
                           prefixStyle: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.w600,
-                            color: BeeTokens.textPrimary(context),
+                            color: PiggyTokens.textPrimary(context),
                           ),
                           hintText: l10n.budgetAmountHint,
                           hintStyle: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.w400,
-                            color: BeeTokens.textTertiary(context),
+                            color: PiggyTokens.textTertiary(context),
                           ),
                           border: InputBorder.none,
                         ),
@@ -242,11 +242,11 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
     bool disabled = false,
   }) {
     final isSelected = _type == type;
-    final primary = BeeTokens.primary(context);
+    final primary = PiggyTokens.primary(context);
 
     return InkWell(
       onTap: disabled ? null : () => setState(() => _type = type),
-      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
       child: Opacity(
         opacity: disabled ? 0.4 : 1.0,
         child: Container(
@@ -254,10 +254,10 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
           decoration: BoxDecoration(
             color: isSelected && !disabled
                 ? primary.withValues(alpha: 0.1)
-                : BeeTokens.surface(context),
-            borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                : PiggyTokens.surface(context),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
             border: Border.all(
-              color: isSelected && !disabled ? primary : BeeTokens.border(context),
+              color: isSelected && !disabled ? primary : PiggyTokens.border(context),
               width: isSelected && !disabled ? 2 : 1,
             ),
           ),
@@ -266,7 +266,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
               Icon(
                 icon,
                 size: 32.0.scaled(context, ref),
-                color: isSelected && !disabled ? primary : BeeTokens.iconSecondary(context),
+                color: isSelected && !disabled ? primary : PiggyTokens.iconSecondary(context),
               ),
               SizedBox(height: 8.0.scaled(context, ref)),
               Text(
@@ -274,7 +274,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: isSelected && !disabled ? FontWeight.w600 : FontWeight.w400,
-                  color: isSelected && !disabled ? primary : BeeTokens.textSecondary(context),
+                  color: isSelected && !disabled ? primary : PiggyTokens.textSecondary(context),
                 ),
               ),
             ],
@@ -287,13 +287,13 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
   Widget _buildCategorySelector(BuildContext context, AppLocalizations l10n) {
     return InkWell(
       onTap: _selectCategory,
-      borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+      borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
       child: Container(
         padding: EdgeInsets.all(12.0.scaled(context, ref)),
         decoration: BoxDecoration(
-          color: BeeTokens.surface(context),
-          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
-          border: Border.all(color: BeeTokens.border(context)),
+          color: PiggyTokens.surface(context),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+          border: Border.all(color: PiggyTokens.border(context)),
         ),
         child: Row(
           children: [
@@ -302,13 +302,13 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
                 width: 36.0.scaled(context, ref),
                 height: 36.0.scaled(context, ref),
                 decoration: BoxDecoration(
-                  color: BeeTokens.primary(context).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                  color: PiggyTokens.primary(context).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                 ),
                 child: Icon(
                   CategoryService.getCategoryIcon(_selectedCategoryIcon),
                   size: 20.0.scaled(context, ref),
-                  color: BeeTokens.primary(context),
+                  color: PiggyTokens.primary(context),
                 ),
               ),
               SizedBox(width: 12.0.scaled(context, ref)),
@@ -317,7 +317,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
                   _selectedCategoryName ?? '',
                   style: TextStyle(
                     fontSize: 16,
-                    color: BeeTokens.textPrimary(context),
+                    color: PiggyTokens.textPrimary(context),
                   ),
                 ),
               ),
@@ -325,7 +325,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
               Icon(
                 Icons.add_circle_outline,
                 size: 24.0.scaled(context, ref),
-                color: BeeTokens.iconTertiary(context),
+                color: PiggyTokens.iconTertiary(context),
               ),
               SizedBox(width: 12.0.scaled(context, ref)),
               Expanded(
@@ -333,14 +333,14 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
                   l10n.budgetCategoryHint,
                   style: TextStyle(
                     fontSize: 16,
-                    color: BeeTokens.textTertiary(context),
+                    color: PiggyTokens.textTertiary(context),
                   ),
                 ),
               ),
             ],
             Icon(
               Icons.chevron_right,
-              color: BeeTokens.iconTertiary(context),
+              color: PiggyTokens.iconTertiary(context),
             ),
           ],
         ),
@@ -362,9 +362,9 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
     final selected = await showModalBottomSheet<Category>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: BeeTokens.surface(context),
+      backgroundColor: PiggyTokens.surface(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
       ),
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.6,
@@ -408,18 +408,18 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
                             .colorScheme
                             .primary
                             .withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                        borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                       ),
                       child: Icon(
                         CategoryService.getCategoryIcon(category.icon),
-                        color: BeeTokens.primary(context),
+                        color: PiggyTokens.primary(context),
                       ),
                     ),
                     title: Text(category.name),
                     trailing: _selectedCategoryId == category.id
                         ? Icon(
                             Icons.check_circle,
-                            color: BeeTokens.primary(context),
+                            color: PiggyTokens.primary(context),
                           )
                         : null,
                     onTap: () => Navigator.pop(context, category),
@@ -522,7 +522,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: BeeTokens.error(context)),
+            style: TextButton.styleFrom(foregroundColor: PiggyTokens.error(context)),
             child: Text(l10n.commonDelete),
           ),
         ],

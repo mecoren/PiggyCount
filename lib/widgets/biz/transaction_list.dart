@@ -389,8 +389,8 @@ class TransactionListState extends ConsumerState<TransactionList> {
               children: [
                 if (!isFirst)
                   Divider(
-                    height: BeeTokens.listDayDividerHeight(context),
-                    color: BeeTokens.listDayDividerColor(context),
+                    height: PiggyTokens.listDayDividerHeight(context),
+                    color: PiggyTokens.listDayDividerColor(context),
                   ),
                 DaySectionHeader(
                   dateText: dateKey,
@@ -573,7 +573,7 @@ class TransactionListState extends ConsumerState<TransactionList> {
                     },
                   ),
                   if (!isLastInGroup)
-                    BeeDivider.short(indent: 56 + 16, endIndent: 16),
+                    PiggyDivider.short(indent: 56 + 16, endIndent: 16),
                 ],
               ),
             );

@@ -9,7 +9,7 @@ const _uuid = Uuid();
 /// 本地账本Repository实现
 /// 基于 Drift 数据库实现
 class LocalLedgerRepository implements LedgerRepository {
-  final BeeDatabase db;
+  final PiggyDatabase db;
 
   LocalLedgerRepository(this.db);
 

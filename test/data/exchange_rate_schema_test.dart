@@ -3,13 +3,13 @@ import 'package:drift/drift.dart' as d;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:beecount/data/db.dart';
+import 'package:piggycount/data/db.dart';
 
 void main() {
-  late BeeDatabase db;
+  late PiggyDatabase db;
 
   setUp(() {
-    db = BeeDatabase.forTesting(NativeDatabase.memory());
+    db = PiggyDatabase.forTesting(NativeDatabase.memory());
   });
 
   tearDown(() async {

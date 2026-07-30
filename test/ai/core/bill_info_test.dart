@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:beecount/ai/core/bill_info.dart';
+import 'package:piggycount/ai/core/bill_info.dart';
 
 void main() {
   group('BillInfo.fromJson', () {

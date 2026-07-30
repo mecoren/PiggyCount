@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'styles/tokens.dart';
 
-class BeeTheme {
+class PiggyTheme {
   // Brand colors - Light Mode
   static const Color honeyGold = Color(0xFFF8C91C); // 主色（亮色模式）
   static const Color hiveBrown = Color(0xFF8D6E63); // 辅助色
@@ -20,19 +20,19 @@ class BeeTheme {
     final pf = platform ?? defaultTargetPlatform;
     final isIOS = pf == TargetPlatform.iOS || pf == TargetPlatform.macOS;
     final adjustedTextTheme =
-        BeeTypography.buildBase(base.textTheme, isIOS: isIOS)
+        PiggyTypography.buildBase(base.textTheme, isIOS: isIOS)
             .apply(bodyColor: textDark, displayColor: textDark);
 
     return base.copyWith(
       colorScheme: base.colorScheme.copyWith(
         primary: honeyGold,
         secondary: energyOrange,
-        surface: BeeTokens.cardBackgroundLightStatic,
+        surface: PiggyTokens.cardBackgroundLightStatic,
       ),
       primaryColor: honeyGold,
-      scaffoldBackgroundColor: BeeTokens.scaffoldBackgroundLightStatic,
+      scaffoldBackgroundColor: PiggyTokens.scaffoldBackgroundLightStatic,
       dividerTheme: DividerThemeData(
-        color: BeeTokens.dividerStatic,
+        color: PiggyTokens.dividerStatic,
         thickness: 1,
       ),
       appBarTheme: const AppBarTheme(
@@ -60,7 +60,7 @@ class BeeTheme {
     final base = ThemeData.dark();
     final pf = platform ?? defaultTargetPlatform;
     final isIOS = pf == TargetPlatform.iOS || pf == TargetPlatform.macOS;
-    final adjusted = BeeTypography.buildBase(base.textTheme, isIOS: isIOS)
+    final adjusted = PiggyTypography.buildBase(base.textTheme, isIOS: isIOS)
         .apply(bodyColor: Colors.white, displayColor: Colors.white);
 
     return base.copyWith(
@@ -72,11 +72,11 @@ class BeeTheme {
         primaryContainer: honeyGoldDark,     // ⭐ Switch thumb 等组件使用
         onPrimaryContainer: Colors.black,    // ⭐ primaryContainer 上的前景色
         secondary: energyOrangeDark,         // ⭐ 辅助色
-        surface: BeeTokens.cardBackgroundDarkStatic, // ⭐ 改为纯黑
+        surface: PiggyTokens.cardBackgroundDarkStatic, // ⭐ 改为纯黑
         onSurface: Colors.white,
       ),
       primaryColor: honeyGoldDark,     // ⭐ 主题色
-      scaffoldBackgroundColor: BeeTokens.scaffoldBackgroundDarkStatic, // ⭐ 纯黑背景（OLED 友好）
+      scaffoldBackgroundColor: PiggyTokens.scaffoldBackgroundDarkStatic, // ⭐ 纯黑背景（OLED 友好）
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.black,  // ⭐ 改为纯黑
         foregroundColor: Colors.white,
@@ -96,10 +96,10 @@ class BeeTheme {
         elevation: 0,
       ),
       cardTheme: CardThemeData(
-        color: BeeTokens.cardBackgroundDarkStatic, // ⭐ 改为纯黑卡片
+        color: PiggyTokens.cardBackgroundDarkStatic, // ⭐ 改为纯黑卡片
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(BeeDimens.radiusXl), // ⭐ 与亮色统一为 radiusXl
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl), // ⭐ 与亮色统一为 radiusXl
           side: BorderSide(
             color: Colors.white.withValues(alpha: 0.1), // ⭐ 白色边框
             width: 1,
@@ -109,14 +109,14 @@ class BeeTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
           ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
           ),
         ),
       ),
@@ -124,12 +124,12 @@ class BeeTheme {
         style: ElevatedButton.styleFrom(
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
           ),
         ),
       ),
       dividerTheme: DividerThemeData(
-        color: BeeTokens.dividerDarkStatic, // ⭐ 白色分割线（与 Token 单一来源）
+        color: PiggyTokens.dividerDarkStatic, // ⭐ 白色分割线（与 Token 单一来源）
         thickness: 1,
       ),
       iconTheme: const IconThemeData(

@@ -28,7 +28,7 @@ class CategoryBudgetTile extends ConsumerWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
       child: Padding(
         padding: EdgeInsets.symmetric(
           vertical: 12.0.scaled(context, ref),
@@ -43,7 +43,7 @@ class CategoryBudgetTile extends ConsumerWidget {
               width: 36.0.scaled(context, ref),
               height: 36.0.scaled(context, ref),
               decoration: BoxDecoration(
-                color: BeeTokens.primary(context).withValues(alpha: 0.1),
+                color: PiggyTokens.primary(context).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8.0.scaled(context, ref)),
               ),
               alignment: Alignment.center,
@@ -51,12 +51,12 @@ class CategoryBudgetTile extends ConsumerWidget {
                   ? CategoryIconWidget(
                       category: usage.category,
                       size: 20.0.scaled(context, ref),
-                      color: BeeTokens.primary(context),
+                      color: PiggyTokens.primary(context),
                     )
                   : Icon(
                       CategoryService.getCategoryIcon(usage.categoryIcon),
                       size: 20.0.scaled(context, ref),
-                      color: BeeTokens.primary(context),
+                      color: PiggyTokens.primary(context),
                     ),
             ),
             SizedBox(width: 12.0.scaled(context, ref)),
@@ -73,7 +73,7 @@ class CategoryBudgetTile extends ConsumerWidget {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
-                          color: BeeTokens.textPrimary(context),
+                          color: PiggyTokens.textPrimary(context),
                         ),
                       ),
                       Text(
@@ -106,13 +106,13 @@ class CategoryBudgetTile extends ConsumerWidget {
   Color _getStatusColor(BuildContext context, String status) {
     switch (status) {
       case 'exceeded':
-        return BeeTokens.error(context);
+        return PiggyTokens.error(context);
       case 'danger':
-        return BeeTokens.error(context);
+        return PiggyTokens.error(context);
       case 'warning':
-        return BeeTokens.warning(context);
+        return PiggyTokens.warning(context);
       default:
-        return BeeTokens.success(context);
+        return PiggyTokens.success(context);
     }
   }
 }

@@ -31,7 +31,7 @@ import 'local_exchange_rate_repository.dart';
 class LocalRepository extends BaseRepository {
   /// 底层数据库实例
   /// 仅供需要直接数据库访问的场景使用（如数据库初始化、导入导出）
-  final BeeDatabase db;
+  final PiggyDatabase db;
 
   /// 可选的变更追踪器，用于云同步
   ChangeTracker? changeTracker;

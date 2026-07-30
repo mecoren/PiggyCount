@@ -38,7 +38,7 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
     final providersAsync = ref.watch(aiProvidersProvider);
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           PrimaryHeader(
@@ -47,7 +47,7 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
             showBack: true,
             actions: [
               IconButton(
-                icon: Icon(Icons.add, color: BeeTokens.iconPrimary(context)),
+                icon: Icon(Icons.add, color: PiggyTokens.iconPrimary(context)),
                 onPressed: () => _addProvider(context),
                 tooltip: l10n.aiProviderAdd,
               ),
@@ -76,12 +76,12 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
             Icon(
               Icons.cloud_off,
               size: 64,
-              color: BeeTokens.textTertiary(context),
+              color: PiggyTokens.textTertiary(context),
             ),
             SizedBox(height: 16.0.scaled(context, ref)),
             Text(
               l10n.aiProviderEmpty,
-              style: TextStyle(color: BeeTokens.textSecondary(context)),
+              style: TextStyle(color: PiggyTokens.textSecondary(context)),
             ),
           ],
         ),
@@ -112,7 +112,7 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
       margin: EdgeInsets.zero,
       child: InkWell(
         onTap: () => _editProvider(context, provider),
-        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -123,7 +123,7 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
                 children: [
                   Icon(
                     provider.isBuiltIn ? Icons.verified : Icons.cloud_outlined,
-                    color: provider.isBuiltIn ? primaryColor : BeeTokens.textSecondary(context),
+                    color: provider.isBuiltIn ? primaryColor : PiggyTokens.textSecondary(context),
                     size: 20,
                   ),
                   const SizedBox(width: 8),
@@ -141,7 +141,7 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: primaryColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+                        borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                       ),
                       child: Text(
                         l10n.aiProviderBuiltIn,
@@ -153,7 +153,7 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
                       icon: Icon(
                         Icons.delete_outline,
                         size: 20,
-                        color: BeeTokens.textTertiary(context),
+                        color: PiggyTokens.textTertiary(context),
                       ),
                       onPressed: () => _deleteProvider(context, provider),
                       padding: EdgeInsets.zero,
@@ -192,16 +192,16 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: BeeTokens.warning(context).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+                    color: PiggyTokens.warning(context).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.warning_amber, size: 16, color: BeeTokens.warning(context)),
+                      Icon(Icons.warning_amber, size: 16, color: PiggyTokens.warning(context)),
                       const SizedBox(width: 6),
                       Text(
                         l10n.aiProviderNoApiKey,
-                        style: TextStyle(fontSize: 12, color: BeeTokens.warning(context)),
+                        style: TextStyle(fontSize: 12, color: PiggyTokens.warning(context)),
                       ),
                     ],
                   ),
@@ -217,13 +217,13 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
                     l10n.aiProviderTapToEdit,
                     style: TextStyle(
                       fontSize: 12,
-                      color: BeeTokens.textTertiary(context),
+                      color: PiggyTokens.textTertiary(context),
                     ),
                   ),
                   Icon(
                     Icons.chevron_right,
                     size: 16,
-                    color: BeeTokens.textTertiary(context),
+                    color: PiggyTokens.textTertiary(context),
                   ),
                 ],
               ),
@@ -242,8 +242,8 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
       decoration: BoxDecoration(
         color: enabled
             ? primaryColor.withValues(alpha: 0.1)
-            : BeeTokens.textTertiary(context).withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+            : PiggyTokens.textTertiary(context).withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -251,14 +251,14 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
           Icon(
             icon,
             size: 14,
-            color: enabled ? primaryColor : BeeTokens.textTertiary(context),
+            color: enabled ? primaryColor : PiggyTokens.textTertiary(context),
           ),
           const SizedBox(width: 4),
           Text(
             label,
             style: TextStyle(
               fontSize: 11,
-              color: enabled ? primaryColor : BeeTokens.textTertiary(context),
+              color: enabled ? primaryColor : PiggyTokens.textTertiary(context),
             ),
           ),
         ],
@@ -307,7 +307,7 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: BeeTokens.error(context)),
+            style: TextButton.styleFrom(foregroundColor: PiggyTokens.error(context)),
             child: Text(l10n.commonDelete),
           ),
         ],
@@ -395,7 +395,7 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
     final primaryColor = ref.watch(primaryColorProvider);
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           PrimaryHeader(
@@ -410,13 +410,13 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
                         height: 16,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: BeeTokens.iconPrimary(context),
+                          color: PiggyTokens.iconPrimary(context),
                         ),
                       )
                     : Text(
                         l10n.commonSave,
                         style: TextStyle(
-                          color: BeeTokens.iconPrimary(context),
+                          color: PiggyTokens.iconPrimary(context),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -525,8 +525,8 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
                             width: double.infinity,
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: BeeTokens.error(context).withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+                              color: PiggyTokens.error(context).withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                             ),
                             child: Text(
                               _textTestError!,
@@ -542,7 +542,7 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
                             l10n.aiCloudApiKeyHelper,
                             style: TextStyle(
                               fontSize: 12,
-                              color: BeeTokens.textTertiary(context),
+                              color: PiggyTokens.textTertiary(context),
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -599,7 +599,7 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
                           l10n.aiProviderModelsHint,
                           style: TextStyle(
                             fontSize: 12,
-                            color: BeeTokens.textTertiary(context),
+                            color: PiggyTokens.textTertiary(context),
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -878,8 +878,8 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
             width: double.infinity,
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: BeeTokens.error(context).withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+              color: PiggyTokens.error(context).withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
             ),
             child: Text(
               testError,
@@ -917,11 +917,11 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
       buttonText = l10n.aiProviderTestRunning;
       buttonIcon = Icons.sync;
     } else if (allSuccess) {
-      buttonColor = BeeTokens.success(context);
+      buttonColor = PiggyTokens.success(context);
       buttonText = l10n.aiProviderTestSuccess;
       buttonIcon = Icons.check_circle;
     } else if (anyFailed) {
-      buttonColor = BeeTokens.warning(context);
+      buttonColor = PiggyTokens.warning(context);
       buttonText = l10n.aiProviderTestAllRetry;
       buttonIcon = Icons.refresh;
     } else {
@@ -978,13 +978,13 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
     Color getColor() {
       switch (status) {
         case TestStatus.idle:
-          return enabled ? primaryColor : BeeTokens.textTertiary(context);
+          return enabled ? primaryColor : PiggyTokens.textTertiary(context);
         case TestStatus.testing:
           return primaryColor;
         case TestStatus.success:
-          return BeeTokens.success(context);
+          return PiggyTokens.success(context);
         case TestStatus.failed:
-          return BeeTokens.error(context);
+          return PiggyTokens.error(context);
       }
     }
 

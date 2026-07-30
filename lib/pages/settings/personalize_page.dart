@@ -53,7 +53,7 @@ class _PersonalizePageState extends ConsumerState<PersonalizePage> {
     ];
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
       appBar: GlassTitleBar(
         title: AppLocalizations.of(context)!.personalizeTitle,
@@ -133,15 +133,15 @@ class _ThemeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = BeeTokens.isDark(context);
+    final isDark = PiggyTokens.isDark(context);
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
       child: Ink(
         decoration: BoxDecoration(
-          color: BeeTokens.surface(context),
-          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
-          border: isDark ? Border.all(color: BeeTokens.border(context)) : null,
+          color: PiggyTokens.surface(context),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+          border: isDark ? Border.all(color: PiggyTokens.border(context)) : null,
           boxShadow: isDark
               ? null
               : [
@@ -160,8 +160,8 @@ class _ThemeCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: option.color,
                   borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(BeeDimens.radiusLg),
-                    topRight: Radius.circular(BeeDimens.radiusLg),
+                    topLeft: Radius.circular(PiggyDimens.radiusLg),
+                    topRight: Radius.circular(PiggyDimens.radiusLg),
                   ),
                 ),
                 child: Align(
@@ -180,7 +180,7 @@ class _ThemeCard extends StatelessWidget {
               alignment: Alignment.center,
               child: Text(option.name,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: BeeTokens.textPrimary(context),
+                        color: PiggyTokens.textPrimary(context),
                       )),
             ),
           ],
@@ -197,16 +197,16 @@ class _CustomColorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = BeeTokens.isDark(context);
+    final isDark = PiggyTokens.isDark(context);
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
       child: Ink(
         decoration: BoxDecoration(
-          color: BeeTokens.surface(context),
-          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+          color: PiggyTokens.surface(context),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
           border: Border.all(
-            color: isDark ? BeeTokens.border(context) : Colors.grey[300]!,
+            color: isDark ? PiggyTokens.border(context) : Colors.grey[300]!,
             width: isDark ? 1 : 2,
           ),
           boxShadow: isDark
@@ -226,14 +226,14 @@ class _CustomColorCard extends StatelessWidget {
               child: Container(
                 decoration: const BoxDecoration(
                   borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(BeeDimens.radiusLg),
-                    topRight: Radius.circular(BeeDimens.radiusLg),
+                    topLeft: Radius.circular(PiggyDimens.radiusLg),
+                    topRight: Radius.circular(PiggyDimens.radiusLg),
                   ),
                 ),
                 child: Icon(
                   Icons.palette_outlined,
                   size: 48,
-                  color: BeeTokens.iconSecondary(context),
+                  color: PiggyTokens.iconSecondary(context),
                 ),
               ),
             ),
@@ -243,7 +243,7 @@ class _CustomColorCard extends StatelessWidget {
               child: Text(
                 AppLocalizations.of(context)!.personalizeCustomColor,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: BeeTokens.textSecondary(context),
+                      color: PiggyTokens.textSecondary(context),
                     ),
               ),
             ),
@@ -279,8 +279,8 @@ class _ColorPickerState extends State<_ColorPicker> {
             height: 80,
             decoration: BoxDecoration(
               color: currentColor.toColor(),
-              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
-              border: Border.all(color: BeeTokens.borderStrong(context), width: 1),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+              border: Border.all(color: PiggyTokens.borderStrong(context), width: 1),
             ),
             child: Center(
               child: Text(
@@ -296,11 +296,11 @@ class _ColorPickerState extends State<_ColorPicker> {
           const SizedBox(height: 20),
 
           // 色相滑块
-          Text(AppLocalizations.of(context)!.personalizeHue(currentColor.hue.round()), style: TextStyle(fontWeight: FontWeight.w500, color: BeeTokens.textPrimary(context))),
+          Text(AppLocalizations.of(context)!.personalizeHue(currentColor.hue.round()), style: TextStyle(fontWeight: FontWeight.w500, color: PiggyTokens.textPrimary(context))),
           Container(
             height: 40,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+              borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
               gradient: LinearGradient(
                 colors: List.generate(7, (index) => HSVColor.fromAHSV(1.0, index * 60.0, 1.0, 1.0).toColor()),
               ),
@@ -328,11 +328,11 @@ class _ColorPickerState extends State<_ColorPicker> {
           const SizedBox(height: 10),
 
           // 饱和度滑块
-          Text(AppLocalizations.of(context)!.personalizeSaturation((currentColor.saturation * 100).round()), style: TextStyle(fontWeight: FontWeight.w500, color: BeeTokens.textPrimary(context))),
+          Text(AppLocalizations.of(context)!.personalizeSaturation((currentColor.saturation * 100).round()), style: TextStyle(fontWeight: FontWeight.w500, color: PiggyTokens.textPrimary(context))),
           Container(
             height: 40,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+              borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
               gradient: LinearGradient(
                 colors: [
                   HSVColor.fromAHSV(1.0, currentColor.hue, 0.0, currentColor.value).toColor(),
@@ -363,11 +363,11 @@ class _ColorPickerState extends State<_ColorPicker> {
           const SizedBox(height: 10),
 
           // 亮度滑块
-          Text(AppLocalizations.of(context)!.personalizeBrightness((currentColor.value * 100).round()), style: TextStyle(fontWeight: FontWeight.w500, color: BeeTokens.textPrimary(context))),
+          Text(AppLocalizations.of(context)!.personalizeBrightness((currentColor.value * 100).round()), style: TextStyle(fontWeight: FontWeight.w500, color: PiggyTokens.textPrimary(context))),
           Container(
             height: 40,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+              borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
               gradient: LinearGradient(
                 colors: [
                   HSVColor.fromAHSV(1.0, currentColor.hue, currentColor.saturation, 0.0).toColor(),
@@ -407,7 +407,7 @@ class _ColorPickerState extends State<_ColorPicker> {
                 foregroundColor: currentColor.value > 0.5 ? Colors.black : Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                 ),
               ),
               child: Text(AppLocalizations.of(context)!.personalizeSelectColor, style: const TextStyle(fontWeight: FontWeight.bold)),

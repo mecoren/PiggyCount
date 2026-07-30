@@ -22,9 +22,9 @@ class LedgerPickerDialog extends ConsumerWidget {
 
     return Dialog(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
       ),
-      backgroundColor: BeeTokens.surface(context),
+      backgroundColor: PiggyTokens.surface(context),
       child: ConstrainedBox(
         constraints: const BoxConstraints(
           maxWidth: 320,
@@ -50,7 +50,7 @@ class LedgerPickerDialog extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w600,
-                        color: BeeTokens.textPrimary(context),
+                        color: PiggyTokens.textPrimary(context),
                       ),
                     ),
                   ),
@@ -60,13 +60,13 @@ class LedgerPickerDialog extends ConsumerWidget {
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: BeeTokens.scaffoldBackground(context),
+                        color: PiggyTokens.scaffoldBackground(context),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
                         Icons.close,
                         size: 18,
-                        color: BeeTokens.iconSecondary(context),
+                        color: PiggyTokens.iconSecondary(context),
                       ),
                     ),
                   ),
@@ -74,7 +74,7 @@ class LedgerPickerDialog extends ConsumerWidget {
               ),
             ),
             // 分割线
-            Divider(height: 1, color: BeeTokens.divider(context)),
+            Divider(height: 1, color: PiggyTokens.divider(context)),
             // 账本列表
             Flexible(
               child: ledgersAsync.when(
@@ -93,13 +93,13 @@ class LedgerPickerDialog extends ConsumerWidget {
                   padding: const EdgeInsets.all(24),
                   child: Text(
                     'Error: $e',
-                    style: TextStyle(color: BeeTokens.textSecondary(context)),
+                    style: TextStyle(color: PiggyTokens.textSecondary(context)),
                   ),
                 ),
               ),
             ),
             // 底部管理按钮
-            Divider(height: 1, color: BeeTokens.divider(context)),
+            Divider(height: 1, color: PiggyTokens.divider(context)),
             _buildManageButton(context, l10n),
           ],
         ),
@@ -123,12 +123,12 @@ class LedgerPickerDialog extends ConsumerWidget {
             Icon(
               Icons.book_outlined,
               size: 48,
-              color: BeeTokens.iconTertiary(context),
+              color: PiggyTokens.iconTertiary(context),
             ),
             const SizedBox(height: 12),
             Text(
               AppLocalizations.of(context).ledgersEmpty,
-              style: TextStyle(color: BeeTokens.textSecondary(context)),
+              style: TextStyle(color: PiggyTokens.textSecondary(context)),
             ),
           ],
         ),
@@ -170,7 +170,7 @@ class LedgerPickerDialog extends ConsumerWidget {
         );
       },
       borderRadius: const BorderRadius.vertical(
-        bottom: Radius.circular(BeeDimens.radius2xl),
+        bottom: Radius.circular(PiggyDimens.radius2xl),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -180,14 +180,14 @@ class LedgerPickerDialog extends ConsumerWidget {
             Icon(
               Icons.settings_outlined,
               size: 18,
-              color: BeeTokens.iconSecondary(context),
+              color: PiggyTokens.iconSecondary(context),
             ),
             const SizedBox(width: 8),
             Text(
               l10n.homeManageLedgers,
               style: TextStyle(
                 fontSize: 14,
-                color: BeeTokens.textSecondary(context),
+                color: PiggyTokens.textSecondary(context),
               ),
             ),
           ],
@@ -235,7 +235,7 @@ class _LedgerItem extends StatelessWidget {
                 border: Border.all(
                   color: isSelected
                       ? primaryColor
-                      : BeeTokens.border(context),
+                      : PiggyTokens.border(context),
                   width: 2,
                 ),
               ),
@@ -260,7 +260,7 @@ class _LedgerItem extends StatelessWidget {
                       fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                       color: isSelected
                           ? primaryColor
-                          : BeeTokens.textPrimary(context),
+                          : PiggyTokens.textPrimary(context),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -270,7 +270,7 @@ class _LedgerItem extends StatelessWidget {
                     '${ledger.currency} · ${ledger.transactionCount} 笔',
                     style: TextStyle(
                       fontSize: 12,
-                      color: BeeTokens.textTertiary(context),
+                      color: PiggyTokens.textTertiary(context),
                     ),
                   ),
                 ],

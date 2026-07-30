@@ -1,6 +1,6 @@
-import 'package:beecount/utils/ui_scale_extensions.dart';
-import 'package:beecount/widgets/biz/section_card.dart';
-import 'package:beecount/widgets/ui/ui.dart';
+import 'package:piggycount/utils/ui_scale_extensions.dart';
+import 'package:piggycount/widgets/biz/section_card.dart';
+import 'package:piggycount/widgets/ui/ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -46,7 +46,7 @@ class _AIModelSelectionPageState extends ConsumerState<AIModelSelectionPage> {
 
     if (_loading) {
       return Scaffold(
-        backgroundColor: BeeTokens.scaffoldBackground(context),
+        backgroundColor: PiggyTokens.scaffoldBackground(context),
         body: Column(
           children: [
             PrimaryHeader(
@@ -62,7 +62,7 @@ class _AIModelSelectionPageState extends ConsumerState<AIModelSelectionPage> {
     }
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           PrimaryHeader(
@@ -220,20 +220,20 @@ class _AIModelSelectionPageState extends ConsumerState<AIModelSelectionPage> {
     return ListTile(
       leading: Icon(
         icon,
-        color: isSelected ? primaryColor : BeeTokens.textTertiary(context),
+        color: isSelected ? primaryColor : PiggyTokens.textTertiary(context),
       ),
       title: Text(
         title,
         style: TextStyle(
           fontWeight: FontWeight.w500,
-          color: isSelected ? primaryColor : BeeTokens.textPrimary(context),
+          color: isSelected ? primaryColor : PiggyTokens.textPrimary(context),
         ),
       ),
       subtitle: Text(
         subtitle,
         style: TextStyle(
           fontSize: 12,
-          color: BeeTokens.textSecondary(context),
+          color: PiggyTokens.textSecondary(context),
         ),
       ),
       trailing: isSelected
@@ -285,7 +285,7 @@ class _AIModelSelectionPageState extends ConsumerState<AIModelSelectionPage> {
             trailing: const Icon(Icons.chevron_right),
             onTap: _showModelDialog,
           ),
-          BeeTokens.cardDivider(context),
+          PiggyTokens.cardDivider(context),
           ListTile(
             leading: Icon(
               Icons.image_search,

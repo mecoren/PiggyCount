@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:decimal/decimal.dart';
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:beecount/widgets/ui/wheel_date_picker.dart';
+import 'package:piggycount/widgets/ui/wheel_date_picker.dart';
 import '../../data/db.dart';
 import '../../providers/shared_ledger_providers.dart';
 import '../../styles/tokens.dart';
@@ -38,9 +38,9 @@ class _TxAuthorInfo {
   final String? creatorUserId;
   final String? lastEditedByUserId;
   final String? currentUserId;
-  final List<BeeCountCloudLedgerMember> members;
+  final List<PiggyCountCloudLedgerMember> members;
 
-  BeeCountCloudLedgerMember? memberOf(String? userId) {
+  PiggyCountCloudLedgerMember? memberOf(String? userId) {
     if (userId == null || userId.isEmpty) return null;
     for (final m in members) {
       if (m.userId == userId) return m;
@@ -144,7 +144,7 @@ class _AvatarSlot extends StatelessWidget {
     required this.tooltipBuilder,
   });
 
-  final BeeCountCloudLedgerMember? member;
+  final PiggyCountCloudLedgerMember? member;
   final String userIdFallback;
   final String? baseUrl;
   final String Function(String name) tooltipBuilder;
@@ -168,13 +168,13 @@ class _AvatarSlot extends StatelessWidget {
       triggerMode: TooltipTriggerMode.longPress,
       child: CircleAvatar(
         radius: 11,
-        backgroundColor: BeeTokens.surfaceCapsule(context),
+        backgroundColor: PiggyTokens.surfaceCapsule(context),
         foregroundImage: absolute != null ? NetworkImage(absolute) : null,
         child: Text(
           letter,
           style: TextStyle(
             fontSize: 11,
-            color: BeeTokens.textSecondary(context),
+            color: PiggyTokens.textSecondary(context),
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -470,13 +470,13 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     ref.watch(currentLedgerCurrencyProvider); // 账本切换时重建
     final txCurrency = _txCurrency();
     return InkWell(
-      borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+      borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
       onTap: _pickCurrency,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
-          color: BeeTokens.surfaceKeySecondary(context),
-          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+          color: PiggyTokens.surfaceKeySecondary(context),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -487,12 +487,12 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
             Text(
               txCurrency,
               style: text.bodySmall?.copyWith(
-                color: BeeTokens.textSecondary(context),
+                color: PiggyTokens.textSecondary(context),
                 fontWeight: FontWeight.w600,
               ),
             ),
             Icon(Icons.arrow_drop_down,
-                size: 16, color: BeeTokens.iconSecondary(context)),
+                size: 16, color: PiggyTokens.iconSecondary(context)),
           ],
         ),
       ),
@@ -540,7 +540,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
               style: text.bodySmall?.copyWith(
                 color: rateMissing
                     ? Theme.of(context).colorScheme.error
-                    : BeeTokens.textTertiary(context),
+                    : PiggyTokens.textTertiary(context),
               ),
             ),
           ),
@@ -706,10 +706,10 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
       return Padding(
         padding: const EdgeInsets.all(6),
         child: Material(
-          color: bg ?? BeeTokens.surfaceKey(context),
-          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+          color: bg ?? PiggyTokens.surfaceKey(context),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
           child: InkWell(
-            borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
             onTap: onTap,
             child: Container(
               height: 60,
@@ -717,7 +717,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
               child: Text(
                 label,
                 style: text.titleMedium?.copyWith(
-                  color: fg ?? BeeTokens.textPrimary(context),
+                  color: fg ?? PiggyTokens.textPrimary(context),
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
                 ),
@@ -738,18 +738,18 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
       // 更大即使同 weight 笔画也会更粗。未激活更小(14)+ 灰色以分主次。
       TextStyle opStyle(bool active) => text.titleMedium!.copyWith(
             color: active
-                ? BeeTokens.textPrimary(context)
-                : BeeTokens.textTertiary(context),
+                ? PiggyTokens.textPrimary(context)
+                : PiggyTokens.textTertiary(context),
             fontSize: active ? 18 : 14,
             fontWeight: FontWeight.w600,
           );
       return Padding(
         padding: const EdgeInsets.all(6),
         child: Material(
-          color: BeeTokens.surfaceKeySecondary(context),
-          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+          color: PiggyTokens.surfaceKeySecondary(context),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
           child: InkWell(
-            borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
             onTap: () => applyOp(activeOp),
             // 双击 / 长按都是「切到另一组运算符并直接应用」(一步用上另一个);
             // applyOp 内部已带触感/声音。
@@ -771,7 +771,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                     TextSpan(
                       text: '/',
                       style: text.titleMedium!.copyWith(
-                        color: BeeTokens.textTertiary(context),
+                        color: PiggyTokens.textTertiary(context),
                         fontSize: 14,
                         fontWeight: FontWeight.w400,
                       ),
@@ -832,7 +832,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                         })(),
                         style: text.titleMedium?.copyWith(
                           fontWeight: FontWeight.w500,
-                          color: BeeTokens.textSecondary(context),
+                          color: PiggyTokens.textSecondary(context),
                         ),
                       ),
                       // 显示运算符
@@ -853,7 +853,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                       style: text.titleLarge?.copyWith(
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.0,
-                        color: BeeTokens.textPrimary(context),
+                        color: PiggyTokens.textPrimary(context),
                       ),
                     ),
                   ],
@@ -868,7 +868,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                         '= ',
                         style: text.titleMedium?.copyWith(
                           fontWeight: FontWeight.w500,
-                          color: BeeTokens.textTertiary(context),
+                          color: PiggyTokens.textTertiary(context),
                         ),
                       ),
                       Text(
@@ -898,17 +898,17 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
             TextField(
               focusNode: _noteFocusNode,
               controller: _noteCtrl,
-              style: TextStyle(color: BeeTokens.textPrimary(context)),
+              style: TextStyle(color: PiggyTokens.textPrimary(context)),
               decoration: InputDecoration(
                 hintText: AppLocalizations.of(context).commonNoteHint,
-                hintStyle: TextStyle(color: BeeTokens.textTertiary(context)),
+                hintStyle: TextStyle(color: PiggyTokens.textTertiary(context)),
                 isDense: true,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
-                fillColor: BeeTokens.surfaceInput(context),
+                fillColor: PiggyTokens.surfaceInput(context),
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 // 历史备注图标作为前缀
@@ -935,7 +935,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                         },
                         child: Icon(
                           Icons.history,
-                          color: BeeTokens.iconSecondary(context),
+                          color: PiggyTokens.iconSecondary(context),
                           size: 20,
                         ),
                       )
@@ -996,10 +996,10 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
               Widget dateKey() => Padding(
                     padding: const EdgeInsets.all(6),
                     child: Material(
-                      color: BeeTokens.surfaceKeySecondary(context),
-                      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                      color: PiggyTokens.surfaceKeySecondary(context),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                       child: InkWell(
-                        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                         onTap: () {
                           SystemSound.play(SystemSoundType.click);
                           _pickDate();
@@ -1014,14 +1014,14 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                                       Text(
                                         fmtDate(_date),
                                         style: text.labelSmall?.copyWith(
-                                            color: BeeTokens.textPrimary(context),
+                                            color: PiggyTokens.textPrimary(context),
                                             fontWeight: FontWeight.w600),
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
                                         fmtTime(_date),
                                         style: text.labelSmall?.copyWith(
-                                            color: BeeTokens.textSecondary(context),
+                                            color: PiggyTokens.textSecondary(context),
                                             fontWeight: FontWeight.w500),
                                       ),
                                     ],
@@ -1029,7 +1029,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                                 : Text(
                                     fmtDate(_date),
                                     style: text.labelMedium?.copyWith(
-                                        color: BeeTokens.textPrimary(context),
+                                        color: PiggyTokens.textPrimary(context),
                                         fontWeight: FontWeight.w600),
                                   ),
                           ),
@@ -1040,16 +1040,16 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
               Widget closeKey() => Padding(
                     padding: const EdgeInsets.all(6),
                     child: Material(
-                      color: BeeTokens.surfaceKey(context),
-                      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                      color: PiggyTokens.surfaceKey(context),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                       child: InkWell(
-                        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                         onTap: _backspace,
                         child: SizedBox(
                           height: 60,
                           child: Center(
                               child: Icon(Icons.backspace_outlined,
-                                  color: BeeTokens.textPrimary(context))),
+                                  color: PiggyTokens.textPrimary(context))),
                         ),
                       ),
                     ),
@@ -1066,10 +1066,10 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                 return Padding(
                   padding: const EdgeInsets.all(6),
                   child: Material(
-                    color: isEnabled ? primary : BeeTokens.surfaceDisabled(context),
-                    borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                    color: isEnabled ? primary : PiggyTokens.surfaceDisabled(context),
+                    borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                       onTap: isEnabled
                           ? () async {
                               if (isInCalcMode) {
@@ -1139,7 +1139,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                               : Text(
                                   isInCalcMode ? '=' : AppLocalizations.of(context).commonFinish,
                                   style: TextStyle(
-                                      color: isEnabled ? Colors.white : BeeTokens.textTertiary(context),
+                                      color: isEnabled ? Colors.white : PiggyTokens.textTertiary(context),
                                       fontSize: isInCalcMode ? 24 : 16,
                                       fontWeight: FontWeight.w700),
                                 ),
@@ -1271,14 +1271,14 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                 title: Text(
                   title,
                   style: TextStyle(
-                    color: BeeTokens.textPrimary(context),
+                    color: PiggyTokens.textPrimary(context),
                     fontSize: 15.0.scaled(context, ref),
                   ),
                 ),
                 subtitle: Text(
                   hint,
                   style: TextStyle(
-                    color: BeeTokens.textTertiary(context),
+                    color: PiggyTokens.textTertiary(context),
                     fontSize: 12.0.scaled(context, ref),
                   ),
                 ),
@@ -1289,11 +1289,11 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
             }
 
             return AlertDialog(
-              backgroundColor: BeeTokens.surface(context),
+              backgroundColor: PiggyTokens.surface(context),
               title: Text(
                 l10n.txFlagDialogTitle,
                 style: TextStyle(
-                  color: BeeTokens.textPrimary(context),
+                  color: PiggyTokens.textPrimary(context),
                   fontSize: 17.0.scaled(context, ref),
                   fontWeight: FontWeight.w600,
                 ),
@@ -1348,8 +1348,8 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: BeeTokens.surfaceInput(context),
-        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+        color: PiggyTokens.surfaceInput(context),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
       ),
       child: Row(
         children: [
@@ -1372,7 +1372,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                   ? Text(
                       l10n.tagSelectTitle,
                       style: TextStyle(
-                        color: BeeTokens.textTertiary(context),
+                        color: PiggyTokens.textTertiary(context),
                         fontSize: 14,
                       ),
                     )
@@ -1407,7 +1407,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                   size: 18,
                   color: hasAttachments
                       ? Theme.of(context).colorScheme.primary
-                      : BeeTokens.iconSecondary(context),
+                      : PiggyTokens.iconSecondary(context),
                 ),
                 if (hasAttachments) ...[
                   const SizedBox(width: 4),
@@ -1451,7 +1451,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
           size: 18,
           color: active
               ? ref.watch(primaryColorProvider)
-              : BeeTokens.iconSecondary(context),
+              : PiggyTokens.iconSecondary(context),
         ),
       ),
     ];

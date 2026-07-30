@@ -8,7 +8,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
 
-import 'package:beecount/data/db.dart';
+import 'package:piggycount/data/db.dart';
 
 /// 与 db.dart `if (from < 30)` 块内的回填 SQL 一致。
 const backfillCurrencyCodeSql = '''
@@ -22,10 +22,10 @@ const backfillNativeAmountSql =
     'UPDATE transactions SET native_amount = amount WHERE native_amount IS NULL;';
 
 void main() {
-  late BeeDatabase db;
+  late PiggyDatabase db;
 
   setUp(() {
-    db = BeeDatabase.forTesting(NativeDatabase.memory());
+    db = PiggyDatabase.forTesting(NativeDatabase.memory());
   });
 
   tearDown(() async => db.close());

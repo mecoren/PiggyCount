@@ -1,6 +1,6 @@
 //
 //  WidgetPreviewAssets.swift
-//  BeeCountWidget
+//  PiggyCountWidget
 //
 //  添加页(widget gallery)的静态预览资产。
 //

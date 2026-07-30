@@ -5,9 +5,9 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:beecount/widget/views/quick_add_view.dart';
-import 'package:beecount/widget/widget_data_service.dart' show QuickAddCategoryItem;
-import 'package:beecount/widget/widget_spec.dart' show HWSize;
+import 'package:piggycount/widget/views/quick_add_view.dart';
+import 'package:piggycount/widget/widget_data_service.dart' show QuickAddCategoryItem;
+import 'package:piggycount/widget/widget_spec.dart' show HWSize;
 
 void main() {
   Widget wrap(Widget child, Size size) {

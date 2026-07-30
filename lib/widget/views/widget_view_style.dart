@@ -34,7 +34,7 @@ const kWidgetTabularFeature = FontFeature.tabularFigures();
 /// 按 `redForIncome` 解析"支出"语义色(true=红色收入方案下支出用绿,
 /// false=红色支出方案下支出用红)。
 ///
-/// 与 `styles/tokens.dart` 的 `BeeTokens.expenseColor` 同一套语义,且已在
+/// 与 `styles/tokens.dart` 的 `PiggyTokens.expenseColor` 同一套语义,且已在
 /// `accounts_page.dart` 里验证过延伸到"负债"这类非交易类支出语义金额上
 /// (总负债用 `expenseColor` 着色)——净资产视图的负债进度条/环比跌幅同样
 /// 复用这套映射,不是独立发明的红绿方案。

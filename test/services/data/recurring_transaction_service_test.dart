@@ -9,14 +9,14 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:beecount/data/db.dart';
-import 'package:beecount/data/repositories/local/local_repository.dart';
-import 'package:beecount/services/data/recurring_transaction_service.dart';
+import 'package:piggycount/data/db.dart';
+import 'package:piggycount/data/repositories/local/local_repository.dart';
+import 'package:piggycount/services/data/recurring_transaction_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  late BeeDatabase db;
+  late PiggyDatabase db;
   late LocalRepository repo;
   late int ledgerId;
 
@@ -24,7 +24,7 @@ void main() {
     // LoggerService(被周期服务调用)内部走 SharedPreferences,单测需提供 mock,
     // 否则 logger.info 触发 MissingPluginException 让测试在完成后异步失败。
     SharedPreferences.setMockInitialValues({});
-    db = BeeDatabase.forTesting(NativeDatabase.memory());
+    db = PiggyDatabase.forTesting(NativeDatabase.memory());
     repo = LocalRepository(db);
     ledgerId = await repo.createLedger(name: 'test', currency: 'CNY');
   });

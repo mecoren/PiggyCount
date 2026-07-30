@@ -7,7 +7,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:beecount/services/currency/exchange_rate_service.dart';
+import 'package:piggycount/services/currency/exchange_rate_service.dart';
 
 class _StubAdapter implements HttpClientAdapter {
   final ResponseBody Function(RequestOptions) handler;

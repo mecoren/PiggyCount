@@ -233,7 +233,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodySmall
-                                      ?.copyWith(color: BeeTokens.textTertiary(context)),
+                                      ?.copyWith(color: PiggyTokens.textTertiary(context)),
                                 ),
                               ),
                           ],
@@ -430,7 +430,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
               p.total == 0 ? 0.0 : (p.done / p.total).clamp(0.0, 1.0);
           return AlertDialog(
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusLg)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
             title: Text(AppLocalizations.of(context)!.importInProgress),
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -446,7 +446,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
                     style: Theme.of(dctx)
                         .textTheme
                         .bodySmall
-                        ?.copyWith(color: BeeTokens.textTertiary(context))),
+                        ?.copyWith(color: PiggyTokens.textTertiary(context))),
               ],
             ),
             actions: [
@@ -986,19 +986,19 @@ class _PreviewTable extends StatelessWidget {
     if (rows.isEmpty) return const SizedBox.shrink();
     const double cellWidth = 140;
     return ClipRRect(
-      borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+      borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(color: BeeTokens.border(context)),
-          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+          border: Border.all(color: PiggyTokens.border(context)),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
         ),
         child: Column(
           children: [
             for (int r = 0; r < rows.length; r++)
               Container(
                 color: r == 0
-                    ? BeeTokens.surfaceSecondary(context)
-                    : BeeTokens.surfaceElevated(context),
+                    ? PiggyTokens.surfaceSecondary(context)
+                    : PiggyTokens.surfaceElevated(context),
                 padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
                 child: Row(
                   children: [
@@ -1010,7 +1010,7 @@ class _PreviewTable extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: BeeTokens.textPrimary(context),
+                            color: PiggyTokens.textPrimary(context),
                             fontWeight: r == 0 ? FontWeight.w600 : null,
                           ),
                         ),

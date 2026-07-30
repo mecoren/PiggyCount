@@ -21,7 +21,7 @@ class ShortcutsGuidePage extends ConsumerWidget {
     final primaryColor = ref.watch(primaryColorProvider);
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
       appBar: GlassTitleBar(
         title: l10n.shortcutsGuide,
@@ -74,7 +74,7 @@ class ShortcutsGuidePage extends ConsumerWidget {
                 children: [
                   Icon(
                     Icons.bolt,
-                    color: BeeTokens.primary(context),
+                    color: PiggyTokens.primary(context),
                     size: 24,
                   ),
                   const SizedBox(width: 8),
@@ -90,7 +90,7 @@ class ShortcutsGuidePage extends ConsumerWidget {
               Text(
                 l10n.shortcutsIntroDesc,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: BeeTokens.textPrimary(context).withValues(alpha: 0.7),
+                  color: PiggyTokens.textPrimary(context).withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -113,35 +113,35 @@ class ShortcutsGuidePage extends ConsumerWidget {
         title: l10n.shortcutVoice,
         description: l10n.shortcutVoiceDesc,
         url: AppLinkBuilder.voice(),
-        color: BeeTokens.warning(context),
+        color: PiggyTokens.warning(context),
       ),
       _ShortcutItem(
         icon: Icons.photo_library,
         title: l10n.shortcutImage,
         description: l10n.shortcutImageDesc,
         url: AppLinkBuilder.image(),
-        color: BeeTokens.success(context),
+        color: PiggyTokens.success(context),
       ),
       _ShortcutItem(
         icon: Icons.camera_alt,
         title: l10n.shortcutCamera,
         description: l10n.shortcutCameraDesc,
         url: AppLinkBuilder.camera(),
-        color: BeeTokens.info(context),
+        color: PiggyTokens.info(context),
       ),
       _ShortcutItem(
         icon: Icons.remove_circle_outline,
         title: l10n.shortcutNewExpense,
         description: l10n.shortcutNewExpenseDesc,
         url: AppLinkBuilder.newExpense(),
-        color: BeeTokens.error(context),
+        color: PiggyTokens.error(context),
       ),
       _ShortcutItem(
         icon: Icons.add_circle_outline,
         title: l10n.shortcutNewIncome,
         description: l10n.shortcutNewIncomeDesc,
         url: AppLinkBuilder.newIncome(),
-        color: BeeTokens.success(context),
+        color: PiggyTokens.success(context),
       ),
       _ShortcutItem(
         icon: Icons.swap_horiz,
@@ -194,12 +194,12 @@ class ShortcutsGuidePage extends ConsumerWidget {
           Clipboard.setData(ClipboardData(text: shortcut.url));
           showToast(context, l10n.shortcutUrlCopied);
         },
-        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
             border: Border.all(
               color: theme.colorScheme.outline.withValues(alpha: 0.2),
             ),
@@ -211,7 +211,7 @@ class ShortcutsGuidePage extends ConsumerWidget {
                 height: 48,
                 decoration: BoxDecoration(
                   color: shortcut.color.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                 ),
                 child: Icon(
                   shortcut.icon,
@@ -234,14 +234,14 @@ class ShortcutsGuidePage extends ConsumerWidget {
                     Text(
                       shortcut.description,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: BeeTokens.textPrimary(context).withValues(alpha: 0.6),
+                        color: PiggyTokens.textPrimary(context).withValues(alpha: 0.6),
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       shortcut.url,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: BeeTokens.primary(context),
+                        color: PiggyTokens.primary(context),
                         fontFamily: 'monospace',
                       ),
                     ),
@@ -250,7 +250,7 @@ class ShortcutsGuidePage extends ConsumerWidget {
               ),
               Icon(
                 Icons.copy,
-                color: BeeTokens.textPrimary(context).withValues(alpha: 0.4),
+                color: PiggyTokens.textPrimary(context).withValues(alpha: 0.4),
                 size: 20,
               ),
             ],
@@ -292,7 +292,7 @@ class ShortcutsGuidePage extends ConsumerWidget {
               Text(
                 l10n.shortcutAutoAddDesc,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: BeeTokens.textPrimary(context).withValues(alpha: 0.7),
+                  color: PiggyTokens.textPrimary(context).withValues(alpha: 0.7),
                 ),
               ),
               const SizedBox(height: 12),
@@ -301,7 +301,7 @@ class ShortcutsGuidePage extends ConsumerWidget {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -309,7 +309,7 @@ class ShortcutsGuidePage extends ConsumerWidget {
                     Text(
                       l10n.shortcutAutoAddExample,
                       style: theme.textTheme.labelMedium?.copyWith(
-                        color: BeeTokens.primary(context),
+                        color: PiggyTokens.primary(context),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -318,7 +318,7 @@ class ShortcutsGuidePage extends ConsumerWidget {
                       'beecount://add?amount=100&type=expense&category=餐饮&note=午餐',
                       style: theme.textTheme.bodySmall?.copyWith(
                         fontFamily: 'monospace',
-                        color: BeeTokens.textPrimary(context).withValues(alpha: 0.8),
+                        color: PiggyTokens.textPrimary(context).withValues(alpha: 0.8),
                       ),
                     ),
                   ],
@@ -357,16 +357,16 @@ class ShortcutsGuidePage extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
               color: required
-                  ? BeeTokens.error(context).withValues(alpha: 0.1)
+                  ? PiggyTokens.error(context).withValues(alpha: 0.1)
                   : theme.colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
             ),
             child: Text(
               param,
               style: TextStyle(
                 fontFamily: 'monospace',
                 fontSize: 12,
-                color: required ? BeeTokens.error(context) : BeeTokens.primary(context),
+                color: required ? PiggyTokens.error(context) : PiggyTokens.primary(context),
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -376,7 +376,7 @@ class ShortcutsGuidePage extends ConsumerWidget {
             child: Text(
               desc,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: BeeTokens.textPrimary(context).withValues(alpha: 0.7),
+                color: PiggyTokens.textPrimary(context).withValues(alpha: 0.7),
               ),
             ),
           ),
@@ -401,7 +401,7 @@ class ShortcutsGuidePage extends ConsumerWidget {
                 children: [
                   Icon(
                     Icons.add_circle_outline,
-                    color: BeeTokens.primary(context),
+                    color: PiggyTokens.primary(context),
                     size: 24,
                   ),
                   const SizedBox(width: 8),
@@ -492,7 +492,7 @@ class ShortcutsGuidePage extends ConsumerWidget {
                 width: 24,
                 height: 24,
                 decoration: BoxDecoration(
-                  color: BeeTokens.primary(context),
+                  color: PiggyTokens.primary(context),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -531,7 +531,7 @@ class ShortcutsGuidePage extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -540,7 +540,7 @@ class ShortcutsGuidePage extends ConsumerWidget {
                 children: [
                   Icon(
                     Icons.info_outline,
-                    color: BeeTokens.primary(context),
+                    color: PiggyTokens.primary(context),
                     size: 20,
                   ),
                   const SizedBox(width: 8),
@@ -548,7 +548,7 @@ class ShortcutsGuidePage extends ConsumerWidget {
                     l10n.shortcutsTip,
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: BeeTokens.primary(context),
+                      color: PiggyTokens.primary(context),
                     ),
                   ),
                 ],
@@ -557,7 +557,7 @@ class ShortcutsGuidePage extends ConsumerWidget {
               Text(
                 l10n.shortcutsTipDesc,
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: BeeTokens.textPrimary(context).withValues(alpha: 0.7),
+                  color: PiggyTokens.textPrimary(context).withValues(alpha: 0.7),
                 ),
               ),
             ],

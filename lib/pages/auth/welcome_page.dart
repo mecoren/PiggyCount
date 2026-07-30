@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../widgets/biz/bee_icon.dart';
+import '../../widgets/biz/piggy_icon.dart';
 import 'dart:io';
 import '../../l10n/app_localizations.dart';
 import '../../utils/file_picker_helper.dart';
@@ -88,7 +88,7 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
                       color: _currentPage == index
                           ? Colors.white
                           : Colors.white.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                     ),
                   ),
                 ),
@@ -198,7 +198,7 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
             child: Center(
               // 用主题色填充 SVG 的 currentColor(肚子/翅膀等),传 Colors.white
               // 会让整个蜜蜂变成纯白与背景圆几乎融为一体。
-              child: BeeIcon(
+              child: PiggyIcon(
                 color: theme.colorScheme.primary,
                 size: 72,
               ),
@@ -243,7 +243,7 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
             constraints: const BoxConstraints(maxHeight: 200),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
             ),
             child: ListView.separated(
               shrinkWrap: true,
@@ -383,7 +383,7 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
               ),
               child: ListView.separated(
                 itemCount: currencies.length,
@@ -461,10 +461,10 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
           Container(
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
             ),
             child: InkWell(
-              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
               onTap: () {
                 setState(() {
                   _createDefaultLedger = !_createDefaultLedger;
@@ -1129,14 +1129,14 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
           _categoryMode = mode;
         });
       },
-      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isSelected
               ? Colors.white.withValues(alpha: 0.3)
               : Colors.white.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
           border: Border.all(
             color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.3),
             width: 2,

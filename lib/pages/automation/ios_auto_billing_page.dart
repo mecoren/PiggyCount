@@ -25,7 +25,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
     final supportsAppIntents = PlatformInfo.supportsAppIntents;
 
     return Scaffold(
-      backgroundColor: BeeTokens.surface(context),
+      backgroundColor: PiggyTokens.surface(context),
       body: Column(
         children: [
           PrimaryHeader(
@@ -126,7 +126,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
             Text(
               l10n.iosAutoImportDesc,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: BeeTokens.textPrimary(context).withValues(alpha: 0.7),
+                color: PiggyTokens.textPrimary(context).withValues(alpha: 0.7),
                 height: 1.5,
               ),
             ),
@@ -184,7 +184,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
             Text(
               l10n.iosAutoBackTapDesc,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: BeeTokens.textPrimary(context).withValues(alpha: 0.7),
+                color: PiggyTokens.textPrimary(context).withValues(alpha: 0.7),
                 height: 1.5,
               ),
             ),
@@ -225,7 +225,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
             Text(
               content,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: BeeTokens.textPrimary(context).withValues(alpha: 0.7),
+                color: PiggyTokens.textPrimary(context).withValues(alpha: 0.7),
                 height: 1.5,
               ),
             ),
@@ -259,7 +259,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
             Text(
               l10n.iosAutoManualConfigDesc,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: BeeTokens.textPrimary(context).withValues(alpha: 0.7),
+                color: PiggyTokens.textPrimary(context).withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 16),
@@ -267,7 +267,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
               l10n.iosAutoShortcutConfigTitle,
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: BeeTokens.success(context),
+                color: PiggyTokens.success(context),
               ),
             ),
             const SizedBox(height: 8),
@@ -281,20 +281,20 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: BeeTokens.success(context).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
-                border: Border.all(color: BeeTokens.success(context).withValues(alpha: 0.3)),
+                color: PiggyTokens.success(context).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+                border: Border.all(color: PiggyTokens.success(context).withValues(alpha: 0.3)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.check_circle_outline, color: BeeTokens.success(context), size: 20),
+                  Icon(Icons.check_circle_outline, color: PiggyTokens.success(context), size: 20),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       l10n.iosAutoShortcutRecommendedTip,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: BeeTokens.success(context),
+                        color: PiggyTokens.success(context),
                         height: 1.4,
                       ),
                     ),
@@ -320,7 +320,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
             width: 24,
             height: 24,
             decoration: BoxDecoration(
-              color: BeeTokens.primary(context).withValues(alpha: 0.1),
+              color: PiggyTokens.primary(context).withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -328,7 +328,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
                 number,
                 style: theme.textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: BeeTokens.primary(context),
+                  color: PiggyTokens.primary(context),
                 ),
               ),
             ),
@@ -338,7 +338,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
             child: Text(
               text,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: BeeTokens.textPrimary(context).withValues(alpha: 0.7),
+                color: PiggyTokens.textPrimary(context).withValues(alpha: 0.7),
               ),
             ),
           ),
@@ -363,7 +363,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
             await launchUrl(url, mode: LaunchMode.externalApplication);
           }
         },
-        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -373,7 +373,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
                 height: 48,
                 decoration: BoxDecoration(
                   color: primaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                 ),
                 child: Icon(
                   Icons.play_circle_outline,
@@ -396,7 +396,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
                     Text(
                       l10n.iosAutoTutorialDesc,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: BeeTokens.textPrimary(context).withValues(alpha: 0.6),
+                        color: PiggyTokens.textPrimary(context).withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -404,7 +404,7 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
               ),
               Icon(
                 Icons.open_in_new,
-                color: BeeTokens.textPrimary(context).withValues(alpha: 0.4),
+                color: PiggyTokens.textPrimary(context).withValues(alpha: 0.4),
                 size: 20,
               ),
             ],
@@ -421,14 +421,14 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: BeeTokens.warning(context).withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
-        border: Border.all(color: BeeTokens.warning(context).withValues(alpha: 0.3)),
+        color: PiggyTokens.warning(context).withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+        border: Border.all(color: PiggyTokens.warning(context).withValues(alpha: 0.3)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.warning_amber_rounded, color: BeeTokens.warning(context), size: 24),
+          Icon(Icons.warning_amber_rounded, color: PiggyTokens.warning(context), size: 24),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -438,14 +438,14 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
                   l10n.iosVersionWarningTitle,
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: BeeTokens.warning(context),
+                    color: PiggyTokens.warning(context),
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   l10n.iosVersionWarningDesc,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: BeeTokens.warning(context),
+                    color: PiggyTokens.warning(context),
                     height: 1.4,
                   ),
                 ),

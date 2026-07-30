@@ -1,6 +1,6 @@
 //
-//  BeeCountBudgetWidget.swift
-//  BeeCountWidget
+//  PiggyCountBudgetWidget.swift
+//  PiggyCountWidget
 //
 //  Created by matrix on 2026/7/19.
 //
@@ -9,12 +9,12 @@ import WidgetKit
 import SwiftUI
 import UIKit
 
-struct BeeCountBudgetEntry: TimelineEntry {
+struct PiggyCountBudgetEntry: TimelineEntry {
     let date: Date
     let widgetImagePath: String
 }
 
-struct BeeCountBudgetProvider: TimelineProvider {
+struct PiggyCountBudgetProvider: TimelineProvider {
     /// 按 widget family 选渲染管线写入的图片 key（对应
     /// `lib/widget/widget_spec.dart` 的 `budgetSmall/Medium`）。
     private func imageKey(for family: WidgetFamily) -> String {
@@ -26,34 +26,34 @@ struct BeeCountBudgetProvider: TimelineProvider {
         }
     }
 
-    func placeholder(in context: Context) -> BeeCountBudgetEntry {
-        BeeCountBudgetEntry(
+    func placeholder(in context: Context) -> PiggyCountBudgetEntry {
+        PiggyCountBudgetEntry(
             date: Date(),
             // 添加页预览:用 bundle 内静态资产(见 WidgetPreviewAssets 注释)。
             widgetImagePath: WidgetPreviewAssets.path(forImageKey: imageKey(for: context.family))
         )
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (BeeCountBudgetEntry) -> ()) {
+    func getSnapshot(in context: Context, completion: @escaping (PiggyCountBudgetEntry) -> ()) {
         // 添加页预览(isPreview):运行时图片在预览上下文读不到(App
         // Group 访问受限,添加页只会显示占位色块),改用 bundle 内静态
         // 预览资产,详见 WidgetPreviewAssets。
         if context.isPreview {
-            completion(BeeCountBudgetEntry(
+            completion(PiggyCountBudgetEntry(
                 date: Date(),
                 widgetImagePath: WidgetPreviewAssets.path(forImageKey: imageKey(for: context.family))))
             return
         }
-        let userDefaults = UserDefaults(suiteName: "group.com.tntlikely.beecount")
+        let userDefaults = UserDefaults(suiteName: "group.com.wait.piggycount")
         let imagePath = userDefaults?.string(forKey: imageKey(for: context.family)) ?? ""
-        let entry = BeeCountBudgetEntry(date: Date(), widgetImagePath: imagePath)
+        let entry = PiggyCountBudgetEntry(date: Date(), widgetImagePath: imagePath)
         completion(entry)
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
-        let userDefaults = UserDefaults(suiteName: "group.com.tntlikely.beecount")
+        let userDefaults = UserDefaults(suiteName: "group.com.wait.piggycount")
         let imagePath = userDefaults?.string(forKey: imageKey(for: context.family)) ?? ""
-        let entry = BeeCountBudgetEntry(date: Date(), widgetImagePath: imagePath)
+        let entry = PiggyCountBudgetEntry(date: Date(), widgetImagePath: imagePath)
 
         // 设置30分钟后刷新
         let nextUpdate = Calendar.current.date(byAdding: .minute, value: 30, to: Date())!
@@ -62,13 +62,13 @@ struct BeeCountBudgetProvider: TimelineProvider {
     }
 }
 
-struct BeeCountBudgetWidgetEntryView : View {
-    var entry: BeeCountBudgetProvider.Entry
+struct PiggyCountBudgetWidgetEntryView : View {
+    var entry: PiggyCountBudgetProvider.Entry
     @Environment(\.widgetFamily) var widgetFamily
 
     // 预算卡片点击 → 预算页。第一版整块点击、不分区。
     // TODO: 中号有分类用量列表时，考虑按行分区深链到该分类的筛选明细。
-    private let budgetURL = URL(string: "beecount://open?page=budget")!
+    private let budgetURL = URL(string: "piggycount://open?page=budget")!
 
     var body: some View {
         if let uiImage = UIImage(contentsOfFile: entry.widgetImagePath) {
@@ -97,18 +97,18 @@ struct BeeCountBudgetWidgetEntryView : View {
     }
 }
 
-struct BeeCountBudgetWidget: Widget {
-    let kind: String = "BeeCountBudgetWidget"
+struct PiggyCountBudgetWidget: Widget {
+    let kind: String = "PiggyCountBudgetWidget"
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: BeeCountBudgetProvider()) { entry in
+        StaticConfiguration(kind: kind, provider: PiggyCountBudgetProvider()) { entry in
             if #available(iOS 17.0, *) {
-                BeeCountBudgetWidgetEntryView(entry: entry)
+                PiggyCountBudgetWidgetEntryView(entry: entry)
                     .containerBackground(for: .widget) {
                         Color.clear
                     }
             } else {
-                BeeCountBudgetWidgetEntryView(entry: entry)
+                PiggyCountBudgetWidgetEntryView(entry: entry)
             }
         }
         .configurationDisplayName("预算进度")

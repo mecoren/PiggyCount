@@ -6,10 +6,10 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:beecount/data/db.dart' show Account;
-import 'package:beecount/widget/views/net_worth_view.dart';
-import 'package:beecount/widget/widget_data_service.dart' show NetWorthAccountItem;
-import 'package:beecount/widget/widget_spec.dart' show HWSize;
+import 'package:piggycount/data/db.dart' show Account;
+import 'package:piggycount/widget/views/net_worth_view.dart';
+import 'package:piggycount/widget/widget_data_service.dart' show NetWorthAccountItem;
+import 'package:piggycount/widget/widget_spec.dart' show HWSize;
 
 void main() {
   Widget wrap(Widget child, Size size) {

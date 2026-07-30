@@ -212,7 +212,7 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
                 children: [
                   Icon(
                     Icons.bar_chart,
-                    color: BeeTokens.primary(context),
+                    color: PiggyTokens.primary(context),
                     size: 20,
                   ),
                   const SizedBox(width: 8),
@@ -235,7 +235,7 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
                     child: _SummaryItem(
                       label: AppLocalizations.of(context).categoryDetailTotalCount,
                       value: AppLocalizations.of(context).categoryMigrationTransactionLabel(summary.totalCount),
-                      color: BeeTokens.primary(context),
+                      color: PiggyTokens.primary(context),
                     ),
                   ),
                   Expanded(
@@ -244,8 +244,8 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
                       value: summary.totalAmount,
                       isAmount: true,
                       color: isIncome
-                        ? BeeTokens.incomeColor(context, ref)
-                        : BeeTokens.expenseColor(context, ref),
+                        ? PiggyTokens.incomeColor(context, ref)
+                        : PiggyTokens.expenseColor(context, ref),
                     ),
                   ),
                   Expanded(
@@ -253,7 +253,7 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
                       label: AppLocalizations.of(context).categoryDetailAverageAmount,
                       value: summary.averageAmount,
                       isAmount: true,
-                      color: BeeTokens.textTertiary(context),
+                      color: PiggyTokens.textTertiary(context),
                     ),
                   ),
                 ],
@@ -273,13 +273,13 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
           Icon(
             Icons.sort,
             size: 16,
-            color: BeeTokens.textTertiary(context),
+            color: PiggyTokens.textTertiary(context),
           ),
           const SizedBox(width: 8),
           Text(
             AppLocalizations.of(context).categoryDetailSortTitle,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: BeeTokens.textTertiary(context),
+              color: PiggyTokens.textTertiary(context),
             ),
           ),
           const SizedBox(width: 12),
@@ -575,7 +575,7 @@ class _SummaryItem extends ConsumerWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: BeeTokens.textTertiary(context),
+            color: PiggyTokens.textTertiary(context),
           ),
         ),
       ],
@@ -652,21 +652,21 @@ class _SortButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected
-            ? BeeTokens.primary(context)
-            : BeeTokens.surface(context),
-          borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+            ? PiggyTokens.primary(context)
+            : PiggyTokens.surface(context),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
           border: Border.all(
             color: isSelected
-              ? BeeTokens.primary(context)
-              : BeeTokens.divider(context),
+              ? PiggyTokens.primary(context)
+              : PiggyTokens.divider(context),
           ),
         ),
         child: Text(
           label,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: isSelected
-              ? BeeTokens.textOnPrimary(context)
-              : BeeTokens.textPrimary(context),
+              ? PiggyTokens.textOnPrimary(context)
+              : PiggyTokens.textPrimary(context),
             fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
           ),
         ),

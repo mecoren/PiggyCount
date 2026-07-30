@@ -81,7 +81,7 @@ class _WaitSlidingSegmentedControlState<T>
     // 圆角令牌：外层轨道使用 radiusLg（12px，与按钮/菜单项同级）；
     // 内层胶囊半径 = 外圆角 - 3px（胶囊 top/bottom 各 3px 内边距），
     // 使胶囊贴合外层曲率，视觉上呈「内嵌胶囊」效果。
-    final double outerRadius = BeeDimens.radiusLg;
+    final double outerRadius = PiggyDimens.radiusLg;
     final double thumbRadius = outerRadius - 3;
 
     return LayoutBuilder(

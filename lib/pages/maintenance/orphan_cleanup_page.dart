@@ -31,7 +31,7 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
     final l10n = AppLocalizations.of(context);
     final reportAsync = ref.watch(orphanScanReportProvider);
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           PrimaryHeader(
@@ -88,11 +88,11 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
             children: [
               Icon(Icons.check_circle_outline,
                   size: 64.0.scaled(context, ref),
-                  color: BeeTokens.textTertiary(context)),
+                  color: PiggyTokens.textTertiary(context)),
               SizedBox(height: 16.0.scaled(context, ref)),
               Text(l10n.maintenanceOrphanEmpty,
                   style: TextStyle(
-                      color: BeeTokens.textSecondary(context))),
+                      color: PiggyTokens.textSecondary(context))),
             ],
           ),
         ),
@@ -131,7 +131,7 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
         child: Row(
           children: [
             Icon(Icons.warning_amber_outlined,
-                color: BeeTokens.warning(context),
+                color: PiggyTokens.warning(context),
                 size: 22.0.scaled(context, ref)),
             SizedBox(width: 12.0.scaled(context, ref)),
             Expanded(
@@ -143,7 +143,7 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: BeeTokens.textPrimary(context),
+                      color: PiggyTokens.textPrimary(context),
                     ),
                   ),
                   if (report.totalSizeBytes > 0)
@@ -152,7 +152,7 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
                           _humanSize(report.totalSizeBytes)),
                       style: TextStyle(
                         fontSize: 12,
-                        color: BeeTokens.textSecondary(context),
+                        color: PiggyTokens.textSecondary(context),
                       ),
                     ),
                 ],
@@ -188,7 +188,7 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: BeeTokens.textPrimary(context),
+                        color: PiggyTokens.textPrimary(context),
                       ),
                     ),
                   ),
@@ -232,11 +232,11 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
       title: Text(r.title,
           style: TextStyle(
               fontSize: 14,
-              color: BeeTokens.textPrimary(context))),
+              color: PiggyTokens.textPrimary(context))),
       subtitle: Text('${r.subtitle}$sizeHint',
           style: TextStyle(
               fontSize: 12,
-              color: BeeTokens.textSecondary(context))),
+              color: PiggyTokens.textSecondary(context))),
       secondary: IconButton(
         tooltip: l10n.maintenanceOrphanDeleteOne,
         icon: const Icon(Icons.delete_outline),
@@ -253,7 +253,7 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
     final selectedCount = report.all
         .where((r) => _selected.contains(r.uniqueKey))
         .length;
-    final primary = BeeTokens.primary(context);
+    final primary = PiggyTokens.primary(context);
     return SafeArea(
       child: Container(
         padding: EdgeInsets.symmetric(
@@ -261,15 +261,15 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
           vertical: 8.0.scaled(context, ref),
         ),
         decoration: BoxDecoration(
-          color: BeeTokens.surface(context),
+          color: PiggyTokens.surface(context),
           border: Border(
-              top: BorderSide(color: BeeTokens.divider(context))),
+              top: BorderSide(color: PiggyTokens.divider(context))),
         ),
         child: Row(
           children: [
             Text(
               l10n.maintenanceOrphanSelectedHint(selectedCount),
-              style: TextStyle(color: BeeTokens.textSecondary(context)),
+              style: TextStyle(color: PiggyTokens.textSecondary(context)),
             ),
             const Spacer(),
             TextButton(

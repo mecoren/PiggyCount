@@ -10,7 +10,7 @@ import '../exchange_rate_repository.dart';
 /// 坑就是这类时序问题,闭包取值规避。
 class LocalExchangeRateRepository implements ExchangeRateRepository {
   static const _uuid = Uuid();
-  final BeeDatabase db;
+  final PiggyDatabase db;
   final ChangeTracker? Function() trackerGetter;
 
   LocalExchangeRateRepository(this.db, {required this.trackerGetter});

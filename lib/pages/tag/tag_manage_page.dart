@@ -33,7 +33,7 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
     final primaryColor = ref.watch(primaryColorProvider);
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           PrimaryHeader(
@@ -76,14 +76,14 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
           Icon(
             Icons.label_outline,
             size: 64,
-            color: BeeTokens.textTertiary(context),
+            color: PiggyTokens.textTertiary(context),
           ),
           const SizedBox(height: 16),
           Text(
             l10n.tagManageEmpty,
             style: TextStyle(
               fontSize: 16,
-              color: BeeTokens.textSecondary(context),
+              color: PiggyTokens.textSecondary(context),
             ),
           ),
           const SizedBox(height: 8),
@@ -91,7 +91,7 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
             l10n.tagManageEmptyHint,
             style: TextStyle(
               fontSize: 14,
-              color: BeeTokens.textTertiary(context),
+              color: PiggyTokens.textTertiary(context),
             ),
           ),
           const SizedBox(height: 24),
@@ -197,27 +197,27 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
 
   /// 构建更多菜单
   Widget _buildMoreMenu(BuildContext context, AppLocalizations l10n, Color primaryColor) {
-    return BeePopupMenu(
+    return PiggyPopupMenu(
       tooltip: l10n.commonMore,
       primaryColor: primaryColor,
       items: [
-        BeeMenuItem.action(
+        PiggyMenuItem.action(
           value: 'add',
           icon: Icons.add_circle_outline,
           label: l10n.tagAddTitle,
         ),
-        BeeMenuItem.action(
+        PiggyMenuItem.action(
           value: 'generate_default',
           icon: Icons.auto_fix_high,
           label: l10n.tagManageGenerateDefault,
         ),
-        BeeMenuItem.action(
+        PiggyMenuItem.action(
           value: 'import',
           icon: Icons.download_outlined,
           label: l10n.tagImport,
         ),
-        const BeeMenuItem.divider(),
-        BeeMenuItem.action(
+        const PiggyMenuItem.divider(),
+        PiggyMenuItem.action(
           value: 'clear_unused',
           icon: Icons.delete_sweep_outlined,
           label: l10n.tagClearUnused,
@@ -445,7 +445,7 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: BeeTokens.error(context)),
+            style: TextButton.styleFrom(foregroundColor: PiggyTokens.error(context)),
             child: Text(l10n.commonDelete),
           ),
         ],
@@ -511,7 +511,7 @@ class _TagCard extends StatelessWidget {
 
   Color _parseColor(BuildContext context) {
     if (tag.color == null || tag.color!.isEmpty) {
-      return BeeTokens.primary(context);
+      return PiggyTokens.primary(context);
     }
     try {
       String hex = tag.color!;
@@ -523,7 +523,7 @@ class _TagCard extends StatelessWidget {
       }
       return Color(int.parse(hex, radix: 16));
     } catch (e) {
-      return BeeTokens.primary(context);
+      return PiggyTokens.primary(context);
     }
   }
 
@@ -531,17 +531,17 @@ class _TagCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final tagColor = _parseColor(context);
-    final isDark = BeeTokens.isDark(context);
+    final isDark = PiggyTokens.isDark(context);
 
     return Material(
-      color: BeeTokens.surface(context),
-      borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+      color: PiggyTokens.surface(context),
+      borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
             border: Border.all(
               color: tagColor.withValues(alpha: isDark ? 0.4 : 0.3),
               width: 1.5,
@@ -590,7 +590,7 @@ class _TagCard extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: BeeTokens.textPrimary(context),
+                                color: PiggyTokens.textPrimary(context),
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
@@ -607,7 +607,7 @@ class _TagCard extends StatelessWidget {
                           l10n.tagTransactionCount(transactionCount),
                           style: TextStyle(
                             fontSize: 12,
-                            color: BeeTokens.textTertiary(context),
+                            color: PiggyTokens.textTertiary(context),
                           ),
                         ),
                         // 删除按钮
@@ -616,7 +616,7 @@ class _TagCard extends StatelessWidget {
                           child: Icon(
                             Icons.delete_outline,
                             size: 18,
-                            color: BeeTokens.iconTertiary(context),
+                            color: PiggyTokens.iconTertiary(context),
                           ),
                         ),
                       ],

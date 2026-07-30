@@ -6,7 +6,7 @@ import '../recurring_transaction_repository.dart';
 /// 本地周期记账Repository实现
 /// 基于 Drift 数据库实现
 class LocalRecurringTransactionRepository implements RecurringTransactionRepository {
-  final BeeDatabase db;
+  final PiggyDatabase db;
 
   LocalRecurringTransactionRepository(this.db);
 

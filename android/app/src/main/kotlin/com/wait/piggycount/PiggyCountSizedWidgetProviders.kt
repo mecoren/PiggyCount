@@ -1,4 +1,4 @@
-package com.tntlikely.beecount
+package com.wait.piggycount
 
 /**
  * 各内容类型的「按尺寸拆分的选择器入口」——全部是**空子类**,完整复用父类
@@ -17,16 +17,16 @@ package com.tntlikely.beecount
  */
 
 /** 净资产·中(默认 4×2)。 */
-class BeeCountNetWorthMediumWidgetProvider : BeeCountNetWorthWidgetProvider()
+class PiggyCountNetWorthMediumWidgetProvider : PiggyCountNetWorthWidgetProvider()
 
 /** 净资产·大(默认 4×4)。 */
-class BeeCountNetWorthLargeWidgetProvider : BeeCountNetWorthWidgetProvider()
+class PiggyCountNetWorthLargeWidgetProvider : PiggyCountNetWorthWidgetProvider()
 
 /** 预算进度·中(默认 4×2)。 */
-class BeeCountBudgetMediumWidgetProvider : BeeCountBudgetWidgetProvider()
+class PiggyCountBudgetMediumWidgetProvider : PiggyCountBudgetWidgetProvider()
 
 /** 快速记账·中(默认 4×2)。 */
-class BeeCountQuickAddMediumWidgetProvider : BeeCountQuickAddWidgetProvider()
+class PiggyCountQuickAddMediumWidgetProvider : PiggyCountQuickAddWidgetProvider()
 
 /** 最近交易·大(默认 4×4)。 */
-class BeeCountRecentLargeWidgetProvider : BeeCountRecentWidgetProvider()
+class PiggyCountRecentLargeWidgetProvider : PiggyCountRecentWidgetProvider()

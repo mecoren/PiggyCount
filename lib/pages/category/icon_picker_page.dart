@@ -56,8 +56,8 @@ class _IconPickerPageState extends State<IconPickerPage> with TickerProviderStat
             bottom: TabBar(
               controller: _tabController,
               isScrollable: true,
-              labelColor: BeeTokens.textPrimary(context),
-              unselectedLabelColor: BeeTokens.textSecondary(context),
+              labelColor: PiggyTokens.textPrimary(context),
+              unselectedLabelColor: PiggyTokens.textSecondary(context),
               tabs: categories.map((category) => Tab(text: category.name)).toList(),
             ),
           ),
@@ -282,15 +282,15 @@ class _IconGrid extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               color: isSelected
-                  ? BeeTokens.primary(context).withValues(alpha: 0.1)
+                  ? PiggyTokens.primary(context).withValues(alpha: 0.1)
                   : null,
               border: Border.all(
                 color: isSelected
-                    ? BeeTokens.primary(context)
-                    : BeeTokens.border(context),
+                    ? PiggyTokens.primary(context)
+                    : PiggyTokens.border(context),
                 width: isSelected ? 2 : 1,
               ),
-              borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -299,15 +299,15 @@ class _IconGrid extends StatelessWidget {
                   icon.iconData,
                   size: 32,
                   color: isSelected
-                      ? BeeTokens.primary(context)
-                      : BeeTokens.iconPrimary(context),
+                      ? PiggyTokens.primary(context)
+                      : PiggyTokens.iconPrimary(context),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   icon.label,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: isSelected
-                        ? BeeTokens.primary(context)
+                        ? PiggyTokens.primary(context)
                         : null,
                   ),
                   textAlign: TextAlign.center,

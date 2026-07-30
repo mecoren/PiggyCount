@@ -8,7 +8,7 @@ part of 'sync_engine.dart';
 extension SyncEngineApplyExt on SyncEngine {
   /// 应用单条远程变更到本地数据库
   /// 返回 true 表示已应用，false 表示跳过
-  Future<bool> applyRemoteChange(BeeCountCloudSyncChange change) async {
+  Future<bool> applyRemoteChange(PiggyCountCloudSyncChange change) async {
     // 跳过本设备自己的变更
     final deviceId = await _getDeviceId();
     if (change.updatedByDeviceId == deviceId) return false;
@@ -53,7 +53,7 @@ extension SyncEngineApplyExt on SyncEngine {
 
   // ==================== Apply 方法 ====================
 
-  Future<void> _applyTransactionChange(BeeCountCloudSyncChange change) async {
+  Future<void> _applyTransactionChange(PiggyCountCloudSyncChange change) async {
     final syncId = change.entitySyncId;
 
     if (change.action == 'delete') {
@@ -299,7 +299,7 @@ extension SyncEngineApplyExt on SyncEngine {
     }
   }
 
-  Future<void> _applyAccountChange(BeeCountCloudSyncChange change) async {
+  Future<void> _applyAccountChange(PiggyCountCloudSyncChange change) async {
     final syncId = change.entitySyncId;
     // ledger_id 也按 syncId 映射到本地 int。account 表 ledgerId 是 legacy
     // 字段，但 insert 时仍需填个有效值；映射失败再 fallback 到旧格式。
@@ -413,7 +413,7 @@ extension SyncEngineApplyExt on SyncEngine {
     );
   }
 
-  Future<void> _applyCategoryChange(BeeCountCloudSyncChange change) async {
+  Future<void> _applyCategoryChange(PiggyCountCloudSyncChange change) async {
     final syncId = change.entitySyncId;
 
     if (change.action == 'delete') {
@@ -571,7 +571,7 @@ extension SyncEngineApplyExt on SyncEngine {
     );
   }
 
-  Future<void> _applyTagChange(BeeCountCloudSyncChange change) async {
+  Future<void> _applyTagChange(PiggyCountCloudSyncChange change) async {
     final syncId = change.entitySyncId;
 
     if (change.action == 'delete') {
@@ -649,7 +649,7 @@ extension SyncEngineApplyExt on SyncEngine {
   /// 应用预算变更。对齐 account/tag:按 syncId upsert,delete 走同样的路径。
   /// ledger/category 的外键在 payload 里以 syncId 形式带来,用
   /// _resolveLedgerIdBySyncId / _resolveCategoryIdBySyncId 换成本地 int id。
-  Future<void> _applyBudgetChange(BeeCountCloudSyncChange change) async {
+  Future<void> _applyBudgetChange(PiggyCountCloudSyncChange change) async {
     final syncId = change.entitySyncId;
 
     if (change.action == 'delete') {
@@ -726,7 +726,7 @@ extension SyncEngineApplyExt on SyncEngine {
   /// apply 直写 db(本文件是 CLAUDE.md 白名单例外),不走 repo → 不记 change,
   /// 防反向 push。
   Future<void> _applyExchangeRateOverrideChange(
-      BeeCountCloudSyncChange change) async {
+      PiggyCountCloudSyncChange change) async {
     if (change.action == 'delete') {
       // delete 按 syncId 精确匹配:币对收敛把行的 syncId 换成新值后,
       // 针对旧 syncId 的 delete 是有意的 no-op(该币对已有更新的 override 存活)。
@@ -774,7 +774,7 @@ extension SyncEngineApplyExt on SyncEngine {
   /// 跟其他 entity 不同:不在本地"新建"账本 —— 账本的创建走 fullPush /
   /// ledger_snapshot 路径。这里只负责"已存在的账本"的 meta 更新。找不到
   /// 对应的本地账本就跳过,等快照路径把它 seed 出来后再复用。
-  Future<void> _applyLedgerChange(BeeCountCloudSyncChange change) async {
+  Future<void> _applyLedgerChange(PiggyCountCloudSyncChange change) async {
     final syncId = change.entitySyncId;
     if (change.action == 'delete') {
       // 账本删除走 'ledger_snapshot' 的 delete change,这里不处理 —— 避免

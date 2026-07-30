@@ -68,12 +68,12 @@ class LedgerCard extends ConsumerWidget {
           vertical: 4,
         ),
         decoration: BoxDecoration(
-          color: BeeTokens.surface(context),
-          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
-          border: BeeTokens.isDark(context)
-              ? Border.all(color: BeeTokens.border(context), width: 1)
+          color: PiggyTokens.surface(context),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+          border: PiggyTokens.isDark(context)
+              ? Border.all(color: PiggyTokens.border(context), width: 1)
               : null,
-          boxShadow: BeeTokens.isDark(context)
+          boxShadow: PiggyTokens.isDark(context)
               ? null
               : [
                   BoxShadow(
@@ -84,7 +84,7 @@ class LedgerCard extends ConsumerWidget {
                 ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
           child: Stack(
             children: [
               // 左侧色条：仅选中时显示
@@ -98,8 +98,8 @@ class LedgerCard extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: primaryColor,
                       borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(BeeDimens.radiusLg),
-                        bottomLeft: Radius.circular(BeeDimens.radiusLg),
+                        topLeft: Radius.circular(PiggyDimens.radiusLg),
+                        bottomLeft: Radius.circular(PiggyDimens.radiusLg),
                       ),
                     ),
                   ),
@@ -124,7 +124,7 @@ class LedgerCard extends ConsumerWidget {
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w600,
-                                    color: BeeTokens.textPrimary(context),
+                                    color: PiggyTokens.textPrimary(context),
                                   ),
                                 ),
                                 TextSpan(
@@ -134,7 +134,7 @@ class LedgerCard extends ConsumerWidget {
                                     fontWeight: FontWeight.w500,
                                     color: isRemote
                                         ? primaryColor.withValues(alpha: 0.8)
-                                        : BeeTokens.textSecondary(context),
+                                        : PiggyTokens.textSecondary(context),
                                   ),
                                 ),
                               ],
@@ -186,7 +186,7 @@ class LedgerCard extends ConsumerWidget {
                           '${l10n.ledgersCurrency}：${getCurrencyName(ledger.currency, context)}（${ledger.currency}）',
                           style: TextStyle(
                             fontSize: 14,
-                            color: BeeTokens.textSecondary(context),
+                            color: PiggyTokens.textSecondary(context),
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -195,7 +195,7 @@ class LedgerCard extends ConsumerWidget {
                           l10n.ledgersRecords('${ledger.transactionCount}'),
                           style: TextStyle(
                             fontSize: 14,
-                            color: BeeTokens.textSecondary(context),
+                            color: PiggyTokens.textSecondary(context),
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -213,7 +213,7 @@ class LedgerCard extends ConsumerWidget {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: ledger.balance >= 0 ? BeeTokens.success(context) : BeeTokens.error(context),
+                            color: ledger.balance >= 0 ? PiggyTokens.success(context) : PiggyTokens.error(context),
                           ),
                         ),
                       ],
@@ -227,8 +227,8 @@ class LedgerCard extends ConsumerWidget {
                 Positioned.fill(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: BeeTokens.surface(context).withValues(alpha: 0.85),
-                      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                      color: PiggyTokens.surface(context).withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -263,7 +263,7 @@ class LedgerCard extends ConsumerWidget {
                     icon: Icon(
                       Icons.more_horiz,
                       size: 20,
-                      color: BeeTokens.iconSecondary(context),
+                      color: PiggyTokens.iconSecondary(context),
                     ),
                     visualDensity: VisualDensity.compact,
                   ),

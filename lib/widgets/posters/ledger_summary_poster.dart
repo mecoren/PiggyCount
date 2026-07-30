@@ -128,7 +128,7 @@ class LedgerSummaryPoster extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
                 decoration: BoxDecoration(
                   color: primaryColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
                 ),
                 child: Text(
                   data.ledgerName,
@@ -165,7 +165,7 @@ class LedgerSummaryPoster extends StatelessWidget {
         ),
         // 右侧二维码
         ClipRRect(
-          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
           child: Container(
             decoration: BoxDecoration(
               boxShadow: [
@@ -198,7 +198,7 @@ class LedgerSummaryPoster extends StatelessWidget {
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(BeeDimens.radius3xl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radius3xl),
         boxShadow: [
           BoxShadow(
             color: primaryColor.withValues(alpha: 0.08),
@@ -449,7 +449,7 @@ class LedgerSummaryPoster extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
         border: Border.all(
           color: primaryColor.withValues(alpha: 0.15),
           width: 1.5,
@@ -463,7 +463,7 @@ class LedgerSummaryPoster extends StatelessWidget {
             height: 32,
             decoration: BoxDecoration(
               color: primaryColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
             ),
             child: Center(
               child: Text(
@@ -529,7 +529,7 @@ class LedgerSummaryPoster extends StatelessWidget {
       padding: const EdgeInsets.all(25),
       decoration: BoxDecoration(
         color: primaryColor.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
         border: Border.all(
           color: primaryColor.withValues(alpha: 0.1),
           width: 1,

@@ -11,9 +11,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:beecount/data/db.dart';
-import 'package:beecount/services/data/seed_service.dart';
-import 'package:beecount/l10n/app_localizations.dart';
+import 'package:piggycount/data/db.dart';
+import 'package:piggycount/services/data/seed_service.dart';
+import 'package:piggycount/l10n/app_localizations.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -32,7 +32,7 @@ void main() {
     final tag = locale.toLanguageTag();
     test('seed 二级分类无重复、无 fallback [$tag]', () async {
       final l10n = await AppLocalizations.delegate.load(locale);
-      final db = BeeDatabase.forTesting(NativeDatabase.memory());
+      final db = PiggyDatabase.forTesting(NativeDatabase.memory());
       try {
         await SeedService.createHierarchicalCategories(db, l10n);
         final cats = await db.select(db.categories).get();

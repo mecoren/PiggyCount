@@ -11,8 +11,8 @@ import 'shared_ledger_providers.dart';
 import 'sync_providers.dart';
 
 // 数据库Provider
-final databaseProvider = Provider<BeeDatabase>((ref) {
-  final db = BeeDatabase();
+final databaseProvider = Provider<PiggyDatabase>((ref) {
+  final db = PiggyDatabase();
   ref.onDispose(() => db.close());
   return db;
 });

@@ -38,7 +38,7 @@ class AnalyticsSummary extends ConsumerWidget {
   });
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final grey = BeeTokens.textSecondary(context);
+    final grey = PiggyTokens.textSecondary(context);
     final l10n = AppLocalizations.of(context);
     String avgLabel;
     switch (scope) {
@@ -169,7 +169,7 @@ class AnalyticsSummary extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 8),
-          BeeDivider.thin(),
+          PiggyDivider.thin(),
         ],
       );
     } else {
@@ -219,7 +219,7 @@ class AnalyticsSummary extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 8),
-          BeeDivider.thin(),
+          PiggyDivider.thin(),
         ],
       );
     }

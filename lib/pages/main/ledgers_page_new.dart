@@ -86,14 +86,14 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
               IconButton(
                 tooltip: AppLocalizations.of(context).ledgersCreate,
                 onPressed: () => _showCreateLedgerDialog(context),
-                icon: Icon(Icons.add, color: BeeTokens.textPrimary(context)),
+                icon: Icon(Icons.add, color: PiggyTokens.textPrimary(context)),
               ),
               // 刷新
               IconButton(
                 onPressed: () {
                   ref.read(ledgerListRefreshProvider.notifier).state++;
                 },
-                icon: Icon(Icons.refresh, color: BeeTokens.textPrimary(context)),
+                icon: Icon(Icons.refresh, color: PiggyTokens.textPrimary(context)),
               ),
             ],
           ),
@@ -186,7 +186,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
      // 都在 BeeCount Cloud 后端),非 BeeCount Cloud 用户(local / WebDAV /
      // S3 / Supabase 等)就算扫码也走不通,按钮藏起来避免误导。
     final cloudConfigAsync = ref.watch(activeCloudConfigProvider);
-    final isBeeCountCloud =
+    final isPiggyCountCloud =
         cloudConfigAsync.valueOrNull?.type == CloudBackendType.beecountCloud;
 
     return ListView(
@@ -196,7 +196,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       children: [
         // §7 共享账本入口 — 跟 web 端 LedgersSection 顶部"加入共享账本"
         // 按钮一致,放在列表顶部,比 header 角落 icon 显眼。
-        if (isBeeCountCloud)
+        if (isPiggyCountCloud)
           Padding(
             padding: EdgeInsets.fromLTRB(
               16.0.scaled(context, ref),
@@ -217,7 +217,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
               style: OutlinedButton.styleFrom(
                 minimumSize: Size(double.infinity, 40.0.scaled(context, ref)),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                 ),
               ),
             ),
@@ -348,7 +348,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
         if (showLoadingOverlay)
           Positioned.fill(
             child: Container(
-              color: BeeTokens.surfaceElevated(context).withValues(alpha: 0.7),
+              color: PiggyTokens.surfaceElevated(context).withValues(alpha: 0.7),
               child: const Center(
                 child: CircularProgressIndicator(),
               ),
@@ -442,14 +442,14 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     // 共享账本/成员管理是 BeeCount Cloud 独有能力,非 BeeCount Cloud 模式
     // (local / WebDAV / S3 / Supabase 等)直接隐藏这些入口。
     final cloudConfig = ref.read(activeCloudConfigProvider).valueOrNull;
-    final isBeeCountCloud =
+    final isPiggyCountCloud =
         cloudConfig?.type == CloudBackendType.beecountCloud;
     final action = await showDialog<String>(
       context: context,
       builder: (dctx) {
-        final primary = BeeTokens.primary(dctx);
+        final primary = PiggyTokens.primary(dctx);
         return SimpleDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
           title: Text(AppLocalizations.of(context).ledgersActions),
           children: [
             if (isOwner)
@@ -478,7 +478,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
             // v24 共享账本:成员管理入口(任意 member 可看,owner 可邀请 / 踢人,
             // Editor 可看列表 + 退出账本)。非 BeeCount Cloud 模式没成员概念,
             // 整个入口隐藏。
-            if (isBeeCountCloud) ...[
+            if (isPiggyCountCloud) ...[
               SimpleDialogOption(
                 onPressed: () => Navigator.pop(dctx, 'members'),
                 child: Row(
@@ -491,7 +491,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                       Text(
                         '(${ledger.memberCount})',
                         style: TextStyle(
-                          color: BeeTokens.textSecondary(context),
+                          color: PiggyTokens.textSecondary(context),
                           fontSize: 13,
                         ),
                       ),
@@ -543,7 +543,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                 onPressed: () => Navigator.pop(dctx, 'delete'),
                 child: Row(
                   children: [
-                    Icon(Icons.delete_forever_outlined, color: BeeTokens.error(context)),
+                    Icon(Icons.delete_forever_outlined, color: PiggyTokens.error(context)),
                     const SizedBox(width: 8),
                     Text(AppLocalizations.of(context).ledgersDelete),
                   ],
@@ -618,9 +618,9 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     final action = await showDialog<String>(
       context: context,
       builder: (dctx) {
-        final primary = BeeTokens.primary(dctx);
+        final primary = PiggyTokens.primary(dctx);
         return SimpleDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
           title: Text(AppLocalizations.of(context).ledgersActions),
           children: [
             SimpleDialogOption(
@@ -637,7 +637,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
               onPressed: () => Navigator.pop(dctx, 'delete'),
               child: Row(
                 children: [
-                  Icon(Icons.delete_forever_outlined, color: BeeTokens.error(context)),
+                  Icon(Icons.delete_forever_outlined, color: PiggyTokens.error(context)),
                   const SizedBox(width: 8),
                   Text(AppLocalizations.of(context).ledgersDeleteRemote),
                 ],
@@ -1139,9 +1139,9 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) {
-        final primary = BeeTokens.primary(ctx);
+        final primary = PiggyTokens.primary(ctx);
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
           contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
           content: StatefulBuilder(builder: (ctx, setState) {
             return Column(
@@ -1235,12 +1235,12 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       {required int initial}) {
     return showModalBottomSheet<int>(
       context: context,
-      backgroundColor: BeeTokens.surfaceElevated(context),
+      backgroundColor: PiggyTokens.surfaceElevated(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
       ),
       builder: (ctx) {
-        final primary = BeeTokens.primary(ctx);
+        final primary = PiggyTokens.primary(ctx);
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -1255,7 +1255,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                     style: Theme.of(ctx)
                         .textTheme
                         .bodySmall
-                        ?.copyWith(color: BeeTokens.textTertiary(ctx))),
+                        ?.copyWith(color: PiggyTokens.textTertiary(ctx))),
                 const SizedBox(height: 12),
                 Wrap(
                   spacing: 8,
@@ -1265,25 +1265,25 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                     final isSelected = initial == day;
                     return InkWell(
                       onTap: () => Navigator.pop(ctx, day),
-                      borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                       child: Container(
                         width: 40,
                         height: 40,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                           color: isSelected
                               ? primary.withValues(alpha: 0.12)
                               : Colors.transparent,
                           border: Border.all(
                               color:
-                                  isSelected ? primary : BeeTokens.divider(ctx)),
+                                  isSelected ? primary : PiggyTokens.divider(ctx)),
                         ),
                         child: Text('$day',
                             style: TextStyle(
                                 color: isSelected
                                     ? primary
-                                    : BeeTokens.textPrimary(ctx))),
+                                    : PiggyTokens.textPrimary(ctx))),
                       ),
                     );
                   }),
@@ -1301,9 +1301,9 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     return showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: BeeTokens.surfaceElevated(context),
+      backgroundColor: PiggyTokens.surfaceElevated(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
       ),
       builder: (bctx) {
         String query = '';
@@ -1332,7 +1332,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                     height: 4,
                     margin: const EdgeInsets.only(bottom: 8),
                     decoration: BoxDecoration(
-                      color: BeeTokens.textTertiary(context).withValues(alpha: 0.3),
+                      color: PiggyTokens.textTertiary(context).withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -1358,7 +1358,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                         return ListTile(
                           title: Text('${c.name} (${c.code})'),
                           trailing: sel
-                              ? Icon(Icons.check, color: BeeTokens.textPrimary(context))
+                              ? Icon(Icons.check, color: PiggyTokens.textPrimary(context))
                               : null,
                           onTap: () => Navigator.pop(bctx, c.code),
                         );
@@ -1397,7 +1397,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
             bool isProcessing = false;
 
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
               title: Row(
                 children: [
                   const Icon(Icons.warning, color: Colors.red, size: 28),
@@ -1420,8 +1420,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: BeeTokens.info(context),
-                        borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                        color: PiggyTokens.info(context),
+                        borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1448,8 +1448,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: BeeTokens.warning(context),
-                          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                          color: PiggyTokens.warning(context),
+                          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1614,7 +1614,7 @@ class _SectionHeader extends ConsumerWidget {
             style: TextStyle(
               fontSize: 16.0.scaled(context, ref),
               fontWeight: FontWeight.w600,
-              color: BeeTokens.textSecondary(context),
+              color: PiggyTokens.textSecondary(context),
             ),
           ),
           if (trailing != null) ...[
@@ -1625,14 +1625,14 @@ class _SectionHeader extends ConsumerWidget {
                 vertical: 2.0.scaled(context, ref),
               ),
               decoration: BoxDecoration(
-                color: BeeTokens.surfaceSecondary(context),
-                borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                color: PiggyTokens.surfaceSecondary(context),
+                borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
               ),
               child: Text(
                 trailing!,
                 style: TextStyle(
                   fontSize: 12.0.scaled(context, ref),
-                  color: BeeTokens.textTertiary(context),
+                  color: PiggyTokens.textTertiary(context),
                 ),
               ),
             ),

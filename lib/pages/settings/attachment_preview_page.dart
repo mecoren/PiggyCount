@@ -51,7 +51,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
       appBar: GlassTitleBar(
         title: widget.title,
@@ -86,7 +86,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
                     child: Text(
                       l10n.attachmentPreviewEmpty,
                       style: TextStyle(
-                        color: BeeTokens.textSecondary(context),
+                        color: PiggyTokens.textSecondary(context),
                         fontSize: 14,
                       ),
                     ),
@@ -115,7 +115,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
         child: Text(
           l10n.attachmentPreviewEmpty,
           style: TextStyle(
-            color: BeeTokens.textSecondary(context),
+            color: PiggyTokens.textSecondary(context),
             fontSize: 14,
           ),
         ),
@@ -144,7 +144,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
       onTap: () => _showImageDetail(context, index, isAttachment),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
           border: isSelected
               ? Border.all(
                   color: ref.watch(primaryColorProvider),
@@ -153,7 +153,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
               : null,
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
           child: _buildImage(index, isAttachment),
         ),
       ),
@@ -171,10 +171,10 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
           return Container(
-            color: BeeTokens.surface(context),
+            color: PiggyTokens.surface(context),
             child: Icon(
               Icons.broken_image,
-              color: BeeTokens.iconSecondary(context),
+              color: PiggyTokens.iconSecondary(context),
             ),
           );
         },
@@ -189,10 +189,10 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
           return Container(
-            color: BeeTokens.surface(context),
+            color: PiggyTokens.surface(context),
             child: Icon(
               Icons.broken_image,
-              color: BeeTokens.iconSecondary(context),
+              color: PiggyTokens.iconSecondary(context),
             ),
           );
         },
@@ -249,7 +249,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.black54,
-                borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
               ),
               child: Text(
                 fileName,

@@ -8,7 +8,7 @@ import '../system/logger_service.dart';
 /// 2. 为账户添加币种字段（从账本继承）
 /// 3. 提供测试用的迁移和回滚方法
 class AccountMigrationService {
-  final BeeDatabase db;
+  final PiggyDatabase db;
 
   AccountMigrationService(this.db);
 

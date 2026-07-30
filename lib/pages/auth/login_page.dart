@@ -193,7 +193,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     final url = WebsiteUrls.docsCloudSyncEmbed(
       _registerDocTopic(type),
       Localizations.localeOf(context),
-      dark: BeeTokens.isDark(context),
+      dark: PiggyTokens.isDark(context),
       primaryHex: _hex(ref.read(primaryColorProvider)),
     );
     Navigator.of(context).push(
@@ -207,14 +207,14 @@ class _AuthPageState extends ConsumerState<AuthPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final primary = ref.watch(primaryColorProvider);
-    final radius = BorderRadius.circular(BeeDimens.radiusLg);
+    final radius = BorderRadius.circular(PiggyDimens.radiusLg);
 
     // 检测云服务类型
     final cloudConfig = ref.watch(activeCloudConfigProvider);
     if (cloudConfig.hasValue && cloudConfig.value!.type == CloudBackendType.webdav) {
       // WebDAV 不需要登录页面
       return Scaffold(
-        backgroundColor: BeeTokens.scaffoldBackground(context),
+        backgroundColor: PiggyTokens.scaffoldBackground(context),
         body: Column(
           children: [
             PrimaryHeader(title: AppLocalizations.of(context).authLogin, showBack: true),
@@ -227,9 +227,9 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                     margin: const EdgeInsets.symmetric(horizontal: 16),
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: BeeTokens.surface(context),
-                      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
-                      boxShadow: BeeTokens.isDark(context) ? null : [
+                      color: PiggyTokens.surface(context),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+                      boxShadow: PiggyTokens.isDark(context) ? null : [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.04),
                           blurRadius: 10,
@@ -243,13 +243,13 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                         Icon(
                           Icons.check_circle_outline,
                           size: 64,
-                          color: BeeTokens.primary(context),
+                          color: PiggyTokens.primary(context),
                         ),
                         const SizedBox(height: 24),
                         Text(
                           AppLocalizations.of(context).webdavConfiguredTitle,
                           style: theme.textTheme.titleLarge?.copyWith(
-                            color: BeeTokens.textPrimary(context),
+                            color: PiggyTokens.textPrimary(context),
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -257,7 +257,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                         Text(
                           AppLocalizations.of(context).webdavConfiguredMessage,
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: BeeTokens.textSecondary(context),
+                            color: PiggyTokens.textSecondary(context),
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -278,7 +278,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     }
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           PrimaryHeader(title: AppLocalizations.of(context).authLogin, showBack: true),
@@ -292,9 +292,9 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                     margin: const EdgeInsets.symmetric(horizontal: 16),
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
                     decoration: BoxDecoration(
-                      color: BeeTokens.surface(context),
-                      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
-                      boxShadow: BeeTokens.isDark(context) ? null : [
+                      color: PiggyTokens.surface(context),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+                      boxShadow: PiggyTokens.isDark(context) ? null : [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.04),
                           blurRadius: 10,
@@ -349,13 +349,13 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                                     Text(
                                       AppLocalizations.of(context).authRememberAccount,
                                       style: theme.textTheme.bodyMedium?.copyWith(
-                                        color: BeeTokens.textPrimary(context),
+                                        color: PiggyTokens.textPrimary(context),
                                       ),
                                     ),
                                     Text(
                                       AppLocalizations.of(context).authRememberAccountHint,
                                       style: theme.textTheme.bodySmall?.copyWith(
-                                        color: BeeTokens.textSecondary(context),
+                                        color: PiggyTokens.textSecondary(context),
                                         fontSize: 11,
                                       ),
                                     ),
@@ -371,7 +371,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                             padding: const EdgeInsets.only(bottom: 8.0),
                             child: Text(
                               errorText!,
-                              style: TextStyle(color: BeeTokens.error(context)),
+                              style: TextStyle(color: PiggyTokens.error(context)),
                             ),
                           ),
                         SizedBox(
@@ -472,7 +472,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                                         .authNoAccountYet,
                                     style:
                                         theme.textTheme.bodyMedium?.copyWith(
-                                      color: BeeTokens.textSecondary(context),
+                                      color: PiggyTokens.textSecondary(context),
                                     ),
                                   ),
                                   TextSpan(

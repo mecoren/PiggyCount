@@ -212,7 +212,7 @@ class _PasswordSetupDialogState extends ConsumerState<PasswordSetupDialog> {
                   color: Theme.of(context).colorScheme.error.withValues(
                         alpha: 0.08,
                       ),
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,7 +238,7 @@ class _PasswordSetupDialogState extends ConsumerState<PasswordSetupDialog> {
               Text(
                 l10n.cloudSyncEncryptMultiDeviceHint,
                 style: TextStyle(
-                  color: BeeTokens.textTertiary(context),
+                  color: PiggyTokens.textTertiary(context),
                   fontSize: 12,
                 ),
               ),
@@ -303,7 +303,7 @@ class _PasswordSetupDialogState extends ConsumerState<PasswordSetupDialog> {
           onPressed: onToggle,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 12, vertical: 14),

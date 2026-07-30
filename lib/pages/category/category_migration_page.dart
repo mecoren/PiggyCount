@@ -100,7 +100,7 @@ class _CategoryMigrationPageState extends ConsumerState<CategoryMigrationPage> {
                 Text(
                   l10n.categoryMigrationDescriptionContent,
                   style: TextStyle(
-                    color: BeeTokens.textSecondary(context),
+                    color: PiggyTokens.textSecondary(context),
                     fontSize: 14,
                   ),
                 ),
@@ -115,7 +115,7 @@ class _CategoryMigrationPageState extends ConsumerState<CategoryMigrationPage> {
             style: TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 16,
-              color: BeeTokens.textPrimary(context),
+              color: PiggyTokens.textPrimary(context),
             ),
           ),
           const SizedBox(height: 8),
@@ -160,7 +160,7 @@ class _CategoryMigrationPageState extends ConsumerState<CategoryMigrationPage> {
             style: TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 16,
-              color: BeeTokens.textPrimary(context),
+              color: PiggyTokens.textPrimary(context),
             ),
           ),
           const SizedBox(height: 8),
@@ -179,7 +179,7 @@ class _CategoryMigrationPageState extends ConsumerState<CategoryMigrationPage> {
             style: TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 16,
-              color: BeeTokens.textPrimary(context),
+              color: PiggyTokens.textPrimary(context),
             ),
           ),
           const SizedBox(height: 8),
@@ -369,20 +369,20 @@ class _TypeButton extends ConsumerWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         decoration: BoxDecoration(
           color: isSelected
               ? primaryColor.withValues(alpha: 0.1)
-              : BeeTokens.surface(context),
+              : PiggyTokens.surface(context),
           border: Border.all(
             color: isSelected
                 ? primaryColor
-                : BeeTokens.border(context),
+                : PiggyTokens.border(context),
             width: isSelected ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -391,7 +391,7 @@ class _TypeButton extends ConsumerWidget {
               icon,
               color: isSelected
                   ? primaryColor
-                  : BeeTokens.iconSecondary(context),
+                  : PiggyTokens.iconSecondary(context),
               size: 20,
             ),
             const SizedBox(width: 8),
@@ -402,7 +402,7 @@ class _TypeButton extends ConsumerWidget {
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 color: isSelected
                     ? primaryColor
-                    : BeeTokens.textPrimary(context),
+                    : PiggyTokens.textPrimary(context),
               ),
             ),
           ],
@@ -434,18 +434,18 @@ class _CategorySelectorButton extends ConsumerWidget {
 
     return InkWell(
       onTap: enabled ? onTap : null,
-      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: BeeTokens.surface(context),
+          color: PiggyTokens.surface(context),
           border: Border.all(
             color: category != null
                 ? primaryColor
-                : BeeTokens.border(context),
+                : PiggyTokens.border(context),
             width: category != null ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         ),
         child: Row(
           children: [
@@ -456,8 +456,8 @@ class _CategorySelectorButton extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: category != null
                     ? primaryColor.withValues(alpha: 0.1)
-                    : BeeTokens.surface(context),
-                borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                    : PiggyTokens.surface(context),
+                borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
               ),
               child: Icon(
                 category != null
@@ -465,7 +465,7 @@ class _CategorySelectorButton extends ConsumerWidget {
                     : icon,
                 color: category != null
                     ? primaryColor
-                    : BeeTokens.iconTertiary(context),
+                    : PiggyTokens.iconTertiary(context),
                 size: 24,
               ),
             ),
@@ -478,7 +478,7 @@ class _CategorySelectorButton extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
-                        color: BeeTokens.textPrimary(context),
+                        color: PiggyTokens.textPrimary(context),
                       ),
                     )
                   : Text(
@@ -486,8 +486,8 @@ class _CategorySelectorButton extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 16,
                         color: enabled
-                            ? BeeTokens.textTertiary(context)
-                            : BeeTokens.textTertiary(context).withValues(alpha: 0.5),
+                            ? PiggyTokens.textTertiary(context)
+                            : PiggyTokens.textTertiary(context).withValues(alpha: 0.5),
                       ),
                     ),
             ),
@@ -495,8 +495,8 @@ class _CategorySelectorButton extends ConsumerWidget {
             Icon(
               Icons.chevron_right,
               color: enabled
-                  ? BeeTokens.iconSecondary(context)
-                  : BeeTokens.iconTertiary(context),
+                  ? PiggyTokens.iconSecondary(context)
+                  : PiggyTokens.iconTertiary(context),
             ),
           ],
         ),

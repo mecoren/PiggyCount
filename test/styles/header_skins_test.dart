@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:beecount/styles/header_skins.dart';
+import 'package:piggycount/styles/header_skins.dart';
 
 void main() {
   test('kHeaderSkins 每个 id 唯一', () {

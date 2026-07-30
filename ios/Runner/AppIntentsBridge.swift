@@ -5,7 +5,7 @@ import Flutter
 /// 使用弱链接支持iOS 15.0+，AppIntents功能仅在iOS 16+可用
 @available(iOS 13.0, *)
 class AppIntentsBridge: NSObject, FlutterPlugin {
-    static let channelName = "com.beecount.app_intents"
+    static let channelName = "com.piggycount.app_intents"
     private static var eventChannel: FlutterEventChannel?
     private static var eventSink: FlutterEventSink?
 

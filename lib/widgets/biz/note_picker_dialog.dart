@@ -66,8 +66,8 @@ class _NotePickerDialogState extends ConsumerState<NotePickerDialog> {
     final l10n = AppLocalizations.of(context);
 
     return AlertDialog(
-      backgroundColor: BeeTokens.surfaceElevated(context),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
+      backgroundColor: PiggyTokens.surfaceElevated(context),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
       contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       content: ConstrainedBox(
         constraints: BoxConstraints(
@@ -83,7 +83,7 @@ class _NotePickerDialogState extends ConsumerState<NotePickerDialog> {
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: BeeTokens.textPrimary(context)),
+                  color: PiggyTokens.textPrimary(context)),
             ),
             const SizedBox(height: 12),
             // 备注列表
@@ -97,7 +97,7 @@ class _NotePickerDialogState extends ConsumerState<NotePickerDialog> {
                 padding: const EdgeInsets.all(32),
                 child: Text(
                   l10n.commonEmpty,
-                  style: TextStyle(color: BeeTokens.textSecondary(context)),
+                  style: TextStyle(color: PiggyTokens.textSecondary(context)),
                 ),
               )
             else
@@ -112,17 +112,17 @@ class _NotePickerDialogState extends ConsumerState<NotePickerDialog> {
                           widget.onNotePicked(item.note);
                           Navigator.pop(context);
                         },
-                        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+                        borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: BeeTokens.surfaceChip(context),
-                            borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
-                            border: BeeTokens.isDark(context)
-                                ? Border.all(color: BeeTokens.border(context))
+                            color: PiggyTokens.surfaceChip(context),
+                            borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
+                            border: PiggyTokens.isDark(context)
+                                ? Border.all(color: PiggyTokens.border(context))
                                 : null,
                           ),
                           child: Row(
@@ -132,7 +132,7 @@ class _NotePickerDialogState extends ConsumerState<NotePickerDialog> {
                                 item.note,
                                 style: TextStyle(
                                   fontSize: 13,
-                                  color: BeeTokens.textSecondary(context),
+                                  color: PiggyTokens.textSecondary(context),
                                 ),
                               ),
                               const SizedBox(width: 4),
@@ -143,7 +143,7 @@ class _NotePickerDialogState extends ConsumerState<NotePickerDialog> {
                                 ),
                                 decoration: BoxDecoration(
                                   color: Colors.red,
-                                  borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                                  borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                                 ),
                                 child: Text(
                                   '${item.usageCount}',
@@ -168,7 +168,7 @@ class _NotePickerDialogState extends ConsumerState<NotePickerDialog> {
               onPressed: () => Navigator.pop(context),
               style: FilledButton.styleFrom(
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                 ),
               ),
               child: Text(l10n.commonClose),

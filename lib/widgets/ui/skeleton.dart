@@ -107,7 +107,7 @@ class _PulseSkeletonState extends State<PulseSkeleton>
   }
 }
 
-/// 骨架矩形条原语 — 通用占位灰块,用 [BeeTokens.surfaceSecondary] 自适应亮/暗。
+/// 骨架矩形条原语 — 通用占位灰块,用 [PiggyTokens.surfaceSecondary] 自适应亮/暗。
 class SkeletonBar extends StatelessWidget {
   final double height;
   final double? width;
@@ -130,8 +130,8 @@ class SkeletonBar extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: BeeTokens.surfaceSecondary(context),
-        borderRadius: borderRadius ?? BorderRadius.circular(BeeDimens.radiusXs),
+        color: PiggyTokens.surfaceSecondary(context),
+        borderRadius: borderRadius ?? BorderRadius.circular(PiggyDimens.radiusXs),
       ),
     );
     if (widthFactor != null) {
@@ -157,7 +157,7 @@ class SkeletonCircle extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: BeeTokens.surfaceSecondary(context),
+        color: PiggyTokens.surfaceSecondary(context),
         shape: BoxShape.circle,
       ),
     );

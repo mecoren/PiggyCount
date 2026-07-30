@@ -46,7 +46,7 @@ class AccountPicker extends ConsumerStatefulWidget {
       context: context,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXl)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
       ),
       isScrollControlled: true,
       builder: (_) => AccountPicker(

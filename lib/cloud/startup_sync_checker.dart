@@ -523,9 +523,9 @@ class WidgetRefDeps implements StartupSyncCheckerDeps {
           barrierDismissible: false,
           builder: (ctx) => AlertDialog(
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
             ),
-            backgroundColor: BeeTokens.surfaceElevated(ctx),
+            backgroundColor: PiggyTokens.surfaceElevated(ctx),
             title: Text(l10n.startupSyncCheckTitle),
             content: Text(message),
             actions: [

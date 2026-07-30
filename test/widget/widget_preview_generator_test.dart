@@ -36,23 +36,23 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:beecount/data/db.dart' show Account, Category, Transaction;
-import 'package:beecount/data/repositories/budget_repository.dart'
+import 'package:piggycount/data/db.dart' show Account, Category, Transaction;
+import 'package:piggycount/data/repositories/budget_repository.dart'
     show BudgetOverview, BudgetUsage, CategoryBudgetUsage;
-import 'package:beecount/widget/views/budget_view.dart';
-import 'package:beecount/widget/views/dashboard_view.dart';
-import 'package:beecount/widget/views/glance_view.dart';
-import 'package:beecount/widget/views/net_worth_view.dart';
-import 'package:beecount/widget/views/quick_add_view.dart';
-import 'package:beecount/widget/views/recent_view.dart';
-import 'package:beecount/widget/widget_data_service.dart'
+import 'package:piggycount/widget/views/budget_view.dart';
+import 'package:piggycount/widget/views/dashboard_view.dart';
+import 'package:piggycount/widget/views/glance_view.dart';
+import 'package:piggycount/widget/views/net_worth_view.dart';
+import 'package:piggycount/widget/views/quick_add_view.dart';
+import 'package:piggycount/widget/views/recent_view.dart';
+import 'package:piggycount/widget/widget_data_service.dart'
     show
         DashboardWidgetData,
         GlanceWidgetData,
         NetWorthAccountItem,
         QuickAddCategoryItem,
         RecentTransactionItem;
-import 'package:beecount/widget/widget_spec.dart' show HWSize;
+import 'package:piggycount/widget/widget_spec.dart' show HWSize;
 
 const _honey = Color(0xFFF5A623);
 

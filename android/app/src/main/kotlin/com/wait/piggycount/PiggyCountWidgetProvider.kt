@@ -1,4 +1,4 @@
-package com.tntlikely.beecount
+package com.wait.piggycount
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
@@ -13,9 +13,9 @@ import android.widget.RemoteViews
 import es.antonborri.home_widget.HomeWidgetProvider
 import java.io.File
 
-class BeeCountWidgetProvider : HomeWidgetProvider() {
+class PiggyCountWidgetProvider : HomeWidgetProvider() {
     companion object {
-        private const val TAG = "BeeCountWidget"
+        private const val TAG = "PiggyCountWidget"
     }
 
     override fun onUpdate(
@@ -29,7 +29,7 @@ class BeeCountWidgetProvider : HomeWidgetProvider() {
             try {
                 Log.d(TAG, "Updating widget $widgetId")
 
-                val views = RemoteViews(context.packageName, R.layout.beecount_widget).apply {
+                val views = RemoteViews(context.packageName, R.layout.piggycount_widget).apply {
                     // Load the rendered widget image
                     val imagePath = widgetData.getString("widgetImage", null)
                     Log.d(TAG, "Image path from SharedPreferences: $imagePath")
@@ -53,7 +53,7 @@ class BeeCountWidgetProvider : HomeWidgetProvider() {
 
                     // 左侧区域 → 打开支出记账
                     try {
-                        val expenseIntent = createLaunchIntentWithDeepLink(context, "beecount://new?type=expense")
+                        val expenseIntent = createLaunchIntentWithDeepLink(context, "piggycount://new?type=expense")
                         val expensePending = PendingIntent.getActivity(
                             context, widgetId * 10 + 1, expenseIntent,
                             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -66,7 +66,7 @@ class BeeCountWidgetProvider : HomeWidgetProvider() {
 
                     // 右侧区域 → 打开收入记账
                     try {
-                        val incomeIntent = createLaunchIntentWithDeepLink(context, "beecount://new?type=income")
+                        val incomeIntent = createLaunchIntentWithDeepLink(context, "piggycount://new?type=income")
                         val incomePending = PendingIntent.getActivity(
                             context, widgetId * 10 + 2, incomeIntent,
                             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE

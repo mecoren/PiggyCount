@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:beecount/utils/analytics_average.dart';
+import 'package:piggycount/utils/analytics_average.dart';
 
 /// 洞察页"日均/月均/年均"求值口径(issue 修复)。
 ///

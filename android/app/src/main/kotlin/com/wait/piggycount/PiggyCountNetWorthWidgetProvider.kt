@@ -1,4 +1,4 @@
-package com.tntlikely.beecount
+package com.wait.piggycount
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
@@ -29,9 +29,9 @@ import java.io.File
  * `AppWidgetManager.getAppWidgetOptions` 读到的真实尺寸选取对应 key,任意
  * 缩放档位都有现成图可显。
  */
-open class BeeCountNetWorthWidgetProvider : HomeWidgetProvider() {
+open class PiggyCountNetWorthWidgetProvider : HomeWidgetProvider() {
     companion object {
-        private const val TAG = "BeeCountNetWorthWidget"
+        private const val TAG = "PiggyCountNetWorthWidget"
 
         // 阈值取自 widget_spec.dart 的 logicalSize:
         // small(155x155) / medium(364x169) / large(364x382)。
@@ -78,7 +78,7 @@ open class BeeCountNetWorthWidgetProvider : HomeWidgetProvider() {
                     // 整块点击 → 资产页。第一版不分区。
                     // TODO: 大号有账户明细列表时,考虑按行分区深链到具体账户。
                     try {
-                        val intent = createLaunchIntentWithDeepLink(context, "beecount://open?page=assets")
+                        val intent = createLaunchIntentWithDeepLink(context, "piggycount://open?page=assets")
                         val pending = PendingIntent.getActivity(
                             context, widgetId, intent,
                             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE

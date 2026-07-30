@@ -71,8 +71,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
       child: Material(
-        color: BeeTokens.surface(context),
-        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+        color: PiggyTokens.surface(context),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
@@ -83,7 +83,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
               Expanded(
                 child: Text(
                   l10n.recalcForeignTxBanner,
-                  style: BeeTextTokens.label(context),
+                  style: PiggyTextTokens.label(context),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -113,7 +113,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
           AppLocalizations.of(context).statsConvertedFootnote(base),
           style: TextStyle(
             fontSize: 11,
-            color: BeeTokens.textTertiary(context),
+            color: PiggyTokens.textTertiary(context),
           ),
         ),
       ),
@@ -466,7 +466,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
               child: Row(
                 children: [
                   Icon(Icons.bar_chart_outlined,
-                      color: BeeTokens.textPrimary(context)),
+                      color: PiggyTokens.textPrimary(context)),
                   const SizedBox(width: 8),
                   InkWell(
                     onTap: _scope != 'all' ? _showPeriodPicker : null,
@@ -475,13 +475,13 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                       children: [
                         Text(
                           _currentPeriodLabel(_scope, selMonth, context),
-                          style: BeeTextTokens.title(context),
+                          style: PiggyTextTokens.title(context),
                         ),
                         if (_scope != 'all')
                           Icon(
                             Icons.arrow_drop_down,
                             size: 20,
-                            color: BeeTokens.textPrimary(context),
+                            color: PiggyTokens.textPrimary(context),
                           ),
                       ],
                     ),
@@ -498,12 +498,12 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                               : _type == 'income'
                                   ? AppLocalizations.of(context).homeIncome
                                   : AppLocalizations.of(context).homeBalance,
-                          style: BeeTextTokens.title(context),
+                          style: PiggyTextTokens.title(context),
                         ),
                         Icon(
                           Icons.arrow_drop_down,
                           size: 20,
-                          color: BeeTokens.textPrimary(context),
+                          color: PiggyTokens.textPrimary(context),
                         ),
                       ],
                     ),
@@ -512,7 +512,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                   // 分享按钮
                   IconButton(
                     icon: Icon(Icons.share,
-                        color: BeeTokens.textPrimary(context)),
+                        color: PiggyTokens.textPrimary(context)),
                     onPressed: () async {
                       final ledgerId = ref.read(currentLedgerIdProvider);
                       if (ledgerId == 0) {
@@ -737,7 +737,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                             children: [
                               Icon(Icons.info_outline,
                                   size: 14,
-                                  color: BeeTokens.textSecondary(context)),
+                                  color: PiggyTokens.textSecondary(context)),
                               const SizedBox(width: 6),
                               Text(
                                   AppLocalizations.of(context)
@@ -746,7 +746,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                                       .textTheme
                                       .labelSmall
                                       ?.copyWith(
-                                          color: BeeTokens.textSecondary(
+                                          color: PiggyTokens.textSecondary(
                                               context))),
                             ],
                           ),
@@ -873,8 +873,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                         isBalance: _type == 'balance',
                         total: sum,
                         avg: computeSeriesAverage(filteredSeriesRaw),
-                        expenseColor: BeeTokens.primary(context),
-                        incomeColor: BeeTokens.primary(context),
+                        expenseColor: PiggyTokens.primary(context),
+                        incomeColor: PiggyTokens.primary(context),
                       ),
                       const SizedBox(height: 12),
                       SizedBox(
@@ -884,13 +884,13 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                           xLabels: xLabels,
                           highlightIndex: highlightIndex,
                           hideAmounts: hide,
-                          themeColor: BeeTokens.primary(context),
+                          themeColor: PiggyTokens.primary(context),
                           // 使用统一图表令牌
-                          lineWidth: BeeChartTokens.lineWidth,
-                          dotRadius: BeeChartTokens.dotRadius,
-                          cornerRadius: BeeChartTokens.cornerRadius,
-                          xLabelFontSize: BeeChartTokens.xLabelFontSize,
-                          yLabelFontSize: BeeChartTokens.yLabelFontSize,
+                          lineWidth: PiggyChartTokens.lineWidth,
+                          dotRadius: PiggyChartTokens.dotRadius,
+                          cornerRadius: PiggyChartTokens.cornerRadius,
+                          xLabelFontSize: PiggyChartTokens.xLabelFontSize,
+                          yLabelFontSize: PiggyChartTokens.yLabelFontSize,
                           onSwipeLeft: () {
                             // 根据scope切换周期
                             _onChartSwipeLeft();
@@ -912,8 +912,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                               setState(() => _localChartDismissed = true);
                             }
                           },
-                          whiteBg: !BeeTokens.isDark(context),
-                          isDark: BeeTokens.isDark(context),
+                          whiteBg: !PiggyTokens.isDark(context),
+                          isDark: PiggyTokens.isDark(context),
                           showGrid: false,
                           showDots: true,
                           annotate: true,
@@ -927,7 +927,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                             Text(
                               AppLocalizations.of(context)
                                   .analyticsCategoryRanking,
-                              style: BeeTextTokens.title(context),
+                              style: PiggyTextTokens.title(context),
                             ),
                             const Spacer(),
                             // 饼图/列表切换按钮
@@ -940,7 +940,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                                       ? Icons.format_list_bulleted
                                       : Icons.pie_chart_outline,
                                   size: 20,
-                                  color: BeeTokens.textSecondary(context),
+                                  color: PiggyTokens.textSecondary(context),
                                 ),
                               ),
                             if (!headerDismissed) const SizedBox(width: 12),
@@ -960,7 +960,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                                     Icon(Icons.swipe,
                                         size: 14,
                                         color:
-                                            BeeTokens.textSecondary(context)),
+                                            PiggyTokens.textSecondary(context)),
                                     const SizedBox(width: 4),
                                     Text(
                                         AppLocalizations.of(context)
@@ -969,12 +969,12 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                                             .textTheme
                                             .labelSmall
                                             ?.copyWith(
-                                                color: BeeTokens.textSecondary(
+                                                color: PiggyTokens.textSecondary(
                                                     context))),
                                     const SizedBox(width: 4),
                                     Icon(Icons.close,
                                         size: 14,
-                                        color: BeeTokens.textTertiary(context)),
+                                        color: PiggyTokens.textTertiary(context)),
                                   ],
                                 ),
                               ),
@@ -994,7 +994,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                             name: item.name,
                             value: item.total,
                             percent: sum == 0 ? 0 : item.total / sum,
-                            color: BeeTokens.primary(context),
+                            color: PiggyTokens.primary(context),
                             start: start,
                             end: end,
                             scope: _scope,

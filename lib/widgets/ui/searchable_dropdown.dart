@@ -89,12 +89,12 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
         width: size.width,
         child: Material(
           elevation: 8,
-          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
           child: Container(
             constraints: const BoxConstraints(maxHeight: 300),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
               border: Border.all(
                 color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
               ),
@@ -111,7 +111,7 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
                       hintText: '搜索...',
                       prefixIcon: const Icon(Icons.search),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                        borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                         borderSide: BorderSide(
                           color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
                         ),
@@ -178,7 +178,7 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
           border: Border.all(
             color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
           ),
-          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
           color: widget.enabled 
             ? Theme.of(context).colorScheme.surface 
             : Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),

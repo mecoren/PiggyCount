@@ -243,8 +243,8 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
                             ? Icons.trending_down
                             : Icons.trending_up,
                         color: widget.kind == 'expense'
-                            ? BeeTokens.error(context)
-                            : BeeTokens.success(context),
+                            ? PiggyTokens.error(context)
+                            : PiggyTokens.success(context),
                       ),
                       title: Text(widget.kind == 'expense'
                           ? AppLocalizations.of(context).categoryExpenseType
@@ -279,7 +279,7 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
                       child: ListTile(
                         leading: Icon(
                           Icons.arrow_upward,
-                          color: BeeTokens.primary(context),
+                          color: PiggyTokens.primary(context),
                         ),
                         title: Text(AppLocalizations.of(context)
                             .categoryParentCategoryTitle),
@@ -381,13 +381,13 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
                     Text(
                       AppLocalizations.of(context).categoryDangerousOperations,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: BeeTokens.error(context),
+                            color: PiggyTokens.error(context),
                           ),
                     ),
                     const SizedBox(height: 8),
                     Card(
                       child: ListTile(
-                        leading: Icon(Icons.delete, color: BeeTokens.error(context)),
+                        leading: Icon(Icons.delete, color: PiggyTokens.error(context)),
                         title: Text(
                             AppLocalizations.of(context).categoryDeleteTitle),
                         subtitle: Text(AppLocalizations.of(context)
@@ -413,7 +413,7 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
                       height: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: BeeTokens.textOnPrimary(context),
+                        color: PiggyTokens.textOnPrimary(context),
                       ),
                     )
                   : Text(AppLocalizations.of(context).commonSave),
@@ -642,22 +642,22 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
   Widget _buildCustomIconSection(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final isSelected = _iconType == 'custom';
-    final primaryColor = BeeTokens.primary(context);
+    final primaryColor = PiggyTokens.primary(context);
 
     return InkWell(
       onTap: _pickCustomIcon,
-      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: isSelected
               ? primaryColor.withValues(alpha: 0.1)
-              : BeeTokens.surface(context),
+              : PiggyTokens.surface(context),
           border: Border.all(
-            color: isSelected ? primaryColor : BeeTokens.border(context),
+            color: isSelected ? primaryColor : PiggyTokens.border(context),
             width: isSelected ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         ),
         child: Row(
           children: [
@@ -666,9 +666,9 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: BeeTokens.surfaceHeader(context),
-                borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
-                border: Border.all(color: BeeTokens.border(context)),
+                color: PiggyTokens.surfaceHeader(context),
+                borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+                border: Border.all(color: PiggyTokens.border(context)),
               ),
               child: _isPickingImage
                   ? const Center(
@@ -694,7 +694,7 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
                             }
 
                             return ClipRRect(
-                              borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+                              borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                               child: Image.file(
                                 File(snapshot.data!),
                                 width: 48,
@@ -703,7 +703,7 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
                                 errorBuilder: (_, __, ___) => Icon(
                                   Icons.broken_image,
                                   size: 24,
-                                  color: BeeTokens.textTertiary(context),
+                                  color: PiggyTokens.textTertiary(context),
                                 ),
                               ),
                             );
@@ -712,7 +712,7 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
                       : Icon(
                           Icons.add_photo_alternate_outlined,
                           size: 24,
-                          color: BeeTokens.textSecondary(context),
+                          color: PiggyTokens.textSecondary(context),
                         ),
             ),
             const SizedBox(width: 12),
@@ -735,7 +735,7 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
                         ? l10n.categoryCustomIconTapToChange
                         : l10n.categoryCustomIconTapToSelect,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: BeeTokens.textTertiary(context),
+                          color: PiggyTokens.textTertiary(context),
                         ),
                   ),
                 ],
@@ -1460,7 +1460,7 @@ class _GroupedIconGrid extends StatelessWidget {
               child: Text(
                 group.title,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: BeeTokens.primary(context),
+                      color: PiggyTokens.primary(context),
                       fontWeight: FontWeight.bold,
                     ),
               ),
@@ -1481,26 +1481,26 @@ class _GroupedIconGrid extends StatelessWidget {
 
                 return InkWell(
                   onTap: () => onIconSelected(iconData.key),
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                   child: Container(
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? BeeTokens.primary(context).withValues(alpha: 0.1)
+                          ? PiggyTokens.primary(context).withValues(alpha: 0.1)
                           : null,
                       border: Border.all(
                         color: isSelected
-                            ? BeeTokens.primary(context)
-                            : BeeTokens.borderStrong(context),
+                            ? PiggyTokens.primary(context)
+                            : PiggyTokens.borderStrong(context),
                         width: isSelected ? 2 : 1,
                       ),
-                      borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                     ),
                     child: Icon(
                       iconData.iconData,
                       size: 20,
                       color: isSelected
-                          ? BeeTokens.primary(context)
-                          : BeeTokens.iconPrimary(context),
+                          ? PiggyTokens.primary(context)
+                          : PiggyTokens.iconPrimary(context),
                     ),
                   ),
                 );

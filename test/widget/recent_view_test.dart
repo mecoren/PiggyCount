@@ -7,10 +7,10 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:beecount/data/db.dart' show Account, Category, Transaction;
-import 'package:beecount/widget/views/recent_view.dart';
-import 'package:beecount/widget/widget_data_service.dart' show RecentTransactionItem;
-import 'package:beecount/widget/widget_spec.dart' show HWSize;
+import 'package:piggycount/data/db.dart' show Account, Category, Transaction;
+import 'package:piggycount/widget/views/recent_view.dart';
+import 'package:piggycount/widget/widget_data_service.dart' show RecentTransactionItem;
+import 'package:piggycount/widget/widget_spec.dart' show HWSize;
 
 void main() {
   Widget wrap(Widget child, Size size) {

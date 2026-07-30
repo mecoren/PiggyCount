@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../styles/tokens.dart';
 
 /// 菜单项类型
-enum BeeMenuItemType {
+enum PiggyMenuItemType {
   /// 普通操作项
   action,
   /// 提示信息（禁用状态）
@@ -12,14 +12,14 @@ enum BeeMenuItemType {
 }
 
 /// 菜单项配置
-class BeeMenuItem {
+class PiggyMenuItem {
   final String? value;
   final IconData? icon;
   final String? label;
-  final BeeMenuItemType type;
+  final PiggyMenuItemType type;
   final bool isDanger;
 
-  const BeeMenuItem._({
+  const PiggyMenuItem._({
     this.value,
     this.icon,
     this.label,
@@ -28,7 +28,7 @@ class BeeMenuItem {
   });
 
   /// 创建普通操作项
-  const BeeMenuItem.action({
+  const PiggyMenuItem.action({
     required String value,
     required IconData icon,
     required String label,
@@ -37,28 +37,28 @@ class BeeMenuItem {
           value: value,
           icon: icon,
           label: label,
-          type: BeeMenuItemType.action,
+          type: PiggyMenuItemType.action,
           isDanger: isDanger,
         );
 
   /// 创建提示信息
-  const BeeMenuItem.tip({
+  const PiggyMenuItem.tip({
     required String label,
     IconData icon = Icons.lightbulb_outline,
   }) : this._(
           icon: icon,
           label: label,
-          type: BeeMenuItemType.tip,
+          type: PiggyMenuItemType.tip,
         );
 
   /// 创建分隔线
-  const BeeMenuItem.divider() : this._(type: BeeMenuItemType.divider);
+  const PiggyMenuItem.divider() : this._(type: PiggyMenuItemType.divider);
 }
 
 /// 美化的弹出菜单组件
-class BeePopupMenu extends StatelessWidget {
+class PiggyPopupMenu extends StatelessWidget {
   /// 菜单项列表
-  final List<BeeMenuItem> items;
+  final List<PiggyMenuItem> items;
 
   /// 选中回调
   final ValueChanged<String>? onSelected;
@@ -72,7 +72,7 @@ class BeePopupMenu extends StatelessWidget {
   /// 提示文字
   final String? tooltip;
 
-  const BeePopupMenu({
+  const PiggyPopupMenu({
     super.key,
     required this.items,
     this.onSelected,
@@ -83,19 +83,19 @@ class BeePopupMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = BeeTokens.isDark(context);
+    final isDark = PiggyTokens.isDark(context);
     final themeColor = primaryColor ?? Theme.of(context).colorScheme.primary;
 
     return PopupMenuButton<String>(
       icon: icon ?? Icon(
         Icons.more_vert,
-        color: BeeTokens.textPrimary(context),
+        color: PiggyTokens.textPrimary(context),
       ),
       tooltip: tooltip,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
       ),
-      color: BeeTokens.surface(context),
+      color: PiggyTokens.surface(context),
       elevation: isDark ? 8 : 4,
       offset: const Offset(0, 8),
       onSelected: onSelected,
@@ -103,13 +103,13 @@ class BeePopupMenu extends StatelessWidget {
         final List<PopupMenuEntry<String>> entries = [];
         for (final item in items) {
           switch (item.type) {
-            case BeeMenuItemType.action:
+            case PiggyMenuItemType.action:
               entries.add(_buildActionItem(context, item, themeColor));
               break;
-            case BeeMenuItemType.tip:
+            case PiggyMenuItemType.tip:
               entries.add(_buildTipItem(context, item));
               break;
-            case BeeMenuItemType.divider:
+            case PiggyMenuItemType.divider:
               entries.add(const PopupMenuDivider(height: 1));
               break;
           }
@@ -121,7 +121,7 @@ class BeePopupMenu extends StatelessWidget {
 
   PopupMenuItem<String> _buildActionItem(
     BuildContext context,
-    BeeMenuItem item,
+    PiggyMenuItem item,
     Color themeColor,
   ) {
     final color = item.isDanger ? Colors.red : themeColor;
@@ -136,7 +136,7 @@ class BeePopupMenu extends StatelessWidget {
             height: 32,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
             ),
             child: Icon(item.icon, size: 18, color: color),
           ),
@@ -145,7 +145,7 @@ class BeePopupMenu extends StatelessWidget {
             item.label ?? '',
             style: TextStyle(
               fontSize: 15,
-              color: item.isDanger ? Colors.red : BeeTokens.textPrimary(context),
+              color: item.isDanger ? Colors.red : PiggyTokens.textPrimary(context),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -154,7 +154,7 @@ class BeePopupMenu extends StatelessWidget {
     );
   }
 
-  PopupMenuItem<String> _buildTipItem(BuildContext context, BeeMenuItem item) {
+  PopupMenuItem<String> _buildTipItem(BuildContext context, PiggyMenuItem item) {
     return PopupMenuItem<String>(
       value: 'tip',
       enabled: false,
@@ -164,7 +164,7 @@ class BeePopupMenu extends StatelessWidget {
           Icon(
             item.icon,
             size: 16,
-            color: BeeTokens.textTertiary(context),
+            color: PiggyTokens.textTertiary(context),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -172,7 +172,7 @@ class BeePopupMenu extends StatelessWidget {
               item.label ?? '',
               style: TextStyle(
                 fontSize: 12,
-                color: BeeTokens.textTertiary(context),
+                color: PiggyTokens.textTertiary(context),
               ),
             ),
           ),

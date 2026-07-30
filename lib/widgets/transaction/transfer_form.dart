@@ -152,7 +152,7 @@ class _TransferFormState extends ConsumerState<TransferForm> {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: BeeTokens.surfaceSheet(context),
+      backgroundColor: PiggyTokens.surfaceSheet(context),
       builder: (context) => AmountEditorSheet(
         categoryName: l10n.transferTitle,
         initialDate: widget.initialDate ?? DateTime.now(),
@@ -386,7 +386,7 @@ class _TransferFormState extends ConsumerState<TransferForm> {
               padding: const EdgeInsets.all(32),
               child: Text(
                 l10n.transferSelectAccount,
-                style: TextStyle(color: BeeTokens.textSecondary(context)),
+                style: TextStyle(color: PiggyTokens.textSecondary(context)),
               ),
             ),
           );
@@ -408,7 +408,7 @@ class _TransferFormState extends ConsumerState<TransferForm> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: BeeTokens.textSecondary(context),
+                  color: PiggyTokens.textSecondary(context),
                 ),
               ),
               const SizedBox(height: 12),
@@ -430,7 +430,7 @@ class _TransferFormState extends ConsumerState<TransferForm> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: BeeTokens.textSecondary(context),
+                  color: PiggyTokens.textSecondary(context),
                 ),
               ),
               const SizedBox(height: 12),
@@ -490,18 +490,18 @@ class _TransferFormState extends ConsumerState<TransferForm> {
           await _openAmountSheet();
         }
       },
-      borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+      borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
       child: Container(
         decoration: BoxDecoration(
           // 未选中跟随页面底色(亮色白/暗黑纯黑),避免暗黑模式下突兀的白卡片
           color: isSelected
               ? primary.withValues(alpha: 0.1)
-              : BeeTokens.surfaceSheet(context),
+              : PiggyTokens.surfaceSheet(context),
           border: Border.all(
-            color: isSelected ? primary : BeeTokens.borderStrong(context),
+            color: isSelected ? primary : PiggyTokens.borderStrong(context),
             width: isSelected ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -523,7 +523,7 @@ class _TransferFormState extends ConsumerState<TransferForm> {
                     Icon(
                       Icons.visibility_off,
                       size: 10,
-                      color: BeeTokens.textTertiary(context),
+                      color: PiggyTokens.textTertiary(context),
                     ),
                     const SizedBox(width: 2),
                   ],
@@ -536,7 +536,7 @@ class _TransferFormState extends ConsumerState<TransferForm> {
                             isSelected ? FontWeight.w600 : FontWeight.normal,
                         color: isSelected
                             ? primary
-                            : BeeTokens.textPrimary(context),
+                            : PiggyTokens.textPrimary(context),
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,

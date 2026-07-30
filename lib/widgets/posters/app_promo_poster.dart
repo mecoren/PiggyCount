@@ -180,7 +180,7 @@ class AppPromoPoster extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+            borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
           ),
           child: Text(
             l10n.sharePosterSlogan,
@@ -210,7 +210,7 @@ class AppPromoPoster extends StatelessWidget {
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(BeeDimens.radius3xl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radius3xl),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.15),
@@ -244,7 +244,7 @@ class AppPromoPoster extends StatelessWidget {
           height: 50,
           decoration: BoxDecoration(
             color: primaryColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
           ),
           child: Icon(
             feature.icon,
@@ -275,7 +275,7 @@ class AppPromoPoster extends StatelessWidget {
       padding: const EdgeInsets.all(25),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -285,7 +285,7 @@ class AppPromoPoster extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.1),
@@ -346,7 +346,7 @@ class AppPromoPoster extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         border: Border.all(
           color: Colors.white.withValues(alpha: 0.3),
           width: 1,

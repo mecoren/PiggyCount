@@ -172,11 +172,11 @@ class AppLinkService {
 
   /// iOS AppIntents 事件通道（用于接收快捷指令传入的图片路径）
   static const EventChannel _eventChannel =
-      EventChannel('com.beecount.app_intents/events');
+      EventChannel('com.piggycount.app_intents/events');
 
   /// iOS AppIntents 方法通道(回调 Swift,告知后台处理已完成可以放 perform 返回)
   static const MethodChannel _methodChannel =
-      MethodChannel('com.beecount.app_intents');
+      MethodChannel('com.piggycount.app_intents');
 
   /// AppIntents 事件订阅
   StreamSubscription<dynamic>? _appIntentSubscription;

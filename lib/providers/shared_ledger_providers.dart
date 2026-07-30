@@ -4,7 +4,7 @@
 //
 /// Shared-ledger Riverpod 层。
 ///
-/// 把 BeeCountCloudProvider 的 invites / members API 封装成可缓存的
+/// 把 PiggyCountCloudProvider 的 invites / members API 封装成可缓存的
 /// FutureProvider,UI 直接 ref.watch。失效刷新走 family.refresh 或 invalidate。
 ///
 /// 设计:
@@ -30,7 +30,7 @@ final sharedResourceRefreshProvider = StateProvider<int>((ref) => 0);
 /// 不持久化离线 member_change 事件)自动重拉,避免被踢 / 新成员加入但本地
 /// 列表 stale 的窗口。
 final ledgerMembersProvider = FutureProvider.autoDispose
-    .family<List<BeeCountCloudLedgerMember>, String>((ref, ledgerId) async {
+    .family<List<PiggyCountCloudLedgerMember>, String>((ref, ledgerId) async {
   ref.watch(sharedResourceRefreshProvider);
   final cloud = await ref.watch(beecountCloudProviderInstance.future);
   if (cloud == null) return const [];
@@ -63,7 +63,7 @@ class MemberStatsKey {
 /// 自动隐藏。**其它异常一律向上抛**,让 AsyncValue.when error 分支展示
 /// 真实错误,而不是把 401/403/500/网络 等全部 swallow 成"无数据"。
 final memberStatsProvider = FutureProvider.autoDispose
-    .family<BeeCountCloudMemberStats?, MemberStatsKey>((ref, key) async {
+    .family<PiggyCountCloudMemberStats?, MemberStatsKey>((ref, key) async {
   ref.watch(sharedResourceRefreshProvider);
   final cloud = await ref.watch(beecountCloudProviderInstance.future);
   if (cloud == null) return null;
@@ -76,7 +76,7 @@ final memberStatsProvider = FutureProvider.autoDispose
 
 /// 列出某账本"当前 active"邀请(仅 owner)。
 final ledgerInvitesProvider = FutureProvider.autoDispose
-    .family<List<BeeCountCloudInvite>, String>((ref, ledgerId) async {
+    .family<List<PiggyCountCloudInvite>, String>((ref, ledgerId) async {
   final cloud = await ref.watch(beecountCloudProviderInstance.future);
   if (cloud == null) return const [];
   try {
@@ -88,7 +88,7 @@ final ledgerInvitesProvider = FutureProvider.autoDispose
 });
 
 /// 一次性触发函数:创建邀请 → 自动失效列表 cache。
-Future<BeeCountCloudInvite> createInviteAndRefresh(
+Future<PiggyCountCloudInvite> createInviteAndRefresh(
   WidgetRef ref, {
   required String ledgerId,
   required String role,
@@ -120,7 +120,7 @@ Future<void> revokeInviteAndRefresh(
 }
 
 /// 接受邀请 — 不绑特定 ledger family(此时还不知道是哪个 ledger)。
-Future<BeeCountCloudInviteAcceptResult> acceptInvite(
+Future<PiggyCountCloudInviteAcceptResult> acceptInvite(
   WidgetRef ref, {
   required String code,
 }) async {
@@ -135,7 +135,7 @@ Future<BeeCountCloudInviteAcceptResult> acceptInvite(
 }
 
 /// preview(不写)
-Future<BeeCountCloudInvitePreview> previewInvite(
+Future<PiggyCountCloudInvitePreview> previewInvite(
   WidgetRef ref, {
   required String code,
 }) async {

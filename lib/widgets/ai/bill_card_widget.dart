@@ -64,8 +64,8 @@ class BillCardWidget extends ConsumerWidget {
                     fontSize: 16.0.scaled(context, ref),
                     fontWeight: FontWeight.w600,
                     color: isUndone
-                        ? BeeTokens.textSecondary(context)
-                        : BeeTokens.textPrimary(context),
+                        ? PiggyTokens.textSecondary(context)
+                        : PiggyTokens.textPrimary(context),
                   ),
                 ),
                 const Spacer(),
@@ -75,7 +75,7 @@ class BillCardWidget extends ConsumerWidget {
             ),
 
             SizedBox(height: 12.0.scaled(context, ref)),
-            Divider(color: BeeTokens.divider(context)),
+            Divider(color: PiggyTokens.divider(context)),
             SizedBox(height: 12.0.scaled(context, ref)),
 
             // 信息行
@@ -131,7 +131,7 @@ class BillCardWidget extends ConsumerWidget {
                       child: Text(
                         AppLocalizations.of(context).billCardUndo,
                         style: TextStyle(
-                          color: BeeTokens.textSecondary(context),
+                          color: PiggyTokens.textSecondary(context),
                         ),
                       ),
                     ),
@@ -170,7 +170,7 @@ class BillCardWidget extends ConsumerWidget {
             label,
             style: TextStyle(
               fontSize: 14.0.scaled(context, ref),
-              color: BeeTokens.textSecondary(context),
+              color: PiggyTokens.textSecondary(context),
             ),
           ),
         ),
@@ -179,7 +179,7 @@ class BillCardWidget extends ConsumerWidget {
             value,
             style: TextStyle(
               fontSize: 14.0.scaled(context, ref),
-              color: BeeTokens.textPrimary(context),
+              color: PiggyTokens.textPrimary(context),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -206,7 +206,7 @@ class BillCardWidget extends ConsumerWidget {
         decoration: BoxDecoration(
           color: canChange
               ? ref.watch(primaryColorProvider).withValues(alpha: 0.1)
-              : BeeTokens.textSecondary(context).withValues(alpha: 0.1),
+              : PiggyTokens.textSecondary(context).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12.0.scaled(context, ref)),
           border: canChange
               ? Border.all(
@@ -223,7 +223,7 @@ class BillCardWidget extends ConsumerWidget {
               size: 12.0.scaled(context, ref),
               color: canChange
                   ? ref.watch(primaryColorProvider)
-                  : BeeTokens.textSecondary(context),
+                  : PiggyTokens.textSecondary(context),
             ),
             SizedBox(width: 4.0.scaled(context, ref)),
             Text(
@@ -232,7 +232,7 @@ class BillCardWidget extends ConsumerWidget {
                 fontSize: 12.0.scaled(context, ref),
                 color: canChange
                     ? ref.watch(primaryColorProvider)
-                    : BeeTokens.textSecondary(context),
+                    : PiggyTokens.textSecondary(context),
                 fontWeight: FontWeight.w500,
               ),
             ),

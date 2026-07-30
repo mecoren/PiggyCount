@@ -15,13 +15,13 @@ import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:beecount/data/encryption/aes_gcm_cipher.dart';
-import 'package:beecount/data/encryption/argon2_key_derivation.dart';
-import 'package:beecount/data/encryption/ciphertext_format.dart';
-import 'package:beecount/data/encryption/encrypted_cloud_storage.dart';
-import 'package:beecount/data/encryption/encryption_service_impl.dart';
-import 'package:beecount/data/encryption/secure_key_storage.dart';
-import 'package:beecount/domain/encryption/encryption_service.dart';
+import 'package:piggycount/data/encryption/aes_gcm_cipher.dart';
+import 'package:piggycount/data/encryption/argon2_key_derivation.dart';
+import 'package:piggycount/data/encryption/ciphertext_format.dart';
+import 'package:piggycount/data/encryption/encrypted_cloud_storage.dart';
+import 'package:piggycount/data/encryption/encryption_service_impl.dart';
+import 'package:piggycount/data/encryption/secure_key_storage.dart';
+import 'package:piggycount/domain/encryption/encryption_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

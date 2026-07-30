@@ -16,10 +16,10 @@ class ReminderSettingsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final reminderSettings = ref.watch(reminderSettingsProvider);
 
-    final isDark = BeeTokens.isDark(context);
+    final isDark = PiggyTokens.isDark(context);
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
       appBar: GlassTitleBar(
         title: AppLocalizations.of(context)!.reminderTitle,
@@ -96,11 +96,11 @@ class ReminderSettingsPage extends ConsumerWidget {
                       }
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: BeeTokens.primary(context),
+                      backgroundColor: PiggyTokens.primary(context),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                        borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                       ),
                     ),
                     child: Text(
@@ -163,8 +163,8 @@ class ReminderSettingsPage extends ConsumerWidget {
                                             .reminderBatteryNotIgnored,
                                     style: TextStyle(
                                       color: (batteryInfo['isIgnoring'] == true)
-                                          ? BeeTokens.success(context)
-                                          : BeeTokens.warning(context),
+                                          ? PiggyTokens.success(context)
+                                          : PiggyTokens.warning(context),
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -206,7 +206,7 @@ class ReminderSettingsPage extends ConsumerWidget {
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                         ),
                       ),
                       child: Text(
@@ -322,7 +322,7 @@ class ReminderSettingsPage extends ConsumerWidget {
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                         ),
                       ),
                       child: Text(
@@ -356,7 +356,7 @@ class ReminderSettingsPage extends ConsumerWidget {
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+                          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                         ),
                       ),
                       child: Text(
@@ -379,12 +379,12 @@ class ReminderSettingsPage extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: BeeTokens.surfaceSecondary(context),
-              borderRadius: BorderRadius.circular(BeeDimens.radiusSm),
+              color: PiggyTokens.surfaceSecondary(context),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
               border: isDark
                   ? null
                   : Border.all(
-                      color: BeeTokens.borderStrong(context),
+                      color: PiggyTokens.borderStrong(context),
                       width: 0.5,
                     ),
             ),
@@ -395,7 +395,7 @@ class ReminderSettingsPage extends ConsumerWidget {
                   AppLocalizations.of(context)!.reminderDescription,
                   style: TextStyle(
                     fontSize: 13,
-                    color: BeeTokens.textSecondary(context),
+                    color: PiggyTokens.textSecondary(context),
                     height: 1.4,
                   ),
                 ),
@@ -406,7 +406,7 @@ class ReminderSettingsPage extends ConsumerWidget {
                       : AppLocalizations.of(context)!.reminderAndroidInstructions,
                   style: TextStyle(
                     fontSize: 12,
-                    color: BeeTokens.textTertiary(context),
+                    color: PiggyTokens.textTertiary(context),
                     height: 1.4,
                   ),
                 ),

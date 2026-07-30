@@ -81,7 +81,7 @@ class RecentView extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: widgetCardBackground(dark),
-        borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -25,7 +25,7 @@ Widget currencyFlag(
       height: height,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: BeeTokens.surfaceKeySecondary(context),
+        color: PiggyTokens.surfaceKeySecondary(context),
         borderRadius: BorderRadius.circular(radius),
       ),
       child: Text(
@@ -35,7 +35,7 @@ Widget currencyFlag(
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w600,
-          color: BeeTokens.textSecondary(context),
+          color: PiggyTokens.textSecondary(context),
         ),
       ),
     );

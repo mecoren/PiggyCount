@@ -64,7 +64,7 @@ Future<void> main() async {
   // 配置iOS App Group（widget和主app共享数据必需）
   try {
     if (Platform.isIOS) {
-      await HomeWidget.setAppGroupId('group.com.tntlikely.beecount');
+      await HomeWidget.setAppGroupId('group.com.wait.piggycount');
     }
   } catch (e) {
     print('⚠️  HomeWidget 插件初始化失败（可能在不支持的平台上运行）: $e');
@@ -141,7 +141,7 @@ Future<void> main() async {
   // 注册 BeeCount Cloud 2FA challenge handler。当 server 返回 requires_2fa=true,
   // service 层会调这个 handler 弹出 Login2FAChallengeDialog 让用户输码。
   // 验证失败留在对话框就地展示错误,验证通过 / 用户取消才关闭。详见 .docs/2fa-design.md
-  BeeCountCloudProvider.globalTwoFactorHandler = (request) async {
+  PiggyCountCloudProvider.globalTwoFactorHandler = (request) async {
     final ctx = globalNavigatorKey.currentContext;
     if (ctx == null) {
       // 极端场景:cloud auth 在 navigator 还没 attach 之前触发,只能视为取消
@@ -474,7 +474,7 @@ class MainApp extends ConsumerWidget {
       return const AppLockScreen();
     }
 
-    return const BeeApp();
+    return const PiggyApp();
   }
 
   @override
@@ -495,12 +495,12 @@ class MainApp extends ConsumerWidget {
 
     final primary = ref.watch(primaryColorProvider);
     final platform = Theme.of(context).platform; // 当前平台
-    final base = BeeTheme.lightTheme(platform: platform);
+    final base = PiggyTheme.lightTheme(platform: platform);
     final baseTextTheme = base.textTheme;
 
     // ⭐ 亮色主题
     // 注意：scaffoldBackgroundColor / dividerColor / cardTheme.color 已在
-    // BeeTheme.lightTheme 中通过 BeeTokens 静态常量统一设置，这里不再覆盖。
+    // PiggyTheme.lightTheme 中通过 PiggyTokens 静态常量统一设置，这里不再覆盖。
     // 仅覆盖动态主色（primaryColor / colorScheme.primary）等需要 Riverpod 驱动的属性。
     final theme = base.copyWith(
       textTheme: baseTextTheme,
@@ -509,15 +509,15 @@ class MainApp extends ConsumerWidget {
       listTileTheme: ListTileThemeData(
         dense: true,
         contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-        iconColor: BeeTokens.primaryTextStatic,
+        iconColor: PiggyTokens.primaryTextStatic,
       ),
       dialogTheme: base.dialogTheme.copyWith(
-        backgroundColor: BeeTokens.cardBackgroundLightStatic,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
+        backgroundColor: PiggyTokens.cardBackgroundLightStatic,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
         titleTextStyle: baseTextTheme.titleMedium?.copyWith(
-            color: BeeTokens.primaryTextStatic, fontWeight: FontWeight.w600),
+            color: PiggyTokens.primaryTextStatic, fontWeight: FontWeight.w600),
         contentTextStyle:
-            baseTextTheme.bodyMedium?.copyWith(color: BeeTokens.secondaryTextStatic),
+            baseTextTheme.bodyMedium?.copyWith(color: PiggyTokens.secondaryTextStatic),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
@@ -530,14 +530,14 @@ class MainApp extends ConsumerWidget {
           backgroundColor: primary,
           foregroundColor: Colors.white,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusLg)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: primary,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusLg)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -546,7 +546,7 @@ class MainApp extends ConsumerWidget {
           foregroundColor: Colors.white,
           elevation: 0,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusLg)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
         ),
       ),
       floatingActionButtonTheme: base.floatingActionButtonTheme.copyWith(
@@ -558,9 +558,9 @@ class MainApp extends ConsumerWidget {
         type: BottomNavigationBarType.fixed,
       ),
       cardTheme: base.cardTheme.copyWith(
-        color: BeeTokens.cardBackgroundLightStatic,
+        color: PiggyTokens.cardBackgroundLightStatic,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusXl)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
         margin: EdgeInsets.zero,
       ),
     );
@@ -583,8 +583,8 @@ class MainApp extends ConsumerWidget {
         scrollBehavior: const NoGlowScrollBehavior(),
         debugShowCheckedModeBanner: false,
         theme: theme,
-        darkTheme: BeeTheme.darkTheme(platform: platform).copyWith(
-          colorScheme: BeeTheme.darkTheme(platform: platform).colorScheme.copyWith(primary: primary),
+        darkTheme: PiggyTheme.darkTheme(platform: platform).copyWith(
+          colorScheme: PiggyTheme.darkTheme(platform: platform).colorScheme.copyWith(primary: primary),
           primaryColor: primary,
         ),                                                // ⭐ 暗黑主题（使用动态主题色）
         themeMode: ref.watch(themeModeProvider),         // ⭐ 使用 provider 支持手动切换

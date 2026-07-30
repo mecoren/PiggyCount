@@ -10803,9 +10803,9 @@ class ExchangeRateOverridesCompanion
   }
 }
 
-abstract class _$BeeDatabase extends GeneratedDatabase {
-  _$BeeDatabase(QueryExecutor e) : super(e);
-  $BeeDatabaseManager get managers => $BeeDatabaseManager(this);
+abstract class _$PiggyDatabase extends GeneratedDatabase {
+  _$PiggyDatabase(QueryExecutor e) : super(e);
+  $PiggyDatabaseManager get managers => $PiggyDatabaseManager(this);
   late final $LedgersTable ledgers = $LedgersTable(this);
   late final $AccountsTable accounts = $AccountsTable(this);
   late final $CategoriesTable categories = $CategoriesTable(this);
@@ -10892,7 +10892,7 @@ typedef $$LedgersTableUpdateCompanionBuilder = LedgersCompanion Function({
 });
 
 class $$LedgersTableFilterComposer
-    extends Composer<_$BeeDatabase, $LedgersTable> {
+    extends Composer<_$PiggyDatabase, $LedgersTable> {
   $$LedgersTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -10935,7 +10935,7 @@ class $$LedgersTableFilterComposer
 }
 
 class $$LedgersTableOrderingComposer
-    extends Composer<_$BeeDatabase, $LedgersTable> {
+    extends Composer<_$PiggyDatabase, $LedgersTable> {
   $$LedgersTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -10979,7 +10979,7 @@ class $$LedgersTableOrderingComposer
 }
 
 class $$LedgersTableAnnotationComposer
-    extends Composer<_$BeeDatabase, $LedgersTable> {
+    extends Composer<_$PiggyDatabase, $LedgersTable> {
   $$LedgersTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -11022,7 +11022,7 @@ class $$LedgersTableAnnotationComposer
 }
 
 class $$LedgersTableTableManager extends RootTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $LedgersTable,
     Ledger,
     $$LedgersTableFilterComposer,
@@ -11030,10 +11030,10 @@ class $$LedgersTableTableManager extends RootTableManager<
     $$LedgersTableAnnotationComposer,
     $$LedgersTableCreateCompanionBuilder,
     $$LedgersTableUpdateCompanionBuilder,
-    (Ledger, BaseReferences<_$BeeDatabase, $LedgersTable, Ledger>),
+    (Ledger, BaseReferences<_$PiggyDatabase, $LedgersTable, Ledger>),
     Ledger,
     PrefetchHooks Function()> {
-  $$LedgersTableTableManager(_$BeeDatabase db, $LedgersTable table)
+  $$LedgersTableTableManager(_$PiggyDatabase db, $LedgersTable table)
       : super(TableManagerState(
           db: db,
           table: table,
@@ -11103,7 +11103,7 @@ class $$LedgersTableTableManager extends RootTableManager<
 }
 
 typedef $$LedgersTableProcessedTableManager = ProcessedTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $LedgersTable,
     Ledger,
     $$LedgersTableFilterComposer,
@@ -11111,7 +11111,7 @@ typedef $$LedgersTableProcessedTableManager = ProcessedTableManager<
     $$LedgersTableAnnotationComposer,
     $$LedgersTableCreateCompanionBuilder,
     $$LedgersTableUpdateCompanionBuilder,
-    (Ledger, BaseReferences<_$BeeDatabase, $LedgersTable, Ledger>),
+    (Ledger, BaseReferences<_$PiggyDatabase, $LedgersTable, Ledger>),
     Ledger,
     PrefetchHooks Function()>;
 typedef $$AccountsTableCreateCompanionBuilder = AccountsCompanion Function({
@@ -11154,7 +11154,7 @@ typedef $$AccountsTableUpdateCompanionBuilder = AccountsCompanion Function({
 });
 
 class $$AccountsTableFilterComposer
-    extends Composer<_$BeeDatabase, $AccountsTable> {
+    extends Composer<_$PiggyDatabase, $AccountsTable> {
   $$AccountsTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -11216,7 +11216,7 @@ class $$AccountsTableFilterComposer
 }
 
 class $$AccountsTableOrderingComposer
-    extends Composer<_$BeeDatabase, $AccountsTable> {
+    extends Composer<_$PiggyDatabase, $AccountsTable> {
   $$AccountsTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -11280,7 +11280,7 @@ class $$AccountsTableOrderingComposer
 }
 
 class $$AccountsTableAnnotationComposer
-    extends Composer<_$BeeDatabase, $AccountsTable> {
+    extends Composer<_$PiggyDatabase, $AccountsTable> {
   $$AccountsTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -11341,7 +11341,7 @@ class $$AccountsTableAnnotationComposer
 }
 
 class $$AccountsTableTableManager extends RootTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $AccountsTable,
     Account,
     $$AccountsTableFilterComposer,
@@ -11349,10 +11349,10 @@ class $$AccountsTableTableManager extends RootTableManager<
     $$AccountsTableAnnotationComposer,
     $$AccountsTableCreateCompanionBuilder,
     $$AccountsTableUpdateCompanionBuilder,
-    (Account, BaseReferences<_$BeeDatabase, $AccountsTable, Account>),
+    (Account, BaseReferences<_$PiggyDatabase, $AccountsTable, Account>),
     Account,
     PrefetchHooks Function()> {
-  $$AccountsTableTableManager(_$BeeDatabase db, $AccountsTable table)
+  $$AccountsTableTableManager(_$PiggyDatabase db, $AccountsTable table)
       : super(TableManagerState(
           db: db,
           table: table,
@@ -11446,7 +11446,7 @@ class $$AccountsTableTableManager extends RootTableManager<
 }
 
 typedef $$AccountsTableProcessedTableManager = ProcessedTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $AccountsTable,
     Account,
     $$AccountsTableFilterComposer,
@@ -11454,7 +11454,7 @@ typedef $$AccountsTableProcessedTableManager = ProcessedTableManager<
     $$AccountsTableAnnotationComposer,
     $$AccountsTableCreateCompanionBuilder,
     $$AccountsTableUpdateCompanionBuilder,
-    (Account, BaseReferences<_$BeeDatabase, $AccountsTable, Account>),
+    (Account, BaseReferences<_$PiggyDatabase, $AccountsTable, Account>),
     Account,
     PrefetchHooks Function()>;
 typedef $$CategoriesTableCreateCompanionBuilder = CategoriesCompanion Function({
@@ -11485,7 +11485,7 @@ typedef $$CategoriesTableUpdateCompanionBuilder = CategoriesCompanion Function({
 });
 
 class $$CategoriesTableFilterComposer
-    extends Composer<_$BeeDatabase, $CategoriesTable> {
+    extends Composer<_$PiggyDatabase, $CategoriesTable> {
   $$CategoriesTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -11530,7 +11530,7 @@ class $$CategoriesTableFilterComposer
 }
 
 class $$CategoriesTableOrderingComposer
-    extends Composer<_$BeeDatabase, $CategoriesTable> {
+    extends Composer<_$PiggyDatabase, $CategoriesTable> {
   $$CategoriesTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -11575,7 +11575,7 @@ class $$CategoriesTableOrderingComposer
 }
 
 class $$CategoriesTableAnnotationComposer
-    extends Composer<_$BeeDatabase, $CategoriesTable> {
+    extends Composer<_$PiggyDatabase, $CategoriesTable> {
   $$CategoriesTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -11618,7 +11618,7 @@ class $$CategoriesTableAnnotationComposer
 }
 
 class $$CategoriesTableTableManager extends RootTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $CategoriesTable,
     Category,
     $$CategoriesTableFilterComposer,
@@ -11626,10 +11626,10 @@ class $$CategoriesTableTableManager extends RootTableManager<
     $$CategoriesTableAnnotationComposer,
     $$CategoriesTableCreateCompanionBuilder,
     $$CategoriesTableUpdateCompanionBuilder,
-    (Category, BaseReferences<_$BeeDatabase, $CategoriesTable, Category>),
+    (Category, BaseReferences<_$PiggyDatabase, $CategoriesTable, Category>),
     Category,
     PrefetchHooks Function()> {
-  $$CategoriesTableTableManager(_$BeeDatabase db, $CategoriesTable table)
+  $$CategoriesTableTableManager(_$PiggyDatabase db, $CategoriesTable table)
       : super(TableManagerState(
           db: db,
           table: table,
@@ -11699,7 +11699,7 @@ class $$CategoriesTableTableManager extends RootTableManager<
 }
 
 typedef $$CategoriesTableProcessedTableManager = ProcessedTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $CategoriesTable,
     Category,
     $$CategoriesTableFilterComposer,
@@ -11707,7 +11707,7 @@ typedef $$CategoriesTableProcessedTableManager = ProcessedTableManager<
     $$CategoriesTableAnnotationComposer,
     $$CategoriesTableCreateCompanionBuilder,
     $$CategoriesTableUpdateCompanionBuilder,
-    (Category, BaseReferences<_$BeeDatabase, $CategoriesTable, Category>),
+    (Category, BaseReferences<_$PiggyDatabase, $CategoriesTable, Category>),
     Category,
     PrefetchHooks Function()>;
 typedef $$TransactionsTableCreateCompanionBuilder = TransactionsCompanion
@@ -11760,7 +11760,7 @@ typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
 });
 
 class $$TransactionsTableFilterComposer
-    extends Composer<_$BeeDatabase, $TransactionsTable> {
+    extends Composer<_$PiggyDatabase, $TransactionsTable> {
   $$TransactionsTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -11841,7 +11841,7 @@ class $$TransactionsTableFilterComposer
 }
 
 class $$TransactionsTableOrderingComposer
-    extends Composer<_$BeeDatabase, $TransactionsTable> {
+    extends Composer<_$PiggyDatabase, $TransactionsTable> {
   $$TransactionsTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -11924,7 +11924,7 @@ class $$TransactionsTableOrderingComposer
 }
 
 class $$TransactionsTableAnnotationComposer
-    extends Composer<_$BeeDatabase, $TransactionsTable> {
+    extends Composer<_$PiggyDatabase, $TransactionsTable> {
   $$TransactionsTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -11997,7 +11997,7 @@ class $$TransactionsTableAnnotationComposer
 }
 
 class $$TransactionsTableTableManager extends RootTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $TransactionsTable,
     Transaction,
     $$TransactionsTableFilterComposer,
@@ -12007,11 +12007,11 @@ class $$TransactionsTableTableManager extends RootTableManager<
     $$TransactionsTableUpdateCompanionBuilder,
     (
       Transaction,
-      BaseReferences<_$BeeDatabase, $TransactionsTable, Transaction>
+      BaseReferences<_$PiggyDatabase, $TransactionsTable, Transaction>
     ),
     Transaction,
     PrefetchHooks Function()> {
-  $$TransactionsTableTableManager(_$BeeDatabase db, $TransactionsTable table)
+  $$TransactionsTableTableManager(_$PiggyDatabase db, $TransactionsTable table)
       : super(TableManagerState(
           db: db,
           table: table,
@@ -12121,7 +12121,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
 }
 
 typedef $$TransactionsTableProcessedTableManager = ProcessedTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $TransactionsTable,
     Transaction,
     $$TransactionsTableFilterComposer,
@@ -12131,7 +12131,7 @@ typedef $$TransactionsTableProcessedTableManager = ProcessedTableManager<
     $$TransactionsTableUpdateCompanionBuilder,
     (
       Transaction,
-      BaseReferences<_$BeeDatabase, $TransactionsTable, Transaction>
+      BaseReferences<_$PiggyDatabase, $TransactionsTable, Transaction>
     ),
     Transaction,
     PrefetchHooks Function()>;
@@ -12181,7 +12181,7 @@ typedef $$RecurringTransactionsTableUpdateCompanionBuilder
 });
 
 class $$RecurringTransactionsTableFilterComposer
-    extends Composer<_$BeeDatabase, $RecurringTransactionsTable> {
+    extends Composer<_$PiggyDatabase, $RecurringTransactionsTable> {
   $$RecurringTransactionsTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -12249,7 +12249,7 @@ class $$RecurringTransactionsTableFilterComposer
 }
 
 class $$RecurringTransactionsTableOrderingComposer
-    extends Composer<_$BeeDatabase, $RecurringTransactionsTable> {
+    extends Composer<_$PiggyDatabase, $RecurringTransactionsTable> {
   $$RecurringTransactionsTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -12317,7 +12317,7 @@ class $$RecurringTransactionsTableOrderingComposer
 }
 
 class $$RecurringTransactionsTableAnnotationComposer
-    extends Composer<_$BeeDatabase, $RecurringTransactionsTable> {
+    extends Composer<_$PiggyDatabase, $RecurringTransactionsTable> {
   $$RecurringTransactionsTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -12384,7 +12384,7 @@ class $$RecurringTransactionsTableAnnotationComposer
 }
 
 class $$RecurringTransactionsTableTableManager extends RootTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $RecurringTransactionsTable,
     RecurringTransaction,
     $$RecurringTransactionsTableFilterComposer,
@@ -12394,13 +12394,13 @@ class $$RecurringTransactionsTableTableManager extends RootTableManager<
     $$RecurringTransactionsTableUpdateCompanionBuilder,
     (
       RecurringTransaction,
-      BaseReferences<_$BeeDatabase, $RecurringTransactionsTable,
+      BaseReferences<_$PiggyDatabase, $RecurringTransactionsTable,
           RecurringTransaction>
     ),
     RecurringTransaction,
     PrefetchHooks Function()> {
   $$RecurringTransactionsTableTableManager(
-      _$BeeDatabase db, $RecurringTransactionsTable table)
+      _$PiggyDatabase db, $RecurringTransactionsTable table)
       : super(TableManagerState(
           db: db,
           table: table,
@@ -12506,7 +12506,7 @@ class $$RecurringTransactionsTableTableManager extends RootTableManager<
 
 typedef $$RecurringTransactionsTableProcessedTableManager
     = ProcessedTableManager<
-        _$BeeDatabase,
+        _$PiggyDatabase,
         $RecurringTransactionsTable,
         RecurringTransaction,
         $$RecurringTransactionsTableFilterComposer,
@@ -12516,7 +12516,7 @@ typedef $$RecurringTransactionsTableProcessedTableManager
         $$RecurringTransactionsTableUpdateCompanionBuilder,
         (
           RecurringTransaction,
-          BaseReferences<_$BeeDatabase, $RecurringTransactionsTable,
+          BaseReferences<_$PiggyDatabase, $RecurringTransactionsTable,
               RecurringTransaction>
         ),
         RecurringTransaction,
@@ -12539,7 +12539,7 @@ typedef $$ConversationsTableUpdateCompanionBuilder = ConversationsCompanion
 });
 
 class $$ConversationsTableFilterComposer
-    extends Composer<_$BeeDatabase, $ConversationsTable> {
+    extends Composer<_$PiggyDatabase, $ConversationsTable> {
   $$ConversationsTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -12564,7 +12564,7 @@ class $$ConversationsTableFilterComposer
 }
 
 class $$ConversationsTableOrderingComposer
-    extends Composer<_$BeeDatabase, $ConversationsTable> {
+    extends Composer<_$PiggyDatabase, $ConversationsTable> {
   $$ConversationsTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -12589,7 +12589,7 @@ class $$ConversationsTableOrderingComposer
 }
 
 class $$ConversationsTableAnnotationComposer
-    extends Composer<_$BeeDatabase, $ConversationsTable> {
+    extends Composer<_$PiggyDatabase, $ConversationsTable> {
   $$ConversationsTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -12614,7 +12614,7 @@ class $$ConversationsTableAnnotationComposer
 }
 
 class $$ConversationsTableTableManager extends RootTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $ConversationsTable,
     Conversation,
     $$ConversationsTableFilterComposer,
@@ -12624,11 +12624,11 @@ class $$ConversationsTableTableManager extends RootTableManager<
     $$ConversationsTableUpdateCompanionBuilder,
     (
       Conversation,
-      BaseReferences<_$BeeDatabase, $ConversationsTable, Conversation>
+      BaseReferences<_$PiggyDatabase, $ConversationsTable, Conversation>
     ),
     Conversation,
     PrefetchHooks Function()> {
-  $$ConversationsTableTableManager(_$BeeDatabase db, $ConversationsTable table)
+  $$ConversationsTableTableManager(_$PiggyDatabase db, $ConversationsTable table)
       : super(TableManagerState(
           db: db,
           table: table,
@@ -12674,7 +12674,7 @@ class $$ConversationsTableTableManager extends RootTableManager<
 }
 
 typedef $$ConversationsTableProcessedTableManager = ProcessedTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $ConversationsTable,
     Conversation,
     $$ConversationsTableFilterComposer,
@@ -12684,7 +12684,7 @@ typedef $$ConversationsTableProcessedTableManager = ProcessedTableManager<
     $$ConversationsTableUpdateCompanionBuilder,
     (
       Conversation,
-      BaseReferences<_$BeeDatabase, $ConversationsTable, Conversation>
+      BaseReferences<_$PiggyDatabase, $ConversationsTable, Conversation>
     ),
     Conversation,
     PrefetchHooks Function()>;
@@ -12710,7 +12710,7 @@ typedef $$MessagesTableUpdateCompanionBuilder = MessagesCompanion Function({
 });
 
 class $$MessagesTableFilterComposer
-    extends Composer<_$BeeDatabase, $MessagesTable> {
+    extends Composer<_$PiggyDatabase, $MessagesTable> {
   $$MessagesTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -12745,7 +12745,7 @@ class $$MessagesTableFilterComposer
 }
 
 class $$MessagesTableOrderingComposer
-    extends Composer<_$BeeDatabase, $MessagesTable> {
+    extends Composer<_$PiggyDatabase, $MessagesTable> {
   $$MessagesTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -12781,7 +12781,7 @@ class $$MessagesTableOrderingComposer
 }
 
 class $$MessagesTableAnnotationComposer
-    extends Composer<_$BeeDatabase, $MessagesTable> {
+    extends Composer<_$PiggyDatabase, $MessagesTable> {
   $$MessagesTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -12815,7 +12815,7 @@ class $$MessagesTableAnnotationComposer
 }
 
 class $$MessagesTableTableManager extends RootTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $MessagesTable,
     Message,
     $$MessagesTableFilterComposer,
@@ -12823,10 +12823,10 @@ class $$MessagesTableTableManager extends RootTableManager<
     $$MessagesTableAnnotationComposer,
     $$MessagesTableCreateCompanionBuilder,
     $$MessagesTableUpdateCompanionBuilder,
-    (Message, BaseReferences<_$BeeDatabase, $MessagesTable, Message>),
+    (Message, BaseReferences<_$PiggyDatabase, $MessagesTable, Message>),
     Message,
     PrefetchHooks Function()> {
-  $$MessagesTableTableManager(_$BeeDatabase db, $MessagesTable table)
+  $$MessagesTableTableManager(_$PiggyDatabase db, $MessagesTable table)
       : super(TableManagerState(
           db: db,
           table: table,
@@ -12884,7 +12884,7 @@ class $$MessagesTableTableManager extends RootTableManager<
 }
 
 typedef $$MessagesTableProcessedTableManager = ProcessedTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $MessagesTable,
     Message,
     $$MessagesTableFilterComposer,
@@ -12892,7 +12892,7 @@ typedef $$MessagesTableProcessedTableManager = ProcessedTableManager<
     $$MessagesTableAnnotationComposer,
     $$MessagesTableCreateCompanionBuilder,
     $$MessagesTableUpdateCompanionBuilder,
-    (Message, BaseReferences<_$BeeDatabase, $MessagesTable, Message>),
+    (Message, BaseReferences<_$PiggyDatabase, $MessagesTable, Message>),
     Message,
     PrefetchHooks Function()>;
 typedef $$TagsTableCreateCompanionBuilder = TagsCompanion Function({
@@ -12912,7 +12912,7 @@ typedef $$TagsTableUpdateCompanionBuilder = TagsCompanion Function({
   Value<String?> syncId,
 });
 
-class $$TagsTableFilterComposer extends Composer<_$BeeDatabase, $TagsTable> {
+class $$TagsTableFilterComposer extends Composer<_$PiggyDatabase, $TagsTable> {
   $$TagsTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -12939,7 +12939,7 @@ class $$TagsTableFilterComposer extends Composer<_$BeeDatabase, $TagsTable> {
       column: $table.syncId, builder: (column) => ColumnFilters(column));
 }
 
-class $$TagsTableOrderingComposer extends Composer<_$BeeDatabase, $TagsTable> {
+class $$TagsTableOrderingComposer extends Composer<_$PiggyDatabase, $TagsTable> {
   $$TagsTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -12967,7 +12967,7 @@ class $$TagsTableOrderingComposer extends Composer<_$BeeDatabase, $TagsTable> {
 }
 
 class $$TagsTableAnnotationComposer
-    extends Composer<_$BeeDatabase, $TagsTable> {
+    extends Composer<_$PiggyDatabase, $TagsTable> {
   $$TagsTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -12995,7 +12995,7 @@ class $$TagsTableAnnotationComposer
 }
 
 class $$TagsTableTableManager extends RootTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $TagsTable,
     Tag,
     $$TagsTableFilterComposer,
@@ -13003,10 +13003,10 @@ class $$TagsTableTableManager extends RootTableManager<
     $$TagsTableAnnotationComposer,
     $$TagsTableCreateCompanionBuilder,
     $$TagsTableUpdateCompanionBuilder,
-    (Tag, BaseReferences<_$BeeDatabase, $TagsTable, Tag>),
+    (Tag, BaseReferences<_$PiggyDatabase, $TagsTable, Tag>),
     Tag,
     PrefetchHooks Function()> {
-  $$TagsTableTableManager(_$BeeDatabase db, $TagsTable table)
+  $$TagsTableTableManager(_$PiggyDatabase db, $TagsTable table)
       : super(TableManagerState(
           db: db,
           table: table,
@@ -13056,7 +13056,7 @@ class $$TagsTableTableManager extends RootTableManager<
 }
 
 typedef $$TagsTableProcessedTableManager = ProcessedTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $TagsTable,
     Tag,
     $$TagsTableFilterComposer,
@@ -13064,7 +13064,7 @@ typedef $$TagsTableProcessedTableManager = ProcessedTableManager<
     $$TagsTableAnnotationComposer,
     $$TagsTableCreateCompanionBuilder,
     $$TagsTableUpdateCompanionBuilder,
-    (Tag, BaseReferences<_$BeeDatabase, $TagsTable, Tag>),
+    (Tag, BaseReferences<_$PiggyDatabase, $TagsTable, Tag>),
     Tag,
     PrefetchHooks Function()>;
 typedef $$TransactionTagsTableCreateCompanionBuilder = TransactionTagsCompanion
@@ -13081,7 +13081,7 @@ typedef $$TransactionTagsTableUpdateCompanionBuilder = TransactionTagsCompanion
 });
 
 class $$TransactionTagsTableFilterComposer
-    extends Composer<_$BeeDatabase, $TransactionTagsTable> {
+    extends Composer<_$PiggyDatabase, $TransactionTagsTable> {
   $$TransactionTagsTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -13100,7 +13100,7 @@ class $$TransactionTagsTableFilterComposer
 }
 
 class $$TransactionTagsTableOrderingComposer
-    extends Composer<_$BeeDatabase, $TransactionTagsTable> {
+    extends Composer<_$PiggyDatabase, $TransactionTagsTable> {
   $$TransactionTagsTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -13120,7 +13120,7 @@ class $$TransactionTagsTableOrderingComposer
 }
 
 class $$TransactionTagsTableAnnotationComposer
-    extends Composer<_$BeeDatabase, $TransactionTagsTable> {
+    extends Composer<_$PiggyDatabase, $TransactionTagsTable> {
   $$TransactionTagsTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -13139,7 +13139,7 @@ class $$TransactionTagsTableAnnotationComposer
 }
 
 class $$TransactionTagsTableTableManager extends RootTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $TransactionTagsTable,
     TransactionTag,
     $$TransactionTagsTableFilterComposer,
@@ -13149,12 +13149,12 @@ class $$TransactionTagsTableTableManager extends RootTableManager<
     $$TransactionTagsTableUpdateCompanionBuilder,
     (
       TransactionTag,
-      BaseReferences<_$BeeDatabase, $TransactionTagsTable, TransactionTag>
+      BaseReferences<_$PiggyDatabase, $TransactionTagsTable, TransactionTag>
     ),
     TransactionTag,
     PrefetchHooks Function()> {
   $$TransactionTagsTableTableManager(
-      _$BeeDatabase db, $TransactionTagsTable table)
+      _$PiggyDatabase db, $TransactionTagsTable table)
       : super(TableManagerState(
           db: db,
           table: table,
@@ -13192,7 +13192,7 @@ class $$TransactionTagsTableTableManager extends RootTableManager<
 }
 
 typedef $$TransactionTagsTableProcessedTableManager = ProcessedTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $TransactionTagsTable,
     TransactionTag,
     $$TransactionTagsTableFilterComposer,
@@ -13202,7 +13202,7 @@ typedef $$TransactionTagsTableProcessedTableManager = ProcessedTableManager<
     $$TransactionTagsTableUpdateCompanionBuilder,
     (
       TransactionTag,
-      BaseReferences<_$BeeDatabase, $TransactionTagsTable, TransactionTag>
+      BaseReferences<_$PiggyDatabase, $TransactionTagsTable, TransactionTag>
     ),
     TransactionTag,
     PrefetchHooks Function()>;
@@ -13234,7 +13234,7 @@ typedef $$BudgetsTableUpdateCompanionBuilder = BudgetsCompanion Function({
 });
 
 class $$BudgetsTableFilterComposer
-    extends Composer<_$BeeDatabase, $BudgetsTable> {
+    extends Composer<_$PiggyDatabase, $BudgetsTable> {
   $$BudgetsTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -13277,7 +13277,7 @@ class $$BudgetsTableFilterComposer
 }
 
 class $$BudgetsTableOrderingComposer
-    extends Composer<_$BeeDatabase, $BudgetsTable> {
+    extends Composer<_$PiggyDatabase, $BudgetsTable> {
   $$BudgetsTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -13320,7 +13320,7 @@ class $$BudgetsTableOrderingComposer
 }
 
 class $$BudgetsTableAnnotationComposer
-    extends Composer<_$BeeDatabase, $BudgetsTable> {
+    extends Composer<_$PiggyDatabase, $BudgetsTable> {
   $$BudgetsTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -13363,7 +13363,7 @@ class $$BudgetsTableAnnotationComposer
 }
 
 class $$BudgetsTableTableManager extends RootTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $BudgetsTable,
     Budget,
     $$BudgetsTableFilterComposer,
@@ -13371,10 +13371,10 @@ class $$BudgetsTableTableManager extends RootTableManager<
     $$BudgetsTableAnnotationComposer,
     $$BudgetsTableCreateCompanionBuilder,
     $$BudgetsTableUpdateCompanionBuilder,
-    (Budget, BaseReferences<_$BeeDatabase, $BudgetsTable, Budget>),
+    (Budget, BaseReferences<_$PiggyDatabase, $BudgetsTable, Budget>),
     Budget,
     PrefetchHooks Function()> {
-  $$BudgetsTableTableManager(_$BeeDatabase db, $BudgetsTable table)
+  $$BudgetsTableTableManager(_$PiggyDatabase db, $BudgetsTable table)
       : super(TableManagerState(
           db: db,
           table: table,
@@ -13444,7 +13444,7 @@ class $$BudgetsTableTableManager extends RootTableManager<
 }
 
 typedef $$BudgetsTableProcessedTableManager = ProcessedTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $BudgetsTable,
     Budget,
     $$BudgetsTableFilterComposer,
@@ -13452,7 +13452,7 @@ typedef $$BudgetsTableProcessedTableManager = ProcessedTableManager<
     $$BudgetsTableAnnotationComposer,
     $$BudgetsTableCreateCompanionBuilder,
     $$BudgetsTableUpdateCompanionBuilder,
-    (Budget, BaseReferences<_$BeeDatabase, $BudgetsTable, Budget>),
+    (Budget, BaseReferences<_$PiggyDatabase, $BudgetsTable, Budget>),
     Budget,
     PrefetchHooks Function()>;
 typedef $$TransactionAttachmentsTableCreateCompanionBuilder
@@ -13485,7 +13485,7 @@ typedef $$TransactionAttachmentsTableUpdateCompanionBuilder
 });
 
 class $$TransactionAttachmentsTableFilterComposer
-    extends Composer<_$BeeDatabase, $TransactionAttachmentsTable> {
+    extends Composer<_$PiggyDatabase, $TransactionAttachmentsTable> {
   $$TransactionAttachmentsTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -13528,7 +13528,7 @@ class $$TransactionAttachmentsTableFilterComposer
 }
 
 class $$TransactionAttachmentsTableOrderingComposer
-    extends Composer<_$BeeDatabase, $TransactionAttachmentsTable> {
+    extends Composer<_$PiggyDatabase, $TransactionAttachmentsTable> {
   $$TransactionAttachmentsTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -13573,7 +13573,7 @@ class $$TransactionAttachmentsTableOrderingComposer
 }
 
 class $$TransactionAttachmentsTableAnnotationComposer
-    extends Composer<_$BeeDatabase, $TransactionAttachmentsTable> {
+    extends Composer<_$PiggyDatabase, $TransactionAttachmentsTable> {
   $$TransactionAttachmentsTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -13616,7 +13616,7 @@ class $$TransactionAttachmentsTableAnnotationComposer
 }
 
 class $$TransactionAttachmentsTableTableManager extends RootTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $TransactionAttachmentsTable,
     TransactionAttachment,
     $$TransactionAttachmentsTableFilterComposer,
@@ -13626,13 +13626,13 @@ class $$TransactionAttachmentsTableTableManager extends RootTableManager<
     $$TransactionAttachmentsTableUpdateCompanionBuilder,
     (
       TransactionAttachment,
-      BaseReferences<_$BeeDatabase, $TransactionAttachmentsTable,
+      BaseReferences<_$PiggyDatabase, $TransactionAttachmentsTable,
           TransactionAttachment>
     ),
     TransactionAttachment,
     PrefetchHooks Function()> {
   $$TransactionAttachmentsTableTableManager(
-      _$BeeDatabase db, $TransactionAttachmentsTable table)
+      _$PiggyDatabase db, $TransactionAttachmentsTable table)
       : super(TableManagerState(
           db: db,
           table: table,
@@ -13706,7 +13706,7 @@ class $$TransactionAttachmentsTableTableManager extends RootTableManager<
 
 typedef $$TransactionAttachmentsTableProcessedTableManager
     = ProcessedTableManager<
-        _$BeeDatabase,
+        _$PiggyDatabase,
         $TransactionAttachmentsTable,
         TransactionAttachment,
         $$TransactionAttachmentsTableFilterComposer,
@@ -13716,7 +13716,7 @@ typedef $$TransactionAttachmentsTableProcessedTableManager
         $$TransactionAttachmentsTableUpdateCompanionBuilder,
         (
           TransactionAttachment,
-          BaseReferences<_$BeeDatabase, $TransactionAttachmentsTable,
+          BaseReferences<_$PiggyDatabase, $TransactionAttachmentsTable,
               TransactionAttachment>
         ),
         TransactionAttachment,
@@ -13747,7 +13747,7 @@ typedef $$LocalChangesTableUpdateCompanionBuilder = LocalChangesCompanion
 });
 
 class $$LocalChangesTableFilterComposer
-    extends Composer<_$BeeDatabase, $LocalChangesTable> {
+    extends Composer<_$PiggyDatabase, $LocalChangesTable> {
   $$LocalChangesTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -13784,7 +13784,7 @@ class $$LocalChangesTableFilterComposer
 }
 
 class $$LocalChangesTableOrderingComposer
-    extends Composer<_$BeeDatabase, $LocalChangesTable> {
+    extends Composer<_$PiggyDatabase, $LocalChangesTable> {
   $$LocalChangesTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -13822,7 +13822,7 @@ class $$LocalChangesTableOrderingComposer
 }
 
 class $$LocalChangesTableAnnotationComposer
-    extends Composer<_$BeeDatabase, $LocalChangesTable> {
+    extends Composer<_$PiggyDatabase, $LocalChangesTable> {
   $$LocalChangesTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -13859,7 +13859,7 @@ class $$LocalChangesTableAnnotationComposer
 }
 
 class $$LocalChangesTableTableManager extends RootTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $LocalChangesTable,
     LocalChange,
     $$LocalChangesTableFilterComposer,
@@ -13869,11 +13869,11 @@ class $$LocalChangesTableTableManager extends RootTableManager<
     $$LocalChangesTableUpdateCompanionBuilder,
     (
       LocalChange,
-      BaseReferences<_$BeeDatabase, $LocalChangesTable, LocalChange>
+      BaseReferences<_$PiggyDatabase, $LocalChangesTable, LocalChange>
     ),
     LocalChange,
     PrefetchHooks Function()> {
-  $$LocalChangesTableTableManager(_$BeeDatabase db, $LocalChangesTable table)
+  $$LocalChangesTableTableManager(_$PiggyDatabase db, $LocalChangesTable table)
       : super(TableManagerState(
           db: db,
           table: table,
@@ -13935,7 +13935,7 @@ class $$LocalChangesTableTableManager extends RootTableManager<
 }
 
 typedef $$LocalChangesTableProcessedTableManager = ProcessedTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $LocalChangesTable,
     LocalChange,
     $$LocalChangesTableFilterComposer,
@@ -13945,7 +13945,7 @@ typedef $$LocalChangesTableProcessedTableManager = ProcessedTableManager<
     $$LocalChangesTableUpdateCompanionBuilder,
     (
       LocalChange,
-      BaseReferences<_$BeeDatabase, $LocalChangesTable, LocalChange>
+      BaseReferences<_$PiggyDatabase, $LocalChangesTable, LocalChange>
     ),
     LocalChange,
     PrefetchHooks Function()>;
@@ -13967,7 +13967,7 @@ typedef $$SyncStateTableUpdateCompanionBuilder = SyncStateCompanion Function({
 });
 
 class $$SyncStateTableFilterComposer
-    extends Composer<_$BeeDatabase, $SyncStateTable> {
+    extends Composer<_$PiggyDatabase, $SyncStateTable> {
   $$SyncStateTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -13995,7 +13995,7 @@ class $$SyncStateTableFilterComposer
 }
 
 class $$SyncStateTableOrderingComposer
-    extends Composer<_$BeeDatabase, $SyncStateTable> {
+    extends Composer<_$PiggyDatabase, $SyncStateTable> {
   $$SyncStateTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -14025,7 +14025,7 @@ class $$SyncStateTableOrderingComposer
 }
 
 class $$SyncStateTableAnnotationComposer
-    extends Composer<_$BeeDatabase, $SyncStateTable> {
+    extends Composer<_$PiggyDatabase, $SyncStateTable> {
   $$SyncStateTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -14053,7 +14053,7 @@ class $$SyncStateTableAnnotationComposer
 }
 
 class $$SyncStateTableTableManager extends RootTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $SyncStateTable,
     SyncStateData,
     $$SyncStateTableFilterComposer,
@@ -14063,11 +14063,11 @@ class $$SyncStateTableTableManager extends RootTableManager<
     $$SyncStateTableUpdateCompanionBuilder,
     (
       SyncStateData,
-      BaseReferences<_$BeeDatabase, $SyncStateTable, SyncStateData>
+      BaseReferences<_$PiggyDatabase, $SyncStateTable, SyncStateData>
     ),
     SyncStateData,
     PrefetchHooks Function()> {
-  $$SyncStateTableTableManager(_$BeeDatabase db, $SyncStateTable table)
+  $$SyncStateTableTableManager(_$PiggyDatabase db, $SyncStateTable table)
       : super(TableManagerState(
           db: db,
           table: table,
@@ -14117,7 +14117,7 @@ class $$SyncStateTableTableManager extends RootTableManager<
 }
 
 typedef $$SyncStateTableProcessedTableManager = ProcessedTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $SyncStateTable,
     SyncStateData,
     $$SyncStateTableFilterComposer,
@@ -14127,7 +14127,7 @@ typedef $$SyncStateTableProcessedTableManager = ProcessedTableManager<
     $$SyncStateTableUpdateCompanionBuilder,
     (
       SyncStateData,
-      BaseReferences<_$BeeDatabase, $SyncStateTable, SyncStateData>
+      BaseReferences<_$PiggyDatabase, $SyncStateTable, SyncStateData>
     ),
     SyncStateData,
     PrefetchHooks Function()>;
@@ -14157,7 +14157,7 @@ typedef $$LedgerMembersTableUpdateCompanionBuilder = LedgerMembersCompanion
 });
 
 class $$LedgerMembersTableFilterComposer
-    extends Composer<_$BeeDatabase, $LedgerMembersTable> {
+    extends Composer<_$PiggyDatabase, $LedgerMembersTable> {
   $$LedgerMembersTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -14191,7 +14191,7 @@ class $$LedgerMembersTableFilterComposer
 }
 
 class $$LedgerMembersTableOrderingComposer
-    extends Composer<_$BeeDatabase, $LedgerMembersTable> {
+    extends Composer<_$PiggyDatabase, $LedgerMembersTable> {
   $$LedgerMembersTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -14226,7 +14226,7 @@ class $$LedgerMembersTableOrderingComposer
 }
 
 class $$LedgerMembersTableAnnotationComposer
-    extends Composer<_$BeeDatabase, $LedgerMembersTable> {
+    extends Composer<_$PiggyDatabase, $LedgerMembersTable> {
   $$LedgerMembersTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -14260,7 +14260,7 @@ class $$LedgerMembersTableAnnotationComposer
 }
 
 class $$LedgerMembersTableTableManager extends RootTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $LedgerMembersTable,
     LedgerMember,
     $$LedgerMembersTableFilterComposer,
@@ -14270,11 +14270,11 @@ class $$LedgerMembersTableTableManager extends RootTableManager<
     $$LedgerMembersTableUpdateCompanionBuilder,
     (
       LedgerMember,
-      BaseReferences<_$BeeDatabase, $LedgerMembersTable, LedgerMember>
+      BaseReferences<_$PiggyDatabase, $LedgerMembersTable, LedgerMember>
     ),
     LedgerMember,
     PrefetchHooks Function()> {
-  $$LedgerMembersTableTableManager(_$BeeDatabase db, $LedgerMembersTable table)
+  $$LedgerMembersTableTableManager(_$PiggyDatabase db, $LedgerMembersTable table)
       : super(TableManagerState(
           db: db,
           table: table,
@@ -14336,7 +14336,7 @@ class $$LedgerMembersTableTableManager extends RootTableManager<
 }
 
 typedef $$LedgerMembersTableProcessedTableManager = ProcessedTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $LedgerMembersTable,
     LedgerMember,
     $$LedgerMembersTableFilterComposer,
@@ -14346,7 +14346,7 @@ typedef $$LedgerMembersTableProcessedTableManager = ProcessedTableManager<
     $$LedgerMembersTableUpdateCompanionBuilder,
     (
       LedgerMember,
-      BaseReferences<_$BeeDatabase, $LedgerMembersTable, LedgerMember>
+      BaseReferences<_$PiggyDatabase, $LedgerMembersTable, LedgerMember>
     ),
     LedgerMember,
     PrefetchHooks Function()>;
@@ -14388,7 +14388,7 @@ typedef $$SharedLedgerCategoriesTableUpdateCompanionBuilder
 });
 
 class $$SharedLedgerCategoriesTableFilterComposer
-    extends Composer<_$BeeDatabase, $SharedLedgerCategoriesTable> {
+    extends Composer<_$PiggyDatabase, $SharedLedgerCategoriesTable> {
   $$SharedLedgerCategoriesTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -14442,7 +14442,7 @@ class $$SharedLedgerCategoriesTableFilterComposer
 }
 
 class $$SharedLedgerCategoriesTableOrderingComposer
-    extends Composer<_$BeeDatabase, $SharedLedgerCategoriesTable> {
+    extends Composer<_$PiggyDatabase, $SharedLedgerCategoriesTable> {
   $$SharedLedgerCategoriesTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -14498,7 +14498,7 @@ class $$SharedLedgerCategoriesTableOrderingComposer
 }
 
 class $$SharedLedgerCategoriesTableAnnotationComposer
-    extends Composer<_$BeeDatabase, $SharedLedgerCategoriesTable> {
+    extends Composer<_$PiggyDatabase, $SharedLedgerCategoriesTable> {
   $$SharedLedgerCategoriesTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -14550,7 +14550,7 @@ class $$SharedLedgerCategoriesTableAnnotationComposer
 }
 
 class $$SharedLedgerCategoriesTableTableManager extends RootTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $SharedLedgerCategoriesTable,
     SharedLedgerCategory,
     $$SharedLedgerCategoriesTableFilterComposer,
@@ -14560,13 +14560,13 @@ class $$SharedLedgerCategoriesTableTableManager extends RootTableManager<
     $$SharedLedgerCategoriesTableUpdateCompanionBuilder,
     (
       SharedLedgerCategory,
-      BaseReferences<_$BeeDatabase, $SharedLedgerCategoriesTable,
+      BaseReferences<_$PiggyDatabase, $SharedLedgerCategoriesTable,
           SharedLedgerCategory>
     ),
     SharedLedgerCategory,
     PrefetchHooks Function()> {
   $$SharedLedgerCategoriesTableTableManager(
-      _$BeeDatabase db, $SharedLedgerCategoriesTable table)
+      _$PiggyDatabase db, $SharedLedgerCategoriesTable table)
       : super(TableManagerState(
           db: db,
           table: table,
@@ -14656,7 +14656,7 @@ class $$SharedLedgerCategoriesTableTableManager extends RootTableManager<
 
 typedef $$SharedLedgerCategoriesTableProcessedTableManager
     = ProcessedTableManager<
-        _$BeeDatabase,
+        _$PiggyDatabase,
         $SharedLedgerCategoriesTable,
         SharedLedgerCategory,
         $$SharedLedgerCategoriesTableFilterComposer,
@@ -14666,7 +14666,7 @@ typedef $$SharedLedgerCategoriesTableProcessedTableManager
         $$SharedLedgerCategoriesTableUpdateCompanionBuilder,
         (
           SharedLedgerCategory,
-          BaseReferences<_$BeeDatabase, $SharedLedgerCategoriesTable,
+          BaseReferences<_$PiggyDatabase, $SharedLedgerCategoriesTable,
               SharedLedgerCategory>
         ),
         SharedLedgerCategory,
@@ -14707,7 +14707,7 @@ typedef $$SharedLedgerAccountsTableUpdateCompanionBuilder
 });
 
 class $$SharedLedgerAccountsTableFilterComposer
-    extends Composer<_$BeeDatabase, $SharedLedgerAccountsTable> {
+    extends Composer<_$PiggyDatabase, $SharedLedgerAccountsTable> {
   $$SharedLedgerAccountsTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -14757,7 +14757,7 @@ class $$SharedLedgerAccountsTableFilterComposer
 }
 
 class $$SharedLedgerAccountsTableOrderingComposer
-    extends Composer<_$BeeDatabase, $SharedLedgerAccountsTable> {
+    extends Composer<_$PiggyDatabase, $SharedLedgerAccountsTable> {
   $$SharedLedgerAccountsTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -14810,7 +14810,7 @@ class $$SharedLedgerAccountsTableOrderingComposer
 }
 
 class $$SharedLedgerAccountsTableAnnotationComposer
-    extends Composer<_$BeeDatabase, $SharedLedgerAccountsTable> {
+    extends Composer<_$PiggyDatabase, $SharedLedgerAccountsTable> {
   $$SharedLedgerAccountsTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -14859,7 +14859,7 @@ class $$SharedLedgerAccountsTableAnnotationComposer
 }
 
 class $$SharedLedgerAccountsTableTableManager extends RootTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $SharedLedgerAccountsTable,
     SharedLedgerAccount,
     $$SharedLedgerAccountsTableFilterComposer,
@@ -14869,13 +14869,13 @@ class $$SharedLedgerAccountsTableTableManager extends RootTableManager<
     $$SharedLedgerAccountsTableUpdateCompanionBuilder,
     (
       SharedLedgerAccount,
-      BaseReferences<_$BeeDatabase, $SharedLedgerAccountsTable,
+      BaseReferences<_$PiggyDatabase, $SharedLedgerAccountsTable,
           SharedLedgerAccount>
     ),
     SharedLedgerAccount,
     PrefetchHooks Function()> {
   $$SharedLedgerAccountsTableTableManager(
-      _$BeeDatabase db, $SharedLedgerAccountsTable table)
+      _$PiggyDatabase db, $SharedLedgerAccountsTable table)
       : super(TableManagerState(
           db: db,
           table: table,
@@ -14960,7 +14960,7 @@ class $$SharedLedgerAccountsTableTableManager extends RootTableManager<
 
 typedef $$SharedLedgerAccountsTableProcessedTableManager
     = ProcessedTableManager<
-        _$BeeDatabase,
+        _$PiggyDatabase,
         $SharedLedgerAccountsTable,
         SharedLedgerAccount,
         $$SharedLedgerAccountsTableFilterComposer,
@@ -14970,7 +14970,7 @@ typedef $$SharedLedgerAccountsTableProcessedTableManager
         $$SharedLedgerAccountsTableUpdateCompanionBuilder,
         (
           SharedLedgerAccount,
-          BaseReferences<_$BeeDatabase, $SharedLedgerAccountsTable,
+          BaseReferences<_$PiggyDatabase, $SharedLedgerAccountsTable,
               SharedLedgerAccount>
         ),
         SharedLedgerAccount,
@@ -14995,7 +14995,7 @@ typedef $$SharedLedgerTagsTableUpdateCompanionBuilder
 });
 
 class $$SharedLedgerTagsTableFilterComposer
-    extends Composer<_$BeeDatabase, $SharedLedgerTagsTable> {
+    extends Composer<_$PiggyDatabase, $SharedLedgerTagsTable> {
   $$SharedLedgerTagsTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -15020,7 +15020,7 @@ class $$SharedLedgerTagsTableFilterComposer
 }
 
 class $$SharedLedgerTagsTableOrderingComposer
-    extends Composer<_$BeeDatabase, $SharedLedgerTagsTable> {
+    extends Composer<_$PiggyDatabase, $SharedLedgerTagsTable> {
   $$SharedLedgerTagsTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -15046,7 +15046,7 @@ class $$SharedLedgerTagsTableOrderingComposer
 }
 
 class $$SharedLedgerTagsTableAnnotationComposer
-    extends Composer<_$BeeDatabase, $SharedLedgerTagsTable> {
+    extends Composer<_$PiggyDatabase, $SharedLedgerTagsTable> {
   $$SharedLedgerTagsTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -15071,7 +15071,7 @@ class $$SharedLedgerTagsTableAnnotationComposer
 }
 
 class $$SharedLedgerTagsTableTableManager extends RootTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $SharedLedgerTagsTable,
     SharedLedgerTag,
     $$SharedLedgerTagsTableFilterComposer,
@@ -15081,12 +15081,12 @@ class $$SharedLedgerTagsTableTableManager extends RootTableManager<
     $$SharedLedgerTagsTableUpdateCompanionBuilder,
     (
       SharedLedgerTag,
-      BaseReferences<_$BeeDatabase, $SharedLedgerTagsTable, SharedLedgerTag>
+      BaseReferences<_$PiggyDatabase, $SharedLedgerTagsTable, SharedLedgerTag>
     ),
     SharedLedgerTag,
     PrefetchHooks Function()> {
   $$SharedLedgerTagsTableTableManager(
-      _$BeeDatabase db, $SharedLedgerTagsTable table)
+      _$PiggyDatabase db, $SharedLedgerTagsTable table)
       : super(TableManagerState(
           db: db,
           table: table,
@@ -15136,7 +15136,7 @@ class $$SharedLedgerTagsTableTableManager extends RootTableManager<
 }
 
 typedef $$SharedLedgerTagsTableProcessedTableManager = ProcessedTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $SharedLedgerTagsTable,
     SharedLedgerTag,
     $$SharedLedgerTagsTableFilterComposer,
@@ -15146,7 +15146,7 @@ typedef $$SharedLedgerTagsTableProcessedTableManager = ProcessedTableManager<
     $$SharedLedgerTagsTableUpdateCompanionBuilder,
     (
       SharedLedgerTag,
-      BaseReferences<_$BeeDatabase, $SharedLedgerTagsTable, SharedLedgerTag>
+      BaseReferences<_$PiggyDatabase, $SharedLedgerTagsTable, SharedLedgerTag>
     ),
     SharedLedgerTag,
     PrefetchHooks Function()>;
@@ -15166,7 +15166,7 @@ typedef $$TransactionTagOverridesTableUpdateCompanionBuilder
 });
 
 class $$TransactionTagOverridesTableFilterComposer
-    extends Composer<_$BeeDatabase, $TransactionTagOverridesTable> {
+    extends Composer<_$PiggyDatabase, $TransactionTagOverridesTable> {
   $$TransactionTagOverridesTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -15186,7 +15186,7 @@ class $$TransactionTagOverridesTableFilterComposer
 }
 
 class $$TransactionTagOverridesTableOrderingComposer
-    extends Composer<_$BeeDatabase, $TransactionTagOverridesTable> {
+    extends Composer<_$PiggyDatabase, $TransactionTagOverridesTable> {
   $$TransactionTagOverridesTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -15206,7 +15206,7 @@ class $$TransactionTagOverridesTableOrderingComposer
 }
 
 class $$TransactionTagOverridesTableAnnotationComposer
-    extends Composer<_$BeeDatabase, $TransactionTagOverridesTable> {
+    extends Composer<_$PiggyDatabase, $TransactionTagOverridesTable> {
   $$TransactionTagOverridesTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -15225,7 +15225,7 @@ class $$TransactionTagOverridesTableAnnotationComposer
 }
 
 class $$TransactionTagOverridesTableTableManager extends RootTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $TransactionTagOverridesTable,
     TransactionTagOverride,
     $$TransactionTagOverridesTableFilterComposer,
@@ -15235,13 +15235,13 @@ class $$TransactionTagOverridesTableTableManager extends RootTableManager<
     $$TransactionTagOverridesTableUpdateCompanionBuilder,
     (
       TransactionTagOverride,
-      BaseReferences<_$BeeDatabase, $TransactionTagOverridesTable,
+      BaseReferences<_$PiggyDatabase, $TransactionTagOverridesTable,
           TransactionTagOverride>
     ),
     TransactionTagOverride,
     PrefetchHooks Function()> {
   $$TransactionTagOverridesTableTableManager(
-      _$BeeDatabase db, $TransactionTagOverridesTable table)
+      _$PiggyDatabase db, $TransactionTagOverridesTable table)
       : super(TableManagerState(
           db: db,
           table: table,
@@ -15287,7 +15287,7 @@ class $$TransactionTagOverridesTableTableManager extends RootTableManager<
 
 typedef $$TransactionTagOverridesTableProcessedTableManager
     = ProcessedTableManager<
-        _$BeeDatabase,
+        _$PiggyDatabase,
         $TransactionTagOverridesTable,
         TransactionTagOverride,
         $$TransactionTagOverridesTableFilterComposer,
@@ -15297,7 +15297,7 @@ typedef $$TransactionTagOverridesTableProcessedTableManager
         $$TransactionTagOverridesTableUpdateCompanionBuilder,
         (
           TransactionTagOverride,
-          BaseReferences<_$BeeDatabase, $TransactionTagOverridesTable,
+          BaseReferences<_$PiggyDatabase, $TransactionTagOverridesTable,
               TransactionTagOverride>
         ),
         TransactionTagOverride,
@@ -15340,7 +15340,7 @@ typedef $$SyncPullErrorsTableUpdateCompanionBuilder = SyncPullErrorsCompanion
 });
 
 class $$SyncPullErrorsTableFilterComposer
-    extends Composer<_$BeeDatabase, $SyncPullErrorsTable> {
+    extends Composer<_$PiggyDatabase, $SyncPullErrorsTable> {
   $$SyncPullErrorsTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -15396,7 +15396,7 @@ class $$SyncPullErrorsTableFilterComposer
 }
 
 class $$SyncPullErrorsTableOrderingComposer
-    extends Composer<_$BeeDatabase, $SyncPullErrorsTable> {
+    extends Composer<_$PiggyDatabase, $SyncPullErrorsTable> {
   $$SyncPullErrorsTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -15457,7 +15457,7 @@ class $$SyncPullErrorsTableOrderingComposer
 }
 
 class $$SyncPullErrorsTableAnnotationComposer
-    extends Composer<_$BeeDatabase, $SyncPullErrorsTable> {
+    extends Composer<_$PiggyDatabase, $SyncPullErrorsTable> {
   $$SyncPullErrorsTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -15512,7 +15512,7 @@ class $$SyncPullErrorsTableAnnotationComposer
 }
 
 class $$SyncPullErrorsTableTableManager extends RootTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $SyncPullErrorsTable,
     SyncPullError,
     $$SyncPullErrorsTableFilterComposer,
@@ -15522,12 +15522,12 @@ class $$SyncPullErrorsTableTableManager extends RootTableManager<
     $$SyncPullErrorsTableUpdateCompanionBuilder,
     (
       SyncPullError,
-      BaseReferences<_$BeeDatabase, $SyncPullErrorsTable, SyncPullError>
+      BaseReferences<_$PiggyDatabase, $SyncPullErrorsTable, SyncPullError>
     ),
     SyncPullError,
     PrefetchHooks Function()> {
   $$SyncPullErrorsTableTableManager(
-      _$BeeDatabase db, $SyncPullErrorsTable table)
+      _$PiggyDatabase db, $SyncPullErrorsTable table)
       : super(TableManagerState(
           db: db,
           table: table,
@@ -15613,7 +15613,7 @@ class $$SyncPullErrorsTableTableManager extends RootTableManager<
 }
 
 typedef $$SyncPullErrorsTableProcessedTableManager = ProcessedTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $SyncPullErrorsTable,
     SyncPullError,
     $$SyncPullErrorsTableFilterComposer,
@@ -15623,7 +15623,7 @@ typedef $$SyncPullErrorsTableProcessedTableManager = ProcessedTableManager<
     $$SyncPullErrorsTableUpdateCompanionBuilder,
     (
       SyncPullError,
-      BaseReferences<_$BeeDatabase, $SyncPullErrorsTable, SyncPullError>
+      BaseReferences<_$PiggyDatabase, $SyncPullErrorsTable, SyncPullError>
     ),
     SyncPullError,
     PrefetchHooks Function()>;
@@ -15649,7 +15649,7 @@ typedef $$ExchangeRatesTableUpdateCompanionBuilder = ExchangeRatesCompanion
 });
 
 class $$ExchangeRatesTableFilterComposer
-    extends Composer<_$BeeDatabase, $ExchangeRatesTable> {
+    extends Composer<_$PiggyDatabase, $ExchangeRatesTable> {
   $$ExchangeRatesTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -15677,7 +15677,7 @@ class $$ExchangeRatesTableFilterComposer
 }
 
 class $$ExchangeRatesTableOrderingComposer
-    extends Composer<_$BeeDatabase, $ExchangeRatesTable> {
+    extends Composer<_$PiggyDatabase, $ExchangeRatesTable> {
   $$ExchangeRatesTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -15707,7 +15707,7 @@ class $$ExchangeRatesTableOrderingComposer
 }
 
 class $$ExchangeRatesTableAnnotationComposer
-    extends Composer<_$BeeDatabase, $ExchangeRatesTable> {
+    extends Composer<_$PiggyDatabase, $ExchangeRatesTable> {
   $$ExchangeRatesTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -15735,7 +15735,7 @@ class $$ExchangeRatesTableAnnotationComposer
 }
 
 class $$ExchangeRatesTableTableManager extends RootTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $ExchangeRatesTable,
     ExchangeRate,
     $$ExchangeRatesTableFilterComposer,
@@ -15745,11 +15745,11 @@ class $$ExchangeRatesTableTableManager extends RootTableManager<
     $$ExchangeRatesTableUpdateCompanionBuilder,
     (
       ExchangeRate,
-      BaseReferences<_$BeeDatabase, $ExchangeRatesTable, ExchangeRate>
+      BaseReferences<_$PiggyDatabase, $ExchangeRatesTable, ExchangeRate>
     ),
     ExchangeRate,
     PrefetchHooks Function()> {
-  $$ExchangeRatesTableTableManager(_$BeeDatabase db, $ExchangeRatesTable table)
+  $$ExchangeRatesTableTableManager(_$PiggyDatabase db, $ExchangeRatesTable table)
       : super(TableManagerState(
           db: db,
           table: table,
@@ -15803,7 +15803,7 @@ class $$ExchangeRatesTableTableManager extends RootTableManager<
 }
 
 typedef $$ExchangeRatesTableProcessedTableManager = ProcessedTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $ExchangeRatesTable,
     ExchangeRate,
     $$ExchangeRatesTableFilterComposer,
@@ -15813,7 +15813,7 @@ typedef $$ExchangeRatesTableProcessedTableManager = ProcessedTableManager<
     $$ExchangeRatesTableUpdateCompanionBuilder,
     (
       ExchangeRate,
-      BaseReferences<_$BeeDatabase, $ExchangeRatesTable, ExchangeRate>
+      BaseReferences<_$PiggyDatabase, $ExchangeRatesTable, ExchangeRate>
     ),
     ExchangeRate,
     PrefetchHooks Function()>;
@@ -15837,7 +15837,7 @@ typedef $$ExchangeRateOverridesTableUpdateCompanionBuilder
 });
 
 class $$ExchangeRateOverridesTableFilterComposer
-    extends Composer<_$BeeDatabase, $ExchangeRateOverridesTable> {
+    extends Composer<_$PiggyDatabase, $ExchangeRateOverridesTable> {
   $$ExchangeRateOverridesTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -15865,7 +15865,7 @@ class $$ExchangeRateOverridesTableFilterComposer
 }
 
 class $$ExchangeRateOverridesTableOrderingComposer
-    extends Composer<_$BeeDatabase, $ExchangeRateOverridesTable> {
+    extends Composer<_$PiggyDatabase, $ExchangeRateOverridesTable> {
   $$ExchangeRateOverridesTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -15895,7 +15895,7 @@ class $$ExchangeRateOverridesTableOrderingComposer
 }
 
 class $$ExchangeRateOverridesTableAnnotationComposer
-    extends Composer<_$BeeDatabase, $ExchangeRateOverridesTable> {
+    extends Composer<_$PiggyDatabase, $ExchangeRateOverridesTable> {
   $$ExchangeRateOverridesTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -15923,7 +15923,7 @@ class $$ExchangeRateOverridesTableAnnotationComposer
 }
 
 class $$ExchangeRateOverridesTableTableManager extends RootTableManager<
-    _$BeeDatabase,
+    _$PiggyDatabase,
     $ExchangeRateOverridesTable,
     ExchangeRateOverride,
     $$ExchangeRateOverridesTableFilterComposer,
@@ -15933,13 +15933,13 @@ class $$ExchangeRateOverridesTableTableManager extends RootTableManager<
     $$ExchangeRateOverridesTableUpdateCompanionBuilder,
     (
       ExchangeRateOverride,
-      BaseReferences<_$BeeDatabase, $ExchangeRateOverridesTable,
+      BaseReferences<_$PiggyDatabase, $ExchangeRateOverridesTable,
           ExchangeRateOverride>
     ),
     ExchangeRateOverride,
     PrefetchHooks Function()> {
   $$ExchangeRateOverridesTableTableManager(
-      _$BeeDatabase db, $ExchangeRateOverridesTable table)
+      _$PiggyDatabase db, $ExchangeRateOverridesTable table)
       : super(TableManagerState(
           db: db,
           table: table,
@@ -15993,7 +15993,7 @@ class $$ExchangeRateOverridesTableTableManager extends RootTableManager<
 
 typedef $$ExchangeRateOverridesTableProcessedTableManager
     = ProcessedTableManager<
-        _$BeeDatabase,
+        _$PiggyDatabase,
         $ExchangeRateOverridesTable,
         ExchangeRateOverride,
         $$ExchangeRateOverridesTableFilterComposer,
@@ -16003,15 +16003,15 @@ typedef $$ExchangeRateOverridesTableProcessedTableManager
         $$ExchangeRateOverridesTableUpdateCompanionBuilder,
         (
           ExchangeRateOverride,
-          BaseReferences<_$BeeDatabase, $ExchangeRateOverridesTable,
+          BaseReferences<_$PiggyDatabase, $ExchangeRateOverridesTable,
               ExchangeRateOverride>
         ),
         ExchangeRateOverride,
         PrefetchHooks Function()>;
 
-class $BeeDatabaseManager {
-  final _$BeeDatabase _db;
-  $BeeDatabaseManager(this._db);
+class $PiggyDatabaseManager {
+  final _$PiggyDatabase _db;
+  $PiggyDatabaseManager(this._db);
   $$LedgersTableTableManager get ledgers =>
       $$LedgersTableTableManager(_db, _db.ledgers);
   $$AccountsTableTableManager get accounts =>

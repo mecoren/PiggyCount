@@ -16,7 +16,7 @@ import '../../../services/system/logger_service.dart';
 /// 本地交易Repository实现
 /// 基于 Drift 数据库实现
 class LocalTransactionRepository implements TransactionRepository {
-  final BeeDatabase db;
+  final PiggyDatabase db;
 
   LocalTransactionRepository(this.db);
 

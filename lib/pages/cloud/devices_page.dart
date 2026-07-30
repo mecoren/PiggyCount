@@ -25,8 +25,8 @@ class _DevicesPageState extends ConsumerState<DevicesPage> {
   bool _showAllSessions = false;
   String? _currentDeviceId;
   String? _currentDeviceFingerprint;
-  List<BeeCountCloudDevice> _devices = const [];
-  List<BeeCountCloudDevice> _allSessions = const [];
+  List<PiggyCountCloudDevice> _devices = const [];
+  List<PiggyCountCloudDevice> _allSessions = const [];
 
   String _formatDateTime(DateTime? value) {
     if (value == null) {
@@ -40,13 +40,13 @@ class _DevicesPageState extends ConsumerState<DevicesPage> {
     return lower.contains('insufficient scope');
   }
 
-  int _recentScore(BeeCountCloudDevice device) {
+  int _recentScore(PiggyCountCloudDevice device) {
     return device.lastSeenAt?.millisecondsSinceEpoch ??
         device.createdAt?.millisecondsSinceEpoch ??
         0;
   }
 
-  String _fingerprint(BeeCountCloudDevice device) {
+  String _fingerprint(PiggyCountCloudDevice device) {
     String normalize(String? value) {
       final out = (value ?? '').trim().toLowerCase();
       return out.isEmpty ? '__empty__' : out;
@@ -61,13 +61,13 @@ class _DevicesPageState extends ConsumerState<DevicesPage> {
     ].join('|');
   }
 
-  List<BeeCountCloudDevice> _sorted(List<BeeCountCloudDevice> devices) {
+  List<PiggyCountCloudDevice> _sorted(List<PiggyCountCloudDevice> devices) {
     final out = devices.toList(growable: false);
     out.sort((a, b) => _recentScore(b).compareTo(_recentScore(a)));
     return out;
   }
 
-  List<String> _targetSessionIds(BeeCountCloudDevice device) {
+  List<String> _targetSessionIds(PiggyCountCloudDevice device) {
     if (_showAllSessions) {
       return [device.id];
     }
@@ -80,19 +80,19 @@ class _DevicesPageState extends ConsumerState<DevicesPage> {
         .toList(growable: false);
   }
 
-  /// 获取 BeeCountCloudProvider 实例（仅 beecountCloud 后端可用）
-  Future<BeeCountCloudProvider> _getCloudProvider() async {
+  /// 获取 PiggyCountCloudProvider 实例（仅 beecountCloud 后端可用）
+  Future<PiggyCountCloudProvider> _getCloudProvider() async {
     final config = await ref.read(activeCloudConfigProvider.future);
     if (!config.valid || config.type != CloudBackendType.beecountCloud) {
       throw StateError(
           AppLocalizations.of(context).cloudCollabUnavailableMessage);
     }
     final services = await createCloudServices(config);
-    if (services.provider == null || services.provider is! BeeCountCloudProvider) {
+    if (services.provider == null || services.provider is! PiggyCountCloudProvider) {
       throw StateError(
           AppLocalizations.of(context).cloudCollabUnavailableMessage);
     }
-    return services.provider as BeeCountCloudProvider;
+    return services.provider as PiggyCountCloudProvider;
   }
 
   Future<void> _reload({bool keepLoadingState = true}) async {
@@ -145,7 +145,7 @@ class _DevicesPageState extends ConsumerState<DevicesPage> {
     }
   }
 
-  Future<void> _revokeDevice(BeeCountCloudDevice device) async {
+  Future<void> _revokeDevice(PiggyCountCloudDevice device) async {
     final l10n = AppLocalizations.of(context);
     final targetIds = _targetSessionIds(device)
         .where((id) => id != _currentDeviceId && id.trim().isNotEmpty)
@@ -204,7 +204,7 @@ class _DevicesPageState extends ConsumerState<DevicesPage> {
     final rows = _devices;
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           PrimaryHeader(
@@ -238,7 +238,7 @@ class _DevicesPageState extends ConsumerState<DevicesPage> {
                                   l10n.cloudCollabScopeDeniedAction,
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
-                                    color: BeeTokens.textSecondary(context),
+                                    color: PiggyTokens.textSecondary(context),
                                   ),
                                 ),
                               ],
@@ -251,7 +251,7 @@ class _DevicesPageState extends ConsumerState<DevicesPage> {
                             child: Text(
                               l10n.cloudCollabNoDevices,
                               style: TextStyle(
-                                  color: BeeTokens.textSecondary(context)),
+                                  color: PiggyTokens.textSecondary(context)),
                             ),
                           )
                         : Column(
@@ -267,7 +267,7 @@ class _DevicesPageState extends ConsumerState<DevicesPage> {
                                     subtitle: Text(
                                       l10n.cloudCollabDevicesViewModeHint,
                                       style: TextStyle(
-                                        color: BeeTokens.textSecondary(context),
+                                        color: PiggyTokens.textSecondary(context),
                                       ),
                                     ),
                                     value: _showAllSessions,
@@ -342,7 +342,7 @@ class _DevicesPageState extends ConsumerState<DevicesPage> {
                                               ? Icons.smartphone
                                               : Icons.devices_outlined,
                                           color:
-                                              BeeTokens.iconSecondary(context),
+                                              PiggyTokens.iconSecondary(context),
                                         ),
                                         title: Text(
                                           device.name.trim().isEmpty

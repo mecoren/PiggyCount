@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:beecount/services/export/config_export_service.dart';
+import 'package:piggycount/services/export/config_export_service.dart';
 
 void main() {
   group('AppSettingsConfig note_display_mode 往返', () {

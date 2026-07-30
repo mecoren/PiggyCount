@@ -80,7 +80,7 @@ class AppConfig {
   final SupabaseConfig? supabase;
   final WebdavConfig? webdav;
   final S3Config? s3;
-  final BeeCountCloudConfig? beecountCloud;
+  final PiggyCountCloudConfig? beecountCloud;
   final AIConfig? ai;
   final AppSettingsConfig? appSettings;
   final LedgersConfig? ledgers;
@@ -174,7 +174,7 @@ class AppConfig {
               Map<String, dynamic>.from(yaml['s3'] as Map))
           : null,
       beecountCloud: yaml.containsKey('beecount_cloud')
-          ? BeeCountCloudConfig.fromMap(
+          ? PiggyCountCloudConfig.fromMap(
               Map<String, dynamic>.from(yaml['beecount_cloud'] as Map))
           : null,
       ai: yaml.containsKey('ai')
@@ -261,7 +261,7 @@ class SupabaseConfig {
 ///
 /// 安全：accessToken / refreshToken 是登录态，导出的 yaml 文件要当作密钥级别
 /// 保管。导出 UI 应默认不带 token，只有显式勾选"包含登录态"才会写进来。
-class BeeCountCloudConfig {
+class PiggyCountCloudConfig {
   final String baseUrl;
   final String? email;
   final String? password;
@@ -269,7 +269,7 @@ class BeeCountCloudConfig {
   final String? refreshToken;
   final String? deviceId;
 
-  const BeeCountCloudConfig({
+  const PiggyCountCloudConfig({
     required this.baseUrl,
     this.email,
     this.password,
@@ -294,8 +294,8 @@ class BeeCountCloudConfig {
     return map;
   }
 
-  static BeeCountCloudConfig fromMap(Map<String, dynamic> map) =>
-      BeeCountCloudConfig(
+  static PiggyCountCloudConfig fromMap(Map<String, dynamic> map) =>
+      PiggyCountCloudConfig(
         baseUrl: map['base_url'] as String,
         email: map['email'] as String?,
         password: map['password'] as String?,
@@ -1308,14 +1308,14 @@ class ConfigExportService {
     // 快速填回登录表单）；access/refresh token 属于登录态，需 options 显式
     // 勾选才带上。当前实现：cloud_beecount_cloud_cfg 里只存 base_url+email，
     // session token 另一把 SharedPreferences key 管 —— 导出 yaml 只取前者。
-    BeeCountCloudConfig? beecountCloudConfig;
+    PiggyCountCloudConfig? beecountCloudConfig;
     final beecountCfgRaw = prefs.getString('cloud_beecount_cloud_cfg');
     if (beecountCfgRaw != null) {
       try {
         final cfg = decodeCloudConfig(beecountCfgRaw);
         final baseUrl = cfg.beecountCloudBaseUrl ?? '';
         if (baseUrl.isNotEmpty) {
-          beecountCloudConfig = BeeCountCloudConfig(
+          beecountCloudConfig = PiggyCountCloudConfig(
             baseUrl: baseUrl,
             email: cfg.beecountCloudEmail,
             // 跟 Supabase 一样：如果用户在 mobile 勾过 "记住账号密码"，
@@ -2270,7 +2270,7 @@ class ConfigExportService {
     if (options.appSettings && config.beecountCloud != null) {
       final bcCfg = CloudServiceConfig(
         type: CloudBackendType.beecountCloud,
-        name: 'BeeCount Cloud',
+        name: 'PiggyCount Cloud',
         beecountCloudBaseUrl: config.beecountCloud!.baseUrl,
         beecountCloudEmail: config.beecountCloud!.email,
         beecountCloudPassword: config.beecountCloud!.password,

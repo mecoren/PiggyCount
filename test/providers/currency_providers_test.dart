@@ -9,9 +9,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:beecount/data/db.dart' show Ledger;
-import 'package:beecount/providers/currency_providers.dart';
-import 'package:beecount/providers/database_providers.dart';
+import 'package:piggycount/data/db.dart' show Ledger;
+import 'package:piggycount/providers/currency_providers.dart';
+import 'package:piggycount/providers/database_providers.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

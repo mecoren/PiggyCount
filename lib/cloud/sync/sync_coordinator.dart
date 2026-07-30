@@ -25,7 +25,7 @@ import 'sync_engine.dart';
 /// 仅在 BeeCount Cloud (SyncEngine) 模式下启用。本地 only / 旧 provider
 /// (S3 / WebDAV) 走的是 snapshot 同步,不读 local_changes 表,这里没意义。
 class SyncCoordinator {
-  final BeeDatabase db;
+  final PiggyDatabase db;
   final SyncEngine engine;
 
   StreamSubscription<List<LocalChange>>? _subscription;

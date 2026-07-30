@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:beecount/utils/website_urls.dart';
+import 'package:piggycount/utils/website_urls.dart';
 
 /// WebsiteUrls.docsCloudSyncEmbed 单测 —— 登录页「注册指引」按后端跳转时,
 /// 用内嵌(embed)模式打开云同步文档所需的 URL 拼接。

@@ -272,7 +272,7 @@ class _CategorySelectorState extends ConsumerState<CategorySelector> {
                       ),
                     );
                   },
-                  borderRadius: BorderRadius.circular(BeeDimens.radius3xl),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radius3xl),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Row(
@@ -358,12 +358,12 @@ class _SubcategorySelectorCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final primaryColor = Theme.of(context).colorScheme.primary;
-    final isDark = BeeTokens.isDark(context);
+    final isDark = PiggyTokens.isDark(context);
 
     return Container(
       decoration: BoxDecoration(
-        color: BeeTokens.surfacePopoverCard(context),
-        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+        color: PiggyTokens.surfacePopoverCard(context),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         boxShadow: isDark
             ? null
             : [
@@ -374,7 +374,7 @@ class _SubcategorySelectorCard extends ConsumerWidget {
                   offset: const Offset(0, 2),
                 ),
               ],
-        border: isDark ? Border.all(color: BeeTokens.border(context)) : null,
+        border: isDark ? Border.all(color: PiggyTokens.border(context)) : null,
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -457,14 +457,14 @@ class _CategoryItem extends StatelessWidget {
                   color: selected
                       ? primaryColor.withValues(alpha: 0.25)
                       : isSubCategory
-                          ? BeeTokens.surfaceCategoryIconLight(context)
-                          : BeeTokens.surfaceCategoryIcon(context),
+                          ? PiggyTokens.surfaceCategoryIconLight(context)
+                          : PiggyTokens.surfaceCategoryIcon(context),
                   shape: BoxShape.circle,
                 ),
                 child: _buildIcon(
                   context,
                   isSubCategory ? 20 : 24,
-                  selected ? primaryColor : BeeTokens.iconCategory(context),
+                  selected ? primaryColor : PiggyTokens.iconCategory(context),
                 ),
               ),
               // 有子分类时在图标右下角显示三个点（完全分开，不重叠）
@@ -478,10 +478,10 @@ class _CategoryItem extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: selected
                           ? primaryColor.withValues(alpha: 0.25)
-                          : BeeTokens.surfaceCategoryIcon(context),
+                          : PiggyTokens.surfaceCategoryIcon(context),
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: BeeTokens.surface(context),
+                        color: PiggyTokens.surface(context),
                         width: 2,
                       ),
                     ),
@@ -491,7 +491,7 @@ class _CategoryItem extends StatelessWidget {
                         size: 14,
                         color: selected
                             ? primaryColor
-                            : BeeTokens.iconCategory(context),
+                            : PiggyTokens.iconCategory(context),
                       ),
                     ),
                   ),
@@ -506,8 +506,8 @@ class _CategoryItem extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: fontSize,
                   color: isSubCategory
-                      ? BeeTokens.textSecondary(context)
-                      : BeeTokens.textPrimary(context),
+                      ? PiggyTokens.textSecondary(context)
+                      : PiggyTokens.textPrimary(context),
                 ),
           ),
         ],

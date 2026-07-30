@@ -20,9 +20,9 @@ import '../utils/path_helper.dart';
 // ============================================================================
 // 设计要点:
 // - 启用 / 管理 UI 只在 Web 端;App 仅承担"登录时若 server 要 2FA → 弹出输码视图"
-// - 两处登录入口(cloud_service_page 配置确认 / beecount_cloud_sync_page 重新登录)
+// - 两处登录入口(cloud_service_page 配置确认 / piggycount_cloud_sync_page 重新登录)
 //   不感知 2FA — 只 await `signInWithEmail()`,2FA 流程被封装在 service 内部
-// - service 通过 `BeeCountCloudProvider.globalTwoFactorHandler` 拿到回调,
+// - service 通过 `PiggyCountCloudProvider.globalTwoFactorHandler` 拿到回调,
 //   handler 由 App 在启动时注册(典型实现:用全局 navigator key push 一个
 //   `Login2FAChallengeView`,等用户输完码后 resolve)
 
@@ -69,16 +69,16 @@ class TwoFactorCancelledException implements Exception {
   String toString() => 'TwoFactorCancelledException: $message';
 }
 
-class BeeCountCloudProvider implements CloudProvider {
+class PiggyCountCloudProvider implements CloudProvider {
   /// 在 App 启动时设置一次。auth service 处理 signInWithEmail 时,server
   /// 若返回 requires_2fa=true,会调这个 handler 让 App 弹输码 UI。
   /// 不设置 = 老 App / 服务端未启 2FA 行为不变;若 server 要求 2FA 而 App
   /// 没注册 handler,signInWithEmail 会抛 [CloudAuthException]。
   static TwoFactorChallengeHandler? globalTwoFactorHandler;
 
-  BeeCountCloudAuthService? _auth;
-  BeeCountCloudStorageService? _storage;
-  BeeCountCloudRealtimeClient? _realtime;
+  PiggyCountCloudAuthService? _auth;
+  PiggyCountCloudStorageService? _storage;
+  PiggyCountCloudRealtimeClient? _realtime;
 
   @override
   String get providerId => 'beecount_cloud';
@@ -122,21 +122,21 @@ class BeeCountCloudProvider implements CloudProvider {
     final baseUrl = rawBaseUrl.replaceFirst(RegExp(r'/$'), '');
     final apiPrefix = _normalizeApiPrefix(rawApiPrefix ?? '/api/v1');
 
-    final authService = BeeCountCloudAuthService(
+    final authService = PiggyCountCloudAuthService(
       baseUrl: baseUrl,
       apiPrefix: apiPrefix,
-      twoFactorHandler: BeeCountCloudProvider.globalTwoFactorHandler,
+      twoFactorHandler: PiggyCountCloudProvider.globalTwoFactorHandler,
     );
     await authService.initialize();
 
     _auth = authService;
-    final storage = BeeCountCloudStorageService(
+    final storage = PiggyCountCloudStorageService(
       baseUrl: baseUrl,
       apiPrefix: apiPrefix,
       auth: authService,
     );
     _storage = storage;
-    _realtime = BeeCountCloudRealtimeClient(
+    _realtime = PiggyCountCloudRealtimeClient(
       baseUrl: baseUrl,
       auth: authService,
     );
@@ -166,7 +166,7 @@ class BeeCountCloudProvider implements CloudProvider {
     _auth = null;
   }
 
-  Stream<BeeCountCloudRealtimeEvent> get realtimeEvents {
+  Stream<PiggyCountCloudRealtimeEvent> get realtimeEvents {
     final realtime = _realtime;
     if (realtime == null) {
       return const Stream.empty();
@@ -187,7 +187,7 @@ class BeeCountCloudProvider implements CloudProvider {
     await _realtime?.stop();
   }
 
-  Future<BeeCountCloudProfile> getMyProfile() async {
+  Future<PiggyCountCloudProfile> getMyProfile() async {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
@@ -196,7 +196,7 @@ class BeeCountCloudProvider implements CloudProvider {
     return storage.getMyProfile();
   }
 
-  /// 转发到 BeeCountCloudAuthService.getTwoFactorStatus,云同步页用它展示状态行。
+  /// 转发到 PiggyCountCloudAuthService.getTwoFactorStatus,云同步页用它展示状态行。
   Future<TwoFactorStatus> getTwoFactorStatus() async {
     final auth = _auth;
     if (auth == null) {
@@ -206,7 +206,7 @@ class BeeCountCloudProvider implements CloudProvider {
     return auth.getTwoFactorStatus();
   }
 
-  Future<BeeCountCloudProfile> updateMyProfileDisplayName({
+  Future<PiggyCountCloudProfile> updateMyProfileDisplayName({
     required String displayName,
   }) async {
     final storage = _storage;
@@ -219,7 +219,7 @@ class BeeCountCloudProvider implements CloudProvider {
 
   /// 更新主币种(ISO code,如 `CNY`)。单向 mobile → server → web,多币种 MVP
   /// user-level 字段。
-  Future<BeeCountCloudProfile> updateMyProfileBaseCurrency({
+  Future<PiggyCountCloudProfile> updateMyProfileBaseCurrency({
     required String primaryCurrency,
   }) async {
     final storage = _storage;
@@ -243,7 +243,7 @@ class BeeCountCloudProvider implements CloudProvider {
     return storage.fetchExchangeRates(base: base);
   }
 
-  Future<BeeCountCloudAvatarUploadResult> uploadMyAvatar({
+  Future<PiggyCountCloudAvatarUploadResult> uploadMyAvatar({
     required Uint8List bytes,
     required String fileName,
     String? mimeType,
@@ -262,7 +262,7 @@ class BeeCountCloudProvider implements CloudProvider {
 
   /// 更新收支颜色方案偏好，对齐 mobile `incomeExpenseColorSchemeProvider`。
   /// 把 bool 推给 `/profile/me` PATCH，server 端 broadcast 后 web 也会实时切换。
-  Future<BeeCountCloudProfile> updateMyProfileIncomeColorScheme({
+  Future<PiggyCountCloudProfile> updateMyProfileIncomeColorScheme({
     required bool incomeIsRed,
   }) async {
     final storage = _storage;
@@ -277,7 +277,7 @@ class BeeCountCloudProvider implements CloudProvider {
 
   /// 更新主题色。hex 形如 `#F59E0B`。单向 mobile → server → web，web 本地改
   /// 色不回推；这个 API 只给 mobile 用。
-  Future<BeeCountCloudProfile> updateMyProfileThemeColor({
+  Future<PiggyCountCloudProfile> updateMyProfileThemeColor({
     required String hex,
   }) async {
     final storage = _storage;
@@ -290,7 +290,7 @@ class BeeCountCloudProvider implements CloudProvider {
 
   /// 更新外观类设置(JSON 形式),当前包括 header_decoration_style /
   /// compact_amount / show_transaction_time。字体缩放不进来。
-  Future<BeeCountCloudProfile> updateMyProfileAppearance({
+  Future<PiggyCountCloudProfile> updateMyProfileAppearance({
     required Map<String, dynamic> appearance,
   }) async {
     final storage = _storage;
@@ -303,7 +303,7 @@ class BeeCountCloudProvider implements CloudProvider {
 
   /// 更新 AI 配置(providers / binding / custom_prompt / strategy 等)。
   /// 注意:API key 属于敏感字段,这条 API 只在用户自己的 session 走。
-  Future<BeeCountCloudProfile> updateMyProfileAiConfig({
+  Future<PiggyCountCloudProfile> updateMyProfileAiConfig({
     required Map<String, dynamic> aiConfig,
   }) async {
     final storage = _storage;
@@ -337,7 +337,7 @@ class BeeCountCloudProvider implements CloudProvider {
   /// 但**不**持久化到 SharedPreferences,由 caller 自己在 apply 成功后决定何时
   /// 推进。这是为了避免"cursor 已推进但本地 apply 失败"导致这一页 change 永远
   /// 拉不回的经典 bug,详见 BeeCount 项目 `.docs/full-pull-refactor/`。
-  Future<BeeCountCloudPullResult> pullChanges({
+  Future<PiggyCountCloudPullResult> pullChanges({
     int? since,
     int limit = 1000,
     bool persistCursor = true,
@@ -366,7 +366,7 @@ class BeeCountCloudProvider implements CloudProvider {
     return storage.pushEntityChanges(changes: changes);
   }
 
-  Future<Map<String, BeeCountCloudAttachmentExistsItem>> attachmentBatchExists({
+  Future<Map<String, PiggyCountCloudAttachmentExistsItem>> attachmentBatchExists({
     required String ledgerId,
     required List<String> sha256List,
   }) async {
@@ -381,7 +381,7 @@ class BeeCountCloudProvider implements CloudProvider {
     );
   }
 
-  Future<BeeCountCloudAttachmentUploadResult> uploadAttachment({
+  Future<PiggyCountCloudAttachmentUploadResult> uploadAttachment({
     required String ledgerId,
     required Uint8List bytes,
     required String fileName,
@@ -401,7 +401,7 @@ class BeeCountCloudProvider implements CloudProvider {
   }
 
   /// 上传分类自定义图标 — user-global,不绑 ledger。
-  Future<BeeCountCloudAttachmentUploadResult> uploadCategoryIcon({
+  Future<PiggyCountCloudAttachmentUploadResult> uploadCategoryIcon({
     required Uint8List bytes,
     required String fileName,
     String? mimeType,
@@ -427,7 +427,7 @@ class BeeCountCloudProvider implements CloudProvider {
     return storage.downloadAttachment(fileId: fileId);
   }
 
-  Future<List<BeeCountCloudDevice>> listDevices({
+  Future<List<PiggyCountCloudDevice>> listDevices({
     String view = 'deduped',
     int activeWithinDays = 30,
   }) async {
@@ -451,7 +451,7 @@ class BeeCountCloudProvider implements CloudProvider {
     return storage.revokeDevice(deviceId: deviceId);
   }
 
-  Future<List<BeeCountCloudReadLedger>> readLedgers() async {
+  Future<List<PiggyCountCloudReadLedger>> readLedgers() async {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
@@ -460,7 +460,7 @@ class BeeCountCloudProvider implements CloudProvider {
     return storage.readLedgers();
   }
 
-  Future<BeeCountCloudReadLedgerDetail> readLedgerDetail({
+  Future<PiggyCountCloudReadLedgerDetail> readLedgerDetail({
     required String ledgerId,
   }) async {
     final storage = _storage;
@@ -471,7 +471,7 @@ class BeeCountCloudProvider implements CloudProvider {
     return storage.readLedgerDetail(ledgerId: ledgerId);
   }
 
-  Future<BeeCountCloudLedgerStats> readLedgerStats({
+  Future<PiggyCountCloudLedgerStats> readLedgerStats({
     required String ledgerId,
   }) async {
     final storage = _storage;
@@ -484,7 +484,7 @@ class BeeCountCloudProvider implements CloudProvider {
 
   /// 拉 server 版本号(公开端点,不需要 token)。用在设置页展示
   /// "BeeCount Cloud vX.Y.Z"。失败抛,调用方自己 swallow。
-  Future<BeeCountCloudServerVersion> fetchServerVersion() async {
+  Future<PiggyCountCloudServerVersion> fetchServerVersion() async {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException(
@@ -497,7 +497,7 @@ class BeeCountCloudProvider implements CloudProvider {
   // 共享账本(Sprint 2.4):invites + members + shared-resources
   // ===========================================================================
 
-  Future<BeeCountCloudInvite> createInvite({
+  Future<PiggyCountCloudInvite> createInvite({
     required String ledgerId,
     String role = 'editor',
     int expiresInHours = 24,
@@ -512,7 +512,7 @@ class BeeCountCloudProvider implements CloudProvider {
     );
   }
 
-  Future<List<BeeCountCloudInvite>> listInvites({required String ledgerId}) async {
+  Future<List<PiggyCountCloudInvite>> listInvites({required String ledgerId}) async {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException('BeeCount Cloud storage is not initialized.');
@@ -528,7 +528,7 @@ class BeeCountCloudProvider implements CloudProvider {
     return storage.revokeInvite(ledgerId: ledgerId, code: code);
   }
 
-  Future<BeeCountCloudInvitePreview> previewInvite({required String code}) async {
+  Future<PiggyCountCloudInvitePreview> previewInvite({required String code}) async {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException('BeeCount Cloud storage is not initialized.');
@@ -536,7 +536,7 @@ class BeeCountCloudProvider implements CloudProvider {
     return storage.previewInvite(code: code);
   }
 
-  Future<BeeCountCloudInviteAcceptResult> acceptInvite({required String code}) async {
+  Future<PiggyCountCloudInviteAcceptResult> acceptInvite({required String code}) async {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException('BeeCount Cloud storage is not initialized.');
@@ -544,7 +544,7 @@ class BeeCountCloudProvider implements CloudProvider {
     return storage.acceptInvite(code: code);
   }
 
-  Future<List<BeeCountCloudLedgerMember>> listMembers({required String ledgerId}) async {
+  Future<List<PiggyCountCloudLedgerMember>> listMembers({required String ledgerId}) async {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException('BeeCount Cloud storage is not initialized.');
@@ -552,7 +552,7 @@ class BeeCountCloudProvider implements CloudProvider {
     return storage.listMembers(ledgerId: ledgerId);
   }
 
-  Future<BeeCountCloudLedgerMember> updateMemberRole({
+  Future<PiggyCountCloudLedgerMember> updateMemberRole({
     required String ledgerId,
     required String userId,
     required String role,
@@ -572,7 +572,7 @@ class BeeCountCloudProvider implements CloudProvider {
     return storage.removeMember(ledgerId: ledgerId, userId: userId);
   }
 
-  Future<BeeCountCloudSharedResources> fetchSharedResources({required String ledgerId}) async {
+  Future<PiggyCountCloudSharedResources> fetchSharedResources({required String ledgerId}) async {
     final storage = _storage;
     if (storage == null) {
       throw CloudConfigurationException('BeeCount Cloud storage is not initialized.');
@@ -580,7 +580,7 @@ class BeeCountCloudProvider implements CloudProvider {
     return storage.fetchSharedResources(ledgerId: ledgerId);
   }
 
-  Future<BeeCountCloudMemberStats> fetchMemberStats({
+  Future<PiggyCountCloudMemberStats> fetchMemberStats({
     required String ledgerId,
     String scope = 'month',
     String? period,
@@ -598,7 +598,7 @@ class BeeCountCloudProvider implements CloudProvider {
     );
   }
 
-  Future<List<BeeCountCloudReadTransaction>> readTransactions({
+  Future<List<PiggyCountCloudReadTransaction>> readTransactions({
     required String ledgerId,
     String? txType,
     String? query,
@@ -623,7 +623,7 @@ class BeeCountCloudProvider implements CloudProvider {
     );
   }
 
-  Future<List<BeeCountCloudReadAccount>> readAccounts({
+  Future<List<PiggyCountCloudReadAccount>> readAccounts({
     required String ledgerId,
   }) async {
     final storage = _storage;
@@ -634,7 +634,7 @@ class BeeCountCloudProvider implements CloudProvider {
     return storage.readAccounts(ledgerId: ledgerId);
   }
 
-  Future<List<BeeCountCloudReadCategory>> readCategories({
+  Future<List<PiggyCountCloudReadCategory>> readCategories({
     required String ledgerId,
   }) async {
     final storage = _storage;
@@ -645,7 +645,7 @@ class BeeCountCloudProvider implements CloudProvider {
     return storage.readCategories(ledgerId: ledgerId);
   }
 
-  Future<List<BeeCountCloudReadTag>> readTags({
+  Future<List<PiggyCountCloudReadTag>> readTags({
     required String ledgerId,
   }) async {
     final storage = _storage;
@@ -656,7 +656,7 @@ class BeeCountCloudProvider implements CloudProvider {
     return storage.readTags(ledgerId: ledgerId);
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeCreateLedger({
+  Future<PiggyCountCloudWriteCommitMeta> writeCreateLedger({
     String? ledgerId,
     required String ledgerName,
     String currency = 'CNY',
@@ -675,7 +675,7 @@ class BeeCountCloudProvider implements CloudProvider {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeLedgerMeta({
+  Future<PiggyCountCloudWriteCommitMeta> writeLedgerMeta({
     required String ledgerId,
     required int baseChangeId,
     String? ledgerName,
@@ -698,7 +698,7 @@ class BeeCountCloudProvider implements CloudProvider {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeCreateTransaction({
+  Future<PiggyCountCloudWriteCommitMeta> writeCreateTransaction({
     required String ledgerId,
     required int baseChangeId,
     required String txType,
@@ -749,7 +749,7 @@ class BeeCountCloudProvider implements CloudProvider {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeUpdateTransaction({
+  Future<PiggyCountCloudWriteCommitMeta> writeUpdateTransaction({
     required String ledgerId,
     required String txId,
     required int baseChangeId,
@@ -802,7 +802,7 @@ class BeeCountCloudProvider implements CloudProvider {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeDeleteTransaction({
+  Future<PiggyCountCloudWriteCommitMeta> writeDeleteTransaction({
     required String ledgerId,
     required String txId,
     required int baseChangeId,
@@ -823,7 +823,7 @@ class BeeCountCloudProvider implements CloudProvider {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeCreateAccount({
+  Future<PiggyCountCloudWriteCommitMeta> writeCreateAccount({
     required String ledgerId,
     required int baseChangeId,
     required String name,
@@ -850,7 +850,7 @@ class BeeCountCloudProvider implements CloudProvider {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeUpdateAccount({
+  Future<PiggyCountCloudWriteCommitMeta> writeUpdateAccount({
     required String ledgerId,
     required String accountId,
     required int baseChangeId,
@@ -879,7 +879,7 @@ class BeeCountCloudProvider implements CloudProvider {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeDeleteAccount({
+  Future<PiggyCountCloudWriteCommitMeta> writeDeleteAccount({
     required String ledgerId,
     required String accountId,
     required int baseChangeId,
@@ -900,7 +900,7 @@ class BeeCountCloudProvider implements CloudProvider {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeCreateCategory({
+  Future<PiggyCountCloudWriteCommitMeta> writeCreateCategory({
     required String ledgerId,
     required int baseChangeId,
     required String name,
@@ -939,7 +939,7 @@ class BeeCountCloudProvider implements CloudProvider {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeUpdateCategory({
+  Future<PiggyCountCloudWriteCommitMeta> writeUpdateCategory({
     required String ledgerId,
     required String categoryId,
     required int baseChangeId,
@@ -980,7 +980,7 @@ class BeeCountCloudProvider implements CloudProvider {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeDeleteCategory({
+  Future<PiggyCountCloudWriteCommitMeta> writeDeleteCategory({
     required String ledgerId,
     required String categoryId,
     required int baseChangeId,
@@ -1001,7 +1001,7 @@ class BeeCountCloudProvider implements CloudProvider {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeCreateTag({
+  Future<PiggyCountCloudWriteCommitMeta> writeCreateTag({
     required String ledgerId,
     required int baseChangeId,
     required String name,
@@ -1024,7 +1024,7 @@ class BeeCountCloudProvider implements CloudProvider {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeUpdateTag({
+  Future<PiggyCountCloudWriteCommitMeta> writeUpdateTag({
     required String ledgerId,
     required String tagId,
     required int baseChangeId,
@@ -1049,7 +1049,7 @@ class BeeCountCloudProvider implements CloudProvider {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeDeleteTag({
+  Future<PiggyCountCloudWriteCommitMeta> writeDeleteTag({
     required String ledgerId,
     required String tagId,
     required int baseChangeId,
@@ -1113,8 +1113,8 @@ String _joinNonEmpty(List<String?> values) {
       .trim();
 }
 
-class BeeCountCloudAuthService implements CloudAuthService {
-  BeeCountCloudAuthService({
+class PiggyCountCloudAuthService implements CloudAuthService {
+  PiggyCountCloudAuthService({
     required this.baseUrl,
     required this.apiPrefix,
     http.Client? httpClient,
@@ -1130,7 +1130,7 @@ class BeeCountCloudAuthService implements CloudAuthService {
   final StreamController<CloudUser?> _authStateController =
       StreamController<CloudUser?>.broadcast();
 
-  _BeeCountCloudSession? _session;
+  _PiggyCountCloudSession? _session;
   _BeeCountDeviceMetadata? _deviceMetadataCache;
   Future<_BeeCountDeviceMetadata>? _deviceMetadataFuture;
 
@@ -1183,7 +1183,7 @@ class BeeCountCloudAuthService implements CloudAuthService {
 
     try {
       final json = jsonDecode(raw) as Map<String, dynamic>;
-      _session = _BeeCountCloudSession.fromJson(json);
+      _session = _PiggyCountCloudSession.fromJson(json);
       if (_isAccessTokenExpired(_session!)) {
         await _refreshSessionOrClear();
       } else {
@@ -1598,7 +1598,7 @@ class BeeCountCloudAuthService implements CloudAuthService {
     _httpClient.close();
   }
 
-  Future<_BeeCountCloudSession> _authenticate({
+  Future<_PiggyCountCloudSession> _authenticate({
     required String path,
     required Map<String, dynamic> body,
     required String actionName,
@@ -1628,12 +1628,12 @@ class BeeCountCloudAuthService implements CloudAuthService {
       );
     }
 
-    final session = _BeeCountCloudSession.fromAuthResponse(payload);
+    final session = _PiggyCountCloudSession.fromAuthResponse(payload);
     await _saveSession(session);
     return session;
   }
 
-  Future<_BeeCountCloudSession> _handleTwoFactorChallenge({
+  Future<_PiggyCountCloudSession> _handleTwoFactorChallenge({
     required Map<String, dynamic> loginBody,
     required Map<String, dynamic> challengePayload,
   }) async {
@@ -1651,12 +1651,12 @@ class BeeCountCloudAuthService implements CloudAuthService {
     if (handler == null) {
       throw CloudAuthException(
           'Server requires 2FA but no TwoFactorChallengeHandler is registered. '
-          'Set BeeCountCloudProvider.globalTwoFactorHandler at app startup.');
+          'Set PiggyCountCloudProvider.globalTwoFactorHandler at app startup.');
     }
 
     // verify callback:UI 输完码点验证 → 调这个 → 命中就保存 session,
     // 返回 null,UI 关闭;失败返回 server 错误消息,UI 就地展示让用户重试。
-    _BeeCountCloudSession? successSession;
+    _PiggyCountCloudSession? successSession;
 
     Future<String?> verify(String method, String code) async {
       final verifyBody = Map<String, dynamic>.of(loginBody)
@@ -1676,7 +1676,7 @@ class BeeCountCloudAuthService implements CloudAuthService {
         return _extractErrorMessage(verifyResp);
       }
       final verifyPayload = _decodeJsonObject(verifyResp.body);
-      final session = _BeeCountCloudSession.fromAuthResponse(verifyPayload);
+      final session = _PiggyCountCloudSession.fromAuthResponse(verifyPayload);
       await _saveSession(session);
       successSession = session;
       return null;
@@ -1741,11 +1741,11 @@ class BeeCountCloudAuthService implements CloudAuthService {
     }
 
     final payload = _decodeJsonObject(response.body);
-    final refreshed = _BeeCountCloudSession.fromAuthResponse(payload);
+    final refreshed = _PiggyCountCloudSession.fromAuthResponse(payload);
     await _saveSession(refreshed);
   }
 
-  Future<void> _saveSession(_BeeCountCloudSession session) async {
+  Future<void> _saveSession(_PiggyCountCloudSession session) async {
     _session = session;
     // 任何成功登录路径都清掉静默恢复冷却,避免之前的失败状态拖到现在。
     _silentRecoveryCooldownUntil = null;
@@ -1782,7 +1782,7 @@ class BeeCountCloudAuthService implements CloudAuthService {
     _authStateController.add(_toCloudUser(session));
   }
 
-  CloudUser _toCloudUser(_BeeCountCloudSession session) {
+  CloudUser _toCloudUser(_PiggyCountCloudSession session) {
     return CloudUser(
       id: session.userId,
       email: session.email,
@@ -1793,7 +1793,7 @@ class BeeCountCloudAuthService implements CloudAuthService {
     );
   }
 
-  bool _isAccessTokenExpired(_BeeCountCloudSession session) {
+  bool _isAccessTokenExpired(_PiggyCountCloudSession session) {
     final now = DateTime.now().toUtc();
     return now.isAfter(
         session.accessTokenExpiresAt.subtract(const Duration(seconds: 30)));
@@ -1820,8 +1820,8 @@ class BeeCountCloudAuthService implements CloudAuthService {
   }
 }
 
-class BeeCountCloudStorageService implements CloudStorageService {
-  BeeCountCloudStorageService({
+class PiggyCountCloudStorageService implements CloudStorageService {
+  PiggyCountCloudStorageService({
     required this.baseUrl,
     required this.apiPrefix,
     required this.auth,
@@ -1830,7 +1830,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
 
   final String baseUrl;
   final String apiPrefix;
-  final BeeCountCloudAuthService auth;
+  final PiggyCountCloudAuthService auth;
   final http.Client _httpClient;
 
   void dispose() {
@@ -2051,7 +2051,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
     return null;
   }
 
-  Future<BeeCountCloudPullResult> pullChanges({
+  Future<PiggyCountCloudPullResult> pullChanges({
     int? since,
     int limit = 1000,
     bool persistCursor = true,
@@ -2082,7 +2082,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
         (payload['server_cursor'] as num?)?.toInt() ?? currentCursor;
     final hasMore = payload['has_more'] == true;
 
-    final changes = <BeeCountCloudSyncChange>[];
+    final changes = <PiggyCountCloudSyncChange>[];
     if (rawChanges is List) {
       for (final row in rawChanges) {
         if (row is! Map<String, dynamic>) {
@@ -2102,7 +2102,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
         }
         final rawPayload = row['payload'];
         changes.add(
-          BeeCountCloudSyncChange(
+          PiggyCountCloudSyncChange(
             changeId: changeId,
             ledgerId: ledgerId,
             entityType: entityType,
@@ -2119,7 +2119,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
     if (persistCursor) {
       await _saveCursor(nextCursor);
     }
-    return BeeCountCloudPullResult(
+    return PiggyCountCloudPullResult(
       changes: changes,
       serverCursor: nextCursor,
       hasMore: hasMore,
@@ -2158,7 +2158,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
     }
   }
 
-  Future<Map<String, BeeCountCloudAttachmentExistsItem>> attachmentBatchExists({
+  Future<Map<String, PiggyCountCloudAttachmentExistsItem>> attachmentBatchExists({
     required String ledgerId,
     required List<String> sha256List,
   }) async {
@@ -2183,18 +2183,18 @@ class BeeCountCloudStorageService implements CloudStorageService {
     }
     final payload = _decodeJsonObject(response.body);
     final itemsRaw = payload['items'];
-    final result = <String, BeeCountCloudAttachmentExistsItem>{};
+    final result = <String, PiggyCountCloudAttachmentExistsItem>{};
     if (itemsRaw is List) {
       for (final row in itemsRaw) {
         if (row is! Map<String, dynamic>) continue;
-        final item = BeeCountCloudAttachmentExistsItem.fromJson(row);
+        final item = PiggyCountCloudAttachmentExistsItem.fromJson(row);
         result[item.sha256] = item;
       }
     }
     return result;
   }
 
-  Future<BeeCountCloudProfile> getMyProfile() async {
+  Future<PiggyCountCloudProfile> getMyProfile() async {
     final response = await _authedRequest(
       method: 'GET',
       path: '/profile/me',
@@ -2204,12 +2204,12 @@ class BeeCountCloudStorageService implements CloudStorageService {
           'Get profile failed: ${_extractErrorMessage(response)}');
     }
     final payload = _decodeJsonObject(response.body);
-    return BeeCountCloudProfile.fromJson(
+    return PiggyCountCloudProfile.fromJson(
       _copyWithNormalizedUrl(payload, 'avatar_url'),
     );
   }
 
-  Future<BeeCountCloudProfile> updateMyProfileDisplayName({
+  Future<PiggyCountCloudProfile> updateMyProfileDisplayName({
     required String displayName,
   }) async {
     final normalized = displayName.trim();
@@ -2221,7 +2221,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
 
   /// 推送主币种到服务端。`primaryCurrency` 形如 `CNY`(归一为大写)。
   /// 同 display_name:mobile → server → web 单向同步。
-  Future<BeeCountCloudProfile> updateMyProfileBaseCurrency({
+  Future<PiggyCountCloudProfile> updateMyProfileBaseCurrency({
     required String primaryCurrency,
   }) async {
     final normalized = primaryCurrency.trim().toUpperCase();
@@ -2256,7 +2256,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
   /// 推送收支颜色方案偏好到服务端。mobile 端 `incomeExpenseColorSchemeProvider`
   /// 切换时 fire-and-forget 调一下，让 web 端通过 WS profile_change 同步。
   /// `incomeIsRed` true = 红色收入 / 绿色支出（mobile 默认）。
-  Future<BeeCountCloudProfile> updateMyProfileIncomeColorScheme({
+  Future<PiggyCountCloudProfile> updateMyProfileIncomeColorScheme({
     required bool incomeIsRed,
   }) async {
     return _patchMyProfile(body: {'income_is_red': incomeIsRed});
@@ -2264,7 +2264,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
 
   /// 推送主题色到服务端。`hex` 形如 `#F59E0B`(server 会校验 `#RRGGBB`)。
   /// 同步方向是单向的:mobile → server → web。web 本地改主题色不回推。
-  Future<BeeCountCloudProfile> updateMyProfileThemeColor({
+  Future<PiggyCountCloudProfile> updateMyProfileThemeColor({
     required String hex,
   }) async {
     return _patchMyProfile(body: {'theme_primary_color': hex});
@@ -2273,7 +2273,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
   /// 推送外观类设置(header_decoration_style / compact_amount /
   /// show_transaction_time 等)到服务端。传整个 dict 整体替换;server 侧
   /// appearance_json 字段会整包写入。空 dict 视为清空。
-  Future<BeeCountCloudProfile> updateMyProfileAppearance({
+  Future<PiggyCountCloudProfile> updateMyProfileAppearance({
     required Map<String, dynamic> appearance,
   }) async {
     return _patchMyProfile(body: {'appearance': appearance});
@@ -2281,7 +2281,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
 
   /// 推送 AI 配置(providers 数组 + binding + custom_prompt + strategy 等)
   /// 到 server。整包替换,空 dict 视为清空。
-  Future<BeeCountCloudProfile> updateMyProfileAiConfig({
+  Future<PiggyCountCloudProfile> updateMyProfileAiConfig({
     required Map<String, dynamic> aiConfig,
   }) async {
     return _patchMyProfile(body: {'ai_config': aiConfig});
@@ -2289,7 +2289,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
 
   /// PATCH /profile/me 通用封装，body 里写哪些字段就更新哪些；server 端会
   /// 忽略 None 值，只 merge 显式给出的键。返回 server 上新的 profile。
-  Future<BeeCountCloudProfile> _patchMyProfile({
+  Future<PiggyCountCloudProfile> _patchMyProfile({
     required Map<String, dynamic> body,
   }) async {
     final response = await _authedRequest(
@@ -2302,12 +2302,12 @@ class BeeCountCloudStorageService implements CloudStorageService {
           'Update profile failed: ${_extractErrorMessage(response)}');
     }
     final payload = _decodeJsonObject(response.body);
-    return BeeCountCloudProfile.fromJson(
+    return PiggyCountCloudProfile.fromJson(
       _copyWithNormalizedUrl(payload, 'avatar_url'),
     );
   }
 
-  Future<BeeCountCloudAvatarUploadResult> uploadMyAvatar({
+  Future<PiggyCountCloudAvatarUploadResult> uploadMyAvatar({
     required Uint8List bytes,
     required String fileName,
     String? mimeType,
@@ -2341,12 +2341,12 @@ class BeeCountCloudStorageService implements CloudStorageService {
           'Avatar upload failed: ${_extractErrorMessage(response)}');
     }
     final payload = _decodeJsonObject(response.body);
-    return BeeCountCloudAvatarUploadResult.fromJson(
+    return PiggyCountCloudAvatarUploadResult.fromJson(
       _copyWithNormalizedUrl(payload, 'avatar_url'),
     );
   }
 
-  Future<BeeCountCloudAttachmentUploadResult> uploadAttachment({
+  Future<PiggyCountCloudAttachmentUploadResult> uploadAttachment({
     required String ledgerId,
     required Uint8List bytes,
     required String fileName,
@@ -2383,7 +2383,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
           'Attachment upload failed: ${_extractErrorMessage(response)}');
     }
     final payload = _decodeJsonObject(response.body);
-    return BeeCountCloudAttachmentUploadResult.fromJson(payload);
+    return PiggyCountCloudAttachmentUploadResult.fromJson(payload);
   }
 
   /// 上传分类自定义图标(user-global,不绑 ledger)。
@@ -2392,7 +2392,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
   /// (user_id, sha256) 去重,落库 attachment_files 行的 ledger_id=NULL、
   /// attachment_kind='category_icon'。跨账本只需上传一次,避免历史按 ledger
   /// 重复上传 N 份的问题。
-  Future<BeeCountCloudAttachmentUploadResult> uploadCategoryIcon({
+  Future<PiggyCountCloudAttachmentUploadResult> uploadCategoryIcon({
     required Uint8List bytes,
     required String fileName,
     String? mimeType,
@@ -2426,7 +2426,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
           'Category icon upload failed: ${_extractErrorMessage(response)}');
     }
     final payload = _decodeJsonObject(response.body);
-    return BeeCountCloudAttachmentUploadResult.fromJson(payload);
+    return PiggyCountCloudAttachmentUploadResult.fromJson(payload);
   }
 
   Future<Uint8List> downloadAttachment({required String fileId}) async {
@@ -2460,7 +2460,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
     return response.bodyBytes;
   }
 
-  Future<List<BeeCountCloudDevice>> listDevices({
+  Future<List<PiggyCountCloudDevice>> listDevices({
     String view = 'deduped',
     int activeWithinDays = 30,
   }) async {
@@ -2481,10 +2481,10 @@ class BeeCountCloudStorageService implements CloudStorageService {
     }
     final decoded = jsonDecode(response.body);
     if (decoded is! List) return const [];
-    final out = <BeeCountCloudDevice>[];
+    final out = <PiggyCountCloudDevice>[];
     for (final row in decoded) {
       if (row is! Map<String, dynamic>) continue;
-      out.add(BeeCountCloudDevice.fromJson(row));
+      out.add(PiggyCountCloudDevice.fromJson(row));
     }
     return out;
   }
@@ -2500,7 +2500,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
     }
   }
 
-  Future<List<BeeCountCloudReadLedger>> readLedgers() async {
+  Future<List<PiggyCountCloudReadLedger>> readLedgers() async {
     final response = await _authedRequest(
       method: 'GET',
       path: '/read/ledgers',
@@ -2511,15 +2511,15 @@ class BeeCountCloudStorageService implements CloudStorageService {
     }
     final decoded = jsonDecode(response.body);
     if (decoded is! List) return const [];
-    final out = <BeeCountCloudReadLedger>[];
+    final out = <PiggyCountCloudReadLedger>[];
     for (final row in decoded) {
       if (row is! Map<String, dynamic>) continue;
-      out.add(BeeCountCloudReadLedger.fromJson(row));
+      out.add(PiggyCountCloudReadLedger.fromJson(row));
     }
     return out;
   }
 
-  Future<BeeCountCloudReadLedgerDetail> readLedgerDetail({
+  Future<PiggyCountCloudReadLedgerDetail> readLedgerDetail({
     required String ledgerId,
   }) async {
     final response = await _authedRequest(
@@ -2531,12 +2531,12 @@ class BeeCountCloudStorageService implements CloudStorageService {
           'Read ledger detail failed: ${_extractErrorMessage(response)}');
     }
     final payload = _decodeJsonObject(response.body);
-    return BeeCountCloudReadLedgerDetail.fromJson(payload);
+    return PiggyCountCloudReadLedgerDetail.fromJson(payload);
   }
 
   /// 读 server 上某账本的实体计数(tx / attachment / budget)。给"深度同步检测"
   /// 用,mobile 对比本地 Drift 计数就能判断是否需要触发一次完整 sync。
-  Future<BeeCountCloudLedgerStats> readLedgerStats({
+  Future<PiggyCountCloudLedgerStats> readLedgerStats({
     required String ledgerId,
   }) async {
     final response = await _authedRequest(
@@ -2548,12 +2548,12 @@ class BeeCountCloudStorageService implements CloudStorageService {
           'Read ledger stats failed: ${_extractErrorMessage(response)}');
     }
     final payload = _decodeJsonObject(response.body);
-    return BeeCountCloudLedgerStats.fromJson(payload);
+    return PiggyCountCloudLedgerStats.fromJson(payload);
   }
 
   /// 拉 server 公开 /version。绕开 auth token —— 登录页未登录状态下也该能
   /// 显示 server 版本,不需要 token。
-  Future<BeeCountCloudServerVersion> fetchServerVersion() async {
+  Future<PiggyCountCloudServerVersion> fetchServerVersion() async {
     final uri = Uri.parse('$baseUrl$apiPrefix/version');
     final response = await _httpClient.get(uri);
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -2561,14 +2561,14 @@ class BeeCountCloudStorageService implements CloudStorageService {
           'Fetch version failed: ${_extractErrorMessage(response)}');
     }
     final payload = _decodeJsonObject(response.body);
-    return BeeCountCloudServerVersion.fromJson(payload);
+    return PiggyCountCloudServerVersion.fromJson(payload);
   }
 
   // ===========================================================================
   // 共享账本(Sprint 2.4)— invites / members / shared-resources HTTP 实现
   // ===========================================================================
 
-  Future<BeeCountCloudInvite> createInvite({
+  Future<PiggyCountCloudInvite> createInvite({
     required String ledgerId,
     required String role,
     required int expiresInHours,
@@ -2582,10 +2582,10 @@ class BeeCountCloudStorageService implements CloudStorageService {
       throw CloudStorageException(
           'Create invite failed: ${_extractErrorMessage(response)}');
     }
-    return BeeCountCloudInvite.fromJson(_decodeJsonObject(response.body));
+    return PiggyCountCloudInvite.fromJson(_decodeJsonObject(response.body));
   }
 
-  Future<List<BeeCountCloudInvite>> listInvites({required String ledgerId}) async {
+  Future<List<PiggyCountCloudInvite>> listInvites({required String ledgerId}) async {
     final response = await _authedRequest(
       method: 'GET', path: '/ledgers/$ledgerId/invites',
     );
@@ -2597,7 +2597,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
     if (decoded is! List) return const [];
     return [
       for (final row in decoded)
-        if (row is Map<String, dynamic>) BeeCountCloudInvite.fromJson(row),
+        if (row is Map<String, dynamic>) PiggyCountCloudInvite.fromJson(row),
     ];
   }
 
@@ -2611,7 +2611,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
     }
   }
 
-  Future<BeeCountCloudInvitePreview> previewInvite({required String code}) async {
+  Future<PiggyCountCloudInvitePreview> previewInvite({required String code}) async {
     final response = await _authedRequest(
       method: 'POST', path: '/invites/$code/preview',
     );
@@ -2619,10 +2619,10 @@ class BeeCountCloudStorageService implements CloudStorageService {
       throw CloudStorageException(
           'Preview invite failed: ${_extractErrorMessage(response)}');
     }
-    return BeeCountCloudInvitePreview.fromJson(_decodeJsonObject(response.body));
+    return PiggyCountCloudInvitePreview.fromJson(_decodeJsonObject(response.body));
   }
 
-  Future<BeeCountCloudInviteAcceptResult> acceptInvite({required String code}) async {
+  Future<PiggyCountCloudInviteAcceptResult> acceptInvite({required String code}) async {
     final response = await _authedRequest(
       method: 'POST', path: '/invites/$code/accept',
     );
@@ -2630,10 +2630,10 @@ class BeeCountCloudStorageService implements CloudStorageService {
       throw CloudStorageException(
           'Accept invite failed: ${_extractErrorMessage(response)}');
     }
-    return BeeCountCloudInviteAcceptResult.fromJson(_decodeJsonObject(response.body));
+    return PiggyCountCloudInviteAcceptResult.fromJson(_decodeJsonObject(response.body));
   }
 
-  Future<List<BeeCountCloudLedgerMember>> listMembers({required String ledgerId}) async {
+  Future<List<PiggyCountCloudLedgerMember>> listMembers({required String ledgerId}) async {
     final response = await _authedRequest(
       method: 'GET', path: '/ledgers/$ledgerId/members',
     );
@@ -2645,11 +2645,11 @@ class BeeCountCloudStorageService implements CloudStorageService {
     if (decoded is! List) return const [];
     return [
       for (final row in decoded)
-        if (row is Map<String, dynamic>) BeeCountCloudLedgerMember.fromJson(row),
+        if (row is Map<String, dynamic>) PiggyCountCloudLedgerMember.fromJson(row),
     ];
   }
 
-  Future<BeeCountCloudLedgerMember> updateMemberRole({
+  Future<PiggyCountCloudLedgerMember> updateMemberRole({
     required String ledgerId,
     required String userId,
     required String role,
@@ -2663,7 +2663,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
       throw CloudStorageException(
           'Update member role failed: ${_extractErrorMessage(response)}');
     }
-    return BeeCountCloudLedgerMember.fromJson(_decodeJsonObject(response.body));
+    return PiggyCountCloudLedgerMember.fromJson(_decodeJsonObject(response.body));
   }
 
   Future<void> removeMember({required String ledgerId, required String userId}) async {
@@ -2677,7 +2677,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
   }
 
   /// 拉 Owner 的 user-global 资源快照(§7 决策 — Editor 端 picker 用)。
-  Future<BeeCountCloudSharedResources> fetchSharedResources({required String ledgerId}) async {
+  Future<PiggyCountCloudSharedResources> fetchSharedResources({required String ledgerId}) async {
     final response = await _authedRequest(
       method: 'GET', path: '/ledgers/$ledgerId/shared-resources',
     );
@@ -2685,12 +2685,12 @@ class BeeCountCloudStorageService implements CloudStorageService {
       throw CloudStorageException(
           'Fetch shared resources failed: ${_extractErrorMessage(response)}');
     }
-    return BeeCountCloudSharedResources.fromJson(_decodeJsonObject(response.body));
+    return PiggyCountCloudSharedResources.fromJson(_decodeJsonObject(response.body));
   }
 
   /// 共享账本成员收支统计:server `/ledgers/{id}/member-stats`。
   /// scope: month / year / all;period 可选(YYYY-MM 或 YYYY)。
-  Future<BeeCountCloudMemberStats> fetchMemberStats({
+  Future<PiggyCountCloudMemberStats> fetchMemberStats({
     required String ledgerId,
     String scope = 'month',
     String? period,
@@ -2710,10 +2710,10 @@ class BeeCountCloudStorageService implements CloudStorageService {
       throw CloudStorageException(
           'Fetch member stats failed: ${_extractErrorMessage(response)}');
     }
-    return BeeCountCloudMemberStats.fromJson(_decodeJsonObject(response.body));
+    return PiggyCountCloudMemberStats.fromJson(_decodeJsonObject(response.body));
   }
 
-  Future<List<BeeCountCloudReadTransaction>> readTransactions({
+  Future<List<PiggyCountCloudReadTransaction>> readTransactions({
     required String ledgerId,
     String? txType,
     String? query,
@@ -2741,11 +2741,11 @@ class BeeCountCloudStorageService implements CloudStorageService {
     }
     final decoded = jsonDecode(response.body);
     if (decoded is! List) return const [];
-    final out = <BeeCountCloudReadTransaction>[];
+    final out = <PiggyCountCloudReadTransaction>[];
     for (final row in decoded) {
       if (row is! Map<String, dynamic>) continue;
       out.add(
-        BeeCountCloudReadTransaction.fromJson(
+        PiggyCountCloudReadTransaction.fromJson(
           _copyWithNormalizedUrl(row, 'created_by_avatar_url'),
         ),
       );
@@ -2753,7 +2753,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
     return out;
   }
 
-  Future<List<BeeCountCloudReadAccount>> readAccounts({
+  Future<List<PiggyCountCloudReadAccount>> readAccounts({
     required String ledgerId,
   }) async {
     final response = await _authedRequest(
@@ -2766,15 +2766,15 @@ class BeeCountCloudStorageService implements CloudStorageService {
     }
     final decoded = jsonDecode(response.body);
     if (decoded is! List) return const [];
-    final out = <BeeCountCloudReadAccount>[];
+    final out = <PiggyCountCloudReadAccount>[];
     for (final row in decoded) {
       if (row is! Map<String, dynamic>) continue;
-      out.add(BeeCountCloudReadAccount.fromJson(row));
+      out.add(PiggyCountCloudReadAccount.fromJson(row));
     }
     return out;
   }
 
-  Future<List<BeeCountCloudReadCategory>> readCategories({
+  Future<List<PiggyCountCloudReadCategory>> readCategories({
     required String ledgerId,
   }) async {
     final response = await _authedRequest(
@@ -2787,15 +2787,15 @@ class BeeCountCloudStorageService implements CloudStorageService {
     }
     final decoded = jsonDecode(response.body);
     if (decoded is! List) return const [];
-    final out = <BeeCountCloudReadCategory>[];
+    final out = <PiggyCountCloudReadCategory>[];
     for (final row in decoded) {
       if (row is! Map<String, dynamic>) continue;
-      out.add(BeeCountCloudReadCategory.fromJson(row));
+      out.add(PiggyCountCloudReadCategory.fromJson(row));
     }
     return out;
   }
 
-  Future<List<BeeCountCloudReadTag>> readTags({
+  Future<List<PiggyCountCloudReadTag>> readTags({
     required String ledgerId,
   }) async {
     final response = await _authedRequest(
@@ -2808,15 +2808,15 @@ class BeeCountCloudStorageService implements CloudStorageService {
     }
     final decoded = jsonDecode(response.body);
     if (decoded is! List) return const [];
-    final out = <BeeCountCloudReadTag>[];
+    final out = <PiggyCountCloudReadTag>[];
     for (final row in decoded) {
       if (row is! Map<String, dynamic>) continue;
-      out.add(BeeCountCloudReadTag.fromJson(row));
+      out.add(PiggyCountCloudReadTag.fromJson(row));
     }
     return out;
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeCreateLedger({
+  Future<PiggyCountCloudWriteCommitMeta> writeCreateLedger({
     String? ledgerId,
     required String ledgerName,
     String currency = 'CNY',
@@ -2836,7 +2836,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeLedgerMeta({
+  Future<PiggyCountCloudWriteCommitMeta> writeLedgerMeta({
     required String ledgerId,
     required int baseChangeId,
     String? ledgerName,
@@ -2861,7 +2861,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeCreateTransaction({
+  Future<PiggyCountCloudWriteCommitMeta> writeCreateTransaction({
     required String ledgerId,
     required int baseChangeId,
     required String txType,
@@ -2912,7 +2912,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeUpdateTransaction({
+  Future<PiggyCountCloudWriteCommitMeta> writeUpdateTransaction({
     required String ledgerId,
     required String txId,
     required int baseChangeId,
@@ -2965,7 +2965,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeDeleteTransaction({
+  Future<PiggyCountCloudWriteCommitMeta> writeDeleteTransaction({
     required String ledgerId,
     required String txId,
     required int baseChangeId,
@@ -2985,7 +2985,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeCreateAccount({
+  Future<PiggyCountCloudWriteCommitMeta> writeCreateAccount({
     required String ledgerId,
     required int baseChangeId,
     required String name,
@@ -3012,7 +3012,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeUpdateAccount({
+  Future<PiggyCountCloudWriteCommitMeta> writeUpdateAccount({
     required String ledgerId,
     required String accountId,
     required int baseChangeId,
@@ -3040,7 +3040,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeDeleteAccount({
+  Future<PiggyCountCloudWriteCommitMeta> writeDeleteAccount({
     required String ledgerId,
     required String accountId,
     required int baseChangeId,
@@ -3060,7 +3060,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeCreateCategory({
+  Future<PiggyCountCloudWriteCommitMeta> writeCreateCategory({
     required String ledgerId,
     required int baseChangeId,
     required String name,
@@ -3099,7 +3099,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeUpdateCategory({
+  Future<PiggyCountCloudWriteCommitMeta> writeUpdateCategory({
     required String ledgerId,
     required String categoryId,
     required int baseChangeId,
@@ -3139,7 +3139,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeDeleteCategory({
+  Future<PiggyCountCloudWriteCommitMeta> writeDeleteCategory({
     required String ledgerId,
     required String categoryId,
     required int baseChangeId,
@@ -3159,7 +3159,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeCreateTag({
+  Future<PiggyCountCloudWriteCommitMeta> writeCreateTag({
     required String ledgerId,
     required int baseChangeId,
     required String name,
@@ -3182,7 +3182,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeUpdateTag({
+  Future<PiggyCountCloudWriteCommitMeta> writeUpdateTag({
     required String ledgerId,
     required String tagId,
     required int baseChangeId,
@@ -3206,7 +3206,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> writeDeleteTag({
+  Future<PiggyCountCloudWriteCommitMeta> writeDeleteTag({
     required String ledgerId,
     required String tagId,
     required int baseChangeId,
@@ -3226,7 +3226,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
     );
   }
 
-  Future<BeeCountCloudWriteCommitMeta> _writeRequest({
+  Future<PiggyCountCloudWriteCommitMeta> _writeRequest({
     required String method,
     required String path,
     required Map<String, dynamic> body,
@@ -3247,7 +3247,7 @@ class BeeCountCloudStorageService implements CloudStorageService {
           'Write request failed: ${_extractErrorMessage(response)}');
     }
     final payload = _decodeJsonObject(response.body);
-    return BeeCountCloudWriteCommitMeta.fromJson(payload);
+    return PiggyCountCloudWriteCommitMeta.fromJson(payload);
   }
 
   String _ledgerIdFromPath(String path) {
@@ -3411,8 +3411,8 @@ class BeeCountCloudStorageService implements CloudStorageService {
   }
 }
 
-class _BeeCountCloudSession {
-  const _BeeCountCloudSession({
+class _PiggyCountCloudSession {
+  const _PiggyCountCloudSession({
     required this.userId,
     required this.email,
     required this.accessToken,
@@ -3428,7 +3428,7 @@ class _BeeCountCloudSession {
   final DateTime accessTokenExpiresAt;
   final String deviceId;
 
-  factory _BeeCountCloudSession.fromAuthResponse(Map<String, dynamic> payload) {
+  factory _PiggyCountCloudSession.fromAuthResponse(Map<String, dynamic> payload) {
     final user = payload['user'];
     if (user is! Map<String, dynamic>) {
       throw const FormatException('Invalid auth response: user missing');
@@ -3448,7 +3448,7 @@ class _BeeCountCloudSession {
       throw const FormatException('Invalid auth response payload');
     }
 
-    return _BeeCountCloudSession(
+    return _PiggyCountCloudSession(
       userId: userId,
       email: user['email'] as String?,
       accessToken: accessToken,
@@ -3459,8 +3459,8 @@ class _BeeCountCloudSession {
     );
   }
 
-  factory _BeeCountCloudSession.fromJson(Map<String, dynamic> json) {
-    return _BeeCountCloudSession(
+  factory _PiggyCountCloudSession.fromJson(Map<String, dynamic> json) {
+    return _PiggyCountCloudSession(
       userId: json['userId'] as String,
       email: json['email'] as String?,
       accessToken: json['accessToken'] as String,
@@ -3483,8 +3483,8 @@ class _BeeCountCloudSession {
   }
 }
 
-class BeeCountCloudSyncChange {
-  const BeeCountCloudSyncChange({
+class PiggyCountCloudSyncChange {
+  const PiggyCountCloudSyncChange({
     required this.changeId,
     required this.ledgerId,
     required this.entityType,
@@ -3505,20 +3505,20 @@ class BeeCountCloudSyncChange {
   final Map<String, dynamic>? payload;
 }
 
-class BeeCountCloudPullResult {
-  const BeeCountCloudPullResult({
+class PiggyCountCloudPullResult {
+  const PiggyCountCloudPullResult({
     required this.changes,
     required this.serverCursor,
     required this.hasMore,
   });
 
-  final List<BeeCountCloudSyncChange> changes;
+  final List<PiggyCountCloudSyncChange> changes;
   final int serverCursor;
   final bool hasMore;
 }
 
-class BeeCountCloudAttachmentExistsItem {
-  const BeeCountCloudAttachmentExistsItem({
+class PiggyCountCloudAttachmentExistsItem {
+  const PiggyCountCloudAttachmentExistsItem({
     required this.sha256,
     required this.exists,
     this.fileId,
@@ -3532,9 +3532,9 @@ class BeeCountCloudAttachmentExistsItem {
   final int? size;
   final String? mimeType;
 
-  factory BeeCountCloudAttachmentExistsItem.fromJson(
+  factory PiggyCountCloudAttachmentExistsItem.fromJson(
       Map<String, dynamic> json) {
-    return BeeCountCloudAttachmentExistsItem(
+    return PiggyCountCloudAttachmentExistsItem(
       sha256: (json['sha256'] as String?)?.toLowerCase() ?? '',
       exists: json['exists'] == true,
       fileId: json['file_id'] as String?,
@@ -3544,8 +3544,8 @@ class BeeCountCloudAttachmentExistsItem {
   }
 }
 
-class BeeCountCloudAttachmentUploadResult {
-  const BeeCountCloudAttachmentUploadResult({
+class PiggyCountCloudAttachmentUploadResult {
+  const PiggyCountCloudAttachmentUploadResult({
     required this.fileId,
     required this.ledgerId,
     required this.sha256,
@@ -3561,7 +3561,7 @@ class BeeCountCloudAttachmentUploadResult {
   final String? mimeType;
   final String? fileName;
 
-  factory BeeCountCloudAttachmentUploadResult.fromJson(
+  factory PiggyCountCloudAttachmentUploadResult.fromJson(
       Map<String, dynamic> json) {
     final fileId = json['file_id'];
     final ledgerId = json['ledger_id'];
@@ -3569,7 +3569,7 @@ class BeeCountCloudAttachmentUploadResult {
     if (fileId is! String || ledgerId is! String || sha is! String) {
       throw const FormatException('Invalid attachment upload response payload');
     }
-    return BeeCountCloudAttachmentUploadResult(
+    return PiggyCountCloudAttachmentUploadResult(
       fileId: fileId,
       ledgerId: ledgerId,
       sha256: sha.toLowerCase(),
@@ -3580,8 +3580,8 @@ class BeeCountCloudAttachmentUploadResult {
   }
 }
 
-class BeeCountCloudDevice {
-  const BeeCountCloudDevice({
+class PiggyCountCloudDevice {
+  const PiggyCountCloudDevice({
     required this.id,
     required this.name,
     required this.platform,
@@ -3605,8 +3605,8 @@ class BeeCountCloudDevice {
   final DateTime? createdAt;
   final int sessionCount;
 
-  factory BeeCountCloudDevice.fromJson(Map<String, dynamic> json) {
-    return BeeCountCloudDevice(
+  factory PiggyCountCloudDevice.fromJson(Map<String, dynamic> json) {
+    return PiggyCountCloudDevice(
       id: json['id'] as String? ?? '',
       name: json['name'] as String? ?? '',
       platform: json['platform'] as String? ?? '',
@@ -3621,8 +3621,8 @@ class BeeCountCloudDevice {
   }
 }
 
-class BeeCountCloudReadLedger {
-  const BeeCountCloudReadLedger({
+class PiggyCountCloudReadLedger {
+  const PiggyCountCloudReadLedger({
     required this.ledgerId,
     required this.ledgerName,
     required this.currency,
@@ -3656,8 +3656,8 @@ class BeeCountCloudReadLedger {
   final DateTime? exportedAt;
   final DateTime? updatedAt;
 
-  factory BeeCountCloudReadLedger.fromJson(Map<String, dynamic> json) {
-    return BeeCountCloudReadLedger(
+  factory PiggyCountCloudReadLedger.fromJson(Map<String, dynamic> json) {
+    return PiggyCountCloudReadLedger(
       ledgerId: json['ledger_id'] as String? ?? '',
       ledgerName: json['ledger_name'] as String? ?? '',
       currency: json['currency'] as String? ?? 'CNY',
@@ -3675,8 +3675,8 @@ class BeeCountCloudReadLedger {
   }
 }
 
-class BeeCountCloudServerVersion {
-  const BeeCountCloudServerVersion({
+class PiggyCountCloudServerVersion {
+  const PiggyCountCloudServerVersion({
     required this.name,
     required this.version,
   });
@@ -3684,16 +3684,16 @@ class BeeCountCloudServerVersion {
   final String name;
   final String version;
 
-  factory BeeCountCloudServerVersion.fromJson(Map<String, dynamic> json) {
-    return BeeCountCloudServerVersion(
+  factory PiggyCountCloudServerVersion.fromJson(Map<String, dynamic> json) {
+    return PiggyCountCloudServerVersion(
       name: (json['name'] as String?)?.trim() ?? 'BeeCount Cloud',
       version: (json['version'] as String?)?.trim() ?? '',
     );
   }
 }
 
-class BeeCountCloudLedgerStats {
-  const BeeCountCloudLedgerStats({
+class PiggyCountCloudLedgerStats {
+  const PiggyCountCloudLedgerStats({
     required this.transactionCount,
     required this.transactionTotal,
     required this.attachmentCount,
@@ -3730,14 +3730,14 @@ class BeeCountCloudLedgerStats {
   final int tagCount;
   final int tagTotal;
 
-  factory BeeCountCloudLedgerStats.fromJson(Map<String, dynamic> json) {
+  factory PiggyCountCloudLedgerStats.fromJson(Map<String, dynamic> json) {
     int readCount(String key) => (json[key] as num?)?.toInt() ?? 0;
     int readTotalOrFallback(String totalKey, String countKey) {
       final v = (json[totalKey] as num?)?.toInt();
       if (v != null) return v;
       return readCount(countKey);
     }
-    return BeeCountCloudLedgerStats(
+    return PiggyCountCloudLedgerStats(
       transactionCount: readCount('transaction_count'),
       transactionTotal: readTotalOrFallback('transaction_total', 'transaction_count'),
       attachmentCount: readCount('attachment_count'),
@@ -3755,8 +3755,8 @@ class BeeCountCloudLedgerStats {
   }
 }
 
-class BeeCountCloudReadLedgerDetail extends BeeCountCloudReadLedger {
-  const BeeCountCloudReadLedgerDetail({
+class PiggyCountCloudReadLedgerDetail extends PiggyCountCloudReadLedger {
+  const PiggyCountCloudReadLedgerDetail({
     required super.ledgerId,
     required super.ledgerName,
     required super.currency,
@@ -3775,9 +3775,9 @@ class BeeCountCloudReadLedgerDetail extends BeeCountCloudReadLedger {
 
   final int sourceChangeId;
 
-  factory BeeCountCloudReadLedgerDetail.fromJson(Map<String, dynamic> json) {
-    final base = BeeCountCloudReadLedger.fromJson(json);
-    return BeeCountCloudReadLedgerDetail(
+  factory PiggyCountCloudReadLedgerDetail.fromJson(Map<String, dynamic> json) {
+    final base = PiggyCountCloudReadLedger.fromJson(json);
+    return PiggyCountCloudReadLedgerDetail(
       ledgerId: base.ledgerId,
       ledgerName: base.ledgerName,
       currency: base.currency,
@@ -3796,8 +3796,8 @@ class BeeCountCloudReadLedgerDetail extends BeeCountCloudReadLedger {
   }
 }
 
-class BeeCountCloudReadTransaction {
-  const BeeCountCloudReadTransaction({
+class PiggyCountCloudReadTransaction {
+  const PiggyCountCloudReadTransaction({
     required this.id,
     required this.txIndex,
     required this.txType,
@@ -3855,7 +3855,7 @@ class BeeCountCloudReadTransaction {
   final String? createdByAvatarUrl;
   final int? createdByAvatarVersion;
 
-  factory BeeCountCloudReadTransaction.fromJson(Map<String, dynamic> json) {
+  factory PiggyCountCloudReadTransaction.fromJson(Map<String, dynamic> json) {
     List<Map<String, dynamic>>? attachments;
     final attachmentsRaw = json['attachments'];
     if (attachmentsRaw is List) {
@@ -3864,7 +3864,7 @@ class BeeCountCloudReadTransaction {
           .map((row) => row.cast<String, dynamic>())
           .toList(growable: false);
     }
-    return BeeCountCloudReadTransaction(
+    return PiggyCountCloudReadTransaction(
       id: json['id'] as String? ?? '',
       txIndex: (json['tx_index'] as num?)?.toInt() ?? 0,
       txType: json['tx_type'] as String? ?? 'expense',
@@ -3898,8 +3898,8 @@ class BeeCountCloudReadTransaction {
   }
 }
 
-class BeeCountCloudProfile {
-  const BeeCountCloudProfile({
+class PiggyCountCloudProfile {
+  const PiggyCountCloudProfile({
     required this.userId,
     this.email,
     this.displayName,
@@ -3927,10 +3927,10 @@ class BeeCountCloudProfile {
   /// AI 配置(providers / binding / custom_prompt / strategy …)的 dict。
   final Map<String, dynamic>? aiConfig;
 
-  factory BeeCountCloudProfile.fromJson(Map<String, dynamic> json) {
+  factory PiggyCountCloudProfile.fromJson(Map<String, dynamic> json) {
     final appearanceRaw = json['appearance'];
     final aiConfigRaw = json['ai_config'];
-    return BeeCountCloudProfile(
+    return PiggyCountCloudProfile(
       userId: json['user_id'] as String? ?? '',
       email: _trimOrNull(json['email'] as String?),
       displayName: _trimOrNull(json['display_name'] as String?),
@@ -3949,8 +3949,8 @@ class BeeCountCloudProfile {
   }
 }
 
-class BeeCountCloudAvatarUploadResult {
-  const BeeCountCloudAvatarUploadResult({
+class PiggyCountCloudAvatarUploadResult {
+  const PiggyCountCloudAvatarUploadResult({
     this.avatarUrl,
     this.avatarVersion = 0,
   });
@@ -3958,16 +3958,16 @@ class BeeCountCloudAvatarUploadResult {
   final String? avatarUrl;
   final int avatarVersion;
 
-  factory BeeCountCloudAvatarUploadResult.fromJson(Map<String, dynamic> json) {
-    return BeeCountCloudAvatarUploadResult(
+  factory PiggyCountCloudAvatarUploadResult.fromJson(Map<String, dynamic> json) {
+    return PiggyCountCloudAvatarUploadResult(
       avatarUrl: _trimOrNull(json['avatar_url'] as String?),
       avatarVersion: (json['avatar_version'] as num?)?.toInt() ?? 0,
     );
   }
 }
 
-class BeeCountCloudReadAccount {
-  const BeeCountCloudReadAccount({
+class PiggyCountCloudReadAccount {
+  const PiggyCountCloudReadAccount({
     required this.id,
     required this.name,
     required this.lastChangeId,
@@ -3991,8 +3991,8 @@ class BeeCountCloudReadAccount {
   final String? createdByUserId;
   final String? createdByEmail;
 
-  factory BeeCountCloudReadAccount.fromJson(Map<String, dynamic> json) {
-    return BeeCountCloudReadAccount(
+  factory PiggyCountCloudReadAccount.fromJson(Map<String, dynamic> json) {
+    return PiggyCountCloudReadAccount(
       id: json['id'] as String? ?? '',
       name: json['name'] as String? ?? '',
       accountType: json['account_type'] as String?,
@@ -4007,8 +4007,8 @@ class BeeCountCloudReadAccount {
   }
 }
 
-class BeeCountCloudReadCategory {
-  const BeeCountCloudReadCategory({
+class PiggyCountCloudReadCategory {
+  const PiggyCountCloudReadCategory({
     required this.id,
     required this.name,
     required this.kind,
@@ -4044,8 +4044,8 @@ class BeeCountCloudReadCategory {
   final String? createdByUserId;
   final String? createdByEmail;
 
-  factory BeeCountCloudReadCategory.fromJson(Map<String, dynamic> json) {
-    return BeeCountCloudReadCategory(
+  factory PiggyCountCloudReadCategory.fromJson(Map<String, dynamic> json) {
+    return PiggyCountCloudReadCategory(
       id: json['id'] as String? ?? '',
       name: json['name'] as String? ?? '',
       kind: json['kind'] as String? ?? 'expense',
@@ -4066,8 +4066,8 @@ class BeeCountCloudReadCategory {
   }
 }
 
-class BeeCountCloudReadTag {
-  const BeeCountCloudReadTag({
+class PiggyCountCloudReadTag {
+  const PiggyCountCloudReadTag({
     required this.id,
     required this.name,
     required this.lastChangeId,
@@ -4087,8 +4087,8 @@ class BeeCountCloudReadTag {
   final String? createdByUserId;
   final String? createdByEmail;
 
-  factory BeeCountCloudReadTag.fromJson(Map<String, dynamic> json) {
-    return BeeCountCloudReadTag(
+  factory PiggyCountCloudReadTag.fromJson(Map<String, dynamic> json) {
+    return PiggyCountCloudReadTag(
       id: json['id'] as String? ?? '',
       name: json['name'] as String? ?? '',
       color: json['color'] as String?,
@@ -4101,8 +4101,8 @@ class BeeCountCloudReadTag {
   }
 }
 
-class BeeCountCloudWriteCommitMeta {
-  const BeeCountCloudWriteCommitMeta({
+class PiggyCountCloudWriteCommitMeta {
+  const PiggyCountCloudWriteCommitMeta({
     required this.ledgerId,
     required this.baseChangeId,
     required this.newChangeId,
@@ -4118,8 +4118,8 @@ class BeeCountCloudWriteCommitMeta {
   final bool idempotencyReplayed;
   final String? entityId;
 
-  factory BeeCountCloudWriteCommitMeta.fromJson(Map<String, dynamic> json) {
-    return BeeCountCloudWriteCommitMeta(
+  factory PiggyCountCloudWriteCommitMeta.fromJson(Map<String, dynamic> json) {
+    return PiggyCountCloudWriteCommitMeta(
       ledgerId: json['ledger_id'] as String? ?? '',
       baseChangeId: (json['base_change_id'] as num?)?.toInt() ?? 0,
       newChangeId: (json['new_change_id'] as num?)?.toInt() ?? 0,
@@ -4131,8 +4131,8 @@ class BeeCountCloudWriteCommitMeta {
   }
 }
 
-class BeeCountCloudRealtimeEvent {
-  const BeeCountCloudRealtimeEvent({
+class PiggyCountCloudRealtimeEvent {
+  const PiggyCountCloudRealtimeEvent({
     required this.type,
     this.ledgerId,
     this.serverCursor,
@@ -4148,17 +4148,17 @@ class BeeCountCloudRealtimeEvent {
   final Map<String, dynamic> rawData;
 }
 
-class BeeCountCloudRealtimeClient {
-  BeeCountCloudRealtimeClient({
+class PiggyCountCloudRealtimeClient {
+  PiggyCountCloudRealtimeClient({
     required this.baseUrl,
     required this.auth,
   });
 
   final String baseUrl;
-  final BeeCountCloudAuthService auth;
+  final PiggyCountCloudAuthService auth;
 
-  final StreamController<BeeCountCloudRealtimeEvent> _events =
-      StreamController<BeeCountCloudRealtimeEvent>.broadcast();
+  final StreamController<PiggyCountCloudRealtimeEvent> _events =
+      StreamController<PiggyCountCloudRealtimeEvent>.broadcast();
 
   WebSocketChannel? _channel;
   StreamSubscription<dynamic>? _channelSub;
@@ -4167,7 +4167,7 @@ class BeeCountCloudRealtimeClient {
   bool _running = false;
   bool _connecting = false;
 
-  Stream<BeeCountCloudRealtimeEvent> get events => _events.stream;
+  Stream<PiggyCountCloudRealtimeEvent> get events => _events.stream;
 
   Future<void> start() async {
     if (_running) {
@@ -4222,7 +4222,7 @@ class BeeCountCloudRealtimeClient {
       // 发一条 "connected" 事件给业务层，让 SyncEngine 知道 WS 重连成功 ——
       // 离线累积的 local_changes 可以此时 flush。没有这个通知的话，断网
       // 期间用户改的东西要等下一次交易写入 / PostProcessor.sync() 才推出去。
-      _events.add(const BeeCountCloudRealtimeEvent(type: 'connected'));
+      _events.add(const PiggyCountCloudRealtimeEvent(type: 'connected'));
     } catch (_) {
       _scheduleReconnect();
     } finally {
@@ -4263,7 +4263,7 @@ class BeeCountCloudRealtimeClient {
       }
       final serverCursor = (payload['serverCursor'] as num?)?.toInt();
       _events.add(
-        BeeCountCloudRealtimeEvent(
+        PiggyCountCloudRealtimeEvent(
           type: type,
           ledgerId: payload['ledgerId'] as String?,
           serverCursor: serverCursor,
@@ -4340,8 +4340,8 @@ String _extractErrorMessage(http.Response response) {
 // 共享账本数据类(Sprint 2.4 — Phase 1)
 // =============================================================================
 
-class BeeCountCloudInvite {
-  const BeeCountCloudInvite({
+class PiggyCountCloudInvite {
+  const PiggyCountCloudInvite({
     required this.code,
     required this.formattedCode,
     required this.targetRole,
@@ -4362,8 +4362,8 @@ class BeeCountCloudInvite {
   /// list endpoint 返回时带,create 不带(创建者自己即 caller)。
   final String? invitedByUserId;
 
-  factory BeeCountCloudInvite.fromJson(Map<String, dynamic> json) {
-    return BeeCountCloudInvite(
+  factory PiggyCountCloudInvite.fromJson(Map<String, dynamic> json) {
+    return PiggyCountCloudInvite(
       code: (json['code'] as String?)?.trim() ?? '',
       formattedCode: (json['formatted_code'] as String?)?.trim() ?? '',
       targetRole: (json['target_role'] as String?)?.trim() ?? 'editor',
@@ -4379,8 +4379,8 @@ class BeeCountCloudInvite {
   }
 }
 
-class BeeCountCloudInvitePreview {
-  const BeeCountCloudInvitePreview({
+class PiggyCountCloudInvitePreview {
+  const PiggyCountCloudInvitePreview({
     required this.code,
     required this.ledgerExternalId,
     required this.ledgerCurrency,
@@ -4398,8 +4398,8 @@ class BeeCountCloudInvitePreview {
   final String targetRole;
   final DateTime expiresAt;
 
-  factory BeeCountCloudInvitePreview.fromJson(Map<String, dynamic> json) {
-    return BeeCountCloudInvitePreview(
+  factory PiggyCountCloudInvitePreview.fromJson(Map<String, dynamic> json) {
+    return PiggyCountCloudInvitePreview(
       code: (json['code'] as String?)?.trim() ?? '',
       ledgerExternalId: (json['ledger_external_id'] as String?)?.trim() ?? '',
       ledgerName: json['ledger_name'] as String?,
@@ -4412,8 +4412,8 @@ class BeeCountCloudInvitePreview {
   }
 }
 
-class BeeCountCloudInviteAcceptResult {
-  const BeeCountCloudInviteAcceptResult({
+class PiggyCountCloudInviteAcceptResult {
+  const PiggyCountCloudInviteAcceptResult({
     required this.ledgerExternalId,
     required this.ledgerCurrency,
     required this.role,
@@ -4427,8 +4427,8 @@ class BeeCountCloudInviteAcceptResult {
   final String role;
   final int memberCount;
 
-  factory BeeCountCloudInviteAcceptResult.fromJson(Map<String, dynamic> json) {
-    return BeeCountCloudInviteAcceptResult(
+  factory PiggyCountCloudInviteAcceptResult.fromJson(Map<String, dynamic> json) {
+    return PiggyCountCloudInviteAcceptResult(
       ledgerExternalId: (json['ledger_external_id'] as String?)?.trim() ?? '',
       ledgerName: json['ledger_name'] as String?,
       ledgerCurrency: (json['ledger_currency'] as String?)?.trim() ?? 'CNY',
@@ -4438,8 +4438,8 @@ class BeeCountCloudInviteAcceptResult {
   }
 }
 
-class BeeCountCloudLedgerMember {
-  const BeeCountCloudLedgerMember({
+class PiggyCountCloudLedgerMember {
+  const PiggyCountCloudLedgerMember({
     required this.userId,
     required this.email,
     required this.role,
@@ -4462,8 +4462,8 @@ class BeeCountCloudLedgerMember {
   final String? avatarUrl;
   final int avatarVersion;
 
-  factory BeeCountCloudLedgerMember.fromJson(Map<String, dynamic> json) {
-    return BeeCountCloudLedgerMember(
+  factory PiggyCountCloudLedgerMember.fromJson(Map<String, dynamic> json) {
+    return PiggyCountCloudLedgerMember(
       userId: (json['user_id'] as String?)?.trim() ?? '',
       email: (json['email'] as String?)?.trim() ?? '',
       displayName: json['display_name'] as String?,
@@ -4481,8 +4481,8 @@ class BeeCountCloudLedgerMember {
 }
 
 /// §7 决策 — Editor 接受邀请后拉到的 Owner user-global 资源快照。
-class BeeCountCloudSharedResources {
-  const BeeCountCloudSharedResources({
+class PiggyCountCloudSharedResources {
+  const PiggyCountCloudSharedResources({
     required this.ownerUserId,
     required this.categories,
     required this.accounts,
@@ -4490,42 +4490,42 @@ class BeeCountCloudSharedResources {
   });
 
   final String ownerUserId;
-  final List<BeeCountCloudSharedCategory> categories;
-  final List<BeeCountCloudSharedAccount> accounts;
-  final List<BeeCountCloudSharedTag> tags;
+  final List<PiggyCountCloudSharedCategory> categories;
+  final List<PiggyCountCloudSharedAccount> accounts;
+  final List<PiggyCountCloudSharedTag> tags;
 
-  factory BeeCountCloudSharedResources.fromJson(Map<String, dynamic> json) {
+  factory PiggyCountCloudSharedResources.fromJson(Map<String, dynamic> json) {
     final cats = json['categories'];
     final accts = json['accounts'];
     final tgs = json['tags'];
-    return BeeCountCloudSharedResources(
+    return PiggyCountCloudSharedResources(
       ownerUserId: (json['owner_user_id'] as String?)?.trim() ?? '',
       categories: cats is List
           ? [
               for (final c in cats)
                 if (c is Map<String, dynamic>)
-                  BeeCountCloudSharedCategory.fromJson(c),
+                  PiggyCountCloudSharedCategory.fromJson(c),
             ]
           : const [],
       accounts: accts is List
           ? [
               for (final a in accts)
                 if (a is Map<String, dynamic>)
-                  BeeCountCloudSharedAccount.fromJson(a),
+                  PiggyCountCloudSharedAccount.fromJson(a),
             ]
           : const [],
       tags: tgs is List
           ? [
               for (final t in tgs)
-                if (t is Map<String, dynamic>) BeeCountCloudSharedTag.fromJson(t),
+                if (t is Map<String, dynamic>) PiggyCountCloudSharedTag.fromJson(t),
             ]
           : const [],
     );
   }
 }
 
-class BeeCountCloudSharedCategory {
-  const BeeCountCloudSharedCategory({
+class PiggyCountCloudSharedCategory {
+  const PiggyCountCloudSharedCategory({
     required this.syncId,
     required this.name,
     required this.kind,
@@ -4552,8 +4552,8 @@ class BeeCountCloudSharedCategory {
   // 共享账本二级分类:parent 的 syncId,client 端用它建稳定父子链。
   final String? parentSyncId;
 
-  factory BeeCountCloudSharedCategory.fromJson(Map<String, dynamic> json) {
-    return BeeCountCloudSharedCategory(
+  factory PiggyCountCloudSharedCategory.fromJson(Map<String, dynamic> json) {
+    return PiggyCountCloudSharedCategory(
       syncId: (json['sync_id'] as String?)?.trim() ?? '',
       name: (json['name'] as String?)?.trim() ?? '',
       kind: (json['kind'] as String?)?.trim() ?? 'expense',
@@ -4569,8 +4569,8 @@ class BeeCountCloudSharedCategory {
   }
 }
 
-class BeeCountCloudSharedAccount {
-  const BeeCountCloudSharedAccount({
+class PiggyCountCloudSharedAccount {
+  const PiggyCountCloudSharedAccount({
     required this.syncId,
     required this.name,
     this.accountType,
@@ -4596,8 +4596,8 @@ class BeeCountCloudSharedAccount {
   final String? bankName;
   final String? cardLastFour;
 
-  factory BeeCountCloudSharedAccount.fromJson(Map<String, dynamic> json) {
-    return BeeCountCloudSharedAccount(
+  factory PiggyCountCloudSharedAccount.fromJson(Map<String, dynamic> json) {
+    return PiggyCountCloudSharedAccount(
       syncId: (json['sync_id'] as String?)?.trim() ?? '',
       name: (json['name'] as String?)?.trim() ?? '',
       accountType: json['account_type'] as String?,
@@ -4613,8 +4613,8 @@ class BeeCountCloudSharedAccount {
   }
 }
 
-class BeeCountCloudSharedTag {
-  const BeeCountCloudSharedTag({
+class PiggyCountCloudSharedTag {
+  const PiggyCountCloudSharedTag({
     required this.syncId,
     required this.name,
     this.color,
@@ -4624,8 +4624,8 @@ class BeeCountCloudSharedTag {
   final String name;
   final String? color;
 
-  factory BeeCountCloudSharedTag.fromJson(Map<String, dynamic> json) {
-    return BeeCountCloudSharedTag(
+  factory PiggyCountCloudSharedTag.fromJson(Map<String, dynamic> json) {
+    return PiggyCountCloudSharedTag(
       syncId: (json['sync_id'] as String?)?.trim() ?? '',
       name: (json['name'] as String?)?.trim() ?? '',
       color: json['color'] as String?,
@@ -4634,8 +4634,8 @@ class BeeCountCloudSharedTag {
 }
 
 /// 共享账本成员收支统计单行(对应 server MemberStatItem)。
-class BeeCountCloudMemberStatItem {
-  const BeeCountCloudMemberStatItem({
+class PiggyCountCloudMemberStatItem {
+  const PiggyCountCloudMemberStatItem({
     required this.userId,
     required this.role,
     required this.incomeTotal,
@@ -4659,9 +4659,9 @@ class BeeCountCloudMemberStatItem {
   final double expenseTotal;
   final int txCount;
 
-  factory BeeCountCloudMemberStatItem.fromJson(Map<String, dynamic> json) {
+  factory PiggyCountCloudMemberStatItem.fromJson(Map<String, dynamic> json) {
     final avatar = (json['avatar_url'] as String?)?.trim();
-    return BeeCountCloudMemberStatItem(
+    return PiggyCountCloudMemberStatItem(
       userId: (json['user_id'] as String?)?.trim() ?? '',
       email: (json['email'] as String?)?.trim().isEmpty == true
           ? null
@@ -4678,8 +4678,8 @@ class BeeCountCloudMemberStatItem {
 }
 
 /// 共享账本成员收支统计响应(对应 server MemberStatsResponse)。
-class BeeCountCloudMemberStats {
-  const BeeCountCloudMemberStats({
+class PiggyCountCloudMemberStats {
+  const PiggyCountCloudMemberStats({
     required this.ledgerId,
     required this.ledgerCurrency,
     required this.scope,
@@ -4697,15 +4697,15 @@ class BeeCountCloudMemberStats {
   final String? period;
   final DateTime? startAt;
   final DateTime? endAt;
-  final List<BeeCountCloudMemberStatItem> items;
+  final List<PiggyCountCloudMemberStatItem> items;
 
-  factory BeeCountCloudMemberStats.fromJson(Map<String, dynamic> json) {
+  factory PiggyCountCloudMemberStats.fromJson(Map<String, dynamic> json) {
     final rawItems = json['items'];
-    final items = <BeeCountCloudMemberStatItem>[];
+    final items = <PiggyCountCloudMemberStatItem>[];
     if (rawItems is List) {
       for (final entry in rawItems) {
         if (entry is Map<String, dynamic>) {
-          items.add(BeeCountCloudMemberStatItem.fromJson(entry));
+          items.add(PiggyCountCloudMemberStatItem.fromJson(entry));
         }
       }
     }
@@ -4717,7 +4717,7 @@ class BeeCountCloudMemberStats {
       return null;
     }
 
-    return BeeCountCloudMemberStats(
+    return PiggyCountCloudMemberStats(
       ledgerId: (json['ledger_id'] as String?)?.trim() ?? '',
       ledgerCurrency: (json['ledger_currency'] as String?)?.trim() ?? 'CNY',
       scope: (json['scope'] as String?)?.trim() ?? 'month',

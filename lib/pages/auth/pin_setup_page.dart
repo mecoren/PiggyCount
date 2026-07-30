@@ -116,7 +116,7 @@ class _PinSetupPageState extends ConsumerState<PinSetupPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           PrimaryHeader(
@@ -137,7 +137,7 @@ class _PinSetupPageState extends ConsumerState<PinSetupPage> {
                     style: TextStyle(
                       fontSize: 18.0.scaled(context, ref),
                       fontWeight: FontWeight.w600,
-                      color: BeeTokens.textPrimary(context),
+                      color: PiggyTokens.textPrimary(context),
                     ),
                   ),
                   SizedBox(height: 32.0.scaled(context, ref)),

@@ -41,7 +41,7 @@ String _sanitizeString(String? input) {
 /// - categories: 分类列表（name, kind, level, icon, parentName）
 /// - tags: 标签列表（name, color）
 /// - items: 交易明细（type, amount, categoryName, categoryKind, happenedAt, note, tags）
-Future<String> exportTransactionsJson(BeeDatabase db, int ledgerId) async {
+Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
   logger.debug('TransactionsJson', '开始导出账本 $ledgerId');
 
   final txs = await (db.select(db.transactions)

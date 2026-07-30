@@ -8,22 +8,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:beecount/data/db.dart';
-import 'package:beecount/data/repositories/local/local_repository.dart';
-import 'package:beecount/l10n/app_localizations.dart';
-import 'package:beecount/providers/currency_providers.dart';
-import 'package:beecount/providers/database_providers.dart';
-import 'package:beecount/widgets/biz/amount_editor_sheet.dart';
+import 'package:piggycount/data/db.dart';
+import 'package:piggycount/data/repositories/local/local_repository.dart';
+import 'package:piggycount/l10n/app_localizations.dart';
+import 'package:piggycount/providers/currency_providers.dart';
+import 'package:piggycount/providers/database_providers.dart';
+import 'package:piggycount/widgets/biz/amount_editor_sheet.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   SharedPreferences.setMockInitialValues({});
 
-  late BeeDatabase db;
+  late PiggyDatabase db;
   late LocalRepository repo;
 
   setUp(() {
-    db = BeeDatabase.forTesting(NativeDatabase.memory());
+    db = PiggyDatabase.forTesting(NativeDatabase.memory());
     repo = LocalRepository(db);
   });
 

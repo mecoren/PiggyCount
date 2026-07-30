@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:beecount/ai/providers/ai_constants.dart';
-import 'package:beecount/ai/providers/ai_provider_manager.dart';
+import 'package:piggycount/ai/providers/ai_constants.dart';
+import 'package:piggycount/ai/providers/ai_provider_manager.dart';
 
 /// #252：语音设置随 AI 配置多设备同步
 void main() {

@@ -19,14 +19,14 @@ import '../providers/theme_providers.dart';
 /// 使用示例：
 /// ```dart
 /// Container(
-///   color: BeeTokens.surface(context),
+///   color: PiggyTokens.surface(context),
 ///   child: Text(
 ///     'Hello',
-///     style: TextStyle(color: BeeTokens.textPrimary(context)),
+///     style: TextStyle(color: PiggyTokens.textPrimary(context)),
 ///   ),
 /// )
 /// ```
-class BeeTokens {
+class PiggyTokens {
   // ========== 背景色 Token (Surface) ==========
 
   /// 页面背景色（Scaffold 背景）
@@ -528,11 +528,11 @@ class BeeTokens {
   static const Color black54Static = Color(0x8A000000);
 
   /// Scaffold 背景色（亮色模式）— #FAFAFA (灰50)
-  /// 单一来源：BeeTokens.scaffoldBackground(context) 与 BeeTheme.lightTheme 共享
+  /// 单一来源：PiggyTokens.scaffoldBackground(context) 与 PiggyTheme.lightTheme 共享
   static const Color scaffoldBackgroundLightStatic = Color(0xFFFAFAFA);
 
   /// Scaffold 背景色（暗色模式）— 纯黑
-  /// 单一来源：BeeTokens.scaffoldBackground(context) 与 BeeTheme.darkTheme 共享
+  /// 单一来源：PiggyTokens.scaffoldBackground(context) 与 PiggyTheme.darkTheme 共享
   static const Color scaffoldBackgroundDarkStatic = Colors.black;
 
   /// 卡片背景色（亮色模式）— #FFFFFF
@@ -553,7 +553,7 @@ class BeeTokens {
 // ============================================================================
 
 /// 间距、圆角等尺寸令牌
-class BeeDimens {
+class PiggyDimens {
   // ========== 间距令牌 ==========
   static const double p4 = 4;
   static const double p8 = 8;
@@ -568,7 +568,7 @@ class BeeDimens {
   // 所有 BorderRadius.circular 调用应使用这些令牌，禁止魔法数字。
   //
   // 使用示例：
-  //   borderRadius: BorderRadius.circular(BeeDimens.radiusXl)
+  //   borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)
 
   /// 极小圆角 - 徽章、状态点、小指示器（原 4/6 合并）
   static const double radiusXs = 4;
@@ -612,7 +612,7 @@ class BeeDimens {
 }
 
 /// 阴影令牌
-class BeeShadows {
+class PiggyShadows {
   static List<BoxShadow> card = [
     BoxShadow(
       color: Colors.black.withValues(alpha: 0.04),
@@ -623,11 +623,11 @@ class BeeShadows {
 }
 
 /// 分割线组件令牌
-class BeeDivider {
+class PiggyDivider {
   static Divider thin({EdgeInsetsGeometry? padding}) => Divider(
         height: 1,
         thickness: 1,
-        color: BeeTokens.dividerStatic,
+        color: PiggyTokens.dividerStatic,
       );
 
   static Divider short({double indent = 0, double endIndent = 0}) => Divider(
@@ -635,12 +635,12 @@ class BeeDivider {
         thickness: 1,
         indent: indent,
         endIndent: endIndent,
-        color: BeeTokens.dividerStatic,
+        color: PiggyTokens.dividerStatic,
       );
 }
 
 /// 图表令牌：统一折线图的视觉参数
-class BeeChartTokens {
+class PiggyChartTokens {
   static const double lineWidth = 2.0;
   static const double dotRadius = 2.5;
   static const double cornerRadius = 12.0;
@@ -649,50 +649,50 @@ class BeeChartTokens {
 }
 
 /// 文本样式令牌：全局统一字号与字重
-class BeeTextTokens {
+class PiggyTextTokens {
   // 标题：用于列表主标题、条目标题
   static TextStyle title(BuildContext ctx) =>
       Theme.of(ctx).textTheme.bodyLarge?.copyWith(
-            color: BeeTokens.textPrimary(ctx),
+            color: PiggyTokens.textPrimary(ctx),
           ) ??
       TextStyle(
-          fontSize: 15, color: BeeTokens.textPrimary(ctx), fontWeight: FontWeight.w400);
+          fontSize: 15, color: PiggyTokens.textPrimary(ctx), fontWeight: FontWeight.w400);
 
   // 强调标题：用于统计数字等需要比普通列表标题更醒目的场景
   static TextStyle strongTitle(BuildContext ctx) =>
       Theme.of(ctx).textTheme.bodyLarge?.copyWith(
             fontSize: 15,
-            color: BeeTokens.textPrimary(ctx),
+            color: PiggyTokens.textPrimary(ctx),
             fontWeight: FontWeight.w600,
           ) ??
       TextStyle(
-          fontSize: 15, color: BeeTokens.textPrimary(ctx), fontWeight: FontWeight.w600);
+          fontSize: 15, color: PiggyTokens.textPrimary(ctx), fontWeight: FontWeight.w600);
 
   // 加粗标题：用于极强强调（如大额数字/主标题）
   static TextStyle boldTitle(BuildContext ctx) =>
       Theme.of(ctx).textTheme.bodyLarge?.copyWith(
             fontSize: 18,
-            color: BeeTokens.textPrimary(ctx),
+            color: PiggyTokens.textPrimary(ctx),
             fontWeight: FontWeight.w700,
           ) ??
       TextStyle(
-          fontSize: 18, color: BeeTokens.textPrimary(ctx), fontWeight: FontWeight.w700);
+          fontSize: 18, color: PiggyTokens.textPrimary(ctx), fontWeight: FontWeight.w700);
 
   // 正文：用于一般性文字
   static TextStyle body(BuildContext ctx) =>
       Theme.of(ctx).textTheme.bodyMedium?.copyWith(
             fontSize: 14,
-            color: BeeTokens.textPrimary(ctx),
+            color: PiggyTokens.textPrimary(ctx),
           ) ??
-      TextStyle(fontSize: 14, color: BeeTokens.textPrimary(ctx));
+      TextStyle(fontSize: 14, color: PiggyTokens.textPrimary(ctx));
 
   // 标签/说明：用于次要说明、辅助信息
   static TextStyle label(BuildContext ctx) =>
       Theme.of(ctx).textTheme.labelMedium?.copyWith(
             fontSize: 12,
-            color: BeeTokens.textSecondary(ctx),
+            color: PiggyTokens.textSecondary(ctx),
           ) ??
-      TextStyle(fontSize: 12, color: BeeTokens.textSecondary(ctx));
+      TextStyle(fontSize: 12, color: PiggyTokens.textSecondary(ctx));
 }
 
 // ============================================================================
@@ -700,7 +700,7 @@ class BeeTextTokens {
 // ============================================================================
 
 /// 字体配置令牌
-class BeeTypography {
+class PiggyTypography {
   static bool useBundledFonts = false; // 已禁用打包字体，使用系统字体
 
   // Primary Latin family when bundled

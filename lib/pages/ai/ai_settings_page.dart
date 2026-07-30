@@ -50,7 +50,7 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
     final config = ref.watch(aiConfigProvider);
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           PrimaryHeader(
@@ -186,7 +186,7 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
               l10n.aiCapabilitySelectSubtitle,
               style: TextStyle(
                 fontSize: 12,
-                color: BeeTokens.textTertiary(context),
+                color: PiggyTokens.textTertiary(context),
               ),
             ),
           ),
@@ -227,7 +227,7 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
 
     return Column(
       children: [
-        BeeTokens.cardDivider(context),
+        PiggyTokens.cardDivider(context),
         _buildCapabilityTile(
           icon: Icons.chat_outlined,
           title: l10n.aiCapabilityTextChat,
@@ -236,7 +236,7 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
           providers: providers,
           capabilityType: AICapabilityType.text,
         ),
-        BeeTokens.cardDivider(context),
+        PiggyTokens.cardDivider(context),
         _buildCapabilityTile(
           icon: Icons.image_outlined,
           title: l10n.aiCapabilityImageUnderstand,
@@ -245,7 +245,7 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
           providers: providers,
           capabilityType: AICapabilityType.vision,
         ),
-        BeeTokens.cardDivider(context),
+        PiggyTokens.cardDivider(context),
         _buildCapabilityTile(
           icon: Icons.mic_outlined,
           title: l10n.aiCapabilitySpeechToText,
@@ -298,7 +298,7 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
             currentProvider.name,
             style: TextStyle(
               fontSize: 13,
-              color: BeeTokens.textSecondary(context),
+              color: PiggyTokens.textSecondary(context),
             ),
           ),
           const Icon(Icons.chevron_right, size: 18),
@@ -337,13 +337,13 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
               return ListTile(
                 leading: Icon(
                   isSelected ? Icons.check_circle : Icons.circle_outlined,
-                  color: isSelected ? primaryColor : BeeTokens.textTertiary(context),
+                  color: isSelected ? primaryColor : PiggyTokens.textTertiary(context),
                 ),
                 title: Text(
                   provider.name,
                   style: TextStyle(
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                    color: isSelected ? primaryColor : BeeTokens.textPrimary(context),
+                    color: isSelected ? primaryColor : PiggyTokens.textPrimary(context),
                   ),
                 ),
                 subtitle: provider.isValid
@@ -352,7 +352,7 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
                         l10n.aiProviderNoApiKey,
                         style: TextStyle(
                           fontSize: 12,
-                          color: BeeTokens.warning(context),
+                          color: PiggyTokens.warning(context),
                         ),
                       ),
                 onTap: () async {
@@ -406,11 +406,11 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
             l10n.aiAdvancedSettingsDesc,
             style: TextStyle(
               fontSize: 12,
-              color: BeeTokens.textTertiary(context),
+              color: PiggyTokens.textTertiary(context),
             ),
           ),
           children: [
-            BeeTokens.cardDivider(context),
+            PiggyTokens.cardDivider(context),
 
             // === 执行策略 ===
             Padding(
@@ -418,14 +418,14 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
               child: Row(
                 children: [
                   Icon(Icons.route_outlined,
-                      size: 18, color: BeeTokens.textSecondary(context)),
+                      size: 18, color: PiggyTokens.textSecondary(context)),
                   const SizedBox(width: 8),
                   Text(
                     l10n.aiStrategyTitle,
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: BeeTokens.textSecondary(context),
+                      color: PiggyTokens.textSecondary(context),
                     ),
                   ),
                 ],
@@ -497,7 +497,7 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
               dense: true,
             ),
 
-            BeeTokens.cardDivider(context),
+            PiggyTokens.cardDivider(context),
 
             // 历史「本地模型(训练中)」占位 entry 已删除(2026-05-24)。本地 AI 视觉
             // 未来走 Apple Foundation Models / Gemini Nano(平台原生 SDK,非 tflite),

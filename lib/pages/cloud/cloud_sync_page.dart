@@ -63,7 +63,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
 
     if (ledgerId == 0) {
       return Scaffold(
-        backgroundColor: BeeTokens.scaffoldBackground(context),
+        backgroundColor: PiggyTokens.scaffoldBackground(context),
         body: Column(
           children: [
             PrimaryHeader(
@@ -76,7 +76,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                 child: Text(
                   AppLocalizations.of(context).aiOcrNoLedger,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: BeeTokens.textSecondary(context),
+                        color: PiggyTokens.textSecondary(context),
                       ),
                 ),
               ),
@@ -87,7 +87,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
     }
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       body: Column(
         children: [
           PrimaryHeader(
@@ -112,7 +112,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                 final cloudConfig = ref.watch(activeCloudConfigProvider);
                 final isLocalMode = cloudConfig.hasValue &&
                     cloudConfig.value!.type == CloudBackendType.local;
-                final isBeeCountCloud = cloudConfig.hasValue &&
+                final isPiggyCountCloud = cloudConfig.hasValue &&
                     cloudConfig.value!.type == CloudBackendType.beecountCloud;
                 final needsLogin = cloudConfig.hasValue &&
                     (cloudConfig.value!.type == CloudBackendType.supabase ||
@@ -201,14 +201,14 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                   padding: const EdgeInsets.all(16),
                   children: [
                     // 提示文案（仅非 BeeCount Cloud 模式显示）
-                    if (!isBeeCountCloud)
+                    if (!isPiggyCountCloud)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: Text(
                           AppLocalizations.of(context).cloudSyncHint,
                           style: TextStyle(
                             fontSize: 12,
-                            color: BeeTokens.textTertiary(context),
+                            color: PiggyTokens.textTertiary(context),
                           ),
                         ),
                       ),
@@ -292,7 +292,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                   },
                           ),
                           // ===== BeeCount Cloud 模式：同步状态 + 登录（无需手动操作） =====
-                          if (isBeeCountCloud) ...[
+                          if (isPiggyCountCloud) ...[
                             // 登录（未登录时显示登录入口）
                             Consumer(builder: (ctx, r, _) {
                               final userNow = user;
@@ -305,7 +305,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                 // 已登录：仅显示账号信息，不提供退出
                                 return Column(
                                   children: [
-                                    BeeTokens.cardDivider(context),
+                                    PiggyTokens.cardDivider(context),
                                     AppListTile(
                                       leading: Icons.verified_user_outlined,
                                       title: userNow.email ?? AppLocalizations.of(context).mineLoggedInEmail,
@@ -318,7 +318,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                               if (hasCachedCredentials) {
                                 return Column(
                                   children: [
-                                    BeeTokens.cardDivider(context),
+                                    PiggyTokens.cardDivider(context),
                                     AppListTile(
                                       leading: Icons.refresh,
                                       title: AppLocalizations.of(context).cloudReloginTitle,
@@ -359,7 +359,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                               // 没凭证时,走原来的登录页
                               return Column(
                                 children: [
-                                  BeeTokens.cardDivider(context),
+                                  PiggyTokens.cardDivider(context),
                                   AppListTile(
                                     leading: Icons.login,
                                     title: AppLocalizations.of(context).mineLoginTitle,
@@ -377,8 +377,8 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                             }),
                           ],
                           // ===== 其他 Provider 模式：上传/下载按钮 =====
-                          if (!isBeeCountCloud) ...[
-                            BeeTokens.cardDivider(context),
+                          if (!isPiggyCountCloud) ...[
+                            PiggyTokens.cardDivider(context),
                             // 上传
                             AppListTile(
                               leading: Icons.cloud_upload_outlined,
@@ -480,7 +480,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                 }
                               },
                             ),
-                            BeeTokens.cardDivider(context),
+                            PiggyTokens.cardDivider(context),
                             // 下载
                             AppListTile(
                               leading: Icons.cloud_download_outlined,
@@ -634,7 +634,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
 
                                 return Column(
                                   children: [
-                                    BeeTokens.cardDivider(context),
+                                    PiggyTokens.cardDivider(context),
                                     AppListTile(
                                       leading: userNow == null
                                           ? Icons.login
@@ -713,7 +713,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
 
                                 return Column(
                                   children: [
-                                    BeeTokens.cardDivider(context),
+                                    PiggyTokens.cardDivider(context),
                                     SwitchListTile(
                                       title: Text(AppLocalizations.of(context)
                                           .mineAutoSyncTitle),
@@ -738,7 +738,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                     ),
                     // 同步加密入口（仅路径 A：S3/WebDAV/Supabase/iCloud）
                     // 路径 B（BeeCount Cloud）服务端需做 LWW 合并与共享账本，不加密
-                    if (canUseCloud && !isBeeCountCloud)
+                    if (canUseCloud && !isPiggyCountCloud)
                       Consumer(builder: (ctx, r, _) {
                         final encEnabledAsync =
                             r.watch(encryptionEnabledProvider);
@@ -766,9 +766,9 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                 ),
                                 decoration: BoxDecoration(
                                   color: encEnabled
-                                      ? BeeTokens.success(context).withValues(alpha: 0.12)
-                                      : BeeTokens.textTertiary(context).withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+                                      ? PiggyTokens.success(context).withValues(alpha: 0.12)
+                                      : PiggyTokens.textTertiary(context).withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                                 ),
                                 child: Text(
                                   encEnabled
@@ -778,8 +778,8 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                           .cloudSyncEncryptDisabled,
                                   style: TextStyle(
                                     color: encEnabled
-                                        ? BeeTokens.success(context)
-                                        : BeeTokens.textTertiary(context),
+                                        ? PiggyTokens.success(context)
+                                        : PiggyTokens.textTertiary(context),
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
                                   ),

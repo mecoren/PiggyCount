@@ -179,7 +179,7 @@ class ProductPromoLauncher {
                 Row(
                   children: [
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                       child: Image.asset(
                         info.logoAsset,
                         width: 44,
@@ -209,7 +209,7 @@ class ProductPromoLauncher {
                             info.subtitle,
                             style: TextStyle(
                               fontSize: 12,
-                              color: BeeTokens.textSecondary(ctx),
+                              color: PiggyTokens.textSecondary(ctx),
                             ),
                           ),
                         ],
@@ -224,7 +224,7 @@ class ProductPromoLauncher {
                   style: TextStyle(
                     fontSize: 14,
                     height: 1.55,
-                    color: BeeTokens.textPrimary(ctx),
+                    color: PiggyTokens.textPrimary(ctx),
                   ),
                 ),
                 // 产品截图缩略图(横向 Row,9:16 手机比例),点击全屏预览。
@@ -251,8 +251,8 @@ class ProductPromoLauncher {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: BeeTokens.surface(ctx).withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                      color: PiggyTokens.surface(ctx).withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                       border: Border.all(
                         color: themeColor.withValues(alpha: 0.15),
                       ),
@@ -274,7 +274,7 @@ class ProductPromoLauncher {
                           style: TextStyle(
                             fontSize: 12,
                             height: 1.5,
-                            color: BeeTokens.textSecondary(ctx),
+                            color: PiggyTokens.textSecondary(ctx),
                           ),
                         ),
                       ],
@@ -310,7 +310,7 @@ class ProductPromoLauncher {
                             side: BorderSide(color: themeColor),
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                              borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                             ),
                           ),
                           child: Text(texts.testFlightButton),
@@ -327,7 +327,7 @@ class ProductPromoLauncher {
                             backgroundColor: themeColor,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                              borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                             ),
                           ),
                           child: Text(texts.openStoreButton),
@@ -437,7 +437,7 @@ class _ScreenshotThumb extends StatelessWidget {
         );
       },
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         child: AspectRatio(
           aspectRatio: 9 / 16,
           child: DecoratedBox(
@@ -540,7 +540,7 @@ class _ScreenshotGalleryPageState extends State<_ScreenshotGalleryPage> {
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: Colors.black.withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+                            borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
                           ),
                           child: Text(
                             '${page + 1} / ${widget.assets.length}',
@@ -578,12 +578,12 @@ class _CopyableEmailRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onCopied,
-      borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: accentColor.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
           border: Border.all(color: accentColor.withValues(alpha: 0.25), width: 1),
         ),
         child: Row(
@@ -599,7 +599,7 @@ class _CopyableEmailRow extends StatelessWidget {
                     label,
                     style: TextStyle(
                       fontSize: 11,
-                      color: BeeTokens.textTertiary(context),
+                      color: PiggyTokens.textTertiary(context),
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -608,7 +608,7 @@ class _CopyableEmailRow extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: BeeTokens.textPrimary(context),
+                      color: PiggyTokens.textPrimary(context),
                       fontFamily: 'monospace',
                     ),
                   ),
@@ -703,7 +703,7 @@ class _ProductPromoCardState extends State<ProductPromoCard>
                   color.withValues(alpha: 0.05),
                 ],
               ),
-              borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
               border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
             ),
             child: Row(
@@ -725,7 +725,7 @@ class _ProductPromoCardState extends State<ProductPromoCard>
                       Text(
                         widget.info.subtitle,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: BeeTokens.textSecondary(context),
+                              color: PiggyTokens.textSecondary(context),
                             ),
                       ),
                     ],
@@ -791,7 +791,7 @@ class _ProductPromoCompactState extends State<ProductPromoCompact> {
                 color.withValues(alpha: 0.04),
               ],
             ),
-            borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
             border: Border.all(color: color.withValues(alpha: 0.25), width: 1),
           ),
           child: Row(
@@ -832,7 +832,7 @@ class _ProductPromoCompactState extends State<ProductPromoCompact> {
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             fontSize: 11,
-                            color: BeeTokens.textSecondary(context),
+                            color: PiggyTokens.textSecondary(context),
                           ),
                     ),
                   ],

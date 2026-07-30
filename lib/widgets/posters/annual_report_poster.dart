@@ -311,7 +311,7 @@ class AnnualReportPoster extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                 ),
                 child: Text(
                   l10n.annualReportTitle,
@@ -330,7 +330,7 @@ class AnnualReportPoster extends StatelessWidget {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.1),
@@ -413,7 +413,7 @@ class AnnualReportPoster extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 40),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(BeeDimens.radius3xl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radius3xl),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.15),
@@ -435,7 +435,7 @@ class AnnualReportPoster extends StatelessWidget {
                   const Color(0xFFFF6B6B),
                 ],
               ),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(BeeDimens.radius3xl)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(PiggyDimens.radius3xl)),
             ),
           ),
           Padding(
@@ -494,7 +494,7 @@ class AnnualReportPoster extends StatelessWidget {
                           ? [const Color(0xFF4CAF50), const Color(0xFF66BB6A)]
                           : [const Color(0xFFFF5252), const Color(0xFFFF6B6B)],
                     ),
-                    borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+                    borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
                     boxShadow: [
                       BoxShadow(
                         color: (data.netSavings >= 0 ? const Color(0xFF4CAF50) : const Color(0xFFFF5252))
@@ -511,7 +511,7 @@ class AnnualReportPoster extends StatelessWidget {
                         height: 50,
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.25),
-                          borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+                          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
                         ),
                         child: Icon(
                           data.netSavings >= 0 ? Icons.savings_rounded : Icons.warning_rounded,
@@ -580,7 +580,7 @@ class AnnualReportPoster extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -686,7 +686,7 @@ class AnnualReportPoster extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
         border: Border.all(
           color: Colors.white.withValues(alpha: 0.2),
           width: 1,
@@ -699,7 +699,7 @@ class AnnualReportPoster extends StatelessWidget {
             height: 40,
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
             ),
             child: Icon(icon, color: Colors.white, size: 22),
           ),
@@ -842,7 +842,7 @@ class AnnualReportPoster extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
@@ -865,7 +865,7 @@ class AnnualReportPoster extends StatelessWidget {
                   color.withValues(alpha: 0.7),
                 ],
               ),
-              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
               boxShadow: [
                 BoxShadow(
                   color: color.withValues(alpha: 0.3),
@@ -943,7 +943,7 @@ class AnnualReportPoster extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+              borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.1),
@@ -994,7 +994,7 @@ class AnnualReportPoster extends StatelessWidget {
                               height: 40,
                               decoration: BoxDecoration(
                                 color: primaryColor.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                                borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                               ),
                               child: Icon(
                                 CategoryService.getCategoryIcon(category.icon),
@@ -1019,7 +1019,7 @@ class AnnualReportPoster extends StatelessWidget {
                                 const SizedBox(height: 4),
                                 // 进度条
                                 ClipRRect(
-                                  borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+                                  borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                                   child: LinearProgressIndicator(
                                     value: category.percentage,
                                     backgroundColor: Colors.grey[200],
@@ -1080,7 +1080,7 @@ class AnnualReportPoster extends StatelessWidget {
           height: 44,
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
           ),
           child: Icon(icon, color: Colors.white, size: 24),
         ),
@@ -1177,7 +1177,7 @@ class AnnualReportPoster extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+              borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.1),
@@ -1235,7 +1235,7 @@ class AnnualReportPoster extends StatelessWidget {
                                     ],
                                   ),
                                   borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(BeeDimens.radiusXs),
+                                    top: Radius.circular(PiggyDimens.radiusXs),
                                   ),
                                   boxShadow: (isMax || isMin)
                                       ? [
@@ -1283,7 +1283,7 @@ class AnnualReportPoster extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.1),
@@ -1299,7 +1299,7 @@ class AnnualReportPoster extends StatelessWidget {
             height: 44,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
             ),
             child: Icon(icon, color: color, size: 24),
           ),
@@ -1418,7 +1418,7 @@ class AnnualReportPoster extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.1),
@@ -1441,7 +1441,7 @@ class AnnualReportPoster extends StatelessWidget {
                   color.withValues(alpha: 0.7),
                 ],
               ),
-              borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
               boxShadow: [
                 BoxShadow(
                   color: color.withValues(alpha: 0.3),
@@ -1547,7 +1547,7 @@ class AnnualReportPoster extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+              borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.1),
@@ -1631,7 +1631,7 @@ class AnnualReportPoster extends StatelessWidget {
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
                                 color: a.color.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+                                borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -1654,7 +1654,7 @@ class AnnualReportPoster extends StatelessWidget {
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
                                 color: Colors.grey[100],
-                                borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+                                borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,

@@ -81,7 +81,7 @@ class _LogCenterPageState extends ConsumerState<LogCenterPage> {
     final filteredLogs = _filteredLogs;
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
       appBar: GlassTitleBar(
         title: l10n.logCenterTitle,
@@ -161,7 +161,7 @@ class _LogCenterPageState extends ConsumerState<LogCenterPage> {
                             .textTheme
                             .labelMedium
                             ?.copyWith(
-                              color: BeeTokens.textSecondary(context),
+                              color: PiggyTokens.textSecondary(context),
                             ),
                       ),
                     ),
@@ -202,7 +202,7 @@ class _LogCenterPageState extends ConsumerState<LogCenterPage> {
                             .textTheme
                             .labelMedium
                             ?.copyWith(
-                              color: BeeTokens.textSecondary(context),
+                              color: PiggyTokens.textSecondary(context),
                             ),
                       ),
                     ),
@@ -259,14 +259,14 @@ class _LogCenterPageState extends ConsumerState<LogCenterPage> {
                 Text(
                   '${l10n.logCenterTotal}: ${logger.logs.length}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: BeeTokens.textSecondary(context),
+                        color: PiggyTokens.textSecondary(context),
                       ),
                 ),
                 SizedBox(width: 16.0.scaled(context, ref)),
                 Text(
                   '${l10n.logCenterFiltered}: ${filteredLogs.length}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: BeeTokens.textSecondary(context),
+                        color: PiggyTokens.textSecondary(context),
                       ),
                 ),
               ],
@@ -282,14 +282,14 @@ class _LogCenterPageState extends ConsumerState<LogCenterPage> {
                         Icon(
                           Icons.inbox_outlined,
                           size: 64.0.scaled(context, ref),
-                          color: BeeTokens.textSecondary(context),
+                          color: PiggyTokens.textSecondary(context),
                         ),
                         SizedBox(height: 16.0.scaled(context, ref)),
                         Text(
                           l10n.logCenterEmpty,
                           style:
                               Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: BeeTokens.textSecondary(context),
+                                    color: PiggyTokens.textSecondary(context),
                                   ),
                         ),
                       ],
@@ -368,9 +368,9 @@ class _LogEntryCard extends ConsumerWidget {
     // 根据日志级别选择颜色
     final levelColor = switch (log.level) {
       LogLevel.debug => Colors.grey,
-      LogLevel.info => BeeTokens.info(context),
-      LogLevel.warning => BeeTokens.warning(context),
-      LogLevel.error => BeeTokens.error(context),
+      LogLevel.info => PiggyTokens.info(context),
+      LogLevel.warning => PiggyTokens.warning(context),
+      LogLevel.error => PiggyTokens.error(context),
     };
 
     return SettingsCard(
@@ -415,14 +415,14 @@ class _LogEntryCard extends ConsumerWidget {
                         vertical: 2.0.scaled(context, ref),
                       ),
                       decoration: BoxDecoration(
-                        color: BeeTokens.surfaceSecondary(context),
+                        color: PiggyTokens.surfaceSecondary(context),
                         borderRadius:
                             BorderRadius.circular(4.0.scaled(context, ref)),
                       ),
                       child: Text(
                         log.platform.displayName,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: BeeTokens.textSecondary(context),
+                              color: PiggyTokens.textSecondary(context),
                             ),
                       ),
                     ),
@@ -431,7 +431,7 @@ class _LogEntryCard extends ConsumerWidget {
                     Text(
                       _formatTime(log.timestamp),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: BeeTokens.textSecondary(context),
+                            color: PiggyTokens.textSecondary(context),
                           ),
                     ),
                   ],
@@ -441,7 +441,7 @@ class _LogEntryCard extends ConsumerWidget {
                 Text(
                   '[${log.tag}]',
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: BeeTokens.textSecondary(context),
+                        color: PiggyTokens.textSecondary(context),
                         fontWeight: FontWeight.w500,
                       ),
                 ),
@@ -450,7 +450,7 @@ class _LogEntryCard extends ConsumerWidget {
                 Text(
                   log.message,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: BeeTokens.textPrimary(context),
+                        color: PiggyTokens.textPrimary(context),
                       ),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
@@ -461,7 +461,7 @@ class _LogEntryCard extends ConsumerWidget {
                   Text(
                     'Error: ${log.error}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: BeeTokens.error(context),
+                          color: PiggyTokens.error(context),
                         ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,

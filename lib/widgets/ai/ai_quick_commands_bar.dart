@@ -105,12 +105,12 @@ class _QuickCommandCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = BeeTokens.isDark(context);
+    final isDark = PiggyTokens.isDark(context);
     final title = _getTitle();
     final description = _getDescription();
 
     return Material(
-      color: BeeTokens.surface(context),
+      color: PiggyTokens.surface(context),
       borderRadius: BorderRadius.circular(8.0.scaled(context, ref)),
       child: InkWell(
         onTap: onTap,
@@ -125,7 +125,7 @@ class _QuickCommandCard extends ConsumerWidget {
             border: Border.all(
               color: isDark
                   ? primaryColor.withAlpha(77) // 30% 透明度
-                  : BeeTokens.border(context),
+                  : PiggyTokens.border(context),
               width: 1.0,
             ),
           ),
@@ -135,7 +135,7 @@ class _QuickCommandCard extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 12.0.scaled(context, ref),
                 fontWeight: FontWeight.w500,
-                color: BeeTokens.textPrimary(context),
+                color: PiggyTokens.textPrimary(context),
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,

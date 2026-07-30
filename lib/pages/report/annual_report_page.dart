@@ -333,7 +333,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
       ),
       child: DropdownButton<int>(
         value: _selectedYear,
@@ -399,7 +399,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
           height: 8,
           decoration: BoxDecoration(
             color: isActive ? Colors.white : Colors.white.withValues(alpha: 0.4),
-            borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
           ),
         );
       }),
@@ -419,7 +419,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             backgroundColor: Colors.white,
             foregroundColor: ref.watch(primaryColorProvider),
             padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BeeDimens.radiusLg)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
           ),
         ),
       ),
@@ -443,8 +443,8 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
             decoration: BoxDecoration(
-              color: BeeTokens.surface(dialogContext),
-              borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+              color: PiggyTokens.surface(dialogContext),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.1),
@@ -469,7 +469,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                   l10n.annualReportGenerating,
                   style: TextStyle(
                     fontSize: 14,
-                    color: BeeTokens.textSecondary(dialogContext),
+                    color: PiggyTokens.textSecondary(dialogContext),
                   ),
                 ),
               ],
@@ -604,21 +604,21 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             icon: Icons.trending_up_rounded,
             label: l10n.annualReportTotalIncome,
             amount: data.totalIncome,
-            color: BeeTokens.success(context),
+            color: PiggyTokens.success(context),
           ),
           const SizedBox(height: 12),
           _buildAmountCard(
             icon: Icons.trending_down_rounded,
             label: l10n.annualReportTotalExpense,
             amount: data.totalExpense,
-            color: BeeTokens.error(context),
+            color: PiggyTokens.error(context),
           ),
           const SizedBox(height: 12),
           _buildAmountCard(
             icon: data.netSavings >= 0 ? Icons.savings_rounded : Icons.warning_rounded,
             label: l10n.annualReportNetSavings,
             amount: data.netSavings,
-            color: data.netSavings >= 0 ? BeeTokens.success(context) : BeeTokens.error(context),
+            color: data.netSavings >= 0 ? PiggyTokens.success(context) : PiggyTokens.error(context),
             showSign: true,
           ),
         ],
@@ -636,7 +636,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
       ),
       child: Column(
         children: [
@@ -693,7 +693,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
       ),
       child: Row(
         children: [
@@ -702,7 +702,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             height: 48,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
             ),
             child: Icon(icon, color: color, size: 24),
           ),
@@ -711,7 +711,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             label,
             style: TextStyle(
               fontSize: 16,
-              color: BeeTokens.textSecondary(context),
+              color: PiggyTokens.textSecondary(context),
             ),
           ),
           const Spacer(),
@@ -844,7 +844,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
               title: '储蓄率',
               value: '${savingsRate.toStringAsFixed(1)}%',
               description: savingsRate >= 0 ? '今年你攒下了收入的这个比例' : '今年支出超过了收入',
-              primaryColor: savingsRate >= 0 ? BeeTokens.success(context) : BeeTokens.error(context),
+              primaryColor: savingsRate >= 0 ? PiggyTokens.success(context) : PiggyTokens.error(context),
             ),
         ],
       ),
@@ -859,14 +859,14 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
     required Color primaryColor,
   }) {
     // 判断是否使用特殊颜色（红/绿）
-    final isSpecialColor = primaryColor == BeeTokens.success(context) ||
-        primaryColor == BeeTokens.error(context);
+    final isSpecialColor = primaryColor == PiggyTokens.success(context) ||
+        primaryColor == PiggyTokens.error(context);
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
       ),
       child: Row(
         children: [
@@ -875,7 +875,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             height: 48,
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
             ),
             child: Icon(icon, color: Colors.white, size: 24),
           ),
@@ -970,7 +970,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                 width: 12,
                 height: 12,
                 decoration: BoxDecoration(
-                  color: BeeTokens.success(context),
+                  color: PiggyTokens.success(context),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -987,7 +987,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                 width: 12,
                 height: 12,
                 decoration: BoxDecoration(
-                  color: BeeTokens.error(context),
+                  color: PiggyTokens.error(context),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -1031,13 +1031,13 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: BeeTokens.success(context).withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+                            color: PiggyTokens.success(context).withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                           ),
                           child: Text(
                             '收入最高',
                             style: TextStyle(
-                              color: BeeTokens.success(context),
+                              color: PiggyTokens.success(context),
                               fontSize: 10,
                             ),
                           ),
@@ -1047,13 +1047,13 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                           margin: EdgeInsets.only(left: isMaxIncome ? 6 : 0),
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: BeeTokens.error(context).withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+                            color: PiggyTokens.error(context).withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                           ),
                           child: Text(
                             '支出最高',
                             style: TextStyle(
-                              color: BeeTokens.error(context),
+                              color: PiggyTokens.error(context),
                               fontSize: 10,
                             ),
                           ),
@@ -1071,7 +1071,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                               height: 16,
                               decoration: BoxDecoration(
                                 color: Colors.white.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+                                borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                               ),
                             ),
                             FractionallySizedBox(
@@ -1079,8 +1079,8 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                               child: Container(
                                 height: 16,
                                 decoration: BoxDecoration(
-                                  color: BeeTokens.success(context),
-                                  borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+                                  color: PiggyTokens.success(context),
+                                  borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                                 ),
                               ),
                             ),
@@ -1093,7 +1093,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                         child: Text(
                           '¥${formatter.format(m.income)}',
                           style: TextStyle(
-                            color: BeeTokens.success(context),
+                            color: PiggyTokens.success(context),
                             fontSize: 12,
                           ),
                           textAlign: TextAlign.right,
@@ -1112,7 +1112,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                               height: 16,
                               decoration: BoxDecoration(
                                 color: Colors.white.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+                                borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                               ),
                             ),
                             FractionallySizedBox(
@@ -1120,8 +1120,8 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                               child: Container(
                                 height: 16,
                                 decoration: BoxDecoration(
-                                  color: BeeTokens.error(context),
-                                  borderRadius: BorderRadius.circular(BeeDimens.radiusXs),
+                                  color: PiggyTokens.error(context),
+                                  borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                                 ),
                               ),
                             ),
@@ -1134,7 +1134,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                         child: Text(
                           '¥${formatter.format(m.expense)}',
                           style: TextStyle(
-                            color: BeeTokens.error(context),
+                            color: PiggyTokens.error(context),
                             fontSize: 12,
                           ),
                           textAlign: TextAlign.right,
@@ -1197,7 +1197,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
                 ),
                 child: Row(
                   children: [
@@ -1327,7 +1327,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                   label: l10n.annualReportHighestMonth,
                   value: '$maxMonth月',
                   subValue: '¥${formatter.format(maxExpense)}',
-                  color: BeeTokens.error(context),
+                  color: PiggyTokens.error(context),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1336,7 +1336,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                   label: l10n.annualReportLowestMonth,
                   value: '$minMonth月',
                   subValue: '¥${formatter.format(minExpense)}',
-                  color: BeeTokens.success(context),
+                  color: PiggyTokens.success(context),
                 ),
               ),
             ],
@@ -1348,7 +1348,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
             ),
             child: Column(
               children: [
@@ -1369,11 +1369,11 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                                 height: 160 * heightRatio,
                                 decoration: BoxDecoration(
                                   color: m.month == maxMonth
-                                      ? BeeTokens.error(context)
+                                      ? PiggyTokens.error(context)
                                       : m.month == minMonth
-                                          ? BeeTokens.success(context)
+                                          ? PiggyTokens.success(context)
                                           : Colors.white.withValues(alpha: 0.6),
-                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(BeeDimens.radiusXs)),
+                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXs)),
                                 ),
                               ),
                               const SizedBox(height: 8),
@@ -1409,7 +1409,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1417,7 +1417,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
           Text(
             label,
             style: TextStyle(
-              color: BeeTokens.textSecondary(context),
+              color: PiggyTokens.textSecondary(context),
               fontSize: 12,
             ),
           ),
@@ -1478,7 +1478,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
               amount: data.largestExpense!.amount,
               note: data.largestExpense!.note ?? data.largestExpenseCategory?.name ?? '',
               date: dateFormatter.format(data.largestExpense!.happenedAt),
-              color: BeeTokens.error(context),
+              color: PiggyTokens.error(context),
             ),
 
           if (data.largestIncome != null) ...[
@@ -1489,7 +1489,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
               amount: data.largestIncome!.amount,
               note: data.largestIncome!.note ?? data.largestIncomeCategory?.name ?? '',
               date: dateFormatter.format(data.largestIncome!.happenedAt),
-              color: BeeTokens.success(context),
+              color: PiggyTokens.success(context),
             ),
           ],
 
@@ -1523,7 +1523,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1535,7 +1535,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                 height: 40,
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusLg),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                 ),
                 child: Icon(icon, color: color, size: 20),
               ),
@@ -1543,7 +1543,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
               Text(
                 label,
                 style: TextStyle(
-                  color: BeeTokens.textSecondary(context),
+                  color: PiggyTokens.textSecondary(context),
                   fontSize: 14,
                 ),
               ),
@@ -1551,7 +1551,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
               Text(
                 date,
                 style: TextStyle(
-                  color: BeeTokens.textTertiary(context),
+                  color: PiggyTokens.textTertiary(context),
                   fontSize: 12,
                 ),
               ),
@@ -1571,7 +1571,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             Text(
               note,
               style: TextStyle(
-                color: BeeTokens.textSecondary(context),
+                color: PiggyTokens.textSecondary(context),
                 fontSize: 14,
               ),
               maxLines: 1,
@@ -1659,7 +1659,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: unlocked ? Colors.white : Colors.white.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
       ),
       child: Row(
         children: [
@@ -1667,12 +1667,12 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: unlocked ? primaryColor.withValues(alpha: 0.1) : BeeTokens.iconTertiary(context).withValues(alpha: 0.2),
+              color: unlocked ? primaryColor.withValues(alpha: 0.1) : PiggyTokens.iconTertiary(context).withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
             child: Icon(
               icon,
-              color: unlocked ? primaryColor : BeeTokens.iconTertiary(context),
+              color: unlocked ? primaryColor : PiggyTokens.iconTertiary(context),
               size: 28,
             ),
           ),
@@ -1684,7 +1684,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                 Text(
                   title,
                   style: TextStyle(
-                    color: unlocked ? BeeTokens.textPrimary(context) : BeeTokens.textTertiary(context),
+                    color: unlocked ? PiggyTokens.textPrimary(context) : PiggyTokens.textTertiary(context),
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -1693,7 +1693,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                 Text(
                   desc,
                   style: TextStyle(
-                    color: unlocked ? BeeTokens.textSecondary(context) : BeeTokens.textTertiary(context),
+                    color: unlocked ? PiggyTokens.textSecondary(context) : PiggyTokens.textTertiary(context),
                     fontSize: 14,
                   ),
                 ),
@@ -1709,7 +1709,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
           else
             Icon(
               Icons.lock_outline,
-              color: BeeTokens.textTertiary(context),
+              color: PiggyTokens.textTertiary(context),
               size: 24,
             ),
         ],
@@ -1823,7 +1823,7 @@ class _AnnualReportPosterPreviewState extends State<_AnnualReportPosterPreview> 
               // 海报预览
               Flexible(
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(BeeDimens.radiusXl),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
                   child: Stack(
                     children: [
                       InteractiveViewer(
@@ -1856,7 +1856,7 @@ class _AnnualReportPosterPreviewState extends State<_AnnualReportPosterPreview> 
                             color: Colors.transparent,
                             child: InkWell(
                               onTap: _toggleHideIncome,
-                              borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+                              borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
@@ -1864,7 +1864,7 @@ class _AnnualReportPosterPreviewState extends State<_AnnualReportPosterPreview> 
                                 ),
                                 decoration: BoxDecoration(
                                   color: Colors.black.withValues(alpha: 0.5),
-                                  borderRadius: BorderRadius.circular(BeeDimens.radius2xl),
+                                  borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -1966,7 +1966,7 @@ class _AnnualReportPosterPreviewState extends State<_AnnualReportPosterPreview> 
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           decoration: BoxDecoration(
             color: bgColor,
-            borderRadius: BorderRadius.circular(BeeDimens.radius3xl),
+            borderRadius: BorderRadius.circular(PiggyDimens.radius3xl),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.1),

@@ -74,12 +74,12 @@ class _HelpCenterPageState extends ConsumerState<HelpCenterPage> {
     _url = widget.initialUrl ??
         WebsiteUrls.docsEmbed(
           locale,
-          dark: BeeTokens.isDark(context),
+          dark: PiggyTokens.isDark(context),
           primaryHex: _hex(ref.read(primaryColorProvider)),
         );
     final controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(BeeTokens.scaffoldBackground(context))
+      ..setBackgroundColor(PiggyTokens.scaffoldBackground(context))
       ..setNavigationDelegate(NavigationDelegate(
         onProgress: (p) {
           if (mounted) setState(() => _progress = p);
@@ -165,7 +165,7 @@ class _HelpCenterPageState extends ConsumerState<HelpCenterPage> {
         Navigator.of(context).pop();
       },
       child: Scaffold(
-        backgroundColor: BeeTokens.scaffoldBackground(context),
+        backgroundColor: PiggyTokens.scaffoldBackground(context),
         extendBodyBehindAppBar: true,
         appBar: GlassTitleBar(
           title: widget.title ?? l10n.mineHelp,
@@ -173,7 +173,7 @@ class _HelpCenterPageState extends ConsumerState<HelpCenterPage> {
           actions: [
             IconButton(
               icon: Icon(Icons.open_in_browser,
-                  color: BeeTokens.iconPrimary(context), size: 20),
+                  color: PiggyTokens.iconPrimary(context), size: 20),
               tooltip: l10n.helpCenterOpenInBrowser,
               onPressed: _openInBrowser,
             ),
@@ -194,12 +194,12 @@ class _HelpCenterPageState extends ConsumerState<HelpCenterPage> {
                     children: [
                       Icon(Icons.wifi_off,
                           size: 48,
-                          color: BeeTokens.textTertiary(context)),
+                          color: PiggyTokens.textTertiary(context)),
                       const SizedBox(height: 12),
                       Text(
                         l10n.helpCenterLoadFailed,
                         style: TextStyle(
-                            color: BeeTokens.textSecondary(context)),
+                            color: PiggyTokens.textSecondary(context)),
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
