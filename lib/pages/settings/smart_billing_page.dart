@@ -210,6 +210,7 @@ class SmartBillingPage extends ConsumerWidget {
       appBar: GlassTitleBar(
         title: l10n.smartBillingPageTitle,
         showBack: true,
+        bottomOpaque: true,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(

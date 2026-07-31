@@ -224,7 +224,7 @@ class UserProfilePoster extends StatelessWidget {
               ],
             ),
             child: QrImageView(
-              data: 'https://github.com/TNT-Likely/PiggyCount?utm_source=share_poster&utm_medium=qr_code&utm_campaign=user_profile',
+              data: 'https://github.com/mecoren/PiggyCount?utm_source=share_poster&utm_medium=qr_code&utm_campaign=user_profile',
               version: QrVersions.auto,
               size: 98,
               backgroundColor: Colors.white,

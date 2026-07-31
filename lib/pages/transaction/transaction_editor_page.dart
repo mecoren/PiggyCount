@@ -19,6 +19,30 @@ import '../../services/billing/post_processor.dart';
 import '../../services/attachment_service.dart';
 import '../../services/data/tx_author_service.dart';
 
+/// 以底部抽屉形式弹出交易编辑器（新建模式专用）
+///
+/// 内部仍复用 [TransactionEditorPage] 的逻辑，仅外层从全屏 Scaffold
+/// 替换为 [ExpandableBottomSheet]。编辑模式仍走全屏页（保留复杂表单体验）。
+Future<void> showTransactionFormBottomSheet(
+  BuildContext context, {
+  String initialKind = 'expense',
+  int? initialCategoryId,
+  bool quickAdd = true,
+}) async {
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) => TransactionEditorPage(
+      initialKind: initialKind,
+      quickAdd: quickAdd,
+      initialCategoryId: initialCategoryId,
+      renderAsBottomSheet: true,
+    ),
+  );
+}
+
 /// 交易编辑器页面
 /// 支持创建/编辑收入、支出和转账记录
 class TransactionEditorPage extends ConsumerStatefulWidget {
@@ -39,6 +63,12 @@ class TransactionEditorPage extends ConsumerStatefulWidget {
   final String? initialCurrencyCode;
   final double? initialNativeAmount;
 
+  /// 是否以底部抽屉形式渲染。
+  ///
+  /// 为 `true` 时 build 返回 [ExpandableBottomSheet]（用于新建场景）；
+  /// 默认 `false` 保持全屏 Scaffold 行为（编辑场景与深链入口）。
+  final bool renderAsBottomSheet;
+
   const TransactionEditorPage({
     super.key,
     required this.initialKind,
@@ -55,10 +85,12 @@ class TransactionEditorPage extends ConsumerStatefulWidget {
     this.initialExcludeFromBudget = false,
     this.initialCurrencyCode,
     this.initialNativeAmount,
+    this.renderAsBottomSheet = false,
   });
 
   @override
-  ConsumerState<TransactionEditorPage> createState() => _TransactionEditorPageState();
+  ConsumerState<TransactionEditorPage> createState() =>
+      _TransactionEditorPageState();
 }
 
 class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
@@ -74,7 +106,9 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
 
     // 若需要自动打开金额输入，则在首帧后查询分类并触发
     // 注意：转账类型不走这个逻辑
-    if (widget.quickAdd && widget.initialCategoryId != null && widget.initialKind != 'transfer') {
+    if (widget.quickAdd &&
+        widget.initialCategoryId != null &&
+        widget.initialKind != 'transfer') {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted || _autoOpened) return;
         final repo = ref.read(repositoryProvider);
@@ -82,7 +116,8 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
         // 共享账本下记的 tx,反查走 SharedLedger* 表。
         Category? c;
         if (widget.initialCategoryId! < 0 && repo is LocalRepository) {
-          c = await repo.db.findCategoryBySyntheticId(widget.initialCategoryId!);
+          c = await repo.db
+              .findCategoryBySyntheticId(widget.initialCategoryId!);
         } else {
           c = await repo.getCategoryById(widget.initialCategoryId!);
         }
@@ -102,6 +137,9 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.renderAsBottomSheet) {
+      return _buildBottomSheet(context);
+    }
     return Scaffold(
       body: Column(
         children: [
@@ -137,7 +175,8 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
                   TextButton(
                     onPressed: () => Navigator.pop(context),
                     child: Text(AppLocalizations.of(context)!.commonCancel,
-                        style: TextStyle(color: PiggyTokens.textPrimary(context))),
+                        style:
+                            TextStyle(color: PiggyTokens.textPrimary(context))),
                   )
                 ],
               ),
@@ -151,12 +190,14 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
               children: [
                 CategorySelector(
                   kind: 'expense',
-                  onCategorySelected: (c) => _onCategorySelected(context, c, 'expense'),
+                  onCategorySelected: (c) =>
+                      _onCategorySelected(context, c, 'expense'),
                   initialCategoryId: widget.initialCategoryId,
                 ),
                 CategorySelector(
                   kind: 'income',
-                  onCategorySelected: (c) => _onCategorySelected(context, c, 'income'),
+                  onCategorySelected: (c) =>
+                      _onCategorySelected(context, c, 'income'),
                   initialCategoryId: widget.initialCategoryId,
                 ),
                 TransferForm(
@@ -180,6 +221,82 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
     );
   }
 
+  /// 底部抽屉模式渲染：复用分类选择器与转账表单，分段选择器放进标题栏 bottom 槽。
+  Widget _buildBottomSheet(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    // 分段选择器：放标题栏 bottom 槽，宽度铺满（无取消按钮，关闭走左上角 ×）
+    final segmentControl = Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      child: WaitSlidingSegmentedControl<String>(
+        selected: _selectedKind,
+        segments: [
+          WaitSlidingSegment(
+            value: 'expense',
+            label: l10n.categoryExpense,
+          ),
+          WaitSlidingSegment(
+            value: 'income',
+            label: l10n.categoryIncome,
+          ),
+          WaitSlidingSegment(
+            value: 'transfer',
+            label: l10n.transferTitle,
+          ),
+        ],
+        onValueChanged: (value) => setState(() => _selectedKind = value),
+      ),
+    );
+
+    return ExpandableBottomSheet(
+      title: l10n.widgetQuickAddLabel,
+      onClose: () => Navigator.of(context).pop(),
+      initialChildSize: 0.7,
+      minChildSize: 0.35,
+      maxChildSize: 1.0,
+      bottom: segmentControl,
+      bottomHeight: 52,
+      builder: (context, scrollController) {
+        // IndexedStack 内部组件自带滚动控制器（CategorySelector/TransferForm），
+        // 抽屉的 scrollController 不强注入，仅用于 DraggableScrollableSheet
+        // 联动判定（此处保留参数避免未使用警告）
+        // ignore: unused_local_variable
+        final _ = scrollController;
+        return IndexedStack(
+          index: _selectedKind == 'expense'
+              ? 0
+              : (_selectedKind == 'income' ? 1 : 2),
+          children: [
+            CategorySelector(
+              kind: 'expense',
+              onCategorySelected: (c) =>
+                  _onCategorySelected(context, c, 'expense'),
+              initialCategoryId: widget.initialCategoryId,
+            ),
+            CategorySelector(
+              kind: 'income',
+              onCategorySelected: (c) =>
+                  _onCategorySelected(context, c, 'income'),
+              initialCategoryId: widget.initialCategoryId,
+            ),
+            TransferForm(
+              onTransferComplete: () {
+                // 关闭抽屉
+                Navigator.of(context).pop();
+              },
+              initialFromAccountId: widget.initialAccountId,
+              initialToAccountId: widget.initialToAccountId,
+              editingTransactionId: widget.editingTransactionId,
+              initialAmount: widget.initialAmount,
+              initialNote: widget.initialNote,
+              initialDate: widget.initialDate,
+              initialTagIds: widget.initialTagIds,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   /// 获取默认账户ID（验证币种匹配）
   Future<int?> _getDefaultAccountId(String kind, int ledgerId) async {
     try {
@@ -195,7 +312,8 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
       if (ledger == null) return null;
 
       // 3. 获取默认账户信息
-      final account = await ref.read(accountByIdProvider(defaultAccountId).future);
+      final account =
+          await ref.read(accountByIdProvider(defaultAccountId).future);
       if (account == null) return null;
 
       // 账户隐藏 #240 E3:默认账户已被隐藏时按「无默认」处理(defensive 兜底,
@@ -211,7 +329,8 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
     }
   }
 
-  Future<void> _onCategorySelected(BuildContext context, Category c, String kind) async {
+  Future<void> _onCategorySelected(
+      BuildContext context, Category c, String kind) async {
     if (!widget.quickAdd) {
       Navigator.pop(context, c);
       return;
@@ -220,7 +339,8 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
 
     // 确定初始账户ID（新建时使用默认账户，编辑时保持原值）
     int? initialAccountId = widget.initialAccountId;
-    if (widget.editingTransactionId == null && widget.initialAccountId == null) {
+    if (widget.editingTransactionId == null &&
+        widget.initialAccountId == null) {
       // 新建模式：尝试获取默认账户
       initialAccountId = await _getDefaultAccountId(kind, ledgerId);
     }
@@ -230,7 +350,8 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
       isScrollControlled: true,
       backgroundColor: PiggyTokens.surfaceSheet(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
       ),
       builder: (ctx) => AmountEditorSheet(
         categoryName: c.name,
@@ -268,8 +389,9 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
           final accountIdForAdd = isSyntheticAccount ? null : res.accountId;
           final accountIdForUpdate = d.Value<int?>(accountIdForAdd);
           final categoryOverride = isSyntheticCategory ? c.syncId : null;
-          final accountOverride =
-              isSyntheticAccount ? await _resolveSyncIdByAccountId(res.accountId!, ledgerId) : null;
+          final accountOverride = isSyntheticAccount
+              ? await _resolveSyncIdByAccountId(res.accountId!, ledgerId)
+              : null;
           if (widget.editingTransactionId != null) {
             // 编辑模式：使用repository更新交易
             await repo.updateTransaction(
@@ -361,12 +483,12 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
                       await repo.db
                           .into(repo.db.transactionTagOverrides)
                           .insert(
-                        TransactionTagOverridesCompanion.insert(
-                          transactionSyncId: txSyncId,
-                          tagSyncId: s.syncId,
-                          createdAt: now,
-                        ),
-                      );
+                            TransactionTagOverridesCompanion.insert(
+                              transactionSyncId: txSyncId,
+                              tagSyncId: s.syncId,
+                              createdAt: now,
+                            ),
+                          );
                       break;
                     }
                   }
@@ -396,8 +518,10 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
             updateAppWidget(ref, context);
           }
           // 先关闭页面，再播放反馈
-          if (ctx.mounted && Navigator.of(ctx).canPop()) Navigator.of(ctx).pop();
-          if (context.mounted && Navigator.of(context).canPop()) Navigator.of(context).pop();
+          if (ctx.mounted && Navigator.of(ctx).canPop())
+            Navigator.of(ctx).pop();
+          if (context.mounted && Navigator.of(context).canPop())
+            Navigator.of(context).pop();
           // 反馈：轻微触感 + 系统点击音
           HapticFeedback.lightImpact();
           SystemSound.play(SystemSoundType.click);

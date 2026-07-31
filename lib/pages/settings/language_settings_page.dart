@@ -20,6 +20,7 @@ class LanguageSettingsPage extends ConsumerWidget {
       appBar: GlassTitleBar(
         title: l10n.languageTitle,
         showBack: true,
+        bottomOpaque: true,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(

@@ -27,13 +27,7 @@ class AppEmpty extends StatelessWidget {
               ),
               alignment: Alignment.center,
               child: PiggyIcon(
-                color: primary,
                 size: 52,
-                // child: SvgPicture.asset(
-                //   'assets/title-logo.svg',
-                //   width: 52,
-                //   height: 52,
-                //   color: Theme.of(context).colorScheme.primary,
               ),
             ),
             const SizedBox(height: 14),

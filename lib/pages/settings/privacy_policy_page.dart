@@ -112,6 +112,7 @@ class _PrivacyPolicyPageState extends ConsumerState<PrivacyPolicyPage> {
         appBar: GlassTitleBar(
           title: l10n.aboutPrivacyPolicy,
           showBack: true,
+          bottomOpaque: true,
         ),
         body: Padding(
           padding:

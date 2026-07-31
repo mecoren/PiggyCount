@@ -422,8 +422,8 @@ final ledgerSyncStatusProvider = FutureProvider.family<SyncStatus, int>(
 
 ## 联系方式
 
-- **GitHub**: https://github.com/TNT-Likely/PiggyCount
-- **Issues**: https://github.com/TNT-Likely/PiggyCount/issues
+- **GitHub**: https://github.com/mecoren/PiggyCount
+- **Issues**: https://github.com/mecoren/PiggyCount/issues
 
 ---
 

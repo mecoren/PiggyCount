@@ -8,20 +8,20 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/biz/product_promo_card.dart';
 
-/// 蜜蜂家当 BeeAssets — 资产可视化产品。
+/// 小猪家当 PiggyAssets — 资产可视化产品。
 ///
 /// 当前阶段:iOS 已正式上架 App Store(TestFlight 公测已关闭),Android 已上架 Google Play。
 /// 截图按当前 locale 自动切英文 / 中文版。
-ProductPromo beeAssetsPromo(BuildContext context) {
+ProductPromo piggyAssetsPromo(BuildContext context) {
   final l10n = AppLocalizations.of(context);
   // 英文 locale 用 _en 后缀的截图,zh / zh-TW 都用中文版
   final isEn = Localizations.localeOf(context).languageCode == 'en';
   final suffix = isEn ? '_en' : '';
   return ProductPromo(
-    logoAsset: 'assets/images/beeassets_logo.png',
-    title: l10n.aboutBeeAssets,
-    subtitle: l10n.aboutBeeAssetsSubtitle,
-    introBody: l10n.aboutBeeAssetsIntro,
+    logoAsset: 'assets/images/piggyassets_logo.png',
+    title: l10n.aboutPiggyAssets,
+    subtitle: l10n.aboutPiggyAssetsSubtitle,
+    introBody: l10n.aboutPiggyAssetsIntro,
     // 跟 logo 黑黄基调对齐:深金黄(蜂蜡 / 老金)
     brandColor: const Color(0xFFD4A017),
     appStoreId: '6763686675',
@@ -31,28 +31,28 @@ ProductPromo beeAssetsPromo(BuildContext context) {
     websiteUrl: 'https://assets.beejz.com',
     contactEmail: 'sunxiaoyes@outlook.com',
     screenshotAssets: [
-      'assets/images/beeassets_dashboard$suffix.png',
-      'assets/images/beeassets_holdings$suffix.png',
+      'assets/images/piggyassets_dashboard$suffix.png',
+      'assets/images/piggyassets_holdings$suffix.png',
     ],
   );
 }
 
-/// 蜜蜂域名 BeeDNS — DNS 管理工具。
-ProductPromo beeDnsPromo(BuildContext context) {
+/// 小猪域名 PiggyDNS — DNS 管理工具。
+ProductPromo piggyDnsPromo(BuildContext context) {
   final l10n = AppLocalizations.of(context);
   return ProductPromo(
-    logoAsset: 'assets/images/beedns_logo.png',
-    title: l10n.aboutBeeDNS,
-    subtitle: l10n.aboutBeeDNSSubtitle,
-    introBody: l10n.aboutBeeDNSIntro,
+    logoAsset: 'assets/images/piggydns_logo.png',
+    title: l10n.aboutPiggyDNS,
+    subtitle: l10n.aboutPiggyDNSSubtitle,
+    introBody: l10n.aboutPiggyDNSIntro,
     // 琥珀橙
     brandColor: const Color(0xFFF59E0B),
     appStoreId: '6757992815',
     // googlePlayUrl: 'https://play.google.com/store/apps/details?id=com.tntlikely.beedns',
     websiteUrl: 'https://dns.beejz.com',
     contactEmail: 'sunxiaoyes@outlook.com',
-    // BeeDNS 截图暂不展示;有合适的产品截图后填这里:
-    // screenshotAssets: const ['assets/images/beedns_xxx.png'],
+    // PiggyDNS 截图暂不展示;有合适的产品截图后填这里:
+    // screenshotAssets: const ['assets/images/piggydns_xxx.png'],
   );
 }
 

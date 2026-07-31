@@ -606,7 +606,7 @@ UPDATE sync_state SET server_cursor = 0;
 ## 10. 信息缺口
 
 - **[待确认]** 应用版本号（如 3.2.0）与 schemaVersion 的精确对应关系，建议项目维护者补充 CHANGELOG.md
-- **[待补充]** GitHub Releases 的版本发布历史未在本文档展开，建议未来从 [Releases 页面](https://github.com/TNT-Likely/PiggyCount/releases) 提取
+- **[待补充]** GitHub Releases 的版本发布历史未在本文档展开，建议未来从 [Releases 页面](https://github.com/mecoren/PiggyCount/releases) 提取
 - **[待补充]** 重大 Bug 修复历史（如 v24 修复 v25 失败导致的卡死）的具体时间线
 - **[推断]** 第 8 节应用版本号为基于代码注释的推测，可能与实际发布版本存在偏差
 - **[待补充]** 各同步后端（PiggyCount Cloud / Supabase / WebDAV / S3 / iCloud）的引入时间线未在 schemaVersion 中体现，需从 git 历史或代码注释中提取

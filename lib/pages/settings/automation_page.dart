@@ -21,6 +21,7 @@ class AutomationPage extends ConsumerWidget {
       appBar: GlassTitleBar(
         title: l10n.automationPageTitle,
         showBack: true,
+        bottomOpaque: true,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(

@@ -2614,7 +2614,7 @@ abstract class AppLocalizations {
   /// No description provided for @shareGuidanceCopyText.
   ///
   /// In en, this message translates to:
-  /// **'Track my expenses with PiggyCount - open source, free & ad-free! 🐝 Download: https://github.com/TNT-Likely/PiggyCount'**
+  /// **'Track my expenses with PiggyCount - open source, free & ad-free! 🐷 Download: https://github.com/mecoren/PiggyCount'**
   String get shareGuidanceCopyText;
 
   /// No description provided for @shareGuidanceCopied.
@@ -3307,36 +3307,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'View documentation and FAQ'**
   String get mineHelpSubtitle;
-
-  /// No description provided for @mineSupportAuthor.
-  ///
-  /// In en, this message translates to:
-  /// **'Star the Project ⭐️'**
-  String get mineSupportAuthor;
-
-  /// No description provided for @mineSupportAuthorSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Open source, {count} stars'**
-  String mineSupportAuthorSubtitle(String count);
-
-  /// No description provided for @githubStarGuideTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'How to Star the Project'**
-  String get githubStarGuideTitle;
-
-  /// No description provided for @githubStarGuideContent.
-  ///
-  /// In en, this message translates to:
-  /// **'After tapping the button below to open GitHub, tap the area marked in the image to complete the Star'**
-  String get githubStarGuideContent;
-
-  /// No description provided for @githubStarGuideButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Go to GitHub'**
-  String get githubStarGuideButton;
 
   /// No description provided for @categoryEditTitle.
   ///
@@ -5731,7 +5701,7 @@ abstract class AppLocalizations {
   /// No description provided for @updateManualVisit.
   ///
   /// In en, this message translates to:
-  /// **'Please manually visit in browser:\\nhttps://github.com/TNT-Likely/PiggyCount/releases'**
+  /// **'Please manually visit in browser:\\nhttps://github.com/mecoren/PiggyCount/releases'**
   String get updateManualVisit;
 
   /// No description provided for @updateNoLocalApkTitle.
@@ -8969,47 +8939,41 @@ abstract class AppLocalizations {
   /// **'I started tracking my expenses in 2015 as an intern, and I\'ve kept the habit for over a decade. Concerned about ads, paywalls, privacy risks, and apps shutting down, I decided to build my own — first as a small tool for myself and my family.\n\nIn September 2025, PiggyCount launched its first version. Honestly, I had no idea if anyone would use it. But gradually, feedback started coming in — someone said they finally found a clean budgeting app, others offered great suggestions, and some quietly left five-star reviews. Every single message reminded me this was worth continuing.\n\nPiggyCount is ad-free, subscription-free, and fully open source. All your data stays on your device and is never uploaded to any third-party server. But publishing and maintaining an app isn\'t free — developer accounts, servers, and other costs are currently covered by community donations, and every system update, bug fix, and new feature is built outside of my day job.\n\nIf PiggyCount has been helpful to you, a rating, a share, or a donation would help this little project go further. Thank you for your trust.'**
   String get aboutDeveloperStory;
 
-  /// No description provided for @aboutRelatedProducts.
+  /// No description provided for @aboutPiggyAssets.
   ///
   /// In en, this message translates to:
-  /// **'More Products'**
-  String get aboutRelatedProducts;
+  /// **'PiggyAssets'**
+  String get aboutPiggyAssets;
 
-  /// No description provided for @aboutBeeAssets.
-  ///
-  /// In en, this message translates to:
-  /// **'BeeAssets'**
-  String get aboutBeeAssets;
-
-  /// No description provided for @aboutBeeAssetsSubtitle.
+  /// No description provided for @aboutPiggyAssetsSubtitle.
   ///
   /// In en, this message translates to:
   /// **'Visualize your full asset portfolio'**
-  String get aboutBeeAssetsSubtitle;
+  String get aboutPiggyAssetsSubtitle;
 
-  /// No description provided for @aboutBeeAssetsIntro.
+  /// No description provided for @aboutPiggyAssetsIntro.
   ///
   /// In en, this message translates to:
-  /// **'PiggyCount focuses on daily cash flow; BeeAssets is its sibling product, focused on asset portfolio visualization: net worth trends across accounts, property / investment / crypto classification, returns, holding period, and allocation breakdown.'**
-  String get aboutBeeAssetsIntro;
+  /// **'PiggyCount focuses on daily cash flow; PiggyAssets is its sibling product, focused on asset portfolio visualization: net worth trends across accounts, property / investment / crypto classification, returns, holding period, and allocation breakdown.'**
+  String get aboutPiggyAssetsIntro;
 
-  /// No description provided for @aboutBeeDNS.
+  /// No description provided for @aboutPiggyDNS.
   ///
   /// In en, this message translates to:
-  /// **'BeeDNS'**
-  String get aboutBeeDNS;
+  /// **'PiggyDNS'**
+  String get aboutPiggyDNS;
 
-  /// No description provided for @aboutBeeDNSSubtitle.
+  /// No description provided for @aboutPiggyDNSSubtitle.
   ///
   /// In en, this message translates to:
   /// **'Simple and efficient DNS management tool'**
-  String get aboutBeeDNSSubtitle;
+  String get aboutPiggyDNSSubtitle;
 
-  /// No description provided for @aboutBeeDNSIntro.
+  /// No description provided for @aboutPiggyDNSIntro.
   ///
   /// In en, this message translates to:
-  /// **'Got domains across Cloudflare and Aliyun? BeeDNS unifies them in one place: batch edit records, A/AAAA toggles, resolution migration, subdomain bulk management — no more switching between provider consoles.'**
-  String get aboutBeeDNSIntro;
+  /// **'Got domains across Cloudflare and Aliyun? PiggyDNS unifies them in one place: batch edit records, A/AAAA toggles, resolution migration, subdomain bulk management — no more switching between provider consoles.'**
+  String get aboutPiggyDNSIntro;
 
   /// No description provided for @productPromoAndroidTitle.
   ///

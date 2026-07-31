@@ -43,11 +43,11 @@
 
 ### 🐛 报告 Bug
 
-发现了问题？请通过 [GitHub Issues](https://github.com/TNT-Likely/PiggyCount/issues) 告诉我们。
+发现了问题？请通过 [GitHub Issues](https://github.com/mecoren/PiggyCount/issues) 告诉我们。
 
 ### 💡 提出新功能
 
-有好的想法？我们很乐意听到！请先查看 [Issues](https://github.com/TNT-Likely/PiggyCount/issues) 和 [Discussions](https://github.com/TNT-Likely/PiggyCount/discussions) 看看是否已经有人提出。
+有好的想法？我们很乐意听到！请先查看 [Issues](https://github.com/mecoren/PiggyCount/issues) 和 [Discussions](https://github.com/mecoren/PiggyCount/discussions) 看看是否已经有人提出。
 
 ### 💻 贡献代码
 
@@ -93,7 +93,7 @@
 
 💌 **联系方式：**
 
-- GitHub Issues: [提交设计建议](https://github.com/TNT-Likely/PiggyCount/issues)
+- GitHub Issues: [提交设计建议](https://github.com/mecoren/PiggyCount/issues)
 - Telegram: [加入讨论群](https://t.me/piggycount)
 
 ## 报告 Bug
@@ -102,8 +102,8 @@
 
 在提交 Bug 报告前，请先：
 
-1. 检查 [FAQ](https://github.com/TNT-Likely/PiggyCount/wiki/常见问题-FAQ) 看看问题是否已有解决方案
-2. 搜索 [现有 Issues](https://github.com/TNT-Likely/PiggyCount/issues) 确认问题未被报告
+1. 检查 [FAQ](https://github.com/mecoren/PiggyCount/wiki/常见问题-FAQ) 看看问题是否已有解决方案
+2. 搜索 [现有 Issues](https://github.com/mecoren/PiggyCount/issues) 确认问题未被报告
 3. 确保你使用的是最新版本
 
 ### 如何报告
@@ -160,7 +160,7 @@
 
 我们欢迎新功能建议！在提交前：
 
-1. 检查 [Discussions](https://github.com/TNT-Likely/PiggyCount/discussions) 中的"Ideas"分类
+1. 检查 [Discussions](https://github.com/mecoren/PiggyCount/discussions) 中的"Ideas"分类
 2. 确认功能符合项目定位（隐私优先、开源、自托管）
 3. 考虑功能的实用性和普遍性
 
@@ -199,7 +199,7 @@ cd PiggyCount
 ### 3. 添加上游仓库
 
 ```bash
-git remote add upstream https://github.com/TNT-Likely/PiggyCount.git
+git remote add upstream https://github.com/mecoren/PiggyCount.git
 ```
 
 ### 4. 创建功能分支
@@ -274,7 +274,7 @@ flutter doctor
 2. **Clone 项目**
 
 ```bash
-git clone https://github.com/TNT-Likely/PiggyCount.git
+git clone https://github.com/mecoren/PiggyCount.git
 cd PiggyCount
 ```
 
@@ -695,7 +695,7 @@ git push origin docs/improve-supabase-guide
 
 ### 社区交流
 
-- [GitHub Discussions](https://github.com/TNT-Likely/PiggyCount/discussions) - 项目讨论
+- [GitHub Discussions](https://github.com/mecoren/PiggyCount/discussions) - 项目讨论
 - [V2EX 帖子](https://www.v2ex.com/t/1168480) - 中文社区
 - Email: sunxiaoyes@outlook.com - 直接联系
 
@@ -711,4 +711,4 @@ git push origin docs/improve-supabase-guide
 
 再次感谢你的贡献！🙏
 
-如有任何问题，欢迎通过 [Issues](https://github.com/TNT-Likely/PiggyCount/issues) 或 [Discussions](https://github.com/TNT-Likely/PiggyCount/discussions) 与我们联系。
+如有任何问题，欢迎通过 [Issues](https://github.com/mecoren/PiggyCount/issues) 或 [Discussions](https://github.com/mecoren/PiggyCount/discussions) 与我们联系。

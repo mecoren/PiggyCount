@@ -43,11 +43,11 @@ Instances of unacceptable behavior may be reported by contacting the project tea
 
 ### 🐛 Report Bugs
 
-Found an issue? Please let us know through [GitHub Issues](https://github.com/TNT-Likely/PiggyCount/issues).
+Found an issue? Please let us know through [GitHub Issues](https://github.com/mecoren/PiggyCount/issues).
 
 ### 💡 Suggest New Features
 
-Have a great idea? We'd love to hear it! Please check [Issues](https://github.com/TNT-Likely/PiggyCount/issues) and [Discussions](https://github.com/TNT-Likely/PiggyCount/discussions) first to see if someone has already suggested it.
+Have a great idea? We'd love to hear it! Please check [Issues](https://github.com/mecoren/PiggyCount/issues) and [Discussions](https://github.com/mecoren/PiggyCount/discussions) first to see if someone has already suggested it.
 
 ### 💻 Contribute Code
 
@@ -93,7 +93,7 @@ Help us translate the app into more languages so more people can use it.
 
 💌 **Contact:**
 
-- GitHub Issues: [Submit design proposals](https://github.com/TNT-Likely/PiggyCount/issues)
+- GitHub Issues: [Submit design proposals](https://github.com/mecoren/PiggyCount/issues)
 
 ## Reporting Bugs
 
@@ -101,8 +101,8 @@ Help us translate the app into more languages so more people can use it.
 
 Before submitting a bug report, please:
 
-1. Check the [FAQ](https://github.com/TNT-Likely/PiggyCount/wiki/FAQ) to see if there's already a solution
-2. Search [existing Issues](https://github.com/TNT-Likely/PiggyCount/issues) to confirm the bug hasn't been reported
+1. Check the [FAQ](https://github.com/mecoren/PiggyCount/wiki/FAQ) to see if there's already a solution
+2. Search [existing Issues](https://github.com/mecoren/PiggyCount/issues) to confirm the bug hasn't been reported
 3. Ensure you're using the latest version
 
 ### How to Report
@@ -159,7 +159,7 @@ Should be able to save large amount transactions, or display amount limit warnin
 
 We welcome feature suggestions! Before submitting:
 
-1. Check the "Ideas" category in [Discussions](https://github.com/TNT-Likely/PiggyCount/discussions)
+1. Check the "Ideas" category in [Discussions](https://github.com/mecoren/PiggyCount/discussions)
 2. Ensure the feature aligns with project goals (privacy-first, open-source, self-hosted)
 3. Consider the feature's practicality and universality
 
@@ -198,7 +198,7 @@ cd PiggyCount
 ### 3. Add Upstream Repository
 
 ```bash
-git remote add upstream https://github.com/TNT-Likely/PiggyCount.git
+git remote add upstream https://github.com/mecoren/PiggyCount.git
 ```
 
 ### 4. Create Feature Branch
@@ -273,7 +273,7 @@ flutter doctor
 2. **Clone Project**
 
 ```bash
-git clone https://github.com/TNT-Likely/PiggyCount.git
+git clone https://github.com/mecoren/PiggyCount.git
 cd PiggyCount
 ```
 
@@ -694,7 +694,7 @@ git push origin docs/improve-supabase-guide
 
 ### Community Communication
 
-- [GitHub Discussions](https://github.com/TNT-Likely/PiggyCount/discussions) - Project discussions
+- [GitHub Discussions](https://github.com/mecoren/PiggyCount/discussions) - Project discussions
 - [V2EX Thread](https://www.v2ex.com/t/1168480) - Chinese community
 - Email: sunxiaoyes@outlook.com - Direct contact
 
@@ -710,4 +710,4 @@ This project is dual-licensed: free for non-commercial use, paid license for com
 
 Thank you again for your contribution! 🙏
 
-If you have any questions, feel free to contact us through [Issues](https://github.com/TNT-Likely/PiggyCount/issues) or [Discussions](https://github.com/TNT-Likely/PiggyCount/discussions).
+If you have any questions, feel free to contact us through [Issues](https://github.com/mecoren/PiggyCount/issues) or [Discussions](https://github.com/mecoren/PiggyCount/discussions).

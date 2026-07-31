@@ -196,10 +196,7 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
               shape: BoxShape.circle,
             ),
             child: Center(
-              // 用主题色填充 SVG 的 currentColor(肚子/翅膀等),传 Colors.white
-              // 会让整个蜜蜂变成纯白与背景圆几乎融为一体。
               child: PiggyIcon(
-                color: theme.colorScheme.primary,
                 size: 72,
               ),
             ),
@@ -698,7 +695,7 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
 
   /// 打开GitHub链接
   Future<void> _launchGitHub(BuildContext context) async {
-    final url = Uri.parse('https://github.com/TNT-Likely/PiggyCount');
+    final url = Uri.parse('https://github.com/mecoren/PiggyCount');
     try {
       if (await canLaunchUrl(url)) {
         await launchUrl(url, mode: LaunchMode.externalApplication);

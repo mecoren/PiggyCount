@@ -12,10 +12,10 @@ import '../../styles/tokens.dart';
 
 // 在 Widget 中使用
 Container(
-  color: BeeTokens.surface(context),
+  color: PiggyTokens.surface(context),
   child: Text(
     'Hello',
-    style: TextStyle(color: BeeTokens.textPrimary(context)),
+    style: TextStyle(color: PiggyTokens.textPrimary(context)),
   ),
 )
 ```
@@ -48,11 +48,11 @@ Container(
 
 | 旧写法 | 新写法 |
 |-------|--------|
-| `BeeColors.greyBg` | `BeeTokens.scaffoldBackground(context)` |
-| `Colors.white` (卡片背景) | `BeeTokens.surface(context)` |
-| `Colors.grey.shade50` | `BeeTokens.scaffoldBackground(context)` |
-| `Colors.grey.shade100` | `BeeTokens.surfaceSecondary(context)` |
-| `Colors.grey.shade200` | `BeeTokens.surfaceChip(context)` |
+| `PiggyColors.greyBg` | `PiggyTokens.scaffoldBackground(context)` |
+| `Colors.white` (卡片背景) | `PiggyTokens.surface(context)` |
+| `Colors.grey.shade50` | `PiggyTokens.scaffoldBackground(context)` |
+| `Colors.grey.shade100` | `PiggyTokens.surfaceSecondary(context)` |
+| `Colors.grey.shade200` | `PiggyTokens.surfaceChip(context)` |
 
 ---
 
@@ -73,12 +73,12 @@ Container(
 
 | 旧写法 | 新写法 |
 |-------|--------|
-| `BeeColors.primaryText` | `BeeTokens.textPrimary(context)` |
-| `BeeColors.secondaryText` | `BeeTokens.textSecondary(context)` |
-| `BeeColors.hintText` | `BeeTokens.textTertiary(context)` |
-| `Colors.black87` | `BeeTokens.textPrimary(context)` |
-| `Colors.black54` | `BeeTokens.textSecondary(context)` |
-| `Colors.white` (文字) | `BeeTokens.textOnPrimary(context)` |
+| `PiggyColors.primaryText` | `PiggyTokens.textPrimary(context)` |
+| `PiggyColors.secondaryText` | `PiggyTokens.textSecondary(context)` |
+| `PiggyColors.hintText` | `PiggyTokens.textTertiary(context)` |
+| `Colors.black87` | `PiggyTokens.textPrimary(context)` |
+| `Colors.black54` | `PiggyTokens.textSecondary(context)` |
+| `Colors.white` (文字) | `PiggyTokens.textOnPrimary(context)` |
 
 ---
 
@@ -95,10 +95,10 @@ Container(
 
 | 旧写法 | 新写法 |
 |-------|--------|
-| `Colors.black87` (图标) | `BeeTokens.iconPrimary(context)` |
-| `Colors.black54` (图标) | `BeeTokens.iconSecondary(context)` |
-| `Colors.grey` (图标) | `BeeTokens.iconTertiary(context)` |
-| `Colors.grey.shade700` | `BeeTokens.iconCategory(context)` |
+| `Colors.black87` (图标) | `PiggyTokens.iconPrimary(context)` |
+| `Colors.black54` (图标) | `PiggyTokens.iconSecondary(context)` |
+| `Colors.grey` (图标) | `PiggyTokens.iconTertiary(context)` |
+| `Colors.grey.shade700` | `PiggyTokens.iconCategory(context)` |
 
 ---
 
@@ -119,9 +119,9 @@ Container(
 
 | 旧写法 | 新写法 |
 |-------|--------|
-| `BeeColors.divider` | `BeeTokens.divider(context)` |
-| `const Divider(height: 1)` | `BeeTokens.cardDivider(context)` |
-| `Colors.black.withOpacity(0.06)` | `BeeTokens.divider(context)` |
+| `PiggyColors.divider` | `PiggyTokens.divider(context)` |
+| `const Divider(height: 1)` | `PiggyTokens.cardDivider(context)` |
+| `Colors.black.withOpacity(0.06)` | `PiggyTokens.divider(context)` |
 
 ---
 
@@ -138,12 +138,12 @@ Container(
 
 | 旧写法 | 新写法 |
 |-------|--------|
-| `BeeColors.success` | `BeeTokens.success(context)` |
-| `BeeColors.warning` | `BeeTokens.warning(context)` |
-| `BeeColors.danger` | `BeeTokens.error(context)` |
-| `Colors.green` | `BeeTokens.success(context)` |
-| `Colors.orange` | `BeeTokens.warning(context)` |
-| `Colors.red` | `BeeTokens.error(context)` |
+| `PiggyColors.success` | `PiggyTokens.success(context)` |
+| `PiggyColors.warning` | `PiggyTokens.warning(context)` |
+| `PiggyColors.danger` | `PiggyTokens.error(context)` |
+| `Colors.green` | `PiggyTokens.success(context)` |
+| `Colors.orange` | `PiggyTokens.warning(context)` |
+| `Colors.red` | `PiggyTokens.error(context)` |
 
 ---
 
@@ -176,9 +176,9 @@ Container(
 
 | 旧写法 | 新写法 |
 |-------|--------|
-| `Colors.grey` (本地存储) | `BeeTokens.brandLocal` |
-| `Colors.blue` (云服务) | `BeeTokens.brandCloud` |
-| `Colors.orange` (WebDAV) | `BeeTokens.brandWebdav` |
+| `Colors.grey` (本地存储) | `PiggyTokens.brandLocal` |
+| `Colors.blue` (云服务) | `PiggyTokens.brandCloud` |
+| `Colors.orange` (WebDAV) | `PiggyTokens.brandWebdav` |
 
 ---
 
@@ -215,96 +215,96 @@ Container(
 
 ```dart
 // 判断当前是否为暗黑模式
-final isDark = BeeTokens.isDark(context);
+final isDark = PiggyTokens.isDark(context);
 
 // 根据语义获取颜色
-final color = BeeTokens.semantic(context, 'success'); // success/warning/error/info
+final color = PiggyTokens.semantic(context, 'success'); // success/warning/error/info
 ```
 
 ---
 
-## 11. 尺寸令牌 (BeeDimens)
+## 11. 尺寸令牌 (PiggyDimens)
 
 统一间距、圆角等尺寸。
 
 | Token 名称 | 值 | 用途 |
 |-----------|-----|------|
-| `BeeDimens.p8` | `8` | 小间距 |
-| `BeeDimens.p12` | `12` | 中间距 |
-| `BeeDimens.p16` | `16` | 大间距 |
-| `BeeDimens.radius12` | `12` | 小圆角 |
-| `BeeDimens.radius16` | `16` | 大圆角 |
-| `BeeDimens.listHeaderVertical` | `6` | 列表头垂直内边距 |
-| `BeeDimens.listRowVertical` | `8` | 列表行垂直内边距 |
+| `PiggyDimens.p8` | `8` | 小间距 |
+| `PiggyDimens.p12` | `12` | 中间距 |
+| `PiggyDimens.p16` | `16` | 大间距 |
+| `PiggyDimens.radius12` | `12` | 小圆角 |
+| `PiggyDimens.radius16` | `16` | 大圆角 |
+| `PiggyDimens.listHeaderVertical` | `6` | 列表头垂直内边距 |
+| `PiggyDimens.listRowVertical` | `8` | 列表行垂直内边距 |
 
 ---
 
-## 12. 阴影令牌 (BeeShadows)
+## 12. 阴影令牌 (PiggyShadows)
 
 ```dart
 // 卡片阴影
-boxShadow: BeeShadows.card,
+boxShadow: PiggyShadows.card,
 ```
 
 ---
 
-## 13. 分割线令牌 (BeeDivider)
+## 13. 分割线令牌 (PiggyDivider)
 
 ```dart
 // 细分割线
-BeeDivider.thin()
+PiggyDivider.thin()
 
 // 带缩进的分割线
-BeeDivider.short(indent: 16, endIndent: 16)
+PiggyDivider.short(indent: 16, endIndent: 16)
 
 // 自适应暗黑模式的卡片内分割线
-BeeTokens.cardDivider(context)
+PiggyTokens.cardDivider(context)
 ```
 
 ---
 
-## 14. 图表令牌 (BeeChartTokens)
+## 14. 图表令牌 (PiggyChartTokens)
 
 | Token 名称 | 值 | 用途 |
 |-----------|-----|------|
-| `BeeChartTokens.lineWidth` | `2.0` | 折线宽度 |
-| `BeeChartTokens.dotRadius` | `2.5` | 数据点半径 |
-| `BeeChartTokens.cornerRadius` | `12.0` | 图表圆角 |
-| `BeeChartTokens.xLabelFontSize` | `10.0` | X轴标签字号 |
-| `BeeChartTokens.yLabelFontSize` | `10.0` | Y轴标签字号 |
+| `PiggyChartTokens.lineWidth` | `2.0` | 折线宽度 |
+| `PiggyChartTokens.dotRadius` | `2.5` | 数据点半径 |
+| `PiggyChartTokens.cornerRadius` | `12.0` | 图表圆角 |
+| `PiggyChartTokens.xLabelFontSize` | `10.0` | X轴标签字号 |
+| `PiggyChartTokens.yLabelFontSize` | `10.0` | Y轴标签字号 |
 
 ---
 
-## 15. 文本样式令牌 (BeeTextTokens)
+## 15. 文本样式令牌 (PiggyTextTokens)
 
 **注意：** 这些方法已自动适配暗黑模式文字颜色。
 
 ```dart
 // 标题样式（列表主标题）- 15px w400
-BeeTextTokens.title(context)
+PiggyTextTokens.title(context)
 
 // 强调标题（统计数字）- 15px w600
-BeeTextTokens.strongTitle(context)
+PiggyTextTokens.strongTitle(context)
 
 // 加粗标题（大额数字）- 18px w700
-BeeTextTokens.boldTitle(context)
+PiggyTextTokens.boldTitle(context)
 
 // 正文样式 - 14px w400
-BeeTextTokens.body(context)
+PiggyTextTokens.body(context)
 
 // 标签/说明样式 - 12px
-BeeTextTokens.label(context)
+PiggyTextTokens.label(context)
 ```
 
 ---
 
-## 16. 字体令牌 (BeeTypography)
+## 16. 字体令牌 (PiggyTypography)
 
 用于构建主题的基础文本样式。
 
 ```dart
 // 构建文本主题
-final textTheme = BeeTypography.buildBase(
+final textTheme = PiggyTypography.buildBase(
   Theme.of(context).textTheme,
   isIOS: Platform.isIOS,
 );
@@ -318,11 +318,11 @@ final textTheme = BeeTypography.buildBase(
 
 | Token 名称 | 值 | 用途 |
 |-----------|-----|------|
-| `BeeTokens.primaryTextStatic` | `#111827` | 主要文字（亮色模式） |
-| `BeeTokens.secondaryTextStatic` | `#6B7280` | 次要文字（亮色模式） |
-| `BeeTokens.hintTextStatic` | `#9CA3AF` | 提示文字（亮色模式） |
-| `BeeTokens.black54Static` | `0x8A000000` | 54% 黑色（亮色模式） |
-| `BeeTokens.dividerStatic` | `rgba(0,0,0,0.06)` | 分割线（亮色模式） |
+| `PiggyTokens.primaryTextStatic` | `#111827` | 主要文字（亮色模式） |
+| `PiggyTokens.secondaryTextStatic` | `#6B7280` | 次要文字（亮色模式） |
+| `PiggyTokens.hintTextStatic` | `#9CA3AF` | 提示文字（亮色模式） |
+| `PiggyTokens.black54Static` | `0x8A000000` | 54% 黑色（亮色模式） |
+| `PiggyTokens.dividerStatic` | `rgba(0,0,0,0.06)` | 分割线（亮色模式） |
 
 ---
 
@@ -347,15 +347,15 @@ PiggyCount 采用 **方案 D：纯黑背景 + 主题色边框** 的暗黑模式�
 
 在替换颜色时，请按以下顺序检查：
 
-- [ ] `Scaffold.backgroundColor` → `BeeTokens.scaffoldBackground(context)`
-- [ ] 卡片/容器背景 → `BeeTokens.surface(context)`
-- [ ] BottomSheet 背景 → `BeeTokens.surfaceSheet(context)`
-- [ ] 键盘按钮背景 → `BeeTokens.surfaceKey(context)` / `surfaceKeySecondary(context)`
-- [ ] 输入框背景 → `BeeTokens.surfaceInput(context)`
-- [ ] Chip/标签背景 → `BeeTokens.surfaceChip(context)`
+- [ ] `Scaffold.backgroundColor` → `PiggyTokens.scaffoldBackground(context)`
+- [ ] 卡片/容器背景 → `PiggyTokens.surface(context)`
+- [ ] BottomSheet 背景 → `PiggyTokens.surfaceSheet(context)`
+- [ ] 键盘按钮背景 → `PiggyTokens.surfaceKey(context)` / `surfaceKeySecondary(context)`
+- [ ] 输入框背景 → `PiggyTokens.surfaceInput(context)`
+- [ ] Chip/标签背景 → `PiggyTokens.surfaceChip(context)`
 - [ ] 文字颜色 → `textPrimary` / `textSecondary` / `textTertiary`
 - [ ] 图标颜色 → `iconPrimary` / `iconSecondary` / `iconTertiary`
-- [ ] 分割线 → 使用 `BeeTokens.cardDivider(context)`
+- [ ] 分割线 → 使用 `PiggyTokens.cardDivider(context)`
 - [ ] 状态颜色 → `success` / `warning` / `error` / `info`
 - [ ] 品牌图标 → `brandLocal` / `brandSupabase` / `brandWebdav` / `brandCloud`
 

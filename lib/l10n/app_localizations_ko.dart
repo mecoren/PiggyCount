@@ -1065,7 +1065,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get deleteConfirmMessage => '이 기록을 삭제하시겠습니까?';
 
   @override
-  String get mineSlogan => '꿀벌 가계부, 한 푼도 소중하게';
+  String get mineSlogan => '꿀벌 가계부, 점점 더 좋아져 가고 있어요';
 
   @override
   String get mineDisplayNameEditTitle => '닉네임 설정';
@@ -1383,7 +1383,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get shareGuidanceCopyText =>
-      'PiggyCount로 지출을 기록하세요 - 오픈소스, 무료, 광고 없음! 🐝 다운로드: https://github.com/TNT-Likely/PiggyCount';
+      'PiggyCount로 지출을 기록하세요 - 오픈소스, 무료, 광고 없음! 🐷 다운로드: https://github.com/mecoren/PiggyCount';
 
   @override
   String get shareGuidanceCopied => '텍스트가 복사되었습니다';
@@ -1753,24 +1753,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get mineHelpSubtitle => '문서와 자주 묻는 질문 보기';
-
-  @override
-  String get mineSupportAuthor => '프로젝트에 스타 남기기 ⭐️';
-
-  @override
-  String mineSupportAuthorSubtitle(String count) {
-    return '오픈소스, $count개의 스타';
-  }
-
-  @override
-  String get githubStarGuideTitle => '프로젝트에 스타를 남기는 방법';
-
-  @override
-  String get githubStarGuideContent =>
-      '아래 버튼을 눌러 GitHub를 연 후, 이미지에 표시된 영역을 눌러 스타를 완료하세요';
-
-  @override
-  String get githubStarGuideButton => 'GitHub로 이동';
 
   @override
   String get categoryEditTitle => '카테고리 편집';
@@ -3051,7 +3033,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get updateManualVisit =>
-      '브라우저에서 직접 방문해 주세요:\\nhttps://github.com/TNT-Likely/PiggyCount/releases';
+      '브라우저에서 직접 방문해 주세요:\\nhttps://github.com/mecoren/PiggyCount/releases';
 
   @override
   String get updateNoLocalApkTitle => '업데이트 패키지를 찾을 수 없습니다';
@@ -4802,27 +4784,24 @@ class AppLocalizationsKo extends AppLocalizations {
       '저는 2015년 인턴 시절부터 가계부를 쓰기 시작해서 10년 넘게 그 습관을 이어오고 있습니다. 광고, 유료 결제, 개인정보 유출 위험, 그리고 앱 서비스 종료에 대한 걱정 때문에 직접 만들어보기로 했습니다 — 처음에는 저와 가족을 위한 작은 도구로 시작했죠.\n\n2025년 9월, PiggyCount의 첫 버전을 출시했습니다. 솔직히 누가 써줄지 전혀 알 수 없었습니다. 하지만 점차 피드백이 들어오기 시작했습니다 — 드디어 깔끔한 가계부 앱을 찾았다는 분도 있었고, 좋은 제안을 해주신 분도 있었고, 조용히 별점 5개를 남겨주신 분도 있었습니다. 그 하나하나의 메시지가 계속할 가치가 있다는 걸 일깨워 주었습니다.\n\nPiggyCount는 광고도, 구독료도 없는 완전한 오픈소스입니다. 모든 데이터는 사용자의 기기에만 저장되며 어떤 제3자 서버로도 업로드되지 않습니다. 하지만 앱을 출시하고 유지하는 데는 비용이 듭니다 — 개발자 계정, 서버 등의 비용은 현재 커뮤니티 후원으로 충당하고 있으며, 모든 시스템 업데이트와 버그 수정, 신규 기능은 본업 외 시간에 만들고 있습니다.\n\nPiggyCount가 도움이 되셨다면, 평점이나 공유, 후원 한 번이 이 작은 프로젝트가 더 멀리 나아가는 데 큰 힘이 됩니다. 믿어주셔서 감사합니다.';
 
   @override
-  String get aboutRelatedProducts => '더 많은 제품';
+  String get aboutPiggyAssets => 'PiggyAssets';
 
   @override
-  String get aboutBeeAssets => 'BeeAssets';
+  String get aboutPiggyAssetsSubtitle => '전체 자산 포트폴리오를 시각화하세요';
 
   @override
-  String get aboutBeeAssetsSubtitle => '전체 자산 포트폴리오를 시각화하세요';
+  String get aboutPiggyAssetsIntro =>
+      'PiggyCount가 일상적인 현금 흐름에 집중한다면, PiggyAssets는 그 자매 제품으로 자산 포트폴리오 시각화에 집중합니다: 계좌별 순자산 추이, 부동산/투자/암호화폐 분류, 수익률, 보유 기간, 자산 배분 분석까지 확인할 수 있습니다.';
 
   @override
-  String get aboutBeeAssetsIntro =>
-      'PiggyCount가 일상적인 현금 흐름에 집중한다면, BeeAssets는 그 자매 제품으로 자산 포트폴리오 시각화에 집중합니다: 계좌별 순자산 추이, 부동산/투자/암호화폐 분류, 수익률, 보유 기간, 자산 배분 분석까지 확인할 수 있습니다.';
+  String get aboutPiggyDNS => 'PiggyDNS';
 
   @override
-  String get aboutBeeDNS => 'BeeDNS';
+  String get aboutPiggyDNSSubtitle => '간단하고 효율적인 DNS 관리 도구';
 
   @override
-  String get aboutBeeDNSSubtitle => '간단하고 효율적인 DNS 관리 도구';
-
-  @override
-  String get aboutBeeDNSIntro =>
-      'Cloudflare와 Aliyun에 도메인이 흩어져 있나요? BeeDNS는 이를 한곳에 모아줍니다: 레코드 일괄 편집, A/AAAA 전환, 리졸루션 이전, 서브도메인 일괄 관리까지 — 더 이상 여러 제공업체 콘솔을 오갈 필요가 없습니다.';
+  String get aboutPiggyDNSIntro =>
+      'Cloudflare와 Aliyun에 도메인이 흩어져 있나요? PiggyDNS는 이를 한곳에 모아줍니다: 레코드 일괄 편집, A/AAAA 전환, 리졸루션 이전, 서브도메인 일괄 관리까지 — 더 이상 여러 제공업체 콘솔을 오갈 필요가 없습니다.';
 
   @override
   String get productPromoAndroidTitle => '베타 접근 요청';

@@ -1061,7 +1061,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get deleteConfirmMessage => '确定要删除这条记账吗？';
 
   @override
-  String get mineSlogan => '小猪记账，一笔一蜜';
+  String get mineSlogan => '小猪记账，越来越棒';
 
   @override
   String get mineDisplayNameEditTitle => '设置昵称';
@@ -1379,7 +1379,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get shareGuidanceCopyText =>
-      '用小猪记账记录生活，开源免费无广告！🐝 下载地址：https://github.com/TNT-Likely/PiggyCount';
+      '用小猪记账记录生活，开源免费无广告！🐷 下载地址：https://github.com/mecoren/PiggyCount';
 
   @override
   String get shareGuidanceCopied => '文案已复制';
@@ -1748,23 +1748,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mineHelpSubtitle => '查看使用文档和常见问题';
-
-  @override
-  String get mineSupportAuthor => '给项目 Star ⭐️';
-
-  @override
-  String mineSupportAuthorSubtitle(String count) {
-    return '开源免费，已有 $count 人 Star';
-  }
-
-  @override
-  String get githubStarGuideTitle => '如何给项目 Star';
-
-  @override
-  String get githubStarGuideContent => '点击下方按钮打开 GitHub 页面后，点击图中标注的位置即可完成 Star';
-
-  @override
-  String get githubStarGuideButton => '前往 GitHub';
 
   @override
   String get categoryEditTitle => '编辑分类';
@@ -3037,7 +3020,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get updateManualVisit =>
-      '请手动在浏览器中访问：\\nhttps://github.com/TNT-Likely/PiggyCount/releases';
+      '请手动在浏览器中访问：\\nhttps://github.com/mecoren/PiggyCount/releases';
 
   @override
   String get updateNoLocalApkTitle => '未找到更新包';
@@ -4748,27 +4731,24 @@ class AppLocalizationsZh extends AppLocalizations {
       '从 2015 年实习起，我坚持记账至今已超过十年。因为担心记账软件的广告、付费、隐私泄露和停运跑路，我决定自己做一个——最初只是给自己和家人用的小工具。\n\n2025 年 9 月，小猪记账发布了第一个版本。说实话，那时候心里没什么底，不知道会不会有人用。但慢慢地，开始收到用户的反馈——有人说终于找到了一款干净的记账软件，有人提了很好的建议，也有人默默给了五星好评。每一条反馈都让我觉得，这件事值得继续做下去。\n\n小猪记账没有广告、没有会员、完全免费开源。你的每一笔数据都只存在你自己的手机里，不会被上传到任何第三方服务器。但上架和维护一款 App 并非零成本——开发者账号、服务器等开支目前靠社区捐赠勉强支撑，每一次适配新系统、修复 Bug、开发新功能，也都是工作之余一点点完成的。\n\n如果你觉得小猪记账对你有帮助，一个好评、一次分享或一笔捐赠，都能让这个小项目走得更远。谢谢你的信任。';
 
   @override
-  String get aboutRelatedProducts => '更多产品';
+  String get aboutPiggyAssets => '小猪家当 PiggyAssets';
 
   @override
-  String get aboutBeeAssets => '蜜蜂家当 BeeAssets';
+  String get aboutPiggyAssetsSubtitle => '可视化你的全部资产配置';
 
   @override
-  String get aboutBeeAssetsSubtitle => '可视化你的全部资产配置';
+  String get aboutPiggyAssetsIntro =>
+      '小猪记账侧重日常流水,小猪家当是它的姐妹产品,专注资产配置可视化:跨账户净资产趋势、房产 / 投资 / 加密资产分类、收益率与持仓时长、配置占比一目了然。';
 
   @override
-  String get aboutBeeAssetsIntro =>
-      '小猪记账侧重日常流水,蜜蜂家当是它的姐妹产品,专注资产配置可视化:跨账户净资产趋势、房产 / 投资 / 加密资产分类、收益率与持仓时长、配置占比一目了然。';
+  String get aboutPiggyDNS => '小猪域名 PiggyDNS';
 
   @override
-  String get aboutBeeDNS => '蜜蜂域名 BeeDNS';
+  String get aboutPiggyDNSSubtitle => '简洁高效的 DNS 管理工具';
 
   @override
-  String get aboutBeeDNSSubtitle => '简洁高效的 DNS 管理工具';
-
-  @override
-  String get aboutBeeDNSIntro =>
-      '如果你的域名分散在 Cloudflare 和阿里云,蜜蜂域名把它们聚合在一处管理:批量改记录、A/AAAA 切换、解析迁移、子域名批量管理 — 不用在两家控制台来回切。';
+  String get aboutPiggyDNSIntro =>
+      '如果你的域名分散在 Cloudflare 和阿里云,小猪域名把它们聚合在一处管理:批量改记录、A/AAAA 切换、解析迁移、子域名批量管理 — 不用在两家控制台来回切。';
 
   @override
   String get productPromoAndroidTitle => '申请加入内测';
@@ -8776,7 +8756,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get deleteConfirmMessage => '確定要刪除這條記帳嗎？';
 
   @override
-  String get mineSlogan => '小豬記帳，一筆一蜜';
+  String get mineSlogan => '小豬記帳，越來越棒';
 
   @override
   String get mineDisplayNameEditTitle => '設定暱稱';
@@ -9094,7 +9074,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get shareGuidanceCopyText =>
-      '用小豬記帳記錄生活，開源免費無廣告！🐝 下載地址：https://github.com/TNT-Likely/PiggyCount';
+      '用小豬記帳記錄生活，開源免費無廣告！🐷 下載地址：https://github.com/mecoren/PiggyCount';
 
   @override
   String get shareGuidanceCopied => '文案已複製';
@@ -9463,23 +9443,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get mineHelpSubtitle => '查看使用文件和常見問題';
-
-  @override
-  String get mineSupportAuthor => '給專案 Star ⭐️';
-
-  @override
-  String mineSupportAuthorSubtitle(String count) {
-    return '開源免費，已有 $count 人 Star';
-  }
-
-  @override
-  String get githubStarGuideTitle => '如何給專案 Star';
-
-  @override
-  String get githubStarGuideContent => '點擊下方按鈕開啟 GitHub 頁面後，點擊圖中標註的位置即可完成 Star';
-
-  @override
-  String get githubStarGuideButton => '前往 GitHub';
 
   @override
   String get categoryEditTitle => '編輯分類';
@@ -10752,7 +10715,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get updateManualVisit =>
-      '請手動在瀏覽器中存取：\\nhttps://github.com/TNT-Likely/PiggyCount/releases';
+      '請手動在瀏覽器中存取：\\nhttps://github.com/mecoren/PiggyCount/releases';
 
   @override
   String get updateNoLocalApkTitle => '未找到更新包';
@@ -12463,27 +12426,24 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
       '從 2015 年實習起，我堅持記帳至今已超過十年。因為擔心記帳軟體的廣告、付費、隱私洩露和停運跑路，我決定自己做一個——最初只是給自己和家人用的小工具。\n\n2025 年 9 月，小豬記帳發佈了第一個版本。說實話，那時候心裡沒什麼底，不知道會不會有人用。但慢慢地，開始收到用戶的回饋——有人說終於找到了一款乾淨的記帳軟體，有人提了很好的建議，也有人默默給了五星好評。每一條回饋都讓我覺得，這件事值得繼續做下去。\n\n小豬記帳沒有廣告、沒有會員、完全免費開源。你的每一筆資料都只存在你自己的手機裡，不會被上傳到任何第三方伺服器。但上架和維護一款 App 並非零成本——開發者帳號、伺服器等開支目前靠社群捐贈勉強支撐，每一次適配新系統、修復 Bug、開發新功能，也都是工作之餘一點點完成的。\n\n如果你覺得小豬記帳對你有幫助，一個好評、一次分享或一筆捐贈，都能讓這個小專案走得更遠。謝謝你的信任。';
 
   @override
-  String get aboutRelatedProducts => '更多產品';
+  String get aboutPiggyAssets => '小豬家當 PiggyAssets';
 
   @override
-  String get aboutBeeAssets => '蜜蜂家當 BeeAssets';
+  String get aboutPiggyAssetsSubtitle => '視覺化你的全部資產配置';
 
   @override
-  String get aboutBeeAssetsSubtitle => '視覺化你的全部資產配置';
+  String get aboutPiggyAssetsIntro =>
+      '小豬記帳側重日常流水,小豬家當是它的姐妹產品,專注資產配置視覺化:跨帳戶淨資產趨勢、房產 / 投資 / 加密資產分類、收益率與持倉時長、配置占比一目了然。';
 
   @override
-  String get aboutBeeAssetsIntro =>
-      '小豬記帳側重日常流水,蜜蜂家當是它的姐妹產品,專注資產配置視覺化:跨帳戶淨資產趨勢、房產 / 投資 / 加密資產分類、收益率與持倉時長、配置占比一目了然。';
+  String get aboutPiggyDNS => '小豬域名 PiggyDNS';
 
   @override
-  String get aboutBeeDNS => '蜜蜂域名 BeeDNS';
+  String get aboutPiggyDNSSubtitle => '簡潔高效的 DNS 管理工具';
 
   @override
-  String get aboutBeeDNSSubtitle => '簡潔高效的 DNS 管理工具';
-
-  @override
-  String get aboutBeeDNSIntro =>
-      '如果你的域名分散在 Cloudflare 和阿里雲,蜜蜂域名把它們聚合在一處管理:批次改記錄、A/AAAA 切換、解析遷移、子網域批次管理 — 不用在兩家控制台來回切。';
+  String get aboutPiggyDNSIntro =>
+      '如果你的域名分散在 Cloudflare 和阿里雲,小豬域名把它們聚合在一處管理:批次改記錄、A/AAAA 切換、解析遷移、子網域批次管理 — 不用在兩家控制台來回切。';
 
   @override
   String get productPromoAndroidTitle => '申請加入內測';

@@ -24,7 +24,7 @@ enum RecurringFrequency {
 /// 注意：此服务主要用于生成待处理的周期交易记录
 /// 基础的 CRUD 操作请使用 RecurringTransactionRepository
 ///
-/// repository 参数可以是 BeeRepository 或 CloudRepository
+/// repository 参数可以是 PiggyRepository 或 CloudRepository
 class RecurringTransactionService {
   static const _tag = 'Recurring';
 
@@ -34,7 +34,7 @@ class RecurringTransactionService {
 
   /// 静态方法：生成待处理的重复交易（供启动时和初始化时调用）
   ///
-  /// [repository] 可以是 BeeRepository 或 CloudRepository
+  /// [repository] 可以是 PiggyRepository 或 CloudRepository
   /// [verbose] 是否打印详细日志
   ///
   /// 返回：生成了交易的账本ID集合（用于触发同步）

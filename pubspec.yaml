@@ -104,14 +104,13 @@ dependency_overrides:
   # Pin to 7.1.0 because 7.2.0 requires Flutter >= 3.27.6 (Color.toARGB32)
   image_cropper_platform_interface: 7.1.0
 
-# adaptive_* 三个素材由 scripts/gen_adaptive_icons.py 生成(几何取自 assets/logo.svg);
+# adaptive_* 三个素材由 scripts/gen_icons_from_image.py 生成(从用户提供的源图抠图);
 # monochrome 是 Android 13+ themed icon(Pixel 动态图标)的单色镂空层,见 issue #186。
 flutter_launcher_icons:
   android: true
   ios: false  # iOS 图标手工维护,0.14.x 会重写 Contents.json 格式,不要让它碰
-  # ⚠️ legacy mipmap ic_launcher.png 已钉死为线上版本(担心影响存量用户),
-  # 重跑本工具后务必恢复:git checkout main -- android/app/src/main/res/mipmap-*/ic_launcher.png
-  image_path: assets/icon/launcher_legacy.png  # 不透明白底!透明 legacy 图标在部分设备表现差
+  # 透明背景 legacy 图标(按用户要求);部分老 launcher 可能显示黑底,但视觉一致性优先。
+  image_path: assets/icon/launcher_legacy.png
   adaptive_icon_background: "#FFFFFF"
   adaptive_icon_foreground: assets/icon/adaptive_foreground.png
   adaptive_icon_monochrome: assets/icon/adaptive_monochrome.png
@@ -123,6 +122,7 @@ flutter:
     - assets/logo.svg
     - assets/piggy.svg
     - assets/logo2.png
+    - assets/icon/icon_master.png
     - assets/icons/
     - assets/icons/social/
     - assets/images/

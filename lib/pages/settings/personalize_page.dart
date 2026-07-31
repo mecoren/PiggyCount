@@ -58,6 +58,7 @@ class _PersonalizePageState extends ConsumerState<PersonalizePage> {
       appBar: GlassTitleBar(
         title: AppLocalizations.of(context)!.personalizeTitle,
         showBack: true,
+        bottomOpaque: true,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(

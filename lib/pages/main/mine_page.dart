@@ -17,7 +17,6 @@ import '../../l10n/app_localizations.dart';
 import '../cloud/cloud_sync_page.dart';
 import '../cloud/piggycount_cloud_sync_page.dart';
 import '../../utils/website_urls.dart';
-import '../../providers/github_star_provider.dart';
 import '../settings/data_management_page.dart';
 import '../settings/appearance_settings_page.dart';
 import '../settings/smart_billing_page.dart';
@@ -33,7 +32,7 @@ import '../donation/donation_page.dart';
 ///
 /// UI 改造：参考 wait-home 项目风格，使用 GlassTitleBar + ListView + 卡片化布局。
 /// 头部内容（头像/问候语/统计）抽取为 ProfileCard，设置项使用 SettingsCard +
-/// SettingsNavItem。所有原有功能逻辑（云同步状态、iOS 专属项、GitHub Star 等）完整保留。
+/// SettingsNavItem。所有原有功能逻辑（云同步状态、iOS 专属项等）完整保留。
 class MinePage extends ConsumerWidget {
   const MinePage({super.key});
 
@@ -50,6 +49,7 @@ class MinePage extends ConsumerWidget {
         title: l10n.mineTitle,
         showBack: false,
         showMenu: false,
+        bottomOpaque: true,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(
@@ -392,20 +392,6 @@ class MinePage extends ConsumerWidget {
                     );
                   },
                 ),
-              // GitHub Star
-              Consumer(
-                builder: (context, ref, _) {
-                  final starCountAsync = ref.watch(githubStarCountProvider);
-                  final starCount = starCountAsync.valueOrNull ?? 999;
-                  return SettingsNavItem(
-                    icon: Icons.star_outline,
-                    title: AppLocalizations.of(context).mineSupportAuthor,
-                    subtitle: AppLocalizations.of(context)
-                        .mineSupportAuthorSubtitle(starCount.toString()),
-                    onTap: () => _showGitHubStarGuide(context),
-                  );
-                },
-              ),
               // 年度账单
               SettingsNavItem(
                 icon: Icons.auto_graph_rounded,
@@ -487,56 +473,6 @@ Future<bool> _tryOpenUrl(Uri url) async {
     logger.error('MinePage', '打开URL失败: $url', e);
     return false;
   }
-}
-
-/// 显示 GitHub Star 引导弹窗
-void _showGitHubStarGuide(BuildContext context) {
-  final l10n = AppLocalizations.of(context);
-  final screenHeight = MediaQuery.of(context).size.height;
-
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text(l10n.githubStarGuideTitle),
-      content: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: screenHeight * 0.5,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                l10n.githubStarGuideContent,
-                style: TextStyle(
-                  color: PiggyTokens.textSecondary(context),
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 16),
-              // 引导图片
-              ClipRRect(
-                borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
-                child: Image.asset(
-                  'assets/images/github_star_guide.png',
-                  fit: BoxFit.contain,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        FilledButton(
-          onPressed: () {
-            Navigator.pop(context);
-            _tryOpenUrl(Uri.parse('https://github.com/TNT-Likely/PiggyCount'));
-          },
-          child: Text(l10n.githubStarGuideButton),
-        ),
-      ],
-    ),
-  );
 }
 
 /// 请求应用评分

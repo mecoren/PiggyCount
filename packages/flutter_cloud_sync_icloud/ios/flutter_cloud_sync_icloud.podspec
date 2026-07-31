@@ -9,7 +9,7 @@ Pod::Spec.new do |s|
 iCloud Document Storage provider for flutter_cloud_sync.
 Provides file upload/download/sync capabilities using iCloud Drive.
                        DESC
-  s.homepage         = 'https://github.com/TNT-Likely/PiggyCount'
+  s.homepage         = 'https://github.com/mecoren/PiggyCount'
   s.license          = { :file => '../LICENSE' }
   s.author           = { 'PiggyCount' => 'contact@piggycount.app' }
   s.source           = { :path => '.' }

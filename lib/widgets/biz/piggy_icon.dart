@@ -1,45 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
+/// 应用图标 widget。
+///
+/// 历史上基于 `assets/piggy.svg`（SVG + currentColor 着色），
+/// 现已改为统一的透明背景 PNG 主图标 `assets/icon/icon_master.png`，
+/// 不再支持主题色着色（新图标本身为彩色插画）。
 class PiggyIcon extends StatelessWidget {
-  final Color color; // 类似 Web 中的 color 属性
   final double size;
 
-  const PiggyIcon({super.key, required this.color, this.size = 256});
+  const PiggyIcon({super.key, this.size = 256});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final svg = SvgPicture.asset(
-      'assets/piggy.svg',
+    return Image.asset(
+      'assets/icon/icon_master.png',
       width: size,
       height: size,
-      theme: SvgTheme(
-        currentColor: color, // 核心：模拟 CSS 的 currentColor
-      ),
-    );
-
-    if (!isDark) return svg;
-
-    // 暗黑模式：在蜜蜂图标后面加浅色圆形遮罩，让黑色边框可见
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Container(
-            width: size * 1.1,
-            height: size * 1.1,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: 0.15),
-            ),
-          ),
-          svg,
-        ],
-      ),
+      fit: BoxFit.contain,
     );
   }
 }

@@ -56,7 +56,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
     return grouped;
   }
 
-  void _onReorder(String type, List<db.Account> groupAccounts, int oldIndex, int newIndex) {
+  void _onReorder(
+      String type, List<db.Account> groupAccounts, int oldIndex, int newIndex) {
     if (oldIndex < newIndex) newIndex -= 1;
     if (oldIndex == newIndex) return;
 
@@ -99,7 +100,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
     final accountFeatureAsync = ref.watch(accountFeatureEnabledProvider);
     final primaryColor = ref.watch(primaryColorProvider);
     final allStatsAsync = ref.watch(allAccountStatsProvider);
-    final netWorthByCurrencyAsync = ref.watch(netWorthBreakdownByCurrencyProvider);
+    final netWorthByCurrencyAsync =
+        ref.watch(netWorthBreakdownByCurrencyProvider);
 
     // 资产构成数据
     final compositionAsync = ref.watch(assetCompositionProvider);
@@ -121,11 +123,12 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
             icon: const Icon(Icons.add),
             tooltip: l10n.accountAddTooltip,
           ),
-          // 蜜蜂家当 BeeAssets 入口 — 行为走 ProductPromoLauncher
+          // 小猪家当 PiggyAssets 入口 — 行为走 ProductPromoLauncher
           // (iOS 跳商店 / Android 弹窗)。
-          _BeeAssetsHeaderEntry(),
+          _PiggyAssetsHeaderEntry(),
           IconButton(
-            onPressed: () => _showSettingsSheet(context, ref, accountFeatureAsync, accountsAsync),
+            onPressed: () => _showSettingsSheet(
+                context, ref, accountFeatureAsync, accountsAsync),
             icon: const Icon(Icons.settings_outlined),
             tooltip: l10n.commonSettings,
           ),
@@ -150,124 +153,132 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                       right: 12.0.scaled(context, ref),
                       top: 8.0.scaled(context, ref),
                       bottom: widget.asTab
-                          ? 8.0.scaled(context, ref) + 56 + MediaQuery.of(context).padding.bottom + 24
+                          ? 8.0.scaled(context, ref) +
+                              56 +
+                              MediaQuery.of(context).padding.bottom +
+                              24
                           : 8.0.scaled(context, ref),
                     ),
-                  children: [
-                    if (accounts.isEmpty)
-                      SizedBox(
-                        height: MediaQuery.of(context).size.height * 0.4,
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.account_balance_wallet_outlined,
-                                size: 64.0.scaled(context, ref),
-                                color: primaryColor.withValues(alpha: 0.4),
-                              ),
-                              SizedBox(height: 16.0.scaled(context, ref)),
-                              Text(
-                                l10n.accountsEmptyMessage,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: PiggyTokens.textSecondary(context),
+                    children: [
+                      if (accounts.isEmpty)
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.4,
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.account_balance_wallet_outlined,
+                                  size: 64.0.scaled(context, ref),
+                                  color: primaryColor.withValues(alpha: 0.4),
                                 ),
-                              ),
-                              SizedBox(height: 24.0.scaled(context, ref)),
-                              ElevatedButton.icon(
-                                onPressed: () => _addAccount(context, ref, ledgerId),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: primaryColor,
-                                  foregroundColor: Colors.white,
+                                SizedBox(height: 16.0.scaled(context, ref)),
+                                Text(
+                                  l10n.accountsEmptyMessage,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: PiggyTokens.textSecondary(context),
+                                  ),
                                 ),
-                                icon: const Icon(Icons.add),
-                                label: Text(l10n.accountAddButton),
-                              ),
-                            ],
+                                SizedBox(height: 24.0.scaled(context, ref)),
+                                ElevatedButton.icon(
+                                  onPressed: () =>
+                                      _addAccount(context, ref, ledgerId),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: primaryColor,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  icon: const Icon(Icons.add),
+                                  label: Text(l10n.accountAddButton),
+                                ),
+                              ],
+                            ),
                           ),
+                        )
+                      else ...[
+                        // 0. 净资产汇总 + 资产构成（合并卡片）
+                        _buildNetWorthAndCompositionCard(
+                          context,
+                          ref,
+                          netWorthByCurrencyAsync,
+                          compositionAsync,
+                          primaryColor,
                         ),
-                      )
-                    else ...[
-                      // 0. 净资产汇总 + 资产构成（合并卡片）
-                      _buildNetWorthAndCompositionCard(
-                        context, ref, netWorthByCurrencyAsync, compositionAsync, primaryColor,
-                      ),
 
-                      // 2. 资产账户分组
-                      ..._buildClassificationSection(
-                        context: context,
-                        l10n: l10n,
-                        title: l10n.assetAccounts,
-                        icon: Icons.trending_up,
-                        iconColor: PiggyTokens.incomeColor(context, ref),
-                        typeOrder: assetTypeOrder,
-                        groups: groups,
-                        allStats: allStatsAsync.valueOrNull,
-                        primaryColor: primaryColor,
-                        ledgerId: ledgerId,
-                      ),
-
-                      // 3. 负债账户分组
-                      ..._buildClassificationSection(
-                        context: context,
-                        l10n: l10n,
-                        title: l10n.liabilityAccounts,
-                        icon: Icons.trending_down,
-                        iconColor: PiggyTokens.expenseColor(context, ref),
-                        typeOrder: liabilityTypeOrder,
-                        groups: groups,
-                        allStats: allStatsAsync.valueOrNull,
-                        primaryColor: primaryColor,
-                        ledgerId: ledgerId,
-                      ),
-
-                      // 4. 其他未知类型(排除隐藏账户,账户隐藏 #240)
-                      ...groups.keys
-                          .where((type) =>
-                              !accountTypeOrder.contains(type) &&
-                              groups[type]!.any((a) => !a.hidden))
-                          .map((type) {
-                        final groupList =
-                            groups[type]!.where((a) => !a.hidden).toList();
-                        return _AccountTypeGroup(
-                          type: type,
-                          accounts: groupList,
-                          primaryColor: primaryColor,
+                        // 2. 资产账户分组
+                        ..._buildClassificationSection(
+                          context: context,
+                          l10n: l10n,
+                          title: l10n.assetAccounts,
+                          icon: Icons.trending_up,
+                          iconColor: PiggyTokens.incomeColor(context, ref),
+                          typeOrder: assetTypeOrder,
+                          groups: groups,
                           allStats: allStatsAsync.valueOrNull,
-                          onReorder: (oldIndex, newIndex) =>
-                              _onReorder(type, groupList, oldIndex, newIndex),
+                          primaryColor: primaryColor,
+                          ledgerId: ledgerId,
+                        ),
+
+                        // 3. 负债账户分组
+                        ..._buildClassificationSection(
+                          context: context,
+                          l10n: l10n,
+                          title: l10n.liabilityAccounts,
+                          icon: Icons.trending_down,
+                          iconColor: PiggyTokens.expenseColor(context, ref),
+                          typeOrder: liabilityTypeOrder,
+                          groups: groups,
+                          allStats: allStatsAsync.valueOrNull,
+                          primaryColor: primaryColor,
+                          ledgerId: ledgerId,
+                        ),
+
+                        // 4. 其他未知类型(排除隐藏账户,账户隐藏 #240)
+                        ...groups.keys
+                            .where((type) =>
+                                !accountTypeOrder.contains(type) &&
+                                groups[type]!.any((a) => !a.hidden))
+                            .map((type) {
+                          final groupList =
+                              groups[type]!.where((a) => !a.hidden).toList();
+                          return _AccountTypeGroup(
+                            type: type,
+                            accounts: groupList,
+                            primaryColor: primaryColor,
+                            allStats: allStatsAsync.valueOrNull,
+                            onReorder: (oldIndex, newIndex) =>
+                                _onReorder(type, groupList, oldIndex, newIndex),
+                            onTap: (account) =>
+                                _viewAccountDetail(context, ref, account),
+                            onEdit: (account) =>
+                                _editAccount(context, ref, account, ledgerId),
+                          );
+                        }),
+
+                        // 5. 已隐藏账户分区(账户隐藏 #240,D2:主列表退场,
+                        // 分区头小计与净资产卡差额对账)
+                        _HiddenAccountsSection(
+                          accounts: accounts.where((a) => a.hidden).toList(),
+                          allStats: allStatsAsync.valueOrNull,
+                          primaryColor: primaryColor,
                           onTap: (account) =>
                               _viewAccountDetail(context, ref, account),
                           onEdit: (account) =>
                               _editAccount(context, ref, account, ledgerId),
-                        );
-                      }),
-
-                      // 5. 已隐藏账户分区(账户隐藏 #240,D2:主列表退场,
-                      // 分区头小计与净资产卡差额对账)
-                      _HiddenAccountsSection(
-                        accounts: accounts.where((a) => a.hidden).toList(),
-                        allStats: allStatsAsync.valueOrNull,
-                        primaryColor: primaryColor,
-                        onTap: (account) =>
-                            _viewAccountDetail(context, ref, account),
-                        onEdit: (account) =>
-                            _editAccount(context, ref, account, ledgerId),
-                        onRestore: (account) =>
-                            _restoreAccount(context, ref, account),
-                      ),
+                          onRestore: (account) =>
+                              _restoreAccount(context, ref, account),
+                        ),
+                      ],
                     ],
-                  ],
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(
-                child: Text('${l10n.commonError}: $err'),
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, stack) => Center(
+                  child: Text('${l10n.commonError}: $err'),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
         ),
       ),
     );
@@ -277,7 +288,15 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
   Widget _buildNetWorthAndCompositionCard(
     BuildContext context,
     WidgetRef ref,
-    AsyncValue<Map<String, ({double totalAssets, double totalLiabilities, double netWorth})>> netWorthAsync,
+    AsyncValue<
+            Map<
+                String,
+                ({
+                  double totalAssets,
+                  double totalLiabilities,
+                  double netWorth
+                })>>
+        netWorthAsync,
     AsyncValue<List<({String type, double totalBalance})>> compositionAsync,
     Color primaryColor,
   ) {
@@ -299,10 +318,12 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
           // 净资产部分
           netWorthAsync.when(
             skipLoadingOnReload: true,
-            data: (nwByCurrency) => _buildNetWorthContent(context, ref, nwByCurrency),
+            data: (nwByCurrency) =>
+                _buildNetWorthContent(context, ref, nwByCurrency),
             loading: () => SizedBox(
               height: 80.0.scaled(context, ref),
-              child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+              child: const Center(
+                  child: CircularProgressIndicator(strokeWidth: 2)),
             ),
             error: (_, __) => const SizedBox.shrink(),
           ),
@@ -310,7 +331,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
           // - showComposition=true（单币种 或 折算态）：可在「净值走势」「资产构成」间切换，记住偏好；
           // - showComposition=false（多币种非折算，构成无法合并）：只展示走势（净值裸加）。
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: 12.0.scaled(context, ref)),
+            padding:
+                EdgeInsets.symmetric(horizontal: 12.0.scaled(context, ref)),
             child: Divider(height: 1, color: PiggyTokens.divider(context)),
           ),
           Builder(builder: (context) {
@@ -322,8 +344,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                 if (showComposition)
                   Padding(
                     padding: EdgeInsets.only(top: 10.0.scaled(context, ref)),
-                    child:
-                        _trendCompositionToggle(context, ref, view, primaryColor),
+                    child: _trendCompositionToggle(
+                        context, ref, view, primaryColor),
                   ),
                 Padding(
                   padding: EdgeInsets.all(12.0.scaled(context, ref)),
@@ -354,7 +376,9 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
   Widget _buildNetWorthContent(
     BuildContext context,
     WidgetRef ref,
-    Map<String, ({double totalAssets, double totalLiabilities, double netWorth})> nwByCurrency,
+    Map<String,
+            ({double totalAssets, double totalLiabilities, double netWorth})>
+        nwByCurrency,
   ) {
     final l10n = AppLocalizations.of(context);
     final useCompact = ref.watch(compactAmountProvider);
@@ -363,7 +387,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
     final multiCurrencyActive = ref.watch(multiCurrencyActiveProvider);
     final converted = ref.watch(convertedNetWorthProvider).valueOrNull;
     if (multiCurrencyActive && converted != null) {
-      return _buildConvertedNetWorthContent(context, ref, converted, useCompact);
+      return _buildConvertedNetWorthContent(
+          context, ref, converted, useCompact);
     }
 
     final isSingleCurrency = nwByCurrency.length <= 1;
@@ -403,7 +428,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
             final currency = mapEntry.value.key;
             final nw = mapEntry.value.value;
             return Padding(
-              padding: EdgeInsets.only(top: isFirst ? 0 : 2.0.scaled(context, ref)),
+              padding:
+                  EdgeInsets.only(top: isFirst ? 0 : 2.0.scaled(context, ref)),
               child: AmountText(
                 value: nw.netWorth,
                 signed: false,
@@ -465,10 +491,12 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                       ),
                       SizedBox(height: 2.0.scaled(context, ref)),
                       _buildMultiCurrencyAmountRow(
-                        context, ref,
+                        context,
+                        ref,
                         entries: nwByCurrency.entries
                             .where((e) => e.value.totalAssets != 0)
-                            .map((e) => (currency: e.key, value: e.value.totalAssets))
+                            .map((e) =>
+                                (currency: e.key, value: e.value.totalAssets))
                             .toList(),
                         valueColor: PiggyTokens.incomeColor(context, ref),
                         useCompact: useCompact,
@@ -493,10 +521,14 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                       ),
                       SizedBox(height: 2.0.scaled(context, ref)),
                       _buildMultiCurrencyAmountRow(
-                        context, ref,
+                        context,
+                        ref,
                         entries: nwByCurrency.entries
                             .where((e) => e.value.totalLiabilities != 0)
-                            .map((e) => (currency: e.key, value: e.value.totalLiabilities.abs()))
+                            .map((e) => (
+                                  currency: e.key,
+                                  value: e.value.totalLiabilities.abs()
+                                ))
                             .toList(),
                         valueColor: PiggyTokens.expenseColor(context, ref),
                         useCompact: useCompact,
@@ -519,8 +551,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
   Widget _buildNetWorthChartInline(BuildContext context, WidgetRef ref) {
     final now = trendTodayAnchor();
     final start = DateTime(now.year, now.month - 11, 1);
-    final seriesAsync = ref.watch(
-        netWorthTrendSeriesProvider((startDate: start, endDate: now)));
+    final seriesAsync = ref
+        .watch(netWorthTrendSeriesProvider((startDate: start, endDate: now)));
     final hide = ref.watch(hideAmountsProvider);
     final primary = ref.watch(primaryColorProvider);
     final l10n = AppLocalizations.of(context);
@@ -584,8 +616,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
       );
 
   /// 走势 / 构成 切换控件（主题色分段胶囊）。
-  Widget _trendCompositionToggle(BuildContext context, WidgetRef ref,
-      AssetTrendView view, Color primary) {
+  Widget _trendCompositionToggle(
+      BuildContext context, WidgetRef ref, AssetTrendView view, Color primary) {
     final l10n = AppLocalizations.of(context);
     Widget seg(AssetTrendView v, String label) {
       final on = view == v;
@@ -632,7 +664,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
   ) {
     final l10n = AppLocalizations.of(context);
     final base = ref.watch(baseCurrencyProvider).toUpperCase();
-    final nwByCurrency = ref.watch(netWorthBreakdownByCurrencyProvider).valueOrNull ?? const {};
+    final nwByCurrency =
+        ref.watch(netWorthBreakdownByCurrencyProvider).valueOrNull ?? const {};
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -653,7 +686,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                 alignment: Alignment.centerRight,
                 child: InkWell(
                   onTap: () => _showNetWorthConversionDetail(
-                    context, ref, converted, nwByCurrency, base, useCompact),
+                      context, ref, converted, nwByCurrency, base, useCompact),
                   borderRadius: BorderRadius.circular(4.0.scaled(context, ref)),
                   child: Padding(
                     padding: EdgeInsets.symmetric(
@@ -755,7 +788,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
     BuildContext context,
     WidgetRef ref,
     ConvertedNetWorth converted,
-    Map<String, ({double totalAssets, double totalLiabilities, double netWorth})>
+    Map<String,
+            ({double totalAssets, double totalLiabilities, double netWorth})>
         nwByCurrency,
     String base,
     bool useCompact,
@@ -836,7 +870,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
 
     return InkWell(
       onTap: () => _showGroupConversionDetail(
-        context, ref,
+        context,
+        ref,
         groupTitle: groupTitle,
         subtotalByCurrency: subtotalByCurrency,
         result: result,
@@ -895,7 +930,11 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
     WidgetRef ref, {
     required String groupTitle,
     required Map<String, double> subtotalByCurrency,
-    required ({double total, Map<String, double> convertedByCurrency, List<String> missingCurrencies}) result,
+    required ({
+      double total,
+      Map<String, double> convertedByCurrency,
+      List<String> missingCurrencies
+    }) result,
     required String baseSymbol,
     required String base,
     required bool useCompact,
@@ -947,7 +986,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
           for (int i = 0; i < entries.length; i++) ...[
             if (i > 0)
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4.0.scaled(context, ref)),
+                padding:
+                    EdgeInsets.symmetric(horizontal: 4.0.scaled(context, ref)),
                 child: Text(
                   '·',
                   style: TextStyle(
@@ -984,7 +1024,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
     required Color iconColor,
     required List<String> typeOrder,
     required Map<String, List<db.Account>> groups,
-    required Map<int, ({double balance, double expense, double income})>? allStats,
+    required Map<int, ({double balance, double expense, double income})>?
+        allStats,
     required Color primaryColor,
     required int ledgerId,
   }) {
@@ -1050,7 +1091,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                 child: Align(
                   alignment: Alignment.centerRight,
                   child: _buildGroupConvertedSubtotal(
-                    context, ref,
+                    context,
+                    ref,
                     groupTitle: title,
                     subtotalByCurrency: subtotalByCurrency,
                     rates: rates,
@@ -1075,7 +1117,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
             else
               Flexible(
                 child: _buildMultiCurrencyAmountRow(
-                  context, ref,
+                  context,
+                  ref,
                   entries: subtotalByCurrency.entries
                       .map((e) => (currency: e.key, value: e.value))
                       .toList(),
@@ -1099,10 +1142,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
           allStats: allStats,
           onReorder: (oldIndex, newIndex) =>
               _onReorder(type, groupList, oldIndex, newIndex),
-          onTap: (account) =>
-              _viewAccountDetail(context, ref, account),
-          onEdit: (account) =>
-              _editAccount(context, ref, account, ledgerId),
+          onTap: (account) => _viewAccountDetail(context, ref, account),
+          onEdit: (account) => _editAccount(context, ref, account, ledgerId),
         );
       }),
     ];
@@ -1120,16 +1161,16 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
     // 默认收/支账户选择器排除隐藏账户(账户隐藏 #240 §四):列表本身不出现,
     // 且若当前默认恰好指向隐藏账户,下方 _CompactDefaultAccount 找不到匹配项
     // 会自动显示「不设置」,兜底 E3。
-    final accounts =
-        (accountsAsync.asData?.value ?? const <db.Account>[])
-            .where((a) => !a.hidden)
-            .toList();
+    final accounts = (accountsAsync.asData?.value ?? const <db.Account>[])
+        .where((a) => !a.hidden)
+        .toList();
 
     showModalBottomSheet(
       context: context,
       backgroundColor: PiggyTokens.surfaceSheet(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
       ),
       builder: (sheetContext) {
         return Consumer(
@@ -1147,13 +1188,15 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                     width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: PiggyTokens.textTertiary(context).withValues(alpha: 0.3),
+                      color: PiggyTokens.textTertiary(context)
+                          .withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                   // 标题
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Text(
                       l10n.commonSettings,
                       style: TextStyle(
@@ -1190,7 +1233,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                   // (多币种恒折算,与 Web 端对齐),这里只保留汇率管理入口。
                   Consumer(
                     builder: (context, ref, _) {
-                      final used = ref.watch(usedCurrenciesProvider).valueOrNull;
+                      final used =
+                          ref.watch(usedCurrenciesProvider).valueOrNull;
                       if (used == null || used.length < 2) {
                         return const SizedBox.shrink();
                       }
@@ -1264,12 +1308,10 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
     );
   }
 
-  Future<void> _addAccount(BuildContext context, WidgetRef ref, int ledgerId) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => AccountEditPage(ledgerId: ledgerId),
-      ),
-    );
+  Future<void> _addAccount(
+      BuildContext context, WidgetRef ref, int ledgerId) async {
+    // 新建账户：底部抽屉弹出（参考 wait-home 影视新增抽屉）
+    await showAccountFormBottomSheet(context, ledgerId: ledgerId);
 
     // 只 bump tick:4 个 stats provider 都 ref.watch(statsRefreshProvider),
     // 自动重算且保留旧值,`when` 不会闪 loading。
@@ -1471,7 +1513,8 @@ class _ConversionDetailRow extends ConsumerWidget {
                 vertical: 1.0.scaled(context, ref),
               ),
               decoration: BoxDecoration(
-                border: Border.all(color: PiggyTokens.warning(context), width: 1),
+                border:
+                    Border.all(color: PiggyTokens.warning(context), width: 1),
                 borderRadius: BorderRadius.circular(4.0.scaled(context, ref)),
               ),
               child: Text(
@@ -1482,7 +1525,8 @@ class _ConversionDetailRow extends ConsumerWidget {
           else if (entry.convertedValue != null)
             // abs:与同行原币 AmountText(signed:false) 的绝对值口径一致(负债不带负号)。
             _ApproxConvertedText(
-              text: '≈ $baseSymbol${entry.convertedValue!.abs().toStringAsFixed(2)}',
+              text:
+                  '≈ $baseSymbol${entry.convertedValue!.abs().toStringAsFixed(2)}',
             ),
         ],
       ),
@@ -1505,7 +1549,8 @@ void _showConversionDetailSheet(
     context: context,
     backgroundColor: PiggyTokens.surfaceSheet(context),
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
+      borderRadius:
+          BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
     ),
     builder: (sheetContext) {
       return SafeArea(
@@ -1671,7 +1716,8 @@ class _AccountTypeGroupState extends ConsumerState<_AccountTypeGroup> {
                   height: 28.0.scaled(context, ref),
                   decoration: BoxDecoration(
                     color: typeColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(7.0.scaled(context, ref)),
+                    borderRadius:
+                        BorderRadius.circular(7.0.scaled(context, ref)),
                   ),
                   child: Center(
                     child: AccountTypeIcon(
@@ -1697,8 +1743,10 @@ class _AccountTypeGroupState extends ConsumerState<_AccountTypeGroup> {
                     vertical: 1.0.scaled(context, ref),
                   ),
                   decoration: BoxDecoration(
-                    color: PiggyTokens.textTertiary(context).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8.0.scaled(context, ref)),
+                    color: PiggyTokens.textTertiary(context)
+                        .withValues(alpha: 0.12),
+                    borderRadius:
+                        BorderRadius.circular(8.0.scaled(context, ref)),
                   ),
                   child: Text(
                     '${widget.accounts.length}',
@@ -1891,6 +1939,7 @@ class _AccountCard extends ConsumerWidget {
   final ({double balance, double expense, double income})? stats;
   final VoidCallback onTap;
   final VoidCallback onEdit;
+
   /// 「已隐藏」分区卡片的恢复回调(账户隐藏 #240)。非空时才渲染「已隐藏」
   /// 灰标 + 恢复按钮;在用卡片(account.hidden==false)不受影响。
   final VoidCallback? onRestore;
@@ -1991,7 +2040,9 @@ class _AccountCard extends ConsumerWidget {
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
-                                    color: isDark ? Colors.white.withValues(alpha: 0.9) : Colors.white,
+                                    color: isDark
+                                        ? Colors.white.withValues(alpha: 0.9)
+                                        : Colors.white,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -2005,13 +2056,16 @@ class _AccountCard extends ConsumerWidget {
                                 ),
                                 decoration: BoxDecoration(
                                   color: Colors.white.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(4.0.scaled(context, ref)),
+                                  borderRadius: BorderRadius.circular(
+                                      4.0.scaled(context, ref)),
                                 ),
                                 child: Text(
                                   getCurrencyName(account.currency, context),
                                   style: TextStyle(
                                     fontSize: 11,
-                                    color: isDark ? Colors.white.withValues(alpha: 0.8) : Colors.white,
+                                    color: isDark
+                                        ? Colors.white.withValues(alpha: 0.8)
+                                        : Colors.white,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -2029,7 +2083,9 @@ class _AccountCard extends ConsumerWidget {
                             ),
                             child: Icon(
                               Icons.edit,
-                              color: isDark ? Colors.white.withValues(alpha: 0.8) : Colors.white,
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.8)
+                                  : Colors.white,
                               size: 14.0.scaled(context, ref),
                             ),
                           ),
@@ -2054,12 +2110,14 @@ class _AccountCard extends ConsumerWidget {
                     else
                       Center(
                         child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 4.0.scaled(context, ref)),
+                          padding: EdgeInsets.symmetric(
+                              vertical: 4.0.scaled(context, ref)),
                           child: const SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
                               strokeWidth: 2,
                             ),
                           ),
@@ -2078,7 +2136,8 @@ class _AccountCard extends ConsumerWidget {
   /// 「已隐藏」灰标 + 恢复按钮(账户隐藏 #240)。仅 account.hidden==true 时被调用。
   Widget _buildHiddenBadgeRow(
       BuildContext context, WidgetRef ref, AppLocalizations l10n, bool isDark) {
-    final textColor = isDark ? Colors.white.withValues(alpha: 0.9) : Colors.white;
+    final textColor =
+        isDark ? Colors.white.withValues(alpha: 0.9) : Colors.white;
     return Row(
       children: [
         Container(
@@ -2134,9 +2193,13 @@ class _AccountCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildNormalStats(BuildContext context, WidgetRef ref, AppLocalizations l10n, bool isDark) {
-    final textColor = isDark ? Colors.white.withValues(alpha: 0.9) : Colors.white;
-    final labelColor = isDark ? Colors.white.withValues(alpha: 0.6) : Colors.white.withValues(alpha: 0.8);
+  Widget _buildNormalStats(
+      BuildContext context, WidgetRef ref, AppLocalizations l10n, bool isDark) {
+    final textColor =
+        isDark ? Colors.white.withValues(alpha: 0.9) : Colors.white;
+    final labelColor = isDark
+        ? Colors.white.withValues(alpha: 0.6)
+        : Colors.white.withValues(alpha: 0.8);
 
     return Row(
       children: [
@@ -2184,12 +2247,17 @@ class _AccountCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildValuationStats(BuildContext context, WidgetRef ref, AppLocalizations l10n, bool isDark) {
-    final textColor = isDark ? Colors.white.withValues(alpha: 0.9) : Colors.white;
-    final labelColor = isDark ? Colors.white.withValues(alpha: 0.6) : Colors.white.withValues(alpha: 0.8);
+  Widget _buildValuationStats(
+      BuildContext context, WidgetRef ref, AppLocalizations l10n, bool isDark) {
+    final textColor =
+        isDark ? Colors.white.withValues(alpha: 0.9) : Colors.white;
+    final labelColor = isDark
+        ? Colors.white.withValues(alpha: 0.6)
+        : Colors.white.withValues(alpha: 0.8);
     final isLiability = isLiabilityType(account.type);
     final displayValue = isLiability ? stats!.balance.abs() : stats!.balance;
-    final label = isLiability ? l10n.valuationCurrentDebt : l10n.valuationCurrentValue;
+    final label =
+        isLiability ? l10n.valuationCurrentDebt : l10n.valuationCurrentValue;
 
     return Row(
       children: [
@@ -2244,10 +2312,14 @@ class _AccountCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildCreditCardStats(BuildContext context, WidgetRef ref, AppLocalizations l10n, bool isDark) {
+  Widget _buildCreditCardStats(
+      BuildContext context, WidgetRef ref, AppLocalizations l10n, bool isDark) {
     final used = stats!.balance < 0 ? -stats!.balance : 0.0;
-    final textColor = isDark ? Colors.white.withValues(alpha: 0.9) : Colors.white;
-    final labelColor = isDark ? Colors.white.withValues(alpha: 0.6) : Colors.white.withValues(alpha: 0.8);
+    final textColor =
+        isDark ? Colors.white.withValues(alpha: 0.9) : Colors.white;
+    final labelColor = isDark
+        ? Colors.white.withValues(alpha: 0.6)
+        : Colors.white.withValues(alpha: 0.8);
 
     // 信用卡按 type 判定;无额度时仅显示当前欠款,不再 fallthrough 到收入/支出卡
     final creditLimit = account.creditLimit;
@@ -2265,7 +2337,8 @@ class _AccountCard extends ConsumerWidget {
       );
     }
 
-    final usageRate = creditLimit > 0 ? (used / creditLimit).clamp(0.0, 1.0) : 0.0;
+    final usageRate =
+        creditLimit > 0 ? (used / creditLimit).clamp(0.0, 1.0) : 0.0;
     return Column(
       children: [
         // 进度条
@@ -2337,6 +2410,7 @@ class _CardStat extends StatelessWidget {
   final Color textColor;
   final Color labelColor;
   final WidgetRef ref;
+
   /// 账户的货币代码 — 用来锁住 formatBalance 的格式;不传则 fallback 到账本货币。
   final String? currencyCode;
 
@@ -2402,7 +2476,8 @@ class _CompactDefaultAccount extends ConsumerWidget {
       data: (defaultAccountId) {
         db.Account? defaultAccount;
         if (defaultAccountId != null) {
-          defaultAccount = accounts.where((a) => a.id == defaultAccountId).firstOrNull;
+          defaultAccount =
+              accounts.where((a) => a.id == defaultAccountId).firstOrNull;
         }
 
         final title = isIncome
@@ -2449,37 +2524,52 @@ class _CompactDefaultAccount extends ConsumerWidget {
     );
   }
 
-  void _showPicker(BuildContext context, WidgetRef ref, List<db.Account> accounts, int? currentDefaultId) {
+  void _showPicker(BuildContext context, WidgetRef ref,
+      List<db.Account> accounts, int? currentDefaultId) {
     final l10n = AppLocalizations.of(context);
     final isIncome = type == 'income';
-    final title = isIncome ? l10n.accountDefaultIncomeTitle : l10n.accountDefaultExpenseTitle;
+    final title = isIncome
+        ? l10n.accountDefaultIncomeTitle
+        : l10n.accountDefaultExpenseTitle;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: PiggyTokens.surfaceElevated(context),
-        title: Text(title, style: TextStyle(color: PiggyTokens.textPrimary(context))),
+        title: Text(title,
+            style: TextStyle(color: PiggyTokens.textPrimary(context))),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
                 dense: true,
-                leading: Icon(Icons.block, color: PiggyTokens.iconSecondary(context)),
+                leading: Icon(Icons.block,
+                    color: PiggyTokens.iconSecondary(context)),
                 title: Text(
                   l10n.accountDefaultNone,
                   style: TextStyle(
-                    color: currentDefaultId == null ? primaryColor : PiggyTokens.textPrimary(context),
-                    fontWeight: currentDefaultId == null ? FontWeight.w600 : FontWeight.normal,
+                    color: currentDefaultId == null
+                        ? primaryColor
+                        : PiggyTokens.textPrimary(context),
+                    fontWeight: currentDefaultId == null
+                        ? FontWeight.w600
+                        : FontWeight.normal,
                   ),
                 ),
-                trailing: currentDefaultId == null ? Icon(Icons.check, color: primaryColor) : null,
+                trailing: currentDefaultId == null
+                    ? Icon(Icons.check, color: primaryColor)
+                    : null,
                 onTap: () async {
                   if (isIncome) {
-                    await ref.read(defaultAccountSetterProvider).setDefaultIncomeAccountId(null);
+                    await ref
+                        .read(defaultAccountSetterProvider)
+                        .setDefaultIncomeAccountId(null);
                     ref.invalidate(defaultIncomeAccountIdProvider);
                   } else {
-                    await ref.read(defaultAccountSetterProvider).setDefaultExpenseAccountId(null);
+                    await ref
+                        .read(defaultAccountSetterProvider)
+                        .setDefaultExpenseAccountId(null);
                     ref.invalidate(defaultExpenseAccountIdProvider);
                   }
                   if (context.mounted) Navigator.pop(context);
@@ -2496,17 +2586,26 @@ class _CompactDefaultAccount extends ConsumerWidget {
                   title: Text(
                     account.name,
                     style: TextStyle(
-                      color: isSelected ? primaryColor : PiggyTokens.textPrimary(context),
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      color: isSelected
+                          ? primaryColor
+                          : PiggyTokens.textPrimary(context),
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.normal,
                     ),
                   ),
-                  trailing: isSelected ? Icon(Icons.check, color: primaryColor) : null,
+                  trailing: isSelected
+                      ? Icon(Icons.check, color: primaryColor)
+                      : null,
                   onTap: () async {
                     if (isIncome) {
-                      await ref.read(defaultAccountSetterProvider).setDefaultIncomeAccountId(account.id);
+                      await ref
+                          .read(defaultAccountSetterProvider)
+                          .setDefaultIncomeAccountId(account.id);
                       ref.invalidate(defaultIncomeAccountIdProvider);
                     } else {
-                      await ref.read(defaultAccountSetterProvider).setDefaultExpenseAccountId(account.id);
+                      await ref
+                          .read(defaultAccountSetterProvider)
+                          .setDefaultExpenseAccountId(account.id);
                       ref.invalidate(defaultExpenseAccountIdProvider);
                     }
                     if (context.mounted) Navigator.pop(context);
@@ -2526,14 +2625,14 @@ class _CompactDefaultAccount extends ConsumerWidget {
 /// 用 Material 标准的 Premium / 进阶版图标(`workspace_premium_outlined`),
 /// 跟 setting / add 等 outlined 图标视觉重量完全一致;语义上暗示「升级 /
 /// 进阶版本」,鼓励点击。颜色自适应 header 背景。点击进入介绍弹窗。
-class _BeeAssetsHeaderEntry extends StatelessWidget {
-  const _BeeAssetsHeaderEntry();
+class _PiggyAssetsHeaderEntry extends StatelessWidget {
+  const _PiggyAssetsHeaderEntry();
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final info = beeAssetsPromo(context);
-    final texts = buildPromoTexts(context, l10n.aboutBeeAssets);
+    final info = piggyAssetsPromo(context);
+    final texts = buildPromoTexts(context, l10n.aboutPiggyAssets);
 
     return IconButton(
       onPressed: () => ProductPromoLauncher.open(context, info, texts),
@@ -2542,4 +2641,3 @@ class _BeeAssetsHeaderEntry extends StatelessWidget {
     );
   }
 }
-

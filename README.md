@@ -2,11 +2,11 @@
 
 <div align="center">
 
-![GitHub stars](https://img.shields.io/github/stars/TNT-Likely/PiggyCount?style=social)
+![GitHub stars](https://img.shields.io/github/stars/mecoren/PiggyCount?style=social)
 ![License](https://img.shields.io/badge/license-Business%20Source%20License-orange.svg)
-![Release](https://img.shields.io/github/v/release/TNT-Likely/PiggyCount?label=latest&color=green)
-![Downloads](https://img.shields.io/github/downloads/TNT-Likely/PiggyCount/total?color=blue)
-![Last commit](https://img.shields.io/github/last-commit/TNT-Likely/PiggyCount)
+![Release](https://img.shields.io/github/v/release/mecoren/PiggyCount?label=latest&color=green)
+![Downloads](https://img.shields.io/github/downloads/mecoren/PiggyCount/total?color=blue)
+![Last commit](https://img.shields.io/github/last-commit/mecoren/PiggyCount)
 ![Flutter](https://img.shields.io/badge/Flutter-3.27%2B-02569B?logo=flutter)
 
 **你的数据,你做主的开源记账应用**
@@ -28,7 +28,7 @@
 <br/>
 <br/>
 
-[🌐 官网](https://count.beejz.com) · [📖 文档](https://count.beejz.com/docs/intro) · [💝 捐赠](#-捐赠支持) · [💬 Telegram](https://t.me/piggycount) · [📦 APK](https://github.com/TNT-Likely/PiggyCount/releases/latest) · [🚀 TestFlight](https://testflight.apple.com/join/Eaw2rWxa)
+[🌐 官网](https://count.beejz.com) · [📖 文档](https://count.beejz.com/docs/intro) · [💝 捐赠](#-捐赠支持) · [💬 Telegram](https://t.me/piggycount) · [📦 APK](https://github.com/mecoren/PiggyCount/releases/latest) · [🚀 TestFlight](https://testflight.apple.com/join/Eaw2rWxa)
 
 </div>
 
@@ -253,8 +253,8 @@ flutter build apk --flavor prod --release
 <details>
 <summary>欢迎所有形式的贡献</summary>
 
-- 🐛 [报告 Bug](https://github.com/TNT-Likely/PiggyCount/issues/new)
-- 💡 [功能建议](https://github.com/TNT-Likely/PiggyCount/discussions/new?category=ideas)
+- 🐛 [报告 Bug](https://github.com/mecoren/PiggyCount/issues/new)
+- 💡 [功能建议](https://github.com/mecoren/PiggyCount/discussions/new?category=ideas)
 - 💻 [代码贡献](docs/contributing/CONTRIBUTING_ZH.md#代码贡献流程) · 🌍 [翻译](docs/contributing/CONTRIBUTING_ZH.md#翻译贡献) · 📝 [文档](docs/contributing/CONTRIBUTING_ZH.md#文档贡献) · 🎨 [设计师招募](docs/contributing/CONTRIBUTING_ZH.md#designer-recruitment)
 
 **快速开始**:Fork → 创建 feature 分支 → 提交 → PR。详细规范见 [完整贡献指南](docs/contributing/CONTRIBUTING_ZH.md)。
@@ -296,7 +296,7 @@ A:
 **Q: 如何确保数据安全?**
 A: 使用自己的服务器 / Storage / Bucket,WebDAV 和 S3 建议 HTTPS 加密传输。PiggyCount Cloud 备份默认 AES-256 加密。
 
-更多详情见 [docs/cloud-setup.md](docs/cloud-setup.md) 或 [Issues](https://github.com/TNT-Likely/PiggyCount/issues)。
+更多详情见 [docs/cloud-setup.md](docs/cloud-setup.md) 或 [Issues](https://github.com/mecoren/PiggyCount/issues)。
 
 </details>
 
@@ -337,7 +337,7 @@ A: 使用自己的服务器 / Storage / Bucket,WebDAV 和 S3 建议 HTTPS 加密
 | <img src="assets/avatars/qiao.svg" width="44"/> | <img src="assets/avatars/rui.svg" width="44"/> | <a href="https://github.com/fishdivinity"><img src="assets/avatars/fishdivinity.png" width="44"/></a> | <img src="assets/avatars/shao.svg" width="44"/> | <img src="assets/avatars/ge.svg" width="44"/> | <img src="assets/avatars/te.svg" width="44"/> | <img src="assets/avatars/wen.svg" width="44"/> | <img src="assets/avatars/anon.svg" width="44"/> | <a href="https://github.com/birdnofoots"><img src="https://github.com/birdnofoots.png" width="44"/></a> | <a href="https://github.com/charieswang72-pro"><img src="https://github.com/charieswang72-pro.png" width="44"/></a> | <a href="https://github.com/542474846"><img src="https://github.com/542474846.png" width="44"/></a> | <a href="https://github.com/JOHN-2025"><img src="https://github.com/JOHN-2025.png" width="44"/></a> | <a href="https://github.com/HowcanoeWang"><img src="https://github.com/HowcanoeWang.png" width="44"/></a> |
 | *桥 ¥12 | *睿 ¥720 | fishdivinity ¥100 | *邵 ¥15 | *哥 ¥6 | *特 ¥15 | *文 ¥50 | 匿名 ¥50 | birdnofoots ¥10 | Charies ¥10 | 542474846 ¥66 | JOHN-2025 ¥30 | 浩瀚猫 ¥98 |
 
-> 💡 已捐赠?[提交信息](https://github.com/TNT-Likely/PiggyCount/issues/new?template=donation_info.yml) 展示在列表中。
+> 💡 已捐赠?[提交信息](https://github.com/mecoren/PiggyCount/issues/new?template=donation_info.yml) 展示在列表中。
 
 ---
 
@@ -399,6 +399,6 @@ A: 使用自己的服务器 / Storage / Bucket,WebDAV 和 S3 建议 HTTPS 加密
 
 感谢所有为小猪记账项目贡献代码、提出建议和反馈问题的朋友们!
 
-如有问题或建议,欢迎在 [Issues](https://github.com/TNT-Likely/PiggyCount/issues) 中提出,或在 [Discussions](https://github.com/TNT-Likely/PiggyCount/discussions) 中参与讨论。
+如有问题或建议,欢迎在 [Issues](https://github.com/mecoren/PiggyCount/issues) 中提出,或在 [Discussions](https://github.com/mecoren/PiggyCount/discussions) 中参与讨论。
 
 **小猪记账 🐝 — 让记账变得简单而安全**

@@ -2,8 +2,8 @@ name: flutter_cloud_sync
 description: A modular cloud sync framework for Flutter with pluggable backend providers
 version: 0.1.0
 publish_to: none
-homepage: https://github.com/TNT-Likely/PiggyCount
-repository: https://github.com/TNT-Likely/PiggyCount/tree/main/packages/flutter_cloud_sync
+homepage: https://github.com/mecoren/PiggyCount
+repository: https://github.com/mecoren/PiggyCount/tree/main/packages/flutter_cloud_sync
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

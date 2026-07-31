@@ -101,7 +101,7 @@ git clone https://github.com/<your-fork>/PiggyCount.git
 cd PiggyCount
 
 # 2. 添加上游
-git remote add upstream https://github.com/TNT-Likely/PiggyCount.git
+git remote add upstream https://github.com/mecoren/PiggyCount.git
 
 # 3. 安装依赖
 flutter pub get

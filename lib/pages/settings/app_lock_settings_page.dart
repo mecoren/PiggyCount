@@ -179,6 +179,7 @@ class _AppLockSettingsPageState extends ConsumerState<AppLockSettingsPage> {
       appBar: GlassTitleBar(
         title: l10n.appLockTitle,
         showBack: true,
+        bottomOpaque: true,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(
@@ -296,6 +297,7 @@ class _PinVerifyPageState extends ConsumerState<_PinVerifyPage> {
       appBar: GlassTitleBar(
         title: l10n.appLockVerifyPin,
         showBack: true,
+        bottomOpaque: true,
       ),
       body: SafeArea(
         top: false,

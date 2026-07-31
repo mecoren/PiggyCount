@@ -26,6 +26,7 @@ class ShortcutsGuidePage extends ConsumerWidget {
       appBar: GlassTitleBar(
         title: l10n.shortcutsGuide,
         showBack: true,
+        bottomOpaque: true,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(

@@ -4,7 +4,7 @@ contact_links:
     url: https://count.beejz.com/docs/intro
     about: 查看详细使用文档和常见问题。Detailed docs and FAQ.
   - name: 💬 讨论区 / Discussions
-    url: https://github.com/TNT-Likely/PiggyCount/discussions
+    url: https://github.com/mecoren/PiggyCount/discussions
     about: 分享使用经验、交流技巧、非 bug 求助请用 Discussions。Share experience, tips, non-bug questions.
   - name: ☁️ 云同步服务端问题 / Cloud Backend Issues
     url: https://github.com/TNT-Likely/PiggyCount-Cloud/issues

@@ -24,6 +24,7 @@ class ReminderSettingsPage extends ConsumerWidget {
       appBar: GlassTitleBar(
         title: AppLocalizations.of(context)!.reminderTitle,
         showBack: true,
+        bottomOpaque: true,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(

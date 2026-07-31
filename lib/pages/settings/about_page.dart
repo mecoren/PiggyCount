@@ -15,7 +15,6 @@ import '../../services/system/logger_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/ui_scale_extensions.dart';
 import '../../utils/website_urls.dart';
-import '../../services/marketing/product_promos.dart';
 import 'help_center_page.dart';
 import 'log_center_page.dart';
 import 'privacy_policy_page.dart';
@@ -92,6 +91,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
       appBar: GlassTitleBar(
         title: l10n.aboutPageTitle,
         showBack: true,
+        bottomOpaque: true,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(
@@ -109,7 +109,6 @@ class _AboutPageState extends ConsumerState<AboutPage> {
             child: Column(
               children: [
                 PiggyIcon(
-                  color: primary,
                   size: 80.0.scaled(context, ref),
                 ),
                 SizedBox(height: 16.0.scaled(context, ref)),
@@ -170,7 +169,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                   svgAsset: 'assets/icons/social/github.svg',
                   label: 'GitHub',
                   onTap: () => _tryOpenUrl(Uri.parse(
-                      'https://github.com/TNT-Likely/PiggyCount')),
+                      'https://github.com/mecoren/PiggyCount')),
                 ),
                 if (showTelegram)
                   _socialButton(
@@ -272,8 +271,8 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                 onTap: () async {
                   final lc = locale.languageCode;
                   final docUrl = lc == 'zh'
-                      ? 'https://github.com/TNT-Likely/PiggyCount/blob/main/docs/donate/README_ZH.md'
-                      : 'https://github.com/TNT-Likely/PiggyCount/blob/main/docs/donate/README_EN.md';
+                      ? 'https://github.com/mecoren/PiggyCount/blob/main/docs/donate/README_ZH.md'
+                      : 'https://github.com/mecoren/PiggyCount/blob/main/docs/donate/README_EN.md';
                   await _tryOpenUrl(Uri.parse(docUrl));
                 },
               ),
@@ -282,7 +281,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                 title: l10n.mineFeedback,
                 subtitle: l10n.mineFeedbackSubtitle,
                 onTap: () => _tryOpenUrl(Uri.parse(
-                    'https://github.com/TNT-Likely/PiggyCount/issues')),
+                    'https://github.com/mecoren/PiggyCount/issues')),
               ),
               SettingsNavItem(
                 icon: Icons.bug_report_outlined,
@@ -299,11 +298,6 @@ class _AboutPageState extends ConsumerState<AboutPage> {
               ),
             ],
           ),
-          // ===== 相关产品 =====
-          SizedBox(height: 28.0.scaled(context, ref)),
-          SettingsSectionLabel(l10n.aboutRelatedProducts),
-          SizedBox(height: 8.0.scaled(context, ref)),
-          _buildProductPromos(context),
           // ===== 底部:更新日志 · 隐私政策 文字链接 + 备案号 =====
           SizedBox(height: 24.0.scaled(context, ref)),
           Row(
@@ -443,26 +437,6 @@ class _AboutPageState extends ConsumerState<AboutPage> {
   static String _hex(Color c) => [c.r, c.g, c.b]
       .map((v) => ((v * 255).round() & 0xff).toRadixString(16).padLeft(2, '0'))
       .join();
-}
-
-/// 「更多产品」section — 单列大卡。蜜蜂家当前置。
-///
-/// ProductPromo 数据从 `lib/services/marketing/product_promos.dart` 集中获取,
-/// 多处页面(关于页 / 资产管理页 banner)共用同一份产品信息。
-Widget _buildProductPromos(BuildContext context) {
-  final l10n = AppLocalizations.of(context);
-  final products = <(ProductPromo info, ProductPromoTexts texts)>[
-    (beeAssetsPromo(context), buildPromoTexts(context, l10n.aboutBeeAssets)),
-    (beeDnsPromo(context), buildPromoTexts(context, l10n.aboutBeeDNS)),
-  ];
-  return Column(
-    children: [
-      for (var i = 0; i < products.length; i++) ...[
-        if (i > 0) const SizedBox(height: 12),
-        ProductPromoCard(info: products[i].$1, texts: products[i].$2),
-      ],
-    ],
-  );
 }
 
 // -------- 工具方法：关于与更新 --------

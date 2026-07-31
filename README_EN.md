@@ -2,11 +2,11 @@
 
 <div align="center">
 
-![GitHub stars](https://img.shields.io/github/stars/TNT-Likely/PiggyCount?style=social)
+![GitHub stars](https://img.shields.io/github/stars/mecoren/PiggyCount?style=social)
 ![License](https://img.shields.io/badge/license-Business%20Source%20License-orange.svg)
-![Release](https://img.shields.io/github/v/release/TNT-Likely/PiggyCount?label=latest&color=green)
-![Downloads](https://img.shields.io/github/downloads/TNT-Likely/PiggyCount/total?color=blue)
-![Last commit](https://img.shields.io/github/last-commit/TNT-Likely/PiggyCount)
+![Release](https://img.shields.io/github/v/release/mecoren/PiggyCount?label=latest&color=green)
+![Downloads](https://img.shields.io/github/downloads/mecoren/PiggyCount/total?color=blue)
+![Last commit](https://img.shields.io/github/last-commit/mecoren/PiggyCount)
 ![Flutter](https://img.shields.io/badge/Flutter-3.27%2B-02569B?logo=flutter)
 
 **Your Data, Your Control — Open Source Accounting App**
@@ -28,7 +28,7 @@ Sync via PiggyCount Cloud (self-hosted) / iCloud / Supabase / WebDAV / S3
 <br/>
 <br/>
 
-[🌐 Website](https://count.beejz.com/en/) · [📖 Docs](https://count.beejz.com/en/docs/intro) · [💝 Donate](#-donate) · [💬 Telegram](https://t.me/piggycount) · [📦 APK](https://github.com/TNT-Likely/PiggyCount/releases/latest) · [🚀 TestFlight](https://testflight.apple.com/join/Eaw2rWxa)
+[🌐 Website](https://count.beejz.com/en/) · [📖 Docs](https://count.beejz.com/en/docs/intro) · [💝 Donate](#-donate) · [💬 Telegram](https://t.me/piggycount) · [📦 APK](https://github.com/mecoren/PiggyCount/releases/latest) · [🚀 TestFlight](https://testflight.apple.com/join/Eaw2rWxa)
 
 </div>
 
@@ -253,8 +253,8 @@ See [docs/contributing/CONTRIBUTING.md](docs/contributing/CONTRIBUTING.md) for d
 <details>
 <summary>All contributions welcome</summary>
 
-- 🐛 [Report a bug](https://github.com/TNT-Likely/PiggyCount/issues/new)
-- 💡 [Feature request](https://github.com/TNT-Likely/PiggyCount/discussions/new?category=ideas)
+- 🐛 [Report a bug](https://github.com/mecoren/PiggyCount/issues/new)
+- 💡 [Feature request](https://github.com/mecoren/PiggyCount/discussions/new?category=ideas)
 - 💻 [Code](docs/contributing/CONTRIBUTING.md#code-contribution-flow) · 🌍 [Translation](docs/contributing/CONTRIBUTING.md#translation-contributions) · 📝 [Docs](docs/contributing/CONTRIBUTING.md#documentation-contributions) · 🎨 [Designer recruitment](docs/contributing/CONTRIBUTING.md#designer-recruitment)
 
 **Quick start**: Fork → create feature branch → commit → PR. See the [full contributing guide](docs/contributing/CONTRIBUTING.md) for details.
@@ -296,7 +296,7 @@ A:
 **Q: How is data security ensured?**
 A: Use your own server / Storage / Bucket. WebDAV and S3 should use HTTPS. PiggyCount Cloud backups are AES-256 encrypted by default.
 
-For more details, see [docs/cloud-setup_EN.md](docs/cloud-setup_EN.md) or [Issues](https://github.com/TNT-Likely/PiggyCount/issues).
+For more details, see [docs/cloud-setup_EN.md](docs/cloud-setup_EN.md) or [Issues](https://github.com/mecoren/PiggyCount/issues).
 
 </details>
 
@@ -337,7 +337,7 @@ PiggyCount is completely free and open-source — **no ads, no paid features**. 
 | <img src="assets/avatars/qiao.svg" width="44"/> | <img src="assets/avatars/rui.svg" width="44"/> | <a href="https://github.com/fishdivinity"><img src="assets/avatars/fishdivinity.png" width="44"/></a> | <img src="assets/avatars/shao.svg" width="44"/> | <img src="assets/avatars/ge.svg" width="44"/> | <img src="assets/avatars/te.svg" width="44"/> | <img src="assets/avatars/wen.svg" width="44"/> | <img src="assets/avatars/anon.svg" width="44"/> | <a href="https://github.com/birdnofoots"><img src="https://github.com/birdnofoots.png" width="44"/></a> | <a href="https://github.com/charieswang72-pro"><img src="https://github.com/charieswang72-pro.png" width="44"/></a> | <a href="https://github.com/542474846"><img src="https://github.com/542474846.png" width="44"/></a> | <a href="https://github.com/JOHN-2025"><img src="https://github.com/JOHN-2025.png" width="44"/></a> | <a href="https://github.com/HowcanoeWang"><img src="https://github.com/HowcanoeWang.png" width="44"/></a> |
 | *Qiao ¥12 | *Rui ¥720 | fishdivinity ¥100 | *Shao ¥15 | *Ge ¥6 | *Te ¥15 | *Wen ¥50 | Anonymous ¥50 | birdnofoots ¥10 | Charies ¥10 | 542474846 ¥66 | JOHN-2025 ¥30 | HowcanoeWang ¥98 |
 
-> 💡 Already donated? [Submit info](https://github.com/TNT-Likely/PiggyCount/issues/new?template=donation_info.yml) to be displayed in the list.
+> 💡 Already donated? [Submit info](https://github.com/mecoren/PiggyCount/issues/new?template=donation_info.yml) to be displayed in the list.
 
 ---
 
@@ -399,6 +399,6 @@ Thanks to [Guhe Bake (Internet Pure Land)](https://www.ghxi.com/) and [Star Moch
 
 Thanks to everyone who has contributed code, suggestions, or feedback to PiggyCount!
 
-For questions or suggestions, please raise an [Issue](https://github.com/TNT-Likely/PiggyCount/issues) or join the [Discussions](https://github.com/TNT-Likely/PiggyCount/discussions).
+For questions or suggestions, please raise an [Issue](https://github.com/mecoren/PiggyCount/issues) or join the [Discussions](https://github.com/mecoren/PiggyCount/discussions).
 
 **PiggyCount 🐝 — Making accounting simple and secure**

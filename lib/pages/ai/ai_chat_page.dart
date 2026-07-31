@@ -472,7 +472,6 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
       ),
       child: Center(
         child: PiggyIcon(
-          color: ref.watch(primaryColorProvider),
           size: 18.0.scaled(context, ref),
         ),
       ),

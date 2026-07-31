@@ -51,5 +51,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Type-safe generic implementation
 - Documentation and examples
 
-[Unreleased]: https://github.com/TNT-Likely/PiggyCount/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/TNT-Likely/PiggyCount/releases/tag/flutter_cloud_sync-v0.1.0
+[Unreleased]: https://github.com/mecoren/PiggyCount/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/mecoren/PiggyCount/releases/tag/flutter_cloud_sync-v0.1.0

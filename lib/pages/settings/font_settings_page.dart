@@ -31,6 +31,7 @@ class FontSettingsPage extends ConsumerWidget {
       appBar: GlassTitleBar(
         title: AppLocalizations.of(context)!.mineDisplayScale,
         showBack: true,
+        bottomOpaque: true,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(

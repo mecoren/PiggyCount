@@ -23,8 +23,8 @@ class ProductPromo {
   final String subtitle;
 
   /// 介绍正文(用于介绍弹窗,几行话讲产品做什么)。每个产品独立内容,
-  /// 跟产品绑定,不能放共用的 ProductPromoTexts 里(否则 BeeDNS 弹窗
-  /// 会显示 BeeAssets 介绍,错位)。
+  /// 跟产品绑定,不能放共用的 ProductPromoTexts 里(否则 PiggyDNS 弹窗
+  /// 会显示 PiggyAssets 介绍,错位)。
   final String introBody;
 
   /// 品牌主色

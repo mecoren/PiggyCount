@@ -74,6 +74,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
       appBar: GlassTitleBar(
         title: l10n.appearanceSettingsPageTitle,
         showBack: true,
+        bottomOpaque: true,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(

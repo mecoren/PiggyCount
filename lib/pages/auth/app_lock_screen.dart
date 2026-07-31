@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../styles/tokens.dart';
 import '../../utils/ui_scale_extensions.dart';
 import '../../providers/security_providers.dart';
-import '../../providers/theme_providers.dart';
 import '../../services/security/app_lock_service.dart';
 import '../../widgets/biz/pin_entry_pad.dart';
 import '../../widgets/biz/piggy_icon.dart';
@@ -98,7 +97,6 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final primaryColor = ref.watch(primaryColorProvider);
     final showBiometric = _biometricAvailable && _biometricEnabled;
 
     return Scaffold(
@@ -109,7 +107,6 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
             const Spacer(flex: 2),
             // Logo
             PiggyIcon(
-              color: primaryColor,
               size: 64.0.scaled(context, ref),
             ),
             SizedBox(height: 24.0.scaled(context, ref)),

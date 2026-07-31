@@ -275,8 +275,9 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
     final skin = headerSkinById(ref.watch(headerSkinProvider));
     final isDark = PiggyTokens.isDark(context);
     final primary = Theme.of(context).colorScheme.primary;
-    // ProfileCard 背景色：亮色模式用主题色，暗黑模式用纯黑（与原 PrimaryHeader 一致）
-    final cardBg = isDark ? Colors.black : primary;
+    // ProfileCard 背景色：与 SettingsCard 一致（亮色=白 / 暗色=#1C1C1E），
+    // 让顶部大卡片与下方设置卡片视觉统一；选中头部皮肤时皮肤层仍覆盖在背景之上。
+    final cardBg = PiggyTokens.surface(context);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
@@ -345,16 +346,11 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
                                         fit: BoxFit.cover,
                                         errorBuilder: (context, error, stackTrace) {
                                           return PiggyIcon(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primary,
                                             size: 40.0.scaled(context, ref),
                                           );
                                         },
                                       )
                                     : PiggyIcon(
-                                        color:
-                                            Theme.of(context).colorScheme.primary,
                                         size: 40.0.scaled(context, ref),
                                       )),
                           ),

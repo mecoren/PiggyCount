@@ -44,6 +44,7 @@ class HeaderSkinPage extends ConsumerWidget {
       appBar: GlassTitleBar(
         title: l10n.headerSkinTitle,
         showBack: true,
+        bottomOpaque: true,
       ),
       body: GridView.count(
         crossAxisCount: 2,

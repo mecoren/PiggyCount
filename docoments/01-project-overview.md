@@ -366,7 +366,7 @@ flowchart LR
 
 | 编号 | 缺口描述 | 影响章节 | 建议补充方式 |
 |---|---|---|---|
-| 1 | GitHub 仓库地址:任务描述 `mecoren/PiggyCount` 与 README 引用 `TNT-Likely/PiggyCount` 不一致,本文档以任务描述为准 | §1.1 | 用户确认仓库归属 |
+| 1 | GitHub 仓库地址:任务描述 `mecoren/PiggyCount` 与 README 引用 `mecoren/PiggyCount` 不一致,本文档以任务描述为准 | §1.1 | 用户确认仓库归属 |
 | 2 | 项目版本号:`pubspec.yaml` 声明 `version: 0.0.1`,实际发布版本由 CI tag 注入,无法从代码确认当前线上版本 | §1.1 | 查 GitHub Release 页面 |
 | 3 | 作者信息:文档 `author` 字段统一写 `wait`,待用户补充 | 文档 frontmatter | 用户补充 |
 | 4 | CHANGELOG:项目根目录无 CHANGELOG.md,版本演进只能从 db.dart schemaVersion 与 git tag 反推 | §4.3、[17 版本演进](./17-roadmap.md) | 从 git log 或 Release Notes 提取 |

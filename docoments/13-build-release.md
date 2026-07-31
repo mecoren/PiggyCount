@@ -717,7 +717,7 @@ xcrun altool --upload-app \
 
 **实现位置**：[lib/services/update/update_checker.dart](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_checker.dart)
 
-- **API**：`https://api.github.com/repos/TNT-Likely/PiggyCount/releases/latest`
+- **API**：`https://api.github.com/repos/mecoren/PiggyCount/releases/latest`
 - **重试机制**：最多 3 次，每次间隔 1 秒
 - **User-Agent 随机化**：9 个真实浏览器 UA 池，按时间戳取模，避免 GitHub 限流
 - **APK URL 选择策略**（`_pickApkUrl`）：
@@ -741,7 +741,7 @@ xcrun altool --upload-app \
 - **镜像加速**：先调 `GitHubMirrorService.getSelectedMirror()` 取镜像，再 `convertToMirrorUrl` 转换 URL
 - **进度通知**：1% 阈值更新，避免频繁刷新
 - **取消机制**：`CancelToken`，支持用户点击取消按钮
-- **请求头伪装**：模拟浏览器 Referer `https://github.com/TNT-Likely/PiggyCount/releases`、随机 UA
+- **请求头伪装**：模拟浏览器 Referer `https://github.com/mecoren/PiggyCount/releases`、随机 UA
 
 ### 12.3 update_installer.dart（APK 安装）
 
@@ -810,7 +810,7 @@ xcrun altool --upload-app \
 - **`showNotificationGuideDialog`**：通知权限被拒后的引导（3 步图文教程）
 - **`showDownloadConfirmDialog`**：发现新版本时的确认弹窗，含镜像选择入口
 - **`showUpdateErrorWithFallback` / `showDownloadErrorWithFallback`**：错误弹窗，提供"去 GitHub"兜底
-- **`launchGitHubReleases`**：`url_launcher` 打开 `https://github.com/TNT-Likely/PiggyCount/releases`
+- **`launchGitHubReleases`**：`url_launcher` 打开 `https://github.com/mecoren/PiggyCount/releases`
 - **`showMirrorSelectDialog`**：镜像选择对话框，支持单选、延迟测试、进度显示
 
 ### 12.9 update_result.dart（结果模型）

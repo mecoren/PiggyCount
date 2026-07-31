@@ -56,6 +56,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
       appBar: GlassTitleBar(
         title: widget.title,
         showBack: true,
+        bottomOpaque: true,
       ),
       body: Column(
         children: [

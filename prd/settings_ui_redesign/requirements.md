@@ -40,7 +40,7 @@
 | 帮助与信息 | 关于 | push | `AboutPage()` |
 | 帮助与信息 | 使用帮助 | 条件分叉 | `kHelpCenterInApp` true → `HelpCenterPage()`；false → `_tryOpenUrl(WebsiteUrls.docs(locale))` |
 | 支持我们 | 打赏（仅 iOS） | push | `DonationPage()` |
-| 支持我们 | GitHub Star | 弹窗 | `_showGitHubStarGuide` → 跳转 `https://github.com/TNT-Likely/PiggyCount` |
+| 支持我们 | GitHub Star | 弹窗 | `_showGitHubStarGuide` → 跳转 `https://github.com/mecoren/PiggyCount` |
 | 支持我们 | 年度账单 | push | `AnnualReportPage()` |
 | 支持我们 | 分享海报 | 服务调用 | `SharePosterService.showPosterCarouselPreview(context)` |
 | 支持我们 | 复制推广文案 | 剪贴板 | `Clipboard.setData` + `showToast(l10n.shareGuidanceCopied)` |

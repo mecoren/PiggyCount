@@ -408,9 +408,9 @@
 
 - **官网**：[https://count.beejz.com](https://count.beejz.com)
 - **文档站**：[https://count.beejz.com/docs/intro](https://count.beejz.com/docs/intro)
-- **GitHub 仓库**：[https://github.com/TNT-Likely/PiggyCount](https://github.com/TNT-Likely/PiggyCount)
-- **GitHub Issues**：[https://github.com/TNT-Likely/PiggyCount/issues](https://github.com/TNT-Likely/PiggyCount/issues)
-- **GitHub Discussions**：[https://github.com/TNT-Likely/PiggyCount/discussions](https://github.com/TNT-Likely/PiggyCount/discussions)
+- **GitHub 仓库**：[https://github.com/mecoren/PiggyCount](https://github.com/mecoren/PiggyCount)
+- **GitHub Issues**：[https://github.com/mecoren/PiggyCount/issues](https://github.com/mecoren/PiggyCount/issues)
+- **GitHub Discussions**：[https://github.com/mecoren/PiggyCount/discussions](https://github.com/mecoren/PiggyCount/discussions)
 - **Telegram 群**：[https://t.me/piggycount](https://t.me/piggycount)
 - **TestFlight**：[https://testflight.apple.com/join/Eaw2rWxa](https://testflight.apple.com/join/Eaw2rWxa)
 

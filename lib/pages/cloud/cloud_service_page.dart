@@ -18,7 +18,7 @@ import '../../styles/tokens.dart';
 import '../../l10n/app_localizations.dart';
 
 // GitHub配置教程链接
-const _kSupabaseGuideUrl = 'https://github.com/TNT-Likely/PiggyCount/wiki/Supabase-%E4%BA%91%E5%90%8C%E6%AD%A5%E9%85%8D%E7%BD%AE';
+const _kSupabaseGuideUrl = 'https://github.com/mecoren/PiggyCount/wiki/Supabase-%E4%BA%91%E5%90%8C%E6%AD%A5%E9%85%8D%E7%BD%AE';
 
 class CloudServicePage extends ConsumerStatefulWidget {
   const CloudServicePage({super.key});
@@ -114,7 +114,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                   : null,
               content: active.type != CloudBackendType.local
                   ? Padding(
-                      padding: const EdgeInsets.fromLTRB(0, 8, 0, 16),
+                      padding: const EdgeInsets.fromLTRB(0, 8, 0, 4),
                       child: _buildConnectionStatus(active),
                     )
                   : null,
@@ -122,7 +122,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
           ),
           // 滑动分段选择器
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: WaitSlidingSegmentedControl<String>(
               selected: _selectedTab,
               segments: [
@@ -957,10 +957,10 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
               ),
               const SizedBox(height: 16),
               // 4 步教程
-              _buildBeeCloudStep('1', l10n.cloudTutorialStep1Title, l10n.cloudTutorialStep1Desc),
-              _buildBeeCloudStep('2', l10n.cloudTutorialStep2Title, l10n.cloudTutorialStep2Desc),
-              _buildBeeCloudStep('3', l10n.cloudTutorialStep3Title, l10n.cloudTutorialStep3Desc),
-              _buildBeeCloudStep('4', l10n.cloudTutorialStep4Title, l10n.cloudTutorialStep4Desc),
+              _buildPiggyCloudStep('1', l10n.cloudTutorialStep1Title, l10n.cloudTutorialStep1Desc),
+              _buildPiggyCloudStep('2', l10n.cloudTutorialStep2Title, l10n.cloudTutorialStep2Desc),
+              _buildPiggyCloudStep('3', l10n.cloudTutorialStep3Title, l10n.cloudTutorialStep3Desc),
+              _buildPiggyCloudStep('4', l10n.cloudTutorialStep4Title, l10n.cloudTutorialStep4Desc),
               const SizedBox(height: 4),
               // 特色功能 —— 强调 Web + 多设备协同 + 多用户 + 共享账本
               Container(
@@ -1040,7 +1040,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
     );
   }
 
-  Widget _buildBeeCloudStep(String num, String title, String desc) {
+  Widget _buildPiggyCloudStep(String num, String title, String desc) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(

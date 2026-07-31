@@ -47,7 +47,7 @@ Color widgetIncomeColor(bool redForIncome) =>
     redForIncome ? kWidgetExpenseRed : kWidgetIncomeGreen;
 
 /// 卡片背景(明/暗)。暗色不直接照搬 App 内「方案D」的纯黑
-/// (`BeeColorTokens` 暗黑背景是 #000000)——小组件是桌面上的独立小卡片,不是
+/// (`PiggyColorTokens` 暗黑背景是 #000000)——小组件是桌面上的独立小卡片,不是
 /// 全屏页面,纯黑在各种桌面壁纸上容易糊成一片,取比纯黑略浅的深暖灰。
 Color widgetCardBackground(bool dark) =>
     dark ? const Color(0xFF1A1712) : Colors.white;

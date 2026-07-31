@@ -684,7 +684,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                         // 左侧：PiggyIcon + 标题 + 账本切换胶囊（用 Expanded 包住，
                         // 标题在空间富余时显示自然宽度，仅在不够时 ellipsis）
                         PiggyIcon(
-                          color: PiggyTokens.primary(context),
                           size: 28,
                         ),
                         const SizedBox(width: 4),
@@ -750,7 +749,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                                             decoration: BoxDecoration(
                                               color: PiggyTokens.surfaceCapsule(context),
                                               borderRadius:
-                                                  BorderRadius.circular(PiggyDimens.radiusXl),
+                                                  BorderRadius.circular(PiggyDimens.radiusLg),
                                             ),
                                             child: Row(
                                               mainAxisSize: MainAxisSize.min,
@@ -915,13 +914,15 @@ class _HomePageState extends ConsumerState<HomePage> {
                   ),
                   const SizedBox(height: 6),
                   // 第二行 - 月份显示和统计
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      InkWell(
-                        borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
-                        onTap: _isJumping ? null : _handleDateSelection,
-                        child: Column(
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: PiggyDimens.p12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        InkWell(
+                          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+                          onTap: _isJumping ? null : _handleDateSelection,
+                          child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
@@ -992,6 +993,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ),
                       const Expanded(child: _HeaderCenterSummary()),
                     ],
+                    ),
                   ),
                   const HomeBudgetSummary(),
                 ],

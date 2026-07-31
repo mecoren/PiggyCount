@@ -170,6 +170,7 @@ class _HelpCenterPageState extends ConsumerState<HelpCenterPage> {
         appBar: GlassTitleBar(
           title: widget.title ?? l10n.mineHelp,
           showBack: true,
+          bottomOpaque: true,
           actions: [
             IconButton(
               icon: Icon(Icons.open_in_browser,

@@ -197,6 +197,7 @@ class _StorageManagementPageState extends ConsumerState<StorageManagementPage> {
       appBar: GlassTitleBar(
         title: l10n.storageManagementTitle,
         showBack: true,
+        bottomOpaque: true,
       ),
       body: _isScanning
           ? const Center(child: CircularProgressIndicator())

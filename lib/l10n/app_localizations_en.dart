@@ -1079,7 +1079,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Are you sure you want to delete this record?';
 
   @override
-  String get mineSlogan => 'Bee Accounting, Every Penny Counts';
+  String get mineSlogan => 'Piggy Accounting, Every Penny Counts';
 
   @override
   String get mineDisplayNameEditTitle => 'Set nickname';
@@ -1400,7 +1400,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shareGuidanceCopyText =>
-      'Track my expenses with PiggyCount - open source, free & ad-free! 🐝 Download: https://github.com/TNT-Likely/PiggyCount';
+      'Track my expenses with PiggyCount - open source, free & ad-free! 🐷 Download: https://github.com/mecoren/PiggyCount';
 
   @override
   String get shareGuidanceCopied => 'Text copied';
@@ -1777,24 +1777,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mineHelpSubtitle => 'View documentation and FAQ';
-
-  @override
-  String get mineSupportAuthor => 'Star the Project ⭐️';
-
-  @override
-  String mineSupportAuthorSubtitle(String count) {
-    return 'Open source, $count stars';
-  }
-
-  @override
-  String get githubStarGuideTitle => 'How to Star the Project';
-
-  @override
-  String get githubStarGuideContent =>
-      'After tapping the button below to open GitHub, tap the area marked in the image to complete the Star';
-
-  @override
-  String get githubStarGuideButton => 'Go to GitHub';
 
   @override
   String get categoryEditTitle => 'Edit Category';
@@ -3132,7 +3114,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get updateManualVisit =>
-      'Please manually visit in browser:\\nhttps://github.com/TNT-Likely/PiggyCount/releases';
+      'Please manually visit in browser:\\nhttps://github.com/mecoren/PiggyCount/releases';
 
   @override
   String get updateNoLocalApkTitle => 'No Update Package Found';
@@ -4956,27 +4938,25 @@ class AppLocalizationsEn extends AppLocalizations {
       'I started tracking my expenses in 2015 as an intern, and I\'ve kept the habit for over a decade. Concerned about ads, paywalls, privacy risks, and apps shutting down, I decided to build my own — first as a small tool for myself and my family.\n\nIn September 2025, PiggyCount launched its first version. Honestly, I had no idea if anyone would use it. But gradually, feedback started coming in — someone said they finally found a clean budgeting app, others offered great suggestions, and some quietly left five-star reviews. Every single message reminded me this was worth continuing.\n\nPiggyCount is ad-free, subscription-free, and fully open source. All your data stays on your device and is never uploaded to any third-party server. But publishing and maintaining an app isn\'t free — developer accounts, servers, and other costs are currently covered by community donations, and every system update, bug fix, and new feature is built outside of my day job.\n\nIf PiggyCount has been helpful to you, a rating, a share, or a donation would help this little project go further. Thank you for your trust.';
 
   @override
-  String get aboutRelatedProducts => 'More Products';
+  String get aboutPiggyAssets => 'PiggyAssets';
 
   @override
-  String get aboutBeeAssets => 'BeeAssets';
+  String get aboutPiggyAssetsSubtitle => 'Visualize your full asset portfolio';
 
   @override
-  String get aboutBeeAssetsSubtitle => 'Visualize your full asset portfolio';
+  String get aboutPiggyAssetsIntro =>
+      'PiggyCount focuses on daily cash flow; PiggyAssets is its sibling product, focused on asset portfolio visualization: net worth trends across accounts, property / investment / crypto classification, returns, holding period, and allocation breakdown.';
 
   @override
-  String get aboutBeeAssetsIntro =>
-      'PiggyCount focuses on daily cash flow; BeeAssets is its sibling product, focused on asset portfolio visualization: net worth trends across accounts, property / investment / crypto classification, returns, holding period, and allocation breakdown.';
+  String get aboutPiggyDNS => 'PiggyDNS';
 
   @override
-  String get aboutBeeDNS => 'BeeDNS';
+  String get aboutPiggyDNSSubtitle =>
+      'Simple and efficient DNS management tool';
 
   @override
-  String get aboutBeeDNSSubtitle => 'Simple and efficient DNS management tool';
-
-  @override
-  String get aboutBeeDNSIntro =>
-      'Got domains across Cloudflare and Aliyun? BeeDNS unifies them in one place: batch edit records, A/AAAA toggles, resolution migration, subdomain bulk management — no more switching between provider consoles.';
+  String get aboutPiggyDNSIntro =>
+      'Got domains across Cloudflare and Aliyun? PiggyDNS unifies them in one place: batch edit records, A/AAAA toggles, resolution migration, subdomain bulk management — no more switching between provider consoles.';
 
   @override
   String get productPromoAndroidTitle => 'Request Beta Access';

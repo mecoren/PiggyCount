@@ -598,7 +598,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
               ),
             ),
                 Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
               child: WaitSlidingSegmentedControl<String>(
                 selected: _scope,
                 segments: [
@@ -866,7 +866,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                     }
                   },
                   child: ListView(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                     children: [
                       AnalyticsSummary(
                         scope: _scope,

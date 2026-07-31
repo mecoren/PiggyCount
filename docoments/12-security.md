@@ -676,7 +676,7 @@ PiggyCount 软件许可协议
 #### 4.9.3 代码可审计性
 
 **优点**：
-- 完整开源：`https://github.com/TNT-Likely/PiggyCount`
+- 完整开源：`https://github.com/mecoren/PiggyCount`
 - 代码结构清晰：`lib/services/security/`、`lib/ai/privacy/` 等安全相关代码独立成目录
 - 关键服务（`AppLockService`、`AiPrivacyConsentStore`）独立可测
 

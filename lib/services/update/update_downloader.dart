@@ -148,7 +148,7 @@ class UpdateDownloader {
             'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
             'Cache-Control': 'no-cache',
             'Pragma': 'no-cache',
-            'Referer': 'https://github.com/TNT-Likely/PiggyCount/releases',
+            'Referer': 'https://github.com/mecoren/PiggyCount/releases',
           },
         ),
         onReceiveProgress: (received, total) {

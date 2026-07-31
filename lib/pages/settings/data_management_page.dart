@@ -49,6 +49,7 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
       appBar: GlassTitleBar(
         title: l10n.dataManagementPageTitle,
         showBack: true,
+        bottomOpaque: true,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(

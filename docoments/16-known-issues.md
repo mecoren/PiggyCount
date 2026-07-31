@@ -465,8 +465,8 @@ lib/
 
 发现新问题请通过：
 
-- **GitHub Issues**：[https://github.com/TNT-Likely/PiggyCount/issues](https://github.com/TNT-Likely/PiggyCount/issues)
-- **GitHub Discussions**：[https://github.com/TNT-Likely/PiggyCount/discussions](https://github.com/TNT-Likely/PiggyCount/discussions)
+- **GitHub Issues**：[https://github.com/mecoren/PiggyCount/issues](https://github.com/mecoren/PiggyCount/issues)
+- **GitHub Discussions**：[https://github.com/mecoren/PiggyCount/discussions](https://github.com/mecoren/PiggyCount/discussions)
 - **Telegram**：[https://t.me/piggycount](https://t.me/piggycount)
 
 提交 Bug 时请包含：

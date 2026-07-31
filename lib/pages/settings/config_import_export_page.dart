@@ -335,6 +335,7 @@ class _ConfigImportExportPageState
       appBar: GlassTitleBar(
         title: l10n.configImportExportTitle,
         showBack: true,
+        bottomOpaque: true,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(

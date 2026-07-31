@@ -54,6 +54,7 @@ class WidgetManagementPage extends ConsumerWidget {
       appBar: GlassTitleBar(
         title: l10n.widgetManagement,
         showBack: true,
+        bottomOpaque: true,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(

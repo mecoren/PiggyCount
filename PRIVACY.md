@@ -91,7 +91,7 @@ While we don't collect your data, we implement security best practices:
 - Local data is stored using SQLite with Android's built-in security
 - Cloud sync uses HTTPS/TLS encryption when communicating with your servers
 - Authentication credentials are stored securely using Android Keystore
-- The app is open source - you can audit our code: [GitHub Repository](https://github.com/TNT-Likely/PiggyCount)
+- The app is open source - you can audit our code: [GitHub Repository](https://github.com/mecoren/PiggyCount)
 
 ## 6. Children's Privacy
 
@@ -110,7 +110,7 @@ You have complete control over your data:
 
 PiggyCount is fully open source under the MIT License. You can:
 
-- Review our entire codebase: https://github.com/TNT-Likely/PiggyCount
+- Review our entire codebase: https://github.com/mecoren/PiggyCount
 - Verify that we don't collect any data
 - Build the app yourself from source
 - Contribute improvements
@@ -144,8 +144,8 @@ AI is OFF by default and requires your own API key. The app shows an in-app noti
 If you have any questions about this Privacy Policy, please contact us:
 
 - **Email**: (Add your email if you want, or remove this section)
-- **GitHub Issues**: https://github.com/TNT-Likely/PiggyCount/issues
-- **GitHub Discussions**: https://github.com/TNT-Likely/PiggyCount/discussions
+- **GitHub Issues**: https://github.com/mecoren/PiggyCount/issues
+- **GitHub Discussions**: https://github.com/mecoren/PiggyCount/discussions
 
 ## 12. Consent
 
@@ -216,7 +216,7 @@ Since we don't collect any data, there's actually nothing to consent to - your p
 ### 5. 开源透明
 
 小猪记账完全开源（MIT许可）：
-- 查看完整代码：https://github.com/TNT-Likely/PiggyCount
+- 查看完整代码：https://github.com/mecoren/PiggyCount
 - 验证我们不收集任何数据
 - 从源代码自行构建
 - 贡献改进
@@ -224,8 +224,8 @@ Since we don't collect any data, there's actually nothing to consent to - your p
 ### 6. 联系我们
 
 如有任何问题，请通过以下方式联系我们：
-- GitHub Issues: https://github.com/TNT-Likely/PiggyCount/issues
-- GitHub Discussions: https://github.com/TNT-Likely/PiggyCount/discussions
+- GitHub Issues: https://github.com/mecoren/PiggyCount/issues
+- GitHub Discussions: https://github.com/mecoren/PiggyCount/discussions
 
 ---
 

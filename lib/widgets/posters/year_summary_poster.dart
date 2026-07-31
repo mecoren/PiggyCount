@@ -233,7 +233,7 @@ class YearSummaryPoster extends StatelessWidget {
               ],
             ),
             child: QrImageView(
-              data: 'https://github.com/TNT-Likely/PiggyCount',
+              data: 'https://github.com/mecoren/PiggyCount',
               version: QrVersions.auto,
               size: 98,
               backgroundColor: Colors.white,

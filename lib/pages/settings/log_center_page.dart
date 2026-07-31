@@ -86,6 +86,7 @@ class _LogCenterPageState extends ConsumerState<LogCenterPage> {
       appBar: GlassTitleBar(
         title: l10n.logCenterTitle,
         showBack: true,
+        bottomOpaque: true,
         actions: [
           // 导出日志
           IconButton(
