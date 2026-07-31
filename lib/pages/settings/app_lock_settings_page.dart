@@ -176,11 +176,9 @@ class _AppLockSettingsPageState extends ConsumerState<AppLockSettingsPage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: l10n.appLockTitle,
         showBack: true,
-        bottomOpaque: true,
-        blur: false,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(
@@ -295,11 +293,9 @@ class _PinVerifyPageState extends ConsumerState<_PinVerifyPage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: l10n.appLockVerifyPin,
         showBack: true,
-        bottomOpaque: true,
-        blur: false,
       ),
       body: SafeArea(
         top: false,

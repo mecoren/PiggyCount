@@ -109,11 +109,9 @@ class _PrivacyPolicyPageState extends ConsumerState<PrivacyPolicyPage> {
       child: Scaffold(
         backgroundColor: PiggyTokens.scaffoldBackground(context),
         extendBodyBehindAppBar: true,
-        appBar: GlassTitleBar(
+        appBar: PiggyTitleBar(
           title: l10n.aboutPrivacyPolicy,
           showBack: true,
-          bottomOpaque: true,
-          blur: false,
         ),
         body: Padding(
           padding:

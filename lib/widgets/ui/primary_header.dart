@@ -6,6 +6,7 @@ import '../../providers/theme_providers.dart';
 import '../../styles/tokens.dart';
 import '../../styles/header_skins.dart';
 
+@Deprecated('Use PiggyHeader/PiggyTitleBar instead. 皮肤渲染逻辑已迁入 PiggyHeader，详见 prd/ui_optimization_review/design.md')
 class PrimaryHeader extends ConsumerWidget {
   final String title;
   final String? subtitle;

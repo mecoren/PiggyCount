@@ -74,7 +74,7 @@ class _ExchangeRatePageState extends ConsumerState<ExchangeRatePage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: l10n.exchangeRatePageTitle,
         showBack: true,
         compact: true,
@@ -99,7 +99,6 @@ class _ExchangeRatePageState extends ConsumerState<ExchangeRatePage> {
               tooltip: l10n.exchangeRatePageTitle,
             ),
         ],
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

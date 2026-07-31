@@ -206,7 +206,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: account.name,
         subtitle: getAccountTypeLabel(context, account.type),
         showBack: true,
@@ -237,7 +237,6 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
             },
           ),
         ],
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

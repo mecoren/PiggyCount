@@ -609,6 +609,15 @@ class PiggyDimens {
 
   /// 通用水平外边距（页面主体两侧）
   static const EdgeInsets pageHorizontalMargin = EdgeInsets.symmetric(horizontal: 12);
+
+  /// 头部水平内边距（与 [pageHorizontalMargin] 同值，语义分离）
+  ///
+  /// 统一原 PrimaryHeader(8) / GlassHeader(16) / pageHorizontalMargin(12) 三值分裂。
+  static const double headerHorizontalValue = 12;
+
+  /// 头部水平内边距 EdgeInsets（基于 [headerHorizontalValue]）。
+  static const EdgeInsets headerHorizontal =
+      EdgeInsets.symmetric(horizontal: headerHorizontalValue);
 }
 
 /// 阴影令牌
@@ -693,6 +702,15 @@ class PiggyTextTokens {
             color: PiggyTokens.textSecondary(ctx),
           ) ??
       TextStyle(fontSize: 12, color: PiggyTokens.textSecondary(ctx));
+
+  // 说明文字：用于列表项次要信息（时间/账户/附件计数等）
+  // 消除 transaction_list_item 等多处散落的 fontSize: 11 字面量
+  static TextStyle caption(BuildContext ctx) =>
+      Theme.of(ctx).textTheme.bodySmall?.copyWith(
+            fontSize: 11,
+            color: PiggyTokens.textTertiary(ctx),
+          ) ??
+      TextStyle(fontSize: 11, color: PiggyTokens.textTertiary(ctx));
 }
 
 // ============================================================================

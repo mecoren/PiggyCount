@@ -671,8 +671,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           Consumer(builder: (context, ref, _) {
             ref.watch(headerStyleProvider);
             final hide = ref.watch(hideAmountsProvider);
-            return GlassHeader(
-              bottomOpaque: true,
+            return PiggyHeader(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [

@@ -22,7 +22,7 @@ class RecurringTransactionPage extends ConsumerWidget {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: AppLocalizations.of(context)!.recurringTransactionTitle,
         showBack: true,
         actions: [
@@ -32,7 +32,6 @@ class RecurringTransactionPage extends ConsumerWidget {
             tooltip: AppLocalizations.of(context)!.recurringTransactionAdd,
           ),
         ],
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

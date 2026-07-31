@@ -40,7 +40,7 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: l10n.aiProviderManageTitle,
         subtitle: l10n.aiProviderManageSubtitle,
         showBack: true,
@@ -51,7 +51,6 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
             tooltip: l10n.aiProviderAdd,
           ),
         ],
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(
@@ -404,7 +403,7 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: _isEditing ? l10n.aiProviderEditTitle : l10n.aiProviderAddTitle,
         showBack: true,
         actions: [
@@ -428,7 +427,6 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
                   ),
           ),
         ],
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

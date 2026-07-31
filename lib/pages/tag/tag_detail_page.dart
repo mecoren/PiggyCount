@@ -86,17 +86,15 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
       appBar: tagAsync.when(
-        loading: () => GlassTitleBar(
+        loading: () => PiggyTitleBar(
           title: l10n.tagDetailTitle,
           showBack: true,
-          bottomOpaque: true,
         ),
-        error: (error, stack) => GlassTitleBar(
+        error: (error, stack) => PiggyTitleBar(
           title: l10n.tagDetailTitle,
           showBack: true,
-          bottomOpaque: true,
         ),
-        data: (tag) => GlassTitleBar(
+        data: (tag) => PiggyTitleBar(
           title: l10n.tagDetailTitle,
           showBack: true,
           actions: [
@@ -119,7 +117,6 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
               onPressed: tag != null ? () => _confirmDelete(tag, l10n) : null,
             ),
           ],
-          bottomOpaque: true,
         ),
       ),
       body: Padding(

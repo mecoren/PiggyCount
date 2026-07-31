@@ -156,11 +156,10 @@ class _DonationPageState extends ConsumerState<DonationPage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: l10n.donationTitle,
         subtitle: l10n.donationSubtitle,
         showBack: true,
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

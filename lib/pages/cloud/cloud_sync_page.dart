@@ -95,11 +95,10 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
       return Scaffold(
         backgroundColor: PiggyTokens.scaffoldBackground(context),
         extendBodyBehindAppBar: true,
-        appBar: GlassTitleBar(
+        appBar: PiggyTitleBar(
           title: AppLocalizations.of(context).cloudSyncPageTitle,
           subtitle: AppLocalizations.of(context).cloudSyncPageSubtitle,
           showBack: true,
-          bottomOpaque: true,
         ),
         body: Padding(
           padding: EdgeInsets.only(
@@ -126,11 +125,10 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: AppLocalizations.of(context).cloudSyncPageTitle,
         subtitle: AppLocalizations.of(context).cloudSyncPageSubtitle,
         showBack: true,
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

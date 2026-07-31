@@ -32,11 +32,10 @@ class BudgetPage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: l10n.budgetTitle,
         showBack: true,
         compact: true,
-        bottomOpaque: true,
         actions: [
           if (!isEditorInShared)
             IconButton(

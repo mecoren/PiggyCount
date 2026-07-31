@@ -141,11 +141,10 @@ class _PiggyCountCloudSyncPageState
       return Scaffold(
         backgroundColor: PiggyTokens.scaffoldBackground(context),
         extendBodyBehindAppBar: true,
-        appBar: GlassTitleBar(
+        appBar: PiggyTitleBar(
           title: l10n.cloudSyncPageTitle,
           subtitle: l10n.cloudSyncPageSubtitle,
           showBack: true,
-          bottomOpaque: true,
         ),
         body: Padding(
           padding: EdgeInsets.only(
@@ -172,11 +171,10 @@ class _PiggyCountCloudSyncPageState
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: l10n.cloudSyncPageTitle,
         subtitle: l10n.cloudSyncPageSubtitle,
         showBack: true,
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

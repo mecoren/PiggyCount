@@ -176,11 +176,10 @@ class _JoinSharedLedgerPageState extends ConsumerState<JoinSharedLedgerPage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: l10n.sharedJoinPageTitle,
         subtitle: l10n.sharedJoinPageSubtitle,
         showBack: true,
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

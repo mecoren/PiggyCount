@@ -41,10 +41,9 @@ class _IconPickerPageState extends State<IconPickerPage> with TickerProviderStat
     
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: AppLocalizations.of(context)!.iconPickerTitle,
         showBack: true,
-        bottomOpaque: true,
         actions: [
           TextButton(
             onPressed: () {

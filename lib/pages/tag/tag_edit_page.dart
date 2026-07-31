@@ -53,7 +53,7 @@ class _TagEditPageState extends ConsumerState<TagEditPage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: _isEditing ? l10n.tagEditTitle : l10n.tagAddTitle,
         showBack: true,
         actions: [
@@ -70,7 +70,6 @@ class _TagEditPageState extends ConsumerState<TagEditPage> {
             ),
           ),
         ],
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

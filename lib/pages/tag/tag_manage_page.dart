@@ -35,11 +35,10 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: l10n.tagManageTitle,
         subtitle: l10n.tagManageSubtitle,
         showBack: true,
-        bottomOpaque: true,
         actions: [
           IconButton(
             onPressed: _shareTags,

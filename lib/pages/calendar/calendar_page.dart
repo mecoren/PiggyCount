@@ -117,7 +117,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: l10n.calendarTitle,
         showBack: true,
         actions: [
@@ -139,7 +139,6 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
             ),
           ),
         ],
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

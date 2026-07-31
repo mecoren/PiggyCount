@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../styles/tokens.dart';
-import 'glass_title_bar.dart';
+import 'piggy_header.dart';
 
 /// 可扩展底部抽屉容器
 ///
@@ -119,7 +119,7 @@ class ExpandableBottomSheet extends StatelessWidget {
                 _DragHandle(scrollController: scrollController),
               // 底部抽屉使用纯色背景：禁用毛玻璃模糊与底部高光线，
               // 使标题栏与内容区视觉上无缝融合，避免突兀的分界线
-              GlassTitleBar(
+              PiggyTitleBar(
                 title: title,
                 titleWidget: titleWidget,
                 showBack: true,
@@ -133,8 +133,6 @@ class ExpandableBottomSheet extends StatelessWidget {
                     ),
                 ],
                 backgroundColor: bgColor,
-                blur: false,
-                showHighlightLine: false,
                 bottom: bottom,
                 bottomHeight: bottomHeight,
                 compact: true,
@@ -144,7 +142,7 @@ class ExpandableBottomSheet extends StatelessWidget {
                 child: RepaintBoundary(
                   // 将 viewInsets 读取隔离到独立叶子组件：
                   // 键盘动画期间每帧变化的 viewInsets 仅触发此组件重建，
-                  // 不会重建上层 DraggableScrollableSheet / GlassTitleBar / 表单体
+                  // 不会重建上层 DraggableScrollableSheet / PiggyTitleBar / 表单体
                   child: _KeyboardBottomPadding(
                     child: builder(context, scrollController),
                   ),

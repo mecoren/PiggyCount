@@ -112,10 +112,7 @@ class TransactionListItem extends ConsumerWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(
-          fontSize: 11,
-          color: PiggyTokens.textTertiary(context),
-        ),
+        style: PiggyTextTokens.caption(context),
       ),
     );
   }
@@ -146,10 +143,7 @@ class TransactionListItem extends ConsumerWidget {
       parts.add(accountName!);
     }
 
-    final textStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
-      color: PiggyTokens.textTertiary(context),
-      fontSize: 11,
-    );
+    final textStyle = PiggyTextTokens.caption(context);
 
     // 构建附件图标部件（可点击）
     Widget buildAttachmentWidget() {
@@ -317,8 +311,7 @@ class TransactionListItem extends ConsumerWidget {
                             ),
                             child: Text(
                               ledgerName!,
-                              style: TextStyle(
-                                fontSize: 11,
+                              style: PiggyTextTokens.caption(context).copyWith(
                                 color: ref.watch(primaryColorProvider),
                                 fontWeight: FontWeight.w500,
                               ),
@@ -395,10 +388,7 @@ class TransactionListItem extends ConsumerWidget {
                         if (showConverted)
                           Text(
                             '≈${nativeAmount!.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: PiggyTokens.textTertiary(context),
-                            ),
+                            style: PiggyTextTokens.caption(context),
                           ),
                       ],
                     ),

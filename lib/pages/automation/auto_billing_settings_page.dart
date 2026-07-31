@@ -166,12 +166,11 @@ class _AndroidAutoBillingPageState extends ConsumerState<AndroidAutoBillingPage>
     return Scaffold(
       backgroundColor: PiggyTokens.surface(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: l10n.autoScreenshotBillingTitle,
         showBack: true,
         leadingIcon: Icons.auto_fix_high,
         leadingPlain: true,
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

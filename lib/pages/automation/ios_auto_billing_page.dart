@@ -27,10 +27,9 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
     return Scaffold(
       backgroundColor: PiggyTokens.surface(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: l10n.autoScreenshotBillingIosTitle,
         showBack: true,
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

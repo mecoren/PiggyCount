@@ -187,7 +187,7 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
       BuildContext context, String headerTitle, String? headerSubtitle) {
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: headerTitle,
         subtitle: headerSubtitle,
         showBack: true,
@@ -226,7 +226,6 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
                 ),
               ]
             : null,
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

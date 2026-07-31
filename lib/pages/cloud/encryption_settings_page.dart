@@ -11,7 +11,7 @@ import '../../widgets/biz/app_list_tile.dart';
 import '../../widgets/biz/section_card.dart';
 import '../../widgets/encryption/password_setup_dialog.dart';
 import '../../widgets/ui/dialog.dart';
-import '../../widgets/ui/glass_title_bar.dart';
+import '../../widgets/ui/piggy_header.dart';
 import '../../widgets/ui/toast.dart';
 
 /// 加密设置页 — 设置 / 修改 / 重置同步加密密码
@@ -234,10 +234,9 @@ class _EncryptionSettingsPageState
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: l10n.cloudSyncEncryptSettings,
         showBack: true,
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

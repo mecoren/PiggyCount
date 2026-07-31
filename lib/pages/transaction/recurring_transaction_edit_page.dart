@@ -103,7 +103,7 @@ class _RecurringTransactionEditPageState
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: _isEditing
             ? l10n.recurringTransactionEdit
             : l10n.recurringTransactionAdd,
@@ -116,7 +116,6 @@ class _RecurringTransactionEditPageState
                 ),
               ]
             : null,
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

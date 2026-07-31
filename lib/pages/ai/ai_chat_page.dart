@@ -149,7 +149,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: AppLocalizations.of(context).aiChatTitle,
         showBack: true,
         actions: [
@@ -159,7 +159,6 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
             onPressed: _showClearHistoryDialog,
           ),
         ],
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

@@ -455,8 +455,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
     return Scaffold(
       body: Column(
         children: [
-          GlassHeader(
-            bottomOpaque: true,
+          PiggyHeader(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,

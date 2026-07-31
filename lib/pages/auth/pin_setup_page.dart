@@ -118,12 +118,11 @@ class _PinSetupPageState extends ConsumerState<PinSetupPage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: widget.mode == PinSetupMode.create
             ? AppLocalizations.of(context).appLockSetPin
             : AppLocalizations.of(context).appLockChangePin,
         showBack: true,
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

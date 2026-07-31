@@ -71,11 +71,10 @@ class _NetWorthTrendPageState extends ConsumerState<NetWorthTrendPage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
           title: l10n.netWorthTrendTitle,
           showBack: true,
-          compact: true,
-          bottomOpaque: true),
+          compact: true),
       body: Padding(
         padding: EdgeInsets.only(
           top: MediaQuery.of(context).padding.top + 56,

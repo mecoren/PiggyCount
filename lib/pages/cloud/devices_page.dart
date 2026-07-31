@@ -207,7 +207,7 @@ class _DevicesPageState extends ConsumerState<DevicesPage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: l10n.cloudCollabDevicesPageTitle,
         subtitle: l10n.cloudCollabDevicesPageSubtitle,
         showBack: true,
@@ -217,7 +217,6 @@ class _DevicesPageState extends ConsumerState<DevicesPage> {
             icon: const Icon(Icons.refresh),
           ),
         ],
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

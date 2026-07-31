@@ -75,7 +75,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: AppLocalizations.of(context).ledgersTitle,
         // 唯一入口是首页 ledger picker 的「管理账本」按钮通过 Navigator.push
         // 进来,可以 pop。showBack=true 让用户回到首页。
@@ -95,7 +95,6 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
             icon: Icon(Icons.refresh, color: PiggyTokens.textPrimary(context)),
           ),
         ],
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

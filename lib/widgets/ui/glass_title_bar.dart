@@ -19,6 +19,7 @@ import 'liquid_glass_title_bar.dart';
 /// （渐变透明：顶 alpha=1.0 → 底 alpha=0.0）。
 /// 替换 `PrimaryHeader`（实底主题色）的页面应显式传 `bottomOpaque: true`，
 /// 让底部保持不透明，隔绝下方紧贴的彩色组件颜色渗透。
+@Deprecated('Use PiggyTitleBar instead. 玻璃模糊已被「95% 实色 + 直渲 HeaderSkin」取代，详见 prd/ui_optimization_review/design.md')
 class GlassTitleBar extends StatelessWidget implements PreferredSizeWidget {
   const GlassTitleBar({
     super.key,
@@ -146,6 +147,7 @@ class GlassTitleBar extends StatelessWidget implements PreferredSizeWidget {
 /// 首页/一级功能页专用玻璃标题栏（汉堡键 + 标题 + 右侧操作）
 ///
 /// 移植自 wait-home 项目。是 [LiquidGlassTitleBar] 的薄包装器。
+@Deprecated('Use PiggyHomeBar instead. 玻璃模糊已被「95% 实色 + 直渲 HeaderSkin」取代，详见 prd/ui_optimization_review/design.md')
 class GlassHomeBar extends StatelessWidget implements PreferredSizeWidget {
   const GlassHomeBar({
     super.key,
@@ -206,6 +208,7 @@ class GlassHomeBar extends StatelessWidget implements PreferredSizeWidget {
 /// 1. **完全自绘**：传入 [child]，完全自定义头部内容（首页/分析页）
 /// 2. **标题行 + content**：传入 [title]/[showBack]/[actions] + [content]，
 ///    渲染标准标题行 + 标题行下方额外内容（云服务页）
+@Deprecated('Use PiggyHeader instead. 玻璃模糊已被「95% 实色 + 直渲 HeaderSkin」取代，详见 prd/ui_optimization_review/design.md')
 class GlassHeader extends StatelessWidget {
   const GlassHeader({
     super.key,

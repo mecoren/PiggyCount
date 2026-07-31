@@ -53,11 +53,9 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: widget.title,
         showBack: true,
-        bottomOpaque: true,
-        blur: false,
       ),
       body: Column(
         children: [

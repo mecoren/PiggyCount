@@ -32,7 +32,7 @@ class MemberListPage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: l10n.sharedMembersPageTitle,
         subtitle: ledgerName,
         showBack: true,
@@ -43,7 +43,6 @@ class MemberListPage extends ConsumerWidget {
                 ref.invalidate(ledgerMembersProvider(ledgerExternalId)),
           ),
         ],
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

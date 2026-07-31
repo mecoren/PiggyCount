@@ -40,7 +40,7 @@ class _MemberStatsPageState extends ConsumerState<MemberStatsPage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: l10n.sharedMembersStatsTitle,
         subtitle: widget.ledgerName,
         showBack: true,
@@ -52,7 +52,6 @@ class _MemberStatsPageState extends ConsumerState<MemberStatsPage> {
             )),
           ),
         ],
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

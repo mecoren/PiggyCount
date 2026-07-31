@@ -144,9 +144,7 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
       body: Column(
         children: [
           // 紧凑顶部：去除多余留白 + 滑动分段选择器（玻璃风格）
-          GlassHeader(
-            bottomOpaque: true,
-            showHighlightLine: false,
+          PiggyHeader(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
               child: Row(

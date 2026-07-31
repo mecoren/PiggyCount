@@ -87,7 +87,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: _isEditing ? l10n.budgetEditTitle : l10n.budgetAddTitle,
         showBack: true,
         compact: true,
@@ -108,7 +108,6 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
             ),
           ),
         ],
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

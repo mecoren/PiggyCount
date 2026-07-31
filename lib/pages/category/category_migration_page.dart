@@ -48,10 +48,9 @@ class _CategoryMigrationPageState extends ConsumerState<CategoryMigrationPage> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: AppLocalizations.of(context).categoryMigrationTitle,
         showBack: true,
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

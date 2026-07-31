@@ -31,10 +31,9 @@ class _ExportPageState extends ConsumerState<ExportPage> {
     final ledgerId = ref.watch(currentLedgerIdProvider);
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: AppLocalizations.of(context).exportTitle,
         showBack: true,
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

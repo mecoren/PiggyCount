@@ -109,11 +109,10 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: l10n.accountsTitle,
         showBack: !widget.asTab,
         compact: true,
-        bottomOpaque: true,
         // 顺序(左 → 右):加号 / 蜜蜂家当入口 / 设置。
         // 设置放最右边(Material 设计惯例,溢出 / 设置类放最右),
         // 蜜蜂家当放中间,顺手能点到但不抢主操作位。

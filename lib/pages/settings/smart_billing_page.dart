@@ -207,11 +207,9 @@ class SmartBillingPage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: l10n.smartBillingPageTitle,
         showBack: true,
-        bottomOpaque: true,
-        blur: false,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(

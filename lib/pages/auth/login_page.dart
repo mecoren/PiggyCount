@@ -216,10 +216,9 @@ class _AuthPageState extends ConsumerState<AuthPage> {
       return Scaffold(
         backgroundColor: PiggyTokens.scaffoldBackground(context),
         extendBodyBehindAppBar: true,
-        appBar: GlassTitleBar(
+        appBar: PiggyTitleBar(
           title: AppLocalizations.of(context).authLogin,
           showBack: true,
-          bottomOpaque: true,
         ),
         body: Padding(
           padding: EdgeInsets.only(
@@ -290,10 +289,9 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: AppLocalizations.of(context).authLogin,
         showBack: true,
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

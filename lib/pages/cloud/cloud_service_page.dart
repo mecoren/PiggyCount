@@ -83,20 +83,17 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
       body: Column(
         children: [
           activeAsync.when(
-            loading: () => GlassHeader(
+            loading: () => PiggyHeader(
               title: AppLocalizations.of(context).mineCloudService,
               showBack: true,
-              bottomOpaque: true,
             ),
-            error: (e, _) => GlassHeader(
+            error: (e, _) => PiggyHeader(
               title: AppLocalizations.of(context).mineCloudService,
               showBack: true,
-              bottomOpaque: true,
             ),
-            data: (active) => GlassHeader(
+            data: (active) => PiggyHeader(
               title: AppLocalizations.of(context).mineCloudService,
               showBack: true,
-              bottomOpaque: true,
               actions: active.type != CloudBackendType.local && active.valid
                   ? [
                       IconButton(

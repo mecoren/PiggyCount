@@ -83,11 +83,9 @@ class _LogCenterPageState extends ConsumerState<LogCenterPage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: l10n.logCenterTitle,
         showBack: true,
-        bottomOpaque: true,
-        blur: false,
         actions: [
           // 导出日志
           IconButton(

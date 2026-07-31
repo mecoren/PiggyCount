@@ -50,10 +50,9 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: l10n.categoryTitle,
         showBack: true,
-        bottomOpaque: true,
         actions: [
           IconButton(
             onPressed: _shareCategories,

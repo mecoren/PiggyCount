@@ -91,7 +91,7 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: categoryAsync.when(
-        loading: () => GlassTitleBar(
+        loading: () => PiggyTitleBar(
           title: AppLocalizations.of(context).categoryDetailSummaryTitle,
           showBack: true,
           actions: [
@@ -104,9 +104,8 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
               onPressed: null, // 加载时禁用
             ),
           ],
-          bottomOpaque: true,
         ),
-        error: (error, stack) => GlassTitleBar(
+        error: (error, stack) => PiggyTitleBar(
           title: AppLocalizations.of(context).categoryDetailSummaryTitle,
           showBack: true,
           actions: [
@@ -119,9 +118,8 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
               onPressed: null, // 错误时禁用
             ),
           ],
-          bottomOpaque: true,
         ),
-        data: (category) => GlassTitleBar(
+        data: (category) => PiggyTitleBar(
           title: AppLocalizations.of(context).categoryDetailSummaryTitle,
           showBack: true,
           actions: [
@@ -167,7 +165,6 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
                   : null,
             ),
           ],
-          bottomOpaque: true,
         ),
       ),
       body: Padding(

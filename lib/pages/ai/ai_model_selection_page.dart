@@ -48,10 +48,9 @@ class _AIModelSelectionPageState extends ConsumerState<AIModelSelectionPage> {
       return Scaffold(
         backgroundColor: PiggyTokens.scaffoldBackground(context),
         extendBodyBehindAppBar: true,
-        appBar: GlassTitleBar(
+        appBar: PiggyTitleBar(
           title: l10n.aiSettingsTitle,
           showBack: true,
-          bottomOpaque: true,
         ),
         body: Padding(
           padding: EdgeInsets.only(
@@ -71,11 +70,10 @@ class _AIModelSelectionPageState extends ConsumerState<AIModelSelectionPage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: l10n.aiSettingsTitle,
         subtitle: l10n.aiSettingsSubtitle,
         showBack: true,
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

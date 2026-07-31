@@ -167,11 +167,9 @@ class _HelpCenterPageState extends ConsumerState<HelpCenterPage> {
       child: Scaffold(
         backgroundColor: PiggyTokens.scaffoldBackground(context),
         extendBodyBehindAppBar: true,
-        appBar: GlassTitleBar(
+        appBar: PiggyTitleBar(
           title: widget.title ?? l10n.mineHelp,
           showBack: true,
-          bottomOpaque: true,
-          blur: false,
           actions: [
             IconButton(
               icon: Icon(Icons.open_in_browser,

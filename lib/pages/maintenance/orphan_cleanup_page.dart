@@ -33,7 +33,7 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: l10n.maintenanceOrphanCleanupTitle,
         subtitle: l10n.maintenanceOrphanCleanupSubtitle,
         showBack: true,
@@ -53,7 +53,6 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
             icon: const Icon(Icons.refresh),
           ),
         ],
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

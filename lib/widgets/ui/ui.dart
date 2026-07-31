@@ -2,6 +2,7 @@ export 'dialog.dart';
 export 'toast.dart';
 export 'primary_header.dart';
 export 'glass_title_bar.dart';
+export 'piggy_header.dart';
 export 'liquid_glass_title_bar.dart';
 export 'expandable_bottom_sheet.dart';
 export 'wheel_date_picker.dart';

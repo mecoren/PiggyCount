@@ -118,10 +118,9 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
     if (parsing) {
       return Scaffold(
         extendBodyBehindAppBar: true,
-        appBar: GlassTitleBar(
+        appBar: PiggyTitleBar(
           title: AppLocalizations.of(context)!.importPreparing,
           showBack: true,
-          bottomOpaque: true,
         ),
         body: Padding(
           padding: EdgeInsets.only(
@@ -156,12 +155,11 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: step == 0
             ? AppLocalizations.of(context)!.importConfirmMapping
             : AppLocalizations.of(context)!.importCategoryMapping,
         showBack: true,
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

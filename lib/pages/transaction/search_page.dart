@@ -708,7 +708,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: _isBatchMode
             ? l10n.searchBatchModeWithCount(
                 _selectedIds.length, _searchResults.length)
@@ -732,7 +732,6 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                 ),
               ]
             : null,
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

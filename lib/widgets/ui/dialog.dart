@@ -146,6 +146,17 @@ class AppDialog {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // 1px 顶部高光线，呼应头部语言（onSurface α0.15 暗 / α0.08 亮）
+              Align(
+                alignment: Alignment.topCenter,
+                child: Container(
+                  height: 0.5,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  color: Theme.of(ctx).colorScheme.onSurface.withValues(
+                    alpha: PiggyTokens.isDark(ctx) ? 0.15 : 0.08,
+                  ),
+                ),
+              ),
               Text(
                 title,
                 textAlign: TextAlign.center,

@@ -88,11 +88,9 @@ class _AboutPageState extends ConsumerState<AboutPage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: l10n.aboutPageTitle,
         showBack: true,
-        bottomOpaque: true,
-        blur: false,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(

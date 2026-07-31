@@ -41,11 +41,9 @@ class HeaderSkinPage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: l10n.headerSkinTitle,
         showBack: true,
-        bottomOpaque: true,
-        blur: false,
       ),
       body: GridView.count(
         crossAxisCount: 2,

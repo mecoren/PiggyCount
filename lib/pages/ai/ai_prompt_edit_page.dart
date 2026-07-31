@@ -265,10 +265,9 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
       return Scaffold(
         backgroundColor: PiggyTokens.scaffoldBackground(context),
         extendBodyBehindAppBar: true,
-        appBar: GlassTitleBar(
+        appBar: PiggyTitleBar(
           title: l10n.aiPromptEditTitle,
           showBack: true,
-          bottomOpaque: true,
         ),
         body: Padding(
           padding: EdgeInsets.only(
@@ -288,7 +287,7 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: l10n.aiPromptEditTitle,
         subtitle: l10n.aiPromptEditSubtitle,
         showBack: true,
@@ -302,7 +301,6 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
             onPressed: _pastePrompt,
           ),
         ],
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(

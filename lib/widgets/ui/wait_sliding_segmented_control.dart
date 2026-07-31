@@ -1,5 +1,3 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 
 import '../../styles/tokens.dart';
@@ -143,48 +141,38 @@ class _WaitSlidingSegmentedControlState<T>
           },
           child: Container(
             height: 42,
+            // 95% 中性实色背景（与底部导航栏/头部统一），消除 BackdropFilter 模糊开销
             decoration: BoxDecoration(
+              color: PiggyTokens.tabBarBackground(context),
               borderRadius: BorderRadius.circular(outerRadius),
+              // 细微边框用于界定轨道
+              border: Border.all(
+                color: colorScheme.outline.withValues(alpha: 0.3),
+                width: 0.5,
+              ),
             ),
-            // 半透明玻璃质感：模糊滤镜 + 低透明度背景，使底层透出
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(outerRadius),
-              child: BackdropFilter(
-                filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                child: Container(
-                  height: 42,
-                  decoration: BoxDecoration(
-                    // 低透明度表面填充，呈现通透质感
-                    color: colorScheme.surface.withValues(alpha: 0.55),
-                    borderRadius: BorderRadius.circular(outerRadius),
-                    // 细微边框用于界定轨道
-                    border: Border.all(
-                      color: colorScheme.outline.withValues(alpha: 0.3),
-                      width: 0.5,
+            child: Stack(
+              children: [
+                // 顶部折射高光线（呼应头部语言）
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    height: 0.5,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: [
+                          Colors.white.withValues(alpha: 0.0),
+                          Colors.white.withValues(alpha: 0.35),
+                          Colors.white.withValues(alpha: 0.0),
+                        ],
+                      ),
                     ),
                   ),
-                  child: Stack(
-                    children: [
-                      // 顶部折射高光线，强化玻璃质感
-                      Positioned(
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        child: Container(
-                          height: 0.5,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.centerLeft,
-                              end: Alignment.centerRight,
-                              colors: [
-                                Colors.white.withValues(alpha: 0.0),
-                                Colors.white.withValues(alpha: 0.35),
-                                Colors.white.withValues(alpha: 0.0),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
+                ),
                       // 滑动强调色胶囊
                       _isDragging
                           ? Positioned(
@@ -284,9 +272,6 @@ class _WaitSlidingSegmentedControlState<T>
                       ),
                     ],
                   ),
-                ),
-              ),
-            ),
           ),
         );
       },

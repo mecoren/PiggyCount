@@ -757,10 +757,9 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
+      appBar: PiggyTitleBar(
         title: isEditing ? l10n.accountEditTitle : l10n.accountNewTitle,
         showBack: true,
-        bottomOpaque: true,
       ),
       body: Padding(
         padding: EdgeInsets.only(
