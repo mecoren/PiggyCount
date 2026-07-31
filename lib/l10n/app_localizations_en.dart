@@ -25,7 +25,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutChangelog => 'Changelog';
 
   @override
-  String get appTitle => 'Bee Accounting';
+  String get appTitle => 'Piggy Accounting';
 
   @override
   String get tabHome => 'Home';
@@ -356,7 +356,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeSelectDate => 'Select date';
 
   @override
-  String get homeAppTitle => 'Bee Accounting';
+  String get homeAppTitle => 'Piggy Accounting';
 
   @override
   String get homeSearch => 'Search';
@@ -617,7 +617,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsToday => 'Today';
 
   @override
-  String get splashAppName => 'Bee Accounting';
+  String get splashAppName => 'Piggy Accounting';
 
   @override
   String get splashSlogan => 'Record Every Drop';
@@ -2579,11 +2579,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reminderIOSInstructions =>
-      '🍎 iOS notification settings:\n• Settings > Notifications > Bee Accounting\n• Enable \"Allow Notifications\"\n• Set notification style: Banner or Alert\n• Enable sound and vibration\n\n⚠️ Important Note:\n• iOS local notifications depend on app process\n• Do not force quit app from task manager\n• Notifications work when app is in background or foreground\n• Force quitting will disable notifications\n\n💡 Usage Tips:\n• Simply press Home button to exit app\n• iOS will manage background apps automatically\n• Keep app in background to receive reminders';
+      '🍎 iOS notification settings:\n• Settings > Notifications > Piggy Accounting\n• Enable \"Allow Notifications\"\n• Set notification style: Banner or Alert\n• Enable sound and vibration\n\n⚠️ Important Note:\n• iOS local notifications depend on app process\n• Do not force quit app from task manager\n• Notifications work when app is in background or foreground\n• Force quitting will disable notifications\n\n💡 Usage Tips:\n• Simply press Home button to exit app\n• iOS will manage background apps automatically\n• Keep app in background to receive reminders';
 
   @override
   String get reminderAndroidInstructions =>
-      'If notifications don\'t work properly, check:\n• App is allowed to send notifications\n• Disable battery optimization/power saving for app\n• Allow app to run in background and auto-start\n• Android 12+ needs exact alarm permission\n\n📱 Xiaomi phone special settings:\n• Settings > App Management > Bee Accounting > Notification Management\n• Tap \"Recording Reminder\" channel\n• Set importance to \"Urgent\" or \"High\"\n• Enable \"Banner notifications\", \"Sound\", \"Vibration\"\n• Security Center > App Management > Permissions > Auto-start\n\n🔒 Lock background methods:\n• Find Bee Accounting in recent tasks\n• Pull down app card to show lock icon\n• Tap lock icon to prevent cleanup';
+      'If notifications don\'t work properly, check:\n• App is allowed to send notifications\n• Disable battery optimization/power saving for app\n• Allow app to run in background and auto-start\n• Android 12+ needs exact alarm permission\n\n📱 Xiaomi phone special settings:\n• Settings > App Management > Piggy Accounting > Notification Management\n• Tap \"Recording Reminder\" channel\n• Set importance to \"Urgent\" or \"High\"\n• Enable \"Banner notifications\", \"Sound\", \"Vibration\"\n• Security Center > App Management > Permissions > Auto-start\n\n🔒 Lock background methods:\n• Find Piggy Accounting in recent tasks\n• Pull down app card to show lock icon\n• Tap lock icon to prevent cleanup';
 
   @override
   String get categoryDetailLoadFailed => 'Load failed';
@@ -6626,7 +6626,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get appLockBiometricReason =>
-      'Verify identity to unlock Bee Accounting';
+      'Verify identity to unlock Piggy Accounting';
 
   @override
   String get appLockTimeout => 'Auto-lock Timeout';

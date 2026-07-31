@@ -25,7 +25,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aboutChangelog => 'Changelog';
 
   @override
-  String get appTitle => '꿀벌 가계부';
+  String get appTitle => '소 돼지 가계부';
 
   @override
   String get tabHome => '홈';
@@ -351,7 +351,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeSelectDate => '날짜 선택';
 
   @override
-  String get homeAppTitle => '꿀벌 가계부';
+  String get homeAppTitle => '소 돼지 가계부';
 
   @override
   String get homeSearch => '검색';
@@ -609,7 +609,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get analyticsToday => '오늘';
 
   @override
-  String get splashAppName => '꿀벌 가계부';
+  String get splashAppName => '소 돼지 가계부';
 
   @override
   String get splashSlogan => '매 순간의 기록';
@@ -1065,7 +1065,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get deleteConfirmMessage => '이 기록을 삭제하시겠습니까?';
 
   @override
-  String get mineSlogan => '꿀벌 가계부, 점점 더 좋아져 가고 있어요';
+  String get mineSlogan => '소 돼지 가계부, 점점 더 좋아져 가고 있어요.';
 
   @override
   String get mineDisplayNameEditTitle => '닉네임 설정';
@@ -2507,11 +2507,11 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get reminderIOSInstructions =>
-      '🍎 iOS 알림 설정:\n• 설정 > 알림 > 꿀벌 가계부\n• \"알림 허용\" 활성화\n• 알림 스타일 설정: 배너 또는 알림창\n• 소리와 진동 활성화\n\n⚠️ 중요 안내:\n• iOS 로컬 알림은 앱 프로세스에 의존합니다\n• 작업 관리자에서 앱을 강제 종료하지 마세요\n• 앱이 백그라운드나 포그라운드에 있을 때 알림이 작동합니다\n• 강제 종료하면 알림이 작동하지 않습니다\n\n💡 사용 팁:\n• 홈 버튼을 눌러 앱을 종료하기만 하면 됩니다\n• iOS가 백그라운드 앱을 자동으로 관리합니다\n• 알림을 받으려면 앱을 백그라운드에 유지하세요';
+      '🍎 iOS 알림 설정:\n• 설정 > 알림 > 소 돼지 가계부\n• \"알림 허용\" 활성화\n• 알림 스타일 설정: 배너 또는 알림창\n• 소리와 진동 활성화\n\n⚠️ 중요 안내:\n• iOS 로컬 알림은 앱 프로세스에 의존합니다\n• 작업 관리자에서 앱을 강제 종료하지 마세요\n• 앱이 백그라운드나 포그라운드에 있을 때 알림이 작동합니다\n• 강제 종료하면 알림이 작동하지 않습니다\n\n💡 사용 팁:\n• 홈 버튼을 눌러 앱을 종료하기만 하면 됩니다\n• iOS가 백그라운드 앱을 자동으로 관리합니다\n• 알림을 받으려면 앱을 백그라운드에 유지하세요';
 
   @override
   String get reminderAndroidInstructions =>
-      '알림이 제대로 오지 않는다면 다음을 확인하세요:\n• 앱의 알림 전송이 허용되어 있는지\n• 앱의 배터리 최적화/절전 모드를 꺼두었는지\n• 앱의 백그라운드 실행과 자동 시작이 허용되어 있는지\n• Android 12 이상은 정확한 알람 권한이 필요합니다\n\n📱 샤오미(Xiaomi) 기기 특별 설정:\n• 설정 > 앱 관리 > 꿀벌 가계부 > 알림 관리\n• \"기록 알림\" 채널을 누르세요\n• 중요도를 \"긴급\" 또는 \"높음\"으로 설정하세요\n• \"배너 알림\", \"소리\", \"진동\"을 활성화하세요\n• 보안센터 > 앱 관리 > 권한 > 자동 실행\n\n🔒 백그라운드 고정 방법:\n• 최근 작업 목록에서 꿀벌 가계부를 찾으세요\n• 앱 카드를 아래로 당겨 잠금 아이콘을 표시하세요\n• 잠금 아이콘을 눌러 정리되지 않도록 하세요';
+      '알림이 제대로 오지 않는다면 다음을 확인하세요:\n• 앱의 알림 전송이 허용되어 있는지\n• 앱의 배터리 최적화/절전 모드를 꺼두었는지\n• 앱의 백그라운드 실행과 자동 시작이 허용되어 있는지\n• Android 12 이상은 정확한 알람 권한이 필요합니다\n\n📱 샤오미(Xiaomi) 기기 특별 설정:\n• 설정 > 앱 관리 > 소 돼지 가계부 > 알림 관리\n• \"기록 알림\" 채널을 누르세요\n• 중요도를 \"긴급\" 또는 \"높음\"으로 설정하세요\n• \"배너 알림\", \"소리\", \"진동\"을 활성화하세요\n• 보안센터 > 앱 관리 > 권한 > 자동 실행\n\n🔒 백그라운드 고정 방법:\n• 최근 작업 목록에서 소 돼지 가계부를 찾으세요\n• 앱 카드를 아래로 당겨 잠금 아이콘을 표시하세요\n• 잠금 아이콘을 눌러 정리되지 않도록 하세요';
 
   @override
   String get categoryDetailLoadFailed => '불러오기 실패';
@@ -6423,7 +6423,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get appLockBiometricDesc => 'Face ID 또는 지문으로 잠금을 해제합니다';
 
   @override
-  String get appLockBiometricReason => '꿀벌 가계부 잠금을 해제하려면 본인 인증이 필요합니다';
+  String get appLockBiometricReason => '소 돼지 가계부 잠금을 해제하려면 본인 인증이 필요합니다';
 
   @override
   String get appLockTimeout => '자동 잠금 시간';
