@@ -45,6 +45,7 @@ class HeaderSkinPage extends ConsumerWidget {
         title: l10n.headerSkinTitle,
         showBack: true,
         bottomOpaque: true,
+        blur: false,
       ),
       body: GridView.count(
         crossAxisCount: 2,

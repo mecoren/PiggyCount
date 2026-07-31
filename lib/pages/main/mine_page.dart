@@ -42,404 +42,431 @@ class MinePage extends ConsumerWidget {
     final ledgerId = ref.watch(currentLedgerIdProvider);
     final l10n = AppLocalizations.of(context);
 
+    // 主题色头部占据状态栏下方区域，状态栏图标使用白色以保证可见性。
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+      ),
+    );
+
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      extendBodyBehindAppBar: true,
-      appBar: GlassTitleBar(
-        title: l10n.mineTitle,
-        showBack: false,
-        showMenu: false,
-        bottomOpaque: true,
-      ),
-      body: ListView(
-        padding: EdgeInsets.fromLTRB(
-          16,
-          MediaQuery.of(context).padding.top + 56 + 16,
-          16,
-          16 + MediaQuery.of(context).padding.bottom + 56 + 12,
-        ),
-        physics: const AlwaysScrollableScrollPhysics(),
+      body: Column(
         children: [
-          // 头部用户信息卡片（头像 + 问候语 + 统计）
+          // 全宽主题色头部（ProfileCard 自身处理状态栏避让）
           const ProfileCard(),
-          SizedBox(height: 24.0.scaled(context, ref)),
-
-          // ── 云同步与备份 ──
-          SettingsSectionLabel(l10n.mineCloudBackupSection),
-          SizedBox(height: 8.0.scaled(context, ref)),
-          Consumer(builder: (sectionContext, sectionRef, _) {
-            final activeCfg = sectionRef.watch(activeCloudConfigProvider);
-
-            return SettingsCard(
+          // 可滚动设置列表
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                0,
+                16,
+                16 + MediaQuery.of(context).padding.bottom + 56 + 12,
+              ),
+              physics: const AlwaysScrollableScrollPhysics(),
               children: [
-                // 云服务 —— PiggyCount Cloud 模式下 subtitle 带上
-                // server 版本号(从 fetchServerVersion 拉的 FutureProvider),
-                // 一眼看到 cloud 哪版。其它模式没版本概念,保留原文案。
-                Consumer(builder: (ctx, r, _) {
-                  final cloudVersion =
-                      r.watch(piggycountCloudServerVersionProvider).valueOrNull;
-                  return SettingsNavItem(
-                    icon: Icons.cloud_queue_outlined,
-                    title: AppLocalizations.of(sectionContext).mineCloudService,
-                    subtitle: activeCfg.when(
-                      loading: () => AppLocalizations.of(sectionContext)
-                          .mineCloudServiceLoading,
-                      error: (e, _) =>
-                          '${AppLocalizations.of(sectionContext).commonError}: $e',
-                      data: (cfg) {
-                        switch (cfg.type) {
-                          case CloudBackendType.local:
-                            return AppLocalizations.of(sectionContext)
-                                .mineCloudServiceOffline;
-                          case CloudBackendType.webdav:
-                            return AppLocalizations.of(sectionContext)
-                                .mineCloudServiceWebDAV;
-                          case CloudBackendType.icloud:
-                            return 'iCloud';
-                          case CloudBackendType.supabase:
-                            return AppLocalizations.of(sectionContext)
-                                .mineCloudServiceCustom;
-                          case CloudBackendType.s3:
-                            return 'S3';
-                          case CloudBackendType.piggycountCloud:
-                            return cloudVersion != null && cloudVersion.isNotEmpty
-                                ? 'PiggyCount Cloud v$cloudVersion'
-                                : 'PiggyCount Cloud';
-                        }
-                      },
-                    ),
-                    onTap: () async {
-                      await Navigator.of(sectionContext).push(
-                        MaterialPageRoute(
-                            builder: (_) => const CloudServicePage()),
-                      );
-                    },
-                  );
-                }),
-                // 同步状态
-                Builder(
-                  builder: (ctx) {
-                    return authAsync.when(
-                      loading: () => SettingsNavItem(
-                        icon: Icons.cloud_sync_outlined,
-                        title: AppLocalizations.of(sectionContext).mineSyncTitle,
-                        trailing: const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      ),
-                      error: (e, _) => SettingsNavItem(
-                        icon: Icons.cloud_sync_outlined,
-                        title: AppLocalizations.of(sectionContext).mineSyncTitle,
-                        subtitle:
-                            '${AppLocalizations.of(sectionContext).commonError}: $e',
-                        enabled: false,
-                      ),
-                      data: (auth) => FutureBuilder<CloudUser?>(
-                        future: auth.currentUser,
-                        builder: (ctx, snap) {
-                          if (snap.hasError) {
-                            return SettingsNavItem(
+                // ── 云同步与备份 ──
+                SettingsSectionLabel(l10n.mineCloudBackupSection),
+                SizedBox(height: 8.0.scaled(context, ref)),
+                Consumer(builder: (sectionContext, sectionRef, _) {
+                  final activeCfg = sectionRef.watch(activeCloudConfigProvider);
+
+                  return SettingsCard(
+                    children: [
+                      // 云服务 —— PiggyCount Cloud 模式下 subtitle 带上
+                      // server 版本号(从 fetchServerVersion 拉的 FutureProvider),
+                      // 一眼看到 cloud 哪版。其它模式没版本概念,保留原文案。
+                      Consumer(builder: (ctx, r, _) {
+                        final cloudVersion = r
+                            .watch(piggycountCloudServerVersionProvider)
+                            .valueOrNull;
+                        return SettingsNavItem(
+                          icon: Icons.cloud_queue_outlined,
+                          title: AppLocalizations.of(sectionContext)
+                              .mineCloudService,
+                          subtitle: activeCfg.when(
+                            loading: () => AppLocalizations.of(sectionContext)
+                                .mineCloudServiceLoading,
+                            error: (e, _) =>
+                                '${AppLocalizations.of(sectionContext).commonError}: $e',
+                            data: (cfg) {
+                              switch (cfg.type) {
+                                case CloudBackendType.local:
+                                  return AppLocalizations.of(sectionContext)
+                                      .mineCloudServiceOffline;
+                                case CloudBackendType.webdav:
+                                  return AppLocalizations.of(sectionContext)
+                                      .mineCloudServiceWebDAV;
+                                case CloudBackendType.icloud:
+                                  return 'iCloud';
+                                case CloudBackendType.supabase:
+                                  return AppLocalizations.of(sectionContext)
+                                      .mineCloudServiceCustom;
+                                case CloudBackendType.s3:
+                                  return 'S3';
+                                case CloudBackendType.piggycountCloud:
+                                  return cloudVersion != null &&
+                                          cloudVersion.isNotEmpty
+                                      ? 'PiggyCount Cloud v$cloudVersion'
+                                      : 'PiggyCount Cloud';
+                              }
+                            },
+                          ),
+                          onTap: () async {
+                            await Navigator.of(sectionContext).push(
+                              MaterialPageRoute(
+                                  builder: (_) => const CloudServicePage()),
+                            );
+                          },
+                        );
+                      }),
+                      // 同步状态
+                      Builder(
+                        builder: (ctx) {
+                          return authAsync.when(
+                            loading: () => SettingsNavItem(
+                              icon: Icons.cloud_sync_outlined,
+                              title: AppLocalizations.of(sectionContext)
+                                  .mineSyncTitle,
+                              trailing: const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            ),
+                            error: (e, _) => SettingsNavItem(
                               icon: Icons.cloud_sync_outlined,
                               title: AppLocalizations.of(sectionContext)
                                   .mineSyncTitle,
                               subtitle:
-                                  '${AppLocalizations.of(sectionContext).commonError}: ${snap.error}',
+                                  '${AppLocalizations.of(sectionContext).commonError}: $e',
                               enabled: false,
-                            );
-                          }
+                            ),
+                            data: (auth) => FutureBuilder<CloudUser?>(
+                              future: auth.currentUser,
+                              builder: (ctx, snap) {
+                                if (snap.hasError) {
+                                  return SettingsNavItem(
+                                    icon: Icons.cloud_sync_outlined,
+                                    title: AppLocalizations.of(sectionContext)
+                                        .mineSyncTitle,
+                                    subtitle:
+                                        '${AppLocalizations.of(sectionContext).commonError}: ${snap.error}',
+                                    enabled: false,
+                                  );
+                                }
 
-                          final user = snap.data;
-                          final cloudConfig =
-                              sectionRef.watch(activeCloudConfigProvider);
-                          final isLocalMode = cloudConfig.hasValue &&
-                              cloudConfig.value!.type == CloudBackendType.local;
-                          final isICloudMode = cloudConfig.hasValue &&
-                              cloudConfig.value!.type ==
-                                  CloudBackendType.icloud;
-                          // iCloud 使用系统账号，不需要登录；其他云服务需要登录
-                          final canUseCloud =
-                              !isLocalMode && (isICloudMode || user != null);
-                          final asyncSt =
-                              sectionRef.watch(syncStatusProvider(ledgerId));
-                          final cached = sectionRef
-                              .watch(lastSyncStatusProvider(ledgerId));
-                          final st = asyncSt.asData?.value ?? cached;
+                                final user = snap.data;
+                                final cloudConfig =
+                                    sectionRef.watch(activeCloudConfigProvider);
+                                final isLocalMode = cloudConfig.hasValue &&
+                                    cloudConfig.value!.type ==
+                                        CloudBackendType.local;
+                                final isICloudMode = cloudConfig.hasValue &&
+                                    cloudConfig.value!.type ==
+                                        CloudBackendType.icloud;
+                                // iCloud 使用系统账号，不需要登录；其他云服务需要登录
+                                final canUseCloud = !isLocalMode &&
+                                    (isICloudMode || user != null);
+                                final asyncSt = sectionRef
+                                    .watch(syncStatusProvider(ledgerId));
+                                final cached = sectionRef
+                                    .watch(lastSyncStatusProvider(ledgerId));
+                                final st = asyncSt.asData?.value ?? cached;
 
-                          // 计算简化的同步状态显示
-                          String subtitle = '';
-                          bool showCheckIcon = false;
-                          final isFirstLoad = st == null;
-                          final refreshing = asyncSt.isLoading;
+                                // 计算简化的同步状态显示
+                                String subtitle = '';
+                                bool showCheckIcon = false;
+                                final isFirstLoad = st == null;
+                                final refreshing = asyncSt.isLoading;
 
-                          if (!isFirstLoad) {
-                            switch (st.diff) {
-                              case SyncDiff.notLoggedIn:
-                                subtitle = AppLocalizations.of(sectionContext)
-                                    .mineSyncNotLoggedIn;
-                                break;
-                              case SyncDiff.notConfigured:
-                                subtitle = AppLocalizations.of(sectionContext)
-                                    .mineSyncNotConfigured;
-                                break;
-                              case SyncDiff.noRemote:
-                                subtitle = AppLocalizations.of(sectionContext)
-                                    .mineSyncNoRemote;
-                                break;
-                              case SyncDiff.inSync:
-                                subtitle = AppLocalizations.of(sectionContext)
-                                    .mineSyncInSyncSimple;
-                                showCheckIcon = true;
-                                break;
-                              case SyncDiff.localNewer:
-                                subtitle = AppLocalizations.of(sectionContext)
-                                    .mineSyncLocalNewerSimple;
-                                break;
-                              case SyncDiff.cloudNewer:
-                                subtitle = AppLocalizations.of(sectionContext)
-                                    .mineSyncCloudNewerSimple;
-                                break;
-                              case SyncDiff.different:
-                                subtitle = AppLocalizations.of(sectionContext)
-                                    .mineSyncDifferent;
-                                break;
-                              case SyncDiff.error:
-                                subtitle = AppLocalizations.of(sectionContext)
-                                    .mineSyncError;
-                                break;
-                            }
-                          }
+                                if (!isFirstLoad) {
+                                  switch (st.diff) {
+                                    case SyncDiff.notLoggedIn:
+                                      subtitle =
+                                          AppLocalizations.of(sectionContext)
+                                              .mineSyncNotLoggedIn;
+                                      break;
+                                    case SyncDiff.notConfigured:
+                                      subtitle =
+                                          AppLocalizations.of(sectionContext)
+                                              .mineSyncNotConfigured;
+                                      break;
+                                    case SyncDiff.noRemote:
+                                      subtitle =
+                                          AppLocalizations.of(sectionContext)
+                                              .mineSyncNoRemote;
+                                      break;
+                                    case SyncDiff.inSync:
+                                      subtitle =
+                                          AppLocalizations.of(sectionContext)
+                                              .mineSyncInSyncSimple;
+                                      showCheckIcon = true;
+                                      break;
+                                    case SyncDiff.localNewer:
+                                      subtitle =
+                                          AppLocalizations.of(sectionContext)
+                                              .mineSyncLocalNewerSimple;
+                                      break;
+                                    case SyncDiff.cloudNewer:
+                                      subtitle =
+                                          AppLocalizations.of(sectionContext)
+                                              .mineSyncCloudNewerSimple;
+                                      break;
+                                    case SyncDiff.different:
+                                      subtitle =
+                                          AppLocalizations.of(sectionContext)
+                                              .mineSyncDifferent;
+                                      break;
+                                    case SyncDiff.error:
+                                      subtitle =
+                                          AppLocalizations.of(sectionContext)
+                                              .mineSyncError;
+                                      break;
+                                  }
+                                }
 
-                          // trailing 逻辑：加载中显示 spinner，同步完成显示 check，
-                          // 其他情况显示 chevron_right（即使禁用也显示，保持与原实现一致）
-                          final Widget trailingWidget;
-                          if (canUseCloud && (isFirstLoad || refreshing)) {
-                            trailingWidget = const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            );
-                          } else if (showCheckIcon) {
-                            trailingWidget = Icon(
-                              Icons.check_circle,
-                              color:
-                                  sectionRef.watch(primaryColorProvider),
-                              size: 20,
-                            );
-                          } else {
-                            trailingWidget = Icon(
-                              Icons.chevron_right_rounded,
-                              color:
-                                  Theme.of(sectionContext)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                            );
-                          }
+                                // trailing 逻辑：加载中显示 spinner，同步完成显示 check，
+                                // 其他情况显示 chevron_right（即使禁用也显示，保持与原实现一致）
+                                final Widget trailingWidget;
+                                if (canUseCloud &&
+                                    (isFirstLoad || refreshing)) {
+                                  trailingWidget = const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  );
+                                } else if (showCheckIcon) {
+                                  trailingWidget = Icon(
+                                    Icons.check_circle,
+                                    color:
+                                        sectionRef.watch(primaryColorProvider),
+                                    size: 20,
+                                  );
+                                } else {
+                                  trailingWidget = Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: Theme.of(sectionContext)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  );
+                                }
 
+                                return SettingsNavItem(
+                                  icon: Icons.cloud_sync_outlined,
+                                  title: AppLocalizations.of(sectionContext)
+                                      .mineSyncTitle,
+                                  subtitle: isFirstLoad ? null : subtitle,
+                                  enabled: !isLocalMode,
+                                  trailing: trailingWidget,
+                                  onTap: () async {
+                                    // PiggyCount Cloud 专属页跟老的
+                                    // iCloud/WebDAV/Supabase 页语义完全不同,
+                                    // 路由按 config.type 分叉,避免 UI 里
+                                    // 大段 if-else 分支。
+                                    final cfg = ref
+                                        .read(activeCloudConfigProvider)
+                                        .valueOrNull;
+                                    final isPiggyCount = cfg != null &&
+                                        cfg.type ==
+                                            CloudBackendType.piggycountCloud;
+                                    await Navigator.of(sectionContext).push(
+                                      MaterialPageRoute(
+                                          builder: (_) => isPiggyCount
+                                              ? const PiggyCountCloudSyncPage()
+                                              : const CloudSyncPage()),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  );
+                }),
+                SizedBox(height: 24.0.scaled(context, ref)),
+
+                // ── 功能管理 ──
+                SettingsSectionLabel(l10n.mineFunctionSection),
+                SizedBox(height: 8.0.scaled(context, ref)),
+                SettingsCard(
+                  children: [
+                    // 智能记账(共享账本入口已移到"账本管理"页 PrimaryHeader)
+                    SettingsNavItem(
+                      icon: Icons.auto_awesome_outlined,
+                      title: AppLocalizations.of(context).smartBilling,
+                      subtitle: AppLocalizations.of(context).smartBillingDesc,
+                      onTap: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (_) => const SmartBillingPage()),
+                        );
+                      },
+                    ),
+                    // 数据管理
+                    SettingsNavItem(
+                      icon: Icons.storage_outlined,
+                      title: AppLocalizations.of(context).dataManagement,
+                      subtitle: AppLocalizations.of(context).dataManagementDesc,
+                      onTap: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (_) => const DataManagementPage()),
+                        );
+                      },
+                    ),
+                    // 预算管理 已挪到「账本管理 → 长按某账本 → 预算管理」
+                    // (每个账本独立预算,放在账本菜单内语义更匹配)。
+                    // 自动化功能
+                    SettingsNavItem(
+                      icon: Icons.schedule_outlined,
+                      title: AppLocalizations.of(context).automation,
+                      subtitle: AppLocalizations.of(context).automationDesc,
+                      onTap: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (_) => const AutomationPage()),
+                        );
+                      },
+                    ),
+                    // 外观设置
+                    SettingsNavItem(
+                      icon: Icons.palette_outlined,
+                      title: AppLocalizations.of(context).appearanceSettings,
+                      subtitle:
+                          AppLocalizations.of(context).appearanceSettingsDesc,
+                      onTap: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (_) => const AppearanceSettingsPage()),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+                SizedBox(height: 24.0.scaled(context, ref)),
+
+                // ── 帮助与信息 ──
+                SettingsSectionLabel(l10n.mineHelpSection),
+                SizedBox(height: 8.0.scaled(context, ref)),
+                SettingsCard(
+                  children: [
+                    SettingsNavItem(
+                      icon: Icons.info_outline,
+                      title: AppLocalizations.of(context).about,
+                      subtitle: AppLocalizations.of(context).aboutDesc,
+                      onTap: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const AboutPage()),
+                        );
+                      },
+                    ),
+                    // 使用帮助:默认 App 内嵌 WebView(embed 模式)。
+                    // 审核兜底:kHelpCenterInApp 改 false 重新打包即回退外部浏览器
+                    SettingsNavItem(
+                      icon: Icons.help_outline,
+                      title: AppLocalizations.of(context).mineHelp,
+                      subtitle: AppLocalizations.of(context).mineHelpSubtitle,
+                      onTap: () async {
+                        if (kHelpCenterInApp) {
+                          await Navigator.of(context).push(MaterialPageRoute(
+                              builder: (_) => const HelpCenterPage()));
+                        } else {
+                          final locale = Localizations.localeOf(context);
+                          await _tryOpenUrl(
+                              Uri.parse(WebsiteUrls.docs(locale)));
+                        }
+                      },
+                    ),
+                  ],
+                ),
+                SizedBox(height: 24.0.scaled(context, ref)),
+
+                // ── 支持我们 ──
+                SettingsSectionLabel(l10n.mineSupportSection),
+                SizedBox(height: 8.0.scaled(context, ref)),
+                SettingsCard(
+                  children: [
+                    // 仅在iOS显示打赏入口
+                    if (Platform.isIOS)
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final primaryColor = ref.watch(primaryColorProvider);
                           return SettingsNavItem(
-                            icon: Icons.cloud_sync_outlined,
-                            title: AppLocalizations.of(sectionContext)
-                                .mineSyncTitle,
-                            subtitle: isFirstLoad ? null : subtitle,
-                            enabled: !isLocalMode,
-                            trailing: trailingWidget,
+                            icon: Icons.favorite,
+                            title: AppLocalizations.of(context).donationTitle,
+                            subtitle: AppLocalizations.of(context)
+                                .donationEntrySubtitle,
+                            accentColor: primaryColor,
                             onTap: () async {
-                              // PiggyCount Cloud 专属页跟老的
-                              // iCloud/WebDAV/Supabase 页语义完全不同,
-                              // 路由按 config.type 分叉,避免 UI 里
-                              // 大段 if-else 分支。
-                              final cfg = ref
-                                  .read(activeCloudConfigProvider)
-                                  .valueOrNull;
-                              final isPiggyCount = cfg != null &&
-                                  cfg.type ==
-                                      CloudBackendType.piggycountCloud;
-                              await Navigator.of(sectionContext).push(
+                              await Navigator.of(context).push(
                                 MaterialPageRoute(
-                                    builder: (_) => isPiggyCount
-                                        ? const PiggyCountCloudSyncPage()
-                                        : const CloudSyncPage()),
+                                    builder: (_) => const DonationPage()),
                               );
                             },
                           );
                         },
                       ),
-                    );
-                  },
-                ),
-              ],
-            );
-          }),
-          SizedBox(height: 24.0.scaled(context, ref)),
-
-          // ── 功能管理 ──
-          SettingsSectionLabel(l10n.mineFunctionSection),
-          SizedBox(height: 8.0.scaled(context, ref)),
-          SettingsCard(
-            children: [
-              // 智能记账(共享账本入口已移到"账本管理"页 PrimaryHeader)
-              SettingsNavItem(
-                icon: Icons.auto_awesome_outlined,
-                title: AppLocalizations.of(context).smartBilling,
-                subtitle: AppLocalizations.of(context).smartBillingDesc,
-                onTap: () async {
-                  await Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const SmartBillingPage()),
-                  );
-                },
-              ),
-              // 数据管理
-              SettingsNavItem(
-                icon: Icons.storage_outlined,
-                title: AppLocalizations.of(context).dataManagement,
-                subtitle: AppLocalizations.of(context).dataManagementDesc,
-                onTap: () async {
-                  await Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const DataManagementPage()),
-                  );
-                },
-              ),
-              // 预算管理 已挪到「账本管理 → 长按某账本 → 预算管理」
-              // (每个账本独立预算,放在账本菜单内语义更匹配)。
-              // 自动化功能
-              SettingsNavItem(
-                icon: Icons.schedule_outlined,
-                title: AppLocalizations.of(context).automation,
-                subtitle: AppLocalizations.of(context).automationDesc,
-                onTap: () async {
-                  await Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const AutomationPage()),
-                  );
-                },
-              ),
-              // 外观设置
-              SettingsNavItem(
-                icon: Icons.palette_outlined,
-                title: AppLocalizations.of(context).appearanceSettings,
-                subtitle: AppLocalizations.of(context).appearanceSettingsDesc,
-                onTap: () async {
-                  await Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const AppearanceSettingsPage()),
-                  );
-                },
-              ),
-            ],
-          ),
-          SizedBox(height: 24.0.scaled(context, ref)),
-
-          // ── 帮助与信息 ──
-          SettingsSectionLabel(l10n.mineHelpSection),
-          SizedBox(height: 8.0.scaled(context, ref)),
-          SettingsCard(
-            children: [
-              SettingsNavItem(
-                icon: Icons.info_outline,
-                title: AppLocalizations.of(context).about,
-                subtitle: AppLocalizations.of(context).aboutDesc,
-                onTap: () async {
-                  await Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const AboutPage()),
-                  );
-                },
-              ),
-              // 使用帮助:默认 App 内嵌 WebView(embed 模式)。
-              // 审核兜底:kHelpCenterInApp 改 false 重新打包即回退外部浏览器
-              SettingsNavItem(
-                icon: Icons.help_outline,
-                title: AppLocalizations.of(context).mineHelp,
-                subtitle: AppLocalizations.of(context).mineHelpSubtitle,
-                onTap: () async {
-                  if (kHelpCenterInApp) {
-                    await Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => const HelpCenterPage()));
-                  } else {
-                    final locale = Localizations.localeOf(context);
-                    await _tryOpenUrl(Uri.parse(WebsiteUrls.docs(locale)));
-                  }
-                },
-              ),
-            ],
-          ),
-          SizedBox(height: 24.0.scaled(context, ref)),
-
-          // ── 支持我们 ──
-          SettingsSectionLabel(l10n.mineSupportSection),
-          SizedBox(height: 8.0.scaled(context, ref)),
-          SettingsCard(
-            children: [
-              // 仅在iOS显示打赏入口
-              if (Platform.isIOS)
-                Consumer(
-                  builder: (context, ref, _) {
-                    final primaryColor = ref.watch(primaryColorProvider);
-                    return SettingsNavItem(
-                      icon: Icons.favorite,
-                      title: AppLocalizations.of(context).donationTitle,
-                      subtitle:
-                          AppLocalizations.of(context).donationEntrySubtitle,
-                      accentColor: primaryColor,
-                      onTap: () async {
-                        await Navigator.of(context).push(
+                    // 年度账单
+                    SettingsNavItem(
+                      icon: Icons.auto_graph_rounded,
+                      title: AppLocalizations.of(context).annualReportTitle,
+                      subtitle: AppLocalizations.of(context)
+                          .annualReportEntrySubtitle,
+                      onTap: () {
+                        Navigator.of(context).push(
                           MaterialPageRoute(
-                              builder: (_) => const DonationPage()),
+                              builder: (_) => const AnnualReportPage()),
                         );
                       },
-                    );
-                  },
+                    ),
+                    // 分享海报
+                    SettingsNavItem(
+                      icon: Icons.ios_share_rounded,
+                      title: AppLocalizations.of(context).mineShareApp,
+                      subtitle:
+                          AppLocalizations.of(context).mineShareWithFriends,
+                      onTap: () {
+                        // 打开海报轮播预览对话框（支持年度、月度、总览3种海报）
+                        SharePosterService.showPosterCarouselPreview(context);
+                      },
+                    ),
+                    // 复制推广文案
+                    SettingsNavItem(
+                      icon: Icons.content_copy_rounded,
+                      title: AppLocalizations.of(context).mineCopyPromoText,
+                      subtitle:
+                          AppLocalizations.of(context).mineCopyPromoSubtitle,
+                      onTap: () async {
+                        final l10n = AppLocalizations.of(context);
+                        await Clipboard.setData(
+                          ClipboardData(text: l10n.shareGuidanceCopyText),
+                        );
+                        if (context.mounted) {
+                          showToast(context, l10n.shareGuidanceCopied);
+                        }
+                      },
+                    ),
+                    // 只在iOS上显示评分入口（Android还未上架）
+                    if (Platform.isIOS)
+                      SettingsNavItem(
+                        icon: Icons.star_border_rounded,
+                        title: AppLocalizations.of(context).mineRateApp,
+                        subtitle:
+                            AppLocalizations.of(context).mineRateAppSubtitle,
+                        onTap: () => _rateApp(context),
+                      ),
+                  ],
                 ),
-              // 年度账单
-              SettingsNavItem(
-                icon: Icons.auto_graph_rounded,
-                title: AppLocalizations.of(context).annualReportTitle,
-                subtitle: AppLocalizations.of(context).annualReportEntrySubtitle,
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const AnnualReportPage()),
-                  );
-                },
-              ),
-              // 分享海报
-              SettingsNavItem(
-                icon: Icons.ios_share_rounded,
-                title: AppLocalizations.of(context).mineShareApp,
-                subtitle: AppLocalizations.of(context).mineShareWithFriends,
-                onTap: () {
-                  // 打开海报轮播预览对话框（支持年度、月度、总览3种海报）
-                  SharePosterService.showPosterCarouselPreview(context);
-                },
-              ),
-              // 复制推广文案
-              SettingsNavItem(
-                icon: Icons.content_copy_rounded,
-                title: AppLocalizations.of(context).mineCopyPromoText,
-                subtitle: AppLocalizations.of(context).mineCopyPromoSubtitle,
-                onTap: () async {
-                  final l10n = AppLocalizations.of(context);
-                  await Clipboard.setData(
-                    ClipboardData(text: l10n.shareGuidanceCopyText),
-                  );
-                  if (context.mounted) {
-                    showToast(context, l10n.shareGuidanceCopied);
-                  }
-                },
-              ),
-              // 只在iOS上显示评分入口（Android还未上架）
-              if (Platform.isIOS)
-                SettingsNavItem(
-                  icon: Icons.star_border_rounded,
-                  title: AppLocalizations.of(context).mineRateApp,
-                  subtitle: AppLocalizations.of(context).mineRateAppSubtitle,
-                  onTap: () => _rateApp(context),
-                ),
-            ],
+                SizedBox(height: 32.0.scaled(context, ref)),
+              ],
+            ),
           ),
-          SizedBox(height: 32.0.scaled(context, ref)),
         ],
       ),
     );

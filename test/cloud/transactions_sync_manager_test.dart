@@ -316,7 +316,12 @@ void main() {
           reason: '恢复的应是云端版本（amount=99）');
     });
 
-    test('reset 后无密钥时，恢复应跳过（返回 0,0）而非崩溃', () async {
+  });
+
+  group('BUG-2 残留: 从未开启加密/reset 后无密钥应引导而非静默跳过', () {
+    test(
+        'reset/从未开启加密后无密钥时，downloadAndRestore 应抛 CloudEncryptedLocallyDisabledException 引导开启加密',
+        () async {
       // Arrange
       final repo = LocalRepository(db);
       await db.into(db.ledgers).insert(LedgersCompanion.insert(
@@ -329,7 +334,9 @@ void main() {
       final payloadB64 = base64.encode(List<int>.filled(32, 1));
       final ciphertext = 'BEECRYPT1:$saltB64:$payloadB64';
 
-      // 模拟 reset 后的真实状态：isEnabled=false 且 hasActiveKey=false（密钥清空）
+      // 模拟 reset/从未开启加密后的真实状态：
+      // - 云端仍是密文 → provider 未被装饰，storage.download 返回原始密文
+      // - 本地 isEnabled=false 且 hasActiveKey=false（无密钥可解密）
       final fakeStorage = _FakeStorage(returnJson: ciphertext);
       final fakeProvider = _FakeCloudProvider(storage: fakeStorage);
 
@@ -350,16 +357,95 @@ void main() {
         provider: fakeProvider,
       );
 
-      // Act: 恢复云端数据
-      final result =
-          await manager.downloadAndRestoreToCurrentLedger(ledgerId: 1);
-
-      // Assert: 无密钥，应跳过恢复（返回 0,0），不抛 FormatException
-      expect(result.inserted, 0);
-      expect(result.deletedDup, 0);
+      // Act & Assert: 无密钥且云端为密文，应抛专属异常
+      // （非静默返回 0,0 让用户误以为云端无数据，非 FormatException 崩溃）
+      await expectLater(
+        manager.downloadAndRestoreToCurrentLedger(ledgerId: 1),
+        throwsA(isA<CloudEncryptedLocallyDisabledException>()),
+      );
       final txs = await db.select(db.transactions).get();
-      expect(txs.length, 0,
-          reason: 'reset 后无密钥，恢复被跳过，本地不应被污染');
+      expect(txs.length, 0, reason: '异常在导入前抛出，本地不应被污染');
+    });
+
+    test(
+        'getStatus 在从未开启加密且云端为密文时返回 cloud_encrypted_locally_disabled 哨兵',
+        () async {
+      // Arrange: 预置 ledger 行（exportTransactionsJson 计算本地指纹需要）
+      await db.into(db.ledgers).insert(LedgersCompanion.insert(
+            id: const d.Value(1),
+            name: 'test',
+            currency: const d.Value('CNY'),
+          ));
+
+      final saltB64 = base64.encode(List<int>.filled(16, 0));
+      final payloadB64 = base64.encode(List<int>.filled(32, 1));
+      final ciphertext = 'BEECRYPT1:$saltB64:$payloadB64';
+
+      // 从未开启加密：isEnabled=false 且 hasActiveKey=false；云端为密文
+      final fakeStorage = _FakeStorage(returnJson: ciphertext);
+      final fakeProvider = _FakeCloudProvider(storage: fakeStorage);
+
+      final manager = TransactionsSyncManager(
+        config: const fcs.CloudServiceConfig(
+          type: fcs.CloudBackendType.supabase,
+          name: 'test',
+        ),
+        db: db,
+        repo: _DummyRepo(),
+        encryptionService: _DisabledNoKeyEncryptionService(),
+      );
+      manager.setSyncManagerForTesting(
+        syncManager: fcs.CloudSyncManager<int>(
+          provider: fakeProvider,
+          serializer: _NoopSerializer(),
+        ),
+        provider: fakeProvider,
+      );
+
+      // Act
+      final status = await manager.getStatus(ledgerId: 1);
+
+      // Assert: 应返回 error + 哨兵 message，供 UI 识别并引导用户开启加密
+      expect(status.diff, SyncDiff.error);
+      expect(status.message, 'cloud_encrypted_locally_disabled',
+          reason: '从未开启加密且云端为密文应返回哨兵，而非把密文当 JSON 解析报错');
+    });
+
+    test('getStatus 在云端为明文时不误报 cloud_encrypted_locally_disabled', () async {
+      // Arrange: 从未开启加密但云端是 legacy 明文 → 正常流程，不触发哨兵
+      await db.into(db.ledgers).insert(LedgersCompanion.insert(
+            id: const d.Value(1),
+            name: 'test',
+            currency: const d.Value('CNY'),
+          ));
+
+      final fakeStorage =
+          _FakeStorage(returnJson: _emptyLedgerJson(ledgerId: 1));
+      final fakeProvider = _FakeCloudProvider(storage: fakeStorage);
+
+      final manager = TransactionsSyncManager(
+        config: const fcs.CloudServiceConfig(
+          type: fcs.CloudBackendType.supabase,
+          name: 'test',
+        ),
+        db: db,
+        repo: _DummyRepo(),
+        encryptionService: _DisabledNoKeyEncryptionService(),
+      );
+      manager.setSyncManagerForTesting(
+        syncManager: fcs.CloudSyncManager<int>(
+          provider: fakeProvider,
+          serializer: _NoopSerializer(),
+        ),
+        provider: fakeProvider,
+      );
+
+      // Act
+      final status = await manager.getStatus(ledgerId: 1);
+
+      // Assert: 明文云端不应误报哨兵（应走正常流程返回非 cloud_encrypted_locally_disabled）
+      expect(status.message, isNot('cloud_encrypted_locally_disabled'),
+          reason: '云端为明文时不应触发 cloud_encrypted_locally_disabled 哨兵');
     });
   });
 

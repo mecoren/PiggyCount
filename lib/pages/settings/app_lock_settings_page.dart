@@ -180,6 +180,7 @@ class _AppLockSettingsPageState extends ConsumerState<AppLockSettingsPage> {
         title: l10n.appLockTitle,
         showBack: true,
         bottomOpaque: true,
+        blur: false,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(
@@ -298,6 +299,7 @@ class _PinVerifyPageState extends ConsumerState<_PinVerifyPage> {
         title: l10n.appLockVerifyPin,
         showBack: true,
         bottomOpaque: true,
+        blur: false,
       ),
       body: SafeArea(
         top: false,

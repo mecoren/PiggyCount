@@ -198,6 +198,7 @@ class _StorageManagementPageState extends ConsumerState<StorageManagementPage> {
         title: l10n.storageManagementTitle,
         showBack: true,
         bottomOpaque: true,
+        blur: false,
       ),
       body: _isScanning
           ? const Center(child: CircularProgressIndicator())

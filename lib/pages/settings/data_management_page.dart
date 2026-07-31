@@ -50,6 +50,7 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
         title: l10n.dataManagementPageTitle,
         showBack: true,
         bottomOpaque: true,
+        blur: false,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(

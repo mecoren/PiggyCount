@@ -27,6 +27,7 @@ class ShortcutsGuidePage extends ConsumerWidget {
         title: l10n.shortcutsGuide,
         showBack: true,
         bottomOpaque: true,
+        blur: false,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(

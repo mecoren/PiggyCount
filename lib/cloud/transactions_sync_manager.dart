@@ -275,8 +275,11 @@ class TransactionsSyncManager implements SyncService {
   ///   secure storage 密钥）：调用 [EncryptionService.decrypt] 解密后返回。
   ///   这保证了 disable 契约——关闭加密只停止新上传加密，存量密文仍可用原密钥
   ///   恢复，用户不会在关闭加密后丢失云端备份访问。
-  /// - 密文但本地无可用密钥（reset 后密钥清空、未注入加密服务、或密钥与密文
-  ///   不匹配）：返回 null，由调用方跳过导入/恢复，避免 jsonDecode 崩溃。
+  /// - 密文但本地无可用密钥（reset 后密钥清空、从未开启加密、或未注入加密服务）：
+  ///   抛 [CloudEncryptedLocallyDisabledException]，由调用方/UI 引导用户走
+  ///   「开启加密 → enableFromCloud」流程恢复，而非静默跳过让用户误以为云端无数据
+  ///   （BUG-2 残留修复）。
+  /// - 密钥存在但解密失败（salt 错配等）：返回 null，由调用方跳过，避免 jsonDecode 崩溃。
   ///
   /// 取代原 [_isUnreadableCiphertext]：原实现仅以 `isEnabled` 判断，会把
   /// 「disable 后密钥仍保留」的场景也判为不可读，导致关闭加密后无法再从云端
@@ -286,8 +289,15 @@ class TransactionsSyncManager implements SyncService {
     // 内容是密文：若加密服务可用且已开启，_provider 应已被装饰，
     // download 返回的是解密后的明文，不会走到这里。
     // 走到这里说明 provider 未装饰（加密未开启），需手动判断本地是否仍有密钥。
-    if (encryptionService == null) return null;
-    if (!await encryptionService!.hasActiveKey) return null;
+    if (encryptionService == null || !await encryptionService!.hasActiveKey) {
+      // BUG-2 残留修复：云端为密文但本地未开启加密（或 reset 后无密钥）。
+      // 旧实现静默返回 null 会让用户误以为云端无数据；此处抛专属异常，
+      // 由 [downloadAndRestoreToCurrentLedger] / UI 引导用户开启加密恢复。
+      throw CloudEncryptedLocallyDisabledException(
+        '云端备份为加密密文，但本设备未开启加密或密钥已清空，'
+        '请开启加密（使用原密码）以恢复云端数据',
+      );
+    }
     try {
       return await encryptionService!.decrypt(raw);
     } on Exception catch (e) {
@@ -295,6 +305,49 @@ class TransactionsSyncManager implements SyncService {
       // 本地确实无法解密，视为不可读，避免崩溃。
       logger.warning('CloudSync', '本地密钥存在但密文解密失败，跳过: $e');
       return null;
+    }
+  }
+
+  /// BUG-2 残留修复：探测"云端为密文但本地未开启加密"的 split-brain 子场景，
+  /// 返回引导用哨兵 [SyncStatus]；非此场景返回 null，调用方继续正常流程。
+  ///
+  /// 设备 B 从未开启加密（或 reset 清空密钥）时，provider 未被装饰，
+  /// 云端 BEECRYPT1: 密文无法被 [fcs.CloudSyncManager.getStatus] 正常解析
+  /// （JSON 解码报错），旧实现走通用 catch 显示原始异常文本，用户误以为云端无数据。
+  /// 本方法主动探测此场景，返回哨兵 'cloud_encrypted_locally_disabled' 供 UI 识别，
+  /// 弹密码对话框走 [EncryptionService.enableFromCloud] 恢复。
+  Future<SyncStatus?> _cloudEncryptedLocallyDisabledStatus(int ledgerId) async {
+    if (!await _isCloudCiphertextLocallyDisabled(ledgerId)) return null;
+    logger.warning(
+        'CloudSync', '云端为密文但本地未开启加密，需引导用户开启加密: $ledgerId');
+    return SyncStatus(
+      diff: SyncDiff.error,
+      localCount: 0,
+      localFingerprint: '',
+      message: 'cloud_encrypted_locally_disabled',
+    );
+  }
+
+  /// 判断是否处于"云端为密文但本地未开启加密"状态。
+  ///
+  /// 判定条件（全部满足才返回 true）：
+  /// - 加密服务已注入；且
+  /// - 加密未开启（provider 未装饰，密文不会被自动解密）；且
+  /// - 本地无可用密钥（排除 disable 后密钥仍保留可手动解密的场景）；且
+  /// - 云端内容确为 BEECRYPT1 密文
+  Future<bool> _isCloudCiphertextLocallyDisabled(int ledgerId) async {
+    if (encryptionService == null) return false;
+    if (await encryptionService!.isEnabled) return false;
+    if (await encryptionService!.hasActiveKey) return false;
+    // 本地无可用密钥：探测云端内容是否为密文
+    final raw = _rawStorage;
+    if (raw == null) return false;
+    try {
+      final content = await raw.download(path: _pathForLedger(ledgerId));
+      return content != null && CiphertextFormat.isEncrypted(content);
+    } catch (e) {
+      logger.warning('CloudSync', 'BUG-2 探测下载失败，跳过: $ledgerId', e);
+      return false;
     }
   }
 
@@ -446,6 +499,12 @@ class TransactionsSyncManager implements SyncService {
         inserted: result.inserted,
         deletedDup: deletedDup.$1,
       );
+    } on CloudEncryptedLocallyDisabledException {
+      // BUG-2 残留修复：云端为密文但本地未开启加密（已在 _decryptIfNeeded 抛出）。
+      // 不视为下载失败（不打 error 堆栈），向上抛出由 UI 引导用户开启加密。
+      logger.warning(
+          'CloudSync', '云端为密文但本地未开启加密，需引导用户开启加密: $ledgerId');
+      rethrow;
     } catch (e, stack) {
       logger.error('CloudSync', '下载失败: $ledgerId', e);
       logger.error('CloudSync', '堆栈', stack);
@@ -616,6 +675,13 @@ class TransactionsSyncManager implements SyncService {
           return st;
         }
       }
+
+      // BUG-2 残留修复：本地未开启加密且无密钥时，先探测云端是否为密文。
+      // 若是，直接返回哨兵 'cloud_encrypted_locally_disabled' 引导用户开启加密，
+      // 避免 manager.getStatus 把密文当 JSON 解析报错（用户误以为云端无数据/看到原始异常）。
+      // 探测仅在「加密未开启 + 无密钥」这一 inherently broken 状态下触发，正常状态立即返回 null。
+      final disabledStatus = await _cloudEncryptedLocallyDisabledStatus(ledgerId);
+      if (disabledStatus != null) return disabledStatus;
 
       logger.info('CloudSync', '获取同步状态: $ledgerId');
 

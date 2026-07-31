@@ -57,6 +57,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
         title: widget.title,
         showBack: true,
         bottomOpaque: true,
+        blur: false,
       ),
       body: Column(
         children: [

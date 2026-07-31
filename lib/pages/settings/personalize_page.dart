@@ -22,12 +22,15 @@ class _PersonalizePageState extends ConsumerState<PersonalizePage> {
     final l10n = AppLocalizations.of(context);
 
     final options = <_ThemeOption>[
+      // 前三为默认推荐色：小猪粉（默认）/ 晴空蓝 / 渐变蓝
+      _ThemeOption(l10n.personalizeThemePiggyPink, const Color(0xFFFF5C8D)),
+      _ThemeOption(l10n.personalizeThemeBlue, const Color(0xFF2196F3)),
+      _ThemeOption(l10n.personalizeThemeGradientBlue, const Color(0xFF2563EB)),
       _ThemeOption(l10n.personalizeThemeHoney, const Color(0xFFF8C91C)),
       _ThemeOption(l10n.personalizeThemeOrange, const Color(0xFFFF7043)),
       _ThemeOption(l10n.personalizeThemeGreen, const Color(0xFF26A69A)),
       _ThemeOption(l10n.personalizeThemePurple, const Color(0xFF7E57C2)),
       _ThemeOption(l10n.personalizeThemePink, const Color(0xFFE91E63)),
-      _ThemeOption(l10n.personalizeThemeBlue, const Color(0xFF2196F3)),
       _ThemeOption(l10n.personalizeThemeMint, const Color(0xFF80CBC4)),
       _ThemeOption(l10n.personalizeThemeSand, const Color(0xFFFFCC80)),
       _ThemeOption(l10n.personalizeThemeLavender, const Color(0xFFB39DDB)),
@@ -59,6 +62,7 @@ class _PersonalizePageState extends ConsumerState<PersonalizePage> {
         title: AppLocalizations.of(context)!.personalizeTitle,
         showBack: true,
         bottomOpaque: true,
+        blur: false,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(

@@ -222,12 +222,16 @@ class StartupSyncChecker {
     for (final ledger in ledgers) {
       try {
         final status = await deps.getStatus(ledger.id);
-        // 缺口 1: salt 不匹配是全局问题（影响所有账本），
-        // 首次检测到时弹密码对话框引导用户重输密码，激活后重新检查。
-        // isRetry 防止无限递归（用户再次输入错误密码时不再弹窗）。
-        if (status.message == 'salt_mismatch_need_password' && !isRetry) {
-          deps.log('StartupSyncChecker: 账本 ${ledger.name} salt 不匹配，'
-              '引导用户重新输入密码');
+        // 加密哨兵是全局问题（影响所有账本），首次检测到时弹密码对话框引导用户
+        // 重输密码/开启加密，激活后重新检查。isRetry 防止无限递归（用户再次输入
+        // 错误密码时不再弹窗）。两类哨兵均走 handleSaltMismatch（即 promptPasswordAndActivate）：
+        // - salt_mismatch_need_password：已开启加密但密钥 salt 与云端密文不匹配
+        // - cloud_encrypted_locally_disabled：从未开启加密/reset 后无密钥，云端为密文（BUG-2 残留）
+        if ((status.message == 'salt_mismatch_need_password' ||
+                status.message == 'cloud_encrypted_locally_disabled') &&
+            !isRetry) {
+          deps.log('StartupSyncChecker: 账本 ${ledger.name} 加密状态异常'
+              '（${status.message}），引导用户恢复密钥');
           controller.dismiss();
           await Future.delayed(Duration.zero); // 让 overlay 消失
           final activated = await deps.handleSaltMismatch();
@@ -390,6 +394,18 @@ class StartupSyncChecker {
           // 恢复 overlay 继续剩余账本
           controller.startApplying(candidates.length);
         }
+      } on CloudEncryptedLocallyDisabledException {
+        // BUG-2 残留：云端为密文但本地未开启加密，同样走密钥恢复流程
+        controller.dismiss();
+        await Future.delayed(Duration.zero); // 让 overlay 消失
+        final activated = await deps.handleSaltMismatch();
+        failCount++;
+        deps.log('StartupSyncChecker: 账本 ${c.ledger.name} 云端密文但本地未开启加密'
+            '${activated ? "（已激活，请重新检查）" : "（用户取消）"}');
+        if (activated) {
+          // 恢复 overlay 继续剩余账本
+          controller.startApplying(candidates.length);
+        }
       } catch (e) {
         failCount++;
         deps.log('StartupSyncChecker: 账本 ${c.ledger.name} applyAll 失败: $e');
@@ -470,6 +486,17 @@ class StartupSyncChecker {
               _formatErrorMessage(c.ledger.name, 'salt 不匹配（用户取消）'));
         }
         deps.log('StartupSyncChecker: 账本 ${c.ledger.name} salt 不匹配'
+            '${activated ? "（已激活）" : "（用户取消）"}');
+      } on CloudEncryptedLocallyDisabledException {
+        // BUG-2 残留：云端为密文但本地未开启加密，同样走密钥恢复流程
+        final activated = await deps.handleSaltMismatch();
+        if (activated) {
+          deps.showLegacyInfo('账本「${c.ledger.name}」密钥已激活，请重新检查同步');
+        } else {
+          deps.showLegacyError(_formatErrorMessage(
+              c.ledger.name, '云端已加密但本设备未开启加密（用户取消）'));
+        }
+        deps.log('StartupSyncChecker: 账本 ${c.ledger.name} 云端密文但本地未开启加密'
             '${activated ? "（已激活）" : "（用户取消）"}');
       } catch (e) {
         deps.showLegacyError(_formatErrorMessage(c.ledger.name, e));

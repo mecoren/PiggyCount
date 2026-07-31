@@ -158,9 +158,8 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
       final result = await providerInstance.uploadMyAvatar(
         bytes: bytes,
         fileName: name,
-        mimeType: name.toLowerCase().endsWith('.png')
-            ? 'image/png'
-            : 'image/jpeg',
+        mimeType:
+            name.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg',
       );
       // 上传成功后把本地 remoteVersion 立刻推到 server 的新版本，避免下一次
       // bootstrap 再触发一次重新下载自己刚传的头像。
@@ -249,8 +248,19 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
     final displayName = ref.watch(displayNameProvider);
     final l10n = AppLocalizations.of(context);
     final greeting = _greeting(l10n);
+
+    // 头部皮肤：亮暗通用同一款(暗色由皮肤内部渲染成纯黑底 + 偏淡主题色图形)。
+    // 'none' → null = 纯主题色 / 纯黑。
+    final skin = headerSkinById(ref.watch(headerSkinProvider));
+    final isDark = PiggyTokens.isDark(context);
+    final primary = Theme.of(context).colorScheme.primary;
+    // 全宽主题色头部：背景固定使用主题色，皮肤层作为装饰叠加在其上。
+    final headerBg = primary;
+    final headerForeground = Colors.white;
+    final statusBarHeight = MediaQuery.of(context).padding.top;
+
     final nameStyle = Theme.of(context).textTheme.titleMedium?.copyWith(
-          color: PiggyTokens.textPrimary(context),
+          color: headerForeground,
           fontWeight: FontWeight.w600,
         );
     // 已设置=「问候,昵称」(与 web 一致),未设置=Slogan。
@@ -265,39 +275,30 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
 
     // 统计信息文字颜色
     final labelStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: PiggyTokens.textSecondary(context),
+          color: headerForeground.withValues(alpha: 0.85),
         );
     final numStyle = PiggyTextTokens.strongTitle(context)
-        .copyWith(fontSize: 20, color: PiggyTokens.textPrimary(context));
-
-    // 头部皮肤：亮暗通用同一款(暗色由皮肤内部渲染成纯黑底 + 偏淡主题色图形)。
-    // 'none' → null = 纯主题色 / 纯黑。
-    final skin = headerSkinById(ref.watch(headerSkinProvider));
-    final isDark = PiggyTokens.isDark(context);
-    final primary = Theme.of(context).colorScheme.primary;
-    // ProfileCard 背景色：与 SettingsCard 一致（亮色=白 / 暗色=#1C1C1E），
-    // 让顶部大卡片与下方设置卡片视觉统一；选中头部皮肤时皮肤层仍覆盖在背景之上。
-    final cardBg = PiggyTokens.surface(context);
+        .copyWith(fontSize: 20, color: headerForeground);
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
+      borderRadius: BorderRadius.zero,
       child: Container(
         decoration: BoxDecoration(
-          color: cardBg,
-          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
+          color: headerBg,
+          borderRadius: BorderRadius.zero,
         ),
         child: Stack(
           children: [
-            // 头部皮肤装饰层（主题色底之上的图形层）；未选皮肤时为纯主题色 / 纯黑
+            // 头部皮肤装饰层（叠加在主题色底之上的图形层）
             if (skin != null)
               Positioned.fill(child: skin.builder(primary, isDark)),
             // 主内容
             Padding(
               padding: EdgeInsets.fromLTRB(
                 16.0.scaled(context, ref),
-                20.0.scaled(context, ref),
+                statusBarHeight + 12.0.scaled(context, ref),
                 16.0.scaled(context, ref),
-                16.0.scaled(context, ref),
+                24.0.scaled(context, ref),
               ),
               child: Column(
                 children: [
@@ -311,15 +312,9 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
                           height: 80.0.scaled(context, ref),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withValues(alpha: 0.1),
+                            color: headerForeground.withValues(alpha: 0.15),
                             border: Border.all(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .primary
-                                  .withValues(alpha: 0.3),
+                              color: headerForeground.withValues(alpha: 0.4),
                               width: 2,
                             ),
                           ),
@@ -331,8 +326,7 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
                                       height: 20.0.scaled(context, ref),
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        color:
-                                            Theme.of(context).colorScheme.primary,
+                                        color: headerForeground,
                                       ),
                                     ),
                                   )
@@ -344,7 +338,8 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
                                         key: ValueKey(effectiveAvatarPath),
                                         File(effectiveAvatarPath),
                                         fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) {
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
                                           return PiggyIcon(
                                             size: 40.0.scaled(context, ref),
                                           );
@@ -362,14 +357,14 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
                             width: 24.0.scaled(context, ref),
                             height: 24.0.scaled(context, ref),
                             decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primary,
+                              color: headerForeground,
                               shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
+                              border: Border.all(color: headerBg, width: 2),
                             ),
                             child: Icon(
                               Icons.edit,
                               size: 12.0.scaled(context, ref),
-                              color: Colors.white,
+                              color: headerBg,
                             ),
                           ),
                         ),
@@ -387,7 +382,7 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
                       if (displayName.isNotEmpty) ...[
                         Icon(greeting.icon,
                             size: 18.0.scaled(context, ref),
-                            color: greeting.color),
+                            color: headerForeground),
                         SizedBox(width: 6.0.scaled(context, ref)),
                       ],
                       Flexible(
@@ -413,7 +408,7 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
                               ? Icons.visibility_off_outlined
                               : Icons.visibility_outlined,
                           size: 18,
-                          color: PiggyTokens.textPrimary(context),
+                          color: headerForeground,
                         ),
                       ),
                     ],
@@ -442,14 +437,15 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
                       ),
                       Expanded(
                         child: _StatCell(
-                          label: AppLocalizations.of(context).mineCurrentBalance,
+                          label:
+                              AppLocalizations.of(context).mineCurrentBalance,
                           value: balance,
                           isAmount: true,
                           currencyCode: currencyCode,
                           labelStyle: labelStyle,
                           numStyle: numStyle.copyWith(
                             color: balance >= 0
-                                ? PiggyTokens.textPrimary(context)
+                                ? headerForeground
                                 : PiggyTokens.error(context),
                           ),
                           centered: true,

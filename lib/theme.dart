@@ -138,4 +138,26 @@ class PiggyTheme {
       textTheme: adjusted,
     );
   }
+
+  /// 统一开关主题（亮/暗共用），参照 wait-home switchTheme：
+  /// 无描边、选中纯色轨道、白色 thumb。
+  /// 使用 [shrinkWrap] 缩小触控尺寸，让开关更紧凑（用户要求「不要现在这么大」）。
+  /// [primary] 由 main.dart 动态主题色注入，保证开关跟随用户选色。
+  static SwitchThemeData switchThemeData(Color primary, {required bool isDark}) {
+    final trackBase = isDark
+        ? Colors.white.withValues(alpha: 0.35)
+        : Colors.black.withValues(alpha: 0.3);
+    return SwitchThemeData(
+      thumbColor: WidgetStateProperty.all(Colors.white),
+      trackColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return primary;
+        }
+        return trackBase;
+      }),
+      trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+      trackOutlineWidth: WidgetStateProperty.all(0),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+  }
 }

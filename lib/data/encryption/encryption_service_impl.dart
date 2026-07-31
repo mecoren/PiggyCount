@@ -34,9 +34,6 @@ class EncryptionServiceImpl implements EncryptionService {
   static const String _enabledKey = 'piggycount_enc_enabled';
   static const String _verifierPlaintext = 'BEECOUNT_VERIFIER_v1';
 
-  /// NIST SP 800-63B 推荐密码最小长度 ≥ 8
-  static const int _minPasswordLength = 8;
-
   final SecureKeyStorage storage;
   final Argon2KeyDerivation keyDerivation;
   final AesGcmCipher cipher;
@@ -539,9 +536,9 @@ class EncryptionServiceImpl implements EncryptionService {
     if (password.isEmpty) {
       throw ArgumentError('密码不能为空');
     }
-    if (password.length < _minPasswordLength) {
+    if (password.length < EncryptionService.minPasswordLength) {
       throw ArgumentError(
-        '密码长度不能少于 $_minPasswordLength 字符',
+        '密码长度不能少于 ${EncryptionService.minPasswordLength} 字符',
       );
     }
   }

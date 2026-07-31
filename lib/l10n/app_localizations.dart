@@ -5476,6 +5476,18 @@ abstract class AppLocalizations {
   /// **'Lime Green'**
   String get personalizeThemeLime;
 
+  /// No description provided for @personalizeThemePiggyPink.
+  ///
+  /// In en, this message translates to:
+  /// **'Piggy Pink'**
+  String get personalizeThemePiggyPink;
+
+  /// No description provided for @personalizeThemeGradientBlue.
+  ///
+  /// In en, this message translates to:
+  /// **'Gradient Blue'**
+  String get personalizeThemeGradientBlue;
+
   /// No description provided for @analyticsMonthlyAvg.
   ///
   /// In en, this message translates to:
@@ -14418,6 +14430,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cloud backup key doesn\'t match local. Tap to re-enter password.'**
   String get saltMismatchNeedPasswordHint;
+
+  /// No description provided for @cloudEncryptedLocallyDisabledHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud backup is encrypted but local encryption is disabled. Tap to enable encryption and restore data.'**
+  String get cloudEncryptedLocallyDisabledHint;
 
   /// No description provided for @saltMismatchDialogTitle.
   ///

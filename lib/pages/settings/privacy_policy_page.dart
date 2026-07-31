@@ -113,6 +113,7 @@ class _PrivacyPolicyPageState extends ConsumerState<PrivacyPolicyPage> {
           title: l10n.aboutPrivacyPolicy,
           showBack: true,
           bottomOpaque: true,
+          blur: false,
         ),
         body: Padding(
           padding:

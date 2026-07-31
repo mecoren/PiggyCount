@@ -57,12 +57,17 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
     await ref.read(syncStatusProvider(ledgerId).future);
   }
 
-  /// SaltMismatch 恢复：弹密码对话框 + 从云端重提取 salt 激活密钥
+  /// 加密恢复：弹密码对话框 + 从云端重提取 salt 激活密钥
   ///
-  /// getStatus 返回 'salt_mismatch_need_password' 哨兵时调用。
+  /// 处理两类加密哨兵，均走 [promptPasswordAndActivate]（弹密码 → enableFromCloud
+  /// → 重建装饰器）恢复：
+  /// - 'salt_mismatch_need_password'：已开启加密但密钥 salt 与云端密文不匹配
+  /// - 'cloud_encrypted_locally_disabled'：从未开启加密/reset 后无密钥，云端为密文
+  ///   （BUG-2 残留修复）
+  ///
   /// 激活成功后清除状态缓存并刷新，让 UI 反映新的同步状态。
   /// 激活失败（取消/密码错误）则不做任何操作。
-  Future<void> _handleSaltMismatch({
+  Future<void> _handleEncryptionRecovery({
     required int ledgerId,
     required SyncService sync,
   }) async {
@@ -242,6 +247,10 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                 localizedMessage = AppLocalizations.of(context)
                                     .saltMismatchNeedPasswordHint;
                                 break;
+                              case 'cloud_encrypted_locally_disabled':
+                                localizedMessage = AppLocalizations.of(context)
+                                    .cloudEncryptedLocallyDisabledHint;
+                                break;
                               default:
                                 localizedMessage = st.message;
                             }
@@ -305,10 +314,14 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                         ? null
                                         : () async {
                                             if (!context.mounted) return;
-                                            // salt_mismatch: 触发密码重输流程而非显示详情
+                                            // 加密哨兵：触发密码重输/开启加密流程而非显示详情
+                                            // - salt_mismatch_need_password：已开启加密但 salt 不匹配
+                                            // - cloud_encrypted_locally_disabled：从未开启加密/reset 后无密钥（BUG-2）
                                             if (st.message ==
-                                                'salt_mismatch_need_password') {
-                                              await _handleSaltMismatch(
+                                                    'salt_mismatch_need_password' ||
+                                                st.message ==
+                                                    'cloud_encrypted_locally_disabled') {
+                                              await _handleEncryptionRecovery(
                                                 ledgerId: ledgerId,
                                                 sync: sync,
                                               );
@@ -823,28 +836,18 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                           // salt 不匹配：弹密码对话框引导用户重新输入密码
                                           // 激活成功后刷新状态，用户可再次点击下载重试
                                           if (!context.mounted) return;
-                                          if (sync
-                                              is! TransactionsSyncManager) {
-                                            return;
-                                          }
-                                          final encryptionService = ref.read(
-                                              encryptionServiceProvider);
-                                          final activated =
-                                              await promptPasswordAndActivate(
-                                            context,
-                                            ref,
-                                            service: encryptionService,
-                                            syncManager: sync,
+                                          await _handleEncryptionRecovery(
+                                            ledgerId: ledgerId,
+                                            sync: sync,
                                           );
-                                          if (activated && mounted) {
-                                            sync.clearStatusCache(
-                                                ledgerId: ledgerId);
-                                            ref
-                                                .read(
-                                                    syncStatusRefreshProvider
-                                                        .notifier)
-                                                .state++;
-                                          }
+                                        } on CloudEncryptedLocallyDisabledException {
+                                          // BUG-2 残留：云端为密文但本地未开启加密，
+                                          // 引导用户开启加密（enableFromCloud）后可重试下载
+                                          if (!context.mounted) return;
+                                          await _handleEncryptionRecovery(
+                                            ledgerId: ledgerId,
+                                            sync: sync,
+                                          );
                                         } catch (e) {
                                           if (!context.mounted) return;
                                           await AppDialog.error(context,

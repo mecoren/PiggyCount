@@ -336,6 +336,7 @@ class _ConfigImportExportPageState
         title: l10n.configImportExportTitle,
         showBack: true,
         bottomOpaque: true,
+        blur: false,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(

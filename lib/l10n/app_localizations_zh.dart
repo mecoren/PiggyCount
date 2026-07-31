@@ -2896,6 +2896,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get personalizeThemeLime => '柠檬绿';
 
   @override
+  String get personalizeThemePiggyPink => '小猪粉';
+
+  @override
+  String get personalizeThemeGradientBlue => '渐变蓝';
+
+  @override
   String get analyticsMonthlyAvg => '月均';
 
   @override
@@ -7684,6 +7690,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get saltMismatchNeedPasswordHint => '云端备份密钥与本地不匹配，点击重新输入密码';
 
   @override
+  String get cloudEncryptedLocallyDisabledHint =>
+      '云端备份为加密密文，但本设备未开启加密，点击开启加密以恢复数据';
+
+  @override
   String get saltMismatchDialogTitle => '重新输入密码';
 
   @override
@@ -10589,6 +10599,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get personalizeThemeLime => '檸檬綠';
+
+  @override
+  String get personalizeThemePiggyPink => '小豬粉';
+
+  @override
+  String get personalizeThemeGradientBlue => '漸變藍';
 
   @override
   String get analyticsMonthlyAvg => '月均';
@@ -15377,6 +15393,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get saltMismatchNeedPasswordHint => '雲端備份金鑰與本地不匹配，點擊重新輸入密碼';
+
+  @override
+  String get cloudEncryptedLocallyDisabledHint =>
+      '雲端備份為加密密文，但本裝置未開啟加密，點擊開啟加密以恢復資料';
 
   @override
   String get saltMismatchDialogTitle => '重新輸入密碼';

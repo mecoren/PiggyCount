@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/encryption/encryption_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../styles/tokens.dart';
 
@@ -110,7 +111,7 @@ class _PasswordSetupDialogState extends ConsumerState<PasswordSetupDialog> {
     if (_isChangeMode && _oldPwdController.text.isEmpty) {
       return l10n.cloudSyncEncryptOldPasswordLabel;
     }
-    if (_pwdController.text.length < 6) {
+    if (_pwdController.text.length < EncryptionService.minPasswordLength) {
       return l10n.cloudSyncEncryptPasswordTooShort;
     }
     if (_needsConfirm && _pwdController.text != _confirmPwdController.text) {

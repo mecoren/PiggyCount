@@ -5,7 +5,6 @@ import '../../data/repositories/budget_repository.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
 import '../../providers/budget_providers.dart';
-import '../../providers/theme_providers.dart';
 import '../../styles/tokens.dart';
 import '../../utils/currencies.dart';
 import '../../utils/ui_scale_extensions.dart';
@@ -314,12 +313,11 @@ class BudgetPage extends ConsumerWidget {
       child: AppListTile(
         leading: Icons.visibility_outlined,
         title: l10n.budgetShowOnHome,
-        trailing: Switch.adaptive(
+        trailing: Switch(
           value: ref.watch(homeBudgetCardEnabledProvider),
           onChanged: (value) {
             ref.read(homeBudgetCardEnabledProvider.notifier).toggle(value);
           },
-          activeColor: ref.watch(primaryColorProvider),
         ),
         onTap: () {
           final current = ref.read(homeBudgetCardEnabledProvider);

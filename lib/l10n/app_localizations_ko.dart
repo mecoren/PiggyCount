@@ -2909,6 +2909,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get personalizeThemeLime => '라임 그린';
 
   @override
+  String get personalizeThemePiggyPink => '피키 핑크';
+
+  @override
+  String get personalizeThemeGradientBlue => '그라데이션 블루';
+
+  @override
   String get analyticsMonthlyAvg => '월평균';
 
   @override
@@ -7769,6 +7775,10 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get saltMismatchNeedPasswordHint =>
       '클라우드 백업 키가 로컬과 일치하지 않습니다. 비밀번호를 다시 입력하세요.';
+
+  @override
+  String get cloudEncryptedLocallyDisabledHint =>
+      '클라우드 백업이 암호화되어 있지만 로컬 암호화가 비활성화되어 있습니다. 암호화를 활성화하려면 탭하세요.';
 
   @override
   String get saltMismatchDialogTitle => '비밀번호 재입력';

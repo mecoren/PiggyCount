@@ -953,30 +953,33 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
               onCenterLongPressEnd: _onLongPressEnd,
             ),
           ),
-          // 开发模式下的主题切换按钮
+          // 开发模式下的记账按钮（与底部菜单一致配色，仅图标）
           if (kDebugMode)
             Positioned(
               right: 16,
               bottom: 100,
-              child: FloatingActionButton.small(
-                heroTag: 'themeSwitcher',
-                backgroundColor: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white
-                    : Colors.black,
-                onPressed: () {
-                  final current = ref.read(themeModeProvider);
-                  final next = current == ThemeMode.dark
-                      ? ThemeMode.light
-                      : ThemeMode.dark;
-                  ref.read(themeModeProvider.notifier).state = next;
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  // 与底部中间记账按钮 onCenterTap 行为一致
+                  showTransactionFormBottomSheet(
+                    context,
+                    initialKind: 'expense',
+                  );
                 },
-                child: Icon(
-                  Theme.of(context).brightness == Brightness.dark
-                      ? Icons.light_mode
-                      : Icons.dark_mode,
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.black
-                      : Colors.white,
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: PiggyTokens.tabBarBackground(context),
+                    shape: BoxShape.circle,
+                    boxShadow: PiggyTokens.tabBarShadow,
+                  ),
+                  child: Icon(
+                    Icons.add_circle_outline,
+                    size: 24,
+                    color: primaryColor,
+                  ),
                 ),
               ),
             ),

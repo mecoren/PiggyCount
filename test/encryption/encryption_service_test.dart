@@ -40,6 +40,28 @@ void main() {
     );
   });
 
+  group('密码最小长度阈值契约', () {
+    test('EncryptionService.minPasswordLength 为 8（NIST SP 800-63B）', () {
+      // 契约：UI 对话框与服务层共用此常量，前后端阈值必须一致
+      expect(EncryptionService.minPasswordLength, 8);
+    });
+
+    test('enable 拒绝长度 < 8 的密码（抛 ArgumentError）', () async {
+      // 7 字符：对话框旧阈值(<6)放行过，但服务层阈值(8)会抛 ArgumentError
+      expect(
+        () => service.enable(password: '1234567'),
+        throwsA(isA<ArgumentError>()),
+      );
+      expect(await service.isEnabled, isFalse,
+          reason: '密码过短时不应写入任何状态');
+    });
+
+    test('enable 接受长度 == 8 的密码', () async {
+      await service.enable(password: '12345678');
+      expect(await service.isEnabled, isTrue);
+    });
+  });
+
   group('EncryptionServiceImpl.isEnabled', () {
     test('初始状态未开启', () async {
       expect(await service.isEnabled, isFalse);

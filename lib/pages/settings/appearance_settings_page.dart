@@ -75,6 +75,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
         title: l10n.appearanceSettingsPageTitle,
         showBack: true,
         bottomOpaque: true,
+        blur: false,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(

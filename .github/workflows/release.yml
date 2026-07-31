@@ -36,14 +36,14 @@ env:
 
 jobs:
   check-branch:
-    name: Check if main branch
+    name: Check if wait branch
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
     steps:
       - name: Check branch
         run: |
-          if [ "${{ github.ref_name }}" != "main" ]; then
-            echo "❌ Release workflow can only be triggered from main branch"
+          if [ "${{ github.ref_name }}" != "wait" ]; then
+            echo "❌ Release workflow can only be triggered from wait branch"
             echo "Current branch: ${{ github.ref_name }}"
             exit 1
           fi

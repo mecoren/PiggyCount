@@ -327,34 +327,29 @@ class _RecurringTransactionCard extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    // 开关
-                    Transform.scale(
-                      scale: 0.65,
-                      alignment: Alignment.centerRight,
-                      child: Switch(
-                        value: recurring.enabled,
-                        onChanged: (value) async {
-                          print(
-                              '🔧 [周期记账] 开关点击: id=${recurring.id}, newValue=$value, repo类型=${repo.runtimeType}');
+                    // 开关：样式由主题级 switchTheme 统一控制（紧凑、无描边）
+                    Switch(
+                      value: recurring.enabled,
+                      onChanged: (value) async {
+                        print(
+                            '🔧 [周期记账] 开关点击: id=${recurring.id}, newValue=$value, repo类型=${repo.runtimeType}');
 
-                          try {
-                            await repo.toggleRecurringTransaction(
-                                recurring.id, value);
-                            print('✅ [周期记账] toggleRecurringTransaction 完成');
+                        try {
+                          await repo.toggleRecurringTransaction(
+                              recurring.id, value);
+                          print('✅ [周期记账] toggleRecurringTransaction 完成');
 
-                            // 给Realtime一点时间触发更新
-                            await Future.delayed(
-                                const Duration(milliseconds: 100));
+                          // 给Realtime一点时间触发更新
+                          await Future.delayed(
+                              const Duration(milliseconds: 100));
 
-                            ref.invalidate(allRecurringTransactionsProvider);
-                            print('✅ [周期记账] Provider已invalidate');
-                          } catch (e, stackTrace) {
-                            print('❌ [周期记账] 切换失败: $e');
-                            print('堆栈: $stackTrace');
-                          }
-                        },
-                        activeColor: primaryColor,
-                      ),
+                          ref.invalidate(allRecurringTransactionsProvider);
+                          print('✅ [周期记账] Provider已invalidate');
+                        } catch (e, stackTrace) {
+                          print('❌ [周期记账] 切换失败: $e');
+                          print('堆栈: $stackTrace');
+                        }
+                      },
                     ),
                   ],
                 ),

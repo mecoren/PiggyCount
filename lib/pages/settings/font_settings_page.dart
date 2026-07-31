@@ -32,6 +32,7 @@ class FontSettingsPage extends ConsumerWidget {
         title: AppLocalizations.of(context)!.mineDisplayScale,
         showBack: true,
         bottomOpaque: true,
+        blur: false,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(

@@ -2988,6 +2988,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personalizeThemeLime => 'Lime Green';
 
   @override
+  String get personalizeThemePiggyPink => 'Piggy Pink';
+
+  @override
+  String get personalizeThemeGradientBlue => 'Gradient Blue';
+
+  @override
   String get analyticsMonthlyAvg => 'Monthly Avg';
 
   @override
@@ -7989,6 +7995,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get saltMismatchNeedPasswordHint =>
       'Cloud backup key doesn\'t match local. Tap to re-enter password.';
+
+  @override
+  String get cloudEncryptedLocallyDisabledHint =>
+      'Cloud backup is encrypted but local encryption is disabled. Tap to enable encryption and restore data.';
 
   @override
   String get saltMismatchDialogTitle => 'Re-enter Password';

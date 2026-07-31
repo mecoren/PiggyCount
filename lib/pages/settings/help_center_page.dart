@@ -171,6 +171,7 @@ class _HelpCenterPageState extends ConsumerState<HelpCenterPage> {
           title: widget.title ?? l10n.mineHelp,
           showBack: true,
           bottomOpaque: true,
+          blur: false,
           actions: [
             IconButton(
               icon: Icon(Icons.open_in_browser,

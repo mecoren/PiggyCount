@@ -44,8 +44,10 @@ final themeModeInitProvider = FutureProvider<void>((ref) async {
 });
 
 // 可变主色（个性化换装使用）
-// 默认值：晴空蓝（与 personalize_page.dart 中 personalizeThemeBlue 选项一致）
-final primaryColorProvider = StateProvider<Color>((ref) => const Color(0xFF2196F3));
+// 默认值：小猪粉（与 personalize_page.dart 中 personalizeThemePiggyPink 选项一致，
+// 列表第一位）。老用户已在 prefs 存过 primaryColor 的，由 primaryColorInitProvider
+// 覆盖为本机选择；未存过的新用户走此默认。
+final primaryColorProvider = StateProvider<Color>((ref) => const Color(0xFFFF5C8D));
 
 // 是否隐藏金额显示
 final hideAmountsProvider = StateProvider<bool>((ref) => false);

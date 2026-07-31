@@ -10,6 +10,12 @@ import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 /// - 修改密码/验证密码时需用户输入密码，派生临时密钥后与 verifier 校验
 /// - encrypt/decrypt 自动识别明文/密文，支持向后兼容
 abstract class EncryptionService {
+  /// 密码最小长度（NIST SP 800-63B 推荐 ≥ 8）
+  ///
+  /// UI 层（密码对话框）与服务层（enable/changePassword）必须共用此常量，
+  /// 避免前后端阈值不一致导致「对话框放行但服务层抛 ArgumentError」的体验缺陷。
+  static const int minPasswordLength = 8;
+
   /// 重加密云端所有账本备份
   ///
   /// 用于「开启加密后立即全量重加密」场景：
@@ -40,7 +46,7 @@ abstract class EncryptionService {
   /// 4. 持久化密钥 + 校验块到 secure storage
   /// 5. 标记加密已开启
   ///
-  /// 抛出 [ArgumentError] 当密码为空或过短（< 6 字符）
+  /// 抛出 [ArgumentError] 当密码为空或过短（< [minPasswordLength] 字符）
   ///
   /// 注意：本方法总是生成新 salt，适用于「首设备开启」场景。
   /// 多设备加入（设备 B 输入已有密码加入）请用 [enableFromCloud]，
@@ -215,6 +221,30 @@ class EnableFromCloudCorruptedException implements Exception {
 
   @override
   String toString() => 'EnableFromCloudCorruptedException: $message';
+}
+
+/// 云端为密文但本地未开启加密异常（BUG-2 残留修复）
+///
+/// 多设备 split-brain 子场景：设备 B 从未开启加密（或已 reset 清空密钥），
+/// 拉取云端时发现 `BEECRYPT1:` 密文，但本地无可用密钥解密。此时 provider 未被
+/// [EncryptedCloudProvider] 装饰（装饰前提是 `isEnabled==true`），密文不会被
+/// [EncryptionService.decrypt] 处理，因而**永不触发** [SaltMismatchException] 哨兵，
+/// 旧实现会静默跳过让用户误以为云端无数据。
+///
+/// 与 [SaltMismatchException] 的区别：
+/// - [SaltMismatchException]：已开启加密但密钥 salt 与密文不匹配（密钥过期/密码错）
+/// - 本异常：根本未开启加密 / 无密钥，需引导用户走「开启加密 → enableFromCloud」流程
+///
+/// UI 层应 catch 本异常（或识别哨兵 message `cloud_encrypted_locally_disabled`），
+/// 调用 `promptPasswordAndActivate` 引导用户输入原密码从云端提取 salt 激活密钥。
+class CloudEncryptedLocallyDisabledException implements Exception {
+  final String message;
+  final Object? cause;
+
+  const CloudEncryptedLocallyDisabledException(this.message, {this.cause});
+
+  @override
+  String toString() => 'CloudEncryptedLocallyDisabledException: $message';
 }
 
 /// 加密未配置异常

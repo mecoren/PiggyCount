@@ -563,6 +563,7 @@ class MainApp extends ConsumerWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
         margin: EdgeInsets.zero,
       ),
+      switchTheme: PiggyTheme.switchThemeData(primary, isDark: false),
     );
     // Clamp 系统字体缩放，避免部分设备设置 1.5+ 造成 UI 溢出
     final media = MediaQuery.of(context);
@@ -586,6 +587,7 @@ class MainApp extends ConsumerWidget {
         darkTheme: PiggyTheme.darkTheme(platform: platform).copyWith(
           colorScheme: PiggyTheme.darkTheme(platform: platform).colorScheme.copyWith(primary: primary),
           primaryColor: primary,
+          switchTheme: PiggyTheme.switchThemeData(primary, isDark: true),
         ),                                                // ⭐ 暗黑主题（使用动态主题色）
         themeMode: ref.watch(themeModeProvider),         // ⭐ 使用 provider 支持手动切换
         localizationsDelegates: const [

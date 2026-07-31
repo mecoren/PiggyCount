@@ -22,6 +22,7 @@ class AutomationPage extends ConsumerWidget {
         title: l10n.automationPageTitle,
         showBack: true,
         bottomOpaque: true,
+        blur: false,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(

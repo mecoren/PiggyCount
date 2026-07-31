@@ -92,6 +92,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
         title: l10n.aboutPageTitle,
         showBack: true,
         bottomOpaque: true,
+        blur: false,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(

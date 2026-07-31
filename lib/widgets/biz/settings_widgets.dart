@@ -188,7 +188,8 @@ class SettingsNavItem extends StatelessWidget {
 
 /// 设置开关项
 ///
-/// [SettingsNavItem] 的变体，trailing 固定为 [Switch.adaptive]。
+/// [SettingsNavItem] 的变体，trailing 固定为 [Switch]（Material）。
+/// 开关样式由主题级 switchTheme 统一控制（无描边、紧凑、跟随主色）。
 /// 其余视觉规格与 [SettingsNavItem] 一致。
 class SettingsToggleItem extends StatelessWidget {
   const SettingsToggleItem({
@@ -219,10 +220,11 @@ class SettingsToggleItem extends StatelessWidget {
       onTap: onChanged == null ? null : () => onChanged!(!value),
       useIconBox: useIconBox,
       accentColor: accentColor,
-      trailing: Switch.adaptive(
+      // 用 Material Switch（非 adaptive），由主题级 switchTheme 统一控制样式：
+      // 无描边、选中纯色轨道、白色 thumb、shrinkWrap 紧凑尺寸。
+      trailing: Switch(
         value: value,
         onChanged: onChanged,
-        activeTrackColor: accentColor ?? Theme.of(context).colorScheme.primary,
       ),
     );
   }
