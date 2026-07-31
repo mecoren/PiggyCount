@@ -677,7 +677,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 children: [
                   // 头部 - 左: PiggyIcon + 账本切换, 右: 操作按钮
                   SizedBox(
-                    height: 48,
+                    height: 56,
                     child: Row(
                       children: [
                         // 左侧：PiggyIcon + 标题 + 账本切换胶囊（用 Expanded 包住，
@@ -911,10 +911,14 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 12),
                   // 第二行 - 月份显示和统计
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: PiggyDimens.p12),
+                    padding: const EdgeInsets.only(
+                      left: PiggyDimens.p12,
+                      right: PiggyDimens.p12,
+                      bottom: 14,
+                    ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
@@ -1088,13 +1092,14 @@ class _HeaderCenterSummary extends ConsumerWidget {
     final (income, expense) = cachedTotals ?? (0.0, 0.0);
     final balance = income - expense;
 
+    final labelStyle = PiggyTextTokens.label(context);
     final amountStyle = Theme.of(context).textTheme.titleMedium?.copyWith(
               color: Theme.of(context).textTheme.bodyLarge?.color,
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: FontWeight.w600,
             ) ??
         TextStyle(
-          fontSize: 16,
+          fontSize: 15,
           fontWeight: FontWeight.w600,
           color: Theme.of(context).textTheme.bodyLarge?.color,
         );
@@ -1103,28 +1108,31 @@ class _HeaderCenterSummary extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title,
-                textAlign: TextAlign.left, style: PiggyTextTokens.label(context)),
-            const SizedBox(height: 2),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: AmountText(
-                value: value,
-                signed: false,
-                decimals: 2,
-                style: amountStyle,
+            Text(title, textAlign: TextAlign.left, style: labelStyle),
+            const SizedBox(height: 3),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: AmountText(
+                  value: value,
+                  signed: false,
+                  decimals: 2,
+                  style: amountStyle,
+                ),
               ),
             ),
           ],
         );
+
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Expanded(child: item(AppLocalizations.of(context).homeIncome, income)),
-        const SizedBox(width: 4),
+        const SizedBox(width: 8),
         Expanded(
             child: item(AppLocalizations.of(context).homeExpense, expense)),
-        const SizedBox(width: 4),
+        const SizedBox(width: 8),
         Expanded(
             child: item(AppLocalizations.of(context).homeBalance, balance)),
       ],
