@@ -326,8 +326,8 @@ class _RecurringTransactionCard extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    // 开关：样式由主题级 switchTheme 统一控制（紧凑、无描边）
-                    Switch(
+                    // 开关：PiggySwitcher（参考 wait-home WaitSwitcher 视觉规格）
+                    PiggySwitcher(
                       value: recurring.enabled,
                       onChanged: (value) async {
                         print(

@@ -442,7 +442,7 @@ class PiggyDatabase extends _$PiggyDatabase {
   PiggyDatabase.forTesting(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 31; // v31: 账户隐藏 — accounts.hidden
+  int get schemaVersion => 32; // v32: transactions(ledger_id, happened_at) 复合索引
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1157,12 +1157,28 @@ class PiggyDatabase extends _$PiggyDatabase {
                 'ALTER TABLE accounts ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0;');
             logger.info('DBMigration', 'v31 迁移完成');
           }
+          if (from < 32) {
+            // v32:为最高频查询模式 WHERE ledger_id=? AND happened_at>=? AND
+            // happened_at<? ORDER BY happened_at DESC 加复合索引。SQLite 复合
+            // 索引前缀匹配 + 索引天然有序,同时加速 filter 与 orderBy,消除月度/
+            // 年度/日期范围查询的全表扫描。CREATE INDEX IF NOT EXISTS 幂等。
+            logger.info('DBMigration', '开始迁移到 v32: transactions 复合索引');
+            await customStatement(
+                'CREATE INDEX IF NOT EXISTS idx_transactions_ledger_happened '
+                'ON transactions(ledger_id, happened_at);');
+            logger.info('DBMigration', 'v32 迁移完成');
+          }
         },
         onCreate: (m) async {
           await m.createAll();
           await customStatement(
               'CREATE UNIQUE INDEX IF NOT EXISTS idx_rate_override_pair '
               'ON exchange_rate_overrides (base_currency, quote_currency);');
+          // v32 索引也需在 onCreate 创建:新装 app 和测试内存库走 onCreate
+          // 而非 migration,若不在 onCreate 建索引则新库永远没有该索引。
+          await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_transactions_ledger_happened '
+              'ON transactions(ledger_id, happened_at);');
         },
       );
 

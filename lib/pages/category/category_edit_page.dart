@@ -261,7 +261,7 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
 
                     // 二级分类开关
                     Card(
-                      child: SwitchListTile(
+                      child: PiggySwitchListTile(
                         title: Text(AppLocalizations.of(context)
                             .categorySubCategoryTitle),
                         subtitle: Text(_isSubCategory

@@ -50,6 +50,7 @@ class PiggyTitleBar extends StatelessWidget implements PreferredSizeWidget {
     this.showTitleSection = true,
     this.content,
     this.primary = true,
+    this.topPadding = 0,
     // —— 以下参数为兼容旧 GlassTitleBar API 保留，内部忽略 ——
     @Deprecated('No longer used; PiggyTitleBar is always solid.') this.backgroundColor,
     @Deprecated('No longer used; PiggyTitleBar is always solid.') this.blur = true,
@@ -80,6 +81,11 @@ class PiggyTitleBar extends StatelessWidget implements PreferredSizeWidget {
 
   /// 是否由外部 `AppBar` 处理状态栏避让（沿用 GlassTitleBar 语义）。
   final bool primary;
+
+  /// 标题行顶部额外间距（在 SafeArea 状态栏避让之上再增加呼吸空间）。
+  ///
+  /// 默认 0，页面标题感觉离状态栏过近时可通过此参数微调。
+  final double topPadding;
 
   // —— 兼容字段（忽略）——
   final Color? backgroundColor;
@@ -116,11 +122,14 @@ class PiggyTitleBar extends StatelessWidget implements PreferredSizeWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(
-            height: firstRowHeight,
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-              child: content,
+          Padding(
+            padding: EdgeInsets.only(top: topPadding),
+            child: SizedBox(
+              height: firstRowHeight,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                child: content,
+              ),
             ),
           ),
           if (bottom != null)
@@ -133,11 +142,13 @@ class PiggyTitleBar extends StatelessWidget implements PreferredSizeWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(
-          height: firstRowHeight,
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-            child: Row(
+        Padding(
+          padding: EdgeInsets.only(top: topPadding),
+          child: SizedBox(
+            height: firstRowHeight,
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+              child: Row(
               children: [
                 if (showBack)
                   IconButton(
@@ -211,7 +222,8 @@ class PiggyTitleBar extends StatelessWidget implements PreferredSizeWidget {
             ),
           ),
         ),
-        if (bottom != null) SizedBox(height: bottomHeight, child: bottom),
+      ),
+      if (bottom != null) SizedBox(height: bottomHeight, child: bottom),
       ],
     );
   }

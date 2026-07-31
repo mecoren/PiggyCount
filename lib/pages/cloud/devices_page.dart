@@ -267,7 +267,7 @@ class _DevicesPageState extends ConsumerState<DevicesPage> {
                                       const EdgeInsets.fromLTRB(16, 12, 16, 0),
                                   child: SectionCard(
                                     margin: EdgeInsets.zero,
-                                    child: SwitchListTile.adaptive(
+                                    child: PiggySwitchListTile(
                                       title: Text(l10n
                                           .cloudCollabDevicesViewAllSessions),
                                       subtitle: Text(

@@ -105,7 +105,7 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
       margin: EdgeInsets.zero,
       child: Column(
         children: [
-          SwitchListTile(
+          PiggySwitchListTile(
             value: config.enabled,
             onChanged: (value) async {
               if (value) {

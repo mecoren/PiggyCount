@@ -29,8 +29,9 @@ final countsForLedgerProvider = FutureProvider.family
 final statsRefreshProvider = StateProvider<int>((ref) => 0);
 
 // 统计：全应用的记账天数与总笔数（跨账本聚合）
+// E2:autoDispose —— UI 不可见时释放缓存,避免聚合结果常驻内存
 final lastCountsAllProvider =
-    StateProvider<({int dayCount, int txCount})?>((ref) => null);
+    StateProvider.autoDispose<({int dayCount, int txCount})?>((ref) => null);
 
 final countsAllProvider =
     FutureProvider.autoDispose<({int dayCount, int txCount})>((ref) async {
@@ -65,7 +66,10 @@ final currentBalanceProvider =
 });
 
 // 统计：月度汇总最近值（避免loading闪烁）
-final lastMonthlyTotalsProvider = StateProvider.family<(double income, double expense)?, ({int ledgerId, DateTime month})>((ref, params) => null);
+// E2:autoDispose family —— 切账本/切月后旧 family 实例自动回收
+final lastMonthlyTotalsProvider = StateProvider.autoDispose
+    .family<(double income, double expense)?, ({int ledgerId, DateTime month})>(
+        (ref, params) => null);
 
 // 统计：月度汇总（收入、支出）
 final monthlyTotalsProvider = FutureProvider.family

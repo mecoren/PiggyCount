@@ -626,10 +626,9 @@ class _HomePageState extends ConsumerState<HomePage> {
     // 检测账本切换，强制刷新 StreamBuilder 并清空缓存
     if (_lastLedgerId != null && _lastLedgerId != ledgerId) {
       _streamBuilderKey++;
-      // 清空缓存，避免显示旧账本数据
-      Future.microtask(() {
-        ref.read(cachedTransactionsProvider.notifier).state = null;
-      });
+      // 同步清空缓存:本帧立即读到 null,避免 microtask 延迟导致的 race window
+      // (旧账本 cache 在切换后第一帧被当作 fallback 显示)。
+      ref.read(cachedTransactionsProvider.notifier).state = null;
       logger.info('HomePage',
           '账本切换: $_lastLedgerId → $ledgerId, 刷新StreamBuilder (key=$_streamBuilderKey)');
     }
@@ -1037,14 +1036,15 @@ class _HomePageState extends ConsumerState<HomePage> {
                 return _txStream;
               }(),
               builder: (context, snapshot) {
-                // Stream 数据到来前，使用预加载数据；到来后使用 Stream 数据
+                // Stream 数据到来前，使用预加载数据；到来后使用 Stream 数据。
+                // 用 snapshot.hasData 区分"流已加载(可能为空)"与"流尚未返回",
+                // 避免空列表被当作未加载而回退到启动缓存(删除最后一笔后旧记录残留)。
                 final streamData = snapshot.data;
-                final hasStreamData =
-                    streamData != null && streamData.isNotEmpty;
+                final hasStreamData = snapshot.hasData;
 
                 // 如果 Stream 没数据，从预加载数据构建基础列表
                 final transactions = hasStreamData
-                    ? streamData
+                    ? (streamData ?? const [])
                     : (cachedFullData
                             ?.map((item) => (
                                   t: item.t,

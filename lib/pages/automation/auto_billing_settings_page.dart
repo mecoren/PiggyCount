@@ -314,9 +314,10 @@ class _AndroidAutoBillingPageState extends ConsumerState<AndroidAutoBillingPage>
                 ],
               ),
             ),
-            Switch(
+            PiggySwitcher(
               value: value,
               onChanged: onChanged,
+              activeColor: primaryColor,
             ),
           ],
         ),

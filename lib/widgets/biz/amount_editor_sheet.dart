@@ -22,6 +22,7 @@ import 'account_selector.dart';
 import '../currency/currency_picker_sheet.dart';
 import '../currency/currency_flag.dart';
 import '../ui/toast.dart';
+import '../ui/piggy_switcher.dart';
 import 'tag_chip.dart';
 import '../../pages/attachment/attachment_preview_page.dart';
 
@@ -1265,7 +1266,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
               required bool value,
               required ValueChanged<bool> onChanged,
             }) {
-              return SwitchListTile(
+              return PiggySwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 dense: true,
                 title: Text(

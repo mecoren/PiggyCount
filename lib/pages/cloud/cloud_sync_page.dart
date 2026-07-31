@@ -99,6 +99,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
           title: AppLocalizations.of(context).cloudSyncPageTitle,
           subtitle: AppLocalizations.of(context).cloudSyncPageSubtitle,
           showBack: true,
+          topPadding: 8,
         ),
         body: Padding(
           padding: EdgeInsets.only(
@@ -129,6 +130,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
         title: AppLocalizations.of(context).cloudSyncPageTitle,
         subtitle: AppLocalizations.of(context).cloudSyncPageSubtitle,
         showBack: true,
+        topPadding: 8,
       ),
       body: Padding(
         padding: EdgeInsets.only(
@@ -995,7 +997,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                         return Column(
                                           children: [
                                             PiggyTokens.cardDivider(context),
-                                            SwitchListTile(
+                                            PiggySwitchListTile(
                                               title: Text(
                                                   AppLocalizations.of(context)
                                                       .mineAutoSyncTitle),

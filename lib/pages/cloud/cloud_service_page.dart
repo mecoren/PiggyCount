@@ -2550,7 +2550,7 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
                 Expanded(
                   child: Text(l10n.cloudS3UseSSLLabel),
                 ),
-                Switch(
+                PiggySwitcher(
                   value: useSSL,
                   onChanged: (value) {
                     setState(() {

@@ -60,7 +60,7 @@ class MinePage extends ConsumerWidget {
             child: ListView(
               padding: EdgeInsets.fromLTRB(
                 16,
-                0,
+                PiggyDimens.p12,
                 16,
                 16 + MediaQuery.of(context).padding.bottom + 56 + 12,
               ),

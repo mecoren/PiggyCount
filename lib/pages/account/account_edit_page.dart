@@ -513,7 +513,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                     SizedBox(height: 4.0.scaled(context, ref)),
                     Divider(color: PiggyTokens.divider(context)),
                     // 还款提醒
-                    SwitchListTile(
+                    PiggySwitchListTile(
                       dense: true,
                       contentPadding: EdgeInsets.zero,
                       title: Text(

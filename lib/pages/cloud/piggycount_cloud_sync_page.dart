@@ -145,6 +145,7 @@ class _PiggyCountCloudSyncPageState
           title: l10n.cloudSyncPageTitle,
           subtitle: l10n.cloudSyncPageSubtitle,
           showBack: true,
+          topPadding: 8,
         ),
         body: Padding(
           padding: EdgeInsets.only(
@@ -175,6 +176,7 @@ class _PiggyCountCloudSyncPageState
         title: l10n.cloudSyncPageTitle,
         subtitle: l10n.cloudSyncPageSubtitle,
         showBack: true,
+        topPadding: 8,
       ),
       body: Padding(
         padding: EdgeInsets.only(

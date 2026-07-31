@@ -312,7 +312,7 @@ class BudgetPage extends ConsumerWidget {
       child: AppListTile(
         leading: Icons.visibility_outlined,
         title: l10n.budgetShowOnHome,
-        trailing: Switch(
+        trailing: PiggySwitcher(
           value: ref.watch(homeBudgetCardEnabledProvider),
           onChanged: (value) {
             ref.read(homeBudgetCardEnabledProvider.notifier).toggle(value);

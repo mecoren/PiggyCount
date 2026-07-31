@@ -574,6 +574,14 @@ class LocalTransactionRepository implements TransactionRepository {
 
   @override
   Future<void> deleteTransaction(int id) async {
+    // 先查出 syncId,用于级联清理 transaction_tag_overrides(该表用
+    // transactionSyncId 文本列作主键,不能按 int id 删)。不查则删除后留下孤儿行,
+    // 共享账本 Editor 视角 _hydrateSharedOverridesFull 会挂载幽灵标签。
+    final tx = await (db.select(db.transactions)
+          ..where((t) => t.id.equals(id)))
+        .getSingleOrNull();
+    final syncId = tx?.syncId;
+
     // 先删除关联的标签
     await (db.delete(db.transactionTags)
           ..where((tt) => tt.transactionId.equals(id)))
@@ -581,6 +589,13 @@ class LocalTransactionRepository implements TransactionRepository {
 
     // 再删除关联的附件
     await _deleteAttachmentsForTransaction(id);
+
+    // 级联清理共享标签 override(按 syncId 删)
+    if (syncId != null && syncId.isNotEmpty) {
+      await (db.delete(db.transactionTagOverrides)
+            ..where((o) => o.transactionSyncId.equals(syncId)))
+          .go();
+    }
 
     // 最后删除交易记录
     await (db.delete(db.transactions)..where((t) => t.id.equals(id))).go();
@@ -610,11 +625,21 @@ class LocalTransactionRepository implements TransactionRepository {
             ..where((a) => a.transactionId.equals(transactionId)))
           .go();
 
+      // 一次查所有 fileName 的剩余引用(批量,避免逐个 N+1 SELECT)
+      final stillReferenced = <String>{};
+      if (fileNames.isNotEmpty) {
+        final refs = await (db.select(db.transactionAttachments)
+              ..where((a) => a.fileName.isIn(fileNames.toList())))
+            .get();
+        for (final r in refs) {
+          stillReferenced.add(r.fileName);
+        }
+      }
+
       for (final fileName in fileNames) {
-        final stillRef = await (db.select(db.transactionAttachments)
-              ..where((a) => a.fileName.equals(fileName)))
-            .getSingleOrNull();
-        if (stillRef != null) continue; // 仍有其他行引用,保留物理文件
+        if (stillReferenced.contains(fileName)) {
+          continue; // 仍有其他行引用,保留物理文件
+        }
 
         final file = File('${attachmentDir.path}/$fileName');
         if (await file.exists()) {
@@ -1039,16 +1064,18 @@ class LocalTransactionRepository implements TransactionRepository {
 
     final txIds = transactions.map((t) => t.id).toList();
 
-    // 批量查询分类
+    // 批量查询分类(一次 isIn,避免逐条 N+1)
+    final categoryIds = transactions
+        .where((t) => t.categoryId != null)
+        .map((t) => t.categoryId!)
+        .toSet();
     final categoriesMap = <int, Category>{};
-    for (final tx in transactions) {
-      if (tx.categoryId != null) {
-        final category = await (db.select(db.categories)
-              ..where((c) => c.id.equals(tx.categoryId!)))
-            .getSingleOrNull();
-        if (category != null) {
-          categoriesMap[tx.categoryId!] = category;
-        }
+    if (categoryIds.isNotEmpty) {
+      final categories = await (db.select(db.categories)
+            ..where((c) => c.id.isIn(categoryIds.toList())))
+          .get();
+      for (final category in categories) {
+        categoriesMap[category.id] = category;
       }
     }
 
@@ -1312,6 +1339,75 @@ class LocalTransactionRepository implements TransactionRepository {
         .get();
 
     // 批量获取所有相关的 category, tags, attachments, account
+    // 一次 isIn 查询,避免逐条 N+1(原实现 100 条交易 → 500 次 SELECT)。
+    if (transactions.isEmpty) {
+      return _hydrateSharedOverridesFull(const []);
+    }
+
+    final txIds = transactions.map((t) => t.id).toList();
+
+    // 批量查询分类
+    final categoryIds = transactions
+        .where((t) => t.categoryId != null)
+        .map((t) => t.categoryId!)
+        .toSet();
+    final categoriesMap = <int, Category>{};
+    if (categoryIds.isNotEmpty) {
+      final categories = await (db.select(db.categories)
+            ..where((c) => c.id.isIn(categoryIds.toList())))
+          .get();
+      for (final category in categories) {
+        categoriesMap[category.id] = category;
+      }
+    }
+
+    // 批量查询标签关联 + 标签
+    final tagsMap = <int, List<Tag>>{};
+    final tagRelations = await (db.select(db.transactionTags)
+          ..where((tt) => tt.transactionId.isIn(txIds)))
+        .get();
+    final tagIds = tagRelations.map((r) => r.tagId).toSet();
+    final tagsById = <int, Tag>{};
+    if (tagIds.isNotEmpty) {
+      final tags = await (db.select(db.tags)
+            ..where((t) => t.id.isIn(tagIds.toList())))
+          .get();
+      for (final tag in tags) {
+        tagsById[tag.id] = tag;
+      }
+    }
+    for (final rel in tagRelations) {
+      final tag = tagsById[rel.tagId];
+      if (tag != null) {
+        tagsMap.putIfAbsent(rel.transactionId, () => []).add(tag);
+      }
+    }
+
+    // 批量查询附件
+    final attachmentsMap = <int, List<TransactionAttachment>>{};
+    final attachments = await (db.select(db.transactionAttachments)
+          ..where((a) => a.transactionId.isIn(txIds)))
+        .get();
+    for (final attachment in attachments) {
+      attachmentsMap.putIfAbsent(attachment.transactionId, () => []).add(attachment);
+    }
+
+    // 批量查询账户
+    final accountIds = transactions
+        .where((t) => t.accountId != null)
+        .map((t) => t.accountId!)
+        .toSet();
+    final accountsMap = <int, Account>{};
+    if (accountIds.isNotEmpty) {
+      final accounts = await (db.select(db.accounts)
+            ..where((a) => a.id.isIn(accountIds.toList())))
+          .get();
+      for (final account in accounts) {
+        accountsMap[account.id] = account;
+      }
+    }
+
+    // 组装结果(顺序与 transactions 一致)
     final result = <({
       Transaction t,
       Category? category,
@@ -1319,48 +1415,13 @@ class LocalTransactionRepository implements TransactionRepository {
       List<TransactionAttachment> attachments,
       Account? account,
     })>[];
-
-    for (final transaction in transactions) {
-      // 获取分类
-      Category? category;
-      if (transaction.categoryId != null) {
-        category = await (db.select(db.categories)
-              ..where((c) => c.id.equals(transaction.categoryId!)))
-            .getSingleOrNull();
-      }
-
-      // 获取标签
-      final tagRelations = await (db.select(db.transactionTags)
-            ..where((tt) => tt.transactionId.equals(transaction.id)))
-          .get();
-
-      final tags = <Tag>[];
-      for (final rel in tagRelations) {
-        final tag = await (db.select(db.tags)
-              ..where((t) => t.id.equals(rel.tagId)))
-            .getSingleOrNull();
-        if (tag != null) tags.add(tag);
-      }
-
-      // 获取附件
-      final attachments = await (db.select(db.transactionAttachments)
-            ..where((a) => a.transactionId.equals(transaction.id)))
-          .get();
-
-      // 获取账户
-      Account? account;
-      if (transaction.accountId != null) {
-        account = await (db.select(db.accounts)
-              ..where((a) => a.id.equals(transaction.accountId!)))
-            .getSingleOrNull();
-      }
-
+    for (final tx in transactions) {
       result.add((
-        t: transaction,
-        category: category,
-        tags: tags,
-        attachments: attachments,
-        account: account,
+        t: tx,
+        category: tx.categoryId != null ? categoriesMap[tx.categoryId] : null,
+        tags: tagsMap[tx.id] ?? [],
+        attachments: attachmentsMap[tx.id] ?? [],
+        account: tx.accountId != null ? accountsMap[tx.accountId] : null,
       ));
     }
 
@@ -1497,6 +1558,10 @@ class LocalTransactionRepository implements TransactionRepository {
           .go();
       await (db.delete(db.transactionAttachments)
             ..where((t) => t.transactionId.isIn(txIds)))
+          .go();
+      // 级联清理共享标签 override(按 syncId 批量删,避免孤儿行)
+      await (db.delete(db.transactionTagOverrides)
+            ..where((t) => t.transactionSyncId.isIn(syncIds)))
           .go();
       // 主表 DELETE WHERE IN — 一次 SQL 删 N 条
       final deleted = await (db.delete(db.transactions)

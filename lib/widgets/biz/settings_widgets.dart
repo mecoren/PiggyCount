@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../styles/tokens.dart';
+import '../ui/piggy_switcher.dart';
 
 /// 设置页专用组件集合
 ///
@@ -220,11 +221,12 @@ class SettingsToggleItem extends StatelessWidget {
       onTap: onChanged == null ? null : () => onChanged!(!value),
       useIconBox: useIconBox,
       accentColor: accentColor,
-      // 用 Material Switch（非 adaptive），由主题级 switchTheme 统一控制样式：
-      // 无描边、选中纯色轨道、白色 thumb、shrinkWrap 紧凑尺寸。
-      trailing: Switch(
+      // 使用 PiggySwitcher（参考 wait-home WaitSwitcher 视觉规格）：
+      // 46×26 轨道、16dp 白色描边滑块、无 ripple、跟随主色
+      trailing: PiggySwitcher(
         value: value,
         onChanged: onChanged,
+        activeColor: accentColor,
       ),
     );
   }

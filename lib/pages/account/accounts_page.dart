@@ -1208,9 +1208,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                   // 功能开关
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: SwitchListTile(
+                    child: PiggySwitchListTile(
                       dense: true,
-                      visualDensity: VisualDensity.compact,
                       title: Text(
                         l10n.accountsEnableFeature,
                         style: TextStyle(

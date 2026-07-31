@@ -76,6 +76,11 @@ extension SyncEngineApplyExt on SyncEngine {
         await (db.delete(db.transactionAttachments)
               ..where((ta) => ta.transactionId.equals(existingId!)))
             .go();
+        // 级联清理共享标签 override(按 syncId 删,避免孤儿行导致 Editor
+        // 视角 _hydrateSharedOverridesFull 挂载幽灵标签)
+        await (db.delete(db.transactionTagOverrides)
+              ..where((t) => t.transactionSyncId.equals(syncId)))
+            .go();
         await (db.delete(db.transactions)
               ..where((t) => t.id.equals(existingId!)))
             .go();

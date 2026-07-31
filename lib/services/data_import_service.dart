@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart' as d;
+import 'package:uuid/uuid.dart';
 import '../data/db.dart';
 import '../data/repositories/base_repository.dart';
 import '../data/repositories/transaction_repository.dart' show BatchAttachmentData;
@@ -588,6 +589,10 @@ class DataImportService {
               tx.amount);
 
       // 构建交易记录
+      // E3:导入路径主动生成 syncId,不依赖仓储层兜底。避免 ChangeTracker
+      // 静默跳过 null-syncId 交易(local_repository.dart `if (tx.syncId == null) continue;`),
+      // 导致该笔永远不会被推送到云端,且 SyncEngine 无 transaction backfill 兜底。
+      final effectiveSyncId = tx.syncId ?? const Uuid().v4();
       final txCompanion = TransactionsCompanion.insert(
         ledgerId: ledgerId,
         type: tx.type,
@@ -597,7 +602,7 @@ class DataImportService {
         toAccountId: d.Value(toAccountId),
         happenedAt: d.Value(tx.happenedAt),
         note: d.Value(tx.note),
-        syncId: d.Value(tx.syncId),
+        syncId: d.Value(effectiveSyncId),
         currencyCode: d.Value(txCurrency),
         nativeAmount: d.Value(txNative),
       );
