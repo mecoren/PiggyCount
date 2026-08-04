@@ -122,6 +122,8 @@ flutter:
     - assets/logo.svg
     - assets/piggy.svg
     - assets/logo2.png
+    - assets/logo_216.png
+    - assets/logo_512.png
     - assets/icon/icon_master.png
     - assets/icons/
     - assets/icons/social/
