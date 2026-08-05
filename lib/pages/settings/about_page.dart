@@ -1,7 +1,6 @@
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:piggycount/widgets/biz/piggy_icon.dart';
@@ -15,6 +14,7 @@ import '../../services/system/logger_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/ui_scale_extensions.dart';
 import '../../utils/website_urls.dart';
+import 'app_icon_page.dart';
 import 'help_center_page.dart';
 import 'log_center_page.dart';
 import 'privacy_policy_page.dart';
@@ -82,8 +82,6 @@ class _AboutPageState extends ConsumerState<AboutPage> {
     final locale = Localizations.localeOf(context);
     final isSimplifiedZh =
         locale.languageCode == 'zh' && locale.countryCode != 'TW';
-    // Telegram 群面向国际用户;简体中文(大陆)访问 Telegram 受限,故仅非简体中文显示。
-    final showTelegram = !isSimplifiedZh;
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
@@ -108,7 +106,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
             child: Column(
               children: [
                 PiggyIcon(
-                  size: 80.0.scaled(context, ref),
+                  size: 150.0.scaled(context, ref),
                 ),
                 SizedBox(height: 16.0.scaled(context, ref)),
                 GestureDetector(
@@ -144,53 +142,6 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                       Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: PiggyTokens.textSecondary(context),
                           ),
-                ),
-              ],
-            ),
-          ),
-          // ===== 圆形图标按钮行(真实品牌 logo)=====
-          Padding(
-            padding: EdgeInsets.only(bottom: 20.0.scaled(context, ref)),
-            child: Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 22.0.scaled(context, ref),
-              runSpacing: 14.0.scaled(context, ref),
-              children: [
-                _socialButton(
-                  context,
-                  icon: Icons.language_rounded,
-                  label: l10n.aboutWebsite,
-                  onTap: () =>
-                      _tryOpenUrl(Uri.parse(WebsiteUrls.home(locale))),
-                ),
-                _socialButton(
-                  context,
-                  svgAsset: 'assets/icons/social/github.svg',
-                  label: 'GitHub',
-                  onTap: () => _tryOpenUrl(Uri.parse(
-                      'https://github.com/mecoren/PiggyCount')),
-                ),
-                if (showTelegram)
-                  _socialButton(
-                    context,
-                    svgAsset: 'assets/icons/social/telegram.svg',
-                    label: l10n.aboutTelegram,
-                    onTap: () =>
-                        _tryOpenUrl(Uri.parse('https://t.me/piggycount')),
-                  ),
-                _socialButton(
-                  context,
-                  svgAsset: 'assets/icons/social/xiaohongshu.svg',
-                  label: l10n.aboutXiaohongshu,
-                  onTap: () => _tryOpenUrl(
-                      Uri.parse('https://xhslink.com/m/8K1ekg7EFOq')),
-                ),
-                _socialButton(
-                  context,
-                  svgAsset: 'assets/icons/social/douyin.svg',
-                  label: l10n.aboutDouyin,
-                  onTap: () => _tryOpenUrl(
-                      Uri.parse('https://v.douyin.com/YG7tUweYYyQ/')),
                 ),
               ],
             ),
@@ -236,7 +187,8 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                     title: title,
                     subtitle:
                         showProgress ? downloadProgress.status : subtitle,
-                    trailing: trailing,
+                    trailing: trailing,
+
                     enabled: !(isLoading || showProgress),
                     onTap: (isLoading || showProgress)
                         ? null
@@ -264,9 +216,22 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                   );
                 }),
               SettingsNavItem(
+                icon: Icons.app_shortcut,
+                title: l10n.appName,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AppIconPage(),
+                    ),
+                  );
+                },
+              ),
+              SettingsNavItem(
                 icon: Icons.favorite_border,
                 title: l10n.aboutSupportDevelopment,
-                subtitle: l10n.aboutSupportDevelopmentSubtitle,
+                subtitle: l10n.aboutSupportDevelopmentSubtitle,
+
                 onTap: () async {
                   final lc = locale.languageCode;
                   final docUrl = lc == 'zh'
@@ -276,16 +241,10 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                 },
               ),
               SettingsNavItem(
-                icon: Icons.feedback_outlined,
-                title: l10n.mineFeedback,
-                subtitle: l10n.mineFeedbackSubtitle,
-                onTap: () => _tryOpenUrl(Uri.parse(
-                    'https://github.com/mecoren/PiggyCount/issues')),
-              ),
-              SettingsNavItem(
                 icon: Icons.bug_report_outlined,
                 title: l10n.logCenterTitle,
-                subtitle: l10n.logCenterSubtitle,
+                subtitle: l10n.logCenterSubtitle,
+
                 onTap: () {
                   Navigator.push(
                     context,
@@ -358,54 +317,6 @@ class _AboutPageState extends ConsumerState<AboutPage> {
             ),
           ],
           SizedBox(height: 8.0.scaled(context, ref)),
-        ],
-      ),
-    );
-  }
-
-  /// 圆形图标社媒按钮 — 传 [svgAsset](品牌 logo)或 [icon](通用图标)之一。
-  /// 图标统一用主题色(logo 形状本身已能辨识平台),和 app 整体视觉呼应。
-  Widget _socialButton(
-    BuildContext context, {
-    String? svgAsset,
-    IconData? icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    final tint = ref.watch(primaryColorProvider);
-    final size = 46.0.scaled(context, ref);
-    final glyph = 22.0.scaled(context, ref);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(size / 2),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              color: tint.withValues(alpha: 0.14),
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: svgAsset != null
-                ? SvgPicture.asset(
-                    svgAsset,
-                    width: glyph,
-                    height: glyph,
-                    colorFilter: ColorFilter.mode(tint, BlendMode.srcIn),
-                  )
-                : Icon(icon, color: tint, size: glyph),
-          ),
-          SizedBox(height: 6.0.scaled(context, ref)),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10.5.scaled(context, ref),
-              color: PiggyTokens.textTertiary(context),
-            ),
-          ),
         ],
       ),
     );
