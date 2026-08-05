@@ -856,7 +856,7 @@
   "cloudLocalStorageTitle": "本機儲存",
   "cloudS3AccessKeyHint": "您的 Access Key ID",
   "cloudS3AccessKeyLabel": "Access Key",
-  "cloudS3BucketHint": "piggycount-data",
+  "cloudS3BucketHint": "例如 my-bucket",
   "cloudS3BucketLabel": "儲存桶名稱",
   "cloudS3EndpointHint": "s3.amazonaws.com 或自訂端點",
   "cloudS3EndpointLabel": "端點地址",

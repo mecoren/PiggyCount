@@ -5017,7 +5017,7 @@ abstract class AppLocalizations {
   /// No description provided for @cloudS3BucketHint.
   ///
   /// In en, this message translates to:
-  /// **'piggycount-data'**
+  /// **'e.g. my-bucket'**
   String get cloudS3BucketHint;
 
   /// No description provided for @cloudS3UseSSLLabel.

@@ -10,7 +10,22 @@ class S3StorageService implements CloudStorageService {
   final S3Client client;
   final String bucket;
 
-  S3StorageService(this.client, this.bucket);
+  /// 所有 S3 key 的统一前缀（例如 `'piggycount/'`）。
+  ///
+  /// 业务层用于在共享 bucket 中隔离应用数据：所有 key 会自动前置该前缀，
+  /// [listFiles] 返回值会剥离前缀，使调用方始终看到逻辑路径，避免双前缀。
+  /// 为空时行为与无前缀一致（向后兼容）。
+  final String keyPrefix;
+
+  S3StorageService(this.client, this.bucket, {String keyPrefix = ''})
+      : keyPrefix = _normalizePrefix(keyPrefix);
+
+  /// 规范化前缀：非空时确保以 `/` 结尾，避免 `piggycount` 与 `ledger.json`
+  /// 直接拼接为 `piggycountledger.json`。
+  static String _normalizePrefix(String prefix) {
+    if (prefix.isEmpty) return '';
+    return prefix.endsWith('/') ? prefix : '$prefix/';
+  }
 
   @override
   Future<void> uploadFile(String localPath, String remotePath) async {
@@ -26,7 +41,7 @@ class S3StorageService implements CloudStorageService {
       // 上传到 S3
       await client.putObject(
         bucket: bucket,
-        key: _normalizePath(remotePath),
+        key: _buildKey(remotePath),
         data: bytes,
       );
     } on S3Exception catch (e) {
@@ -42,7 +57,7 @@ class S3StorageService implements CloudStorageService {
       // 从 S3 下载
       final bytes = await client.getObject(
         bucket: bucket,
-        key: _normalizePath(remotePath),
+        key: _buildKey(remotePath),
       );
 
       // 写入本地文件
@@ -63,7 +78,7 @@ class S3StorageService implements CloudStorageService {
     try {
       await client.deleteObject(
         bucket: bucket,
-        key: _normalizePath(remotePath),
+        key: _buildKey(remotePath),
       );
     } on S3Exception catch (e) {
       throw CloudStorageException('Failed to delete file: ${e.message}');
@@ -77,7 +92,7 @@ class S3StorageService implements CloudStorageService {
     try {
       return await client.headObject(
         bucket: bucket,
-        key: _normalizePath(remotePath),
+        key: _buildKey(remotePath),
       );
     } on S3Exception catch (e) {
       throw CloudStorageException('Failed to check file existence: ${e.message}');
@@ -90,11 +105,20 @@ class S3StorageService implements CloudStorageService {
   @override
   Future<List<String>> listFiles(String remotePath) async {
     try {
-      final prefix = _normalizePath(remotePath);
-      return await client.listObjects(
+      final prefix = _buildKey(remotePath);
+      final keys = await client.listObjects(
         bucket: bucket,
         prefix: prefix.isEmpty ? null : prefix,
       );
+      // 剥离 keyPrefix 后返回逻辑路径，调用方拿到的 key 可直接传回
+      // upload/download/delete，由 _buildKey 再次前置前缀，避免双前缀。
+      return keyPrefix.isEmpty
+          ? keys
+          : keys
+              .map((k) => k.startsWith(keyPrefix)
+                  ? k.substring(keyPrefix.length)
+                  : k)
+              .toList();
     } on S3Exception catch (e) {
       throw CloudStorageException('Failed to list files: ${e.message}');
     } catch (e) {
@@ -129,7 +153,7 @@ class S3StorageService implements CloudStorageService {
       // 上传到 S3
       await client.putObject(
         bucket: bucket,
-        key: _normalizePath(path),
+        key: _buildKey(path),
         data: bytes,
       );
     } on S3Exception catch (e) {
@@ -145,7 +169,7 @@ class S3StorageService implements CloudStorageService {
       // 从 S3 下载
       final bytes = await client.getObject(
         bucket: bucket,
-        key: _normalizePath(path),
+        key: _buildKey(path),
       );
 
       // 将字节转为字符串
@@ -197,13 +221,14 @@ class S3StorageService implements CloudStorageService {
     }
   }
 
-  /// 标准化路径：去除开头的斜杠
+  /// 构造实际 S3 key：剥离开头斜杠后前置 [keyPrefix]。
   ///
-  /// S3 的 Key 不应该以 / 开头
-  String _normalizePath(String path) {
-    if (path.startsWith('/')) {
-      return path.substring(1);
+  /// S3 的 Key 不应该以 / 开头；前置前缀实现 bucket 内目录隔离。
+  String _buildKey(String path) {
+    var key = path;
+    if (key.startsWith('/')) {
+      key = key.substring(1);
     }
-    return path;
+    return keyPrefix.isEmpty ? key : '$keyPrefix$key';
   }
 }

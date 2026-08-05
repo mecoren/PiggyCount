@@ -42,6 +42,11 @@ class CloudServiceConfig {
   final bool? s3UseSSL;
   final int? s3Port;
 
+  /// S3 寻址方式：true 强制 path-style（`/bucket/...`），false 使用
+  /// virtual-hosted-style（`bucket.endpoint/...`）。null 时按端点自动推断
+  /// （托管云默认 virtual-hosted，自托管默认 path-style）。
+  final bool? s3ForcePathStyle;
+
   const CloudServiceConfig({
     required this.type,
     required this.name,
@@ -69,6 +74,7 @@ class CloudServiceConfig {
     this.s3Bucket,
     this.s3UseSSL,
     this.s3Port,
+    this.s3ForcePathStyle,
   });
 
   String get id => type.name; // 使用类型作为id
@@ -123,6 +129,7 @@ class CloudServiceConfig {
         's3Bucket': s3Bucket,
         's3UseSSL': s3UseSSL,
         's3Port': s3Port,
+        's3ForcePathStyle': s3ForcePathStyle,
       };
 
   static CloudServiceConfig fromJson(Map<String, dynamic> j) {
@@ -160,6 +167,7 @@ class CloudServiceConfig {
       s3Bucket: j['s3Bucket'] as String?,
       s3UseSSL: j['s3UseSSL'] as bool?,
       s3Port: j['s3Port'] as int?,
+      s3ForcePathStyle: j['s3ForcePathStyle'] as bool?,
     );
   }
 

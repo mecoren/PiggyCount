@@ -1068,7 +1068,7 @@
   "cloudS3SecretKeyLabel": "Secret Key",
   "cloudS3SecretKeyHint": "您的 Secret Access Key",
   "cloudS3BucketLabel": "存储桶名称",
-  "cloudS3BucketHint": "piggycount-data",
+  "cloudS3BucketHint": "例如 my-bucket",
   "cloudS3UseSSLLabel": "使用 HTTPS",
   "cloudS3PortLabel": "端口（可选）",
   "cloudS3PortHint": "留空使用默认端口",

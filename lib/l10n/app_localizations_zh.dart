@@ -2658,7 +2658,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cloudS3BucketLabel => '存储桶名称';
 
   @override
-  String get cloudS3BucketHint => 'piggycount-data';
+  String get cloudS3BucketHint => '例如 my-bucket';
 
   @override
   String get cloudS3UseSSLLabel => '使用 HTTPS';
@@ -10363,7 +10363,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get cloudS3BucketLabel => '儲存桶名稱';
 
   @override
-  String get cloudS3BucketHint => 'piggycount-data';
+  String get cloudS3BucketHint => '例如 my-bucket';
 
   @override
   String get cloudS3UseSSLLabel => '使用 HTTPS';

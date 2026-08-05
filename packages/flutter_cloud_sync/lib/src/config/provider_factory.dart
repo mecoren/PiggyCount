@@ -95,6 +95,11 @@ Future<({CloudProvider? provider, CloudAuthService? auth})> createCloudServices(
         'bucket': config.s3Bucket!,
         'useSSL': config.s3UseSSL ?? true,
         'port': config.s3Port,
+        // null 时由 provider 按端点自动推断寻址方式
+        'forcePathStyle': config.s3ForcePathStyle,
+        // 业务层默认在 bucket 根下创建 piggycount/ 目录隔离应用数据，
+        // 避免直接写入 bucket 根目录与其他应用数据混杂。
+        'keyPrefix': 'piggycount/',
       });
 
       final auth = provider.auth;

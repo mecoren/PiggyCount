@@ -2742,7 +2742,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cloudS3BucketLabel => 'Bucket Name';
 
   @override
-  String get cloudS3BucketHint => 'piggycount-data';
+  String get cloudS3BucketHint => 'e.g. my-bucket';
 
   @override
   String get cloudS3UseSSLLabel => 'Use HTTPS';

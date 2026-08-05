@@ -2669,7 +2669,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get cloudS3BucketLabel => '버킷 이름';
 
   @override
-  String get cloudS3BucketHint => 'piggycount-data';
+  String get cloudS3BucketHint => '예: my-bucket';
 
   @override
   String get cloudS3UseSSLLabel => 'HTTPS 사용';

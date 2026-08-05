@@ -20,6 +20,12 @@ import '../../l10n/app_localizations.dart';
 // GitHub配置教程链接
 const _kSupabaseGuideUrl = 'https://github.com/mecoren/PiggyCount/wiki/Supabase-%E4%BA%91%E5%90%8C%E6%AD%A5%E9%85%8D%E7%BD%AE';
 
+/// 项目技术标识符，用作云存储默认命名空间（WebDAV 远程目录、S3 桶名等）
+/// 注意：必须使用 ASCII 小写标识，不能依赖 [AppLocalizations.appName]，
+/// 因为后者在中文环境下会变为 "小猪记账"，既不适合作为 URL 路径段，
+/// 也不符合 S3 桶名命名规范（仅允许小写字母、数字、点、连字符）。
+const _kDefaultProjectName = 'piggycount';
+
 class CloudServicePage extends ConsumerStatefulWidget {
   const CloudServicePage({super.key});
   @override
@@ -1645,7 +1651,10 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
         initialUrl: existing?.webdavUrl ?? '',
         initialUsername: existing?.webdavUsername ?? '',
         initialPassword: existing?.webdavPassword ?? '',
-        initialPath: existing?.webdavRemotePath ?? '/',
+        // 未配置过时，默认使用项目名（ASCII 标识符）作为远程目录，避免本地化名称导致路径异常
+        initialPath: existing?.webdavRemotePath ?? '/$_kDefaultProjectName',
+        // 清空后保存时回写到输入框的默认值
+        defaultPath: '/$_kDefaultProjectName',
       ),
     );
 
@@ -1699,9 +1708,12 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
         initialRegion: existing?.s3Region ?? 'us-east-1',
         initialAccessKey: existing?.s3AccessKey ?? '',
         initialSecretKey: existing?.s3SecretKey ?? '',
-        initialBucket: existing?.s3Bucket ?? '',
+        // 未配置过时，默认使用项目名（ASCII 小写标识符，符合 S3 桶名规范）
+        initialBucket: existing?.s3Bucket ?? _kDefaultProjectName,
         initialUseSSL: existing?.s3UseSSL ?? true,
         initialPort: existing?.s3Port,
+        // 清空后保存时回写到输入框的默认值
+        defaultBucket: _kDefaultProjectName,
       ),
     );
 
@@ -2233,12 +2245,15 @@ class _WebdavConfigDialog extends StatefulWidget {
   final String initialUsername;
   final String initialPassword;
   final String initialPath;
+  /// 远程路径为空时回写到输入框的默认值
+  final String defaultPath;
 
   const _WebdavConfigDialog({
     required this.initialUrl,
     required this.initialUsername,
     required this.initialPassword,
     required this.initialPath,
+    required this.defaultPath,
   });
 
   @override
@@ -2367,6 +2382,10 @@ class _WebdavConfigDialogState extends State<_WebdavConfigDialog> {
         ),
         FilledButton(
           onPressed: () {
+            // 远程路径为空时回写默认值到输入框，确保用户看到实际保存的值
+            if (pathController.text.trim().isEmpty) {
+              pathController.text = widget.defaultPath;
+            }
             if (_validate()) {
               Navigator.of(context).pop({
                 'url': urlController.text.trim(),
@@ -2392,6 +2411,8 @@ class _S3ConfigDialog extends StatefulWidget {
   final String initialBucket;
   final bool initialUseSSL;
   final int? initialPort;
+  /// 存储桶名为空时回写到输入框的默认值
+  final String defaultBucket;
 
   const _S3ConfigDialog({
     required this.initialEndpoint,
@@ -2400,6 +2421,7 @@ class _S3ConfigDialog extends StatefulWidget {
     required this.initialSecretKey,
     required this.initialBucket,
     required this.initialUseSSL,
+    required this.defaultBucket,
     this.initialPort,
   });
 
@@ -2579,6 +2601,10 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
         ),
         FilledButton(
           onPressed: () {
+            // 存储桶名为空时回写默认值到输入框，确保用户看到实际保存的值
+            if (bucketController.text.trim().isEmpty) {
+              bucketController.text = widget.defaultBucket;
+            }
             if (_validate()) {
               final portText = portController.text.trim();
               final port = portText.isEmpty ? null : int.tryParse(portText);

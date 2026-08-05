@@ -1106,7 +1106,7 @@
   "cloudS3SecretKeyLabel": "Secret Key",
   "cloudS3SecretKeyHint": "Your Secret Access Key",
   "cloudS3BucketLabel": "Bucket Name",
-  "cloudS3BucketHint": "piggycount-data",
+  "cloudS3BucketHint": "e.g. my-bucket",
   "cloudS3UseSSLLabel": "Use HTTPS",
   "cloudS3PortLabel": "Port (optional)",
   "cloudS3PortHint": "Leave blank for default",

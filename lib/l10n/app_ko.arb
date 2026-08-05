@@ -849,7 +849,7 @@
   "cloudS3SecretKeyLabel": "시크릿 키",
   "cloudS3SecretKeyHint": "Secret Access Key를 입력하세요",
   "cloudS3BucketLabel": "버킷 이름",
-  "cloudS3BucketHint": "piggycount-data",
+  "cloudS3BucketHint": "예: my-bucket",
   "cloudS3UseSSLLabel": "HTTPS 사용",
   "cloudS3PortLabel": "포트 (선택 사항)",
   "cloudS3PortHint": "기본값을 사용하려면 비워두세요",
