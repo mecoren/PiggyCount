@@ -7710,13 +7710,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get cloudSyncEncryptNewPasswordLabel => '새 비밀번호';
 
   @override
-  String get cloudSyncEncryptPasswordHint => '최소 6자 이상';
+  String get cloudSyncEncryptPasswordHint => '최소 8자 이상';
 
   @override
   String get cloudSyncEncryptPasswordMismatch => '두 비밀번호가 일치하지 않습니다';
 
   @override
-  String get cloudSyncEncryptPasswordTooShort => '비밀번호는 최소 6자 이상이어야 합니다';
+  String get cloudSyncEncryptPasswordTooShort => '비밀번호는 최소 8자 이상이어야 합니다';
 
   @override
   String get cloudSyncEncryptWrongPassword => '비밀번호가 틀렸습니다';

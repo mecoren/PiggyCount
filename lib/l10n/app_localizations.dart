@@ -14314,7 +14314,7 @@ abstract class AppLocalizations {
   /// No description provided for @cloudSyncEncryptPasswordHint.
   ///
   /// In en, this message translates to:
-  /// **'At least 6 characters'**
+  /// **'At least 8 characters'**
   String get cloudSyncEncryptPasswordHint;
 
   /// No description provided for @cloudSyncEncryptPasswordMismatch.
@@ -14326,7 +14326,7 @@ abstract class AppLocalizations {
   /// No description provided for @cloudSyncEncryptPasswordTooShort.
   ///
   /// In en, this message translates to:
-  /// **'Password must be at least 6 characters'**
+  /// **'Password must be at least 8 characters'**
   String get cloudSyncEncryptPasswordTooShort;
 
   /// No description provided for @cloudSyncEncryptWrongPassword.

@@ -7627,13 +7627,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cloudSyncEncryptNewPasswordLabel => '新密码';
 
   @override
-  String get cloudSyncEncryptPasswordHint => '至少 6 个字符';
+  String get cloudSyncEncryptPasswordHint => '至少 8 个字符';
 
   @override
   String get cloudSyncEncryptPasswordMismatch => '两次输入的密码不一致';
 
   @override
-  String get cloudSyncEncryptPasswordTooShort => '密码至少 6 个字符';
+  String get cloudSyncEncryptPasswordTooShort => '密码至少 8 个字符';
 
   @override
   String get cloudSyncEncryptWrongPassword => '密码错误';
@@ -15332,13 +15332,13 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get cloudSyncEncryptNewPasswordLabel => '新密碼';
 
   @override
-  String get cloudSyncEncryptPasswordHint => '至少 6 個字元';
+  String get cloudSyncEncryptPasswordHint => '至少 8 個字元';
 
   @override
   String get cloudSyncEncryptPasswordMismatch => '兩次輸入的密碼不一致';
 
   @override
-  String get cloudSyncEncryptPasswordTooShort => '密碼至少 6 個字元';
+  String get cloudSyncEncryptPasswordTooShort => '密碼至少 8 個字元';
 
   @override
   String get cloudSyncEncryptWrongPassword => '密碼錯誤';

@@ -7927,14 +7927,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cloudSyncEncryptNewPasswordLabel => 'New Password';
 
   @override
-  String get cloudSyncEncryptPasswordHint => 'At least 6 characters';
+  String get cloudSyncEncryptPasswordHint => 'At least 8 characters';
 
   @override
   String get cloudSyncEncryptPasswordMismatch => 'Passwords do not match';
 
   @override
   String get cloudSyncEncryptPasswordTooShort =>
-      'Password must be at least 6 characters';
+      'Password must be at least 8 characters';
 
   @override
   String get cloudSyncEncryptWrongPassword => 'Wrong password';
