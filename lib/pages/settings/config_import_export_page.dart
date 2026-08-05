@@ -339,7 +339,7 @@ class _ConfigImportExportPageState
       body: ListView(
         padding: EdgeInsets.fromLTRB(
           16,
-          MediaQuery.of(context).padding.top + 56 + 16,
+          PiggyTokens.topScrollablePadding(context, extra: 16),
           16,
           16 + MediaQuery.of(context).padding.bottom,
         ),

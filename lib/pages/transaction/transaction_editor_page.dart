@@ -98,11 +98,17 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
   String _selectedKind = 'expense';
   bool _autoOpened = false;
 
+  /// 已激活（至少构建过一次）的类型集合，用于 IndexedStack 懒加载：
+  /// 未访问过的类型返回 SizedBox.shrink()，避免三个子树同时初始化。
+  /// 首次切换到某类型时才构建对应组件，已构建的保持存活以保留状态。
+  final Set<String> _activatedKinds = {};
+
   @override
   void initState() {
     super.initState();
     // 设置初始选中类型
     _selectedKind = widget.initialKind;
+    _activatedKinds.add(widget.initialKind);
 
     // 若需要自动打开金额输入，则在首帧后查询分类并触发
     // 注意：转账类型不走这个逻辑
@@ -121,15 +127,16 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
         } else {
           c = await repo.getCategoryById(widget.initialCategoryId!);
         }
-        if (c != null && mounted) {
-          // 切换到对应的类型（提前取出 kind 避免 closure 内流分析丢失非空信息）
-          final kind = c.kind;
-          setState(() => _selectedKind = kind);
-          _autoOpened = true;
-          // 直接调用 onPick 逻辑，打开金额输入
-          // ignore: use_build_context_synchronously
-          await _onCategorySelected(context, c, kind);
-        }
+        if (!mounted || c == null) return;
+        // 切换到对应的类型（提前取出 kind 避免 closure 内流分析丢失非空信息）
+        final kind = c.kind;
+        setState(() {
+          _selectedKind = kind;
+          _activatedKinds.add(kind);
+        });
+        _autoOpened = true;
+        // 直接调用 onPick 逻辑，打开金额输入
+        await _onCategorySelected(context, c, kind);
       });
     }
     // 注意：转账编辑模式不需要在这里做任何操作，让 TransferForm 自己处理
@@ -166,8 +173,10 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
                           label: AppLocalizations.of(context)!.transferTitle,
                         ),
                       ],
-                      onValueChanged: (value) =>
-                          setState(() => _selectedKind = value),
+                      onValueChanged: (value) => setState(() {
+                        _selectedKind = value;
+                        _activatedKinds.add(value);
+                      }),
                     ),
                   ),
                   TextButton(
@@ -186,37 +195,54 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
                   ? 0
                   : (_selectedKind == 'income' ? 1 : 2),
               children: [
-                CategorySelector(
-                  kind: 'expense',
-                  onCategorySelected: (c) =>
-                      _onCategorySelected(context, c, 'expense'),
-                  initialCategoryId: widget.initialCategoryId,
-                ),
-                CategorySelector(
-                  kind: 'income',
-                  onCategorySelected: (c) =>
-                      _onCategorySelected(context, c, 'income'),
-                  initialCategoryId: widget.initialCategoryId,
-                ),
-                TransferForm(
-                  onTransferComplete: () {
-                    // 关闭交易编辑器
-                    Navigator.pop(context);
-                  },
-                  initialFromAccountId: widget.initialAccountId,
-                  initialToAccountId: widget.initialToAccountId,
-                  editingTransactionId: widget.editingTransactionId,
-                  initialAmount: widget.initialAmount,
-                  initialNote: widget.initialNote,
-                  initialDate: widget.initialDate,
-                  initialTagIds: widget.initialTagIds,
-                ),
+                _buildKindChild(context, 'expense'),
+                _buildKindChild(context, 'income'),
+                _buildKindChild(context, 'transfer'),
               ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  /// 按需构建对应类型的子组件（懒加载）
+  ///
+  /// 仅当类型已在 [_activatedKinds] 中（即用户至少切换到过一次）时才真正构建，
+  /// 否则返回空 widget。已构建的子树在 IndexedStack 中保持存活，保留滚动位置等状态。
+  Widget _buildKindChild(BuildContext context, String kind) {
+    if (!_activatedKinds.contains(kind)) {
+      return const SizedBox.shrink();
+    }
+    switch (kind) {
+      case 'expense':
+        return CategorySelector(
+          kind: 'expense',
+          onCategorySelected: (c) =>
+              _onCategorySelected(context, c, 'expense'),
+          initialCategoryId: widget.initialCategoryId,
+        );
+      case 'income':
+        return CategorySelector(
+          kind: 'income',
+          onCategorySelected: (c) =>
+              _onCategorySelected(context, c, 'income'),
+          initialCategoryId: widget.initialCategoryId,
+        );
+      case 'transfer':
+        return TransferForm(
+          onTransferComplete: () => Navigator.of(context).pop(),
+          initialFromAccountId: widget.initialAccountId,
+          initialToAccountId: widget.initialToAccountId,
+          editingTransactionId: widget.editingTransactionId,
+          initialAmount: widget.initialAmount,
+          initialNote: widget.initialNote,
+          initialDate: widget.initialDate,
+          initialTagIds: widget.initialTagIds,
+        );
+      default:
+        return const SizedBox.shrink();
+    }
   }
 
   /// 底部抽屉模式渲染：复用分类选择器与转账表单，分段选择器放进标题栏 bottom 槽。
@@ -241,7 +267,10 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
             label: l10n.transferTitle,
           ),
         ],
-        onValueChanged: (value) => setState(() => _selectedKind = value),
+        onValueChanged: (value) => setState(() {
+          _selectedKind = value;
+          _activatedKinds.add(value);
+        }),
       ),
     );
 
@@ -264,31 +293,9 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
               ? 0
               : (_selectedKind == 'income' ? 1 : 2),
           children: [
-            CategorySelector(
-              kind: 'expense',
-              onCategorySelected: (c) =>
-                  _onCategorySelected(context, c, 'expense'),
-              initialCategoryId: widget.initialCategoryId,
-            ),
-            CategorySelector(
-              kind: 'income',
-              onCategorySelected: (c) =>
-                  _onCategorySelected(context, c, 'income'),
-              initialCategoryId: widget.initialCategoryId,
-            ),
-            TransferForm(
-              onTransferComplete: () {
-                // 关闭抽屉
-                Navigator.of(context).pop();
-              },
-              initialFromAccountId: widget.initialAccountId,
-              initialToAccountId: widget.initialToAccountId,
-              editingTransactionId: widget.editingTransactionId,
-              initialAmount: widget.initialAmount,
-              initialNote: widget.initialNote,
-              initialDate: widget.initialDate,
-              initialTagIds: widget.initialTagIds,
-            ),
+            _buildKindChild(context, 'expense'),
+            _buildKindChild(context, 'income'),
+            _buildKindChild(context, 'transfer'),
           ],
         );
       },
@@ -342,6 +349,9 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
       // 新建模式：尝试获取默认账户
       initialAccountId = await _getDefaultAccountId(kind, ledgerId);
     }
+
+    // await 后检查 mounted，避免页面已卸载仍使用 context 弹出底部表单
+    if (!mounted) return;
 
     await showModalBottomSheet(
       context: context,

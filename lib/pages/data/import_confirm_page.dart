@@ -124,7 +124,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
         ),
         body: Padding(
           padding: EdgeInsets.only(
-            top: MediaQuery.of(context).padding.top + 56,
+            top: PiggyTokens.topScrollablePadding(context),
           ),
           child: Column(
             children: [
@@ -163,7 +163,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
       ),
       body: Padding(
         padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 56,
+          top: PiggyTokens.topScrollablePadding(context),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

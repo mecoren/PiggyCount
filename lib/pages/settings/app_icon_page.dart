@@ -26,7 +26,7 @@ class AppIconPage extends ConsumerWidget {
       body: Padding(
         // 留出状态栏与标题栏高度,让图标在可视区域内居中,不被 app bar 遮挡。
         padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 56,
+          top: PiggyTokens.topScrollablePadding(context),
         ),
         child: LayoutBuilder(
           builder: (context, constraints) {

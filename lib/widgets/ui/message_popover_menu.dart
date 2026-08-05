@@ -176,7 +176,7 @@ class _PopoverOverlayState extends State<_PopoverOverlay>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // 获取顶部安全区域高度 + Header 高度（约 56）
-    final topPadding = MediaQuery.of(context).padding.top + 56;
+    final topPadding = PiggyTokens.topScrollablePadding(context);
 
     return Stack(
         children: [

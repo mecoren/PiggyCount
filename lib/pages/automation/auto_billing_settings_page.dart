@@ -174,7 +174,7 @@ class _AndroidAutoBillingPageState extends ConsumerState<AndroidAutoBillingPage>
       ),
       body: Padding(
         padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 56,
+          top: PiggyTokens.topScrollablePadding(context),
         ),
         child: Column(
           children: [

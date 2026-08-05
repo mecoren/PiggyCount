@@ -13,6 +13,7 @@ import '../../data/repositories/base_repository.dart';
 import '../../data/db.dart';
 import '../../widgets/ui/ui.dart';
 import '../../utils/category_utils.dart';
+import '../../styles/tokens.dart';
 
 class ExportPage extends ConsumerStatefulWidget {
   const ExportPage({super.key});
@@ -37,7 +38,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
       ),
       body: Padding(
         padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 56,
+          top: PiggyTokens.topScrollablePadding(context),
         ),
         child: Column(
           children: [

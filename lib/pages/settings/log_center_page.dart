@@ -103,7 +103,7 @@ class _LogCenterPageState extends ConsumerState<LogCenterPage> {
       ),
       body: Column(
         children: [
-          SizedBox(height: MediaQuery.of(context).padding.top + 56),
+          SizedBox(height: PiggyTokens.topScrollablePadding(context)),
           // 搜索框
           Padding(
             padding: EdgeInsets.symmetric(

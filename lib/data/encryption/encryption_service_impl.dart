@@ -300,6 +300,154 @@ class EncryptionServiceImpl implements EncryptionService {
   }
 
   @override
+  Future<ReEncryptResult> changePasswordWithCloudReEncryption({
+    required String oldPassword,
+    required String newPassword,
+    required CloudStorageService cloudStorage,
+  }) async {
+    _validatePassword(newPassword);
+
+    // 1. 验证旧密码
+    if (!await verifyPassword(oldPassword)) {
+      throw ArgumentError('旧密码不正确');
+    }
+
+    // 2. 确保旧密钥已加载到内存（用于解密云端存量密文）
+    if (_activeKey == null || _activeSalt == null) {
+      await _loadActiveKeyFromStorage();
+      if (_activeKey == null || _activeSalt == null) {
+        throw StateError('加密已开启但密钥不可用，无法重加密');
+      }
+    }
+    // 快照旧密钥/salt（后续不可再访问 _activeKey/_activeSalt 读取旧值）
+    final oldKey = Uint8List.fromList(_activeKey!);
+    final oldSalt = Uint8List.fromList(_activeSalt!);
+
+    // 3. 生成新 salt + key
+    final newSalt = await Argon2KeyDerivation.generateSalt();
+    final newKey = await keyDerivation.deriveKey(
+      password: newPassword,
+      salt: newSalt,
+    );
+
+    // 4. 遍历云端文件：用旧密钥解密 → 用新密钥加密 → 上传
+    //    在激活新密钥之前完成，确保解密用的是旧密钥
+    final result = await _reEncryptCloudDataWithKeys(
+      cloudStorage: cloudStorage,
+      oldKey: oldKey,
+      oldSalt: oldSalt,
+      newKey: newKey,
+      newSalt: newSalt,
+    );
+
+    // 5. 加密新 verifier
+    final newVerifier = await cipher.encrypt(
+      plaintext: utf8.encode(_verifierPlaintext),
+      key: newKey,
+    );
+
+    // 6. 持久化新密钥/salt/verifier
+    await storage.saveKey(newKey);
+    await storage.saveSalt(newSalt);
+    await storage.saveVerifier(newVerifier);
+
+    // 7. 激活新密钥
+    _activeKey = newKey;
+    _activeSalt = newSalt;
+
+    // 主动 zeroing 旧密钥快照（best effort）
+    oldKey.fillRange(0, oldKey.length, 0);
+
+    return result;
+  }
+
+  /// 用显式 oldKey/newKey 重加密云端文件（缺陷 A 修复核心）
+  ///
+  /// 与 [reEncryptExistingCloudData] 的区别：
+  /// - [reEncryptExistingCloudData] 用当前 active key 既解密又加密（无法用于密钥轮换）
+  /// - 本方法用 oldKey 解密旧密文、用 newKey 加密为新密文，专为密钥轮换设计
+  ///
+  /// 流程：遍历 `ledger_*.json` → 下载 → 用 oldKey 解密 → 用 newKey 加密 → 上传
+  /// - 跳过 legacy 明文（非 BEECRYPT1: 格式）：后续 sync 会自动加密
+  /// - salt 不匹配 oldSalt 的密文：跳过（无法解密），计入 failed
+  /// - 单文件失败不中断整体流程
+  Future<ReEncryptResult> _reEncryptCloudDataWithKeys({
+    required CloudStorageService cloudStorage,
+    required Uint8List oldKey,
+    required Uint8List oldSalt,
+    required Uint8List newKey,
+    required Uint8List newSalt,
+    String pathPrefix = '',
+  }) async {
+    final files = await cloudStorage.list(path: pathPrefix);
+
+    int success = 0;
+    int failed = 0;
+    int skipped = 0;
+    final failedPaths = <String>[];
+
+    for (final file in files) {
+      final name = file.name;
+      if (!name.startsWith('ledger_') || !name.endsWith('.json')) {
+        skipped++;
+        continue;
+      }
+
+      try {
+        final raw = await cloudStorage.download(path: name);
+        if (raw == null) {
+          skipped++;
+          continue;
+        }
+
+        // 跳过 legacy 明文：后续首次 sync 时会被新密钥加密
+        if (!CiphertextFormat.isEncrypted(raw)) {
+          skipped++;
+          continue;
+        }
+
+        final decoded = CiphertextFormat.decode(raw);
+
+        // salt 必须与 oldSalt 匹配才能用 oldKey 解密
+        if (!_listsEqual(oldSalt, decoded.salt)) {
+          // salt 不匹配（可能已被其他设备用不同密钥加密），无法解密
+          failed++;
+          failedPaths.add(name);
+          continue;
+        }
+
+        // 用旧密钥解密
+        final plaintextBytes = await cipher.decrypt(
+          encryptedBytes: decoded.encryptedBytes,
+          key: oldKey,
+        );
+
+        // 用新密钥加密
+        final newEncryptedBytes = await cipher.encrypt(
+          plaintext: plaintextBytes,
+          key: newKey,
+        );
+        final newCiphertext = CiphertextFormat.encode(
+          salt: newSalt,
+          encryptedBytes: newEncryptedBytes,
+        );
+        await cloudStorage.upload(path: name, data: newCiphertext);
+        success++;
+      } catch (e) {
+        failed++;
+        failedPaths.add(name);
+      }
+    }
+
+    return ReEncryptResult(
+      success: success,
+      failed: failed,
+      skipped: skipped,
+      failedPaths: failedPaths,
+    );
+  }
+
+  @override
   Future<void> reset() async {
     await storage.clearAll();
     final prefs = await _getPrefs();
@@ -406,20 +554,30 @@ class EncryptionServiceImpl implements EncryptionService {
     // 解析密文头获取 salt
     final decoded = CiphertextFormat.decode(ciphertext);
 
-    // 确保有可用密钥
-    if (_activeKey == null) {
+    // 确保有可用密钥和 salt
+    // 同时检查 key 和 salt：若任一缺失则从 storage 加载（两者总是一起加载）。
+    // 修复缺陷 F：原实现仅检查 _activeKey == null，当 _activeKey != null 但
+    // _activeSalt == null 时（极端状态），salt 校验被短路，SaltMismatchException
+    // 降级为通用 DecryptionException，UI 无法引导用户重输密码。
+    if (_activeKey == null || _activeSalt == null) {
       await _loadActiveKeyFromStorage();
       if (_activeKey == null) {
         throw const EncryptionNotConfiguredException(
           '需要解密但密钥不可用，请输入密码',
         );
       }
+      // 加载后 salt 仍为 null：密钥/salt 状态不一致（数据损坏）
+      if (_activeSalt == null) {
+        throw const DecryptionException(
+          '密钥已加载但 salt 不可用，加密状态不一致',
+        );
+      }
     }
 
     // 检查 salt 是否匹配
-    // 若 _activeSalt 已知且与密文头 salt 不同，说明密钥不匹配
-    // 抛 SaltMismatchException（US-2）让 UI 层可单独捕获并引导重输密码
-    if (_activeSalt != null && !_listsEqual(_activeSalt!, decoded.salt)) {
+    // 修复缺陷 F：移除 _activeSalt != null 守卫——上方已确保 salt 非 null，
+    // 始终评估 SaltMismatchException 让 UI 能引导重输密码
+    if (!_listsEqual(_activeSalt!, decoded.salt)) {
       throw SaltMismatchException(
         '密文 salt 与当前密钥不匹配，可能需要重新输入密码',
         ciphertextSaltBase64: base64.encode(decoded.salt),

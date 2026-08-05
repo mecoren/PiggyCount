@@ -63,7 +63,7 @@ class _IconPickerPageState extends State<IconPickerPage> with TickerProviderStat
       ),
       body: Padding(
         padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 56 + 48,
+          top: PiggyTokens.topScrollablePadding(context, extra: 48),
         ),
         child: TabBarView(
           controller: _tabController,

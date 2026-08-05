@@ -580,6 +580,11 @@ extension SyncEngineSerializationExt on SyncEngine {
     // 分批推送:每条 change 平均 ~500 字节,500 条 ≈ 250KB,远低于网关限制,
     // 但单次请求内 server 事务处理时间 ~100ms 可接受。
     // 5 倍原先 100 的吞吐,3 万条交易上传从 300 批降到 60 批,耗时约 1/5。
+
+    // 缺陷 B 修复：fullPush 路径同样需要加密 payload
+    // 在分批前统一加密，避免每批重复检查加密状态
+    await _encryptPayloadsIfNeeded(syncChanges);
+
     const batchSize = 500;
     for (var i = 0; i < syncChanges.length; i += batchSize) {
       final end = (i + batchSize > syncChanges.length)

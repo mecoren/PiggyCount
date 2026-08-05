@@ -142,7 +142,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
       ),
       body: Padding(
         padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 56,
+          top: PiggyTokens.topScrollablePadding(context),
         ),
         child: Column(
           children: [
@@ -563,6 +563,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                     ? null
                     : (subtitle.isNotEmpty ? categoryName : null),
                 amount: item.t.amount,
+                transactionId: item.t.id,
                 currencyCode: item.t.currencyCode,
                 nativeAmount: item.t.nativeAmount,
                 isExpense: isExpense,
@@ -663,6 +664,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                     ? null
                     : (subtitle.isNotEmpty ? categoryName : null),
                 amount: item.t.amount,
+                transactionId: item.t.id,
                 currencyCode: item.t.currencyCode,
                 nativeAmount: item.t.nativeAmount,
                 isExpense: isExpense,

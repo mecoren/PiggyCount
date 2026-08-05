@@ -54,7 +54,7 @@ class _AIModelSelectionPageState extends ConsumerState<AIModelSelectionPage> {
         ),
         body: Padding(
           padding: EdgeInsets.only(
-            top: MediaQuery.of(context).padding.top + 56,
+            top: PiggyTokens.topScrollablePadding(context),
           ),
           child: Column(
             children: [

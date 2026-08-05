@@ -735,7 +735,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       ),
       body: Padding(
         padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 56,
+          top: PiggyTokens.topScrollablePadding(context),
         ),
         child: Column(
           children: [
@@ -1179,6 +1179,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                   title: subtitle,
                                   categoryName: categoryName,
                                   amount: item.t.amount,
+                                  transactionId: item.t.id,
                                   currencyCode: item.t.currencyCode,
                                   nativeAmount: item.t.nativeAmount,
                                   isExpense: isExpense,

@@ -144,17 +144,61 @@ class _EncryptionSettingsPageState
     setState(() => _busy = true);
     try {
       final service = ref.read(encryptionServiceProvider);
-      await service.changePassword(
-        oldPassword: result.oldPassword!,
-        newPassword: result.password,
-      );
-      // 修改密码后强制 sync 重新初始化，让装饰器重建并使用新密钥
-      // 注意：此处仅重建装饰器；云端存量密文的重加密属于 changePassword
-      // 的独立流程（需先用旧 key 解密再切新 key 加密），不在本次改造范围
       final sync = ref.read(sync_p.syncServiceProvider);
+
+      // 缺陷 A 修复：改密时内联重加密云端存量密文
+      // 用旧密钥解密 → 新密钥加密 → 上传，确保改密后云端密文仍可解密。
+      // 需要未装饰的 raw storage（装饰器会自动解密，导致双重加密）。
+      ReEncryptResult? reEncResult;
+      if (sync is TransactionsSyncManager) {
+        await sync.ensureInitialized();
+        final rawStorage = sync.rawStorage;
+        if (rawStorage != null) {
+          reEncResult = await service.changePasswordWithCloudReEncryption(
+            oldPassword: result.oldPassword!,
+            newPassword: result.password,
+            cloudStorage: rawStorage,
+          );
+        } else {
+          // rawStorage 不可用（如 iCloud 未登录）：回退到普通改密，警告用户
+          await service.changePassword(
+            oldPassword: result.oldPassword!,
+            newPassword: result.password,
+          );
+          if (mounted) {
+            AppDialog.warning(
+              context,
+              title: l10n.cloudSyncEncryptChangePassword,
+              message: '云存储不可用，云端存量密文未能重加密。'
+                  '请连接云存储后重新同步，否则云端备份将无法用新密码解密。',
+            );
+          }
+        }
+      } else {
+        // 非 TransactionsSyncManager（如 SyncEngine/PiggyCount Cloud）：
+        // 走普通改密。变更日志后端的加密覆盖由缺陷 B 修复处理。
+        await service.changePassword(
+          oldPassword: result.oldPassword!,
+          newPassword: result.password,
+        );
+      }
+
+      // 修改密码后强制 sync 重新初始化，让装饰器重建并使用新密钥
       if (sync is TransactionsSyncManager) {
         await sync.reinitializeForEncryption();
       }
+
+      // 重加密部分失败时警告（不阻塞，密钥已轮换完成）
+      if (reEncResult != null && reEncResult.failed > 0 && mounted) {
+        AppDialog.warning(
+          context,
+          title: l10n.cloudSyncEncryptChangePassword,
+          message: l10n.cloudSyncEncryptReencryptPartialFailed(
+            reEncResult.failed,
+          ),
+        );
+      }
+
       ref.read(encryptionEnabledTickProvider.notifier).state++;
       if (mounted) showToast(context, l10n.cloudSyncEncryptChangeSuccess);
     } catch (e) {
@@ -240,7 +284,7 @@ class _EncryptionSettingsPageState
       ),
       body: Padding(
         padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 56,
+          top: PiggyTokens.topScrollablePadding(context),
         ),
         child: ListView(
           padding: const EdgeInsets.all(16),

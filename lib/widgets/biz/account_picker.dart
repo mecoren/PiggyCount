@@ -114,7 +114,7 @@ class _AccountPickerState extends ConsumerState<AccountPicker> {
 
     // v1.15.0: 获取所有账户并按币种筛选
     final allAccountsAsync = ref.watch(allAccountsStreamProvider);
-    final primaryColor = Theme.of(context).primaryColor;
+    final primaryColor = Theme.of(context).colorScheme.primary;
 
     return allAccountsAsync.when(
       data: (allAccounts) {

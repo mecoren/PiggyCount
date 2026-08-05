@@ -11,6 +11,7 @@ import '../../l10n/app_localizations.dart';
 import '../../services/data/recurring_transaction_service.dart';
 import '../../services/system/logger_service.dart';
 import '../../utils/category_utils.dart';
+import '../../styles/tokens.dart';
 
 class RecurringTransactionEditPage extends ConsumerStatefulWidget {
   final RecurringTransaction? recurring;
@@ -119,7 +120,7 @@ class _RecurringTransactionEditPageState
       ),
       body: Padding(
         padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 56,
+          top: PiggyTokens.topScrollablePadding(context),
         ),
         child: Column(
           children: [

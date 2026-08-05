@@ -91,7 +91,7 @@ class UpdateDialogs {
         actions: [
           TextButton(
             style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).primaryColor,
+              foregroundColor: Theme.of(context).colorScheme.primary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
               ),
@@ -167,8 +167,8 @@ class UpdateDialogs {
         actions: [
           OutlinedButton(
             style: OutlinedButton.styleFrom(
-              foregroundColor: Theme.of(context).primaryColor,
-              side: BorderSide(color: Theme.of(context).primaryColor),
+              foregroundColor: Theme.of(context).colorScheme.primary,
+              side: BorderSide(color: Theme.of(context).colorScheme.primary),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
               ),
@@ -209,8 +209,8 @@ class UpdateDialogs {
         actions: [
           OutlinedButton(
             style: OutlinedButton.styleFrom(
-              foregroundColor: Theme.of(context).primaryColor,
-              side: BorderSide(color: Theme.of(context).primaryColor),
+              foregroundColor: Theme.of(context).colorScheme.primary,
+              side: BorderSide(color: Theme.of(context).colorScheme.primary),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
               ),
@@ -621,8 +621,8 @@ class _DownloadConfirmDialogState extends State<_DownloadConfirmDialog> {
       actions: [
         OutlinedButton(
           style: OutlinedButton.styleFrom(
-            foregroundColor: Theme.of(context).primaryColor,
-            side: BorderSide(color: Theme.of(context).primaryColor),
+            foregroundColor: Theme.of(context).colorScheme.primary,
+            side: BorderSide(color: Theme.of(context).colorScheme.primary),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
             ),

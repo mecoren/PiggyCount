@@ -162,7 +162,7 @@ class _PasswordSetupDialogState extends ConsumerState<PasswordSetupDialog> {
     return AlertDialog(
       title: Text(_title(l10n)),
       content: SizedBox(
-        width: 320,
+        width: (MediaQuery.sizeOf(context).width - 32).clamp(0.0, 320.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,

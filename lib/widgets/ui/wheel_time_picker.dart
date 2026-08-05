@@ -107,7 +107,7 @@ class _WheelTimePickerState extends State<WheelTimePicker> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
-                        color: Theme.of(context).primaryColor,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                   ),

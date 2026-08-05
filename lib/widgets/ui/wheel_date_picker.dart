@@ -138,7 +138,7 @@ class _WheelDatePickerState extends State<WheelDatePicker> {
                       }
                       Navigator.pop(context, result);
                     },
-                    child: Text(AppLocalizations.of(context).commonOk, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Theme.of(context).primaryColor))),
+                    child: Text(AppLocalizations.of(context).commonOk, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.primary))),
               ],
             ),
           ),
@@ -401,7 +401,7 @@ class _DateStepPickerState extends State<_DateStepPicker> {
                     Navigator.pop(context, result);
                   },
                   child: Text(l10n.commonNext,
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Theme.of(context).primaryColor)),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.primary)),
                 ),
               ],
             ),
@@ -584,7 +584,7 @@ class _TimeStepPickerState extends State<_TimeStepPicker> {
                       Navigator.of(context).pop((hour: hour, minute: minute, second: second));
                     },
                     child: Text(l10n.commonOk,
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Theme.of(context).primaryColor)),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.primary)),
                   ),
                 ],
               ),

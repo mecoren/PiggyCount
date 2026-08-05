@@ -121,7 +121,7 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
       ),
       body: Padding(
         padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 56,
+          top: PiggyTokens.topScrollablePadding(context),
         ),
         child: Column(
           children: [
@@ -344,6 +344,7 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
                 categoryName: categoryName,
                 ledgerName: ledgerNames[transaction.ledgerId],
                 amount: transaction.amount,
+                transactionId: transaction.id,
                 currencyCode: transaction.currencyCode,
                 nativeAmount: transaction.nativeAmount,
                 isExpense: transaction.type == 'expense',

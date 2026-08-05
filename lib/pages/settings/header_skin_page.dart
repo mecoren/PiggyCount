@@ -49,7 +49,7 @@ class HeaderSkinPage extends ConsumerWidget {
         crossAxisCount: 2,
         padding: EdgeInsets.fromLTRB(
           16,
-          MediaQuery.of(context).padding.top + 56 + 16,
+          PiggyTokens.topScrollablePadding(context, extra: 16),
           16,
           16 + MediaQuery.of(context).padding.bottom,
         ),

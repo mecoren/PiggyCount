@@ -365,6 +365,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   const SizedBox(width: 12),
                   // 查看按钮（查看后本次隐藏，下次打开app还会显示）
                   GestureDetector(
+                    behavior: HitTestBehavior.opaque,
                     onTap: () {
                       SharePosterService.showPosterCarouselPreview(
                         context,
@@ -376,12 +377,16 @@ class _HomePageState extends ConsumerState<HomePage> {
                         _showLastMonthReminder = false;
                       });
                     },
-                    child: Text(
-                      l10n.homeLastMonthReportView,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: primaryColor,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 6),
+                      child: Text(
+                        l10n.homeLastMonthReportView,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: primaryColor,
+                        ),
                       ),
                     ),
                   ),
@@ -390,10 +395,13 @@ class _HomePageState extends ConsumerState<HomePage> {
                   GestureDetector(
                     onTap: _dismissLastMonthReminder,
                     behavior: HitTestBehavior.opaque,
-                    child: Icon(
-                      Icons.close,
-                      size: 18,
-                      color: PiggyTokens.textDisabled(context),
+                    child: Padding(
+                      padding: const EdgeInsets.all(6),
+                      child: Icon(
+                        Icons.close,
+                        size: 18,
+                        color: PiggyTokens.textDisabled(context),
+                      ),
                     ),
                   ),
                 ],
@@ -471,6 +479,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   const SizedBox(width: 12),
                   // 查看按钮
                   GestureDetector(
+                    behavior: HitTestBehavior.opaque,
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
@@ -483,12 +492,16 @@ class _HomePageState extends ConsumerState<HomePage> {
                         _showAnnualReportReminder = false;
                       });
                     },
-                    child: Text(
-                      l10n.homeAnnualReportView,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: primaryColor,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 6),
+                      child: Text(
+                        l10n.homeAnnualReportView,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: primaryColor,
+                        ),
                       ),
                     ),
                   ),
@@ -497,10 +510,13 @@ class _HomePageState extends ConsumerState<HomePage> {
                   GestureDetector(
                     onTap: _dismissAnnualReportReminder,
                     behavior: HitTestBehavior.opaque,
-                    child: Icon(
-                      Icons.close,
-                      size: 18,
-                      color: PiggyTokens.textDisabled(context),
+                    child: Padding(
+                      padding: const EdgeInsets.all(6),
+                      child: Icon(
+                        Icons.close,
+                        size: 18,
+                        color: PiggyTokens.textDisabled(context),
+                      ),
                     ),
                   ),
                 ],
@@ -938,7 +954,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                                             .textTheme
                                             .bodyMedium
                                             ?.color
-                                            ?.withValues(alpha: 0.6), // ⭐ 自适应次要文字颜色
+                                            ?.withValues(alpha: 0.6) ??
+                                                PiggyTokens.textSecondary(context), // 自适应次要文字颜色
                                         fontSize: 13,
                                         fontWeight: FontWeight.w500)),
                             const SizedBox(height: 2),
@@ -955,7 +972,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                                           color: Theme.of(context)
                                               .textTheme
                                               .bodyLarge
-                                              ?.color, // ⭐ 自适应主文字颜色
+                                              ?.color ??
+                                                  PiggyTokens.textPrimary(context), // 自适应主文字颜色
                                           fontSize: 20,
                                           fontWeight: FontWeight.w500),
                                 ),
@@ -970,7 +988,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                                           color: Theme.of(context)
                                               .textTheme
                                               .bodyLarge
-                                              ?.color, // ⭐ 自适应颜色
+                                              ?.color ??
+                                                  PiggyTokens.textPrimary(context), // 自适应颜色
                                         ),
                                       )
                                     : Icon(
@@ -980,7 +999,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                                             .textTheme
                                             .bodyMedium
                                             ?.color
-                                            ?.withValues(alpha: 0.6), // ⭐ 自适应次要颜色
+                                            ?.withValues(alpha: 0.6) ??
+                                                PiggyTokens.textSecondary(context), // 自适应次要颜色
                                       ),
                               ],
                             ),

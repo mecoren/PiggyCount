@@ -183,7 +183,7 @@ class _AppLockSettingsPageState extends ConsumerState<AppLockSettingsPage> {
       body: ListView(
         padding: EdgeInsets.fromLTRB(
           16,
-          MediaQuery.of(context).padding.top + 56 + 16,
+          PiggyTokens.topScrollablePadding(context, extra: 16),
           16,
           16 + MediaQuery.of(context).padding.bottom,
         ),
@@ -196,7 +196,8 @@ class _AppLockSettingsPageState extends ConsumerState<AppLockSettingsPage> {
                 title: l10n.appLockEnable,
                 subtitle: l10n.appLockEnableDesc,
                 value: enabled,
-                onChanged: _toggleAppLock,
+                onChanged: _toggleAppLock,
+
               ),
             ],
           ),
@@ -207,7 +208,8 @@ class _AppLockSettingsPageState extends ConsumerState<AppLockSettingsPage> {
               children: [
                 SettingsNavItem(
                   icon: Icons.dialpad,
-                  title: l10n.appLockChangePin,
+                  title: l10n.appLockChangePin,
+
                   onTap: _changePin,
                 ),
               ],
@@ -222,12 +224,14 @@ class _AppLockSettingsPageState extends ConsumerState<AppLockSettingsPage> {
                     title: l10n.appLockBiometric,
                     subtitle: l10n.appLockBiometricDesc,
                     value: biometricEnabled,
-                    onChanged: _toggleBiometric,
+                    onChanged: _toggleBiometric,
+
                   ),
                 SettingsNavItem(
                   icon: Icons.timer_outlined,
                   title: l10n.appLockTimeout,
-                  subtitle: _timeoutLabel(timeout),
+                  subtitle: _timeoutLabel(timeout),
+
                   onTap: _showTimeoutPicker,
                 ),
               ],
@@ -301,7 +305,7 @@ class _PinVerifyPageState extends ConsumerState<_PinVerifyPage> {
         top: false,
         child: Padding(
           padding: EdgeInsets.only(
-            top: MediaQuery.of(context).padding.top + 56,
+            top: PiggyTokens.topScrollablePadding(context),
           ),
           child: Column(
             children: [

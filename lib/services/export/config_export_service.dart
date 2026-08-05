@@ -47,6 +47,11 @@ class ExportOptions {
   /// 测试或跨设备快速登录时显式勾选。
   final bool piggycountCloudCredentials;
 
+  /// 是否在导出文件中包含真实凭据（密码/密钥/API key）。
+  /// 默认 false —— 凭据以 **** 占位写出，避免备份文件泄露导致账户失陷。
+  /// 需真实凭据时显式勾选，并注意保管导出文件。
+  final bool includeCredentials;
+
   const ExportOptions({
     this.ledgers = true,
     this.categories = true,
@@ -57,6 +62,7 @@ class ExportOptions {
     this.appSettings = true,
     this.ai = true,
     this.piggycountCloudCredentials = false,
+    this.includeCredentials = false,
   });
 
   /// 全选
@@ -1237,6 +1243,12 @@ class ConfigExportService {
   }) async {
     final prefs = await SharedPreferences.getInstance();
 
+    // 缺陷 C 修复：凭据脱敏 helper
+    // includeCredentials=false 时用 **** 占位，避免备份文件泄露真实凭据
+    String? mask(String? v) => options.includeCredentials
+        ? v
+        : (v != null && v.isNotEmpty ? '****' : v);
+
     // 读取Supabase配置
     SupabaseConfig? supabaseConfig;
     final supabaseCfgRaw = prefs.getString('cloud_supabase_cfg');
@@ -1249,7 +1261,7 @@ class ConfigExportService {
             anonKey: cfg.supabaseAnonKey!,
             bucket: cfg.supabaseBucket,
             email: cfg.supabaseEmail,
-            password: cfg.supabasePassword,
+            password: mask(cfg.supabasePassword),
           );
         }
       } catch (e) {
@@ -1269,7 +1281,7 @@ class ConfigExportService {
           webdavConfig = WebdavConfig(
             url: cfg.webdavUrl!,
             username: cfg.webdavUsername!,
-            password: cfg.webdavPassword!,
+            password: mask(cfg.webdavPassword) ?? '',
             remotePath: cfg.webdavRemotePath,
           );
         }
@@ -1293,7 +1305,7 @@ class ConfigExportService {
             endpoint: cfg.s3Endpoint!,
             region: cfg.s3Region!,
             accessKey: cfg.s3AccessKey!,
-            secretKey: cfg.s3SecretKey!,
+            secretKey: mask(cfg.s3SecretKey) ?? '',
             bucket: cfg.s3Bucket!,
             useSSL: cfg.s3UseSSL,
             port: cfg.s3Port,
@@ -1321,7 +1333,7 @@ class ConfigExportService {
             // 跟 Supabase 一样：如果用户在 mobile 勾过 "记住账号密码"，
             // piggycountCloudPassword 就会在 SharedPreferences 里，带上它方便
             // B 设备导入后无感登录。没勾就是 null，yaml 也不写这一行。
-            password: cfg.piggycountCloudPassword,
+            password: mask(cfg.piggycountCloudPassword),
             // access/refresh token 走独立 session storage（key 里带 baseUrl
             // sha1），跨设备迁移风险高，导出 yaml 不带。
           );
@@ -1358,14 +1370,18 @@ class ConfigExportService {
     if (glmApiKey != null || aiStrategy != null || aiEnabled != null ||
         aiUseVision != null || glmModel != null || glmVisionModel != null ||
         aiProviders != null || aiCapabilityBinding != null) {
+      // 缺陷 C 修复：对每个服务商的 apiKey 做脱敏（copyWith 不影响原实例）
+      final maskedProviders = aiProviders
+          ?.map((p) => p.copyWith(apiKey: mask(p.apiKey) ?? ''))
+          .toList();
       aiConfig = AIConfig(
-        glmApiKey: glmApiKey,
+        glmApiKey: mask(glmApiKey),
         glmModel: glmModel,
         glmVisionModel: glmVisionModel,
         strategy: aiStrategy,
         enabled: aiEnabled,
         useVision: aiUseVision,
-        providers: aiProviders,
+        providers: maskedProviders,
         capabilityBinding: aiCapabilityBinding,
       );
     }

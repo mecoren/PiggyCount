@@ -93,7 +93,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
       body: ListView(
         padding: EdgeInsets.fromLTRB(
           16.0.scaled(context, ref),
-          MediaQuery.of(context).padding.top + 56 + 16,
+          PiggyTokens.topScrollablePadding(context, extra: 16),
           16.0.scaled(context, ref),
           16.0.scaled(context, ref) + MediaQuery.of(context).padding.bottom,
         ),

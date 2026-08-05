@@ -114,6 +114,34 @@ abstract class EncryptionService {
     required String newPassword,
   });
 
+  /// 修改密码并内联重加密云端存量密文（缺陷 A 修复）
+  ///
+  /// 与 [changePassword] 不同，本方法在密钥轮换前先用旧密钥解密云端所有
+  /// `ledger_*.json` 密文，再用新密钥重新加密上传，最后才激活新密钥。
+  /// 这样保证改密后云端密文仍可用新密码解密，避免数据可用性致命缺陷。
+  ///
+  /// 流程：
+  /// 1. 验证旧密码
+  /// 2. 确保旧密钥已加载到内存（用于解密存量密文）
+  /// 3. 生成新 salt + 派生新密钥
+  /// 4. 遍历云端文件：用旧密钥解密 → 用新密钥加密 → 上传
+  /// 5. 加密新 verifier + 持久化新密钥/salt/verifier
+  /// 6. 激活新密钥
+  ///
+  /// [cloudStorage] 必须是**未装饰的原始 storage**（理由同
+  /// [reEncryptExistingCloudData]），否则会双重加密。
+  ///
+  /// 返回 [ReEncryptResult] 汇总重加密结果。即使部分文件失败也会完成
+  /// 密钥轮换（否则用户被锁死在旧密码），调用方应据 failed 字段提示用户
+  /// "部分文件未能重加密，建议保持联网完成一次完整同步"。
+  ///
+  /// 抛出 [ArgumentError] 当旧密码错误或新密码无效
+  Future<ReEncryptResult> changePasswordWithCloudReEncryption({
+    required String oldPassword,
+    required String newPassword,
+    required CloudStorageService cloudStorage,
+  });
+
   /// 重置加密（清空密钥和配置）
   ///
   /// 删除 secure storage 中的密钥和 verifier，标记加密未开启。

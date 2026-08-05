@@ -170,7 +170,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                   Icon(
                     Icons.arrow_upward,
                     color: _type == 'expense'
-                        ? Theme.of(context).primaryColor
+                        ? Theme.of(context).colorScheme.primary
                         : null,
                   ),
                   const SizedBox(width: 12),
@@ -179,7 +179,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                     style: TextStyle(
                       fontWeight: _type == 'expense' ? FontWeight.bold : null,
                       color: _type == 'expense'
-                          ? Theme.of(context).primaryColor
+                          ? Theme.of(context).colorScheme.primary
                           : null,
                     ),
                   ),
@@ -196,7 +196,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                   Icon(
                     Icons.arrow_downward,
                     color: _type == 'income'
-                        ? Theme.of(context).primaryColor
+                        ? Theme.of(context).colorScheme.primary
                         : null,
                   ),
                   const SizedBox(width: 12),
@@ -205,7 +205,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                     style: TextStyle(
                       fontWeight: _type == 'income' ? FontWeight.bold : null,
                       color: _type == 'income'
-                          ? Theme.of(context).primaryColor
+                          ? Theme.of(context).colorScheme.primary
                           : null,
                     ),
                   ),
@@ -222,7 +222,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                   Icon(
                     Icons.balance,
                     color: _type == 'balance'
-                        ? Theme.of(context).primaryColor
+                        ? Theme.of(context).colorScheme.primary
                         : null,
                   ),
                   const SizedBox(width: 12),
@@ -231,7 +231,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                     style: TextStyle(
                       fontWeight: _type == 'balance' ? FontWeight.bold : null,
                       color: _type == 'balance'
-                          ? Theme.of(context).primaryColor
+                          ? Theme.of(context).colorScheme.primary
                           : null,
                     ),
                   ),

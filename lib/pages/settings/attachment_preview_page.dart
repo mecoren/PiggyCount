@@ -59,7 +59,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
       ),
       body: Column(
         children: [
-          SizedBox(height: MediaQuery.of(context).padding.top + 56),
+          SizedBox(height: PiggyTokens.topScrollablePadding(context)),
           // 滑动分段选择器
           if (totalCount > 0)
             Padding(

@@ -12,6 +12,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../data/db.dart';
 import '../../data/repositories/base_repository.dart';
+import '../../domain/encryption/encryption_service.dart';
 import '../../services/custom_icon_service.dart';
 import '../../services/system/logger_service.dart';
 import '../../services/ui/avatar_service.dart';
@@ -74,6 +75,13 @@ class SyncEngine implements app.SyncService {
   final PiggyCountCloudProvider provider;
   final ChangeTracker changeTracker;
   final BaseRepository repo;
+
+  /// 可选的加密服务（缺陷 B 修复）
+  ///
+  /// 若非 null 且加密已开启，pushChanges 前对每条 SyncChange.payload 加密、
+  /// pullChanges 后解密，实现 PiggyCount Cloud 变更日志路径的 E2EE 覆盖。
+  /// 加密未开启时 payload 以明文上行（向后兼容旧服务端数据）。
+  final EncryptionService? encryptionService;
 
   /// 状态缓存
   final Map<int, app.SyncStatus> _statusCache = {};
@@ -192,6 +200,7 @@ class SyncEngine implements app.SyncService {
     required this.provider,
     required this.changeTracker,
     required this.repo,
+    this.encryptionService,
   }) {
     appCursor = AppCursorStore(provider);
     pullErrors = SyncErrorStore(db);
@@ -788,6 +797,8 @@ class SyncEngine implements app.SyncService {
 
     // 主批(account/category/tag):照原逻辑推送 + 标记已推。
     if (mainSyncChanges.isNotEmpty) {
+      // 缺陷 B 修复：user-global 实体 payload 也需加密
+      await _encryptPayloadsIfNeeded(mainSyncChanges);
       await provider.pushChanges(changes: mainSyncChanges);
       await changeTracker.markPushed(mainChanges.map((c) => c.id).toList());
     }
@@ -797,6 +808,8 @@ class SyncEngine implements app.SyncService {
     // 失败只 warning、不标记已推 → 留在 local_changes 下次重试。
     if (overrideSyncChanges.isNotEmpty) {
       try {
+        // 缺陷 B 修复：override 批同样需加密
+        await _encryptPayloadsIfNeeded(overrideSyncChanges);
         await provider.pushChanges(changes: overrideSyncChanges);
         await changeTracker
             .markPushed(overrideChanges.map((c) => c.id).toList());
@@ -1033,6 +1046,9 @@ class SyncEngine implements app.SyncService {
       });
     }
 
+    // 缺陷 B 修复：若 E2EE 已开启，加密每条变更的 payload 后再上行
+    await _encryptPayloadsIfNeeded(syncChanges);
+
     // 使用 pushChanges 直接推送个体变更
     await provider.pushChanges(changes: syncChanges);
 
@@ -1105,6 +1121,85 @@ class SyncEngine implements app.SyncService {
   Completer<int>? _pullInFlight;
   int? _pullInFlightSince;
 
+  /// 缺陷 B 修复：加密 push 变更的 payload
+  ///
+  /// 若 E2EE 已开启，遍历 [changes] 中每条变更的 payload：
+  /// payload Map → JSON string → BEECRYPT1: 密文 → 包装为 {__encrypted__, ciphertext}
+  /// delete 动作 payload 为空 Map，跳过加密（无敏感数据）。
+  /// 未开启加密时原样返回，向后兼容旧服务端数据。
+  Future<void> _encryptPayloadsIfNeeded(
+      List<Map<String, dynamic>> changes) async {
+    if (encryptionService == null || !await encryptionService!.isEnabled) {
+      return;
+    }
+    for (final change in changes) {
+      final payload = change['payload'];
+      if (payload is Map<String, dynamic> && payload.isNotEmpty) {
+        final jsonStr = jsonEncode(payload);
+        final encrypted = await encryptionService!.encrypt(jsonStr);
+        change['payload'] = {'__encrypted__': true, 'ciphertext': encrypted};
+      }
+    }
+  }
+
+  /// 缺陷 B 修复：解密 pull 结果中的加密 payload
+  ///
+  /// 若加密已开启，遍历 [result].changes，对标记 `__encrypted__` 的 payload
+  /// 用 [encryptionService] 解密并还原为原始 Map。
+  /// 未加密的 payload（legacy 明文）原样保留，向后兼容旧服务端数据。
+  ///
+  /// 解密失败的单条变更：payload 置 null，apply 阶段会按"数据损坏"跳过，
+  /// 不中断整页流程。
+  Future<PiggyCountCloudPullResult> _decryptPullResult(
+    PiggyCountCloudPullResult result,
+  ) async {
+    if (encryptionService == null || !await encryptionService!.isEnabled) {
+      return result;
+    }
+
+    final decrypted = <PiggyCountCloudSyncChange>[];
+    for (final change in result.changes) {
+      final payload = change.payload;
+      if (payload != null && payload['__encrypted__'] == true) {
+        try {
+          final ciphertext = payload['ciphertext'] as String;
+          final plaintext = await encryptionService!.decrypt(ciphertext);
+          decrypted.add(PiggyCountCloudSyncChange(
+            changeId: change.changeId,
+            ledgerId: change.ledgerId,
+            entityType: change.entityType,
+            entitySyncId: change.entitySyncId,
+            action: change.action,
+            updatedByDeviceId: change.updatedByDeviceId,
+            updatedAt: change.updatedAt,
+            payload: jsonDecode(plaintext) as Map<String, dynamic>,
+          ));
+        } catch (e) {
+          logger.warning('SyncEngine',
+              'pull: payload 解密失败 changeId=${change.changeId}, 跳过: $e');
+          decrypted.add(PiggyCountCloudSyncChange(
+            changeId: change.changeId,
+            ledgerId: change.ledgerId,
+            entityType: change.entityType,
+            entitySyncId: change.entitySyncId,
+            action: change.action,
+            updatedByDeviceId: change.updatedByDeviceId,
+            updatedAt: change.updatedAt,
+            payload: null,
+          ));
+        }
+      } else {
+        // 未加密的 legacy payload，原样保留
+        decrypted.add(change);
+      }
+    }
+    return PiggyCountCloudPullResult(
+      changes: decrypted,
+      serverCursor: result.serverCursor,
+      hasMore: result.hasMore,
+    );
+  }
+
   Future<int> _doPull(String ledgerId, int? sinceOverride) async {
     int? nextSince = sinceOverride ?? await appCursor.read();
     if (nextSince == 0 && sinceOverride == null) {
@@ -1116,11 +1211,11 @@ class SyncEngine implements app.SyncService {
     // return,跳过 LookupCache 全表 SELECT(transactions 10k+ 行的 prime
     // 每次都要 200-500ms 主线程时间)。多账本场景这里是大头 — 启动时 5 个
     // ledger 各跑一次 sync,空跑也要 prime 5 次,白白卡 1-2s。
-    final probe = await provider.pullChanges(
+    final probe = await _decryptPullResult(await provider.pullChanges(
       since: nextSince,
       limit: 500,
       persistCursor: false,
-    );
+    ));
     if (probe.changes.isEmpty) {
       logger.info(
           'SyncEngine', 'pull: since=$nextSince 无新变更,跳过 LookupCache prime');
@@ -1160,11 +1255,11 @@ class SyncEngine implements app.SyncService {
         logger.info('SyncEngine',
             'pull #$pageIndex: since=$nextSince got ${result.changes.length} hasMore=${result.hasMore} (reused probe)');
       } else {
-        result = await provider.pullChanges(
+        result = await _decryptPullResult(await provider.pullChanges(
           since: nextSince,
           limit: 500,
           persistCursor: false, // cursor 由 appCursor 接管
-        );
+        ));
         final httpMs = DateTime.now().difference(pageStart).inMilliseconds;
         logger.info('SyncEngine',
             'pull #$pageIndex: since=$nextSince got ${result.changes.length} hasMore=${result.hasMore} (HTTP ${httpMs}ms)');

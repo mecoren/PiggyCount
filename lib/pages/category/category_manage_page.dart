@@ -64,7 +64,7 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
       ),
       body: Padding(
         padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 56,
+          top: PiggyTokens.topScrollablePadding(context),
         ),
         child: Column(
           children: [

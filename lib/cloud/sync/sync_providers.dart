@@ -3,6 +3,7 @@ import 'package:flutter_cloud_sync/flutter_cloud_sync.dart'
     hide SyncStatus;
 
 import '../../providers/database_providers.dart';
+import '../../providers/encryption_providers.dart';
 import 'change_tracker.dart';
 import 'sync_engine.dart';
 
@@ -31,6 +32,7 @@ final syncEngineProvider = Provider.family<SyncEngine, PiggyCountCloudProvider>(
       provider: provider,
       changeTracker: tracker,
       repo: repo,
+      encryptionService: ref.watch(encryptionServiceProvider),
     );
     ref.onDispose(() => engine.dispose());
     return engine;

@@ -50,12 +50,16 @@ class TransactionListItem extends ConsumerWidget {
   final bool excludeFromStats; // 不计入收支:第二行显示「不计收支」标签
   final bool excludeFromBudget; // 不计入预算:第二行显示「不计预算」标签
 
+  /// 交易唯一 id，用于 Dismissible key，避免同备注同金额的交易 key 碰撞
+  final int transactionId;
+
   const TransactionListItem({
       super.key,
       required this.icon,
       this.category,
       required this.title,
       required this.amount,
+      required this.transactionId,
       this.currencyCode,
       this.nativeAmount,
       required this.isExpense,
@@ -404,7 +408,7 @@ class TransactionListItem extends ConsumerWidget {
     // 如果提供了删除回调，则包装在Dismissible中支持侧滑删除
     if (onDelete != null) {
       return Dismissible(
-        key: ValueKey('transaction_$title${amount.toString()}'),
+        key: ValueKey('tx_$transactionId'),
         direction: DismissDirection.endToStart,
         background: Container(
           alignment: Alignment.centerRight,

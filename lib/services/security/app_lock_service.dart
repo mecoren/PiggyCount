@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../data/encryption/argon2_key_derivation.dart';
 import '../system/logger_service.dart';
 
 class AppLockService {
@@ -13,6 +15,10 @@ class AppLockService {
 
   static final LocalAuthentication _localAuth = LocalAuthentication();
 
+  /// Argon2id KDF 实例（生产参数：3 迭代 / 64MB / 2 并行）
+  /// 用于 PIN 哈希派生，替代原无盐单次 SHA-256。
+  static const _argon2 = Argon2KeyDerivation();
+
   /// 最近一次解锁时间（内存中，防止解锁后立即被 resumed 事件重新锁定）
   static DateTime? _lastUnlockTime;
 
@@ -22,26 +28,72 @@ class AppLockService {
     logger.info('AppLock', '已记录解锁时间');
   }
 
-  /// SHA-256 哈希 PIN 码
-  static String hashPin(String pin) {
+  /// 旧版 SHA-256 哈希（无盐单次），仅用于迁移期验证旧 PIN
+  static String _legacyHashPin(String pin) {
     final bytes = utf8.encode(pin);
     return sha256.convert(bytes).toString();
   }
 
-  /// 设置 PIN 码
+  /// 用 Argon2id + 随机 salt 哈希 PIN 码
+  ///
+  /// 返回格式 `base64(salt):base64(hash)`，salt 为 16 字节随机值，
+  /// hash 为 Argon2id 派生的 32 字节。每次 setPin 生成新 salt。
+  static Future<String> _hashPinSecure(String pin) async {
+    final salt = await Argon2KeyDerivation.generateSalt();
+    final hash = await _argon2.deriveKey(password: pin, salt: salt);
+    return '${base64.encode(salt)}:${base64.encode(hash)}';
+  }
+
+  /// 设置 PIN 码（Argon2id + salt）
   static Future<void> setPin(String pin) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_keyPinHash, hashPin(pin));
+    final hashed = await _hashPinSecure(pin);
+    await prefs.setString(_keyPinHash, hashed);
     await prefs.setBool(_keyEnabled, true);
     logger.info('AppLock', 'PIN已设置');
   }
 
   /// 验证 PIN 码
+  ///
+  /// 支持两种格式：
+  /// - 新格式 `base64(salt):base64(hash)`：Argon2id 派生 + 常量时间比较
+  /// - 旧格式（纯 SHA-256 hex）：验证成功后自动升级为新格式
   static Future<bool> verifyPin(String pin) async {
     final prefs = await SharedPreferences.getInstance();
     final savedHash = prefs.getString(_keyPinHash);
     if (savedHash == null) return false;
-    return hashPin(pin) == savedHash;
+
+    if (savedHash.contains(':')) {
+      // 新格式: base64(salt):base64(hash)
+      final parts = savedHash.split(':');
+      if (parts.length != 2) return false;
+      try {
+        final salt = Uint8List.fromList(base64.decode(parts[0]));
+        final hash = await _argon2.deriveKey(password: pin, salt: salt);
+        return _constantTimeEquals(base64.encode(hash), parts[1]);
+      } catch (e) {
+        logger.warning('AppLock', 'PIN 验证异常: $e');
+        return false;
+      }
+    }
+
+    // 旧格式: 无盐 SHA-256，验证成功后自动升级
+    if (_constantTimeEquals(_legacyHashPin(pin), savedHash)) {
+      await setPin(pin);
+      logger.info('AppLock', 'PIN 已从 SHA-256 升级为 Argon2id');
+      return true;
+    }
+    return false;
+  }
+
+  /// 常量时间字符串比较，防止侧信道时序攻击
+  static bool _constantTimeEquals(String a, String b) {
+    if (a.length != b.length) return false;
+    var result = 0;
+    for (var i = 0; i < a.length; i++) {
+      result |= a.codeUnitAt(i) ^ b.codeUnitAt(i);
+    }
+    return result == 0;
   }
 
   /// 清除 PIN 码并禁用锁定

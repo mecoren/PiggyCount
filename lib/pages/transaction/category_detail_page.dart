@@ -169,7 +169,7 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
       ),
       body: Padding(
         padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 56,
+          top: PiggyTokens.topScrollablePadding(context),
         ),
         child: Column(
           children: [
@@ -445,6 +445,7 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
                   category?.name ?? widget.categoryName, context),
               ledgerName: ledgerNames[transaction.ledgerId],
               amount: transaction.amount,
+              transactionId: transaction.id,
               currencyCode: transaction.currencyCode,
               nativeAmount: transaction.nativeAmount,
               isExpense: transaction.type == 'expense',
@@ -528,6 +529,7 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
                 icon: _getTransactionIcon(transaction),
                 category: category,
                 title: transaction.note ?? '',
+                transactionId: transaction.id,
                 categoryName: CategoryUtils.getDisplayName(
                     category?.name ?? widget.categoryName, context),
                 ledgerName: ledgerNames[transaction.ledgerId],

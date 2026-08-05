@@ -115,7 +115,7 @@ class _PrivacyPolicyPageState extends ConsumerState<PrivacyPolicyPage> {
         ),
         body: Padding(
           padding:
-              EdgeInsets.only(top: MediaQuery.of(context).padding.top + 56),
+              EdgeInsets.only(top: PiggyTokens.topScrollablePadding(context)),
           child: Stack(
             children: [
               if (_controller != null && !_failed)

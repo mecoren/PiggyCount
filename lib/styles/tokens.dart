@@ -492,6 +492,16 @@ class PiggyTokens {
 
   // ========== 辅助方法 ==========
 
+  /// 计算 AppBar 下方内容的顶部内边距（缺陷 G 修复）
+  ///
+  /// 替代手动 `MediaQuery.of(context).padding.top + 56 + extra`，
+  /// 使用 [kToolbarHeight] 保持与 Material AppBar 标准高度一致，
+  /// 避免 extendBodyBehindAppBar / 横屏 / 灵动岛等场景下内容被状态栏遮挡。
+  ///
+  /// [extra] 为 AppBar 底部到内容起始处的额外间距，默认 0。
+  static double topScrollablePadding(BuildContext context, {double extra = 0}) =>
+      MediaQuery.of(context).padding.top + kToolbarHeight + extra;
+
   /// 判断当前是否为暗黑模式
   static bool isDark(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark;
