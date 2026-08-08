@@ -826,22 +826,17 @@ class _CategoryCard extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Container(
+                  SizedBox(
                     width: item.isSubCategory ? 28 : 32,
                     height: item.isSubCategory ? 28 : 32,
-                    decoration: BoxDecoration(
-                      color: item.isSubCategory
-                          ? PiggyTokens.warning(context).withValues(alpha: 0.2)
-                          : PiggyTokens.primary(context).withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: CategoryIconWidget(
-                      category: item.category,
-                      size: item.isSubCategory ? 16.0 : 18.0,
-                      color: item.isSubCategory
-                          ? PiggyTokens.warning(context)
-                          : PiggyTokens.primary(context),
-                      circular: true,
+                    child: Center(
+                      child: CategoryIconWidget(
+                        category: item.category,
+                        size: item.isSubCategory ? 18.0 : 20.0,
+                        color: item.isSubCategory
+                            ? PiggyTokens.warning(context)
+                            : PiggyTokens.primary(context),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -970,18 +965,15 @@ class _SubcategoryDialogState extends ConsumerState<_SubcategoryDialog> {
             // 标题栏
             Row(
               children: [
-                Container(
+                SizedBox(
                   width: 32,
                   height: 32,
-                  decoration: BoxDecoration(
-                    color: primaryColor.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: CategoryIconWidget(
-                    category: widget.parentCategory,
-                    size: 18,
-                    color: primaryColor,
-                    circular: true,
+                  child: Center(
+                    child: CategoryIconWidget(
+                      category: widget.parentCategory,
+                      size: 20,
+                      color: primaryColor,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1134,18 +1126,15 @@ class _DialogSubCategoryCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
+            SizedBox(
               width: 26,
               height: 26,
-              decoration: BoxDecoration(
-                color: primaryColor.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: CategoryIconWidget(
-                category: category,
-                size: 14,
-                color: primaryColor,
-                circular: true,
+              child: Center(
+                child: CategoryIconWidget(
+                  category: category,
+                  size: 16,
+                  color: primaryColor,
+                ),
               ),
             ),
             const SizedBox(height: 4),

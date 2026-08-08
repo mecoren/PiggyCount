@@ -210,7 +210,14 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
   ///
   /// 仅当类型已在 [_activatedKinds] 中（即用户至少切换到过一次）时才真正构建，
   /// 否则返回空 widget。已构建的子树在 IndexedStack 中保持存活，保留滚动位置等状态。
-  Widget _buildKindChild(BuildContext context, String kind) {
+  ///
+  /// [scrollController] 仅底部抽屉场景传入：且只应传给当前激活的分类页，
+  /// 避免 expense/income 两个 ListView 同时挂载同一控制器报错。
+  Widget _buildKindChild(
+    BuildContext context,
+    String kind, {
+    ScrollController? scrollController,
+  }) {
     if (!_activatedKinds.contains(kind)) {
       return const SizedBox.shrink();
     }
@@ -221,6 +228,7 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
           onCategorySelected: (c) =>
               _onCategorySelected(context, c, 'expense'),
           initialCategoryId: widget.initialCategoryId,
+          scrollController: scrollController,
         );
       case 'income':
         return CategorySelector(
@@ -228,6 +236,7 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
           onCategorySelected: (c) =>
               _onCategorySelected(context, c, 'income'),
           initialCategoryId: widget.initialCategoryId,
+          scrollController: scrollController,
         );
       case 'transfer':
         return TransferForm(
@@ -283,18 +292,25 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
       bottom: segmentControl,
       bottomHeight: 52,
       builder: (context, scrollController) {
-        // IndexedStack 内部组件自带滚动控制器（CategorySelector/TransferForm），
-        // 抽屉的 scrollController 不强注入，仅用于 DraggableScrollableSheet
-        // 联动判定（此处保留参数避免未使用警告）
-        // ignore: unused_local_variable
-        final _ = scrollController;
         return IndexedStack(
           index: _selectedKind == 'expense'
               ? 0
               : (_selectedKind == 'income' ? 1 : 2),
           children: [
-            _buildKindChild(context, 'expense'),
-            _buildKindChild(context, 'income'),
+            // 仅当前激活的分类页接入抽屉 scrollController，
+            // 驱动上滑全屏/下滑回弹；其余页传 null 走自带控制器
+            _buildKindChild(
+              context,
+              'expense',
+              scrollController:
+                  _selectedKind == 'expense' ? scrollController : null,
+            ),
+            _buildKindChild(
+              context,
+              'income',
+              scrollController:
+                  _selectedKind == 'income' ? scrollController : null,
+            ),
             _buildKindChild(context, 'transfer'),
           ],
         );

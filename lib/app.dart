@@ -1075,15 +1075,8 @@ class _PiggyBottomBar extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: () => onTabTap(index),
         child: Center(
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
+          child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-            decoration: BoxDecoration(
-              color: isActive
-                  ? primaryColor.withValues(alpha: 0.12)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
-            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1175,15 +1168,8 @@ class _PiggyBottomBar extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: () => onTabTap(index),
         child: Center(
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
+          child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-            decoration: BoxDecoration(
-              color: isActive
-                  ? primaryColor.withValues(alpha: 0.12)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
-            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,

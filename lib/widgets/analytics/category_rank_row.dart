@@ -174,16 +174,10 @@ class _CategoryRankRowState extends ConsumerState<CategoryRankRow> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Container(
+            SizedBox(
               width: isTopLevel ? 44 : 38,
               height: isTopLevel ? 44 : 38,
-              decoration: BoxDecoration(
-                color: isTopLevel
-                    ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
-                    : widget.color.withValues(alpha: 0.08),
-                shape: BoxShape.circle,
-              ),
-              child: iconWidget,
+              child: Center(child: iconWidget),
             ),
             const SizedBox(width: 12),
             Expanded(

@@ -246,22 +246,18 @@ class TransactionListItem extends ConsumerWidget {
                 activeColor: Theme.of(context).colorScheme.primary,
               )
             else
-              // 分类图标，支持点击跳转
+              // 分类图标，支持点击跳转（无背景）
               GestureDetector(
                 onTap: onCategoryTap,
-                child: Container(
+                behavior: HitTestBehavior.opaque,
+                child: SizedBox(
                   width: 32,
                   height: 32,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .primary
-                        .withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: CategoryIconWidget(
-                    category: category,
-                    size: 18,
+                  child: Center(
+                    child: CategoryIconWidget(
+                      category: category,
+                      size: 22,
+                    ),
                   ),
                 ),
               ),

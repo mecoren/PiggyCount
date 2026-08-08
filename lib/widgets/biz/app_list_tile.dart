@@ -30,19 +30,14 @@ class AppListTile extends StatelessWidget {
       child: Row(
         children: [
           leadingWidget ??
-              Container(
+              SizedBox(
                 width: 36,
                 height: 36,
-                decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .primary
-                      .withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  leading,
-                  color: Theme.of(context).colorScheme.primary,
+                child: Center(
+                  child: Icon(
+                    leading,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
               ),
           const SizedBox(width: 12),

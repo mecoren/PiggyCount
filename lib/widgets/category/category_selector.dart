@@ -24,11 +24,19 @@ class CategorySelector extends ConsumerStatefulWidget {
   /// 初始选中的分类ID（可选）
   final int? initialCategoryId;
 
+  /// 外部滚动控制器（可选）。
+  ///
+  /// 底部抽屉场景传入 [ExpandableBottomSheet] 提供的控制器后，本组件的主
+  /// [ListView] 会驱动抽屉伸缩（上滑扩至全屏、下滑回弹至原样）。为 null
+  /// 时（全屏编辑页）保持默认 primary 滚动行为。
+  final ScrollController? scrollController;
+
   const CategorySelector({
     super.key,
     required this.kind,
     required this.onCategorySelected,
     this.initialCategoryId,
+    this.scrollController,
   });
 
   @override
@@ -299,7 +307,12 @@ class _CategorySelectorState extends ConsumerState<CategorySelector> {
             );
             displayItems.add(const SizedBox(height: 12));
 
+            // scrollController 非空(底部抽屉)时由其驱动抽屉伸缩；
+            // 为 null(全屏编辑页)保持 primary 默认滚动行为
+            final useSheetController = widget.scrollController != null;
             return ListView(
+              controller: widget.scrollController,
+              primary: !useSheetController,
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
               children: displayItems,
             );
@@ -357,24 +370,12 @@ class _SubcategorySelectorCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
-    final isDark = PiggyTokens.isDark(context);
-
     return Container(
       decoration: BoxDecoration(
         color: PiggyTokens.surfacePopoverCard(context),
         borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-        boxShadow: isDark
-            ? null
-            : [
-                BoxShadow(
-                  color: primaryColor.withValues(alpha: 0.15),
-                  blurRadius: 8,
-                  spreadRadius: 1,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-        border: isDark ? Border.all(color: PiggyTokens.border(context)) : null,
+        // 去底色风格：去掉彩色阴影，统一用细边框区分二级分类区
+        border: Border.all(color: PiggyTokens.border(context)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -423,23 +424,15 @@ class _CategoryItem extends StatelessWidget {
     this.expanded = false,
   });
 
-  /// 构建图标组件（支持自定义图标）
-  Widget _buildIcon(BuildContext context, double size, Color color) {
-    // 使用统一的 CategoryIconWidget
-    return CategoryIconWidget(
-      category: category,
-      size: size,
-      color: color,
-      circular: true, // 使用圆形
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    // 二级分类使用较小的图标和缩进
-    final iconSize = isSubCategory ? 48.0 : 56.0;
+    // 去底色风格：未选中无背景，仅图标；选中用主色高亮环+主色图标
+    final iconSize = isSubCategory ? 48.0 : 56.0; // 容器尺寸(点击区+徽标锚点)
+    final iconGlyphSize = isSubCategory ? 28.0 : 34.0; // 实际图标(比旧值放大)
     final fontSize = isSubCategory ? 11.0 : 12.0;
     final primaryColor = Theme.of(context).colorScheme.primary;
+    final iconColor =
+        selected ? primaryColor : PiggyTokens.iconCategory(context);
 
     return InkWell(
       onTap: onTap,
@@ -453,47 +446,30 @@ class _CategoryItem extends StatelessWidget {
               Container(
                 width: iconSize,
                 height: iconSize,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: selected
-                      ? primaryColor.withValues(alpha: 0.25)
-                      : isSubCategory
-                          ? PiggyTokens.surfaceCategoryIconLight(context)
-                          : PiggyTokens.surfaceCategoryIcon(context),
                   shape: BoxShape.circle,
+                  // 选中态：极淡主色底 + 主色环作为高亮；未选中无任何底色
+                  color: selected ? primaryColor.withValues(alpha: 0.08) : null,
+                  border: selected
+                      ? Border.all(color: primaryColor, width: 1.5)
+                      : null,
                 ),
-                child: _buildIcon(
-                  context,
-                  isSubCategory ? 20 : 24,
-                  selected ? primaryColor : PiggyTokens.iconCategory(context),
+                child: CategoryIconWidget(
+                  category: category,
+                  size: iconGlyphSize,
+                  color: iconColor,
                 ),
               ),
-              // 有子分类时在图标右下角显示三个点（完全分开，不重叠）
+              // 有子分类：右下角三点指示(去底色，仅淡色图标)
               if (hasChildren && !isSubCategory)
                 Positioned(
-                  right: -6,
-                  bottom: -6,
-                  child: Container(
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? primaryColor.withValues(alpha: 0.25)
-                          : PiggyTokens.surfaceCategoryIcon(context),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: PiggyTokens.surface(context),
-                        width: 2,
-                      ),
-                    ),
-                    child: Center(
-                      child: Icon(
-                        Icons.more_horiz,
-                        size: 14,
-                        color: selected
-                            ? primaryColor
-                            : PiggyTokens.iconCategory(context),
-                      ),
-                    ),
+                  right: -2,
+                  bottom: -2,
+                  child: Icon(
+                    Icons.more_horiz,
+                    size: 16,
+                    color: PiggyTokens.iconTertiary(context),
                   ),
                 ),
             ],
@@ -505,9 +481,11 @@ class _CategoryItem extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: fontSize,
-                  color: isSubCategory
-                      ? PiggyTokens.textSecondary(context)
-                      : PiggyTokens.textPrimary(context),
+                  color: selected
+                      ? primaryColor
+                      : (isSubCategory
+                          ? PiggyTokens.textSecondary(context)
+                          : PiggyTokens.textPrimary(context)),
                 ),
           ),
         ],

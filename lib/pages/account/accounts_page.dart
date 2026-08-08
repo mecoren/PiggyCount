@@ -1964,166 +1964,106 @@ class _AccountCard extends ConsumerWidget {
       child: Container(
         margin: EdgeInsets.only(bottom: 8.0.scaled(context, ref)),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: isDark
-                ? [
-                    typeColor.withValues(alpha: 0.25),
-                    typeColor.withValues(alpha: 0.12),
-                  ]
-                : [typeColor, typeColor.withValues(alpha: 0.8)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(12.0.scaled(context, ref)),
-          boxShadow: isDark
-              ? null
-              : [
-                  BoxShadow(
-                    color: typeColor.withValues(alpha: 0.15),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+          color: PiggyTokens.surface(context),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+          boxShadow: isDark ? null : PiggyShadows.card,
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12.0.scaled(context, ref)),
-          child: Stack(
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: 14.0.scaled(context, ref),
+            vertical: 12.0.scaled(context, ref),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 装饰圆圈
-              Positioned(
-                right: -20,
-                top: -20,
-                child: Container(
-                  width: 80.0.scaled(context, ref),
-                  height: 80.0.scaled(context, ref),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: isDark ? 0.05 : 0.1),
+              // 顶部行：图标(无背景) + 名称 + 货币 + 编辑
+              Row(
+                children: [
+                  AccountTypeIcon(
+                    type: account.type,
+                    size: 22.0.scaled(context, ref),
                   ),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 14.0.scaled(context, ref),
-                  vertical: 12.0.scaled(context, ref),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 顶部行：图标 + 名称 + 编辑
-                    Row(
+                  SizedBox(width: 10.0.scaled(context, ref)),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          width: 32.0.scaled(context, ref),
-                          height: 32.0.scaled(context, ref),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: AccountTypeIcon(
-                              type: account.type,
-                              size: 18.0.scaled(context, ref),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                account.name,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: PiggyTokens.textPrimary(context),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                        ),
-                        SizedBox(width: 10.0.scaled(context, ref)),
-                        Expanded(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  account.name,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark
-                                        ? Colors.white.withValues(alpha: 0.9)
-                                        : Colors.white,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              SizedBox(width: 8.0.scaled(context, ref)),
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 5.0.scaled(context, ref),
-                                  vertical: 1.0.scaled(context, ref),
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(
-                                      4.0.scaled(context, ref)),
-                                ),
-                                child: Text(
-                                  getCurrencyName(account.currency, context),
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: isDark
-                                        ? Colors.white.withValues(alpha: 0.8)
-                                        : Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
+                            if (account.hidden) ...[
+                              SizedBox(width: 6.0.scaled(context, ref)),
+                              _buildHiddenBadge(context, ref, l10n),
                             ],
-                          ),
+                          ],
                         ),
-                        GestureDetector(
-                          onTap: onEdit,
-                          child: Container(
-                            padding: EdgeInsets.all(6.0.scaled(context, ref)),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.edit,
-                              color: isDark
-                                  ? Colors.white.withValues(alpha: 0.8)
-                                  : Colors.white,
-                              size: 14.0.scaled(context, ref),
-                            ),
+                        Text(
+                          getCurrencyName(account.currency, context),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: PiggyTokens.textTertiary(context),
                           ),
                         ),
                       ],
                     ),
-                    SizedBox(height: 10.0.scaled(context, ref)),
-                    // 已隐藏标签 + 恢复按钮(账户隐藏 #240,D2)
-                    if (account.hidden) ...[
-                      _buildHiddenBadgeRow(context, ref, l10n, isDark),
-                      SizedBox(height: 8.0.scaled(context, ref)),
-                    ],
-                    // 信用卡：进度条 + 额度信息
-                    if (account.type == 'credit_card' && stats != null)
-                      _buildCreditCardStats(context, ref, l10n, isDark)
-                    // 估值账户：仅显示当前估值
-                    else if (isValuationOnlyType(account.type) && stats != null)
-                      _buildValuationStats(context, ref, l10n, isDark)
-                    // 普通账户：余额/收入/支出
-                    else if (stats != null)
-                      _buildNormalStats(context, ref, l10n, isDark)
-                    else
-                      Center(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(
-                              vertical: 4.0.scaled(context, ref)),
-                          child: const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
-                              strokeWidth: 2,
-                            ),
-                          ),
-                        ),
+                  ),
+                  GestureDetector(
+                    onTap: onEdit,
+                    behavior: HitTestBehavior.opaque,
+                    child: Padding(
+                      padding: EdgeInsets.all(4.0.scaled(context, ref)),
+                      child: Icon(
+                        Icons.edit_outlined,
+                        color: PiggyTokens.iconTertiary(context),
+                        size: 16.0.scaled(context, ref),
                       ),
-                  ],
-                ),
+                    ),
+                  ),
+                ],
               ),
+              // 已隐藏账户的恢复按钮(账户隐藏 #240,D2)
+              if (account.hidden && onRestore != null) ...[
+                SizedBox(height: 8.0.scaled(context, ref)),
+                _buildRestoreButton(context, ref, l10n),
+              ],
+              SizedBox(height: 10.0.scaled(context, ref)),
+              // 信用卡：进度条 + 额度信息
+              if (account.type == 'credit_card' && stats != null)
+                _buildCreditCardStats(context, ref, l10n, isDark)
+              // 估值账户：仅显示当前估值
+              else if (isValuationOnlyType(account.type) && stats != null)
+                _buildValuationStats(context, ref, l10n, isDark)
+              // 普通账户：余额/收入/支出
+              else if (stats != null)
+                _buildNormalStats(context, ref, l10n, isDark)
+              else
+                Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                        vertical: 4.0.scaled(context, ref)),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                            PiggyTokens.primary(context)),
+                        strokeWidth: 2,
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -2131,111 +2071,110 @@ class _AccountCard extends ConsumerWidget {
     );
   }
 
-  /// 「已隐藏」灰标 + 恢复按钮(账户隐藏 #240)。仅 account.hidden==true 时被调用。
-  Widget _buildHiddenBadgeRow(
-      BuildContext context, WidgetRef ref, AppLocalizations l10n, bool isDark) {
-    final textColor =
-        isDark ? Colors.white.withValues(alpha: 0.9) : Colors.white;
-    return Row(
-      children: [
-        Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: 6.0.scaled(context, ref),
-            vertical: 2.0.scaled(context, ref),
-          ),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.18),
-            borderRadius: BorderRadius.circular(4.0.scaled(context, ref)),
-          ),
-          child: Text(
-            l10n.accountHiddenTag,
-            style: TextStyle(
-              fontSize: 11,
-              color: textColor,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+  /// 「已隐藏」中性小标签(账户隐藏 #240)。仅 account.hidden==true 时渲染。
+  Widget _buildHiddenBadge(
+      BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: 6.0.scaled(context, ref),
+        vertical: 2.0.scaled(context, ref),
+      ),
+      decoration: BoxDecoration(
+        color: PiggyTokens.textTertiary(context).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(4.0.scaled(context, ref)),
+      ),
+      child: Text(
+        l10n.accountHiddenTag,
+        style: TextStyle(
+          fontSize: 10,
+          color: PiggyTokens.textTertiary(context),
+          fontWeight: FontWeight.w600,
         ),
-        const Spacer(),
-        if (onRestore != null)
-          GestureDetector(
-            onTap: onRestore,
-            child: Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: 10.0.scaled(context, ref),
-                vertical: 4.0.scaled(context, ref),
-              ),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.25),
-                borderRadius: BorderRadius.circular(12.0.scaled(context, ref)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.replay,
-                      size: 12.0.scaled(context, ref), color: textColor),
-                  SizedBox(width: 4.0.scaled(context, ref)),
-                  Text(
-                    l10n.accountRestore,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: textColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+      ),
+    );
+  }
+
+  /// 恢复按钮(账户隐藏 #240)。主题色弱底 ghost 按钮。
+  Widget _buildRestoreButton(
+      BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+    final primary = PiggyTokens.primary(context);
+    return GestureDetector(
+      onTap: onRestore,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: 10.0.scaled(context, ref),
+          vertical: 4.0.scaled(context, ref),
+        ),
+        decoration: BoxDecoration(
+          color: primary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8.0.scaled(context, ref)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.replay, size: 12.0.scaled(context, ref), color: primary),
+            SizedBox(width: 4.0.scaled(context, ref)),
+            Text(
+              l10n.accountRestore,
+              style: TextStyle(
+                fontSize: 12,
+                color: primary,
+                fontWeight: FontWeight.w600,
               ),
             ),
-          ),
-      ],
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildNormalStats(
       BuildContext context, WidgetRef ref, AppLocalizations l10n, bool isDark) {
-    final textColor =
-        isDark ? Colors.white.withValues(alpha: 0.9) : Colors.white;
-    final labelColor = isDark
-        ? Colors.white.withValues(alpha: 0.6)
-        : Colors.white.withValues(alpha: 0.8);
+    final labelColor = PiggyTokens.textTertiary(context);
 
+    // 余额作为 hero 数字(主色),收支以语义色弱化展示,去掉竖线分隔。
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Expanded(
-          child: _CardStat(
-            label: l10n.accountBalance,
-            value: stats!.balance,
-            textColor: textColor,
-            labelColor: labelColor,
-            ref: ref,
-            currencyCode: account.currency,
+          flex: 2,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AmountText(
+                value: stats!.balance,
+                signed: false,
+                showCurrency: false,
+                useCompactFormat: ref.watch(compactAmountProvider),
+                currencyCode: account.currency,
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: PiggyTokens.textPrimary(context),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(l10n.accountBalance,
+                  style: TextStyle(fontSize: 11, color: labelColor)),
+            ],
           ),
-        ),
-        Container(
-          width: 1,
-          height: 24.0.scaled(context, ref),
-          color: Colors.white.withValues(alpha: 0.2),
         ),
         Expanded(
           child: _CardStat(
             label: l10n.homeIncome,
             value: stats!.income,
-            textColor: textColor,
+            valueColor: PiggyTokens.incomeColor(context, ref),
             labelColor: labelColor,
             ref: ref,
             currencyCode: account.currency,
           ),
         ),
-        Container(
-          width: 1,
-          height: 24.0.scaled(context, ref),
-          color: Colors.white.withValues(alpha: 0.2),
-        ),
         Expanded(
           child: _CardStat(
             label: l10n.homeExpense,
             value: stats!.expense,
-            textColor: textColor,
+            valueColor: PiggyTokens.expenseColor(context, ref),
             labelColor: labelColor,
             ref: ref,
             currencyCode: account.currency,
@@ -2247,31 +2186,20 @@ class _AccountCard extends ConsumerWidget {
 
   Widget _buildValuationStats(
       BuildContext context, WidgetRef ref, AppLocalizations l10n, bool isDark) {
-    final textColor =
-        isDark ? Colors.white.withValues(alpha: 0.9) : Colors.white;
-    final labelColor = isDark
-        ? Colors.white.withValues(alpha: 0.6)
-        : Colors.white.withValues(alpha: 0.8);
+    final labelColor = PiggyTokens.textTertiary(context);
     final isLiability = isLiabilityType(account.type);
     final displayValue = isLiability ? stats!.balance.abs() : stats!.balance;
     final label =
         isLiability ? l10n.valuationCurrentDebt : l10n.valuationCurrentValue;
 
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Expanded(
           flex: 2,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: labelColor,
-                ),
-              ),
-              SizedBox(height: 2.0.scaled(context, ref)),
               AmountText(
                 value: displayValue,
                 signed: false,
@@ -2279,17 +2207,20 @@ class _AccountCard extends ConsumerWidget {
                 useCompactFormat: ref.watch(compactAmountProvider),
                 currencyCode: account.currency,
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: textColor,
+                  color: PiggyTokens.textPrimary(context),
                 ),
               ),
+              const SizedBox(height: 2),
+              Text(label, style: TextStyle(fontSize: 11, color: labelColor)),
             ],
           ),
         ),
         if (account.updatedAt != null)
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 Icons.update,
@@ -2313,11 +2244,7 @@ class _AccountCard extends ConsumerWidget {
   Widget _buildCreditCardStats(
       BuildContext context, WidgetRef ref, AppLocalizations l10n, bool isDark) {
     final used = stats!.balance < 0 ? -stats!.balance : 0.0;
-    final textColor =
-        isDark ? Colors.white.withValues(alpha: 0.9) : Colors.white;
-    final labelColor = isDark
-        ? Colors.white.withValues(alpha: 0.6)
-        : Colors.white.withValues(alpha: 0.8);
+    final labelColor = PiggyTokens.textTertiary(context);
 
     // 信用卡按 type 判定;无额度时仅显示当前欠款,不再 fallthrough 到收入/支出卡
     final creditLimit = account.creditLimit;
@@ -2327,7 +2254,7 @@ class _AccountCard extends ConsumerWidget {
         child: _CardStat(
           label: l10n.creditCardOwed,
           value: used,
-          textColor: textColor,
+          valueColor: PiggyTokens.expenseColor(context, ref),
           labelColor: labelColor,
           ref: ref,
           currencyCode: account.currency,
@@ -2338,16 +2265,17 @@ class _AccountCard extends ConsumerWidget {
     final usageRate =
         creditLimit > 0 ? (used / creditLimit).clamp(0.0, 1.0) : 0.0;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 进度条
+        // 进度条:轨道用中性弱底,填充用账户类型色
         ClipRRect(
           borderRadius: BorderRadius.circular(3.0.scaled(context, ref)),
           child: LinearProgressIndicator(
             value: usageRate,
-            backgroundColor: Colors.white.withValues(alpha: 0.2),
-            valueColor: AlwaysStoppedAnimation<Color>(
-              Colors.white.withValues(alpha: 0.8),
-            ),
+            backgroundColor: isDark
+                ? Colors.white.withValues(alpha: 0.1)
+                : Colors.black.withValues(alpha: 0.06),
+            valueColor: AlwaysStoppedAnimation<Color>(typeColor),
             minHeight: 4.0.scaled(context, ref),
           ),
         ),
@@ -2358,37 +2286,27 @@ class _AccountCard extends ConsumerWidget {
               child: _CardStat(
                 label: l10n.creditLimit,
                 value: creditLimit,
-                textColor: textColor,
+                valueColor: PiggyTokens.textPrimary(context),
                 labelColor: labelColor,
                 ref: ref,
                 currencyCode: account.currency,
               ),
-            ),
-            Container(
-              width: 1,
-              height: 24.0.scaled(context, ref),
-              color: Colors.white.withValues(alpha: 0.2),
             ),
             Expanded(
               child: _CardStat(
                 label: l10n.creditUsed,
                 value: used,
-                textColor: textColor,
+                valueColor: PiggyTokens.expenseColor(context, ref),
                 labelColor: labelColor,
                 ref: ref,
                 currencyCode: account.currency,
               ),
             ),
-            Container(
-              width: 1,
-              height: 24.0.scaled(context, ref),
-              color: Colors.white.withValues(alpha: 0.2),
-            ),
             Expanded(
               child: _CardStat(
                 label: l10n.creditAvailable,
                 value: creditLimit - used,
-                textColor: textColor,
+                valueColor: PiggyTokens.incomeColor(context, ref),
                 labelColor: labelColor,
                 ref: ref,
                 currencyCode: account.currency,
@@ -2405,7 +2323,7 @@ class _AccountCard extends ConsumerWidget {
 class _CardStat extends StatelessWidget {
   final String label;
   final double value;
-  final Color textColor;
+  final Color valueColor;
   final Color labelColor;
   final WidgetRef ref;
 
@@ -2415,7 +2333,7 @@ class _CardStat extends StatelessWidget {
   const _CardStat({
     required this.label,
     required this.value,
-    required this.textColor,
+    required this.valueColor,
     required this.labelColor,
     required this.ref,
     this.currencyCode,
@@ -2424,6 +2342,7 @@ class _CardStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         AmountText(
           value: value,
@@ -2433,8 +2352,8 @@ class _CardStat extends StatelessWidget {
           currencyCode: currencyCode,
           style: TextStyle(
             fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: textColor,
+            fontWeight: FontWeight.w600,
+            color: valueColor,
           ),
         ),
         const SizedBox(height: 2),

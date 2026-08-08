@@ -1374,16 +1374,14 @@ class _TransactionTile extends ConsumerWidget {
         ),
         child: Row(
           children: [
-            Container(
+            SizedBox(
               width: 32,
               height: 32,
-              decoration: BoxDecoration(
-                color: primaryColor.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: CategoryIconWidget(
-                category: category,
-                size: 18,
+              child: Center(
+                child: CategoryIconWidget(
+                  category: category,
+                  size: 22,
+                ),
               ),
             ),
             SizedBox(width: 12.0.scaled(context, ref)),
