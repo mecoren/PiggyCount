@@ -345,6 +345,23 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeBalance => '잔액';
 
   @override
+  String get homeMonthIncome => '수입';
+
+  @override
+  String get homeMonthExpense => '지출';
+
+  @override
+  String get homeMonthBalance => '잔액';
+
+  @override
+  String homeBudgetSet(String amount) {
+    return '예산 $amount';
+  }
+
+  @override
+  String get homeBudgetNotSet => '미설정';
+
+  @override
   String get homeNoRecords => '아직 기록이 없습니다';
 
   @override

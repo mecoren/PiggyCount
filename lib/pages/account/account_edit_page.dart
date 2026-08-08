@@ -744,11 +744,13 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
         minChildSize: 0.35,
         maxChildSize: 1.0,
         builder: (context, scrollController) {
-          // 抽屉模式下 scrollController 不强注入到 ListView（ListView 自带
-          // PrimaryScrollController 联动），此处保留参数避免未使用警告
-          // ignore: unused_local_variable
-          final _ = scrollController;
-          return formWidget;
+          // 注入抽屉 scrollController：formWidget 内 ListView 未显式指定
+          // controller，会回退到 PrimaryScrollController。将其指向抽屉的
+          // scrollController 后，内容上滑即可联动抽屉扩展到全屏（同记一笔）。
+          return PrimaryScrollController(
+            controller: scrollController,
+            child: formWidget,
+          );
         },
       );
     }

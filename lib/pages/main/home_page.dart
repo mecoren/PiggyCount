@@ -24,6 +24,7 @@ import '../report/annual_report_page.dart';
 import '../calendar/calendar_page.dart';
 import '../../widgets/biz/ledger_picker_sheet.dart';
 import '../../widgets/biz/home_budget_summary.dart';
+import '../../widgets/biz/home_month_summary_card.dart';
 import 'ledgers_page_new.dart';
 import '../../providers/shared_ledger_providers.dart';
 
@@ -47,7 +48,6 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   // StreamBuilder 刷新计数器
   int _streamBuilderKey = 0;
-  int? _lastLedgerId;
 
   // home build 缓存的 tx stream。repo.transactionsWithCategoryAll 内部每次调
   // 都 new StreamController,如果在 build 里直接调,只要 home 因任何 setState
@@ -264,24 +264,8 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   // FlutterListView不需要手动计算偏移量，直接使用jumpToIndex即可！
 
-  // 日期选择处理
-  Future<void> _handleDateSelection() async {
-    final month = ref.read(selectedMonthProvider);
-    final res = await showWheelDatePicker(
-      context,
-      initial: month,
-      mode: WheelDatePickerMode.ym,
-      maxDate: DateTime.now(),
-    );
-
-    if (res != null) {
-      final targetMonth = DateTime(res.year, res.month, 1);
-      ref.read(selectedMonthProvider.notifier).state = targetMonth;
-
-      // 使用FlutterListView的精准跳转
-      await _jumpToTargetMonth(targetMonth);
-    }
-  }
+  // 月份选择由 HomeMonthSummaryCard 内部处理（chevron / 弹 WheelDatePicker），
+  // 选择后通过 onMonthSelected 回调触发列表跳转。
 
   // 构建月初提醒卡片
   Widget _buildLastMonthReminderCard(BuildContext context) {
@@ -634,21 +618,20 @@ class _HomePageState extends ConsumerState<HomePage> {
     // 预加载数据（含标签、附件、账户，仅前 N 条）
     final cachedFullData = ref.watch(cachedTransactionsProvider);
     final ledgerId = ref.watch(currentLedgerIdProvider);
-    final month = ref.watch(selectedMonthProvider);
-    final hide = ref.watch(hideAmountsProvider);
     final aiEnabledAsync = ref.watch(aiAssistantEnabledProvider);
     final aiEnabled = aiEnabledAsync.asData?.value ?? true; // 默认开启
 
-    // 检测账本切换，强制刷新 StreamBuilder 并清空缓存
-    if (_lastLedgerId != null && _lastLedgerId != ledgerId) {
-      _streamBuilderKey++;
-      // 同步清空缓存:本帧立即读到 null,避免 microtask 延迟导致的 race window
-      // (旧账本 cache 在切换后第一帧被当作 fallback 显示)。
-      ref.read(cachedTransactionsProvider.notifier).state = null;
-      logger.info('HomePage',
-          '账本切换: $_lastLedgerId → $ledgerId, 刷新StreamBuilder (key=$_streamBuilderKey)');
-    }
-    _lastLedgerId = ledgerId;
+    // 检测账本切换 → 用 listen,避免在 build 中直接写 state 触发
+    // "Tried to modify a provider while the widget tree was building"
+    ref.listen<int>(currentLedgerIdProvider, (previous, next) {
+      if (previous != null && previous != next) {
+        _streamBuilderKey++;
+        // 清空缓存,避免旧账本 cache 在切换后被当作 fallback 显示。
+        ref.read(cachedTransactionsProvider.notifier).state = null;
+        logger.info('HomePage',
+            '账本切换: $previous → $next, 刷新StreamBuilder (key=$_streamBuilderKey)');
+      }
+    });
 
     // 监听滚动到顶部的信号
     ref.listen<int>(homeScrollToTopProvider, (previous, next) {
@@ -685,7 +668,6 @@ class _HomePageState extends ConsumerState<HomePage> {
         children: [
           Consumer(builder: (context, ref, _) {
             ref.watch(headerStyleProvider);
-            final hide = ref.watch(hideAmountsProvider);
             return PiggyHeader(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -927,95 +909,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  // 第二行 - 月份显示和统计
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      left: PiggyDimens.p12,
-                      right: PiggyDimens.p12,
-                      bottom: 14,
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        InkWell(
-                          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
-                          onTap: _isJumping ? null : _handleDateSelection,
-                          child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                                AppLocalizations.of(context)
-                                    .homeYear(month.year),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .labelLarge
-                                    ?.copyWith(
-                                        color: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.color
-                                            ?.withValues(alpha: 0.6) ??
-                                                PiggyTokens.textSecondary(context), // 自适应次要文字颜色
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500)),
-                            const SizedBox(height: 2),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  AppLocalizations.of(context).homeMonth(
-                                      month.month.toString().padLeft(2, '0')),
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(
-                                          color: Theme.of(context)
-                                              .textTheme
-                                              .bodyLarge
-                                              ?.color ??
-                                                  PiggyTokens.textPrimary(context), // 自适应主文字颜色
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.w500),
-                                ),
-                                const SizedBox(width: 4),
-                                // 月份旁边的向下三角形（日期选择）
-                                _isJumping
-                                    ? SizedBox(
-                                        width: 12,
-                                        height: 12,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 1.5,
-                                          color: Theme.of(context)
-                                              .textTheme
-                                              .bodyLarge
-                                              ?.color ??
-                                                  PiggyTokens.textPrimary(context), // 自适应颜色
-                                        ),
-                                      )
-                                    : Icon(
-                                        Icons.keyboard_arrow_down,
-                                        size: 16,
-                                        color: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.color
-                                            ?.withValues(alpha: 0.6) ??
-                                                PiggyTokens.textSecondary(context), // 自适应次要颜色
-                                      ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 12),
-                        width: 1,
-                        height: 36,
-                        color: PiggyTokens.divider(context), // ⭐ 自适应分割线颜色
-                      ),
-                      const Expanded(child: _HeaderCenterSummary()),
-                    ],
-                    ),
+                  // 月度统计大卡片（2×2 网格 + 月份选择器 + 预算级别括号）
+                  HomeMonthSummaryCard(
+                    onMonthSelected: _jumpToTargetMonth,
                   ),
                   const HomeBudgetSummary(),
                 ],
@@ -1080,7 +976,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   transactions: transactions,
                   // 传入预加载数据供详情使用（标签、附件、账户）
                   transactionsWithDetails: cachedFullData,
-                  hideAmounts: hide,
+                  hideAmounts: ref.watch(hideAmountsProvider),
                   enableVisibilityTracking: true,
                   onDateVisibilityChanged: _onHeaderVisibilityChanged,
                   controller: _listController,
@@ -1094,68 +990,6 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _HeaderCenterSummary extends ConsumerWidget {
-  const _HeaderCenterSummary();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final ledgerId = ref.watch(currentLedgerIdProvider);
-    final month = ref.watch(selectedMonthProvider);
-    final params = (ledgerId: ledgerId, month: month);
-
-    ref.watch(monthlyTotalsProvider(params));
-    final cachedTotals = ref.watch(lastMonthlyTotalsProvider(params));
-    final (income, expense) = cachedTotals ?? (0.0, 0.0);
-    final balance = income - expense;
-
-    final labelStyle = PiggyTextTokens.label(context);
-    final amountStyle = Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Theme.of(context).textTheme.bodyLarge?.color,
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-            ) ??
-        TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w600,
-          color: Theme.of(context).textTheme.bodyLarge?.color,
-        );
-
-    Widget item(String title, double value) => Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, textAlign: TextAlign.left, style: labelStyle),
-            const SizedBox(height: 3),
-            Flexible(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: AmountText(
-                  value: value,
-                  signed: false,
-                  decimals: 2,
-                  style: amountStyle,
-                ),
-              ),
-            ),
-          ],
-        );
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Expanded(child: item(AppLocalizations.of(context).homeIncome, income)),
-        const SizedBox(width: 8),
-        Expanded(
-            child: item(AppLocalizations.of(context).homeExpense, expense)),
-        const SizedBox(width: 8),
-        Expanded(
-            child: item(AppLocalizations.of(context).homeBalance, balance)),
-      ],
     );
   }
 }

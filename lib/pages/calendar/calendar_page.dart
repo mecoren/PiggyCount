@@ -237,20 +237,22 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 
       // 日历样式
       calendarStyle: CalendarStyle(
-        // 今天样式
+        // 今天样式 — 圆角统一使用项目标准 PiggyDimens.radius2xl,
+        // 与 tokens.dart 注释「海报、日历选中态、特殊突出元素」一致;
+        // 避免与项目其他卡片圆角风格不一致。
         todayDecoration: BoxDecoration(
           color: primaryColor.withValues(alpha: 0.2),
-          shape: BoxShape.circle,
+          borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
         ),
         todayTextStyle: TextStyle(
           color: primaryColor,
           fontWeight: FontWeight.bold,
         ),
 
-        // 选中样式
+        // 选中样式 — 同上,圆角统一为项目标准 radius2xl
         selectedDecoration: BoxDecoration(
           color: primaryColor,
-          shape: BoxShape.circle,
+          borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
         ),
         selectedTextStyle: const TextStyle(
           color: Colors.white,
@@ -356,19 +358,22 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // 日期数字（带圆形背景）
+          // 日期数字（项目标准圆角矩形背景；32×32 cell 用 radiusLg 形成明显圆角矩形）
+          // 旧版用 BoxShape.circle 32×32 完美圆,与项目圆角令牌体系不一致。
           Container(
             width: 32,
             height: 32,
             decoration: isSelected
                 ? BoxDecoration(
                     color: primaryColor,
-                    shape: BoxShape.circle,
+                    borderRadius:
+                        BorderRadius.circular(PiggyDimens.radiusLg),
                   )
                 : isToday
                     ? BoxDecoration(
                         color: primaryColor.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
+                        borderRadius:
+                            BorderRadius.circular(PiggyDimens.radiusLg),
                       )
                     : null,
             alignment: Alignment.center,
@@ -465,15 +470,17 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               ],
             ),
           ),
+          // 主操作按钮 — 用项目标准按钮圆角 radiusLg(12),与全局主按钮风格一致;
+          // 旧版 radius2xl(20) ≈ 按钮半高 = pill 胶囊形,不符合主操作按钮标准。
           Material(
             color: Colors.transparent,
             child: InkWell(
-              borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
               onTap: _addTransactionForSelectedDate,
               child: Ink(
                 decoration: BoxDecoration(
                   color: primaryColor,
-                  borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                   boxShadow: [
                     BoxShadow(
                       color: primaryColor.withValues(alpha: 0.28),

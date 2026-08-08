@@ -194,6 +194,18 @@
   "homeIncome": "Income",
   "homeExpense": "Expense",
   "homeBalance": "Balance",
+  "homeMonthIncome": "Income",
+  "homeMonthExpense": "Expense",
+  "homeMonthBalance": "Balance",
+  "homeBudgetSet": "Budget {amount}",
+  "@homeBudgetSet": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "homeBudgetNotSet": "Not set",
   "homeNoRecords": "No records yet",
   "homeSelectDate": "Select date",
   "homeAppTitle": "Piggy Accounting",

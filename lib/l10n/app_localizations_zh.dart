@@ -345,6 +345,23 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeBalance => '结余';
 
   @override
+  String get homeMonthIncome => '本月收入';
+
+  @override
+  String get homeMonthExpense => '本月支出';
+
+  @override
+  String get homeMonthBalance => '本月结余';
+
+  @override
+  String homeBudgetSet(String amount) {
+    return '预算 $amount';
+  }
+
+  @override
+  String get homeBudgetNotSet => '未设置';
+
+  @override
   String get homeNoRecords => '还没有记账';
 
   @override
@@ -8048,6 +8065,23 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get homeBalance => '結餘';
+
+  @override
+  String get homeMonthIncome => '本月收入';
+
+  @override
+  String get homeMonthExpense => '本月支出';
+
+  @override
+  String get homeMonthBalance => '本月結餘';
+
+  @override
+  String homeBudgetSet(String amount) {
+    return '預算 $amount';
+  }
+
+  @override
+  String get homeBudgetNotSet => '未設定';
 
   @override
   String get homeNoRecords => '還沒有記帳';

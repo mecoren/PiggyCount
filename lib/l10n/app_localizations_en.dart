@@ -350,6 +350,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeBalance => 'Balance';
 
   @override
+  String get homeMonthIncome => 'Income';
+
+  @override
+  String get homeMonthExpense => 'Expense';
+
+  @override
+  String get homeMonthBalance => 'Balance';
+
+  @override
+  String homeBudgetSet(String amount) {
+    return 'Budget $amount';
+  }
+
+  @override
+  String get homeBudgetNotSet => 'Not set';
+
+  @override
   String get homeNoRecords => 'No records yet';
 
   @override

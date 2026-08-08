@@ -191,6 +191,18 @@
   "homeIncome": "收入",
   "homeExpense": "支出",
   "homeBalance": "结余",
+  "homeMonthIncome": "本月收入",
+  "homeMonthExpense": "本月支出",
+  "homeMonthBalance": "本月结余",
+  "homeBudgetSet": "预算 {amount}",
+  "@homeBudgetSet": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "homeBudgetNotSet": "未设置",
   "homeNoRecords": "还没有记账",
   "homeSelectDate": "选择日期",
   "homeAppTitle": "小猪记账",

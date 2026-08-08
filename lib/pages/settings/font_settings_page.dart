@@ -62,7 +62,7 @@ class FontSettingsPage extends ConsumerWidget {
                   .labelLarge
                   ?.copyWith(fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
-          ...options.map((o) => _buildOption(context, ref, o, level)),
+          _FontLevelsGroup(options: options, current: level),
           const SizedBox(height: 24),
           Text(AppLocalizations.of(context)!.fontSettingsCustomAdjust,
               style: Theme.of(context)
@@ -82,28 +82,72 @@ class FontSettingsPage extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Widget _buildOption(
-      BuildContext context, WidgetRef ref, _FontOption o, int current) {
-    final active = o.value == current;
+/// 把 8 个档位合并到一张卡里 + 行间 Divider，避免"卡片堆卡片"的拥挤感。
+class _FontLevelsGroup extends ConsumerWidget {
+  const _FontLevelsGroup({required this.options, required this.current});
+
+  final List<_FontOption> options;
+  final int current;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = PiggyTokens.isDark(context);
-    final style = Theme.of(context).textTheme.bodyMedium?.copyWith(
-          fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-          color: PiggyTokens.textPrimary(context),
-        );
+
+    Widget buildRow(_FontOption o) {
+      final active = o.value == current;
+      final style = Theme.of(context).textTheme.bodyMedium?.copyWith(
+            fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+            color: PiggyTokens.textPrimary(context),
+          );
+      return ListTile(
+        dense: true,
+        visualDensity: VisualDensity.compact,
+        horizontalTitleGap: 8,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+        title: Text(o.label, style: style),
+        subtitle: Text(
+          o.preview,
+          style: Theme.of(context)
+              .textTheme
+              .bodySmall
+              ?.copyWith(color: PiggyTokens.textSecondary(context)),
+        ),
+        trailing: active
+            ? Icon(Icons.check_circle,
+                color: PiggyTokens.success(context), size: 20)
+            : null,
+        onTap: () =>
+            ref.read(fontScaleLevelProvider.notifier).state = o.value,
+      );
+    }
+
     return Card(
       elevation: isDark ? 0 : 1,
       color: PiggyTokens.surface(context),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-        side: isDark ? BorderSide(color: PiggyTokens.border(context)) : BorderSide.none,
+        side: isDark
+            ? BorderSide(color: PiggyTokens.border(context))
+            : BorderSide.none,
       ),
-      child: ListTile(
-        title: Text(o.label, style: style),
-        subtitle: Text(o.preview, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: PiggyTokens.textSecondary(context))),
-        trailing:
-            active ? Icon(Icons.check_circle, color: PiggyTokens.success(context)) : null,
-        onTap: () => ref.read(fontScaleLevelProvider.notifier).state = o.value,
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < options.length; i++) ...[
+            buildRow(options[i]),
+            if (i < options.length - 1)
+              Divider(
+                height: 1,
+                thickness: 1,
+                indent: 16,
+                endIndent: 16,
+                color: PiggyTokens.border(context).withValues(alpha: 0.5),
+              ),
+          ],
+        ],
       ),
     );
   }

@@ -650,12 +650,12 @@ class _CategoryGridViewState extends ConsumerState<_CategoryGridView> {
     }
 
     return ReorderableGridView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 4,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 1,
+        childAspectRatio: 0.88,
       ),
       itemCount: topLevelCategories.length,
       onReorder: (oldIndex, newIndex) {
@@ -820,51 +820,59 @@ class _CategoryCard extends ConsumerWidget {
         ),
         child: Stack(
           children: [
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: item.isSubCategory ? 28 : 32,
-                    height: item.isSubCategory ? 28 : 32,
-                    child: Center(
-                      child: CategoryIconWidget(
-                        category: item.category,
-                        size: item.isSubCategory ? 18.0 : 20.0,
-                        color: item.isSubCategory
-                            ? PiggyTokens.warning(context)
-                            : PiggyTokens.primary(context),
+            Padding(
+              // 留出底部安全区，避免主内容覆盖右下角子分类指示器
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: item.isSubCategory ? 26 : 28,
+                      height: item.isSubCategory ? 26 : 28,
+                      child: Center(
+                        child: CategoryIconWidget(
+                          category: item.category,
+                          size: item.isSubCategory ? 16.0 : 17.0,
+                          color: item.isSubCategory
+                              ? PiggyTokens.warning(context)
+                              : PiggyTokens.primary(context),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Text(
-                      CategoryUtils.getDisplayName(item.category.name, context),
+                    const SizedBox(height: 6),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Text(
+                        CategoryUtils.getDisplayName(item.category.name, context),
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              fontSize: item.isSubCategory ? 10 : 11,
+                              height: 1.1,
+                              color: item.isSubCategory ? PiggyTokens.warning(context) : null,
+                            ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      AppLocalizations.of(context).categoryMigrationTransactionLabel(item.transactionCount),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            fontSize: item.isSubCategory ? 10 : 12,
-                            color: item.isSubCategory ? PiggyTokens.warning(context) : null,
+                            color: item.isSubCategory
+                                ? PiggyTokens.warning(context)
+                                : PiggyTokens.textSecondary(context),
+                            fontSize: item.isSubCategory ? 10 : 10,
+                            height: 1.0,
                           ),
                       textAlign: TextAlign.center,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    AppLocalizations.of(context).categoryMigrationTransactionLabel(item.transactionCount),
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: item.isSubCategory
-                              ? PiggyTokens.warning(context)
-                              : PiggyTokens.borderStrong(context),
-                          fontSize: item.isSubCategory ? 9 : 10,
-                        ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             // 有子分类的一级分类：右下角显示指示器
@@ -873,15 +881,15 @@ class _CategoryCard extends ConsumerWidget {
                 right: 4,
                 bottom: 4,
                 child: Container(
-                  width: 18,
-                  height: 18,
+                  width: 16,
+                  height: 16,
                   decoration: BoxDecoration(
                     color: PiggyTokens.primary(context),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.more_horiz,
-                    size: 14,
+                    size: 12,
                     color: PiggyTokens.textOnPrimary(context),
                   ),
                 ),
@@ -1009,7 +1017,7 @@ class _SubcategoryDialogState extends ConsumerState<_SubcategoryDialog> {
                   crossAxisCount: 4,
                   crossAxisSpacing: 10,
                   mainAxisSpacing: 10,
-                  childAspectRatio: 1,
+                  childAspectRatio: 0.92,
                 ),
                 itemCount: (_subCategories?.length ?? 0) + 2, // 子分类 + 添加 + 编辑
                 itemBuilder: (context, index) {
@@ -1074,20 +1082,30 @@ class _DialogActionButton extends StatelessWidget {
             width: 1,
           ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: primaryColor, size: 24),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                color: primaryColor,
-                fontWeight: FontWeight.w500,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: primaryColor, size: 22),
+              const SizedBox(height: 4),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 10,
+                    height: 1.1,
+                    color: primaryColor,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1123,39 +1141,50 @@ class _DialogSubCategoryCard extends StatelessWidget {
             width: 1,
           ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 26,
-              height: 26,
-              child: Center(
-                child: CategoryIconWidget(
-                  category: category,
-                  size: 16,
-                  color: primaryColor,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: Center(
+                  child: CategoryIconWidget(
+                    category: category,
+                    size: 15,
+                    color: primaryColor,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: Text(
-                CategoryUtils.getDisplayName(category.name, context),
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(fontSize: 10),
+              const SizedBox(height: 4),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: Text(
+                  CategoryUtils.getDisplayName(category.name, context),
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        fontSize: 10,
+                        height: 1.1,
+                      ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                AppLocalizations.of(context).categoryMigrationTransactionLabel(transactionCount),
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: PiggyTokens.textSecondary(context),
+                      fontSize: 9,
+                      height: 1.0,
+                    ),
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-            ),
-            Text(
-              AppLocalizations.of(context).categoryMigrationTransactionLabel(transactionCount),
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: PiggyTokens.borderStrong(context),
-                fontSize: 9,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

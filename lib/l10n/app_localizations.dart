@@ -720,6 +720,36 @@ abstract class AppLocalizations {
   /// **'Balance'**
   String get homeBalance;
 
+  /// No description provided for @homeMonthIncome.
+  ///
+  /// In en, this message translates to:
+  /// **'Income'**
+  String get homeMonthIncome;
+
+  /// No description provided for @homeMonthExpense.
+  ///
+  /// In en, this message translates to:
+  /// **'Expense'**
+  String get homeMonthExpense;
+
+  /// No description provided for @homeMonthBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Balance'**
+  String get homeMonthBalance;
+
+  /// No description provided for @homeBudgetSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Budget {amount}'**
+  String homeBudgetSet(String amount);
+
+  /// No description provided for @homeBudgetNotSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get homeBudgetNotSet;
+
   /// No description provided for @homeNoRecords.
   ///
   /// In en, this message translates to:
