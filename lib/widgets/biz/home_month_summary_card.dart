@@ -41,7 +41,6 @@ class HomeMonthSummaryCard extends ConsumerWidget {
     final cachedTotals = ref.watch(lastMonthlyTotalsProvider(params));
     final (income, expense) =
         totalsAsync.valueOrNull ?? cachedTotals ?? (0.0, 0.0);
-    final balance = income - expense;
 
     // 预算级别（用于支出格括号显示）
     final overviewAsync = ref.watch(budgetOverviewProvider);
@@ -89,7 +88,28 @@ class HomeMonthSummaryCard extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 第一行：本月支出 | 月份选择器
+              // 第一行：月份选择器（靠左）
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: _MonthSelectorCell(
+                        month: month,
+                        onShift: (delta) => _shiftMonth(ref, delta),
+                        onTapPicker: () => _pickMonth(context, ref),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // 行间分割线
+              Container(
+                height: 1,
+                margin: const EdgeInsets.symmetric(vertical: 5),
+                color: Colors.white.withValues(alpha: 0.18),
+              ),
+              // 第二行：本月支出 | 本月收入
               IntrinsicHeight(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -111,42 +131,9 @@ class HomeMonthSummaryCard extends ConsumerWidget {
                       color: Colors.white.withValues(alpha: 0.2),
                     ),
                     Expanded(
-                      child: _MonthSelectorCell(
-                        month: month,
-                        onShift: (delta) => _shiftMonth(ref, delta),
-                        onTapPicker: () => _pickMonth(context, ref),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // 行间分割线
-              Container(
-                height: 1,
-                margin: const EdgeInsets.symmetric(vertical: 5),
-                color: Colors.white.withValues(alpha: 0.18),
-              ),
-              // 第二行：本月收入 | 本月结余
-              IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(
                       child: _StatCell(
                         label: l10n.homeMonthIncome,
                         value: income,
-                        parenthetical: currencyLabel,
-                      ),
-                    ),
-                    Container(
-                      width: 1,
-                      margin: const EdgeInsets.symmetric(horizontal: 8),
-                      color: Colors.white.withValues(alpha: 0.2),
-                    ),
-                    Expanded(
-                      child: _StatCell(
-                        label: l10n.homeMonthBalance,
-                        value: balance,
                         parenthetical: currencyLabel,
                       ),
                     ),
@@ -306,9 +293,9 @@ class _MonthSelectorCell extends StatelessWidget {
       height: 1.15,
     );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
@@ -316,31 +303,25 @@ class _MonthSelectorCell extends StatelessWidget {
           style: yearStyle,
           maxLines: 1,
         ),
-        const SizedBox(height: 2),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _ChevronButton(
-              icon: Icons.chevron_left,
-              onTap: () => onShift(-1),
+        const SizedBox(width: 4),
+        _ChevronButton(
+          icon: Icons.chevron_left,
+          onTap: () => onShift(-1),
+        ),
+        GestureDetector(
+          onTap: onTapPicker,
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: Text(
+              l10n.homeMonth(month.month.toString().padLeft(2, '0')),
+              style: monthStyle,
             ),
-            GestureDetector(
-              onTap: onTapPicker,
-              behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: Text(
-                  l10n.homeMonth(month.month.toString().padLeft(2, '0')),
-                  style: monthStyle,
-                ),
-              ),
-            ),
-            _ChevronButton(
-              icon: Icons.chevron_right,
-              onTap: () => onShift(1),
-            ),
-          ],
+          ),
+        ),
+        _ChevronButton(
+          icon: Icons.chevron_right,
+          onTap: () => onShift(1),
         ),
       ],
     );
