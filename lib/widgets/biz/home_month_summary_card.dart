@@ -89,7 +89,7 @@ class HomeMonthSummaryCard extends ConsumerWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -287,13 +287,13 @@ class _MonthSelectorCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final yearStyle = TextStyle(
-      fontSize: 9,
+      fontSize: 12,
       color: Colors.white.withValues(alpha: 0.7),
       fontWeight: FontWeight.w500,
     );
     final monthStyle = const TextStyle(
-      fontSize: 15,
-      fontWeight: FontWeight.w700,
+      fontSize: 16,
+      fontWeight: FontWeight.w600,
       color: Colors.white,
       height: 1.15,
     );
@@ -308,7 +308,7 @@ class _MonthSelectorCell extends StatelessWidget {
           style: yearStyle,
           maxLines: 1,
         ),
-        const SizedBox(width: 4),
+        const SizedBox(width: 6),
         _ChevronButton(
           icon: Icons.chevron_left,
           onTap: () => onShift(-1),
@@ -317,7 +317,7 @@ class _MonthSelectorCell extends StatelessWidget {
           onTap: onTapPicker,
           behavior: HitTestBehavior.opaque,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Text(
               l10n.homeMonth(month.month.toString().padLeft(2, '0')),
               style: monthStyle,
@@ -333,7 +333,8 @@ class _MonthSelectorCell extends StatelessWidget {
   }
 }
 
-/// 白色 chevron 按钮（紧贴月份文字两侧）。
+/// 圆形描边 chevron 按钮（与洞察页 _periodNavArrow 同款样式，
+/// 适配渐变背景：白色描边 + 白色图标）。
 class _ChevronButton extends StatelessWidget {
   const _ChevronButton({
     required this.icon,
@@ -345,15 +346,25 @@ class _ChevronButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkResponse(
-      onTap: onTap,
-      radius: 14,
-      child: Padding(
-        padding: const EdgeInsets.all(1),
-        child: Icon(
-          icon,
-          size: 16,
-          color: Colors.white.withValues(alpha: 0.9),
+    final borderColor = Colors.white.withValues(alpha: 0.55);
+    return SizedBox(
+      width: 30,
+      height: 30,
+      child: Material(
+        color: Colors.transparent,
+        shape: CircleBorder(
+          side: BorderSide(color: borderColor, width: 1.4),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: Center(
+            child: Icon(
+              icon,
+              size: 18,
+              color: Colors.white.withValues(alpha: 0.92),
+            ),
+          ),
         ),
       ),
     );

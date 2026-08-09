@@ -1275,7 +1275,7 @@ abstract class AppLocalizations {
   /// No description provided for @splashSlogan.
   ///
   /// In en, this message translates to:
-  /// **'Record Every Drop'**
+  /// **'Piggy Accounting, Getting Better Every Day'**
   String get splashSlogan;
 
   /// No description provided for @splashSecurityTitle.

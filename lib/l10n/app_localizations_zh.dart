@@ -661,7 +661,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get splashAppName => '小猪记账';
 
   @override
-  String get splashSlogan => '一笔一蜜';
+  String get splashSlogan => '小猪记账，越来越棒';
 
   @override
   String get splashSecurityTitle => '开源数据安全';
@@ -8433,7 +8433,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get splashAppName => '小豬記帳';
 
   @override
-  String get splashSlogan => '一筆一蜜';
+  String get splashSlogan => '小豬記帳，越來越棒';
 
   @override
   String get splashSecurityTitle => '開源資料安全';

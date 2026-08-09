@@ -673,7 +673,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get splashAppName => 'Piggy Accounting';
 
   @override
-  String get splashSlogan => 'Record Every Drop';
+  String get splashSlogan => 'Piggy Accounting, Getting Better Every Day';
 
   @override
   String get splashSecurityTitle => 'Open Source Data Security';

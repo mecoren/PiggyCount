@@ -664,7 +664,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get splashAppName => '소 돼지 가계부';
 
   @override
-  String get splashSlogan => '매 순간의 기록';
+  String get splashSlogan => '돼지 가계부, 점점 더 좋아집니다';
 
   @override
   String get splashSecurityTitle => '오픈소스 데이터 보안';

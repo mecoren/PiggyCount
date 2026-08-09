@@ -251,18 +251,18 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
   Widget _periodNavArrow(
       BuildContext context, IconData icon, VoidCallback onTap) {
     return SizedBox(
-      width: 22,
-      height: 22,
+      width: 30,
+      height: 30,
       child: Material(
         color: Colors.transparent,
         shape: const CircleBorder(
-          side: BorderSide(color: Color(0xFFCFD8DC), width: 1.2),
+          side: BorderSide(color: Color(0xFFCFD8DC), width: 1.4),
         ),
         child: InkWell(
           onTap: onTap,
           customBorder: const CircleBorder(),
           child: Center(
-            child: Icon(icon, size: 14, color: PiggyTokens.textSecondary(context)),
+            child: Icon(icon, size: 18, color: PiggyTokens.textSecondary(context)),
           ),
         ),
       ),
@@ -634,8 +634,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
               child: WaitSlidingSegmentedControl<String>(
                 selected: _scope,
-                height: 32,
-                fontSize: 13,
+                height: 38,
+                fontSize: 14,
                 segments: [
                   WaitSlidingSegment(
                     value: 'week',
@@ -675,7 +675,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 16,
                             fontWeight: FontWeight.w600,
                             color: PiggyTokens.textPrimary(context),
                           ),
@@ -689,11 +689,11 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                   const SizedBox(width: 8),
                   // 支出/收入/结余：与顶部周/月/年/全部同款滑块胶囊（紧凑高度）
                   SizedBox(
-                    width: 152,
+                    width: 180,
                     child: WaitSlidingSegmentedControl<String>(
                       selected: _type,
-                      height: 26,
-                      fontSize: 11,
+                      height: 32,
+                      fontSize: 13,
                       segments: [
                         WaitSlidingSegment(
                           value: 'expense',

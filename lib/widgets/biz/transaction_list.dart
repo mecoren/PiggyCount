@@ -45,9 +45,11 @@ class TransactionList extends ConsumerStatefulWidget {
   /// 列表控制器（可选，用于精准跳转）
   final FlutterListViewController? controller;
 
-  /// 是否把整张明细列表包成一个大卡片(日期头部 + 所有交易项统一一张卡,
-  /// 天与天之间用分割线隔开,日内交易不再画分割线)。
-  /// - true:整张大卡片风格(首页"明细"tab 当前风格);
+  /// 是否启用「独立日卡片」风格:每个 day 渲染为一张独立卡片(日期头部 + 当天
+  /// 交易项),卡片之间用 cardMargin 间距天然分隔,日内交易不再画分割线。每张
+  /// 日卡片是 FlutterListView 的独立懒加载项,滚动时按需构建/回收,避免
+  /// 一次性构建全部交易导致卡顿。
+  /// - true:独立日卡片风格(首页"明细"tab 当前风格);
   /// - false:不包外卡,回到无包裹状态(向后兼容)。
   final bool wrapInOuterCard;
 
@@ -321,21 +323,17 @@ class TransactionListState extends ConsumerState<TransactionList> {
     }
 
     if (widget.wrapInOuterCard && sortedKeys.isNotEmpty) {
-      // 「整张大卡片」风格:首日插入 outerCardStart 标记,日内追加各 day,
-      // 天与天之间插 dayDivider,末日后插 outerCardEnd 标记。首/末标记只各占
-      // 一个 flat item,在 build delegate 中通过「首个 day item 之前是
-      // outerCardStart」识别,这里实际不需要单独的 start/end 标记 ——
-      // 外层大卡片在首个 day item 一次性渲染,后续 day item 渲染 SizedBox 占位,
-      // bottomSpacer 维持原位置。
+      // 「独立日卡片」风格:每个 day 作为独立的懒加载项(FlutterListView delegate
+      // 按 index 按需构建),渲染为一张独立日卡片。day 之间不再插 dayDivider ——
+      // 每张卡片自带 cardMargin 间距,天然形成日间分隔。flatDayStart 记录该 day
+      // 第一条交易在全局交易序号中的起点,供 Dismissible 的 key 保持全局唯一稳定。
+      int flatDayStart = 0;
       for (int i = 0; i < sortedKeys.length; i++) {
         final key = sortedKeys[i];
         final list = groups[key]!;
         _dateIndexMap[key] = _flatItems.length;
-        _flatItems.add(('day', key, list));
-        // 天与天之间插一个分割线 item(亮暗都画细线,沿用 PiggyTokens.listDayDivider*)
-        if (i < sortedKeys.length - 1) {
-          _flatItems.add(('dayDivider', null, null));
-        }
+        _flatItems.add(('day', key, list, flatDayStart));
+        flatDayStart += list.length;
       }
     } else if (!widget.wrapInOuterCard) {
       // 平铺旧风格:header + 每个交易项独立占一行
@@ -464,16 +462,13 @@ class TransactionListState extends ConsumerState<TransactionList> {
 
             return header;
           } else if (type == 'day') {
-            // 「整张大卡片」风格:在首个 day item 一次性构建包含所有 day 的外卡,
-            // 后续 day item + dayDivider item 渲染 SizedBox.shrink() 占位(它们已
-            // 包含在外卡里)。jumpToMonth 用 _dateIndexMap 跳到首个 day item 即可。
-            if (index == _dateIndexMap.values.reduce((a, b) => a < b ? a : b)) {
-              return _buildOuterCard(context);
-            }
-            return const SizedBox.shrink();
-          } else if (type == 'dayDivider') {
-            // dayDivider 已被外层大卡片包含,此 index 渲染占位。
-            return const SizedBox.shrink();
+            // 「独立日卡片」风格:每个 day 作为独立懒加载项,渲染为一张独立日卡片,
+            // 由 FlutterListView 按 index 按需构建/回收(3000 条数据下滚动只渲染
+            // 可视区间的日卡片)。jumpToMonth 仍用 _dateIndexMap 映射到各 day item。
+            final dateKey = item.$2 as String;
+            final list = item.$3 as List<({Transaction t, Category? category, Account? account, Account? toAccount})>;
+            final flatDayStart = item.$4 as int;
+            return _buildDayCard(context, dateKey, list, flatDayStart);
           } else {
             // 'transaction' 平铺旧风格(wrapInOuterCard = false):平铺单条交易,
             // 项之间用 PiggyDivider.short 分隔,项的具体渲染复用 _buildTransactionRow。
@@ -654,74 +649,59 @@ class TransactionListState extends ConsumerState<TransactionList> {
     );
   }
 
-  /// 渲染「日卡片」:DaySectionHeader + 当天所有交易项,包在一个卡片容器里。
+  /// 渲染单张「日卡片」:DaySectionHeader + 当天所有交易项,包在一个卡片容器里。
   ///
-  /// 卡片样式对齐 SectionCard(margin + 圆角 + surface + 阴影/边框),适合
-  /// 首页「明细」tab 的无限滚动场景——按天分组自然形成视觉分组,无需再用
-  /// 日分隔线把每天隔开。
-  ///
-  /// 渲染「整张明细」大卡片:DaySectionHeader + 当天所有交易项,按天拼成一张
-  /// 外层卡片(surface 背景 + 圆角 + 阴影/边框);天与天之间用
-  /// [PiggyTokens.listDayDivider*] 细线分隔,日内交易项之间不再画分隔线。
-  Widget _buildOuterCard(BuildContext context) {
+  /// 卡片样式对齐 SectionCard(margin + 圆角 + surface + 阴影/边框)。每个 day
+  /// 作为 FlutterListView 的独立懒加载项按 index 按需构建/回收,替代旧版
+  /// 「整张全量大卡片」(_buildOuterCard)一次性构建全部 day 的 O(n) 渲染,解决
+  /// 导入 3000 笔账单后的卡顿。日卡片之间靠自身 cardMargin 间距天然分隔,
+  /// 日内交易项之间不再画分隔线,保留原大卡片的视觉风格。
+  Widget _buildDayCard(
+    BuildContext context,
+    String dateKey,
+    List<({Transaction t, Category? category, Account? account, Account? toAccount})> list,
+    int flatDayStart,
+  ) {
     final isDark = PiggyTokens.isDark(context);
     final primary = ref.watch(primaryColorProvider);
     final borderWidth = 1.5;
     final borderColor = primary;
 
-    // 遍历 _flatItems,按顺序取出 day + dayDivider 组合成 children
-    final children = <Widget>[];
-    int flatDayIndex = 0; // 仅用于 _buildTransactionRow 的 Dismissible key
-    for (final item in _flatItems) {
-      final type = item.$1 as String;
-      if (type == 'day') {
-        final dateKey = item.$2 as String;
-        final list = item.$3 as List<({Transaction t, Category? category, Account? account, Account? toAccount})>;
-        // 当天收支(用于 DaySectionHeader)
-        double dayIncome = 0, dayExpense = 0;
-        for (final it in list) {
-          if (it.t.type == 'income') {
-            dayIncome += it.t.nativeAmount ?? it.t.amount;
-          }
-          if (it.t.type == 'expense') {
-            dayExpense += it.t.nativeAmount ?? it.t.amount;
-          }
-        }
-        Widget header = DaySectionHeader(
-          dateText: dateKey,
-          income: dayIncome,
-          expense: dayExpense,
-          hide: widget.hideAmounts,
-        );
-        // 可见性跟踪用于首页月份跳转
-        if (widget.enableVisibilityTracking && widget.onDateVisibilityChanged != null) {
-          header = VisibilityDetector(
-            key: Key('header-$dateKey'),
-            onVisibilityChanged: (VisibilityInfo info) {
-              widget.onDateVisibilityChanged!(dateKey, info.visibleFraction > 0.5);
-            },
-            child: header,
-          );
-        }
-        // day 块:header + 当天所有交易(无日内分割线)
-        children.add(header);
-        for (int i = 0; i < list.length; i++) {
-          children.add(_buildTransactionRow(context, flatDayIndex, list[i], list));
-          flatDayIndex++;
-        }
-      } else if (type == 'dayDivider') {
-        // 天与天之间的细线(亮暗都显示)。不连接到卡片两端:缩进 12 与卡片内
-        // 内容对齐(DaySectionHeader / TransactionListItem 的水平 padding)。
-        children.add(Divider(
-          height: PiggyTokens.listDayDividerHeight(context),
-          thickness: PiggyTokens.listDayDividerHeight(context),
-          color: PiggyTokens.listDayDividerColor(context),
-          indent: 12,
-          endIndent: 12,
-        ));
+    // 当天收支(用于 DaySectionHeader)
+    double dayIncome = 0, dayExpense = 0;
+    for (final it in list) {
+      if (it.t.type == 'income') {
+        dayIncome += it.t.nativeAmount ?? it.t.amount;
       }
-      // 其他类型(bottomSpacer 等)不进外卡,已在 flat items 列表里独立渲染。
+      if (it.t.type == 'expense') {
+        dayExpense += it.t.nativeAmount ?? it.t.amount;
+      }
     }
+    Widget header = DaySectionHeader(
+      dateText: dateKey,
+      income: dayIncome,
+      expense: dayExpense,
+      hide: widget.hideAmounts,
+    );
+    // 可见性跟踪用于首页月份跳转
+    if (widget.enableVisibilityTracking && widget.onDateVisibilityChanged != null) {
+      header = VisibilityDetector(
+        key: Key('header-$dateKey'),
+        onVisibilityChanged: (VisibilityInfo info) {
+          widget.onDateVisibilityChanged!(dateKey, info.visibleFraction > 0.5);
+        },
+        child: header,
+      );
+    }
+
+    // day 卡片内容:header + 当天所有交易(无日内分割线)。flatDayStart 由
+    // _buildFlatItems 预分配,保证各 day 的 Dismissible key('tx-${id}-$flatIndex')
+    // 全局唯一稳定,与旧 _buildOuterCard 中 flatDayIndex 语义一致。
+    final children = <Widget>[
+      header,
+      for (int i = 0; i < list.length; i++)
+        _buildTransactionRow(context, flatDayStart + i, list[i], list),
+    ];
 
     return Container(
       margin: PiggyDimens.cardMargin,
