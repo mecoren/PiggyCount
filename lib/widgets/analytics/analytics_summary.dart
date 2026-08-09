@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../styles/tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/currency_providers.dart';
+import '../../providers/theme_providers.dart';
 import '../../utils/currencies.dart';
 import '../biz/amount_text.dart';
 
@@ -96,6 +97,10 @@ class AnalyticsSummary extends ConsumerWidget {
         color: PiggyTokens.surface(context),
         // 参考收支报表卡片样式：纯白底、无阴影、圆角
         borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
+        border: Border.all(
+          color: ref.watch(primaryColorProvider),
+          width: 1.5,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

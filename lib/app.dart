@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -911,7 +912,7 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
       child: Stack(
         children: [
           Scaffold(
-            extendBody: true, // 让页面内容延伸到底部栏后面
+            extendBody: false, // 底部栏贴底固定，为内容预留空间
             body: IndexedStack(
               index: idx,
               children: _pages,
@@ -1027,37 +1028,40 @@ class _PiggyBottomBar extends StatelessWidget {
     const barHeight = 56.0;
 
     return SizedBox(
-      height: barHeight + bottomPadding + 12, // 12dp 浮动间距
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          bottom: bottomPadding + 12,
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(PiggyDimens.radius3xl),
-            boxShadow: PiggyTokens.tabBarShadow,
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(PiggyDimens.radius3xl),
-            child: Row(
-              children: [
-                _buildTabItem(0, Icons.receipt_long_outlined,
-                    Icons.receipt_long, l10n.tabHome, inactiveColor),
-                _buildTabItem(1, Icons.pie_chart_outline_rounded,
-                    Icons.pie_chart_rounded, l10n.tabInsights, inactiveColor),
-                // 中间记账按钮（作为 Tab 样式）
-                _buildCenterTabItem(inactiveColor),
-                _buildTabItem(
-                    2,
-                    Icons.account_balance_wallet_outlined,
-                    Icons.account_balance_wallet,
-                    l10n.tabAssets,
-                    inactiveColor),
-                _buildAvatarTabItem(3, l10n.tabMine, inactiveColor),
-              ],
+      height: barHeight + bottomPadding,
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Container(
+            decoration: BoxDecoration(
+              color: bgColor,
+              border: Border(
+                top: BorderSide(
+                  color: PiggyTokens.cardInnerDividerColor(context),
+                  width: 0.5,
+                ),
+              ),
+              boxShadow: PiggyTokens.tabBarShadow,
+            ),
+            child: Padding(
+              padding: EdgeInsets.only(bottom: bottomPadding),
+              child: Row(
+                children: [
+                  _buildTabItem(0, Icons.receipt_long_outlined,
+                      Icons.receipt_long, l10n.tabHome, inactiveColor),
+                  _buildTabItem(1, Icons.pie_chart_outline_rounded,
+                      Icons.pie_chart_rounded, l10n.tabInsights, inactiveColor),
+                  // 中间记账按钮（作为 Tab 样式）
+                  _buildCenterTabItem(inactiveColor),
+                  _buildTabItem(
+                      2,
+                      Icons.account_balance_wallet_outlined,
+                      Icons.account_balance_wallet,
+                      l10n.tabAssets,
+                      inactiveColor),
+                  _buildAvatarTabItem(3, l10n.tabMine, inactiveColor),
+                ],
+              ),
             ),
           ),
         ),

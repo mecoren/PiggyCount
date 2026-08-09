@@ -966,6 +966,10 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                           color: PiggyTokens.surface(context),
                           borderRadius:
                               BorderRadius.circular(PiggyDimens.radius2xl),
+                          border: Border.all(
+                            color: ref.watch(primaryColorProvider),
+                            width: 1.5,
+                          ),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -1094,6 +1098,10 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                                   color: PiggyTokens.surface(context),
                                   borderRadius: BorderRadius.circular(
                                       PiggyDimens.radius2xl),
+                                  border: Border.all(
+                                    color: ref.watch(primaryColorProvider),
+                                    width: 1.5,
+                                  ),
                                 ),
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
@@ -1146,6 +1154,10 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                                   color: PiggyTokens.surface(context),
                                   borderRadius: BorderRadius.circular(
                                       PiggyDimens.radius2xl),
+                                  border: Border.all(
+                                    color: ref.watch(primaryColorProvider),
+                                    width: 1.5,
+                                  ),
                                 ),
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,

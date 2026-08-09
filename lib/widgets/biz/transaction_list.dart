@@ -640,8 +640,9 @@ class TransactionListState extends ConsumerState<TransactionList> {
   /// [PiggyTokens.listDayDivider*] 细线分隔,日内交易项之间不再画分隔线。
   Widget _buildOuterCard(BuildContext context) {
     final isDark = PiggyTokens.isDark(context);
-    final borderWidth = PiggyTokens.cardOuterBorderWidth(context);
-    final borderColor = PiggyTokens.cardOuterBorderColor(context);
+    final primary = ref.watch(primaryColorProvider);
+    final borderWidth = 1.5;
+    final borderColor = primary;
 
     // 遍历 _flatItems,按顺序取出 day + dayDivider 组合成 children
     final children = <Widget>[];

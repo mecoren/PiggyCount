@@ -60,6 +60,7 @@ class HomeMonthSummaryCard extends ConsumerWidget {
     final currencyLabel = currencyCode;
 
     final isDark = PiggyTokens.isDark(context);
+    final primary = ref.watch(primaryColorProvider);
 
     return Container(
       margin: const EdgeInsets.fromLTRB(
@@ -71,6 +72,10 @@ class HomeMonthSummaryCard extends ConsumerWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
         gradient: _cardGradient(context, ref, isDark),
+        border: Border.all(
+          color: primary,
+          width: 1.5,
+        ),
         boxShadow: isDark
             ? null
             : [
