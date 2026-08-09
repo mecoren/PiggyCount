@@ -263,7 +263,9 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
 
   // 备注框焦点节点
   final FocusNode _noteFocusNode = FocusNode();
-  bool _noteFieldHasFocus = false;
+  // 用 ValueNotifier 承载焦点状态：焦点变化只重建外层 AnimatedPadding，
+  // 不再 setState 重建整个 sheet（数字键盘/标签/账户/币种换算全部子树）。
+  final ValueNotifier<bool> _noteFieldHasFocus = ValueNotifier(false);
 
   // 防重复提交标志
   bool _isSubmitting = false;
@@ -316,11 +318,9 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     _amountStr = trimmed.isEmpty ? '0' : trimmed;
     _noteCtrl.text = widget.initialNote ?? '';
 
-    // 监听焦点变化
+    // 监听焦点变化：写入 ValueNotifier，只触发外层 AnimatedPadding 局部重建
     _noteFocusNode.addListener(() {
-      setState(() {
-        _noteFieldHasFocus = _noteFocusNode.hasFocus;
-      });
+      _noteFieldHasFocus.value = _noteFocusNode.hasFocus;
     });
 
     // 加载最近使用的备注
@@ -330,6 +330,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   @override
   void dispose() {
     _noteFocusNode.dispose();
+    _noteFieldHasFocus.dispose();
     super.dispose();
   }
 
@@ -662,10 +663,6 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
     final text = Theme.of(context).textTheme;
-    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
-
-    // 如果备注框有焦点且键盘弹出，固定增加100的padding
-    final extraPadding = (_noteFieldHasFocus && keyboardHeight > 0) ? 100.0 : 0.0;
 
     double parsed() => double.tryParse(_amountStr) ?? 0.0;
 
@@ -793,14 +790,25 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
 
     return SafeArea(
       top: false,
-      child: AnimatedPadding(
-        duration: const Duration(milliseconds: 100),
-        padding: EdgeInsets.fromLTRB(
-          16,
-          12,
-          16,
-          16 + extraPadding,
-        ),
+      // 焦点状态通过 ValueNotifier 隔离：备注框获得/失去焦点、输入法弹起时
+      // 只重建外层 AnimatedPadding 的 padding，整个内容 Column 作为 child
+      // 传入保持引用不变，避免重建数字键盘/标签/账户/币种换算等全部子树。
+      child: ValueListenableBuilder<bool>(
+        valueListenable: _noteFieldHasFocus,
+        builder: (context, focused, child) {
+          final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+          final extraPadding = (focused && keyboardHeight > 0) ? 100.0 : 0.0;
+          return AnimatedPadding(
+            duration: const Duration(milliseconds: 100),
+            padding: EdgeInsets.fromLTRB(
+              16,
+              12,
+              16,
+              16 + extraPadding,
+            ),
+            child: child!,
+          );
+        },
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,

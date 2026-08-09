@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/db.dart';
@@ -39,6 +41,17 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         Account? account,
         Account? toAccount
       })> _allTransactions = [];
+  // stream 缓存：复用同一 stream 引用，避免无关 rebuild（搜索、筛选）导致
+  // StreamBuilder 重新订阅 → snapshot 短暂 null → _allTransactions 被清空。
+  Stream<
+      List<
+          ({
+            Transaction t,
+            Category? category,
+            Account? account,
+            Account? toAccount
+          })>>? _txStream;
+  int? _txStreamLedgerId;
   bool _isSearching = false;
   String _searchText = '';
 
@@ -49,6 +62,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   DateTime? _endDate;
   Category? _selectedCategory;
   bool _hasScheduledSearch = false; // 防止重复调度搜索
+  Timer? _searchDebounce; // 搜索防抖：输入停顿后才执行全量过滤
 
   // 缓存汇总金额，避免每次 build() 重复计算
   double _totalExpense = 0.0;
@@ -66,20 +80,26 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     _noteController.dispose();
     super.dispose();
   }
 
   void _onSearchChanged() {
-    setState(() {
-      _searchText = _searchController.text.trim();
+    // 防抖：连续按键时只在停顿后执行一次全量过滤 + setState，
+    // 避免每个字符都 O(n) 遍历 + 整页重建导致输入卡顿。
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 200), () {
+      if (mounted) _performSearch();
     });
-    _performSearch();
   }
 
   /// 执行搜索
   void _performSearch() {
+    // 防抖期间 _searchText 可能滞后，这里从 controller 同步最新输入。
+    _searchText = _searchController.text.trim();
+
     // 如果没有任何搜索条件，清空结果
     if (_searchText.isEmpty &&
         _minAmount == null &&
@@ -97,11 +117,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       return;
     }
 
-    setState(() {
-      _isSearching = true;
-      _hasScheduledSearch = false;
-    });
-
+    // 500~3000 条数据的内存过滤为同步操作（<10ms），无需转圈（转圈在同一帧
+    // 内也不会渲染），直接过滤后一次 setState。
+    final searchLower = _searchText.toLowerCase();
     final results = _allTransactions.where((item) {
       final transaction = item.t;
       final category = item.category;
@@ -109,7 +127,6 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       // 文本搜索
       bool textMatch = true;
       if (_searchText.isNotEmpty) {
-        final searchLower = _searchText.toLowerCase();
         final note = transaction.note?.toLowerCase() ?? '';
         final categoryName =
             CategoryUtils.getDisplayName(category?.name, context).toLowerCase();
@@ -169,6 +186,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           .where((e) => e.t.type == 'income')
           .fold(0.0, (sum, e) => sum + (e.t.nativeAmount ?? e.t.amount).abs());
       _isSearching = false;
+      _hasScheduledSearch = false;
     });
   }
 
@@ -761,36 +779,42 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     Row(
                       children: [
                         Expanded(
-                          child: TextField(
-                            controller: _searchController,
-                            decoration: InputDecoration(
-                              hintText: AppLocalizations.of(context).searchHint,
-                              prefixIcon: Icon(Icons.search,
-                                  color: PiggyTokens.textTertiary(context)),
-                              suffixIcon: _searchController.text.isNotEmpty
-                                  ? IconButton(
-                                      onPressed: () {
-                                        _searchController.clear();
-                                      },
-                                      icon: Icon(Icons.clear,
-                                          color: PiggyTokens.textTertiary(
-                                              context)),
-                                    )
-                                  : null,
-                              border: OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.circular(PiggyDimens.radiusLg),
-                                borderSide: BorderSide(
-                                    color: PiggyTokens.divider(context)),
+                          // 用 ValueListenableBuilder 监听 controller：输入时只局部
+                          // 重建 TextField（刷新清除按钮），不再 setState 整页 rebuild。
+                          child: ValueListenableBuilder<TextEditingValue>(
+                            valueListenable: _searchController,
+                            builder: (context, value, _) => TextField(
+                              controller: _searchController,
+                              decoration: InputDecoration(
+                                hintText:
+                                    AppLocalizations.of(context).searchHint,
+                                prefixIcon: Icon(Icons.search,
+                                    color: PiggyTokens.textTertiary(context)),
+                                suffixIcon: value.text.isNotEmpty
+                                    ? IconButton(
+                                        onPressed: () {
+                                          _searchController.clear();
+                                        },
+                                        icon: Icon(Icons.clear,
+                                            color: PiggyTokens.textTertiary(
+                                                context)),
+                                      )
+                                    : null,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(
+                                      PiggyDimens.radiusLg),
+                                  borderSide: BorderSide(
+                                      color: PiggyTokens.divider(context)),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(
+                                      PiggyDimens.radiusLg),
+                                  borderSide: BorderSide(
+                                      color: PiggyTokens.primary(context)),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 12, horizontal: 16),
                               ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.circular(PiggyDimens.radiusLg),
-                                borderSide: BorderSide(
-                                    color: PiggyTokens.primary(context)),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                  vertical: 12, horizontal: 16),
                             ),
                           ),
                         ),
@@ -910,7 +934,15 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                         Account? account,
                         Account? toAccount
                       })>>(
-                stream: repo.transactionsWithCategoryAll(ledgerId: ledgerId),
+                stream: () {
+                  // ledgerId 变化或首次才重建 stream；无关 rebuild 复用同一引用，
+                  // 避免 StreamBuilder 重新订阅导致 _allTransactions 闪空。
+                  if (_txStream == null || _txStreamLedgerId != ledgerId) {
+                    _txStream = repo.transactionsWithCategoryAll(ledgerId: ledgerId);
+                    _txStreamLedgerId = ledgerId;
+                  }
+                  return _txStream;
+                }(),
                 builder: (context, snapshot) {
                   if (snapshot.hasData) {
                     _allTransactions = snapshot.data!;

@@ -63,12 +63,9 @@ class HomeMonthSummaryCard extends ConsumerWidget {
     final primary = ref.watch(primaryColorProvider);
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(
-        PiggyDimens.p12,
-        0,
-        PiggyDimens.p12,
-        14,
-      ),
+      // 水平边距交给父容器控制（TransactionList 的 cardMargin 已给 12px），
+      // 否则会出现双重 12px → 卡片比明细卡片窄 24px。
+      margin: const EdgeInsets.fromLTRB(0, 0, 0, 14),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
         gradient: _cardGradient(context, ref, isDark),
@@ -93,7 +90,12 @@ class HomeMonthSummaryCard extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 第一行：月份选择器（靠左）
+              // 第一行：月份选择器（靠左）。
+              // 必须保留 IntrinsicHeight：Row(stretch) 的交叉轴高度需要「有界」
+              // 参考。作为 FlutterListView 的 item，高度约束是 unbounded，去掉
+              // IntrinsicHeight 会让 Row(stretch) 抛 BoxConstraints forces an
+              // infinite height → 整个列表区域渲染崩溃。IntrinsicHeight 在这里
+              // 是布局正确性所必需（虽然多做一次测量，但代价远小于崩溃）。
               IntrinsicHeight(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -114,7 +116,10 @@ class HomeMonthSummaryCard extends ConsumerWidget {
                 margin: const EdgeInsets.symmetric(vertical: 5),
                 color: Colors.white.withValues(alpha: 0.18),
               ),
-              // 第二行：本月支出 | 本月收入
+              // 第二行：本月支出 | 本月收入。
+              // 同第一行：Row(stretch) 在有界高度参考下才能正常工作，且中间的
+              // 竖向分隔线依赖 stretch 拉伸到与两侧 _StatCell 等高。IntrinsicHeight
+              // 提供这个有界参考，是布局正确性所必需。
               IntrinsicHeight(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -333,8 +338,7 @@ class _MonthSelectorCell extends StatelessWidget {
   }
 }
 
-/// 圆形描边 chevron 按钮（与洞察页 _periodNavArrow 同款样式，
-/// 适配渐变背景：白色描边 + 白色图标）。
+/// 极简 chevron 按钮（无圆形描边，仅 chevron 图标，轻量可点击）。
 class _ChevronButton extends StatelessWidget {
   const _ChevronButton({
     required this.icon,
@@ -346,25 +350,15 @@ class _ChevronButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = Colors.white.withValues(alpha: 0.55);
-    return SizedBox(
-      width: 30,
-      height: 30,
-      child: Material(
-        color: Colors.transparent,
-        shape: CircleBorder(
-          side: BorderSide(color: borderColor, width: 1.4),
-        ),
-        child: InkWell(
-          onTap: onTap,
-          customBorder: const CircleBorder(),
-          child: Center(
-            child: Icon(
-              icon,
-              size: 18,
-              color: Colors.white.withValues(alpha: 0.92),
-            ),
-          ),
+    return InkResponse(
+      onTap: onTap,
+      radius: 18,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        child: Icon(
+          icon,
+          size: 18,
+          color: Colors.white.withValues(alpha: 0.92),
         ),
       ),
     );

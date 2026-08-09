@@ -386,27 +386,33 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
 
     // 金额排序：不再按天分组（按金额排后位置会散），每条交易用 showFullDate
     // 完整显示日期+时间，项间用细分割线，保留与时间排序一致的「大卡片」外壳。
+    // 每条交易作为独立的懒加载 item —— 明细多时按需构建，避免一次性渲染全部。
     if (currentSortType == SortType.amountDesc ||
         currentSortType == SortType.amountAsc) {
-      final children = <Widget>[];
-      for (int i = 0; i < transactions.length; i++) {
-        if (i > 0) {
-          children.add(Divider(
-            height: PiggyTokens.listDayDividerHeight(context),
-            thickness: PiggyTokens.listDayDividerHeight(context),
-            color: PiggyTokens.listDayDividerColor(context),
-            indent: 12,
-            endIndent: 12,
-          ));
-        }
-        children.add(_buildTransactionItem(transactions[i], ledgerNames,
-            showFullDate: true));
-      }
-      return _buildOuterCard(children);
+      return _buildLazyCard(
+        itemCount: transactions.length,
+        itemBuilder: (context, index) {
+          final children = <Widget>[
+            _buildTransactionItem(transactions[index], ledgerNames,
+                showFullDate: true),
+          ];
+          if (index < transactions.length - 1) {
+            children.add(Divider(
+              height: PiggyTokens.listDayDividerHeight(context),
+              thickness: PiggyTokens.listDayDividerHeight(context),
+              color: PiggyTokens.listDayDividerColor(context),
+              indent: 12,
+              endIndent: 12,
+            ));
+          }
+          return Column(children: children);
+        },
+      );
     }
 
-    // 时间排序：按天分组 → 每组内 header + 交易项连续显示，天与天之间用
-    // 细分割线（与「整张明细」风格一致）。
+    // 时间排序：按天分组 → 每个 day 作为独立懒加载 item（header + 当天交易
+    // 连续显示），天与天之间用细分割线（与「整张明细」风格一致）。按天懒
+    // 加载保证明细多时只构建视口内的 day，而不是一次性构建全部交易。
     final Map<String, List<db.Transaction>> groupedTransactions =
         <String, List<db.Transaction>>{};
     for (final transaction in transactions) {
@@ -422,35 +428,37 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
       sortedKeys.sort((a, b) => a.compareTo(b)); // 最早日期在前
     }
 
-    final children = <Widget>[];
-    for (int i = 0; i < sortedKeys.length; i++) {
-      final dateKey = sortedKeys[i];
-      final dayTransactions = groupedTransactions[dateKey]!;
+    return _buildLazyCard(
+      itemCount: sortedKeys.length,
+      itemBuilder: (context, index) {
+        final dateKey = sortedKeys[index];
+        final dayTransactions = groupedTransactions[dateKey]!;
 
-      if (i > 0) {
-        // 天与天之间的细线（与金额排序项间分割线一致）
-        children.add(Divider(
-          height: PiggyTokens.listDayDividerHeight(context),
-          thickness: PiggyTokens.listDayDividerHeight(context),
-          color: PiggyTokens.listDayDividerColor(context),
-          indent: 12,
-          endIndent: 12,
-        ));
-      }
-      children.add(DaySectionHeader(
-        dateText: dateKey,
-        expense: dayTransactions
-            .where((t) => t.type == 'expense')
-            .fold(0.0, (sum, t) => sum + (t.nativeAmount ?? t.amount)),
-        income: dayTransactions
-            .where((t) => t.type == 'income')
-            .fold(0.0, (sum, t) => sum + (t.nativeAmount ?? t.amount)),
-      ));
-      for (final t in dayTransactions) {
-        children.add(_buildTransactionItem(t, ledgerNames));
-      }
-    }
-    return _buildOuterCard(children);
+        final children = <Widget>[
+          DaySectionHeader(
+            dateText: dateKey,
+            expense: dayTransactions
+                .where((t) => t.type == 'expense')
+                .fold(0.0, (sum, t) => sum + (t.nativeAmount ?? t.amount)),
+            income: dayTransactions
+                .where((t) => t.type == 'income')
+                .fold(0.0, (sum, t) => sum + (t.nativeAmount ?? t.amount)),
+          ),
+          for (final t in dayTransactions)
+            _buildTransactionItem(t, ledgerNames),
+        ];
+        if (index < sortedKeys.length - 1) {
+          children.add(Divider(
+            height: PiggyTokens.listDayDividerHeight(context),
+            thickness: PiggyTokens.listDayDividerHeight(context),
+            color: PiggyTokens.listDayDividerColor(context),
+            indent: 12,
+            endIndent: 12,
+          ));
+        }
+        return Column(children: children);
+      },
+    );
   }
 
   /// 构建单条交易项(无分组逻辑,纯 widget 工厂)。供时间/金额两种排序复用。
@@ -512,41 +520,59 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
     );
   }
 
-  /// 「整张大卡片」外壳:把所有明细内容包在带主题色细边框的 surface 圆角卡里,
-  /// 与顶部汇总卡片视觉对齐。沿用首页「明细」tab 的 _buildOuterCard 风格:
-  /// - margin = cardMargin
-  /// - surface 背景 + radiusLg 圆角
-  /// - 主题色 1.5 边框(亮色有阴影,暗黑无阴影)
-  /// - ListView + 一个 outer-card item,保证明细可滚动(交易很多时不溢出)。
-  Widget _buildOuterCard(List<Widget> children) {
+  /// 懒加载的「整张大卡片」外壳。
+  ///
+  /// 用 ListView.builder 把每个 day（时间排序）或每条交易（金额排序）作为
+  /// 独立 item 按需构建：首 item 画顶部圆角 + 顶边 + 阴影，末 item 画底部
+  /// 圆角 + 底边，中间 item 只画左右边线——视觉上仍是连续一张大卡片，
+  /// 但明细很多时不会一次性构建/渲染全部交易（旧的 _buildOuterCard 把整棵
+  /// 子树塞进单个 ListView item，年视角下分类明细可达上千笔 → 卡顿）。
+  Widget _buildLazyCard({
+    required int itemCount,
+    required Widget Function(BuildContext context, int index) itemBuilder,
+  }) {
     final isDark = PiggyTokens.isDark(context);
     final primary = ref.watch(primaryColorProvider);
     const borderWidth = 1.5;
 
-    return ListView(
-      // 仅一个 item:整张外卡。padding 给 ListView 一点底空间,
-      // 让最后一项不被卡边缘裁切。
-      padding: const EdgeInsets.only(bottom: 8),
-      children: [
-        Container(
-          margin: PiggyDimens.cardMargin,
-          decoration: BoxDecoration(
-            color: PiggyTokens.surface(context),
-            borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-            border: borderWidth > 0
-                ? Border.all(color: primary, width: borderWidth)
-                : null,
-            boxShadow: isDark ? null : PiggyShadows.card,
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: children,
+    return Container(
+      margin: PiggyDimens.cardMargin,
+      child: ListView.builder(
+        // item 间无额外间距，圆角/边框由首末 item 决定
+        padding: EdgeInsets.zero,
+        itemCount: itemCount,
+        itemBuilder: (context, index) {
+          final isFirst = index == 0;
+          final isLast = index == itemCount - 1;
+          return Container(
+            decoration: BoxDecoration(
+              color: PiggyTokens.surface(context),
+              borderRadius: BorderRadius.only(
+                topLeft:
+                    isFirst ? const Radius.circular(PiggyDimens.radiusLg) : Radius.zero,
+                topRight:
+                    isFirst ? const Radius.circular(PiggyDimens.radiusLg) : Radius.zero,
+                bottomLeft:
+                    isLast ? const Radius.circular(PiggyDimens.radiusLg) : Radius.zero,
+                bottomRight:
+                    isLast ? const Radius.circular(PiggyDimens.radiusLg) : Radius.zero,
+              ),
+              border: Border(
+                top: isFirst
+                    ? BorderSide(color: primary, width: borderWidth)
+                    : BorderSide.none,
+                bottom: isLast
+                    ? BorderSide(color: primary, width: borderWidth)
+                    : BorderSide.none,
+                left: BorderSide(color: primary, width: borderWidth),
+                right: BorderSide(color: primary, width: borderWidth),
+              ),
+              boxShadow: isFirst ? (isDark ? null : PiggyShadows.card) : null,
             ),
-          ),
-        ),
-      ],
+            child: itemBuilder(context, index),
+          );
+        },
+      ),
     );
   }
 

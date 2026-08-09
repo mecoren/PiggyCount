@@ -292,8 +292,9 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
 
                     SizedBox(height: 12.0.scaled(context, ref)),
 
-                    // 交易列表（分页）
-                    _buildTransactionList(
+                    // 交易列表（分页，懒加载：每笔交易作为外层 ListView 的独立
+                    // item 按需构建，避免分页累积的交易全部一次性 layout/paint）
+                    ..._buildTransactionListItems(
                       context,
                       paginationState,
                       currencyCode,
@@ -955,7 +956,14 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
         (account.note != null && account.note!.isNotEmpty);
   }
 
-  Widget _buildTransactionList(
+  /// 交易列表（懒加载版）。
+  ///
+  /// 把「一个 SectionCard 内 Column 一次性构建全部交易」拆成一组独立 item，
+  /// 由外层 ListView 直接持有，按 index 按需构建/回收——分页累积到几百条后
+  /// 也不再一次性 layout/paint 全部交易。视觉上仍是连续的一张主题色大卡片：
+  /// 首 item 画顶部圆角 + 顶边，末 item 画底部圆角 + 底边，中间只画左右边线，
+  /// item 之间共享连续边框；item 外仍有与其它卡片一致的左右 margin。
+  List<Widget> _buildTransactionListItems(
     BuildContext context,
     AccountTransactionsPaginationState state,
     String currencyCode,
@@ -967,120 +975,193 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
     final transactions = state.transactions;
 
     if (transactions.isEmpty && !state.isLoading) {
-      return SectionCard(
-        borderColor: primaryColor,
-        child: Padding(
-          padding: EdgeInsets.all(32.0.scaled(context, ref)),
-          child: Center(
-            child: Column(
-              children: [
-                Icon(
-                  Icons.receipt_long_outlined,
-                  size: 48.0.scaled(context, ref),
-                  color: PiggyTokens.textTertiary(context),
-                ),
-                SizedBox(height: 8.0.scaled(context, ref)),
-                Text(
-                  l10n.accountNoTransactions,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: PiggyTokens.textSecondary(context),
+      return [
+        SectionCard(
+          borderColor: primaryColor,
+          child: Padding(
+            padding: EdgeInsets.all(32.0.scaled(context, ref)),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.receipt_long_outlined,
+                    size: 48.0.scaled(context, ref),
+                    color: PiggyTokens.textTertiary(context),
                   ),
-                ),
-              ],
+                  SizedBox(height: 8.0.scaled(context, ref)),
+                  Text(
+                    l10n.accountNoTransactions,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: PiggyTokens.textSecondary(context),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-      );
+      ];
     }
 
-    return SectionCard(
-      borderColor: primaryColor,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: EdgeInsets.all(12.0.scaled(context, ref)),
-            child: Row(
-              children: [
-                Text(
-                  l10n.accountTransactionHistory,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: PiggyTokens.textPrimary(context),
+    const borderWidth = 1.5;
+    final isLastTxFooter = transactions.isNotEmpty && !state.hasMore;
+
+    // 首 item：标题行（顶部圆角 + 顶边）
+    final items = <Widget>[
+      _buildTxCardShell(
+        context,
+        primaryColor,
+        borderWidth,
+        isFirst: true,
+        isLast: false,
+        child: Padding(
+          padding: EdgeInsets.all(12.0.scaled(context, ref)),
+          child: Row(
+            children: [
+              Text(
+                l10n.accountTransactionHistory,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: PiggyTokens.textPrimary(context),
+                ),
+              ),
+              const Spacer(),
+              if (transactions.isNotEmpty)
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 8.0.scaled(context, ref),
+                    vertical: 2.0.scaled(context, ref),
+                  ),
+                  decoration: BoxDecoration(
+                    color: primaryColor.withValues(alpha: 0.1),
+                    borderRadius:
+                        BorderRadius.circular(10.0.scaled(context, ref)),
+                  ),
+                  child: Text(
+                    '${transactions.length}${state.hasMore ? '+' : ''}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: primaryColor,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-                const Spacer(),
-                if (transactions.isNotEmpty)
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 8.0.scaled(context, ref),
-                      vertical: 2.0.scaled(context, ref),
-                    ),
-                    decoration: BoxDecoration(
-                      color: primaryColor.withValues(alpha: 0.1),
-                      borderRadius:
-                          BorderRadius.circular(10.0.scaled(context, ref)),
-                    ),
-                    child: Text(
-                      '${transactions.length}${state.hasMore ? '+' : ''}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: primaryColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-              ],
+            ],
+          ),
+        ),
+      ),
+    ];
+
+    // 交易项：每笔一个 item，只画左右边线；末笔若是卡片末 item 则画底部圆角+底边
+    for (var index = 0; index < transactions.length; index++) {
+      final tx = transactions[index];
+      final isLast = index == transactions.length - 1 && !state.isLoading;
+      items.add(_buildTxCardShell(
+        context,
+        primaryColor,
+        borderWidth,
+        isFirst: false,
+        isLast: isLast && !isLastTxFooter,
+        child: Column(
+          children: [
+            if (index > 0) PiggyTokens.cardDivider(context),
+            _TransactionTile(
+              transaction: tx,
+              currencyCode: currencyCode,
+              primaryColor: primaryColor,
+              ledgers: ref.watch(ledgersStreamProvider).asData?.value ?? [],
+              categories: categories,
+              currentAccountId: widget.account.id,
+              onTap: () => _editTransaction(context, ref, tx),
+            ),
+          ],
+        ),
+      ));
+    }
+
+    // 底部 footer：加载指示器 / 没有更多（末 item，画底部圆角+底边）
+    if (state.isLoading) {
+      items.add(_buildTxCardShell(
+        context,
+        primaryColor,
+        borderWidth,
+        isFirst: false,
+        isLast: true,
+        child: Padding(
+          padding: EdgeInsets.all(16.0.scaled(context, ref)),
+          child: const Center(
+            child: SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
             ),
           ),
-          ...transactions.asMap().entries.map((entry) {
-            final index = entry.key;
-            final tx = entry.value;
-
-            return Column(
-              children: [
-                if (index > 0) PiggyTokens.cardDivider(context),
-                _TransactionTile(
-                  transaction: tx,
-                  currencyCode: currencyCode,
-                  primaryColor: primaryColor,
-                  ledgers: ref.watch(ledgersStreamProvider).asData?.value ?? [],
-                  categories: categories,
-                  currentAccountId: widget.account.id,
-                  onTap: () => _editTransaction(context, ref, tx),
-                ),
-              ],
-            );
-          }),
-          // 加载指示器
-          if (state.isLoading)
-            Padding(
-              padding: EdgeInsets.all(16.0.scaled(context, ref)),
-              child: const Center(
-                child: SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              ),
-            )
-          else if (!state.hasMore && transactions.isNotEmpty)
-            Padding(
-              padding: EdgeInsets.all(12.0.scaled(context, ref)),
-              child: Center(
-                child: Text(
-                  l10n.accountNoMoreData,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: PiggyTokens.textTertiary(context),
-                  ),
-                ),
+        ),
+      ));
+    } else if (isLastTxFooter) {
+      items.add(_buildTxCardShell(
+        context,
+        primaryColor,
+        borderWidth,
+        isFirst: false,
+        isLast: true,
+        child: Padding(
+          padding: EdgeInsets.all(12.0.scaled(context, ref)),
+          child: Center(
+            child: Text(
+              l10n.accountNoMoreData,
+              style: TextStyle(
+                fontSize: 12,
+                color: PiggyTokens.textTertiary(context),
               ),
             ),
-        ],
+          ),
+        ),
+      ));
+    }
+
+    return items;
+  }
+
+  /// 大卡片「外壳」item：按首/末位置决定圆角与顶/底边线，左右边线常驻，
+  /// 视觉上多个 item 连成一张带主题色细边框的连续大卡片。
+  /// 与原有 SectionCard(borderColor:) 一致：有主题色边框时无阴影。
+  Widget _buildTxCardShell(
+    BuildContext context,
+    Color primaryColor,
+    double borderWidth, {
+    required bool isFirst,
+    required bool isLast,
+    required Widget child,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: PiggyDimens.p12),
+      decoration: BoxDecoration(
+        color: PiggyTokens.surface(context),
+        borderRadius: BorderRadius.only(
+          topLeft:
+              isFirst ? const Radius.circular(PiggyDimens.radiusLg) : Radius.zero,
+          topRight:
+              isFirst ? const Radius.circular(PiggyDimens.radiusLg) : Radius.zero,
+          bottomLeft:
+              isLast ? const Radius.circular(PiggyDimens.radiusLg) : Radius.zero,
+          bottomRight:
+              isLast ? const Radius.circular(PiggyDimens.radiusLg) : Radius.zero,
+        ),
+        border: Border(
+          top: isFirst
+              ? BorderSide(color: primaryColor, width: borderWidth)
+              : BorderSide.none,
+          bottom: isLast
+              ? BorderSide(color: primaryColor, width: borderWidth)
+              : BorderSide.none,
+          left: BorderSide(color: primaryColor, width: borderWidth),
+          right: BorderSide(color: primaryColor, width: borderWidth),
+        ),
       ),
+      child: child,
     );
   }
 

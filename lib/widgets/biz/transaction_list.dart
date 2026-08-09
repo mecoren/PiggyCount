@@ -45,11 +45,12 @@ class TransactionList extends ConsumerStatefulWidget {
   /// 列表控制器（可选，用于精准跳转）
   final FlutterListViewController? controller;
 
-  /// 是否启用「独立日卡片」风格:每个 day 渲染为一张独立卡片(日期头部 + 当天
-  /// 交易项),卡片之间用 cardMargin 间距天然分隔,日内交易不再画分割线。每张
-  /// 日卡片是 FlutterListView 的独立懒加载项,滚动时按需构建/回收,避免
-  /// 一次性构建全部交易导致卡顿。
-  /// - true:独立日卡片风格(首页"明细"tab 当前风格);
+  /// 是否启用「分组卡片」风格:每个 day 渲染为 FlutterListView 的独立懒加载项,
+  /// 首日画顶部圆角+顶边+阴影,末日画底部圆角+底边,中日只画左右边线——所有
+  /// day 共享连续 surface 背景,形成「一张大卡片」观感。日内交易不再画分割线,
+  /// 日间用细线分隔。滚动时按需构建/回收,避免 3000 笔账单下一次性构建全部
+  /// 交易导致卡顿。
+  /// - true:分组卡片风格(首页"明细"tab 当前风格);
   /// - false:不包外卡,回到无包裹状态(向后兼容)。
   final bool wrapInOuterCard;
 
@@ -79,6 +80,13 @@ class TransactionListState extends ConsumerState<TransactionList> {
   List<dynamic> _flatItems = []; // 扁平化的项目列表
   final Map<String, int> _dateIndexMap = {}; // 日期到列表索引的映射
 
+  // 数据指纹缓存:transactions 列表引用 + 长度未变时跳过 _buildFlatItems 的
+  // 全量重算(格式化/分组/排序)。首页父级 rebuild(如 hideAmountsProvider、
+  // _loadTags setState)传入同一 list 引用时,3000 条数据不必每次重跑。
+  List<({Transaction t, Category? category, Account? account, Account? toAccount})>?
+      _flatItemsSource;
+  int? _flatItemsSourceLength;
+
   // 缓存标签数据（仅用于非预加载模式）
   Map<int, List<Tag>> _cachedTagsMap = {};
   List<int> _cachedTransactionIds = [];
@@ -86,6 +94,7 @@ class TransactionListState extends ConsumerState<TransactionList> {
 
   // 缓存附件数量（仅用于非预加载模式）
   Map<int, int> _cachedAttachmentCounts = {};
+  List<int> _cachedAttachmentIds = [];
   int _lastAttachmentRefreshVersion = 0;
 
   // D 方案后:不再需要 _cachedAccountNames / _cachedToAccountNames /
@@ -102,13 +111,19 @@ class TransactionListState extends ConsumerState<TransactionList> {
     return widget.transactions ?? [];
   }
 
-  /// 预加载数据的 ID 集合（用于快速判断某条交易是否有预加载详情）
-  Set<int>? _preloadedIds;
-  Set<int> get _preloadedIdSet {
-    if (_preloadedIds == null && widget.transactionsWithDetails != null) {
-      _preloadedIds = widget.transactionsWithDetails!.map((t) => t.t.id).toSet();
+  /// 预加载数据按 id 的 O(1) 查找表(避免每行渲染线性扫描整个列表)。
+  /// 仅在预加载数据引用变化时惰性构建一次。
+  Map<int, TransactionDisplayItem>? _preloadedById;
+  bool _preloadedIdsStale = true;
+  Map<int, TransactionDisplayItem> get _preloadedByIdMap {
+    if (_preloadedIdsStale && widget.transactionsWithDetails != null) {
+      _preloadedById = {
+        for (final item in widget.transactionsWithDetails!)
+          item.t.id: item,
+      };
+      _preloadedIdsStale = false;
     }
-    return _preloadedIds ?? {};
+    return _preloadedById ?? const {};
   }
 
   @override
@@ -126,7 +141,8 @@ class TransactionListState extends ConsumerState<TransactionList> {
 
     // 检测预加载数据是否变化（如账本切换），重置状态
     if (widget.transactionsWithDetails != oldWidget.transactionsWithDetails) {
-      _preloadedIds = null; // 重置预加载 ID 缓存
+      _preloadedIdsStale = true; // 预加载查找表已过期,下次访问时重建
+      _preloadedById = null;
       if (widget.transactionsWithDetails != null) {
         _usePreloadedData = true; // 重置为预加载模式
       }
@@ -152,6 +168,9 @@ class TransactionListState extends ConsumerState<TransactionList> {
 
   Future<void> _loadTags() async {
     final transactionIds = _transactionsList.map((t) => t.t.id).toList();
+    // 指纹去重:当前 id 列表与上次已加载的一致时跳过,避免 didUpdateWidget /
+    // refresh provider 触发重复的全量批量查询。
+    if (_listEquals(transactionIds, _cachedTransactionIds)) return;
     if (transactionIds.isEmpty) {
       setState(() {
         _cachedTagsMap = {};
@@ -173,9 +192,12 @@ class TransactionListState extends ConsumerState<TransactionList> {
 
   Future<void> _loadAttachmentCounts() async {
     final transactionIds = _transactionsList.map((t) => t.t.id).toList();
+    // 指纹去重:与上次已加载的 id 列表一致时跳过。
+    if (_listEquals(transactionIds, _cachedAttachmentIds)) return;
     if (transactionIds.isEmpty) {
       setState(() {
         _cachedAttachmentCounts = {};
+        _cachedAttachmentIds = [];
       });
       return;
     }
@@ -186,21 +208,15 @@ class TransactionListState extends ConsumerState<TransactionList> {
     if (mounted) {
       setState(() {
         _cachedAttachmentCounts = countsMap;
+        _cachedAttachmentIds = transactionIds;
       });
     }
   }
 
-  /// 检查某条交易是否有预加载详情
-  bool _hasPreloadedDetails(int transactionId) {
-    return _usePreloadedData && _preloadedIdSet.contains(transactionId);
-  }
-
-  /// 获取预加载的交易详情
+  /// 获取预加载的交易详情(O(1) Map 查找,替代每行线性扫描)
   TransactionDisplayItem? _getPreloadedItem(int transactionId) {
-    if (!_hasPreloadedDetails(transactionId)) return null;
-    return widget.transactionsWithDetails!
-        .where((item) => item.t.id == transactionId)
-        .firstOrNull;
+    if (!_usePreloadedData) return null;
+    return _preloadedByIdMap[transactionId];
   }
 
   /// 获取交易的标签列表（优先使用预加载数据）
@@ -323,16 +339,26 @@ class TransactionListState extends ConsumerState<TransactionList> {
     }
 
     if (widget.wrapInOuterCard && sortedKeys.isNotEmpty) {
-      // 「独立日卡片」风格:每个 day 作为独立的懒加载项(FlutterListView delegate
-      // 按 index 按需构建),渲染为一张独立日卡片。day 之间不再插 dayDivider ——
-      // 每张卡片自带 cardMargin 间距,天然形成日间分隔。flatDayStart 记录该 day
-      // 第一条交易在全局交易序号中的起点,供 Dismissible 的 key 保持全局唯一稳定。
+      // 「分组卡片」风格:每个 day 作为独立的懒加载项(FlutterListView delegate
+      // 按 index 按需构建),但视觉上首日/末日的圆角+边框与中日共享连续边线,
+      // 形成"一个大卡片"观感。flatDayStart 记录该 day 第一条交易在全局交易
+      // 序号中的起点,供 Dismissible 的 key 保持全局唯一稳定。`isFirst`/`isLast`
+      // 用于决定哪个 day 渲染顶/底圆角与顶/底边线——只有首日画顶部圆角+阴影,
+      // 只有末日画底部圆角,中日只画左右边线,整体连接成一张大卡片。
       int flatDayStart = 0;
+      final lastIndex = sortedKeys.length - 1;
       for (int i = 0; i < sortedKeys.length; i++) {
         final key = sortedKeys[i];
         final list = groups[key]!;
         _dateIndexMap[key] = _flatItems.length;
-        _flatItems.add(('day', key, list, flatDayStart));
+        _flatItems.add((
+          'day',
+          key,
+          list,
+          flatDayStart,
+          i == 0,        // isFirst
+          i == lastIndex // isLast
+        ));
         flatDayStart += list.length;
       }
     } else if (!widget.wrapInOuterCard) {
@@ -374,7 +400,16 @@ class TransactionListState extends ConsumerState<TransactionList> {
     // —— account / toAccount 由 Drift JOIN + SharedLedger* table-watch 自动
     // 推送,UI 直接读 it.account?.name。
 
-    _buildFlatItems();
+    // 数据引用缓存:同一 transactions 列表引用 + 相同长度时复用上次 _flatItems
+    // 结果(父级 rebuild 时传入同一引用),避免 3000 条数据每次 build 全量重算。
+    // 引用变化(Stream 推送新列表)或长度变化时才重建。
+    final tx = _transactionsList;
+    if (!identical(tx, _flatItemsSource) ||
+        tx.length != _flatItemsSourceLength) {
+      _buildFlatItems();
+      _flatItemsSource = tx;
+      _flatItemsSourceLength = tx.length;
+    }
 
     // 无数据时展示空状态（列表头部仍显示，位于空状态上方）
     final hasTransactions = _transactionsList.isNotEmpty;
@@ -388,7 +423,16 @@ class TransactionListState extends ConsumerState<TransactionList> {
       if (widget.listHeader != null) {
         return Column(
           children: [
-            widget.listHeader!,
+            // 空数据时 listHeader 不随列表滚动,需要补上与正常路径等效的水平边距
+            // (正常路径由 FlutterListView 外层 Container(margin: cardMargin) 给
+            // 出,左右各 12px)。用 Container(margin: horizontal: 12) 而不是
+            // Padding:Container 的 margin 让子项宽度 = (screenWidth - 24),
+            // 与正常路径一致;Padding 会让背景延伸 + box 约束传播在 Row+Expanded
+            // 嵌套下偶发 layout 异常(空状态提示不可见)。
+            Container(
+              margin: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+              child: widget.listHeader!,
+            ),
             Expanded(child: empty),
           ],
         );
@@ -396,11 +440,15 @@ class TransactionListState extends ConsumerState<TransactionList> {
       return empty;
     }
 
-    // 使用FlutterListView渲染列表
-    return FlutterListView(
-      controller: _controller,
-      physics: const BouncingScrollPhysics(),
-      delegate: FlutterListViewDelegate(
+    // 使用FlutterListView渲染列表。外层 Container(margin: cardMargin) 给出
+    // 「整张大卡片」整体边距,内部每个 day item 共享连续边线 boxShadow,而非
+    // 每个 day 独立 margin —— 形成一个连续大卡片观感。
+    return Container(
+      margin: PiggyDimens.cardMargin,
+      child: FlutterListView(
+        controller: _controller,
+        physics: const BouncingScrollPhysics(),
+        delegate: FlutterListViewDelegate(
         (BuildContext context, int index) {
           final item = _flatItems[index];
           final type = item.$1 as String;
@@ -462,13 +510,16 @@ class TransactionListState extends ConsumerState<TransactionList> {
 
             return header;
           } else if (type == 'day') {
-            // 「独立日卡片」风格:每个 day 作为独立懒加载项,渲染为一张独立日卡片,
-            // 由 FlutterListView 按 index 按需构建/回收(3000 条数据下滚动只渲染
-            // 可视区间的日卡片)。jumpToMonth 仍用 _dateIndexMap 映射到各 day item。
+            // 「分组卡片」风格:每个 day 独立懒加载,首日画顶部圆角+阴影,末日
+            // 画底部圆角,中日只画左右边线——视觉上各 day 共享连续边线,像"一张
+            // 大卡片"。FlutterListView 按 index 按需构建/回收解决 3000 条卡顿。
+            // jumpToMonth 仍用 _dateIndexMap 映射到各 day item。
             final dateKey = item.$2 as String;
             final list = item.$3 as List<({Transaction t, Category? category, Account? account, Account? toAccount})>;
             final flatDayStart = item.$4 as int;
-            return _buildDayCard(context, dateKey, list, flatDayStart);
+            final isFirst = item.$5 as bool;
+            final isLast = item.$6 as bool;
+            return _buildDayCard(context, dateKey, list, flatDayStart, isFirst, isLast);
           } else {
             // 'transaction' 平铺旧风格(wrapInOuterCard = false):平铺单条交易,
             // 项之间用 PiggyDivider.short 分隔,项的具体渲染复用 _buildTransactionRow。
@@ -485,10 +536,38 @@ class TransactionListState extends ConsumerState<TransactionList> {
             );
           }
         },
+        // onItemHeight:为 flutter_list_view 提供 item 高度估算,避免默认 50px
+        // 严重低估 day 卡片(实际 = header + 当天交易行数×行高)导致 constructNext
+        // 按 50px 逐项构建直到填满视口 → 单帧过量构建大量日卡片(含当天全部
+        // 交易行),这是 3000 笔数据下真实设备卡顿的根因之一。此值仅用于估算
+        // 构建范围/总高度,不参与实际布局,偏高是安全的。
+        onItemHeight: (index) {
+          if (index < 0 || index >= _flatItems.length) return 50.0;
+          final item = _flatItems[index];
+          final type = item.$1 as String;
+          switch (type) {
+            case 'listHeader':
+              return 160.0; // 月份总结卡片(随内容变化,估算偏大)
+            case 'bottomSpacer':
+              return 110.0; // 悬浮 Tab 栏留白
+            case 'day':
+              // DaySectionHeader(~40px) + 当天交易行数×行高。行高取单行
+              // 48px(icon32+8*2) + 二级信息行(~28px)的保守上限 72px。
+              final list = item.$3 as List;
+              return 40.0 + list.length * 72.0;
+            case 'header':
+              return 40.0; // 平铺旧风格:DaySectionHeader
+            case 'transaction':
+              return 80.0; // 平铺旧风格:单行 + 分割线
+            default:
+              return 50.0;
+          }
+        },
         childCount: _flatItems.length,
       ),
-    );
-  }
+    ),
+  );
+}
 
   /// 渲染单个交易项(Dismissible + TransactionListItem)。被「日卡片」和
   /// 旧平铺模式共用;调用方负责在项之间加分隔线,此处不输出。
@@ -649,18 +728,20 @@ class TransactionListState extends ConsumerState<TransactionList> {
     );
   }
 
-  /// 渲染单张「日卡片」:DaySectionHeader + 当天所有交易项,包在一个卡片容器里。
+  /// 渲染单日「分组卡片」:DaySectionHeader + 当天所有交易项 + (非末日)日间细线,
+  /// 包在一个装饰容器里。
   ///
-  /// 卡片样式对齐 SectionCard(margin + 圆角 + surface + 阴影/边框)。每个 day
-  /// 作为 FlutterListView 的独立懒加载项按 index 按需构建/回收,替代旧版
-  /// 「整张全量大卡片」(_buildOuterCard)一次性构建全部 day 的 O(n) 渲染,解决
-  /// 导入 3000 笔账单后的卡顿。日卡片之间靠自身 cardMargin 间距天然分隔,
-  /// 日内交易项之间不再画分隔线,保留原大卡片的视觉风格。
+  /// 视觉上每个 day 作为 FlutterListView 独立懒加载项按 index 按需构建/回收。
+  /// 首日画顶部圆角+顶边+亮色阴影,末日画底部圆角+底边,中日只画左右边线——
+  /// 所有 day 共享连续 surface 背景,形成「一张大卡片」观感。替代旧版
+  /// _buildOuterCard 一次性 O(n) 渲染,解决 3000 笔账单下首页卡顿。
   Widget _buildDayCard(
     BuildContext context,
     String dateKey,
     List<({Transaction t, Category? category, Account? account, Account? toAccount})> list,
     int flatDayStart,
+    bool isFirst,
+    bool isLast,
   ) {
     final isDark = PiggyTokens.isDark(context);
     final primary = ref.watch(primaryColorProvider);
@@ -694,31 +775,45 @@ class TransactionListState extends ConsumerState<TransactionList> {
       );
     }
 
-    // day 卡片内容:header + 当天所有交易(无日内分割线)。flatDayStart 由
-    // _buildFlatItems 预分配,保证各 day 的 Dismissible key('tx-${id}-$flatIndex')
-    // 全局唯一稳定,与旧 _buildOuterCard 中 flatDayIndex 语义一致。
+    // day 内容:header + 当天所有交易 + (非末日)日间细线。flatDayStart 由
+    // _buildFlatItems 预分配,保证 Dismissible key('tx-${id}-$flatIndex')全局
+    // 唯一稳定,跨 day 不会冲突。
     final children = <Widget>[
       header,
       for (int i = 0; i < list.length; i++)
         _buildTransactionRow(context, flatDayStart + i, list[i], list),
+      if (!isLast)
+        Divider(
+          height: PiggyTokens.listDayDividerHeight(context),
+          thickness: PiggyTokens.listDayDividerHeight(context),
+          color: PiggyTokens.listDayDividerColor(context),
+          indent: 12,
+          endIndent: 12,
+        ),
     ];
 
+    // 「分组卡片」装饰:首日画顶部圆角+顶边+亮色 boxShadow,末日画底部圆角+底边,
+    // 中日只画左右边线——所有 day 共享连续 surface 背景,视觉上像一张大卡片。
     return Container(
-      margin: PiggyDimens.cardMargin,
       decoration: BoxDecoration(
         color: PiggyTokens.surface(context),
-        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-        border: borderWidth > 0
-            ? Border.all(color: borderColor, width: borderWidth)
-            : null,
-        boxShadow: isDark ? null : PiggyShadows.card,
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: children,
+        border: Border(
+          top: isFirst ? BorderSide(color: borderColor, width: borderWidth) : BorderSide.none,
+          bottom: isLast ? BorderSide(color: borderColor, width: borderWidth) : BorderSide.none,
+          left: BorderSide(color: borderColor, width: borderWidth),
+          right: BorderSide(color: borderColor, width: borderWidth),
         ),
+        borderRadius: BorderRadius.only(
+          topLeft: isFirst ? const Radius.circular(PiggyDimens.radiusLg) : Radius.zero,
+          topRight: isFirst ? const Radius.circular(PiggyDimens.radiusLg) : Radius.zero,
+          bottomLeft: isLast ? const Radius.circular(PiggyDimens.radiusLg) : Radius.zero,
+          bottomRight: isLast ? const Radius.circular(PiggyDimens.radiusLg) : Radius.zero,
+        ),
+        boxShadow: isFirst ? (isDark ? null : PiggyShadows.card) : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
       ),
     );
   }
