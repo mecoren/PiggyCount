@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui' show Color;
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:drift/drift.dart' as d;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' hide SyncStatus;
@@ -353,6 +354,38 @@ final syncServiceProvider = Provider<SyncService>((ref) {
       });
     });
 
+    // §X 兜底:Drift table-watch。任何 transactions 表变更(本地写入 /
+    // 云端合并)都主动 bump statsRefreshProvider,让 monthlyTotalsProvider
+    // 等派生统计被 invalidate 重新查 SQL。
+    //
+    // 业务路径(transaction_editor_page / category_detail_page / PullCompleted
+    // 事件 / bootstrap 同步)已经显式 bump 过 statsRefreshProvider;但
+    // cloud_sync_page 的「下载并应用」流程走 dataImportService.
+    // importTransactions 批量写表,不在任何交易 CRUD 钩子覆盖范围内,会
+    // 漏掉 statsRefreshProvider 触发,导致「明细变了、月合计/日合计不变」。
+    // Drift tableUpdates 在表提交完成时同步 emit,这里作为兜底监听,确保
+    // 任何来源的 transactions 写入都触发 UI 刷新。
+    //
+    // 注意:这里会 bump 多次(importTransactions 一批 N 条会触发 N 次
+    // tableUpdates 回调),Riverpod 的 StateProvider 在重复相同值时不会重建
+    // 监听者,所以开销可接受;但 monthlyTotalsProvider 是 family,每次
+    // statsRefreshProvider 变化都会触发 future 重跑,用户停手即收敛。
+    StreamSubscription<void>? txTableSub;
+    try {
+      txTableSub = db
+          .tableUpdates(d.TableUpdateQuery.onTable(db.transactions))
+          .listen((_) {
+        ref.read(statsRefreshProvider.notifier).state++;
+      });
+    } catch (e, st) {
+      // db 在极少数时序下可能未就绪;不影响主流程,记日志即可。
+      logger.warning(
+        'SyncProvider',
+        'transactions table-watch 启动失败: $e',
+        st,
+      );
+    }
+
     // 当 Provider 被销毁时停止监听。engine.dispose 归 syncEngineProvider
     // (family),这里只清本 provider 自己持有的资源。
     ref.onDispose(() {
@@ -360,6 +393,7 @@ final syncServiceProvider = Provider<SyncService>((ref) {
       connectivityDebounce?.cancel();
       connectivitySubscription.cancel();
       coordinator.dispose();
+      txTableSub?.cancel();
     });
 
     // Profile（含头像）同步和 ledger 同步解耦：新设备首次登录时，用户可能还

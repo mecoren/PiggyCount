@@ -905,6 +905,13 @@ class _HomePageState extends ConsumerState<HomePage> {
             }
             return const SizedBox.shrink();
           }),
+          // 月总结卡片固定在顶部，不随明细滚动
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: HomeMonthSummaryCard(
+              onMonthSelected: _jumpToTargetMonth,
+            ),
+          ),
           Expanded(
             child: StreamBuilder<
                 List<
@@ -955,10 +962,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                   enableVisibilityTracking: true,
                   onDateVisibilityChanged: _onHeaderVisibilityChanged,
                   controller: _listController,
-                  // 月份总结卡片作为列表第一项，随明细滚动
-                  listHeader: HomeMonthSummaryCard(
-                    onMonthSelected: _jumpToTargetMonth,
-                  ),
                   emptyWidget: AppEmpty(
                     text: AppLocalizations.of(context).homeNoRecords,
                     subtext: AppLocalizations.of(context).homeNoRecordsSubtext,

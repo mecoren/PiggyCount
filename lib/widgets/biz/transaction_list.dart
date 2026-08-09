@@ -80,12 +80,23 @@ class TransactionListState extends ConsumerState<TransactionList> {
   List<dynamic> _flatItems = []; // 扁平化的项目列表
   final Map<String, int> _dateIndexMap = {}; // 日期到列表索引的映射
 
-  // 数据指纹缓存:transactions 列表引用 + 长度未变时跳过 _buildFlatItems 的
-  // 全量重算(格式化/分组/排序)。首页父级 rebuild(如 hideAmountsProvider、
-  // _loadTags setState)传入同一 list 引用时,3000 条数据不必每次重跑。
+  // 数据指纹缓存:transactions 列表引用 + 长度 + 首尾交易 id 都未变时跳过
+  // _buildFlatItems 的全量重算(格式化/分组/排序)。首页父级 rebuild(如
+  // hideAmountsProvider、_loadTags setState)传入同一 list 引用时,3000 条
+  // 数据不必每次重跑。
+  //
+  // 显式比较首尾 id 的原因:Drift watch 重新 emit 时,新 list 通常是不同引用,
+  // 仅靠 !identical + length 就能 miss 缓存;但「云端合并」等场景下 stream
+  // 偶尔会出现"新引用 + 相同长度 + 内部若干条 id 被替换/金额被改"的组合,
+  // 此时日合计 _buildDayCard 的循环会拿到旧 list 的 (Transaction t) 元组,
+  // 求和就是旧值,而 _buildTransactionRow 用的 Dismissible key 'tx-${id}'
+  // 因为 id 变了会被强制重建——结果就是"明细是新数据、合计是旧数据"的诡异
+  // 现象。把首尾 id 当作内容指纹的 O(1) 轻量代理,加进缓存 miss 条件。
   List<({Transaction t, Category? category, Account? account, Account? toAccount})>?
       _flatItemsSource;
   int? _flatItemsSourceLength;
+  int? _firstTxId;
+  int? _lastTxId;
 
   // 缓存标签数据（仅用于非预加载模式）
   Map<int, List<Tag>> _cachedTagsMap = {};
@@ -400,15 +411,22 @@ class TransactionListState extends ConsumerState<TransactionList> {
     // —— account / toAccount 由 Drift JOIN + SharedLedger* table-watch 自动
     // 推送,UI 直接读 it.account?.name。
 
-    // 数据引用缓存:同一 transactions 列表引用 + 相同长度时复用上次 _flatItems
-    // 结果(父级 rebuild 时传入同一引用),避免 3000 条数据每次 build 全量重算。
-    // 引用变化(Stream 推送新列表)或长度变化时才重建。
+    // 数据引用缓存:同一 transactions 列表引用 + 相同长度 + 相同首尾 id 时
+    // 复用上次 _flatItems 结果(父级 rebuild 时传入同一引用),避免 3000 条
+    // 数据每次 build 全量重算。引用变化(Stream 推送新列表)、长度变化、或
+    // 首尾 id 变化(云端合并可能 emit 同长度新列表但内容不同)时才重建。
     final tx = _transactionsList;
+    final firstId = tx.isNotEmpty ? tx.first.t.id : null;
+    final lastId = tx.isNotEmpty ? tx.last.t.id : null;
     if (!identical(tx, _flatItemsSource) ||
-        tx.length != _flatItemsSourceLength) {
+        tx.length != _flatItemsSourceLength ||
+        firstId != _firstTxId ||
+        lastId != _lastTxId) {
       _buildFlatItems();
       _flatItemsSource = tx;
       _flatItemsSourceLength = tx.length;
+      _firstTxId = firstId;
+      _lastTxId = lastId;
     }
 
     // 无数据时展示空状态（列表头部仍显示，位于空状态上方）

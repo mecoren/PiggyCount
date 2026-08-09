@@ -52,10 +52,15 @@ class DaySectionHeader extends ConsumerWidget {
     final grey = PiggyTokens.textSecondary(context);
     final week = getWeekday(dateText);
     final l10n = AppLocalizations.of(context);
-    // 日期 / 星期 / 支出标题 / 收入标题 共用同一 TextStyle,确保四者色、字号、
-    // 字重完全一致(用户要求日期&星期和支出标题同色)。
+    // 支出标题 / 收入标题 共用样式:次要色,弱化显示(汇总信息)。
     final labelStyle = TextStyle(
       color: grey,
+      fontSize: 12,
+      fontWeight: FontWeight.w400,
+    );
+    // 日期 / 星期:与单条明细的分类标题(TransactionListItem 的 PiggyTextTokens.title)
+    // 颜色一致(取主色),字号保持 12 不抢戏。
+    final dateLabelStyle = PiggyTextTokens.title(context).copyWith(
       fontSize: 12,
       fontWeight: FontWeight.w400,
     );
@@ -68,10 +73,10 @@ class DaySectionHeader extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(children: [
-            Text(dateText, style: labelStyle),
+            Text(dateText, style: dateLabelStyle),
             if (week.isNotEmpty) ...[
               const SizedBox(width: 8),
-              Text(week, style: labelStyle),
+              Text(week, style: dateLabelStyle),
             ]
           ]),
           Row(children: [
