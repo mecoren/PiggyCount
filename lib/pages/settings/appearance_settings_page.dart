@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers.dart';
 import '../../models/note_history.dart';
+import '../../providers/theme_providers.dart' show IncomeExpenseColorScheme;
 import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/biz.dart';
 import '../../styles/tokens.dart';
@@ -90,14 +91,16 @@ class AppearanceSettingsPage extends ConsumerWidget {
               SettingsNavItem(
                 icon: Icons.brightness_6_outlined,
                 title: l10n.appearanceThemeMode,
-                subtitle: themeModeDisplay,
+                subtitle: themeModeDisplay,
+
                 onTap: () => _showThemeModeDialog(context, ref, l10n),
               ),
               // 主题色设置
               SettingsNavItem(
                 icon: Icons.brush_outlined,
                 title: l10n.personalizeTitle,
-                subtitle: l10n.personalizeSubtitle,
+                subtitle: l10n.personalizeSubtitle,
+
                 onTap: () async {
                   await Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const PersonalizePage()),
@@ -108,7 +111,8 @@ class AppearanceSettingsPage extends ConsumerWidget {
               SettingsNavItem(
                 icon: Icons.wallpaper_outlined,
                 title: l10n.headerSkinTitle,
-                subtitle: skinDisplay,
+                subtitle: skinDisplay,
+
                 onTap: () async {
                   await Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const HeaderSkinPage()),
@@ -119,7 +123,8 @@ class AppearanceSettingsPage extends ConsumerWidget {
               SettingsNavItem(
                 icon: Icons.zoom_out_map_outlined,
                 title: l10n.mineDisplayScale,
-                subtitle: l10n.mineDisplayScaleSubtitle,
+                subtitle: l10n.mineDisplayScaleSubtitle,
+
                 onTap: () async {
                   await Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const FontSettingsPage()),
@@ -138,7 +143,8 @@ class AppearanceSettingsPage extends ConsumerWidget {
                 title: l10n.appearanceAmountFormat,
                 subtitle: ref.watch(compactAmountProvider)
                     ? l10n.appearanceAmountFormatCompact
-                    : l10n.appearanceAmountFormatFull,
+                    : l10n.appearanceAmountFormatFull,
+
                 onTap: () => _showAmountFormatDialog(context, ref, l10n),
               ),
               // 显示交易时间
@@ -149,7 +155,8 @@ class AppearanceSettingsPage extends ConsumerWidget {
                 value: ref.watch(showTransactionTimeProvider),
                 onChanged: (value) {
                   ref.read(showTransactionTimeProvider.notifier).state = value;
-                },
+                },
+
               ),
               // 备注显示方式
               SettingsNavItem(
@@ -157,23 +164,24 @@ class AppearanceSettingsPage extends ConsumerWidget {
                 title: l10n.appearanceNoteDisplay,
                 subtitle: ref.watch(noteDisplayModeProvider) == 'note'
                     ? l10n.appearanceNoteDisplayNote
-                    : l10n.appearanceNoteDisplayCategory,
+                    : l10n.appearanceNoteDisplayCategory,
+
                 onTap: () => _showNoteDisplayDialog(context, ref, l10n),
               ),
               // 历史备注偏好
               SettingsNavItem(
                 icon: Icons.history_outlined,
                 title: l10n.appearanceNoteHistory,
-                subtitle: _noteHistorySummary(ref, l10n),
+                subtitle: _noteHistorySummary(ref, l10n),
+
                 onTap: () => _showNoteHistoryDialog(context, ref, l10n),
               ),
               // 收支颜色方案
               SettingsNavItem(
                 icon: Icons.palette_outlined,
                 title: l10n.appearanceColorScheme,
-                subtitle: ref.watch(incomeExpenseColorSchemeProvider)
-                    ? l10n.appearanceColorSchemeOn
-                    : l10n.appearanceColorSchemeOff,
+                subtitle: _colorSchemeSubtitle(ref, l10n),
+
                 onTap: () => _showColorSchemeDialog(context, ref, l10n),
               ),
             ],
@@ -188,14 +196,16 @@ class AppearanceSettingsPage extends ConsumerWidget {
                 title: l10n.baseCurrencyLabel,
                 subtitle: displayCurrency(
                     ref.watch(baseCurrencyProvider).toUpperCase(),
-                    context),
+                    context),
+
                 onTap: () => _pickBaseCurrency(context, ref),
               ),
               // 汇率管理
               SettingsNavItem(
                 icon: Icons.currency_exchange,
                 title: l10n.exchangeRatePageTitle,
-                subtitle: l10n.exchangeRateEntrySubtitle,
+                subtitle: l10n.exchangeRateEntrySubtitle,
+
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => const ExchangeRatePage(),
@@ -212,7 +222,8 @@ class AppearanceSettingsPage extends ConsumerWidget {
               SettingsNavItem(
                 icon: Icons.language_outlined,
                 title: l10n.mineLanguageSettings,
-                subtitle: languageDisplay,
+                subtitle: languageDisplay,
+
                 onTap: () async {
                   await Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const LanguageSettingsPage()),
@@ -223,7 +234,8 @@ class AppearanceSettingsPage extends ConsumerWidget {
               SettingsNavItem(
                 icon: Icons.widgets_outlined,
                 title: l10n.widgetManagement,
-                subtitle: l10n.widgetManagementDesc,
+                subtitle: l10n.widgetManagementDesc,
+
                 onTap: () async {
                   await Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const WidgetManagementPage()),
@@ -234,7 +246,8 @@ class AppearanceSettingsPage extends ConsumerWidget {
               SettingsNavItem(
                 icon: Icons.lock_outline,
                 title: l10n.appLockTitle,
-                subtitle: l10n.appLockDesc,
+                subtitle: l10n.appLockDesc,
+
                 onTap: () async {
                   await Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const AppLockSettingsPage()),
@@ -662,6 +675,20 @@ class AppearanceSettingsPage extends ConsumerWidget {
     );
   }
 
+  /// 把当前方案的文案翻译成一层摘要,显示在个性化设置卡的副标题位
+  /// (默认显示当前选中的方案名)。三套方案可见后,直接对应
+  /// `_showColorSchemeDialog` 里的 3 个 `_buildColorSchemeOption`。
+  String _colorSchemeSubtitle(WidgetRef ref, AppLocalizations l10n) {
+    switch (ref.watch(incomeExpenseColorSchemeProvider)) {
+      case IncomeExpenseColorScheme.redIncome:
+        return l10n.appearanceColorSchemeOn;
+      case IncomeExpenseColorScheme.greenIncome:
+        return l10n.appearanceColorSchemeOff;
+      case IncomeExpenseColorScheme.blueIncome:
+        return l10n.appearanceColorSchemeBlue;
+    }
+  }
+
   /// 显示收支颜色方案选择对话框
   void _showColorSchemeDialog(
       BuildContext context, WidgetRef ref, AppLocalizations l10n) {
@@ -682,7 +709,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
               context, ref,
               title: l10n.appearanceColorSchemeOn,
               subtitle: l10n.appearanceColorSchemeOnDesc,
-              value: true,
+              value: IncomeExpenseColorScheme.redIncome,
               currentValue: currentScheme,
               icon: Icons.trending_up,
             ),
@@ -690,9 +717,17 @@ class AppearanceSettingsPage extends ConsumerWidget {
               context, ref,
               title: l10n.appearanceColorSchemeOff,
               subtitle: l10n.appearanceColorSchemeOffDesc,
-              value: false,
+              value: IncomeExpenseColorScheme.greenIncome,
               currentValue: currentScheme,
               icon: Icons.trending_down,
+            ),
+            _buildColorSchemeOption(
+              context, ref,
+              title: l10n.appearanceColorSchemeBlue,
+              subtitle: l10n.appearanceColorSchemeBlueDesc,
+              value: IncomeExpenseColorScheme.blueIncome,
+              currentValue: currentScheme,
+              icon: Icons.palette_outlined,
             ),
           ],
         ),
@@ -705,8 +740,8 @@ class AppearanceSettingsPage extends ConsumerWidget {
     WidgetRef ref, {
     required String title,
     required String subtitle,
-    required bool value,
-    required bool currentValue,
+    required IncomeExpenseColorScheme value,
+    required IncomeExpenseColorScheme currentValue,
     required IconData icon,
   }) {
     final isSelected = value == currentValue;

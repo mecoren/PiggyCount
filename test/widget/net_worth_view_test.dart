@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:piggycount/data/db.dart' show Account;
+import 'package:piggycount/providers/theme_providers.dart' show IncomeExpenseColorScheme;
 import 'package:piggycount/widget/views/net_worth_view.dart';
 import 'package:piggycount/widget/widget_data_service.dart' show NetWorthAccountItem;
 import 'package:piggycount/widget/widget_spec.dart' show HWSize;
@@ -59,7 +60,7 @@ void main() {
             baseCurrency: 'CNY',
             trend: sampleTrend(),
             themeColor: const Color(0xFFF5A623),
-            redForIncome: true,
+            colorScheme: IncomeExpenseColorScheme.redIncome,
             dark: dark,
             netWorthLabel: '净资产',
             totalAssetsLabel: '总资产',
@@ -86,7 +87,7 @@ void main() {
             baseCurrency: 'CNY',
             trend: const [],
             themeColor: const Color(0xFFF5A623),
-            redForIncome: true,
+            colorScheme: IncomeExpenseColorScheme.redIncome,
             dark: dark,
             netWorthLabel: '净资产',
             totalAssetsLabel: '总资产',
@@ -115,7 +116,7 @@ void main() {
           baseCurrency: 'CNY',
           trend: sampleTrend(),
           themeColor: const Color(0xFFF5A623),
-          redForIncome: false,
+          colorScheme: IncomeExpenseColorScheme.greenIncome,
           dark: false,
           netWorthLabel: '净资产',
           totalAssetsLabel: '总资产',
@@ -143,7 +144,7 @@ void main() {
           baseCurrency: 'USD',
           trend: sampleTrend(),
           themeColor: const Color(0xFFF5A623),
-          redForIncome: true,
+          colorScheme: IncomeExpenseColorScheme.redIncome,
           dark: true,
           netWorthLabel: '净资产',
           totalAssetsLabel: '总资产',
@@ -193,7 +194,7 @@ void main() {
             ),
           ],
           themeColor: const Color(0xFFF5A623),
-          redForIncome: true,
+          colorScheme: IncomeExpenseColorScheme.redIncome,
           dark: false,
           netWorthLabel: '净资产',
           totalAssetsLabel: '总资产',
@@ -222,7 +223,7 @@ void main() {
           baseCurrency: 'CNY',
           trend: const [],
           themeColor: const Color(0xFFF5A623),
-          redForIncome: true,
+          colorScheme: IncomeExpenseColorScheme.redIncome,
           dark: true,
           netWorthLabel: '净资产',
           totalAssetsLabel: '总资产',

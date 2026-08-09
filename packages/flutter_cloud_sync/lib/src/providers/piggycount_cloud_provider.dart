@@ -261,9 +261,13 @@ class PiggyCountCloudProvider implements CloudProvider {
   }
 
   /// 更新收支颜色方案偏好，对齐 mobile `incomeExpenseColorSchemeProvider`。
-  /// 把 bool 推给 `/profile/me` PATCH，server 端 broadcast 后 web 也会实时切换。
+  /// mobile 端方案由 v1 的 bool 升级为 v2 的字符串:`'redIncome'` /
+  /// `'greenIncome'` / `'blueIncome'`(`'blueIncome'` 是默认)。这里把
+  /// 方案 key 与 `income_is_red` 兼容字段一并推送,保证:
+  /// 1. server / web 端仍在读老 `income_is_red` 时不丢字段;
+  /// 2. server / web 端识别 `income_color_scheme` 时拿到完整信息。
   Future<PiggyCountCloudProfile> updateMyProfileIncomeColorScheme({
-    required bool incomeIsRed,
+    required String scheme,
   }) async {
     final storage = _storage;
     if (storage == null) {
@@ -271,7 +275,7 @@ class PiggyCountCloudProvider implements CloudProvider {
           'PiggyCount Cloud storage is not initialized.');
     }
     return storage.updateMyProfileIncomeColorScheme(
-      incomeIsRed: incomeIsRed,
+      scheme: scheme,
     );
   }
 
@@ -2255,11 +2259,17 @@ class PiggyCountCloudStorageService implements CloudStorageService {
 
   /// 推送收支颜色方案偏好到服务端。mobile 端 `incomeExpenseColorSchemeProvider`
   /// 切换时 fire-and-forget 调一下，让 web 端通过 WS profile_change 同步。
-  /// `incomeIsRed` true = 红色收入 / 绿色支出（mobile 默认）。
+  /// [scheme] 是 mobile `IncomeExpenseColorScheme.persistenceKey` 的字符串
+  /// 形式(`'redIncome'` / `'greenIncome'` / `'blueIncome'`)。同时把
+  /// legacy `income_is_red` 字段一并推,以保证仍依赖老字段的 server/web
+  /// 不会因为新增字段而丢配色信息。
   Future<PiggyCountCloudProfile> updateMyProfileIncomeColorScheme({
-    required bool incomeIsRed,
+    required String scheme,
   }) async {
-    return _patchMyProfile(body: {'income_is_red': incomeIsRed});
+    return _patchMyProfile(body: {
+      'income_color_scheme': scheme,
+      'income_is_red': scheme == 'redIncome',
+    });
   }
 
   /// 推送主题色到服务端。`hex` 形如 `#F59E0B`(server 会校验 `#RRGGBB`)。
@@ -3906,6 +3916,7 @@ class PiggyCountCloudProfile {
     this.avatarUrl,
     this.avatarVersion = 0,
     this.incomeIsRed,
+    this.incomeColorScheme,
     this.themePrimaryColor,
     this.appearance,
     this.aiConfig,
@@ -3917,7 +3928,12 @@ class PiggyCountCloudProfile {
   final String? displayName;
   final String? avatarUrl;
   final int avatarVersion;
+  /// 老版本仅用 `income_is_red` 区分红/绿方向(true=红色收入/绿色支出),
+  /// server / 旧 web 仍以这个字段为权威。新版本同时存一份字符串方案的
+  /// [incomeColorScheme](`'redIncome'`/`'greenIncome'`/`'blueIncome'`),
+  /// 缺失时退回到 [incomeIsRed] 的 bool 语义。
   final bool? incomeIsRed;
+  final String? incomeColorScheme;
   final String? themePrimaryColor;
   /// 用户主币种(ISO code,如 `CNY`)。多币种 MVP user-level 字段,跨设备同步。
   final String? primaryCurrency;
@@ -3937,6 +3953,7 @@ class PiggyCountCloudProfile {
       avatarUrl: _trimOrNull(json['avatar_url'] as String?),
       avatarVersion: (json['avatar_version'] as num?)?.toInt() ?? 0,
       incomeIsRed: json['income_is_red'] as bool?,
+      incomeColorScheme: _trimOrNull(json['income_color_scheme'] as String?),
       themePrimaryColor: _trimOrNull(json['theme_primary_color'] as String?),
       appearance: appearanceRaw is Map<String, dynamic>
           ? Map<String, dynamic>.from(appearanceRaw)

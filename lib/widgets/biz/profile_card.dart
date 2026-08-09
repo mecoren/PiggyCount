@@ -249,14 +249,18 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
     final l10n = AppLocalizations.of(context);
     final greeting = _greeting(l10n);
 
-    // 头部皮肤：亮暗通用同一款(暗色由皮肤内部渲染成纯黑底 + 偏淡主题色图形)。
-    // 'none' → null = 纯主题色 / 纯黑。
+    // 头部皮肤：亮暗通用同一款(暗色由皮肤内部渲染成深蓝灰底 + 偏淡主题色图形)。
+    // 'none' → null = 纯背景色。
     final skin = headerSkinById(ref.watch(headerSkinProvider));
     final isDark = PiggyTokens.isDark(context);
     final primary = Theme.of(context).colorScheme.primary;
-    // 全宽主题色头部：背景固定使用主题色，皮肤层作为装饰叠加在其上。
-    final headerBg = primary;
-    final headerForeground = Colors.white;
+    // 全宽头部：背景与页面背景一致(亮色淡蓝 / 暗色深蓝灰)，皮肤层作为装饰叠加其上。
+    final headerBg = isDark
+        ? PiggyTokens.scaffoldBackgroundDarkStatic
+        : PiggyTokens.scaffoldBackgroundLightStatic;
+    // 前景色自适应：亮色淡蓝底用深色文字，暗色深蓝灰底用白色文字。
+    final headerForeground =
+        isDark ? Colors.white : PiggyTokens.textPrimary(context);
     final statusBarHeight = MediaQuery.of(context).padding.top;
 
     final nameStyle = Theme.of(context).textTheme.titleMedium?.copyWith(

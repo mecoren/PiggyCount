@@ -57,12 +57,12 @@ class PrimaryHeader extends ConsumerWidget {
     // ⭐ 使用 Token 系统
     final isDark = PiggyTokens.isDark(context);
 
-    // ⭐ 头部皮肤:亮暗通用同一款(暗色由皮肤内部渲染成纯黑底 + 偏淡主题色图形)。
-    // 'none' → null = 纯主题色 / 纯黑。
+    // ⭐ 头部皮肤:亮暗通用同一款(暗色由皮肤内部渲染成深蓝灰底 + 偏淡主题色图形)。
+    // 'none' → null = 纯主题色 / 深蓝灰。
     final skin = headerSkinById(ref.watch(headerSkinProvider));
 
-    // ⭐ Header 背景颜色：亮色模式用主题色，暗黑模式用纯黑
-    final headerBg = isDark ? Colors.black : primary;
+    // ⭐ Header 背景颜色：亮色模式用主题色，暗黑模式用深蓝灰（与页面背景一致）
+    final headerBg = isDark ? PiggyTokens.scaffoldBackgroundDarkStatic : primary;
 
     // ⭐ 文字和图标颜色（使用 Token）
     final textColor = PiggyTokens.textPrimary(context);

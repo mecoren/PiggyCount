@@ -308,12 +308,16 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
 
     // 编辑模式标题显示「编辑」，新建模式显示「记一笔」
     final isEditing = widget.editingTransactionId != null;
+    // 背景色取当前模式下的页面背景（淡蓝/深蓝），让弹窗与页面背景融为一体，
+    // 而不是像传统 BottomSheet 那样使用卡片色悬浮在页面上（用户要求）。
+    final sheetBg = PiggyTokens.scaffoldBackground(context);
     return ExpandableBottomSheet(
       title: isEditing ? l10n.commonEdit : l10n.widgetQuickAddLabel,
       onClose: () => Navigator.of(context).pop(),
       initialChildSize: 0.7,
       minChildSize: 0.35,
       maxChildSize: 1.0,
+      backgroundColor: sheetBg,
       bottom: segmentControl,
       bottomHeight: 52,
       builder: (context, scrollController) {

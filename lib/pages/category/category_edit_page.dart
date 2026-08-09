@@ -7,7 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
 import '../../providers.dart';
 import '../../widgets/ui/ui.dart';
-import '../../widgets/biz/category_selector_dialog.dart';
+import '../../widgets/biz/biz.dart';
 import '../../data/db.dart' as db;
 import '../../l10n/app_localizations.dart';
 import '../../utils/category_utils.dart';
@@ -185,6 +185,7 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
 
   Widget _buildScaffold(
       BuildContext context, String headerTitle, String? headerSubtitle) {
+    final primaryColor = ref.watch(primaryColorProvider);
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: PiggyTitleBar(
@@ -241,7 +242,9 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
                   padding: const EdgeInsets.all(16),
                   children: [
                     // 分类类型提示
-                    Card(
+                    SectionCard(
+                      borderColor: primaryColor,
+                      margin: EdgeInsets.zero,
                       child: ListTile(
                         leading: Icon(
                           widget.kind == 'expense'
@@ -260,7 +263,9 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
                     const SizedBox(height: 16),
 
                     // 二级分类开关
-                    Card(
+                    SectionCard(
+                      borderColor: primaryColor,
+                      margin: EdgeInsets.zero,
                       child: PiggySwitchListTile(
                         title: Text(AppLocalizations.of(context)
                             .categorySubCategoryTitle),
@@ -280,7 +285,9 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
                     // 父分类选择器
                     if (_isSubCategory) ...[
                       const SizedBox(height: 16),
-                      Card(
+                      SectionCard(
+                        borderColor: primaryColor,
+                        margin: EdgeInsets.zero,
                         child: ListTile(
                           leading: Icon(
                             Icons.arrow_upward,
@@ -304,7 +311,9 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
                     const SizedBox(height: 16),
 
                     // 分类名称
-                    Card(
+                    SectionCard(
+                      borderColor: primaryColor,
+                      margin: EdgeInsets.zero,
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
@@ -346,7 +355,9 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
                     const SizedBox(height: 16),
 
                     // 图标选择
-                    Card(
+                    SectionCard(
+                      borderColor: primaryColor,
+                      margin: EdgeInsets.zero,
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
@@ -393,7 +404,9 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
                                 ),
                       ),
                       const SizedBox(height: 8),
-                      Card(
+                      SectionCard(
+                        borderColor: primaryColor,
+                        margin: EdgeInsets.zero,
                         child: ListTile(
                           leading: Icon(Icons.delete,
                               color: PiggyTokens.error(context)),
@@ -663,9 +676,10 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
           color: isSelected
               ? primaryColor.withValues(alpha: 0.1)
               : PiggyTokens.surface(context),
+          // 主题色边框：选中加粗，未选中细边框
           border: Border.all(
-            color: isSelected ? primaryColor : PiggyTokens.border(context),
-            width: isSelected ? 2 : 1,
+            color: primaryColor,
+            width: isSelected ? 2 : 1.5,
           ),
           borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         ),

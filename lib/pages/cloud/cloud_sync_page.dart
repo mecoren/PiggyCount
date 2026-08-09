@@ -282,6 +282,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                             // 同步操作 Section
                             SectionCard(
                               margin: EdgeInsets.zero,
+                              borderColor: ref.watch(primaryColorProvider),
                               child: Column(
                                 children: [
                                   // 同步状态
@@ -1034,6 +1035,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                   padding: const EdgeInsets.only(top: 12),
                                   child: SectionCard(
                                     margin: EdgeInsets.zero,
+                                    borderColor: r.watch(primaryColorProvider),
                                     child: AppListTile(
                                       leading: encEnabled
                                           ? Icons.lock

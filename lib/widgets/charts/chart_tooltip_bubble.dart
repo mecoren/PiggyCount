@@ -16,6 +16,8 @@ class ChartTooltipBubble extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: color,
+        // 与项目里 toast / popup menu / tag selector 等提示浮层一致：
+        // 统一用 radiusLg，保持胶囊提示的视觉调性，避免 radiusXl 偏胶囊形。
         borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
       ),
       child: Text(

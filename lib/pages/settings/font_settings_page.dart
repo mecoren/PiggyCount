@@ -93,7 +93,7 @@ class _FontLevelsGroup extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = PiggyTokens.isDark(context);
+    final primary = Theme.of(context).colorScheme.primary;
 
     Widget buildRow(_FontOption o) {
       final active = o.value == current;
@@ -124,13 +124,11 @@ class _FontLevelsGroup extends ConsumerWidget {
     }
 
     return Card(
-      elevation: isDark ? 0 : 1,
+      elevation: 0,
       color: PiggyTokens.surface(context),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-        side: isDark
-            ? BorderSide(color: PiggyTokens.border(context))
-            : BorderSide.none,
+        side: BorderSide(color: primary, width: 1.5),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -173,6 +171,11 @@ class _PreviewParagraph extends ConsumerWidget {
     final sample = AppLocalizations.of(context)!.fontSettingsPreviewText;
     return Card(
       elevation: 0,
+      color: PiggyTokens.surface(context),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+        side: BorderSide(color: Theme.of(context).colorScheme.primary, width: 1.5),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -223,6 +226,11 @@ class _MultiStylePreview extends ConsumerWidget {
     final theme = Theme.of(context).textTheme;
     return Card(
       elevation: 0,
+      color: PiggyTokens.surface(context),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+        side: BorderSide(color: Theme.of(context).colorScheme.primary, width: 1.5),
+      ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
         child: Column(
@@ -325,6 +333,11 @@ class _UIScaleInfo extends ConsumerWidget {
 
     return Card(
       elevation: 0,
+      color: PiggyTokens.surface(context),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+        side: BorderSide(color: Theme.of(context).colorScheme.primary, width: 1.5),
+      ),
       child: Padding(
         padding: EdgeInsets.all(12.0.scaled(context, ref)),
         child: Column(
@@ -396,6 +409,11 @@ class _CustomScaleSlider extends ConsumerWidget {
 
     return Card(
       elevation: 0,
+      color: PiggyTokens.surface(context),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+        side: BorderSide(color: Theme.of(context).colorScheme.primary, width: 1.5),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

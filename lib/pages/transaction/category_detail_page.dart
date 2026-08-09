@@ -222,8 +222,14 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
     final isIncome = category?.kind == 'income';
 
     return Container(
-      margin: const EdgeInsets.all(16),
+      // 与下方明细外卡共用 12px 左右外边距(PiggyDimens.cardMargin 是 EdgeInsets),
+      // 保证两张卡片左右同宽对齐。
+      // SectionCard 默认还有 12px 水平外边距,会导致汇总卡比下方明细卡更窄,
+      // 这里显式传 margin: EdgeInsets.zero 让外层 Container 单独控制边距。
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
       child: SectionCard(
+        margin: EdgeInsets.zero,
+        borderColor: ref.watch(primaryColorProvider),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -292,7 +298,31 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
     );
   }
 
+  /// 切换排序：仅在「时间/金额」两个维度内翻转方向。
+  /// - 当前已是时间维度：timeDesc ⇄ timeAsc
+  /// - 从金额维度切过来：回到默认的时间倒序
+  SortType _toggleTime(SortType current) {
+    if (current == SortType.timeDesc) return SortType.timeAsc;
+    if (current == SortType.timeAsc) return SortType.timeDesc;
+    return SortType.timeDesc;
+  }
+
+  /// 切换排序：仅在「金额」维度内翻转方向。
+  /// - 当前已是金额维度：amountDesc ⇄ amountAsc
+  /// - 从时间维度切过来：回到默认的金额倒序
+  SortType _toggleAmount(SortType current) {
+    if (current == SortType.amountDesc) return SortType.amountAsc;
+    if (current == SortType.amountAsc) return SortType.amountDesc;
+    return SortType.amountDesc;
+  }
+
   Widget _buildSortControls(SortType currentSortType) {
+    final l10n = AppLocalizations.of(context);
+    final isTimeSelected = currentSortType == SortType.timeDesc ||
+        currentSortType == SortType.timeAsc;
+    final isAmountSelected = currentSortType == SortType.amountDesc ||
+        currentSortType == SortType.amountAsc;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
@@ -304,59 +334,31 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
           ),
           const SizedBox(width: 8),
           Text(
-            AppLocalizations.of(context).categoryDetailSortTitle,
+            l10n.categoryDetailSortTitle,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: PiggyTokens.textTertiary(context),
                 ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _SortButton(
-                    label:
-                        AppLocalizations.of(context).categoryDetailSortTimeDesc,
-                    isSelected: currentSortType == SortType.timeDesc,
-                    onTap: () => ref
-                        .read(_categorySortTypeProvider(widget.categoryId)
-                            .notifier)
-                        .state = SortType.timeDesc,
-                  ),
-                  const SizedBox(width: 8),
-                  _SortButton(
-                    label:
-                        AppLocalizations.of(context).categoryDetailSortTimeAsc,
-                    isSelected: currentSortType == SortType.timeAsc,
-                    onTap: () => ref
-                        .read(_categorySortTypeProvider(widget.categoryId)
-                            .notifier)
-                        .state = SortType.timeAsc,
-                  ),
-                  const SizedBox(width: 8),
-                  _SortButton(
-                    label: AppLocalizations.of(context)
-                        .categoryDetailSortAmountDesc,
-                    isSelected: currentSortType == SortType.amountDesc,
-                    onTap: () => ref
-                        .read(_categorySortTypeProvider(widget.categoryId)
-                            .notifier)
-                        .state = SortType.amountDesc,
-                  ),
-                  const SizedBox(width: 8),
-                  _SortButton(
-                    label: AppLocalizations.of(context)
-                        .categoryDetailSortAmountAsc,
-                    isSelected: currentSortType == SortType.amountAsc,
-                    onTap: () => ref
-                        .read(_categorySortTypeProvider(widget.categoryId)
-                            .notifier)
-                        .state = SortType.amountAsc,
-                  ),
-                ],
-              ),
-            ),
+          const Spacer(),
+          _SortButton(
+            // 激活时按当前方向显示「时间↓/时间↑」，未激活时显示默认倒序
+            label: currentSortType == SortType.timeAsc
+                ? l10n.categoryDetailSortTimeAsc
+                : l10n.categoryDetailSortTimeDesc,
+            isSelected: isTimeSelected,
+            onTap: () => ref
+                .read(_categorySortTypeProvider(widget.categoryId).notifier)
+                .state = _toggleTime(currentSortType),
+          ),
+          const SizedBox(width: 8),
+          _SortButton(
+            label: currentSortType == SortType.amountAsc
+                ? l10n.categoryDetailSortAmountAsc
+                : l10n.categoryDetailSortAmountDesc,
+            isSelected: isAmountSelected,
+            onTap: () => ref
+                .read(_categorySortTypeProvider(widget.categoryId).notifier)
+                .state = _toggleAmount(currentSortType),
           ),
         ],
       ),
@@ -374,7 +376,7 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
     }
 
     // 全部账本模式下，构建账本名映射，用于在交易项展示账本标签
-    final ledgerNames = widget.allLedgers
+    final Map<int, String> ledgerNames = widget.allLedgers
         ? {
             for (final l
                 in (ref.watch(ledgersStreamProvider).valueOrNull ?? []))
@@ -382,112 +384,29 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
           }
         : const <int, String>{};
 
-    // 金额排序时：预计算UI列表，避免动态插入导致卡顿
+    // 金额排序：不再按天分组（按金额排后位置会散），每条交易用 showFullDate
+    // 完整显示日期+时间，项间用细分割线，保留与时间排序一致的「大卡片」外壳。
     if (currentSortType == SortType.amountDesc ||
         currentSortType == SortType.amountAsc) {
-      // 先计算每个日期的统计数据（避免重复计算）
-      final Map<String, ({double expense, double income})> dateStats = {};
-      for (final transaction in transactions) {
-        final dateKey =
-            DateFormat('yyyy-MM-dd').format(transaction.happenedAt.toLocal());
-        final current = dateStats[dateKey] ?? (expense: 0.0, income: 0.0);
-        // 账本维度日小计:折 nativeAmount(与时间排序分支 448/458、顶部汇总 77
-        // 一致;此前金额排序分支裸加 amount → 同页两套口径,多币种下不一致)。
-        final v = transaction.nativeAmount ?? transaction.amount;
-        dateStats[dateKey] = transaction.type == 'expense'
-            ? (expense: current.expense + v, income: current.income)
-            : (expense: current.expense, income: current.income + v);
-      }
-
-      // 预构建显示项列表
-      final List<
-              ({bool isHeader, String? dateKey, db.Transaction? transaction})>
-          displayItems = [];
-      String? lastDateKey;
-
-      for (final transaction in transactions) {
-        final dateKey =
-            DateFormat('yyyy-MM-dd').format(transaction.happenedAt.toLocal());
-
-        // 当日期改变时，添加日期头
-        if (lastDateKey != dateKey) {
-          displayItems
-              .add((isHeader: true, dateKey: dateKey, transaction: null));
-          lastDateKey = dateKey;
+      final children = <Widget>[];
+      for (int i = 0; i < transactions.length; i++) {
+        if (i > 0) {
+          children.add(Divider(
+            height: PiggyTokens.listDayDividerHeight(context),
+            thickness: PiggyTokens.listDayDividerHeight(context),
+            color: PiggyTokens.listDayDividerColor(context),
+            indent: 12,
+            endIndent: 12,
+          ));
         }
-
-        // 添加交易项
-        displayItems
-            .add((isHeader: false, dateKey: null, transaction: transaction));
+        children.add(_buildTransactionItem(transactions[i], ledgerNames,
+            showFullDate: true));
       }
-
-      return ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: displayItems.length,
-        itemBuilder: (context, index) {
-          final item = displayItems[index];
-
-          if (item.isHeader) {
-            final stats = dateStats[item.dateKey!]!;
-            return DaySectionHeader(
-              dateText: item.dateKey!,
-              expense: stats.expense,
-              income: stats.income,
-            );
-          } else {
-            final transaction = item.transaction!;
-            final category = _getTransactionCategory();
-            return TransactionListItem(
-              icon: _getTransactionIcon(transaction),
-              category: category,
-              title: transaction.note ?? '',
-              categoryName: CategoryUtils.getDisplayName(
-                  category?.name ?? widget.categoryName, context),
-              ledgerName: ledgerNames[transaction.ledgerId],
-              amount: transaction.amount,
-              transactionId: transaction.id,
-              currencyCode: transaction.currencyCode,
-              nativeAmount: transaction.nativeAmount,
-              isExpense: transaction.type == 'expense',
-              happenedAt: transaction.happenedAt,
-              onTap: () async {
-                final categoryData =
-                    ref.read(_categoryStreamProvider(widget.categoryId));
-                await TransactionEditUtils.editTransaction(
-                  context,
-                  ref,
-                  transaction,
-                  categoryData.value,
-                );
-              },
-              onDelete: () async {
-                final repo = ref.read(repositoryProvider);
-                final ledgerId = ref.read(currentLedgerIdProvider);
-
-                try {
-                  await repo.deleteTransaction(transaction.id);
-
-                  // 统一处理：自动/手动同步与状态刷新（后台静默）
-                  await PostProcessor.sync(ref, ledgerId: ledgerId);
-
-                  // 刷新：账本笔数与全局统计
-                  ref.invalidate(countsForLedgerProvider(ledgerId));
-                  ref.read(statsRefreshProvider.notifier).state++;
-                  ref.read(budgetRefreshProvider.notifier).state++;
-                } catch (e) {
-                  if (context.mounted) {
-                    showToast(context,
-                        '${AppLocalizations.of(context).categoryDetailDeleteFailed}: $e');
-                  }
-                }
-              },
-            );
-          }
-        },
-      );
+      return _buildOuterCard(children);
     }
 
-    // 时间排序时：按日期分组，然后按时间排序日期分组
+    // 时间排序：按天分组 → 每组内 header + 交易项连续显示，天与天之间用
+    // 细分割线（与「整张明细」风格一致）。
     final Map<String, List<db.Transaction>> groupedTransactions =
         <String, List<db.Transaction>>{};
     for (final transaction in transactions) {
@@ -497,85 +416,137 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
     }
 
     final sortedKeys = groupedTransactions.keys.toList();
-    // 时间排序时：按日期排序分组
     if (currentSortType == SortType.timeDesc) {
       sortedKeys.sort((a, b) => b.compareTo(a)); // 最新日期在前
     } else {
       sortedKeys.sort((a, b) => a.compareTo(b)); // 最早日期在前
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: sortedKeys.length,
-      itemBuilder: (context, index) {
-        final dateKey = sortedKeys[index];
-        final dayTransactions = groupedTransactions[dateKey]!;
+    final children = <Widget>[];
+    for (int i = 0; i < sortedKeys.length; i++) {
+      final dateKey = sortedKeys[i];
+      final dayTransactions = groupedTransactions[dateKey]!;
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            DaySectionHeader(
-              dateText: dateKey,
-              expense: dayTransactions
-                  .where((t) => t.type == 'expense')
-                  .fold(0.0, (sum, t) => sum + (t.nativeAmount ?? t.amount)),
-              income: dayTransactions
-                  .where((t) => t.type == 'income')
-                  .fold(0.0, (sum, t) => sum + (t.nativeAmount ?? t.amount)),
-            ),
-            ...dayTransactions.map((transaction) {
-              final category = _getTransactionCategory();
-              return TransactionListItem(
-                icon: _getTransactionIcon(transaction),
-                category: category,
-                title: transaction.note ?? '',
-                transactionId: transaction.id,
-                categoryName: CategoryUtils.getDisplayName(
-                    category?.name ?? widget.categoryName, context),
-                ledgerName: ledgerNames[transaction.ledgerId],
-                amount: transaction.amount,
-                currencyCode: transaction.currencyCode,
-                nativeAmount: transaction.nativeAmount,
-                isExpense: transaction.type == 'expense',
-                happenedAt: transaction.happenedAt,
-                onTap: () async {
-                  final categoryData =
-                      ref.read(_categoryStreamProvider(widget.categoryId));
-                  await TransactionEditUtils.editTransaction(
-                    context,
-                    ref,
-                    transaction,
-                    categoryData.value,
-                  );
-                  // 注意：现在无需手动刷新！
-                  // 数据库变化会自动通过Stream推送到UI
-                },
-                onDelete: () async {
-                  final repo = ref.read(repositoryProvider);
-                  final ledgerId = ref.read(currentLedgerIdProvider);
+      if (i > 0) {
+        // 天与天之间的细线（与金额排序项间分割线一致）
+        children.add(Divider(
+          height: PiggyTokens.listDayDividerHeight(context),
+          thickness: PiggyTokens.listDayDividerHeight(context),
+          color: PiggyTokens.listDayDividerColor(context),
+          indent: 12,
+          endIndent: 12,
+        ));
+      }
+      children.add(DaySectionHeader(
+        dateText: dateKey,
+        expense: dayTransactions
+            .where((t) => t.type == 'expense')
+            .fold(0.0, (sum, t) => sum + (t.nativeAmount ?? t.amount)),
+        income: dayTransactions
+            .where((t) => t.type == 'income')
+            .fold(0.0, (sum, t) => sum + (t.nativeAmount ?? t.amount)),
+      ));
+      for (final t in dayTransactions) {
+        children.add(_buildTransactionItem(t, ledgerNames));
+      }
+    }
+    return _buildOuterCard(children);
+  }
 
-                  try {
-                    await repo.deleteTransaction(transaction.id);
-
-                    // 统一处理：自动/手动同步与状态刷新（后台静默）
-                    await PostProcessor.sync(ref, ledgerId: ledgerId);
-
-                    // 刷新：账本笔数与全局统计
-                    ref.invalidate(countsForLedgerProvider(ledgerId));
-                    ref.read(statsRefreshProvider.notifier).state++;
-                    ref.read(budgetRefreshProvider.notifier).state++;
-                  } catch (e) {
-                    if (context.mounted) {
-                      showToast(context,
-                          '${AppLocalizations.of(context).categoryDetailDeleteFailed}: $e');
-                    }
-                  }
-                },
-              );
-            }),
-          ],
+  /// 构建单条交易项(无分组逻辑,纯 widget 工厂)。供时间/金额两种排序复用。
+  /// - [showFullDate]:金额排序时为 true,在第二行完整显示日期+时间,替代
+  ///   按天分组时的 DaySectionHeader。
+  Widget _buildTransactionItem(
+    db.Transaction transaction,
+    Map<int, String> ledgerNames, {
+    bool showFullDate = false,
+  }) {
+    final category = _getTransactionCategory();
+    return TransactionListItem(
+      icon: _getTransactionIcon(transaction),
+      category: category,
+      title: transaction.note ?? '',
+      transactionId: transaction.id,
+      categoryName: CategoryUtils.getDisplayName(
+          category?.name ?? widget.categoryName, context),
+      ledgerName: ledgerNames[transaction.ledgerId],
+      amount: transaction.amount,
+      currencyCode: transaction.currencyCode,
+      nativeAmount: transaction.nativeAmount,
+      isExpense: transaction.type == 'expense',
+      happenedAt: transaction.happenedAt,
+      showFullDate: showFullDate,
+      onTap: () async {
+        final categoryData =
+            ref.read(_categoryStreamProvider(widget.categoryId));
+        await TransactionEditUtils.editTransaction(
+          context,
+          ref,
+          transaction,
+          categoryData.value,
         );
+        // 注意：现在无需手动刷新！
+        // 数据库变化会自动通过Stream推送到UI
       },
+      onDelete: () async {
+        final repo = ref.read(repositoryProvider);
+        final ledgerId = ref.read(currentLedgerIdProvider);
+
+        try {
+          await repo.deleteTransaction(transaction.id);
+
+          // 统一处理：自动/手动同步与状态刷新（后台静默）
+          await PostProcessor.sync(ref, ledgerId: ledgerId);
+
+          // 刷新：账本笔数与全局统计
+          ref.invalidate(countsForLedgerProvider(ledgerId));
+          ref.read(statsRefreshProvider.notifier).state++;
+          ref.read(budgetRefreshProvider.notifier).state++;
+        } catch (e) {
+          if (mounted) {
+            showToast(context,
+                '${AppLocalizations.of(context).categoryDetailDeleteFailed}: $e');
+          }
+        }
+      },
+    );
+  }
+
+  /// 「整张大卡片」外壳:把所有明细内容包在带主题色细边框的 surface 圆角卡里,
+  /// 与顶部汇总卡片视觉对齐。沿用首页「明细」tab 的 _buildOuterCard 风格:
+  /// - margin = cardMargin
+  /// - surface 背景 + radiusLg 圆角
+  /// - 主题色 1.5 边框(亮色有阴影,暗黑无阴影)
+  /// - ListView + 一个 outer-card item,保证明细可滚动(交易很多时不溢出)。
+  Widget _buildOuterCard(List<Widget> children) {
+    final isDark = PiggyTokens.isDark(context);
+    final primary = ref.watch(primaryColorProvider);
+    const borderWidth = 1.5;
+
+    return ListView(
+      // 仅一个 item:整张外卡。padding 给 ListView 一点底空间,
+      // 让最后一项不被卡边缘裁切。
+      padding: const EdgeInsets.only(bottom: 8),
+      children: [
+        Container(
+          margin: PiggyDimens.cardMargin,
+          decoration: BoxDecoration(
+            color: PiggyTokens.surface(context),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+            border: borderWidth > 0
+                ? Border.all(color: primary, width: borderWidth)
+                : null,
+            boxShadow: isDark ? null : PiggyShadows.card,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: children,
+            ),
+          ),
+        ),
+      ],
     );
   }
 

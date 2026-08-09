@@ -9,6 +9,39 @@ import '../system/logger_service.dart';
 import '../../ai/providers/ai_constants.dart';
 import '../../ai/providers/ai_provider_config.dart';
 import '../../ai/providers/ai_provider_manager.dart';
+import '../../providers/theme_providers.dart' show IncomeExpenseColorScheme;
+
+/// 把 [scheme] 输出成 JSON 兼容的形式:v2 字符串(`'redIncome'` 等)直接
+/// 透传,bool 老值(`true`/`false`)归一化为同义字符串。
+String _normalizeIncomeColorSchemeExport(String scheme) => scheme;
+
+/// 从导入包读出收支颜色方案字段。导出 v2 统一以字符串协议落盘,但老
+/// 包可能仍是 bool;两者都收,未知值回退 `null`(由调用方继续走默认
+/// `blueIncome`,见 theme_providers.dart 的 IncomeExpenseColorScheme
+/// 注释)。
+String? _parseIncomeColorSchemeImport(Object? raw) {
+  if (raw == null) return null;
+  if (raw is String) {
+    if (raw.isEmpty) return null;
+    if (IncomeExpenseColorScheme.values.any((v) => v.persistenceKey == raw)) {
+      return raw;
+    }
+    return null;
+  }
+  if (raw is bool) {
+    return raw ? 'redIncome' : 'greenIncome';
+  }
+  return null;
+}
+
+/// 从 SharedPreferences 读出收支配色偏好,兼容历史 bool 旧值。prefs v2
+/// 总是落字符串,但仍有少数用户停留在旧 prefs 写入路径上(prefs key 相同)。
+Object? _loadIncomeColorSchemeFromPrefs(SharedPreferences prefs) {
+  final asString = prefs.getString('incomeExpenseColorScheme');
+  if (asString != null) return asString;
+  // 回退到历史 bool 形态;只在字符串缺失时尝试读取。
+  return prefs.getBool('incomeExpenseColorScheme');
+}
 
 // 导入 OrderingTerm
 typedef OrderingTerm = d.OrderingTerm;
@@ -525,7 +558,7 @@ class AppSettingsConfig {
   final String? noteHistoryScope; // 历史备注范围:'allCategories' | 'currentCategory'
   final String? noteHistorySort; // 历史备注排序:'frequency' | 'recent'
   final int? noteHistoryLimit; // 历史备注展示数量
-  final bool? incomeExpenseColorScheme; // 收支颜色方案：true=红色收入/绿色支出，false=红色支出/绿色收入
+  final String? incomeExpenseColorScheme; // 收支颜色方案：'redIncome' / 'greenIncome' / 'blueIncome'(v2 字符串协议);老导出包仍是 bool(true 表示红绿方案)
 
   // 云服务选择
   final String? cloudServiceType;
@@ -627,7 +660,8 @@ class AppSettingsConfig {
       map['note_history_limit'] = noteHistoryLimit;
     }
     if (incomeExpenseColorScheme != null) {
-      map['income_expense_color_scheme'] = incomeExpenseColorScheme;
+      map['income_expense_color_scheme'] =
+          _normalizeIncomeColorSchemeExport(incomeExpenseColorScheme!);
     }
     if (cloudServiceType != null && cloudServiceType!.isNotEmpty) {
       map['cloud_service_type'] = cloudServiceType;
@@ -669,7 +703,8 @@ class AppSettingsConfig {
         noteHistoryScope: map['note_history_scope'] as String?,
         noteHistorySort: map['note_history_sort'] as String?,
         noteHistoryLimit: map['note_history_limit'] as int?,
-        incomeExpenseColorScheme: map['income_expense_color_scheme'] as bool?,
+        incomeExpenseColorScheme: _parseIncomeColorSchemeImport(
+            map['income_expense_color_scheme']),
         cloudServiceType: map['cloud_service_type'] as String?,
         autoSync: map['auto_sync'] as bool?,
         autoScreenshotEnabled: map['auto_screenshot_enabled'] as bool?,
@@ -1436,7 +1471,8 @@ class ConfigExportService {
     final noteHistorySort = prefs.getString('noteHistorySort') ?? 'frequency';
     final noteHistoryLimit =
         prefs.getInt('noteHistoryLimit') ?? 20;
-    final incomeExpenseColorScheme = prefs.getBool('incomeExpenseColorScheme');
+    final incomeExpenseColorScheme =
+        _parseIncomeColorSchemeImport(_loadIncomeColorSchemeFromPrefs(prefs));
     final cloudServiceType = prefs.getString('cloud_active_type');
     final autoSync = prefs.getBool('auto_sync');
     final autoScreenshotEnabled =
@@ -2449,7 +2485,9 @@ class ConfigExportService {
         await prefs.setInt('noteHistoryLimit', settings.noteHistoryLimit!);
       }
       if (settings.incomeExpenseColorScheme != null) {
-        await prefs.setBool(
+        // 收支颜色方案 v2 总是按字符串协议写入。老安装可能还残留 bool 旧值,
+        // 重新触发 init 后也会被升级为字符串。prefs 直接落字符串即可。
+        await prefs.setString(
             'incomeExpenseColorScheme', settings.incomeExpenseColorScheme!);
       }
 

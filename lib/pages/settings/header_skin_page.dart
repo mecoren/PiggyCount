@@ -99,9 +99,10 @@ class _SkinCard extends StatelessWidget {
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
+                // 主题色边框：选中加粗，未选中细边框
                 border: Border.all(
-                  color: selected ? primary : PiggyTokens.border(context),
-                  width: selected ? 2.5 : 1,
+                  color: primary,
+                  width: selected ? 2.5 : 1.5,
                 ),
               ),
               child: ClipRRect(

@@ -323,6 +323,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
   ) {
     return SectionCard(
       margin: EdgeInsets.symmetric(horizontal: 12.0.scaled(context, ref)),
+      borderColor: ref.watch(primaryColorProvider),
       child: statsAsync.when(
         data: (stats) => Row(
           children: [
@@ -390,6 +391,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
       padding: EdgeInsets.symmetric(horizontal: 12.0.scaled(context, ref)),
       child: SectionCard(
         margin: EdgeInsets.zero,
+        borderColor: primaryColor,
         child: Padding(
           padding: EdgeInsets.all(20.0.scaled(context, ref)),
           child: Column(
@@ -582,6 +584,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
       padding: EdgeInsets.symmetric(horizontal: 12.0.scaled(context, ref)),
       child: SectionCard(
         margin: EdgeInsets.zero,
+        borderColor: primaryColor,
         child: Padding(
           padding: EdgeInsets.all(12.0.scaled(context, ref)),
           child: Column(
@@ -855,6 +858,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
       padding: EdgeInsets.symmetric(horizontal: 12.0.scaled(context, ref)),
       child: SectionCard(
         margin: EdgeInsets.zero,
+        borderColor: primaryColor,
         child: Padding(
           padding: EdgeInsets.all(12.0.scaled(context, ref)),
           child: Column(
@@ -964,6 +968,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
 
     if (transactions.isEmpty && !state.isLoading) {
       return SectionCard(
+        borderColor: primaryColor,
         child: Padding(
           padding: EdgeInsets.all(32.0.scaled(context, ref)),
           child: Center(
@@ -990,6 +995,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
     }
 
     return SectionCard(
+      borderColor: primaryColor,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

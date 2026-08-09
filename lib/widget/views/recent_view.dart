@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../providers/theme_providers.dart';
 import '../../styles/tokens.dart';
 import '../../utils/currencies.dart' show getCurrencySymbol;
 import '../../widgets/biz/format_money.dart' show formatMoneyCompact;
@@ -34,7 +35,7 @@ class RecentView extends StatelessWidget {
   final String defaultCurrency;
 
   final Color themeColor;
-  final bool redForIncome;
+  final IncomeExpenseColorScheme colorScheme;
   final bool dark;
 
   /// 分类/转账账户都缺失时的兜底名称。对应 arb key `commonUncategorized`——
@@ -59,7 +60,7 @@ class RecentView extends StatelessWidget {
     required this.items,
     required this.defaultCurrency,
     required this.themeColor,
-    required this.redForIncome,
+    required this.colorScheme,
     required this.dark,
     this.uncategorizedLabel = '未分类',
     this.emptyLabel = '暂无交易',
@@ -122,7 +123,7 @@ class RecentView extends StatelessWidget {
                               defaultCurrency: defaultCurrency,
                               uncategorizedLabel: uncategorizedLabel,
                               themeColor: themeColor,
-                              redForIncome: redForIncome,
+                              colorScheme: colorScheme,
                               dark: dark,
                             ),
                           ),
@@ -146,7 +147,7 @@ class RecentTransactionRow extends StatelessWidget {
   final String defaultCurrency;
   final String uncategorizedLabel;
   final Color themeColor;
-  final bool redForIncome;
+  final IncomeExpenseColorScheme colorScheme;
   final bool dark;
 
   const RecentTransactionRow({
@@ -155,7 +156,7 @@ class RecentTransactionRow extends StatelessWidget {
     required this.defaultCurrency,
     required this.uncategorizedLabel,
     required this.themeColor,
-    required this.redForIncome,
+    required this.colorScheme,
     required this.dark,
   });
 
@@ -208,9 +209,9 @@ class RecentTransactionRow extends StatelessWidget {
   Color get _amountColor {
     switch (item.transaction.type) {
       case 'expense':
-        return widgetExpenseColor(redForIncome);
+        return widgetExpenseColor(colorScheme);
       case 'income':
-        return widgetIncomeColor(redForIncome);
+        return widgetIncomeColor(colorScheme);
       default:
         return widgetTextPrimary(dark);
     }

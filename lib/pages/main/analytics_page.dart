@@ -88,6 +88,11 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
       child: Material(
         color: PiggyTokens.surface(context),
         borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+          // 主题色细边框（与洞察页图表卡片统一）
+          side: BorderSide(color: ref.watch(primaryColorProvider), width: 1.5),
+        ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
@@ -242,16 +247,24 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
     });
   }
 
-  /// 周期导航箭头（‹ ›）
+  /// 周期导航箭头（‹ ›）：圆形描边按钮，参考截图样式
   Widget _periodNavArrow(
       BuildContext context, IconData icon, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-      child: Padding(
-        padding: const EdgeInsets.all(2),
-        child:
-            Icon(icon, size: 20, color: PiggyTokens.textSecondary(context)),
+    return SizedBox(
+      width: 22,
+      height: 22,
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(
+          side: BorderSide(color: Color(0xFFCFD8DC), width: 1.2),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: Center(
+            child: Icon(icon, size: 14, color: PiggyTokens.textSecondary(context)),
+          ),
+        ),
       ),
     );
   }
@@ -269,6 +282,43 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
       default:
         return '${selMonth.year}-${selMonth.month.toString().padLeft(2, '0')}';
     }
+  }
+
+  // 将「天」序列聚合为 6 个周桶（本周 + 前5周），桶标签 = 周一起始日
+  List<({DateTime day, double total})> _aggregateToWeeks(
+    List<({DateTime day, double total})> days,
+    DateTime firstWeekStart,
+  ) {
+    final map = <DateTime, double>{};
+    for (final e in days) {
+      final ws = weekRangeFor(e.day).start;
+      map.update(ws, (v) => v + e.total, ifAbsent: () => e.total);
+    }
+    final out = <({DateTime day, double total})>[];
+    for (int i = 0; i < 6; i++) {
+      final ws = firstWeekStart.add(Duration(days: 7 * i));
+      out.add((day: ws, total: map[ws] ?? 0));
+    }
+    return out;
+  }
+
+  // 将「天」序列聚合为 6 个月桶（本月 + 前5个月），桶标签 = 周期标签月（含 startDay 语义）
+  List<({DateTime month, double total})> _aggregateToMonths(
+    List<({DateTime day, double total})> days,
+    DateTime firstMonthLabel,
+    int startDay,
+  ) {
+    final map = <DateTime, double>{};
+    for (final e in days) {
+      final label = labelForDate(e.day, startDay);
+      map.update(label, (v) => v + e.total, ifAbsent: () => e.total);
+    }
+    final out = <({DateTime month, double total})>[];
+    for (int i = 0; i < 6; i++) {
+      final m = DateTime(firstMonthLabel.year, firstMonthLabel.month + i, 1);
+      out.add((month: m, total: map[m] ?? 0));
+    }
+    return out;
   }
 
   // 计算结余序列（收入 - 支出）
@@ -430,6 +480,36 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
               ? repo.totalsByMonth(
                   ledgerId: ledgerId, type: _type, year: selMonth.year)
               : repo.totalsByYearSeries(ledgerId: ledgerId, type: _type);
+    }
+
+    // 图表固定6根柱的序列（柱状图/折线图共用）：
+    //   周报 = 本周 + 前5周；月报 = 本月 + 前5个月；年报 = 本年 + 前5年
+    Future<dynamic> buildChartSeries(dynamic repo, int ledgerId, String type) {
+      if (_scope == 'week') {
+        final cStart = weekAdd(_selWeek, -5);
+        final cEnd = weekRangeFor(_selWeek).end;
+        return repo.totalsByDay(
+            ledgerId: ledgerId, type: type, start: cStart, end: cEnd);
+      }
+      if (_scope == 'month') {
+        final firstLabel = DateTime(selMonth.year, selMonth.month - 5, 1);
+        final cStart =
+            periodForLabel(firstLabel.year, firstLabel.month, sd).start;
+        final cEnd = periodForLabel(selMonth.year, selMonth.month, sd).end;
+        return repo.totalsByDay(
+            ledgerId: ledgerId, type: type, start: cStart, end: cEnd);
+      }
+      return repo.totalsByYearSeries(ledgerId: ledgerId, type: type);
+    }
+
+    Future<dynamic> chartSeriesFuture;
+    if (_type == 'balance') {
+      chartSeriesFuture = Future.wait<dynamic>([
+        buildChartSeries(repo, ledgerId, 'income'),
+        buildChartSeries(repo, ledgerId, 'expense'),
+      ]).then((r) => _calculateBalanceSeries(r[0], r[1]));
+    } else {
+      chartSeriesFuture = buildChartSeries(repo, ledgerId, _type);
     }
 
     return Scaffold(
@@ -647,9 +727,9 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
               future: _type == 'balance'
                   ? _loadBalanceData(repo, ledgerId, start, end, seriesFuture,
                       incomeSeriesFuture!, expenseSeriesFuture!, prevStart,
-                      prevEnd)
+                      prevEnd, chartSeriesFuture)
                   : _loadCategoryData(repo, ledgerId, _type, start, end,
-                      seriesFuture, prevStart, prevEnd),
+                      seriesFuture, prevStart, prevEnd, chartSeriesFuture),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
@@ -790,73 +870,85 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                   return seriesRaw;
                 }();
 
+                // ===== 图表6周期序列（柱状图/折线图共用）=====
+                // 周报 = 本周+前5周、月报 = 本月+前5月、年报 = 本年+前5年；全部 = 全部年份
+                final chartSeriesRaw = list[list.length - 1];
+                dynamic chartSeries;
+                if (chartSeriesRaw is List<({DateTime day, double total})>) {
+                  if (_scope == 'week') {
+                    chartSeries =
+                        _aggregateToWeeks(chartSeriesRaw, weekAdd(_selWeek, -5));
+                  } else if (_scope == 'month') {
+                    chartSeries = _aggregateToMonths(
+                        chartSeriesRaw,
+                        DateTime(selMonth.year, selMonth.month - 5, 1),
+                        sd);
+                  } else {
+                    chartSeries = chartSeriesRaw;
+                  }
+                } else if (chartSeriesRaw is List<({int year, double total})>) {
+                  if (_scope == 'year') {
+                    // 年报：选中年 + 前5年（最多6个年份）
+                    final ys = chartSeriesRaw
+                        .where((e) => e.year <= selMonth.year)
+                        .toList();
+                    chartSeries =
+                        ys.length > 6 ? ys.sublist(ys.length - 6) : ys;
+                  } else {
+                    // 全部：所有年份
+                    chartSeries = chartSeriesRaw
+                        .where((e) => e.year <= now.year)
+                        .toList();
+                  }
+                } else {
+                  chartSeries = chartSeriesRaw;
+                }
+
                 // 转换为折线值数组 + x 轴标签
                 final values = () {
-                  if (filteredSeriesRaw
-                      is List<({DateTime day, double total})>) {
-                    return filteredSeriesRaw.map((e) => e.total).toList();
+                  if (chartSeries is List<({DateTime day, double total})>) {
+                    return chartSeries.map((e) => e.total).toList();
                   }
-                  if (filteredSeriesRaw
-                      is List<({DateTime month, double total})>) {
-                    return filteredSeriesRaw.map((e) => e.total).toList();
+                  if (chartSeries is List<({DateTime month, double total})>) {
+                    return chartSeries.map((e) => e.total).toList();
                   }
-                  if (filteredSeriesRaw is List<({int year, double total})>) {
-                    return filteredSeriesRaw.map((e) => e.total).toList();
+                  if (chartSeries is List<({int year, double total})>) {
+                    return chartSeries.map((e) => e.total).toList();
                   }
                   return const <double>[];
                 }();
 
                 final xLabels = () {
-                  if (filteredSeriesRaw
-                      is List<({DateTime day, double total})>) {
-                    // 周视角：MM.dd 短日期标签
+                  if (chartSeries is List<({DateTime day, double total})>) {
+                    String two(int v) => v.toString().padLeft(2, '0');
+                    // 周视角：周一起始日 MM.dd 短标签
                     if (_scope == 'week') {
-                      String two(int v) => v.toString().padLeft(2, '0');
-                      return filteredSeriesRaw
+                      return chartSeries
                           .map((e) => '${two(e.day.month)}.${two(e.day.day)}')
                           .toList(growable: false);
                     }
-                    return filteredSeriesRaw
+                    return chartSeries
                         .map((e) => e.day.day.toString())
                         .toList(growable: false);
                   }
-                  if (filteredSeriesRaw
-                      is List<({DateTime month, double total})>) {
-                    return filteredSeriesRaw
+                  if (chartSeries is List<({DateTime month, double total})>) {
+                    return chartSeries
                         .map((e) => AppLocalizations.of(context).homeMonth(
                             e.month.month.toString().padLeft(2, '0')))
                         .toList(growable: false);
                   }
-                  if (filteredSeriesRaw is List<({int year, double total})>) {
-                    return filteredSeriesRaw
+                  if (chartSeries is List<({int year, double total})>) {
+                    return chartSeries
                         .map((e) => e.year.toString())
                         .toList(growable: false);
                   }
                   return const <String>[];
                 }();
 
+                // 高亮当前选中周期（最后一根柱/最后一点）；全部视角不高亮
                 int? highlightIndex;
-                if (_scope == 'week' &&
-                    filteredSeriesRaw is List<({DateTime day, double total})>) {
-                  // 周视角：高亮今天（仅当前周）
-                  final idx = filteredSeriesRaw.indexWhere((e) =>
-                      e.day.year == now.year &&
-                      e.day.month == now.month &&
-                      e.day.day == now.day);
-                  if (idx >= 0) highlightIndex = idx;
-                }
-                if (_scope == 'month' &&
-                    filteredSeriesRaw is List<({DateTime day, double total})>) {
-                  final today = DateTime.now();
-                  if (today.year == selMonth.year &&
-                      today.month == selMonth.month) {
-                    highlightIndex = today.day - 1; // 从 0 开始
-                    if (highlightIndex >= 0 &&
-                        highlightIndex < xLabels.length) {
-                      xLabels[highlightIndex] =
-                          AppLocalizations.of(context).analyticsToday;
-                    }
-                  }
+                if (_scope != 'all' && xLabels.isNotEmpty) {
+                  highlightIndex = xLabels.length - 1;
                 }
 
                 final chartDismissed = (ref
@@ -890,9 +982,9 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
 
                 // 折线点按气泡：MM.dd 支出 ¥1,918.03（天序列）/ 标签+金额（月年序列）
                 String Function(int)? tooltipText;
-                if (filteredSeriesRaw is List<({DateTime day, double total})>) {
+                if (chartSeries is List<({DateTime day, double total})>) {
                   tooltipText = (i) {
-                    final e = filteredSeriesRaw[i];
+                    final e = chartSeries[i];
                     String two(int v) => v.toString().padLeft(2, '0');
                     final amt = hide
                         ? '**'
@@ -900,23 +992,19 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                             isChineseLocale: isZh);
                     return '${two(e.day.month)}.${two(e.day.day)} $typeWord $amt';
                   };
-                } else if (filteredSeriesRaw
-                    is List<({DateTime month, double total})>) {
+                } else if (chartSeries is List<({DateTime month, double total})>) {
                   tooltipText = (i) {
                     final amt = hide
                         ? '**'
-                        : formatBalance(filteredSeriesRaw[i].total,
-                            baseCurrency,
+                        : formatBalance(chartSeries[i].total, baseCurrency,
                             isChineseLocale: isZh);
                     return '${xLabels[i]} $typeWord $amt';
                   };
-                } else if (filteredSeriesRaw
-                    is List<({int year, double total})>) {
+                } else if (chartSeries is List<({int year, double total})>) {
                   tooltipText = (i) {
                     final amt = hide
                         ? '**'
-                        : formatBalance(filteredSeriesRaw[i].total,
-                            baseCurrency,
+                        : formatBalance(chartSeries[i].total, baseCurrency,
                             isChineseLocale: isZh);
                     return '${xLabels[i]} $typeWord $amt';
                   };
@@ -1215,7 +1303,7 @@ Color _pieColorAt(BuildContext context, int i) =>
     i < 8 ? kAnalyticsPieColors[i] : PiggyTokens.textTertiary(context);
 
 // 加载分类数据并聚合
-// 返回 [catData, seriesRaw, txCount, (本期收入,本期支出), (上期收入,上期支出)]
+// 返回 [catData, seriesRaw, txCount, (本期收入,本期支出), (上期收入,上期支出), chartSeriesRaw]
 Future<List<dynamic>> _loadCategoryData(
   dynamic repo,
   int ledgerId,
@@ -1225,6 +1313,7 @@ Future<List<dynamic>> _loadCategoryData(
   Future<dynamic> seriesFuture,
   DateTime? prevStart,
   DateTime? prevEnd,
+  Future<dynamic> chartSeriesFuture,
 ) async {
   final prevTotalsFuture = (prevStart != null && prevEnd != null)
       ? repo.totalsInRange(ledgerId: ledgerId, start: prevStart, end: prevEnd)
@@ -1239,6 +1328,7 @@ Future<List<dynamic>> _loadCategoryData(
     // 本期收支（结余用）
     repo.totalsInRange(ledgerId: ledgerId, start: start, end: end),
     prevTotalsFuture,
+    chartSeriesFuture,
   ]);
 
   final hierarchyData = results[0] as List<
@@ -1255,11 +1345,18 @@ Future<List<dynamic>> _loadCategoryData(
   final aggregated =
       await _aggregateTopLevelCategories(hierarchyData, repo, sharedSynthetic);
 
-  return [aggregated, results[1], results[2], results[4], results[5]];
+  return [
+    aggregated,
+    results[1],
+    results[2],
+    results[4],
+    results[5],
+    results[6],
+  ];
 }
 
 // 加载结余数据并聚合
-// 返回 [catData, series, expenseCount, incomeSeries, expenseSeries, incomeCount, (上期收入,上期支出)]
+// 返回 [catData, series, expenseCount, incomeSeries, expenseSeries, incomeCount, (上期收入,上期支出), chartSeriesRaw]
 Future<List<dynamic>> _loadBalanceData(
   dynamic repo,
   int ledgerId,
@@ -1270,6 +1367,7 @@ Future<List<dynamic>> _loadBalanceData(
   Future<dynamic> expenseSeriesFuture,
   DateTime? prevStart,
   DateTime? prevEnd,
+  Future<dynamic> chartSeriesFuture,
 ) async {
   final prevTotalsFuture = (prevStart != null && prevEnd != null)
       ? repo.totalsInRange(ledgerId: ledgerId, start: prevStart, end: prevEnd)
@@ -1286,6 +1384,7 @@ Future<List<dynamic>> _loadBalanceData(
         ledgerId: ledgerId, type: 'income', start: start, end: end),
     repo.getSharedSyntheticCategoriesForLedger(ledgerId),
     prevTotalsFuture,
+    chartSeriesFuture,
   ]);
 
   final hierarchyData = results[0] as List<
@@ -1309,7 +1408,8 @@ Future<List<dynamic>> _loadBalanceData(
     results[3],
     results[4],
     results[5],
-    results[7]
+    results[7],
+    results[8],
   ];
 }
 

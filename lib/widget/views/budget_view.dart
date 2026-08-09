@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../providers/theme_providers.dart';
 import '../../styles/tokens.dart';
 import '../../data/repositories/budget_repository.dart'
     show BudgetOverview, BudgetUsage, CategoryBudgetUsage;
@@ -43,7 +44,7 @@ class BudgetView extends StatelessWidget {
   final String currencyCode;
 
   final Color themeColor;
-  final bool redForIncome;
+  final IncomeExpenseColorScheme colorScheme;
   final bool dark;
 
   /// 顶部小标题(小/中共用),l10n 暂无独立 key。
@@ -77,7 +78,7 @@ class BudgetView extends StatelessWidget {
     required this.overview,
     required this.currencyCode,
     required this.themeColor,
-    required this.redForIncome,
+    required this.colorScheme,
     required this.dark,
     this.budgetLabel = '本月预算',
     this.usedLabel = '已用',
@@ -101,7 +102,7 @@ class BudgetView extends StatelessWidget {
     switch (status) {
       case 'exceeded':
       case 'danger':
-        return widgetExpenseColor(redForIncome);
+        return widgetExpenseColor(colorScheme);
       case 'warning':
         return const Color(0xFFFFA726);
       default:

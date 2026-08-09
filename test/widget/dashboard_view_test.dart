@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:piggycount/data/db.dart' show Account, Category, Transaction;
+import 'package:piggycount/providers/theme_providers.dart' show IncomeExpenseColorScheme;
 import 'package:piggycount/widget/views/dashboard_view.dart';
 import 'package:piggycount/widget/views/recent_view.dart' show RecentTransactionRow;
 import 'package:piggycount/widget/widget_data_service.dart'
@@ -136,7 +137,7 @@ void main() {
             data: sampleData(),
             defaultCurrency: 'CNY',
             themeColor: const Color(0xFFF5A623),
-            redForIncome: true,
+            colorScheme: IncomeExpenseColorScheme.redIncome,
             dark: dark,
             width: size.width,
             height: size.height,
@@ -169,7 +170,7 @@ void main() {
             ),
             defaultCurrency: 'CNY',
             themeColor: const Color(0xFFF5A623),
-            redForIncome: true,
+            colorScheme: IncomeExpenseColorScheme.redIncome,
             dark: dark,
             width: size.width,
             height: size.height,
@@ -190,7 +191,7 @@ void main() {
             data: sampleData(trendDays: 1),
             defaultCurrency: 'CNY',
             themeColor: const Color(0xFFF5A623),
-            redForIncome: true,
+            colorScheme: IncomeExpenseColorScheme.redIncome,
             dark: dark,
             width: size.width,
             height: size.height,
@@ -208,7 +209,7 @@ void main() {
             data: sampleData(longNameSuffix: '一个非常非常长用来测试溢出的名称示例文本'),
             defaultCurrency: 'CNY',
             themeColor: const Color(0xFFF5A623),
-            redForIncome: true,
+            colorScheme: IncomeExpenseColorScheme.redIncome,
             dark: dark,
             width: size.width,
             height: size.height,
@@ -229,7 +230,7 @@ void main() {
         data: sampleData(quickAddCount: 0),
         defaultCurrency: 'CNY',
         themeColor: const Color(0xFFF5A623),
-        redForIncome: true,
+        colorScheme: IncomeExpenseColorScheme.redIncome,
         dark: false,
         width: size.width,
         height: size.height,
@@ -267,7 +268,7 @@ void main() {
         ),
         defaultCurrency: 'USD',
         themeColor: const Color(0xFFF5A623),
-        redForIncome: false,
+        colorScheme: IncomeExpenseColorScheme.greenIncome,
         dark: true,
         width: size.width,
         height: size.height,

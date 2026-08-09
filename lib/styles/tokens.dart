@@ -30,94 +30,94 @@ class PiggyTokens {
   // ========== 背景色 Token (Surface) ==========
 
   /// 页面背景色（Scaffold 背景）
-  /// - 亮色模式：#FAFAFA (灰50)
-  /// - 暗黑模式：#000000 (纯黑)
+  /// - 亮色模式：#E5EEFE (淡蓝)
+  /// - 暗黑模式：#151A24 (深蓝灰)
   static Color scaffoldBackground(BuildContext context) =>
       isDark(context) ? scaffoldBackgroundDarkStatic : scaffoldBackgroundLightStatic;
 
   /// 卡片背景色（贴在页面上的卡片）
-  /// - 亮色模式：#FFFFFF (白色)
-  /// - 暗黑模式：#1C1C1E (深灰，与纯黑背景形成对比)
+  /// - 亮色模式：#F9F9F9 (卡片内部，与淡蓝页面形成对比)
+  /// - 暗黑模式：#1C2330 (深蓝灰，与深蓝页面形成对比)
   static Color surface(BuildContext context) =>
-      isDark(context) ? const Color(0xFF1C1C1E) : cardBackgroundLightStatic;
+      isDark(context) ? cardBackgroundDarkStatic : cardBackgroundLightStatic;
 
   /// 次级背景色（嵌套卡片、输入框背景）
   /// - 亮色模式：#F5F5F5 (灰100)
-  /// - 暗黑模式：#2C2C2E (更深的灰)
+  /// - 暗黑模式：#232B3D (更深的蓝灰)
   static Color surfaceSecondary(BuildContext context) =>
-      isDark(context) ? const Color(0xFF2C2C2E) : Colors.grey.shade100;
+      isDark(context) ? const Color(0xFF232B3D) : Colors.grey.shade100;
 
   /// 悬浮卡片背景色（Dialog、BottomSheet、Dropdown 等）
   /// - 亮色模式：#FFFFFF (白色)
-  /// - 暗黑模式：#2C2C2E (略亮于普通卡片)
+  /// - 暗黑模式：#232B3D (略亮于普通卡片)
   static Color surfaceElevated(BuildContext context) =>
-      isDark(context) ? const Color(0xFF2C2C2E) : Colors.white;
+      isDark(context) ? const Color(0xFF232B3D) : Colors.white;
 
   /// PrimaryHeader 背景色
   /// - 亮色模式：用户选择的主题色
-  /// - 暗黑模式：#000000 (纯黑)
+  /// - 暗黑模式：#151A24 (深蓝灰，与页面背景一致)
   static Color surfaceHeader(BuildContext context) =>
-      isDark(context) ? Colors.black : Theme.of(context).colorScheme.primary;
+      isDark(context) ? scaffoldBackgroundDarkStatic : Theme.of(context).colorScheme.primary;
 
   /// BottomSheet 背景色（金额输入等弹窗）
   /// - 亮色模式：#FFFFFF (白色)
-  /// - 暗黑模式：#000000 (纯黑)
+  /// - 暗黑模式：#1C2330 (深蓝灰，同卡片)
   static Color surfaceSheet(BuildContext context) =>
-      isDark(context) ? Colors.black : Colors.white;
+      isDark(context) ? cardBackgroundDarkStatic : Colors.white;
 
   /// 键盘按钮背景色
   /// - 亮色模式：#FFFFFF (白色)
-  /// - 暗黑模式：#000000 (纯黑)
+  /// - 暗黑模式：#1C2330 (深蓝灰，同卡片)
   static Color surfaceKey(BuildContext context) =>
-      isDark(context) ? Colors.black : Colors.white;
+      isDark(context) ? cardBackgroundDarkStatic : Colors.white;
 
   /// 键盘次级按钮背景色（日期、+/-等）
   /// - 亮色模式：#F5F5F5 (灰100)
-  /// - 暗黑模式：#2C2C2E (深灰)
+  /// - 暗黑模式：#232B3D (深蓝灰)
   static Color surfaceKeySecondary(BuildContext context) =>
-      isDark(context) ? const Color(0xFF2C2C2E) : Colors.grey.shade100;
+      isDark(context) ? const Color(0xFF232B3D) : Colors.grey.shade100;
 
   /// 禁用按钮背景色
   /// - 亮色模式：#E0E0E0 (灰300)
-  /// - 暗黑模式：#1C1C1E (更深的灰)
+  /// - 暗黑模式：#232B3D (更深的蓝灰)
   static Color surfaceDisabled(BuildContext context) =>
-      isDark(context) ? const Color(0xFF1C1C1E) : Colors.grey.shade300;
+      isDark(context) ? const Color(0xFF232B3D) : Colors.grey.shade300;
 
   /// 输入框背景色
   /// - 亮色模式：#F3F4F6 (浅灰)
-  /// - 暗黑模式：#2C2C2E (深灰)
+  /// - 暗黑模式：#232B3D (深蓝灰)
   static Color surfaceInput(BuildContext context) =>
-      isDark(context) ? const Color(0xFF2C2C2E) : const Color(0xFFF3F4F6);
+      isDark(context) ? const Color(0xFF232B3D) : const Color(0xFFF3F4F6);
 
   /// 标签/Chip 背景色（未选中状态）
   /// - 亮色模式：#EEEEEE (灰200)
-  /// - 暗黑模式：#2C2C2E (深灰)
+  /// - 暗黑模式：#232B3D (深蓝灰)
   static Color surfaceChip(BuildContext context) =>
-      isDark(context) ? const Color(0xFF2C2C2E) : Colors.grey.shade200;
+      isDark(context) ? const Color(0xFF232B3D) : Colors.grey.shade200;
 
   /// 胶囊切换器背景色
   /// - 亮色模式：rgba(0,0,0,0.06) (浅灰透明)
-  /// - 暗黑模式：#2C2C2E (深灰)
+  /// - 暗黑模式：#232B3D (深蓝灰)
   static Color surfaceCapsule(BuildContext context) =>
-      isDark(context) ? const Color(0xFF2C2C2E) : Colors.black.withValues(alpha: 0.06);
+      isDark(context) ? const Color(0xFF232B3D) : Colors.black.withValues(alpha: 0.06);
 
   /// 弹出层/浮层内卡片背景色（如二级分类选择）
   /// - 亮色模式：#FFFFFF (白色)
-  /// - 暗黑模式：#3A3A3C (中灰)
+  /// - 暗黑模式：#2A3244 (中深蓝灰)
   static Color surfacePopoverCard(BuildContext context) =>
-      isDark(context) ? const Color(0xFF3A3A3C) : Colors.white;
+      isDark(context) ? const Color(0xFF2A3244) : Colors.white;
 
   /// 分类图标背景色（未选中状态）
   /// - 亮色模式：#EEEEEE (灰200)
-  /// - 暗黑模式：#48484A (中灰)
+  /// - 暗黑模式：#333D50 (深蓝灰)
   static Color surfaceCategoryIcon(BuildContext context) =>
-      isDark(context) ? const Color(0xFF48484A) : Colors.grey.shade200;
+      isDark(context) ? const Color(0xFF333D50) : Colors.grey.shade200;
 
   /// 分类图标背景色 - 浅色版（二级分类用）
   /// - 亮色模式：#F5F5F5 (灰100)
-  /// - 暗黑模式：#3A3A3C (深灰)
+  /// - 暗黑模式：#2A3244 (深蓝灰)
   static Color surfaceCategoryIconLight(BuildContext context) =>
-      isDark(context) ? const Color(0xFF3A3A3C) : Colors.grey.shade100;
+      isDark(context) ? const Color(0xFF2A3244) : Colors.grey.shade100;
 
   /// 分类图标颜色（未选中状态）
   /// - 亮色模式：#616161 (灰700)
@@ -365,9 +365,9 @@ class PiggyTokens {
 
   /// 禁用按钮背景色
   /// - 亮色模式：#E5E7EB (灰200)
-  /// - 暗黑模式：#3C3C3E
+  /// - 暗黑模式：#2A3244 (深蓝灰)
   static Color buttonDisabled(BuildContext context) =>
-      isDark(context) ? const Color(0xFF3C3C3E) : const Color(0xFFE5E7EB);
+      isDark(context) ? const Color(0xFF2A3244) : const Color(0xFFE5E7EB);
 
   /// Switch 开启状态轨道颜色
   /// - 亮色模式：主题色
@@ -377,9 +377,9 @@ class PiggyTokens {
 
   /// Switch 关闭状态轨道颜色
   /// - 亮色模式：#E5E7EB
-  /// - 暗黑模式：#3C3C3E
+  /// - 暗黑模式：#2A3244 (深蓝灰)
   static Color switchInactiveTrack(BuildContext context) =>
-      isDark(context) ? const Color(0xFF3C3C3E) : const Color(0xFFE5E7EB);
+      isDark(context) ? const Color(0xFF2A3244) : const Color(0xFFE5E7EB);
 
   // ========== 品牌图标色 Token (Brand Icons) ==========
   // 这些颜色是各服务的品牌色，在亮暗模式下保持一致
@@ -438,19 +438,37 @@ class PiggyTokens {
   static Color chartTransfer(BuildContext context) => info(context);
 
   /// 收入颜色（动态方案，根据用户设置）
-  /// - true：红色
-  /// - false：绿色
+  /// - [IncomeExpenseColorScheme.redIncome]：error(红)
+  /// - [IncomeExpenseColorScheme.greenIncome]：success(绿)
+  /// - [IncomeExpenseColorScheme.blueIncome]：`#477AF8`(蓝)
   static Color incomeColor(BuildContext context, WidgetRef ref) {
-    final redForIncome = ref.watch(incomeExpenseColorSchemeProvider);
-    return redForIncome ? error(context) : success(context);
+    final scheme = ref.watch(incomeExpenseColorSchemeProvider);
+    return _resolveSchemeColor(context, scheme.incomeColor);
   }
 
   /// 支出颜色（动态方案，根据用户设置）
-  /// - true：绿色
-  /// - false：红色
+  /// - [IncomeExpenseColorScheme.redIncome]：success(绿)
+  /// - [IncomeExpenseColorScheme.greenIncome]：error(红)
+  /// - [IncomeExpenseColorScheme.blueIncome]：`#EE6839`(橙)
   static Color expenseColor(BuildContext context, WidgetRef ref) {
-    final redForIncome = ref.watch(incomeExpenseColorSchemeProvider);
-    return redForIncome ? success(context) : error(context);
+    final scheme = ref.watch(incomeExpenseColorSchemeProvider);
+    return _resolveSchemeColor(context, scheme.expenseColor);
+  }
+
+  /// 把收入/支出颜色 token 与 PiggyTokens 内的 error/success 对齐:
+  /// 需要走主题色 token 的(如语义红/绿)用 [error]/[success](自动跟随暗黑模式),
+  /// 自定义色(蓝/橙等明/暗一致的)直接返回原值。
+  static Color _resolveSchemeColor(BuildContext context, SchemeColor c) {
+    switch (c) {
+      case SchemeColor.error:
+        return error(context);
+      case SchemeColor.success:
+        return success(context);
+      case SchemeColor.incomeBlue:
+        return const Color(0xFF477AF8);
+      case SchemeColor.expenseOrange:
+        return const Color(0xFFEE6839);
+    }
   }
 
   // ========== 遮罩层 Token (Overlay) ==========
@@ -473,13 +491,13 @@ class PiggyTokens {
 
   // ========== 悬浮 Tab 栏 Token (Floating Tab Bar) ==========
 
-  /// 悬浮 Tab 栏背景色
-  /// - 亮色模式：白色 95% 不透明
-  /// - 暗黑模式：深灰 95% 不透明
+  /// 悬浮 Tab 栏背景色（PiggyHeader/PiggyTitleBar 标题栏与底部导航栏共用）
+  /// - 亮色模式：淡蓝 95% 不透明（与页面背景融为一体）
+  /// - 暗黑模式：深蓝灰 95% 不透明
   static Color tabBarBackground(BuildContext context) =>
       isDark(context)
-          ? const Color(0xFF1C1C1E).withValues(alpha: 0.95)
-          : Colors.white.withValues(alpha: 0.95);
+          ? cardBackgroundDarkStatic.withValues(alpha: 0.95)
+          : scaffoldBackgroundLightStatic.withValues(alpha: 0.95);
 
   /// 悬浮 Tab 栏阴影
   static List<BoxShadow> get tabBarShadow => [
@@ -537,19 +555,19 @@ class PiggyTokens {
   /// 54% 黑色（亮色模式，兼容 Colors.black54）
   static const Color black54Static = Color(0x8A000000);
 
-  /// Scaffold 背景色（亮色模式）— #F3F3F3
+  /// Scaffold 背景色（亮色模式）— #E5EEFE (淡蓝)
   /// 单一来源：PiggyTokens.scaffoldBackground(context) 与 PiggyTheme.lightTheme 共享
-  static const Color scaffoldBackgroundLightStatic = Color(0xFFF3F3F3);
+  static const Color scaffoldBackgroundLightStatic = Color(0xFFE5EEFE);
 
-  /// Scaffold 背景色（暗色模式）— 纯黑
+  /// Scaffold 背景色（暗色模式）— #151A24 (深蓝灰)
   /// 单一来源：PiggyTokens.scaffoldBackground(context) 与 PiggyTheme.darkTheme 共享
-  static const Color scaffoldBackgroundDarkStatic = Colors.black;
+  static const Color scaffoldBackgroundDarkStatic = Color(0xFF151A24);
 
   /// 卡片背景色（亮色模式）— #F9F9F9
   static const Color cardBackgroundLightStatic = Color(0xFFF9F9F9);
 
-  /// 卡片背景色（暗色模式）— 纯黑
-  static const Color cardBackgroundDarkStatic = Colors.black;
+  /// 卡片背景色（暗色模式）— #1C2330 (深蓝灰，与页面背景形成层级对比)
+  static const Color cardBackgroundDarkStatic = Color(0xFF1C2330);
 
   /// 分割线颜色（亮色模式）— black 6%
   static Color get dividerStatic => Colors.black.withValues(alpha: 0.06);

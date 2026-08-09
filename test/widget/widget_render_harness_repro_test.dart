@@ -21,6 +21,7 @@ import 'package:piggycount/data/db.dart';
 import 'package:piggycount/data/repositories/budget_repository.dart'
     show BudgetOverview, BudgetUsage;
 import 'package:piggycount/data/repositories/local/local_repository.dart';
+import 'package:piggycount/providers/theme_providers.dart' show IncomeExpenseColorScheme;
 import 'package:piggycount/widget/views/budget_view.dart';
 import 'package:piggycount/widget/views/dashboard_view.dart';
 import 'package:piggycount/widget/views/glance_view.dart';
@@ -131,7 +132,7 @@ void main() {
         items: items,
         defaultCurrency: currency,
         themeColor: const Color(0xFFF5A623),
-        redForIncome: true,
+        colorScheme: IncomeExpenseColorScheme.redIncome,
         dark: false,
         width: w,
         height: h,
@@ -161,7 +162,7 @@ void main() {
       data: data,
       defaultCurrency: currency,
       themeColor: const Color(0xFFF5A623),
-      redForIncome: true,
+      colorScheme: IncomeExpenseColorScheme.redIncome,
       dark: false,
       width: 364,
       height: 382,
@@ -192,7 +193,7 @@ void main() {
       items: items,
       defaultCurrency: 'CNY',
       themeColor: const Color(0xFFF5A623),
-      redForIncome: true,
+      colorScheme: IncomeExpenseColorScheme.redIncome,
       dark: false,
       width: 364,
       height: 169,
@@ -204,7 +205,7 @@ void main() {
       data: data,
       defaultCurrency: 'CNY',
       themeColor: const Color(0xFFF5A623),
-      redForIncome: true,
+      colorScheme: IncomeExpenseColorScheme.redIncome,
       dark: false,
       width: 364,
       height: 382,
@@ -262,7 +263,7 @@ void main() {
     final views = <String, Widget>{
       'GlanceView.medium': const GlanceView.medium(
         todayExpense: '¥1', todayIncome: '¥2', monthExpense: '¥3',
-        monthIncome: '¥4', themeColor: honey, redForIncome: true, dark: false,
+        monthIncome: '¥4', themeColor: honey, colorScheme: IncomeExpenseColorScheme.redIncome, dark: false,
         titleLabel: 'B', monthSuffix: '月', todayExpenseLabel: 'a',
         todayIncomeLabel: 'b', monthExpenseLabel: 'c', monthIncomeLabel: 'd',
         width: 364, height: 169,
@@ -273,7 +274,7 @@ void main() {
         topAccounts: [
           const NetWorthAccountItem(account: acc, balance: 10, convertedBalance: 10),
         ],
-        themeColor: honey, redForIncome: true, dark: false,
+        themeColor: honey, colorScheme: IncomeExpenseColorScheme.redIncome, dark: false,
         netWorthLabel: 'n', totalAssetsLabel: 'a', totalLiabilitiesLabel: 'l',
         width: 364, height: 382,
       ),
@@ -286,12 +287,12 @@ void main() {
         overview: BudgetOverview(
             totalBudget: BudgetUsage(used: 5, budget: 10),
             categoryBudgets: const [], daysRemaining: 1, dailyAvailable: 1),
-        currencyCode: 'CNY', themeColor: honey, redForIncome: true,
+        currencyCode: 'CNY', themeColor: honey, colorScheme: IncomeExpenseColorScheme.redIncome,
         dark: false, width: 364, height: 169,
       ),
       'RecentView.large(6 行)': RecentView(
         size: HWSize.large, items: items, defaultCurrency: 'CNY',
-        themeColor: honey, redForIncome: true, dark: false,
+        themeColor: honey, colorScheme: IncomeExpenseColorScheme.redIncome, dark: false,
         width: 364, height: 382,
       ),
       'DashboardView': DashboardView(
@@ -301,7 +302,7 @@ void main() {
                 monthExpenseTotal: 3, monthIncomeTotal: 4),
             netWorthTrend: trend, recent: items.take(2).toList(),
             quickAdd: quickAdd),
-        defaultCurrency: 'CNY', themeColor: honey, redForIncome: true,
+        defaultCurrency: 'CNY', themeColor: honey, colorScheme: IncomeExpenseColorScheme.redIncome,
         dark: false, width: 364, height: 382,
       ),
     };

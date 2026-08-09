@@ -103,6 +103,7 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
 
     return SectionCard(
       margin: EdgeInsets.zero,
+      borderColor: primaryColor,
       child: Column(
         children: [
           PiggySwitchListTile(
@@ -140,6 +141,7 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
 
     return SectionCard(
       margin: EdgeInsets.zero,
+      borderColor: primaryColor,
       child: ListTile(
         leading: Icon(Icons.cloud_outlined, color: primaryColor),
         title: Text(
@@ -170,6 +172,7 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
 
     return SectionCard(
       margin: EdgeInsets.zero,
+      borderColor: ref.watch(primaryColorProvider),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -394,6 +397,7 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
 
     return SectionCard(
       margin: EdgeInsets.zero,
+      borderColor: ref.watch(primaryColorProvider),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(

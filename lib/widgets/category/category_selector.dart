@@ -173,8 +173,9 @@ class _CategorySelectorState extends ConsumerState<CategorySelector> {
               });
             }
 
-            // 构建显示项列表：网格行 + 可能的二级分类容器
-            final displayItems = <Widget>[];
+            // 构建显示项列表：分类网格项(放入卡片)与尾部项(设置按钮等留在卡片外)
+            final categoryItems = <Widget>[];
+            final trailingItems = <Widget>[];
 
             // 按每4个一组显示一级分类
             for (int i = 0; i < topLevelCategories.length; i += 4) {
@@ -185,7 +186,7 @@ class _CategorySelectorState extends ConsumerState<CategorySelector> {
               final firstCategoryInRow = rowItems.first;
 
               // 添加网格行
-              displayItems.add(
+              categoryItems.add(
                 Container(
                   key: _keys.putIfAbsent(firstCategoryInRow.id, () => GlobalKey()),
                   child: GridView.builder(
@@ -195,8 +196,8 @@ class _CategorySelectorState extends ConsumerState<CategorySelector> {
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 4,
                     crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 0.9,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 0.78,
                   ),
                   itemCount: rowItems.length,
                   itemBuilder: (context, index) {
@@ -241,10 +242,10 @@ class _CategorySelectorState extends ConsumerState<CategorySelector> {
                 final hasChildren = children.isNotEmpty;
 
                 if (_expandedCategoryId == topCat.id && hasChildren) {
-                  displayItems.add(
+                  categoryItems.add(
                     const SizedBox(height: 12),
                   );
-                  displayItems.add(
+                  categoryItems.add(
                     _SubcategorySelectorCard(
                       parentCategory: topCat,
                       subCategories: children,
@@ -260,13 +261,13 @@ class _CategorySelectorState extends ConsumerState<CategorySelector> {
               }
 
               if (i + 4 < topLevelCategories.length) {
-                displayItems.add(const SizedBox(height: 16));
+                categoryItems.add(const SizedBox(height: 16));
               }
             }
 
-            // 添加设置按钮
-            displayItems.add(const SizedBox(height: 24));
-            displayItems.add(
+            // 添加设置按钮(留在卡片外)
+            trailingItems.add(const SizedBox(height: 24));
+            trailingItems.add(
               Center(
                 child: InkWell(
                   onTap: () {
@@ -305,16 +306,33 @@ class _CategorySelectorState extends ConsumerState<CategorySelector> {
                 ),
               ),
             );
-            displayItems.add(const SizedBox(height: 12));
+            trailingItems.add(const SizedBox(height: 12));
 
             // scrollController 非空(底部抽屉)时由其驱动抽屉伸缩；
             // 为 null(全屏编辑页)保持 primary 默认滚动行为
             final useSheetController = widget.scrollController != null;
+            final primaryColor = Theme.of(context).colorScheme.primary;
             return ListView(
               controller: widget.scrollController,
               primary: !useSheetController,
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-              children: displayItems,
+              children: [
+                // 分类网格区域卡片：边框主题色,内部背景 #f9f9f9(亮)/ 深蓝灰(暗)
+                Container(
+                  decoration: BoxDecoration(
+                    color: PiggyTokens.surface(context),
+                    borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
+                    border: Border.all(color: primaryColor, width: 1.5),
+                  ),
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: categoryItems,
+                  ),
+                ),
+                ...trailingItems,
+              ],
             );
           },
         );
@@ -386,7 +404,7 @@ class _SubcategorySelectorCard extends ConsumerWidget {
             crossAxisCount: 4,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 0.9,
+            childAspectRatio: 0.84,
           ),
           itemCount: subCategories.length,
           itemBuilder: (context, index) {

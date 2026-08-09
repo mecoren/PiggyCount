@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../providers/theme_providers.dart';
 import '../../styles/tokens.dart';
 import '../../utils/currencies.dart' show getCurrencySymbol;
 import '../../widgets/biz/format_money.dart' show formatMoneyCompact;
@@ -48,7 +49,7 @@ class DashboardView extends StatelessWidget {
   final String defaultCurrency;
 
   final Color themeColor;
-  final bool redForIncome;
+  final IncomeExpenseColorScheme colorScheme;
   final bool dark;
 
   /// 顶部本月支出/收入文案,复用 `WidgetManager.updateAllWidgets` 里
@@ -76,7 +77,7 @@ class DashboardView extends StatelessWidget {
     required this.data,
     required this.defaultCurrency,
     required this.themeColor,
-    required this.redForIncome,
+    required this.colorScheme,
     required this.dark,
     this.monthExpenseLabel = '本月支出',
     this.monthIncomeLabel = '本月收入',
@@ -164,7 +165,7 @@ class DashboardView extends StatelessWidget {
                             defaultCurrency: defaultCurrency,
                             uncategorizedLabel: uncategorizedLabel,
                             themeColor: themeColor,
-                            redForIncome: redForIncome,
+                            colorScheme: colorScheme,
                             dark: dark,
                           ),
                       ],
@@ -188,7 +189,7 @@ class DashboardView extends StatelessWidget {
           child: _statBlock(
             monthExpenseLabel,
             glance.monthExpenseTotal,
-            widgetExpenseColor(redForIncome),
+            widgetExpenseColor(colorScheme),
           ),
         ),
         const SizedBox(width: 12),
@@ -198,7 +199,7 @@ class DashboardView extends StatelessWidget {
           child: _statBlock(
             monthIncomeLabel,
             glance.monthIncomeTotal,
-            widgetIncomeColor(redForIncome),
+            widgetIncomeColor(colorScheme),
           ),
         ),
       ],

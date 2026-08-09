@@ -71,6 +71,15 @@ class _AnalyticsBarChartState extends State<AnalyticsBarChart> {
     }
   }
 
+  /// 判断第 [i] 根柱是否高亮：点按选中时高亮该柱；未点按时回落到
+  /// 当前周期（[widget.highlightIndex]）默认高亮。
+  bool _isHighlighted(int i) {
+    if (_touchedIndex != null) {
+      return _touchedIndex == i;
+    }
+    return widget.highlightIndex != null && i == widget.highlightIndex;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.values.isEmpty) return const SizedBox.shrink();
@@ -104,6 +113,11 @@ class _AnalyticsBarChartState extends State<AnalyticsBarChart> {
         decoration: BoxDecoration(
           color: PiggyTokens.surface(context),
           borderRadius: BorderRadius.circular(PiggyChartTokens.cornerRadius),
+          // 主题色细边框（与洞察页折线图卡统一）
+          border: Border.all(
+            color: Theme.of(context).colorScheme.primary,
+            width: 1.5,
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -219,8 +233,7 @@ class _AnalyticsBarChartState extends State<AnalyticsBarChart> {
                                     if (i < 0 || i >= widget.xLabels.length) {
                                       return const SizedBox.shrink();
                                     }
-                                    final isHi = widget.highlightIndex != null &&
-                                        i == widget.highlightIndex;
+                                    final isHi = _isHighlighted(i);
                                     // 采样显示，避免标签拥挤；高亮索引的标签始终保留
                                     if (!isHi && i % step != 0) {
                                       return const SizedBox.shrink();
@@ -274,8 +287,7 @@ class _AnalyticsBarChartState extends State<AnalyticsBarChart> {
                             barGroups:
                                 List.generate(widget.values.length, (i) {
                               final v = widget.values[i];
-                              final isHi = widget.highlightIndex != null &&
-                                  i == widget.highlightIndex;
+                              final isHi = _isHighlighted(i);
                               return BarChartGroupData(
                                 x: i,
                                 barRods: [

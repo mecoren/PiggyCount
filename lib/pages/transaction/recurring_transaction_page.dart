@@ -136,23 +136,14 @@ class _RecurringTransactionCard extends ConsumerWidget {
       decoration: BoxDecoration(
         color: PiggyTokens.surface(context),
         borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
-        border: PiggyTokens.isDark(context)
-            ? Border.all(
-                color: recurring.enabled
-                    ? primaryColor.withValues(alpha: 0.3)
-                    : PiggyTokens.border(context),
-                width: 1,
-              )
-            : null,
-        boxShadow: PiggyTokens.isDark(context)
-            ? null
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+        // 主题色细边框（与统计页图表卡片统一），用边框替代阴影
+        border: Border.all(
+          color: recurring.enabled
+              ? primaryColor
+              : PiggyTokens.border(context),
+          width: 1.5,
+        ),
+        boxShadow: null,
       ),
       child: Material(
         color: Colors.transparent,
@@ -411,6 +402,7 @@ class _UsageGuideCard extends ConsumerWidget {
 
     return SectionCard(
       margin: EdgeInsets.zero,
+      borderColor: primaryColor,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

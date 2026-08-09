@@ -344,6 +344,7 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
 
     return SectionCard(
       margin: EdgeInsets.zero,
+      borderColor: ref.watch(primaryColorProvider),
       child: ExpansionTile(
         leading: Icon(Icons.code, color: primaryColor, size: 20),
         title: Text(
@@ -406,6 +407,7 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
 
     return SectionCard(
       margin: EdgeInsets.zero,
+      borderColor: primaryColor,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -472,6 +474,7 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
 
     return SectionCard(
       margin: EdgeInsets.zero,
+      borderColor: primaryColor,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

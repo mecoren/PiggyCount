@@ -82,6 +82,7 @@ class MemberListPage extends ConsumerWidget {
       children: [
         const SizedBox(height: 8),
         SectionCard(
+          borderColor: Theme.of(context).colorScheme.primary,
           child: Column(
             children: [
               for (final m in members) ...[
@@ -103,6 +104,7 @@ class MemberListPage extends ConsumerWidget {
         const SizedBox(height: 8),
         if (amOwner)
           SectionCard(
+            borderColor: Theme.of(context).colorScheme.primary,
             child: ListTile(
               leading: const Icon(Icons.person_add_outlined),
               title: Text(l10n.sharedMembersInviteCta),
@@ -120,6 +122,7 @@ class MemberListPage extends ConsumerWidget {
         const SizedBox(height: 8),
         if (me != null && !amOwner)
           SectionCard(
+            borderColor: Theme.of(context).colorScheme.primary,
             child: ListTile(
               leading: Icon(Icons.logout, color: PiggyTokens.error(context)),
               title: Text(

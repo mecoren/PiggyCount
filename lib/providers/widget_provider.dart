@@ -17,7 +17,7 @@ Future<void> updateAppWidget(WidgetRef ref, BuildContext context) async {
     final repository = ref.read(repositoryProvider);
     final currentLedgerId = ref.read(currentLedgerIdProvider);
     final primaryColor = ref.read(primaryColorProvider);
-    final redForIncome = ref.read(incomeExpenseColorSchemeProvider);
+    final colorScheme = ref.read(incomeExpenseColorSchemeProvider);
     final baseCurrency = ref.read(baseCurrencyProvider);
 
     final widgetManager = ref.read(widgetManagerProvider);
@@ -25,7 +25,7 @@ Future<void> updateAppWidget(WidgetRef ref, BuildContext context) async {
       repository,
       currentLedgerId,
       primaryColor,
-      redForIncome: redForIncome,
+      colorScheme: colorScheme,
       glanceTitleLabel: l10n.widgetGalleryGlanceTitle,
       quickAddTitleLabel: l10n.widgetGalleryQuickAddTitle,
       recentTitleLabel: l10n.widgetRecentTransactions,

@@ -305,6 +305,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
 
     return SectionCard(
       margin: EdgeInsets.zero,
+      borderColor: primaryColor,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -1960,7 +1961,9 @@ class _AccountCard extends ConsumerWidget {
         decoration: BoxDecoration(
           color: PiggyTokens.surface(context),
           borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-          boxShadow: isDark ? null : PiggyShadows.card,
+          // 主题色细边框（与统计页图表卡片一致），用边框替代阴影
+          border: Border.all(color: primaryColor, width: 1.5),
+          boxShadow: null,
         ),
         child: Padding(
           padding: EdgeInsets.symmetric(

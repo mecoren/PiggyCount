@@ -68,7 +68,7 @@ class _PiggyCountCloudSyncPageState
       await reconcileProfileToServer(
         cloudProviderFuture: ref.read(piggycountCloudProviderInstance.future),
         currentThemeColor: ref.read(primaryColorProvider),
-        currentIncomeIsRed: ref.read(incomeExpenseColorSchemeProvider),
+        currentIncomeColorScheme: ref.read(incomeExpenseColorSchemeProvider),
         currentHeaderStyle: ref.read(headerDecorationStyleProvider),
         currentCompactAmount: ref.read(compactAmountProvider),
         currentShowTransactionTime: ref.read(showTransactionTimeProvider),
@@ -205,6 +205,7 @@ class _PiggyCountCloudSyncPageState
                         children: [
                           // Section 1: 账号
                           SectionCard(
+                            borderColor: ref.watch(primaryColorProvider),
                             child: _buildAccountSection(context, user),
                           ),
                           // Section 1.5: 2FA 状态行 — 内部根据是否能拉到 status 决定显示
@@ -215,11 +216,13 @@ class _PiggyCountCloudSyncPageState
                           const SizedBox(height: 8),
                           // Section 2: 同步状态(深度检测结果)
                           SectionCard(
+                            borderColor: ref.watch(primaryColorProvider),
                             child: _buildHealthSection(context),
                           ),
                           const SizedBox(height: 8),
                           // Section 3: 同步说明(折叠) — 解释增量/全量、断点续传、排查
                           SectionCard(
+                            borderColor: ref.watch(primaryColorProvider),
                             child: _buildSyncHelpSection(context),
                           ),
                           // PiggyCount Cloud server 版本号,底部弱展示。
@@ -669,6 +672,7 @@ class _TwoFactorStatusRowState extends ConsumerState<_TwoFactorStatusRow> {
         : null;
 
     return SectionCard(
+      borderColor: ref.watch(primaryColorProvider),
       child: AppListTile(
         leading: status.enabled ? Icons.verified_user : Icons.lock_outline,
         title: '${l10n.twofaStatusTitle} · $enabledLabel',

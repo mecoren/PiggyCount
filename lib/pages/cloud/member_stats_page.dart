@@ -118,6 +118,7 @@ class _MemberStatsPageState extends ConsumerState<MemberStatsPage> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       children: [
         SectionCard(
+          borderColor: Theme.of(context).colorScheme.primary,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             child: Row(
@@ -144,6 +145,7 @@ class _MemberStatsPageState extends ConsumerState<MemberStatsPage> {
         ),
         const SizedBox(height: 8),
         SectionCard(
+          borderColor: Theme.of(context).colorScheme.primary,
           child: Column(
             children: [
               for (final s in stats.items) ...[

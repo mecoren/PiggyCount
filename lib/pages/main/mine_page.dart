@@ -42,9 +42,12 @@ class MinePage extends ConsumerWidget {
     final ledgerId = ref.watch(currentLedgerIdProvider);
     final l10n = AppLocalizations.of(context);
 
-    // 主题色头部占据状态栏下方区域，状态栏图标使用白色以保证可见性。
+    // 头部背景与页面背景一致(亮色淡蓝 / 暗色深蓝灰)，
+    // 状态栏图标随主题切换以保证可见性。
+    final isDark = PiggyTokens.isDark(context);
     SystemChrome.setSystemUIOverlayStyle(
-      SystemUiOverlayStyle.light.copyWith(
+      (isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark)
+          .copyWith(
         statusBarColor: Colors.transparent,
       ),
     );

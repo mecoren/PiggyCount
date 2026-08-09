@@ -10,6 +10,7 @@ import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' hide SyncStatus;
 import 'package:flutter_cloud_sync_icloud/flutter_cloud_sync_icloud.dart';
 import '../../providers/sync_providers.dart';
 import '../../providers/database_providers.dart';
+import '../../providers/theme_providers.dart';
 import '../../services/system/logger_service.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/ui/wait_sliding_segmented_control.dart';
@@ -83,6 +84,8 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
     final supabaseAsync = ref.watch(supabaseConfigProvider);
     final webdavAsync = ref.watch(webdavConfigProvider);
     final s3Async = ref.watch(s3ConfigProvider);
+    // 选中态边框使用用户选定的主题色（与首页「明细」外层卡片边框色保持一致）
+    final primaryColor = ref.watch(primaryColorProvider);
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
@@ -155,6 +158,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                         isSelected: active.type == CloudBackendType.local,
                         isDisabled: false,
                         onTap: () => _switchService(CloudBackendType.local),
+                        primaryColor: primaryColor,
                       ),
                     ],
                   );
@@ -172,7 +176,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
 
                       // iCloud (仅 iOS)
                       if (!kIsWeb && Platform.isIOS) ...[
-                        _buildICloudCard(context, active, isDisabled: false),
+                        _buildICloudCard(context, active, isDisabled: false, primaryColor: primaryColor),
                         const SizedBox(height: 12),
                       ],
 
@@ -198,6 +202,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                               ? () => _configureService(CloudBackendType.webdav)
                               : null,
                           onShowGuide: _showWebdavHelpDialog,
+                          primaryColor: primaryColor,
                         ),
                       ),
 
@@ -225,6 +230,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                               ? () => _configureService(CloudBackendType.s3)
                               : null,
                           onShowGuide: _showS3HelpDialog,
+                          primaryColor: primaryColor,
                         ),
                       ),
 
@@ -252,6 +258,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                               ? () => _configureService(CloudBackendType.supabase)
                               : null,
                           onShowGuide: _showSupabaseHelpDialog,
+                          primaryColor: primaryColor,
                         ),
                       ),
                     ],
@@ -282,6 +289,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                               ? () => _configureService(CloudBackendType.piggycountCloud)
                               : null,
                           onShowGuide: _showPiggyCountCloudHelpDialog,
+                          primaryColor: primaryColor,
                         ),
                       ),
                     ],
@@ -594,16 +602,19 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
     required VoidCallback onTap,
     VoidCallback? onConfigure,
     VoidCallback? onShowGuide,
+    required Color primaryColor,
   }) {
     return Opacity(
       opacity: isDisabled ? 0.5 : 1.0,
       child: Container(
         decoration: BoxDecoration(
-          border: isSelected ? Border.all(color: PiggyTokens.success(context), width: 2) : null,
           borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         ),
         child: SectionCard(
           margin: EdgeInsets.zero,
+          // 主题色边框：选中加粗，未选中细边框（与全站卡片统一）
+          borderColor: primaryColor,
+          borderWidth: isSelected ? 2.5 : 1.5,
           child: InkWell(
             onTap: isDisabled ? null : onTap,
             borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
@@ -668,16 +679,16 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                         ),
                       ),
 
-                      // 选中标记
+                      // 选中标记：填充用户主题色（与边框同色，视觉一致）
                       if (isSelected && !isDisabled)
                         Container(
                           width: 28,
                           height: 28,
                           decoration: BoxDecoration(
-                            color: PiggyTokens.success(context),
+                            color: primaryColor,
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(Icons.check, color: PiggyTokens.textOnPrimary(context), size: 18),
+                          child: Icon(Icons.check, color: Colors.white, size: 18),
                         ),
                     ],
                   ),
@@ -725,18 +736,20 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
     );
   }
 
-  Widget _buildICloudCard(BuildContext context, CloudServiceConfig active, {bool isDisabled = false}) {
+  Widget _buildICloudCard(BuildContext context, CloudServiceConfig active, {bool isDisabled = false, required Color primaryColor}) {
     final isSelected = active.type == CloudBackendType.icloud;
 
     return Opacity(
       opacity: isDisabled ? 0.5 : 1.0,
       child: Container(
         decoration: BoxDecoration(
-          border: isSelected ? Border.all(color: PiggyTokens.success(context), width: 2) : null,
           borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         ),
         child: SectionCard(
           margin: EdgeInsets.zero,
+          // 主题色边框：选中加粗，未选中细边框（与全站卡片统一）
+          borderColor: primaryColor,
+          borderWidth: isSelected ? 2.5 : 1.5,
           child: InkWell(
             onTap: isDisabled ? null : () => _switchService(CloudBackendType.icloud),
             borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
@@ -803,16 +816,16 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                         ),
                       ),
 
-                      // 选中标记
+                      // 选中标记：填充用户主题色（与边框同色，视觉一致）
                       if (isSelected && !isDisabled)
                         Container(
                           width: 28,
                           height: 28,
                           decoration: BoxDecoration(
-                            color: PiggyTokens.success(context),
+                            color: primaryColor,
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(Icons.check, color: PiggyTokens.textOnPrimary(context), size: 18),
+                          child: Icon(Icons.check, color: Colors.white, size: 18),
                         ),
                     ],
                   ),

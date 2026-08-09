@@ -760,7 +760,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     // 起始日影响小部件「本月」口径,立即刷新
     try {
       final repository = ref.read(repositoryProvider);
-      final redForIncome = ref.read(incomeExpenseColorSchemeProvider);
+      final colorScheme = ref.read(incomeExpenseColorSchemeProvider);
       // 没有 BuildContext,靠 languageProvider 还原当前 App 语言(见
       // widget_manager.dart resolveWidgetLocalizations 文档)。
       await WidgetManager().updateAllWidgetsLocalized(
@@ -768,7 +768,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
         ledger.id,
         ref.read(primaryColorProvider),
         explicitLocale: ref.read(languageProvider),
-        redForIncome: redForIncome,
+        colorScheme: colorScheme,
         baseCurrency: ref.read(baseCurrencyProvider),
       );
     } catch (_) {}

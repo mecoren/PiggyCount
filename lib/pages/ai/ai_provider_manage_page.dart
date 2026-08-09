@@ -116,6 +116,7 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
 
     return SectionCard(
       margin: EdgeInsets.zero,
+      borderColor: primaryColor,
       child: InkWell(
         onTap: () => _editProvider(context, provider),
         borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
@@ -444,6 +445,7 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
                 // 基本信息
                 SectionCard(
                   margin: EdgeInsets.zero,
+                  borderColor: ref.watch(primaryColorProvider),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
@@ -593,6 +595,7 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
                 // 模型配置
                 SectionCard(
                   margin: EdgeInsets.zero,
+                  borderColor: ref.watch(primaryColorProvider),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(

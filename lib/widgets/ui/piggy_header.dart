@@ -51,8 +51,8 @@ class PiggyTitleBar extends StatelessWidget implements PreferredSizeWidget {
     this.content,
     this.primary = true,
     this.topPadding = 0,
+    this.backgroundColor,
     // —— 以下参数为兼容旧 GlassTitleBar API 保留，内部忽略 ——
-    @Deprecated('No longer used; PiggyTitleBar is always solid.') this.backgroundColor,
     @Deprecated('No longer used; PiggyTitleBar is always solid.') this.blur = true,
     @Deprecated('No longer used; PiggyTitleBar has no blur.') this.maxSigma = 20.0,
     @Deprecated('No longer used; PiggyTitleBar has no blur.') this.minSigma = 2.0,
@@ -87,8 +87,10 @@ class PiggyTitleBar extends StatelessWidget implements PreferredSizeWidget {
   /// 默认 0，页面标题感觉离状态栏过近时可通过此参数微调。
   final double topPadding;
 
-  // —— 兼容字段（忽略）——
+  /// 自定义标题栏背景色；为 null 时使用默认 [PiggyTokens.tabBarBackground]。
   final Color? backgroundColor;
+
+  // —— 兼容字段（忽略）——
   final bool blur;
   final double maxSigma;
   final double minSigma;
@@ -106,6 +108,7 @@ class PiggyTitleBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return _PiggyHeaderShell(
       primary: primary,
+      backgroundColor: backgroundColor,
       foreground: _buildForeground(context),
     );
   }
@@ -421,12 +424,16 @@ class _PiggyHeaderShell extends ConsumerWidget {
   const _PiggyHeaderShell({
     required this.foreground,
     required this.primary,
+    this.backgroundColor,
   });
 
   final Widget foreground;
 
   /// 是否由外部 `AppBar` 处理状态栏避让（沿用 GlassTitleBar 语义）。
   final bool primary;
+
+  /// 自定义背景色；为 null 时使用默认 [PiggyTokens.tabBarBackground]。
+  final Color? backgroundColor;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -440,8 +447,8 @@ class _PiggyHeaderShell extends ConsumerWidget {
     final skin = headerSkinById(ref.watch(headerSkinProvider));
     final primaryColor = ref.watch(primaryColorProvider);
 
-    // 95% 中性实色背景，与底部导航栏同色
-    final bgColor = PiggyTokens.tabBarBackground(context);
+    // 95% 中性实色背景；调用方可自定义（如底部抽屉与页面背景融合）。
+    final bgColor = backgroundColor ?? PiggyTokens.tabBarBackground(context);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(

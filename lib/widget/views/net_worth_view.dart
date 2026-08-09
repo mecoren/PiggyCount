@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../providers/theme_providers.dart';
 import '../../styles/tokens.dart';
 import '../../utils/currencies.dart' show getCurrencySymbol;
 import '../../widgets/biz/format_money.dart' show formatMoneyCompact;
@@ -49,7 +50,7 @@ class NetWorthView extends StatelessWidget {
   final List<NetWorthAccountItem> topAccounts;
 
   final Color themeColor;
-  final bool redForIncome;
+  final IncomeExpenseColorScheme colorScheme;
   final bool dark;
 
   final String netWorthLabel;
@@ -72,7 +73,7 @@ class NetWorthView extends StatelessWidget {
     required this.trend,
     this.topAccounts = const [],
     required this.themeColor,
-    required this.redForIncome,
+    required this.colorScheme,
     required this.dark,
     required this.netWorthLabel,
     required this.totalAssetsLabel,
@@ -144,7 +145,7 @@ class NetWorthView extends StatelessWidget {
     final pct = _changePercent;
     if (pct == null) return const SizedBox.shrink();
     final positive = pct >= 0;
-    final color = positive ? widgetIncomeColor(redForIncome) : widgetExpenseColor(redForIncome);
+    final color = positive ? widgetIncomeColor(colorScheme) : widgetExpenseColor(colorScheme);
     final arrow = positive ? '▲' : '▼';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -294,7 +295,7 @@ class NetWorthView extends StatelessWidget {
                   label: totalAssetsLabel,
                   value: totalAssets,
                   ratio: totalAssets.abs() / _progressMax,
-                  color: widgetIncomeColor(redForIncome),
+                  color: widgetIncomeColor(colorScheme),
                 ),
               ),
               const SizedBox(width: 12),
@@ -303,7 +304,7 @@ class NetWorthView extends StatelessWidget {
                   label: totalLiabilitiesLabel,
                   value: totalLiabilities,
                   ratio: totalLiabilities.abs() / _progressMax,
-                  color: widgetExpenseColor(redForIncome),
+                  color: widgetExpenseColor(colorScheme),
                 ),
               ),
             ],
@@ -353,14 +354,14 @@ class NetWorthView extends StatelessWidget {
             label: totalAssetsLabel,
             value: totalAssets,
             ratio: totalAssets.abs() / _progressMax,
-            color: widgetIncomeColor(redForIncome),
+            color: widgetIncomeColor(colorScheme),
           ),
           const SizedBox(height: 4),
           _progressRow(
             label: totalLiabilitiesLabel,
             value: totalLiabilities,
             ratio: totalLiabilities.abs() / _progressMax,
-            color: widgetExpenseColor(redForIncome),
+            color: widgetExpenseColor(colorScheme),
           ),
           const SizedBox(height: 10),
           Container(height: 1, color: widgetDivider(dark)),

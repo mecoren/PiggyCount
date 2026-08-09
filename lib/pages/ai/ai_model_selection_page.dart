@@ -282,6 +282,7 @@ class _AIModelSelectionPageState extends ConsumerState<AIModelSelectionPage> {
 
     return SectionCard(
       margin: EdgeInsets.zero,
+      borderColor: ref.watch(primaryColorProvider),
       child: Column(
         children: [
           ListTile(

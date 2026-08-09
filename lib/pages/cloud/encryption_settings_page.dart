@@ -291,6 +291,7 @@ class _EncryptionSettingsPageState
           children: [
             // 状态展示
             SectionCard(
+              borderColor: Theme.of(context).colorScheme.primary,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -398,6 +399,7 @@ class _EncryptionSettingsPageState
             const SizedBox(height: 16),
             // 操作入口
             SectionCard(
+              borderColor: Theme.of(context).colorScheme.primary,
               child: Column(
                 children: [
                   if (!isEnabled || !hasKey)

@@ -125,6 +125,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
                   // 预算类型选择
                   if (!_isEditing) ...[
                     SectionCard(
+                      borderColor: ref.watch(primaryColorProvider),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -167,6 +168,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
                   // 分类选择（仅分类预算）
                   if (_type == 'category') ...[
                     SectionCard(
+                      borderColor: ref.watch(primaryColorProvider),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -187,6 +189,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
                   ],
                   // 预算金额
                   SectionCard(
+                    borderColor: ref.watch(primaryColorProvider),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -264,11 +267,10 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
                 ? primary.withValues(alpha: 0.1)
                 : PiggyTokens.surface(context),
             borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+            // 主题色边框：选中加粗，未选中细边框
             border: Border.all(
-              color: isSelected && !disabled
-                  ? primary
-                  : PiggyTokens.border(context),
-              width: isSelected && !disabled ? 2 : 1,
+              color: primary,
+              width: isSelected && !disabled ? 2 : 1.5,
             ),
           ),
           child: Column(
@@ -309,7 +311,11 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
         decoration: BoxDecoration(
           color: PiggyTokens.surface(context),
           borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
-          border: Border.all(color: PiggyTokens.border(context)),
+          // 主题色细边框
+          border: Border.all(
+            color: ref.watch(primaryColorProvider),
+            width: 1.5,
+          ),
         ),
         child: Row(
           children: [

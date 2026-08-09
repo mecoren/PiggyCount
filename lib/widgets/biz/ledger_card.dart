@@ -70,18 +70,12 @@ class LedgerCard extends ConsumerWidget {
         decoration: BoxDecoration(
           color: PiggyTokens.surface(context),
           borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-          border: PiggyTokens.isDark(context)
-              ? Border.all(color: PiggyTokens.border(context), width: 1)
-              : null,
-          boxShadow: PiggyTokens.isDark(context)
-              ? null
-              : [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+          // 主题色边框：选中加粗，未选中细边框（与全站卡片统一），用边框替代阴影
+          border: Border.all(
+            color: primaryColor,
+            width: selected ? 2.5 : 1.5,
+          ),
+          boxShadow: null,
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),

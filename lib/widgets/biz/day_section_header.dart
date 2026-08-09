@@ -52,6 +52,13 @@ class DaySectionHeader extends ConsumerWidget {
     final grey = PiggyTokens.textSecondary(context);
     final week = getWeekday(dateText);
     final l10n = AppLocalizations.of(context);
+    // 日期 / 星期 / 支出标题 / 收入标题 共用同一 TextStyle,确保四者色、字号、
+    // 字重完全一致(用户要求日期&星期和支出标题同色)。
+    final labelStyle = TextStyle(
+      color: grey,
+      fontSize: 12,
+      fontWeight: FontWeight.w400,
+    );
     return Container(
       // 不设背景色:与交易行一样透明,显示同一外层列表背景。否则暗黑下 header
       // 是 surface 深灰(#1C1C1E)、交易行是纯黑 scaffold 底,两者不协调。
@@ -61,34 +68,18 @@ class DaySectionHeader extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(children: [
-            Text(dateText,
-                style: Theme.of(context)
-                    .textTheme
-                    .labelMedium
-                    ?.copyWith(color: grey, fontSize: 12)),
+            Text(dateText, style: labelStyle),
             if (week.isNotEmpty) ...[
               const SizedBox(width: 8),
-              Text(week,
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelMedium
-                      ?.copyWith(color: grey, fontSize: 12)),
+              Text(week, style: labelStyle),
             ]
           ]),
           Row(children: [
             if (shouldHide == false && fmt(expense).isNotEmpty)
-              Text('${l10n.homeExpense} ${fmt(expense)}',
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelMedium
-                      ?.copyWith(color: grey, fontSize: 12)),
+              Text('${l10n.homeExpense} ${fmt(expense)}', style: labelStyle),
             if (shouldHide == false && fmt(income).isNotEmpty) const SizedBox(width: 12),
             if (shouldHide == false && fmt(income).isNotEmpty)
-              Text('${l10n.homeIncome} ${fmt(income)}',
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelMedium
-                      ?.copyWith(color: grey, fontSize: 12)),
+              Text('${l10n.homeIncome} ${fmt(income)}', style: labelStyle),
           ])
         ],
       ),

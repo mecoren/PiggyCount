@@ -288,15 +288,9 @@ class _HomePageState extends ConsumerState<HomePage> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         color: PiggyTokens.surface(context),
-        boxShadow: PiggyTokens.isDark(context)
-            ? null
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+        // 主题色细边框（与统计页图表卡片统一），用边框替代阴影
+        border: Border.all(color: primaryColor, width: 1.5),
+        boxShadow: null,
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
@@ -415,15 +409,9 @@ class _HomePageState extends ConsumerState<HomePage> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         color: PiggyTokens.surface(context),
-        boxShadow: PiggyTokens.isDark(context)
-            ? null
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+        // 主题色细边框（与统计页图表卡片统一），用边框替代阴影
+        border: Border.all(color: primaryColor, width: 1.5),
+        boxShadow: null,
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
@@ -444,7 +432,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
               child: Row(
                 children: [
-                  // 文案
+                  // 图标 + 文案
                   Expanded(
                     child: Row(
                       children: [
@@ -528,15 +516,9 @@ class _HomePageState extends ConsumerState<HomePage> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         color: PiggyTokens.surface(context),
-        boxShadow: PiggyTokens.isDark(context)
-            ? null
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+        // 主题色细边框（与统计页图表卡片统一），用边框替代阴影
+        border: Border.all(color: primaryColor, width: 1.5),
+        boxShadow: null,
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
@@ -897,10 +879,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  // 月度统计大卡片（2×2 网格 + 月份选择器 + 预算级别括号）
-                  HomeMonthSummaryCard(
-                    onMonthSelected: _jumpToTargetMonth,
-                  ),
+                  // 预算总结卡片（固定在顶部）
                   const HomeBudgetSummary(),
                 ],
               ),
@@ -976,6 +955,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                   enableVisibilityTracking: true,
                   onDateVisibilityChanged: _onHeaderVisibilityChanged,
                   controller: _listController,
+                  // 月份总结卡片作为列表第一项，随明细滚动
+                  listHeader: HomeMonthSummaryCard(
+                    onMonthSelected: _jumpToTargetMonth,
+                  ),
                   emptyWidget: AppEmpty(
                     text: AppLocalizations.of(context).homeNoRecords,
                     subtext: AppLocalizations.of(context).homeNoRecordsSubtext,

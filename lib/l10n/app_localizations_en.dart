@@ -2384,6 +2384,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Red represents expense, green represents income';
 
   @override
+  String get appearanceColorSchemeBlue =>
+      'Blue for income · Orange for expense';
+
+  @override
+  String get appearanceColorSchemeBlueDesc =>
+      'Blue represents income, orange represents expense';
+
+  @override
   String fontSettingsCurrentScale(Object scale) {
     return 'Current scale: x$scale';
   }
@@ -3042,6 +3050,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get personalizeThemePiggyPink => 'Piggy Pink';
+
+  @override
+  String get personalizeThemeSkyBlue => 'Azure Blue';
 
   @override
   String get personalizeThemeGradientBlue => 'Gradient Blue';

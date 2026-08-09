@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:piggycount/data/repositories/budget_repository.dart'
     show BudgetOverview, BudgetUsage, CategoryBudgetUsage;
+import 'package:piggycount/providers/theme_providers.dart' show IncomeExpenseColorScheme;
 import 'package:piggycount/widget/views/budget_view.dart';
 import 'package:piggycount/widget/widget_spec.dart' show HWSize;
 
@@ -37,7 +38,7 @@ void main() {
           ),
           currencyCode: 'CNY',
           themeColor: const Color(0xFFF5A623),
-          redForIncome: true,
+          colorScheme: IncomeExpenseColorScheme.redIncome,
           dark: false,
           fallbackShares: const [
             (name: '餐饮', share: 0.52),
@@ -76,7 +77,7 @@ void main() {
           ),
           currencyCode: 'CNY',
           themeColor: const Color(0xFFF5A623),
-          redForIncome: true,
+          colorScheme: IncomeExpenseColorScheme.redIncome,
           dark: false,
           width: size.width,
           height: size.height,
@@ -113,7 +114,7 @@ void main() {
             ),
             currencyCode: 'CNY',
             themeColor: const Color(0xFFF5A623),
-            redForIncome: true,
+            colorScheme: IncomeExpenseColorScheme.redIncome,
             dark: dark,
             width: size.width,
             height: size.height,
@@ -139,7 +140,7 @@ void main() {
             ),
             currencyCode: 'CNY',
             themeColor: const Color(0xFFF5A623),
-            redForIncome: true,
+            colorScheme: IncomeExpenseColorScheme.redIncome,
             dark: dark,
             width: size.width,
             height: size.height,
@@ -165,7 +166,7 @@ void main() {
             ),
             currencyCode: 'CNY',
             themeColor: const Color(0xFFF5A623),
-            redForIncome: true,
+            colorScheme: IncomeExpenseColorScheme.redIncome,
             dark: dark,
             width: size.width,
             height: size.height,
@@ -198,7 +199,7 @@ void main() {
           ),
           currencyCode: 'CNY',
           themeColor: const Color(0xFFF5A623),
-          redForIncome: false,
+          colorScheme: IncomeExpenseColorScheme.greenIncome,
           dark: false,
           width: size.width,
           height: size.height,
@@ -225,7 +226,7 @@ void main() {
           ),
           currencyCode: 'USD',
           themeColor: const Color(0xFFF5A623),
-          redForIncome: true,
+          colorScheme: IncomeExpenseColorScheme.redIncome,
           dark: true,
           width: size.width,
           height: size.height,
@@ -252,7 +253,7 @@ void main() {
           ),
           currencyCode: 'CNY',
           themeColor: const Color(0xFFF5A623),
-          redForIncome: true,
+          colorScheme: IncomeExpenseColorScheme.redIncome,
           dark: false,
           width: size.width,
           height: size.height,
@@ -284,7 +285,7 @@ void main() {
           ),
           currencyCode: 'CNY',
           themeColor: const Color(0xFFF5A623),
-          redForIncome: true,
+          colorScheme: IncomeExpenseColorScheme.redIncome,
           dark: false,
           width: size.width,
           height: size.height,

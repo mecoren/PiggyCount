@@ -116,6 +116,7 @@ class _ExchangeRatePageState extends ConsumerState<ExchangeRatePage> {
                   // 1. 主币种
                   SectionCard(
                     margin: EdgeInsets.zero,
+                    borderColor: primary,
                     child: InkWell(
                       onTap: () => _pickBaseCurrency(context),
                       borderRadius:
@@ -158,6 +159,7 @@ class _ExchangeRatePageState extends ConsumerState<ExchangeRatePage> {
                   if (quotes.isEmpty)
                     SectionCard(
                       margin: EdgeInsets.zero,
+                      borderColor: primary,
                       child: Padding(
                         padding: EdgeInsets.symmetric(
                           vertical: 32.0.scaled(context, ref),
@@ -180,6 +182,7 @@ class _ExchangeRatePageState extends ConsumerState<ExchangeRatePage> {
                     SectionCard(
                       margin: EdgeInsets.zero,
                       padding: EdgeInsets.zero,
+                      borderColor: primary,
                       child: Column(
                         children: [
                           for (int i = 0; i < quotes.length; i++) ...[

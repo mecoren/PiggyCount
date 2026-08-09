@@ -208,6 +208,7 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
     return Container(
       margin: const EdgeInsets.all(16),
       child: SectionCard(
+        borderColor: ref.watch(primaryColorProvider),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(

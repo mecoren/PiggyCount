@@ -51,6 +51,9 @@ class TransactionList extends ConsumerStatefulWidget {
   /// - false:不包外卡,回到无包裹状态(向后兼容)。
   final bool wrapInOuterCard;
 
+  /// 列表头部自定义内容(如月份总结卡片),作为列表第一项随列表一起滚动。
+  final Widget? listHeader;
+
   const TransactionList({
     super.key,
     this.transactionsWithDetails,
@@ -61,6 +64,7 @@ class TransactionList extends ConsumerStatefulWidget {
     this.emptyWidget,
     this.controller,
     this.wrapInOuterCard = true,
+    this.listHeader,
   }) : assert(transactionsWithDetails != null || transactions != null,
             'Either transactionsWithDetails or transactions must be provided');
 
@@ -311,6 +315,11 @@ class TransactionListState extends ConsumerState<TransactionList> {
     _flatItems = <dynamic>[];
     _dateIndexMap.clear();
 
+    // 列表头部内容(如月份总结卡片)作为第一项随列表滚动
+    if (widget.listHeader != null) {
+      _flatItems.add(('listHeader', null, null));
+    }
+
     if (widget.wrapInOuterCard && sortedKeys.isNotEmpty) {
       // 「整张大卡片」风格:首日插入 outerCardStart 标记,日内追加各 day,
       // 天与天之间插 dayDivider,末日后插 outerCardEnd 标记。首/末标记只各占
@@ -369,13 +378,24 @@ class TransactionListState extends ConsumerState<TransactionList> {
 
     _buildFlatItems();
 
-    // 无数据时展示空状态
-    if (_flatItems.isEmpty) {
-      return widget.emptyWidget ??
-        AppEmpty(
-          text: AppLocalizations.of(context).commonEmpty,
-          subtext: AppLocalizations.of(context).homeNoRecords,
+    // 无数据时展示空状态（列表头部仍显示，位于空状态上方）
+    final hasTransactions = _transactionsList.isNotEmpty;
+    if (_flatItems.isEmpty ||
+        (widget.listHeader != null && !hasTransactions)) {
+      final empty = widget.emptyWidget ??
+          AppEmpty(
+            text: AppLocalizations.of(context).commonEmpty,
+            subtext: AppLocalizations.of(context).homeNoRecords,
+          );
+      if (widget.listHeader != null) {
+        return Column(
+          children: [
+            widget.listHeader!,
+            Expanded(child: empty),
+          ],
         );
+      }
+      return empty;
     }
 
     // 使用FlutterListView渲染列表
@@ -386,6 +406,11 @@ class TransactionListState extends ConsumerState<TransactionList> {
         (BuildContext context, int index) {
           final item = _flatItems[index];
           final type = item.$1 as String;
+
+          if (type == 'listHeader') {
+            // 列表头部内容（随列表滚动）
+            return widget.listHeader ?? const SizedBox.shrink();
+          }
 
           if (type == 'bottomSpacer') {
             // 悬浮 Tab 栏高度(56) + 浮动间距(12) + 安全区 + 额外间距

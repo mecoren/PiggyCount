@@ -127,6 +127,7 @@ class _InvitePageState extends ConsumerState<InvitePage> {
 
   Widget _buildForm(AppLocalizations l10n) {
     return SectionCard(
+      borderColor: Theme.of(context).colorScheme.primary,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -195,6 +196,7 @@ class _InvitePageState extends ConsumerState<InvitePage> {
 
   Widget _buildShareView(PiggyCountCloudInvite invite, AppLocalizations l10n) {
     return SectionCard(
+      borderColor: Theme.of(context).colorScheme.primary,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

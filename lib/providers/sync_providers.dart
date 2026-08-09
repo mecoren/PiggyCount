@@ -262,7 +262,7 @@ final syncServiceProvider = Provider<SyncService>((ref) {
             case ProfileField.themeColor:
               _applyThemeColorFromServer(ref, value as String);
             case ProfileField.incomeColor:
-              _applyIncomeColorFromServer(ref, value as bool);
+              _applyIncomeColorFromServer(ref, value as String);
             case ProfileField.appearance:
               _applyAppearanceFromServer(ref, value as Map<String, dynamic>);
             case ProfileField.displayName:
@@ -376,7 +376,7 @@ final syncServiceProvider = Provider<SyncService>((ref) {
       await reconcileProfileToServer(
         cloudProviderFuture: ref.read(piggycountCloudProviderInstance.future),
         currentThemeColor: ref.read(primaryColorProvider),
-        currentIncomeIsRed: ref.read(incomeExpenseColorSchemeProvider),
+        currentIncomeColorScheme: ref.read(incomeExpenseColorSchemeProvider),
         currentHeaderStyle: ref.read(headerDecorationStyleProvider),
         currentCompactAmount: ref.read(compactAmountProvider),
         currentShowTransactionTime: ref.read(showTransactionTimeProvider),
@@ -585,7 +585,7 @@ final piggycountCloudServerVersionProvider =
 Future<void> reconcileProfileToServer({
   required Future<PiggyCountCloudProvider?> cloudProviderFuture,
   required Color currentThemeColor,
-  required bool currentIncomeIsRed,
+  required IncomeExpenseColorScheme currentIncomeColorScheme,
   required String currentHeaderStyle,
   required bool currentCompactAmount,
   required bool currentShowTransactionTime,
@@ -615,15 +615,19 @@ Future<void> reconcileProfileToServer({
       }
     }
 
-    // income_is_red
-    if (profile.incomeIsRed == null) {
+    // income_color_scheme(2026-08 新字段)。旧字段 income_is_red 已被废弃,
+    // 但某些老 server 仍在读它 —— 不论两端哪一个缺失都补推一次,幂等。
+    if (profile.incomeColorScheme == null &&
+        profile.incomeIsRed == null) {
       try {
         await cloud.updateMyProfileIncomeColorScheme(
-            incomeIsRed: currentIncomeIsRed);
+          scheme: currentIncomeColorScheme.persistenceKey,
+        );
         logger.info('CloudSync',
-            'reconcile: pushed income_is_red=$currentIncomeIsRed');
+            'reconcile: pushed income_color_scheme=${currentIncomeColorScheme.persistenceKey}');
       } catch (e, st) {
-        logger.warning('CloudSync', 'reconcile income 推送失败: $e', st);
+        logger.warning(
+            'CloudSync', 'reconcile income_color_scheme 推送失败: $e', st);
       }
     }
 
@@ -737,11 +741,13 @@ void _applyThemeColorFromServer(Ref ref, String hex) {
   }
 }
 
-void _applyIncomeColorFromServer(Ref ref, bool incomeIsRed) {
+void _applyIncomeColorFromServer(Ref ref, String scheme) {
+  final next = IncomeExpenseColorScheme.fromKey(scheme);
   final current = ref.read(incomeExpenseColorSchemeProvider);
-  if (current == incomeIsRed) return;
-  ref.read(incomeExpenseColorSchemeProvider.notifier).state = incomeIsRed;
-  logger.info('profile_sync', 'applied income_is_red from server: $incomeIsRed');
+  if (current == next) return;
+  ref.read(incomeExpenseColorSchemeProvider.notifier).state = next;
+  logger.info('profile_sync',
+      'applied income_color_scheme from server: ${next.persistenceKey}');
 }
 
 void _applyDisplayNameFromServer(Ref ref, String name) {

@@ -147,6 +147,7 @@ class BudgetPage extends ConsumerWidget {
 
     return SectionCard(
       margin: EdgeInsets.zero,
+      borderColor: ref.watch(primaryColorProvider),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -270,6 +271,7 @@ class BudgetPage extends ConsumerWidget {
   ) {
     return SectionCard(
       margin: EdgeInsets.zero,
+      borderColor: ref.watch(primaryColorProvider),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -309,6 +311,7 @@ class BudgetPage extends ConsumerWidget {
       BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     return SectionCard(
       margin: EdgeInsets.zero,
+      borderColor: ref.watch(primaryColorProvider),
       child: AppListTile(
         leading: Icons.visibility_outlined,
         title: l10n.budgetShowOnHome,

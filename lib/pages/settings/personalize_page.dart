@@ -22,7 +22,8 @@ class _PersonalizePageState extends ConsumerState<PersonalizePage> {
     final l10n = AppLocalizations.of(context);
 
     final options = <_ThemeOption>[
-      // 前三为默认推荐色：小猪粉（默认）/ 晴空蓝 / 渐变蓝
+      // 前三为默认推荐色：天空蓝（默认）/ 小猪粉 / 晴空蓝
+      _ThemeOption(l10n.personalizeThemeSkyBlue, const Color(0xFF497FF8)),
       _ThemeOption(l10n.personalizeThemePiggyPink, const Color(0xFFFF5C8D)),
       _ThemeOption(l10n.personalizeThemeBlue, const Color(0xFF2196F3)),
       _ThemeOption(l10n.personalizeThemeGradientBlue, const Color(0xFF2563EB)),
@@ -130,7 +131,7 @@ class _ThemeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = PiggyTokens.isDark(context);
+    final primary = Theme.of(context).colorScheme.primary;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
@@ -138,16 +139,12 @@ class _ThemeCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: PiggyTokens.surface(context),
           borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-          border: isDark ? Border.all(color: PiggyTokens.border(context)) : null,
-          boxShadow: isDark
-              ? null
-              : [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  )
-                ],
+          // 主题色边框：选中加粗，未选中细边框；边框替代阴影
+          border: Border.all(
+            color: primary,
+            width: selected ? 2.5 : 1.5,
+          ),
+          boxShadow: null,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -194,7 +191,7 @@ class _CustomColorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = PiggyTokens.isDark(context);
+    final primary = Theme.of(context).colorScheme.primary;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
@@ -202,19 +199,9 @@ class _CustomColorCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: PiggyTokens.surface(context),
           borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-          border: Border.all(
-            color: isDark ? PiggyTokens.border(context) : Colors.grey[300]!,
-            width: isDark ? 1 : 2,
-          ),
-          boxShadow: isDark
-              ? null
-              : [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  )
-                ],
+          // 主题色边框替代灰色边框与阴影
+          border: Border.all(color: primary, width: 1.5),
+          boxShadow: null,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

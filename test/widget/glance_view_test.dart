@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:piggycount/widget/views/glance_view.dart';
+import 'package:piggycount/providers/theme_providers.dart' show IncomeExpenseColorScheme;
 
 void main() {
   Widget wrap(Widget child, Size size) {
@@ -26,7 +27,7 @@ void main() {
           monthExpense: '¥1,234.56',
           monthIncome: '¥7,890.12',
           themeColor: Color(0xFFF5A623),
-          redForIncome: true,
+          colorScheme: IncomeExpenseColorScheme.redIncome,
           dark: false,
           titleLabel: '收支速览',
           monthSuffix: '月',
@@ -54,7 +55,7 @@ void main() {
           monthExpense: '¥1,234.56',
           monthIncome: '¥7,890.12',
           themeColor: Color(0xFFF5A623),
-          redForIncome: false,
+          colorScheme: IncomeExpenseColorScheme.greenIncome,
           dark: true,
           titleLabel: '收支速览',
           monthSuffix: '月',
@@ -82,7 +83,7 @@ void main() {
           monthExpense: '¥1,234.56',
           monthIncome: '¥7,890.12',
           themeColor: Color(0xFFF5A623),
-          redForIncome: true,
+          colorScheme: IncomeExpenseColorScheme.redIncome,
           dark: false,
           todayLabel: '今日',
           todayExpenseLabel: '今日支出',
@@ -107,7 +108,7 @@ void main() {
           monthExpense: '¥0.00',
           monthIncome: '¥0.00',
           themeColor: Color(0xFFF5A623),
-          redForIncome: false,
+          colorScheme: IncomeExpenseColorScheme.greenIncome,
           dark: true,
           todayLabel: '今日',
           todayExpenseLabel: '今日支出',

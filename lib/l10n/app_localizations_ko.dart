@@ -2317,6 +2317,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get appearanceColorSchemeOffDesc => '빨강은 지출을, 초록은 수입을 나타냅니다';
 
   @override
+  String get appearanceColorSchemeBlue => '파랑 = 수입 · 주황 = 지출';
+
+  @override
+  String get appearanceColorSchemeBlueDesc => '파랑은 수입을, 주황은 지출을 나타냅니다';
+
+  @override
   String fontSettingsCurrentScale(Object scale) {
     return '현재 배율: x$scale';
   }
@@ -2962,6 +2968,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get personalizeThemePiggyPink => '피키 핑크';
+
+  @override
+  String get personalizeThemeSkyBlue => '아주르 블루';
 
   @override
   String get personalizeThemeGradientBlue => '그라데이션 블루';

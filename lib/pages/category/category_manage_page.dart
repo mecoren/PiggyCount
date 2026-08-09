@@ -473,11 +473,8 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
             color: PiggyTokens.surface(context),
-            border: Border.all(
-              color: PiggyTokens.isDark(context)
-                ? primaryColor.withValues(alpha: 0.3)
-                : PiggyTokens.border(context),
-            ),
+            // 主题色细边框（与统计页图表卡片统一）
+            border: Border.all(color: primaryColor, width: 1.5),
             borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
           ),
           child: Material(
@@ -814,8 +811,8 @@ class _CategoryCard extends ConsumerWidget {
           border: Border.all(
             color: item.isSubCategory
                 ? PiggyTokens.warning(context).withValues(alpha: 0.3)
-                : PiggyTokens.borderStrong(context),
-            width: 1,
+                : Theme.of(context).colorScheme.primary,
+            width: item.isSubCategory ? 1 : 1.5,
           ),
         ),
         child: Stack(
@@ -1077,10 +1074,8 @@ class _DialogActionButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: PiggyTokens.surface(context),
           borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-          border: Border.all(
-            color: PiggyTokens.borderStrong(context),
-            width: 1,
-          ),
+          // 主题色细边框（与统计页图表卡片统一）
+          border: Border.all(color: primaryColor, width: 1.5),
         ),
         child: Center(
           child: Column(
@@ -1136,10 +1131,8 @@ class _DialogSubCategoryCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: PiggyTokens.surface(context),
           borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-          border: Border.all(
-            color: PiggyTokens.borderStrong(context),
-            width: 1,
-          ),
+          // 主题色细边框（与统计页图表卡片统一）
+          border: Border.all(color: primaryColor, width: 1.5),
         ),
         child: Center(
           child: Column(

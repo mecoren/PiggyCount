@@ -17,6 +17,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../providers/theme_providers.dart' show IncomeExpenseColorScheme;
 import '../../services/data/category_service.dart' show CategoryService;
 
 /// 蜜蜂主题强调色(品牌色)。多数场景下和用户可自定义的 `themeColor` 一致
@@ -24,27 +25,50 @@ import '../../services/data/category_service.dart' show CategoryService;
 /// 用户个性化、需要固定"蜜蜂感"的强调元素使用。
 const Color kWidgetHoney = Color(0xFFF5A623);
 
-/// 支出/收入固定色值(未叠加 `redForIncome` 前)。
+/// 默认语义色(原版两组:redIncome/greenIncome 切换的固定值)。
+/// 蓝色收入/橙色支出方案的固定值见 [kWidgetIncomeBlue] / [kWidgetExpenseOrange]。
 const Color kWidgetExpenseRed = Color(0xFFE5533C);
 const Color kWidgetIncomeGreen = Color(0xFF2FA36B);
+
+/// 蓝收橙支方案的收入/支出色(2026-08 新增第三方案,默认)。
+const Color kWidgetIncomeBlue = Color(0xFF477AF8);
+const Color kWidgetExpenseOrange = Color(0xFFEE6839);
 
 /// 数字等宽对齐,金额类文本统一叠加这个 FontFeature。
 const kWidgetTabularFeature = FontFeature.tabularFigures();
 
-/// 按 `redForIncome` 解析"支出"语义色(true=红色收入方案下支出用绿,
-/// false=红色支出方案下支出用红)。
+/// 按 [scheme] 解析"支出"语义色。
 ///
 /// 与 `styles/tokens.dart` 的 `PiggyTokens.expenseColor` 同一套语义,且已在
 /// `accounts_page.dart` 里验证过延伸到"负债"这类非交易类支出语义金额上
 /// (总负债用 `expenseColor` 着色)——净资产视图的负债进度条/环比跌幅同样
 /// 复用这套映射,不是独立发明的红绿方案。
-Color widgetExpenseColor(bool redForIncome) =>
-    redForIncome ? kWidgetIncomeGreen : kWidgetExpenseRed;
+///
+/// 蓝收橙支方案支出用 [kWidgetExpenseOrange];红绿两套保留与桌面组件渲染
+/// 历史一致([kWidgetExpenseRed] / [kWidgetIncomeGreen])。
+Color widgetExpenseColor(IncomeExpenseColorScheme scheme) {
+  switch (scheme) {
+    case IncomeExpenseColorScheme.redIncome:
+      return kWidgetIncomeGreen;
+    case IncomeExpenseColorScheme.greenIncome:
+      return kWidgetExpenseRed;
+    case IncomeExpenseColorScheme.blueIncome:
+      return kWidgetExpenseOrange;
+  }
+}
 
-/// 按 `redForIncome` 解析"收入"语义色,见 [widgetExpenseColor]。净资产视图
+/// 按 [scheme] 解析"收入"语义色,见 [widgetExpenseColor]。净资产视图
 /// 的资产进度条/环比涨幅复用这套映射(涨=收入语义=正面)。
-Color widgetIncomeColor(bool redForIncome) =>
-    redForIncome ? kWidgetExpenseRed : kWidgetIncomeGreen;
+Color widgetIncomeColor(IncomeExpenseColorScheme scheme) {
+  switch (scheme) {
+    case IncomeExpenseColorScheme.redIncome:
+      return kWidgetExpenseRed;
+    case IncomeExpenseColorScheme.greenIncome:
+      return kWidgetIncomeGreen;
+    case IncomeExpenseColorScheme.blueIncome:
+      return kWidgetIncomeBlue;
+  }
+}
 
 /// 卡片背景(明/暗)。暗色不直接照搬 App 内「方案D」的纯黑
 /// (`PiggyColorTokens` 暗黑背景是 #000000)——小组件是桌面上的独立小卡片,不是

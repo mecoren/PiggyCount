@@ -4,6 +4,7 @@ import 'dart:ui' show PlatformDispatcher;
 
 import 'package:flutter/material.dart';
 import 'package:home_widget/home_widget.dart';
+import '../providers/theme_providers.dart' show IncomeExpenseColorScheme;
 import '../styles/tokens.dart';
 import '../data/repositories/base_repository.dart';
 import '../l10n/app_localizations.dart';
@@ -161,7 +162,7 @@ class WidgetManager {
     BaseRepository repository,
     int ledgerId,
     Color themeColor, {
-    bool redForIncome = true,
+    IncomeExpenseColorScheme colorScheme = IncomeExpenseColorScheme.blueIncome,
     // 六款组件统一内容标签(2026-07 A 方案):glance 中号从「App 名 header」
     // 改为内容标签(iOS HIG:widget 内不放 App 名),其余三款新增标签。
     // 分别对应 arb widgetGalleryGlanceTitle / widgetGalleryQuickAddTitle /
@@ -260,7 +261,7 @@ class WidgetManager {
             spec,
             batch: batch,
             themeColor: themeColor,
-            redForIncome: redForIncome,
+            colorScheme: colorScheme,
             dark: dark,
             glanceTitleLabel: glanceTitleLabel,
             quickAddTitleLabel: quickAddTitleLabel,
@@ -341,7 +342,7 @@ class WidgetManager {
     int ledgerId,
     Color themeColor, {
     required Locale? explicitLocale,
-    bool redForIncome = true,
+    IncomeExpenseColorScheme colorScheme = IncomeExpenseColorScheme.blueIncome,
     String baseCurrency = 'CNY',
     bool warmUpAllSpecs = false,
   }) {
@@ -350,7 +351,7 @@ class WidgetManager {
       repository,
       ledgerId,
       themeColor,
-      redForIncome: redForIncome,
+      colorScheme: colorScheme,
       warmUpAllSpecs: warmUpAllSpecs,
       glanceTitleLabel: l10n.widgetGalleryGlanceTitle,
       quickAddTitleLabel: l10n.widgetGalleryQuickAddTitle,
@@ -400,7 +401,7 @@ class WidgetManager {
     WidgetSpec spec, {
     required WidgetGatherBatch batch,
     required Color themeColor,
-    required bool redForIncome,
+    required IncomeExpenseColorScheme colorScheme,
     required bool dark,
     required String glanceTitleLabel,
     required String quickAddTitleLabel,
@@ -432,7 +433,7 @@ class WidgetManager {
           spec,
           batch: batch,
           themeColor: themeColor,
-          redForIncome: redForIncome,
+          colorScheme: colorScheme,
           dark: dark,
           titleLabel: glanceTitleLabel,
           monthSuffix: monthSuffix,
@@ -448,7 +449,7 @@ class WidgetManager {
           spec,
           batch: batch,
           themeColor: themeColor,
-          redForIncome: redForIncome,
+          colorScheme: colorScheme,
           dark: dark,
           netWorthLabel: netWorthLabel,
           totalAssetsLabel: totalAssetsLabel,
@@ -471,7 +472,7 @@ class WidgetManager {
           spec,
           batch: batch,
           themeColor: themeColor,
-          redForIncome: redForIncome,
+          colorScheme: colorScheme,
           dark: dark,
           budgetLabel: budgetLabel,
           usedLabel: budgetUsedLabel,
@@ -485,7 +486,7 @@ class WidgetManager {
           spec,
           batch: batch,
           themeColor: themeColor,
-          redForIncome: redForIncome,
+          colorScheme: colorScheme,
           dark: dark,
           uncategorizedLabel: uncategorizedLabel,
           emptyLabel: noTransactionsLabel,
@@ -497,7 +498,7 @@ class WidgetManager {
           spec,
           batch: batch,
           themeColor: themeColor,
-          redForIncome: redForIncome,
+          colorScheme: colorScheme,
           dark: dark,
           monthExpenseLabel: monthExpenseLabel,
           monthIncomeLabel: monthIncomeLabel,
@@ -516,7 +517,7 @@ class WidgetManager {
     WidgetSpec spec, {
     required WidgetGatherBatch batch,
     required Color themeColor,
-    required bool redForIncome,
+    required IncomeExpenseColorScheme colorScheme,
     required bool dark,
     required String titleLabel,
     required String monthSuffix,
@@ -551,7 +552,7 @@ class WidgetManager {
         monthExpense: monthExpense,
         monthIncome: monthIncome,
         themeColor: themeColor,
-        redForIncome: redForIncome,
+        colorScheme: colorScheme,
         dark: dark,
         todayLabel: todayLabel,
         todayExpenseLabel: todayExpenseLabel,
@@ -573,7 +574,7 @@ class WidgetManager {
         monthExpense: monthExpense,
         monthIncome: monthIncome,
         themeColor: themeColor,
-        redForIncome: redForIncome,
+        colorScheme: colorScheme,
         dark: dark,
         titleLabel: titleLabel,
         monthSuffix: monthSuffix,
@@ -599,7 +600,7 @@ class WidgetManager {
     WidgetSpec spec, {
     required WidgetGatherBatch batch,
     required Color themeColor,
-    required bool redForIncome,
+    required IncomeExpenseColorScheme colorScheme,
     required bool dark,
     required String netWorthLabel,
     required String totalAssetsLabel,
@@ -627,7 +628,7 @@ class WidgetManager {
       trend: trend,
       topAccounts: topAccounts,
       themeColor: themeColor,
-      redForIncome: redForIncome,
+      colorScheme: colorScheme,
       dark: dark,
       netWorthLabel: netWorthLabel,
       totalAssetsLabel: totalAssetsLabel,
@@ -680,7 +681,7 @@ class WidgetManager {
     WidgetSpec spec, {
     required WidgetGatherBatch batch,
     required Color themeColor,
-    required bool redForIncome,
+    required IncomeExpenseColorScheme colorScheme,
     required bool dark,
     required String budgetLabel,
     required String usedLabel,
@@ -703,7 +704,7 @@ class WidgetManager {
       overview: overview,
       currencyCode: currencyCode,
       themeColor: themeColor,
-      redForIncome: redForIncome,
+      colorScheme: colorScheme,
       dark: dark,
       budgetLabel: budgetLabel,
       usedLabel: usedLabel,
@@ -727,7 +728,7 @@ class WidgetManager {
     WidgetSpec spec, {
     required WidgetGatherBatch batch,
     required Color themeColor,
-    required bool redForIncome,
+    required IncomeExpenseColorScheme colorScheme,
     required bool dark,
     required String uncategorizedLabel,
     required String emptyLabel,
@@ -745,7 +746,7 @@ class WidgetManager {
       items: items,
       defaultCurrency: defaultCurrency,
       themeColor: themeColor,
-      redForIncome: redForIncome,
+      colorScheme: colorScheme,
       dark: dark,
       uncategorizedLabel: uncategorizedLabel,
       emptyLabel: emptyLabel,
@@ -769,7 +770,7 @@ class WidgetManager {
     WidgetSpec spec, {
     required WidgetGatherBatch batch,
     required Color themeColor,
-    required bool redForIncome,
+    required IncomeExpenseColorScheme colorScheme,
     required bool dark,
     required String monthExpenseLabel,
     required String monthIncomeLabel,
@@ -792,7 +793,7 @@ class WidgetManager {
       data: data,
       defaultCurrency: defaultCurrency,
       themeColor: themeColor,
-      redForIncome: redForIncome,
+      colorScheme: colorScheme,
       dark: dark,
       monthExpenseLabel: monthExpenseLabel,
       monthIncomeLabel: monthIncomeLabel,

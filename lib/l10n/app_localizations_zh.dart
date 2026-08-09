@@ -2308,6 +2308,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appearanceColorSchemeOffDesc => '红色表示支出，绿色表示收入';
 
   @override
+  String get appearanceColorSchemeBlue => '蓝色收入 · 橙色支出';
+
+  @override
+  String get appearanceColorSchemeBlueDesc => '蓝色表示收入，橙色表示支出';
+
+  @override
   String fontSettingsCurrentScale(Object scale) {
     return '当前缩放：x$scale';
   }
@@ -2949,6 +2955,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get personalizeThemePiggyPink => '小猪粉';
+
+  @override
+  String get personalizeThemeSkyBlue => '天空蓝';
 
   @override
   String get personalizeThemeGradientBlue => '渐变蓝';
@@ -10071,6 +10080,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get appearanceColorSchemeOffDesc => '紅色表示支出，綠色表示收入';
 
   @override
+  String get appearanceColorSchemeBlue => '藍色收入 · 橙色支出';
+
+  @override
+  String get appearanceColorSchemeBlueDesc => '藍色表示收入，橙色表示支出';
+
+  @override
   String fontSettingsCurrentScale(Object scale) {
     return '當前縮放：x$scale';
   }
@@ -10712,6 +10727,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get personalizeThemePiggyPink => '小豬粉';
+
+  @override
+  String get personalizeThemeSkyBlue => '天空藍';
 
   @override
   String get personalizeThemeGradientBlue => '漸變藍';

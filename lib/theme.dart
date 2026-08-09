@@ -36,7 +36,7 @@ class PiggyTheme {
         thickness: 1,
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.white,
+        backgroundColor: PiggyTokens.scaffoldBackgroundLightStatic, // ⭐ 淡蓝，与页面背景融为一体
         foregroundColor: textDark,
         elevation: 0.0,
         centerTitle: true,
@@ -72,13 +72,13 @@ class PiggyTheme {
         primaryContainer: honeyGoldDark,     // ⭐ Switch thumb 等组件使用
         onPrimaryContainer: Colors.black,    // ⭐ primaryContainer 上的前景色
         secondary: energyOrangeDark,         // ⭐ 辅助色
-        surface: PiggyTokens.cardBackgroundDarkStatic, // ⭐ 改为纯黑
+        surface: PiggyTokens.cardBackgroundDarkStatic, // ⭐ 深蓝灰卡片
         onSurface: Colors.white,
       ),
       primaryColor: honeyGoldDark,     // ⭐ 主题色
-      scaffoldBackgroundColor: PiggyTokens.scaffoldBackgroundDarkStatic, // ⭐ 纯黑背景（OLED 友好）
+      scaffoldBackgroundColor: PiggyTokens.scaffoldBackgroundDarkStatic, // ⭐ 深蓝灰页面背景
       appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.black,  // ⭐ 改为纯黑
+        backgroundColor: PiggyTokens.scaffoldBackgroundDarkStatic, // ⭐ 深蓝灰，与页面背景融为一体
         foregroundColor: Colors.white,
         elevation: 0.0,
         centerTitle: true,
@@ -96,7 +96,7 @@ class PiggyTheme {
         elevation: 0,
       ),
       cardTheme: CardThemeData(
-        color: PiggyTokens.cardBackgroundDarkStatic, // ⭐ 改为纯黑卡片
+        color: PiggyTokens.cardBackgroundDarkStatic, // ⭐ 深蓝灰卡片
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(PiggyDimens.radiusXl), // ⭐ 与亮色统一为 radiusXl

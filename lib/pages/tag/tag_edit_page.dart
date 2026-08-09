@@ -89,6 +89,7 @@ class _TagEditPageState extends ConsumerState<TagEditPage> {
 
                     // 标签名称
                     SectionCard(
+                      borderColor: Theme.of(context).colorScheme.primary,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -132,6 +133,7 @@ class _TagEditPageState extends ConsumerState<TagEditPage> {
 
                     // 颜色选择
                     SectionCard(
+                      borderColor: Theme.of(context).colorScheme.primary,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [

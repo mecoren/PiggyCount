@@ -265,6 +265,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
           // ===== 账户类型（资产/负债 Tab + 缩小网格）=====
           SectionCard(
             margin: EdgeInsets.zero,
+            borderColor: primaryColor,
             child: Padding(
               padding: EdgeInsets.all(16.0.scaled(context, ref)),
               child: Column(
@@ -319,6 +320,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
           // ===== 基本（名称 + 币种/余额）=====
           SectionCard(
             margin: EdgeInsets.zero,
+            borderColor: primaryColor,
             child: Padding(
               padding: EdgeInsets.all(16.0.scaled(context, ref)),
               child: Column(
@@ -427,6 +429,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
             SizedBox(height: 8.0.scaled(context, ref)),
             SectionCard(
               margin: EdgeInsets.zero,
+              borderColor: primaryColor,
               child: Padding(
                 padding: EdgeInsets.all(16.0.scaled(context, ref)),
                 child: Column(
@@ -572,6 +575,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
             SizedBox(height: 8.0.scaled(context, ref)),
             SectionCard(
               margin: EdgeInsets.zero,
+              borderColor: primaryColor,
               child: Padding(
                 padding: EdgeInsets.all(16.0.scaled(context, ref)),
                 child: Column(
@@ -617,6 +621,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
           SizedBox(height: 8.0.scaled(context, ref)),
           SectionCard(
             margin: EdgeInsets.zero,
+            borderColor: primaryColor,
             child: Padding(
               padding: EdgeInsets.all(16.0.scaled(context, ref)),
               child: TextFormField(
@@ -729,6 +734,9 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
     // 底部抽屉模式：复用 formWidget，保存按钮放标题栏右侧
     if (widget.renderAsBottomSheet) {
       return ExpandableBottomSheet(
+        // 新建账户抽屉整体背景与页面背景(scaffoldBackground)一致，
+        // 标题栏与内容区融为一色，与分类选择器弹窗视觉统一。
+        backgroundColor: PiggyTokens.scaffoldBackground(context),
         title: l10n.accountNewTitle,
         onClose: () => Navigator.of(context).pop(),
         onSave: (_saving || _isNameDuplicate) ? null : _save,

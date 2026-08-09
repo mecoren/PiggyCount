@@ -44,10 +44,10 @@ final themeModeInitProvider = FutureProvider<void>((ref) async {
 });
 
 // 可变主色（个性化换装使用）
-// 默认值：小猪粉（与 personalize_page.dart 中 personalizeThemePiggyPink 选项一致，
+// 默认值：天空蓝（与 personalize_page.dart 中 personalizeThemeSkyBlue 选项一致，
 // 列表第一位）。老用户已在 prefs 存过 primaryColor 的，由 primaryColorInitProvider
 // 覆盖为本机选择；未存过的新用户走此默认。
-final primaryColorProvider = StateProvider<Color>((ref) => const Color(0xFFFF5C8D));
+final primaryColorProvider = StateProvider<Color>((ref) => const Color(0xFF497FF8));
 
 // 是否隐藏金额显示
 final hideAmountsProvider = StateProvider<bool>((ref) => false);
@@ -70,7 +70,7 @@ final primaryColorInitProvider = FutureProvider<void>((ref) async {
     try {
       final repository = ref.read(repositoryProvider);
       final currentLedgerId = ref.read(currentLedgerIdProvider);
-      final redForIncome = ref.read(incomeExpenseColorSchemeProvider);
+      final colorScheme = ref.read(incomeExpenseColorSchemeProvider);
       final baseCurrency = ref.read(baseCurrencyProvider);
       // 没有 BuildContext,靠 languageProvider 还原当前 App 语言(见
       // widget_manager.dart resolveWidgetLocalizations 文档)。
@@ -81,7 +81,7 @@ final primaryColorInitProvider = FutureProvider<void>((ref) async {
         currentLedgerId,
         next,
         explicitLocale: locale,
-        redForIncome: redForIncome,
+        colorScheme: colorScheme,
         baseCurrency: baseCurrency,
       );
     } catch (e) {
@@ -362,20 +362,105 @@ void _pushAppearanceToCloud(Ref ref) {
   }());
 }
 
-// 收支颜色方案Provider（默认红色收入、绿色支出）
-// true = 红色收入、绿色支出
-// false = 红色支出、绿色收入
-final incomeExpenseColorSchemeProvider = StateProvider<bool>((ref) => true);
+// 收支颜色方案(v2:从 bool 升级为枚举,新增「蓝色收入/橙色支出」方案)。
+//
+// 早期版仅支持红色↔绿色的方向反转,语义上把"红色"作硬编码配色,
+// widget 内不便分担第三种配色。现在的方案采用"枚举+显式收入/支出色"
+// 的形态,新增配色只需要扩 enum,不用改 widget 接线。
+//
+// 持久化键保持 `incomeExpenseColorScheme`,迁移老 bool 值的兼容性靠
+// [incomeExpenseColorSchemeInitProvider] 完成:启动时检测到旧值后
+// 立刻回写到新 schema,之后按字符串名存储(`'redIncome'`/
+// `'greenIncome'`/`'blueIncome'`)。
+enum IncomeExpenseColorScheme {
+  /// 红色收入 / 绿色支出(经典配色,原 `redForIncome == true`)。
+  redIncome('redIncome'),
 
-// 收支颜色方案持久化初始化
-final incomeExpenseColorSchemeInitProvider = FutureProvider<void>((ref) async {
-  final prefs = await SharedPreferences.getInstance();
-  final saved = prefs.getBool('incomeExpenseColorScheme');
-  if (saved != null) {
-    ref.read(incomeExpenseColorSchemeProvider.notifier).state = saved;
+  /// 绿色收入 / 红色支出(原 `redForIncome == false`)。
+  greenIncome('greenIncome'),
+
+  /// 蓝色收入 (#477AF8) / 橙色支出 (#EE6839)。
+  /// 偏好默认,无障碍对比和品牌色都兼顾。
+  blueIncome('blueIncome');
+
+  const IncomeExpenseColorScheme(this.persistenceKey);
+
+  /// 持久化键:prefs 与云 profile sync 共用同一种字符串协议。
+  /// 老版本可能存的是 bool,首次启动时迁移。
+  final String persistenceKey;
+
+  /// 该方案下「收入」应取的语义色 token。
+  SchemeColor get incomeColor {
+    switch (this) {
+      case IncomeExpenseColorScheme.redIncome:
+        return SchemeColor.error;
+      case IncomeExpenseColorScheme.greenIncome:
+        return SchemeColor.success;
+      case IncomeExpenseColorScheme.blueIncome:
+        return SchemeColor.incomeBlue;
+    }
   }
-  ref.listen<bool>(incomeExpenseColorSchemeProvider, (prev, next) async {
-    await prefs.setBool('incomeExpenseColorScheme', next);
+
+  /// 该方案下「支出」应取的语义色 token。
+  SchemeColor get expenseColor {
+    switch (this) {
+      case IncomeExpenseColorScheme.redIncome:
+        return SchemeColor.success;
+      case IncomeExpenseColorScheme.greenIncome:
+        return SchemeColor.error;
+      case IncomeExpenseColorScheme.blueIncome:
+        return SchemeColor.expenseOrange;
+    }
+  }
+
+  /// 把 prefs / API 读到的字符串解析回 enum;未知值兜底
+  /// [blueIncome](默认),绝不抛(便于老版本/外部数据兼容)。
+  static IncomeExpenseColorScheme fromKey(Object? raw) {
+    if (raw is bool) {
+      // 兼容老 prefs: true → redIncome, false → greenIncome。
+      return raw ? IncomeExpenseColorScheme.redIncome : IncomeExpenseColorScheme.greenIncome;
+    }
+    if (raw is String) {
+      for (final v in IncomeExpenseColorScheme.values) {
+        if (v.persistenceKey == raw) return v;
+      }
+    }
+    return IncomeExpenseColorScheme.blueIncome;
+  }
+}
+
+/// 收入/支出语义色 token(`IncomeExpenseColorScheme` → 实际色)的中介枚举。
+///
+/// 映射在 [PiggyTokens.incomeColor]/[PiggyTokens.expenseColor] 内部完成:
+/// [SchemeColor.error]/[SchemeColor.success] 走主题色 token(自动跟暗黑
+/// 模式),自定义色([SchemeColor.incomeBlue]/[SchemeColor.expenseOrange])直
+/// 接返回固定值 —— 明暗差异由配色自身兼顾,不二次走主题色 token。
+enum SchemeColor { error, success, incomeBlue, expenseOrange }
+
+/// 收支颜色方案Provider(默认:蓝色收入 / 橙色支出)。
+final incomeExpenseColorSchemeProvider =
+    StateProvider<IncomeExpenseColorScheme>(
+        (ref) => IncomeExpenseColorScheme.blueIncome);
+
+// 收支颜色方案持久化初始化(同时承担 bool → enum 的迁移,见
+// [IncomeExpenseColorScheme.fromKey])。
+final incomeExpenseColorSchemeInitProvider =
+    FutureProvider<void>((ref) async {
+  final prefs = await SharedPreferences.getInstance();
+  // 同时读 string 和 bool,新版本写 string,旧版本写的是 bool。
+  final savedString = prefs.getString('incomeExpenseColorScheme');
+  final savedBool = prefs.getBool('incomeExpenseColorScheme');
+  final saved = savedString ?? savedBool;
+  if (saved != null) {
+    final current = ref.read(incomeExpenseColorSchemeProvider);
+    final next = IncomeExpenseColorScheme.fromKey(saved);
+    if (next != current) {
+      ref.read(incomeExpenseColorSchemeProvider.notifier).state = next;
+    }
+  }
+  ref.listen<IncomeExpenseColorScheme>(
+      incomeExpenseColorSchemeProvider, (prev, next) async {
+    await prefs.setString('incomeExpenseColorScheme', next.persistenceKey);
     try {
       final repository = ref.read(repositoryProvider);
       final currentLedgerId = ref.read(currentLedgerIdProvider);
@@ -390,7 +475,7 @@ final incomeExpenseColorSchemeInitProvider = FutureProvider<void>((ref) async {
         currentLedgerId,
         primaryColor,
         explicitLocale: locale,
-        redForIncome: next,
+        colorScheme: next,
         baseCurrency: baseCurrency,
       );
     } catch (e) {
@@ -405,10 +490,10 @@ final incomeExpenseColorSchemeInitProvider = FutureProvider<void>((ref) async {
             await ref.read(piggycountCloudProviderInstance.future);
         if (cloudProvider == null) return;
         await cloudProvider.updateMyProfileIncomeColorScheme(
-          incomeIsRed: next,
+          scheme: next.persistenceKey,
         );
         logger.info('theme_providers',
-            'income color scheme pushed to server: incomeIsRed=$next');
+            'income color scheme pushed to server: scheme=$next');
       } catch (e) {
         logger.warning('theme_providers',
             'push income color scheme failed (non-blocking): $e');

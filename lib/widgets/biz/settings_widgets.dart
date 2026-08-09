@@ -46,14 +46,16 @@ class SettingsSectionLabel extends StatelessWidget {
 /// 视觉规格：
 /// - 圆角 16px
 /// - 背景色 `PiggyTokens.surface`
-/// - 无阴影、无边框（靠背景色对比分层）
-/// - 无默认 padding（children 自带 padding）
+/// - 主题色细边框（1.5px，与统计页图表卡片 / 交易列表卡片统一）
+/// - 无阴影、无默认 padding（children 自带 padding）
 /// - 卡片内项目之间不画 Divider，靠 padding 分隔
 class SettingsCard extends StatelessWidget {
   const SettingsCard({
     super.key,
     required this.children,
     this.margin,
+    this.borderColor,
+    this.borderWidth,
   });
 
   final List<Widget> children;
@@ -61,13 +63,24 @@ class SettingsCard extends StatelessWidget {
   /// 外边距，默认为零（由外层 ListView 的 16px padding 控制水平间距）
   final EdgeInsets? margin;
 
+  /// 卡片边框颜色，默认取当前主题色。
+  final Color? borderColor;
+
+  /// 卡片边框宽度，默认 1.5（与统计页图表卡片一致）。
+  final double? borderWidth;
+
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
     return Container(
       margin: margin ?? EdgeInsets.zero,
       decoration: BoxDecoration(
         color: PiggyTokens.surface(context),
         borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
+        border: Border.all(
+          color: borderColor ?? primary,
+          width: borderWidth ?? 1.5,
+        ),
       ),
       child: Column(children: children),
     );

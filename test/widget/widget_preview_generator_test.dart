@@ -39,6 +39,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:piggycount/data/db.dart' show Account, Category, Transaction;
 import 'package:piggycount/data/repositories/budget_repository.dart'
     show BudgetOverview, BudgetUsage, CategoryBudgetUsage;
+import 'package:piggycount/providers/theme_providers.dart'
+    show IncomeExpenseColorScheme;
 import 'package:piggycount/widget/views/budget_view.dart';
 import 'package:piggycount/widget/views/dashboard_view.dart';
 import 'package:piggycount/widget/views/glance_view.dart';
@@ -381,7 +383,7 @@ Future<void> _generatePack(WidgetTester tester, _Pack p) async {
       monthExpense: '${p.sym}842.3',
       monthIncome: '${p.sym}1,850',
       themeColor: _honey,
-      redForIncome: false,
+      colorScheme: IncomeExpenseColorScheme.redIncome,
       dark: false,
       todayLabel: p.todayLabel,
       todayExpenseLabel: p.todayExpenseLabel,
@@ -404,7 +406,7 @@ Future<void> _generatePack(WidgetTester tester, _Pack p) async {
       monthExpense: '${p.sym}6,842.3',
       monthIncome: '${p.sym}18,500',
       themeColor: _honey,
-      redForIncome: false,
+      colorScheme: IncomeExpenseColorScheme.redIncome,
       dark: false,
       titleLabel: p.glanceTitleLabel,
       monthSuffix: p.monthSuffix,
@@ -432,7 +434,7 @@ Future<void> _generatePack(WidgetTester tester, _Pack p) async {
       baseCurrency: p.currency,
       trend: _trend(),
       themeColor: _honey,
-      redForIncome: false,
+      colorScheme: IncomeExpenseColorScheme.redIncome,
       dark: false,
       netWorthLabel: p.netWorthLabel,
       totalAssetsLabel: p.totalAssetsLabel,
@@ -456,7 +458,7 @@ Future<void> _generatePack(WidgetTester tester, _Pack p) async {
       baseCurrency: p.currency,
       trend: _trend(),
       themeColor: _honey,
-      redForIncome: false,
+      colorScheme: IncomeExpenseColorScheme.redIncome,
       dark: false,
       netWorthLabel: p.netWorthLabel,
       totalAssetsLabel: p.totalAssetsLabel,
@@ -490,7 +492,7 @@ Future<void> _generatePack(WidgetTester tester, _Pack p) async {
             convertedBalance: 12650),
       ],
       themeColor: _honey,
-      redForIncome: false,
+      colorScheme: IncomeExpenseColorScheme.redIncome,
       dark: false,
       netWorthLabel: p.netWorthLabel,
       totalAssetsLabel: p.totalAssetsLabel,
@@ -561,7 +563,7 @@ Future<void> _generatePack(WidgetTester tester, _Pack p) async {
       ),
       currencyCode: p.currency,
       themeColor: _honey,
-      redForIncome: false,
+      colorScheme: IncomeExpenseColorScheme.redIncome,
       dark: false,
       budgetLabel: p.budgetLabel,
       usedLabel: p.usedLabel,
@@ -607,7 +609,7 @@ Future<void> _generatePack(WidgetTester tester, _Pack p) async {
       ),
       currencyCode: p.currency,
       themeColor: _honey,
-      redForIncome: false,
+      colorScheme: IncomeExpenseColorScheme.redIncome,
       dark: false,
       budgetLabel: p.budgetLabel,
       usedLabel: p.usedLabel,
@@ -629,7 +631,7 @@ Future<void> _generatePack(WidgetTester tester, _Pack p) async {
       items: _recentItems(p),
       defaultCurrency: p.currency,
       themeColor: _honey,
-      redForIncome: false,
+      colorScheme: IncomeExpenseColorScheme.redIncome,
       dark: false,
       titleLabel: p.recentLabel,
       width: 364,
@@ -648,7 +650,7 @@ Future<void> _generatePack(WidgetTester tester, _Pack p) async {
       items: [..._recentItems(p), ..._recentItems(p)],
       defaultCurrency: p.currency,
       themeColor: _honey,
-      redForIncome: false,
+      colorScheme: IncomeExpenseColorScheme.redIncome,
       dark: false,
       titleLabel: p.recentLabel,
       width: 364,
@@ -676,7 +678,7 @@ Future<void> _generatePack(WidgetTester tester, _Pack p) async {
       ),
       defaultCurrency: p.currency,
       themeColor: _honey,
-      redForIncome: false,
+      colorScheme: IncomeExpenseColorScheme.redIncome,
       dark: false,
       monthExpenseLabel: p.monthExpenseLabel,
       monthIncomeLabel: p.monthIncomeLabel,

@@ -45,7 +45,7 @@ class WidgetManagementPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final primaryColor = ref.watch(primaryColorProvider);
-    final redForIncome = ref.watch(incomeExpenseColorSchemeProvider);
+    final colorScheme = ref.watch(incomeExpenseColorSchemeProvider);
     final dark = PiggyTokens.isDark(context);
 
     return Scaffold(
@@ -80,7 +80,7 @@ class WidgetManagementPage extends ConsumerWidget {
               monthExpense: '¥3,200.5',
               monthIncome: '¥8,000',
               themeColor: primaryColor,
-              redForIncome: redForIncome,
+              colorScheme: colorScheme,
               dark: dark,
               titleLabel: l10n.widgetGalleryGlanceTitle,
               monthSuffix: l10n.widgetMonthSuffix,
@@ -110,7 +110,7 @@ class WidgetManagementPage extends ConsumerWidget {
               monthExpense: '¥3,200.5',
               monthIncome: '¥8,000',
               themeColor: primaryColor,
-              redForIncome: redForIncome,
+              colorScheme: colorScheme,
               dark: dark,
               todayLabel: l10n.widgetToday,
               todayExpenseLabel: l10n.widgetTodayExpense,
@@ -139,7 +139,7 @@ class WidgetManagementPage extends ConsumerWidget {
               trend: _sampleNetWorthTrend(),
               topAccounts: _sampleNetWorthAccounts(),
               themeColor: primaryColor,
-              redForIncome: redForIncome,
+              colorScheme: colorScheme,
               dark: dark,
               netWorthLabel: l10n.accountTotalBalance,
               totalAssetsLabel: l10n.totalAssets,
@@ -185,7 +185,7 @@ class WidgetManagementPage extends ConsumerWidget {
               overview: _sampleBudgetOverview(),
               currencyCode: 'CNY',
               themeColor: primaryColor,
-              redForIncome: redForIncome,
+              colorScheme: colorScheme,
               dark: dark,
               budgetLabel: l10n.budgetMonthlyBudget,
               usedLabel: l10n.budgetUsed,
@@ -211,7 +211,7 @@ class WidgetManagementPage extends ConsumerWidget {
               items: _sampleRecentItems(),
               defaultCurrency: 'CNY',
               themeColor: primaryColor,
-              redForIncome: redForIncome,
+              colorScheme: colorScheme,
               dark: dark,
               uncategorizedLabel: l10n.commonUncategorized,
               emptyLabel: l10n.widgetNoTransactions,
@@ -234,7 +234,7 @@ class WidgetManagementPage extends ConsumerWidget {
               data: _sampleDashboardData(),
               defaultCurrency: 'CNY',
               themeColor: primaryColor,
-              redForIncome: redForIncome,
+              colorScheme: colorScheme,
               dark: dark,
               monthExpenseLabel: l10n.widgetMonthExpense,
               monthIncomeLabel: l10n.widgetMonthIncome,

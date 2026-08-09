@@ -81,144 +81,165 @@ class _CategoryMigrationPageState extends ConsumerState<CategoryMigrationPage> {
     final l10n = AppLocalizations.of(context);
 
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 说明卡片
-          SectionCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline,
-                      color: ref.watch(primaryColorProvider),
+          // 可滚动表单区域：说明卡 + 类型选择 + 迁出/迁入分类。
+          // 之前在 Column 内直接用 Spacer 推按钮,内容过多时会溢出
+          // (BOTTOM OVERFLOWED BY 55 PIXELS),这里改为 Expanded + 滚动。
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 说明卡片
+                  SectionCard(
+                    // 外层 _buildMigrationForm 已有 16px 左右 padding,
+                    // 这里把 SectionCard 自带的 12px 水平外边距重置为 0,
+                    // 保证说明卡和下方「选择类型/迁出分类/迁入分类/开始迁移」按钮同宽对齐。
+                    margin: EdgeInsets.zero,
+                    borderColor: ref.watch(primaryColorProvider),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              color: ref.watch(primaryColorProvider),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              l10n.categoryMigrationDescription,
+                              style: TextStyle(
+                                color: ref.watch(primaryColorProvider),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          l10n.categoryMigrationDescriptionContent,
+                          style: TextStyle(
+                            color: PiggyTokens.textSecondary(context),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      l10n.categoryMigrationDescription,
-                      style: TextStyle(
-                        color: ref.watch(primaryColorProvider),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  l10n.categoryMigrationDescriptionContent,
-                  style: TextStyle(
-                    color: PiggyTokens.textSecondary(context),
-                    fontSize: 14,
                   ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-          // 类型选择
-          Text(
-            l10n.categoryMigrationTypeLabel,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-              color: PiggyTokens.textPrimary(context),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: _TypeButton(
-                  label: l10n.categoryExpense,
-                  icon: Icons.trending_down,
-                  isSelected: _selectedType == 'expense',
-                  onTap: () {
-                    setState(() {
-                      _selectedType = 'expense';
-                      _fromCategory = null;
-                      _toCategory = null;
-                    });
-                  },
-                ),
+                  // 类型选择
+                  Text(
+                    l10n.categoryMigrationTypeLabel,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      color: PiggyTokens.textPrimary(context),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _TypeButton(
+                          label: l10n.categoryExpense,
+                          icon: Icons.trending_down,
+                          isSelected: _selectedType == 'expense',
+                          onTap: () {
+                            setState(() {
+                              _selectedType = 'expense';
+                              _fromCategory = null;
+                              _toCategory = null;
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _TypeButton(
+                          label: l10n.categoryIncome,
+                          icon: Icons.trending_up,
+                          isSelected: _selectedType == 'income',
+                          onTap: () {
+                            setState(() {
+                              _selectedType = 'income';
+                              _fromCategory = null;
+                              _toCategory = null;
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // 迁出分类
+                  Text(
+                    l10n.categoryMigrationFromLabel,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      color: PiggyTokens.textPrimary(context),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _CategorySelectorButton(
+                    category: _fromCategory,
+                    hintText: l10n.categoryMigrationFromHint,
+                    icon: Icons.upload_outlined,
+                    enabled: _selectedType != null,
+                    onTap:
+                        _selectedType != null ? () => _selectFromCategory() : null,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // 迁入分类
+                  Text(
+                    l10n.categoryMigrationToLabel,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      color: PiggyTokens.textPrimary(context),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _CategorySelectorButton(
+                    category: _toCategory,
+                    hintText: _fromCategory == null
+                        ? l10n.categoryMigrationToHintFirst
+                        : l10n.categoryMigrationToHint,
+                    icon: Icons.download_outlined,
+                    enabled: _fromCategory != null,
+                    onTap: _fromCategory != null ? () => _selectToCategory() : null,
+                  ),
+                  const SizedBox(height: 16),
+                ],
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _TypeButton(
-                  label: l10n.categoryIncome,
-                  icon: Icons.trending_up,
-                  isSelected: _selectedType == 'income',
-                  onTap: () {
-                    setState(() {
-                      _selectedType = 'income';
-                      _fromCategory = null;
-                      _toCategory = null;
-                    });
-                  },
-                ),
+            ),
+          ),
+          // 固定在底部的操作按钮
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 16),
+            child: SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed:
+                    _canMigrate() && !_isLoading ? _performMigration : null,
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(l10n.categoryMigrationStartButton),
               ),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          // 迁出分类
-          Text(
-            l10n.categoryMigrationFromLabel,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-              color: PiggyTokens.textPrimary(context),
             ),
           ),
-          const SizedBox(height: 8),
-          _CategorySelectorButton(
-            category: _fromCategory,
-            hintText: l10n.categoryMigrationFromHint,
-            icon: Icons.upload_outlined,
-            enabled: _selectedType != null,
-            onTap: _selectedType != null ? () => _selectFromCategory() : null,
-          ),
-          const SizedBox(height: 24),
-
-          // 迁入分类
-          Text(
-            l10n.categoryMigrationToLabel,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-              color: PiggyTokens.textPrimary(context),
-            ),
-          ),
-          const SizedBox(height: 8),
-          _CategorySelectorButton(
-            category: _toCategory,
-            hintText: _fromCategory == null
-                ? l10n.categoryMigrationToHintFirst
-                : l10n.categoryMigrationToHint,
-            icon: Icons.download_outlined,
-            enabled: _fromCategory != null,
-            onTap: _fromCategory != null ? () => _selectToCategory() : null,
-          ),
-          const Spacer(),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed:
-                  _canMigrate() && !_isLoading ? _performMigration : null,
-              child: _isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(l10n.categoryMigrationStartButton),
-            ),
-          ),
-          const SizedBox(height: 16),
         ],
       ),
     );
@@ -390,9 +411,10 @@ class _TypeButton extends ConsumerWidget {
           color: isSelected
               ? primaryColor.withValues(alpha: 0.1)
               : PiggyTokens.surface(context),
+          // 主题色边框：选中加粗，未选中细边框
           border: Border.all(
-            color: isSelected ? primaryColor : PiggyTokens.border(context),
-            width: isSelected ? 2 : 1,
+            color: primaryColor,
+            width: isSelected ? 2 : 1.5,
           ),
           borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         ),
@@ -451,10 +473,10 @@ class _CategorySelectorButton extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: PiggyTokens.surface(context),
+          // 主题色边框：已选加粗，未选细边框
           border: Border.all(
-            color:
-                category != null ? primaryColor : PiggyTokens.border(context),
-            width: category != null ? 2 : 1,
+            color: primaryColor,
+            width: category != null ? 2 : 1.5,
           ),
           borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         ),

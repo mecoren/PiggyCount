@@ -132,6 +132,7 @@ class ExpandableBottomSheet extends StatelessWidget {
                       onPressed: onSave,
                     ),
                 ],
+                // 标题栏与内容区使用同一个 bgColor，保证上下背景无缝衔接。
                 backgroundColor: bgColor,
                 bottom: bottom,
                 bottomHeight: bottomHeight,

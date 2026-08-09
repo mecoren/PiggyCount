@@ -207,6 +207,7 @@ class _JoinSharedLedgerPageState extends ConsumerState<JoinSharedLedgerPage> {
 
   Widget _buildInputCard(AppLocalizations l10n) {
     return SectionCard(
+      borderColor: Theme.of(context).colorScheme.primary,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -276,6 +277,7 @@ class _JoinSharedLedgerPageState extends ConsumerState<JoinSharedLedgerPage> {
   Widget _buildPreviewCard(
       PiggyCountCloudInvitePreview preview, AppLocalizations l10n) {
     return SectionCard(
+      borderColor: Theme.of(context).colorScheme.primary,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

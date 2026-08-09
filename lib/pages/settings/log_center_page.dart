@@ -146,7 +146,11 @@ class _LogCenterPageState extends ConsumerState<LogCenterPage> {
             child: SettingsCard(
               children: [
                 Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  // 用 stretch 让 Column 横向填满 SettingsCard 内部宽度,
+                  // 与下方日志列表项(InkWell + Padding + Column 已自动拉伸)
+                  // 保持一致的卡片宽度;否则 Column 默认按内容自适应宽度,
+                  // 整张卡看起来比下面的日志卡窄。
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // 日志级别过滤
                     Padding(

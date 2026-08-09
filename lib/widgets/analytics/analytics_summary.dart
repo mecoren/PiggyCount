@@ -5,7 +5,44 @@ import '../../l10n/app_localizations.dart';
 import '../../providers/currency_providers.dart';
 import '../../providers/theme_providers.dart';
 import '../../utils/currencies.dart';
-import '../biz/amount_text.dart';
+
+/// 完整数字格式：千分号 + 始终保留两位小数，不带币种符号、不压缩万/k/M。
+/// 仅用于「洞察」页合计卡：用户要求展示完整金额，不要 "¥14.63万" 这种缩写。
+String _formatFullPlain(double v, {bool signed = false}) {
+  final abs = v.abs().toStringAsFixed(2);
+  final parts = abs.split('.');
+  final intPart = parts[0];
+  final decPart = parts.length > 1 ? parts[1] : '00';
+
+  // 千分号：每 3 位插入逗号
+  final buf = StringBuffer();
+  for (int i = 0; i < intPart.length; i++) {
+    if (i > 0 && (intPart.length - i) % 3 == 0) buf.write(',');
+    buf.write(intPart[i]);
+  }
+
+  final core = '${buf.toString()}.$decPart';
+  if (v < 0) return '-$core';
+  if (signed) return '+$core';
+  return core;
+}
+
+/// 洞察页统一金额文字样式：不带币种符号、带千分号、固定两位小数。
+/// 4 个指标（总额/平均/同比/结余）使用相同字号（与「收支报表」同款尺寸），
+/// 确保视觉一致。
+Text _summaryAmount(BuildContext context, String text, Color? color) {
+  return Text(
+    text,
+    maxLines: 1,
+    overflow: TextOverflow.ellipsis,
+    style: TextStyle(
+      fontSize: 16,
+      height: 1.15,
+      fontWeight: FontWeight.w700,
+      color: color ?? PiggyTokens.textPrimary(context),
+    ),
+  );
+}
 
 /// 洞察页顶部合计卡片（2×2 四指标网格，参考收支报表样式）。
 ///
@@ -17,6 +54,9 @@ import '../biz/amount_text.dart';
 ///
 /// 每个指标前置蓝色色块 marker（参考收支报表卡片样式），无卡片阴影。
 /// 支持 [hideAmounts] 隐藏金额与暗黑/浅色主题。
+///
+/// 数字展示规则（用户要求）：4 个金额统一字号，不带币种符号，不使用万/k/M
+/// 缩写，始终保留两位小数（如 `146,300.00`）。见 [_formatFullPlain]。
 class AnalyticsSummary extends ConsumerWidget {
   final String scope; // week/month/year/all
   final bool isExpense;
@@ -112,29 +152,13 @@ class AnalyticsSummary extends ConsumerWidget {
               _cell(
                 context,
                 label: title + unit,
-                value: AmountText(
-                  value: total,
-                  signed: false,
-                  showCurrency: true,
-                  useCompactFormat: true,
-                  style: TextStyle(
-                    fontSize: 22,
-                    height: 1.15,
-                    fontWeight: FontWeight.w700,
-                    color: primaryColor,
-                  ),
-                ),
+                value: _summaryAmount(context, _formatFullPlain(total), primaryColor),
               ),
               const SizedBox(width: 16),
               _cell(
                 context,
                 label: avgLabel + unit,
-                value: AmountText(
-                  value: avg,
-                  signed: false,
-                  useCompactFormat: true,
-                  style: _subStyle(context),
-                ),
+                value: _summaryAmount(context, _formatFullPlain(avg), null),
               ),
             ],
           ),
@@ -152,15 +176,12 @@ class AnalyticsSummary extends ConsumerWidget {
                         : l10n.analyticsTxCount) +
                     unit,
                 value: prevTotal != null
-                    ? AmountText(
-                        value: yoy,
-                        signed: true,
-                        showCurrency: true,
-                        useCompactFormat: true,
-                        style: _subStyle(context).copyWith(
-                            color: PiggyTokens.primary(context)),
+                    ? _summaryAmount(
+                        context,
+                        _formatFullPlain(yoy, signed: true),
+                        PiggyTokens.primary(context),
                       )
-                    : Text('$txCount', style: _subStyle(context)),
+                    : _summaryAmount(context, '$txCount', null),
               ),
               const SizedBox(width: 16),
               _cell(
@@ -170,21 +191,16 @@ class AnalyticsSummary extends ConsumerWidget {
                         : _trimColon(l10n.analyticsBalance)) +
                     unit,
                 value: (isBalance && expenseTotal != null)
-                    ? AmountText(
-                        value: expenseTotal!,
-                        signed: false,
-                        useCompactFormat: true,
-                        style: _subStyle(context).copyWith(
-                            color: expenseColor ??
-                                PiggyTokens.expenseColor(context, ref)),
+                    ? _summaryAmount(
+                        context,
+                        _formatFullPlain(expenseTotal!),
+                        expenseColor ??
+                            PiggyTokens.expenseColor(context, ref),
                       )
-                    : AmountText(
-                        value: balance,
-                        signed: true,
-                        showCurrency: true,
-                        useCompactFormat: true,
-                        style:
-                            _subStyle(context).copyWith(color: balanceColor),
+                    : _summaryAmount(
+                        context,
+                        _formatFullPlain(balance, signed: true),
+                        balanceColor,
                       ),
               ),
             ],
@@ -193,18 +209,6 @@ class AnalyticsSummary extends ConsumerWidget {
       ),
     );
   }
-
-  /// 次要指标金额样式（平均 / 同比 / 结余）
-  TextStyle _subStyle(BuildContext context) =>
-      Theme.of(context).textTheme.bodyMedium?.copyWith(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: PiggyTokens.textPrimary(context),
-          ) ??
-      const TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.w700,
-      );
 
   /// 单个指标格：左侧蓝色色块 marker + 小标签 + 金额
   Widget _cell(BuildContext context,

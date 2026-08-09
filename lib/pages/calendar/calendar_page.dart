@@ -157,6 +157,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                   // 日历视图
                   SectionCard(
                     margin: EdgeInsets.zero,
+                    borderColor: primaryColor,
                     child: dailyTotalsAsync.when(
                       // 记账等触发 calendarRefreshProvider 时不切到 loading,
                       // 旧统计保留,等新数据来无缝替换 — 避免日历整页 spinner 闪烁
@@ -518,6 +519,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 
     final card = SectionCard(
       margin: EdgeInsets.zero,
+      borderColor: primaryColor,
       child: transactionsAsync.when(
         // 同上:bump 刷新触发的 reload 不切到 loading 分支,旧列表保持显示
         skipLoadingOnReload: true,
@@ -621,6 +623,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 
     return SectionCard(
       margin: EdgeInsets.zero,
+      borderColor: ref.watch(primaryColorProvider),
       child: transactionsAsync.when(
         data: (transactions) {
           if (transactions.isEmpty) {

@@ -317,7 +317,9 @@ class _CategorySelectorDialogState extends ConsumerState<CategorySelectorDialog>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: PiggyTokens.surfaceElevated(context),
+              // 标题栏背景与弹窗主体(scaffoldBackground)同色,
+              // 让顶部栏与列表区域融为一体,不再单独区分色块。
+              color: PiggyTokens.scaffoldBackground(context),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
               border: Border(
                 bottom: BorderSide(

@@ -2,6 +2,7 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 
+import '../../providers/theme_providers.dart';
 import '../../styles/tokens.dart';
 import '../widget_spec.dart' show HWSize;
 import 'widget_view_style.dart';
@@ -30,7 +31,7 @@ class GlanceView extends StatelessWidget {
   final String monthIncome;
 
   final Color themeColor;
-  final bool redForIncome;
+  final IncomeExpenseColorScheme colorScheme;
 
   /// 系统明暗态,由 `WidgetManager` 用 `PlatformDispatcher` 在渲染时取一次
   /// 传入(切换后靠 App 重渲染触发换色,App 存活时经
@@ -61,7 +62,7 @@ class GlanceView extends StatelessWidget {
     required this.monthExpense,
     required this.monthIncome,
     required this.themeColor,
-    required this.redForIncome,
+    required this.colorScheme,
     required this.dark,
     required this.monthSuffix,
     required this.todayExpenseLabel,
@@ -80,7 +81,7 @@ class GlanceView extends StatelessWidget {
     required this.monthExpense,
     required this.monthIncome,
     required this.themeColor,
-    required this.redForIncome,
+    required this.colorScheme,
     required this.dark,
     required this.todayLabel,
     required this.todayExpenseLabel,
@@ -94,8 +95,8 @@ class GlanceView extends StatelessWidget {
     this.todayIncomeLabel = '',
   }) : size = HWSize.small;
 
-  Color get _expenseColor => widgetExpenseColor(redForIncome);
-  Color get _incomeColor => widgetIncomeColor(redForIncome);
+  Color get _expenseColor => widgetExpenseColor(colorScheme);
+  Color get _incomeColor => widgetIncomeColor(colorScheme);
 
   @override
   Widget build(BuildContext context) {

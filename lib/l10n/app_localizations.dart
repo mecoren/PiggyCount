@@ -4346,6 +4346,18 @@ abstract class AppLocalizations {
   /// **'Red represents expense, green represents income'**
   String get appearanceColorSchemeOffDesc;
 
+  /// No description provided for @appearanceColorSchemeBlue.
+  ///
+  /// In en, this message translates to:
+  /// **'Blue for income · Orange for expense'**
+  String get appearanceColorSchemeBlue;
+
+  /// No description provided for @appearanceColorSchemeBlueDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Blue represents income, orange represents expense'**
+  String get appearanceColorSchemeBlueDesc;
+
   /// No description provided for @fontSettingsCurrentScale.
   ///
   /// In en, this message translates to:
@@ -5565,6 +5577,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Piggy Pink'**
   String get personalizeThemePiggyPink;
+
+  /// No description provided for @personalizeThemeSkyBlue.
+  ///
+  /// In en, this message translates to:
+  /// **'Azure Blue'**
+  String get personalizeThemeSkyBlue;
 
   /// No description provided for @personalizeThemeGradientBlue.
   ///
