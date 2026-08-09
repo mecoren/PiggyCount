@@ -45,6 +45,12 @@ class TransactionList extends ConsumerStatefulWidget {
   /// 列表控制器（可选，用于精准跳转）
   final FlutterListViewController? controller;
 
+  /// 是否把整张明细列表包成一个大卡片(日期头部 + 所有交易项统一一张卡,
+  /// 天与天之间用分割线隔开,日内交易不再画分割线)。
+  /// - true:整张大卡片风格(首页"明细"tab 当前风格);
+  /// - false:不包外卡,回到无包裹状态(向后兼容)。
+  final bool wrapInOuterCard;
+
   const TransactionList({
     super.key,
     this.transactionsWithDetails,
@@ -54,6 +60,7 @@ class TransactionList extends ConsumerStatefulWidget {
     this.onDateVisibilityChanged,
     this.emptyWidget,
     this.controller,
+    this.wrapInOuterCard = true,
   }) : assert(transactionsWithDetails != null || transactions != null,
             'Either transactionsWithDetails or transactions must be provided');
 
@@ -304,15 +311,32 @@ class TransactionListState extends ConsumerState<TransactionList> {
     _flatItems = <dynamic>[];
     _dateIndexMap.clear();
 
-    for (final key in sortedKeys) {
-      final list = groups[key]!;
-      // 记录日期头部在扁平化列表中的索引
-      _dateIndexMap[key] = _flatItems.length;
-      // 添加日期头部
-      _flatItems.add(('header', key, list));
-      // 添加所有交易项
-      for (final item in list) {
-        _flatItems.add(('transaction', item, list));
+    if (widget.wrapInOuterCard && sortedKeys.isNotEmpty) {
+      // 「整张大卡片」风格:首日插入 outerCardStart 标记,日内追加各 day,
+      // 天与天之间插 dayDivider,末日后插 outerCardEnd 标记。首/末标记只各占
+      // 一个 flat item,在 build delegate 中通过「首个 day item 之前是
+      // outerCardStart」识别,这里实际不需要单独的 start/end 标记 ——
+      // 外层大卡片在首个 day item 一次性渲染,后续 day item 渲染 SizedBox 占位,
+      // bottomSpacer 维持原位置。
+      for (int i = 0; i < sortedKeys.length; i++) {
+        final key = sortedKeys[i];
+        final list = groups[key]!;
+        _dateIndexMap[key] = _flatItems.length;
+        _flatItems.add(('day', key, list));
+        // 天与天之间插一个分割线 item(亮暗都画细线,沿用 PiggyTokens.listDayDivider*)
+        if (i < sortedKeys.length - 1) {
+          _flatItems.add(('dayDivider', null, null));
+        }
+      }
+    } else if (!widget.wrapInOuterCard) {
+      // 平铺旧风格:header + 每个交易项独立占一行
+      for (final key in sortedKeys) {
+        final list = groups[key]!;
+        _dateIndexMap[key] = _flatItems.length;
+        _flatItems.add(('header', key, list));
+        for (final item in list) {
+          _flatItems.add(('transaction', item, list));
+        }
       }
     }
 
@@ -370,7 +394,7 @@ class TransactionListState extends ConsumerState<TransactionList> {
           }
 
           if (type == 'header') {
-            // 渲染日期头部
+            // 渲染日期头部(平铺旧风格用)
             final dateKey = item.$2 as String;
             final list = item.$3 as List<({Transaction t, Category? category, Account? account, Account? toAccount})>;
             double dayIncome = 0, dayExpense = 0;
@@ -414,173 +438,281 @@ class TransactionListState extends ConsumerState<TransactionList> {
             }
 
             return header;
+          } else if (type == 'day') {
+            // 「整张大卡片」风格:在首个 day item 一次性构建包含所有 day 的外卡,
+            // 后续 day item + dayDivider item 渲染 SizedBox.shrink() 占位(它们已
+            // 包含在外卡里)。jumpToMonth 用 _dateIndexMap 跳到首个 day item 即可。
+            if (index == _dateIndexMap.values.reduce((a, b) => a < b ? a : b)) {
+              return _buildOuterCard(context);
+            }
+            return const SizedBox.shrink();
+          } else if (type == 'dayDivider') {
+            // dayDivider 已被外层大卡片包含,此 index 渲染占位。
+            return const SizedBox.shrink();
           } else {
-            // 渲染交易项
+            // 'transaction' 平铺旧风格(wrapInOuterCard = false):平铺单条交易,
+            // 项之间用 PiggyDivider.short 分隔,项的具体渲染复用 _buildTransactionRow。
             final it = item.$2 as ({Transaction t, Category? category, Account? account, Account? toAccount});
             final allItemsInDay = item.$3 as List<({Transaction t, Category? category, Account? account, Account? toAccount})>;
-            final isTransfer = it.t.type == 'transfer';
-            final isExpense = it.t.type == 'expense';
-            final isAdjustment = it.t.type == 'adjustment';
-
-            // 获取分类显示名称
-            final categoryName = isAdjustment
-                ? AppLocalizations.of(context).adjustmentTransaction
-                : CategoryUtils.getDisplayName(it.category?.name, context);
-
-            final subtitle = it.t.note ?? '';
-
-            // 检查是否是当天最后一项
             final isLastInGroup = allItemsInDay.last.t.id == it.t.id;
 
-            // 账户名 — D 方案:account / toAccount 已经由 watchTransactionsWith*
-            // 的 LEFT JOIN(+ SharedLedger* hydration)直接挂在 tx 记录上,
-            // 跟 category 同款。UI 只读 it.account?.name,Drift 自动响应主表
-            // accounts 行变化 + 镜像表 sharedLedgerAccounts 变化,无需任何
-            // 命令式 cache / setState / provider fallback。
-            final accountFeatureEnabled =
-                ref.watch(accountFeatureEnabledProvider).valueOrNull ?? true;
-            String? accountName;
-            String? toAccountName;
-            if (accountFeatureEnabled) {
-              accountName = it.account?.name;
-              if (isTransfer) toAccountName = it.toAccount?.name;
-            }
-
-            return Dismissible(
-              key: Key('tx-${it.t.id}-$index'), // 添加索引避免key冲突
-              direction: DismissDirection.endToStart,
-              background: Container(
-                alignment: Alignment.centerRight,
-                padding: const EdgeInsets.only(right: 16),
-                color: Colors.red,
-                child: const Icon(Icons.delete, color: Colors.white),
-              ),
-              confirmDismiss: (direction) async {
-                return await AppDialog.confirm<bool>(
-                      context,
-                      title: AppLocalizations.of(context).deleteConfirmTitle,
-                      message: AppLocalizations.of(context).deleteConfirmMessage,
-                    ) ??
-                    false;
-              },
-              onDismissed: (direction) async {
-                final repo = ref.read(repositoryProvider);
-                await repo.deleteTransaction(it.t.id);
-
-                if (!context.mounted) return;
-                final curLedger = ref.read(currentLedgerIdProvider);
-                ref.invalidate(countsForLedgerProvider(curLedger));
-                ref.read(statsRefreshProvider.notifier).state++;
-                ref.read(budgetRefreshProvider.notifier).state++;
-                PostProcessor.sync(ref, ledgerId: curLedger);
-
-                if (context.mounted) {
-                  showToast(context, AppLocalizations.of(context).ledgersDeleted);
-                }
-              },
-              child: Column(
-                children: [
-                  Builder(
-                    builder: (context) {
-                      // 获取该交易的标签（优先使用预加载数据）
-                      final transactionTags = _getTagsForTransaction(it.t.id);
-                      final tagsList = transactionTags
-                          .map((t) => (id: t.id, name: t.name, color: t.color))
-                          .toList();
-
-                      // 转账账户信息
-                      final transferAccountInfo = (accountName != null && toAccountName != null)
-                          ? '$accountName → $toAccountName'
-                          : null;
-
-                      // 获取附件数量（优先使用预加载数据）
-                      final attachmentCount = _getAttachmentCountForTransaction(it.t.id);
-
-                      return TransactionListItem(
-                        icon: isAdjustment
-                          ? Icons.tune
-                          : getCategoryIconData(category: it.category, categoryName: categoryName),
-                        category: isAdjustment ? null : it.category,
-                        title: isTransfer
-                          ? (subtitle.isNotEmpty ? subtitle : AppLocalizations.of(context).transferTitle)
-                          : isAdjustment
-                            ? categoryName
-                            : subtitle,
-                        categoryName: (isTransfer || isAdjustment)
-                          ? null
-                          : categoryName,
-                        amount: it.t.amount,
-                        transactionId: it.t.id,
-                        currencyCode: it.t.currencyCode,
-                        nativeAmount: it.t.nativeAmount,
-                        isExpense: isExpense,
-                        isTransfer: isTransfer,
-                        isAdjustment: isAdjustment,
-                        hide: widget.hideAmounts,
-                        happenedAt: it.t.happenedAt,
-                        accountName: isTransfer
-                          ? transferAccountInfo  // 转账始终在第三行显示账户信息
-                          : accountName,
-                        tags: tagsList.isNotEmpty ? tagsList : null,
-                        attachmentCount: attachmentCount,
-                        excludeFromStats: it.t.excludeFromStats,
-                        excludeFromBudget: it.t.excludeFromBudget,
-                        onAttachmentTap: attachmentCount > 0
-                            ? () async {
-                                switchToStreamMode(); // 用户交互，切换到 Stream 模式
-                                await Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => AttachmentPreviewPage.fromTransaction(
-                                      transactionId: it.t.id,
-                                    ),
-                                  ),
-                                );
-                              }
-                            : null,
-                        onTagTap: (tagId, tagName) async {
-                          switchToStreamMode(); // 用户交互，切换到 Stream 模式
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => TagDetailPage(
-                                tagId: tagId,
-                                tagName: tagName,
-                              ),
-                            ),
-                          );
-                        },
-                        onTap: () async {
-                          switchToStreamMode(); // 用户交互，切换到 Stream 模式
-                          await TransactionEditUtils.editTransaction(
-                            context,
-                            ref,
-                            it.t,
-                            it.category,
-                          );
-                        },
-                        onCategoryTap: !isTransfer && it.category?.id != null
-                            ? () async {
-                                switchToStreamMode(); // 用户交互，切换到 Stream 模式
-                                await Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => CategoryDetailPage(
-                                      categoryId: it.category!.id,
-                                      categoryName: categoryName,
-                                    ),
-                                  ),
-                                );
-                              }
-                            : null,
-                      );
-                    },
-                  ),
-                  if (!isLastInGroup)
-                    PiggyDivider.short(indent: 56 + 16, endIndent: 16),
-                ],
-              ),
+            return Column(
+              children: [
+                _buildTransactionRow(context, index, it, allItemsInDay),
+                if (!isLastInGroup)
+                  PiggyDivider.short(indent: 56 + 16, endIndent: 16),
+              ],
             );
           }
         },
         childCount: _flatItems.length,
+      ),
+    );
+  }
+
+  /// 渲染单个交易项(Dismissible + TransactionListItem)。被「日卡片」和
+  /// 旧平铺模式共用;调用方负责在项之间加分隔线,此处不输出。
+  Widget _buildTransactionRow(
+    BuildContext context,
+    int flatIndex,
+    ({Transaction t, Category? category, Account? account, Account? toAccount}) it,
+    List<({Transaction t, Category? category, Account? account, Account? toAccount})> allItemsInDay,
+  ) {
+    final isTransfer = it.t.type == 'transfer';
+    final isExpense = it.t.type == 'expense';
+    final isAdjustment = it.t.type == 'adjustment';
+
+    final categoryName = isAdjustment
+        ? AppLocalizations.of(context).adjustmentTransaction
+        : CategoryUtils.getDisplayName(it.category?.name, context);
+
+    final subtitle = it.t.note ?? '';
+
+    // D 方案:account / toAccount 已经由 watchTransactionsWith* 的 LEFT JOIN
+    // (+ SharedLedger* hydration) 直接挂在 tx 记录上,跟 category 同款。UI 只读
+    // it.account?.name,Drift 自动响应主表 accounts 行变化 + 镜像表
+    // sharedLedgerAccounts 变化,无需任何命令式 cache / setState / provider fallback。
+    final accountFeatureEnabled =
+        ref.watch(accountFeatureEnabledProvider).valueOrNull ?? true;
+    String? accountName;
+    String? toAccountName;
+    if (accountFeatureEnabled) {
+      accountName = it.account?.name;
+      if (isTransfer) toAccountName = it.toAccount?.name;
+    }
+
+    return Dismissible(
+      key: Key('tx-${it.t.id}-$flatIndex'), // 添加索引避免key冲突
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 16),
+        color: Colors.red,
+        child: const Icon(Icons.delete, color: Colors.white),
+      ),
+      confirmDismiss: (direction) async {
+        return await AppDialog.confirm<bool>(
+              context,
+              title: AppLocalizations.of(context).deleteConfirmTitle,
+              message: AppLocalizations.of(context).deleteConfirmMessage,
+            ) ??
+            false;
+      },
+      onDismissed: (direction) async {
+        final repo = ref.read(repositoryProvider);
+        await repo.deleteTransaction(it.t.id);
+
+        if (!context.mounted) return;
+        final curLedger = ref.read(currentLedgerIdProvider);
+        ref.invalidate(countsForLedgerProvider(curLedger));
+        ref.read(statsRefreshProvider.notifier).state++;
+        ref.read(budgetRefreshProvider.notifier).state++;
+        PostProcessor.sync(ref, ledgerId: curLedger);
+
+        if (context.mounted) {
+          showToast(context, AppLocalizations.of(context).ledgersDeleted);
+        }
+      },
+      child: Builder(
+        builder: (context) {
+          // 获取该交易的标签（优先使用预加载数据）
+          final transactionTags = _getTagsForTransaction(it.t.id);
+          final tagsList = transactionTags
+              .map((t) => (id: t.id, name: t.name, color: t.color))
+              .toList();
+
+          // 转账账户信息
+          final transferAccountInfo = (accountName != null && toAccountName != null)
+              ? '$accountName → $toAccountName'
+              : null;
+
+          // 获取附件数量（优先使用预加载数据）
+          final attachmentCount = _getAttachmentCountForTransaction(it.t.id);
+
+          return TransactionListItem(
+            icon: isAdjustment
+                ? Icons.tune
+                : getCategoryIconData(category: it.category, categoryName: categoryName),
+            category: isAdjustment ? null : it.category,
+            title: isTransfer
+                ? (subtitle.isNotEmpty ? subtitle : AppLocalizations.of(context).transferTitle)
+                : isAdjustment
+                    ? categoryName
+                    : subtitle,
+            categoryName: (isTransfer || isAdjustment)
+                ? null
+                : categoryName,
+            amount: it.t.amount,
+            transactionId: it.t.id,
+            currencyCode: it.t.currencyCode,
+            nativeAmount: it.t.nativeAmount,
+            isExpense: isExpense,
+            isTransfer: isTransfer,
+            isAdjustment: isAdjustment,
+            hide: widget.hideAmounts,
+            happenedAt: it.t.happenedAt,
+            accountName: isTransfer
+                ? transferAccountInfo  // 转账始终在第三行显示账户信息
+                : accountName,
+            tags: tagsList.isNotEmpty ? tagsList : null,
+            attachmentCount: attachmentCount,
+            excludeFromStats: it.t.excludeFromStats,
+            excludeFromBudget: it.t.excludeFromBudget,
+            onAttachmentTap: attachmentCount > 0
+                ? () async {
+                    switchToStreamMode(); // 用户交互，切换到 Stream 模式
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => AttachmentPreviewPage.fromTransaction(
+                          transactionId: it.t.id,
+                        ),
+                      ),
+                    );
+                  }
+                : null,
+            onTagTap: (tagId, tagName) async {
+              switchToStreamMode(); // 用户交互，切换到 Stream 模式
+              await Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => TagDetailPage(
+                    tagId: tagId,
+                    tagName: tagName,
+                  ),
+                ),
+              );
+            },
+            onTap: () async {
+              switchToStreamMode(); // 用户交互，切换到 Stream 模式
+              await TransactionEditUtils.editTransaction(
+                context,
+                ref,
+                it.t,
+                it.category,
+              );
+            },
+            onCategoryTap: !isTransfer && it.category?.id != null
+                ? () async {
+                    switchToStreamMode(); // 用户交互，切换到 Stream 模式
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => CategoryDetailPage(
+                          categoryId: it.category!.id,
+                          categoryName: categoryName,
+                        ),
+                      ),
+                    );
+                  }
+                : null,
+          );
+        },
+      ),
+    );
+  }
+
+  /// 渲染「日卡片」:DaySectionHeader + 当天所有交易项,包在一个卡片容器里。
+  ///
+  /// 卡片样式对齐 SectionCard(margin + 圆角 + surface + 阴影/边框),适合
+  /// 首页「明细」tab 的无限滚动场景——按天分组自然形成视觉分组,无需再用
+  /// 日分隔线把每天隔开。
+  ///
+  /// 渲染「整张明细」大卡片:DaySectionHeader + 当天所有交易项,按天拼成一张
+  /// 外层卡片(surface 背景 + 圆角 + 阴影/边框);天与天之间用
+  /// [PiggyTokens.listDayDivider*] 细线分隔,日内交易项之间不再画分隔线。
+  Widget _buildOuterCard(BuildContext context) {
+    final isDark = PiggyTokens.isDark(context);
+    final borderWidth = PiggyTokens.cardOuterBorderWidth(context);
+    final borderColor = PiggyTokens.cardOuterBorderColor(context);
+
+    // 遍历 _flatItems,按顺序取出 day + dayDivider 组合成 children
+    final children = <Widget>[];
+    int flatDayIndex = 0; // 仅用于 _buildTransactionRow 的 Dismissible key
+    for (final item in _flatItems) {
+      final type = item.$1 as String;
+      if (type == 'day') {
+        final dateKey = item.$2 as String;
+        final list = item.$3 as List<({Transaction t, Category? category, Account? account, Account? toAccount})>;
+        // 当天收支(用于 DaySectionHeader)
+        double dayIncome = 0, dayExpense = 0;
+        for (final it in list) {
+          if (it.t.type == 'income') {
+            dayIncome += it.t.nativeAmount ?? it.t.amount;
+          }
+          if (it.t.type == 'expense') {
+            dayExpense += it.t.nativeAmount ?? it.t.amount;
+          }
+        }
+        Widget header = DaySectionHeader(
+          dateText: dateKey,
+          income: dayIncome,
+          expense: dayExpense,
+          hide: widget.hideAmounts,
+        );
+        // 可见性跟踪用于首页月份跳转
+        if (widget.enableVisibilityTracking && widget.onDateVisibilityChanged != null) {
+          header = VisibilityDetector(
+            key: Key('header-$dateKey'),
+            onVisibilityChanged: (VisibilityInfo info) {
+              widget.onDateVisibilityChanged!(dateKey, info.visibleFraction > 0.5);
+            },
+            child: header,
+          );
+        }
+        // day 块:header + 当天所有交易(无日内分割线)
+        children.add(header);
+        for (int i = 0; i < list.length; i++) {
+          children.add(_buildTransactionRow(context, flatDayIndex, list[i], list));
+          flatDayIndex++;
+        }
+      } else if (type == 'dayDivider') {
+        // 天与天之间的细线(亮暗都显示)。不连接到卡片两端:缩进 12 与卡片内
+        // 内容对齐(DaySectionHeader / TransactionListItem 的水平 padding)。
+        children.add(Divider(
+          height: PiggyTokens.listDayDividerHeight(context),
+          thickness: PiggyTokens.listDayDividerHeight(context),
+          color: PiggyTokens.listDayDividerColor(context),
+          indent: 12,
+          endIndent: 12,
+        ));
+      }
+      // 其他类型(bottomSpacer 等)不进外卡,已在 flat items 列表里独立渲染。
+    }
+
+    return Container(
+      margin: PiggyDimens.cardMargin,
+      decoration: BoxDecoration(
+        color: PiggyTokens.surface(context),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+        border: borderWidth > 0
+            ? Border.all(color: borderColor, width: borderWidth)
+            : null,
+        boxShadow: isDark ? null : PiggyShadows.card,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: children,
+        ),
       ),
     );
   }

@@ -8,8 +8,9 @@ import '../../utils/category_utils.dart';
 import '../../data/db.dart' as db;
 import '../biz/biz.dart';
 
-/// 饼图用的分类调色板（12 色，覆盖常见分类数量）
-const _kPieColors = <Color>[
+/// 饼图/排行榜共用的分类调色板（12 色，覆盖常见分类数量）。
+/// 排行榜按分类排序下标取色，与环形图扇区颜色一一对应。
+const kAnalyticsPieColors = <Color>[
   Color(0xFF5B8FF9), // 蓝
   Color(0xFF5AD8A6), // 绿
   Color(0xFFF6BD16), // 黄
@@ -34,7 +35,7 @@ typedef PieCategoryItem = ({
       subCategories,
 });
 
-/// 分类占比饼图
+/// 分类占比环形图（donut，外置引线标签：名称 + 百分比）
 class CategoryPieChart extends ConsumerStatefulWidget {
   final List<PieCategoryItem> data;
   final double sum;
@@ -86,7 +87,8 @@ class _CategoryPieChartState extends ConsumerState<CategoryPieChart> {
         slices.add((
           name: item.name,
           total: item.total,
-          color: _kPieColors[slices.length % _kPieColors.length],
+          color:
+              kAnalyticsPieColors[slices.length % kAnalyticsPieColors.length],
           originalIndex: idx,
         ));
       } else {
@@ -121,140 +123,149 @@ class _CategoryPieChartState extends ConsumerState<CategoryPieChart> {
     final hasSelection = _touchedIndex >= 0 && _touchedIndex < slices.length;
     final selectedSlice = hasSelection ? slices[_touchedIndex] : null;
 
-    return Column(
-      children: [
-        SizedBox(
-          height: 220,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              PieChart(
-                PieChartData(
-                  pieTouchData: PieTouchData(
-                    touchCallback: (event, response) {
-                      if (!event.isInterestedForInteractions ||
-                          response == null ||
-                          response.touchedSection == null) {
-                        if (_touchedIndex != -1) {
-                          setState(() => _touchedIndex = -1);
-                          widget.onSectionTap?.call(-1);
-                        }
-                        return;
-                      }
-                      final idx = response.touchedSection!.touchedSectionIndex;
-                      if (idx != _touchedIndex) {
-                        setState(() => _touchedIndex = idx);
-                        if (idx >= 0 && idx < slices.length) {
-                          widget.onSectionTap?.call(slices[idx].originalIndex);
-                        }
-                      }
-                    },
-                  ),
-                  sectionsSpace: 2,
-                  centerSpaceRadius: 50,
-                  sections: List.generate(slices.length, (i) {
-                    final s = slices[i];
-                    final pct = (s.total / widget.sum * 100);
-                    final isTouched = i == _touchedIndex;
-                    return PieChartSectionData(
-                      color: s.color,
-                      value: s.total,
-                      title: pct >= 5 ? '${pct.toStringAsFixed(1)}%' : '',
-                      radius: isTouched ? 56 : 48,
-                      titleStyle: TextStyle(
-                        fontSize: isTouched ? 13 : 11,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    );
-                  }),
-                ),
+    return SizedBox(
+      height: 240,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          PieChart(
+            PieChartData(
+              pieTouchData: PieTouchData(
+                touchCallback: (event, response) {
+                  if (!event.isInterestedForInteractions ||
+                      response == null ||
+                      response.touchedSection == null) {
+                    if (_touchedIndex != -1) {
+                      setState(() => _touchedIndex = -1);
+                      widget.onSectionTap?.call(-1);
+                    }
+                    return;
+                  }
+                  final idx = response.touchedSection!.touchedSectionIndex;
+                  if (idx != _touchedIndex) {
+                    setState(() => _touchedIndex = idx);
+                    if (idx >= 0 && idx < slices.length) {
+                      widget.onSectionTap?.call(slices[idx].originalIndex);
+                    }
+                  }
+                },
               ),
-              // 环形中心：显示选中分类的名称和金额，或总金额
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    selectedSlice != null
-                        ? (selectedSlice.name == '_other_'
-                            ? l10n.commonOther
-                            : CategoryUtils.getDisplayName(
-                                selectedSlice.name, context))
-                        : l10n.analyticsTotalAmount,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: PiggyTokens.textTertiary(context),
-                          fontSize: 11,
-                        ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  AmountText(
-                    value: selectedSlice?.total ?? widget.sum,
-                    signed: false,
-                    decimals: 0,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: PiggyTokens.textPrimary(context),
+              sectionsSpace: 2,
+              centerSpaceRadius: 52,
+              sections: List.generate(slices.length, (i) {
+                final s = slices[i];
+                final pct = (s.total / widget.sum * 100);
+                final isTouched = i == _touchedIndex;
+                final displayName = s.name == '_other_'
+                    ? l10n.commonOther
+                    : CategoryUtils.getDisplayName(s.name, context);
+                return PieChartSectionData(
+                  color: s.color,
+                  value: s.total,
+                  title: '',
+                  radius: isTouched ? 40 : 32,
+                  // 外置标签：名称 + 百分比（占比过小的扇区不标，避免拥挤）
+                  showTitle: false,
+                  badgeWidget: pct >= 4
+                      ? _ExternalLabel(
+                          name: displayName,
+                          percent: pct,
+                          color: s.color,
+                          highlighted: isTouched,
+                        )
+                      : null,
+                  badgePositionPercentageOffset: 1.28,
+                );
+              }),
+            ),
+          ),
+          // 环形中心：显示选中分类的名称和金额，或总金额
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                selectedSlice != null
+                    ? (selectedSlice.name == '_other_'
+                        ? l10n.commonOther
+                        : CategoryUtils.getDisplayName(
+                            selectedSlice.name, context))
+                    : l10n.analyticsTotalAmount,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: PiggyTokens.textTertiary(context),
+                      fontSize: 11,
                     ),
-                  ),
-                ],
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              AmountText(
+                value: selectedSlice?.total ?? widget.sum,
+                signed: false,
+                useCompactFormat: true,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: PiggyTokens.textPrimary(context),
+                ),
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 环形图外置标签：彩色圆点 + 名称 + 百分比
+class _ExternalLabel extends StatelessWidget {
+  final String name;
+  final double percent;
+  final Color color;
+  final bool highlighted;
+
+  const _ExternalLabel({
+    required this.name,
+    required this.percent,
+    required this.color,
+    required this.highlighted,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 3),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 64),
+              child: Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight:
+                      highlighted ? FontWeight.w600 : FontWeight.w400,
+                  color: PiggyTokens.textPrimary(context),
+                ),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
-        // 图例：名称 + 金额 + 百分比
-        Wrap(
-          spacing: 16,
-          runSpacing: 8,
-          alignment: WrapAlignment.center,
-          children: slices.map((s) {
-            final pct = (s.total / widget.sum * 100).toStringAsFixed(1);
-            final displayName = s.name == '_other_'
-                ? l10n.commonOther
-                : CategoryUtils.getDisplayName(s.name, context);
-            return Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: s.color,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  displayName,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: PiggyTokens.textPrimary(context),
-                        fontSize: 11,
-                      ),
-                ),
-                const SizedBox(width: 4),
-                AmountText(
-                  value: s.total,
-                  signed: false,
-                  decimals: 0,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: PiggyTokens.textSecondary(context),
-                  ),
-                ),
-                const SizedBox(width: 2),
-                Text(
-                  '($pct%)',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: PiggyTokens.textTertiary(context),
-                        fontSize: 10,
-                      ),
-                ),
-              ],
-            );
-          }).toList(),
+        Text(
+          '${percent.toStringAsFixed(2)}%',
+          style: TextStyle(
+            fontSize: 9,
+            color: PiggyTokens.textTertiary(context),
+          ),
         ),
       ],
     );

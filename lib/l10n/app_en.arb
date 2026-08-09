@@ -302,7 +302,16 @@
   "searchBatchCategoryTypeError": "Selected transactions have different types, please select all income or all expense",
   "searchDateStart": "Start",
   "searchDateEnd": "End",
+  "analyticsWeek": "Week",
   "analyticsMonth": "Month",
+  "analyticsWeekTotal": "{type} This Week: ",
+  "analyticsComparedToLastWeek": "vs Last Week",
+  "analyticsThisWeek": "This Week",
+  "analyticsThisMonth": "This Month",
+  "analyticsThisYear": "This Year",
+  "analyticsTrendTitle": "{period} Trend",
+  "analyticsCategoryComposition": "{type} by Category",
+  "analyticsTxCountShort": "{count} txns",
   "analyticsYear": "Year",
   "analyticsAll": "All",
   "analyticsCategoryRanking": "Category Ranking",
@@ -317,7 +326,7 @@
       }
     }
   },
-  "analyticsTipHeader": "Tip: Top capsule can switch Month/Year/All",
+  "analyticsTipHeader": "Tip: Top capsule can switch Week/Month/Year/All",
   "analyticsSwipeToSwitch": "Swipe to switch",
   "analyticsAllYears": "All Years",
   "analyticsToday": "Today",
@@ -1224,6 +1233,8 @@
   "analyticsTotalIncome": "Total Income: ",
   "analyticsTotalExpense": "Total Expense: ",
   "analyticsBalance": "Balance: ",
+  "analyticsComparedToLastYear": "vs Last Year",
+  "analyticsTxCount": "Records",
   "analyticsAvgIncome": "{avgLabel} Income: ",
   "@analyticsAvgIncome": {
     "placeholders": {

@@ -107,6 +107,42 @@ String formatBalance(double balance, String currencyCode,
   }
 }
 
+/// 图表坐标轴/徽章的大金额紧凑缩写（不带币种符号）。
+///
+/// - 中文环境：>=1万 → `x.x万`（一位小数，去掉末尾 .0）；<1万 → 千分位整数
+/// - 其他语言：>=1e9 → B，>=1e6 → M，>=1e3 → k（一位小数，去尾零）；<1e3 → 整数
+///
+/// 负数前置 `-`。供折线/柱状图 Y 轴、tooltip、汇总 badge 复用。
+String formatCompactAxis(double v, {bool isChinese = true}) {
+  final sign = v < 0 ? '-' : '';
+  final abs = v.abs();
+
+  String trim(double scaled) {
+    var s = scaled.toStringAsFixed(1);
+    if (s.endsWith('.0')) s = s.substring(0, s.length - 2);
+    return s;
+  }
+
+  if (isChinese) {
+    if (abs >= 10000) return '$sign${trim(abs / 10000)}万';
+    return '$sign${_thousandSeparated(abs.round())}';
+  }
+  if (abs >= 1e9) return '$sign${trim(abs / 1e9)}B';
+  if (abs >= 1e6) return '$sign${trim(abs / 1e6)}M';
+  if (abs >= 1e3) return '$sign${trim(abs / 1e3)}k';
+  return '$sign${abs.round()}';
+}
+
+String _thousandSeparated(int v) {
+  final s = v.toString();
+  final buffer = StringBuffer();
+  for (int i = 0; i < s.length; i++) {
+    if (i > 0 && (s.length - i) % 3 == 0) buffer.write(',');
+    buffer.write(s[i]);
+  }
+  return buffer.toString();
+}
+
 /// 格式化完整余额显示（带千分号）
 ///
 /// [balance] 金额

@@ -585,7 +585,42 @@ class AppLocalizationsZh extends AppLocalizations {
   String get searchDateEnd => '结束';
 
   @override
+  String get analyticsWeek => '周';
+
+  @override
   String get analyticsMonth => '月';
+
+  @override
+  String analyticsWeekTotal(Object type) {
+    return '本周$type： ';
+  }
+
+  @override
+  String get analyticsComparedToLastWeek => '比上周';
+
+  @override
+  String get analyticsThisWeek => '本周';
+
+  @override
+  String get analyticsThisMonth => '本月';
+
+  @override
+  String get analyticsThisYear => '今年';
+
+  @override
+  String analyticsTrendTitle(Object period) {
+    return '$period趋势';
+  }
+
+  @override
+  String analyticsCategoryComposition(Object type) {
+    return '$type分类构成';
+  }
+
+  @override
+  String analyticsTxCountShort(Object count) {
+    return '$count笔';
+  }
 
   @override
   String get analyticsYear => '年';
@@ -611,7 +646,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get analyticsTipHeader => '提示：顶部胶囊可切换 月/年/全部';
+  String get analyticsTipHeader => '提示：顶部胶囊可切换 周/月/年/全部';
 
   @override
   String get analyticsSwipeToSwitch => '横滑切换';
@@ -2935,6 +2970,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get analyticsBalance => '结余： ';
+
+  @override
+  String get analyticsComparedToLastYear => '比上年';
+
+  @override
+  String get analyticsTxCount => '记账笔数';
 
   @override
   String analyticsAvgIncome(String avgLabel) {
@@ -8307,7 +8348,42 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get searchDateEnd => '結束';
 
   @override
+  String get analyticsWeek => '週';
+
+  @override
   String get analyticsMonth => '月';
+
+  @override
+  String analyticsWeekTotal(Object type) {
+    return '本週$type： ';
+  }
+
+  @override
+  String get analyticsComparedToLastWeek => '比上週';
+
+  @override
+  String get analyticsThisWeek => '本週';
+
+  @override
+  String get analyticsThisMonth => '本月';
+
+  @override
+  String get analyticsThisYear => '今年';
+
+  @override
+  String analyticsTrendTitle(Object period) {
+    return '$period趨勢';
+  }
+
+  @override
+  String analyticsCategoryComposition(Object type) {
+    return '$type分類構成';
+  }
+
+  @override
+  String analyticsTxCountShort(Object count) {
+    return '$count筆';
+  }
 
   @override
   String get analyticsYear => '年';
@@ -8333,7 +8409,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
-  String get analyticsTipHeader => '提示：頂部膠囊可切換月/年/全部';
+  String get analyticsTipHeader => '提示：頂部膠囊可切換週/月/年/全部';
 
   @override
   String get analyticsSwipeToSwitch => '橫滑切換';
@@ -10657,6 +10733,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get analyticsBalance => '結餘： ';
+
+  @override
+  String get analyticsComparedToLastYear => '比上年';
+
+  @override
+  String get analyticsTxCount => '記帳筆數';
 
   @override
   String analyticsAvgIncome(String avgLabel) {

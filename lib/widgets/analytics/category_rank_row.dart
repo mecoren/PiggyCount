@@ -20,6 +20,9 @@ class CategoryRankRow extends ConsumerStatefulWidget {
   final String scope; // 周期范围
   final DateTime selMonth; // 选中的月份
   final List<({int id, db.Category category, String name, double total})>? subCategories; // 预计算的子分类明细
+  final int? rank; // 排名序号（1 起），null 不显示
+  final int? count; // 该分类记账笔数，null 不显示
+  final String? periodLabel; // 周期详情页标签（周视角传入范围文案）
 
   const CategoryRankRow({
     super.key,
@@ -34,6 +37,9 @@ class CategoryRankRow extends ConsumerStatefulWidget {
     required this.scope,
     required this.selMonth,
     this.subCategories,
+    this.rank,
+    this.count,
+    this.periodLabel,
   });
 
   @override
@@ -96,9 +102,9 @@ class _CategoryRankRowState extends ConsumerState<CategoryRankRow> {
   void _handleTap(int? categoryId, String categoryName) {
     if (categoryId == null) return;
 
-    // 生成周期标签
-    String? periodLabel;
-    if (widget.scope != 'all') {
+    // 生成周期标签（周视角由页面直接传入范围文案）
+    String? periodLabel = widget.periodLabel;
+    if (periodLabel == null && widget.scope != 'all') {
       periodLabel = _currentPeriodLabel(widget.scope, widget.selMonth, context);
     }
 
@@ -159,6 +165,10 @@ class _CategoryRankRowState extends ConsumerState<CategoryRankRow> {
       color: widget.color,
     );
 
+    final l10n = AppLocalizations.of(context);
+    final showRank = isTopLevel && widget.rank != null;
+    final rank = widget.rank ?? 0;
+
     return InkWell(
       onTap: isTopLevel
           ? _handleTopLevelTap
@@ -174,6 +184,24 @@ class _CategoryRankRowState extends ConsumerState<CategoryRankRow> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            // 排名序号：前三名用分类调色板色，其余灰色
+            if (showRank) ...[
+              SizedBox(
+                width: 18,
+                child: Text(
+                  '$rank',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: rank <= 3
+                        ? widget.color
+                        : PiggyTokens.textTertiary(context),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+            ],
             SizedBox(
               width: isTopLevel ? 44 : 38,
               height: isTopLevel ? 44 : 38,
@@ -186,7 +214,7 @@ class _CategoryRankRowState extends ConsumerState<CategoryRankRow> {
                 children: [
                   Row(
                     children: [
-                      Expanded(
+                      Flexible(
                         child: Text(
                           CategoryUtils.getDisplayName(name, context),
                           maxLines: 1,
@@ -196,25 +224,19 @@ class _CategoryRankRowState extends ConsumerState<CategoryRankRow> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      AmountText(
-                        value: value,
-                        signed: false,
-                        decimals: 0,
-                        style: TextStyle(fontSize: isTopLevel ? 14 : 13),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Text(
-                        '${(percent * 100).toStringAsFixed(1)}%',
-                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: PiggyTokens.textTertiary(context),
-                          fontSize: isTopLevel ? 12 : 11,
+                      // 笔数：如「1笔」
+                      if (isTopLevel && widget.count != null) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          l10n.analyticsTxCountShort(widget.count!),
+                          style:
+                              Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color:
+                                        PiggyTokens.textTertiary(context),
+                                    fontSize: 11,
+                                  ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 6),
@@ -239,6 +261,42 @@ class _CategoryRankRowState extends ConsumerState<CategoryRankRow> {
                 ],
               ),
             ),
+            const SizedBox(width: 12),
+            // 右侧：百分比 + 金额（大金额紧凑显示）
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '${(percent * 100).toStringAsFixed(2)}%',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: PiggyTokens.textTertiary(context),
+                        fontSize: isTopLevel ? 11 : 10,
+                      ),
+                ),
+                const SizedBox(height: 2),
+                AmountText(
+                  value: value,
+                  signed: false,
+                  showCurrency: true,
+                  useCompactFormat: true,
+                  style: TextStyle(
+                    fontSize: isTopLevel ? 14 : 13,
+                    fontWeight:
+                        isTopLevel ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+            if (isTopLevel) ...[
+              const SizedBox(width: 4),
+              Icon(
+                _expanded && _subCategories != null && _subCategories!.isNotEmpty
+                    ? Icons.keyboard_arrow_down
+                    : Icons.chevron_right,
+                size: 16,
+                color: PiggyTokens.textTertiary(context),
+              ),
+            ],
           ],
         ),
       ),

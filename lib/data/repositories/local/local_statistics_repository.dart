@@ -107,7 +107,7 @@ class LocalStatisticsRepository implements StatisticsRepository {
   }
 
   @override
-  Future<List<({int? id, String name, String? icon, int? parentId, int level, double total})>>
+  Future<List<({int? id, String name, String? icon, int? parentId, int level, double total, int count})>>
       totalsByCategoryWithHierarchy({
     required int ledgerId,
     required String type,
@@ -128,6 +128,7 @@ class LocalStatisticsRepository implements StatisticsRepository {
     final rows = await q.get();
     final shared = await _loadSharedCategoriesForLedger(ledgerId);
     final map = <int?, double>{};
+    final countMap = <int?, int>{};
     final categoryInfo = <int?, ({String name, String? icon, int? parentId, int level})>{};
 
     for (final r in rows) {
@@ -173,6 +174,7 @@ class LocalStatisticsRepository implements StatisticsRepository {
 
       map.update(id, (v) => v + (t.nativeAmount ?? t.amount),
           ifAbsent: () => t.nativeAmount ?? t.amount);
+      countMap.update(id, (v) => v + 1, ifAbsent: () => 1);
     }
 
     final list = map.entries.map((e) {
@@ -184,6 +186,7 @@ class LocalStatisticsRepository implements StatisticsRepository {
         parentId: info.parentId,
         level: info.level,
         total: e.value,
+        count: countMap[e.key] ?? 0,
       );
     }).toList()
       ..sort((a, b) => b.total.compareTo(a.total));

@@ -537,16 +537,16 @@ class PiggyTokens {
   /// 54% 黑色（亮色模式，兼容 Colors.black54）
   static const Color black54Static = Color(0x8A000000);
 
-  /// Scaffold 背景色（亮色模式）— #FAFAFA (灰50)
+  /// Scaffold 背景色（亮色模式）— #F3F3F3
   /// 单一来源：PiggyTokens.scaffoldBackground(context) 与 PiggyTheme.lightTheme 共享
-  static const Color scaffoldBackgroundLightStatic = Color(0xFFFAFAFA);
+  static const Color scaffoldBackgroundLightStatic = Color(0xFFF3F3F3);
 
   /// Scaffold 背景色（暗色模式）— 纯黑
   /// 单一来源：PiggyTokens.scaffoldBackground(context) 与 PiggyTheme.darkTheme 共享
   static const Color scaffoldBackgroundDarkStatic = Colors.black;
 
-  /// 卡片背景色（亮色模式）— #FFFFFF
-  static const Color cardBackgroundLightStatic = Colors.white;
+  /// 卡片背景色（亮色模式）— #F9F9F9
+  static const Color cardBackgroundLightStatic = Color(0xFFF9F9F9);
 
   /// 卡片背景色（暗色模式）— 纯黑
   static const Color cardBackgroundDarkStatic = Colors.black;

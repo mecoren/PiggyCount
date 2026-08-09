@@ -587,7 +587,42 @@ class AppLocalizationsKo extends AppLocalizations {
   String get searchDateEnd => '종료';
 
   @override
+  String get analyticsWeek => '주';
+
+  @override
   String get analyticsMonth => '월';
+
+  @override
+  String analyticsWeekTotal(Object type) {
+    return '이번 주 $type: ';
+  }
+
+  @override
+  String get analyticsComparedToLastWeek => '지난주 대비';
+
+  @override
+  String get analyticsThisWeek => '이번 주';
+
+  @override
+  String get analyticsThisMonth => '이번 달';
+
+  @override
+  String get analyticsThisYear => '올해';
+
+  @override
+  String analyticsTrendTitle(Object period) {
+    return '$period 추세';
+  }
+
+  @override
+  String analyticsCategoryComposition(Object type) {
+    return '$type 카테고리 구성';
+  }
+
+  @override
+  String analyticsTxCountShort(Object count) {
+    return '$count건';
+  }
 
   @override
   String get analyticsYear => '년';
@@ -614,7 +649,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get analyticsTipHeader => '팁: 상단 캡슐을 눌러 월/년/전체를 전환할 수 있습니다';
+  String get analyticsTipHeader => '팁: 상단 캡슐을 눌러 주/월/년/전체를 전환할 수 있습니다';
 
   @override
   String get analyticsSwipeToSwitch => '스와이프해 전환';
@@ -2948,6 +2983,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get analyticsBalance => '잔액: ';
+
+  @override
+  String get analyticsComparedToLastYear => '전년 대비';
+
+  @override
+  String get analyticsTxCount => '거래 건수';
 
   @override
   String analyticsAvgIncome(String avgLabel) {

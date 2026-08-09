@@ -11,8 +11,8 @@ abstract class StatisticsRepository {
     required DateTime end,
   });
 
-  /// 按分类统计（支持二级分类展开）
-  Future<List<({int? id, String name, String? icon, int? parentId, int level, double total})>>
+  /// 按分类统计（支持二级分类展开），count 为该分类下的记账笔数
+  Future<List<({int? id, String name, String? icon, int? parentId, int level, double total, int count})>>
       totalsByCategoryWithHierarchy({
     required int ledgerId,
     required String type,

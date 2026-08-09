@@ -6,6 +6,7 @@ import '../../styles/tokens.dart';
 import '../../providers.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/charts/line_chart.dart';
+import '../../widgets/charts/analytics_bar_chart.dart';
 import '../../widgets/charts/category_pie_chart.dart';
 import '../../widgets/analytics/analytics_summary.dart';
 import '../../widgets/analytics/category_rank_row.dart';
@@ -14,6 +15,8 @@ import '../../l10n/app_localizations.dart';
 import '../../services/export/share_poster_service.dart';
 import '../../data/db.dart' as db;
 import '../../utils/month_range.dart';
+import '../../utils/week_range.dart';
+import '../../utils/format_utils.dart';
 import '../../utils/analytics_average.dart';
 
 class AnalyticsPage extends ConsumerStatefulWidget {
@@ -24,16 +27,28 @@ class AnalyticsPage extends ConsumerStatefulWidget {
 }
 
 class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
-  String _scope = 'month'; // month | year | all
+  String _scope = 'month'; // week | month | year | all
   String _type = 'expense'; // expense | income | balance
   bool _chartSwiped = false; // 吸收图表区域横滑，避免父级切换收入/支出
-  bool _localHeaderDismissed = false; // 本地快速隐藏，实际持久化在 provider 中
   bool _localChartDismissed = false;
-  bool _showPieChart = false; // 切换饼图/排行榜
+  // 周报选中的周（该周周一），独立于首页月份状态，避免污染首页
+  DateTime _selWeek = weekLabelFor(DateTime.now());
 
   // 显示周期选择器
   void _showPeriodPicker() async {
     final selMonth = ref.read(selectedMonthProvider);
+    if (_scope == 'week') {
+      final res = await showWheelDatePicker(
+        context,
+        initial: _selWeek,
+        mode: WheelDatePickerMode.ymd,
+        maxDate: DateTime.now(),
+      );
+      if (res != null) {
+        setState(() => _selWeek = weekLabelFor(res));
+      }
+      return;
+    }
     if (_scope == 'month') {
       final res = await showWheelDatePicker(
         context,
@@ -154,102 +169,6 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
     ref.read(statsRefreshProvider.notifier).state++;
   }
 
-  void _showTypeMenu() async {
-    final l10n = AppLocalizations.of(context);
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) => SimpleDialog(
-        title: Text('选择视角'),
-        children: [
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(context, 'expense'),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.arrow_upward,
-                    color: _type == 'expense'
-                        ? Theme.of(context).colorScheme.primary
-                        : null,
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    l10n.homeExpense,
-                    style: TextStyle(
-                      fontWeight: _type == 'expense' ? FontWeight.bold : null,
-                      color: _type == 'expense'
-                          ? Theme.of(context).colorScheme.primary
-                          : null,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(context, 'income'),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.arrow_downward,
-                    color: _type == 'income'
-                        ? Theme.of(context).colorScheme.primary
-                        : null,
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    l10n.homeIncome,
-                    style: TextStyle(
-                      fontWeight: _type == 'income' ? FontWeight.bold : null,
-                      color: _type == 'income'
-                          ? Theme.of(context).colorScheme.primary
-                          : null,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(context, 'balance'),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.balance,
-                    color: _type == 'balance'
-                        ? Theme.of(context).colorScheme.primary
-                        : null,
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    l10n.homeBalance,
-                    style: TextStyle(
-                      fontWeight: _type == 'balance' ? FontWeight.bold : null,
-                      color: _type == 'balance'
-                          ? Theme.of(context).colorScheme.primary
-                          : null,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (result != null) {
-      setState(() {
-        _type = result;
-      });
-    }
-  }
-
   // 循环切换类型（用于滑动）：expense -> income -> balance -> expense
   void _cycleTypeForward() {
     setState(() {
@@ -275,12 +194,18 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
     });
   }
 
-  // 根据scope切换周期（用于图表滑动）
+  // 根据scope切换周期（用于图表滑动 / 导航箭头）
   void _onChartSwipeLeft() {
     final selMonth = ref.read(selectedMonthProvider);
     final now = DateTime.now();
     setState(() {
-      if (_scope == 'month') {
+      if (_scope == 'week') {
+        // 周视角：切换到下一周（不能超过当前周）
+        final nextWeek = weekAdd(_selWeek, 1);
+        if (!nextWeek.isAfter(weekLabelFor(now))) {
+          _selWeek = nextWeek;
+        }
+      } else if (_scope == 'month') {
         // 月视角：切换到下一个月（不能超过当前月）
         final nextMonth = DateTime(selMonth.year, selMonth.month + 1, 1);
         if (nextMonth.year < now.year ||
@@ -301,7 +226,10 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
   void _onChartSwipeRight() {
     final selMonth = ref.read(selectedMonthProvider);
     setState(() {
-      if (_scope == 'month') {
+      if (_scope == 'week') {
+        // 周视角：切换到上一周
+        _selWeek = weekAdd(_selWeek, -1);
+      } else if (_scope == 'month') {
         // 月视角：切换到上一个月
         final prevMonth = DateTime(selMonth.year, selMonth.month - 1, 1);
         ref.read(selectedMonthProvider.notifier).state = prevMonth;
@@ -312,6 +240,35 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
       }
       // all视角：不做任何操作
     });
+  }
+
+  /// 周期导航箭头（‹ ›）
+  Widget _periodNavArrow(
+      BuildContext context, IconData icon, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+      child: Padding(
+        padding: const EdgeInsets.all(2),
+        child:
+            Icon(icon, size: 20, color: PiggyTokens.textSecondary(context)),
+      ),
+    );
+  }
+
+  /// 导航行周期文案：周=日期范围，月=yyyy-MM，年=yyyy，全部=全部年份
+  String _navPeriodLabel(BuildContext context, DateTime selMonth) {
+    switch (_scope) {
+      case 'week':
+        return weekRangeText(weekRangeFor(_selWeek));
+      case 'year':
+        return '${selMonth.year}';
+      case 'all':
+        return AppLocalizations.of(context).analyticsAllYears;
+      case 'month':
+      default:
+        return '${selMonth.year}-${selMonth.month.toString().padLeft(2, '0')}';
+    }
   }
 
   // 计算结余序列（收入 - 支出）
@@ -394,7 +351,14 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
     final today = DateTime(now.year, now.month, now.day);
 
     final sd = ref.watch(currentMonthStartDayProvider);
-    if (_scope == 'month') {
+    if (_scope == 'week') {
+      final range = weekRangeFor(_selWeek);
+      start = range.start;
+      final isCurrentWeek =
+          !now.isBefore(range.start) && now.isBefore(range.end);
+      // 当前周：只到今天；历史周：到周末
+      end = isCurrentWeek ? today.add(const Duration(days: 1)) : range.end;
+    } else if (_scope == 'month') {
       final range = periodForLabel(selMonth.year, selMonth.month, sd);
       start = range.start;
       // 「当前周期」判定用周期标签，不能用自然月相等(6月5日属5月周期)
@@ -415,6 +379,22 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
       end = today.add(const Duration(days: 1));
     }
 
+    // 同比所需的上期范围：周视角=上周，月视角=去年同期周期，年视角=去年周期，全部视角无上期
+    DateTime? prevStart;
+    DateTime? prevEnd;
+    if (_scope == 'week') {
+      prevStart = weekAdd(_selWeek, -1);
+      prevEnd = weekRangeFor(_selWeek).start; // 上周区间 [上周一, 本周一)
+    } else if (_scope == 'month') {
+      final prevRange = periodForLabel(selMonth.year - 1, selMonth.month, sd);
+      prevStart = prevRange.start;
+      prevEnd = prevRange.end;
+    } else if (_scope == 'year') {
+      final prevRange = yearRangeFor(selMonth.year - 1, sd);
+      prevStart = prevRange.start;
+      prevEnd = prevRange.end;
+    }
+
     // 按视角获取序列
     Future<dynamic> seriesFuture;
     Future<dynamic>? incomeSeriesFuture;
@@ -422,7 +402,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
 
     if (_type == 'balance') {
       // 结余模式：同时获取收入和支出数据
-      if (_scope == 'month') {
+      if (_scope == 'week' || _scope == 'month') {
         incomeSeriesFuture = repo.totalsByDay(
             ledgerId: ledgerId, type: 'income', start: start, end: end);
         expenseSeriesFuture = repo.totalsByDay(
@@ -443,7 +423,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
       }
     } else {
       // 收入或支出模式
-      seriesFuture = _scope == 'month'
+      seriesFuture = (_scope == 'week' || _scope == 'month')
           ? repo.totalsByDay(
               ledgerId: ledgerId, type: _type, start: start, end: end)
           : _scope == 'year'
@@ -467,45 +447,9 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                   Icon(Icons.bar_chart_outlined,
                       color: PiggyTokens.textPrimary(context)),
                   const SizedBox(width: 8),
-                  InkWell(
-                    onTap: _scope != 'all' ? _showPeriodPicker : null,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _currentPeriodLabel(_scope, selMonth, context),
-                          style: PiggyTextTokens.title(context),
-                        ),
-                        if (_scope != 'all')
-                          Icon(
-                            Icons.arrow_drop_down,
-                            size: 20,
-                            color: PiggyTokens.textPrimary(context),
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  InkWell(
-                    onTap: _showTypeMenu,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _type == 'expense'
-                              ? AppLocalizations.of(context).homeExpense
-                              : _type == 'income'
-                                  ? AppLocalizations.of(context).homeIncome
-                                  : AppLocalizations.of(context).homeBalance,
-                          style: PiggyTextTokens.title(context),
-                        ),
-                        Icon(
-                          Icons.arrow_drop_down,
-                          size: 20,
-                          color: PiggyTokens.textPrimary(context),
-                        ),
-                      ],
-                    ),
+                  Text(
+                    AppLocalizations.of(context).tabInsights,
+                    style: PiggyTextTokens.title(context),
                   ),
                   const Spacer(),
                   // 分享按钮
@@ -558,7 +502,17 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                           Navigator.of(context).pop(); // 关闭加载对话框
 
                           // 使用动态预览对话框（支持隐藏收入）
-                          if (_scope == 'month') {
+                          if (_scope == 'week') {
+                            // 周报回退到该周所在月的月报海报
+                            await SharePosterService.showDynamicPosterPreview(
+                              context,
+                              ref,
+                              type: 'month',
+                              ledgerId: ledgerId,
+                              year: _selWeek.year,
+                              month: _selWeek.month,
+                            );
+                          } else if (_scope == 'month') {
                             await SharePosterService.showDynamicPosterPreview(
                               context,
                               ref,
@@ -600,7 +554,13 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
               child: WaitSlidingSegmentedControl<String>(
                 selected: _scope,
+                height: 32,
+                fontSize: 13,
                 segments: [
+                  WaitSlidingSegment(
+                    value: 'week',
+                    label: AppLocalizations.of(context).analyticsWeek,
+                  ),
                   WaitSlidingSegment(
                     value: 'month',
                     label: AppLocalizations.of(context).analyticsMonth,
@@ -617,6 +577,63 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                 onValueChanged: (value) => setState(() => _scope = value),
               ),
             ),
+                // 周期导航行：‹ 范围文案 › 居左，支出/收入/结余三段胶囊居右
+                Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+              child: Row(
+                children: [
+                  if (_scope != 'all')
+                    _periodNavArrow(
+                        context, Icons.chevron_left, _onChartSwipeRight),
+                  Expanded(
+                    child: InkWell(
+                      onTap: _scope != 'all' ? _showPeriodPicker : null,
+                      child: Center(
+                        child: Text(
+                          _navPeriodLabel(context, selMonth),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: PiggyTokens.textPrimary(context),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (_scope != 'all')
+                    _periodNavArrow(
+                        context, Icons.chevron_right, _onChartSwipeLeft),
+                  const SizedBox(width: 8),
+                  // 支出/收入/结余：与顶部周/月/年/全部同款滑块胶囊（紧凑高度）
+                  SizedBox(
+                    width: 152,
+                    child: WaitSlidingSegmentedControl<String>(
+                      selected: _type,
+                      height: 26,
+                      fontSize: 11,
+                      segments: [
+                        WaitSlidingSegment(
+                          value: 'expense',
+                          label: AppLocalizations.of(context).homeExpense,
+                        ),
+                        WaitSlidingSegment(
+                          value: 'income',
+                          label: AppLocalizations.of(context).homeIncome,
+                        ),
+                        WaitSlidingSegment(
+                          value: 'balance',
+                          label: AppLocalizations.of(context).homeBalance,
+                        ),
+                      ],
+                      onValueChanged: (v) => setState(() => _type = v),
+                    ),
+                  ),
+                ],
+              ),
+            ),
                 ],
               ),
           ),
@@ -629,9 +646,10 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
               key: ValueKey('analytics_$_type'),
               future: _type == 'balance'
                   ? _loadBalanceData(repo, ledgerId, start, end, seriesFuture,
-                      incomeSeriesFuture!, expenseSeriesFuture!)
-                  : _loadCategoryData(
-                      repo, ledgerId, _type, start, end, seriesFuture),
+                      incomeSeriesFuture!, expenseSeriesFuture!, prevStart,
+                      prevEnd)
+                  : _loadCategoryData(repo, ledgerId, _type, start, end,
+                      seriesFuture, prevStart, prevEnd),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
@@ -640,10 +658,13 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
 
                 // 在balance模式下，需要计算结余数据
                 dynamic seriesRaw;
-                List<({int? id, String name, db.Category? category, double total, List<({int id, db.Category category, String name, double total})> subCategories})>
+                List<({int? id, String name, db.Category? category, double total, int count, List<({int id, db.Category category, String name, double total})> subCategories})>
                     catData;
                 int txCount;
                 double sum;
+                double balance = 0; // 本期收支结余
+                double? prevTotal; // 上期总额（同比）
+                double expenseTotal = 0; // 本期总支出（结余视角第 4 格用）
 
                 if (_type == 'balance') {
                   // balance模式：list[3]是收入数据，list[4]是支出数据，list[5]是收入交易数量
@@ -655,7 +676,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
 
                   // 分类数据显示支出分类（但结余模式下不显示排行榜）
                   catData = list[0] as List<
-                      ({int? id, String name, db.Category? category, double total, List<({int id, db.Category category, String name, double total})> subCategories})>;
+                      ({int? id, String name, db.Category? category, double total, int count, List<({int id, db.Category category, String name, double total})> subCategories})>;
 
                   // 获取收入和支出的交易数量
                   final expenseCount = list[2] as int;
@@ -666,12 +687,23 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                   final incomeSum = _getSumFromSeries(incomeData);
                   final expenseSum = _getSumFromSeries(expenseData);
                   sum = incomeSum - expenseSum;
+                  // 结余视角：结余即总额；同比=上期收入-支出；第4格显示总支出
+                  final prevTotals = list[6] as (double, double);
+                  balance = sum;
+                  prevTotal = prevTotals.$1 - prevTotals.$2;
+                  expenseTotal = expenseSum;
                 } else {
                   catData = list[0] as List<
-                      ({int? id, String name, db.Category? category, double total, List<({int id, db.Category category, String name, double total})> subCategories})>;
+                      ({int? id, String name, db.Category? category, double total, int count, List<({int id, db.Category category, String name, double total})> subCategories})>;
                   seriesRaw = list[1];
                   txCount = list[2] as int;
                   sum = catData.fold<double>(0, (a, b) => a + b.total);
+                  // 本期收支与上期收支（同比）
+                  final curTotals = list[3] as (double, double);
+                  final prevTotals = list[4] as (double, double);
+                  balance = curTotals.$1 - curTotals.$2;
+                  prevTotal =
+                      _type == 'expense' ? prevTotals.$2 : prevTotals.$1;
                 }
 
                 // 统一取数列的数值数组
@@ -691,12 +723,6 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                 final vals = valuesOnly();
                 final allZero = vals.isEmpty || vals.every((v) => v == 0);
                 if (txCount == 0 || (sum == 0 && allZero)) {
-                  final headerDismissed = (ref
-                              .watch(analyticsHeaderHintDismissedProvider)
-                              .asData
-                              ?.value ??
-                          false) ||
-                      _localHeaderDismissed;
                   return GestureDetector(
                     onHorizontalDragEnd: (details) {
                       // 左右滑动切换周期（月份/年份）
@@ -731,26 +757,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        if (!headerDismissed)
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.info_outline,
-                                  size: 14,
-                                  color: PiggyTokens.textSecondary(context)),
-                              const SizedBox(width: 6),
-                              Text(
-                                  AppLocalizations.of(context)
-                                      .analyticsTipHeader,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .labelSmall
-                                      ?.copyWith(
-                                          color: PiggyTokens.textSecondary(
-                                              context))),
-                            ],
-                          ),
-                      ],
+                        ],
                     ),
                   );
                 }
@@ -802,6 +809,13 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                 final xLabels = () {
                   if (filteredSeriesRaw
                       is List<({DateTime day, double total})>) {
+                    // 周视角：MM.dd 短日期标签
+                    if (_scope == 'week') {
+                      String two(int v) => v.toString().padLeft(2, '0');
+                      return filteredSeriesRaw
+                          .map((e) => '${two(e.day.month)}.${two(e.day.day)}')
+                          .toList(growable: false);
+                    }
                     return filteredSeriesRaw
                         .map((e) => e.day.day.toString())
                         .toList(growable: false);
@@ -822,6 +836,15 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                 }();
 
                 int? highlightIndex;
+                if (_scope == 'week' &&
+                    filteredSeriesRaw is List<({DateTime day, double total})>) {
+                  // 周视角：高亮今天（仅当前周）
+                  final idx = filteredSeriesRaw.indexWhere((e) =>
+                      e.day.year == now.year &&
+                      e.day.month == now.month &&
+                      e.day.day == now.day);
+                  if (idx >= 0) highlightIndex = idx;
+                }
                 if (_scope == 'month' &&
                     filteredSeriesRaw is List<({DateTime day, double total})>) {
                   final today = DateTime.now();
@@ -836,13 +859,6 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                   }
                 }
 
-                // 提示是否已被持久化关闭
-                final headerDismissed = (ref
-                            .watch(analyticsHeaderHintDismissedProvider)
-                            .asData
-                            ?.value ??
-                        false) ||
-                    _localHeaderDismissed;
                 final chartDismissed = (ref
                             .watch(analyticsChartHintDismissedProvider)
                             .asData
@@ -850,6 +866,65 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                         false) ||
                     _localChartDismissed;
                 final hide = ref.watch(hideAmountsProvider);
+                final l10n = AppLocalizations.of(context);
+                // 大金额格式化：币种 + 语言（与 AmountText 同款判定）
+                final baseCurrency = ref.watch(currentLedgerCurrencyProvider);
+                final selectedLocale = ref.watch(languageProvider);
+                final isZh = selectedLocale?.languageCode == 'zh' ||
+                    (selectedLocale == null &&
+                        Localizations.localeOf(context).languageCode == 'zh');
+                final typeWord = _type == 'expense'
+                    ? l10n.analyticsExpense
+                    : _type == 'income'
+                        ? l10n.analyticsIncome
+                        : l10n.analyticsBalance
+                            .replaceAll(RegExp(r'[\s:：]+$'), '');
+
+                // 折线图卡片标题：本周趋势 / 本月趋势 / 今年趋势 / 全部趋势
+                final lineTitle = l10n.analyticsTrendTitle(switch (_scope) {
+                  'week' => l10n.analyticsThisWeek,
+                  'month' => l10n.analyticsThisMonth,
+                  'year' => l10n.analyticsThisYear,
+                  _ => l10n.analyticsAll,
+                });
+
+                // 折线点按气泡：MM.dd 支出 ¥1,918.03（天序列）/ 标签+金额（月年序列）
+                String Function(int)? tooltipText;
+                if (filteredSeriesRaw is List<({DateTime day, double total})>) {
+                  tooltipText = (i) {
+                    final e = filteredSeriesRaw[i];
+                    String two(int v) => v.toString().padLeft(2, '0');
+                    final amt = hide
+                        ? '**'
+                        : formatBalance(e.total, baseCurrency,
+                            isChineseLocale: isZh);
+                    return '${two(e.day.month)}.${two(e.day.day)} $typeWord $amt';
+                  };
+                } else if (filteredSeriesRaw
+                    is List<({DateTime month, double total})>) {
+                  tooltipText = (i) {
+                    final amt = hide
+                        ? '**'
+                        : formatBalance(filteredSeriesRaw[i].total,
+                            baseCurrency,
+                            isChineseLocale: isZh);
+                    return '${xLabels[i]} $typeWord $amt';
+                  };
+                } else if (filteredSeriesRaw
+                    is List<({int year, double total})>) {
+                  tooltipText = (i) {
+                    final amt = hide
+                        ? '**'
+                        : formatBalance(filteredSeriesRaw[i].total,
+                            baseCurrency,
+                            isChineseLocale: isZh);
+                    return '${xLabels[i]} $typeWord $amt';
+                  };
+                }
+
+                // 柱状图右上角 badge：compact 总额 + 周期范围
+                final barBadge =
+                    '${hide ? '**' : formatBalance(sum, baseCurrency, isChineseLocale: isZh)} ${_navPeriodLabel(context, selMonth)}';
 
                 return GestureDetector(
                   onHorizontalDragEnd: (details) {
@@ -873,134 +948,237 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                         isBalance: _type == 'balance',
                         total: sum,
                         avg: computeSeriesAverage(filteredSeriesRaw),
-                        expenseColor: PiggyTokens.primary(context),
-                        incomeColor: PiggyTokens.primary(context),
+                        // 收支配色遵循用户设置的红绿方案
+                        expenseColor: PiggyTokens.expenseColor(context, ref),
+                        incomeColor: PiggyTokens.incomeColor(context, ref),
+                        // 四指标：同比（全部视角无上期→显示记账笔数）+ 结余
+                        prevTotal: _scope == 'all' ? null : prevTotal,
+                        balance: balance,
+                        txCount: txCount,
+                        expenseTotal:
+                            _type == 'balance' ? expenseTotal : null,
                       ),
                       const SizedBox(height: 12),
-                      SizedBox(
-                        height: 240,
-                        child: LineChart(
-                          values: values,
-                          xLabels: xLabels,
-                          highlightIndex: highlightIndex,
-                          hideAmounts: hide,
-                          themeColor: PiggyTokens.primary(context),
-                          // 使用统一图表令牌
-                          lineWidth: PiggyChartTokens.lineWidth,
-                          dotRadius: PiggyChartTokens.dotRadius,
-                          cornerRadius: PiggyChartTokens.cornerRadius,
-                          xLabelFontSize: PiggyChartTokens.xLabelFontSize,
-                          yLabelFontSize: PiggyChartTokens.yLabelFontSize,
-                          onSwipeLeft: () {
-                            // 根据scope切换周期
-                            _onChartSwipeLeft();
-                            setState(() => _chartSwiped = true);
-                          },
-                          onSwipeRight: () {
-                            // 根据scope切换周期
-                            _onChartSwipeRight();
-                            setState(() => _chartSwiped = true);
-                          },
-                          showHint: !chartDismissed,
-                          hintText:
-                              AppLocalizations.of(context).analyticsSwipeHint,
-                          onCloseHint: () async {
-                            final setter =
-                                ref.read(analyticsHintsSetterProvider);
-                            await setter.dismissChart();
-                            if (mounted) {
-                              setState(() => _localChartDismissed = true);
-                            }
-                          },
-                          whiteBg: !PiggyTokens.isDark(context),
-                          isDark: PiggyTokens.isDark(context),
-                          showGrid: false,
-                          showDots: true,
-                          annotate: true,
+                      // 趋势折线卡：标题 + 平滑曲线 + Y轴大金额缩写 + 点按气泡
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(12, 14, 12, 8),
+                        decoration: BoxDecoration(
+                          color: PiggyTokens.surface(context),
+                          borderRadius:
+                              BorderRadius.circular(PiggyDimens.radius2xl),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 3,
+                                  height: 14,
+                                  margin: const EdgeInsets.only(right: 8),
+                                  decoration: BoxDecoration(
+                                    color: PiggyTokens.primary(context),
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                                Text(
+                                  lineTitle,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: PiggyTokens.textPrimary(context),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              height: 200,
+                              child: LineChart(
+                                values: values,
+                                xLabels: xLabels,
+                                highlightIndex: highlightIndex,
+                                hideAmounts: hide,
+                                themeColor: PiggyTokens.primary(context),
+                                // 使用统一图表令牌
+                                lineWidth: PiggyChartTokens.lineWidth,
+                                dotRadius: PiggyChartTokens.dotRadius,
+                                cornerRadius: PiggyChartTokens.cornerRadius,
+                                xLabelFontSize:
+                                    PiggyChartTokens.xLabelFontSize,
+                                yLabelFontSize:
+                                    PiggyChartTokens.yLabelFontSize,
+                                onSwipeLeft: () {
+                                  // 根据scope切换周期
+                                  _onChartSwipeLeft();
+                                  setState(() => _chartSwiped = true);
+                                },
+                                onSwipeRight: () {
+                                  // 根据scope切换周期
+                                  _onChartSwipeRight();
+                                  setState(() => _chartSwiped = true);
+                                },
+                                showHint: !chartDismissed,
+                                hintText: AppLocalizations.of(context)
+                                    .analyticsSwipeHint,
+                                onCloseHint: () async {
+                                  final setter = ref
+                                      .read(analyticsHintsSetterProvider);
+                                  await setter.dismissChart();
+                                  if (mounted) {
+                                    setState(
+                                        () => _localChartDismissed = true);
+                                  }
+                                },
+                                // minimal：背景/轴线/平均线交给外层卡片
+                                whiteBg: false,
+                                isDark: PiggyTokens.isDark(context),
+                                showGrid: false,
+                                showDots: true,
+                                annotate: false,
+                                minimal: true,
+                                smooth: true,
+                                showYAxisLabels: true,
+                                isChineseLocale: isZh,
+                                pointTooltipText: tooltipText,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 12),
-                      // 结余视角不显示分类排行榜标题和内容
-                      if (_type != 'balance')
-                        Row(
-                          children: [
-                            Text(
-                              AppLocalizations.of(context)
-                                  .analyticsCategoryRanking,
-                              style: PiggyTextTokens.title(context),
-                            ),
-                            const Spacer(),
-                            // 饼图/列表切换按钮
-                            if (catData.isNotEmpty && sum > 0)
-                              GestureDetector(
-                                onTap: () =>
-                                    setState(() => _showPieChart = !_showPieChart),
-                                child: Icon(
-                                  _showPieChart
-                                      ? Icons.format_list_bulleted
-                                      : Icons.pie_chart_outline,
-                                  size: 20,
-                                  color: PiggyTokens.textSecondary(context),
-                                ),
+                      AnalyticsBarChart(
+                        values: values,
+                        xLabels: xLabels,
+                        highlightIndex: highlightIndex,
+                        hideAmounts: hide,
+                        themeColor: PiggyTokens.primary(context),
+                        isDark: PiggyTokens.isDark(context),
+                        title: l10n.analyticsTrendTitle(typeWord),
+                        badgeText: barBadge,
+                        isChineseLocale: isZh,
+                        pointTooltipText: tooltipText,
+                        onSwipeLeft: () {
+                          // 根据scope切换周期
+                          _onChartSwipeLeft();
+                          setState(() => _chartSwiped = true);
+                        },
+                        onSwipeRight: () {
+                          // 根据scope切换周期
+                          _onChartSwipeRight();
+                          setState(() => _chartSwiped = true);
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      // 结余视角不显示分类构成与排行榜
+                      if (_type != 'balance') ...[
+                        // 分类构成卡：标题 + 环形图（外置标签），仅展示主分类
+                        Builder(builder: (context) {
+                          final pieData = <PieCategoryItem>[
+                            for (final c in catData)
+                              (
+                                id: c.id,
+                                name: c.name,
+                                category: c.category,
+                                total: c.total,
+                                subCategories: c.subCategories,
                               ),
-                            if (!headerDismissed) const SizedBox(width: 12),
-                            if (!headerDismissed)
-                              InkWell(
-                                onTap: () async {
-                                  final setter =
-                                      ref.read(analyticsHintsSetterProvider);
-                                  await setter.dismissHeader();
-                                  if (mounted) {
-                                    setState(
-                                        () => _localHeaderDismissed = true);
-                                  }
-                                },
-                                child: Row(
+                          ];
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Container(
+                                padding:
+                                    const EdgeInsets.fromLTRB(16, 14, 16, 12),
+                                decoration: BoxDecoration(
+                                  color: PiggyTokens.surface(context),
+                                  borderRadius: BorderRadius.circular(
+                                      PiggyDimens.radius2xl),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.swipe,
-                                        size: 14,
-                                        color:
-                                            PiggyTokens.textSecondary(context)),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                        AppLocalizations.of(context)
-                                            .analyticsSwipeToSwitch,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .labelSmall
-                                            ?.copyWith(
-                                                color: PiggyTokens.textSecondary(
-                                                    context))),
-                                    const SizedBox(width: 4),
-                                    Icon(Icons.close,
-                                        size: 14,
-                                        color: PiggyTokens.textTertiary(context)),
+                                    Row(
+                                      children: [
+                                        Container(
+                                          width: 3,
+                                          height: 14,
+                                          margin:
+                                              const EdgeInsets.only(right: 8),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                PiggyTokens.primary(context),
+                                            borderRadius:
+                                                BorderRadius.circular(2),
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: Text(
+                                            l10n.analyticsCategoryComposition(
+                                                typeWord),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w600,
+                                              color: PiggyTokens.textPrimary(
+                                                  context),
+                                            ),
+                                          ),
+                                        ),
+                                        ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    if (pieData.isNotEmpty && sum > 0)
+                                      CategoryPieChart(
+                                        data: pieData,
+                                        sum: sum,
+                                      ),
                                   ],
                                 ),
                               ),
-                          ],
-                        ),
-                      if (_type != 'balance') const SizedBox(height: 8),
-                      if (_type != 'balance' && _showPieChart && catData.isNotEmpty && sum > 0)
-                        CategoryPieChart(
-                          data: catData,
-                          sum: sum,
-                        ),
-                      if (_type != 'balance' && !_showPieChart)
-                        for (final item in catData)
-                          CategoryRankRow(
-                            categoryId: item.id,
-                            category: item.category,
-                            name: item.name,
-                            value: item.total,
-                            percent: sum == 0 ? 0 : item.total / sum,
-                            color: PiggyTokens.primary(context),
-                            start: start,
-                            end: end,
-                            scope: _scope,
-                            selMonth: selMonth,
-                            subCategories: item.subCategories,
-                          ),
+                              const SizedBox(height: 12),
+                              // 排行榜卡：序号 + 图标 + 名称笔数 + 进度条 + 百分比金额
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: PiggyTokens.surface(context),
+                                  borderRadius: BorderRadius.circular(
+                                      PiggyDimens.radius2xl),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // 仅主分类排行（本项目无子分类），点击直接进分类详情
+                                    for (var i = 0; i < catData.length; i++)
+                                      CategoryRankRow(
+                                        categoryId: catData[i].id,
+                                        category: catData[i].category,
+                                        name: catData[i].name,
+                                        value: catData[i].total,
+                                        percent: sum == 0
+                                            ? 0
+                                            : catData[i].total / sum,
+                                        color: _pieColorAt(context, i),
+                                        start: start,
+                                        end: end,
+                                        scope: _scope,
+                                        selMonth: selMonth,
+                                        rank: i + 1,
+                                        count: catData[i].count,
+                                        periodLabel: _scope == 'week'
+                                            ? weekRangeText(
+                                                weekRangeFor(_selWeek))
+                                            : null,
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        }),
+                      ],
                       // 底部留白，避免被悬浮 Tab 栏遮挡
                       SizedBox(height: 56 + 12 + MediaQuery.of(context).viewPadding.bottom + 16),
                     ],
@@ -1015,25 +1193,17 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
   }
 }
 
-// 顶部类型下拉已移除
+// 顶部类型下拉已移除（改为导航行三段胶囊，与周/月/年/全部同款滑块）
 
 // 自定义选择器：月份（年+月）
 // 旧的自定义年月选择器已移除，统一使用 showWheelDatePicker。
 
-String _currentPeriodLabel(
-    String scope, DateTime selMonth, BuildContext context) {
-  switch (scope) {
-    case 'year':
-      return '${selMonth.year}';
-    case 'all':
-      return AppLocalizations.of(context).analyticsAllYears;
-    case 'month':
-    default:
-      return '${selMonth.year}-${selMonth.month.toString().padLeft(2, '0')}';
-  }
-}
+/// 排行榜第 i 名的颜色：与环形图扇区调色板一致（前 8 名），其余归入「其他」灰
+Color _pieColorAt(BuildContext context, int i) =>
+    i < 8 ? kAnalyticsPieColors[i] : PiggyTokens.textTertiary(context);
 
 // 加载分类数据并聚合
+// 返回 [catData, seriesRaw, txCount, (本期收入,本期支出), (上期收入,上期支出)]
 Future<List<dynamic>> _loadCategoryData(
   dynamic repo,
   int ledgerId,
@@ -1041,7 +1211,12 @@ Future<List<dynamic>> _loadCategoryData(
   DateTime start,
   DateTime end,
   Future<dynamic> seriesFuture,
+  DateTime? prevStart,
+  DateTime? prevEnd,
 ) async {
+  final prevTotalsFuture = (prevStart != null && prevEnd != null)
+      ? repo.totalsInRange(ledgerId: ledgerId, start: prevStart, end: prevEnd)
+      : Future.value((0.0, 0.0));
   final results = await Future.wait<dynamic>([
     repo.totalsByCategoryWithHierarchy(
         ledgerId: ledgerId, type: type, start: start, end: end),
@@ -1049,6 +1224,9 @@ Future<List<dynamic>> _loadCategoryData(
     repo.countByTypeInRange(
         ledgerId: ledgerId, type: type, start: start, end: end),
     repo.getSharedSyntheticCategoriesForLedger(ledgerId),
+    // 本期收支（结余用）
+    repo.totalsInRange(ledgerId: ledgerId, start: start, end: end),
+    prevTotalsFuture,
   ]);
 
   final hierarchyData = results[0] as List<
@@ -1058,16 +1236,18 @@ Future<List<dynamic>> _loadCategoryData(
         String? icon,
         int? parentId,
         int level,
-        double total
+        double total,
+        int count
       })>;
   final sharedSynthetic = results[3] as Map<int, db.Category>;
   final aggregated =
       await _aggregateTopLevelCategories(hierarchyData, repo, sharedSynthetic);
 
-  return [aggregated, results[1], results[2]];
+  return [aggregated, results[1], results[2], results[4], results[5]];
 }
 
 // 加载结余数据并聚合
+// 返回 [catData, series, expenseCount, incomeSeries, expenseSeries, incomeCount, (上期收入,上期支出)]
 Future<List<dynamic>> _loadBalanceData(
   dynamic repo,
   int ledgerId,
@@ -1076,7 +1256,12 @@ Future<List<dynamic>> _loadBalanceData(
   Future<dynamic> seriesFuture,
   Future<dynamic> incomeSeriesFuture,
   Future<dynamic> expenseSeriesFuture,
+  DateTime? prevStart,
+  DateTime? prevEnd,
 ) async {
+  final prevTotalsFuture = (prevStart != null && prevEnd != null)
+      ? repo.totalsInRange(ledgerId: ledgerId, start: prevStart, end: prevEnd)
+      : Future.value((0.0, 0.0));
   final results = await Future.wait<dynamic>([
     repo.totalsByCategoryWithHierarchy(
         ledgerId: ledgerId, type: 'expense', start: start, end: end),
@@ -1088,6 +1273,7 @@ Future<List<dynamic>> _loadBalanceData(
     repo.countByTypeInRange(
         ledgerId: ledgerId, type: 'income', start: start, end: end),
     repo.getSharedSyntheticCategoriesForLedger(ledgerId),
+    prevTotalsFuture,
   ]);
 
   final hierarchyData = results[0] as List<
@@ -1097,7 +1283,8 @@ Future<List<dynamic>> _loadBalanceData(
         String? icon,
         int? parentId,
         int level,
-        double total
+        double total,
+        int count
       })>;
   final sharedSynthetic = results[6] as Map<int, db.Category>;
   final aggregated =
@@ -1109,12 +1296,13 @@ Future<List<dynamic>> _loadBalanceData(
     results[2],
     results[3],
     results[4],
-    results[5]
+    results[5],
+    results[7]
   ];
 }
 
-// 聚合一级分类数据（将二级分类金额聚合到一级分类）
-Future<List<({int? id, String name, db.Category? category, double total, List<({int id, db.Category category, String name, double total})> subCategories})>>
+// 聚合一级分类数据（将二级分类金额/笔数聚合到一级分类）
+Future<List<({int? id, String name, db.Category? category, double total, int count, List<({int id, db.Category category, String name, double total})> subCategories})>>
     _aggregateTopLevelCategories(
         List<
                 ({
@@ -1123,7 +1311,8 @@ Future<List<({int? id, String name, db.Category? category, double total, List<({
                   String? icon,
                   int? parentId,
                   int level,
-                  double total
+                  double total,
+                  int count
                 })>
             hierarchyData,
         dynamic repo,
@@ -1185,19 +1374,24 @@ Future<List<({int? id, String name, db.Category? category, double total, List<({
     }
   }
 
-  // 4. 聚合金额，同时收集子分类明细
+  // 4. 聚合金额与笔数，同时收集子分类明细
   final topLevelMap = <int?, double>{};
+  final topLevelCountMap = <int?, int>{};
   final subCategoriesMap = <int?, List<({int id, db.Category category, String name, double total})>>{};
 
   for (final item in hierarchyData) {
     if (item.level == 1) {
-      // 一级分类：累加金额
+      // 一级分类：累加金额与笔数
       topLevelMap.update(item.id, (v) => v + item.total,
           ifAbsent: () => item.total);
+      topLevelCountMap.update(item.id, (v) => v + item.count,
+          ifAbsent: () => item.count);
     } else if (item.level == 2 && item.parentId != null) {
       // 二级分类：累加到父分类
       topLevelMap.update(item.parentId, (v) => v + item.total,
           ifAbsent: () => item.total);
+      topLevelCountMap.update(item.parentId, (v) => v + item.count,
+          ifAbsent: () => item.count);
       // 收集子分类明细 — §7 共享账本:负 id 的 L2 走 sharedSynthetic
       // fallback,主表 getCategoryById 查不到。这样点击一级分类才能展开
       // SharedLedger* 的子分类,点击子分类才能进 CategoryDetailPage。
@@ -1232,6 +1426,7 @@ Future<List<({int? id, String name, db.Category? category, double total, List<({
     final total = e.value;
     final subs = subCategoriesMap[id] ?? <({int id, db.Category category, String name, double total})>[];
 
+    final count = topLevelCountMap[id] ?? 0;
     // 获取一级分类信息
     if (id != null && topLevelInfo.containsKey(id)) {
       final category = topLevelInfo[id]!;
@@ -1240,6 +1435,7 @@ Future<List<({int? id, String name, db.Category? category, double total, List<({
         name: category.name,
         category: category,
         total: total,
+        count: count,
         subCategories: subs,
       );
     } else if (topLevelNames.containsKey(id)) {
@@ -1249,6 +1445,7 @@ Future<List<({int? id, String name, db.Category? category, double total, List<({
         name: topLevelNames[id]!,
         category: null,
         total: total,
+        count: count,
         subCategories: subs,
       );
     } else {
@@ -1257,6 +1454,7 @@ Future<List<({int? id, String name, db.Category? category, double total, List<({
         name: '未分类',
         category: null,
         total: total,
+        count: count,
         subCategories: subs,
       );
     }

@@ -8,7 +8,6 @@ import '../../widgets/category_icon.dart';
 import '../../providers/database_providers.dart';
 import '../../providers/theme_providers.dart';
 import 'amount_text.dart';
-import 'tag_chip.dart';
 import 'transaction_row_title.dart';
 
 class TransactionListItem extends ConsumerWidget {
@@ -86,8 +85,8 @@ class TransactionListItem extends ConsumerWidget {
   });
 
 
-  /// 检查是否有次要信息需要显示（时间、账户或附件）
-  bool _hasSecondaryInfo(WidgetRef ref) {
+  /// 检查是否有次要信息需要显示（时间、备注、账户、标签、附件）
+  bool _hasSecondaryInfo(WidgetRef ref, String? parenNote) {
     // 显示完整日期模式
     if (showFullDate && happenedAt != null) return true;
 
@@ -97,8 +96,10 @@ class TransactionListItem extends ConsumerWidget {
         (happenedAt!.hour != 0 || happenedAt!.minute != 0 || happenedAt!.second != 0);
 
     return showTime ||
+        (parenNote != null && parenNote.isNotEmpty) ||
         accountName != null ||
         attachmentCount > 0 ||
+        (tags != null && tags!.isNotEmpty) ||
         excludeFromStats ||
         excludeFromBudget;
   }
@@ -121,33 +122,38 @@ class TransactionListItem extends ConsumerWidget {
     );
   }
 
-  /// 构建次要信息小部件（时间 · 账户 + 附件图标）
-  Widget _buildSecondaryInfo(BuildContext context, WidgetRef ref) {
-    final parts = <String>[];
+  /// 构建次要信息小部件（时间 | 备注 | 账户 | 标签 · 附件图标）
+  ///
+  /// 段与段之间用竖杠 `|` 分隔;标签为彩色可点击文本(沿用 TagChip 的取色逻辑)。
+  Widget _buildSecondaryInfo(BuildContext context, WidgetRef ref, String? parenNote) {
+    final textStyle = PiggyTextTokens.caption(context);
+    final sep = Text(' | ', style: textStyle);
 
-    // 时间部分
+    // 文本段：时间 | 备注 | 账户
+    final textParts = <String>[];
     if (happenedAt != null) {
       if (showFullDate) {
         // 完整日期模式
-        parts.add(
+        textParts.add(
           '${happenedAt!.year}-${happenedAt!.month.toString().padLeft(2, '0')}-${happenedAt!.day.toString().padLeft(2, '0')} '
           '${happenedAt!.hour.toString().padLeft(2, '0')}:${happenedAt!.minute.toString().padLeft(2, '0')}',
         );
       } else if (ref.watch(showTransactionTimeProvider) &&
           (happenedAt!.hour != 0 || happenedAt!.minute != 0 || happenedAt!.second != 0)) {
         // 完整时间模式（HH:mm:ss）
-        parts.add(
+        textParts.add(
           '${happenedAt!.hour.toString().padLeft(2, '0')}:${happenedAt!.minute.toString().padLeft(2, '0')}:${happenedAt!.second.toString().padLeft(2, '0')}',
         );
       }
     }
-
-    // 账户部分
-    if (accountName != null) {
-      parts.add(accountName!);
+    // 备注（时间右边，竖杠分隔）
+    if (parenNote != null && parenNote.isNotEmpty) {
+      textParts.add(parenNote);
     }
-
-    final textStyle = PiggyTextTokens.caption(context);
+    // 账户
+    if (accountName != null) {
+      textParts.add(accountName!);
+    }
 
     // 构建附件图标部件（可点击）
     Widget buildAttachmentWidget() {
@@ -176,8 +182,24 @@ class TransactionListItem extends ConsumerWidget {
       return widget;
     }
 
-    // 「不计收支 / 不计预算」标签:第二行末尾的次要标签，改为与标签 chip 一致的
-    // 中性 pill 样式（de-emphasis，沿用 TagChip 的中性灰底 + pill 圆角）
+    // 标签段：彩色可点击文本（保留 TagChip 的取色与点击行为）
+    final tagWidgets = <Widget>[
+      if (tags != null)
+        for (final tag in tags!)
+          GestureDetector(
+            onTap: onTagTap != null ? () => onTagTap!(tag.id, tag.name) : null,
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Text(
+                tag.name,
+                style: textStyle.copyWith(color: _tagTextColor(context, tag.color)),
+              ),
+            ),
+          ),
+    ];
+
+    // 「不计收支 / 不计预算」标签:第二行末尾的次要标签
     final flagTags = <Widget>[
       if (excludeFromStats)
         _flagChip(context, AppLocalizations.of(context).txFlagExcludedTag),
@@ -185,40 +207,47 @@ class TransactionListItem extends ConsumerWidget {
         _flagChip(context, AppLocalizations.of(context).txFlagBudgetExcludedTag),
     ];
 
-    // 如果只有附件 / 标签，没有时间·账户文字
-    if (parts.isEmpty) {
-      final children = <Widget>[
-        if (attachmentCount > 0) buildAttachmentWidget(),
-        ...flagTags,
-      ];
-      // 用 Wrap 避免次要行溢出（标签可能与附件并排）
-      return Wrap(
-        spacing: 6,
-        runSpacing: 2,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: children,
-      );
+    // 组装段：文本(join 竖杠) → 附件 → 标签，各段之间用竖杠连接
+    final segments = <Widget>[];
+    if (textParts.isNotEmpty) {
+      segments.add(Text(textParts.join(' | '), style: textStyle));
+    }
+    if (attachmentCount > 0) {
+      segments.add(buildAttachmentWidget());
+    }
+    if (tagWidgets.isNotEmpty) {
+      segments.addAll(tagWidgets);
     }
 
-    // 有时间·账户文字时:文字 + 附件保持原有 ' · ' 风格，标签紧随其后
+    final children = <Widget>[];
+    for (int i = 0; i < segments.length; i++) {
+      if (i > 0) children.add(sep);
+      children.add(segments[i]);
+    }
+    children.addAll(flagTags);
+
+    // 用 Wrap 避免次要行溢出（标签可能与附件并排）
     return Wrap(
       spacing: 6,
       runSpacing: 2,
       crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(parts.join(' · '), style: textStyle),
-            if (attachmentCount > 0) ...[
-              Text(' · ', style: textStyle),
-              buildAttachmentWidget(),
-            ],
-          ],
-        ),
-        ...flagTags,
-      ],
+      children: children,
     );
+  }
+
+  /// 标签文本颜色解析（与 TagChip._parseColor 同一取色规则）
+  Color _tagTextColor(BuildContext context, String? color) {
+    if (color == null || color.isEmpty) {
+      return Theme.of(context).colorScheme.primary;
+    }
+    try {
+      String hex = color;
+      if (hex.startsWith('#')) hex = hex.substring(1);
+      if (hex.length == 6) hex = 'FF$hex';
+      return Color(int.parse(hex, radix: 16));
+    } catch (_) {
+      return Theme.of(context).colorScheme.primary;
+    }
   }
 
   bool _isForeign(WidgetRef ref) {
@@ -231,6 +260,15 @@ class TransactionListItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 第一行主文本 + 第二行备注。mode='note' 时 primary 即备注(parenNote=null,
+    // 第二行不重复);默认 'category' 时 primary=分类名、parenNote=备注(第二行显示)。
+    final composed = composeTransactionRowTitle(
+      mode: ref.watch(noteDisplayModeProvider),
+      categoryName: categoryName,
+      title: title,
+    );
+    final composedParenNote = composed.parenNote;
+
     Widget child = InkWell(
       onTap: isSelectionMode ? onSelectionChanged : onTap,
       child: Padding(
@@ -271,34 +309,16 @@ class TransactionListItem extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // 第一行：分类名（常驻）+ 备注接在后面（括号、次要色、整体单行省略，对齐 web 端）
+                    // 第一行：分类名（备注已移到第二行时间右边，此处不再挂括号）
                     Row(
                       children: [
                         Flexible(
-                          child: Consumer(builder: (context, ref, _) {
-                            final composed = composeTransactionRowTitle(
-                              mode: ref.watch(noteDisplayModeProvider),
-                              categoryName: categoryName,
-                              title: title,
-                            );
-                            return Text.rich(
-                              TextSpan(
-                                text: composed.primary,
-                                style: PiggyTextTokens.title(context),
-                                children: [
-                                  if (composed.parenNote != null)
-                                    TextSpan(
-                                      text: '  (${composed.parenNote})',
-                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: PiggyTokens.textSecondary(context),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            );
-                          }),
+                          child: Text(
+                            composed.primary,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: PiggyTextTokens.title(context),
+                          ),
                         ),
                         // 全部账本模式：展示账本名标签（参考账户详情页）
                         if (ledgerName != null && ledgerName!.isNotEmpty) ...[
@@ -320,17 +340,17 @@ class TransactionListItem extends ConsumerWidget {
                         ],
                       ],
                     ),
-                    // 第三行：时间 · 账户 · 附件
-                    if (_hasSecondaryInfo(ref))
+                    // 第二行：时间 | 备注 | 账户 | 标签 · 附件
+                    if (_hasSecondaryInfo(ref, composedParenNote))
                       Padding(
                         padding: const EdgeInsets.only(top: 2),
-                        child: _buildSecondaryInfo(context, ref),
+                        child: _buildSecondaryInfo(context, ref, composedParenNote),
                       ),
                   ],
                 ),
               ),
             ),
-            // 右侧：金额 + 标签
+            // 右侧：金额 + ≈折算小字
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisAlignment: MainAxisAlignment.center,
@@ -358,42 +378,19 @@ class TransactionListItem extends ConsumerWidget {
                                   ? PiggyTokens.expenseColor(context, ref)
                                   : PiggyTokens.incomeColor(context, ref),
                     )),
-                // 标签行 + ≈折算小字(反馈15:折算放标签右边,同一行;无标签时
-                // 折算独占该行)。隐藏金额开关开启时折算同样遮蔽。
-                // 反馈16:有折算时标签最多展示 1 个(挤位),无折算保持 2 个。
-                Builder(builder: (context) {
-                  final showConverted = _isForeign(ref) &&
-                      nativeAmount != null &&
-                      nativeAmount != amount &&
-                      hide != true;
-                  final hasTags = tags != null && tags!.isNotEmpty;
-                  if (!showConverted && !hasTags) {
-                    return const SizedBox.shrink();
-                  }
-                  return Padding(
+                // ≈折算小字(标签已移到第二行,此处仅保留折算)。
+                // 隐藏金额开关开启时折算同样遮蔽。
+                if (_isForeign(ref) &&
+                    nativeAmount != null &&
+                    nativeAmount != amount &&
+                    hide != true)
+                  Padding(
                     padding: const EdgeInsets.only(top: 4),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (hasTags)
-                          TagChipList(
-                            tags: tags!,
-                            maxDisplay: showConverted ? 1 : 2,
-                            size: TagChipSize.small,
-                            spacing: 4,
-                            onTagTap: onTagTap,
-                          ),
-                        if (hasTags && showConverted)
-                          const SizedBox(width: 6),
-                        if (showConverted)
-                          Text(
-                            '≈${nativeAmount!.toStringAsFixed(2)}',
-                            style: PiggyTextTokens.caption(context),
-                          ),
-                      ],
+                    child: Text(
+                      '≈${nativeAmount!.toStringAsFixed(2)}',
+                      style: PiggyTextTokens.caption(context),
                     ),
-                  );
-                }),
+                  ),
               ],
             ),
           ],

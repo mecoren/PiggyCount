@@ -2034,7 +2034,7 @@ class LocalRepository extends BaseRepository {
       );
 
   @override
-  Future<List<({int? id, String name, String? icon, int? parentId, int level, double total})>>
+  Future<List<({int? id, String name, String? icon, int? parentId, int level, double total, int count})>>
       totalsByCategoryWithHierarchy({
     required int ledgerId,
     required String type,

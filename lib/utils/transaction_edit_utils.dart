@@ -46,30 +46,28 @@ class TransactionEditUtils {
 
     if (!context.mounted) return;
 
-    // 所有类型（收入/支出/转账）都使用交易编辑器页面
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => TransactionEditorPage(
-          initialKind: transaction.type, // 'expense', 'income', 或 'transfer'
-          quickAdd: true,
-          initialCategoryId: initialCategoryId,
-          initialAmount: transaction.amount,
-          initialDate: transaction.happenedAt,
-          initialNote: transaction.note,
-          editingTransactionId: transaction.id,
-          initialAccountId: initialAccountId,
-          // 转账特有的参数
-          initialToAccountId: initialToAccountId,
-          // 标签
-          initialTagIds: tagIds,
-          // 账单标记（不计入收支/预算）回显
-          initialExcludeFromStats: transaction.excludeFromStats,
-          initialExcludeFromBudget: transaction.excludeFromBudget,
-          // v30 多币种:编辑外币交易时汇率行按隐含汇率回显
-          initialCurrencyCode: transaction.currencyCode,
-          initialNativeAmount: transaction.nativeAmount,
-        ),
-      ),
+    // 所有类型（收入/支出/转账）都以底部抽屉形式弹出交易编辑器，
+    // 与新建记账保持一致的交互体验。
+    await showTransactionFormBottomSheet(
+      context,
+      initialKind: transaction.type, // 'expense', 'income', 或 'transfer'
+      quickAdd: true,
+      initialCategoryId: initialCategoryId,
+      initialAmount: transaction.amount,
+      initialDate: transaction.happenedAt,
+      initialNote: transaction.note,
+      editingTransactionId: transaction.id,
+      initialAccountId: initialAccountId,
+      // 转账特有的参数
+      initialToAccountId: initialToAccountId,
+      // 标签
+      initialTagIds: tagIds,
+      // 账单标记（不计入收支/预算）回显
+      initialExcludeFromStats: transaction.excludeFromStats,
+      initialExcludeFromBudget: transaction.excludeFromBudget,
+      // v30 多币种:编辑外币交易时汇率行按隐含汇率回显
+      initialCurrencyCode: transaction.currencyCode,
+      initialNativeAmount: transaction.nativeAmount,
     );
   }
 }

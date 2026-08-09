@@ -1140,11 +1140,65 @@ abstract class AppLocalizations {
   /// **'End'**
   String get searchDateEnd;
 
+  /// No description provided for @analyticsWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Week'**
+  String get analyticsWeek;
+
   /// No description provided for @analyticsMonth.
   ///
   /// In en, this message translates to:
   /// **'Month'**
   String get analyticsMonth;
+
+  /// No description provided for @analyticsWeekTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'{type} This Week: '**
+  String analyticsWeekTotal(Object type);
+
+  /// No description provided for @analyticsComparedToLastWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'vs Last Week'**
+  String get analyticsComparedToLastWeek;
+
+  /// No description provided for @analyticsThisWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'This Week'**
+  String get analyticsThisWeek;
+
+  /// No description provided for @analyticsThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'This Month'**
+  String get analyticsThisMonth;
+
+  /// No description provided for @analyticsThisYear.
+  ///
+  /// In en, this message translates to:
+  /// **'This Year'**
+  String get analyticsThisYear;
+
+  /// No description provided for @analyticsTrendTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{period} Trend'**
+  String analyticsTrendTitle(Object period);
+
+  /// No description provided for @analyticsCategoryComposition.
+  ///
+  /// In en, this message translates to:
+  /// **'{type} by Category'**
+  String analyticsCategoryComposition(Object type);
+
+  /// No description provided for @analyticsTxCountShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} txns'**
+  String analyticsTxCountShort(Object count);
 
   /// No description provided for @analyticsYear.
   ///
@@ -1191,7 +1245,7 @@ abstract class AppLocalizations {
   /// No description provided for @analyticsTipHeader.
   ///
   /// In en, this message translates to:
-  /// **'Tip: Top capsule can switch Month/Year/All'**
+  /// **'Tip: Top capsule can switch Week/Month/Year/All'**
   String get analyticsTipHeader;
 
   /// No description provided for @analyticsSwipeToSwitch.
@@ -5553,6 +5607,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Balance: '**
   String get analyticsBalance;
+
+  /// No description provided for @analyticsComparedToLastYear.
+  ///
+  /// In en, this message translates to:
+  /// **'vs Last Year'**
+  String get analyticsComparedToLastYear;
+
+  /// No description provided for @analyticsTxCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Records'**
+  String get analyticsTxCount;
 
   /// No description provided for @analyticsAvgIncome.
   ///

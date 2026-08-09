@@ -18,6 +18,8 @@ class WaitSlidingSegmentedControl<T> extends StatefulWidget {
     required this.selected,
     required this.onValueChanged,
     this.accentColor,
+    this.height = 42,
+    this.fontSize = 14,
   });
 
   /// 选项列表
@@ -31,6 +33,12 @@ class WaitSlidingSegmentedControl<T> extends StatefulWidget {
 
   /// 选中项的强调色。未指定时使用 [ColorScheme.primary]。
   final Color? accentColor;
+
+  /// 控件高度（默认 42，紧凑场景可传 28 等）
+  final double height;
+
+  /// 选项文字字号（默认 14，紧凑场景可传 12 等）
+  final double fontSize;
 
   @override
   State<WaitSlidingSegmentedControl<T>> createState() =>
@@ -140,7 +148,7 @@ class _WaitSlidingSegmentedControlState<T>
             widget.onValueChanged(widget.segments[nearestIndex].value);
           },
           child: Container(
-            height: 42,
+            height: widget.height,
             // 95% 中性实色背景（与底部导航栏/头部统一），消除 BackdropFilter 模糊开销
             decoration: BoxDecoration(
               color: PiggyTokens.tabBarBackground(context),
@@ -230,7 +238,7 @@ class _WaitSlidingSegmentedControlState<T>
                           return Expanded(
                             child: Center(
                               child: Container(
-                                height: 42,
+                                height: widget.height,
                                 alignment: Alignment.center,
                                 child: Row(
                                   children: [
@@ -241,7 +249,7 @@ class _WaitSlidingSegmentedControlState<T>
                                             milliseconds: 200,
                                           ),
                                           style: TextStyle(
-                                            fontSize: 14,
+                                            fontSize: widget.fontSize,
                                             fontWeight: FontWeight.w500,
                                             color: isSelected
                                                 ? colorScheme.surface
@@ -251,11 +259,11 @@ class _WaitSlidingSegmentedControlState<T>
                                         ),
                                       ),
                                     ),
-                                    // 分割线：上下留出间距，不全满
+                                    // 分割线：上下留出间距，不全满（随高度缩放）
                                     if (!isLast)
                                       Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 10,
+                                        padding: EdgeInsets.symmetric(
+                                          vertical: widget.height * 0.25,
                                         ),
                                         child: Container(
                                           width: 0.5,

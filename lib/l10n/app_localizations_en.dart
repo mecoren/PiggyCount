@@ -595,7 +595,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchDateEnd => 'End';
 
   @override
+  String get analyticsWeek => 'Week';
+
+  @override
   String get analyticsMonth => 'Month';
+
+  @override
+  String analyticsWeekTotal(Object type) {
+    return '$type This Week: ';
+  }
+
+  @override
+  String get analyticsComparedToLastWeek => 'vs Last Week';
+
+  @override
+  String get analyticsThisWeek => 'This Week';
+
+  @override
+  String get analyticsThisMonth => 'This Month';
+
+  @override
+  String get analyticsThisYear => 'This Year';
+
+  @override
+  String analyticsTrendTitle(Object period) {
+    return '$period Trend';
+  }
+
+  @override
+  String analyticsCategoryComposition(Object type) {
+    return '$type by Category';
+  }
+
+  @override
+  String analyticsTxCountShort(Object count) {
+    return '$count txns';
+  }
 
   @override
   String get analyticsYear => 'Year';
@@ -622,7 +657,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get analyticsTipHeader => 'Tip: Top capsule can switch Month/Year/All';
+  String get analyticsTipHeader =>
+      'Tip: Top capsule can switch Week/Month/Year/All';
 
   @override
   String get analyticsSwipeToSwitch => 'Swipe to switch';
@@ -3027,6 +3063,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get analyticsBalance => 'Balance: ';
+
+  @override
+  String get analyticsComparedToLastYear => 'vs Last Year';
+
+  @override
+  String get analyticsTxCount => 'Records';
 
   @override
   String analyticsAvgIncome(String avgLabel) {

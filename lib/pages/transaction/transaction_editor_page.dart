@@ -19,15 +19,27 @@ import '../../services/billing/post_processor.dart';
 import '../../services/attachment_service.dart';
 import '../../services/data/tx_author_service.dart';
 
-/// 以底部抽屉形式弹出交易编辑器（新建模式专用）
+/// 以底部抽屉形式弹出交易编辑器（新建 / 编辑通用）
 ///
-/// 内部仍复用 [TransactionEditorPage] 的逻辑，仅外层从全屏 Scaffold
-/// 替换为 [ExpandableBottomSheet]。编辑模式仍走全屏页（保留复杂表单体验）。
+/// 内部复用 [TransactionEditorPage] 的逻辑，外层用 [ExpandableBottomSheet]
+/// 渲染。编辑模式（[editingTransactionId] 非空）时传入金额/日期/备注/账户/
+/// 标签/币种等参数用于回显，抽屉标题切换为「编辑」。
 Future<void> showTransactionFormBottomSheet(
   BuildContext context, {
   String initialKind = 'expense',
   int? initialCategoryId,
   bool quickAdd = true,
+  String? initialNote,
+  double? initialAmount,
+  DateTime? initialDate,
+  int? editingTransactionId,
+  int? initialAccountId,
+  int? initialToAccountId,
+  List<int>? initialTagIds,
+  bool initialExcludeFromStats = false,
+  bool initialExcludeFromBudget = false,
+  String? initialCurrencyCode,
+  double? initialNativeAmount,
 }) async {
   await showModalBottomSheet<void>(
     context: context,
@@ -39,6 +51,17 @@ Future<void> showTransactionFormBottomSheet(
       quickAdd: quickAdd,
       initialCategoryId: initialCategoryId,
       renderAsBottomSheet: true,
+      initialNote: initialNote,
+      initialAmount: initialAmount,
+      initialDate: initialDate,
+      editingTransactionId: editingTransactionId,
+      initialAccountId: initialAccountId,
+      initialToAccountId: initialToAccountId,
+      initialTagIds: initialTagIds,
+      initialExcludeFromStats: initialExcludeFromStats,
+      initialExcludeFromBudget: initialExcludeFromBudget,
+      initialCurrencyCode: initialCurrencyCode,
+      initialNativeAmount: initialNativeAmount,
     ),
   );
 }
@@ -283,8 +306,10 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
       ),
     );
 
+    // 编辑模式标题显示「编辑」，新建模式显示「记一笔」
+    final isEditing = widget.editingTransactionId != null;
     return ExpandableBottomSheet(
-      title: l10n.widgetQuickAddLabel,
+      title: isEditing ? l10n.commonEdit : l10n.widgetQuickAddLabel,
       onClose: () => Navigator.of(context).pop(),
       initialChildSize: 0.7,
       minChildSize: 0.35,
