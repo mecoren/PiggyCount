@@ -44,12 +44,21 @@ class TagSelector extends ConsumerStatefulWidget {
 
 class _TagSelectorState extends ConsumerState<TagSelector> {
   late Set<int> _selectedIds;
-  String _searchText = '';
+  // 用 ValueNotifier 承载搜索词:输入时只局部重建列表区(过滤结果),
+  // 不再 setState 重建整个 sheet(标题/搜索框/最近使用/全部 chip)。
+  // 这是输入法卡顿根因——每个字符全量重建 + 重过滤 + 重渲染所有 TagChip。
+  final ValueNotifier<String> _searchText = ValueNotifier('');
 
   @override
   void initState() {
     super.initState();
     _selectedIds = Set.from(widget.selectedTagIds);
+  }
+
+  @override
+  void dispose() {
+    _searchText.dispose();
+    super.dispose();
   }
 
   @override
@@ -136,59 +145,71 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
                   vertical: 8,
                 ),
               ),
-              onChanged: (value) => setState(() => _searchText = value),
+              onChanged: (value) => _searchText.value = value,
             ),
           ),
           const SizedBox(height: 12),
 
           // 内容区
+          // ValueListenableBuilder 监听搜索词:按键时仅此区域重建(过滤 + 列表),
+          // 标题/搜索框/选中态 chip 等其余部分保持不变,消除输入卡顿。
           Expanded(
-            child: allTagsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(child: Text('$error')),
-              data: (allTags) {
-                // 过滤搜索结果
-                final filteredTags = _searchText.isEmpty
-                    ? allTags
-                    : allTags
-                        .where((t) => t.name.toLowerCase().contains(_searchText.toLowerCase()))
-                        .toList();
+            child: ValueListenableBuilder<String>(
+              valueListenable: _searchText,
+              builder: (context, searchText, _) {
+                return allTagsAsync.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (error, stack) => Center(child: Text('$error')),
+                  data: (allTags) {
+                    // 过滤搜索结果
+                    final filteredTags = searchText.isEmpty
+                        ? allTags
+                        : allTags
+                            .where((t) => t.name
+                                .toLowerCase()
+                                .contains(searchText.toLowerCase()))
+                            .toList();
 
-                if (filteredTags.isEmpty && allTags.isEmpty) {
-                  return _buildEmptyState(l10n);
-                }
+                    if (filteredTags.isEmpty && allTags.isEmpty) {
+                      return _buildEmptyState(l10n);
+                    }
 
-                return ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  children: [
-                    // 最近使用
-                    if (_searchText.isEmpty)
-                      recentTagsAsync.when(
-                        loading: () => const SizedBox.shrink(),
-                        error: (_, __) => const SizedBox.shrink(),
-                        data: (recentTags) {
-                          if (recentTags.isEmpty) {
-                            return const SizedBox.shrink();
-                          }
-                          return _buildSection(
-                            l10n.tagSelectRecentlyUsed,
-                            recentTags,
-                          );
-                        },
-                      ),
+                    return ListView(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      children: [
+                        // 最近使用
+                        if (searchText.isEmpty)
+                          recentTagsAsync.when(
+                            loading: () => const SizedBox.shrink(),
+                            error: (_, __) => const SizedBox.shrink(),
+                            data: (recentTags) {
+                              if (recentTags.isEmpty) {
+                                return const SizedBox.shrink();
+                              }
+                              return _buildSection(
+                                l10n.tagSelectRecentlyUsed,
+                                recentTags,
+                              );
+                            },
+                          ),
 
-                    // 全部标签
-                    if (filteredTags.isNotEmpty)
-                      _buildSection(
-                        _searchText.isEmpty ? l10n.tagSelectAllTags : '${l10n.commonSearch}结果',
-                        filteredTags,
-                      ),
+                        // 全部标签
+                        if (filteredTags.isNotEmpty)
+                          _buildSection(
+                            searchText.isEmpty
+                                ? l10n.tagSelectAllTags
+                                : '${l10n.commonSearch}结果',
+                            filteredTags,
+                          ),
 
-                    // 新建标签入口
-                    const SizedBox(height: 8),
-                    _buildCreateNew(l10n),
-                    const SizedBox(height: 16),
-                  ],
+                        // 新建标签入口
+                        const SizedBox(height: 8),
+                        _buildCreateNew(l10n),
+                        const SizedBox(height: 16),
+                      ],
+                    );
+                  },
                 );
               },
             ),

@@ -32,16 +32,26 @@ Future<String?> showCurrencyPickerSheet(
     builder: (bctx) {
       String query = '';
       final sheetTitle = title ?? AppLocalizations.of(bctx).baseCurrencyLabel;
-      return StatefulBuilder(builder: (sctx, setSheetState) {
-        // 常用币种置顶(kCommonCurrencyCodes 顺序),其余按地区原顺序。
+      // 常用币种置顶(kCommonCurrencyCodes 顺序),其余按地区原顺序。
+      // 有序列表只构建一次,不随每次按键重建(输入法卡顿根因:每个字符
+      // 都 getCurrencies + 多次 where 全量扫描 + 重新 toList)。
+      final List<CurrencyInfo> ordered = () {
         final allCur = getCurrencies(bctx);
-        final ordered = <CurrencyInfo>[];
+        final list = <CurrencyInfo>[];
         for (final code in kCommonCurrencyCodes) {
-          final hit = allCur.where((c) => c.code == code);
-          if (hit.isNotEmpty) ordered.add(hit.first);
+          for (final c in allCur) {
+            if (c.code == code) {
+              list.add(c);
+              break;
+            }
+          }
         }
-        ordered.addAll(
+        list.addAll(
             allCur.where((c) => !kCommonCurrencyCodes.contains(c.code)));
+        return list;
+      }();
+      return StatefulBuilder(builder: (sctx, setSheetState) {
+        // 仅重算过滤结果(轻量),排序已缓存。
         final filtered = ordered.where((c) {
           final q = query.trim();
           if (q.isEmpty) return true;
