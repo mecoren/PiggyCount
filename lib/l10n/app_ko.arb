@@ -70,6 +70,7 @@
       "total": {"type": "int"}
     }
   },
+  "startupSyncCheckUpToDate": "모든 장부가 최신 상태입니다",
   "startupSyncConflictTooltip": "로컬 변경사항이 클라우드로 덮어씌워집니다",
   "startupSyncConflictConfirmTitle": "덮어쓰기 확인",
   "startupSyncConflictConfirmMessage": "{count}개 장부의 로컬 변경사항({names})을 클라우드 버전으로 덮어씁니다. 계속하시겠습니까?",

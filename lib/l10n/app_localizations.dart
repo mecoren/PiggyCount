@@ -318,6 +318,12 @@ abstract class AppLocalizations {
   /// **'Merging {applied}/{total}'**
   String startupSyncCheckApplyingProgress(int applied, int total);
 
+  /// No description provided for @startupSyncCheckUpToDate.
+  ///
+  /// In en, this message translates to:
+  /// **'All ledgers are up to date'**
+  String get startupSyncCheckUpToDate;
+
   /// No description provided for @startupSyncConflictTooltip.
   ///
   /// In en, this message translates to:

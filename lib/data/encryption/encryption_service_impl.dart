@@ -135,6 +135,7 @@ class EncryptionServiceImpl implements EncryptionService {
   Future<bool> enableFromCloud({
     required String password,
     required CloudStorageService cloudStorage,
+    bool allowFallbackToEnable = true,
   }) async {
     _validatePassword(password);
 
@@ -153,9 +154,14 @@ class EncryptionServiceImpl implements EncryptionService {
       );
     }
 
-    // 2. 遍历文件，下载并识别第一个 ledger_*.json 的 BEECRYPT1 密文
-    //    下载内容缓存到 ciphertextContent，避免重复下载
-    String? ciphertextContent;
+    // 2. 遍历文件，下载所有 ledger_*.json 的 BEECRYPT1 密文。
+    //    注意：不能只取第一个密文验证密码——当云端存在「混合 salt」
+    //    （A 设备改密时部分文件重加密失败/未重加密，或部分文件被
+    //    其他设备用不同密码加密）时，第一个密文可能是旧 salt，
+    //    用新密码派生 key 解密会 GCM MAC 失败，导致「输入正确密码
+    //    仍报密码错误」。应收集全部密文，逐个尝试验证，只要有一个
+    //    能用输入密码解密成功，即认为密码正确（用该密文的 salt 激活）。
+    final ciphertextCandidates = <String>[];
     for (final f in files) {
       final name = f.name;
       if (!name.startsWith('ledger_') || !name.endsWith('.json')) continue;
@@ -172,65 +178,104 @@ class EncryptionServiceImpl implements EncryptionService {
       }
 
       if (raw != null && CiphertextFormat.isEncrypted(raw)) {
-        ciphertextContent = raw;
-        break;
+        ciphertextCandidates.add(raw);
       }
     }
 
-    // 3. 云端无密文 → 回退到 enable（首设备场景）
-    if (ciphertextContent == null) {
+    // 3. 云端无密文 → 默认回退到 enable（首设备场景）；
+    //    但 salt_mismatch 恢复场景（allowFallbackToEnable=false）禁止回退：
+    //    此时本地已确认云端存在密文，若 list 探测不到 ledger_*.json 密文
+    //    （文件名不匹配/路径前缀等），回退 enable 会生成全新的随机 salt，
+    //    本地密钥与云端密文永远不匹配，导致后续 getStatus 持续
+    //    salt_mismatch_need_password（用户输入正确密码仍报"密钥不匹配"）。
+    //    应抛探测失败异常让 UI 明确提示，而非静默污染本地密钥。
+    if (ciphertextCandidates.isEmpty) {
+      if (!allowFallbackToEnable) {
+        throw EnableFromCloudProbeFailedException(
+          '云端未找到可恢复的加密备份（ledger_*.json 密文），'
+          '无法从云端提取 salt。请检查云端数据后重试。',
+        );
+      }
       await enable(password: password);
       return false;
     }
 
-    // 4. 提取 salt + 派生 key + 尝试解密验证密码
-    //    密文格式损坏（base64 截断、salt 长度异常）抛 FormatException
-    DecodedCiphertext decoded;
-    try {
-      decoded = CiphertextFormat.decode(ciphertextContent);
-    } catch (e) {
-      throw EnableFromCloudCorruptedException(
-        '云端密文格式损坏，无法提取 salt。可能是云端数据被破坏或截断。'
-        '请尝试以首设备身份重新设置加密（将生成新 salt 并重加密云端数据）。',
-        cause: e,
+    // 4. 遍历所有密文，逐个提取 salt + 派生 key + 尝试解密验证密码。
+    //    只要有一个密文能用输入密码解密成功，即认为密码正确，
+    //    并用该密文的 salt 激活（与云端实际使用的 salt 保持一致）。
+    //    若全部失败：
+    //    - 任一密文格式损坏（base64 截断、salt 长度异常）抛
+    //      EnableFromCloudCorruptedException（数据损坏，与密码无关）
+    //    - 全部为 GCM MAC 失败 → 密码错误（ArgumentError）
+    // 记录首个格式损坏错误（数据损坏，与密码无关）
+    String? lastFormatError;
+    // 是否发生过 GCM MAC 校验失败（密码错误特征）
+    var sawAuthError = false;
+    DecodedCiphertext? activatedDecoded;
+    Uint8List? activatedKey;
+
+    for (final candidate in ciphertextCandidates) {
+      DecodedCiphertext decoded;
+      try {
+        decoded = CiphertextFormat.decode(candidate);
+      } catch (e) {
+        // 记录首个格式错误，继续尝试其他密文
+        lastFormatError ??= e.toString();
+        continue;
+      }
+
+      final key = await keyDerivation.deriveKey(
+        password: password,
+        salt: decoded.salt,
       );
+
+      try {
+        await cipher.decrypt(
+          encryptedBytes: decoded.encryptedBytes,
+          key: key,
+        );
+      } on SecretBoxAuthenticationError {
+        // GCM MAC 校验失败：该密文非此密码加密，记录并尝试下一个
+        sawAuthError = true;
+        continue;
+      } catch (e) {
+        // 其他异常（如密文长度不足、base64 损坏）：记录首个，继续尝试
+        lastFormatError ??= e.toString();
+        continue;
+      }
+
+      // 验证通过：记录该密文的 salt/key，跳出循环
+      activatedDecoded = decoded;
+      activatedKey = key;
+      break;
     }
 
-    final key = await keyDerivation.deriveKey(
-      password: password,
-      salt: decoded.salt,
-    );
-
-    // M2 修复：区分 GCM MAC 失败（密码错）与其他异常（数据损坏）
-    try {
-      await cipher.decrypt(
-        encryptedBytes: decoded.encryptedBytes,
-        key: key,
-      );
-    } on SecretBoxAuthenticationError {
-      // GCM MAC 校验失败：密码错误（密钥与密文不匹配）
+    if (activatedDecoded == null || activatedKey == null) {
+      // 所有密文都验证失败
+      if (lastFormatError != null && !sawAuthError) {
+        // 全部是格式损坏（无任何 MAC 校验失败）→ 云端数据损坏
+        throw EnableFromCloudCorruptedException(
+          '云端密文数据损坏，无法验证密码。可能是云端数据被破坏。'
+          '请尝试以首设备身份重新设置加密。',
+          cause: FormatException(lastFormatError),
+        );
+      }
+      // 至少一个密文 GCM MAC 校验失败 → 密码错误
       throw ArgumentError('密码错误，无法加入加密');
-    } catch (e) {
-      // 其他异常（如密文长度不足、base64 损坏）：云端数据损坏
-      throw EnableFromCloudCorruptedException(
-        '云端密文数据损坏，无法验证密码。可能是云端数据被破坏。'
-        '请尝试以首设备身份重新设置加密。',
-        cause: e,
-      );
     }
 
     // 5. 验证通过 → 生成 verifier 并持久化
     final verifier = await cipher.encrypt(
       plaintext: utf8.encode(_verifierPlaintext),
-      key: key,
+      key: activatedKey,
     );
-    await storage.saveKey(key);
-    await storage.saveSalt(decoded.salt);
+    await storage.saveKey(activatedKey);
+    await storage.saveSalt(activatedDecoded.salt);
     await storage.saveVerifier(verifier);
 
     // 6. 激活内存密钥 + 标记已开启
-    _activeKey = key;
-    _activeSalt = Uint8List.fromList(decoded.salt);
+    _activeKey = activatedKey;
+    _activeSalt = Uint8List.fromList(activatedDecoded.salt);
     final prefs = await _getPrefs();
     await prefs.setBool(_enabledKey, true);
 

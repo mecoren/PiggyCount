@@ -127,6 +127,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get startupSyncCheckUpToDate => 'All ledgers are up to date';
+
+  @override
   String get startupSyncConflictTooltip =>
       'Local changes will be overwritten by cloud';
 

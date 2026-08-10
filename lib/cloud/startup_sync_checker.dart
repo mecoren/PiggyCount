@@ -156,6 +156,9 @@ abstract class StartupSyncCheckerDeps {
   /// confirmEach 模式下弹出信息提示
   void showLegacyInfo(String message);
 
+  /// 全部账本均是最新时显示的成功提示文案
+  String getUpToDateMessage();
+
   /// 日志
   void log(String message);
 }
@@ -226,6 +229,8 @@ class StartupSyncChecker {
     // 4. 收集候选账本（cloudNewer / different），推送进度
     controller.startChecking(ledgers.length);
     final candidates = <LedgerCandidate>[];
+    // isRetry 后仍检测到哨兵的账本名（密钥激活后仍未完全恢复）
+    final retrySentinelLedgers = <String>[];
     var checked = 0;
     for (final ledger in ledgers) {
       try {
@@ -245,7 +250,8 @@ class StartupSyncChecker {
           final result = await deps.handleSaltMismatch();
           switch (result) {
             case SaltMismatchRecoveryResult.activated:
-              // 激活成功，重新执行整个检查流程
+              // 激活成功，重新挂载 overlay 并重新执行整个检查流程
+              controller.reattach();
               return _runInternal(isRetry: true);
             case SaltMismatchRecoveryResult.failed:
               // 密码错误/激活失败：明确告知用户同步未恢复，
@@ -259,6 +265,18 @@ class StartupSyncChecker {
               controller.dismiss();
               return;
           }
+        } else if ((status.message == 'salt_mismatch_need_password' ||
+                status.message == 'cloud_encrypted_locally_disabled') &&
+            isRetry) {
+          // isRetry 分支：激活成功后重试仍检测到哨兵。
+          // 说明本地密钥仍与云端部分/全部密文不匹配（可能：A 设备改密时云端
+          // 部分文件重加密失败形成混合 salt；或本次激活的 salt 只匹配部分账本）。
+          // 不能静默跳过——用户输入密码后应有明确反馈，否则错误只在设置页可见。
+          // 这里收集账本名，循环结束后统一提示（避免多账本连续弹窗）。
+          deps.log('StartupSyncChecker: 账本 ${ledger.name} 密钥激活后仍'
+              '加密状态异常（${status.message}），同步未完全恢复');
+          retrySentinelLedgers.add(ledger.name);
+          continue;
         }
         if (status.diff == SyncDiff.cloudNewer ||
             status.diff == SyncDiff.different) {
@@ -278,9 +296,19 @@ class StartupSyncChecker {
       controller.updateCheckingProgress(checked, ledgers.length);
     }
 
-    if (candidates.isEmpty) {
-      deps.log('StartupSyncChecker: 无候选账本，跳过');
+    if (retrySentinelLedgers.isNotEmpty) {
+      // 激活后仍有账本密钥不匹配：明确告知用户，避免错误只在设置页可见。
+      deps.log('StartupSyncChecker: 激活后仍有 ${retrySentinelLedgers.length} '
+          '个账本密钥不匹配（${retrySentinelLedgers.join('、')}），同步未完全恢复');
       controller.dismiss();
+      deps.showRecoveryFailed();
+      return;
+    }
+
+    if (candidates.isEmpty) {
+      deps.log('StartupSyncChecker: 无候选账本，全部都是最新');
+      // 全部最新：显示完成态提示，1.5s 后自动 dismiss
+      controller.done(deps.getUpToDateMessage());
       return;
     }
 
@@ -761,6 +789,10 @@ class WidgetRefDeps implements StartupSyncCheckerDeps {
       message: message,
     );
   }
+
+  @override
+  String getUpToDateMessage() =>
+      AppLocalizations.of(_context).startupSyncCheckUpToDate;
 
   @override
   void log(String message) {

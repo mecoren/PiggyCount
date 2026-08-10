@@ -71,6 +71,7 @@ class DismissedState extends StartupSyncState {}
 class StartupSyncController extends ChangeNotifier {
   StartupSyncState _state = IdleState();
   OverlayEntry? _overlayEntry;
+  OverlayState? _overlay;
   bool _attached = false;
 
   StartupSyncState get state => _state;
@@ -84,6 +85,23 @@ class StartupSyncController extends ChangeNotifier {
   /// 挂载 overlay 到指定 OverlayState
   void attach(OverlayState overlay) {
     if (_attached) return;
+    _overlay = overlay;
+    _overlayEntry = OverlayEntry(
+      builder: (ctx) => _StartupSyncOverlayView(controller: this),
+    );
+    overlay.insert(_overlayEntry!);
+    _attached = true;
+  }
+
+  /// 重新挂载 overlay（detach 后再次显示）
+  ///
+  /// 用于 salt_mismatch 恢复流程：先 dismiss 关掉遮罩弹密码框，
+  /// 激活成功后重新挂载遮罩，让用户能看到后续检查进度/结果，
+  /// 避免「输入密码后无任何反馈」的体验缺陷。
+  void reattach() {
+    if (_attached) return;
+    final overlay = _overlay;
+    if (overlay == null) return;
     _overlayEntry = OverlayEntry(
       builder: (ctx) => _StartupSyncOverlayView(controller: this),
     );

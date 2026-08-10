@@ -1091,6 +1091,7 @@
       "total": {"type": "int"}
     }
   },
+  "startupSyncCheckUpToDate": "所有帳本都是最新的",
   "startupSyncConflictTooltip": "本地有改動將被雲端覆蓋",
   "startupSyncConflictConfirmTitle": "覆蓋確認",
   "startupSyncConflictConfirmMessage": "將用雲端覆蓋 {count} 個帳本的本地改動（{names}），是否繼續？",

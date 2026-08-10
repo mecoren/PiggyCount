@@ -70,6 +70,13 @@ abstract class EncryptionService {
   /// [EncryptedCloudStorageService]），因为本方法需要下载密文字符串本身
   /// 来提取 salt，而非解密后的明文。
   ///
+  /// [allowFallbackToEnable]：
+  /// - true（默认）：云端无密文时回退到 [enable] 生成新 salt（首设备场景）
+  /// - false：禁止回退。调用方已确定云端存在密文（如 salt_mismatch 恢复场景），
+  ///   若 list 探测未找到 `ledger_*.json` 密文则抛
+  ///   [EnableFromCloudProbeFailedException]，**绝不**生成新 salt——
+  ///   否则本地会写入与云端不匹配的错误 salt，导致后续永远 salt_mismatch。
+  ///
   /// 返回值：
   /// - true：从云端密文提取 salt 成功加入（新设备场景），云端已是密文，
   ///         调用方**无需**再触发全量重加密
@@ -78,10 +85,13 @@ abstract class EncryptionService {
   ///
   /// 抛出：
   /// - [ArgumentError]：密码为空/过短/解密验证失败（密码错误）
+  /// - [EnableFromCloudProbeFailedException]：list/download 探测失败，
+  ///   或 [allowFallbackToEnable] 为 false 时云端未找到密文
   /// - 网络/云存储异常（download 阶段）：透传给调用方
   Future<bool> enableFromCloud({
     required String password,
     required CloudStorageService cloudStorage,
+    bool allowFallbackToEnable = true,
   });
 
   /// 关闭加密

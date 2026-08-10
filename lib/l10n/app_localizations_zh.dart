@@ -127,6 +127,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get startupSyncCheckUpToDate => '所有账本都是最新的';
+
+  @override
   String get startupSyncConflictTooltip => '本地有改动将被云端覆盖';
 
   @override
@@ -7901,6 +7904,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String startupSyncCheckApplyingProgress(int applied, int total) {
     return '正在合併 $applied/$total';
   }
+
+  @override
+  String get startupSyncCheckUpToDate => '所有帳本都是最新的';
 
   @override
   String get startupSyncConflictTooltip => '本地有改動將被雲端覆蓋';

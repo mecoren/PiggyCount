@@ -165,7 +165,7 @@ void main() {
   });
 
   group('候选收集', () {
-    test('所有账本 inSync 时不进入 HasUpdatesState', () async {
+    test('所有账本 inSync 时提示全部都是最新（DoneState）', () async {
       deps.activeConfig = const CloudServiceConfig(
         type: CloudBackendType.s3,
         name: 's3',
@@ -183,7 +183,10 @@ void main() {
       await checker.runIfNeeded();
 
       expect(deps.getStatusCallCount, 2);
-      expect(controller.state, isA<DismissedState>());
+      // 没有候选时进入 DoneState 显示"全部都是最新"提示（1.5s 后自动 dismiss）
+      expect(controller.state, isA<DoneState>());
+      expect((controller.state as DoneState).message,
+          deps.getUpToDateMessage());
     });
 
     test('cloudNewer 和 different 的账本都被收集为候选', () async {
@@ -240,7 +243,10 @@ void main() {
       await checker.runIfNeeded();
 
       expect(deps.lastCandidates, isEmpty);
-      expect(controller.state, isA<DismissedState>());
+      // 无候选：进入 DoneState 显示"全部都是最新"提示
+      expect(controller.state, isA<DoneState>());
+      expect((controller.state as DoneState).message,
+          deps.getUpToDateMessage());
     });
 
     test('getStatus 抛异常时该账本被跳过，其他账本继续', () async {
@@ -824,6 +830,44 @@ void main() {
       expect(deps.lastCandidates, isEmpty);
       expect(controller.state, isA<DismissedState>());
     });
+
+    test('isRetry 后仍检测到哨兵时弹明确提示（而非静默退出）', () async {
+      // Arrange: 激活成功（返回 activated），但激活后 getStatus 仍返回哨兵
+      // （混合 salt：A 改密时云端部分文件重加密失败，激活的 salt 只匹配部分账本）
+      deps.statusByLedger = {
+        1: SyncStatus(
+          diff: SyncDiff.error,
+          localCount: 0,
+          localFingerprint: '',
+          message: 'salt_mismatch_need_password',
+        ),
+        2: SyncStatus(
+          diff: SyncDiff.error,
+          localCount: 0,
+          localFingerprint: '',
+          message: 'cloud_encrypted_locally_disabled',
+        ),
+      };
+      deps.handleSaltMismatchReturn = SaltMismatchRecoveryResult.activated;
+      // 激活后仍全部是哨兵
+      deps.statusAfterSaltMismatch = SyncStatus(
+        diff: SyncDiff.error,
+        localCount: 0,
+        localFingerprint: '',
+        message: 'salt_mismatch_need_password',
+      );
+
+      // Act
+      await checker.runIfNeeded();
+
+      // Assert: 输入密码后仍失败 → 前端直接弹明确提示（而非静默退出到设置页）
+      expect(deps.recoveryFailedShownCount, 1,
+          reason: '激活后仍密钥不匹配应明确提示用户，而非静默退出');
+      expect(deps.handleSaltMismatchCallCount, 1,
+          reason: 'isRetry 模式下不应再次弹密码框（防止无限递归）');
+      expect(deps.lastCandidates, isEmpty);
+      expect(controller.state, isA<DismissedState>());
+    });
   });
 }
 
@@ -1017,6 +1061,9 @@ class _FakeDeps implements StartupSyncCheckerDeps {
   void showLegacyInfo(String message) {
     legacyInfoShownCount++;
   }
+
+  @override
+  String getUpToDateMessage() => 'All ledgers up to date (test)';
 
   @override
   void log(String message) {

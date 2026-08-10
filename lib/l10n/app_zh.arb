@@ -71,6 +71,7 @@
       "total": {"type": "int"}
     }
   },
+  "startupSyncCheckUpToDate": "所有账本都是最新的",
   "startupSyncConflictTooltip": "本地有改动将被云端覆盖",
   "startupSyncConflictConfirmTitle": "覆盖确认",
   "startupSyncConflictConfirmMessage": "将用云端覆盖 {count} 个账本的本地改动（{names}），是否继续？",

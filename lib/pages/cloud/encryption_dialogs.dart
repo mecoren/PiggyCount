@@ -5,6 +5,7 @@ import '../../cloud/transactions_sync_manager.dart';
 import '../../domain/encryption/encryption_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/encryption_providers.dart';
+import '../../providers/sync_providers.dart';
 import '../../services/system/logger_service.dart';
 import '../../widgets/encryption/password_setup_dialog.dart';
 import '../../widgets/ui/dialog.dart';
@@ -62,11 +63,27 @@ Future<SaltMismatchRecoveryResult> promptPasswordAndActivate(
   }
 
   // 3. 从云端重提取 salt + 验证密码 + 持久化新密钥
+  //    关键：salt_mismatch 恢复场景禁止回退 enable（allowFallbackToEnable=false）。
+  //    否则云端 list 探测找不到 ledger_*.json 密文时（文件名不匹配/路径前缀等），
+  //    enableFromCloud 会生成全新随机 salt 并返回 false，本地密钥与云端永远不匹配，
+  //    用户输入正确密码仍持续报"密钥不匹配"（历史 bug，本次修复）。
   try {
-    await service.enableFromCloud(
+    final activated = await service.enableFromCloud(
       password: password,
       cloudStorage: rawStorage,
+      allowFallbackToEnable: false,
     );
+    if (!activated) {
+      // 防御：allowFallbackToEnable=false 时不应返回 false；
+      // 若返回（云端确实无密文），明确告知用户无法恢复
+      if (!context.mounted) return SaltMismatchRecoveryResult.cancelled;
+      await AppDialog.error(
+        context,
+        title: l10n.saltMismatchDialogTitle,
+        message: l10n.saltMismatchProbeFailed,
+      );
+      return SaltMismatchRecoveryResult.failed;
+    }
   } on ArgumentError {
     // 密码错误（解密验证失败）
     if (!context.mounted) return SaltMismatchRecoveryResult.cancelled;
@@ -100,6 +117,14 @@ Future<SaltMismatchRecoveryResult> promptPasswordAndActivate(
   await syncManager.reinitializeForEncryption();
   // 5. 刷新加密状态 tick，触发 UI 更新
   ref.read(encryptionEnabledTickProvider.notifier).state++;
+  // 6. 刷新同步状态 tick：让 syncStatusProvider（watch 此 tick）重新拉取。
+  //    否则激活后进入设置页，syncStatusProvider 仍返回激活前缓存的
+  //    'salt_mismatch_need_password'，导致「输入正确密码后设置页仍报
+  //    『云端备份密钥与本地不匹配』」（历史 bug，本次修复）。
+  ref.read(syncStatusRefreshProvider.notifier).state++;
+  //    同时清除同步状态缓存，避免 getStatus 读到旧 error（虽然 error 不缓存，
+  //    但 clear 是防御性的，确保后续 getStatus 重新走完整流程）。
+  syncManager.clearStatusCache();
 
   logger.info('CloudSync', 'salt_mismatch 恢复：密钥已重新激活');
   return SaltMismatchRecoveryResult.activated;

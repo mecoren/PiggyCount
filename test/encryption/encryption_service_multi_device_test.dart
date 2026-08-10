@@ -24,7 +24,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:piggycount/data/encryption/aes_gcm_cipher.dart';
 import 'package:piggycount/data/encryption/argon2_key_derivation.dart';
-import 'package:piggycount/data/encryption/ciphertext_format.dart';
 import 'package:piggycount/data/encryption/encryption_service_impl.dart';
 import 'package:piggycount/data/encryption/secure_key_storage.dart';
 import 'package:piggycount/domain/encryption/encryption_service.dart';
@@ -86,6 +85,50 @@ void main() {
       expect(await deviceBStorage.getVerifier(), isNotNull);
       expect(deviceB.activeSalt, isNotNull);
       expect(deviceB.activeSalt!.length, 16);
+    });
+
+    test('allowFallbackToEnable=false 且云端无密文 → 抛探测失败异常，不写 secure storage',
+        () async {
+      // salt_mismatch 恢复场景：调用方已确认云端存在密文，
+      // 禁止回退 enable 生成新 salt（否则本地 salt 与云端永远不匹配）。
+      cloud.listFiles = const [];
+
+      expect(
+        () => deviceB.enableFromCloud(
+          password: 'mypassword',
+          cloudStorage: cloud,
+          allowFallbackToEnable: false,
+        ),
+        throwsA(isA<EnableFromCloudProbeFailedException>()),
+      );
+
+      // 不应写入任何密钥（未被污染）
+      expect(await deviceB.isEnabled, isFalse);
+      expect(await deviceBStorage.getKey(), isNull);
+      expect(await deviceBStorage.getSalt(), isNull);
+      expect(await deviceBStorage.getVerifier(), isNull);
+      expect(deviceB.activeSalt, isNull);
+    });
+
+    test('allowFallbackToEnable=false 且云端仅 legacy 明文 → 抛探测失败异常，不污染本地',
+        () async {
+      cloud.stored['ledger_1.json'] = '{"version":5,"items":[]}';
+      cloud.listFiles = [
+        CloudFile(name: 'ledger_1.json', path: 'ledger_1.json'),
+      ];
+
+      expect(
+        () => deviceB.enableFromCloud(
+          password: 'mypassword',
+          cloudStorage: cloud,
+          allowFallbackToEnable: false,
+        ),
+        throwsA(isA<EnableFromCloudProbeFailedException>()),
+      );
+
+      expect(await deviceB.isEnabled, isFalse);
+      expect(await deviceBStorage.getKey(), isNull);
+      expect(deviceB.activeSalt, isNull);
     });
   });
 
@@ -198,6 +241,186 @@ void main() {
       final raw2 = cloud.stored['ledger_2.json']!;
       expect(await deviceB.decrypt(raw1), content1);
       expect(await deviceB.decrypt(raw2), content2);
+    });
+  });
+
+  group('TC-M3b: 混合 salt 场景 - 云端存在旧/新密码各自加密的密文', () {
+    test('输入新密码（正确）→ 遍历所有密文，用新 salt 密文验证成功激活', () async {
+      // 场景还原：A 设备改密后云端存在混合 salt
+      // - ledger_1.json：旧密码（oldpassword）加密（改密时重加密失败遗留）
+      // - ledger_2.json：新密码（newpassword）加密（改密时重加密成功）
+      // 用户在新设备 B 输入新密码（正确），即使第一个密文是旧 salt，
+      // enableFromCloud 也应遍历到新 salt 密文验证通过，而非误报密码错误。
+      final oldDevice = EncryptionServiceImpl(
+        storage: InMemorySecureKeyStorage(),
+        keyDerivation: Argon2KeyDerivation.forTesting(),
+        cipher: AesGcmCipher(),
+      );
+      await oldDevice.enable(password: 'oldpassword');
+      cloud.stored['ledger_1.json'] = await oldDevice.encrypt(
+          '{"version":6,"items":[{"amount":10}]}');
+
+      final newDevice = EncryptionServiceImpl(
+        storage: InMemorySecureKeyStorage(),
+        keyDerivation: Argon2KeyDerivation.forTesting(),
+        cipher: AesGcmCipher(),
+      );
+      await newDevice.enable(password: 'newpassword');
+      cloud.stored['ledger_2.json'] = await newDevice.encrypt(
+          '{"version":6,"items":[{"amount":20}]}');
+
+      cloud.listFiles = [
+        CloudFile(name: 'ledger_1.json', path: 'ledger_1.json'),
+        CloudFile(name: 'ledger_2.json', path: 'ledger_2.json'),
+      ];
+
+      // 设备 B 输入新密码（正确）
+      await deviceB.enableFromCloud(
+        password: 'newpassword',
+        cloudStorage: cloud,
+      );
+
+      // 激活成功：salt 取自新 salt 密文（与 newDevice 一致）
+      expect(await deviceB.isEnabled, isTrue);
+      expect(await deviceBStorage.getKey(), isNotNull);
+      expect(deviceB.activeSalt, isNotNull);
+      expect(
+        _listEquals(deviceB.activeSalt!, newDevice.activeSalt!),
+        isTrue,
+        reason: 'B 的 salt 应取自新密码加密的密文（与 newDevice 一致）',
+      );
+      // B 能解密新 salt 密文
+      expect(
+        await deviceB.decrypt(cloud.stored['ledger_2.json']!),
+        '{"version":6,"items":[{"amount":20}]}',
+      );
+    });
+
+    test('输入旧密码（另一正确密码）→ 用旧 salt 密文验证成功激活', () async {
+      final oldDevice = EncryptionServiceImpl(
+        storage: InMemorySecureKeyStorage(),
+        keyDerivation: Argon2KeyDerivation.forTesting(),
+        cipher: AesGcmCipher(),
+      );
+      await oldDevice.enable(password: 'oldpassword');
+      cloud.stored['ledger_1.json'] = await oldDevice.encrypt(
+          '{"version":6,"items":[{"amount":10}]}');
+
+      final newDevice = EncryptionServiceImpl(
+        storage: InMemorySecureKeyStorage(),
+        keyDerivation: Argon2KeyDerivation.forTesting(),
+        cipher: AesGcmCipher(),
+      );
+      await newDevice.enable(password: 'newpassword');
+      cloud.stored['ledger_2.json'] = await newDevice.encrypt(
+          '{"version":6,"items":[{"amount":20}]}');
+      cloud.listFiles = [
+        CloudFile(name: 'ledger_1.json', path: 'ledger_1.json'),
+        CloudFile(name: 'ledger_2.json', path: 'ledger_2.json'),
+      ];
+
+      // 输入旧密码：遍历到 ledger_1.json（旧 salt）验证通过
+      await deviceB.enableFromCloud(
+        password: 'oldpassword',
+        cloudStorage: cloud,
+      );
+
+      expect(await deviceB.isEnabled, isTrue);
+      expect(
+        _listEquals(deviceB.activeSalt!, oldDevice.activeSalt!),
+        isTrue,
+        reason: 'B 的 salt 应取自旧密码加密的密文（与 oldDevice 一致）',
+      );
+    });
+
+    test('所有密文都无法用输入密码解密 → 抛 ArgumentError，不写 secure storage', () async {
+      // 两个密文都是别的密码加密，用户输入完全错误的密码
+      final oldDevice = EncryptionServiceImpl(
+        storage: InMemorySecureKeyStorage(),
+        keyDerivation: Argon2KeyDerivation.forTesting(),
+        cipher: AesGcmCipher(),
+      );
+      await oldDevice.enable(password: 'password1');
+      cloud.stored['ledger_1.json'] = await oldDevice.encrypt(
+          '{"version":6,"items":[{"amount":10}]}');
+
+      final newDevice = EncryptionServiceImpl(
+        storage: InMemorySecureKeyStorage(),
+        keyDerivation: Argon2KeyDerivation.forTesting(),
+        cipher: AesGcmCipher(),
+      );
+      await newDevice.enable(password: 'password2');
+      cloud.stored['ledger_2.json'] = await newDevice.encrypt(
+          '{"version":6,"items":[{"amount":20}]}');
+      cloud.listFiles = [
+        CloudFile(name: 'ledger_1.json', path: 'ledger_1.json'),
+        CloudFile(name: 'ledger_2.json', path: 'ledger_2.json'),
+      ];
+
+      expect(
+        () => deviceB.enableFromCloud(
+          password: 'totallywrong',
+          cloudStorage: cloud,
+        ),
+        throwsA(isA<ArgumentError>()),
+      );
+
+      expect(await deviceBStorage.getKey(), isNull);
+      expect(await deviceBStorage.getSalt(), isNull);
+      expect(deviceB.activeSalt, isNull);
+    });
+
+    test('混合密文中有一个格式损坏 + 一个新 salt 密文 → 仍能激活（跳过损坏密文）', () async {
+      // 第一个密文是损坏的（非合法 BEECRYPT1 结构），第二个是新 salt 密文。
+      // enableFromCloud 应跳过损坏密文，用新 salt 密文验证成功。
+      cloud.stored['ledger_1.json'] = 'BEECRYPT1:brokenbase64!!!:notvalid';
+      final newDevice = EncryptionServiceImpl(
+        storage: InMemorySecureKeyStorage(),
+        keyDerivation: Argon2KeyDerivation.forTesting(),
+        cipher: AesGcmCipher(),
+      );
+      await newDevice.enable(password: 'newpassword');
+      cloud.stored['ledger_2.json'] = await newDevice.encrypt(
+          '{"version":6,"items":[{"amount":20}]}');
+      cloud.listFiles = [
+        CloudFile(name: 'ledger_1.json', path: 'ledger_1.json'),
+        CloudFile(name: 'ledger_2.json', path: 'ledger_2.json'),
+      ];
+
+      await deviceB.enableFromCloud(
+        password: 'newpassword',
+        cloudStorage: cloud,
+      );
+
+      expect(await deviceB.isEnabled, isTrue);
+      expect(
+        _listEquals(deviceB.activeSalt!, newDevice.activeSalt!),
+        isTrue,
+      );
+    });
+
+    test('密文格式非法（无法通过 isEncrypted 识别）→ 视为无密文，恢复模式禁止回退时抛探测失败',
+        () async {
+      // 'BEECRYPT1:brokenbase64!!!:notvalid' 的 base64 非法，
+      // isEncrypted 判定为非密文 → 被跳过 → candidates 为空 → 走"无密文"分支。
+      // salt_mismatch 恢复场景（allowFallbackToEnable=false）抛探测失败异常。
+      cloud.stored['ledger_1.json'] = 'BEECRYPT1:brokenbase64!!!:notvalid';
+      cloud.stored['ledger_2.json'] = 'BEECRYPT1:also:broken';
+      cloud.listFiles = [
+        CloudFile(name: 'ledger_1.json', path: 'ledger_1.json'),
+        CloudFile(name: 'ledger_2.json', path: 'ledger_2.json'),
+      ];
+
+      expect(
+        () => deviceB.enableFromCloud(
+          password: 'mypassword',
+          cloudStorage: cloud,
+          allowFallbackToEnable: false,
+        ),
+        throwsA(isA<EnableFromCloudProbeFailedException>()),
+      );
+
+      expect(await deviceBStorage.getKey(), isNull);
     });
   });
 

@@ -127,6 +127,9 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get startupSyncCheckUpToDate => '모든 장부가 최신 상태입니다';
+
+  @override
   String get startupSyncConflictTooltip => '로컬 변경사항이 클라우드로 덮어씌워집니다';
 
   @override

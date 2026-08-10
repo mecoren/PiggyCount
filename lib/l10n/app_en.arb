@@ -74,6 +74,7 @@
       "total": {"type": "int"}
     }
   },
+  "startupSyncCheckUpToDate": "All ledgers are up to date",
   "startupSyncConflictTooltip": "Local changes will be overwritten by cloud",
   "startupSyncConflictConfirmTitle": "Overwrite confirmation",
   "startupSyncConflictConfirmMessage": "This will overwrite local changes in {count} ledger(s) ({names}) with cloud version. Continue?",
