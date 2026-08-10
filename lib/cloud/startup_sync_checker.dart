@@ -135,9 +135,17 @@ abstract class StartupSyncCheckerDeps {
   /// 或 downloadAndPreview/downloadAndRestoreToCurrentLedger 抛出
   /// SaltMismatchException 时调用。
   ///
-  /// 返回 true 表示激活成功，调用方应重试原操作；
-  /// 返回 false 表示用户取消或密码错误，调用方应跳过当前账本。
-  Future<bool> handleSaltMismatch();
+  /// 返回 [SaltMismatchRecoveryResult.activated] 表示激活成功，调用方应重试原操作；
+  /// 返回 [SaltMismatchRecoveryResult.cancelled] 表示用户主动取消，调用方应跳过当前账本；
+  /// 返回 [SaltMismatchRecoveryResult.failed] 表示密码错误/激活失败，
+  /// 调用方应跳过当前账本，并明确告知用户同步未恢复。
+  Future<SaltMismatchRecoveryResult> handleSaltMismatch();
+
+  /// 密钥激活失败（密码错误等）时的兜底提示。
+  ///
+  /// 用于启动主流程：当 [handleSaltMismatch] 返回 failed 时，
+  /// 确保用户在前端直接看到明确反馈（而非只在设置页可见错误）。
+  void showRecoveryFailed();
 
   /// 应用变更后刷新 UI providers
   void runAfterDownload();
@@ -234,14 +242,23 @@ class StartupSyncChecker {
               '（${status.message}），引导用户恢复密钥');
           controller.dismiss();
           await Future.delayed(Duration.zero); // 让 overlay 消失
-          final activated = await deps.handleSaltMismatch();
-          if (activated) {
-            // 激活成功，重新执行整个检查流程
-            return _runInternal(isRetry: true);
+          final result = await deps.handleSaltMismatch();
+          switch (result) {
+            case SaltMismatchRecoveryResult.activated:
+              // 激活成功，重新执行整个检查流程
+              return _runInternal(isRetry: true);
+            case SaltMismatchRecoveryResult.failed:
+              // 密码错误/激活失败：明确告知用户同步未恢复，
+              // 避免静默退出后只能到设置页看到错误
+              deps.log('StartupSyncChecker: 密钥激活失败，同步未恢复');
+              controller.dismiss();
+              deps.showRecoveryFailed();
+              return;
+            case SaltMismatchRecoveryResult.cancelled:
+              // 用户主动取消：不打扰，静默退出
+              controller.dismiss();
+              return;
           }
-          // 用户取消或密码错误：不继续检查，直接返回
-          controller.dismiss();
-          return;
         }
         if (status.diff == SyncDiff.cloudNewer ||
             status.diff == SyncDiff.different) {
@@ -331,6 +348,8 @@ class StartupSyncChecker {
     var failCount = 0;
     var totalChanges = 0;
     var applied = 0;
+    // 密钥恢复失败只弹一次提示，避免多个账本失败时连续弹窗
+    var recoveryFailedNotified = false;
 
     for (final c in candidates) {
       controller.updateApplyingProgress(
@@ -386,25 +405,35 @@ class StartupSyncChecker {
         // 缺口 1: salt 不匹配，弹密码对话框引导用户重输密码
         controller.dismiss();
         await Future.delayed(Duration.zero); // 让 overlay 消失
-        final activated = await deps.handleSaltMismatch();
+        final result = await deps.handleSaltMismatch();
         failCount++;
         deps.log('StartupSyncChecker: 账本 ${c.ledger.name} salt 不匹配'
-            '${activated ? "（已激活，请重新检查）" : "（用户取消）"}');
-        if (activated) {
+            '${_describeRecoveryResult(result)}');
+        if (result == SaltMismatchRecoveryResult.activated) {
           // 恢复 overlay 继续剩余账本
           controller.startApplying(candidates.length);
+        } else if (result == SaltMismatchRecoveryResult.failed &&
+            !recoveryFailedNotified) {
+          // 密码错误/激活失败：明确提示用户同步未恢复（只弹一次）
+          recoveryFailedNotified = true;
+          deps.showRecoveryFailed();
         }
       } on CloudEncryptedLocallyDisabledException {
         // BUG-2 残留：云端为密文但本地未开启加密，同样走密钥恢复流程
         controller.dismiss();
         await Future.delayed(Duration.zero); // 让 overlay 消失
-        final activated = await deps.handleSaltMismatch();
+        final result = await deps.handleSaltMismatch();
         failCount++;
         deps.log('StartupSyncChecker: 账本 ${c.ledger.name} 云端密文但本地未开启加密'
-            '${activated ? "（已激活，请重新检查）" : "（用户取消）"}');
-        if (activated) {
+            '${_describeRecoveryResult(result)}');
+        if (result == SaltMismatchRecoveryResult.activated) {
           // 恢复 overlay 继续剩余账本
           controller.startApplying(candidates.length);
+        } else if (result == SaltMismatchRecoveryResult.failed &&
+            !recoveryFailedNotified) {
+          // 密码错误/激活失败：明确提示用户同步未恢复（只弹一次）
+          recoveryFailedNotified = true;
+          deps.showRecoveryFailed();
         }
       } catch (e) {
         failCount++;
@@ -478,26 +507,40 @@ class StartupSyncChecker {
       } on SaltMismatchException {
         // 缺口 1: salt 不匹配，弹密码对话框引导用户重输密码
         // confirmEach 模式下 overlay 已关闭，直接弹 dialog
-        final activated = await deps.handleSaltMismatch();
-        if (activated) {
-          deps.showLegacyInfo('账本「${c.ledger.name}」密钥已激活，请重新检查同步');
-        } else {
-          deps.showLegacyError(
-              _formatErrorMessage(c.ledger.name, 'salt 不匹配（用户取消）'));
+        final result = await deps.handleSaltMismatch();
+        switch (result) {
+          case SaltMismatchRecoveryResult.activated:
+            deps.showLegacyInfo('账本「${c.ledger.name}」密钥已激活，请重新检查同步');
+            break;
+          case SaltMismatchRecoveryResult.failed:
+            // 密码错误/激活失败：明确提示用户同步未恢复
+            deps.showRecoveryFailed();
+            break;
+          case SaltMismatchRecoveryResult.cancelled:
+            deps.showLegacyError(
+                _formatErrorMessage(c.ledger.name, 'salt 不匹配（用户取消）'));
+            break;
         }
         deps.log('StartupSyncChecker: 账本 ${c.ledger.name} salt 不匹配'
-            '${activated ? "（已激活）" : "（用户取消）"}');
+            '${_describeRecoveryResult(result)}');
       } on CloudEncryptedLocallyDisabledException {
         // BUG-2 残留：云端为密文但本地未开启加密，同样走密钥恢复流程
-        final activated = await deps.handleSaltMismatch();
-        if (activated) {
-          deps.showLegacyInfo('账本「${c.ledger.name}」密钥已激活，请重新检查同步');
-        } else {
-          deps.showLegacyError(_formatErrorMessage(
-              c.ledger.name, '云端已加密但本设备未开启加密（用户取消）'));
+        final result = await deps.handleSaltMismatch();
+        switch (result) {
+          case SaltMismatchRecoveryResult.activated:
+            deps.showLegacyInfo('账本「${c.ledger.name}」密钥已激活，请重新检查同步');
+            break;
+          case SaltMismatchRecoveryResult.failed:
+            // 密码错误/激活失败：明确提示用户同步未恢复
+            deps.showRecoveryFailed();
+            break;
+          case SaltMismatchRecoveryResult.cancelled:
+            deps.showLegacyError(_formatErrorMessage(
+                c.ledger.name, '云端已加密但本设备未开启加密（用户取消）'));
+            break;
         }
         deps.log('StartupSyncChecker: 账本 ${c.ledger.name} 云端密文但本地未开启加密'
-            '${activated ? "（已激活）" : "（用户取消）"}');
+            '${_describeRecoveryResult(result)}');
       } catch (e) {
         deps.showLegacyError(_formatErrorMessage(c.ledger.name, e));
         deps.log('StartupSyncChecker: 账本 ${c.ledger.name} confirmEach 失败: $e');
@@ -529,6 +572,18 @@ class StartupSyncChecker {
   /// 格式化错误消息
   String _formatErrorMessage(String ledgerName, Object error) {
     return '账本「$ledgerName」处理失败：$error';
+  }
+
+  /// 密钥恢复结果的可读描述（用于日志）
+  String _describeRecoveryResult(SaltMismatchRecoveryResult r) {
+    switch (r) {
+      case SaltMismatchRecoveryResult.activated:
+        return '（已激活，请重新检查）';
+      case SaltMismatchRecoveryResult.failed:
+        return '（激活失败）';
+      case SaltMismatchRecoveryResult.cancelled:
+        return '（用户取消）';
+    }
   }
 }
 
@@ -662,13 +717,23 @@ class WidgetRefDeps implements StartupSyncCheckerDeps {
   }
 
   @override
-  Future<bool> handleSaltMismatch() async {
+  Future<SaltMismatchRecoveryResult> handleSaltMismatch() async {
     final encryptionService = _ref.read(encryptionServiceProvider);
     return await promptPasswordAndActivate(
       _context,
       _ref,
       service: encryptionService,
       syncManager: _syncManager,
+    );
+  }
+
+  @override
+  void showRecoveryFailed() {
+    final l10n = AppLocalizations.of(_context);
+    AppDialog.error<void>(
+      _context,
+      title: l10n.saltMismatchDialogTitle,
+      message: l10n.startupSyncRecoveryFailedHint,
     );
   }
 

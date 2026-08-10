@@ -3327,5 +3327,6 @@
   "saltMismatchRetrySuccess": "密钥已激活，正在重试同步...",
   "saltMismatchRawStorageUnavailable": "云服务未初始化，无法恢复密钥",
   "saltMismatchProbeFailed": "云端探测失败，请检查网络后重试",
-  "saltMismatchCloudCorrupted": "云端密文已损坏，无法恢复密钥"
+  "saltMismatchCloudCorrupted": "云端密文已损坏，无法恢复密钥",
+  "startupSyncRecoveryFailedHint": "密钥激活失败，同步未恢复。请确认密码后重试，或到同步设置重新操作。"
 }

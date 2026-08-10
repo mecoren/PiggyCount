@@ -8087,4 +8087,8 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get saltMismatchCloudCorrupted =>
       'Cloud ciphertext is corrupted, cannot recover key';
+
+  @override
+  String get startupSyncRecoveryFailedHint =>
+      'Key activation failed. Sync has not been restored. Please re-enter the password or check sync settings.';
 }

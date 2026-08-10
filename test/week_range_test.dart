@@ -45,12 +45,12 @@ void main() {
   });
 
   group('weekRangeText', () {
-    test('同年输出 MM.dd 尾段', () {
+    test('同年输出 MM.dd 短格式(省掉头部年份以适配窄宽导航行)', () {
       final r = weekRangeFor(DateTime(2026, 8, 9));
-      expect(weekRangeText(r), '2026.08.03～08.09');
+      expect(weekRangeText(r), '08.03～08.09');
     });
 
-    test('跨年输出完整尾段', () {
+    test('跨年输出完整年份(避免歧义)', () {
       final r = weekRangeFor(DateTime(2027, 1, 1));
       expect(weekRangeText(r), '2026.12.28～2027.01.03');
     });

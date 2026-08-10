@@ -73,13 +73,13 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
   }) async {
     if (sync is! TransactionsSyncManager) return;
     final encryptionService = ref.read(encryptionServiceProvider);
-    final activated = await promptPasswordAndActivate(
+    final result = await promptPasswordAndActivate(
       context,
       ref,
       service: encryptionService,
       syncManager: sync,
     );
-    if (!activated || !mounted) return;
+    if (result != SaltMismatchRecoveryResult.activated || !mounted) return;
     // 激活成功：清除缓存并刷新状态（相当于重试一次 getStatus）
     sync.clearStatusCache(ledgerId: ledgerId);
     ref.read(syncStatusRefreshProvider.notifier).state++;

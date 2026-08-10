@@ -21,16 +21,22 @@ DateTime weekLabelFor(DateTime date) => weekRangeFor(date).start;
 DateTime weekAdd(DateTime weekStart, int offset) =>
     weekStart.add(Duration(days: 7 * offset));
 
-/// UI 周期范围文案,如 "2026.08.03～08.09";跨年时为 "2026.12.28～2027.01.03"。
+/// UI 周期范围文案：
+/// - 同年内（更紧凑）："08.03～08.09"
+/// - 跨年（避免歧义）："2026.12.28～2027.01.03"
+/// 头部年份省略后,洞察页周期导航行(两侧圆形箭头 + 右侧胶囊)能完整容纳文案。
 String weekRangeText(DateRange range) {
   final s = range.start;
   // 日历日减一(非 Duration:DST 时区减 86400s 可能落到前一天 23:00)
   final e = range.end;
   final endIncl = DateTime(e.year, e.month, e.day - 1);
   String two(int v) => v.toString().padLeft(2, '0');
-  final head = '${s.year}.${two(s.month)}.${two(s.day)}';
-  final tail = endIncl.year == s.year
-      ? '${two(endIncl.month)}.${two(endIncl.day)}'
-      : '${endIncl.year}.${two(endIncl.month)}.${two(endIncl.day)}';
-  return '$head～$tail';
+  String short(DateTime d) => '${two(d.month)}.${two(d.day)}';
+  final tailShort = short(endIncl);
+  final headShort = short(s);
+  final tailFull = '${endIncl.year}.$tailShort';
+  // 跨年:保留完整年份;同年:省掉头部年份,缩短 ~30% 宽度
+  return endIncl.year == s.year
+      ? '$headShort～$tailShort'
+      : '${s.year}.$headShort～$tailFull';
 }

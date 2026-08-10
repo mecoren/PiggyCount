@@ -3032,5 +3032,6 @@
   "saltMismatchRetrySuccess": "金鑰已啟用，正在重試同步...",
   "saltMismatchRawStorageUnavailable": "雲端服務未初始化，無法恢復金鑰",
   "saltMismatchProbeFailed": "雲端探測失敗，請檢查網路後重試",
-  "saltMismatchCloudCorrupted": "雲端密文已損壞，無法恢復金鑰"
+  "saltMismatchCloudCorrupted": "雲端密文已損壞，無法恢復金鑰",
+  "startupSyncRecoveryFailedHint": "密鑰啟用失敗，同步未恢復。請確認密碼後重試，或到同步設定重新操作。"
 }

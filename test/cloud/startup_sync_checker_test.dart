@@ -16,6 +16,7 @@ import 'package:piggycount/cloud/startup_sync_overlay.dart';
 import 'package:piggycount/cloud/sync_diff_service.dart';
 import 'package:piggycount/cloud/sync_service.dart';
 import 'package:piggycount/data/db.dart';
+import 'package:piggycount/domain/encryption/encryption_service.dart';
 import 'package:piggycount/services/data_import_service.dart';
 
 void main() {
@@ -726,8 +727,8 @@ void main() {
           message: 'salt_mismatch_need_password',
         ),
       };
-      // handleSaltMismatch 返回 true（激活成功），并把状态改为 cloudNewer
-      deps.handleSaltMismatchReturn = true;
+      // handleSaltMismatch 返回 activated（激活成功），并把状态改为 cloudNewer
+      deps.handleSaltMismatchReturn = SaltMismatchRecoveryResult.activated;
       deps.statusAfterSaltMismatch = _status(SyncDiff.cloudNewer);
 
       // Act
@@ -742,7 +743,7 @@ void main() {
       expect(deps.lastCandidates.first.diffType, SyncDiff.cloudNewer);
     });
 
-    test('用户取消密码输入时不重新检查，直接返回', () async {
+    test('用户取消密码输入时不重新检查，直接返回且不弹失败提示', () async {
       // Arrange
       deps.statusByLedger = {
         1: SyncStatus(
@@ -752,7 +753,7 @@ void main() {
           message: 'salt_mismatch_need_password',
         ),
       };
-      deps.handleSaltMismatchReturn = false; // 用户取消
+      deps.handleSaltMismatchReturn = SaltMismatchRecoveryResult.cancelled;
 
       // Act
       await checker.runIfNeeded();
@@ -760,6 +761,35 @@ void main() {
       // Assert: handleSaltMismatch 被调用
       expect(deps.handleSaltMismatchCallCount, 1);
       // Assert: 没有候选账本被收集
+      expect(deps.lastCandidates, isEmpty);
+      // Assert: controller 被 dismiss
+      expect(controller.state, isA<DismissedState>());
+      // Assert: 用户主动取消不弹"激活失败"提示
+      expect(deps.recoveryFailedShownCount, 0,
+          reason: '用户主动取消不应弹激活失败提示');
+    });
+
+    test('密码错误/激活失败时弹明确提示（而非静默退出）', () async {
+      // Arrange: getStatus 返回 salt_mismatch 哨兵，且激活失败（密码错误）
+      deps.statusByLedger = {
+        1: SyncStatus(
+          diff: SyncDiff.error,
+          localCount: 0,
+          localFingerprint: '',
+          message: 'salt_mismatch_need_password',
+        ),
+      };
+      deps.handleSaltMismatchReturn = SaltMismatchRecoveryResult.failed;
+
+      // Act
+      await checker.runIfNeeded();
+
+      // Assert: handleSaltMismatch 被调用
+      expect(deps.handleSaltMismatchCallCount, 1);
+      // Assert: 前端直接弹激活失败提示（而非只在设置页显示）
+      expect(deps.recoveryFailedShownCount, 1,
+          reason: '激活失败应在前端直接弹窗提示用户');
+      // Assert: 不继续收集候选账本
       expect(deps.lastCandidates, isEmpty);
       // Assert: controller 被 dismiss
       expect(controller.state, isA<DismissedState>());
@@ -776,7 +806,7 @@ void main() {
         ),
       };
       // 激活后状态仍为 salt_mismatch（密码再次错误）
-      deps.handleSaltMismatchReturn = true;
+      deps.handleSaltMismatchReturn = SaltMismatchRecoveryResult.activated;
       deps.statusAfterSaltMismatch = SyncStatus(
         diff: SyncDiff.error,
         localCount: 0,
@@ -859,8 +889,11 @@ class _FakeDeps implements StartupSyncCheckerDeps {
 
   // SaltMismatch 处理记录
   int handleSaltMismatchCallCount = 0;
-  bool handleSaltMismatchReturn = false;
-  /// 若非 null，handleSaltMismatch 返回 true 时把所有账本状态替换为此值
+  SaltMismatchRecoveryResult handleSaltMismatchReturn =
+      SaltMismatchRecoveryResult.cancelled;
+  /// 密钥激活失败兜底提示调用次数
+  int recoveryFailedShownCount = 0;
+  /// 若非 null，handleSaltMismatch 返回 activated 时把所有账本状态替换为此值
   /// （模拟激活密钥后 getStatus 返回正常状态）
   SyncStatus? statusAfterSaltMismatch;
 
@@ -954,15 +987,21 @@ class _FakeDeps implements StartupSyncCheckerDeps {
   }
 
   @override
-  Future<bool> handleSaltMismatch() async {
+  Future<SaltMismatchRecoveryResult> handleSaltMismatch() async {
     handleSaltMismatchCallCount++;
-    if (handleSaltMismatchReturn && statusAfterSaltMismatch != null) {
+    if (handleSaltMismatchReturn == SaltMismatchRecoveryResult.activated &&
+        statusAfterSaltMismatch != null) {
       // 模拟激活密钥后 getStatus 返回正常状态
       for (final id in statusByLedger.keys.toList()) {
         statusByLedger[id] = statusAfterSaltMismatch!;
       }
     }
     return handleSaltMismatchReturn;
+  }
+
+  @override
+  void showRecoveryFailed() {
+    recoveryFailedShownCount++;
   }
 
   @override

@@ -153,6 +153,13 @@ Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
       'happenedAt': t.happenedAt.toUtc().toIso8601String(),
       'note': _sanitizeString(t.note),
       if (t.syncId != null) 'syncId': t.syncId,
+      // 账单标记 + v30 多币种：必须随 JSON 传输，否则跨设备 WebDAV
+      // 同步后标记/折算值丢失（例如"不计入统计"的交易同步后变回计入，
+      // 导致合计虚高）。与 SyncEngine 的 entity_serializer 保持一致。
+      'excludeFromStats': t.excludeFromStats,
+      'excludeFromBudget': t.excludeFromBudget,
+      if (t.currencyCode != null) 'currencyCode': t.currencyCode,
+      if (t.nativeAmount != null) 'nativeAmount': t.nativeAmount,
     };
 
     // 添加账户信息
@@ -393,6 +400,11 @@ ImportData parseJsonToImportData(String jsonStr) {
         tagNames: tagNames,
         attachments: attachments,
         syncId: it['syncId'] as String?,
+        // 账单标记 + v30 多币种（老 JSON 没有这些键 → 保持默认/兜底）
+        excludeFromStats: it['excludeFromStats'] as bool? ?? false,
+        excludeFromBudget: it['excludeFromBudget'] as bool? ?? false,
+        currencyCode: it['currencyCode'] as String?,
+        nativeAmount: (it['nativeAmount'] as num?)?.toDouble(),
       ));
     }
   }

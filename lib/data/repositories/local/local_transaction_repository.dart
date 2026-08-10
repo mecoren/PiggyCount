@@ -1521,6 +1521,21 @@ class LocalTransactionRepository implements TransactionRepository {
               toAccountId: d.Value(u.toAccountId),
               happenedAt: d.Value(u.happenedAt),
               note: d.Value(u.note),
+              // 修正 BUG：此前只更新 amount 不更新 currency_code /
+              // native_amount，导致单币种账本同步后 native_amount 保持旧值，
+              // 统计（SUM(COALESCE(native_amount, amount))）读旧数据，
+              // 表现为"明细变了但日/月合计不变"。这里按调用方提供的折算值
+              // 一并写入；调用方未提供时（如旧调用方）保持本地原值。
+              currencyCode: u.currencyCode == null
+                  ? const d.Value.absent()
+                  : d.Value(u.currencyCode),
+              nativeAmount: u.nativeAmount == null
+                  ? const d.Value.absent()
+                  : d.Value(u.nativeAmount),
+              // 账单标记：diff 合并必须一并写入，否则"不计入统计/预算"
+              // 跨设备丢失（与 native_amount 分裂同源问题）。
+              excludeFromStats: d.Value(u.excludeFromStats),
+              excludeFromBudget: d.Value(u.excludeFromBudget),
             ),
             where: (t) => t.syncId.equals(u.syncId),
           );

@@ -675,7 +675,10 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: 16,
+                            // 周视角文案如 "08.03～08.09",两侧圆形箭头 +
+                            // 右侧胶囊挤压可用宽度;字号 16 在窄屏上会截断,
+                            // 微降到 15 给周范围留足显示空间。
+                            fontSize: 15,
                             fontWeight: FontWeight.w600,
                             color: PiggyTokens.textPrimary(context),
                           ),
@@ -689,7 +692,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                   const SizedBox(width: 8),
                   // 支出/收入/结余：与顶部周/月/年/全部同款滑块胶囊（紧凑高度）
                   SizedBox(
-                    width: 180,
+                    width: 168,
                     child: WaitSlidingSegmentedControl<String>(
                       selected: _type,
                       height: 32,

@@ -7774,6 +7774,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get saltMismatchCloudCorrupted => '云端密文已损坏，无法恢复密钥';
+
+  @override
+  String get startupSyncRecoveryFailedHint =>
+      '密钥激活失败，同步未恢复。请确认密码后重试，或到同步设置重新操作。';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -15546,4 +15550,8 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get saltMismatchCloudCorrupted => '雲端密文已損壞，無法恢復金鑰';
+
+  @override
+  String get startupSyncRecoveryFailedHint =>
+      '密鑰啟用失敗，同步未恢復。請確認密碼後重試，或到同步設定重新操作。';
 }

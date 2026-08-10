@@ -63,6 +63,13 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
   // AppLink 监听订阅
   ProviderSubscription<AppLinkAction?>? _appLinkSubscription;
 
+  // 同步完成提示气泡(增量同步)相关状态
+  ProviderSubscription<AsyncValue<SyncEvent>>? _syncToastSubscription;
+  ProviderSubscription<int>? _snapshotSyncToastSubscription;
+  Timer? _syncToastTimer;
+  int _syncToastPushed = 0;
+  int _syncToastPulled = 0;
+
   // 快捷操作服务
   final QuickActionsService _quickActionsService = QuickActionsService();
 
@@ -103,6 +110,8 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
 
     // 后台刷新账本同步状态
     _refreshLedgersStatusInBackground();
+    // 同步完成时弹出提示气泡(数据变更 / 其它操作触发增量同步后给用户反馈)
+    _setupSyncCompletionToast();
     // 延迟监听 AppLink，确保 context 可用
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _setupAppLinkListener();
@@ -238,6 +247,73 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
       fireImmediately: true,
     );
     logger.info('AppLink', 'PiggyApp: AppLink 监听已设置');
+  }
+
+  /// 订阅同步完成信号,在「本地数据变更 / 其它操作触发的同步」完成后弹出
+  /// 提示气泡,让用户明确感知云端已同步,避免"改了数据不知道有没有存到云端"。
+  ///
+  /// 两条互补的监听路径:
+  /// 1. SyncEngine(PiggyCount Cloud 增量同步):engine 只往 `events` stream 写,
+  ///    [syncEventStreamProvider] 把它暴露成 StreamProvider。收到
+  ///    PushCompleted / PullCompleted 后提取计数值;一次 sync() 可能同时 fire
+  ///    push + pull 两个事件,用短窗口聚合,避免同一轮同步弹两条 toast。
+  /// 2. TransactionsSyncManager(S3 / WebDAV / Supabase 快照同步):该模式不发射
+  ///    SyncEvent,由 PostProcessor 在「数据变更后的自动上传」成功时 bump
+  ///    [sp.snapshotSyncCompletedProvider](手动上传走 cloud_sync_page 已有弹窗,
+  ///    不走这里,避免双重提示)。两种模式互斥,不会同时命中。
+  void _setupSyncCompletionToast() {
+    _syncToastSubscription = ref.listenManual<AsyncValue<SyncEvent>>(
+      sp.syncEventStreamProvider,
+      (previous, next) {
+        final event = next.valueOrNull;
+        if (event == null) return;
+        int pushed = 0;
+        int pulled = 0;
+        switch (event) {
+          case PushCompleted():
+            pushed = event.pushed;
+          case PullCompleted():
+            pulled = event.applied;
+          default:
+            return;
+        }
+        if (pushed <= 0 && pulled <= 0) return;
+        _scheduleSyncCompletionToast(pushed: pushed, pulled: pulled);
+      },
+    );
+
+    // 快照同步完成信号:upload 成功 → 弹「已同步」提示。
+    _snapshotSyncToastSubscription = ref.listenManual<int>(
+      sp.snapshotSyncCompletedProvider,
+      (previous, next) {
+        if (next == 0 || next == previous) return;
+        if (!mounted) return;
+        final l10n = AppLocalizations.of(context);
+        showToast(context, l10n.mineUploadSuccessMessage);
+      },
+    );
+  }
+
+  /// 聚合 push/pull 计数值,并在短窗口结束时统一弹一次完成 toast。
+  ///
+  /// 说明:同一轮同步里 push 与 pull 可能先后到达,若各自立即弹 toast 会连续
+  /// 弹两条;这里把 500ms 内到达的事件累加,等安静后一次性展示
+  /// `cloudSyncComplete(pushed, pulled)`(该 l10n key 各语言已就绪,符合现有
+  /// 文案规范)。toast 本身自动 2s 后消失,不会占布局。
+  void _scheduleSyncCompletionToast({required int pushed, required int pulled}) {
+    _syncToastPushed += pushed;
+    _syncToastPulled += pulled;
+    _syncToastTimer?.cancel();
+    _syncToastTimer = Timer(const Duration(milliseconds: 500), () {
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
+      showToast(
+        context,
+        l10n.cloudSyncComplete(_syncToastPushed, _syncToastPulled),
+      );
+      _syncToastPushed = 0;
+      _syncToastPulled = 0;
+    });
   }
 
   /// 后台刷新账本同步状态 / 触发首次同步
@@ -675,6 +751,9 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
   void dispose() {
     _drainTimer?.cancel();
     _appLinkSubscription?.close();
+    _syncToastSubscription?.close();
+    _snapshotSyncToastSubscription?.close();
+    _syncToastTimer?.cancel();
     _removeOverlay();
     _startupSyncController?.detach();
     _startupSyncController = null;

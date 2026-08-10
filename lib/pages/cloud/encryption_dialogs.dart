@@ -27,9 +27,11 @@ import '../../widgets/ui/dialog.dart';
 /// 4. 刷新 [encryptionEnabledTickProvider] 触发 UI 更新
 ///
 /// 返回值：
-/// - true：激活成功，调用方应**最多重试一次**原同步操作
-/// - false：用户取消或密码错误，调用方不应重试
-Future<bool> promptPasswordAndActivate(
+/// - [SaltMismatchRecoveryResult.activated]：激活成功，调用方应**最多重试一次**原同步操作
+/// - [SaltMismatchRecoveryResult.cancelled]：用户主动取消密码输入，调用方不应重试
+/// - [SaltMismatchRecoveryResult.failed]：密码错误/激活失败，调用方不应重试，
+///   且需要明确告知用户同步未恢复（内部已弹具体错误对话框）
+Future<SaltMismatchRecoveryResult> promptPasswordAndActivate(
   BuildContext context,
   WidgetRef ref, {
   required EncryptionService service,
@@ -42,13 +44,13 @@ Future<bool> promptPasswordAndActivate(
   if (password == null) {
     // 用户取消，仅记日志
     logger.info('CloudSync', 'salt_mismatch 恢复：用户取消密码输入');
-    return false;
+    return SaltMismatchRecoveryResult.cancelled;
   }
-  if (!context.mounted) return false;
+  if (!context.mounted) return SaltMismatchRecoveryResult.cancelled;
 
   // 2. 确保 rawStorage 可用（enableFromCloud 需要未装饰的 storage 下载密文字符串）
   await syncManager.ensureInitialized();
-  if (!context.mounted) return false;
+  if (!context.mounted) return SaltMismatchRecoveryResult.cancelled;
   final rawStorage = syncManager.rawStorage;
   if (rawStorage == null) {
     await AppDialog.error(
@@ -56,7 +58,7 @@ Future<bool> promptPasswordAndActivate(
       title: l10n.saltMismatchDialogTitle,
       message: l10n.saltMismatchRawStorageUnavailable,
     );
-    return false;
+    return SaltMismatchRecoveryResult.failed;
   }
 
   // 3. 从云端重提取 salt + 验证密码 + 持久化新密钥
@@ -67,31 +69,31 @@ Future<bool> promptPasswordAndActivate(
     );
   } on ArgumentError {
     // 密码错误（解密验证失败）
-    if (!context.mounted) return false;
+    if (!context.mounted) return SaltMismatchRecoveryResult.cancelled;
     await AppDialog.error(
       context,
       title: l10n.saltMismatchDialogTitle,
       message: l10n.cloudSyncEncryptWrongPassword,
     );
-    return false;
+    return SaltMismatchRecoveryResult.failed;
   } on EnableFromCloudProbeFailedException {
     // 云端探测失败（网络/权限）
-    if (!context.mounted) return false;
+    if (!context.mounted) return SaltMismatchRecoveryResult.cancelled;
     await AppDialog.error(
       context,
       title: l10n.saltMismatchDialogTitle,
       message: l10n.saltMismatchProbeFailed,
     );
-    return false;
+    return SaltMismatchRecoveryResult.failed;
   } on EnableFromCloudCorruptedException {
     // 云端密文损坏
-    if (!context.mounted) return false;
+    if (!context.mounted) return SaltMismatchRecoveryResult.cancelled;
     await AppDialog.error(
       context,
       title: l10n.saltMismatchDialogTitle,
       message: l10n.saltMismatchCloudCorrupted,
     );
-    return false;
+    return SaltMismatchRecoveryResult.failed;
   }
 
   // 4. 重建装饰器，让下次同步使用新密钥
@@ -100,5 +102,5 @@ Future<bool> promptPasswordAndActivate(
   ref.read(encryptionEnabledTickProvider.notifier).state++;
 
   logger.info('CloudSync', 'salt_mismatch 恢复：密钥已重新激活');
-  return true;
+  return SaltMismatchRecoveryResult.activated;
 }

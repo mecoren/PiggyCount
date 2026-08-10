@@ -103,11 +103,22 @@ class ImportTransaction {
   final String? syncId; // 跨设备同步唯一标识
   /// v30 多币种:CSV 币种列(反馈10)。null → 账户币种/账本本位币兜底。
   final String? currencyCode;
+  /// v30 多币种:折算到账本本位币的快照。JSON 同步时显式传输，避免
+  /// 跨设备丢失（尤其外币账本，避免 modified 合并把 native 退化为旧值）。
+  final double? nativeAmount;
+  /// 账单标记：不计入统计。JSON 同步必须传输，否则跨设备后"不计入
+  /// 统计"的交易变回计入 → 合计虚高。
+  final bool excludeFromStats;
+  /// 账单标记：不计入预算。同上，JSON 同步必须传输。
+  final bool excludeFromBudget;
 
   const ImportTransaction({
     required this.type,
     required this.amount,
     this.currencyCode,
+    this.nativeAmount,
+    this.excludeFromStats = false,
+    this.excludeFromBudget = false,
     this.categoryName,
     this.categoryKind,
     required this.happenedAt,
@@ -579,14 +590,17 @@ class DataImportService {
               : null) ??
           (accountId != null ? accountCurrencyById[accountId] : null) ??
           ledgerBase;
-      final txNative = txCurrency == ledgerBase
-          ? tx.amount
-          : (computeNativeAmount(
-                  amount: tx.amount,
-                  accountCurrency: txCurrency,
-                  ledgerBase: ledgerBase,
-                  rates: importRates) ??
-              tx.amount);
+      // 优先用 JSON 显式携带的折算快照（跨设备同步时保持一致）；缺失时
+      // 按旧逻辑重算（单币种 = amount，外币按汇率，取不到 = amount）。
+      final txNative = tx.nativeAmount ??
+          (txCurrency == ledgerBase
+              ? tx.amount
+              : (computeNativeAmount(
+                      amount: tx.amount,
+                      accountCurrency: txCurrency,
+                      ledgerBase: ledgerBase,
+                      rates: importRates) ??
+                  tx.amount));
 
       // 构建交易记录
       // E3:导入路径主动生成 syncId,不依赖仓储层兜底。避免 ChangeTracker
@@ -605,6 +619,9 @@ class DataImportService {
         syncId: d.Value(effectiveSyncId),
         currencyCode: d.Value(txCurrency),
         nativeAmount: d.Value(txNative),
+        // 账单标记：JSON 同步必须传输，否则"不计入统计/预算"跨设备丢失
+        excludeFromStats: d.Value(tx.excludeFromStats),
+        excludeFromBudget: d.Value(tx.excludeFromBudget),
       );
 
       final indexInBatch = batchTx.length;

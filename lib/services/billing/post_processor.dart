@@ -120,10 +120,14 @@ class PostProcessor {
     final prefs = await SharedPreferences.getInstance();
     if (prefs.getBool('auto_sync') ?? false) {
       final refresh = ref.read(syncStatusRefreshProvider.notifier);
+      // 快照同步完成信号：供主壳监听弹「已同步」toast。手动上传（cloud_sync_page
+      // 等）已有自己的弹窗，这里只覆盖「数据变更后自动同步」路径，避免双重提示。
+      final syncDone = ref.read(snapshotSyncCompletedProvider.notifier);
       Future(() async {
         try {
           await sync.uploadCurrentLedger(ledgerId: ledgerId);
           refresh.state++;
+          syncDone.state++;
           logger.info('PostProcessor', '后台同步完成', 'ledgerId=$ledgerId');
         } catch (e) {
           logger.error('PostProcessor', '后台同步失败', e);
@@ -160,10 +164,14 @@ class PostProcessor {
     final prefs = await SharedPreferences.getInstance();
     if (prefs.getBool('auto_sync') ?? false) {
       final refresh = c.read(syncStatusRefreshProvider.notifier);
+      // 快照同步完成信号：供主壳监听弹「已同步」toast。手动上传（cloud_sync_page
+      // 等）已有自己的弹窗，这里只覆盖「数据变更后自动同步」路径，避免双重提示。
+      final syncDone = c.read(snapshotSyncCompletedProvider.notifier);
       Future(() async {
         try {
           await sync.uploadCurrentLedger(ledgerId: ledgerId);
           refresh.state++;
+          syncDone.state++;
           logger.info('PostProcessor', '后台同步完成', 'ledgerId=$ledgerId');
         } catch (e) {
           logger.error('PostProcessor', '后台同步失败', e);
@@ -200,10 +208,14 @@ class PostProcessor {
     final prefs = await SharedPreferences.getInstance();
     if (prefs.getBool('auto_sync') ?? false) {
       final refresh = ref.read(syncStatusRefreshProvider.notifier);
+      // 快照同步完成信号：供主壳监听弹「已同步」toast。手动上传（cloud_sync_page
+      // 等）已有自己的弹窗，这里只覆盖「数据变更后自动同步」路径，避免双重提示。
+      final syncDone = ref.read(snapshotSyncCompletedProvider.notifier);
       Future(() async {
         try {
           await sync.uploadCurrentLedger(ledgerId: ledgerId);
           refresh.state++;
+          syncDone.state++;
           logger.info('PostProcessor', '后台同步完成', 'ledgerId=$ledgerId');
         } catch (e) {
           logger.error('PostProcessor', '后台同步失败', e);

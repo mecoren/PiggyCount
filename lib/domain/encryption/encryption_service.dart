@@ -287,6 +287,23 @@ class EncryptionNotConfiguredException implements Exception {
   String toString() => 'EncryptionNotConfiguredException: $message';
 }
 
+/// SaltMismatch 恢复流程的结果
+///
+/// 用于区分「用户主动取消」与「激活失败」两种结束状态，
+/// 让调用方（[StartupSyncChecker] 等）能针对不同结果给出不同反馈，
+/// 避免「密码错误静默退出、错误只在设置页可见」的体验缺陷。
+enum SaltMismatchRecoveryResult {
+  /// 密码正确、密钥激活成功，调用方应重试原同步操作
+  activated,
+
+  /// 用户主动取消密码输入，无需额外提示
+  cancelled,
+
+  /// 密码错误或密钥激活失败（网络探测失败、云端密文损坏、云服务未初始化等），
+  /// 需要明确告知用户同步未恢复
+  failed,
+}
+
 /// 重加密云端数据的结果
 class ReEncryptResult {
   /// 成功重加密的文件数

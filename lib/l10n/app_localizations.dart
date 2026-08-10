@@ -14580,6 +14580,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cloud ciphertext is corrupted, cannot recover key'**
   String get saltMismatchCloudCorrupted;
+
+  /// No description provided for @startupSyncRecoveryFailedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Key activation failed. Sync has not been restored. Please re-enter the password or check sync settings.'**
+  String get startupSyncRecoveryFailedHint;
 }
 
 class _AppLocalizationsDelegate

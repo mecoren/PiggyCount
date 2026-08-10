@@ -2301,5 +2301,6 @@
   "saltMismatchRetrySuccess": "키가 활성화되었습니다. 동기화를 재시도하는 중...",
   "saltMismatchRawStorageUnavailable": "클라우드 서비스가 초기화되지 않아 키를 복구할 수 없습니다",
   "saltMismatchProbeFailed": "클라우드 탐지 실패, 네트워크 확인 후 재시도하세요",
-  "saltMismatchCloudCorrupted": "클라우드 암호문이 손상되어 키를 복구할 수 없습니다"
+  "saltMismatchCloudCorrupted": "클라우드 암호문이 손상되어 키를 복구할 수 없습니다",
+  "startupSyncRecoveryFailedHint": "키 활성화에 실패했습니다. 동기화가 복원되지 않았습니다. 비밀번호를 확인한 후 다시 시도하거나 동기화 설정에서 다시 작업하세요."
 }

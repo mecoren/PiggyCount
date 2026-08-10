@@ -7862,4 +7862,8 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get saltMismatchCloudCorrupted => '클라우드 암호문이 손상되어 키를 복구할 수 없습니다';
+
+  @override
+  String get startupSyncRecoveryFailedHint =>
+      '키 활성화에 실패했습니다. 동기화가 복원되지 않았습니다. 비밀번호를 확인한 후 다시 시도하거나 동기화 설정에서 다시 작업하세요.';
 }

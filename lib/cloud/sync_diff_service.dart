@@ -266,6 +266,26 @@ class SyncDiffService {
       diffs.add('标签: $from → $to');
     }
 
+    // 比较账单标记（不计入统计/预算）：不比较则 A 端只改标记时，B 端
+    // diff 识别不出 modified，标记永不跨设备同步。
+    if (local.excludeFromStats != cloud.excludeFromStats) {
+      diffs.add(
+          '不计入统计: ${local.excludeFromStats ? '是' : '否'} → ${cloud.excludeFromStats ? '是' : '否'}');
+    }
+    if (local.excludeFromBudget != cloud.excludeFromBudget) {
+      diffs.add(
+          '不计入预算: ${local.excludeFromBudget ? '是' : '否'} → ${cloud.excludeFromBudget ? '是' : '否'}');
+    }
+    // 比较 v30 多币种字段（原币种 + 折算值）。老 JSON 缺键 → null，
+    // 此时仅当本地也是 null 才认为无差异（避免老 JSON 触发全量 modified）。
+    if (cloud.currencyCode != null && local.currencyCode != cloud.currencyCode) {
+      diffs.add('币种: ${local.currencyCode ?? '无'} → ${cloud.currencyCode}');
+    }
+    if (cloud.nativeAmount != null &&
+        (local.nativeAmount ?? 0) != cloud.nativeAmount) {
+      diffs.add('折算金额: ${local.nativeAmount} → ${cloud.nativeAmount}');
+    }
+
     return diffs;
   }
 
@@ -347,6 +367,16 @@ class SyncDiffService {
     // 门的 batch tag-update 接口。
     if (modifiedChanges.isNotEmpty) {
       final sw = Stopwatch()..start();
+      // 账本位币：与 importTransactions 的规则一致（账本币种兜底 CNY）。
+      // 用于 modified 路径重算 nativeAmount，避免"只更新 amount、不更新
+      // native_amount"导致统计合计（SUM(COALESCE(native_amount, amount))）
+      // 读到旧折算值（明细新、合计旧）。
+      final ledgerBase =
+          ((importData.currency?.isNotEmpty ?? false) ? importData.currency! : 'CNY')
+              .toUpperCase();
+      // 单币种账本下的 nativeAmount = amount；外币账本保持本地原值
+      // （null → update 时 absent），由 L11 检测按需捞回，避免引入汇率
+      // 查询复杂度。单币种是本 bug 的主战场。
       final updates = <TransactionUpdateBySyncIdData>[];
       final tagIdsBySyncId = <String, List<int>>{};
       for (final change in modifiedChanges) {
@@ -356,6 +386,9 @@ class SyncDiffService {
         final accountId = _resolveAccountId(cloud, accountNameToId);
         final toAccountId = _resolveToAccountId(cloud, accountNameToId);
         final tagIds = _resolveTagIds(cloud, tagNameToId).toSet().toList();
+        final cloudCurrency =
+            ((cloud.currencyCode?.isNotEmpty ?? false) ? cloud.currencyCode! : null);
+        final isSameBase = cloudCurrency == null || cloudCurrency.toUpperCase() == ledgerBase;
         updates.add(TransactionUpdateBySyncIdData(
           syncId: syncId,
           type: cloud.type,
@@ -365,6 +398,12 @@ class SyncDiffService {
           toAccountId: toAccountId,
           happenedAt: cloud.happenedAt,
           note: cloud.note,
+          currencyCode: isSameBase ? ledgerBase : cloudCurrency,
+          nativeAmount: cloud.nativeAmount ??
+              (isSameBase ? cloud.amount : null),
+          // 账单标记：diff 合并也要带上，避免"不计入统计/预算"跨设备丢失
+          excludeFromStats: cloud.excludeFromStats,
+          excludeFromBudget: cloud.excludeFromBudget,
         ));
         tagIdsBySyncId[syncId] = tagIds;
       }

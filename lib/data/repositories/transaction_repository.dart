@@ -11,6 +11,18 @@ class TransactionUpdateBySyncIdData {
   final int? toAccountId;
   final DateTime happenedAt;
   final String? note;
+  /// v30 多币种：交易币种。null 表示保持本地原值。
+  final String? currencyCode;
+  /// v30 多币种：折算到账本本位币的金额。null 表示保持本地原值。
+  /// 注意：sync_diff_service 的 modified 路径若只更新 amount 而不带
+  /// nativeAmount，单币种账本下本地旧行的 native_amount 会与新的 amount
+  /// 分裂，导致合计（SUM(COALESCE(native_amount, amount))）读旧值——即
+  /// 此前"同步后明细变了但合计不变"的根因。调用方必须重算并传入。
+  final double? nativeAmount;
+  /// 账单标记：不计入统计。diff 合并必须带上，否则跨设备丢失。
+  final bool excludeFromStats;
+  /// 账单标记：不计入预算。同上。
+  final bool excludeFromBudget;
 
   const TransactionUpdateBySyncIdData({
     required this.syncId,
@@ -21,6 +33,10 @@ class TransactionUpdateBySyncIdData {
     this.toAccountId,
     required this.happenedAt,
     this.note,
+    this.currencyCode,
+    this.nativeAmount,
+    this.excludeFromStats = false,
+    this.excludeFromBudget = false,
   });
 }
 

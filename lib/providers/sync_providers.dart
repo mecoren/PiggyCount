@@ -518,6 +518,31 @@ final syncServiceProvider = Provider<SyncService>((ref) {
   final db = ref.watch(databaseProvider);
   final repo = ref.watch(repositoryProvider);
   final encryptionService = ref.watch(encryptionServiceProvider);
+
+  // §X 兜底:Drift table-watch(与 PiggyCount Cloud 分支同规则)。快照同步的
+  // 下载/恢复/导入都走 dataImportService.importTransactions 批量写表,不在
+  // 任何交易 CRUD 钩子覆盖范围内;且此分支没有 PullCompleted 事件 → 同步
+  // 完成后明细(TransactionList 的 stream 自动推送)是新的,但依赖
+  // statsRefreshProvider 的月合计 / 日合计卡片 / 洞察统计不刷新,表现为
+  // 「明细新、合计旧」。这里监听 transactions 表变更,任何来源的写入都
+  // 主动 bump statsRefreshProvider。
+  StreamSubscription<void>? txTableSub2;
+  try {
+    txTableSub2 = db
+        .tableUpdates(d.TableUpdateQuery.onTable(db.transactions))
+        .listen((_) {
+      ref.read(statsRefreshProvider.notifier).state++;
+    });
+  } catch (e, st) {
+    // db 在极少数时序下可能未就绪;不影响主流程,记日志即可。
+    logger.warning(
+      'SyncProvider',
+      'transactions table-watch 启动失败: $e',
+      st,
+    );
+  }
+  ref.onDispose(() => txTableSub2?.cancel());
+
   return TransactionsSyncManager(
     config: config,
     db: db,
@@ -924,6 +949,13 @@ final ledgerListRefreshProvider = StateProvider<int>((ref) => 0);
 
 /// 当前正在上传的账本ID集合
 final uploadingLedgerIdsProvider = StateProvider<Set<int>>((ref) => {});
+
+/// 快照同步（TransactionsSyncManager）上传完成信号。
+///
+/// 每次 [TransactionsSyncManager.uploadCurrentLedger] 成功 +1，供 UI
+/// `ref.listen` 弹出「已同步」toast。SyncEngine（PiggyCount Cloud）模式走
+/// [syncEventStreamProvider] 事件流，不走这里 —— 两者互不干扰。
+final snapshotSyncCompletedProvider = StateProvider<int>((ref) => 0);
 
 /// 本地账本列表（快速，仅本地）
 final localLedgersProvider =
