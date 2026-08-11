@@ -18,12 +18,31 @@ class ImportAccount {
   final String? type;
   final String? currency;
   final double? initialBalance;
+  // 账户扩展字段（备份同步必须传输，否则恢复后信用卡/隐藏等属性丢失）
+  final int? sortOrder;
+  final double? creditLimit;
+  final int? billingDay;
+  final int? paymentDueDay;
+  final String? bankName;
+  final String? cardLastFour;
+  final String? note;
+  final bool? hidden;
+  final String? syncId;
 
   const ImportAccount({
     required this.name,
     this.type,
     this.currency,
     this.initialBalance,
+    this.sortOrder,
+    this.creditLimit,
+    this.billingDay,
+    this.paymentDueDay,
+    this.bankName,
+    this.cardLastFour,
+    this.note,
+    this.hidden,
+    this.syncId,
   });
 }
 
@@ -56,10 +75,14 @@ class ImportCategory {
 class ImportTag {
   final String name;
   final String? color;
+  final String? syncId;
+  final int? sortOrder;
 
   const ImportTag({
     required this.name,
     this.color,
+    this.syncId,
+    this.sortOrder,
   });
 }
 
@@ -98,6 +121,7 @@ class ImportTransaction {
   final String? fromAccountName; // 转出账户（转账）
   final String? toAccountName; // 转入账户（转账）
   final List<String>? tagNames; // 标签名称列表
+  final List<String>? tagSyncIds; // 标签 syncId 列表（优先于 tagNames 解析）
   final int? categoryId; // 预解析的分类ID（优先于categoryName）
   final List<ImportAttachment>? attachments; // 附件元数据列表
   final String? syncId; // 跨设备同步唯一标识
@@ -111,6 +135,12 @@ class ImportTransaction {
   final bool excludeFromStats;
   /// 账单标记：不计入预算。同上，JSON 同步必须传输。
   final bool excludeFromBudget;
+  /// 共享账本 override：Editor 视角选 Owner 的 category/account/tag，
+  /// 本地主表无对应 int id，直接存 Owner 的 syncId。JSON 同步必须传输，
+  /// 否则 modified 后 override 丢失、回退到 categoryId int（可能为 null）。
+  final String? categorySyncIdOverride;
+  final String? accountSyncIdOverride;
+  final String? toAccountSyncIdOverride;
 
   const ImportTransaction({
     required this.type,
@@ -127,9 +157,13 @@ class ImportTransaction {
     this.fromAccountName,
     this.toAccountName,
     this.tagNames,
+    this.tagSyncIds,
     this.categoryId,
     this.attachments,
     this.syncId,
+    this.categorySyncIdOverride,
+    this.accountSyncIdOverride,
+    this.toAccountSyncIdOverride,
   });
 }
 
@@ -217,7 +251,9 @@ class DataImportService {
     final categoryCache = await importCategories(repo, data.categories);
 
     // 4. 导入标签
-    final tagNameToId = await importTags(repo, data.tags);
+    final tagMaps = await importTags(repo, data.tags);
+    final tagNameToId = tagMaps.byName;
+    final tagSyncIdToId = tagMaps.bySyncId;
 
     // 5. 导入交易
     final result = await importTransactions(
@@ -227,6 +263,7 @@ class DataImportService {
       accountNameToId: accountNameToId,
       categoryCache: categoryCache,
       tagNameToId: tagNameToId,
+      tagSyncIdToId: tagSyncIdToId,
       onProgress: onProgress,
       recordChanges: recordChanges,
     );
@@ -246,6 +283,7 @@ class DataImportService {
     logger.info('AccountImport', '开始导入账户: ${accounts.length} 个');
     final sw = Stopwatch()..start();
     int created = 0;
+    int updated = 0;
 
     try {
       final existingAccounts = await repo.getAllAccounts();
@@ -261,13 +299,64 @@ class DataImportService {
             type: acc.type ?? 'cash',
             currency: acc.currency ?? defaultCurrency,
             initialBalance: acc.initialBalance ?? 0.0,
+            creditLimit: acc.creditLimit,
+            billingDay: acc.billingDay,
+            paymentDueDay: acc.paymentDueDay,
+            bankName: acc.bankName,
+            cardLastFour: acc.cardLastFour,
+            note: acc.note,
+            syncId: acc.syncId,
           );
           accountNameToId[acc.name] = id;
           created++;
+          // hidden / sortOrder 单独更新（createAccount 接口无此参数）
+          if (acc.hidden != null) {
+            await repo.updateAccount(id, hidden: acc.hidden);
+          }
+          if (acc.sortOrder != null) {
+            await repo.updateAccountSortOrders([(id: id, sortOrder: acc.sortOrder!)]);
+          }
+        } else {
+          // 已存在账户：仅在存在非 null 扩展字段时才更新（null 保持本地
+          // 原值）。避免全 null 时也触发 updateAccount → 无意义 DB 写入 +
+          // change log 记录假'update' change（下次同步白推一次）。
+          final existingId = accountNameToId[acc.name]!;
+          final hasUpdates = acc.type != null ||
+              acc.currency != null ||
+              acc.initialBalance != null ||
+              acc.creditLimit != null ||
+              acc.billingDay != null ||
+              acc.paymentDueDay != null ||
+              acc.bankName != null ||
+              acc.cardLastFour != null ||
+              acc.note != null ||
+              acc.hidden != null ||
+              acc.sortOrder != null;
+          if (hasUpdates) {
+            await repo.updateAccount(
+              existingId,
+              type: acc.type,
+              currency: acc.currency,
+              initialBalance: acc.initialBalance,
+              creditLimit: acc.creditLimit,
+              billingDay: acc.billingDay,
+              paymentDueDay: acc.paymentDueDay,
+              bankName: acc.bankName,
+              cardLastFour: acc.cardLastFour,
+              note: acc.note,
+              hidden: acc.hidden,
+            );
+            if (acc.sortOrder != null) {
+              await repo.updateAccountSortOrders([
+                (id: existingId, sortOrder: acc.sortOrder!)
+              ]);
+            }
+            updated++;
+          }
         }
       }
       logger.info('AccountImport',
-          '账户导入完成: 新增=$created 已存在=${accounts.length - created} 耗时=${sw.elapsedMilliseconds}ms');
+          '账户导入完成: 新增=$created 更新=$updated 耗时=${sw.elapsedMilliseconds}ms');
     } catch (e, st) {
       logger.error('AccountImport', '账户导入失败', e, st);
     }
@@ -375,14 +464,20 @@ class DataImportService {
     return categoryCache;
   }
 
-  /// 导入标签。public — sync_diff_service 复用。
-  Future<Map<String, int>> importTags(
+  /// 导入标签。返回 byName + bySyncId 两个映射：
+  /// - byName：标签名 → 本地 id（CSV/老 JSON 兜底匹配用）
+  /// - bySyncId：标签 syncId → 本地 id（v7 JSON 跨设备稳定匹配，避免 rename 错挂）
+  Future<({Map<String, int> byName, Map<String, int> bySyncId})>
+      importTags(
     BaseRepository repo,
     List<ImportTag> tags,
   ) async {
     final tagNameToId = <String, int>{};
+    final tagSyncIdToId = <String, int>{};
 
-    if (tags.isEmpty) return tagNameToId;
+    if (tags.isEmpty) {
+      return (byName: tagNameToId, bySyncId: tagSyncIdToId);
+    }
 
     logger.info('TagImport', '开始导入标签: ${tags.length} 个');
     final sw = Stopwatch()..start();
@@ -392,24 +487,111 @@ class DataImportService {
     try {
       final existingTags = await repo.getAllTags();
       final existingTagMap = <String, Tag>{};
+      final existingTagById = <int, Tag>{};
       for (final tag in existingTags) {
         tagNameToId[tag.name] = tag.id;
         existingTagMap[tag.name] = tag;
+        existingTagById[tag.id] = tag;
+        if (tag.syncId != null && tag.syncId!.isNotEmpty) {
+          tagSyncIdToId[tag.syncId!] = tag.id;
+        }
       }
 
       // 单条 await 循环 — 标签量通常小(<100),没批量接口暂保持,但去掉 per-row
       // INFO 日志:N 个标签会打 3N 条 INFO,把 logger 队列冲爆,导致后续 import
       // 阶段的日志被淹没,用户感知"日志不全"。
       for (final tag in tags) {
-        if (!tagNameToId.containsKey(tag.name)) {
-          final id = await repo.createTag(name: tag.name, color: tag.color);
+        // 优先按 syncId 匹配已存在标签（跨设备 rename 后仍能稳定锚定）
+        int? existingIdBySyncId;
+        if (tag.syncId != null && tag.syncId!.isNotEmpty) {
+          existingIdBySyncId = tagSyncIdToId[tag.syncId];
+        }
+        final existingByName = existingTagMap[tag.name];
+
+        if (existingIdBySyncId == null && existingByName == null) {
+          // 新建：带 syncId（若 JSON 有）和 sortOrder
+          final id = await repo.createTag(
+            name: tag.name,
+            color: tag.color,
+            sortOrder: tag.sortOrder ?? 0,
+            syncId: tag.syncId,
+          );
           tagNameToId[tag.name] = id;
+          if (tag.syncId != null && tag.syncId!.isNotEmpty) {
+            tagSyncIdToId[tag.syncId!] = id;
+          }
           created++;
-        } else if (tag.color != null) {
-          final existingTag = existingTagMap[tag.name];
-          if (existingTag != null && existingTag.color != tag.color) {
-            await repo.updateTag(existingTag.id, color: tag.color);
+        } else if (existingIdBySyncId != null) {
+          // 按 syncId 命中已存在：用非 null 字段更新（color/sortOrder）
+          final existingTag = existingTagById[existingIdBySyncId]!;
+          var needUpdate = false;
+          String? newColor = existingTag.color;
+          int? newSortOrder;
+          if (tag.color != null && tag.color != existingTag.color) {
+            newColor = tag.color;
+            needUpdate = true;
+          }
+          if (tag.sortOrder != null && tag.sortOrder != existingTag.sortOrder) {
+            newSortOrder = tag.sortOrder;
+            needUpdate = true;
+          }
+          // name 也可能更新（远端 rename 了）。撞同名（目标 name 已被另一个
+          // tag 占用）时跳过 rename 保持原名 —— Tags 表无 DB 唯一约束，
+          // 强行 rename 会产生两个同名脏标签。保守跳过比产生脏数据安全。
+          if (tag.name != existingTag.name &&
+              (tagNameToId.containsKey(tag.name))) {
+            // 目标名已被占用：本行不改名，仅更新 color/sortOrder
+            if (needUpdate) {
+              await repo.updateTag(existingTag.id,
+                  color: newColor, sortOrder: newSortOrder);
+              updated++;
+            }
+          } else if (tag.name != existingTag.name) {
+            await repo.updateTag(existingTag.id,
+                name: tag.name, color: newColor, sortOrder: newSortOrder);
+            tagNameToId.remove(existingTag.name);
+            tagNameToId[tag.name] = existingTag.id;
+            // 同步更新内存 map：existingTagMap 按 name 索引，避免后续同 JSON
+            // 里其他 tag 引用旧名字时解析到已改名的行。
+            existingTagMap.remove(existingTag.name);
+            existingTagMap[tag.name] = existingTag;
             updated++;
+          } else if (needUpdate) {
+            await repo.updateTag(existingTag.id,
+                color: newColor, sortOrder: newSortOrder);
+            updated++;
+          }
+        } else if (existingByName != null) {
+          // 仅 name 命中（本地无 syncId、JSON 有 syncId 或都没有）
+          // 用非 null 字段更新；若本地 syncId 缺失且 JSON 带了，需要回填
+          var needUpdate = false;
+          String? newColor = existingByName.color;
+          int? newSortOrder;
+          if (tag.color != null && tag.color != existingByName.color) {
+            newColor = tag.color;
+            needUpdate = true;
+          }
+          if (tag.sortOrder != null &&
+              tag.sortOrder != existingByName.sortOrder) {
+            newSortOrder = tag.sortOrder;
+            needUpdate = true;
+          }
+          if (needUpdate) {
+            await repo.updateTag(existingByName.id,
+                color: newColor, sortOrder: newSortOrder);
+            updated++;
+          }
+          // 回填 syncId：本地缺失时用 JSON 带的 syncId 补上。否则下次导出
+          // 该 tag 仍无 syncId、交易 tagSyncIds 无法锚定（#6 闭环断裂）。
+          if (tag.syncId != null &&
+              tag.syncId!.isNotEmpty &&
+              (existingByName.syncId == null ||
+                  existingByName.syncId!.isEmpty)) {
+            await repo.updateTagSyncId(existingByName.id, tag.syncId!);
+            updated++;
+          }
+          if (tag.syncId != null && tag.syncId!.isNotEmpty) {
+            tagSyncIdToId[tag.syncId!] = existingByName.id;
           }
         }
       }
@@ -419,7 +601,7 @@ class DataImportService {
       logger.error('TagImport', '标签导入失败', e, st);
     }
 
-    return tagNameToId;
+    return (byName: tagNameToId, bySyncId: tagSyncIdToId);
   }
 
   /// 导入交易(统一 batch 路径,tag/attachment 跟 tx 一起 batch insert)
@@ -441,6 +623,7 @@ class DataImportService {
     required Map<String, int> accountNameToId,
     required Map<String, int> categoryCache,
     required Map<String, int> tagNameToId,
+    Map<String, int>? tagSyncIdToId,
     void Function(int done, int total)? onProgress,
     bool recordChanges = true,
   }) async {
@@ -516,9 +699,19 @@ class DataImportService {
     }
 
     for (final tx in transactions) {
+      // 共享账本 override 与本地 int id 互斥（§7 决策，与 SyncEngine 一致）：
+      // override 非空时 categoryId/accountId/toAccountId 一律留 null，
+      // 避免本地主表同名分类/账户被误解析导致「override + int 双写」。
+      final hasCatOverride = (tx.categorySyncIdOverride?.isNotEmpty ?? false);
+      final hasAccOverride = (tx.accountSyncIdOverride?.isNotEmpty ?? false);
+      final hasToOverride =
+          (tx.toAccountSyncIdOverride?.isNotEmpty ?? false);
+
       // 解析分类ID
       int? categoryId;
-      if (tx.categoryId != null) {
+      if (hasCatOverride) {
+        categoryId = null;
+      } else if (tx.categoryId != null) {
         categoryId = tx.categoryId;
       } else if (tx.categoryName != null && tx.categoryKind != null) {
         final key = '${tx.categoryKind}|${tx.categoryName}';
@@ -534,11 +727,11 @@ class DataImportService {
         }
       }
 
-      // 解析账户ID
+      // 解析账户ID（override 非空时留 null，见上方分类注释）
       int? accountId;
       int? toAccountId;
       if (tx.type == 'transfer') {
-        if (tx.fromAccountName != null) {
+        if (!hasAccOverride && tx.fromAccountName != null) {
           accountId = accountNameToId[tx.fromAccountName];
           if (accountId == null) {
             failed++;
@@ -546,7 +739,7 @@ class DataImportService {
             continue;
           }
         }
-        if (tx.toAccountName != null) {
+        if (!hasToOverride && tx.toAccountName != null) {
           toAccountId = accountNameToId[tx.toAccountName];
           if (toAccountId == null) {
             failed++;
@@ -555,14 +748,31 @@ class DataImportService {
           }
         }
       } else {
-        if (tx.accountName != null) {
+        if (!hasAccOverride && tx.accountName != null) {
           accountId = accountNameToId[tx.accountName];
         }
       }
 
-      // 解析标签ID — toSet().toList() 去重,因为底层 batch insert 不查重
-      final tagIds = <int>[];
-      if (tx.tagNames != null) {
+      // 解析标签ID — 优先按 tagSyncIds 匹配（跨设备 rename 稳定锚定），
+      // 互斥而非叠加：v7 JSON 里 tagSyncIds 是权威锚点，name 只是可读参考，
+      // 叠加会导致两端 tag 集合不一致时（本地同名不同 syncId 的独立标签）
+      // 多加标签。syncId 全部 miss 才回退 name。用 Set 去重。
+      final resolvedTagIds = <int>{};
+      var resolvedBySyncId = false;
+
+      // 1. 优先按 syncId 解析
+      if (tagSyncIdToId != null &&
+          tx.tagSyncIds != null &&
+          tx.tagSyncIds!.isNotEmpty) {
+        for (final syncId in tx.tagSyncIds!) {
+          final tagId = tagSyncIdToId[syncId];
+          if (tagId != null) resolvedTagIds.add(tagId);
+        }
+        resolvedBySyncId = resolvedTagIds.isNotEmpty;
+      }
+
+      // 2. 按 name 解析（仅当无 tagSyncIds 或 syncId 全部 miss 时兜底）
+      if (!resolvedBySyncId && tx.tagNames != null) {
         for (final tagName in tx.tagNames!) {
           var tagId = tagNameToId[tagName];
           if (tagId == null) {
@@ -577,11 +787,11 @@ class DataImportService {
             } catch (_) {}
           }
           if (tagId != null) {
-            tagIds.add(tagId);
+            resolvedTagIds.add(tagId);
           }
         }
       }
-      final uniqueTagIds = tagIds.toSet().toList();
+      final uniqueTagIds = resolvedTagIds.toList();
 
       // v30:交易币种 = CSV 币种列(显式,反馈10)?? 账户币种 ?? 本位币;
       // 折算快照同币种 = amount,外币按有效汇率,取不到 = amount(L11 可捞回)。
@@ -622,6 +832,11 @@ class DataImportService {
         // 账单标记：JSON 同步必须传输，否则"不计入统计/预算"跨设备丢失
         excludeFromStats: d.Value(tx.excludeFromStats),
         excludeFromBudget: d.Value(tx.excludeFromBudget),
+        // 共享账本 override：added 恢复路径必须写入，否则 JSON 全量导入后
+        // Editor 视角记的 tx override 丢失、回退到 categoryId int（null）。
+        categorySyncIdOverride: d.Value(tx.categorySyncIdOverride),
+        accountSyncIdOverride: d.Value(tx.accountSyncIdOverride),
+        toAccountSyncIdOverride: d.Value(tx.toAccountSyncIdOverride),
       );
 
       final indexInBatch = batchTx.length;

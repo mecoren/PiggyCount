@@ -82,6 +82,13 @@ class LocalTagRepository implements TagRepository {
   }
 
   @override
+  Future<void> updateTagSyncId(int id, String syncId) async {
+    await (db.update(db.tags)..where((t) => t.id.equals(id))).write(
+      TagsCompanion(syncId: d.Value(syncId)),
+    );
+  }
+
+  @override
   Future<void> deleteTag(int id) async {
     await db.transaction(() async {
       // 先删除关联关系

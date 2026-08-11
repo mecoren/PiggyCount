@@ -14,6 +14,9 @@ import '../services/system/logger_service.dart';
 /// - 标签按字典序排序后拼接，确保顺序无关
 /// - 转账交易（type == 'transfer'）忽略 categoryName/categoryKind，
 ///   避免跨设备分类缺失导致指纹漂移
+/// - tagSyncIds（v7）排序后拼接，确保顺序无关
+/// - 共享账本 override 字段（v7）纳入指纹：否则两端仅 override 不同时
+///   指纹相同 → getStatus 判定 inSync → 永不触发拉取 → override 不同步
 /// - 排序键优先级：
 ///   happenedAt → type → amount → categoryName → categoryKind → note
 ///
@@ -28,6 +31,9 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
         final sortedTags = tags.isNotEmpty
             ? (tags.split(',')..sort()).join(',')
             : '';
+        // v7 标签 syncId 列表：排序后拼接，确保顺序无关
+        final tagSyncIds = (it['tagSyncIds'] as List?)?.cast<String>() ?? const [];
+        final sortedTagSyncIds = List<String>.from(tagSyncIds)..sort();
         // 账户：区分转账和普通交易
         final accountName = it['accountName'] as String? ?? '';
         final fromAccountName = it['fromAccountName'] as String? ?? '';
@@ -46,6 +52,10 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
               isTransfer ? '' : (it['categoryKind'] as String? ?? ''),
           'note': it['note'] as String? ?? '',
           'tags': sortedTags,
+          'tagSyncIds': sortedTagSyncIds,
+          'categorySyncIdOverride': it['categorySyncIdOverride'] as String? ?? '',
+          'accountSyncIdOverride': it['accountSyncIdOverride'] as String? ?? '',
+          'toAccountSyncIdOverride': it['toAccountSyncIdOverride'] as String? ?? '',
           'accountName': accountName,
           'fromAccountName': fromAccountName,
           'toAccountName': toAccountName,

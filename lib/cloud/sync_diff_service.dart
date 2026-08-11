@@ -286,6 +286,22 @@ class SyncDiffService {
       diffs.add('折算金额: ${local.nativeAmount} → ${cloud.nativeAmount}');
     }
 
+    // 比较共享账本 override（仅当 JSON 显式携带时；null==null 不触发，
+    // 避免老 JSON 因缺键触发全量 modified）。不比较则 Editor 只改 override
+    // 时 diff 识别不出 modified，override 永不跨设备同步。
+    if (cloud.categorySyncIdOverride != null &&
+        local.categorySyncIdOverride != cloud.categorySyncIdOverride) {
+      diffs.add('分类override: ${local.categorySyncIdOverride ?? '无'} → ${cloud.categorySyncIdOverride}');
+    }
+    if (cloud.accountSyncIdOverride != null &&
+        local.accountSyncIdOverride != cloud.accountSyncIdOverride) {
+      diffs.add('账户override: ${local.accountSyncIdOverride ?? '无'} → ${cloud.accountSyncIdOverride}');
+    }
+    if (cloud.toAccountSyncIdOverride != null &&
+        local.toAccountSyncIdOverride != cloud.toAccountSyncIdOverride) {
+      diffs.add('转入账户override: ${local.toAccountSyncIdOverride ?? '无'} → ${cloud.toAccountSyncIdOverride}');
+    }
+
     return diffs;
   }
 
@@ -313,8 +329,9 @@ class SyncDiffService {
       importData.accounts,
       defaultCurrency: importData.currency ?? 'CNY',
     );
-    final tagNameToId =
-        await dataImportService.importTags(repo, importData.tags);
+    final tagMaps = await dataImportService.importTags(repo, importData.tags);
+    final tagNameToId = tagMaps.byName;
+    final tagSyncIdToId = tagMaps.bySyncId;
 
     int addedCount = 0;
     int modifiedCount = 0;
@@ -356,6 +373,7 @@ class SyncDiffService {
         accountNameToId: accountNameToId,
         categoryCache: categoryCache,
         tagNameToId: tagNameToId,
+        tagSyncIdToId: tagSyncIdToId,
       );
       addedCount = result.inserted;
     }
@@ -382,10 +400,22 @@ class SyncDiffService {
       for (final change in modifiedChanges) {
         final cloud = change.cloudTransaction!;
         final syncId = cloud.syncId!;
-        final categoryId = _resolveCategoryId(cloud, categoryCache);
-        final accountId = _resolveAccountId(cloud, accountNameToId);
-        final toAccountId = _resolveToAccountId(cloud, accountNameToId);
-        final tagIds = _resolveTagIds(cloud, tagNameToId).toSet().toList();
+        // 共享账本 override 与本地 int id 互斥（§7 决策，与 SyncEngine
+        // sync_engine_apply.dart 一致）：override 非空时 int 留 null，
+        // 避免本地主表同名分类/账户被误解析导致「override + int 双写」。
+        final hasCatOverride = (cloud.categorySyncIdOverride?.isNotEmpty ?? false);
+        final hasAccOverride = (cloud.accountSyncIdOverride?.isNotEmpty ?? false);
+        final hasToOverride =
+            (cloud.toAccountSyncIdOverride?.isNotEmpty ?? false);
+        final categoryId =
+            hasCatOverride ? null : _resolveCategoryId(cloud, categoryCache);
+        final accountId =
+            hasAccOverride ? null : _resolveAccountId(cloud, accountNameToId);
+        final toAccountId = hasToOverride
+            ? null
+            : _resolveToAccountId(cloud, accountNameToId);
+        final tagIds =
+            _resolveTagIds(cloud, tagNameToId, tagSyncIdToId).toSet().toList();
         final cloudCurrency =
             ((cloud.currencyCode?.isNotEmpty ?? false) ? cloud.currencyCode! : null);
         final isSameBase = cloudCurrency == null || cloudCurrency.toUpperCase() == ledgerBase;
@@ -404,6 +434,11 @@ class SyncDiffService {
           // 账单标记：diff 合并也要带上，避免"不计入统计/预算"跨设备丢失
           excludeFromStats: cloud.excludeFromStats,
           excludeFromBudget: cloud.excludeFromBudget,
+          // 共享账本 override：modified 合并必须带上，否则 Editor 视角记的
+          // tx 跨设备后 override 丢失、回退到 categoryId int（可能为 null）
+          categorySyncIdOverride: cloud.categorySyncIdOverride,
+          accountSyncIdOverride: cloud.accountSyncIdOverride,
+          toAccountSyncIdOverride: cloud.toAccountSyncIdOverride,
         ));
         tagIdsBySyncId[syncId] = tagIds;
       }
@@ -508,13 +543,30 @@ class SyncDiffService {
     return null;
   }
 
-  List<int> _resolveTagIds(
-      ImportTransaction tx, Map<String, int> tagNameToId) {
-    if (tx.tagNames == null || tx.tagNames!.isEmpty) return [];
-    return tx.tagNames!
-        .map((name) => tagNameToId[name])
-        .whereType<int>()
-        .toList();
+  List<int> _resolveTagIds(ImportTransaction tx, Map<String, int> tagNameToId,
+      Map<String, int>? tagSyncIdToId) {
+    final result = <int>{};
+    // 优先按 syncId 解析（跨设备 rename 稳定锚定）。v7 JSON 里 tagSyncIds
+    // 是权威锚点，name 只是可读参考 —— 不能叠加，否则两端 tag 集合不一致
+    // 时（本地同名不同 syncId 的独立标签）会多加标签。
+    if (tagSyncIdToId != null &&
+        tx.tagSyncIds != null &&
+        tx.tagSyncIds!.isNotEmpty) {
+      for (final syncId in tx.tagSyncIds!) {
+        final id = tagSyncIdToId[syncId];
+        if (id != null) result.add(id);
+      }
+      // syncId 全部 miss（极端：本地无该 syncId 标签）→ 回退到 name
+      if (result.isNotEmpty) return result.toList();
+    }
+    // fallback 到 name 解析（老 JSON 无 tagSyncIds / syncId 全部 miss）
+    if (tx.tagNames != null) {
+      for (final name in tx.tagNames!) {
+        final id = tagNameToId[name];
+        if (id != null) result.add(id);
+      }
+    }
+    return result.toList();
   }
 
   // 分类/账户/标签的导入逻辑统一委托给 DataImportService.importCategories /

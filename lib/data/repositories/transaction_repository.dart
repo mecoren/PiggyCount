@@ -23,6 +23,11 @@ class TransactionUpdateBySyncIdData {
   final bool excludeFromStats;
   /// 账单标记：不计入预算。同上。
   final bool excludeFromBudget;
+  /// 共享账本 override：null 表示保持本地原值（Value.absent），
+  /// 非 null（含空串"清空"语义）表示写入。与 currencyCode 同模式。
+  final String? categorySyncIdOverride;
+  final String? accountSyncIdOverride;
+  final String? toAccountSyncIdOverride;
 
   const TransactionUpdateBySyncIdData({
     required this.syncId,
@@ -37,6 +42,9 @@ class TransactionUpdateBySyncIdData {
     this.nativeAmount,
     this.excludeFromStats = false,
     this.excludeFromBudget = false,
+    this.categorySyncIdOverride,
+    this.accountSyncIdOverride,
+    this.toAccountSyncIdOverride,
   });
 }
 

@@ -31,16 +31,17 @@ String _sanitizeString(String? input) {
 /// [ledgerId] - 账本ID
 ///
 /// 返回包含以下字段的 JSON：
-/// - version: 数据格式版本（当前为4）
+/// - version: 数据格式版本（当前为7）
 /// - exportedAt: 导出时间戳
 /// - ledgerId: 账本ID
 /// - ledgerName: 账本名称
 /// - currency: 货币
 /// - count: 交易条数
-/// - accounts: 账户列表（name, type, currency, initialBalance）
+/// - accounts: 账户列表（name, type, currency, initialBalance + 扩展字段）
 /// - categories: 分类列表（name, kind, level, icon, parentName）
-/// - tags: 标签列表（name, color）
-/// - items: 交易明细（type, amount, categoryName, categoryKind, happenedAt, note, tags）
+/// - tags: 标签列表（name, color, syncId, sortOrder）
+/// - items: 交易明细（type, amount, categoryName, categoryKind, happenedAt,
+///   note, tags, tagSyncIds, override 字段）
 Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
   logger.debug('TransactionsJson', '开始导出账本 $ledgerId');
 
@@ -131,6 +132,16 @@ Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
             'type': a.type,
             'currency': a.currency,
             'initialBalance': a.initialBalance,
+            'sortOrder': a.sortOrder,
+            if (a.creditLimit != null) 'creditLimit': a.creditLimit,
+            if (a.billingDay != null) 'billingDay': a.billingDay,
+            if (a.paymentDueDay != null) 'paymentDueDay': a.paymentDueDay,
+            if (a.bankName != null) 'bankName': _sanitizeString(a.bankName),
+            if (a.cardLastFour != null)
+              'cardLastFour': _sanitizeString(a.cardLastFour),
+            if (a.note != null) 'note': _sanitizeString(a.note),
+            'hidden': a.hidden,
+            if (a.syncId != null) 'syncId': a.syncId,
           })
       .toList();
 
@@ -160,6 +171,15 @@ Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
       'excludeFromBudget': t.excludeFromBudget,
       if (t.currencyCode != null) 'currencyCode': t.currencyCode,
       if (t.nativeAmount != null) 'nativeAmount': t.nativeAmount,
+      // 共享账本 override：Editor 选 Owner 的 category/account，本地主表
+      // 无 int id，直接存 syncId。modified 同步后必须保留，否则 override
+      // 丢失回退到 categoryId（可能 null）。
+      if (t.categorySyncIdOverride != null)
+        'categorySyncIdOverride': t.categorySyncIdOverride,
+      if (t.accountSyncIdOverride != null)
+        'accountSyncIdOverride': t.accountSyncIdOverride,
+      if (t.toAccountSyncIdOverride != null)
+        'toAccountSyncIdOverride': t.toAccountSyncIdOverride,
     };
 
     // 添加账户信息
@@ -178,10 +198,16 @@ Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
       }
     }
 
-    // 添加标签（逗号分隔的标签名称）
+    // 添加标签（逗号分隔的标签名称 + syncId 列表）
     final txTags = tagsMap[t.id];
     if (txTags != null && txTags.isNotEmpty) {
       item['tags'] = txTags.map((tag) => _sanitizeString(tag.name)).join(',');
+      final syncIds = txTags
+          .map((tag) => tag.syncId)
+          .whereType<String>()
+          .where((s) => s.isNotEmpty)
+          .toList();
+      if (syncIds.isNotEmpty) item['tagSyncIds'] = syncIds;
     }
 
     return item;
@@ -277,6 +303,10 @@ Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
     if (tag.color != null && tag.color!.isNotEmpty) {
       tagItem['color'] = tag.color;
     }
+    if (tag.syncId != null && tag.syncId!.isNotEmpty) {
+      tagItem['syncId'] = tag.syncId;
+    }
+    tagItem['sortOrder'] = tag.sortOrder;
     return tagItem;
   }).toList();
 
@@ -287,7 +317,7 @@ Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
   }
 
   final payload = {
-    'version': 6, // 版本升级,新增 syncId 用于跨设备同步
+    'version': 7, // 版本升级:账户扩展字段 + 标签 syncId + 交易 tagSyncIds/override
     'exportedAt': DateTime.now().toUtc().toIso8601String(),
     'ledgerId': ledgerId,
     'ledgerName': ledger.name,
@@ -320,6 +350,15 @@ ImportData parseJsonToImportData(String jsonStr) {
         type: acc['type'] as String?,
         currency: acc['currency'] as String?,
         initialBalance: (acc['initialBalance'] as num?)?.toDouble(),
+        sortOrder: acc['sortOrder'] as int?,
+        creditLimit: (acc['creditLimit'] as num?)?.toDouble(),
+        billingDay: acc['billingDay'] as int?,
+        paymentDueDay: acc['paymentDueDay'] as int?,
+        bankName: acc['bankName'] as String?,
+        cardLastFour: acc['cardLastFour'] as String?,
+        note: acc['note'] as String?,
+        hidden: acc['hidden'] as bool?,
+        syncId: acc['syncId'] as String?,
       ));
     }
   }
@@ -351,6 +390,8 @@ ImportData parseJsonToImportData(String jsonStr) {
       tags.add(ImportTag(
         name: tag['name'] as String,
         color: tag['color']?.toString(),
+        syncId: tag['syncId'] as String?,
+        sortOrder: tag['sortOrder'] as int?,
       ));
     }
   }
@@ -386,6 +427,12 @@ ImportData parseJsonToImportData(String jsonStr) {
       }
 
       final type = it['type'] as String;
+      // 解析标签 syncId 列表
+      List<String>? tagSyncIds;
+      final rawTagSyncIds = it['tagSyncIds'];
+      if (rawTagSyncIds is List && rawTagSyncIds.isNotEmpty) {
+        tagSyncIds = rawTagSyncIds.whereType<String>().toList();
+      }
       transactions.add(ImportTransaction(
         type: type,
         amount: (it['amount'] as num).toDouble(),
@@ -398,13 +445,18 @@ ImportData parseJsonToImportData(String jsonStr) {
         fromAccountName: type == 'transfer' ? it['fromAccountName'] as String? : null,
         toAccountName: type == 'transfer' ? it['toAccountName'] as String? : null,
         tagNames: tagNames,
+        tagSyncIds: tagSyncIds,
         attachments: attachments,
         syncId: it['syncId'] as String?,
-        // 账单标记 + v30 多币种（老 JSON 没有这些键 → 保持默认/兜底）
+        // 账单标记 + v30 多币种
         excludeFromStats: it['excludeFromStats'] as bool? ?? false,
         excludeFromBudget: it['excludeFromBudget'] as bool? ?? false,
         currencyCode: it['currencyCode'] as String?,
         nativeAmount: (it['nativeAmount'] as num?)?.toDouble(),
+        // 共享账本 override
+        categorySyncIdOverride: it['categorySyncIdOverride'] as String?,
+        accountSyncIdOverride: it['accountSyncIdOverride'] as String?,
+        toAccountSyncIdOverride: it['toAccountSyncIdOverride'] as String?,
       ));
     }
   }

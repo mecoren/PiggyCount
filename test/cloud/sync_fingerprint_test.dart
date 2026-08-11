@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:piggycount/cloud/sync_fingerprint.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -175,6 +173,82 @@ void main() {
       expect(
         contentFingerprintFromMap(p1),
         equals(contentFingerprintFromMap(p2)),
+      );
+    });
+
+    test('tagSyncIds 顺序不影响指纹', () {
+      final p1 = payload([
+        {
+          'happenedAt': '2026-07-01T10:00:00',
+          'type': 'expense',
+          'amount': 12.34,
+          'tagSyncIds': ['b', 'a', 'c'],
+        },
+      ]);
+      final p2 = payload([
+        {
+          'happenedAt': '2026-07-01T10:00:00',
+          'type': 'expense',
+          'amount': 12.34,
+          'tagSyncIds': ['a', 'c', 'b'],
+        },
+      ]);
+
+      expect(
+        contentFingerprintFromMap(p1),
+        equals(contentFingerprintFromMap(p2)),
+      );
+    });
+
+    test('override 变化产生不同指纹', () {
+      final p1 = payload([
+        {
+          'happenedAt': '2026-07-01T10:00:00',
+          'type': 'expense',
+          'amount': 12.34,
+          'categorySyncIdOverride': 'cat-owner-001',
+        },
+      ]);
+      final p2 = payload([
+        {
+          'happenedAt': '2026-07-01T10:00:00',
+          'type': 'expense',
+          'amount': 12.34,
+          'categorySyncIdOverride': 'cat-owner-002',
+        },
+      ]);
+
+      expect(
+        contentFingerprintFromMap(p1),
+        isNot(equals(contentFingerprintFromMap(p2))),
+      );
+    });
+
+    test('老 JSON 无新字段与带空字段指纹一致', () {
+      // 老 JSON 不携带 tagSyncIds/override → 指纹应等同于显式空值，
+      // 避免老 JSON 因缺键触发假"有差异"。
+      final legacy = payload([
+        {
+          'happenedAt': '2026-07-01T10:00:00',
+          'type': 'expense',
+          'amount': 12.34,
+        },
+      ]);
+      final withEmpty = payload([
+        {
+          'happenedAt': '2026-07-01T10:00:00',
+          'type': 'expense',
+          'amount': 12.34,
+          'tagSyncIds': <String>[],
+          'categorySyncIdOverride': '',
+          'accountSyncIdOverride': '',
+          'toAccountSyncIdOverride': '',
+        },
+      ]);
+
+      expect(
+        contentFingerprintFromMap(legacy),
+        equals(contentFingerprintFromMap(withEmpty)),
       );
     });
 

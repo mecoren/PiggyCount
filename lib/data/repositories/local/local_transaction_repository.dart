@@ -1536,6 +1536,17 @@ class LocalTransactionRepository implements TransactionRepository {
               // 跨设备丢失（与 native_amount 分裂同源问题）。
               excludeFromStats: d.Value(u.excludeFromStats),
               excludeFromBudget: d.Value(u.excludeFromBudget),
+              // 共享账本 override：null → absent（保留本地原值），
+              // 非 null → 写入（含空串"清空"语义）。与 currencyCode 同模式。
+              categorySyncIdOverride: u.categorySyncIdOverride == null
+                  ? const d.Value.absent()
+                  : d.Value(u.categorySyncIdOverride),
+              accountSyncIdOverride: u.accountSyncIdOverride == null
+                  ? const d.Value.absent()
+                  : d.Value(u.accountSyncIdOverride),
+              toAccountSyncIdOverride: u.toAccountSyncIdOverride == null
+                  ? const d.Value.absent()
+                  : d.Value(u.toAccountSyncIdOverride),
             ),
             where: (t) => t.syncId.equals(u.syncId),
           );

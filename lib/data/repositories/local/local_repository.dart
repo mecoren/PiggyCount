@@ -2347,6 +2347,11 @@ class LocalRepository extends BaseRepository {
   }
 
   @override
+  Future<void> updateTagSyncId(int id, String syncId) async {
+    await _tagRepo.updateTagSyncId(id, syncId);
+  }
+
+  @override
   Future<void> deleteTag(int id) async {
     var recorded = false;
     if (changeTracker != null) {

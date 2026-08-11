@@ -32,6 +32,11 @@ abstract class TagRepository {
     int? sortOrder,
   });
 
+  /// 回填标签 syncId（import 场景：本地 seed 标签缺失 syncId 时用 JSON 带的
+  /// syncId 补上，否则下次导出仍无 syncId、交易 tagSyncIds 无法锚定）。
+  /// 不记 change log —— 纯补全远端已有标识，push 时用相同 syncId 幂等。
+  Future<void> updateTagSyncId(int id, String syncId);
+
   /// 删除标签
   Future<void> deleteTag(int id);
 
