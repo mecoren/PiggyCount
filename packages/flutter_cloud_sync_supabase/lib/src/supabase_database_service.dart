@@ -55,7 +55,7 @@ class SupabaseDatabaseService implements CloudDatabaseService {
           .select()
           .single();
 
-      return response as Map<String, dynamic>;
+      return response;
     } on supabase.PostgrestException catch (e) {
       throw CloudStorageException('Insert failed: ${e.message}', e);
     } catch (e) {
@@ -119,7 +119,7 @@ class SupabaseDatabaseService implements CloudDatabaseService {
       // Update and return the updated record
       final response = await query.select().single();
 
-      return response as Map<String, dynamic>;
+      return response;
     } on supabase.PostgrestException catch (e) {
       throw CloudStorageException('Update failed: ${e.message}', e);
     } catch (e) {
@@ -238,7 +238,7 @@ class SupabaseDatabaseService implements CloudDatabaseService {
           .eq('id', id)
           .maybeSingle();
 
-      return response as Map<String, dynamic>?;
+      return response;
     } on supabase.PostgrestException catch (e) {
       throw CloudStorageException('Get by ID failed: ${e.message}', e);
     } catch (e) {

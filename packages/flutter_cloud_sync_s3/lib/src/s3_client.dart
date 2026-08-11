@@ -1,10 +1,14 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:xml/xml.dart';
 
+import 's3_object_info.dart';
 import 's3_signature.dart';
 import 's3_exceptions.dart';
+
+export 's3_object_info.dart';
 
 /// S3 REST API 客户端
 ///
@@ -35,6 +39,12 @@ class S3Client {
   late final S3SignatureV4 _signer;
   late final http.Client _httpClient;
 
+  /// HTTP 请求超时时间（M-02 修复）
+  ///
+  /// 所有 S3 API 请求（put/get/delete/head/list）均受此限制，
+  /// 防止服务器无响应时同步 UI 无限挂起。超时后抛 [S3NetworkException]。
+  final Duration timeout;
+
   S3Client({
     required this.endpoint,
     required this.region,
@@ -43,6 +53,7 @@ class S3Client {
     this.useSSL = true,
     this.port,
     this.forcePathStyle = true,
+    this.timeout = const Duration(seconds: 30),
     http.Client? httpClient,
   }) {
     _signer = S3SignatureV4(
@@ -60,11 +71,15 @@ class S3Client {
   }
 
   /// PUT Object - 上传文件
+  ///
+  /// [metadata] 中的 key-value 对会作为 `x-amz-meta-{key}` 头发送，
+  /// 供后续 HeadObject/GetMetadata 读取（C-01 修复）。
   Future<void> putObject({
     required String bucket,
     required String key,
     required Uint8List data,
     String? contentType,
+    Map<String, String>? metadata,
   }) async {
     final uri = _buildUri(bucket, key: key);
 
@@ -73,6 +88,13 @@ class S3Client {
       'Content-Type': contentType ?? 'application/octet-stream',
       'Content-Length': '${data.length}',
     };
+
+    // C-01 修复：将自定义 metadata 转为 x-amz-meta-* 头
+    if (metadata != null) {
+      for (final entry in metadata.entries) {
+        headers['x-amz-meta-${entry.key}'] = entry.value;
+      }
+    }
 
     // 签名请求（传递字节数组以正确计算 SHA256）
     headers = _signer.sign(
@@ -83,13 +105,17 @@ class S3Client {
     );
 
     try {
-      final response = await _httpClient.put(uri, headers: headers, body: data);
+      final response = await _httpClient
+          .put(uri, headers: headers, body: data)
+          .timeout(timeout);
 
       if (response.statusCode != 200 && response.statusCode != 204) {
         _handleError('PutObject', response);
       }
     } on SocketException catch (e) {
       throw S3NetworkException('Network error: ${e.message}', originalException: e);
+    } on TimeoutException {
+      throw S3NetworkException('PutObject timed out after ${timeout.inSeconds}s');
     } catch (e) {
       if (e is S3Exception) rethrow;
       throw S3Exception('PutObject failed: $e', originalException: e as Exception?);
@@ -114,7 +140,9 @@ class S3Client {
     );
 
     try {
-      final response = await _httpClient.get(uri, headers: headers);
+      final response = await _httpClient
+          .get(uri, headers: headers)
+          .timeout(timeout);
 
       if (response.statusCode == 200) {
         return response.bodyBytes;
@@ -126,6 +154,8 @@ class S3Client {
       }
     } on SocketException catch (e) {
       throw S3NetworkException('Network error: ${e.message}', originalException: e);
+    } on TimeoutException {
+      throw S3NetworkException('GetObject timed out after ${timeout.inSeconds}s');
     } catch (e) {
       if (e is S3Exception) rethrow;
       throw S3Exception('GetObject failed: $e', originalException: e as Exception?);
@@ -150,7 +180,9 @@ class S3Client {
     );
 
     try {
-      final response = await _httpClient.delete(uri, headers: headers);
+      final response = await _httpClient
+          .delete(uri, headers: headers)
+          .timeout(timeout);
 
       if (response.statusCode != 204 && response.statusCode != 200) {
         // 404 也算成功（对象已不存在）
@@ -160,6 +192,8 @@ class S3Client {
       }
     } on SocketException catch (e) {
       throw S3NetworkException('Network error: ${e.message}', originalException: e);
+    } on TimeoutException {
+      throw S3NetworkException('DeleteObject timed out after ${timeout.inSeconds}s');
     } catch (e) {
       if (e is S3Exception) rethrow;
       throw S3Exception('DeleteObject failed: $e', originalException: e as Exception?);
@@ -167,6 +201,11 @@ class S3Client {
   }
 
   /// HEAD Object - 检查文件是否存在
+  ///
+  /// 仅在对象存在（200）时返回 true，对象不存在（404）时返回 false。
+  /// 其他状态码（403/500 等）和网络错误会抛出 [S3Exception]，避免
+  /// 调用方把「权限不足」「网络中断」误判为「文件不存在」而触发
+  /// 覆盖上传等危险操作。
   Future<bool> headObject({
     required String bucket,
     required String key,
@@ -184,13 +223,90 @@ class S3Client {
     );
 
     try {
-      final response = await _httpClient.head(uri, headers: headers);
-      return response.statusCode == 200;
+      final response = await _httpClient
+          .head(uri, headers: headers)
+          .timeout(timeout);
+      if (response.statusCode == 200) return true;
+      if (response.statusCode == 404) return false;
+      // 其他状态码（403/500 等）是真实错误，不能误判为「不存在」
+      _handleError('HeadObject', response);
+      return false; // _handleError 一定会抛，此处仅为静态分析兜底
     } on SocketException catch (e) {
       throw S3NetworkException('Network error: ${e.message}', originalException: e);
+    } on TimeoutException {
+      throw S3NetworkException('HeadObject timed out after ${timeout.inSeconds}s');
+    } on S3Exception {
+      rethrow;
     } catch (e) {
-      // HEAD 请求失败返回 false 而不抛出异常
-      return false;
+      if (e is S3Exception) rethrow;
+      throw S3Exception('HeadObject failed: $e', originalException: e as Exception?);
+    }
+  }
+
+  /// HEAD Object 并返回完整元信息（size / lastModified / contentType / metadata）
+  ///
+  /// 与 [headObject] 的区别：返回 [S3HeadInfo] 携带 Content-Length、
+  /// Last-Modified、自定义元数据（x-amz-meta-*）等响应头，
+  /// 供 [S3StorageService.getMetadata] 使用。
+  ///
+  /// C-01 修复：解析 x-amz-meta-* 响应头，使 CloudSyncManager 能通过
+  /// metadata 中的 fingerprint 直接判断同步状态，避免全量下载。
+  ///
+  /// 对象不存在（404）返回 [S3HeadInfo.notFound]（exists=false）。
+  /// 其他错误抛 [S3Exception]。
+  Future<S3HeadInfo> headObjectWithMetadata({
+    required String bucket,
+    required String key,
+  }) async {
+    final uri = _buildUri(bucket, key: key);
+
+    var headers = <String, String>{
+      'Host': uri.authority,
+    };
+
+    headers = _signer.sign(
+      method: 'HEAD',
+      uri: uri,
+      headers: headers,
+    );
+
+    try {
+      final response = await _httpClient
+          .head(uri, headers: headers)
+          .timeout(timeout);
+      if (response.statusCode == 200) {
+        return S3HeadInfo(
+          exists: true,
+          size: int.tryParse(response.headers['content-length'] ?? ''),
+          lastModified: _parseHttpDate(response.headers['last-modified']),
+          contentType: response.headers['content-type'],
+          metadata: _extractCustomMetadata(response.headers),
+        );
+      }
+      if (response.statusCode == 404) {
+        return S3HeadInfo.notFound;
+      }
+      _handleError('HeadObject', response);
+      return S3HeadInfo.notFound; // 不可达
+    } on SocketException catch (e) {
+      throw S3NetworkException('Network error: ${e.message}', originalException: e);
+    } on TimeoutException {
+      throw S3NetworkException('HeadObject timed out after ${timeout.inSeconds}s');
+    } on S3Exception {
+      rethrow;
+    } catch (e) {
+      if (e is S3Exception) rethrow;
+      throw S3Exception('HeadObject failed: $e', originalException: e as Exception?);
+    }
+  }
+
+  /// 解析 HTTP 日期头（RFC 1123 格式，如 "Wed, 21 Oct 2015 07:28:00 GMT"）
+  DateTime? _parseHttpDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return null;
+    try {
+      return HttpDate.parse(dateStr);
+    } catch (_) {
+      return null;
     }
   }
 
@@ -203,80 +319,133 @@ class S3Client {
     required String bucket,
     String? prefix,
   }) async {
+    final infos = await listObjectsDetailed(bucket: bucket, prefix: prefix);
+    return infos.map((e) => e.key).toList();
+  }
+
+  /// LIST Objects（含元数据）
+  ///
+  /// 与 [listObjects] 相同，但返回 [S3ObjectInfo] 列表，携带 size 和
+  /// lastModified。供 [S3StorageService.list] 使用，避免返回硬编码的
+  /// size=0 / lastModified=DateTime.now()。
+  Future<List<S3ObjectInfo>> listObjectsDetailed({
+    required String bucket,
+    String? prefix,
+  }) async {
     try {
-      return await _listObjectsV2(bucket: bucket, prefix: prefix);
+      return await _listObjectsV2Detailed(bucket: bucket, prefix: prefix);
     } on S3Exception catch (e) {
       if (e.statusCode == 400 || e.statusCode == 501) {
-        return _listObjectsV1(bucket: bucket, prefix: prefix);
+        return _listObjectsV1Detailed(bucket: bucket, prefix: prefix);
       }
       rethrow;
     }
   }
 
-  /// ListObjectsV2（`?list-type=2`）
-  Future<List<String>> _listObjectsV2({
+  /// ListObjectsV2（`?list-type=2`），返回含元数据的对象列表
+  ///
+  /// M-01 修复：支持分页迭代，S3 单次最多返回 1000 个对象，
+  /// 当 IsTruncated=true 时用 continuation-token 继续请求，
+  /// 直到所有对象都被获取。
+  Future<List<S3ObjectInfo>> _listObjectsV2Detailed({
     required String bucket,
     String? prefix,
   }) async {
-    final queryParams = <String, String>{
-      'list-type': '2', // ListObjectsV2
-    };
-    if (prefix != null && prefix.isNotEmpty) {
-      queryParams['prefix'] = prefix;
-    }
+    final allObjects = <S3ObjectInfo>[];
+    String? continuationToken;
 
-    final uri = _buildUri(bucket, queryParameters: queryParams);
-    final headers = _signedGetHeaders(uri);
-
-    try {
-      final response = await _httpClient.get(uri, headers: headers);
-
-      if (response.statusCode == 200) {
-        return _parseListObjectsResponse(response.body);
-      } else if (response.statusCode == 404) {
-        throw S3BucketNotFoundException(bucket);
-      } else {
-        _handleError('ListObjects', response);
-        return [];
+    do {
+      final queryParams = <String, String>{
+        'list-type': '2', // ListObjectsV2
+      };
+      if (prefix != null && prefix.isNotEmpty) {
+        queryParams['prefix'] = prefix;
       }
-    } on SocketException catch (e) {
-      throw S3NetworkException('Network error: ${e.message}', originalException: e);
-    } catch (e) {
-      if (e is S3Exception) rethrow;
-      throw S3Exception('ListObjects failed: $e', originalException: e as Exception?);
-    }
+      if (continuationToken != null) {
+        queryParams['continuation-token'] = continuationToken;
+      }
+
+      final uri = _buildUri(bucket, queryParameters: queryParams);
+      final headers = _signedGetHeaders(uri);
+
+      try {
+        final response = await _httpClient
+            .get(uri, headers: headers)
+            .timeout(timeout);
+
+        if (response.statusCode == 200) {
+          final result = _parseListObjectsXml(response.body);
+          allObjects.addAll(result.objects);
+          continuationToken = result.isTruncated ? result.nextContinuationToken : null;
+        } else if (response.statusCode == 404) {
+          throw S3BucketNotFoundException(bucket);
+        } else {
+          _handleError('ListObjects', response);
+          return allObjects;
+        }
+      } on SocketException catch (e) {
+        throw S3NetworkException('Network error: ${e.message}', originalException: e);
+      } on TimeoutException {
+        throw S3NetworkException('ListObjects timed out after ${timeout.inSeconds}s');
+      } catch (e) {
+        if (e is S3Exception) rethrow;
+        throw S3Exception('ListObjects failed: $e', originalException: e as Exception?);
+      }
+    } while (continuationToken != null);
+
+    return allObjects;
   }
 
-  /// ListObjects V1（不带 `list-type` 参数）
-  Future<List<String>> _listObjectsV1({
+  /// ListObjects V1（不带 `list-type` 参数），返回含元数据的对象列表
+  ///
+  /// M-01 修复：支持分页迭代，V1 用 marker 参数（上一页最后一个 key）
+  /// 继续请求，直到 IsTruncated=false。
+  Future<List<S3ObjectInfo>> _listObjectsV1Detailed({
     required String bucket,
     String? prefix,
   }) async {
-    final queryParams = <String, String>{};
-    if (prefix != null && prefix.isNotEmpty) {
-      queryParams['prefix'] = prefix;
-    }
+    final allObjects = <S3ObjectInfo>[];
+    String? marker;
 
-    final uri = _buildUri(bucket, queryParameters: queryParams);
-    final headers = _signedGetHeaders(uri);
-
-    try {
-      final response = await _httpClient.get(uri, headers: headers);
-
-      if (response.statusCode == 200) {
-        return _parseListObjectsResponse(response.body);
-      } else if (response.statusCode == 404) {
-        throw S3BucketNotFoundException(bucket);
-      } else {
-        _handleError('ListObjects', response);
-        return [];
+    do {
+      final queryParams = <String, String>{};
+      if (prefix != null && prefix.isNotEmpty) {
+        queryParams['prefix'] = prefix;
       }
-    } on SocketException catch (e) {
-      throw S3NetworkException('Network error: ${e.message}', originalException: e);
-    } catch (e) {
-      if (e is S3Exception) rethrow;
-      throw S3Exception('ListObjects failed: $e', originalException: e as Exception?);
-    }
+      if (marker != null) {
+        queryParams['marker'] = marker;
+      }
+
+      final uri = _buildUri(bucket, queryParameters: queryParams);
+      final headers = _signedGetHeaders(uri);
+
+      try {
+        final response = await _httpClient
+            .get(uri, headers: headers)
+            .timeout(timeout);
+
+        if (response.statusCode == 200) {
+          final result = _parseListObjectsXml(response.body);
+          allObjects.addAll(result.objects);
+          // V1 分页：IsTruncated=true 时，用最后一条 key 作为下次请求的 marker
+          marker = result.isTruncated ? result.lastKey : null;
+        } else if (response.statusCode == 404) {
+          throw S3BucketNotFoundException(bucket);
+        } else {
+          _handleError('ListObjects', response);
+          return allObjects;
+        }
+      } on SocketException catch (e) {
+        throw S3NetworkException('Network error: ${e.message}', originalException: e);
+      } on TimeoutException {
+        throw S3NetworkException('ListObjects timed out after ${timeout.inSeconds}s');
+      } catch (e) {
+        if (e is S3Exception) rethrow;
+        throw S3Exception('ListObjects failed: $e', originalException: e as Exception?);
+      }
+    } while (marker != null);
+
+    return allObjects;
   }
 
   /// 为 GET/HEAD 请求生成带签名的 headers
@@ -308,23 +477,67 @@ class S3Client {
     return uri;
   }
 
-  /// 解析 ListObjects 响应（XML）
-  List<String> _parseListObjectsResponse(String xmlBody) {
+  /// 解析 ListObjects 响应（XML），返回对象列表 + 分页信息
+  ///
+  /// M-01 修复：增加分页支持，返回 IsTruncated、NextContinuationToken（V2）
+  /// 和最后一个对象的 key（V1 的 Marker），使调用方能够迭代获取全部对象。
+  /// S3 ListObjects 单次最多返回 1000 个对象，不处理分页会导致多账本用户
+  /// 只能看到前 1000 个文件。
+  ({List<S3ObjectInfo> objects, bool isTruncated, String? nextContinuationToken, String? lastKey})
+      _parseListObjectsXml(String xmlBody) {
     try {
       final document = XmlDocument.parse(xmlBody);
-      final contents = document.findAllElements('Contents');
 
-      return contents
-          .map((element) {
-            final keyElement = element.findElements('Key').firstOrNull;
-            return keyElement?.innerText;
-          })
-          .whereType<String>()
-          .toList();
+      final objects = document.findAllElements('Contents').map((element) {
+        final keyElement = element.findElements('Key').firstOrNull;
+        final sizeElement = element.findElements('Size').firstOrNull;
+        final modifiedElement = element.findElements('LastModified').firstOrNull;
+
+        final key = keyElement?.innerText;
+        if (key == null) return null;
+
+        final sizeStr = sizeElement?.innerText;
+        final size = sizeStr != null ? int.tryParse(sizeStr) : null;
+
+        final modifiedStr = modifiedElement?.innerText;
+        final lastModified = modifiedStr != null ? DateTime.tryParse(modifiedStr) : null;
+
+        return S3ObjectInfo(key: key, size: size, lastModified: lastModified);
+      }).whereType<S3ObjectInfo>().toList();
+
+      // 分页信息
+      final isTruncated = document.findAllElements('IsTruncated').firstOrNull?.innerText.toLowerCase() == 'true';
+      final nextContinuationToken = document.findAllElements('NextContinuationToken').firstOrNull?.innerText;
+      final lastKey = objects.isNotEmpty ? objects.last.key : null;
+
+      return (
+        objects: objects,
+        isTruncated: isTruncated,
+        nextContinuationToken: nextContinuationToken,
+        lastKey: lastKey,
+      );
     } catch (e) {
-      // XML 解析失败，返回空列表
-      return [];
+      // M-03 修复：XML 解析失败不再静默返回空列表，
+      // 通过 stderr 输出警告便于排查，避免调用方误认为桶为空
+      stderr.writeln('[S3] Warning: ListObjects XML parse failed: $e');
+      return (objects: <S3ObjectInfo>[], isTruncated: false, nextContinuationToken: null, lastKey: null);
     }
+  }
+
+  /// C-01 修复：从 HTTP 响应头中提取 x-amz-meta-* 自定义元数据
+  ///
+  /// S3 将用户上传时通过 x-amz-meta-{key} 头设置的元数据原样返回，
+  /// http 包将所有头名转为小写，因此用 'x-amz-meta-' 前缀匹配。
+  Map<String, String>? _extractCustomMetadata(Map<String, String> headers) {
+    const prefix = 'x-amz-meta-';
+    final result = <String, String>{};
+    for (final entry in headers.entries) {
+      if (entry.key.startsWith(prefix)) {
+        final metaKey = entry.key.substring(prefix.length);
+        result[metaKey] = entry.value;
+      }
+    }
+    return result.isEmpty ? null : result;
   }
 
   /// URL 编码 Key（保留 /）

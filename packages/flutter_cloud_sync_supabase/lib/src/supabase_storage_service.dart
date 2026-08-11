@@ -1,6 +1,7 @@
 library;
 
 import 'dart:convert';
+import 'dart:developer' as dev;
 
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
@@ -96,7 +97,14 @@ class SupabaseStorageService implements CloudStorageService {
       final fullPath = _buildUserPath(user.id, path);
 
       // Delete file
-      await _client.storage.from(_bucketName).remove([fullPath]);
+      try {
+        await _client.storage.from(_bucketName).remove([fullPath]);
+      } on supabase.StorageException catch (e) {
+        // 忽略 404（文件不存在），删除操作幂等
+        if (e.statusCode != '404' && !e.message.contains('not found')) {
+          rethrow;
+        }
+      }
 
       // Delete metadata
       await _deleteMetadata(fullPath);
@@ -244,6 +252,9 @@ class SupabaseStorageService implements CloudStorageService {
   /// Stores custom metadata in a separate database table.
   /// Since Supabase Storage doesn't support custom metadata directly,
   /// we store it in a metadata table.
+  ///
+  /// 元数据存储失败不影响主数据的完整性（主文件已上传成功），
+  /// 但需记录 warning 便于排查，而非完全静默吞掉。
   Future<void> _storeMetadata(
       String path, Map<String, String> metadata) async {
     try {
@@ -253,8 +264,9 @@ class SupabaseStorageService implements CloudStorageService {
         'updated_at': DateTime.now().toIso8601String(),
       });
     } catch (e) {
-      // Silently fail if metadata table doesn't exist
-      // This is optional functionality
+      // 元数据是辅助功能（主数据已上传成功），失败不阻塞主流程，
+      // 但记录 warning 便于排查（如 metadata 表未创建）
+      dev.log('[Supabase] Warning: metadata storage failed for $path: $e', name: 'SupabaseStorage');
     }
   }
 

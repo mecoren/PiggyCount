@@ -4,7 +4,6 @@ import '../data/repositories/local/local_repository.dart';
 import '../utils/shared_ledger_picker_filter.dart';
 import 'database_providers.dart';
 import 'shared_ledger_providers.dart';
-import 'sync_providers.dart' show currentLedgerIdProvider;
 
 /// 标签列表刷新触发器
 final tagListRefreshProvider = StateProvider<int>((ref) => 0);

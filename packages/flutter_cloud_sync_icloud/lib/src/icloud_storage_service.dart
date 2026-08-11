@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 
 import 'icloud_method_channel.dart';
@@ -18,6 +19,30 @@ class ICloudStorageService implements CloudStorageService {
       return value.map((key, val) => MapEntry(key.toString(), val));
     }
     return null;
+  }
+
+  /// 判断异常是否表示「文件/目录不存在」
+  ///
+  /// 优先检查 [PlatformException.code]（原生层返回的结构化错误码），
+  /// 其次检查 message 中的关键词（兼容未规范 code 的原生实现）。
+  /// 命中返回 true，调用方据此返回 null / 空列表 / false（幂等语义）；
+  /// 未命中时调用方应抛出异常，避免把网络中断、权限不足误判为「不存在」。
+  bool _isNotFoundError(Object e) {
+    if (e is PlatformException) {
+      final code = e.code.toLowerCase();
+      if (code.contains('404') ||
+          code.contains('notfound') ||
+          code.contains('no_such_file') ||
+          code.contains('file_not_found')) {
+        return true;
+      }
+    }
+    final msg = e.toString().toLowerCase();
+    return msg.contains('404') ||
+        msg.contains('not found') ||
+        msg.contains('does not exist') ||
+        msg.contains('nsfilereadnosuchfileerror') ||
+        msg.contains('nsfilenosuchfileerror');
   }
 
   @override
@@ -53,11 +78,8 @@ class ICloudStorageService implements CloudStorageService {
       final bytes = base64Decode(encodedData);
       return utf8.decode(bytes);
     } catch (e) {
-      // Return null for "not found" errors
-      if (e.toString().contains('404') ||
-          e.toString().contains('not found') ||
-          e.toString().contains('does not exist') ||
-          e.toString().contains('NSFileReadNoSuchFileError')) {
+      // 文件不存在时返回 null（幂等语义），其他错误抛出
+      if (_isNotFoundError(e)) {
         return null;
       }
       throw CloudStorageException('Download failed: $e', e);
@@ -69,10 +91,8 @@ class ICloudStorageService implements CloudStorageService {
     try {
       await _methodChannel.deleteFile(path: path);
     } catch (e) {
-      // Ignore "not found" errors for idempotent delete
-      if (!e.toString().contains('404') &&
-          !e.toString().contains('not found') &&
-          !e.toString().contains('NSFileNoSuchFileError')) {
+      // 忽略「文件不存在」错误（幂等删除），其他错误抛出
+      if (!_isNotFoundError(e)) {
         throw CloudStorageException('Delete failed: $e', e);
       }
     }
@@ -94,9 +114,8 @@ class ICloudStorageService implements CloudStorageService {
         );
       }).toList();
     } catch (e) {
-      // Return empty list if directory doesn't exist
-      if (e.toString().contains('not found') ||
-          e.toString().contains('does not exist')) {
+      // 目录不存在时返回空列表（幂等语义），其他错误抛出
+      if (_isNotFoundError(e)) {
         return [];
       }
       throw CloudStorageException('List failed: $e', e);
@@ -108,7 +127,13 @@ class ICloudStorageService implements CloudStorageService {
     try {
       return await _methodChannel.fileExists(path: path);
     } catch (e) {
-      return false;
+      // 仅在文件不存在（404/NSFileNoSuchFileError）时返回 false；
+      // 其他错误（网络中断、iCloud 未启用等）必须抛出，避免调用方
+      // 误判文件不存在而触发覆盖上传等危险操作。
+      if (_isNotFoundError(e)) {
+        return false;
+      }
+      throw CloudStorageException('Failed to check file existence: $e', e);
     }
   }
 
@@ -130,9 +155,7 @@ class ICloudStorageService implements CloudStorageService {
         metadata: _convertToStringDynamicMap(metadata['customMetadata']),
       );
     } catch (e) {
-      if (e.toString().contains('404') ||
-          e.toString().contains('not found') ||
-          e.toString().contains('NSFileReadNoSuchFileError')) {
+      if (_isNotFoundError(e)) {
         return null;
       }
       throw CloudStorageException('Get metadata failed: $e', e);

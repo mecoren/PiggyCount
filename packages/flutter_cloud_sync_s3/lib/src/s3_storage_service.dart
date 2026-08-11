@@ -27,7 +27,6 @@ class S3StorageService implements CloudStorageService {
     return prefix.endsWith('/') ? prefix : '$prefix/';
   }
 
-  @override
   Future<void> uploadFile(String localPath, String remotePath) async {
     try {
       final file = File(localPath);
@@ -51,7 +50,6 @@ class S3StorageService implements CloudStorageService {
     }
   }
 
-  @override
   Future<void> downloadFile(String remotePath, String localPath) async {
     try {
       // 从 S3 下载
@@ -73,7 +71,6 @@ class S3StorageService implements CloudStorageService {
     }
   }
 
-  @override
   Future<void> deleteFile(String remotePath) async {
     try {
       await client.deleteObject(
@@ -87,7 +84,6 @@ class S3StorageService implements CloudStorageService {
     }
   }
 
-  @override
   Future<bool> fileExists(String remotePath) async {
     try {
       return await client.headObject(
@@ -96,13 +92,9 @@ class S3StorageService implements CloudStorageService {
       );
     } on S3Exception catch (e) {
       throw CloudStorageException('Failed to check file existence: ${e.message}');
-    } catch (e) {
-      // 其他错误返回 false
-      return false;
     }
   }
 
-  @override
   Future<List<String>> listFiles(String remotePath) async {
     try {
       final prefix = _buildKey(remotePath);
@@ -126,18 +118,32 @@ class S3StorageService implements CloudStorageService {
     }
   }
 
-  @override
   Future<int> getFileSize(String remotePath) async {
-    // S3 HeadObject 可以返回 Content-Length
-    // 但当前 S3Client 实现中未解析，暂时不支持
-    throw UnimplementedError('getFileSize not implemented for S3');
+    try {
+      final info = await client.headObjectWithMetadata(
+        bucket: bucket,
+        key: _buildKey(remotePath),
+      );
+      if (!info.exists) {
+        throw CloudStorageException('File not found: $remotePath');
+      }
+      return info.size ?? 0;
+    } on S3Exception catch (e) {
+      throw CloudStorageException('Failed to get file size: ${e.message}');
+    }
   }
 
-  @override
   Future<DateTime?> getLastModified(String remotePath) async {
-    // S3 HeadObject 可以返回 Last-Modified
-    // 但当前 S3Client 实现中未解析，暂时不支持
-    throw UnimplementedError('getLastModified not implemented for S3');
+    try {
+      final info = await client.headObjectWithMetadata(
+        bucket: bucket,
+        key: _buildKey(remotePath),
+      );
+      if (!info.exists) return null;
+      return info.lastModified;
+    } on S3Exception catch (e) {
+      throw CloudStorageException('Failed to get last modified: ${e.message}');
+    }
   }
 
   @override
@@ -150,11 +156,12 @@ class S3StorageService implements CloudStorageService {
       // 将字符串数据转为字节
       final bytes = utf8.encode(data);
 
-      // 上传到 S3
+      // 上传到 S3，C-01 修复：传递 metadata 作为 x-amz-meta-* 头
       await client.putObject(
         bucket: bucket,
         key: _buildKey(path),
         data: bytes,
+        metadata: metadata,
       );
     } on S3Exception catch (e) {
       throw CloudStorageException('Failed to upload file: ${e.message}');
@@ -195,29 +202,53 @@ class S3StorageService implements CloudStorageService {
 
   @override
   Future<List<CloudFile>> list({required String path}) async {
-    final files = await listFiles(path);
-    return files.map((name) => CloudFile(
-      name: name,
-      path: name,
-      size: 0, // Size not available in list operation
-      lastModified: DateTime.now(), // Not available
-    )).toList();
+    try {
+      final prefix = _buildKey(path);
+      final infos = await client.listObjectsDetailed(
+        bucket: bucket,
+        prefix: prefix.isEmpty ? null : prefix,
+      );
+      // 剥离 keyPrefix 后返回逻辑路径，与 listFiles 行为一致
+      return infos
+          .map((info) {
+            final name = keyPrefix.isEmpty
+                ? info.key
+                : (info.key.startsWith(keyPrefix)
+                    ? info.key.substring(keyPrefix.length)
+                    : info.key);
+            return CloudFile(
+              name: name,
+              path: name,
+              size: info.size,
+              lastModified: info.lastModified,
+            );
+          })
+          .toList();
+    } on S3Exception catch (e) {
+      throw CloudStorageException('Failed to list files: ${e.message}');
+    }
   }
 
   @override
   Future<CloudFile?> getMetadata({required String path}) async {
     try {
-      final exists = await fileExists(path);
-      if (!exists) return null;
+      final info = await client.headObjectWithMetadata(
+        bucket: bucket,
+        key: _buildKey(path),
+      );
+      if (!info.exists) return null;
 
+      // C-01 修复：返回 x-amz-meta-* 自定义元数据，
+      // 使 CloudSyncManager 能通过 fingerprint 直接判断同步状态
       return CloudFile(
         name: path.split('/').last,
         path: path,
-        size: 0, // Not implemented yet
-        lastModified: DateTime.now(), // Not implemented yet
+        size: info.size,
+        lastModified: info.lastModified,
+        metadata: info.metadata,
       );
-    } catch (e) {
-      return null;
+    } on S3Exception catch (e) {
+      throw CloudStorageException('Failed to get metadata: ${e.message}');
     }
   }
 

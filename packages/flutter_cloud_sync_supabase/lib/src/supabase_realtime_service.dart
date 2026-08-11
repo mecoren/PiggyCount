@@ -8,8 +8,13 @@ import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 /// Supabase implementation of [RealtimeChannel].
 class SupabaseRealtimeChannel implements RealtimeChannel {
   final supabase.RealtimeChannel _channel;
+  // 缓存 channel name，避免访问 _channel.topic（supabase 包内部成员）
+  final String _name;
+  // 自行追踪订阅状态，避免访问 _channel.socket（supabase 包内部成员）
+  bool _subscribed = false;
 
-  SupabaseRealtimeChannel(this._channel);
+  SupabaseRealtimeChannel(this._channel, {required String name})
+      : _name = name;
 
   @override
   RealtimeChannel onPostgresChanges({
@@ -75,24 +80,25 @@ class SupabaseRealtimeChannel implements RealtimeChannel {
 
   @override
   Future<void> subscribe() async {
-    await _channel.subscribe();
+    // supabase 的 RealtimeChannel.subscribe() 返回 RealtimeChannel（非 Future），
+    // 用于链式调用，此处不需要 await
+    _channel.subscribe();
+    _subscribed = true;
   }
 
   @override
   Future<void> unsubscribe() async {
     await supabase.Supabase.instance.client.removeChannel(_channel);
+    _subscribed = false;
   }
 
   @override
-  String get name => _channel.topic;
+  String get name => _name;
 
   @override
   String get state {
-    // Supabase channel state is more complex, simplify it
-    if (_channel.socket.isConnected) {
-      return 'subscribed';
-    }
-    return 'closed';
+    // 使用自行追踪的订阅状态，避免访问 _channel.socket（supabase 包内部成员）
+    return _subscribed ? 'subscribed' : 'closed';
   }
 
   /// Parse event string to Supabase event type
@@ -185,7 +191,7 @@ class SupabaseRealtimeService implements CloudRealtimeService {
     final supabaseChannel = _client.channel(channelName);
 
     // Wrap in our interface
-    final channel = SupabaseRealtimeChannel(supabaseChannel);
+    final channel = SupabaseRealtimeChannel(supabaseChannel, name: channelName);
 
     // Cache channel
     _channels[channelName] = channel;

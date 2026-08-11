@@ -1,7 +1,6 @@
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 
 import 's3_client.dart';
-import 's3_exceptions.dart';
 
 /// S3 认证服务实现
 ///
@@ -12,7 +11,6 @@ class S3AuthService implements CloudAuthService {
 
   S3AuthService(this.client, this.bucket);
 
-  @override
   Future<CloudUser?> getCurrentUser() async {
     // S3 使用 Access Key 认证，无用户概念
     // 直接返回用户信息，不需要网络验证（类似 WebDAV）
@@ -28,7 +26,6 @@ class S3AuthService implements CloudAuthService {
     );
   }
 
-  @override
   Future<void> signIn(Map<String, dynamic> credentials) async {
     // S3 在 initialize 时已完成认证和连接验证
     // 这里不需要额外的网络请求
@@ -41,12 +38,10 @@ class S3AuthService implements CloudAuthService {
     // 认证信息在 provider dispose 时清除
   }
 
-  @override
   Future<void> refreshToken() async {
     // S3 Access Key 不需要刷新
   }
 
-  @override
   bool get isAuthenticated {
     // 简单判断：如果 client 存在，认为已认证
     // 实际验证在 getCurrentUser() 中进行

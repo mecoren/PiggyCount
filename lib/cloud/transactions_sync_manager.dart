@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/drift.dart' as drift;
@@ -42,7 +43,14 @@ class TransactionsSyncManager implements SyncService {
   bool _isInitializing = false;
   bool _isInitialized = false;
 
-  final Map<int, SyncStatus> _statusCache = {};
+  /// 初始化并发控制：用 Completer 替代轮询，多个并发调用等待同一个
+  /// Completer 完成，避免 50ms 轮询带来的延迟和 CPU 空转。
+  Completer<void>? _initCompleter;
+
+  /// m-03 修复：状态缓存 TTL，防止其他设备上传后本地仍显示过时的"已同步"状态
+  static const _statusCacheTtl = Duration(seconds: 60);
+
+  final Map<int, _CachedStatus> _statusCache = {};
   final Map<int, DateTime> _recentLocalChangeAt = {};
   final Map<int, _RecentUpload> _recentUpload = {};
 
@@ -111,6 +119,7 @@ class TransactionsSyncManager implements SyncService {
   Future<void> reinitializeForEncryption() async {
     _isInitialized = false;
     _isInitializing = false;
+    _initCompleter = null;
 
     // 释放旧 provider（会触发 EncryptedCloudProvider.dispose → inner.dispose）
     // dispose 失败仅记录 warning，不阻塞重初始化流程
@@ -186,29 +195,36 @@ class TransactionsSyncManager implements SyncService {
   }
 
   /// 确保服务已初始化（延迟初始化）
+  ///
+  /// 使用 Completer 实现并发控制：多个并发调用等待同一个 Completer，
+  /// 避免旧实现的 50ms 轮询带来的延迟和 CPU 空转。
+  /// 若等待期间 reinitializeForEncryption 被调用（_isInitialized 被置
+  /// false 且 _initCompleter 被清空），会递归重试一次初始化。
   Future<void> _ensureInitialized() async {
     if (_isInitialized) return;
-    if (_isInitializing) {
-      // 等待初始化完成
-      while (_isInitializing) {
-        await Future.delayed(const Duration(milliseconds: 50));
-      }
-      // 竞态防护：等待期间若 reinitializeForEncryption 被并发调用，
-      // _isInitializing 会被强行置 false 但 _isInitialized 仍为 false。
-      // 此时不能直接 return，需递归重试一次初始化。
+
+    // 正在初始化：等待现有 Completer 完成
+    if (_isInitializing && _initCompleter != null) {
+      await _initCompleter!.future;
+      // 等待期间若 reinitializeForEncryption 被并发调用，
+      // _isInitialized 仍为 false，需递归重试
       if (_isInitialized) return;
-      if (_isInitializing) {
-        // 另一个调用方已抢先进入初始化，递归等待
-        return _ensureInitialized();
-      }
+      return _ensureInitialized();
     }
 
     _isInitializing = true;
+    _initCompleter = Completer<void>();
     try {
       await _initialize();
       _isInitialized = true;
+      _initCompleter!.complete();
+    } catch (e, st) {
+      _initCompleter!.completeError(e, st);
+      rethrow;
     } finally {
       _isInitializing = false;
+      // 保留 _initCompleter 直到 complete 后清理，避免 await 方拿不到结果
+      _initCompleter = null;
     }
   }
 
@@ -389,23 +405,40 @@ class TransactionsSyncManager implements SyncService {
       // 上传前先计算本地指纹（用于记录上传快照）
       String? localFp;
       int? localCount;
+      Map<String, dynamic>? exportMap;
       try {
         final jsonStr = await exportTransactionsJson(db, ledgerId);
-        final map = jsonDecode(jsonStr) as Map<String, dynamic>;
-        localFp = _contentFingerprintFromMap(map);
-        localCount = (map['count'] as num?)?.toInt();
+        exportMap = jsonDecode(jsonStr) as Map<String, dynamic>;
+        localFp = _contentFingerprintFromMap(exportMap);
+        localCount = (exportMap['count'] as num?)?.toInt();
       } catch (e) {
         logger.warning('CloudSync', '计算本地指纹失败: $e');
+      }
+
+      // m-02 修复：将账本摘要信息写入 metadata，
+      // 供 getRemoteLedgers 直接读取，避免逐个下载文件解析 JSON
+      final uploadMetadata = <String, String>{
+        'version': '2',
+        'uploadedAt': DateTime.now().toUtc().toIso8601String(),
+        'ledgerId': ledgerId.toString(),
+      };
+      if (exportMap != null) {
+        final name = exportMap['ledgerName'] as String? ?? exportMap['name'] as String?;
+        final currency = exportMap['currency'] as String?;
+        final balance = exportMap['balance'] as num?;
+        final exportedAt = exportMap['exportedAt'] as String?;
+        if (name != null) uploadMetadata['ledgerName'] = name;
+        if (currency != null) uploadMetadata['currency'] = currency;
+        if (localCount != null) uploadMetadata['count'] = localCount.toString();
+        if (balance != null) uploadMetadata['balance'] = balance.toString();
+        if (exportedAt != null) uploadMetadata['exportedAt'] = exportedAt;
+        if (localFp != null) uploadMetadata['fingerprint'] = localFp;
       }
 
       await manager.upload(
         data: ledgerId,
         path: _pathForLedger(ledgerId),
-        metadata: {
-          'version': '2',
-          'uploadedAt': DateTime.now().toUtc().toIso8601String(),
-          'ledgerId': ledgerId.toString(),
-        },
+        metadata: uploadMetadata,
       );
 
       // 记录近期上传，用于处理 CDN 缓存延迟
@@ -416,13 +449,15 @@ class TransactionsSyncManager implements SyncService {
           count: localCount,
         );
         // 立即更新缓存为"已同步"状态
-        _statusCache[ledgerId] = SyncStatus(
-          diff: SyncDiff.inSync,
-          localCount: localCount,
-          localFingerprint: localFp,
-          cloudCount: localCount,
-          cloudFingerprint: localFp,
-          cloudExportedAt: DateTime.now(),
+        _statusCache[ledgerId] = _CachedStatus(
+          SyncStatus(
+            diff: SyncDiff.inSync,
+            localCount: localCount,
+            localFingerprint: localFp,
+            cloudCount: localCount,
+            cloudFingerprint: localFp,
+            cloudExportedAt: DateTime.now(),
+          ),
         );
       } else {
         // 指纹计算失败，清除缓存等待下次查询
@@ -509,8 +544,10 @@ class TransactionsSyncManager implements SyncService {
       logger.error('CloudSync', '下载失败: $ledgerId', e);
       logger.error('CloudSync', '堆栈', stack);
 
-      // 如果是 404,返回空结果
-      if (e.toString().contains('404') || e.toString().contains('not found')) {
+      // m-04 修复：优先用类型匹配判断 404，字符串匹配作为兜底
+      if (e is fcs.CloudFileNotFoundException ||
+          e.toString().contains('404') ||
+          e.toString().contains('not found')) {
         return (inserted: 0, deletedDup: 0);
       }
 
@@ -641,11 +678,15 @@ class TransactionsSyncManager implements SyncService {
       );
     }
 
-    // 检查缓存
+    // 检查缓存（m-03 修复：TTL 过期则视为未命中）
     final cached = _statusCache[ledgerId];
-    if (cached != null) {
-      logger.debug('CloudSync', '缓存命中: ledgerId=$ledgerId, diff=${cached.diff}');
-      return cached;
+    if (cached != null && !cached.isExpired) {
+      logger.debug('CloudSync', '缓存命中: ledgerId=$ledgerId, diff=${cached.status.diff}');
+      return cached.status;
+    }
+    if (cached != null && cached.isExpired) {
+      logger.debug('CloudSync', '缓存过期，重新计算: ledgerId=$ledgerId');
+      _statusCache.remove(ledgerId);
     }
 
     logger.debug('CloudSync', '缓存未命中，开始计算: ledgerId=$ledgerId');
@@ -670,7 +711,7 @@ class TransactionsSyncManager implements SyncService {
             cloudFingerprint: ru.fp,
             cloudExportedAt: ru.at,
           );
-          _statusCache[ledgerId] = st;
+          _statusCache[ledgerId] = _CachedStatus(st);
           logger.info('CloudSync', '使用近期上传缓存: $ledgerId -> 已同步');
           return st;
         }
@@ -716,7 +757,7 @@ class TransactionsSyncManager implements SyncService {
       // 若缓存该状态，瞬时错误（网络抖动、临时 401、salt 错配）会持续阻挡，
       // 下次调用应重新走完整流程。salt_mismatch_need_password 同样不缓存。
       if (status.diff != SyncDiff.error) {
-        _statusCache[ledgerId] = status;
+        _statusCache[ledgerId] = _CachedStatus(status);
       }
       logger.info('CloudSync', '同步状态: $ledgerId -> ${status.diff}');
       logger.debug('CloudSync', '本地指纹: ${status.localFingerprint}');
@@ -873,8 +914,10 @@ class TransactionsSyncManager implements SyncService {
 
       logger.info('CloudSync', '删除完成: $ledgerId');
     } catch (e) {
-      // 忽略 404 错误
-      if (e.toString().contains('404') || e.toString().contains('not found')) {
+      // m-04 修复：优先用类型匹配判断 404，字符串匹配作为兜底
+      if (e is fcs.CloudFileNotFoundException ||
+          e.toString().contains('404') ||
+          e.toString().contains('not found')) {
         logger.warning('CloudSync', '云端备份不存在（忽略）: $ledgerId');
         return;
       }
@@ -916,6 +959,13 @@ class TransactionsSyncManager implements SyncService {
   Future<List<LedgerDisplayItem>> getRemoteLedgers() async {
     await _ensureInitialized();
 
+    // 捕获到局部变量（ATTACH-2 竞态防护）
+    final provider = _provider;
+    if (provider == null) {
+      logger.warning('CloudSync', 'Provider 不可用，无法获取远程账本列表');
+      return [];
+    }
+
     // 获取本地账本ID列表（用于过滤）
     final localLedgers = await db.select(db.ledgers).get();
     final localLedgerIds = localLedgers.map((l) => l.id).toSet();
@@ -924,7 +974,7 @@ class TransactionsSyncManager implements SyncService {
 
     // 直接从云端文件列表获取远程账本
     try {
-      final files = await _provider!.storage.list(path: '');
+      final files = await provider.storage.list(path: '');
       logger.info('CloudSync', '云端文件列表: ${files.map((f) => f.name).toList()}');
       int remoteCount = 0;
 
@@ -945,39 +995,67 @@ class TransactionsSyncManager implements SyncService {
           // 如果本地已存在，跳过
           if (localLedgerIds.contains(remoteId)) continue;
 
-          // 下载文件获取账本元数据（使用 file.name 而非 file.path，避免路径重复）
-          logger.info('CloudSync',
-              '尝试下载远程账本: file.name=${file.name}, file.path=${file.path}');
-          final jsonStr = await _provider!.storage.download(path: file.name);
-          if (jsonStr == null) {
-            logger.warning('CloudSync', '下载结果为空: ${file.name}');
-            continue;
+          // m-02 修复：优先从 metadata 获取账本摘要信息，避免全量下载 JSON。
+          // upload 时已将 ledgerName/currency/count/balance/exportedAt 写入 metadata，
+          // 对于支持自定义元数据的 Provider（S3 HEAD / Supabase metadata 表），
+          // 仅需 1 次轻量请求即可获取摘要，无需下载完整 JSON 文件。
+          String? name;
+          String? currency;
+          int? transactionCount;
+          double? balance;
+          String? updatedAtStr;
+
+          // 尝试从 list() 返回的 metadata 或 getMetadata() 获取
+          var fileMeta = file.metadata;
+          if (fileMeta == null || fileMeta.isEmpty || fileMeta['ledgerName'] == null) {
+            try {
+              final meta = await provider.storage.getMetadata(path: file.name);
+              fileMeta = meta?.metadata;
+            } catch (e) {
+              logger.warning('CloudSync', 'getMetadata 失败: ${file.name} - $e');
+            }
           }
 
-          final json = jsonDecode(jsonStr) as Map<String, dynamic>;
-          final name = json['ledgerName'] as String? ??
-              json['name'] as String? ??
-              'Unknown';
-          final currency = json['currency'] as String? ?? 'CNY';
-          final updatedAtStr = json['exportedAt'] as String?;
-          final transactionCount = json['count'] as int? ?? 0;
+          if (fileMeta != null && fileMeta['ledgerName'] != null) {
+            // metadata 命中，直接构造（无需下载）
+            name = fileMeta['ledgerName'];
+            currency = fileMeta['currency'] ?? 'CNY';
+            transactionCount = int.tryParse(fileMeta['count'] ?? '');
+            balance = double.tryParse(fileMeta['balance'] ?? '');
+            updatedAtStr = fileMeta['exportedAt'] ?? fileMeta['uploadedAt'];
+            logger.info('CloudSync', '从 metadata 获取账本信息: $name (跳过下载)');
+          }
 
-          // 优先使用 balance 字段，没有则从 items 计算
-          double balance;
-          if (json.containsKey('balance')) {
-            balance = (json['balance'] as num?)?.toDouble() ?? 0.0;
-          } else {
-            balance = 0.0;
-            final items =
-                (json['items'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-            for (final item in items) {
-              final type = item['type'] as String?;
-              final amount = (item['amount'] as num?)?.toDouble() ?? 0.0;
-              if (type == 'income') {
-                balance += amount;
-              } else if (type == 'expense') {
-                balance -= amount;
+          // metadata 未命中，回退到全量下载解析 JSON
+          if (name == null) {
+            logger.info('CloudSync', 'metadata 未命中，下载远程账本: ${file.name}');
+            final jsonStr = await provider.storage.download(path: file.name);
+            if (jsonStr == null) {
+              logger.warning('CloudSync', '下载结果为空: ${file.name}');
+              continue;
+            }
+
+            final json = jsonDecode(jsonStr) as Map<String, dynamic>;
+            name = json['ledgerName'] as String? ?? json['name'] as String? ?? 'Unknown';
+            currency = json['currency'] as String? ?? 'CNY';
+            updatedAtStr = json['exportedAt'] as String?;
+            transactionCount = json['count'] as int? ?? 0;
+
+            if (json.containsKey('balance')) {
+              balance = (json['balance'] as num?)?.toDouble() ?? 0.0;
+            } else {
+              var computed = 0.0;
+              final items = (json['items'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+              for (final item in items) {
+                final type = item['type'] as String?;
+                final amount = (item['amount'] as num?)?.toDouble() ?? 0.0;
+                if (type == 'income') {
+                  computed += amount;
+                } else if (type == 'expense') {
+                  computed -= amount;
+                }
               }
+              balance = computed;
             }
           }
 
@@ -991,10 +1069,10 @@ class TransactionsSyncManager implements SyncService {
           result.add(LedgerDisplayItem.fromRemote(
             remoteSyncId: remoteId.toString(),
             name: name,
-            currency: currency,
+            currency: currency ?? 'CNY',
             updatedAt: updatedAt,
-            transactionCount: transactionCount,
-            balance: balance,
+            transactionCount: transactionCount ?? 0,
+            balance: balance ?? 0.0,
           ));
 
           remoteCount++;
@@ -1061,12 +1139,22 @@ class TransactionsSyncManager implements SyncService {
   /// 1. 如果本地存在同名账本，复用该账本（不创建新账本）
   /// 2. 如果本地不存在同名账本但不存在远程 ID，复用远程 ID
   /// 3. 否则创建新 ID
+  ///
+  /// 云端文件迁移策略（Critical-07 修复）：
+  /// 采用「先上传后删除」顺序，确保上传成功后再删除旧文件。
+  /// 旧实现「先删除后上传」在删除成功但上传失败时会导致云端数据丢失。
   Future<int?> downloadRemoteLedger({
     required String name,
     required String currency,
     required String remotePath,
   }) async {
     await _ensureInitialized();
+
+    // 捕获到局部变量（ATTACH-2 竞态防护）
+    final provider = _provider;
+    if (provider == null) {
+      throw fcs.CloudSyncException('云服务不可用，请检查配置或登录状态');
+    }
 
     try {
       logger.info('CloudSync', '下载远程账本: $remotePath');
@@ -1122,7 +1210,7 @@ class TransactionsSyncManager implements SyncService {
       }
 
       // 下载数据
-      final raw = await _provider!.storage.download(path: remotePath);
+      final raw = await provider.storage.download(path: remotePath);
 
       if (raw == null) {
         logger.warning('CloudSync', '云端账本不存在: $remotePath');
@@ -1154,22 +1242,25 @@ class TransactionsSyncManager implements SyncService {
           '下载完成: ledgerId=$ledgerId, inserted=${result.inserted}');
 
       // 处理云端文件更新
+      // Critical-07 修复：采用「先上传后删除」顺序，避免删除成功但上传
+      // 失败时云端数据丢失。旧文件在新文件上传成功后才删除。
       if (reuseExistingByName) {
         // 复用了同名账本，本地 ID 可能和云端不同
-        // 需要删除旧的云端文件，并上传新的（使用本地 ID）
+        // 需要上传新的（使用本地 ID），再删除旧的云端文件
         if (remoteId != null && remoteId != ledgerId) {
-          try {
-            await _provider!.storage.delete(path: remotePath);
-            logger.info('CloudSync', '旧远程文件已删除: $remotePath (远程ID: $remoteId != 本地ID: $ledgerId)');
-          } catch (e) {
-            logger.warning('CloudSync', '删除旧远程文件失败（忽略）: $e');
-          }
-          // 上传本地账本到云端（使用本地 ID）
+          // 先上传到新路径
           try {
             await uploadCurrentLedger(ledgerId: ledgerId);
             logger.info('CloudSync', '账本已上传到云端: ledger_$ledgerId.json');
+            // 上传成功后再删除旧文件
+            try {
+              await provider.storage.delete(path: remotePath);
+              logger.info('CloudSync', '旧远程文件已删除: $remotePath (远程ID: $remoteId != 本地ID: $ledgerId)');
+            } catch (e) {
+              logger.warning('CloudSync', '删除旧远程文件失败（忽略，新文件已上传）: $e');
+            }
           } catch (e) {
-            logger.warning('CloudSync', '上传账本失败（忽略）: $e');
+            logger.warning('CloudSync', '上传账本失败（旧文件保留）: $e');
           }
         } else {
           logger.info('CloudSync', '复用同名账本，ID相同无需更新云端文件');
@@ -1178,19 +1269,19 @@ class TransactionsSyncManager implements SyncService {
         // 复用了远程ID，无需删除和重新上传
         logger.info('CloudSync', '复用远程ID，无需更新云端文件');
       } else {
-        // 创建了新 ID，需要删除旧文件并上传新文件
-        try {
-          await _provider!.storage.delete(path: remotePath);
-          logger.info('CloudSync', '旧远程文件已删除: $remotePath');
-        } catch (e) {
-          logger.warning('CloudSync', '删除旧远程文件失败（忽略）: $e');
-        }
-        // 上传新创建的本地账本到云端
+        // 创建了新 ID，需要上传新文件，再删除旧文件
         try {
           await uploadCurrentLedger(ledgerId: ledgerId);
           logger.info('CloudSync', '新账本已上传到云端: ledger_$ledgerId.json');
+          // 上传成功后再删除旧文件
+          try {
+            await provider.storage.delete(path: remotePath);
+            logger.info('CloudSync', '旧远程文件已删除: $remotePath');
+          } catch (e) {
+            logger.warning('CloudSync', '删除旧远程文件失败（忽略，新文件已上传）: $e');
+          }
         } catch (e) {
-          logger.warning('CloudSync', '上传新账本失败（忽略）: $e');
+          logger.warning('CloudSync', '上传新账本失败（旧文件保留）: $e');
         }
       }
 
@@ -1206,15 +1297,23 @@ class TransactionsSyncManager implements SyncService {
   Future<void> deleteRemoteLedger({required String remotePath}) async {
     await _ensureInitialized();
 
+    // 捕获到局部变量（ATTACH-2 竞态防护）
+    final provider = _provider;
+    if (provider == null) {
+      throw fcs.CloudSyncException('云服务不可用，请检查配置或登录状态');
+    }
+
     try {
       logger.info('CloudSync', '删除远程账本: $remotePath');
 
-      await _provider!.storage.delete(path: remotePath);
+      await provider.storage.delete(path: remotePath);
 
       logger.info('CloudSync', '删除完成: $remotePath');
     } catch (e) {
-      // 忽略 404 错误
-      if (e.toString().contains('404') || e.toString().contains('not found')) {
+      // m-04 修复：优先用类型匹配判断 404，字符串匹配作为兜底
+      if (e is fcs.CloudFileNotFoundException ||
+          e.toString().contains('404') ||
+          e.toString().contains('not found')) {
         logger.warning('CloudSync', '远程账本不存在（忽略）: $remotePath');
         return;
       }
@@ -1228,6 +1327,12 @@ class TransactionsSyncManager implements SyncService {
   Future<({int success, int failed})> restoreAllRemoteLedgers() async {
     await _ensureInitialized();
 
+    // 捕获到局部变量（ATTACH-2 竞态防护）
+    final provider = _provider;
+    if (provider == null) {
+      throw fcs.CloudSyncException('云服务不可用，请检查配置或登录状态');
+    }
+
     try {
       logger.info('CloudSync', '开始恢复所有远程账本');
 
@@ -1237,7 +1342,7 @@ class TransactionsSyncManager implements SyncService {
       logger.info('CloudSync', '本地已存在账本: $localLedgerIds');
 
       // 列出所有远程账本文件
-      final files = await _provider!.storage.list(path: '');
+      final files = await provider.storage.list(path: '');
 
       // 过滤出账本文件，并排除本地已存在的
       final ledgerFiles = files.where((file) {
@@ -1267,7 +1372,7 @@ class TransactionsSyncManager implements SyncService {
         ledgerFiles.map((file) async {
           try {
             // 下载文件内容以获取账本信息（使用 file.name 而非 file.path）
-            final jsonStr = await _provider!.storage.download(path: file.name);
+            final jsonStr = await provider.storage.download(path: file.name);
             if (jsonStr == null) {
               logger.warning('CloudSync', '下载失败: ${file.name}');
               return false;
@@ -1349,4 +1454,17 @@ class _RecentUpload {
     required this.fp,
     required this.count,
   });
+}
+
+/// 带时间戳的同步状态缓存条目（m-03 修复）
+///
+/// 在 TTL 内有效，过期后视为未命中，防止其他设备上传后本地仍显示过时的"已同步"状态。
+class _CachedStatus {
+  final SyncStatus status;
+  final DateTime cachedAt;
+
+  _CachedStatus(this.status) : cachedAt = DateTime.now();
+
+  bool get isExpired =>
+      DateTime.now().difference(cachedAt) > TransactionsSyncManager._statusCacheTtl;
 }

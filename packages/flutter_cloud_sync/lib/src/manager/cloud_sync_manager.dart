@@ -106,11 +106,25 @@ class CloudSyncManager<T> {
       final fingerprint = serializer.fingerprint(serializedData);
       logger?.debug('Fingerprint: $fingerprint');
 
+      // 3.5 尝试从序列化数据中提取 count，写入 metadata 供 getStatus
+      // 直接读取（无需下载全量文件）
+      String? countStr;
+      try {
+        final json = jsonDecode(serializedData) as Map<String, dynamic>?;
+        if (json != null && json.containsKey('count')) {
+          final count = (json['count'] as num?)?.toInt();
+          if (count != null) countStr = count.toString();
+        }
+      } catch (_) {
+        // Not JSON or doesn't have count field, ignore
+      }
+
       // 4. Prepare metadata
       final fullMetadata = <String, String>{
         'fingerprint': fingerprint,
         'uploadedAt': DateTime.now().toIso8601String(),
         'userId': user.id,
+        if (countStr != null) 'count': countStr,
         ...?metadata,
       };
 
@@ -274,35 +288,64 @@ class CloudSyncManager<T> {
         return status;
       }
 
-      // 5. Download cloud data to extract metadata
-      final cloudData = await provider.storage.download(path: path);
+      // 5. 提取云端指纹：优先从 metadata 读取（upload 时写入），避免
+      // 每次 getStatus 都下载全量文件计算指纹（Major-08 修复）。
+      // 仅当 metadata 中无 fingerprint 时，才回退到下载全量文件计算。
       String? cloudFingerprint;
       int? cloudCount;
       DateTime? cloudUpdatedAt;
 
-      if (cloudData != null) {
-        cloudFingerprint = serializer.fingerprint(cloudData);
+      final metaFingerprint = cloudFile.metadata?['fingerprint'] as String?;
+      final metaCountStr = cloudFile.metadata?['count'] as String?;
+      final metaCount = metaCountStr != null ? int.tryParse(metaCountStr) : null;
 
-        // Try to extract metadata from cloud JSON
-        try {
-          final cloudJson = jsonDecode(cloudData) as Map<String, dynamic>?;
-          if (cloudJson != null) {
-            // Extract count
-            if (cloudJson.containsKey('count')) {
-              cloudCount = (cloudJson['count'] as num?)?.toInt();
-            }
+      if (metaFingerprint != null) {
+        // metadata 中有指纹，直接使用，无需下载全量文件
+        cloudFingerprint = metaFingerprint;
+        cloudCount = metaCount;
 
-            // Extract exportedAt timestamp
-            if (cloudJson.containsKey('exportedAt')) {
-              final exportedAtStr = cloudJson['exportedAt'] as String?;
-              if (exportedAtStr != null) {
-                cloudUpdatedAt = DateTime.tryParse(exportedAtStr);
+        // 尝试从 metadata 提取时间戳
+        final uploadedAtStr = cloudFile.metadata?['uploadedAt'] as String?;
+        if (uploadedAtStr != null) {
+          cloudUpdatedAt = DateTime.tryParse(uploadedAtStr);
+        }
+        // 也尝试用文件的 lastModified 作为兜底
+        cloudUpdatedAt ??= cloudFile.lastModified;
+
+        logger?.debug(
+            'Cloud fingerprint from metadata: $cloudFingerprint, count: $cloudCount (skipped full download)');
+      } else {
+        // metadata 中无指纹（旧格式或 provider 不支持 metadata），
+        // 回退到下载全量文件计算指纹
+        final cloudData = await provider.storage.download(path: path);
+
+        if (cloudData != null) {
+          cloudFingerprint = serializer.fingerprint(cloudData);
+
+          // Try to extract metadata from cloud JSON
+          try {
+            final cloudJson = jsonDecode(cloudData) as Map<String, dynamic>?;
+            if (cloudJson != null) {
+              // Extract count
+              if (cloudJson.containsKey('count')) {
+                cloudCount = (cloudJson['count'] as num?)?.toInt();
+              }
+
+              // Extract exportedAt timestamp
+              if (cloudJson.containsKey('exportedAt')) {
+                final exportedAtStr = cloudJson['exportedAt'] as String?;
+                if (exportedAtStr != null) {
+                  cloudUpdatedAt = DateTime.tryParse(exportedAtStr);
+                }
               }
             }
+          } catch (_) {
+            // Not JSON or missing fields, ignore
           }
-        } catch (_) {
-          // Not JSON or missing fields, ignore
         }
+
+        logger?.debug(
+            'Cloud fingerprint from full download: $cloudFingerprint, count: $cloudCount');
       }
 
       logger?.debug(
@@ -386,6 +429,9 @@ class CloudSyncManager<T> {
       return status;
     } catch (e) {
       logger?.error('Get status failed: $e');
+      // Major-12 修复：错误状态不写入缓存，避免瞬时错误（网络抖动、
+      // 临时 401、salt 错配）在 cacheTTL 期间持续阻挡，下次调用应
+      // 重新走完整流程。
       final status = SyncStatus(
         state: SyncState.error,
         message: 'Failed to get sync status: $e',

@@ -383,6 +383,10 @@ class SyncDiffService {
     // 是 N 次单条(每条 tx 的 tagIds 不同,需要先 DELETE WHERE tx_id = ? 再
     // INSERT 新关联);如果 modified 量大到 tag update 也成瓶颈,后续可加专
     // 门的 batch tag-update 接口。
+    //
+    // Major-09/10 修复：主表更新与 tag 更新分离。主表更新失败时不尝试
+    // tag 更新（避免对已回滚的数据写 tag）。tag 更新失败时记录失败计数
+    // 并汇总日志，不再静默吞掉。
     if (modifiedChanges.isNotEmpty) {
       final sw = Stopwatch()..start();
       // 账本位币：与 importTransactions 的规则一致（账本币种兜底 CNY）。
@@ -442,11 +446,22 @@ class SyncDiffService {
         ));
         tagIdsBySyncId[syncId] = tagIds;
       }
+
+      // 主表更新（原子操作：单条 BEGIN/COMMIT）
+      Map<String, int> syncIdToTxId;
       try {
-        final syncIdToTxId =
-            await repo.updateTransactionsBatchBySyncId(updates);
+        syncIdToTxId = await repo.updateTransactionsBatchBySyncId(updates);
         modifiedCount = syncIdToTxId.length;
-        // tag 关联逐条 update(tag 数量通常很小,这里没批量接口)
+      } catch (e, st) {
+        // 主表更新失败：不尝试 tag 更新（数据已回滚），记录错误并跳过
+        logger.error('SyncDiff', '批量更新主表失败，跳过 tag 更新', e, st);
+        syncIdToTxId = {};
+      }
+
+      // tag 关联逐条 update（仅主表更新成功的行才更新 tag）
+      // Major-10 修复：跟踪失败计数，汇总日志，不再静默吞掉
+      if (syncIdToTxId.isNotEmpty) {
+        int tagFailCount = 0;
         for (final entry in tagIdsBySyncId.entries) {
           final txId = syncIdToTxId[entry.key];
           if (txId == null) continue;
@@ -456,13 +471,17 @@ class SyncDiffService {
               tagIds: entry.value,
             );
           } catch (e, st) {
+            tagFailCount++;
             logger.error('SyncDiff', 'tag 关联更新失败 syncId=${entry.key}', e, st);
           }
         }
+        if (tagFailCount > 0) {
+          logger.warning('SyncDiff',
+              'tag 关联更新完成: 成功=${tagIdsBySyncId.length - tagFailCount}, '
+              '失败=$tagFailCount（主表数据已更新，tag 可能不一致）');
+        }
         logger.info('SyncDiff',
             '批量更新: size=${updates.length} 成功=$modifiedCount 耗时=${sw.elapsedMilliseconds}ms');
-      } catch (e, st) {
-        logger.error('SyncDiff', '批量更新失败', e, st);
       }
     }
 
