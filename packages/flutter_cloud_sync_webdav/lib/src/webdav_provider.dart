@@ -81,8 +81,13 @@ class WebDAVProvider implements CloudProvider {
       try {
         await _client!.readDir(remotePath);
       } catch (e) {
-        // If remote path doesn't exist, try to create it
-        await _client!.mkdir(remotePath);
+        // 仅在 404（远端路径不存在）时触发创建；其他错误（网络中断、
+        // 403 权限不足等）直接抛出，避免掩盖真实问题导致误导性的 mkdir。
+        if (_isNotFound(e)) {
+          await _client!.mkdir(remotePath);
+        } else {
+          rethrow;
+        }
       }
 
       // Create service instances
@@ -119,6 +124,29 @@ class WebDAVProvider implements CloudProvider {
     _authService?.dispose();
     _authService = null;
     _storageService = null;
+    // 关闭底层 dio 客户端，释放 HTTP 连接资源
+    _client?.c.close(force: true);
     _client = null;
+  }
+
+  /// 统一判断 WebDAV 404 错误，优先使用结构化状态码，字符串匹配仅作兜底。
+  ///
+  /// 与 WebDAVStorageService._isNotFound 逻辑保持一致：优先读取 dio 异常
+  /// 携带的 response.statusCode，无结构化信息时退化为字符串匹配。
+  bool _isNotFound(Object e) {
+    try {
+      final dynamic dyn = e;
+      final dynamic response = dyn.response;
+      if (response != null && response.statusCode == 404) {
+        return true;
+      }
+    } catch (_) {
+      // 非 dio 异常类型，无 response 字段，进入字符串兜底
+    }
+    final msg = e.toString().toLowerCase();
+    return msg.contains('404') ||
+        msg.contains('not found') ||
+        msg.contains('does not exist') ||
+        msg.contains('no such');
   }
 }

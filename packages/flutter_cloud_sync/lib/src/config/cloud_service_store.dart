@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'cloud_service_config.dart';
 
@@ -26,7 +27,7 @@ class CloudServiceStore {
           try {
             return decodeCloudConfig(raw);
           } catch (e) {
-            // 解析失败，静默回退到本地存储
+            debugPrint('Config parse failed for $activeType: $e');
           }
         }
         return CloudServiceConfig.localStorage();
@@ -37,7 +38,7 @@ class CloudServiceStore {
           try {
             return decodeCloudConfig(raw);
           } catch (e) {
-            // 解析失败，静默回退到本地存储
+            debugPrint('Config parse failed for $activeType: $e');
           }
         }
         // 回退到本地存储
@@ -49,7 +50,7 @@ class CloudServiceStore {
           try {
             return decodeCloudConfig(raw);
           } catch (e) {
-            // 解析失败，静默回退到本地存储
+            debugPrint('Config parse failed for $activeType: $e');
           }
         }
         // 回退到本地存储
@@ -68,7 +69,7 @@ class CloudServiceStore {
           try {
             return decodeCloudConfig(raw);
           } catch (e) {
-            // 解析失败，静默回退到本地存储
+            debugPrint('Config parse failed for $activeType: $e');
           }
         }
         // 回退到本地存储
@@ -128,6 +129,8 @@ class CloudServiceStore {
   }
 
   /// 保存并激活配置
+  ///
+  // 先写配置再激活：若两次写入间崩溃，下次 loadActive 找不到配置会回退本地存储，符合预期
   Future<void> saveAndActivate(CloudServiceConfig cfg) async {
     final sp = await SharedPreferences.getInstance();
 

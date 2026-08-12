@@ -158,15 +158,16 @@ final authServiceProvider = FutureProvider<CloudAuthService>((ref) async {
     if (services.auth != null) {
       return services.auth!;
     }
-  } catch (e) {
-    // 初始化失败，返回 NoopAuthService
+  } catch (e, st) {
+    logger.warning('CloudSync', 'Cloud services initialization failed: $e', st);
   }
 
   return NoopAuthService();
 });
 
-// 防重入锁：避免 Provider 重建导致多个自动同步并发执行
-bool _autoSyncInProgress = false;
+// 按 config.id 跟踪正在执行的 bootstrap，避免全局锁跨 Provider 重建互相阻塞。
+// 不同 config 的 bootstrap 互不影响；同 config 重建时跳过重复触发。
+final _bootstrappingConfigs = <String>{};
 
 final syncServiceProvider = Provider<SyncService>((ref) {
   final activeAsync = ref.watch(activeCloudConfigProvider);
@@ -403,24 +404,28 @@ final syncServiceProvider = Provider<SyncService>((ref) {
     // 字段补推上去(theme / income / appearance / ai_config) —— 用户之前
     // 一直用 A,升级到带同步的版本时本地早就有配置,server 却是空的。
     Future(() async {
-      // avatar bump 走 engine.onAvatarChanged 回调,不再用 changed 兜底
-      // (changed=true 包含 theme/income/appearance/ai 等任意字段被 apply,
-      // 不只是头像,会引发头像组件无谓重渲)。
-      await engine.syncMyProfile();
-      await reconcileProfileToServer(
-        cloudProviderFuture: ref.read(piggycountCloudProviderInstance.future),
-        currentThemeColor: ref.read(primaryColorProvider),
-        currentIncomeColorScheme: ref.read(incomeExpenseColorSchemeProvider),
-        currentHeaderStyle: ref.read(headerDecorationStyleProvider),
-        currentCompactAmount: ref.read(compactAmountProvider),
-        currentShowTransactionTime: ref.read(showTransactionTimeProvider),
-        currentDisplayName: ref.read(displayNameProvider),
-        currentHeaderSkin: ref.read(headerSkinProvider),
-        currentNoteDisplayMode: ref.read(noteDisplayModeProvider),
-        currentNoteHistoryScope: ref.read(noteHistoryScopeProvider).name,
-        currentNoteHistorySort: ref.read(noteHistorySortProvider).name,
-        currentNoteHistoryLimit: ref.read(noteHistoryLimitProvider),
-      );
+      try {
+        // avatar bump 走 engine.onAvatarChanged 回调,不再用 changed 兜底
+        // (changed=true 包含 theme/income/appearance/ai 等任意字段被 apply,
+        // 不只是头像,会引发头像组件无谓重渲)。
+        await engine.syncMyProfile();
+        await reconcileProfileToServer(
+          cloudProviderFuture: ref.read(piggycountCloudProviderInstance.future),
+          currentThemeColor: ref.read(primaryColorProvider),
+          currentIncomeColorScheme: ref.read(incomeExpenseColorSchemeProvider),
+          currentHeaderStyle: ref.read(headerDecorationStyleProvider),
+          currentCompactAmount: ref.read(compactAmountProvider),
+          currentShowTransactionTime: ref.read(showTransactionTimeProvider),
+          currentDisplayName: ref.read(displayNameProvider),
+          currentHeaderSkin: ref.read(headerSkinProvider),
+          currentNoteDisplayMode: ref.read(noteDisplayModeProvider),
+          currentNoteHistoryScope: ref.read(noteHistoryScopeProvider).name,
+          currentNoteHistorySort: ref.read(noteHistorySortProvider).name,
+          currentNoteHistoryLimit: ref.read(noteHistoryLimitProvider),
+        );
+      } catch (e, st) {
+        logger.warning('SyncProvider', 'Profile sync failed: $e', st);
+      }
     });
 
     // Bootstrap 串行：必须等 `syncLedgersFromServer` 完成（把 A 的账本 2/3/…
@@ -430,8 +435,8 @@ final syncServiceProvider = Provider<SyncService>((ref) {
     // 挂到错位或不存在的账本"。
     final currentLedgerId = ref.read(currentLedgerIdProvider);
     logger.info('SyncProvider', 'SyncEngine 就绪, ledgerId=$currentLedgerId');
-    if (currentLedgerId > 0 && !_autoSyncInProgress) {
-      _autoSyncInProgress = true;
+    if (currentLedgerId > 0 && !_bootstrappingConfigs.contains(config.id)) {
+      _bootstrappingConfigs.add(config.id);
       Future(() async {
         try {
           // Step 1: 先拉账本列表，保证所有 A 的账本已经在 B 本地落库
@@ -489,10 +494,10 @@ final syncServiceProvider = Provider<SyncService>((ref) {
           logger.error('SyncProvider', '自动同步异常', e, st);
           ref.read(lastSyncErrorProvider.notifier).state = e.toString();
         } finally {
-          _autoSyncInProgress = false;
+          _bootstrappingConfigs.remove(config.id);
         }
       });
-    } else if (currentLedgerId > 0 && _autoSyncInProgress) {
+    } else if (currentLedgerId > 0 && _bootstrappingConfigs.contains(config.id)) {
       logger.info('SyncProvider', '自动同步已在执行中，跳过重复触发');
     } else {
       // 没有 current ledger（一般不会发生）。单独拉一次账本列表兜底。

@@ -133,6 +133,9 @@ class SyncStatus {
   String toString() => 'SyncStatus(state: $state, message: $message)';
 
   /// Create a copy with modified fields
+  ///
+  /// 注意：copyWith 使用 ?? 合并，无法将字段设为 null。
+  /// 如需重置状态，请直接构造新的 [SyncStatus] 实例。
   SyncStatus copyWith({
     SyncState? state,
     String? localFingerprint,

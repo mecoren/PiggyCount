@@ -1,6 +1,6 @@
 import 'dart:io' show Platform;
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter_cloud_sync_supabase/flutter_cloud_sync_supabase.dart';
 import 'package:flutter_cloud_sync_webdav/flutter_cloud_sync_webdav.dart';
 import 'package:flutter_cloud_sync_icloud/flutter_cloud_sync_icloud.dart';
@@ -80,7 +80,8 @@ Future<({CloudProvider? provider, CloudAuthService? auth})> createCloudServices(
 
         return (provider: provider, auth: auth);
       } catch (e) {
-        // iCloud 不可用（未登录等），返回 null
+        // iCloud 不可用（未登录、权限问题等），记录日志便于排查
+        debugPrint('iCloud init failed: $e');
         return (provider: null, auth: null);
       }
 

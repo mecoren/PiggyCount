@@ -59,7 +59,8 @@ S3EndpointInfo parseS3Endpoint(String endpoint, {bool? useSSL, int? port}) {
   if (value.contains(':') && port == null) {
     final lastColon = value.lastIndexOf(':');
     final candidatePort = int.tryParse(value.substring(lastColon + 1));
-    if (candidatePort != null) {
+    // 校验端口范围（0-65535），拒绝越界值避免构造非法 URI
+    if (candidatePort != null && candidatePort >= 0 && candidatePort <= 65535) {
       host = value.substring(0, lastColon);
       finalPort = candidatePort;
     }

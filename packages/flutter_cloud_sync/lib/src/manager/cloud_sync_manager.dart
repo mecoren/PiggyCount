@@ -120,12 +120,14 @@ class CloudSyncManager<T> {
       }
 
       // 4. Prepare metadata
+      // 用户 metadata 放在前面，保留字段（fingerprint/uploadedAt/userId/count）
+      // 在后覆盖，防止用户值污染关键字段导致 getStatus 指纹比对失效
       final fullMetadata = <String, String>{
+        ...?metadata, // 用户值在前
         'fingerprint': fingerprint,
         'uploadedAt': DateTime.now().toIso8601String(),
         'userId': user.id,
         if (countStr != null) 'count': countStr,
-        ...?metadata,
       };
 
       // 5. Upload to cloud storage

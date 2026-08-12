@@ -81,7 +81,8 @@ abstract class CloudAuthService {
 /// No-op implementation for providers that don't require authentication
 class NoopAuthService implements CloudAuthService {
   @override
-  Stream<CloudUser?> get authStateChanges => Stream.value(null);
+  Stream<CloudUser?> get authStateChanges =>
+      Stream.value(null).asBroadcastStream();
 
   @override
   Future<CloudUser?> get currentUser async => null;

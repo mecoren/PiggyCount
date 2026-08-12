@@ -20,7 +20,9 @@ class ICloudAuthService implements CloudAuthService {
   final ICloudMethodChannel _methodChannel;
   late final StreamController<CloudUser?> _authStateController;
   CloudUser? _currentUser;
-  bool _initialized = false;
+  // 用 Future 缓存替代 bool 标志：所有并发调用方共享同一个初始化任务，
+  // 避免标志位在 await 完成前被提前置位导致重复初始化或竞态。
+  Future<void>? _initFuture;
 
   ICloudAuthService(this._methodChannel) {
     // Create broadcast stream that sends current state on listen
@@ -33,24 +35,32 @@ class ICloudAuthService implements CloudAuthService {
     );
   }
 
-  Future<void> _ensureInitialized() async {
-    if (_initialized) return;
-    _initialized = true;
+  Future<void> _ensureInitialized() {
+    // 所有调用方共享同一个 Future，避免标志位在 await 前提前置位导致竞态
+    return _initFuture ??= _doInitialize();
+  }
 
-    // Check if iCloud is available
-    final isAvailable = await _methodChannel.isICloudAvailable();
-    if (isAvailable) {
-      // Create virtual iCloud user
-      _currentUser = CloudUser(
-        id: 'icloud-user',
-        email: 'iCloud',
-        metadata: {
-          'provider': 'icloud',
-          'accountStatus': 'available',
-        },
-      );
-    } else {
+  Future<void> _doInitialize() async {
+    try {
+      // Check if iCloud is available
+      final isAvailable = await _methodChannel.isICloudAvailable();
+      if (isAvailable) {
+        // Create virtual iCloud user
+        _currentUser = CloudUser(
+          id: 'icloud-user',
+          email: 'iCloud',
+          metadata: {
+            'provider': 'icloud',
+            'accountStatus': 'available',
+          },
+        );
+      } else {
+        _currentUser = null;
+      }
+    } catch (e) {
+      // 初始化失败：置空用户并清除 Future 缓存，允许后续重试
       _currentUser = null;
+      _initFuture = null;
     }
   }
 

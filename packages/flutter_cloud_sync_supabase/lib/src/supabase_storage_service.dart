@@ -202,9 +202,11 @@ class SupabaseStorageService implements CloudStorageService {
           );
 
       final fileName = PathHelper.basename(fullPath);
+      // 文件不在列表中时通过私有标记异常跳出，由外层捕获后返回 null，
+      // 避免抛出 CloudStorageException 导致调用方需 catch 字符串匹配（Minor）
       final file = files.firstWhere(
         (f) => f.name == fileName,
-        orElse: () => throw CloudStorageException('File not found: $path'),
+        orElse: () => throw _FileNotFoundInList(),
       );
 
       // Get stored custom metadata
@@ -221,6 +223,9 @@ class SupabaseStorageService implements CloudStorageService {
           ...customMetadata,
         },
       );
+    } on _FileNotFoundInList {
+      // 文件不存在时返回 null 而非抛异常（Minor）
+      return null;
     } on supabase.StorageException catch (e) {
       if (e.statusCode == '404' || e.message.contains('not found')) {
         return null;
@@ -283,7 +288,13 @@ class SupabaseStorageService implements CloudStorageService {
 
       return response['metadata'] as Map<String, dynamic>? ?? {};
     } catch (e) {
-      // Return empty map if metadata table doesn't exist
+      // 元数据是辅助功能，失败不阻塞主流程，但记录 warning 便于排查
+      // （如 metadata 表未创建）（P-M8）
+      dev.log(
+        '[Supabase] Warning: getMetadata failed for $path: $e',
+        name: 'SupabaseStorage',
+        level: 900,
+      );
       return {};
     }
   }
@@ -292,8 +303,24 @@ class SupabaseStorageService implements CloudStorageService {
   Future<void> _deleteMetadata(String path) async {
     try {
       await _client.from('file_metadata').delete().eq('path', path);
+    } on supabase.PostgrestException catch (e) {
+      // 区分表不存在的错误与其他错误：表不存在属于环境配置问题，降级为 warning；
+      // 其他 Postgrest 错误同样记录 warning 但不阻塞删除主流程（P-M8）
+      dev.log(
+        '[Supabase] Warning: deleteMetadata Postgrest error for $path: ${e.message} (code: ${e.code})',
+        name: 'SupabaseStorage',
+        level: 900,
+      );
     } catch (e) {
-      // Silently fail if metadata table doesn't exist
+      dev.log(
+        '[Supabase] Warning: deleteMetadata failed for $path: $e',
+        name: 'SupabaseStorage',
+        level: 900,
+      );
     }
   }
 }
+
+/// 私有标记异常：用于 getMetadata 中 firstWhere 的 orElse 跳出，
+/// 外层捕获后返回 null，避免文件不存在时抛出业务异常（Minor）
+class _FileNotFoundInList implements Exception {}

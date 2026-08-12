@@ -141,7 +141,12 @@ class CloudServiceConfig {
 
     return CloudServiceConfig(
       type: CloudBackendType.values
-          .firstWhere((e) => e.name == j['type'] as String),
+              .cast<CloudBackendType?>()
+              .firstWhere(
+                (e) => e?.name == (j['type'] as String? ?? 'local'),
+                orElse: () => null,
+              ) ??
+          CloudBackendType.local,
       name: j['name'] as String,
       // PiggyCount Cloud
       piggycountCloudBaseUrl: j['piggycountCloudBaseUrl'] as String?,
@@ -225,9 +230,15 @@ class CloudServiceConfig {
         if (s3Endpoint == null || s3Endpoint!.isEmpty) {
           return '__NOT_CONFIGURED__';
         }
-        // 显示 endpoint / bucket
-        final bucket = s3Bucket ?? '';
-        return bucket.isEmpty ? s3Endpoint! : '$s3Endpoint / $bucket';
+        // 统一脱敏：只返回 host，不暴露完整 endpoint / bucket
+        try {
+          final uri = Uri.parse(s3Endpoint!.contains('://')
+              ? s3Endpoint!
+              : 'https://$s3Endpoint');
+          return uri.host.isEmpty ? s3Endpoint! : uri.host;
+        } catch (_) {
+          return s3Endpoint!;
+        }
     }
   }
 }

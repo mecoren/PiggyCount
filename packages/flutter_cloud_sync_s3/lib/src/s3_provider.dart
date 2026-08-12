@@ -68,7 +68,9 @@ class S3Provider implements CloudProvider {
     final forcePathStyle = config['forcePathStyle'] as bool? ??
         !isManagedCloudEndpoint(info.host);
 
-    // 创建 S3 客户端
+    // S-M2 修复：创建新 client 前先释放旧实例，
+    // 避免 initialize 重复调用时旧 httpClient 泄漏连接资源
+    _client?.dispose();
     _client = S3Client(
       endpoint: info.host,
       region: region,
@@ -81,9 +83,10 @@ class S3Provider implements CloudProvider {
 
     _bucket = bucket;
 
-    // 测试连接：尝试列出 bucket
+    // 测试连接：仅请求 1 个 key 即可验证连接/认证/桶可访问性，
+    // 避免大 bucket 全量列举浪费带宽和时间
     try {
-      await _client!.listObjects(bucket: bucket);
+      await _client!.listObjects(bucket: bucket, maxKeys: 1);
     } on S3BucketNotFoundException catch (e) {
       throw CloudConfigurationException(
         'Bucket not found: ${e.bucket}. Please create the bucket first.',

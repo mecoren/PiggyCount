@@ -8,13 +8,26 @@ import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 /// Supabase implementation of [RealtimeChannel].
 class SupabaseRealtimeChannel implements RealtimeChannel {
   final supabase.RealtimeChannel _channel;
+  // 使用传入的 client 而非全局单例执行 removeChannel，
+  // 避免多实例场景下误操作非本实例管理的连接（P-M5）
+  final supabase.SupabaseClient _client;
   // 缓存 channel name，避免访问 _channel.topic（supabase 包内部成员）
   final String _name;
-  // 自行追踪订阅状态，避免访问 _channel.socket（supabase 包内部成员）
-  bool _subscribed = false;
+  // 通过 subscribe 回调追踪最新订阅状态，避免访问 SDK 内部成员，
+  // 也避免在 subscribe() 中立即标记为已订阅（SDK 实际是异步建联）（C5）
+  // 注：当前 SDK (realtime_client 2.13.0) 未提供 status getter / onStatus 方法，
+  // 故通过 subscribe 回调捕获状态。
+  supabase.RealtimeSubscribeStatus? _status;
+  // 服务级状态回调，由 SupabaseRealtimeService 注入，
+  // 用于将单个 channel 的状态变化反向更新服务级连接状态（C3）
+  void Function(supabase.RealtimeSubscribeStatus status, Object? error)?
+      onStatusChange;
 
-  SupabaseRealtimeChannel(this._channel, {required String name})
-      : _name = name;
+  SupabaseRealtimeChannel(
+    this._channel,
+    this._client, {
+    required String name,
+  }) : _name = name;
 
   @override
   RealtimeChannel onPostgresChanges({
@@ -28,13 +41,7 @@ class SupabaseRealtimeChannel implements RealtimeChannel {
       event: _parsePostgresEvent(event),
       schema: schema,
       table: table,
-      filter: filter != null
-          ? supabase.PostgresChangeFilter(
-              type: supabase.PostgresChangeFilterType.eq,
-              column: filter.split('=').first,
-              value: filter.split('=').last,
-            )
-          : null,
+      filter: filter != null ? _parseEqFilter(filter) : null,
       callback: (payload) {
         // Convert Supabase payload to our format
         final data = <String, dynamic>{
@@ -81,15 +88,20 @@ class SupabaseRealtimeChannel implements RealtimeChannel {
   @override
   Future<void> subscribe() async {
     // supabase 的 RealtimeChannel.subscribe() 返回 RealtimeChannel（非 Future），
-    // 用于链式调用，此处不需要 await
-    _channel.subscribe();
-    _subscribed = true;
+    // 用于链式调用，此处不需要 await。
+    // 通过 SDK 提供的状态回调追踪真实订阅状态（C5）：不再在调用后立即标记为已订阅，
+    // 而是等待 SDK 在建联成功/失败/超时/关闭时回调。
+    // 同时将状态变化转发给服务级回调以更新连接状态（C3）。
+    _channel.subscribe((status, error) {
+      _status = status;
+      onStatusChange?.call(status, error);
+    });
   }
 
   @override
   Future<void> unsubscribe() async {
-    await supabase.Supabase.instance.client.removeChannel(_channel);
-    _subscribed = false;
+    // 使用构造时注入的 client 而非全局单例，确保操作的是本实例的连接（P-M5）
+    await _client.removeChannel(_channel);
   }
 
   @override
@@ -97,8 +109,20 @@ class SupabaseRealtimeChannel implements RealtimeChannel {
 
   @override
   String get state {
-    // 使用自行追踪的订阅状态，避免访问 _channel.socket（supabase 包内部成员）
-    return _subscribed ? 'subscribed' : 'closed';
+    // 映射 SDK 真实订阅状态，避免在 subscribe() 后立即返回 'subscribed'（C5）。
+    // 当前 SDK 枚举仅含 4 个值（无 waiting），未订阅时 _status 为 null。
+    final status = _status;
+    if (status == null) return 'closed';
+    switch (status) {
+      case supabase.RealtimeSubscribeStatus.subscribed:
+        return 'subscribed';
+      case supabase.RealtimeSubscribeStatus.closed:
+        return 'closed';
+      case supabase.RealtimeSubscribeStatus.timedOut:
+        return 'timed_out';
+      case supabase.RealtimeSubscribeStatus.channelError:
+        return 'error';
+    }
   }
 
   /// Parse event string to Supabase event type
@@ -116,6 +140,25 @@ class SupabaseRealtimeChannel implements RealtimeChannel {
       default:
         return supabase.PostgresChangeEvent.all;
     }
+  }
+
+  /// 解析 "column=value" 格式的等值过滤器（P-M9）。
+  /// 使用 indexOf 切分并校验，避免 split('=') 在缺少 '=' 或值为空时
+  /// 静默产生错误结果。
+  supabase.PostgresChangeFilter _parseEqFilter(String filter) {
+    final eqIdx = filter.indexOf('=');
+    if (eqIdx <= 0 || eqIdx == filter.length - 1) {
+      throw ArgumentError(
+        'Invalid realtime filter "$filter", expected "column=value"',
+      );
+    }
+    final column = filter.substring(0, eqIdx);
+    final value = filter.substring(eqIdx + 1);
+    return supabase.PostgresChangeFilter(
+      type: supabase.PostgresChangeFilterType.eq,
+      column: column,
+      value: value,
+    );
   }
 }
 
@@ -190,8 +233,25 @@ class SupabaseRealtimeService implements CloudRealtimeService {
     // Create new Supabase channel
     final supabaseChannel = _client.channel(channelName);
 
-    // Wrap in our interface
-    final channel = SupabaseRealtimeChannel(supabaseChannel, name: channelName);
+    // Wrap in our interface，传入 _client 用于 unsubscribe（P-M5）
+    final channel =
+        SupabaseRealtimeChannel(supabaseChannel, _client, name: channelName);
+
+    // 注入状态回调：将单个 channel 的订阅状态变化反向更新服务级连接状态，
+    // 避免仅依赖初始化时的一次快照（C3）。
+    // 当前 SDK 未提供 onStatus 方法，故通过 subscribe 回调转发（见 channel.subscribe）。
+    channel.onStatusChange = (status, _) {
+      switch (status) {
+        case supabase.RealtimeSubscribeStatus.subscribed:
+          _updateConnectionState(RealtimeConnectionState.connected);
+          break;
+        case supabase.RealtimeSubscribeStatus.closed:
+        case supabase.RealtimeSubscribeStatus.timedOut:
+        case supabase.RealtimeSubscribeStatus.channelError:
+          _updateConnectionState(RealtimeConnectionState.disconnected);
+          break;
+      }
+    };
 
     // Cache channel
     _channels[channelName] = channel;
@@ -201,18 +261,38 @@ class SupabaseRealtimeService implements CloudRealtimeService {
 
   @override
   Future<void> removeChannel(String channelName) async {
-    final channel = _channels.remove(channelName);
-    if (channel != null) {
+    final channel = _channels[channelName];
+    if (channel == null) return;
+    // 先 unsubscribe 成功后再从缓存移除，避免 unsubscribe 失败时
+    // 缓存已被清空导致调用方无法重试（P-M3）
+    try {
       await channel.unsubscribe();
+    } finally {
+      _channels.remove(channelName);
     }
   }
 
   @override
   Future<void> removeAllChannels() async {
-    for (final channel in _channels.values) {
-      await channel.unsubscribe();
+    // 先快照再清理，避免遍历过程中并发修改（P-M4）
+    final snapshot = _channels.values.toList();
+    final errors = <Object>[];
+    for (final channel in snapshot) {
+      // 每个 channel 单独捕获异常，避免一个失败导致其余未清理
+      try {
+        await channel.unsubscribe();
+      } catch (e) {
+        errors.add(e);
+      }
     }
     _channels.clear();
+    // 统一上报：单个异常原样抛出，多个异常聚合后抛出
+    if (errors.length == 1) throw errors.first;
+    if (errors.length > 1) {
+      throw CloudSyncException(
+        'Multiple channel unsubscribe failures: $errors',
+      );
+    }
   }
 
   @override
@@ -226,12 +306,9 @@ class SupabaseRealtimeService implements CloudRealtimeService {
     _updateConnectionState(RealtimeConnectionState.connecting);
 
     try {
-      // Supabase realtime connection is automatic
-      // Just ensure client is initialized
-      if (!_client.realtime.isConnected) {
-        // Connection will be established when first channel subscribes
-        _updateConnectionState(RealtimeConnectionState.connected);
-      } else {
+      // 仅当底层 realtime 已连接时才升级为 connected，
+      // 否则保持 connecting，由 channel 的 subscribe 回调升级为 connected（C4）
+      if (_client.realtime.isConnected) {
         _updateConnectionState(RealtimeConnectionState.connected);
       }
     } catch (e) {
@@ -266,7 +343,12 @@ class SupabaseRealtimeService implements CloudRealtimeService {
   }
 
   /// Dispose resources
-  void dispose() {
-    _connectionStateController.close();
+  ///
+  /// 先取消所有 channel 订阅再关闭 StreamController，
+  /// 避免遗留订阅导致资源泄漏（P-M10）。
+  /// 接口 [CloudRealtimeService] 未声明 dispose，故此处非 @override。
+  Future<void> dispose() async {
+    await removeAllChannels();
+    await _connectionStateController.close();
   }
 }

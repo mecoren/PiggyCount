@@ -4,32 +4,33 @@ import 's3_client.dart';
 
 /// S3 认证服务实现
 ///
-/// S3 使用 Access Key 认证，无传统的登录/登出概念
+/// S3 使用 Access Key 认证，无传统的登录/登出概念。
+/// 真正的连接与认证验证在 [S3Provider.initialize] 时通过 listObjects 探测完成。
 class S3AuthService implements CloudAuthService {
   final S3Client client;
   final String bucket;
 
   S3AuthService(this.client, this.bucket);
 
-  Future<CloudUser?> getCurrentUser() async {
-    // S3 使用 Access Key 认证，无用户概念
-    // 直接返回用户信息，不需要网络验证（类似 WebDAV）
-    // 实际的连接验证在 provider.initialize() 时已完成
-    return CloudUser(
-      id: 's3-${client.accessKey}',
-      email: null, // S3 无 email
-      metadata: {
-        'bucket': bucket,
-        'endpoint': client.endpoint,
-        'region': client.region,
-      },
-    );
-  }
+  /// 统一构造 CloudUser，避免 getCurrentUser / authStateChanges 重复构建
+  /// 导致字段不一致（例如修改 metadata 结构时需改两处）
+  CloudUser _buildUser() => CloudUser(
+        id: 's3-${client.accessKey}',
+        email: null, // S3 无 email 概念
+        metadata: {
+          'bucket': bucket,
+          'endpoint': client.endpoint,
+          'region': client.region,
+        },
+      );
 
-  Future<void> signIn(Map<String, dynamic> credentials) async {
-    // S3 在 initialize 时已完成认证和连接验证
-    // 这里不需要额外的网络请求
-    // 如果需要验证连接，应该由调用方在 provider.initialize() 时完成
+  /// 获取当前用户信息
+  ///
+  /// S3 使用 Access Key 认证，无独立用户系统，此处直接基于 client 配置
+  /// 构造用户信息。实际的连接验证已在 provider.initialize() 时完成，
+  /// 此处不再发起网络请求。
+  Future<CloudUser?> getCurrentUser() async {
+    return _buildUser();
   }
 
   @override
@@ -38,28 +39,10 @@ class S3AuthService implements CloudAuthService {
     // 认证信息在 provider dispose 时清除
   }
 
-  Future<void> refreshToken() async {
-    // S3 Access Key 不需要刷新
-  }
-
-  bool get isAuthenticated {
-    // 简单判断：如果 client 存在，认为已认证
-    // 实际验证在 getCurrentUser() 中进行
-    return true;
-  }
-
   @override
   Stream<CloudUser?> get authStateChanges {
     // S3 无状态变化概念，返回固定流
-    return Stream.value(CloudUser(
-      id: 's3-${client.accessKey}',
-      email: null,
-      metadata: {
-        'bucket': bucket,
-        'endpoint': client.endpoint,
-        'region': client.region,
-      },
-    ));
+    return Stream.value(_buildUser());
   }
 
   @override

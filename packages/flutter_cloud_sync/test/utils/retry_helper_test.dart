@@ -1,6 +1,12 @@
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// 测试用：CloudStorageException 的子类，用于验证 C-M13
+/// "子类也应被重试"的语义（列表未命中时回退默认 is 检查）。
+class _SubStorageException extends CloudStorageException {
+  _SubStorageException(String message) : super(message);
+}
+
 void main() {
   group('RetryHelper - basic retry', () {
     test('should return result on first success', () async {
@@ -293,6 +299,52 @@ void main() {
 
       expect(storageCallCount, equals(3)); // Should retry
       expect(authCallCount, equals(1)); // Should not retry
+    });
+
+    test('should retry subclass exceptions via fallback is check (C-M13)',
+        () async {
+      // 列表只注册基类，抛出子类：列表精确匹配未命中，
+      // 但回退到默认 is 检查（exception is CloudStorageException）后仍应重试。
+      var subclassCallCount = 0;
+      try {
+        await RetryHelper.execute(
+          () async {
+            subclassCallCount++;
+            throw _SubStorageException('Subclass storage error');
+          },
+          config: const RetryConfig(
+            maxAttempts: 3,
+            initialDelay: Duration(milliseconds: 10),
+            retryableExceptions: [CloudStorageException],
+          ),
+        );
+      } catch (e) {
+        // Expected
+      }
+      expect(subclassCallCount, equals(3)); // 子类应被重试
+    });
+
+    test('list miss falls back to default is check', () async {
+      // 列表只注册子类，却抛出基类：列表未命中，回退默认 is 检查
+      // （exception is CloudStorageException → true）后仍重试，
+      // 固化"列表为附加允许、未命中走默认规则"的语义。
+      var baseCallCount = 0;
+      try {
+        await RetryHelper.execute(
+          () async {
+            baseCallCount++;
+            throw CloudStorageException('Base storage error');
+          },
+          config: const RetryConfig(
+            maxAttempts: 3,
+            initialDelay: Duration(milliseconds: 10),
+            retryableExceptions: [_SubStorageException],
+          ),
+        );
+      } catch (e) {
+        // Expected
+      }
+      expect(baseCallCount, equals(3));
     });
   });
 

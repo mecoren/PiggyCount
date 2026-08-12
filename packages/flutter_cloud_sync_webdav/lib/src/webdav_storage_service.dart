@@ -19,25 +19,43 @@ class WebDAVStorageService implements CloudStorageService {
     required String data,
     Map<String, String>? metadata,
   }) async {
+    final fullPath = _buildPath(path);
+    // 临时文件 + rename 实现原子写入，避免网络中断在远端留下损坏的半截文件。
+    // 之所以先 remove 再 rename：部分 WebDAV 服务器 MOVE 不支持覆盖，
+    // 先删除目标可提高 rename 成功率；remove 失败（如目标不存在）可忽略。
+    final tempPath = '$fullPath.tmp.${DateTime.now().millisecondsSinceEpoch}';
     try {
-      // Build full path
-      final fullPath = _buildPath(path);
-
-      // Ensure parent directories exist
+      // 确保父目录存在
       await _ensureDirectory(PathHelper.dirname(fullPath));
 
-      // Convert string to bytes
       final bytes = utf8.encode(data);
 
-      // Upload file
-      await _client.write(fullPath, bytes);
+      // 1. 先写临时文件
+      await _client.write(tempPath, bytes);
 
-      // Store metadata as custom properties if provided
-      if (metadata != null && metadata.isNotEmpty) {
-        await _storeMetadata(fullPath, metadata);
+      // 2. 尝试删除旧文件（忽略失败：旧文件可能不存在，或服务器 rename 自带覆盖）
+      try {
+        await _client.remove(fullPath);
+      } catch (_) {
+        // 旧文件不存在或删除失败均可忽略，交由 rename 处理
       }
+
+      // 3. rename 完成原子上传；overwrite=true 兼容目标仍存在的边缘场景
+      await _client.rename(tempPath, fullPath, true);
     } catch (e) {
+      // 清理临时文件，避免远端残留半成品
+      try {
+        await _client.remove(tempPath);
+      } catch (cleanupError) {
+        // 临时文件清理失败记录日志，便于排查远端残留半成品
+        dev.log('[WebDAV] Warning: temp file cleanup failed for $tempPath: $cleanupError', name: 'WebDAVStorage');
+      }
       throw CloudStorageException('Upload failed: $e', e);
+    }
+
+    // 元数据写入失败仅记日志，不影响主文件上传成功
+    if (metadata != null && metadata.isNotEmpty) {
+      await _storeMetadata(fullPath, metadata);
     }
   }
 
@@ -53,9 +71,8 @@ class WebDAVStorageService implements CloudStorageService {
       // Convert bytes to string
       return utf8.decode(bytes);
     } catch (e) {
-      // m-04 修复：用 CloudFileNotFoundException 统一 404 处理，替代字符串匹配
-      final msg = e.toString().toLowerCase();
-      if (msg.contains('404') || msg.contains('not found') || msg.contains('does not exist')) {
+      // 统一用 _isNotFound 判断 404，优先结构化状态码、字符串匹配仅兜底
+      if (_isNotFound(e)) {
         return null;
       }
       throw CloudStorageException('Download failed: $e', e);
@@ -70,8 +87,7 @@ class WebDAVStorageService implements CloudStorageService {
     try {
       await _client.remove(fullPath);
     } catch (e) {
-      final msg = e.toString().toLowerCase();
-      if (msg.contains('404') || msg.contains('not found') || msg.contains('does not exist')) {
+      if (_isNotFound(e)) {
         // 文件已不存在，删除幂等成功
       } else {
         throw CloudStorageException('Delete failed: $e', e);
@@ -96,14 +112,20 @@ class WebDAVStorageService implements CloudStorageService {
           .where((file) =>
               !(file.isDir ?? true) &&
               !(file.name?.endsWith('.metadata.json') ?? false))
-          .map((file) => CloudFile(
-                name: file.name ?? '',
-                path: file.path ?? fullPath,
-                size: file.size,
-                lastModified: file.mTime,
-                metadata: const {},
-              ))
-          .toList();
+          .map((file) {
+        final name = file.name ?? '';
+        // 构造相对于 remotePath 的路径，供下游 _buildPath 重新拼接。
+        // file.path 为 null 时回退到基于 name 的拼接，而非回退到目录路径，
+        // 避免下游把目录路径当成文件路径处理。
+        final relativePath = path.isEmpty ? name : '$path/$name';
+        return CloudFile(
+          name: name,
+          path: relativePath,
+          size: file.size,
+          lastModified: file.mTime,
+          metadata: const {},
+        );
+      }).toList();
     } catch (e) {
       throw CloudStorageException('List failed: $e', e);
     }
@@ -122,10 +144,7 @@ class WebDAVStorageService implements CloudStorageService {
       // 仅在目录不存在（404）时返回 false；其他错误（网络中断、
       // 403 权限不足等）必须抛出，避免调用方误判文件不存在而触发
       // 覆盖上传等危险操作。
-      final msg = e.toString().toLowerCase();
-      if (msg.contains('404') ||
-          msg.contains('not found') ||
-          msg.contains('does not exist')) {
+      if (_isNotFound(e)) {
         return false;
       }
       throw CloudStorageException('Failed to check file existence: $e', e);
@@ -152,16 +171,14 @@ class WebDAVStorageService implements CloudStorageService {
       final customMetadata = await _getMetadata(fullPath);
 
       return CloudFile(
-        name: file.name!,
-        path: file.path!,
+        name: file.name ?? '',
+        path: file.path ?? fullPath,
         size: file.size,
         lastModified: file.mTime,
         metadata: customMetadata,
       );
     } catch (e) {
-      if (e.toString().contains('404') ||
-          e.toString().contains('not found') ||
-          e is CloudStorageException) {
+      if (_isNotFound(e) || e is CloudStorageException) {
         return null;
       }
       throw CloudStorageException('Get metadata failed: $e', e);
@@ -171,6 +188,30 @@ class WebDAVStorageService implements CloudStorageService {
   /// Builds the full path with remote path prefix.
   String _buildPath(String path) {
     return PathHelper.join([_remotePath, path]);
+  }
+
+  /// 统一判断 WebDAV 404 错误，优先使用结构化状态码，字符串匹配仅作兜底。
+  ///
+  /// webdav_client 内部抛出的是 dio 的 DioException（带 response.statusCode），
+  /// 这里用 dynamic 访问 response 字段以避免引入 dio 直接依赖；
+  /// 当无结构化信息时再退化为字符串匹配，兼容各服务器差异化的错误文案。
+  bool _isNotFound(Object e) {
+    // 优先走结构化状态码：dio 异常的 response.statusCode
+    try {
+      final dynamic dyn = e;
+      final dynamic response = dyn.response;
+      if (response != null && response.statusCode == 404) {
+        return true;
+      }
+    } catch (_) {
+      // 非 dio 异常类型，无 response 字段，进入字符串兜底
+    }
+    // 兜底：仅当确实无结构化信息时使用字符串匹配
+    final msg = e.toString().toLowerCase();
+    return msg.contains('404') ||
+        msg.contains('not found') ||
+        msg.contains('does not exist') ||
+        msg.contains('no such');
   }
 
   /// Ensures a directory exists, creating it if necessary.
@@ -184,11 +225,7 @@ class WebDAVStorageService implements CloudStorageService {
       // readDir 成功，目录已存在
       return;
     } catch (e) {
-      final msg = e.toString().toLowerCase();
-      if (msg.contains('404') ||
-          msg.contains('not found') ||
-          msg.contains('does not exist') ||
-          msg.contains('no such')) {
+      if (_isNotFound(e)) {
         // 目录不存在，创建它
         await _createDirectoryRecursively(dirPath);
       } else {
@@ -279,7 +316,10 @@ class WebDAVStorageService implements CloudStorageService {
       final metadataPath = '$filePath.metadata.json';
       await _client.remove(metadataPath);
     } catch (e) {
-      // Silently fail if metadata file doesn't exist
+      // 元数据是辅助数据，删除失败（如文件本就不存在）不阻塞主流程，
+      // 但记录 warning 便于排查，与 _storeMetadata 的日志策略保持一致
+      dev.log('[WebDAV] Warning: metadata delete failed for $filePath: $e',
+          name: 'WebDAVStorage');
     }
   }
 }

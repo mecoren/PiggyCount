@@ -58,10 +58,14 @@ class S3StorageService implements CloudStorageService {
         key: _buildKey(remotePath),
       );
 
-      // 写入本地文件
+      // 原子写入：先写临时文件再 rename 替换，避免下载中途异常
+      // 导致目标文件被截断/损坏，使原有可用数据丢失
       final file = File(localPath);
       await file.parent.create(recursive: true);
-      await file.writeAsBytes(bytes);
+      final tempPath = '$localPath.tmp';
+      final tempFile = File(tempPath);
+      await tempFile.writeAsBytes(bytes);
+      await tempFile.rename(localPath);
     } on S3ObjectNotFoundException catch (e) {
       throw CloudStorageException('File not found: ${e.key}');
     } on S3Exception catch (e) {
@@ -240,8 +244,11 @@ class S3StorageService implements CloudStorageService {
 
       // C-01 修复：返回 x-amz-meta-* 自定义元数据，
       // 使 CloudSyncManager 能通过 fingerprint 直接判断同步状态
+      // 先去除末尾斜杠再提取文件名，避免目录路径返回空名
+      final trimmed = path.endsWith('/') ? path.substring(0, path.length - 1) : path;
+      final name = trimmed.isEmpty ? path : trimmed.split('/').last;
       return CloudFile(
-        name: path.split('/').last,
+        name: name,
         path: path,
         size: info.size,
         lastModified: info.lastModified,
@@ -256,9 +263,11 @@ class S3StorageService implements CloudStorageService {
   ///
   /// S3 的 Key 不应该以 / 开头；前置前缀实现 bucket 内目录隔离。
   String _buildKey(String path) {
-    var key = path;
-    if (key.startsWith('/')) {
-      key = key.substring(1);
+    var key = path.startsWith('/') ? path.substring(1) : path;
+    // 拒绝路径遍历尝试：含 .. 的路径可能逃逸 keyPrefix 隔离，
+    // 访问到其他应用/前缀下的对象，造成越权读写
+    if (key.contains('..')) {
+      throw CloudStorageException('Invalid path containing ..: $path');
     }
     return keyPrefix.isEmpty ? key : '$keyPrefix$key';
   }

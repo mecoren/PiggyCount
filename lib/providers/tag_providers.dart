@@ -74,6 +74,7 @@ final tagTransactionsProvider = StreamProvider.family<List<Transaction>, int>((r
 /// 批量获取多个交易的标签 Provider
 /// 用于交易列表优化，避免 N+1 查询
 final batchTransactionTagsProvider = FutureProvider.family<Map<int, List<Tag>>, List<int>>((ref, transactionIds) async {
+  ref.watch(tagListRefreshProvider); // 标签变更时刷新
   if (transactionIds.isEmpty) return {};
   final repo = ref.watch(repositoryProvider);
   return await repo.getTagsForTransactions(transactionIds);

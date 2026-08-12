@@ -49,6 +49,6 @@ class S3NetworkException extends S3Exception {
 
 /// S3 权限不足异常
 class S3PermissionDeniedException extends S3Exception {
-  S3PermissionDeniedException(String message)
-      : super(message, statusCode: 403);
+  S3PermissionDeniedException(String message, {Exception? originalException})
+      : super(message, statusCode: 403, originalException: originalException);
 }

@@ -16,10 +16,22 @@ class ICloudLogger {
 
 class ICloudManager {
     private let fileManager = FileManager.default
-    private var containerURL: URL?
+    // 用串行队列保护 containerURL 的读写，避免 initializeContainer 写入与
+    // 文件操作读取之间的数据竞争（Swift 默认不保证属性访问线程安全）。
+    private let containerQueue = DispatchQueue(label: "com.piggycount.icloud.container")
+    private var _containerURL: URL?
+    private var containerURL: URL? {
+        get { containerQueue.sync { _containerURL } }
+        set { containerQueue.sync { _containerURL = newValue } }
+    }
 
     // iCloud container identifier - must match entitlements
     private let containerIdentifier = "iCloud.com.wait.piggycount"
+
+    // 复用 ISO8601DateFormatter，避免在 listFiles/getFileMetadata 等高频路径重复创建
+    private lazy var isoFormatter: ISO8601DateFormatter = {
+        ISO8601DateFormatter()
+    }()
 
     // MARK: - Initialization
 
@@ -200,7 +212,7 @@ class ICloudManager {
         metadata: [String: String]?,
         completion: @escaping (Error?) -> Void
     ) {
-        guard let containerURL = containerURL else {
+        guard containerURL != nil else {
             completion(NSError(
                 domain: "ICloudManager",
                 code: -1,
@@ -222,8 +234,8 @@ class ICloudManager {
                     )
                 }
 
-                // Build file URL
-                let fileURL = containerURL.appendingPathComponent(path)
+                // Build file URL（safeURL 校验路径遍历）
+                let fileURL = try self.safeURL(for: path)
 
                 // Create parent directory if needed
                 let parentURL = fileURL.deletingLastPathComponent()
@@ -263,7 +275,7 @@ class ICloudManager {
     }
 
     func downloadFile(path: String, completion: @escaping (String?, Error?) -> Void) {
-        guard let containerURL = containerURL else {
+        guard containerURL != nil else {
             completion(nil, NSError(
                 domain: "ICloudManager",
                 code: -1,
@@ -275,7 +287,13 @@ class ICloudManager {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
 
-            let fileURL = containerURL.appendingPathComponent(path)
+            let fileURL: URL
+            do {
+                fileURL = try self.safeURL(for: path)
+            } catch {
+                DispatchQueue.main.async { completion(nil, error) }
+                return
+            }
 
             // Check if file exists
             guard self.fileManager.fileExists(atPath: fileURL.path) else {
@@ -289,32 +307,37 @@ class ICloudManager {
                 return
             }
 
-            // Trigger download if file is in iCloud but not downloaded
-            self.startDownloadIfNeeded(fileURL)
-
-            // Read file using NSFileCoordinator
-            let coordinator = NSFileCoordinator(filePresenter: nil)
-            var coordinatorError: NSError?
-            var base64Data: String?
-            var readError: Error?
-
-            coordinator.coordinate(readingItemAt: fileURL, options: .withoutChanges, error: &coordinatorError) { url in
-                do {
-                    let data = try Data(contentsOf: url)
-                    base64Data = data.base64EncodedString()
-                } catch {
-                    readError = error
+            // 触发 iCloud 下载并等待完成，避免 startDownloadingUbiquitousItem
+            // 异步返回导致后续读到空文件或残缺数据。
+            self.downloadAndWaitIfNeeded(fileURL) { waitError in
+                if let waitError = waitError {
+                    DispatchQueue.main.async { completion(nil, waitError) }
+                    return
                 }
-            }
+                // Read file using NSFileCoordinator
+                let coordinator = NSFileCoordinator(filePresenter: nil)
+                var coordinatorError: NSError?
+                var base64Data: String?
+                var readError: Error?
 
-            DispatchQueue.main.async {
-                completion(base64Data, coordinatorError ?? readError)
+                coordinator.coordinate(readingItemAt: fileURL, options: .withoutChanges, error: &coordinatorError) { url in
+                    do {
+                        let data = try Data(contentsOf: url)
+                        base64Data = data.base64EncodedString()
+                    } catch {
+                        readError = error
+                    }
+                }
+
+                DispatchQueue.main.async {
+                    completion(base64Data, coordinatorError ?? readError)
+                }
             }
         }
     }
 
     func deleteFile(path: String, completion: @escaping (Error?) -> Void) {
-        guard let containerURL = containerURL else {
+        guard containerURL != nil else {
             completion(NSError(
                 domain: "ICloudManager",
                 code: -1,
@@ -326,7 +349,13 @@ class ICloudManager {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
 
-            let fileURL = containerURL.appendingPathComponent(path)
+            let fileURL: URL
+            do {
+                fileURL = try self.safeURL(for: path)
+            } catch {
+                DispatchQueue.main.async { completion(error) }
+                return
+            }
 
             // Delete using NSFileCoordinator
             let coordinator = NSFileCoordinator(filePresenter: nil)
@@ -354,7 +383,7 @@ class ICloudManager {
     }
 
     func listFiles(at path: String, completion: @escaping ([[String: Any]]?, Error?) -> Void) {
-        guard let containerURL = containerURL else {
+        guard containerURL != nil else {
             completion(nil, NSError(
                 domain: "ICloudManager",
                 code: -1,
@@ -366,7 +395,13 @@ class ICloudManager {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
 
-            let directoryURL = containerURL.appendingPathComponent(path)
+            let directoryURL: URL
+            do {
+                directoryURL = try self.safeURL(for: path)
+            } catch {
+                DispatchQueue.main.async { completion(nil, error) }
+                return
+            }
 
             // Return empty array if directory doesn't exist
             guard self.fileManager.fileExists(atPath: directoryURL.path) else {
@@ -400,7 +435,12 @@ class ICloudManager {
                         }
 
                         if let modDate = attributes[.modificationDate] as? Date {
-                            fileInfo["lastModified"] = ISO8601DateFormatter().string(from: modDate)
+                            fileInfo["lastModified"] = self.isoFormatter.string(from: modDate)
+                        }
+
+                        // 加载自定义元数据（若存在），便于下游直接使用
+                        if let customMetadata = self.loadMetadata(for: url) {
+                            fileInfo["customMetadata"] = customMetadata
                         }
 
                         return fileInfo
@@ -418,13 +458,13 @@ class ICloudManager {
     }
 
     func fileExists(at path: String) -> Bool {
-        guard let containerURL = containerURL else { return false }
-        let fileURL = containerURL.appendingPathComponent(path)
+        // safeURL 内部校验 containerURL 与路径遍历；容器未初始化或逃逸路径均返回 false
+        guard let fileURL = try? safeURL(for: path) else { return false }
         return fileManager.fileExists(atPath: fileURL.path)
     }
 
     func getFileMetadata(at path: String, completion: @escaping ([String: Any]?, Error?) -> Void) {
-        guard let containerURL = containerURL else {
+        guard containerURL != nil else {
             completion(nil, NSError(
                 domain: "ICloudManager",
                 code: -1,
@@ -436,7 +476,13 @@ class ICloudManager {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
 
-            let fileURL = containerURL.appendingPathComponent(path)
+            let fileURL: URL
+            do {
+                fileURL = try self.safeURL(for: path)
+            } catch {
+                DispatchQueue.main.async { completion(nil, error) }
+                return
+            }
 
             guard self.fileManager.fileExists(atPath: fileURL.path) else {
                 DispatchQueue.main.async {
@@ -461,7 +507,7 @@ class ICloudManager {
                 }
 
                 if let modDate = attributes[.modificationDate] as? Date {
-                    metadata["lastModified"] = ISO8601DateFormatter().string(from: modDate)
+                    metadata["lastModified"] = self.isoFormatter.string(from: modDate)
                 }
 
                 // Load custom metadata if exists
@@ -512,6 +558,24 @@ class ICloudManager {
 
     // MARK: - Helper Methods
 
+    /// 安全拼接路径并校验是否仍在容器目录内，防止 .. 路径遍历逃逸。
+    /// 所有外部传入的 path 都必须经此方法拼接，禁止直接 appendingPathComponent。
+    private func safeURL(for path: String) throws -> URL {
+        guard let containerURL = self.containerURL else {
+            throw NSError(domain: "ICloudManager", code: 1001,
+                          userInfo: [NSLocalizedDescriptionKey: "Container not initialized"])
+        }
+        let fileURL = containerURL.appendingPathComponent(path)
+        let standardized = fileURL.standardizedFileURL
+        let containerStandardized = containerURL.standardizedFileURL
+        // 标准化后校验是否仍在容器目录内，拒绝逃逸路径（如 ../etc/passwd）
+        guard standardized.path.hasPrefix(containerStandardized.path) else {
+            throw NSError(domain: "ICloudManager", code: 1002,
+                          userInfo: [NSLocalizedDescriptionKey: "Path traversal detected: \(path)"])
+        }
+        return standardized
+    }
+
     private func createDirectoryIfNeeded(at url: URL, completion: @escaping (Error?) -> Void) {
         if !fileManager.fileExists(atPath: url.path) {
             do {
@@ -538,11 +602,15 @@ class ICloudManager {
 
         let metadataDict: [String: Any] = [
             "metadata": metadata,
-            "updatedAt": ISO8601DateFormatter().string(from: Date())
+            "updatedAt": isoFormatter.string(from: Date())
         ]
 
-        if let jsonData = try? JSONSerialization.data(withJSONObject: metadataDict, options: .prettyPrinted) {
-            try? jsonData.write(to: metadataURL, options: .atomic)
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: metadataDict, options: .prettyPrinted)
+            try jsonData.write(to: metadataURL, options: .atomic)
+        } catch {
+            // 元数据是辅助数据，写入失败不阻塞主流程，但记录 warning 便于排查
+            ICloudLogger.log("Warning: failed to store metadata at \(metadataURL.path): \(error.localizedDescription)")
         }
     }
 
@@ -558,6 +626,33 @@ class ICloudManager {
         return metadata
     }
 
+    /// 触发 iCloud 下载并等待完成，解决 startDownloadingUbiquitousItem 异步返回
+    /// 导致读到空文件或残缺数据的问题。轮询 ubiquitousItemDownloadingStatus，
+    /// 最长等待 30 秒后超时返回错误。
+    private func downloadAndWaitIfNeeded(_ fileURL: URL, completion: @escaping (Error?) -> Void) {
+        startDownloadIfNeeded(fileURL)
+        let deadline = Date().addingTimeInterval(30)
+        // 递归轮询下载状态：当前状态为 .current 即完成，否则 0.5s 后重试
+        func check() {
+            if Date() > deadline {
+                completion(NSError(domain: "ICloudManager", code: 1003,
+                                   userInfo: [NSLocalizedDescriptionKey: "Download timeout"]))
+                return
+            }
+            do {
+                let vals = try fileURL.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey])
+                if vals.ubiquitousItemDownloadingStatus == .current {
+                    completion(nil)
+                } else {
+                    DispatchQueue.global().asyncAfter(deadline: .now() + 0.5, execute: check)
+                }
+            } catch {
+                completion(error)
+            }
+        }
+        check()
+    }
+
     private func startDownloadIfNeeded(_ fileURL: URL) {
         do {
             // Check if file needs to be downloaded from iCloud
@@ -567,7 +662,8 @@ class ICloudManager {
                 try fileManager.startDownloadingUbiquitousItem(at: fileURL)
             }
         } catch {
-            // Ignore errors - file might be local
+            // 下载触发失败可能是文件已在本地，记录 warning 便于排查而非完全静默
+            ICloudLogger.log("Warning: startDownloadIfNeeded failed for \(fileURL.path): \(error.localizedDescription)")
         }
     }
 }

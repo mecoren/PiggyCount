@@ -156,10 +156,17 @@ class SupabaseProvider implements CloudProvider {
 
   @override
   Future<void> dispose() async {
+    // 先断开 realtime 连接并释放资源，避免遗留订阅导致资源泄漏（C8）
+    await _realtimeService?.disconnect();
+    await _realtimeService?.dispose();
     _authService = null;
     _storageService = null;
     _databaseService = null;
     _realtimeService = null;
     _client = null;
+    // 重置静态配置标记，使后续 initialize 可用新配置重新初始化（P-M1）
+    _isInitialized = false;
+    _currentUrl = null;
+    _currentAnonKey = null;
   }
 }

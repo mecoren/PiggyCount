@@ -65,6 +65,10 @@ class RetryHelper {
   /// Returns the result of the successful operation.
   /// Throws the last exception if all retries are exhausted.
   ///
+  /// 注意：本方法只捕获 [Exception]，不捕获 [Error]。Error 类型（如
+  /// StackOverflowError、StateError）通常表示编程 bug，重试无意义，
+  /// 应直接暴露给调用方修复代码。
+  ///
   /// Example:
   /// ```dart
   /// final result = await RetryHelper.execute(
@@ -182,9 +186,17 @@ class RetryHelper {
     }
 
     // Check against retryable exception types if provided
+    // 注意：Dart 的 [Type] 对象不支持运行时子类型判断（dart:mirrors 在
+    // Flutter 不可用），因此列表只能精确匹配 runtimeType，无法"遍历继承链"。
+    // 为满足 C-M13"子类也能重试"的目标，列表未命中时不立即返回 false，
+    // 而是继续走下方默认 is 检查——内建异常层次（CloudStorageException 等）
+    // 天然覆盖其所有子类；自定义类型层次请用 [RetryConfig.shouldRetry] 回调。
     if (config.retryableExceptions != null) {
-      return config.retryableExceptions!
-          .any((type) => exception.runtimeType == type);
+      if (config.retryableExceptions!
+          .any((type) => exception.runtimeType == type)) {
+        return true;
+      }
+      // 列表未命中：继续走默认 is 检查以覆盖子类场景
     }
 
     // Default behavior: retry on CloudStorageException but not on auth errors

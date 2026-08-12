@@ -175,6 +175,12 @@ class DatabaseSyncManager {
   /// Conflict resolution strategy
   final ConflictResolutionStrategy conflictStrategy;
 
+  /// 手动冲突解决回调，选择 [ConflictResolutionStrategy.manual] 策略时必须设置。
+  /// 返回合并后的记录数据，返回 null 表示放弃解决。
+  /// 未设置时遇到 manual 冲突会抛出 [CloudSyncException]。
+  final Future<Map<String, dynamic>?> Function(SyncConflict)?
+      onManualConflictResolve;
+
   /// Maximum retry attempts for failed operations
   final int maxRetryAttempts;
 
@@ -203,6 +209,7 @@ class DatabaseSyncManager {
     this.realtimeService,
     this.logger,
     this.conflictStrategy = ConflictResolutionStrategy.lastWriteWins,
+    this.onManualConflictResolve,
     this.maxRetryAttempts = 3,
   });
 
@@ -275,7 +282,7 @@ class DatabaseSyncManager {
 
       // Cloud record exists, check for conflicts
       if (!forceUpdate) {
-        final conflict = _detectConflict(localRecord, cloudRecord);
+        final conflict = _detectConflict(localRecord, cloudRecord, table);
         if (conflict != null) {
           logger?.warning('Conflict detected for $table/$recordId');
           final resolved = await _resolveConflict(conflict);
@@ -385,6 +392,18 @@ class DatabaseSyncManager {
     }
 
     // Re-queue failed operations
+    // 失败操作重新入队前，按最大重试次数指数退避，避免在服务端不可用时
+    // 形成紧密重试循环加剧压力。delay = 2^retryCount 秒，上限 16 秒。
+    if (failedOperations.isNotEmpty) {
+      final maxRetry = failedOperations
+          .map((op) => op.retryCount)
+          .reduce((a, b) => a > b ? a : b);
+      final delay = Duration(seconds: 1 << (maxRetry.clamp(0, 4)));
+      logger?.debug(
+          'Backing off ${delay.inSeconds}s before re-queueing ${failedOperations.length} failed operations');
+      await Future.delayed(delay);
+    }
+
     for (final op in failedOperations) {
       _offlineQueue.add(op);
     }
@@ -451,9 +470,10 @@ class DatabaseSyncManager {
     // Build filter string for Supabase format
     String? filterString;
     if (filters != null && filters.isNotEmpty) {
-      // Example: "ledger_id=eq.123"
+      // Example: "ledger_id=eq.\"abc\""（字符串值需加引号）
+      //          "status=in.(active,pending)"（列表值用括号）
       filterString = filters
-          .map((f) => '${f.column}=${f.operator}.${f.value}')
+          .map((f) => '${f.column}=${f.operator}.${_formatFilterValue(f)}')
           .join(',');
     }
 
@@ -468,6 +488,9 @@ class DatabaseSyncManager {
 
         // Convert payload to DatabaseEvent
         final eventType = _parseEventType(payload['eventType'] as String?);
+        // 未知事件类型直接跳过，避免误当 insert 处理
+        if (eventType == null) return;
+
         final record = (payload['new'] as Map<String, dynamic>?) ??
             (payload['old'] as Map<String, dynamic>?) ??
             {};
@@ -544,27 +567,29 @@ class DatabaseSyncManager {
   SyncConflict? _detectConflict(
     Map<String, dynamic> localRecord,
     Map<String, dynamic> cloudRecord,
+    String table,
   ) {
     // Compare version numbers (optimistic locking)
     final localVersion = localRecord['version'] as int?;
     final cloudVersion = cloudRecord['version'] as int?;
 
     if (localVersion != null && cloudVersion != null) {
-      if (localVersion <= cloudVersion) {
-        // Local version is not newer, no conflict
+      if (localVersion < cloudVersion) {
+        // 本地版本落后于云端：本地数据已过期，不能直接覆盖，触发冲突解决
+        // 让策略（lastWriteWins / preferCloud 等）决定如何处理
+        return SyncConflict(
+          localRecord: localRecord,
+          cloudRecord: cloudRecord,
+          table: table,
+          recordId: localRecord['id'] as String,
+        );
+      }
+      if (localVersion == cloudVersion) {
+        // 版本相同，回退到时间戳/内容比较，继续向下执行
+      } else {
+        // localVersion > cloudVersion：本地更新，正常更新无冲突
         return null;
       }
-      if (localVersion == cloudVersion + 1) {
-        // Local is exactly one version ahead, normal update
-        return null;
-      }
-      // Version mismatch, conflict detected
-      return SyncConflict(
-        localRecord: localRecord,
-        cloudRecord: cloudRecord,
-        table: '', // Will be filled by caller
-        recordId: localRecord['id'] as String,
-      );
     }
 
     // Fallback to timestamp comparison
@@ -581,7 +606,7 @@ class DatabaseSyncManager {
         return SyncConflict(
           localRecord: localRecord,
           cloudRecord: cloudRecord,
-          table: '',
+          table: table,
           recordId: localRecord['id'] as String,
         );
       }
@@ -632,8 +657,12 @@ class DatabaseSyncManager {
         return conflict.cloudRecord;
 
       case ConflictResolutionStrategy.manual:
+        // 优先使用手动冲突解决回调；未设置回调时抛异常，让调用方感知配置缺失
+        if (onManualConflictResolve != null) {
+          return await onManualConflictResolve!(conflict);
+        }
         throw CloudSyncException(
-          'Manual conflict resolution required: ${conflict.table}/${conflict.recordId}',
+          'Manual conflict resolution callback not set: ${conflict.table}/${conflict.recordId}',
         );
     }
   }
@@ -683,8 +712,19 @@ class DatabaseSyncManager {
     }
   }
 
+  /// 格式化过滤器值为 Supabase Realtime filter 字符串格式。
+  /// 字符串值需加双引号，列表值用括号包裹（逗号分隔），其他类型直接 toString。
+  String _formatFilterValue(QueryFilter f) {
+    if (f.value is String) return '"${f.value}"';
+    if (f.value is List) return '(${(f.value as List).join(',')})';
+    return f.value.toString();
+  }
+
   /// Parse event type string to enum
-  DatabaseEventType _parseEventType(String? eventType) {
+  ///
+  /// 返回 null 表示未知事件类型，调用方应跳过该事件而不是默认按 insert 处理，
+  /// 避免把 DELETE/未知事件误当成 INSERT 写入本地数据库。
+  DatabaseEventType? _parseEventType(String? eventType) {
     switch (eventType?.toUpperCase()) {
       case 'INSERT':
         return DatabaseEventType.insert;
@@ -693,14 +733,18 @@ class DatabaseSyncManager {
       case 'DELETE':
         return DatabaseEventType.delete;
       default:
-        return DatabaseEventType.insert;
+        logger?.warning('Unknown realtime event type: $eventType, skipping');
+        return null;
     }
   }
 
   /// Dispose resources
-  void dispose() {
+  ///
+  /// 先取消所有 Realtime 订阅再关闭 status stream controller，
+  /// 避免订阅回调在 controller 关闭后仍触发导致状态泄漏。
+  Future<void> dispose() async {
     logger?.info('Disposing DatabaseSyncManager');
-    _statusController.close();
-    // Note: Don't unsubscribe here, let caller manage subscription lifecycle
+    await unsubscribeAll();
+    await _statusController.close();
   }
 }

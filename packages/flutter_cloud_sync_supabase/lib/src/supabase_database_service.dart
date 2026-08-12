@@ -1,5 +1,7 @@
 library;
 
+import 'dart:developer' as dev;
+
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
@@ -61,33 +63,6 @@ class SupabaseDatabaseService implements CloudDatabaseService {
     } catch (e) {
       if (e is CloudNotAuthenticatedException) rethrow;
       throw CloudStorageException('Insert failed: $e', e);
-    }
-  }
-
-  /// Batch insert multiple records
-  Future<List<Map<String, dynamic>>> insertBatch({
-    required String table,
-    required List<Map<String, dynamic>> data,
-  }) async {
-    try {
-      // Check authentication
-      final user = _client.auth.currentUser;
-      if (user == null) {
-        throw CloudNotAuthenticatedException('User not authenticated');
-      }
-
-      // Batch insert and return created records
-      final response = await _client
-          .from(table)
-          .insert(data)
-          .select();
-
-      return (response as List).cast<Map<String, dynamic>>();
-    } on supabase.PostgrestException catch (e) {
-      throw CloudStorageException('Batch insert failed: ${e.message}', e);
-    } catch (e) {
-      if (e is CloudNotAuthenticatedException) rethrow;
-      throw CloudStorageException('Batch insert failed: $e', e);
     }
   }
 
@@ -199,12 +174,13 @@ class SupabaseDatabaseService implements CloudDatabaseService {
         query = query.order(orderBy, ascending: !descending);
       }
 
-      // Apply pagination
-      if (limit != null) {
-        query = query.limit(limit);
-      }
+      // Apply pagination（P-M6）：当 offset != null 时统一用 range，
+      // 不再叠加 limit（避免 limit + range 双重分页导致返回行数不符预期）
       if (offset != null) {
-        query = query.range(offset, offset + (limit ?? 1000) - 1);
+        final effectiveLimit = limit ?? 1000;
+        query = query.range(offset, offset + effectiveLimit - 1);
+      } else if (limit != null) {
+        query = query.limit(limit);
       }
 
       // Execute query
@@ -264,6 +240,7 @@ class SupabaseDatabaseService implements CloudDatabaseService {
   Future<List<Map<String, dynamic>>> batchInsert({
     required String table,
     required List<Map<String, dynamic>> data,
+    bool autoInjectUserId = true,
   }) async {
     try {
       // Check authentication
@@ -272,11 +249,19 @@ class SupabaseDatabaseService implements CloudDatabaseService {
         throw CloudNotAuthenticatedException('User not authenticated');
       }
 
+      // 自动注入 user_id（复用 insert 的注入逻辑，P-M2）
+      final payload = autoInjectUserId
+          ? data
+              .map((r) {
+                final c = Map<String, dynamic>.from(r);
+                if (!c.containsKey('user_id')) c['user_id'] = user.id;
+                return c;
+              })
+              .toList()
+          : data;
+
       // Batch insert
-      final response = await _client
-          .from(table)
-          .insert(data)
-          .select();
+      final response = await _client.from(table).insert(payload).select();
 
       return List<Map<String, dynamic>>.from(response as List);
     } on supabase.PostgrestException catch (e) {
@@ -292,29 +277,45 @@ class SupabaseDatabaseService implements CloudDatabaseService {
     required String table,
     required List<Map<String, dynamic>> data,
     String idField = 'id',
+    bool autoFilterByUser = true,
   }) async {
+    final user = _client.auth.currentUser;
+    if (user == null) {
+      throw CloudNotAuthenticatedException('User not authenticated');
+    }
+
+    // 预校验所有记录的 idField 不为 null，避免半途失败留下脏状态（C6）
+    for (final record in data) {
+      if (record[idField] == null) {
+        throw CloudStorageException('Record missing $idField field');
+      }
+    }
+
     try {
-      // Check authentication
-      final user = _client.auth.currentUser;
-      if (user == null) {
-        throw CloudNotAuthenticatedException('User not authenticated');
-      }
-
-      // Supabase doesn't support batch update directly
-      // We need to update records one by one
-      for (final record in data) {
-        final id = record[idField];
-        if (id == null) {
-          throw CloudStorageException('Record missing $idField field');
-        }
-
-        await _client
-            .from(table)
-            .update(record)
-            .eq(idField, id);
-      }
+      // 优先尝试 RPC 事务保证原子性：所有记录要么全部更新成功，要么全部回滚。
+      // 需在 Supabase 后端预先创建 batch_update_records RPC 函数。
+      await _client.rpc('batch_update_records', params: {
+        'p_table': table,
+        'p_id_field': idField,
+        'p_user_id': autoFilterByUser ? user.id : null,
+        'p_records': data,
+      });
     } on supabase.PostgrestException catch (e) {
-      throw CloudStorageException('Batch update failed: ${e.message}', e);
+      // RPC 不存在或不可用时回退到逐条更新，并记录 warning 便于排查（C6）。
+      // 回退路径无法保证原子性，但保持原有行为兼容。
+      dev.log(
+        '[Supabase] batchUpdate RPC unavailable, fallback to loop: ${e.message}',
+        name: 'SupabaseDatabase',
+        level: 900,
+      );
+      for (final record in data) {
+        var query =
+            _client.from(table).update(record).eq(idField, record[idField]);
+        if (autoFilterByUser) {
+          query = query.eq('user_id', user.id);
+        }
+        await query;
+      }
     } catch (e) {
       if (e is CloudNotAuthenticatedException) rethrow;
       throw CloudStorageException('Batch update failed: $e', e);
@@ -350,7 +351,10 @@ class SupabaseDatabaseService implements CloudDatabaseService {
   }
 
   @override
-  Future<List<Map<String, dynamic>>> rawQuery(String query) async {
+  Future<List<Map<String, dynamic>>> rawQuery(
+    String queryName, {
+    Map<String, dynamic>? params,
+  }) async {
     try {
       // Check authentication
       final user = _client.auth.currentUser;
@@ -358,11 +362,10 @@ class SupabaseDatabaseService implements CloudDatabaseService {
         throw CloudNotAuthenticatedException('User not authenticated');
       }
 
-      // Execute raw RPC call
-      // Note: This requires a custom PostgreSQL function to be created
-      final response = await _client.rpc('execute_raw_query', params: {
-        'query_text': query,
-      });
+      // 仅允许调用预定义 RPC 函数，禁止传入原始 SQL 文本（C7 防 SQL 注入）。
+      // 调用前需在 Supabase 后端创建名为 [queryName] 的 RPC 函数。
+      final response =
+          await _client.rpc(queryName, params: params ?? <String, dynamic>{});
 
       return List<Map<String, dynamic>>.from(response as List);
     } on supabase.PostgrestException catch (e) {

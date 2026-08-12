@@ -76,6 +76,7 @@ class ICloudProvider implements CloudProvider {
 
   @override
   Future<void> dispose() async {
+    _authService?.dispose();
     _authService = null;
     _storageService = null;
   }

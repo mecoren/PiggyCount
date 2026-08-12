@@ -32,6 +32,7 @@ class ICloudStorageService implements CloudStorageService {
       final code = e.code.toLowerCase();
       if (code.contains('404') ||
           code.contains('notfound') ||
+          code.contains('not_found') ||
           code.contains('no_such_file') ||
           code.contains('file_not_found')) {
         return true;

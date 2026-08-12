@@ -16,7 +16,11 @@ public class FlutterCloudSyncIcloudPlugin: NSObject, FlutterPlugin {
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
         case "isICloudAvailable":
-            result(icloudManager.isICloudAvailable())
+            // 派发到后台队列，避免首次访问 iCloud 容器阻塞主线程（Flutter UI 线程）
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                let available = self?.icloudManager.isICloudAvailable() ?? false
+                DispatchQueue.main.async { result(available) }
+            }
 
         case "getICloudDiagnostics":
             handleGetICloudDiagnostics(result: result)
@@ -108,7 +112,12 @@ public class FlutterCloudSyncIcloudPlugin: NSObject, FlutterPlugin {
             if let error = error {
                 let nsError = error as NSError
                 if nsError.domain == NSCocoaErrorDomain && nsError.code == NSFileReadNoSuchFileError {
-                    result(nil) // File not found
+                    // 返回结构化 NOT_FOUND 错误码，Dart 侧 _isNotFoundError 据此识别并返回 null
+                    result(FlutterError(
+                        code: "NOT_FOUND",
+                        message: "File not found",
+                        details: path
+                    ))
                 } else {
                     result(FlutterError(
                         code: "DOWNLOAD_ERROR",
@@ -138,7 +147,12 @@ public class FlutterCloudSyncIcloudPlugin: NSObject, FlutterPlugin {
                 let nsError = error as NSError
                 // Ignore "file not found" errors (idempotent delete)
                 if nsError.domain == NSCocoaErrorDomain && nsError.code == NSFileNoSuchFileError {
-                    result(nil)
+                    // 返回结构化 NOT_FOUND 错误码，Dart 侧识别后按幂等删除处理
+                    result(FlutterError(
+                        code: "NOT_FOUND",
+                        message: "File not found",
+                        details: path
+                    ))
                 } else {
                     result(FlutterError(
                         code: "DELETE_ERROR",
@@ -206,7 +220,12 @@ public class FlutterCloudSyncIcloudPlugin: NSObject, FlutterPlugin {
             if let error = error {
                 let nsError = error as NSError
                 if nsError.domain == NSCocoaErrorDomain && nsError.code == NSFileReadNoSuchFileError {
-                    result(nil)
+                    // 返回结构化 NOT_FOUND 错误码，Dart 侧识别后返回 null
+                    result(FlutterError(
+                        code: "NOT_FOUND",
+                        message: "File not found",
+                        details: path
+                    ))
                 } else {
                     result(FlutterError(
                         code: "METADATA_ERROR",
@@ -221,15 +240,20 @@ public class FlutterCloudSyncIcloudPlugin: NSObject, FlutterPlugin {
     }
 
     private func handleGetICloudAccountInfo(result: @escaping FlutterResult) {
-        icloudManager.getAccountInfo { accountInfo, error in
-            if let error = error {
-                result(FlutterError(
-                    code: "ACCOUNT_ERROR",
-                    message: "Failed to get iCloud account info",
-                    details: error.localizedDescription
-                ))
-            } else {
-                result(accountInfo)
+        // 派发到后台：getAccountInfo 内部访问 ubiquityIdentityToken 与容器 URL，
+        // 首次访问可能阻塞，避免卡住 Flutter 主线程
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            self?.icloudManager.getAccountInfo { accountInfo, error in
+                // getAccountInfo 的 completion 已派发到主线程
+                if let error = error {
+                    result(FlutterError(
+                        code: "ACCOUNT_ERROR",
+                        message: "Failed to get iCloud account info",
+                        details: error.localizedDescription
+                    ))
+                } else {
+                    result(accountInfo)
+                }
             }
         }
     }

@@ -45,6 +45,9 @@ class S3Client {
   /// 防止服务器无响应时同步 UI 无限挂起。超时后抛 [S3NetworkException]。
   final Duration timeout;
 
+  /// dispose 标志：避免释放后继续使用导致状态错误
+  bool _disposed = false;
+
   S3Client({
     required this.endpoint,
     required this.region,
@@ -67,13 +70,56 @@ class S3Client {
 
   /// 释放资源
   void dispose() {
+    if (_disposed) return;
+    _disposed = true;
     _httpClient.close();
+  }
+
+  /// 校验未释放：所有公开方法入口调用，防止 dispose 后误用导致
+  /// 请求发送到已关闭的 httpClient 或状态混乱
+  void _checkDisposed() {
+    if (_disposed) {
+      throw StateError('S3Client has been disposed');
+    }
+  }
+
+  /// 对幂等操作执行指数退避重试，避免瞬时网络故障导致同步失败
+  ///
+  /// 仅重试 [S3NetworkException]（瞬时网络故障）和 5xx 服务端错误；
+  /// 4xx 客户端错误（认证失败、权限不足、参数错误等）立即抛出，
+  /// 避免无意义重试浪费时间和请求配额。
+  /// putObject 非幂等（重复写入可能造成数据覆盖语义问题），不使用此方法。
+  Future<T> _retry<T>(Future<T> Function() operation, {int maxRetries = 3}) async {
+    int attempt = 0;
+    while (true) {
+      try {
+        return await operation();
+      } on S3NetworkException {
+        // 网络瞬时故障（SocketException/Timeout）可安全重试
+        attempt++;
+        if (attempt >= maxRetries) rethrow;
+        // 指数退避：1s, 2s, 4s
+        final delay = Duration(seconds: 1 << (attempt - 1));
+        await Future.delayed(delay);
+      } on S3Exception catch (e) {
+        // 5xx 状态码表示服务端临时错误，可重试
+        if (e.statusCode != null && e.statusCode! >= 500 && e.statusCode! < 600) {
+          attempt++;
+          if (attempt >= maxRetries) rethrow;
+          await Future.delayed(Duration(seconds: 1 << (attempt - 1)));
+        } else {
+          rethrow;
+        }
+      }
+    }
   }
 
   /// PUT Object - 上传文件
   ///
   /// [metadata] 中的 key-value 对会作为 `x-amz-meta-{key}` 头发送，
   /// 供后续 HeadObject/GetMetadata 读取（C-01 修复）。
+  ///
+  /// 非幂等操作（重复写入可能覆盖最新版本），不进行自动重试。
   Future<void> putObject({
     required String bucket,
     required String key,
@@ -81,6 +127,7 @@ class S3Client {
     String? contentType,
     Map<String, String>? metadata,
   }) async {
+    _checkDisposed();
     final uri = _buildUri(bucket, key: key);
 
     var headers = <String, String>{
@@ -122,11 +169,12 @@ class S3Client {
     }
   }
 
-  /// GET Object - 下载文件
+  /// GET Object - 下载文件（幂等，自动重试瞬时网络故障）
   Future<Uint8List> getObject({
     required String bucket,
     required String key,
   }) async {
+    _checkDisposed();
     final uri = _buildUri(bucket, key: key);
 
     var headers = <String, String>{
@@ -139,34 +187,36 @@ class S3Client {
       headers: headers,
     );
 
-    try {
-      final response = await _httpClient
-          .get(uri, headers: headers)
-          .timeout(timeout);
+    return _retry(() async {
+      try {
+        final response = await _httpClient
+            .get(uri, headers: headers)
+            .timeout(timeout);
 
-      if (response.statusCode == 200) {
-        return response.bodyBytes;
-      } else if (response.statusCode == 404) {
-        throw S3ObjectNotFoundException(key);
-      } else {
+        if (response.statusCode == 200) {
+          return response.bodyBytes;
+        } else if (response.statusCode == 404) {
+          throw S3ObjectNotFoundException(key);
+        }
         _handleError('GetObject', response);
-        throw S3Exception('GetObject failed');
+      } on SocketException catch (e) {
+        throw S3NetworkException('Network error: ${e.message}', originalException: e);
+      } on TimeoutException {
+        throw S3NetworkException('GetObject timed out after ${timeout.inSeconds}s');
+      } on S3Exception {
+        rethrow;
+      } catch (e) {
+        throw S3Exception('GetObject failed: $e', originalException: e as Exception?);
       }
-    } on SocketException catch (e) {
-      throw S3NetworkException('Network error: ${e.message}', originalException: e);
-    } on TimeoutException {
-      throw S3NetworkException('GetObject timed out after ${timeout.inSeconds}s');
-    } catch (e) {
-      if (e is S3Exception) rethrow;
-      throw S3Exception('GetObject failed: $e', originalException: e as Exception?);
-    }
+    });
   }
 
-  /// DELETE Object - 删除文件
+  /// DELETE Object - 删除文件（幂等，自动重试瞬时网络故障）
   Future<void> deleteObject({
     required String bucket,
     required String key,
   }) async {
+    _checkDisposed();
     final uri = _buildUri(bucket, key: key);
 
     var headers = <String, String>{
@@ -179,28 +229,31 @@ class S3Client {
       headers: headers,
     );
 
-    try {
-      final response = await _httpClient
-          .delete(uri, headers: headers)
-          .timeout(timeout);
+    await _retry(() async {
+      try {
+        final response = await _httpClient
+            .delete(uri, headers: headers)
+            .timeout(timeout);
 
-      if (response.statusCode != 204 && response.statusCode != 200) {
-        // 404 也算成功（对象已不存在）
-        if (response.statusCode != 404) {
-          _handleError('DeleteObject', response);
+        if (response.statusCode != 204 && response.statusCode != 200) {
+          // 404 也算成功（对象已不存在）
+          if (response.statusCode != 404) {
+            _handleError('DeleteObject', response);
+          }
         }
+      } on SocketException catch (e) {
+        throw S3NetworkException('Network error: ${e.message}', originalException: e);
+      } on TimeoutException {
+        throw S3NetworkException('DeleteObject timed out after ${timeout.inSeconds}s');
+      } on S3Exception {
+        rethrow;
+      } catch (e) {
+        throw S3Exception('DeleteObject failed: $e', originalException: e as Exception?);
       }
-    } on SocketException catch (e) {
-      throw S3NetworkException('Network error: ${e.message}', originalException: e);
-    } on TimeoutException {
-      throw S3NetworkException('DeleteObject timed out after ${timeout.inSeconds}s');
-    } catch (e) {
-      if (e is S3Exception) rethrow;
-      throw S3Exception('DeleteObject failed: $e', originalException: e as Exception?);
-    }
+    });
   }
 
-  /// HEAD Object - 检查文件是否存在
+  /// HEAD Object - 检查文件是否存在（幂等，自动重试瞬时网络故障）
   ///
   /// 仅在对象存在（200）时返回 true，对象不存在（404）时返回 false。
   /// 其他状态码（403/500 等）和网络错误会抛出 [S3Exception]，避免
@@ -210,6 +263,7 @@ class S3Client {
     required String bucket,
     required String key,
   }) async {
+    _checkDisposed();
     final uri = _buildUri(bucket, key: key);
 
     var headers = <String, String>{
@@ -222,25 +276,25 @@ class S3Client {
       headers: headers,
     );
 
-    try {
-      final response = await _httpClient
-          .head(uri, headers: headers)
-          .timeout(timeout);
-      if (response.statusCode == 200) return true;
-      if (response.statusCode == 404) return false;
-      // 其他状态码（403/500 等）是真实错误，不能误判为「不存在」
-      _handleError('HeadObject', response);
-      return false; // _handleError 一定会抛，此处仅为静态分析兜底
-    } on SocketException catch (e) {
-      throw S3NetworkException('Network error: ${e.message}', originalException: e);
-    } on TimeoutException {
-      throw S3NetworkException('HeadObject timed out after ${timeout.inSeconds}s');
-    } on S3Exception {
-      rethrow;
-    } catch (e) {
-      if (e is S3Exception) rethrow;
-      throw S3Exception('HeadObject failed: $e', originalException: e as Exception?);
-    }
+    return _retry(() async {
+      try {
+        final response = await _httpClient
+            .head(uri, headers: headers)
+            .timeout(timeout);
+        if (response.statusCode == 200) return true;
+        if (response.statusCode == 404) return false;
+        // 其他状态码（403/500 等）是真实错误，不能误判为「不存在」
+        _handleError('HeadObject', response);
+      } on SocketException catch (e) {
+        throw S3NetworkException('Network error: ${e.message}', originalException: e);
+      } on TimeoutException {
+        throw S3NetworkException('HeadObject timed out after ${timeout.inSeconds}s');
+      } on S3Exception {
+        rethrow;
+      } catch (e) {
+        throw S3Exception('HeadObject failed: $e', originalException: e as Exception?);
+      }
+    });
   }
 
   /// HEAD Object 并返回完整元信息（size / lastModified / contentType / metadata）
@@ -258,6 +312,7 @@ class S3Client {
     required String bucket,
     required String key,
   }) async {
+    _checkDisposed();
     final uri = _buildUri(bucket, key: key);
 
     var headers = <String, String>{
@@ -270,34 +325,34 @@ class S3Client {
       headers: headers,
     );
 
-    try {
-      final response = await _httpClient
-          .head(uri, headers: headers)
-          .timeout(timeout);
-      if (response.statusCode == 200) {
-        return S3HeadInfo(
-          exists: true,
-          size: int.tryParse(response.headers['content-length'] ?? ''),
-          lastModified: _parseHttpDate(response.headers['last-modified']),
-          contentType: response.headers['content-type'],
-          metadata: _extractCustomMetadata(response.headers),
-        );
+    return _retry(() async {
+      try {
+        final response = await _httpClient
+            .head(uri, headers: headers)
+            .timeout(timeout);
+        if (response.statusCode == 200) {
+          return S3HeadInfo(
+            exists: true,
+            size: int.tryParse(response.headers['content-length'] ?? ''),
+            lastModified: _parseHttpDate(response.headers['last-modified']),
+            contentType: response.headers['content-type'],
+            metadata: _extractCustomMetadata(response.headers),
+          );
+        }
+        if (response.statusCode == 404) {
+          return S3HeadInfo.notFound;
+        }
+        _handleError('HeadObject', response);
+      } on SocketException catch (e) {
+        throw S3NetworkException('Network error: ${e.message}', originalException: e);
+      } on TimeoutException {
+        throw S3NetworkException('HeadObject timed out after ${timeout.inSeconds}s');
+      } on S3Exception {
+        rethrow;
+      } catch (e) {
+        throw S3Exception('HeadObject failed: $e', originalException: e as Exception?);
       }
-      if (response.statusCode == 404) {
-        return S3HeadInfo.notFound;
-      }
-      _handleError('HeadObject', response);
-      return S3HeadInfo.notFound; // 不可达
-    } on SocketException catch (e) {
-      throw S3NetworkException('Network error: ${e.message}', originalException: e);
-    } on TimeoutException {
-      throw S3NetworkException('HeadObject timed out after ${timeout.inSeconds}s');
-    } on S3Exception {
-      rethrow;
-    } catch (e) {
-      if (e is S3Exception) rethrow;
-      throw S3Exception('HeadObject failed: $e', originalException: e as Exception?);
-    }
+    });
   }
 
   /// 解析 HTTP 日期头（RFC 1123 格式，如 "Wed, 21 Oct 2015 07:28:00 GMT"）
@@ -315,11 +370,20 @@ class S3Client {
   /// 优先使用 ListObjectsV2（`?list-type=2`）；部分 S3 兼容网关
   /// （如阿里云 OSS S3 兼容层）不支持 V2，返回 HTTP 400/501 时
   /// 自动回退到 ListObjects V1。
+  ///
+  /// [maxKeys] 限制单次返回对象数量（S3 上限 1000），主要用于
+  /// 连接探测等场景，避免全量列举浪费带宽。
   Future<List<String>> listObjects({
     required String bucket,
     String? prefix,
+    int? maxKeys,
   }) async {
-    final infos = await listObjectsDetailed(bucket: bucket, prefix: prefix);
+    _checkDisposed();
+    final infos = await listObjectsDetailed(
+      bucket: bucket,
+      prefix: prefix,
+      maxKeys: maxKeys,
+    );
     return infos.map((e) => e.key).toList();
   }
 
@@ -331,12 +395,22 @@ class S3Client {
   Future<List<S3ObjectInfo>> listObjectsDetailed({
     required String bucket,
     String? prefix,
+    int? maxKeys,
   }) async {
+    _checkDisposed();
     try {
-      return await _listObjectsV2Detailed(bucket: bucket, prefix: prefix);
+      return await _listObjectsV2Detailed(
+        bucket: bucket,
+        prefix: prefix,
+        maxKeys: maxKeys,
+      );
     } on S3Exception catch (e) {
       if (e.statusCode == 400 || e.statusCode == 501) {
-        return _listObjectsV1Detailed(bucket: bucket, prefix: prefix);
+        return _listObjectsV1Detailed(
+          bucket: bucket,
+          prefix: prefix,
+          maxKeys: maxKeys,
+        );
       }
       rethrow;
     }
@@ -350,50 +424,55 @@ class S3Client {
   Future<List<S3ObjectInfo>> _listObjectsV2Detailed({
     required String bucket,
     String? prefix,
-  }) async {
-    final allObjects = <S3ObjectInfo>[];
-    String? continuationToken;
+    int? maxKeys,
+  }) {
+    return _retry(() async {
+      final allObjects = <S3ObjectInfo>[];
+      String? continuationToken;
 
-    do {
-      final queryParams = <String, String>{
-        'list-type': '2', // ListObjectsV2
-      };
-      if (prefix != null && prefix.isNotEmpty) {
-        queryParams['prefix'] = prefix;
-      }
-      if (continuationToken != null) {
-        queryParams['continuation-token'] = continuationToken;
-      }
-
-      final uri = _buildUri(bucket, queryParameters: queryParams);
-      final headers = _signedGetHeaders(uri);
-
-      try {
-        final response = await _httpClient
-            .get(uri, headers: headers)
-            .timeout(timeout);
-
-        if (response.statusCode == 200) {
-          final result = _parseListObjectsXml(response.body);
-          allObjects.addAll(result.objects);
-          continuationToken = result.isTruncated ? result.nextContinuationToken : null;
-        } else if (response.statusCode == 404) {
-          throw S3BucketNotFoundException(bucket);
-        } else {
-          _handleError('ListObjects', response);
-          return allObjects;
+      do {
+        final queryParams = <String, String>{
+          'list-type': '2', // ListObjectsV2
+        };
+        if (prefix != null && prefix.isNotEmpty) {
+          queryParams['prefix'] = prefix;
         }
-      } on SocketException catch (e) {
-        throw S3NetworkException('Network error: ${e.message}', originalException: e);
-      } on TimeoutException {
-        throw S3NetworkException('ListObjects timed out after ${timeout.inSeconds}s');
-      } catch (e) {
-        if (e is S3Exception) rethrow;
-        throw S3Exception('ListObjects failed: $e', originalException: e as Exception?);
-      }
-    } while (continuationToken != null);
+        if (maxKeys != null) {
+          queryParams['max-keys'] = '$maxKeys';
+        }
+        if (continuationToken != null) {
+          queryParams['continuation-token'] = continuationToken;
+        }
 
-    return allObjects;
+        final uri = _buildUri(bucket, queryParameters: queryParams);
+        final headers = _signedGetHeaders(uri);
+
+        try {
+          final response = await _httpClient
+              .get(uri, headers: headers)
+              .timeout(timeout);
+
+          if (response.statusCode == 200) {
+            final result = _parseListObjectsXml(response.body);
+            allObjects.addAll(result.objects);
+            continuationToken = result.isTruncated ? result.nextContinuationToken : null;
+          } else if (response.statusCode == 404) {
+            throw S3BucketNotFoundException(bucket);
+          } else {
+            _handleError('ListObjects', response);
+          }
+        } on SocketException catch (e) {
+          throw S3NetworkException('Network error: ${e.message}', originalException: e);
+        } on TimeoutException {
+          throw S3NetworkException('ListObjects timed out after ${timeout.inSeconds}s');
+        } catch (e) {
+          if (e is S3Exception) rethrow;
+          throw S3Exception('ListObjects failed: $e', originalException: e as Exception?);
+        }
+      } while (continuationToken != null);
+
+      return allObjects;
+    });
   }
 
   /// ListObjects V1（不带 `list-type` 参数），返回含元数据的对象列表
@@ -403,49 +482,54 @@ class S3Client {
   Future<List<S3ObjectInfo>> _listObjectsV1Detailed({
     required String bucket,
     String? prefix,
-  }) async {
-    final allObjects = <S3ObjectInfo>[];
-    String? marker;
+    int? maxKeys,
+  }) {
+    return _retry(() async {
+      final allObjects = <S3ObjectInfo>[];
+      String? marker;
 
-    do {
-      final queryParams = <String, String>{};
-      if (prefix != null && prefix.isNotEmpty) {
-        queryParams['prefix'] = prefix;
-      }
-      if (marker != null) {
-        queryParams['marker'] = marker;
-      }
-
-      final uri = _buildUri(bucket, queryParameters: queryParams);
-      final headers = _signedGetHeaders(uri);
-
-      try {
-        final response = await _httpClient
-            .get(uri, headers: headers)
-            .timeout(timeout);
-
-        if (response.statusCode == 200) {
-          final result = _parseListObjectsXml(response.body);
-          allObjects.addAll(result.objects);
-          // V1 分页：IsTruncated=true 时，用最后一条 key 作为下次请求的 marker
-          marker = result.isTruncated ? result.lastKey : null;
-        } else if (response.statusCode == 404) {
-          throw S3BucketNotFoundException(bucket);
-        } else {
-          _handleError('ListObjects', response);
-          return allObjects;
+      do {
+        final queryParams = <String, String>{};
+        if (prefix != null && prefix.isNotEmpty) {
+          queryParams['prefix'] = prefix;
         }
-      } on SocketException catch (e) {
-        throw S3NetworkException('Network error: ${e.message}', originalException: e);
-      } on TimeoutException {
-        throw S3NetworkException('ListObjects timed out after ${timeout.inSeconds}s');
-      } catch (e) {
-        if (e is S3Exception) rethrow;
-        throw S3Exception('ListObjects failed: $e', originalException: e as Exception?);
-      }
-    } while (marker != null);
+        if (maxKeys != null) {
+          queryParams['max-keys'] = '$maxKeys';
+        }
+        if (marker != null) {
+          queryParams['marker'] = marker;
+        }
 
-    return allObjects;
+        final uri = _buildUri(bucket, queryParameters: queryParams);
+        final headers = _signedGetHeaders(uri);
+
+        try {
+          final response = await _httpClient
+              .get(uri, headers: headers)
+              .timeout(timeout);
+
+          if (response.statusCode == 200) {
+            final result = _parseListObjectsXml(response.body);
+            allObjects.addAll(result.objects);
+            // V1 分页：IsTruncated=true 时，用最后一条 key 作为下次请求的 marker
+            marker = result.isTruncated ? result.lastKey : null;
+          } else if (response.statusCode == 404) {
+            throw S3BucketNotFoundException(bucket);
+          } else {
+            _handleError('ListObjects', response);
+          }
+        } on SocketException catch (e) {
+          throw S3NetworkException('Network error: ${e.message}', originalException: e);
+        } on TimeoutException {
+          throw S3NetworkException('ListObjects timed out after ${timeout.inSeconds}s');
+        } catch (e) {
+          if (e is S3Exception) rethrow;
+          throw S3Exception('ListObjects failed: $e', originalException: e as Exception?);
+        }
+      } while (marker != null);
+
+      return allObjects;
+    });
   }
 
   /// 为 GET/HEAD 请求生成带签名的 headers
@@ -517,10 +601,12 @@ class S3Client {
         lastKey: lastKey,
       );
     } catch (e) {
-      // M-03 修复：XML 解析失败不再静默返回空列表，
-      // 通过 stderr 输出警告便于排查，避免调用方误认为桶为空
-      stderr.writeln('[S3] Warning: ListObjects XML parse failed: $e');
-      return (objects: <S3ObjectInfo>[], isTruncated: false, nextContinuationToken: null, lastKey: null);
+      // S-M1 修复：XML 解析失败不再静默返回空列表，
+      // 而是抛出异常，避免调用方误认为桶为空导致数据丢失判断错误
+      throw S3Exception(
+        'ListObjects XML parse failed: $e',
+        originalException: e is Exception ? e : null,
+      );
     }
   }
 
@@ -546,7 +632,10 @@ class S3Client {
   }
 
   /// 统一错误处理
-  void _handleError(String operation, http.Response response) {
+  ///
+  /// 返回类型为 [Never]：此方法永远抛出异常，不会正常返回。
+  /// 调用后的代码在编译器看来不可达，便于静态分析消除死代码。
+  Never _handleError(String operation, http.Response response) {
     final statusCode = response.statusCode;
     final body = response.body;
 
@@ -570,7 +659,10 @@ class S3Client {
         throw S3PermissionDeniedException('Permission denied: $message');
       }
     } else if (statusCode == 404) {
-      throw S3ObjectNotFoundException('Object not found');
+      // _handleError 不持有 key 信息，无法构造语义正确的
+      // S3ObjectNotFoundException（需要 key），故抛通用 S3Exception。
+      // 具体对象的 404 由调用方在状态码判断后自行抛出 S3ObjectNotFoundException。
+      throw S3Exception('Object not found (404)', statusCode: 404);
     } else if (statusCode == 400) {
       throw S3Exception(
         '$operation failed (HTTP 400): $message. '

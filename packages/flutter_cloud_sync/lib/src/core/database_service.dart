@@ -39,7 +39,7 @@ class DatabaseEvent {
     required this.record,
     this.oldRecord,
     DateTime? timestamp,
-  }) : timestamp = timestamp ?? DateTime.fromMillisecondsSinceEpoch(0);
+  }) : timestamp = timestamp ?? DateTime.now();
 
   @override
   String toString() {
@@ -214,19 +214,25 @@ abstract class CloudDatabaseService {
   /// Batch insert multiple records
   ///
   /// Returns the inserted records.
+  ///
+  /// - [autoInjectUserId]: 自动注入当前用户ID (默认: true)
   Future<List<Map<String, dynamic>>> batchInsert({
     required String table,
     required List<Map<String, dynamic>> data,
+    bool autoInjectUserId = true,
   });
 
   /// Batch update multiple records
   ///
   /// Uses [idField] to identify records (default: 'id').
   /// Each data map should contain the id field.
+  ///
+  /// - [autoFilterByUser]: 自动添加用户过滤(防止修改其他用户数据, 默认: true)
   Future<void> batchUpdate({
     required String table,
     required List<Map<String, dynamic>> data,
     String idField = 'id',
+    bool autoFilterByUser = true,
   });
 
   /// Batch delete multiple records
@@ -237,9 +243,16 @@ abstract class CloudDatabaseService {
     required List<QueryFilter> filters,
   });
 
-  /// Execute a custom query (provider-specific)
+  /// Execute a predefined RPC by name (provider-specific)
   ///
-  /// This allows executing provider-specific queries when needed.
-  /// Use with caution as it may not be portable across providers.
-  Future<List<Map<String, dynamic>>> rawQuery(String query);
+  /// 仅允许调用预定义的数据库函数（RPC），禁止传入原始 SQL 文本，
+  /// 以避免 SQL 注入风险。调用前需在 Supabase 后端创建对应的 RPC 函数，
+  /// 并通过 [params] 传递命名参数。
+  ///
+  /// - [queryName]: 预定义 RPC 函数名
+  /// - [params]: 传给 RPC 的命名参数
+  Future<List<Map<String, dynamic>>> rawQuery(
+    String queryName, {
+    Map<String, dynamic>? params,
+  });
 }
