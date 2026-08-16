@@ -13,6 +13,9 @@ import '../../l10n/app_localizations.dart';
 import '../../services/billing/post_processor.dart';
 import '../../cloud/sync_service.dart';
 import '../../cloud/transactions_sync_manager.dart';
+import '../../cloud/backup/backup_scheduler.dart';
+import '../../cloud/backup/cloud_backup_providers.dart';
+import '../../cloud/backup/cloud_backup_service.dart';
 import '../../domain/encryption/encryption_service.dart';
 import '../auth/login_page.dart';
 import 'encryption_dialogs.dart';
@@ -32,6 +35,8 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
   bool downloadBusy = false;
   bool fullUploadBusy = false;
   bool fullDownloadBusy = false;
+  bool backupBusy = false;
+  bool restoreBusy = false;
 
   @override
   void initState() {
@@ -249,6 +254,234 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
         message: l10n.fullDownloadResult(success, failed),
       );
     }
+  }
+
+  // ============ 云端备份（/prd/cloud_backup） ============
+
+  /// 手动立即备份：阻塞进度弹窗；成败均记录当日状态（当日不再自动触发）
+  Future<void> _handleBackupNow(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
+    final ledgers = await ref.read(repositoryProvider).getAllLedgers();
+    if (!mounted || !context.mounted) return;
+    if (ledgers.isEmpty) {
+      await AppDialog.info(
+          context, title: l10n.backupNowTitle, message: l10n.backupNoLedgers);
+      return;
+    }
+    final backup = ref.read(cloudBackupServiceProvider);
+    if (backup == null) {
+      await AppDialog.error(
+          context, title: l10n.commonFailed, message: l10n.fullSyncUnsupported);
+      return;
+    }
+
+    setState(() => backupBusy = true);
+    final block = showBlockingProgressDialog(
+      context,
+      title: l10n.backupNowTitle,
+      initialStatus: l10n.backupRunningStatus,
+    );
+    Object? error;
+    String? fileName;
+    try {
+      final result = await backup.createBackup(
+        onLedgersProgress: (done, total) =>
+            block.status.value = l10n.backupPackingProgress(done, total),
+      );
+      fileName = result.fileName;
+    } catch (e) {
+      error = e;
+    } finally {
+      // 先关阻塞弹窗再展示结果，避免 close 的 pop 误关顶层弹窗
+      await block.close();
+    }
+
+    // 成败均写当日状态：当日不再自动触发（与定时备份同一规则）
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+        'backup_last_date', BackupScheduler.formatDate(DateTime.now()));
+    await prefs.setString('backup_last_result', error == null ? 'ok' : 'fail');
+
+    if (mounted) {
+      setState(() => backupBusy = false);
+      ref.read(backupRefreshProvider.notifier).state++;
+    }
+    if (!mounted || !context.mounted) return;
+
+    if (error != null) {
+      // 认证失败与网络失败分开提示（对齐 startup_sync_checker 口径）
+      if (error is CloudAuthException) {
+        await AppDialog.error(context,
+            title: l10n.commonFailed, message: l10n.backupFailedAuthMessage);
+      } else {
+        await AppDialog.error(context,
+            title: l10n.commonFailed, message: l10n.backupFailedNetworkMessage);
+      }
+    } else {
+      await AppDialog.info(context,
+          title: l10n.backupNowTitle,
+          message: l10n.backupSuccessMessage(fileName ?? ''));
+    }
+  }
+
+  /// 从备份恢复（全量覆盖）：列表选择 → 双重 5 秒危险确认 → 阻塞恢复
+  Future<void> _handleRestoreFromBackup(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
+    final backup = ref.read(cloudBackupServiceProvider);
+    if (backup == null) {
+      await AppDialog.error(
+          context, title: l10n.commonFailed, message: l10n.fullSyncUnsupported);
+      return;
+    }
+
+    setState(() => restoreBusy = true);
+    List<BackupFileInfo> backups;
+    try {
+      final block = showBlockingProgressDialog(
+        context,
+        title: l10n.restoreFromBackupTitle,
+        initialStatus: l10n.backupListDialogTitle,
+      );
+      try {
+        backups = await backup.listBackups();
+      } finally {
+        await block.close();
+      }
+    } catch (e) {
+      if (mounted) setState(() => restoreBusy = false);
+      if (context.mounted) {
+        await AppDialog.error(context, title: l10n.commonFailed, message: '$e');
+      }
+      return;
+    }
+    if (!mounted || !context.mounted) return;
+
+    if (backups.isEmpty) {
+      setState(() => restoreBusy = false);
+      await AppDialog.info(context,
+          title: l10n.restoreFromBackupTitle,
+          message: l10n.backupListEmptyMessage);
+      return;
+    }
+
+    final picked = await _showBackupPicker(context, backups);
+    if (picked == null || !mounted || !context.mounted) {
+      if (mounted) setState(() => restoreBusy = false);
+      return;
+    }
+
+    // 双重危险确认（各 5 秒倒计时）：明确告知覆盖本地数据、不可撤销
+    final dateText = BackupScheduler.formatDate(picked.date);
+    final first = await showDangerConfirmDialog(
+      context,
+      title: l10n.restoreFromBackupTitle,
+      message: l10n.restoreConfirm1Message(dateText),
+    );
+    if (!first || !mounted || !context.mounted) {
+      if (mounted) setState(() => restoreBusy = false);
+      return;
+    }
+    final second = await showDangerConfirmDialog(
+      context,
+      title: l10n.restoreFromBackupTitle,
+      message: l10n.restoreConfirm2Message,
+    );
+    if (!second || !mounted || !context.mounted) {
+      if (mounted) setState(() => restoreBusy = false);
+      return;
+    }
+
+    final block = showBlockingProgressDialog(
+      context,
+      title: l10n.restoreFromBackupTitle,
+      initialStatus: l10n.restoreRunningStatus,
+    );
+    var success = 0;
+    var failed = 0;
+    Object? error;
+    try {
+      final result = await backup.restoreBackup(
+        fileName: picked.fileName,
+        onProgress: (done, total) =>
+            block.status.value = l10n.restoreLedgerProgress(done, total),
+      );
+      success = result.success;
+      failed = result.failed;
+    } catch (e) {
+      error = e;
+    } finally {
+      await block.close();
+    }
+
+    if (mounted) setState(() => restoreBusy = false);
+    if (!mounted) return;
+
+    // 恢复直接改写各账本数据：列表/统计/同步状态全部刷新（对齐全量下载）
+    PostProcessor.runAfterDownload(ref);
+    ref.read(ledgerListRefreshProvider.notifier).state++;
+    ref.read(statsRefreshProvider.notifier).state++;
+    ref.read(syncStatusRefreshProvider.notifier).state++;
+
+    if (!context.mounted) return;
+    if (error != null) {
+      await AppDialog.error(context, title: l10n.commonFailed, message: '$error');
+    } else {
+      await AppDialog.info(context,
+          title: l10n.restoreFromBackupTitle,
+          message: l10n.restoreResultMessage(success, failed));
+    }
+  }
+
+  /// 备份选择列表（bottom sheet，按日期倒序）
+  Future<BackupFileInfo?> _showBackupPicker(
+      BuildContext context, List<BackupFileInfo> backups) {
+    final l10n = AppLocalizations.of(context);
+    return showModalBottomSheet<BackupFileInfo>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+              child: Text(l10n.restoreFromBackupTitle,
+                  style: Theme.of(ctx).textTheme.titleMedium),
+            ),
+            for (final b in backups)
+              ListTile(
+                leading: const Icon(Icons.archive_outlined),
+                title: Text(BackupScheduler.formatDate(b.date)),
+                subtitle: b.size == null ? null : Text(_formatSize(b.size!)),
+                onTap: () => Navigator.pop(ctx, b),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _formatSize(int bytes) {
+    if (bytes >= 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
+    if (bytes >= 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '$bytes B';
+  }
+
+  /// 定时备份时间选择
+  Future<void> _pickBackupTime(BuildContext context, WidgetRef r) async {
+    final cur = r.read(backupTimeProvider).asData?.value ??
+        BackupScheduler.defaultBackupTime;
+    final minutes = BackupScheduler.parseHhMm(cur);
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: minutes ~/ 60, minute: minutes % 60),
+    );
+    if (picked == null) return;
+    await r
+        .read(backupTimeSetterProvider)
+        .set(BackupScheduler.formatHhMm(picked.hour * 60 + picked.minute));
   }
 
   @override
@@ -1443,8 +1676,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                 padding: const EdgeInsets.only(top: 12),
                                 child: SectionCard(
                                   margin: EdgeInsets.zero,
-                                  borderColor:
-                                      Theme.of(context).colorScheme.error,
+                                  borderColor: ref.watch(primaryColorProvider),
                                   child: Column(
                                     children: [
                                       // 全量上传
@@ -1458,6 +1690,8 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                             !downloadBusy &&
                                             !fullUploadBusy &&
                                             !fullDownloadBusy &&
+                                            !backupBusy &&
+                                            !restoreBusy &&
                                             !isFirstLoad &&
                                             !refreshing,
                                         trailing: fullUploadBusy
@@ -1482,6 +1716,8 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                             !downloadBusy &&
                                             !fullUploadBusy &&
                                             !fullDownloadBusy &&
+                                            !backupBusy &&
+                                            !restoreBusy &&
                                             !isFirstLoad &&
                                             !refreshing,
                                         trailing: fullDownloadBusy
@@ -1494,6 +1730,149 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                         onTap: () => _handleFullDownload(
                                             context, sync),
                                       ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            // 云端备份卡片（仅路径 A，与全量同步卡片同口径）
+                            if (canUseCloud && !isPiggyCountCloud)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 12),
+                                child: SectionCard(
+                                  margin: EdgeInsets.zero,
+                                  borderColor: ref.watch(primaryColorProvider),
+                                  child: Column(
+                                    children: [
+                                      AppListTile(
+                                        leading: Icons.backup_outlined,
+                                        title: AppLocalizations.of(context)
+                                            .backupNowTitle,
+                                        subtitle: AppLocalizations.of(context)
+                                            .backupNowSubtitle,
+                                        enabled: !uploadBusy &&
+                                            !downloadBusy &&
+                                            !fullUploadBusy &&
+                                            !fullDownloadBusy &&
+                                            !backupBusy &&
+                                            !restoreBusy &&
+                                            !isFirstLoad &&
+                                            !refreshing,
+                                        trailing: backupBusy
+                                            ? const SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child: CircularProgressIndicator(
+                                                    strokeWidth: 2))
+                                            : null,
+                                        onTap: () =>
+                                            _handleBackupNow(context),
+                                      ),
+                                      PiggyTokens.cardDivider(context),
+                                      AppListTile(
+                                        leading: Icons.restore,
+                                        title: AppLocalizations.of(context)
+                                            .restoreFromBackupTitle,
+                                        subtitle: AppLocalizations.of(context)
+                                            .restoreFromBackupSubtitle,
+                                        enabled: !uploadBusy &&
+                                            !downloadBusy &&
+                                            !fullUploadBusy &&
+                                            !fullDownloadBusy &&
+                                            !backupBusy &&
+                                            !restoreBusy &&
+                                            !isFirstLoad &&
+                                            !refreshing,
+                                        trailing: restoreBusy
+                                            ? const SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child: CircularProgressIndicator(
+                                                    strokeWidth: 2))
+                                            : null,
+                                        onTap: () =>
+                                            _handleRestoreFromBackup(context),
+                                      ),
+                                      PiggyTokens.cardDivider(context),
+                                      // 定时备份开关 + 时间 + 最近状态
+                                      Consumer(builder: (ctx, r, _) {
+                                        final auto = r.watch(
+                                                backupAutoEnabledProvider)
+                                                .asData
+                                                ?.value ??
+                                            false;
+                                        final time = r
+                                                .watch(backupTimeProvider)
+                                                .asData
+                                                ?.value ??
+                                            BackupScheduler
+                                                .defaultBackupTime;
+                                        final last = r
+                                            .watch(lastBackupInfoProvider)
+                                            .asData
+                                            ?.value;
+                                        return Column(
+                                          children: [
+                                            PiggySwitchListTile(
+                                              title: Text(
+                                                  AppLocalizations.of(context)
+                                                      .backupAutoTitle),
+                                              subtitle: Text(
+                                                  AppLocalizations.of(context)
+                                                      .backupAutoSubtitle),
+                                              value: auto,
+                                              onChanged: (v) => r
+                                                  .read(
+                                                      backupAutoSetterProvider)
+                                                  .set(v),
+                                            ),
+                                            if (auto) ...[
+                                              PiggyTokens.cardDivider(
+                                                  context),
+                                              AppListTile(
+                                                leading: Icons.schedule,
+                                                title:
+                                                    AppLocalizations.of(context)
+                                                        .backupTimeTitle,
+                                                subtitle: time,
+                                                enabled: !backupBusy &&
+                                                    !restoreBusy,
+                                                onTap: () => _pickBackupTime(
+                                                    context, r),
+                                              ),
+                                            ],
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.fromLTRB(
+                                                      16, 8, 16, 12),
+                                              child: Align(
+                                                alignment:
+                                                    Alignment.centerLeft,
+                                                child: Text(
+                                                  AppLocalizations.of(context)
+                                                      .lastBackupCaption(
+                                                    last?.date ?? '-',
+                                                    (last?.ok ?? false)
+                                                        ? AppLocalizations.of(
+                                                                context)
+                                                            .commonSuccess
+                                                        : AppLocalizations.of(
+                                                                context)
+                                                            .commonFailed,
+                                                  ),
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .bodySmall
+                                                      ?.copyWith(
+                                                          color: Theme.of(
+                                                                  context)
+                                                              .colorScheme
+                                                              .onSurfaceVariant),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      }),
                                     ],
                                   ),
                                 ),

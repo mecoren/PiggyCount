@@ -3916,5 +3916,33 @@
         "type": "String"
       }
     }
-  }
+  },
+  "backupCardTitle": "Cloud Backup",
+  "backupNowTitle": "Back Up Now",
+  "backupNowSubtitle": "Pack all ledgers and attachments into one daily backup in piggycount-bak",
+  "backupNoLedgers": "There are no ledgers to back up.",
+  "backupRunningStatus": "Creating backup…",
+  "backupPackingProgress": "Packing ledger {done}/{total}…",
+  "@backupPackingProgress": { "placeholders": { "done": { "type": "int" }, "total": { "type": "int" } } },
+  "backupSuccessMessage": "Backup uploaded: piggycount-bak/{fileName}",
+  "@backupSuccessMessage": { "placeholders": { "fileName": { "type": "String" } } },
+  "backupFailedAuthMessage": "Cloud authentication failed. Please check your cloud service configuration and retry.",
+  "backupFailedNetworkMessage": "Backup failed. Please check your network and retry.",
+  "restoreFromBackupTitle": "Restore from Backup",
+  "restoreFromBackupSubtitle": "Overwrite local data with a selected daily backup (all ledgers and attachments)",
+  "backupListDialogTitle": "Loading backups…",
+  "backupListEmptyMessage": "No backups found in the cloud yet.",
+  "restoreConfirm1Message": "This will overwrite ALL local ledger data (accounts, categories, transactions) with the backup from {date}. Newer local changes will be lost.",
+  "@restoreConfirm1Message": { "placeholders": { "date": { "type": "String" } } },
+  "restoreConfirm2Message": "This operation cannot be undone. Are you sure you want to continue?",
+  "restoreRunningStatus": "Restoring from backup…",
+  "restoreLedgerProgress": "Restoring ledger {done}/{total}…",
+  "@restoreLedgerProgress": { "placeholders": { "done": { "type": "int" }, "total": { "type": "int" } } },
+  "restoreResultMessage": "Restore finished: {success} succeeded, {failed} failed.",
+  "@restoreResultMessage": { "placeholders": { "success": { "type": "int" }, "failed": { "type": "int" } } },
+  "backupAutoTitle": "Scheduled Backup",
+  "backupAutoSubtitle": "Automatically back up once per day at the configured time (while the app is running)",
+  "backupTimeTitle": "Daily Backup Time",
+  "lastBackupCaption": "Last backup: {date} · {ok}",
+  "@lastBackupCaption": { "placeholders": { "date": { "type": "String" }, "ok": { "type": "String" } } }
 }

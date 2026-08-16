@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' as d;
 import 'package:uuid/uuid.dart';
+import '../cloud/transactions_json.dart';
 import '../data/db.dart';
 import '../data/repositories/base_repository.dart';
 import '../data/repositories/transaction_repository.dart' show BatchAttachmentData;
@@ -1396,3 +1397,77 @@ class DataImportService {
 
 /// 全局单例
 final dataImportService = DataImportService();
+
+/// ============================================================
+/// 账本整体恢复（云同步恢复 / 云端备份恢复 共用）
+/// ============================================================
+
+/// 清空指定账本的全部交易及关联行（transactionTags /
+/// transactionAttachments）。
+///
+/// 从 TransactionsSyncManager 迁移为公共函数：恢复是「先清空再导入」，
+/// 清空逻辑必须单一事实源，避免备份/同步两条链路各自实现产生分叉。
+/// 不记录 local_changes（为导入数据腾位置，不应反向回流云端）。
+/// 调用方应将其与导入操作包裹在同一事务内，保证原子性。
+Future<int> clearLedgerTransactions(PiggyDatabase db, int ledgerId) async {
+  final txIds = await (db.selectOnly(db.transactions)
+        ..addColumns([db.transactions.id])
+        ..where(db.transactions.ledgerId.equals(ledgerId)))
+      .map((row) => row.read(db.transactions.id)!)
+      .get();
+
+  if (txIds.isEmpty) return 0;
+
+  await (db.delete(db.transactionTags)
+        ..where((t) => t.transactionId.isIn(txIds)))
+      .go();
+  await (db.delete(db.transactionAttachments)
+        ..where((t) => t.transactionId.isIn(txIds)))
+      .go();
+  final deleted = await (db.delete(db.transactions)
+        ..where((t) => t.ledgerId.equals(ledgerId)))
+      .go();
+  logger.info('DataImport', '恢复前清空账本 $ledgerId: 删除 $deleted 笔交易');
+  return deleted;
+}
+
+/// 用快照 JSON 整体恢复指定账本（清空后导入，事务原子）。
+///
+/// 抽取自 TransactionsSyncManager.downloadAndRestoreToCurrentLedger 中段，
+/// 供云同步恢复与云端备份恢复（CloudBackupService）共用同一语义。
+///
+/// 返回 (inserted, deletedDup)；返回 null 表示跳过恢复：
+/// - P1-1 守卫：快照不含任何交易且本地非空 → 拒绝空覆盖
+///   （误上传空文件不应静默抹掉本地全部交易；确需清空走显式上传覆盖）。
+///
+/// [jsonStr] 必须是已解密的明文 JSON。调用方需保证 ledgerId 的本地账本已存在。
+Future<({int inserted, int deletedDup})?> restoreLedgerFromJson({
+  required PiggyDatabase db,
+  required BaseRepository repo,
+  required int ledgerId,
+  required String jsonStr,
+}) async {
+  final remoteImport = parseJsonToImportData(jsonStr);
+  if (remoteImport.transactions.isEmpty) {
+    final localRows = await (db.select(db.transactions)
+          ..where((t) => t.ledgerId.equals(ledgerId)))
+        .get();
+    if (localRows.isNotEmpty) {
+      logger.warning('DataImport',
+          '快照为空但本地有 ${localRows.length} 条交易，拒绝空覆盖（ledgerId=$ledgerId）');
+      return null;
+    }
+  }
+
+  // 清空 + 导入包裹同一事务：导入失败则清空一并回滚，本地不会被部分清空。
+  // importTransactionsJson 内部事务作为 savepoint 嵌套。
+  // recordChanges: false —— 恢复不应写入本地变更历史（P2-3）
+  final deleted = await db.transaction(() async {
+    final cleared = await clearLedgerTransactions(db, ledgerId);
+    final result = await importTransactionsJson(repo, ledgerId, jsonStr,
+        recordChanges: false);
+    return (cleared, result);
+  });
+
+  return (inserted: deleted.$2.inserted, deletedDup: deleted.$1);
+}

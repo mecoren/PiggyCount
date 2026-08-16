@@ -8250,4 +8250,88 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get startupSyncRecoveryFailedHint =>
       'Key activation failed. Sync has not been restored. Please re-enter the password or check sync settings.';
+
+  @override
+  String get backupCardTitle => 'Cloud Backup';
+
+  @override
+  String get backupNowTitle => 'Back Up Now';
+
+  @override
+  String get backupNowSubtitle =>
+      'Pack all ledgers and attachments into one daily backup in piggycount-bak';
+
+  @override
+  String get backupNoLedgers => 'There are no ledgers to back up.';
+
+  @override
+  String get backupRunningStatus => 'Creating backup…';
+
+  @override
+  String backupPackingProgress(int done, int total) {
+    return 'Packing ledger $done/$total…';
+  }
+
+  @override
+  String backupSuccessMessage(String fileName) {
+    return 'Backup uploaded: piggycount-bak/$fileName';
+  }
+
+  @override
+  String get backupFailedAuthMessage =>
+      'Cloud authentication failed. Please check your cloud service configuration and retry.';
+
+  @override
+  String get backupFailedNetworkMessage =>
+      'Backup failed. Please check your network and retry.';
+
+  @override
+  String get restoreFromBackupTitle => 'Restore from Backup';
+
+  @override
+  String get restoreFromBackupSubtitle =>
+      'Overwrite local data with a selected daily backup (all ledgers and attachments)';
+
+  @override
+  String get backupListDialogTitle => 'Loading backups…';
+
+  @override
+  String get backupListEmptyMessage => 'No backups found in the cloud yet.';
+
+  @override
+  String restoreConfirm1Message(String date) {
+    return 'This will overwrite ALL local ledger data (accounts, categories, transactions) with the backup from $date. Newer local changes will be lost.';
+  }
+
+  @override
+  String get restoreConfirm2Message =>
+      'This operation cannot be undone. Are you sure you want to continue?';
+
+  @override
+  String get restoreRunningStatus => 'Restoring from backup…';
+
+  @override
+  String restoreLedgerProgress(int done, int total) {
+    return 'Restoring ledger $done/$total…';
+  }
+
+  @override
+  String restoreResultMessage(int success, int failed) {
+    return 'Restore finished: $success succeeded, $failed failed.';
+  }
+
+  @override
+  String get backupAutoTitle => 'Scheduled Backup';
+
+  @override
+  String get backupAutoSubtitle =>
+      'Automatically back up once per day at the configured time (while the app is running)';
+
+  @override
+  String get backupTimeTitle => 'Daily Backup Time';
+
+  @override
+  String lastBackupCaption(String date, String ok) {
+    return 'Last backup: $date · $ok';
+  }
 }

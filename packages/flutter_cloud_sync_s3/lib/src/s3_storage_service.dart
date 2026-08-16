@@ -1,12 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 
 import 's3_client.dart';
 import 's3_exceptions.dart';
 
 /// S3 存储服务实现
-class S3StorageService implements CloudStorageService {
+class S3StorageService implements CloudStorageService, BinaryCapableStorage {
   final S3Client client;
   final String bucket;
 
@@ -195,17 +196,30 @@ class S3StorageService implements CloudStorageService {
     required String data,
     Map<String, String>? metadata,
   }) async {
-    try {
-      // 将字符串数据转为字节
-      final bytes = utf8.encode(data);
+    // 字符串上传统一委托字节路径，utf8 编码与历史行为一致
+    await uploadBinary(
+        path: path, bytes: utf8.encode(data), metadata: metadata);
+  }
 
+  @override
+  Future<void> uploadBinary({
+    required String path,
+    required List<int> bytes,
+    Map<String, String>? metadata,
+  }) async {
+    try {
       // 上传到 S3，C-01 修复：传递 metadata 作为 x-amz-meta-* 头
+      // （putObject 需要 Uint8List，已是 Uint8List 时避免拷贝）
+      final data = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
       await client.putObject(
         bucket: bucket,
         key: _buildKey(path),
-        data: bytes,
+        data: data,
         metadata: metadata,
       );
+    } on CloudAuthException {
+      // 认证异常原样透传，避免被通用 catch 降级（与 download 同理）
+      rethrow;
     } on S3AuthException catch (e) {
       throw _authException(e);
     } on S3PermissionDeniedException catch (e) {
@@ -220,14 +234,34 @@ class S3StorageService implements CloudStorageService {
   @override
   Future<String?> download({required String path}) async {
     try {
-      // 从 S3 下载
+      final bytes = await downloadBinary(path: path);
+      if (bytes == null) return null;
+      return utf8.decode(bytes);
+    } on CloudAuthException {
+      // downloadBinary 已把 401/403 转成认证异常，这里必须原样透传，
+      // 否则落入通用 catch 被降级为 CloudStorageException，上层无法
+      // 依据异常类型引导用户修正凭据
+      rethrow;
+    } on S3AuthException catch (e) {
+      throw _authException(e);
+    } on S3PermissionDeniedException catch (e) {
+      throw _authException(e);
+    } on S3Exception catch (e) {
+      throw CloudStorageException('Failed to download file: ${e.message}');
+    } catch (e) {
+      throw CloudStorageException('Failed to download file: $e');
+    }
+  }
+
+  @override
+  Future<Uint8List?> downloadBinary({required String path}) async {
+    try {
+      // 从 S3 下载原始字节
       final bytes = await client.getObject(
         bucket: bucket,
         key: _buildKey(path),
       );
-
-      // 将字节转为字符串
-      return utf8.decode(bytes);
+      return bytes;
     } on S3ObjectNotFoundException {
       return null;
     } on S3AuthException catch (e) {

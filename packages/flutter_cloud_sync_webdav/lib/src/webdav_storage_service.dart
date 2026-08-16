@@ -2,12 +2,13 @@ library;
 
 import 'dart:convert';
 import 'dart:developer' as dev;
+import 'dart:typed_data';
 
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:webdav_client/webdav_client.dart' as webdav;
 
 /// WebDAV implementation of [CloudStorageService].
-class WebDAVStorageService implements CloudStorageService {
+class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage {
   final webdav.Client _client;
   final String _remotePath;
 
@@ -19,6 +20,17 @@ class WebDAVStorageService implements CloudStorageService {
     required String data,
     Map<String, String>? metadata,
   }) async {
+    // 字符串上传统一委托字节路径（原子写逻辑唯一），utf8 编码与历史行为一致
+    await uploadBinary(
+        path: path, bytes: utf8.encode(data), metadata: metadata);
+  }
+
+  @override
+  Future<void> uploadBinary({
+    required String path,
+    required List<int> bytes,
+    Map<String, String>? metadata,
+  }) async {
     final fullPath = _buildPath(path);
     // 临时文件 + rename 实现原子写入，避免网络中断在远端留下损坏的半截文件。
     // 之所以先 remove 再 rename：部分 WebDAV 服务器 MOVE 不支持覆盖，
@@ -28,10 +40,9 @@ class WebDAVStorageService implements CloudStorageService {
       // 确保父目录存在
       await _ensureDirectory(PathHelper.dirname(fullPath));
 
-      final bytes = utf8.encode(data);
-
-      // 1. 先写临时文件
-      await _client.write(tempPath, bytes);
+      // 1. 先写临时文件（webdav write 需要 Uint8List，避免多余拷贝）
+      final data = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
+      await _client.write(tempPath, data);
 
       // 2. 尝试删除旧文件（忽略失败：旧文件可能不存在，或服务器 rename 自带覆盖）
       try {
@@ -66,14 +77,12 @@ class WebDAVStorageService implements CloudStorageService {
   @override
   Future<String?> download({required String path}) async {
     try {
-      // Build full path
-      final fullPath = _buildPath(path);
-
-      // Download file
-      final bytes = await _client.read(fullPath);
-
-      // Convert bytes to string
+      final bytes = await downloadBinary(path: path);
+      if (bytes == null) return null;
       return utf8.decode(bytes);
+    } on CloudAuthException {
+      // downloadBinary 已识别的认证失败原样透传（不依赖字符串兜底）
+      rethrow;
     } catch (e) {
       // 统一用 _isNotFound 判断 404，优先结构化状态码、字符串匹配仅兜底
       if (_isNotFound(e)) {
@@ -81,6 +90,27 @@ class WebDAVStorageService implements CloudStorageService {
       }
       // 401/403 认证失败需与网络错误区分：上层（如 enableFromCloud 探测）
       // 依赖异常类型引导用户重新配置凭据，误报为网络错误会误导排查方向
+      if (_isUnauthorized(e)) {
+        throw CloudAuthException('WebDAV 认证失败（账号或密码错误）', e);
+      }
+      throw CloudStorageException('Download failed: $e', e);
+    }
+  }
+
+  @override
+  Future<Uint8List?> downloadBinary({required String path}) async {
+    try {
+      // Build full path
+      final fullPath = _buildPath(path);
+
+      // Download file
+      final bytes = await _client.read(fullPath);
+
+      return Uint8List.fromList(bytes);
+    } catch (e) {
+      if (_isNotFound(e)) {
+        return null;
+      }
       if (_isUnauthorized(e)) {
         throw CloudAuthException('WebDAV 认证失败（账号或密码错误）', e);
       }

@@ -8024,4 +8024,85 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get startupSyncRecoveryFailedHint =>
       '키 활성화에 실패했습니다. 동기화가 복원되지 않았습니다. 비밀번호를 확인한 후 다시 시도하거나 동기화 설정에서 다시 작업하세요.';
+
+  @override
+  String get backupCardTitle => '클라우드 백업';
+
+  @override
+  String get backupNowTitle => '지금 백업';
+
+  @override
+  String get backupNowSubtitle =>
+      '모든 장부와 첨부 파일을 당일 백업 하나로 묶어 piggycount-bak에 저장';
+
+  @override
+  String get backupNoLedgers => '백업할 장부가 없습니다.';
+
+  @override
+  String get backupRunningStatus => '백업 생성 중…';
+
+  @override
+  String backupPackingProgress(int done, int total) {
+    return '장부 압축 $done/$total…';
+  }
+
+  @override
+  String backupSuccessMessage(String fileName) {
+    return '백업 업로드 완료: piggycount-bak/$fileName';
+  }
+
+  @override
+  String get backupFailedAuthMessage =>
+      '클라우드 인증에 실패했습니다. 클라우드 서비스 설정을 확인하고 다시 시도하세요.';
+
+  @override
+  String get backupFailedNetworkMessage => '백업에 실패했습니다. 네트워크를 확인하고 다시 시도하세요.';
+
+  @override
+  String get restoreFromBackupTitle => '백업에서 복원';
+
+  @override
+  String get restoreFromBackupSubtitle =>
+      '선택한 일일 백업으로 로컬 데이터를 덮어씁니다(모든 장부와 첨부 파일)';
+
+  @override
+  String get backupListDialogTitle => '백업 목록 불러오는 중…';
+
+  @override
+  String get backupListEmptyMessage => '클라우드에 아직 백업이 없습니다.';
+
+  @override
+  String restoreConfirm1Message(String date) {
+    return '$date 백업으로 로컬의 모든 장부 데이터(계정, 카테고리, 거래)를 덮어씁니다. 백업 이후의 로컬 변경 사항은 사라집니다.';
+  }
+
+  @override
+  String get restoreConfirm2Message => '이 작업은 되돌릴 수 없습니다. 계속하시겠습니까?';
+
+  @override
+  String get restoreRunningStatus => '백업에서 복원 중…';
+
+  @override
+  String restoreLedgerProgress(int done, int total) {
+    return '장부 복원 $done/$total…';
+  }
+
+  @override
+  String restoreResultMessage(int success, int failed) {
+    return '복원 완료: 성공 $success개, 실패 $failed개.';
+  }
+
+  @override
+  String get backupAutoTitle => '예약 백업';
+
+  @override
+  String get backupAutoSubtitle => '매일 설정한 시간에 자동 백업(앱 실행 중에만 동작)';
+
+  @override
+  String get backupTimeTitle => '매일 백업 시간';
+
+  @override
+  String lastBackupCaption(String date, String ok) {
+    return '최근 백업: $date · $ok';
+  }
 }

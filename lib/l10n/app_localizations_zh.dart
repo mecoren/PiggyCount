@@ -7933,6 +7933,84 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get startupSyncRecoveryFailedHint =>
       '密钥激活失败，同步未恢复。请确认密码后重试，或到同步设置重新操作。';
+
+  @override
+  String get backupCardTitle => '云端备份';
+
+  @override
+  String get backupNowTitle => '立即备份';
+
+  @override
+  String get backupNowSubtitle => '将全部账本与附件打包为一份当日备份，存入 piggycount-bak';
+
+  @override
+  String get backupNoLedgers => '没有可备份的账本。';
+
+  @override
+  String get backupRunningStatus => '正在创建备份…';
+
+  @override
+  String backupPackingProgress(int done, int total) {
+    return '正在打包账本 $done/$total…';
+  }
+
+  @override
+  String backupSuccessMessage(String fileName) {
+    return '备份已上传：piggycount-bak/$fileName';
+  }
+
+  @override
+  String get backupFailedAuthMessage => '云端认证失败，请检查云服务配置后重试。';
+
+  @override
+  String get backupFailedNetworkMessage => '备份失败，请检查网络后重试。';
+
+  @override
+  String get restoreFromBackupTitle => '从备份恢复';
+
+  @override
+  String get restoreFromBackupSubtitle => '用选定的每日备份覆盖本地数据（全部账本与附件）';
+
+  @override
+  String get backupListDialogTitle => '正在读取备份列表…';
+
+  @override
+  String get backupListEmptyMessage => '云端还没有备份。';
+
+  @override
+  String restoreConfirm1Message(String date) {
+    return '将使用 $date 的备份覆盖本地全部账本数据（账户、分类、交易），比备份更新的本地改动将丢失。';
+  }
+
+  @override
+  String get restoreConfirm2Message => '此操作不可撤销，确定要继续吗？';
+
+  @override
+  String get restoreRunningStatus => '正在从备份恢复…';
+
+  @override
+  String restoreLedgerProgress(int done, int total) {
+    return '正在恢复账本 $done/$total…';
+  }
+
+  @override
+  String restoreResultMessage(int success, int failed) {
+    return '恢复完成：成功 $success 个，失败 $failed 个。';
+  }
+
+  @override
+  String get backupAutoTitle => '定时备份';
+
+  @override
+  String get backupAutoSubtitle => '每日在设定时间自动备份一次（仅 App 运行期间生效）';
+
+  @override
+  String get backupTimeTitle => '每日备份时间';
+
+  @override
+  String lastBackupCaption(String date, String ok) {
+    return '最近备份：$date · $ok';
+  }
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -15864,4 +15942,82 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String get startupSyncRecoveryFailedHint =>
       '密鑰啟用失敗，同步未恢復。請確認密碼後重試，或到同步設定重新操作。';
+
+  @override
+  String get backupCardTitle => '雲端備份';
+
+  @override
+  String get backupNowTitle => '立即備份';
+
+  @override
+  String get backupNowSubtitle => '將全部賬本與附件打包為一份當日備份，存入 piggycount-bak';
+
+  @override
+  String get backupNoLedgers => '沒有可備份的賬本。';
+
+  @override
+  String get backupRunningStatus => '正在建立備份…';
+
+  @override
+  String backupPackingProgress(int done, int total) {
+    return '正在打包賬本 $done/$total…';
+  }
+
+  @override
+  String backupSuccessMessage(String fileName) {
+    return '備份已上傳：piggycount-bak/$fileName';
+  }
+
+  @override
+  String get backupFailedAuthMessage => '雲端認證失敗，請檢查雲服務設定後重試。';
+
+  @override
+  String get backupFailedNetworkMessage => '備份失敗，請檢查網路後重試。';
+
+  @override
+  String get restoreFromBackupTitle => '從備份還原';
+
+  @override
+  String get restoreFromBackupSubtitle => '用選定的每日備份覆蓋本機資料（全部賬本與附件）';
+
+  @override
+  String get backupListDialogTitle => '正在讀取備份列表…';
+
+  @override
+  String get backupListEmptyMessage => '雲端還沒有備份。';
+
+  @override
+  String restoreConfirm1Message(String date) {
+    return '將使用 $date 的備份覆蓋本機全部賬本資料（帳戶、分類、交易），比備份更新的本機變更將遺失。';
+  }
+
+  @override
+  String get restoreConfirm2Message => '此操作無法復原，確定要繼續嗎？';
+
+  @override
+  String get restoreRunningStatus => '正在從備份還原…';
+
+  @override
+  String restoreLedgerProgress(int done, int total) {
+    return '正在還原賬本 $done/$total…';
+  }
+
+  @override
+  String restoreResultMessage(int success, int failed) {
+    return '還原完成：成功 $success 個，失敗 $failed 個。';
+  }
+
+  @override
+  String get backupAutoTitle => '定時備份';
+
+  @override
+  String get backupAutoSubtitle => '每日在設定時間自動備份一次（僅 App 執行期間生效）';
+
+  @override
+  String get backupTimeTitle => '每日備份時間';
+
+  @override
+  String lastBackupCaption(String date, String ok) {
+    return '最近備份：$date · $ok';
+  }
 }

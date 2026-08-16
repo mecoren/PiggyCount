@@ -93,6 +93,14 @@ class TransactionsSyncManager implements SyncService {
   /// （BEECRYPT1:...），不会自动解密。这正是 enableFromCloud 所需。
   fcs.CloudStorageService? get rawStorage => _rawStorage;
 
+  /// 装饰后的 storage（E2EE 开启时上传/下载自动加解密），供云端备份等
+  /// 模块复用同一加密装配。provider 未初始化/不可用（如 iCloud 未登录）
+  /// 时返回 null。
+  Future<fcs.CloudStorageService?> decoratedStorage() async {
+    await _ensureInitialized();
+    return _provider?.storage;
+  }
+
   /// 触发延迟初始化（公开入口，供 UI 层在调用 rawStorage 前预热）
   ///
   /// 幂等：已初始化时立即返回，正在初始化时等待完成。
@@ -795,39 +803,18 @@ class TransactionsSyncManager implements SyncService {
         return (inserted: 0, deletedDup: 0);
       }
 
-      // P1-1：远端快照不含任何交易（误上传空文件 / 覆盖了空备份）时，
-      // 禁止用空数据清空本地非空账本——否则"恢复"会静默抹掉本地全部交易。
-      // 用户若确需清空，应走显式的上传/清空操作。
-      final remoteImport = parseJsonToImportData(jsonStr);
-      if (remoteImport.transactions.isEmpty) {
-        final localRows = await (db.select(db.transactions)
-              ..where((t) => t.ledgerId.equals(ledgerId)))
-            .get();
-        if (localRows.isNotEmpty) {
-          logger.warning(
-              'CloudSync',
-              '远端快照为空但本地有 ${localRows.length} 条交易，拒绝空覆盖'
-              '（ledgerId=$ledgerId）');
-          return (inserted: 0, deletedDup: 0);
-        }
+      // 复用公共恢复管线（P1-1 守卫 + 事务内清空导入），
+      // 与云端备份恢复（CloudBackupService）同一语义单一事实源
+      final restored = await restoreLedgerFromJson(
+          db: db, repo: repo, ledgerId: ledgerId, jsonStr: jsonStr);
+      if (restored == null) {
+        return (inserted: 0, deletedDup: 0);
       }
-
-      // 恢复前清空本地账本交易，避免追加式导入产生重复行（US-1）。
-      // 清空 + 导入包裹在同一事务内：若导入失败，清空操作一并回滚，
-      // 保证本地数据不会被部分清空。importTransactionsJson 内部的
-      // db.transaction 会作为 savepoint 嵌套在本事务内。
-      // recordChanges: false —— 从云端恢复不应写入本地变更历史（P2-3）
-      final deletedDup = await db.transaction(() async {
-        final deleted = await _clearLedgerTransactions(ledgerId);
-        return (deleted,
-            await importTransactionsJson(repo, ledgerId, jsonStr,
-                recordChanges: false));
-      });
-
-      final result = deletedDup.$2;
+      final result = restored.inserted;
+      final deletedDupCount = restored.deletedDup;
 
       logger.info('CloudSync',
-          '下载完成: inserted=${result.inserted}, deletedDup=${deletedDup.$1}');
+          '下载完成: inserted=$result, deletedDup=$deletedDupCount');
 
       // 附件二进制后台补齐(不阻塞恢复返回):元数据已入库,缺的文件
       // 从 attachments/<sha256>.bin 异步下载,失败回队下次 drain 重试。
@@ -840,8 +827,8 @@ class TransactionsSyncManager implements SyncService {
       _recentUpload.remove(ledgerId);
 
       return (
-        inserted: result.inserted,
-        deletedDup: deletedDup.$1,
+        inserted: result,
+        deletedDup: deletedDupCount,
       );
     } on CloudEncryptedLocallyDisabledException {
       // BUG-2 残留修复：云端为密文但本地未开启加密（已在 _decryptIfNeeded 抛出）。
@@ -864,38 +851,9 @@ class TransactionsSyncManager implements SyncService {
     }
   }
 
-  /// 清空指定账本的全部交易及其关联行（transactionTags /
-  /// transactionAttachments）。
-  ///
-  /// 用途：[downloadAndRestoreToCurrentLedger] 恢复云端数据前清空本地，
-  /// 避免追加式导入产生重复行。不记录 local_changes（这是为云端数据
-  /// 腾位置的本地操作，不应反向回流到云端）。
-  ///
-  /// 返回被删除的交易行数，供调用方填充 `deletedDup`（AC-1.3）。
-  ///
-  /// 注意：调用方应将其与导入操作包裹在同一事务内，保证原子性。
-  Future<int> _clearLedgerTransactions(int ledgerId) async {
-    // 先查出本账本所有交易 id，用于级联删 transactionTags / attachments
-    final txIds = await (db.selectOnly(db.transactions)
-          ..addColumns([db.transactions.id])
-          ..where(db.transactions.ledgerId.equals(ledgerId)))
-        .map((row) => row.read(db.transactions.id)!)
-        .get();
-
-    if (txIds.isEmpty) return 0;
-
-    await (db.delete(db.transactionTags)
-          ..where((t) => t.transactionId.isIn(txIds)))
-        .go();
-    await (db.delete(db.transactionAttachments)
-          ..where((t) => t.transactionId.isIn(txIds)))
-        .go();
-    final deleted = await (db.delete(db.transactions)
-          ..where((t) => t.ledgerId.equals(ledgerId)))
-        .go();
-    logger.info('CloudSync', '恢复前清空账本 $ledgerId: 删除 $deleted 笔交易');
-    return deleted;
-  }
+  /// 清空指定账本交易的操作已迁移为公共函数
+  /// `clearLedgerTransactions`（data_import_service.dart），
+  /// 与云端备份恢复共用同一实现，避免两条链路产生语义分叉。
 
   /// 下载云端数据并计算 diff 预览
   ///

@@ -25,6 +25,8 @@ import 'cloud/transactions_sync_manager.dart';
 import 'cloud/sync/sync_engine.dart';
 import 'cloud/startup_sync_checker.dart';
 import 'cloud/startup_sync_overlay.dart';
+import 'cloud/backup/backup_scheduler.dart';
+import 'cloud/backup/cloud_backup_providers.dart';
 import 'providers/sync_providers.dart' as sp;
 import 'utils/voice_billing_helper.dart';
 import 'utils/image_billing_helper.dart';
@@ -118,6 +120,9 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
       _setupQuickActions();
       // 启动时检查路径 A 的云端更新（仅路径 A，路径 B 走现有 _triggerInitialCloudSync）
       _triggerStartupSyncCheck();
+      // 每日定时备份：1 分钟粒度检查，触发条件在闭包内判定
+      _backupScheduler =
+          BackupScheduler(onCheck: _runScheduledBackupCheck)..start();
     });
   }
 
@@ -130,6 +135,9 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
 
   /// 当前启动检查的 controller（用于在 dispose 时清理 overlay）
   StartupSyncController? _startupSyncController;
+
+  /// 每日定时备份调度器（App 运行期间每分钟检查一次）
+  BackupScheduler? _backupScheduler;
 
   /// 启动时云端数据拉取检查（仅路径 A：S3/WebDAV/Supabase/iCloud）
   ///
@@ -172,6 +180,52 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
         });
       },
     );
+  }
+
+  /// 定时备份检查（BackupScheduler 每分钟调用）：
+  /// 开关开启 && 到达设定时间 && 当日定时未触发 && 云服务就绪 → 后台非阻塞执行。
+  /// 去重 key 用 backup_auto_last_date（仅定时写入）：手动备份不占用当日
+  /// 自动名额，到点仍会执行一次（用最新数据覆盖当日文件）。
+  /// 成败均写 auto key（当日不重试，失败状态显示在卡片供手动补救）。
+  /// 云服务未就绪（LocalOnly 等待期等）不写 key，下一分钟重查。
+  Future<void> _runScheduledBackupCheck() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (!(prefs.getBool('backup_auto_enabled') ?? false)) return;
+      final timeStr =
+          prefs.getString('backup_time') ?? BackupScheduler.defaultBackupTime;
+      final autoLast = prefs.getString('backup_auto_last_date');
+      final now = DateTime.now();
+      if (!BackupScheduler.shouldTriggerNow(
+        enabled: true,
+        scheduledMinutes: BackupScheduler.parseHhMm(timeStr),
+        lastDate: autoLast,
+        now: now,
+      )) {
+        return;
+      }
+
+      final backup = ref.read(cloudBackupServiceProvider);
+      if (backup == null) return; // 云未就绪：不计为当日已备
+
+      final today = BackupScheduler.formatDate(now);
+      try {
+        await backup.createBackup();
+        await prefs.setString('backup_last_result', 'ok');
+        logger.info('Backup', '定时备份完成');
+      } catch (e) {
+        await prefs.setString('backup_last_result', 'fail');
+        logger.warning('Backup', '定时备份失败: $e');
+      }
+      // 显示用 last_date 与定时去重 auto key 都要写
+      await prefs.setString('backup_last_date', today);
+      await prefs.setString('backup_auto_last_date', today);
+      if (mounted) {
+        ref.read(backupRefreshProvider.notifier).state++;
+      }
+    } catch (e) {
+      logger.warning('Backup', '定时备份检查异常: $e');
+    }
   }
 
   /// 执行启动检查：创建 controller + overlay，运行 checker，管理生命周期
@@ -754,6 +808,8 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
     _syncToastSubscription?.close();
     _snapshotSyncToastSubscription?.close();
     _syncToastTimer?.cancel();
+    _backupScheduler?.dispose();
+    _backupScheduler = null;
     _removeOverlay();
     _startupSyncController?.detach();
     _startupSyncController = null;

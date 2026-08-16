@@ -14856,6 +14856,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Key activation failed. Sync has not been restored. Please re-enter the password or check sync settings.'**
   String get startupSyncRecoveryFailedHint;
+
+  /// No description provided for @backupCardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud Backup'**
+  String get backupCardTitle;
+
+  /// No description provided for @backupNowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Back Up Now'**
+  String get backupNowTitle;
+
+  /// No description provided for @backupNowSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pack all ledgers and attachments into one daily backup in piggycount-bak'**
+  String get backupNowSubtitle;
+
+  /// No description provided for @backupNoLedgers.
+  ///
+  /// In en, this message translates to:
+  /// **'There are no ledgers to back up.'**
+  String get backupNoLedgers;
+
+  /// No description provided for @backupRunningStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating backup…'**
+  String get backupRunningStatus;
+
+  /// No description provided for @backupPackingProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Packing ledger {done}/{total}…'**
+  String backupPackingProgress(int done, int total);
+
+  /// No description provided for @backupSuccessMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup uploaded: piggycount-bak/{fileName}'**
+  String backupSuccessMessage(String fileName);
+
+  /// No description provided for @backupFailedAuthMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud authentication failed. Please check your cloud service configuration and retry.'**
+  String get backupFailedAuthMessage;
+
+  /// No description provided for @backupFailedNetworkMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup failed. Please check your network and retry.'**
+  String get backupFailedNetworkMessage;
+
+  /// No description provided for @restoreFromBackupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore from Backup'**
+  String get restoreFromBackupTitle;
+
+  /// No description provided for @restoreFromBackupSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Overwrite local data with a selected daily backup (all ledgers and attachments)'**
+  String get restoreFromBackupSubtitle;
+
+  /// No description provided for @backupListDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading backups…'**
+  String get backupListDialogTitle;
+
+  /// No description provided for @backupListEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No backups found in the cloud yet.'**
+  String get backupListEmptyMessage;
+
+  /// No description provided for @restoreConfirm1Message.
+  ///
+  /// In en, this message translates to:
+  /// **'This will overwrite ALL local ledger data (accounts, categories, transactions) with the backup from {date}. Newer local changes will be lost.'**
+  String restoreConfirm1Message(String date);
+
+  /// No description provided for @restoreConfirm2Message.
+  ///
+  /// In en, this message translates to:
+  /// **'This operation cannot be undone. Are you sure you want to continue?'**
+  String get restoreConfirm2Message;
+
+  /// No description provided for @restoreRunningStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Restoring from backup…'**
+  String get restoreRunningStatus;
+
+  /// No description provided for @restoreLedgerProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Restoring ledger {done}/{total}…'**
+  String restoreLedgerProgress(int done, int total);
+
+  /// No description provided for @restoreResultMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore finished: {success} succeeded, {failed} failed.'**
+  String restoreResultMessage(int success, int failed);
+
+  /// No description provided for @backupAutoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled Backup'**
+  String get backupAutoTitle;
+
+  /// No description provided for @backupAutoSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically back up once per day at the configured time (while the app is running)'**
+  String get backupAutoSubtitle;
+
+  /// No description provided for @backupTimeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Backup Time'**
+  String get backupTimeTitle;
+
+  /// No description provided for @lastBackupCaption.
+  ///
+  /// In en, this message translates to:
+  /// **'Last backup: {date} · {ok}'**
+  String lastBackupCaption(String date, String ok);
 }
 
 class _AppLocalizationsDelegate

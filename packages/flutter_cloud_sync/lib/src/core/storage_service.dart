@@ -1,4 +1,9 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:meta/meta.dart';
+
+import 'exceptions.dart';
 
 /// Represents a file in cloud storage
 @immutable
@@ -133,5 +138,60 @@ class NoopStorageService implements CloudStorageService {
   @override
   Future<CloudFile?> getMetadata({required String path}) async {
     throw UnsupportedError('Storage is not configured');
+  }
+}
+
+/// 可选能力接口：支持原生二进制读写的存储后端。
+///
+/// [CloudStorageService.upload] 只接受 String，二进制内容（如 ZIP 备份）
+/// 传统上需 base64 为文本传输，导致云端文件无法被外部工具直接识别。
+/// 后端实现本接口后，[CloudStorageBinaryExt] 会自动改走真字节路径；
+/// 未实现的后端无感知，继续走 base64 兜底（行为与历史版本一致）。
+abstract class BinaryCapableStorage {
+  /// 以原始字节上传（同 upsert 语义：存在即覆盖）
+  Future<void> uploadBinary({
+    required String path,
+    required List<int> bytes,
+    Map<String, String>? metadata,
+  });
+
+  /// 下载原始字节；文件不存在返回 null。
+  /// 返回内容约定为 uploadBinary 上传的原始字节（不做任何文本编码）。
+  Future<Uint8List?> downloadBinary({required String path});
+}
+
+/// 二进制读写入口：按后端能力自动分派。
+///
+/// - `is BinaryCapableStorage` → 后端原生字节路径（云端文件为真实二进制）
+/// - 否则 → base64 文本兜底（与既有字符串传输行为完全一致）
+extension CloudStorageBinaryExt on CloudStorageService {
+  Future<void> uploadBinaryOrFallback({
+    required String path,
+    required List<int> bytes,
+    Map<String, String>? metadata,
+  }) async {
+    // 显式 cast：extension receiver 上的 is 检查不触发局部类型提升
+    if (this is BinaryCapableStorage) {
+      final bin = this as BinaryCapableStorage;
+      await bin.uploadBinary(path: path, bytes: bytes, metadata: metadata);
+      return;
+    }
+    await upload(path: path, data: base64Encode(bytes), metadata: metadata);
+  }
+
+  Future<Uint8List?> downloadBinaryOrFallback({required String path}) async {
+    if (this is BinaryCapableStorage) {
+      final bin = this as BinaryCapableStorage;
+      return bin.downloadBinary(path: path);
+    }
+    final text = await download(path: path);
+    if (text == null) return null;
+    // 非法 base64 统一包装为存储异常：上层（如备份恢复）依赖捕获后
+    // 转译为「文件损坏」语义，裸 FormatException 会穿透错误处理边界
+    try {
+      return Uint8List.fromList(base64Decode(text));
+    } catch (e) {
+      throw CloudStorageException('Invalid base64 payload: $path', e);
+    }
   }
 }
