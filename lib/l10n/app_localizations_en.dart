@@ -153,6 +153,20 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get startupSyncNewLedgersTitle => 'Cloud ledgers found';
+
+  @override
+  String startupSyncNewLedgersMessage(int count, String names) {
+    return 'Found $count ledger(s) on cloud that are not on this device: $names. Download them?';
+  }
+
+  @override
+  String get startupSyncNewLedgersOk => 'Download';
+
+  @override
+  String get startupSyncNewLedgersCancel => 'Skip';
+
+  @override
   String get commonSuccess => 'Success';
 
   @override
@@ -875,6 +889,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String ledgersRestoreResult(int success, int failed) {
     return 'Success: $success, Failed: $failed';
   }
+
+  @override
+  String get ledgersUploadAll => 'Upload All';
+
+  @override
+  String ledgersUploadAllMessage(int count) {
+    return 'Upload all $count local ledgers to the cloud? Existing cloud content will be overwritten.';
+  }
+
+  @override
+  String get ledgersUploadAllComplete => 'Upload Complete';
+
+  @override
+  String ledgersUploadAllResult(int success, int failed) {
+    return 'Success: $success, Failed: $failed';
+  }
+
+  @override
+  String ledgersUploadingProgress(int done, int total) {
+    return 'Uploading ledgers $done/$total, please wait…';
+  }
+
+  @override
+  String get ledgersUploadThis => 'Upload to Cloud';
 
   @override
   String get categoryTitle => 'Category Management';
@@ -1608,6 +1646,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mineSyncTitle => 'Sync';
 
   @override
+  String get mineSyncChecking => 'Syncing…';
+
+  @override
   String get mineSyncNotLoggedIn => 'Not logged in';
 
   @override
@@ -1700,7 +1741,112 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mineUploadSuccess => 'Uploaded';
 
   @override
-  String get mineUploadSuccessMessage => 'Current ledger synced to cloud';
+  String get mineUploadSuccessMessage => 'All ledgers synced to cloud';
+
+  @override
+  String get syncBlockingDownloadTitle => 'Download sync';
+
+  @override
+  String get syncBlockingUploadTitle => 'Upload sync';
+
+  @override
+  String get syncBlockingCheckCloud => 'Checking cloud ledgers…';
+
+  @override
+  String syncBlockingDownloadLedger(int n, int m) {
+    return 'Downloading ledger $n/$m…';
+  }
+
+  @override
+  String get syncBlockingApplying => 'Applying changes…';
+
+  @override
+  String get fullUploadTitle => 'Full Upload';
+
+  @override
+  String get fullUploadSubtitle => 'Overwrite cloud with all local ledgers';
+
+  @override
+  String get fullDownloadTitle => 'Full Download';
+
+  @override
+  String get fullDownloadSubtitle => 'Overwrite local with all cloud ledgers';
+
+  @override
+  String fullUploadConfirm1Message(int count) {
+    return 'This will upload all $count local ledgers. The matching cloud ledgers will be completely replaced by local data. Cloud-only ledgers will be kept.';
+  }
+
+  @override
+  String get fullUploadConfirm2Message =>
+      'Final confirmation: replaced cloud data cannot be recovered. Continue?';
+
+  @override
+  String get fullDownloadConfirm1Message =>
+      'All cloud ledgers will completely overwrite the matching local ledgers, and cloud-only ledgers will be imported as new ledgers. Local-only ledgers will be kept.';
+
+  @override
+  String get fullDownloadConfirm2Message =>
+      'Final confirmation: replaced local data cannot be recovered. Continue?';
+
+  @override
+  String dangerConfirmCountdown(int seconds) {
+    return 'Confirm (${seconds}s)';
+  }
+
+  @override
+  String get fullUploadBlockingStatus => 'Uploading all local ledgers…';
+
+  @override
+  String get fullDownloadBlockingStatus => 'Restoring all cloud ledgers…';
+
+  @override
+  String get fullUploadNoLedgers => 'No local ledgers to upload.';
+
+  @override
+  String get fullUploadSuccessMessage =>
+      'Full upload finished. Cloud now matches local data.';
+
+  @override
+  String fullDownloadResult(int success, int failed) {
+    return 'Full download finished: $success succeeded, $failed failed.';
+  }
+
+  @override
+  String get fullSyncUnsupported =>
+      'Full coverage sync is not available for the current cloud backend.';
+
+  @override
+  String get ledgersRestoreBlockingStatus => 'Restoring ledgers from cloud…';
+
+  @override
+  String get ledgersUploadOneBlockingStatus => 'Uploading ledger…';
+
+  @override
+  String get ledgersDownloadOneBlockingStatus => 'Downloading ledger…';
+
+  @override
+  String get encryptionBlockingVerifying => 'Verifying cloud encrypted data…';
+
+  @override
+  String get encryptionBlockingReencrypt => 'Encrypting cloud data…';
+
+  @override
+  String get encryptionBlockingReinit => 'Initializing encrypted sync…';
+
+  @override
+  String get encryptionBlockingChangePassword => 'Re-encrypting cloud data…';
+
+  @override
+  String get encryptionBlockingReset => 'Resetting encryption…';
+
+  @override
+  String get cloudFirstSyncBlockingTitle => 'First cloud sync';
+
+  @override
+  String cloudFirstSyncBlockingStatus(int n, int m) {
+    return 'Uploading ledger $n/$m…';
+  }
 
   @override
   String get mineDownloadTitle => 'Download & Sync';
@@ -8090,6 +8236,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get saltMismatchCloudCorrupted =>
       'Cloud ciphertext is corrupted, cannot recover key';
+
+  @override
+  String get saltMismatchWebdavAuthTitle => 'Cloud authentication failed';
+
+  @override
+  String get saltMismatchWebdavAuthMessage =>
+      'Cloud storage (WebDAV) username or password is incorrect. Please go to cloud service settings and update your credentials, then retry.';
+
+  @override
+  String get saltMismatchGoConfig => 'Edit cloud config';
 
   @override
   String get startupSyncRecoveryFailedHint =>

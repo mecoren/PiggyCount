@@ -2940,6 +2940,11 @@ class $RecurringTransactionsTable extends RecurringTransactions
   late final GeneratedColumn<int> ledgerId = GeneratedColumn<int>(
       'ledger_id', aliasedName, false,
       type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _syncIdMeta = const VerificationMeta('syncId');
+  @override
+  late final GeneratedColumn<String> syncId = GeneratedColumn<String>(
+      'sync_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _typeMeta = const VerificationMeta('type');
   @override
   late final GeneratedColumn<String> type = GeneratedColumn<String>(
@@ -3053,6 +3058,7 @@ class $RecurringTransactionsTable extends RecurringTransactions
   List<GeneratedColumn> get $columns => [
         id,
         ledgerId,
+        syncId,
         type,
         amount,
         categoryId,
@@ -3090,6 +3096,10 @@ class $RecurringTransactionsTable extends RecurringTransactions
           ledgerId.isAcceptableOrUnknown(data['ledger_id']!, _ledgerIdMeta));
     } else if (isInserting) {
       context.missing(_ledgerIdMeta);
+    }
+    if (data.containsKey('sync_id')) {
+      context.handle(_syncIdMeta,
+          syncId.isAcceptableOrUnknown(data['sync_id']!, _syncIdMeta));
     }
     if (data.containsKey('type')) {
       context.handle(
@@ -3192,6 +3202,8 @@ class $RecurringTransactionsTable extends RecurringTransactions
           .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
       ledgerId: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}ledger_id'])!,
+      syncId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}sync_id']),
       type: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}type'])!,
       amount: attachedDatabase.typeMapping
@@ -3239,6 +3251,11 @@ class RecurringTransaction extends DataClass
     implements Insertable<RecurringTransaction> {
   final int id;
   final int ledgerId;
+
+  /// 跨设备同步 syncId。v33 新增,migration 给老行补随机 hex;
+  /// 语义与 budgets.syncId(v22)/accounts.syncId 一致:快照与 Cloud
+  /// 链路都按此做跨设备实体锚定(cloud_recurring_sync PRD)。
+  final String? syncId;
   final String type;
   final double amount;
   final int? categoryId;
@@ -3259,6 +3276,7 @@ class RecurringTransaction extends DataClass
   const RecurringTransaction(
       {required this.id,
       required this.ledgerId,
+      this.syncId,
       required this.type,
       required this.amount,
       this.categoryId,
@@ -3281,6 +3299,9 @@ class RecurringTransaction extends DataClass
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['ledger_id'] = Variable<int>(ledgerId);
+    if (!nullToAbsent || syncId != null) {
+      map['sync_id'] = Variable<String>(syncId);
+    }
     map['type'] = Variable<String>(type);
     map['amount'] = Variable<double>(amount);
     if (!nullToAbsent || categoryId != null) {
@@ -3323,6 +3344,8 @@ class RecurringTransaction extends DataClass
     return RecurringTransactionsCompanion(
       id: Value(id),
       ledgerId: Value(ledgerId),
+      syncId:
+          syncId == null && nullToAbsent ? const Value.absent() : Value(syncId),
       type: Value(type),
       amount: Value(amount),
       categoryId: categoryId == null && nullToAbsent
@@ -3365,6 +3388,7 @@ class RecurringTransaction extends DataClass
     return RecurringTransaction(
       id: serializer.fromJson<int>(json['id']),
       ledgerId: serializer.fromJson<int>(json['ledgerId']),
+      syncId: serializer.fromJson<String?>(json['syncId']),
       type: serializer.fromJson<String>(json['type']),
       amount: serializer.fromJson<double>(json['amount']),
       categoryId: serializer.fromJson<int?>(json['categoryId']),
@@ -3391,6 +3415,7 @@ class RecurringTransaction extends DataClass
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'ledgerId': serializer.toJson<int>(ledgerId),
+      'syncId': serializer.toJson<String?>(syncId),
       'type': serializer.toJson<String>(type),
       'amount': serializer.toJson<double>(amount),
       'categoryId': serializer.toJson<int?>(categoryId),
@@ -3414,6 +3439,7 @@ class RecurringTransaction extends DataClass
   RecurringTransaction copyWith(
           {int? id,
           int? ledgerId,
+          Value<String?> syncId = const Value.absent(),
           String? type,
           double? amount,
           Value<int?> categoryId = const Value.absent(),
@@ -3434,6 +3460,7 @@ class RecurringTransaction extends DataClass
       RecurringTransaction(
         id: id ?? this.id,
         ledgerId: ledgerId ?? this.ledgerId,
+        syncId: syncId.present ? syncId.value : this.syncId,
         type: type ?? this.type,
         amount: amount ?? this.amount,
         categoryId: categoryId.present ? categoryId.value : this.categoryId,
@@ -3458,6 +3485,7 @@ class RecurringTransaction extends DataClass
     return RecurringTransaction(
       id: data.id.present ? data.id.value : this.id,
       ledgerId: data.ledgerId.present ? data.ledgerId.value : this.ledgerId,
+      syncId: data.syncId.present ? data.syncId.value : this.syncId,
       type: data.type.present ? data.type.value : this.type,
       amount: data.amount.present ? data.amount.value : this.amount,
       categoryId:
@@ -3489,6 +3517,7 @@ class RecurringTransaction extends DataClass
     return (StringBuffer('RecurringTransaction(')
           ..write('id: $id, ')
           ..write('ledgerId: $ledgerId, ')
+          ..write('syncId: $syncId, ')
           ..write('type: $type, ')
           ..write('amount: $amount, ')
           ..write('categoryId: $categoryId, ')
@@ -3514,6 +3543,7 @@ class RecurringTransaction extends DataClass
   int get hashCode => Object.hash(
       id,
       ledgerId,
+      syncId,
       type,
       amount,
       categoryId,
@@ -3537,6 +3567,7 @@ class RecurringTransaction extends DataClass
       (other is RecurringTransaction &&
           other.id == this.id &&
           other.ledgerId == this.ledgerId &&
+          other.syncId == this.syncId &&
           other.type == this.type &&
           other.amount == this.amount &&
           other.categoryId == this.categoryId &&
@@ -3560,6 +3591,7 @@ class RecurringTransactionsCompanion
     extends UpdateCompanion<RecurringTransaction> {
   final Value<int> id;
   final Value<int> ledgerId;
+  final Value<String?> syncId;
   final Value<String> type;
   final Value<double> amount;
   final Value<int?> categoryId;
@@ -3580,6 +3612,7 @@ class RecurringTransactionsCompanion
   const RecurringTransactionsCompanion({
     this.id = const Value.absent(),
     this.ledgerId = const Value.absent(),
+    this.syncId = const Value.absent(),
     this.type = const Value.absent(),
     this.amount = const Value.absent(),
     this.categoryId = const Value.absent(),
@@ -3601,6 +3634,7 @@ class RecurringTransactionsCompanion
   RecurringTransactionsCompanion.insert({
     this.id = const Value.absent(),
     required int ledgerId,
+    this.syncId = const Value.absent(),
     required String type,
     required double amount,
     this.categoryId = const Value.absent(),
@@ -3626,6 +3660,7 @@ class RecurringTransactionsCompanion
   static Insertable<RecurringTransaction> custom({
     Expression<int>? id,
     Expression<int>? ledgerId,
+    Expression<String>? syncId,
     Expression<String>? type,
     Expression<double>? amount,
     Expression<int>? categoryId,
@@ -3647,6 +3682,7 @@ class RecurringTransactionsCompanion
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (ledgerId != null) 'ledger_id': ledgerId,
+      if (syncId != null) 'sync_id': syncId,
       if (type != null) 'type': type,
       if (amount != null) 'amount': amount,
       if (categoryId != null) 'category_id': categoryId,
@@ -3670,6 +3706,7 @@ class RecurringTransactionsCompanion
   RecurringTransactionsCompanion copyWith(
       {Value<int>? id,
       Value<int>? ledgerId,
+      Value<String?>? syncId,
       Value<String>? type,
       Value<double>? amount,
       Value<int?>? categoryId,
@@ -3690,6 +3727,7 @@ class RecurringTransactionsCompanion
     return RecurringTransactionsCompanion(
       id: id ?? this.id,
       ledgerId: ledgerId ?? this.ledgerId,
+      syncId: syncId ?? this.syncId,
       type: type ?? this.type,
       amount: amount ?? this.amount,
       categoryId: categoryId ?? this.categoryId,
@@ -3718,6 +3756,9 @@ class RecurringTransactionsCompanion
     }
     if (ledgerId.present) {
       map['ledger_id'] = Variable<int>(ledgerId.value);
+    }
+    if (syncId.present) {
+      map['sync_id'] = Variable<String>(syncId.value);
     }
     if (type.present) {
       map['type'] = Variable<String>(type.value);
@@ -3778,6 +3819,7 @@ class RecurringTransactionsCompanion
     return (StringBuffer('RecurringTransactionsCompanion(')
           ..write('id: $id, ')
           ..write('ledgerId: $ledgerId, ')
+          ..write('syncId: $syncId, ')
           ..write('type: $type, ')
           ..write('amount: $amount, ')
           ..write('categoryId: $categoryId, ')
@@ -5696,6 +5738,12 @@ class $TransactionAttachmentsTable extends TransactionAttachments
   late final GeneratedColumn<String> cloudSha256 = GeneratedColumn<String>(
       'cloud_sha256', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _localSha256Meta =
+      const VerificationMeta('localSha256');
+  @override
+  late final GeneratedColumn<String> localSha256 = GeneratedColumn<String>(
+      'local_sha256', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -5716,6 +5764,7 @@ class $TransactionAttachmentsTable extends TransactionAttachments
         sortOrder,
         cloudFileId,
         cloudSha256,
+        localSha256,
         createdAt
       ];
   @override
@@ -5780,6 +5829,12 @@ class $TransactionAttachmentsTable extends TransactionAttachments
           cloudSha256.isAcceptableOrUnknown(
               data['cloud_sha256']!, _cloudSha256Meta));
     }
+    if (data.containsKey('local_sha256')) {
+      context.handle(
+          _localSha256Meta,
+          localSha256.isAcceptableOrUnknown(
+              data['local_sha256']!, _localSha256Meta));
+    }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -5813,6 +5868,8 @@ class $TransactionAttachmentsTable extends TransactionAttachments
           .read(DriftSqlType.string, data['${effectivePrefix}cloud_file_id']),
       cloudSha256: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}cloud_sha256']),
+      localSha256: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}local_sha256']),
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
     );
@@ -5836,6 +5893,13 @@ class TransactionAttachment extends DataClass
   final int sortOrder;
   final String? cloudFileId;
   final String? cloudSha256;
+
+  /// 本地文件内容 SHA256(hex)。v34 新增(attachment_binary_sync):
+  /// 快照链路按内容寻址上传 `attachments/<sha256>.bin`,此列是清单锚点。
+  /// 不复用 cloudSha256 —— 那是 Cloud server 回填的引用,两条链路混用会
+  /// 互相污染。写入时机:saveAttachment 计算文件名时同步落列;
+  /// 存量行由启动后台任务 backfillLocalSha256 分批补齐。
+  final String? localSha256;
   final DateTime createdAt;
   const TransactionAttachment(
       {required this.id,
@@ -5848,6 +5912,7 @@ class TransactionAttachment extends DataClass
       required this.sortOrder,
       this.cloudFileId,
       this.cloudSha256,
+      this.localSha256,
       required this.createdAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -5873,6 +5938,9 @@ class TransactionAttachment extends DataClass
     }
     if (!nullToAbsent || cloudSha256 != null) {
       map['cloud_sha256'] = Variable<String>(cloudSha256);
+    }
+    if (!nullToAbsent || localSha256 != null) {
+      map['local_sha256'] = Variable<String>(localSha256);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -5900,6 +5968,9 @@ class TransactionAttachment extends DataClass
       cloudSha256: cloudSha256 == null && nullToAbsent
           ? const Value.absent()
           : Value(cloudSha256),
+      localSha256: localSha256 == null && nullToAbsent
+          ? const Value.absent()
+          : Value(localSha256),
       createdAt: Value(createdAt),
     );
   }
@@ -5918,6 +5989,7 @@ class TransactionAttachment extends DataClass
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
       cloudFileId: serializer.fromJson<String?>(json['cloudFileId']),
       cloudSha256: serializer.fromJson<String?>(json['cloudSha256']),
+      localSha256: serializer.fromJson<String?>(json['localSha256']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -5935,6 +6007,7 @@ class TransactionAttachment extends DataClass
       'sortOrder': serializer.toJson<int>(sortOrder),
       'cloudFileId': serializer.toJson<String?>(cloudFileId),
       'cloudSha256': serializer.toJson<String?>(cloudSha256),
+      'localSha256': serializer.toJson<String?>(localSha256),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -5950,6 +6023,7 @@ class TransactionAttachment extends DataClass
           int? sortOrder,
           Value<String?> cloudFileId = const Value.absent(),
           Value<String?> cloudSha256 = const Value.absent(),
+          Value<String?> localSha256 = const Value.absent(),
           DateTime? createdAt}) =>
       TransactionAttachment(
         id: id ?? this.id,
@@ -5963,6 +6037,7 @@ class TransactionAttachment extends DataClass
         sortOrder: sortOrder ?? this.sortOrder,
         cloudFileId: cloudFileId.present ? cloudFileId.value : this.cloudFileId,
         cloudSha256: cloudSha256.present ? cloudSha256.value : this.cloudSha256,
+        localSha256: localSha256.present ? localSha256.value : this.localSha256,
         createdAt: createdAt ?? this.createdAt,
       );
   TransactionAttachment copyWithCompanion(
@@ -5984,6 +6059,8 @@ class TransactionAttachment extends DataClass
           data.cloudFileId.present ? data.cloudFileId.value : this.cloudFileId,
       cloudSha256:
           data.cloudSha256.present ? data.cloudSha256.value : this.cloudSha256,
+      localSha256:
+          data.localSha256.present ? data.localSha256.value : this.localSha256,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -6001,14 +6078,26 @@ class TransactionAttachment extends DataClass
           ..write('sortOrder: $sortOrder, ')
           ..write('cloudFileId: $cloudFileId, ')
           ..write('cloudSha256: $cloudSha256, ')
+          ..write('localSha256: $localSha256, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, transactionId, fileName, originalName,
-      fileSize, width, height, sortOrder, cloudFileId, cloudSha256, createdAt);
+  int get hashCode => Object.hash(
+      id,
+      transactionId,
+      fileName,
+      originalName,
+      fileSize,
+      width,
+      height,
+      sortOrder,
+      cloudFileId,
+      cloudSha256,
+      localSha256,
+      createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -6023,6 +6112,7 @@ class TransactionAttachment extends DataClass
           other.sortOrder == this.sortOrder &&
           other.cloudFileId == this.cloudFileId &&
           other.cloudSha256 == this.cloudSha256 &&
+          other.localSha256 == this.localSha256 &&
           other.createdAt == this.createdAt);
 }
 
@@ -6038,6 +6128,7 @@ class TransactionAttachmentsCompanion
   final Value<int> sortOrder;
   final Value<String?> cloudFileId;
   final Value<String?> cloudSha256;
+  final Value<String?> localSha256;
   final Value<DateTime> createdAt;
   const TransactionAttachmentsCompanion({
     this.id = const Value.absent(),
@@ -6050,6 +6141,7 @@ class TransactionAttachmentsCompanion
     this.sortOrder = const Value.absent(),
     this.cloudFileId = const Value.absent(),
     this.cloudSha256 = const Value.absent(),
+    this.localSha256 = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   TransactionAttachmentsCompanion.insert({
@@ -6063,6 +6155,7 @@ class TransactionAttachmentsCompanion
     this.sortOrder = const Value.absent(),
     this.cloudFileId = const Value.absent(),
     this.cloudSha256 = const Value.absent(),
+    this.localSha256 = const Value.absent(),
     this.createdAt = const Value.absent(),
   })  : transactionId = Value(transactionId),
         fileName = Value(fileName);
@@ -6077,6 +6170,7 @@ class TransactionAttachmentsCompanion
     Expression<int>? sortOrder,
     Expression<String>? cloudFileId,
     Expression<String>? cloudSha256,
+    Expression<String>? localSha256,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -6090,6 +6184,7 @@ class TransactionAttachmentsCompanion
       if (sortOrder != null) 'sort_order': sortOrder,
       if (cloudFileId != null) 'cloud_file_id': cloudFileId,
       if (cloudSha256 != null) 'cloud_sha256': cloudSha256,
+      if (localSha256 != null) 'local_sha256': localSha256,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -6105,6 +6200,7 @@ class TransactionAttachmentsCompanion
       Value<int>? sortOrder,
       Value<String?>? cloudFileId,
       Value<String?>? cloudSha256,
+      Value<String?>? localSha256,
       Value<DateTime>? createdAt}) {
     return TransactionAttachmentsCompanion(
       id: id ?? this.id,
@@ -6117,6 +6213,7 @@ class TransactionAttachmentsCompanion
       sortOrder: sortOrder ?? this.sortOrder,
       cloudFileId: cloudFileId ?? this.cloudFileId,
       cloudSha256: cloudSha256 ?? this.cloudSha256,
+      localSha256: localSha256 ?? this.localSha256,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -6154,6 +6251,9 @@ class TransactionAttachmentsCompanion
     if (cloudSha256.present) {
       map['cloud_sha256'] = Variable<String>(cloudSha256.value);
     }
+    if (localSha256.present) {
+      map['local_sha256'] = Variable<String>(localSha256.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -6173,6 +6273,7 @@ class TransactionAttachmentsCompanion
           ..write('sortOrder: $sortOrder, ')
           ..write('cloudFileId: $cloudFileId, ')
           ..write('cloudSha256: $cloudSha256, ')
+          ..write('localSha256: $localSha256, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -12139,6 +12240,7 @@ typedef $$RecurringTransactionsTableCreateCompanionBuilder
     = RecurringTransactionsCompanion Function({
   Value<int> id,
   required int ledgerId,
+  Value<String?> syncId,
   required String type,
   required double amount,
   Value<int?> categoryId,
@@ -12161,6 +12263,7 @@ typedef $$RecurringTransactionsTableUpdateCompanionBuilder
     = RecurringTransactionsCompanion Function({
   Value<int> id,
   Value<int> ledgerId,
+  Value<String?> syncId,
   Value<String> type,
   Value<double> amount,
   Value<int?> categoryId,
@@ -12194,6 +12297,9 @@ class $$RecurringTransactionsTableFilterComposer
 
   ColumnFilters<int> get ledgerId => $composableBuilder(
       column: $table.ledgerId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get syncId => $composableBuilder(
+      column: $table.syncId, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get type => $composableBuilder(
       column: $table.type, builder: (column) => ColumnFilters(column));
@@ -12263,6 +12369,9 @@ class $$RecurringTransactionsTableOrderingComposer
   ColumnOrderings<int> get ledgerId => $composableBuilder(
       column: $table.ledgerId, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get syncId => $composableBuilder(
+      column: $table.syncId, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get type => $composableBuilder(
       column: $table.type, builder: (column) => ColumnOrderings(column));
 
@@ -12330,6 +12439,9 @@ class $$RecurringTransactionsTableAnnotationComposer
 
   GeneratedColumn<int> get ledgerId =>
       $composableBuilder(column: $table.ledgerId, builder: (column) => column);
+
+  GeneratedColumn<String> get syncId =>
+      $composableBuilder(column: $table.syncId, builder: (column) => column);
 
   GeneratedColumn<String> get type =>
       $composableBuilder(column: $table.type, builder: (column) => column);
@@ -12416,6 +12528,7 @@ class $$RecurringTransactionsTableTableManager extends RootTableManager<
           updateCompanionCallback: ({
             Value<int> id = const Value.absent(),
             Value<int> ledgerId = const Value.absent(),
+            Value<String?> syncId = const Value.absent(),
             Value<String> type = const Value.absent(),
             Value<double> amount = const Value.absent(),
             Value<int?> categoryId = const Value.absent(),
@@ -12437,6 +12550,7 @@ class $$RecurringTransactionsTableTableManager extends RootTableManager<
               RecurringTransactionsCompanion(
             id: id,
             ledgerId: ledgerId,
+            syncId: syncId,
             type: type,
             amount: amount,
             categoryId: categoryId,
@@ -12458,6 +12572,7 @@ class $$RecurringTransactionsTableTableManager extends RootTableManager<
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
             required int ledgerId,
+            Value<String?> syncId = const Value.absent(),
             required String type,
             required double amount,
             Value<int?> categoryId = const Value.absent(),
@@ -12479,6 +12594,7 @@ class $$RecurringTransactionsTableTableManager extends RootTableManager<
               RecurringTransactionsCompanion.insert(
             id: id,
             ledgerId: ledgerId,
+            syncId: syncId,
             type: type,
             amount: amount,
             categoryId: categoryId,
@@ -13469,6 +13585,7 @@ typedef $$TransactionAttachmentsTableCreateCompanionBuilder
   Value<int> sortOrder,
   Value<String?> cloudFileId,
   Value<String?> cloudSha256,
+  Value<String?> localSha256,
   Value<DateTime> createdAt,
 });
 typedef $$TransactionAttachmentsTableUpdateCompanionBuilder
@@ -13483,6 +13600,7 @@ typedef $$TransactionAttachmentsTableUpdateCompanionBuilder
   Value<int> sortOrder,
   Value<String?> cloudFileId,
   Value<String?> cloudSha256,
+  Value<String?> localSha256,
   Value<DateTime> createdAt,
 });
 
@@ -13524,6 +13642,9 @@ class $$TransactionAttachmentsTableFilterComposer
 
   ColumnFilters<String> get cloudSha256 => $composableBuilder(
       column: $table.cloudSha256, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get localSha256 => $composableBuilder(
+      column: $table.localSha256, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
@@ -13570,6 +13691,9 @@ class $$TransactionAttachmentsTableOrderingComposer
   ColumnOrderings<String> get cloudSha256 => $composableBuilder(
       column: $table.cloudSha256, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get localSha256 => $composableBuilder(
+      column: $table.localSha256, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 }
@@ -13612,6 +13736,9 @@ class $$TransactionAttachmentsTableAnnotationComposer
 
   GeneratedColumn<String> get cloudSha256 => $composableBuilder(
       column: $table.cloudSha256, builder: (column) => column);
+
+  GeneratedColumn<String> get localSha256 => $composableBuilder(
+      column: $table.localSha256, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -13658,6 +13785,7 @@ class $$TransactionAttachmentsTableTableManager extends RootTableManager<
             Value<int> sortOrder = const Value.absent(),
             Value<String?> cloudFileId = const Value.absent(),
             Value<String?> cloudSha256 = const Value.absent(),
+            Value<String?> localSha256 = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
           }) =>
               TransactionAttachmentsCompanion(
@@ -13671,6 +13799,7 @@ class $$TransactionAttachmentsTableTableManager extends RootTableManager<
             sortOrder: sortOrder,
             cloudFileId: cloudFileId,
             cloudSha256: cloudSha256,
+            localSha256: localSha256,
             createdAt: createdAt,
           ),
           createCompanionCallback: ({
@@ -13684,6 +13813,7 @@ class $$TransactionAttachmentsTableTableManager extends RootTableManager<
             Value<int> sortOrder = const Value.absent(),
             Value<String?> cloudFileId = const Value.absent(),
             Value<String?> cloudSha256 = const Value.absent(),
+            Value<String?> localSha256 = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
           }) =>
               TransactionAttachmentsCompanion.insert(
@@ -13697,6 +13827,7 @@ class $$TransactionAttachmentsTableTableManager extends RootTableManager<
             sortOrder: sortOrder,
             cloudFileId: cloudFileId,
             cloudSha256: cloudSha256,
+            localSha256: localSha256,
             createdAt: createdAt,
           ),
           withReferenceMapper: (p0) => p0

@@ -152,6 +152,20 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get startupSyncNewLedgersTitle => '클라우드 장부 발견';
+
+  @override
+  String startupSyncNewLedgersMessage(int count, String names) {
+    return '이 기기에 없는 장부 $count개를 클라우드에서 발견했습니다: $names. 다운로드하시겠습니까?';
+  }
+
+  @override
+  String get startupSyncNewLedgersOk => '다운로드';
+
+  @override
+  String get startupSyncNewLedgersCancel => '건너뛰기';
+
+  @override
   String get commonSuccess => '성공';
 
   @override
@@ -863,6 +877,30 @@ class AppLocalizationsKo extends AppLocalizations {
   String ledgersRestoreResult(int success, int failed) {
     return '성공: $success, 실패: $failed';
   }
+
+  @override
+  String get ledgersUploadAll => '전체 업로드';
+
+  @override
+  String ledgersUploadAllMessage(int count) {
+    return '모든 로컬 가계부를 클라우드에 업로드하시겠습니까? 총 $count개이며, 기존 클라우드 내용이 덮어써집니다.';
+  }
+
+  @override
+  String get ledgersUploadAllComplete => '업로드 완료';
+
+  @override
+  String ledgersUploadAllResult(int success, int failed) {
+    return '성공: $success, 실패: $failed';
+  }
+
+  @override
+  String ledgersUploadingProgress(int done, int total) {
+    return '원장 업로드 중 $done/$total, 기다려 주세요…';
+  }
+
+  @override
+  String get ledgersUploadThis => '클라우드에 업로드';
 
   @override
   String get categoryTitle => '카테고리 관리';
@@ -1587,6 +1625,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mineSyncTitle => '동기화';
 
   @override
+  String get mineSyncChecking => '동기화 중…';
+
+  @override
   String get mineSyncNotLoggedIn => '로그인하지 않음';
 
   @override
@@ -1678,7 +1719,111 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mineUploadSuccess => '업로드 완료';
 
   @override
-  String get mineUploadSuccessMessage => '현재 가계부가 클라우드에 동기화되었습니다';
+  String get mineUploadSuccessMessage => '모든 가계부가 클라우드에 동기화되었습니다';
+
+  @override
+  String get syncBlockingDownloadTitle => '동기화 다운로드';
+
+  @override
+  String get syncBlockingUploadTitle => '동기화 업로드';
+
+  @override
+  String get syncBlockingCheckCloud => '클라우드 가계부 확인 중…';
+
+  @override
+  String syncBlockingDownloadLedger(int n, int m) {
+    return '가계부 다운로드 중 $n/$m…';
+  }
+
+  @override
+  String get syncBlockingApplying => '변경 사항 적용 중…';
+
+  @override
+  String get fullUploadTitle => '전체 업로드';
+
+  @override
+  String get fullUploadSubtitle => '로컬의 모든 가계부로 클라우드 덮어쓰기';
+
+  @override
+  String get fullDownloadTitle => '전체 다운로드';
+
+  @override
+  String get fullDownloadSubtitle => '클라우드의 모든 가계부로 로컬 덮어쓰기';
+
+  @override
+  String fullUploadConfirm1Message(int count) {
+    return '로컬 가계부 $count개를 전체 업로드합니다. 클라우드의 해당 가계부 데이터가 로컬 데이터로 완전히 덮어쓰여집니다. 클라우드에만 있는 가계부는 유지됩니다.';
+  }
+
+  @override
+  String get fullUploadConfirm2Message =>
+      '최종 확인: 덮어쓰인 클라우드 데이터는 복구할 수 없습니다. 계속하시겠습니까?';
+
+  @override
+  String get fullDownloadConfirm1Message =>
+      '클라우드의 모든 가계부가 로컬의 해당 가계부를 완전히 덮어쓰며, 클라우드에만 있는 가계부는 새로 가져옵니다. 로컬에만 있는 가계부는 유지됩니다.';
+
+  @override
+  String get fullDownloadConfirm2Message =>
+      '최종 확인: 덮어쓰인 로컬 데이터는 복구할 수 없습니다. 계속하시겠습니까?';
+
+  @override
+  String dangerConfirmCountdown(int seconds) {
+    return '확인 ($seconds초)';
+  }
+
+  @override
+  String get fullUploadBlockingStatus => '로컬의 모든 가계부 업로드 중…';
+
+  @override
+  String get fullDownloadBlockingStatus => '클라우드의 모든 가계부 복원 중…';
+
+  @override
+  String get fullUploadNoLedgers => '업로드할 로컬 가계부가 없습니다.';
+
+  @override
+  String get fullUploadSuccessMessage =>
+      '전체 업로드가 완료되었습니다. 클라우드가 로컬 데이터와 일치합니다.';
+
+  @override
+  String fullDownloadResult(int success, int failed) {
+    return '전체 다운로드 완료: 성공 $success개, 실패 $failed개.';
+  }
+
+  @override
+  String get fullSyncUnsupported => '현재 클라우드 백엔드는 전체 덮어쓰기 동기화를 지원하지 않습니다.';
+
+  @override
+  String get ledgersRestoreBlockingStatus => '클라우드에서 가계부 복원 중…';
+
+  @override
+  String get ledgersUploadOneBlockingStatus => '가계부 업로드 중…';
+
+  @override
+  String get ledgersDownloadOneBlockingStatus => '가계부 다운로드 중…';
+
+  @override
+  String get encryptionBlockingVerifying => '클라우드 암호화 데이터 확인 중…';
+
+  @override
+  String get encryptionBlockingReencrypt => '클라우드 데이터 암호화 중…';
+
+  @override
+  String get encryptionBlockingReinit => '암호화 동기화 초기화 중…';
+
+  @override
+  String get encryptionBlockingChangePassword => '클라우드 데이터 재암호화 중…';
+
+  @override
+  String get encryptionBlockingReset => '암호화 재설정 중…';
+
+  @override
+  String get cloudFirstSyncBlockingTitle => '첫 클라우드 동기화';
+
+  @override
+  String cloudFirstSyncBlockingStatus(int n, int m) {
+    return '가계부 업로드 중 $n/$m…';
+  }
 
   @override
   String get mineDownloadTitle => '다운로드 및 동기화';
@@ -7865,6 +8010,16 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get saltMismatchCloudCorrupted => '클라우드 암호문이 손상되어 키를 복구할 수 없습니다';
+
+  @override
+  String get saltMismatchWebdavAuthTitle => '클라우드 인증 실패';
+
+  @override
+  String get saltMismatchWebdavAuthMessage =>
+      '클라우드 저장소(WebDAV) 계정 또는 비밀번호가 올바르지 않습니다. 클라우드 서비스 설정에서 자격 증명을 수정한 후 다시 시도하세요.';
+
+  @override
+  String get saltMismatchGoConfig => '설정 수정하기';
 
   @override
   String get startupSyncRecoveryFailedHint =>

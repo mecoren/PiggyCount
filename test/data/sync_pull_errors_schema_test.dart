@@ -31,8 +31,10 @@ void main() {
     await db.close();
   });
 
-  test('schemaVersion = 31(确保 sync_pull_errors 表已纳入 schema)', () {
-    expect(db.schemaVersion, 31);
+  test('schemaVersion ≥ 31(确保 sync_pull_errors 表已纳入 schema)', () {
+    // v32/v33 已落地,精确版本断言由各版本专属迁移测试负责,
+    // 这里只防止 schema 回退到无 sync_pull_errors 的老版本。
+    expect(db.schemaVersion, greaterThanOrEqualTo(31));
   });
 
   test('sync_pull_errors 表存在,所有列就位', () async {

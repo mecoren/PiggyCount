@@ -1,7 +1,10 @@
 import 'package:drift/drift.dart' as d;
+import 'package:uuid/uuid.dart';
 
 import '../../db.dart';
 import '../recurring_transaction_repository.dart';
+
+const _uuid = Uuid();
 
 /// 本地周期记账Repository实现
 /// 基于 Drift 数据库实现
@@ -46,7 +49,10 @@ class LocalRecurringTransactionRepository implements RecurringTransactionReposit
     required DateTime startDate,
     DateTime? endDate,
     bool enabled = true,
+    String? syncId,
   }) async {
+    // 每条新规则分配 syncId（导入路径显式传，UI 路径生成）—— v8 快照与
+    // Cloud 引擎都靠它做跨设备锚定；缺失时业务键匹配是兜底而非主路径。
     return await db.into(db.recurringTransactions).insert(
       RecurringTransactionsCompanion.insert(
         ledgerId: ledgerId,
@@ -64,6 +70,7 @@ class LocalRecurringTransactionRepository implements RecurringTransactionReposit
         startDate: startDate,
         endDate: d.Value(endDate),
         enabled: d.Value(enabled),
+        syncId: d.Value(syncId ?? _uuid.v4()),
       ),
     );
   }
@@ -87,6 +94,7 @@ class LocalRecurringTransactionRepository implements RecurringTransactionReposit
     DateTime? endDate,
     bool? enabled,
     DateTime? lastGeneratedDate,
+    String? syncId,
   }) async {
     await (db.update(db.recurringTransactions)..where((t) => t.id.equals(id)))
         .write(
@@ -107,6 +115,9 @@ class LocalRecurringTransactionRepository implements RecurringTransactionReposit
         endDate: d.Value(endDate),
         enabled: enabled != null ? d.Value(enabled) : const d.Value.absent(),
         lastGeneratedDate: d.Value(lastGeneratedDate),
+        // 仅显式传入时回填（name 命中业务键的导入匹配后补身份锚点）；
+        // null → absent，避免把已有 syncId 清掉。
+        syncId: syncId != null ? d.Value(syncId) : const d.Value.absent(),
         updatedAt: d.Value(DateTime.now()),
       ),
     );

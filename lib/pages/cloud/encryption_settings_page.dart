@@ -43,6 +43,13 @@ class _EncryptionSettingsPageState
     if (!mounted) return;
 
     setState(() => _busy = true);
+    // 强制阻塞弹窗：云端校验/全量重加密期间禁止一切页面操作，
+    // 防止用户中途编辑数据或触发同步与重加密互相踩写
+    final block = showBlockingProgressDialog(
+      context,
+      title: l10n.cloudSyncEncryptSetPassword,
+      initialStatus: l10n.encryptionBlockingVerifying,
+    );
     try {
       final service = ref.read(encryptionServiceProvider);
       final sync = ref.read(sync_p.syncServiceProvider);
@@ -64,6 +71,16 @@ class _EncryptionSettingsPageState
               cloudStorage: rawStorage,
             );
             usedEnableFromCloud = true;
+          } on EnableFromCloudAuthException {
+            // WebDAV 401/403：凭据错误重试无效，也不能走「以首设备继续」
+            // （重加密会用错误凭据失败），直接提示修正配置
+            if (!mounted) return;
+            await AppDialog.error(
+              context,
+              title: l10n.saltMismatchWebdavAuthTitle,
+              message: l10n.saltMismatchWebdavAuthMessage,
+            );
+            return;
           } on EnableFromCloudProbeFailedException {
             // US-3: 探测失败不自动回退 enable()，改为提示用户确认。
             // 若用户确认"以首设备继续"，走 enable + reEncrypt 流程；
@@ -97,12 +114,14 @@ class _EncryptionSettingsPageState
       //   （云端已是密文，无需重加密）
       if (sync is TransactionsSyncManager) {
         if (!isNewDevice) {
+          block.status.value = l10n.encryptionBlockingReencrypt;
           final reEncResult = await sync.reEncryptCloudAndReinit(
             encryptionService: service,
           );
           // 重加密失败时仅警告不阻塞，用户下次同步时仍可触发重加密
+          // await：确保警告弹窗落定后 finally 才关阻塞弹窗，避免误 pop
           if (reEncResult != null && reEncResult.failed > 0 && mounted) {
-            AppDialog.warning(
+            await AppDialog.warning(
               context,
               title: l10n.cloudSyncEncryptSetPassword,
               message: l10n.cloudSyncEncryptReencryptPartialFailed(
@@ -112,6 +131,7 @@ class _EncryptionSettingsPageState
           }
         } else {
           // 新设备：云端已是密文，仅需重建装饰器
+          block.status.value = l10n.encryptionBlockingReinit;
           await sync.reinitializeForEncryption();
         }
       }
@@ -120,13 +140,15 @@ class _EncryptionSettingsPageState
       if (mounted) showToast(context, l10n.cloudSyncEncryptEnableSuccess);
     } catch (e) {
       if (mounted) {
-        AppDialog.error(
+        // await：确保错误弹窗落定后 finally 才关阻塞弹窗，避免误 pop
+        await AppDialog.error(
           context,
           title: l10n.cloudSyncEncryptSetPassword,
           message: e.toString(),
         );
       }
     } finally {
+      await block.close();
       if (mounted) setState(() => _busy = false);
     }
   }
@@ -142,6 +164,12 @@ class _EncryptionSettingsPageState
     if (!mounted) return;
 
     setState(() => _busy = true);
+    // 强制阻塞弹窗：改密 + 云端存量密文重加密期间禁止一切页面操作
+    final block = showBlockingProgressDialog(
+      context,
+      title: l10n.cloudSyncEncryptChangePassword,
+      initialStatus: l10n.encryptionBlockingChangePassword,
+    );
     try {
       final service = ref.read(encryptionServiceProvider);
       final sync = ref.read(sync_p.syncServiceProvider);
@@ -161,12 +189,13 @@ class _EncryptionSettingsPageState
           );
         } else {
           // rawStorage 不可用（如 iCloud 未登录）：回退到普通改密，警告用户
+          // await：确保警告弹窗落定后 finally 才关阻塞弹窗，避免误 pop
           await service.changePassword(
             oldPassword: result.oldPassword!,
             newPassword: result.password,
           );
           if (mounted) {
-            AppDialog.warning(
+            await AppDialog.warning(
               context,
               title: l10n.cloudSyncEncryptChangePassword,
               message: '云存储不可用，云端存量密文未能重加密。'
@@ -190,7 +219,7 @@ class _EncryptionSettingsPageState
 
       // 重加密部分失败时警告（不阻塞，密钥已轮换完成）
       if (reEncResult != null && reEncResult.failed > 0 && mounted) {
-        AppDialog.warning(
+        await AppDialog.warning(
           context,
           title: l10n.cloudSyncEncryptChangePassword,
           message: l10n.cloudSyncEncryptReencryptPartialFailed(
@@ -203,13 +232,14 @@ class _EncryptionSettingsPageState
       if (mounted) showToast(context, l10n.cloudSyncEncryptChangeSuccess);
     } catch (e) {
       if (mounted) {
-        AppDialog.error(
+        await AppDialog.error(
           context,
           title: l10n.cloudSyncEncryptChangePassword,
           message: e.toString(),
         );
       }
     } finally {
+      await block.close();
       if (mounted) setState(() => _busy = false);
     }
   }
@@ -246,6 +276,12 @@ class _EncryptionSettingsPageState
     if (!mounted) return;
 
     setState(() => _busy = true);
+    // 强制阻塞弹窗：重置 + 装饰器重建期间禁止一切页面操作
+    final block = showBlockingProgressDialog(
+      context,
+      title: l10n.cloudSyncEncryptResetEncryption,
+      initialStatus: l10n.encryptionBlockingReset,
+    );
     try {
       await service.reset();
       // 重置后强制 sync 重新初始化，卸载加密装饰器
@@ -257,13 +293,14 @@ class _EncryptionSettingsPageState
       if (mounted) showToast(context, l10n.cloudSyncEncryptResetSuccess);
     } catch (e) {
       if (mounted) {
-        AppDialog.error(
+        await AppDialog.error(
           context,
           title: l10n.cloudSyncEncryptResetEncryption,
           message: e.toString(),
         );
       }
     } finally {
+      await block.close();
       if (mounted) setState(() => _busy = false);
     }
   }

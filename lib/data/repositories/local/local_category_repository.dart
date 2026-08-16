@@ -97,6 +97,7 @@ class LocalCategoryRepository implements CategoryRepository {
     String? icon,
     int? parentId,
     int? level,
+    String? syncId,
   }) async {
     await (db.update(db.categories)..where((c) => c.id.equals(id))).write(
       CategoriesCompanion(
@@ -107,6 +108,9 @@ class LocalCategoryRepository implements CategoryRepository {
             ? (parentId == -1 ? const d.Value(null) : d.Value(parentId))
             : const d.Value.absent(),
         level: level != null ? d.Value(level) : const d.Value.absent(),
+        // syncId 非 null 才覆盖；null 保持原值（云同步对齐身份用，
+        // 语义与 updateAccount 的回填一致，不误清空本地身份）
+        syncId: syncId != null ? d.Value(syncId) : const d.Value.absent(),
       ),
     );
   }

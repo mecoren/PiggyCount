@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
@@ -137,9 +138,13 @@ class S3Client {
     };
 
     // C-01 修复：将自定义 metadata 转为 x-amz-meta-* 头
+    // 非 ASCII 值（如中文账本名）直接作为 HTTP 头值会触发 RFC 7230
+    // 校验异常（FormatException: Invalid HTTP header field value），
+    // 请求根本发不出去。故统一 base64 编码并加 'b64:' 前缀标记，
+    // 读取端 [_decodeMetaValue] 自动还原，对所有 S3 兼容服务通用。
     if (metadata != null) {
       for (final entry in metadata.entries) {
-        headers['x-amz-meta-${entry.key}'] = entry.value;
+        headers['x-amz-meta-${entry.key}'] = _encodeMetaValue(entry.value);
       }
     }
 
@@ -556,7 +561,18 @@ class S3Client {
 
     var uri = Uri.parse('$scheme://$host$portStr$path');
     if (queryParameters != null && queryParameters.isNotEmpty) {
-      uri = uri.replace(queryParameters: queryParameters);
+      // 与 s3_signature._createCanonicalRequest 保持逐字节一致的编码：
+      // 使用 Uri.encodeComponent（RFC 3986，空格 -> %20），而不是
+      // uri.replace(queryParameters:) 的 x-www-form-urlencoded 编码
+      // （空格 -> '+'）。否则带空格的 prefix 会使「落网查询串」与
+      // 「签名查询串」不一致，S3 SigV4 校验返回 403；
+      // 字面 '+'（如 base64 continuation-token）也会被错误解码为空格。
+      // uri.replace(query:) 接收已编码串，不会二次编码（已实测验证）。
+      final encodedQuery = queryParameters.entries
+          .map((e) =>
+              '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
+          .join('&');
+      uri = uri.replace(query: encodedQuery);
     }
     return uri;
   }
@@ -614,16 +630,42 @@ class S3Client {
   ///
   /// S3 将用户上传时通过 x-amz-meta-{key} 头设置的元数据原样返回，
   /// http 包将所有头名转为小写，因此用 'x-amz-meta-' 前缀匹配。
+  /// 写入端已对非 ASCII 值做 base64 编码（见 [_encodeMetaValue]），
+  /// 此处自动还原；不带 'b64:' 前缀的旧值原样返回以保持向后兼容。
   Map<String, String>? _extractCustomMetadata(Map<String, String> headers) {
     const prefix = 'x-amz-meta-';
     final result = <String, String>{};
     for (final entry in headers.entries) {
       if (entry.key.startsWith(prefix)) {
         final metaKey = entry.key.substring(prefix.length);
-        result[metaKey] = entry.value;
+        result[metaKey] = _decodeMetaValue(entry.value);
       }
     }
     return result.isEmpty ? null : result;
+  }
+
+  /// 将 metadata 值编码为 HTTP 头安全形式。
+  ///
+  /// 非 ASCII 字符（如中文账本名）直接作为头值会触发 RFC 7230 校验异常，
+  /// 故统一 base64 编码并加 'b64:' 前缀标记；读取端 [_decodeMetaValue]
+  /// 自动还原。编码发生在签名之前，故服务端收到的也是编码值、签名一致。
+  static String _encodeMetaValue(String value) {
+    return 'b64:${base64.encode(utf8.encode(value))}';
+  }
+
+  /// 还原 [_encodeMetaValue] 编码的 metadata 值。
+  ///
+  /// 带 'b64:' 前缀的做 base64 解码；不带前缀视为历史明文值原样返回，
+  /// 避免破坏旧版写入的数据。解码异常时回退原值，保证不丢数据。
+  static String _decodeMetaValue(String value) {
+    if (value.startsWith('b64:')) {
+      try {
+        return utf8.decode(base64.decode(value.substring(5)));
+      } on Exception {
+        return value;
+      }
+    }
+    return value;
   }
 
   /// URL 编码 Key（保留 /）

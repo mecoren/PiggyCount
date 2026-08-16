@@ -274,10 +274,11 @@ void main() {
         name: '支付宝',
         currency: 'CNY',
       );
-      // 另一币种账户不参与匹配
+      // 另一币种账户不参与匹配。账户名全局唯一,同名 USD 账户已不可建,
+      // 改用「支付宝美元」:若币种过滤失效,它会因模糊匹配被误选中。
       await repo.createAccount(
         ledgerId: ledgerId,
-        name: '支付宝',
+        name: '支付宝美元',
         currency: 'USD',
       );
       final txId = await service.createFromBill(

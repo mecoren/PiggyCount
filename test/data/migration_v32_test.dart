@@ -25,8 +25,10 @@ void main() {
         reason: 'v32 迁移应创建 idx_transactions_ledger_happened 复合索引');
   });
 
-  test('schemaVersion 已升至 32', () async {
-    expect(db.schemaVersion, 32,
-        reason: 'db.dart schemaVersion 应为 32');
+  test('schemaVersion 已达 32 及以上', () async {
+    // v33(recurring sync_id)已落地,此处只保证 v32 迁移不被回退,
+    // 精确版本断言由各版本的专属迁移测试负责。
+    expect(db.schemaVersion, greaterThanOrEqualTo(32),
+        reason: 'db.dart schemaVersion 不应低于 32');
   });
 }

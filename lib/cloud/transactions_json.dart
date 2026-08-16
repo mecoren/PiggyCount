@@ -58,6 +58,21 @@ Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
     return a.id.compareTo(b.id);
   });
 
+  // ledger meta（提前查询：items 构建需要账本币种做币种规范化）
+  final ledger = await (db.select(db.ledgers)
+        ..where((l) => l.id.equals(ledgerId)))
+      .getSingleOrNull();
+
+  // 周期规则（v8 G2）：id → syncId 映射，items 的 recurringSyncId 需要它
+  // 把本地 int 外键翻译成跨设备稳定的字符串锚点。
+  final ledgerRecurrings = await (db.select(db.recurringTransactions)
+        ..where((r) => r.ledgerId.equals(ledgerId)))
+      .get();
+  final recurringIdToSyncId = <int, String?>{};
+  for (final r in ledgerRecurrings) {
+    recurringIdToSyncId[r.id] = r.syncId;
+  }
+
   // 获取所有交易的标签（批量查询）
   final txIds = txs.map((t) => t.id).toList();
   final tagsMap = <int, List<Tag>>{}; // transactionId -> tags
@@ -89,10 +104,10 @@ Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
     }
   }
 
-  // Map categoryId -> name/kind for used categories
+  // Map categoryId -> name/kind for used categories（仅服务 items 构建；
+  // 分类数组本身 v8 起全量导出，不再依赖此集合）
   final usedCatIds = txs.map((t) => t.categoryId).whereType<int>().toSet();
   final cats = <int, Map<String, dynamic>>{};
-  final allCategoriesSet = <int>{}; // 存储所有相关分类ID（包括父分类）
 
   for (final cid in usedCatIds) {
     final c = await (db.select(db.categories)..where((c) => c.id.equals(cid)))
@@ -100,31 +115,21 @@ Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
     if (c != null) {
       final sanitizedName = _sanitizeString(c.name);
       cats[cid] = {"name": sanitizedName, "kind": c.kind};
-      allCategoriesSet.add(cid);
-
-      // 如果是二级分类，也需要导出其父分类
-      if (c.level == 2 && c.parentId != null) {
-        allCategoriesSet.add(c.parentId!);
-      }
     }
   }
 
-  // v1.15.0: 导出该账本交易中使用的账户（包括转账的toAccountId）
-  // 需要在导出 items 之前查询，以便添加账户名称
-  final usedAccountIds = <int>{};
-  for (final t in txs) {
-    if (t.accountId != null) usedAccountIds.add(t.accountId!);
-    if (t.toAccountId != null) usedAccountIds.add(t.toAccountId!);
-  }
-  final accounts = <Account>[];
+  // 账户是 user-global 实体(ledger_id=0,与账本解耦),这里导出**全量**账户
+  // 而非仅被交易引用的账户 —— 否则未被交易引用的账户(新建空账户、删完交易
+  // 的账户)永远不上云,另一台设备的资产管理里会缺账户(account_sync_fix G1)。
+  // 每个 ledger 快照都携带同一份全量账户列表,恢复任意一个快照即可收敛
+  // 账户集合;账户数量级小(几十条),冗余可接受。
+  final accounts = (await db.select(db.accounts).get())
+    ..sort((a, b) => a.id.compareTo(b.id)); // 稳定排序,保证跨设备指纹可比
   final accountIdToName = <int, String>{}; // 账户ID -> 名称映射
-  for (final aid in usedAccountIds) {
-    final a = await (db.select(db.accounts)..where((a) => a.id.equals(aid)))
-        .getSingleOrNull();
-    if (a != null) {
-      accounts.add(a);
-      accountIdToName[a.id] = _sanitizeString(a.name);
-    }
+  final accountIdToSyncId = <int, String?>{}; // 账户ID -> syncId（v8 recurring 用）
+  for (final a in accounts) {
+    accountIdToName[a.id] = _sanitizeString(a.name);
+    accountIdToSyncId[a.id] = a.syncId;
   }
   final accountItems = accounts
       .map((a) => {
@@ -169,8 +174,13 @@ Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
       // 导致合计虚高）。与 SyncEngine 的 entity_serializer 保持一致。
       'excludeFromStats': t.excludeFromStats,
       'excludeFromBudget': t.excludeFromBudget,
-      if (t.currencyCode != null) 'currencyCode': t.currencyCode,
-      if (t.nativeAmount != null) 'nativeAmount': t.nativeAmount,
+      // 币种规范化：currencyCode 为空视为账本本币、nativeAmount 为空视为
+      // amount。不同写入路径（部分填 CNY+折算值、部分留空）产生的语义相同
+      // 数据，若原样导出会让两台设备算出不同指纹 → 永远 cloudNewer →
+      // 每次启动误弹「云端有更新」（account_dedup 排查实测 5700/8350 行
+      // 因此不收敛）。规范化是导出字段的确定性函数，两端结果一致。
+      'currencyCode': t.currencyCode ?? ledger?.currency ?? 'CNY',
+      'nativeAmount': t.nativeAmount ?? t.amount,
       // 共享账本 override：Editor 选 Owner 的 category/account，本地主表
       // 无 int id，直接存 syncId。modified 同步后必须保留，否则 override
       // 丢失回退到 categoryId（可能 null）。
@@ -180,6 +190,11 @@ Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
         'accountSyncIdOverride': t.accountSyncIdOverride,
       if (t.toAccountSyncIdOverride != null)
         'toAccountSyncIdOverride': t.toAccountSyncIdOverride,
+      // v8 G2：周期规则锚点。recurringId 是本地 int，跨设备必须用 syncId；
+      // 规则本身在顶层 recurring 数组里，恢复端靠此字段重建关联。
+      if (t.recurringId != null &&
+          (recurringIdToSyncId[t.recurringId] ?? '').isNotEmpty)
+        'recurringSyncId': recurringIdToSyncId[t.recurringId],
     };
 
     // 添加账户信息
@@ -201,11 +216,16 @@ Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
     // 添加标签（逗号分隔的标签名称 + syncId 列表）
     final txTags = tagsMap[t.id];
     if (txTags != null && txTags.isNotEmpty) {
-      item['tags'] = txTags.map((tag) => _sanitizeString(tag.name)).join(',');
-      final syncIds = txTags
+      // 去重：防止脏数据产生重复标签名或重复 syncId，避免跨设备 diff 循环
+      final seenTagIds = <int>{};
+      final uniqueTags = txTags.where((tag) => seenTagIds.add(tag.id)).toList();
+
+      item['tags'] = uniqueTags.map((tag) => _sanitizeString(tag.name)).join(',');
+      final syncIds = uniqueTags
           .map((tag) => tag.syncId)
           .whereType<String>()
           .where((s) => s.isNotEmpty)
+          .toSet()
           .toList();
       if (syncIds.isNotEmpty) item['tagSyncIds'] = syncIds;
     }
@@ -230,6 +250,9 @@ Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
       };
       if (a.cloudFileId != null) attMap['cloudFileId'] = a.cloudFileId;
       if (a.cloudSha256 != null) attMap['cloudSha256'] = a.cloudSha256;
+      // v8+(attachment_binary_sync):本地内容哈希。恢复端凭它从
+      // attachments/<sha256>.bin 补齐文件;旧快照无此字段则保持缺文件现状。
+      if (a.localSha256 != null) attMap['sha256'] = a.localSha256;
       attachmentsMap.putIfAbsent(a.transactionId, () => []).add(attMap);
     }
   }
@@ -242,16 +265,15 @@ Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
     }
   }
 
-  // ledger meta
-  final ledger = await (db.select(db.ledgers)
-        ..where((l) => l.id.equals(ledgerId)))
-      .getSingleOrNull();
-
-  // 构建 categories 数组（包含图标、层级、父分类信息）
+  // 构建 categories 数组（v8 G3：全量导出，与账户 G1 同理 —— 未被交易
+  // 引用的自定义分类也要上云，否则另一台设备分类管理里缺失）。
   final categoryItems = <Map<String, dynamic>>[];
-  final allCategoriesList = await (db.select(db.categories)
-        ..where((c) => c.id.isIn(allCategoriesSet.toList())))
-      .get();
+  final allCategoriesList = await db.select(db.categories).get();
+  // id → 名称映射：budgets/recurring 数组的分类引用要用
+  final categoryIdToName = <int, String>{};
+  for (final c in allCategoriesList) {
+    categoryIdToName[c.id] = _sanitizeString(c.name);
+  }
 
   // 先导出一级分类，再导出二级分类（便于导入时先创建父分类）
   allCategoriesList.sort((a, b) {
@@ -266,6 +288,9 @@ Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
       'level': cat.level,
       'sortOrder': cat.sortOrder, // 保存排序顺序
       'iconType': cat.iconType, // 图标类型: material / custom / community
+      // v8 G3：分类 syncId。此前表里有列但快照不传，导入只能按 name+kind
+      // 匹配 —— 两端各自建的同名分类无法按身份收敛。
+      if (cat.syncId != null && cat.syncId!.isNotEmpty) 'syncId': cat.syncId,
     };
 
     // 添加图标信息（如果存在）
@@ -295,8 +320,11 @@ Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
     categoryItems.add(categoryItem);
   }
 
-  // 构建标签列表
-  final tagItems = allUsedTags.values.map((tag) {
+  // 构建标签列表（v8 G3：全量导出 —— 未被交易引用的标签也要上云，
+  // 与账户/分类同理。allUsedTags 仍用于 items 的 tag 名拼接。）
+  final allTags = await db.select(db.tags).get()
+    ..sort((a, b) => a.id.compareTo(b.id)); // 稳定排序
+  final tagItems = allTags.map((tag) {
     final tagItem = <String, dynamic>{
       'name': _sanitizeString(tag.name),
     };
@@ -310,6 +338,86 @@ Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
     return tagItem;
   }).toList();
 
+  // v8 G1：预算数组。budgets 是 ledger-scoped（按 ledgerId 过滤），
+  // 导出按 syncId 锚定、稳定排序（跨设备指纹可比）。
+  final ledgerBudgets = await (db.select(db.budgets)
+        ..where((b) => b.ledgerId.equals(ledgerId)))
+      .get()
+    ..sort((a, b) {
+      final ka = a.syncId ?? 'budget_${a.id}';
+      final kb = b.syncId ?? 'budget_${b.id}';
+      return ka.compareTo(kb);
+    });
+  final budgetItems = ledgerBudgets.map((b) {
+    final categoryName =
+        b.categoryId != null ? categoryIdToName[b.categoryId] : null;
+    return <String, dynamic>{
+      if (b.syncId != null && b.syncId!.isNotEmpty) 'syncId': b.syncId,
+      'type': b.type,
+      if (categoryName != null) 'categoryName': categoryName,
+      'amount': b.amount,
+      'period': b.period,
+      'startDay': b.startDay,
+      'enabled': b.enabled,
+    };
+  }).toList();
+
+  // v8 G2：周期规则数组。int 外键（category/account/toAccount）翻译成
+  // name + syncId 双锚点：导入端优先按 syncId 反查，name 兜底。
+  final recurringItems = ledgerRecurrings.map((r) {
+    final catName =
+        r.categoryId != null ? categoryIdToName[r.categoryId] : null;
+    String? accSyncId;
+    String? toAccSyncId;
+    if (r.accountId != null) accSyncId = accountIdToSyncId[r.accountId];
+    if (r.toAccountId != null) toAccSyncId = accountIdToSyncId[r.toAccountId];
+    return <String, dynamic>{
+      if (r.syncId != null && r.syncId!.isNotEmpty) 'syncId': r.syncId,
+      'type': r.type,
+      'amount': r.amount,
+      if (catName != null) 'categoryName': catName,
+      if (r.accountId != null)
+        'accountName': accountIdToName[r.accountId],
+      if (accSyncId != null && accSyncId.isNotEmpty)
+        'accountSyncId': accSyncId,
+      if (r.toAccountId != null)
+        'toAccountName': accountIdToName[r.toAccountId],
+      if (toAccSyncId != null && toAccSyncId.isNotEmpty)
+        'toAccountSyncId': toAccSyncId,
+      'note': _sanitizeString(r.note),
+      'frequency': r.frequency,
+      'interval': r.interval,
+      if (r.dayOfMonth != null) 'dayOfMonth': r.dayOfMonth,
+      if (r.dayOfWeek != null) 'dayOfWeek': r.dayOfWeek,
+      if (r.monthOfYear != null) 'monthOfYear': r.monthOfYear,
+      'startDate': r.startDate.toUtc().toIso8601String(),
+      if (r.endDate != null)
+        'endDate': r.endDate!.toUtc().toIso8601String(),
+      if (r.lastGeneratedDate != null)
+        'lastGeneratedDate': r.lastGeneratedDate!.toUtc().toIso8601String(),
+      'enabled': r.enabled,
+    };
+  }).toList()
+    ..sort((a, b) {
+      final ka = (a['syncId'] as String?) ?? '';
+      final kb = (b['syncId'] as String?) ?? '';
+      return ka.compareTo(kb);
+    });
+
+  // v8 G4：手动汇率覆盖。user-global 实体，随快照冗余携带（行数极少，
+  // 与账户同策略）；业务键 (baseCurrency, quoteCurrency)。
+  final rateOverrides = (await db.select(db.exchangeRateOverrides).get())
+    ..sort((a, b) =>
+        '${a.baseCurrency}/${a.quoteCurrency}'.compareTo('${b.baseCurrency}/${b.quoteCurrency}'));
+  final rateOverrideItems = rateOverrides.map((o) {
+    return <String, dynamic>{
+      if (o.syncId != null && o.syncId!.isNotEmpty) 'syncId': o.syncId,
+      'baseCurrency': o.baseCurrency,
+      'quoteCurrency': o.quoteCurrency,
+      'rate': o.rate,
+    };
+  }).toList();
+
   // 检查账本是否存在
   if (ledger == null) {
     logger.error('TransactionsJson', '账本 $ledgerId 不存在！');
@@ -317,7 +425,7 @@ Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
   }
 
   final payload = {
-    'version': 7, // 版本升级:账户扩展字段 + 标签 syncId + 交易 tagSyncIds/override
+    'version': 8, // v8: budgets/recurring/exchangeRateOverrides + 全量分类/标签 + recurringSyncId
     'exportedAt': DateTime.now().toUtc().toIso8601String(),
     'ledgerId': ledgerId,
     'ledgerName': ledger.name,
@@ -327,6 +435,9 @@ Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
     'accounts': accountItems,
     'categories': categoryItems,
     'tags': tagItems, // 新增：标签信息
+    'budgets': budgetItems, // v8 G1：预算
+    'recurring': recurringItems, // v8 G2：周期规则
+    'exchangeRateOverrides': rateOverrideItems, // v8 G4：手动汇率
     'items': items,
   };
 
@@ -378,6 +489,78 @@ ImportData parseJsonToImportData(String jsonStr) {
         iconType: cat['iconType'] as String?,
         customIconPath: cat['customIconPath'] as String?,
         communityIconId: cat['communityIconId'] as String?,
+        syncId: cat['syncId'] as String?,
+      ));
+    }
+  }
+
+  // 解析预算（v8 G1；旧快照无此数组 → 空列表，导入跳过不删本地）
+  final budgets = <ImportBudget>[];
+  final jsonBudgets = data['budgets'] as List?;
+  if (jsonBudgets != null) {
+    for (final b in jsonBudgets.cast<Map<String, dynamic>>()) {
+      budgets.add(ImportBudget(
+        syncId: b['syncId'] as String?,
+        type: b['type'] as String? ?? 'total',
+        categoryName: b['categoryName'] as String?,
+        amount: (b['amount'] as num?)?.toDouble() ?? 0,
+        period: b['period'] as String? ?? 'monthly',
+        startDay: b['startDay'] as int? ?? 1,
+        enabled: b['enabled'] as bool? ?? true,
+      ));
+    }
+  }
+
+  // 解析周期规则（v8 G2；旧快照无此数组 → 空列表）
+  final recurrings = <ImportRecurring>[];
+  final jsonRecurrings = data['recurring'] as List?;
+  if (jsonRecurrings != null) {
+    for (final r in jsonRecurrings.cast<Map<String, dynamic>>()) {
+      recurrings.add(ImportRecurring(
+        syncId: r['syncId'] as String?,
+        type: r['type'] as String,
+        amount: (r['amount'] as num).toDouble(),
+        categoryName: r['categoryName'] as String?,
+        accountName: r['accountName'] as String?,
+        accountSyncId: r['accountSyncId'] as String?,
+        toAccountName: r['toAccountName'] as String?,
+        toAccountSyncId: r['toAccountSyncId'] as String?,
+        note: r['note'] as String?,
+        frequency: r['frequency'] as String,
+        interval: r['interval'] as int? ?? 1,
+        dayOfMonth: r['dayOfMonth'] as int?,
+        dayOfWeek: r['dayOfWeek'] as int?,
+        monthOfYear: r['monthOfYear'] as int?,
+        startDate: DateTime.parse(r['startDate'] as String),
+        endDate: r['endDate'] != null
+            ? DateTime.parse(r['endDate'] as String)
+            : null,
+        lastGeneratedDate: r['lastGeneratedDate'] != null
+            ? DateTime.parse(r['lastGeneratedDate'] as String)
+            : null,
+        enabled: r['enabled'] as bool? ?? true,
+      ));
+    }
+  }
+
+  // 解析手动汇率覆盖（v8 G4）
+  final rateOverrides = <ImportRateOverride>[];
+  final jsonRateOverrides = data['exchangeRateOverrides'] as List?;
+  if (jsonRateOverrides != null) {
+    for (final o in jsonRateOverrides.cast<Map<String, dynamic>>()) {
+      final base = o['baseCurrency'] as String?;
+      final quote = o['quoteCurrency'] as String?;
+      // exchangeRateOverrides.rate 是 TEXT 列，JSON 中以字符串形式序列化，
+      // 需兼容 String 与 num 两种形态。
+      final rate = (o['rate'] is num
+              ? o['rate'] as num
+              : num.tryParse(o['rate']?.toString() ?? ''))
+          ?.toDouble();
+      if (base == null || quote == null || rate == null || rate <= 0) continue;
+      rateOverrides.add(ImportRateOverride(
+        baseCurrency: base,
+        quoteCurrency: quote,
+        rate: rate,
       ));
     }
   }
@@ -422,6 +605,7 @@ ImportData parseJsonToImportData(String jsonStr) {
             sortOrder: a['sortOrder'] as int? ?? 0,
             cloudFileId: a['cloudFileId'] as String?,
             cloudSha256: a['cloudSha256'] as String?,
+            sha256: a['sha256'] as String?,
           );
         }).toList();
       }
@@ -457,19 +641,27 @@ ImportData parseJsonToImportData(String jsonStr) {
         categorySyncIdOverride: it['categorySyncIdOverride'] as String?,
         accountSyncIdOverride: it['accountSyncIdOverride'] as String?,
         toAccountSyncIdOverride: it['toAccountSyncIdOverride'] as String?,
+        // v8 G2：周期规则锚点
+        recurringSyncId: it['recurringSyncId'] as String?,
       ));
     }
   }
 
-  // monthStartDay 在导出 payload 里有,但这里刻意不读 —— 恢复路径由
-  // syncLedgersFromServer 收敛(见 .docs/period-start-date/design.md §4)。
+  // v8 G5：monthStartDay 进 ImportData。旧版注释里该字段由 Cloud 引擎的
+  // syncLedgersFromServer 收敛 —— 但纯快照(WebDAV/S3/Supabase/iCloud)
+  // 用户没有 Cloud 引擎,「下载恢复」后本地月起始日永远不收敛(sync_gap_closure G5)。
+  // 现在恢复路径以快照为准回写;Cloud 路径同值写入幂等,不冲突。
   return ImportData(
     accounts: accounts,
     categories: categories,
     tags: tags,
     transactions: transactions,
+    budgets: budgets,
+    recurrings: recurrings,
+    rateOverrides: rateOverrides,
     ledgerName: data['ledgerName'] as String?,
     currency: data['currency'] as String?,
+    monthStartDay: data['monthStartDay'] as int?,
   );
 }
 

@@ -50,6 +50,10 @@ class WebDAVStorageService implements CloudStorageService {
         // 临时文件清理失败记录日志，便于排查远端残留半成品
         dev.log('[WebDAV] Warning: temp file cleanup failed for $tempPath: $cleanupError', name: 'WebDAVStorage');
       }
+      // 401/403 认证失败：抛专属异常供上层引导用户修正凭据
+      if (_isUnauthorized(e)) {
+        throw CloudAuthException('WebDAV 认证失败（账号或密码错误）', e);
+      }
       throw CloudStorageException('Upload failed: $e', e);
     }
 
@@ -74,6 +78,11 @@ class WebDAVStorageService implements CloudStorageService {
       // 统一用 _isNotFound 判断 404，优先结构化状态码、字符串匹配仅兜底
       if (_isNotFound(e)) {
         return null;
+      }
+      // 401/403 认证失败需与网络错误区分：上层（如 enableFromCloud 探测）
+      // 依赖异常类型引导用户重新配置凭据，误报为网络错误会误导排查方向
+      if (_isUnauthorized(e)) {
+        throw CloudAuthException('WebDAV 认证失败（账号或密码错误）', e);
       }
       throw CloudStorageException('Download failed: $e', e);
     }
@@ -127,6 +136,10 @@ class WebDAVStorageService implements CloudStorageService {
         );
       }).toList();
     } catch (e) {
+      // 401/403 认证失败：抛专属异常供上层引导用户修正凭据
+      if (_isUnauthorized(e)) {
+        throw CloudAuthException('WebDAV 认证失败（账号或密码错误）', e);
+      }
       throw CloudStorageException('List failed: $e', e);
     }
   }
@@ -146,6 +159,10 @@ class WebDAVStorageService implements CloudStorageService {
       // 覆盖上传等危险操作。
       if (_isNotFound(e)) {
         return false;
+      }
+      // 401/403 认证失败必须抛出：误判为「不存在」会触发覆盖上传等危险操作
+      if (_isUnauthorized(e)) {
+        throw CloudAuthException('WebDAV 认证失败（账号或密码错误）', e);
       }
       throw CloudStorageException('Failed to check file existence: $e', e);
     }
@@ -178,6 +195,11 @@ class WebDAVStorageService implements CloudStorageService {
         metadata: customMetadata,
       );
     } catch (e) {
+      // 401/403 认证失败需原样抛出：下方 `e is CloudStorageException` 分支
+      // 会把通用存储异常吞成 null（视为无元数据），认证错误不能被吞掉
+      if (_isUnauthorized(e)) {
+        throw CloudAuthException('WebDAV 认证失败（账号或密码错误）', e);
+      }
       if (_isNotFound(e) || e is CloudStorageException) {
         return null;
       }
@@ -212,6 +234,30 @@ class WebDAVStorageService implements CloudStorageService {
         msg.contains('not found') ||
         msg.contains('does not exist') ||
         msg.contains('no such');
+  }
+
+  /// 统一判断 WebDAV 401/403 认证失败，策略与 [_isNotFound] 一致：
+  /// 优先读取 dio 异常携带的 response.statusCode，无结构化信息时退化为
+  /// 字符串匹配（兼容各服务器差异化错误文案）。
+  ///
+  /// 认证失败与网络故障对用户的处置动作完全不同（改凭据 vs 查网络），
+  /// 必须区分抛出 [CloudAuthException]，避免上层统一报「请检查网络」。
+  bool _isUnauthorized(Object e) {
+    try {
+      final dynamic dyn = e;
+      final dynamic response = dyn.response;
+      if (response != null &&
+          (response.statusCode == 401 || response.statusCode == 403)) {
+        return true;
+      }
+    } catch (_) {
+      // 非 dio 异常类型，无 response 字段，进入字符串兜底
+    }
+    final msg = e.toString().toLowerCase();
+    return msg.contains('401') ||
+        msg.contains('403') ||
+        msg.contains('unauthorized') ||
+        msg.contains('forbidden');
   }
 
   /// Ensures a directory exists, creating it if necessary.

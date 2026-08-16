@@ -147,6 +147,14 @@ class EncryptionServiceImpl implements EncryptionService {
     try {
       files = await cloudStorage.list(path: '');
     } catch (e) {
+      // 401/403 认证失败与网络故障分流通：认证错误重试无效，
+      // 需引导用户修正云存储凭据（新设备 WebDAV 密码输错的核心场景）
+      if (_isAuthError(e)) {
+        throw EnableFromCloudAuthException(
+          '云端认证失败（账号或密码错误），请到云服务页修正配置后重试',
+          cause: e,
+        );
+      }
       throw EnableFromCloudProbeFailedException(
         '探测云端文件失败，无法判断是否为首设备。请检查网络/权限后重试，'
         '或确认以首设备身份继续（将生成新 salt 并重加密云端数据）。',
@@ -171,6 +179,13 @@ class EncryptionServiceImpl implements EncryptionService {
       try {
         raw = await cloudStorage.download(path: name);
       } catch (e) {
+        // 认证失败与 list 探测同款分流逻辑
+        if (_isAuthError(e)) {
+          throw EnableFromCloudAuthException(
+            '云端认证失败（账号或密码错误），请到云服务页修正配置后重试',
+            cause: e,
+          );
+        }
         throw EnableFromCloudProbeFailedException(
           '下载云端文件失败：$name。请检查网络/权限后重试。',
           cause: e,
@@ -752,5 +767,16 @@ class EncryptionServiceImpl implements EncryptionService {
       if (a[i] != b[i]) return false;
     }
     return true;
+  }
+
+  /// 判断异常是否为云端认证失败（401/403）。
+  ///
+  /// 正常路径下 WebDAV 层直接抛 [CloudAuthException]（rawStorage 未装饰、
+  /// 无中间包装）；字符串兜底覆盖被上层包装成文本的边缘情况
+  /// （如 CloudConfigurationException 保留 originalError 的 toString）。
+  bool _isAuthError(Object e) {
+    if (e is CloudAuthException) return true;
+    final s = e.toString();
+    return s.contains('CloudAuthException') || s.contains('认证失败');
   }
 }

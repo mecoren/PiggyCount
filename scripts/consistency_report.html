@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PiggyCount Dev 双实例数据一致性对照</title>
+<style>
+  :root{
+    --bg:#f7f8fa; --card:#ffffff; --ink:#1f2329; --sub:#646a73;
+    --line:#e5e6eb; --ok:#0a8f5b; --warn:#d97706; --bad:#d4380d; --accent:#3b6cff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+       background:var(--bg);color:var(--ink);padding:24px;line-height:1.6}
+  h1{font-size:20px;margin:0 0 4px}
+  .meta{color:var(--sub);font-size:13px;margin-bottom:18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:16px}
+  h2{font-size:15px;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+  th{color:var(--sub);font-weight:600}
+  td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .tag{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600}
+  .t-ok{background:#e7f7ee;color:var(--ok)}
+  .t-warn{background:#fdf0e0;color:var(--warn)}
+  .t-bad{background:#fdeae3;color:var(--bad)}
+  .t-info{background:#eaf0ff;color:var(--accent)}
+  .finding{border-left:4px solid var(--accent);padding:10px 14px;background:#f3f6ff;border-radius:8px;margin-bottom:12px}
+  .finding.warn{border-color:var(--warn);background:#fef6ec}
+  .finding.ok{border-color:var(--ok);background:#effaf3}
+  code{background:#f0f1f3;padding:1px 6px;border-radius:5px;font-size:12px}
+  ul{margin:6px 0 0;padding-left:20px}
+  li{margin:4px 0}
+</style>
+</head>
+<body>
+  <h1>PiggyCount Dev 双实例数据一致性对照</h1>
+  <div class="meta">对比时间：2026-08-16 &nbsp;|&nbsp; 实例 127.0.0.1:16384 vs 127.0.0.1:16416 &nbsp;|&nbsp; 包名 com.wait.piggycount.dev.debug</div>
+
+  <div class="card">
+    <h2>一、结构性指标对比</h2>
+    <table>
+      <tr><th>指标</th><th class="num">16384</th><th class="num">16416</th><th>判定</th></tr>
+      <tr><td>账本数</td><td class="num">6</td><td class="num">6</td><td><span class="tag t-ok">一致</span></td></tr>
+      <tr><td>账户数</td><td class="num">97</td><td class="num">97</td><td><span class="tag t-warn">数量齐，但异常膨胀</span></td></tr>
+      <tr><td>交易数</td><td class="num">2500</td><td class="num">2500</td><td><span class="tag t-ok">一致</span></td></tr>
+      <tr><td>分类数（支出/收入/转账）</td><td class="num">60 (45/14/1)</td><td class="num">60 (45/14/1)</td><td><span class="tag t-ok">一致</span></td></tr>
+      <tr><td>每个账本交易分布</td><td class="num">5×500</td><td class="num">5×500</td><td><span class="tag t-ok">一致·归账正确</span></td></tr>
+      <tr><td>user_version / journal</td><td class="num">34 / delete</td><td class="num">34 / delete</td><td><span class="tag t-ok">一致</span></td></tr>
+      <tr><td>账户 ledger_id 取值</td><td class="num">全部 0</td><td class="num">全部 0</td><td><span class="tag t-info">设计行为</span></td></tr>
+      <tr><td>账本名集合</td><td>默认+日常消费/海外旅行/资产配置/创业公司/家庭共用</td><td>默认+学生生活/自由职业/跨境海淘/房产投资/亲友共享</td><td><span class="tag t-warn">刻意差异化</span></td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>二、两个关键发现</h2>
+
+    <div class="finding ok">
+      <strong>发现 1：账户 <code>ledger_id=0</code> 不是数据损坏，是应用设计。</strong>
+      <ul>
+        <li><code>lib/services/data/account_dedup_service.dart</code> 在每次启动引导阶段运行，把所有账户收敛为 <b>全局实体</b>（<code>ledger_id=0</code>，与账本解耦）。</li>
+        <li>应用运行后，注入时写在账户上的账本归属（原本 2–6）被主动全局化，因此账本列表显示"账户 0"属正常终态，并非挂空。</li>
+        <li>交易不受影响：<code>transactions.ledger_id</code> 仍为 2–6，每账本精确 500 笔，归账正确。</li>
+      </ul>
+    </div>
+
+    <div class="finding warn">
+      <strong>发现 2：两个实例出现云同步「串台」，账户互相污染。</strong>
+      <ul>
+        <li>账户数从注入时的 50 膨胀到 97；且 <b>16384 出现了 16416 专属账户名</b>（如「校园一卡通」「学生支付宝」「饭卡」），16416 对称。</li>
+        <li>几乎可以确定两个 dev 实例<b>共用了同一个云同步账号/桶</b>，运行时会互相同步，把对方账户拉进本地并全局化。</li>
+        <li>后果：两边数据不再是「干净的差异化测试数据」，账本边界被云同步打破。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>三、结论与建议</h2>
+    <p><b>结构层面</b>：两边完全一致（6 账本 / 97 账户 / 2500 交易 / 60 分类 / 交易归账正确 / schema 一致）。</p>
+    <p><b>内容层面</b>：并不「一致」——账本名是刻意差异化的，且被云同步串台互相混入对方账户，已不是隔离的测试数据。</p>
+    <p><b>建议</b>（如需恢复为干净、隔离的差异化数据）：</p>
+    <ul>
+      <li>让两个 dev 实例使用<b>不同的云同步账号/桶</b>，或在调试期间<b>临时禁用云同步</b>；</li>
+      <li>断开同步后，重新执行 <code>scripts/inject_into_live.py</code> 注入流程（拉取→注入→推回→重启）；</li>
+      <li>注意：在 PiggyCount 当前模型中「账户是全局的」，<code>ledger_id=0</code> 会被自动保持，无法通过该字段体现「每个账本专属 N 个账户」，但交易已正确挂在各账本下，统计/筛选不受影响。</li>
+    </ul>
+  </div>
+</body>
+</html>

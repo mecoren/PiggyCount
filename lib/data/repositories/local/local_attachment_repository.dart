@@ -25,6 +25,7 @@ class LocalAttachmentRepository implements AttachmentRepository {
     int sortOrder = 0,
     String? cloudFileId,
     String? cloudSha256,
+    String? localSha256,
   }) async {
     return await db.into(db.transactionAttachments).insert(
       TransactionAttachmentsCompanion.insert(
@@ -37,6 +38,7 @@ class LocalAttachmentRepository implements AttachmentRepository {
         sortOrder: d.Value(sortOrder),
         cloudFileId: d.Value(cloudFileId),
         cloudSha256: d.Value(cloudSha256),
+        localSha256: d.Value(localSha256),
       ),
     );
   }
@@ -83,6 +85,27 @@ class LocalAttachmentRepository implements AttachmentRepository {
         cloudSha256: d.Value(cloudSha256),
       ),
     );
+  }
+
+  @override
+  Future<void> updateAttachmentLocalSha256(int id, String localSha256) async {
+    await (db.update(db.transactionAttachments)
+      ..where((t) => t.id.equals(id))).write(
+      TransactionAttachmentsCompanion(
+        localSha256: d.Value(localSha256),
+      ),
+    );
+  }
+
+  @override
+  Future<List<TransactionAttachment>> getAttachmentsWithoutLocalSha256({
+    required int limit,
+  }) async {
+    return await (db.select(db.transactionAttachments)
+          ..where((t) => t.localSha256.isNull())
+          ..orderBy([(t) => d.OrderingTerm(expression: t.id)])
+          ..limit(limit))
+        .get();
   }
 
   @override

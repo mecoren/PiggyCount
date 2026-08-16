@@ -6,6 +6,34 @@ import '../core/exceptions.dart';
 import '../core/sync_status.dart';
 import '../utils/logger.dart';
 
+/// 归一化云端 metadata 值：剥离存储层写入的 'b64:' base64 包装。
+///
+/// S3 存储层上传时统一对 metadata 值做 base64 编码并加 'b64:' 前缀
+/// （RFC 7230 头值安全），读取端应在存储层解码；但部分 S3 兼容网关
+/// 会原样返回编码值或剥离 padding 导致解码回退，使指纹比较变成
+/// '386c...' vs 'b64:Mzg2...' 永不相等 → 永远 outOfSync → 每次启动
+/// 都弹「云端有更新」。在消费点（getStatus）做防御性归一化，
+/// 无论存储层解码是否生效都能收敛；无前缀的历史明文值原样返回。
+String? _normalizeMetaValue(String? value) {
+  if (value == null) return null;
+  if (value.startsWith('b64:')) {
+    final payload = value.substring(4);
+    // 直接解码；padding 被网关剥离时补齐后重试（base64.decode 抛
+    // FormatException，utf8.decode 可能抛 ArgumentError，统一兜底原样返回）
+    for (final candidate in [
+      payload,
+      payload.padRight((payload.length + 3) ~/ 4 * 4, '='),
+    ]) {
+      try {
+        return utf8.decode(base64.decode(candidate));
+      } catch (_) {
+        continue;
+      }
+    }
+  }
+  return value;
+}
+
 /// Cached sync status entry
 class _CachedStatus {
   final SyncStatus status;
@@ -297,8 +325,13 @@ class CloudSyncManager<T> {
       int? cloudCount;
       DateTime? cloudUpdatedAt;
 
-      final metaFingerprint = cloudFile.metadata?['fingerprint'] as String?;
-      final metaCountStr = cloudFile.metadata?['count'] as String?;
+      // metadata 值经 _normalizeMetaValue 归一化：剥离存储层可能的
+      // 'b64:' 包装（见其文档注释），否则指纹永不相等、count/uploadedAt
+      // 解析失败（方向判断退化到 lastModified 兜底）
+      final metaFingerprint =
+          _normalizeMetaValue(cloudFile.metadata?['fingerprint'] as String?);
+      final metaCountStr =
+          _normalizeMetaValue(cloudFile.metadata?['count'] as String?);
       final metaCount = metaCountStr != null ? int.tryParse(metaCountStr) : null;
 
       if (metaFingerprint != null) {
@@ -307,7 +340,8 @@ class CloudSyncManager<T> {
         cloudCount = metaCount;
 
         // 尝试从 metadata 提取时间戳
-        final uploadedAtStr = cloudFile.metadata?['uploadedAt'] as String?;
+        final uploadedAtStr =
+            _normalizeMetaValue(cloudFile.metadata?['uploadedAt'] as String?);
         if (uploadedAtStr != null) {
           cloudUpdatedAt = DateTime.tryParse(uploadedAtStr);
         }
@@ -354,7 +388,8 @@ class CloudSyncManager<T> {
           'Cloud fingerprint: $cloudFingerprint, count: $cloudCount, updatedAt: $cloudUpdatedAt');
 
       // 6. Get last sync timestamp from metadata
-      final lastSyncedAtStr = cloudFile.metadata?['uploadedAt'] as String?;
+      final lastSyncedAtStr =
+          _normalizeMetaValue(cloudFile.metadata?['uploadedAt'] as String?);
       final lastSyncedAt = lastSyncedAtStr != null
           ? DateTime.tryParse(lastSyncedAtStr)
           : cloudFile.lastModified;

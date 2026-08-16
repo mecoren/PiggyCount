@@ -119,6 +119,19 @@ class MockCloudStorageService implements CloudStorageService {
       metadata: file.metadata,
     );
   }
+
+  /// 模拟 S3 兼容网关原样返回 'b64:' 包装 metadata（存储层解码未生效）：
+  /// 把已存储的每个 metadata 值 base64 包装，复刻线上
+  /// '386c...' vs 'b64:Mzg2...' 永不相等的故障形态
+  void wrapMetadataInBase64(String path) {
+    final file = _files[path];
+    if (file?.metadata == null) return;
+    final wrapped = <String, String>{
+      for (final e in file!.metadata!.entries)
+        e.key: 'b64:${base64.encode(utf8.encode(e.value))}',
+    };
+    _files[path] = _StoredFile(file.data, wrapped);
+  }
 }
 
 class _StoredFile {
@@ -394,6 +407,66 @@ void main() {
 
       // Assert - should detect out of sync
       expect(status.state, equals(SyncState.outOfSync));
+    });
+
+    // sync_convergence_fix 回归：S3 存储层上传时对 metadata 值统一加
+    // 'b64:' base64 包装（RFC 7230 头值安全），部分 S3 兼容网关会原样
+    // 返回包装值导致指纹比较变成 '386c...' vs 'b64:Mzg2...' 永不相等
+    // → 永远 outOfSync → 每次启动都弹「云端有更新」死循环。
+    // getStatus 消费点必须做防御性归一化。
+    test('metadata 带 b64 包装时指纹仍应判定 synced（网关不解码场景）',
+        () async {
+      // Arrange
+      const testUser = CloudUser(id: 'user123');
+      const testData = 123;
+      const testPath = 'test.json';
+
+      mockAuth.setCurrentUser(testUser);
+      await syncManager.upload(data: testData, path: testPath);
+
+      // 模拟网关原样返回 b64 包装的 metadata
+      mockStorage.wrapMetadataInBase64(testPath);
+
+      // Act
+      final status = await syncManager.getStatus(
+        data: testData,
+        path: testPath,
+        forceRefresh: true,
+      );
+
+      // Assert：归一化后指纹一致 → synced，而非 outOfSync
+      expect(status.state, equals(SyncState.synced));
+      expect(status.cloudFingerprint, equals(status.localFingerprint));
+    });
+
+    test('metadata b64 包装值缺 padding（网关剥离 = ）时仍可归一化', () async {
+      // Arrange
+      const testUser = CloudUser(id: 'user123');
+      const testData = 123;
+      const testPath = 'test.json';
+
+      mockAuth.setCurrentUser(testUser);
+      await syncManager.upload(data: testData, path: testPath);
+
+      // 包装后剥离 padding，模拟部分网关对头值的规范化处理
+      mockStorage.wrapMetadataInBase64(testPath);
+      final file = mockStorage._files[testPath]!;
+      final stripped = <String, String>{
+        for (final e in file.metadata!.entries)
+          e.key: e.value.replaceAll('=', ''),
+      };
+      mockStorage._files[testPath] = _StoredFile(file.data, stripped);
+
+      // Act
+      final status = await syncManager.getStatus(
+        data: testData,
+        path: testPath,
+        forceRefresh: true,
+      );
+
+      // Assert：容错补 padding 解码，指纹一致 → synced
+      expect(status.state, equals(SyncState.synced));
+      expect(status.cloudFingerprint, equals(status.localFingerprint));
     });
   });
 

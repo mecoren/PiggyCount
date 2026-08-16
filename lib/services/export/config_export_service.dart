@@ -65,6 +65,78 @@ Map<String, dynamic> _convertToStringDynamicMap(Map map) {
   });
 }
 
+/// E1:YAML 双引号字符串转义 helper。
+///
+/// 手写 StringBuffer 拼 YAML 时,值直接 `"${x}"` 插值,若值含 `"` / `\` /
+/// 换行 / 制表符会破坏 YAML 结构(双引号 scalar 提前闭合、换行把后续内容
+/// 误解析为新 key)。本 helper 统一转义并包裹双引号,null 输出空串 `""`。
+String _yamlQuote(Object? v) {
+  if (v == null) return '""';
+  final s = v.toString();
+  final escaped = s
+      .replaceAll('\\', '\\\\')
+      .replaceAll('"', '\\"')
+      .replaceAll('\n', '\\n')
+      .replaceAll('\r', '\\r')
+      .replaceAll('\t', '\\t');
+  return '"$escaped"';
+}
+
+/// E2:敏感字段名集合(凭据类)。
+///
+/// 新增凭据类字段时,即便忘记在 [exportToYaml] 源头调 `mask()`,下方
+/// [_maskSensitiveFieldsRecursive] 也会按字段名统一脱敏,避免明文落盘。
+/// 不含 email/url —— 它们非凭据,需明文导出方便 B 设备填回登录表单。
+const Set<String> _sensitiveFieldNames = {
+  'password',
+  'secret_key',
+  'access_key',
+  'access_token',
+  'refresh_token',
+  'anon_key',
+  'apiKey',
+};
+
+/// E2:递归脱敏兜底。
+///
+/// [includeCredentials] 为 true 时原样返回(用户显式要求真实凭据);为 false
+/// 时遍历整棵 Map,命中 [_sensitiveFieldNames] 的字符串值替换为 `****`。
+/// 作为源头 `mask()` 的安全网,覆盖未来新增字段忘记脱敏的情况。
+Map<String, dynamic> _maskSensitiveFieldsRecursive(
+  Map<String, dynamic> map, {
+  required bool includeCredentials,
+}) {
+  if (includeCredentials) return map;
+  final result = <String, dynamic>{};
+  for (final entry in map.entries) {
+    final key = entry.key;
+    var value = entry.value;
+    if (_sensitiveFieldNames.contains(key) && value is String) {
+      result[key] = value.isNotEmpty ? '****' : value;
+    } else if (value is Map<String, dynamic>) {
+      result[key] =
+          _maskSensitiveFieldsRecursive(value, includeCredentials: includeCredentials);
+    } else if (value is Map) {
+      result[key] = _maskSensitiveFieldsRecursive(
+        _convertToStringDynamicMap(value),
+        includeCredentials: includeCredentials,
+      );
+    } else if (value is List) {
+      result[key] = value
+          .map((e) => e is Map<String, dynamic>
+              ? _maskSensitiveFieldsRecursive(e, includeCredentials: includeCredentials)
+              : e is Map
+                  ? _maskSensitiveFieldsRecursive(_convertToStringDynamicMap(e),
+                      includeCredentials: includeCredentials)
+                  : e)
+          .toList();
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
 /// 导出选项 - 控制导出哪些内容
 class ExportOptions {
   final bool ledgers;
@@ -1786,7 +1858,12 @@ class ConfigExportService {
     );
 
     // 转换为YAML格式
-    final yamlMap = config.toYaml();
+    // E2:递归脱敏兜底 —— 即便新增凭据字段时忘记在源头调 mask(),这里按
+    // 字段名统一脱敏,避免明文落盘。includeCredentials=true 时原样保留。
+    final yamlMap = _maskSensitiveFieldsRecursive(
+      config.toYaml(),
+      includeCredentials: options.includeCredentials,
+    );
 
     // 手动构建YAML字符串以保持良好格式
     final buffer = StringBuffer();
@@ -1797,20 +1874,20 @@ class ConfigExportService {
     if (yamlMap.containsKey('supabase')) {
       buffer.writeln('supabase:');
       final sb = yamlMap['supabase'] as Map<String, dynamic>;
-      buffer.writeln('  url: "${sb['url']}"');
-      buffer.writeln('  anon_key: "${sb['anon_key']}"');
+      buffer.writeln('  url: ${_yamlQuote(sb['url'])}');
+      buffer.writeln('  anon_key: ${_yamlQuote(sb['anon_key'])}');
       if (sb.containsKey('bucket')) {
         buffer.writeln('  # Storage bucket 名称，留空则使用默认值 piggycount-backups');
-        buffer.writeln('  bucket: "${sb['bucket']}"');
+        buffer.writeln('  bucket: ${_yamlQuote(sb['bucket'])}');
       }
       if (sb.containsKey('email') || sb.containsKey('password')) {
         buffer.writeln('  # 记住账号密码功能：导入后登录页面会自动填充');
       }
       if (sb.containsKey('email')) {
-        buffer.writeln('  email: "${sb['email']}"');
+        buffer.writeln('  email: ${_yamlQuote(sb['email'])}');
       }
       if (sb.containsKey('password')) {
-        buffer.writeln('  password: "${sb['password']}"');
+        buffer.writeln('  password: ${_yamlQuote(sb['password'])}');
       }
       buffer.writeln();
     }
@@ -1818,11 +1895,11 @@ class ConfigExportService {
     if (yamlMap.containsKey('webdav')) {
       buffer.writeln('webdav:');
       final wd = yamlMap['webdav'] as Map<String, dynamic>;
-      buffer.writeln('  url: "${wd['url']}"');
-      buffer.writeln('  username: "${wd['username']}"');
-      buffer.writeln('  password: "${wd['password']}"');
+      buffer.writeln('  url: ${_yamlQuote(wd['url'])}');
+      buffer.writeln('  username: ${_yamlQuote(wd['username'])}');
+      buffer.writeln('  password: ${_yamlQuote(wd['password'])}');
       if (wd.containsKey('remote_path')) {
-        buffer.writeln('  remote_path: "${wd['remote_path']}"');
+        buffer.writeln('  remote_path: ${_yamlQuote(wd['remote_path'])}');
       }
       buffer.writeln();
     }
@@ -1830,11 +1907,11 @@ class ConfigExportService {
     if (yamlMap.containsKey('s3')) {
       buffer.writeln('s3:');
       final s3 = yamlMap['s3'] as Map<String, dynamic>;
-      buffer.writeln('  endpoint: "${s3['endpoint']}"');
-      buffer.writeln('  region: "${s3['region']}"');
-      buffer.writeln('  access_key: "${s3['access_key']}"');
-      buffer.writeln('  secret_key: "${s3['secret_key']}"');
-      buffer.writeln('  bucket: "${s3['bucket']}"');
+      buffer.writeln('  endpoint: ${_yamlQuote(s3['endpoint'])}');
+      buffer.writeln('  region: ${_yamlQuote(s3['region'])}');
+      buffer.writeln('  access_key: ${_yamlQuote(s3['access_key'])}');
+      buffer.writeln('  secret_key: ${_yamlQuote(s3['secret_key'])}');
+      buffer.writeln('  bucket: ${_yamlQuote(s3['bucket'])}');
       if (s3.containsKey('use_ssl')) {
         buffer.writeln('  use_ssl: ${s3['use_ssl']}');
       }
@@ -1848,24 +1925,24 @@ class ConfigExportService {
       buffer.writeln('piggycount_cloud:');
       final bc = yamlMap['piggycount_cloud'] as Map<String, dynamic>;
       buffer.writeln('  # PiggyCount Cloud 自部署后端配置');
-      buffer.writeln('  base_url: "${bc['base_url']}"');
+      buffer.writeln('  base_url: ${_yamlQuote(bc['base_url'])}');
       if (bc.containsKey('email') || bc.containsKey('password')) {
         buffer.writeln('  # 记住账号密码功能：导入后登录页面会自动填充');
       }
       if (bc.containsKey('email')) {
-        buffer.writeln('  email: "${bc['email']}"');
+        buffer.writeln('  email: ${_yamlQuote(bc['email'])}');
       }
       if (bc.containsKey('password')) {
-        buffer.writeln('  password: "${bc['password']}"');
+        buffer.writeln('  password: ${_yamlQuote(bc['password'])}');
       }
       if (bc.containsKey('access_token')) {
-        buffer.writeln('  access_token: "${bc['access_token']}"');
+        buffer.writeln('  access_token: ${_yamlQuote(bc['access_token'])}');
       }
       if (bc.containsKey('refresh_token')) {
-        buffer.writeln('  refresh_token: "${bc['refresh_token']}"');
+        buffer.writeln('  refresh_token: ${_yamlQuote(bc['refresh_token'])}');
       }
       if (bc.containsKey('device_id')) {
-        buffer.writeln('  device_id: "${bc['device_id']}"');
+        buffer.writeln('  device_id: ${_yamlQuote(bc['device_id'])}');
       }
       buffer.writeln();
     }
@@ -1874,16 +1951,16 @@ class ConfigExportService {
       buffer.writeln('ai:');
       final ai = yamlMap['ai'] as Map<String, dynamic>;
       if (ai.containsKey(AIConstants.keyGlmApiKey)) {
-        buffer.writeln('  ${AIConstants.keyGlmApiKey}: "${ai[AIConstants.keyGlmApiKey]}"');
+        buffer.writeln('  ${AIConstants.keyGlmApiKey}: ${_yamlQuote(ai[AIConstants.keyGlmApiKey])}');
       }
       if (ai.containsKey(AIConstants.keyGlmModel)) {
-        buffer.writeln('  ${AIConstants.keyGlmModel}: "${ai[AIConstants.keyGlmModel]}"');
+        buffer.writeln('  ${AIConstants.keyGlmModel}: ${_yamlQuote(ai[AIConstants.keyGlmModel])}');
       }
       if (ai.containsKey(AIConstants.keyGlmVisionModel)) {
-        buffer.writeln('  ${AIConstants.keyGlmVisionModel}: "${ai[AIConstants.keyGlmVisionModel]}"');
+        buffer.writeln('  ${AIConstants.keyGlmVisionModel}: ${_yamlQuote(ai[AIConstants.keyGlmVisionModel])}');
       }
       if (ai.containsKey(AIConstants.keyAiStrategy)) {
-        buffer.writeln('  ${AIConstants.keyAiStrategy}: "${ai[AIConstants.keyAiStrategy]}"');
+        buffer.writeln('  ${AIConstants.keyAiStrategy}: ${_yamlQuote(ai[AIConstants.keyAiStrategy])}');
       }
       if (ai.containsKey(AIConstants.keyAiBillExtractionEnabled)) {
         buffer.writeln('  ${AIConstants.keyAiBillExtractionEnabled}: ${ai[AIConstants.keyAiBillExtractionEnabled]}');
@@ -1897,23 +1974,23 @@ class ConfigExportService {
         final providers = ai['providers'] as List;
         for (final p in providers) {
           final provider = p as Map<String, dynamic>;
-          buffer.writeln('    - id: "${provider['id']}"');
-          buffer.writeln('      name: "${provider['name']}"');
+          buffer.writeln('    - id: ${_yamlQuote(provider['id'])}');
+          buffer.writeln('      name: ${_yamlQuote(provider['name'])}');
           buffer.writeln('      isBuiltIn: ${provider['isBuiltIn']}');
           if (provider['apiKey'] != null && (provider['apiKey'] as String).isNotEmpty) {
-            buffer.writeln('      apiKey: "${provider['apiKey']}"');
+            buffer.writeln('      apiKey: ${_yamlQuote(provider['apiKey'])}');
           }
           if (provider['baseUrl'] != null && (provider['baseUrl'] as String).isNotEmpty) {
-            buffer.writeln('      baseUrl: "${provider['baseUrl']}"');
+            buffer.writeln('      baseUrl: ${_yamlQuote(provider['baseUrl'])}');
           }
           if (provider['textModel'] != null && (provider['textModel'] as String).isNotEmpty) {
-            buffer.writeln('      textModel: "${provider['textModel']}"');
+            buffer.writeln('      textModel: ${_yamlQuote(provider['textModel'])}');
           }
           if (provider['visionModel'] != null && (provider['visionModel'] as String).isNotEmpty) {
-            buffer.writeln('      visionModel: "${provider['visionModel']}"');
+            buffer.writeln('      visionModel: ${_yamlQuote(provider['visionModel'])}');
           }
           if (provider['audioModel'] != null && (provider['audioModel'] as String).isNotEmpty) {
-            buffer.writeln('      audioModel: "${provider['audioModel']}"');
+            buffer.writeln('      audioModel: ${_yamlQuote(provider['audioModel'])}');
           }
         }
       }
@@ -1922,13 +1999,13 @@ class ConfigExportService {
         buffer.writeln('  capability_binding:');
         final binding = ai['capability_binding'] as Map<String, dynamic>;
         if (binding['textProviderId'] != null) {
-          buffer.writeln('    textProviderId: "${binding['textProviderId']}"');
+          buffer.writeln('    textProviderId: ${_yamlQuote(binding['textProviderId'])}');
         }
         if (binding['visionProviderId'] != null) {
-          buffer.writeln('    visionProviderId: "${binding['visionProviderId']}"');
+          buffer.writeln('    visionProviderId: ${_yamlQuote(binding['visionProviderId'])}');
         }
         if (binding['speechProviderId'] != null) {
-          buffer.writeln('    speechProviderId: "${binding['speechProviderId']}"');
+          buffer.writeln('    speechProviderId: ${_yamlQuote(binding['speechProviderId'])}');
         }
       }
       buffer.writeln();
@@ -1946,10 +2023,10 @@ class ConfigExportService {
           buffer.writeln('  account_feature_enabled: ${settings['account_feature_enabled']}');
         }
         if (settings.containsKey('default_income_account_name')) {
-          buffer.writeln('  default_income_account_name: "${settings['default_income_account_name']}"');
+          buffer.writeln('  default_income_account_name: ${_yamlQuote(settings['default_income_account_name'])}');
         }
         if (settings.containsKey('default_expense_account_name')) {
-          buffer.writeln('  default_expense_account_name: "${settings['default_expense_account_name']}"');
+          buffer.writeln('  default_expense_account_name: ${_yamlQuote(settings['default_expense_account_name'])}');
         }
       }
 
@@ -1971,10 +2048,10 @@ class ConfigExportService {
       if (settings.containsKey('language_code') || settings.containsKey('country_code')) {
         buffer.writeln('  # 语言设置');
         if (settings.containsKey('language_code')) {
-          buffer.writeln('  language_code: "${settings['language_code']}"');
+          buffer.writeln('  language_code: ${_yamlQuote(settings['language_code'])}');
         }
         if (settings.containsKey('country_code')) {
-          buffer.writeln('  country_code: "${settings['country_code']}"');
+          buffer.writeln('  country_code: ${_yamlQuote(settings['country_code'])}');
         }
       }
 
@@ -2003,10 +2080,10 @@ class ConfigExportService {
           settings.containsKey('note_history_limit')) {
         buffer.writeln('  # 外观设置');
         if (settings.containsKey('theme_mode')) {
-          buffer.writeln('  theme_mode: "${settings['theme_mode']}"');
+          buffer.writeln('  theme_mode: ${_yamlQuote(settings['theme_mode'])}');
         }
         if (settings.containsKey('dark_mode_pattern_style')) {
-          buffer.writeln('  dark_mode_pattern_style: "${settings['dark_mode_pattern_style']}"');
+          buffer.writeln('  dark_mode_pattern_style: ${_yamlQuote(settings['dark_mode_pattern_style'])}');
         }
         if (settings.containsKey('compact_amount')) {
           buffer.writeln('  compact_amount: ${settings['compact_amount']}');
@@ -2015,13 +2092,13 @@ class ConfigExportService {
           buffer.writeln('  show_transaction_time: ${settings['show_transaction_time']}');
         }
         if (settings.containsKey('note_display_mode')) {
-          buffer.writeln('  note_display_mode: "${settings['note_display_mode']}"');
+          buffer.writeln('  note_display_mode: ${_yamlQuote(settings['note_display_mode'])}');
         }
         if (settings.containsKey('note_history_scope')) {
-          buffer.writeln('  note_history_scope: "${settings['note_history_scope']}"');
+          buffer.writeln('  note_history_scope: ${_yamlQuote(settings['note_history_scope'])}');
         }
         if (settings.containsKey('note_history_sort')) {
-          buffer.writeln('  note_history_sort: "${settings['note_history_sort']}"');
+          buffer.writeln('  note_history_sort: ${_yamlQuote(settings['note_history_sort'])}');
         }
         if (settings.containsKey('note_history_limit')) {
           buffer.writeln('  note_history_limit: ${settings['note_history_limit']}');
@@ -2032,7 +2109,7 @@ class ConfigExportService {
           settings.containsKey('auto_sync')) {
         buffer.writeln('  # 云服务');
         if (settings.containsKey('cloud_service_type')) {
-          buffer.writeln('  cloud_service_type: "${settings['cloud_service_type']}"');
+          buffer.writeln('  cloud_service_type: ${_yamlQuote(settings['cloud_service_type'])}');
         }
         if (settings.containsKey('auto_sync')) {
           buffer.writeln('  auto_sync: ${settings['auto_sync']}');
@@ -2062,13 +2139,13 @@ class ConfigExportService {
         buffer.writeln('  items:');
         for (final item in items) {
           final itemMap = item as Map<String, dynamic>;
-          buffer.writeln('    - name: "${itemMap['name']}"');
-          buffer.writeln('      currency: "${itemMap['currency']}"');
+          buffer.writeln('    - name: ${_yamlQuote(itemMap['name'])}');
+          buffer.writeln('      currency: ${_yamlQuote(itemMap['currency'])}');
           if (itemMap.containsKey('type') && itemMap['type'] != null) {
-            buffer.writeln('      type: "${itemMap['type']}"');
+            buffer.writeln('      type: ${_yamlQuote(itemMap['type'])}');
           }
           if (itemMap.containsKey('created_at') && itemMap['created_at'] != null) {
-            buffer.writeln('      created_at: "${itemMap['created_at']}"');
+            buffer.writeln('      created_at: ${_yamlQuote(itemMap['created_at'])}');
           }
         }
       }
@@ -2086,24 +2163,24 @@ class ConfigExportService {
         buffer.writeln('  items:');
         for (final item in items) {
           final itemMap = item as Map<String, dynamic>;
-          buffer.writeln('    - ledger_name: "${itemMap['ledger_name']}"');
-          buffer.writeln('      type: "${itemMap['type']}"');
+          buffer.writeln('    - ledger_name: ${_yamlQuote(itemMap['ledger_name'])}');
+          buffer.writeln('      type: ${_yamlQuote(itemMap['type'])}');
           buffer.writeln('      amount: ${itemMap['amount']}');
 
           if (itemMap.containsKey('category_name') && itemMap['category_name'] != null) {
-            buffer.writeln('      category_name: "${itemMap['category_name']}"');
+            buffer.writeln('      category_name: ${_yamlQuote(itemMap['category_name'])}');
           }
           if (itemMap.containsKey('account_name') && itemMap['account_name'] != null) {
-            buffer.writeln('      account_name: "${itemMap['account_name']}"');
+            buffer.writeln('      account_name: ${_yamlQuote(itemMap['account_name'])}');
           }
           if (itemMap.containsKey('to_account_name') && itemMap['to_account_name'] != null) {
-            buffer.writeln('      to_account_name: "${itemMap['to_account_name']}"');
+            buffer.writeln('      to_account_name: ${_yamlQuote(itemMap['to_account_name'])}');
           }
           if (itemMap.containsKey('note') && itemMap['note'] != null) {
-            buffer.writeln('      note: "${itemMap['note']}"');
+            buffer.writeln('      note: ${_yamlQuote(itemMap['note'])}');
           }
 
-          buffer.writeln('      frequency: "${itemMap['frequency']}"');
+          buffer.writeln('      frequency: ${_yamlQuote(itemMap['frequency'])}');
           buffer.writeln('      interval: ${itemMap['interval']}');
 
           if (itemMap.containsKey('day_of_month')) {
@@ -2116,9 +2193,9 @@ class ConfigExportService {
             buffer.writeln('      month_of_year: ${itemMap['month_of_year']}');
           }
 
-          buffer.writeln('      start_date: "${itemMap['start_date']}"');
+          buffer.writeln('      start_date: ${_yamlQuote(itemMap['start_date'])}');
           if (itemMap.containsKey('end_date') && itemMap['end_date'] != null) {
-            buffer.writeln('      end_date: "${itemMap['end_date']}"');
+            buffer.writeln('      end_date: ${_yamlQuote(itemMap['end_date'])}');
           }
           buffer.writeln('      enabled: ${itemMap['enabled']}');
         }
@@ -2137,12 +2214,12 @@ class ConfigExportService {
         buffer.writeln('  items:');
         for (final item in items) {
           final itemMap = item as Map<String, dynamic>;
-          buffer.writeln('    - name: "${itemMap['name']}"');
-          buffer.writeln('      type: "${itemMap['type']}"');
-          buffer.writeln('      currency: "${itemMap['currency']}"');
+          buffer.writeln('    - name: ${_yamlQuote(itemMap['name'])}');
+          buffer.writeln('      type: ${_yamlQuote(itemMap['type'])}');
+          buffer.writeln('      currency: ${_yamlQuote(itemMap['currency'])}');
           buffer.writeln('      initial_balance: ${itemMap['initial_balance']}');
           if (itemMap.containsKey('created_at') && itemMap['created_at'] != null) {
-            buffer.writeln('      created_at: "${itemMap['created_at']}"');
+            buffer.writeln('      created_at: ${_yamlQuote(itemMap['created_at'])}');
           }
           if (itemMap.containsKey('credit_limit') && itemMap['credit_limit'] != null) {
             buffer.writeln('      credit_limit: ${itemMap['credit_limit']}');
@@ -2154,13 +2231,13 @@ class ConfigExportService {
             buffer.writeln('      payment_due_day: ${itemMap['payment_due_day']}');
           }
           if (itemMap.containsKey('bank_name') && itemMap['bank_name'] != null) {
-            buffer.writeln('      bank_name: "${itemMap['bank_name']}"');
+            buffer.writeln('      bank_name: ${_yamlQuote(itemMap['bank_name'])}');
           }
           if (itemMap.containsKey('card_last_four') && itemMap['card_last_four'] != null) {
-            buffer.writeln('      card_last_four: "${itemMap['card_last_four']}"');
+            buffer.writeln('      card_last_four: ${_yamlQuote(itemMap['card_last_four'])}');
           }
           if (itemMap.containsKey('note') && itemMap['note'] != null) {
-            buffer.writeln('      note: "${itemMap['note']}"');
+            buffer.writeln('      note: ${_yamlQuote(itemMap['note'])}');
           }
         }
       }
@@ -2178,25 +2255,25 @@ class ConfigExportService {
         buffer.writeln('  items:');
         for (final item in items) {
           final itemMap = item as Map<String, dynamic>;
-          buffer.writeln('    - name: "${itemMap['name']}"');
-          buffer.writeln('      kind: "${itemMap['kind']}"');
+          buffer.writeln('    - name: ${_yamlQuote(itemMap['name'])}');
+          buffer.writeln('      kind: ${_yamlQuote(itemMap['kind'])}');
           if (itemMap.containsKey('icon') && itemMap['icon'] != null) {
-            buffer.writeln('      icon: "${itemMap['icon']}"');
+            buffer.writeln('      icon: ${_yamlQuote(itemMap['icon'])}');
           }
           buffer.writeln('      sort_order: ${itemMap['sort_order']}');
           if (itemMap.containsKey('parent_name') && itemMap['parent_name'] != null) {
-            buffer.writeln('      parent_name: "${itemMap['parent_name']}"');
+            buffer.writeln('      parent_name: ${_yamlQuote(itemMap['parent_name'])}');
           }
           buffer.writeln('      level: ${itemMap['level']}');
           // 自定义图标字段
           if (itemMap.containsKey('icon_type') && itemMap['icon_type'] != null) {
-            buffer.writeln('      icon_type: "${itemMap['icon_type']}"');
+            buffer.writeln('      icon_type: ${_yamlQuote(itemMap['icon_type'])}');
           }
           if (itemMap.containsKey('custom_icon_path') && itemMap['custom_icon_path'] != null) {
-            buffer.writeln('      custom_icon_path: "${itemMap['custom_icon_path']}"');
+            buffer.writeln('      custom_icon_path: ${_yamlQuote(itemMap['custom_icon_path'])}');
           }
           if (itemMap.containsKey('community_icon_id') && itemMap['community_icon_id'] != null) {
-            buffer.writeln('      community_icon_id: "${itemMap['community_icon_id']}"');
+            buffer.writeln('      community_icon_id: ${_yamlQuote(itemMap['community_icon_id'])}');
           }
         }
       }
@@ -2214,9 +2291,9 @@ class ConfigExportService {
         buffer.writeln('  items:');
         for (final item in items) {
           final itemMap = item as Map<String, dynamic>;
-          buffer.writeln('    - name: "${itemMap['name']}"');
+          buffer.writeln('    - name: ${_yamlQuote(itemMap['name'])}');
           if (itemMap.containsKey('color') && itemMap['color'] != null) {
-            buffer.writeln('      color: "${itemMap['color']}"');
+            buffer.writeln('      color: ${_yamlQuote(itemMap['color'])}');
           }
         }
       }
@@ -2234,10 +2311,10 @@ class ConfigExportService {
         buffer.writeln('  items:');
         for (final item in items) {
           final itemMap = item as Map<String, dynamic>;
-          buffer.writeln('    - ledger_name: "${itemMap['ledger_name']}"');
-          buffer.writeln('      type: "${itemMap['type']}"');
+          buffer.writeln('    - ledger_name: ${_yamlQuote(itemMap['ledger_name'])}');
+          buffer.writeln('      type: ${_yamlQuote(itemMap['type'])}');
           if (itemMap.containsKey('category_name') && itemMap['category_name'] != null) {
-            buffer.writeln('      category_name: "${itemMap['category_name']}"');
+            buffer.writeln('      category_name: ${_yamlQuote(itemMap['category_name'])}');
           }
           buffer.writeln('      amount: ${itemMap['amount']}');
           buffer.writeln('      start_day: ${itemMap['start_day']}');

@@ -85,6 +85,39 @@ void main() {
       expect(capturedHeaders['host'], 'mybucket.oss-cn-hangzhou.aliyuncs.com');
     });
 
+    test('P1-2: 带空格的 prefix 落网编码为 %20 而非 +，与签名一致', () async {
+      late Uri capturedUri;
+      late Map<String, String> capturedHeaders;
+      final mock = MockClient((request) async {
+        capturedUri = request.url;
+        capturedHeaders = request.headers;
+        return http.Response(_listXml(), 200);
+      });
+
+      final client = S3Client(
+        endpoint: 'minio.local',
+        region: 'us-east-1',
+        accessKey: 'ak',
+        secretKey: 'sk',
+        useSSL: false,
+        forcePathStyle: true,
+        httpClient: mock,
+      );
+
+      // 回归测试：修复前 uri.replace(queryParameters:) 将空格编码为 '+'，
+      // 与签名侧 Uri.encodeComponent 的 '%20' 不一致，S3 SigV4 校验返回 403。
+      final keys =
+          await client.listObjects(bucket: 'mybucket', prefix: 'my folder');
+      expect(keys, _xmlKeys);
+      // 落网查询串必须使用 %20（RFC 3986），不得出现 '+' 形式
+      expect(capturedUri.query, contains('prefix=my%20folder'));
+      expect(capturedUri.query, isNot(contains('my+folder')));
+      // 服务端解码后应还原为原始 prefix
+      expect(capturedUri.queryParameters['prefix'], 'my folder');
+      // 签名 Host 仍正确
+      expect(capturedHeaders['host'], 'minio.local');
+    });
+
     test('putObject path-style 带端口时 Host 与签名一致', () async {
       late Uri capturedUri;
       late Map<String, String> capturedHeaders;

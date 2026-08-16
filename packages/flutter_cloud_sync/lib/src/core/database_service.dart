@@ -238,9 +238,13 @@ abstract class CloudDatabaseService {
   /// Batch delete multiple records
   ///
   /// Deletes all records matching the filters.
+  ///
+  /// - [autoFilterByUser]: 自动添加用户过滤(防止删除其他用户数据, 默认: true)。
+  ///   与 [delete]/[batchUpdate] 保持一致，避免漏加 user_id 过滤造成跨用户删除。
   Future<void> batchDelete({
     required String table,
     required List<QueryFilter> filters,
+    bool autoFilterByUser = true,
   });
 
   /// Execute a predefined RPC by name (provider-specific)

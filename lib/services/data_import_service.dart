@@ -57,6 +57,8 @@ class ImportCategory {
   final String? iconType; // 图标类型: material / custom / community
   final String? customIconPath; // 自定义图标路径
   final String? communityIconId; // 社区图标ID
+  /// v8 G3：分类 syncId。跨设备身份锚定（rename 后仍指向同一分类）。
+  final String? syncId;
 
   const ImportCategory({
     required this.name,
@@ -68,6 +70,86 @@ class ImportCategory {
     this.iconType,
     this.customIconPath,
     this.communityIconId,
+    this.syncId,
+  });
+}
+
+/// 导入预算数据（v8 G1：快照恢复预算）
+class ImportBudget {
+  final String? syncId;
+  final String type; // 'total' or 'category'
+  final String? categoryName; // type == 'category' 时的分类名
+  final double amount;
+  final String period; // 'monthly' 等
+  final int startDay;
+  final bool enabled;
+
+  const ImportBudget({
+    this.syncId,
+    required this.type,
+    this.categoryName,
+    required this.amount,
+    this.period = 'monthly',
+    this.startDay = 1,
+    this.enabled = true,
+  });
+}
+
+/// 导入周期规则数据（v8 G2：快照恢复周期记账）
+class ImportRecurring {
+  final String? syncId;
+  final String type; // expense / income / transfer
+  final double amount;
+  final String? categoryName; // 分类引用（name 兜底锚点）
+  final String? accountName;
+  final String? accountSyncId; // 账户引用（syncId 优先锚点）
+  final String? toAccountName;
+  final String? toAccountSyncId;
+  final String? note;
+  final String frequency;
+  final int interval;
+  final int? dayOfMonth;
+  final int? dayOfWeek;
+  final int? monthOfYear;
+  final DateTime startDate;
+  final DateTime? endDate;
+  /// 本机生成进度。导入取 max(local, cloud)，防止恢复旧快照后
+  /// 生成器重放整段历史交易（sync_gap_closure 设计决策 2）。
+  final DateTime? lastGeneratedDate;
+  final bool enabled;
+
+  const ImportRecurring({
+    this.syncId,
+    required this.type,
+    required this.amount,
+    this.categoryName,
+    this.accountName,
+    this.accountSyncId,
+    this.toAccountName,
+    this.toAccountSyncId,
+    this.note,
+    required this.frequency,
+    this.interval = 1,
+    this.dayOfMonth,
+    this.dayOfWeek,
+    this.monthOfYear,
+    required this.startDate,
+    this.endDate,
+    this.lastGeneratedDate,
+    this.enabled = true,
+  });
+}
+
+/// 导入手动汇率覆盖（v8 G4）。业务键 (baseCurrency, quoteCurrency)。
+class ImportRateOverride {
+  final String baseCurrency;
+  final String quoteCurrency;
+  final double rate;
+
+  const ImportRateOverride({
+    required this.baseCurrency,
+    required this.quoteCurrency,
+    required this.rate,
   });
 }
 
@@ -97,6 +179,10 @@ class ImportAttachment {
   final String? cloudFileId;
   final String? cloudSha256;
 
+  /// 快照链路内容哈希(attachment_binary_sync)。恢复端落列后据此
+  /// 从 attachments/<sha256>.bin 后台补齐文件。
+  final String? sha256;
+
   const ImportAttachment({
     required this.fileName,
     this.originalName,
@@ -106,6 +192,7 @@ class ImportAttachment {
     this.sortOrder = 0,
     this.cloudFileId,
     this.cloudSha256,
+    this.sha256,
   });
 }
 
@@ -141,6 +228,8 @@ class ImportTransaction {
   final String? categorySyncIdOverride;
   final String? accountSyncIdOverride;
   final String? toAccountSyncIdOverride;
+  /// v8 G2：周期规则锚点。导入后用于重建 transactions.recurringId。
+  final String? recurringSyncId;
 
   const ImportTransaction({
     required this.type,
@@ -164,6 +253,7 @@ class ImportTransaction {
     this.categorySyncIdOverride,
     this.accountSyncIdOverride,
     this.toAccountSyncIdOverride,
+    this.recurringSyncId,
   });
 }
 
@@ -173,19 +263,31 @@ class ImportData {
   final List<ImportCategory> categories;
   final List<ImportTag> tags;
   final List<ImportTransaction> transactions;
+  /// v8 G1：预算（快照恢复）
+  final List<ImportBudget> budgets;
+  /// v8 G2：周期规则（快照恢复）
+  final List<ImportRecurring> recurrings;
+  /// v8 G4：手动汇率覆盖（快照恢复）
+  final List<ImportRateOverride> rateOverrides;
 
   /// 账本名称（可选，用于更新账本信息）
   final String? ledgerName;
   /// 货币（可选，用于更新账本信息）
   final String? currency;
+  /// 每月起始日（可选，v8 G5：恢复时以云端快照为准回写账本元数据）
+  final int? monthStartDay;
 
   const ImportData({
     this.accounts = const [],
     this.categories = const [],
     this.tags = const [],
     this.transactions = const [],
+    this.budgets = const [],
+    this.recurrings = const [],
+    this.rateOverrides = const [],
     this.ledgerName,
     this.currency,
+    this.monthStartDay,
   });
 }
 
@@ -230,12 +332,22 @@ class DataImportService {
     bool recordChanges = true,
   }) async {
     // 1. 更新账本信息（如果提供）
+    //    v8 G5：monthStartDay 一并回写 —— 纯快照(WebDAV 等)用户没有
+    //    Cloud 引擎帮其收敛月起始日，恢复时以云端快照为准。
     if (data.ledgerName != null || data.currency != null) {
       try {
         await repo.updateLedger(
           id: ledgerId,
           name: data.ledgerName,
           currency: data.currency,
+        );
+      } catch (_) {}
+    }
+    if (data.monthStartDay != null) {
+      try {
+        await repo.updateLedger(
+          id: ledgerId,
+          monthStartDay: data.monthStartDay!.clamp(1, 28),
         );
       } catch (_) {}
     }
@@ -255,7 +367,22 @@ class DataImportService {
     final tagNameToId = tagMaps.byName;
     final tagSyncIdToId = tagMaps.bySyncId;
 
-    // 5. 导入交易
+    // 5. 导入周期规则（v8 G2）。必须在交易之前 —— 交易的 recurringSyncId
+    //    要靠这里产出的 syncId→id 映射回填 transactions.recurringId。
+    final recurringSyncIdToId = await importRecurrings(
+      repo,
+      ledgerId,
+      data.recurrings,
+      accountNameToId: accountNameToId,
+      categoryCache: categoryCache,
+    );
+
+    // 6. 导入预算 + 手动汇率（v8 G1/G4）
+    await importBudgets(repo, ledgerId, data.budgets,
+        categoryCache: categoryCache);
+    await importRateOverrides(repo, data.rateOverrides);
+
+    // 7. 导入交易
     final result = await importTransactions(
       repo,
       ledgerId,
@@ -264,6 +391,7 @@ class DataImportService {
       categoryCache: categoryCache,
       tagNameToId: tagNameToId,
       tagSyncIdToId: tagSyncIdToId,
+      recurringSyncIdToId: recurringSyncIdToId,
       onProgress: onProgress,
       recordChanges: recordChanges,
     );
@@ -271,7 +399,8 @@ class DataImportService {
     return result;
   }
 
-  /// 导入账户(全局按名称去重)。public — sync_diff_service 也复用,避免维护两套。
+  /// 导入账户(全局去重:syncId 优先匹配,name 兜底)。
+  /// public — sync_diff_service 也复用,避免维护两套。
   Future<Map<String, int>> importAccounts(
     BaseRepository repo,
     List<ImportAccount> accounts,
@@ -287,12 +416,33 @@ class DataImportService {
 
     try {
       final existingAccounts = await repo.getAllAccounts();
+      // syncId 索引:跨设备稳定身份锚定(策略对齐 importTags)。
+      // 仅按 name 去重会把「两台设备各自创建的同名账户」错并、
+      // 「同一账户 rename 后」拆成两条(account_sync_fix G2)。
+      final accountSyncIdToId = <String, int>{};
+      final accountIdToSyncId = <int, String>{};
       for (final acc in existingAccounts) {
         accountNameToId[acc.name] = acc.id;
+        if (acc.syncId != null && acc.syncId!.isNotEmpty) {
+          accountSyncIdToId[acc.syncId!] = acc.id;
+          accountIdToSyncId[acc.id] = acc.syncId!;
+        }
       }
 
       for (final acc in accounts) {
-        if (!accountNameToId.containsKey(acc.name)) {
+        // 匹配优先级: ① syncId —— 跨设备 rename 后仍锚定同一账户;
+        // ② name —— 旧快照(无 syncId)或本地账户无 syncId 时兜底。
+        int? existingId;
+        if (acc.syncId != null && acc.syncId!.isNotEmpty) {
+          existingId = accountSyncIdToId[acc.syncId];
+        }
+        var matchedByName = false;
+        if (existingId == null && accountNameToId.containsKey(acc.name)) {
+          existingId = accountNameToId[acc.name];
+          matchedByName = true;
+        }
+
+        if (existingId == null) {
           final id = await repo.createAccount(
             ledgerId: 0, // 账户独立,不绑定账本
             name: acc.name,
@@ -308,6 +458,10 @@ class DataImportService {
             syncId: acc.syncId,
           );
           accountNameToId[acc.name] = id;
+          if (acc.syncId != null && acc.syncId!.isNotEmpty) {
+            accountSyncIdToId[acc.syncId!] = id;
+            accountIdToSyncId[id] = acc.syncId!;
+          }
           created++;
           // hidden / sortOrder 单独更新（createAccount 接口无此参数）
           if (acc.hidden != null) {
@@ -320,7 +474,11 @@ class DataImportService {
           // 已存在账户：仅在存在非 null 扩展字段时才更新（null 保持本地
           // 原值）。避免全 null 时也触发 updateAccount → 无意义 DB 写入 +
           // change log 记录假'update' change（下次同步白推一次）。
-          final existingId = accountNameToId[acc.name]!;
+          final localSyncId = accountIdToSyncId[existingId];
+          // name 命中但本地无 syncId 时回填 incoming.syncId:让两台设备
+          // 各自创建的同名账户收敛到同一身份,后续导出/同步按 syncId 锚定。
+          final needBackfillSyncId =
+              matchedByName && localSyncId == null && acc.syncId != null;
           final hasUpdates = acc.type != null ||
               acc.currency != null ||
               acc.initialBalance != null ||
@@ -331,7 +489,8 @@ class DataImportService {
               acc.cardLastFour != null ||
               acc.note != null ||
               acc.hidden != null ||
-              acc.sortOrder != null;
+              acc.sortOrder != null ||
+              needBackfillSyncId;
           if (hasUpdates) {
             await repo.updateAccount(
               existingId,
@@ -345,7 +504,15 @@ class DataImportService {
               cardLastFour: acc.cardLastFour,
               note: acc.note,
               hidden: acc.hidden,
+              syncId: needBackfillSyncId ? acc.syncId : null,
             );
+            if (needBackfillSyncId && acc.syncId != null) {
+              accountSyncIdToId[acc.syncId!] = existingId;
+              accountIdToSyncId[existingId] = acc.syncId!;
+            }
+            // syncId 命中但名称被对端改过 → 同步刷新 name 映射,
+            // 后续交易按新 name 引用才能命中该账户。
+            accountNameToId[acc.name] = existingId;
             if (acc.sortOrder != null) {
               await repo.updateAccountSortOrders([
                 (id: existingId, sortOrder: acc.sortOrder!)
@@ -365,6 +532,12 @@ class DataImportService {
   }
 
   /// 导入分类(先一级后二级)。public — sync_diff_service 复用。
+  ///
+  /// 匹配锚点：① syncId（v8 G3，rename 后仍指向同一分类）
+  /// ② kind|name 业务键（(name,kind) 联合唯一约束即此键）。
+  /// 命中后若本地 syncId 缺失或与云端不同 → 回填对齐云端身份：
+  /// 两台设备独立创建的同名分类若各自保留本地 syncId，指纹（含分类
+  /// syncId）两端永久不一致，合并后互相覆盖 ping-pong（sync_convergence_fix）。
   Future<Map<String, int>> importCategories(
     BaseRepository repo,
     List<ImportCategory> categories,
@@ -375,88 +548,114 @@ class DataImportService {
     logger.info('CategoryImport', '开始导入分类: ${categories.length} 个');
     final sw = Stopwatch()..start();
     int created = 0;
+    int updated = 0;
 
     try {
-      // 获取所有现有分类
-      final existingExpense = await repo.getTopLevelCategories('expense');
-      final existingIncome = await repo.getTopLevelCategories('income');
-      final existingCategoryMap = <String, int>{};
-
-      for (final cat in [...existingExpense, ...existingIncome]) {
-        existingCategoryMap['${cat.kind}|${cat.name}'] = cat.id;
-        // 获取子分类
-        final subCats = await repo.getSubCategories(cat.id);
-        for (final sub in subCats) {
-          existingCategoryMap['${sub.kind}|${sub.name}'] = sub.id;
+      // 全量分类建索引。之前只查 expense/income 两种 kind，transfer 等
+      // 其他 kind（如内置「转账」）不在索引里 → 走 createCategory →
+      // 撞 (name,kind) 联合唯一约束抛 DuplicateNameException → 整个
+      // 分类导入中止，本地/云端分类集永不收敛，启动同步死循环。
+      final all = await repo.getAllCategories();
+      final bySyncId = <String, int>{};
+      final byKindName = <String, int>{};
+      final syncIdById = <int, String>{};
+      for (final c in all) {
+        byKindName['${c.kind}|${c.name}'] = c.id;
+        if (c.syncId != null && c.syncId!.isNotEmpty) {
+          bySyncId[c.syncId!] = c.id;
+          syncIdById[c.id] = c.syncId!;
         }
       }
 
-      // 分离一级和二级分类
-      final level1 = categories.where((c) => c.level == 1 || c.parentName == null).toList();
-      final level2 = categories.where((c) => c.level == 2 && c.parentName != null).toList();
-
-      // 导入一级分类
-      for (final cat in level1) {
+      // 匹配或创建单个分类；返回 id（失败返回 null，不中断循环）
+      Future<int?> matchOrCreate(ImportCategory cat, {int? parentId}) async {
         final key = '${cat.kind}|${cat.name}';
-        if (existingCategoryMap.containsKey(key)) {
-          categoryCache[key] = existingCategoryMap[key]!;
-        } else {
-          final id = await repo.createCategory(
-            name: cat.name,
-            kind: cat.kind,
-            icon: cat.icon,
-            sortOrder: cat.sortOrder,
-          );
+        // ① syncId 锚定
+        int? id;
+        if (cat.syncId != null && cat.syncId!.isNotEmpty) {
+          id = bySyncId[cat.syncId];
+        }
+        // ② kind|name 业务键兜底
+        id ??= byKindName[key];
+
+        if (id != null) {
+          // 命中：对齐云端 syncId（云端身份优先，null 不覆盖本地）
+          final localSyncId = syncIdById[id];
+          if (cat.syncId != null &&
+              cat.syncId!.isNotEmpty &&
+              cat.syncId != localSyncId) {
+            await repo.updateCategory(id, syncId: cat.syncId);
+            bySyncId[cat.syncId!] = id;
+            syncIdById[id] = cat.syncId!;
+            updated++;
+          }
           categoryCache[key] = id;
+          byKindName[key] = id;
+          return id;
+        }
+
+        // 新建。单个失败只记日志继续 —— 之前整个循环共用一个 try，
+        // 一条坏数据会吞掉剩余所有分类的导入
+        try {
+          final newId = parentId != null
+              ? await repo.createSubCategory(
+                  parentId: parentId,
+                  name: cat.name,
+                  kind: cat.kind,
+                  icon: cat.icon,
+                  sortOrder: cat.sortOrder,
+                )
+              : await repo.createCategory(
+                  name: cat.name,
+                  kind: cat.kind,
+                  icon: cat.icon,
+                  sortOrder: cat.sortOrder,
+                );
+          categoryCache[key] = newId;
+          byKindName[key] = newId;
+          if (cat.syncId != null && cat.syncId!.isNotEmpty) {
+            bySyncId[cat.syncId!] = newId;
+            syncIdById[newId] = cat.syncId!;
+          }
           created++;
 
           // 如果有自定义图标信息，更新图标
           if (cat.iconType != null && cat.iconType != 'material') {
             await repo.updateCategoryIcon(
-              id,
+              newId,
               iconType: cat.iconType!,
               icon: cat.icon,
               customIconPath: cat.customIconPath,
               communityIconId: cat.communityIconId,
             );
           }
+          return newId;
+        } catch (e) {
+          logger.warning(
+              'CategoryImport', '分类创建失败(跳过继续): ${cat.kind}|${cat.name} - $e');
+          return null;
         }
       }
 
-      // 导入二级分类
-      for (final cat in level2) {
-        final key = '${cat.kind}|${cat.name}';
-        if (existingCategoryMap.containsKey(key)) {
-          categoryCache[key] = existingCategoryMap[key]!;
-        } else {
-          // 查找父分类ID
-          final parentKey = '${cat.kind}|${cat.parentName}';
-          final parentId = categoryCache[parentKey];
-          if (parentId != null) {
-            final id = await repo.createSubCategory(
-              parentId: parentId,
-              name: cat.name,
-              kind: cat.kind,
-              icon: cat.icon,
-              sortOrder: cat.sortOrder,
-            );
-            categoryCache[key] = id;
+      // 分离一级和二级分类（二级依赖一级先落库/命中以解析 parentId）
+      final level1 =
+          categories.where((c) => c.level == 1 || c.parentName == null).toList();
+      final level2 =
+          categories.where((c) => c.level == 2 && c.parentName != null).toList();
 
-            // 如果有自定义图标信息，更新图标
-            if (cat.iconType != null && cat.iconType != 'material') {
-              await repo.updateCategoryIcon(
-                id,
-                iconType: cat.iconType!,
-                icon: cat.icon,
-                customIconPath: cat.customIconPath,
-                communityIconId: cat.communityIconId,
-              );
-            }
-          }
+      for (final cat in level1) {
+        await matchOrCreate(cat);
+      }
+      for (final cat in level2) {
+        // 父分类先从缓存解析；解析不到时尝试按 kind|parentName 匹配建父
+        final parentKey = '${cat.kind}|${cat.parentName}';
+        final parentId = categoryCache[parentKey] ?? byKindName[parentKey];
+        if (parentId != null) {
+          await matchOrCreate(cat, parentId: parentId);
         }
       }
       logger.info('CategoryImport',
-          '分类导入完成: 新增=$created 已存在=${categories.length - created} 耗时=${sw.elapsedMilliseconds}ms');
+          '分类导入完成: 新增=$created 更新=$updated 已存在=${categories.length - created - updated} 耗时=${sw.elapsedMilliseconds}ms');
     } catch (e, st) {
       logger.error('CategoryImport', '分类导入失败', e, st);
     }
@@ -604,6 +803,283 @@ class DataImportService {
     return (byName: tagNameToId, bySyncId: tagSyncIdToId);
   }
 
+  /// 导入周期规则（v8 G2，sync_gap_closure）
+  ///
+  /// 合并策略（对齐设计文档决策 3，upsert-only 不删本地多余项）：
+  /// ① syncId 命中 → 整行以快照为准更新，lastGeneratedDate 取
+  ///    max(local, cloud) —— 防止恢复旧快照后生成器重放历史交易；
+  /// ② 业务键（type|note|frequency|amount|dayOfMonth）兜底命中 →
+  ///    同上更新并回填 syncId（本地建的同规则收敛到同一身份）；
+  /// ③ 都未命中 → 新建。
+  ///
+  /// 返回 syncId → 本地 id 映射：importTransactions 靠它把交易的
+  /// recurringSyncId 翻译回 transactions.recurringId int 外键。
+  Future<Map<String, int>> importRecurrings(
+    BaseRepository repo,
+    int ledgerId,
+    List<ImportRecurring> recurrings, {
+    required Map<String, int> accountNameToId,
+    required Map<String, int> categoryCache,
+  }) async {
+    final recurringSyncIdToId = <String, int>{};
+    if (recurrings.isEmpty) return recurringSyncIdToId;
+
+    logger.info('RecurringImport', '开始导入周期规则: ${recurrings.length} 条');
+    final sw = Stopwatch()..start();
+    int created = 0;
+    int updated = 0;
+
+    try {
+      // 解析引用锚点：账户（syncId 优先、name 兜底）、分类（name）。
+      // categoryCache 键是 'kind|name'，recurring 快照只带 categoryName
+      // —— 剥掉 kind 前缀建 name→id 映射；跨 kind 同名分类极少见，
+      // 命中歧义时后写覆盖（预算分类同理）。
+      final categoryNameToId = <String, int>{};
+      for (final e in categoryCache.entries) {
+        final idx = e.key.indexOf('|');
+        categoryNameToId[e.key.substring(idx + 1)] = e.value;
+      }
+      final accountSyncIdToId = <String, int>{};
+      for (final a in await repo.getAllAccounts()) {
+        if (a.syncId != null && a.syncId!.isNotEmpty) {
+          accountSyncIdToId[a.syncId!] = a.id;
+        }
+      }
+
+      final existing =
+          await repo.getRecurringTransactionsByLedger(ledgerId);
+      final existingBySyncId = <String, RecurringTransaction>{};
+      final existingByBizKey = <String, RecurringTransaction>{};
+      String bizKey(String type, String? note, String frequency, double amount,
+              int? dayOfMonth) =>
+          '$type|${note ?? ''}|$frequency|${amount.toStringAsFixed(2)}|${dayOfMonth ?? ''}';
+      for (final r in existing) {
+        if (r.syncId != null && r.syncId!.isNotEmpty) {
+          existingBySyncId[r.syncId!] = r;
+        }
+        existingByBizKey[bizKey(
+            r.type, r.note, r.frequency, r.amount, r.dayOfMonth)] = r;
+      }
+
+      for (final r in recurrings) {
+        // 引用解析：syncId 优先，name 兜底；都失败置 null + warning
+        // （与交易缺分类的容错一致，不阻断整体导入）。
+        int? categoryId;
+        if (r.categoryName != null) {
+          categoryId = categoryNameToId[r.categoryName];
+          if (categoryId == null) {
+            logger.warning('RecurringImport',
+                '周期规则分类未命中: "${r.categoryName}" → 置空');
+          }
+        }
+        int? accountId;
+        if (r.accountSyncId != null && r.accountSyncId!.isNotEmpty) {
+          accountId = accountSyncIdToId[r.accountSyncId];
+        }
+        accountId ??= (r.accountName != null
+            ? accountNameToId[r.accountName]
+            : null);
+        int? toAccountId;
+        if (r.toAccountSyncId != null && r.toAccountSyncId!.isNotEmpty) {
+          toAccountId = accountSyncIdToId[r.toAccountSyncId];
+        }
+        toAccountId ??= (r.toAccountName != null
+            ? accountNameToId[r.toAccountName]
+            : null);
+
+        // 匹配：① syncId ② 业务键
+        RecurringTransaction? matched;
+        var matchedByBizKey = false;
+        if (r.syncId != null && r.syncId!.isNotEmpty) {
+          matched = existingBySyncId[r.syncId];
+        }
+        if (matched == null) {
+          final key = bizKey(
+              r.type, r.note, r.frequency, r.amount, r.dayOfMonth);
+          matched = existingByBizKey[key];
+          matchedByBizKey = matched != null;
+        }
+
+        if (matched == null) {
+          final id = await repo.addRecurringTransaction(
+            ledgerId: ledgerId,
+            type: r.type,
+            amount: r.amount,
+            categoryId: categoryId,
+            accountId: accountId,
+            toAccountId: toAccountId,
+            note: r.note,
+            frequency: r.frequency,
+            interval: r.interval,
+            dayOfMonth: r.dayOfMonth,
+            dayOfWeek: r.dayOfWeek,
+            monthOfYear: r.monthOfYear,
+            startDate: r.startDate,
+            endDate: r.endDate,
+            enabled: r.enabled,
+            syncId: r.syncId,
+          );
+          created++;
+          if (r.syncId != null && r.syncId!.isNotEmpty) {
+            recurringSyncIdToId[r.syncId!] = id;
+          }
+        } else {
+          // 已存在：整行以快照为准更新；lastGeneratedDate 取 max 防
+          // 旧快照回退进度 → 生成器重放整段历史交易。
+          final mergedLastGen = _maxDate(
+              matched.lastGeneratedDate, r.lastGeneratedDate);
+          await repo.updateRecurringTransaction(
+            id: matched.id,
+            ledgerId: ledgerId,
+            type: r.type,
+            amount: r.amount,
+            categoryId: categoryId,
+            accountId: accountId,
+            toAccountId: toAccountId,
+            note: r.note,
+            frequency: r.frequency,
+            interval: r.interval,
+            dayOfMonth: r.dayOfMonth,
+            dayOfWeek: r.dayOfWeek,
+            monthOfYear: r.monthOfYear,
+            startDate: r.startDate,
+            endDate: r.endDate,
+            enabled: r.enabled,
+            lastGeneratedDate: mergedLastGen,
+            // 业务键命中的本地行可能无 syncId（v33 前建的），回填收敛身份
+            syncId: matchedByBizKey ? r.syncId : null,
+          );
+          updated++;
+          if (r.syncId != null && r.syncId!.isNotEmpty) {
+            recurringSyncIdToId[r.syncId!] = matched.id;
+          }
+        }
+      }
+      logger.info('RecurringImport',
+          '周期规则导入完成: 新增=$created 更新=$updated 耗时=${sw.elapsedMilliseconds}ms');
+    } catch (e, st) {
+      logger.error('RecurringImport', '周期规则导入失败', e, st);
+    }
+
+    return recurringSyncIdToId;
+  }
+
+  /// 导入预算（v8 G1，sync_gap_closure）
+  ///
+  /// 匹配：① syncId ② 业务键（type|categoryId|period）→ 更新并回填
+  /// syncId；③ 新建。upsert-only：云端快照不删本地多余预算（旧快照
+  /// 误删新数据的风险 > 删除不传播的不便，与交易恢复同语义）。
+  Future<void> importBudgets(
+    BaseRepository repo,
+    int ledgerId,
+    List<ImportBudget> budgets, {
+    required Map<String, int> categoryCache,
+  }) async {
+    if (budgets.isEmpty) return;
+
+    logger.info('BudgetImport', '开始导入预算: ${budgets.length} 条');
+    final sw = Stopwatch()..start();
+    int created = 0;
+    int updated = 0;
+
+    try {
+      final categoryNameToId = <String, int>{};
+      for (final e in categoryCache.entries) {
+        final idx = e.key.indexOf('|');
+        categoryNameToId[e.key.substring(idx + 1)] = e.value;
+      }
+
+      final existing = await repo.getAllBudgets(ledgerId);
+      final existingBySyncId = <String, Budget>{};
+      final existingByBizKey = <String, Budget>{};
+      for (final b in existing) {
+        if (b.syncId != null && b.syncId!.isNotEmpty) {
+          existingBySyncId[b.syncId!] = b;
+        }
+        existingByBizKey['${b.type}|${b.categoryId ?? ''}|${b.period}'] = b;
+      }
+
+      for (final b in budgets) {
+        int? categoryId;
+        if (b.type == 'category' && b.categoryName != null) {
+          categoryId = categoryNameToId[b.categoryName];
+          if (categoryId == null) {
+            logger.warning('BudgetImport',
+                '预算分类未命中: "${b.categoryName}" → 跳过该条');
+            continue;
+          }
+        }
+
+        Budget? matched;
+        var matchedByBizKey = false;
+        if (b.syncId != null && b.syncId!.isNotEmpty) {
+          matched = existingBySyncId[b.syncId];
+        }
+        if (matched == null) {
+          matched = existingByBizKey['${b.type}|${categoryId ?? ''}|${b.period}'];
+          matchedByBizKey = matched != null;
+        }
+
+        if (matched == null) {
+          await repo.createBudget(
+            ledgerId: ledgerId,
+            type: b.type,
+            categoryId: categoryId,
+            amount: b.amount,
+            period: b.period,
+            startDay: b.startDay,
+            syncId: b.syncId,
+          );
+          created++;
+        } else {
+          await repo.updateBudget(
+            matched.id,
+            amount: b.amount,
+            startDay: b.startDay,
+            enabled: b.enabled,
+            syncId: matchedByBizKey ? b.syncId : null,
+          );
+          updated++;
+        }
+      }
+      logger.info('BudgetImport',
+          '预算导入完成: 新增=$created 更新=$updated 耗时=${sw.elapsedMilliseconds}ms');
+    } catch (e, st) {
+      logger.error('BudgetImport', '预算导入失败', e, st);
+    }
+  }
+
+  /// 导入手动汇率覆盖（v8 G4）。按 (base, quote) 唯一键 upsert，
+  /// setOverride 内部已处理插入/更新两种情况。
+  Future<void> importRateOverrides(
+    BaseRepository repo,
+    List<ImportRateOverride> overrides,
+  ) async {
+    if (overrides.isEmpty) return;
+    logger.info('RateOverrideImport', '开始导入手动汇率: ${overrides.length} 条');
+    try {
+      for (final o in overrides) {
+        await repo.setOverride(
+          base: o.baseCurrency,
+          quote: o.quoteCurrency,
+          // setOverride 接口收 String；toStringAsFixed 丢失精度可控
+          //（汇率 6 位小数足够），跨设备由快照统一值覆盖。
+          rate: o.rate.toStringAsFixed(6),
+        );
+      }
+      logger.info('RateOverrideImport', '手动汇率导入完成');
+    } catch (e, st) {
+      logger.error('RateOverrideImport', '手动汇率导入失败', e, st);
+    }
+  }
+
+  /// 两个可空日期取较新者（周期规则进度合并用）。
+  DateTime? _maxDate(DateTime? a, DateTime? b) {
+    if (a == null) return b;
+    if (b == null) return a;
+    return a.isAfter(b) ? a : b;
+  }
+
   /// 导入交易(统一 batch 路径,tag/attachment 跟 tx 一起 batch insert)
   ///
   /// **历史**:之前"有标签/附件"的 tx 走单条 await 路径,
@@ -624,6 +1100,7 @@ class DataImportService {
     required Map<String, int> categoryCache,
     required Map<String, int> tagNameToId,
     Map<String, int>? tagSyncIdToId,
+    Map<String, int>? recurringSyncIdToId,
     void Function(int done, int total)? onProgress,
     bool recordChanges = true,
   }) async {
@@ -688,8 +1165,39 @@ class DataImportService {
         logger.info('TxImport',
             'flush 批次: size=$size 耗时=${batchSw.elapsedMilliseconds}ms 累计=${processed + size}/$total');
       } catch (e, st) {
-        logger.error('TxImport', '批次 flush 失败,本批 $size 条算 failed', e, st);
-        failed += size;
+        // B1:整批失败时不直接 `failed += size`,降级为逐条重试,定位真实坏行。
+        // 否则一批 500 条里只有 1 条坏数据也会被全部计为失败,且无法定位哪条。
+        // 连续失败超过阈值视为系统性故障(如 DB 锁/schema 不匹配),避免无谓
+        // 重试拖垮导入耗时。
+        logger.error('TxImport', '批次 flush 失败,降级逐条重试定位坏行', e, st);
+        int consecutiveFailures = 0;
+        for (int i = 0; i < size; i++) {
+          try {
+            final ids = await repo.insertTransactionsBatchWithRelations(
+              transactions: [batchTx[i]],
+              tagIdsByIndex: batchTagsByIndex.containsKey(i)
+                  ? {0: batchTagsByIndex[i]!}
+                  : const {},
+              attachmentsByIndex: batchAttachmentsByIndex.containsKey(i)
+                  ? {0: batchAttachmentsByIndex[i]!}
+                  : const {},
+              recordChanges: recordChanges,
+            );
+            inserted += ids.length;
+            consecutiveFailures = 0;
+          } catch (e2, st2) {
+            logger.error('TxImport', '单条插入失败(坏行): batchIndex=$i', e2, st2);
+            failed++;
+            consecutiveFailures++;
+            if (consecutiveFailures >= 10) {
+              logger.error('TxImport',
+                  '连续 $consecutiveFailures 条失败,视为系统性故障,'
+                  '剩余 ${size - i - 1} 条整批算 failed');
+              failed += size - i - 1;
+              break;
+            }
+          }
+        }
       }
       processed += size;
       batchTx.clear();
@@ -734,16 +1242,20 @@ class DataImportService {
         if (!hasAccOverride && tx.fromAccountName != null) {
           accountId = accountNameToId[tx.fromAccountName];
           if (accountId == null) {
+            // B2:失败也回调进度,避免 UI 进度条卡死/失真
             failed++;
             processed++;
+            if (onProgress != null) onProgress(processed, total);
             continue;
           }
         }
         if (!hasToOverride && tx.toAccountName != null) {
           toAccountId = accountNameToId[tx.toAccountName];
           if (toAccountId == null) {
+            // B2:失败也回调进度,避免 UI 进度条卡死/失真
             failed++;
             processed++;
+            if (onProgress != null) onProgress(processed, total);
             continue;
           }
         }
@@ -754,9 +1266,8 @@ class DataImportService {
       }
 
       // 解析标签ID — 优先按 tagSyncIds 匹配（跨设备 rename 稳定锚定），
-      // 互斥而非叠加：v7 JSON 里 tagSyncIds 是权威锚点，name 只是可读参考，
-      // 叠加会导致两端 tag 集合不一致时（本地同名不同 syncId 的独立标签）
-      // 多加标签。syncId 全部 miss 才回退 name。用 Set 去重。
+      // 用 Set 去重。仅当所有 syncId 都完整命中时才直接返回，否则继续按
+      // name 兜底，避免部分 miss 导致标签缺失并触发无限 diff 循环。
       final resolvedTagIds = <int>{};
       var resolvedBySyncId = false;
 
@@ -768,10 +1279,11 @@ class DataImportService {
           final tagId = tagSyncIdToId[syncId];
           if (tagId != null) resolvedTagIds.add(tagId);
         }
-        resolvedBySyncId = resolvedTagIds.isNotEmpty;
+        resolvedBySyncId = resolvedTagIds.isNotEmpty &&
+            resolvedTagIds.length == tx.tagSyncIds!.length;
       }
 
-      // 2. 按 name 解析（仅当无 tagSyncIds 或 syncId 全部 miss 时兜底）
+      // 2. 按 name 解析（syncId 缺失或部分 miss 时兜底）
       if (!resolvedBySyncId && tx.tagNames != null) {
         for (final tagName in tx.tagNames!) {
           var tagId = tagNameToId[tagName];
@@ -817,6 +1329,13 @@ class DataImportService {
       // 静默跳过 null-syncId 交易(local_repository.dart `if (tx.syncId == null) continue;`),
       // 导致该笔永远不会被推送到云端,且 SyncEngine 无 transaction backfill 兜底。
       final effectiveSyncId = tx.syncId ?? const Uuid().v4();
+      // v8 G2：周期规则关联。recurringSyncId → 本地 recurring int id
+      // （映射由 importRecurrings 产出；规则未导入/未命中 → null，
+      // 交易本身照常落库，仅来源关联缺失）。
+      final resolvedRecurringId = (tx.recurringSyncId != null &&
+              recurringSyncIdToId != null)
+          ? recurringSyncIdToId[tx.recurringSyncId!]
+          : null;
       final txCompanion = TransactionsCompanion.insert(
         ledgerId: ledgerId,
         type: tx.type,
@@ -837,6 +1356,7 @@ class DataImportService {
         categorySyncIdOverride: d.Value(tx.categorySyncIdOverride),
         accountSyncIdOverride: d.Value(tx.accountSyncIdOverride),
         toAccountSyncIdOverride: d.Value(tx.toAccountSyncIdOverride),
+        recurringId: d.Value(resolvedRecurringId),
       );
 
       final indexInBatch = batchTx.length;
@@ -855,6 +1375,7 @@ class DataImportService {
                   sortOrder: a.sortOrder,
                   cloudFileId: a.cloudFileId,
                   cloudSha256: a.cloudSha256,
+                  localSha256: a.sha256,
                 ))
             .toList();
       }

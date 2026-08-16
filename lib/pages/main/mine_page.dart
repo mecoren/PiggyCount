@@ -185,7 +185,13 @@ class MinePage extends ConsumerWidget {
                                 final isFirstLoad = st == null;
                                 final refreshing = asyncSt.isLoading;
 
-                                if (!isFirstLoad) {
+                                // 刷新期间不回退显示缓存的旧状态（可能是过时
+                                // 的"已同步"），改显"同步中"，避免与启动检查
+                                // 的"云端有更新"提示互相矛盾
+                                if (refreshing) {
+                                  subtitle = AppLocalizations.of(sectionContext)
+                                      .mineSyncChecking;
+                                } else if (!isFirstLoad) {
                                   switch (st.diff) {
                                     case SyncDiff.notLoggedIn:
                                       subtitle =

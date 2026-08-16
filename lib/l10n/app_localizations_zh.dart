@@ -152,6 +152,20 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get startupSyncNewLedgersTitle => '发现云端账本';
+
+  @override
+  String startupSyncNewLedgersMessage(int count, String names) {
+    return '云端发现 $count 个本机没有的账本：$names。是否下载到本机？';
+  }
+
+  @override
+  String get startupSyncNewLedgersOk => '下载';
+
+  @override
+  String get startupSyncNewLedgersCancel => '跳过';
+
+  @override
   String get commonSuccess => '成功';
 
   @override
@@ -859,6 +873,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String ledgersRestoreResult(int success, int failed) {
     return '成功: $success，失败: $failed';
   }
+
+  @override
+  String get ledgersUploadAll => '全部上传';
+
+  @override
+  String ledgersUploadAllMessage(int count) {
+    return '确认将 $count 个本地账本上传到云端？云端现有内容将被本地内容覆盖。';
+  }
+
+  @override
+  String get ledgersUploadAllComplete => '上传完成';
+
+  @override
+  String ledgersUploadAllResult(int success, int failed) {
+    return '成功: $success，失败: $failed';
+  }
+
+  @override
+  String ledgersUploadingProgress(int done, int total) {
+    return '正在上传账本 $done/$total，请勿操作…';
+  }
+
+  @override
+  String get ledgersUploadThis => '上传到云端';
 
   @override
   String get categoryTitle => '分类管理';
@@ -1583,6 +1621,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mineSyncTitle => '同步';
 
   @override
+  String get mineSyncChecking => '同步中…';
+
+  @override
   String get mineSyncNotLoggedIn => '未登录';
 
   @override
@@ -1674,7 +1715,108 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mineUploadSuccess => '已上传';
 
   @override
-  String get mineUploadSuccessMessage => '当前账本已同步到云端';
+  String get mineUploadSuccessMessage => '所有账本已同步到云端';
+
+  @override
+  String get syncBlockingDownloadTitle => '下载同步';
+
+  @override
+  String get syncBlockingUploadTitle => '上传同步';
+
+  @override
+  String get syncBlockingCheckCloud => '正在检查云端账本…';
+
+  @override
+  String syncBlockingDownloadLedger(int n, int m) {
+    return '正在下载账本 $n/$m…';
+  }
+
+  @override
+  String get syncBlockingApplying => '正在应用变更…';
+
+  @override
+  String get fullUploadTitle => '全量上传';
+
+  @override
+  String get fullUploadSubtitle => '以本地全部账本覆盖云端';
+
+  @override
+  String get fullDownloadTitle => '全量下载';
+
+  @override
+  String get fullDownloadSubtitle => '以云端全部账本覆盖本地';
+
+  @override
+  String fullUploadConfirm1Message(int count) {
+    return '将把本地 $count 个账本全量上传，云端对应的账本数据将被本地数据完全覆盖。云端独有的账本会保留。';
+  }
+
+  @override
+  String get fullUploadConfirm2Message => '再次确认：覆盖后云端原有数据无法恢复，确定要继续吗？';
+
+  @override
+  String get fullDownloadConfirm1Message =>
+      '云端全部账本将完全覆盖本地对应的账本，云端独有的账本会导入为新建账本。本地独有的账本会保留。';
+
+  @override
+  String get fullDownloadConfirm2Message => '再次确认：覆盖后本地原有数据无法恢复，确定要继续吗？';
+
+  @override
+  String dangerConfirmCountdown(int seconds) {
+    return '确认（$seconds秒）';
+  }
+
+  @override
+  String get fullUploadBlockingStatus => '正在全量上传所有本地账本…';
+
+  @override
+  String get fullDownloadBlockingStatus => '正在全量恢复所有云端账本…';
+
+  @override
+  String get fullUploadNoLedgers => '没有可上传的本地账本。';
+
+  @override
+  String get fullUploadSuccessMessage => '全量上传完成，云端已与本地数据一致。';
+
+  @override
+  String fullDownloadResult(int success, int failed) {
+    return '全量下载完成：成功 $success 个，失败 $failed 个。';
+  }
+
+  @override
+  String get fullSyncUnsupported => '当前云后端不支持全量覆盖同步。';
+
+  @override
+  String get ledgersRestoreBlockingStatus => '正在从云端恢复账本…';
+
+  @override
+  String get ledgersUploadOneBlockingStatus => '正在上传账本…';
+
+  @override
+  String get ledgersDownloadOneBlockingStatus => '正在下载账本…';
+
+  @override
+  String get encryptionBlockingVerifying => '正在验证云端加密数据…';
+
+  @override
+  String get encryptionBlockingReencrypt => '正在加密云端数据…';
+
+  @override
+  String get encryptionBlockingReinit => '正在初始化加密同步…';
+
+  @override
+  String get encryptionBlockingChangePassword => '正在重新加密云端数据…';
+
+  @override
+  String get encryptionBlockingReset => '正在重置加密…';
+
+  @override
+  String get cloudFirstSyncBlockingTitle => '首次云同步';
+
+  @override
+  String cloudFirstSyncBlockingStatus(int n, int m) {
+    return '正在上传账本 $n/$m…';
+  }
 
   @override
   String get mineDownloadTitle => '下载同步';
@@ -7779,6 +7921,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get saltMismatchCloudCorrupted => '云端密文已损坏，无法恢复密钥';
 
   @override
+  String get saltMismatchWebdavAuthTitle => '云端认证失败';
+
+  @override
+  String get saltMismatchWebdavAuthMessage =>
+      '云存储（WebDAV）账号或密码错误，请前往云服务设置修正凭据后重试。';
+
+  @override
+  String get saltMismatchGoConfig => '去修改配置';
+
+  @override
   String get startupSyncRecoveryFailedHint =>
       '密钥激活失败，同步未恢复。请确认密码后重试，或到同步设置重新操作。';
 }
@@ -7929,6 +8081,20 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String startupSyncConflictAndMore(int count) {
     return '等 $count 個';
   }
+
+  @override
+  String get startupSyncNewLedgersTitle => '發現雲端賬本';
+
+  @override
+  String startupSyncNewLedgersMessage(int count, String names) {
+    return '雲端發現 $count 個本機沒有的賬本：$names。是否下載到本機？';
+  }
+
+  @override
+  String get startupSyncNewLedgersOk => '下載';
+
+  @override
+  String get startupSyncNewLedgersCancel => '跳過';
 
   @override
   String get commonSuccess => '成功';
@@ -8638,6 +8804,30 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String ledgersRestoreResult(int success, int failed) {
     return '成功: $success，失敗: $failed';
   }
+
+  @override
+  String get ledgersUploadAll => '全部上傳';
+
+  @override
+  String ledgersUploadAllMessage(int count) {
+    return '確認將 $count 個本機帳本上傳到雲端？雲端現有內容將被本機內容覆蓋。';
+  }
+
+  @override
+  String get ledgersUploadAllComplete => '上傳完成';
+
+  @override
+  String ledgersUploadAllResult(int success, int failed) {
+    return '成功: $success，失敗: $failed';
+  }
+
+  @override
+  String ledgersUploadingProgress(int done, int total) {
+    return '正在上傳帳本 $done/$total，請勿操作…';
+  }
+
+  @override
+  String get ledgersUploadThis => '上傳到雲端';
 
   @override
   String get categoryTitle => '分類管理';
@@ -9362,6 +9552,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get mineSyncTitle => '同步';
 
   @override
+  String get mineSyncChecking => '同步中…';
+
+  @override
   String get mineSyncNotLoggedIn => '未登入';
 
   @override
@@ -9453,7 +9646,108 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get mineUploadSuccess => '已上傳';
 
   @override
-  String get mineUploadSuccessMessage => '當前帳本已同步到雲端';
+  String get mineUploadSuccessMessage => '所有帳本已同步到雲端';
+
+  @override
+  String get syncBlockingDownloadTitle => '下載同步';
+
+  @override
+  String get syncBlockingUploadTitle => '上傳同步';
+
+  @override
+  String get syncBlockingCheckCloud => '正在檢查雲端帳本…';
+
+  @override
+  String syncBlockingDownloadLedger(int n, int m) {
+    return '正在下載帳本 $n/$m…';
+  }
+
+  @override
+  String get syncBlockingApplying => '正在套用變更…';
+
+  @override
+  String get fullUploadTitle => '全量上傳';
+
+  @override
+  String get fullUploadSubtitle => '以本地全部帳本覆蓋雲端';
+
+  @override
+  String get fullDownloadTitle => '全量下載';
+
+  @override
+  String get fullDownloadSubtitle => '以雲端全部帳本覆蓋本地';
+
+  @override
+  String fullUploadConfirm1Message(int count) {
+    return '將把本地 $count 個帳本全量上傳，雲端對應的帳本資料將被本地資料完全覆蓋。雲端獨有的帳本會保留。';
+  }
+
+  @override
+  String get fullUploadConfirm2Message => '再次確認：覆蓋後雲端原有資料無法復原，確定要繼續嗎？';
+
+  @override
+  String get fullDownloadConfirm1Message =>
+      '雲端全部帳本將完全覆蓋本地對應的帳本，雲端獨有的帳本會匯入為新建帳本。本地獨有的帳本會保留。';
+
+  @override
+  String get fullDownloadConfirm2Message => '再次確認：覆蓋後本地原有資料無法復原，確定要繼續嗎？';
+
+  @override
+  String dangerConfirmCountdown(int seconds) {
+    return '確認（$seconds秒）';
+  }
+
+  @override
+  String get fullUploadBlockingStatus => '正在全量上傳所有本地帳本…';
+
+  @override
+  String get fullDownloadBlockingStatus => '正在全量還原所有雲端帳本…';
+
+  @override
+  String get fullUploadNoLedgers => '沒有可上傳的本地帳本。';
+
+  @override
+  String get fullUploadSuccessMessage => '全量上傳完成，雲端已與本地資料一致。';
+
+  @override
+  String fullDownloadResult(int success, int failed) {
+    return '全量下載完成：成功 $success 個，失敗 $failed 個。';
+  }
+
+  @override
+  String get fullSyncUnsupported => '目前雲端後端不支援全量覆蓋同步。';
+
+  @override
+  String get ledgersRestoreBlockingStatus => '正在從雲端恢復帳本…';
+
+  @override
+  String get ledgersUploadOneBlockingStatus => '正在上傳帳本…';
+
+  @override
+  String get ledgersDownloadOneBlockingStatus => '正在下載帳本…';
+
+  @override
+  String get encryptionBlockingVerifying => '正在驗證雲端加密資料…';
+
+  @override
+  String get encryptionBlockingReencrypt => '正在加密雲端資料…';
+
+  @override
+  String get encryptionBlockingReinit => '正在初始化加密同步…';
+
+  @override
+  String get encryptionBlockingChangePassword => '正在重新加密雲端資料…';
+
+  @override
+  String get encryptionBlockingReset => '正在重置加密…';
+
+  @override
+  String get cloudFirstSyncBlockingTitle => '首次雲端同步';
+
+  @override
+  String cloudFirstSyncBlockingStatus(int n, int m) {
+    return '正在上傳帳本 $n/$m…';
+  }
 
   @override
   String get mineDownloadTitle => '下載同步';
@@ -15556,6 +15850,16 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get saltMismatchCloudCorrupted => '雲端密文已損壞，無法恢復金鑰';
+
+  @override
+  String get saltMismatchWebdavAuthTitle => '雲端認證失敗';
+
+  @override
+  String get saltMismatchWebdavAuthMessage =>
+      '雲端儲存（WebDAV）帳號或密碼錯誤，請前往雲端服務設定修正憑證後重試。';
+
+  @override
+  String get saltMismatchGoConfig => '前往修改設定';
 
   @override
   String get startupSyncRecoveryFailedHint =>

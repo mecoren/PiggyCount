@@ -84,6 +84,10 @@
   "startupSyncConflictConfirmOk": "覆盖本地",
   "startupSyncConflictConfirmCancel": "取消",
   "startupSyncConflictAndMore": "等 {count} 个",
+  "startupSyncNewLedgersTitle": "发现云端账本",
+  "startupSyncNewLedgersMessage": "云端发现 {count} 个本机没有的账本：{names}。是否下载到本机？",
+  "startupSyncNewLedgersOk": "下载",
+  "startupSyncNewLedgersCancel": "跳过",
   "@startupSyncConflictAndMore": {
     "placeholders": {
       "count": {"type": "int"}
@@ -675,6 +679,7 @@
   "mineCloudServiceCustom": "自定义 Supabase",
   "mineCloudServiceWebDAV": "自定义云服务 (WebDAV)",
   "mineSyncTitle": "同步",
+  "mineSyncChecking": "同步中…",
   "mineSyncNotLoggedIn": "未登录",
   "mineSyncNotConfigured": "未配置云端",
   "mineSyncNoRemote": "云端暂无数据",
@@ -700,7 +705,49 @@
   "mineUploadRefreshing": "刷新中…",
   "mineUploadSynced": "已同步",
   "mineUploadSuccess": "已上传",
-  "mineUploadSuccessMessage": "当前账本已同步到云端",
+  "mineUploadSuccessMessage": "所有账本已同步到云端",
+  "syncBlockingDownloadTitle": "下载同步",
+  "syncBlockingUploadTitle": "上传同步",
+  "syncBlockingCheckCloud": "正在检查云端账本…",
+  "syncBlockingDownloadLedger": "正在下载账本 {n}/{m}…",
+  "@syncBlockingDownloadLedger": {
+    "placeholders": {
+      "n": {"type": "int"},
+      "m": {"type": "int"}
+    }
+  },
+  "syncBlockingApplying": "正在应用变更…",
+  "fullUploadTitle": "全量上传",
+  "fullUploadSubtitle": "以本地全部账本覆盖云端",
+  "fullDownloadTitle": "全量下载",
+  "fullDownloadSubtitle": "以云端全部账本覆盖本地",
+  "fullUploadConfirm1Message": "将把本地 {count} 个账本全量上传，云端对应的账本数据将被本地数据完全覆盖。云端独有的账本会保留。",
+  "fullUploadConfirm2Message": "再次确认：覆盖后云端原有数据无法恢复，确定要继续吗？",
+  "fullDownloadConfirm1Message": "云端全部账本将完全覆盖本地对应的账本，云端独有的账本会导入为新建账本。本地独有的账本会保留。",
+  "fullDownloadConfirm2Message": "再次确认：覆盖后本地原有数据无法恢复，确定要继续吗？",
+  "dangerConfirmCountdown": "确认（{seconds}秒）",
+  "fullUploadBlockingStatus": "正在全量上传所有本地账本…",
+  "fullDownloadBlockingStatus": "正在全量恢复所有云端账本…",
+  "fullUploadNoLedgers": "没有可上传的本地账本。",
+  "fullUploadSuccessMessage": "全量上传完成，云端已与本地数据一致。",
+  "fullDownloadResult": "全量下载完成：成功 {success} 个，失败 {failed} 个。",
+  "fullSyncUnsupported": "当前云后端不支持全量覆盖同步。",
+  "ledgersRestoreBlockingStatus": "正在从云端恢复账本…",
+  "ledgersUploadOneBlockingStatus": "正在上传账本…",
+  "ledgersDownloadOneBlockingStatus": "正在下载账本…",
+  "encryptionBlockingVerifying": "正在验证云端加密数据…",
+  "encryptionBlockingReencrypt": "正在加密云端数据…",
+  "encryptionBlockingReinit": "正在初始化加密同步…",
+  "encryptionBlockingChangePassword": "正在重新加密云端数据…",
+  "encryptionBlockingReset": "正在重置加密…",
+  "cloudFirstSyncBlockingTitle": "首次云同步",
+  "cloudFirstSyncBlockingStatus": "正在上传账本 {n}/{m}…",
+  "@cloudFirstSyncBlockingStatus": {
+    "placeholders": {
+      "n": {"type": "int"},
+      "m": {"type": "int"}
+    }
+  },
   "mineDownloadTitle": "下载同步",
   "mineDownloadNeedCloudService": "仅限云服务模式可用",
   "mineDownloadComplete": "同步完成",
@@ -2070,6 +2117,39 @@
       }
     }
   },
+  "ledgersUploadAll": "全部上传",
+  "ledgersUploadAllMessage": "确认将 {count} 个本地账本上传到云端？云端现有内容将被本地内容覆盖。",
+  "@ledgersUploadAllMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ledgersUploadAllComplete": "上传完成",
+  "ledgersUploadAllResult": "成功: {success}，失败: {failed}",
+  "@ledgersUploadAllResult": {
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "ledgersUploadingProgress": "正在上传账本 {done}/{total}，请勿操作…",
+  "@ledgersUploadingProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "ledgersUploadThis": "上传到云端",
   "ledgersConflictTitle": "同步冲突",
   "ledgersConflictMessage": "本地和云端账本数据不一致，请选择操作：",
   "ledgersConflictLocalInfo": "本地：{count} 笔账单",
@@ -3329,5 +3409,8 @@
   "saltMismatchRawStorageUnavailable": "云服务未初始化，无法恢复密钥",
   "saltMismatchProbeFailed": "云端探测失败，请检查网络后重试",
   "saltMismatchCloudCorrupted": "云端密文已损坏，无法恢复密钥",
+  "saltMismatchWebdavAuthTitle": "云端认证失败",
+  "saltMismatchWebdavAuthMessage": "云存储（WebDAV）账号或密码错误，请前往云服务设置修正凭据后重试。",
+  "saltMismatchGoConfig": "去修改配置",
   "startupSyncRecoveryFailedHint": "密钥激活失败，同步未恢复。请确认密码后重试，或到同步设置重新操作。"
 }

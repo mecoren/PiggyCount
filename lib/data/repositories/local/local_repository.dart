@@ -1230,9 +1230,10 @@ class LocalRepository extends BaseRepository {
   }
 
   @override
-  Future<void> updateCategory(int id, {String? name, String? icon, int? parentId, int? level}) async {
+  Future<void> updateCategory(int id,
+      {String? name, String? icon, int? parentId, int? level, String? syncId}) async {
     final cat = changeTracker != null ? await _categoryRepo.getCategoryById(id) : null;
-    await _categoryRepo.updateCategory(id, name: name, icon: icon, parentId: parentId, level: level);
+    await _categoryRepo.updateCategory(id, name: name, icon: icon, parentId: parentId, level: level, syncId: syncId);
     if (cat?.syncId != null) {
       await changeTracker!.recordUserGlobalChange(
         entityType: 'category', entityId: id,
@@ -1604,9 +1605,12 @@ class LocalRepository extends BaseRepository {
       'transfer 分类发现 ${all.length} 条,合并 → keeper=${keeper.id} dupes=$dupeIds',
     );
 
-    // 预查受影响的 transactions(为 ChangeTracker 记录)
+    // 预查受影响的 transactions / recurring_transactions(为 ChangeTracker 记录)
     final affectedTxs = await (db.select(db.transactions)
           ..where((t) => t.categoryId.isIn(dupeIds)))
+        .get();
+    final affectedRecurrings = await (db.select(db.recurringTransactions)
+          ..where((r) => r.categoryId.isIn(dupeIds)))
         .get();
 
     await db.transaction(() async {
@@ -1629,7 +1633,8 @@ class LocalRepository extends BaseRepository {
           .go();
     });
 
-    // ChangeTracker 记录:受影响 transactions 的 update + dupe categories 的 delete
+    // ChangeTracker 记录:受影响 transactions / recurring_transactions 的
+    // update + dupe categories 的 delete
     if (changeTracker != null) {
       for (final tx in affectedTxs) {
         if (tx.syncId == null) continue;
@@ -1638,6 +1643,18 @@ class LocalRepository extends BaseRepository {
           entityId: tx.id,
           entitySyncId: tx.syncId!,
           ledgerId: tx.ledgerId,
+          action: 'update',
+        );
+      }
+      // cloud_recurring_sync:被改写 categoryId 的规则也要推 update,
+      // 否则对端规则的分类引用还挂在已删除的 dupe 分类上。
+      for (final r in affectedRecurrings) {
+        if (r.syncId == null) continue;
+        await changeTracker!.recordLedgerChange(
+          entityType: 'recurring',
+          entityId: r.id,
+          entitySyncId: r.syncId!,
+          ledgerId: r.ledgerId,
           action: 'update',
         );
       }
@@ -1765,6 +1782,7 @@ class LocalRepository extends BaseRepository {
     String? note,
     bool clearMetadataFields = false,
     bool? hidden,
+    String? syncId,
   }) async {
     final account = changeTracker != null ? await _accountRepo.getAccount(id) : null;
     await _accountRepo.updateAccount(
@@ -1782,6 +1800,7 @@ class LocalRepository extends BaseRepository {
       note: note,
       clearMetadataFields: clearMetadataFields,
       hidden: hidden,
+      syncId: syncId,
     );
     if (account?.syncId != null) {
       await changeTracker!.recordUserGlobalChange(
@@ -2154,24 +2173,43 @@ class LocalRepository extends BaseRepository {
     required DateTime startDate,
     DateTime? endDate,
     bool enabled = true,
-  }) =>
-      _recurringTransactionRepo.addRecurringTransaction(
-        ledgerId: ledgerId,
-        type: type,
-        amount: amount,
-        categoryId: categoryId,
-        accountId: accountId,
-        toAccountId: toAccountId,
-        note: note,
-        frequency: frequency,
-        interval: interval,
-        dayOfMonth: dayOfMonth,
-        dayOfWeek: dayOfWeek,
-        monthOfYear: monthOfYear,
-        startDate: startDate,
-        endDate: endDate,
-        enabled: enabled,
-      );
+    String? syncId,
+  }) async {
+    final id = await _recurringTransactionRepo.addRecurringTransaction(
+      ledgerId: ledgerId,
+      type: type,
+      amount: amount,
+      categoryId: categoryId,
+      accountId: accountId,
+      toAccountId: toAccountId,
+      note: note,
+      frequency: frequency,
+      interval: interval,
+      dayOfMonth: dayOfMonth,
+      dayOfWeek: dayOfWeek,
+      monthOfYear: monthOfYear,
+      startDate: startDate,
+      endDate: endDate,
+      enabled: enabled,
+      syncId: syncId,
+    );
+    // cloud_recurring_sync:新建规则登记 create change(对齐 budget 的包装模式)
+    if (changeTracker != null) {
+      final row = await (db.select(db.recurringTransactions)
+            ..where((t) => t.id.equals(id)))
+          .getSingleOrNull();
+      if (row?.syncId != null) {
+        await changeTracker!.recordLedgerChange(
+          entityType: 'recurring',
+          entityId: id,
+          entitySyncId: row!.syncId!,
+          ledgerId: ledgerId,
+          action: 'create',
+        );
+      }
+    }
+    return id;
+  }
 
   @override
   Future<void> updateRecurringTransaction({
@@ -2192,38 +2230,104 @@ class LocalRepository extends BaseRepository {
     DateTime? endDate,
     bool? enabled,
     DateTime? lastGeneratedDate,
-  }) =>
-      _recurringTransactionRepo.updateRecurringTransaction(
-        id: id,
-        ledgerId: ledgerId,
-        type: type,
-        amount: amount,
-        categoryId: categoryId,
-        accountId: accountId,
-        toAccountId: toAccountId,
-        note: note,
-        frequency: frequency,
-        interval: interval,
-        dayOfMonth: dayOfMonth,
-        dayOfWeek: dayOfWeek,
-        monthOfYear: monthOfYear,
-        startDate: startDate,
-        endDate: endDate,
-        enabled: enabled,
-        lastGeneratedDate: lastGeneratedDate,
+    String? syncId,
+  }) async {
+    await _recurringTransactionRepo.updateRecurringTransaction(
+      id: id,
+      ledgerId: ledgerId,
+      type: type,
+      amount: amount,
+      categoryId: categoryId,
+      accountId: accountId,
+      toAccountId: toAccountId,
+      note: note,
+      frequency: frequency,
+      interval: interval,
+      dayOfMonth: dayOfMonth,
+      dayOfWeek: dayOfWeek,
+      monthOfYear: monthOfYear,
+      startDate: startDate,
+      endDate: endDate,
+      enabled: enabled,
+      lastGeneratedDate: lastGeneratedDate,
+      syncId: syncId,
+    );
+    // cloud_recurring_sync:编辑规则登记 update change。lastGeneratedDate 是
+    // 普通 LWW 字段随行整体传播,其他设备拿到新进度后不会重放生成。
+    if (changeTracker != null) {
+      final row = await (db.select(db.recurringTransactions)
+            ..where((t) => t.id.equals(id)))
+          .getSingleOrNull();
+      if (row != null && row.syncId != null) {
+        await changeTracker!.recordLedgerChange(
+          entityType: 'recurring',
+          entityId: id,
+          entitySyncId: row.syncId!,
+          ledgerId: row.ledgerId,
+          action: 'update',
+        );
+      }
+    }
+  }
+
+  @override
+  Future<void> deleteRecurringTransaction(int id) async {
+    // 先取行拿 syncId/ledgerId(删了就查不到),再删 + 登记 delete change。
+    // 交易不级联删 —— 悬空 recurringId 由孤儿清理器范畴兜住(设计边界)。
+    final row = await (db.select(db.recurringTransactions)
+          ..where((t) => t.id.equals(id)))
+        .getSingleOrNull();
+    await _recurringTransactionRepo.deleteRecurringTransaction(id);
+    if (changeTracker != null && row != null && row.syncId != null) {
+      await changeTracker!.recordLedgerChange(
+        entityType: 'recurring',
+        entityId: row.id,
+        entitySyncId: row.syncId!,
+        ledgerId: row.ledgerId,
+        action: 'delete',
       );
+    }
+  }
 
   @override
-  Future<void> deleteRecurringTransaction(int id) =>
-      _recurringTransactionRepo.deleteRecurringTransaction(id);
+  Future<void> toggleRecurringTransaction(int id, bool enabled) async {
+    await _recurringTransactionRepo.toggleRecurringTransaction(id, enabled);
+    if (changeTracker != null) {
+      final row = await (db.select(db.recurringTransactions)
+            ..where((t) => t.id.equals(id)))
+          .getSingleOrNull();
+      if (row != null && row.syncId != null) {
+        await changeTracker!.recordLedgerChange(
+          entityType: 'recurring',
+          entityId: id,
+          entitySyncId: row.syncId!,
+          ledgerId: row.ledgerId,
+          action: 'update',
+        );
+      }
+    }
+  }
 
   @override
-  Future<void> toggleRecurringTransaction(int id, bool enabled) =>
-      _recurringTransactionRepo.toggleRecurringTransaction(id, enabled);
-
-  @override
-  Future<void> updateLastGeneratedDate(int id, DateTime date) =>
-      _recurringTransactionRepo.updateLastGeneratedDate(id, date);
+  Future<void> updateLastGeneratedDate(int id, DateTime date) async {
+    await _recurringTransactionRepo.updateLastGeneratedDate(id, date);
+    // 生成器每次生成交易都会前移该字段 → 顺势推 update change,把"生成进度"
+    // 传播给其他设备避免重放生成(设计决策 3)。
+    if (changeTracker != null) {
+      final row = await (db.select(db.recurringTransactions)
+            ..where((t) => t.id.equals(id)))
+          .getSingleOrNull();
+      if (row != null && row.syncId != null) {
+        await changeTracker!.recordLedgerChange(
+          entityType: 'recurring',
+          entityId: id,
+          entitySyncId: row.syncId!,
+          ledgerId: row.ledgerId,
+          action: 'update',
+        );
+      }
+    }
+  }
 
   @override
   Future<int> getActiveRecurringCountByAccount(int accountId) =>
@@ -2524,6 +2628,7 @@ class LocalRepository extends BaseRepository {
     required double amount,
     String period = 'monthly',
     int startDay = 1,
+    String? syncId,
   }) async {
     final id = await _budgetRepo.createBudget(
       ledgerId: ledgerId,
@@ -2532,6 +2637,7 @@ class LocalRepository extends BaseRepository {
       amount: amount,
       period: period,
       startDay: startDay,
+      syncId: syncId,
     );
     if (changeTracker != null) {
       final row = await (db.select(db.budgets)..where((b) => b.id.equals(id)))
@@ -2555,12 +2661,14 @@ class LocalRepository extends BaseRepository {
     double? amount,
     int? startDay,
     bool? enabled,
+    String? syncId,
   }) async {
     await _budgetRepo.updateBudget(
       id,
       amount: amount,
       startDay: startDay,
       enabled: enabled,
+      syncId: syncId,
     );
     if (changeTracker != null) {
       final row = await (db.select(db.budgets)..where((b) => b.id.equals(id)))
@@ -2657,6 +2765,7 @@ class LocalRepository extends BaseRepository {
     int sortOrder = 0,
     String? cloudFileId,
     String? cloudSha256,
+    String? localSha256,
   }) async {
     final id = await _attachmentRepo.createAttachment(
       transactionId: transactionId,
@@ -2668,6 +2777,7 @@ class LocalRepository extends BaseRepository {
       sortOrder: sortOrder,
       cloudFileId: cloudFileId,
       cloudSha256: cloudSha256,
+      localSha256: localSha256,
     );
     // 附件本身不走 sync_change 表（server 通过 tx payload 里的 attachments
     // 数组下发），但必须给父 tx 登记一条 update change，否则另一台设备永远
@@ -2728,6 +2838,16 @@ class LocalRepository extends BaseRepository {
   @override
   Future<void> updateAttachmentCloudRef(int id, {String? cloudFileId, String? cloudSha256}) =>
       _attachmentRepo.updateAttachmentCloudRef(id, cloudFileId: cloudFileId, cloudSha256: cloudSha256);
+
+  @override
+  Future<void> updateAttachmentLocalSha256(int id, String localSha256) =>
+      _attachmentRepo.updateAttachmentLocalSha256(id, localSha256);
+
+  @override
+  Future<List<TransactionAttachment>> getAttachmentsWithoutLocalSha256({
+    int limit = 200,
+  }) =>
+      _attachmentRepo.getAttachmentsWithoutLocalSha256(limit: limit);
 
   @override
   Future<bool> attachmentExistsByFileName(String fileName) =>

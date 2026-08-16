@@ -68,6 +68,15 @@ class WebDAVProvider implements CloudProvider {
     final password = config['password'] as String;
     final remotePath = config['remotePath'] as String? ?? '/';
 
+    // P2-7：WebDAV 使用 HTTP Basic Auth，用户名密码以 Base64（可逆）
+    // 随每个请求明文传输。强制 https，避免 http 链路上凭据被窃取。
+    final scheme = Uri.tryParse(url)?.scheme.toLowerCase() ?? '';
+    if (scheme != 'https' && scheme != 'davs') {
+      throw CloudConfigurationException(
+          'WebDAV 地址必须使用 HTTPS（当前为 $scheme://，'
+          'Basic Auth 凭据将在链路上明文传输）');
+    }
+
     try {
       // Create WebDAV client
       _client = webdav.newClient(
@@ -85,6 +94,10 @@ class WebDAVProvider implements CloudProvider {
         // 403 权限不足等）直接抛出，避免掩盖真实问题导致误导性的 mkdir。
         if (_isNotFound(e)) {
           await _client!.mkdir(remotePath);
+        } else if (_isUnauthorized(e)) {
+          // 401/403 凭据错误：抛专属认证异常，上层（如 ensureInitialized
+          // 调用方）据此引导用户重新配置，而非误报网络/配置格式问题
+          throw CloudAuthException('WebDAV 认证失败（账号或密码错误）', e);
         } else {
           rethrow;
         }
@@ -94,6 +107,10 @@ class WebDAVProvider implements CloudProvider {
       _authService = WebDAVAuthService(username);
 
       _storageService = WebDAVStorageService(_client!, remotePath);
+    } on CloudAuthException {
+      // 保真透传：认证失败不能被包装成 CloudConfigurationException，
+      // 否则调用方无法区分「密码错误」与「配置格式错误」
+      rethrow;
     } catch (e) {
       throw CloudConfigurationException(
           'Failed to initialize WebDAV: $e', e);
@@ -148,5 +165,26 @@ class WebDAVProvider implements CloudProvider {
         msg.contains('not found') ||
         msg.contains('does not exist') ||
         msg.contains('no such');
+  }
+
+  /// 统一判断 WebDAV 401/403 认证失败，策略与 [_isNotFound] 一致：
+  /// 优先读取 dio 异常携带的 response.statusCode，无结构化信息时退化为
+  /// 字符串匹配。与 WebDAVStorageService._isUnauthorized 逻辑保持一致。
+  bool _isUnauthorized(Object e) {
+    try {
+      final dynamic dyn = e;
+      final dynamic response = dyn.response;
+      if (response != null &&
+          (response.statusCode == 401 || response.statusCode == 403)) {
+        return true;
+      }
+    } catch (_) {
+      // 非 dio 异常类型，无 response 字段，进入字符串兜底
+    }
+    final msg = e.toString().toLowerCase();
+    return msg.contains('401') ||
+        msg.contains('403') ||
+        msg.contains('unauthorized') ||
+        msg.contains('forbidden');
   }
 }

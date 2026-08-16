@@ -1,0 +1,369 @@
+// attachment_binary_sync 单元测试
+//
+// 覆盖快照链路(Path A)附件二进制同步的核心闭环:
+// 1. 上传侧 uploadAttachmentObjects:内容寻址上传、exists 去重、孤儿跳过
+// 2. 恢复侧 enqueueMissingAttachmentJobs + drainAttachmentJobs:
+//    缺文件入队、下载校验落盘、已有文件不入队、损坏对象拒绝落盘
+// 3. 清单→落列:快照 JSON 里的 sha256 经恢复写入 localSha256 列
+//
+// 不依赖真实网络:fake CloudProvider + 内存 Map storage + 临时目录
+// 模拟 getApplicationDocumentsDirectory。
+
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:crypto/crypto.dart' as crypto;
+import 'package:drift/drift.dart' as d;
+import 'package:drift/native.dart';
+import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' as fcs;
+import 'package:flutter_test/flutter_test.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:piggycount/cloud/transactions_sync_manager.dart';
+import 'package:piggycount/data/db.dart';
+import 'package:piggycount/data/repositories/base_repository.dart';
+import 'package:piggycount/data/repositories/local/local_repository.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  SharedPreferences.setMockInitialValues({});
+
+  late PiggyDatabase db;
+  late Directory tempDir;
+  late Directory attDir;
+
+  setUp(() async {
+    db = PiggyDatabase.forTesting(NativeDatabase.memory());
+    tempDir = await Directory.systemTemp.createTemp('att_sync_test');
+    attDir = Directory('${tempDir.path}/attachments');
+    await attDir.create(recursive: true);
+    PathProviderPlatform.instance = _FakePathProvider(tempDir.path);
+  });
+
+  tearDown(() async {
+    await db.close();
+    await tempDir.delete(recursive: true);
+  });
+
+  /// 构造已注入 fake provider 的 manager。
+  /// [repo] 缺省用 _DummyRepo;需要走真实导入路径时传 LocalRepository。
+  TransactionsSyncManager buildManager(
+    _MapStorage storage, {
+    BaseRepository? repo,
+  }) {
+    final provider = _FakeCloudProvider(storage: storage);
+    final manager = TransactionsSyncManager(
+      config: const fcs.CloudServiceConfig(
+        type: fcs.CloudBackendType.supabase,
+        name: 'test',
+      ),
+      db: db,
+      repo: repo ?? _DummyRepo(),
+    );
+    manager.setSyncManagerForTesting(
+      syncManager: fcs.CloudSyncManager<int>(
+        provider: provider,
+        serializer: _NoopSerializer(),
+      ),
+      provider: provider,
+    );
+    return manager;
+  }
+
+  /// 预置账本 + 一笔交易 + 一条附件行
+  Future<int> seedAttachmentRow({
+    required String fileName,
+    required String sha256,
+  }) async {
+    await db.into(db.ledgers).insert(LedgersCompanion.insert(
+          id: const d.Value(1),
+          name: 'L',
+          currency: const d.Value('CNY'),
+        ));
+    final txId = await db.into(db.transactions).insert(
+          TransactionsCompanion.insert(
+            ledgerId: 1,
+            type: 'expense',
+            amount: 10.0,
+            happenedAt: d.Value(DateTime(2026, 8, 1)),
+            syncId: const d.Value('tx-1'),
+          ),
+        );
+    await db.into(db.transactionAttachments).insert(
+          TransactionAttachmentsCompanion.insert(
+            transactionId: txId,
+            fileName: fileName,
+            localSha256: d.Value(sha256),
+          ),
+        );
+    return txId;
+  }
+
+  group('pathForAttachmentBin', () {
+    test('内容寻址路径格式为 attachments/<sha256>.bin', () {
+      final manager = buildManager(_MapStorage());
+      expect(manager.pathForAttachmentBin('abc123'),
+          'attachments/abc123.bin');
+    });
+  });
+
+  group('uploadAttachmentObjects 上传侧', () {
+    test('本地文件按内容寻址上传为 base64 对象', () async {
+      final bytes = Uint8List.fromList([1, 2, 3, 4, 5]);
+      final sha = crypto.sha256.convert(bytes).toString();
+      await seedAttachmentRow(fileName: 'pic.jpg', sha256: sha);
+      await File('${attDir.path}/pic.jpg').writeAsBytes(bytes);
+
+      final storage = _MapStorage();
+      final manager = buildManager(storage);
+
+      final result = await manager.uploadAttachmentObjects(ledgerId: 1);
+
+      expect(result.uploaded, 1, reason: '应上传 1 个对象');
+      expect(result.failed, 0);
+      // 云端对象内容必须是原始字节的 base64(与 drain 的解码口径互逆)
+      expect(storage.files['attachments/$sha.bin'], base64Encode(bytes));
+    });
+
+    test('云端已存在的对象跳过(exists 去重)', () async {
+      final bytes = Uint8List.fromList([9, 9, 9]);
+      final sha = crypto.sha256.convert(bytes).toString();
+      await seedAttachmentRow(fileName: 'dup.png', sha256: sha);
+      await File('${attDir.path}/dup.png').writeAsBytes(bytes);
+
+      final storage = _MapStorage()
+        ..files['attachments/$sha.bin'] = base64Encode(bytes);
+      final manager = buildManager(storage);
+
+      final result = await manager.uploadAttachmentObjects(ledgerId: 1);
+
+      expect(result.uploaded, 0, reason: '对象已在云端,不应重复上传');
+      expect(result.skipped, 1);
+    });
+
+    test('同 sha 多行只上传一份(内容寻址去重)', () async {
+      final bytes = Uint8List.fromList([7, 7, 7]);
+      final sha = crypto.sha256.convert(bytes).toString();
+      final txId = await seedAttachmentRow(
+          fileName: 'a.jpg', sha256: sha);
+      await File('${attDir.path}/a.jpg').writeAsBytes(bytes);
+      // 第二笔交易挂同内容附件(不同文件名,内容相同)
+      final tx2 = await db.into(db.transactions).insert(
+            TransactionsCompanion.insert(
+              ledgerId: 1,
+              type: 'expense',
+              amount: 20.0,
+              happenedAt: d.Value(DateTime(2026, 8, 2)),
+              syncId: const d.Value('tx-2'),
+            ),
+          );
+      expect(tx2, isNot(txId));
+      await db.into(db.transactionAttachments).insert(
+            TransactionAttachmentsCompanion.insert(
+              transactionId: tx2,
+              fileName: 'b.jpg',
+              localSha256: d.Value(sha),
+            ),
+          );
+      await File('${attDir.path}/b.jpg').writeAsBytes(bytes);
+
+      final storage = _MapStorage();
+      final manager = buildManager(storage);
+
+      final result = await manager.uploadAttachmentObjects(ledgerId: 1);
+
+      expect(result.uploaded, 1, reason: '两行同 sha 应合并为一个对象');
+      expect(storage.files.length, 1);
+    });
+
+    test('本地文件缺失的孤儿行跳过且不抛错', () async {
+      await seedAttachmentRow(fileName: 'ghost.jpg', sha256: 'deadbeef');
+
+      final storage = _MapStorage();
+      final manager = buildManager(storage);
+
+      final result = await manager.uploadAttachmentObjects(ledgerId: 1);
+
+      expect(result.uploaded, 0);
+      expect(result.skipped, 1, reason: '孤儿附件行应计为跳过');
+      expect(storage.files, isEmpty);
+    });
+  });
+
+  group('enqueue + drain 恢复侧', () {
+    test('缺文件入队,drain 下载校验后落盘', () async {
+      final bytes = Uint8List.fromList([11, 22, 33]);
+      final sha = crypto.sha256.convert(bytes).toString();
+      await seedAttachmentRow(fileName: 'restored.jpg', sha256: sha);
+      // 注意:本地不写文件,模拟"元数据已导入、文件缺失"
+
+      final storage = _MapStorage()
+        ..files['attachments/$sha.bin'] = base64Encode(bytes);
+      final manager = buildManager(storage);
+
+      await manager.enqueueMissingAttachmentJobs(1);
+      final ok = await manager.drainAttachmentJobs();
+
+      expect(ok, 1, reason: '应成功补齐 1 个文件');
+      final saved = File('${attDir.path}/restored.jpg');
+      expect(await saved.exists(), isTrue, reason: '文件应已落盘');
+      expect(await saved.readAsBytes(), bytes, reason: '落盘内容应与云端一致');
+    });
+
+    test('本地文件已存在则不入队', () async {
+      final bytes = Uint8List.fromList([44, 55]);
+      final sha = crypto.sha256.convert(bytes).toString();
+      await seedAttachmentRow(fileName: 'exists.jpg', sha256: sha);
+      await File('${attDir.path}/exists.jpg').writeAsBytes(bytes);
+
+      final storage = _MapStorage();
+      final manager = buildManager(storage);
+
+      await manager.enqueueMissingAttachmentJobs(1);
+      final ok = await manager.drainAttachmentJobs();
+
+      expect(ok, 0, reason: '文件已存在,无需补齐');
+      expect(storage.downloads, isEmpty, reason: '不应发生下载');
+    });
+
+    test('云端对象损坏(sha 不匹配)拒绝落盘', () async {
+      final goodBytes = Uint8List.fromList([1, 1, 1]);
+      final goodSha = crypto.sha256.convert(goodBytes).toString();
+      await seedAttachmentRow(fileName: 'bad.jpg', sha256: goodSha);
+
+      // 云端对象内容与路径声明的哈希不符(损坏/错配)
+      final corrupt = Uint8List.fromList([9, 9, 9, 9]);
+      final storage = _MapStorage()
+        ..files['attachments/$goodSha.bin'] = base64Encode(corrupt);
+      final manager = buildManager(storage);
+
+      await manager.enqueueMissingAttachmentJobs(1);
+      final ok = await manager.drainAttachmentJobs();
+
+      expect(ok, 0, reason: '校验失败不应计为成功');
+      expect(await File('${attDir.path}/bad.jpg').exists(), isFalse,
+          reason: '损坏对象不得落盘');
+    });
+  });
+
+  group('快照清单 → localSha256 落列', () {
+    test('恢复含 attachments[].sha256 的快照后列值正确', () async {
+      final repo = LocalRepository(db);
+      final bytes = Uint8List.fromList([5, 6, 7, 8]);
+      final sha = crypto.sha256.convert(bytes).toString();
+
+      // 与 _ledgerJsonWithOneTx 同构的 v8 快照,attachments 带 sha256
+      final cloudJson = '{"version":8,"exportedAt":"2026-08-15T10:00:00Z",'
+          '"ledgerId":1,"ledgerName":"L","currency":"CNY","count":1,'
+          '"accounts":[],"categories":[],"tags":[],'
+          '"items":[{"type":"expense","amount":10.0,'
+          '"categoryName":null,"categoryKind":null,'
+          '"happenedAt":"2026-08-01T00:00:00.000","note":"n","tags":"",'
+          '"syncId":"tx-1",'
+          '"attachments":[{"fileName":"m.jpg","originalName":"m.jpg",'
+          '"fileSize":4,"sortOrder":0,"sha256":"$sha"}]}]}';
+
+      final storage = _MapStorage()
+        ..files['ledger_1.json'] = cloudJson
+        ..files['attachments/$sha.bin'] = base64Encode(bytes);
+      final manager = buildManager(storage, repo: repo);
+
+      final result =
+          await manager.downloadAndRestoreToCurrentLedger(ledgerId: 1);
+
+      expect(result.inserted, 1);
+      final rows = await db.select(db.transactionAttachments).get();
+      expect(rows, hasLength(1));
+      expect(rows.first.localSha256, sha,
+          reason: '清单 sha256 应随导入落 localSha256 列');
+      expect(rows.first.fileName, 'm.jpg');
+    });
+  });
+}
+
+/// 内存 Map 版 storage:真实记录 upload/exists/download 行为
+class _MapStorage implements fcs.CloudStorageService {
+  final Map<String, String> files = {};
+  final List<String> downloads = [];
+
+  @override
+  Future<String?> download({required String path}) async {
+    downloads.add(path);
+    return files[path];
+  }
+
+  @override
+  Future<void> upload({
+    required String path,
+    required String data,
+    Map<String, String>? metadata,
+  }) async {
+    files[path] = data;
+  }
+
+  @override
+  Future<void> delete({required String path}) async {
+    files.remove(path);
+  }
+
+  @override
+  Future<List<fcs.CloudFile>> list({required String path}) async => [];
+
+  @override
+  Future<bool> exists({required String path}) async => files.containsKey(path);
+
+  @override
+  Future<fcs.CloudFile?> getMetadata({required String path}) async => null;
+}
+
+class _FakeCloudProvider implements fcs.CloudProvider {
+  @override
+  final fcs.CloudStorageService storage;
+  _FakeCloudProvider({required this.storage});
+
+  @override
+  String get providerId => 'fake';
+  @override
+  String get providerName => 'Fake';
+  @override
+  fcs.CloudAuthService get auth => _FakeAuthService();
+  @override
+  Future<void> initialize(Map<String, dynamic> config) async {}
+  @override
+  bool validateConfig(Map<String, dynamic> config) => true;
+  @override
+  Future<void> dispose() async {}
+}
+
+class _FakeAuthService implements fcs.CloudAuthService {
+  @override
+  Future<fcs.CloudUser?> get currentUser async =>
+      const fcs.CloudUser(id: 'test-user');
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _NoopSerializer implements fcs.DataSerializer<int> {
+  @override
+  Future<String> serialize(int data) async => '';
+  @override
+  Future<int> deserialize(String data) async => 0;
+  @override
+  String fingerprint(String data) => '';
+}
+
+class _DummyRepo implements BaseRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// 把应用文档目录指到临时目录,隔离附件落盘位置
+class _FakePathProvider extends PathProviderPlatform {
+  final String documentsPath;
+  _FakePathProvider(this.documentsPath);
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async => documentsPath;
+}

@@ -59,6 +59,8 @@ abstract class AccountRepository {
   ///
   /// [hidden] 为 null 表示不改动(见 [setAccountHidden] 便捷法)。true/false
   /// 显式传入才会写库,配合同步 apply 的「缺键保留」语义(账户隐藏 #240)。
+  /// [syncId] 仅用于快照恢复时给「本地无 syncId 的老账户」回填身份,
+  /// 非null 才写库,不会清空已有 syncId(account_sync_fix G2)。
   Future<void> updateAccount(
     int id, {
     String? name,
@@ -74,6 +76,7 @@ abstract class AccountRepository {
     String? note,
     bool clearMetadataFields = false,
     bool? hidden,
+    String? syncId,
   });
 
   /// 隐藏 / 恢复账户(账户隐藏 #240)。内部走 [updateAccount] → 记

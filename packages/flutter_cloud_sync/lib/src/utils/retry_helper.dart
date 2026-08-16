@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import '../core/exceptions.dart';
 
 /// Retry configuration
@@ -56,6 +58,8 @@ class RetryConfig {
 
 /// Retry helper for executing operations with automatic retry logic
 class RetryHelper {
+  /// 用于重试间隔 jitter（P3-3）
+  static final Random _random = Random();
   /// Execute an operation with automatic retry on failure
   ///
   /// [operation] - The async operation to execute
@@ -109,8 +113,13 @@ class RetryHelper {
         // Notify retry callback
         onRetry?.call(attempt, e);
 
-        // Wait before retrying
-        await Future.delayed(currentDelay);
+        // P3-3：等待前加入 0~25% 随机 jitter，避免多端同时重试
+        // 产生重试风暴（thundering herd）。
+        final jitterMs =
+            (currentDelay.inMilliseconds * (0.25 * _random.nextDouble()))
+                .round();
+        await Future.delayed(
+            currentDelay + Duration(milliseconds: jitterMs));
 
         // Calculate next delay with exponential backoff
         currentDelay = Duration(
@@ -209,6 +218,12 @@ class RetryHelper {
     }
 
     if (exception is CloudAuthException) {
+      return false;
+    }
+
+    // P2-9：文件/对象不存在（404）是确定性错误，重试必然再次失败，
+    // 不应消耗重试次数与网络往返。
+    if (exception is CloudFileNotFoundException) {
       return false;
     }
 

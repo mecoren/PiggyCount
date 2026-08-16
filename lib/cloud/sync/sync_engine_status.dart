@@ -225,6 +225,29 @@ extension SyncEngineHealthChecks on SyncEngine {
       }
     }
 
+    // Recurring rules(ledger-scoped):v33 迁移给老行补了 syncId 但没写过
+    // change 的规则,这里补 upsert change,让它们能被 push 上云。只处理当前
+    // ledger 的规则(recordLedgerChange 要求挂在具体账本上)。
+    final recurrings = await (db.select(db.recurringTransactions)
+          ..where((r) => r.ledgerId.equals(ledgerId)))
+        .get();
+    for (final r in recurrings) {
+      if (r.syncId == null || r.syncId!.isEmpty) continue;
+      if (allPushedIds.contains(r.syncId)) continue;
+      try {
+        await changeTracker.recordLedgerChange(
+          entityType: 'recurring',
+          entityId: r.id,
+          entitySyncId: r.syncId!,
+          ledgerId: ledgerId,
+          action: 'upsert',
+        );
+        backfilled++;
+      } catch (e) {
+        logger.debug('SyncEngine', 'backfill recurring ${r.syncId} skip: $e');
+      }
+    }
+
     logger.info('SyncEngine',
         'backfillUntrackedEntities: 共补写 $backfilled 条 sync_change');
     return backfilled;

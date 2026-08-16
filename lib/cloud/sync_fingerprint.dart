@@ -17,6 +17,17 @@ import '../services/system/logger_service.dart';
 /// - tagSyncIds（v7）排序后拼接，确保顺序无关
 /// - 共享账本 override 字段（v7）纳入指纹：否则两端仅 override 不同时
 ///   指纹相同 → getStatus 判定 inSync → 永不触发拉取 → override 不同步
+/// - 顶层 accounts 数组（account_metadata_sync_fix G4）参与指纹：纯账户
+///   变更（新增/修改账户、无交易变化）也要能被状态检测感知，否则误判
+///   inSync，用户收不到「云端有更新」提示。账户按 syncId（无则 name）
+///   排序后哈希——两端导出顺序依赖查询结果顺序，不排序会对同一份数据
+///   产生不同指纹；缺失 accounts 键（旧快照）视为空列表
+/// - v8（sync_gap_closure）：categories/tags（全量导出后，未被引用的
+///   条目变更也要能触发状态检测，理同 accounts G4）、budgets、recurring、
+///   exchangeRateOverrides、monthStartDay 全部参与指纹。recurring 的
+///   lastGeneratedDate 刻意排除：它是「本机生成进度」而非数据本体，两端
+///   天然不同，纳入会导致指纹永久 different → 每次启动误弹「云端有更新」。
+///   导入侧用 max(local, cloud) 合并保证进度不回退（importRecurrings）。
 /// - 排序键优先级：
 ///   happenedAt → type → amount → categoryName → categoryKind → note
 ///
@@ -26,14 +37,14 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
   final items = (payload['items'] as List).cast<Map<String, dynamic>>();
   final canon = items
       .map((it) {
-        // 标签：排序后拼接，确保顺序一致
+        // 标签：去重并排序后拼接，确保顺序一致并兼容历史脏数据
         final tags = (it['tags'] as String?) ?? '';
         final sortedTags = tags.isNotEmpty
-            ? (tags.split(',')..sort()).join(',')
+            ? (tags.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toSet().toList()..sort()).join(',')
             : '';
-        // v7 标签 syncId 列表：排序后拼接，确保顺序无关
+        // v7 标签 syncId 列表：去重并排序后拼接，确保顺序无关
         final tagSyncIds = (it['tagSyncIds'] as List?)?.cast<String>() ?? const [];
-        final sortedTagSyncIds = List<String>.from(tagSyncIds)..sort();
+        final sortedTagSyncIds = tagSyncIds.toSet().toList()..sort();
         // 账户：区分转账和普通交易
         final accountName = it['accountName'] as String? ?? '';
         final fromAccountName = it['fromAccountName'] as String? ?? '';
@@ -46,6 +57,13 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
           'happenedAt': it['happenedAt'] as String? ?? '',
           'type': type,
           'amount': (it['amount'] as num?)?.toDouble().toString() ?? '0.0',
+          // P2-1：以下字段同样参与同步，漏算会导致脏检测漏报
+          // （仅修改这些字段时自动同步不触发）
+          'nativeAmount':
+              (it['nativeAmount'] as num?)?.toDouble().toString() ?? '0.0',
+          'currencyCode': it['currencyCode'] as String? ?? '',
+          'excludeFromStats': it['excludeFromStats'] as bool? ?? false,
+          'excludeFromBudget': it['excludeFromBudget'] as bool? ?? false,
           'categoryName':
               isTransfer ? '' : (it['categoryName'] as String? ?? ''),
           'categoryKind':
@@ -59,6 +77,9 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
           'accountName': accountName,
           'fromAccountName': fromAccountName,
           'toAccountName': toAccountName,
+          // v8 G2：交易与周期规则的关联也参与指纹（缺失视为空，
+          // 保证「旧快照无此字段」与「显式无关联」产生相同指纹）
+          'recurringSyncId': it['recurringSyncId'] as String? ?? '',
         };
       })
       .toList();
@@ -68,7 +89,9 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
     if (c1 != 0) return c1;
     final c2 = (a['type'] as String).compareTo(b['type'] as String);
     if (c2 != 0) return c2;
-    final c3 = (a['amount'] as String).compareTo(b['amount'] as String);
+    // P3-1：按数值而非字符串比较金额，避免 '100.0' < '20.0' 的字典序误排
+    final c3 = (double.tryParse(a['amount'] as String) ?? 0)
+        .compareTo(double.tryParse(b['amount'] as String) ?? 0);
     if (c3 != 0) return c3;
     final c4 =
         (a['categoryName'] as String).compareTo(b['categoryName'] as String);
@@ -78,9 +101,176 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
     if (c5 != 0) return c5;
     return (a['note'] as String).compareTo(b['note'] as String);
   });
-  final bytes = utf8.encode(jsonEncode(canon));
+  // 账户元数据规范化（account_metadata_sync_fix G4）：
+  // 字段集与 exportTransactionsJson 的账户导出保持一致；缺失键以默认值
+  // 兜底，保证「旧快照缺键」与「显式空值」产生相同指纹。
+  final accounts = (payload['accounts'] as List?)
+          ?.cast<Map<String, dynamic>>() ??
+      const <Map<String, dynamic>>[];
+  final accountCanon = accounts
+      .map((a) => {
+            'syncId': a['syncId'] as String? ?? '',
+            'name': a['name'] as String? ?? '',
+            'type': a['type'] as String? ?? '',
+            'currency': a['currency'] as String? ?? '',
+            'initialBalance':
+                (a['initialBalance'] as num?)?.toDouble().toString() ?? '0.0',
+            'creditLimit':
+                (a['creditLimit'] as num?)?.toDouble().toString() ?? '',
+            'billingDay': (a['billingDay'] as num?)?.toInt().toString() ?? '',
+            'paymentDueDay':
+                (a['paymentDueDay'] as num?)?.toInt().toString() ?? '',
+            'bankName': a['bankName'] as String? ?? '',
+            'cardLastFour': a['cardLastFour'] as String? ?? '',
+            'note': a['note'] as String? ?? '',
+            'hidden': a['hidden'] as bool? ?? false,
+            'sortOrder': (a['sortOrder'] as num?)?.toInt().toString() ?? '',
+          })
+      .toList();
+  // 排序键：syncId 优先，缺失时回退 name —— 顺序无关且跨设备稳定
+  accountCanon.sort((a, b) {
+    final ka = (a['syncId'] as String).isNotEmpty
+        ? a['syncId'] as String
+        : (a['name'] as String);
+    final kb = (b['syncId'] as String).isNotEmpty
+        ? b['syncId'] as String
+        : (b['name'] as String);
+    return ka.compareTo(kb);
+  });
+
+  // ---- v8（sync_gap_closure）：全量分类/标签 + 预算/周期/汇率覆盖 ----
+  // 理同 accounts G4：这些实体进了快照就必须进指纹，否则「仅这些数据
+  // 变化」时两端判 inSync，新增的预算/规则/分类永远不被拉取。
+  // 所有数组按稳定键排序（syncId 优先，业务键兜底）后序列化。
+
+  // 通用兜底排序键：syncId 非空用 syncId，否则用 name / 业务键
+  int compareBySyncIdOrName(Map<String, dynamic> a, Map<String, dynamic> b) {
+    final ka = ((a['syncId'] as String?) ?? '').isNotEmpty
+        ? a['syncId'] as String
+        : ((a['name'] as String?) ?? '');
+    final kb = ((b['syncId'] as String?) ?? '').isNotEmpty
+        ? b['syncId'] as String
+        : ((b['name'] as String?) ?? '');
+    return ka.compareTo(kb);
+  }
+
+  final categories = (payload['categories'] as List?)
+          ?.cast<Map<String, dynamic>>() ??
+      const <Map<String, dynamic>>[];
+  final categoryCanon = categories
+      .map((c) => {
+            'syncId': c['syncId'] as String? ?? '',
+            'name': c['name'] as String? ?? '',
+            'kind': c['kind'] as String? ?? '',
+            'level': (c['level'] as num?)?.toInt() ?? 1,
+            'parentName': c['parentName'] as String? ?? '',
+            'sortOrder': (c['sortOrder'] as num?)?.toInt() ?? 0,
+            'iconType': c['iconType'] as String? ?? '',
+            'icon': c['icon'] as String? ?? '',
+            'customIconPath': c['customIconPath'] as String? ?? '',
+            'communityIconId': c['communityIconId'] as String? ?? '',
+          })
+      .toList()
+    ..sort(compareBySyncIdOrName);
+
+  final tags = (payload['tags'] as List?)
+          ?.cast<Map<String, dynamic>>() ??
+      const <Map<String, dynamic>>[];
+  final tagCanon = tags
+      .map((t) => {
+            'syncId': t['syncId'] as String? ?? '',
+            'name': t['name'] as String? ?? '',
+            'color': t['color'] as String? ?? '',
+            'sortOrder': (t['sortOrder'] as num?)?.toInt() ?? 0,
+          })
+      .toList()
+    ..sort(compareBySyncIdOrName);
+
+  final budgets = (payload['budgets'] as List?)
+          ?.cast<Map<String, dynamic>>() ??
+      const <Map<String, dynamic>>[];
+  final budgetCanon = budgets
+      .map((b) => {
+            'syncId': b['syncId'] as String? ?? '',
+            'type': b['type'] as String? ?? '',
+            'categoryName': b['categoryName'] as String? ?? '',
+            'amount': (b['amount'] as num?)?.toDouble().toString() ?? '0.0',
+            'period': b['period'] as String? ?? '',
+            'startDay': (b['startDay'] as num?)?.toInt() ?? 1,
+            'enabled': b['enabled'] as bool? ?? true,
+          })
+      .toList()
+    // 预算排序键：syncId 优先，业务键兜底（旧快照无 syncId 的行）
+    ..sort((a, b) {
+      final ka = ((a['syncId'] as String?) ?? '').isNotEmpty
+          ? a['syncId'] as String
+          : '${a['type']}|${a['categoryName']}|${a['period']}';
+      final kb = ((b['syncId'] as String?) ?? '').isNotEmpty
+          ? b['syncId'] as String
+          : '${b['type']}|${b['categoryName']}|${b['period']}';
+      return ka.compareTo(kb);
+    });
+
+  final recurrings = (payload['recurring'] as List?)
+          ?.cast<Map<String, dynamic>>() ??
+      const <Map<String, dynamic>>[];
+  final recurringCanon = recurrings
+      .map((r) => {
+            'syncId': r['syncId'] as String? ?? '',
+            'type': r['type'] as String? ?? '',
+            'amount': (r['amount'] as num?)?.toDouble().toString() ?? '0.0',
+            'categoryName': r['categoryName'] as String? ?? '',
+            'accountName': r['accountName'] as String? ?? '',
+            'accountSyncId': r['accountSyncId'] as String? ?? '',
+            'toAccountName': r['toAccountName'] as String? ?? '',
+            'toAccountSyncId': r['toAccountSyncId'] as String? ?? '',
+            'note': r['note'] as String? ?? '',
+            'frequency': r['frequency'] as String? ?? '',
+            'interval': (r['interval'] as num?)?.toInt() ?? 1,
+            'dayOfMonth': (r['dayOfMonth'] as num?)?.toInt().toString() ?? '',
+            'dayOfWeek': (r['dayOfWeek'] as num?)?.toInt().toString() ?? '',
+            'monthOfYear':
+                (r['monthOfYear'] as num?)?.toInt().toString() ?? '',
+            'startDate': r['startDate'] as String? ?? '',
+            'endDate': r['endDate'] as String? ?? '',
+            'enabled': r['enabled'] as bool? ?? true,
+            // lastGeneratedDate 刻意排除（本机生成进度，见函数头注释）
+          })
+      .toList()
+    ..sort(compareBySyncIdOrName);
+
+  final rateOverrides = (payload['exchangeRateOverrides'] as List?)
+          ?.cast<Map<String, dynamic>>() ??
+      const <Map<String, dynamic>>[];
+  final rateOverrideCanon = rateOverrides
+      .map((o) => {
+            'baseCurrency': o['baseCurrency'] as String? ?? '',
+            'quoteCurrency': o['quoteCurrency'] as String? ?? '',
+            'rate': (o['rate'] is num
+                    ? o['rate'] as num
+                    : num.tryParse(o['rate']?.toString() ?? '') ?? 0.0)
+                .toDouble()
+                .toString(),
+          })
+      .toList()
+    ..sort((a, b) =>
+        '${a['baseCurrency']}/${a['quoteCurrency']}'
+            .compareTo('${b['baseCurrency']}/${b['quoteCurrency']}'));
+
+  final bytes = utf8.encode(jsonEncode({
+    'items': canon,
+    'accounts': accountCanon,
+    'categories': categoryCanon,
+    'tags': tagCanon,
+    'budgets': budgetCanon,
+    'recurring': recurringCanon,
+    'exchangeRateOverrides': rateOverrideCanon,
+    'monthStartDay': (payload['monthStartDay'] as num?)?.toInt() ?? 1,
+  }));
   final fp = sha256.convert(bytes).toString();
-  logger.debug(
-      'Fingerprint', '交易数: ${canon.length}, 指纹: ${fp.substring(0, 16)}...');
+  logger.debug('Fingerprint',
+      '交易数: ${canon.length}, 账户数: ${accountCanon.length}, 分类数: ${categoryCanon.length}, '
+      '标签数: ${tagCanon.length}, 预算数: ${budgetCanon.length}, 周期规则数: ${recurringCanon.length}, '
+      '汇率覆盖数: ${rateOverrideCanon.length}, 指纹: ${fp.substring(0, 16)}...');
   return fp;
 }

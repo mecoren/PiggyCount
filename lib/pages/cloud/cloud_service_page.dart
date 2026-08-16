@@ -1569,17 +1569,43 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
               await prefs.setBool('auto_sync', true);
               ref.invalidate(autoSyncValueProvider);
 
-              Future(() async {
-                try {
-                  final sync = ref.read(syncServiceProvider);
-                  final ledgerId = ref.read(currentLedgerIdProvider);
-                  await sync.uploadCurrentLedger(ledgerId: ledgerId);
-                  ref.read(syncStatusRefreshProvider.notifier).state++;
-                  ref.read(ledgerListRefreshProvider.notifier).state++;
-                } catch (e) {
-                  logger.error('CloudServicePage', 'PiggyCount Cloud 首次同步失败', e);
+              // 首次同步上传所有本地账本（与帮助文案"首次全量上传
+              // 所有账本数据"的承诺一致）。强制阻塞弹窗：期间禁止一切
+              // 页面操作，防止用户中途编辑数据与上传互相踩写
+              final ledgers =
+                  await ref.read(repositoryProvider).getAllLedgers();
+              if (!mounted) return;
+              final sync = ref.read(syncServiceProvider);
+              final l10nCs = AppLocalizations.of(context);
+              final block = showBlockingProgressDialog(
+                context,
+                title: l10nCs.cloudFirstSyncBlockingTitle,
+                initialStatus: l10nCs.cloudFirstSyncBlockingStatus(
+                    0, ledgers.length),
+              );
+              var success = 0;
+              var failed = 0;
+              try {
+                for (final ledger in ledgers) {
+                  block.status.value = l10nCs.cloudFirstSyncBlockingStatus(
+                      success + failed + 1, ledgers.length);
+                  try {
+                    await sync.uploadCurrentLedger(ledgerId: ledger.id);
+                    success++;
+                  } catch (e) {
+                    // 单个账本失败不中断其余账本
+                    failed++;
+                    logger.warning('CloudServicePage',
+                        'PiggyCount Cloud 首次同步账本 ${ledger.id} 失败', e);
+                  }
                 }
-              });
+              } finally {
+                await block.close();
+              }
+              logger.info('CloudServicePage',
+                  'PiggyCount Cloud 首次同步完成: 成功 $success, 失败 $failed');
+              ref.read(syncStatusRefreshProvider.notifier).state++;
+              ref.read(ledgerListRefreshProvider.notifier).state++;
 
               if (mounted) {
                 showToast(context, AppLocalizations.of(context).cloudPiggyCountCloudLoginSuccess);

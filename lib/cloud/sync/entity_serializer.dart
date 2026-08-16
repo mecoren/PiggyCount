@@ -23,6 +23,7 @@ class EntitySerializer {
     List<String>? tagNames,
     List<String>? tagSyncIds,
     List<Map<String, dynamic>>? attachments,
+    String? recurringSyncId,
   }) {
     // 同时带 *Name 和 *Id（syncId）到服务端。服务端的 read 会优先按 id 反查
     // snapshot 里当前 entity 的名字，名字字段只作为历史/兼容兜底。这样任何
@@ -68,6 +69,10 @@ class EntitySerializer {
       'toAccountId': toAccountSyncId ?? '',
       if (tagNames != null && tagNames.isNotEmpty) 'tags': tagNames.join(','),
       if (tagSyncIds != null && tagSyncIds.isNotEmpty) 'tagIds': tagSyncIds,
+      // cloud_recurring_sync:交易与规则的关联锚点(tx.recurringId 反查
+      // recurring.syncId)。apply 端规则未就绪时走延迟绑定回扫。
+      if (recurringSyncId != null && recurringSyncId.isNotEmpty)
+        'recurringSyncId': recurringSyncId,
       // 即使是 `[]` 也必须写出来，不能变 null 后被 if-spread 过滤掉。否则
       // A 端删光所有附件时 payload 里完全没有 attachments 字段 → B 端没法
       // 区分"没发送附件信息"和"全删光了"，B 就永远同步不到删除。
@@ -190,6 +195,47 @@ class EntitySerializer {
       'period': budget.period,
       'startDay': budget.startDay,
       'enabled': budget.enabled,
+    };
+  }
+
+  // ==================== RecurringTransaction ====================
+
+  /// 周期交易规则的跨设备同步 payload(cloud_recurring_sync)。
+  ///
+  /// int 外键序列化为 syncId 字符串(设计决策 2):categoryId/accountId/
+  /// toAccountId 反查 Categories/Accounts 的 syncId,为 null 时省略;
+  /// apply 端反向解析回本地 int id,未命中置 null + warning。
+  /// lastGeneratedDate 是普通 LWW 字段(设计决策 3),随行整体传播。
+  static Map<String, dynamic> serializeRecurring(
+    RecurringTransaction r, {
+    String? ledgerSyncId,
+    String? categorySyncId,
+    String? accountSyncId,
+    String? toAccountSyncId,
+  }) {
+    return {
+      'syncId': r.syncId,
+      if (ledgerSyncId != null && ledgerSyncId.isNotEmpty)
+        'ledgerSyncId': ledgerSyncId,
+      'type': r.type,
+      'amount': r.amount,
+      if (categorySyncId != null && categorySyncId.isNotEmpty)
+        'categorySyncId': categorySyncId,
+      if (accountSyncId != null && accountSyncId.isNotEmpty)
+        'accountSyncId': accountSyncId,
+      if (toAccountSyncId != null && toAccountSyncId.isNotEmpty)
+        'toAccountSyncId': toAccountSyncId,
+      if (r.note != null) 'note': r.note,
+      'frequency': r.frequency,
+      'interval': r.interval,
+      if (r.dayOfMonth != null) 'dayOfMonth': r.dayOfMonth,
+      if (r.dayOfWeek != null) 'dayOfWeek': r.dayOfWeek,
+      if (r.monthOfYear != null) 'monthOfYear': r.monthOfYear,
+      'startDate': r.startDate.toUtc().toIso8601String(),
+      if (r.endDate != null) 'endDate': r.endDate!.toUtc().toIso8601String(),
+      'enabled': r.enabled,
+      if (r.lastGeneratedDate != null)
+        'lastGeneratedDate': r.lastGeneratedDate!.toUtc().toIso8601String(),
     };
   }
 

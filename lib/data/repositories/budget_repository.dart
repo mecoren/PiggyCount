@@ -71,6 +71,7 @@ abstract class BudgetRepository {
     required double amount,
     String period = 'monthly',
     int startDay = 1,
+    String? syncId,
   });
 
   /// 更新预算
@@ -79,6 +80,7 @@ abstract class BudgetRepository {
     double? amount,
     int? startDay,
     bool? enabled,
+    String? syncId,
   });
 
   /// 删除预算

@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
+import 'services/data/account_dedup_service.dart';
+import 'cloud/sync/change_tracker.dart';
 import 'styles/tokens.dart';
 import 'widgets/biz/login_2fa_challenge_view.dart';
 import 'widgets/ui/toast.dart';
@@ -22,6 +24,7 @@ import 'pages/auth/app_lock_screen.dart';
 import 'providers/security_providers.dart';
 import 'services/system/reminder_monitor_service.dart';
 import 'providers/credit_card_reminder_providers.dart';
+import 'services/attachment_service.dart' show attachmentServiceProvider;
 import 'services/platform/screenshot_monitor_service.dart';
 import 'services/platform/image_share_handler_service.dart';
 import 'services/platform/app_link_service.dart';
@@ -116,6 +119,23 @@ Future<void> main() async {
     // 静默失败，不影响启动
   }
 
+  // 账户去重收敛（prd/account_dedup）：合并历史遗留的按账本重复账户。
+  // 必须在 runApp 前完成——后续启动同步检查的指纹计算/上传导出会并发
+  // 读账户表。幂等：无重复时零写入直接返回，失败仅记日志不阻塞启动。
+  // PiggyCount Cloud 激活时传 ChangeTracker:被重定向的 recurring 规则
+  // 补登记 update change,否则收敛结果推不到对端(cloud_recurring_sync)。
+  try {
+    final db = container.read(databaseProvider);
+    final activeConfig = await CloudServiceStore().loadActive();
+    final cloudTracker = (activeConfig.valid &&
+            activeConfig.type == CloudBackendType.piggycountCloud)
+        ? ChangeTracker(db)
+        : null;
+    await AccountDedupService.run(db, changeTracker: cloudTracker);
+  } catch (e, st) {
+    logger.warning('AccountDedup', '账户去重收敛失败(不阻塞启动): $e\n$st');
+  }
+
   // [已删除] v1.15.0 账户独立迁移 & v2.7.1 转账分类迁移
   // 所有活跃用户已完成，Drift onUpgrade 已覆盖相关 schema 变更
   // 硬编码 SQL 重建表会导致新增字段丢失（如 sort_order），故移除
@@ -154,6 +174,10 @@ Future<void> main() async {
   // 清理历史版本遗留的文件。标志位 SharedPreferences 保证只跑一次。后台异步
   // 执行,失败不致命。
   unawaited(_runOrphanFileGcOnce(container));
+
+  // 启动后台回填附件 localSha256(v34 列,attachment_binary_sync)。
+  // 分批读文件算哈希,补齐后退化为空查询;失败不致命,下次启动自愈。
+  unawaited(_runAttachmentShaBackfillOnce(container));
 
   runApp(ProviderScope(
     parent: container,
@@ -751,5 +775,18 @@ Future<void> _runOrphanFileGcOnce(ProviderContainer container) async {
   } catch (e, st) {
     // 任何异常都不该影响 app 启动。下次启动还会重试(因为没设 flag)。
     logger.warning('OrphanGC', '一次性清理异常(会在下次启动重试): $e\n$st');
+  }
+}
+
+/// 启动后台回填附件 localSha256(v34 列,attachment_binary_sync)。
+///
+/// 让路启动关键路径(与 OrphanGC 同款 3s 延迟);内部自带分批与异常
+/// 兜底,这里再包一层 try/catch 保证绝不 block runApp 之后的流程。
+Future<void> _runAttachmentShaBackfillOnce(ProviderContainer container) async {
+  try {
+    await Future.delayed(const Duration(seconds: 3));
+    await container.read(attachmentServiceProvider).backfillLocalSha256();
+  } catch (e, st) {
+    logger.warning('Startup', '附件 localSha256 回填异常(下次启动重试): $e\n$st');
   }
 }

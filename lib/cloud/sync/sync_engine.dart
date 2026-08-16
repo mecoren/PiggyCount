@@ -147,6 +147,13 @@ class SyncEngine implements app.SyncService {
   /// 详见 [LookupCache](sync_engine_pull.dart)。
   LookupCache? activePullCache;
 
+  /// 延迟绑定(cloud_recurring_sync 决策 5):change 流里 transaction 先于
+  /// recurring 到达时,交易的 recurringSyncId 暂存到这里,等
+  /// `_applyRecurringChange` 落地规则后回扫补齐交易的 recurringId int 外键。
+  /// key=transaction syncId,value=recurring syncId。规则永不到达则交易
+  /// recurringId 置 null + warning(下次 edit 同步自然修复)。
+  final Map<String, String> pendingRecurringBindings = {};
+
   /// push / fullPush 的 in-flight 单飞锁。**per-ledger** —— 不同 ledger
   /// 并发不互相阻塞,只阻塞同 ledger 的并发触发。
   ///
@@ -968,9 +975,16 @@ class SyncEngine implements app.SyncService {
     // 变更才安全 return。
     final ledgerChanges =
         await changeTracker.getUnpushedChangesForLedger(ledgerIdInt);
+    // D10 独立批模式:recurring 拆独立批推送。旧 server(未升级 entity_type
+    // 白名单)会拒绝未知类型,若混在主批会把 transaction/budget/ledger 一起
+    // 打失败;独立批失败只 warning、不 markPushed,留在 local_changes 等
+    // server 升级后下一次 push 自动追平。
+    final changes =
+        ledgerChanges.where((c) => c.entityType != 'recurring').toList();
+    final recurringChanges =
+        ledgerChanges.where((c) => c.entityType == 'recurring').toList();
     // 仅这个 ledger 的 ledger-scope change。user-global 已在上面统一推走。
-    final changes = ledgerChanges;
-    if (changes.isEmpty) {
+    if (changes.isEmpty && recurringChanges.isEmpty) {
       if (ledger == null) {
         logger.warning('SyncEngine', 'push: 本地账本 $ledgerId 已删除且无待推送变更,跳过');
       } else {
@@ -998,10 +1012,12 @@ class SyncEngine implements app.SyncService {
               '从 snapshot change 拿到 ledgerSyncId=$deletedLedgerSyncId,继续 push');
     }
 
-    // 构建服务端 push 格式：从 DB 读取最新数据序列化
+    // 构建服务端 push 格式：从 DB 读取最新数据序列化。
+    // 主批与 recurring 独立批分开攒,推送时各自走一次 pushChanges。
     final syncChanges = <Map<String, dynamic>>[];
+    final recurringSyncChanges = <Map<String, dynamic>>[];
 
-    for (final change in changes) {
+    for (final change in ledgerChanges) {
       final isUserGlobal =
           ChangeTracker.userGlobalEntityTypes.contains(change.entityType);
 
@@ -1035,7 +1051,9 @@ class SyncEngine implements app.SyncService {
         pushLedgerId = ledger?.syncId ?? deletedLedgerSyncId ?? ledgerId;
         pushScope = 'ledger';
       }
-      syncChanges.add({
+      final target =
+          change.entityType == 'recurring' ? recurringSyncChanges : syncChanges;
+      target.add({
         'ledger_id': pushLedgerId,
         'scope': pushScope,
         'entity_type': change.entityType,
@@ -1046,17 +1064,42 @@ class SyncEngine implements app.SyncService {
       });
     }
 
-    // 缺陷 B 修复：若 E2EE 已开启，加密每条变更的 payload 后再上行
-    await _encryptPayloadsIfNeeded(syncChanges);
+    var ledgerPushed = 0;
 
-    // 使用 pushChanges 直接推送个体变更
-    await provider.pushChanges(changes: syncChanges);
+    // 主批(transaction / budget / ledger / ledger_snapshot):失败正常抛出,
+    // 走上层重试语义。
+    if (syncChanges.isNotEmpty) {
+      // 缺陷 B 修复：若 E2EE 已开启，加密每条变更的 payload 后再上行
+      await _encryptPayloadsIfNeeded(syncChanges);
 
-    // 标记已推送
-    await changeTracker.markPushed(changes.map((c) => c.id).toList());
-    logger.info('SyncEngine',
-        'push: 推送 ${changes.length} 条 ledger-scope 变更 + 本会话 user-global $userGlobalPushed 条');
-    return changes.length + userGlobalPushed;
+      // 使用 pushChanges 直接推送个体变更
+      await provider.pushChanges(changes: syncChanges);
+
+      // 标记已推送
+      await changeTracker.markPushed(changes.map((c) => c.id).toList());
+      ledgerPushed += syncChanges.length;
+    }
+
+    // recurring 独立批:失败只 warning、不 markPushed,变更留在 local_changes
+    // 表里等下一次 push 重试(旧 server 未升级白名单时整批被拒也不影响主批)。
+    if (recurringSyncChanges.isNotEmpty) {
+      try {
+        await _encryptPayloadsIfNeeded(recurringSyncChanges);
+        await provider.pushChanges(changes: recurringSyncChanges);
+        await changeTracker
+            .markPushed(recurringChanges.map((c) => c.id).toList());
+        ledgerPushed += recurringSyncChanges.length;
+      } catch (e, st) {
+        logger.warning('SyncEngine',
+            'push: recurring 独立批推送失败,不阻塞主批(留待下次重试): $e\n$st');
+      }
+    }
+
+    logger.info(
+        'SyncEngine',
+        'push: 推送 ${syncChanges.length} 条主批 + ${recurringSyncChanges.length} 条 recurring 独立批'
+            '(实际成功 $ledgerPushed)+ 本会话 user-global $userGlobalPushed 条');
+    return ledgerPushed + userGlobalPushed;
   }
 
   /// 拉取远程变更并应用到本地。

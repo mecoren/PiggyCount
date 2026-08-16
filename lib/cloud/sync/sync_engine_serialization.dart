@@ -157,6 +157,15 @@ extension SyncEngineSerializationExt on SyncEngine {
           finalToAccountSyncId = toAcc?.syncId;
         }
 
+        // cloud_recurring_sync:tx.recurringId 反查规则的 syncId,作为关联
+        // 锚点随交易 payload 传播(规则本体走独立 'recurring' change)。
+        String? recurringSyncId;
+        if (tx.recurringId != null) {
+          final rule = await (db.select(db.recurringTransactions)
+                ..where((t) => t.id.equals(tx.recurringId!)))
+              .getSingleOrNull();
+          recurringSyncId = rule?.syncId;
+        }
         return EntitySerializer.serializeTransaction(
           tx,
           categoryName: finalCategoryName,
@@ -172,6 +181,7 @@ extension SyncEngineSerializationExt on SyncEngine {
           tagNames: tagNames.isNotEmpty ? tagNames : null,
           tagSyncIds: tagSyncIds.isNotEmpty ? tagSyncIds : null,
           attachments: attMaps,
+          recurringSyncId: recurringSyncId,
         );
 
       case 'account':
@@ -265,6 +275,43 @@ extension SyncEngineSerializationExt on SyncEngine {
           budget,
           ledgerSyncId: parentLedgerSyncId,
           categorySyncId: categorySyncId,
+        );
+
+      case 'recurring':
+        // cloud_recurring_sync:int 外键反查 syncId 后序列化(设计决策 2)。
+        // 行已删(delete change 后残留的 update)返回空 payload,delete 路径
+        // server 只看 action 不读 payload,无害。
+        final r = await (db.select(db.recurringTransactions)
+              ..where((t) => t.id.equals(entityId)))
+            .getSingleOrNull();
+        if (r == null) return <String, dynamic>{};
+        String? categorySyncId;
+        if (r.categoryId != null) {
+          final cat = await (db.select(db.categories)
+                ..where((c) => c.id.equals(r.categoryId!)))
+              .getSingleOrNull();
+          categorySyncId = cat?.syncId;
+        }
+        String? accountSyncId;
+        if (r.accountId != null) {
+          final acc = await (db.select(db.accounts)
+                ..where((a) => a.id.equals(r.accountId!)))
+              .getSingleOrNull();
+          accountSyncId = acc?.syncId;
+        }
+        String? toAccountSyncId;
+        if (r.toAccountId != null) {
+          final toAcc = await (db.select(db.accounts)
+                ..where((a) => a.id.equals(r.toAccountId!)))
+              .getSingleOrNull();
+          toAccountSyncId = toAcc?.syncId;
+        }
+        return EntitySerializer.serializeRecurring(
+          r,
+          ledgerSyncId: parentLedgerSyncId,
+          categorySyncId: categorySyncId,
+          accountSyncId: accountSyncId,
+          toAccountSyncId: toAccountSyncId,
         );
 
       case 'ledger':

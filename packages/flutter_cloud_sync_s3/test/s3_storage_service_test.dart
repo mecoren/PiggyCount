@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
@@ -124,6 +125,65 @@ void main() {
       // 无 prefix 时不应传递 prefix 查询参数
       expect(capturedUri.queryParameters.containsKey('prefix'), isFalse);
       expect(keys, ['a.txt', 'b.txt']);
+    });
+  });
+
+  // 认证失败保真：S3 运行期凭据失效（密钥撤销/轮换）时，
+  // S3AuthException / S3PermissionDeniedException 不能被包装成通用
+  // CloudStorageException——上层（enableFromCloud 探测、启动检查器）
+  // 依赖 CloudAuthException 区分「改凭据」与「检查网络」，误报为
+  // 网络错误会误导排查方向（与 WebDAV 修复同款问题）
+  group('S3StorageService 认证失败保真', () {
+    String errXml(String code) => '<?xml version="1.0"?>'
+        '<Error><Code>$code</Code>'
+        '<Message>Request has expired</Message></Error>';
+
+    test('download 403 SignatureDoesNotMatch 抛 CloudAuthException', () async {
+      final mock = MockClient((request) async =>
+          http.Response(errXml('SignatureDoesNotMatch'), 403));
+
+      final service = S3StorageService(_client(mock), 'mybucket');
+      await expectLater(
+        service.download(path: 'ledger.json'),
+        throwsA(isA<CloudAuthException>()),
+      );
+    });
+
+    test('list 403 InvalidAccessKeyId 抛 CloudAuthException', () async {
+      final mock = MockClient((request) async =>
+          http.Response(errXml('InvalidAccessKeyId'), 403));
+
+      final service = S3StorageService(_client(mock), 'mybucket');
+      await expectLater(
+        service.list(path: ''),
+        throwsA(isA<CloudAuthException>()),
+      );
+    });
+
+    test('HEAD 403（无 body）抛 CloudAuthException 而非误判不存在', () async {
+      // HEAD 响应无 body，XML 解析失败走 S3PermissionDeniedException 分支
+      final mock = MockClient((request) async => http.Response('', 403));
+
+      final service = S3StorageService(_client(mock), 'mybucket');
+      await expectLater(
+        service.exists(path: 'ledger.json'),
+        throwsA(isA<CloudAuthException>()),
+      );
+    });
+
+    test('CloudAuthException 消息含「认证失败」供文本兜底识别', () async {
+      final mock = MockClient((request) async =>
+          http.Response(errXml('SignatureDoesNotMatch'), 403));
+
+      final service = S3StorageService(_client(mock), 'mybucket');
+      try {
+        await service.download(path: 'ledger.json');
+        fail('应抛 CloudAuthException');
+      } on CloudAuthException catch (e) {
+        // 上层 _isAuthError/_isAuthErrorText 有文本兜底匹配，
+        // 消息必须携带「认证失败」关键字
+        expect(e.toString(), contains('认证失败'));
+      }
     });
   });
 }

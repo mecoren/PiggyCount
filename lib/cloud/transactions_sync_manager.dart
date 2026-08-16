@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:crypto/crypto.dart' as crypto;
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' as fcs;
+import 'package:path_provider/path_provider.dart';
 
 import '../data/db.dart';
 import '../data/encryption/ciphertext_format.dart';
@@ -53,6 +56,15 @@ class TransactionsSyncManager implements SyncService {
   final Map<int, _CachedStatus> _statusCache = {};
   final Map<int, DateTime> _recentLocalChangeAt = {};
   final Map<int, _RecentUpload> _recentUpload = {};
+
+  /// 待补齐的附件二进制下载队列(attachment_binary_sync)。
+  /// 元组:云对象 sha256 + 落盘目标 fileName。恢复/导入事务提交后入队,
+  /// drainAttachmentJobs 并发消费;失败回队等下次 drain。
+  final List<({String sha256, String fileName})> _pendingAttachmentJobs = [];
+
+  /// drain 重入守卫:恢复完成 / 初始化完成可能几乎同时触发 drain,
+  /// 串行执行避免同一 .bin 被并发下载两次。
+  bool _isDrainingAttachments = false;
 
   TransactionsSyncManager({
     required this.config,
@@ -218,6 +230,9 @@ class TransactionsSyncManager implements SyncService {
       await _initialize();
       _isInitialized = true;
       _initCompleter!.complete();
+      // 初始化即触发一次 drain:覆盖"上次恢复失败的附件任务"在
+      // 下次同步/启动检查时重试的场景(队列空时是空操作,零成本)。
+      unawaited(drainAttachmentJobs());
     } catch (e, st) {
       _initCompleter!.completeError(e, st);
       rethrow;
@@ -435,6 +450,15 @@ class TransactionsSyncManager implements SyncService {
         if (localFp != null) uploadMetadata['fingerprint'] = localFp;
       }
 
+      // 附件对象必须先于 ledger JSON 上传(上传顺序协议):清单引用的
+      // attachments/<sha256>.bin 得先存在,恢复端才能补齐文件。单对象
+      // 失败已在内部吞掉,不阻断 JSON 上传。
+      try {
+        await uploadAttachmentObjects(ledgerId: ledgerId);
+      } catch (e) {
+        logger.warning('CloudSync', '附件对象上传异常(不阻断账本上传): $e');
+      }
+
       await manager.upload(
         data: ledgerId,
         path: _pathForLedger(ledgerId),
@@ -475,6 +499,266 @@ class TransactionsSyncManager implements SyncService {
     }
   }
 
+  /// 批量上传所有本地账本到云端（串行逐个上传，单个失败不中断）。
+  ///
+  /// 串行而非并行：避免并发上传打满 WebDAV/S3 连接数限制，且
+  /// uploadCurrentLedger 内部写 _recentUpload/_statusCache（Map），
+  /// 串行天然无竞态。返回 (success, failed) 统计，语义对齐
+  /// [restoreAllRemoteLedgers]。
+  ///
+  /// [onProgress] 每完成一个账本回调 (done, total)，供 UI 阻塞弹窗展示进度。
+  Future<({int success, int failed})> uploadAllLedgers({
+    void Function(int done, int total)? onProgress,
+  }) async {
+    await _ensureInitialized();
+
+    final ledgers = await db.select(db.ledgers).get();
+    var success = 0;
+    var failed = 0;
+    var done = 0;
+    for (final ledger in ledgers) {
+      try {
+        await uploadCurrentLedger(ledgerId: ledger.id);
+        success++;
+      } catch (e) {
+        // 单个账本失败只计数并继续，避免一个账本故障拖垮整批备份
+        logger.warning('CloudSync', '批量上传账本 ${ledger.id} 失败: $e');
+        failed++;
+      }
+      done++;
+      onProgress?.call(done, ledgers.length);
+    }
+    return (success: success, failed: failed);
+  }
+
+  // ============================================================
+  // 附件二进制同步(attachment_binary_sync,快照链路 Path A)
+  // ============================================================
+
+  /// 附件对象的云端路径:与 ledger_<id>.json 同级的 attachments/ 目录,
+  /// 按内容寻址命名 —— 相同内容(同 sha256)跨账本/跨交易只存一份。
+  @visibleForTesting
+  String pathForAttachmentBin(String sha256) => 'attachments/$sha256.bin';
+
+  /// 上传某账本全部附件二进制对象到云端(内容寻址)。
+  ///
+  /// 上传顺序协议:必须先于 ledger_<id>.json 调用 —— 清单里引用的对象
+  /// 得先存在,否则恢复端拿到"永远缺文件"的清单。单个对象失败不阻断
+  /// 账本 JSON 上传(清单仍带 sha256,恢复端 drain 会持续尝试),仅计数
+  /// 并 warning。exists() 探测已存在的对象直接跳过(去重 + 省流量)。
+  ///
+  /// 返回 (uploaded, skipped, failed) 统计供调用方汇总。
+  Future<({int uploaded, int skipped, int failed})>
+      uploadAttachmentObjects({required int ledgerId}) async {
+    await _ensureInitialized();
+    final provider = _provider;
+    if (provider == null) {
+      throw fcs.CloudSyncException('云服务不可用，请检查配置或登录状态');
+    }
+
+    // 收集该账本所有交易的附件行(localSha256 非空才可内容寻址),
+    // 按 sha256 去重 —— 同一图片挂多笔交易只传一份。
+    final txIds = await (db.selectOnly(db.transactions)
+          ..addColumns([db.transactions.id])
+          ..where(db.transactions.ledgerId.equals(ledgerId)))
+        .map((row) => row.read(db.transactions.id)!)
+        .get();
+    if (txIds.isEmpty) return (uploaded: 0, skipped: 0, failed: 0);
+
+    final atts = await (db.select(db.transactionAttachments)
+          ..where((a) =>
+              a.transactionId.isIn(txIds) & a.localSha256.isNotNull()))
+        .get();
+
+    // sha256 -> 候选本地文件名(内容相同,任一存在的物理文件即可作为源)
+    final filesBySha = <String, List<String>>{};
+    for (final a in atts) {
+      final sha = a.localSha256;
+      if (sha == null || sha.isEmpty) continue;
+      filesBySha.putIfAbsent(sha, () => []).add(a.fileName);
+    }
+    if (filesBySha.isEmpty) return (uploaded: 0, skipped: 0, failed: 0);
+
+    final appDir = await getApplicationDocumentsDirectory();
+    final attDir = Directory('${appDir.path}/attachments');
+
+    var uploaded = 0;
+    var skipped = 0;
+    var failed = 0;
+    final pool = _Semaphore(4);
+    await Future.wait(filesBySha.entries.map((entry) async {
+      final sha = entry.key;
+      await pool.acquire();
+      try {
+        // 源文件缺失(孤儿附件行)或云端已存在 → 跳过
+        String? srcPath;
+        for (final name in entry.value) {
+          final f = File('${attDir.path}/$name');
+          if (await f.exists()) {
+            srcPath = f.path;
+            break;
+          }
+        }
+        if (srcPath == null) {
+          skipped++;
+          logger.warning('CloudSync',
+              '附件本地文件缺失,跳过上传: sha256=$sha (${entry.value.first})');
+          return;
+        }
+        if (await provider.storage.exists(path: pathForAttachmentBin(sha))) {
+          skipped++;
+          return;
+        }
+        // base64 编码为 String 走既有 encrypt(加密装饰器透明处理),
+        // 与账本快照的加密语义一致(设计决策 2)
+        final b64 = base64Encode(await File(srcPath).readAsBytes());
+        await provider.storage
+            .upload(path: pathForAttachmentBin(sha), data: b64);
+        uploaded++;
+      } catch (e) {
+        failed++;
+        logger.warning('CloudSync', '附件对象上传失败 sha256=$sha: $e');
+      } finally {
+        pool.release();
+      }
+    }));
+
+    if (uploaded > 0 || failed > 0) {
+      logger.info('CloudSync',
+          '附件对象上传完成(账本 $ledgerId): 上传=$uploaded 跳过=$skipped 失败=$failed');
+    }
+    return (uploaded: uploaded, skipped: skipped, failed: failed);
+  }
+
+  /// 恢复/导入完成后,把"清单带 sha256 且本地文件缺失"的附件入下载队列。
+  ///
+  /// 元数据导入(importTransactionsJson)会落 localSha256 列;这里只做
+  /// 文件存在性检查,不抛错(缺文件不该影响恢复主流程的结果)。
+  Future<void> enqueueMissingAttachmentJobs(int ledgerId) async {
+    try {
+      final txIds = await (db.selectOnly(db.transactions)
+            ..addColumns([db.transactions.id])
+            ..where(db.transactions.ledgerId.equals(ledgerId)))
+          .map((row) => row.read(db.transactions.id)!)
+          .get();
+      if (txIds.isEmpty) return;
+
+      final atts = await (db.select(db.transactionAttachments)
+            ..where((a) =>
+                a.transactionId.isIn(txIds) & a.localSha256.isNotNull()))
+          .get();
+      if (atts.isEmpty) return;
+
+      final appDir = await getApplicationDocumentsDirectory();
+      final attDir = Directory('${appDir.path}/attachments');
+      for (final a in atts) {
+        final sha = a.localSha256!;
+        if (sha.isEmpty) continue;
+        // 同 sha 已在队列 → 跳过(内容寻址,一份对象补一个文件名即可;
+        // 极端情况下同 sha 不同 ext 的行会复用队列里的第一个 fileName)
+        if (_pendingAttachmentJobs.any((j) => j.sha256 == sha)) continue;
+        if (await File('${attDir.path}/${a.fileName}').exists()) continue;
+        _pendingAttachmentJobs.add((sha256: sha, fileName: a.fileName));
+      }
+    } catch (e) {
+      logger.warning('CloudSync', '附件补齐任务入队失败(ledgerId=$ledgerId): $e');
+    }
+  }
+
+  /// 消费附件下载队列:并发(semaphore 4)下载 → 解密 → base64 解码 →
+  /// sha256 校验 → 落盘。失败(已重试 3 次)回队,下次 drain 再试,
+  /// 对齐 drainCustomIconQueue 的回队模式。
+  ///
+  /// 恢复主流程不等待本方法(附件下载可能分钟级,交易数据必须先可用);
+  /// 在恢复完成、云端账本导入、以及下次任何同步操作(_ensureInitialized)
+  /// 时触发。返回成功补齐的文件数。
+  Future<int> drainAttachmentJobs() async {
+    if (_isDrainingAttachments || _pendingAttachmentJobs.isEmpty) return 0;
+    _isDrainingAttachments = true;
+    try {
+      final provider = _provider;
+      if (provider == null) return 0;
+
+      final jobs = List<({String sha256, String fileName})>.from(
+          _pendingAttachmentJobs);
+      _pendingAttachmentJobs.clear();
+
+      final failed = <({String sha256, String fileName})>[];
+      final pool = _Semaphore(4);
+      final results = await Future.wait(jobs.map((job) async {
+        await pool.acquire();
+        try {
+          final ok = await _downloadAttachmentBinWithRetry(provider, job);
+          if (!ok) failed.add(job);
+          return ok;
+        } finally {
+          pool.release();
+        }
+      }));
+
+      if (failed.isNotEmpty) {
+        _pendingAttachmentJobs.addAll(failed);
+        logger.warning('CloudSync',
+            '附件补齐下载失败 ${failed.length}/${jobs.length},回队等下次 drain');
+      }
+      final ok = results.where((r) => r).length;
+      if (ok > 0) {
+        logger.info('CloudSync', '附件补齐完成: $ok/${jobs.length}');
+      }
+      return ok;
+    } finally {
+      _isDrainingAttachments = false;
+    }
+  }
+
+  /// 单个附件对象下载 + 校验 + 落盘,3 次指数退避重试。
+  ///
+  /// sha256 校验必做:内容寻址的信任根基是"路径即哈希",不校验就把
+  /// 损坏/错配的对象当成品落盘,且因文件名带 sha 永远不会再被修复。
+  Future<bool> _downloadAttachmentBinWithRetry(
+    fcs.CloudProvider provider,
+    ({String sha256, String fileName}) job,
+  ) async {
+    Object? lastError;
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try {
+        final raw =
+            await provider.storage.download(path: pathForAttachmentBin(job.sha256));
+        if (raw == null) {
+          // 云端对象不存在(上传端失败的竞态):回队意义有限但成本低,
+          // 保持与其他失败一致的处理。
+          throw fcs.CloudStorageException('附件对象不存在: ${job.sha256}');
+        }
+        // 与账本 JSON 同一口径处理密文(加密开启时 storage 已自动解密,
+        // isEncrypted=false 直接通过;disable 后残留密钥场景手动解密)
+        final plain = await _decryptIfNeeded(raw);
+        if (plain == null) {
+          throw fcs.CloudStorageException('附件对象密文无法解密: ${job.sha256}');
+        }
+        final bytes = base64Decode(plain);
+        // 校验内容哈希与路径声明一致,拒绝损坏/错配对象
+        final actual = crypto.sha256.convert(bytes).toString();
+        if (actual != job.sha256) {
+          throw fcs.CloudStorageException(
+              '附件 sha256 不匹配: expect=${job.sha256} actual=$actual');
+        }
+        final appDir = await getApplicationDocumentsDirectory();
+        final dest = File('${appDir.path}/attachments/${job.fileName}');
+        await dest.parent.create(recursive: true);
+        await dest.writeAsBytes(bytes, flush: true);
+        return true;
+      } catch (e) {
+        lastError = e;
+        if (attempt < 2) {
+          await Future.delayed(Duration(seconds: 1 << attempt));
+        }
+      }
+    }
+    logger.warning('CloudSync',
+        '附件下载失败 sha256=${job.sha256} after 3 attempts: $lastError');
+    return false;
+  }
+
   @override
   Future<({int inserted, int deletedDup})>
       downloadAndRestoreToCurrentLedger({required int ledgerId}) async {
@@ -511,19 +795,44 @@ class TransactionsSyncManager implements SyncService {
         return (inserted: 0, deletedDup: 0);
       }
 
+      // P1-1：远端快照不含任何交易（误上传空文件 / 覆盖了空备份）时，
+      // 禁止用空数据清空本地非空账本——否则"恢复"会静默抹掉本地全部交易。
+      // 用户若确需清空，应走显式的上传/清空操作。
+      final remoteImport = parseJsonToImportData(jsonStr);
+      if (remoteImport.transactions.isEmpty) {
+        final localRows = await (db.select(db.transactions)
+              ..where((t) => t.ledgerId.equals(ledgerId)))
+            .get();
+        if (localRows.isNotEmpty) {
+          logger.warning(
+              'CloudSync',
+              '远端快照为空但本地有 ${localRows.length} 条交易，拒绝空覆盖'
+              '（ledgerId=$ledgerId）');
+          return (inserted: 0, deletedDup: 0);
+        }
+      }
+
       // 恢复前清空本地账本交易，避免追加式导入产生重复行（US-1）。
       // 清空 + 导入包裹在同一事务内：若导入失败，清空操作一并回滚，
       // 保证本地数据不会被部分清空。importTransactionsJson 内部的
       // db.transaction 会作为 savepoint 嵌套在本事务内。
+      // recordChanges: false —— 从云端恢复不应写入本地变更历史（P2-3）
       final deletedDup = await db.transaction(() async {
         final deleted = await _clearLedgerTransactions(ledgerId);
-        return (deleted, await importTransactionsJson(repo, ledgerId, jsonStr));
+        return (deleted,
+            await importTransactionsJson(repo, ledgerId, jsonStr,
+                recordChanges: false));
       });
 
       final result = deletedDup.$2;
 
       logger.info('CloudSync',
           '下载完成: inserted=${result.inserted}, deletedDup=${deletedDup.$1}');
+
+      // 附件二进制后台补齐(不阻塞恢复返回):元数据已入库,缺的文件
+      // 从 attachments/<sha256>.bin 异步下载,失败回队下次 drain 重试。
+      unawaited(enqueueMissingAttachmentJobs(ledgerId)
+          .then((_) => drainAttachmentJobs()));
 
       // 清除缓存
       _statusCache.remove(ledgerId);
@@ -696,7 +1005,7 @@ class TransactionsSyncManager implements SyncService {
       final jsonStr = await exportTransactionsJson(db, ledgerId);
       final localMap = jsonDecode(jsonStr) as Map<String, dynamic>;
       final localFp = _contentFingerprintFromMap(localMap);
-      final localCount = (localMap['count'] as num).toInt();
+      final localCount = (localMap['count'] as num?)?.toInt() ?? 0;
 
       // 若刚刚上传成功且在短时间窗口内（15秒），且本地指纹与上传时一致，直接认定已同步
       final ru = _recentUpload[ledgerId];
@@ -760,6 +1069,15 @@ class TransactionsSyncManager implements SyncService {
         _statusCache[ledgerId] = _CachedStatus(status);
       }
       logger.info('CloudSync', '同步状态: $ledgerId -> ${status.diff}');
+      if (status.diff != SyncDiff.inSync &&
+          status.localFingerprint.length >= 8) {
+        // 指纹不一致时提升为 INFO：sync_convergence 排查依赖本地/云端
+        // 指纹对比（前 8 位足够定位），debug 级默认不可见
+        logger.info('CloudSync',
+            '指纹不一致 本地: ${status.localFingerprint.substring(0, 8)} '
+            '云端: ${status.cloudFingerprint != null && status.cloudFingerprint!.length >= 8 ? status.cloudFingerprint!.substring(0, 8) : "无"} '
+            '数量 本地${status.localCount}/云端${status.cloudCount ?? "无"}');
+      }
       logger.debug('CloudSync', '本地指纹: ${status.localFingerprint}');
       logger.debug('CloudSync', '云端指纹: ${status.cloudFingerprint ?? "无"}');
       logger.debug('CloudSync', '本地数量: ${status.localCount}, 云端数量: ${status.cloudCount ?? "无"}');
@@ -1235,8 +1553,10 @@ class TransactionsSyncManager implements SyncService {
         return null;
       }
 
-      // 导入数据
-      final result = await importTransactionsJson(repo, ledgerId, jsonStr);
+      // 导入数据（P2-3：从云端下载不应写入本地变更历史，避免污染
+      // 用户真实编辑轨迹并反向触发脏标记）
+      final result = await importTransactionsJson(repo, ledgerId, jsonStr,
+          recordChanges: false);
 
       logger.info('CloudSync',
           '下载完成: ledgerId=$ledgerId, inserted=${result.inserted}');
@@ -1417,6 +1737,274 @@ class TransactionsSyncManager implements SyncService {
       rethrow;
     }
   }
+
+  /// 全量覆盖下载：把云端所有账本快照无条件刷到本地
+  /// （调用方已通过双重危险确认，见 cloud_sync_page 全量覆盖卡片）
+  ///
+  /// 与 [restoreAllRemoteLedgers] 的区别：
+  /// - 本地已存在的账本不跳过，而是用 [downloadAndRestoreToCurrentLedger]
+  ///   整体覆盖本地数据（清空后导入，含账户 syncId 去重，流程同现有恢复）
+  /// - 云端独有的账本仍走 [downloadRemoteLedger] 导入新建
+  /// - 本地独有的账本不做任何处理（保留）
+  ///
+  /// 串行执行：恢复会批量写库，并行易触发数据库锁竞争；
+  /// 单个账本失败只计数不中断整批（语义对齐 uploadAllLedgers）。
+  Future<({int success, int failed})> fullRestoreAllRemoteLedgers({
+    void Function(int done, int total)? onProgress,
+  }) async {
+    await _ensureInitialized();
+
+    // 捕获到局部变量（ATTACH-2 竞态防护）
+    final provider = _provider;
+    if (provider == null) {
+      throw fcs.CloudSyncException('云服务不可用，请检查配置或登录状态');
+    }
+
+    try {
+      logger.info('CloudSync', '开始全量覆盖下载所有远程账本');
+
+      // 本地已存在的账本 ID：决定云端文件走「覆盖」还是「导入新建」
+      final localIds =
+          (await db.select(db.ledgers).get()).map((l) => l.id).toSet();
+
+      final files = await provider.storage.list(path: '');
+      final ledgerFiles =
+          files.where((f) => _ledgerFileNamePattern.hasMatch(f.name)).toList();
+      logger.info(
+          'CloudSync', '云端共 ${ledgerFiles.length} 个账本文件，本地已有 ${localIds.length} 个账本');
+
+      var success = 0;
+      var failed = 0;
+      for (final file in ledgerFiles) {
+        final remoteId =
+            int.parse(_ledgerFileNamePattern.firstMatch(file.name)!.group(1)!);
+        try {
+          if (localIds.contains(remoteId)) {
+            // 本地已有该账本：云端快照整体覆盖本地数据
+            await downloadAndRestoreToCurrentLedger(ledgerId: remoteId);
+          } else {
+            // 云端独有账本：下载元信息后导入为新建本地账本
+            final jsonStr = await provider.storage.download(path: file.name);
+            if (jsonStr == null) {
+              throw fcs.CloudSyncException('云端文件下载为空: ${file.name}');
+            }
+            final json = jsonDecode(jsonStr) as Map<String, dynamic>;
+            final name = json['ledgerName'] as String? ??
+                json['name'] as String? ??
+                'Unknown';
+            final currency = json['currency'] as String? ?? 'CNY';
+            final ledgerId = await downloadRemoteLedger(
+              name: name,
+              currency: currency,
+              remotePath: file.name,
+            );
+            if (ledgerId == null) {
+              throw fcs.CloudSyncException('云端账本导入失败: ${file.name}');
+            }
+          }
+          success++;
+        } catch (e) {
+          failed++;
+          logger.warning('CloudSync', '全量恢复账本失败: ${file.name} - $e');
+        }
+        onProgress?.call(success + failed, ledgerFiles.length);
+      }
+
+      logger.info('CloudSync', '全量覆盖下载完成: 成功=$success, 失败=$failed');
+      return (success: success, failed: failed);
+    } catch (e, stack) {
+      logger.error('CloudSync', '全量覆盖下载所有远程账本失败', e);
+      logger.error('CloudSync', '堆栈', stack);
+      rethrow;
+    }
+  }
+
+  // ============ 云端账本发现（跨设备新建账本同步） ============
+
+  /// 发现阶段缓存的远端 payload（远端账本 id → 解密后的 JSON 明文）
+  ///
+  /// [discoverRemoteLedgers] 下载文件提取元信息时顺手缓存，
+  /// [importRemoteLedger] 优先用缓存避免同一文件二次下载。
+  final Map<int, String> _discoveredPayloads = {};
+
+  /// 云端账本文件名模式：ledger_<本地id>.json
+  static final RegExp _ledgerFileNamePattern = RegExp(r'^ledger_(\d+)\.json$');
+
+  /// 列出云端存在、但本机没有对应账本行的账本文件，提取元信息
+  ///
+  /// 设计见 /prd/remote_ledger_discovery/design.md：
+  /// - 路径 A 的同步 key 即本地 id（`ledger_<id>.json`），文件名中的 id
+  ///   在本机没有对应账本行时，说明该账本是在其他设备新建后上传的
+  /// - 单个文件下载/解密/解析失败只跳过该账本（记日志），不影响其他
+  /// - 返回的 meta 供确认弹窗展示；payload 已缓存供后续导入复用
+  Future<List<RemoteLedgerMeta>> discoverRemoteLedgers() async {
+    await _ensureInitialized();
+
+    // 捕获到局部变量（ATTACH-2 竞态防护）
+    final provider = _provider;
+    if (provider == null) {
+      throw fcs.CloudSyncException('云服务不可用，请检查配置或登录状态');
+    }
+
+    final localIds =
+        (await db.select(db.ledgers).get()).map((l) => l.id).toSet();
+    _discoveredPayloads.clear();
+
+    final files = await provider.storage.list(path: '');
+    final metas = <RemoteLedgerMeta>[];
+    for (final file in files) {
+      final match = _ledgerFileNamePattern.firstMatch(file.name);
+      if (match == null) continue;
+      final remoteId = int.parse(match.group(1)!);
+      // 本地已有同 id 账本行：该文件由既有逐账本检查流程负责，
+      // 不属于"发现"范畴（路径 A 文件名即本地 id，撞号是既有语义）
+      if (localIds.contains(remoteId)) continue;
+
+      try {
+        final raw = await provider.storage.download(path: file.name);
+        if (raw == null) {
+          logger.warning('CloudSync', '发现账本 $remoteId 下载返回空，跳过');
+          continue;
+        }
+        // 密文场景：provider 已装饰时 download 即明文；未装饰（本地未开
+        // 加密）时 _decryptIfNeeded 会抛 CloudEncryptedLocallyDisabledException
+        final jsonStr = await _decryptIfNeeded(raw);
+        if (jsonStr == null) {
+          logger.warning('CloudSync', '发现账本 $remoteId 密文解密失败，跳过');
+          continue;
+        }
+        final payload = jsonDecode(jsonStr) as Map<String, dynamic>;
+        _discoveredPayloads[remoteId] = jsonStr;
+        metas.add(RemoteLedgerMeta(
+          id: remoteId,
+          name: (payload['ledgerName'] as String?) ?? '云端账本 $remoteId',
+          currency: (payload['currency'] as String?) ?? 'CNY',
+          monthStartDay:
+              ((payload['monthStartDay'] as num?)?.toInt() ?? 1).clamp(1, 28),
+          txCount: (payload['count'] as num?)?.toInt() ?? 0,
+        ));
+      } on CloudEncryptedLocallyDisabledException {
+        // 无可用密钥：跳过该账本（加密恢复走既有的哨兵引导流程）
+        logger.warning('CloudSync', '发现账本 $remoteId 为密文且本地无密钥，跳过');
+      } catch (e) {
+        logger.warning('CloudSync', '发现账本 $remoteId 失败，跳过: $e');
+      }
+    }
+
+    logger.info('CloudSync', '云端账本发现完成: ${metas.length} 个本机没有的账本');
+    return metas;
+  }
+
+  /// 导入一个发现阶段的云端账本：保留远端 id 创建本地账本行并导入数据
+  ///
+  /// 返回导入的交易条数；返回 null 表示远端 id 已被本地占用（极端竞态），
+  /// 该账本被跳过。
+  ///
+  /// 关键语义（design.md D2）：路径 A 的同步 key 就是本地 id，保留远端 id
+  /// 插入后本地指纹与云端一致，后续启动检查自然 inSync；syncId 写 id 字符串
+  /// 与 v21 迁移"旧数据 id 回填 syncId"语义一致（payload 不携带创建侧 UUID）。
+  Future<int?> importRemoteLedger(RemoteLedgerMeta meta) async {
+    await _ensureInitialized();
+
+    // payload 优先取发现阶段缓存，未命中（如进程内首次直接导入）重新下载
+    var jsonStr = _discoveredPayloads[meta.id];
+    if (jsonStr == null) {
+      final provider = _provider;
+      if (provider == null) {
+        throw fcs.CloudSyncException('云服务不可用，请检查配置或登录状态');
+      }
+      final path = _pathForLedger(meta.id);
+      final raw = await provider.storage.download(path: path);
+      if (raw == null) {
+        throw fcs.CloudSyncException('云端账本文件不存在: $path');
+      }
+      jsonStr = await _decryptIfNeeded(raw);
+      if (jsonStr == null) {
+        throw fcs.CloudSyncException('云端账本 ${meta.id} 密文无法解密');
+      }
+    }
+
+    final inserted = await db.transaction(() async {
+      // 竞态守卫：发现与导入之间本地可能新建了同 id 账本
+      final exists = await (db.select(db.ledgers)
+            ..where((l) => l.id.equals(meta.id)))
+          .getSingleOrNull();
+      if (exists != null) {
+        logger.warning('CloudSync', '账本 id=${meta.id} 已被本地占用，跳过导入');
+        return null;
+      }
+
+      await db.into(db.ledgers).insert(
+            LedgersCompanion.insert(
+              id: drift.Value(meta.id),
+              name: meta.name,
+              currency: drift.Value(meta.currency),
+              monthStartDay: drift.Value(meta.monthStartDay),
+              syncId: drift.Value(meta.id.toString()),
+            ),
+          );
+
+      // 从云端导入不写本地变更历史（P2-3），与下载恢复路径语义一致
+      final result = await importTransactionsJson(repo, meta.id, jsonStr!,
+          recordChanges: false);
+      return result.inserted;
+    });
+
+    _discoveredPayloads.remove(meta.id);
+    logger.info('CloudSync',
+        '云端账本导入完成: id=${meta.id}, name=${meta.name}, inserted=$inserted');
+
+    // 附件二进制后台补齐(与下载恢复路径同款:不阻塞导入返回)
+    unawaited(enqueueMissingAttachmentJobs(meta.id)
+        .then((_) => drainAttachmentJobs()));
+    return inserted;
+  }
+}
+
+/// 简单计数信号量:限制附件对象上传/下载的并发数(4),避免打满
+/// WebDAV/S3 的连接数限制。acquire 挂起等待,release 唤醒一个等待者。
+class _Semaphore {
+  final int _max;
+  int _count = 0;
+  final _waiters = <Completer<void>>[];
+
+  _Semaphore(this._max);
+
+  Future<void> acquire() {
+    if (_count < _max) {
+      _count++;
+      return Future.value();
+    }
+    final c = Completer<void>();
+    _waiters.add(c);
+    return c.future;
+  }
+
+  void release() {
+    if (_waiters.isNotEmpty) {
+      _waiters.removeAt(0).complete();
+    } else {
+      _count--;
+      if (_count < 0) _count = 0;
+    }
+  }
+}
+
+/// 云端账本元信息（发现阶段从 `ledger_<id>.json` payload 提取）
+class RemoteLedgerMeta {
+  final int id;
+  final String name;
+  final String currency;
+  final int monthStartDay;
+  final int txCount;
+
+  const RemoteLedgerMeta({
+    required this.id,
+    required this.name,
+    required this.currency,
+    required this.monthStartDay,
+    required this.txCount,
+  });
 }
 
 /// 账本交易数据序列化器

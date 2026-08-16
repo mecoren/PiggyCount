@@ -34,12 +34,15 @@ abstract class CategoryRepository {
   /// 更新分类
   /// [parentId] 传入具体值表示设置父分类，传入 -1 表示清空父分类（变为一级分类）
   /// [level] 传入 1 或 2 表示修改分类层级
+  /// [syncId] 传入非 null 表示覆盖同步身份（云同步合并时对齐云端，
+  /// 语义对齐 updateAccount 的 syncId 回填；null 保持原值不清空）
   Future<void> updateCategory(
     int id, {
     String? name,
     String? icon,
     int? parentId,
     int? level,
+    String? syncId,
   });
 
   /// 删除分类

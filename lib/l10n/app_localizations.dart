@@ -360,6 +360,30 @@ abstract class AppLocalizations {
   /// **'and {count} more'**
   String startupSyncConflictAndMore(int count);
 
+  /// No description provided for @startupSyncNewLedgersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud ledgers found'**
+  String get startupSyncNewLedgersTitle;
+
+  /// No description provided for @startupSyncNewLedgersMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Found {count} ledger(s) on cloud that are not on this device: {names}. Download them?'**
+  String startupSyncNewLedgersMessage(int count, String names);
+
+  /// No description provided for @startupSyncNewLedgersOk.
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get startupSyncNewLedgersOk;
+
+  /// No description provided for @startupSyncNewLedgersCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get startupSyncNewLedgersCancel;
+
   /// No description provided for @commonSuccess.
   ///
   /// In en, this message translates to:
@@ -1625,6 +1649,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Success: {success}, Failed: {failed}'**
   String ledgersRestoreResult(int success, int failed);
+
+  /// No description provided for @ledgersUploadAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload All'**
+  String get ledgersUploadAll;
+
+  /// No description provided for @ledgersUploadAllMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload all {count} local ledgers to the cloud? Existing cloud content will be overwritten.'**
+  String ledgersUploadAllMessage(int count);
+
+  /// No description provided for @ledgersUploadAllComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload Complete'**
+  String get ledgersUploadAllComplete;
+
+  /// No description provided for @ledgersUploadAllResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Success: {success}, Failed: {failed}'**
+  String ledgersUploadAllResult(int success, int failed);
+
+  /// No description provided for @ledgersUploadingProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading ledgers {done}/{total}, please wait…'**
+  String ledgersUploadingProgress(int done, int total);
+
+  /// No description provided for @ledgersUploadThis.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload to Cloud'**
+  String get ledgersUploadThis;
 
   /// No description provided for @categoryTitle.
   ///
@@ -2995,6 +3055,12 @@ abstract class AppLocalizations {
   /// **'Sync'**
   String get mineSyncTitle;
 
+  /// No description provided for @mineSyncChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing…'**
+  String get mineSyncChecking;
+
   /// No description provided for @mineSyncNotLoggedIn.
   ///
   /// In en, this message translates to:
@@ -3148,8 +3214,188 @@ abstract class AppLocalizations {
   /// No description provided for @mineUploadSuccessMessage.
   ///
   /// In en, this message translates to:
-  /// **'Current ledger synced to cloud'**
+  /// **'All ledgers synced to cloud'**
   String get mineUploadSuccessMessage;
+
+  /// No description provided for @syncBlockingDownloadTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Download sync'**
+  String get syncBlockingDownloadTitle;
+
+  /// No description provided for @syncBlockingUploadTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload sync'**
+  String get syncBlockingUploadTitle;
+
+  /// No description provided for @syncBlockingCheckCloud.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking cloud ledgers…'**
+  String get syncBlockingCheckCloud;
+
+  /// No description provided for @syncBlockingDownloadLedger.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading ledger {n}/{m}…'**
+  String syncBlockingDownloadLedger(int n, int m);
+
+  /// No description provided for @syncBlockingApplying.
+  ///
+  /// In en, this message translates to:
+  /// **'Applying changes…'**
+  String get syncBlockingApplying;
+
+  /// No description provided for @fullUploadTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Full Upload'**
+  String get fullUploadTitle;
+
+  /// No description provided for @fullUploadSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Overwrite cloud with all local ledgers'**
+  String get fullUploadSubtitle;
+
+  /// No description provided for @fullDownloadTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Full Download'**
+  String get fullDownloadTitle;
+
+  /// No description provided for @fullDownloadSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Overwrite local with all cloud ledgers'**
+  String get fullDownloadSubtitle;
+
+  /// No description provided for @fullUploadConfirm1Message.
+  ///
+  /// In en, this message translates to:
+  /// **'This will upload all {count} local ledgers. The matching cloud ledgers will be completely replaced by local data. Cloud-only ledgers will be kept.'**
+  String fullUploadConfirm1Message(int count);
+
+  /// No description provided for @fullUploadConfirm2Message.
+  ///
+  /// In en, this message translates to:
+  /// **'Final confirmation: replaced cloud data cannot be recovered. Continue?'**
+  String get fullUploadConfirm2Message;
+
+  /// No description provided for @fullDownloadConfirm1Message.
+  ///
+  /// In en, this message translates to:
+  /// **'All cloud ledgers will completely overwrite the matching local ledgers, and cloud-only ledgers will be imported as new ledgers. Local-only ledgers will be kept.'**
+  String get fullDownloadConfirm1Message;
+
+  /// No description provided for @fullDownloadConfirm2Message.
+  ///
+  /// In en, this message translates to:
+  /// **'Final confirmation: replaced local data cannot be recovered. Continue?'**
+  String get fullDownloadConfirm2Message;
+
+  /// No description provided for @dangerConfirmCountdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm ({seconds}s)'**
+  String dangerConfirmCountdown(int seconds);
+
+  /// No description provided for @fullUploadBlockingStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading all local ledgers…'**
+  String get fullUploadBlockingStatus;
+
+  /// No description provided for @fullDownloadBlockingStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Restoring all cloud ledgers…'**
+  String get fullDownloadBlockingStatus;
+
+  /// No description provided for @fullUploadNoLedgers.
+  ///
+  /// In en, this message translates to:
+  /// **'No local ledgers to upload.'**
+  String get fullUploadNoLedgers;
+
+  /// No description provided for @fullUploadSuccessMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Full upload finished. Cloud now matches local data.'**
+  String get fullUploadSuccessMessage;
+
+  /// No description provided for @fullDownloadResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Full download finished: {success} succeeded, {failed} failed.'**
+  String fullDownloadResult(int success, int failed);
+
+  /// No description provided for @fullSyncUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Full coverage sync is not available for the current cloud backend.'**
+  String get fullSyncUnsupported;
+
+  /// No description provided for @ledgersRestoreBlockingStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Restoring ledgers from cloud…'**
+  String get ledgersRestoreBlockingStatus;
+
+  /// No description provided for @ledgersUploadOneBlockingStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading ledger…'**
+  String get ledgersUploadOneBlockingStatus;
+
+  /// No description provided for @ledgersDownloadOneBlockingStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading ledger…'**
+  String get ledgersDownloadOneBlockingStatus;
+
+  /// No description provided for @encryptionBlockingVerifying.
+  ///
+  /// In en, this message translates to:
+  /// **'Verifying cloud encrypted data…'**
+  String get encryptionBlockingVerifying;
+
+  /// No description provided for @encryptionBlockingReencrypt.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypting cloud data…'**
+  String get encryptionBlockingReencrypt;
+
+  /// No description provided for @encryptionBlockingReinit.
+  ///
+  /// In en, this message translates to:
+  /// **'Initializing encrypted sync…'**
+  String get encryptionBlockingReinit;
+
+  /// No description provided for @encryptionBlockingChangePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-encrypting cloud data…'**
+  String get encryptionBlockingChangePassword;
+
+  /// No description provided for @encryptionBlockingReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Resetting encryption…'**
+  String get encryptionBlockingReset;
+
+  /// No description provided for @cloudFirstSyncBlockingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'First cloud sync'**
+  String get cloudFirstSyncBlockingTitle;
+
+  /// No description provided for @cloudFirstSyncBlockingStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading ledger {n}/{m}…'**
+  String cloudFirstSyncBlockingStatus(int n, int m);
 
   /// No description provided for @mineDownloadTitle.
   ///
@@ -14586,6 +14832,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cloud ciphertext is corrupted, cannot recover key'**
   String get saltMismatchCloudCorrupted;
+
+  /// No description provided for @saltMismatchWebdavAuthTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud authentication failed'**
+  String get saltMismatchWebdavAuthTitle;
+
+  /// No description provided for @saltMismatchWebdavAuthMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud storage (WebDAV) username or password is incorrect. Please go to cloud service settings and update your credentials, then retry.'**
+  String get saltMismatchWebdavAuthMessage;
+
+  /// No description provided for @saltMismatchGoConfig.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit cloud config'**
+  String get saltMismatchGoConfig;
 
   /// No description provided for @startupSyncRecoveryFailedHint.
   ///

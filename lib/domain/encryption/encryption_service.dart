@@ -247,6 +247,22 @@ class EnableFromCloudProbeFailedException implements Exception {
   String toString() => 'EnableFromCloudProbeFailedException: $message';
 }
 
+/// enableFromCloud 探测阶段认证失败异常（WebDAV 401/403）
+///
+/// 云端存储凭据错误（底层抛 CloudAuthException）。与网络故障
+/// （[EnableFromCloudProbeFailedException]）的本质区别：重试无法解决，
+/// 必须引导用户到云服务页修正 WebDAV 账号/密码后再试。
+/// UI 层应 catch 此异常并引导跳转云服务配置页，而非提示「检查网络」。
+class EnableFromCloudAuthException implements Exception {
+  final String message;
+  final Object? cause;
+
+  const EnableFromCloudAuthException(this.message, {this.cause});
+
+  @override
+  String toString() => 'EnableFromCloudAuthException: $message';
+}
+
 /// enableFromCloud 云端密文损坏异常
 ///
 /// 云端密文格式损坏（base64 截断、salt 长度异常、payload 损坏），

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/app_localizations.dart';
+import '../services/system/logger_service.dart';
 import '../widget/widget_manager.dart';
 import '../providers.dart';
 
@@ -56,7 +57,9 @@ Future<void> updateAppWidget(WidgetRef ref, BuildContext context) async {
       noTransactionsLabel: l10n.widgetNoTransactions,
       dashboardRecentLabel: l10n.widgetRecentTransactions,
     );
-  } catch (e) {
-    // Silently fail to avoid disrupting the app
+  } catch (e, st) {
+    // B3:静默吞异常会导致桌面组件渲染失败不可观测。仍不向用户抛错
+    // (避免打断记账流程),但落一条 error 日志,便于定位渲染失败根因。
+    logger.error('WidgetProvider', 'updateAppWidget 渲染失败', e, st);
   }
 }

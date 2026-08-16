@@ -156,6 +156,11 @@ class Transactions extends Table {
 class RecurringTransactions extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get ledgerId => integer()();
+
+  /// 跨设备同步 syncId。v33 新增,migration 给老行补随机 hex;
+  /// 语义与 budgets.syncId(v22)/accounts.syncId 一致:快照与 Cloud
+  /// 链路都按此做跨设备实体锚定(cloud_recurring_sync PRD)。
+  TextColumn get syncId => text().nullable()();
   TextColumn get type => text()(); // expense / income / transfer
   RealColumn get amount => real()();
   IntColumn get categoryId => integer().nullable()(); // 转账时为null
@@ -293,6 +298,13 @@ class TransactionAttachments extends Table {
   IntColumn get sortOrder => integer().withDefault(const Constant(0))(); // 排序序号
   TextColumn get cloudFileId => text().nullable()();   // 云端文件ID
   TextColumn get cloudSha256 => text().nullable()();   // 云端文件SHA256
+
+  /// 本地文件内容 SHA256(hex)。v34 新增(attachment_binary_sync):
+  /// 快照链路按内容寻址上传 `attachments/<sha256>.bin`,此列是清单锚点。
+  /// 不复用 cloudSha256 —— 那是 Cloud server 回填的引用,两条链路混用会
+  /// 互相污染。写入时机:saveAttachment 计算文件名时同步落列;
+  /// 存量行由启动后台任务 backfillLocalSha256 分批补齐。
+  TextColumn get localSha256 => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -442,7 +454,7 @@ class PiggyDatabase extends _$PiggyDatabase {
   PiggyDatabase.forTesting(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 32; // v32: transactions(ledger_id, happened_at) 复合索引
+  int get schemaVersion => 34; // v34: transaction_attachments 加 local_sha256(快照链路内容寻址)
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1168,17 +1180,47 @@ class PiggyDatabase extends _$PiggyDatabase {
                 'ON transactions(ledger_id, happened_at);');
             logger.info('DBMigration', 'v32 迁移完成');
           }
+          if (from < 33) {
+            // v33: recurring_transactions 加 sync_id(sync_gap_closure G2)。
+            // 周期规则此前双链路均不同步,换设备即丢;加列后快照 v8 / Cloud
+            // 引擎(cloud_recurring_sync)都按此锚定实体。回填用 32 位随机
+            // hex,与 v22 budgets 同款(SQLite 无原生 UUID,server 只要求非空)。
+            logger.info('DBMigration', '开始迁移到 v33: recurring_transactions.sync_id');
+            await _addColumnIfMissing('recurring_transactions', 'sync_id',
+                'ALTER TABLE recurring_transactions ADD COLUMN sync_id TEXT;');
+            await customStatement(
+                'UPDATE recurring_transactions SET sync_id = lower(hex(randomblob(16))) '
+                'WHERE sync_id IS NULL;');
+            await customStatement(
+                'CREATE INDEX IF NOT EXISTS idx_recurring_sync_id '
+                'ON recurring_transactions(sync_id);');
+            logger.info('DBMigration', 'v33 迁移完成');
+          }
+          if (from < 34) {
+            // v34: transaction_attachments 加 local_sha256(attachment_binary_sync)。
+            // 只加列不回填 —— 读全量附件文件算哈希可能几百 MB I/O,放启动
+            // 后台任务(attachment_service.backfillLocalSha256)分批执行,
+            // 避免迁移卡启动。
+            logger.info(
+                'DBMigration', '开始迁移到 v34: transaction_attachments.local_sha256');
+            await _addColumnIfMissing('transaction_attachments', 'local_sha256',
+                'ALTER TABLE transaction_attachments ADD COLUMN local_sha256 TEXT;');
+            logger.info('DBMigration', 'v34 迁移完成');
+          }
         },
         onCreate: (m) async {
           await m.createAll();
           await customStatement(
               'CREATE UNIQUE INDEX IF NOT EXISTS idx_rate_override_pair '
               'ON exchange_rate_overrides (base_currency, quote_currency);');
-          // v32 索引也需在 onCreate 创建:新装 app 和测试内存库走 onCreate
+          // v32/v33 索引也需在 onCreate 创建:新装 app 和测试内存库走 onCreate
           // 而非 migration,若不在 onCreate 建索引则新库永远没有该索引。
           await customStatement(
               'CREATE INDEX IF NOT EXISTS idx_transactions_ledger_happened '
               'ON transactions(ledger_id, happened_at);');
+          await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_recurring_sync_id '
+              'ON recurring_transactions(sync_id);');
         },
       );
 

@@ -60,6 +60,9 @@ class BatchAttachmentData {
   final String? cloudFileId;
   final String? cloudSha256;
 
+  /// 快照链路内容哈希(attachment_binary_sync),恢复时随清单落列。
+  final String? localSha256;
+
   const BatchAttachmentData({
     required this.fileName,
     this.originalName,
@@ -69,6 +72,7 @@ class BatchAttachmentData {
     this.sortOrder = 0,
     this.cloudFileId,
     this.cloudSha256,
+    this.localSha256,
   });
 }
 

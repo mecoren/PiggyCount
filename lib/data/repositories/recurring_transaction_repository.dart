@@ -30,9 +30,9 @@ abstract class RecurringTransactionRepository {
     required DateTime startDate,
     DateTime? endDate,
     bool enabled = true,
+    String? syncId,
   });
 
-  /// 更新周期记账
   Future<void> updateRecurringTransaction({
     required int id,
     required int ledgerId,
@@ -50,6 +50,8 @@ abstract class RecurringTransactionRepository {
     required DateTime startDate,
     DateTime? endDate,
     bool? enabled,
+    DateTime? lastGeneratedDate,
+    String? syncId,
   });
 
   /// 删除周期记账

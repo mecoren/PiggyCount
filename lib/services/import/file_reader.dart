@@ -148,8 +148,10 @@ class FileReaderService {
     // 尝试 GBK 解码（支付宝旧版本 Windows 导出常用）
     try {
       final gbkText = gbk_bytes.decode(bytes);
-      // 简单检测：如果包含常见中文字符，认为GBK解码成功
-      if (_containsChineseCharacters(gbkText)) {
+      // F1:走到 GBK 分支说明 UTF-8 已失败或含乱码标记。GBK 解码成功且
+      // 无 U+FFFD 即采用 —— 不再强制要求"含中文",否则含全角标点/智能
+      // 引号等非 CJK 字符的 GBK 文件会被误判、退回 allowMalformed UTF-8 乱码。
+      if (!gbkText.contains('\uFFFD')) {
         return gbkText;
       }
     } catch (_) {
@@ -163,12 +165,5 @@ class FileReaderService {
       // 最后的兜底 latin1
       return latin1.decode(bytes);
     }
-  }
-
-  /// 检测文本中是否包含中文字符
-  static bool _containsChineseCharacters(String text) {
-    // 检查常见汉字范围 (基本汉字: U+4E00-U+9FFF)
-    final chineseRegex = RegExp(r'[\u4E00-\u9FFF]');
-    return chineseRegex.hasMatch(text);
   }
 }

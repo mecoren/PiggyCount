@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
+import 'package:crypto/crypto.dart' as crypto;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
@@ -342,10 +343,9 @@ class AttachmentExportImportService {
               onProgress?.call(processed, total);
               continue;
             } else {
-              // 覆盖模式：删除旧文件和记录
-              if (existsLocally) {
-                await localFile.delete();
-              }
+              // D1:覆盖模式。旧 DB 记录先删(DB 操作可回滚,风险低);旧文件
+              // 不在此处删,改为下方"写临时文件+原子替换",避免写入中途失败
+              // (磁盘满/权限)导致原附件丢失且新附件不完整、无事务兜底。
               if (existsInDb) {
                 await repo.deleteAttachmentByFileName(fileName);
               }
@@ -354,9 +354,27 @@ class AttachmentExportImportService {
           }
 
           // 保存图片文件
-          await localFile.writeAsBytes(imageFile.content as List<int>);
+          // D1:覆盖已存在文件时走"写临时文件 + rename 替换"原子路径,写入
+          // 失败则原附件保留;rename 到已存在路径在部分平台会失败,因此先删
+          // 旧文件再 rename —— 删除后 rename 若失败,临时文件保留供下次导入
+          // 恢复,优于"先删后写"丢失原文件。新建/非覆盖时直接写。
+          if (existsLocally && conflictStrategy == conflictOverwrite) {
+            final tmpPath = '$localFilePath.tmp';
+            final tmpFile = File(tmpPath);
+            await tmpFile.writeAsBytes(imageFile.content as List<int>);
+            try {
+              await localFile.delete();
+            } catch (e) {
+              logger.warning('AttachmentExportImport',
+                  '覆盖时删除旧附件失败(将继续替换): $fileName', e);
+            }
+            await tmpFile.rename(localFilePath);
+          } else {
+            await localFile.writeAsBytes(imageFile.content as List<int>);
+          }
 
-          // 创建数据库记录
+          // 创建数据库记录。localSha256 直接对内存字节计算(attachment_binary_sync:
+          // 内容已在手上,不落列则该行要等启动回填任务才能参与快照同步)。
           await repo.createAttachment(
             transactionId: transactionId,
             fileName: fileName,
@@ -365,6 +383,8 @@ class AttachmentExportImportService {
             width: attachmentData['width'] as int?,
             height: attachmentData['height'] as int?,
             sortOrder: attachmentData['sortOrder'] as int? ?? 0,
+            localSha256:
+                crypto.sha256.convert(imageFile.content as List<int>).toString(),
           );
 
           imported++;
@@ -603,8 +623,17 @@ class AttachmentExportImportService {
       final attachmentItems = <AttachmentPreviewItem>[];
       final customIconItems = <AttachmentPreviewItem>[];
 
+      // D3:预览图片全量 Uint8List.fromList 驻留内存会撑爆大包,限制预览
+      // 总数,超出截断并提示(仅影响预览,不影响实际导入的完整性)。
+      const maxPreviewCount = 30;
+      int previewAdded = 0;
       // 提取所有图片文件
       for (final file in archive) {
+        if (previewAdded >= maxPreviewCount) {
+          logger.warning('AttachmentExportImport',
+              '预览图片超过 $maxPreviewCount 张,已截断(归档实际可能更多)');
+          break;
+        }
         logger.debug('AttachmentExportImport', '归档文件: ${file.name}');
 
         // 附件图片（images/ 目录）
@@ -615,6 +644,7 @@ class AttachmentExportImportService {
             fileName: fileName,
             bytes: Uint8List.fromList(imageBytes),
           ));
+          previewAdded++;
           logger.debug('AttachmentExportImport', '添加附件预览: $fileName');
         }
 
@@ -626,6 +656,7 @@ class AttachmentExportImportService {
             fileName: fileName,
             bytes: Uint8List.fromList(imageBytes),
           ));
+          previewAdded++;
           logger.debug('AttachmentExportImport', '添加自定义图标预览: $fileName');
         }
       }

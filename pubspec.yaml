@@ -97,6 +97,8 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.4
   # Testing framework enhancements
   mocktail: ^1.0.4
+  # 测试中 mock getApplicationDocumentsDirectory(附件二进制同步测试)
+  path_provider_platform_interface: ^2.1.0
 
 dependency_overrides:
   # Fix record_linux compatibility issue (we target iOS/Android only)

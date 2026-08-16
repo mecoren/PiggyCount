@@ -260,6 +260,104 @@ void main() {
       expect(fp1.length, 64);
     });
 
+    group('账户数组参与指纹（account_metadata_sync_fix G4）', () {
+      // 与 exportTransactionsJson 的账户导出字段保持一致
+      Map<String, dynamic> accItem({
+        required String name,
+        String type = 'cash',
+        String currency = 'CNY',
+        num initialBalance = 0,
+        num? sortOrder,
+        num? creditLimit,
+        String? syncId,
+        bool hidden = false,
+      }) =>
+          {
+            'name': name,
+            'type': type,
+            'currency': currency,
+            'initialBalance': initialBalance,
+            if (sortOrder != null) 'sortOrder': sortOrder,
+            if (creditLimit != null) 'creditLimit': creditLimit,
+            'hidden': hidden,
+            if (syncId != null) 'syncId': syncId,
+          };
+
+      final oneTx = <Map<String, dynamic>>[
+        txItem(happenedAt: '2026-07-01T10:00:00', type: 'expense', amount: 12.34),
+      ];
+
+      test('仅账户变更（交易相同）产生不同指纹', () {
+        final p1 = {
+          'items': oneTx,
+          'accounts': [accItem(name: '现金')],
+        };
+        final p2 = {
+          'items': oneTx,
+          'accounts': [
+            accItem(name: '现金'),
+            accItem(name: '理财账户', syncId: 'acc-fin-001'),
+          ],
+        };
+
+        expect(
+          contentFingerprintFromMap(p1),
+          isNot(equals(contentFingerprintFromMap(p2))),
+          reason: '云端仅新增账户时，指纹必须变化，否则 getStatus 误判 inSync，'
+              '用户收不到「云端有更新」提示，账户同步断链',
+        );
+      });
+
+      test('账户字段变更产生不同指纹', () {
+        final p1 = {
+          'items': oneTx,
+          'accounts': [accItem(name: '现金', initialBalance: 100)],
+        };
+        final p2 = {
+          'items': oneTx,
+          'accounts': [accItem(name: '现金', initialBalance: 3200)],
+        };
+
+        expect(
+          contentFingerprintFromMap(p1),
+          isNot(equals(contentFingerprintFromMap(p2))),
+        );
+      });
+
+      test('账户顺序不影响指纹（内容相同即相同）', () {
+        final a = accItem(name: '现金', syncId: 'acc-1');
+        final b = accItem(name: '银行卡', syncId: 'acc-2');
+        final p1 = {
+          'items': oneTx,
+          'accounts': [a, b],
+        };
+        final p2 = {
+          'items': oneTx,
+          'accounts': [b, a],
+        };
+
+        expect(
+          contentFingerprintFromMap(p1),
+          equals(contentFingerprintFromMap(p2)),
+          reason: '两端导出顺序依赖查询结果顺序，可能不同；'
+              '不排序会对同一份数据产生不同指纹 → 永远误报有差异',
+        );
+      });
+
+      test('无 accounts 键与空 accounts 指纹一致（旧快照兼容）', () {
+        final legacy = {'items': oneTx};
+        final withEmpty = {
+          'items': oneTx,
+          'accounts': <Map<String, dynamic>>[],
+        };
+
+        expect(
+          contentFingerprintFromMap(legacy),
+          equals(contentFingerprintFromMap(withEmpty)),
+        );
+      });
+    });
+
     test('快照测试：固定输入对应固定 SHA256（防止规范化规则意外变化）', () {
       // 该测试用例的输入与期望指纹绑定，任何对规范化规则的修改都会触发此测试失败，
       // 提醒开发者评估是否需要数据迁移或全量重同步。

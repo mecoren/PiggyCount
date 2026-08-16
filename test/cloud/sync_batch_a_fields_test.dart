@@ -6,7 +6,7 @@
 //      tagSyncIds 解析（跨设备 rename 后不错挂）。
 //   #7 override 字段：TransactionUpdateBySyncIdData 带 override 时，
 //      updateTransactionsBatchBySyncId 必须写入。
-//   全链路：exportTransactionsJson → parseJsonToImportData 往返，version 7
+//   全链路：exportTransactionsJson → parseJsonToImportData 往返，version 8
 //      带所有新字段。
 import 'dart:convert';
 
@@ -214,8 +214,11 @@ void main() {
     });
 
     test('本地 tag 无 syncId 时:导入必须回填 DB syncId（#6 闭环）', () async {
-      // 本地已有无 syncId 的标签（老数据/seed 场景）
-      await repo.createTag(name: '购物');
+      // 本地已有无 syncId 的标签（老数据/seed 场景）。
+      // 注意:createTag 现在总是自动生成 syncId,无法构造该场景,
+      // 必须用裸 SQL 插 NULL 行模拟 v7 之前创建的存量标签。
+      await db.customStatement(
+          "INSERT INTO tags (name, sync_id) VALUES ('购物', NULL)");
 
       // 导入 JSON 带 syncId 的同名标签 → 应回填本地 DB
       final result = await service.importTags(repo, [
@@ -329,9 +332,11 @@ void main() {
       await db.customStatement(
           "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
       // 插入一条带 syncId 的交易用于 modified 更新
+      // (happened_at 用 unix 秒:drift 默认 int 模式存日期,字符串读不回)
       await db.customStatement(
           "INSERT INTO transactions (id, ledger_id, type, amount, happened_at, sync_id) "
-          "VALUES (1, 1, 'expense', 100.0, '2026-08-01', 'tx-sync-001')");
+          "VALUES (1, 1, 'expense', 100.0, "
+          "CAST(strftime('%s','2026-08-01') AS INTEGER), 'tx-sync-001')");
     });
 
     test('updateTransactionsBatchBySyncId 必须写入 override 字段', () async {
@@ -410,7 +415,7 @@ void main() {
     });
   });
 
-  group('JSON 导出→解析往返（version 7）', () {
+  group('JSON 导出→解析往返（version 8）', () {
     setUp(() async {
       await db.customStatement(
           "INSERT INTO ledgers (id, name, currency, month_start_day) "
@@ -426,22 +431,24 @@ void main() {
       await db.customStatement(
           "INSERT INTO tags (id, name, color, sync_id, sort_order) "
           "VALUES (1, '购物', '#FF0000', 'tag-sync-001', 3)");
-      // 带 override 的交易
+      // 带 override 的交易（happened_at 用 unix 秒,drift int 模式）
       await db.customStatement(
           "INSERT INTO transactions (id, ledger_id, type, amount, happened_at, "
           "note, sync_id, exclude_from_stats, exclude_from_budget, "
           "category_sync_id_override, account_sync_id_override) "
-          "VALUES (1, 1, 'expense', 100.0, '2026-08-01', '备注', "
+          "VALUES (1, 1, 'expense', 100.0, "
+          "CAST(strftime('%s','2026-08-01') AS INTEGER), '备注', "
           "'tx-sync-001', 1, 0, 'cat-owner-001', 'acc-owner-001')");
       // 交易-标签关联
       await db.customStatement(
           "INSERT INTO transaction_tags (transaction_id, tag_id) VALUES (1, 1)");
     });
 
-    test('导出 JSON version 必须为 7', () async {
+    test('导出 JSON version 必须为 8', () async {
       final json = await exportTransactionsJson(db, 1);
       final data = jsonDecode(json) as Map<String, dynamic>;
-      expect(data['version'], 7);
+      expect(data['version'], 8,
+          reason: 'v8(sync_gap_closure): budgets/recurring/汇率覆盖 + 全量分类/标签');
     });
 
     test('账户扩展字段在导出→解析后完整保留', () async {
@@ -492,24 +499,29 @@ void main() {
 
     test('导入→导出闭环: 本地无 syncId 的 tag 经导入回填后再导出带 tagSyncIds',
         () async {
-      // 本地已有无 syncId 的标签 + 关联交易的标签（老数据）
-      final tagId = await repo.createTag(name: '购物');
+      // 本地已有无 syncId 的标签 + 关联交易的标签（老数据）。
+      // createTag 总是生成 syncId,用裸 SQL 插 NULL 行模拟存量标签;
+      // 名字避开 setUp 的 '购物',否则导入按 syncId 命中 setUp 那条,
+      // 永远走不到 NULL 回填分支。
+      await db.customStatement(
+          "INSERT INTO tags (id, name, sync_id) VALUES (9, '餐饮', NULL)");
       await db.customStatement(
           "INSERT INTO transactions (id, ledger_id, type, amount, happened_at, sync_id) "
-          "VALUES (2, 1, 'expense', 50.0, '2026-08-02', 'tx-sync-002')");
+          "VALUES (2, 1, 'expense', 50.0, "
+          "CAST(strftime('%s','2026-08-02') AS INTEGER), 'tx-sync-002')");
       await db.customStatement(
-          "INSERT INTO transaction_tags (transaction_id, tag_id) VALUES (2, $tagId)");
+          "INSERT INTO transaction_tags (transaction_id, tag_id) VALUES (2, 9)");
 
       // 导入 JSON（带 syncId 的标签 + 交易带 tagSyncIds）
       await service.importTags(repo, [
-        ImportTag(name: '购物', syncId: 'tag-sync-001'),
+        ImportTag(name: '餐饮', syncId: 'tag-sync-009'),
       ]);
 
       // 再次导出 → 交易 items 必须带 tagSyncIds
       final json = await exportTransactionsJson(db, 1);
       final importData = parseJsonToImportData(json);
       final tx2 = importData.transactions.firstWhere((t) => t.syncId == 'tx-sync-002');
-      expect(tx2.tagSyncIds, ['tag-sync-001'],
+      expect(tx2.tagSyncIds, ['tag-sync-009'],
           reason: 'syncId 回填后导出必须带 tagSyncIds（闭环）');
     });
   });

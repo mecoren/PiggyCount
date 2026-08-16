@@ -483,6 +483,7 @@ class LocalTransactionRepository implements TransactionRepository {
                   sortOrder: d.Value(att.sortOrder),
                   cloudFileId: d.Value(att.cloudFileId),
                   cloudSha256: d.Value(att.cloudSha256),
+                  localSha256: d.Value(att.localSha256),
                 ),
               );
             }

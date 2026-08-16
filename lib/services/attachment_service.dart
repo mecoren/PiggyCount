@@ -103,6 +103,7 @@ class AttachmentService {
       // 不再每笔复制一份(配合删除处的引用计数,避免误删共享文件)。
       final String fileName;
       final File savedFile;
+      final String localSha256;
       int? width;
       int? height;
       final int fileSize;
@@ -111,7 +112,8 @@ class AttachmentService {
         // 同时跳过 _getImageInfo:它走 ui.instantiateImageCodec 也是 platform
         // channel,后台冻结时也卡。width/height 留 null 不影响主功能。
         final bytes = sourceFile.readAsBytesSync();
-        fileName = 'sha_${sha256.convert(bytes)}$finalExt';
+        localSha256 = sha256.convert(bytes).toString();
+        fileName = 'sha_$localSha256$finalExt';
         final destPath = '${dir.path}/$fileName';
         savedFile = File(destPath);
         if (!savedFile.existsSync()) {
@@ -128,7 +130,8 @@ class AttachmentService {
           return null;
         }
         final bytes = await compressedFile.readAsBytes();
-        fileName = 'sha_${sha256.convert(bytes)}$finalExt';
+        localSha256 = sha256.convert(bytes).toString();
+        fileName = 'sha_$localSha256$finalExt';
         final destPath = '${dir.path}/$fileName';
         if (await File(destPath).exists()) {
           await compressedFile.delete();
@@ -152,6 +155,7 @@ class AttachmentService {
         width: width,
         height: height,
         sortOrder: index,
+        localSha256: localSha256,
       );
 
       logger.info('AttachmentService',
@@ -181,6 +185,56 @@ class AttachmentService {
       }
     }
     return results;
+  }
+
+  /// 存量附件 localSha256 回填(v34,attachment_binary_sync)。
+  ///
+  /// v34 之前的行没有 local_sha256,快照链路按内容寻址上传需要它做清单
+  /// 锚点。分批(200/批)读文件算哈希,避免一次性几百 MB I/O 卡启动;
+  /// 文件缺失的行保持 null 并 warning(孤儿附件本就不可用)。每次启动
+  /// 调用一次:补齐后退化为一次空查询,无需持久化标志位;若用户恢复了
+  /// 旧备份库也能自愈。
+  Future<void> backfillLocalSha256() async {
+    try {
+      final repo = ref.read(repositoryProvider);
+      const batchSize = 200;
+      int backfilled = 0;
+      int missing = 0;
+      // 循环取"NULL 且文件可读"的批,直到取空或整批无进展(全部文件缺失
+      // 时退出,防止死循环;这些行下次启动再试)。
+      while (true) {
+        final batch =
+            await repo.getAttachmentsWithoutLocalSha256(limit: batchSize);
+        if (batch.isEmpty) break;
+        final dir = await getAttachmentDirectory();
+        int progressed = 0;
+        for (final att in batch) {
+          final file = File('${dir.path}/${att.fileName}');
+          if (!await file.exists()) {
+            missing++;
+            logger.warning('AttachmentService',
+                '附件文件缺失,跳过 localSha256 回填: ${att.fileName}');
+            continue;
+          }
+          try {
+            final digest = sha256.convert(await file.readAsBytes());
+            await repo.updateAttachmentLocalSha256(att.id, digest.toString());
+            backfilled++;
+            progressed++;
+          } catch (e, st) {
+            logger.error('AttachmentService',
+                'localSha256 回填失败: ${att.fileName}', e, st);
+          }
+        }
+        if (progressed == 0) break;
+      }
+      if (backfilled > 0 || missing > 0) {
+        logger.info('AttachmentService',
+            'localSha256 回填完成: 补齐=$backfilled 文件缺失=$missing');
+      }
+    } catch (e, st) {
+      logger.error('AttachmentService', 'localSha256 回填任务异常', e, st);
+    }
   }
 
   /// 删除附件

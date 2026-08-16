@@ -20,6 +20,17 @@ class S3StorageService implements CloudStorageService {
   S3StorageService(this.client, this.bucket, {String keyPrefix = ''})
       : keyPrefix = _normalizePrefix(keyPrefix);
 
+  /// 认证/权限类异常转 [CloudAuthException]，保持语义保真（与 WebDAV 修复同款）
+  ///
+  /// S3AuthException（AK/SK 无效）与 S3PermissionDeniedException（403 无权限）
+  /// 都是凭据配置问题，重试无效，需引导用户到云服务页修正配置；
+  /// 若包装成通用 CloudStorageException，上层（enableFromCloud 探测、
+  /// 启动检查器）会把认证失败误报为网络错误，误导排查方向。
+  /// 消息携带「认证失败」关键字，供下游文本兜底识别。
+  CloudAuthException _authException(S3Exception e) {
+    return CloudAuthException('S3 认证失败（凭据错误或无权限）：${e.message}', e);
+  }
+
   /// 规范化前缀：非空时确保以 `/` 结尾，避免 `piggycount` 与 `ledger.json`
   /// 直接拼接为 `piggycountledger.json`。
   static String _normalizePrefix(String prefix) {
@@ -43,6 +54,10 @@ class S3StorageService implements CloudStorageService {
         key: _buildKey(remotePath),
         data: bytes,
       );
+    } on S3AuthException catch (e) {
+      throw _authException(e);
+    } on S3PermissionDeniedException catch (e) {
+      throw _authException(e);
     } on S3Exception catch (e) {
       throw CloudStorageException('Failed to upload file: ${e.message}');
     } catch (e) {
@@ -68,6 +83,10 @@ class S3StorageService implements CloudStorageService {
       await tempFile.rename(localPath);
     } on S3ObjectNotFoundException catch (e) {
       throw CloudStorageException('File not found: ${e.key}');
+    } on S3AuthException catch (e) {
+      throw _authException(e);
+    } on S3PermissionDeniedException catch (e) {
+      throw _authException(e);
     } on S3Exception catch (e) {
       throw CloudStorageException('Failed to download file: ${e.message}');
     } catch (e) {
@@ -81,6 +100,10 @@ class S3StorageService implements CloudStorageService {
         bucket: bucket,
         key: _buildKey(remotePath),
       );
+    } on S3AuthException catch (e) {
+      throw _authException(e);
+    } on S3PermissionDeniedException catch (e) {
+      throw _authException(e);
     } on S3Exception catch (e) {
       throw CloudStorageException('Failed to delete file: ${e.message}');
     } catch (e) {
@@ -94,6 +117,10 @@ class S3StorageService implements CloudStorageService {
         bucket: bucket,
         key: _buildKey(remotePath),
       );
+    } on S3AuthException catch (e) {
+      throw _authException(e);
+    } on S3PermissionDeniedException catch (e) {
+      throw _authException(e);
     } on S3Exception catch (e) {
       throw CloudStorageException('Failed to check file existence: ${e.message}');
     }
@@ -115,6 +142,10 @@ class S3StorageService implements CloudStorageService {
                   ? k.substring(keyPrefix.length)
                   : k)
               .toList();
+    } on S3AuthException catch (e) {
+      throw _authException(e);
+    } on S3PermissionDeniedException catch (e) {
+      throw _authException(e);
     } on S3Exception catch (e) {
       throw CloudStorageException('Failed to list files: ${e.message}');
     } catch (e) {
@@ -132,6 +163,10 @@ class S3StorageService implements CloudStorageService {
         throw CloudStorageException('File not found: $remotePath');
       }
       return info.size ?? 0;
+    } on S3AuthException catch (e) {
+      throw _authException(e);
+    } on S3PermissionDeniedException catch (e) {
+      throw _authException(e);
     } on S3Exception catch (e) {
       throw CloudStorageException('Failed to get file size: ${e.message}');
     }
@@ -145,6 +180,10 @@ class S3StorageService implements CloudStorageService {
       );
       if (!info.exists) return null;
       return info.lastModified;
+    } on S3AuthException catch (e) {
+      throw _authException(e);
+    } on S3PermissionDeniedException catch (e) {
+      throw _authException(e);
     } on S3Exception catch (e) {
       throw CloudStorageException('Failed to get last modified: ${e.message}');
     }
@@ -167,6 +206,10 @@ class S3StorageService implements CloudStorageService {
         data: bytes,
         metadata: metadata,
       );
+    } on S3AuthException catch (e) {
+      throw _authException(e);
+    } on S3PermissionDeniedException catch (e) {
+      throw _authException(e);
     } on S3Exception catch (e) {
       throw CloudStorageException('Failed to upload file: ${e.message}');
     } catch (e) {
@@ -187,6 +230,10 @@ class S3StorageService implements CloudStorageService {
       return utf8.decode(bytes);
     } on S3ObjectNotFoundException {
       return null;
+    } on S3AuthException catch (e) {
+      throw _authException(e);
+    } on S3PermissionDeniedException catch (e) {
+      throw _authException(e);
     } on S3Exception catch (e) {
       throw CloudStorageException('Failed to download file: ${e.message}');
     } catch (e) {
@@ -228,6 +275,10 @@ class S3StorageService implements CloudStorageService {
             );
           })
           .toList();
+    } on S3AuthException catch (e) {
+      throw _authException(e);
+    } on S3PermissionDeniedException catch (e) {
+      throw _authException(e);
     } on S3Exception catch (e) {
       throw CloudStorageException('Failed to list files: ${e.message}');
     }
@@ -254,6 +305,10 @@ class S3StorageService implements CloudStorageService {
         lastModified: info.lastModified,
         metadata: info.metadata,
       );
+    } on S3AuthException catch (e) {
+      throw _authException(e);
+    } on S3PermissionDeniedException catch (e) {
+      throw _authException(e);
     } on S3Exception catch (e) {
       throw CloudStorageException('Failed to get metadata: ${e.message}');
     }

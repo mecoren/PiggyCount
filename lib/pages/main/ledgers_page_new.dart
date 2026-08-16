@@ -44,6 +44,7 @@ class LedgersPageNew extends ConsumerStatefulWidget {
 
 class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
   bool _isRestoring = false;
+  bool _isUploadingAll = false;
 
   @override
   void initState() {
@@ -233,6 +234,18 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
           _SectionHeader(
             title: AppLocalizations.of(context).ledgersLocal,
             trailing: localLedgers.length.toString(),
+            // 「全部上传」仅快照同步类（WebDAV/S3/Supabase/iCloud）显示：
+            // PiggyCount Cloud 是增量自动同步、未配置云服务时无上传目标，
+            // 其余情况隐藏入口避免误导。与远程区「全部恢复」按钮对称。
+            action: ref.watch(syncServiceProvider) is TransactionsSyncManager
+                ? TextButton.icon(
+                    icon: const Icon(Icons.cloud_upload, size: 18),
+                    label: Text(AppLocalizations.of(context).ledgersUploadAll),
+                    onPressed: _isUploadingAll
+                        ? null
+                        : () => _handleBatchUpload(context),
+                  )
+                : null,
           ),
           ...localLedgers.map((ledger) => LedgerCard(
                 ledger: ledger,
@@ -392,11 +405,18 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       message: AppLocalizations.of(context).ledgersDownloadMessage(translateLedgerName(context, ledger.name)),
     );
 
-    if (confirmed != true || !mounted) return;
+    if (confirmed != true || !mounted || !context.mounted) return;
 
+    // 强制阻塞弹窗：下载期间禁止切账本/触发上传等一切页面操作，
+    // 防止下载恢复的写入与用户操作互相踩写
+    final l10n = AppLocalizations.of(context);
+    final block = showBlockingProgressDialog(
+      context,
+      title: l10n.ledgersDownloadTitle,
+      initialStatus: l10n.ledgersDownloadOneBlockingStatus,
+    );
+    Object? error;
     try {
-      showToast(context, AppLocalizations.of(context).ledgersDownloading);
-
       final syncService = ref.read(syncServiceProvider);
       if (syncService is SyncEngine) {
         // PiggyCount Cloud 路径（sync_changes 增量日志模型）：
@@ -419,23 +439,29 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       } else {
         throw Exception('Cloud sync not available');
       }
-
-      if (!mounted) return;
-
-      // 刷新列表和同步状态
-      ref.read(ledgerListRefreshProvider.notifier).state++;
-      ref.read(statsRefreshProvider.notifier).state++;
-      ref.read(syncStatusRefreshProvider.notifier).state++;
-
-      showToast(context, AppLocalizations.of(context).ledgersDownloadSuccess(translateLedgerName(context, ledger.name)));
     } catch (e) {
-      if (!mounted) return;
+      error = e;
+    } finally {
+      await block.close();
+    }
+
+    if (!mounted || !context.mounted) return;
+
+    if (error != null) {
       await AppDialog.error(
         context,
         title: AppLocalizations.of(context).commonFailed,
-        message: '$e',
+        message: '$error',
       );
+      return;
     }
+
+    // 刷新列表和同步状态
+    ref.read(ledgerListRefreshProvider.notifier).state++;
+    ref.read(statsRefreshProvider.notifier).state++;
+    ref.read(syncStatusRefreshProvider.notifier).state++;
+
+    showToast(context, AppLocalizations.of(context).ledgersDownloadSuccess(translateLedgerName(context, ledger.name)));
   }
 
   /// 显示本地账本操作菜单
@@ -450,6 +476,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     final cloudConfig = ref.read(activeCloudConfigProvider).valueOrNull;
     final isPiggyCountCloud =
         cloudConfig?.type == CloudBackendType.piggycountCloud;
+    // 手动上传仅对快照同步类后端开放（PiggyCount Cloud 增量自动同步无需手动上传）
+    final canUpload = ref.read(syncServiceProvider) is TransactionsSyncManager;
     final action = await showDialog<String>(
       context: context,
       builder: (dctx) {
@@ -519,6 +547,18 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                   ),
                 ),
             ],
+            // 单账本上传 — 放在破坏性操作（清空/删除）之前，与编辑类操作分组。
+            if (canUpload)
+              SimpleDialogOption(
+                onPressed: () => Navigator.pop(dctx, 'upload'),
+                child: Row(
+                  children: [
+                    Icon(Icons.cloud_upload_outlined, color: primary),
+                    const SizedBox(width: 8),
+                    Text(AppLocalizations.of(context).ledgersUploadThis),
+                  ],
+                ),
+              ),
             if (isOwner) ...[
               SimpleDialogOption(
                 onPressed: () => Navigator.pop(dctx, 'clear'),
@@ -610,6 +650,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
           ),
         ));
       }
+    } else if (action == 'upload') {
+      await _handleUploadLedger(context, ledger);
     } else if (action == 'clear') {
       await _handleClearLedger(context, ledger);
     } else if (action == 'deleteLocal') {
@@ -1014,16 +1056,23 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       message: AppLocalizations.of(context).ledgersRestoreAllMessage(remoteLedgers.length),
     );
 
-    if (confirmed != true || !mounted) return;
+    if (confirmed != true || !mounted || !context.mounted) return;
 
     setState(() => _isRestoring = true);
 
+    // 强制阻塞弹窗：批量恢复期间禁止切账本/触发上传等一切页面操作，
+    // 防止恢复写入与用户操作互相踩写
+    final l10n = AppLocalizations.of(context);
+    final block = showBlockingProgressDialog(
+      context,
+      title: l10n.ledgersRestoreAllTitle,
+      initialStatus: l10n.ledgersRestoreBlockingStatus,
+    );
+    int success = 0;
+    int failed = 0;
+    Object? error;
     try {
-      showToast(context, AppLocalizations.of(context).ledgersRestoring);
-
       final syncService = ref.read(syncServiceProvider);
-      int success = 0;
-      int failed = 0;
       if (syncService is SyncEngine) {
         // PiggyCount Cloud 批量（sync_changes 日志模型）：
         // 1) syncLedgersFromServer 把所有 remote-only ledger 插到本地
@@ -1045,35 +1094,202 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       } else {
         throw Exception('Cloud sync not available');
       }
+    } catch (e) {
+      error = e;
+    } finally {
+      // 先关阻塞弹窗，再展示结果/错误弹窗，避免误 pop 顶层弹窗
+      await block.close();
+    }
+
+    if (!mounted || !context.mounted) return;
+    setState(() => _isRestoring = false);
+
+    if (error != null) {
+      await AppDialog.error(
+        context,
+        title: AppLocalizations.of(context).commonFailed,
+        message: '$error',
+      );
+      return;
+    }
+
+    // 刷新列表和同步状态
+    ref.read(ledgerListRefreshProvider.notifier).state++;
+    ref.read(statsRefreshProvider.notifier).state++;
+    ref.read(syncStatusRefreshProvider.notifier).state++;
+
+    // 显示结果
+    await AppDialog.info(
+      context,
+      title: AppLocalizations.of(context).ledgersRestoreComplete,
+      message: AppLocalizations.of(context).ledgersRestoreResult(
+        success,
+        failed,
+      ),
+    );
+  }
+
+  /// 批量上传所有本地账本到云端（快照同步类后端专属）。
+  ///
+  /// 语义：以本地为准覆盖云端（用户已在确认弹窗中知晓覆盖警示）。
+  /// 流程：确认 → **阻塞式进度弹窗**（期间禁止一切页面操作）→
+  /// uploadAllLedgers（串行、单个失败不中断）→ 关闭弹窗 → 刷新 providers
+  /// → 结果弹窗。
+  Future<void> _handleBatchUpload(BuildContext context) async {
+    final localLedgers = ref.read(localLedgersProvider).value ?? [];
+
+    final confirmed = await AppDialog.confirm<bool>(
+      context,
+      title: AppLocalizations.of(context).ledgersUploadAll,
+      message: AppLocalizations.of(context)
+          .ledgersUploadAllMessage(localLedgers.length),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isUploadingAll = true);
+
+    final l10n = AppLocalizations.of(context);
+    // 进度用 ValueNotifier 驱动：上传循环在弹窗外异步推进，
+    // ValueListenableBuilder 订阅刷新，避免捕获 StatefulBuilder 的 setState
+    final progress = ValueNotifier<int>(0);
+    final total = localLedgers.length;
+    // 弹窗是否已弹出：异常路径下只有弹窗在台前才需要 pop，
+    // 否则会误关别的路由
+    var dialogOpen = false;
+
+    try {
+      final syncService = ref.read(syncServiceProvider);
+      if (syncService is! TransactionsSyncManager) {
+        // 按钮仅在 TransactionsSyncManager 下可见，这里防御配置中途变化
+        throw Exception('Cloud sync not available');
+      }
+
+      // 强制阻塞弹窗：barrierDismissible=false 禁止点外部关闭，
+      // PopScope(canPop:false) 拦截系统返回键 —— 批量上传期间用户不能做
+      // 任何其他操作，防止中途切账本/触发并发同步与上传互相踩写
+      final dialogFuture = showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dctx) => PopScope(
+          canPop: false,
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
+            title: Text(l10n.ledgersUploadAll),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                ValueListenableBuilder<int>(
+                  valueListenable: progress,
+                  builder: (_, done, __) => Text(
+                    l10n.ledgersUploadingProgress(done, total),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      dialogOpen = true;
+
+      final result = await syncService.uploadAllLedgers(
+        onProgress: (done, _) => progress.value = done,
+      );
+
+      // 上传结束（成败皆关）：关闭进度弹窗，dialogFuture 由 pop 落定
+      if (mounted && dialogOpen) {
+        Navigator.of(context, rootNavigator: true).pop();
+        dialogOpen = false;
+      }
+      await dialogFuture;
 
       if (!mounted) return;
 
-      setState(() => _isRestoring = false);
+      setState(() => _isUploadingAll = false);
 
       // 刷新列表和同步状态
       ref.read(ledgerListRefreshProvider.notifier).state++;
       ref.read(statsRefreshProvider.notifier).state++;
       ref.read(syncStatusRefreshProvider.notifier).state++;
 
-      // 显示结果
       await AppDialog.info(
         context,
-        title: AppLocalizations.of(context).ledgersRestoreComplete,
-        message: AppLocalizations.of(context).ledgersRestoreResult(
-          success,
-          failed,
-        ),
+        title: AppLocalizations.of(context).ledgersUploadAllComplete,
+        message: AppLocalizations.of(context)
+            .ledgersUploadAllResult(result.success, result.failed),
       );
     } catch (e) {
-      setState(() => _isRestoring = false);
-
+      // 异常路径也必须关掉进度弹窗，否则它会永久挡住页面
+      if (mounted && dialogOpen) {
+        Navigator.of(context, rootNavigator: true).pop();
+        dialogOpen = false;
+      }
       if (!mounted) return;
+      setState(() => _isUploadingAll = false);
 
       await AppDialog.error(
         context,
         title: AppLocalizations.of(context).commonFailed,
         message: '$e',
       );
+    } finally {
+      progress.dispose();
+    }
+  }
+
+  /// 上传单个本地账本到云端（长按菜单入口，快照同步类后端专属）。
+  ///
+  /// 通过 uploadingLedgerIdsProvider 标记上传中状态，供其他 UI
+  /// （如冲突对话框）感知并避免并发上传同一账本。
+  Future<void> _handleUploadLedger(
+      BuildContext context, LedgerDisplayItem ledger) async {
+    final uploadingIds = ref.read(uploadingLedgerIdsProvider);
+    ref.read(uploadingLedgerIdsProvider.notifier).state = {
+      ...uploadingIds,
+      ledger.id,
+    };
+
+    // 强制阻塞弹窗：上传期间禁止切账本/编辑等一切页面操作，
+    // 防止与上传快照互相踩写
+    final l10n = AppLocalizations.of(context);
+    final block = showBlockingProgressDialog(
+      context,
+      title: l10n.syncBlockingUploadTitle,
+      initialStatus: l10n.ledgersUploadOneBlockingStatus,
+    );
+    Object? error;
+    try {
+      await ref
+          .read(syncServiceProvider)
+          .uploadCurrentLedger(ledgerId: ledger.id);
+    } catch (e) {
+      error = e;
+    } finally {
+      await block.close();
+    }
+
+    if (mounted && context.mounted) {
+      if (error != null) {
+        await AppDialog.error(
+          context,
+          title: AppLocalizations.of(context).commonFailed,
+          message: '$error',
+        );
+      } else {
+        showToast(context, AppLocalizations.of(context).mineUploadSuccess);
+        ref.read(ledgerListRefreshProvider.notifier).state++;
+        ref.read(syncStatusRefreshProvider.notifier).state++;
+      }
+    }
+    // widget 已销毁时不再触碰 ref，避免 StateError
+    if (mounted) {
+      final ids = ref.read(uploadingLedgerIdsProvider);
+      ref.read(uploadingLedgerIdsProvider.notifier).state =
+          ids.where((id) => id != ledger.id).toSet();
     }
   }
 
@@ -1394,14 +1610,21 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
 
     final DateFormat dateFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
 
+    // isProcessing 必须声明在 StatefulBuilder 之外：
+    // 声明在 builder 内会在每次 rebuild 时被重置，导致处理中
+    // 按钮重新变为可点（双重触发的并发风险）
+    bool isProcessing = false;
+
     await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (stateContext, setState) {
-            bool isProcessing = false;
-
+        // PopScope 拦截系统返回键：处理中（isProcessing）禁止关闭弹窗，
+        // 否则用户可在下载/上传进行中返回离开，底层页面恢复可操作
+        return PopScope(
+          canPop: false,
+          child: StatefulBuilder(
+            builder: (stateContext, setState) {
             return AlertDialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
               title: Row(
@@ -1585,7 +1808,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                 ],
               ],
             );
-          },
+            },
+          ),
         );
       },
     );

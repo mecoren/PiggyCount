@@ -18,6 +18,7 @@ abstract class AttachmentRepository {
     int sortOrder = 0,
     String? cloudFileId,
     String? cloudSha256,
+    String? localSha256,
   });
 
   /// 根据ID获取附件
@@ -40,6 +41,14 @@ abstract class AttachmentRepository {
 
   /// 更新附件云端引用（上传后回填）
   Future<void> updateAttachmentCloudRef(int id, {String? cloudFileId, String? cloudSha256});
+
+  /// 更新附件本地内容哈希（attachment_binary_sync:v34 列回填)
+  Future<void> updateAttachmentLocalSha256(int id, String localSha256);
+
+  /// 分批获取 localSha256 为 NULL 的附件(回填任务用,按 id 升序)
+  Future<List<TransactionAttachment>> getAttachmentsWithoutLocalSha256({
+    required int limit,
+  });
 
   // ============================================
   // 查询操作

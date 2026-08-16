@@ -326,6 +326,7 @@ class SupabaseDatabaseService implements CloudDatabaseService {
   Future<void> batchDelete({
     required String table,
     required List<QueryFilter> filters,
+    bool autoFilterByUser = true,
   }) async {
     try {
       // Check authentication
@@ -336,6 +337,12 @@ class SupabaseDatabaseService implements CloudDatabaseService {
 
       // Build delete query with filters
       var query = _client.from(table).delete();
+
+      // P2-8：自动添加用户过滤，与 delete()/batchUpdate() 保持一致，
+      // 防止 filters 未含 user_id 时误删其他用户的记录（跨用户越权删除）。
+      if (autoFilterByUser) {
+        query = query.eq('user_id', user.id);
+      }
 
       for (final filter in filters) {
         query = _applyFilter(query, filter);

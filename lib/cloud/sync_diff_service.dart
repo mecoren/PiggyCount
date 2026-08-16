@@ -148,8 +148,9 @@ class SyncDiffService {
         // 都有，检查是否有差异
         final localTagNames = (tagsMap[localTx.id] ?? [])
             .map((t) => t.name)
-            .toList()
-          ..sort();
+            .toSet()
+            .toList();
+        localTagNames.sort();
         final localAccountName = localTx.accountId != null
             ? accountIdToName[localTx.accountId]
             : null;
@@ -258,8 +259,9 @@ class SyncDiffService {
       }
     }
 
-    // 比较标签
-    final cloudTagNames = List<String>.from(cloud.tagNames ?? [])..sort();
+    // 比较标签（去重，避免历史脏数据产生重复标签名导致伪差异）
+    final cloudTagNames = (cloud.tagNames ?? []).toSet().toList();
+    cloudTagNames.sort();
     if (localTagNames.join(',') != cloudTagNames.join(',')) {
       final from = localTagNames.isEmpty ? '无' : localTagNames.join(', ');
       final to = cloudTagNames.isEmpty ? '无' : cloudTagNames.join(', ');
@@ -317,11 +319,11 @@ class SyncDiffService {
     required List<SyncChange> selectedChanges,
     required ImportData importData,
   }) async {
-    if (selectedChanges.isEmpty) {
-      return const SyncApplyResult();
-    }
-
-    // 分类/账户/标签:复用 DataImportService(同一份 batch 优化只在一处维护)
+    // 分类/账户/标签:复用 DataImportService(同一份 batch 优化只在一处维护)。
+    // 元数据合并不依赖交易 diff —— 必须在空变更早退之前执行:云端仅有
+    // 账户/分类/标签变更时 computeDiff 返回空 preview,若此处先早退,
+    // importAccounts 永远不会被调用,账户同步即断链(account_metadata_sync_fix
+    // G1+G2)。元数据导入是幂等增量 upsert,多账本循环重复合并无害。
     final categoryCache =
         await dataImportService.importCategories(repo, importData.categories);
     final accountNameToId = await dataImportService.importAccounts(
@@ -330,6 +332,45 @@ class SyncDiffService {
       defaultCurrency: importData.currency ?? 'CNY',
     );
     final tagMaps = await dataImportService.importTags(repo, importData.tags);
+
+    // 合并范围对齐指纹范围(sync_fingerprint 覆盖 8 类实体):此前只合并
+    // 账户/分类/标签,预算/周期规则/手动汇率/月起始日的云端差异永远不落
+    // 本地 → 本地指纹与云端永久不一致 → 每次启动都判 cloudNewer 反复弹
+    // 「云端有更新」,下载却因交易无 diff 而"导入 0 条"。以下复用全量恢复
+    // 路径(DataImportService.importData)的幂等 upsert,语义一致。
+    // 周期规则必须在交易之前导入:added 交易靠 recurringSyncIdToId 映射
+    // 回填 transactions.recurringId 外键。
+    final recurringSyncIdToId = await dataImportService.importRecurrings(
+      repo,
+      ledgerId,
+      importData.recurrings,
+      accountNameToId: accountNameToId,
+      categoryCache: categoryCache,
+    );
+    await dataImportService.importBudgets(
+      repo,
+      ledgerId,
+      importData.budgets,
+      categoryCache: categoryCache,
+    );
+    await dataImportService.importRateOverrides(
+      repo,
+      importData.rateOverrides,
+    );
+    if (importData.monthStartDay != null) {
+      // 月起始日以云端快照为准(v8 G5 同语义);失败不阻断交易合并
+      try {
+        await repo.updateLedger(
+          id: ledgerId,
+          monthStartDay: importData.monthStartDay!.clamp(1, 28),
+        );
+      } catch (_) {}
+    }
+
+    if (selectedChanges.isEmpty) {
+      // 交易无差异:仅完成上述元数据合并,交易计数全为 0
+      return const SyncApplyResult();
+    }
     final tagNameToId = tagMaps.byName;
     final tagSyncIdToId = tagMaps.bySyncId;
 
@@ -374,6 +415,7 @@ class SyncDiffService {
         categoryCache: categoryCache,
         tagNameToId: tagNameToId,
         tagSyncIdToId: tagSyncIdToId,
+        recurringSyncIdToId: recurringSyncIdToId,
       );
       addedCount = result.inserted;
     }
@@ -566,8 +608,9 @@ class SyncDiffService {
       Map<String, int>? tagSyncIdToId) {
     final result = <int>{};
     // 优先按 syncId 解析（跨设备 rename 稳定锚定）。v7 JSON 里 tagSyncIds
-    // 是权威锚点，name 只是可读参考 —— 不能叠加，否则两端 tag 集合不一致
-    // 时（本地同名不同 syncId 的独立标签）会多加标签。
+    // 是权威锚点，name 只是可读参考。仅当所有 syncId 都完整命中时才直接
+    // 返回；否则继续用 name 兜底，避免部分 miss 导致标签缺失并触发无限
+    // diff 循环。
     if (tagSyncIdToId != null &&
         tx.tagSyncIds != null &&
         tx.tagSyncIds!.isNotEmpty) {
@@ -575,8 +618,9 @@ class SyncDiffService {
         final id = tagSyncIdToId[syncId];
         if (id != null) result.add(id);
       }
-      // syncId 全部 miss（极端：本地无该 syncId 标签）→ 回退到 name
-      if (result.isNotEmpty) return result.toList();
+      if (result.isNotEmpty && result.length == tx.tagSyncIds!.length) {
+        return result.toList();
+      }
     }
     // fallback 到 name 解析（老 JSON 无 tagSyncIds / syncId 全部 miss）
     if (tx.tagNames != null) {

@@ -42,9 +42,11 @@ class LocalBudgetRepository implements BudgetRepository {
     required double amount,
     String period = 'monthly',
     int startDay = 1,
+    String? syncId,
   }) async {
     // 每条新建预算分配一个 UUID,跨设备 LWW 用。syncId 在 DB schema 上允许
-    // NULL,只是为了 v22 migration 对老数据兼容;新建走这里永远填。
+    // NULL,只是为了 v22 migration 对老数据兼容;新建走这里永远填
+    // (导入路径显式传快照里的 syncId,保持跨设备身份一致)。
     return await db.into(db.budgets).insert(
       BudgetsCompanion.insert(
         ledgerId: ledgerId,
@@ -53,7 +55,7 @@ class LocalBudgetRepository implements BudgetRepository {
         amount: amount,
         period: d.Value(period),
         startDay: d.Value(startDay),
-        syncId: d.Value(_uuid.v4()),
+        syncId: d.Value(syncId ?? _uuid.v4()),
       ),
     );
   }
@@ -64,12 +66,16 @@ class LocalBudgetRepository implements BudgetRepository {
     double? amount,
     int? startDay,
     bool? enabled,
+    String? syncId,
   }) async {
     await (db.update(db.budgets)..where((b) => b.id.equals(id))).write(
       BudgetsCompanion(
         amount: amount != null ? d.Value(amount) : const d.Value.absent(),
         startDay: startDay != null ? d.Value(startDay) : const d.Value.absent(),
         enabled: enabled != null ? d.Value(enabled) : const d.Value.absent(),
+        // 仅显式传入时回填（导入按业务键命中后补身份锚点），
+        // null → absent 避免清掉已有 syncId。
+        syncId: syncId != null ? d.Value(syncId) : const d.Value.absent(),
         updatedAt: d.Value(DateTime.now()),
       ),
     );

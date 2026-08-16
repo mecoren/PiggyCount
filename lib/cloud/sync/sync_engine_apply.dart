@@ -36,6 +36,9 @@ extension SyncEngineApplyExt on SyncEngine {
       case 'budget':
         await _applyBudgetChange(change);
         return true;
+      case 'recurring':
+        await _applyRecurringChange(change);
+        return true;
       case 'exchange_rate_override':
         await _applyExchangeRateOverrideChange(change);
         return true;
@@ -175,6 +178,25 @@ extension SyncEngineApplyExt on SyncEngine {
       if (shared != null) toAccountSyncIdOverride = shared.syncId;
     }
 
+    // cloud_recurring_sync:交易来源规则。payload 带 recurringSyncId →
+    // 反查本地规则 int id;未命中(规则 change 还没到,change 流无顺序保证)
+    // 暂存 pendingRecurringBindings,等 _applyRecurringChange 落地后回扫
+    // 补齐(延迟绑定)。key 缺失(旧客户端 payload)→ 不动本地值。
+    final recurringSyncId = payload['recurringSyncId'] as String?;
+    int? recurringId;
+    if (recurringSyncId != null && recurringSyncId.isNotEmpty) {
+      final rule = await (db.select(db.recurringTransactions)
+            ..where((r) => r.syncId.equals(recurringSyncId)))
+          .getSingleOrNull();
+      if (rule != null) {
+        recurringId = rule.id;
+      } else {
+        pendingRecurringBindings[syncId] = recurringSyncId;
+        logger.info('SyncEngine',
+            'pull: 交易 $syncId 的规则 $recurringSyncId 未就绪,暂存待延迟绑定');
+      }
+    }
+
     // 查 existing 优先走 LookupCache(prime 时已全表加载 transactions 的
     // syncId / id / createdByUserId),消除 10k 条 = 10k 次 SELECT 的 N+1。
     // miss(冷启动新设备 / 老数据)再走 DB。
@@ -263,6 +285,10 @@ extension SyncEngineApplyExt on SyncEngine {
             ? d.Value(payloadCurrency)
             : const d.Value.absent(), // 缺键保留本地币种
         nativeAmount: nativeValue,
+        // 规则已解析 → LWW 覆盖;未解析(延迟绑定中)或缺键 → 保留本地
+        recurringId: recurringId == null
+            ? const d.Value.absent()
+            : d.Value(recurringId),
       ));
       // 更新标签和附件(existing 路径)
       await _syncTransactionTags(existingId, syncId, payload);
@@ -293,6 +319,8 @@ extension SyncEngineApplyExt on SyncEngine {
               // 留 NULL(检测端 LEFT JOIN 账户币种兜底)。
               currencyCode: d.Value(payloadCurrency),
               nativeAmount: d.Value(hasNativeKey ? payloadNative : amount),
+              // 新插入行没有"原值"可保:延迟绑定中 → 先 null,规则落地后回扫补
+              recurringId: d.Value(recurringId),
             ),
           );
       // 写回 cache,后续同 syncId 的 update change 能命中
@@ -717,6 +745,163 @@ extension SyncEngineApplyExt on SyncEngine {
             syncId: d.Value(syncId),
           ));
       logger.debug('SyncEngine', 'pull: 新增预算 $syncId');
+    }
+  }
+
+  /// cloud_recurring_sync:周期交易规则 apply,形状对齐
+  /// [_applyBudgetChange](v22 验证过的最小路径)。
+  ///
+  /// - 外键(category/account/toAccount)payload 带 syncId,反查本地 int id;
+  ///   未命中置 null + warning(与交易缺分类的容错策略一致);
+  /// - lastGeneratedDate 是普通 LWW 字段,随规则行整体最后写入胜出(Cloud
+  ///   是 server 权威 LWW,与快照链路"取 max"是刻意差异);
+  /// - 落地后回扫 [SyncEngine.pendingRecurringBindings],给先到的交易补
+  ///   recurringId(延迟绑定);
+  /// - apply 直写 db 不走 repo → 不记 change,防 pull→push 回环(与
+  ///   _applyBudgetChange 同款约束)。
+  Future<void> _applyRecurringChange(PiggyCountCloudSyncChange change) async {
+    final syncId = change.entitySyncId;
+
+    if (change.action == 'delete') {
+      // 只删规则行,不级联删交易(防误删用户数据);仍引用它的交易
+      // recurringId 悬空,由孤儿清理器范畴兜底。
+      final existing = await (db.select(db.recurringTransactions)
+            ..where((r) => r.syncId.equals(syncId)))
+          .getSingleOrNull();
+      if (existing != null) {
+        await (db.delete(db.recurringTransactions)
+              ..where((r) => r.id.equals(existing.id)))
+            .go();
+        logger.debug('SyncEngine', 'pull: 删除周期规则 $syncId');
+      }
+      return;
+    }
+
+    final payload = change.payload!;
+    final type = payload['type'] as String? ?? 'expense';
+    final amount = (payload['amount'] as num?)?.toDouble() ?? 0.0;
+    final frequency = payload['frequency'] as String? ?? 'monthly';
+    final interval = (payload['interval'] as num?)?.toInt() ?? 1;
+    final startDate =
+        DateTime.tryParse(payload['startDate'] as String? ?? '')?.toLocal() ??
+            DateTime.now();
+    final endDate =
+        DateTime.tryParse(payload['endDate'] as String? ?? '')?.toLocal();
+    final lastGeneratedDate =
+        DateTime.tryParse(payload['lastGeneratedDate'] as String? ?? '')
+            ?.toLocal();
+    final enabled = payload['enabled'] as bool? ?? true;
+
+    // ledger:payload.ledgerSyncId 优先,fallback change.ledgerId(server 的
+    // external_id;再兜 int 字符串的老格式)。本地未就绪 → 跳过等下次。
+    final ledgerSyncId = (payload['ledgerSyncId'] as String?) ?? change.ledgerId;
+    final localLedgerId = await _resolveLedgerIdBySyncId(ledgerSyncId) ??
+        int.tryParse(change.ledgerId);
+    if (localLedgerId == null || localLedgerId <= 0) {
+      logger.info('SyncEngine',
+          'pull: 周期规则 $syncId 的 ledgerSyncId=$ledgerSyncId 本地未就绪,跳过');
+      return;
+    }
+
+    // 外键解析:未命中置 null + warning(规则行仍落地,引用缺失不阻断同步)
+    final categorySyncId = payload['categorySyncId'] as String?;
+    final localCategoryId = await _resolveCategoryIdBySyncId(categorySyncId);
+    if (categorySyncId != null &&
+        categorySyncId.isNotEmpty &&
+        localCategoryId == null) {
+      logger.warning('SyncEngine',
+          'pull: 周期规则 $syncId 的 categorySyncId=$categorySyncId 未命中,置 null');
+    }
+    final accountSyncId = payload['accountSyncId'] as String?;
+    final localAccountId = await _resolveAccountIdBySyncId(accountSyncId);
+    if (accountSyncId != null &&
+        accountSyncId.isNotEmpty &&
+        localAccountId == null) {
+      logger.warning('SyncEngine',
+          'pull: 周期规则 $syncId 的 accountSyncId=$accountSyncId 未命中,置 null');
+    }
+    final toAccountSyncId = payload['toAccountSyncId'] as String?;
+    final localToAccountId = await _resolveAccountIdBySyncId(toAccountSyncId);
+    if (toAccountSyncId != null &&
+        toAccountSyncId.isNotEmpty &&
+        localToAccountId == null) {
+      logger.warning(
+          'SyncEngine',
+          'pull: 周期规则 $syncId 的 toAccountSyncId=$toAccountSyncId 未命中,'
+          '置 null');
+    }
+
+    final existing = await (db.select(db.recurringTransactions)
+          ..where((r) => r.syncId.equals(syncId)))
+        .getSingleOrNull();
+
+    final int localId;
+    if (existing != null) {
+      localId = existing.id;
+      await (db.update(db.recurringTransactions)
+            ..where((r) => r.id.equals(localId)))
+          .write(RecurringTransactionsCompanion(
+        ledgerId: d.Value(localLedgerId),
+        type: d.Value(type),
+        amount: d.Value(amount),
+        categoryId: d.Value(localCategoryId),
+        accountId: d.Value(localAccountId),
+        toAccountId: d.Value(localToAccountId),
+        note: d.Value(payload['note'] as String?),
+        frequency: d.Value(frequency),
+        interval: d.Value(interval),
+        dayOfMonth: d.Value((payload['dayOfMonth'] as num?)?.toInt()),
+        dayOfWeek: d.Value((payload['dayOfWeek'] as num?)?.toInt()),
+        monthOfYear: d.Value((payload['monthOfYear'] as num?)?.toInt()),
+        startDate: d.Value(startDate),
+        endDate: d.Value(endDate),
+        enabled: d.Value(enabled),
+        lastGeneratedDate: d.Value(lastGeneratedDate),
+        updatedAt: d.Value(DateTime.now()),
+      ));
+      logger.debug('SyncEngine', 'pull: 更新周期规则 $syncId');
+    } else {
+      localId = await db.into(db.recurringTransactions).insert(
+            RecurringTransactionsCompanion.insert(
+              ledgerId: localLedgerId,
+              type: type,
+              amount: amount,
+              frequency: frequency,
+              startDate: startDate,
+              categoryId: d.Value(localCategoryId),
+              accountId: d.Value(localAccountId),
+              toAccountId: d.Value(localToAccountId),
+              note: d.Value(payload['note'] as String?),
+              interval: d.Value(interval),
+              dayOfMonth: d.Value((payload['dayOfMonth'] as num?)?.toInt()),
+              dayOfWeek: d.Value((payload['dayOfWeek'] as num?)?.toInt()),
+              monthOfYear: d.Value((payload['monthOfYear'] as num?)?.toInt()),
+              endDate: d.Value(endDate),
+              enabled: d.Value(enabled),
+              lastGeneratedDate: d.Value(lastGeneratedDate),
+              syncId: d.Value(syncId),
+            ),
+          );
+      logger.debug('SyncEngine', 'pull: 新增周期规则 $syncId');
+    }
+
+    // 延迟绑定回扫:transaction change 先到时暂存了 recurringSyncId,现在
+    // 规则已落地,按 value==syncId 捞出待补交易,补齐 recurringId int 外键。
+    if (pendingRecurringBindings.isNotEmpty) {
+      final pendingTxSyncIds = pendingRecurringBindings.entries
+          .where((e) => e.value == syncId)
+          .map((e) => e.key)
+          .toList();
+      for (final txSyncId in pendingTxSyncIds) {
+        pendingRecurringBindings.remove(txSyncId);
+        final updated = await (db.update(db.transactions)
+              ..where((t) => t.syncId.equals(txSyncId)))
+            .write(TransactionsCompanion(recurringId: d.Value(localId)));
+        if (updated > 0) {
+          logger.info('SyncEngine',
+              'pull: 延迟绑定交易 $txSyncId → 周期规则 $syncId(localId=$localId)');
+        }
+      }
     }
   }
 
