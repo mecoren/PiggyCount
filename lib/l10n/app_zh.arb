@@ -2064,7 +2064,7 @@
     }
   },
   "ledgersDownloadTitle": "下载账本",
-  "ledgersDownloadMessage": "确认下载账本\"{name}\"到本地？",
+  "ledgersDownloadMessage": "确认下载账本\"{name}\"到本地？本地同名账本的数据将被云端数据覆盖。",
   "@ledgersDownloadMessage": {
     "placeholders": {
       "name": {

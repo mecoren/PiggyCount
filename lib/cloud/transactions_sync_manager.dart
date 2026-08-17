@@ -1335,12 +1335,8 @@ class TransactionsSyncManager implements SyncService {
             }
           }
 
-          DateTime updatedAt;
-          try {
-            updatedAt = DateTime.parse(updatedAtStr ?? '');
-          } catch (_) {
-            updatedAt = DateTime.now();
-          }
+          // H1：损坏/缺失的时间串降级为当前时间，不中断远端账本列表发现
+          final updatedAt = DateTime.tryParse(updatedAtStr ?? '') ?? DateTime.now();
 
           result.add(LedgerDisplayItem.fromRemote(
             remoteSyncId: remoteId.toString(),
@@ -1511,13 +1507,21 @@ class TransactionsSyncManager implements SyncService {
         return null;
       }
 
-      // 导入数据（P2-3：从云端下载不应写入本地变更历史，避免污染
-      // 用户真实编辑轨迹并反向触发脏标记）
-      final result = await importTransactionsJson(repo, ledgerId, jsonStr,
-          recordChanges: false);
-
+      // H2：同名/既有账本的云端下载统一走「先清空再导入」的覆盖语义
+      // （restoreLedgerFromJson：含 P1-1 空快照守卫 + 事务原子 +
+      // recordChanges:false），与 downloadAndRestoreToCurrentLedger /
+      // 全量覆盖恢复对齐，消除旧实现「同名账本追加合并 → 交易翻倍」。
+      final restored = await restoreLedgerFromJson(
+          db: db, repo: repo, ledgerId: ledgerId, jsonStr: jsonStr);
+      if (restored == null) {
+        // P1-1 拒绝空覆盖：本地未接受云端状态，云端文件原样保留，
+        // 也不做下方的「上传新路径/删旧文件」换名操作。
+        logger.warning('CloudSync',
+            '云端快照为空且本地非空，拒绝覆盖，保留本地与云端现状: $remotePath');
+        return null;
+      }
       logger.info('CloudSync',
-          '下载完成: ledgerId=$ledgerId, inserted=${result.inserted}');
+          '下载完成(覆盖语义): ledgerId=$ledgerId, inserted=${restored.inserted}, 清空=${restored.deletedDup}');
 
       // 处理云端文件更新
       // Critical-07 修复：采用「先上传后删除」顺序，避免删除成功但上传
@@ -1978,8 +1982,12 @@ class _TransactionSerializer implements fcs.DataSerializer<int> {
 
   @override
   Future<int> deserialize(String data) async {
-    final json = jsonDecode(data) as Map<String, dynamic>;
-    return json['ledgerId'] as int;
+    final json = jsonDecode(data);
+    // H1：老 JSON 无 ledgerId 或类型异常时返回 0 而非 CastError，
+    // 由上层按「未知账本」分支处理
+    return json is Map && json['ledgerId'] is num
+        ? (json['ledgerId'] as num).toInt()
+        : 0;
   }
 
   @override

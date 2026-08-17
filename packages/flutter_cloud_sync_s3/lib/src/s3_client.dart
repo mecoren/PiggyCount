@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' show Random;
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:xml/xml.dart';
@@ -48,6 +49,9 @@ class S3Client {
 
   /// dispose 标志：避免释放后继续使用导致状态错误
   bool _disposed = false;
+
+  /// P5：重试延迟随机数发生器（jitter 用）。实例级，生命周期与 client 一致。
+  final Random _random = Random();
 
   S3Client({
     required this.endpoint,
@@ -99,20 +103,34 @@ class S3Client {
         // 网络瞬时故障（SocketException/Timeout）可安全重试
         attempt++;
         if (attempt >= maxRetries) rethrow;
-        // 指数退避：1s, 2s, 4s
-        final delay = Duration(seconds: 1 << (attempt - 1));
-        await Future.delayed(delay);
+        // P5：指数退避 + jitter（1s/2s/4s 的 50%~100% 区间）
+        await Future.delayed(retryDelayForTest(attempt));
       } on S3Exception catch (e) {
         // 5xx 状态码表示服务端临时错误，可重试
         if (e.statusCode != null && e.statusCode! >= 500 && e.statusCode! < 600) {
           attempt++;
           if (attempt >= maxRetries) rethrow;
-          await Future.delayed(Duration(seconds: 1 << (attempt - 1)));
+          await Future.delayed(retryDelayForTest(attempt));
         } else {
           rethrow;
         }
       }
     }
+  }
+
+  /// P5：指数退避 + jitter（base 的 50%~100%），防止多设备在瞬时故障
+  /// 后同一时刻集中重试形成 thundering herd（同步重试风暴）。
+  /// attempt 从 1 起：base = 2^(attempt-1) 秒，返回 [base/2, base] 区间。
+  ///
+  /// 注：putObject 维持不重试——非幂等 + A-1 覆盖竞态未修，重试旧快照
+  /// 会覆盖新数据，故此方法只供幂等 GET/HEAD/DELETE/LIST 用。
+  /// 方法名 ForTest 后缀为测试专用约定（不依赖 @visibleForTesting 注解，
+  /// 避免引入 foundation/meta 包级依赖）。
+  Duration retryDelayForTest(int attempt, [Random? rng]) {
+    final random = rng ?? _random;
+    final baseMs = (1 << (attempt - 1)) * 1000;
+    return Duration(
+        milliseconds: baseMs ~/ 2 + random.nextInt(baseMs ~/ 2 + 1));
   }
 
   /// PUT Object - 上传文件

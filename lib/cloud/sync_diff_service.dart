@@ -95,6 +95,16 @@ class SyncDiffService {
     final local = localTransactions ??
         await repo.getTransactionsByLedger(ledgerId);
 
+    // M1 空快照守卫：云端 items 为空（缺失/损坏/被清空）无法区分
+    // 「云端合法清空」与「快照异常」，一律拒绝 diff（返回 null）。
+    // 调用方降级走全量替换确认路径，该路径另有 restoreLedgerFromJson
+    // 的空快照守卫，两层守卫共同防止「全部本地交易被误标 deleted 一键应用」。
+    if (cloudTransactions.isEmpty && local.isNotEmpty) {
+      logger.warning('SyncDiff',
+          '云端交易列表为空但本地有 ${local.length} 条，拒绝计算 diff（防误删）');
+      return null;
+    }
+
     // 批量获取本地交易的标签
     final localTxIds = local.map((t) => t.id).toList();
     final tagsMap = localTxIds.isNotEmpty
@@ -319,6 +329,33 @@ class SyncDiffService {
     required List<SyncChange> selectedChanges,
     required ImportData importData,
   }) async {
+    // M3：云→本地合并全程抑制 change 记录。合并内部会路过大量带
+    // changeTracker 的 repo 写方法（账户/分类/标签/预算 upsert、交易批量
+    // 插入/更新/删除），任何一处回流 local_changes 都会把云端数据反向
+    // 登记「本地编辑」→ Cloud 引擎推送幻影变更 / 触发重复上传。
+    final tracker = repo.changeTracker;
+    if (tracker == null) {
+      return _applySyncChangesInternal(
+        repo: repo,
+        ledgerId: ledgerId,
+        selectedChanges: selectedChanges,
+        importData: importData,
+      );
+    }
+    return tracker.withRecordingSuppressed(() => _applySyncChangesInternal(
+          repo: repo,
+          ledgerId: ledgerId,
+          selectedChanges: selectedChanges,
+          importData: importData,
+        ));
+  }
+
+  Future<SyncApplyResult> _applySyncChangesInternal({
+    required BaseRepository repo,
+    required int ledgerId,
+    required List<SyncChange> selectedChanges,
+    required ImportData importData,
+  }) async {
     // 分类/账户/标签:复用 DataImportService(同一份 batch 优化只在一处维护)。
     // 元数据合并不依赖交易 diff —— 必须在空变更早退之前执行:云端仅有
     // 账户/分类/标签变更时 computeDiff 返回空 preview,若此处先早退,
@@ -416,6 +453,7 @@ class SyncDiffService {
         tagNameToId: tagNameToId,
         tagSyncIdToId: tagSyncIdToId,
         recurringSyncIdToId: recurringSyncIdToId,
+        recordChanges: false, // M3：云→本地路径不回流 local_changes
       );
       addedCount = result.inserted;
     }
@@ -492,7 +530,8 @@ class SyncDiffService {
       // 主表更新（原子操作：单条 BEGIN/COMMIT）
       Map<String, int> syncIdToTxId;
       try {
-        syncIdToTxId = await repo.updateTransactionsBatchBySyncId(updates);
+        syncIdToTxId = await repo.updateTransactionsBatchBySyncId(updates,
+            recordChanges: false); // M3
         modifiedCount = syncIdToTxId.length;
       } catch (e, st) {
         // 主表更新失败：不尝试 tag 更新（数据已回滚），记录错误并跳过
@@ -543,7 +582,8 @@ class SyncDiffService {
       if (withSyncIds.isNotEmpty) {
         try {
           final n =
-              await repo.deleteTransactionsBatchBySyncIds(withSyncIds);
+              await repo.deleteTransactionsBatchBySyncIds(withSyncIds,
+                  recordChanges: false); // M3
           deletedCount += n;
           logger.info('SyncDiff',
               '批量删除: syncId 路径 size=${withSyncIds.length} 实删=$n');

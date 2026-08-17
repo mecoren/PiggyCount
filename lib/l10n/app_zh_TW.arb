@@ -1522,7 +1522,7 @@
   "ledgersDeleted": "已刪除",
   "ledgersDeleting": "刪除中...",
   "ledgersDownload": "下載",
-  "ledgersDownloadMessage": "確認下載帳本「{name}」到本地？",
+  "ledgersDownloadMessage": "確認下載帳本「{name}」到本地？本地同名帳本的資料將被雲端資料覆蓋。",
   "ledgersDownloadSuccess": "帳本「{name}」下載成功",
   "ledgersDownloadTitle": "下載帳本",
   "ledgersDownloading": "下載中...",

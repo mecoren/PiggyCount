@@ -97,6 +97,27 @@ class ChangeTracker {
     );
   }
 
+  /// M3：云→本地合并（Path A）期间的全局抑制开关。
+  /// 置 true 时所有 record*Change 静默跳过 —— 云端拉下来的数据若反向
+  /// 登记为「本地编辑」，会污染推送队列：Cloud 引擎把幻影变更推回
+  /// 服务端 / 触发无意义的重复上传。
+  bool _suppressRecording = false;
+
+  /// 在抑制 change 记录的上下文中执行 [action]。
+  ///
+  /// 供 applySyncChanges / restoreLedgerFromJson 等云→本地合并路径包裹
+  /// 全程：无论内部调到哪个 repo 写方法（账户/分类/标签/交易 upsert），
+  /// 都不会回流 local_changes。支持嵌套（内层恢复外层状态）。
+  Future<T> withRecordingSuppressed<T>(Future<T> Function() action) async {
+    final previous = _suppressRecording;
+    _suppressRecording = true;
+    try {
+      return await action();
+    } finally {
+      _suppressRecording = previous;
+    }
+  }
+
   /// 低层 insert,不对外暴露。路径统一:所有 record*Change 走这条,行为
   /// (日志 / insert 语义)一处维护。
   Future<void> _insert({
@@ -107,6 +128,9 @@ class ChangeTracker {
     required String action,
     String? payloadJson,
   }) async {
+    // M3：云→本地合并路径抑制期间直接丢弃 —— 这些写入来自云端快照，
+    // 不是用户编辑，回流推送队列只会产生幻影变更。
+    if (_suppressRecording) return;
     await db.into(db.localChanges).insert(LocalChangesCompanion.insert(
       entityType: entityType,
       entityId: entityId,

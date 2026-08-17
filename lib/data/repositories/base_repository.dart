@@ -1,3 +1,4 @@
+import '../../cloud/sync/change_tracker.dart';
 import 'ledger_repository.dart';
 import 'transaction_repository.dart';
 import 'category_repository.dart';
@@ -31,6 +32,11 @@ abstract class BaseRepository
         BudgetRepository,
         AttachmentRepository,
         ExchangeRateRepository {
+  /// 变更追踪器（云同步）。默认 null；LocalRepository 以公开字段覆写。
+  /// M3：云→本地合并路径（applySyncChanges）经此拿 tracker 包裹
+  /// withRecordingSuppressed，防止合并写入回流 local_changes。
+  ChangeTracker? get changeTracker => null;
+
   // -------------------------------------------------------------------
   // v30 交易级多币种(.docs/multi-currency-ledger):重算 / 检测。
   // 声明在聚合层而非 TransactionRepository:这些方法要同时访问交易表与

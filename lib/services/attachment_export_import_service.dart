@@ -191,7 +191,8 @@ class AttachmentExportImportService {
   }) {
     final metadata = <String, dynamic>{
       'version': 3, // 升级版本号以支持自定义图标
-      'exportedAt': DateTime.now().toIso8601String(),
+      // M4：exportedAt 用 UTC（带 Z 后缀），跨时区设备导入时解析一致。
+      'exportedAt': DateTime.now().toUtc().toIso8601String(),
       'count': attachments.length,
       'attachments': attachments.map((a) => {
         'id': a.id,

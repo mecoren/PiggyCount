@@ -14,6 +14,20 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
 
   WebDAVStorageService(this._client, this._remotePath);
 
+  /// P3：WebDAV 单次操作 60s 超时。webdav_client 未暴露 dio 超时配置，
+  /// 服务器无响应时 future 永不完成会让同步 UI 永久挂起，
+  /// 在服务层统一包 .timeout 兜底。
+  static const _opTimeout = Duration(seconds: 60);
+
+  /// 包裹单次 WebDAV 操作，超时抛 [CloudStorageException]（带操作名），
+  /// 与其他网络错误走同一异常通道，调用方无需新增捕获分支。
+  Future<T> _op<T>(String opName, Future<T> Function() op) {
+    return op().timeout(_opTimeout, onTimeout: () {
+      throw CloudStorageException(
+          'WebDAV $opName 超时（${_opTimeout.inSeconds}s），请检查网络或服务器');
+    });
+  }
+
   @override
   Future<void> upload({
     required String path,
@@ -42,21 +56,21 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
 
       // 1. 先写临时文件（webdav write 需要 Uint8List，避免多余拷贝）
       final data = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
-      await _client.write(tempPath, data);
+      await _op('write', () => _client.write(tempPath, data));
 
       // 2. 尝试删除旧文件（忽略失败：旧文件可能不存在，或服务器 rename 自带覆盖）
       try {
-        await _client.remove(fullPath);
+        await _op('remove', () => _client.remove(fullPath));
       } catch (_) {
         // 旧文件不存在或删除失败均可忽略，交由 rename 处理
       }
 
       // 3. rename 完成原子上传；overwrite=true 兼容目标仍存在的边缘场景
-      await _client.rename(tempPath, fullPath, true);
+      await _op('rename', () => _client.rename(tempPath, fullPath, true));
     } catch (e) {
       // 清理临时文件，避免远端残留半成品
       try {
-        await _client.remove(tempPath);
+        await _op('remove', () => _client.remove(tempPath));
       } catch (cleanupError) {
         // 临时文件清理失败记录日志，便于排查远端残留半成品
         dev.log('[WebDAV] Warning: temp file cleanup failed for $tempPath: $cleanupError', name: 'WebDAVStorage');
@@ -104,7 +118,7 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
       final fullPath = _buildPath(path);
 
       // Download file
-      final bytes = await _client.read(fullPath);
+      final bytes = await _op('read', () => _client.read(fullPath));
 
       return Uint8List.fromList(bytes);
     } catch (e) {
@@ -124,7 +138,7 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
 
     // C-02 修复：删除操作应幂等，404（文件不存在）视为成功
     try {
-      await _client.remove(fullPath);
+      await _op('remove', () => _client.remove(fullPath));
     } catch (e) {
       if (_isNotFound(e)) {
         // 文件已不存在，删除幂等成功
@@ -144,7 +158,7 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
       final fullPath = _buildPath(path);
 
       // List files
-      final files = await _client.readDir(fullPath);
+      final files = await _op('readDir', () => _client.readDir(fullPath));
 
       // Convert to CloudFile objects, excluding directories and metadata files
       return files
@@ -181,7 +195,8 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
     final fileName = PathHelper.basename(fullPath);
 
     try {
-      final files = await _client.readDir(parentDir);
+      final files =
+          await _op('readDir', () => _client.readDir(parentDir));
       return files.any((f) => f.name == fileName);
     } catch (e) {
       // 仅在目录不存在（404）时返回 false；其他错误（网络中断、
@@ -208,7 +223,8 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
       final parentDir = PathHelper.dirname(fullPath);
       final fileName = PathHelper.basename(fullPath);
 
-      final files = await _client.readDir(parentDir);
+      final files =
+          await _op('readDir', () => _client.readDir(parentDir));
       final file = files.firstWhere(
         (f) => f.name == fileName,
         orElse: () => throw CloudStorageException('File not found: $path'),
@@ -297,7 +313,7 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
   /// 避免掩盖真实问题导致误导性的 mkdir 调用。
   Future<void> _ensureDirectory(String dirPath) async {
     try {
-      await _client.readDir(dirPath);
+      await _op('readDir', () => _client.readDir(dirPath));
       // readDir 成功，目录已存在
       return;
     } catch (e) {
@@ -323,12 +339,12 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
     for (final part in parts) {
       currentPath = currentPath.isEmpty ? part : '$currentPath/$part';
       try {
-        await _client.readDir(currentPath);
+        await _op('readDir', () => _client.readDir(currentPath));
         // 目录已存在，继续下一级
       } catch (e) {
         // 目录可能不存在，尝试创建
         try {
-          await _client.mkdir(currentPath);
+          await _op('mkdir', () => _client.mkdir(currentPath));
         } catch (createError) {
           // mkdir 失败可能是并发创建（405/409），再验证一次
           final msg = createError.toString().toLowerCase();
@@ -337,7 +353,7 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
               msg.contains('already exists') ||
               msg.contains('conflict')) {
             try {
-              await _client.readDir(currentPath);
+              await _op('readDir', () => _client.readDir(currentPath));
               // 验证成功，目录确实存在（由其他进程创建）
             } catch (_) {
               // 验证也失败，说明是真实错误，重新抛出
@@ -365,7 +381,7 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
         'updatedAt': DateTime.now().toIso8601String(),
       });
       final bytes = utf8.encode(metadataJson);
-      await _client.write(metadataPath, bytes);
+      await _op('write', () => _client.write(metadataPath, bytes));
     } catch (e) {
       // 元数据是辅助功能（主数据已上传成功），失败不阻塞主流程，
       // 但记录 warning 便于排查，避免完全静默
@@ -377,7 +393,8 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
   Future<Map<String, dynamic>> _getMetadata(String filePath) async {
     try {
       final metadataPath = '$filePath.metadata.json';
-      final bytes = await _client.read(metadataPath);
+      final bytes =
+          await _op('read', () => _client.read(metadataPath));
       final json = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
       return json['metadata'] as Map<String, dynamic>? ?? {};
     } catch (e) {
@@ -390,7 +407,7 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
   Future<void> _deleteMetadata(String filePath) async {
     try {
       final metadataPath = '$filePath.metadata.json';
-      await _client.remove(metadataPath);
+      await _op('remove', () => _client.remove(metadataPath));
     } catch (e) {
       // 元数据是辅助数据，删除失败（如文件本就不存在）不阻塞主流程，
       // 但记录 warning 便于排查，与 _storeMetadata 的日志策略保持一致

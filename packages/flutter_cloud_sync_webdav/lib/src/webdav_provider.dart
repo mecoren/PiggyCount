@@ -88,12 +88,19 @@ class WebDAVProvider implements CloudProvider {
 
       // Verify connection by reading the remote path
       try {
-        await _client!.readDir(remotePath);
+        // P3：60s 超时防服务器无响应导致初始化永久挂起
+        await _client!.readDir(remotePath).timeout(
+            const Duration(seconds: 60),
+            onTimeout: () => throw CloudStorageException(
+                'WebDAV 连接超时（60s），请检查网络或服务器'));
       } catch (e) {
         // 仅在 404（远端路径不存在）时触发创建；其他错误（网络中断、
         // 403 权限不足等）直接抛出，避免掩盖真实问题导致误导性的 mkdir。
         if (_isNotFound(e)) {
-          await _client!.mkdir(remotePath);
+          await _client!.mkdir(remotePath).timeout(
+              const Duration(seconds: 60),
+              onTimeout: () => throw CloudStorageException(
+                  'WebDAV 创建目录超时（60s），请检查网络或服务器'));
         } else if (_isUnauthorized(e)) {
           // 401/403 凭据错误：抛专属认证异常，上层（如 ensureInitialized
           // 调用方）据此引导用户重新配置，而非误报网络/配置格式问题

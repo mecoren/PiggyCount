@@ -83,6 +83,66 @@ void main() {
     });
   });
 
+  group('H2: downloadRemoteLedger 同名账本真覆盖语义', () {
+    test('本地同名账本下载恢复后以云端为准，不追加翻倍', () async {
+      // Arrange: 真实 LocalRepository + 本地同名账本（2 笔本地交易）
+      final repo = LocalRepository(db);
+      await db.into(db.ledgers).insert(LedgersCompanion.insert(
+            id: const d.Value(1),
+            name: 'L',
+            currency: const d.Value('CNY'),
+          ));
+      for (var i = 1; i <= 2; i++) {
+        await db.into(db.transactions).insert(
+              TransactionsCompanion.insert(
+                ledgerId: 1,
+                type: 'expense',
+                amount: i * 10.0,
+                happenedAt: d.Value(DateTime(2026, 7, i)),
+                syncId: d.Value('local-$i'),
+              ),
+            );
+      }
+
+      // 云端快照只有 1 笔（syncId 与本地均不同）
+      final cloudJson = _ledgerJsonWithOneTx(
+        ledgerId: 1,
+        syncId: 'cloud-1',
+        amount: 200.0,
+      );
+      final fakeStorage = _FakeStorage(returnJson: cloudJson);
+      final fakeProvider = _FakeCloudProvider(storage: fakeStorage);
+
+      final manager = TransactionsSyncManager(
+        config: const fcs.CloudServiceConfig(
+          type: fcs.CloudBackendType.supabase,
+          name: 'test',
+        ),
+        db: db,
+        repo: repo,
+      );
+      manager.setSyncManagerForTesting(
+        syncManager: fcs.CloudSyncManager<int>(
+          provider: fakeProvider,
+          serializer: _NoopSerializer(),
+        ),
+        provider: fakeProvider,
+      );
+
+      // Act: 下载同名账本（remoteId=1 与本地一致，避免触发换名上传分支）
+      final ledgerId = await manager.downloadRemoteLedger(
+          name: 'L', currency: 'CNY', remotePath: 'ledger_1.json');
+
+      // Assert: 覆盖语义 —— 本地 2 笔被云端 1 笔替换，而非追加成 3 笔
+      expect(ledgerId, 1);
+      final txs = await db.select(db.transactions).get();
+      expect(txs.length, 1,
+          reason: 'H2：同名账本「下载恢复」应为覆盖语义（清空再导入），'
+              '旧实现的追加合并会让交易翻倍');
+      expect(txs.first.amount, 200.0);
+    });
+  });
+
   group('US-1: downloadAndRestoreToCurrentLedger 恢复前清空账本', () {
     test('本地已有交易时，恢复云端同 syncId 交易不应产生重复行', () async {
       // Arrange: 用真实 LocalRepository 让 importTransactionsJson 走真实写入路径

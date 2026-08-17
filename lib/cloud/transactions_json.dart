@@ -106,17 +106,14 @@ Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
 
   // Map categoryId -> name/kind for used categories（仅服务 items 构建；
   // 分类数组本身 v8 起全量导出，不再依赖此集合）
-  final usedCatIds = txs.map((t) => t.categoryId).whereType<int>().toSet();
-  final cats = <int, Map<String, dynamic>>{};
-
-  for (final cid in usedCatIds) {
-    final c = await (db.select(db.categories)..where((c) => c.id.equals(cid)))
-        .getSingleOrNull();
-    if (c != null) {
-      final sanitizedName = _sanitizeString(c.name);
-      cats[cid] = {"name": sanitizedName, "kind": c.kind};
-    }
-  }
+  // M2：一次全量查询建 categoryId → {name, kind} 映射，替代旧实现的
+  // 逐 categoryId 单查（N+1）；allCategoriesList 同时供下方 categories
+  // 数组全量导出复用，不再二次查询。
+  final allCategoriesList = await db.select(db.categories).get();
+  final cats = <int, Map<String, dynamic>>{
+    for (final c in allCategoriesList)
+      c.id: {"name": _sanitizeString(c.name), "kind": c.kind},
+  };
 
   // 账户是 user-global 实体(ledger_id=0,与账本解耦),这里导出**全量**账户
   // 而非仅被交易引用的账户 —— 否则未被交易引用的账户(新建空账户、删完交易
@@ -268,7 +265,7 @@ Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
   // 构建 categories 数组（v8 G3：全量导出，与账户 G1 同理 —— 未被交易
   // 引用的自定义分类也要上云，否则另一台设备分类管理里缺失）。
   final categoryItems = <Map<String, dynamic>>[];
-  final allCategoriesList = await db.select(db.categories).get();
+  // M2：allCategoriesList 已在上方一次查询，此处直接复用（原二次查询删除）
   // id → 名称映射：budgets/recurring 数组的分类引用要用
   final categoryIdToName = <int, String>{};
   for (final c in allCategoriesList) {
@@ -447,98 +444,171 @@ Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
 
 // --- 导入 ---
 
+// ===== H1 安全读取助手：字段类型不符返回 null，由调用方决定跳过 =====
+// 为什么不用硬 cast：远端/损坏 JSON 任一字段类型不符即抛 CastError，
+// 会让整账本导入中断；改为「必填字段校验失败 → 跳过该条目并计数」，
+// 保证单条脏数据不拖垮整个快照恢复。
+String? _readString(Map<String, dynamic> m, String key) =>
+    m[key] is String ? m[key] as String : null;
+
+int? _readInt(Map<String, dynamic> m, String key) =>
+    m[key] is int ? m[key] as int : (m[key] is num ? (m[key] as num).toInt() : null);
+
+double? _readDouble(Map<String, dynamic> m, String key) =>
+    m[key] is num ? (m[key] as num).toDouble() : null;
+
+bool? _readBool(Map<String, dynamic> m, String key) =>
+    m[key] is bool ? m[key] as bool : null;
+
+DateTime? _readDate(Map<String, dynamic> m, String key) =>
+    m[key] is String ? DateTime.tryParse(m[key] as String) : null;
+
+void _skip(Map<String, int> skipped, String section) =>
+    skipped[section] = (skipped[section] ?? 0) + 1;
+
+const _kValidTxTypes = {'expense', 'income', 'transfer'};
+
 /// 将 JSON 数据转换为统一的 ImportData 格式
 ImportData parseJsonToImportData(String jsonStr) {
-  final data = jsonDecode(jsonStr) as Map<String, dynamic>;
+  final decoded = jsonDecode(jsonStr);
+  // H1：顶层不是 JSON 对象（如数组/字符串）属于快照整体损坏，
+  // 无法逐条降级，抛可读异常由上层走「拒绝恢复」分支。
+  if (decoded is! Map) {
+    throw const FormatException('快照格式损坏：顶层不是 JSON 对象');
+  }
+  final data = decoded.cast<String, dynamic>();
+  final skipped = <String, int>{};
 
-  // 解析账户
+  // 解析账户（H1：name 必填，损坏条目跳过并计数）
   final accounts = <ImportAccount>[];
   final jsonAccounts = data['accounts'] as List?;
   if (jsonAccounts != null) {
-    for (final acc in jsonAccounts.cast<Map<String, dynamic>>()) {
+    for (final acc in jsonAccounts) {
+      if (acc is! Map) {
+        _skip(skipped, 'accounts');
+        continue;
+      }
+      final m = acc.cast<String, dynamic>();
+      final name = _readString(m, 'name');
+      if (name == null) {
+        _skip(skipped, 'accounts');
+        continue;
+      }
       accounts.add(ImportAccount(
-        name: acc['name'] as String,
-        type: acc['type'] as String?,
-        currency: acc['currency'] as String?,
-        initialBalance: (acc['initialBalance'] as num?)?.toDouble(),
-        sortOrder: acc['sortOrder'] as int?,
-        creditLimit: (acc['creditLimit'] as num?)?.toDouble(),
-        billingDay: acc['billingDay'] as int?,
-        paymentDueDay: acc['paymentDueDay'] as int?,
-        bankName: acc['bankName'] as String?,
-        cardLastFour: acc['cardLastFour'] as String?,
-        note: acc['note'] as String?,
-        hidden: acc['hidden'] as bool?,
-        syncId: acc['syncId'] as String?,
+        name: name,
+        type: _readString(m, 'type'),
+        currency: _readString(m, 'currency'),
+        initialBalance: _readDouble(m, 'initialBalance'),
+        sortOrder: _readInt(m, 'sortOrder'),
+        creditLimit: _readDouble(m, 'creditLimit'),
+        billingDay: _readInt(m, 'billingDay'),
+        paymentDueDay: _readInt(m, 'paymentDueDay'),
+        bankName: _readString(m, 'bankName'),
+        cardLastFour: _readString(m, 'cardLastFour'),
+        note: _readString(m, 'note'),
+        hidden: _readBool(m, 'hidden'),
+        syncId: _readString(m, 'syncId'),
       ));
     }
   }
 
-  // 解析分类
+  // 解析分类（H1：name/kind 必填）
   final categories = <ImportCategory>[];
   final jsonCategories = data['categories'] as List?;
   if (jsonCategories != null) {
-    for (final cat in jsonCategories.cast<Map<String, dynamic>>()) {
+    for (final cat in jsonCategories) {
+      if (cat is! Map) {
+        _skip(skipped, 'categories');
+        continue;
+      }
+      final m = cat.cast<String, dynamic>();
+      final name = _readString(m, 'name');
+      final kind = _readString(m, 'kind');
+      if (name == null || kind == null) {
+        _skip(skipped, 'categories');
+        continue;
+      }
       categories.add(ImportCategory(
-        name: cat['name'] as String,
-        kind: cat['kind'] as String,
-        level: cat['level'] as int? ?? 1,
-        sortOrder: cat['sortOrder'] as int? ?? 0,
-        icon: cat['icon'] as String?,
-        parentName: cat['parentName'] as String?,
-        iconType: cat['iconType'] as String?,
-        customIconPath: cat['customIconPath'] as String?,
-        communityIconId: cat['communityIconId'] as String?,
-        syncId: cat['syncId'] as String?,
+        name: name,
+        kind: kind,
+        level: _readInt(m, 'level') ?? 1,
+        sortOrder: _readInt(m, 'sortOrder') ?? 0,
+        icon: _readString(m, 'icon'),
+        parentName: _readString(m, 'parentName'),
+        iconType: _readString(m, 'iconType'),
+        customIconPath: _readString(m, 'customIconPath'),
+        communityIconId: _readString(m, 'communityIconId'),
+        syncId: _readString(m, 'syncId'),
       ));
     }
   }
 
   // 解析预算（v8 G1；旧快照无此数组 → 空列表，导入跳过不删本地）
+  // H1：保留原有默认值逻辑，仅当字段「存在但类型错误」时跳过该条。
   final budgets = <ImportBudget>[];
   final jsonBudgets = data['budgets'] as List?;
   if (jsonBudgets != null) {
-    for (final b in jsonBudgets.cast<Map<String, dynamic>>()) {
-      budgets.add(ImportBudget(
-        syncId: b['syncId'] as String?,
-        type: b['type'] as String? ?? 'total',
-        categoryName: b['categoryName'] as String?,
-        amount: (b['amount'] as num?)?.toDouble() ?? 0,
-        period: b['period'] as String? ?? 'monthly',
-        startDay: b['startDay'] as int? ?? 1,
-        enabled: b['enabled'] as bool? ?? true,
-      ));
+    for (final b in jsonBudgets) {
+      if (b is! Map) {
+        _skip(skipped, 'budgets');
+        continue;
+      }
+      try {
+        final m = b.cast<String, dynamic>();
+        budgets.add(ImportBudget(
+          syncId: m['syncId'] as String?,
+          type: m['type'] as String? ?? 'total',
+          categoryName: m['categoryName'] as String?,
+          amount: (m['amount'] as num?)?.toDouble() ?? 0,
+          period: m['period'] as String? ?? 'monthly',
+          startDay: m['startDay'] as int? ?? 1,
+          enabled: m['enabled'] as bool? ?? true,
+        ));
+      } catch (_) {
+        _skip(skipped, 'budgets');
+      }
     }
   }
 
   // 解析周期规则（v8 G2；旧快照无此数组 → 空列表）
+  // H1：type/amount/frequency/startDate 为必填，缺失或类型不符跳过。
   final recurrings = <ImportRecurring>[];
   final jsonRecurrings = data['recurring'] as List?;
   if (jsonRecurrings != null) {
-    for (final r in jsonRecurrings.cast<Map<String, dynamic>>()) {
+    for (final r in jsonRecurrings) {
+      if (r is! Map) {
+        _skip(skipped, 'recurring');
+        continue;
+      }
+      final m = r.cast<String, dynamic>();
+      final type = _readString(m, 'type');
+      final amount = _readDouble(m, 'amount');
+      final frequency = _readString(m, 'frequency');
+      final startDate = _readDate(m, 'startDate');
+      if (type == null || amount == null || frequency == null ||
+          startDate == null) {
+        _skip(skipped, 'recurring');
+        continue;
+      }
       recurrings.add(ImportRecurring(
-        syncId: r['syncId'] as String?,
-        type: r['type'] as String,
-        amount: (r['amount'] as num).toDouble(),
-        categoryName: r['categoryName'] as String?,
-        accountName: r['accountName'] as String?,
-        accountSyncId: r['accountSyncId'] as String?,
-        toAccountName: r['toAccountName'] as String?,
-        toAccountSyncId: r['toAccountSyncId'] as String?,
-        note: r['note'] as String?,
-        frequency: r['frequency'] as String,
-        interval: r['interval'] as int? ?? 1,
-        dayOfMonth: r['dayOfMonth'] as int?,
-        dayOfWeek: r['dayOfWeek'] as int?,
-        monthOfYear: r['monthOfYear'] as int?,
-        startDate: DateTime.parse(r['startDate'] as String),
-        endDate: r['endDate'] != null
-            ? DateTime.parse(r['endDate'] as String)
-            : null,
-        lastGeneratedDate: r['lastGeneratedDate'] != null
-            ? DateTime.parse(r['lastGeneratedDate'] as String)
-            : null,
-        enabled: r['enabled'] as bool? ?? true,
+        syncId: _readString(m, 'syncId'),
+        type: type,
+        amount: amount,
+        categoryName: _readString(m, 'categoryName'),
+        accountName: _readString(m, 'accountName'),
+        accountSyncId: _readString(m, 'accountSyncId'),
+        toAccountName: _readString(m, 'toAccountName'),
+        toAccountSyncId: _readString(m, 'toAccountSyncId'),
+        note: _readString(m, 'note'),
+        frequency: frequency,
+        interval: _readInt(m, 'interval') ?? 1,
+        dayOfMonth: _readInt(m, 'dayOfMonth'),
+        dayOfWeek: _readInt(m, 'dayOfWeek'),
+        monthOfYear: _readInt(m, 'monthOfYear'),
+        startDate: startDate,
+        endDate: _readDate(m, 'endDate'),
+        lastGeneratedDate: _readDate(m, 'lastGeneratedDate'),
+        enabled: _readBool(m, 'enabled') ?? true,
       ));
     }
   }
@@ -547,16 +617,24 @@ ImportData parseJsonToImportData(String jsonStr) {
   final rateOverrides = <ImportRateOverride>[];
   final jsonRateOverrides = data['exchangeRateOverrides'] as List?;
   if (jsonRateOverrides != null) {
-    for (final o in jsonRateOverrides.cast<Map<String, dynamic>>()) {
-      final base = o['baseCurrency'] as String?;
-      final quote = o['quoteCurrency'] as String?;
+    for (final o in jsonRateOverrides) {
+      if (o is! Map) {
+        _skip(skipped, 'rateOverrides');
+        continue;
+      }
+      final m = o.cast<String, dynamic>();
+      final base = _readString(m, 'baseCurrency');
+      final quote = _readString(m, 'quoteCurrency');
       // exchangeRateOverrides.rate 是 TEXT 列，JSON 中以字符串形式序列化，
       // 需兼容 String 与 num 两种形态。
-      final rate = (o['rate'] is num
-              ? o['rate'] as num
-              : num.tryParse(o['rate']?.toString() ?? ''))
+      final rate = (m['rate'] is num
+              ? m['rate'] as num
+              : num.tryParse(m['rate']?.toString() ?? ''))
           ?.toDouble();
-      if (base == null || quote == null || rate == null || rate <= 0) continue;
+      if (base == null || quote == null || rate == null || rate <= 0) {
+        _skip(skipped, 'rateOverrides');
+        continue;
+      }
       rateOverrides.add(ImportRateOverride(
         baseCurrency: base,
         quoteCurrency: quote,
@@ -565,84 +643,120 @@ ImportData parseJsonToImportData(String jsonStr) {
     }
   }
 
-  // 解析标签
+  // 解析标签（H1：name 必填）
   final tags = <ImportTag>[];
   final jsonTags = data['tags'] as List?;
   if (jsonTags != null) {
-    for (final tag in jsonTags.cast<Map<String, dynamic>>()) {
+    for (final tag in jsonTags) {
+      if (tag is! Map) {
+        _skip(skipped, 'tags');
+        continue;
+      }
+      final m = tag.cast<String, dynamic>();
+      final name = _readString(m, 'name');
+      if (name == null) {
+        _skip(skipped, 'tags');
+        continue;
+      }
       tags.add(ImportTag(
-        name: tag['name'] as String,
-        color: tag['color']?.toString(),
-        syncId: tag['syncId'] as String?,
-        sortOrder: tag['sortOrder'] as int?,
+        name: name,
+        color: m['color']?.toString(),
+        syncId: _readString(m, 'syncId'),
+        sortOrder: _readInt(m, 'sortOrder'),
       ));
     }
   }
 
-  // 解析交易
+  // 解析交易（H1：type 白名单/amount/happenedAt 必填；
+  // 附件子条目缺 fileName 跳过该附件）
   final transactions = <ImportTransaction>[];
   final jsonItems = data['items'] as List?;
   if (jsonItems != null) {
-    for (final it in jsonItems.cast<Map<String, dynamic>>()) {
+    for (final it in jsonItems) {
+      if (it is! Map) {
+        _skip(skipped, 'transactions');
+        continue;
+      }
+      final m = it.cast<String, dynamic>();
+      final type = _readString(m, 'type');
+      final amount = _readDouble(m, 'amount');
+      final happenedAt = _readDate(m, 'happenedAt');
+      if (type == null || !_kValidTxTypes.contains(type) ||
+          amount == null || happenedAt == null) {
+        _skip(skipped, 'transactions');
+        continue;
+      }
+
       // 解析标签名称列表
       List<String>? tagNames;
-      final tagsStr = it['tags'] as String?;
+      final tagsStr = _readString(m, 'tags');
       if (tagsStr != null && tagsStr.trim().isNotEmpty) {
         tagNames = tagsStr.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
       }
 
-      // 解析附件元数据
+      // 解析附件元数据（H1：损坏附件跳过，不影响所属交易）
       List<ImportAttachment>? attachments;
-      final jsonAttachments = it['attachments'] as List?;
-      if (jsonAttachments != null && jsonAttachments.isNotEmpty) {
-        attachments = jsonAttachments.cast<Map<String, dynamic>>().map((a) {
-          return ImportAttachment(
-            fileName: a['fileName'] as String,
-            originalName: a['originalName'] as String?,
-            fileSize: a['fileSize'] as int?,
-            width: a['width'] as int?,
-            height: a['height'] as int?,
-            sortOrder: a['sortOrder'] as int? ?? 0,
-            cloudFileId: a['cloudFileId'] as String?,
-            cloudSha256: a['cloudSha256'] as String?,
-            sha256: a['sha256'] as String?,
-          );
-        }).toList();
+      final jsonAttachments = m['attachments'];
+      if (jsonAttachments is List && jsonAttachments.isNotEmpty) {
+        final validAttachments = <ImportAttachment>[];
+        for (final a in jsonAttachments) {
+          if (a is! Map) {
+            _skip(skipped, 'attachments');
+            continue;
+          }
+          final am = a.cast<String, dynamic>();
+          final fileName = _readString(am, 'fileName');
+          if (fileName == null) {
+            _skip(skipped, 'attachments');
+            continue;
+          }
+          validAttachments.add(ImportAttachment(
+            fileName: fileName,
+            originalName: _readString(am, 'originalName'),
+            fileSize: _readInt(am, 'fileSize'),
+            width: _readInt(am, 'width'),
+            height: _readInt(am, 'height'),
+            sortOrder: _readInt(am, 'sortOrder') ?? 0,
+            cloudFileId: _readString(am, 'cloudFileId'),
+            cloudSha256: _readString(am, 'cloudSha256'),
+            sha256: _readString(am, 'sha256'),
+          ));
+        }
+        if (validAttachments.isNotEmpty) attachments = validAttachments;
       }
 
-      final type = it['type'] as String;
       // 解析标签 syncId 列表
       List<String>? tagSyncIds;
-      final rawTagSyncIds = it['tagSyncIds'];
+      final rawTagSyncIds = m['tagSyncIds'];
       if (rawTagSyncIds is List && rawTagSyncIds.isNotEmpty) {
         tagSyncIds = rawTagSyncIds.whereType<String>().toList();
       }
       transactions.add(ImportTransaction(
         type: type,
-        amount: (it['amount'] as num).toDouble(),
-        categoryName: it['categoryName'] as String?,
-        categoryKind: it['categoryKind'] as String?,
-        happenedAt: DateTime.parse(it['happenedAt'] as String).toLocal(),
-        note: it['note'] as String?,
+        amount: amount,
+        categoryName: _readString(m, 'categoryName'),
+        categoryKind: _readString(m, 'categoryKind'),
+        happenedAt: happenedAt.toLocal(),
+        note: _readString(m, 'note'),
         // 账户信息：转账用 fromAccountName/toAccountName，其他用 accountName
-        accountName: type != 'transfer' ? it['accountName'] as String? : null,
-        fromAccountName: type == 'transfer' ? it['fromAccountName'] as String? : null,
-        toAccountName: type == 'transfer' ? it['toAccountName'] as String? : null,
+        accountName: type != 'transfer' ? _readString(m, 'accountName') : null,
+        fromAccountName: type == 'transfer' ? _readString(m, 'fromAccountName') : null,
+        toAccountName: type == 'transfer' ? _readString(m, 'toAccountName') : null,
         tagNames: tagNames,
         tagSyncIds: tagSyncIds,
         attachments: attachments,
-        syncId: it['syncId'] as String?,
+        syncId: _readString(m, 'syncId'),
         // 账单标记 + v30 多币种
-        excludeFromStats: it['excludeFromStats'] as bool? ?? false,
-        excludeFromBudget: it['excludeFromBudget'] as bool? ?? false,
-        currencyCode: it['currencyCode'] as String?,
-        nativeAmount: (it['nativeAmount'] as num?)?.toDouble(),
+        excludeFromStats: _readBool(m, 'excludeFromStats') ?? false,
+        excludeFromBudget: _readBool(m, 'excludeFromBudget') ?? false,
+        currencyCode: _readString(m, 'currencyCode'),
+        nativeAmount: _readDouble(m, 'nativeAmount'),
         // 共享账本 override
-        categorySyncIdOverride: it['categorySyncIdOverride'] as String?,
-        accountSyncIdOverride: it['accountSyncIdOverride'] as String?,
-        toAccountSyncIdOverride: it['toAccountSyncIdOverride'] as String?,
+        categorySyncIdOverride: _readString(m, 'categorySyncIdOverride'),
+        accountSyncIdOverride: _readString(m, 'accountSyncIdOverride'),
+        toAccountSyncIdOverride: _readString(m, 'toAccountSyncIdOverride'),
         // v8 G2：周期规则锚点
-        recurringSyncId: it['recurringSyncId'] as String?,
+        recurringSyncId: _readString(m, 'recurringSyncId'),
       ));
     }
   }
@@ -659,9 +773,11 @@ ImportData parseJsonToImportData(String jsonStr) {
     budgets: budgets,
     recurrings: recurrings,
     rateOverrides: rateOverrides,
-    ledgerName: data['ledgerName'] as String?,
-    currency: data['currency'] as String?,
-    monthStartDay: data['monthStartDay'] as int?,
+    ledgerName: _readString(data, 'ledgerName'),
+    currency: _readString(data, 'currency'),
+    monthStartDay: _readInt(data, 'monthStartDay'),
+    version: _readInt(data, 'version'),
+    skippedItems: skipped,
   );
 }
 
@@ -683,6 +799,12 @@ Future<({int inserted})> importTransactionsJson(
 }) async {
   // 1. 解析 JSON 为统一格式
   final importData = parseJsonToImportData(jsonStr);
+  // H1：损坏条目已在解析层跳过，这里仅记录日志供排查，
+  // 不中断导入（单条脏数据不应拖垮整账本恢复）。
+  if (importData.skippedItems.isNotEmpty) {
+    logger.warning('TransactionsJson',
+        '快照解析跳过损坏条目（不影响其余数据）: ${importData.skippedItems}');
+  }
 
   // 2. 使用统一导入服务
   // [recordChanges] 默认 true 兼容 CSV 导入路径(`data_import_service` 会

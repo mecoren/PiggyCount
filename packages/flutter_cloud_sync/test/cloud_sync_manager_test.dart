@@ -234,6 +234,30 @@ void main() {
       expect(metadata.metadata!['app'], equals('PiggyCount'));
       expect(metadata.metadata!['fingerprint'], isNotNull);
     });
+
+    // M4 跨时区一致性：uploadedAt 必须是 UTC（带 Z 后缀）。
+    // 调用方传入 UTC 值时尊重之，不得用本地 naive 时间覆盖
+    test('M4: upload 写入的 uploadedAt 为 UTC 且尊重调用方传入值', () async {
+      const testUser = CloudUser(id: 'user123');
+      mockAuth.setCurrentUser(testUser);
+
+      // 未传 uploadedAt：自动补的必须是 UTC 串（以 Z 结尾）
+      await syncManager.upload(data: 1, path: 'm4-auto.json');
+      final auto = await mockStorage.getMetadata(path: 'm4-auto.json');
+      expect(auto!.metadata!['uploadedAt'], endsWith('Z'),
+          reason: 'M4：自动补的 uploadedAt 必须是 UTC（toUtc().toIso8601String()）');
+
+      // 调用方传 UTC：原样保留
+      const callerUtc = '2026-08-16T12:00:00.000Z';
+      await syncManager.upload(
+        data: 2,
+        path: 'm4-caller.json',
+        metadata: {'uploadedAt': callerUtc},
+      );
+      final caller = await mockStorage.getMetadata(path: 'm4-caller.json');
+      expect(caller!.metadata!['uploadedAt'], equals(callerUtc),
+          reason: 'M4：调用方（transactions_sync_manager）传入的 UTC 值不得被覆盖');
+    });
   });
 
   group('CloudSyncManager - download', () {
@@ -277,6 +301,42 @@ void main() {
 
       // Assert
       expect(result, equals(testData));
+    });
+
+    // P4 完整性校验：metadata 指纹与实际内容不一致（S3 控制台改写/
+    // CDN 陈旧副本）时必须硬失败，不能把脏数据交给恢复流程
+    test('P4: 下载内容与 metadata 指纹不一致 → 抛 CloudStorageException',
+        () async {
+      const testUser = CloudUser(id: 'user123');
+      const testPath = 'test.json';
+      mockAuth.setCurrentUser(testUser);
+
+      // 篡改云端内容但保留旧指纹
+      await mockStorage.upload(
+        path: testPath,
+        data: '{"id": 999}',
+        metadata: {'fingerprint': 'stale-fingerprint'},
+      );
+
+      await expectLater(
+        syncManager.download(path: testPath),
+        throwsA(isA<CloudStorageException>()),
+      );
+    });
+
+    test('P4: metadata 缺失指纹时跳过校验正常返回', () async {
+      const testUser = CloudUser(id: 'user123');
+      const testPath = 'test.json';
+      mockAuth.setCurrentUser(testUser);
+
+      await mockStorage.upload(
+        path: testPath,
+        data: '{"id": 123}',
+        metadata: const {},
+      );
+
+      final result = await syncManager.download(path: testPath);
+      expect(result, equals(123));
     });
   });
 

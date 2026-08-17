@@ -190,6 +190,11 @@ class DatabaseSyncManager {
   /// Offline operations queue
   final Queue<PendingSyncOperation> _offlineQueue = Queue();
 
+  /// P2：processOfflineQueue 重入保护标志。网络恢复事件与手动触发并发、
+  /// 或 status listener / insert 回调在执行期间再次触发时，防止两轮
+  /// removeFirst 交错导致同一批操作重复执行（insert 重复建记录）。
+  bool _processingQueue = false;
+
   /// Active realtime subscriptions
   final Map<String, RealtimeChannel> _subscriptions = {};
 
@@ -356,67 +361,81 @@ class DatabaseSyncManager {
   /// print('Synced $synced operations');
   /// ```
   Future<int> processOfflineQueue() async {
-    if (_offlineQueue.isEmpty) {
-      logger?.info('Offline queue is empty');
+    // P2：重入保护——网络恢复事件与手动触发并发时，两个调用各自
+    // removeFirst 会交错/重复执行同一批操作（insert 重复建记录）。
+    // status listener / insert 回调在执行期间再次触发时同理。
+    if (_processingQueue) {
+      logger?.warning(
+          'processOfflineQueue already running; concurrent call skipped');
       return 0;
     }
+    _processingQueue = true;
+    try {
+      if (_offlineQueue.isEmpty) {
+        logger?.info('Offline queue is empty');
+        return 0;
+      }
 
-    logger?.info('Processing offline queue: ${_offlineQueue.length} operations');
-    _updateStatus(DatabaseSyncStatus.syncing);
+      logger
+          ?.info('Processing offline queue: ${_offlineQueue.length} operations');
+      _updateStatus(DatabaseSyncStatus.syncing);
 
-    int successCount = 0;
-    final failedOperations = <PendingSyncOperation>[];
+      int successCount = 0;
+      final failedOperations = <PendingSyncOperation>[];
 
-    while (_offlineQueue.isNotEmpty) {
-      final operation = _offlineQueue.removeFirst();
+      while (_offlineQueue.isNotEmpty) {
+        final operation = _offlineQueue.removeFirst();
 
-      try {
-        await _executeOperation(operation);
-        successCount++;
-        logger?.debug('Operation completed: ${operation.id}');
-      } catch (e) {
-        logger?.error('Operation failed: ${operation.id} - $e');
+        try {
+          await _executeOperation(operation);
+          successCount++;
+          logger?.debug('Operation completed: ${operation.id}');
+        } catch (e) {
+          logger?.error('Operation failed: ${operation.id} - $e');
 
-        // Retry if under max attempts
-        if (operation.retryCount < maxRetryAttempts) {
-          failedOperations.add(
-            operation.copyWith(
-              retryCount: operation.retryCount + 1,
-              error: e.toString(),
-            ),
-          );
-        } else {
-          logger?.error('Operation max retries reached: ${operation.id}');
+          // Retry if under max attempts
+          if (operation.retryCount < maxRetryAttempts) {
+            failedOperations.add(
+              operation.copyWith(
+                retryCount: operation.retryCount + 1,
+                error: e.toString(),
+              ),
+            );
+          } else {
+            logger?.error('Operation max retries reached: ${operation.id}');
+          }
         }
       }
+
+      // Re-queue failed operations
+      // 失败操作重新入队前，按最大重试次数指数退避，避免在服务端不可用时
+      // 形成紧密重试循环加剧压力。delay = 2^retryCount 秒，上限 16 秒。
+      if (failedOperations.isNotEmpty) {
+        final maxRetry = failedOperations
+            .map((op) => op.retryCount)
+            .reduce((a, b) => a > b ? a : b);
+        final delay = Duration(seconds: 1 << (maxRetry.clamp(0, 4)));
+        logger?.debug(
+            'Backing off ${delay.inSeconds}s before re-queueing ${failedOperations.length} failed operations');
+        await Future.delayed(delay);
+      }
+
+      for (final op in failedOperations) {
+        _offlineQueue.add(op);
+      }
+
+      _updateStatus(
+        _offlineQueue.isEmpty
+            ? DatabaseSyncStatus.idle
+            : DatabaseSyncStatus.offline,
+      );
+
+      logger?.info(
+          'Offline queue processed: $successCount succeeded, ${failedOperations.length} failed');
+      return successCount;
+    } finally {
+      _processingQueue = false;
     }
-
-    // Re-queue failed operations
-    // 失败操作重新入队前，按最大重试次数指数退避，避免在服务端不可用时
-    // 形成紧密重试循环加剧压力。delay = 2^retryCount 秒，上限 16 秒。
-    if (failedOperations.isNotEmpty) {
-      final maxRetry = failedOperations
-          .map((op) => op.retryCount)
-          .reduce((a, b) => a > b ? a : b);
-      final delay = Duration(seconds: 1 << (maxRetry.clamp(0, 4)));
-      logger?.debug(
-          'Backing off ${delay.inSeconds}s before re-queueing ${failedOperations.length} failed operations');
-      await Future.delayed(delay);
-    }
-
-    for (final op in failedOperations) {
-      _offlineQueue.add(op);
-    }
-
-    _updateStatus(
-      _offlineQueue.isEmpty
-          ? DatabaseSyncStatus.idle
-          : DatabaseSyncStatus.offline,
-    );
-
-    logger?.info(
-        'Offline queue processed: $successCount succeeded, ${failedOperations.length} failed');
-    return successCount;
   }
 
   /// Subscribe to table changes (Realtime)
@@ -673,6 +692,21 @@ class DatabaseSyncManager {
       case SyncOperationType.insert:
         if (operation.data == null) {
           throw CloudSyncException('Insert operation requires data');
+        }
+        // P2 幂等预检：首次 insert 已写入但响应丢失（超时/断网）后重试
+        // 会重复建记录。云端已有同 id 行则视为已完成，跳过。
+        // 沿用 syncRecord（L265-277）既有的 getById→insert 幂等模式。
+        final newRecordId = operation.data!['id']?.toString();
+        if (newRecordId != null && newRecordId.isNotEmpty) {
+          final existing = await databaseService.getById(
+            table: operation.table,
+            id: newRecordId,
+          );
+          if (existing != null) {
+            logger?.info(
+                'Insert idempotent skip: ${operation.table}/$newRecordId already on server');
+            break;
+          }
         }
         await databaseService.insert(
           table: operation.table,

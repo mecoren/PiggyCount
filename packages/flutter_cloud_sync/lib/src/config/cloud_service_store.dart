@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/exceptions.dart';
 import 'cloud_service_config.dart';
 
 /// 云服务配置持久化存储
@@ -19,9 +20,14 @@ class CloudServiceStore {
   static const _kS3Cfg = 'cloud_s3_cfg';
 
   /// 安全存储实例。Android 使用 EncryptedSharedPreferences 加密。
-  static const FlutterSecureStorage _secure = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
+  /// 构造注入（P1）：测试可替换为损坏/假实现验证硬失败语义。
+  final FlutterSecureStorage _secure;
+
+  CloudServiceStore({FlutterSecureStorage? secureStorage})
+      : _secure = secureStorage ??
+            const FlutterSecureStorage(
+              aOptions: AndroidOptions(encryptedSharedPreferences: true),
+            );
 
   /// 读取配置 JSON：优先安全存储；SharedPreferences 仅作旧版本明文
   /// 数据的迁移回退（读到后迁移到安全存储并删除明文）。
@@ -47,24 +53,21 @@ class CloudServiceStore {
     return legacy;
   }
 
-  /// 写入配置 JSON 到安全存储；安全存储不可用时降级到
-  /// SharedPreferences（保持可用但不丢配置）。
+  /// 写入配置 JSON 到安全存储。
+  ///
+  /// P1 安全底线：secure storage 写失败时【硬失败】抛异常，绝不降级
+  /// 明文 SharedPreferences——凭据明文落盘的风险 > 保存失败的不便。
+  /// 调用方（设置页保存/登录流程）应 catch 并向用户提示。
   Future<void> _writeCfg(String key, String value) async {
-    var wroteSecure = false;
     try {
       await _secure.write(key: key, value: value);
-      wroteSecure = true;
     } catch (e) {
-      debugPrint('Secure storage write failed for $key, fallback to prefs: $e');
+      debugPrint('Secure storage write failed for $key: $e');
+      throw CloudStorageException('安全存储写入失败，云配置未保存（凭据不会以明文保存）', e);
     }
+    // 写入成功后清除可能残留的历史明文
     final sp = await SharedPreferences.getInstance();
-    if (wroteSecure) {
-      // 安全存储写入成功：清除旧明文
-      await sp.remove(key);
-    } else {
-      // 降级路径：明文写入 SharedPreferences
-      await sp.setString(key, value);
-    }
+    await sp.remove(key);
   }
 
   /// 加载当前激活的云服务配置

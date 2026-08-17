@@ -280,7 +280,7 @@
   "ledgersRestoreAll": "전체 복원",
   "ledgersSwitched": "가계부 \"{name}\"(으)로 전환되었습니다",
   "ledgersDownloadTitle": "가계부 다운로드",
-  "ledgersDownloadMessage": "가계부 \"{name}\"를 로컬로 다운로드하시겠습니까?",
+  "ledgersDownloadMessage": "가계부 \"{name}\"를 이 기기로 다운로드할까요? 같은 이름의 로컬 가계부는 클라우드 버전으로 덮어쓰입니다.",
   "ledgersDownloading": "다운로드 중...",
   "ledgersDownloadSuccess": "가계부 \"{name}\"를 다운로드했습니다",
   "ledgersDownload": "다운로드",

@@ -277,6 +277,12 @@ class ImportData {
   final String? currency;
   /// 每月起始日（可选，v8 G5：恢复时以云端快照为准回写账本元数据）
   final int? monthStartDay;
+  /// 快照 payload version（H1/H3：镜像删除仅在 v8+ 生效）
+  final int? version;
+  /// H1：解析时因字段损坏被跳过的条目数（key: accounts/categories/
+  /// budgets/recurring/rateOverrides/tags/transactions/attachments），
+  /// 供日志与 UI 提示
+  final Map<String, int> skippedItems;
 
   const ImportData({
     this.accounts = const [],
@@ -289,6 +295,8 @@ class ImportData {
     this.ledgerName,
     this.currency,
     this.monthStartDay,
+    this.version,
+    this.skippedItems = const {},
   });
 }
 
@@ -1466,8 +1474,113 @@ Future<({int inserted, int deletedDup})?> restoreLedgerFromJson({
     final cleared = await clearLedgerTransactions(db, ledgerId);
     final result = await importTransactionsJson(repo, ledgerId, jsonStr,
         recordChanges: false);
+    // H3 真覆盖（镜像云端）：v8+ 快照把云端已删除的预算/周期/分类/标签
+    // 传播到本地。旧实现只 upsert 不删除，「全量覆盖」后云端删掉的实体
+    // 在本地永不消失。
+    if (remoteImport.version != null && remoteImport.version! >= 8) {
+      await _mirrorDeleteAbsentEntities(db, ledgerId, remoteImport);
+    }
     return (cleared, result);
   });
 
   return (inserted: deleted.$2.inserted, deletedDup: deleted.$1);
+}
+
+/// H3 真覆盖（镜像云端）：删除「本地有 syncId 但 v8 快照中不存在」的实体。
+///
+/// 安全边界：只删「本地行有 syncId 且不在云端 syncId 集合」——
+/// 云端行无 syncId 或本地行无 syncId（同步纪元前遗留）都不删，
+/// 防止旧快照/异常数据误删。分类/标签是全局表，仅在无任何账本引用
+/// （交易/预算/周期/父子层级/标签关联）时删除。
+/// 必须在 restoreLedgerFromJson 的事务内调用（清空+导入完成后）。
+Future<int> _mirrorDeleteAbsentEntities(
+    PiggyDatabase db, int ledgerId, ImportData cloud) async {
+  var total = 0;
+
+  // 预算：按账本范围镜像
+  final cloudBudgetSyncIds =
+      cloud.budgets.map((b) => b.syncId).whereType<String>().toSet();
+  final delBudgets = await (db.delete(db.budgets)
+        ..where((b) => b.ledgerId.equals(ledgerId) &
+              b.syncId.isNotNull() &
+              (cloudBudgetSyncIds.isEmpty
+                  ? const d.Constant(true)
+                  : b.syncId.isNotIn(cloudBudgetSyncIds.toList()))))
+      .go();
+  total += delBudgets;
+
+  // 周期规则：按账本范围镜像
+  final cloudRecurringSyncIds =
+      cloud.recurrings.map((r) => r.syncId).whereType<String>().toSet();
+  final delRecs = await (db.delete(db.recurringTransactions)
+        ..where((r) => r.ledgerId.equals(ledgerId) &
+              r.syncId.isNotNull() &
+              (cloudRecurringSyncIds.isEmpty
+                  ? const d.Constant(true)
+                  : r.syncId.isNotIn(cloudRecurringSyncIds.toList()))))
+      .go();
+  total += delRecs;
+
+  // 分类：全局表，仅删「不在云端且无任何引用」的
+  // （引用来源：交易 categoryId、预算 categoryId、周期 categoryId、子分类 parentId）
+  final cloudCatSyncIds =
+      cloud.categories.map((c) => c.syncId).whereType<String>().toSet();
+  final usedCatIds = <int>{
+    ...(await (db.selectOnly(db.transactions)
+            ..addColumns([db.transactions.categoryId]))
+        .map((row) => row.read(db.transactions.categoryId))
+        .get())
+        .whereType<int>(),
+    ...(await (db.selectOnly(db.budgets)
+            ..addColumns([db.budgets.categoryId]))
+        .map((row) => row.read(db.budgets.categoryId))
+        .get())
+        .whereType<int>(),
+    ...(await (db.selectOnly(db.recurringTransactions)
+            ..addColumns([db.recurringTransactions.categoryId]))
+        .map((row) => row.read(db.recurringTransactions.categoryId))
+        .get())
+        .whereType<int>(),
+    ...(await (db.selectOnly(db.categories)
+            ..addColumns([db.categories.parentId]))
+        .map((row) => row.read(db.categories.parentId))
+        .get())
+        .whereType<int>(),
+  };
+  final delCats = await (db.delete(db.categories)
+        ..where((c) => c.syncId.isNotNull() &
+              (cloudCatSyncIds.isEmpty
+                  ? const d.Constant(true)
+                  : c.syncId.isNotIn(cloudCatSyncIds.toList())) &
+              (usedCatIds.isEmpty
+                  ? const d.Constant(true)
+                  : c.id.isNotIn(usedCatIds.toList()))))
+      .go();
+  total += delCats;
+
+  // 标签：仅删「不在云端且无交易关联」的
+  final cloudTagSyncIds =
+      cloud.tags.map((t) => t.syncId).whereType<String>().toSet();
+  final usedTagIds = (await (db.selectOnly(db.transactionTags)
+          ..addColumns([db.transactionTags.tagId]))
+        .map((row) => row.read(db.transactionTags.tagId))
+        .get())
+      .whereType<int>()
+      .toSet();
+  final delTags = await (db.delete(db.tags)
+        ..where((t) => t.syncId.isNotNull() &
+              (cloudTagSyncIds.isEmpty
+                  ? const d.Constant(true)
+                  : t.syncId.isNotIn(cloudTagSyncIds.toList())) &
+              (usedTagIds.isEmpty
+                  ? const d.Constant(true)
+                  : t.id.isNotIn(usedTagIds.toList()))))
+      .go();
+  total += delTags;
+
+  if (total > 0) {
+    logger.info('DataImport',
+        'H3 镜像删除(ledgerId=$ledgerId): 预算=$delBudgets 周期=$delRecs 分类=$delCats 标签=$delTags');
+  }
+  return total;
 }

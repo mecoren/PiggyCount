@@ -153,7 +153,12 @@ class CloudSyncManager<T> {
       final fullMetadata = <String, String>{
         ...?metadata, // 用户值在前
         'fingerprint': fingerprint,
-        'uploadedAt': DateTime.now().toIso8601String(),
+        // M4 跨时区一致性：uploadedAt 必须是 UTC（带 Z 后缀）。
+        // 调用方（如 transactions_sync_manager）传入的 UTC 值原样保留，
+        // 不得用本地 naive 时间覆盖 —— 否则跨时区设备 uploadedAt 解析
+        // 偏移导致方向判断退化到 lastModified 兜底。
+        'uploadedAt':
+            metadata?['uploadedAt'] ?? DateTime.now().toUtc().toIso8601String(),
         'userId': user.id,
         if (countStr != null) 'count': countStr,
       };
@@ -213,6 +218,32 @@ class CloudSyncManager<T> {
       }
 
       logger?.debug('Data downloaded: ${serializedData.length} bytes');
+
+      // P4 完整性校验：metadata 带指纹时对下载内容重算指纹比对，防止
+      // metadata 指纹与实际内容脱钩（S3 控制台改写/CDN 陈旧副本）把脏
+      // 数据交给恢复流程。校验失败硬失败；metadata 读取失败不阻断
+      // （部分后端旁路元数据缺失属自愈降级）。
+      try {
+        final cloudFile = await provider.storage.getMetadata(path: path);
+        // metadata 值经 _normalizeMetaValue 归一化：剥离存储层可能的
+        // 'b64:' 包装（S3 兼容网关原样返回编码值），否则指纹永不相等。
+        final expected =
+            _normalizeMetaValue(cloudFile?.metadata?['fingerprint'] as String?);
+        if (expected != null) {
+          final actual = serializer.fingerprint(serializedData);
+          if (actual != expected) {
+            logger?.error('Integrity check failed: $path '
+                '(expected=$expected, actual=$actual)');
+            throw CloudStorageException(
+                '云端数据完整性校验失败（指纹不匹配）: $path');
+          }
+          logger?.debug('Integrity check passed: $path');
+        }
+      } on CloudSyncException {
+        rethrow;
+      } catch (e) {
+        logger?.warning('Integrity check skipped (metadata unavailable): $e');
+      }
 
       // 3. Deserialize business data
       final data = await serializer.deserialize(serializedData);
