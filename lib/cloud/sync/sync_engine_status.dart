@@ -156,73 +156,88 @@ extension SyncEngineHealthChecks on SyncEngine {
   ///
   /// 幂等:只对没有对应 sync_change 记录的实体补写 create。重复调用是安全的。
   Future<int> backfillUntrackedEntities({required int ledgerId}) async {
-    final allUnpushed =
-        await changeTracker.getUnpushedChangesForLedger(ledgerId);
-    final allPushedIds =
-        <String>{}; // syncId 集合 —— unpushed 的先留着,判断"从未写过 change"用的是下面的专用查询
-    for (final c in allUnpushed) {
-      allPushedIds.add(c.entitySyncId);
-    }
-    // 用 change_tracker 的 hasAnyChangeForEntity(若有) / 直接查 local_changes 表。
-    // 这里用更稳妥的方式:对每个 entity 调 recordChange,recordChange 自身会
-    // 判断"同 entitySyncId + action 是否已经存在",不会造成重复(依赖
-    // ChangeTracker 的 upsert 语义,若没有就是直接 insert,重复的会被 unique
-    // 约束拦住 —— 重复 insert catch 住 = 无害重复)。
+    // F2 修复:去重必须跨全表(含已推送)且不按 ledgerId 过滤。
+    // user-global 实体(tag/account/category/exchange_rate_override)的 change
+    // 记在 ledgerId=0,而本方法入参 ledgerId 是具体账本 —— 旧逻辑用
+    // getUnpushedChangesForLedger(ledgerId) 构建去重集,既取不到 user-global
+    // 变更(ledgerId 不匹配)又只含 unpushed(pushed 的会被漏掉),导致去重集
+    // 恒空 → 每次 backfill 都给所有 user-global 实体重插 create →
+    // local_changes 随健康检查反复膨胀并重复推送。
+    // 现对齐 _backfillLegacyUserGlobalChanges 的正确范式:全表查 local_changes
+    // (含 pushed、不按 ledger 过滤)构建 knownSyncIds。详见
+    // docs/sync-fix-drafts-2026-08-17.md。
+    final knownUserGlobalSyncIds = (await (db.select(db.localChanges)
+              ..where((c) => c.entityType.isIn(
+                  ['tag', 'account', 'category', 'exchange_rate_override'])))
+            .get())
+        .map((c) => c.entitySyncId)
+        .toSet();
+    // recurring 是 ledger-scoped,按账本去重,但仍含已推送(否则 push 后下次
+    // backfill 又会重插)。
+    final knownRecurringSyncIds = (await (db.select(db.localChanges)
+              ..where((c) =>
+                  c.entityType.equals('recurring') &
+                  c.ledgerId.equals(ledgerId)))
+            .get())
+        .map((c) => c.entitySyncId)
+        .toSet();
+
     int backfilled = 0;
 
     // Tags
     final tags = await db.select(db.tags).get();
     for (final tag in tags) {
       if (tag.syncId == null || tag.syncId!.isEmpty) continue;
-      if (allPushedIds.contains(tag.syncId)) continue;
-      try {
-        await changeTracker.recordUserGlobalChange(
-          entityType: 'tag',
-          entityId: tag.id,
-          entitySyncId: tag.syncId!,
-          action: 'create',
-        );
-        backfilled++;
-      } catch (e) {
-        // 已存在的 change 会撞唯一约束,忽略即可。
-        logger.debug('SyncEngine', 'backfill tag ${tag.syncId} skip: $e');
-      }
+      if (knownUserGlobalSyncIds.contains(tag.syncId)) continue;
+      await changeTracker.recordUserGlobalChange(
+        entityType: 'tag',
+        entityId: tag.id,
+        entitySyncId: tag.syncId!,
+        action: 'create',
+      );
+      backfilled++;
     }
 
     // Accounts
     final accounts = await db.select(db.accounts).get();
     for (final acc in accounts) {
       if (acc.syncId == null || acc.syncId!.isEmpty) continue;
-      if (allPushedIds.contains(acc.syncId)) continue;
-      try {
-        await changeTracker.recordUserGlobalChange(
-          entityType: 'account',
-          entityId: acc.id,
-          entitySyncId: acc.syncId!,
-          action: 'create',
-        );
-        backfilled++;
-      } catch (e) {
-        logger.debug('SyncEngine', 'backfill account ${acc.syncId} skip: $e');
-      }
+      if (knownUserGlobalSyncIds.contains(acc.syncId)) continue;
+      await changeTracker.recordUserGlobalChange(
+        entityType: 'account',
+        entityId: acc.id,
+        entitySyncId: acc.syncId!,
+        action: 'create',
+      );
+      backfilled++;
     }
 
     // Categories
     final categories = await db.select(db.categories).get();
     for (final cat in categories) {
       if (cat.syncId == null || cat.syncId!.isEmpty) continue;
-      if (allPushedIds.contains(cat.syncId)) continue;
-      try {
-        await changeTracker.recordUserGlobalChange(
-          entityType: 'category',
-          entityId: cat.id,
-          entitySyncId: cat.syncId!,
-          action: 'create',
-        );
-        backfilled++;
-      } catch (e) {
-        logger.debug('SyncEngine', 'backfill category ${cat.syncId} skip: $e');
-      }
+      if (knownUserGlobalSyncIds.contains(cat.syncId)) continue;
+      await changeTracker.recordUserGlobalChange(
+        entityType: 'category',
+        entityId: cat.id,
+        entitySyncId: cat.syncId!,
+        action: 'create',
+      );
+      backfilled++;
+    }
+
+    // Exchange rate overrides(F3: 之前漏了它,老汇率覆盖永不推送)。
+    final rateOverrides = await db.select(db.exchangeRateOverrides).get();
+    for (final r in rateOverrides) {
+      if (r.syncId == null || r.syncId!.isEmpty) continue;
+      if (knownUserGlobalSyncIds.contains(r.syncId)) continue;
+      await changeTracker.recordUserGlobalChange(
+        entityType: 'exchange_rate_override',
+        entityId: r.id,
+        entitySyncId: r.syncId!,
+        action: 'create',
+      );
+      backfilled++;
     }
 
     // Recurring rules(ledger-scoped):v33 迁移给老行补了 syncId 但没写过
@@ -233,19 +248,15 @@ extension SyncEngineHealthChecks on SyncEngine {
         .get();
     for (final r in recurrings) {
       if (r.syncId == null || r.syncId!.isEmpty) continue;
-      if (allPushedIds.contains(r.syncId)) continue;
-      try {
-        await changeTracker.recordLedgerChange(
-          entityType: 'recurring',
-          entityId: r.id,
-          entitySyncId: r.syncId!,
-          ledgerId: ledgerId,
-          action: 'upsert',
-        );
-        backfilled++;
-      } catch (e) {
-        logger.debug('SyncEngine', 'backfill recurring ${r.syncId} skip: $e');
-      }
+      if (knownRecurringSyncIds.contains(r.syncId)) continue;
+      await changeTracker.recordLedgerChange(
+        entityType: 'recurring',
+        entityId: r.id,
+        entitySyncId: r.syncId!,
+        ledgerId: ledgerId,
+        action: 'upsert',
+      );
+      backfilled++;
     }
 
     logger.info('SyncEngine',

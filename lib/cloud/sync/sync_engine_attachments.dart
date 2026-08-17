@@ -257,7 +257,10 @@ extension SyncEngineAttachmentsExt on SyncEngine {
           try {
             final abs = await iconSvc.resolveIconPath(existing.customIconPath!);
             if (await File(abs).exists()) return true;
-          } catch (_) {}
+          } catch (e) {
+            // F7: 图标存在性检查失败(将走重下载),保留异常细节便于排查。
+            logger.debug('SyncEngine', '图标存在性检查失败,将重下载: $e');
+          }
         }
         final bytes = await provider.downloadAttachment(fileId: job.cloudFileId);
         final ext = _detectIconExtension(bytes, originalPath: job.expectedPath);
@@ -337,7 +340,10 @@ extension SyncEngineAttachmentsExt on SyncEngine {
         if (await thumbFile.exists()) {
           try {
             await thumbFile.delete();
-          } catch (_) {/* best effort */}
+          } catch (e) {
+            // F7: 缩略图清理是 best effort,但保留异常细节便于排查。
+            logger.debug('SyncEngine', '缩略图清理失败(best effort): $e');
+          }
         }
       }
     } catch (e, st) {

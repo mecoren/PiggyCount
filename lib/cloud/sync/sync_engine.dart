@@ -147,6 +147,17 @@ class SyncEngine implements app.SyncService {
   /// 详见 [LookupCache](sync_engine_pull.dart)。
   LookupCache? activePullCache;
 
+  /// F1: pull 内 deviceId 是常量。[_doPull] 入口解析一次,pull 内复用,避免
+  /// `applyRemoteChange` 逐条 `await _getDeviceId()`(1 万条 change = 1 万次
+  /// 异步往返)。null = 非 pull 路径,`applyRemoteChange` 会 fallback 逐次解析。
+  /// 生命周期与 [activePullCache] 完全对齐:pull 开始赋值、finally 清空。
+  String? _pullDeviceId;
+
+  /// F6: push 期间生效的 [PushLookupCache]。[_doPush] 入口 new + prime,push
+  /// 结束清 null。`_serializeEntityForPush` 优先查它,消除增量 push 的关联
+  /// 实体(category/account/tag 被多笔交易引用时)N+1 SELECT。
+  PushLookupCache? activePushCache;
+
   /// 延迟绑定(cloud_recurring_sync 决策 5):change 流里 transaction 先于
   /// recurring 到达时,交易的 recurringSyncId 暂存到这里,等
   /// `_applyRecurringChange` 落地规则后回扫补齐交易的 recurringId int 外键。
@@ -840,8 +851,11 @@ class SyncEngine implements app.SyncService {
   Future<void> _backfillLegacyUserGlobalChanges() async {
     // 预拉:local_changes 表里所有 user-global 实体 syncId,做 in-memory dedup,
     // 避免逐 entity SELECT。
+    // F3: 补 exchange_rate_override —— 它是 user-global(白名单见
+    // change_tracker._userGlobalEntityTypes),漏了它会导致老汇率覆盖永不推送。
     final existingChanges = await (db.select(db.localChanges)
-          ..where((c) => c.entityType.isIn(['account', 'category', 'tag'])))
+          ..where((c) => c.entityType.isIn(
+              ['account', 'category', 'tag', 'exchange_rate_override'])))
         .get();
     final knownSyncIds = existingChanges.map((c) => c.entitySyncId).toSet();
 
@@ -900,6 +914,29 @@ class SyncEngine implements app.SyncService {
         await changeTracker.recordUserGlobalChange(
           entityType: 'tag',
           entityId: t.id,
+          entitySyncId: syncId,
+          action: 'upsert',
+        );
+        backfilled++;
+      }
+    }
+
+    // exchange_rate_override(同样 user-global)。F3: 之前漏了它 ——
+    // v28 migration 给老行填了 syncId 但没登记 local_changes,导致多设备间
+    // 汇率覆盖静默丢失。syncId 为 null 的脏行兜底生成 UUID 写回。
+    final rateOverrides = await db.select(db.exchangeRateOverrides).get();
+    for (final r in rateOverrides) {
+      var syncId = r.syncId;
+      if (syncId == null) {
+        syncId = _uuid.v4();
+        await (db.update(db.exchangeRateOverrides)
+              ..where((row) => row.id.equals(r.id)))
+            .write(ExchangeRateOverridesCompanion(syncId: d.Value(syncId)));
+      }
+      if (!knownSyncIds.contains(syncId)) {
+        await changeTracker.recordUserGlobalChange(
+          entityType: 'exchange_rate_override',
+          entityId: r.id,
           entitySyncId: syncId,
           action: 'upsert',
         );
@@ -1017,6 +1054,13 @@ class SyncEngine implements app.SyncService {
     final syncChanges = <Map<String, dynamic>>[];
     final recurringSyncChanges = <Map<String, dynamic>>[];
 
+    // F6: 预载 push 查找缓存(ledgers/categories/accounts/tags 的 id→row),
+    // 消除 _serializeEntityForPush 逐条查关联实体的 N+1。与 pull 的
+    // LookupCache 对称;生命周期一致(push 入口 prime、finally 清空)。
+    final pushCache = PushLookupCache();
+    await pushCache.prime(db);
+    activePushCache = pushCache;
+    try {
     for (final change in ledgerChanges) {
       final isUserGlobal =
           ChangeTracker.userGlobalEntityTypes.contains(change.entityType);
@@ -1062,6 +1106,9 @@ class SyncEngine implements app.SyncService {
         'payload': payload,
         'updated_at': change.createdAt.toUtc().toIso8601String(),
       });
+    }
+    } finally {
+      activePushCache = null; // F6: 清理,避免泄漏到非 push 路径
     }
 
     var ledgerPushed = 0;
@@ -1110,7 +1157,8 @@ class SyncEngine implements app.SyncService {
   /// 2. **失败隔离**:整页 apply 抛错 → rollback + 错误入 [pullErrors] 表 +
   ///    cursor 不推进 + 后续页不再拉,UI 显示"同步暂停"
   /// 3. **busy retry**:SQLite busy/locked 单条 retry 2 次
-  /// 4. **小颗粒度**:单页 limit 50(原 500),让 retry 范围 + UI 反馈更可控
+  /// 4. **分页拉取**:单页 limit 500。失败时整页事务回滚(最多 500 条不入
+  ///    本地),cursor 不前进,下次从同 since 重拉,让 retry 范围 + UI 反馈可控
   ///
   /// 传 [sinceOverride]=0 = 从头重放(等价旧 replayAllChanges)。
   ///
@@ -1134,7 +1182,10 @@ class SyncEngine implements app.SyncService {
           'pull(sinceOverride=$sinceOverride) 等待 in-flight pull 完成');
       try {
         await inFlight.future;
-      } catch (_) {/* 忽略 in-flight 的错,自己单独跑 */}
+      } catch (e) {
+        // F7: 复用 in-flight pull 失败转单独跑,保留错误细节便于排查根因。
+        logger.debug('SyncEngine', '复用 in-flight pull 失败,单独重跑: $e');
+      }
     }
 
     final completer = Completer<int>();
@@ -1269,11 +1320,15 @@ class SyncEngine implements app.SyncService {
     final cache = LookupCache();
     await cache.prime(db);
     activePullCache = cache;
+    // F1: deviceId 在一次 pull 内是常量,这里解析一次供 applyRemoteChange 复用,
+    // 避免逐条 await _getDeviceId() 的 N+1 异步往返。
+    _pullDeviceId = await _getDeviceId();
 
     try {
       return await _runPullLoop(ledgerId, nextSince, firstPage: probe);
     } finally {
       activePullCache = null;
+      _pullDeviceId = null; // F1: 清理,避免泄漏到非 pull 路径
     }
   }
 

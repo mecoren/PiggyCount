@@ -19,9 +19,11 @@ extension SyncEngineSerializationExt on SyncEngine {
     // 取父 ledger 的 syncId，下面 serialize 时塞进 tx payload。对端
     // apply 先用 payload.ledgerSyncId 解析本地 ledger id，跨设备的 int id
     // 不一致问题（如 A 的账本 2 = B 的账本 3）才不会把 tx 错挂到别处。
-    final parentLedger = await (db.select(db.ledgers)
-          ..where((l) => l.id.equals(ledgerId)))
-        .getSingleOrNull();
+    // F6: 优先查 push 缓存(同一 ledger 的所有 tx change 共享),miss 走 DB。
+    final parentLedger = activePushCache?.ledger(ledgerId) ??
+        await (db.select(db.ledgers)
+              ..where((l) => l.id.equals(ledgerId)))
+            .getSingleOrNull();
     final parentLedgerSyncId = parentLedger?.syncId;
 
     switch (entityType) {
@@ -32,20 +34,25 @@ extension SyncEngineSerializationExt on SyncEngine {
         if (tx == null) return <String, dynamic>{};
 
         // 获取关联数据
+        // F6: 关联实体优先查 push 缓存(miss 走 DB),消除同 cat/acc 被多笔
+        // 交易引用时的逐条 SELECT N+1。
         final cat = tx.categoryId != null
-            ? await (db.select(db.categories)
-                  ..where((c) => c.id.equals(tx.categoryId!)))
-                .getSingleOrNull()
+            ? (activePushCache?.category(tx.categoryId) ??
+                await (db.select(db.categories)
+                      ..where((c) => c.id.equals(tx.categoryId!)))
+                    .getSingleOrNull())
             : null;
         final acc = tx.accountId != null
-            ? await (db.select(db.accounts)
-                  ..where((a) => a.id.equals(tx.accountId!)))
-                .getSingleOrNull()
+            ? (activePushCache?.account(tx.accountId) ??
+                await (db.select(db.accounts)
+                      ..where((a) => a.id.equals(tx.accountId!)))
+                    .getSingleOrNull())
             : null;
         final toAcc = tx.toAccountId != null
-            ? await (db.select(db.accounts)
-                  ..where((a) => a.id.equals(tx.toAccountId!)))
-                .getSingleOrNull()
+            ? (activePushCache?.account(tx.toAccountId) ??
+                await (db.select(db.accounts)
+                      ..where((a) => a.id.equals(tx.toAccountId!)))
+                    .getSingleOrNull())
             : null;
 
         // 获取标签(连同 tag.syncId,server 端按 id 反查最新名字)
@@ -55,9 +62,10 @@ extension SyncEngineSerializationExt on SyncEngine {
         final tagNames = <String>[];
         final tagSyncIds = <String>[];
         for (final tt in txTags) {
-          final tag = await (db.select(db.tags)
-                ..where((t) => t.id.equals(tt.tagId)))
-              .getSingleOrNull();
+          final tag = activePushCache?.tag(tt.tagId) ??
+              await (db.select(db.tags)
+                    ..where((t) => t.id.equals(tt.tagId)))
+                  .getSingleOrNull();
           if (tag != null) {
             tagNames.add(tag.name);
             if (tag.syncId != null && tag.syncId!.isNotEmpty) {

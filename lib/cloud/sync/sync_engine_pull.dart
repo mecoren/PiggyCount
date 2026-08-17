@@ -63,7 +63,15 @@ class AppCursorStore {
     final auth = _provider.auth as PiggyCountCloudAuthService;
     final userId = auth.currentUserId;
     final deviceId = auth.currentDeviceId;
-    if (userId == null || deviceId == null) return null;
+    if (userId == null || deviceId == null) {
+      // F5: 登录态/设备注册未就绪时 cursor 无法持久化。pull 仍会跑(read
+      // 返 0 从头拉,upsert 幂等不坏数据),但下次 pull 又从 0 起,浪费带宽
+      // + 重复 apply + 可能触发 UI 重刷。记 warning 便于排查这个窗口。
+      logger.warning('AppCursorStore',
+          'cursor key 不可用(userId=$userId deviceId=$deviceId)'
+          '——cursor 不持久化,下次 pull 将从 0 重拉');
+      return null;
+    }
     final baseUrl = _provider.baseUrl ?? 'unknown';
     final raw = '$baseUrl|$userId|$deviceId';
     final digest = sha1.convert(utf8.encode(raw)).toString();
@@ -293,6 +301,49 @@ class LookupCache {
   void putTransaction(String syncId, int id, String? createdByUserId) =>
       _tx[syncId] = _TxCacheEntry(id: id, createdByUserId: createdByUserId);
   void removeTransaction(String syncId) => _tx.remove(syncId);
+}
+
+/// push 路径上的 `本地 int id → 实体行` 缓存,与 pull 的 [LookupCache]
+/// (syncId→id) 对称。
+///
+/// 增量 `_push` 路径上 `_serializeEntityForPush` 每条 change 会查父 ledger /
+/// category / account / tag 的整行(用于 denormalize name + syncId)。同一
+/// category/account/tag 被多笔交易引用时,逐条 SELECT 是 N+1。本缓存一次性
+/// 预载 4 张表(通常几十~几百行)的 id→row,序列化时查缓存,miss 才走 DB。
+///
+/// **不缓存 transactions**:交易表可能 10k+,全表加载不可接受;每条 tx change
+/// 仍走单次 SELECT(必须,要拿当前 tx 数据)。这与 fullPush 的 `_pushAllEntities`
+/// 预载 categories/accounts/tags + firstWhere 的做法一致(F6 对齐)。
+///
+/// **生命周期**:SyncEngine 每次 `_doPush` 入口 new + prime,push 结束清空。
+class PushLookupCache {
+  final Map<int, Ledger> _ledgerById = {};
+  final Map<int, Category> _categoryById = {};
+  final Map<int, Account> _accountById = {};
+  final Map<int, Tag> _tagById = {};
+
+  Future<void> prime(PiggyDatabase db) async {
+    for (final l in await db.select(db.ledgers).get()) {
+      _ledgerById[l.id] = l;
+    }
+    for (final c in await db.select(db.categories).get()) {
+      _categoryById[c.id] = c;
+    }
+    for (final a in await db.select(db.accounts).get()) {
+      _accountById[a.id] = a;
+    }
+    for (final t in await db.select(db.tags).get()) {
+      _tagById[t.id] = t;
+    }
+    logger.info('PushLookupCache',
+        'prime: ledgers=${_ledgerById.length} categories=${_categoryById.length} '
+        'accounts=${_accountById.length} tags=${_tagById.length}');
+  }
+
+  Ledger? ledger(int? id) => id == null ? null : _ledgerById[id];
+  Category? category(int? id) => id == null ? null : _categoryById[id];
+  Account? account(int? id) => id == null ? null : _accountById[id];
+  Tag? tag(int? id) => id == null ? null : _tagById[id];
 }
 
 /// transactions 表的轻量缓存条目。只存 apply 路径会用到的 2 个字段。

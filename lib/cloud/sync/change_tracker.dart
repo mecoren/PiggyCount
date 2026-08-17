@@ -131,14 +131,22 @@ class ChangeTracker {
     // M3：云→本地合并路径抑制期间直接丢弃 —— 这些写入来自云端快照，
     // 不是用户编辑，回流推送队列只会产生幻影变更。
     if (_suppressRecording) return;
-    await db.into(db.localChanges).insert(LocalChangesCompanion.insert(
-      entityType: entityType,
-      entityId: entityId,
-      entitySyncId: entitySyncId,
-      ledgerId: ledgerId,
-      action: action,
-      payloadJson: d.Value(payloadJson),
-    ));
+    // F2 加固: insertOrIgnore —— 同 (entity_type, entity_sync_id, action) 的
+    // 未推送重复 insert 静默合并(保留首条),由 v35 部分唯一索引(WHERE
+    // pushed_at IS NULL)兜底。已推送行退出部分索引,二次编辑可正常插入。
+    // push 路径从 DB 重建 payload(见 _serializeEntityForPush),不读
+    // payloadJson,合并不丢数据。
+    await db.into(db.localChanges).insert(
+      LocalChangesCompanion.insert(
+        entityType: entityType,
+        entityId: entityId,
+        entitySyncId: entitySyncId,
+        ledgerId: ledgerId,
+        action: action,
+        payloadJson: d.Value(payloadJson),
+      ),
+      mode: d.InsertMode.insertOrIgnore,
+    );
     logger.debug('ChangeTracker', '$action $entityType($entitySyncId)');
   }
 

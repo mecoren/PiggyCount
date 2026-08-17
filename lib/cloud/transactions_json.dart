@@ -564,7 +564,10 @@ ImportData parseJsonToImportData(String jsonStr) {
           startDay: m['startDay'] as int? ?? 1,
           enabled: m['enabled'] as bool? ?? true,
         ));
-      } catch (_) {
+      } catch (e) {
+        // F7: 保留异常细节便于诊断损坏快照。budget 行解析失败仍跳过(单条
+        // 损坏不拖垮整账本恢复),但不再静默丢弃异常对象。
+        logger.debug('TransactionsJson', 'budget 解析失败,跳过: $e');
         _skip(skipped, 'budgets');
       }
     }

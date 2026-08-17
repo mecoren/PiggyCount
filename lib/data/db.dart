@@ -454,7 +454,7 @@ class PiggyDatabase extends _$PiggyDatabase {
   PiggyDatabase.forTesting(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 34; // v34: transaction_attachments 加 local_sha256(快照链路内容寻址)
+  int get schemaVersion => 35; // v35: local_changes 部分唯一索引(F2 加固); v34: transaction_attachments local_sha256
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1207,6 +1207,34 @@ class PiggyDatabase extends _$PiggyDatabase {
                 'ALTER TABLE transaction_attachments ADD COLUMN local_sha256 TEXT;');
             logger.info('DBMigration', 'v34 迁移完成');
           }
+          if (from < 35) {
+            // v35: local_changes 部分唯一索引(WHERE pushed_at IS NULL),为
+            // (entity_type, entity_sync_id, action) 去重做 DB 层兜底。部分索引
+            // 只约束未推送行 —— 已推送行(pushedAt 非空)退出索引,同实体同
+            // action 的二次编辑(push 后再改)可正常插入,不误伤编辑流。
+            // 代码层 backfill 去重已修(sync_engine_status.dart),此索引为
+            // 第二道防线。详见 docs/sync-fix-drafts-2026-08-17.md F2 加固。
+            //
+            // 建索引前先清已存在的未推送重复行(保留 id 最小的一条),否则
+            // CREATE UNIQUE INDEX 会因重复行失败。
+            logger.info(
+                'DBMigration', '开始迁移到 v35: local_changes 部分唯一索引');
+            await customStatement('''
+              DELETE FROM local_changes
+              WHERE rowid NOT IN (
+                SELECT MIN(rowid) FROM local_changes
+                WHERE pushed_at IS NULL
+                GROUP BY entity_type, entity_sync_id, action
+              )
+              AND pushed_at IS NULL;
+            ''');
+            await customStatement('''
+              CREATE UNIQUE INDEX IF NOT EXISTS idx_local_changes_unpushed_dedup
+              ON local_changes (entity_type, entity_sync_id, action)
+              WHERE pushed_at IS NULL;
+            ''');
+            logger.info('DBMigration', 'v35 迁移完成');
+          }
         },
         onCreate: (m) async {
           await m.createAll();
@@ -1221,6 +1249,11 @@ class PiggyDatabase extends _$PiggyDatabase {
           await customStatement(
               'CREATE INDEX IF NOT EXISTS idx_recurring_sync_id '
               'ON recurring_transactions(sync_id);');
+          // v35: local_changes 部分唯一索引(与 onUpgrade v35 同构,新装 app 走 onCreate)。
+          await customStatement(
+              'CREATE UNIQUE INDEX IF NOT EXISTS idx_local_changes_unpushed_dedup '
+              'ON local_changes (entity_type, entity_sync_id, action) '
+              'WHERE pushed_at IS NULL;');
         },
       );
 

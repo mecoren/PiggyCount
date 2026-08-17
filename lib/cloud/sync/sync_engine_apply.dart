@@ -10,7 +10,9 @@ extension SyncEngineApplyExt on SyncEngine {
   /// 返回 true 表示已应用，false 表示跳过
   Future<bool> applyRemoteChange(PiggyCountCloudSyncChange change) async {
     // 跳过本设备自己的变更
-    final deviceId = await _getDeviceId();
+    // F1: pull 内 deviceId 是常量,用 _doPull 预解析的 _pullDeviceId;
+    // 非 pull 路径(目前无 caller)fallback 到逐次解析。
+    final deviceId = _pullDeviceId ?? await _getDeviceId();
     if (change.updatedByDeviceId == deviceId) return false;
 
     // 如果没有 payload 且不是删除操作，跳过（无法应用）

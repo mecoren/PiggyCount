@@ -401,7 +401,10 @@ class SyncDiffService {
           id: ledgerId,
           monthStartDay: importData.monthStartDay!.clamp(1, 28),
         );
-      } catch (_) {}
+      } catch (e) {
+        // F7: monthStartDay 更新失败不阻断 diff 流程,但保留异常细节便于排查。
+        logger.debug('SyncDiff', 'monthStartDay 更新失败(忽略): $e');
+      }
     }
 
     if (selectedChanges.isEmpty) {
