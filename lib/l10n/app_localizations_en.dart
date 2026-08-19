@@ -837,7 +837,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String ledgersDownloadMessage(String name) {
-    return 'Confirm download ledger \"$name\" to local?';
+    return 'Download ledger \"$name\" to this device? Any local ledger with the same name will be overwritten by the cloud version.';
   }
 
   @override

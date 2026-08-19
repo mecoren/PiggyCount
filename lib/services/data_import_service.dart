@@ -607,18 +607,23 @@ class DataImportService {
         // 一条坏数据会吞掉剩余所有分类的导入
         try {
           final newId = parentId != null
+              // 必须透传云端 syncId：repo 在 syncId 为 null 时会自动生成新 UUID，
+              // 导致本地分类与云端快照的 syncId 不一致，随后被 H3 镜像删除
+              // （按 syncId 判定"本地有、云端无"）误删。与 importAccounts 保持一致。
               ? await repo.createSubCategory(
                   parentId: parentId,
                   name: cat.name,
                   kind: cat.kind,
                   icon: cat.icon,
                   sortOrder: cat.sortOrder,
+                  syncId: cat.syncId,
                 )
               : await repo.createCategory(
                   name: cat.name,
                   kind: cat.kind,
                   icon: cat.icon,
                   sortOrder: cat.sortOrder,
+                  syncId: cat.syncId,
                 );
           categoryCache[key] = newId;
           byKindName[key] = newId;

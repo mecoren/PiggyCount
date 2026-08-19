@@ -821,7 +821,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String ledgersDownloadMessage(String name) {
-    return '确认下载账本\"$name\"到本地？';
+    return '确认下载账本\"$name\"到本地？本地同名账本的数据将被云端数据覆盖。';
   }
 
   @override
@@ -8830,7 +8830,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String ledgersDownloadMessage(String name) {
-    return '確認下載帳本「$name」到本地？';
+    return '確認下載帳本「$name」到本地？本地同名帳本的資料將被雲端資料覆蓋。';
   }
 
   @override

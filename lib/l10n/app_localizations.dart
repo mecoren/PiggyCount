@@ -1563,7 +1563,7 @@ abstract class AppLocalizations {
   /// No description provided for @ledgersDownloadMessage.
   ///
   /// In en, this message translates to:
-  /// **'Confirm download ledger \"{name}\" to local?'**
+  /// **'Download ledger \"{name}\" to this device? Any local ledger with the same name will be overwritten by the cloud version.'**
   String ledgersDownloadMessage(String name);
 
   /// No description provided for @ledgersDownloading.

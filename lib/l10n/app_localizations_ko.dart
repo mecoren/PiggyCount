@@ -825,7 +825,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String ledgersDownloadMessage(String name) {
-    return '가계부 \"$name\"를 로컬로 다운로드하시겠습니까?';
+    return '가계부 \"$name\"를 이 기기로 다운로드할까요? 같은 이름의 로컬 가계부는 클라우드 버전으로 덮어쓰입니다.';
   }
 
   @override

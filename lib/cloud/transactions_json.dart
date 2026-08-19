@@ -466,7 +466,10 @@ DateTime? _readDate(Map<String, dynamic> m, String key) =>
 void _skip(Map<String, int> skipped, String section) =>
     skipped[section] = (skipped[section] ?? 0) + 1;
 
-const _kValidTxTypes = {'expense', 'income', 'transfer'};
+// 必须与 app 支持的一级交易类型完全对齐：adjustment（估值调整）是资产账户
+// 估值变动的合法业务类型，早期漏登记导致 S3 快照恢复时被当作非法类型静默丢弃
+// （云端有、恢复后没有 → 真实数据丢失）。新增交易类型时务必同步这里。
+const _kValidTxTypes = {'expense', 'income', 'transfer', 'adjustment'};
 
 /// 将 JSON 数据转换为统一的 ImportData 格式
 ImportData parseJsonToImportData(String jsonStr) {
