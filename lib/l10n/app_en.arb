@@ -1660,6 +1660,7 @@
   "cloudCustomS3Subtitle": "AWS S3 / Cloudflare R2 / MinIO",
   "cloudPiggyCountCloudTitle": "PiggyCount Cloud",
   "cloudPiggyCountCloudSubtitle": "Self-hosted · Incremental sync · Multi-device",
+  "cloudPiggyCountCloudDisabled": "Disabled in this build",
   "cloudConfigurePiggyCountCloudTitle": "Configure PiggyCount Cloud",
   "cloudPiggyCountCloudUrlLabel": "Server URL",
   "cloudPiggyCountCloudUrlHint": "https://your-server.com",

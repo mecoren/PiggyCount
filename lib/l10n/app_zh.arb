@@ -1501,6 +1501,7 @@
   "cloudCustomS3Subtitle": "AWS S3 / Cloudflare R2 / MinIO",
   "cloudPiggyCountCloudTitle": "PiggyCount Cloud",
   "cloudPiggyCountCloudSubtitle": "自建云服务 · 增量同步 · 多设备协同",
+  "cloudPiggyCountCloudDisabled": "本版本已停用",
   "cloudConfigurePiggyCountCloudTitle": "配置 PiggyCount Cloud",
   "cloudPiggyCountCloudUrlLabel": "服务器地址",
   "cloudPiggyCountCloudUrlHint": "https://your-server.com",

@@ -3806,6 +3806,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Self-hosted · Incremental sync · Multi-device';
 
   @override
+  String get cloudPiggyCountCloudDisabled => 'Disabled in this build';
+
+  @override
   String get cloudConfigurePiggyCountCloudTitle => 'Configure PiggyCount Cloud';
 
   @override

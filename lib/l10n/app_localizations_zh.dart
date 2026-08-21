@@ -3690,6 +3690,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cloudPiggyCountCloudSubtitle => '自建云服务 · 增量同步 · 多设备协同';
 
   @override
+  String get cloudPiggyCountCloudDisabled => '本版本已停用';
+
+  @override
   String get cloudConfigurePiggyCountCloudTitle => '配置 PiggyCount Cloud';
 
   @override
@@ -11697,6 +11700,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get cloudPiggyCountCloudSubtitle => '自建雲服務 · 增量同步 · 多裝置協同';
+
+  @override
+  String get cloudPiggyCountCloudDisabled => '此版本已停用';
 
   @override
   String get cloudConfigurePiggyCountCloudTitle => '設定 PiggyCount Cloud';

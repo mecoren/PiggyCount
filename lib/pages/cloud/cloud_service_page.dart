@@ -17,6 +17,7 @@ import '../../widgets/ui/wait_sliding_segmented_control.dart';
 import '../../widgets/biz/section_card.dart';
 import '../../styles/tokens.dart';
 import '../../l10n/app_localizations.dart';
+import '../../cloud/cloud_feature_flags.dart';
 
 // GitHub配置教程链接
 const _kSupabaseGuideUrl = 'https://github.com/mecoren/PiggyCount/wiki/Supabase-%E4%BA%91%E5%90%8C%E6%AD%A5%E9%85%8D%E7%BD%AE';
@@ -276,16 +277,21 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                           icon: Icons.cloud_circle,
                           iconColor: PiggyTokens.brandCloud,
                           title: AppLocalizations.of(context).cloudPiggyCountCloudTitle,
-                          subtitle: bcCfg?.valid == true
-                              ? bcCfg!.obfuscatedUrl()
-                              : AppLocalizations.of(context).cloudPiggyCountCloudSubtitle,
+                          // 云端协同已关闭（见 cloud_feature_flags.dart）：
+                          // 卡片置灰、标注「未启用」，且不可被选择。
+                          subtitle: !kPiggyCountCloudEnabled
+                              ? AppLocalizations.of(context).cloudPiggyCountCloudDisabled
+                              : (bcCfg?.valid == true
+                                  ? bcCfg!.obfuscatedUrl()
+                                  : AppLocalizations.of(context)
+                                      .cloudPiggyCountCloudSubtitle),
                           isSelected: active.type == CloudBackendType.piggycountCloud,
                           isConfigured: bcCfg?.valid == true,
-                          isDisabled: false,
-                          onTap: () => bcCfg?.valid == true
+                          isDisabled: !kPiggyCountCloudEnabled,
+                          onTap: () => (bcCfg?.valid == true
                               ? _switchService(CloudBackendType.piggycountCloud)
-                              : _configureService(CloudBackendType.piggycountCloud),
-                          onConfigure: bcCfg?.valid == true
+                              : _configureService(CloudBackendType.piggycountCloud)),
+                          onConfigure: kPiggyCountCloudEnabled && bcCfg?.valid == true
                               ? () => _configureService(CloudBackendType.piggycountCloud)
                               : null,
                           onShowGuide: _showPiggyCountCloudHelpDialog,

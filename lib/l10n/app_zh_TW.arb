@@ -789,6 +789,7 @@
   "cloudCustomS3Title": "S3 協議儲存",
   "cloudPiggyCountCloudTitle": "PiggyCount Cloud",
   "cloudPiggyCountCloudSubtitle": "自建雲服務 · 增量同步 · 多裝置協同",
+  "cloudPiggyCountCloudDisabled": "此版本已停用",
   "cloudConfigurePiggyCountCloudTitle": "設定 PiggyCount Cloud",
   "cloudPiggyCountCloudUrlLabel": "伺服器地址",
   "cloudPiggyCountCloudUrlHint": "https://your-server.com",

@@ -1166,6 +1166,7 @@
   "cloudCustomS3Subtitle": "AWS S3 / Cloudflare R2 / MinIO",
   "cloudPiggyCountCloudTitle": "PiggyCount 클라우드",
   "cloudPiggyCountCloudSubtitle": "셀프 호스팅 · 증분 동기화 · 다중 기기",
+  "cloudPiggyCountCloudDisabled": "이 빌드에서는 비활성화됨",
   "cloudConfigurePiggyCountCloudTitle": "PiggyCount 클라우드 설정",
   "cloudPiggyCountCloudUrlLabel": "서버 URL",
   "cloudPiggyCountCloudUrlHint": "https://your-server.com",

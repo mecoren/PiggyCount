@@ -6917,6 +6917,12 @@ abstract class AppLocalizations {
   /// **'Self-hosted · Incremental sync · Multi-device'**
   String get cloudPiggyCountCloudSubtitle;
 
+  /// No description provided for @cloudPiggyCountCloudDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled in this build'**
+  String get cloudPiggyCountCloudDisabled;
+
   /// No description provided for @cloudConfigurePiggyCountCloudTitle.
   ///
   /// In en, this message translates to:

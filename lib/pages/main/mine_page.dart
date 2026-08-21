@@ -16,6 +16,7 @@ import '../../services/export/share_poster_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../cloud/cloud_sync_page.dart';
 import '../cloud/piggycount_cloud_sync_page.dart';
+import '../../cloud/cloud_feature_flags.dart';
 import '../../utils/website_urls.dart';
 import '../settings/data_management_page.dart';
 import '../settings/appearance_settings_page.dart';
@@ -109,10 +110,14 @@ class MinePage extends ConsumerWidget {
                                 case CloudBackendType.s3:
                                   return 'S3';
                                 case CloudBackendType.piggycountCloud:
-                                  return cloudVersion != null &&
-                                          cloudVersion.isNotEmpty
-                                      ? 'PiggyCount Cloud v$cloudVersion'
-                                      : 'PiggyCount Cloud';
+                                  // 云端协同已关闭（见 cloud_feature_flags.dart）：
+                                  // 即便配置里仍是该类型，也标注为「未启用」。
+                                  return !kPiggyCountCloudEnabled
+                                      ? 'PiggyCount Cloud（未启用）'
+                                      : (cloudVersion != null &&
+                                              cloudVersion.isNotEmpty
+                                          ? 'PiggyCount Cloud v$cloudVersion'
+                                          : 'PiggyCount Cloud');
                               }
                             },
                           ),
@@ -281,7 +286,8 @@ class MinePage extends ConsumerWidget {
                                         .valueOrNull;
                                     final isPiggyCount = cfg != null &&
                                         cfg.type ==
-                                            CloudBackendType.piggycountCloud;
+                                            CloudBackendType.piggycountCloud &&
+                                        kPiggyCountCloudEnabled;
                                     await Navigator.of(sectionContext).push(
                                       MaterialPageRoute(
                                           builder: (_) => isPiggyCount

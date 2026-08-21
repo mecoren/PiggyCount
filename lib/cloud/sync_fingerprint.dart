@@ -27,7 +27,9 @@ import '../services/system/logger_service.dart';
 ///   exchangeRateOverrides、monthStartDay 全部参与指纹。recurring 的
 ///   lastGeneratedDate 刻意排除：它是「本机生成进度」而非数据本体，两端
 ///   天然不同，纳入会导致指纹永久 different → 每次启动误弹「云端有更新」。
-///   导入侧用 max(local, cloud) 合并保证进度不回退（importRecurrings）。
+///   注意：快照（transactions_json）里仍会携带 lastGeneratedDate 字段，但
+///   那仅用于导入侧 max(local, cloud) 合并保证进度不回退（importRecurrings），
+///   不参与指纹 —— 序列化携带与指纹排除并不矛盾。
 /// - 排序键优先级：
 ///   happenedAt → type → amount → categoryName → categoryKind → note
 ///

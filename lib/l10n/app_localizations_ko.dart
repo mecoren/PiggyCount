@@ -3710,6 +3710,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get cloudPiggyCountCloudSubtitle => '셀프 호스팅 · 증분 동기화 · 다중 기기';
 
   @override
+  String get cloudPiggyCountCloudDisabled => '이 빌드에서는 비활성화됨';
+
+  @override
   String get cloudConfigurePiggyCountCloudTitle => 'PiggyCount 클라우드 설정';
 
   @override

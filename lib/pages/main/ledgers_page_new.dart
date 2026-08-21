@@ -13,6 +13,7 @@ import '../../providers/currency_providers.dart';
 import '../../models/ledger_display_item.dart';
 import '../../cloud/transactions_sync_manager.dart';
 import '../../cloud/sync_service.dart';
+import '../../cloud/cloud_feature_flags.dart';
 import '../../cloud/sync/sync_engine.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/biz.dart';
@@ -193,8 +194,11 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
      // 都在 PiggyCount Cloud 后端),非 PiggyCount Cloud 用户(local / WebDAV /
      // S3 / Supabase 等)就算扫码也走不通,按钮藏起来避免误导。
     final cloudConfigAsync = ref.watch(activeCloudConfigProvider);
+    // 共享账本是云端协同（PiggyCount Cloud）的独占能力；云端协同关闭时
+    // （见 cloud_feature_flags.dart）不再展示「加入共享账本」入口。
     final isPiggyCountCloud =
-        cloudConfigAsync.valueOrNull?.type == CloudBackendType.piggycountCloud;
+        cloudConfigAsync.valueOrNull?.type == CloudBackendType.piggycountCloud &&
+        kPiggyCountCloudEnabled;
 
     return ListView(
       padding: EdgeInsets.symmetric(

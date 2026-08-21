@@ -13,6 +13,7 @@ import '../cloud/sync/sync_coordinator.dart';
 import '../cloud/sync/sync_engine.dart';
 import '../cloud/sync/sync_providers.dart' as sync_p;
 import '../cloud/transactions_sync_manager.dart';
+import '../cloud/cloud_feature_flags.dart';
 import '../models/ledger_display_item.dart';
 import '../ai/providers/ai_provider_manager.dart';
 import '../pages/ai/ai_provider_manage_page.dart'
@@ -180,6 +181,11 @@ final syncServiceProvider = Provider<SyncService>((ref) {
 
   // PiggyCount Cloud → SyncEngine（增量同步）
   if (config.type == CloudBackendType.piggycountCloud) {
+    // 云端协同总开关（见 cloud_feature_flags.dart）。关闭时不允许任何
+    // SyncEngine 实时通道被实例化，退化为纯本地，路径 B 代码路径不再触发。
+    if (!kPiggyCountCloudEnabled) {
+      return LocalOnlySyncService();
+    }
     final providerAsync = ref.watch(piggycountCloudProviderInstance);
     if (!providerAsync.hasValue || providerAsync.value == null) {
       // Provider 尚未初始化，返回 LocalOnly 等待
@@ -560,6 +566,9 @@ final syncServiceProvider = Provider<SyncService>((ref) {
 /// 用于 SyncEngine 和其他需要直接访问 PiggyCount Cloud API 的场景
 final piggycountCloudProviderInstance =
     FutureProvider<PiggyCountCloudProvider?>((ref) async {
+  // 云端协同总开关（见 cloud_feature_flags.dart）。关闭时直接返回 null，
+  // 阻止任何 PiggyCount Cloud 网络初始化（登录 / 版本探测 / profile 同步等）。
+  if (!kPiggyCountCloudEnabled) return null;
   final configAsync = ref.watch(activeCloudConfigProvider);
   if (!configAsync.hasValue) return null;
 
