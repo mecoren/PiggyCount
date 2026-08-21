@@ -312,6 +312,7 @@ class LocalRepository extends BaseRepository {
     required DateTime happenedAt,
     String? note,
     String? syncId,
+    int? recurringId,
     String? categorySyncIdOverride,
     String? accountSyncIdOverride,
     String? toAccountSyncIdOverride,
@@ -339,6 +340,7 @@ class LocalRepository extends BaseRepository {
       happenedAt: happenedAt,
       note: note,
       syncId: syncId,
+      recurringId: recurringId,
       categorySyncIdOverride: categorySyncIdOverride,
       accountSyncIdOverride: accountSyncIdOverride,
       toAccountSyncIdOverride: toAccountSyncIdOverride,
@@ -510,6 +512,14 @@ class LocalRepository extends BaseRepository {
 
   @override
   Future<Transaction?> getTransactionById(int id) => _transactionRepo.getTransactionById(id);
+
+  @override
+  Future<bool> existsRecurringInstance({
+    required int recurringId,
+    required DateTime happenedAt,
+  }) =>
+      _transactionRepo.existsRecurringInstance(
+          recurringId: recurringId, happenedAt: happenedAt);
 
   // ---------------------------------------------------------------------
   // v30 交易级多币种:折算兜底 + 重算/检测(.docs/multi-currency-ledger)

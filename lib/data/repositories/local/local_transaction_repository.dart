@@ -365,6 +365,7 @@ class LocalTransactionRepository implements TransactionRepository {
     required DateTime happenedAt,
     String? note,
     String? syncId,
+    int? recurringId,
     String? categorySyncIdOverride,
     String? accountSyncIdOverride,
     String? toAccountSyncIdOverride,
@@ -385,6 +386,7 @@ class LocalTransactionRepository implements TransactionRepository {
           happenedAt: d.Value(happenedAt),
           note: d.Value(note),
           syncId: d.Value(syncId ?? _uuid.v4()),
+          recurringId: d.Value(recurringId),
           categorySyncIdOverride: d.Value(categorySyncIdOverride),
           accountSyncIdOverride: d.Value(accountSyncIdOverride),
           toAccountSyncIdOverride: d.Value(toAccountSyncIdOverride),
@@ -666,6 +668,19 @@ class LocalTransactionRepository implements TransactionRepository {
   Future<Transaction?> getTransactionById(int id) async {
     return await (db.select(db.transactions)..where((t) => t.id.equals(id)))
         .getSingleOrNull();
+  }
+
+  @override
+  Future<bool> existsRecurringInstance({
+    required int recurringId,
+    required DateTime happenedAt,
+  }) async {
+    final rows = await (db.select(db.transactions)
+          ..where((t) =>
+              t.recurringId.equals(recurringId) &
+              t.happenedAt.equals(happenedAt)))
+        .get();
+    return rows.isNotEmpty;
   }
 
   @override

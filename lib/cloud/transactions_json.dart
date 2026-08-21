@@ -390,6 +390,11 @@ Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
       'startDate': r.startDate.toUtc().toIso8601String(),
       if (r.endDate != null)
         'endDate': r.endDate!.toUtc().toIso8601String(),
+      // lastGeneratedDate 语义说明（与 sync_fingerprint 排除规则对齐）：
+      // 它是「本机生成进度」而非数据本体，两端的值天然不同，故指纹计算时
+      // 刻意排除（否则永久 different、每次启动误弹「云端有更新」）。快照里
+      // 仍携带它，仅用于恢复侧 importRecurrings 以 max(local, cloud) 合并，
+      // 防止旧快照回退进度 → 生成器重放历史交易。
       if (r.lastGeneratedDate != null)
         'lastGeneratedDate': r.lastGeneratedDate!.toUtc().toIso8601String(),
       'enabled': r.enabled,

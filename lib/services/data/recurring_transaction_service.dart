@@ -221,40 +221,60 @@ class RecurringTransactionService {
           final nextDate = calculateNextDate(currentRecurring);
           if (nextDate == null) break;
 
-          logger.info(_tag,
-              '周期交易 id=${currentRecurring.id} 生成一笔: happenedAt=$nextDate amount=${currentRecurring.amount} type=${currentRecurring.type}');
+          // 防重(A 方案)：生成前检查该周期模板在目标日是否已有实例。
+          // 当 S3 恢复已先把同周期实例写进来(带 recurringId)时,此处命中
+          // 并跳过,避免「恢复实例 + 本地新生成实例」并存重复。recurringId
+          // 为 null 的脏模板无法关联,跳过检查保持历史行为。
+          final recurringId = currentRecurring.id;
+          final duplicateExists = recurringId != null &&
+              await repository.existsRecurringInstance(
+                recurringId: recurringId,
+                happenedAt: nextDate,
+              );
 
-          // 生成交易记录
-          final transactionId = await repository.addTransaction(
-            ledgerId: currentRecurring.ledgerId,
-            type: currentRecurring.type,
-            amount: currentRecurring.amount,
-            categoryId: currentRecurring.categoryId,
-            accountId: currentRecurring.accountId,
-            toAccountId: currentRecurring.toAccountId,
-            happenedAt: nextDate,
-            note: currentRecurring.note,
-          );
+          if (duplicateExists) {
+            logger.info(_tag,
+                '周期交易 id=$recurringId 目标日 $nextDate 已存在同周期实例,跳过生成(仅推进 lastGeneratedDate)');
+          } else {
+            logger.info(_tag,
+                '周期交易 id=${currentRecurring.id} 生成一笔: happenedAt=$nextDate amount=${currentRecurring.amount} type=${currentRecurring.type}');
 
-          // 更新最后生成日期
+            // 生成交易记录。recurringId 一并写入:否则实例 recurring_id 为
+            // null,两端无法按 (recurringId, happenedAt) 识别为同一周期实例,
+            // 同步恢复侧去重(B 方案)将失效。
+            final transactionId = await repository.addTransaction(
+              ledgerId: currentRecurring.ledgerId,
+              type: currentRecurring.type,
+              amount: currentRecurring.amount,
+              categoryId: currentRecurring.categoryId,
+              accountId: currentRecurring.accountId,
+              toAccountId: currentRecurring.toAccountId,
+              happenedAt: nextDate,
+              note: currentRecurring.note,
+              recurringId: recurringId,
+            );
+
+            // 使用流式查询获取生成的交易（取第一个）
+            final transactionsWithCategory =
+                await repository.transactionsWithCategoryAll(ledgerId: ledger.id).first;
+            final matchedTransactions = transactionsWithCategory
+                .where((e) => e.t.id == transactionId)
+                .toList();
+            final transaction = matchedTransactions.isNotEmpty
+                ? matchedTransactions.first.t
+                : null;
+
+            if (transaction != null) {
+              generatedTransactions.add(transaction);
+            }
+          }
+
+          // 更新最后生成日期。无论生成还是命中重复跳过,都要推进进度 ——
+          // 否则 nextDate 不会前进到下一周期,while 循环将原地死循环。
           await repository.updateLastGeneratedDate(
             currentRecurring.id,
             nextDate,
           );
-
-          // 使用流式查询获取生成的交易（取第一个）
-          final transactionsWithCategory =
-              await repository.transactionsWithCategoryAll(ledgerId: ledger.id).first;
-          final matchedTransactions = transactionsWithCategory
-              .where((e) => e.t.id == transactionId)
-              .toList();
-          final transaction = matchedTransactions.isNotEmpty
-              ? matchedTransactions.first.t
-              : null;
-
-          if (transaction != null) {
-            generatedTransactions.add(transaction);
-          }
 
           // 重新读取更新后的重复交易记录，用于下一次循环
           final updatedList = await repository.getAllRecurringTransactions();

@@ -304,10 +304,13 @@ class ImportData {
 class ImportResult {
   final int inserted;
   final int failed;
+  /// 因 recurring 周期实例去重而被跳过的交易条数（B 方案）。
+  final int skippedRecurring;
 
   const ImportResult({
     required this.inserted,
     required this.failed,
+    this.skippedRecurring = 0,
   });
 }
 
@@ -1120,6 +1123,7 @@ class DataImportService {
   }) async {
     int inserted = 0;
     int failed = 0;
+    int skipped = 0;
     int processed = 0;
     final total = transactions.length;
     logger.info('TxImport',
@@ -1350,6 +1354,31 @@ class DataImportService {
               recurringSyncIdToId != null)
           ? recurringSyncIdToId[tx.recurringSyncId!]
           : null;
+      // B 方案（同步恢复侧去重）：带周期规则锚点的实例，若本地已存在
+      // 同 (recurringId, happenedAt) 实例（可能是本机 generator 先生成的，
+      // 或本批次已恢复过），则跳过不重复插入。否则「本地生成实例 + 源端
+      // 恢复实例」因 syncId 不同而无法被 syncId 去重识别，导致重复。
+      // 查询失败时按「不存在」处理并告警，不阻断整体恢复（与 import 容错
+      // 语义一致）。
+      if (resolvedRecurringId != null) {
+        bool dup;
+        try {
+          dup = await repo.existsRecurringInstance(
+            recurringId: resolvedRecurringId,
+            happenedAt: tx.happenedAt,
+          );
+        } catch (e, st) {
+          logger.warning('TxImport',
+              'recurring 实例存在性检查失败(按不存在处理): recurringId=$resolvedRecurringId, e=$e, st=$st');
+          dup = false;
+        }
+        if (dup) {
+          skipped++;
+          processed++;
+          if (onProgress != null) onProgress(processed, total);
+          continue;
+        }
+      }
       final txCompanion = TransactionsCompanion.insert(
         ledgerId: ledgerId,
         type: tx.type,
@@ -1403,8 +1432,9 @@ class DataImportService {
     await flush();
 
     logger.info('TxImport',
-        '交易导入完成: 总数=$total 成功=$inserted 失败=$failed 总耗时=${overallSw.elapsedMilliseconds}ms');
-    return ImportResult(inserted: inserted, failed: failed);
+        '交易导入完成: 总数=$total 成功=$inserted 跳过recurring重复=$skipped 失败=$failed 总耗时=${overallSw.elapsedMilliseconds}ms');
+    return ImportResult(
+        inserted: inserted, failed: failed, skippedRecurring: skipped);
   }
 }
 

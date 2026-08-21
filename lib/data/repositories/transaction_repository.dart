@@ -148,6 +148,18 @@ abstract class TransactionRepository {
   /// 根据ID获取单条交易
   Future<Transaction?> getTransactionById(int id);
 
+  /// 判断该周期模板在指定日期是否已生成过实例（用于 recurring 生成防重）。
+  ///
+  /// recurring 周期交易可能因「本地 generator 先生成 + S3 恢复又插入同周期
+  /// 实例」而产生重复（两端 recurringId/happenedAt 相同、syncId 不同）。
+  /// 生成前与恢复前都应调用此方法做 (recurringId, happenedAt) 维度的去重。
+  /// [happenedAt] 传实例的计划日期即可，无需精确到时刻（与 generator /
+  /// import 传入的 happenedAt 保持一致）。
+  Future<bool> existsRecurringInstance({
+    required int recurringId,
+    required DateTime happenedAt,
+  });
+
   /// 获取指定月份的交易记录（带分类信息）
   ///
   /// [month] 为周期标签,约定传 DateTime(year, month, 1);实际范围由账本
@@ -187,6 +199,10 @@ abstract class TransactionRepository {
     required DateTime happenedAt,
     String? note,
     String? syncId,
+    /// 关联的周期模板 id（recurring_transactions.id）。recurring 生成器生成的
+    /// 实例必须写入，否则 (recurringId, happenedAt) 去重键缺失，无法与
+    /// S3 恢复来的同周期实例识别为重复（见 existsRecurringInstance）。
+    int? recurringId,
     String? categorySyncIdOverride,
     String? accountSyncIdOverride,
     String? toAccountSyncIdOverride,
