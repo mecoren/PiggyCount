@@ -75,7 +75,12 @@ void main() {
         message: message,
       );
 
-  SyncPreview _preview({int added = 0, int modified = 0, int deleted = 0}) {
+  SyncPreview _preview({
+    int added = 0,
+    int modified = 0,
+    int deleted = 0,
+    bool selectDeleted = false,
+  }) {
     final changes = <SyncChange>[];
     for (var i = 0; i < added; i++) {
       changes.add(SyncChange(type: SyncChangeType.added));
@@ -84,7 +89,11 @@ void main() {
       changes.add(SyncChange(type: SyncChangeType.modified));
     }
     for (var i = 0; i < deleted; i++) {
-      changes.add(SyncChange(type: SyncChangeType.deleted));
+      // SYNC-05：deleted 默认不选中；需要旧行为（全选）的测试显式传入
+      changes.add(SyncChange(
+        type: SyncChangeType.deleted,
+        selected: selectDeleted,
+      ));
     }
     return SyncPreview(changes: changes);
   }
@@ -384,23 +393,34 @@ void main() {
       };
     });
 
-    test('对每个候选账本调用 applyPreviewChanges，全部选中', () async {
+    test('对每个候选账本调用 applyPreviewChanges，按默认选中态应用', () async {
       await checker.runIfNeeded();
 
-      expect(deps.applyPreviewChangesCallCount, 2);
       // L1: 2 added + 1 modified = 3 全选
-      // L2: 3 deleted = 3 全选
       expect(deps.appliedForLedger[1]!.length, 3);
-      expect(deps.appliedForLedger[2]!.length, 3);
+      // SYNC-05：L2 的 3 条 deleted（本地独有交易）默认不选中 →
+      // 无选中变更，跳过 apply 且不进入合并/回传
+      expect(deps.appliedForLedger.containsKey(2), isFalse);
+      expect(deps.applyPreviewChangesCallCount, 1);
     });
 
     test('每次 apply 后触发 runAfterDownload', () async {
+      deps.previewByLedger[2] = (
+        preview: _preview(deleted: 3, selectDeleted: true),
+        importData: const ImportData(),
+        version: 6,
+      );
       await checker.runIfNeeded();
 
       expect(deps.runAfterDownloadCallCount, 2);
     });
 
     test('合并成功后对每个账本回传云端（merge-then-publish）', () async {
+      deps.previewByLedger[2] = (
+        preview: _preview(deleted: 3, selectDeleted: true),
+        importData: const ImportData(),
+        version: 6,
+      );
       await checker.runIfNeeded();
 
       // 只下载合并不回传时指纹永不收敛，下次启动会重复弹「云端有更新」
@@ -409,6 +429,11 @@ void main() {
 
     test('两阶段：全部账本合并完成后才统一回传（sync_convergence_fix）',
         () async {
+      deps.previewByLedger[2] = (
+        preview: _preview(deleted: 3, selectDeleted: true),
+        importData: const ImportData(),
+        version: 6,
+      );
       await checker.runIfNeeded();
 
       // 账户/分类/标签是用户全局数据：若逐账本交错「合并→回传」，
@@ -451,6 +476,11 @@ void main() {
 
     test('回传失败不影响合并结果，汇总提示回传失败', () async {
       deps.uploadThrowForLedgerIds = {1};
+      deps.previewByLedger[2] = (
+        preview: _preview(deleted: 3, selectDeleted: true),
+        importData: const ImportData(),
+        version: 6,
+      );
 
       await checker.runIfNeeded();
 
@@ -475,6 +505,11 @@ void main() {
     });
 
     test('最后状态为 DoneState 显示汇总结果', () async {
+      deps.previewByLedger[2] = (
+        preview: _preview(deleted: 3, selectDeleted: true),
+        importData: const ImportData(),
+        version: 6,
+      );
       await checker.runIfNeeded();
 
       expect(controller.state, isA<DoneState>());
@@ -540,6 +575,11 @@ void main() {
 
     test('单个账本 apply 抛异常不影响其他账本，最终 DoneState 包含失败计数', () async {
       deps.applyThrowForLedgerIds = {1};
+      deps.previewByLedger[2] = (
+        preview: _preview(deleted: 3, selectDeleted: true),
+        importData: const ImportData(),
+        version: 6,
+      );
 
       await checker.runIfNeeded();
 
@@ -552,6 +592,11 @@ void main() {
 
     test('downloadAndPreview 抛异常时该账本计入失败，其他账本继续', () async {
       deps.downloadAndPreviewThrowForLedgerIds = {1};
+      deps.previewByLedger[2] = (
+        preview: _preview(deleted: 3, selectDeleted: true),
+        importData: const ImportData(),
+        version: 6,
+      );
 
       await checker.runIfNeeded();
 

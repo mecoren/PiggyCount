@@ -323,7 +323,23 @@ class SyncEngine implements app.SyncService {
       } else if (unpushedCount > 0) {
         diff = app.SyncDiff.localNewer;
       } else {
-        diff = app.SyncDiff.inSync;
+        // SYNC-11：本地无未推送变更时，进一步对比本地游标与服务端最新
+        // cursor，检测「远端有未拉取增量」。旧实现只看本地未推送数 +
+        // 快照是否存在，永远判不出 cloudNewer——另一台设备推了新变更后
+        // 本机 UI 仍显示 inSync。
+        // 探测为一次轻量空页请求（since 取超大值），结果随 _statusCache
+        // 缓存，pull/push 完成后缓存已失效会重新探测。
+        final localCursor = await appCursor.read();
+        final probe = await provider.pullChanges(
+          since: 1 << 40,
+          limit: 1,
+          persistCursor: false,
+        );
+        if (probe.serverCursor > (localCursor ?? 0)) {
+          diff = app.SyncDiff.cloudNewer;
+        } else {
+          diff = app.SyncDiff.inSync;
+        }
       }
 
       final status = app.SyncStatus(

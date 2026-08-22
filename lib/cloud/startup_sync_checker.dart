@@ -657,7 +657,8 @@ class StartupSyncChecker {
           continue;
         }
 
-        // 一键应用：所有变更都选中（selected 字段默认 true）
+        // 一键应用：按各变更的默认选中态（SYNC-05：added/modified 默认
+        // 选中，deleted 本地独有交易默认不选，避免破坏性变更静默执行）
         final selected = preview.changes.where((ch) => ch.selected).toList();
         if (selected.isEmpty) {
           applied++;

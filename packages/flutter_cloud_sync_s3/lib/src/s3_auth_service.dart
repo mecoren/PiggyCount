@@ -12,10 +12,18 @@ class S3AuthService implements CloudAuthService {
 
   S3AuthService(this.client, this.bucket);
 
+  /// accessKey 脱敏（SYNC-14）：仅保留前 4 位 + 后 4 位，中间以 `…` 代替。
+  /// 同一 accessKey 生成的 id 保持稳定（不影响既有快照元数据的 userId 一致性），
+  /// 但完整密钥标识不再随快照元数据上云 / 进入日志扩散面。
+  static String _maskAccessKey(String key) {
+    if (key.length <= 8) return '****';
+    return '${key.substring(0, 4)}…${key.substring(key.length - 4)}';
+  }
+
   /// 统一构造 CloudUser，避免 getCurrentUser / authStateChanges 重复构建
   /// 导致字段不一致（例如修改 metadata 结构时需改两处）
   CloudUser _buildUser() => CloudUser(
-        id: 's3-${client.accessKey}',
+        id: 's3-${_maskAccessKey(client.accessKey)}',
         email: null, // S3 无 email 概念
         metadata: {
           'bucket': bucket,

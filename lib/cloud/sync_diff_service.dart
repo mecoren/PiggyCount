@@ -18,7 +18,12 @@ class SyncChange {
   /// 本地版本（modified/deleted 有值）
   final Transaction? localTransaction;
 
-  /// 用户是否选中，默认 true
+  /// 用户是否选中
+  ///
+  /// SYNC-05：默认值按类型区分——added/modified 默认选中，
+  /// **deleted（本地独有交易将被删除）默认不选中**。旧实现一律默认 true，
+  /// 「一键应用」会把"删除本地独有交易"这类破坏性变更静默包含在内；
+  /// 现在用户需在预览中显式勾选才会执行删除。
   bool selected;
 
   /// 变更描述（用于 modified 类型显示差异）
@@ -28,9 +33,9 @@ class SyncChange {
     required this.type,
     this.cloudTransaction,
     this.localTransaction,
-    this.selected = true,
+    bool? selected,
     this.diffDetails = const [],
-  });
+  }) : selected = selected ?? (type != SyncChangeType.deleted);
 }
 
 /// Diff 预览结果

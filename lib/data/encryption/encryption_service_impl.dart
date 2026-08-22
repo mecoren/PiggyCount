@@ -831,6 +831,31 @@ class EncryptionServiceImpl implements EncryptionService {
     _loadKeyCompleter = null;
   }
 
+  /// 常见弱密码黑名单（小写比较）。Argon2id 虽为 memory-hard KDF，
+  /// 但对 `12345678` 这类字典密码仍可被离线爆破，入口处直接拦截。
+  static const List<String> _weakPasswordBlacklist = [
+    '12345678',
+    '123456789',
+    '1234567890',
+    'password',
+    'password1',
+    'passw0rd',
+    'qwertyuiop',
+    'asdfghjkl',
+    'zxcvbnm,.',
+    '11111111',
+    '88888888',
+    '66666666',
+    '00000000',
+    '12121212',
+    'abcd1234',
+    'abc12345',
+    'iloveyou',
+    'sunshine',
+    'princess',
+    'piggycount',
+  ];
+
   void _validatePassword(String password) {
     if (password.isEmpty) {
       throw ArgumentError('密码不能为空');
@@ -839,6 +864,22 @@ class EncryptionServiceImpl implements EncryptionService {
       throw ArgumentError(
         '密码长度不能少于 ${EncryptionService.minPasswordLength} 字符',
       );
+    }
+
+    // SYNC-12：复杂度校验——至少包含字母 / 数字 / 其他符号中的两类。
+    // 全同类字符（纯数字、纯重复字母）显著降低离线爆破成本。
+    var categories = 0;
+    if (password.contains(RegExp(r'[A-Za-z]'))) categories++;
+    if (password.contains(RegExp(r'[0-9]'))) categories++;
+    if (password.contains(RegExp(r'[^A-Za-z0-9]'))) categories++;
+    if (categories < 2) {
+      throw ArgumentError(
+        '密码强度不足：请至少包含「字母 / 数字 / 符号」中的两类',
+      );
+    }
+
+    if (_weakPasswordBlacklist.contains(password.toLowerCase())) {
+      throw ArgumentError('密码过于常见（弱密码），请更换');
     }
   }
 
