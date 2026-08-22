@@ -47,8 +47,13 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
   }) async {
     final fullPath = _buildPath(path);
     // 临时文件 + rename 实现原子写入，避免网络中断在远端留下损坏的半截文件。
-    // 之所以先 remove 再 rename：部分 WebDAV 服务器 MOVE 不支持覆盖，
-    // 先删除目标可提高 rename 成功率；remove 失败（如目标不存在）可忽略。
+    //
+    // SYNC-09 修复：改为「先 rename(overwrite) 再按需 remove」。
+    // 此前先 remove(fullPath) 再 rename，若 rename 失败（网络中断等）旧文件
+    // 已被删除 → 云端账本文件出现丢失窗口。现在优先直接覆盖 rename：
+    // rename 失败时旧文件仍在；仅当服务器不支持 MOVE 覆盖（409/412 等）
+    // 时才降级为先删目标再重试一次 —— 此时丢失窗口收窄到「怪异服务器 +
+    // 第二次 rename 也失败」的组合场景。
     final tempPath = '$fullPath.tmp.${DateTime.now().millisecondsSinceEpoch}';
     try {
       // 确保父目录存在
@@ -58,15 +63,19 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
       final data = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
       await _op('write', () => _client.write(tempPath, data));
 
-      // 2. 尝试删除旧文件（忽略失败：旧文件可能不存在，或服务器 rename 自带覆盖）
+      // 2. 直接覆盖 rename（overwrite=true），失败时旧文件保持原样
       try {
-        await _op('remove', () => _client.remove(fullPath));
-      } catch (_) {
-        // 旧文件不存在或删除失败均可忽略，交由 rename 处理
+        await _op('rename', () => _client.rename(tempPath, fullPath, true));
+      } catch (renameError) {
+        // 3. 降级：部分 WebDAV 服务器 MOVE 不支持覆盖，此时才先删目标
+        //    再重试一次。remove 失败（如目标本不存在）可忽略。
+        try {
+          await _op('remove', () => _client.remove(fullPath));
+        } catch (_) {
+          // 目标不存在或删除失败均可忽略，交由 rename 处理
+        }
+        await _op('rename', () => _client.rename(tempPath, fullPath, true));
       }
-
-      // 3. rename 完成原子上传；overwrite=true 兼容目标仍存在的边缘场景
-      await _op('rename', () => _client.rename(tempPath, fullPath, true));
     } catch (e) {
       // 清理临时文件，避免远端残留半成品
       try {

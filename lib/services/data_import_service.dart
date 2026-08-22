@@ -3,7 +3,8 @@ import 'package:uuid/uuid.dart';
 import '../cloud/transactions_json.dart';
 import '../data/db.dart';
 import '../data/repositories/base_repository.dart';
-import '../data/repositories/transaction_repository.dart' show BatchAttachmentData;
+import '../data/repositories/transaction_repository.dart'
+    show BatchAttachmentData, TransactionRepository;
 import 'currency/rate_math.dart';
 import 'system/logger_service.dart';
 
@@ -845,6 +846,7 @@ class DataImportService {
     final sw = Stopwatch()..start();
     int created = 0;
     int updated = 0;
+    int failed = 0;
 
     try {
       // 解析引用锚点：账户（syncId 优先、name 兜底）、分类（name）。
@@ -878,102 +880,118 @@ class DataImportService {
             r.type, r.note, r.frequency, r.amount, r.dayOfMonth)] = r;
       }
 
+      // REC-03 修复：单条规则失败只跳过该条并记 error，不中断其余规则。
+      // 此前 try 包住整个循环，一条规则抛异常会中断其后所有规则的导入，
+      // 这些规则的 syncId 全部缺失映射 → 对应交易以 recurringId=null
+      // 落库，恢复侧 (recurringId, happenedAt) 去重随之失效，且调用方无感知。
       for (final r in recurrings) {
-        // 引用解析：syncId 优先，name 兜底；都失败置 null + warning
-        // （与交易缺分类的容错一致，不阻断整体导入）。
-        int? categoryId;
-        if (r.categoryName != null) {
-          categoryId = categoryNameToId[r.categoryName];
-          if (categoryId == null) {
-            logger.warning('RecurringImport',
-                '周期规则分类未命中: "${r.categoryName}" → 置空');
+        try {
+          // 引用解析：syncId 优先，name 兜底；都失败置 null + warning
+          // （与交易缺分类的容错一致，不阻断整体导入）。
+          int? categoryId;
+          if (r.categoryName != null) {
+            categoryId = categoryNameToId[r.categoryName];
+            if (categoryId == null) {
+              logger.warning('RecurringImport',
+                  '周期规则分类未命中: "${r.categoryName}" → 置空');
+            }
           }
-        }
-        int? accountId;
-        if (r.accountSyncId != null && r.accountSyncId!.isNotEmpty) {
-          accountId = accountSyncIdToId[r.accountSyncId];
-        }
-        accountId ??= (r.accountName != null
-            ? accountNameToId[r.accountName]
-            : null);
-        int? toAccountId;
-        if (r.toAccountSyncId != null && r.toAccountSyncId!.isNotEmpty) {
-          toAccountId = accountSyncIdToId[r.toAccountSyncId];
-        }
-        toAccountId ??= (r.toAccountName != null
-            ? accountNameToId[r.toAccountName]
-            : null);
+          int? accountId;
+          if (r.accountSyncId != null && r.accountSyncId!.isNotEmpty) {
+            accountId = accountSyncIdToId[r.accountSyncId];
+          }
+          accountId ??= (r.accountName != null
+              ? accountNameToId[r.accountName]
+              : null);
+          int? toAccountId;
+          if (r.toAccountSyncId != null && r.toAccountSyncId!.isNotEmpty) {
+            toAccountId = accountSyncIdToId[r.toAccountSyncId];
+          }
+          toAccountId ??= (r.toAccountName != null
+              ? accountNameToId[r.toAccountName]
+              : null);
 
-        // 匹配：① syncId ② 业务键
-        RecurringTransaction? matched;
-        var matchedByBizKey = false;
-        if (r.syncId != null && r.syncId!.isNotEmpty) {
-          matched = existingBySyncId[r.syncId];
-        }
-        if (matched == null) {
-          final key = bizKey(
-              r.type, r.note, r.frequency, r.amount, r.dayOfMonth);
-          matched = existingByBizKey[key];
-          matchedByBizKey = matched != null;
-        }
+          // 匹配：① syncId ② 业务键
+          RecurringTransaction? matched;
+          var matchedByBizKey = false;
+          if (r.syncId != null && r.syncId!.isNotEmpty) {
+            matched = existingBySyncId[r.syncId];
+          }
+          if (matched == null) {
+            final key = bizKey(
+                r.type, r.note, r.frequency, r.amount, r.dayOfMonth);
+            matched = existingByBizKey[key];
+            matchedByBizKey = matched != null;
+          }
 
-        if (matched == null) {
-          final id = await repo.addRecurringTransaction(
-            ledgerId: ledgerId,
-            type: r.type,
-            amount: r.amount,
-            categoryId: categoryId,
-            accountId: accountId,
-            toAccountId: toAccountId,
-            note: r.note,
-            frequency: r.frequency,
-            interval: r.interval,
-            dayOfMonth: r.dayOfMonth,
-            dayOfWeek: r.dayOfWeek,
-            monthOfYear: r.monthOfYear,
-            startDate: r.startDate,
-            endDate: r.endDate,
-            enabled: r.enabled,
-            syncId: r.syncId,
-          );
-          created++;
-          if (r.syncId != null && r.syncId!.isNotEmpty) {
-            recurringSyncIdToId[r.syncId!] = id;
+          if (matched == null) {
+            final id = await repo.addRecurringTransaction(
+              ledgerId: ledgerId,
+              type: r.type,
+              amount: r.amount,
+              categoryId: categoryId,
+              accountId: accountId,
+              toAccountId: toAccountId,
+              note: r.note,
+              frequency: r.frequency,
+              interval: r.interval,
+              dayOfMonth: r.dayOfMonth,
+              dayOfWeek: r.dayOfWeek,
+              monthOfYear: r.monthOfYear,
+              startDate: r.startDate,
+              endDate: r.endDate,
+              enabled: r.enabled,
+              syncId: r.syncId,
+            );
+            created++;
+            if (r.syncId != null && r.syncId!.isNotEmpty) {
+              recurringSyncIdToId[r.syncId!] = id;
+            }
+          } else {
+            // 已存在：整行以快照为准更新；lastGeneratedDate 取 max 防
+            // 旧快照回退进度 → 生成器重放整段历史交易。
+            final mergedLastGen = _maxDate(
+                matched.lastGeneratedDate, r.lastGeneratedDate);
+            await repo.updateRecurringTransaction(
+              id: matched.id,
+              ledgerId: ledgerId,
+              type: r.type,
+              amount: r.amount,
+              categoryId: categoryId,
+              accountId: accountId,
+              toAccountId: toAccountId,
+              note: r.note,
+              frequency: r.frequency,
+              interval: r.interval,
+              dayOfMonth: r.dayOfMonth,
+              dayOfWeek: r.dayOfWeek,
+              monthOfYear: r.monthOfYear,
+              startDate: r.startDate,
+              endDate: r.endDate,
+              enabled: r.enabled,
+              lastGeneratedDate: mergedLastGen,
+              // 业务键命中的本地行可能无 syncId（v33 前建的），回填收敛身份
+              syncId: matchedByBizKey ? r.syncId : null,
+            );
+            updated++;
+            if (r.syncId != null && r.syncId!.isNotEmpty) {
+              recurringSyncIdToId[r.syncId!] = matched.id;
+            }
           }
-        } else {
-          // 已存在：整行以快照为准更新；lastGeneratedDate 取 max 防
-          // 旧快照回退进度 → 生成器重放整段历史交易。
-          final mergedLastGen = _maxDate(
-              matched.lastGeneratedDate, r.lastGeneratedDate);
-          await repo.updateRecurringTransaction(
-            id: matched.id,
-            ledgerId: ledgerId,
-            type: r.type,
-            amount: r.amount,
-            categoryId: categoryId,
-            accountId: accountId,
-            toAccountId: toAccountId,
-            note: r.note,
-            frequency: r.frequency,
-            interval: r.interval,
-            dayOfMonth: r.dayOfMonth,
-            dayOfWeek: r.dayOfWeek,
-            monthOfYear: r.monthOfYear,
-            startDate: r.startDate,
-            endDate: r.endDate,
-            enabled: r.enabled,
-            lastGeneratedDate: mergedLastGen,
-            // 业务键命中的本地行可能无 syncId（v33 前建的），回填收敛身份
-            syncId: matchedByBizKey ? r.syncId : null,
-          );
-          updated++;
-          if (r.syncId != null && r.syncId!.isNotEmpty) {
-            recurringSyncIdToId[r.syncId!] = matched.id;
-          }
+        } catch (e, st) {
+          failed++;
+          logger.error('RecurringImport',
+              '单条周期规则导入失败(已跳过，不影响其余规则): syncId=${r.syncId ?? '无'}',
+              e, st);
         }
       }
       logger.info('RecurringImport',
-          '周期规则导入完成: 新增=$created 更新=$updated 耗时=${sw.elapsedMilliseconds}ms');
+          '周期规则导入完成: 新增=$created 更新=$updated 失败=$failed 耗时=${sw.elapsedMilliseconds}ms');
+      if (failed > 0) {
+        logger.error('RecurringImport',
+            '有 $failed 条周期规则未导入成功，引用这些规则的交易将以无周期锚点落库'
+            '（recurringId=null），恢复侧去重对其失效');
+      }
     } catch (e, st) {
       logger.error('RecurringImport', '周期规则导入失败', e, st);
     }
@@ -1167,6 +1185,28 @@ class DataImportService {
 
     final localCategoryCache = Map<String, int>.from(categoryCache);
 
+    // REC-04：预加载本批次涉及周期规则的已有实例去重键，循环内 O(1) 查内存，
+    // 替代逐笔 await DB 查询（大快照 N 笔周期实例 = N 次 SELECT）。键为
+    // (recurringId, 本地日历日)（REC-01/02：导出 toUtc/导入 toLocal 跨时区
+    // 下精确毫秒必失配；非 0 点实例按同日归一）。导入中新落库的键同步入集，
+    // 兼得批内去重（flush 前 DB 里还没有这批行）。预加载失败按空集处理并
+    // 告警，不阻断整体恢复（与下方逐笔容错语义一致）。
+    final existingRecurringKeys = <String>{};
+    try {
+      final involvedIds = <int>{
+        for (final tx in transactions)
+          if (tx.recurringSyncId != null &&
+              recurringSyncIdToId != null &&
+              recurringSyncIdToId[tx.recurringSyncId] != null)
+            recurringSyncIdToId[tx.recurringSyncId]!,
+      };
+      existingRecurringKeys.addAll(
+          await repo.getRecurringInstanceKeys(involvedIds));
+    } catch (e, st) {
+      logger.warning('TxImport',
+          '周期实例去重键预加载失败(按空集处理，本批不去重): $e, $st');
+    }
+
     // 把当前缓冲 flush 到 repo。捕获异常时整批算 failed,继续下一批。
     Future<void> flush() async {
       if (batchTx.isEmpty) return;
@@ -1355,29 +1395,20 @@ class DataImportService {
           ? recurringSyncIdToId[tx.recurringSyncId!]
           : null;
       // B 方案（同步恢复侧去重）：带周期规则锚点的实例，若本地已存在
-      // 同 (recurringId, happenedAt) 实例（可能是本机 generator 先生成的，
+      // 同 (recurringId, 本地日历日) 实例（可能是本机 generator 先生成的，
       // 或本批次已恢复过），则跳过不重复插入。否则「本地生成实例 + 源端
       // 恢复实例」因 syncId 不同而无法被 syncId 去重识别，导致重复。
-      // 查询失败时按「不存在」处理并告警，不阻断整体恢复（与 import 容错
-      // 语义一致）。
+      // 去重集合见上方预加载（REC-01/02/04）。
       if (resolvedRecurringId != null) {
-        bool dup;
-        try {
-          dup = await repo.existsRecurringInstance(
-            recurringId: resolvedRecurringId,
-            happenedAt: tx.happenedAt,
-          );
-        } catch (e, st) {
-          logger.warning('TxImport',
-              'recurring 实例存在性检查失败(按不存在处理): recurringId=$resolvedRecurringId, e=$e, st=$st');
-          dup = false;
-        }
-        if (dup) {
+        final dupKey = TransactionRepository.recurringInstanceKey(
+            resolvedRecurringId, tx.happenedAt);
+        if (existingRecurringKeys.contains(dupKey)) {
           skipped++;
           processed++;
           if (onProgress != null) onProgress(processed, total);
           continue;
         }
+        existingRecurringKeys.add(dupKey);
       }
       final txCompanion = TransactionsCompanion.insert(
         ledgerId: ledgerId,

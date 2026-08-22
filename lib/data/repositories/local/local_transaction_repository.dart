@@ -675,12 +675,40 @@ class LocalTransactionRepository implements TransactionRepository {
     required int recurringId,
     required DateTime happenedAt,
   }) async {
+    // REC-01/02：按本地日历日匹配而非精确时刻。JSON 导出 .toUtc()/导入
+    // .toLocal() 跨时区恢复时精确毫秒必然失配；daily/weekly 首笔实例也可能
+    // 带 startDate 的非 0 点时刻。单规则实例量有限（数千级），取回后内存比对。
     final rows = await (db.select(db.transactions)
-          ..where((t) =>
-              t.recurringId.equals(recurringId) &
-              t.happenedAt.equals(happenedAt)))
+          ..where((t) => t.recurringId.equals(recurringId)))
         .get();
-    return rows.isNotEmpty;
+    if (rows.isEmpty) return false;
+    final key =
+        TransactionRepository.recurringInstanceKey(recurringId, happenedAt);
+    for (final t in rows) {
+      final rid = t.recurringId;
+      if (rid == null) continue;
+      if (TransactionRepository.recurringInstanceKey(rid, t.happenedAt) ==
+          key) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @override
+  Future<Set<String>> getRecurringInstanceKeys(
+      Iterable<int> recurringIds) async {
+    final ids = recurringIds.toSet();
+    if (ids.isEmpty) return {};
+    final rows = await (db.select(db.transactions)
+          ..where((t) => t.recurringId.isIn(ids)))
+        .get();
+    return {
+      for (final t in rows)
+        if (t.recurringId != null)
+          TransactionRepository.recurringInstanceKey(
+              t.recurringId!, t.happenedAt),
+    };
   }
 
   @override

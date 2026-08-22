@@ -11,6 +11,7 @@ import 'aes_gcm_cipher.dart';
 import 'ciphertext_format.dart';
 import 'secure_key_storage.dart';
 import '../../domain/encryption/encryption_service.dart';
+import '../../services/system/logger_service.dart';
 
 /// 加密服务实现
 ///
@@ -400,6 +401,31 @@ class EncryptionServiceImpl implements EncryptionService {
       newSalt: newSalt,
     );
 
+    // SYNC-13：部分文件重加密失败时必须中止改密。若照常激活新密钥，
+    // 云端将出现「部分旧密钥 + 部分新密钥」混合快照，旧密钥副本永久
+    // 不可解密（选择性数据丢失）。处理：
+    // ① 把已成功重加密的文件反向回滚为旧密钥密文，恢复云端一致；
+    // ② 不保存/不激活新密钥，旧密码继续有效；
+    // ③ 抛专属异常供 UI 明确告知用户失败文件清单。
+    if (result.failed > 0) {
+      LoggerService().warning('CloudReEncrypt',
+          '改密重加密部分失败(${result.failed} 个)，开始回滚已重加密文件并中止改密');
+      final rollbackFailed = await _rollbackReEncryptedFiles(
+        cloudStorage: cloudStorage,
+        oldKey: oldKey,
+        oldSalt: oldSalt,
+        newKey: newKey,
+        newSalt: newSalt,
+        successPaths: result.successPaths,
+      );
+      // 主动 zeroing 新密钥材料（改密未生效）
+      newKey.fillRange(0, newKey.length, 0);
+      throw ReEncryptPartialFailureException(
+        failedPaths: result.failedPaths,
+        rollbackFailedPaths: rollbackFailed,
+      );
+    }
+
     // 5. 加密新 verifier
     final newVerifier = await cipher.encrypt(
       plaintext: utf8.encode(_verifierPlaintext),
@@ -445,6 +471,7 @@ class EncryptionServiceImpl implements EncryptionService {
     int failed = 0;
     int skipped = 0;
     final failedPaths = <String>[];
+    final successPaths = <String>[];
 
     for (final file in files) {
       final name = file.name;
@@ -493,6 +520,7 @@ class EncryptionServiceImpl implements EncryptionService {
         );
         await cloudStorage.upload(path: name, data: newCiphertext);
         success++;
+        successPaths.add(name);
       } catch (e) {
         failed++;
         failedPaths.add(name);
@@ -504,7 +532,60 @@ class EncryptionServiceImpl implements EncryptionService {
       failed: failed,
       skipped: skipped,
       failedPaths: failedPaths,
+      successPaths: successPaths,
     );
+  }
+
+  /// SYNC-13 回滚：把已用 newKey/newSalt 重加密的云端文件反向恢复为
+  /// oldKey/oldSalt 密文，使改密中止后云端回到「全旧密钥」一致状态。
+  ///
+  /// 单文件回滚失败不中断其余文件，失败清单由调用方并入异常信息。
+  /// 返回回滚仍失败的文件路径列表（空 = 云端已完全恢复旧密钥一致）。
+  Future<List<String>> _rollbackReEncryptedFiles({
+    required CloudStorageService cloudStorage,
+    required Uint8List oldKey,
+    required Uint8List oldSalt,
+    required Uint8List newKey,
+    required Uint8List newSalt,
+    required List<String> successPaths,
+  }) async {
+    final rollbackFailed = <String>[];
+
+    for (final name in successPaths) {
+      try {
+        final raw = await cloudStorage.download(path: name);
+        if (raw == null || !CiphertextFormat.isEncrypted(raw)) {
+          rollbackFailed.add(name);
+          continue;
+        }
+        final decoded = CiphertextFormat.decode(raw);
+        // salt 与 newSalt 不匹配说明该文件已被其他进程改动，不可盲目覆盖
+        if (!_listsEqual(newSalt, decoded.salt)) {
+          rollbackFailed.add(name);
+          continue;
+        }
+        final plaintextBytes = await cipher.decrypt(
+          encryptedBytes: decoded.encryptedBytes,
+          key: newKey,
+        );
+        final oldEncryptedBytes = await cipher.encrypt(
+          plaintext: plaintextBytes,
+          key: oldKey,
+        );
+        await cloudStorage.upload(
+          path: name,
+          data: CiphertextFormat.encode(
+            salt: oldSalt,
+            encryptedBytes: oldEncryptedBytes,
+          ),
+        );
+      } catch (e) {
+        LoggerService().error('CloudReEncrypt', '回滚文件失败: $name', e);
+        rollbackFailed.add(name);
+      }
+    }
+
+    return rollbackFailed;
   }
 
   @override

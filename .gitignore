@@ -64,3 +64,6 @@ tmp
 
 # visual brainstorm 涓存椂鏂囦欢
 .superpowers/
+
+# 本地实盘数据夹具（s3_roundtrip_consistency_test 专用，含真实账本数据）
+scripts/live_db/

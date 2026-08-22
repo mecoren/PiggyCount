@@ -344,14 +344,52 @@ class ReEncryptResult {
   /// 失败文件的路径列表（用于上层提示用户）
   final List<String> failedPaths;
 
+  /// 成功重加密的文件路径列表（SYNC-13：部分失败时供回滚定位）
+  final List<String> successPaths;
+
   const ReEncryptResult({
     required this.success,
     required this.failed,
     required this.skipped,
     required this.failedPaths,
+    this.successPaths = const [],
   });
 
   @override
   String toString() =>
       'ReEncryptResult(success: $success, failed: $failed, skipped: $skipped)';
+}
+
+/// 改密时云端重加密部分失败异常（SYNC-13）
+///
+/// 云端存在无法用旧密钥解密/上传失败的文件时，继续激活新密钥会造成
+/// 「云端部分旧密钥、部分新密钥」的混合状态，叠加增量拉取静默丢弃将
+/// 导致选择性数据丢失。此时必须中止改密：不保存、不激活新密钥，
+/// 并把已重加密成功的文件回滚为旧密钥密文。
+class ReEncryptPartialFailureException implements Exception {
+  /// 无法重加密的云端文件
+  final List<String> failedPaths;
+
+  /// 回滚已重加密文件时仍失败的文件（空 = 回滚完全成功，云端保持旧密钥一致）
+  final List<String> rollbackFailedPaths;
+
+  const ReEncryptPartialFailureException({
+    required this.failedPaths,
+    this.rollbackFailedPaths = const [],
+  });
+
+  bool get rollbackClean => rollbackFailedPaths.isEmpty;
+
+  @override
+  String toString() {
+    final buf = StringBuffer('ReEncryptPartialFailureException: '
+        '${failedPaths.length} 个云端文件重加密失败，改密已中止'
+        '（新密码未生效，旧密码仍有效）。失败文件: ${failedPaths.take(5).join(', ')}');
+    if (failedPaths.length > 5) buf.write(' 等 ${failedPaths.length} 个');
+    if (!rollbackClean) {
+      buf.write('；另有 ${rollbackFailedPaths.length} 个文件回滚失败，'
+          '云端可能存在新旧密钥混合状态: ${rollbackFailedPaths.take(5).join(', ')}');
+    }
+    return buf.toString();
+  }
 }

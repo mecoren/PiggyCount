@@ -63,6 +63,16 @@ class S3Provider implements CloudProvider {
     // - 解析 host 中自带的端口
     final info = parseS3Endpoint(rawEndpoint, useSSL: useSSL, port: port);
 
+    // SYNC-04：默认拒绝明文 HTTP。http:// 显式协议会覆盖 useSSL 配置；
+    // 明文链路上账本数据与 SigV4 凭据均可被窃听/中间人篡改。与 WebDAV
+    // 后端强制 HTTPS 的安全策略对齐（webdav_provider P2-7）。
+    if (!info.useSSL) {
+      throw CloudConfigurationException(
+        'S3 地址必须使用 HTTPS（检测到 http:// 前缀或 useSSL=false，'
+        '账本数据与访问密钥将在链路上明文传输）',
+      );
+    }
+
     // 寻址方式：托管云（AWS/OSS/COS/R2 等）默认 virtual-hosted-style；
     // 自托管（MinIO 等）默认 path-style。可通过 forcePathStyle 显式覆盖。
     final forcePathStyle = config['forcePathStyle'] as bool? ??

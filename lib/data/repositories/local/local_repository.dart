@@ -521,6 +521,10 @@ class LocalRepository extends BaseRepository {
       _transactionRepo.existsRecurringInstance(
           recurringId: recurringId, happenedAt: happenedAt);
 
+  @override
+  Future<Set<String>> getRecurringInstanceKeys(Iterable<int> recurringIds) =>
+      _transactionRepo.getRecurringInstanceKeys(recurringIds);
+
   // ---------------------------------------------------------------------
   // v30 交易级多币种:折算兜底 + 重算/检测(.docs/multi-currency-ledger)
   // ---------------------------------------------------------------------

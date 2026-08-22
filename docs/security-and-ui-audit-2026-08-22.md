@@ -112,3 +112,44 @@
 
 ### 需产品决策的设计取舍
 - **SYNC-07/SYNC-08**：主加密密码是否在每次访问时强制重输 / 派生密钥是否落盘。当前为"可用性优先"，需明确安全边界并在隐私文档声明（当前路径 B 停用，风险面收窄）。
+
+---
+
+## 第五部分：源码复核修正与本轮修复记录（2026-08-22 追加）
+
+> 对本文档全部 36 项结论逐条源码复核。26 项属实、8 项部分属实（描述有偏差）、2 项不成立/不存在。以下为修正与修复状态。
+
+### 5.1 复核修正（原文档结论有误或不准确的项）
+
+| # | 原结论 | 复核结果 |
+|---|---|---|
+| REC-06 | syncEngineProvider 空守卫缺失会崩溃 | **不成立，删除**。3 处调用方（`shared_ledger_providers.dart:155`、`join_shared_ledger_page.dart:101`、`sync_providers.dart:189`）全部先判空；且 family 参数非可空，传空无法通过编译 |
+| SYNC-05 | 整账本覆盖、无合并、无确认 | **高估**。存在交易级 diff 合并（`sync_diff_service.dart:81-199` 按 syncId）与多重 UI 强制确认（`startup_sync_checker.dart:564` 等 4 处）。真实风险：冲突对话框仅"二选一整本覆盖"无合并选项；`_applyAll` 二次确认后默认全选含"删除本地独有交易"项。建议降级为"中"，改写为"覆盖型冲突模型 + applyAll 默认全选删除项" |
+| REC-02 | 用户手动"现在生成"入口导致非 0 点实例 | 手动生成入口**不存在**。真实触发路径：新建 daily/weekly 规则默认 `startDate=DateTime.now()` 带时刻（`recurring_transaction_edit_page.dart:68`），首笔及后续实例落非 0 点 |
+| SYNC-14 | accessKey 进入日志 | id 构造属实，但全库无打印该 id 的日志语句；实际是随快照对象元数据上云（`cloud_sync_manager.dart:162`） |
+| UI-04 后半 | 月度卡片固定高度裁切 | 不存在。卡片为 `MainAxisSize.min` + `FittedBox(scaleDown)` 兜底 |
+| UI-07 部分 | `transaction_list_item.dart:286` 字号魔法值 | 该处为图标尺寸非字号；文件正文样式已走 PiggyTextTokens |
+| UI-08 后半 | FAB 长按拖动飞出屏幕 | 不存在。实为径向 speed-dial 悬停选择，按钮不移动，无需 clamp |
+| UI-09 部分 | `product_promo_card.dart:430` loading 遮罩 black*0.3 | 实为 `black87` 且是截图画廊路由 barrier 非 loading 遮罩 |
+| UI-14 部分 | 键盘背景未用 surfaceKey | 已用（`amount_editor_sheet.dart:707`）；仅白色图标硬编码属实 |
+| UI-15 | 选中背景 white10/black06 | white10/black06 属实但位置是 flag pill 底色而非批量选中背景 |
+| SYNC-06 引用 | 路径 B 附件走 provider.storage.upload 未加密装饰 | 行号引用有误：实际走专用明文 HTTP 端点（`piggycount_cloud_provider.dart:2368+` multipart），与经 `EncryptedCloudStorageService` 装饰的路径 A 是两套通道。核心结论不变 |
+
+另：REC-03 实际**比原文更严重**——try 包住整个循环而非单条（原 `data_import_service.dart:849/977`），一条规则失败即中断其后所有规则导入。
+
+### 5.2 本轮已修复（P0：路径 A 线上生效的数据完整性/安全）
+
+| # | 修复内容 | 关键改动 |
+|---|---|---|
+| REC-03 | 周期规则导入单条隔离 | `data_import_service.dart` importRecurrings 循环体内 try/catch，单条失败跳过并记 error（含 syncId），不再中断其余规则；完成日志含失败数 |
+| REC-01 + REC-04 | 去重键日期归一化 + 批量预加载 | 新增 `TransactionRepository.recurringInstanceKey`（本地日历日维度）与 `getRecurringInstanceKeys` 批量接口；导入前一次查库构建内存集合 O(1) 判重并支持批内去重；`existsRecurringInstance` 改按同日匹配（同时修复 REC-02 非 0 点漏判）。已知局限：两端时区差跨午夜仍可能漏判，根治需存储生成意图日 |
+| SYNC-09 | WebDAV 上传原子性 | `webdav_storage_service.dart` 改为先 `rename(overwrite:true)`，失败（不支持覆盖的服务器）才降级先删后重试，消除常规路径的旧文件丢失窗口 |
+| SYNC-13 | 改密部分失败中止并回滚 | `ReEncryptResult` 增加 successPaths；新增 `_rollbackReEncryptedFiles` 反向恢复旧密钥密文；`failed>0` 时回滚→zeroing 新密钥→抛 `ReEncryptPartialFailureException`（UI catch 弹窗呈现），不再激活新密钥 |
+| SYNC-04 | S3 默认拒绝明文 HTTP | `s3_provider.dart` initialize 中 `useSSL=false` 时抛 `CloudConfigurationException`（对齐 WebDAV P2-7 策略）。后续优化：UI 的 useSSL 开关取消勾选将直接报错，可考虑隐藏开关 |
+
+### 5.3 待处理优先级更新
+
+1. **P1（安全加固）**：SYNC-03 会话令牌迁移 FlutterSecureStorage；REC-05 在 createCloudServices 内部集中拦截开关（残留激活配置场景 `cloud_service_page.dart:1917` 与 `sync_providers.dart:158` 可绕过）
+2. **P2（UI 中危）**：UI-01 / UI-10 / UI-03 / UI-02
+3. **P3（重新启用路径 B 前必须）**：SYNC-01 / SYNC-02 / SYNC-06 附件加密 / SYNC-11 remoteNewer
+4. **P4**：其余 UI 低危、SYNC-12 弱密码提示、SYNC-14 元数据脱敏、SYNC-05 applyAll 默认全选项调整

@@ -153,12 +153,33 @@ abstract class TransactionRepository {
   /// recurring 周期交易可能因「本地 generator 先生成 + S3 恢复又插入同周期
   /// 实例」而产生重复（两端 recurringId/happenedAt 相同、syncId 不同）。
   /// 生成前与恢复前都应调用此方法做 (recurringId, happenedAt) 维度的去重。
-  /// [happenedAt] 传实例的计划日期即可，无需精确到时刻（与 generator /
-  /// import 传入的 happenedAt 保持一致）。
+  /// [happenedAt] 传实例的计划日期即可（REC-01/02：按 [recurringInstanceKey]
+  /// 的本地日历日维度匹配，不比较精确时刻）。
   Future<bool> existsRecurringInstance({
     required int recurringId,
     required DateTime happenedAt,
   });
+
+  /// 批量获取周期实例去重键集合（见 [recurringInstanceKey]）。
+  ///
+  /// 供导入路径预加载：一次查库构建内存集合，循环内 O(1) 判重，
+  /// 替代逐笔 await 查询（大快照 N 笔周期实例 = N 次 SELECT）。
+  Future<Set<String>> getRecurringInstanceKeys(Iterable<int> recurringIds);
+
+  /// 归一化 (recurringId, happenedAt) → 周期实例去重键。
+  ///
+  /// 键取 happenedAt 的**本地日历日**（不含时刻）。理由：
+  /// - JSON 导出走 `.toUtc()`、导入走 `.toLocal()`，跨时区恢复时精确毫秒
+  ///   必然失配 → 同日归一后同设备/同时区恢复稳定命中；
+  /// - daily/weekly 规则首笔继承 startDate 时刻（可能非 0 点），按日匹配
+  ///   可与生成器的 0 点系实例互相识别；
+  /// 已知局限：两端时区差跨午夜时（如 +08 与 UTC）仍可能漏判，根治需
+  /// 存储生成意图日本身（schema 变更），当前以日志告警兜底。
+  static String recurringInstanceKey(int recurringId, DateTime happenedAt) {
+    final mm = happenedAt.month.toString().padLeft(2, '0');
+    final dd = happenedAt.day.toString().padLeft(2, '0');
+    return '$recurringId|${happenedAt.year.toString().padLeft(4, '0')}-$mm-$dd';
+  }
 
   /// 获取指定月份的交易记录（带分类信息）
   ///

@@ -624,6 +624,94 @@ void main() {
       expect(decryptedFirst, '{"version":6,"items":[]}');
     });
   });
+
+  group('EncryptionServiceImpl.changePasswordWithCloudReEncryption (SYNC-13)', () {
+    late _FakeCloudStorage cloud;
+
+    setUp(() {
+      cloud = _FakeCloudStorage();
+    });
+
+    /// 用旧密码开启加密并把两份旧密钥密文放入云端
+    Future<void> seedCloudEncrypted() async {
+      await service.enable(password: 'oldpassword');
+      cloud.stored['ledger_1.json'] =
+          await service.encrypt('{"version":6,"a":1}');
+      cloud.stored['ledger_2.json'] =
+          await service.encrypt('{"version":6,"b":2}');
+      cloud.listFiles = [
+        CloudFile(name: 'ledger_1.json', path: 'ledger_1.json'),
+        CloudFile(name: 'ledger_2.json', path: 'ledger_2.json'),
+      ];
+    }
+
+    test('全部成功 → 新密码生效，云端密文可用新密码解密', () async {
+      await seedCloudEncrypted();
+
+      final result = await service.changePasswordWithCloudReEncryption(
+        oldPassword: 'oldpassword',
+        newPassword: 'newpassword',
+        cloudStorage: cloud,
+      );
+
+      expect(result.failed, 0);
+      expect(result.success, 2);
+      expect(await service.verifyPassword('newpassword'), isTrue);
+      expect(await service.verifyPassword('oldpassword'), isFalse);
+      expect(
+        await service.decrypt(cloud.stored['ledger_1.json']!),
+        '{"version":6,"a":1}',
+      );
+    });
+
+    test('部分失败 → 抛 ReEncryptPartialFailureException、改密中止、'
+        '成功文件回滚为旧密钥密文', () async {
+      await seedCloudEncrypted();
+      cloud.throwOnUploadPaths.add('ledger_2.json');
+
+      await expectLater(
+        service.changePasswordWithCloudReEncryption(
+          oldPassword: 'oldpassword',
+          newPassword: 'newpassword',
+          cloudStorage: cloud,
+        ),
+        throwsA(isA<ReEncryptPartialFailureException>()
+            .having((e) => e.failedPaths, 'failedPaths', ['ledger_2.json'])
+            .having((e) => e.rollbackClean, 'rollbackClean', isTrue)),
+      );
+
+      // 改密必须中止：新密码不生效、旧密码仍有效（密钥/verifier 未被覆盖）
+      expect(await service.verifyPassword('newpassword'), isFalse,
+          reason: '部分失败时不得激活新密钥');
+      expect(await service.verifyPassword('oldpassword'), isTrue);
+
+      // 已重加密成功的 ledger_1 必须被回滚为旧密钥密文（可解密）
+      expect(
+        await service.decrypt(cloud.stored['ledger_1.json']!),
+        '{"version":6,"a":1}',
+      );
+    });
+
+    test('部分失败且回滚也失败 → 异常携带 rollbackFailedPaths', () async {
+      await seedCloudEncrypted();
+      cloud.throwOnUploadPaths.add('ledger_2.json');
+      // ledger_1 首轮重加密(第 1 次上传)成功、回滚阶段(第 2 次上传)失败，
+      // 模拟回滚期间网络故障
+      cloud.failOnNthUpload['ledger_1.json'] = 2;
+
+      await expectLater(
+        service.changePasswordWithCloudReEncryption(
+          oldPassword: 'oldpassword',
+          newPassword: 'newpassword',
+          cloudStorage: cloud,
+        ),
+        throwsA(isA<ReEncryptPartialFailureException>()
+            .having((e) => e.rollbackClean, 'rollbackClean', isFalse)
+            .having((e) => e.rollbackFailedPaths, 'rollbackFailedPaths',
+                ['ledger_1.json'])),
+      );
+    });
+  });
 }
 
 /// list 方法抛异常的 CloudStorageService 实现
@@ -708,6 +796,10 @@ class _FakeCloudStorage implements CloudStorageService {
   final Set<String> throwOnDownloadPaths = {};
   final Set<String> throwOnUploadPaths = {};
 
+  /// 第 N 次上传指定路径时抛异常（1 起），模拟"首轮成功、回滚阶段失败"
+  final Map<String, int> failOnNthUpload = {};
+  final Map<String, int> _uploadCallCounts = {};
+
   @override
   Future<void> upload({
     required String path,
@@ -716,6 +808,14 @@ class _FakeCloudStorage implements CloudStorageService {
   }) async {
     if (throwOnUploadPaths.contains(path)) {
       throw Exception('mock upload failure for $path');
+    }
+    final nth = failOnNthUpload[path];
+    if (nth != null) {
+      final count = (_uploadCallCounts[path] ?? 0) + 1;
+      _uploadCallCounts[path] = count;
+      if (count >= nth) {
+        throw Exception('mock upload failure #$count for $path');
+      }
     }
     stored[path] = data;
   }
