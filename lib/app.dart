@@ -1162,7 +1162,8 @@ class _PiggyBottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bgColor = PiggyTokens.tabBarBackground(context);
-    final inactiveColor = isDark ? Colors.white70 : Colors.black54;
+    // UI-08：未选中色走 token，不再绕过主题体系
+    final inactiveColor = PiggyTokens.iconSecondary(context);
 
     const barHeight = 56.0;
 

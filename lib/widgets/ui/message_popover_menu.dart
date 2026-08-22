@@ -211,7 +211,8 @@ class _PopoverOverlayState extends State<_PopoverOverlay>
               color: Colors.transparent,
               child: Container(
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                  // UI-12：浮层背景走 token（surfacePopoverCard 亮暗语义一致）
+                  color: PiggyTokens.surfacePopoverCard(context),
                   borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                   boxShadow: [
                     BoxShadow(
@@ -238,9 +239,7 @@ class _PopoverOverlayState extends State<_PopoverOverlay>
                             Container(
                               width: 0.5,
                               height: 32,
-                              color: isDark
-                                  ? Colors.white.withValues(alpha: 0.1)
-                                  : Colors.black.withValues(alpha: 0.1),
+                              color: PiggyTokens.border(context),
                             ),
                         ],
                       );
@@ -261,7 +260,7 @@ class _PopoverOverlayState extends State<_PopoverOverlay>
     bool isDark,
   ) {
     final color = item.color ??
-        (isDark ? Colors.white : Colors.black87);
+        PiggyTokens.iconPrimary(context);
 
     return InkWell(
       onTap: () async {

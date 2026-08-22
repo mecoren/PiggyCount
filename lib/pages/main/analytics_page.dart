@@ -252,8 +252,10 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
       height: 30,
       child: Material(
         color: Colors.transparent,
-        shape: const CircleBorder(
-          side: BorderSide(color: Color(0xFFCFD8DC), width: 1.4),
+        // UI-10：边框走 token，暗色模式下不再用固定浅灰导致不可见
+        shape: CircleBorder(
+          side: BorderSide(
+              color: PiggyTokens.borderThemed(context), width: 1.4),
         ),
         child: InkWell(
           onTap: onTap,

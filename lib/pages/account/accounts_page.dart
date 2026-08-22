@@ -1809,10 +1809,9 @@ class _HiddenAccountsSectionState
     if (widget.accounts.isEmpty) return const SizedBox.shrink();
 
     final l10n = AppLocalizations.of(context);
-    final isDark = PiggyTokens.isDark(context);
-    // 中性灰(暗黑/明亮各一档),弱化隐藏卡视觉权重,不用账户类型主题色
-    // (0xFF48484A 沿用 tokens.dart 里同款暗黑中性灰,见 surfaceCategoryIcon)。
-    final mutedColor = isDark ? const Color(0xFF48484A) : Colors.grey.shade400;
+    // 中性弱化色（UI-13：走 textTertiary token，暗黑/明亮语义一致），
+    // 弱化隐藏卡视觉权重,不用账户类型主题色。
+    final mutedColor = PiggyTokens.textTertiary(context);
 
     // 按币种分组计算小计,口径同 _buildClassificationSection(仅隐藏账户)。
     final Map<String, double> subtotalByCurrency = {};
@@ -2245,14 +2244,12 @@ class _AccountCard extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 进度条:轨道用中性弱底,填充用账户类型色
+        // 进度条:轨道用中性弱底(UI-13:surfaceSelected token),填充用账户类型色
         ClipRRect(
           borderRadius: BorderRadius.circular(3.0.scaled(context, ref)),
           child: LinearProgressIndicator(
             value: usageRate,
-            backgroundColor: isDark
-                ? Colors.white.withValues(alpha: 0.1)
-                : Colors.black.withValues(alpha: 0.06),
+            backgroundColor: PiggyTokens.surfaceSelected(context),
             valueColor: AlwaysStoppedAnimation<Color>(typeColor),
             minHeight: 4.0.scaled(context, ref),
           ),

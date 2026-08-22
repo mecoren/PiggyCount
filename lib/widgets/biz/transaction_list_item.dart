@@ -421,21 +421,22 @@ class TransactionListItem extends ConsumerWidget {
         background: Container(
           alignment: Alignment.centerRight,
           padding: const EdgeInsets.only(right: 20),
-          color: Colors.red,
-          child: const Icon(
+          color: PiggyTokens.error(context),
+          child: Icon(
             Icons.delete,
-            color: Colors.white,
+            color: PiggyTokens.textOnPrimary(context),
             size: 24,
           ),
         ),
         confirmDismiss: (direction) async {
           // 滑动到位触发确认时给一次中强度触感
           PiggyHaptics.medium();
-          // 显示确认对话框
+          // 显示确认对话框（UI-01：走 l10n，避免英文环境弹中文）
+          final l10n = AppLocalizations.of(context);
           return await AppDialog.confirm<bool>(
                 context,
-                title: '确认删除',
-                message: '确定要删除这笔交易吗？此操作无法撤销。',
+                title: l10n.deleteConfirmTitle,
+                message: l10n.deleteConfirmMessage,
               ) ??
               false;
         },

@@ -298,24 +298,24 @@ class LedgerCard extends ConsumerWidget {
         size: 20,
       );
     } else if (isSynced) {
-      // 已同步：绿色云勾选图标
-      return const Icon(
+      // 已同步：绿色云勾选图标（UI-02：走 token，暗色下对比度一致）
+      return Icon(
         Icons.cloud_done,
-        color: Colors.green,
+        color: PiggyTokens.success(context),
         size: 20,
       );
     } else if (isNotSynced) {
       // 未同步（包括：localNewer、cloudNewer、different、error、notLoggedIn）：红色云图标
-      return const Icon(
+      return Icon(
         Icons.cloud_off,
-        color: Colors.red,
+        color: PiggyTokens.error(context),
         size: 20,
       );
     } else {
       // 纯本地账本（离线模式/未配置）：灰色云关闭图标
-      return const Icon(
+      return Icon(
         Icons.cloud_off,
-        color: Colors.grey,
+        color: PiggyTokens.iconTertiary(context),
         size: 20,
       );
     }

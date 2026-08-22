@@ -812,8 +812,11 @@ class _HomePageState extends ConsumerState<HomePage> {
                             tooltip: AppLocalizations.of(context).aiChatTitle,
                             padding: const EdgeInsets.all(8),
                             style: IconButton.styleFrom(
+                              // UI-03：视觉保持紧凑，但命中区恢复 ≥48×48
+                              //（无障碍 / 单手操作，shrinkWrap 下由
+                              // minimumSize 兜底热区）
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              minimumSize: Size.zero,
+                              minimumSize: const Size(48, 48),
                             ),
                             onPressed: () {
                               _transactionListKey.currentState
@@ -834,8 +837,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                           tooltip: AppLocalizations.of(context).calendarTitle,
                           padding: const EdgeInsets.all(6),
                           style: IconButton.styleFrom(
+                            // UI-03：同上，热区 ≥48×48
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            minimumSize: Size.zero,
+                            minimumSize: const Size(48, 48),
                           ),
                           onPressed: () {
                             Navigator.push(
@@ -855,8 +859,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                           tooltip: AppLocalizations.of(context).homeSearch,
                           padding: const EdgeInsets.all(6),
                           style: IconButton.styleFrom(
+                            // UI-03：同上，热区 ≥48×48
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            minimumSize: Size.zero,
+                            minimumSize: const Size(48, 48),
                           ),
                           onPressed: () {
                             _transactionListKey.currentState
