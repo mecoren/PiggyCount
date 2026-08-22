@@ -10,6 +10,14 @@ import '../../providers/theme_providers.dart';
 import 'amount_text.dart';
 import 'transaction_row_title.dart';
 
+/// ≈折算小字可见性判定。
+///
+/// 必须与 AmountText 隐藏口径一致：显式 [hide] 优先，否则回落全局开关。
+/// （审计 U1：旧实现只判参数 hide，calendar_page 构造时不传，
+/// 全局隐藏开启后折算金额明文泄漏。）
+bool nativeConversionVisible({required bool? hide, required bool globalHide}) =>
+    !(hide ?? globalHide);
+
 class TransactionListItem extends ConsumerWidget {
   final IconData icon;
   final db.Category? category; // 可选的分类对象，用于显示自定义图标
@@ -400,7 +408,10 @@ class TransactionListItem extends ConsumerWidget {
                   if (_isForeign(ref) &&
                       nativeAmount != null &&
                       nativeAmount != amount &&
-                      hide != true)
+                      nativeConversionVisible(
+                        hide: hide,
+                        globalHide: ref.watch(hideAmountsProvider),
+                      ))
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
