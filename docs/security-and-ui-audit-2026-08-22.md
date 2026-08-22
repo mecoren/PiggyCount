@@ -153,3 +153,23 @@
 2. **P2（UI 中危）**：UI-01 / UI-10 / UI-03 / UI-02
 3. **P3（重新启用路径 B 前必须）**：SYNC-01 / SYNC-02 / SYNC-06 附件加密 / SYNC-11 remoteNewer
 4. **P4**：其余 UI 低危、SYNC-12 弱密码提示、SYNC-14 元数据脱敏、SYNC-05 applyAll 默认全选项调整
+
+### 5.4 全量修复落地记录（2026-08-22 第二轮）
+
+> 5.2 之外的**全部剩余项**已按批次修复完毕，逐批独立提交。验证：`flutter analyze` 全仓零 error；`flutter test` 444 通过、405 失败均为本机缺 sqlite3.dll 的环境性失败（stash 复测基线一致，零回归）。
+
+| 批次 | 提交 | 内容 |
+|---|---|---|
+| P0 固化 | `c8d5821` | 5.2 节五项修复正式入库；`scripts/live_db/` 加入 .gitignore（含真实数据不入库） |
+| 批次 A（P1 安全） | `ec34371` | **SYNC-03** 会话令牌迁 FlutterSecureStorage（旧明文自动迁移+清除，写失败硬失败）；**REC-05** 残留守卫补齐（authServiceProvider / cloud_service_page 两处运行时拦截 / devices_page 死代码加守卫保留）；**SYNC-10 后半** 密文损坏/错配抛 `CloudCiphertextUndecryptableException` 替代静默 inserted:0，六个调用点全部改为显式报错或清理后上抛；**SYNC-13 补充** UI 专门 catch 分支区分回滚干净/回滚失败 |
+| 批次 B（路径 B 完整性） | `2b96aa1` | **SYNC-01** 解密失败整页阻塞：记入 pullErrors、游标不推进、连续 3 页失败停止本轮；**SYNC-02** 自愈机制：卡死时以云端快照整本恢复受影响账本 + 游标跳至服务端最新 + 清理错误（5 分钟冷却防抖）；**SYNC-06** 收据附件走加密信封（与 EncryptedCloudStorageService 同口径），分类图标/头像因跨端渲染与 iconSha256 校验语义保持明文并注释决策 |
+| 批次 C（健壮性） | `5526e01`+`84fcf80` | **SYNC-11** getStatus 空页探测服务端最新 cursor 补全 cloudNewer 分支；**SYNC-12** 复杂度（≥2 类字符）+ 弱密码黑名单拦截（UI 强度条已存在）；**SYNC-14** accessKey 前4+后4 脱敏（id 稳定性不变）；**SYNC-05** SyncChange.deleted 默认不选中，「一键应用」不再静默删除本地独有交易（配套更新 8 处测试断言） |
+| 批次 D（UI 中危） | `f4c4a9d` | **UI-01** 删除确认走 l10n.deleteConfirm*（词条四语言已在）；**UI-02/10/12/13** 六处硬编码色收敛 PiggyTokens（ledger_card 状态云图标、tli 滑删底色、analytics 描边、popover 背景/分隔线/图标、accounts mutedColor+进度轨道、底部导航未选中色）；**UI-03** 头部三按钮热区恢复 ≥48×48 |
+| 批次 E（UI 低危） | `8962744` | **UI-05** `_StaticGrid`（LayoutBuilder+Wrap）替代两处 shrinkWrap 嵌套 GridView；**UI-06** 金额列包 Flexible+折算行省略；**UI-09** 海报遮罩走 overlay token；**UI-11** 添加/编辑走 commonAdd/Edit；**UI-14** 提交键前景 textOnPrimary/textDisabled；**UI-15** flag pill 底色 surfaceSelected；**UI-07** ledger_card 三处+底部导航四处字号收口 PiggyTextTokens |
+| 收尾 | 本次 | **SYNC-07/08** 维持现状（选项①），新增 `docs/encryption-security-boundary.md` 显式披露安全边界 |
+
+#### 已知残留（记录不修）
+
+- 分类图标/头像在路径 B 仍为明文（跨端渲染依赖，见批次 B 注释）；重新启用路径 B 且 web 端具备解密能力时应一并收敛。
+- 跨时区跨午夜的周期实例去重仍可能漏判（5.2 已声明，根治需存储生成意图日）。
+- 快照自愈的恢复窗口内其他设备推送的增量会被跳过（快照即权威态的固有权衡）。
