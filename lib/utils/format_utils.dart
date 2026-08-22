@@ -192,3 +192,17 @@ String translateLedgerName(BuildContext context, String ledgerName) {
 
   return ledgerName;
 }
+
+/// 剥离 [formatBalance] 输出开头的币种符号（负号感知）。
+///
+/// formatBalance 对负数返回 `-¥15万`（负号拼在币种符之前），
+/// 简单的 startsWith(symbol) 判断会漏掉负数场景（审计 U2）。
+String stripCurrencySymbolPrefix(String formatted, String symbol) {
+  if (symbol.isEmpty) return formatted;
+  final isNegative = formatted.startsWith('-');
+  final body = (isNegative ? formatted.substring(1) : formatted).trimLeft();
+  if (!body.startsWith(symbol)) return formatted;
+  return isNegative
+      ? '-${body.substring(symbol.length).trimLeft()}'
+      : body.substring(symbol.length).trimLeft();
+}
