@@ -114,6 +114,38 @@ class _CategorySelectorState extends ConsumerState<CategorySelector> {
     return repo.db.filterCategoriesForLedger(cats, ctx, kind: widget.kind);
   }
 
+  /// 构建单个一级分类网格单元（UI-05：从 GridView.itemBuilder 抽出）
+  Widget _buildTopCategoryCell(
+      Category topCat, Map<int, List<Category>> subCategoriesMap) {
+    final children = subCategoriesMap[topCat.id] ?? [];
+    final hasChildren = children.isNotEmpty;
+    return _CategoryItem(
+      category: topCat,
+      selected: _selectedId == topCat.id,
+      hasChildren: hasChildren,
+      expanded: _expandedCategoryId == topCat.id,
+      onTap: () {
+        if (hasChildren) {
+          // 有子分类，切换展开/折叠
+          setState(() {
+            if (_expandedCategoryId == topCat.id) {
+              _expandedCategoryId = null;
+            } else {
+              _expandedCategoryId = topCat.id;
+            }
+          });
+        } else {
+          // 无子分类，直接选中，同时关闭展开的二级分类
+          setState(() {
+            _selectedId = topCat.id;
+            _expandedCategoryId = null; // 关闭展开的二级分类
+          });
+          widget.onCategorySelected(topCat);
+        }
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // §7 共享账本:WS shared_resource_change 推送后 tick bump,触发 rebuild
@@ -194,49 +226,17 @@ class _CategorySelectorState extends ConsumerState<CategorySelector> {
                 Container(
                   key: _keys.putIfAbsent(
                       firstCategoryInRow.id, () => GlobalKey()),
-                  child: GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    padding: EdgeInsets.zero,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 4,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 0.78,
-                    ),
-                    itemCount: rowItems.length,
-                    itemBuilder: (context, index) {
-                      final topCat = rowItems[index];
-                      final children = subCategoriesMap[topCat.id] ?? [];
-                      final hasChildren = children.isNotEmpty;
-
-                      return _CategoryItem(
-                        category: topCat,
-                        selected: _selectedId == topCat.id,
-                        hasChildren: hasChildren,
-                        expanded: _expandedCategoryId == topCat.id,
-                        onTap: () {
-                          if (hasChildren) {
-                            // 有子分类，切换展开/折叠
-                            setState(() {
-                              if (_expandedCategoryId == topCat.id) {
-                                _expandedCategoryId = null;
-                              } else {
-                                _expandedCategoryId = topCat.id;
-                              }
-                            });
-                          } else {
-                            // 无子分类，直接选中，同时关闭展开的二级分类
-                            setState(() {
-                              _selectedId = topCat.id;
-                              _expandedCategoryId = null; // 关闭展开的二级分类
-                            });
-                            widget.onCategorySelected(topCat);
-                          }
-                        },
-                      );
-                    },
+                  // UI-05：以静态网格替代 shrinkWrap GridView，
+                  // 消除嵌套 viewport 的布局与构建开销
+                  child: _StaticGrid(
+                    crossAxisCount: 4,
+                    spacing: 16,
+                    runSpacing: 12,
+                    childAspectRatio: 0.78,
+                    children: [
+                      for (final topCat in rowItems)
+                        _buildTopCategoryCell(topCat, subCategoriesMap),
+                    ],
                   ),
                 ),
               );
@@ -403,28 +403,66 @@ class _SubcategorySelectorCard extends ConsumerWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 4,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.84,
-          ),
-          itemCount: subCategories.length,
-          itemBuilder: (context, index) {
-            final subCat = subCategories[index];
-            return _CategoryItem(
-              category: subCat,
-              selected: selectedId == subCat.id,
-              isSubCategory: true,
-              onTap: () => onSubCategoryTap(subCat),
-            );
-          },
+        // UI-05：同上，静态网格替代 shrinkWrap GridView
+        child: _StaticGrid(
+          crossAxisCount: 4,
+          spacing: 12,
+          runSpacing: 12,
+          childAspectRatio: 0.84,
+          children: [
+            for (final subCat in subCategories)
+              _CategoryItem(
+                category: subCat,
+                selected: selectedId == subCat.id,
+                isSubCategory: true,
+                onTap: () => onSubCategoryTap(subCat),
+              ),
+          ],
         ),
       ),
     );
+  }
+}
+
+/// UI-05：静态网格助手。
+///
+/// 替代 `GridView.builder(shrinkWrap:true, NeverScrollableScrollPhysics)`
+/// 嵌套在滚动容器内的写法——那种结构会一次性构建全部子项，还叠加
+/// viewport 布局开销，builder 的懒加载完全失效。此助手用
+/// LayoutBuilder + Wrap 复刻 SliverGridDelegateWithFixedCrossAxisCount
+/// 的几何（等宽单元 / 固定纵横比 / 行列间距），视觉与原网格一致，
+/// 但没有任何滚动语义。
+class _StaticGrid extends StatelessWidget {
+  final int crossAxisCount;
+  final double spacing;
+  final double runSpacing;
+  final double childAspectRatio;
+  final List<Widget> children;
+
+  const _StaticGrid({
+    required this.crossAxisCount,
+    required this.spacing,
+    required this.runSpacing,
+    required this.childAspectRatio,
+    required this.children,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (context, constraints) {
+      final width = constraints.maxWidth;
+      final cellWidth =
+          (width - spacing * (crossAxisCount - 1)) / crossAxisCount;
+      final cellHeight = cellWidth / childAspectRatio;
+      return Wrap(
+        spacing: spacing,
+        runSpacing: runSpacing,
+        children: [
+          for (final child in children)
+            SizedBox(width: cellWidth, height: cellHeight, child: child),
+        ],
+      );
+    });
   }
 }
 

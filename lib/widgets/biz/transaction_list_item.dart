@@ -113,9 +113,8 @@ class TransactionListItem extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: PiggyTokens.isDark(context)
-            ? Colors.white.withValues(alpha: 0.1)
-            : Colors.black.withValues(alpha: 0.06),
+        // UI-15：底色走 token，不再手写 white10/black06
+        color: PiggyTokens.surfaceSelected(context),
         borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
       ),
       child: Text(
@@ -364,49 +363,55 @@ class TransactionListItem extends ConsumerWidget {
               ),
             ),
             // 右侧：金额 + ≈折算小字
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 金额（转账不显示正负号）
-                AmountText(
-                    value: isAdjustment
-                        ? amount // adjustment 直接显示原始值（含正负）
-                        : isExpense
-                            ? -amount
-                            : amount,
-                    hide: hide,
-                    signed: !isTransfer, // 转账不显示正负号
-                    // v30:外币交易显示其币种符号(原币语义);本位币维持纯数字
-                    showCurrency: _isForeign(ref),
-                    currencyCode: currencyCode,
-                    decimals: 2,
-                    style: PiggyTextTokens.title(context).copyWith(
-                      color: isAdjustment
-                          ? (amount >= 0
-                              ? PiggyTokens.incomeColor(context, ref)
-                              : PiggyTokens.expenseColor(context, ref))
-                          : isTransfer
-                              ? PiggyTokens.textPrimary(context)
-                              : isExpense
-                                  ? PiggyTokens.expenseColor(context, ref)
-                                  : PiggyTokens.incomeColor(context, ref),
-                    )),
-                // ≈折算小字(标签已移到第二行,此处仅保留折算)。
-                // 隐藏金额开关开启时折算同样遮蔽。
-                if (_isForeign(ref) &&
-                    nativeAmount != null &&
-                    nativeAmount != amount &&
-                    hide != true)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      '≈${nativeAmount!.toStringAsFixed(2)}',
-                      style: PiggyTextTokens.caption(context),
+            // UI-06：包 Flexible 防止超长金额（亿级+折算行）触发
+            // RenderFlex overflow，由文本自身省略兜底。
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 金额（转账不显示正负号）
+                  AmountText(
+                      value: isAdjustment
+                          ? amount // adjustment 直接显示原始值（含正负）
+                          : isExpense
+                              ? -amount
+                              : amount,
+                      hide: hide,
+                      signed: !isTransfer, // 转账不显示正负号
+                      // v30:外币交易显示其币种符号(原币语义);本位币维持纯数字
+                      showCurrency: _isForeign(ref),
+                      currencyCode: currencyCode,
+                      decimals: 2,
+                      style: PiggyTextTokens.title(context).copyWith(
+                        color: isAdjustment
+                            ? (amount >= 0
+                                ? PiggyTokens.incomeColor(context, ref)
+                                : PiggyTokens.expenseColor(context, ref))
+                            : isTransfer
+                                ? PiggyTokens.textPrimary(context)
+                                : isExpense
+                                    ? PiggyTokens.expenseColor(context, ref)
+                                    : PiggyTokens.incomeColor(context, ref),
+                      )),
+                  // ≈折算小字(标签已移到第二行,此处仅保留折算)。
+                  // 隐藏金额开关开启时折算同样遮蔽。
+                  if (_isForeign(ref) &&
+                      nativeAmount != null &&
+                      nativeAmount != amount &&
+                      hide != true)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        '≈${nativeAmount!.toStringAsFixed(2)}',
+                        style: PiggyTextTokens.caption(context),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ],
         ),

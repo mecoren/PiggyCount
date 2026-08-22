@@ -122,13 +122,15 @@ class LedgerCard extends ConsumerWidget {
                                 ),
                                 TextSpan(
                                   text: ' (ID:${ledger.id})',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                    color: isRemote
-                                        ? primaryColor.withValues(alpha: 0.8)
-                                        : PiggyTokens.textSecondary(context),
-                                  ),
+                                  // UI-07：字号走 PiggyTextTokens（body=14）
+                                  style: PiggyTextTokens.body(context)
+                                      .copyWith(
+                                          fontWeight: FontWeight.w500,
+                                          color: isRemote
+                                              ? primaryColor
+                                                  .withValues(alpha: 0.8)
+                                              : PiggyTokens.textSecondary(
+                                                  context)),
                                 ),
                               ],
                             ),
@@ -201,8 +203,7 @@ class LedgerCard extends ConsumerWidget {
                                 : formatBalanceFull(
                                     ledger.balance, ledger.currency),
                           ),
-                          style: TextStyle(
-                            fontSize: 14,
+                          style: PiggyTextTokens.body(context).copyWith(
                             fontWeight: FontWeight.w500,
                             color: ledger.balance >= 0
                                 ? PiggyTokens.success(context)
@@ -235,8 +236,8 @@ class LedgerCard extends ConsumerWidget {
                         const SizedBox(height: 8),
                         Text(
                           l10n.ledgerCardDownloadCloud,
-                          style: TextStyle(
-                            fontSize: 16,
+                          // UI-07：title(16) 基础上仅覆写字重与颜色
+                          style: PiggyTextTokens.title(context).copyWith(
                             fontWeight: FontWeight.w600,
                             color: primaryColor,
                           ),

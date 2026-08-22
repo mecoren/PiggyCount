@@ -59,12 +59,14 @@ class SubcategoryContainer extends ConsumerWidget {
           ),
           itemCount: totalItems,
           itemBuilder: (context, index) {
+            final l10n = AppLocalizations.of(context);
             // 倒数第二个是添加按钮
             if (index == subCategories.length) {
               return _ActionButton(
                 onTap: onAddSubCategory,
                 icon: Icons.add,
-                label: '添加',
+                // UI-11：走 l10n
+                label: l10n.commonAdd,
               );
             }
 
@@ -73,7 +75,7 @@ class SubcategoryContainer extends ConsumerWidget {
               return _ActionButton(
                 onTap: onEditParentCategory,
                 icon: Icons.edit_outlined,
-                label: '编辑',
+                label: l10n.commonEdit,
               );
             }
 

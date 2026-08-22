@@ -1187,19 +1187,20 @@ class _PiggyBottomBar extends StatelessWidget {
               padding: EdgeInsets.only(bottom: bottomPadding),
               child: Row(
                 children: [
-                  _buildTabItem(0, Icons.receipt_long_outlined,
+                  _buildTabItem(context, 0, Icons.receipt_long_outlined,
                       Icons.receipt_long, l10n.tabHome, inactiveColor),
-                  _buildTabItem(1, Icons.pie_chart_outline_rounded,
+                  _buildTabItem(context, 1, Icons.pie_chart_outline_rounded,
                       Icons.pie_chart_rounded, l10n.tabInsights, inactiveColor),
                   // 中间记账按钮（作为 Tab 样式）
-                  _buildCenterTabItem(inactiveColor),
+                  _buildCenterTabItem(context, inactiveColor),
                   _buildTabItem(
+                      context,
                       2,
                       Icons.account_balance_wallet_outlined,
                       Icons.account_balance_wallet,
                       l10n.tabAssets,
                       inactiveColor),
-                  _buildAvatarTabItem(3, l10n.tabMine, inactiveColor),
+                  _buildAvatarTabItem(context, 3, l10n.tabMine, inactiveColor),
                 ],
               ),
             ),
@@ -1209,8 +1210,13 @@ class _PiggyBottomBar extends StatelessWidget {
     );
   }
 
-  Widget _buildTabItem(int index, IconData icon, IconData activeIcon,
-      String label, Color inactiveColor) {
+  Widget _buildTabItem(
+      BuildContext context,
+      int index,
+      IconData icon,
+      IconData activeIcon,
+      String label,
+      Color inactiveColor) {
     final isActive = index == currentIndex;
     final iconColor = isActive ? primaryColor : inactiveColor;
 
@@ -1233,8 +1239,8 @@ class _PiggyBottomBar extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   softWrap: false,
                   textScaler: TextScaler.noScaling,
-                  style: TextStyle(
-                    fontSize: 10,
+                  // UI-07：字号走 caption token（10），颜色/字重按激活态覆写
+                  style: PiggyTextTokens.caption(context).copyWith(
                     color: isActive ? primaryColor : inactiveColor,
                     fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                   ),
@@ -1247,7 +1253,7 @@ class _PiggyBottomBar extends StatelessWidget {
     );
   }
 
-  Widget _buildCenterTabItem(Color inactiveColor) {
+  Widget _buildCenterTabItem(BuildContext context, Color inactiveColor) {
     return Expanded(
       child: GestureDetector(
         key: centerButtonKey,
@@ -1269,11 +1275,8 @@ class _PiggyBottomBar extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 softWrap: false,
                 textScaler: TextScaler.noScaling,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: inactiveColor,
-                  fontWeight: FontWeight.w400,
-                ),
+                // UI-07：同上
+                style: PiggyTextTokens.caption(context),
               ),
             ],
           ),
@@ -1282,7 +1285,8 @@ class _PiggyBottomBar extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatarTabItem(int index, String label, Color inactiveColor) {
+  Widget _buildAvatarTabItem(
+      BuildContext context, int index, String label, Color inactiveColor) {
     final isActive = index == currentIndex;
     final hasAvatar = avatarPath != null;
 
@@ -1326,8 +1330,8 @@ class _PiggyBottomBar extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   softWrap: false,
                   textScaler: TextScaler.noScaling,
-                  style: TextStyle(
-                    fontSize: 10,
+                  // UI-07：同上
+                  style: PiggyTextTokens.caption(context).copyWith(
                     color: isActive ? primaryColor : inactiveColor,
                     fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                   ),

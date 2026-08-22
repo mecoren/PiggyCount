@@ -1156,8 +1156,9 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                                   height: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
+                                    // UI-14：主色底上的前景走 textOnPrimary token
                                     valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white),
+                                        PiggyTokens.textOnPrimary(context)),
                                   ),
                                 )
                               : Text(
@@ -1166,9 +1167,10 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                                       : AppLocalizations.of(context)
                                           .commonFinish,
                                   style: TextStyle(
+                                      // UI-14：同上；禁用态用 textDisabled 语义更准
                                       color: isEnabled
-                                          ? Colors.white
-                                          : PiggyTokens.textTertiary(context),
+                                          ? PiggyTokens.textOnPrimary(context)
+                                          : PiggyTokens.textDisabled(context),
                                       fontSize: isInCalcMode ? 24 : 16,
                                       fontWeight: FontWeight.w700),
                                 ),

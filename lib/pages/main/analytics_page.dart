@@ -551,7 +551,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                           showDialog(
                             context: context,
                             barrierDismissible: false,
-                            barrierColor: Colors.black.withValues(alpha: 0.3),
+                            // UI-09：遮罩走 token（亮 0.5/暗 0.7，暗色下不再偏淡）
+                            barrierColor: PiggyTokens.overlay(context),
                             builder: (ctx) => PopScope(
                               canPop: false,
                               child: Center(
