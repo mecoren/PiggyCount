@@ -81,6 +81,19 @@ class PiggyCountCloudProvider implements CloudProvider {
   PiggyCountCloudStorageService? _storage;
   PiggyCountCloudRealtimeClient? _realtime;
 
+  /// 审计 S7：是否放行非 HTTPS。仅限自托管调试，
+  /// 由 `--dart-define=PIGGY_ALLOW_INSECURE_HTTP=true` 显式开启。
+  final bool allowInsecureHttp;
+
+  /// 审计 S7：WS scheme 统一收口。
+  static String websocketSchemeFor(String urlScheme) =>
+      urlScheme == 'https' ? 'wss' : 'ws';
+
+  PiggyCountCloudProvider({
+    this.allowInsecureHttp =
+        const bool.fromEnvironment('PIGGY_ALLOW_INSECURE_HTTP'),
+  });
+
   @override
   String get providerId => 'piggycount_cloud';
 
@@ -123,6 +136,13 @@ class PiggyCountCloudProvider implements CloudProvider {
     final baseUrl = rawBaseUrl.replaceFirst(RegExp(r'/$'), '');
     final apiPrefix = _normalizeApiPrefix(rawApiPrefix ?? '/api/v1');
 
+    // 审计 S7：运行期兜底拦截，保证 validateConfig 之外的调用路径同样受限。
+    if (!allowInsecureHttp && !rawBaseUrl.startsWith('https://')) {
+      throw CloudConfigurationException(
+          'PiggyCount Cloud 地址必须使用 https://（自托管调试可用 '
+          '--dart-define=PIGGY_ALLOW_INSECURE_HTTP=true 放行）');
+    }
+
     final authService = PiggyCountCloudAuthService(
       baseUrl: baseUrl,
       apiPrefix: apiPrefix,
@@ -148,6 +168,9 @@ class PiggyCountCloudProvider implements CloudProvider {
     final baseUrl = config['baseUrl'];
     if (baseUrl is! String || baseUrl.trim().isEmpty) {
       return false;
+    }
+    if (!allowInsecureHttp && !baseUrl.startsWith('https://')) {
+      return false; // 审计 S7：登录密码与 Bearer token 禁止明文链路
     }
     final apiPrefix = config['apiPrefix'];
     if (apiPrefix != null && apiPrefix is! String) {
@@ -4316,7 +4339,8 @@ class PiggyCountCloudRealtimeClient {
 
   Uri _buildWebSocketUri(String token) {
     final base = Uri.parse(baseUrl);
-    final scheme = base.scheme == 'https' ? 'wss' : 'ws';
+    // 审计 S7：WS scheme 统一收口到 PiggyCountCloudProvider.websocketSchemeFor
+    final scheme = PiggyCountCloudProvider.websocketSchemeFor(base.scheme);
     final segments = <String>[
       ...base.pathSegments.where((segment) => segment.isNotEmpty),
       'ws',
