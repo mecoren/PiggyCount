@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart' as d;
@@ -71,6 +72,16 @@ enum SyncEngineStatus { idle, pushing, pulling, syncing, error }
 /// 核心同步编排器 — 实现 SyncService 接口
 /// 负责 push 本地变更到服务端、pull 远程变更到本地
 class SyncEngine implements app.SyncService {
+  /// SYNC-01：同一游标位置连续存在解密失败变更的页数上限。
+  /// 达到后停止本轮拉取，防止永久损坏的 change 造成无限重试；
+  /// 失败已记入 pullErrors，UI 错误横幅可见，下轮同步重新计数重试。
+  static const int _maxDecryptFailPages = 3;
+
+  /// SYNC-02 自愈冷却：上次「快照恢复 + 游标跳变」尝试时间。
+  /// 防止快照恢复失败或对端仍在推旧密钥增量时反复触发全量拉取。
+  DateTime? _lastSnapshotRecoveryAt;
+  static const Duration _snapshotRecoveryCooldown = Duration(minutes: 5);
+
   final PiggyDatabase db;
   final PiggyCountCloudProvider provider;
   final ChangeTracker changeTracker;
@@ -1242,16 +1253,24 @@ class SyncEngine implements app.SyncService {
   /// 用 [encryptionService] 解密并还原为原始 Map。
   /// 未加密的 payload（legacy 明文）原样保留，向后兼容旧服务端数据。
   ///
-  /// 解密失败的单条变更：payload 置 null，apply 阶段会按"数据损坏"跳过，
-  /// 不中断整页流程。
-  Future<PiggyCountCloudPullResult> _decryptPullResult(
+  /// SYNC-01 加固：解密失败的变更不再置 null 由 apply 静默跳过（旧实现
+  /// 导致变更被永久丢弃、游标照常推进、错误横幅完全无感知），而是随返回值
+  /// `decryptFailed` 上报——调用方将其记入 pullErrors 且不推进该页游标，
+  /// 下轮拉取重试同一页。
+  Future<
+      ({PiggyCountCloudPullResult result,
+      List<PiggyCountCloudSyncChange> decryptFailed})> _decryptPullResult(
     PiggyCountCloudPullResult result,
   ) async {
     if (encryptionService == null || !await encryptionService!.isEnabled) {
-      return result;
+      return (
+        result: result,
+        decryptFailed: const <PiggyCountCloudSyncChange>[],
+      );
     }
 
     final decrypted = <PiggyCountCloudSyncChange>[];
+    final decryptFailed = <PiggyCountCloudSyncChange>[];
     for (final change in result.changes) {
       final payload = change.payload;
       if (payload != null && payload['__encrypted__'] == true) {
@@ -1270,27 +1289,21 @@ class SyncEngine implements app.SyncService {
           ));
         } catch (e) {
           logger.warning('SyncEngine',
-              'pull: payload 解密失败 changeId=${change.changeId}, 跳过: $e');
-          decrypted.add(PiggyCountCloudSyncChange(
-            changeId: change.changeId,
-            ledgerId: change.ledgerId,
-            entityType: change.entityType,
-            entitySyncId: change.entitySyncId,
-            action: change.action,
-            updatedByDeviceId: change.updatedByDeviceId,
-            updatedAt: change.updatedAt,
-            payload: null,
-          ));
+              'pull: payload 解密失败 changeId=${change.changeId}: $e');
+          decryptFailed.add(change);
         }
       } else {
         // 未加密的 legacy payload，原样保留
         decrypted.add(change);
       }
     }
-    return PiggyCountCloudPullResult(
-      changes: decrypted,
-      serverCursor: result.serverCursor,
-      hasMore: result.hasMore,
+    return (
+      result: PiggyCountCloudPullResult(
+        changes: decrypted,
+        serverCursor: result.serverCursor,
+        hasMore: result.hasMore,
+      ),
+      decryptFailed: decryptFailed,
     );
   }
 
@@ -1310,7 +1323,7 @@ class SyncEngine implements app.SyncService {
       limit: 500,
       persistCursor: false,
     ));
-    if (probe.changes.isEmpty) {
+    if (probe.result.changes.isEmpty) {
       logger.info(
           'SyncEngine', 'pull: since=$nextSince 无新变更,跳过 LookupCache prime');
       return 0;
@@ -1335,34 +1348,80 @@ class SyncEngine implements app.SyncService {
   Future<int> _runPullLoop(
     String ledgerId,
     int? nextSince, {
-    PiggyCountCloudPullResult? firstPage,
+    ({PiggyCountCloudPullResult result,
+    List<PiggyCountCloudSyncChange> decryptFailed})? firstPage,
   }) async {
     int totalApplied = 0;
     bool hasMore = true;
     int pageIndex = 0;
     final loopStart = DateTime.now();
-    PiggyCountCloudPullResult? reuseResult = firstPage;
+    // SYNC-01：解密失败页的连续计数（同一游标位置反复失败即累加）。
+    // 达到上限后停止本轮拉取，防止永久损坏的 change 导致无限重试。
+    var consecutiveDecryptFailPages = 0;
+    // SYNC-02：本轮累计的不可解密变更（供快照自愈使用）
+    final stuckChanges = <PiggyCountCloudSyncChange>[];
+    ({PiggyCountCloudPullResult result,
+            List<PiggyCountCloudSyncChange> decryptFailed})? reuseResult =
+        firstPage;
     while (hasMore) {
       pageIndex++;
       final pageStart = DateTime.now();
       final PiggyCountCloudPullResult result;
+      final List<PiggyCountCloudSyncChange> decryptFailed;
       if (reuseResult != null) {
         // 第一轮:复用 _doPull 的探针结果,不再发一次 HTTP
-        result = reuseResult;
+        result = reuseResult.result;
+        decryptFailed = reuseResult.decryptFailed;
         reuseResult = null;
         logger.info('SyncEngine',
             'pull #$pageIndex: since=$nextSince got ${result.changes.length} hasMore=${result.hasMore} (reused probe)');
       } else {
-        result = await _decryptPullResult(await provider.pullChanges(
+        final page = await _decryptPullResult(await provider.pullChanges(
           since: nextSince,
           limit: 500,
           persistCursor: false, // cursor 由 appCursor 接管
         ));
+        result = page.result;
+        decryptFailed = page.decryptFailed;
         final httpMs = DateTime.now().difference(pageStart).inMilliseconds;
         logger.info('SyncEngine',
             'pull #$pageIndex: since=$nextSince got ${result.changes.length} hasMore=${result.hasMore} (HTTP ${httpMs}ms)');
       }
-      if (result.changes.isEmpty) break;
+      if (result.changes.isEmpty && decryptFailed.isEmpty) break;
+
+      // SYNC-01：本页存在解密失败的变更 → 整页视为应用失败（与既有
+      // 「整页回滚」语义一致）：全部记入 pullErrors、不应用任何变更、
+      // 游标不推进，下轮拉取重试同一页。错误横幅经由 pullErrors 呈现。
+      if (decryptFailed.isNotEmpty) {
+        consecutiveDecryptFailPages++;
+        stuckChanges.addAll(decryptFailed);
+        logger.warning(
+            'SyncEngine',
+            'pull #$pageIndex: ${decryptFailed.length}/${result.changes.length + decryptFailed.length} 条变更解密失败，'
+            '本页不应用且游标停在 $nextSince（连续失败页 $consecutiveDecryptFailPages/$_maxDecryptFailPages）');
+        for (final ch in decryptFailed) {
+          await pullErrors.record(
+            change: ch,
+            error: StateError(
+                'payload 解密失败：加密密码可能已变更或密文损坏，请与其他设备核对密码'),
+            stackTrace: StackTrace.current,
+          );
+        }
+        if (consecutiveDecryptFailPages >= _maxDecryptFailPages) {
+          logger.error(
+              'SyncEngine',
+              'pull: 连续 $_maxDecryptFailPages 页存在解密失败变更，停止本轮拉取防止死循环。'
+              '请检查加密密码是否与其他设备一致；改密后其他设备需重新执行一次改密'
+              '以收敛云端密文（rekey epoch）');
+          // SYNC-02 自愈：增量日志里的旧密钥 change 无法在客户端重加密，
+          // 改用云端全量快照恢复受影响账本并把游标推进到服务端最新，
+          // 避免本机永久卡死（详见 _recoverStuckPullFromSnapshot）。
+          await _recoverStuckPullFromSnapshot(stuckChanges);
+          break;
+        }
+        hasMore = false; // 游标未推进，本轮不再继续
+        continue;
+      }
 
       final applyStart = DateTime.now();
       final outcome = await _applyPullPage(result.changes);
@@ -1400,6 +1459,68 @@ class SyncEngine implements app.SyncService {
           'pull: 累计 apply $totalApplied 条 / $pageIndex 页 / 总耗时 ${totalMs}ms');
     }
     return totalApplied;
+  }
+
+  /// SYNC-02 自愈：增量日志存在用旧密钥加密的 change（改密后 E2EE 下服务端
+  /// 无法代为重加密，客户端也无法单点修复）导致本机游标永久卡死时的恢复路径：
+  ///
+  /// ① 对受影响账本用云端全量快照（/sync/full）整本覆盖恢复本地；
+  /// ② 把 appCursor 直接推进到服务端最新 cursor（快照即当前权威态，
+  ///    旧密钥增量全部作废跳过）；
+  /// ③ 将卡住的解密失败错误标记 resolved，UI 错误横幅随之消除。
+  ///
+  /// 已知取舍：恢复窗口内其他设备推到服务端的增量会被一并跳过（以快照为准）；
+  /// 后续变更由正常增量拉取接管。快照拉取/导入失败时保持现状（游标不动、
+  /// 错误可见），等待用户介入（如在改密设备重新执行一次改密后重试同步）。
+  Future<void> _recoverStuckPullFromSnapshot(
+      List<PiggyCountCloudSyncChange> stuckChanges) async {
+    final now = DateTime.now();
+    final last = _lastSnapshotRecoveryAt;
+    if (last != null && now.difference(last) < _snapshotRecoveryCooldown) {
+      logger.info('SyncEngine', 'pull 自愈：冷却期内跳过快照恢复');
+      return;
+    }
+    _lastSnapshotRecoveryAt = now;
+
+    try {
+      // 受影响账本 → 本地 int id 去重
+      final affected = <int>{};
+      for (final ch in stuckChanges) {
+        final localId = await _resolveLedgerIdBySyncId(ch.ledgerId);
+        if (localId != null) affected.add(localId);
+      }
+
+      if (affected.isNotEmpty) {
+        for (final ledgerId in affected) {
+          logger.warning('SyncEngine',
+              'pull 自愈：ledger=$ledgerId 存在不可解密增量，改用云端快照整本恢复');
+          await runFullPull(ledgerId: ledgerId);
+        }
+      } else {
+        logger.info('SyncEngine',
+            'pull 自愈：受影响账本本地不存在，仅推进游标跳过旧密钥增量');
+      }
+
+      // 游标直接推进到服务端最新：since 取超大值拿到空页 + 最新 server_cursor
+      final probe = await provider.pullChanges(
+        since: 1 << 40,
+        limit: 1,
+        persistCursor: false,
+      );
+      await appCursor.commit(probe.serverCursor);
+
+      // 清掉已跳过的解密失败错误，避免横幅残留误导
+      for (final ch in stuckChanges) {
+        await pullErrors.markResolved(ch.changeId);
+      }
+
+      logger.info('SyncEngine',
+          'pull 自愈完成：快照恢复 ${affected.length} 个账本，cursor → ${probe.serverCursor}');
+      _emit(PullCompleted(ledgerId: '', applied: stuckChanges.length));
+    } catch (e, st) {
+      logger.error(
+          'SyncEngine', 'pull 自愈失败：保持游标与错误现状，等待用户介入', e, st);
+    }
   }
 
   /// 单页 apply。整页事务 try/catch:

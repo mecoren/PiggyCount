@@ -6,6 +6,40 @@ part of 'sync_engine.dart';
 /// 这些方法不参与 sync 的高层编排,跟 push / pull / apply 解耦,所以独立成 part。
 /// 主入口 [SyncEngine] 通过 extension 的方式承载,可以自由访问类的私有字段。
 extension SyncEngineAttachmentsExt on SyncEngine {
+  /// SYNC-06 魔数：与 [CiphertextFormat.magicHeader] 一致。
+  /// 云端产物为密文时必然是 ASCII 文本信封；JPEG/PNG 等二进制内容
+  /// 以该前缀开头的概率可忽略，用前缀探测区分密文与 legacy 明文。
+  static const String _attachmentCipherMagic = 'BEECRYPT1:';
+
+  /// SYNC-06：路径 B 收据附件加密口径（与 EncryptedCloudStorageService 的
+  /// uploadBinary 一致）——字节 base64 封入文本信封后走字符串加密，
+  /// 云端产物为 BEECRYPT1: 密文；加密未开启时等价透传（明文上传，
+  /// 向后兼容既有行为）。
+  Future<Uint8List> _encryptAttachmentBytes(Uint8List bytes) async {
+    final enc = encryptionService;
+    if (enc == null || !await enc.isEnabled) return bytes;
+    final payload = await enc.encrypt(base64Encode(bytes));
+    return Uint8List.fromList(utf8.encode(payload));
+  }
+
+  /// 下载侧解密：仅 BEECRYPT1 信封才解密；legacy 明文原样返回。
+  /// 云端为密文但本机无可用密钥时抛错，由调用方的重试逻辑记录。
+  Future<Uint8List> _decryptAttachmentBytes(List<int> raw) async {
+    if (raw.length <= _attachmentCipherMagic.length + 16) {
+      return Uint8List.fromList(raw);
+    }
+    final head =
+        utf8.decode(raw.sublist(0, _attachmentCipherMagic.length), allowMalformed: true);
+    if (head != _attachmentCipherMagic) return Uint8List.fromList(raw);
+
+    final enc = encryptionService;
+    if (enc == null || !await enc.isEnabled) {
+      throw StateError('附件为加密密文但本机加密未开启或密钥不可用');
+    }
+    final plain = await enc.decrypt(utf8.decode(raw));
+    return Uint8List.fromList(base64Decode(plain));
+  }
+
   /// 清掉某账本下所有附件的 cloudFileId / cloudSha256。
   /// 用于"远端账本被重建/清空"的场景：本地以为文件在云上，实际已失效，
   /// 重置后下次 uploadAttachments 会把它们当新的重新上传。
@@ -33,6 +67,13 @@ extension SyncEngineAttachmentsExt on SyncEngine {
   /// 走 user-global 的 `/attachments/category-icons/upload` endpoint,跟账本
   /// 解耦:相同 sha256 的图标全用户只上传 1 份(server 端按 user_id + sha256
   /// 去重),避免历史"每个账本各上传一份"的倍数膨胀。
+  ///
+  /// SYNC-06 范围决策：分类图标/头像**保持明文**不上加密信封——
+  /// ① 它们是跨端渲染资产（web 端按 fileId 直接拉取展示，无解密能力）；
+  /// ② 下行链路用 iconCloudSha256（原始字节哈希）做缓存校验
+  ///    （CustomIconService.writeCachedSharedIcon），加密会破坏该校验语义。
+  /// 若未来 web 端支持解密，可在此处套用 _encryptAttachmentBytes 同一口径，
+  /// 并同步调整 iconCloudSha256 的哈希基准约定。
   Future<Map<int, ({String fileId, String sha256})>>
       _uploadCategoryIcons() async {
     final categories = await db.select(db.categories).get();
@@ -116,9 +157,11 @@ extension SyncEngineAttachmentsExt on SyncEngine {
     for (var attempt = 0; attempt < 3; attempt++) {
       try {
         final bytes = await localFile.readAsBytes();
+        // SYNC-06：加密开启时上传密文信封（明文透传，兼容既有行为）
+        final out = await _encryptAttachmentBytes(bytes);
         final result = await provider.uploadAttachment(
           ledgerId: serverLedgerId,
-          bytes: bytes,
+          bytes: out,
           fileName: att.originalName ?? att.fileName,
         );
         await (db.update(db.transactionAttachments)
@@ -193,7 +236,9 @@ extension SyncEngineAttachmentsExt on SyncEngine {
     Object? lastError;
     for (var attempt = 0; attempt < 3; attempt++) {
       try {
-        final bytes = await provider.downloadAttachment(fileId: cloudFileId);
+        final raw = await provider.downloadAttachment(fileId: cloudFileId);
+        // SYNC-06：密文信封自动解密，legacy 明文透传
+        final bytes = await _decryptAttachmentBytes(raw);
         final dir = localFile.parent;
         if (!dir.existsSync()) dir.createSync(recursive: true);
         await localFile.writeAsBytes(bytes);
