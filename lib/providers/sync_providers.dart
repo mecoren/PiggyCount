@@ -154,6 +154,14 @@ final authServiceProvider = FutureProvider<CloudAuthService>((ref) async {
     return NoopAuthService();
   }
 
+  // REC-05 防御纵深：路径 B（PiggyCount Cloud）总开关关闭时，即使存量
+  // 激活配置仍为 piggycountCloud，也禁止实例化其认证服务（否则深链/
+  // 常驻页可能借 auth 通道触发登录与设备拉取）。
+  if (config.type == CloudBackendType.piggycountCloud &&
+      !kPiggyCountCloudEnabled) {
+    return NoopAuthService();
+  }
+
   try {
     final services = await createCloudServices(config);
     if (services.auth != null) {

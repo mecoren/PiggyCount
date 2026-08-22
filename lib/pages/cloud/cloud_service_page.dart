@@ -1660,6 +1660,17 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
         return;
       }
 
+      // REC-05 防御纵深：路径 B 总开关关闭时禁止保存配置与登录
+      //（UI 入口已禁用，此处兜底拦截深链/残留调用）。
+      if (!kPiggyCountCloudEnabled) {
+        if (mounted) {
+          await AppDialog.error(context,
+              title: AppLocalizations.of(context).cloudConfigInvalidTitle,
+              message: 'PiggyCount Cloud 已停用');
+        }
+        return;
+      }
+
       try {
         await ref.read(cloudServiceStoreProvider).saveOnly(cfg);
         ref.invalidate(piggycountCloudConfigProvider);
@@ -2051,6 +2062,10 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
 
           case CloudBackendType.piggycountCloud:
             // PiggyCount Cloud 连接测试 - 调用健康检查接口
+            // REC-05 防御纵深：总开关关闭时直接判定失败，不创建云服务。
+            if (!kPiggyCountCloudEnabled) {
+              throw Exception('PiggyCount Cloud 已停用');
+            }
             try {
               final services = await createCloudServices(config);
               if (services.provider == null) {

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -1138,6 +1139,13 @@ class PiggyCountCloudAuthService implements CloudAuthService {
   _PiggyCountDeviceMetadata? _deviceMetadataCache;
   Future<_PiggyCountDeviceMetadata>? _deviceMetadataFuture;
 
+  /// SYNC-03 安全加固：会话令牌（accessToken/refreshToken）持久化于安全存储
+  /// （Android EncryptedSharedPreferences / iOS Keychain），不再明文落盘。
+  /// 与 CloudServiceStore 同一安全后端与迁移策略。
+  final FlutterSecureStorage _sessionSecure = const FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
+
   /// 离线恢复凭证:token 全部失效(refresh_token 过期 / server 认不出来)时,
   /// 如果注入了邮密,currentUser/requireAccessToken 会用这对凭证自动再登一次,
   /// 让 API 调用方无感恢复,不用用户手动去配置页点确定。
@@ -1178,9 +1186,68 @@ class PiggyCountCloudAuthService implements CloudAuthService {
     return 'piggycount_cloud_local_device_id_$digest';
   }
 
+  /// 读取会话 JSON：优先安全存储；SharedPreferences 仅作旧版本明文数据的
+  /// 迁移回退（读到后迁移到安全存储并删除明文）。
+  Future<String?> _readSessionRaw() async {
+    try {
+      final secure = await _sessionSecure.read(key: _sessionStorageKey);
+      if (secure != null && secure.isNotEmpty) {
+        return secure;
+      }
+    } catch (e) {
+      debugPrint('Secure storage session read failed: $e');
+    }
+    // 旧版本明文迁移（尽力而为，失败不阻塞读取）
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final legacy = prefs.getString(_sessionStorageKey);
+      if (legacy != null && legacy.isNotEmpty) {
+        await _sessionSecure.write(key: _sessionStorageKey, value: legacy);
+        await prefs.remove(_sessionStorageKey);
+        debugPrint(
+            'Migrated piggycount cloud session from plaintext prefs to secure storage');
+      }
+      return legacy;
+    } catch (e) {
+      debugPrint('Legacy session migration failed: $e');
+      return null;
+    }
+  }
+
+  /// 写入会话 JSON 到安全存储。
+  ///
+  /// SYNC-03 安全底线：secure storage 写失败时【硬失败】抛异常，绝不降级
+  /// 明文 SharedPreferences——令牌明文落盘的风险 > 保存失败的不便
+  ///（与 CloudServiceStore._writeCfg 策略一致）。
+  Future<void> _writeSessionRaw(String raw) async {
+    try {
+      await _sessionSecure.write(key: _sessionStorageKey, value: raw);
+    } catch (e) {
+      debugPrint('Secure storage session write failed: $e');
+      throw CloudAuthException('安全存储写入失败，登录态未持久化（令牌不会以明文保存）', e);
+    }
+    // 写入成功后清除可能残留的历史明文
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_sessionStorageKey);
+    } catch (_) {}
+  }
+
+  /// 删除安全存储与历史明文残留中的会话。
+  Future<void> _deleteSessionRaw() async {
+    try {
+      await _sessionSecure.delete(key: _sessionStorageKey);
+    } catch (e) {
+      debugPrint('Secure storage session delete failed: $e');
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_sessionStorageKey);
+    } catch (_) {}
+  }
+
   Future<void> initialize() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_sessionStorageKey);
+    final raw = await _readSessionRaw();
     if (raw == null || raw.isEmpty) {
       return;
     }
@@ -1754,8 +1821,9 @@ class PiggyCountCloudAuthService implements CloudAuthService {
     // 任何成功登录路径都清掉静默恢复冷却,避免之前的失败状态拖到现在。
     _silentRecoveryCooldownUntil = null;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_sessionStorageKey, jsonEncode(session.toJson()));
     await prefs.setString(_localDeviceIdStorageKey, session.deviceId);
+    // SYNC-03：会话令牌仅写安全存储（写失败抛异常，不降级明文）
+    await _writeSessionRaw(jsonEncode(session.toJson()));
     final metadata = _deviceMetadataCache;
     if (metadata != null && metadata.deviceId != session.deviceId) {
       _deviceMetadataCache = _PiggyCountDeviceMetadata(
@@ -1772,8 +1840,7 @@ class PiggyCountCloudAuthService implements CloudAuthService {
 
   Future<void> _clearSession() async {
     _session = null;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_sessionStorageKey);
+    await _deleteSessionRaw();
     _authStateController.add(null);
   }
 

@@ -301,6 +301,27 @@ class CloudEncryptedLocallyDisabledException implements Exception {
   String toString() => 'CloudEncryptedLocallyDisabledException: $message';
 }
 
+/// 云端密文损坏/密钥错配异常（SYNC-10 后半）
+///
+/// 本地存在可用密钥但解密仍失败（密文损坏 / salt 错配 / 被其他设备用
+/// 不同密码重加密）时抛出。取代旧实现「返回 null 静默跳过」——旧行为
+/// 会让恢复流程返回 inserted:0 且无任何提示，用户误以为"什么都没发生"。
+///
+/// 与 [CloudEncryptedLocallyDisabledException] 的区别：
+/// - [CloudEncryptedLocallyDisabledException]：本地无密钥/未开启加密，
+///   引导用户走「开启加密 → enableFromCloud」流程即可恢复
+/// - 本异常：本地有密钥但内容不可读，需用户确认密码是否变更，或用
+///   「上传覆盖云端」自救
+class CloudCiphertextUndecryptableException implements Exception {
+  final String message;
+  final Object? cause;
+
+  const CloudCiphertextUndecryptableException(this.message, {this.cause});
+
+  @override
+  String toString() => 'CloudCiphertextUndecryptableException: $message';
+}
+
 /// 加密未配置异常
 ///
 /// 加密已开启但密钥不可用时抛出。

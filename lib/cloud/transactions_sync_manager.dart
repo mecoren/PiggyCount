@@ -318,12 +318,17 @@ class TransactionsSyncManager implements SyncService {
   ///   抛 [CloudEncryptedLocallyDisabledException]，由调用方/UI 引导用户走
   ///   「开启加密 → enableFromCloud」流程恢复，而非静默跳过让用户误以为云端无数据
   ///   （BUG-2 残留修复）。
-  /// - 密钥存在但解密失败（salt 错配等）：返回 null，由调用方跳过，避免 jsonDecode 崩溃。
+  /// - 密钥存在但解密失败（salt 错配/密文损坏等）：抛
+  ///   [CloudCiphertextUndecryptableException]，由调用方向用户明确呈现
+  ///   「密文损坏/密钥不匹配」，不再静默返回 null 让恢复流程表现为
+  ///   "什么都没发生"（SYNC-10 后半修复）。
   ///
   /// 取代原 [_isUnreadableCiphertext]：原实现仅以 `isEnabled` 判断，会把
   /// 「disable 后密钥仍保留」的场景也判为不可读，导致关闭加密后无法再从云端
   /// 恢复存量密文备份（即 BUG-1 的残余阻塞点）。
-  Future<String?> _decryptIfNeeded(String raw) async {
+  ///
+  /// 返回非空明文；不可解密场景一律抛异常（SYNC-10 后半），不再返回 null。
+  Future<String> _decryptIfNeeded(String raw) async {
     if (!CiphertextFormat.isEncrypted(raw)) return raw;
     // 内容是密文：若加密服务可用且已开启，_provider 应已被装饰，
     // download 返回的是解密后的明文，不会走到这里。
@@ -340,10 +345,16 @@ class TransactionsSyncManager implements SyncService {
     try {
       return await encryptionService!.decrypt(raw);
     } on Exception catch (e) {
-      // 密钥存在但与密文不匹配（salt 错配/被其他设备用不同密码重加密等）：
-      // 本地确实无法解密，视为不可读，避免崩溃。
-      logger.warning('CloudSync', '本地密钥存在但密文解密失败，跳过: $e');
-      return null;
+      // SYNC-10 后半：密钥存在但与密文不匹配（salt 错配/被其他设备用
+      // 不同密码重加密/密文损坏）。本地确实无法解密——抛专属异常向上
+      // 呈现，而非静默跳过。
+      logger.warning('CloudSync', '本地密钥存在但密文解密失败: $e');
+      throw CloudCiphertextUndecryptableException(
+        '云端备份密文无法用本机密钥解密（密码可能已变更或密文损坏）。\n'
+        '若你记得原密码，请在加密设置中用它激活密钥后再试；'
+        '或先上传本地数据覆盖云端备份。',
+        cause: e,
+      );
     }
   }
 
@@ -738,11 +749,9 @@ class TransactionsSyncManager implements SyncService {
           throw fcs.CloudStorageException('附件对象不存在: ${job.sha256}');
         }
         // 与账本 JSON 同一口径处理密文(加密开启时 storage 已自动解密,
-        // isEncrypted=false 直接通过;disable 后残留密钥场景手动解密)
+        // isEncrypted=false 直接通过;disable 后残留密钥场景手动解密;
+        // 密文不可解密时 _decryptIfNeeded 抛专属异常,由下方 catch 计入重试/失败)
         final plain = await _decryptIfNeeded(raw);
-        if (plain == null) {
-          throw fcs.CloudStorageException('附件对象密文无法解密: ${job.sha256}');
-        }
         final bytes = base64Decode(plain);
         // 校验内容哈希与路径声明一致,拒绝损坏/错配对象
         final actual = crypto.sha256.convert(bytes).toString();
@@ -792,16 +801,9 @@ class TransactionsSyncManager implements SyncService {
       }
 
       // 规整为可解析明文：disable 后密钥仍保留 → 解密存量密文并恢复；
-      // reset 后无密钥 → 跳过恢复（避免崩溃），提示用户重新开启加密或上传覆盖。
+      // reset 后无密钥 / 密钥错配或密文损坏 → 抛专属异常（SYNC-10 后半），
+      // 由 UI 明确提示，不再静默返回 inserted:0 让用户以为"什么都没发生"。
       final jsonStr = await _decryptIfNeeded(raw);
-      if (jsonStr == null) {
-        logger.warning(
-          'CloudSync',
-          '云端存在加密密文但本地无可解密密钥，跳过恢复以避免崩溃。'
-          '请重新开启加密（使用原密码）或先上传本地数据覆盖云端。',
-        );
-        return (inserted: 0, deletedDup: 0);
-      }
 
       // 复用公共恢复管线（P1-1 守卫 + 事务内清空导入），
       // 与云端备份恢复（CloudBackupService）同一语义单一事实源
@@ -835,6 +837,11 @@ class TransactionsSyncManager implements SyncService {
       // 不视为下载失败（不打 error 堆栈），向上抛出由 UI 引导用户开启加密。
       logger.warning(
           'CloudSync', '云端为密文但本地未开启加密，需引导用户开启加密: $ledgerId');
+      rethrow;
+    } on CloudCiphertextUndecryptableException {
+      // SYNC-10 后半：密钥存在但密文不可解密（损坏/salt 错配/密码已变更）。
+      // 向上抛出由 UI 明确呈现，不再落入通用 catch 被当作普通失败吞掉。
+      logger.warning('CloudSync', '云端密文无法用本机密钥解密，恢复中止: $ledgerId');
       rethrow;
     } catch (e, stack) {
       logger.error('CloudSync', '下载失败: $ledgerId', e);
@@ -881,9 +888,10 @@ class TransactionsSyncManager implements SyncService {
       return null;
     }
 
-    // 规整为可解析明文：disable 后密钥仍保留则解密；无密钥返回 null
+    // 规整为可解析明文：disable 后密钥仍保留则解密；无密钥或密文不可
+    // 解密（SYNC-10）抛专属异常，由调用方/UI 明确呈现错误，不再当作
+    // 「云端无数据」静默返回 null。
     final jsonStr = await _decryptIfNeeded(raw);
-    if (jsonStr == null) return null;
 
     // 解析 JSON
     final jsonData = jsonDecode(jsonStr) as Map<String, dynamic>;
@@ -1494,17 +1502,24 @@ class TransactionsSyncManager implements SyncService {
       }
 
       // 规整为可解析明文：disable 后密钥仍保留则解密后导入；
-      // 无密钥（reset 等）跳过导入，避免崩溃
-      final jsonStr = await _decryptIfNeeded(raw);
-      if (jsonStr == null) {
+      // 无密钥 / 密文不可解密（SYNC-10 后半）→ 清理本次新建的账本行
+      // 后向上抛专属异常，由 UI 明确呈现，不再静默跳过导入。
+      final String jsonStr;
+      try {
+        jsonStr = await _decryptIfNeeded(raw);
+      } on CloudEncryptedLocallyDisabledException catch (e) {
         logger.warning(
-          'CloudSync',
-          '云端账本 $remotePath 存在加密密文但本地无可解密密钥，跳过导入',
-        );
+            'CloudSync', '云端账本 $remotePath 为密文且本地无可用密钥: $e');
         if (!reuseExistingByName) {
           await (db.delete(db.ledgers)..where((t) => t.id.equals(ledgerId))).go();
         }
-        return null;
+        rethrow;
+      } on CloudCiphertextUndecryptableException catch (e) {
+        logger.warning('CloudSync', '云端账本 $remotePath 密文不可解密: $e');
+        if (!reuseExistingByName) {
+          await (db.delete(db.ledgers)..where((t) => t.id.equals(ledgerId))).go();
+        }
+        rethrow;
       }
 
       // H2：同名/既有账本的云端下载统一走「先清空再导入」的覆盖语义
@@ -1829,12 +1844,8 @@ class TransactionsSyncManager implements SyncService {
           continue;
         }
         // 密文场景：provider 已装饰时 download 即明文；未装饰（本地未开
-        // 加密）时 _decryptIfNeeded 会抛 CloudEncryptedLocallyDisabledException
+        // 加密）或密文不可解密（SYNC-10）时 _decryptIfNeeded 抛专属异常
         final jsonStr = await _decryptIfNeeded(raw);
-        if (jsonStr == null) {
-          logger.warning('CloudSync', '发现账本 $remoteId 密文解密失败，跳过');
-          continue;
-        }
         final payload = jsonDecode(jsonStr) as Map<String, dynamic>;
         _discoveredPayloads[remoteId] = jsonStr;
         metas.add(RemoteLedgerMeta(
@@ -1848,6 +1859,10 @@ class TransactionsSyncManager implements SyncService {
       } on CloudEncryptedLocallyDisabledException {
         // 无可用密钥：跳过该账本（加密恢复走既有的哨兵引导流程）
         logger.warning('CloudSync', '发现账本 $remoteId 为密文且本地无密钥，跳过');
+      } on CloudCiphertextUndecryptableException {
+        // 密钥存在但不可解密（损坏/错配）：发现阶段仅列举，跳过该账本，
+        // 用户点导入时会在 importRemoteLedger 中得到明确报错。
+        logger.warning('CloudSync', '发现账本 $remoteId 密文无法用本机密钥解密，跳过');
       } catch (e) {
         logger.warning('CloudSync', '发现账本 $remoteId 失败，跳过: $e');
       }
@@ -1880,10 +1895,9 @@ class TransactionsSyncManager implements SyncService {
       if (raw == null) {
         throw fcs.CloudSyncException('云端账本文件不存在: $path');
       }
+      // 密文不可解密（SYNC-10）时 _decryptIfNeeded 抛专属异常，直接向上
+      // 呈现比笼统的 CloudSyncException 更明确
       jsonStr = await _decryptIfNeeded(raw);
-      if (jsonStr == null) {
-        throw fcs.CloudSyncException('云端账本 ${meta.id} 密文无法解密');
-      }
     }
 
     final inserted = await db.transaction(() async {

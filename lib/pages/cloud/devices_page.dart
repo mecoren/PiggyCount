@@ -5,6 +5,7 @@ import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../cloud/cloud_feature_flags.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
 import '../../styles/tokens.dart';
@@ -84,6 +85,11 @@ class _DevicesPageState extends ConsumerState<DevicesPage> {
   Future<PiggyCountCloudProvider> _getCloudProvider() async {
     // 在 async gap 前缓存 l10n，避免 dispose 后 context 失效
     final l10n = AppLocalizations.of(context);
+    // REC-05 防御纵深：路径 B 总开关关闭时禁止创建云服务（页面当前
+    // 无导航入口，此守卫防深链/未来误启用）。
+    if (!kPiggyCountCloudEnabled) {
+      throw StateError(l10n.cloudCollabUnavailableMessage);
+    }
     final config = await ref.read(activeCloudConfigProvider.future);
     if (!config.valid || config.type != CloudBackendType.piggycountCloud) {
       throw StateError(l10n.cloudCollabUnavailableMessage);

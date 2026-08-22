@@ -177,12 +177,12 @@ class _EncryptionSettingsPageState
       // 缺陷 A 修复：改密时内联重加密云端存量密文
       // 用旧密钥解密 → 新密钥加密 → 上传，确保改密后云端密文仍可解密。
       // 需要未装饰的 raw storage（装饰器会自动解密，导致双重加密）。
-      ReEncryptResult? reEncResult;
+      // 部分失败时服务层回滚并抛 ReEncryptPartialFailureException（SYNC-13）。
       if (sync is TransactionsSyncManager) {
         await sync.ensureInitialized();
         final rawStorage = sync.rawStorage;
         if (rawStorage != null) {
-          reEncResult = await service.changePasswordWithCloudReEncryption(
+          await service.changePasswordWithCloudReEncryption(
             oldPassword: result.oldPassword!,
             newPassword: result.password,
             cloudStorage: rawStorage,
@@ -217,19 +217,28 @@ class _EncryptionSettingsPageState
         await sync.reinitializeForEncryption();
       }
 
-      // 重加密部分失败时警告（不阻塞，密钥已轮换完成）
-      if (reEncResult != null && reEncResult.failed > 0 && mounted) {
-        await AppDialog.warning(
-          context,
-          title: l10n.cloudSyncEncryptChangePassword,
-          message: l10n.cloudSyncEncryptReencryptPartialFailed(
-            reEncResult.failed,
-          ),
-        );
-      }
-
       ref.read(encryptionEnabledTickProvider.notifier).state++;
       if (mounted) showToast(context, l10n.cloudSyncEncryptChangeSuccess);
+    } on ReEncryptPartialFailureException catch (e) {
+      // SYNC-13：改密部分失败已回滚中止（服务层保证新密钥未激活）。
+      // 区分「回滚干净」与「回滚也失败（云端新旧密钥混合）」差异化提示。
+      if (mounted) {
+        await AppDialog.error(
+          context,
+          title: l10n.cloudSyncEncryptChangePassword,
+          message: e.rollbackClean
+              ? '云端有 ${e.failedPaths.length} 个文件重加密失败，'
+                  '本次改密已中止并回滚。\n'
+                  '当前密码未变更，旧密码仍有效。请检查网络后重试。\n'
+                  '失败文件: ${e.failedPaths.take(5).join(', ')}'
+                  '${e.failedPaths.length > 5 ? ' 等 ${e.failedPaths.length} 个' : ''}'
+              : '云端有 ${e.failedPaths.length} 个文件重加密失败，且回滚未完全'
+                  '成功——云端可能同时存在新旧密钥的密文，请勿删除本地数据，'
+                  '建议联网后重新执行一次改密以收敛状态。\n'
+                  '本次改密已中止，旧密码仍有效。\n'
+                  '回滚失败文件: ${e.rollbackFailedPaths.take(5).join(', ')}',
+        );
+      }
     } catch (e) {
       if (mounted) {
         await AppDialog.error(
