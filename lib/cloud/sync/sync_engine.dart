@@ -335,7 +335,7 @@ class SyncEngine implements app.SyncService {
           limit: 1,
           persistCursor: false,
         );
-        if (probe.serverCursor > (localCursor ?? 0)) {
+        if (probe.serverCursor > localCursor) {
           diff = app.SyncDiff.cloudNewer;
         } else {
           diff = app.SyncDiff.inSync;
