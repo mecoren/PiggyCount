@@ -160,6 +160,7 @@ class _PasswordSetupDialogState extends ConsumerState<PasswordSetupDialog> {
     final strength = _passwordStrength(_pwdController.text);
 
     return AlertDialog(
+      scrollable: true, // 审计 U3：小屏+键盘弹起时内容可滚动
       title: Text(_title(l10n)),
       content: SizedBox(
         width: (MediaQuery.sizeOf(context).width - 32).clamp(0.0, 320.0),
