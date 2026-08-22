@@ -64,8 +64,7 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
               child: reportAsync.when(
                 skipLoadingOnReload: true,
                 data: (report) => _buildBody(context, ref, l10n, report),
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
+                loading: () => const Center(child: CircularProgressIndicator()),
                 error: (err, _) => Center(
                   child: Padding(
                     padding: const EdgeInsets.all(24),
@@ -83,8 +82,8 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
     );
   }
 
-  Widget _buildBody(BuildContext context, WidgetRef ref,
-      AppLocalizations l10n, OrphanScanReport report) {
+  Widget _buildBody(BuildContext context, WidgetRef ref, AppLocalizations l10n,
+      OrphanScanReport report) {
     if (report.totalCount == 0) {
       return Center(
         child: Padding(
@@ -97,8 +96,7 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
                   color: PiggyTokens.textTertiary(context)),
               SizedBox(height: 16.0.scaled(context, ref)),
               Text(l10n.maintenanceOrphanEmpty,
-                  style: TextStyle(
-                      color: PiggyTokens.textSecondary(context))),
+                  style: TextStyle(color: PiggyTokens.textSecondary(context))),
             ],
           ),
         ),
@@ -113,8 +111,8 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
         _buildSummary(context, l10n, report),
         SizedBox(height: 8.0.scaled(context, ref)),
         if (report.dbOrphans.isNotEmpty)
-          _buildGroup(context, l10n, l10n.maintenanceOrphanGroupDb,
-              report.dbOrphans),
+          _buildGroup(
+              context, l10n, l10n.maintenanceOrphanGroupDb, report.dbOrphans),
         if (report.fileOrphans.isNotEmpty)
           _buildGroup(context, l10n, l10n.maintenanceOrphanGroupFile,
               report.fileOrphans),
@@ -146,20 +144,14 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
                 children: [
                   Text(
                     l10n.maintenanceOrphanSummary(report.totalCount),
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: PiggyTokens.textPrimary(context),
-                    ),
+                    style: PiggyTextTokens.strongTitle(context)
+                        .copyWith(fontSize: 14),
                   ),
                   if (report.totalSizeBytes > 0)
                     Text(
                       l10n.maintenanceOrphanSummarySize(
                           _humanSize(report.totalSizeBytes)),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: PiggyTokens.textSecondary(context),
-                      ),
+                      style: PiggyTextTokens.label(context),
                     ),
                 ],
               ),
@@ -191,11 +183,8 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
                   Expanded(
                     child: Text(
                       '$groupTitle (${records.length})',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: PiggyTokens.textPrimary(context),
-                      ),
+                      style: PiggyTextTokens.strongTitle(context)
+                          .copyWith(fontSize: 13),
                     ),
                   ),
                   TextButton(
@@ -235,14 +224,9 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
                 }
               });
             },
-      title: Text(r.title,
-          style: TextStyle(
-              fontSize: 14,
-              color: PiggyTokens.textPrimary(context))),
-      subtitle: Text('${r.subtitle}$sizeHint',
-          style: TextStyle(
-              fontSize: 12,
-              color: PiggyTokens.textSecondary(context))),
+      title: Text(r.title, style: PiggyTextTokens.body(context)),
+      subtitle:
+          Text('${r.subtitle}$sizeHint', style: PiggyTextTokens.label(context)),
       secondary: IconButton(
         tooltip: l10n.maintenanceOrphanDeleteOne,
         icon: const Icon(Icons.delete_outline),
@@ -256,9 +240,8 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
   Widget _buildBottomBar(
       BuildContext context, AppLocalizations l10n, OrphanScanReport report) {
     if (report.totalCount == 0) return const SizedBox.shrink();
-    final selectedCount = report.all
-        .where((r) => _selected.contains(r.uniqueKey))
-        .length;
+    final selectedCount =
+        report.all.where((r) => _selected.contains(r.uniqueKey)).length;
     final primary = PiggyTokens.primary(context);
     return SafeArea(
       child: Container(
@@ -268,8 +251,7 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
         ),
         decoration: BoxDecoration(
           color: PiggyTokens.surface(context),
-          border: Border(
-              top: BorderSide(color: PiggyTokens.divider(context))),
+          border: Border(top: BorderSide(color: PiggyTokens.divider(context))),
         ),
         child: Row(
           children: [
@@ -279,8 +261,9 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
             ),
             const Spacer(),
             TextButton(
-              onPressed:
-                  _cleaning ? null : () => _toggleAll(report, selectedCount == 0),
+              onPressed: _cleaning
+                  ? null
+                  : () => _toggleAll(report, selectedCount == 0),
               child: Text(selectedCount == 0
                   ? l10n.maintenanceOrphanSelectAll
                   : l10n.maintenanceOrphanDeselectAll),
@@ -345,9 +328,8 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
 
   Future<void> _cleanSelected(OrphanScanReport report) async {
     final l10n = AppLocalizations.of(context);
-    final selected = report.all
-        .where((r) => _selected.contains(r.uniqueKey))
-        .toList();
+    final selected =
+        report.all.where((r) => _selected.contains(r.uniqueKey)).toList();
     if (selected.isEmpty) return;
     final confirmed = await _showConfirm(
       title: l10n.maintenanceOrphanConfirmTitle,

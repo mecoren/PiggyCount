@@ -15,7 +15,8 @@ import '../../l10n/app_localizations.dart';
 
 /// Google Play 版本(CI 注入)。截屏自动记账依赖 READ_MEDIA_IMAGES,在 Google
 /// Play 渠道被砍掉,这里用来隐藏入口。详见 release.yml 的临时 manifest 配置。
-const _isGooglePlayBuild = bool.fromEnvironment('GOOGLE_PLAY', defaultValue: false);
+const _isGooglePlayBuild =
+    bool.fromEnvironment('GOOGLE_PLAY', defaultValue: false);
 
 /// 智能记账二级页面
 class SmartBillingPage extends ConsumerWidget {
@@ -60,7 +61,9 @@ class SmartBillingPage extends ConsumerWidget {
                     : PiggyTokens.info(context).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                 border: Border.all(
-                  color: requiresAI ? PiggyTokens.warning(context) : PiggyTokens.info(context),
+                  color: requiresAI
+                      ? PiggyTokens.warning(context)
+                      : PiggyTokens.info(context),
                   width: 1,
                 ),
               ),
@@ -68,7 +71,9 @@ class SmartBillingPage extends ConsumerWidget {
                 children: [
                   Icon(
                     requiresAI ? Icons.warning_amber : Icons.psychology,
-                    color: requiresAI ? PiggyTokens.warning(context) : PiggyTokens.info(context),
+                    color: requiresAI
+                        ? PiggyTokens.warning(context)
+                        : PiggyTokens.info(context),
                     size: 20,
                   ),
                   const SizedBox(width: 8),
@@ -77,7 +82,9 @@ class SmartBillingPage extends ConsumerWidget {
                       aiRequirement,
                       style: TextStyle(
                         fontSize: 13,
-                        color: requiresAI ? PiggyTokens.warning(context) : PiggyTokens.info(context),
+                        color: requiresAI
+                            ? PiggyTokens.warning(context)
+                            : PiggyTokens.info(context),
                       ),
                     ),
                   ),
@@ -135,10 +142,10 @@ class SmartBillingPage extends ConsumerWidget {
         SettingsNavItem(
           icon: Icons.mic_none_outlined,
           title: l10n.smartBillingVoiceTrigger,
-          subtitle: isAuto
-              ? l10n.voiceTriggerModeAuto
-              : l10n.voiceTriggerModeHold,
-          onTap: () => _showVoiceTriggerDialog(context, ref, settings.triggerMode),
+          subtitle:
+              isAuto ? l10n.voiceTriggerModeAuto : l10n.voiceTriggerModeHold,
+          onTap: () =>
+              _showVoiceTriggerDialog(context, ref, settings.triggerMode),
         ),
         if (isAuto) ...[
           const _VoiceSilenceTimeoutSlider(),
@@ -226,7 +233,7 @@ class SmartBillingPage extends ConsumerWidget {
               SettingsNavItem(
                 icon: Icons.psychology_outlined,
                 title: l10n.aiSettingsTitle,
-                subtitle: l10n.aiSettingsSubtitle,
+                subtitle: l10n.aiSettingsSubtitle,
                 onTap: () async {
                   await Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const AISettingsPage()),
@@ -245,7 +252,7 @@ class SmartBillingPage extends ConsumerWidget {
               SettingsNavItem(
                 icon: Icons.photo_library_outlined,
                 title: l10n.smartBillingImageBilling,
-                subtitle: l10n.smartBillingImageBillingDesc,
+                subtitle: l10n.smartBillingImageBillingDesc,
                 onTap: () {
                   _showFeatureGuideDialog(
                     context,
@@ -261,7 +268,7 @@ class SmartBillingPage extends ConsumerWidget {
               SettingsNavItem(
                 icon: Icons.camera_alt_outlined,
                 title: l10n.smartBillingCameraBilling,
-                subtitle: l10n.smartBillingCameraBillingDesc,
+                subtitle: l10n.smartBillingCameraBillingDesc,
                 onTap: () {
                   _showFeatureGuideDialog(
                     context,
@@ -277,7 +284,7 @@ class SmartBillingPage extends ConsumerWidget {
               SettingsNavItem(
                 icon: Icons.mic_outlined,
                 title: l10n.smartBillingVoiceBilling,
-                subtitle: l10n.smartBillingVoiceBillingDesc,
+                subtitle: l10n.smartBillingVoiceBillingDesc,
                 onTap: () {
                   _showFeatureGuideDialog(
                     context,
@@ -301,7 +308,7 @@ class SmartBillingPage extends ConsumerWidget {
                 SettingsNavItem(
                   icon: Icons.share_outlined,
                   title: l10n.shareBilling,
-                  subtitle: l10n.shareBillingDesc,
+                  subtitle: l10n.shareBillingDesc,
                   onTap: () {
                     _showFeatureGuideDialog(
                       context,
@@ -322,10 +329,11 @@ class SmartBillingPage extends ConsumerWidget {
                       : l10n.autoScreenshotBillingIosTitle,
                   subtitle: Platform.isAndroid
                       ? l10n.autoScreenshotBillingDesc
-                      : l10n.autoScreenshotBillingIosDesc,
+                      : l10n.autoScreenshotBillingIosDesc,
                   onTap: () async {
                     await Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const AutoBillingSettingsPage()),
+                      MaterialPageRoute(
+                          builder: (_) => const AutoBillingSettingsPage()),
                     );
                   },
                 ),
@@ -333,10 +341,11 @@ class SmartBillingPage extends ConsumerWidget {
               SettingsNavItem(
                 icon: Icons.app_shortcut,
                 title: l10n.shortcutsGuide,
-                subtitle: l10n.shortcutsGuideDesc,
+                subtitle: l10n.shortcutsGuideDesc,
                 onTap: () async {
                   await Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ShortcutsGuidePage()),
+                    MaterialPageRoute(
+                        builder: (_) => const ShortcutsGuidePage()),
                   );
                 },
               ),
@@ -356,7 +365,7 @@ class SmartBillingPage extends ConsumerWidget {
                 value: ref.watch(smartBillingAutoTagsProvider),
                 onChanged: (value) {
                   ref.read(smartBillingAutoTagsProvider.notifier).state = value;
-                },
+                },
               ),
               // 自动添加附件
               SettingsToggleItem(
@@ -365,8 +374,9 @@ class SmartBillingPage extends ConsumerWidget {
                 subtitle: l10n.smartBillingAutoAttachmentDesc,
                 value: ref.watch(smartBillingAutoAttachmentProvider),
                 onChanged: (value) {
-                  ref.read(smartBillingAutoAttachmentProvider.notifier).state = value;
-                },
+                  ref.read(smartBillingAutoAttachmentProvider.notifier).state =
+                      value;
+                },
               ),
             ],
           ),
@@ -418,10 +428,8 @@ class _VoiceSilenceTimeoutSliderState
                         style: const TextStyle(fontSize: 15)),
                     Text(
                       l10n.smartBillingVoiceSilenceTimeoutValue(seconds),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: PiggyTokens.textTertiary(context),
-                      ),
+                      style: PiggyTextTokens.label(context)
+                          .copyWith(color: PiggyTokens.textTertiary(context)),
                     ),
                   ],
                 ),

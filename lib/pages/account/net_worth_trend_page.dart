@@ -72,9 +72,7 @@ class _NetWorthTrendPageState extends ConsumerState<NetWorthTrendPage> {
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
       appBar: PiggyTitleBar(
-          title: l10n.netWorthTrendTitle,
-          showBack: true,
-          compact: true),
+          title: l10n.netWorthTrendTitle, showBack: true, compact: true),
       body: Padding(
         padding: EdgeInsets.only(
           top: PiggyTokens.topScrollablePadding(context),
@@ -128,10 +126,7 @@ class _NetWorthTrendPageState extends ConsumerState<NetWorthTrendPage> {
                             value: last,
                             signed: false,
                             showCurrency: true,
-                            style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: PiggyTokens.textPrimary(context)),
+                            style: PiggyTextTokens.strongTitle(context),
                           ),
                           const Spacer(),
                           // 期初净值为 0 时 pct 无意义(会显示误导的「+0.0%」),不显。
@@ -175,9 +170,7 @@ class _NetWorthTrendPageState extends ConsumerState<NetWorthTrendPage> {
                               EdgeInsets.only(top: 12.0.scaled(context, ref)),
                           child: Text(
                             l10n.netWorthTrendMultiCurrencyNote,
-                            style: TextStyle(
-                                fontSize: 11,
-                                color: PiggyTokens.textTertiary(context)),
+                            style: PiggyTextTokens.caption(context),
                           ),
                         ),
                     ],

@@ -265,7 +265,22 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                     ],
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => DelayedSkeleton(
+                  placeholder: const SizedBox.expand(),
+                  child: PulseSkeleton(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: const [
+                          SkeletonListTile(),
+                          SkeletonListTile(),
+                          SkeletonListTile(),
+                          SkeletonListTile(),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
                 error: (err, stack) => Center(
                   child: Text('${l10n.commonError}: $err'),
                 ),
@@ -314,10 +329,17 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
             skipLoadingOnReload: true,
             data: (nwByCurrency) =>
                 _buildNetWorthContent(context, ref, nwByCurrency),
-            loading: () => SizedBox(
-              height: 80.0.scaled(context, ref),
-              child: const Center(
-                  child: CircularProgressIndicator(strokeWidth: 2)),
+            loading: () => DelayedSkeleton(
+              placeholder: SizedBox(height: 80.0.scaled(context, ref)),
+              child: PulseSkeleton(
+                child: Padding(
+                  padding: EdgeInsets.all(12.0.scaled(context, ref)),
+                  child: SkeletonBar(
+                    height: 56,
+                    borderRadius: BorderRadius.circular(PiggyDimens.radiusMd),
+                  ),
+                ),
+              ),
             ),
             error: (_, __) => const SizedBox.shrink(),
           ),
@@ -348,11 +370,16 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                           skipLoadingOnReload: true,
                           data: (data) =>
                               AssetCompositionChart(data: data, embedded: true),
-                          loading: () => SizedBox(
-                            height: 180.0.scaled(context, ref),
-                            child: const Center(
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2)),
+                          loading: () => DelayedSkeleton(
+                            placeholder:
+                                SizedBox(height: 180.0.scaled(context, ref)),
+                            child: PulseSkeleton(
+                              child: SkeletonBar(
+                                height: 180.0.scaled(context, ref),
+                                borderRadius:
+                                    BorderRadius.circular(PiggyDimens.radiusLg),
+                              ),
+                            ),
                           ),
                           error: (_, __) => const SizedBox.shrink(),
                         )
@@ -396,10 +423,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
         // 净资产标签
         Text(
           l10n.accountTotalBalance,
-          style: TextStyle(
-            fontSize: 12,
-            color: PiggyTokens.textTertiary(context),
-          ),
+          style: PiggyTextTokens.label(context)
+              .copyWith(color: PiggyTokens.textTertiary(context)),
         ),
         SizedBox(height: 4.0.scaled(context, ref)),
         if (isSingleCurrency) ...[
@@ -478,10 +503,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                     children: [
                       Text(
                         l10n.totalAssets,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: PiggyTokens.textTertiary(context),
-                        ),
+                        style: PiggyTextTokens.caption(context),
                       ),
                       SizedBox(height: 2.0.scaled(context, ref)),
                       _buildMultiCurrencyAmountRow(
@@ -508,10 +530,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                     children: [
                       Text(
                         l10n.totalLiabilities,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: PiggyTokens.textTertiary(context),
-                        ),
+                        style: PiggyTextTokens.caption(context),
                       ),
                       SizedBox(height: 2.0.scaled(context, ref)),
                       _buildMultiCurrencyAmountRow(
@@ -558,8 +577,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
             context,
             ref,
             Text(l10n.commonEmpty,
-                style: TextStyle(
-                    fontSize: 12, color: PiggyTokens.textTertiary(context))),
+                style: PiggyTextTokens.label(context)
+                    .copyWith(color: PiggyTokens.textTertiary(context))),
           );
         }
         return InkWell(
@@ -595,11 +614,18 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
         context,
         ref,
         Text(l10n.commonError,
-            style: TextStyle(
-                fontSize: 12, color: PiggyTokens.textTertiary(context))),
+            style: PiggyTextTokens.label(context)
+                .copyWith(color: PiggyTokens.textTertiary(context))),
       ),
-      orElse: () => _inlineChartBox(context, ref,
-          const Center(child: CircularProgressIndicator(strokeWidth: 2))),
+      orElse: () => _inlineChartBox(
+          context,
+          ref,
+          PulseSkeleton(
+            child: SkeletonBar(
+              height: 140,
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusMd),
+            ),
+          )),
     );
   }
 
@@ -670,10 +696,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
             const Spacer(),
             Text(
               l10n.convertedNetWorth(base),
-              style: TextStyle(
-                fontSize: 12,
-                color: PiggyTokens.textTertiary(context),
-              ),
+              style: PiggyTextTokens.label(context)
+                  .copyWith(color: PiggyTokens.textTertiary(context)),
             ),
             Expanded(
               child: Align(
@@ -692,10 +716,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                       children: [
                         Text(
                           l10n.commonDetail,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: PiggyTokens.textTertiary(context),
-                          ),
+                          style: PiggyTextTokens.label(context).copyWith(
+                              color: PiggyTokens.textTertiary(context)),
                         ),
                         Icon(
                           Icons.chevron_right,
@@ -1070,11 +1092,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
             SizedBox(width: 6.0.scaled(context, ref)),
             Text(
               title,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: PiggyTokens.textPrimary(context),
-              ),
+              style: PiggyTextTokens.boldTitle(context).copyWith(fontSize: 16),
             ),
             const Spacer(),
             if (convertActive)
@@ -1193,11 +1211,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Text(
                       l10n.commonSettings,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: PiggyTokens.textPrimary(context),
-                      ),
+                      style: PiggyTextTokens.strongTitle(context)
+                          .copyWith(fontSize: 16),
                     ),
                   ),
                   // 功能开关
@@ -1207,10 +1222,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                       dense: true,
                       title: Text(
                         l10n.accountsEnableFeature,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: PiggyTokens.textPrimary(context),
-                        ),
+                        style: PiggyTextTokens.body(context),
                       ),
                       value: enabled,
                       activeColor: primaryColor,
@@ -1245,10 +1257,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                             visualDensity: VisualDensity.compact,
                             title: Text(
                               l10n.exchangeRatePageTitle,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: PiggyTokens.textPrimary(context),
-                              ),
+                              style: PiggyTextTokens.body(context),
                             ),
                             trailing: Icon(
                               Icons.chevron_right,
@@ -1374,10 +1383,7 @@ class _StatCell extends ConsumerWidget {
       children: [
         Text(
           label,
-          style: TextStyle(
-            fontSize: 11,
-            color: PiggyTokens.textTertiary(context),
-          ),
+          style: PiggyTextTokens.caption(context),
         ),
         SizedBox(height: 2.0.scaled(context, ref)),
         AmountText(
@@ -1408,10 +1414,8 @@ class _ApproxConvertedText extends ConsumerWidget {
     final hide = ref.watch(hideAmountsProvider);
     return Text(
       hide ? '≈ ****' : text,
-      style: TextStyle(
-        fontSize: 12,
-        color: PiggyTokens.textTertiary(context),
-      ),
+      style: PiggyTextTokens.label(context)
+          .copyWith(color: PiggyTokens.textTertiary(context)),
     );
   }
 }
@@ -1473,10 +1477,8 @@ class _ConversionDetailRow extends ConsumerWidget {
                     getCurrencyName(entry.code, context),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: PiggyTokens.textTertiary(context),
-                    ),
+                    style: PiggyTextTokens.label(context)
+                        .copyWith(color: PiggyTokens.textTertiary(context)),
                   ),
                 ),
               ],
@@ -1490,10 +1492,8 @@ class _ConversionDetailRow extends ConsumerWidget {
             showCurrency: true,
             currencyCode: entry.code,
             useCompactFormat: useCompact,
-            style: TextStyle(
-              fontSize: 14,
-              color: PiggyTokens.textSecondary(context),
-            ),
+            style: PiggyTextTokens.body(context)
+                .copyWith(color: PiggyTokens.textSecondary(context)),
           ),
           SizedBox(width: 8.0.scaled(context, ref)),
           // 右:base 自身空 / 缺失橙 badge / ≈ 折算 灰字
@@ -1566,11 +1566,8 @@ void _showConversionDetailSheet(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Text(
                 title,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: PiggyTokens.textPrimary(sheetContext),
-                ),
+                style: PiggyTextTokens.strongTitle(sheetContext)
+                    .copyWith(fontSize: 16),
               ),
             ),
             Flexible(
@@ -1619,10 +1616,7 @@ class _ConvertedStatCell extends ConsumerWidget {
       children: [
         Text(
           label,
-          style: TextStyle(
-            fontSize: 11,
-            color: PiggyTokens.textTertiary(context),
-          ),
+          style: PiggyTextTokens.caption(context),
         ),
         SizedBox(height: 2.0.scaled(context, ref)),
         Row(
@@ -1743,10 +1737,7 @@ class _AccountTypeGroupState extends ConsumerState<_AccountTypeGroup> {
                   ),
                   child: Text(
                     '${widget.accounts.length}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: PiggyTokens.textTertiary(context),
-                    ),
+                    style: PiggyTextTokens.caption(context),
                   ),
                 ),
                 const Spacer(),
@@ -1991,11 +1982,7 @@ class _AccountCard extends ConsumerWidget {
                             Flexible(
                               child: Text(
                                 account.name,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: PiggyTokens.textPrimary(context),
-                                ),
+                                style: PiggyTextTokens.strongTitle(context),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -2008,10 +1995,7 @@ class _AccountCard extends ConsumerWidget {
                         ),
                         Text(
                           getCurrencyName(account.currency, context),
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: PiggyTokens.textTertiary(context),
-                          ),
+                          style: PiggyTextTokens.caption(context),
                         ),
                       ],
                     ),
@@ -2153,7 +2137,7 @@ class _AccountCard extends ConsumerWidget {
               ),
               const SizedBox(height: 2),
               Text(l10n.accountBalance,
-                  style: TextStyle(fontSize: 11, color: labelColor)),
+                  style: PiggyTextTokens.caption(context)),
             ],
           ),
         ),
@@ -2210,7 +2194,7 @@ class _AccountCard extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 2),
-              Text(label, style: TextStyle(fontSize: 11, color: labelColor)),
+              Text(label, style: PiggyTextTokens.caption(context)),
             ],
           ),
         ),
@@ -2227,10 +2211,7 @@ class _AccountCard extends ConsumerWidget {
               SizedBox(height: 2.0.scaled(context, ref)),
               Text(
                 '${account.updatedAt!.month.toString().padLeft(2, '0')}-${account.updatedAt!.day.toString().padLeft(2, '0')}',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: labelColor,
-                ),
+                style: PiggyTextTokens.caption(context),
               ),
             ],
           ),
@@ -2409,10 +2390,7 @@ class _CompactDefaultAccount extends ConsumerWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: PiggyTokens.textPrimary(context),
-                  ),
+                  style: PiggyTextTokens.body(context),
                 ),
                 const Spacer(),
                 Text(

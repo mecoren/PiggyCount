@@ -131,10 +131,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
         alignment: Alignment.centerLeft,
         child: Text(
           AppLocalizations.of(context).statsConvertedFootnote(base),
-          style: TextStyle(
-            fontSize: 11,
-            color: PiggyTokens.textTertiary(context),
-          ),
+          style: PiggyTextTokens.caption(context),
         ),
       ),
     );
@@ -262,7 +259,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
           onTap: onTap,
           customBorder: const CircleBorder(),
           child: Center(
-            child: Icon(icon, size: 18, color: PiggyTokens.textSecondary(context)),
+            child:
+                Icon(icon, size: 18, color: PiggyTokens.textSecondary(context)),
           ),
         ),
       ),
@@ -521,204 +519,211 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              child: Row(
-                children: [
-                  Icon(Icons.bar_chart_outlined,
-                      color: PiggyTokens.textPrimary(context)),
-                  const SizedBox(width: 8),
-                  Text(
-                    AppLocalizations.of(context).tabInsights,
-                    style: PiggyTextTokens.title(context),
-                  ),
-                  const Spacer(),
-                  // 分享按钮
-                  IconButton(
-                    icon: Icon(Icons.share,
-                        color: PiggyTokens.textPrimary(context)),
-                    onPressed: () async {
-                      final ledgerId = ref.read(currentLedgerIdProvider);
-                      if (ledgerId == 0) {
-                        showToast(context, AppLocalizations.of(context).sharePosterNoLedger);
-                        return;
-                      }
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  child: Row(
+                    children: [
+                      Icon(Icons.bar_chart_outlined,
+                          color: PiggyTokens.textPrimary(context)),
+                      const SizedBox(width: 8),
+                      Text(
+                        AppLocalizations.of(context).tabInsights,
+                        style: PiggyTextTokens.title(context),
+                      ),
+                      const Spacer(),
+                      // 分享按钮
+                      IconButton(
+                        icon: Icon(Icons.share,
+                            color: PiggyTokens.textPrimary(context)),
+                        onPressed: () async {
+                          final ledgerId = ref.read(currentLedgerIdProvider);
+                          if (ledgerId == 0) {
+                            showToast(
+                                context,
+                                AppLocalizations.of(context)
+                                    .sharePosterNoLedger);
+                            return;
+                          }
 
-                      // 显示加载对话框（与轮播海报预览样式统一）
-                      showDialog(
-                        context: context,
-                        barrierDismissible: false,
-                        barrierColor: Colors.black.withValues(alpha: 0.3),
-                        builder: (ctx) => PopScope(
-                          canPop: false,
+                          // 显示加载对话框（与轮播海报预览样式统一）
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            barrierColor: Colors.black.withValues(alpha: 0.3),
+                            builder: (ctx) => PopScope(
+                              canPop: false,
+                              child: Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const SizedBox(
+                                      width: 50,
+                                      height: 50,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 3,
+                                        valueColor: AlwaysStoppedAnimation(
+                                            Colors.white),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 20),
+                                    Text(
+                                      AppLocalizations.of(context)
+                                          .mineShareGenerating,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+
+                          try {
+                            if (context.mounted) {
+                              Navigator.of(context).pop(); // 关闭加载对话框
+
+                              // 使用动态预览对话框（支持隐藏收入）
+                              if (_scope == 'week') {
+                                // 周报回退到该周所在月的月报海报
+                                await SharePosterService
+                                    .showDynamicPosterPreview(
+                                  context,
+                                  ref,
+                                  type: 'month',
+                                  ledgerId: ledgerId,
+                                  year: _selWeek.year,
+                                  month: _selWeek.month,
+                                );
+                              } else if (_scope == 'month') {
+                                await SharePosterService
+                                    .showDynamicPosterPreview(
+                                  context,
+                                  ref,
+                                  type: 'month',
+                                  ledgerId: ledgerId,
+                                  year: selMonth.year,
+                                  month: selMonth.month,
+                                );
+                              } else if (_scope == 'year') {
+                                await SharePosterService
+                                    .showDynamicPosterPreview(
+                                  context,
+                                  ref,
+                                  type: 'year',
+                                  ledgerId: ledgerId,
+                                  year: selMonth.year,
+                                );
+                              } else {
+                                await SharePosterService
+                                    .showDynamicPosterPreview(
+                                  context,
+                                  ref,
+                                  type: 'ledger',
+                                  ledgerId: ledgerId,
+                                );
+                              }
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              Navigator.of(context).pop(); // 关闭加载对话框
+                              showToast(context,
+                                  '${AppLocalizations.of(context).commonError}: $e');
+                            }
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+                  child: WaitSlidingSegmentedControl<String>(
+                    selected: _scope,
+                    height: 38,
+                    fontSize: 14,
+                    segments: [
+                      WaitSlidingSegment(
+                        value: 'week',
+                        label: AppLocalizations.of(context).analyticsWeek,
+                      ),
+                      WaitSlidingSegment(
+                        value: 'month',
+                        label: AppLocalizations.of(context).analyticsMonth,
+                      ),
+                      WaitSlidingSegment(
+                        value: 'year',
+                        label: AppLocalizations.of(context).analyticsYear,
+                      ),
+                      WaitSlidingSegment(
+                        value: 'all',
+                        label: AppLocalizations.of(context).analyticsAll,
+                      ),
+                    ],
+                    onValueChanged: (value) => setState(() => _scope = value),
+                  ),
+                ),
+                // 周期导航行：‹ 范围文案 › 居左，支出/收入/结余三段胶囊居右
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                  child: Row(
+                    children: [
+                      if (_scope != 'all')
+                        _periodNavArrow(
+                            context, Icons.chevron_left, _onChartSwipeRight),
+                      Expanded(
+                        child: InkWell(
+                          onTap: _scope != 'all' ? _showPeriodPicker : null,
                           child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const SizedBox(
-                                  width: 50,
-                                  height: 50,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 3,
-                                    valueColor: AlwaysStoppedAnimation(Colors.white),
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-                                Text(
-                                  AppLocalizations.of(context).mineShareGenerating,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
+                            child: Text(
+                              _navPeriodLabel(context, selMonth),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style:
+                                  // 周视角文案如 "08.03～08.09",两侧圆形箭头 +
+                                  // 右侧胶囊挤压可用宽度;字号 16 在窄屏上会截断,
+                                  // 微降到 15 给周范围留足显示空间。
+                                  PiggyTextTokens.strongTitle(context),
                             ),
                           ),
                         ),
-                      );
-
-                      try {
-                        if (context.mounted) {
-                          Navigator.of(context).pop(); // 关闭加载对话框
-
-                          // 使用动态预览对话框（支持隐藏收入）
-                          if (_scope == 'week') {
-                            // 周报回退到该周所在月的月报海报
-                            await SharePosterService.showDynamicPosterPreview(
-                              context,
-                              ref,
-                              type: 'month',
-                              ledgerId: ledgerId,
-                              year: _selWeek.year,
-                              month: _selWeek.month,
-                            );
-                          } else if (_scope == 'month') {
-                            await SharePosterService.showDynamicPosterPreview(
-                              context,
-                              ref,
-                              type: 'month',
-                              ledgerId: ledgerId,
-                              year: selMonth.year,
-                              month: selMonth.month,
-                            );
-                          } else if (_scope == 'year') {
-                            await SharePosterService.showDynamicPosterPreview(
-                              context,
-                              ref,
-                              type: 'year',
-                              ledgerId: ledgerId,
-                              year: selMonth.year,
-                            );
-                          } else {
-                            await SharePosterService.showDynamicPosterPreview(
-                              context,
-                              ref,
-                              type: 'ledger',
-                              ledgerId: ledgerId,
-                            );
-                          }
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          Navigator.of(context).pop(); // 关闭加载对话框
-                          showToast(context,
-                              '${AppLocalizations.of(context).commonError}: $e');
-                        }
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
-                Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
-              child: WaitSlidingSegmentedControl<String>(
-                selected: _scope,
-                height: 38,
-                fontSize: 14,
-                segments: [
-                  WaitSlidingSegment(
-                    value: 'week',
-                    label: AppLocalizations.of(context).analyticsWeek,
-                  ),
-                  WaitSlidingSegment(
-                    value: 'month',
-                    label: AppLocalizations.of(context).analyticsMonth,
-                  ),
-                  WaitSlidingSegment(
-                    value: 'year',
-                    label: AppLocalizations.of(context).analyticsYear,
-                  ),
-                  WaitSlidingSegment(
-                    value: 'all',
-                    label: AppLocalizations.of(context).analyticsAll,
-                  ),
-                ],
-                onValueChanged: (value) => setState(() => _scope = value),
-              ),
-            ),
-                // 周期导航行：‹ 范围文案 › 居左，支出/收入/结余三段胶囊居右
-                Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-              child: Row(
-                children: [
-                  if (_scope != 'all')
-                    _periodNavArrow(
-                        context, Icons.chevron_left, _onChartSwipeRight),
-                  Expanded(
-                    child: InkWell(
-                      onTap: _scope != 'all' ? _showPeriodPicker : null,
-                      child: Center(
-                        child: Text(
-                          _navPeriodLabel(context, selMonth),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            // 周视角文案如 "08.03～08.09",两侧圆形箭头 +
-                            // 右侧胶囊挤压可用宽度;字号 16 在窄屏上会截断,
-                            // 微降到 15 给周范围留足显示空间。
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: PiggyTokens.textPrimary(context),
-                          ),
+                      ),
+                      if (_scope != 'all')
+                        _periodNavArrow(
+                            context, Icons.chevron_right, _onChartSwipeLeft),
+                      const SizedBox(width: 8),
+                      // 支出/收入/结余：与顶部周/月/年/全部同款滑块胶囊（紧凑高度）
+                      SizedBox(
+                        width: 168,
+                        child: WaitSlidingSegmentedControl<String>(
+                          selected: _type,
+                          height: 32,
+                          fontSize: 13,
+                          segments: [
+                            WaitSlidingSegment(
+                              value: 'expense',
+                              label: AppLocalizations.of(context).homeExpense,
+                            ),
+                            WaitSlidingSegment(
+                              value: 'income',
+                              label: AppLocalizations.of(context).homeIncome,
+                            ),
+                            WaitSlidingSegment(
+                              value: 'balance',
+                              label: AppLocalizations.of(context).homeBalance,
+                            ),
+                          ],
+                          onValueChanged: (v) => setState(() => _type = v),
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                  if (_scope != 'all')
-                    _periodNavArrow(
-                        context, Icons.chevron_right, _onChartSwipeLeft),
-                  const SizedBox(width: 8),
-                  // 支出/收入/结余：与顶部周/月/年/全部同款滑块胶囊（紧凑高度）
-                  SizedBox(
-                    width: 168,
-                    child: WaitSlidingSegmentedControl<String>(
-                      selected: _type,
-                      height: 32,
-                      fontSize: 13,
-                      segments: [
-                        WaitSlidingSegment(
-                          value: 'expense',
-                          label: AppLocalizations.of(context).homeExpense,
-                        ),
-                        WaitSlidingSegment(
-                          value: 'income',
-                          label: AppLocalizations.of(context).homeIncome,
-                        ),
-                        WaitSlidingSegment(
-                          value: 'balance',
-                          label: AppLocalizations.of(context).homeBalance,
-                        ),
-                      ],
-                      onValueChanged: (v) => setState(() => _type = v),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-                ],
-              ),
           ),
           // v30 L11:检测到未折算外币交易 → 补折算横幅(用户确认后按当前汇率重算)
           _buildRecalcForeignBanner(context),
@@ -728,9 +733,17 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
             child: FutureBuilder(
               key: ValueKey('analytics_$_type'),
               future: _type == 'balance'
-                  ? _loadBalanceData(repo, ledgerId, start, end, seriesFuture,
-                      incomeSeriesFuture!, expenseSeriesFuture!, prevStart,
-                      prevEnd, chartSeriesFuture)
+                  ? _loadBalanceData(
+                      repo,
+                      ledgerId,
+                      start,
+                      end,
+                      seriesFuture,
+                      incomeSeriesFuture!,
+                      expenseSeriesFuture!,
+                      prevStart,
+                      prevEnd,
+                      chartSeriesFuture)
                   : _loadCategoryData(repo, ledgerId, _type, start, end,
                       seriesFuture, prevStart, prevEnd, chartSeriesFuture),
               builder: (context, snapshot) {
@@ -741,8 +754,21 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
 
                 // 在balance模式下，需要计算结余数据
                 dynamic seriesRaw;
-                List<({int? id, String name, db.Category? category, double total, int count, List<({int id, db.Category category, String name, double total})> subCategories})>
-                    catData;
+                List<
+                    ({
+                      int? id,
+                      String name,
+                      db.Category? category,
+                      double total,
+                      int count,
+                      List<
+                          ({
+                            int id,
+                            db.Category category,
+                            String name,
+                            double total
+                          })> subCategories
+                    })> catData;
                 int txCount;
                 double sum;
                 double balance = 0; // 本期收支结余
@@ -759,7 +785,20 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
 
                   // 分类数据显示支出分类（但结余模式下不显示排行榜）
                   catData = list[0] as List<
-                      ({int? id, String name, db.Category? category, double total, int count, List<({int id, db.Category category, String name, double total})> subCategories})>;
+                      ({
+                        int? id,
+                        String name,
+                        db.Category? category,
+                        double total,
+                        int count,
+                        List<
+                            ({
+                              int id,
+                              db.Category category,
+                              String name,
+                              double total
+                            })> subCategories
+                      })>;
 
                   // 获取收入和支出的交易数量
                   final expenseCount = list[2] as int;
@@ -777,7 +816,20 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                   expenseTotal = expenseSum;
                 } else {
                   catData = list[0] as List<
-                      ({int? id, String name, db.Category? category, double total, int count, List<({int id, db.Category category, String name, double total})> subCategories})>;
+                      ({
+                        int? id,
+                        String name,
+                        db.Category? category,
+                        double total,
+                        int count,
+                        List<
+                            ({
+                              int id,
+                              db.Category category,
+                              String name,
+                              double total
+                            })> subCategories
+                      })>;
                   seriesRaw = list[1];
                   txCount = list[2] as int;
                   sum = catData.fold<double>(0, (a, b) => a + b.total);
@@ -840,7 +892,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        ],
+                      ],
                     ),
                   );
                 }
@@ -879,13 +931,11 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                 dynamic chartSeries;
                 if (chartSeriesRaw is List<({DateTime day, double total})>) {
                   if (_scope == 'week') {
-                    chartSeries =
-                        _aggregateToWeeks(chartSeriesRaw, weekAdd(_selWeek, -5));
+                    chartSeries = _aggregateToWeeks(
+                        chartSeriesRaw, weekAdd(_selWeek, -5));
                   } else if (_scope == 'month') {
-                    chartSeries = _aggregateToMonths(
-                        chartSeriesRaw,
-                        DateTime(selMonth.year, selMonth.month - 5, 1),
-                        sd);
+                    chartSeries = _aggregateToMonths(chartSeriesRaw,
+                        DateTime(selMonth.year, selMonth.month - 5, 1), sd);
                   } else {
                     chartSeries = chartSeriesRaw;
                   }
@@ -995,7 +1045,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                             isChineseLocale: isZh);
                     return '${two(e.day.month)}.${two(e.day.day)} $typeWord $amt';
                   };
-                } else if (chartSeries is List<({DateTime month, double total})>) {
+                } else if (chartSeries
+                    is List<({DateTime month, double total})>) {
                   tooltipText = (i) {
                     final amt = hide
                         ? '**'
@@ -1046,8 +1097,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                         prevTotal: _scope == 'all' ? null : prevTotal,
                         balance: balance,
                         txCount: txCount,
-                        expenseTotal:
-                            _type == 'balance' ? expenseTotal : null,
+                        expenseTotal: _type == 'balance' ? expenseTotal : null,
                       ),
                       const SizedBox(height: 12),
                       // 趋势折线卡：标题 + 平滑曲线 + Y轴大金额缩写 + 点按气泡
@@ -1078,11 +1128,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                                 ),
                                 Text(
                                   lineTitle,
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                    color: PiggyTokens.textPrimary(context),
-                                  ),
+                                  style: PiggyTextTokens.strongTitle(context),
                                 ),
                               ],
                             ),
@@ -1099,10 +1145,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                                 lineWidth: PiggyChartTokens.lineWidth,
                                 dotRadius: PiggyChartTokens.dotRadius,
                                 cornerRadius: PiggyChartTokens.cornerRadius,
-                                xLabelFontSize:
-                                    PiggyChartTokens.xLabelFontSize,
-                                yLabelFontSize:
-                                    PiggyChartTokens.yLabelFontSize,
+                                xLabelFontSize: PiggyChartTokens.xLabelFontSize,
+                                yLabelFontSize: PiggyChartTokens.yLabelFontSize,
                                 onSwipeLeft: () {
                                   // 根据scope切换周期
                                   _onChartSwipeLeft();
@@ -1117,12 +1161,11 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                                 hintText: AppLocalizations.of(context)
                                     .analyticsSwipeHint,
                                 onCloseHint: () async {
-                                  final setter = ref
-                                      .read(analyticsHintsSetterProvider);
+                                  final setter =
+                                      ref.read(analyticsHintsSetterProvider);
                                   await setter.dismissChart();
                                   if (mounted) {
-                                    setState(
-                                        () => _localChartDismissed = true);
+                                    setState(() => _localChartDismissed = true);
                                   }
                                 },
                                 // minimal：背景/轴线/平均线交给外层卡片
@@ -1205,8 +1248,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                                           margin:
                                               const EdgeInsets.only(right: 8),
                                           decoration: BoxDecoration(
-                                            color:
-                                                PiggyTokens.primary(context),
+                                            color: PiggyTokens.primary(context),
                                             borderRadius:
                                                 BorderRadius.circular(2),
                                           ),
@@ -1217,15 +1259,11 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                                                 typeWord),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w600,
-                                              color: PiggyTokens.textPrimary(
-                                                  context),
-                                            ),
+                                            style: PiggyTextTokens.strongTitle(
+                                                context),
                                           ),
                                         ),
-                                        ],
+                                      ],
                                     ),
                                     const SizedBox(height: 8),
                                     if (pieData.isNotEmpty && sum > 0)
@@ -1283,7 +1321,11 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                         }),
                       ],
                       // 底部留白，避免被悬浮 Tab 栏遮挡
-                      SizedBox(height: 56 + 12 + MediaQuery.of(context).viewPadding.bottom + 16),
+                      SizedBox(
+                          height: 56 +
+                              12 +
+                              MediaQuery.of(context).viewPadding.bottom +
+                              16),
                     ],
                   ),
                 );
@@ -1417,21 +1459,35 @@ Future<List<dynamic>> _loadBalanceData(
 }
 
 // 聚合一级分类数据（将二级分类金额/笔数聚合到一级分类）
-Future<List<({int? id, String name, db.Category? category, double total, int count, List<({int id, db.Category category, String name, double total})> subCategories})>>
-    _aggregateTopLevelCategories(
-        List<
-                ({
-                  int? id,
-                  String name,
-                  String? icon,
-                  int? parentId,
-                  int level,
-                  double total,
-                  int count
-                })>
-            hierarchyData,
-        dynamic repo,
-        Map<int, db.Category> sharedSynthetic) async {
+Future<
+    List<
+        ({
+          int? id,
+          String name,
+          db.Category? category,
+          double total,
+          int count,
+          List<
+              ({
+                int id,
+                db.Category category,
+                String name,
+                double total
+              })> subCategories
+        })>> _aggregateTopLevelCategories(
+    List<
+            ({
+              int? id,
+              String name,
+              String? icon,
+              int? parentId,
+              int level,
+              double total,
+              int count
+            })>
+        hierarchyData,
+    dynamic repo,
+    Map<int, db.Category> sharedSynthetic) async {
   // 1. 先收集所有一级分类的完整信息
   // §7 共享账本:Editor 的 tx 用 SharedLedger* 表(synthetic 负 id),
   // 主表 getCategoryById 查不到。topLevelNames/Icons 兜底从 hierarchyData
@@ -1492,7 +1548,8 @@ Future<List<({int? id, String name, db.Category? category, double total, int cou
   // 4. 聚合金额与笔数，同时收集子分类明细
   final topLevelMap = <int?, double>{};
   final topLevelCountMap = <int?, int>{};
-  final subCategoriesMap = <int?, List<({int id, db.Category category, String name, double total})>>{};
+  final subCategoriesMap = <int?,
+      List<({int id, db.Category category, String name, double total})>>{};
 
   for (final item in hierarchyData) {
     if (item.level == 1) {
@@ -1539,7 +1596,8 @@ Future<List<({int? id, String name, db.Category? category, double total, int cou
   final result = topLevelMap.entries.map((e) {
     final id = e.key;
     final total = e.value;
-    final subs = subCategoriesMap[id] ?? <({int id, db.Category category, String name, double total})>[];
+    final subs = subCategoriesMap[id] ??
+        <({int id, db.Category category, String name, double total})>[];
 
     final count = topLevelCountMap[id] ?? 0;
     // 获取一级分类信息

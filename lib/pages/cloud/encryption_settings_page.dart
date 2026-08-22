@@ -390,9 +390,8 @@ class _EncryptionSettingsPageState
                     const SizedBox(height: 8),
                     Text(
                       l10n.cloudSyncEncryptMultiDeviceHint,
-                      style: TextStyle(
+                      style: PiggyTextTokens.label(context).copyWith(
                         color: PiggyTokens.textTertiary(context),
-                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -420,9 +419,8 @@ class _EncryptionSettingsPageState
                           Expanded(
                             child: Text(
                               l10n.cloudSyncEncryptDecryptFailed,
-                              style: TextStyle(
+                              style: PiggyTextTokens.label(context).copyWith(
                                 color: Theme.of(context).colorScheme.error,
-                                fontSize: 12,
                               ),
                             ),
                           ),

@@ -4,7 +4,8 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' show CloudBackendType;
+import 'package:flutter_cloud_sync/flutter_cloud_sync.dart'
+    show CloudBackendType;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -68,7 +69,9 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     // 监听导入进度，当导入完成时自动刷新账本列表和同步状态
     ref.listen<ImportProgress>(importProgressProvider, (previous, next) {
       // 检测到导入完成（从运行中变为完成状态）
-      if (previous?.running == true && next.isJustCompleted && next.ledgerId != null) {
+      if (previous?.running == true &&
+          next.isJustCompleted &&
+          next.ledgerId != null) {
         print('🟢 [LedgersPage] 检测到导入完成: ledgerId=${next.ledgerId}');
         // 触发同步状态刷新和账本列表刷新
         PostProcessor.sync(ref, ledgerId: next.ledgerId!);
@@ -138,7 +141,21 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
 
     // 如果本地也在加载中且没有缓存数据，显示全局加载
     if (localAsync.isLoading && localLedgers.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return DelayedSkeleton(
+        placeholder: const SizedBox.expand(),
+        child: PulseSkeleton(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: const [
+                SkeletonListTile(),
+                SkeletonListTile(),
+                SkeletonListTile(),
+              ],
+            ),
+          ),
+        ),
+      );
     }
 
     // 如果本地加载失败，显示错误
@@ -191,13 +208,13 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     Object? remoteError,
   }) {
     // 共享账本是 PiggyCount Cloud 独有能力(server 端的成员管理 / WS fan-out
-     // 都在 PiggyCount Cloud 后端),非 PiggyCount Cloud 用户(local / WebDAV /
-     // S3 / Supabase 等)就算扫码也走不通,按钮藏起来避免误导。
+    // 都在 PiggyCount Cloud 后端),非 PiggyCount Cloud 用户(local / WebDAV /
+    // S3 / Supabase 等)就算扫码也走不通,按钮藏起来避免误导。
     final cloudConfigAsync = ref.watch(activeCloudConfigProvider);
     // 共享账本是云端协同（PiggyCount Cloud）的独占能力；云端协同关闭时
     // （见 cloud_feature_flags.dart）不再展示「加入共享账本」入口。
-    final isPiggyCountCloud =
-        cloudConfigAsync.valueOrNull?.type == CloudBackendType.piggycountCloud &&
+    final isPiggyCountCloud = cloudConfigAsync.valueOrNull?.type ==
+            CloudBackendType.piggycountCloud &&
         kPiggyCountCloudEnabled;
 
     return ListView(
@@ -261,18 +278,20 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
         ],
 
         // 远程账本区域（仅在加载中或有远程账本时显示）
-        if (remoteLoading || remoteLedgers.isNotEmpty || remoteError != null) ...[
+        if (remoteLoading ||
+            remoteLedgers.isNotEmpty ||
+            remoteError != null) ...[
           SizedBox(height: 16.0.scaled(context, ref)),
           _SectionHeader(
             title: AppLocalizations.of(context).ledgersRemote,
-            trailing: remoteLoading
-                ? null
-                : remoteLedgers.length.toString(),
+            trailing: remoteLoading ? null : remoteLedgers.length.toString(),
             action: remoteLedgers.isNotEmpty
                 ? TextButton.icon(
                     icon: const Icon(Icons.cloud_download, size: 18),
                     label: Text(AppLocalizations.of(context).ledgersRestoreAll),
-                    onPressed: _isRestoring ? null : () => _handleBatchRestore(context),
+                    onPressed: _isRestoring
+                        ? null
+                        : () => _handleBatchRestore(context),
                   )
                 : null,
           ),
@@ -280,9 +299,16 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
           // 远程账本加载状态
           if (remoteLoading)
             Padding(
-              padding: EdgeInsets.symmetric(vertical: 24.0.scaled(context, ref)),
-              child: const Center(
-                child: CircularProgressIndicator(),
+              padding:
+                  EdgeInsets.symmetric(vertical: 24.0.scaled(context, ref)),
+              child: DelayedSkeleton(
+                placeholder: const SizedBox(height: 48),
+                child: PulseSkeleton(
+                  child: SkeletonBar(
+                      height: 48,
+                      borderRadius:
+                          BorderRadius.circular(PiggyDimens.radiusLg)),
+                ),
               ),
             )
           else if (remoteError != null)
@@ -328,40 +354,42 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
             vertical: 8.0.scaled(context, ref),
           ),
           children: [
-                    // 账本区域
-                    if (localLedgers.isNotEmpty) ...[
-                      _SectionHeader(
-                        title: AppLocalizations.of(context).ledgersLocal,
-                        trailing: localLedgers.length.toString(),
-                      ),
-                      ...localLedgers.map((ledger) => LedgerCard(
-                            ledger: ledger,
-                            selected: !ledger.isRemoteOnly && ledger.id == currentId,
-                            onTap: () => _handleLocalLedgerTap(ledger),
-                            onLongPress: () => _showLocalLedgerActions(context, ledger),
-                            onMore: () => _showLocalLedgerActions(context, ledger),
-                          )),
-                    ],
+            // 账本区域
+            if (localLedgers.isNotEmpty) ...[
+              _SectionHeader(
+                title: AppLocalizations.of(context).ledgersLocal,
+                trailing: localLedgers.length.toString(),
+              ),
+              ...localLedgers.map((ledger) => LedgerCard(
+                    ledger: ledger,
+                    selected: !ledger.isRemoteOnly && ledger.id == currentId,
+                    onTap: () => _handleLocalLedgerTap(ledger),
+                    onLongPress: () => _showLocalLedgerActions(context, ledger),
+                    onMore: () => _showLocalLedgerActions(context, ledger),
+                  )),
+            ],
 
-                    // 远程账本区域
-                    if (remoteLedgers.isNotEmpty) ...[
-                      SizedBox(height: 16.0.scaled(context, ref)),
-                      _SectionHeader(
-                        title: AppLocalizations.of(context).ledgersRemote,
-                        trailing: remoteLedgers.length.toString(),
-                        action: TextButton.icon(
-                          icon: const Icon(Icons.cloud_download, size: 18),
-                          label: Text(AppLocalizations.of(context).ledgersRestoreAll),
-                          onPressed: _isRestoring ? null : () => _handleBatchRestore(context),
-                        ),
-                      ),
-                      ...remoteLedgers.map((ledger) => LedgerCard(
-                            ledger: ledger,
-                            onTap: () => _handleRemoteLedgerTap(context, ledger),
-                            onLongPress: () => _showRemoteLedgerActions(context, ledger),
-                            onMore: () => _showRemoteLedgerActions(context, ledger),
-                          )),
-                    ],
+            // 远程账本区域
+            if (remoteLedgers.isNotEmpty) ...[
+              SizedBox(height: 16.0.scaled(context, ref)),
+              _SectionHeader(
+                title: AppLocalizations.of(context).ledgersRemote,
+                trailing: remoteLedgers.length.toString(),
+                action: TextButton.icon(
+                  icon: const Icon(Icons.cloud_download, size: 18),
+                  label: Text(AppLocalizations.of(context).ledgersRestoreAll),
+                  onPressed:
+                      _isRestoring ? null : () => _handleBatchRestore(context),
+                ),
+              ),
+              ...remoteLedgers.map((ledger) => LedgerCard(
+                    ledger: ledger,
+                    onTap: () => _handleRemoteLedgerTap(context, ledger),
+                    onLongPress: () =>
+                        _showRemoteLedgerActions(context, ledger),
+                    onMore: () => _showRemoteLedgerActions(context, ledger),
+                  )),
+            ],
 
             SizedBox(height: 60.0.scaled(context, ref)),
           ],
@@ -371,7 +399,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
         if (showLoadingOverlay)
           Positioned.fill(
             child: Container(
-              color: PiggyTokens.surfaceElevated(context).withValues(alpha: 0.7),
+              color:
+                  PiggyTokens.surfaceElevated(context).withValues(alpha: 0.7),
               child: const Center(
                 child: CircularProgressIndicator(),
               ),
@@ -398,15 +427,20 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     ref.read(currentLedgerIdProvider.notifier).state = ledger.id;
     // 清除缓存的交易数据，确保切换后刷新
     ref.invalidate(cachedTransactionsWithCategoryProvider);
-    showToast(context, AppLocalizations.of(context).ledgersSwitched(translateLedgerName(context, ledger.name)));
+    showToast(
+        context,
+        AppLocalizations.of(context)
+            .ledgersSwitched(translateLedgerName(context, ledger.name)));
   }
 
   /// 处理远程账本点击 - 下载
-  Future<void> _handleRemoteLedgerTap(BuildContext context, LedgerDisplayItem ledger) async {
+  Future<void> _handleRemoteLedgerTap(
+      BuildContext context, LedgerDisplayItem ledger) async {
     final confirmed = await AppDialog.confirm<bool>(
       context,
       title: AppLocalizations.of(context).ledgersDownloadTitle,
-      message: AppLocalizations.of(context).ledgersDownloadMessage(translateLedgerName(context, ledger.name)),
+      message: AppLocalizations.of(context)
+          .ledgersDownloadMessage(translateLedgerName(context, ledger.name)),
     );
 
     if (confirmed != true || !mounted || !context.mounted) return;
@@ -465,11 +499,15 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     ref.read(statsRefreshProvider.notifier).state++;
     ref.read(syncStatusRefreshProvider.notifier).state++;
 
-    showToast(context, AppLocalizations.of(context).ledgersDownloadSuccess(translateLedgerName(context, ledger.name)));
+    showToast(
+        context,
+        AppLocalizations.of(context)
+            .ledgersDownloadSuccess(translateLedgerName(context, ledger.name)));
   }
 
   /// 显示本地账本操作菜单
-  Future<void> _showLocalLedgerActions(BuildContext context, LedgerDisplayItem ledger) async {
+  Future<void> _showLocalLedgerActions(
+      BuildContext context, LedgerDisplayItem ledger) async {
     // v24 共享账本权限矩阵(详见 .docs/shared-ledger/01-product-design.md §6):
     // - Owner / 单人账本:edit / clear / deleteLocal / delete + members 全部可用
     // - Editor(共享账本 + myRole != owner):仅 members(看成员/退出),
@@ -487,7 +525,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       builder: (dctx) {
         final primary = PiggyTokens.primary(dctx);
         return SimpleDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
           title: Text(AppLocalizations.of(context).ledgersActions),
           children: [
             if (isOwner)
@@ -528,8 +567,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                       const SizedBox(width: 6),
                       Text(
                         '(${ledger.memberCount})',
-                        style: TextStyle(
-                          color: PiggyTokens.textSecondary(context),
+                        style: PiggyTextTokens.label(context).copyWith(
                           fontSize: 13,
                         ),
                       ),
@@ -545,8 +583,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                     children: [
                       Icon(Icons.insert_chart_outlined, color: primary),
                       const SizedBox(width: 8),
-                      Text(AppLocalizations.of(context)
-                          .sharedMembersStatsTitle),
+                      Text(
+                          AppLocalizations.of(context).sharedMembersStatsTitle),
                     ],
                   ),
                 ),
@@ -593,7 +631,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                 onPressed: () => Navigator.pop(dctx, 'delete'),
                 child: Row(
                   children: [
-                    Icon(Icons.delete_forever_outlined, color: PiggyTokens.error(context)),
+                    Icon(Icons.delete_forever_outlined,
+                        color: PiggyTokens.error(context)),
                     const SizedBox(width: 8),
                     Text(AppLocalizations.of(context).ledgersDelete),
                   ],
@@ -627,7 +666,9 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       final row = await ref.read(repositoryProvider).getLedgerById(ledger.id);
       final syncId = row?.syncId;
       if (syncId == null || syncId.isEmpty) {
-        if (mounted) showToast(context, AppLocalizations.of(context).sharedRequiresCloudSync);
+        if (mounted)
+          showToast(
+              context, AppLocalizations.of(context).sharedRequiresCloudSync);
         return;
       }
       if (mounted) {
@@ -643,7 +684,9 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       final row = await ref.read(repositoryProvider).getLedgerById(ledger.id);
       final syncId = row?.syncId;
       if (syncId == null || syncId.isEmpty) {
-        if (mounted) showToast(context, AppLocalizations.of(context).sharedRequiresCloudSync);
+        if (mounted)
+          showToast(
+              context, AppLocalizations.of(context).sharedRequiresCloudSync);
         return;
       }
       if (mounted) {
@@ -666,13 +709,15 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
   }
 
   /// 显示远程账本操作菜单
-  Future<void> _showRemoteLedgerActions(BuildContext context, LedgerDisplayItem ledger) async {
+  Future<void> _showRemoteLedgerActions(
+      BuildContext context, LedgerDisplayItem ledger) async {
     final action = await showDialog<String>(
       context: context,
       builder: (dctx) {
         final primary = PiggyTokens.primary(dctx);
         return SimpleDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
           title: Text(AppLocalizations.of(context).ledgersActions),
           children: [
             SimpleDialogOption(
@@ -689,7 +734,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
               onPressed: () => Navigator.pop(dctx, 'delete'),
               child: Row(
                 children: [
-                  Icon(Icons.delete_forever_outlined, color: PiggyTokens.error(context)),
+                  Icon(Icons.delete_forever_outlined,
+                      color: PiggyTokens.error(context)),
                   const SizedBox(width: 8),
                   Text(AppLocalizations.of(context).ledgersDeleteRemote),
                 ],
@@ -710,7 +756,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
   }
 
   /// 编辑账本
-  Future<void> _handleEditLedger(BuildContext context, LedgerDisplayItem ledger) async {
+  Future<void> _handleEditLedger(
+      BuildContext context, LedgerDisplayItem ledger) async {
     final repo = ref.read(repositoryProvider);
     final ledgerData = await repo.getLedgerById(ledger.id);
 
@@ -775,10 +822,11 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       // 缺汇率的笔退化 =amount,由 L11 横幅兜底,绝不保留旧口径错值。
       final foreign = await repo.getLedgerForeignCurrencies(ledger.id);
       await refreshExchangeRatesFromUi(ref,
-          force: true, extraQuotes: {...foreign, ledgerData.currency.toUpperCase()});
+          force: true,
+          extraQuotes: {...foreign, ledgerData.currency.toUpperCase()});
       // 全量重算(逐笔记 change,L13);缺汇率的笔留待 L11 横幅
-      final n = await repo.recalcNativeAmountsForLedger(
-          ledger.id, result.currency);
+      final n =
+          await repo.recalcNativeAmountsForLedger(ledger.id, result.currency);
       if (mounted && n > 0) {
         showToast(this.context,
             AppLocalizations.of(this.context).recalcForeignTxDone(n));
@@ -836,12 +884,14 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
   }
 
   /// 清空账本（删除所有账单，保留账本）
-  Future<void> _handleClearLedger(BuildContext context, LedgerDisplayItem ledger) async {
+  Future<void> _handleClearLedger(
+      BuildContext context, LedgerDisplayItem ledger) async {
     final l10n = AppLocalizations.of(context);
     final confirmed = await AppDialog.confirm<bool>(
       context,
       title: l10n.ledgersClearTitle,
-      message: l10n.ledgersClearMessage(translateLedgerName(context, ledger.name)),
+      message:
+          l10n.ledgersClearMessage(translateLedgerName(context, ledger.name)),
     );
 
     if (confirmed != true || !mounted) return;
@@ -880,7 +930,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
   }
 
   /// 仅删除本地账本（保留云端备份）
-  Future<void> _handleDeleteLocalLedgerOnly(BuildContext context, LedgerDisplayItem ledger) async {
+  Future<void> _handleDeleteLocalLedgerOnly(
+      BuildContext context, LedgerDisplayItem ledger) async {
     final l10n = AppLocalizations.of(context);
 
     final repo = ref.read(repositoryProvider);
@@ -889,7 +940,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     final confirmed = await AppDialog.confirm<bool>(
       context,
       title: l10n.ledgersDeleteLocalTitle,
-      message: l10n.ledgersDeleteLocalMessage(translateLedgerName(context, ledger.name)),
+      message: l10n
+          .ledgersDeleteLocalMessage(translateLedgerName(context, ledger.name)),
     );
 
     if (confirmed != true || !mounted) return;
@@ -936,7 +988,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
   }
 
   /// 删除本地账本
-  Future<void> _handleDeleteLocalLedger(BuildContext context, LedgerDisplayItem ledger) async {
+  Future<void> _handleDeleteLocalLedger(
+      BuildContext context, LedgerDisplayItem ledger) async {
     final l10n = AppLocalizations.of(context);
 
     final repo = ref.read(repositoryProvider);
@@ -1014,11 +1067,13 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
   }
 
   /// 删除远程账本
-  Future<void> _handleDeleteRemoteLedger(BuildContext context, LedgerDisplayItem ledger) async {
+  Future<void> _handleDeleteRemoteLedger(
+      BuildContext context, LedgerDisplayItem ledger) async {
     final confirmed = await AppDialog.confirm<bool>(
       context,
       title: AppLocalizations.of(context).ledgersDeleteRemoteConfirm,
-      message: AppLocalizations.of(context).ledgersDeleteRemoteMessage(translateLedgerName(context, ledger.name)),
+      message: AppLocalizations.of(context).ledgersDeleteRemoteMessage(
+          translateLedgerName(context, ledger.name)),
     );
 
     if (confirmed != true || !mounted) return;
@@ -1031,13 +1086,15 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
         throw Exception('Cloud sync not available');
       }
 
-      await syncService.deleteRemoteLedger(remotePath: 'ledger_${ledger.id}.json');
+      await syncService.deleteRemoteLedger(
+          remotePath: 'ledger_${ledger.id}.json');
 
       if (!mounted) return;
 
       ref.read(ledgerListRefreshProvider.notifier).state++;
 
-      showToast(context, AppLocalizations.of(context).ledgersDeleteRemoteSuccess);
+      showToast(
+          context, AppLocalizations.of(context).ledgersDeleteRemoteSuccess);
     } catch (e) {
       if (!mounted) return;
       await AppDialog.error(
@@ -1057,7 +1114,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     final confirmed = await AppDialog.confirm<bool>(
       context,
       title: AppLocalizations.of(context).ledgersRestoreAllTitle,
-      message: AppLocalizations.of(context).ledgersRestoreAllMessage(remoteLedgers.length),
+      message: AppLocalizations.of(context)
+          .ledgersRestoreAllMessage(remoteLedgers.length),
     );
 
     if (confirmed != true || !mounted || !context.mounted) return;
@@ -1350,7 +1408,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
   }
 
   /// 账本编辑对话框
-  Future<({String name, String currency, int monthStartDay})?> _showLedgerEditorDialog(
+  Future<({String name, String currency, int monthStartDay})?>
+      _showLedgerEditorDialog(
     BuildContext context, {
     String? title,
     String? initialName,
@@ -1367,7 +1426,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       builder: (ctx) {
         final primary = PiggyTokens.primary(ctx);
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
           contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
           content: StatefulBuilder(builder: (ctx, setState) {
             return Column(
@@ -1396,7 +1456,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                   subtitle: Text(displayCurrency(currency, context)),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () async {
-                    final picked = await _showCurrencyPicker(ctx, initial: currency);
+                    final picked =
+                        await _showCurrencyPicker(ctx, initial: currency);
                     if (picked != null) {
                       setState(() => currency = picked);
                     }
@@ -1450,7 +1511,11 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     );
 
     if (ok == true && nameCtrl.text.trim().isNotEmpty) {
-      return (name: nameCtrl.text.trim(), currency: currency, monthStartDay: monthStartDay);
+      return (
+        name: nameCtrl.text.trim(),
+        currency: currency,
+        monthStartDay: monthStartDay
+      );
     }
 
     return null;
@@ -1463,7 +1528,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       context: context,
       backgroundColor: PiggyTokens.surfaceElevated(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
       ),
       builder: (ctx) {
         final primary = PiggyTokens.primary(ctx);
@@ -1497,13 +1563,15 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                         height: 40,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+                          borderRadius:
+                              BorderRadius.circular(PiggyDimens.radiusSm),
                           color: isSelected
                               ? primary.withValues(alpha: 0.12)
                               : Colors.transparent,
                           border: Border.all(
-                              color:
-                                  isSelected ? primary : PiggyTokens.divider(ctx)),
+                              color: isSelected
+                                  ? primary
+                                  : PiggyTokens.divider(ctx)),
                         ),
                         child: Text('$day',
                             style: TextStyle(
@@ -1523,13 +1591,15 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
   }
 
   /// 货币选择器
-  Future<String?> _showCurrencyPicker(BuildContext context, {String? initial}) async {
+  Future<String?> _showCurrencyPicker(BuildContext context,
+      {String? initial}) async {
     return showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       backgroundColor: PiggyTokens.surfaceElevated(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
       ),
       builder: (bctx) {
         String query = '';
@@ -1558,7 +1628,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                     height: 4,
                     margin: const EdgeInsets.only(bottom: 8),
                     decoration: BoxDecoration(
-                      color: PiggyTokens.textTertiary(context).withValues(alpha: 0.3),
+                      color: PiggyTokens.textTertiary(context)
+                          .withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -1584,7 +1655,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                         return ListTile(
                           title: Text('${c.name} (${c.code})'),
                           trailing: sel
-                              ? Icon(Icons.check, color: PiggyTokens.textPrimary(context))
+                              ? Icon(Icons.check,
+                                  color: PiggyTokens.textPrimary(context))
                               : null,
                           onTap: () => Navigator.pop(bctx, c.code),
                         );
@@ -1601,9 +1673,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
   }
 
   /// 显示冲突解决对话框
-  Future<void> _showConflictResolutionDialog(BuildContext context, LedgerDisplayItem ledger) async {
-    
-
+  Future<void> _showConflictResolutionDialog(
+      BuildContext context, LedgerDisplayItem ledger) async {
     final l10n = AppLocalizations.of(context);
     final syncService = ref.read(syncServiceProvider);
 
@@ -1629,189 +1700,205 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
           canPop: false,
           child: StatefulBuilder(
             builder: (stateContext, setState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
-              title: Row(
-                children: [
-                  const Icon(Icons.warning, color: Colors.red, size: 28),
-                  const SizedBox(width: 12),
-                  Text(l10n.ledgersConflictTitle),
-                ],
-              ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              return AlertDialog(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
+                title: Row(
                   children: [
-                    Text(
-                      l10n.ledgersConflictMessage,
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // 本地信息
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: PiggyTokens.info(context),
-                        borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+                    const Icon(Icons.warning, color: Colors.red, size: 28),
+                    const SizedBox(width: 12),
+                    Text(l10n.ledgersConflictTitle),
+                  ],
+                ),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.ledgersConflictMessage,
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w500),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n.ledgersConflictLocalInfo(syncStatus.localCount),
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            l10n.ledgersConflictLocalFingerprint(
-                              syncStatus.localFingerprint.substring(0, 8),
-                            ),
-                            style: const TextStyle(fontSize: 12, color: Colors.black54),
-                          ),
-                        ],
-                      ),
-                    ),
+                      const SizedBox(height: 16),
 
-                    const SizedBox(height: 12),
-
-                    // 云端信息
-                    if (syncStatus.cloudFingerprint != null && syncStatus.cloudExportedAt != null)
+                      // 本地信息
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: PiggyTokens.warning(context),
-                          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+                          color: PiggyTokens.info(context),
+                          borderRadius:
+                              BorderRadius.circular(PiggyDimens.radiusSm),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              l10n.ledgersConflictRemoteInfo(syncStatus.cloudCount ?? 0),
-                              style: const TextStyle(fontWeight: FontWeight.w600),
+                              l10n.ledgersConflictLocalInfo(
+                                  syncStatus.localCount),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w600),
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              l10n.ledgersConflictRemoteUpdated(
-                                dateFormat.format(syncStatus.cloudExportedAt!.toLocal()),
+                              l10n.ledgersConflictLocalFingerprint(
+                                syncStatus.localFingerprint.substring(0, 8),
                               ),
-                              style: const TextStyle(fontSize: 12, color: Colors.black54),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              l10n.ledgersConflictRemoteFingerprint(
-                                syncStatus.cloudFingerprint!.substring(0, 8),
-                              ),
-                              style: const TextStyle(fontSize: 12, color: Colors.black54),
+                              style: const TextStyle(
+                                  fontSize: 12, color: Colors.black54),
                             ),
                           ],
                         ),
                       ),
-                  ],
+
+                      const SizedBox(height: 12),
+
+                      // 云端信息
+                      if (syncStatus.cloudFingerprint != null &&
+                          syncStatus.cloudExportedAt != null)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: PiggyTokens.warning(context),
+                            borderRadius:
+                                BorderRadius.circular(PiggyDimens.radiusSm),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                l10n.ledgersConflictRemoteInfo(
+                                    syncStatus.cloudCount ?? 0),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                l10n.ledgersConflictRemoteUpdated(
+                                  dateFormat.format(
+                                      syncStatus.cloudExportedAt!.toLocal()),
+                                ),
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.black54),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                l10n.ledgersConflictRemoteFingerprint(
+                                  syncStatus.cloudFingerprint!.substring(0, 8),
+                                ),
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.black54),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-              actions: [
-                if (isProcessing)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                actions: [
+                  if (isProcessing)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  else ...[
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      child: Text(l10n.commonCancel),
                     ),
-                  )
-                else ...[
-                  TextButton(
-                    onPressed: () => Navigator.pop(dialogContext),
-                    child: Text(l10n.commonCancel),
-                  ),
-                  TextButton(
-                    onPressed: () async {
-                      setState(() => isProcessing = true);
-                      try {
-                        showToast(context, l10n.ledgersConflictDownloading);
-                        final result = await syncService.downloadAndRestoreToCurrentLedger(
-                          ledgerId: ledger.id,
-                        );
-
-                        if (stateContext.mounted) {
-                          Navigator.pop(dialogContext);
-                        }
-
-                        if (!mounted) return;
-
-                        // 下载完成后，触发刷新状态和账本列表
-                        await PostProcessor.sync(ref, ledgerId: ledger.id);
-
-                        // 刷新统计
-                        ref.read(statsRefreshProvider.notifier).state++;
-
-                        showToast(
-                          context,
-                          l10n.ledgersConflictDownloadSuccess(result.inserted),
-                        );
-                      } catch (e) {
-                        setState(() => isProcessing = false);
-                        if (stateContext.mounted) {
-                          await AppDialog.error(
-                            stateContext,
-                            title: l10n.commonFailed,
-                            message: '$e',
+                    TextButton(
+                      onPressed: () async {
+                        setState(() => isProcessing = true);
+                        try {
+                          showToast(context, l10n.ledgersConflictDownloading);
+                          final result = await syncService
+                              .downloadAndRestoreToCurrentLedger(
+                            ledgerId: ledger.id,
                           );
-                        }
-                      }
-                    },
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.download, size: 18),
-                        const SizedBox(width: 4),
-                        Text(l10n.ledgersConflictDownload),
-                      ],
-                    ),
-                  ),
-                  FilledButton(
-                    onPressed: () async {
-                      setState(() => isProcessing = true);
-                      try {
-                        showToast(context, l10n.ledgersConflictUploading);
-                        await syncService.uploadCurrentLedger(ledgerId: ledger.id);
 
-                        if (stateContext.mounted) {
-                          Navigator.pop(dialogContext);
-                        }
+                          if (stateContext.mounted) {
+                            Navigator.pop(dialogContext);
+                          }
 
-                        if (!mounted) return;
+                          if (!mounted) return;
 
-                        // 刷新列表和同步状态
-                        ref.read(ledgerListRefreshProvider.notifier).state++;
-                        ref.read(syncStatusRefreshProvider.notifier).state++;
+                          // 下载完成后，触发刷新状态和账本列表
+                          await PostProcessor.sync(ref, ledgerId: ledger.id);
 
-                        showToast(context, l10n.ledgersConflictUploadSuccess);
-                      } catch (e) {
-                        setState(() => isProcessing = false);
-                        if (stateContext.mounted) {
-                          await AppDialog.error(
-                            stateContext,
-                            title: l10n.commonFailed,
-                            message: '$e',
+                          // 刷新统计
+                          ref.read(statsRefreshProvider.notifier).state++;
+
+                          showToast(
+                            context,
+                            l10n.ledgersConflictDownloadSuccess(
+                                result.inserted),
                           );
+                        } catch (e) {
+                          setState(() => isProcessing = false);
+                          if (stateContext.mounted) {
+                            await AppDialog.error(
+                              stateContext,
+                              title: l10n.commonFailed,
+                              message: '$e',
+                            );
+                          }
                         }
-                      }
-                    },
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.upload, size: 18),
-                        const SizedBox(width: 4),
-                        Text(l10n.ledgersConflictUpload),
-                      ],
+                      },
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.download, size: 18),
+                          const SizedBox(width: 4),
+                          Text(l10n.ledgersConflictDownload),
+                        ],
+                      ),
                     ),
-                  ),
+                    FilledButton(
+                      onPressed: () async {
+                        setState(() => isProcessing = true);
+                        try {
+                          showToast(context, l10n.ledgersConflictUploading);
+                          await syncService.uploadCurrentLedger(
+                              ledgerId: ledger.id);
+
+                          if (stateContext.mounted) {
+                            Navigator.pop(dialogContext);
+                          }
+
+                          if (!mounted) return;
+
+                          // 刷新列表和同步状态
+                          ref.read(ledgerListRefreshProvider.notifier).state++;
+                          ref.read(syncStatusRefreshProvider.notifier).state++;
+
+                          showToast(context, l10n.ledgersConflictUploadSuccess);
+                        } catch (e) {
+                          setState(() => isProcessing = false);
+                          if (stateContext.mounted) {
+                            await AppDialog.error(
+                              stateContext,
+                              title: l10n.commonFailed,
+                              message: '$e',
+                            );
+                          }
+                        }
+                      },
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.upload, size: 18),
+                          const SizedBox(width: 4),
+                          Text(l10n.ledgersConflictUpload),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
-              ],
-            );
+              );
             },
           ),
         );

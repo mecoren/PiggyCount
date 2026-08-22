@@ -179,14 +179,32 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
                   ),
                   // 交易列表
                   Expanded(
-                    child: transactionsAsync.when(
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
-                      error: (error, stack) => Center(
-                        child: Text('${l10n.commonError}: $error'),
+                    child: RefreshIndicator(
+                      onRefresh: () async {
+                        PiggyHaptics.light();
+                        final params =
+                            (tagId: widget.tagId, ledgerId: ledgerScope);
+                        ref.invalidate(_tagTransactionsStreamProvider(params));
+                        ref.invalidate(_tagStatsProvider(params));
+                        try {
+                          await ref.read(
+                              _tagTransactionsStreamProvider(params).future);
+                        } catch (_) {
+                          // 失败保持静默，错误分支由 when 展示
+                        }
+                      },
+                      child: transactionsAsync.when(
+                        // skipLoading*: 下拉刷新后保留旧数据渲染，避免整页闪 loading
+                        skipLoadingOnReload: true,
+                        skipLoadingOnRefresh: true,
+                        loading: () =>
+                            const Center(child: CircularProgressIndicator()),
+                        error: (error, stack) => Center(
+                          child: Text('${l10n.commonError}: $error'),
+                        ),
+                        data: (transactions) =>
+                            _buildTransactionsList(transactions, l10n),
                       ),
-                      data: (transactions) =>
-                          _buildTransactionsList(transactions, l10n),
                     ),
                   ),
                 ],
@@ -308,6 +326,8 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
+      // AlwaysScrollable: 内容不满一屏时也能下拉刷新
+      physics: const AlwaysScrollableScrollPhysics(),
       itemCount: sortedKeys.length,
       itemBuilder: (context, index) {
         final dateKey = sortedKeys[index];

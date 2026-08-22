@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../../styles/tokens.dart';
+import 'haptics.dart';
 
 enum WheelDatePickerMode { y, ym, ymd }
 
@@ -33,7 +34,8 @@ Future<DateTime?> showWheelDatePicker(
     context: context,
     backgroundColor: PiggyTokens.surfaceElevated(context),
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
+      borderRadius:
+          BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
     ),
     isScrollControlled: true,
     builder: (_) => WheelDatePicker(
@@ -47,7 +49,8 @@ Future<DateTime?> showWheelDatePicker(
 
 class _WheelDatePickerState extends State<WheelDatePicker> {
   Color _textPrimary(BuildContext context) => PiggyTokens.textPrimary(context);
-  Color _textTertiary(BuildContext context) => PiggyTokens.textTertiary(context);
+  Color _textTertiary(BuildContext context) =>
+      PiggyTokens.textTertiary(context);
   late int year;
   late int month;
   late int day;
@@ -118,9 +121,15 @@ class _WheelDatePickerState extends State<WheelDatePicker> {
               children: [
                 TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: Text(AppLocalizations.of(context).commonCancel, style: TextStyle(fontSize: 16, color: _textTertiary(context)))),
+                    child: Text(AppLocalizations.of(context).commonCancel,
+                        style: TextStyle(
+                            fontSize: 16, color: _textTertiary(context)))),
                 const Spacer(),
-                Text(AppLocalizations.of(context).homeSelectDate, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: _textPrimary(context))),
+                Text(AppLocalizations.of(context).homeSelectDate,
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: _textPrimary(context))),
                 const Spacer(),
                 TextButton(
                     onPressed: () {
@@ -138,7 +147,11 @@ class _WheelDatePickerState extends State<WheelDatePicker> {
                       }
                       Navigator.pop(context, result);
                     },
-                    child: Text(AppLocalizations.of(context).commonOk, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.primary))),
+                    child: Text(AppLocalizations.of(context).commonOk,
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: Theme.of(context).colorScheme.primary))),
               ],
             ),
           ),
@@ -151,6 +164,7 @@ class _WheelDatePickerState extends State<WheelDatePicker> {
                     itemExtent: 52,
                     scrollController: _yearCtrl,
                     onSelectedItemChanged: (i) => setState(() {
+                      PiggyHaptics.selection();
                       year = years[i];
                       // 调整月份与日期以符合边界
                       int sm = 1, em = 12;
@@ -190,7 +204,9 @@ class _WheelDatePickerState extends State<WheelDatePicker> {
                       for (final y in years)
                         Center(
                             child: Text('$y',
-                                style: TextStyle(fontSize: 18, color: _textPrimary(context)))),
+                                style: TextStyle(
+                                    fontSize: 18,
+                                    color: _textPrimary(context)))),
                     ],
                   ),
                 ),
@@ -200,6 +216,7 @@ class _WheelDatePickerState extends State<WheelDatePicker> {
                       itemExtent: 52,
                       scrollController: _monthCtrl,
                       onSelectedItemChanged: (i) => setState(() {
+                        PiggyHaptics.selection();
                         month = months[i];
                         // 调整日期以符合边界
                         final dim = _daysInMonth(year, month).last;
@@ -228,7 +245,9 @@ class _WheelDatePickerState extends State<WheelDatePicker> {
                         for (final m in months)
                           Center(
                               child: Text('$m',
-                                  style: TextStyle(fontSize: 18, color: _textPrimary(context)))),
+                                  style: TextStyle(
+                                      fontSize: 18,
+                                      color: _textPrimary(context)))),
                       ],
                     ),
                   ),
@@ -238,13 +257,16 @@ class _WheelDatePickerState extends State<WheelDatePicker> {
                       itemExtent: 52,
                       scrollController: _dayCtrl,
                       onSelectedItemChanged: (i) => setState(() {
+                        PiggyHaptics.selection();
                         day = days[i];
                       }),
                       children: [
                         for (final d in days)
                           Center(
                               child: Text('$d',
-                                  style: TextStyle(fontSize: 18, color: _textPrimary(context)))),
+                                  style: TextStyle(
+                                      fontSize: 18,
+                                      color: _textPrimary(context)))),
                       ],
                     ),
                   ),
@@ -269,7 +291,8 @@ Future<DateTime?> showWheelDateTimePicker(
     context: context,
     backgroundColor: PiggyTokens.surfaceElevated(context),
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
+      borderRadius:
+          BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
     ),
     isScrollControlled: true,
     builder: (_) => _DateStepPicker(
@@ -281,11 +304,13 @@ Future<DateTime?> showWheelDateTimePicker(
   if (dateResult == null || !context.mounted) return null;
 
   // 第二步：选择时间（时分秒）
-  final timeResult = await showModalBottomSheet<({int hour, int minute, int second})>(
+  final timeResult =
+      await showModalBottomSheet<({int hour, int minute, int second})>(
     context: context,
     backgroundColor: PiggyTokens.surfaceElevated(context),
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
+      borderRadius:
+          BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
     ),
     isScrollControlled: true,
     builder: (_) => _TimeStepPicker(
@@ -372,9 +397,11 @@ class _DateStepPickerState extends State<_DateStepPicker> {
     if (year == max.year && month == max.month) endDay = max.day;
     final days = [for (int d = startDay; d <= endDay; d++) d];
 
-    _monthCtrl ??= FixedExtentScrollController(initialItem: months.indexOf(month));
+    _monthCtrl ??=
+        FixedExtentScrollController(initialItem: months.indexOf(month));
     final dayIndex = days.indexOf(day);
-    _dayCtrl ??= FixedExtentScrollController(initialItem: dayIndex < 0 ? 0 : dayIndex);
+    _dayCtrl ??=
+        FixedExtentScrollController(initialItem: dayIndex < 0 ? 0 : dayIndex);
 
     return SafeArea(
       top: false,
@@ -389,11 +416,16 @@ class _DateStepPickerState extends State<_DateStepPicker> {
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: Text(l10n.commonCancel,
-                    style: TextStyle(fontSize: 16, color: PiggyTokens.textTertiary(context))),
+                      style: TextStyle(
+                          fontSize: 16,
+                          color: PiggyTokens.textTertiary(context))),
                 ),
                 const Spacer(),
                 Text(l10n.homeSelectDate,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: PiggyTokens.textPrimary(context))),
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: PiggyTokens.textPrimary(context))),
                 const Spacer(),
                 TextButton(
                   onPressed: () {
@@ -401,7 +433,10 @@ class _DateStepPickerState extends State<_DateStepPicker> {
                     Navigator.pop(context, result);
                   },
                   child: Text(l10n.commonNext,
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.primary)),
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Theme.of(context).colorScheme.primary)),
                 ),
               ],
             ),
@@ -415,6 +450,7 @@ class _DateStepPickerState extends State<_DateStepPicker> {
                     itemExtent: 52,
                     scrollController: _yearCtrl,
                     onSelectedItemChanged: (i) => setState(() {
+                      PiggyHaptics.selection();
                       year = years[i];
                       int sm = 1, em = 12;
                       if (year == min.year) sm = min.month;
@@ -430,7 +466,8 @@ class _DateStepPickerState extends State<_DateStepPicker> {
                       final monthsNow = [for (int m = sm; m <= em; m++) m];
                       final mi = monthsNow.indexOf(month);
                       if (_monthCtrl == null) {
-                        _monthCtrl = FixedExtentScrollController(initialItem: mi);
+                        _monthCtrl =
+                            FixedExtentScrollController(initialItem: mi);
                       } else {
                         WidgetsBinding.instance.addPostFrameCallback((_) {
                           _monthCtrl!.jumpToItem(mi);
@@ -439,7 +476,8 @@ class _DateStepPickerState extends State<_DateStepPicker> {
                       final daysNow = [for (int d = sd; d <= ed; d++) d];
                       final di = daysNow.indexOf(day);
                       if (_dayCtrl == null) {
-                        _dayCtrl = FixedExtentScrollController(initialItem: di < 0 ? 0 : di);
+                        _dayCtrl = FixedExtentScrollController(
+                            initialItem: di < 0 ? 0 : di);
                       } else {
                         WidgetsBinding.instance.addPostFrameCallback((_) {
                           _dayCtrl!.jumpToItem(di < 0 ? 0 : di);
@@ -448,7 +486,11 @@ class _DateStepPickerState extends State<_DateStepPicker> {
                     }),
                     children: [
                       for (final y in years)
-                        Center(child: Text('$y', style: TextStyle(fontSize: 18, color: PiggyTokens.textPrimary(context)))),
+                        Center(
+                            child: Text('$y',
+                                style: TextStyle(
+                                    fontSize: 18,
+                                    color: PiggyTokens.textPrimary(context)))),
                     ],
                   ),
                 ),
@@ -457,6 +499,7 @@ class _DateStepPickerState extends State<_DateStepPicker> {
                     itemExtent: 52,
                     scrollController: _monthCtrl,
                     onSelectedItemChanged: (i) => setState(() {
+                      PiggyHaptics.selection();
                       month = months[i];
                       final dim = _daysInMonth(year, month).last;
                       int sd = 1, ed = dim;
@@ -467,7 +510,8 @@ class _DateStepPickerState extends State<_DateStepPicker> {
                       final daysNow = [for (int d = sd; d <= ed; d++) d];
                       final di = daysNow.indexOf(day);
                       if (_dayCtrl == null) {
-                        _dayCtrl = FixedExtentScrollController(initialItem: di < 0 ? 0 : di);
+                        _dayCtrl = FixedExtentScrollController(
+                            initialItem: di < 0 ? 0 : di);
                       } else {
                         WidgetsBinding.instance.addPostFrameCallback((_) {
                           _dayCtrl!.jumpToItem(di < 0 ? 0 : di);
@@ -476,7 +520,11 @@ class _DateStepPickerState extends State<_DateStepPicker> {
                     }),
                     children: [
                       for (final m in months)
-                        Center(child: Text('$m', style: TextStyle(fontSize: 18, color: PiggyTokens.textPrimary(context)))),
+                        Center(
+                            child: Text('$m',
+                                style: TextStyle(
+                                    fontSize: 18,
+                                    color: PiggyTokens.textPrimary(context)))),
                     ],
                   ),
                 ),
@@ -485,11 +533,16 @@ class _DateStepPickerState extends State<_DateStepPicker> {
                     itemExtent: 52,
                     scrollController: _dayCtrl,
                     onSelectedItemChanged: (i) => setState(() {
+                      PiggyHaptics.selection();
                       day = days[i];
                     }),
                     children: [
                       for (final d in days)
-                        Center(child: Text('$d', style: TextStyle(fontSize: 18, color: PiggyTokens.textPrimary(context)))),
+                        Center(
+                            child: Text('$d',
+                                style: TextStyle(
+                                    fontSize: 18,
+                                    color: PiggyTokens.textPrimary(context)))),
                     ],
                   ),
                 ),
@@ -553,7 +606,8 @@ class _TimeStepPickerState extends State<_TimeStepPicker> {
     return Container(
       decoration: BoxDecoration(
         color: PiggyTokens.surfaceElevated(context),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
+        borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(PiggyDimens.radiusXl)),
       ),
       child: SafeArea(
         child: Column(
@@ -564,7 +618,9 @@ class _TimeStepPickerState extends State<_TimeStepPicker> {
               decoration: BoxDecoration(
                 border: Border(
                   bottom: BorderSide(
-                    color: isDark ? PiggyTokens.border(context) : const Color(0xFFE5E5E5),
+                    color: isDark
+                        ? PiggyTokens.border(context)
+                        : const Color(0xFFE5E5E5),
                     width: 0.5,
                   ),
                 ),
@@ -575,16 +631,25 @@ class _TimeStepPickerState extends State<_TimeStepPicker> {
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(),
                     child: Text(l10n.commonCancel,
-                      style: TextStyle(fontSize: 16, color: PiggyTokens.textTertiary(context))),
+                        style: TextStyle(
+                            fontSize: 16,
+                            color: PiggyTokens.textTertiary(context))),
                   ),
                   Text(l10n.commonSelectTime,
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: PiggyTokens.textPrimary(context))),
+                      style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: PiggyTokens.textPrimary(context))),
                   TextButton(
                     onPressed: () {
-                      Navigator.of(context).pop((hour: hour, minute: minute, second: second));
+                      Navigator.of(context)
+                          .pop((hour: hour, minute: minute, second: second));
                     },
                     child: Text(l10n.commonOk,
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.primary)),
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: Theme.of(context).colorScheme.primary)),
                   ),
                 ],
               ),
@@ -597,35 +662,67 @@ class _TimeStepPickerState extends State<_TimeStepPicker> {
                     child: CupertinoPicker(
                       scrollController: _hourCtrl,
                       itemExtent: 40,
-                      onSelectedItemChanged: (index) => setState(() => hour = index),
-                      children: List.generate(24, (index) => Center(
-                        child: Text(index.toString().padLeft(2, '0'),
-                          style: TextStyle(fontSize: 20, color: PiggyTokens.textPrimary(context))),
-                      )),
+                      onSelectedItemChanged: (index) {
+                        PiggyHaptics.selection();
+                        setState(() => hour = index);
+                      },
+                      children: List.generate(
+                          24,
+                          (index) => Center(
+                                child: Text(index.toString().padLeft(2, '0'),
+                                    style: TextStyle(
+                                        fontSize: 20,
+                                        color:
+                                            PiggyTokens.textPrimary(context))),
+                              )),
                     ),
                   ),
-                  Text(':', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500, color: PiggyTokens.textPrimary(context))),
+                  Text(':',
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w500,
+                          color: PiggyTokens.textPrimary(context))),
                   Expanded(
                     child: CupertinoPicker(
                       scrollController: _minuteCtrl,
                       itemExtent: 40,
-                      onSelectedItemChanged: (index) => setState(() => minute = index),
-                      children: List.generate(60, (index) => Center(
-                        child: Text(index.toString().padLeft(2, '0'),
-                          style: TextStyle(fontSize: 20, color: PiggyTokens.textPrimary(context))),
-                      )),
+                      onSelectedItemChanged: (index) {
+                        PiggyHaptics.selection();
+                        setState(() => minute = index);
+                      },
+                      children: List.generate(
+                          60,
+                          (index) => Center(
+                                child: Text(index.toString().padLeft(2, '0'),
+                                    style: TextStyle(
+                                        fontSize: 20,
+                                        color:
+                                            PiggyTokens.textPrimary(context))),
+                              )),
                     ),
                   ),
-                  Text(':', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500, color: PiggyTokens.textPrimary(context))),
+                  Text(':',
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w500,
+                          color: PiggyTokens.textPrimary(context))),
                   Expanded(
                     child: CupertinoPicker(
                       scrollController: _secondCtrl,
                       itemExtent: 40,
-                      onSelectedItemChanged: (index) => setState(() => second = index),
-                      children: List.generate(60, (index) => Center(
-                        child: Text(index.toString().padLeft(2, '0'),
-                          style: TextStyle(fontSize: 20, color: PiggyTokens.textPrimary(context))),
-                      )),
+                      onSelectedItemChanged: (index) {
+                        PiggyHaptics.selection();
+                        setState(() => second = index);
+                      },
+                      children: List.generate(
+                          60,
+                          (index) => Center(
+                                child: Text(index.toString().padLeft(2, '0'),
+                                    style: TextStyle(
+                                        fontSize: 20,
+                                        color:
+                                            PiggyTokens.textPrimary(context))),
+                              )),
                     ),
                   ),
                 ],

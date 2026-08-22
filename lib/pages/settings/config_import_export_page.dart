@@ -170,7 +170,8 @@ class _ConfigImportExportPageState
     } catch (e) {
       logger.error('ConfigExport', '读取配置文件失败: $e');
       if (!mounted) return;
-      showToast(context, AppLocalizations.of(context).configExportReadFileFailed);
+      showToast(
+          context, AppLocalizations.of(context).configExportReadFileFailed);
     }
   }
 
@@ -289,13 +290,15 @@ class _ConfigImportExportPageState
       // 刷新字体缩放
       final fontScaleLevel = prefs.getInt('fontScaleLevel');
       if (fontScaleLevel != null) {
-        ref.read(fontScaleLevelProvider.notifier).state = fontScaleLevel.clamp(-3, 4);
+        ref.read(fontScaleLevelProvider.notifier).state =
+            fontScaleLevel.clamp(-3, 4);
         logger.info('ConfigImport', '字体缩放档位已刷新: $fontScaleLevel');
       }
 
       final customFontScale = prefs.getDouble('customFontScale');
       if (customFontScale != null) {
-        ref.read(customFontScaleProvider.notifier).state = customFontScale.clamp(0.7, 1.5);
+        ref.read(customFontScaleProvider.notifier).state =
+            customFontScale.clamp(0.7, 1.5);
         logger.info('ConfigImport', '自定义字体缩放已刷新: $customFontScale');
       }
 
@@ -309,7 +312,8 @@ class _ConfigImportExportPageState
       // 刷新交易时间显示
       final showTransactionTime = prefs.getBool('showTransactionTime');
       if (showTransactionTime != null) {
-        ref.read(showTransactionTimeProvider.notifier).state = showTransactionTime;
+        ref.read(showTransactionTimeProvider.notifier).state =
+            showTransactionTime;
         logger.info('ConfigImport', '交易时间显示已刷新: $showTransactionTime');
       }
 
@@ -392,7 +396,7 @@ class _ConfigImportExportPageState
               SettingsNavItem(
                 icon: Icons.upload_file,
                 title: l10n.configExportTitle,
-                subtitle: l10n.configExportSubtitle,
+                subtitle: l10n.configExportSubtitle,
                 trailing: _isExporting
                     ? SizedBox(
                         width: 20.0.scaled(context, ref),
@@ -426,7 +430,8 @@ class _ConfigImportExportPageState
                           SizedBox(width: 8.0.scaled(context, ref)),
                           Expanded(
                             child: Text(
-                              l10n.configExportSavedTo(_lastExportedFilePath!.replaceAll('/storage/emulated/0/', '')),
+                              l10n.configExportSavedTo(_lastExportedFilePath!
+                                  .replaceAll('/storage/emulated/0/', '')),
                               style: TextStyle(
                                 fontSize: 13.0.scaled(context, ref),
                                 color: PiggyTokens.textSecondary(context),
@@ -445,7 +450,9 @@ class _ConfigImportExportPageState
                           style: OutlinedButton.styleFrom(
                             foregroundColor: ref.watch(primaryColorProvider),
                             side: BorderSide(
-                              color: ref.watch(primaryColorProvider).withValues(alpha: 0.5),
+                              color: ref
+                                  .watch(primaryColorProvider)
+                                  .withValues(alpha: 0.5),
                             ),
                           ),
                         ),
@@ -457,7 +464,7 @@ class _ConfigImportExportPageState
               SettingsNavItem(
                 icon: Icons.download_outlined,
                 title: l10n.configImportTitle,
-                subtitle: l10n.configImportSubtitle,
+                subtitle: l10n.configImportSubtitle,
                 trailing: _isImporting
                     ? SizedBox(
                         width: 20.0.scaled(context, ref),
@@ -760,10 +767,12 @@ class _ConfigPreviewDialogState extends State<_ConfigPreviewDialog> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: PiggyTokens.warning(context).withValues(alpha: 0.1),
+                      color:
+                          PiggyTokens.warning(context).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                       border: Border.all(
-                        color: PiggyTokens.warning(context).withValues(alpha: 0.3),
+                        color:
+                            PiggyTokens.warning(context).withValues(alpha: 0.3),
                       ),
                     ),
                     child: Row(
@@ -869,7 +878,8 @@ class _ExportOptionsDialogState extends State<_ExportOptionsDialog> {
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
       backgroundColor: PiggyTokens.surfaceElevated(context),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -931,7 +941,8 @@ class _ExportOptionsDialogState extends State<_ExportOptionsDialog> {
                   value: _accounts,
                   onChanged: (v) => setState(() => _accounts = v ?? true),
                   title: Text(l10n.configIncludeAccounts),
-                  secondary: Icon(Icons.account_balance_wallet_outlined, color: primary),
+                  secondary: Icon(Icons.account_balance_wallet_outlined,
+                      color: primary),
                   controlAffinity: ListTileControlAffinity.trailing,
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -947,13 +958,15 @@ class _ExportOptionsDialogState extends State<_ExportOptionsDialog> {
                   value: _budgets,
                   onChanged: (v) => setState(() => _budgets = v ?? true),
                   title: Text(l10n.configIncludeBudgets),
-                  secondary: Icon(Icons.account_balance_outlined, color: primary),
+                  secondary:
+                      Icon(Icons.account_balance_outlined, color: primary),
                   controlAffinity: ListTileControlAffinity.trailing,
                   contentPadding: EdgeInsets.zero,
                 ),
                 CheckboxListTile(
                   value: _recurringTransactions,
-                  onChanged: (v) => setState(() => _recurringTransactions = v ?? true),
+                  onChanged: (v) =>
+                      setState(() => _recurringTransactions = v ?? true),
                   title: Text(l10n.configIncludeRecurringTransactions),
                   secondary: Icon(Icons.repeat, color: primary),
                   controlAffinity: ListTileControlAffinity.trailing,
@@ -965,10 +978,7 @@ class _ExportOptionsDialogState extends State<_ExportOptionsDialog> {
                   title: Text(l10n.configIncludeAI),
                   subtitle: Text(
                     l10n.configIncludeAISubtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: PiggyTokens.textSecondary(context),
-                    ),
+                    style: PiggyTextTokens.label(context),
                   ),
                   secondary: Icon(Icons.smart_toy_outlined, color: primary),
                   controlAffinity: ListTileControlAffinity.trailing,
@@ -980,10 +990,7 @@ class _ExportOptionsDialogState extends State<_ExportOptionsDialog> {
                   title: Text(l10n.configIncludeOtherSettings),
                   subtitle: Text(
                     l10n.configIncludeOtherSettingsSubtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: PiggyTokens.textSecondary(context),
-                    ),
+                    style: PiggyTextTokens.label(context),
                   ),
                   secondary: Icon(Icons.settings_outlined, color: primary),
                   controlAffinity: ListTileControlAffinity.trailing,
@@ -1041,7 +1048,8 @@ class _ExportPreviewDialog extends StatelessWidget {
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
       backgroundColor: PiggyTokens.surfaceElevated(context),
       child: Column(
         children: [
@@ -1173,7 +1181,8 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
       backgroundColor: PiggyTokens.surfaceElevated(context),
       child: Column(
         children: [
@@ -1220,10 +1229,12 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: PiggyTokens.warning(context).withValues(alpha: 0.1),
+                      color:
+                          PiggyTokens.warning(context).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                       border: Border.all(
-                        color: PiggyTokens.warning(context).withValues(alpha: 0.3),
+                        color:
+                            PiggyTokens.warning(context).withValues(alpha: 0.3),
                       ),
                     ),
                     child: Row(
@@ -1274,11 +1285,8 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                   // 选择导入内容标题
                   Text(
                     l10n.configImportSelectTitle,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: PiggyTokens.textPrimary(context),
-                    ),
+                    style: PiggyTextTokens.strongTitle(context)
+                        .copyWith(fontSize: 14),
                   ),
                   const SizedBox(height: 8),
                   // 选项列表
@@ -1307,7 +1315,8 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                       value: _accounts,
                       onChanged: (v) => setState(() => _accounts = v ?? true),
                       title: Text(l10n.configIncludeAccounts),
-                      secondary: Icon(Icons.account_balance_wallet_outlined, color: primary),
+                      secondary: Icon(Icons.account_balance_wallet_outlined,
+                          color: primary),
                       controlAffinity: ListTileControlAffinity.trailing,
                       contentPadding: EdgeInsets.zero,
                       dense: true,
@@ -1327,7 +1336,8 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                       value: _budgets,
                       onChanged: (v) => setState(() => _budgets = v ?? true),
                       title: Text(l10n.configIncludeBudgets),
-                      secondary: Icon(Icons.account_balance_outlined, color: primary),
+                      secondary:
+                          Icon(Icons.account_balance_outlined, color: primary),
                       controlAffinity: ListTileControlAffinity.trailing,
                       contentPadding: EdgeInsets.zero,
                       dense: true,
@@ -1335,7 +1345,8 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                   if (info.hasRecurringTransactions)
                     CheckboxListTile(
                       value: _recurringTransactions,
-                      onChanged: (v) => setState(() => _recurringTransactions = v ?? true),
+                      onChanged: (v) =>
+                          setState(() => _recurringTransactions = v ?? true),
                       title: Text(l10n.configIncludeRecurringTransactions),
                       secondary: Icon(Icons.repeat, color: primary),
                       controlAffinity: ListTileControlAffinity.trailing,
@@ -1349,10 +1360,7 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                       title: Text(l10n.configIncludeAI),
                       subtitle: Text(
                         l10n.configIncludeAISubtitle,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: PiggyTokens.textSecondary(context),
-                        ),
+                        style: PiggyTextTokens.label(context),
                       ),
                       secondary: Icon(Icons.smart_toy_outlined, color: primary),
                       controlAffinity: ListTileControlAffinity.trailing,
@@ -1362,14 +1370,12 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                   if (info.hasAppSettings)
                     CheckboxListTile(
                       value: _appSettings,
-                      onChanged: (v) => setState(() => _appSettings = v ?? true),
+                      onChanged: (v) =>
+                          setState(() => _appSettings = v ?? true),
                       title: Text(l10n.configIncludeOtherSettings),
                       subtitle: Text(
                         l10n.configIncludeOtherSettingsSubtitle,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: PiggyTokens.textSecondary(context),
-                        ),
+                        style: PiggyTextTokens.label(context),
                       ),
                       secondary: Icon(Icons.settings_outlined, color: primary),
                       controlAffinity: ListTileControlAffinity.trailing,

@@ -94,7 +94,6 @@ class BudgetPage extends ConsumerWidget {
     );
   }
 
-
   Widget _buildEmptyState(
       BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     // §7 共享账本 Editor 视角:预算空时不显示"添加"CTA(owner-only)
@@ -102,26 +101,12 @@ class BudgetPage extends ConsumerWidget {
     final isEditorInShared = currentLedger != null &&
         currentLedger.isShared &&
         currentLedger.myRole != 'owner';
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.account_balance_wallet_outlined,
-            size: 64,
-            color: PiggyTokens.textTertiary(context),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            l10n.budgetEmptyHint,
-            style: TextStyle(
-              fontSize: 16,
-              color: PiggyTokens.textSecondary(context),
-            ),
-          ),
-          const SizedBox(height: 24),
-          if (!isEditorInShared)
-            ElevatedButton.icon(
+    return AppEmpty(
+      text: l10n.budgetEmptyHint,
+      icon: Icons.account_balance_wallet_outlined,
+      action: isEditorInShared
+          ? null
+          : ElevatedButton.icon(
               onPressed: () => _addBudget(context),
               icon: Icon(Icons.add,
                   color: PiggyTokens.buttonPrimaryText(context)),
@@ -131,8 +116,6 @@ class BudgetPage extends ConsumerWidget {
                 foregroundColor: PiggyTokens.buttonPrimaryText(context),
               ),
             ),
-        ],
-      ),
     );
   }
 
@@ -156,10 +139,8 @@ class BudgetPage extends ConsumerWidget {
             children: [
               Text(
                 l10n.budgetMonthlyBudget,
-                style: TextStyle(
+                style: PiggyTextTokens.strongTitle(context).copyWith(
                   fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: PiggyTokens.textPrimary(context),
                 ),
               ),
               if (!_isEditorInShared(ref))
@@ -188,10 +169,7 @@ class BudgetPage extends ConsumerWidget {
                 children: [
                   Text(
                     l10n.budgetUsed,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: PiggyTokens.textSecondary(context),
-                    ),
+                    style: PiggyTextTokens.label(context),
                   ),
                   Text(
                     '$currencySymbol${budget.used.toStringAsFixed(2)}',
@@ -208,17 +186,16 @@ class BudgetPage extends ConsumerWidget {
                 children: [
                   Text(
                     l10n.budgetRemaining,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: PiggyTokens.textSecondary(context),
-                    ),
+                    style: PiggyTextTokens.label(context),
                   ),
                   Text(
                     '$currencySymbol${budget.remaining.toStringAsFixed(2)}',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: budget.remaining >= 0 ? PiggyTokens.success(context) : PiggyTokens.error(context),
+                      color: budget.remaining >= 0
+                          ? PiggyTokens.success(context)
+                          : PiggyTokens.error(context),
                     ),
                   ),
                 ],
@@ -240,10 +217,8 @@ class BudgetPage extends ConsumerWidget {
               children: [
                 Text(
                   l10n.budgetDaysRemaining(overview.daysRemaining),
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: PiggyTokens.textSecondary(context),
-                  ),
+                  style: PiggyTextTokens.body(context)
+                      .copyWith(color: PiggyTokens.textSecondary(context)),
                 ),
                 Text(
                   l10n.budgetDailyAvailable(

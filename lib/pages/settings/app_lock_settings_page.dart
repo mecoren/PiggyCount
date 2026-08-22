@@ -110,7 +110,8 @@ class _AppLockSettingsPageState extends ConsumerState<AppLockSettingsPage> {
       context: context,
       backgroundColor: PiggyTokens.surfaceElevated(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
       ),
       builder: (ctx) {
         return SafeArea(
@@ -121,11 +122,8 @@ class _AppLockSettingsPageState extends ConsumerState<AppLockSettingsPage> {
                 padding: const EdgeInsets.all(16),
                 child: Text(
                   l10n.appLockTimeout,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: PiggyTokens.textPrimary(ctx),
-                  ),
+                  style:
+                      PiggyTextTokens.strongTitle(ctx).copyWith(fontSize: 16),
                 ),
               ),
               ...options.map((opt) {
@@ -197,7 +195,6 @@ class _AppLockSettingsPageState extends ConsumerState<AppLockSettingsPage> {
                 subtitle: l10n.appLockEnableDesc,
                 value: enabled,
                 onChanged: _toggleAppLock,
-
               ),
             ],
           ),
@@ -209,7 +206,6 @@ class _AppLockSettingsPageState extends ConsumerState<AppLockSettingsPage> {
                 SettingsNavItem(
                   icon: Icons.dialpad,
                   title: l10n.appLockChangePin,
-
                   onTap: _changePin,
                 ),
               ],
@@ -225,13 +221,11 @@ class _AppLockSettingsPageState extends ConsumerState<AppLockSettingsPage> {
                     subtitle: l10n.appLockBiometricDesc,
                     value: biometricEnabled,
                     onChanged: _toggleBiometric,
-
                   ),
                 SettingsNavItem(
                   icon: Icons.timer_outlined,
                   title: l10n.appLockTimeout,
                   subtitle: _timeoutLabel(timeout),
-
                   onTap: _showTimeoutPicker,
                 ),
               ],
@@ -325,8 +319,8 @@ class _PinVerifyPageState extends ConsumerState<_PinVerifyPage> {
               ),
               const Spacer(flex: 1),
               Padding(
-                padding: EdgeInsets.symmetric(
-                    horizontal: 40.0.scaled(context, ref)),
+                padding:
+                    EdgeInsets.symmetric(horizontal: 40.0.scaled(context, ref)),
                 child: NumberPad(
                   onNumberTap: _onNumberTap,
                   onDelete: _onDelete,

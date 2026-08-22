@@ -116,13 +116,11 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                     children: [
                       Text(
                         l10n.appName,
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineSmall
-                            ?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: PiggyTokens.textPrimary(context),
-                            ),
+                        style:
+                            Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: PiggyTokens.textPrimary(context),
+                                ),
                       ),
                       SizedBox(width: 4.0.scaled(context, ref)),
                       Icon(
@@ -138,10 +136,9 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                   _versionDisplay.isEmpty
                       ? l10n.aboutPageLoadingVersion
                       : _versionDisplay,
-                  style:
-                      Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: PiggyTokens.textSecondary(context),
-                          ),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: PiggyTokens.textSecondary(context),
+                      ),
                 ),
               ],
             ),
@@ -185,10 +182,8 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                   return SettingsNavItem(
                     icon: icon,
                     title: title,
-                    subtitle:
-                        showProgress ? downloadProgress.status : subtitle,
+                    subtitle: showProgress ? downloadProgress.status : subtitle,
                     trailing: trailing,
-
                     enabled: !(isLoading || showProgress),
                     onTap: (isLoading || showProgress)
                         ? null
@@ -196,8 +191,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                             await UpdateService.checkUpdateWithUI(
                               context,
                               setLoading: (loading) => ref2
-                                  .read(
-                                      checkUpdateLoadingProvider.notifier)
+                                  .read(checkUpdateLoadingProvider.notifier)
                                   .state = loading,
                               setProgress: (progress, status) {
                                 if (status.isEmpty) {
@@ -206,9 +200,9 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                                       .state = UpdateProgress.idle();
                                 } else {
                                   ref2
-                                      .read(updateProgressProvider.notifier)
-                                      .state = UpdateProgress.active(
-                                          progress, status);
+                                          .read(updateProgressProvider.notifier)
+                                          .state =
+                                      UpdateProgress.active(progress, status);
                                 }
                               },
                             );
@@ -231,7 +225,6 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                 icon: Icons.favorite_border,
                 title: l10n.aboutSupportDevelopment,
                 subtitle: l10n.aboutSupportDevelopmentSubtitle,
-
                 onTap: () async {
                   final lc = locale.languageCode;
                   final docUrl = lc == 'zh'
@@ -244,7 +237,6 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                 icon: Icons.bug_report_outlined,
                 title: l10n.logCenterTitle,
                 subtitle: l10n.logCenterSubtitle,
-
                 onTap: () {
                   Navigator.push(
                     context,
@@ -281,14 +273,13 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                 },
               ),
               Padding(
-                padding: EdgeInsets.symmetric(
-                    horizontal: 10.0.scaled(context, ref)),
+                padding:
+                    EdgeInsets.symmetric(horizontal: 10.0.scaled(context, ref)),
                 child: Text(
                   '·',
-                  style:
-                      Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: PiggyTokens.textTertiary(context),
-                          ),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: PiggyTokens.textTertiary(context),
+                      ),
                 ),
               ),
               _footerLink(
@@ -309,10 +300,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
             Center(
               child: Text(
                 '浙ICP备2025214907号-2A',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: PiggyTokens.textTertiary(context),
-                      fontSize: 11,
-                    ),
+                style: PiggyTextTokens.caption(context),
               ),
             ),
           ],

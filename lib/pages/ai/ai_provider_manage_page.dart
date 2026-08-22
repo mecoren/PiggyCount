@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/section_card.dart';
+import '../../widgets/biz/app_empty.dart';
 import '../../styles/tokens.dart';
 import '../../utils/ui_scale_extensions.dart';
 import '../../providers/theme_providers.dart';
@@ -18,7 +19,8 @@ import '../../utils/website_urls.dart';
 final aiProviderListRefreshProvider = StateProvider<int>((ref) => 0);
 
 /// AI 服务商列表 Provider
-final aiProvidersProvider = FutureProvider<List<AIServiceProviderConfig>>((ref) async {
+final aiProvidersProvider =
+    FutureProvider<List<AIServiceProviderConfig>>((ref) async {
   ref.watch(aiProviderListRefreshProvider);
   return AIProviderManager.getProviders();
 });
@@ -28,7 +30,8 @@ class AIProviderManagePage extends ConsumerStatefulWidget {
   const AIProviderManagePage({super.key});
 
   @override
-  ConsumerState<AIProviderManagePage> createState() => _AIProviderManagePageState();
+  ConsumerState<AIProviderManagePage> createState() =>
+      _AIProviderManagePageState();
 }
 
 class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
@@ -61,7 +64,21 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
             Expanded(
               child: providersAsync.when(
                 data: (providers) => _buildProviderList(providers),
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => DelayedSkeleton(
+                  placeholder: const SizedBox.expand(),
+                  child: PulseSkeleton(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: const [
+                          SkeletonListTile(),
+                          SkeletonListTile(),
+                          SkeletonListTile(),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
                 error: (e, _) => Center(child: Text('$e')),
               ),
             ),
@@ -75,22 +92,9 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
     final l10n = AppLocalizations.of(context);
 
     if (providers.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.cloud_off,
-              size: 64,
-              color: PiggyTokens.textTertiary(context),
-            ),
-            SizedBox(height: 16.0.scaled(context, ref)),
-            Text(
-              l10n.aiProviderEmpty,
-              style: TextStyle(color: PiggyTokens.textSecondary(context)),
-            ),
-          ],
-        ),
+      return AppEmpty(
+        text: l10n.aiProviderEmpty,
+        icon: Icons.cloud_off,
       );
     }
 
@@ -130,7 +134,9 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
                 children: [
                   Icon(
                     provider.isBuiltIn ? Icons.verified : Icons.cloud_outlined,
-                    color: provider.isBuiltIn ? primaryColor : PiggyTokens.textSecondary(context),
+                    color: provider.isBuiltIn
+                        ? primaryColor
+                        : PiggyTokens.textSecondary(context),
                     size: 20,
                   ),
                   const SizedBox(width: 8),
@@ -145,14 +151,17 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
                   ),
                   if (provider.isBuiltIn)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: primaryColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
+                        borderRadius:
+                            BorderRadius.circular(PiggyDimens.radiusXs),
                       ),
                       child: Text(
                         l10n.aiProviderBuiltIn,
-                        style: TextStyle(fontSize: 11, color: primaryColor),
+                        style: PiggyTextTokens.caption(context)
+                            .copyWith(color: primaryColor),
                       ),
                     )
                   else
@@ -204,11 +213,13 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.warning_amber, size: 16, color: PiggyTokens.warning(context)),
+                      Icon(Icons.warning_amber,
+                          size: 16, color: PiggyTokens.warning(context)),
                       const SizedBox(width: 6),
                       Text(
                         l10n.aiProviderNoApiKey,
-                        style: TextStyle(fontSize: 12, color: PiggyTokens.warning(context)),
+                        style: PiggyTextTokens.label(context)
+                            .copyWith(color: PiggyTokens.warning(context)),
                       ),
                     ],
                   ),
@@ -222,10 +233,8 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
                 children: [
                   Text(
                     l10n.aiProviderTapToEdit,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: PiggyTokens.textTertiary(context),
-                    ),
+                    style: PiggyTextTokens.label(context)
+                        .copyWith(color: PiggyTokens.textTertiary(context)),
                   ),
                   Icon(
                     Icons.chevron_right,
@@ -286,7 +295,8 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
     }
   }
 
-  Future<void> _editProvider(BuildContext context, AIServiceProviderConfig provider) async {
+  Future<void> _editProvider(
+      BuildContext context, AIServiceProviderConfig provider) async {
     final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
@@ -299,7 +309,8 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
     }
   }
 
-  Future<void> _deleteProvider(BuildContext context, AIServiceProviderConfig provider) async {
+  Future<void> _deleteProvider(
+      BuildContext context, AIServiceProviderConfig provider) async {
     final l10n = AppLocalizations.of(context);
 
     final confirmed = await showDialog<bool>(
@@ -314,7 +325,8 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: PiggyTokens.error(context)),
+            style: TextButton.styleFrom(
+                foregroundColor: PiggyTokens.error(context)),
             child: Text(l10n.commonDelete),
           ),
         ],
@@ -435,233 +447,251 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
         ),
         child: Column(
           children: [
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.symmetric(
-                horizontal: 12.0.scaled(context, ref),
-                vertical: 8.0.scaled(context, ref),
-              ),
-              children: [
-                // 基本信息
-                SectionCard(
-                  margin: EdgeInsets.zero,
-                  borderColor: ref.watch(primaryColorProvider),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.aiProviderBasicInfo,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // 名称
-                        TextField(
-                          controller: _nameController,
-                          enabled: !_isBuiltIn,
-                          decoration: InputDecoration(
-                            labelText: l10n.aiProviderName,
-                            hintText: l10n.aiProviderNameHint,
-                            border: const OutlineInputBorder(),
-                            isDense: true,
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: primaryColor, width: 2),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Base URL（内置服务商不可编辑）
-                        TextField(
-                          controller: _baseUrlController,
-                          enabled: !_isBuiltIn,
-                          decoration: InputDecoration(
-                            labelText: 'Base URL',
-                            hintText: 'https://api.example.com/v1',
-                            helperText: _isBuiltIn ? null : l10n.aiCustomBaseUrlHelper,
-                            border: const OutlineInputBorder(),
-                            isDense: true,
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: primaryColor, width: 2),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // API Key 标题行（带测试按钮）
-                        Row(
-                          children: [
-                            const Text(
-                              'API Key',
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                            ),
-                            const Spacer(),
-                            _buildInlineTestButton(
-                              status: _textTestStatus,
-                              onTest: _testTextCapability,
-                              enabled: _apiKeyController.text.isNotEmpty,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: _apiKeyController,
-                          obscureText: _obscureApiKey,
-                          decoration: InputDecoration(
-                            hintText: l10n.aiCloudApiKeyHintCustom,
-                            border: const OutlineInputBorder(),
-                            isDense: true,
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: primaryColor, width: 2),
-                            ),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscureApiKey ? Icons.visibility_off : Icons.visibility,
-                                size: 20,
-                              ),
-                              onPressed: () {
-                                setState(() => _obscureApiKey = !_obscureApiKey);
-                              },
-                            ),
-                          ),
-                        ),
-
-                        // 文本测试错误信息
-                        if (_textTestStatus == TestStatus.failed && _textTestError != null) ...[
-                          const SizedBox(height: 8),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: PiggyTokens.error(context).withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
-                            ),
-                            child: Text(
-                              _textTestError!,
-                              style: const TextStyle(fontSize: 12, color: Colors.red),
-                            ),
-                          ),
-                        ],
-
-                        // 内置服务商显示获取Key和教程链接
-                        if (_isBuiltIn) ...[
-                          const SizedBox(height: 8),
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: 12.0.scaled(context, ref),
+                  vertical: 8.0.scaled(context, ref),
+                ),
+                children: [
+                  // 基本信息
+                  SectionCard(
+                    margin: EdgeInsets.zero,
+                    borderColor: ref.watch(primaryColorProvider),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            l10n.aiCloudApiKeyHelper,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: PiggyTokens.textTertiary(context),
+                            l10n.aiProviderBasicInfo,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 16),
+
+                          // 名称
+                          TextField(
+                            controller: _nameController,
+                            enabled: !_isBuiltIn,
+                            decoration: InputDecoration(
+                              labelText: l10n.aiProviderName,
+                              hintText: l10n.aiProviderNameHint,
+                              border: const OutlineInputBorder(),
+                              isDense: true,
+                              focusedBorder: OutlineInputBorder(
+                                borderSide:
+                                    BorderSide(color: primaryColor, width: 2),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Base URL（内置服务商不可编辑）
+                          TextField(
+                            controller: _baseUrlController,
+                            enabled: !_isBuiltIn,
+                            decoration: InputDecoration(
+                              labelText: 'Base URL',
+                              hintText: 'https://api.example.com/v1',
+                              helperText: _isBuiltIn
+                                  ? null
+                                  : l10n.aiCustomBaseUrlHelper,
+                              border: const OutlineInputBorder(),
+                              isDense: true,
+                              focusedBorder: OutlineInputBorder(
+                                borderSide:
+                                    BorderSide(color: primaryColor, width: 2),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // API Key 标题行（带测试按钮）
                           Row(
                             children: [
-                              TextButton.icon(
-                                onPressed: _openGlmWebsite,
-                                icon: const Icon(Icons.open_in_new, size: 16),
-                                label: Text(l10n.aiCloudApiGetKey),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: primaryColor,
-                                  textStyle: const TextStyle(fontSize: 13),
-                                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                                ),
+                              const Text(
+                                'API Key',
+                                style: TextStyle(
+                                    fontSize: 14, fontWeight: FontWeight.w500),
                               ),
                               const Spacer(),
-                              TextButton.icon(
-                                onPressed: _openTutorial,
-                                icon: const Icon(Icons.help_outline, size: 16),
-                                label: Text(l10n.aiCloudApiTutorial),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: primaryColor,
-                                  textStyle: const TextStyle(fontSize: 13),
-                                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                                ),
+                              _buildInlineTestButton(
+                                status: _textTestStatus,
+                                onTest: _testTextCapability,
+                                enabled: _apiKeyController.text.isNotEmpty,
                               ),
                             ],
                           ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: _apiKeyController,
+                            obscureText: _obscureApiKey,
+                            decoration: InputDecoration(
+                              hintText: l10n.aiCloudApiKeyHintCustom,
+                              border: const OutlineInputBorder(),
+                              isDense: true,
+                              focusedBorder: OutlineInputBorder(
+                                borderSide:
+                                    BorderSide(color: primaryColor, width: 2),
+                              ),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscureApiKey
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                  size: 20,
+                                ),
+                                onPressed: () {
+                                  setState(
+                                      () => _obscureApiKey = !_obscureApiKey);
+                                },
+                              ),
+                            ),
+                          ),
+
+                          // 文本测试错误信息
+                          if (_textTestStatus == TestStatus.failed &&
+                              _textTestError != null) ...[
+                            const SizedBox(height: 8),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: PiggyTokens.error(context)
+                                    .withValues(alpha: 0.08),
+                                borderRadius:
+                                    BorderRadius.circular(PiggyDimens.radiusXs),
+                              ),
+                              child: Text(
+                                _textTestError!,
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.red),
+                              ),
+                            ),
+                          ],
+
+                          // 内置服务商显示获取Key和教程链接
+                          if (_isBuiltIn) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              l10n.aiCloudApiKeyHelper,
+                              style: PiggyTextTokens.label(context).copyWith(
+                                  color: PiggyTokens.textTertiary(context)),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                TextButton.icon(
+                                  onPressed: _openGlmWebsite,
+                                  icon: const Icon(Icons.open_in_new, size: 16),
+                                  label: Text(l10n.aiCloudApiGetKey),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: primaryColor,
+                                    textStyle: const TextStyle(fontSize: 13),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 4),
+                                  ),
+                                ),
+                                const Spacer(),
+                                TextButton.icon(
+                                  onPressed: _openTutorial,
+                                  icon:
+                                      const Icon(Icons.help_outline, size: 16),
+                                  label: Text(l10n.aiCloudApiTutorial),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: primaryColor,
+                                    textStyle: const TextStyle(fontSize: 13),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 4),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   ),
-                ),
 
-                SizedBox(height: 8.0.scaled(context, ref)),
+                  SizedBox(height: 8.0.scaled(context, ref)),
 
-                // 模型配置
-                SectionCard(
-                  margin: EdgeInsets.zero,
-                  borderColor: ref.watch(primaryColorProvider),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.aiProviderModels,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                  // 模型配置
+                  SectionCard(
+                    margin: EdgeInsets.zero,
+                    borderColor: ref.watch(primaryColorProvider),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.aiProviderModels,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          l10n.aiProviderModelsHint,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: PiggyTokens.textTertiary(context),
+                          const SizedBox(height: 8),
+                          Text(
+                            l10n.aiProviderModelsHint,
+                            style: PiggyTextTokens.label(context).copyWith(
+                                color: PiggyTokens.textTertiary(context)),
                           ),
-                        ),
-                        const SizedBox(height: 16),
+                          const SizedBox(height: 16),
 
-                        // 文本模型
-                        _buildModelInputWithTest(
-                          controller: _textModelController,
-                          label: l10n.aiTextModelTitle,
-                          hintText: _isBuiltIn ? AIConstants.defaultGlmModel : 'gpt-4o-mini',
-                          testStatus: _textTestStatus,
-                          testError: _textTestError,
-                          onTest: _testTextCapability,
-                        ),
-                        const SizedBox(height: 16),
+                          // 文本模型
+                          _buildModelInputWithTest(
+                            controller: _textModelController,
+                            label: l10n.aiTextModelTitle,
+                            hintText: _isBuiltIn
+                                ? AIConstants.defaultGlmModel
+                                : 'gpt-4o-mini',
+                            testStatus: _textTestStatus,
+                            testError: _textTestError,
+                            onTest: _testTextCapability,
+                          ),
+                          const SizedBox(height: 16),
 
-                        // 视觉模型
-                        _buildModelInputWithTest(
-                          controller: _visionModelController,
-                          label: l10n.aiVisionModelTitle,
-                          hintText: _isBuiltIn ? AIConstants.defaultGlmVisionModel : 'gpt-4o',
-                          testStatus: _visionTestStatus,
-                          testError: _visionTestError,
-                          onTest: _testVisionCapability,
-                        ),
-                        const SizedBox(height: 16),
+                          // 视觉模型
+                          _buildModelInputWithTest(
+                            controller: _visionModelController,
+                            label: l10n.aiVisionModelTitle,
+                            hintText: _isBuiltIn
+                                ? AIConstants.defaultGlmVisionModel
+                                : 'gpt-4o',
+                            testStatus: _visionTestStatus,
+                            testError: _visionTestError,
+                            onTest: _testVisionCapability,
+                          ),
+                          const SizedBox(height: 16),
 
-                        // 语音模型
-                        _buildModelInputWithTest(
-                          controller: _audioModelController,
-                          label: l10n.aiAudioModelTitle,
-                          hintText: _isBuiltIn ? AIConstants.defaultGlmAudioModel : 'whisper-1',
-                          testStatus: _speechTestStatus,
-                          testError: _speechTestError,
-                          onTest: _testSpeechCapability,
-                        ),
+                          // 语音模型
+                          _buildModelInputWithTest(
+                            controller: _audioModelController,
+                            label: l10n.aiAudioModelTitle,
+                            hintText: _isBuiltIn
+                                ? AIConstants.defaultGlmAudioModel
+                                : 'whisper-1',
+                            testStatus: _speechTestStatus,
+                            testError: _speechTestError,
+                            onTest: _testSpeechCapability,
+                          ),
 
-                        // 一键测试按钮
-                        const SizedBox(height: 16),
-                        _buildTestAllButton(),
-                      ],
+                          // 一键测试按钮
+                          const SizedBox(height: 16),
+                          _buildTestAllButton(),
+                        ],
+                      ),
                     ),
                   ),
-                ),
 
-                SizedBox(height: 32.0.scaled(context, ref)),
-              ],
+                  SizedBox(height: 32.0.scaled(context, ref)),
+                ],
+              ),
             ),
-          ),
           ],
         ),
       ),
@@ -699,7 +729,8 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
 
     try {
       final config = _getCurrentConfig();
-      final (success, error) = await AIProviderFactory.validateTextCapability(config);
+      final (success, error) =
+          await AIProviderFactory.validateTextCapability(config);
 
       if (mounted) {
         setState(() {
@@ -733,7 +764,8 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
 
     try {
       final config = _getCurrentConfig();
-      final (success, error) = await AIProviderFactory.validateVisionCapability(config);
+      final (success, error) =
+          await AIProviderFactory.validateVisionCapability(config);
 
       if (mounted) {
         setState(() {
@@ -767,7 +799,8 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
 
     try {
       final config = _getCurrentConfig();
-      final (success, error) = await AIProviderFactory.validateSpeechCapability(config);
+      final (success, error) =
+          await AIProviderFactory.validateSpeechCapability(config);
 
       if (mounted) {
         setState(() {
@@ -867,7 +900,8 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
             _buildInlineTestButton(
               status: testStatus,
               onTest: onTest,
-              enabled: _apiKeyController.text.isNotEmpty && controller.text.isNotEmpty,
+              enabled: _apiKeyController.text.isNotEmpty &&
+                  controller.text.isNotEmpty,
             ),
           ],
         ),
@@ -877,7 +911,8 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
           controller: controller,
           decoration: InputDecoration(
             hintText: hintText,
-            helperText: controller.text.isEmpty ? l10n.aiModelInputHelper : null,
+            helperText:
+                controller.text.isEmpty ? l10n.aiModelInputHelper : null,
             border: const OutlineInputBorder(),
             isDense: true,
             focusedBorder: OutlineInputBorder(
@@ -1022,7 +1057,8 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
           ? SizedBox(
               width: 14,
               height: 14,
-              child: CircularProgressIndicator(strokeWidth: 2, color: primaryColor),
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: primaryColor),
             )
           : Icon(
               status == TestStatus.success
@@ -1044,7 +1080,8 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
 
   /// 打开智谱 GLM 网站
   Future<void> _openGlmWebsite() async {
-    final uri = Uri.parse('https://open.bigmodel.cn/usercenter/proj-mgmt/apikeys');
+    final uri =
+        Uri.parse('https://open.bigmodel.cn/usercenter/proj-mgmt/apikeys');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }

@@ -337,10 +337,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
               Expanded(
                 child: Text(
                   _selectedCategoryName ?? '',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: PiggyTokens.textPrimary(context),
-                  ),
+                  style: PiggyTextTokens.title(context).copyWith(fontSize: 16),
                 ),
               ),
             ] else ...[
@@ -353,7 +350,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
               Expanded(
                 child: Text(
                   l10n.budgetCategoryHint,
-                  style: TextStyle(
+                  style: PiggyTextTokens.title(context).copyWith(
                     fontSize: 16,
                     color: PiggyTokens.textTertiary(context),
                   ),

@@ -13,3 +13,4 @@ export 'message_popover_menu.dart';
 export 'piggy_popup_menu.dart';
 export 'piggy_switcher.dart';
 export 'skeleton.dart';
+export 'haptics.dart';

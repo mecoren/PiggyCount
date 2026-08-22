@@ -121,8 +121,8 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
       // 启动时检查路径 A 的云端更新（仅路径 A，路径 B 走现有 _triggerInitialCloudSync）
       _triggerStartupSyncCheck();
       // 每日定时备份：1 分钟粒度检查，触发条件在闭包内判定
-      _backupScheduler =
-          BackupScheduler(onCheck: _runScheduledBackupCheck)..start();
+      _backupScheduler = BackupScheduler(onCheck: _runScheduledBackupCheck)
+        ..start();
     });
   }
 
@@ -354,7 +354,8 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
   /// 弹两条;这里把 500ms 内到达的事件累加,等安静后一次性展示
   /// `cloudSyncComplete(pushed, pulled)`(该 l10n key 各语言已就绪,符合现有
   /// 文案规范)。toast 本身自动 2s 后消失,不会占布局。
-  void _scheduleSyncCompletionToast({required int pushed, required int pulled}) {
+  void _scheduleSyncCompletionToast(
+      {required int pushed, required int pulled}) {
     _syncToastPushed += pushed;
     _syncToastPulled += pulled;
     _syncToastTimer?.cancel();
@@ -824,6 +825,7 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
   }
 
   void _onLongPressStart(LongPressStartDetails details) {
+    PiggyHaptics.medium();
     _expandController.forward();
     _showOverlay();
   }
@@ -943,6 +945,7 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
     }
 
     if (newHoveredIndex != _hoveredIndex) {
+      if (newHoveredIndex != null) PiggyHaptics.selection();
       setState(() {
         _hoveredIndex = newHoveredIndex;
       });
@@ -1061,6 +1064,7 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
               avatarPath: avatarPath,
               centerButtonKey: _centerButtonKey,
               onTabTap: (index) {
+                PiggyHaptics.selection();
                 final now = DateTime.now();
                 if (_lastTappedIndex == index &&
                     _lastTapTime != null &&

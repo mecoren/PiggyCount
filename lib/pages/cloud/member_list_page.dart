@@ -154,7 +154,8 @@ class MemberListPage extends ConsumerWidget {
             child: Text(l10n.commonCancel),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: PiggyTokens.error(context)),
+            style: FilledButton.styleFrom(
+                backgroundColor: PiggyTokens.error(context)),
             onPressed: () => Navigator.pop(context, true),
             child: Text(l10n.commonRemove),
           ),
@@ -223,7 +224,8 @@ class MemberListPage extends ConsumerWidget {
             child: Text(l10n.commonCancel),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: PiggyTokens.error(context)),
+            style: FilledButton.styleFrom(
+                backgroundColor: PiggyTokens.error(context)),
             onPressed: () => Navigator.pop(context, true),
             child: Text(l10n.sharedMembersLeaveCta),
           ),
@@ -283,9 +285,8 @@ class _MemberTile extends ConsumerWidget {
             const SizedBox(width: 4),
             Text(
               ' (${l10n.sharedMembersYou})',
-              style: TextStyle(
+              style: PiggyTextTokens.label(context).copyWith(
                 color: PiggyTokens.textTertiary(context),
-                fontSize: 12,
               ),
             ),
           ],
@@ -293,8 +294,7 @@ class _MemberTile extends ConsumerWidget {
       ),
       subtitle: Text(
         member.email,
-        style:
-            TextStyle(color: PiggyTokens.textSecondary(context), fontSize: 12),
+        style: PiggyTextTokens.label(context),
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,

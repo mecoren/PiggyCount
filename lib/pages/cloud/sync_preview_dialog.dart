@@ -71,14 +71,11 @@ class _SyncPreviewDialogState extends State<_SyncPreviewDialog> {
 
     return AlertDialog(
       backgroundColor: PiggyTokens.surface(context),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
       title: Text(
         l10n.syncPreviewTitle,
-        style: TextStyle(
-          color: PiggyTokens.textPrimary(context),
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-        ),
+        style: PiggyTextTokens.strongTitle(context).copyWith(fontSize: 18),
       ),
       content: SizedBox(
         width: double.maxFinite,
@@ -109,10 +106,8 @@ class _SyncPreviewDialogState extends State<_SyncPreviewDialog> {
                     allSelected
                         ? l10n.syncPreviewDeselectAll
                         : l10n.syncPreviewSelectAll,
-                    style: TextStyle(
-                      color: PiggyTokens.textSecondary(context),
-                      fontSize: 13,
-                    ),
+                    style:
+                        PiggyTextTokens.label(context).copyWith(fontSize: 13),
                   ),
                 ],
               ),
@@ -128,19 +123,19 @@ class _SyncPreviewDialogState extends State<_SyncPreviewDialog> {
                   shrinkWrap: true,
                   children: [
                     if (addedChanges.isNotEmpty) ...[
-                      _buildSectionHeader(
-                          context, l10n.syncPreviewAdded, PiggyTokens.success(context)),
+                      _buildSectionHeader(context, l10n.syncPreviewAdded,
+                          PiggyTokens.success(context)),
                       ...addedChanges.map((c) => _buildChangeItem(context, c)),
                     ],
                     if (modifiedChanges.isNotEmpty) ...[
-                      _buildSectionHeader(
-                          context, l10n.syncPreviewModified, PiggyTokens.info(context)),
+                      _buildSectionHeader(context, l10n.syncPreviewModified,
+                          PiggyTokens.info(context)),
                       ...modifiedChanges
                           .map((c) => _buildChangeItem(context, c)),
                     ],
                     if (deletedChanges.isNotEmpty) ...[
-                      _buildSectionHeader(
-                          context, l10n.syncPreviewDeleted, PiggyTokens.error(context)),
+                      _buildSectionHeader(context, l10n.syncPreviewDeleted,
+                          PiggyTokens.error(context)),
                       ...deletedChanges
                           .map((c) => _buildChangeItem(context, c)),
                     ],
@@ -182,13 +177,14 @@ class _SyncPreviewDialogState extends State<_SyncPreviewDialog> {
       spacing: 12,
       children: [
         if (added > 0)
-          _buildBadge(context, l10n.syncPreviewAddedCount(added), PiggyTokens.success(context)),
+          _buildBadge(context, l10n.syncPreviewAddedCount(added),
+              PiggyTokens.success(context)),
         if (modified > 0)
-          _buildBadge(
-              context, l10n.syncPreviewModifiedCount(modified), PiggyTokens.info(context)),
+          _buildBadge(context, l10n.syncPreviewModifiedCount(modified),
+              PiggyTokens.info(context)),
         if (deleted > 0)
-          _buildBadge(
-              context, l10n.syncPreviewDeletedCount(deleted), PiggyTokens.error(context)),
+          _buildBadge(context, l10n.syncPreviewDeletedCount(deleted),
+              PiggyTokens.error(context)),
       ],
     );
   }
@@ -211,8 +207,7 @@ class _SyncPreviewDialogState extends State<_SyncPreviewDialog> {
     );
   }
 
-  Widget _buildSectionHeader(
-      BuildContext context, String title, Color color) {
+  Widget _buildSectionHeader(BuildContext context, String title, Color color) {
     return Padding(
       padding: const EdgeInsets.only(top: 8, bottom: 4),
       child: Row(
@@ -228,11 +223,8 @@ class _SyncPreviewDialogState extends State<_SyncPreviewDialog> {
           const SizedBox(width: 6),
           Text(
             title,
-            style: TextStyle(
-              color: PiggyTokens.textSecondary(context),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
+            style: PiggyTextTokens.label(context)
+                .copyWith(fontWeight: FontWeight.w500),
           ),
         ],
       ),
@@ -304,20 +296,14 @@ class _SyncPreviewDialogState extends State<_SyncPreviewDialog> {
                 children: [
                   Text(
                     summary,
-                    style: TextStyle(
-                      color: PiggyTokens.textPrimary(context),
-                      fontSize: 13,
-                    ),
+                    style: PiggyTextTokens.body(context).copyWith(fontSize: 13),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   if (detail != null)
                     Text(
                       detail,
-                      style: TextStyle(
-                        color: PiggyTokens.textTertiary(context),
-                        fontSize: 11,
-                      ),
+                      style: PiggyTextTokens.caption(context),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

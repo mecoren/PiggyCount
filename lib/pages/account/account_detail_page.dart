@@ -363,9 +363,18 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
             ),
           ],
         ),
-        loading: () => SizedBox(
-          height: 60.0.scaled(context, ref),
-          child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        loading: () => DelayedSkeleton(
+          // 占位与真实内容等高，避免布局跳动；300ms 内完成则不显示骨架
+          placeholder: SizedBox(height: 60.0.scaled(context, ref)),
+          child: PulseSkeleton(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: SkeletonBar(
+                height: 36,
+                borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+              ),
+            ),
+          ),
         ),
         error: (_, __) => const SizedBox.shrink(),
       ),
@@ -426,10 +435,15 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                     color: PiggyTokens.textPrimary(context),
                   ),
                 ),
-                loading: () => SizedBox(
-                  height: 36.0.scaled(context, ref),
-                  child: const Center(
-                      child: CircularProgressIndicator(strokeWidth: 2)),
+                loading: () => DelayedSkeleton(
+                  placeholder: SizedBox(height: 36.0.scaled(context, ref)),
+                  child: PulseSkeleton(
+                    child: SkeletonBar(
+                      height: 28,
+                      width: 120,
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+                    ),
+                  ),
                 ),
                 error: (_, __) => const Text('-'),
               ),
@@ -440,10 +454,8 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                   l10n.valuationLastUpdated(
                     '${account.updatedAt!.year}-${account.updatedAt!.month.toString().padLeft(2, '0')}-${account.updatedAt!.day.toString().padLeft(2, '0')}',
                   ),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: PiggyTokens.textTertiary(context),
-                  ),
+                  style: PiggyTextTokens.label(context)
+                      .copyWith(color: PiggyTokens.textTertiary(context)),
                 ),
               // 备注
               if (account.note != null && account.note!.isNotEmpty) ...[
@@ -610,10 +622,14 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                     typeColor,
                     l10n,
                   ),
-                  loading: () => const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(8),
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                  loading: () => DelayedSkeleton(
+                    placeholder: const SizedBox(height: 56),
+                    child: PulseSkeleton(
+                      child: SkeletonBar(
+                        height: 56,
+                        borderRadius:
+                            BorderRadius.circular(PiggyDimens.radiusMd),
+                      ),
                     ),
                   ),
                   error: (_, __) => const SizedBox.shrink(),
@@ -650,10 +666,8 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
           if (parts.isNotEmpty) const SizedBox(height: 4),
           Text(
             account.note!,
-            style: TextStyle(
-              fontSize: 12,
-              color: PiggyTokens.textTertiary(context),
-            ),
+            style: PiggyTextTokens.label(context)
+                .copyWith(color: PiggyTokens.textTertiary(context)),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -786,10 +800,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                           Text(
                             l10n.creditCardBillingInfo(
                                 account.billingDay!, account.paymentDueDay!),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: PiggyTokens.textSecondary(context),
-                            ),
+                            style: PiggyTextTokens.label(context),
                           ),
                         if (daysUntilPayment != null) ...[
                           if (hasBillingInfo)
@@ -908,10 +919,15 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                       type: 'expense',
                     );
                   },
-                  loading: () => const SizedBox(
-                    height: 180,
-                    child: Center(
-                        child: CircularProgressIndicator(strokeWidth: 2)),
+                  loading: () => DelayedSkeleton(
+                    placeholder: const SizedBox(height: 180),
+                    child: PulseSkeleton(
+                      child: SkeletonBar(
+                        height: 180,
+                        borderRadius:
+                            BorderRadius.circular(PiggyDimens.radiusLg),
+                      ),
+                    ),
                   ),
                   error: (_, __) => const SizedBox(height: 180),
                 )
@@ -936,10 +952,15 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                       type: 'income',
                     );
                   },
-                  loading: () => const SizedBox(
-                    height: 180,
-                    child: Center(
-                        child: CircularProgressIndicator(strokeWidth: 2)),
+                  loading: () => DelayedSkeleton(
+                    placeholder: const SizedBox(height: 180),
+                    child: PulseSkeleton(
+                      child: SkeletonBar(
+                        height: 180,
+                        borderRadius:
+                            BorderRadius.circular(PiggyDimens.radiusLg),
+                      ),
+                    ),
                   ),
                   error: (_, __) => const SizedBox(height: 180),
                 ),
@@ -991,10 +1012,8 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                   SizedBox(height: 8.0.scaled(context, ref)),
                   Text(
                     l10n.accountNoTransactions,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: PiggyTokens.textSecondary(context),
-                    ),
+                    style: PiggyTextTokens.body(context)
+                        .copyWith(color: PiggyTokens.textSecondary(context)),
                   ),
                 ],
               ),
@@ -1112,10 +1131,8 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
           child: Center(
             child: Text(
               l10n.accountNoMoreData,
-              style: TextStyle(
-                fontSize: 12,
-                color: PiggyTokens.textTertiary(context),
-              ),
+              style: PiggyTextTokens.label(context)
+                  .copyWith(color: PiggyTokens.textTertiary(context)),
             ),
           ),
         ),
@@ -1141,14 +1158,18 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
       decoration: BoxDecoration(
         color: PiggyTokens.surface(context),
         borderRadius: BorderRadius.only(
-          topLeft:
-              isFirst ? const Radius.circular(PiggyDimens.radiusLg) : Radius.zero,
-          topRight:
-              isFirst ? const Radius.circular(PiggyDimens.radiusLg) : Radius.zero,
-          bottomLeft:
-              isLast ? const Radius.circular(PiggyDimens.radiusLg) : Radius.zero,
-          bottomRight:
-              isLast ? const Radius.circular(PiggyDimens.radiusLg) : Radius.zero,
+          topLeft: isFirst
+              ? const Radius.circular(PiggyDimens.radiusLg)
+              : Radius.zero,
+          topRight: isFirst
+              ? const Radius.circular(PiggyDimens.radiusLg)
+              : Radius.zero,
+          bottomLeft: isLast
+              ? const Radius.circular(PiggyDimens.radiusLg)
+              : Radius.zero,
+          bottomRight: isLast
+              ? const Radius.circular(PiggyDimens.radiusLg)
+              : Radius.zero,
         ),
         border: Border(
           top: isFirst
@@ -1232,19 +1253,12 @@ class _OverviewStatCell extends ConsumerWidget {
           signed: false,
           showCurrency: false,
           useCompactFormat: ref.watch(compactAmountProvider),
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: PiggyTokens.textPrimary(context),
-          ),
+          style: PiggyTextTokens.strongTitle(context).copyWith(fontSize: 16),
         ),
         const SizedBox(height: 2),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 11,
-            color: PiggyTokens.textTertiary(context),
-          ),
+          style: PiggyTextTokens.caption(context),
         ),
       ],
     );
@@ -1322,10 +1336,7 @@ class _DetailStatCell extends ConsumerWidget {
       children: [
         Text(
           label,
-          style: TextStyle(
-            fontSize: 11,
-            color: PiggyTokens.textTertiary(context),
-          ),
+          style: PiggyTextTokens.caption(context),
         ),
         SizedBox(height: 4.0.scaled(context, ref)),
         AmountText(
@@ -1334,11 +1345,7 @@ class _DetailStatCell extends ConsumerWidget {
           showCurrency: true,
           useCompactFormat: ref.watch(compactAmountProvider),
           currencyCode: currencyCode,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: PiggyTokens.textPrimary(context),
-          ),
+          style: PiggyTextTokens.boldTitle(context).copyWith(fontSize: 16),
         ),
       ],
     );

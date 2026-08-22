@@ -185,10 +185,8 @@ class LedgerPickerDialog extends ConsumerWidget {
             const SizedBox(width: 8),
             Text(
               l10n.homeManageLedgers,
-              style: TextStyle(
-                fontSize: 14,
-                color: PiggyTokens.textSecondary(context),
-              ),
+              style: PiggyTextTokens.body(context)
+                  .copyWith(color: PiggyTokens.textSecondary(context)),
             ),
           ],
         ),
@@ -233,9 +231,8 @@ class _LedgerItem extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: isSelected ? primaryColor : Colors.transparent,
                 border: Border.all(
-                  color: isSelected
-                      ? primaryColor
-                      : PiggyTokens.border(context),
+                  color:
+                      isSelected ? primaryColor : PiggyTokens.border(context),
                   width: 2,
                 ),
               ),
@@ -257,7 +254,8 @@ class _LedgerItem extends StatelessWidget {
                     ledger.name,
                     style: TextStyle(
                       fontSize: 15,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.w500,
                       color: isSelected
                           ? primaryColor
                           : PiggyTokens.textPrimary(context),
@@ -268,10 +266,8 @@ class _LedgerItem extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     '${ledger.currency} · ${ledger.transactionCount} 笔',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: PiggyTokens.textTertiary(context),
-                    ),
+                    style: PiggyTextTokens.label(context)
+                        .copyWith(color: PiggyTokens.textTertiary(context)),
                   ),
                 ],
               ),

@@ -63,10 +63,8 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
             padding: const EdgeInsets.only(bottom: 12),
             child: Text(
               l10n.dataManagementAttachmentHint,
-              style: TextStyle(
-                fontSize: 12,
-                color: PiggyTokens.textTertiary(context),
-              ),
+              style: PiggyTextTokens.label(context)
+                  .copyWith(color: PiggyTokens.textTertiary(context)),
             ),
           ),
           // 导入导出
@@ -78,7 +76,7 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                 if (!p.running && p.total == 0) {
                   return SettingsNavItem(
                     icon: Icons.file_upload_outlined,
-                    title: l10n.mineImport,
+                    title: l10n.mineImport,
                     onTap: () async {
                       await Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const ImportPage()),
@@ -92,10 +90,11 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                   return SettingsNavItem(
                     icon: Icons.upload_outlined,
                     title: l10n.mineImportProgressTitle,
-                    subtitle: l10n
-                        .mineImportProgressSubtitle(p.done, p.fail, p.ok, p.total),
+                    subtitle: l10n.mineImportProgressSubtitle(
+                        p.done, p.fail, p.ok, p.total),
                     trailing: SizedBox(
-                        width: 72, child: LinearProgressIndicator(value: percent)),
+                        width: 72,
+                        child: LinearProgressIndicator(value: percent)),
                     enabled: false,
                   );
                 }
@@ -105,14 +104,14 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                   icon: Icons.info_outline,
                   title: l10n.mineImportCompleteTitle,
                   subtitle:
-                      '${l10n.commonSuccess} ${p.ok}，${l10n.commonFailed} ${p.fail}',
+                      '${l10n.commonSuccess} ${p.ok}，${l10n.commonFailed} ${p.fail}',
                   enabled: false,
                 );
               }),
               // 导出数据
               SettingsNavItem(
                 icon: Icons.file_download_outlined,
-                title: l10n.mineExport,
+                title: l10n.mineExport,
                 onTap: () async {
                   await Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const ExportPage()),
@@ -132,10 +131,11 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
               SettingsNavItem(
                 icon: Icons.category_outlined,
                 title: l10n.mineCategoryManagement,
-                subtitle: l10n.mineCategoryManagementSubtitle,
+                subtitle: l10n.mineCategoryManagementSubtitle,
                 onTap: () async {
                   await Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const CategoryManagePage()),
+                    MaterialPageRoute(
+                        builder: (_) => const CategoryManagePage()),
                   );
                 },
               ),
@@ -143,10 +143,11 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
               SettingsNavItem(
                 icon: Icons.swap_horiz,
                 title: l10n.mineCategoryMigration,
-                subtitle: l10n.mineCategoryMigrationSubtitle,
+                subtitle: l10n.mineCategoryMigrationSubtitle,
                 onTap: () async {
                   await Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const CategoryMigrationPage()),
+                    MaterialPageRoute(
+                        builder: (_) => const CategoryMigrationPage()),
                   );
                 },
               ),
@@ -159,7 +160,7 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
               SettingsNavItem(
                 icon: Icons.label_outline,
                 title: l10n.tagManageTitle,
-                subtitle: l10n.tagManageSubtitle,
+                subtitle: l10n.tagManageSubtitle,
                 onTap: () async {
                   await Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const TagManagePage()),
@@ -176,10 +177,11 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
               SettingsNavItem(
                 icon: Icons.settings_backup_restore,
                 title: l10n.configImportExportTitle,
-                subtitle: l10n.configImportExportSubtitle,
+                subtitle: l10n.configImportExportSubtitle,
                 onTap: () async {
                   await Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ConfigImportExportPage()),
+                    MaterialPageRoute(
+                        builder: (_) => const ConfigImportExportPage()),
                   );
                 },
               ),
@@ -187,10 +189,11 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
               SettingsNavItem(
                 icon: Icons.storage_outlined,
                 title: l10n.storageManagementTitle,
-                subtitle: l10n.storageManagementSubtitle,
+                subtitle: l10n.storageManagementSubtitle,
                 onTap: () async {
                   await Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const StorageManagementPage()),
+                    MaterialPageRoute(
+                        builder: (_) => const StorageManagementPage()),
                   );
                 },
               ),
@@ -198,7 +201,7 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
               SettingsNavItem(
                 icon: Icons.cleaning_services_outlined,
                 title: l10n.maintenanceOrphanCleanupTitle,
-                subtitle: l10n.maintenanceOrphanCleanupSubtitle,
+                subtitle: l10n.maintenanceOrphanCleanupSubtitle,
                 onTap: () async {
                   await Navigator.of(context).push(
                     MaterialPageRoute(
@@ -228,7 +231,7 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
         SettingsNavItem(
           icon: Icons.upload_file,
           title: l10n.attachmentExportTitle,
-          subtitle: l10n.attachmentExportSubtitle,
+          subtitle: l10n.attachmentExportSubtitle,
           trailing: _isExporting
               ? SizedBox(
                   width: 24,
@@ -266,11 +269,9 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                           _exportProgress,
                           _exportTotal,
                         )
-                      : l10n.attachmentExportProgress(_exportProgress, _exportTotal),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: PiggyTokens.textSecondary(context),
-                  ),
+                      : l10n.attachmentExportProgress(
+                          _exportProgress, _exportTotal),
+                  style: PiggyTextTokens.label(context),
                 ),
               ],
             ),
@@ -279,7 +280,7 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
         SettingsNavItem(
           icon: Icons.download,
           title: l10n.attachmentImportTitle,
-          subtitle: l10n.attachmentImportSubtitle,
+          subtitle: l10n.attachmentImportSubtitle,
           trailing: _isImporting
               ? SizedBox(
                   width: 24,
@@ -308,10 +309,7 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                 const SizedBox(height: 4),
                 Text(
                   l10n.attachmentImportProgress(_importProgress, _importTotal),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: PiggyTokens.textSecondary(context),
-                  ),
+                  style: PiggyTextTokens.label(context),
                 ),
               ],
             ),
@@ -495,23 +493,20 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                         l10n.attachmentArchiveInfo(
                           info.count,
                           info.exportedAt != null
-                              ? DateFormat('yyyy-MM-dd HH:mm').format(info.exportedAt!)
+                              ? DateFormat('yyyy-MM-dd HH:mm')
+                                  .format(info.exportedAt!)
                               : '-',
                         ),
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: PiggyTokens.textSecondary(ctx),
-                        ),
+                        style: PiggyTextTokens.body(ctx)
+                            .copyWith(color: PiggyTokens.textSecondary(ctx)),
                       ),
                       if (info.customIconCount > 0)
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
                           child: Text(
                             '自定义图标: ${info.customIconCount} 个',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: PiggyTokens.textSecondary(ctx),
-                            ),
+                            style: PiggyTextTokens.body(ctx).copyWith(
+                                color: PiggyTokens.textSecondary(ctx)),
                           ),
                         ),
                       if (info.hasAvatar)
@@ -519,10 +514,8 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                           padding: const EdgeInsets.only(top: 4),
                           child: Text(
                             '包含头像',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: PiggyTokens.textSecondary(ctx),
-                            ),
+                            style: PiggyTextTokens.body(ctx).copyWith(
+                                color: PiggyTokens.textSecondary(ctx)),
                           ),
                         ),
                     ],
@@ -536,7 +529,8 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                   const SizedBox(height: 8),
                   // 跳过选项
                   RadioListTile<String>(
-                    title: Text(l10n.attachmentImportConflictSkip, style: const TextStyle(fontSize: 14)),
+                    title: Text(l10n.attachmentImportConflictSkip,
+                        style: const TextStyle(fontSize: 14)),
                     value: AttachmentExportImportService.conflictSkip,
                     groupValue: conflictStrategy,
                     onChanged: (v) {
@@ -551,7 +545,8 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                   ),
                   // 覆盖选项
                   RadioListTile<String>(
-                    title: Text(l10n.attachmentImportConflictOverwrite, style: const TextStyle(fontSize: 14)),
+                    title: Text(l10n.attachmentImportConflictOverwrite,
+                        style: const TextStyle(fontSize: 14)),
                     value: AttachmentExportImportService.conflictOverwrite,
                     groupValue: conflictStrategy,
                     onChanged: (v) {
@@ -635,7 +630,10 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
       final parts = <String>[];
 
       // 交易附件结果
-      if (result.imported > 0 || result.skipped > 0 || result.overwritten > 0 || result.failed > 0) {
+      if (result.imported > 0 ||
+          result.skipped > 0 ||
+          result.overwritten > 0 ||
+          result.failed > 0) {
         parts.add(l10n.attachmentImportResult(
           result.imported,
           result.skipped,
@@ -651,11 +649,14 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
 
       // 自定义图标导入结果
       if (result.customIconsImported > 0 || result.customIconsSkipped > 0) {
-        parts.add('自定义图标：导入${result.customIconsImported}个${result.customIconsSkipped > 0 ? '，跳过${result.customIconsSkipped}个' : ''}');
+        parts.add(
+            '自定义图标：导入${result.customIconsImported}个${result.customIconsSkipped > 0 ? '，跳过${result.customIconsSkipped}个' : ''}');
       }
 
       // 如果没有任何导入结果，显示提示
-      if (parts.isEmpty && !result.avatarImported && result.customIconsImported == 0) {
+      if (parts.isEmpty &&
+          !result.avatarImported &&
+          result.customIconsImported == 0) {
         parts.add('未导入任何内容');
       }
 
@@ -681,7 +682,7 @@ class _ImportSuccessTile extends StatelessWidget {
         return SettingsNavItem(
           icon: Icons.check_circle_outline,
           title: AppLocalizations.of(ctx).mineImportCompleteTitle,
-          subtitle: AppLocalizations.of(ctx).mineImportCompleteAllSuccess,
+          subtitle: AppLocalizations.of(ctx).mineImportCompleteAllSuccess,
           trailing: SizedBox(
             width: 72,
             child: LinearProgressIndicator(

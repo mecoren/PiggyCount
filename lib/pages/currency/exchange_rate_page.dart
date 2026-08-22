@@ -129,16 +129,12 @@ class _ExchangeRatePageState extends ConsumerState<ExchangeRatePage> {
                           children: [
                             Text(
                               l10n.baseCurrencyLabel,
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: PiggyTokens.textPrimary(context),
-                              ),
+                              style: PiggyTextTokens.title(context),
                             ),
                             const Spacer(),
                             Text(
                               displayCurrency(base, context),
-                              style: TextStyle(
-                                fontSize: 14,
+                              style: PiggyTextTokens.body(context).copyWith(
                                 color: PiggyTokens.textSecondary(context),
                               ),
                             ),
@@ -169,10 +165,10 @@ class _ExchangeRatePageState extends ConsumerState<ExchangeRatePage> {
                           child: Text(
                             l10n.ratesEmptyHint,
                             textAlign: TextAlign.center,
-                            style: TextStyle(
+                            style: PiggyTextTokens.label(context).copyWith(
                               fontSize: 13,
-                              color: PiggyTokens.textTertiary(context),
                               height: 1.4,
+                              color: PiggyTokens.textTertiary(context),
                             ),
                           ),
                         ),
@@ -215,9 +211,7 @@ class _ExchangeRatePageState extends ConsumerState<ExchangeRatePage> {
                     ),
                     child: Text(
                       l10n.rateDisclaimer,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: PiggyTokens.textTertiary(context),
+                      style: PiggyTextTokens.caption(context).copyWith(
                         height: 1.4,
                       ),
                     ),
@@ -356,8 +350,7 @@ class _RateEditDialogState extends ConsumerState<_RateEditDialog> {
           SizedBox(height: 10.0.scaled(context, ref)),
           Text(
             l10n.rateInverseHint(widget.base, inverseText, widget.quote),
-            style: TextStyle(
-              fontSize: 12,
+            style: PiggyTextTokens.label(context).copyWith(
               color: PiggyTokens.textTertiary(context),
             ),
           ),
@@ -438,8 +431,8 @@ class _RateRow extends ConsumerWidget {
     if (eff == null) {
       subtitle = Text.rich(
         TextSpan(
-          style:
-              TextStyle(fontSize: 12, color: PiggyTokens.textTertiary(context)),
+          style: PiggyTextTokens.label(context)
+              .copyWith(color: PiggyTokens.textTertiary(context)),
           children: [
             TextSpan(text: l10n.rateNotFetched),
             const TextSpan(text: ' · '),
@@ -499,8 +492,7 @@ class _RateRow extends ConsumerWidget {
                       SizedBox(width: 6.0.scaled(context, ref)),
                       Text(
                         quote,
-                        style: TextStyle(
-                          fontSize: 12,
+                        style: PiggyTextTokens.label(context).copyWith(
                           color: PiggyTokens.textTertiary(context),
                         ),
                       ),

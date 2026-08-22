@@ -15,7 +15,8 @@ class AIModelSelectionPage extends ConsumerStatefulWidget {
   const AIModelSelectionPage({super.key});
 
   @override
-  ConsumerState<AIModelSelectionPage> createState() => _AIModelSelectionPageState();
+  ConsumerState<AIModelSelectionPage> createState() =>
+      _AIModelSelectionPageState();
 }
 
 class _AIModelSelectionPageState extends ConsumerState<AIModelSelectionPage> {
@@ -34,11 +35,11 @@ class _AIModelSelectionPageState extends ConsumerState<AIModelSelectionPage> {
 
     setState(() {
       _glmModel = prefs.getString(AIConstants.keyGlmModel) ?? _glmModel;
-      _glmVisionModel = prefs.getString(AIConstants.keyGlmVisionModel) ?? _glmVisionModel;
+      _glmVisionModel =
+          prefs.getString(AIConstants.keyGlmVisionModel) ?? _glmVisionModel;
       _loading = false;
     });
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -100,8 +101,6 @@ class _AIModelSelectionPageState extends ConsumerState<AIModelSelectionPage> {
       ),
     );
   }
-
-
 
   /// 获取文本模型的显示名称
   String _getModelDisplayName(String modelId, AppLocalizations l10n) {
@@ -243,14 +242,10 @@ class _AIModelSelectionPageState extends ConsumerState<AIModelSelectionPage> {
       ),
       subtitle: Text(
         subtitle,
-        style: TextStyle(
-          fontSize: 12,
-          color: PiggyTokens.textSecondary(context),
-        ),
+        style: PiggyTextTokens.label(context),
       ),
-      trailing: isSelected
-          ? Icon(Icons.check_circle, color: primaryColor)
-          : null,
+      trailing:
+          isSelected ? Icon(Icons.check_circle, color: primaryColor) : null,
       onTap: () async {
         Navigator.pop(dialogContext);
 

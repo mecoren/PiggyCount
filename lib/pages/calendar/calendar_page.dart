@@ -229,10 +229,8 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
         titleCentered: true,
         leftChevronIcon: Icon(Icons.chevron_left, color: primaryColor),
         rightChevronIcon: Icon(Icons.chevron_right, color: primaryColor),
-        titleTextStyle: TextStyle(
+        titleTextStyle: PiggyTextTokens.strongTitle(context).copyWith(
           fontSize: 16,
-          fontWeight: FontWeight.w600,
-          color: PiggyTokens.textPrimary(context),
         ),
       ),
 
@@ -283,14 +281,8 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 
       // 星期标题样式
       daysOfWeekStyle: DaysOfWeekStyle(
-        weekdayStyle: TextStyle(
-          color: PiggyTokens.textSecondary(context),
-          fontSize: 12,
-        ),
-        weekendStyle: TextStyle(
-          color: PiggyTokens.textSecondary(context),
-          fontSize: 12,
-        ),
+        weekdayStyle: PiggyTextTokens.label(context),
+        weekendStyle: PiggyTextTokens.label(context),
       ),
 
       // 日期标记构建器
@@ -367,8 +359,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
             decoration: isSelected
                 ? BoxDecoration(
                     color: primaryColor,
-                    borderRadius:
-                        BorderRadius.circular(PiggyDimens.radiusLg),
+                    borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                   )
                 : isToday
                     ? BoxDecoration(
@@ -454,19 +445,13 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               children: [
                 Text(
                   dateLabel,
-                  style: TextStyle(
-                    color: PiggyTokens.textPrimary(context),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: PiggyTextTokens.strongTitle(context),
                 ),
                 const SizedBox(width: 6),
                 Text(
                   weekdayLabel,
-                  style: TextStyle(
-                    color: PiggyTokens.textTertiary(context),
-                    fontSize: 12,
-                  ),
+                  style: PiggyTextTokens.label(context)
+                      .copyWith(color: PiggyTokens.textTertiary(context)),
                 ),
               ],
             ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../styles/tokens.dart';
+import 'haptics.dart';
 
 /// PiggyCount 风格开关组件
 ///
@@ -44,8 +45,7 @@ class PiggySwitcher extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = onChanged != null;
-    final accent =
-        activeColor ?? Theme.of(context).colorScheme.primary;
+    final accent = activeColor ?? Theme.of(context).colorScheme.primary;
 
     // 关闭态轨道色：次要文字色 @ 10% alpha，与 wait-home 一致的极淡灰
     final trackColor = value
@@ -57,7 +57,12 @@ class PiggySwitcher extends StatelessWidget {
       enabled: enabled,
       container: true,
       child: GestureDetector(
-        onTap: enabled ? () => onChanged!(!value) : null,
+        onTap: enabled
+            ? () {
+                PiggyHaptics.selection();
+                onChanged!(!value);
+              }
+            : null,
         behavior: HitTestBehavior.opaque,
         child: AnimatedContainer(
           duration: duration,
@@ -153,7 +158,12 @@ class PiggySwitchListTile extends StatelessWidget {
           );
 
     return InkWell(
-      onTap: onChanged != null ? () => onChanged!(!value) : null,
+      onTap: onChanged != null
+          ? () {
+              PiggyHaptics.selection();
+              onChanged!(!value);
+            }
+          : null,
       child: Padding(
         padding: padding,
         child: Row(

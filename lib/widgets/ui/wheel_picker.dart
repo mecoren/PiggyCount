@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../../styles/tokens.dart';
+import 'haptics.dart';
 
 /// 通用滚轮选择器
 class WheelPicker<T> extends StatefulWidget {
@@ -24,7 +25,8 @@ class WheelPicker<T> extends StatefulWidget {
 
 class _WheelPickerState<T> extends State<WheelPicker<T>> {
   Color _textPrimary(BuildContext context) => PiggyTokens.textPrimary(context);
-  Color _textTertiary(BuildContext context) => PiggyTokens.textTertiary(context);
+  Color _textTertiary(BuildContext context) =>
+      PiggyTokens.textTertiary(context);
 
   late T selected;
   late FixedExtentScrollController _controller;
@@ -34,7 +36,8 @@ class _WheelPickerState<T> extends State<WheelPicker<T>> {
     super.initState();
     selected = widget.initial;
     final index = widget.items.indexOf(selected);
-    _controller = FixedExtentScrollController(initialItem: index >= 0 ? index : 0);
+    _controller =
+        FixedExtentScrollController(initialItem: index >= 0 ? index : 0);
   }
 
   @override
@@ -55,20 +58,27 @@ class _WheelPickerState<T> extends State<WheelPicker<T>> {
                   onPressed: () => Navigator.pop(context),
                   child: Text(
                     AppLocalizations.of(context)!.commonCancel,
-                    style: TextStyle(fontSize: 16, color: _textTertiary(context)),
+                    style:
+                        TextStyle(fontSize: 16, color: _textTertiary(context)),
                   ),
                 ),
                 const Spacer(),
                 Text(
                   widget.title,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: _textPrimary(context)),
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: _textPrimary(context)),
                 ),
                 const Spacer(),
                 TextButton(
                   onPressed: () => Navigator.pop(context, selected),
                   child: Text(
                     AppLocalizations.of(context)!.commonOk,
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.primary),
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Theme.of(context).colorScheme.primary),
                   ),
                 ),
               ],
@@ -79,15 +89,19 @@ class _WheelPickerState<T> extends State<WheelPicker<T>> {
             child: CupertinoPicker(
               itemExtent: 52,
               scrollController: _controller,
-              onSelectedItemChanged: (i) => setState(() {
-                selected = items[i];
-              }),
+              onSelectedItemChanged: (i) {
+                PiggyHaptics.selection();
+                setState(() {
+                  selected = items[i];
+                });
+              },
               children: [
                 for (final item in items)
                   Center(
                     child: Text(
                       widget.labelBuilder(item),
-                      style: TextStyle(fontSize: 18, color: _textPrimary(context)),
+                      style:
+                          TextStyle(fontSize: 18, color: _textPrimary(context)),
                     ),
                   ),
               ],
@@ -111,7 +125,8 @@ Future<T?> showWheelPicker<T>(
     context: context,
     backgroundColor: PiggyTokens.surfaceElevated(context),
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
+      borderRadius:
+          BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
     ),
     isScrollControlled: true,
     builder: (_) => WheelPicker<T>(

@@ -178,15 +178,14 @@ class _InvitePageState extends ConsumerState<InvitePage> {
           if (_error != null) ...[
             const SizedBox(height: 12),
             Text(_error!,
-                style:
-                    TextStyle(color: PiggyTokens.error(context), fontSize: 13)),
+                style: PiggyTextTokens.label(context)
+                    .copyWith(color: PiggyTokens.error(context))),
           ],
           const SizedBox(height: 16),
           Text(
             l10n.sharedInviteWarning,
-            style: TextStyle(
+            style: PiggyTextTokens.label(context).copyWith(
               color: PiggyTokens.textTertiary(context),
-              fontSize: 12,
             ),
           ),
         ],
@@ -217,8 +216,8 @@ class _InvitePageState extends ConsumerState<InvitePage> {
               l10n.sharedInviteExpiresAt(
                 invite.expiresAt.toLocal().toString().split('.').first,
               ),
-              style: TextStyle(
-                  color: PiggyTokens.textTertiary(context), fontSize: 12),
+              style: PiggyTextTokens.label(context)
+                  .copyWith(color: PiggyTokens.textTertiary(context)),
             ),
           ),
           const SizedBox(height: 24),

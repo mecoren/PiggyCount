@@ -66,8 +66,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
                         const SizedBox(height: 16),
                         // 账单类型选择器
                         Text(AppLocalizations.of(context)!.importBillType,
-                            style: TextStyle(
-                                fontSize: 14,
+                            style: PiggyTextTokens.body(context).copyWith(
                                 color: PiggyTokens.textSecondary(context))),
                         const SizedBox(height: 8),
                         WaitSlidingSegmentedControl<BillSourceType>(

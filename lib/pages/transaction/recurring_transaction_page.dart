@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../providers.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/amount_text.dart';
+import '../../widgets/biz/app_empty.dart';
 import '../../widgets/biz/section_card.dart';
 import '../../data/db.dart';
 import '../../l10n/app_localizations.dart';
@@ -40,66 +41,58 @@ class RecurringTransactionPage extends ConsumerWidget {
         child: Column(
           children: [
             Expanded(
-              child: recurringTransactionsAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stack) => Center(
-                  child: Text('Error: $error'),
-                ),
-                data: (recurringTransactions) {
-                  if (recurringTransactions.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.repeat,
-                            size: 64,
-                            color: PiggyTokens.textTertiary(context),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            AppLocalizations.of(context)!
-                                .recurringTransactionEmpty,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                                  color: PiggyTokens.textSecondary(context),
-                                ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            AppLocalizations.of(context)!
-                                .recurringTransactionEmptyHint,
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: PiggyTokens.textTertiary(context),
-                                    ),
-                          ),
-                        ],
-                      ),
-                    );
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  PiggyHaptics.light();
+                  ref.invalidate(allRecurringTransactionsProvider);
+                  try {
+                    await ref.read(allRecurringTransactionsProvider.future);
+                  } catch (_) {
+                    // 失败保持静默，错误分支由 when 展示
                   }
-
-                  return ListView.builder(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 16),
-                    itemCount: recurringTransactions.length +
-                        1, // +1 for usage guide card
-                    itemBuilder: (context, index) {
-                      // 第一个显示使用说明卡片
-                      if (index == 0) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: _UsageGuideCard(),
-                        );
-                      }
-                      // 后续显示周期记账卡片
-                      final recurring = recurringTransactions[index - 1];
-                      return _RecurringTransactionCard(recurring: recurring);
-                    },
-                  );
                 },
+                child: recurringTransactionsAsync.when(
+                  // skipLoading*: 下拉刷新后保留旧数据渲染，避免整页闪 loading
+                  skipLoadingOnReload: true,
+                  skipLoadingOnRefresh: true,
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (error, stack) => Center(
+                    child: Text('Error: $error'),
+                  ),
+                  data: (recurringTransactions) {
+                    if (recurringTransactions.isEmpty) {
+                      return AppEmpty(
+                        text: AppLocalizations.of(context)!
+                            .recurringTransactionEmpty,
+                        subtext: AppLocalizations.of(context)!
+                            .recurringTransactionEmptyHint,
+                        icon: Icons.repeat,
+                      );
+                    }
+
+                    return ListView.builder(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 16),
+                      // AlwaysScrollable: 内容不满一屏时也能下拉刷新
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      itemCount: recurringTransactions.length +
+                          1, // +1 for usage guide card
+                      itemBuilder: (context, index) {
+                        // 第一个显示使用说明卡片
+                        if (index == 0) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _UsageGuideCard(),
+                          );
+                        }
+                        // 后续显示周期记账卡片
+                        final recurring = recurringTransactions[index - 1];
+                        return _RecurringTransactionCard(recurring: recurring);
+                      },
+                    );
+                  },
+                ),
               ),
             ),
           ],
@@ -138,9 +131,7 @@ class _RecurringTransactionCard extends ConsumerWidget {
         borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
         // 主题色细边框（与统计页图表卡片统一），用边框替代阴影
         border: Border.all(
-          color: recurring.enabled
-              ? primaryColor
-              : PiggyTokens.border(context),
+          color: recurring.enabled ? primaryColor : PiggyTokens.border(context),
           width: 1.5,
         ),
         boxShadow: null,
@@ -188,11 +179,8 @@ class _RecurringTransactionCard extends ConsumerWidget {
                       recurring.type == 'transfer'
                           ? Text(
                               AppLocalizations.of(context)!.transferTitle,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: PiggyTokens.textPrimary(context),
-                              ),
+                              style: PiggyTextTokens.strongTitle(context)
+                                  .copyWith(fontSize: 16),
                             )
                           : FutureBuilder<Category?>(
                               future: _getCategory(ref, recurring.categoryId),
@@ -201,11 +189,8 @@ class _RecurringTransactionCard extends ConsumerWidget {
                                 return Text(
                                   CategoryUtils.getDisplayName(
                                       categoryName, context),
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: PiggyTokens.textPrimary(context),
-                                  ),
+                                  style: PiggyTextTokens.strongTitle(context)
+                                      .copyWith(fontSize: 16),
                                 );
                               },
                             ),
@@ -220,10 +205,8 @@ class _RecurringTransactionCard extends ConsumerWidget {
                               final ledgerName = snapshot.data?.name ?? '';
                               return Text(
                                 ledgerName,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: PiggyTokens.textTertiary(context),
-                                ),
+                                style: PiggyTextTokens.label(context).copyWith(
+                                    color: PiggyTokens.textTertiary(context)),
                               );
                             },
                           ),
@@ -231,19 +214,15 @@ class _RecurringTransactionCard extends ConsumerWidget {
                             padding: const EdgeInsets.symmetric(horizontal: 6),
                             child: Text(
                               '·',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: PiggyTokens.textTertiary(context),
-                              ),
+                              style: PiggyTextTokens.label(context).copyWith(
+                                  color: PiggyTokens.textTertiary(context)),
                             ),
                           ),
                           // 频率
                           Text(
                             _getFrequencyDescription(context),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: PiggyTokens.textTertiary(context),
-                            ),
+                            style: PiggyTextTokens.label(context).copyWith(
+                                color: PiggyTokens.textTertiary(context)),
                           ),
                           // 下次生成时间（如果有）
                           if (recurring.lastGeneratedDate != null) ...[
@@ -252,10 +231,8 @@ class _RecurringTransactionCard extends ConsumerWidget {
                                   const EdgeInsets.symmetric(horizontal: 6),
                               child: Text(
                                 '·',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: PiggyTokens.textTertiary(context),
-                                ),
+                                style: PiggyTextTokens.label(context).copyWith(
+                                    color: PiggyTokens.textTertiary(context)),
                               ),
                             ),
                             Icon(
@@ -282,8 +259,7 @@ class _RecurringTransactionCard extends ConsumerWidget {
                         const SizedBox(height: 4),
                         Text(
                           recurring.note!,
-                          style: TextStyle(
-                            fontSize: 11,
+                          style: PiggyTextTokens.caption(context).copyWith(
                             color: PiggyTokens.textSecondary(context),
                           ),
                           maxLines: 1,
@@ -418,18 +394,13 @@ class _UsageGuideCard extends ConsumerWidget {
               children: [
                 Text(
                   l10n.recurringTransactionUsageTitle,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: PiggyTokens.textPrimary(context),
-                  ),
+                  style: PiggyTextTokens.strongTitle(context),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   l10n.recurringTransactionUsageContent,
-                  style: TextStyle(
+                  style: PiggyTextTokens.label(context).copyWith(
                     fontSize: 13,
-                    color: PiggyTokens.textSecondary(context),
                     height: 1.5,
                   ),
                 ),

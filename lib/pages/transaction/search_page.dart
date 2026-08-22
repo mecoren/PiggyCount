@@ -938,7 +938,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                   // ledgerId 变化或首次才重建 stream；无关 rebuild 复用同一引用，
                   // 避免 StreamBuilder 重新订阅导致 _allTransactions 闪空。
                   if (_txStream == null || _txStreamLedgerId != ledgerId) {
-                    _txStream = repo.transactionsWithCategoryAll(ledgerId: ledgerId);
+                    _txStream =
+                        repo.transactionsWithCategoryAll(ledgerId: ledgerId);
                     _txStreamLedgerId = ledgerId;
                   }
                   return _txStream;
@@ -974,42 +975,16 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                       _startDate == null &&
                       _endDate == null &&
                       _selectedCategory == null) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.search,
-                              size: 64,
-                              color: PiggyTokens.textTertiary(context)),
-                          const SizedBox(height: 16),
-                          Text(
-                            AppLocalizations.of(context).searchNoInput,
-                            style: TextStyle(
-                                color: PiggyTokens.textTertiary(context),
-                                fontSize: 16),
-                          ),
-                        ],
-                      ),
+                    return AppEmpty(
+                      text: AppLocalizations.of(context).searchNoInput,
+                      icon: Icons.search,
                     );
                   }
 
                   if (_searchResults.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.search_off,
-                              size: 64,
-                              color: PiggyTokens.textTertiary(context)),
-                          const SizedBox(height: 16),
-                          Text(
-                            AppLocalizations.of(context).searchNoResults,
-                            style: TextStyle(
-                                color: PiggyTokens.textTertiary(context),
-                                fontSize: 16),
-                          ),
-                        ],
-                      ),
+                    return AppEmpty(
+                      text: AppLocalizations.of(context).searchNoResults,
+                      icon: Icons.search_off,
                     );
                   }
 

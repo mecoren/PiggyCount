@@ -28,7 +28,8 @@ class AttachmentPreviewPage extends ConsumerStatefulWidget {
         );
 
   @override
-  ConsumerState<AttachmentPreviewPage> createState() => _AttachmentPreviewPageState();
+  ConsumerState<AttachmentPreviewPage> createState() =>
+      _AttachmentPreviewPageState();
 }
 
 class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
@@ -36,11 +37,13 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
   String _selectedTab = 'attachment';
   int? _selectedIndex;
 
-  int get attachmentCount => widget.exportData?.attachments.length ??
+  int get attachmentCount =>
+      widget.exportData?.attachments.length ??
       widget.archiveData?.attachments.length ??
       0;
 
-  int get customIconCount => widget.exportData?.customIcons.length ??
+  int get customIconCount =>
+      widget.exportData?.customIcons.length ??
       widget.archiveData?.customIcons.length ??
       0;
 
@@ -76,8 +79,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
                     label: '自定义图标 ($customIconCount)',
                   ),
                 ],
-                onValueChanged: (value) =>
-                    setState(() => _selectedTab = value),
+                onValueChanged: (value) => setState(() => _selectedTab = value),
               ),
             ),
           Expanded(
@@ -85,10 +87,8 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
                 ? Center(
                     child: Text(
                       l10n.attachmentPreviewEmpty,
-                      style: TextStyle(
-                        color: PiggyTokens.textSecondary(context),
-                        fontSize: 14,
-                      ),
+                      style: PiggyTextTokens.body(context)
+                          .copyWith(color: PiggyTokens.textSecondary(context)),
                     ),
                   )
                 : IndexedStack(
@@ -114,10 +114,8 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
       return Center(
         child: Text(
           l10n.attachmentPreviewEmpty,
-          style: TextStyle(
-            color: PiggyTokens.textSecondary(context),
-            fontSize: 14,
-          ),
+          style: PiggyTextTokens.body(context)
+              .copyWith(color: PiggyTokens.textSecondary(context)),
         ),
       );
     }

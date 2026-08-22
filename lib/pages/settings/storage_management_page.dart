@@ -66,8 +66,8 @@ class _StorageManagementPageState extends ConsumerState<StorageManagementPage> {
       if (await modelsDir.exists()) {
         final files = modelsDir
             .listSync()
-            .where((entity) =>
-                entity is File && entity.path.endsWith('.tflite'))
+            .where(
+                (entity) => entity is File && entity.path.endsWith('.tflite'))
             .toList();
 
         int totalSize = 0;
@@ -226,7 +226,7 @@ class _StorageManagementPageState extends ConsumerState<StorageManagementPage> {
                               ? ref.watch(primaryColorProvider)
                               : PiggyTokens.textSecondary(context),
                         ),
-                      ),
+                      ),
                       enabled: _aiModelsSize > 0,
                       onTap: _aiModelsSize > 0 ? _clearAIModels : null,
                     ),
@@ -253,7 +253,7 @@ class _StorageManagementPageState extends ConsumerState<StorageManagementPage> {
                                 ? ref.watch(primaryColorProvider)
                                 : PiggyTokens.textSecondary(context),
                           ),
-                        ),
+                        ),
                         enabled: _apkFilesSize > 0,
                         onTap: _apkFilesSize > 0 ? _clearAPKFiles : null,
                       ),
@@ -269,10 +269,7 @@ class _StorageManagementPageState extends ConsumerState<StorageManagementPage> {
                   ),
                   child: Text(
                     l10n.storageHint,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: PiggyTokens.textSecondary(context),
-                    ),
+                    style: PiggyTextTokens.label(context),
                   ),
                 ),
               ],

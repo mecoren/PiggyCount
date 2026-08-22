@@ -320,9 +320,8 @@ class _JoinSharedLedgerPageState extends ConsumerState<JoinSharedLedgerPage> {
           Center(
             child: Text(
               _formatExpiry(preview.expiresAt, l10n),
-              style: TextStyle(
+              style: PiggyTextTokens.label(context).copyWith(
                 color: PiggyTokens.textTertiary(context),
-                fontSize: 12,
               ),
             ),
           ),
@@ -331,8 +330,8 @@ class _JoinSharedLedgerPageState extends ConsumerState<JoinSharedLedgerPage> {
             Center(
               child: Text(
                 _error!,
-                style:
-                    TextStyle(color: PiggyTokens.error(context), fontSize: 13),
+                style: PiggyTextTokens.label(context)
+                    .copyWith(color: PiggyTokens.error(context)),
               ),
             ),
           ],
@@ -372,8 +371,7 @@ class _JoinSharedLedgerPageState extends ConsumerState<JoinSharedLedgerPage> {
             child: Text(
               DateFormat('yyyy-MM-dd HH:mm')
                   .format(preview.expiresAt.toLocal()),
-              style: TextStyle(
-                  color: PiggyTokens.textTertiary(context), fontSize: 11),
+              style: PiggyTextTokens.caption(context),
             ),
           ),
         ],

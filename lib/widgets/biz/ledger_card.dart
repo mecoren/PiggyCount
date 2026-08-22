@@ -47,7 +47,8 @@ class LedgerCard extends ConsumerWidget {
 
     // 检查是否正在上传
     final uploadingIds = ref.watch(uploadingLedgerIdsProvider);
-    final isUploading = !ledger.isRemoteOnly && uploadingIds.contains(ledger.id);
+    final isUploading =
+        !ledger.isRemoteOnly && uploadingIds.contains(ledger.id);
 
     // 判断同步状态
     final isRemote = ledger.isRemoteOnly;
@@ -114,12 +115,10 @@ class LedgerCard extends ConsumerWidget {
                             text: TextSpan(
                               children: [
                                 TextSpan(
-                                  text: translateLedgerName(context, ledger.name),
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
-                                    color: PiggyTokens.textPrimary(context),
-                                  ),
+                                  text:
+                                      translateLedgerName(context, ledger.name),
+                                  style: PiggyTextTokens.boldTitle(context)
+                                      .copyWith(fontWeight: FontWeight.w600),
                                 ),
                                 TextSpan(
                                   text: ' (ID:${ledger.id})',
@@ -147,10 +146,8 @@ class LedgerCard extends ConsumerWidget {
                           const SizedBox(width: 2),
                           Text(
                             '${ledger.memberCount}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: primaryColor,
-                            ),
+                            style: PiggyTextTokens.label(context)
+                                .copyWith(color: primaryColor),
                           ),
                         ],
 
@@ -178,36 +175,38 @@ class LedgerCard extends ConsumerWidget {
                         // 币种
                         Text(
                           '${l10n.ledgersCurrency}：${getCurrencyName(ledger.currency, context)}（${ledger.currency}）',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: PiggyTokens.textSecondary(context),
-                          ),
+                          style: PiggyTextTokens.body(context).copyWith(
+                              color: PiggyTokens.textSecondary(context)),
                         ),
                         const SizedBox(height: 4),
                         // 记账笔数
                         Text(
                           l10n.ledgersRecords('${ledger.transactionCount}'),
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: PiggyTokens.textSecondary(context),
-                          ),
+                          style: PiggyTextTokens.body(context).copyWith(
+                              color: PiggyTokens.textSecondary(context)),
                         ),
                         const SizedBox(height: 4),
                         // 余额（根据设置使用简洁或完整格式）
                         Text(
                           l10n.ledgersBalance(
                             ref.watch(compactAmountProvider)
-                              ? formatBalance(
-                                  ledger.balance,
-                                  ledger.currency,
-                                  isChineseLocale: Localizations.localeOf(context).languageCode == 'zh',
-                                )
-                              : formatBalanceFull(ledger.balance, ledger.currency),
+                                ? formatBalance(
+                                    ledger.balance,
+                                    ledger.currency,
+                                    isChineseLocale:
+                                        Localizations.localeOf(context)
+                                                .languageCode ==
+                                            'zh',
+                                  )
+                                : formatBalanceFull(
+                                    ledger.balance, ledger.currency),
                           ),
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: ledger.balance >= 0 ? PiggyTokens.success(context) : PiggyTokens.error(context),
+                            color: ledger.balance >= 0
+                                ? PiggyTokens.success(context)
+                                : PiggyTokens.error(context),
                           ),
                         ),
                       ],
@@ -221,7 +220,8 @@ class LedgerCard extends ConsumerWidget {
                 Positioned.fill(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: PiggyTokens.surface(context).withValues(alpha: 0.85),
+                      color:
+                          PiggyTokens.surface(context).withValues(alpha: 0.85),
                       borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                     ),
                     child: Column(
@@ -320,5 +320,4 @@ class LedgerCard extends ConsumerWidget {
       );
     }
   }
-
 }

@@ -53,7 +53,10 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
         ref.watch(_categorySortTypeProvider(widget.categoryId));
 
     // 如果有周期限制，需要筛选交易数据
+    // skipLoading*: 下拉刷新 invalidate 后保留旧数据渲染，避免整页闪 loading
     final filteredTransactionsAsync = transactionsAsync.when(
+      skipLoadingOnReload: true,
+      skipLoadingOnRefresh: true,
       loading: () => const AsyncValue<List<db.Transaction>>.loading(),
       error: (error, stack) =>
           AsyncValue<List<db.Transaction>>.error(error, stack),
@@ -195,14 +198,34 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
                   _buildSortControls(currentSortType),
                   // 交易记录列表
                   Expanded(
-                    child: filteredTransactionsAsync.when(
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
-                      error: (error, stack) => Center(
-                          child: Text(
-                              '${AppLocalizations.of(context).categoryDetailLoadFailed}: $error')),
-                      data: (transactions) =>
-                          _buildTransactionsList(transactions, currentSortType),
+                    child: RefreshIndicator(
+                      onRefresh: () async {
+                        PiggyHaptics.light();
+                        final params = (
+                          categoryId: widget.categoryId,
+                          ledgerId: ledgerScope
+                        );
+                        ref.invalidate(
+                            _categoryTransactionsStreamProvider(params));
+                        try {
+                          await ref.read(
+                              _categoryTransactionsStreamProvider(params)
+                                  .future);
+                        } catch (_) {
+                          // 失败保持静默，错误分支由 when 展示
+                        }
+                      },
+                      child: filteredTransactionsAsync.when(
+                        skipLoadingOnReload: true,
+                        skipLoadingOnRefresh: true,
+                        loading: () =>
+                            const Center(child: CircularProgressIndicator()),
+                        error: (error, stack) => Center(
+                            child: Text(
+                                '${AppLocalizations.of(context).categoryDetailLoadFailed}: $error')),
+                        data: (transactions) => _buildTransactionsList(
+                            transactions, currentSortType),
+                      ),
                     ),
                   ),
                 ],
@@ -540,6 +563,8 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
       child: ListView.builder(
         // item 间无额外间距，圆角/边框由首末 item 决定
         padding: EdgeInsets.zero,
+        // AlwaysScrollable: 内容不满一屏时也能下拉刷新
+        physics: const AlwaysScrollableScrollPhysics(),
         itemCount: itemCount,
         itemBuilder: (context, index) {
           final isFirst = index == 0;
@@ -548,14 +573,18 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
             decoration: BoxDecoration(
               color: PiggyTokens.surface(context),
               borderRadius: BorderRadius.only(
-                topLeft:
-                    isFirst ? const Radius.circular(PiggyDimens.radiusLg) : Radius.zero,
-                topRight:
-                    isFirst ? const Radius.circular(PiggyDimens.radiusLg) : Radius.zero,
-                bottomLeft:
-                    isLast ? const Radius.circular(PiggyDimens.radiusLg) : Radius.zero,
-                bottomRight:
-                    isLast ? const Radius.circular(PiggyDimens.radiusLg) : Radius.zero,
+                topLeft: isFirst
+                    ? const Radius.circular(PiggyDimens.radiusLg)
+                    : Radius.zero,
+                topRight: isFirst
+                    ? const Radius.circular(PiggyDimens.radiusLg)
+                    : Radius.zero,
+                bottomLeft: isLast
+                    ? const Radius.circular(PiggyDimens.radiusLg)
+                    : Radius.zero,
+                bottomRight: isLast
+                    ? const Radius.circular(PiggyDimens.radiusLg)
+                    : Radius.zero,
               ),
               border: Border(
                 top: isFirst

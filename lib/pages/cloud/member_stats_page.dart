@@ -182,9 +182,8 @@ class _SummaryCell extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(
+          style: PiggyTextTokens.caption(context).copyWith(
             color: PiggyTokens.textSecondary(context),
-            fontSize: 11,
           ),
         ),
         const SizedBox(height: 2),
@@ -228,10 +227,7 @@ class _MemberStatTile extends ConsumerWidget {
       title: Text(displayName, overflow: TextOverflow.ellipsis),
       subtitle: Text(
         l10n.sharedMembersStatsTxCount(stat.txCount),
-        style: TextStyle(
-          color: PiggyTokens.textTertiary(context),
-          fontSize: 11,
-        ),
+        style: PiggyTextTokens.caption(context),
       ),
       trailing: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -254,10 +250,8 @@ class _MemberStatTile extends ConsumerWidget {
               if (totalExpense > 0) ...[
                 Text(
                   '${share.toStringAsFixed(0)}%',
-                  style: TextStyle(
-                    color: PiggyTokens.textTertiary(context),
-                    fontSize: 10,
-                  ),
+                  style:
+                      PiggyTextTokens.caption(context).copyWith(fontSize: 10),
                 ),
                 const SizedBox(width: 4),
               ],

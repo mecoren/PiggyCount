@@ -445,8 +445,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                         Expanded(
                           child: Text(
                             l10n.homeAnnualReportReminder(reportYear),
-                            style: TextStyle(
-                              fontSize: 14,
+                            style: PiggyTextTokens.body(context).copyWith(
                               color: PiggyTokens.textSecondary(context),
                             ),
                           ),
@@ -552,8 +551,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                         Expanded(
                           child: Text(
                             l10n.budgetSetupHint,
-                            style: TextStyle(
-                              fontSize: 14,
+                            style: PiggyTextTokens.body(context).copyWith(
                               color: PiggyTokens.textSecondary(context),
                             ),
                           ),

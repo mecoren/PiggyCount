@@ -521,17 +521,12 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                       contentPadding: EdgeInsets.zero,
                       title: Text(
                         l10n.creditCardReminderTitle,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: PiggyTokens.textPrimary(context),
-                        ),
+                        style: PiggyTextTokens.body(context),
                       ),
                       subtitle: Text(
                         l10n.creditCardReminderDesc,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: PiggyTokens.textTertiary(context),
-                        ),
+                        style: PiggyTextTokens.label(context)
+                            .copyWith(color: PiggyTokens.textTertiary(context)),
                       ),
                       value: _reminderEnabled,
                       activeColor: primaryColor,

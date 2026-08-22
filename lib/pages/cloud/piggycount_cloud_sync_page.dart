@@ -242,10 +242,7 @@ class _PiggyCountCloudSyncPageState
                               child: Center(
                                 child: Text(
                                   'PiggyCount Cloud v$v',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: PiggyTokens.textTertiary(context),
-                                  ),
+                                  style: PiggyTextTokens.caption(context),
                                 ),
                               ),
                             );
@@ -335,11 +332,7 @@ class _PiggyCountCloudSyncPageState
             Icon(Icons.help_outline, color: PiggyTokens.iconSecondary(context)),
         title: Text(
           l10n.cloudSyncHelpTitle,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: PiggyTokens.textPrimary(context),
-          ),
+          style: PiggyTextTokens.strongTitle(context).copyWith(fontSize: 14),
         ),
         children: [
           _helpBlock(context, l10n.cloudSyncHelpModesTitle,
@@ -381,20 +374,13 @@ class _PiggyCountCloudSyncPageState
         children: [
           Text(
             title,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: PiggyTokens.textPrimary(context),
-            ),
+            style: PiggyTextTokens.strongTitle(context).copyWith(fontSize: 13),
           ),
           const SizedBox(height: 4),
           Text(
             body,
-            style: TextStyle(
-              fontSize: 12.5,
-              height: 1.5,
-              color: PiggyTokens.textSecondary(context),
-            ),
+            style: PiggyTextTokens.label(context)
+                .copyWith(fontSize: 12.5, height: 1.5),
           ),
         ],
       ),
@@ -449,7 +435,8 @@ class _PiggyCountCloudSyncPageState
           const SizedBox(height: 8),
           Text(
             l10n.syncHealthCheckFailed(effective.error ?? ''),
-            style: TextStyle(color: PiggyTokens.error(context), fontSize: 12),
+            style: PiggyTextTokens.label(context)
+                .copyWith(color: PiggyTokens.error(context)),
           ),
         ],
       );
@@ -464,8 +451,7 @@ class _PiggyCountCloudSyncPageState
         const SizedBox(height: 6),
         Text(
           summary,
-          style: TextStyle(
-            fontSize: 12,
+          style: PiggyTextTokens.label(context).copyWith(
             color: effective.hasDiff
                 ? PiggyTokens.warning(context)
                 : PiggyTokens.textSecondary(context),
@@ -501,10 +487,8 @@ class _PiggyCountCloudSyncPageState
       padding: const EdgeInsets.only(top: 4, bottom: 2),
       child: Text(
         text,
-        style: TextStyle(
-          fontSize: 11,
+        style: PiggyTextTokens.caption(context).copyWith(
           fontWeight: FontWeight.w600,
-          color: PiggyTokens.textTertiary(context),
           letterSpacing: 0.4,
         ),
       ),
@@ -521,10 +505,7 @@ class _PiggyCountCloudSyncPageState
             width: 80,
             child: Text(
               label,
-              style: TextStyle(
-                fontSize: 13,
-                color: PiggyTokens.textSecondary(context),
-              ),
+              style: PiggyTextTokens.label(context).copyWith(fontSize: 13),
             ),
           ),
           Expanded(
@@ -558,10 +539,7 @@ class _PiggyCountCloudSyncPageState
             width: 80,
             child: Text(
               AppLocalizations.of(context).syncHealthRowUnpushed,
-              style: TextStyle(
-                fontSize: 13,
-                color: PiggyTokens.textSecondary(context),
-              ),
+              style: PiggyTextTokens.label(context).copyWith(fontSize: 13),
             ),
           ),
           Expanded(

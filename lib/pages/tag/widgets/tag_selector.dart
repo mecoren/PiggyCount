@@ -74,7 +74,8 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
       ),
       decoration: BoxDecoration(
         color: PiggyTokens.surfaceElevated(context),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
+        borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(PiggyDimens.radiusXl)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -104,23 +105,20 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
                   children: [
                     Text(
                       l10n.tagSelectTitle,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: PiggyTokens.textPrimary(context),
-                      ),
+                      style: PiggyTextTokens.strongTitle(context)
+                          .copyWith(fontSize: 16),
                     ),
                     Text(
                       l10n.tagSelectHint,
-                      style: TextStyle(
-                        fontSize: 12,
+                      style: PiggyTextTokens.label(context).copyWith(
                         color: PiggyTokens.textTertiary(context),
                       ),
                     ),
                   ],
                 ),
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(_selectedIds.toList()),
+                  onPressed: () =>
+                      Navigator.of(context).pop(_selectedIds.toList()),
                   child: Text(l10n.commonConfirm),
                 ),
               ],

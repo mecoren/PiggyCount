@@ -27,7 +27,8 @@ Future<String?> showCurrencyPickerSheet(
     isScrollControlled: true,
     backgroundColor: PiggyTokens.surfaceSheet(context),
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
+      borderRadius:
+          BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
     ),
     builder: (bctx) {
       String query = '';
@@ -75,17 +76,15 @@ Future<String?> showCurrencyPickerSheet(
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 8),
                   decoration: BoxDecoration(
-                    color: PiggyTokens.textTertiary(bctx).withValues(alpha: 0.3),
+                    color:
+                        PiggyTokens.textTertiary(bctx).withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
                 Text(
                   sheetTitle,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: PiggyTokens.textPrimary(bctx),
-                  ),
+                  style:
+                      PiggyTextTokens.strongTitle(bctx).copyWith(fontSize: 16),
                 ),
                 const SizedBox(height: 8),
                 TextField(
@@ -137,10 +136,7 @@ Future<String?> showCurrencyPickerSheet(
                               ? null
                               : Text(
                                   rateText,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: PiggyTokens.textTertiary(cctx),
-                                  ),
+                                  style: PiggyTextTokens.caption(cctx),
                                 ),
                           trailing: sel
                               ? Icon(Icons.check, color: primaryColor)

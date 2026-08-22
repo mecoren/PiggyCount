@@ -46,13 +46,13 @@ class ReminderSettingsPage extends ConsumerWidget {
                   ref
                       .read(reminderSettingsProvider.notifier)
                       .updateEnabled(value);
-                },
+                },
               ),
               // 提醒时间设置
               SettingsNavItem(
                 icon: Icons.access_time_rounded,
                 title: AppLocalizations.of(context)!.reminderTimeTitle,
-                subtitle: reminderSettings.timeString,
+                subtitle: reminderSettings.timeString,
                 onTap: () async {
                   final selectedTime = await showWheelTimePicker(
                     context,
@@ -64,9 +64,9 @@ class ReminderSettingsPage extends ConsumerWidget {
 
                   if (selectedTime != null) {
                     ref.read(reminderSettingsProvider.notifier).updateTime(
-                      selectedTime.hour,
-                      selectedTime.minute,
-                    );
+                          selectedTime.hour,
+                          selectedTime.minute,
+                        );
                   }
                 },
               ),
@@ -84,7 +84,8 @@ class ReminderSettingsPage extends ConsumerWidget {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () async {
-                      final notificationUtil = NotificationFactory.getInstance();
+                      final notificationUtil =
+                          NotificationFactory.getInstance();
                       await notificationUtil.showNotification(
                         id: 9999,
                         title: AppLocalizations.of(context)!.reminderTestTitle,
@@ -100,7 +101,8 @@ class ReminderSettingsPage extends ConsumerWidget {
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+                        borderRadius:
+                            BorderRadius.circular(PiggyDimens.radiusSm),
                       ),
                     ),
                     child: Text(
@@ -119,7 +121,6 @@ class ReminderSettingsPage extends ConsumerWidget {
           // Android专用电池和渠道检查按钮
           if (Platform.isAndroid) ...[
             const SizedBox(height: 16),
-
             SettingsCard(
               children: [
                 // 电池优化状态检查
@@ -185,8 +186,9 @@ class ReminderSettingsPage extends ConsumerWidget {
                                   TextButton(
                                     onPressed: () async {
                                       Navigator.of(context).pop();
-                                      final androidUtil = NotificationFactory
-                                          .getInstance() as AndroidNotificationUtil;
+                                      final androidUtil =
+                                          NotificationFactory.getInstance()
+                                              as AndroidNotificationUtil;
                                       await androidUtil
                                           .requestIgnoreBatteryOptimizations();
                                     },
@@ -206,7 +208,8 @@ class ReminderSettingsPage extends ConsumerWidget {
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+                          borderRadius:
+                              BorderRadius.circular(PiggyDimens.radiusSm),
                         ),
                       ),
                       child: Text(
@@ -301,8 +304,9 @@ class ReminderSettingsPage extends ConsumerWidget {
                                 TextButton(
                                   onPressed: () async {
                                     Navigator.of(context).pop();
-                                    final androidUtil = NotificationFactory
-                                        .getInstance() as AndroidNotificationUtil;
+                                    final androidUtil =
+                                        NotificationFactory.getInstance()
+                                            as AndroidNotificationUtil;
                                     await androidUtil
                                         .openNotificationChannelSettings();
                                   },
@@ -322,7 +326,8 @@ class ReminderSettingsPage extends ConsumerWidget {
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+                          borderRadius:
+                              BorderRadius.circular(PiggyDimens.radiusSm),
                         ),
                       ),
                       child: Text(
@@ -356,7 +361,8 @@ class ReminderSettingsPage extends ConsumerWidget {
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+                          borderRadius:
+                              BorderRadius.circular(PiggyDimens.radiusSm),
                         ),
                       ),
                       child: Text(
@@ -371,7 +377,6 @@ class ReminderSettingsPage extends ConsumerWidget {
                 ),
               ],
             ),
-
             const SizedBox(height: 16),
           ],
 
@@ -403,12 +408,10 @@ class ReminderSettingsPage extends ConsumerWidget {
                 Text(
                   Platform.isIOS
                       ? AppLocalizations.of(context)!.reminderIOSInstructions
-                      : AppLocalizations.of(context)!.reminderAndroidInstructions,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: PiggyTokens.textTertiary(context),
-                    height: 1.4,
-                  ),
+                      : AppLocalizations.of(context)!
+                          .reminderAndroidInstructions,
+                  style: PiggyTextTokens.label(context).copyWith(
+                      color: PiggyTokens.textTertiary(context), height: 1.4),
                 ),
               ],
             ),

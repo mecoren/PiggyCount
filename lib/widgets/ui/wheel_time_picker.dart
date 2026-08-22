@@ -2,10 +2,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../../styles/tokens.dart';
+import 'haptics.dart';
 
 class WheelTimePicker extends StatefulWidget {
   final TimeOfDay initial;
-  
+
   const WheelTimePicker({
     super.key,
     required this.initial,
@@ -23,7 +24,8 @@ Future<TimeOfDay?> showWheelTimePicker(
     context: context,
     backgroundColor: PiggyTokens.surfaceElevated(context),
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
+      borderRadius:
+          BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
     ),
     isScrollControlled: true,
     builder: (ctx) => WheelTimePicker(
@@ -60,7 +62,8 @@ class _WheelTimePickerState extends State<WheelTimePicker> {
     return Container(
       decoration: BoxDecoration(
         color: PiggyTokens.surfaceElevated(context),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
+        borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(PiggyDimens.radiusXl)),
       ),
       child: SafeArea(
         child: Column(
@@ -72,7 +75,9 @@ class _WheelTimePickerState extends State<WheelTimePicker> {
               decoration: BoxDecoration(
                 border: Border(
                   bottom: BorderSide(
-                    color: isDark ? PiggyTokens.border(context) : const Color(0xFFE5E5E5),
+                    color: isDark
+                        ? PiggyTokens.border(context)
+                        : const Color(0xFFE5E5E5),
                     width: 0.5,
                   ),
                 ),
@@ -100,7 +105,8 @@ class _WheelTimePickerState extends State<WheelTimePicker> {
                   ),
                   TextButton(
                     onPressed: () {
-                      Navigator.of(context).pop(TimeOfDay(hour: hour, minute: minute));
+                      Navigator.of(context)
+                          .pop(TimeOfDay(hour: hour, minute: minute));
                     },
                     child: Text(
                       AppLocalizations.of(context)!.commonOk,
@@ -114,7 +120,7 @@ class _WheelTimePickerState extends State<WheelTimePicker> {
                 ],
               ),
             ),
-            
+
             // 时间选择器
             SizedBox(
               height: 216,
@@ -126,6 +132,7 @@ class _WheelTimePickerState extends State<WheelTimePicker> {
                       scrollController: _hourCtrl,
                       itemExtent: 40,
                       onSelectedItemChanged: (index) {
+                        PiggyHaptics.selection();
                         setState(() {
                           hour = index;
                         });
@@ -160,6 +167,7 @@ class _WheelTimePickerState extends State<WheelTimePicker> {
                       scrollController: _minuteCtrl,
                       itemExtent: 40,
                       onSelectedItemChanged: (index) {
+                        PiggyHaptics.selection();
                         setState(() {
                           minute = index;
                         });
@@ -180,7 +188,7 @@ class _WheelTimePickerState extends State<WheelTimePicker> {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 20),
           ],
         ),

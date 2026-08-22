@@ -49,15 +49,10 @@ class DaySectionHeader extends ConsumerWidget {
     // 优先使用传入的hide,否则使用全局状态
     final shouldHide = hide ?? ref.watch(hideAmountsProvider);
     String fmt(double v) => v == 0 ? '' : formatMoneyCompact(v, maxDecimals: 2);
-    final grey = PiggyTokens.textSecondary(context);
     final week = getWeekday(dateText);
     final l10n = AppLocalizations.of(context);
     // 支出标题 / 收入标题 共用样式:次要色,弱化显示(汇总信息)。
-    final labelStyle = TextStyle(
-      color: grey,
-      fontSize: 12,
-      fontWeight: FontWeight.w400,
-    );
+    final labelStyle = PiggyTextTokens.label(context);
     // 日期 / 星期:与单条明细的分类标题(TransactionListItem 的 PiggyTextTokens.title)
     // 颜色一致(取主色),字号保持 12 不抢戏。
     final dateLabelStyle = PiggyTextTokens.title(context).copyWith(
@@ -82,7 +77,8 @@ class DaySectionHeader extends ConsumerWidget {
           Row(children: [
             if (shouldHide == false && fmt(expense).isNotEmpty)
               Text('${l10n.homeExpense} ${fmt(expense)}', style: labelStyle),
-            if (shouldHide == false && fmt(income).isNotEmpty) const SizedBox(width: 12),
+            if (shouldHide == false && fmt(income).isNotEmpty)
+              const SizedBox(width: 12),
             if (shouldHide == false && fmt(income).isNotEmpty)
               Text('${l10n.homeIncome} ${fmt(income)}', style: labelStyle),
           ])

@@ -98,8 +98,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
   ///
   /// 流程与现有上传按钮一致（串行 uploadCurrentLedger、单个失败不中断），
   /// 区别是入口为危险操作：双重强制确认（各 5 秒倒计时）后才执行。
-  Future<void> _handleFullUpload(
-      BuildContext context, SyncService sync) async {
+  Future<void> _handleFullUpload(BuildContext context, SyncService sync) async {
     final l10n = AppLocalizations.of(context);
     final ledgers = await ref.read(repositoryProvider).getAllLedgers();
     if (!mounted || !context.mounted) return;
@@ -264,14 +263,14 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
     final ledgers = await ref.read(repositoryProvider).getAllLedgers();
     if (!mounted || !context.mounted) return;
     if (ledgers.isEmpty) {
-      await AppDialog.info(
-          context, title: l10n.backupNowTitle, message: l10n.backupNoLedgers);
+      await AppDialog.info(context,
+          title: l10n.backupNowTitle, message: l10n.backupNoLedgers);
       return;
     }
     final backup = ref.read(cloudBackupServiceProvider);
     if (backup == null) {
-      await AppDialog.error(
-          context, title: l10n.commonFailed, message: l10n.fullSyncUnsupported);
+      await AppDialog.error(context,
+          title: l10n.commonFailed, message: l10n.fullSyncUnsupported);
       return;
     }
 
@@ -329,8 +328,8 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
     final l10n = AppLocalizations.of(context);
     final backup = ref.read(cloudBackupServiceProvider);
     if (backup == null) {
-      await AppDialog.error(
-          context, title: l10n.commonFailed, message: l10n.fullSyncUnsupported);
+      await AppDialog.error(context,
+          title: l10n.commonFailed, message: l10n.fullSyncUnsupported);
       return;
     }
 
@@ -424,7 +423,8 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
 
     if (!context.mounted) return;
     if (error != null) {
-      await AppDialog.error(context, title: l10n.commonFailed, message: '$error');
+      await AppDialog.error(context,
+          title: l10n.commonFailed, message: '$error');
     } else {
       await AppDialog.info(context,
           title: l10n.restoreFromBackupTitle,
@@ -539,7 +539,21 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
           children: [
             Expanded(
               child: authAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => DelayedSkeleton(
+                  placeholder: const SizedBox.expand(),
+                  child: PulseSkeleton(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: const [
+                          SkeletonListTile(),
+                          SkeletonListTile(),
+                          SkeletonListTile(),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
                 error: (e, _) => Center(
                   child:
                       Text('${AppLocalizations.of(context).commonError}: $e'),
@@ -548,7 +562,21 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                   future: auth.currentUser,
                   builder: (ctx, snap) {
                     if (snap.connectionState != ConnectionState.done) {
-                      return const Center(child: CircularProgressIndicator());
+                      return DelayedSkeleton(
+                        placeholder: const SizedBox.expand(),
+                        child: PulseSkeleton(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              children: const [
+                                SkeletonListTile(),
+                                SkeletonListTile(),
+                                SkeletonListTile(),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
                     }
 
                     final user = snap.data;
@@ -583,8 +611,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                     // "已同步"），改显"同步中"，避免与启动检查的
                     // "云端有更新"提示互相矛盾
                     if (refreshing) {
-                      subtitle =
-                          AppLocalizations.of(context).mineSyncChecking;
+                      subtitle = AppLocalizations.of(context).mineSyncChecking;
                     } else if (!isFirstLoad) {
                       switch (st.diff) {
                         case SyncDiff.notLoggedIn:
@@ -678,10 +705,10 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                 padding: const EdgeInsets.only(bottom: 12),
                                 child: Text(
                                   AppLocalizations.of(context).cloudSyncHint,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: PiggyTokens.textTertiary(context),
-                                  ),
+                                  style: PiggyTextTokens.label(context)
+                                      .copyWith(
+                                          color: PiggyTokens.textTertiary(
+                                              context)),
                                 ),
                               ),
                             // 同步操作 Section
@@ -987,10 +1014,9 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                         // 标记全部账本为上传中，
                                         // 供账本卡片显示上传状态
                                         ref
-                                                .read(
-                                                    uploadingLedgerIdsProvider
-                                                        .notifier)
-                                                .state = {
+                                            .read(uploadingLedgerIdsProvider
+                                                .notifier)
+                                            .state = {
                                           ...uploadingIds,
                                           ...ledgers.map((l) => l.id),
                                         };
@@ -1007,8 +1033,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                           // 强制阻塞弹窗：上传期间禁止一切
                                           // 页面操作，防止中途切账本/触发
                                           // 并发同步与上传互相踩写
-                                          final dialogFuture =
-                                              showDialog<void>(
+                                          final dialogFuture = showDialog<void>(
                                             context: context,
                                             barrierDismissible: false,
                                             builder: (dctx) => PopScope(
@@ -1019,8 +1044,8 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                                         BorderRadius.circular(
                                                             PiggyDimens
                                                                 .radiusXl)),
-                                                title: Text(
-                                                    l10n.ledgersUploadAll),
+                                                title:
+                                                    Text(l10n.ledgersUploadAll),
                                                 content: Column(
                                                   mainAxisSize:
                                                       MainAxisSize.min,
@@ -1031,13 +1056,11 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                                       valueListenable: progress,
                                                       builder: (_, done, __) =>
                                                           Text(
-                                                        l10n
-                                                            .ledgersUploadingProgress(
-                                                                done,
-                                                                ledgers
-                                                                    .length),
-                                                        textAlign: TextAlign
-                                                            .center,
+                                                        l10n.ledgersUploadingProgress(
+                                                            done,
+                                                            ledgers.length),
+                                                        textAlign:
+                                                            TextAlign.center,
                                                       ),
                                                     ),
                                                   ],
@@ -1078,21 +1101,18 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                                   .notifier)
                                               .state++;
                                           ref
-                                              .read(
-                                                  syncStatusRefreshProvider
-                                                      .notifier)
+                                              .read(syncStatusRefreshProvider
+                                                  .notifier)
                                               .state++;
 
                                           await AppDialog.info(context,
-                                              title: AppLocalizations.of(
-                                                      context)
-                                                  .mineUploadSuccess,
+                                              title:
+                                                  AppLocalizations.of(context)
+                                                      .mineUploadSuccess,
                                               message: failed == 0
-                                                  ? AppLocalizations.of(
-                                                          context)
+                                                  ? AppLocalizations.of(context)
                                                       .mineUploadSuccessMessage
-                                                  : AppLocalizations.of(
-                                                          context)
+                                                  : AppLocalizations.of(context)
                                                       .ledgersUploadAllResult(
                                                           success, failed));
                                         } catch (e) {
@@ -1112,8 +1132,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                               message: '$e');
                                         } finally {
                                           if (mounted) {
-                                            setState(
-                                                () => uploadBusy = false);
+                                            setState(() => uploadBusy = false);
                                           }
                                           // 移除本批账本的上传中标记
                                           final ids = ref
@@ -1122,9 +1141,10 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                                   .read(
                                                       uploadingLedgerIdsProvider
                                                           .notifier)
-                                              .state = ids
-                                                  .where((id) => !ledgers.any(
-                                                      (l) => l.id == id))
+                                                  .state =
+                                              ids
+                                                  .where((id) => !ledgers
+                                                      .any((l) => l.id == id))
                                                   .toSet();
                                           progress.dispose();
                                         }
@@ -1183,8 +1203,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                         final block =
                                             showBlockingProgressDialog(
                                           context,
-                                          title:
-                                              l10n.syncBlockingDownloadTitle,
+                                          title: l10n.syncBlockingDownloadTitle,
                                           initialStatus:
                                               l10n.syncBlockingCheckCloud,
                                         );
@@ -1204,30 +1223,30 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                             // 的话逐账本合并永远覆盖不到它们
                                             //（语义对齐启动检查的发现流程）
                                             try {
-                                              final metas =
-                                                  await syncManager
-                                                      .discoverRemoteLedgers();
+                                              final metas = await syncManager
+                                                  .discoverRemoteLedgers();
                                               if (metas.isNotEmpty &&
                                                   context.mounted) {
                                                 final displayNames = metas
                                                     .map((m) =>
                                                         '${m.name}(${m.txCount})')
                                                     .join('、');
-                                                final confirmed = await AppDialog
-                                                        .confirm<bool>(
-                                                      context,
-                                                      title: l10n
-                                                          .startupSyncNewLedgersTitle,
-                                                      message: l10n
-                                                          .startupSyncNewLedgersMessage(
-                                                              metas.length,
-                                                              displayNames),
-                                                      okLabel: l10n
-                                                          .startupSyncNewLedgersOk,
-                                                      cancelLabel: l10n
-                                                          .startupSyncNewLedgersCancel,
-                                                    ) ??
-                                                    false;
+                                                final confirmed =
+                                                    await AppDialog.confirm<
+                                                            bool>(
+                                                          context,
+                                                          title: l10n
+                                                              .startupSyncNewLedgersTitle,
+                                                          message: l10n
+                                                              .startupSyncNewLedgersMessage(
+                                                                  metas.length,
+                                                                  displayNames),
+                                                          okLabel: l10n
+                                                              .startupSyncNewLedgersOk,
+                                                          cancelLabel: l10n
+                                                              .startupSyncNewLedgersCancel,
+                                                        ) ??
+                                                        false;
                                                 if (confirmed) {
                                                   for (final meta in metas) {
                                                     try {
@@ -1276,8 +1295,8 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                                 // JSON 下载(下载慢的主因),
                                                 // 状态检查(HEAD 级)代价远低
                                                 // 于全量下载+diff
-                                                final st = await syncManager
-                                                    .getStatus(
+                                                final st =
+                                                    await syncManager.getStatus(
                                                         ledgerId: ledger.id);
                                                 if (st.diff ==
                                                     SyncDiff.inSync) {
@@ -1307,17 +1326,14 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                                     // 落地的唯一入口(静默合并,
                                                     // 不弹框——元数据 upsert
                                                     // 无破坏性,无需用户确认)
-                                                    block.status.value =
-                                                        l10n
-                                                            .syncBlockingApplying;
+                                                    block.status.value = l10n
+                                                        .syncBlockingApplying;
                                                     await syncManager
                                                         .applyPreviewChanges(
                                                       ledgerId: ledger.id,
-                                                      selectedChanges:
-                                                          const [],
-                                                      importData:
-                                                          previewResult
-                                                              .importData,
+                                                      selectedChanges: const [],
+                                                      importData: previewResult
+                                                          .importData,
                                                     );
                                                     // merge-then-publish:
                                                     // 只记录待回传,循环结束
@@ -1481,9 +1497,8 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                                 .notifier)
                                             .state++;
                                         ref
-                                            .read(
-                                                syncStatusRefreshProvider
-                                                    .notifier)
+                                            .read(syncStatusRefreshProvider
+                                                .notifier)
                                             .state++;
                                         if (!context.mounted) return;
 
@@ -1698,11 +1713,12 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                             ? const SizedBox(
                                                 width: 20,
                                                 height: 20,
-                                                child: CircularProgressIndicator(
-                                                    strokeWidth: 2))
+                                                child:
+                                                    CircularProgressIndicator(
+                                                        strokeWidth: 2))
                                             : null,
-                                        onTap: () => _handleFullUpload(
-                                            context, sync),
+                                        onTap: () =>
+                                            _handleFullUpload(context, sync),
                                       ),
                                       PiggyTokens.cardDivider(context),
                                       // 全量下载
@@ -1724,11 +1740,12 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                             ? const SizedBox(
                                                 width: 20,
                                                 height: 20,
-                                                child: CircularProgressIndicator(
-                                                    strokeWidth: 2))
+                                                child:
+                                                    CircularProgressIndicator(
+                                                        strokeWidth: 2))
                                             : null,
-                                        onTap: () => _handleFullDownload(
-                                            context, sync),
+                                        onTap: () =>
+                                            _handleFullDownload(context, sync),
                                       ),
                                     ],
                                   ),
@@ -1761,11 +1778,11 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                             ? const SizedBox(
                                                 width: 20,
                                                 height: 20,
-                                                child: CircularProgressIndicator(
-                                                    strokeWidth: 2))
+                                                child:
+                                                    CircularProgressIndicator(
+                                                        strokeWidth: 2))
                                             : null,
-                                        onTap: () =>
-                                            _handleBackupNow(context),
+                                        onTap: () => _handleBackupNow(context),
                                       ),
                                       PiggyTokens.cardDivider(context),
                                       AppListTile(
@@ -1786,8 +1803,9 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                             ? const SizedBox(
                                                 width: 20,
                                                 height: 20,
-                                                child: CircularProgressIndicator(
-                                                    strokeWidth: 2))
+                                                child:
+                                                    CircularProgressIndicator(
+                                                        strokeWidth: 2))
                                             : null,
                                         onTap: () =>
                                             _handleRestoreFromBackup(context),
@@ -1795,8 +1813,9 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                       PiggyTokens.cardDivider(context),
                                       // 定时备份开关 + 时间 + 最近状态
                                       Consumer(builder: (ctx, r, _) {
-                                        final auto = r.watch(
-                                                backupAutoEnabledProvider)
+                                        final auto = r
+                                                .watch(
+                                                    backupAutoEnabledProvider)
                                                 .asData
                                                 ?.value ??
                                             false;
@@ -1804,8 +1823,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                                 .watch(backupTimeProvider)
                                                 .asData
                                                 ?.value ??
-                                            BackupScheduler
-                                                .defaultBackupTime;
+                                            BackupScheduler.defaultBackupTime;
                                         final last = r
                                             .watch(lastBackupInfoProvider)
                                             .asData
@@ -1826,18 +1844,17 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                                   .set(v),
                                             ),
                                             if (auto) ...[
-                                              PiggyTokens.cardDivider(
-                                                  context),
+                                              PiggyTokens.cardDivider(context),
                                               AppListTile(
                                                 leading: Icons.schedule,
                                                 title:
                                                     AppLocalizations.of(context)
                                                         .backupTimeTitle,
                                                 subtitle: time,
-                                                enabled: !backupBusy &&
-                                                    !restoreBusy,
-                                                onTap: () => _pickBackupTime(
-                                                    context, r),
+                                                enabled:
+                                                    !backupBusy && !restoreBusy,
+                                                onTap: () =>
+                                                    _pickBackupTime(context, r),
                                               ),
                                             ],
                                             Padding(
@@ -1845,8 +1862,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                                   const EdgeInsets.fromLTRB(
                                                       16, 8, 16, 12),
                                               child: Align(
-                                                alignment:
-                                                    Alignment.centerLeft,
+                                                alignment: Alignment.centerLeft,
                                                 child: Text(
                                                   AppLocalizations.of(context)
                                                       .lastBackupCaption(

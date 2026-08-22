@@ -92,7 +92,6 @@ class AppearanceSettingsPage extends ConsumerWidget {
                 icon: Icons.brightness_6_outlined,
                 title: l10n.appearanceThemeMode,
                 subtitle: themeModeDisplay,
-
                 onTap: () => _showThemeModeDialog(context, ref, l10n),
               ),
               // 主题色设置
@@ -100,7 +99,6 @@ class AppearanceSettingsPage extends ConsumerWidget {
                 icon: Icons.brush_outlined,
                 title: l10n.personalizeTitle,
                 subtitle: l10n.personalizeSubtitle,
-
                 onTap: () async {
                   await Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const PersonalizePage()),
@@ -112,7 +110,6 @@ class AppearanceSettingsPage extends ConsumerWidget {
                 icon: Icons.wallpaper_outlined,
                 title: l10n.headerSkinTitle,
                 subtitle: skinDisplay,
-
                 onTap: () async {
                   await Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const HeaderSkinPage()),
@@ -124,7 +121,6 @@ class AppearanceSettingsPage extends ConsumerWidget {
                 icon: Icons.zoom_out_map_outlined,
                 title: l10n.mineDisplayScale,
                 subtitle: l10n.mineDisplayScaleSubtitle,
-
                 onTap: () async {
                   await Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const FontSettingsPage()),
@@ -144,7 +140,6 @@ class AppearanceSettingsPage extends ConsumerWidget {
                 subtitle: ref.watch(compactAmountProvider)
                     ? l10n.appearanceAmountFormatCompact
                     : l10n.appearanceAmountFormatFull,
-
                 onTap: () => _showAmountFormatDialog(context, ref, l10n),
               ),
               // 显示交易时间
@@ -156,7 +151,6 @@ class AppearanceSettingsPage extends ConsumerWidget {
                 onChanged: (value) {
                   ref.read(showTransactionTimeProvider.notifier).state = value;
                 },
-
               ),
               // 备注显示方式
               SettingsNavItem(
@@ -165,7 +159,6 @@ class AppearanceSettingsPage extends ConsumerWidget {
                 subtitle: ref.watch(noteDisplayModeProvider) == 'note'
                     ? l10n.appearanceNoteDisplayNote
                     : l10n.appearanceNoteDisplayCategory,
-
                 onTap: () => _showNoteDisplayDialog(context, ref, l10n),
               ),
               // 历史备注偏好
@@ -173,7 +166,6 @@ class AppearanceSettingsPage extends ConsumerWidget {
                 icon: Icons.history_outlined,
                 title: l10n.appearanceNoteHistory,
                 subtitle: _noteHistorySummary(ref, l10n),
-
                 onTap: () => _showNoteHistoryDialog(context, ref, l10n),
               ),
               // 收支颜色方案
@@ -181,7 +173,6 @@ class AppearanceSettingsPage extends ConsumerWidget {
                 icon: Icons.palette_outlined,
                 title: l10n.appearanceColorScheme,
                 subtitle: _colorSchemeSubtitle(ref, l10n),
-
                 onTap: () => _showColorSchemeDialog(context, ref, l10n),
               ),
             ],
@@ -195,9 +186,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
                 icon: Icons.payments_outlined,
                 title: l10n.baseCurrencyLabel,
                 subtitle: displayCurrency(
-                    ref.watch(baseCurrencyProvider).toUpperCase(),
-                    context),
-
+                    ref.watch(baseCurrencyProvider).toUpperCase(), context),
                 onTap: () => _pickBaseCurrency(context, ref),
               ),
               // 汇率管理
@@ -205,7 +194,6 @@ class AppearanceSettingsPage extends ConsumerWidget {
                 icon: Icons.currency_exchange,
                 title: l10n.exchangeRatePageTitle,
                 subtitle: l10n.exchangeRateEntrySubtitle,
-
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => const ExchangeRatePage(),
@@ -223,10 +211,10 @@ class AppearanceSettingsPage extends ConsumerWidget {
                 icon: Icons.language_outlined,
                 title: l10n.mineLanguageSettings,
                 subtitle: languageDisplay,
-
                 onTap: () async {
                   await Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const LanguageSettingsPage()),
+                    MaterialPageRoute(
+                        builder: (_) => const LanguageSettingsPage()),
                   );
                 },
               ),
@@ -235,10 +223,10 @@ class AppearanceSettingsPage extends ConsumerWidget {
                 icon: Icons.widgets_outlined,
                 title: l10n.widgetManagement,
                 subtitle: l10n.widgetManagementDesc,
-
                 onTap: () async {
                   await Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const WidgetManagementPage()),
+                    MaterialPageRoute(
+                        builder: (_) => const WidgetManagementPage()),
                   );
                 },
               ),
@@ -247,10 +235,10 @@ class AppearanceSettingsPage extends ConsumerWidget {
                 icon: Icons.lock_outline,
                 title: l10n.appLockTitle,
                 subtitle: l10n.appLockDesc,
-
                 onTap: () async {
                   await Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const AppLockSettingsPage()),
+                    MaterialPageRoute(
+                        builder: (_) => const AppLockSettingsPage()),
                   );
                 },
               ),
@@ -275,7 +263,8 @@ class AppearanceSettingsPage extends ConsumerWidget {
   }
 
   /// 显示主题模式选择对话框
-  void _showThemeModeDialog(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+  void _showThemeModeDialog(
+      BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     final currentMode = ref.read(themeModeProvider);
 
     showDialog(
@@ -290,21 +279,24 @@ class AppearanceSettingsPage extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             _buildModeOption(
-              context, ref,
+              context,
+              ref,
               title: l10n.appearanceThemeModeSystem,
               value: ThemeMode.system,
               currentValue: currentMode,
               icon: Icons.settings_suggest_outlined,
             ),
             _buildModeOption(
-              context, ref,
+              context,
+              ref,
               title: l10n.appearanceThemeModeLight,
               value: ThemeMode.light,
               currentValue: currentMode,
               icon: Icons.light_mode_outlined,
             ),
             _buildModeOption(
-              context, ref,
+              context,
+              ref,
               title: l10n.appearanceThemeModeDark,
               value: ThemeMode.dark,
               currentValue: currentMode,
@@ -339,9 +331,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
           fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
         ),
       ),
-      trailing: isSelected
-          ? Icon(Icons.check, color: primaryColor)
-          : null,
+      trailing: isSelected ? Icon(Icons.check, color: primaryColor) : null,
       onTap: () {
         ref.read(themeModeProvider.notifier).state = value;
         Navigator.pop(context);
@@ -350,7 +340,8 @@ class AppearanceSettingsPage extends ConsumerWidget {
   }
 
   /// 显示金额显示格式选择对话框
-  void _showAmountFormatDialog(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+  void _showAmountFormatDialog(
+      BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     final isCompact = ref.read(compactAmountProvider);
 
     showDialog(
@@ -365,7 +356,8 @@ class AppearanceSettingsPage extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             _buildAmountFormatOption(
-              context, ref,
+              context,
+              ref,
               title: l10n.appearanceAmountFormatFull,
               subtitle: l10n.appearanceAmountFormatFullDesc,
               value: false,
@@ -373,7 +365,8 @@ class AppearanceSettingsPage extends ConsumerWidget {
               icon: Icons.format_list_numbered_outlined,
             ),
             _buildAmountFormatOption(
-              context, ref,
+              context,
+              ref,
               title: l10n.appearanceAmountFormatCompact,
               subtitle: l10n.appearanceAmountFormatCompactDesc,
               value: true,
@@ -412,14 +405,9 @@ class AppearanceSettingsPage extends ConsumerWidget {
       ),
       subtitle: Text(
         subtitle,
-        style: TextStyle(
-          color: PiggyTokens.textSecondary(context),
-          fontSize: 12,
-        ),
+        style: PiggyTextTokens.label(context),
       ),
-      trailing: isSelected
-          ? Icon(Icons.check, color: primaryColor)
-          : null,
+      trailing: isSelected ? Icon(Icons.check, color: primaryColor) : null,
       onTap: () {
         ref.read(compactAmountProvider.notifier).state = value;
         Navigator.pop(context);
@@ -428,7 +416,8 @@ class AppearanceSettingsPage extends ConsumerWidget {
   }
 
   /// 显示备注显示方式选择对话框
-  void _showNoteDisplayDialog(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+  void _showNoteDisplayDialog(
+      BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     final current = ref.read(noteDisplayModeProvider);
     showDialog(
       context: context,
@@ -442,7 +431,8 @@ class AppearanceSettingsPage extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             _buildNoteDisplayOption(
-              context, ref,
+              context,
+              ref,
               title: l10n.appearanceNoteDisplayCategory,
               subtitle: l10n.appearanceNoteDisplayCategoryDesc,
               value: 'category',
@@ -450,7 +440,8 @@ class AppearanceSettingsPage extends ConsumerWidget {
               icon: Icons.label_outline,
             ),
             _buildNoteDisplayOption(
-              context, ref,
+              context,
+              ref,
               title: l10n.appearanceNoteDisplayNote,
               subtitle: l10n.appearanceNoteDisplayNoteDesc,
               value: 'note',
@@ -475,7 +466,9 @@ class AppearanceSettingsPage extends ConsumerWidget {
     final isSelected = value == currentValue;
     final primaryColor = ref.watch(primaryColorProvider);
     return ListTile(
-      leading: Icon(icon, color: isSelected ? primaryColor : PiggyTokens.iconSecondary(context)),
+      leading: Icon(icon,
+          color:
+              isSelected ? primaryColor : PiggyTokens.iconSecondary(context)),
       title: Text(
         title,
         style: TextStyle(
@@ -485,7 +478,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
       ),
       subtitle: Text(
         subtitle,
-        style: TextStyle(color: PiggyTokens.textSecondary(context), fontSize: 12),
+        style: PiggyTextTokens.label(context),
       ),
       trailing: isSelected ? Icon(Icons.check, color: primaryColor) : null,
       onTap: () {
@@ -647,8 +640,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
                 ),
                 if (limitError)
                   Padding(
-                    padding:
-                        const EdgeInsets.only(top: 4).scaled(context, ref),
+                    padding: const EdgeInsets.only(top: 4).scaled(context, ref),
                     child: Align(
                       alignment: Alignment.centerRight,
                       child: Text(
@@ -706,7 +698,8 @@ class AppearanceSettingsPage extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             _buildColorSchemeOption(
-              context, ref,
+              context,
+              ref,
               title: l10n.appearanceColorSchemeOn,
               subtitle: l10n.appearanceColorSchemeOnDesc,
               value: IncomeExpenseColorScheme.redIncome,
@@ -714,7 +707,8 @@ class AppearanceSettingsPage extends ConsumerWidget {
               icon: Icons.trending_up,
             ),
             _buildColorSchemeOption(
-              context, ref,
+              context,
+              ref,
               title: l10n.appearanceColorSchemeOff,
               subtitle: l10n.appearanceColorSchemeOffDesc,
               value: IncomeExpenseColorScheme.greenIncome,
@@ -722,7 +716,8 @@ class AppearanceSettingsPage extends ConsumerWidget {
               icon: Icons.trending_down,
             ),
             _buildColorSchemeOption(
-              context, ref,
+              context,
+              ref,
               title: l10n.appearanceColorSchemeBlue,
               subtitle: l10n.appearanceColorSchemeBlueDesc,
               value: IncomeExpenseColorScheme.blueIncome,
@@ -761,14 +756,9 @@ class AppearanceSettingsPage extends ConsumerWidget {
       ),
       subtitle: Text(
         subtitle,
-        style: TextStyle(
-          color: PiggyTokens.textSecondary(context),
-          fontSize: 12,
-        ),
+        style: PiggyTextTokens.label(context),
       ),
-      trailing: isSelected
-          ? Icon(Icons.check, color: primaryColor)
-          : null,
+      trailing: isSelected ? Icon(Icons.check, color: primaryColor) : null,
       onTap: () {
         ref.read(incomeExpenseColorSchemeProvider.notifier).state = value;
         Navigator.pop(context);

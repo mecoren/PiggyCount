@@ -42,10 +42,7 @@ class BudgetProgressBar extends ConsumerWidget {
           SizedBox(height: 4.0.scaled(context, ref)),
           Text(
             '$currencySymbol${used.toStringAsFixed(0)} / $currencySymbol${budget.toStringAsFixed(0)}',
-            style: TextStyle(
-              fontSize: 12,
-              color: PiggyTokens.textSecondary(context),
-            ),
+            style: PiggyTextTokens.label(context),
           ),
         ],
       ],

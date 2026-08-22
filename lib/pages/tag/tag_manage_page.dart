@@ -14,6 +14,7 @@ import '../../services/export/config_export_service.dart';
 import '../../services/system/logger_service.dart';
 import '../../styles/tokens.dart';
 import '../../widgets/ui/ui.dart';
+import '../../widgets/biz/app_empty.dart';
 import 'tag_detail_page.dart';
 import 'tag_edit_page.dart';
 
@@ -75,38 +76,14 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
   }
 
   Widget _buildEmptyState(AppLocalizations l10n) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.label_outline,
-            size: 64,
-            color: PiggyTokens.textTertiary(context),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            l10n.tagManageEmpty,
-            style: TextStyle(
-              fontSize: 16,
-              color: PiggyTokens.textSecondary(context),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.tagManageEmptyHint,
-            style: TextStyle(
-              fontSize: 14,
-              color: PiggyTokens.textTertiary(context),
-            ),
-          ),
-          const SizedBox(height: 24),
-          OutlinedButton.icon(
-            onPressed: _generateDefaultTags,
-            icon: const Icon(Icons.auto_fix_high),
-            label: Text(l10n.tagManageGenerateDefault),
-          ),
-        ],
+    return AppEmpty(
+      text: l10n.tagManageEmpty,
+      subtext: l10n.tagManageEmptyHint,
+      icon: Icons.label_outline,
+      action: OutlinedButton.icon(
+        onPressed: _generateDefaultTags,
+        icon: const Icon(Icons.auto_fix_high),
+        label: Text(l10n.tagManageGenerateDefault),
       ),
     );
   }
@@ -202,7 +179,8 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
   }
 
   /// 构建更多菜单
-  Widget _buildMoreMenu(BuildContext context, AppLocalizations l10n, Color primaryColor) {
+  Widget _buildMoreMenu(
+      BuildContext context, AppLocalizations l10n, Color primaryColor) {
     return PiggyPopupMenu(
       tooltip: l10n.commonMore,
       primaryColor: primaryColor,
@@ -276,7 +254,11 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
       if (!mounted) return;
 
       // 生成文件并分享
-      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
+      final timestamp = DateTime.now()
+          .toIso8601String()
+          .replaceAll(':', '-')
+          .split('.')
+          .first;
       final fileName = 'piggycount_tags_$timestamp.yml';
 
       if (Platform.isAndroid) {
@@ -290,7 +272,10 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
         await file.writeAsString(yamlContent);
 
         if (!mounted) return;
-        showToast(context, l10n.tagShareSuccess(filePath.replaceAll('/storage/emulated/0/', '')));
+        showToast(
+            context,
+            l10n.tagShareSuccess(
+                filePath.replaceAll('/storage/emulated/0/', '')));
       } else {
         final tempDir = await getTemporaryDirectory();
         final filePath = '${tempDir.path}/$fileName';
@@ -429,9 +414,8 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
     final tagsWithStats = ref.read(tagsWithStatsProvider).valueOrNull ?? [];
 
     // 找出交易数为0的标签
-    final unusedTags = tagsWithStats
-        .where((item) => item.transactionCount == 0)
-        .toList();
+    final unusedTags =
+        tagsWithStats.where((item) => item.transactionCount == 0).toList();
 
     if (unusedTags.isEmpty) {
       showToast(context, l10n.tagClearUnusedEmpty);
@@ -451,7 +435,8 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: PiggyTokens.error(context)),
+            style: TextButton.styleFrom(
+                foregroundColor: PiggyTokens.error(context)),
             child: Text(l10n.commonDelete),
           ),
         ],
@@ -488,9 +473,8 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
   /// 静默清空未使用的标签（用于覆盖导入）
   Future<void> _clearUnusedTagsSilent() async {
     final tagsWithStats = ref.read(tagsWithStatsProvider).valueOrNull ?? [];
-    final unusedTags = tagsWithStats
-        .where((item) => item.transactionCount == 0)
-        .toList();
+    final unusedTags =
+        tagsWithStats.where((item) => item.transactionCount == 0).toList();
 
     if (unusedTags.isEmpty) return;
 
@@ -593,11 +577,8 @@ class _TagCard extends StatelessWidget {
                           Expanded(
                             child: Text(
                               tag.name,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: PiggyTokens.textPrimary(context),
-                              ),
+                              style: PiggyTextTokens.strongTitle(context)
+                                  .copyWith(fontSize: 16),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -611,8 +592,7 @@ class _TagCard extends StatelessWidget {
                       children: [
                         Text(
                           l10n.tagTransactionCount(transactionCount),
-                          style: TextStyle(
-                            fontSize: 12,
+                          style: PiggyTextTokens.label(context).copyWith(
                             color: PiggyTokens.textTertiary(context),
                           ),
                         ),
