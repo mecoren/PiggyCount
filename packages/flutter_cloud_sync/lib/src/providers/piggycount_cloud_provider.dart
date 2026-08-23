@@ -1141,17 +1141,34 @@ String _joinNonEmpty(List<String?> values) {
       .trim();
 }
 
+/// 审计 S15：所有网络发送的唯一出口——超时转译为可重试异常，
+/// 防止半开连接让串行同步入口永久挂起。
+@visibleForTesting
+Future<T> debugSendWithTimeout<T>(
+    Duration requestTimeout, Future<T> Function() send) async {
+  try {
+    return await send().timeout(requestTimeout);
+  } on TimeoutException {
+    throw CloudStorageException(
+        '网络请求超时（${requestTimeout.inSeconds}s），请检查网络后重试');
+  }
+}
+
 class PiggyCountCloudAuthService implements CloudAuthService {
   PiggyCountCloudAuthService({
     required this.baseUrl,
     required this.apiPrefix,
     http.Client? httpClient,
     TwoFactorChallengeHandler? twoFactorHandler,
+    this.requestTimeout = const Duration(seconds: 30),
   })  : _httpClient = httpClient ?? http.Client(),
         _twoFactorHandler = twoFactorHandler;
 
   final String baseUrl;
   final String apiPrefix;
+
+  /// 审计 S15：单请求超时。默认 30s。弱网下半开连接不再永久挂起。
+  final Duration requestTimeout;
   final http.Client _httpClient;
   final TwoFactorChallengeHandler? _twoFactorHandler;
 
@@ -1930,8 +1947,11 @@ class PiggyCountCloudAuthService implements CloudAuthService {
       request.body = jsonEncode(body);
     }
 
-    final streamed = await _httpClient.send(request);
-    return http.Response.fromStream(streamed);
+    // 审计 S15：超时出口（auth）
+    final streamed = await debugSendWithTimeout(
+        requestTimeout, () => _httpClient.send(request));
+    return http.Response.fromStream(streamed).timeout(requestTimeout,
+        onTimeout: () => throw CloudStorageException('响应体读取超时'));
   }
 }
 
@@ -1941,10 +1961,15 @@ class PiggyCountCloudStorageService implements CloudStorageService {
     required this.apiPrefix,
     required this.auth,
     http.Client? httpClient,
+    this.requestTimeout = const Duration(seconds: 30),
   }) : _httpClient = httpClient ?? http.Client();
 
   final String baseUrl;
   final String apiPrefix;
+
+  /// 审计 S15：单请求超时。默认 30s。弱网下半开连接不再永久挂起。
+  final Duration requestTimeout;
+
   final PiggyCountCloudAuthService auth;
   final http.Client _httpClient;
 
@@ -2676,7 +2701,9 @@ class PiggyCountCloudStorageService implements CloudStorageService {
   /// 显示 server 版本,不需要 token。
   Future<PiggyCountCloudServerVersion> fetchServerVersion() async {
     final uri = Uri.parse('$baseUrl$apiPrefix/version');
-    final response = await _httpClient.get(uri);
+    // 审计 S15：超时出口（version 探测）
+    final response = await debugSendWithTimeout(
+        requestTimeout, () => _httpClient.get(uri));
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw CloudStorageException(
           'Fetch version failed: ${_extractErrorMessage(response)}');
@@ -3454,8 +3481,11 @@ class PiggyCountCloudStorageService implements CloudStorageService {
     if (body != null) {
       request.body = jsonEncode(body);
     }
-    final streamed = await _httpClient.send(request);
-    return http.Response.fromStream(streamed);
+    // 审计 S15：超时出口（storage）
+    final streamed = await debugSendWithTimeout(
+        requestTimeout, () => _httpClient.send(request));
+    return http.Response.fromStream(streamed).timeout(requestTimeout,
+        onTimeout: () => throw CloudStorageException('响应体读取超时'));
   }
 
   Future<http.Response> _multipartRequest({
@@ -3479,7 +3509,9 @@ class PiggyCountCloudStorageService implements CloudStorageService {
     if (mimeType != null && mimeType.trim().isNotEmpty) {
       request.fields['mime_type'] = mimeType.trim();
     }
-    final streamed = await _httpClient.send(request);
+    // 审计 S15：超时出口（附件 multipart，调用方已消费流，无需二次超时）
+    final streamed = await debugSendWithTimeout(
+        requestTimeout, () => _httpClient.send(request));
     return http.Response.fromStream(streamed);
   }
 
@@ -3504,7 +3536,9 @@ class PiggyCountCloudStorageService implements CloudStorageService {
     if (mimeType != null && mimeType.trim().isNotEmpty) {
       request.fields['mime_type'] = mimeType.trim();
     }
-    final streamed = await _httpClient.send(request);
+    // 审计 S15：超时出口（分类图标 multipart）
+    final streamed = await debugSendWithTimeout(
+        requestTimeout, () => _httpClient.send(request));
     return http.Response.fromStream(streamed);
   }
 
@@ -3527,7 +3561,9 @@ class PiggyCountCloudStorageService implements CloudStorageService {
     if (mimeType != null && mimeType.trim().isNotEmpty) {
       request.fields['mime_type'] = mimeType.trim();
     }
-    final streamed = await _httpClient.send(request);
+    // 审计 S15：超时出口（头像 multipart）
+    final streamed = await debugSendWithTimeout(
+        requestTimeout, () => _httpClient.send(request));
     return http.Response.fromStream(streamed);
   }
 }
