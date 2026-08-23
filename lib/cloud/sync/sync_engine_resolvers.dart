@@ -52,6 +52,10 @@ extension _SyncEngineResolvers on SyncEngine {
   }
 
   /// 根据分类名和类型查找 categoryId
+  ///
+  /// 审计 S10：同步产生的同名 (name,kind) 分类在 schema 无唯一约束下可以
+  /// 共存，getSingleOrNull 会抛 "Too many elements" 让交易 apply 整页卡死。
+  /// 对齐 _resolveAccountId 的 take(1) 口径。
   Future<int?> _resolveCategoryId({
     String? categoryName,
     String? categoryKind,
@@ -62,8 +66,8 @@ extension _SyncEngineResolvers on SyncEngine {
     if (categoryKind != null) {
       query.where((c) => c.kind.equals(categoryKind));
     }
-    final cat = await query.getSingleOrNull();
-    return cat?.id;
+    final rows = await (query..limit(1)).get();
+    return rows.isEmpty ? null : rows.first.id;
   }
 
   /// 根据账户名查找 accountId

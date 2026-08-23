@@ -676,10 +676,13 @@ class SyncEngine implements app.SyncService {
           continue;
         }
         // fallback：同名 + syncId 为 NULL 的 seed 行 → 收编
-        final byName = await (db.select(db.ledgers)
+        // （审计 S10：take(1) 防 "Too many elements"）
+        final byNameRows = await (db.select(db.ledgers)
               ..where((l) => l.name.equals(r.ledgerName))
-              ..where((l) => l.syncId.isNull()))
-            .getSingleOrNull();
+              ..where((l) => l.syncId.isNull())
+              ..limit(1))
+            .get();
+        final byName = byNameRows.isEmpty ? null : byNameRows.first;
         if (byName != null) {
           await (db.update(db.ledgers)..where((l) => l.id.equals(byName.id)))
               .write(LedgersCompanion(

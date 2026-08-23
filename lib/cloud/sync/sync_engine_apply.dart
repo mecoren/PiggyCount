@@ -523,31 +523,35 @@ extension SyncEngineApplyExt on SyncEngine {
     // 解析 parentId
     int? parentId;
     if (parentName != null && parentName.isNotEmpty) {
-      final parent = await (db.select(db.categories)
+      // 审计 S10：同名分类可能多行，take(1) 防 "Too many elements"
+      final parents = await (db.select(db.categories)
             ..where((c) => c.name.equals(parentName))
             ..where((c) => c.kind.equals(kind))
-            ..where((c) => c.level.equals(1)))
-          .getSingleOrNull();
-      parentId = parent?.id;
+            ..where((c) => c.level.equals(1))
+            ..limit(1))
+          .get();
+      parentId = parents.isEmpty ? null : parents.first.id;
     }
 
     var existing = await (db.select(db.categories)
           ..where((c) => c.syncId.equals(syncId)))
-        .getSingleOrNull();
+        .get();
 
     // Fallback：syncId 查不到 → 本地可能是 seed 默认分类（syncId 为 NULL）。
     // 按 name + kind 匹配 NULL syncId 行，把 syncId 补上。避免 device B 首次
     // pull 远端分类插第二份同名 seed。
-    if (existing == null && name.isNotEmpty) {
-      final seeded = await (db.select(db.categories)
+    if (existing.isEmpty && name.isNotEmpty) {
+      final seededRows = await (db.select(db.categories)
             ..where((c) => c.name.equals(name))
             ..where((c) => c.kind.equals(kind))
-            ..where((c) => c.syncId.isNull()))
-          .getSingleOrNull();
-      if (seeded != null) {
+            ..where((c) => c.syncId.isNull())
+            ..limit(1))
+          .get();
+      if (seededRows.isNotEmpty) {
+        final seeded = seededRows.first;
         await (db.update(db.categories)..where((c) => c.id.equals(seeded.id)))
             .write(CategoriesCompanion(syncId: d.Value(syncId)));
-        existing = seeded;
+        existing = [seeded];
         logger.info('SyncEngine',
             'pull: 收编本地 seed 分类 name="$name" kind=$kind → syncId=$syncId');
       }
@@ -573,10 +577,10 @@ extension SyncEngineApplyExt on SyncEngine {
     String? resolvedCustomIconPath;
     bool needIconDownload = false;
     if (iconType == 'custom' && cloudFileId != null && cloudFileId.isNotEmpty) {
-      if (existing != null &&
-          (existing.customIconPath ?? '').contains(cloudFileId)) {
+      if (existing.isNotEmpty &&
+          ((existing.first.customIconPath ?? '').contains(cloudFileId))) {
         // 本地已下载,保留路径,不重新下
-        resolvedCustomIconPath = existing.customIconPath;
+        resolvedCustomIconPath = existing.first.customIconPath;
       } else {
         // 还没下载:写 null,等 drain 写本地路径
         resolvedCustomIconPath = null;
@@ -587,12 +591,14 @@ extension SyncEngineApplyExt on SyncEngine {
       resolvedCustomIconPath = null;
     } else {
       // iconType=custom 但没 cloudFileId(老数据):保留 existing path 兜底
-      resolvedCustomIconPath = existing?.customIconPath;
+      resolvedCustomIconPath =
+          existing.isNotEmpty ? existing.first.customIconPath : null;
     }
 
     int? localCategoryId;
-    if (existing != null) {
-      localCategoryId = existing.id;
+    if (existing.isNotEmpty) {
+      final target = existing.first;
+      localCategoryId = target.id;
       await (db.update(db.categories)
             ..where((c) => c.id.equals(localCategoryId!)))
           .write(CategoriesCompanion(
@@ -608,22 +614,50 @@ extension SyncEngineApplyExt on SyncEngine {
       ));
       logger.debug('SyncEngine', 'pull: 更新分类 $syncId');
     } else {
-      localCategoryId = await db.into(db.categories).insert(
-            CategoriesCompanion.insert(
-              name: name,
-              kind: kind,
-              level: d.Value(level),
-              sortOrder: d.Value(sortOrder),
-              icon: d.Value(icon),
-              iconType: d.Value(iconType),
-              customIconPath: d.Value(resolvedCustomIconPath),
-              communityIconId: d.Value(payload['communityIconId'] as String?),
-              parentId: d.Value(parentId),
-              syncId: d.Value(syncId),
-            ),
-          );
-      activePullCache?.putCategory(syncId, localCategoryId);
-      logger.debug('SyncEngine', 'pull: 新增分类 $syncId');
+      // 审计 S10：插入前按 (name,kind) 收编既有同名行——schema 无唯一
+      // 约束，不同 syncId 的同名分类盲插会产生重复行，后续按名解析
+      // （_resolveCategoryId 等）随之退化。优先收编 NULL syncId 的 seed，
+      // 否则取第一行盖上本 syncId。
+      List<Category> sameName = await (db.select(db.categories)
+            ..where((c) => c.name.equals(name))
+            ..where((c) => c.kind.equals(kind))
+            ..where((c) => c.syncId.isNull())
+            ..limit(1))
+          .get();
+      if (sameName.isEmpty) {
+        sameName = await (db.select(db.categories)
+              ..where((c) => c.name.equals(name))
+              ..where((c) => c.kind.equals(kind))
+              ..limit(1))
+            .get();
+      }
+      if (sameName.isNotEmpty) {
+        final adopt = sameName.first;
+        await (db.update(db.categories)..where((c) => c.id.equals(adopt.id)))
+            .write(CategoriesCompanion(syncId: d.Value(syncId)));
+        localCategoryId = adopt.id;
+        activePullCache?.putCategory(syncId, localCategoryId);
+        logger.info('SyncEngine',
+            'pull: 收编重名分类 id=${adopt.id} → syncId=$syncId（防重复行）');
+      } else {
+        localCategoryId = await db.into(db.categories).insert(
+              CategoriesCompanion.insert(
+                name: name,
+                kind: kind,
+                level: d.Value(level),
+                sortOrder: d.Value(sortOrder),
+                icon: d.Value(icon),
+                iconType: d.Value(iconType),
+                customIconPath: d.Value(resolvedCustomIconPath),
+                communityIconId:
+                    d.Value(payload['communityIconId'] as String?),
+                parentId: d.Value(parentId),
+                syncId: d.Value(syncId),
+              ),
+            );
+        activePullCache?.putCategory(syncId, localCategoryId);
+        logger.debug('SyncEngine', 'pull: 新增分类 $syncId');
+      }
     }
 
     // §Phase 3:入队下载任务,主事务 commit 后由 drainCustomIconQueue 并发处理。
