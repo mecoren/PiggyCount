@@ -8,6 +8,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../core/auth_service.dart';
@@ -4348,6 +4349,12 @@ class PiggyCountCloudRealtimeClient {
   bool _running = false;
   bool _connecting = false;
 
+  /// 审计 S17：指数退避重连计数。收到服务端首条消息时归零
+  /// （connect 返回成功 ≠ 链路建立，不能在那里归零）。
+  int _reconnectAttempts = 0;
+  static const _reconnectBaseDelay = Duration(seconds: 3);
+  static const _reconnectMaxDelay = Duration(seconds: 60);
+
   Stream<PiggyCountCloudRealtimeEvent> get events => _events.stream;
 
   Future<void> start() async {
@@ -4383,7 +4390,12 @@ class PiggyCountCloudRealtimeClient {
     try {
       final token = await auth.requireAccessToken();
       final uri = _buildWebSocketUri(token);
-      final channel = WebSocketChannel.connect(uri);
+      // 审计 S18：token 改走 Authorization header，避免落入反代/网关
+      // 访问日志。query 中的 token 为过渡期双读兼容（服务端迁移到
+      // header 鉴权后移除），见 _buildWebSocketUri 注释。
+      final channel = IOWebSocketChannel.connect(uri, headers: <String, String>{
+        'Authorization': 'Bearer $token',
+      });
       _channel = channel;
 
       _channelSub = channel.stream.listen(
@@ -4420,6 +4432,9 @@ class PiggyCountCloudRealtimeClient {
       'ws',
     ];
 
+    // 审计 S18：Authorization header 已随握手发送（见 _connect）。
+    // query token 为过渡期兼容保留——服务端升级为 header 鉴权后
+    // 删除此 queryParameters，彻底消除 token 进访问日志的面。
     return Uri(
       scheme: scheme,
       host: base.host,
@@ -4430,6 +4445,9 @@ class PiggyCountCloudRealtimeClient {
   }
 
   void _onMessage(dynamic message) {
+    // 审计 S17：收到服务端任何消息（含 pong）即视为链路真正建立，
+    // 重连退避计数归零。
+    _reconnectAttempts = 0;
     if (message is! String || message.trim().isEmpty || message == 'pong') {
       return;
     }
@@ -4466,8 +4484,21 @@ class PiggyCountCloudRealtimeClient {
     _channelSub = null;
     _channel = null;
 
+    // 审计 S17：指数退避 + ±20% 随机 jitter。
+    // 服务器宕机/弱网长断时不再形成固定 3s 的重连风暴；
+    // jitter 抖散多设备同时恢复后的连接峰值。
+    final attempt = _reconnectAttempts++;
+    var delayMs = _reconnectBaseDelay.inMilliseconds * (1 << attempt.clamp(0, 5));
+    if (delayMs > _reconnectMaxDelay.inMilliseconds) {
+      delayMs = _reconnectMaxDelay.inMilliseconds;
+    }
+    final jitter =
+        (delayMs * 0.2 * (DateTime.now().millisecondsSinceEpoch % 1000) / 1000)
+            .round();
+    final delay = Duration(milliseconds: delayMs - jitter);
+
     _reconnectTimer?.cancel();
-    _reconnectTimer = Timer(const Duration(seconds: 3), () async {
+    _reconnectTimer = Timer(delay, () async {
       if (!_running) {
         return;
       }
