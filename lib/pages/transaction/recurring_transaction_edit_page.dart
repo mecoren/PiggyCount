@@ -372,11 +372,11 @@ class _RecurringTransactionEditPageState
 
     if (isFromAccount) {
       if (_type == 'transfer' && _selectedAccountId == null) {
-        return '请选择转出账户';
+        return l10n.transferSelectFromAccount;
       }
     } else {
       if (_type == 'transfer' && _selectedToAccountId == null) {
-        return '请选择转入账户';
+        return l10n.transferSelectToAccount;
       }
       if (_type == 'transfer' &&
           _selectedAccountId != null &&

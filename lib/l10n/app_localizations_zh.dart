@@ -8014,6 +8014,23 @@ class AppLocalizationsZh extends AppLocalizations {
   String lastBackupCaption(String date, String ok) {
     return '最近备份：$date · $ok';
   }
+
+  @override
+  String get ledgersCreatedSuccess => '账本创建成功';
+
+  @override
+  String ledgersCreateFailed(String error) {
+    return '创建失败: $error';
+  }
+
+  @override
+  String get budgetOnlyOwnerCanEdit => '只有账本所有者能编辑预算';
+
+  @override
+  String get transferSelectFromAccount => '请选择转出账户';
+
+  @override
+  String get transferSelectToAccount => '请选择转入账户';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -16026,4 +16043,21 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String lastBackupCaption(String date, String ok) {
     return '最近備份：$date · $ok';
   }
+
+  @override
+  String get ledgersCreatedSuccess => '帳本建立成功';
+
+  @override
+  String ledgersCreateFailed(String error) {
+    return '建立失敗: $error';
+  }
+
+  @override
+  String get budgetOnlyOwnerCanEdit => '只有帳本所有者能編輯預算';
+
+  @override
+  String get transferSelectFromAccount => '請選擇轉出帳戶';
+
+  @override
+  String get transferSelectToAccount => '請選擇轉入帳戶';
 }

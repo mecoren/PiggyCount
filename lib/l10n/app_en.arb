@@ -3945,5 +3945,17 @@
   "backupAutoSubtitle": "Automatically back up once per day at the configured time (while the app is running)",
   "backupTimeTitle": "Daily Backup Time",
   "lastBackupCaption": "Last backup: {date} · {ok}",
-  "@lastBackupCaption": { "placeholders": { "date": { "type": "String" }, "ok": { "type": "String" } } }
+  "@lastBackupCaption": { "placeholders": { "date": { "type": "String" }, "ok": { "type": "String" } } },
+  "ledgersCreatedSuccess": "Ledger created",
+  "ledgersCreateFailed": "Create failed: {error}",
+  "@ledgersCreateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetOnlyOwnerCanEdit": "Only the ledger owner can edit budgets",
+  "transferSelectFromAccount": "Select a from account",
+  "transferSelectToAccount": "Select a to account"
 }

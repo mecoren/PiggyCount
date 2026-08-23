@@ -3101,5 +3101,17 @@
   "backupAutoTitle": "定時備份",
   "backupAutoSubtitle": "每日在設定時間自動備份一次（僅 App 執行期間生效）",
   "backupTimeTitle": "每日備份時間",
-  "lastBackupCaption": "最近備份：{date} · {ok}"
+  "lastBackupCaption": "最近備份：{date} · {ok}",
+  "ledgersCreatedSuccess": "帳本建立成功",
+  "ledgersCreateFailed": "建立失敗: {error}",
+  "@ledgersCreateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetOnlyOwnerCanEdit": "只有帳本所有者能編輯預算",
+  "transferSelectFromAccount": "請選擇轉出帳戶",
+  "transferSelectToAccount": "請選擇轉入帳戶"
 }

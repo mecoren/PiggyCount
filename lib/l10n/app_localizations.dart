@@ -14994,6 +14994,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Last backup: {date} · {ok}'**
   String lastBackupCaption(String date, String ok);
+
+  /// No description provided for @ledgersCreatedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Ledger created'**
+  String get ledgersCreatedSuccess;
+
+  /// No description provided for @ledgersCreateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Create failed: {error}'**
+  String ledgersCreateFailed(String error);
+
+  /// No description provided for @budgetOnlyOwnerCanEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Only the ledger owner can edit budgets'**
+  String get budgetOnlyOwnerCanEdit;
+
+  /// No description provided for @transferSelectFromAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a from account'**
+  String get transferSelectFromAccount;
+
+  /// No description provided for @transferSelectToAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a to account'**
+  String get transferSelectToAccount;
 }
 
 class _AppLocalizationsDelegate

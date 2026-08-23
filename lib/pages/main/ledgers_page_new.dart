@@ -1400,10 +1400,11 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       PostProcessor.sync(ref, ledgerId: newLedgerId);
 
       if (!mounted) return;
-      showToast(context, '账本创建成功');
+      showToast(context, AppLocalizations.of(context).ledgersCreatedSuccess);
     } catch (e) {
       if (!mounted) return;
-      showToast(context, '创建失败: ${e.toString()}');
+      showToast(context,
+          AppLocalizations.of(context).ledgersCreateFailed(e.toString()));
     }
   }
 

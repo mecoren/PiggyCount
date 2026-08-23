@@ -3435,5 +3435,17 @@
   "backupAutoTitle": "定时备份",
   "backupAutoSubtitle": "每日在设定时间自动备份一次（仅 App 运行期间生效）",
   "backupTimeTitle": "每日备份时间",
-  "lastBackupCaption": "最近备份：{date} · {ok}"
+  "lastBackupCaption": "最近备份：{date} · {ok}",
+  "ledgersCreatedSuccess": "账本创建成功",
+  "ledgersCreateFailed": "创建失败: {error}",
+  "@ledgersCreateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetOnlyOwnerCanEdit": "只有账本所有者能编辑预算",
+  "transferSelectFromAccount": "请选择转出账户",
+  "transferSelectToAccount": "请选择转入账户"
 }

@@ -319,7 +319,7 @@ class BudgetPage extends ConsumerWidget {
 
   Future<void> _editTotalBudget(BuildContext context, WidgetRef ref) async {
     if (_isEditorInShared(ref)) {
-      showToast(context, '只有账本所有者能编辑预算');
+      showToast(context, AppLocalizations.of(context).budgetOnlyOwnerCanEdit);
       return;
     }
     final budget = await ref.read(totalBudgetProvider.future);
@@ -346,7 +346,7 @@ class BudgetPage extends ConsumerWidget {
     CategoryBudgetUsage usage,
   ) async {
     if (_isEditorInShared(ref)) {
-      showToast(context, '只有账本所有者能编辑预算');
+      showToast(context, AppLocalizations.of(context).budgetOnlyOwnerCanEdit);
       return;
     }
     final allBudgets = await ref.read(allBudgetsProvider.future);

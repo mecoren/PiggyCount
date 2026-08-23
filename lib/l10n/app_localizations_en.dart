@@ -8337,4 +8337,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String lastBackupCaption(String date, String ok) {
     return 'Last backup: $date · $ok';
   }
+
+  @override
+  String get ledgersCreatedSuccess => 'Ledger created';
+
+  @override
+  String ledgersCreateFailed(String error) {
+    return 'Create failed: $error';
+  }
+
+  @override
+  String get budgetOnlyOwnerCanEdit => 'Only the ledger owner can edit budgets';
+
+  @override
+  String get transferSelectFromAccount => 'Select a from account';
+
+  @override
+  String get transferSelectToAccount => 'Select a to account';
 }

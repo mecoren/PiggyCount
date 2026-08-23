@@ -8108,4 +8108,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String lastBackupCaption(String date, String ok) {
     return '최근 백업: $date · $ok';
   }
+
+  @override
+  String get ledgersCreatedSuccess => '장부가 생성되었습니다';
+
+  @override
+  String ledgersCreateFailed(String error) {
+    return '생성 실패: $error';
+  }
+
+  @override
+  String get budgetOnlyOwnerCanEdit => '장부 소유자만 예산을 편집할 수 있습니다';
+
+  @override
+  String get transferSelectFromAccount => '송금 계좌를 선택하세요';
+
+  @override
+  String get transferSelectToAccount => '입금 계좌를 선택하세요';
 }
