@@ -27,6 +27,8 @@ class TagManagePage extends ConsumerStatefulWidget {
 }
 
 class _TagManagePageState extends ConsumerState<TagManagePage> {
+  /// 审计 U15：删除/种子生成进行中标志（防连点 + 失败提示）
+  bool _busy = false;
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -141,12 +143,23 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
     );
 
     if (confirmed == true && mounted) {
-      final repo = ref.read(repositoryProvider);
-      await repo.deleteTag(tag.id);
-      ref.read(tagListRefreshProvider.notifier).state++;
+      // 审计 U15：删除期间禁用入口，失败显式提示
+      if (_busy) return;
+      setState(() => _busy = true);
+      try {
+        final repo = ref.read(repositoryProvider);
+        await repo.deleteTag(tag.id);
+        ref.read(tagListRefreshProvider.notifier).state++;
 
-      if (mounted) {
-        showToast(context, l10n.tagDeleteSuccess);
+        if (mounted) {
+          showToast(context, l10n.tagDeleteSuccess);
+        }
+      } catch (e) {
+        if (mounted) {
+          showToast(context, '${l10n.commonFailed}: $e');
+        }
+      } finally {
+        if (mounted) setState(() => _busy = false);
       }
     }
   }
@@ -161,19 +174,30 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
     );
 
     if (confirmed == true && mounted) {
-      final repo = ref.read(repositoryProvider);
-      await TagSeedService.seedDefaultTags(repo, l10n);
-      // 跟普通手工新建的 tag 一样走 sync_changes 路径,这里再顺手 push 一下,
-      // 保证云同步页还没被下拉刷新时就已经开始把种子标签推到云端。
-      // 标签是用户级、不挂账本,但 PostProcessor.sync 需要 ledgerId —— 用
-      // 当前账本即可,sync engine 会把所有 unpushed changes(包括 ledger=0 的)
-      // 一起带上。
-      final currentLedgerId = ref.read(currentLedgerIdProvider);
-      await PostProcessor.sync(ref, ledgerId: currentLedgerId);
-      ref.read(tagListRefreshProvider.notifier).state++;
+      // 审计 U15：种子生成 + 云端推送耗时较长，置忙碌防连点重复 seed
+      if (_busy) return;
+      setState(() => _busy = true);
+      try {
+        final repo = ref.read(repositoryProvider);
+        await TagSeedService.seedDefaultTags(repo, l10n);
+        // 跟普通手工新建的 tag 一样走 sync_changes 路径,这里再顺手 push 一下,
+        // 保证云同步页还没被下拉刷新时就已经开始把种子标签推到云端。
+        // 标签是用户级、不挂账本,但 PostProcessor.sync 需要 ledgerId —— 用
+        // 当前账本即可,sync engine 会把所有 unpushed changes(包括 ledger=0 的)
+        // 一起带上。
+        final currentLedgerId = ref.read(currentLedgerIdProvider);
+        await PostProcessor.sync(ref, ledgerId: currentLedgerId);
+        ref.read(tagListRefreshProvider.notifier).state++;
 
-      if (mounted) {
-        showToast(context, l10n.tagManageGenerateDefaultSuccess);
+        if (mounted) {
+          showToast(context, l10n.tagManageGenerateDefaultSuccess);
+        }
+      } catch (e) {
+        if (mounted) {
+          showToast(context, '${l10n.commonFailed}: $e');
+        }
+      } finally {
+        if (mounted) setState(() => _busy = false);
       }
     }
   }

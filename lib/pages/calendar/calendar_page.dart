@@ -109,7 +109,6 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     ref.watch(calendarRefreshProvider);
 
     // 获取当月统计数据
-    print('🔍 查询参数: ledgerId=$ledgerId, month=$_focusedMonth');
     final dailyTotalsAsync = ref.watch(
       dailyTotalsByMonthProvider((ledgerId: ledgerId, month: _focusedMonth)),
     );
@@ -195,15 +194,6 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     Color primaryColor,
   ) {
     final locale = Localizations.localeOf(context);
-
-    print('📊 _buildCalendar 被调用: dailyTotals.length=${dailyTotals.length}');
-    print('📊 locale=${locale.toString()}');
-    if (dailyTotals.isNotEmpty) {
-      print('📊 数据样例:');
-      dailyTotals.entries.take(5).forEach((e) {
-        print('  ${e.key}: 收入=${e.value.$1}, 支出=${e.value.$2}');
-      });
-    }
 
     return TableCalendar(
       locale: locale.toString(),
@@ -325,15 +315,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     final (income, expense) = totals ?? (0.0, 0.0);
     final hasTransaction = income > 0 || expense > 0;
 
-    // 调试：打印前3天的数据
-    if (day.day <= 3 && day.month == _focusedMonth.month) {
-      print('📅 _buildDateCell: day=${day.day}, dateKey=$dateKey');
-      print(
-          '   totals=$totals, income=$income, expense=$expense, hasTransaction=$hasTransaction');
-      print('   isOutside=$isOutside');
-    }
-
-    // 文字颜色
+    // 颜色设置
     Color textColor;
     if (isSelected) {
       textColor = Colors.white;

@@ -159,6 +159,9 @@ Future<String?> showCurrencyPickerSheet(
 /// 应用主币种选择:同值跳过 / set provider / 已有手动汇率提示 / force 重拉自动汇率。
 ///
 /// 汇率页与个性化页共用 —— 选完后统一走这条收尾逻辑。mounted 守卫照旧。
+/// 审计 U15/U4：force 重拉汇率可达数秒，进行中忽略重复触发，
+/// 防止用户连选多个币种造成并发刷新互相覆盖。
+bool _applyBaseCurrencyBusy = false;
 Future<void> applyBaseCurrencySelection(
   BuildContext context,
   WidgetRef ref,
@@ -168,14 +171,24 @@ Future<void> applyBaseCurrencySelection(
   final current = ref.read(baseCurrencyProvider).toUpperCase();
   final next = code.toUpperCase();
   if (next == current) return;
+  if (_applyBaseCurrencyBusy) {
+    // 复用「刷新中」文案提示进行中（审计 U15）
+    showToast(context, l10n.mineUploadRefreshing);
+    return;
+  }
 
   ref.read(baseCurrencyProvider.notifier).state = next;
   // 新主币种若已有手动汇率,提示并立即生效;随后 force 重拉自动汇率。
   final repo = ref.read(repositoryProvider);
-  final overrides = await repo.getOverrides(next);
-  if (!context.mounted) return;
-  if (overrides.isNotEmpty) {
-    showToast(context, l10n.rateManualApplied(overrides.length));
+  _applyBaseCurrencyBusy = true;
+  try {
+    final overrides = await repo.getOverrides(next);
+    if (!context.mounted) return;
+    if (overrides.isNotEmpty) {
+      showToast(context, l10n.rateManualApplied(overrides.length));
+    }
+    await refreshExchangeRatesFromUi(ref, force: true);
+  } finally {
+    _applyBaseCurrencyBusy = false;
   }
-  await refreshExchangeRatesFromUi(ref, force: true);
 }
