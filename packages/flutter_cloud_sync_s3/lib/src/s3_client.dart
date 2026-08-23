@@ -41,6 +41,9 @@ class S3Client {
   late final S3SignatureV4 _signer;
   late final http.Client _httpClient;
 
+  /// 审计 S22 测试口：暴露签名器以断言时钟偏移写入。
+  S3SignatureV4 get signerForTest => _signer;
+
   /// HTTP 请求超时时间（M-02 修复）
   ///
   /// 所有 S3 API 请求（put/get/delete/head/list）均受此限制，
@@ -99,6 +102,13 @@ class S3Client {
     while (true) {
       try {
         return await operation();
+      } on S3ClockSkewException {
+        // 审计 S22：时钟偏差——_handleError 已按服务器时间写入签名偏移，
+        // 立即用新偏移重试一次（不消耗常规重试次数预算）。
+        await Future.delayed(const Duration(milliseconds: 200));
+        // 继续下一轮；若偏差持续，后续 skew 异常走 maxRetries 上限
+        attempt++;
+        if (attempt >= maxRetries) rethrow;
       } on S3NetworkException {
         // 网络瞬时故障（SocketException/Timeout）可安全重试
         attempt++;
@@ -711,6 +721,31 @@ class S3Client {
     }
 
     final message = errorMessage ?? _sanitizeHtmlBody(body);
+
+    // 审计 S22：时钟偏差检测。AWS 默认容忍 ±15min，超窗后所有请求
+    // 403 RequestTimeTooSkewed——旧逻辑误报成「权限不足」且不重试，
+    // 同步彻底瘫痪。此处解析服务器时间写入签名偏移并抛专属异常，
+    // _retry 捕获后用新偏移立即重试一次。
+    if (errorCode == 'RequestTimeTooSkewed') {
+      DateTime? serverTime;
+      try {
+        final dateHeader = response.headers['date'];
+        if (dateHeader != null) {
+          serverTime = HttpDate.parse(dateHeader).toUtc();
+        }
+      } catch (_) {
+        // Date 头缺失或格式异常，无法自动补偿
+      }
+      if (serverTime != null) {
+        _signer.clockOffset = serverTime.difference(DateTime.now().toUtc());
+      }
+      throw S3ClockSkewException(
+        '设备时钟与服务器偏差过大，已尝试校准（服务器时间: '
+        '${serverTime?.toIso8601String() ?? '未知'}）。'
+        '若持续失败请校准系统时间后重试',
+        serverTime: serverTime,
+      );
+    }
 
     if (statusCode == 403) {
       if (errorCode == 'InvalidAccessKeyId' || errorCode == 'SignatureDoesNotMatch') {

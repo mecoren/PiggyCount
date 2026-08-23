@@ -86,6 +86,16 @@ class WebDAVProvider implements CloudProvider {
         debug: false,
       );
 
+      // 审计 S23：禁用自动重定向。dart:io 对 301/302/303 会把 PUT/MOVE/
+      // DELETE 改写成 GET 并丢弃 body——「上传成功」假象但什么都没写；
+      // 且 Basic Auth 凭据会原样重放到重定向目标，https→http 302 即可
+      // 让凭据明文过网，绕开上面的 HTTPS 强制。改为显式拒绝 3xx，
+      // 引导用户直接填写最终地址。
+      _client!.c.options.followRedirects = false;
+      _client!.c.options.maxRedirects = 0;
+      _client!.c.options.validateStatus = (status) =>
+          status == null || status < 300; // 3xx 一律进异常分支
+
       // Verify connection by reading the remote path
       try {
         // P3：60s 超时防服务器无响应导致初始化永久挂起
@@ -96,7 +106,11 @@ class WebDAVProvider implements CloudProvider {
       } catch (e) {
         // 仅在 404（远端路径不存在）时触发创建；其他错误（网络中断、
         // 403 权限不足等）直接抛出，避免掩盖真实问题导致误导性的 mkdir。
-        if (_isNotFound(e)) {
+        if (_isRedirect(e)) {
+          throw CloudConfigurationException(
+              'WebDAV 服务器返回了重定向（3xx）。请直接填写重定向后的最终地址，'
+              '避免凭据被转发到第三方域名');
+        } else if (_isNotFound(e)) {
           await _client!.mkdir(remotePath).timeout(
               const Duration(seconds: 60),
               onTimeout: () => throw CloudStorageException(
@@ -193,5 +207,28 @@ class WebDAVProvider implements CloudProvider {
         msg.contains('403') ||
         msg.contains('unauthorized') ||
         msg.contains('forbidden');
+  }
+
+  /// 审计 S23：识别重定向（3xx）。followRedirects=false 后 dio 会把
+  /// 3xx 响应按异常抛出（validateStatus 拦截），此处统一判定。
+  bool _isRedirect(Object e) {
+    try {
+      final dynamic dyn = e;
+      final dynamic response = dyn.response;
+      if (response != null) {
+        final code = response.statusCode as int?;
+        if (code != null && code >= 300 && code < 400) {
+          return true;
+        }
+      }
+    } catch (_) {
+      // 非 dio 异常类型
+    }
+    final msg = e.toString().toLowerCase();
+    return msg.contains('302 found') ||
+        msg.contains('301 moved') ||
+        msg.contains('307 temporary') ||
+        msg.contains('308 permanent') ||
+        msg.contains('redirect');
   }
 }

@@ -12,6 +12,10 @@ class S3SignatureV4 {
   final String region;
   final String service;
 
+  /// 审计 S22：时钟偏差补偿。收到 RequestTimeTooSkewed 后由 client
+  /// 按「服务器时间 − 本地时间」写入，签名取 now + offset。
+  Duration clockOffset = Duration.zero;
+
   S3SignatureV4({
     required this.accessKey,
     required this.secretKey,
@@ -33,7 +37,9 @@ class S3SignatureV4 {
     required Map<String, String> headers,
     List<int>? payloadBytes,
   }) {
-    final now = DateTime.now().toUtc();
+    // 审计 S22：叠加时钟偏差补偿，设备时钟不准时仍可产出服务端
+    // 容忍窗口（±15min）内的签名时间。
+    final now = DateTime.now().toUtc().add(clockOffset);
     final dateStamp = _formatDateStamp(now);
     final amzDate = _formatAmzDate(now);
 

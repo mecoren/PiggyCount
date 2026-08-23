@@ -52,3 +52,16 @@ class S3PermissionDeniedException extends S3Exception {
   S3PermissionDeniedException(String message, {Exception? originalException})
       : super(message, statusCode: 403, originalException: originalException);
 }
+
+/// 审计 S22：设备时钟与服务端偏差过大（RequestTimeTooSkewed）。
+///
+/// 客户端已按响应携带的服务器时间自动写入签名偏移补偿并重试；
+/// 若本异常仍抛出，说明偏差持续存在或无法解析服务器时间，
+/// UI 应提示用户校准系统时间。
+class S3ClockSkewException extends S3Exception {
+  /// 服务器时间（若可解析，UTC）
+  final DateTime? serverTime;
+
+  S3ClockSkewException(String message, {this.serverTime})
+      : super(message, statusCode: 403);
+}
