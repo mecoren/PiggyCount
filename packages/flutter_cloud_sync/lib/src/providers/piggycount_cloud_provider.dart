@@ -1197,6 +1197,25 @@ class PiggyCountCloudAuthService implements CloudAuthService {
     _silentRecoveryCooldownUntil = null;
   }
 
+  /// 审计 S8 观测口：当前恢复凭证邮箱。
+  @visibleForTesting
+  String? get debugRecoveryEmail => _recoveryEmail;
+
+  /// 审计 S8 观测口：是否仍有可用于静默重登的密码。
+  @visibleForTesting
+  bool get debugSilentRecoveryArmed => _recoveryPassword != null;
+
+  /// 清空恢复凭证与冷却/在途状态。signOut 必须调用：
+  /// 否则共享设备上「退出登录」会被下一次 currentUser()/requireAccessToken
+  /// 的 _tryRecoveryLogin 静默复活（审计 S8）。
+  @visibleForTesting
+  void clearRecoveryCredentials() {
+    _recoveryEmail = null;
+    _recoveryPassword = null;
+    _silentRecoveryCooldownUntil = null;
+    _recoveryInFlight = null;
+  }
+
   String get _sessionStorageKey {
     final raw = '$baseUrl|$apiPrefix';
     final digest = sha1.convert(utf8.encode(raw)).toString();
@@ -1658,6 +1677,7 @@ class PiggyCountCloudAuthService implements CloudAuthService {
   Future<void> signOut() async {
     final session = _session;
     if (session == null) {
+      clearRecoveryCredentials(); // 审计 S8：无会话也清残留恢复凭证
       return;
     }
 
@@ -1672,6 +1692,7 @@ class PiggyCountCloudAuthService implements CloudAuthService {
       // Ignore network/logout errors and clear local session directly.
     } finally {
       await _clearSession();
+      clearRecoveryCredentials(); // 审计 S8
     }
   }
 
