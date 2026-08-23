@@ -27,6 +27,7 @@ import 'cloud/startup_sync_checker.dart';
 import 'cloud/startup_sync_overlay.dart';
 import 'cloud/backup/backup_scheduler.dart';
 import 'cloud/backup/cloud_backup_providers.dart';
+import 'cloud/sync_restore_guard.dart';
 import 'providers/sync_providers.dart' as sp;
 import 'utils/voice_billing_helper.dart';
 import 'utils/image_billing_helper.dart';
@@ -189,6 +190,12 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
   /// 成败均写 auto key（当日不重试，失败状态显示在卡片供手动补救）。
   /// 云服务未就绪（LocalOnly 等待期等）不写 key，下一分钟重查。
   Future<void> _runScheduledBackupCheck() async {
+    // 审计 S6：启动恢复/全量同步进行中时本轮备份让位——半恢复态 DB
+    // 打包上传会覆盖当日好备份。下一分钟重查。
+    if (SyncRestoreGuard.isBusy) {
+      logger.info('Backup', '恢复进行中，本轮定时备份跳过');
+      return;
+    }
     try {
       final prefs = await SharedPreferences.getInstance();
       if (!(prefs.getBool('backup_auto_enabled') ?? false)) return;
@@ -254,11 +261,13 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
     final overlay = Overlay.of(context, rootOverlay: true);
     controller.attach(overlay);
 
-    // 运行检查
-    await StartupSyncChecker(
-      deps: WidgetRefDeps(ref, syncService, context),
-      controller: controller,
-    ).runIfNeeded();
+    // 运行检查（审计 S6：恢复临界区内定时备份让位，避免打包半恢复态 DB）
+    await SyncRestoreGuard.run(
+      () => StartupSyncChecker(
+        deps: WidgetRefDeps(ref, syncService, context),
+        controller: controller,
+      ).runIfNeeded(),
+    );
   }
 
   /// 设置快捷操作
