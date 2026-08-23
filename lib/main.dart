@@ -201,7 +201,13 @@ class _WidgetUpdateObserver extends ProviderObserver {
     }
   }
 
+  /// 审计 U4：桌面小组件渲染的代际守卫。
+  /// 快速连切 A→B 时两次渲染并发，慢的旧任务后完成会把 A 的数据写到
+  /// 桌面。每次触发递增 generation，await 返回后落后者放弃写入。
+  int _widgetRenderGeneration = 0;
+
   void _updateWidgetOnStart(ProviderContainer container) async {
+    final myGeneration = ++_widgetRenderGeneration;
     try {
       // 先等主币种从 prefs 恢复完成再取值:本回调由 currentLedgerIdProvider
       // 首次赋值触发,与 baseCurrencyInitProvider 的异步恢复是并行的两条链,
@@ -216,6 +222,12 @@ class _WidgetUpdateObserver extends ProviderObserver {
       // 没有 BuildContext,靠 languageProvider 还原当前 App 语言(见
       // widget_manager.dart resolveWidgetLocalizations 文档)。
       final locale = container.read(languageProvider);
+
+      if (myGeneration != _widgetRenderGeneration) {
+        logger.info('App',
+            '小组件渲染已有更新触发（generation=$myGeneration < $_widgetRenderGeneration），跳过过期写入');
+        return;
+      }
 
       final widgetManager = WidgetManager();
       await widgetManager.updateAllWidgetsLocalized(

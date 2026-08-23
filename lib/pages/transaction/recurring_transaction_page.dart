@@ -9,6 +9,7 @@ import '../../widgets/biz/section_card.dart';
 import '../../data/db.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/data/recurring_transaction_service.dart';
+import '../../services/system/logger_service.dart';
 import '../../utils/category_utils.dart';
 import '../../styles/tokens.dart';
 import 'recurring_transaction_edit_page.dart';
@@ -297,23 +298,27 @@ class _RecurringTransactionCard extends ConsumerWidget {
                     PiggySwitcher(
                       value: recurring.enabled,
                       onChanged: (value) async {
-                        print(
-                            '🔧 [周期记账] 开关点击: id=${recurring.id}, newValue=$value, repo类型=${repo.runtimeType}');
-
                         try {
                           await repo.toggleRecurringTransaction(
                               recurring.id, value);
-                          print('✅ [周期记账] toggleRecurringTransaction 完成');
 
                           // 给Realtime一点时间触发更新
                           await Future.delayed(
                               const Duration(milliseconds: 100));
 
                           ref.invalidate(allRecurringTransactionsProvider);
-                          print('✅ [周期记账] Provider已invalidate');
                         } catch (e, stackTrace) {
-                          print('❌ [周期记账] 切换失败: $e');
-                          print('堆栈: $stackTrace');
+                          logger.warning(
+                              'RecurringPage', '切换周期记账失败: $e', stackTrace);
+                          // 审计 U5：失败必须回滚开关并提示，否则 UI 呈现
+                          // 「已开启/关闭」而 DB 实际未变（假成功）
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content: Text(
+                                      '${AppLocalizations.of(context)!.commonFailed}: $e')),
+                            );
+                          }
                         }
                       },
                     ),

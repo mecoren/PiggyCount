@@ -637,7 +637,18 @@ class TransactionListState extends ConsumerState<TransactionList> {
       },
       onDismissed: (direction) async {
         final repo = ref.read(repositoryProvider);
-        await repo.deleteTransaction(it.t.id);
+        try {
+          await repo.deleteTransaction(it.t.id);
+        } catch (e) {
+          // 审计 U5：Dismissible 已把行从视觉上移除，删除失败必须显式
+          // 提示，否则是「行消失但数据还在」的静默失败
+          logger.error('TransactionList', '删除交易失败 id=${it.t.id}', e);
+          if (context.mounted) {
+            showToast(context,
+                '${AppLocalizations.of(context).commonFailed}: $e');
+          }
+          return;
+        }
 
         if (!context.mounted) return;
         final curLedger = ref.read(currentLedgerIdProvider);
