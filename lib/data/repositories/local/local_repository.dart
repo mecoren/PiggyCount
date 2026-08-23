@@ -167,11 +167,55 @@ class LocalRepository extends BaseRepository {
       final budgets = await (db.select(db.budgets)
             ..where((b) => b.ledgerId.equals(id)))
           .get();
+      // 审计 S9：收集账本维度实体的 syncId，删行后同步清理水位表，
+      // 防止被删实体 syncId 的水位行永久累积。
+      final accounts = await (db.select(db.accounts)
+            ..where((a) => a.ledgerId.equals(id)))
+          .get();
+      final recurrings = await (db.select(db.recurringTransactions)
+            ..where((r) => r.ledgerId.equals(id)))
+          .get();
+
+      // 审计 S9：底层 deleteLedger 只清 transactions+ledgers 两表
+      // （db.dart 无外键级联，注释里的"级联"并不存在）——
+      // transaction_tags / transaction_attachments 残留孤儿行，照
+      // clearLedgerTransactions 的口径在此一并清理。
+      final txIds = txs.map((t) => t.id).toList();
+      if (txIds.isNotEmpty) {
+        await (db.delete(db.transactionTags)
+              ..where((tt) => tt.transactionId.isIn(txIds)))
+            .go();
+        await (db.delete(db.transactionAttachments)
+              ..where((ta) => ta.transactionId.isIn(txIds)))
+            .go();
+      }
 
       await _ledgerRepo.deleteLedger(id);
       // 顺便把残留的 budgets 一起清,见上面注释。
       if (budgets.isNotEmpty) {
         await (db.delete(db.budgets)..where((b) => b.ledgerId.equals(id)))
+            .go();
+      }
+
+      // 审计 S9：被删账本的 pull 错误记录悬挂（UI 会持续显示已不存在
+      // 账本的同步错误），按 external_id 清理。
+      await (db.delete(db.syncPullErrors)
+            ..where((e) => e.ledgerExternalId.equals(ledgerSyncId)))
+          .go();
+
+      // 审计 S9：实体水位按本轮删除的实体 syncId 清理（账本自身 +
+      // txs + budgets + accounts + recurrings；categories/tags 是用户
+      // 级实体不随账本删）。
+      final watermarkSyncIds = <String>[
+        ledgerSyncId,
+        ...txs.map((t) => t.syncId).whereType<String>(),
+        ...budgets.map((b) => b.syncId).whereType<String>(),
+        ...accounts.map((a) => a.syncId).whereType<String>(),
+        ...recurrings.map((r) => r.syncId).whereType<String>(),
+      ];
+      if (watermarkSyncIds.isNotEmpty) {
+        await (db.delete(db.entityChangeWatermarks)
+              ..where((w) => w.syncId.isIn(watermarkSyncIds)))
             .go();
       }
 

@@ -597,9 +597,36 @@ extension SyncEngineRealtime on SyncEngine {
   Future<void> _purgeLocalLedgerByExternalId(String ledgerExternalId) async {
     final localId = await _resolveLedgerIdBySyncId(ledgerExternalId);
     if (localId == null) return;
-    // tx + tags + attachments 走级联;ledgers 行本身删
+    // 审计 S9：db.dart 无外键级联，"tx + tags + attachments 走级联"的
+    // 旧注释不成立——tags/attachments/budgets 同样残留，显式清理。
+    final txs = await (db.select(db.transactions)
+          ..where((t) => t.ledgerId.equals(localId)))
+        .get();
+    final txIds = txs.map((t) => t.id).toList();
+    if (txIds.isNotEmpty) {
+      await (db.delete(db.transactionTags)
+            ..where((tt) => tt.transactionId.isIn(txIds)))
+          .go();
+      await (db.delete(db.transactionAttachments)
+            ..where((ta) => ta.transactionId.isIn(txIds)))
+          .go();
+    }
+    await (db.delete(db.budgets)..where((b) => b.ledgerId.equals(localId))).go();
     await (db.delete(db.transactions)..where((t) => t.ledgerId.equals(localId))).go();
     await (db.delete(db.ledgers)..where((l) => l.id.equals(localId))).go();
+    // 审计 S9：同步辅助表同步清理，防孤儿行累积/悬挂错误横幅。
+    await (db.delete(db.syncPullErrors)
+          ..where((e) => e.ledgerExternalId.equals(ledgerExternalId)))
+        .go();
+    final watermarkSyncIds = <String>[
+      ledgerExternalId,
+      ...txs.map((t) => t.syncId).whereType<String>(),
+    ];
+    if (watermarkSyncIds.isNotEmpty) {
+      await (db.delete(db.entityChangeWatermarks)
+            ..where((w) => w.syncId.isIn(watermarkSyncIds)))
+          .go();
+    }
     // SharedLedger* 镜像
     await (db.delete(db.ledgerMembers)
           ..where((t) => t.ledgerSyncId.equals(ledgerExternalId)))
