@@ -537,6 +537,16 @@ class StartupSyncChecker {
     return await deps.getAllLedgers();
   }
 
+  /// 阶段 2 回传守卫（致命 S1）：预览存在「用户未勾选的云端删除」时，
+  /// 本地仍保留这些已删交易；照常 merge-then-publish 会把它们随快照推回
+  /// 云端并传播到所有设备。代价必须是「本轮指纹不收敛」，而非复活数据。
+  @visibleForTesting
+  static bool shouldSkipMergePublish({
+    required bool previewExists,
+    required int unselectedDeletedCount,
+  }) =>
+      previewExists && unselectedDeletedCount > 0;
+
   /// 合并后回传（merge-then-publish）：上传合并结果收敛本地/云端指纹。
   ///
   /// 只下载合并不回传时，指纹永不收敛，下次启动仍判 cloudNewer
@@ -600,8 +610,10 @@ class StartupSyncChecker {
     var uploadFailCount = 0;
     // 密钥恢复失败只弹一次提示，避免多个账本失败时连续弹窗
     var recoveryFailedNotified = false;
-    // 阶段 1 产出：合并成功的账本（id + name），供阶段 2 统一回传
-    final merged = <LedgerCandidate>[];
+    // 阶段 1 产出：合并成功的账本（id + name），供阶段 2 统一回传。
+    // 致命 S1：skipPublish 标记该账本存在用户未勾选的云端删除，
+    // 阶段 2 必须跳过回传以防已删交易随快照复活传播。
+    final merged = <({LedgerCandidate cand, bool skipPublish})>[];
 
     // ---------- 阶段 1：逐账本下载 + 合并（只写本地） ----------
     for (final c in candidates) {
@@ -628,7 +640,7 @@ class StartupSyncChecker {
               .downloadAndRestoreToCurrentLedger(ledgerId: c.ledger.id)
               .timeout(_applyTimeout);
           deps.runAfterDownload();
-          merged.add(c);
+          merged.add((cand: c, skipPublish: false));
           successCount++;
           deps.log('StartupSyncChecker: 账本 ${c.ledger.name} 全量替换完成');
           applied++;
@@ -649,7 +661,7 @@ class StartupSyncChecker {
               )
               .timeout(_applyTimeout);
           deps.runAfterDownload();
-          merged.add(c);
+          merged.add((cand: c, skipPublish: false));
           successCount++;
           applied++;
           deps.log('StartupSyncChecker: 账本 ${c.ledger.name} preview 为空，'
@@ -674,7 +686,15 @@ class StartupSyncChecker {
             .timeout(_applyTimeout);
         totalChanges += result.totalCount;
         deps.runAfterDownload();
-        merged.add(c);
+        final unselectedDeleted = preview.changes
+            .where((ch) =>
+                ch.type == SyncChangeType.deleted && !ch.selected)
+            .length;
+        merged.add((
+          cand: c,
+          skipPublish: StartupSyncChecker.shouldSkipMergePublish(
+              previewExists: true, unselectedDeletedCount: unselectedDeleted),
+        ));
         successCount++;
         applied++;
       } on SaltMismatchException {
@@ -721,14 +741,19 @@ class StartupSyncChecker {
     // ---------- 阶段 2：统一回传所有合并成功的账本 ----------
     // 此时用户全局数据已是最终态，每个回传快照都包含同一份全局数据，
     // 指纹一轮收敛
-    for (final c in merged) {
-      controller.updateApplyingProgress(
-        applied,
-        candidates.length * 2,
-        c.ledger.name,
-        totalChanges,
-      );
-      if (!await _publishAfterMerge(c.ledger.id, c.ledger.name)) {
+    var publishSkippedCount = 0;
+    for (final entry in merged) {
+      controller.updateApplyingProgress(applied, candidates.length * 2,
+          entry.cand.ledger.name, totalChanges);
+      if (entry.skipPublish) {
+        publishSkippedCount++;
+        deps.log('StartupSyncChecker: 账本 ${entry.cand.ledger.name} 存在未应用的'
+            '云端删除，本轮跳过回传以防删除复活（下次启动将再次提示）');
+        applied++;
+        continue;
+      }
+      if (!await _publishAfterMerge(
+          entry.cand.ledger.id, entry.cand.ledger.name)) {
         uploadFailCount++;
       }
       applied++;
@@ -738,16 +763,20 @@ class StartupSyncChecker {
     final uploadFailHint = uploadFailCount > 0
         ? '；$uploadFailCount 个账本回传云端失败，下次启动可能再次提示'
         : '';
+    final publishSkippedHint = publishSkippedCount > 0
+        ? '；$publishSkippedCount 个账本存在你未勾选的云端删除，已跳过回传'
+            '（这些删除本轮不会生效，如需删除请到云同步页手动处理）'
+        : '';
     if (failCount == 0) {
       controller.done('已合并 $successCount 个账本'
           '${totalChanges > 0 ? '，共 $totalChanges 条变更' : ''}'
-          '$uploadFailHint');
+          '$uploadFailHint$publishSkippedHint');
     } else if (successCount == 0) {
       controller.error('全部 $failCount 个账本合并失败');
     } else {
       controller.done('已合并 $successCount 个账本，$failCount 个失败'
           '${totalChanges > 0 ? '，共 $totalChanges 条变更' : ''}'
-          '$uploadFailHint');
+          '$uploadFailHint$publishSkippedHint');
     }
     return true;
   }
