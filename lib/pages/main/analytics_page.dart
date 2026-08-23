@@ -34,6 +34,9 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
   // 周报选中的周（该周周一），独立于首页月份状态，避免污染首页
   DateTime _selWeek = weekLabelFor(DateTime.now());
 
+  /// 审计 U8：FutureBuilder future 缓存（key: type|start|end|refreshTick）
+  final Map<String, Future<List<dynamic>>> _analyticsFutureCache = {};
+
   // 显示周期选择器
   void _showPeriodPicker() async {
     final selMonth = ref.read(selectedMonthProvider);
@@ -392,8 +395,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
     final ledgerId = ref.watch(currentLedgerIdProvider);
     final selMonth = ref.watch(selectedMonthProvider);
     // 统计刷新 tick：当有新增/编辑/删除时我们会 +1，这里监听以触发重建和重新拉取
-    ref.watch(statsRefreshProvider);
-
+    final refreshTick = ref.watch(statsRefreshProvider);
     // 时间范围
     late DateTime start;
     late DateTime end;
@@ -735,20 +737,27 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
           Expanded(
             child: FutureBuilder(
               key: ValueKey('analytics_$_type'),
-              future: _type == 'balance'
-                  ? _loadBalanceData(
-                      repo,
-                      ledgerId,
-                      start,
-                      end,
-                      seriesFuture,
-                      incomeSeriesFuture!,
-                      expenseSeriesFuture!,
-                      prevStart,
-                      prevEnd,
-                      chartSeriesFuture)
-                  : _loadCategoryData(repo, ledgerId, _type, start, end,
-                      seriesFuture, prevStart, prevEnd, chartSeriesFuture),
+              // 审计 U8：缓存 future——任意 setState（横幅交互等）重建时
+              // 复用已发查询，不再整段重发导致闪烁；数据变化（refreshTick）
+              // 或时间范围/类型变化才发起新查询。
+              future: _analyticsFutureCache.putIfAbsent(
+                '$_type|${start.millisecondsSinceEpoch}|'
+                '${end.millisecondsSinceEpoch}|$refreshTick',
+                () => _type == 'balance'
+                    ? _loadBalanceData(
+                        repo,
+                        ledgerId,
+                        start,
+                        end,
+                        seriesFuture,
+                        incomeSeriesFuture!,
+                        expenseSeriesFuture!,
+                        prevStart,
+                        prevEnd,
+                        chartSeriesFuture)
+                    : _loadCategoryData(repo, ledgerId, _type, start, end,
+                        seriesFuture, prevStart, prevEnd, chartSeriesFuture),
+              ),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());

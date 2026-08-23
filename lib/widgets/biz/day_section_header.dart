@@ -67,21 +67,36 @@ class DaySectionHeader extends ConsumerWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(children: [
-            Text(dateText, style: dateLabelStyle),
-            if (week.isNotEmpty) ...[
-              const SizedBox(width: 8),
-              Text(week, style: dateLabelStyle),
-            ]
-          ]),
-          Row(children: [
-            if (shouldHide == false && fmt(expense).isNotEmpty)
-              Text('${l10n.homeExpense} ${fmt(expense)}', style: labelStyle),
-            if (shouldHide == false && fmt(income).isNotEmpty)
-              const SizedBox(width: 12),
-            if (shouldHide == false && fmt(income).isNotEmpty)
-              Text('${l10n.homeIncome} ${fmt(income)}', style: labelStyle),
-          ])
+          // 审计 U9：两侧均无弹性约束，大字号/小屏必溢出——左段 Flexible+省略
+          Expanded(
+            child: Row(children: [
+              Flexible(
+                  child: Text(dateText,
+                      style: dateLabelStyle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis)),
+              if (week.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Flexible(
+                    child: Text(week,
+                        style: dateLabelStyle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis)),
+              ]
+            ]),
+          ),
+          // 右段（支出·收入）不参与换行，用 FittedBox 整体缩放兜底
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(children: [
+              if (shouldHide == false && fmt(expense).isNotEmpty)
+                Text('${l10n.homeExpense} ${fmt(expense)}', style: labelStyle),
+              if (shouldHide == false && fmt(income).isNotEmpty)
+                const SizedBox(width: 12),
+              if (shouldHide == false && fmt(income).isNotEmpty)
+                Text('${l10n.homeIncome} ${fmt(income)}', style: labelStyle),
+            ]),
+          ),
         ],
       ),
     );

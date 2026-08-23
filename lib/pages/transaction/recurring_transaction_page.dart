@@ -197,19 +197,26 @@ class _RecurringTransactionCard extends ConsumerWidget {
                             ),
                       const SizedBox(height: 6),
                       // 第二行：账本 + 频率 + 时间
+                      // 审计 U10：各子项无约束，长账本名/频率文案在窄屏溢出
                       Row(
                         children: [
                           // 账本
-                          FutureBuilder<Ledger?>(
-                            future: _getLedger(ref, recurring.ledgerId),
-                            builder: (context, snapshot) {
-                              final ledgerName = snapshot.data?.name ?? '';
-                              return Text(
-                                ledgerName,
-                                style: PiggyTextTokens.label(context).copyWith(
-                                    color: PiggyTokens.textTertiary(context)),
-                              );
-                            },
+                          Flexible(
+                            child: FutureBuilder<Ledger?>(
+                              future: _getLedger(ref, recurring.ledgerId),
+                              builder: (context, snapshot) {
+                                final ledgerName = snapshot.data?.name ?? '';
+                                return Text(
+                                  ledgerName,
+                                  style: PiggyTextTokens.label(context)
+                                      .copyWith(
+                                          color:
+                                              PiggyTokens.textTertiary(context)),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                );
+                              },
+                            ),
                           ),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -220,10 +227,14 @@ class _RecurringTransactionCard extends ConsumerWidget {
                             ),
                           ),
                           // 频率
-                          Text(
-                            _getFrequencyDescription(context),
-                            style: PiggyTextTokens.label(context).copyWith(
-                                color: PiggyTokens.textTertiary(context)),
+                          Flexible(
+                            child: Text(
+                              _getFrequencyDescription(context),
+                              style: PiggyTextTokens.label(context).copyWith(
+                                  color: PiggyTokens.textTertiary(context)),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                           // 下次生成时间（如果有）
                           if (recurring.lastGeneratedDate != null) ...[
