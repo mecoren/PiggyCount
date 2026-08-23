@@ -142,22 +142,67 @@ class SupabaseRealtimeChannel implements RealtimeChannel {
     }
   }
 
-  /// 解析 "column=value" 格式的等值过滤器（P-M9）。
-  /// 使用 indexOf 切分并校验，避免 split('=') 在缺少 '=' 或值为空时
-  /// 静默产生错误结果。
+  /// 解析 "column=value" / "column=op.value" 格式的过滤器。
+  ///
+  /// 审计 S20：manager（database_sync_manager.dart）生成的是 PostgREST
+  /// 线格式（如 `ledger_id=eq.123`、`status=in.(a,b)`），旧实现把首个 `=`
+  /// 之后整体当值——`eq.` 前缀被并入值导致过滤器永不命中，realtime
+  /// 订阅静默失效。此处正确解析操作符并映射到 SDK 枚举：
+  /// - 无操作符前缀 → 按 eq 处理（向后兼容旧调用方）
+  /// - 支持 eq/neq/lt/lte/gt/gte/like/ilike
+  /// - 多条件（逗号拼接）与 in/is 等复合值显式拒绝——本包装的
+  ///   onPostgresChanges 每次注册只接受单个过滤器对象，
+  ///   静默丢弃条件比快速失败更危险
   supabase.PostgresChangeFilter _parseEqFilter(String filter) {
     final eqIdx = filter.indexOf('=');
     if (eqIdx <= 0 || eqIdx == filter.length - 1) {
       throw ArgumentError(
-        'Invalid realtime filter "$filter", expected "column=value"',
+        'Invalid realtime filter "$filter", '
+        'expected "column=value" or "column=op.value"',
       );
     }
-    final column = filter.substring(0, eqIdx);
-    final value = filter.substring(eqIdx + 1);
+    final column = filter.substring(0, eqIdx).trim();
+    var rest = filter.substring(eqIdx + 1).trim();
+
+    if (rest.contains(',')) {
+      throw ArgumentError(
+        'Multi-condition realtime filter "$filter" is not supported by this '
+        'wrapper; register one filter per condition instead',
+      );
+    }
+
+    const operators = <String, supabase.PostgresChangeFilterType>{
+      'eq': supabase.PostgresChangeFilterType.eq,
+      'neq': supabase.PostgresChangeFilterType.neq,
+      'lt': supabase.PostgresChangeFilterType.lt,
+      'lte': supabase.PostgresChangeFilterType.lte,
+      'gt': supabase.PostgresChangeFilterType.gt,
+      'gte': supabase.PostgresChangeFilterType.gte,
+      'like': supabase.PostgresChangeFilterType.like,
+      'ilike': supabase.PostgresChangeFilterType.ilike,
+    };
+
+    var type = supabase.PostgresChangeFilterType.eq;
+    final dot = rest.indexOf('.');
+    if (dot > 0) {
+      final head = rest.substring(0, dot);
+      final mapped = operators[head];
+      if (mapped != null) {
+        type = mapped;
+        rest = rest.substring(dot + 1);
+      }
+    }
+
+    // 剥掉外层引号（manager 对保留字符值会生成 col=eq."abc"）；
+    // SDK 序列化时按需自行加引号，这里不剥会双重引用导致不匹配。
+    if (rest.length >= 2 && rest.startsWith('"') && rest.endsWith('"')) {
+      rest = rest.substring(1, rest.length - 1);
+    }
+
     return supabase.PostgresChangeFilter(
-      type: supabase.PostgresChangeFilterType.eq,
+      type: type,
       column: column,
-      value: value,
+      value: rest,
     );
   }
 }

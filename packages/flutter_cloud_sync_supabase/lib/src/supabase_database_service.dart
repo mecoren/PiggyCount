@@ -44,9 +44,10 @@ class SupabaseDatabaseService implements CloudDatabaseService {
         throw CloudNotAuthenticatedException('User not authenticated');
       }
 
-      // 自动注入 user_id
+      // 自动注入 user_id（审计 S20：强制覆盖而非仅补缺——
+      // 调用方自带伪造 user_id 可把记录写到他人名下）
       final insertData = Map<String, dynamic>.from(data);
-      if (autoInjectUserId && !insertData.containsKey('user_id')) {
+      if (autoInjectUserId) {
         insertData['user_id'] = user.id;
       }
 
@@ -207,11 +208,13 @@ class SupabaseDatabaseService implements CloudDatabaseService {
         throw CloudNotAuthenticatedException('User not authenticated');
       }
 
-      // Get single record
+      // 审计 S20：与 update/delete/query 一致补上 user_id 过滤——
+      // getById 是唯一无过滤的读路径，服务端 RLS 缺失时可跨用户读取。
       final response = await _client
           .from(table)
           .select()
           .eq('id', id)
+          .eq('user_id', user.id)
           .maybeSingle();
 
       return response;
@@ -249,15 +252,13 @@ class SupabaseDatabaseService implements CloudDatabaseService {
         throw CloudNotAuthenticatedException('User not authenticated');
       }
 
-      // 自动注入 user_id（复用 insert 的注入逻辑，P-M2）
+      // 自动注入 user_id（复用 insert 的注入逻辑，P-M2；审计 S20：强制覆盖）
       final payload = autoInjectUserId
-          ? data
-              .map((r) {
-                final c = Map<String, dynamic>.from(r);
-                if (!c.containsKey('user_id')) c['user_id'] = user.id;
-                return c;
-              })
-              .toList()
+          ? data.map((r) {
+              final c = Map<String, dynamic>.from(r);
+              c['user_id'] = user.id;
+              return c;
+            }).toList()
           : data;
 
       // Batch insert

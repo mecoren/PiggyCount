@@ -86,21 +86,20 @@ class SupabaseProvider implements CloudProvider {
     _pathPrefix = config['pathPrefix'] as String?;
 
     try {
-      // Check if Supabase is already initialized with the same config
+      // 审计 S21：Supabase SDK 是进程级单例，initialize 不支持原地换
+      // url/anonKey。旧实现配置变更时仅 signOut 旧 client 再靠异常字符串
+      // 匹配兜底——兜底后拿到的仍是旧项目 client，数据会静默写错后端；
+      // 且异常文案随 SDK 版本变化，匹配失败直接抛错。改为显式 dispose
+      // 整个实例（内部会重置 SDK 初始化标志），再干净地重新 initialize。
       final configChanged = _currentUrl != url || _currentAnonKey != anonKey;
 
       if (_isInitialized && configChanged) {
-        // Configuration changed, need to sign out and reinitialize
-        try {
-          await supabase.Supabase.instance.client.auth.signOut();
-        } catch (_) {
-          // Ignore signout errors
-        }
+        await supabase.Supabase.instance.dispose();
         _isInitialized = false;
       }
 
       if (!_isInitialized) {
-        // Initialize Supabase client (only once per configuration)
+        // Initialize Supabase client
         await supabase.Supabase.initialize(
           url: url,
           anonKey: anonKey,
@@ -121,17 +120,18 @@ class SupabaseProvider implements CloudProvider {
       _databaseService = SupabaseDatabaseService(_client!);
       _realtimeService = SupabaseRealtimeService(_client!);
     } catch (e) {
-      // If initialization fails due to already initialized, try to use existing instance
-      if (e.toString().contains('already initialized') ||
-          e.toString().contains('LateInitializationError')) {
+      // 同配置重复 initialize（SDK 抛 already initialized）→ 复用现有实例。
+      // 注意：仅在「配置未变」时才允许兜底，防止静默错连旧项目（审计 S21）。
+      final sameConfig = _currentUrl == url && _currentAnonKey == anonKey;
+      if (sameConfig &&
+          (e.toString().contains('already initialized') ||
+              e.toString().contains('LateInitializationError'))) {
         _client = supabase.Supabase.instance.client;
         _authService = SupabaseAuthService(_client!);
         _storageService = SupabaseStorageService(_client!, _bucketName, _pathPrefix);
         _databaseService = SupabaseDatabaseService(_client!);
         _realtimeService = SupabaseRealtimeService(_client!);
         _isInitialized = true;
-        _currentUrl = url;
-        _currentAnonKey = anonKey;
       } else {
         throw CloudConfigurationException(
             'Failed to initialize Supabase: $e', e);
