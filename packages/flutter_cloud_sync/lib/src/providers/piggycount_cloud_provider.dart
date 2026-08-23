@@ -77,6 +77,17 @@ class PiggyCountCloudProvider implements CloudProvider {
   /// 没注册 handler,signInWithEmail 会抛 [CloudAuthException]。
   static TwoFactorChallengeHandler? globalTwoFactorHandler;
 
+  /// 审计 S16：仅「确定性认证失效」才应清空会话。
+  /// 网络瞬断/超时/5xx 清会话会导致离线用户被反复登出；
+  /// refresh_token 确定性作废（401/403）才需要登出重认证。
+  @visibleForTesting
+  static bool shouldClearSessionOnRefreshError(Object error) {
+    if (error is CloudAuthException) return true;
+    final s = error.toString();
+    return s.contains('CloudAuthException') ||
+        RegExp(r'\b40[13]\b').hasMatch(s);
+  }
+
   PiggyCountCloudAuthService? _auth;
   PiggyCountCloudStorageService? _storage;
   PiggyCountCloudRealtimeClient? _realtime;
@@ -1445,8 +1456,14 @@ class PiggyCountCloudAuthService implements CloudAuthService {
     try {
       await _refreshSession();
       return true;
-    } catch (_) {
-      await _clearSession();
+    } catch (e) {
+      if (PiggyCountCloudProvider.shouldClearSessionOnRefreshError(e)) {
+        await _clearSession();
+      } else {
+        // 网络/超时/5xx：保留会话原样，等待下次触发重试（审计 S16）
+        debugPrint(
+            '[PiggyCountCloud] 刷新会话失败（非认证失效，保留会话）: $e');
+      }
       return false;
     }
   }
