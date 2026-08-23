@@ -133,8 +133,13 @@ extension SyncEngineApplyExt on SyncEngine {
     // 只有没命中时才 fallback 到直接 parse（向后兼容老数据 ledger_id 就是
     // int 字符串的场景）。
     final ledgerIdInt = await _resolveLedgerIdBySyncId(change.ledgerId) ??
-        int.tryParse(change.ledgerId) ??
-        -1;
+        int.tryParse(change.ledgerId);
+    if (ledgerIdInt == null) {
+      // 审计 S4：账本未就绪。抛出走整页 blocked 语义（游标不推进），
+      // 由 pull 循环 priming 后重试；禁止 -1 幽灵行 / 静默 skip。
+      throw SyncLedgerNotReadyException(
+          'ledger 未就绪: ${change.ledgerId}');
+    }
 
     // 解析 payload 字段
     final type = payload['type'] as String? ?? 'expense';
@@ -370,8 +375,12 @@ extension SyncEngineApplyExt on SyncEngine {
     // ledger_id 也按 syncId 映射到本地 int。account 表 ledgerId 是 legacy
     // 字段，但 insert 时仍需填个有效值；映射失败再 fallback 到旧格式。
     final ledgerIdInt = await _resolveLedgerIdBySyncId(change.ledgerId) ??
-        int.tryParse(change.ledgerId) ??
-        -1;
+        int.tryParse(change.ledgerId);
+    if (ledgerIdInt == null) {
+      // 审计 S4：同 transaction，禁止 -1 幽灵行（account 同样引用账本）。
+      throw SyncLedgerNotReadyException(
+          'ledger 未就绪: ${change.ledgerId}');
+    }
 
     if (change.action == 'delete') {
       final existing = await (db.select(db.accounts)
@@ -740,12 +749,12 @@ extension SyncEngineApplyExt on SyncEngine {
     final startDay = (payload['startDay'] as num?)?.toInt() ?? 1;
     final enabled = payload['enabled'] as bool? ?? true;
 
-    // 先解析外键 —— 本地 ledger 找不到就 skip,等 ledger change 先到再说。
+    // 先解析外键 —— 审计 S4：本地 ledger 找不到时抛异常走 blocked 语义
+    // （pull 循环 priming 后重试），禁止静默 skip 且游标照常推进。
     final localLedgerId = await _resolveLedgerIdBySyncId(ledgerSyncId);
     if (localLedgerId == null) {
-      logger.info('SyncEngine',
-          'pull: 预算 $syncId 的 ledgerSyncId=$ledgerSyncId 本地未就绪,跳过');
-      return;
+      throw SyncLedgerNotReadyException(
+          'ledger 未就绪: $ledgerSyncId');
     }
     final localCategoryId = await _resolveCategoryIdBySyncId(categorySyncId);
 
@@ -826,14 +835,14 @@ extension SyncEngineApplyExt on SyncEngine {
     final enabled = payload['enabled'] as bool? ?? true;
 
     // ledger:payload.ledgerSyncId 优先,fallback change.ledgerId(server 的
-    // external_id;再兜 int 字符串的老格式)。本地未就绪 → 跳过等下次。
+    // external_id;再兜 int 字符串的老格式)。审计 S4：本地未就绪 → 抛异常
+    // 走 blocked 语义（pull 循环 priming 后重试），禁止静默 skip。
     final ledgerSyncId = (payload['ledgerSyncId'] as String?) ?? change.ledgerId;
     final localLedgerId = await _resolveLedgerIdBySyncId(ledgerSyncId) ??
         int.tryParse(change.ledgerId);
     if (localLedgerId == null || localLedgerId <= 0) {
-      logger.info('SyncEngine',
-          'pull: 周期规则 $syncId 的 ledgerSyncId=$ledgerSyncId 本地未就绪,跳过');
-      return;
+      throw SyncLedgerNotReadyException(
+          'ledger 未就绪: $ledgerSyncId');
     }
 
     // 外键解析:未命中置 null + warning(规则行仍落地,引用缺失不阻断同步)

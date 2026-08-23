@@ -72,6 +72,14 @@ class SyncResult {
 /// 同步状态
 enum SyncEngineStatus { idle, pushing, pulling, syncing, error }
 
+/// 审计 S4：pull 页引用的账本在本地尚不存在。
+class SyncLedgerNotReadyException implements Exception {
+  final String message;
+  const SyncLedgerNotReadyException(this.message);
+  @override
+  String toString() => 'SyncLedgerNotReadyException: $message';
+}
+
 /// 核心同步编排器 — 实现 SyncService 接口
 /// 负责 push 本地变更到服务端、pull 远程变更到本地
 class SyncEngine implements app.SyncService {
@@ -1443,7 +1451,20 @@ class SyncEngine implements app.SyncService {
       }
 
       final applyStart = DateTime.now();
-      final outcome = await _applyPullPage(result.changes);
+      _PullPageOutcome outcome;
+      try {
+        outcome = await _applyPullPage(result.changes);
+      } on SyncLedgerNotReadyException {
+        // 审计 S4：页内引用账本未就绪 → 先从 server priming 账本再重试一次
+        logger.warning('SyncEngine', '页内引用账本未就绪，priming 后重试一次');
+        await _primeLedgersFromServer();
+        try {
+          outcome = await _applyPullPage(result.changes);
+        } on SyncLedgerNotReadyException catch (e) {
+          logger.warning('SyncEngine', 'priming 后仍缺账本，整页 blocked：$e');
+          break; // 游标停在本页之前，下次同步重放
+        }
+      }
       final applyMs = DateTime.now().difference(applyStart).inMilliseconds;
       logger.info('SyncEngine',
           'pull #$pageIndex: applied ${outcome.applied}/${result.changes.length} (apply ${applyMs}ms, page total ${DateTime.now().difference(pageStart).inMilliseconds}ms)');
@@ -1546,6 +1567,31 @@ class SyncEngine implements app.SyncService {
           List<PiggyCountCloudSyncChange> stuckChanges) =>
       _recoverStuckPullFromSnapshot(stuckChanges);
 
+  /// 审计 S4：拉取 server 账本清单，为本地缺失的每个账本走一次既有
+  /// ledger apply。返回是否新建了任何账本。
+  Future<bool> _primeLedgersFromServer() async {
+    var createdAny = false;
+    try {
+      for (final rl in await provider.readLedgers()) {
+        if (await _resolveLedgerIdBySyncId(rl.ledgerId) != null) continue;
+        await _applyLedgerChange(PiggyCountCloudSyncChange(
+          changeId: 0,
+          ledgerId: rl.ledgerId,
+          entityType: 'ledger',
+          entitySyncId: rl.ledgerId,
+          action: 'upsert',
+          updatedByDeviceId: '',
+          updatedAt: '',
+          payload: {'ledgerName': rl.ledgerName, 'currency': rl.currency},
+        ));
+        createdAny = true;
+      }
+    } catch (e) {
+      logger.warning('SyncEngine', 'priming ledgers 失败', e);
+    }
+    return createdAny;
+  }
+
   /// 单页 apply。整页事务 try/catch:
   /// - 不可恢复异常 → rollback + 错误入 [pullErrors] + return blocked
   /// - SQLite busy/locked → 单条 retry 2 次
@@ -1572,6 +1618,9 @@ class SyncEngine implements app.SyncService {
       }
       return _PullPageOutcome(applied: applied, blocked: false);
     } catch (e, st) {
+      // 审计 S4：账本未就绪要冒泡给 pull 循环做 priming 后重试，
+      // 不记入 pullErrors（priming 成功后本页会正常重放）。
+      if (e is SyncLedgerNotReadyException) rethrow;
       // 整页 rollback 已自动完成(Drift transaction 抛错回滚)
       logger.error(
           'SyncEngine',
