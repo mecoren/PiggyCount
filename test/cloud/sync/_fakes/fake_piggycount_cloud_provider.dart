@@ -188,10 +188,15 @@ class FakePiggyCountCloudProvider extends PiggyCountCloudProvider {
     final from = since ?? 0;
     final unread = _serverChanges.where((c) => c.changeId > from).toList();
     final slice = unread.take(limit).toList();
+    // 真实 server 语义：server_cursor 是服务端当前全局头部，与 since 回显无关。
+    // （审计 S2 测试需要：自愈 probe since=超大值时也必须拿到真实头部，
+    //   否则游标被推到 since 本身，后续新增量会被永久跳过。）
+    final head = _serverChanges.isEmpty
+        ? from
+        : _serverChanges.map((c) => c.changeId).reduce((a, b) => a > b ? a : b);
     return PiggyCountCloudPullResult(
       changes: slice,
-      serverCursor:
-          slice.isEmpty ? from : slice.last.changeId,
+      serverCursor: slice.isEmpty ? head : slice.last.changeId,
       hasMore: unread.length > slice.length,
     );
   }

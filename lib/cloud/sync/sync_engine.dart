@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart' as d;
+// flutter/foundation 提供 @visibleForTesting（审计 S2 测试入口）；
+// hide Category 避免与 drift 生成的实体类冲突。
+import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -1480,7 +1482,8 @@ class SyncEngine implements app.SyncService {
   /// SYNC-02 自愈：增量日志存在用旧密钥加密的 change（改密后 E2EE 下服务端
   /// 无法代为重加密，客户端也无法单点修复）导致本机游标永久卡死时的恢复路径：
   ///
-  /// ① 对受影响账本用云端全量快照（/sync/full）整本覆盖恢复本地；
+  /// ① 对【全部】本地账本用云端全量快照（/sync/full）整本覆盖恢复
+  ///    （审计 S2）；
   /// ② 把 appCursor 直接推进到服务端最新 cursor（快照即当前权威态，
   ///    旧密钥增量全部作废跳过）；
   /// ③ 将卡住的解密失败错误标记 resolved，UI 错误横幅随之消除。
@@ -1499,22 +1502,19 @@ class SyncEngine implements app.SyncService {
     _lastSnapshotRecoveryAt = now;
 
     try {
-      // 受影响账本 → 本地 int id 去重
+      // 审计 S2：不再从 stuckChanges 反查受影响账本——全局游标即将被推到
+      // 服务端头部，本地与服务端之间【所有】账本的待拉增量都会被跳过。
+      // 必须让全部本地账本先以云端快照收敛，否则健康账本出现永久静默缺口。
       final affected = <int>{};
-      for (final ch in stuckChanges) {
-        final localId = await _resolveLedgerIdBySyncId(ch.ledgerId);
-        if (localId != null) affected.add(localId);
+      for (final l in await db.select(db.ledgers).get()) {
+        final sid = l.syncId;
+        if (sid != null && sid.isNotEmpty) affected.add(l.id);
       }
 
-      if (affected.isNotEmpty) {
-        for (final ledgerId in affected) {
-          logger.warning('SyncEngine',
-              'pull 自愈：ledger=$ledgerId 存在不可解密增量，改用云端快照整本恢复');
-          await runFullPull(ledgerId: ledgerId);
-        }
-      } else {
-        logger.info('SyncEngine',
-            'pull 自愈：受影响账本本地不存在，仅推进游标跳过旧密钥增量');
+      for (final ledgerId in affected) {
+        logger.warning('SyncEngine',
+            'pull 自愈：ledger=$ledgerId 以云端快照整本恢复（审计 S2）');
+        await runFullPull(ledgerId: ledgerId);
       }
 
       // 游标直接推进到服务端最新：since 取超大值拿到空页 + 最新 server_cursor
@@ -1538,6 +1538,12 @@ class SyncEngine implements app.SyncService {
           'SyncEngine', 'pull 自愈失败：保持游标与错误现状，等待用户介入', e, st);
     }
   }
+
+  /// 审计 S2 测试入口：直接触发 SYNC-02 自愈。
+  @visibleForTesting
+  Future<void> debugRunStuckPullRecovery(
+          List<PiggyCountCloudSyncChange> stuckChanges) =>
+      _recoverStuckPullFromSnapshot(stuckChanges);
 
   /// 单页 apply。整页事务 try/catch:
   /// - 不可恢复异常 → rollback + 错误入 [pullErrors] + return blocked
