@@ -672,6 +672,23 @@ extension SyncEngineSerializationExt on SyncEngine {
     final categories = await db.select(db.categories).get();
     final tags = await db.select(db.tags).get();
 
+    // 审计 S5：push 路径带附件而本函数漏带 → fullPull 恢复后
+    // cloudFileId 行缺失、收据断链。对齐 push 路径口径。
+    final allAttachments = await db.select(db.transactionAttachments).get();
+    final attachmentsByTx = <int, List<TransactionAttachment>>{};
+    for (final a in allAttachments) {
+      attachmentsByTx.putIfAbsent(a.transactionId, () => []).add(a);
+    }
+    // 审计 S5：快照补齐 budgets / recurrings / rateOverrides，
+    // fullPull 恢复后预算/周期/汇率覆盖不再丢失。
+    final budgets = await (db.select(db.budgets)
+          ..where((b) => b.ledgerId.equals(ledger.id)))
+        .get();
+    final recurrings = await (db.select(db.recurringTransactions)
+          ..where((r) => r.ledgerId.equals(ledger.id)))
+        .get();
+    final rateOverrides = await db.select(db.exchangeRateOverrides).get();
+
     final items = <Map<String, dynamic>>[];
     for (final tx in transactions) {
       final cat = tx.categoryId != null
@@ -707,6 +724,21 @@ extension SyncEngineSerializationExt on SyncEngine {
         }
       }
 
+      // 审计 S5：附件元数据随 item 走（与 push 路径 :587-620 同构）。
+      final txAtts = attachmentsByTx[tx.id] ?? const [];
+      final attMaps = txAtts
+          .map((a) => <String, dynamic>{
+                'fileName': a.fileName,
+                'originalName': a.originalName,
+                'fileSize': a.fileSize,
+                'width': a.width,
+                'height': a.height,
+                'sortOrder': a.sortOrder,
+                if (a.cloudFileId != null) 'cloudFileId': a.cloudFileId,
+                if (a.cloudSha256 != null) 'cloudSha256': a.cloudSha256,
+              })
+          .toList();
+
       items.add(EntitySerializer.serializeTransaction(
         tx,
         categoryName: cat?.name,
@@ -721,6 +753,7 @@ extension SyncEngineSerializationExt on SyncEngine {
         ledgerSyncId: ledger.syncId,
         tagNames: tagNames.isNotEmpty ? tagNames : null,
         tagSyncIds: tagSyncIds.isNotEmpty ? tagSyncIds : null,
+        attachments: attMaps.isNotEmpty ? attMaps : null,
       ));
     }
 
@@ -748,6 +781,32 @@ extension SyncEngineSerializationExt on SyncEngine {
             parentName: parentName, parentSyncId: parentSyncId);
       }).toList(),
       'tags': tags.map((t) => EntitySerializer.serializeTag(t)).toList(),
+      // 审计 S5：顶层补齐 budgets / recurrings / rateOverrides（导入器
+      // transactions_json.dart 已支持解析这些键）。
+      'budgets': [
+        for (final b in budgets)
+          EntitySerializer.serializeBudget(
+            b,
+            ledgerSyncId: ledger.syncId,
+            categorySyncId: b.categoryId != null
+                ? categories
+                    .cast<Category?>()
+                    .firstWhere((c) => c?.id == b.categoryId,
+                        orElse: () => null)
+                    ?.syncId
+                : null,
+          ),
+      ],
+      'recurrings': [
+        for (final r in recurrings)
+          EntitySerializer.serializeRecurring(
+            r,
+            ledgerSyncId: ledger.syncId,
+          ),
+      ],
+      'rateOverrides': rateOverrides
+          .map((o) => EntitySerializer.serializeExchangeRateOverride(o))
+          .toList(),
       'items': items,
     });
   }

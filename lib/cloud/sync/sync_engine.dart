@@ -1567,6 +1567,15 @@ class SyncEngine implements app.SyncService {
           List<PiggyCountCloudSyncChange> stuckChanges) =>
       _recoverStuckPullFromSnapshot(stuckChanges);
 
+  /// 审计 S5 测试包装：导出账本全量快照 JSON（与 fullPush 上传内容一致）。
+  @visibleForTesting
+  Future<String> debugExportLedgerJson(int ledgerId) async {
+    final ledger =
+        await (db.select(db.ledgers)..where((l) => l.id.equals(ledgerId)))
+            .getSingle();
+    return _exportLedgerJson(ledger);
+  }
+
   /// 审计 S4：拉取 server 账本清单，为本地缺失的每个账本走一次既有
   /// ledger apply。返回是否新建了任何账本。
   Future<bool> _primeLedgersFromServer() async {
