@@ -391,6 +391,16 @@ class EncryptionServiceImpl implements EncryptionService {
       salt: newSalt,
     );
 
+    // 审计 S24：改密检查点——云端重加密开始前，把 newKey||newSalt 以旧钥
+    // 加密落盘。若进程在「云端已换新钥、本地尚未持久化」窗口内崩溃，
+    // newKey 只存在于此检查点中；没有它，云端数据将永久不可解密。
+    // （成功后清除；SYNC-13 部分失败中止路径也清除。）
+    final checkpointCiphertext = await cipher.encrypt(
+      plaintext: Uint8List.fromList([...newKey, ...newSalt]),
+      key: oldKey,
+    );
+    await storage.saveRekeyCheckpoint(base64.encode(checkpointCiphertext));
+
     // 4. 遍历云端文件：用旧密钥解密 → 用新密钥加密 → 上传
     //    在激活新密钥之前完成，确保解密用的是旧密钥
     final result = await _reEncryptCloudDataWithKeys(
@@ -420,6 +430,8 @@ class EncryptionServiceImpl implements EncryptionService {
       );
       // 主动 zeroing 新密钥材料（改密未生效）
       newKey.fillRange(0, newKey.length, 0);
+      // 审计 S24：中止路径清检查点（回滚结果由 SYNC-13 异常文案承载）
+      await storage.clearRekeyCheckpoint();
       throw ReEncryptPartialFailureException(
         failedPaths: result.failedPaths,
         rollbackFailedPaths: rollbackFailed,
@@ -437,6 +449,9 @@ class EncryptionServiceImpl implements EncryptionService {
     await storage.saveSalt(newSalt);
     await storage.saveVerifier(newVerifier);
 
+    // 审计 S24：本地持久化完成 → 改密原子性闭环，清除检查点
+    await storage.clearRekeyCheckpoint();
+
     // 7. 激活新密钥
     _activeKey = newKey;
     _activeSalt = newSalt;
@@ -445,6 +460,84 @@ class EncryptionServiceImpl implements EncryptionService {
     oldKey.fillRange(0, oldKey.length, 0);
 
     return result;
+  }
+
+  /// 审计 S24：恢复一次被中断的改密（W1 崩溃窗口）。
+  ///
+  /// 场景：云端重加密已完成/部分完成，但本地持久化新钥前进程崩溃——
+  /// 本地仍是旧密码可用，而 newKey/newSalt 只存在于检查点中。
+  ///
+  /// 恢复流程：用当前 active（旧）密钥解出检查点中的 newKey/newSalt →
+  /// 幂等续跑云端重加密（salt 已等于 newSalt 的文件自动跳过）→
+  /// 完成本地持久化与激活 → 清除检查点。返回 true 表示有检查点且
+  /// 恢复成功；false 表示无待恢复的改密。
+  Future<bool> recoverPendingRekey({
+    required CloudStorageService cloudStorage,
+  }) async {
+    final ckptB64 = await storage.getRekeyCheckpoint();
+    if (ckptB64 == null || ckptB64.isEmpty) {
+      return false;
+    }
+
+    if (_activeKey == null || _activeSalt == null) {
+      await _loadActiveKeyFromStorage();
+      if (_activeKey == null) {
+        throw StateError('存在改密检查点但本地旧密钥不可用，无法恢复');
+      }
+    }
+    final oldKey = Uint8List.fromList(_activeKey!);
+    final oldSalt = Uint8List.fromList(_activeSalt!);
+
+    // 解出检查点中的 newKey(32) + newSalt(16)
+    final plain = await cipher.decrypt(
+        encryptedBytes: base64.decode(ckptB64), key: oldKey);
+    final expectedLen = Argon2KeyDerivation.keyLength +
+        Argon2KeyDerivation.saltLength;
+    if (plain.length != expectedLen) {
+      // 检查点损坏：清掉避免永久阻塞，向上提示需手动重新改密
+      await storage.clearRekeyCheckpoint();
+      throw StateError('改密检查点损坏（长度 ${plain.length} != $expectedLen），'
+          '已清除。请确认其他设备数据一致后重新执行改密');
+    }
+    final recoveredNewKey = Uint8List.fromList(
+        plain.sublist(0, Argon2KeyDerivation.keyLength));
+    final recoveredNewSalt = Uint8List.fromList(plain.sublist(
+        Argon2KeyDerivation.keyLength));
+
+    LoggerService().warning(
+        'CloudReEncrypt', '检测到未完成的改密检查点，开始幂等续跑云端重加密');
+
+    // 幂等续跑：salt 已等于 newSalt 的文件（上次崩溃前已迁移）计 skip
+    final result = await _reEncryptCloudDataWithKeys(
+      cloudStorage: cloudStorage,
+      oldKey: oldKey,
+      oldSalt: oldSalt,
+      newKey: recoveredNewKey,
+      newSalt: recoveredNewSalt,
+      resumeNewSalt: recoveredNewSalt,
+    );
+    if (result.failed > 0) {
+      throw ReEncryptPartialFailureException(
+        failedPaths: result.failedPaths,
+        rollbackFailedPaths: const <String>[],
+      );
+    }
+
+    // 完成本地持久化与激活（补上崩溃时缺失的最后一步）
+    final newVerifier = await cipher.encrypt(
+      plaintext: utf8.encode(_verifierPlaintext),
+      key: recoveredNewKey,
+    );
+    await storage.saveKey(recoveredNewKey);
+    await storage.saveSalt(recoveredNewSalt);
+    await storage.saveVerifier(newVerifier);
+    await storage.clearRekeyCheckpoint();
+    _activeKey = recoveredNewKey;
+    _activeSalt = recoveredNewSalt;
+
+    LoggerService().info(
+        'CloudReEncrypt', '改密恢复完成：本地已切换到新密钥');
+    return true;
   }
 
   /// 用显式 oldKey/newKey 重加密云端文件（缺陷 A 修复核心）
@@ -464,6 +557,7 @@ class EncryptionServiceImpl implements EncryptionService {
     required Uint8List newKey,
     required Uint8List newSalt,
     String pathPrefix = '',
+    Uint8List? resumeNewSalt,
   }) async {
     final files = await cloudStorage.list(path: pathPrefix);
 
@@ -497,6 +591,12 @@ class EncryptionServiceImpl implements EncryptionService {
 
         // salt 必须与 oldSalt 匹配才能用 oldKey 解密
         if (!_listsEqual(oldSalt, decoded.salt)) {
+          // 审计 S24：续跑模式下，salt 已等于 newSalt 的文件是上次
+          // 崩溃前已迁移完成的 → 计 skip 而非 failed
+          if (resumeNewSalt != null && _listsEqual(resumeNewSalt, decoded.salt)) {
+            skipped++;
+            continue;
+          }
           // salt 不匹配（可能已被其他设备用不同密钥加密），无法解密
           failed++;
           failedPaths.add(name);

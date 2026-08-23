@@ -22,6 +22,7 @@ class SecureKeyStorage {
   static const String _keyKey = '${_keyPrefix}key';
   static const String _verifierKey = '${_keyPrefix}verifier';
   static const String _saltKey = '${_keyPrefix}salt';
+  static const String _rekeyCheckpointKey = '${_keyPrefix}rekey_ckpt';
 
   final FlutterSecureStorage _storage;
 
@@ -79,10 +80,27 @@ class SecureKeyStorage {
     return Uint8List.fromList(base64.decode(value));
   }
 
+  /// 审计 S24：改密检查点（newKey/newSalt 以旧钥加密后的 base64 密文）。
+  ///
+  /// 云端重加密开始前写入；本地持久化完成后清除。进程在两者之间崩溃时
+  /// 检查点保证新钥材料可恢复，避免「云端已换新钥而本地密钥永久丢失」。
+  Future<void> saveRekeyCheckpoint(String ciphertextB64) async {
+    await _storage.write(key: _rekeyCheckpointKey, value: ciphertextB64);
+  }
+
+  Future<String?> getRekeyCheckpoint() async {
+    return _storage.read(key: _rekeyCheckpointKey);
+  }
+
+  Future<void> clearRekeyCheckpoint() async {
+    await _storage.delete(key: _rekeyCheckpointKey);
+  }
+
   /// 清除所有加密相关数据
   Future<void> clearAll() async {
     await _storage.delete(key: _keyKey);
     await _storage.delete(key: _verifierKey);
     await _storage.delete(key: _saltKey);
+    await _storage.delete(key: _rekeyCheckpointKey);
   }
 }

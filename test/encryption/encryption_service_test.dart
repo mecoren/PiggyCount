@@ -785,6 +785,20 @@ class InMemorySecureKeyStorage implements SecureKeyStorage {
   }
 
   @override
+  @override
+  Future<void> saveRekeyCheckpoint(String ciphertextB64) async {
+    _store['piggycount_enc_rekey_ckpt'] = ciphertextB64;
+  }
+
+  @override
+  Future<String?> getRekeyCheckpoint() async {
+    return _store['piggycount_enc_rekey_ckpt'];
+  }
+
+  @override
+  Future<void> clearRekeyCheckpoint() async {
+    _store.remove('piggycount_enc_rekey_ckpt');
+  }
   Future<void> clearAll() async {
     _store.clear();
   }
