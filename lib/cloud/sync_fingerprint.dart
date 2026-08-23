@@ -55,6 +55,21 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
         final type = it['type'] as String? ?? '';
         final isTransfer = type == 'transfer';
 
+        // 审计 S11：附件清单参与指纹。只加/删/换附件不改交易内容时，
+        // 旧白名单下两端指纹不变 → getStatus 判 inSync → 附件差异
+        // 永不传播。规范化为排序后的 (sha256, fileName, sortOrder) 列表；
+        // 缺键视为空列表（G2「缺失==显式空」约定，兼容旧快照）。
+        final rawAtts = (it['attachments'] as List?) ?? const [];
+        final canonAttachments = rawAtts
+            .whereType<Map>()
+            .map((a) => [
+                  (a['cloudSha256'] ?? a['sha256'] ?? '') as String,
+                  (a['fileName'] ?? '') as String,
+                  ((a['sortOrder'] as num?) ?? 0).toString(),
+                ].join('|'))
+            .toList()
+          ..sort();
+
         return {
           'happenedAt': it['happenedAt'] as String? ?? '',
           'type': type,
@@ -82,6 +97,8 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
           // v8 G2：交易与周期规则的关联也参与指纹（缺失视为空，
           // 保证「旧快照无此字段」与「显式无关联」产生相同指纹）
           'recurringSyncId': it['recurringSyncId'] as String? ?? '',
+          // 审计 S11：附件清单指纹（排序后的规范化行，见上方注释）
+          'attachments': canonAttachments,
         };
       })
       .toList();

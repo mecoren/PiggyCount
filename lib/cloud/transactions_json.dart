@@ -13,13 +13,15 @@ import '../services/system/logger_service.dart';
 /// 清理字符串中的控制字符，防止 JSON 解析错误
 String _sanitizeString(String? input) {
   if (input == null) return '';
-  // 移除所有控制字符（ASCII 0-31，除了常见的制表符、换行符等）
-  // 并替换换行符和制表符为空格
+  // 移除危险控制字符（ASCII 0-31 中除 \t \n \r 外的不可见字符与 DEL），
+  // 防止 JSON 结构被破坏。
+  //
+  // 审计 S13：旧实现额外把 \n/\r/\t 替换成空格——多行备注在每次快照
+  // 上传时被压平成单行，恢复到对端后换行永久丢失。控制字符正则本身
+  // 已跳过这三个空白符（JSON 可安全承载），故删除压平逻辑；
+  // name/tag 等短字段本就不该含换行，行为不受影响。
   return input
       .replaceAll(RegExp(r'[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]'), '')
-      .replaceAll('\n', ' ')
-      .replaceAll('\r', ' ')
-      .replaceAll('\t', ' ')
       .trim();
 }
 
