@@ -815,6 +815,10 @@ class LocalAccountRepository implements AccountRepository {
   }
 
   @override
+  /// ⚠️ 审计 U12：多币种口径未处理——本方法跨所有账户按币种裸加余额。
+  /// 当前无 UI 消费（netWorthBreakdownProvider 已标记 deprecated）。
+  /// 多币种场景必须用 [getNetWorthBreakdownByCurrency] + 折算链路
+  /// （convertedNetWorth），勿直接接入本方法。
   Future<({double totalAssets, double totalLiabilities, double netWorth})> getNetWorthBreakdown() async {
     final accounts = await getAllAccounts();
     double totalAssets = 0.0;

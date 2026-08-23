@@ -113,8 +113,13 @@ final allAccountStatsProvider = FutureProvider.autoDispose<Map<int, ({double bal
   return stats;
 });
 
-// 统计：所有账户汇总统计（总余额、总支出、总收入）
-// v1.15.0: 不再限制账本，获取所有账户
+// 审计 U12：以下两个 provider 跨币种裸加金额（汇率不同的余额不能直接
+// 相加），且当前无任何 UI 消费 —— 属于地雷代码。多币种净资产请用
+// [netWorthBreakdownByCurrencyProvider] + 折算链路（convertedNetWorth）。
+// 保留 repo 方法供测试/单币种场景，但 UI 禁止接入这两个 provider。
+
+/// @deprecated 跨币种裸加，无 UI 消费。勿在新代码中使用。
+// ignore: unused_element
 final allAccountsTotalStatsProvider = FutureProvider.autoDispose<({double totalBalance, double totalExpense, double totalIncome})>(
         (ref) async {
   final repo = ref.watch(repositoryProvider);
@@ -128,7 +133,8 @@ final allAccountsTotalStatsProvider = FutureProvider.autoDispose<({double totalB
   return stats;
 });
 
-// 统计：净资产分解（总资产、总负债、净资产）
+/// @deprecated 跨币种裸加，无 UI 消费。用 netWorthBreakdownByCurrencyProvider。
+// ignore: unused_element
 final netWorthBreakdownProvider = FutureProvider.autoDispose<({double totalAssets, double totalLiabilities, double netWorth})>(
         (ref) async {
   final repo = ref.watch(repositoryProvider);

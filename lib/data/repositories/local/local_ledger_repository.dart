@@ -269,6 +269,8 @@ class LocalLedgerRepository implements LedgerRepository {
   }
 
   @override
+  /// ⚠️ 审计 U12：initial_balance 为各账户**各自币种**的金额，本方法
+  /// 裸加不分币种——仅当账本内所有账户同币种时结果正确。当前无调用方。
   Future<double> getTotalInitialBalance(int ledgerId) async {
     final accounts = await (db.select(db.accounts)
           ..where((a) => a.ledgerId.equals(ledgerId)))
