@@ -8,7 +8,16 @@ part of 'sync_engine.dart';
 extension SyncEngineRealtime on SyncEngine {
   /// 开始监听 WebSocket 实时事件，收到变更通知时自动触发 pull
   void startListeningRealtime() {
-    _realtimeSubscription?.cancel();
+    // 审计 S19：幂等守卫——重复调用（多入口触发/配置切换竞态）不再
+    // cancel+重建订阅，避免重建窗口内丢事件、避免双份调度。
+    if (_realtimeSubscription != null) {
+      logger.debug('SyncEngine', '实时事件已在监听，跳过重复订阅');
+      // WS 连接仍需确保启动（幂等：client.start 内部有 _running guard）
+      provider.startRealtime().catchError((e) {
+        logger.warning('SyncEngine', 'WebSocket 启动失败: $e');
+      });
+      return;
+    }
     // 启动 WebSocket 连接，否则 realtimeEvents 流永远为空
     provider.startRealtime().catchError((e) {
       logger.warning('SyncEngine', 'WebSocket 启动失败: $e');
@@ -47,6 +56,11 @@ extension SyncEngineRealtime on SyncEngine {
       }
     }, onError: (Object e) {
       logger.warning('SyncEngine', '实时事件流错误: $e');
+    }, onDone: () {
+      // 审计 S19（历史 N2）：broadcast controller 正常关闭意味着 provider
+      // 已 dispose——清掉悬挂引用；引擎若仍在服务期由调用方重新订阅。
+      logger.info('SyncEngine', '实时事件流已关闭，清理订阅引用');
+      _realtimeSubscription = null;
     });
     logger.info('SyncEngine', '已开始监听实时事件');
   }
