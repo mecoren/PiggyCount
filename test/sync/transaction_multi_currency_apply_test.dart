@@ -51,6 +51,15 @@ void main() {
         ));
   }
 
+  /// 审计 S3b：本文件验证的是 apply 层字段级合并语义（D6/快照保护），
+  /// 与「未推送本地编辑跳过远端更新」守卫无关——先把种子产生的
+  /// local_changes 标记为已推送，模拟 push 已完成的稳态。
+  Future<void> markAllLocalChangesPushed() async {
+    await db.update(db.localChanges).write(
+          LocalChangesCompanion(pushedAt: Value(DateTime.now())),
+        );
+  }
+
   Future<Transaction> txBySyncId(String syncId) async {
     return (db.select(db.transactions)..where((t) => t.syncId.equals(syncId)))
         .getSingle();
@@ -111,6 +120,7 @@ void main() {
         'happenedAt': '2026-07-12T00:00:00Z',
       },
     );
+    await markAllLocalChangesPushed();
     await engine.pull('');
 
     final tx = await txBySyncId(txSyncId);
@@ -143,6 +153,7 @@ void main() {
         'happenedAt': '2026-07-12T00:00:00Z',
       },
     );
+    await markAllLocalChangesPushed();
     await engine.pull('');
 
     final tx = await txBySyncId(txSyncId);

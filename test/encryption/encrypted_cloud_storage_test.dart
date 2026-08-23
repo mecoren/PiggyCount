@@ -57,7 +57,7 @@ void main() {
     });
 
     test('加密已开启时上传密文格式（BEECRYPT1:）给 inner', () async {
-      await encryptionService.enable(password: 'mypassword');
+      await encryptionService.enable(password: 'MyPassw0rd');
       const plaintext = '{"version":6,"items":[]}';
 
       await decorated.upload(path: 'ledger_1.json', data: plaintext);
@@ -71,7 +71,7 @@ void main() {
     });
 
     test('加密已开启时上传后 inner 中存的是密文（非原文）', () async {
-      await encryptionService.enable(password: 'mypassword');
+      await encryptionService.enable(password: 'MyPassw0rd');
       const plaintext = '{"version":6,"items":[{"amount":99.9}]}';
 
       await decorated.upload(path: 'ledger_1.json', data: plaintext);
@@ -109,7 +109,7 @@ void main() {
 
   group('EncryptedCloudStorageService.download (加密已开启)', () {
     setUp(() async {
-      await encryptionService.enable(password: 'mypassword');
+      await encryptionService.enable(password: 'MyPassw0rd');
     });
 
     test('inner 返回 null → 返回 null', () async {
@@ -138,13 +138,13 @@ void main() {
 
     test('解密失败抛出 DecryptionException', () async {
       // 用错误密码加密一段数据，然后切换密码，使其无法解密
-      await encryptionService.enable(password: 'firstpassword');
+      await encryptionService.enable(password: 'FirstPass1');
       final ciphertext = await encryptionService.encrypt('{"v":1}');
 
       // 修改密码（生成新 salt），旧密文 salt 不匹配
       await encryptionService.changePassword(
-        oldPassword: 'firstpassword',
-        newPassword: 'secondpassword',
+        oldPassword: 'FirstPass1',
+        newPassword: 'SecondPass2',
       );
 
       inner.stored['ledger_1.json'] = ciphertext;
@@ -158,7 +158,7 @@ void main() {
     test('US-2: salt 不匹配时 download 抛出 SaltMismatchException（可被 UI 单独捕获）',
         () async {
       // 设备 A 加密
-      await encryptionService.enable(password: 'passwordA');
+      await encryptionService.enable(password: 'PasswordA1');
       const plaintext = '{"version":6,"items":[]}';
       final ciphertext = await encryptionService.encrypt(plaintext);
 
@@ -169,7 +169,7 @@ void main() {
         keyDerivation: Argon2KeyDerivation.forTesting(),
         cipher: AesGcmCipher(),
       );
-      await serviceB.enable(password: 'passwordB');
+      await serviceB.enable(password: 'PasswordB2');
 
       final decoratedB = EncryptedCloudStorageService(
         inner: inner,
@@ -187,7 +187,7 @@ void main() {
 
   group('EncryptedCloudStorageService 往返测试', () {
     test('upload → download 还原原文（加密已开启）', () async {
-      await encryptionService.enable(password: 'mypassword');
+      await encryptionService.enable(password: 'MyPassw0rd');
       const plaintext = '{"version":6,"items":[{"amount":1},{"amount":2}]}';
 
       await decorated.upload(path: 'ledger_1.json', data: plaintext);
@@ -248,7 +248,7 @@ void main() {
 
   group('EncryptedCloudStorageService 装饰器边界', () {
     test('加密已开启但密钥不可用（reset 后）→ upload 抛出', () async {
-      await encryptionService.enable(password: 'mypassword');
+      await encryptionService.enable(password: 'MyPassw0rd');
       await encryptionService.reset();
       // 此时 isEnabled 为 false，但若代码错误地认为还该加密会怎样？
       // 实际：isEnabled=false，upload 透传原文（不抛错）

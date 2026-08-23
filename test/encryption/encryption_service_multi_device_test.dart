@@ -75,7 +75,7 @@ void main() {
       cloud.listFiles = const [];
 
       await deviceB.enableFromCloud(
-        password: 'mypassword',
+        password: 'MyPassw0rd',
         cloudStorage: cloud,
       );
 
@@ -95,7 +95,7 @@ void main() {
 
       expect(
         () => deviceB.enableFromCloud(
-          password: 'mypassword',
+          password: 'MyPassw0rd',
           cloudStorage: cloud,
           allowFallbackToEnable: false,
         ),
@@ -119,7 +119,7 @@ void main() {
 
       expect(
         () => deviceB.enableFromCloud(
-          password: 'mypassword',
+          password: 'MyPassw0rd',
           cloudStorage: cloud,
           allowFallbackToEnable: false,
         ),
@@ -141,7 +141,7 @@ void main() {
       ];
 
       await deviceB.enableFromCloud(
-        password: 'mypassword',
+        password: 'MyPassw0rd',
         cloudStorage: cloud,
       );
 
@@ -155,11 +155,11 @@ void main() {
   group('TC-M3: 新设备加入 - 云端有 BEECRYPT1 密文 + 正确密码', () {
     test('提取 salt，派生 key，验证通过，secure storage 写入，enabled=true', () async {
       // 1. 设备 A 加密上传
-      await _simulateDeviceAUpload(password: 'sharedpassword');
+      await _simulateDeviceAUpload(password: 'SharedPass7');
 
       // 2. 设备 B 加入（使用相同密码）
       await deviceB.enableFromCloud(
-        password: 'sharedpassword',
+        password: 'SharedPass7',
         cloudStorage: cloud,
       );
 
@@ -180,10 +180,10 @@ void main() {
     });
 
     test('deviceB 的 key 应与 deviceA 一致（同密码 + 同 salt 派生）', () async {
-      await _simulateDeviceAUpload(password: 'sharedpassword');
+      await _simulateDeviceAUpload(password: 'SharedPass7');
 
       await deviceB.enableFromCloud(
-        password: 'sharedpassword',
+        password: 'SharedPass7',
         cloudStorage: cloud,
       );
 
@@ -197,13 +197,13 @@ void main() {
 
   group('TC-M4: 新设备加入 - 错误密码', () {
     test('抛 ArgumentError，secure storage 未写入', () async {
-      // 设备 A 用 'correctpassword' 加密
-      await _simulateDeviceAUpload(password: 'correctpassword');
+      // 设备 A 用 'CorrectPass1' 加密
+      await _simulateDeviceAUpload(password: 'CorrectPass1');
 
       // 设备 B 用错误密码加入
       expect(
         () => deviceB.enableFromCloud(
-          password: 'wrongpassword',
+          password: 'WrongPass9',
           cloudStorage: cloud,
         ),
         throwsA(isA<ArgumentError>()),
@@ -220,7 +220,7 @@ void main() {
   group('TC-M5: 加入后能解密云端所有同 salt 密文', () {
     test('deviceB 加入后可解密 deviceA 上传的多个密文', () async {
       // 1. 设备 A 加密上传多个账本
-      await deviceA.enable(password: 'sharedpassword');
+      await deviceA.enable(password: 'SharedPass7');
       const content1 = '{"version":6,"items":[{"amount":100}]}';
       const content2 = '{"version":6,"items":[{"amount":200}]}';
       cloud.stored['ledger_1.json'] = await deviceA.encrypt(content1);
@@ -232,7 +232,7 @@ void main() {
 
       // 2. 设备 B 加入
       await deviceB.enableFromCloud(
-        password: 'sharedpassword',
+        password: 'SharedPass7',
         cloudStorage: cloud,
       );
 
@@ -256,7 +256,7 @@ void main() {
         keyDerivation: Argon2KeyDerivation.forTesting(),
         cipher: AesGcmCipher(),
       );
-      await oldDevice.enable(password: 'oldpassword');
+      await oldDevice.enable(password: 'OldPassw0rd');
       cloud.stored['ledger_1.json'] = await oldDevice.encrypt(
           '{"version":6,"items":[{"amount":10}]}');
 
@@ -265,7 +265,7 @@ void main() {
         keyDerivation: Argon2KeyDerivation.forTesting(),
         cipher: AesGcmCipher(),
       );
-      await newDevice.enable(password: 'newpassword');
+      await newDevice.enable(password: 'NewPassw0rd1');
       cloud.stored['ledger_2.json'] = await newDevice.encrypt(
           '{"version":6,"items":[{"amount":20}]}');
 
@@ -276,7 +276,7 @@ void main() {
 
       // 设备 B 输入新密码（正确）
       await deviceB.enableFromCloud(
-        password: 'newpassword',
+        password: 'NewPassw0rd1',
         cloudStorage: cloud,
       );
 
@@ -302,7 +302,7 @@ void main() {
         keyDerivation: Argon2KeyDerivation.forTesting(),
         cipher: AesGcmCipher(),
       );
-      await oldDevice.enable(password: 'oldpassword');
+      await oldDevice.enable(password: 'OldPassw0rd');
       cloud.stored['ledger_1.json'] = await oldDevice.encrypt(
           '{"version":6,"items":[{"amount":10}]}');
 
@@ -311,7 +311,7 @@ void main() {
         keyDerivation: Argon2KeyDerivation.forTesting(),
         cipher: AesGcmCipher(),
       );
-      await newDevice.enable(password: 'newpassword');
+      await newDevice.enable(password: 'NewPassw0rd1');
       cloud.stored['ledger_2.json'] = await newDevice.encrypt(
           '{"version":6,"items":[{"amount":20}]}');
       cloud.listFiles = [
@@ -321,7 +321,7 @@ void main() {
 
       // 输入旧密码：遍历到 ledger_1.json（旧 salt）验证通过
       await deviceB.enableFromCloud(
-        password: 'oldpassword',
+        password: 'OldPassw0rd',
         cloudStorage: cloud,
       );
 
@@ -340,7 +340,7 @@ void main() {
         keyDerivation: Argon2KeyDerivation.forTesting(),
         cipher: AesGcmCipher(),
       );
-      await oldDevice.enable(password: 'password1');
+      await oldDevice.enable(password: 'LegacyPass1');
       cloud.stored['ledger_1.json'] = await oldDevice.encrypt(
           '{"version":6,"items":[{"amount":10}]}');
 
@@ -349,7 +349,7 @@ void main() {
         keyDerivation: Argon2KeyDerivation.forTesting(),
         cipher: AesGcmCipher(),
       );
-      await newDevice.enable(password: 'password2');
+      await newDevice.enable(password: 'LegacyPass2');
       cloud.stored['ledger_2.json'] = await newDevice.encrypt(
           '{"version":6,"items":[{"amount":20}]}');
       cloud.listFiles = [
@@ -359,7 +359,7 @@ void main() {
 
       expect(
         () => deviceB.enableFromCloud(
-          password: 'totallywrong',
+          password: 'TotallyWrong1',
           cloudStorage: cloud,
         ),
         throwsA(isA<ArgumentError>()),
@@ -379,7 +379,7 @@ void main() {
         keyDerivation: Argon2KeyDerivation.forTesting(),
         cipher: AesGcmCipher(),
       );
-      await newDevice.enable(password: 'newpassword');
+      await newDevice.enable(password: 'NewPassw0rd1');
       cloud.stored['ledger_2.json'] = await newDevice.encrypt(
           '{"version":6,"items":[{"amount":20}]}');
       cloud.listFiles = [
@@ -388,7 +388,7 @@ void main() {
       ];
 
       await deviceB.enableFromCloud(
-        password: 'newpassword',
+        password: 'NewPassw0rd1',
         cloudStorage: cloud,
       );
 
@@ -413,7 +413,7 @@ void main() {
 
       expect(
         () => deviceB.enableFromCloud(
-          password: 'mypassword',
+          password: 'MyPassw0rd',
           cloudStorage: cloud,
           allowFallbackToEnable: false,
         ),
@@ -426,25 +426,25 @@ void main() {
 
   group('TC-M6: 加入后 verifier 可通过 verifyPassword 验证', () {
     test('verifyPassword 正确密码返回 true', () async {
-      await _simulateDeviceAUpload(password: 'sharedpassword');
+      await _simulateDeviceAUpload(password: 'SharedPass7');
 
       await deviceB.enableFromCloud(
-        password: 'sharedpassword',
+        password: 'SharedPass7',
         cloudStorage: cloud,
       );
 
-      expect(await deviceB.verifyPassword('sharedpassword'), isTrue);
+      expect(await deviceB.verifyPassword('SharedPass7'), isTrue);
     });
 
     test('verifyPassword 错误密码返回 false', () async {
-      await _simulateDeviceAUpload(password: 'sharedpassword');
+      await _simulateDeviceAUpload(password: 'SharedPass7');
 
       await deviceB.enableFromCloud(
-        password: 'sharedpassword',
+        password: 'SharedPass7',
         cloudStorage: cloud,
       );
 
-      expect(await deviceB.verifyPassword('wrongpassword'), isFalse);
+      expect(await deviceB.verifyPassword('WrongPass9'), isFalse);
     });
   });
 
@@ -458,7 +458,7 @@ void main() {
       // 应抛异常让 UI 引导用户确认是否以首设备身份继续。
       expect(
         () => deviceB.enableFromCloud(
-          password: 'mypassword',
+          password: 'MyPassw0rd',
           cloudStorage: cloud,
         ),
         throwsA(isA<EnableFromCloudProbeFailedException>()),
@@ -482,7 +482,7 @@ void main() {
 
       expect(
         () => deviceB.enableFromCloud(
-          password: 'mypassword',
+          password: 'MyPassw0rd',
           cloudStorage: cloud,
         ),
         throwsA(isA<Exception>()),
@@ -517,14 +517,14 @@ void main() {
 
     test('云端有密文但不是 ledger_*.json（如 readme.txt）→ 跳过，回退到 enable', () async {
       // 设备 A 加密一个非 ledger 文件
-      await deviceA.enable(password: 'mypassword');
+      await deviceA.enable(password: 'MyPassw0rd');
       cloud.stored['readme.txt'] = await deviceA.encrypt('some content');
       cloud.listFiles = [
         CloudFile(name: 'readme.txt', path: 'readme.txt'),
       ];
 
       await deviceB.enableFromCloud(
-        password: 'mypassword',
+        password: 'MyPassw0rd',
         cloudStorage: cloud,
       );
 

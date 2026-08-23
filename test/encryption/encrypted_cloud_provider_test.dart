@@ -75,7 +75,7 @@ void main() {
     });
 
     test('加密已开启时 upload 写入密文', () async {
-      await encryptionService.enable(password: 'mypassword');
+      await encryptionService.enable(password: 'MyPassw0rd');
       const plaintext = '{"version":6,"items":[]}';
 
       await decoratedProvider.storage.upload(
@@ -89,7 +89,7 @@ void main() {
     });
 
     test('download 走解密路径', () async {
-      await encryptionService.enable(password: 'mypassword');
+      await encryptionService.enable(password: 'MyPassw0rd');
       const plaintext = '{"version":6,"items":[{"amount":1}]}';
 
       await decoratedProvider.storage.upload(

@@ -59,6 +59,15 @@ void main() {
         ));
   }
 
+  /// 审计 S3b：本文件验证的是 apply 层字段级合并语义（D6），
+  /// 与「未推送本地编辑跳过远端更新」守卫无关——先把种子产生的
+  /// local_changes 标记为已推送，模拟 push 已完成的稳态。
+  Future<void> markAllLocalChangesPushed() async {
+    await db.update(db.localChanges).write(
+          LocalChangesCompanion(pushedAt: Value(DateTime.now())),
+        );
+  }
+
   test('(D6) 远端 upsert 省略 hidden 键 → 本地 true 仍保留', () async {
     final lid = await seedLedger();
     const accountSyncId = 'ax-hidden-1';
@@ -87,6 +96,7 @@ void main() {
       },
     );
 
+    await markAllLocalChangesPushed();
     await engine.pull('');
 
     final a = await (db.select(db.accounts)
@@ -123,6 +133,7 @@ void main() {
       },
     );
 
+    await markAllLocalChangesPushed();
     await engine.pull('');
 
     final a = await (db.select(db.accounts)
@@ -150,6 +161,7 @@ void main() {
       },
     );
 
+    await markAllLocalChangesPushed();
     await engine.pull('');
 
     final a = await (db.select(db.accounts)
@@ -177,6 +189,7 @@ void main() {
       },
     );
 
+    await markAllLocalChangesPushed();
     await engine.pull('');
 
     final a = await (db.select(db.accounts)

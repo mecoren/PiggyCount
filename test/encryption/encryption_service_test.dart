@@ -57,7 +57,8 @@ void main() {
     });
 
     test('enable 接受长度 == 8 的密码', () async {
-      await service.enable(password: '12345678');
+      // SYNC-12：8 位边界 + 复杂度（字母/数字两类）需同时满足
+      await service.enable(password: 'Pass1234');
       expect(await service.isEnabled, isTrue);
     });
   });
@@ -68,12 +69,12 @@ void main() {
     });
 
     test('enable 后变为已开启', () async {
-      await service.enable(password: 'mypassword');
+      await service.enable(password: 'MyPassw0rd');
       expect(await service.isEnabled, isTrue);
     });
 
     test('disable 后变为未开启', () async {
-      await service.enable(password: 'mypassword');
+      await service.enable(password: 'MyPassw0rd');
       await service.disable();
       expect(await service.isEnabled, isFalse);
     });
@@ -85,18 +86,18 @@ void main() {
     });
 
     test('enable 后有密钥', () async {
-      await service.enable(password: 'mypassword');
+      await service.enable(password: 'MyPassw0rd');
       expect(await service.hasActiveKey, isTrue);
     });
 
     test('disable 后仍有密钥（保留用于解密存量密文）', () async {
-      await service.enable(password: 'mypassword');
+      await service.enable(password: 'MyPassw0rd');
       await service.disable();
       expect(await service.hasActiveKey, isTrue);
     });
 
     test('reset 后无密钥', () async {
-      await service.enable(password: 'mypassword');
+      await service.enable(password: 'MyPassw0rd');
       await service.reset();
       expect(await service.hasActiveKey, isFalse);
     });
@@ -118,7 +119,7 @@ void main() {
     });
 
     test('enable 后 secure storage 中有 key、salt、verifier', () async {
-      await service.enable(password: 'mypassword');
+      await service.enable(password: 'MyPassw0rd');
 
       expect(await storage.getKey(), isNotNull);
       expect(await storage.getSalt(), isNotNull);
@@ -126,7 +127,7 @@ void main() {
     });
 
     test('enable 后 activeSalt 不为 null', () async {
-      await service.enable(password: 'mypassword');
+      await service.enable(password: 'MyPassw0rd');
       expect(service.activeSalt, isNotNull);
       expect(service.activeSalt!.length, 16);
     });
@@ -134,13 +135,13 @@ void main() {
 
   group('EncryptionServiceImpl.verifyPassword', () {
     test('正确密码返回 true', () async {
-      await service.enable(password: 'correctpassword');
-      expect(await service.verifyPassword('correctpassword'), isTrue);
+      await service.enable(password: 'CorrectPass1');
+      expect(await service.verifyPassword('CorrectPass1'), isTrue);
     });
 
     test('错误密码返回 false', () async {
-      await service.enable(password: 'correctpassword');
-      expect(await service.verifyPassword('wrongpassword'), isFalse);
+      await service.enable(password: 'CorrectPass1');
+      expect(await service.verifyPassword('WrongPass9'), isFalse);
     });
 
     test('未开启加密时返回 false', () async {
@@ -148,9 +149,9 @@ void main() {
     });
 
     test('reset 后返回 false', () async {
-      await service.enable(password: 'correctpassword');
+      await service.enable(password: 'CorrectPass1');
       await service.reset();
-      expect(await service.verifyPassword('correctpassword'), isFalse);
+      expect(await service.verifyPassword('CorrectPass1'), isFalse);
     });
   });
 
@@ -168,7 +169,7 @@ void main() {
     });
 
     test('开启加密后 encrypt 返回 BEECRYPT1: 格式密文', () async {
-      await service.enable(password: 'mypassword');
+      await service.enable(password: 'MyPassw0rd');
       const plaintext = '{"version":6,"items":[]}';
 
       final result = await service.encrypt(plaintext);
@@ -177,7 +178,7 @@ void main() {
     });
 
     test('encrypt → decrypt 往返还原原文', () async {
-      await service.enable(password: 'mypassword');
+      await service.enable(password: 'MyPassw0rd');
       const plaintext = '{"version":6,"items":[{"amount":99.9}]}';
 
       final ciphertext = await service.encrypt(plaintext);
@@ -187,7 +188,7 @@ void main() {
     });
 
     test('decrypt legacy 明文（无 magic header）原样返回', () async {
-      await service.enable(password: 'mypassword');
+      await service.enable(password: 'MyPassw0rd');
       const legacyPlaintext = '{"version":5,"items":[]}';
 
       final result = await service.decrypt(legacyPlaintext);
@@ -196,7 +197,7 @@ void main() {
     });
 
     test('加密后密文内容与原文不同（非明文）', () async {
-      await service.enable(password: 'mypassword');
+      await service.enable(password: 'MyPassw0rd');
       const plaintext = '{"version":6,"items":[{"amount":99.9}]}';
 
       final ciphertext = await service.encrypt(plaintext);
@@ -208,37 +209,37 @@ void main() {
 
   group('EncryptionServiceImpl.changePassword', () {
     test('正确旧密码 + 有效新密码 → 修改成功', () async {
-      await service.enable(password: 'oldpassword');
+      await service.enable(password: 'OldPassw0rd');
 
       await service.changePassword(
-        oldPassword: 'oldpassword',
-        newPassword: 'newpassword',
+        oldPassword: 'OldPassw0rd',
+        newPassword: 'NewPassw0rd1',
       );
 
       // 新密码应该能验证
-      expect(await service.verifyPassword('newpassword'), isTrue);
+      expect(await service.verifyPassword('NewPassw0rd1'), isTrue);
       // 旧密码应该不能验证
-      expect(await service.verifyPassword('oldpassword'), isFalse);
+      expect(await service.verifyPassword('OldPassw0rd'), isFalse);
     });
 
     test('错误旧密码 → 抛出 ArgumentError', () async {
-      await service.enable(password: 'oldpassword');
+      await service.enable(password: 'OldPassw0rd');
 
       expect(
         () => service.changePassword(
           oldPassword: 'wrongold',
-          newPassword: 'newpassword',
+          newPassword: 'NewPassw0rd1',
         ),
         throwsA(isA<ArgumentError>()),
       );
     });
 
     test('新密码无效（过短）→ 抛出 ArgumentError', () async {
-      await service.enable(password: 'oldpassword');
+      await service.enable(password: 'OldPassw0rd');
 
       expect(
         () => service.changePassword(
-          oldPassword: 'oldpassword',
+          oldPassword: 'OldPassw0rd',
           newPassword: '12345',
         ),
         throwsA(isA<ArgumentError>()),
@@ -246,12 +247,12 @@ void main() {
     });
 
     test('修改密码后仍能解密用新密码加密的数据', () async {
-      await service.enable(password: 'oldpassword');
+      await service.enable(password: 'OldPassw0rd');
       const plaintext = '{"version":6,"items":[]}';
 
       await service.changePassword(
-        oldPassword: 'oldpassword',
-        newPassword: 'newpassword',
+        oldPassword: 'OldPassw0rd',
+        newPassword: 'NewPassw0rd1',
       );
 
       final ciphertext = await service.encrypt(plaintext);
@@ -260,7 +261,7 @@ void main() {
     });
 
     test('修改密码后用旧密码加密的密文无法用新密钥解密', () async {
-      await service.enable(password: 'oldpassword');
+      await service.enable(password: 'OldPassw0rd');
       const plaintext = '{"version":6,"items":[]}';
 
       // 用旧密码加密
@@ -268,8 +269,8 @@ void main() {
 
       // 修改密码
       await service.changePassword(
-        oldPassword: 'oldpassword',
-        newPassword: 'newpassword',
+        oldPassword: 'OldPassw0rd',
+        newPassword: 'NewPassw0rd1',
       );
 
       // 旧密文（salt 不同）应该无法解密
@@ -282,7 +283,7 @@ void main() {
 
   group('EncryptionServiceImpl.reset', () {
     test('reset 后 secure storage 完全清空', () async {
-      await service.enable(password: 'mypassword');
+      await service.enable(password: 'MyPassw0rd');
 
       await service.reset();
 
@@ -292,7 +293,7 @@ void main() {
     });
 
     test('reset 后 isEnabled 为 false', () async {
-      await service.enable(password: 'mypassword');
+      await service.enable(password: 'MyPassw0rd');
 
       await service.reset();
 
@@ -300,7 +301,7 @@ void main() {
     });
 
     test('reset 后 activeSalt 为 null', () async {
-      await service.enable(password: 'mypassword');
+      await service.enable(password: 'MyPassw0rd');
 
       await service.reset();
 
@@ -351,7 +352,7 @@ void main() {
   group('EncryptionServiceImpl 多设备场景模拟', () {
     test('A 设备加密 → B 设备同密码解密', () async {
       // A 设备：开启加密并加密数据
-      await service.enable(password: 'sharedpassword');
+      await service.enable(password: 'SharedPass7');
       const plaintext = '{"version":6,"items":[{"amount":100}]}';
       final ciphertext = await service.encrypt(plaintext);
 
@@ -366,7 +367,7 @@ void main() {
       // B 设备用相同密码激活密钥（salt 从密文头取）
       final decoded = CiphertextFormat.decode(ciphertext);
       await serviceB.activateKey(
-        password: 'sharedpassword',
+        password: 'SharedPass7',
         salt: decoded.salt,
       );
 
@@ -376,7 +377,7 @@ void main() {
     });
 
     test('A 设备加密 → B 设备不同密码解密失败', () async {
-      await service.enable(password: 'correctpass');
+      await service.enable(password: 'CorrectPass1x');
       const plaintext = '{"version":6,"items":[]}';
       final ciphertext = await service.encrypt(plaintext);
 
@@ -389,7 +390,7 @@ void main() {
 
       final decoded = CiphertextFormat.decode(ciphertext);
       await serviceB.activateKey(
-        password: 'wrongpass',
+        password: 'WrongPass9x',
         salt: decoded.salt,
       );
 
@@ -401,7 +402,7 @@ void main() {
 
     test('US-2: salt 不匹配时抛出 SaltMismatchException（可被 UI 单独捕获）', () async {
       // A 设备：用密码 A 加密
-      await service.enable(password: 'passwordA');
+      await service.enable(password: 'PasswordA1');
       const plaintext = '{"version":6,"items":[]}';
       final ciphertext = await service.encrypt(plaintext);
 
@@ -413,7 +414,7 @@ void main() {
         cipher: AesGcmCipher(),
       );
       // B 设备自行 enable，生成自己的 salt（与 A 不同）
-      await serviceB.enable(password: 'passwordB');
+      await serviceB.enable(password: 'PasswordB2');
 
       // B 设备尝试解密 A 的密文 → salt 不匹配
       expect(
@@ -427,7 +428,7 @@ void main() {
     test('US-2: SaltMismatchException 是 DecryptionException 的子类（向后兼容）',
         () async {
       // 已有代码 catch DecryptionException 时仍能捕获 SaltMismatchException
-      await service.enable(password: 'passwordA');
+      await service.enable(password: 'PasswordA1');
       const plaintext = '{"version":6,"items":[]}';
       final ciphertext = await service.encrypt(plaintext);
 
@@ -437,7 +438,7 @@ void main() {
         keyDerivation: Argon2KeyDerivation.forTesting(),
         cipher: AesGcmCipher(),
       );
-      await serviceB.enable(password: 'passwordB');
+      await serviceB.enable(password: 'PasswordB2');
 
       // 用 catch DecryptionException 捕获，验证 SaltMismatchException 也被捕获
       var caught = false;
@@ -467,7 +468,7 @@ void main() {
     });
 
     test('云端有 legacy 明文 → 全部重加密为 BEECRYPT1: 格式', () async {
-      await service.enable(password: 'mypassword');
+      await service.enable(password: 'MyPassw0rd');
       cloud.stored['ledger_1.json'] = '{"version":6,"items":[]}';
       cloud.stored['ledger_2.json'] = '{"version":6,"items":[{"amount":99}]}';
       cloud.listFiles = [
@@ -488,7 +489,7 @@ void main() {
 
     test('混合 legacy 明文 + 已加密密文 → 都重加密为新密文', () async {
       // 场景：用户之前已开过加密（用相同密码），现在重新开启
-      await service.enable(password: 'mypassword');
+      await service.enable(password: 'MyPassw0rd');
       final ciphertext = await service.encrypt('{"version":6,"items":[]}');
       cloud.stored['ledger_1.json'] = ciphertext; // 已是密文
       cloud.stored['ledger_2.json'] = '{"version":6,"items":[]}'; // legacy 明文
@@ -510,7 +511,7 @@ void main() {
     });
 
     test('非 ledger_*.json 文件被跳过', () async {
-      await service.enable(password: 'mypassword');
+      await service.enable(password: 'MyPassw0rd');
       cloud.stored['readme.txt'] = 'hello';
       cloud.stored['ledger_1.json'] = '{"version":6,"items":[]}';
       cloud.listFiles = [
@@ -529,7 +530,7 @@ void main() {
     });
 
     test('download 返回 null 的文件被跳过', () async {
-      await service.enable(password: 'mypassword');
+      await service.enable(password: 'MyPassw0rd');
       // list 返回了文件名但 stored 中没有该文件 → download 返回 null
       cloud.listFiles = [
         CloudFile(name: 'ledger_1.json', path: 'ledger_1.json'),
@@ -543,7 +544,7 @@ void main() {
     });
 
     test('单文件 download 失败不中断整体流程', () async {
-      await service.enable(password: 'mypassword');
+      await service.enable(password: 'MyPassw0rd');
       cloud.stored['ledger_1.json'] = '{"version":6,"items":[]}';
       cloud.stored['ledger_2.json'] = '{"version":6,"items":[]}';
       cloud.throwOnDownloadPaths.add('ledger_1.json');
@@ -560,7 +561,7 @@ void main() {
     });
 
     test('单文件 upload 失败不中断整体流程', () async {
-      await service.enable(password: 'mypassword');
+      await service.enable(password: 'MyPassw0rd');
       cloud.stored['ledger_1.json'] = '{"version":6,"items":[]}';
       cloud.stored['ledger_2.json'] = '{"version":6,"items":[]}';
       cloud.throwOnUploadPaths.add('ledger_2.json');
@@ -576,7 +577,7 @@ void main() {
     });
 
     test('list 抛错时整体失败，抛出原异常', () async {
-      await service.enable(password: 'mypassword');
+      await service.enable(password: 'MyPassw0rd');
       cloud.listFiles = []; // 不会被读到
       // 用一个会抛错的 storage
       final throwingStorage = _ThrowingListStorage();
@@ -589,7 +590,7 @@ void main() {
 
     test('加密已开启但密钥不可用（reset 后）→ 抛 StateError', () async {
       // 模拟异常状态：isEnabled=true 但 key 已被清空
-      await service.enable(password: 'mypassword');
+      await service.enable(password: 'MyPassw0rd');
       // 直接清掉内存 key 模拟密钥不可用
       await service.reset();
       // reset 会同时把 isEnabled 置 false，所以这个场景实际不会发生
@@ -602,7 +603,7 @@ void main() {
     });
 
     test('重加密后再调用一次（幂等性）→ 文件仍是密文，success 不变', () async {
-      await service.enable(password: 'mypassword');
+      await service.enable(password: 'MyPassw0rd');
       cloud.stored['ledger_1.json'] = '{"version":6,"items":[]}';
       cloud.listFiles = [
         CloudFile(name: 'ledger_1.json', path: 'ledger_1.json'),
@@ -634,7 +635,7 @@ void main() {
 
     /// 用旧密码开启加密并把两份旧密钥密文放入云端
     Future<void> seedCloudEncrypted() async {
-      await service.enable(password: 'oldpassword');
+      await service.enable(password: 'OldPassw0rd');
       cloud.stored['ledger_1.json'] =
           await service.encrypt('{"version":6,"a":1}');
       cloud.stored['ledger_2.json'] =
@@ -649,15 +650,15 @@ void main() {
       await seedCloudEncrypted();
 
       final result = await service.changePasswordWithCloudReEncryption(
-        oldPassword: 'oldpassword',
-        newPassword: 'newpassword',
+        oldPassword: 'OldPassw0rd',
+        newPassword: 'NewPassw0rd1',
         cloudStorage: cloud,
       );
 
       expect(result.failed, 0);
       expect(result.success, 2);
-      expect(await service.verifyPassword('newpassword'), isTrue);
-      expect(await service.verifyPassword('oldpassword'), isFalse);
+      expect(await service.verifyPassword('NewPassw0rd1'), isTrue);
+      expect(await service.verifyPassword('OldPassw0rd'), isFalse);
       expect(
         await service.decrypt(cloud.stored['ledger_1.json']!),
         '{"version":6,"a":1}',
@@ -671,8 +672,8 @@ void main() {
 
       await expectLater(
         service.changePasswordWithCloudReEncryption(
-          oldPassword: 'oldpassword',
-          newPassword: 'newpassword',
+          oldPassword: 'OldPassw0rd',
+          newPassword: 'NewPassw0rd1',
           cloudStorage: cloud,
         ),
         throwsA(isA<ReEncryptPartialFailureException>()
@@ -681,9 +682,9 @@ void main() {
       );
 
       // 改密必须中止：新密码不生效、旧密码仍有效（密钥/verifier 未被覆盖）
-      expect(await service.verifyPassword('newpassword'), isFalse,
+      expect(await service.verifyPassword('NewPassw0rd1'), isFalse,
           reason: '部分失败时不得激活新密钥');
-      expect(await service.verifyPassword('oldpassword'), isTrue);
+      expect(await service.verifyPassword('OldPassw0rd'), isTrue);
 
       // 已重加密成功的 ledger_1 必须被回滚为旧密钥密文（可解密）
       expect(
@@ -701,8 +702,8 @@ void main() {
 
       await expectLater(
         service.changePasswordWithCloudReEncryption(
-          oldPassword: 'oldpassword',
-          newPassword: 'newpassword',
+          oldPassword: 'OldPassw0rd',
+          newPassword: 'NewPassw0rd1',
           cloudStorage: cloud,
         ),
         throwsA(isA<ReEncryptPartialFailureException>()
