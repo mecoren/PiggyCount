@@ -1413,6 +1413,18 @@ class TransactionsSyncManager implements SyncService {
     }
   }
 
+  /// 审计 S12：为与本地现有账本撞名的导入生成不冲突的名字
+  /// （"账本" → "账本（2）" → "账本（3）"…）。
+  static String _dedupeLedgerName(Iterable<Ledger> existing, String base) {
+    final taken = existing.map((l) => l.name).toSet();
+    if (!taken.contains(base)) return base;
+    var i = 2;
+    while (taken.contains('$base（$i）')) {
+      i++;
+    }
+    return '$base（$i）';
+  }
+
   /// 下载远程账本（创建新的本地账本或复用同名账本）
   ///
   /// 优先级：
@@ -1444,10 +1456,14 @@ class TransactionsSyncManager implements SyncService {
           remotePath.replaceAll('ledger_', '').replaceAll('.json', '');
       final remoteId = int.tryParse(remoteIdStr);
 
-      // 优先检查本地是否已存在同名账本
-      final existingByName = await (db.select(db.ledgers)
+      // 审计 S12：同名复用是 H2 既定语义（用户主动下载该账本 → 以云端
+      // 为准覆盖），保留。但 getSingleOrNull 在本地已有多个同名账本时抛
+      // "Too many elements" 直接崩——改为取第一行（take-first）。
+      final sameNameRows = await (db.select(db.ledgers)
             ..where((t) => t.name.equals(name)))
-          .getSingleOrNull();
+          .get();
+      final existingByName =
+          sameNameRows.isEmpty ? null : sameNameRows.first;
 
       final int ledgerId;
       final bool reuseExistingByName = existingByName != null;
@@ -1456,7 +1472,7 @@ class TransactionsSyncManager implements SyncService {
       if (reuseExistingByName) {
         // 复用同名账本的 ID（不创建新账本）
         ledgerId = existingByName.id;
-        logger.info('CloudSync', '本地已存在同名账本，复用账本ID: $ledgerId (名称: $name)');
+        logger.info('CloudSync', '本地已存在同源账本，复用账本ID: $ledgerId (名称: $name)');
       } else {
         // 检查本地是否已存在该远程 ID
         final existingById = remoteId != null
@@ -1910,10 +1926,23 @@ class TransactionsSyncManager implements SyncService {
         return null;
       }
 
+      // 审计 S12：同名但 syncId 不同的本地账本存在时，改名导入
+      // （"账本（2）"），避免出现两个完全同名的账本干扰用户与后续
+      // 按名匹配逻辑；syncId 一致说明是同一本，正常导入。
+      final importNameRows = await (db.select(db.ledgers)
+            ..where((l) => l.name.equals(meta.name)))
+          .get();
+      final unrelatedSameName = importNameRows
+          .where((l) => l.syncId != meta.id.toString())
+          .toList();
+      final importName = unrelatedSameName.isEmpty
+          ? meta.name
+          : _dedupeLedgerName(importNameRows, meta.name);
+
       await db.into(db.ledgers).insert(
             LedgersCompanion.insert(
               id: drift.Value(meta.id),
-              name: meta.name,
+              name: importName,
               currency: drift.Value(meta.currency),
               monthStartDay: drift.Value(meta.monthStartDay),
               syncId: drift.Value(meta.id.toString()),
