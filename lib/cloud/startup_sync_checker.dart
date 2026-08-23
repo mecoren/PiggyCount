@@ -167,6 +167,14 @@ abstract class StartupSyncCheckerDeps {
   /// 返回 true 表示用户确认覆盖，false 表示取消（applyAll 中止，回退到 SummaryView）。
   Future<bool> showConflictConfirmDialog(List<String> ledgerNames);
 
+  /// 审计 S14：旧格式（v5 及以下）全量替换前的确认弹窗
+  ///
+  /// 全量替换 = 清空账本 + 导入 + 镜像删除，是破坏性操作；
+  /// 旧实现一键应用/逐个确认路径都直接执行无任何提示。
+  /// [ledgerNames] 待全量替换的账本名列表。
+  /// 返回 false 时调用方跳过该账本（不替换）。
+  Future<bool> showLegacyReplaceConfirmDialog(List<String> ledgerNames);
+
   /// SaltMismatch 恢复：弹密码对话框 + 从云端重提取 salt 激活密钥
   ///
   /// 当 getStatus 返回 'salt_mismatch_need_password' 哨兵，
@@ -636,6 +644,17 @@ class StartupSyncChecker {
 
         if (previewResult.preview == null) {
           // 旧格式（v5 及以下）：走全量替换
+          // 审计 S14：全量替换 = 清空账本 + 导入 + 镜像删除，破坏性
+          // 操作必须先经用户确认；拒绝则跳过该账本。
+          final confirmed = await deps.showLegacyReplaceConfirmDialog(
+            [c.ledger.name],
+          );
+          if (!confirmed) {
+            deps.log('StartupSyncChecker: 账本 ${c.ledger.name} '
+                '用户取消旧格式全量替换，跳过');
+            applied++;
+            continue;
+          }
           await deps
               .downloadAndRestoreToCurrentLedger(ledgerId: c.ledger.id)
               .timeout(_applyTimeout);
@@ -914,6 +933,14 @@ class StartupSyncChecker {
 
   /// 旧格式（v5 及以下）的全量替换流程（只合并，回传由调用方统一执行）
   Future<bool> _handleLegacyFormat(Ledger ledger) async {
+    // 审计 S14：全量替换前确认（旧注释声称有弹窗但实现里从来没有）
+    final confirmed =
+        await deps.showLegacyReplaceConfirmDialog([ledger.name]);
+    if (!confirmed) {
+      deps.log('StartupSyncChecker: 账本 ${ledger.name} '
+          '用户取消旧格式全量替换，跳过');
+      return false;
+    }
     try {
       await deps
           .downloadAndRestoreToCurrentLedger(ledgerId: ledger.id)
@@ -1113,6 +1140,18 @@ class WidgetRefDeps implements StartupSyncCheckerDeps {
       message: message,
       okLabel: l10n.startupSyncConflictConfirmOk,
       cancelLabel: l10n.startupSyncConflictConfirmCancel,
+    );
+    return result ?? false;
+  }
+
+  @override
+  Future<bool> showLegacyReplaceConfirmDialog(List<String> ledgerNames) async {
+    final l10n = AppLocalizations.of(_context);
+    // 审计 S14：复用手动下载页的旧格式全量替换文案（口径一致）
+    final result = await AppDialog.confirm<bool>(
+      _context,
+      title: l10n.syncPreviewOldFormat,
+      message: l10n.syncPreviewOldFormatMessage,
     );
     return result ?? false;
   }

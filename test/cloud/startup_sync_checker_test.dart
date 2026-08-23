@@ -463,6 +463,36 @@ void main() {
       expect(deps.uploadedLedgerIds, [1, 2]);
     });
 
+    test('S14: 用户拒绝 legacy 全量替换确认 → 跳过该账本不回传', () async {
+      deps.previewByLedger = {
+        1: (preview: null, importData: const ImportData(), version: 5),
+        2: (preview: _preview(added: 1), importData: const ImportData(), version: 6),
+      };
+      deps.legacyReplaceConfirmReturn = false;
+
+      await checker.runIfNeeded();
+
+      expect(deps.legacyReplaceConfirmCallCount, 1,
+          reason: 'S14：全量替换前必须弹确认');
+      expect(deps.lastLegacyReplaceLedgerNames, ['L1']);
+      expect(deps.downloadAndRestoreCallCount, 0,
+          reason: '拒绝后不得执行全量替换');
+      expect(deps.uploadedLedgerIds, [2], reason: '被拒账本不参与合并/回传');
+    });
+
+    test('S14: 用户确认后 legacy 全量替换照常执行', () async {
+      deps.previewByLedger = {
+        1: (preview: null, importData: const ImportData(), version: 5),
+      };
+      deps.legacyReplaceConfirmReturn = true;
+
+      await checker.runIfNeeded();
+
+      expect(deps.legacyReplaceConfirmCallCount, 1);
+      expect(deps.downloadAndRestoreCallCount, 1);
+      expect(deps.uploadedLedgerIds, [1]);
+    });
+
     test('preview.isEmpty 合并元数据后同样回传', () async {
       deps.previewByLedger = {
         1: (preview: _preview(), importData: const ImportData(), version: 6),
@@ -1408,6 +1438,17 @@ class _FakeDeps implements StartupSyncCheckerDeps {
     conflictConfirmCallCount++;
     lastConflictLedgerNames = List<String>.from(ledgerNames);
     return conflictConfirmReturn;
+  }
+
+  int legacyReplaceConfirmCallCount = 0;
+  List<String> lastLegacyReplaceLedgerNames = const [];
+  bool legacyReplaceConfirmReturn = true;
+
+  @override
+  Future<bool> showLegacyReplaceConfirmDialog(List<String> ledgerNames) async {
+    legacyReplaceConfirmCallCount++;
+    lastLegacyReplaceLedgerNames = List<String>.from(ledgerNames);
+    return legacyReplaceConfirmReturn;
   }
 
   @override
