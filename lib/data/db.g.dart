@@ -10904,6 +10904,202 @@ class ExchangeRateOverridesCompanion
   }
 }
 
+class $EntityChangeWatermarksTable extends EntityChangeWatermarks
+    with TableInfo<$EntityChangeWatermarksTable, EntityChangeWatermark> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $EntityChangeWatermarksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _syncIdMeta = const VerificationMeta('syncId');
+  @override
+  late final GeneratedColumn<String> syncId = GeneratedColumn<String>(
+      'sync_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _watermarkMeta =
+      const VerificationMeta('watermark');
+  @override
+  late final GeneratedColumn<int> watermark = GeneratedColumn<int>(
+      'watermark', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [syncId, watermark];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'entity_change_watermarks';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<EntityChangeWatermark> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('sync_id')) {
+      context.handle(_syncIdMeta,
+          syncId.isAcceptableOrUnknown(data['sync_id']!, _syncIdMeta));
+    } else if (isInserting) {
+      context.missing(_syncIdMeta);
+    }
+    if (data.containsKey('watermark')) {
+      context.handle(_watermarkMeta,
+          watermark.isAcceptableOrUnknown(data['watermark']!, _watermarkMeta));
+    } else if (isInserting) {
+      context.missing(_watermarkMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {syncId};
+  @override
+  EntityChangeWatermark map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return EntityChangeWatermark(
+      syncId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}sync_id'])!,
+      watermark: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}watermark'])!,
+    );
+  }
+
+  @override
+  $EntityChangeWatermarksTable createAlias(String alias) {
+    return $EntityChangeWatermarksTable(attachedDatabase, alias);
+  }
+}
+
+class EntityChangeWatermark extends DataClass
+    implements Insertable<EntityChangeWatermark> {
+  final String syncId;
+  final int watermark;
+  const EntityChangeWatermark({required this.syncId, required this.watermark});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['sync_id'] = Variable<String>(syncId);
+    map['watermark'] = Variable<int>(watermark);
+    return map;
+  }
+
+  EntityChangeWatermarksCompanion toCompanion(bool nullToAbsent) {
+    return EntityChangeWatermarksCompanion(
+      syncId: Value(syncId),
+      watermark: Value(watermark),
+    );
+  }
+
+  factory EntityChangeWatermark.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return EntityChangeWatermark(
+      syncId: serializer.fromJson<String>(json['syncId']),
+      watermark: serializer.fromJson<int>(json['watermark']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'syncId': serializer.toJson<String>(syncId),
+      'watermark': serializer.toJson<int>(watermark),
+    };
+  }
+
+  EntityChangeWatermark copyWith({String? syncId, int? watermark}) =>
+      EntityChangeWatermark(
+        syncId: syncId ?? this.syncId,
+        watermark: watermark ?? this.watermark,
+      );
+  EntityChangeWatermark copyWithCompanion(
+      EntityChangeWatermarksCompanion data) {
+    return EntityChangeWatermark(
+      syncId: data.syncId.present ? data.syncId.value : this.syncId,
+      watermark: data.watermark.present ? data.watermark.value : this.watermark,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EntityChangeWatermark(')
+          ..write('syncId: $syncId, ')
+          ..write('watermark: $watermark')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(syncId, watermark);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is EntityChangeWatermark &&
+          other.syncId == this.syncId &&
+          other.watermark == this.watermark);
+}
+
+class EntityChangeWatermarksCompanion
+    extends UpdateCompanion<EntityChangeWatermark> {
+  final Value<String> syncId;
+  final Value<int> watermark;
+  final Value<int> rowid;
+  const EntityChangeWatermarksCompanion({
+    this.syncId = const Value.absent(),
+    this.watermark = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  EntityChangeWatermarksCompanion.insert({
+    required String syncId,
+    required int watermark,
+    this.rowid = const Value.absent(),
+  })  : syncId = Value(syncId),
+        watermark = Value(watermark);
+  static Insertable<EntityChangeWatermark> custom({
+    Expression<String>? syncId,
+    Expression<int>? watermark,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (syncId != null) 'sync_id': syncId,
+      if (watermark != null) 'watermark': watermark,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  EntityChangeWatermarksCompanion copyWith(
+      {Value<String>? syncId, Value<int>? watermark, Value<int>? rowid}) {
+    return EntityChangeWatermarksCompanion(
+      syncId: syncId ?? this.syncId,
+      watermark: watermark ?? this.watermark,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (syncId.present) {
+      map['sync_id'] = Variable<String>(syncId.value);
+    }
+    if (watermark.present) {
+      map['watermark'] = Variable<int>(watermark.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EntityChangeWatermarksCompanion(')
+          ..write('syncId: $syncId, ')
+          ..write('watermark: $watermark, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$PiggyDatabase extends GeneratedDatabase {
   _$PiggyDatabase(QueryExecutor e) : super(e);
   $PiggyDatabaseManager get managers => $PiggyDatabaseManager(this);
@@ -10936,6 +11132,8 @@ abstract class _$PiggyDatabase extends GeneratedDatabase {
   late final $ExchangeRatesTable exchangeRates = $ExchangeRatesTable(this);
   late final $ExchangeRateOverridesTable exchangeRateOverrides =
       $ExchangeRateOverridesTable(this);
+  late final $EntityChangeWatermarksTable entityChangeWatermarks =
+      $EntityChangeWatermarksTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -10961,7 +11159,8 @@ abstract class _$PiggyDatabase extends GeneratedDatabase {
         transactionTagOverrides,
         syncPullErrors,
         exchangeRates,
-        exchangeRateOverrides
+        exchangeRateOverrides,
+        entityChangeWatermarks
       ];
 }
 
@@ -16143,6 +16342,141 @@ typedef $$ExchangeRateOverridesTableProcessedTableManager
         ),
         ExchangeRateOverride,
         PrefetchHooks Function()>;
+typedef $$EntityChangeWatermarksTableCreateCompanionBuilder
+    = EntityChangeWatermarksCompanion Function({
+  required String syncId,
+  required int watermark,
+  Value<int> rowid,
+});
+typedef $$EntityChangeWatermarksTableUpdateCompanionBuilder
+    = EntityChangeWatermarksCompanion Function({
+  Value<String> syncId,
+  Value<int> watermark,
+  Value<int> rowid,
+});
+
+class $$EntityChangeWatermarksTableFilterComposer
+    extends Composer<_$PiggyDatabase, $EntityChangeWatermarksTable> {
+  $$EntityChangeWatermarksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get syncId => $composableBuilder(
+      column: $table.syncId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get watermark => $composableBuilder(
+      column: $table.watermark, builder: (column) => ColumnFilters(column));
+}
+
+class $$EntityChangeWatermarksTableOrderingComposer
+    extends Composer<_$PiggyDatabase, $EntityChangeWatermarksTable> {
+  $$EntityChangeWatermarksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get syncId => $composableBuilder(
+      column: $table.syncId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get watermark => $composableBuilder(
+      column: $table.watermark, builder: (column) => ColumnOrderings(column));
+}
+
+class $$EntityChangeWatermarksTableAnnotationComposer
+    extends Composer<_$PiggyDatabase, $EntityChangeWatermarksTable> {
+  $$EntityChangeWatermarksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get syncId =>
+      $composableBuilder(column: $table.syncId, builder: (column) => column);
+
+  GeneratedColumn<int> get watermark =>
+      $composableBuilder(column: $table.watermark, builder: (column) => column);
+}
+
+class $$EntityChangeWatermarksTableTableManager extends RootTableManager<
+    _$PiggyDatabase,
+    $EntityChangeWatermarksTable,
+    EntityChangeWatermark,
+    $$EntityChangeWatermarksTableFilterComposer,
+    $$EntityChangeWatermarksTableOrderingComposer,
+    $$EntityChangeWatermarksTableAnnotationComposer,
+    $$EntityChangeWatermarksTableCreateCompanionBuilder,
+    $$EntityChangeWatermarksTableUpdateCompanionBuilder,
+    (
+      EntityChangeWatermark,
+      BaseReferences<_$PiggyDatabase, $EntityChangeWatermarksTable,
+          EntityChangeWatermark>
+    ),
+    EntityChangeWatermark,
+    PrefetchHooks Function()> {
+  $$EntityChangeWatermarksTableTableManager(
+      _$PiggyDatabase db, $EntityChangeWatermarksTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$EntityChangeWatermarksTableFilterComposer(
+                  $db: db, $table: table),
+          createOrderingComposer: () =>
+              $$EntityChangeWatermarksTableOrderingComposer(
+                  $db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$EntityChangeWatermarksTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> syncId = const Value.absent(),
+            Value<int> watermark = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              EntityChangeWatermarksCompanion(
+            syncId: syncId,
+            watermark: watermark,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String syncId,
+            required int watermark,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              EntityChangeWatermarksCompanion.insert(
+            syncId: syncId,
+            watermark: watermark,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$EntityChangeWatermarksTableProcessedTableManager
+    = ProcessedTableManager<
+        _$PiggyDatabase,
+        $EntityChangeWatermarksTable,
+        EntityChangeWatermark,
+        $$EntityChangeWatermarksTableFilterComposer,
+        $$EntityChangeWatermarksTableOrderingComposer,
+        $$EntityChangeWatermarksTableAnnotationComposer,
+        $$EntityChangeWatermarksTableCreateCompanionBuilder,
+        $$EntityChangeWatermarksTableUpdateCompanionBuilder,
+        (
+          EntityChangeWatermark,
+          BaseReferences<_$PiggyDatabase, $EntityChangeWatermarksTable,
+              EntityChangeWatermark>
+        ),
+        EntityChangeWatermark,
+        PrefetchHooks Function()>;
 
 class $PiggyDatabaseManager {
   final _$PiggyDatabase _db;
@@ -16191,4 +16525,7 @@ class $PiggyDatabaseManager {
       $$ExchangeRatesTableTableManager(_db, _db.exchangeRates);
   $$ExchangeRateOverridesTableTableManager get exchangeRateOverrides =>
       $$ExchangeRateOverridesTableTableManager(_db, _db.exchangeRateOverrides);
+  $$EntityChangeWatermarksTableTableManager get entityChangeWatermarks =>
+      $$EntityChangeWatermarksTableTableManager(
+          _db, _db.entityChangeWatermarks);
 }

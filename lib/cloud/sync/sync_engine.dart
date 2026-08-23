@@ -44,6 +44,7 @@ part 'sync_engine_profile.dart';
 part 'sync_engine_apply.dart';
 part 'sync_engine_serialization.dart';
 part 'sync_engine_pull.dart';
+part 'sync_engine_watermarks.dart';
 
 const _uuid = Uuid();
 

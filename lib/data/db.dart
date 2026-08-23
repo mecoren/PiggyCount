@@ -244,6 +244,17 @@ class SyncState extends Table {
   DateTimeColumn get lastPullAt => dateTime().nullable()();
 }
 
+/// 审计 S3：每实体已见最大服务端 change_id 水位。
+/// server change_id 全局单调；回声与应用成功都推进水位，
+/// 应用前拦截 changeId ≤ 水位的陈旧重放，防旧值覆盖本地较新状态。
+class EntityChangeWatermarks extends Table {
+  TextColumn get syncId => text()();
+  IntColumn get watermark => integer()();
+
+  @override
+  Set<Column> get primaryKey => {syncId};
+}
+
 // 交易-标签关联表
 class TransactionTags extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -444,6 +455,7 @@ class SharedLedgerTags extends Table {
   SyncPullErrors,
   ExchangeRates,
   ExchangeRateOverrides,
+  EntityChangeWatermarks,
 ])
 class PiggyDatabase extends _$PiggyDatabase {
   PiggyDatabase() : super(_openConnection());
@@ -454,7 +466,7 @@ class PiggyDatabase extends _$PiggyDatabase {
   PiggyDatabase.forTesting(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 35; // v35: local_changes 部分唯一索引(F2 加固); v34: transaction_attachments local_sha256
+  int get schemaVersion => 36; // v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固); v34: transaction_attachments local_sha256
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1234,6 +1246,16 @@ class PiggyDatabase extends _$PiggyDatabase {
               WHERE pushed_at IS NULL;
             ''');
             logger.info('DBMigration', 'v35 迁移完成');
+          }
+          if (from < 36) {
+            // v36: entity_change_watermarks 实体水位表（审计 S3）。
+            // server change_id 全局单调；pull 应用成功与自设备回声都推进
+            // 水位，应用前拦截 changeId ≤ 水位的陈旧重放，防止「先推后拉」
+            // 窗口内旧远端值覆盖本地较新状态并反向污染服务端。
+            logger.info(
+                'DBMigration', '开始迁移到 v36: entity_change_watermarks 实体水位表');
+            await migrator.createTable(entityChangeWatermarks);
+            logger.info('DBMigration', 'v36 迁移完成');
           }
         },
         onCreate: (m) async {

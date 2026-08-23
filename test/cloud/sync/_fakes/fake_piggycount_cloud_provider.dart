@@ -233,9 +233,10 @@ class FakePiggyCountCloudProvider extends PiggyCountCloudProvider {
     String action = 'upsert',
     Map<String, dynamic>? payload,
     String updatedByDeviceId = 'remote-device',
+    int? changeId, // 审计 S3：测试注入显式 id（默认仍自增）
   }) {
     final change = PiggyCountCloudSyncChange(
-      changeId: _serverChanges.length + 1,
+      changeId: changeId ?? _serverChanges.length + 1,
       ledgerId: ledgerId,
       entityType: entityType,
       entitySyncId: entitySyncId,

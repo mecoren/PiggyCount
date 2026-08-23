@@ -366,10 +366,11 @@ void main() {
       await engine.pull('');
       expect(await engine.appCursor.read(), 3);
 
-      // replay 从 0 拉 — 由于 apply 是 syncId upsert 幂等,重拉不会重复插
+      // replay 从 0 拉 — 审计 S3 水位拦截:已见过的 change(changeId ≤ 水位)
+      // 不得重放应用,防止陈旧远端值覆盖本地较新状态。
       provider.pullCalls.clear();
       final applied = await engine.pull('', sinceOverride: 0);
-      expect(applied, 3, reason: 'replay 应重新 apply 3 条');
+      expect(applied, 0, reason: 'S3 水位应拦住全部已见变更的重放');
       expect(provider.pullCalls.first.since, 0,
           reason: 'replay 必须从 since=0 拉');
 

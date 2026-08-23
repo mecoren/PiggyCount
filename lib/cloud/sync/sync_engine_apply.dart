@@ -9,19 +9,50 @@ extension SyncEngineApplyExt on SyncEngine {
   /// 应用单条远程变更到本地数据库
   /// 返回 true 表示已应用，false 表示跳过
   Future<bool> applyRemoteChange(PiggyCountCloudSyncChange change) async {
-    // 跳过本设备自己的变更
-    // F1: pull 内 deviceId 是常量,用 _doPull 预解析的 _pullDeviceId;
-    // 非 pull 路径(目前无 caller)fallback 到逐次解析。
     final deviceId = _pullDeviceId ?? await _getDeviceId();
-    if (change.updatedByDeviceId == deviceId) return false;
 
-    // 如果没有 payload 且不是删除操作，跳过（无法应用）
+    // 自设备回声：不应用，但必须记录水位——这是「先推后拉」场景下
+    // 本机较新推送在 pull 窗口内的唯一痕迹（审计 S3）。
+    if (change.updatedByDeviceId == deviceId) {
+      await _recordEntityWatermark(change.entitySyncId, change.changeId);
+      return false;
+    }
+
     if (change.payload == null && change.action != 'delete') {
       logger.debug('SyncEngine',
           'pull: 跳过无 payload 的变更 ${change.entityType}/${change.entitySyncId}');
       return false;
     }
 
+    // 未推送本地编辑守卫（审计 S3b）：sync() 固定 push→pull，本机较新值
+    // 即将/已经推上 server。若此刻把 pull 窗口里更旧的远端值写进本地，
+    // 本地回退且后续以旧值为 base 的编辑会反向污染 server canonical。
+    // 跳过不记错误；等本机推送成功后，回声/水位机制自然收敛。
+    if (await _hasUnpushedLocalChange(change.entityType, change.entitySyncId)) {
+      logger.debug('SyncEngine',
+          'pull: 存在未推送本地编辑，跳过远端更新 '
+          '${change.entityType}/${change.entitySyncId}');
+      return false;
+    }
+
+    // 陈旧重放拦截（审计 S3）：该实体已见过更大（或相等）的 change_id。
+    final seen = await _entityWatermark(change.entitySyncId);
+    if (seen != null && change.changeId <= seen) {
+      logger.debug('SyncEngine',
+          'pull: 跳过陈旧变更 ${change.entityType}/${change.entitySyncId}'
+          '(changeId=${change.changeId} <= watermark=$seen)');
+      return false;
+    }
+
+    final applied = await _dispatchApply(change);
+    if (applied) {
+      await _recordEntityWatermark(change.entitySyncId, change.changeId);
+    }
+    return applied;
+  }
+
+  /// switch 分发逻辑（原 applyRemoteChange 内联部分，原样迁入）。
+  Future<bool> _dispatchApply(PiggyCountCloudSyncChange change) async {
     switch (change.entityType) {
       case 'transaction':
         await _applyTransactionChange(change);
