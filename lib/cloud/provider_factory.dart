@@ -1,23 +1,23 @@
 import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:flutter_cloud_sync_supabase/flutter_cloud_sync_supabase.dart';
 import 'package:flutter_cloud_sync_webdav/flutter_cloud_sync_webdav.dart';
 import 'package:flutter_cloud_sync_icloud/flutter_cloud_sync_icloud.dart';
 import 'package:flutter_cloud_sync_s3/flutter_cloud_sync_s3.dart';
-import '../providers/piggycount_cloud_provider.dart';
-
-import '../core/auth_service.dart';
-import '../core/cloud_provider.dart';
-import 'cloud_service_config.dart';
 
 /// 根据 CloudServiceConfig 创建对应的 CloudProvider 和 CloudAuthService
 ///
 /// 返回 (CloudProvider, CloudAuthService) 元组
 ///
-/// 支持:
-/// - Supabase: 使用独立包内的初始化逻辑
-/// - WebDAV: 创建新的 WebDAV provider
+/// 支持后端: PiggyCount Cloud / Supabase / WebDAV / iCloud / S3
+///
+/// 位置说明（L3 循环依赖解除）：本工厂此前位于 flutter_cloud_sync 包内
+/// （src/config/provider_factory.dart），导致 core 反向依赖全部 provider
+/// 包、与「provider 包依赖 core」形成循环。现迁至 app 层 —— app 本就直接
+/// 依赖所有包，core 回归纯接口+通用实现（PiggyCount Cloud 协议实现仍在
+/// core 内，无循环）。
 Future<({CloudProvider? provider, CloudAuthService? auth})> createCloudServices(
   CloudServiceConfig config,
 ) async {
@@ -107,11 +107,4 @@ Future<({CloudProvider? provider, CloudAuthService? auth})> createCloudServices(
 
       return (provider: provider, auth: auth);
   }
-}
-
-/// 兼容旧代码的方法
-@Deprecated('Use createCloudServices instead')
-Future<CloudProvider?> createCloudProvider(CloudServiceConfig config) async {
-  final services = await createCloudServices(config);
-  return services.provider;
 }

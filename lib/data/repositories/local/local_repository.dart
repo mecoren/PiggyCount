@@ -12,6 +12,7 @@ import '../budget_repository.dart';
 import '../transaction_repository.dart'
     show
         BatchAttachmentData,
+        RecurringInstanceFingerprint,
         TransactionUpdateBySyncIdData;
 import 'local_ledger_repository.dart';
 import 'local_transaction_repository.dart';
@@ -137,10 +138,6 @@ class LocalRepository extends BaseRepository {
 
   @override
   Future<void> deleteLedger(int id) async {
-    if (changeTracker == null) {
-      await _ledgerRepo.deleteLedger(id);
-      return;
-    }
     // 删除前预查级联会消失的 transactions 和 budgets,删完后逐条登记 delete
     // change。之前只记 ledger_snapshot:delete 一条,server 端如果不做级联
     // (或对端 mobile 各按自己的契约 apply),本地删干净的 tx 在云端可能继续
@@ -152,6 +149,13 @@ class LocalRepository extends BaseRepository {
     //
     // 关键修复:必须先把 ledger.syncId 拿出来,否则 _ledgerRepo.deleteLedger
     // 之后 ledger 行就没了,后续 _push 拿不到 syncId 推不掉云端账本。
+    //
+    // M1/M2 审计修复：清理逻辑不再挂在 tracker 分支 —— 此前非 Cloud 后端
+    // （S3/WebDAV/iCloud/Supabase，tracker==null）提前 return，budgets /
+    // transaction_tags / transaction_attachments / transaction_tag_overrides
+    // 全部残留孤儿行；且 recurring_transactions 在任何模式都漏删。现在
+    // 数据清理对全部后端一致执行，仅「水位/拉取错误清理 + change 登记」
+    // 是 Cloud 专属（快照链路没有这些表的数据）。
     await db.transaction(() async {
       final ledgerRow = await (db.select(db.ledgers)
             ..where((l) => l.id.equals(id)))
@@ -176,10 +180,9 @@ class LocalRepository extends BaseRepository {
             ..where((r) => r.ledgerId.equals(id)))
           .get();
 
-      // 审计 S9：底层 deleteLedger 只清 transactions+ledgers 两表
-      // （db.dart 无外键级联，注释里的"级联"并不存在）——
-      // transaction_tags / transaction_attachments 残留孤儿行，照
-      // clearLedgerTransactions 的口径在此一并清理。
+      // 底层 deleteLedger 只清 transactions+ledgers 两表（db.dart 无外键
+      // 级联，注释里的"级联"并不存在）——照 clearLedgerTransactions 的
+      // 口径在此一并清理关联行。
       final txIds = txs.map((t) => t.id).toList();
       if (txIds.isNotEmpty) {
         await (db.delete(db.transactionTags)
@@ -187,6 +190,22 @@ class LocalRepository extends BaseRepository {
             .go();
         await (db.delete(db.transactionAttachments)
               ..where((ta) => ta.transactionId.isIn(txIds)))
+            .go();
+        // 共享标签 override 按 tx.syncId 清理（该表主键是文本 syncId，
+        // 不能按 int id 删；此前批量删账本两条路径都漏了它）。
+        final txSyncIds =
+            txs.map((t) => t.syncId).whereType<String>().toList();
+        if (txSyncIds.isNotEmpty) {
+          await (db.delete(db.transactionTagOverrides)
+                ..where((o) => o.transactionSyncId.isIn(txSyncIds)))
+              .go();
+        }
+      }
+      // M2：删除账本自身的周期规则模板（两种模式都漏 → 孤儿规则残留，
+      // 且有被生成器复活成悬空 ledgerId 交易的风险）。
+      if (recurrings.isNotEmpty) {
+        await (db.delete(db.recurringTransactions)
+              ..where((r) => r.ledgerId.equals(id)))
             .go();
       }
 
@@ -196,6 +215,9 @@ class LocalRepository extends BaseRepository {
         await (db.delete(db.budgets)..where((b) => b.ledgerId.equals(id)))
             .go();
       }
+
+      // ---- 以下为 PiggyCount Cloud 链路专属收尾（快照后端无此数据）----
+      if (changeTracker == null) return;
 
       // 审计 S9：被删账本的 pull 错误记录悬挂（UI 会持续显示已不存在
       // 账本的同步错误），按 external_id 清理。
@@ -239,6 +261,16 @@ class LocalRepository extends BaseRepository {
           action: 'delete',
         );
       }
+      for (final r in recurrings) {
+        if (r.syncId == null || r.syncId!.isEmpty) continue;
+        await changeTracker!.recordLedgerChange(
+          entityType: 'recurring',
+          entityId: r.id,
+          entitySyncId: r.syncId!,
+          ledgerId: id,
+          action: 'delete',
+        );
+      }
       // ledger_snapshot:delete 用 ledger.syncId 作为 entity_sync_id,server
       // 才能按 external_id 找到对应的 ledger 删掉(server 用 syncId/UUID 做
       // external_id,不是本地 int id)。这点跟 sync_engine._pushAllEntities
@@ -253,7 +285,8 @@ class LocalRepository extends BaseRepository {
       );
       logger.info('LocalRepository',
           'deleteLedger($id) 已登记 ${txs.length} 条 transaction:delete + '
-          '${budgets.length} 条 budget:delete + 1 条 ledger_snapshot:delete '
+          '${budgets.length} 条 budget:delete + ${recurrings.length} 条 '
+          'recurring:delete + 1 条 ledger_snapshot:delete '
           '(ledgerSyncId=$ledgerSyncId)');
     });
   }
@@ -566,8 +599,9 @@ class LocalRepository extends BaseRepository {
           recurringId: recurringId, happenedAt: happenedAt);
 
   @override
-  Future<Set<String>> getRecurringInstanceKeys(Iterable<int> recurringIds) =>
-      _transactionRepo.getRecurringInstanceKeys(recurringIds);
+  Future<Map<String, List<RecurringInstanceFingerprint>>>
+      getRecurringInstanceDetails(Iterable<int> recurringIds) =>
+      _transactionRepo.getRecurringInstanceDetails(recurringIds);
 
   // ---------------------------------------------------------------------
   // v30 交易级多币种:折算兜底 + 重算/检测(.docs/multi-currency-ledger)

@@ -18,6 +18,7 @@ import '../../widgets/biz/section_card.dart';
 import '../../styles/tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../cloud/cloud_feature_flags.dart';
+import '../../cloud/provider_factory.dart';
 
 // GitHub配置教程链接
 const _kSupabaseGuideUrl =

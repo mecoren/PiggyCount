@@ -191,8 +191,11 @@ class FakePiggyCountCloudProvider extends PiggyCountCloudProvider {
     // 真实 server 语义：server_cursor 是服务端当前全局头部，与 since 回显无关。
     // （审计 S2 测试需要：自愈 probe since=超大值时也必须拿到真实头部，
     //   否则游标被推到 since 本身，后续新增量会被永久跳过。）
+    // 空流分支同样必须返真实头部（0）而非回显 since —— 否则 SYNC-11 的
+    // 轻量探针 pullChanges(since: 1<<40) 会拿到 1<<40 > 本地游标，
+    // getStatus 永远误判 cloudNewer。
     final head = _serverChanges.isEmpty
-        ? from
+        ? 0
         : _serverChanges.map((c) => c.changeId).reduce((a, b) => a > b ? a : b);
     return PiggyCountCloudPullResult(
       changes: slice,

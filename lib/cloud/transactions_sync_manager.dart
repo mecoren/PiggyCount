@@ -13,9 +13,9 @@ import '../data/encryption/ciphertext_format.dart';
 import '../data/encryption/encrypted_cloud_provider.dart';
 import '../data/repositories/base_repository.dart';
 import '../domain/encryption/encryption_service.dart';
-import '../models/ledger_display_item.dart';
 import '../services/data_import_service.dart';
 import '../services/system/logger_service.dart';
+import 'provider_factory.dart';
 import 'sync_diff_service.dart';
 import 'sync_fingerprint.dart';
 import 'sync_service.dart';
@@ -253,7 +253,7 @@ class TransactionsSyncManager implements SyncService {
 
   /// 初始化 CloudProvider 和 SyncManager
   Future<void> _initialize() async {
-    final services = await fcs.createCloudServices(config);
+    final services = await createCloudServices(config);
     _provider = services.provider;
 
     if (_provider == null) {
@@ -816,7 +816,12 @@ class TransactionsSyncManager implements SyncService {
       final deletedDupCount = restored.deletedDup;
 
       logger.info('CloudSync',
-          '下载完成: inserted=$result, deletedDup=$deletedDupCount');
+          '下载完成: inserted=$result, deletedDup=$deletedDupCount, skippedRecurring=${restored.skippedRecurring}');
+      if (restored.skippedRecurring > 0) {
+        logger.warning('CloudSync',
+            '恢复时有 ${restored.skippedRecurring} 笔同日周期实例被判重跳过'
+            '（同规则同日且syncId或金额+备注相同），请核对源端是否存在同日多笔合法交易');
+      }
 
       // 附件二进制后台补齐(不阻塞恢复返回):元数据已入库,缺的文件
       // 从 attachments/<sha256>.bin 异步下载,失败回队下次 drain 重试。
@@ -932,6 +937,14 @@ class TransactionsSyncManager implements SyncService {
     _statusCache.remove(ledgerId);
     _recentLocalChangeAt.remove(ledgerId);
     _recentUpload.remove(ledgerId);
+
+    // 附件差异贯通：modified 合并可能带入带 sha256 的附件清单，本地缺的
+    // 文件从 attachments/<sha256>.bin 后台补齐（与下载恢复路径同口径，
+    // 不阻塞 apply 返回）。
+    if (result.totalCount > 0) {
+      unawaited(enqueueMissingAttachmentJobs(ledgerId)
+          .then((_) => drainAttachmentJobs()));
+    }
 
     return result;
   }
@@ -1211,186 +1224,11 @@ class TransactionsSyncManager implements SyncService {
     }
   }
 
-  /// 获取本地账本列表
-  Future<List<LedgerDisplayItem>> getLocalLedgers({bool accountFeatureEnabled = true}) async {
-    await _ensureInitialized();
-
-    final localLedgers = await db.select(db.ledgers).get();
-    final result = <LedgerDisplayItem>[];
-
-    for (final ledger in localLedgers) {
-      // 使用 getLedgerStats 一次性获取余额和交易数，内部会自动查询 transactions
-      final stats = await repo.getLedgerStats(
-        ledgerId: ledger.id,
-        accountFeatureEnabled: accountFeatureEnabled,
-      );
-
-      result.add(LedgerDisplayItem.fromLocal(
-        id: ledger.id,
-        name: ledger.name,
-        currency: ledger.currency,
-        createdAt: ledger.createdAt,
-        transactionCount: stats.transactionCount,
-        balance: stats.balance,
-      ));
-    }
-
-    logger.info('CloudSync', '已加载本地账本: ${result.length} 个');
-    return result;
-  }
-
-  /// 获取远程账本列表（仅云端，不在本地）
-  Future<List<LedgerDisplayItem>> getRemoteLedgers() async {
-    await _ensureInitialized();
-
-    // 捕获到局部变量（ATTACH-2 竞态防护）
-    final provider = _provider;
-    if (provider == null) {
-      logger.warning('CloudSync', 'Provider 不可用，无法获取远程账本列表');
-      return [];
-    }
-
-    // 获取本地账本ID列表（用于过滤）
-    final localLedgers = await db.select(db.ledgers).get();
-    final localLedgerIds = localLedgers.map((l) => l.id).toSet();
-
-    final result = <LedgerDisplayItem>[];
-
-    // 直接从云端文件列表获取远程账本
-    try {
-      final files = await provider.storage.list(path: '');
-      logger.info('CloudSync', '云端文件列表: ${files.map((f) => f.name).toList()}');
-      int remoteCount = 0;
-
-      for (final file in files) {
-        try {
-          // 只处理 ledger_*.json 文件
-          final fileName = file.name;
-          if (!fileName.startsWith('ledger_') || !fileName.endsWith('.json')) {
-            continue;
-          }
-
-          // 从文件名提取账本ID
-          final idStr =
-              fileName.replaceAll('ledger_', '').replaceAll('.json', '');
-          final remoteId = int.tryParse(idStr);
-          if (remoteId == null) continue;
-
-          // 如果本地已存在，跳过
-          if (localLedgerIds.contains(remoteId)) continue;
-
-          // m-02 修复：优先从 metadata 获取账本摘要信息，避免全量下载 JSON。
-          // upload 时已将 ledgerName/currency/count/balance/exportedAt 写入 metadata，
-          // 对于支持自定义元数据的 Provider（S3 HEAD / Supabase metadata 表），
-          // 仅需 1 次轻量请求即可获取摘要，无需下载完整 JSON 文件。
-          String? name;
-          String? currency;
-          int? transactionCount;
-          double? balance;
-          String? updatedAtStr;
-
-          // 尝试从 list() 返回的 metadata 或 getMetadata() 获取
-          var fileMeta = file.metadata;
-          if (fileMeta == null || fileMeta.isEmpty || fileMeta['ledgerName'] == null) {
-            try {
-              final meta = await provider.storage.getMetadata(path: file.name);
-              fileMeta = meta?.metadata;
-            } catch (e) {
-              logger.warning('CloudSync', 'getMetadata 失败: ${file.name} - $e');
-            }
-          }
-
-          if (fileMeta != null && fileMeta['ledgerName'] != null) {
-            // metadata 命中，直接构造（无需下载）
-            name = fileMeta['ledgerName'];
-            currency = fileMeta['currency'] ?? 'CNY';
-            transactionCount = int.tryParse(fileMeta['count'] ?? '');
-            balance = double.tryParse(fileMeta['balance'] ?? '');
-            updatedAtStr = fileMeta['exportedAt'] ?? fileMeta['uploadedAt'];
-            logger.info('CloudSync', '从 metadata 获取账本信息: $name (跳过下载)');
-          }
-
-          // metadata 未命中，回退到全量下载解析 JSON
-          if (name == null) {
-            logger.info('CloudSync', 'metadata 未命中，下载远程账本: ${file.name}');
-            final jsonStr = await provider.storage.download(path: file.name);
-            if (jsonStr == null) {
-              logger.warning('CloudSync', '下载结果为空: ${file.name}');
-              continue;
-            }
-
-            final json = jsonDecode(jsonStr) as Map<String, dynamic>;
-            name = json['ledgerName'] as String? ?? json['name'] as String? ?? 'Unknown';
-            currency = json['currency'] as String? ?? 'CNY';
-            updatedAtStr = json['exportedAt'] as String?;
-            transactionCount = json['count'] as int? ?? 0;
-
-            if (json.containsKey('balance')) {
-              balance = (json['balance'] as num?)?.toDouble() ?? 0.0;
-            } else {
-              var computed = 0.0;
-              final items = (json['items'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-              for (final item in items) {
-                final type = item['type'] as String?;
-                final amount = (item['amount'] as num?)?.toDouble() ?? 0.0;
-                if (type == 'income') {
-                  computed += amount;
-                } else if (type == 'expense') {
-                  computed -= amount;
-                }
-              }
-              balance = computed;
-            }
-          }
-
-          // H1：损坏/缺失的时间串降级为当前时间，不中断远端账本列表发现
-          final updatedAt = DateTime.tryParse(updatedAtStr ?? '') ?? DateTime.now();
-
-          result.add(LedgerDisplayItem.fromRemote(
-            remoteSyncId: remoteId.toString(),
-            name: name,
-            currency: currency ?? 'CNY',
-            updatedAt: updatedAt,
-            transactionCount: transactionCount ?? 0,
-            balance: balance ?? 0.0,
-          ));
-
-          remoteCount++;
-        } catch (e) {
-          logger.warning('CloudSync', '解析远程账本文件失败: ${file.name} - $e');
-          continue;
-        }
-      }
-
-      logger.info('CloudSync', '已加载远程账本: $remoteCount 个');
-    } catch (e) {
-      logger.warning('CloudSync', '获取远程账本失败: $e');
-      // 失败不影响，返回空列表
-    }
-
-    return result;
-  }
-
-  /// 获取所有账本（本地 + 云端）
-  Future<List<LedgerDisplayItem>> getAllLedgers() async {
-    await _ensureInitialized();
-
-    // 并行获取本地和远程账本
-    final results = await Future.wait([
-      getLocalLedgers(),
-      getRemoteLedgers(),
-    ]);
-
-    final localLedgers = results[0];
-    final remoteLedgers = results[1];
-
-    // 组合结果
-    final allLedgers = [...localLedgers, ...remoteLedgers];
-
-    logger.info('CloudSync', '已加载所有账本: 本地=${localLedgers.length}, 远程=${remoteLedgers.length}, 总计=${allLedgers.length}');
-
-    return allLedgers;
-  }
+  // L4 死代码清理：getLocalLedgers / getRemoteLedgers / getAllLedgers 已无
+  // 任何调用方（UI 远端账本入口统一走 discoverRemoteLedgers / importRemoteLedger，
+  // 本地账本列表走 repositoryProvider.getAllLedgers），整组删除 —— 其中
+  // getRemoteLedgers 的 metadata/下载解析逻辑与 discoverRemoteLedgers 重复，
+  // 留着只会多一份需要同步修 bug 的副本。
 
   /// 刷新所有账本的同步状态（后台预热缓存）
   Future<void> refreshAllLedgersStatus() async {
@@ -1552,7 +1390,11 @@ class TransactionsSyncManager implements SyncService {
         return null;
       }
       logger.info('CloudSync',
-          '下载完成(覆盖语义): ledgerId=$ledgerId, inserted=${restored.inserted}, 清空=${restored.deletedDup}');
+          '下载完成(覆盖语义): ledgerId=$ledgerId, inserted=${restored.inserted}, 清空=${restored.deletedDup}, skippedRecurring=${restored.skippedRecurring}');
+      if (restored.skippedRecurring > 0) {
+        logger.warning('CloudSync',
+            '恢复时有 ${restored.skippedRecurring} 笔同日周期实例被判重跳过，请核对源端明细');
+      }
 
       // 处理云端文件更新
       // Critical-07 修复：采用「先上传后删除」顺序，避免删除成功但上传
@@ -1685,9 +1527,22 @@ class TransactionsSyncManager implements SyncService {
         ledgerFiles.map((file) async {
           try {
             // 下载文件内容以获取账本信息（使用 file.name 而非 file.path）
-            final jsonStr = await provider.storage.download(path: file.name);
-            if (jsonStr == null) {
+            final raw = await provider.storage.download(path: file.name);
+            if (raw == null) {
               logger.warning('CloudSync', '下载失败: ${file.name}');
+              return false;
+            }
+
+            // H3 补漏：密文快照先解密再解析；无密钥/密文损坏计为该文件
+            // 恢复失败，不再让 jsonDecode 报格式错误误导排查。
+            final String jsonStr;
+            try {
+              jsonStr = await _decryptIfNeeded(raw);
+            } on CloudEncryptedLocallyDisabledException {
+              logger.warning('CloudSync', '远程账本 ${file.name} 为密文且本地无可用密钥');
+              return false;
+            } on CloudCiphertextUndecryptableException {
+              logger.warning('CloudSync', '远程账本 ${file.name} 密文无法用本机密钥解密');
               return false;
             }
 
@@ -1777,10 +1632,12 @@ class TransactionsSyncManager implements SyncService {
             await downloadAndRestoreToCurrentLedger(ledgerId: remoteId);
           } else {
             // 云端独有账本：下载元信息后导入为新建本地账本
-            final jsonStr = await provider.storage.download(path: file.name);
-            if (jsonStr == null) {
+            final raw = await provider.storage.download(path: file.name);
+            if (raw == null) {
               throw fcs.CloudSyncException('云端文件下载为空: ${file.name}');
             }
+            // H3 补漏：密文快照先解密再解析（与 downloadRemoteLedger 同口径）
+            final jsonStr = await _decryptIfNeeded(raw);
             final json = jsonDecode(jsonStr) as Map<String, dynamic>;
             final name = json['ledgerName'] as String? ??
                 json['name'] as String? ??
@@ -1916,6 +1773,7 @@ class TransactionsSyncManager implements SyncService {
       jsonStr = await _decryptIfNeeded(raw);
     }
 
+    var importSkippedRecurring = 0;
     final inserted = await db.transaction(() async {
       // 竞态守卫：发现与导入之间本地可能新建了同 id 账本
       final exists = await (db.select(db.ledgers)
@@ -1952,12 +1810,17 @@ class TransactionsSyncManager implements SyncService {
       // 从云端导入不写本地变更历史（P2-3），与下载恢复路径语义一致
       final result = await importTransactionsJson(repo, meta.id, jsonStr!,
           recordChanges: false);
+      importSkippedRecurring = result.skippedRecurring;
       return result.inserted;
     });
 
     _discoveredPayloads.remove(meta.id);
     logger.info('CloudSync',
-        '云端账本导入完成: id=${meta.id}, name=${meta.name}, inserted=$inserted');
+        '云端账本导入完成: id=${meta.id}, name=${meta.name}, inserted=$inserted, skippedRecurring=$importSkippedRecurring');
+    if (importSkippedRecurring > 0) {
+      logger.warning('CloudSync',
+          '导入时有 $importSkippedRecurring 笔同日周期实例被判重跳过，请核对源端明细');
+    }
 
     // 附件二进制后台补齐(与下载恢复路径同款:不阻塞导入返回)
     unawaited(enqueueMissingAttachmentJobs(meta.id)

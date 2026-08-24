@@ -117,75 +117,89 @@ void main() {
   });
 
   group('WebDAVAuthService', () {
-    test('should create CloudUser from credentials', () async {
+    test('currentUser should return virtual user built from username', () async {
       final authService = WebDAVAuthService('test-user');
 
-      final user = await authService.signInWithEmail(
-        email: 'user@example.com',
-        password: 'password',
-      );
+      final user = await authService.currentUser;
 
-      expect(user.id, equals('user@example.com'));
-      expect(user.email, equals('user@example.com'));
-      expect(user.metadata?['password'], equals('password'));
+      expect(user, isNotNull);
+      expect(user!.id, equals('test-user'));
+      expect(user.email, equals('test-user@webdav'));
+
+      authService.dispose();
     });
 
-    test('should emit auth state changes', () async {
+    test(
+        'signInWithEmail / signUpWithEmail should throw UnsupportedError '
+        '(WebDAV uses Basic Auth, no email accounts)', () async {
+      final authService = WebDAVAuthService('test-user');
+
+      expect(
+        () => authService.signInWithEmail(
+            email: 'user@example.com', password: 'password'),
+        throwsUnsupportedError,
+      );
+      expect(
+        () => authService.signUpWithEmail(
+            email: 'user@example.com', password: 'password'),
+        throwsUnsupportedError,
+      );
+
+      authService.dispose();
+    });
+
+    test('authStateChanges should emit current user on listen', () async {
       final authService = WebDAVAuthService('test-user');
 
       final states = <CloudUser?>[];
       final subscription = authService.authStateChanges.listen(states.add);
 
-      await authService.signInWithEmail(
-        email: 'user@example.com',
-        password: 'password',
-      );
-
+      // broadcast stream 在 onListen 时推送当前用户
       await Future.delayed(const Duration(milliseconds: 100));
 
-      expect(states.length, greaterThan(0));
-      expect(states.last?.email, equals('user@example.com'));
+      expect(states, isNotEmpty);
+      expect(states.last?.id, equals('test-user'));
 
       await subscription.cancel();
       authService.dispose();
     });
 
-    test('signOut should clear current user', () async {
+    test('authStateChanges should emit null after signOut', () async {
       final authService = WebDAVAuthService('test-user');
-
-      await authService.signInWithEmail(
-        email: 'user@example.com',
-        password: 'password',
-      );
 
       var user = await authService.currentUser;
       expect(user, isNotNull);
 
+      final states = <CloudUser?>[];
+      final subscription = authService.authStateChanges.listen(states.add);
       await authService.signOut();
+      await Future.delayed(const Duration(milliseconds: 100));
 
       user = await authService.currentUser;
       expect(user, isNull);
+      expect(states.last, isNull);
 
+      await subscription.cancel();
       authService.dispose();
     });
 
-    test('sendPasswordResetEmail should throw exception', () async {
+    test('sendPasswordResetEmail should throw UnsupportedError', () async {
       final authService = WebDAVAuthService('test-user');
 
       expect(
         () => authService.sendPasswordResetEmail(email: 'user@example.com'),
-        throwsA(isA<CloudAuthException>()),
+        throwsUnsupportedError,
       );
 
       authService.dispose();
     });
 
-    test('resendEmailVerification should throw exception', () async {
+    test('resendEmailVerification should throw UnsupportedError', () async {
       final authService = WebDAVAuthService('test-user');
 
       expect(
         () => authService.resendEmailVerification(email: 'user@example.com'),
-        throwsA(isA<CloudAuthException>()),
+        throwsUnsupportedError,
       );
 
       authService.dispose();

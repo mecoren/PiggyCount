@@ -59,11 +59,15 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
         // 旧白名单下两端指纹不变 → getStatus 判 inSync → 附件差异
         // 永不传播。规范化为排序后的 (sha256, fileName, sortOrder) 列表；
         // 缺键视为空列表（G2「缺失==显式空」约定，兼容旧快照）。
+        // 键优先级对齐快照链口径（L1）：内容寻址锚点 localSha256（'sha256'）
+        // 是上传/补齐链路的唯一事实源，优先采用；cloudSha256 只是 Cloud
+        // 引擎的引用回填，混排进指纹会让「一端有 Cloud 残留列、另一端
+        // 没有」的同一份文件产生不同指纹 → 永久 outOfSync。
         final rawAtts = (it['attachments'] as List?) ?? const [];
         final canonAttachments = rawAtts
             .whereType<Map>()
             .map((a) => [
-                  (a['cloudSha256'] ?? a['sha256'] ?? '') as String,
+                  ((a['sha256'] ?? a['cloudSha256']) ?? '') as String,
                   (a['fileName'] ?? '') as String,
                   ((a['sortOrder'] as num?) ?? 0).toString(),
                 ].join('|'))

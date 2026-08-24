@@ -358,6 +358,76 @@ void main() {
       });
     });
 
+    group('附件清单参与指纹（S11 + L1 键优先级）', () {
+      Map<String, dynamic> txWithAtts(List<Map<String, dynamic>> atts) => {
+            'happenedAt': '2026-07-01T10:00:00',
+            'type': 'expense',
+            'amount': 12.34,
+            'attachments': atts,
+          };
+
+      test('附件增删产生不同指纹', () {
+        final p1 = payload([txWithAtts(const [])]);
+        final p2 = payload([
+          txWithAtts([
+            {'sha256': 'abc123', 'fileName': 'a.jpg', 'sortOrder': 0},
+          ]),
+        ]);
+
+        expect(
+          contentFingerprintFromMap(p1),
+          isNot(equals(contentFingerprintFromMap(p2))),
+          reason: '只加附件不改交易内容时指纹必须变化，否则 getStatus 判 '
+              'inSync，附件差异永不传播',
+        );
+      });
+
+      test('sha256 优先于 cloudSha256（快照链口径，L1）', () {
+        // 同一文件：一端带 Cloud 引擎残留的 cloudSha256 列、另一端只有
+        // localSha256 —— 内容相同时指纹必须一致。
+        final withCloudRef = payload([
+          txWithAtts([
+            {
+              'sha256': 'content-hash-1',
+              'cloudSha256': 'cloud-ref-999',
+              'fileName': 'a.jpg',
+              'sortOrder': 0,
+            },
+          ]),
+        ]);
+        final onlyLocal = payload([
+          txWithAtts([
+            {'sha256': 'content-hash-1', 'fileName': 'a.jpg', 'sortOrder': 0},
+          ]),
+        ]);
+
+        expect(
+          contentFingerprintFromMap(withCloudRef),
+          equals(contentFingerprintFromMap(onlyLocal)),
+          reason: '指纹锚点必须是内容哈希 sha256；cloudSha256 参与比较会让 '
+              '「有/无 Cloud 残留列」的两端对同一份文件算出不同指纹',
+        );
+      });
+
+      test('无 sha256 时回退 cloudSha256（旧数据兼容）', () {
+        final onlyCloud = payload([
+          txWithAtts([
+            {'cloudSha256': 'cloud-ref-1', 'fileName': 'a.jpg', 'sortOrder': 0},
+          ]),
+        ]);
+        final explicitFallback = payload([
+          txWithAtts([
+            {'sha256': 'cloud-ref-1', 'fileName': 'a.jpg', 'sortOrder': 0},
+          ]),
+        ]);
+
+        expect(
+          contentFingerprintFromMap(onlyCloud),
+          equals(contentFingerprintFromMap(explicitFallback)),
+        );
+      });
+    });
+
     test('快照测试：固定输入对应固定 SHA256（防止规范化规则意外变化）', () {
       // 该测试用例的输入与期望指纹绑定，任何对规范化规则的修改都会触发此测试失败，
       // 提醒开发者评估是否需要数据迁移或全量重同步。

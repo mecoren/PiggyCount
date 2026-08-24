@@ -7,6 +7,7 @@ import 'package:drift/drift.dart' as d;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' hide SyncStatus;
+import '../cloud/provider_factory.dart';
 import '../cloud/sync_service.dart';
 import 'shared_ledger_providers.dart';
 import '../cloud/sync/sync_coordinator.dart';

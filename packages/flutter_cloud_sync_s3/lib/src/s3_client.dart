@@ -104,9 +104,9 @@ class S3Client {
         return await operation();
       } on S3ClockSkewException {
         // 审计 S22：时钟偏差——_handleError 已按服务器时间写入签名偏移，
-        // 立即用新偏移重试一次（不消耗常规重试次数预算）。
+        // 立即用新偏移重试一次。计入 maxRetries 预算（attempt++）：
+        // 偏差持续存在时终止循环，避免无限重试。
         await Future.delayed(const Duration(milliseconds: 200));
-        // 继续下一轮；若偏差持续，后续 skew 异常走 maxRetries 上限
         attempt++;
         if (attempt >= maxRetries) rethrow;
       } on S3NetworkException {

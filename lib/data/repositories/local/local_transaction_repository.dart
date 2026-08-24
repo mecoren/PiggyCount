@@ -696,19 +696,29 @@ class LocalTransactionRepository implements TransactionRepository {
   }
 
   @override
-  Future<Set<String>> getRecurringInstanceKeys(
-      Iterable<int> recurringIds) async {
+  Future<Map<String, List<RecurringInstanceFingerprint>>>
+      getRecurringInstanceDetails(Iterable<int> recurringIds) async {
     final ids = recurringIds.toSet();
     if (ids.isEmpty) return {};
     final rows = await (db.select(db.transactions)
           ..where((t) => t.recurringId.isIn(ids)))
         .get();
-    return {
-      for (final t in rows)
-        if (t.recurringId != null)
-          TransactionRepository.recurringInstanceKey(
-              t.recurringId!, t.happenedAt),
-    };
+    final result =
+        <String, List<RecurringInstanceFingerprint>>{};
+    for (final t in rows) {
+      final rid = t.recurringId;
+      if (rid == null) continue;
+      result
+          .putIfAbsent(
+              TransactionRepository.recurringInstanceKey(rid, t.happenedAt),
+              () => [])
+          .add((
+        syncId: t.syncId,
+        amount: t.amount,
+        note: t.note,
+      ));
+    }
+    return result;
   }
 
   @override
@@ -1567,11 +1577,102 @@ class LocalTransactionRepository implements TransactionRepository {
       final rows = await (db.select(db.transactions)
             ..where((t) => t.syncId.isIn(syncIds)))
           .get();
-      return {
+      final syncIdToTxId = {
         for (final tx in rows)
           if (tx.syncId != null) tx.syncId!: tx.id,
       };
+
+      // 附件清单替换（云→本 modified 合并）：attachments == null 不动本地；
+      // 非 null（含空表）以云端清单整体替换。与主表更新同事务，失败一起回滚。
+      final removedFileNames = <String>{};
+      for (final u in updates) {
+        final list = u.attachments;
+        if (list == null) continue;
+        final txId = syncIdToTxId[u.syncId];
+        if (txId == null) continue;
+        removedFileNames.addAll(
+            await _replaceAttachmentsForTransaction(txId, list));
+      }
+      if (removedFileNames.isNotEmpty) {
+        await _gcUnreferencedAttachmentFiles(removedFileNames);
+      }
+
+      return syncIdToTxId;
     });
+  }
+
+  /// 整体替换某交易的附件元数据行。返回被移除行的 fileName 集合
+  /// （物理文件是否可删由调用方统一做引用计数判定）。
+  Future<Set<String>> _replaceAttachmentsForTransaction(
+    int transactionId,
+    List<BatchAttachmentData> incoming,
+  ) async {
+    final oldRows = await (db.select(db.transactionAttachments)
+          ..where((a) => a.transactionId.equals(transactionId)))
+        .get();
+    await (db.delete(db.transactionAttachments)
+          ..where((a) => a.transactionId.equals(transactionId)))
+        .go();
+    if (incoming.isNotEmpty) {
+      await db.batch((b) {
+        for (final a in incoming) {
+          b.insert(db.transactionAttachments, TransactionAttachmentsCompanion.insert(
+            transactionId: transactionId,
+            fileName: a.fileName,
+            originalName: d.Value(a.originalName),
+            fileSize: d.Value(a.fileSize),
+            width: d.Value(a.width),
+            height: d.Value(a.height),
+            sortOrder: d.Value(a.sortOrder),
+            cloudFileId: d.Value(a.cloudFileId),
+            cloudSha256: d.Value(a.cloudSha256),
+            localSha256: d.Value(a.localSha256),
+          ));
+        }
+      });
+    }
+    return {
+      for (final r in oldRows)
+        if (!incoming.any((a) => a.fileName == r.fileName)) r.fileName,
+    };
+  }
+
+  /// 引用计数回收附件物理文件：仅当没有任何 transaction_attachments 行
+  /// 再引用该 fileName 时才删文件与缩略图（对齐 _deleteAttachmentsForTransaction
+  /// 的口径；内容寻址下多笔交易共享同一文件，误删会弄坏别笔交易）。
+  Future<void> _gcUnreferencedAttachmentFiles(Set<String> candidates) async {
+    if (candidates.isEmpty) return;
+    try {
+      final stillReferenced = <String>{};
+      final refs = await (db.select(db.transactionAttachments)
+            ..where((a) => a.fileName.isIn(candidates.toList())))
+          .get();
+      for (final r in refs) {
+        stillReferenced.add(r.fileName);
+      }
+      if (stillReferenced.length >= candidates.length) return;
+
+      final appDir = await getApplicationDocumentsDirectory();
+      final attachmentDir = Directory('${appDir.path}/attachments');
+      final thumbDir =
+          Directory('${(await getTemporaryDirectory()).path}/attachment_thumbs');
+      for (final name in candidates) {
+        if (stillReferenced.contains(name)) continue;
+        final file = File('${attachmentDir.path}/$name');
+        if (await file.exists()) {
+          await file.delete();
+        }
+        final thumbName =
+            '${path.basenameWithoutExtension(name)}_thumb.jpg';
+        final thumbFile = File('${thumbDir.path}/$thumbName');
+        if (await thumbFile.exists()) {
+          await thumbFile.delete();
+        }
+      }
+    } catch (e, st) {
+      // 物理文件清理失败不影响数据正确性（孤儿文件由维护页扫描兜底）
+      logger.warning('LocalTransactionRepository', '附件物理文件回收失败: $e\n$st');
+    }
   }
 
   @override

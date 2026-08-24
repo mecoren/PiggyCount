@@ -20,14 +20,11 @@ dependencies:
   shared_preferences: ^2.2.2
   flutter_secure_storage: ^9.2.2
   web_socket_channel: ^3.0.1
-  flutter_cloud_sync_supabase:
-    path: ../flutter_cloud_sync_supabase
-  flutter_cloud_sync_webdav:
-    path: ../flutter_cloud_sync_webdav
-  flutter_cloud_sync_icloud:
-    path: ../flutter_cloud_sync_icloud
-  flutter_cloud_sync_s3:
-    path: ../flutter_cloud_sync_s3
+  # L3 循环依赖解除：core 不再依赖任何 provider 包（supabase/webdav/
+  # icloud/s3）。此前 core 内的 createCloudServices 工厂反向依赖全部
+  # provider，而 provider 又依赖 core 形成循环；工厂已迁至 app 层
+  # （lib/cloud/provider_factory.dart），core 回归「接口 + PiggyCount
+  # Cloud 协议实现」的纯底层定位。
 
 dev_dependencies:
   flutter_test:

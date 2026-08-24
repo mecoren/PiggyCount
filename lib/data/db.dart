@@ -234,15 +234,9 @@ class LocalChanges extends Table {
   DateTimeColumn get pushedAt => dateTime().nullable()(); // 非null表示已推送
 }
 
-// 同步状态表
-class SyncState extends Table {
-  IntColumn get id => integer().autoIncrement()();
-  TextColumn get deviceId => text()();         // 设备唯一标识
-  TextColumn get providerType => text().withDefault(const Constant('piggycount_cloud'))(); // 防止不同 provider 的 cursor 冲突
-  IntColumn get serverCursor => integer().withDefault(const Constant(0))(); // 服务端变更游标
-  DateTimeColumn get lastPushAt => dateTime().nullable()();
-  DateTimeColumn get lastPullAt => dateTime().nullable()();
-}
+// 注：历史上的 sync_state 表（deviceId/providerType/serverCursor 游标）在
+// Supabase 增量同步废弃后已无任何读写方（游标改由 SyncEngine 内存 +
+// entity_change_watermarks 承载），v37 迁移统一 DROP，见 onUpgrade。
 
 /// 审计 S3：每实体已见最大服务端 change_id 水位。
 /// server change_id 全局单调；回声与应用成功都推进水位，
@@ -446,7 +440,6 @@ class SharedLedgerTags extends Table {
   Budgets,
   TransactionAttachments,
   LocalChanges,
-  SyncState,
   LedgerMembers,
   SharedLedgerCategories,
   SharedLedgerAccounts,
@@ -466,7 +459,7 @@ class PiggyDatabase extends _$PiggyDatabase {
   PiggyDatabase.forTesting(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 36; // v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固); v34: transaction_attachments local_sha256
+  int get schemaVersion => 37; // v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -931,9 +924,8 @@ class PiggyDatabase extends _$PiggyDatabase {
             await migrator.createTable(localChanges);
             logger.info('DB', 'v19: local_changes 表已创建');
 
-            // 5. 创建 sync_state 表
-            await migrator.createTable(syncState);
-            logger.info('DB', 'v19: sync_state 表已创建');
+            // （历史上的第 5 步 sync_state 建表已移除：该表 v37 起 DROP，
+            //   不再属于 schema。）
 
             print('[DB Migration] v19 迁移完成');
           }
@@ -1256,6 +1248,15 @@ class PiggyDatabase extends _$PiggyDatabase {
                 'DBMigration', '开始迁移到 v36: entity_change_watermarks 实体水位表');
             await migrator.createTable(entityChangeWatermarks);
             logger.info('DBMigration', 'v36 迁移完成');
+          }
+          if (from < 37) {
+            // v37: DROP 死表 sync_state。Supabase 增量同步时代的服务端游标
+            // 表，全仓库零读写（游标现由 SyncEngine 内存 + 水位表承载）。
+            // DROP IF EXISTS 幂等：新装库（onCreate 走 createAll，本就没有
+            // 此表）与极端 partial state 重跑均安全。
+            logger.info('DBMigration', '开始迁移到 v37: DROP 死表 sync_state');
+            await customStatement('DROP TABLE IF EXISTS sync_state');
+            logger.info('DBMigration', 'v37 迁移完成');
           }
         },
         onCreate: (m) async {

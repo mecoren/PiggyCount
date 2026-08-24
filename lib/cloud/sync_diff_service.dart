@@ -1,7 +1,7 @@
 import '../data/db.dart';
 import '../data/repositories/base_repository.dart';
 import '../data/repositories/transaction_repository.dart'
-    show TransactionUpdateBySyncIdData;
+    show TransactionUpdateBySyncIdData, BatchAttachmentData;
 import '../services/data_import_service.dart';
 import '../services/system/logger_service.dart';
 
@@ -116,6 +116,13 @@ class SyncDiffService {
         ? await repo.getTagsForTransactions(localTxIds)
         : <int, List<Tag>>{};
 
+    // 批量获取本地交易的附件（附件差异贯通：与指纹口径一致，
+    // 否则"只加/删/换附件"的 modified 检测不出 → 云端差异永不落本地，
+    // 且 merge-then-publish 会把无附件快照回传覆盖云端，形成 ping-pong）
+    final attachmentsMap = localTxIds.isNotEmpty
+        ? await repo.getAttachmentsForTransactions(localTxIds)
+        : <int, List<TransactionAttachment>>{};
+
     // 批量获取本地交易涉及的账户名称
     final accountIds = <int>{};
     for (final tx in local) {
@@ -178,6 +185,7 @@ class SyncDiffService {
           localTagNames: localTagNames,
           localAccountName: localAccountName,
           localToAccountName: localToAccountName,
+          localAttachments: attachmentsMap[localTx.id] ?? const [],
         );
         if (diffs.isNotEmpty) {
           changes.add(SyncChange(
@@ -221,6 +229,7 @@ class SyncDiffService {
     List<String> localTagNames = const [],
     String? localAccountName,
     String? localToAccountName,
+    List<TransactionAttachment> localAttachments = const [],
   }) {
     final diffs = <String>[];
 
@@ -317,6 +326,26 @@ class SyncDiffService {
     if (cloud.toAccountSyncIdOverride != null &&
         local.toAccountSyncIdOverride != cloud.toAccountSyncIdOverride) {
       diffs.add('转入账户override: ${local.toAccountSyncIdOverride ?? '无'} → ${cloud.toAccountSyncIdOverride}');
+    }
+
+    // 比较附件清单（附件差异贯通）。规范化口径与 contentFingerprintFromMap
+    // 的 S11 规则一致：排序后的 (sha256, fileName, sortOrder)；键优先级
+    // 对齐快照链（L1）：localSha256/sha256 优先，cloudSha256 仅兜底。
+    String attKey(String? sha, String? cloudSha, Object? name, int? order) =>
+        [(sha ?? cloudSha ?? ''), (name ?? '').toString(), (order ?? 0).toString()]
+            .join('|');
+    final localAttKeys = localAttachments
+        .map((a) => attKey(a.localSha256, a.cloudSha256, a.fileName, a.sortOrder))
+        .toSet();
+    final cloudAttKeys = (cloud.attachments ?? const [])
+        .map((a) => attKey(a.sha256, a.cloudSha256, a.fileName, a.sortOrder))
+        .toSet();
+    if (!(localAttKeys.length == cloudAttKeys.length &&
+        localAttKeys.containsAll(cloudAttKeys))) {
+      // 集合不等价（顺序无关的多/少/换附件）
+      final added = cloudAttKeys.difference(localAttKeys).length;
+      final removed = localAttKeys.difference(cloudAttKeys).length;
+      diffs.add('附件变更: 云端多 $added 项 / 本地独有 $removed 项');
     }
 
     return diffs;
@@ -464,6 +493,11 @@ class SyncDiffService {
         recordChanges: false, // M3：云→本地路径不回流 local_changes
       );
       addedCount = result.inserted;
+      if (result.skippedRecurring > 0) {
+        logger.warning('SyncDiff',
+            '云→本应用 added 时有 ${result.skippedRecurring} 笔同日周期实例被判重跳过'
+            '（同规则同日且syncId或金额+备注相同），请核对远端是否存在同日多笔合法交易');
+      }
     }
 
     // ============ modified: 主表用批量 UPDATE,tag 关联单条 await ============
@@ -511,6 +545,22 @@ class SyncDiffService {
         final cloudCurrency =
             ((cloud.currencyCode?.isNotEmpty ?? false) ? cloud.currencyCode! : null);
         final isSameBase = cloudCurrency == null || cloudCurrency.toUpperCase() == ledgerBase;
+        // 附件清单（云→本 modified 合并）：快照是全量清单，云端条目
+        // （含空表）整体替换本地行；sha256 落 localSha256 列供
+        // attachments/<sha>.bin 后台补齐。
+        final cloudAttachments = (cloud.attachments ?? const [])
+            .map((a) => BatchAttachmentData(
+                  fileName: a.fileName,
+                  originalName: a.originalName,
+                  fileSize: a.fileSize,
+                  width: a.width,
+                  height: a.height,
+                  sortOrder: a.sortOrder,
+                  cloudFileId: a.cloudFileId,
+                  cloudSha256: a.cloudSha256,
+                  localSha256: a.sha256,
+                ))
+            .toList();
         updates.add(TransactionUpdateBySyncIdData(
           syncId: syncId,
           type: cloud.type,
@@ -531,6 +581,7 @@ class SyncDiffService {
           categorySyncIdOverride: cloud.categorySyncIdOverride,
           accountSyncIdOverride: cloud.accountSyncIdOverride,
           toAccountSyncIdOverride: cloud.toAccountSyncIdOverride,
+          attachments: cloudAttachments,
         ));
         tagIdsBySyncId[syncId] = tagIds;
       }

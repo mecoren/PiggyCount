@@ -1,6 +1,15 @@
 import '../db.dart';
 import '../../models/note_history.dart';
 
+/// 周期实例指纹：同去重键 (recurringId, 本地日历日) 下区分
+/// 「真重复」与「同日多笔合法交易」的最小字段集。
+/// 恢复侧判重规则见 [TransactionRepository.getRecurringInstanceDetails]。
+typedef RecurringInstanceFingerprint = ({
+  String? syncId,
+  double amount,
+  String? note,
+});
+
 /// 批量按 syncId 更新交易时的单条 update payload。
 class TransactionUpdateBySyncIdData {
   final String syncId;
@@ -28,6 +37,12 @@ class TransactionUpdateBySyncIdData {
   final String? categorySyncIdOverride;
   final String? accountSyncIdOverride;
   final String? toAccountSyncIdOverride;
+  /// 附件清单（云→本 modified 合并，附件差异贯通修复）。
+  ///
+  /// - null：不改动本地 transaction_attachments 行；
+  /// - 非 null（含空列表）：以云端清单整体替换本地行 —— 快照是全量清单，
+  ///   "云端无此附件"即显式删除。替换后按引用计数清理不再被引用的物理文件。
+  final List<BatchAttachmentData>? attachments;
 
   const TransactionUpdateBySyncIdData({
     required this.syncId,
@@ -45,6 +60,7 @@ class TransactionUpdateBySyncIdData {
     this.categorySyncIdOverride,
     this.accountSyncIdOverride,
     this.toAccountSyncIdOverride,
+    this.attachments,
   });
 }
 
@@ -160,11 +176,17 @@ abstract class TransactionRepository {
     required DateTime happenedAt,
   });
 
-  /// 批量获取周期实例去重键集合（见 [recurringInstanceKey]）。
+  /// 批量获取周期实例指纹明细（键见 [recurringInstanceKey]）。
   ///
-  /// 供导入路径预加载：一次查库构建内存集合，循环内 O(1) 判重，
+  /// 供导入路径预加载：一次查库构建内存映射，循环内 O(1) 判重，
   /// 替代逐笔 await 查询（大快照 N 笔周期实例 = N 次 SELECT）。
-  Future<Set<String>> getRecurringInstanceKeys(Iterable<int> recurringIds);
+  /// 值携带同键下各实例的 (syncId, amount, note)：恢复侧命中同日键后
+  /// 还需逐实例比对指纹——仅 syncId 相同（同一实体）或 amount+note 均
+  /// 相同（generator 本机实例 vs 源端同源实例）才算真重复跳过；
+  /// 同日不同金额/备注是合法的多笔交易，必须照常落库
+  /// （回归案例：tx-hist-day-rent54 被同日 generator 实例误杀）。
+  Future<Map<String, List<RecurringInstanceFingerprint>>>
+      getRecurringInstanceDetails(Iterable<int> recurringIds);
 
   /// 归一化 (recurringId, happenedAt) → 周期实例去重键。
   ///
