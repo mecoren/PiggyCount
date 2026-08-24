@@ -742,7 +742,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
               // 或时间范围/类型变化才发起新查询。
               future: _analyticsFutureCache.putIfAbsent(
                 '$_type|${start.millisecondsSinceEpoch}|'
-                '${end.millisecondsSinceEpoch}|$refreshTick',
+                '${end.millisecondsSinceEpoch}|$refreshTick|'
+                '$ledgerId',
                 () => _type == 'balance'
                     ? _loadBalanceData(
                         repo,

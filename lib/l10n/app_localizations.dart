@@ -14971,6 +14971,12 @@ abstract class AppLocalizations {
   /// **'Restore finished: {success} succeeded, {failed} failed.'**
   String restoreResultMessage(int success, int failed);
 
+  /// No description provided for @restoreSkippedRecurringHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Note: {count} same-day recurring instance(s) were skipped as duplicates during restore (same rule & day with identical syncId or amount+note). Please verify the source if multiple same-day entries were expected.'**
+  String restoreSkippedRecurringHint(int count);
+
   /// No description provided for @backupAutoTitle.
   ///
   /// In en, this message translates to:

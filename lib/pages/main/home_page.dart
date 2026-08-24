@@ -780,31 +780,39 @@ class _HomePageState extends ConsumerState<HomePage> {
                             }),
                           ),
                         ),
-                        // 中间：小猪记账 logo + 标题（居中显示）
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            PiggyIcon(
-                              size: 28,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              AppLocalizations.of(context).homeAppTitle,
-                              maxLines: 1,
-                              softWrap: false,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
-                                  ?.copyWith(
-                                    color: Theme.of(context)
-                                        .textTheme
-                                        .bodyLarge
-                                        ?.color,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                            ),
-                          ],
+                        // 中间：小猪记账 logo + 标题（居中显示）。
+                        // Flexible：小屏/长账本名时允许中间段收缩，
+                        // 否则 左(≤160)+中(≈104)+右(3×48=144) 固定宽度
+                        // 在窄屏上会溢出（实测 RIGHT OVERFLOWED BY 3.5px）。
+                        Flexible(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              PiggyIcon(
+                                size: 28,
+                              ),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  AppLocalizations.of(context).homeAppTitle,
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleLarge
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .textTheme
+                                            .bodyLarge
+                                            ?.color,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                         // 右侧操作按钮
                         if (aiEnabled)

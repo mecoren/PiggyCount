@@ -3432,6 +3432,7 @@
   "restoreRunningStatus": "正在从备份恢复…",
   "restoreLedgerProgress": "正在恢复账本 {done}/{total}…",
   "restoreResultMessage": "恢复完成：成功 {success} 个，失败 {failed} 个。",
+  "restoreSkippedRecurringHint": "注意：恢复时有 {count} 笔同日周期实例被判重跳过（同规则同日且 syncId 或金额+备注相同），如源端存在同日多笔交易请核对明细。",
   "backupAutoTitle": "定时备份",
   "backupAutoSubtitle": "每日在设定时间自动备份一次（仅 App 运行期间生效）",
   "backupTimeTitle": "每日备份时间",

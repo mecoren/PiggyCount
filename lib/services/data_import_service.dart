@@ -4,7 +4,10 @@ import '../cloud/transactions_json.dart';
 import '../data/db.dart';
 import '../data/repositories/base_repository.dart';
 import '../data/repositories/transaction_repository.dart'
-    show BatchAttachmentData, TransactionRepository;
+    show
+        BatchAttachmentData,
+        RecurringInstanceFingerprint,
+        TransactionRepository;
 import 'currency/rate_math.dart';
 import 'system/logger_service.dart';
 
@@ -1185,13 +1188,22 @@ class DataImportService {
 
     final localCategoryCache = Map<String, int>.from(categoryCache);
 
-    // REC-04：预加载本批次涉及周期规则的已有实例去重键，循环内 O(1) 查内存，
+    // REC-04：预加载本批次涉及周期规则的已有实例指纹，循环内 O(1) 查内存，
     // 替代逐笔 await DB 查询（大快照 N 笔周期实例 = N 次 SELECT）。键为
     // (recurringId, 本地日历日)（REC-01/02：导出 toUtc/导入 toLocal 跨时区
-    // 下精确毫秒必失配；非 0 点实例按同日归一）。导入中新落库的键同步入集，
-    // 兼得批内去重（flush 前 DB 里还没有这批行）。预加载失败按空集处理并
-    // 告警，不阻断整体恢复（与下方逐笔容错语义一致）。
-    final existingRecurringKeys = <String>{};
+    // 下精确毫秒必失配；非 0 点实例按同日归一）。导入中新落库的指纹同步入
+    // 映射，兼得批内去重（flush 前 DB 里还没有这批行）。预加载失败按空映射
+    // 处理并告警，不阻断整体恢复（与下方逐笔容错语义一致）。
+    //
+    // REC-05：值从 Set<String> 升级为指纹明细 List<RecurringInstanceFingerprint>
+    // (syncId/amount/note)。同日键命中只是"候选重复"，还须逐实例比对：
+    // - syncId 相同 → 同一实体（重复恢复同一快照），跳过；
+    // - amount+note 均相同 → generator 本机实例 vs 源端同源实例，跳过；
+    // - 其余（同日不同金额/备注的多笔合法交易）→ 照常落库。
+    // 回归案例：tx-hist-day-rent54（08:00）被同日 generator 实例
+    // 房租月付（00:00）仅凭同日键误杀，恢复后两端差一笔。
+    final existingRecurringInstances =
+        <String, List<RecurringInstanceFingerprint>>{};
     try {
       final involvedIds = <int>{
         for (final tx in transactions)
@@ -1200,8 +1212,8 @@ class DataImportService {
               recurringSyncIdToId[tx.recurringSyncId] != null)
             recurringSyncIdToId[tx.recurringSyncId]!,
       };
-      existingRecurringKeys.addAll(
-          await repo.getRecurringInstanceKeys(involvedIds));
+      existingRecurringInstances.addAll(
+          await repo.getRecurringInstanceDetails(involvedIds));
     } catch (e, st) {
       logger.warning('TxImport',
           '周期实例去重键预加载失败(按空集处理，本批不去重): $e, $st');
@@ -1394,21 +1406,41 @@ class DataImportService {
               recurringSyncIdToId != null)
           ? recurringSyncIdToId[tx.recurringSyncId!]
           : null;
-      // B 方案（同步恢复侧去重）：带周期规则锚点的实例，若本地已存在
-      // 同 (recurringId, 本地日历日) 实例（可能是本机 generator 先生成的，
-      // 或本批次已恢复过），则跳过不重复插入。否则「本地生成实例 + 源端
-      // 恢复实例」因 syncId 不同而无法被 syncId 去重识别，导致重复。
-      // 去重集合见上方预加载（REC-01/02/04）。
+      // B 方案（同步恢复侧去重，REC-05 细化）：带周期规则锚点的实例命中
+      // 同 (recurringId, 本地日历日) 键时，不再一律跳过——逐实例比对指纹：
+      // - syncId 相同：同一实体（同一快照重复恢复），跳过；
+      // - amount+note 均相同：generator 本机实例 vs 源端同源实例
+      //   （generator 的 note=规则备注、amount=规则金额，与源端生成实例
+      //   同源同值），跳过；否则「本地生成实例 + 源端恢复实例」因 syncId
+      //   不同无法被 syncId 去重识别，导致重复。
+      // - 金额或备注不同：同日多笔合法交易（如手工补记的历史房租 vs
+      //   本月自动生成房租），必须落库。此前仅凭同日键误杀
+      //   （回归案例 tx-hist-day-rent54）。
       if (resolvedRecurringId != null) {
         final dupKey = TransactionRepository.recurringInstanceKey(
             resolvedRecurringId, tx.happenedAt);
-        if (existingRecurringKeys.contains(dupKey)) {
+        final candidates = existingRecurringInstances[dupKey];
+        final incomingNote = tx.note ?? '';
+        final isTrueDup = candidates != null &&
+            candidates.any((c) =>
+                (c.syncId != null && c.syncId == tx.syncId) ||
+                (c.amount == tx.amount && (c.note ?? '') == incomingNote));
+        if (isTrueDup) {
           skipped++;
           processed++;
           if (onProgress != null) onProgress(processed, total);
           continue;
         }
-        existingRecurringKeys.add(dupKey);
+        final fingerprint = (
+          syncId: tx.syncId,
+          amount: tx.amount,
+          note: tx.note,
+        );
+        if (candidates != null) {
+          candidates.add(fingerprint);
+        } else {
+          existingRecurringInstances[dupKey] = [fingerprint];
+        }
       }
       final txCompanion = TransactionsCompanion.insert(
         ledgerId: ledgerId,
@@ -1463,7 +1495,7 @@ class DataImportService {
     await flush();
 
     logger.info('TxImport',
-        '交易导入完成: 总数=$total 成功=$inserted 跳过recurring重复=$skipped 失败=$failed 总耗时=${overallSw.elapsedMilliseconds}ms');
+        '交易导入完成: 总数=$total 成功=$inserted 跳过recurring重复=$skipped(同规则同日且syncId或金额+备注相同) 失败=$failed 总耗时=${overallSw.elapsedMilliseconds}ms');
     return ImportResult(
         inserted: inserted, failed: failed, skippedRecurring: skipped);
   }
@@ -1510,12 +1542,13 @@ Future<int> clearLedgerTransactions(PiggyDatabase db, int ledgerId) async {
 /// 抽取自 TransactionsSyncManager.downloadAndRestoreToCurrentLedger 中段，
 /// 供云同步恢复与云端备份恢复（CloudBackupService）共用同一语义。
 ///
-/// 返回 (inserted, deletedDup)；返回 null 表示跳过恢复：
+/// 返回 (inserted, deletedDup, skippedRecurring)；返回 null 表示跳过恢复：
 /// - P1-1 守卫：快照不含任何交易且本地非空 → 拒绝空覆盖
 ///   （误上传空文件不应静默抹掉本地全部交易；确需清空走显式上传覆盖）。
 ///
 /// [jsonStr] 必须是已解密的明文 JSON。调用方需保证 ledgerId 的本地账本已存在。
-Future<({int inserted, int deletedDup})?> restoreLedgerFromJson({
+Future<({int inserted, int deletedDup, int skippedRecurring})?>
+    restoreLedgerFromJson({
   required PiggyDatabase db,
   required BaseRepository repo,
   required int ledgerId,
@@ -1549,7 +1582,11 @@ Future<({int inserted, int deletedDup})?> restoreLedgerFromJson({
     return (cleared, result);
   });
 
-  return (inserted: deleted.$2.inserted, deletedDup: deleted.$1);
+  return (
+    inserted: deleted.$2.inserted,
+    deletedDup: deleted.$1,
+    skippedRecurring: deleted.$2.skippedRecurring,
+  );
 }
 
 /// H3 真覆盖（镜像云端）：删除「本地有 syncId 但 v8 快照中不存在」的实体。

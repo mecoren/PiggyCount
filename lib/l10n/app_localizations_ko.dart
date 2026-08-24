@@ -8096,6 +8096,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String restoreSkippedRecurringHint(int count) {
+    return '참고: 복원 중 같은 날짜의 반복 인스턴스 $count개가 중복 판정으로 건너뛰어졌습니다(같은 규칙·같은 날이며 syncId 또는 금액+메모 일치). 같은 날 여러 거래가 있었다면 원본을 확인하세요.';
+  }
+
+  @override
   String get backupAutoTitle => '예약 백업';
 
   @override

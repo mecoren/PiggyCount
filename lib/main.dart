@@ -98,7 +98,7 @@ Future<void> main() async {
   // _WidgetUpdateObserver 一直是死代码(2026-07 review 发现)——启动预热/
   // 切账本触发的小组件渲染全靠它,必须真正生效。
   final container = ProviderContainer(
-    observers: const [_WidgetUpdateObserver()],
+    observers: [_WidgetUpdateObserver()],
   );
 
   // 初始化应用模式（需要在生成重复交易之前，确保模式正确）
@@ -187,7 +187,7 @@ Future<void> main() async {
 
 /// Provider observer to update widget on app start
 class _WidgetUpdateObserver extends ProviderObserver {
-  const _WidgetUpdateObserver();
+  _WidgetUpdateObserver();
   @override
   void didUpdateProvider(
     ProviderBase provider,
@@ -488,6 +488,122 @@ class NoGlowScrollBehavior extends MaterialScrollBehavior {
   }
 }
 
+/// 应用主题缓存（按 platform + primary 记忆）。
+///
+/// 此前 [MainApp.build] 每次执行都无条件构建 3 个完整 ThemeData
+/// （lightTheme ×1 + darkTheme ×2），而 build 又因全量订阅 MediaQuery
+/// 在键盘弹出动画期间每帧触发 —— 真机上键盘动画因此逐帧卡顿。
+/// 主题仅取决于 (platform, primary)，此处做单条目记忆化后，
+/// 键盘等高频 rebuild 不再重复支付 ThemeData 构建成本。
+class _AppThemes {
+  _AppThemes._(this.light, this.dark);
+
+  final ThemeData light;
+  final ThemeData dark;
+
+  static _AppThemes? _cached;
+  static TargetPlatform? _cachedPlatform;
+  static Color? _cachedPrimary;
+
+  factory _AppThemes.of(TargetPlatform platform, Color primary) {
+    final cached = _cached;
+    if (cached != null && _cachedPlatform == platform && _cachedPrimary == primary) {
+      return cached;
+    }
+    final created = _AppThemes._(
+      _buildLightTheme(platform, primary),
+      _buildDarkTheme(platform, primary),
+    );
+    _cached = created;
+    _cachedPlatform = platform;
+    _cachedPrimary = primary;
+    return created;
+  }
+
+  /// ⭐ 亮色主题
+  /// 注意：scaffoldBackgroundColor / dividerColor / cardTheme.color 已在
+  /// PiggyTheme.lightTheme 中通过 PiggyTokens 静态常量统一设置，这里不再覆盖。
+  /// 仅覆盖动态主色（primaryColor / colorScheme.primary）等需要 Riverpod 驱动的属性。
+  static ThemeData _buildLightTheme(TargetPlatform platform, Color primary) {
+    final base = PiggyTheme.lightTheme(platform: platform);
+    final baseTextTheme = base.textTheme;
+    return base.copyWith(
+      textTheme: baseTextTheme,
+      colorScheme: base.colorScheme.copyWith(primary: primary),
+      primaryColor: primary,
+      listTileTheme: ListTileThemeData(
+        dense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+        iconColor: PiggyTokens.primaryTextStatic,
+      ),
+      dialogTheme: base.dialogTheme.copyWith(
+        backgroundColor: PiggyTokens.cardBackgroundLightStatic,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
+        titleTextStyle: baseTextTheme.titleMedium?.copyWith(
+            color: PiggyTokens.primaryTextStatic, fontWeight: FontWeight.w600),
+        contentTextStyle:
+            baseTextTheme.bodyMedium?.copyWith(color: PiggyTokens.secondaryTextStatic),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: primary,
+          textStyle: baseTextTheme.labelLarge,
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: primary,
+          foregroundColor: Colors.white,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: primary,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primary,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
+        ),
+      ),
+      floatingActionButtonTheme: base.floatingActionButtonTheme.copyWith(
+        backgroundColor: primary,
+        foregroundColor: Colors.white,
+      ),
+      bottomNavigationBarTheme: base.bottomNavigationBarTheme.copyWith(
+        selectedItemColor: primary,
+        type: BottomNavigationBarType.fixed,
+      ),
+      cardTheme: base.cardTheme.copyWith(
+        color: PiggyTokens.cardBackgroundLightStatic,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
+        margin: EdgeInsets.zero,
+      ),
+      switchTheme: PiggyTheme.switchThemeData(primary, isDark: false),
+    );
+  }
+
+  /// ⭐ 暗黑主题（使用动态主题色）
+  ///
+  /// 注意：此前 darkTheme 在同一表达式内被调用两次，这里只构建一次。
+  static ThemeData _buildDarkTheme(TargetPlatform platform, Color primary) {
+    final darkBase = PiggyTheme.darkTheme(platform: platform);
+    return darkBase.copyWith(
+      colorScheme: darkBase.colorScheme.copyWith(primary: primary),
+      primaryColor: primary,
+      switchTheme: PiggyTheme.switchThemeData(primary, isDark: true),
+    );
+  }
+}
+
 class MainApp extends ConsumerWidget {
   const MainApp({super.key});
 
@@ -531,117 +647,51 @@ class MainApp extends ConsumerWidget {
 
     final primary = ref.watch(primaryColorProvider);
     final platform = Theme.of(context).platform; // 当前平台
-    final base = PiggyTheme.lightTheme(platform: platform);
-    final baseTextTheme = base.textTheme;
+    // 主题走记忆化缓存（见 _AppThemes）：键盘弹出等高频 rebuild 不再重复构建 ThemeData
+    final themes = _AppThemes.of(platform, primary);
 
-    // ⭐ 亮色主题
-    // 注意：scaffoldBackgroundColor / dividerColor / cardTheme.color 已在
-    // PiggyTheme.lightTheme 中通过 PiggyTokens 静态常量统一设置，这里不再覆盖。
-    // 仅覆盖动态主色（primaryColor / colorScheme.primary）等需要 Riverpod 驱动的属性。
-    final theme = base.copyWith(
-      textTheme: baseTextTheme,
-      colorScheme: base.colorScheme.copyWith(primary: primary),
-      primaryColor: primary,
-      listTileTheme: ListTileThemeData(
-        dense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-        iconColor: PiggyTokens.primaryTextStatic,
-      ),
-      dialogTheme: base.dialogTheme.copyWith(
-        backgroundColor: PiggyTokens.cardBackgroundLightStatic,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
-        titleTextStyle: baseTextTheme.titleMedium?.copyWith(
-            color: PiggyTokens.primaryTextStatic, fontWeight: FontWeight.w600),
-        contentTextStyle:
-            baseTextTheme.bodyMedium?.copyWith(color: PiggyTokens.secondaryTextStatic),
-      ),
-      textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: primary,
-          textStyle: baseTextTheme.labelLarge,
-        ),
-      ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: primary,
-          foregroundColor: Colors.white,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
-        ),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: primary,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
-        ),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primary,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
-        ),
-      ),
-      floatingActionButtonTheme: base.floatingActionButtonTheme.copyWith(
-        backgroundColor: primary,
-        foregroundColor: Colors.white,
-      ),
-      bottomNavigationBarTheme: base.bottomNavigationBarTheme.copyWith(
-        selectedItemColor: primary,
-        type: BottomNavigationBarType.fixed,
-      ),
-      cardTheme: base.cardTheme.copyWith(
-        color: PiggyTokens.cardBackgroundLightStatic,
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
-        margin: EdgeInsets.zero,
-      ),
-      switchTheme: PiggyTheme.switchThemeData(primary, isDark: false),
-    );
-    // Clamp 系统字体缩放，避免部分设备设置 1.5+ 造成 UI 溢出
-    final media = MediaQuery.of(context);
     // init font scale persistence
     ref.watch(fontScaleInitProvider);
     final customScale = ref.watch(effectiveFontScaleProvider);
-    final clamped = media.textScaler.clamp(
-      minScaleFactor: 0.85,
-      maxScaleFactor: 1.15,
-    );
+
+    // Clamp 系统字体缩放，避免部分设备设置 1.5+ 造成 UI 溢出。
+    //
+    // 性能关键点：这里只订阅 textScaler（MediaQuery.textScalerOf），
+    // 绝不能订阅全量 MediaQuery —— 键盘弹出/收起动画期间 viewInsets 每帧变化，
+    // 全量订阅会导致本 widget（含整棵 MaterialApp 子树）逐帧重建，
+    // 是真机键盘动画卡顿的主要 UI 线程开销之一。
+    // 缩放覆盖在下方 builder 中应用；builder 位于 MaterialApp 内部，
+    // 即使随 insets 每帧执行也只有一个轻量 MediaQuery 包裹层的成本。
+    final clamped =
+        MediaQuery.textScalerOf(context).clamp(minScaleFactor: 0.85, maxScaleFactor: 1.15);
     final combinedScale = clamped.scale(customScale); // returns double
     final newScaler = TextScaler.linear(combinedScale);
-    return MediaQuery(
-      data: media.copyWith(textScaler: newScaler),
-      child: MaterialApp(
-        navigatorKey: globalNavigatorKey,
-        onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
-        scrollBehavior: const NoGlowScrollBehavior(),
-        debugShowCheckedModeBanner: false,
-        theme: theme,
-        darkTheme: PiggyTheme.darkTheme(platform: platform).copyWith(
-          colorScheme: PiggyTheme.darkTheme(platform: platform).colorScheme.copyWith(primary: primary),
-          primaryColor: primary,
-          switchTheme: PiggyTheme.switchThemeData(primary, isDark: true),
-        ),                                                // ⭐ 暗黑主题（使用动态主题色）
-        themeMode: ref.watch(themeModeProvider),         // ⭐ 使用 provider 支持手动切换
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [
-          Locale('en'),
-          Locale('zh'),
-          Locale('zh', 'TW'),
-          Locale('ko'),
-        ],
-        locale: selectedLanguage,
-        builder: (context, child) {
-          final showPrivacy = ref.watch(showPrivacyScreenProvider);
-          return Stack(
+    return MaterialApp(
+      navigatorKey: globalNavigatorKey,
+      onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
+      scrollBehavior: const NoGlowScrollBehavior(),
+      debugShowCheckedModeBanner: false,
+      theme: themes.light,   // ⭐ 亮色主题（缓存）
+      darkTheme: themes.dark, // ⭐ 暗黑主题（使用动态主题色，缓存）
+      themeMode: ref.watch(themeModeProvider),         // ⭐ 使用 provider 支持手动切换
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en'),
+        Locale('zh'),
+        Locale('zh', 'TW'),
+        Locale('ko'),
+      ],
+      locale: selectedLanguage,
+      builder: (context, child) {
+        final showPrivacy = ref.watch(showPrivacyScreenProvider);
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: newScaler),
+          child: Stack(
             children: [
               child ?? const SizedBox.shrink(),
               if (showPrivacy)
@@ -660,20 +710,20 @@ class MainApp extends ConsumerWidget {
                   ),
                 ),
             ],
-          );
-        },
-        // 显式命名根路由，便于路由日志与 popUntil 精确识别
-        home: _getHomePage(initState, ref),
-        onGenerateRoute: (settings) {
-          if (settings.name == Navigator.defaultRouteName ||
-              settings.name == '/') {
-            return MaterialPageRoute(
-                builder: (_) => _getHomePage(initState, ref),
-                settings: const RouteSettings(name: '/'));
-          }
-          return null;
-        },
-      ),
+          ),
+        );
+      },
+      // 显式命名根路由，便于路由日志与 popUntil 精确识别
+      home: _getHomePage(initState, ref),
+      onGenerateRoute: (settings) {
+        if (settings.name == Navigator.defaultRouteName ||
+            settings.name == '/') {
+          return MaterialPageRoute(
+              builder: (_) => _getHomePage(initState, ref),
+              settings: const RouteSettings(name: '/'));
+        }
+        return null;
+      },
     );
   }
 }

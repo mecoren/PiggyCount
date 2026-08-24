@@ -3941,6 +3941,8 @@
   "@restoreLedgerProgress": { "placeholders": { "done": { "type": "int" }, "total": { "type": "int" } } },
   "restoreResultMessage": "Restore finished: {success} succeeded, {failed} failed.",
   "@restoreResultMessage": { "placeholders": { "success": { "type": "int" }, "failed": { "type": "int" } } },
+  "restoreSkippedRecurringHint": "Note: {count} same-day recurring instance(s) were skipped as duplicates during restore (same rule & day with identical syncId or amount+note). Please verify the source if multiple same-day entries were expected.",
+  "@restoreSkippedRecurringHint": { "placeholders": { "count": { "type": "int" } } },
   "backupAutoTitle": "Scheduled Backup",
   "backupAutoSubtitle": "Automatically back up once per day at the configured time (while the app is running)",
   "backupTimeTitle": "Daily Backup Time",

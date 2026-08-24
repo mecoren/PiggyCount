@@ -124,7 +124,9 @@ class _CategoryPieChartState extends ConsumerState<CategoryPieChart> {
     final selectedSlice = hasSelection ? slices[_touchedIndex] : null;
 
     return SizedBox(
-      height: 240,
+      // 高度给外置标签留足上下边距：标签锚点在环外（见 badgePositionPercentageOffset），
+      // 过矮会导致底部扇区的百分比文字被裁切
+      height: 264,
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -174,7 +176,10 @@ class _CategoryPieChartState extends ConsumerState<CategoryPieChart> {
                           highlighted: isTouched,
                         )
                       : null,
-                  badgePositionPercentageOffset: 1.28,
+                  // 标签锚点 = centerRadius + radius × offset。1.42 时标签
+                  // 内缘恰好落在环外缘之外，百分比文字不再压在扇区色块上
+                  // （1.28 时会与环体重叠导致看不清）
+                  badgePositionPercentageOffset: 1.42,
                 );
               }),
             ),
@@ -262,9 +267,12 @@ class _ExternalLabel extends StatelessWidget {
         ),
         Text(
           '${percent.toStringAsFixed(2)}%',
+          // 百分比是关键信息：比名称略小但需高对比（此前 9px + textTertiary
+          // 在浅色扇区上几乎看不清）
           style: TextStyle(
-            fontSize: 9,
-            color: PiggyTokens.textTertiary(context),
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: PiggyTokens.textSecondary(context),
           ),
         ),
       ],

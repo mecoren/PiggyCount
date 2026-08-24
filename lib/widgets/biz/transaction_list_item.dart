@@ -289,143 +289,166 @@ class TransactionListItem extends ConsumerWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(
             horizontal: 12, vertical: PiggyDimens.listRowVertical),
-        child: Row(
-          children: [
-            // 选择模式下显示复选框，否则显示分类图标
-            if (isSelectionMode)
-              Checkbox(
-                value: isSelected,
-                onChanged: (_) => onSelectionChanged?.call(),
-                activeColor: Theme.of(context).colorScheme.primary,
-              )
-            else
-              // 分类图标，支持点击跳转（无背景）
-              GestureDetector(
-                onTap: onCategoryTap,
-                behavior: HitTestBehavior.opaque,
-                child: SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: Center(
-                    child: CategoryIconWidget(
-                      category: category,
-                      size: 22,
+        // UI-07：金额列原来是 Flexible(flex:1)，与左侧 Expanded(flex:1)
+        // 平分剩余宽度——即使金额只占 60px，文字列也被压到一半宽，
+        // 次要信息（时间|备注|账户）被迫折成三四行，整页看起来"挤在一块"。
+        // 改为：文字列 Expanded 独占剩余宽度；金额列不参与 flex，
+        // 只用 LayoutBuilder 给它设上限（≤45% 行宽），超长时整体等比缩小。
+        child: LayoutBuilder(builder: (context, constraints) {
+          return Row(
+            children: [
+              // 选择模式下显示复选框，否则显示分类图标
+              if (isSelectionMode)
+                Checkbox(
+                  value: isSelected,
+                  onChanged: (_) => onSelectionChanged?.call(),
+                  activeColor: Theme.of(context).colorScheme.primary,
+                )
+              else
+                // 分类图标，支持点击跳转（无背景）
+                GestureDetector(
+                  onTap: onCategoryTap,
+                  behavior: HitTestBehavior.opaque,
+                  child: SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: Center(
+                      child: CategoryIconWidget(
+                        category: category,
+                        size: 22,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            const SizedBox(width: 12),
-            // 左侧：分类名称 + 备注 + 时间·账户
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // 第一行：分类名（备注已移到第二行时间右边，此处不再挂括号）
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            composed.primary,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: PiggyTextTokens.title(context),
-                          ),
-                        ),
-                        // 全部账本模式：展示账本名标签（参考账户详情页）
-                        if (ledgerName != null && ledgerName!.isNotEmpty) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: ref
-                                  .watch(primaryColorProvider)
-                                  .withValues(alpha: 0.1),
-                              borderRadius:
-                                  BorderRadius.circular(PiggyDimens.radiusXs),
-                            ),
+              const SizedBox(width: 12),
+              // 左侧：分类名称 + 备注 + 时间·账户
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 第一行：分类名（备注已移到第二行时间右边，此处不再挂括号）
+                      Row(
+                        children: [
+                          Flexible(
                             child: Text(
-                              ledgerName!,
-                              style: PiggyTextTokens.caption(context).copyWith(
-                                color: ref.watch(primaryColorProvider),
-                                fontWeight: FontWeight.w500,
+                              composed.primary,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: PiggyTextTokens.title(context),
+                            ),
+                          ),
+                          // 全部账本模式：展示账本名标签（参考账户详情页）。
+                          // Flexible + 单行省略：标签过长时截断而不是把标题
+                          // 挤没 / 自己折成多行把行高撑爆。
+                          if (ledgerName != null && ledgerName!.isNotEmpty) ...[
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: ref
+                                      .watch(primaryColorProvider)
+                                      .withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(
+                                      PiggyDimens.radiusXs),
+                                ),
+                                child: Text(
+                                  ledgerName!,
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  overflow: TextOverflow.ellipsis,
+                                  style:
+                                      PiggyTextTokens.caption(context).copyWith(
+                                    color: ref.watch(primaryColorProvider),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
+                          ],
                         ],
-                      ],
-                    ),
-                    // 第二行：时间 | 备注 | 账户 | 标签 · 附件
-                    if (_hasSecondaryInfo(ref, composedParenNote))
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: _buildSecondaryInfo(
-                            context, ref, composedParenNote),
                       ),
-                  ],
+                      // 第二行：时间 | 备注 | 账户 | 标签 · 附件
+                      if (_hasSecondaryInfo(ref, composedParenNote))
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: _buildSecondaryInfo(
+                              context, ref, composedParenNote),
+                        ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            // 右侧：金额 + ≈折算小字
-            // UI-06：包 Flexible 防止超长金额（亿级+折算行）触发
-            // RenderFlex overflow，由文本自身省略兜底。
-            Flexible(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 金额（转账不显示正负号）
-                  AmountText(
-                      value: isAdjustment
-                          ? amount // adjustment 直接显示原始值（含正负）
-                          : isExpense
-                              ? -amount
-                              : amount,
-                      hide: hide,
-                      signed: !isTransfer, // 转账不显示正负号
-                      // v30:外币交易显示其币种符号(原币语义);本位币维持纯数字
-                      showCurrency: _isForeign(ref),
-                      currencyCode: currencyCode,
-                      decimals: 2,
-                      style: PiggyTextTokens.title(context).copyWith(
-                        color: isAdjustment
-                            ? (amount >= 0
-                                ? PiggyTokens.incomeColor(context, ref)
-                                : PiggyTokens.expenseColor(context, ref))
-                            : isTransfer
-                                ? PiggyTokens.textPrimary(context)
-                                : isExpense
-                                    ? PiggyTokens.expenseColor(context, ref)
-                                    : PiggyTokens.incomeColor(context, ref),
-                      )),
-                  // ≈折算小字(标签已移到第二行,此处仅保留折算)。
-                  // 隐藏金额开关开启时折算同样遮蔽。
-                  if (_isForeign(ref) &&
-                      nativeAmount != null &&
-                      nativeAmount != amount &&
-                      nativeConversionVisible(
-                        hide: hide,
-                        globalHide: ref.watch(hideAmountsProvider),
-                      ))
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        '≈${nativeAmount!.toStringAsFixed(2)}',
-                        style: PiggyTextTokens.caption(context),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                ],
+              // 右侧：金额 + ≈折算小字。
+              // 不参与 flex（见上方 UI-07 注释），宽度上限 45% 行宽；
+              // 超长（亿级+折算行）时 FittedBox 整体等比缩小兜底，
+              // 不会触发 RenderFlex overflow，也不必省略号截断金额数字。
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: constraints.maxWidth * 0.45,
+                ),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 金额（转账不显示正负号）
+                      AmountText(
+                          value: isAdjustment
+                              ? amount // adjustment 直接显示原始值（含正负）
+                              : isExpense
+                                  ? -amount
+                                  : amount,
+                          hide: hide,
+                          signed: !isTransfer, // 转账不显示正负号
+                          // v30:外币交易显示其币种符号(原币语义);本位币维持纯数字
+                          showCurrency: _isForeign(ref),
+                          currencyCode: currencyCode,
+                          decimals: 2,
+                          style: PiggyTextTokens.title(context).copyWith(
+                            color: isAdjustment
+                                ? (amount >= 0
+                                    ? PiggyTokens.incomeColor(context, ref)
+                                    : PiggyTokens.expenseColor(context, ref))
+                                : isTransfer
+                                    ? PiggyTokens.textPrimary(context)
+                                    : isExpense
+                                        ? PiggyTokens.expenseColor(context, ref)
+                                        : PiggyTokens.incomeColor(context, ref),
+                          )),
+                      // ≈折算小字(标签已移到第二行,此处仅保留折算)。
+                      // 隐藏金额开关开启时折算同样遮蔽。
+                      if (_isForeign(ref) &&
+                          nativeAmount != null &&
+                          nativeAmount != amount &&
+                          nativeConversionVisible(
+                            hide: hide,
+                            globalHide: ref.watch(hideAmountsProvider),
+                          ))
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            '≈${nativeAmount!.toStringAsFixed(2)}',
+                            style: PiggyTextTokens.caption(context),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          );
+        }),
       ),
     );
 

@@ -149,7 +149,7 @@ class _PiggyCountCloudSyncPageState
         ),
         body: Padding(
           padding: EdgeInsets.only(
-            top: MediaQuery.of(context).padding.top + 80,
+            top: MediaQuery.of(context).padding.top + 88,
           ),
           child: Column(
             children: [
@@ -180,7 +180,7 @@ class _PiggyCountCloudSyncPageState
       ),
       body: Padding(
         padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 80,
+          top: MediaQuery.of(context).padding.top + 88,
         ),
         child: Column(
           children: [

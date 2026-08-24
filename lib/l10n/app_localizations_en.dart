@@ -8324,6 +8324,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String restoreSkippedRecurringHint(int count) {
+    return 'Note: $count same-day recurring instance(s) were skipped as duplicates during restore (same rule & day with identical syncId or amount+note). Please verify the source if multiple same-day entries were expected.';
+  }
+
+  @override
   String get backupAutoTitle => 'Scheduled Backup';
 
   @override

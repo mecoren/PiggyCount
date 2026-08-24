@@ -53,12 +53,18 @@ class PiggyTitleBar extends StatelessWidget implements PreferredSizeWidget {
     this.topPadding = 0,
     this.backgroundColor,
     // —— 以下参数为兼容旧 GlassTitleBar API 保留，内部忽略 ——
-    @Deprecated('No longer used; PiggyTitleBar is always solid.') this.blur = true,
-    @Deprecated('No longer used; PiggyTitleBar has no blur.') this.maxSigma = 20.0,
-    @Deprecated('No longer used; PiggyTitleBar has no blur.') this.minSigma = 2.0,
-    @Deprecated('No longer used; PiggyTitleBar always shows highlight line.') this.showHighlightLine = true,
-    @Deprecated('No longer used; PiggyTitleBar is always opaque.') this.bottomOpaque = false,
-    @Deprecated('No longer used; PiggyTitleBar has no blur fade.') this.scrollOffsetListenable,
+    @Deprecated('No longer used; PiggyTitleBar is always solid.')
+    this.blur = true,
+    @Deprecated('No longer used; PiggyTitleBar has no blur.')
+    this.maxSigma = 20.0,
+    @Deprecated('No longer used; PiggyTitleBar has no blur.')
+    this.minSigma = 2.0,
+    @Deprecated('No longer used; PiggyTitleBar always shows highlight line.')
+    this.showHighlightLine = true,
+    @Deprecated('No longer used; PiggyTitleBar is always opaque.')
+    this.bottomOpaque = false,
+    @Deprecated('No longer used; PiggyTitleBar has no blur fade.')
+    this.scrollOffsetListenable,
   });
 
   final String? title;
@@ -101,7 +107,12 @@ class PiggyTitleBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Size get preferredSize {
     final firstRow = (subtitle != null && showTitleSection) ? 80.0 : 56.0;
-    return Size.fromHeight(firstRow + (bottom != null ? bottomHeight : 0));
+    // topPadding 是前景列里真实占位的空间（Padding(top) + SizedBox(firstRow)），
+    // 必须计入 preferredSize，否则 Scaffold 只给 firstRow 高度，
+    // 内容比预留空间高出 topPadding → "BOTTOM OVERFLOWED BY n PIXELS"。
+    return Size.fromHeight(
+      topPadding + firstRow + (bottom != null ? bottomHeight : 0),
+    );
   }
 
   @override
@@ -135,8 +146,7 @@ class PiggyTitleBar extends StatelessWidget implements PreferredSizeWidget {
               ),
             ),
           ),
-          if (bottom != null)
-            SizedBox(height: bottomHeight, child: bottom),
+          if (bottom != null) SizedBox(height: bottomHeight, child: bottom),
         ],
       );
     }
@@ -152,81 +162,85 @@ class PiggyTitleBar extends StatelessWidget implements PreferredSizeWidget {
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
               child: Row(
-              children: [
-                if (showBack)
-                  IconButton(
-                    padding: const EdgeInsets.only(right: 8),
-                    icon: backIcon ?? const Icon(Icons.arrow_back_rounded, size: 22),
-                    onPressed: onBack ?? () => Navigator.of(context).maybePop(),
-                  ),
-                if (showMenu)
-                  IconButton(
-                    padding: const EdgeInsets.only(right: 8),
-                    icon: const Icon(Icons.menu_rounded, size: 22),
-                    onPressed: onMenuTap,
-                  ),
-                if (!showBack && !showMenu && leadingIcon != null) ...[
-                  leadingPlain
-                      ? Icon(leadingIcon, size: 22)
-                      : Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: colorScheme.primary.withValues(alpha: 0.12),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(leadingIcon, size: 20),
-                        ),
-                  const SizedBox(width: 8),
-                ],
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment:
-                        centerTitle ? CrossAxisAlignment.center : CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (titleWidget != null)
-                            Flexible(child: titleWidget!)
-                          else if (title != null)
-                            Flexible(
-                              child: Text(
-                                title!,
-                                style: TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w500,
-                                  color: colorScheme.onSurface,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                children: [
+                  if (showBack)
+                    IconButton(
+                      padding: const EdgeInsets.only(right: 8),
+                      icon: backIcon ??
+                          const Icon(Icons.arrow_back_rounded, size: 22),
+                      onPressed:
+                          onBack ?? () => Navigator.of(context).maybePop(),
+                    ),
+                  if (showMenu)
+                    IconButton(
+                      padding: const EdgeInsets.only(right: 8),
+                      icon: const Icon(Icons.menu_rounded, size: 22),
+                      onPressed: onMenuTap,
+                    ),
+                  if (!showBack && !showMenu && leadingIcon != null) ...[
+                    leadingPlain
+                        ? Icon(leadingIcon, size: 22)
+                        : Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color:
+                                  colorScheme.primary.withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
                             ),
-                        ],
-                      ),
-                      if (subtitle != null) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          subtitle!,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: colorScheme.onSurfaceVariant,
+                            child: Icon(leadingIcon, size: 20),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: centerTitle
+                          ? CrossAxisAlignment.center
+                          : CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (titleWidget != null)
+                              Flexible(child: titleWidget!)
+                            else if (title != null)
+                              Flexible(
+                                child: Text(
+                                  title!,
+                                  style: TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w500,
+                                    color: colorScheme.onSurface,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                          ],
                         ),
+                        if (subtitle != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-                if (actions != null) ...actions!,
-              ],
+                  if (actions != null) ...actions!,
+                ],
+              ),
             ),
           ),
         ),
-      ),
-      if (bottom != null) SizedBox(height: bottomHeight, child: bottom),
+        if (bottom != null) SizedBox(height: bottomHeight, child: bottom),
       ],
     );
   }
@@ -243,8 +257,10 @@ class PiggyHomeBar extends StatelessWidget implements PreferredSizeWidget {
     this.onMenuTap,
     this.actions,
     this.primary = true,
-    @Deprecated('No longer used; PiggyHomeBar is always solid.') this.blur = true,
-    @Deprecated('No longer used; PiggyHomeBar is always opaque.') this.bottomOpaque = false,
+    @Deprecated('No longer used; PiggyHomeBar is always solid.')
+    this.blur = true,
+    @Deprecated('No longer used; PiggyHomeBar is always opaque.')
+    this.bottomOpaque = false,
   });
 
   final String? title;
@@ -319,9 +335,12 @@ class PiggyHeader extends ConsumerWidget {
     this.bottom,
     this.bottomHeight = 0,
     // —— 以下参数为兼容旧 GlassHeader API 保留，内部忽略 ——
-    @Deprecated('No longer used; PiggyHeader is always opaque.') this.bottomOpaque = false,
-    @Deprecated('No longer used; PiggyHeader has no blur.') this.maxSigma = 20.0,
-    @Deprecated('No longer used; PiggyHeader always shows highlight line.') this.showHighlightLine = true,
+    @Deprecated('No longer used; PiggyHeader is always opaque.')
+    this.bottomOpaque = false,
+    @Deprecated('No longer used; PiggyHeader has no blur.')
+    this.maxSigma = 20.0,
+    @Deprecated('No longer used; PiggyHeader always shows highlight line.')
+    this.showHighlightLine = true,
   });
 
   /// 完全自定义头部内容（优先于 title/showBack/actions/content）。
@@ -440,8 +459,7 @@ class _PiggyHeaderShell extends ConsumerWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final colorScheme = theme.colorScheme;
-    final statusBarIconBrightness =
-        isDark ? Brightness.light : Brightness.dark;
+    final statusBarIconBrightness = isDark ? Brightness.light : Brightness.dark;
 
     // 皮肤层：读取 headerSkinProvider，0.85 不透明度护栏对比度
     final skin = headerSkinById(ref.watch(headerSkinProvider));

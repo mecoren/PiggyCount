@@ -10,10 +10,14 @@ class UIScaleService {
   static const double baseScreenWidth = 407.0; // 用户设备的实际宽度
 
   /// 计算效果补偿系数 (确保所有设备用户缩放1.0时效果一致)
+  ///
+  /// 性能关键点：只订阅 devicePixelRatio 与 size 这两个窄粒度 aspect，
+  /// 绝不能使用全量 MediaQuery.of —— 键盘弹出动画期间 viewInsets 每帧变化，
+  /// 全量订阅会让全项目所有调用 `.scaled()` 的组件逐帧整页重建，
+  /// 是真机键盘动画卡顿的主要 UI 线程开销之一。
   static double getEffectCompensation(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    final devicePixelRatio = mediaQuery.devicePixelRatio;
-    final screenWidth = mediaQuery.size.width;
+    final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final screenWidth = MediaQuery.sizeOf(context).width;
 
     // 基于屏幕密度的补偿
     final densityCompensation = devicePixelRatio / baseDevicePixelRatio;
@@ -76,9 +80,9 @@ class UIScaleService {
 
   /// 检测是否为基准设备（或非常接近基准设备）
   static bool isBaseDevice(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    final devicePixelRatio = mediaQuery.devicePixelRatio;
-    final screenWidth = mediaQuery.size.width;
+    // 窄粒度订阅，避免全量 MediaQuery 依赖（见 getEffectCompensation 注释）
+    final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final screenWidth = MediaQuery.sizeOf(context).width;
 
     // 允许5%的误差
     final densityMatch = (devicePixelRatio - baseDevicePixelRatio).abs() / baseDevicePixelRatio < 0.05;
@@ -95,15 +99,17 @@ class UIScaleService {
 
   /// 获取调试信息
   static Map<String, double> getDebugInfo(BuildContext context, double userScale) {
-    final mediaQuery = MediaQuery.of(context);
+    // 窄粒度订阅，避免全量 MediaQuery 依赖（见 getEffectCompensation 注释）
+    final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final size = MediaQuery.sizeOf(context);
     final deviceScale = getDeviceScaleFactor(context);
     final finalScale = getFinalScaleFactor(context, userScale);
     final recommendedScale = getRecommendedUserScale(context);
 
     return {
-      'devicePixelRatio': mediaQuery.devicePixelRatio,
-      'screenWidth': mediaQuery.size.width,
-      'screenHeight': mediaQuery.size.height,
+      'devicePixelRatio': devicePixelRatio,
+      'screenWidth': size.width,
+      'screenHeight': size.height,
       'baseDevicePixelRatio': baseDevicePixelRatio,
       'baseScreenWidth': baseScreenWidth,
       'deviceScaleFactor': deviceScale,

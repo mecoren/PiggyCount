@@ -35,8 +35,15 @@ class BackupFileInfo {
 typedef BackupOutcome = ({int ledgers, int attachments, String fileName});
 
 /// 单次恢复结果
-typedef RestoreOutcome =
-    ({int success, int failed, int attachmentsRestored, String fileName});
+/// [skippedRecurring] 恢复侧周期实例去重跳过数（REC-05：同规则同日且
+/// syncId 或金额+备注相同才算真重复；>0 意味着有同日多笔交易未恢复，
+/// UI 必须显式提示，不允许静默丢数）。
+typedef RestoreOutcome = (
+    {int success,
+    int failed,
+    int attachmentsRestored,
+    int skippedRecurring,
+    String fileName});
 
 /// 云端全量备份服务（/prd/cloud_backup/design.md）
 ///
@@ -245,6 +252,7 @@ class CloudBackupService {
         ..sort();
       var success = 0;
       var failed = 0;
+      var skippedRecurring = 0;
       for (final name in ledgerEntries) {
         final remoteId =
             int.parse(_ledgerEntryPattern.firstMatch(name)!.group(1)!);
@@ -261,12 +269,14 @@ class CloudBackupService {
               // P1-1 守卫触发：空快照拒绝覆盖非空本地账本
               throw fcs.CloudSyncException('空快照被拒绝覆盖本地账本: $name');
             }
+            skippedRecurring += restored.skippedRecurring;
           } else {
-            final newId = await _importNewLedgerFromBackup(
+            final imported = await _importNewLedgerFromBackup(
                 remoteId: remoteId, jsonStr: jsonStr);
-            if (newId == null) {
+            if (imported == null) {
               throw fcs.CloudSyncException('备份账本导入失败: $name');
             }
+            skippedRecurring += imported.skippedRecurring;
           }
           success++;
         } catch (e) {
@@ -281,11 +291,17 @@ class CloudBackupService {
       final restoredAttachments = await _restoreAttachmentsFromArchive(entries);
 
       logger.info('Backup',
-          '备份恢复完成: $fileName 成功=$success 失败=$failed 附件=$restoredAttachments');
+          '备份恢复完成: $fileName 成功=$success 失败=$failed 附件=$restoredAttachments 跳过recurring重复=$skippedRecurring');
+      if (skippedRecurring > 0) {
+        logger.warning('Backup',
+            '恢复时有 $skippedRecurring 笔同日周期实例被判重跳过（同规则同日且syncId或金额+备注相同）。'
+            '若源端存在同日多笔合法交易，请核对明细。');
+      }
       return (
         success: success,
         failed: failed,
         attachmentsRestored: restoredAttachments,
+        skippedRecurring: skippedRecurring,
         fileName: fileName
       );
     } finally {
@@ -328,7 +344,7 @@ class CloudBackupService {
 
   /// 备份独有账本导入新建（镜像 downloadRemoteLedger 的 ID 解析语义：
   /// 同名复用 → 远程 ID 空闲复用 → 新 ID），但不触碰云端同步文件。
-  Future<int?> _importNewLedgerFromBackup(
+  Future<({int ledgerId, int skippedRecurring})?> _importNewLedgerFromBackup(
       {required int remoteId, required String jsonStr}) async {
     final json = jsonDecode(jsonStr) as Map<String, dynamic>;
     final name =
@@ -358,8 +374,9 @@ class CloudBackupService {
       }
     }
 
-    await importTransactionsJson(repo, ledgerId, jsonStr, recordChanges: false);
-    return ledgerId;
+    final importResult = await importTransactionsJson(repo, ledgerId, jsonStr,
+        recordChanges: false);
+    return (ledgerId: ledgerId, skippedRecurring: importResult.skippedRecurring);
   }
 
   /// 从 ZIP 条目补齐本地缺失附件：只写缺失文件，sha256 校验不过则跳过。

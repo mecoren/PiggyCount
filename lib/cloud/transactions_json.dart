@@ -801,9 +801,11 @@ ImportData parseJsonToImportData(String jsonStr) {
 /// [jsonStr] - JSON 字符串
 /// [onProgress] - 进度回调 (已处理数, 总数)
 ///
-/// 返回 (inserted,) 元组：
+/// 返回 (inserted, skippedRecurring) 元组：
 /// - inserted: 新增条数
-Future<({int inserted})> importTransactionsJson(
+/// - skippedRecurring: 恢复侧周期实例去重跳过条数（REC-05：
+///   同规则同日且 syncId 或金额+备注相同才算真重复）
+Future<({int inserted, int skippedRecurring})> importTransactionsJson(
   BaseRepository repo,
   int ledgerId,
   String jsonStr, {
@@ -832,5 +834,5 @@ Future<({int inserted})> importTransactionsJson(
     recordChanges: recordChanges,
   );
 
-  return (inserted: result.inserted,);
+  return (inserted: result.inserted, skippedRecurring: result.skippedRecurring);
 }

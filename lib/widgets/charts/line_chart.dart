@@ -226,6 +226,7 @@ class _LineChartState extends State<LineChart> {
   }
 
   /// 点按气泡：主题色底白字，位于数据点上方，水平居中于点并限制在图内。
+  /// 定位规则与柱状图共用 [chartTooltipLayout]，保证两类趋势卡气泡位置一致。
   Widget _buildTooltip(BuildContext context, Size size, int index) {
     final points = _ChartGeom.pointsFor(
         widget.values,
@@ -233,14 +234,13 @@ class _LineChartState extends State<LineChart> {
         size,
         widget.showYAxisLabels);
     final p = points[index];
-    // Align x ∈ [-1,1]，留出边距防止气泡超出卡片
-    final alignX = ((p.dx / size.width) * 2 - 1).clamp(-0.72, 0.72);
-    final top = math.max(p.dy - 52.0, 4.0);
+    final layout =
+        chartTooltipLayout(anchor: p, chartSize: size);
     return Positioned.fill(
       child: Align(
-        alignment: Alignment(alignX, -1),
+        alignment: Alignment(layout.alignX, -1),
         child: Padding(
-          padding: EdgeInsets.only(top: top),
+          padding: EdgeInsets.only(top: layout.top),
           child: ChartTooltipBubble(
             text: widget.pointTooltipText!(index),
             color: widget.themeColor,
@@ -250,29 +250,29 @@ class _LineChartState extends State<LineChart> {
     );
   }
 
-  /// 点按气泡手势：命中数据点附近(28px)则显示/切换气泡，否则收起。
+  /// 点按气泡手势：命中规则与柱状图统一 —— 按数据点 x 坐标分列，
+  /// 点击落在某列半带宽内即选中该点（不限垂直位置，无需精确点到圆点）；
+  /// 点击两侧边距空白处收起气泡。
   void _handlePointTap(Offset localPosition) {
     final renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
     final size = renderBox.size;
-    if (widget.values.isEmpty) return;
+    final n = widget.values.length;
+    if (size.width <= 0 || n == 0) return;
     final points = _ChartGeom.pointsFor(
         widget.values,
         _ChartGeom.range(widget.values, widget.secondaryValues),
         size,
         widget.showYAxisLabels);
-    int? hit;
-    double minDist = double.infinity;
-    for (int i = 0; i < points.length; i++) {
-      final d = (points[i] - localPosition).distance;
-      if (d < minDist) {
-        minDist = d;
-        hit = i;
-      }
-    }
-    setState(() {
-      _tappedIndex = (hit != null && minDist <= 28) ? hit : null;
-    });
+    // 列宽 = 相邻数据点水平间距；稀疏序列时至少保留 16px 命中宽度
+    final left = _ChartGeom.leftInset(widget.showYAxisLabels);
+    final step =
+        (size.width - left - _ChartGeom.rightPad) / (n - 1).clamp(1, 999);
+    final halfBand = math.max(step / 2, 16.0);
+    final idx = ((localPosition.dx - left) / step).round().clamp(0, n - 1);
+    final hit =
+        (points[idx].dx - localPosition.dx).abs() <= halfBand ? idx : null;
+    setState(() => _tappedIndex = hit);
   }
 
   /// 旧版线点击手势：判断点击位置离主线/副线哪条更近。
@@ -699,14 +699,17 @@ class _LinePainter extends CustomPainter {
       final n = xLabels.length;
       int step = (n / 8).ceil();
       if (step < 1) step = 1;
-      for (int i = 0; i < n; i += step) {
+      // 高亮优先级：点按选中的列 > 当前周期（与柱状图 _isHighlighted 语义一致）
+      final activeIndex = tappedIndex ?? highlightIndex;
+      // 采样显示避免拥挤；选中/高亮列的标签始终保留（与柱状图一致）
+      for (int i = 0; i < n; i++) {
+        if (i % step != 0 && i != activeIndex) continue;
         final lbl = xLabels[i];
         final tp = TextPainter(
           text: TextSpan(
               text: lbl,
-              style: (highlightIndex != null && i == highlightIndex)
-                  ? hiStyle
-                  : baseStyle),
+              style:
+                  (activeIndex != null && i == activeIndex) ? hiStyle : baseStyle),
           textDirection: TextDirection.ltr,
         )..layout(maxWidth: 60);
         final dxi =

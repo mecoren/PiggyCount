@@ -2367,6 +2367,7 @@
   "restoreRunningStatus": "백업에서 복원 중…",
   "restoreLedgerProgress": "장부 복원 {done}/{total}…",
   "restoreResultMessage": "복원 완료: 성공 {success}개, 실패 {failed}개.",
+  "restoreSkippedRecurringHint": "참고: 복원 중 같은 날짜의 반복 인스턴스 {count}개가 중복 판정으로 건너뛰어졌습니다(같은 규칙·같은 날이며 syncId 또는 금액+메모 일치). 같은 날 여러 거래가 있었다면 원본을 확인하세요.",
   "backupAutoTitle": "예약 백업",
   "backupAutoSubtitle": "매일 설정한 시간에 자동 백업(앱 실행 중에만 동작)",
   "backupTimeTitle": "매일 백업 시간",

@@ -1038,8 +1038,12 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
     final l10n = AppLocalizations.of(context);
     final primaryColor = ref.watch(primaryColorProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
     final avatarPath = ref.watch(avatarPathProvider).asData?.value;
+
+    // 性能关键点：这里绝不能读取全量 MediaQuery.of —— 键盘弹出动画期间
+    // viewInsets/padding 每帧变化，全量订阅会让主页 Scaffold（含 IndexedStack
+    // 的四个 Tab 页与底部导航栏）逐帧整页重建。底部栏的安全区高度已下沉到
+    // _PiggyBottomBar 内部的叶子组件中窄粒度订阅，键盘动画只重建那一小块。
 
     return PopScope(
       canPop: false,
@@ -1068,7 +1072,6 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
               currentIndex: idx,
               primaryColor: primaryColor,
               isDark: isDark,
-              bottomPadding: bottomPadding,
               l10n: l10n,
               avatarPath: avatarPath,
               centerButtonKey: _centerButtonKey,
@@ -1143,7 +1146,6 @@ class _PiggyBottomBar extends StatelessWidget {
   final int currentIndex;
   final Color primaryColor;
   final bool isDark;
-  final double bottomPadding;
   final AppLocalizations l10n;
   final String? avatarPath;
   final GlobalKey centerButtonKey;
@@ -1157,7 +1159,6 @@ class _PiggyBottomBar extends StatelessWidget {
     required this.currentIndex,
     required this.primaryColor,
     required this.isDark,
-    required this.bottomPadding,
     required this.l10n,
     this.avatarPath,
     required this.centerButtonKey,
@@ -1176,8 +1177,8 @@ class _PiggyBottomBar extends StatelessWidget {
 
     const barHeight = 56.0;
 
-    return SizedBox(
-      height: barHeight + bottomPadding,
+    return _PiggyBottomBarSafeAreaHeight(
+      barHeight: barHeight,
       child: ClipRect(
         child: BackdropFilter(
           filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
@@ -1192,26 +1193,30 @@ class _PiggyBottomBar extends StatelessWidget {
               ),
               boxShadow: PiggyTokens.tabBarShadow,
             ),
-            child: Padding(
-              padding: EdgeInsets.only(bottom: bottomPadding),
-              child: Row(
-                children: [
-                  _buildTabItem(context, 0, Icons.receipt_long_outlined,
-                      Icons.receipt_long, l10n.tabHome, inactiveColor),
-                  _buildTabItem(context, 1, Icons.pie_chart_outline_rounded,
-                      Icons.pie_chart_rounded, l10n.tabInsights, inactiveColor),
-                  // 中间记账按钮（作为 Tab 样式）
-                  _buildCenterTabItem(context, inactiveColor),
-                  _buildTabItem(
-                      context,
-                      2,
-                      Icons.account_balance_wallet_outlined,
-                      Icons.account_balance_wallet,
-                      l10n.tabAssets,
-                      inactiveColor),
-                  _buildAvatarTabItem(context, 3, l10n.tabMine, inactiveColor),
-                ],
-              ),
+            child: Column(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      _buildTabItem(context, 0, Icons.receipt_long_outlined,
+                          Icons.receipt_long, l10n.tabHome, inactiveColor),
+                      _buildTabItem(context, 1, Icons.pie_chart_outline_rounded,
+                          Icons.pie_chart_rounded, l10n.tabInsights, inactiveColor),
+                      // 中间记账按钮（作为 Tab 样式）
+                      _buildCenterTabItem(context, inactiveColor),
+                      _buildTabItem(
+                          context,
+                          2,
+                          Icons.account_balance_wallet_outlined,
+                          Icons.account_balance_wallet,
+                          l10n.tabAssets,
+                          inactiveColor),
+                      _buildAvatarTabItem(context, 3, l10n.tabMine, inactiveColor),
+                    ],
+                  ),
+                ),
+                const _PiggyBottomBarSafeArea(),
+              ],
             ),
           ),
         ),
@@ -1351,6 +1356,39 @@ class _PiggyBottomBar extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// 底部导航栏总高度（barHeight + 安全区高度）。
+///
+/// 独立读取 [MediaQuery.paddingOf] 以隔离 rebuild 范围：键盘弹出/收起动画期间
+/// padding.bottom 每帧变化，仅此叶子组件逐帧重建，
+/// 不会向上传播重建 PiggyApp / Scaffold / IndexedStack 各 Tab 页。
+class _PiggyBottomBarSafeAreaHeight extends StatelessWidget {
+  const _PiggyBottomBarSafeAreaHeight({required this.barHeight, required this.child});
+
+  final double barHeight;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: barHeight + MediaQuery.paddingOf(context).bottom,
+      child: child,
+    );
+  }
+}
+
+/// 底部导航栏内容下方的安全区占位（手势条区域）。
+///
+/// 同样独立读取 [MediaQuery.paddingOf]，把键盘动画期间的逐帧变化
+/// 隔离在这个叶子组件内，Row 内容不受影响。
+class _PiggyBottomBarSafeArea extends StatelessWidget {
+  const _PiggyBottomBarSafeArea();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(height: MediaQuery.paddingOf(context).bottom);
   }
 }
 

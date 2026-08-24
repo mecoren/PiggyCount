@@ -1738,7 +1738,12 @@ class SyncEngine implements app.SyncService {
       data,
       recordChanges: false,
     );
-    logger.info('SyncEngine', '全量拉取完成: inserted=${result.inserted}');
+    logger.info('SyncEngine',
+        '全量拉取完成: inserted=${result.inserted}, skippedRecurring=${result.skippedRecurring}');
+    if (result.skippedRecurring > 0) {
+      logger.warning('SyncEngine',
+          '全量拉取有 ${result.skippedRecurring} 笔同日周期实例被判重跳过，请核对源端明细');
+    }
 
     // 下载附件
     try {

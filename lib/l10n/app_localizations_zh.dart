@@ -8002,6 +8002,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String restoreSkippedRecurringHint(int count) {
+    return '注意：恢复时有 $count 笔同日周期实例被判重跳过（同规则同日且 syncId 或金额+备注相同），如源端存在同日多笔交易请核对明细。';
+  }
+
+  @override
   String get backupAutoTitle => '定时备份';
 
   @override
@@ -16028,6 +16033,11 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String restoreResultMessage(int success, int failed) {
     return '還原完成：成功 $success 個，失敗 $failed 個。';
+  }
+
+  @override
+  String restoreSkippedRecurringHint(int count) {
+    return '注意：還原時有 $count 筆同日週期實例被判重跳過（同規則同日且 syncId 或金額+備註相同），如源端存在同日多筆交易請核對明細。';
   }
 
   @override

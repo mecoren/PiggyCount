@@ -3098,6 +3098,7 @@
   "restoreRunningStatus": "正在從備份還原…",
   "restoreLedgerProgress": "正在還原賬本 {done}/{total}…",
   "restoreResultMessage": "還原完成：成功 {success} 個，失敗 {failed} 個。",
+  "restoreSkippedRecurringHint": "注意：還原時有 {count} 筆同日週期實例被判重跳過（同規則同日且 syncId 或金額+備註相同），如源端存在同日多筆交易請核對明細。",
   "backupAutoTitle": "定時備份",
   "backupAutoSubtitle": "每日在設定時間自動備份一次（僅 App 執行期間生效）",
   "backupTimeTitle": "每日備份時間",

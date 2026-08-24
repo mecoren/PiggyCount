@@ -397,6 +397,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
     );
     var success = 0;
     var failed = 0;
+    var skippedRecurring = 0;
     Object? error;
     try {
       final result = await backup.restoreBackup(
@@ -406,6 +407,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
       );
       success = result.success;
       failed = result.failed;
+      skippedRecurring = result.skippedRecurring;
     } catch (e) {
       error = e;
     } finally {
@@ -426,9 +428,14 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
       await AppDialog.error(context,
           title: l10n.commonFailed, message: '$error');
     } else {
+      // REC-05：同日周期实例被判重跳过时必须显式提示，不允许静默丢数
+      var message = l10n.restoreResultMessage(success, failed);
+      if (skippedRecurring > 0) {
+        message +=
+            '\n${l10n.restoreSkippedRecurringHint(skippedRecurring)}';
+      }
       await AppDialog.info(context,
-          title: l10n.restoreFromBackupTitle,
-          message: l10n.restoreResultMessage(success, failed));
+          title: l10n.restoreFromBackupTitle, message: message);
     }
   }
 
@@ -502,7 +509,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
         ),
         body: Padding(
           padding: EdgeInsets.only(
-            top: MediaQuery.of(context).padding.top + 80,
+            top: MediaQuery.of(context).padding.top + 88,
           ),
           child: Column(
             children: [
@@ -533,7 +540,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
       ),
       body: Padding(
         padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 80,
+          top: MediaQuery.of(context).padding.top + 88,
         ),
         child: Column(
           children: [

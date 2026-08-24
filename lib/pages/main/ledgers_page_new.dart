@@ -1614,15 +1614,14 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
           }).toList();
 
           return Padding(
-            padding: EdgeInsets.only(
-              left: 16,
-              right: 16,
-              top: 12,
-              bottom: 16 + MediaQuery.of(bctx).viewInsets.bottom,
-            ),
-            child: SizedBox(
-              height: 420,
-              child: Column(
+            // viewInsets 读取隔离到 KeyboardBottomInsetPadding 叶子组件：
+            // 键盘动画期间仅该组件逐帧重建，不再重建整个 sheet 内容
+            padding: const EdgeInsets.only(left: 16, right: 16, top: 12),
+            child: KeyboardBottomInsetPadding(
+              extra: 16,
+              child: SizedBox(
+                height: 420,
+                child: Column(
                 children: [
                   Container(
                     width: 36,
@@ -1667,7 +1666,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                 ],
               ),
             ),
-          );
+          ),
+        );
         });
       },
     );

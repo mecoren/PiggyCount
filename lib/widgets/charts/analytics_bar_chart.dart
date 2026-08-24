@@ -323,13 +323,13 @@ class _AnalyticsBarChartState extends State<AnalyticsBarChart> {
   }
 
   /// 点按气泡定位：柱体水平居中于其 band，垂直贴柱顶上方。
+  /// 布局规则与折线图共用 [chartTooltipLayout]，保证两类趋势卡气泡位置一致。
   Widget _buildTooltip(BuildContext context, Size size) {
     final i = _touchedIndex!;
     final plotWidth = size.width - _leftAxisWidth;
     final band = plotWidth / widget.values.length;
-    // 柱体中心 x → Align 坐标（-1..1），留出边距防止气泡超出卡片
+    // 柱体中心 x
     final centerX = _leftAxisWidth + band * (i + 0.5);
-    final alignX = ((centerX / size.width) * 2 - 1).clamp(-0.72, 0.72);
 
     // 柱顶 y：按 minY..maxY 线性映射到绘图区（与 fl_chart 归一化一致）
     final maxV = widget.values.fold<double>(0.0, (a, v) => v > a ? v : a);
@@ -339,13 +339,14 @@ class _AnalyticsBarChartState extends State<AnalyticsBarChart> {
     final plotBottom = size.height - _bottomAxisHeight;
     final t = (widget.values[i] - minY) / (maxY - minY);
     final barEndY = plotBottom * (1 - t);
-    final top = (barEndY - 46).clamp(4.0, size.height - 56);
 
+    final layout = chartTooltipLayout(
+        anchor: Offset(centerX, barEndY), chartSize: size);
     return Positioned.fill(
       child: Align(
-        alignment: Alignment(alignX, -1),
+        alignment: Alignment(layout.alignX, -1),
         child: Padding(
-          padding: EdgeInsets.only(top: top),
+          padding: EdgeInsets.only(top: layout.top),
           child: ChartTooltipBubble(
             text: widget.pointTooltipText!(i),
             color: widget.themeColor,
