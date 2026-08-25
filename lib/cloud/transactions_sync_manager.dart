@@ -1993,8 +1993,8 @@ class TransactionsSyncManager implements SyncService {
 
     var importSkippedRecurring = 0;
     var inserted = 0;
-    // 事务外解包一次：缓存命中/重新下载两条路径到这里都已非空
-    final payload = jsonStr!;
+    // 缓存命中/重新下载两条路径到这里都已提升为非空
+    final payload = jsonStr;
     final newLedgerId = await db.transaction(() async {
       // 竞态守卫：发现与导入之间本地可能已导入同身份账本
       final existing = await _localLedgerForSlotKey(meta.slotKey);
