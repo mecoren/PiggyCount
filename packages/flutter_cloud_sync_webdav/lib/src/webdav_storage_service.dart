@@ -19,6 +19,10 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
   /// 在服务层统一包 .timeout 兜底。
   static const _opTimeout = Duration(seconds: 60);
 
+  /// M15：上传临时文件标记（`<name>.tmp.<毫秒>`，见 [uploadBinary]）。
+  /// list() 据此过滤上传中断残留的半成品，避免被下游当有效文件消费。
+  static const _tempFileMarker = '.tmp.';
+
   /// 包裹单次 WebDAV 操作，超时抛 [CloudStorageException]（带操作名），
   /// 与其他网络错误走同一异常通道，调用方无需新增捕获分支。
   Future<T> _op<T>(String opName, Future<T> Function() op) {
@@ -173,7 +177,11 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
       return files
           .where((file) =>
               !(file.isDir ?? true) &&
-              !(file.name?.endsWith('.metadata.json') ?? false))
+              !(file.name?.endsWith('.metadata.json') ?? false) &&
+              // M15：上传中断残留的临时文件（upload 用 `<name>.tmp.<毫秒>`，
+              // PUT 后 MOVE 前崩溃即永久滞留）不得混进列表 —— 下游列举型
+              // 消费者（备份/恢复候选）会把它当有效文件展示甚至恢复半截数据
+              !(file.name?.contains(_tempFileMarker) ?? false))
           .map((file) {
         final name = file.name ?? '';
         // 构造相对于 remotePath 的路径，供下游 _buildPath 重新拼接。
@@ -234,9 +242,14 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
 
       final files =
           await _op('readDir', () => _client.readDir(parentDir));
+      // W2：用类型化异常表达「文件不存在」，与超时/网络等通用存储故障区分。
+      // 之前 orElse 抛通用 CloudStorageException，下方 `e is
+      // CloudStorageException` 分支把 _op 超时抛的同类异常一并吞成 null，
+      // 上层（getStatus）据此误判「云端无备份」→ 放行覆盖上传，弱网环境
+      // 下可能拿旧数据盖掉云端新备份。
       final file = files.firstWhere(
         (f) => f.name == fileName,
-        orElse: () => throw CloudStorageException('File not found: $path'),
+        orElse: () => throw CloudFileNotFoundException(path),
       );
 
       // Try to load custom metadata
@@ -250,12 +263,14 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
         metadata: customMetadata,
       );
     } catch (e) {
-      // 401/403 认证失败需原样抛出：下方 `e is CloudStorageException` 分支
-      // 会把通用存储异常吞成 null（视为无元数据），认证错误不能被吞掉
+      // 401/403 认证失败需原样抛出：下方 not-found 分支会把其余异常
+      // 上抛为通用存储故障，认证错误必须可区分以引导用户改凭据
       if (_isUnauthorized(e)) {
         throw CloudAuthException('WebDAV 认证失败（账号或密码错误）', e);
       }
-      if (_isNotFound(e) || e is CloudStorageException) {
+      // 仅「确认不存在」收敛为 null（接口契约：getMetadata 缺失返回 null）；
+      // 超时/网络等其余故障一律上抛，绝不静默变成「云端无元数据」
+      if (_isNotFound(e) || e is CloudFileNotFoundException) {
         return null;
       }
       throw CloudStorageException('Get metadata failed: $e', e);
@@ -270,15 +285,19 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
   /// 统一判断 WebDAV 404 错误，优先使用结构化状态码，字符串匹配仅作兜底。
   ///
   /// webdav_client 内部抛出的是 dio 的 DioException（带 response.statusCode），
-  /// 这里用 dynamic 访问 response 字段以避免引入 dio 直接依赖；
-  /// 当无结构化信息时再退化为字符串匹配，兼容各服务器差异化的错误文案。
+  /// 这里用 dynamic 访问 response 字段以避免引入 dio 直接依赖。
+  ///
+  /// M5：只要异常携带了结构化 response，就**只**按状态码判定 —— 字符串
+  /// 兜底仅在完全无结构化信息时使用。之前「有 response 但非 404」也会
+  /// 落到字符串匹配，而 DioException.toString() 内嵌完整 URL：文件名含
+  /// "404"/"not found" 子串时（如 backup404.json），任何网络层错误都会
+  /// 被误判为文件不存在 → exists()=false → 触发覆盖上传等危险操作。
   bool _isNotFound(Object e) {
-    // 优先走结构化状态码：dio 异常的 response.statusCode
     try {
       final dynamic dyn = e;
       final dynamic response = dyn.response;
-      if (response != null && response.statusCode == 404) {
-        return true;
+      if (response != null) {
+        return response.statusCode == 404;
       }
     } catch (_) {
       // 非 dio 异常类型，无 response 字段，进入字符串兜底
@@ -292,8 +311,7 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
   }
 
   /// 统一判断 WebDAV 401/403 认证失败，策略与 [_isNotFound] 一致：
-  /// 优先读取 dio 异常携带的 response.statusCode，无结构化信息时退化为
-  /// 字符串匹配（兼容各服务器差异化错误文案）。
+  /// 有结构化状态码只看状态码；字符串兜底仅限无结构化信息时（M5 同款）。
   ///
   /// 认证失败与网络故障对用户的处置动作完全不同（改凭据 vs 查网络），
   /// 必须区分抛出 [CloudAuthException]，避免上层统一报「请检查网络」。
@@ -301,9 +319,8 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
     try {
       final dynamic dyn = e;
       final dynamic response = dyn.response;
-      if (response != null &&
-          (response.statusCode == 401 || response.statusCode == 403)) {
-        return true;
+      if (response != null) {
+        return response.statusCode == 401 || response.statusCode == 403;
       }
     } catch (_) {
       // 非 dio 异常类型，无 response 字段，进入字符串兜底

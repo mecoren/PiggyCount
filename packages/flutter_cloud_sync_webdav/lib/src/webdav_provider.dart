@@ -6,6 +6,13 @@ import 'package:webdav_client/webdav_client.dart' as webdav;
 import 'webdav_auth_service.dart';
 import 'webdav_storage_service.dart';
 
+/// WebDAV 状态码过滤：仅拒绝 3xx（重定向），其余一律放行。
+///
+/// 返回 true 表示 dio 把该响应当作正常结果返回给上游；返回 false 则抛
+/// DioException。详见 [WebDAVProvider.initialize] 内 W1 修复注释。
+bool webdavValidateStatus(int? status) =>
+    status == null || status < 300 || status >= 400;
+
 /// WebDAV implementation of [CloudProvider].
 ///
 /// This provider uses WebDAV protocol for cloud storage.
@@ -91,10 +98,17 @@ class WebDAVProvider implements CloudProvider {
       // 且 Basic Auth 凭据会原样重放到重定向目标，https→http 302 即可
       // 让凭据明文过网，绕开上面的 HTTPS 强制。改为显式拒绝 3xx，
       // 引导用户直接填写最终地址。
+      //
+      // W1 修复：validateStatus 只拒 3xx，4xx/5xx 一律放行给上游处理。
+      // 上游 webdav_client 的设计是「响应作为返回值」：首个请求不带凭据
+      // （NoAuth），收到 401 后由上游读 WWW-Authenticate 协商升级
+      // Basic/Digest 并重试；404/403 等也由上层各操作显式检查状态码抛错。
+      // 之前把阈值设为 <300，401 直接变成 DioException，认证协商成死代码，
+      // 正确密码也会被报「认证失败」。只拦 3xx 可同时保住两个目标：
+      // 认证协商正常工作 + 重定向绝不跟随（含上游的手工 302 跟随路径）。
       _client!.c.options.followRedirects = false;
       _client!.c.options.maxRedirects = 0;
-      _client!.c.options.validateStatus = (status) =>
-          status == null || status < 300; // 3xx 一律进异常分支
+      _client!.c.options.validateStatus = webdavValidateStatus;
 
       // Verify connection by reading the remote path
       try {
@@ -169,14 +183,15 @@ class WebDAVProvider implements CloudProvider {
 
   /// 统一判断 WebDAV 404 错误，优先使用结构化状态码，字符串匹配仅作兜底。
   ///
-  /// 与 WebDAVStorageService._isNotFound 逻辑保持一致：优先读取 dio 异常
-  /// 携带的 response.statusCode，无结构化信息时退化为字符串匹配。
+  /// 与 WebDAVStorageService._isNotFound 逻辑保持一致（M5）：只要异常
+  /// 携带结构化 response 就只按状态码判定，字符串兜底仅在完全无结构化
+  /// 信息时使用 —— 否则 URL 含 "404" 子串的网络错误会被误判。
   bool _isNotFound(Object e) {
     try {
       final dynamic dyn = e;
       final dynamic response = dyn.response;
-      if (response != null && response.statusCode == 404) {
-        return true;
+      if (response != null) {
+        return response.statusCode == 404;
       }
     } catch (_) {
       // 非 dio 异常类型，无 response 字段，进入字符串兜底
@@ -189,15 +204,13 @@ class WebDAVProvider implements CloudProvider {
   }
 
   /// 统一判断 WebDAV 401/403 认证失败，策略与 [_isNotFound] 一致：
-  /// 优先读取 dio 异常携带的 response.statusCode，无结构化信息时退化为
-  /// 字符串匹配。与 WebDAVStorageService._isUnauthorized 逻辑保持一致。
+  /// 有结构化状态码只看状态码；字符串兜底仅限无结构化信息时（M5 同款）。
   bool _isUnauthorized(Object e) {
     try {
       final dynamic dyn = e;
       final dynamic response = dyn.response;
-      if (response != null &&
-          (response.statusCode == 401 || response.statusCode == 403)) {
-        return true;
+      if (response != null) {
+        return response.statusCode == 401 || response.statusCode == 403;
       }
     } catch (_) {
       // 非 dio 异常类型，无 response 字段，进入字符串兜底
@@ -211,15 +224,14 @@ class WebDAVProvider implements CloudProvider {
 
   /// 审计 S23：识别重定向（3xx）。followRedirects=false 后 dio 会把
   /// 3xx 响应按异常抛出（validateStatus 拦截），此处统一判定。
+  /// M5 同款：有结构化 response 只看状态码。
   bool _isRedirect(Object e) {
     try {
       final dynamic dyn = e;
       final dynamic response = dyn.response;
       if (response != null) {
         final code = response.statusCode as int?;
-        if (code != null && code >= 300 && code < 400) {
-          return true;
-        }
+        return code != null && code >= 300 && code < 400;
       }
     } catch (_) {
       // 非 dio 异常类型

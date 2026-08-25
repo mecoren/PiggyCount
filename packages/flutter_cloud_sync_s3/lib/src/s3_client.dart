@@ -159,47 +159,68 @@ class S3Client {
     _checkDisposed();
     final uri = _buildUri(bucket, key: key);
 
-    var headers = <String, String>{
+    var headers = _signedPutHeaders(uri, data, contentType, metadata);
+
+    // M9：时钟偏差（RequestTimeTooSkewed）时服务器**没有处理本次请求**
+    // （403 拒签），与「超时但服务端已写入」的 A-1 覆盖竞态本质不同 ——
+    // _handleError 已按服务器时间写入签名偏移，立即用新偏移重发是安全的，
+    // 不违反 putObject 的不重试纪律。偏差最多重试 2 次，持续偏差向上抛。
+    var skewRetries = 0;
+    while (true) {
+      try {
+        final response = await _httpClient
+            .put(uri, headers: headers, body: data)
+            .timeout(timeout);
+
+        if (response.statusCode != 200 && response.statusCode != 204) {
+          _handleError('PutObject', response);
+        }
+        return;
+      } on S3ClockSkewException {
+        skewRetries++;
+        if (skewRetries > 2) rethrow;
+        await Future.delayed(const Duration(milliseconds: 200));
+        // 用更新后的偏移重新签名再发
+        headers = _signedPutHeaders(uri, data, contentType, metadata);
+      } on SocketException catch (e) {
+        throw S3NetworkException('Network error: ${e.message}',
+            originalException: e);
+      } on TimeoutException {
+        throw S3NetworkException(
+            'PutObject timed out after ${timeout.inSeconds}s');
+      } catch (e) {
+        if (e is S3Exception) rethrow;
+        throw S3Exception('PutObject failed: $e',
+            originalException: e as Exception?);
+      }
+    }
+  }
+
+  /// 构造并签名 PUT 请求头（M9：时钟偏差重试需用新偏移重签）。
+  ///
+  /// C-01 修复：将自定义 metadata 转为 x-amz-meta-* 头。
+  /// 非 ASCII 值（如中文账本名）直接作为 HTTP 头值会触发 RFC 7230
+  /// 校验异常（FormatException: Invalid HTTP header field value），
+  /// 请求根本发不出去。故统一 base64 编码并加 'b64:' 前缀标记，
+  /// 读取端 [_decodeMetaValue] 自动还原，对所有 S3 兼容服务通用。
+  Map<String, String> _signedPutHeaders(Uri uri, Uint8List data,
+      String? contentType, Map<String, String>? metadata) {
+    final headers = <String, String>{
       'Host': uri.authority,
       'Content-Type': contentType ?? 'application/octet-stream',
       'Content-Length': '${data.length}',
     };
-
-    // C-01 修复：将自定义 metadata 转为 x-amz-meta-* 头
-    // 非 ASCII 值（如中文账本名）直接作为 HTTP 头值会触发 RFC 7230
-    // 校验异常（FormatException: Invalid HTTP header field value），
-    // 请求根本发不出去。故统一 base64 编码并加 'b64:' 前缀标记，
-    // 读取端 [_decodeMetaValue] 自动还原，对所有 S3 兼容服务通用。
     if (metadata != null) {
       for (final entry in metadata.entries) {
         headers['x-amz-meta-${entry.key}'] = _encodeMetaValue(entry.value);
       }
     }
-
-    // 签名请求（传递字节数组以正确计算 SHA256）
-    headers = _signer.sign(
+    return _signer.sign(
       method: 'PUT',
       uri: uri,
       headers: headers,
       payloadBytes: data,
     );
-
-    try {
-      final response = await _httpClient
-          .put(uri, headers: headers, body: data)
-          .timeout(timeout);
-
-      if (response.statusCode != 200 && response.statusCode != 204) {
-        _handleError('PutObject', response);
-      }
-    } on SocketException catch (e) {
-      throw S3NetworkException('Network error: ${e.message}', originalException: e);
-    } on TimeoutException {
-      throw S3NetworkException('PutObject timed out after ${timeout.inSeconds}s');
-    } catch (e) {
-      if (e is S3Exception) rethrow;
-      throw S3Exception('PutObject failed: $e', originalException: e as Exception?);
-    }
   }
 
   /// GET Object - 下载文件（幂等，自动重试瞬时网络故障）
@@ -454,6 +475,11 @@ class S3Client {
   /// M-01 修复：支持分页迭代，S3 单次最多返回 1000 个对象，
   /// 当 IsTruncated=true 时用 continuation-token 继续请求，
   /// 直到所有对象都被获取。
+  ///
+  /// W3 修复：[maxKeys] 是**结果总数上限**而非单页大小。之前只把它作为
+  /// 每页 max-keys 参数下发，do-while 只看 continuationToken，导致
+  /// `listObjects(maxKeys: 1)` 连接探测实际翻页拉取全桶对象
+  /// （大桶浪费流量/费用，故障网关恒返回 IsTruncated=true 时死循环）。
   Future<List<S3ObjectInfo>> _listObjectsV2Detailed({
     required String bucket,
     String? prefix,
@@ -470,8 +496,9 @@ class S3Client {
         if (prefix != null && prefix.isNotEmpty) {
           queryParams['prefix'] = prefix;
         }
+        // 每页请求「还缺多少条」，由服务端钳制到其单页上限
         if (maxKeys != null) {
-          queryParams['max-keys'] = '$maxKeys';
+          queryParams['max-keys'] = '${maxKeys - allObjects.length}';
         }
         if (continuationToken != null) {
           queryParams['continuation-token'] = continuationToken;
@@ -487,6 +514,13 @@ class S3Client {
 
           if (response.statusCode == 200) {
             final result = _parseListObjectsXml(response.body);
+            final remaining =
+                maxKeys == null ? null : maxKeys - allObjects.length;
+            if (remaining != null && result.objects.length > remaining) {
+              // 服务端可能无视 max-keys 下发超量，截断到上限
+              allObjects.addAll(result.objects.take(remaining));
+              break; // 已达上限，无需继续翻页
+            }
             allObjects.addAll(result.objects);
             continuationToken = result.isTruncated ? result.nextContinuationToken : null;
           } else if (response.statusCode == 404) {
@@ -502,7 +536,9 @@ class S3Client {
           if (e is S3Exception) rethrow;
           throw S3Exception('ListObjects failed: $e', originalException: e as Exception?);
         }
-      } while (continuationToken != null);
+        // 达到 maxKeys 上限即停，绝不继续翻页
+      } while (continuationToken != null &&
+          (maxKeys == null || allObjects.length < maxKeys));
 
       return allObjects;
     });
@@ -512,6 +548,8 @@ class S3Client {
   ///
   /// M-01 修复：支持分页迭代，V1 用 marker 参数（上一页最后一个 key）
   /// 继续请求，直到 IsTruncated=false。
+  ///
+  /// W3：maxKeys 语义同 V2 路径 —— 结果总数上限，达到即停。
   Future<List<S3ObjectInfo>> _listObjectsV1Detailed({
     required String bucket,
     String? prefix,
@@ -527,7 +565,7 @@ class S3Client {
           queryParams['prefix'] = prefix;
         }
         if (maxKeys != null) {
-          queryParams['max-keys'] = '$maxKeys';
+          queryParams['max-keys'] = '${maxKeys - allObjects.length}';
         }
         if (marker != null) {
           queryParams['marker'] = marker;
@@ -543,6 +581,12 @@ class S3Client {
 
           if (response.statusCode == 200) {
             final result = _parseListObjectsXml(response.body);
+            final remaining =
+                maxKeys == null ? null : maxKeys - allObjects.length;
+            if (remaining != null && result.objects.length > remaining) {
+              allObjects.addAll(result.objects.take(remaining));
+              break; // 已达上限，无需继续翻页
+            }
             allObjects.addAll(result.objects);
             // V1 分页：IsTruncated=true 时，用最后一条 key 作为下次请求的 marker
             marker = result.isTruncated ? result.lastKey : null;
@@ -559,7 +603,9 @@ class S3Client {
           if (e is S3Exception) rethrow;
           throw S3Exception('ListObjects failed: $e', originalException: e as Exception?);
         }
-      } while (marker != null);
+        // 达到 maxKeys 上限即停，绝不继续翻页
+      } while (marker != null &&
+          (maxKeys == null || allObjects.length < maxKeys));
 
       return allObjects;
     });
@@ -685,12 +731,23 @@ class S3Client {
   ///
   /// 带 'b64:' 前缀的做 base64 解码；不带前缀视为历史明文值原样返回，
   /// 避免破坏旧版写入的数据。解码异常时回退原值，保证不丢数据。
+  ///
+  /// M8：部分网关/代理会剥掉响应头值的尾部 `=` padding。Dart 的
+  /// `base64.decode` 对缺 padding 输入直接抛 FormatException，回退分支
+  /// 会把「b64:密文」整串当值返回 → 指纹恒不匹配、反复全量下载。
+  /// 先经 [base64.normalize] 补齐 padding 再解码即可还原。
   static String _decodeMetaValue(String value) {
     if (value.startsWith('b64:')) {
+      final payload = value.substring(5);
       try {
-        return utf8.decode(base64.decode(value.substring(5)));
-      } on Exception {
-        return value;
+        return utf8.decode(base64.decode(payload));
+      } on FormatException {
+        // 可能只是被网关剥了 padding，补齐后重试
+        try {
+          return utf8.decode(base64.decode(base64.normalize(payload)));
+        } on FormatException {
+          return value; // 真损坏：回退原值，不丢数据
+        }
       }
     }
     return value;
