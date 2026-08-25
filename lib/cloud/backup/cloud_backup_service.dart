@@ -7,6 +7,7 @@ import 'package:crypto/crypto.dart' as crypto;
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' as fcs;
 import 'package:path_provider/path_provider.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../data/db.dart';
 import '../../data/encryption/ciphertext_format.dart';
@@ -14,6 +15,7 @@ import '../../data/repositories/base_repository.dart';
 import '../../domain/encryption/encryption_service.dart';
 import '../../services/data_import_service.dart';
 import '../../services/system/logger_service.dart';
+import '../sync_restore_guard.dart';
 import '../transactions_json.dart';
 import 'backup_scheduler.dart';
 
@@ -223,6 +225,10 @@ class CloudBackupService {
       throw StateError('已有备份/恢复操作正在执行');
     }
     _busy = true;
+    // W6：备份恢复属破坏性全量替换，进入 SyncRestoreGuard 恢复临界区，
+    // 让定时备份（app.dart 每轮 tick 检查 isBusy）让位，避免半恢复态
+    // DB 被打包上传覆盖当日好备份。begin/end 配对等价于 Guard.run。
+    SyncRestoreGuard.begin();
     try {
       final storage = await _requireStorage();
 
@@ -305,6 +311,7 @@ class CloudBackupService {
         fileName: fileName
       );
     } finally {
+      SyncRestoreGuard.end();
       _busy = false;
     }
   }
@@ -344,12 +351,20 @@ class CloudBackupService {
 
   /// 备份独有账本导入新建（镜像 downloadRemoteLedger 的 ID 解析语义：
   /// 同名复用 → 远程 ID 空闲复用 → 新 ID），但不触碰云端同步文件。
+  ///
+  /// syncId 锚定：v9 快照携带 ledgerSyncId 时优先采用（与云端同步槽位
+  /// 身份一致，恢复后 push/发现流程能认领同一账本）；旧快照缺失时生成
+  /// UUID 兜底 —— 账本行没有 syncId 会退回数字 id 身份，跨设备撞号。
   Future<({int ledgerId, int skippedRecurring})?> _importNewLedgerFromBackup(
       {required int remoteId, required String jsonStr}) async {
     final json = jsonDecode(jsonStr) as Map<String, dynamic>;
     final name =
         (json['ledgerName'] as String?) ?? (json['name'] as String?) ?? 'Unknown';
     final currency = (json['currency'] as String?) ?? 'CNY';
+    final snapshotSyncId = (json['ledgerSyncId'] as String?)?.trim();
+    final effectiveSyncId = (snapshotSyncId != null && snapshotSyncId.isNotEmpty)
+        ? snapshotSyncId
+        : const Uuid().v4();
 
     final existingByName = await (db.select(db.ledgers)
           ..where((t) => t.name.equals(name)))
@@ -367,10 +382,13 @@ class CloudBackupService {
               id: drift.Value(remoteId),
               name: name,
               currency: drift.Value(currency),
+              syncId: drift.Value(effectiveSyncId),
             ));
       } else {
         ledgerId = await db.into(db.ledgers).insert(LedgersCompanion.insert(
-            name: name, currency: drift.Value(currency)));
+            name: name,
+            currency: drift.Value(currency),
+            syncId: drift.Value(effectiveSyncId)));
       }
     }
 

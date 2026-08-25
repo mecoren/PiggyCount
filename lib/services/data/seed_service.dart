@@ -404,6 +404,12 @@ class SeedService {
       LedgersCompanion.insert(
         name: l10n.ledgerDefaultName,
         currency: Value(currency),
+        // 默认账本用确定性 UUID（与默认分类/账户同模式）：两台全新设备
+        // 各自 seed 出的默认账本得到同一个 syncId → 云端槽位天然同源，
+        // 首次同步直接按身份认领合并，而不是两个随机身份互相覆盖。
+        // 账本创建必须写 syncId：云端槽位命名与 push 锚点都以它为准，
+        // 缺省会让默认账本退回数字 id 身份（两台设备的本地 id 都是 1）。
+        syncId: Value(_seedUuid.v5(_seedSyncNamespace, 'ledger:default')),
       ),
     );
     return ledgerId;
