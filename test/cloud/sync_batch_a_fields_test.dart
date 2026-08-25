@@ -1,4 +1,4 @@
-// 批次 A 同步修复回归测试：
+﻿// 批次 A 同步修复回归测试：
 //   #5 账户扩展字段（creditLimit/billingDay/paymentDueDay/bankName/
 //      cardLastFour/note/hidden/syncId）在 importAccounts create + update
 //      已存在两条路径下都不丢失。
@@ -444,11 +444,11 @@ void main() {
           "INSERT INTO transaction_tags (transaction_id, tag_id) VALUES (1, 1)");
     });
 
-    test('导出 JSON version 必须为 8', () async {
+    test('导出 JSON version 必须为 9', () async {
       final json = await exportTransactionsJson(db, 1);
       final data = jsonDecode(json) as Map<String, dynamic>;
-      expect(data['version'], 8,
-          reason: 'v8(sync_gap_closure): budgets/recurring/汇率覆盖 + 全量分类/标签');
+      expect(data['version'], 9,
+          reason: 'v9：快照版本随 ledgerSyncId 升级（v8 budgets/recurring/汇率覆盖 + 全量分类/标签）');
     });
 
     test('账户扩展字段在导出→解析后完整保留', () async {

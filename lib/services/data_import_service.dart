@@ -281,6 +281,11 @@ class ImportData {
   final String? currency;
   /// 每月起始日（可选，v8 G5：恢复时以云端快照为准回写账本元数据）
   final int? monthStartDay;
+  /// v9：快照所属账本的 syncId（跨设备稳定身份）。恢复端用它回填本地
+  /// 账本行缺失的 sync_id —— 否则纯快照（WebDAV/S3/iCloud）用户的
+  /// legacy 账本永远没有跨设备身份，槽位命名与 push 锚点只能退回
+  /// 本地数字 id（两台设备按数字撞名互覆的根源）。
+  final String? ledgerSyncId;
   /// 快照 payload version（H1/H3：镜像删除仅在 v8+ 生效）
   final int? version;
   /// H1：解析时因字段损坏被跳过的条目数（key: accounts/categories/
@@ -299,6 +304,7 @@ class ImportData {
     this.ledgerName,
     this.currency,
     this.monthStartDay,
+    this.ledgerSyncId,
     this.version,
     this.skippedItems = const {},
   });
@@ -1570,6 +1576,10 @@ Future<({int inserted, int deletedDup, int skippedRecurring})?>
   // importTransactionsJson 内部事务作为 savepoint 嵌套。
   // recordChanges: false —— 恢复不应写入本地变更历史（P2-3）
   final deleted = await db.transaction(() async {
+    // v9：账本身份回填。快照携带 ledgerSyncId 且本地行缺失时补写，
+    // 让 legacy 账本在首次恢复后即获得跨设备稳定身份（后续 push 锚点、
+    // 云端槽位命名都依赖它，不再退回本地数字 id）。
+    await _backfillLedgerSyncId(db, ledgerId, remoteImport.ledgerSyncId);
     final cleared = await clearLedgerTransactions(db, ledgerId);
     final result = await importTransactionsJson(repo, ledgerId, jsonStr,
         recordChanges: false);
@@ -1579,6 +1589,14 @@ Future<({int inserted, int deletedDup, int skippedRecurring})?>
     if (remoteImport.version != null && remoteImport.version! >= 8) {
       await _mirrorDeleteAbsentEntities(db, ledgerId, remoteImport);
     }
+    // W4：恢复 = 以云端状态为权威，恢复前已存在的未推送 local_changes
+    // 全部过期，必须同事务清理。否则残留队列三连炸：
+    // a) 陈旧 delete 在下次 push 把刚恢复的数据删掉并传播到所有设备；
+    // b) S3b 守卫（sync_engine_apply._hasUnpushedLocalChange）把该实体
+    //    的所有后续远端更新持续拦截；
+    // c) v35 唯一索引 + insertOrIgnore 保留旧 entityId 死行 → push 序列化
+    //    查不到实体发空 payload，用户真实编辑永久丢失。
+    await _purgeStaleLocalChanges(db, ledgerId, remoteImport);
     return (cleared, result);
   });
 
@@ -1587,6 +1605,80 @@ Future<({int inserted, int deletedDup, int skippedRecurring})?>
     deletedDup: deleted.$1,
     skippedRecurring: deleted.$2.skippedRecurring,
   );
+}
+
+/// v9：账本身份回填。快照携带 ledgerSyncId 时对账本地行做保守收敛：
+/// - 本地行无 syncId → 回填快照值（legacy 账本首次恢复后获得跨设备身份）；
+/// - 本地行已有 syncId 且与快照一致 → 幂等无操作（最常见：两端同源）；
+/// - 两者不同 → 保留本地身份不动，仅告警。本地 syncId 可能已被
+///   PiggyCount Cloud 引擎锚定 server external_id，贸然覆盖会撕裂
+///   push/pull 的实体映射；身份冲突应交给用户在设置里处理而非静默改写。
+///
+/// 必须在 restoreLedgerFromJson 的恢复事务内调用。快照无 ledgerSyncId
+/// （v8- 旧格式）时为空操作。
+Future<void> _backfillLedgerSyncId(
+    PiggyDatabase db, int ledgerId, String? snapshotSyncId) async {
+  final value = snapshotSyncId?.trim();
+  if (value == null || value.isEmpty) return;
+
+  final row = await (db.select(db.ledgers)
+        ..where((l) => l.id.equals(ledgerId)))
+      .getSingleOrNull();
+  if (row == null) return; // 调用方契约保证存在；防御性跳过
+
+  final current = row.syncId;
+  if (current != null && current.trim().isNotEmpty) {
+    if (current.trim() != value) {
+      logger.warning('DataImport',
+          '账本身份不一致（保留本地）: ledgerId=$ledgerId '
+          'local=$current snapshot=$value');
+    }
+    return;
+  }
+
+  await (db.update(db.ledgers)..where((l) => l.id.equals(ledgerId)))
+      .write(LedgersCompanion(syncId: d.Value(value)));
+  logger.info('DataImport',
+      'v9 回填账本 sync_id: ledgerId=$ledgerId -> $value');
+}
+
+/// W4：清理恢复作用域内已过期的未推送 local_changes（必须在
+/// restoreLedgerFromJson 的事务内、导入完成后调用）。
+///
+/// 范围：
+/// - ledger-scoped（transaction/budget/recurring/ledger/ledger_snapshot）：
+///   该账本的全部未推送行 —— 快照整体替换了账本权威状态。
+/// - user-global（account/category/tag）：仅清「本次快照列出的实体」，
+///   快照外的全局改动未被触碰，仍然有效，保留。
+///
+/// exchange_rate_override 刻意跳过：v8 快照的 rateOverrides 段无 syncId
+/// 锚点无法精确对齐；残留影响有界（S3b 守卫最多延迟一次远端覆盖更新，
+/// 下次编辑自愈），不值得为它做过宽清除。
+Future<int> _purgeStaleLocalChanges(
+    PiggyDatabase db, int ledgerId, ImportData cloud) async {
+  var purged = await (db.delete(db.localChanges)
+        ..where((c) => c.pushedAt.isNull() & c.ledgerId.equals(ledgerId)))
+      .go();
+
+  final globalSyncIds = <String>{
+    ...cloud.accounts.map((a) => a.syncId).whereType<String>(),
+    ...cloud.categories.map((c) => c.syncId).whereType<String>(),
+    ...cloud.tags.map((t) => t.syncId).whereType<String>(),
+  };
+  if (globalSyncIds.isNotEmpty) {
+    purged += await (db.delete(db.localChanges)
+          ..where((c) => c.pushedAt.isNull() &
+              c.ledgerId.equals(0) &
+              c.entitySyncId.isIn(globalSyncIds.toList())))
+        .go();
+  }
+
+  if (purged > 0) {
+    logger.info('DataImport',
+        '恢复后清理过期的未推送变更 $purged 条（ledgerId=$ledgerId，'
+        '含 user-global ${globalSyncIds.length} 个快照实体的匹配行）');
+  }
+  return purged;
 }
 
 /// H3 真覆盖（镜像云端）：删除「本地有 syncId 但 v8 快照中不存在」的实体。

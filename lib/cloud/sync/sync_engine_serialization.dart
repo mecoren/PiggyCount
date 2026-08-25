@@ -447,14 +447,23 @@ extension SyncEngineSerializationExt on SyncEngine {
     //
     // 修复:把 delete change 留作未推送,sync() 在 fullPush 之后会再调一次
     // _push 把它们推上去 + markPushed。
+    //
+    // W7:**recurring 同样不能 mark**。`_pushAllEntities` 只推 ledger /
+    // budget / transaction 三类(与增量 _doPush 的主批一致),recurring 走
+    // D10 独立批(sync_engine._push)。fullPush 成功后把队列里的 recurring
+    // upsert 一并 markPushed,规则就永远不上云了 —— 其他设备拿不到周期
+    // 规则。留作未推送,由 fullPush 之后的 `_push` 的 recurring 独立批补推。
     final unpushed = await changeTracker.getUnpushedChangesForLedger(ledgerId);
-    final nonDeletes = unpushed.where((c) => c.action != 'delete').toList();
-    if (nonDeletes.isNotEmpty) {
-      await changeTracker.markPushed(nonDeletes.map((c) => c.id).toList());
+    final covered = unpushed
+        .where((c) => c.action != 'delete' && c.entityType != 'recurring')
+        .toList();
+    if (covered.isNotEmpty) {
+      await changeTracker.markPushed(covered.map((c) => c.id).toList());
     }
 
     logger.info('SyncEngine',
-        '全量推送完成 ledger=${ledger.name},markPushed ${nonDeletes.length}/${unpushed.length}(剩余 delete change 留给 _push)');
+        '全量推送完成 ledger=${ledger.name},markPushed ${covered.length}/${unpushed.length}'
+        '(剩余 delete/recurring change 留给 _push 补推)');
   }
 
   /// 推送所有实体为个体变更(fullPush 时调用)。
@@ -757,12 +766,67 @@ extension SyncEngineSerializationExt on SyncEngine {
       ));
     }
 
+    // M13 修复：与官方导出器（transactions_json.dart v8）对齐。
+    //
+    // 之前三个分叉导致引擎快照在恢复端静默丢数据：
+    // 1. version:6 < 镜像删除门槛 ≥8 → fullPull/自愈恢复跳过
+    //    _mirrorDeleteAbsentEntities，云端已删实体在本地复活；
+    // 2. 段键 'recurrings'/'rateOverrides' 与解析器读取的
+    //    'recurring'/'exchangeRateOverrides' 不一致 → 周期规则与手动汇率
+    //    整段被忽略（解析器对未知键不报错）；
+    // 3. 预算/周期缺 categoryName 锚（解析器按 name 反查分类）→
+    //    category 预算降级为 total、周期规则丢分类关联。
+    // 解析器侧同时兼容旧键名（transactions_json.dart），已上传的旧快照
+    // 无需重传即可被正确解析。serializeBudget/serializeRecurring 的输出
+    // 保持原样（push payload 不动），仅在导出 map 上补 name 锚。
+    String? budgetCategoryName(int? categoryId) {
+      if (categoryId == null) return null;
+      return categories
+          .cast<Category?>()
+          .firstWhere((c) => c?.id == categoryId, orElse: () => null)
+          ?.name;
+    }
+
+    Map<String, dynamic> budgetExportJson(Budget b) {
+      final catName = budgetCategoryName(b.categoryId);
+      return {
+        ...EntitySerializer.serializeBudget(
+          b,
+          ledgerSyncId: ledger.syncId,
+          categorySyncId: b.categoryId != null
+              ? categories
+                  .cast<Category?>()
+                  .firstWhere((c) => c?.id == b.categoryId,
+                      orElse: () => null)
+                  ?.syncId
+              : null,
+        ),
+        // M13：解析器按 categoryName 反查分类，缺锚则 category 预算降级
+        if (catName != null) 'categoryName': catName,
+      };
+    }
+
+    Map<String, dynamic> recurringExportJson(RecurringTransaction r) {
+      final catName = budgetCategoryName(r.categoryId);
+      return {
+        ...EntitySerializer.serializeRecurring(
+          r,
+          ledgerSyncId: ledger.syncId,
+        ),
+        if (catName != null) 'categoryName': catName,
+      };
+    }
+
     return jsonEncode({
-      'version': 6,
+      // v9: ledgerSyncId 与官方导出器（transactions_json.dart）对齐，
+      // 恢复端凭它回填 ledgers.sync_id。不参与内容指纹。
+      'version': 9,
       'exportedAt': DateTime.now().toUtc().toIso8601String(),
       'ledgerId': ledger.id,
       'ledgerName': ledger.name,
       'currency': ledger.currency,
+      if (ledger.syncId != null && ledger.syncId!.isNotEmpty)
+        'ledgerSyncId': ledger.syncId,
       'monthStartDay': ledger.monthStartDay,
       'count': items.length,
       'accounts':
@@ -782,29 +846,11 @@ extension SyncEngineSerializationExt on SyncEngine {
       }).toList(),
       'tags': tags.map((t) => EntitySerializer.serializeTag(t)).toList(),
       // 审计 S5：顶层补齐 budgets / recurrings / rateOverrides（导入器
-      // transactions_json.dart 已支持解析这些键）。
-      'budgets': [
-        for (final b in budgets)
-          EntitySerializer.serializeBudget(
-            b,
-            ledgerSyncId: ledger.syncId,
-            categorySyncId: b.categoryId != null
-                ? categories
-                    .cast<Category?>()
-                    .firstWhere((c) => c?.id == b.categoryId,
-                        orElse: () => null)
-                    ?.syncId
-                : null,
-          ),
-      ],
-      'recurrings': [
-        for (final r in recurrings)
-          EntitySerializer.serializeRecurring(
-            r,
-            ledgerSyncId: ledger.syncId,
-          ),
-      ],
-      'rateOverrides': rateOverrides
+      // transactions_json.dart 已支持解析这些键）。M13：段键与 name 锚
+      // 对齐官方 v8 格式。
+      'budgets': [for (final b in budgets) budgetExportJson(b)],
+      'recurring': [for (final r in recurrings) recurringExportJson(r)],
+      'exchangeRateOverrides': rateOverrides
           .map((o) => EntitySerializer.serializeExchangeRateOverride(o))
           .toList(),
       'items': items,

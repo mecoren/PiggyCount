@@ -183,6 +183,58 @@ void main() {
     expect(tags.map((t) => t.syncId), isNot(contains('tag-orphan')));
     expect(tags.map((t) => t.syncId), contains('tag-kept'));
   });
+
+  test('v9 回填：快照带 ledgerSyncId 且本地行缺失时补写 sync_id', () async {
+    final id = await addLedger('Main'); // 无 syncId（legacy 行）
+    final map = jsonDecodeMap(await exportTransactionsJson(db, id));
+    // 模拟 v9 快照：源端账本身份
+    map['version'] = 9;
+    map['ledgerSyncId'] = '0f1e2d3c-4b5a-6789-abcd-ef0123456789';
+    final snapshot = jsonEncode(map);
+
+    final result = await restoreLedgerFromJson(
+        db: db, repo: repo, ledgerId: id, jsonStr: snapshot);
+    expect(result, isNotNull);
+
+    final row = await (db.select(db.ledgers)
+          ..where((l) => l.id.equals(id)))
+        .getSingle();
+    expect(row.syncId, '0f1e2d3c-4b5a-6789-abcd-ef0123456789',
+        reason: 'v9：恢复端必须回填账本行的 sync_id，'
+            '否则纯快照用户的账本永远没有跨设备身份');
+  });
+
+  test('v9 身份冲突：本地已有不同 syncId 时保留本地不覆盖', () async {
+    final id = await db.into(db.ledgers).insert(LedgersCompanion.insert(
+        name: 'Main', syncId: const drift.Value('local-identity')));
+    final map = jsonDecodeMap(await exportTransactionsJson(db, id));
+    map['version'] = 9;
+    map['ledgerSyncId'] = 'cloud-other-identity';
+    final snapshot = jsonEncode(map);
+
+    await restoreLedgerFromJson(
+        db: db, repo: repo, ledgerId: id, jsonStr: snapshot);
+    final row = await (db.select(db.ledgers)
+          ..where((l) => l.id.equals(id)))
+        .getSingle();
+    expect(row.syncId, 'local-identity',
+        reason: '本地 syncId 可能已被 Cloud 引擎锚定 server external_id，'
+            '恢复不得静默改写身份（撕裂 push/pull 映射）');
+  });
+
+  test('v8- 旧快照无 ledgerSyncId 时保持现状不回填', () async {
+    final id = await addLedger('Main');
+    final map = jsonDecodeMap(await exportTransactionsJson(db, id));
+    map['version'] = 8;
+    map.remove('ledgerSyncId');
+
+    await restoreLedgerFromJson(
+        db: db, repo: repo, ledgerId: id, jsonStr: jsonEncode(map));
+    final row = await (db.select(db.ledgers)
+          ..where((l) => l.id.equals(id)))
+        .getSingle();
+    expect(row.syncId, isNull);
+  });
 }
 
 /// 测试辅助：解码 JSON 为 Map（避免每个测试文件重复写）

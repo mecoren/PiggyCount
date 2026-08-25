@@ -429,11 +429,18 @@ Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
   }
 
   final payload = {
-    'version': 8, // v8: budgets/recurring/exchangeRateOverrides + 全量分类/标签 + recurringSyncId
+    // v9: ledgerSyncId —— 账本跨设备身份随快照传播（恢复端回填
+    // ledgers.sync_id，见 restoreLedgerFromJson）。不参与内容指纹：
+    // 身份字段进指纹会让「回填前后的同一份数据」产生不同指纹，
+    // 造成一轮永久 different。历史版本：v8 预算/周期/汇率覆盖 +
+    // 全量分类/标签 + recurringSyncId。
+    'version': 9,
     'exportedAt': DateTime.now().toUtc().toIso8601String(),
     'ledgerId': ledgerId,
     'ledgerName': ledger.name,
     'currency': ledger.currency,
+    if (ledger.syncId != null && ledger.syncId!.isNotEmpty)
+      'ledgerSyncId': ledger.syncId,
     'monthStartDay': ledger.monthStartDay,
     'count': items.length,
     'accounts': accountItems,
@@ -585,8 +592,11 @@ ImportData parseJsonToImportData(String jsonStr) {
 
   // 解析周期规则（v8 G2；旧快照无此数组 → 空列表）
   // H1：type/amount/frequency/startDate 为必填，缺失或类型不符跳过。
+  // M13：兼容旧 SyncEngine 导出器的段键 'recurrings'（官方为 'recurring'），
+  // 已上传的旧快照无需重传即可解析。
   final recurrings = <ImportRecurring>[];
-  final jsonRecurrings = data['recurring'] as List?;
+  final jsonRecurrings =
+      (data['recurring'] ?? data['recurrings']) as List?;
   if (jsonRecurrings != null) {
     for (final r in jsonRecurrings) {
       if (r is! Map) {
@@ -627,8 +637,11 @@ ImportData parseJsonToImportData(String jsonStr) {
   }
 
   // 解析手动汇率覆盖（v8 G4）
+  // M13：兼容旧 SyncEngine 导出器的段键 'rateOverrides'（官方为
+  // 'exchangeRateOverrides'）。
   final rateOverrides = <ImportRateOverride>[];
-  final jsonRateOverrides = data['exchangeRateOverrides'] as List?;
+  final jsonRateOverrides =
+      (data['exchangeRateOverrides'] ?? data['rateOverrides']) as List?;
   if (jsonRateOverrides != null) {
     for (final o in jsonRateOverrides) {
       if (o is! Map) {
@@ -789,6 +802,8 @@ ImportData parseJsonToImportData(String jsonStr) {
     ledgerName: _readString(data, 'ledgerName'),
     currency: _readString(data, 'currency'),
     monthStartDay: _readInt(data, 'monthStartDay'),
+    // v9：账本身份锚点。旧快照（v8-）无此键 → null，恢复端保持现状。
+    ledgerSyncId: _readString(data, 'ledgerSyncId'),
     version: _readInt(data, 'version'),
     skippedItems: skipped,
   );
