@@ -152,13 +152,45 @@ class SyncDiffService {
       }
     }
 
+    // H1（audit S5）：无 syncId 本地交易的业务键兜底索引。
+    // 此前这些行完全不进索引 → 云端同业务内容版本被误判 added，
+    // 恢复合并时重复插入。键与 _compareTx 的时间口径一致（精确到秒）；
+    // 仅当该键在本地位**唯一**时才参与配对（多行同键无法可靠配对，
+    // 宁可维持旧行为也不误配）。
+    // 已知取舍：键包含 note —— note 本身不同的行无法经键配对，维持旧行为
+    // 判为 added。刻意不放宽为「时间+金额」宽松匹配：那会把同秒同额、
+    // 备注不同的两笔合法交易误合并（覆盖备注），风险大于重复插入。
+    final localBizKeyCounts = <String, int>{};
+    final localByBizKey = <String, Transaction>{};
+    String bizKeyOf(DateTime at, double amount, String? note) =>
+        '${at.millisecondsSinceEpoch ~/ 1000}'
+        '|${amount.toStringAsFixed(2)}|${note ?? ''}';
+    for (final tx in local) {
+      if (tx.syncId != null && tx.syncId!.isNotEmpty) continue;
+      final key =
+          bizKeyOf(tx.happenedAt, tx.amount, tx.note);
+      localBizKeyCounts[key] = (localBizKeyCounts[key] ?? 0) + 1;
+      localByBizKey[key] = tx;
+    }
+
     final changes = <SyncChange>[];
 
     // 1. 遍历云端交易
     for (final entry in cloudBySyncId.entries) {
       final syncId = entry.key;
       final cloudTx = entry.value;
-      final localTx = localBySyncId[syncId];
+      var localTx = localBySyncId[syncId];
+      var matchedViaBizKey = false;
+
+      if (localTx == null) {
+        // 云端有、本地无 syncId 匹配 → 尝试业务键唯一兜底配对
+        final key = bizKeyOf(
+            cloudTx.happenedAt, cloudTx.amount, cloudTx.note);
+        if ((localBizKeyCounts[key] ?? 0) == 1) {
+          localTx = localByBizKey[key];
+          matchedViaBizKey = true;
+        }
+      }
 
       if (localTx == null) {
         // 云端有、本地无 → added
@@ -194,8 +226,18 @@ class SyncDiffService {
             localTransaction: localTx,
             diffDetails: diffs,
           ));
+        } else if (matchedViaBizKey) {
+          // 内容一致但身份缺失：仍需进入变更列表让 apply 阶段认领 syncId，
+          // 否则每次预览都重复出现同一伪差异且本地行永远拿不到稳定身份。
+          changes.add(SyncChange(
+            type: SyncChangeType.modified,
+            cloudTransaction: cloudTx,
+            localTransaction: localTx,
+            selected: true,
+            diffDetails: const ['本地交易缺少同步标识，将绑定云端身份'],
+          ));
         }
-        // 相同 → unchanged，不加入变更列表
+        // 相同（syncId 已匹配）→ unchanged，不加入变更列表
       }
     }
 
@@ -498,6 +540,35 @@ class SyncDiffService {
             '云→本应用 added 时有 ${result.skippedRecurring} 笔同日周期实例被判重跳过'
             '（同规则同日且syncId或金额+备注相同），请核对远端是否存在同日多笔合法交易');
       }
+    }
+
+    // ============ H1：业务键配对的身份认领 ============
+    // 业务键兜底配出的 modified（本地行无 syncId）先回填云端 syncId，
+    // 后续按 syncId 的批量更新才能命中这些行。认领失败（目标行已有身份 /
+    // syncId 已被其他行占用 / 行已消失）的配对整条放弃 —— 既不新增也不
+    // 覆盖，避免重复插入或误写他者；该差异会在下次预览中继续呈现。
+    if (modifiedChanges.isNotEmpty) {
+      final adopted = <SyncChange>[];
+      for (final c in modifiedChanges) {
+        final localTx = c.localTransaction;
+        final syncId = c.cloudTransaction?.syncId;
+        if (localTx != null &&
+            (localTx.syncId == null || localTx.syncId!.isEmpty) &&
+            syncId != null &&
+            syncId.isNotEmpty) {
+          final ok = await repo.adoptTransactionSyncId(localTx.id, syncId);
+          if (!ok) {
+            logger.warning('SyncDiff',
+                '业务键配对认领失败，放弃该变更 '
+                '(本地id=${localTx.id}, 云端syncId=$syncId)');
+            continue;
+          }
+        }
+        adopted.add(c);
+      }
+      modifiedChanges
+        ..clear()
+        ..addAll(adopted);
     }
 
     // ============ modified: 主表用批量 UPDATE,tag 关联单条 await ============

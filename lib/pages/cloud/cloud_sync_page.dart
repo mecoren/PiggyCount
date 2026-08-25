@@ -493,7 +493,6 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
         .set(BackupScheduler.formatHhMm(picked.hour * 60 + picked.minute));
   }
 
-  @override
   /// M11：云配置损坏 banner。loadActive 解析失败会静默回退 LocalOnly
   /// （自动同步无声停摆），此处把包侧记录的错误以显式提示呈现，
   /// 引导用户重新配置云服务。

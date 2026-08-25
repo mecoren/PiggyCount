@@ -460,6 +460,17 @@ abstract class TransactionRepository {
     bool recordChanges = true,
   });
 
+  /// 为「本地无 syncId、经业务键唯一匹配到云端交易」的行回填云端 syncId
+  /// （认领语义，与 v9 快照导入的 sync_id 回填同源）。
+  ///
+  /// 双重守卫，任一不满足返回 false：
+  /// - 目标行当前 syncId 必须为空（绝不覆盖既有身份）；
+  /// - 全库不得已有其他行占用该 syncId（否则按 syncId 的批量更新会命中多行）。
+  ///
+  /// 不写 local_changes：身份锚定不是内容变更，且调用方
+  /// （云→本合并）处于 withRecordingSuppressed 内。
+  Future<bool> adoptTransactionSyncId(int txId, String syncId);
+
   /// 创建估值调整交易
   Future<int> createAdjustmentTransaction({
     required int ledgerId,

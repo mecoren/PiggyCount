@@ -248,10 +248,23 @@ class CloudBackupService {
       }
       final entries = {for (final f in archive) f.name: f};
 
-      // 2. 逐账本恢复：本地已有 → restoreLedgerFromJson 整体覆盖；
-      //    备份独有 → 复用 downloadRemoteLedger 的 ID 解析语义导入新建
-      final localIds =
-          (await db.select(db.ledgers).get()).map((l) => l.id).toSet();
+      // 2. 逐账本恢复。
+      //    H2（audit）：认领优先级改为 syncId-first。ZIP 条目名携带的是
+      //    **备份端本地数字 id**，跨设备恢复时两台设备自增序列独立 —— 旧
+      //    逻辑按数字 id 命中即整本覆盖，会把备份内容盖到 B 设备恰好同号
+      //    的**别的账本**上，而真正同源（syncId 相同、id 不同）的账本反而
+      //    被当「备份独有」新建副本。现按三级认领：
+      //      ① 快照带 ledgerSyncId 且本地存在同 syncId 行 → 覆盖该行；
+      //      ② 数字 id 兜底：仅当命中行 syncId 为空、或与快照身份一致
+      //         （排除「同号异账本」的身份冲突覆盖）；
+      //      ③ 其余视为备份独有 → 导入新建（_importNewLedgerFromBackup，
+      //         内部以快照 syncId 锚定新行身份）。
+      final localRows = await db.select(db.ledgers).get();
+      final localById = {for (final l in localRows) l.id: l};
+      final localBySnapshotSyncId = <String, Ledger>{
+        for (final l in localRows)
+          if (l.syncId != null && l.syncId!.isNotEmpty) l.syncId!: l,
+      };
       final ledgerEntries = entries.keys
           .where((n) => _ledgerEntryPattern.hasMatch(n))
           .toList()
@@ -268,9 +281,25 @@ class CloudBackupService {
           if (jsonStr == null) {
             throw fcs.CloudSyncException('备份账本密文无法解密: $name');
           }
-          if (localIds.contains(remoteId)) {
+          final snapshot = jsonDecode(jsonStr) as Map<String, dynamic>;
+          final snapshotSyncId =
+              ((snapshot['ledgerSyncId'] as String?) ?? '').trim();
+
+          Ledger? target;
+          if (snapshotSyncId.isNotEmpty &&
+              localBySnapshotSyncId.containsKey(snapshotSyncId)) {
+            target = localBySnapshotSyncId[snapshotSyncId]; // ① 同源认领
+          } else if (localById.containsKey(remoteId)) {
+            final candidate = localById[remoteId]!;
+            final candidateSync = (candidate.syncId ?? '').trim();
+            if (candidateSync.isEmpty || candidateSync == snapshotSyncId) {
+              target = candidate; // ② 无身份冲突的数字兜底
+            }
+          }
+
+          if (target != null) {
             final restored = await restoreLedgerFromJson(
-                db: db, repo: repo, ledgerId: remoteId, jsonStr: jsonStr);
+                db: db, repo: repo, ledgerId: target.id, jsonStr: jsonStr);
             if (restored == null) {
               // P1-1 守卫触发：空快照拒绝覆盖非空本地账本
               throw fcs.CloudSyncException('空快照被拒绝覆盖本地账本: $name');
@@ -381,6 +410,14 @@ class CloudBackupService {
     final int ledgerId;
     if (existingByName != null) {
       ledgerId = existingByName.id;
+      // H2 配套：被复用行尚无 syncId 时补锚快照身份 —— 此后云端同步槽位
+      // （ledger_<syncId>.json）与发现流程才能认领同一账本。已有身份
+      // （含与快照不同源）一律不覆盖。
+      if ((existingByName.syncId ?? '').trim().isEmpty &&
+          effectiveSyncId.isNotEmpty) {
+        await (db.update(db.ledgers)..where((t) => t.id.equals(ledgerId)))
+            .write(LedgersCompanion(syncId: drift.Value(effectiveSyncId)));
+      }
     } else {
       final existingById = await (db.select(db.ledgers)
             ..where((t) => t.id.equals(remoteId)))

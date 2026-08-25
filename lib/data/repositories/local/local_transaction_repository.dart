@@ -1601,6 +1601,28 @@ class LocalTransactionRepository implements TransactionRepository {
     });
   }
 
+  /// H1（audit）：为「本地无 syncId、经业务键唯一匹配到云端交易」的行回填
+  /// 云端 syncId（认领语义）。见 TransactionRepository 契约注释。
+  @override
+  Future<bool> adoptTransactionSyncId(int txId, String syncId) async {
+    if (syncId.isEmpty) return false;
+    return db.transaction(() async {
+      final row = await (db.select(db.transactions)
+            ..where((t) => t.id.equals(txId)))
+          .getSingleOrNull();
+      if (row == null || (row.syncId != null && row.syncId!.isNotEmpty)) {
+        return false; // 行不存在或已有身份：绝不覆盖
+      }
+      final occupied = await (db.select(db.transactions)
+            ..where((t) => t.syncId.equals(syncId)))
+          .get();
+      if (occupied.isNotEmpty) return false; // 身份已被其他行占用
+      await (db.update(db.transactions)..where((t) => t.id.equals(txId)))
+          .write(TransactionsCompanion(syncId: d.Value(syncId)));
+      return true;
+    });
+  }
+
   /// 整体替换某交易的附件元数据行。返回被移除行的 fileName 集合
   /// （物理文件是否可删由调用方统一做引用计数判定）。
   Future<Set<String>> _replaceAttachmentsForTransaction(
