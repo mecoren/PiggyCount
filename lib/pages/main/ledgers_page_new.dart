@@ -14,6 +14,7 @@ import '../../providers/currency_providers.dart';
 import '../../models/ledger_display_item.dart';
 import '../../cloud/transactions_sync_manager.dart';
 import '../../cloud/sync_service.dart';
+import '../../cloud/sync_diff_service.dart' show SyncChange;
 import '../../cloud/cloud_feature_flags.dart';
 import '../../cloud/sync/sync_engine.dart';
 import '../../widgets/ui/ui.dart';
@@ -21,7 +22,9 @@ import '../../widgets/biz/biz.dart';
 import '../cloud/member_list_page.dart';
 import '../cloud/member_stats_page.dart';
 import '../cloud/join_shared_ledger_page.dart';
+import '../cloud/upload_conflict_helper.dart';
 import '../budget/budget_page.dart';
+import '../cloud/sync_preview_dialog.dart' show showSyncPreviewDialog;
 import '../../styles/tokens.dart';
 import '../../utils/currencies.dart';
 import '../../services/attachment_service.dart';
@@ -468,11 +471,12 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
         await syncService.syncLedgersFromServer();
         await syncService.replayAllChanges();
       } else if (syncService is TransactionsSyncManager) {
-        // 老的 Supabase 路径
+        // 老的 Supabase 路径。槽位路径按 syncId 解析（与上传同规则），
+        // 不再手拼 ledger_<本地id>.json —— 数字 id 跨设备无意义。
         await syncService.downloadRemoteLedger(
           name: ledger.name,
           currency: ledger.currency,
-          remotePath: 'ledger_${ledger.id}.json',
+          remotePath: await syncService.pathForLedger(ledger.id),
         );
       } else {
         throw Exception('Cloud sync not available');
@@ -1086,8 +1090,9 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
         throw Exception('Cloud sync not available');
       }
 
+      // 槽位路径按 syncId 解析（与上传同规则），不手拼数字 id
       await syncService.deleteRemoteLedger(
-          remotePath: 'ledger_${ledger.id}.json');
+          remotePath: await syncService.pathForLedger(ledger.id));
 
       if (!mounted) return;
 
@@ -1318,20 +1323,47 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     // 强制阻塞弹窗：上传期间禁止切账本/编辑等一切页面操作，
     // 防止与上传快照互相踩写
     final l10n = AppLocalizations.of(context);
-    final block = showBlockingProgressDialog(
-      context,
-      title: l10n.syncBlockingUploadTitle,
-      initialStatus: l10n.ledgersUploadOneBlockingStatus,
-    );
     Object? error;
+    var uploaded = false;
+
+    /// 单次上传尝试（自带阻塞弹窗）。CloudConflictException 会先经
+    /// finally 关闭进度弹窗再上抛，让守卫在无遮拦状态下弹确认框。
+    Future<bool> attempt({required bool force}) async {
+      Object? err;
+      var ok = false;
+      final block = showBlockingProgressDialog(
+        context,
+        title: l10n.syncBlockingUploadTitle,
+        initialStatus: l10n.ledgersUploadOneBlockingStatus,
+      );
+      try {
+        await ref
+            .read(syncServiceProvider)
+            .uploadCurrentLedger(ledgerId: ledger.id, force: force);
+        ok = true;
+      } on CloudConflictException {
+        rethrow;
+      } catch (e) {
+        err = e;
+      } finally {
+        await block.close();
+      }
+      if (err != null) throw err;
+      return ok;
+    }
+
     try {
-      await ref
-          .read(syncServiceProvider)
-          .uploadCurrentLedger(ledgerId: ledger.id);
+      uploaded = await uploadLedgerWithConflictGuard(
+        context,
+        run: ({required bool force}) => attempt(force: force),
+        // 冲突三选一中的「对比合并」：进入逐条 diff 预览合并，
+        // 不覆盖任何一侧（方向仲裁时间戳失真时的无损出路）
+        compareMerge: () async {
+          await _handleCompareMergeFlow(context, ledger);
+        },
+      );
     } catch (e) {
       error = e;
-    } finally {
-      await block.close();
     }
 
     if (mounted && context.mounted) {
@@ -1341,7 +1373,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
           title: AppLocalizations.of(context).commonFailed,
           message: '$error',
         );
-      } else {
+      } else if (uploaded) {
         showToast(context, AppLocalizations.of(context).mineUploadSuccess);
         ref.read(ledgerListRefreshProvider.notifier).state++;
         ref.read(syncStatusRefreshProvider.notifier).state++;
@@ -1673,6 +1705,112 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     );
   }
 
+  /// 对比合并流程（方向仲裁的第三选择）：
+  ///
+  /// 拉取云端快照做逐条 diff 预览，用户勾选后应用到本地，
+  /// 再 merge-then-publish 回传收敛指纹 —— 替代「下载覆盖 / 上传覆盖」
+  /// 二选一。local_changes 时间戳因 recordChanges:false 导入失真时，
+  /// 方向无法可信判定，本入口保证用户总能无损地双向合并。
+  Future<void> _handleCompareMergeFlow(
+      BuildContext context, LedgerDisplayItem ledger) async {
+    final l10n = AppLocalizations.of(context);
+    final syncService = ref.read(syncServiceProvider);
+    if (syncService is! TransactionsSyncManager) return;
+
+    final block = showBlockingProgressDialog(
+      context,
+      title: l10n.conflictCompareMergeAction,
+      initialStatus: l10n.syncBlockingCheckCloud,
+    );
+    try {
+      final previewResult =
+          await syncService.downloadAndPreview(ledgerId: ledger.id);
+
+      if (!mounted || !context.mounted) return;
+
+      // 云端无数据
+      if (previewResult == null) {
+        await block.close();
+        if (!mounted || !context.mounted) return;
+        showToast(context, l10n.syncNoCloudBackupMessage);
+        return;
+      }
+
+      // 旧格式（v5-）无逐条 diff 能力：确认后退回全量替换
+      if (previewResult.preview == null) {
+        await block.close();
+        if (!mounted || !context.mounted) return;
+        final confirmed = await AppDialog.confirm<bool>(
+          context,
+          title: l10n.syncPreviewOldFormat,
+          message: l10n.syncPreviewOldFormatMessage,
+        );
+        if (confirmed != true || !mounted || !context.mounted) return;
+        final res = await syncService
+            .downloadAndRestoreToCurrentLedger(ledgerId: ledger.id);
+        // merge-then-publish：全量替换后同样回传收敛指纹
+        await syncService.uploadCurrentLedger(ledgerId: ledger.id, force: true);
+        await PostProcessor.sync(ref, ledgerId: ledger.id);
+        ref.read(statsRefreshProvider.notifier).state++;
+        if (!mounted || !context.mounted) return;
+        showToast(context, l10n.syncPreviewApplied(res.inserted));
+        return;
+      }
+
+      final preview = previewResult.preview!;
+      // 交易无 diff 但指纹不同 → 纯元数据（账户/分类/标签/预算/周期）
+      // 变更：静默应用元数据合并（与启动检查 applyAll 同策略）
+      List<SyncChange> selected;
+      if (preview.isEmpty) {
+        selected = const [];
+      } else {
+        // 预览弹窗不能被阻塞遮罩压住：先关阻塞框再弹预览
+        await block.close();
+        selected = (await showSyncPreviewDialog(
+              context,
+              preview: preview,
+              primaryColor: ref.read(primaryColorProvider),
+            )) ??
+            const [];
+        if (!mounted || !context.mounted) return;
+        if (selected.isEmpty) return; // 用户取消或未勾选任何变更
+      }
+
+      var appliedCount = 0;
+      if (selected.isNotEmpty) {
+        final result = await syncService.applyPreviewChanges(
+          ledgerId: ledger.id,
+          selectedChanges: selected,
+          importData: previewResult.importData,
+        );
+        appliedCount = result.totalCount;
+      }
+
+      // merge-then-publish：合并成功后 force 回传收敛云端指纹
+      await syncService.uploadCurrentLedger(ledgerId: ledger.id, force: true);
+      await PostProcessor.sync(ref, ledgerId: ledger.id);
+      ref.read(statsRefreshProvider.notifier).state++;
+      ref.read(ledgerListRefreshProvider.notifier).state++;
+      ref.read(syncStatusRefreshProvider.notifier).state++;
+
+      if (!mounted || !context.mounted) return;
+      showToast(context, l10n.syncPreviewApplied(appliedCount));
+    } catch (e) {
+      logger.warning('LedgersPage', '对比合并失败(ledger=${ledger.id}): $e');
+      // 先收阻塞遮罩再弹错误框：错误弹窗不被压在遮罩之下
+      await block.close();
+      if (mounted && context.mounted) {
+        await AppDialog.error(
+          context,
+          title: l10n.commonFailed,
+          message: '$e',
+        );
+      }
+    } finally {
+      await block.close();
+    }
+  }
+
   /// 显示冲突解决对话框
   Future<void> _showConflictResolutionDialog(
       BuildContext context, LedgerDisplayItem ledger) async {
@@ -1813,6 +1951,21 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                     ),
                     TextButton(
                       onPressed: () async {
+                        // 先关冲突弹窗再进入对比合并流程（预览弹窗不能被压住）
+                        Navigator.pop(dialogContext);
+                        await _handleCompareMergeFlow(context, ledger);
+                      },
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.difference_outlined, size: 18),
+                          const SizedBox(width: 4),
+                          Text(l10n.conflictCompareMergeAction),
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () async {
                         setState(() => isProcessing = true);
                         try {
                           showToast(context, l10n.ledgersConflictDownloading);
@@ -1859,12 +2012,14 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                       ),
                     ),
                     FilledButton(
-                      onPressed: () async {
-                        setState(() => isProcessing = true);
-                        try {
-                          showToast(context, l10n.ledgersConflictUploading);
-                          await syncService.uploadCurrentLedger(
-                              ledgerId: ledger.id);
+                        onPressed: () async {
+                          setState(() => isProcessing = true);
+                          try {
+                            showToast(context, l10n.ledgersConflictUploading);
+                            // M7：此处是冲突卡片上的「上传」按钮，用户已明确
+                            // 选择以本地覆盖云端，force 跳过二次拦截
+                            await syncService.uploadCurrentLedger(
+                                ledgerId: ledger.id, force: true);
 
                           if (stateContext.mounted) {
                             Navigator.pop(dialogContext);

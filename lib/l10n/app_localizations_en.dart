@@ -46,6 +46,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonCancel => 'Cancel';
 
   @override
+  String get conflictUploadTitle => 'Sync Conflict Detected';
+
+  @override
+  String get conflictUploadCloudNewerMessage =>
+      'The cloud snapshot is newer than this device — another device may have synced recently. Uploading now will overwrite the cloud copy and it will be lost. Overwrite anyway?';
+
+  @override
+  String get conflictUploadUnknownMessage =>
+      'Unable to tell which side is newer (contents differ but timestamps match). Uploading will overwrite the cloud copy. Overwrite anyway?';
+
+  @override
+  String get conflictForceUploadAction => 'Overwrite Cloud';
+
+  @override
+  String get conflictCompareMergeAction => 'Compare & Merge';
+
+  @override
+  String get cloudConfigCorruptWarning =>
+      'Cloud configuration could not be read — automatic sync has been paused. Please set up your cloud service again.';
+
+  @override
   String get commonConfirm => 'Confirm';
 
   @override
@@ -904,6 +925,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String ledgersUploadAllResult(int success, int failed) {
     return 'Success: $success, Failed: $failed';
+  }
+
+  @override
+  String ledgersUploadAllConflictSkipped(int success, int conflicts) {
+    return 'Uploaded: $success. Skipped $conflicts ledger(s) whose cloud copy is newer — upload them individually after reviewing.';
   }
 
   @override

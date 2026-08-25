@@ -15,6 +15,14 @@
   "tabRecord": "Record",
   "tabMine": "Mine",
   "commonCancel": "Cancel",
+  "conflictUploadTitle": "Sync Conflict Detected",
+  "@conflictUploadTitle": { "description": "M7: title for the upload-overwrite conflict confirmation dialog" },
+  "conflictUploadCloudNewerMessage": "The cloud snapshot is newer than this device — another device may have synced recently. Uploading now will overwrite the cloud copy and it will be lost. Overwrite anyway?",
+  "conflictUploadUnknownMessage": "Unable to tell which side is newer (contents differ but timestamps match). Uploading will overwrite the cloud copy. Overwrite anyway?",
+  "conflictForceUploadAction": "Overwrite Cloud",
+  "conflictCompareMergeAction": "Compare & Merge",
+  "@conflictCompareMergeAction": { "description": "Action to open the per-item diff preview and merge both sides instead of overwriting either one (direction arbitration fallback)" },
+  "cloudConfigCorruptWarning": "Cloud configuration could not be read — automatic sync has been paused. Please set up your cloud service again.",
   "commonConfirm": "Confirm",
   "commonSave": "Save",
   "commonDelete": "Delete",
@@ -483,6 +491,17 @@
         "type": "int"
       },
       "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "ledgersUploadAllConflictSkipped": "Uploaded: {success}. Skipped {conflicts} ledger(s) whose cloud copy is newer — upload them individually after reviewing.",
+  "@ledgersUploadAllConflictSkipped": {
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "conflicts": {
         "type": "int"
       }
     }

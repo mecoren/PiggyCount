@@ -46,6 +46,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commonCancel => '取消';
 
   @override
+  String get conflictUploadTitle => '检测到同步冲突';
+
+  @override
+  String get conflictUploadCloudNewerMessage =>
+      '云端快照比本地更新（可能另一台设备刚同步过）。继续上传会覆盖云端数据，且云端版本将丢失。确定要覆盖上传吗？';
+
+  @override
+  String get conflictUploadUnknownMessage =>
+      '无法判定本地与云端哪个更新（内容不同但时间相同）。继续上传会覆盖云端数据。确定要覆盖上传吗？';
+
+  @override
+  String get conflictForceUploadAction => '覆盖上传';
+
+  @override
+  String get conflictCompareMergeAction => '对比合并';
+
+  @override
+  String get cloudConfigCorruptWarning => '云端配置读取失败，自动同步已暂停。请重新配置云服务。';
+
+  @override
   String get commonConfirm => '确定';
 
   @override
@@ -888,6 +908,11 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String ledgersUploadAllResult(int success, int failed) {
     return '成功: $success，失败: $failed';
+  }
+
+  @override
+  String ledgersUploadAllConflictSkipped(int success, int conflicts) {
+    return '已上传 $success 个账本；$conflicts 个账本因云端更新被跳过，请核对后逐个上传。';
   }
 
   @override
@@ -8080,6 +8105,26 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get commonCancel => '取消';
 
   @override
+  String get conflictUploadTitle => '偵測到同步衝突';
+
+  @override
+  String get conflictUploadCloudNewerMessage =>
+      '雲端快照比本機新（可能另一台裝置剛同步過）。繼續上傳會覆蓋雲端資料，且雲端版本將遺失。確定要覆蓋上傳嗎？';
+
+  @override
+  String get conflictUploadUnknownMessage =>
+      '無法判定本機與雲端哪個較新（內容不同但時間相同）。繼續上傳會覆蓋雲端資料。確定要覆蓋上傳嗎？';
+
+  @override
+  String get conflictForceUploadAction => '覆蓋上傳';
+
+  @override
+  String get conflictCompareMergeAction => '對比合併';
+
+  @override
+  String get cloudConfigCorruptWarning => '雲端設定讀取失敗，自動同步已暫停。請重新設定雲端服務。';
+
+  @override
   String get commonConfirm => '確定';
 
   @override
@@ -8922,6 +8967,11 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String ledgersUploadAllResult(int success, int failed) {
     return '成功: $success，失敗: $failed';
+  }
+
+  @override
+  String ledgersUploadAllConflictSkipped(int success, int conflicts) {
+    return '已上傳 $success 個帳本；$conflicts 個帳本因雲端較新被跳過，請核對後逐個上傳。';
   }
 
   @override

@@ -12,6 +12,12 @@
   "tabRecord": "记账",
   "tabMine": "我的",
   "commonCancel": "取消",
+  "conflictUploadTitle": "检测到同步冲突",
+  "conflictUploadCloudNewerMessage": "云端快照比本地更新（可能另一台设备刚同步过）。继续上传会覆盖云端数据，且云端版本将丢失。确定要覆盖上传吗？",
+  "conflictUploadUnknownMessage": "无法判定本地与云端哪个更新（内容不同但时间相同）。继续上传会覆盖云端数据。确定要覆盖上传吗？",
+  "conflictForceUploadAction": "覆盖上传",
+  "conflictCompareMergeAction": "对比合并",
+  "cloudConfigCorruptWarning": "云端配置读取失败，自动同步已暂停。请重新配置云服务。",
   "commonConfirm": "确定",
   "commonSave": "保存",
   "commonDelete": "删除",
@@ -2135,6 +2141,17 @@
         "type": "int"
       },
       "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "ledgersUploadAllConflictSkipped": "已上传 {success} 个账本；{conflicts} 个账本因云端更新被跳过，请核对后逐个上传。",
+  "@ledgersUploadAllConflictSkipped": {
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "conflicts": {
         "type": "int"
       }
     }

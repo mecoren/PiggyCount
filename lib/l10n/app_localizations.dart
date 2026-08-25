@@ -173,6 +173,42 @@ abstract class AppLocalizations {
   /// **'Cancel'**
   String get commonCancel;
 
+  /// M7: title for the upload-overwrite conflict confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Sync Conflict Detected'**
+  String get conflictUploadTitle;
+
+  /// No description provided for @conflictUploadCloudNewerMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The cloud snapshot is newer than this device — another device may have synced recently. Uploading now will overwrite the cloud copy and it will be lost. Overwrite anyway?'**
+  String get conflictUploadCloudNewerMessage;
+
+  /// No description provided for @conflictUploadUnknownMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to tell which side is newer (contents differ but timestamps match). Uploading will overwrite the cloud copy. Overwrite anyway?'**
+  String get conflictUploadUnknownMessage;
+
+  /// No description provided for @conflictForceUploadAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Overwrite Cloud'**
+  String get conflictForceUploadAction;
+
+  /// Action to open the per-item diff preview and merge both sides instead of overwriting either one (direction arbitration fallback)
+  ///
+  /// In en, this message translates to:
+  /// **'Compare & Merge'**
+  String get conflictCompareMergeAction;
+
+  /// No description provided for @cloudConfigCorruptWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud configuration could not be read — automatic sync has been paused. Please set up your cloud service again.'**
+  String get cloudConfigCorruptWarning;
+
   /// No description provided for @commonConfirm.
   ///
   /// In en, this message translates to:
@@ -1673,6 +1709,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Success: {success}, Failed: {failed}'**
   String ledgersUploadAllResult(int success, int failed);
+
+  /// No description provided for @ledgersUploadAllConflictSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploaded: {success}. Skipped {conflicts} ledger(s) whose cloud copy is newer — upload them individually after reviewing.'**
+  String ledgersUploadAllConflictSkipped(int success, int conflicts);
 
   /// No description provided for @ledgersUploadingProgress.
   ///

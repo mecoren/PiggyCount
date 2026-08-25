@@ -46,6 +46,27 @@ class AppLocalizationsKo extends AppLocalizations {
   String get commonCancel => '취소';
 
   @override
+  String get conflictUploadTitle => '동기화 충돌 감지됨';
+
+  @override
+  String get conflictUploadCloudNewerMessage =>
+      '클라우드 스냅샷이 이 기기보다 최신입니다(다른 기기가 방금 동기화했을 수 있음). 지금 업로드하면 클라우드 데이터를 덮어쓰며 해당 버전은 사라집니다. 그래도 덮어쓰시겠습니까?';
+
+  @override
+  String get conflictUploadUnknownMessage =>
+      '어느 쪽이 최신인지 판별할 수 없습니다(내용은 다르지만 시각이 같음). 업로드하면 클라우드 데이터를 덮어씁니다. 그래도 덮어쓰시겠습니까?';
+
+  @override
+  String get conflictForceUploadAction => '클라우드 덮어쓰기';
+
+  @override
+  String get conflictCompareMergeAction => '비교 후 병합';
+
+  @override
+  String get cloudConfigCorruptWarning =>
+      '클라우드 설정을 읽을 수 없어 자동 동기화가 일시 중지되었습니다. 클라우드 서비스를 다시 설정해 주세요.';
+
+  @override
   String get commonConfirm => '확인';
 
   @override
@@ -892,6 +913,11 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String ledgersUploadAllResult(int success, int failed) {
     return '성공: $success, 실패: $failed';
+  }
+
+  @override
+  String ledgersUploadAllConflictSkipped(int success, int conflicts) {
+    return '$success개 업로드 완료; 클라우드가 더 최신인 $conflicts개 원장은 건너뛰었습니다. 확인 후 개별적으로 업로드해 주세요.';
   }
 
   @override
