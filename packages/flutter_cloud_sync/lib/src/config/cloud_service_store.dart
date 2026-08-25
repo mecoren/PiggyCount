@@ -19,6 +19,28 @@ class CloudServiceStore {
   static const _kWebdavCfg = 'cloud_webdav_cfg';
   static const _kS3Cfg = 'cloud_s3_cfg';
 
+  /// M11：loadActive 解析失败的结构化痕迹。
+  ///
+  /// 配置损坏时 loadActive 会静默回退 localStorage（自动同步无声停摆，
+  /// 只有 debugPrint 可查）。这里记录失败的后端类型与原因，供 App 层
+  /// 在云页面以 banner 呈现「配置已损坏，请重新配置」。成功解析、切到
+  /// local 或保存新配置时清除。进程重启后若配置仍损坏会再次记录，
+  /// 因此无需持久化。
+  static String? lastLoadErrorBackend;
+  static String? lastLoadErrorMessage;
+
+  /// 清除加载错误痕迹（App 层在用户重新配置成功后调用亦可）。
+  static void clearLoadError() {
+    lastLoadErrorBackend = null;
+    lastLoadErrorMessage = null;
+  }
+
+  static void _recordLoadError(String backend, Object e) {
+    debugPrint('Config parse failed for $backend: $e');
+    lastLoadErrorBackend = backend;
+    lastLoadErrorMessage = e.toString();
+  }
+
   /// 安全存储实例。Android 使用 EncryptedSharedPreferences 加密。
   /// 构造注入（P1）：测试可替换为损坏/假实现验证硬失败语义。
   final FlutterSecureStorage _secure;
@@ -75,6 +97,9 @@ class CloudServiceStore {
     final sp = await SharedPreferences.getInstance();
     final activeType = sp.getString(_kActiveType) ?? 'local';
 
+    // 成功路径（含 local）先清除历史错误，避免陈旧 banner 常驻
+    CloudServiceStore.clearLoadError();
+
     switch (activeType) {
       case 'local':
         return CloudServiceConfig.localStorage();
@@ -85,7 +110,7 @@ class CloudServiceStore {
           try {
             return decodeCloudConfig(raw);
           } catch (e) {
-            debugPrint('Config parse failed for $activeType: $e');
+            _recordLoadError(activeType, e);
           }
         }
         return CloudServiceConfig.localStorage();
@@ -96,7 +121,7 @@ class CloudServiceStore {
           try {
             return decodeCloudConfig(raw);
           } catch (e) {
-            debugPrint('Config parse failed for $activeType: $e');
+            _recordLoadError(activeType, e);
           }
         }
         // 回退到本地存储
@@ -108,7 +133,7 @@ class CloudServiceStore {
           try {
             return decodeCloudConfig(raw);
           } catch (e) {
-            debugPrint('Config parse failed for $activeType: $e');
+            _recordLoadError(activeType, e);
           }
         }
         // 回退到本地存储
@@ -127,7 +152,7 @@ class CloudServiceStore {
           try {
             return decodeCloudConfig(raw);
           } catch (e) {
-            debugPrint('Config parse failed for $activeType: $e');
+            _recordLoadError(activeType, e);
           }
         }
         // 回退到本地存储
@@ -187,6 +212,8 @@ class CloudServiceStore {
   // 先写配置再激活：若两次写入间崩溃，下次 loadActive 找不到配置会回退本地存储，符合预期
   Future<void> saveAndActivate(CloudServiceConfig cfg) async {
     final sp = await SharedPreferences.getInstance();
+    // M11：用户重新保存配置 = 损坏配置被替换，清除错误痕迹
+    CloudServiceStore.clearLoadError();
 
     switch (cfg.type) {
       case CloudBackendType.local:

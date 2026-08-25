@@ -428,6 +428,44 @@ void main() {
       });
     });
 
+    group('账本名与本位币参与指纹（M2）', () {
+      final oneTx = <Map<String, dynamic>>[
+        txItem(happenedAt: '2026-07-01T10:00:00', type: 'expense', amount: 12.34),
+      ];
+
+      test('ledgerName 变化产生不同指纹（改名要能触发拉取）', () {
+        final p1 = {'items': oneTx, 'ledgerName': '日常开销'};
+        final p2 = {'items': oneTx, 'ledgerName': '家庭账本'};
+
+        expect(
+          contentFingerprintFromMap(p1),
+          isNot(equals(contentFingerprintFromMap(p2))),
+          reason: 'A 改账本名上传后，B 端若指纹不变会恒判 inSync，'
+              '改名永不传播',
+        );
+      });
+
+      test('currency 变化产生不同指纹（币种影响金额解读）', () {
+        final p1 = {'items': oneTx, 'currency': 'CNY'};
+        final p2 = {'items': oneTx, 'currency': 'JPY'};
+
+        expect(
+          contentFingerprintFromMap(p1),
+          isNot(equals(contentFingerprintFromMap(p2))),
+        );
+      });
+
+      test('无 ledgerName/currency 键与显式空串指纹一致（旧快照兼容）', () {
+        final legacy = {'items': oneTx};
+        final withEmpty = {'items': oneTx, 'ledgerName': '', 'currency': ''};
+
+        expect(
+          contentFingerprintFromMap(legacy),
+          equals(contentFingerprintFromMap(withEmpty)),
+        );
+      });
+    });
+
     test('快照测试：固定输入对应固定 SHA256（防止规范化规则意外变化）', () {
       // 该测试用例的输入与期望指纹绑定，任何对规范化规则的修改都会触发此测试失败，
       // 提醒开发者评估是否需要数据迁移或全量重同步。

@@ -112,11 +112,26 @@ final autoSyncSetterProvider = Provider<AutoSyncSetter>((ref) {
 final cloudServiceStoreProvider =
     Provider<CloudServiceStore>((_) => CloudServiceStore());
 
+/// M11：激活配置解析失败的呈现状态（null = 正常）。
+/// 配置损坏时 loadActive 静默回退 LocalOnly，这里把包侧记录的
+/// 结构化错误转成 UI 可监听的状态，由云同步页 banner 提示用户重新配置。
+final cloudConfigCorruptionProvider =
+    StateProvider<({String backend, String message})?>((_) => null);
+
 // 当前激活配置（Future，因需读 SharedPreferences）
 final activeCloudConfigProvider =
     FutureProvider<CloudServiceConfig>((ref) async {
   final store = ref.watch(cloudServiceStoreProvider);
-  return store.loadActive();
+  final cfg = await store.loadActive();
+  final errBackend = CloudServiceStore.lastLoadErrorBackend;
+  ref.read(cloudConfigCorruptionProvider.notifier).state =
+      errBackend == null
+          ? null
+          : (
+              backend: errBackend,
+              message: CloudServiceStore.lastLoadErrorMessage ?? ''
+            );
+  return cfg;
 });
 
 // Supabase配置(不管是否激活)

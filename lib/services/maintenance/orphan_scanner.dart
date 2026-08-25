@@ -485,6 +485,8 @@ class OrphanScanner {
   /// - tag → tags.sync_id
   /// - budget → budgets.sync_id
   /// - ledger_snapshot / ledger → ledgers.sync_id
+  /// - recurring → recurring_transactions.sync_id（M3 补漏）
+  /// - exchange_rate_override → exchange_rate_overrides.sync_id（M3 补漏）
   ///
   /// 注:`action = 'delete'` 的 change 不算孤儿(它的语义就是删除,实体本来该
   /// 不在了)。
@@ -515,6 +517,15 @@ class OrphanScanner {
           SELECT 1 FROM ledgers l
             WHERE lc.entity_type IN ('ledger', 'ledger_snapshot')
               AND l.sync_id = lc.entity_sync_id
+          UNION ALL
+          -- M3:缺这两个分支时子查询恒空 → 健在实体的未推送变更被误报
+          -- 「实体已删」,维护页一键清理会删掉有效待推送变更 → 永不上云
+          SELECT 1 FROM recurring_transactions r
+            WHERE lc.entity_type = 'recurring' AND r.sync_id = lc.entity_sync_id
+          UNION ALL
+          SELECT 1 FROM exchange_rate_overrides o
+            WHERE lc.entity_type = 'exchange_rate_override'
+              AND o.sync_id = lc.entity_sync_id
         )
       ''',
       readsFrom: {
@@ -525,6 +536,8 @@ class OrphanScanner {
         db.tags,
         db.budgets,
         db.ledgers,
+        db.recurringTransactions,
+        db.exchangeRateOverrides,
       },
     ).get();
     return rows.map((row) {

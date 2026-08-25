@@ -1716,7 +1716,10 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                   block.status.value = l10nCs.cloudFirstSyncBlockingStatus(
                       success + failed + 1, ledgers.length);
                   try {
-                    await sync.uploadCurrentLedger(ledgerId: ledger.id);
+                    // M7：登录后首次同步是显式批量发布（且 Cloud 引擎无覆盖
+                    // 冲突概念），force 跳过快照路径的冲突拦截
+                    await sync.uploadCurrentLedger(
+                        ledgerId: ledger.id, force: true);
                     success++;
                   } catch (e) {
                     // 单个账本失败不中断其余账本

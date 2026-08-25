@@ -249,7 +249,11 @@ class SyncEngine implements app.SyncService {
   // ==================== SyncService 接口实现 ====================
 
   @override
-  Future<void> uploadCurrentLedger({required int ledgerId}) async {
+  Future<void> uploadCurrentLedger(
+      {required int ledgerId, bool force = false}) async {
+    // force 参数仅快照路径（TransactionsSyncManager）的覆盖冲突确认使用；
+    // Cloud 引擎是增量 push（只推 changeTracker 登记过的本地操作），无
+    // 「整包覆盖云端」语义，此处接受参数以实现接口、不做冲突拦截。
     logger.info('SyncEngine', '上传账本 ledger=$ledgerId');
 
     // 用户主动点"上传"永远只做增量：用 server 的 entity diff log 把本地未推

@@ -632,6 +632,15 @@ extension SyncEngineRealtime on SyncEngine {
     await (db.delete(db.syncPullErrors)
           ..where((e) => e.ledgerExternalId.equals(ledgerExternalId)))
         .go();
+    // M14：该账本的未推送 local_changes 必须一并清除 —— 账本行已删，
+    // 残留的 upsert/delete 队列在下次 push 走「账本已删」分支时捞不到
+    // ledger_snapshot:delete 的 syncId，会 fallback 到本地 int id 字符串
+    // 当 ledger_id 推给 server → 整批失败反复重试或写出脏 external_id。
+    // 注意刻意**不**登记 ledger_snapshot:delete：被踢/退出只是本地移除，
+    // server 上账本对 Owner 和其他成员仍然存在。
+    await (db.delete(db.localChanges)
+          ..where((c) => c.ledgerId.equals(localId)))
+        .go();
     final watermarkSyncIds = <String>[
       ledgerExternalId,
       ...txs.map((t) => t.syncId).whereType<String>(),

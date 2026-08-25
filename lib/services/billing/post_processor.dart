@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers.dart';
 import '../../cloud/sync/sync_engine.dart';
+import '../../cloud/sync_service.dart';
 import '../attachment_service.dart';
 import '../system/logger_service.dart';
 
@@ -129,6 +130,12 @@ class PostProcessor {
           refresh.state++;
           syncDone.state++;
           logger.info('PostProcessor', '后台同步完成', 'ledgerId=$ledgerId');
+        } on CloudConflictException catch (e) {
+          // M7：auto 路径无人值守，不能弹窗也不能盲目覆盖——静默跳过本次
+          // 自动上传并刷新状态，UI 卡片会显示 cloudNewer/outOfSync，
+          // 由用户在云页面手动选择「下载」或「覆盖上传」
+          logger.warning('PostProcessor', '后台同步检测到云端有更新，跳过自动上传', e);
+          refresh.state++;
         } catch (e) {
           logger.error('PostProcessor', '后台同步失败', e);
         }
@@ -173,6 +180,12 @@ class PostProcessor {
           refresh.state++;
           syncDone.state++;
           logger.info('PostProcessor', '后台同步完成', 'ledgerId=$ledgerId');
+        } on CloudConflictException catch (e) {
+          // M7：auto 路径无人值守，不能弹窗也不能盲目覆盖——静默跳过本次
+          // 自动上传并刷新状态，UI 卡片会显示 cloudNewer/outOfSync，
+          // 由用户在云页面手动选择「下载」或「覆盖上传」
+          logger.warning('PostProcessor', '后台同步检测到云端有更新，跳过自动上传', e);
+          refresh.state++;
         } catch (e) {
           logger.error('PostProcessor', '后台同步失败', e);
         }
@@ -217,6 +230,12 @@ class PostProcessor {
           refresh.state++;
           syncDone.state++;
           logger.info('PostProcessor', '后台同步完成', 'ledgerId=$ledgerId');
+        } on CloudConflictException catch (e) {
+          // M7：auto 路径无人值守，不能弹窗也不能盲目覆盖——静默跳过本次
+          // 自动上传并刷新状态，UI 卡片会显示 cloudNewer/outOfSync，
+          // 由用户在云页面手动选择「下载」或「覆盖上传」
+          logger.warning('PostProcessor', '后台同步检测到云端有更新，跳过自动上传', e);
+          refresh.state++;
         } catch (e) {
           logger.error('PostProcessor', '后台同步失败', e);
         }

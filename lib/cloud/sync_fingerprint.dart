@@ -32,6 +32,11 @@ import '../services/system/logger_service.dart';
 ///   不参与指纹 —— 序列化携带与指纹排除并不矛盾。
 /// - 排序键优先级：
 ///   happenedAt → type → amount → categoryName → categoryKind → note
+/// - M2：顶层 ledgerName / currency 参与指纹（账本名/本位币变更也要能
+///   触发状态检测）。已知取舍：算法变更导致升级后首轮一次性 outOfSync。
+///   标签名含逗号的歧义（"a,b" vs 两个标签）刻意不在此处理：快照格式
+///   本身以逗号串携带 tags，指纹层无法还原；tagSyncIds（List，无歧义）
+///   已参与指纹兜底，两端都有 syncId 时不会碰撞。
 ///
 /// 输入 payload 必须包含 `items` 字段（List<Map>），与 `exportTransactionsJson`
 /// 输出结构一致。
@@ -289,6 +294,16 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
     'recurring': recurringCanon,
     'exchangeRateOverrides': rateOverrideCanon,
     'monthStartDay': (payload['monthStartDay'] as num?)?.toInt() ?? 1,
+    // M2：账本名与本位币参与指纹。两者随快照传播、导入侧支持回写，
+    // 但旧白名单不含它们 → A 设备改名/改币种上传后，B 端 localFp ==
+    // cloudFp 恒判 inSync，永不拉取 —— 币种变更直接影响金额解读，
+    // 属高危元数据不同步。两个导出器（transactions_json v8 / 引擎
+    // _exportLedgerJson）顶层都携带这两个键，缺失视为空串兼容旧快照。
+    //
+    // 注意指纹算法变更的迁移语义：升级后首轮 getStatus 必然本地新算法
+    // vs 云端旧元数据 → 一次性 outOfSync，用户同步一轮即收敛。
+    'ledgerName': payload['ledgerName'] as String? ?? '',
+    'currency': payload['currency'] as String? ?? '',
   }));
   final fp = sha256.convert(bytes).toString();
   logger.debug('Fingerprint',

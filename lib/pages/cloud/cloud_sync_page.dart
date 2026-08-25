@@ -142,7 +142,9 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
       // 串行逐账本上传：单个失败不中断整批（语义对齐现有上传按钮）
       for (final ledger in ledgers) {
         try {
-          await sync.uploadCurrentLedger(ledgerId: ledger.id);
+          // M7：全量上传已经过双重危险确认（显式覆盖全部云端），force 跳过
+          // 逐账本冲突拦截
+          await sync.uploadCurrentLedger(ledgerId: ledger.id, force: true);
           success++;
         } catch (e) {
           failed++;
@@ -492,6 +494,32 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
   }
 
   @override
+  /// M11：云配置损坏 banner。loadActive 解析失败会静默回退 LocalOnly
+  /// （自动同步无声停摆），此处把包侧记录的错误以显式提示呈现，
+  /// 引导用户重新配置云服务。
+  Widget _buildConfigCorruptionBanner(BuildContext context) {
+    final corruption = ref.watch(cloudConfigCorruptionProvider);
+    if (corruption == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Card(
+        color: Theme.of(context).colorScheme.errorContainer,
+        elevation: 0,
+        child: ListTile(
+          leading: Icon(Icons.cloud_off,
+              color: Theme.of(context).colorScheme.onErrorContainer),
+          title: Text(
+            AppLocalizations.of(context).cloudConfigCorruptWarning,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onErrorContainer,
+                ),
+          ),
+          dense: true,
+        ),
+      ),
+    );
+  }
+
   Widget build(BuildContext context) {
     final authAsync = ref.watch(authServiceProvider);
     final sync = ref.watch(syncServiceProvider);
@@ -544,6 +572,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
         ),
         child: Column(
           children: [
+            _buildConfigCorruptionBanner(context),
             Expanded(
               child: authAsync.when(
                 loading: () => DelayedSkeleton(
@@ -1081,11 +1110,15 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                           // 整批（语义对齐 uploadAllLedgers）
                                           var success = 0;
                                           var failed = 0;
+                                          // M7：因云端更新被拦截跳过的账本数
+                                          var conflicts = 0;
                                           for (final ledger in ledgers) {
                                             try {
                                               await sync.uploadCurrentLedger(
                                                   ledgerId: ledger.id);
                                               success++;
+                                            } on CloudConflictException {
+                                              conflicts++;
                                             } catch (e) {
                                               failed++;
                                             }
@@ -1116,12 +1149,18 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                               title:
                                                   AppLocalizations.of(context)
                                                       .mineUploadSuccess,
-                                              message: failed == 0
+                                              message: conflicts > 0
                                                   ? AppLocalizations.of(context)
-                                                      .mineUploadSuccessMessage
-                                                  : AppLocalizations.of(context)
-                                                      .ledgersUploadAllResult(
-                                                          success, failed));
+                                                      .ledgersUploadAllConflictSkipped(
+                                                          success, conflicts)
+                                                  : failed == 0
+                                                      ? AppLocalizations.of(
+                                                              context)
+                                                          .mineUploadSuccessMessage
+                                                      : AppLocalizations.of(
+                                                              context)
+                                                          .ledgersUploadAllResult(
+                                                              success, failed));
                                         } catch (e) {
                                           // 异常路径也必须关掉进度弹窗，
                                           // 否则它会永久挡住页面
@@ -1447,12 +1486,17 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                                 in mergedLedgerIds) {
                                               block.status.value =
                                                   l10n.syncBlockingApplying;
-                                              try {
-                                                await syncManager
-                                                    .uploadCurrentLedger(
-                                                  ledgerId: ledgerId,
-                                                );
-                                              } catch (_) {
+                                               try {
+                                                 // M7：一键应用是「以云端为准
+                                                 // 合并后回传」，用户已确认合并，
+                                                 // force 跳过冲突拦截以免打断
+                                                 // 指纹收敛循环
+                                                 await syncManager
+                                                     .uploadCurrentLedger(
+                                                   ledgerId: ledgerId,
+                                                   force: true,
+                                                 );
+                                               } catch (_) {
                                                 // 回传失败不中断其余账本:
                                                 // 下次启动会再次提醒,可重试
                                               }

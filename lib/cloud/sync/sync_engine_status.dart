@@ -95,8 +95,13 @@ extension SyncEngineHealthChecks on SyncEngine {
         (await (db.select(db.tags)..where((t) => t.syncId.isNotNull())).get())
             .length;
 
+    // L2：口径补全 —— 除本账本外还要计入 user-global（ledger_id=0）的
+    // account/category/tag/exchange_rate_override 积压。此前只数账本范围，
+    // 全局实体大量积压时健康检查仍显示 unpushed=0 →「localTags > remote 且
+    // unpushed==0」的 backfill 判据永远不触发，种子/遗留实体永不上云。
     final unpushed =
-        (await changeTracker.getUnpushedChangesForLedger(ledgerId)).length;
+        (await changeTracker.getUnpushedChangesForLedger(ledgerId)).length +
+            (await changeTracker.getUnpushedChangesForLedger(0)).length;
 
     // ---------- 远端 /read/ledgers/<id>/stats ----------
     try {

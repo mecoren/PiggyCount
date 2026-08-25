@@ -125,7 +125,11 @@ abstract class StartupSyncCheckerDeps {
   ///
   /// 启动检查若只下载合并不回传，指纹永不收敛，下次启动仍会判
   /// cloudNewer 重复弹「云端有更新」，因此合并成功后必须回传该账本。
-  Future<void> uploadLedger({required int ledgerId});
+  ///
+  /// [force] 透传给 uploadCurrentLedger：回传发生在用户确认合并**之后**，
+  /// M7 冲突拦截若在此触发会打断收敛循环（本地刚合并完，时间戳仲裁可能
+  /// 仍判 cloudNewer），实现方应传 true。
+  Future<void> uploadLedger({required int ledgerId, bool force = false});
 
   /// 云端账本发现：列出云端 ledger_*.json 中本机没有对应账本行的文件
   ///
@@ -562,7 +566,9 @@ class StartupSyncChecker {
   /// 仅返回 false 由调用方计入汇总提示（下次启动会再次提醒，可重试）。
   Future<bool> _publishAfterMerge(int ledgerId, String ledgerName) async {
     try {
-      await deps.uploadLedger(ledgerId: ledgerId).timeout(_publishTimeout);
+      await deps
+          .uploadLedger(ledgerId: ledgerId, force: true)
+          .timeout(_publishTimeout);
       deps.log('StartupSyncChecker: 账本 $ledgerName 合并后回传完成');
       return true;
     } catch (e) {
@@ -1040,8 +1046,8 @@ class WidgetRefDeps implements StartupSyncCheckerDeps {
       _syncManager.downloadAndRestoreToCurrentLedger(ledgerId: ledgerId);
 
   @override
-  Future<void> uploadLedger({required int ledgerId}) =>
-      _syncManager.uploadCurrentLedger(ledgerId: ledgerId);
+  Future<void> uploadLedger({required int ledgerId, bool force = false}) =>
+      _syncManager.uploadCurrentLedger(ledgerId: ledgerId, force: force);
 
   @override
   Future<List<RemoteLedgerMeta>> discoverRemoteLedgers() =>
