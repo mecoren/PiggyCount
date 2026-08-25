@@ -3,6 +3,7 @@ import '../data/db.dart';
 import '../data/repositories/base_repository.dart';
 import '../services/data_import_service.dart';
 import '../services/system/logger_service.dart';
+import 'sync_fingerprint.dart';
 
 /// 账本交易数据的 JSON 导入导出工具
 ///
@@ -452,6 +453,13 @@ Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
     'items': items,
   };
 
+  // 审计 TSM-P3：指纹自描述 —— 把内容指纹写进快照本体。
+  // contentFingerprintFromMap 是白名单式规范化（只读已知键），嵌入值不会
+  // 反馈进哈希，无循环依赖；旧快照缺此键时读取端回退外部元数据，完全向后
+  // 兼容。收益：WebDAV sidecar 丢失 / S3 元数据头被网关剥离时，冲突检测
+  // 与完整性校验仍可从下载内容本身取到权威指纹，不再退化成 unknown 冲突循环。
+  payload['contentFingerprint'] = contentFingerprintFromMap(payload);
+
   logger.debug('TransactionsJson', '导出完成: ${items.length} 条交易, ${categoryItems.length} 个分类');
   return jsonEncode(payload);
 }
@@ -665,6 +673,9 @@ ImportData parseJsonToImportData(String jsonStr) {
         baseCurrency: base,
         quoteCurrency: quote,
         rate: rate,
+        // 审计 TBL-M3：回传快照身份锚点（v9 快照导出端已写入），
+        // 恢复端据此回写本地行，不再重建新 UUID 撕裂跨设备映射
+        syncId: _readString(m, 'syncId'),
       ));
     }
   }

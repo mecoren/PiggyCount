@@ -626,7 +626,7 @@ void main() {
           reason: '两台设备本地 id 都可能是 1，槽位必须用跨设备唯一的 syncId');
     });
 
-    test('syncId 缺失的 legacy 行退回数字 id（兼容存量云端文件名）', () async {
+    test('syncId 缺失时就地生成 UUID 并持久化（TSM-P18/P19 根治）', () async {
       final repo = LocalRepository(db);
       await db.into(db.ledgers).insert(LedgersCompanion.insert(
             id: const d.Value(1),
@@ -636,7 +636,23 @@ void main() {
 
       final manager = buildSyncManager(repo);
 
-      expect(await manager.pathForLedger(1), 'ledger_1.json');
+      final path = await manager.pathForLedger(1);
+      // 不再回退数字 id：数字槽位在 syncId 回填后漂移、旧文件孤儿化，
+      // 且跨设备自增 id 撞号会同槽互覆
+      expect(path, isNot('ledger_1.json'));
+      expect(path, startsWith('ledger_'));
+      expect(path, endsWith('.json'));
+      final slotKey = path.substring('ledger_'.length, path.length - '.json'.length);
+      expect(slotKey.length, greaterThanOrEqualTo(3),
+          reason: '生成的身份必须是 UUID 形态而非数字 id');
+
+      // 身份必须已持久化：再次调用返回同一路径（稳定槽位）
+      expect(await manager.pathForLedger(1), path);
+      final row = await (db.select(db.ledgers)
+            ..where((l) => l.id.equals(1)))
+          .getSingle();
+      expect(row.syncId, slotKey,
+          reason: '生成的 syncId 应写回 ledgers 行');
     });
 
     test('发现导入：UUID 槽位按 syncId 建新行，不再保留远端数字 id', () async {
