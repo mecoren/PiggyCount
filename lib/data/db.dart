@@ -1080,7 +1080,10 @@ class PiggyDatabase extends _$PiggyDatabase {
 
             // 重置 server_cursor — 强制下次启动全量重拉,确保 sync_engine_apply
             // 用最新的 override 写入逻辑填回 *SyncIdOverride 字段。
-            await customStatement('UPDATE sync_state SET server_cursor = 0');
+            // W5:sync_state 建表已从 v19 移除(v37 DROP,不再属于 schema),
+            // from<19 直升上来的库没有这张表 —— 无守卫 UPDATE 会抛
+            // no such table 让迁移回滚、App 永久打不开。表存在才重置。
+            await _resetServerCursorIfSyncStateExists();
 
             print('[DB Migration] v24 迁移完成');
           }
@@ -1113,7 +1116,8 @@ class PiggyDatabase extends _$PiggyDatabase {
                 AND (child.parent_sync_id IS NULL OR child.parent_sync_id = '')
             ''');
             // reset server_cursor 让后续 pull 重拉 user-global category change。
-            await customStatement('UPDATE sync_state SET server_cursor = 0');
+            // W5:同 v24,表可能不存在(from<19 升级路径),守卫后执行。
+            await _resetServerCursorIfSyncStateExists();
             logger.info('DBMigration', 'v25 迁移完成');
           }
           if (from < 26) {
@@ -1127,7 +1131,11 @@ class PiggyDatabase extends _$PiggyDatabase {
           if (from < 27) {
             logger.info('DBMigration', '开始迁移到 v27: ledgers.month_start_day');
             // v27: 账本自定义每月起始日(1-28),默认 1=自然月
-            await customStatement(
+            // W5:改走幂等 helper。裸 ALTER 在 partial state 重跑(上次迁移
+            // 中途崩溃)时会 duplicate column 卡死,违反本项目迁移纪律。
+            await _addColumnIfMissing(
+                'ledgers',
+                'month_start_day',
                 'ALTER TABLE ledgers ADD COLUMN month_start_day INTEGER NOT NULL DEFAULT 1;');
             logger.info('DBMigration', 'v27 迁移完成');
           }
@@ -1246,7 +1254,10 @@ class PiggyDatabase extends _$PiggyDatabase {
             // 窗口内旧远端值覆盖本地较新状态并反向污染服务端。
             logger.info(
                 'DBMigration', '开始迁移到 v36: entity_change_watermarks 实体水位表');
-            await migrator.createTable(entityChangeWatermarks);
+            // W5:改走幂等 helper,理由同 v27(partial state 重跑防
+            // table already exists 卡死)。
+            await _createTableIfMissing(
+                migrator, 'entity_change_watermarks', entityChangeWatermarks);
             logger.info('DBMigration', 'v36 迁移完成');
           }
           if (from < 37) {
@@ -1277,6 +1288,22 @@ class PiggyDatabase extends _$PiggyDatabase {
               'CREATE UNIQUE INDEX IF NOT EXISTS idx_local_changes_unpushed_dedup '
               'ON local_changes (entity_type, entity_sync_id, action) '
               'WHERE pushed_at IS NULL;');
+          // L4:各实体 sync_id 查询索引(与 onUpgrade v15/v19/v21/v22 分支同构)。
+          // 之前只在 onUpgrade 创建 → 新装库 pull 解析按 entity_sync_id 反查
+          // 实体时全表扫描(LookupCache 只缓解部分路径)。IF NOT EXISTS 幂等,
+          // 与 onUpgrade 已建的索引同名不冲突。
+          await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_transactions_sync_id ON transactions(sync_id);');
+          await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_accounts_sync_id ON accounts(sync_id);');
+          await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_categories_sync_id ON categories(sync_id);');
+          await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_tags_sync_id ON tags(sync_id);');
+          await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_ledgers_sync_id ON ledgers(sync_id);');
+          await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_budgets_sync_id ON budgets(sync_id);');
         },
       );
 
@@ -1313,6 +1340,22 @@ class PiggyDatabase extends _$PiggyDatabase {
       return;
     }
     await m.createTable(table);
+  }
+
+  /// Migration helper: sync_state 存在才重置 server_cursor(W5)。
+  ///
+  /// sync_state 建表步骤已从 v19 移除(该表 v37 起 DROP,不再属于 schema),
+  /// from<19 直升上来的老库没有这张表。v24/v25 的重置必须守卫执行,
+  /// 否则 `no such table` 让整个 onUpgrade 回滚、user_version 不前进,
+  /// 每次启动在同一处失败。
+  Future<void> _resetServerCursorIfSyncStateExists() async {
+    final info = await customSelect('PRAGMA table_info(sync_state)').get();
+    if (info.isEmpty) {
+      logger.info('DBMigration',
+          'sync_state 表不存在(from<19 升级路径),跳过 server_cursor 重置');
+      return;
+    }
+    await customStatement('UPDATE sync_state SET server_cursor = 0');
   }
 
   // Seed minimal data
