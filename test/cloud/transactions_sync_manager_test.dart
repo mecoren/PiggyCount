@@ -589,6 +589,96 @@ void main() {
           reason: '第二次调用应实际触发 download');
     });
   });
+
+  group('槽位命名：ledger_<syncId>.json（消除数字 id 撞名互覆）', () {
+    TransactionsSyncManager buildSyncManager(BaseRepository repo,
+        {fcs.CloudStorageService? storage}) {
+      final provider = _FakeCloudProvider(
+          storage: storage ?? _FakeStorage(returnJson: ''));
+      final manager = TransactionsSyncManager(
+        config: const fcs.CloudServiceConfig(
+          type: fcs.CloudBackendType.supabase,
+          name: 'test',
+        ),
+        db: db,
+        repo: repo,
+      );
+      manager.setSyncManagerForTesting(
+        syncManager:
+            fcs.CloudSyncManager<int>(provider: provider, serializer: _NoopSerializer()),
+        provider: provider,
+      );
+      return manager;
+    }
+
+    test('pathForLedger 用 syncId 而非本地数字 id', () async {
+      final repo = LocalRepository(db);
+      await db.into(db.ledgers).insert(LedgersCompanion.insert(
+            id: const d.Value(1),
+            name: 'L',
+            currency: const d.Value('CNY'),
+            syncId: const d.Value('uuid-aaaa'),
+          ));
+
+      final manager = buildSyncManager(repo);
+
+      expect(await manager.pathForLedger(1), 'ledger_uuid-aaaa.json',
+          reason: '两台设备本地 id 都可能是 1，槽位必须用跨设备唯一的 syncId');
+    });
+
+    test('syncId 缺失的 legacy 行退回数字 id（兼容存量云端文件名）', () async {
+      final repo = LocalRepository(db);
+      await db.into(db.ledgers).insert(LedgersCompanion.insert(
+            id: const d.Value(1),
+            name: 'L',
+            currency: const d.Value('CNY'),
+          ));
+
+      final manager = buildSyncManager(repo);
+
+      expect(await manager.pathForLedger(1), 'ledger_1.json');
+    });
+
+    test('发现导入：UUID 槽位按 syncId 建新行，不再保留远端数字 id', () async {
+      final repo = LocalRepository(db);
+      // 本机已有自己的「账本 1」（另一台设备的 ledger_1.json 与本机无关）
+      await db.into(db.ledgers).insert(LedgersCompanion.insert(
+            id: const d.Value(1),
+            name: 'My Local',
+            currency: const d.Value('CNY'),
+          ));
+      // 云端文件内容：ledger_<uuid>.json（他机新建账本，v9 带 ledgerSyncId）
+      final cloudJson =
+          '{"version":9,"exportedAt":"2026-07-28T10:00:00Z",'
+          '"ledgerId":1,"ledgerName":"Remote","currency":"CNY","count":1,'
+          '"ledgerSyncId":"uuid-remote-1",'
+          '"accounts":[],"categories":[],"tags":[],'
+          '"items":[{"type":"expense","amount":5.0,'
+          '"happenedAt":"2026-07-01T00:00:00.000","note":"","syncId":"r-1"}]}';
+      final manager =
+          buildSyncManager(repo, storage: _FakeStorage(returnJson: cloudJson));
+
+      final inserted = await manager.importRemoteLedger(const RemoteLedgerMeta(
+        slotKey: 'uuid-remote-1',
+        name: 'Remote',
+        currency: 'CNY',
+        monthStartDay: 1,
+        txCount: 1,
+      ));
+
+      expect(inserted, isNotNull);
+      final rows = await db.select(db.ledgers).get();
+      // 两行：本机原有 + 导入的新行；新行 syncId = 槽位 key
+      expect(rows.length, 2);
+      final imported = rows.firstWhere((l) => l.syncId == 'uuid-remote-1');
+      expect(imported.id, isNot(1),
+          reason: '不再保留远端数字 id —— 本地 id 独立自增，身份靠 syncId');
+      final txs = await (db.select(db.transactions)
+            ..where((t) => t.ledgerId.equals(imported.id)))
+          .get();
+      expect(txs.length, 1);
+    });
+  });
 }
 
 // --- Fakes ---

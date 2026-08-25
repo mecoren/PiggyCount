@@ -1,9 +1,26 @@
 /// 云同步服务接口和状态模型
 
+import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' show CloudSyncException;
+
+/// M7：上传覆盖冲突 —— 快照同步是整文件覆盖语义（last-writer-wins），
+/// 上传前检测到「云端快照比本地新」或「方向无法判定但内容不同」时抛出，
+/// 让调用方（UI）向用户确认后再以 `force: true` 重试，而不是无声覆盖
+/// 另一台设备刚同步的数据。
+class CloudConflictException extends CloudSyncException {
+  /// 冲突方向：'cloudNewer'（云端更新，覆盖必然丢云端数据）
+  /// 或 'unknown'（时间相同内容不同，无法判定谁更新）。
+  final String direction;
+
+  CloudConflictException({required this.direction})
+      : super('Upload conflict: cloud snapshot is $direction');
+
+  bool get isCloudNewer => direction == 'cloudNewer';
+}
+
 // ---- 同步服务接口 ----
 
 abstract class SyncService {
-  Future<void> uploadCurrentLedger({required int ledgerId});
+  Future<void> uploadCurrentLedger({required int ledgerId, bool force = false});
 
   /// 下载并导入到当前账本
   /// 返回 (inserted, deletedDup) 二元组：
@@ -39,7 +56,8 @@ class LocalOnlySyncService implements SyncService {
   }
 
   @override
-  Future<void> uploadCurrentLedger({required int ledgerId}) async {
+  Future<void> uploadCurrentLedger(
+      {required int ledgerId, bool force = false}) async {
     throw UnsupportedError('Cloud sync not configured');
   }
 

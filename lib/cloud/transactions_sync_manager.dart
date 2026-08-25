@@ -18,6 +18,7 @@ import '../services/system/logger_service.dart';
 import 'provider_factory.dart';
 import 'sync_diff_service.dart';
 import 'sync_fingerprint.dart';
+import 'sync_restore_guard.dart';
 import 'sync_service.dart';
 import 'transactions_json.dart';
 
@@ -302,8 +303,22 @@ class TransactionsSyncManager implements SyncService {
     );
   }
 
-  String _pathForLedger(int ledgerId) {
-    return 'ledger_$ledgerId.json';
+  /// 云端槽位路径：`ledger_<slotKey>.json`。
+  ///
+  /// slotKey 用账本 syncId（跨设备稳定身份）而非本地数字 id —— 两台设备
+  /// 各自新建的第一个账本本地 id 都是 1，按数字 id 命名会互相覆盖对方的
+  /// 云端快照（同槽互覆）。syncId 缺失时退回本地数字 id，与 v21 迁移
+  /// 「旧数据 syncId = id.toString()」的存量云端文件名天然兼容：已同步
+  /// 用户升级后槽位不变，无需迁移。公开供 UI 层（如远程账本下载入口）
+  /// 复用同一命名规则，避免两处实现漂移。
+  Future<String> pathForLedger(int ledgerId) async {
+    final row = await (db.select(db.ledgers)
+          ..where((l) => l.id.equals(ledgerId)))
+        .getSingleOrNull();
+    final syncId = row?.syncId?.trim();
+    final key =
+        (syncId != null && syncId.isNotEmpty) ? syncId : ledgerId.toString();
+    return 'ledger_$key.json';
   }
 
   /// 把下载到的原始内容规整为「可解析的明文」。
@@ -345,7 +360,7 @@ class TransactionsSyncManager implements SyncService {
     try {
       return await encryptionService!.decrypt(raw);
     } on Exception catch (e) {
-      // SYNC-10 后半：密钥存在但与密文不匹配（salt 错配/被其他设备用
+      // SYNC-10 后半：密钥存在但密文不可解密（salt 错配/被其他设备用
       // 不同密码重加密/密文损坏）。本地确实无法解密——抛专属异常向上
       // 呈现，而非静默跳过。
       logger.warning('CloudSync', '本地密钥存在但密文解密失败: $e');
@@ -393,7 +408,8 @@ class TransactionsSyncManager implements SyncService {
     final raw = _rawStorage;
     if (raw == null) return false;
     try {
-      final content = await raw.download(path: _pathForLedger(ledgerId));
+      final content =
+          await raw.download(path: await pathForLedger(ledgerId));
       return content != null && CiphertextFormat.isEncrypted(content);
     } catch (e) {
       logger.warning('CloudSync', 'BUG-2 探测下载失败，跳过: $ledgerId', e);
@@ -401,35 +417,76 @@ class TransactionsSyncManager implements SyncService {
     }
   }
 
-  /// 本地最大发生时间（用于 flutter_cloud_sync 的方向判断）。
-  /// 取 `max(最近本地写入时间, SELECT MAX(happened_at) WHERE ledger=...)`。
-  /// 之前只返回 `_recentLocalChangeAt`，冷启动时为 null，方向判断只能靠 count。
-  /// 两台设备交易条数相同、但内容不同的时候，count 判断会误判方向。
-  Future<DateTime?> _computeLocalUpdatedAt(int ledgerId) async {
-    final recentChange = _recentLocalChangeAt[ledgerId];
+  /// 本地最近变更证据：墙钟时间戳 + 该时间戳是否可信。
+  ///
+  /// M1：之前取 `MAX(happened_at)`（业务时间）——补录历史账是记账 App 的
+  /// 高频操作，MAX(happened_at) 停在过去，与云端 uploadedAt（上传墙钟）
+  /// 比较必然误判方向（本地新数据被判「云端较新」，启动检查弹错误提示；
+  /// 反向误判则触发无意义覆盖上传）。
+  ///
+  /// 现在三层来源，全部墙钟语义：
+  /// 1. `_recentLocalChangeAt`：本 session 内存墙钟（写路径已登记）→ 可信；
+  /// 2. `MAX(local_changes.created_at)`（本账本 + user-global ledger_id=0
+  ///    —— 账户/分类/标签改动同样改变快照内容）：持久化墙钟。**仅当该
+  ///    作用域存在未推送行时才可信** —— 未推送行证明最后一次记录的编辑
+  ///    尚未上云，时间戳与内容新旧状态一致；
+  /// 3. 全部已推送 / 无任何行：时间戳只能证明「上次同步前有过编辑」，
+  ///    无法排除其后 recordChanges:false 导入（快照恢复 / fullPull /
+  ///    云端账本导入都不写 local_changes）带来的内容变化 → 标记不可信。
+  ///    仲裁方对不可信证据必须按「方向未知」处理：宁可多弹一次合并
+  ///    确认，也不能凭失真时间戳自动放行覆盖（丢云端他机数据）或误报
+  ///    「云端较新」（诱导用户放弃本地更新数据）。
+  Future<({DateTime? at, bool trusted})> _localChangeEvidence(
+      int ledgerId) async {
     DateTime? dbMax;
+    var unpushed = 0;
     try {
-      final query = db.selectOnly(db.transactions)
-        ..addColumns([db.transactions.happenedAt.max()])
-        ..where(db.transactions.ledgerId.equals(ledgerId));
-      final row = await query.getSingleOrNull();
-      dbMax = row?.read(db.transactions.happenedAt.max());
+      final maxQuery = db.selectOnly(db.localChanges)
+        ..addColumns([db.localChanges.createdAt.max()])
+        ..where(db.localChanges.ledgerId.isIn([ledgerId, 0]));
+      final row = await maxQuery.getSingleOrNull();
+      dbMax = row?.read(db.localChanges.createdAt.max());
+
+      final countQuery = db.selectOnly(db.localChanges)
+        ..addColumns([db.localChanges.id.count()])
+        ..where(db.localChanges.pushedAt.isNull() &
+            db.localChanges.ledgerId.isIn([ledgerId, 0]));
+      final cntRow = await countQuery.getSingleOrNull();
+      unpushed = cntRow?.read(db.localChanges.id.count()) ?? 0;
     } catch (e) {
-      logger.warning('CloudSync', '读取本地 MAX(happenedAt) 失败: $e');
+      logger.warning('CloudSync', '读取本地 local_changes 变更证据失败: $e');
     }
-    if (recentChange == null) return dbMax;
-    if (dbMax == null) return recentChange;
-    return recentChange.isAfter(dbMax) ? recentChange : dbMax;
+
+    final recentChange = _recentLocalChangeAt[ledgerId];
+    if (recentChange != null) {
+      return (
+        at: dbMax == null || recentChange.isAfter(dbMax) ? recentChange : dbMax,
+        trusted: true,
+      );
+    }
+    return (at: dbMax, trusted: unpushed > 0);
+  }
+
+  /// 方向判断用的本地墙钟（getStatus 透传给 flutter_cloud_sync 做展示级
+  /// 方向判定）。只取时间值不做可信度裁决：包内 cloudNewer 仅用于路由到
+  /// 「下载预览合并」入口（有 diff 预览兜底，不会静默覆盖），失真时间戳
+  /// 在此的最坏后果是多弹一次可取消的合并提示；真正的覆盖放行决策走
+  /// [_detectUploadConflict] 的可信度门禁。
+  Future<DateTime?> _computeLocalUpdatedAt(int ledgerId) async {
+    final evidence = await _localChangeEvidence(ledgerId);
+    return evidence.at;
   }
 
   @override
-  Future<void> uploadCurrentLedger({required int ledgerId}) async {
+  Future<void> uploadCurrentLedger(
+      {required int ledgerId, bool force = false}) async {
     await _ensureInitialized();
 
     // 捕获到局部变量：防止执行期间 reinitializeForEncryption 把
     // _syncManager 置 null 导致 NPE（ATTACH-2 竞态防护）
     final manager = _syncManager;
-    if (manager == null) {
+    final provider = _provider;
+    if (manager == null || provider == null) {
       throw fcs.CloudSyncException('云服务不可用，请检查配置或登录状态');
     }
 
@@ -447,6 +504,24 @@ class TransactionsSyncManager implements SyncService {
         localCount = (exportMap['count'] as num?)?.toInt();
       } catch (e) {
         logger.warning('CloudSync', '计算本地指纹失败: $e');
+      }
+
+      // M7：并发覆盖止血（last-writer-wins）。非 force 时先做冲突判定：
+      // 云端快照更新 / 方向无法判定但内容不同 → 抛 CloudConflictException，
+      // 由 UI 确认后 force:true 重试。内部流程（全量上传已有双重确认、
+      // 合并后回传、Critical-07 换名）直接传 force:true 不受影响。
+      if (!force) {
+        final conflict = await _detectUploadConflict(
+          provider: provider,
+          ledgerId: ledgerId,
+          localFp: localFp,
+        );
+        if (conflict != null) {
+          logger.warning('CloudSync',
+              '上传冲突拦截: ledger=$ledgerId direction=$conflict '
+              '(等待用户确认覆盖)');
+          throw CloudConflictException(direction: conflict);
+        }
       }
 
       // m-02 修复：将账本摘要信息写入 metadata，
@@ -469,7 +544,7 @@ class TransactionsSyncManager implements SyncService {
         if (localFp != null) uploadMetadata['fingerprint'] = localFp;
       }
 
-      // 附件对象必须先于 ledger JSON 上传(上传顺序协议):清单引用的
+      // 附件对象必须先于 ledger JSON 上传(上传顺序协议):清单里引用的
       // attachments/<sha256>.bin 得先存在,恢复端才能补齐文件。单对象
       // 失败已在内部吞掉,不阻断 JSON 上传。
       try {
@@ -480,7 +555,7 @@ class TransactionsSyncManager implements SyncService {
 
       await manager.upload(
         data: ledgerId,
-        path: _pathForLedger(ledgerId),
+        path: await pathForLedger(ledgerId),
         metadata: uploadMetadata,
       );
 
@@ -537,7 +612,9 @@ class TransactionsSyncManager implements SyncService {
     var done = 0;
     for (final ledger in ledgers) {
       try {
-        await uploadCurrentLedger(ledgerId: ledger.id);
+        // M7：批量上传是显式的「全量覆盖」动作（UI 侧已有双重危险确认），
+        // force 跳过逐账本冲突拦截，避免整批被逐个弹窗打断。
+        await uploadCurrentLedger(ledgerId: ledger.id, force: true);
         success++;
       } catch (e) {
         // 单个账本失败只计数并继续，避免一个账本故障拖垮整批备份
@@ -778,7 +855,17 @@ class TransactionsSyncManager implements SyncService {
 
   @override
   Future<({int inserted, int deletedDup})>
-      downloadAndRestoreToCurrentLedger({required int ledgerId}) async {
+      downloadAndRestoreToCurrentLedger({required int ledgerId}) {
+    // W6：整本下载恢复属破坏性全量替换（清空后导入），必须处于
+    // SyncRestoreGuard 恢复临界区内 —— 定时备份（app.dart）每轮 tick 检查
+    // isBusy 让位。否则恢复进行到一半时到点的备份会把半恢复态 DB 打包
+    // 上传，覆盖当日好备份，恰好摧毁灾难恢复能力。
+    return SyncRestoreGuard.run(
+        () => _downloadAndRestoreToCurrentLedger(ledgerId: ledgerId));
+  }
+
+  Future<({int inserted, int deletedDup})>
+      _downloadAndRestoreToCurrentLedger({required int ledgerId}) async {
     await _ensureInitialized();
 
     // 捕获到局部变量：防止执行期间 reinitializeForEncryption 把
@@ -791,9 +878,11 @@ class TransactionsSyncManager implements SyncService {
     try {
       logger.info('CloudSync', '开始下载账本 $ledgerId');
 
+      // 槽位路径解析一次复用（下载 + 指纹自检两处引用，省一次账本行查询）
+      final remotePath = await pathForLedger(ledgerId);
+
       // 直接使用 storage 下载原始 JSON 字符串
-      final raw =
-          await provider.storage.download(path: _pathForLedger(ledgerId));
+      final raw = await provider.storage.download(path: remotePath);
 
       if (raw == null) {
         logger.warning('CloudSync', '云端备份不存在');
@@ -804,6 +893,13 @@ class TransactionsSyncManager implements SyncService {
       // reset 后无密钥 / 密钥错配或密文损坏 → 抛专属异常（SYNC-10 后半），
       // 由 UI 明确提示，不再静默返回 inserted:0 让用户以为"什么都没发生"。
       final jsonStr = await _decryptIfNeeded(raw);
+
+      // M4：内容 vs 元数据指纹交叉自检（软告警，不阻断）
+      await _warnIfRemoteFingerprintMismatch(
+        provider: provider,
+        path: remotePath,
+        plainJson: jsonStr,
+      );
 
       // 复用公共恢复管线（P1-1 守卫 + 事务内清空导入），
       // 与云端备份恢复（CloudBackupService）同一语义单一事实源
@@ -885,8 +981,8 @@ class TransactionsSyncManager implements SyncService {
 
     logger.info('CloudSync', '开始下载预览: $ledgerId');
 
-    final raw =
-        await provider.storage.download(path: _pathForLedger(ledgerId));
+    final raw = await provider.storage
+        .download(path: await pathForLedger(ledgerId));
 
     if (raw == null) {
       logger.warning('CloudSync', '云端备份不存在');
@@ -1017,7 +1113,7 @@ class TransactionsSyncManager implements SyncService {
       // 调用包的 getStatus，传入时间戳用于方向判断
       final fcsStatus = await manager.getStatus(
           data: ledgerId,
-          path: _pathForLedger(ledgerId),
+          path: await pathForLedger(ledgerId),
           localUpdatedAt: await _computeLocalUpdatedAt(ledgerId),
           forceRefresh: true);
 
@@ -1153,7 +1249,7 @@ class TransactionsSyncManager implements SyncService {
       // 强制刷新状态
       final status = await manager.getStatus(
         data: ledgerId,
-        path: _pathForLedger(ledgerId),
+        path: await pathForLedger(ledgerId),
         localUpdatedAt: await _computeLocalUpdatedAt(ledgerId),
         forceRefresh: true,
       );
@@ -1182,12 +1278,124 @@ class TransactionsSyncManager implements SyncService {
     logger.info('CloudSync', '标记本地变更: $ledgerId');
   }
 
+  /// M7：上传前冲突判定。返回冲突方向（'cloudNewer'/'unknown'），
+  /// null = 可安全上传。
+  ///
+  /// 判定链：
+  /// 1. 云端无快照 → 直接传（localOnly 语义）；
+  /// 2. 指纹相等 → 内容一致，直接传（最常见快路径）；
+  /// 3. 指纹不等/缺失 → 方向仲裁，但**只信有未推送行佐证的本地墙钟**
+  ///    （[_localChangeEvidence]）：
+  ///    - 可信且本地较新 = 正常覆盖语义放行；
+  ///    - 可信且云端较新 = 覆盖会丢另一台设备的同步 → 冲突 'cloudNewer'；
+  ///    - 时间相同 / 本地无证据 / **证据不可信**（全已推送或无行 ——
+  ///      recordChanges:false 导入会让纯 local_changes 时间戳失真，
+  ///      既可能把新数据判旧放行覆盖、也可能把旧数据判新误报云端较新）
+  ///      → 'unknown' 冲突，由上层给出「对比合并」入口而非二选一；
+  /// 4. 探测自身失败（网络等）→ 放行：可用性优先，行为等同旧版。
+  ///
+  /// 注意 M2 指纹算法升级的迁移窗口：旧元数据指纹与新算法必有一轮错位，
+  /// 此时会落到 unknown 冲突——用户走一次对比合并（或确认覆盖）即写入
+  /// 新算法元数据，永久收敛。
+  Future<String?> _detectUploadConflict({
+    required fcs.CloudProvider provider,
+    required int ledgerId,
+    required String? localFp,
+  }) async {
+    try {
+      final meta = await provider.storage
+          .getMetadata(path: await pathForLedger(ledgerId));
+      if (meta == null) return null; // 云端无备份
+
+      final rawRemoteFp = meta.metadata?['fingerprint'] as String?;
+      final remoteFp =
+          rawRemoteFp == null ? null : _normalizeFingerprintMeta(rawRemoteFp);
+      if (localFp != null &&
+          remoteFp != null &&
+          localFp == remoteFp) {
+        return null; // 内容一致
+      }
+
+      // 指纹不同（或一侧缺失）→ 方向仲裁（只信可信证据）
+      final uploadedAtStr = meta.metadata?['uploadedAt'] as String?;
+      final remoteAt =
+          DateTime.tryParse(uploadedAtStr ?? '') ?? meta.lastModified;
+      if (remoteAt == null) return 'unknown';
+      final evidence = await _localChangeEvidence(ledgerId);
+      final localAt = evidence.at;
+      if (!evidence.trusted || localAt == null) return 'unknown';
+      if (localAt.isAfter(remoteAt)) return null; // 本地较新：正常覆盖
+      if (remoteAt.isAfter(localAt)) return 'cloudNewer';
+      return 'unknown'; // 同秒且内容不同：无法判定
+    } catch (e) {
+      logger.warning('CloudSync', '上传冲突检测失败（放行上传）: $e');
+      return null;
+    }
+  }
+
   /// 从 JSON payload 计算内容指纹
   ///
   /// 委托给共享函数 [contentFingerprintFromMap]（US-5 抽取），
   /// 规范化规则与序列化器侧保持一致，避免双份实现漂移。
   String _contentFingerprintFromMap(Map<String, dynamic> payload) =>
       contentFingerprintFromMap(payload);
+
+  /// M4：下载内容与元数据指纹交叉自检（软告警版，不阻断恢复）。
+  ///
+  /// 包内 CloudSyncManager.download 自带完整性校验，但 App 层全部直连
+  /// provider.storage.download，该防线是死代码 —— CDN 陈旧副本/网关截断
+  /// 只能靠 jsonDecode 抛异常兜底。此处在「已解密明文」上对齐同等检查：
+  ///
+  /// - 元数据无指纹（旧快照）→ 静默跳过；
+  /// - 指纹不一致 → **warning 不抛异常**。M2 指纹算法升级（纳入
+  ///   ledgerName/currency）后，旧算法写入的云端元数据必有一轮错位，
+  ///   硬失败会把「一次性 outOfSync」恶化成「恢复被阻断」，本末倒置。
+  Future<void> _warnIfRemoteFingerprintMismatch({
+    required fcs.CloudProvider provider,
+    required String path,
+    required String plainJson,
+  }) async {
+    try {
+      final meta = await provider.storage.getMetadata(path: path);
+      final raw = meta?.metadata?['fingerprint'] as String?;
+      if (raw == null || raw.isEmpty) return;
+      final remoteFp = _normalizeFingerprintMeta(raw);
+      Map<String, dynamic> map;
+      try {
+        map = jsonDecode(plainJson) as Map<String, dynamic>;
+      } catch (_) {
+        logger.warning('CloudSync',
+            '完整性自检：下载内容不是 JSON 对象(path=$path)，请留意数据完整性');
+        return;
+      }
+      final contentFp = _contentFingerprintFromMap(map);
+      if (contentFp != remoteFp) {
+        logger.warning('CloudSync',
+            '完整性自检：云端快照指纹不一致(path=$path) '
+            'metadata=$remoteFp content=$contentFp。'
+            '可能为 CDN 陈旧副本或旧算法元数据；恢复继续执行');
+      }
+    } catch (e) {
+      // 自检是尽力而为的旁路，任何失败都不影响主恢复流程
+      logger.debug('CloudSync', '完整性自检跳过: $e');
+    }
+  }
+
+  /// 归一化 metadata 指纹值：剥离 'b64:' 包装（S3 客户端通常已解码，
+  /// 这里对 WebDAV sidecar 原文/历史残留兜底），补齐被网关剥掉的 padding。
+  static String _normalizeFingerprintMeta(String v) {
+    if (!v.startsWith('b64:')) return v;
+    final payload = v.substring(4);
+    try {
+      return utf8.decode(base64.decode(payload));
+    } on FormatException {
+      try {
+        return utf8.decode(base64.decode(base64.normalize(payload)));
+      } on FormatException {
+        return v;
+      }
+    }
+  }
 
   @override
   Future<void> deleteRemoteBackup({required int ledgerId}) async {
@@ -1202,7 +1410,7 @@ class TransactionsSyncManager implements SyncService {
     try {
       logger.info('CloudSync', '删除云端备份: $ledgerId');
 
-      await manager.deleteRemote(path: _pathForLedger(ledgerId));
+      await manager.deleteRemote(path: await pathForLedger(ledgerId));
 
       // 清除缓存
       _statusCache.remove(ledgerId);
@@ -1263,16 +1471,15 @@ class TransactionsSyncManager implements SyncService {
     return '$base（$i）';
   }
 
-  /// 下载远程账本（创建新的本地账本或复用同名账本）
+  /// 下载远程账本（创建新的本地账本或复用同源账本）
   ///
-  /// 优先级：
-  /// 1. 如果本地存在同名账本，复用该账本（不创建新账本）
-  /// 2. 如果本地不存在同名账本但不存在远程 ID，复用远程 ID
-  /// 3. 否则创建新 ID
+  /// 本地账本复用优先级：
+  /// 1. 存在同名账本 → 复用该行（H2 既定语义：用户主动下载即以云端为准覆盖）
+  /// 2. 槽位 key 对应的 syncId 已存在本地行 → 复用（同源账本认领）
+  /// 3. 否则新建本地账本行，**syncId = 槽位 key**（本地 id 自动分配）
   ///
-  /// 云端文件迁移策略（Critical-07 修复）：
-  /// 采用「先上传后删除」顺序，确保上传成功后再删除旧文件。
-  /// 旧实现「先删除后上传」在删除成功但上传失败时会导致云端数据丢失。
+  /// 云端文件收尾（Critical-07 修复）：先上传新槽位再删旧文件；目标槽位
+  /// 与远程路径一致时不做任何换名操作。
   Future<int?> downloadRemoteLedger({
     required String name,
     required String currency,
@@ -1289,10 +1496,8 @@ class TransactionsSyncManager implements SyncService {
     try {
       logger.info('CloudSync', '下载远程账本: $remotePath');
 
-      // 从远程路径提取账本ID
-      final remoteIdStr =
-          remotePath.replaceAll('ledger_', '').replaceAll('.json', '');
-      final remoteId = int.tryParse(remoteIdStr);
+      // 从远程路径提取槽位 key（= 源端账本 syncId；legacy 文件为数字 id 串）
+      final slotKey = _slotKeyFromPath(remotePath);
 
       // 审计 S12：同名复用是 H2 既定语义（用户主动下载该账本 → 以云端
       // 为准覆盖），保留。但 getSingleOrNull 在本地已有多个同名账本时抛
@@ -1304,43 +1509,43 @@ class TransactionsSyncManager implements SyncService {
           sameNameRows.isEmpty ? null : sameNameRows.first;
 
       final int ledgerId;
-      final bool reuseExistingByName = existingByName != null;
-      bool reuseRemoteId = false;
+      bool reusedExistingRow = false;
 
-      if (reuseExistingByName) {
-        // 复用同名账本的 ID（不创建新账本）
+      if (existingByName != null) {
+        // 复用同名账本的行（不创建新账本）
         ledgerId = existingByName.id;
-        logger.info('CloudSync', '本地已存在同源账本，复用账本ID: $ledgerId (名称: $name)');
-      } else {
-        // 检查本地是否已存在该远程 ID
-        final existingById = remoteId != null
-            ? await (db.select(db.ledgers)..where((t) => t.id.equals(remoteId)))
-                .getSingleOrNull()
-            : null;
-
-        reuseRemoteId = remoteId != null && existingById == null;
-
-        if (reuseRemoteId) {
-          // 复用远程 ID
-          logger.info('CloudSync', '复用远程ID: $remoteId');
-          await db.into(db.ledgers).insert(
-                LedgersCompanion.insert(
-                  id: drift.Value(remoteId),
-                  name: name,
-                  currency: drift.Value(currency),
-                ),
-              );
-          ledgerId = remoteId;
+        reusedExistingRow = true;
+        logger.info('CloudSync',
+            '本地已存在同名账本，复用账本ID: $ledgerId (名称: $name)');
+      } else if (slotKey != null) {
+        final sameIdentity = await _localLedgerForSlotKey(slotKey);
+        if (sameIdentity != null) {
+          ledgerId = sameIdentity.id;
+          reusedExistingRow = true;
+          logger.info('CloudSync',
+              '本地已有同源账本(syncId=$slotKey)，复用账本ID: $ledgerId');
         } else {
-          // 创建新 ID（自动递增）
-          logger.info('CloudSync', '本地ID冲突或无效，创建新ID');
+          // 新建：id 自动分配、身份锚定槽位 key。不再沿用远端数字 id ——
+          // 两台设备各自的自增序列独立，按 id 撞号正是同槽互覆的根源。
           ledgerId = await db.into(db.ledgers).insert(
                 LedgersCompanion.insert(
                   name: name,
                   currency: drift.Value(currency),
+                  syncId: drift.Value(slotKey),
                 ),
               );
+          logger.info('CloudSync',
+              '创建新账本: id=$ledgerId, syncId=$slotKey');
         }
+      } else {
+        // 无法解析槽位 key 的异常路径：退回旧行为新建匿名账本
+        ledgerId = await db.into(db.ledgers).insert(
+              LedgersCompanion.insert(
+                name: name,
+                currency: drift.Value(currency),
+              ),
+            );
+        logger.info('CloudSync', '远程路径无槽位 key，创建新账本 id=$ledgerId');
       }
 
       // 下载数据
@@ -1348,8 +1553,8 @@ class TransactionsSyncManager implements SyncService {
 
       if (raw == null) {
         logger.warning('CloudSync', '云端账本不存在: $remotePath');
-        // 只有新创建的账本才需要删除
-        if (!reuseExistingByName) {
+        // 只有本次新建的账本才需要删除
+        if (!reusedExistingRow) {
           await (db.delete(db.ledgers)..where((t) => t.id.equals(ledgerId))).go();
         }
         return null;
@@ -1364,27 +1569,35 @@ class TransactionsSyncManager implements SyncService {
       } on CloudEncryptedLocallyDisabledException catch (e) {
         logger.warning(
             'CloudSync', '云端账本 $remotePath 为密文且本地无可用密钥: $e');
-        if (!reuseExistingByName) {
+        if (!reusedExistingRow) {
           await (db.delete(db.ledgers)..where((t) => t.id.equals(ledgerId))).go();
         }
         rethrow;
       } on CloudCiphertextUndecryptableException catch (e) {
         logger.warning('CloudSync', '云端账本 $remotePath 密文不可解密: $e');
-        if (!reuseExistingByName) {
+        if (!reusedExistingRow) {
           await (db.delete(db.ledgers)..where((t) => t.id.equals(ledgerId))).go();
         }
         rethrow;
       }
 
+      // M4：内容 vs 元数据指纹交叉自检（软告警，不阻断）
+      await _warnIfRemoteFingerprintMismatch(
+        provider: provider,
+        path: remotePath,
+        plainJson: jsonStr,
+      );
+
       // H2：同名/既有账本的云端下载统一走「先清空再导入」的覆盖语义
       // （restoreLedgerFromJson：含 P1-1 空快照守卫 + 事务原子 +
-      // recordChanges:false），与 downloadAndRestoreToCurrentLedger /
-      // 全量覆盖恢复对齐，消除旧实现「同名账本追加合并 → 交易翻倍」。
+      // recordChanges:false + v9 sync_id 回填），与
+      // downloadAndRestoreToCurrentLedger / 全量覆盖恢复对齐，
+      // 消除旧实现「同名账本追加合并 → 交易翻倍」。
       final restored = await restoreLedgerFromJson(
           db: db, repo: repo, ledgerId: ledgerId, jsonStr: jsonStr);
       if (restored == null) {
         // P1-1 拒绝空覆盖：本地未接受云端状态，云端文件原样保留，
-        // 也不做下方的「上传新路径/删旧文件」换名操作。
+        // 也不做下方的「上传新槽位/删旧文件」换名操作。
         logger.warning('CloudSync',
             '云端快照为空且本地非空，拒绝覆盖，保留本地与云端现状: $remotePath');
         return null;
@@ -1396,38 +1609,14 @@ class TransactionsSyncManager implements SyncService {
             '恢复时有 ${restored.skippedRecurring} 笔同日周期实例被判重跳过，请核对源端明细');
       }
 
-      // 处理云端文件更新
-      // Critical-07 修复：采用「先上传后删除」顺序，避免删除成功但上传
-      // 失败时云端数据丢失。旧文件在新文件上传成功后才删除。
-      if (reuseExistingByName) {
-        // 复用了同名账本，本地 ID 可能和云端不同
-        // 需要上传新的（使用本地 ID），再删除旧的云端文件
-        if (remoteId != null && remoteId != ledgerId) {
-          // 先上传到新路径
-          try {
-            await uploadCurrentLedger(ledgerId: ledgerId);
-            logger.info('CloudSync', '账本已上传到云端: ledger_$ledgerId.json');
-            // 上传成功后再删除旧文件
-            try {
-              await provider.storage.delete(path: remotePath);
-              logger.info('CloudSync', '旧远程文件已删除: $remotePath (远程ID: $remoteId != 本地ID: $ledgerId)');
-            } catch (e) {
-              logger.warning('CloudSync', '删除旧远程文件失败（忽略，新文件已上传）: $e');
-            }
-          } catch (e) {
-            logger.warning('CloudSync', '上传账本失败（旧文件保留）: $e');
-          }
-        } else {
-          logger.info('CloudSync', '复用同名账本，ID相同无需更新云端文件');
-        }
-      } else if (reuseRemoteId) {
-        // 复用了远程ID，无需删除和重新上传
-        logger.info('CloudSync', '复用远程ID，无需更新云端文件');
-      } else {
-        // 创建了新 ID，需要上传新文件，再删除旧文件
+      // 云端文件收尾：目标槽位与远程文件名不一致时才需要换名
+      // （Critical-07：先上传后删除，防删除成功但上传失败丢数据）。
+      final targetPath = await pathForLedger(ledgerId);
+      if (_baseName(targetPath) != _baseName(remotePath)) {
+        // M7：刚以云端为准恢复完本地（内容一致），force 跳过冲突拦截
         try {
-          await uploadCurrentLedger(ledgerId: ledgerId);
-          logger.info('CloudSync', '新账本已上传到云端: ledger_$ledgerId.json');
+          await uploadCurrentLedger(ledgerId: ledgerId, force: true);
+          logger.info('CloudSync', '账本已上传到云端: $targetPath');
           // 上传成功后再删除旧文件
           try {
             await provider.storage.delete(path: remotePath);
@@ -1436,8 +1625,10 @@ class TransactionsSyncManager implements SyncService {
             logger.warning('CloudSync', '删除旧远程文件失败（忽略，新文件已上传）: $e');
           }
         } catch (e) {
-          logger.warning('CloudSync', '上传新账本失败（旧文件保留）: $e');
+          logger.warning('CloudSync', '上传账本失败（旧文件保留）: $e');
         }
+      } else {
+        logger.info('CloudSync', '槽位一致，无需更新云端文件: $targetPath');
       }
 
       return ledgerId;
@@ -1491,34 +1682,21 @@ class TransactionsSyncManager implements SyncService {
     try {
       logger.info('CloudSync', '开始恢复所有远程账本');
 
-      // 获取本地已存在的账本ID
-      final localLedgers = await db.select(db.ledgers).get();
-      final localLedgerIds = localLedgers.map((l) => l.id).toSet();
-      logger.info('CloudSync', '本地已存在账本: $localLedgerIds');
-
       // 列出所有远程账本文件
       final files = await provider.storage.list(path: '');
 
-      // 过滤出账本文件，并排除本地已存在的
-      final ledgerFiles = files.where((file) {
-        final fileName = file.name;
-        if (!fileName.startsWith('ledger_') || !fileName.endsWith('.json')) {
-          return false;
+      // 过滤出账本文件，并排除本地已有对应身份的（按槽位 key 解析，
+      // 不再比较数字 id 集合 —— 两台设备 id 序列独立，数字对比不可靠）
+      final ledgerFiles = <fcs.CloudFile>[];
+      for (final file in files) {
+        final match = _ledgerFileNamePattern.firstMatch(file.name);
+        if (match == null) continue;
+        if (await _localLedgerForSlotKey(match.group(1)!) != null) {
+          logger.info('CloudSync', '跳过已有对应账本的远程文件: ${file.name}');
+          continue;
         }
-
-        // 从文件名提取账本ID
-        final idStr =
-            fileName.replaceAll('ledger_', '').replaceAll('.json', '');
-        final remoteId = int.tryParse(idStr);
-
-        // 跳过本地已存在的账本
-        if (remoteId != null && localLedgerIds.contains(remoteId)) {
-          logger.info('CloudSync', '跳过已存在的账本: $fileName (ID=$remoteId)');
-          return false;
-        }
-
-        return true;
-      }).toList();
+        ledgerFiles.add(file);
+      }
 
       logger.info('CloudSync', '找到 ${ledgerFiles.length} 个需要恢复的远程账本文件');
 
@@ -1590,7 +1768,7 @@ class TransactionsSyncManager implements SyncService {
   /// （调用方已通过双重危险确认，见 cloud_sync_page 全量覆盖卡片）
   ///
   /// 与 [restoreAllRemoteLedgers] 的区别：
-  /// - 本地已存在的账本不跳过，而是用 [downloadAndRestoreToCurrentLedger]
+  /// - 本地已有同身份账本的文件不跳过，而是用 [downloadAndRestoreToCurrentLedger]
   ///   整体覆盖本地数据（清空后导入，含账户 syncId 去重，流程同现有恢复）
   /// - 云端独有的账本仍走 [downloadRemoteLedger] 导入新建
   /// - 本地独有的账本不做任何处理（保留）
@@ -1598,6 +1776,16 @@ class TransactionsSyncManager implements SyncService {
   /// 串行执行：恢复会批量写库，并行易触发数据库锁竞争；
   /// 单个账本失败只计数不中断整批（语义对齐 uploadAllLedgers）。
   Future<({int success, int failed})> fullRestoreAllRemoteLedgers({
+    void Function(int done, int total)? onProgress,
+  }) {
+    // W6：全量覆盖下载是最大粒度的破坏性恢复，整个批次都处于
+    // SyncRestoreGuard 恢复临界区内（守卫为计数器，内部嵌套调用
+    // downloadAndRestoreToCurrentLedger 的二次 begin/end 安全）。
+    return SyncRestoreGuard.run(() => _fullRestoreAllRemoteLedgers(
+        onProgress: onProgress));
+  }
+
+  Future<({int success, int failed})> _fullRestoreAllRemoteLedgers({
     void Function(int done, int total)? onProgress,
   }) async {
     await _ensureInitialized();
@@ -1611,25 +1799,24 @@ class TransactionsSyncManager implements SyncService {
     try {
       logger.info('CloudSync', '开始全量覆盖下载所有远程账本');
 
-      // 本地已存在的账本 ID：决定云端文件走「覆盖」还是「导入新建」
-      final localIds =
-          (await db.select(db.ledgers).get()).map((l) => l.id).toSet();
-
       final files = await provider.storage.list(path: '');
       final ledgerFiles =
           files.where((f) => _ledgerFileNamePattern.hasMatch(f.name)).toList();
+      final localCount = (await db.select(db.ledgers).get()).length;
       logger.info(
-          'CloudSync', '云端共 ${ledgerFiles.length} 个账本文件，本地已有 ${localIds.length} 个账本');
+          'CloudSync', '云端共 ${ledgerFiles.length} 个账本文件，本地已有 $localCount 个账本');
 
       var success = 0;
       var failed = 0;
       for (final file in ledgerFiles) {
-        final remoteId =
-            int.parse(_ledgerFileNamePattern.firstMatch(file.name)!.group(1)!);
+        final slotKey =
+            _ledgerFileNamePattern.firstMatch(file.name)!.group(1)!;
         try {
-          if (localIds.contains(remoteId)) {
+          // 按槽位 key 解析本地同身份账本（syncId 匹配，数字 key 兜底 id 匹配）
+          final local = await _localLedgerForSlotKey(slotKey);
+          if (local != null) {
             // 本地已有该账本：云端快照整体覆盖本地数据
-            await downloadAndRestoreToCurrentLedger(ledgerId: remoteId);
+            await downloadAndRestoreToCurrentLedger(ledgerId: local.id);
           } else {
             // 云端独有账本：下载元信息后导入为新建本地账本
             final raw = await provider.storage.download(path: file.name);
@@ -1671,20 +1858,50 @@ class TransactionsSyncManager implements SyncService {
 
   // ============ 云端账本发现（跨设备新建账本同步） ============
 
-  /// 发现阶段缓存的远端 payload（远端账本 id → 解密后的 JSON 明文）
+  /// 发现阶段缓存的远端 payload（槽位 key → 解密后的 JSON 明文）
   ///
   /// [discoverRemoteLedgers] 下载文件提取元信息时顺手缓存，
   /// [importRemoteLedger] 优先用缓存避免同一文件二次下载。
-  final Map<int, String> _discoveredPayloads = {};
+  final Map<String, String> _discoveredPayloads = {};
 
-  /// 云端账本文件名模式：ledger_<本地id>.json
-  static final RegExp _ledgerFileNamePattern = RegExp(r'^ledger_(\d+)\.json$');
-
-  /// 列出云端存在、但本机没有对应账本行的账本文件，提取元信息
+  /// 云端账本文件名模式：ledger_<slotKey>.json
   ///
-  /// 设计见 /prd/remote_ledger_discovery/design.md：
-  /// - 路径 A 的同步 key 即本地 id（`ledger_<id>.json`），文件名中的 id
-  ///   在本机没有对应账本行时，说明该账本是在其他设备新建后上传的
+  /// slotKey 是账本 syncId（新建账本为 UUID；v21 迁移把 legacy 账本回填成
+  /// 数字 id 字符串）。历史快照（槽位改版前）直接用本地数字 id 当 key，
+  /// 纯数字形态与 syncId 回填值天然重合，一个宽松正则同时覆盖两种形态。
+  static final RegExp _ledgerFileNamePattern = RegExp(r'^ledger_(.+)\.json$');
+
+  /// 从远程路径提取槽位 key（取末段文件名做匹配，容忍目录前缀）
+  static String? _slotKeyFromPath(String remotePath) {
+    final base = remotePath.split('/').last;
+    return _ledgerFileNamePattern.firstMatch(base)?.group(1);
+  }
+
+  /// 取路径末段文件名（list 返回 name、调用方可能传带前缀的 path）
+  static String _baseName(String path) => path.split('/').last;
+
+  /// 槽位 key → 本地账本行的身份解析：
+  /// 1. syncId 精确匹配（正路径：syncId 命名的槽位）；
+  /// 2. 纯数字 key 兜底按本地 id 匹配 —— 兼容 syncId 尚未回填的 legacy 行。
+  ///    数字 id 撞名互覆正是槽位改用 syncId 要消除的隐患，但存量数字
+  ///    文件仍须能被既有账本认领，否则升级后各设备会把对方的账本
+  ///    当「新账本」重复导入。
+  Future<Ledger?> _localLedgerForSlotKey(String key) async {
+    final bySyncId = await (db.select(db.ledgers)
+          ..where((l) => l.syncId.equals(key)))
+        .get();
+    if (bySyncId.isNotEmpty) return bySyncId.first;
+    final numericId = int.tryParse(key);
+    if (numericId == null) return null;
+    return await (db.select(db.ledgers)..where((l) => l.id.equals(numericId)))
+        .getSingleOrNull();
+  }
+
+  /// 列出云端存在、但本机没有对应账本身份的账本文件，提取元信息
+  ///
+  /// 设计见 /prd/remote_ledger_discovery/design.md（v2 槽位语义）：
+  /// - 槽位 key 即账本 syncId；本地没有对应 syncId（纯数字 key 也撞不上
+  ///   本地 id）时，说明该账本是在其他设备新建后上传的
   /// - 单个文件下载/解密/解析失败只跳过该账本（记日志），不影响其他
   /// - 返回的 meta 供确认弹窗展示；payload 已缓存供后续导入复用
   Future<List<RemoteLedgerMeta>> discoverRemoteLedgers() async {
@@ -1696,8 +1913,6 @@ class TransactionsSyncManager implements SyncService {
       throw fcs.CloudSyncException('云服务不可用，请检查配置或登录状态');
     }
 
-    final localIds =
-        (await db.select(db.ledgers).get()).map((l) => l.id).toSet();
     _discoveredPayloads.clear();
 
     final files = await provider.storage.list(path: '');
@@ -1705,25 +1920,25 @@ class TransactionsSyncManager implements SyncService {
     for (final file in files) {
       final match = _ledgerFileNamePattern.firstMatch(file.name);
       if (match == null) continue;
-      final remoteId = int.parse(match.group(1)!);
-      // 本地已有同 id 账本行：该文件由既有逐账本检查流程负责，
-      // 不属于"发现"范畴（路径 A 文件名即本地 id，撞号是既有语义）
-      if (localIds.contains(remoteId)) continue;
+      final slotKey = match.group(1)!;
+      // 本地已有同身份账本行：该文件由既有逐账本检查流程负责，
+      // 不属于"发现"范畴
+      if (await _localLedgerForSlotKey(slotKey) != null) continue;
 
       try {
         final raw = await provider.storage.download(path: file.name);
         if (raw == null) {
-          logger.warning('CloudSync', '发现账本 $remoteId 下载返回空，跳过');
+          logger.warning('CloudSync', '发现账本 $slotKey 下载返回空，跳过');
           continue;
         }
         // 密文场景：provider 已装饰时 download 即明文；未装饰（本地未开
         // 加密）或密文不可解密（SYNC-10）时 _decryptIfNeeded 抛专属异常
         final jsonStr = await _decryptIfNeeded(raw);
         final payload = jsonDecode(jsonStr) as Map<String, dynamic>;
-        _discoveredPayloads[remoteId] = jsonStr;
+        _discoveredPayloads[slotKey] = jsonStr;
         metas.add(RemoteLedgerMeta(
-          id: remoteId,
-          name: (payload['ledgerName'] as String?) ?? '云端账本 $remoteId',
+          slotKey: slotKey,
+          name: (payload['ledgerName'] as String?) ?? '云端账本 $slotKey',
           currency: (payload['currency'] as String?) ?? 'CNY',
           monthStartDay:
               ((payload['monthStartDay'] as num?)?.toInt() ?? 1).clamp(1, 28),
@@ -1731,13 +1946,13 @@ class TransactionsSyncManager implements SyncService {
         ));
       } on CloudEncryptedLocallyDisabledException {
         // 无可用密钥：跳过该账本（加密恢复走既有的哨兵引导流程）
-        logger.warning('CloudSync', '发现账本 $remoteId 为密文且本地无密钥，跳过');
+        logger.warning('CloudSync', '发现账本 $slotKey 为密文且本地无密钥，跳过');
       } on CloudCiphertextUndecryptableException {
         // 密钥存在但不可解密（损坏/错配）：发现阶段仅列举，跳过该账本，
         // 用户点导入时会在 importRemoteLedger 中得到明确报错。
-        logger.warning('CloudSync', '发现账本 $remoteId 密文无法用本机密钥解密，跳过');
+        logger.warning('CloudSync', '发现账本 $slotKey 密文无法用本机密钥解密，跳过');
       } catch (e) {
-        logger.warning('CloudSync', '发现账本 $remoteId 失败，跳过: $e');
+        logger.warning('CloudSync', '发现账本 $slotKey 失败，跳过: $e');
       }
     }
 
@@ -1745,25 +1960,28 @@ class TransactionsSyncManager implements SyncService {
     return metas;
   }
 
-  /// 导入一个发现阶段的云端账本：保留远端 id 创建本地账本行并导入数据
+  /// 导入一个发现阶段的云端账本：以槽位 key 作为 syncId 创建本地账本行
+  /// 并导入数据。
   ///
-  /// 返回导入的交易条数；返回 null 表示远端 id 已被本地占用（极端竞态），
-  /// 该账本被跳过。
+  /// 返回新账本的本地 id；返回 null 表示同 syncId 账本已被本地占用
+  /// （发现与导入之间的竞态），该账本被跳过。
   ///
-  /// 关键语义（design.md D2）：路径 A 的同步 key 就是本地 id，保留远端 id
-  /// 插入后本地指纹与云端一致，后续启动检查自然 inSync；syncId 写 id 字符串
-  /// 与 v21 迁移"旧数据 id 回填 syncId"语义一致（payload 不携带创建侧 UUID）。
+  /// 关键语义：**不再保留远端数字 id**——两台设备各自的自增序列独立，
+  /// 按 id 撞号正是同槽互覆的根源。本地 id 自动分配，syncId = 槽位 key，
+  /// 身份跨设备稳定后本地指纹与云端一致，后续启动检查自然 inSync。
+  /// legacy 数字槽位沿用 key 作 syncId，与 v21 迁移「id 回填 syncId」
+  /// 口径一致。
   Future<int?> importRemoteLedger(RemoteLedgerMeta meta) async {
     await _ensureInitialized();
 
     // payload 优先取发现阶段缓存，未命中（如进程内首次直接导入）重新下载
-    var jsonStr = _discoveredPayloads[meta.id];
+    var jsonStr = _discoveredPayloads[meta.slotKey];
     if (jsonStr == null) {
       final provider = _provider;
       if (provider == null) {
         throw fcs.CloudSyncException('云服务不可用，请检查配置或登录状态');
       }
-      final path = _pathForLedger(meta.id);
+      final path = 'ledger_${meta.slotKey}.json';
       final raw = await provider.storage.download(path: path);
       if (raw == null) {
         throw fcs.CloudSyncException('云端账本文件不存在: $path');
@@ -1774,56 +1992,58 @@ class TransactionsSyncManager implements SyncService {
     }
 
     var importSkippedRecurring = 0;
-    final inserted = await db.transaction(() async {
-      // 竞态守卫：发现与导入之间本地可能新建了同 id 账本
-      final exists = await (db.select(db.ledgers)
-            ..where((l) => l.id.equals(meta.id)))
-          .getSingleOrNull();
-      if (exists != null) {
-        logger.warning('CloudSync', '账本 id=${meta.id} 已被本地占用，跳过导入');
+    var inserted = 0;
+    // 事务外解包一次：缓存命中/重新下载两条路径到这里都已非空
+    final payload = jsonStr!;
+    final newLedgerId = await db.transaction(() async {
+      // 竞态守卫：发现与导入之间本地可能已导入同身份账本
+      final existing = await _localLedgerForSlotKey(meta.slotKey);
+      if (existing != null) {
+        logger.warning(
+            'CloudSync', '账本 syncId=${meta.slotKey} 已被本地占用，跳过导入');
         return null;
       }
 
-      // 审计 S12：同名但 syncId 不同的本地账本存在时，改名导入
-      // （"账本（2）"），避免出现两个完全同名的账本干扰用户与后续
-      // 按名匹配逻辑；syncId 一致说明是同一本，正常导入。
+      // 审计 S12：能走到这里的同名行必然身份不同（同身份已在上方守卫
+      // 返回），一律改名导入（"账本（2）"），避免两个完全同名账本干扰
+      // 用户与后续按名匹配逻辑。
       final importNameRows = await (db.select(db.ledgers)
             ..where((l) => l.name.equals(meta.name)))
           .get();
-      final unrelatedSameName = importNameRows
-          .where((l) => l.syncId != meta.id.toString())
-          .toList();
-      final importName = unrelatedSameName.isEmpty
+      final importName = importNameRows.isEmpty
           ? meta.name
           : _dedupeLedgerName(importNameRows, meta.name);
 
-      await db.into(db.ledgers).insert(
+      final newId = await db.into(db.ledgers).insert(
             LedgersCompanion.insert(
-              id: drift.Value(meta.id),
               name: importName,
               currency: drift.Value(meta.currency),
               monthStartDay: drift.Value(meta.monthStartDay),
-              syncId: drift.Value(meta.id.toString()),
+              syncId: drift.Value(meta.slotKey),
             ),
           );
 
       // 从云端导入不写本地变更历史（P2-3），与下载恢复路径语义一致
-      final result = await importTransactionsJson(repo, meta.id, jsonStr!,
-          recordChanges: false);
+      final result =
+          await importTransactionsJson(repo, newId, payload,
+              recordChanges: false);
       importSkippedRecurring = result.skippedRecurring;
-      return result.inserted;
+      inserted = result.inserted;
+      return newId;
     });
 
-    _discoveredPayloads.remove(meta.id);
+    _discoveredPayloads.remove(meta.slotKey);
+    if (newLedgerId == null) return null;
+
     logger.info('CloudSync',
-        '云端账本导入完成: id=${meta.id}, name=${meta.name}, inserted=$inserted, skippedRecurring=$importSkippedRecurring');
+        '云端账本导入完成: localId=$newLedgerId, slotKey=${meta.slotKey}, name=${meta.name}, inserted=$inserted, skippedRecurring=$importSkippedRecurring');
     if (importSkippedRecurring > 0) {
       logger.warning('CloudSync',
           '导入时有 $importSkippedRecurring 笔同日周期实例被判重跳过，请核对源端明细');
     }
 
     // 附件二进制后台补齐(与下载恢复路径同款:不阻塞导入返回)
-    unawaited(enqueueMissingAttachmentJobs(meta.id)
+    unawaited(enqueueMissingAttachmentJobs(newLedgerId)
         .then((_) => drainAttachmentJobs()));
     return inserted;
   }
@@ -1858,16 +2078,18 @@ class _Semaphore {
   }
 }
 
-/// 云端账本元信息（发现阶段从 `ledger_<id>.json` payload 提取）
+/// 云端账本元信息（发现阶段从 `ledger_<slotKey>.json` payload 提取）
 class RemoteLedgerMeta {
-  final int id;
+  /// 云端槽位 key（= 源端账本 syncId；legacy 数字命名文件为 id 字符串）。
+  /// 导入侧以它作为新账本行的 syncId，保证跨设备身份稳定。
+  final String slotKey;
   final String name;
   final String currency;
   final int monthStartDay;
   final int txCount;
 
   const RemoteLedgerMeta({
-    required this.id,
+    required this.slotKey,
     required this.name,
     required this.currency,
     required this.monthStartDay,

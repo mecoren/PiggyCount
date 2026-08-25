@@ -1126,7 +1126,7 @@ void main() {
   group('云端账本发现（/prd/remote_ledger_discovery）', () {
     RemoteLedgerMeta _meta(int id, String name, {int txCount = 3}) =>
         RemoteLedgerMeta(
-          id: id,
+          slotKey: id.toString(),
           name: name,
           currency: 'CNY',
           monthStartDay: 1,
@@ -1192,7 +1192,7 @@ void main() {
       deps.ledgers = [_ledger(1, 'L1')];
       deps.statusByLedger = {1: _status(SyncDiff.inSync)};
       deps.remoteLedgerMetas = [_meta(2, 'A'), _meta(3, 'B')];
-      deps.importThrowForLedgerIds = {2};
+      deps.importThrowForSlotKeys = {'2'};
 
       await checker.runIfNeeded();
 
@@ -1362,7 +1362,7 @@ class _FakeDeps implements StartupSyncCheckerDeps {
   }
 
   @override
-  Future<void> uploadLedger({required int ledgerId}) async {
+  Future<void> uploadLedger({required int ledgerId, bool force = false}) async {
     uploadCallCount++;
     callSequence.add('upload:$ledgerId');
     uploadedLedgerIds.add(ledgerId);
@@ -1388,8 +1388,8 @@ class _FakeDeps implements StartupSyncCheckerDeps {
   /// importRemoteLedger 返回值（null = id 被占用跳过）
   int? importRemoteLedgerReturn = 0;
 
-  /// importRemoteLedger 抛异常的账本 id 集合
-  Set<int> importThrowForLedgerIds = {};
+  /// importRemoteLedger 抛异常的账本 slotKey 集合
+  Set<String> importThrowForSlotKeys = {};
 
   int discoverCallCount = 0;
   int importCallCount = 0;
@@ -1406,8 +1406,8 @@ class _FakeDeps implements StartupSyncCheckerDeps {
   Future<int?> importRemoteLedger(RemoteLedgerMeta meta) async {
     importCallCount++;
     lastImportedMetas.add(meta);
-    if (importThrowForLedgerIds.contains(meta.id)) {
-      throw Exception('import failed for ${meta.id}');
+    if (importThrowForSlotKeys.contains(meta.slotKey)) {
+      throw Exception('import failed for ${meta.slotKey}');
     }
     return importRemoteLedgerReturn;
   }
