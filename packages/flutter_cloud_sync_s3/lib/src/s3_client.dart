@@ -617,16 +617,16 @@ class S3Client {
 
     var uri = Uri.parse('$scheme://$host$portStr$path');
     if (queryParameters != null && queryParameters.isNotEmpty) {
-      // 与 s3_signature._createCanonicalRequest 保持逐字节一致的编码：
-      // 使用 Uri.encodeComponent（RFC 3986，空格 -> %20），而不是
-      // uri.replace(queryParameters:) 的 x-www-form-urlencoded 编码
-      // （空格 -> '+'）。否则带空格的 prefix 会使「落网查询串」与
-      // 「签名查询串」不一致，S3 SigV4 校验返回 403；
-      // 字面 '+'（如 base64 continuation-token）也会被错误解码为空格。
-      // uri.replace(query:) 接收已编码串，不会二次编码（已实测验证）。
+      // 与 s3_signature._createCanonicalRequest 保持逐字节一致（审计 S3-1）：
+      // 使用同一严格 RFC 3986 编码器，而不是 uri.replace(queryParameters:)
+      // 的 x-www-form-urlencoded 编码（空格 -> '+'）。否则带空格/子定界符
+      // 的查询值会使「落网查询串」与「签名查询串」不一致，S3 SigV4 校验
+      // 返回 403；字面 '+'（如 base64 continuation-token）也会被错误解码
+      // 为空格。uri.replace(query:) 接收已编码串，不会二次编码。
       final encodedQuery = queryParameters.entries
           .map((e) =>
-              '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
+              '${S3SignatureV4.encodePathComponentRfc3986(e.key)}='
+              '${S3SignatureV4.encodePathComponentRfc3986(e.value)}')
           .join('&');
       uri = uri.replace(query: encodedQuery);
     }
@@ -738,9 +738,11 @@ class S3Client {
   }
 
   /// URL 编码 Key（保留 /）
-  String _encodeKey(String key) {
-    return key.split('/').map(Uri.encodeComponent).join('/');
-  }
+  ///
+  /// 审计 S3-1：委托签名端的严格 RFC 3986 编码器，保证请求路径与
+  /// canonical URI 逐字节一致（Uri.encodeComponent 不转义子定界符，
+  /// 与签名端口径分裂会导致 403 SignatureDoesNotMatch）。
+  String _encodeKey(String key) => S3SignatureV4.encodeKeyRfc3986(key);
 
   /// 统一错误处理
   ///

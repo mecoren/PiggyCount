@@ -46,6 +46,14 @@ class S3Provider implements CloudProvider {
 
   @override
   Future<void> initialize(Map<String, dynamic> config) async {
+    // 审计 S3-24：initialize 前置校验。此前空 bucket/AK/SK 一路走到连接
+    // 探测，报出晦涩的服务端错误而非「配置缺失」。
+    if (!validateConfig(config)) {
+      throw CloudConfigurationException(
+          'Invalid configuration. Required non-empty keys: '
+          'endpoint, accessKey, secretKey, bucket');
+    }
+
     // 解析配置
     final rawEndpoint = config['endpoint'] as String? ?? '';
     final region = config['region'] as String? ?? 'us-east-1';
@@ -97,27 +105,62 @@ class S3Provider implements CloudProvider {
     // 避免大 bucket 全量列举浪费带宽和时间
     try {
       await _client!.listObjects(bucket: bucket, maxKeys: 1);
-    } on S3BucketNotFoundException catch (e) {
-      throw CloudConfigurationException(
-        'Bucket not found: ${e.bucket}. Please create the bucket first.',
-      );
-    } on S3AuthException catch (e) {
-      throw CloudConfigurationException(
-        'Authentication failed: ${e.message}. Please check your Access Key and Secret Key.',
-      );
-    } on S3NetworkException catch (e) {
-      throw CloudConfigurationException(
-        'Network error: ${e.message}. Please check your endpoint and network connection.',
-      );
     } catch (e) {
-      throw CloudConfigurationException(
-        'Failed to initialize S3: $e',
-      );
+      // 审计 S3-11：探测失败 = 半初始化状态，必须释放已创建的 client，
+      // 否则调用方丢弃 provider 后 httpClient 连接池泄漏（重复 initialize
+      // 的场景已由上方 S-M2 dispose 兜底，这里是首初始化失败路径）。
+      _teardown();
+      throw _classifyProbeFailure(e);
     }
 
     // 初始化服务
     _authService = S3AuthService(_client!, _bucket!);
     _storageService = S3StorageService(_client!, _bucket!, keyPrefix: keyPrefix);
+  }
+
+  /// 释放半初始化状态的资源（探测失败路径）
+  void _teardown() {
+    _client?.dispose();
+    _client = null;
+    _bucket = null;
+    _authService = null;
+    _storageService = null;
+  }
+
+  /// 把连接探测异常分类为面向用户的 [CloudConfigurationException]。
+  ///
+  /// 审计 S3-11：此前 ClockSkew（设备时钟偏差超 ±15min）落入通用分支被
+  /// 报成「配置错误」，用户排查方向完全被误导 —— 时钟问题改配置无用，
+  /// 必须提示校时。
+  static CloudConfigurationException _classifyProbeFailure(Object e) {
+    if (e is S3BucketNotFoundException) {
+      return CloudConfigurationException(
+        'Bucket not found: ${e.bucket}. Please create the bucket first.',
+      );
+    }
+    if (e is S3AuthException) {
+      return CloudConfigurationException(
+        'Authentication failed: ${e.message}. Please check your Access Key and Secret Key.',
+      );
+    }
+    if (e is S3ClockSkewException) {
+      return CloudConfigurationException(
+        'Device clock skew detected: ${e.message}. '
+        '请校准设备系统时间后重试（S3 要求客户端与服务端时钟偏差在 ±15 分钟内）。',
+      );
+    }
+    if (e is S3NetworkException) {
+      return CloudConfigurationException(
+        'Network error: ${e.message}. Please check your endpoint and network connection.',
+      );
+    }
+    if (e is S3PermissionDeniedException) {
+      return CloudConfigurationException(
+        'Permission denied: ${e.message}. '
+        '请确认 Access Key 对该 bucket 有读写权限（ListObjects 被拒）。',
+      );
+    }
+    return CloudConfigurationException('Failed to initialize S3: $e');
   }
 
   @override

@@ -63,15 +63,20 @@ void main() {
       expect(info.useSSL, isTrue);
     });
 
-    test('F8: 端口 0 不是合法连接目标，不作为 port 解析', () {
-      final info = parseS3Endpoint('minio.local:0');
-      // 拒绝后 host 保留原始输入、port 为 null，交由上层 URI/连接层暴露
-      expect(info.port, isNull);
+    test('审计 S3-5: 端口 0 配置期即报错（不再静默滞留 host）', () {
+      // 旧行为：静默忽略、端口滞留 host，延迟到首个请求才以裸
+      // FormatException 爆发。现在配置期给出明确 ArgumentError。
+      expect(
+        () => parseS3Endpoint('minio.local:0'),
+        throwsArgumentError,
+      );
     });
 
-    test('F8: 端口越界（>65535）不作为 port 解析', () {
-      final info = parseS3Endpoint('minio.local:99999');
-      expect(info.port, isNull);
+    test('审计 S3-5: 端口越界（>65535）配置期即报错', () {
+      expect(
+        () => parseS3Endpoint('minio.local:99999'),
+        throwsArgumentError,
+      );
     });
 
     test('F8: 方括号 IPv6 字面量（无端口）', () {

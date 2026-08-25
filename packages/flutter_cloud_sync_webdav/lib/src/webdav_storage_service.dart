@@ -25,6 +25,10 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
   /// list() 据此过滤上传中断残留的半成品，避免被下游当有效文件消费。
   static const _tempFileMarker = '.tmp.';
 
+  /// 审计 WD-1：降级交换流程的备份文件标记（`<name>.old.<毫秒>`）。
+  /// 备份清理失败时 list() 据此过滤，避免孤儿备份被下游当有效文件。
+  static const _backupFileMarker = '.old.';
+
   /// 包裹单次 WebDAV 操作，超时抛 [CloudStorageException]（带操作名），
   /// 与其他网络错误走同一异常通道，调用方无需新增捕获分支。
   ///
@@ -65,12 +69,18 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
     final fullPath = _buildPath(path);
     // 临时文件 + rename 实现原子写入，避免网络中断在远端留下损坏的半截文件。
     //
-    // SYNC-09 修复：改为「先 rename(overwrite) 再按需 remove」。
+    // SYNC-09 修复：改为「先 rename(overwrite) 再按需降级」。
     // 此前先 remove(fullPath) 再 rename，若 rename 失败（网络中断等）旧文件
-    // 已被删除 → 云端账本文件出现丢失窗口。现在优先直接覆盖 rename：
-    // rename 失败时旧文件仍在；仅当服务器不支持 MOVE 覆盖（409/412 等）
-    // 时才降级为先删目标再重试一次 —— 此时丢失窗口收窄到「怪异服务器 +
-    // 第二次 rename 也失败」的组合场景。
+    // 已被删除 → 云端账本文件出现丢失窗口。
+    //
+    // 审计 WD-1 二次修复：SYNC-09 的降级分支对**任意** rename 错误都会先
+    // remove(fullPath)，弱网下「删除成功、二次 rename 也失败」仍会把云端
+    // 唯一备份彻底删没。现在：
+    //   1. 只有错误明确指向「服务器不支持覆盖式 MOVE」（405/409/412）才降级，
+    //      其余错误一律原样上抛 —— 此时旧文件完好；
+    //   2. 降级本身改为无损交换：旧文件先挪到备份位 → 新文件落位 → 成功后
+    //      删备份。任一步失败都尽力把备份挪回原位，全程不存在
+    //      「目标已删、新未落位且无备份」的窗口。
     final tempPath = '$fullPath.tmp.${DateTime.now().millisecondsSinceEpoch}';
     try {
       // 确保父目录存在
@@ -84,14 +94,39 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
       try {
         await _op('rename', (_) => _client.rename(tempPath, fullPath, true));
       } catch (renameError) {
-        // 3. 降级：部分 WebDAV 服务器 MOVE 不支持覆盖，此时才先删目标
-        //    再重试一次。remove 失败（如目标本不存在）可忽略。
-        try {
-          await _op('remove', (t) => _client.remove(fullPath, t));
-        } catch (_) {
-          // 目标不存在或删除失败均可忽略，交由 rename 处理
+        // 3. 降级（仅限不支持覆盖 MOVE 的服务器）：交换式替换，见上方注释
+        if (!_isOverwriteUnsupported(renameError)) {
+          rethrow;
         }
-        await _op('rename', (_) => _client.rename(tempPath, fullPath, true));
+        final backupPath =
+            '$fullPath.old.${DateTime.now().millisecondsSinceEpoch}';
+        // 旧文件挪到备份位。此步失败则旧文件仍在原位，直接向上抛
+        // （外层 catch 清理临时文件即可，无数据风险）。
+        await _op('rename', (_) => _client.rename(fullPath, backupPath, false));
+        try {
+          // 新文件落位
+          await _op('rename', (_) => _client.rename(tempPath, fullPath, true));
+        } catch (swapError) {
+          // 落位失败：把备份挪回原位保住旧数据，再上抛原始错误
+          try {
+            await _op(
+                'rename', (_) => _client.rename(backupPath, fullPath, false));
+          } catch (restoreError) {
+            dev.log(
+                '[WebDAV] Error: failed to restore backup $backupPath -> $fullPath: $restoreError',
+                name: 'WebDAVStorage');
+          }
+          rethrow;
+        }
+        // 落位成功，清理备份。失败仅遗留孤儿备份文件（list 已过滤 .old.
+        // 标记，不会被下游当有效数据消费），不影响上传结果。
+        try {
+          await _op('remove', (t) => _client.remove(backupPath, t));
+        } catch (cleanupError) {
+          dev.log(
+              '[WebDAV] Warning: backup cleanup failed for $backupPath: $cleanupError',
+              name: 'WebDAVStorage');
+        }
       }
     } catch (e) {
       // 清理临时文件，避免远端残留半成品
@@ -168,6 +203,11 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
     } catch (e) {
       if (_isNotFound(e)) {
         // 文件已不存在，删除幂等成功
+      } else if (_isUnauthorized(e)) {
+        // 审计 WD-M1：凭据失效必须抛认证异常（与 upload/download/list/
+        // exists/getMetadata 及 S3 实现对齐），让上层引导用户改密码，
+        // 而不是报成笼统的存储故障。
+        throw CloudAuthException('WebDAV 认证失败（账号或密码错误）', e);
       } else {
         throw CloudStorageException('Delete failed: $e', e);
       }
@@ -194,13 +234,21 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
               // M15：上传中断残留的临时文件（upload 用 `<name>.tmp.<毫秒>`，
               // PUT 后 MOVE 前崩溃即永久滞留）不得混进列表 —— 下游列举型
               // 消费者（备份/恢复候选）会把它当有效文件展示甚至恢复半截数据
-              !(file.name?.contains(_tempFileMarker) ?? false))
+              !(file.name?.contains(_tempFileMarker) ?? false) &&
+              // 审计 WD-1：降级交换后清理失败的备份文件同理过滤
+              !(file.name?.contains(_backupFileMarker) ?? false))
           .map((file) {
         final name = file.name ?? '';
         // 构造相对于 remotePath 的路径，供下游 _buildPath 重新拼接。
         // file.path 为 null 时回退到基于 name 的拼接，而非回退到目录路径，
         // 避免下游把目录路径当成文件路径处理。
-        final relativePath = path.isEmpty ? name : '$path/$name';
+        // 审计 WD-L2：入参带尾斜杠时归一化，避免产出 `backups//x.json`
+        // 这类双斜杠脏路径直接暴露给消费方。
+        final normalizedDir = path.endsWith('/') && path.length > 1
+            ? path.substring(0, path.length - 1)
+            : path;
+        final relativePath =
+            normalizedDir.isEmpty ? name : '$normalizedDir/$name';
         return CloudFile(
           name: name,
           path: relativePath,
@@ -280,16 +328,20 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
         metadata: customMetadata,
       );
     } catch (e) {
-      // 401/403 认证失败需原样抛出：下方 not-found 分支会把其余异常
-      // 上抛为通用存储故障，认证错误必须可区分以引导用户改凭据
+      // 审计 WD-M2：「确认不存在」必须最先判定 —— CloudFileNotFoundException
+      // 由本方法内部抛出、不携带结构化状态码，若先走 _isUnauthorized 的
+      // 字符串兜底，文件路径含 forbidden/401 等子串时（如 notes/forbidden.txt）
+      // 普通的「文件不存在」会被误判成认证失败，UI 误导用户去改密码。
+      if (_isNotFound(e) || e is CloudFileNotFoundException) {
+        return null;
+      }
+      // 401/403 认证失败需原样抛出：下方其余异常上抛为通用存储故障，
+      // 认证错误必须可区分以引导用户改凭据
       if (_isUnauthorized(e)) {
         throw CloudAuthException('WebDAV 认证失败（账号或密码错误）', e);
       }
       // 仅「确认不存在」收敛为 null（接口契约：getMetadata 缺失返回 null）；
       // 超时/网络等其余故障一律上抛，绝不静默变成「云端无元数据」
-      if (_isNotFound(e) || e is CloudFileNotFoundException) {
-        return null;
-      }
       throw CloudStorageException('Get metadata failed: $e', e);
     }
   }
@@ -299,54 +351,80 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
     return PathHelper.join([_remotePath, path]);
   }
 
-  /// 统一判断 WebDAV 404 错误，优先使用结构化状态码，字符串匹配仅作兜底。
+  /// 提取异常携带的结构化 HTTP 状态码（dio 系异常），无则返回 null。
   ///
   /// webdav_client 内部抛出的是 dio 的 DioException（带 response.statusCode），
   /// 这里用 dynamic 访问 response 字段以避免引入 dio 直接依赖。
+  int? _statusCodeOf(Object e) {
+    try {
+      final dynamic dyn = e;
+      final dynamic response = dyn.response;
+      if (response != null) {
+        final dynamic code = response.statusCode;
+        if (code is int) return code;
+      }
+    } catch (_) {
+      // 非 dio 异常类型，无 response 字段
+    }
+    return null;
+  }
+
+  /// 统一判断 WebDAV 404 错误，优先使用结构化状态码，字符串匹配仅作兜底。
   ///
   /// M5：只要异常携带了结构化 response，就**只**按状态码判定 —— 字符串
   /// 兜底仅在完全无结构化信息时使用。之前「有 response 但非 404」也会
   /// 落到字符串匹配，而 DioException.toString() 内嵌完整 URL：文件名含
   /// "404"/"not found" 子串时（如 backup404.json），任何网络层错误都会
   /// 被误判为文件不存在 → exists()=false → 触发覆盖上传等危险操作。
+  ///
+  /// 审计 WD-M3：无结构化信息的异常（SocketException 等）消息常内嵌
+  /// host:port（如 `10.0.40.35:8404`），**纯数字子串匹配必然误判**
+  /// （8404 含 "404"、端口含 "401"/"403" 同理）。故兜底只做明确的措辞
+  /// 匹配，彻底移除数字子串 —— 连接层失败本就不该被归类为任何 HTTP 状态。
   bool _isNotFound(Object e) {
-    try {
-      final dynamic dyn = e;
-      final dynamic response = dyn.response;
-      if (response != null) {
-        return response.statusCode == 404;
-      }
-    } catch (_) {
-      // 非 dio 异常类型，无 response 字段，进入字符串兜底
+    final code = _statusCodeOf(e);
+    if (code != null) {
+      return code == 404;
     }
-    // 兜底：仅当确实无结构化信息时使用字符串匹配
+    // 兜底：仅当确实无结构化信息时使用措辞匹配（不做数字子串匹配）
     final msg = e.toString().toLowerCase();
-    return msg.contains('404') ||
-        msg.contains('not found') ||
+    return msg.contains('not found') ||
         msg.contains('does not exist') ||
-        msg.contains('no such');
+        msg.contains('no such file') ||
+        msg.contains('no such resource');
   }
 
   /// 统一判断 WebDAV 401/403 认证失败，策略与 [_isNotFound] 一致：
-  /// 有结构化状态码只看状态码；字符串兜底仅限无结构化信息时（M5 同款）。
+  /// 有结构化状态码只看状态码；字符串兜底仅限无结构化信息时的措辞匹配，
+  /// 不做纯数字子串匹配（WD-M3 同款理由）。
   ///
   /// 认证失败与网络故障对用户的处置动作完全不同（改凭据 vs 查网络），
   /// 必须区分抛出 [CloudAuthException]，避免上层统一报「请检查网络」。
   bool _isUnauthorized(Object e) {
-    try {
-      final dynamic dyn = e;
-      final dynamic response = dyn.response;
-      if (response != null) {
-        return response.statusCode == 401 || response.statusCode == 403;
-      }
-    } catch (_) {
-      // 非 dio 异常类型，无 response 字段，进入字符串兜底
+    final code = _statusCodeOf(e);
+    if (code != null) {
+      return code == 401 || code == 403;
     }
     final msg = e.toString().toLowerCase();
-    return msg.contains('401') ||
-        msg.contains('403') ||
-        msg.contains('unauthorized') ||
+    return msg.contains('unauthorized') ||
         msg.contains('forbidden');
+  }
+
+  /// 判断 rename(MOVE overwrite=true) 失败是否源于「服务器不支持覆盖式 MOVE」。
+  ///
+  /// 仅这类错误允许进入 uploadBinary 的交换式降级流程；网络中断、超时等
+  /// 瞬时故障绝不能触发降级（审计 WD-1）。有结构化状态码只认 405/409/412；
+  /// 字符串兜底只匹配方法/前置条件类明确措辞，不匹配纯数字（避免撞上
+  /// 异常消息内嵌的 URL 端口等子串）。
+  bool _isOverwriteUnsupported(Object e) {
+    final code = _statusCodeOf(e);
+    if (code != null) {
+      return code == 405 || code == 409 || code == 412;
+    }
+    final msg = e.toString().toLowerCase();
+    return msg.contains('method not allowed') ||
+        msg.contains('precondition failed') ||
+        msg.contains('conflict');
   }
 
   /// Ensures a directory exists, creating it if necessary.

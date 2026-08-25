@@ -85,6 +85,10 @@ class WebDAVProvider implements CloudProvider {
     }
 
     try {
+      // 审计 WD-M7：创建前先释放旧实例（重复 initialize 场景），
+      // 避免旧 dio client 连接池泄漏。
+      await _disposeQuietly();
+
       // Create WebDAV client
       _client = webdav.newClient(
         url,
@@ -150,10 +154,38 @@ class WebDAVProvider implements CloudProvider {
     } on CloudAuthException {
       // 保真透传：认证失败不能被包装成 CloudConfigurationException，
       // 否则调用方无法区分「密码错误」与「配置格式错误」
+      await _disposeQuietly();
+      rethrow;
+    } on CloudStorageException {
+      // 审计 WD-M8：连接超时等存储层异常由内层显式抛出（带「请检查网络」
+      // 指引），不能再被下方 catch-all 包装成「配置无效」—— 网络问题
+      // 改配置无用，语义错位会误导排查方向。
+      await _disposeQuietly();
       rethrow;
     } catch (e) {
+      // 审计 WD-M7：初始化失败必须释放已创建的 client，否则调用方丢弃
+      // provider 后 dio 连接池泄漏。
+      await _disposeQuietly();
       throw CloudConfigurationException(
           'Failed to initialize WebDAV: $e', e);
+    }
+  }
+
+  /// 释放当前持有的底层资源（dio client + 服务实例），错误静默忽略。
+  ///
+  /// 供 dispose 与 initialize 失败/重复调用路径复用（审计 WD-M7）。
+  Future<void> _disposeQuietly() async {
+    _authService?.dispose();
+    _authService = null;
+    _storageService = null;
+    final client = _client;
+    _client = null;
+    if (client != null) {
+      try {
+        client.c.close(force: true);
+      } catch (_) {
+        // 关闭失败不影响主流程
+      }
     }
   }
 
@@ -178,53 +210,52 @@ class WebDAVProvider implements CloudProvider {
 
   @override
   Future<void> dispose() async {
-    _authService?.dispose();
-    _authService = null;
-    _storageService = null;
-    // 关闭底层 dio 客户端，释放 HTTP 连接资源
-    _client?.c.close(force: true);
-    _client = null;
+    await _disposeQuietly();
+  }
+
+  /// 提取异常携带的结构化 HTTP 状态码（dio 系异常），无则返回 null。
+  int? _statusCodeOf(Object e) {
+    try {
+      final dynamic dyn = e;
+      final dynamic response = dyn.response;
+      if (response != null) {
+        final dynamic code = response.statusCode;
+        if (code is int) return code;
+      }
+    } catch (_) {
+      // 非 dio 异常类型，无 response 字段
+    }
+    return null;
   }
 
   /// 统一判断 WebDAV 404 错误，优先使用结构化状态码，字符串匹配仅作兜底。
   ///
   /// 与 WebDAVStorageService._isNotFound 逻辑保持一致（M5）：只要异常
-  /// 携带结构化 response 就只按状态码判定，字符串兜底仅在完全无结构化
-  /// 信息时使用 —— 否则 URL 含 "404" 子串的网络错误会被误判。
+  /// 携带结构化 response 就只按状态码判定。字符串兜底不做纯数字子串
+  /// 匹配（审计 WD-M3：无结构化信息的异常消息常内嵌 host:port，
+  /// `:8404` 会撞出 "404"），仅做明确措辞匹配。
   bool _isNotFound(Object e) {
-    try {
-      final dynamic dyn = e;
-      final dynamic response = dyn.response;
-      if (response != null) {
-        return response.statusCode == 404;
-      }
-    } catch (_) {
-      // 非 dio 异常类型，无 response 字段，进入字符串兜底
+    final code = _statusCodeOf(e);
+    if (code != null) {
+      return code == 404;
     }
     final msg = e.toString().toLowerCase();
-    return msg.contains('404') ||
-        msg.contains('not found') ||
+    return msg.contains('not found') ||
         msg.contains('does not exist') ||
-        msg.contains('no such');
+        msg.contains('no such file') ||
+        msg.contains('no such resource');
   }
 
   /// 统一判断 WebDAV 401/403 认证失败，策略与 [_isNotFound] 一致：
-  /// 有结构化状态码只看状态码；字符串兜底仅限无结构化信息时（M5 同款）。
+  /// 有结构化状态码只看状态码；字符串兜底仅限无结构化信息时的措辞匹配
+  /// （WD-M3 同款理由）。
   bool _isUnauthorized(Object e) {
-    try {
-      final dynamic dyn = e;
-      final dynamic response = dyn.response;
-      if (response != null) {
-        return response.statusCode == 401 || response.statusCode == 403;
-      }
-    } catch (_) {
-      // 非 dio 异常类型，无 response 字段，进入字符串兜底
+    final code = _statusCodeOf(e);
+    if (code != null) {
+      return code == 401 || code == 403;
     }
     final msg = e.toString().toLowerCase();
-    return msg.contains('401') ||
-        msg.contains('403') ||
-        msg.contains('unauthorized') ||
-        msg.contains('forbidden');
+    return msg.contains('unauthorized') || msg.contains('forbidden');
   }
 
   /// 审计 S23：识别重定向（3xx）。followRedirects=false 后 dio 会把

@@ -18,12 +18,12 @@ class WebDAVAuthService implements CloudAuthService {
       email: '$username@webdav',
     );
 
-    // Create broadcast stream that sends current state on listen
+    // Create broadcast stream that sends current state on listen.
+    // 审计 WD-L9：无条件重放当前状态 —— 此前 signOut 后（_currentUser ==
+    // null）新订阅者收不到任何事件，UI 永远等不到初始登录态。
     _authStateController = StreamController<CloudUser?>.broadcast(
       onListen: () {
-        if (_currentUser != null) {
-          _authStateController.add(_currentUser);
-        }
+        _authStateController.add(_currentUser);
       },
     );
   }
@@ -40,8 +40,12 @@ class WebDAVAuthService implements CloudAuthService {
 
   @override
   Future<void> signOut() async {
+    // 审计 WD-L9：dispose 后调用不再抛 StateError（controller 已关闭，
+    // add 会崩），静默幂等即可。
     _currentUser = null;
-    _authStateController.add(null);
+    if (!_authStateController.isClosed) {
+      _authStateController.add(null);
+    }
   }
 
   @override

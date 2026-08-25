@@ -77,10 +77,19 @@ S3EndpointInfo parseS3Endpoint(String endpoint, {bool? useSSL, int? port}) {
     final lastColon = value.lastIndexOf(':');
     final candidatePort = int.tryParse(value.substring(lastColon + 1));
     // 校验端口范围（1-65535）：0 不是合法的连接目标端口，拒绝越界值
-    // 避免构造非法 URI（F8）
+    // 避免构造非法 URI（F8）。
+    // 审计 S3-5：非法端口此前被静默忽略（滞留 host），延迟到首个请求才以
+    // 裸 FormatException 爆发。配置期即给出明确错误。
     if (candidatePort != null && _isValidPort(candidatePort)) {
       host = value.substring(0, lastColon);
       finalPort = candidatePort;
+    } else {
+      throw ArgumentError.value(
+        endpoint,
+        'endpoint',
+        'invalid port "${value.substring(lastColon + 1)}" '
+            '(expected an integer in 1-65535)',
+      );
     }
   }
 

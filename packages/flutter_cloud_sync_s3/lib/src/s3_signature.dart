@@ -94,15 +94,36 @@ class S3SignatureV4 {
     return mutableHeaders;
   }
 
-  /// 创建规范请求（Canonical Request）
+  /// RFC 3986 严格编码单个路径段/查询分量：仅保留 unreserved 字符
+  /// （A-Za-z0-9 - . _ ~），其余字节一律转义为 %XX（大写十六进制）。
   ///
-  /// ⚠️ 键约束（审计 F8）：canonicalUri 取 [Uri.path]，即**已解码**形态。
-  /// AWS SigV4 规范要求签 URI-encoded path；本实现成立的前提是对象键
-  /// 仅含 URL 安全字符（当前业务满足：槽位 key 为 UUID/纯数字、附件为
-  /// sha256 hex，见 app 层 pathForLedger / pathForAttachmentBin）。
-  /// 若未来允许非 ASCII 或空格等字符进入键名，必须改为对每个路径段
-  /// 做 RFC 3986 编码后签名（保留 '/'），否则服务端校验将
-  /// SignatureDoesNotMatch。
+  /// 审计 S3-1：此前签名端取 [Uri.path]（解码形态）、请求端用
+  /// Uri.encodeComponent（不转义 ! ' ( ) * 等子定界符），两侧口径不一致
+  /// —— key 含子定界符/空格/非 ASCII 时，服务端按线上原始路径复算的
+  /// canonical request 与本地签名不符，恒报 403 SignatureDoesNotMatch。
+  /// 统一为严格编码后「线上所发 = 签名所见」，且 unreserved 化的路径
+  /// 不给服务端任何归一化空间（S3 对 SigV4 不做路径规范化）。
+  static String encodePathComponentRfc3986(String component) {
+    const unreserved =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+    final out = StringBuffer();
+    for (final b in utf8.encode(component)) {
+      final ch = String.fromCharCode(b);
+      out.write(unreserved.contains(ch)
+          ? ch
+          : '%${b.toRadixString(16).toUpperCase().padLeft(2, '0')}');
+    }
+    return out.toString();
+  }
+
+  /// 编码整条对象键：按 / 分段各自编码，分隔符原样保留。
+  ///
+  /// 签名端（[_createCanonicalRequest]）与请求端（S3Client._buildUri）
+  /// 必须使用同一函数，保证 canonical URI 与线上路径逐字节一致。
+  static String encodeKeyRfc3986(String key) =>
+      key.split('/').map(encodePathComponentRfc3986).join('/');
+
+  /// 创建规范请求（Canonical Request）
   String _createCanonicalRequest({
     required String method,
     required Uri uri,
@@ -110,14 +131,21 @@ class S3SignatureV4 {
     required String payloadHash,
   }) {
     // Canonical URI
-    final canonicalUri = uri.path.isEmpty ? '/' : uri.path;
+    //
+    // 审计 S3-1：uri.path 是「已解码」形态，直接参与签名会与线上编码
+    // 路径不一致。这里对每段重新做严格 RFC 3986 编码；请求 URL 由
+    // S3Client 用同一编码器构造，两侧逐字节一致。
+    final canonicalUri = uri.path.isEmpty
+        ? '/'
+        : encodeKeyRfc3986(uri.path);
 
     // Canonical Query String
+    // 同样用严格编码器（encodeComponent 会保留子定界符，造成口径分裂）。
     final sortedParams = uri.queryParameters.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
     final canonicalQuery = sortedParams
-        .map((e) => '${Uri.encodeComponent(e.key)}='
-                    '${Uri.encodeComponent(e.value)}')
+        .map((e) => '${encodePathComponentRfc3986(e.key)}='
+                    '${encodePathComponentRfc3986(e.value)}')
         .join('&');
 
     // Canonical Headers (只包含签名相关的 headers)

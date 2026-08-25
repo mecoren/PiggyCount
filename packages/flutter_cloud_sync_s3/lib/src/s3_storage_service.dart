@@ -19,7 +19,7 @@ class S3StorageService implements CloudStorageService, BinaryCapableStorage {
   final String keyPrefix;
 
   S3StorageService(this.client, this.bucket, {String keyPrefix = ''})
-      : keyPrefix = _normalizePrefix(keyPrefix);
+      : keyPrefix = _normalizePrefix(_validatePrefix(keyPrefix));
 
   /// 认证/权限类异常转 [CloudAuthException]，保持语义保真（与 WebDAV 修复同款）
   ///
@@ -38,6 +38,25 @@ class S3StorageService implements CloudStorageService, BinaryCapableStorage {
     if (prefix.isEmpty) return '';
     return prefix.endsWith('/') ? prefix : '$prefix/';
   }
+
+  /// 审计 S3-22：前缀自身校验。含 `..` 段可逃逸前缀隔离访问其他应用对象；
+  /// 前导 `/` 会拼出 `//xxx` 双斜杠 key 使对象名错乱。构造期即拒绝，
+  /// 不等到首个请求才以晦涩的服务端错误暴露。
+  static String _validatePrefix(String prefix) {
+    if (prefix.isEmpty) return prefix;
+    if (prefix.startsWith('/')) {
+      throw ArgumentError.value(
+          prefix, 'keyPrefix', 'must not start with "/"');
+    }
+    _assertNoTraversal(prefix, 'keyPrefix');
+    return prefix;
+  }
+
+  /// 审计 S3-12：进程内自增计数器，参与下载临时文件名构造。此前固定使用
+  /// `$localPath.tmp`，同一目标的并发下载会互相覆盖对方写了一半的 tmp，
+  /// 先完成者 rename 发布的可能是对方截断的数据。时间戳 + 序号保证
+  /// 同进程内每次下载独占自己的 tmp 文件。
+  static int _tempSeq = 0;
 
   Future<void> uploadFile(String localPath, String remotePath) async {
     try {
@@ -75,13 +94,24 @@ class S3StorageService implements CloudStorageService, BinaryCapableStorage {
       );
 
       // 原子写入：先写临时文件再 rename 替换，避免下载中途异常
-      // 导致目标文件被截断/损坏，使原有可用数据丢失
+      // 导致目标文件被截断/损坏，使原有可用数据丢失。
+      // 审计 S3-12：tmp 文件名加入时间戳+序号，并发下载同一目标时
+      // 各自独立，不再互相覆盖半成品。
       final file = File(localPath);
       await file.parent.create(recursive: true);
-      final tempPath = '$localPath.tmp';
+      final tempPath =
+          '$localPath.tmp.${DateTime.now().microsecondsSinceEpoch}_${_tempSeq++}';
       final tempFile = File(tempPath);
-      await tempFile.writeAsBytes(bytes);
-      await tempFile.rename(localPath);
+      try {
+        await tempFile.writeAsBytes(bytes);
+        await tempFile.rename(localPath);
+      } catch (_) {
+        // rename 失败时尽力清理本次的 tmp，避免残留垃圾文件
+        try {
+          if (await tempFile.exists()) await tempFile.delete();
+        } catch (_) {}
+        rethrow;
+      }
     } on S3ObjectNotFoundException catch (e) {
       throw CloudStorageException('File not found: ${e.key}');
     } on S3AuthException catch (e) {
@@ -352,11 +382,20 @@ class S3StorageService implements CloudStorageService, BinaryCapableStorage {
   /// S3 的 Key 不应该以 / 开头；前置前缀实现 bucket 内目录隔离。
   String _buildKey(String path) {
     var key = path.startsWith('/') ? path.substring(1) : path;
-    // 拒绝路径遍历尝试：含 .. 的路径可能逃逸 keyPrefix 隔离，
-    // 访问到其他应用/前缀下的对象，造成越权读写
-    if (key.contains('..')) {
-      throw CloudStorageException('Invalid path containing ..: $path');
-    }
+    // 拒绝路径遍历尝试：`..` 段可能逃逸 keyPrefix 隔离，访问到其他
+    // 应用/前缀下的对象，造成越权读写
+    _assertNoTraversal(key, 'path');
     return keyPrefix.isEmpty ? key : '$keyPrefix$key';
+  }
+
+  /// 审计 S3-21：按 `/` 分段后存在恰为 `..` 的段才拒绝。此前对整条路径做
+  /// `contains('..')` 子串匹配，会误伤 `ledger..backup.json` 等合法文件名。
+  static void _assertNoTraversal(String value, String field) {
+    for (final seg in value.split('/')) {
+      if (seg == '..') {
+        throw CloudStorageException(
+            'Invalid $field containing ".." path segment: $value');
+      }
+    }
   }
 }
