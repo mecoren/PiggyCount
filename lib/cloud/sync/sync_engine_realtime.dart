@@ -645,6 +645,23 @@ extension SyncEngineRealtime on SyncEngine {
       ledgerExternalId,
       ...txs.map((t) => t.syncId).whereType<String>(),
     ];
+    // 审计 L2：与 deleteLedger S9 口径对齐 —— 该账本名下的 budgets /
+    // recurrings / accounts 的水位行同样要清，否则残留行无限累积。
+    for (final row in await (db.select(db.budgets)
+          ..where((b) => b.ledgerId.equals(localId)))
+        .get()) {
+      if (row.syncId != null) watermarkSyncIds.add(row.syncId!);
+    }
+    for (final row in await (db.select(db.recurringTransactions)
+          ..where((r) => r.ledgerId.equals(localId)))
+        .get()) {
+      if (row.syncId != null) watermarkSyncIds.add(row.syncId!);
+    }
+    for (final row in await (db.select(db.accounts)
+          ..where((a) => a.ledgerId.equals(localId)))
+        .get()) {
+      if (row.syncId != null) watermarkSyncIds.add(row.syncId!);
+    }
     if (watermarkSyncIds.isNotEmpty) {
       await (db.delete(db.entityChangeWatermarks)
             ..where((w) => w.syncId.isIn(watermarkSyncIds)))

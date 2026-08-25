@@ -151,10 +151,15 @@ class ImportRateOverride {
   final String quoteCurrency;
   final double rate;
 
+  /// 审计 TBL-M3：快照携带的跨设备身份锚点。此前导出写、解析丢，
+  /// 恢复端身份重建为新 UUID，push/pull 的实体映射断裂。
+  final String? syncId;
+
   const ImportRateOverride({
     required this.baseCurrency,
     required this.quoteCurrency,
     required this.rate,
+    this.syncId,
   });
 }
 
@@ -1575,7 +1580,35 @@ Future<({int inserted, int deletedDup, int skippedRecurring})?>
   // 清空 + 导入包裹同一事务：导入失败则清空一并回滚，本地不会被部分清空。
   // importTransactionsJson 内部事务作为 savepoint 嵌套。
   // recordChanges: false —— 恢复不应写入本地变更历史（P2-3）
-  final deleted = await db.transaction(() async {
+  //
+  // 审计 TBL-S1/M5 加固：全程包 withRecordingSuppressed。此前仅交易显式
+  // 关闭了记录，快照内部补建的账户/分类（repo.createAccount 等）与汇率
+  // 覆盖 upsert（setOverride）仍会无条件回流 local_changes，成为推回
+  // server 的幻影变更。抑制开关在 tracker 层统一拦截所有 record*Change，
+  // 与 sync_diff_service.applySyncChanges 的做法对齐。
+  Future<(int, ({int inserted, int skippedRecurring}))> runTx() =>
+      _restoreLedgerFromJsonTx(db, repo, ledgerId, jsonStr, remoteImport);
+  final tracker = repo.changeTracker;
+  final deleted = tracker != null
+      ? await tracker.withRecordingSuppressed(runTx)
+      : await runTx();
+
+  return (
+    inserted: deleted.$2.inserted,
+    deletedDup: deleted.$1,
+    skippedRecurring: deleted.$2.skippedRecurring,
+  );
+}
+
+/// restoreLedgerFromJson 的事务体（抽出以便被抑制上下文包裹）。
+Future<(int, ({int inserted, int skippedRecurring}))>
+    _restoreLedgerFromJsonTx(
+        PiggyDatabase db,
+        BaseRepository repo,
+        int ledgerId,
+        String jsonStr,
+        ImportData remoteImport) async {
+  return await db.transaction(() async {
     // v9：账本身份回填。快照携带 ledgerSyncId 且本地行缺失时补写，
     // 让 legacy 账本在首次恢复后即获得跨设备稳定身份（后续 push 锚点、
     // 云端槽位命名都依赖它，不再退回本地数字 id）。
@@ -1583,6 +1616,9 @@ Future<({int inserted, int deletedDup, int skippedRecurring})?>
     final cleared = await clearLedgerTransactions(db, ledgerId);
     final result = await importTransactionsJson(repo, ledgerId, jsonStr,
         recordChanges: false);
+    // 审计 TBL-M3：快照携带的汇率覆盖 syncId 回写本地行。此前解析器丢弃
+    // syncId，恢复端身份重建为新 UUID，跨设备 push/pull 映射断裂。
+    await _restoreRateOverrideSyncIds(db, remoteImport.rateOverrides);
     // H3 真覆盖（镜像云端）：v8+ 快照把云端已删除的预算/周期/分类/标签
     // 传播到本地。旧实现只 upsert 不删除，「全量覆盖」后云端删掉的实体
     // 在本地永不消失。
@@ -1599,12 +1635,26 @@ Future<({int inserted, int deletedDup, int skippedRecurring})?>
     await _purgeStaleLocalChanges(db, ledgerId, remoteImport);
     return (cleared, result);
   });
+}
 
-  return (
-    inserted: deleted.$2.inserted,
-    deletedDup: deleted.$1,
-    skippedRecurring: deleted.$2.skippedRecurring,
-  );
+/// 审计 TBL-M3：按业务键 (base, quote) 把快照携带的 syncId 回写本地
+/// 汇率覆盖行。本地行缺失（导入被跳过等）静默跳过；已在恢复事务内调用。
+Future<void> _restoreRateOverrideSyncIds(
+    PiggyDatabase db, List<ImportRateOverride> overrides) async {
+  for (final o in overrides) {
+    final sid = o.syncId?.trim();
+    if (sid == null || sid.isEmpty) continue;
+    final baseUp = o.baseCurrency.toUpperCase();
+    final quoteUp = o.quoteCurrency.toUpperCase();
+    final row = await (db.select(db.exchangeRateOverrides)
+          ..where((t) =>
+              t.baseCurrency.equals(baseUp) & t.quoteCurrency.equals(quoteUp)))
+        .getSingleOrNull();
+    if (row == null || row.syncId == sid) continue;
+    await (db.update(db.exchangeRateOverrides)
+          ..where((t) => t.id.equals(row.id)))
+        .write(ExchangeRateOverridesCompanion(syncId: d.Value(sid)));
+  }
 }
 
 /// v9：账本身份回填。快照携带 ledgerSyncId 时对账本地行做保守收敛：
@@ -1648,12 +1698,13 @@ Future<void> _backfillLedgerSyncId(
 /// 范围：
 /// - ledger-scoped（transaction/budget/recurring/ledger/ledger_snapshot）：
 ///   该账本的全部未推送行 —— 快照整体替换了账本权威状态。
-/// - user-global（account/category/tag）：仅清「本次快照列出的实体」，
-///   快照外的全局改动未被触碰，仍然有效，保留。
+/// - user-global（account/category/tag/exchange_rate_override）：仅清
+///   「本次快照列出的实体」，快照外的全局改动未被触碰，仍然有效，保留。
 ///
-/// exchange_rate_override 刻意跳过：v8 快照的 rateOverrides 段无 syncId
-/// 锚点无法精确对齐；残留影响有界（S3b 守卫最多延迟一次远端覆盖更新，
-/// 下次编辑自愈），不值得为它做过宽清除。
+/// exchange_rate_override：v9 快照已携带 syncId 锚点（审计 TBL-M3 修复），
+/// 与 account/category/tag 同口径纳入清理。此前因解析器丢弃 syncId 无法
+/// 精确对齐而刻意跳过；残留影响有界（S3b 守卫最多延迟一次远端覆盖更新，
+/// 下次编辑自愈），现在可以精确清理了。
 Future<int> _purgeStaleLocalChanges(
     PiggyDatabase db, int ledgerId, ImportData cloud) async {
   var purged = await (db.delete(db.localChanges)
@@ -1664,6 +1715,7 @@ Future<int> _purgeStaleLocalChanges(
     ...cloud.accounts.map((a) => a.syncId).whereType<String>(),
     ...cloud.categories.map((c) => c.syncId).whereType<String>(),
     ...cloud.tags.map((t) => t.syncId).whereType<String>(),
+    ...cloud.rateOverrides.map((o) => o.syncId).whereType<String>(),
   };
   if (globalSyncIds.isNotEmpty) {
     purged += await (db.delete(db.localChanges)

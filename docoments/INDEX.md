@@ -96,7 +96,7 @@
 
 #### [07. 数据模型](file:///d:/DevTools/project/PiggyCount/docoments/07-data-model.md)
 
-**内容**：21 张 Drift 表完整 ER 图、字段说明、索引设计、schemaVersion=31 的迁移策略、`*SyncIdOverride` 字段设计、local_changes / sync_state / sync_pull_errors 表的作用。
+**内容**：Drift 表完整 ER 图、字段说明、索引设计、schemaVersion（当前 38，见 lib/data/db.dart）的迁移策略、`*SyncIdOverride` 字段设计、local_changes / entity_change_watermarks / sync_pull_errors 表的作用。（注：sync_state 表已于 v37 DROP，游标由 SyncEngine 内存 + 水位表承载。）
 
 **适合读者**：修改数据库结构前必读；排查数据问题参考。
 

@@ -17,6 +17,8 @@ import '../../data/db.dart';
 import '../../data/repositories/base_repository.dart';
 import '../../domain/encryption/encryption_service.dart';
 import '../../services/custom_icon_service.dart';
+import '../../services/data_import_service.dart'
+    show restoreLedgerFromJson;
 import '../../services/system/logger_service.dart';
 import '../../services/ui/avatar_service.dart';
 import '../sync_service.dart' as app;
@@ -322,12 +324,10 @@ class SyncEngine implements app.SyncService {
       final unpushedCount =
           (await changeTracker.getUnpushedChangesForLedger(ledgerId)).length;
 
-      // 检查云端是否有数据。path 用 ledger.syncId 跟 push 侧保持一致。
-      final ledgerRowStatus = await (db.select(db.ledgers)
-            ..where((l) => l.id.equals(ledgerId)))
-          .getSingleOrNull();
+      // 检查云端是否有数据。path 用 ledger.syncId 跟 push 侧保持一致
+      // （TSM-P18/P19：缺失时就地生成，不再回退数字 id）。
       final hasRemote = await provider.storage.exists(
-        path: ledgerRowStatus?.syncId ?? ledgerId.toString(),
+        path: await _resolveLedgerExternalId(ledgerId),
       );
 
       app.SyncDiff diff;
@@ -385,10 +385,17 @@ class SyncEngine implements app.SyncService {
   @override
   Future<void> deleteRemoteBackup({required int ledgerId}) async {
     // path 用 ledger.syncId，跟 push/upload 对齐。
-    final ledgerRow = await (db.select(db.ledgers)
+    // TSM-P18/P19：缺失时就地生成（不再回退数字 id）；账本行已本地删除时
+    // 无法得知旧槽位，告警后放弃（调用方链路此时应走 change push 清理）。
+    final row = await (db.select(db.ledgers)
           ..where((l) => l.id.equals(ledgerId)))
         .getSingleOrNull();
-    final path = ledgerRow?.syncId ?? ledgerId.toString();
+    if (row == null) {
+      logger.warning('SyncEngine',
+          'deleteRemoteBackup: 账本 $ledgerId 已不存在本地，跳过云端文件删除');
+      return;
+    }
+    final path = await _ensureLedgerSyncId(row);
     try {
       await provider.storage.delete(path: path);
     } catch (e) {
@@ -411,12 +418,9 @@ class SyncEngine implements app.SyncService {
   Future<({String? fingerprint, int? count, DateTime? exportedAt})>
       refreshCloudFingerprint({required int ledgerId}) async {
     // 对于增量同步，fingerprint 概念不太适用
-    // 返回基本信息即可
-    final ledgerRow = await (db.select(db.ledgers)
-          ..where((l) => l.id.equals(ledgerId)))
-        .getSingleOrNull();
+    // 返回基本信息即可。TSM-P18/P19：缺失时就地生成，不再回退数字 id。
     final hasRemote = await provider.storage.exists(
-      path: ledgerRow?.syncId ?? ledgerId.toString(),
+      path: await _resolveLedgerExternalId(ledgerId),
     );
     if (!hasRemote) {
       return (fingerprint: null, count: null, exportedAt: null);
@@ -573,20 +577,42 @@ class SyncEngine implements app.SyncService {
 
   /// fullPush 前确保 ledger.syncId 已生成。
   ///
-  /// 没 syncId 时 `pathForSnapshot` 会 fallback 到 `ledger.id.toString()`(短
-  /// 数字串如 "2"),走两个失败路径:
+  /// 没 syncId 时快照槽位会 fallback 到 `ledger.id.toString()`(短数字串如
+  /// "2"),走两个失败路径:
   /// - `writeCreateLedger` 的 `WriteLedgerCreateRequest.ledger_id` 校验 min_length=3
   /// - server 端 ledger.external_id 被写成 int id 字符串,跨设备时同一账本
   ///   external_id 会分裂(A 设备的 syncId=UUID,B 设备的 syncId=int)
   ///
-  /// 这里在 fullPush 入口做最后兜底,生成 UUID 写回。
-  Future<void> _ensureLedgerSyncId(Ledger ledger) async {
-    if (ledger.syncId != null && ledger.syncId!.length >= 3) return;
+  /// 这里在 fullPush 入口做最后兜底,生成 UUID 写回。返回生效的身份串。
+  Future<String> _ensureLedgerSyncId(Ledger ledger) async {
+    final current = ledger.syncId?.trim() ?? '';
+    if (current.length >= 3) return current;
     final newSyncId = _uuid.v4();
     await (db.update(db.ledgers)..where((l) => l.id.equals(ledger.id)))
         .write(LedgersCompanion(syncId: d.Value(newSyncId)));
     logger.info(
         'SyncEngine', 'fullPush 前补生成 ledger.syncId: ${ledger.id} → $newSyncId');
+    return newSyncId;
+  }
+
+  /// 解析账本的云端身份（syncId）。
+  ///
+  /// 审计 TSM-P18/P19 同款根治（开发版无历史数据）：此前各读路径用
+  /// `syncId ?? ledgerId.toString()` 兜底 —— 数字 id 跨设备无意义、回填后
+  /// 槽位漂移。现在统一走本方法：缺失或过短（legacy 残留）时就地生成并
+  /// 持久化 UUID 后返回，全引擎身份口径单一。
+  Future<String> _resolveLedgerExternalId(int ledgerId) async {
+    final row = await (db.select(db.ledgers)
+          ..where((l) => l.id.equals(ledgerId)))
+        .getSingleOrNull();
+    if (row != null) {
+      return _ensureLedgerSyncId(row);
+    }
+    // 账本行不存在：无行可写，返回生成值仅供只读探测路径使用
+    final generated = _uuid.v4();
+    logger.info('SyncEngine',
+        '_resolveLedgerExternalId: 账本 $ledgerId 不存在，返回临时身份');
+    return generated;
   }
 
   /// 首次登录 / app 启动时从 server 拉全部账本写本地 Drift。
@@ -1686,9 +1712,10 @@ class SyncEngine implements app.SyncService {
   }
 
   // 附件相关方法搬到 sync_engine_attachments.dart 这个 part 文件:
-  //   _resetAttachmentCloudRefs / _uploadCategoryIcons / uploadAttachments
+  //   _resetAttachmentCloudRefs / uploadAttachments
   //   downloadAttachments / _getAttachmentFile / _cleanupTxAttachmentFilesOnDisk
   //   _cleanupCategoryIconFilesOnDisk
+  //   （原 _uploadCategoryIcons 已删：图标上传前置进 _serializeEntityForPush）
 
   /// 新设备全量拉取。
   ///
@@ -1723,30 +1750,41 @@ class SyncEngine implements app.SyncService {
     logger.info('SyncEngine', '开始全量拉取 ledger=$ledgerId');
 
     // path 对齐 fullPush 上传时用的 ledger.syncId。
-    final ledgerRow = await (db.select(db.ledgers)
-          ..where((l) => l.id.equals(ledgerId)))
-        .getSingleOrNull();
-    final path = ledgerRow?.syncId ?? ledgerId.toString();
+    // TSM-P18/P19：缺失时就地生成，不再回退数字 id。
+    final path = await _resolveLedgerExternalId(ledgerId);
     final data = await provider.storage.download(path: path);
     if (data == null) {
       logger.warning('SyncEngine', '全量拉取: 服务端无数据');
       return (inserted: 0, deletedDup: 0);
     }
 
-    // 复用 importTransactionsJson;recordChanges:false 阻止反向回流:
-    // 从云端拉下来的数据**不应该**再以 local_changes 形式推回去,否则 10k
-    // 条 fullPull 会触发 SyncCoordinator 反向 sync,白白多一轮 10k push。
-    final result = await importTransactionsJson(
-      repo,
-      ledgerId,
-      data,
-      recordChanges: false,
-    );
-    logger.info('SyncEngine',
-        '全量拉取完成: inserted=${result.inserted}, skippedRecurring=${result.skippedRecurring}');
-    if (result.skippedRecurring > 0) {
+    // 改用公共恢复管线（restoreLedgerFromJson）替换裸 importTransactionsJson：
+    //
+    // 审计 TBL-S1（幻影回流）：此前仅交易传了 recordChanges:false，快照内
+    // 补建的账户/分类经 repo 包装层（createAccount/createCategory）无条件
+    // 回流 local_changes —— fullPull 后全部作为幻影变更推回 server，
+    // sync_changes 膨胀且 S3b 守卫持续拦截这些实体的真实远端更新。恢复
+    // 管线的 W4 清理会在同事务内清掉这批回流行。
+    //
+    // 审计 TBL-S2（W4 缺失）：fullPull 前已存在的未推送 delete change 若
+    // 不清理，下次 push 会把刚从云端拉回的数据删掉并传播到所有设备；残留
+    // 行还会让该实体的后续远端更新被永久拦截。
+    //
+    // 同时获得 P1-1 空快照守卫与 H3 云端删除镜像，语义与
+    // TransactionsSyncManager.downloadAndRestoreToCurrentLedger 对齐
+    // （同一单一事实源）。
+    final restored = await restoreLedgerFromJson(
+        db: db, repo: repo, ledgerId: ledgerId, jsonStr: data);
+    if (restored == null) {
       logger.warning('SyncEngine',
-          '全量拉取有 ${result.skippedRecurring} 笔同日周期实例被判重跳过，请核对源端明细');
+          '全量拉取：云端快照为空且本地非空，拒绝空覆盖（P1-1），保留本地现状');
+      return (inserted: 0, deletedDup: 0);
+    }
+    logger.info('SyncEngine',
+        '全量拉取完成: inserted=${restored.inserted}, cleared=${restored.deletedDup}, skippedRecurring=${restored.skippedRecurring}');
+    if (restored.skippedRecurring > 0) {
+      logger.warning('SyncEngine',
+          '全量拉取有 ${restored.skippedRecurring} 笔同日周期实例被判重跳过，请核对源端明细');
     }
 
     // 下载附件
@@ -1756,7 +1794,7 @@ class SyncEngine implements app.SyncService {
       logger.error('SyncEngine', '附件下载失败（不阻塞拉取）', e, st);
     }
 
-    return (inserted: result.inserted, deletedDup: 0);
+    return (inserted: restored.inserted, deletedDup: restored.deletedDup);
   }
 
   // ==================== 附件云端同步 ====================

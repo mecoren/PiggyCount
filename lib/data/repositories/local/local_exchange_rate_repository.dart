@@ -94,68 +94,74 @@ class LocalExchangeRateRepository implements ExchangeRateRepository {
     required String base,
     required String quote,
     required String rate,
-  }) async {
-    final baseUp = base.toUpperCase();
-    final quoteUp = quote.toUpperCase();
-    final existing = await (db.select(db.exchangeRateOverrides)
-          ..where((t) =>
-              t.baseCurrency.equals(baseUp) & t.quoteCurrency.equals(quoteUp)))
-        .getSingleOrNull();
-    final now = DateTime.now().toUtc();
-    if (existing == null) {
-      final syncId = _uuid.v4();
-      final id = await db.into(db.exchangeRateOverrides).insert(
-            ExchangeRateOverridesCompanion.insert(
-              baseCurrency: baseUp,
-              quoteCurrency: quoteUp,
-              rate: rate,
-              syncId: d.Value(syncId),
-              updatedAt: d.Value(now),
-            ),
-          );
-      await trackerGetter()?.recordUserGlobalChange(
-        entityType: 'exchange_rate_override',
-        entityId: id,
-        entitySyncId: syncId,
-        action: 'create',
-      );
-    } else {
-      final syncId = existing.syncId ?? _uuid.v4();
-      await (db.update(db.exchangeRateOverrides)
-            ..where((t) => t.id.equals(existing.id)))
-          .write(ExchangeRateOverridesCompanion(
-        rate: d.Value(rate),
-        syncId: d.Value(syncId),
-        updatedAt: d.Value(now),
-      ));
-      await trackerGetter()?.recordUserGlobalChange(
-        entityType: 'exchange_rate_override',
-        entityId: existing.id,
-        entitySyncId: syncId,
-        action: 'update',
-      );
-    }
+  }) {
+    // TBL-M9：写表 + 记 change 同事务，防崩溃窗口内变更丢失推送机会
+    return db.transaction(() async {
+      final baseUp = base.toUpperCase();
+      final quoteUp = quote.toUpperCase();
+      final existing = await (db.select(db.exchangeRateOverrides)
+            ..where((t) =>
+                t.baseCurrency.equals(baseUp) & t.quoteCurrency.equals(quoteUp)))
+          .getSingleOrNull();
+      final now = DateTime.now().toUtc();
+      if (existing == null) {
+        final syncId = _uuid.v4();
+        final id = await db.into(db.exchangeRateOverrides).insert(
+              ExchangeRateOverridesCompanion.insert(
+                baseCurrency: baseUp,
+                quoteCurrency: quoteUp,
+                rate: rate,
+                syncId: d.Value(syncId),
+                updatedAt: d.Value(now),
+              ),
+            );
+        await trackerGetter()?.recordUserGlobalChange(
+          entityType: 'exchange_rate_override',
+          entityId: id,
+          entitySyncId: syncId,
+          action: 'create',
+        );
+      } else {
+        final syncId = existing.syncId ?? _uuid.v4();
+        await (db.update(db.exchangeRateOverrides)
+              ..where((t) => t.id.equals(existing.id)))
+            .write(ExchangeRateOverridesCompanion(
+          rate: d.Value(rate),
+          syncId: d.Value(syncId),
+          updatedAt: d.Value(now),
+        ));
+        await trackerGetter()?.recordUserGlobalChange(
+          entityType: 'exchange_rate_override',
+          entityId: existing.id,
+          entitySyncId: syncId,
+          action: 'update',
+        );
+      }
+    });
   }
 
   @override
-  Future<void> removeOverride({required String base, required String quote}) async {
-    final existing = await (db.select(db.exchangeRateOverrides)
-          ..where((t) =>
-              t.baseCurrency.equals(base.toUpperCase()) &
-              t.quoteCurrency.equals(quote.toUpperCase())))
-        .getSingleOrNull();
-    if (existing == null) return;
-    await (db.delete(db.exchangeRateOverrides)
-          ..where((t) => t.id.equals(existing.id)))
-        .go();
-    final syncId = existing.syncId;
-    if (syncId != null) {
-      await trackerGetter()?.recordUserGlobalChange(
-        entityType: 'exchange_rate_override',
-        entityId: existing.id,
-        entitySyncId: syncId,
-        action: 'delete',
-      );
-    }
+  Future<void> removeOverride({required String base, required String quote}) {
+    // TBL-M9：删表 + 记 change 同事务
+    return db.transaction(() async {
+      final existing = await (db.select(db.exchangeRateOverrides)
+            ..where((t) =>
+                t.baseCurrency.equals(base.toUpperCase()) &
+                t.quoteCurrency.equals(quote.toUpperCase())))
+          .getSingleOrNull();
+      if (existing == null) return;
+      await (db.delete(db.exchangeRateOverrides)
+            ..where((t) => t.id.equals(existing.id)))
+          .go();
+      final syncId = existing.syncId;
+      if (syncId != null) {
+        await trackerGetter()?.recordUserGlobalChange(
+          entityType: 'exchange_rate_override',
+          entityId: existing.id,
+          entitySyncId: syncId,
+          action: 'delete',
+        );
+      }
+    });
   }
 }

@@ -35,6 +35,17 @@ class ChangeTracker {
   /// 调用方误用(把 transaction 之类传进来也能通过,但被 assert 拦住)。
   static const Set<String> _userGlobalEntityTypes = {'account', 'category', 'tag', 'exchange_rate_override'};
 
+  /// M2（audit）：server pull 标记专用 action 值。
+  ///
+  /// [recordPulledFromServer] 写入的"server 已有此实体"防重推标记此前借用
+  /// 业务值 'upsert'，与真实业务变更无法区分 —— Path A 快照上传后的
+  /// [cleanupPushedChanges]（7 天清理）会把这类标记当普通已推送行删掉，
+  /// 之后 Path B 的 legacy backfill 扫不到它们 → 把 server 已知实体重新
+  /// 登记推送（服务端幂等不丢数据，但 sync_changes 膨胀+带宽浪费）。
+  /// 改用专属值后，清理可精确豁免；存量 'upsert' 标记由下次 pull 的
+  /// recordPulledFromServer 幂等重写自愈。
+  static const String serverMarkerAction = 'server_marker';
+
   /// 公开 read-only 视图给 sync_engine 的 push 路径用,判断"这条 change 是否
   /// 是 user-global 类型",决定 push 时 scope 字段。
   static const Set<String> userGlobalEntityTypes = _userGlobalEntityTypes;
@@ -150,6 +161,27 @@ class ChangeTracker {
     logger.debug('ChangeTracker', '$action $entityType($entitySyncId)');
   }
 
+  /// 批量登记变更（batch 导入路径专用，审计 TBL-M8）。
+  ///
+  /// 此前 local_repository 的三个 batch 方法用裸 db.batch 直插 localChanges：
+  /// - 绕过 [_suppressRecording]：抑制上下文中的调用会把云→本合并数据
+  ///   反向登记为待推送幻影变更；
+  /// - 绕过 InsertMode.insertOrIgnore：撞 v35 部分唯一索引时直接抛错，
+  ///   整批导入失败。
+  /// 统一收口到 tracker 后两条纪律与单条路径（[_insert]）完全一致。
+  Future<void> recordBatch(List<LocalChangesCompanion> rows) async {
+    if (_suppressRecording || rows.isEmpty) return;
+    await db.batch((b) {
+      for (final row in rows) {
+        b.insert(
+          db.localChanges,
+          row,
+          mode: d.InsertMode.insertOrIgnore,
+        );
+      }
+    });
+  }
+
   /// 登记一个**从 server pull 拉下来**的实体在本地的状态。
   ///
   /// 写入一条 `local_changes` 行,**pushedAt 设为 now**(表示"server 已有此
@@ -163,6 +195,10 @@ class ChangeTracker {
   ///
   /// **幂等**:同一 (entityType, entitySyncId) 多次调用只插一次(同 entity
   /// 通过 apply update 多次也不会挤爆表)。
+  ///
+  /// M2：action 使用专用值 [serverMarkerAction]（不再借用业务值 'upsert'），
+  /// 使 [cleanupPushedChanges] 能豁免这类标记，防止防重推标记被 7 天清理
+  /// 误删后触发重复推送膨胀。
   Future<void> recordPulledFromServer({
     required String entityType,
     required int entityId,
@@ -183,7 +219,7 @@ class ChangeTracker {
       entityId: entityId,
       entitySyncId: entitySyncId,
       ledgerId: ledgerId,
-      action: 'upsert',
+      action: serverMarkerAction,
       pushedAt: d.Value(now),
     ));
     logger.debug('ChangeTracker',
@@ -245,11 +281,18 @@ class ChangeTracker {
     return count;
   }
 
-  /// 清理已推送的旧变更（保留最近 7 天）
+  /// 清理已推送的旧变更（保留最近 7 天）。
+  ///
+  /// M2：豁免 [serverMarkerAction] 标记 —— 它们的职责是阻止 Path B
+  /// legacy backfill 把 server 已知实体重推（见常量注释），被 7 天窗口
+  /// 误删会造成推送膨胀。标记行本身幂等：recordPulledFromServer 按
+  /// (entityType, entitySyncId) 去重，不会无限累积。
   Future<int> cleanupPushedChanges({Duration retention = const Duration(days: 7)}) async {
     final cutoff = DateTime.now().subtract(retention);
     final count = await (db.delete(db.localChanges)
-          ..where((c) => c.pushedAt.isNotNull() & c.pushedAt.isSmallerThanValue(cutoff)))
+          ..where((c) => c.pushedAt.isNotNull() &
+              c.pushedAt.isSmallerThanValue(cutoff) &
+              c.action.equals(serverMarkerAction).not()))
         .go();
     if (count > 0) {
       logger.info('ChangeTracker', '清理 $count 条已推送的旧变更');

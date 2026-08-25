@@ -60,63 +60,18 @@ extension SyncEngineAttachmentsExt on SyncEngine {
     }
   }
 
-  /// 上传所有分类的自定义图标到云端，返回 categoryId → 云端引用 的映射。
-  /// 分类的 customIconPath 是本地文件路径，单独上传后 serializeCategory 会把
-  /// cloud 引用写进 payload 让 web 端能拉到。
-  ///
-  /// 走 user-global 的 `/attachments/category-icons/upload` endpoint,跟账本
-  /// 解耦:相同 sha256 的图标全用户只上传 1 份(server 端按 user_id + sha256
-  /// 去重),避免历史"每个账本各上传一份"的倍数膨胀。
-  ///
-  /// SYNC-06 范围决策：分类图标/头像**保持明文**不上加密信封——
-  /// ① 它们是跨端渲染资产（web 端按 fileId 直接拉取展示，无解密能力）；
-  /// ② 下行链路用 iconCloudSha256（原始字节哈希）做缓存校验
-  ///    （CustomIconService.writeCachedSharedIcon），加密会破坏该校验语义。
-  /// 若未来 web 端支持解密，可在此处套用 _encryptAttachmentBytes 同一口径，
-  /// 并同步调整 iconCloudSha256 的哈希基准约定。
-  Future<Map<int, ({String fileId, String sha256})>>
-      _uploadCategoryIcons() async {
-    final categories = await db.select(db.categories).get();
-    final out = <int, ({String fileId, String sha256})>{};
-    final iconSvc = CustomIconService();
-    for (final cat in categories) {
-      if (cat.iconType != 'custom') continue;
-      final rel = cat.customIconPath;
-      if (rel == null || rel.isEmpty) continue;
-      try {
-        final abs = await iconSvc.resolveIconPath(rel);
-        final file = File(abs);
-        if (!file.existsSync()) {
-          logger.debug('SyncEngine',
-              '分类 ${cat.name} 的自定义图标文件不存在: $abs');
-          continue;
-        }
-        final bytes = await file.readAsBytes();
-        final result = await provider.uploadCategoryIcon(
-          bytes: bytes,
-          fileName: rel.split('/').last,
-        );
-        out[cat.id] = (fileId: result.fileId, sha256: result.sha256);
-      } catch (e, st) {
-        logger.error(
-            'SyncEngine', '分类 ${cat.name} 自定义图标上传失败', e, st);
-      }
-    }
-    if (out.isNotEmpty) {
-      logger.info('SyncEngine', '分类自定义图标上传完成: ${out.length} 个');
-    }
-    return out;
-  }
+  // 注：原 `_uploadCategoryIcons`（整库扫描上传分类图标）已删除 ——
+  // P9 修复把图标上传前置进 _serializeEntityForPush 的 'category' 分支
+  // （见 sync_engine_serialization.dart），本方法再无调用方。SYNC-06
+  // 「图标/头像保持明文」的范围决策注释一并迁至该分支。
 
   /// 上传账本中未同步的附件到云端。
   ///
   /// Phase 3 改造:Semaphore(concurrency=4) 并发 + 指数退避 retry。
   /// 详见 `.docs/full-pull-refactor/`。
   Future<int> uploadAttachments({required int ledgerId}) async {
-    final ledgerRow = await (db.select(db.ledgers)
-          ..where((l) => l.id.equals(ledgerId)))
-        .getSingleOrNull();
-    final serverLedgerId = ledgerRow?.syncId ?? ledgerId.toString();
+    // TSM-P18/P19：缺失时就地生成身份，不再回退数字 id
+    final serverLedgerId = await _resolveLedgerExternalId(ledgerId);
 
     final txs = await (db.select(db.transactions)
           ..where((t) => t.ledgerId.equals(ledgerId)))

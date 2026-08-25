@@ -188,25 +188,28 @@ void main() {
       await store.markResolved(99999); // 不抛
     });
 
-    test('resolved 的 change 后续再 record → 不会唤醒(仍然 resolved)', () async {
-      // server 修了脏数据 + 推新 change → 新 change_id 不同,旧 change_id 保留 resolved。
+    test('resolved 的 change 后续再 record → 重新唤醒（审计 L4）', () async {
+      // 审计 L4 语义修正：同 change_id 复发说明问题仍在，必须清除
+      // resolved_at 让 UI 重新展示，否则横幅永久消失、用户无从感知。
       await store.record(
         change: _change(changeId: 900),
         error: Exception('e'),
         stackTrace: StackTrace.current,
       );
       await store.markResolved(900);
+      expect((await store.watchUnresolved().first), isEmpty);
 
-      // 同 change_id 再次 record(罕见场景:用户跳过后又错误重做)
+      // 同 change_id 再次 record（错误复发）
       await store.record(
         change: _change(changeId: 900),
         error: Exception('e2'),
         stackTrace: StackTrace.current,
       );
 
-      // 行被 update,但 resolvedAt 仍非空 → watchUnresolved 不返
+      // resolved_at 被复位 → watchUnresolved 重新返回该行
       final rows = await store.watchUnresolved().first;
-      expect(rows, isEmpty);
+      expect(rows, hasLength(1));
+      expect(rows.first.changeId, 900);
     });
   });
 }

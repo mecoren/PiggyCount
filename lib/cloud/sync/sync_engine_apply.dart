@@ -121,6 +121,8 @@ extension SyncEngineApplyExt on SyncEngine {
               ..where((t) => t.id.equals(existingId!)))
             .go();
         activePullCache?.removeTransaction(syncId);
+        // 审计 L1：远端删除后清水位行，防水位表无限增长
+        await _dropEntityWatermark(syncId);
         logger.debug('SyncEngine', 'pull: 删除交易 $syncId');
       }
       return;
@@ -142,12 +144,30 @@ extension SyncEngineApplyExt on SyncEngine {
     }
 
     // 解析 payload 字段
+    //
+    // 审计 M7：缺键保护口径统一 —— 旧 payload 缺键表示「该字段不在本次
+    // 变更范围」，update 时必须保留本地值（Value.absent），而不是用兜底
+    // 值/空值破坏性覆盖。此前 happenedAt 缺键会拿 DateTime.now() 覆盖本地
+    // 日期，note/category/account 缺键会被显式清空，而 excludeFromStats 等
+    // 字段却做了 containsKey 保护 —— 同一函数两套语义。
+    final hasHappenedAtKey = payload.containsKey('happenedAt');
+    final happenedAt = hasHappenedAtKey
+        ? DateTime.tryParse(payload['happenedAt'] as String? ?? '')
+                ?.toLocal() ??
+            DateTime.now()
+        : DateTime.now(); // 仅 insert 兜底用；update 走 absent
+    final hasNoteKey = payload.containsKey('note');
+    final hasTypeKey = payload.containsKey('type');
+    final hasCategoryKey =
+        payload.containsKey('categoryId') || payload.containsKey('categoryName');
+    final hasAccountKey = payload.containsKey('accountId') ||
+        payload.containsKey('accountName') ||
+        payload.containsKey('fromAccountId') ||
+        payload.containsKey('fromAccountName');
+    final hasToAccountKey = payload.containsKey('toAccountId') ||
+        payload.containsKey('toAccountName');
     final type = payload['type'] as String? ?? 'expense';
     final amount = (payload['amount'] as num?)?.toDouble() ?? 0.0;
-    final happenedAtStr = payload['happenedAt'] as String?;
-    final happenedAt = happenedAtStr != null
-        ? DateTime.tryParse(happenedAtStr)?.toLocal() ?? DateTime.now()
-        : DateTime.now();
     final note = payload['note'] as String?;
     final categoryName = payload['categoryName'] as String?;
     final categoryKind = payload['categoryKind'] as String?;
@@ -299,16 +319,30 @@ extension SyncEngineApplyExt on SyncEngine {
       }
       await (db.update(db.transactions)..where((t) => t.id.equals(existingId!)))
           .write(TransactionsCompanion(
-        type: d.Value(type),
+        type: hasTypeKey ? d.Value(type) : const d.Value.absent(),
         amount: d.Value(amount),
-        happenedAt: d.Value(happenedAt),
-        note: d.Value(note),
-        categoryId: d.Value(categoryId),
-        accountId: d.Value(accountId),
-        toAccountId: d.Value(toAccountId),
-        categorySyncIdOverride: d.Value(categorySyncIdOverride),
-        accountSyncIdOverride: d.Value(accountSyncIdOverride),
-        toAccountSyncIdOverride: d.Value(toAccountSyncIdOverride),
+        // 审计 M7：缺键保留本地（此前 DateTime.now() 破坏性覆盖本地日期）
+        happenedAt: hasHappenedAtKey
+            ? d.Value(happenedAt)
+            : const d.Value.absent(),
+        note: hasNoteKey ? d.Value(note) : const d.Value.absent(),
+        categoryId: hasCategoryKey
+            ? d.Value(categoryId)
+            : const d.Value.absent(),
+        accountId:
+            hasAccountKey ? d.Value(accountId) : const d.Value.absent(),
+        toAccountId: hasToAccountKey
+            ? d.Value(toAccountId)
+            : const d.Value.absent(),
+        categorySyncIdOverride: hasCategoryKey
+            ? d.Value(categorySyncIdOverride)
+            : const d.Value.absent(),
+        accountSyncIdOverride: hasAccountKey
+            ? d.Value(accountSyncIdOverride)
+            : const d.Value.absent(),
+        toAccountSyncIdOverride: hasToAccountKey
+            ? d.Value(toAccountSyncIdOverride)
+            : const d.Value.absent(),
         createdByUserId: shouldBackfillCreator
             ? d.Value(createdByUserId)
             : const d.Value.absent(),
@@ -389,6 +423,8 @@ extension SyncEngineApplyExt on SyncEngine {
       if (existing != null) {
         await (db.delete(db.accounts)..where((a) => a.id.equals(existing.id)))
             .go();
+        // 审计 L1：清水位
+        await _dropEntityWatermark(syncId);
         logger.debug('SyncEngine', 'pull: 删除账户 $syncId');
       }
       return;
@@ -505,6 +541,8 @@ extension SyncEngineApplyExt on SyncEngine {
             .go();
         await (db.delete(db.categories)..where((c) => c.id.equals(existing.id)))
             .go();
+        // 审计 L1：清水位
+        await _dropEntityWatermark(syncId);
         logger.debug('SyncEngine', 'pull: 删除分类 $syncId');
       }
       return;
@@ -693,6 +731,8 @@ extension SyncEngineApplyExt on SyncEngine {
               ..where((tt) => tt.tagId.equals(existing.id)))
             .go();
         await (db.delete(db.tags)..where((t) => t.id.equals(existing.id))).go();
+        // 审计 L1：清水位
+        await _dropEntityWatermark(syncId);
         logger.debug('SyncEngine', 'pull: 删除标签 $syncId');
       }
       return;
@@ -768,6 +808,8 @@ extension SyncEngineApplyExt on SyncEngine {
       if (existing != null) {
         await (db.delete(db.budgets)..where((b) => b.id.equals(existing.id)))
             .go();
+        // 审计 L1：清水位
+        await _dropEntityWatermark(syncId);
         logger.debug('SyncEngine', 'pull: 删除预算 $syncId');
       }
       return;
@@ -848,6 +890,8 @@ extension SyncEngineApplyExt on SyncEngine {
         await (db.delete(db.recurringTransactions)
               ..where((r) => r.id.equals(existing.id)))
             .go();
+        // 审计 L1：清水位
+        await _dropEntityWatermark(syncId);
         logger.debug('SyncEngine', 'pull: 删除周期规则 $syncId');
       }
       return;
@@ -999,6 +1043,8 @@ extension SyncEngineApplyExt on SyncEngine {
       await (db.delete(db.exchangeRateOverrides)
             ..where((t) => t.syncId.equals(change.entitySyncId)))
           .go();
+      // 审计 L1：清水位
+      await _dropEntityWatermark(change.entitySyncId);
       return;
     }
     final p = change.payload!;

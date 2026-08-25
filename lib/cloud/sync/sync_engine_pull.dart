@@ -124,13 +124,16 @@ class SyncErrorStore {
 
     // 步骤 1:update。已存在 → attempt_count + 1 由 customStatement 完成
     // (Drift `.write()` 不支持引用现有列做加法,所以走 raw SQL)。
+    // 审计 L4:复发时必须复位 resolved_at —— 此前已 resolve 的错误再次
+    // 失败后 resolvedAt 仍是旧值,UI 按 resolved 过滤导致横幅永久消失。
     final affected = await _db.customUpdate(
       'UPDATE sync_pull_errors '
       'SET attempt_count = attempt_count + 1, '
       '    last_attempt_at = ?, '
       '    error_class = ?, '
       '    error_message = ?, '
-      '    stack_trace = ? '
+      '    stack_trace = ?, '
+      '    resolved_at = NULL '
       'WHERE change_id = ?',
       variables: [
         d.Variable<DateTime>(now),

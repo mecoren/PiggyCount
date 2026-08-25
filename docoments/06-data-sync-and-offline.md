@@ -40,7 +40,7 @@ audience: 一年经验的开发者
 
 - 本文**只讲同步机制**,不讲整体架构(整体架构见 [04 系统架构设计](./04-system-architecture.md))
 - 本文**只讲同步模块的接口**,不讲 Repository 内部实现(Repository 见 [08 接口与数据访问设计](./08-api-and-data-access.md))
-- 本文**只讲同步涉及的表**(local_changes / sync_state / sync_pull_errors),不讲全部表(全部表见 [07 数据模型设计](./07-data-model.md))
+- 本文**只讲同步涉及的表**(local_changes / entity_change_watermarks / sync_pull_errors；sync_state 已于 v37 DROP),不讲全部表(全部表见 [07 数据模型设计](./07-data-model.md))
 
 ### 1.3 信息来源
 
@@ -797,7 +797,7 @@ sequenceDiagram
 - [02 术语表](./02-glossary.md) — 同步术语统一
 - [04 系统架构设计](./04-system-architecture.md) — 同步引擎在架构中的位置
 - [05 核心模块详解](./05-core-modules.md) — 同步模块与其他模块的协作
-- [07 数据模型设计](./07-data-model.md) — 同步相关表(local_changes / sync_state / sync_pull_errors)
+- [07 数据模型设计](./07-data-model.md) — 同步相关表(local_changes / entity_change_watermarks / sync_pull_errors)
 - [08 接口与数据访问设计](./08-api-and-data-access.md) — PiggyCountCloudProvider API 详解
 - [09 错误处理与容错策略](./09-error-handling.md) — 同步错误处理
 - [11 性能优化方案](./11-performance.md) — 同步性能优化

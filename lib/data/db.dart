@@ -459,7 +459,7 @@ class PiggyDatabase extends _$PiggyDatabase {
   PiggyDatabase.forTesting(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 37; // v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
+  int get schemaVersion => 38; // v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1269,6 +1269,58 @@ class PiggyDatabase extends _$PiggyDatabase {
             await customStatement('DROP TABLE IF EXISTS sync_state');
             logger.info('DBMigration', 'v37 迁移完成');
           }
+          if (from < 38) {
+            // v38: 各实体 sync_id 唯一索引（审计 TBL-M1）。
+            //
+            // 此前 8 张表的 sync_id 只有普通索引，代码层（resolvers /
+            // getTransactionBySyncId 等）却按唯一假设用 getSingleOrNull()
+            // —— 一旦出现重复行（历史双链路导入竞态 / v21 回填撞号等），
+            // pull 整页抛 "Too many elements" 回滚卡死。
+            //
+            // 建索引前先消除存量重复：**改写而非删除** —— 重复组内除最小
+            // rowid 外的行回填新的随机 sync_id（v33 同款 lower(hex(...))）。
+            // 相比删除的优势：不破坏 transactions 对 category/account/tag
+            // 的引用、不丢任何业务数据；重复实体只是获得独立身份。
+            for (final table in const [
+              'ledgers',
+              'accounts',
+              'categories',
+              'transactions',
+              'tags',
+              'budgets',
+              'recurring_transactions',
+              'exchange_rate_overrides',
+            ]) {
+              await customStatement(
+                'UPDATE $table SET sync_id = lower(hex(randomblob(16))) '
+                'WHERE sync_id IS NOT NULL AND rowid NOT IN ('
+                '  SELECT MIN(rowid) FROM $table'
+                '  WHERE sync_id IS NOT NULL'
+                '  GROUP BY sync_id'
+                ');',
+              );
+            }
+            // 唯一索引与既有 idx_*_sync_id 普通索引并存（名字不同不冲突，
+            // 普通索引继续服务非等值/前缀场景）。NULL sync_id 在 SQLite
+            // UNIQUE 索引中互不冲突，legacy 未回填行不受影响。
+            await customStatement(
+                'CREATE UNIQUE INDEX IF NOT EXISTS uq_ledgers_sync_id ON ledgers(sync_id);');
+            await customStatement(
+                'CREATE UNIQUE INDEX IF NOT EXISTS uq_accounts_sync_id ON accounts(sync_id);');
+            await customStatement(
+                'CREATE UNIQUE INDEX IF NOT EXISTS uq_categories_sync_id ON categories(sync_id);');
+            await customStatement(
+                'CREATE UNIQUE INDEX IF NOT EXISTS uq_transactions_sync_id ON transactions(sync_id);');
+            await customStatement(
+                'CREATE UNIQUE INDEX IF NOT EXISTS uq_tags_sync_id ON tags(sync_id);');
+            await customStatement(
+                'CREATE UNIQUE INDEX IF NOT EXISTS uq_budgets_sync_id ON budgets(sync_id);');
+            await customStatement(
+                'CREATE UNIQUE INDEX IF NOT EXISTS uq_recurring_sync_id ON recurring_transactions(sync_id);');
+            await customStatement(
+                'CREATE UNIQUE INDEX IF NOT EXISTS uq_exchange_rate_overrides_sync_id ON exchange_rate_overrides(sync_id);');
+            logger.info('DBMigration', 'v38 迁移完成: sync_id 唯一索引');
+          }
         },
         onCreate: (m) async {
           await m.createAll();
@@ -1304,6 +1356,24 @@ class PiggyDatabase extends _$PiggyDatabase {
               'CREATE INDEX IF NOT EXISTS idx_ledgers_sync_id ON ledgers(sync_id);');
           await customStatement(
               'CREATE INDEX IF NOT EXISTS idx_budgets_sync_id ON budgets(sync_id);');
+          // v38: 各实体 sync_id 唯一索引（审计 TBL-M1，与 onUpgrade v38
+          // 同构 —— 新装库走 onCreate 而非 migration）。
+          await customStatement(
+              'CREATE UNIQUE INDEX IF NOT EXISTS uq_ledgers_sync_id ON ledgers(sync_id);');
+          await customStatement(
+              'CREATE UNIQUE INDEX IF NOT EXISTS uq_accounts_sync_id ON accounts(sync_id);');
+          await customStatement(
+              'CREATE UNIQUE INDEX IF NOT EXISTS uq_categories_sync_id ON categories(sync_id);');
+          await customStatement(
+              'CREATE UNIQUE INDEX IF NOT EXISTS uq_transactions_sync_id ON transactions(sync_id);');
+          await customStatement(
+              'CREATE UNIQUE INDEX IF NOT EXISTS uq_tags_sync_id ON tags(sync_id);');
+          await customStatement(
+              'CREATE UNIQUE INDEX IF NOT EXISTS uq_budgets_sync_id ON budgets(sync_id);');
+          await customStatement(
+              'CREATE UNIQUE INDEX IF NOT EXISTS uq_recurring_sync_id ON recurring_transactions(sync_id);');
+          await customStatement(
+              'CREATE UNIQUE INDEX IF NOT EXISTS uq_exchange_rate_overrides_sync_id ON exchange_rate_overrides(sync_id);');
         },
       );
 

@@ -228,6 +228,13 @@ extension SyncEngineSerializationExt on SyncEngine {
         // 否则增量 push 的 payload 里不会带 iconCloudFileId，web 端永远没图。
         // 走 user-global 的 category icon endpoint —— 跟 ledger 解耦,user-id
         // + sha256 去重,跨账本只占 server 一份存储。
+        //
+        // SYNC-06 范围决策：分类图标/头像**保持明文**不上加密信封——
+        // ① 它们是跨端渲染资产（web 端按 fileId 直接拉取展示，无解密能力）；
+        // ② 下行链路用 iconCloudSha256（原始字节哈希）做缓存校验
+        //    （CustomIconService.writeCachedSharedIcon），加密会破坏该校验语义。
+        // 若未来 web 端支持解密，可在此处套用 _encryptAttachmentBytes 同一口径，
+        // 并同步调整 iconCloudSha256 的哈希基准约定。
         String? iconCloudFileId;
         String? iconCloudSha256;
         if (category.iconType == 'custom' &&
@@ -378,7 +385,9 @@ extension SyncEngineSerializationExt on SyncEngine {
     final ledger = await (db.select(db.ledgers)
           ..where((l) => l.id.equals(ledgerId)))
         .getSingle();
-    final pathForSnapshot = ledger.syncId ?? ledger.id.toString();
+    // TSM-P18/P19：不依赖调用方先调 _ensureLedgerSyncId —— 本方法自行
+    // 确保身份存在（缺失/过短就地生成并持久化），数字回退彻底移除。
+    final pathForSnapshot = await _resolveLedgerExternalId(ledgerId);
 
     // 0. 先用专用的 writeCreateLedger API(POST /write/ledgers)显式带 currency
     //    创建 server 端账本。这是修复"app 选 JPY 创建账本,server 端却是 CNY"的
@@ -479,7 +488,8 @@ extension SyncEngineSerializationExt on SyncEngine {
     // 2) 再处理本 ledger 的 ledger-scope 推送
     // 跟增量 _push 保持一致:用 ledger.syncId 作为 server 认的 external_id,
     // 跨设备时同一账本永远同一个 external_id,不会分裂成多条。
-    final ledgerId = ledger.syncId ?? ledger.id.toString();
+    // TSM-P18/P19：缺失/过短时就地生成并持久化，不再回退数字 id。
+    final ledgerId = await _resolveLedgerExternalId(ledger.id);
     final now = DateTime.now().toUtc().toIso8601String();
     final syncChanges = <Map<String, dynamic>>[];
 
