@@ -552,9 +552,7 @@ final syncServiceProvider = Provider<SyncService>((ref) {
   // 注入 EncryptionService 用于 E2EE（_initialize 内会按需包装 CloudProvider）
   final db = ref.watch(databaseProvider);
   final repo = ref.watch(repositoryProvider);
-  final encryptionService = ref.watch(encryptionServiceProvider);
-
-  // §X 兜底:Drift table-watch(与 PiggyCount Cloud 分支同规则)。快照同步的
+  final encryptionService = ref.watch(encryptionServiceProvider);  // §X 兜底:Drift table-watch(与 PiggyCount Cloud 分支同规则)。快照同步的
   // 下载/恢复/导入都走 dataImportService.importTransactions 批量写表,不在
   // 任何交易 CRUD 钩子覆盖范围内;且此分支没有 PullCompleted 事件 → 同步
   // 完成后明细(TransactionList 的 stream 自动推送)是新的,但依赖
@@ -578,12 +576,16 @@ final syncServiceProvider = Provider<SyncService>((ref) {
   }
   ref.onDispose(() => txTableSub2?.cancel());
 
-  return TransactionsSyncManager(
+  final manager = TransactionsSyncManager(
     config: config,
     db: db,
     repo: repo,
     encryptionService: encryptionService,
   );
+  // F5：provider 重建（切云配置/依赖变更）时释放旧实例的 HTTP 连接池，
+  // 否则 WebDAV dio / S3 http.Client 随每次重建泄漏
+  ref.onDispose(() => unawaited(manager.dispose()));
+  return manager;
 });
 
 /// 已初始化的 PiggyCountCloudProvider 实例

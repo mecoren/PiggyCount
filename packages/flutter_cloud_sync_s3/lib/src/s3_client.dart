@@ -203,6 +203,11 @@ class S3Client {
   /// 校验异常（FormatException: Invalid HTTP header field value），
   /// 请求根本发不出去。故统一 base64 编码并加 'b64:' 前缀标记，
   /// 读取端 [_decodeMetaValue] 自动还原，对所有 S3 兼容服务通用。
+  ///
+  /// metadata 键统一小写：HTTP 头名大小写不敏感，传输层（dart:io /
+  /// package:http）会把响应头名转小写，读取端拿到的键恒为小写形态。
+  /// 写入端显式小写使键的存储形态确定，避免依赖各网关对大小写的
+  /// 保留行为。
   Map<String, String> _signedPutHeaders(Uri uri, Uint8List data,
       String? contentType, Map<String, String>? metadata) {
     final headers = <String, String>{
@@ -212,7 +217,8 @@ class S3Client {
     };
     if (metadata != null) {
       for (final entry in metadata.entries) {
-        headers['x-amz-meta-${entry.key}'] = _encodeMetaValue(entry.value);
+        headers['x-amz-meta-${entry.key.toLowerCase()}'] =
+            _encodeMetaValue(entry.value);
       }
     }
     return _signer.sign(
@@ -738,7 +744,9 @@ class S3Client {
   /// 先经 [base64.normalize] 补齐 padding 再解码即可还原。
   static String _decodeMetaValue(String value) {
     if (value.startsWith('b64:')) {
-      final payload = value.substring(5);
+      // 'b64:' 前缀长度为 4，payload 从下标 4 开始（此前误写 substring(5)
+      // 会削掉 payload 首字符导致解码永远失败、恒回退原始包装串）。
+      final payload = value.substring(4);
       try {
         return utf8.decode(base64.decode(payload));
       } on FormatException {

@@ -1685,8 +1685,15 @@ Future<int> _purgeStaleLocalChanges(
 ///
 /// 安全边界：只删「本地行有 syncId 且不在云端 syncId 集合」——
 /// 云端行无 syncId 或本地行无 syncId（同步纪元前遗留）都不删，
-/// 防止旧快照/异常数据误删。分类/标签是全局表，仅在无任何账本引用
-/// （交易/预算/周期/父子层级/标签关联）时删除。
+/// 防止旧快照/异常数据误删。分类/标签/账户是全局表，仅在无任何账本引用
+/// 时删除。
+///
+/// 账户纳入镜像的原因（审计 F4）：指纹 G4 把全量 accounts 纳入比对，
+/// 若云端已删账户在本地永不消失，两端指纹永久不一致 → 每次启动判
+/// different → merge-then-publish 又把已删账户推回云端复活，形成
+/// 不收敛循环。引用守卫与分类/标签同款：被任何交易/周期规则
+/// （含转账 toAccountId）引用的账户一律保留。
+///
 /// 必须在 restoreLedgerFromJson 的事务内调用（清空+导入完成后）。
 Future<int> _mirrorDeleteAbsentEntities(
     PiggyDatabase db, int ledgerId, ImportData cloud) async {
@@ -1773,9 +1780,48 @@ Future<int> _mirrorDeleteAbsentEntities(
       .go();
   total += delTags;
 
+  // 账户：全局表，仅删「不在云端且无任何引用」的
+  // （引用来源：交易 accountId/toAccountId、周期 accountId/toAccountId，
+  // 全账本范围 —— 账户是 user-global 实体，其他账本的引用同样构成保留理由）
+  final cloudAccountSyncIds =
+      cloud.accounts.map((a) => a.syncId).whereType<String>().toSet();
+  final usedAccountIds = <int>{
+    ...(await (db.selectOnly(db.transactions)
+            ..addColumns([db.transactions.accountId]))
+        .map((row) => row.read(db.transactions.accountId))
+        .get())
+        .whereType<int>(),
+    ...(await (db.selectOnly(db.transactions)
+            ..addColumns([db.transactions.toAccountId]))
+        .map((row) => row.read(db.transactions.toAccountId))
+        .get())
+        .whereType<int>(),
+    ...(await (db.selectOnly(db.recurringTransactions)
+            ..addColumns([db.recurringTransactions.accountId]))
+        .map((row) => row.read(db.recurringTransactions.accountId))
+        .get())
+        .whereType<int>(),
+    ...(await (db.selectOnly(db.recurringTransactions)
+            ..addColumns([db.recurringTransactions.toAccountId]))
+        .map((row) => row.read(db.recurringTransactions.toAccountId))
+        .get())
+        .whereType<int>(),
+  };
+  final delAccounts = await (db.delete(db.accounts)
+        ..where((a) => a.syncId.isNotNull() &
+              (cloudAccountSyncIds.isEmpty
+                  ? const d.Constant(true)
+                  : a.syncId.isNotIn(cloudAccountSyncIds.toList())) &
+              (usedAccountIds.isEmpty
+                  ? const d.Constant(true)
+                  : a.id.isNotIn(usedAccountIds.toList()))))
+      .go();
+  total += delAccounts;
+
   if (total > 0) {
     logger.info('DataImport',
-        'H3 镜像删除(ledgerId=$ledgerId): 预算=$delBudgets 周期=$delRecs 分类=$delCats 标签=$delTags');
+        'H3 镜像删除(ledgerId=$ledgerId): 预算=$delBudgets 周期=$delRecs '
+        '分类=$delCats 标签=$delTags 账户=$delAccounts');
   }
   return total;
 }

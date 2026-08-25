@@ -93,6 +93,14 @@ class S3SignatureV4 {
   }
 
   /// 创建规范请求（Canonical Request）
+  ///
+  /// ⚠️ 键约束（审计 F8）：canonicalUri 取 [Uri.path]，即**已解码**形态。
+  /// AWS SigV4 规范要求签 URI-encoded path；本实现成立的前提是对象键
+  /// 仅含 URL 安全字符（当前业务满足：槽位 key 为 UUID/纯数字、附件为
+  /// sha256 hex，见 app 层 pathForLedger / pathForAttachmentBin）。
+  /// 若未来允许非 ASCII 或空格等字符进入键名，必须改为对每个路径段
+  /// 做 RFC 3986 编码后签名（保留 '/'），否则服务端校验将
+  /// SignatureDoesNotMatch。
   String _createCanonicalRequest({
     required String method,
     required Uri uri,

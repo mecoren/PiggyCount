@@ -823,6 +823,56 @@ void main() {
       expect(deps.applyPreviewChangesCallCount, 2);
     });
 
+    test('S1 守卫：viewDetail 未勾选云端删除时跳过回传，防删除复活', () async {
+      // 云端快照删除了 1 笔本地交易；用户在预览弹窗只勾选新增、未勾选删除
+      deps.previewByLedger = {
+        1: (
+          preview: _preview(added: 1, deleted: 1),
+          importData: const ImportData(),
+          version: 6,
+        ),
+      };
+      deps.ledgers = [_ledger(1, 'L1')];
+      deps.statusByLedger = {1: _status(SyncDiff.cloudNewer)};
+      deps.perLedgerChoice = LedgerDialogChoice.viewDetail;
+      // 模拟弹窗返回：仅返回用户勾选的 added（deleted 保持未勾选）
+      deps.syncPreviewReturn = [SyncChange(type: SyncChangeType.added)];
+
+      await checker.runIfNeeded();
+
+      expect(deps.applyPreviewChangesCallCount, 1,
+          reason: '合并照常执行');
+      expect(deps.uploadedLedgerIds, isEmpty,
+          reason: '存在未应用的云端删除时必须跳过回传，'
+              '否则本地保留的已删交易随快照复活并传播到所有设备');
+    });
+
+    test('S1 守卫：全部删除被勾选应用时正常回传', () async {
+      final deletedChange =
+          SyncChange(type: SyncChangeType.deleted, selected: true);
+      deps.previewByLedger = {
+        1: (
+          preview: _preview(added: 1, deleted: 1, selectDeleted: true),
+          importData: const ImportData(),
+          version: 6,
+        ),
+      };
+      deps.ledgers = [_ledger(1, 'L1')];
+      deps.statusByLedger = {1: _status(SyncDiff.cloudNewer)};
+      deps.perLedgerChoice = LedgerDialogChoice.viewDetail;
+      // 弹窗把勾选实例原样返回（真实实现为 changes.where(selected)）
+      deps.syncPreviewReturn = [
+        SyncChange(type: SyncChangeType.added),
+        deletedChange,
+      ];
+
+      await checker.runIfNeeded();
+
+      expect(deps.applyPreviewChangesCallCount, 1);
+      expect(deps.uploadedLedgerIds, [1],
+          reason: '删除已被应用，回传不会复活任何数据');
+    });
+
     test('用户选 skip 时该账本不 apply，继续下一个', () async {
       deps.perLedgerChoice = LedgerDialogChoice.skip;
 

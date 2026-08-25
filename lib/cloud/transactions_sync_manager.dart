@@ -161,6 +161,27 @@ class TransactionsSyncManager implements SyncService {
     logger.info('CloudSync', '已标记需重新初始化（加密状态变更）');
   }
 
+  /// 释放底层云服务资源（WebDAV dio client / S3 http.Client 连接池）。
+  ///
+  /// syncServiceProvider 在云配置/依赖变更时会重建本实例；旧实例若不
+  /// 显式关闭，底层 HTTP 客户端会泄漏连接资源。dispose 后本实例不可再
+  /// 使用（后续方法调用按「云服务不可用」处理），进行中的操作因已在
+  /// 入口捕获局部引用（ATTACH-2 模式）可安全完成。
+  Future<void> dispose() async {
+    try {
+      await _provider?.dispose();
+    } catch (e) {
+      logger.warning('CloudSync', '旧 provider dispose 失败（忽略）: $e');
+    }
+    _provider = null;
+    _syncManager = null;
+    _rawStorage = null;
+    _statusCache.clear();
+    _recentLocalChangeAt.clear();
+    _recentUpload.clear();
+    _pendingAttachmentJobs.clear();
+  }
+
   /// 开启加密后的全量重加密 + 重新初始化（原子流程）
   ///
   /// 专为 [EncryptionService.enable] 之后的流程设计，组合两个步骤：
@@ -311,6 +332,11 @@ class TransactionsSyncManager implements SyncService {
   /// 「旧数据 syncId = id.toString()」的存量云端文件名天然兼容：已同步
   /// 用户升级后槽位不变，无需迁移。公开供 UI 层（如远程账本下载入口）
   /// 复用同一命名规则，避免两处实现漂移。
+  ///
+  /// 键字符约束：返回值必须保持 URL 安全（ASCII、无空格/保留字）——
+  /// S3 SigV4 签名实现以解码 path 参与规范化（见 s3_signature.dart
+  /// F8 注释）。slotKey 来源为 UUID/纯数字，天然满足；若未来引入其他
+  /// 字符形态的键需同步评估签名链路。
   Future<String> pathForLedger(int ledgerId) async {
     final row = await (db.select(db.ledgers)
           ..where((l) => l.id.equals(ledgerId)))
@@ -1307,9 +1333,7 @@ class TransactionsSyncManager implements SyncService {
           .getMetadata(path: await pathForLedger(ledgerId));
       if (meta == null) return null; // 云端无备份
 
-      final rawRemoteFp = meta.metadata?['fingerprint'] as String?;
-      final remoteFp =
-          rawRemoteFp == null ? null : _normalizeFingerprintMeta(rawRemoteFp);
+      final remoteFp = _metaValue(meta.metadata, 'fingerprint');
       if (localFp != null &&
           remoteFp != null &&
           localFp == remoteFp) {
@@ -1317,9 +1341,9 @@ class TransactionsSyncManager implements SyncService {
       }
 
       // 指纹不同（或一侧缺失）→ 方向仲裁（只信可信证据）
-      final uploadedAtStr = meta.metadata?['uploadedAt'] as String?;
       final remoteAt =
-          DateTime.tryParse(uploadedAtStr ?? '') ?? meta.lastModified;
+          DateTime.tryParse(_metaValue(meta.metadata, 'uploadedAt') ?? '') ??
+              meta.lastModified;
       if (remoteAt == null) return 'unknown';
       final evidence = await _localChangeEvidence(ledgerId);
       final localAt = evidence.at;
@@ -1357,7 +1381,7 @@ class TransactionsSyncManager implements SyncService {
   }) async {
     try {
       final meta = await provider.storage.getMetadata(path: path);
-      final raw = meta?.metadata?['fingerprint'] as String?;
+      final raw = _metaValue(meta?.metadata, 'fingerprint');
       if (raw == null || raw.isEmpty) return;
       final remoteFp = _normalizeFingerprintMeta(raw);
       Map<String, dynamic> map;
@@ -1395,6 +1419,24 @@ class TransactionsSyncManager implements SyncService {
         return v;
       }
     }
+  }
+
+  /// 大小写无关读取云端 metadata 并做 b64 归一化。
+  ///
+  /// HTTP 头名大小写不敏感：S3 链路 x-amz-meta-* 的键经传输层统一转
+  /// 小写，写入端的 'uploadedAt' 在读取端实际是 'uploadedat'。直接
+  /// [] 读取恒 miss → uploadedAt 解析失败、方向仲裁退化到 lastModified。
+  /// 按小写匹配对 S3 与 WebDAV sidecar（保留原始键名）都兼容。
+  static String? _metaValue(Map<String, dynamic>? metadata, String key) {
+    if (metadata == null) return null;
+    final target = key.toLowerCase();
+    for (final entry in metadata.entries) {
+      if (entry.key.toLowerCase() == target) {
+        final v = entry.value;
+        return v == null ? null : _normalizeFingerprintMeta(v.toString());
+      }
+    }
+    return null;
   }
 
   @override
@@ -1670,7 +1712,18 @@ class TransactionsSyncManager implements SyncService {
   }
 
   /// 恢复所有远程账本到本地（并行执行）
-  Future<({int success, int failed})> restoreAllRemoteLedgers() async {
+  ///
+  /// W6/S6 补口：本入口内部的 [downloadRemoteLedger] 对同名/同身份账本
+  /// 执行「清空+导入」的破坏性替换，与 [fullRestoreAllRemoteLedgers] /
+  /// [downloadAndRestoreToCurrentLedger] 同属恢复临界区操作 —— 必须让
+  /// 定时备份（app.dart BackupScheduler tick 检查 isBusy）让位，否则
+  /// 批量恢复进行到一半时到点的备份会把半恢复态 DB 打包上传，覆盖当日
+  /// 好备份。此前仅全量覆盖下载有守卫，本入口遗漏。
+  Future<({int success, int failed})> restoreAllRemoteLedgers() {
+    return SyncRestoreGuard.run(() => _restoreAllRemoteLedgers());
+  }
+
+  Future<({int success, int failed})> _restoreAllRemoteLedgers() async {
     await _ensureInitialized();
 
     // 捕获到局部变量（ATTACH-2 竞态防护）
@@ -1963,7 +2016,7 @@ class TransactionsSyncManager implements SyncService {
   /// 导入一个发现阶段的云端账本：以槽位 key 作为 syncId 创建本地账本行
   /// 并导入数据。
   ///
-  /// 返回新账本的本地 id；返回 null 表示同 syncId 账本已被本地占用
+  /// 返回**导入的交易条数**；返回 null 表示同 syncId 账本已被本地占用
   /// （发现与导入之间的竞态），该账本被跳过。
   ///
   /// 关键语义：**不再保留远端数字 id**——两台设备各自的自增序列独立，

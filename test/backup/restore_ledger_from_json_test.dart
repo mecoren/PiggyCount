@@ -184,6 +184,60 @@ void main() {
     expect(tags.map((t) => t.syncId), contains('tag-kept'));
   });
 
+  test('H3 账户镜像：无引用且不在云端的账户被删（F4 复活循环修复）', () async {
+    final id = await addLedger('Main');
+    await db.into(db.accounts).insert(AccountsCompanion.insert(
+        ledgerId: id, name: '云端账户',
+        syncId: const drift.Value('acc-kept')));
+    await db.into(db.accounts).insert(AccountsCompanion.insert(
+        ledgerId: id, name: '孤儿账户',
+        syncId: const drift.Value('acc-orphan')));
+    final snapshot = jsonEncode({
+      'version': 8,
+      'ledgerName': 'Main',
+      'currency': 'CNY',
+      'accounts': [
+        {'name': '云端账户', 'syncId': 'acc-kept'},
+      ],
+      'categories': [],
+      'tags': [],
+      'items': [],
+    });
+
+    final result = await restoreLedgerFromJson(
+        db: db, repo: repo, ledgerId: id, jsonStr: snapshot);
+    expect(result, isNotNull);
+
+    final accs = await db.select(db.accounts).get();
+    expect(accs.map((a) => a.syncId), contains('acc-kept'));
+    expect(accs.map((a) => a.syncId), isNot(contains('acc-orphan')),
+        reason: '云端已删且本地无引用的账户必须镜像删除，'
+            '否则指纹 G4 使两端永久 outOfSync 并在回传时复活该账户');
+  });
+
+  test('H3 账户镜像：被交易引用的账户即使不在云端也保留（引用守卫）', () async {
+    final main = await addLedger('Main');
+    final other = await addLedger('Other');
+    final accId = await db.into(db.accounts).insert(AccountsCompanion.insert(
+        ledgerId: main, name: '被引用账户',
+        syncId: const drift.Value('acc-used')));
+    // 另一账本的交易仍引用该账户 —— 全局引用守卫必须保住它
+    await db.into(db.transactions).insert(TransactionsCompanion.insert(
+        ledgerId: other, type: 'expense', amount: 5,
+        accountId: drift.Value(accId)));
+
+    final snapshot = jsonEncode({
+      'version': 8, 'ledgerName': 'Main', 'currency': 'CNY',
+      'accounts': [], 'categories': [], 'tags': [], 'items': [],
+    });
+    await restoreLedgerFromJson(
+        db: db, repo: repo, ledgerId: main, jsonStr: snapshot);
+
+    final accs = await db.select(db.accounts).get();
+    expect(accs.map((a) => a.syncId), contains('acc-used'),
+        reason: '引用守卫：仍有交易引用的账户不得被镜像删除');
+  });
+
   test('v9 回填：快照带 ledgerSyncId 且本地行缺失时补写 sync_id', () async {
     final id = await addLedger('Main'); // 无 syncId（legacy 行）
     final map = jsonDecodeMap(await exportTransactionsJson(db, id));

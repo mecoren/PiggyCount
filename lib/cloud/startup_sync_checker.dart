@@ -815,8 +815,11 @@ class StartupSyncChecker {
   /// 会让先回传的账本快照被后续合并引入的全局数据失效。
   Future<void> _confirmEach(List<LedgerCandidate> candidates) async {
     // 阶段 1 产出：合并成功的账本（用户点查看详情并应用 / 空变更元数据
-    // 合并 / 旧格式全量替换）
-    final merged = <LedgerCandidate>[];
+    // 合并 / 旧格式全量替换）。
+    // 致命 S1：与 _applyAll 同款守卫 —— 用户在预览弹窗未勾选的云端删除
+    // 会把已删交易留在本地，若照常回传，它们将随快照复活并传播到所有
+    // 设备。skipPublish 标记该账本轮次必须跳过回传。
+    final merged = <({LedgerCandidate cand, bool skipPublish})>[];
     for (final c in candidates) {
       try {
         final previewResult =
@@ -829,7 +832,7 @@ class StartupSyncChecker {
         if (previewResult.preview == null) {
           // 旧格式：弹全量替换确认
           final ok = await _handleLegacyFormat(c.ledger);
-          if (ok) merged.add(c);
+          if (ok) merged.add((cand: c, skipPublish: false));
           continue;
         }
 
@@ -845,7 +848,7 @@ class StartupSyncChecker {
               )
               .timeout(_applyTimeout);
           deps.runAfterDownload();
-          merged.add(c);
+          merged.add((cand: c, skipPublish: false));
           deps.log('StartupSyncChecker: 账本 ${c.ledger.name} preview 为空，'
               '已合并元数据');
           continue;
@@ -864,7 +867,9 @@ class StartupSyncChecker {
             await _publishMerged(merged);
             return;
           case LedgerDialogChoice.viewDetail:
-            // 走同步预览弹窗
+            // 走同步预览弹窗（showSyncPreviewDialog 原地修改 change.selected，
+            // 返回值为同一批实例的过滤列表 —— 弹窗关闭后 preview.changes 的
+            // selected 标志即用户最终选择）
             final selected = await deps.showSyncPreviewDialog(preview);
             if (selected == null || selected.isEmpty) {
               continue;
@@ -877,7 +882,17 @@ class StartupSyncChecker {
                 )
                 .timeout(_applyTimeout);
             deps.runAfterDownload();
-            merged.add(c);
+            // S1 守卫：统计用户未勾选的云端删除（对齐 _applyAll）
+            final unselectedDeleted = preview.changes
+                .where((ch) =>
+                    ch.type == SyncChangeType.deleted && !ch.selected)
+                .length;
+            merged.add((
+              cand: c,
+              skipPublish: StartupSyncChecker.shouldSkipMergePublish(
+                  previewExists: true,
+                  unselectedDeletedCount: unselectedDeleted),
+            ));
             deps.showLegacyInfo(
                 '账本「${c.ledger.name}」已应用 ${result.totalCount} 条变更');
             break;
@@ -930,10 +945,19 @@ class StartupSyncChecker {
 
   /// 批量回传合并成功的账本（confirmEach 阶段 2）
   ///
-  /// 回传失败不中断剩余账本，仅记日志（下次启动会再次提示，可重试）
-  Future<void> _publishMerged(List<LedgerCandidate> merged) async {
-    for (final c in merged) {
-      await _publishAfterMerge(c.ledger.id, c.ledger.name);
+  /// 回传失败不中断剩余账本，仅记日志（下次启动会再次提示，可重试）。
+  /// S1 守卫：存在用户未勾选的云端删除时跳过回传，防止已删交易随快照
+  /// 复活传播（与 _applyAll 阶段 2 同语义）。
+  Future<void> _publishMerged(
+      List<({LedgerCandidate cand, bool skipPublish})> merged) async {
+    for (final entry in merged) {
+      if (entry.skipPublish) {
+        deps.log('StartupSyncChecker: 账本 ${entry.cand.ledger.name} 存在未应用'
+            '的云端删除，本轮跳过回传以防删除复活（下次启动将再次提示）');
+        continue;
+      }
+      await _publishAfterMerge(
+          entry.cand.ledger.id, entry.cand.ledger.name);
     }
   }
 

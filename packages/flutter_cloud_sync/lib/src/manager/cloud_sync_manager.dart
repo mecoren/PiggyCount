@@ -34,6 +34,24 @@ String? _normalizeMetaValue(String? value) {
   return value;
 }
 
+/// 大小写无关读取云端 metadata 并归一化。
+///
+/// HTTP 头名大小写不敏感：S3 链路 x-amz-meta-* 的键经传输层统一转为
+/// 小写（dart:io / package:http 均如此），写入端的 'uploadedAt'/'count'
+/// 在读取端实际是 'uploadedat'/'count'。直接 [] 读取对混合大小写键恒
+/// miss → uploadedAt 解析失败、方向判定退化到 lastModified 兜底。
+/// 按小写匹配对 S3 与 WebDAV sidecar（保留原始键名）都兼容。
+String? _metaValue(Map<String, dynamic>? metadata, String key) {
+  if (metadata == null) return null;
+  final target = key.toLowerCase();
+  for (final entry in metadata.entries) {
+    if (entry.key.toLowerCase() == target) {
+      return _normalizeMetaValue(entry.value as String?);
+    }
+  }
+  return null;
+}
+
 /// Cached sync status entry
 class _CachedStatus {
   final SyncStatus status;
@@ -225,10 +243,10 @@ class CloudSyncManager<T> {
       // （部分后端旁路元数据缺失属自愈降级）。
       try {
         final cloudFile = await provider.storage.getMetadata(path: path);
-        // metadata 值经 _normalizeMetaValue 归一化：剥离存储层可能的
-        // 'b64:' 包装（S3 兼容网关原样返回编码值），否则指纹永不相等。
-        final expected =
-            _normalizeMetaValue(cloudFile?.metadata?['fingerprint'] as String?);
+        // metadata 值经 _metaValue 归一化：剥离存储层可能的 'b64:' 包装
+        // （S3 兼容网关原样返回编码值），否则指纹永不相等；键按大小写
+        // 无关匹配（S3 传输层会把头名转小写）。
+        final expected = _metaValue(cloudFile?.metadata, 'fingerprint');
         if (expected != null) {
           final actual = serializer.fingerprint(serializedData);
           if (actual != expected) {
@@ -356,13 +374,12 @@ class CloudSyncManager<T> {
       int? cloudCount;
       DateTime? cloudUpdatedAt;
 
-      // metadata 值经 _normalizeMetaValue 归一化：剥离存储层可能的
-      // 'b64:' 包装（见其文档注释），否则指纹永不相等、count/uploadedAt
-      // 解析失败（方向判断退化到 lastModified 兜底）
-      final metaFingerprint =
-          _normalizeMetaValue(cloudFile.metadata?['fingerprint'] as String?);
-      final metaCountStr =
-          _normalizeMetaValue(cloudFile.metadata?['count'] as String?);
+      // metadata 值经 _metaValue 归一化：剥离存储层可能的 'b64:' 包装
+      // （见其文档注释），否则指纹永不相等、count/uploadedAt 解析失败
+      // （方向判断退化到 lastModified 兜底）；键大小写无关匹配（S3
+      // 传输层会把 x-amz-meta-* 头名转小写）
+      final metaFingerprint = _metaValue(cloudFile.metadata, 'fingerprint');
+      final metaCountStr = _metaValue(cloudFile.metadata, 'count');
       final metaCount = metaCountStr != null ? int.tryParse(metaCountStr) : null;
 
       if (metaFingerprint != null) {
@@ -371,8 +388,7 @@ class CloudSyncManager<T> {
         cloudCount = metaCount;
 
         // 尝试从 metadata 提取时间戳
-        final uploadedAtStr =
-            _normalizeMetaValue(cloudFile.metadata?['uploadedAt'] as String?);
+        final uploadedAtStr = _metaValue(cloudFile.metadata, 'uploadedAt');
         if (uploadedAtStr != null) {
           cloudUpdatedAt = DateTime.tryParse(uploadedAtStr);
         }
@@ -419,8 +435,7 @@ class CloudSyncManager<T> {
           'Cloud fingerprint: $cloudFingerprint, count: $cloudCount, updatedAt: $cloudUpdatedAt');
 
       // 6. Get last sync timestamp from metadata
-      final lastSyncedAtStr =
-          _normalizeMetaValue(cloudFile.metadata?['uploadedAt'] as String?);
+      final lastSyncedAtStr = _metaValue(cloudFile.metadata, 'uploadedAt');
       final lastSyncedAt = lastSyncedAtStr != null
           ? DateTime.tryParse(lastSyncedAtStr)
           : cloudFile.lastModified;
