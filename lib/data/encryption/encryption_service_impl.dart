@@ -540,6 +540,30 @@ class EncryptionServiceImpl implements EncryptionService {
     return true;
   }
 
+  /// 尽力读取云端对象的现有元数据（S3 x-amz-meta-* / WebDAV sidecar）。
+  ///
+  /// 重加密只改密文包装、不改业务明文，fingerprint/uploadedAt/count 等
+  /// 元数据在重加密后依然有效。而 S3 的 PUT 是整对象覆盖：不带 metadata
+  /// 重传会把 x-amz-meta 全部清空 —— getStatus 退化为全量下载、
+  /// 上传方向仲裁退化为 unknown（多弹一次冲突确认），直到下一次正常
+  /// 同步上传才恢复（审计 P3）。WebDAV 主文件虽不丢 sidecar，但同样
+  /// 回写可保证两端行为一致。读取失败（网络等）返回 null，该文件退回
+  /// 「无元数据」旧行为，不阻断重加密主流程。
+  Future<Map<String, String>?> _preservedMetadata(
+      CloudStorageService cloudStorage, String path) async {
+    try {
+      final file = await cloudStorage.getMetadata(path: path);
+      final meta = file?.metadata;
+      if (meta == null || meta.isEmpty) return null;
+      return {
+        for (final entry in meta.entries)
+          if (entry.value != null) entry.key: entry.value.toString(),
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// 用显式 oldKey/newKey 重加密云端文件（缺陷 A 修复核心）
   ///
   /// 与 [reEncryptExistingCloudData] 的区别：
@@ -618,7 +642,11 @@ class EncryptionServiceImpl implements EncryptionService {
           salt: newSalt,
           encryptedBytes: newEncryptedBytes,
         );
-        await cloudStorage.upload(path: name, data: newCiphertext);
+        await cloudStorage.upload(
+          path: name,
+          data: newCiphertext,
+          metadata: await _preservedMetadata(cloudStorage, name),
+        );
         success++;
         successPaths.add(name);
       } catch (e) {
@@ -678,6 +706,7 @@ class EncryptionServiceImpl implements EncryptionService {
             salt: oldSalt,
             encryptedBytes: oldEncryptedBytes,
           ),
+          metadata: await _preservedMetadata(cloudStorage, name),
         );
       } catch (e) {
         LoggerService().error('CloudReEncrypt', '回滚文件失败: $name', e);
@@ -742,7 +771,11 @@ class EncryptionServiceImpl implements EncryptionService {
         // 这样可避免对已是密文的数据双重加密
         final plaintext = await decrypt(raw);
         final reEncrypted = await encrypt(plaintext);
-        await cloudStorage.upload(path: name, data: reEncrypted);
+        await cloudStorage.upload(
+          path: name,
+          data: reEncrypted,
+          metadata: await _preservedMetadata(cloudStorage, name),
+        );
         success++;
       } catch (e) {
         // 单文件失败不中断整体流程，记录后继续

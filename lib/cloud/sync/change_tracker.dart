@@ -216,6 +216,35 @@ class ChangeTracker {
     logger.debug('ChangeTracker', '标记 ${changeIds.length} 条变更已推送');
   }
 
+  /// 快照同步（Path A）专用：把某账本作用域的全部未推送变更标记为已推送。
+  ///
+  /// 语义依据：Path A 的整账本快照上传会把该账本的 ledger-scoped 变更和
+  /// user-global 变更（账户/分类/标签等，每个快照都全量携带，见
+  /// transactions_json.dart 导出注释）一并带到云端。因此快照上传成功后：
+  /// - ledgerId 对应的 ledger-scoped 未推送行 + 全部 user-global
+  ///   （ledger_id=0）未推送行都已上云，不应再留在推送队列；
+  /// - 防止 local_changes 无限膨胀（此前 Path A 用户永不 markPushed，
+  ///   审计 F2）；
+  /// - 恢复 `_localChangeEvidence`「仅未推送行存在才可信」证据门禁的
+  ///   设计语义（M1/M7）：上传完成后时间戳与内容新旧状态重新对齐。
+  ///
+  /// 注意：只应在**快照上传成功后**调用；SyncEngine（Path B）推送仍走
+  /// [markPushed]（按 changeId 精确标记，失败行留队列重试）。
+  ///
+  /// 返回标记的行数。
+  Future<int> markSnapshotPushed({required int ledgerId}) async {
+    final now = DateTime.now();
+    final count = await (db.update(db.localChanges)
+          ..where((c) => c.pushedAt.isNull() &
+              (c.ledgerId.equals(ledgerId) | c.ledgerId.equals(0))))
+        .write(LocalChangesCompanion(pushedAt: d.Value(now)));
+    if (count > 0) {
+      logger.debug('ChangeTracker',
+          '快照已上云，标记 ledger=$ledgerId(含 user-global) $count 条变更已推送');
+    }
+    return count;
+  }
+
   /// 清理已推送的旧变更（保留最近 7 天）
   Future<int> cleanupPushedChanges({Duration retention = const Duration(days: 7)}) async {
     final cutoff = DateTime.now().subtract(retention);

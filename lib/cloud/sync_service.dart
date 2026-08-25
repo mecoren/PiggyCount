@@ -31,7 +31,15 @@ abstract class SyncService {
 
   Future<SyncStatus> getStatus({required int ledgerId});
 
-  /// 主动刷新云端指纹：强制下载云端对象并计算指纹，返回 (fingerprint, count, exportedAt)。
+  /// 主动刷新云端同步状态，返回 (fingerprint, count, exportedAt)。
+  ///
+  /// 实现说明（F7 契约对齐）：C-01 优化后优先读取对象元数据中的指纹
+  /// （上传时写入、与内容同请求原子落盘），**不一定下载全量内容**；
+  /// 仅当元数据缺失指纹时才回退下载计算。因此本方法适合「刷新展示态」，
+  /// 不适合作为「怀疑云端内容与元数据脱钩（CDN 陈旧副本等）」的内容级
+  /// 校验手段 —— 后者请走下载恢复/对比合并入口，它们会对下载到的明文
+  /// 做交叉自检。
+  ///
   /// 实现可在内部根据对比结果适度更新缓存，便于 UI 立即反映状态。
   Future<({String? fingerprint, int? count, DateTime? exportedAt})>
       refreshCloudFingerprint({required int ledgerId});

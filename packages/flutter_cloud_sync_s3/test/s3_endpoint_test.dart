@@ -62,6 +62,38 @@ void main() {
       expect(info.host, '');
       expect(info.useSSL, isTrue);
     });
+
+    test('F8: 端口 0 不是合法连接目标，不作为 port 解析', () {
+      final info = parseS3Endpoint('minio.local:0');
+      // 拒绝后 host 保留原始输入、port 为 null，交由上层 URI/连接层暴露
+      expect(info.port, isNull);
+    });
+
+    test('F8: 端口越界（>65535）不作为 port 解析', () {
+      final info = parseS3Endpoint('minio.local:99999');
+      expect(info.port, isNull);
+    });
+
+    test('F8: 方括号 IPv6 字面量（无端口）', () {
+      final info = parseS3Endpoint('[::1]');
+      expect(info.host, '[::1]');
+      expect(info.port, isNull);
+      expect(info.useSSL, isTrue);
+    });
+
+    test('F8: 方括号 IPv6 + 端口', () {
+      final info = parseS3Endpoint('http://[2001:db8::1]:9000');
+      expect(info.host, '[2001:db8::1]');
+      expect(info.port, 9000);
+      expect(info.useSSL, isFalse);
+    });
+
+    test('F8: IPv6 与路径混合', () {
+      final info = parseS3Endpoint('https://[::1]/base/path');
+      expect(info.host, '[::1]');
+      expect(info.port, isNull);
+      expect(info.useSSL, isTrue);
+    });
   });
 
   group('isManagedCloudEndpoint', () {

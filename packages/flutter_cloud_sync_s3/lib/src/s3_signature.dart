@@ -29,6 +29,7 @@ class S3SignatureV4 {
   /// [uri] 请求的完整 URI
   /// [headers] 原始请求 headers
   /// [payloadBytes] 请求体字节数组（可选）
+  /// [at] 签名时间（仅测试注入用，省略时取当前 UTC 时间）
   ///
   /// 返回包含签名的完整 headers
   Map<String, String> sign({
@@ -36,10 +37,11 @@ class S3SignatureV4 {
     required Uri uri,
     required Map<String, String> headers,
     List<int>? payloadBytes,
+    DateTime? at,
   }) {
     // 审计 S22：叠加时钟偏差补偿，设备时钟不准时仍可产出服务端
     // 容忍窗口（±15min）内的签名时间。
-    final now = DateTime.now().toUtc().add(clockOffset);
+    final now = (at ?? DateTime.now()).toUtc().add(clockOffset);
     final dateStamp = _formatDateStamp(now);
     final amzDate = _formatAmzDate(now);
 
@@ -202,7 +204,7 @@ class S3SignatureV4 {
   /// 格式化为 AMZ 日期时间格式（20230101T120000Z）
   String _formatAmzDate(DateTime dt) {
     final iso = dt.toIso8601String();
-    return iso.replaceAll(RegExp(r'[-:]'), '').split('.')[0] + 'Z';
+    return '${iso.replaceAll(RegExp(r'[-:]'), '').split('.')[0]}Z';
   }
 
   /// 格式化为日期戳格式（20230101）

@@ -366,9 +366,17 @@ class CloudBackupService {
         ? snapshotSyncId
         : const Uuid().v4();
 
-    final existingByName = await (db.select(db.ledgers)
+    // 审计 S12 同款口径：本地可能存在多个同名账本（legacy 数据/历史导入），
+    // getSingleOrNull 会抛 "Too many elements" 直接崩掉整个备份恢复流程。
+    // 取第一行复用，与 downloadRemoteLedger 的修复保持一致。
+    final sameNameRows = await (db.select(db.ledgers)
           ..where((t) => t.name.equals(name)))
-        .getSingleOrNull();
+        .get();
+    if (sameNameRows.length > 1) {
+      logger.warning('Backup',
+          '本地存在 ${sameNameRows.length} 个同名账本「$name」，复用第一行 (id=${sameNameRows.first.id})');
+    }
+    final existingByName = sameNameRows.isEmpty ? null : sameNameRows.first;
 
     final int ledgerId;
     if (existingByName != null) {

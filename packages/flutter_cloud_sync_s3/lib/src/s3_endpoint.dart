@@ -56,11 +56,29 @@ S3EndpointInfo parseS3Endpoint(String endpoint, {bool? useSSL, int? port}) {
   // 4. 解析 host 与端口（若 host 自带端口且调用方未单独指定）
   var host = value;
   var finalPort = port;
-  if (value.contains(':') && port == null) {
+  if (value.startsWith('[')) {
+    // F8：IPv6 字面量（RFC 3986：IP-literal 需方括号）。`]` 前整体视作
+    // host（保留方括号 —— Uri 拼接 `scheme://[::1]:9000/...` 必须带括号
+    // 才合法，SigV4 的 Host 头取 uri.authority 也天然一致）；端口取
+    // `]` 后的 :n。多个冒号不得再触发 host:port 切分。
+    final close = value.indexOf(']');
+    if (close != -1) {
+      host = value.substring(0, close + 1);
+      final rest = value.substring(close + 1);
+      if (rest.startsWith(':') && port == null) {
+        final candidatePort = int.tryParse(rest.substring(1));
+        if (candidatePort != null && _isValidPort(candidatePort)) {
+          finalPort = candidatePort;
+        }
+      }
+    }
+    // 无 `]`：畸形输入，host 原样保留，交由上层 URI 构造暴露问题
+  } else if (value.contains(':') && port == null) {
     final lastColon = value.lastIndexOf(':');
     final candidatePort = int.tryParse(value.substring(lastColon + 1));
-    // 校验端口范围（0-65535），拒绝越界值避免构造非法 URI
-    if (candidatePort != null && candidatePort >= 0 && candidatePort <= 65535) {
+    // 校验端口范围（1-65535）：0 不是合法的连接目标端口，拒绝越界值
+    // 避免构造非法 URI（F8）
+    if (candidatePort != null && _isValidPort(candidatePort)) {
       host = value.substring(0, lastColon);
       finalPort = candidatePort;
     }
@@ -68,6 +86,9 @@ S3EndpointInfo parseS3Endpoint(String endpoint, {bool? useSSL, int? port}) {
 
   return S3EndpointInfo(host: host, port: finalPort, useSSL: ssl);
 }
+
+/// 合法连接端口范围：0 是 OS 的通配保留值，不能作为请求目标。
+bool _isValidPort(int p) => p >= 1 && p <= 65535;
 
 /// 判断是否为托管云服务端点（通常要求 virtual-hosted-style 寻址）。
 ///

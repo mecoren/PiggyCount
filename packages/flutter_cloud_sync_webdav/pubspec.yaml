@@ -15,6 +15,7 @@ dependencies:
   flutter_cloud_sync:
     path: ../flutter_cloud_sync
   webdav_client: ^1.2.2
+  dio: ^5.4.0
   http: ^1.1.0
 
 dev_dependencies:

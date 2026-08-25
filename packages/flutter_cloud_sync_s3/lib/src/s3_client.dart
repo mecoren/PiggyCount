@@ -237,17 +237,12 @@ class S3Client {
     _checkDisposed();
     final uri = _buildUri(bucket, key: key);
 
-    var headers = <String, String>{
-      'Host': uri.authority,
-    };
-
-    headers = _signer.sign(
-      method: 'GET',
-      uri: uri,
-      headers: headers,
-    );
-
     return _retry(() async {
+      // 每次尝试都重新签名：时钟偏差补偿（_handleError 已把服务器时间差
+      // 写入 signer.clockOffset）后，重试请求必须携带新 x-amz-date 的签名。
+      // 若复用外层旧签名，真实服务端会再次 403 RequestTimeTooSkewed，
+      // 补偿形同虚设（与 listObjectsV2/V1 在闭包内重建 headers 同理）。
+      final headers = _signedHeaders(uri, 'GET');
       try {
         final response = await _httpClient
             .get(uri, headers: headers)
@@ -279,17 +274,9 @@ class S3Client {
     _checkDisposed();
     final uri = _buildUri(bucket, key: key);
 
-    var headers = <String, String>{
-      'Host': uri.authority,
-    };
-
-    headers = _signer.sign(
-      method: 'DELETE',
-      uri: uri,
-      headers: headers,
-    );
-
     await _retry(() async {
+      // 每次尝试重新签名（时钟偏差补偿后旧签名必然再次 403，见 getObject）
+      final headers = _signedHeaders(uri, 'DELETE');
       try {
         final response = await _httpClient
             .delete(uri, headers: headers)
@@ -326,17 +313,9 @@ class S3Client {
     _checkDisposed();
     final uri = _buildUri(bucket, key: key);
 
-    var headers = <String, String>{
-      'Host': uri.authority,
-    };
-
-    headers = _signer.sign(
-      method: 'HEAD',
-      uri: uri,
-      headers: headers,
-    );
-
     return _retry(() async {
+      // 每次尝试重新签名（时钟偏差补偿后旧签名必然再次 403，见 getObject）
+      final headers = _signedHeaders(uri, 'HEAD');
       try {
         final response = await _httpClient
             .head(uri, headers: headers)
@@ -375,17 +354,9 @@ class S3Client {
     _checkDisposed();
     final uri = _buildUri(bucket, key: key);
 
-    var headers = <String, String>{
-      'Host': uri.authority,
-    };
-
-    headers = _signer.sign(
-      method: 'HEAD',
-      uri: uri,
-      headers: headers,
-    );
-
     return _retry(() async {
+      // 每次尝试重新签名（时钟偏差补偿后旧签名必然再次 403，见 getObject）
+      final headers = _signedHeaders(uri, 'HEAD');
       try {
         final response = await _httpClient
             .head(uri, headers: headers)
@@ -511,7 +482,7 @@ class S3Client {
         }
 
         final uri = _buildUri(bucket, queryParameters: queryParams);
-        final headers = _signedGetHeaders(uri);
+        final headers = _signedHeaders(uri, 'GET');
 
         try {
           final response = await _httpClient
@@ -578,7 +549,7 @@ class S3Client {
         }
 
         final uri = _buildUri(bucket, queryParameters: queryParams);
-        final headers = _signedGetHeaders(uri);
+        final headers = _signedHeaders(uri, 'GET');
 
         try {
           final response = await _httpClient
@@ -617,10 +588,15 @@ class S3Client {
     });
   }
 
-  /// 为 GET/HEAD 请求生成带签名的 headers
-  Map<String, String> _signedGetHeaders(Uri uri) {
+  /// 为请求生成带签名的 headers
+  ///
+  /// [method] 必须与实际发送的 HTTP method 完全一致：SigV4 规范请求首行
+  /// 即 HTTP method，服务端按收到的请求行重算签名，签名 method 与实际
+  /// method 不一致必然 SignatureDoesNotMatch(403)。此前 HEAD/DELETE 复用
+  /// GET 签名正是该错误（审计 P0）。
+  Map<String, String> _signedHeaders(Uri uri, String method) {
     return _signer.sign(
-      method: 'GET',
+      method: method,
       uri: uri,
       headers: {'Host': uri.authority},
     );

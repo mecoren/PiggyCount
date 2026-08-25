@@ -136,13 +136,13 @@ class S3StorageService implements CloudStorageService, BinaryCapableStorage {
       );
       // 剥离 keyPrefix 后返回逻辑路径，调用方拿到的 key 可直接传回
       // upload/download/delete，由 _buildKey 再次前置前缀，避免双前缀。
-      return keyPrefix.isEmpty
-          ? keys
-          : keys
-              .map((k) => k.startsWith(keyPrefix)
-                  ? k.substring(keyPrefix.length)
-                  : k)
-              .toList();
+      // 过滤目录占位对象（控制台建目录产生的零字节 key，形如
+      // `piggycount/` 或 `piggycount/attachments/`）：剥离后为空串或以
+      // `/` 结尾，不是真实文件，不应进入调用方的文件列表。
+      String stripPrefix(String k) => k.startsWith(keyPrefix)
+          ? k.substring(keyPrefix.length)
+          : k;
+      return keys.map(stripPrefix).where((k) => k.isNotEmpty && !k.endsWith('/')).toList();
     } on S3AuthException catch (e) {
       throw _authException(e);
     } on S3PermissionDeniedException catch (e) {
@@ -293,21 +293,20 @@ class S3StorageService implements CloudStorageService, BinaryCapableStorage {
         bucket: bucket,
         prefix: prefix.isEmpty ? null : prefix,
       );
-      // 剥离 keyPrefix 后返回逻辑路径，与 listFiles 行为一致
+      // 剥离 keyPrefix 后返回逻辑路径，与 listFiles 行为一致。
+      // 过滤目录占位对象与空名（见 listFiles 内注释）。
+      String stripPrefix(String k) => k.startsWith(keyPrefix)
+          ? k.substring(keyPrefix.length)
+          : k;
       return infos
-          .map((info) {
-            final name = keyPrefix.isEmpty
-                ? info.key
-                : (info.key.startsWith(keyPrefix)
-                    ? info.key.substring(keyPrefix.length)
-                    : info.key);
-            return CloudFile(
-              name: name,
-              path: name,
-              size: info.size,
-              lastModified: info.lastModified,
-            );
-          })
+          .map((info) => (name: stripPrefix(info.key), info: info))
+          .where((e) => e.name.isNotEmpty && !e.name.endsWith('/'))
+          .map((e) => CloudFile(
+                name: e.name,
+                path: e.name,
+                size: e.info.size,
+                lastModified: e.info.lastModified,
+              ))
           .toList();
     } on S3AuthException catch (e) {
       throw _authException(e);

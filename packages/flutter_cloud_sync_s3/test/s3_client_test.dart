@@ -6,6 +6,7 @@ import 'package:http/testing.dart';
 
 import 'package:flutter_cloud_sync_s3/src/s3_client.dart';
 import 'package:flutter_cloud_sync_s3/src/s3_exceptions.dart';
+import 'package:flutter_cloud_sync_s3/src/s3_signature.dart';
 
 const _xmlKeys = [
   'a.txt',
@@ -258,6 +259,170 @@ void main() {
         client.listObjects(bucket: 'b'),
         throwsA(isA<S3AuthException>()),
       );
+    });
+  });
+
+  group('S3Client 签名 method 一致性（P0）', () {
+    /// x-amz-date（20260825T072830Z）→ UTC DateTime
+    DateTime parseAmzDate(String amzDate) {
+      final m = RegExp(r'^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$')
+          .firstMatch(amzDate)!;
+      return DateTime.utc(
+        int.parse(m.group(1)!),
+        int.parse(m.group(2)!),
+        int.parse(m.group(3)!),
+        int.parse(m.group(4)!),
+        int.parse(m.group(5)!),
+        int.parse(m.group(6)!),
+      );
+    }
+
+    /// 用捕获到的请求头（含 x-amz-date）按 [method] 重算期望签名，
+    /// 断言落网 Authorization 与之一致。服务端正是这样校验的：签名
+    /// 规范请求首行是 HTTP method，method 不一致必然 SignatureDoesNotMatch。
+    void expectSignedAs({
+      required String actualAuthorization,
+      required Uri uri,
+      required String method,
+      required String amzDate,
+    }) {
+      final signer = S3SignatureV4(
+        accessKey: 'ak',
+        secretKey: 'sk',
+        region: 'us-east-1',
+      );
+      final expected = signer.sign(
+        method: method,
+        uri: uri,
+        headers: {'Host': uri.authority},
+        at: parseAmzDate(amzDate),
+      );
+      expect(actualAuthorization, expected['Authorization']);
+    }
+
+    test('headObject 以 HEAD 签名', () async {
+      late Uri capturedUri;
+      late Map<String, String> capturedHeaders;
+      final mock = MockClient((request) async {
+        capturedUri = request.url;
+        capturedHeaders = request.headers;
+        return http.Response('', 200);
+      });
+
+      final client = S3Client(
+        endpoint: 'minio.local',
+        region: 'us-east-1',
+        accessKey: 'ak',
+        secretKey: 'sk',
+        useSSL: false,
+        forcePathStyle: true,
+        httpClient: mock,
+      );
+
+      expect(await client.headObject(bucket: 'b', key: 'k.json'), isTrue);
+
+      expectSignedAs(
+        actualAuthorization: capturedHeaders['authorization']!,
+        uri: capturedUri,
+        method: 'HEAD',
+        amzDate: capturedHeaders['x-amz-date']!,
+      );
+    });
+
+    test('headObjectWithMetadata 以 HEAD 签名', () async {
+      late Uri capturedUri;
+      late Map<String, String> capturedHeaders;
+      final mock = MockClient((request) async {
+        capturedUri = request.url;
+        capturedHeaders = request.headers;
+        return http.Response('', 200);
+      });
+
+      final client = S3Client(
+        endpoint: 'minio.local',
+        region: 'us-east-1',
+        accessKey: 'ak',
+        secretKey: 'sk',
+        useSSL: false,
+        forcePathStyle: true,
+        httpClient: mock,
+      );
+
+      final info = await client.headObjectWithMetadata(bucket: 'b', key: 'k');
+      expect(info.exists, isTrue);
+
+      expectSignedAs(
+        actualAuthorization: capturedHeaders['authorization']!,
+        uri: capturedUri,
+        method: 'HEAD',
+        amzDate: capturedHeaders['x-amz-date']!,
+      );
+    });
+
+    test('deleteObject 以 DELETE 签名', () async {
+      late Uri capturedUri;
+      late Map<String, String> capturedHeaders;
+      final mock = MockClient((request) async {
+        capturedUri = request.url;
+        capturedHeaders = request.headers;
+        return http.Response('', 204);
+      });
+
+      final client = S3Client(
+        endpoint: 'minio.local',
+        region: 'us-east-1',
+        accessKey: 'ak',
+        secretKey: 'sk',
+        useSSL: false,
+        forcePathStyle: true,
+        httpClient: mock,
+      );
+
+      await client.deleteObject(bucket: 'b', key: 'k.json');
+
+      expectSignedAs(
+        actualAuthorization: capturedHeaders['authorization']!,
+        uri: capturedUri,
+        method: 'DELETE',
+        amzDate: capturedHeaders['x-amz-date']!,
+      );
+    });
+
+    test('负向对照：GET 签名 ≠ HEAD 落网 Authorization（防回归灵敏度）', () async {
+      late Uri capturedUri;
+      late Map<String, String> capturedHeaders;
+      final mock = MockClient((request) async {
+        capturedUri = request.url;
+        capturedHeaders = request.headers;
+        return http.Response('', 200);
+      });
+
+      final client = S3Client(
+        endpoint: 'minio.local',
+        region: 'us-east-1',
+        accessKey: 'ak',
+        secretKey: 'sk',
+        useSSL: false,
+        forcePathStyle: true,
+        httpClient: mock,
+      );
+
+      await client.headObject(bucket: 'b', key: 'k');
+
+      final signer = S3SignatureV4(
+        accessKey: 'ak',
+        secretKey: 'sk',
+        region: 'us-east-1',
+      );
+      final wrongMethod = signer.sign(
+        method: 'GET',
+        uri: capturedUri,
+        headers: {'Host': capturedUri.authority},
+        at: parseAmzDate(capturedHeaders['x-amz-date']!),
+      );
+      // 若回归为「用 GET 签名发 HEAD」，此断言将失败
+      expect(capturedHeaders['authorization'],
+          isNot(wrongMethod['Authorization']));
     });
   });
 }

@@ -523,9 +523,10 @@ class TransactionsSyncManager implements SyncService {
       String? localFp;
       int? localCount;
       Map<String, dynamic>? exportMap;
+      String? exportedJson;
       try {
-        final jsonStr = await exportTransactionsJson(db, ledgerId);
-        exportMap = jsonDecode(jsonStr) as Map<String, dynamic>;
+        exportedJson = await exportTransactionsJson(db, ledgerId);
+        exportMap = jsonDecode(exportedJson) as Map<String, dynamic>;
         localFp = _contentFingerprintFromMap(exportMap);
         localCount = (exportMap['count'] as num?)?.toInt();
       } catch (e) {
@@ -583,6 +584,11 @@ class TransactionsSyncManager implements SyncService {
         data: ledgerId,
         path: await pathForLedger(ledgerId),
         metadata: uploadMetadata,
+        // F6：复用刚导出的同一份 JSON 与指纹，避免 manager 内部二次全量
+        // 导出（大账本代价高），并消除两次导出间 DB 变化导致的
+        // 「本地缓存指纹 ≠ 云端 metadata 指纹」错位。
+        serializedData: exportedJson,
+        fingerprint: localFp,
       );
 
       // 记录近期上传，用于处理 CDN 缓存延迟
@@ -610,6 +616,23 @@ class TransactionsSyncManager implements SyncService {
 
       // 清除本地变更标记
       _recentLocalChangeAt.remove(ledgerId);
+
+      // F2：快照上传成功 = 本账本 + user-global 的未推送变更均已随快照
+      // 上云，标记 pushedAt：
+      // ① 阻止 local_changes 无限膨胀（Path A 此前永不 markPushed，
+      //    cleanupPushedChanges 也因此无行可清）；
+      // ② 让 _localChangeEvidence 的「未推送行存在才可信」门禁恢复设计
+      //    语义（M1/M7）：上传后时间戳与内容新旧状态重新对齐。
+      // 失败不阻断（下次上传会重新标记）。
+      try {
+        final tracker = repo.changeTracker;
+        if (tracker != null) {
+          await tracker.markSnapshotPushed(ledgerId: ledgerId);
+          unawaited(tracker.cleanupPushedChanges());
+        }
+      } catch (e) {
+        logger.warning('CloudSync', '标记本地变更已推送失败(不影响本次上传): $e');
+      }
 
       logger.info('CloudSync', '上传完成: $ledgerId');
     } catch (e, stack) {
@@ -1141,7 +1164,10 @@ class TransactionsSyncManager implements SyncService {
           data: ledgerId,
           path: await pathForLedger(ledgerId),
           localUpdatedAt: await _computeLocalUpdatedAt(ledgerId),
-          forceRefresh: true);
+          forceRefresh: true,
+          // F6：复用上方已导出的 JSON，省去 manager 内部对同一账本的
+          // 第二次全量导出
+          localSerializedData: jsonStr);
 
       // 转换包的 SyncStatus 为 PiggyCount 的 SyncStatus
       final status = _convertSyncStatus(fcsStatus);
@@ -1352,6 +1378,12 @@ class TransactionsSyncManager implements SyncService {
       if (remoteAt.isAfter(localAt)) return 'cloudNewer';
       return 'unknown'; // 同秒且内容不同：无法判定
     } catch (e) {
+      // F5：认证失败不是「探测不到」而是「确定读不到云端状态」——此时
+      // 放行上传会静默盖掉其他设备的数据，且用户得不到任何修复指引。
+      // 向上抛出由调用方按凭据错误引导（启动检查器/UI 均已区分
+      // CloudAuthException）。其余瞬态故障（网络抖动等）维持原取舍：
+      // 可用性优先，行为等同旧版。
+      if (e is fcs.CloudAuthException) rethrow;
       logger.warning('CloudSync', '上传冲突检测失败（放行上传）: $e');
       return null;
     }

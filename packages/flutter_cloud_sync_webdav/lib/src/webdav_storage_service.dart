@@ -1,9 +1,11 @@
 library;
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as dev;
 import 'dart:typed_data';
 
+import 'package:dio/dio.dart' show CancelToken;
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:webdav_client/webdav_client.dart' as webdav;
 
@@ -25,11 +27,22 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
 
   /// 包裹单次 WebDAV 操作，超时抛 [CloudStorageException]（带操作名），
   /// 与其他网络错误走同一异常通道，调用方无需新增捕获分支。
-  Future<T> _op<T>(String opName, Future<T> Function() op) {
-    return op().timeout(_opTimeout, onTimeout: () {
+  ///
+  /// F9：超时同时通过 [CancelToken] 主动中止底层 HTTP 请求。仅靠
+  /// Future.timeout 放弃等待的话，请求仍在后台继续 —— PUT 可能在超时后
+  /// 才完成，把临时文件留在远端（孤儿半成品）。取消让传输层尽快终止。
+  /// 注意：rename(MOVE) 的上游 client.rename 声明了 cancelToken 形参但未
+  /// 向下传递（webdav_client 1.2.2 已知问题），MOVE 无法被取消，维持
+  /// timeout-only；其余操作全部可取消。
+  Future<T> _op<T>(String opName, Future<T> Function(CancelToken token) op) {
+    final token = CancelToken();
+    final timer = Timer(_opTimeout, () {
+      token.cancel('WebDAV $opName 超时');
+    });
+    return op(token).timeout(_opTimeout, onTimeout: () {
       throw CloudStorageException(
           'WebDAV $opName 超时（${_opTimeout.inSeconds}s），请检查网络或服务器');
-    });
+    }).whenComplete(timer.cancel);
   }
 
   @override
@@ -65,25 +78,25 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
 
       // 1. 先写临时文件（webdav write 需要 Uint8List，避免多余拷贝）
       final data = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
-      await _op('write', () => _client.write(tempPath, data));
+      await _op('write', (t) => _client.write(tempPath, data, cancelToken: t));
 
       // 2. 直接覆盖 rename（overwrite=true），失败时旧文件保持原样
       try {
-        await _op('rename', () => _client.rename(tempPath, fullPath, true));
+        await _op('rename', (_) => _client.rename(tempPath, fullPath, true));
       } catch (renameError) {
         // 3. 降级：部分 WebDAV 服务器 MOVE 不支持覆盖，此时才先删目标
         //    再重试一次。remove 失败（如目标本不存在）可忽略。
         try {
-          await _op('remove', () => _client.remove(fullPath));
+          await _op('remove', (t) => _client.remove(fullPath, t));
         } catch (_) {
           // 目标不存在或删除失败均可忽略，交由 rename 处理
         }
-        await _op('rename', () => _client.rename(tempPath, fullPath, true));
+        await _op('rename', (_) => _client.rename(tempPath, fullPath, true));
       }
     } catch (e) {
       // 清理临时文件，避免远端残留半成品
       try {
-        await _op('remove', () => _client.remove(tempPath));
+        await _op('remove', (t) => _client.remove(tempPath, t));
       } catch (cleanupError) {
         // 临时文件清理失败记录日志，便于排查远端残留半成品
         dev.log('[WebDAV] Warning: temp file cleanup failed for $tempPath: $cleanupError', name: 'WebDAVStorage');
@@ -131,7 +144,7 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
       final fullPath = _buildPath(path);
 
       // Download file
-      final bytes = await _op('read', () => _client.read(fullPath));
+      final bytes = await _op('read', (t) => _client.read(fullPath, cancelToken: t));
 
       return Uint8List.fromList(bytes);
     } catch (e) {
@@ -151,7 +164,7 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
 
     // C-02 修复：删除操作应幂等，404（文件不存在）视为成功
     try {
-      await _op('remove', () => _client.remove(fullPath));
+      await _op('remove', (t) => _client.remove(fullPath, t));
     } catch (e) {
       if (_isNotFound(e)) {
         // 文件已不存在，删除幂等成功
@@ -171,7 +184,7 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
       final fullPath = _buildPath(path);
 
       // List files
-      final files = await _op('readDir', () => _client.readDir(fullPath));
+      final files = await _op('readDir', (t) => _client.readDir(fullPath, t));
 
       // Convert to CloudFile objects, excluding directories and metadata files
       return files
@@ -213,7 +226,7 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
 
     try {
       final files =
-          await _op('readDir', () => _client.readDir(parentDir));
+          await _op('readDir', (t) => _client.readDir(parentDir, t));
       return files.any((f) => f.name == fileName);
     } catch (e) {
       // 仅在目录不存在（404）时返回 false；其他错误（网络中断、
@@ -241,7 +254,7 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
       final fileName = PathHelper.basename(fullPath);
 
       final files =
-          await _op('readDir', () => _client.readDir(parentDir));
+          await _op('readDir', (t) => _client.readDir(parentDir, t));
       // W2：用类型化异常表达「文件不存在」，与超时/网络等通用存储故障区分。
       // 之前 orElse 抛通用 CloudStorageException，下方 `e is
       // CloudStorageException` 分支把 _op 超时抛的同类异常一并吞成 null，
@@ -257,7 +270,11 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
 
       return CloudFile(
         name: file.name ?? '',
-        path: file.path ?? fullPath,
+        // 口径对齐其余方法（upload/download/delete/list）：返回**逻辑相对
+        // 路径**（即调用方传入的 path），保证 getMetadata 的返回值可直接
+        // 回传给 _buildPath 重新拼接而不产生双前缀。file.path 是 webdav_client
+        // 返回的服务端绝对路径，混出去会让下游把目录前缀拼两遍。
+        path: path,
         size: file.size,
         lastModified: file.mTime,
         metadata: customMetadata,
@@ -339,7 +356,7 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
   /// 避免掩盖真实问题导致误导性的 mkdir 调用。
   Future<void> _ensureDirectory(String dirPath) async {
     try {
-      await _op('readDir', () => _client.readDir(dirPath));
+      await _op('readDir', (t) => _client.readDir(dirPath, t));
       // readDir 成功，目录已存在
       return;
     } catch (e) {
@@ -365,12 +382,12 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
     for (final part in parts) {
       currentPath = currentPath.isEmpty ? part : '$currentPath/$part';
       try {
-        await _op('readDir', () => _client.readDir(currentPath));
+        await _op('readDir', (t) => _client.readDir(currentPath, t));
         // 目录已存在，继续下一级
       } catch (e) {
         // 目录可能不存在，尝试创建
         try {
-          await _op('mkdir', () => _client.mkdir(currentPath));
+          await _op('mkdir', (t) => _client.mkdir(currentPath, t));
         } catch (createError) {
           // mkdir 失败可能是并发创建（405/409），再验证一次
           final msg = createError.toString().toLowerCase();
@@ -379,7 +396,7 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
               msg.contains('already exists') ||
               msg.contains('conflict')) {
             try {
-              await _op('readDir', () => _client.readDir(currentPath));
+              await _op('readDir', (t) => _client.readDir(currentPath, t));
               // 验证成功，目录确实存在（由其他进程创建）
             } catch (_) {
               // 验证也失败，说明是真实错误，重新抛出
@@ -396,22 +413,32 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
 
   /// Stores custom metadata as a separate JSON file.
   ///
-  /// 元数据存储失败不影响主数据的完整性（主文件已上传成功），
-  /// 但需记录 warning 日志便于排查，而非完全静默吞掉。
-  Future<void> _storeMetadata(
+  /// 元数据存储失败不影响主数据的完整性（主文件已上传成功），但必须尽力
+  /// 作废可能残留的**陈旧** sidecar（F3）：旧指纹 + 新内容的组合会让读取端
+  /// （CloudSyncManager.download 完整性自检）拿旧指纹比对新内容而硬失败，
+  /// 把「一次性元数据写失败」放大成「该备份永久无法下载」，比
+  /// 「无指纹 → 跳过校验」危险得多。返回是否写入成功。
+  Future<bool> _storeMetadata(
       String filePath, Map<String, String> metadata) async {
+    final metadataPath = '$filePath.metadata.json';
     try {
-      final metadataPath = '$filePath.metadata.json';
       final metadataJson = jsonEncode({
         'metadata': metadata,
         'updatedAt': DateTime.now().toIso8601String(),
       });
       final bytes = utf8.encode(metadataJson);
-      await _op('write', () => _client.write(metadataPath, bytes));
+      await _op('write', (t) => _client.write(metadataPath, bytes, cancelToken: t));
+      return true;
     } catch (e) {
       // 元数据是辅助功能（主数据已上传成功），失败不阻塞主流程，
       // 但记录 warning 便于排查，避免完全静默
       dev.log('[WebDAV] Warning: metadata storage failed for $filePath: $e', name: 'WebDAVStorage');
+      // F3：尽力删除陈旧 sidecar。删除也失败（网络异常时的常见组合）时
+      // 读取端仍会看到陈旧指纹 —— 该残余风险记录在案，属极端场景。
+      try {
+        await _op('remove', (t) => _client.remove(metadataPath, t));
+      } catch (_) {}
+      return false;
     }
   }
 
@@ -420,7 +447,7 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
     try {
       final metadataPath = '$filePath.metadata.json';
       final bytes =
-          await _op('read', () => _client.read(metadataPath));
+          await _op('read', (t) => _client.read(metadataPath, cancelToken: t));
       final json = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
       return json['metadata'] as Map<String, dynamic>? ?? {};
     } catch (e) {
@@ -433,7 +460,7 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
   Future<void> _deleteMetadata(String filePath) async {
     try {
       final metadataPath = '$filePath.metadata.json';
-      await _op('remove', () => _client.remove(metadataPath));
+      await _op('remove', (t) => _client.remove(metadataPath, t));
     } catch (e) {
       // 元数据是辅助数据，删除失败（如文件本就不存在）不阻塞主流程，
       // 但记录 warning 便于排查，与 _storeMetadata 的日志策略保持一致

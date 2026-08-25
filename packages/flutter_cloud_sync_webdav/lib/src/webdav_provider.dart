@@ -125,7 +125,12 @@ class WebDAVProvider implements CloudProvider {
               'WebDAV 服务器返回了重定向（3xx）。请直接填写重定向后的最终地址，'
               '避免凭据被转发到第三方域名');
         } else if (_isNotFound(e)) {
-          await _client!.mkdir(remotePath).timeout(
+          // F4：远端路径不存在 → 递归创建全部缺失层级。此前单级 mkdir 遇到
+          // 嵌套 remotePath（如 /a/b/PiggyCount 且 /a 不存在）时，MKCOL 因
+          // 缺父目录返回 409 → 直接初始化失败。mkdirAll 在 409 时逐级补建
+          // （webdav_client client.mkdirAll），与 uploadBinary 内
+          // _createDirectoryRecursively 的逐级语义一致。
+          await _client!.mkdirAll(remotePath).timeout(
               const Duration(seconds: 60),
               onTimeout: () => throw CloudStorageException(
                   'WebDAV 创建目录超时（60s），请检查网络或服务器'));

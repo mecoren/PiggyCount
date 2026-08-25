@@ -2102,6 +2102,9 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                 s3Bucket: config.s3Bucket,
                 s3UseSSL: config.s3UseSSL,
                 s3Port: config.s3Port,
+                // 寻址方式必须随配置透传，否则连接测试与真实同步的
+                // path-style / virtual-hosted 推断可能分叉
+                s3ForcePathStyle: config.s3ForcePathStyle,
               );
 
               logger.info('CloudServicePage',

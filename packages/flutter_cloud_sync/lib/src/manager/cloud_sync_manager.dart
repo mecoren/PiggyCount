@@ -133,6 +133,8 @@ class CloudSyncManager<T> {
     required T data,
     required String path,
     Map<String, String>? metadata,
+    String? serializedData,
+    String? fingerprint,
   }) async {
     logger?.info('Starting upload: $path');
 
@@ -145,18 +147,23 @@ class CloudSyncManager<T> {
 
     try {
       // 2. Serialize business data
-      final serializedData = await serializer.serialize(data);
-      logger?.debug('Data serialized: ${serializedData.length} bytes');
+      //
+      // F6：支持调用方注入预计算的序列化结果与指纹。业务层（如快照上传）
+      // 往往刚导出过同一份数据用于本地指纹计算，复用可省一次全量导出，
+      // 并消除两次导出之间 DB 再变化导致的「缓存指纹 ≠ 云端 metadata
+      // 指纹」错位。二者须配套传入（指纹必须对应同一份序列化结果）。
+      final payload = serializedData ?? await serializer.serialize(data);
+      final actualFingerprint = fingerprint ?? serializer.fingerprint(payload);
+      logger?.debug('Data serialized: ${payload.length} bytes');
 
       // 3. Calculate fingerprint
-      final fingerprint = serializer.fingerprint(serializedData);
-      logger?.debug('Fingerprint: $fingerprint');
+      logger?.debug('Fingerprint: $actualFingerprint');
 
       // 3.5 尝试从序列化数据中提取 count，写入 metadata 供 getStatus
       // 直接读取（无需下载全量文件）
       String? countStr;
       try {
-        final json = jsonDecode(serializedData) as Map<String, dynamic>?;
+        final json = jsonDecode(payload) as Map<String, dynamic>?;
         if (json != null && json.containsKey('count')) {
           final count = (json['count'] as num?)?.toInt();
           if (count != null) countStr = count.toString();
@@ -170,7 +177,7 @@ class CloudSyncManager<T> {
       // 在后覆盖，防止用户值污染关键字段导致 getStatus 指纹比对失效
       final fullMetadata = <String, String>{
         ...?metadata, // 用户值在前
-        'fingerprint': fingerprint,
+        'fingerprint': actualFingerprint,
         // M4 跨时区一致性：uploadedAt 必须是 UTC（带 Z 后缀）。
         // 调用方（如 transactions_sync_manager）传入的 UTC 值原样保留，
         // 不得用本地 naive 时间覆盖 —— 否则跨时区设备 uploadedAt 解析
@@ -184,7 +191,7 @@ class CloudSyncManager<T> {
       // 5. Upload to cloud storage
       await provider.storage.upload(
         path: path,
-        data: serializedData,
+        data: payload,
         metadata: fullMetadata,
       );
 
@@ -308,6 +315,7 @@ class CloudSyncManager<T> {
     required String path,
     DateTime? localUpdatedAt,
     bool forceRefresh = false,
+    String? localSerializedData,
   }) async {
     logger?.debug('Getting sync status: $path (forceRefresh: $forceRefresh)');
 
@@ -338,7 +346,9 @@ class CloudSyncManager<T> {
       String? localData;
 
       if (data != null) {
-        localData = await serializer.serialize(data);
+        // F6：调用方已持有序列化结果时直接复用，避免同一次状态检查内
+        // 对同一账本做第二次全量导出（快照导出在大账本上代价可观）。
+        localData = localSerializedData ?? await serializer.serialize(data);
         localFingerprint = serializer.fingerprint(localData);
 
         // Try to extract count from serialized data (if it's JSON with a 'count' field)

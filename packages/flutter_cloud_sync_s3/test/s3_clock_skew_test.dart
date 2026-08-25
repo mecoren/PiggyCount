@@ -2,7 +2,6 @@
 //
 // 场景：设备时钟偏差超窗 → 首个请求 403 RequestTimeTooSkewed；
 // client 解析响应 Date 头写入签名偏移，_retry 用新偏移重试成功。
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_cloud_sync_s3/src/s3_client.dart';
