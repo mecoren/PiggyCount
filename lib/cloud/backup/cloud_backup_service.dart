@@ -84,6 +84,9 @@ class CloudBackupService {
   static final RegExp _backupNamePattern =
       RegExp(r'^PiggyCount-(\d{4}-\d{2}-\d{2})\.zip$');
 
+  /// 审计修复（附件原子落盘）：恢复写盘临时文件名的进程内自增序号
+  static int _restoreWriteSeq = 0;
+
   /// ZIP 内账本条目名：`ledger_<id>.json`
   static final RegExp _ledgerEntryPattern = RegExp(r'^ledger_(\d+)\.json$');
 
@@ -202,7 +205,18 @@ class CloudBackupService {
         '备份目录原始列表: ${files.map((f) => f.name).toList()}');
     final result = <BackupFileInfo>[];
     for (final f in files) {
-      final baseName = f.name.split('/').last;
+      // 审计修复（S3 前缀误命中）：S3 ListObjects 的 prefix 是文本前缀，
+      // 'piggycount-bak' 会同时命中 'piggycount-bak-old/...' 等兄弟目录
+      // 下的对象。仅接受「裸文件名（WebDAV readDir 口径）」或「恰好位于
+      // backupDir 一级之下（S3 剥离 keyPrefix 后的相对路径）」的条目；
+      // 其余带路径前缀的一律过滤，避免把兄弟目录的同名 zip 展示为可恢复
+      // 备份、点恢复时才报「文件不存在」。
+      var rel = f.name;
+      while (rel.startsWith('/')) {
+        rel = rel.substring(1);
+      }
+      if (rel.contains('/') && !rel.startsWith('$backupDir/')) continue;
+      final baseName = rel.split('/').last;
       final m = _backupNamePattern.firstMatch(baseName);
       if (m == null) continue;
       final date = DateTime.tryParse(m.group(1)!);
@@ -468,7 +482,20 @@ class CloudBackupService {
             '附件 sha256 不匹配，跳过落盘: expect=$sha actual=$actual');
         continue;
       }
-      await dest.writeAsBytes(bytes, flush: true);
+      // 审计修复（原子落盘）：先写临时文件再 rename，进程中途被杀不会
+      // 留下截断半截文件冒充已恢复的附件（与 drainAttachmentJobs 同口径）
+      final tempPath =
+          '${dest.path}.tmp.${DateTime.now().microsecondsSinceEpoch}_${_restoreWriteSeq++}';
+      final tempFile = File(tempPath);
+      try {
+        await tempFile.writeAsBytes(bytes, flush: true);
+        await tempFile.rename(dest.path);
+      } catch (_) {
+        try {
+          if (await tempFile.exists()) await tempFile.delete();
+        } catch (_) {}
+        rethrow;
+      }
       restored++;
     }
     return restored;

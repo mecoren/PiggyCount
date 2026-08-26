@@ -191,7 +191,7 @@ class S3Client {
       } catch (e) {
         if (e is S3Exception) rethrow;
         throw S3Exception('PutObject failed: $e',
-            originalException: e as Exception?);
+            originalException: _asException(e));
       }
     }
   }
@@ -261,7 +261,7 @@ class S3Client {
       } on S3Exception {
         rethrow;
       } catch (e) {
-        throw S3Exception('GetObject failed: $e', originalException: e as Exception?);
+        throw S3Exception('GetObject failed: $e', originalException: _asException(e));
       }
     });
   }
@@ -295,7 +295,7 @@ class S3Client {
       } on S3Exception {
         rethrow;
       } catch (e) {
-        throw S3Exception('DeleteObject failed: $e', originalException: e as Exception?);
+        throw S3Exception('DeleteObject failed: $e', originalException: _asException(e));
       }
     });
   }
@@ -331,7 +331,7 @@ class S3Client {
       } on S3Exception {
         rethrow;
       } catch (e) {
-        throw S3Exception('HeadObject failed: $e', originalException: e as Exception?);
+        throw S3Exception('HeadObject failed: $e', originalException: _asException(e));
       }
     });
   }
@@ -381,7 +381,7 @@ class S3Client {
       } on S3Exception {
         rethrow;
       } catch (e) {
-        throw S3Exception('HeadObject failed: $e', originalException: e as Exception?);
+        throw S3Exception('HeadObject failed: $e', originalException: _asException(e));
       }
     });
   }
@@ -511,7 +511,7 @@ class S3Client {
           throw S3NetworkException('ListObjects timed out after ${timeout.inSeconds}s');
         } catch (e) {
           if (e is S3Exception) rethrow;
-          throw S3Exception('ListObjects failed: $e', originalException: e as Exception?);
+          throw S3Exception('ListObjects failed: $e', originalException: _asException(e));
         }
         // 达到 maxKeys 上限即停，绝不继续翻页
       } while (continuationToken != null &&
@@ -578,7 +578,7 @@ class S3Client {
           throw S3NetworkException('ListObjects timed out after ${timeout.inSeconds}s');
         } catch (e) {
           if (e is S3Exception) rethrow;
-          throw S3Exception('ListObjects failed: $e', originalException: e as Exception?);
+          throw S3Exception('ListObjects failed: $e', originalException: _asException(e));
         }
         // 达到 maxKeys 上限即停，绝不继续翻页
       } while (marker != null &&
@@ -831,4 +831,9 @@ class S3Client {
     if (cleaned.isEmpty) return body.trim();
     return cleaned.length > 300 ? '${cleaned.substring(0, 300)}…' : cleaned;
   }
+
+  /// 审计修复：安全提取原始异常。通用 catch (e) 捕获的可能是 Error
+  /// （如 ArgumentError/RangeError），此前 `e as Exception?` 强转在遇到
+  /// Error 时自身抛 TypeError、掩盖真正的错误；非 Exception 一律置 null。
+  static Exception? _asException(Object e) => e is Exception ? e : null;
 }

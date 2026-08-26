@@ -21,6 +21,12 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
   /// 在服务层统一包 .timeout 兜底。
   static const _opTimeout = Duration(seconds: 60);
 
+  /// 审计修复：进程内自增计数器，参与上传临时文件名构造。此前仅用
+  /// 毫秒时间戳，同一目标的并发上传落在同一毫秒时互相覆盖对方写了一半
+  /// 的 tmp，先完成者 rename 发布的可能是对方截断的数据（与 S3 侧
+  /// _tempSeq 修复同款）。时间戳 + 序号保证每次上传独占自己的 tmp。
+  static int _tempSeq = 0;
+
   /// M15：上传临时文件标记（`<name>.tmp.<毫秒>`，见 [uploadBinary]）。
   /// list() 据此过滤上传中断残留的半成品，避免被下游当有效文件消费。
   static const _tempFileMarker = '.tmp.';
@@ -81,7 +87,8 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
     //   2. 降级本身改为无损交换：旧文件先挪到备份位 → 新文件落位 → 成功后
     //      删备份。任一步失败都尽力把备份挪回原位，全程不存在
     //      「目标已删、新未落位且无备份」的窗口。
-    final tempPath = '$fullPath.tmp.${DateTime.now().millisecondsSinceEpoch}';
+    final tempPath =
+        '$fullPath.tmp.${DateTime.now().millisecondsSinceEpoch}_${_tempSeq++}';
     try {
       // 确保父目录存在
       await _ensureDirectory(PathHelper.dirname(fullPath));
@@ -529,7 +536,14 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
       final json = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
       return json['metadata'] as Map<String, dynamic>? ?? {};
     } catch (e) {
-      // Return empty map if metadata file doesn't exist
+      // 审计修复：sidecar 不存在（从未写过/已被清理）是常态，静默返回空；
+      // 超时/网络抖动等真实故障也返回空 map（指纹缺失 → 上层走全量下载
+      // 兜底，安全设计不变），但必须留下告警 —— 否则弱网下反复全量下载
+      // 无从排查。
+      if (!_isNotFound(e)) {
+        dev.log('[WebDAV] Warning: metadata sidecar read failed for $filePath: $e',
+            name: 'WebDAVStorage');
+      }
       return {};
     }
   }

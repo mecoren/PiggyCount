@@ -127,7 +127,18 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
     final c5 =
         (a['categoryKind'] as String).compareTo(b['categoryKind'] as String);
     if (c5 != 0) return c5;
-    return (a['note'] as String).compareTo(b['note'] as String);
+    final c6 = (a['note'] as String).compareTo(b['note'] as String);
+    if (c6 != 0) return c6;
+    // 审计修复（指纹全序化）：以上 6 键打平、但其余参与哈希的字段
+    // （accountName/tags/tagSyncIds/attachments/override 等）不同的两笔
+    // 交易，旧实现的相对顺序随输入顺序漂移 —— 导出端输入按本地自增 id
+    // 排序（transactions_json），跨设备 id 序列独立必然不同，同一逻辑
+    // 数据两端会算出不同指纹 → 永久 outOfSync/different 循环。
+    // 以完整规范化串做末位比较，使排序成为全序：平局项顺序确定、与
+    // 输入顺序无关。无平局项的数据指纹不受影响（哈希内容不变）。
+    // 已知取舍：算法变更让「存在 6 键平局交易」的存量用户升级后首轮
+    // 一次性 outOfSync，同步一轮即收敛（同 M2 迁移先例）。
+    return jsonEncode(a).compareTo(jsonEncode(b));
   });
   // 账户元数据规范化（account_metadata_sync_fix G4）：
   // 字段集与 exportTransactionsJson 的账户导出保持一致；缺失键以默认值
@@ -155,7 +166,9 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
             'sortOrder': (a['sortOrder'] as num?)?.toInt().toString() ?? '',
           })
       .toList();
-  // 排序键：syncId 优先，缺失时回退 name —— 顺序无关且跨设备稳定
+  // 排序键：syncId 优先，缺失时回退 name —— 顺序无关且跨设备稳定。
+  // 平局兜底同 items：完整规范化串比较，保证全序（两个同名且无 syncId
+  // 的 legacy 账户旧实现会随输入顺序/本地 id 漂移）。
   accountCanon.sort((a, b) {
     final ka = (a['syncId'] as String).isNotEmpty
         ? a['syncId'] as String
@@ -163,7 +176,9 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
     final kb = (b['syncId'] as String).isNotEmpty
         ? b['syncId'] as String
         : (b['name'] as String);
-    return ka.compareTo(kb);
+    final c = ka.compareTo(kb);
+    if (c != 0) return c;
+    return jsonEncode(a).compareTo(jsonEncode(b));
   });
 
   // ---- v8（sync_gap_closure）：全量分类/标签 + 预算/周期/汇率覆盖 ----
@@ -171,7 +186,10 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
   // 变化」时两端判 inSync，新增的预算/规则/分类永远不被拉取。
   // 所有数组按稳定键排序（syncId 优先，业务键兜底）后序列化。
 
-  // 通用兜底排序键：syncId 非空用 syncId，否则用 name / 业务键
+  // 通用兜底排序键：syncId 非空用 syncId，否则用 name / 业务键。
+  // 平局时以完整规范化串定序（全序保证，理由同 items 的末位比较）：
+  // 同名无 syncId 的分类/标签、以及无 syncId 的周期规则（recurring
+  // 规范化 map 无 name 键，旧实现全部平局）此前都随输入顺序漂移。
   int compareBySyncIdOrName(Map<String, dynamic> a, Map<String, dynamic> b) {
     final ka = ((a['syncId'] as String?) ?? '').isNotEmpty
         ? a['syncId'] as String
@@ -179,7 +197,9 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
     final kb = ((b['syncId'] as String?) ?? '').isNotEmpty
         ? b['syncId'] as String
         : ((b['name'] as String?) ?? '');
-    return ka.compareTo(kb);
+    final c = ka.compareTo(kb);
+    if (c != 0) return c;
+    return jsonEncode(a).compareTo(jsonEncode(b));
   }
 
   final categories = (payload['categories'] as List?)
@@ -228,7 +248,9 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
             'enabled': b['enabled'] as bool? ?? true,
           })
       .toList()
-    // 预算排序键：syncId 优先，业务键兜底（旧快照无 syncId 的行）
+    // 预算排序键：syncId 优先，业务键兜底（旧快照无 syncId 的行）。
+    // 平局兜底：完整规范化串（同 type/category/period 但金额不同的
+    // 无 syncId 预算，旧实现顺序随输入漂移）。
     ..sort((a, b) {
       final ka = ((a['syncId'] as String?) ?? '').isNotEmpty
           ? a['syncId'] as String
@@ -236,7 +258,9 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
       final kb = ((b['syncId'] as String?) ?? '').isNotEmpty
           ? b['syncId'] as String
           : '${b['type']}|${b['categoryName']}|${b['period']}';
-      return ka.compareTo(kb);
+      final c = ka.compareTo(kb);
+      if (c != 0) return c;
+      return jsonEncode(a).compareTo(jsonEncode(b));
     });
 
   final recurrings = (payload['recurring'] as List?)
@@ -281,9 +305,14 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
                 .toString(),
           })
       .toList()
-    ..sort((a, b) =>
-        '${a['baseCurrency']}/${a['quoteCurrency']}'
-            .compareTo('${b['baseCurrency']}/${b['quoteCurrency']}'));
+    // 业务键 (base, quote) 理论唯一；平局兜底仍加全序比较，防脏数据
+    // （同币种对多行）时顺序漂移
+    ..sort((a, b) {
+      final c = '${a['baseCurrency']}/${a['quoteCurrency']}'
+          .compareTo('${b['baseCurrency']}/${b['quoteCurrency']}');
+      if (c != 0) return c;
+      return jsonEncode(a).compareTo(jsonEncode(b));
+    });
 
   final bytes = utf8.encode(jsonEncode({
     'items': canon,

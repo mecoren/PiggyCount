@@ -55,6 +55,10 @@ class TransactionsSyncManager implements SyncService {
   /// m-03 修复：状态缓存 TTL，防止其他设备上传后本地仍显示过时的"已同步"状态
   static const _statusCacheTtl = Duration(seconds: 60);
 
+  /// 审计修复（附件原子落盘）：下载写盘临时文件名的进程内自增序号，
+  /// 与时间戳组合保证并发下载（semaphore 4）各自独占 tmp 文件。
+  static int _attachWriteSeq = 0;
+
   final Map<int, _CachedStatus> _statusCache = {};
   final Map<int, DateTime> _recentLocalChangeAt = {};
   final Map<int, _RecentUpload> _recentUpload = {};
@@ -1182,7 +1186,24 @@ class TransactionsSyncManager implements SyncService {
         final appDir = await getApplicationDocumentsDirectory();
         final dest = File('${appDir.path}/attachments/${job.fileName}');
         await dest.parent.create(recursive: true);
-        await dest.writeAsBytes(bytes, flush: true);
+        // 审计修复（原子落盘）：先写临时文件再 rename。此前直接 writeAsBytes
+        // 写目标文件，进程中途被杀会留下截断的半截文件 —— 而入队侧
+        // （enqueueMissingAttachmentJobs）按 File.exists() 判重，半截文件
+        // 会被当作「已存在」永不重下，且文件名含 sha256 无从察觉损坏。
+        // 时间戳 + 进程内序号保证并发下载（semaphore 4）各自独占 tmp。
+        final tempPath =
+            '${dest.path}.tmp.${DateTime.now().microsecondsSinceEpoch}_${_attachWriteSeq++}';
+        final tempFile = File(tempPath);
+        try {
+          await tempFile.writeAsBytes(bytes, flush: true);
+          await tempFile.rename(dest.path);
+        } catch (_) {
+          // rename 失败尽力清理本次 tmp，避免残留垃圾文件
+          try {
+            if (await tempFile.exists()) await tempFile.delete();
+          } catch (_) {}
+          rethrow;
+        }
         return _AttachmentDownloadOutcome.ok;
       } catch (e) {
         lastError = e;

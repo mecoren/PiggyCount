@@ -466,6 +466,87 @@ void main() {
       });
     });
 
+    group('排序全序化（审计修复：平局项顺序不得随输入漂移）', () {
+      Map<String, dynamic> tieTx(String accountName) => {
+            // 6 个排序键全部相同，仅 accountName（参与哈希但不参与旧排序键）不同
+            'happenedAt': '2026-08-01T00:00:00.000Z',
+            'type': 'expense',
+            'amount': 15.0,
+            'categoryName': '餐饮',
+            'categoryKind': 'expense',
+            'note': '',
+            'accountName': accountName,
+          };
+
+      test('同排序键不同账户的两笔交易：输入顺序反转指纹不变', () {
+        // 设备 A 本地 id 序 [现金, 招行]；设备 B [招行, 现金]
+        final deviceA = payload([tieTx('现金'), tieTx('招行卡')]);
+        final deviceB = payload([tieTx('招行卡'), tieTx('现金')]);
+
+        expect(
+          contentFingerprintFromMap(deviceA),
+          equals(contentFingerprintFromMap(deviceB)),
+          reason: '排序非全序时两端指纹不一致 → 永久 outOfSync/different',
+        );
+      });
+
+      test('同名无 syncId 的两个账户：输入顺序反转指纹不变', () {
+        Map<String, dynamic> acct(String type) =>
+            {'name': '现金', 'type': type, 'currency': 'CNY'};
+        final p1 = payload([
+          txItem(happenedAt: '2026-07-01T10:00:00', type: 'expense', amount: 1),
+        ]);
+        final a = {'items': p1['items'], 'accounts': [acct('cash'), acct('credit')]};
+        final b = {'items': p1['items'], 'accounts': [acct('credit'), acct('cash')]};
+
+        expect(
+          contentFingerprintFromMap(a),
+          equals(contentFingerprintFromMap(b)),
+        );
+      });
+
+      test('无 syncId 的周期规则：输入顺序反转指纹不变', () {
+        Map<String, dynamic> rule(double amount) => {
+              'syncId': '',
+              'type': 'expense',
+              'amount': amount,
+              'frequency': 'monthly',
+              'startDate': '2026-01-01T00:00:00.000Z',
+            };
+        final items = [
+          txItem(happenedAt: '2026-07-01T10:00:00', type: 'expense', amount: 1),
+        ];
+        // recurring 规范化 map 无 name 键，旧实现按 name('') 排序必然全平局
+        final r1 = {'items': items, 'recurring': [rule(10.0), rule(20.0)]};
+        final r2 = {'items': items, 'recurring': [rule(20.0), rule(10.0)]};
+
+        expect(
+          contentFingerprintFromMap(r1),
+          equals(contentFingerprintFromMap(r2)),
+        );
+      });
+
+      test('同业务键无 syncId 的两条预算：输入顺序反转指纹不变', () {
+        Map<String, dynamic> budget(double amount) => {
+              'syncId': '',
+              'type': 'category',
+              'categoryName': '餐饮',
+              'amount': amount,
+              'period': 'monthly',
+            };
+        final items = [
+          txItem(happenedAt: '2026-07-01T10:00:00', type: 'expense', amount: 1),
+        ];
+        final b1 = {'items': items, 'budgets': [budget(100.0), budget(200.0)]};
+        final b2 = {'items': items, 'budgets': [budget(200.0), budget(100.0)]};
+
+        expect(
+          contentFingerprintFromMap(b1),
+          equals(contentFingerprintFromMap(b2)),
+        );
+      });
+    });
+
     test('快照测试：固定输入对应固定 SHA256（防止规范化规则意外变化）', () {
       // 该测试用例的输入与期望指纹绑定，任何对规范化规则的修改都会触发此测试失败，
       // 提醒开发者评估是否需要数据迁移或全量重同步。
