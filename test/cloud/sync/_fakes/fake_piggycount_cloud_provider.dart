@@ -106,6 +106,12 @@ class FakePiggyCountCloudStorageService implements CloudStorageService {
     }
     return CloudFile(name: path, path: path);
   }
+
+  /// 测试 helper：直接塞入可下载文件内容（fullPull 守卫等场景，
+  /// 需要保证「若无守卫则恢复必然执行」的对照前提）
+  void seedFile({required String path, required String content}) {
+    _files[path] = content;
+  }
 }
 
 // =====================================================================
@@ -293,6 +299,11 @@ class FakePiggyCountCloudProvider extends PiggyCountCloudProvider {
       name: ledgerId,
       path: ledgerId,
     ));
+  }
+
+  /// 测试 helper：塞入可下载文件（透传 [_fakeStorage.seedFile]）
+  void seedStorageFile({required String path, required String content}) {
+    _fakeStorage.seedFile(path: path, content: content);
   }
 
   /// 清空所有 in-memory 状态

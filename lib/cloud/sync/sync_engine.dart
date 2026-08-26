@@ -1749,6 +1749,28 @@ class SyncEngine implements app.SyncService {
       {required int ledgerId}) async {
     logger.info('SyncEngine', '开始全量拉取 ledger=$ledgerId');
 
+    // 审计 PathB-H3：共享账本 Editor 角色拒绝快照整本恢复 —— 与 §7
+    // 「Editor 永不 fullPush」（:489）对称。restoreLedgerFromJson 会清空
+    // 账本并连带 W4 清理未推送 local_changes：Editor 尚未推送的本地编辑
+    // 先被静默丢弃、再被 Owner 快照覆盖，属无提示的破坏性覆盖。
+    // 共享账本的非 Owner 内容以 server 增量日志为准 —— 增量 pull 的 S3b
+    // 守卫会保护未推送编辑，没有这条对称闸门。SYNC-02 自愈循环遍历全部
+    // 账本时同样经由本方法，此处拦截即两路同时生效；被跳过账本的增量
+    // 缺口与既有「自愈窗口内其他设备增量被跳过」取舍一致（见
+    // _recoverStuckPullFromSnapshot 注释），下次增量同步继续收敛。
+    final ledgerRow = await (db.select(db.ledgers)
+          ..where((l) => l.id.equals(ledgerId)))
+        .getSingleOrNull();
+    if (ledgerRow != null &&
+        ledgerRow.isShared &&
+        ledgerRow.myRole != 'owner') {
+      logger.warning('SyncEngine',
+          'fullPull 拒绝：ledger=$ledgerId 为共享账本且本机角色='
+          '${ledgerRow.myRole}，快照整本恢复会覆盖未推送的本地编辑'
+          '（审计 PathB-H3）。如需对账请走增量同步或对比合并');
+      return (inserted: 0, deletedDup: 0);
+    }
+
     // path 对齐 fullPush 上传时用的 ledger.syncId。
     // TSM-P18/P19：缺失时就地生成，不再回退数字 id。
     final path = await _resolveLedgerExternalId(ledgerId);

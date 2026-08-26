@@ -176,7 +176,13 @@ extension SyncEngineApplyExt on SyncEngine {
     final hasToAccountKey = payload.containsKey('toAccountId') ||
         payload.containsKey('toAccountName');
     final type = payload['type'] as String? ?? 'expense';
-    final amount = (payload['amount'] as num?)?.toDouble() ?? 0.0;
+    // 审计 PathB-H1：amount 与核心字段同级，但 partial 更新可能不携带 ——
+    // 此前无条件 `?? 0.0` 且 update 走覆盖分支，一条缺 amount 的 payload
+    // 会把本地金额清零并向下游传播。对齐 M7 containsKey 范式。
+    final hasAmountKey = payload.containsKey('amount');
+    final amount = hasAmountKey
+        ? ((payload['amount'] as num?)?.toDouble() ?? 0.0)
+        : 0.0; // 仅 insert 兜底用；update 走 absent
     final note = payload['note'] as String?;
     final categoryName = payload['categoryName'] as String?;
     final categoryKind = payload['categoryKind'] as String?;
@@ -329,7 +335,8 @@ extension SyncEngineApplyExt on SyncEngine {
       await (db.update(db.transactions)..where((t) => t.id.equals(existingId!)))
           .write(TransactionsCompanion(
         type: hasTypeKey ? d.Value(type) : const d.Value.absent(),
-        amount: d.Value(amount),
+        // 审计 PathB-H1：缺键保留本地金额（此前无条件覆盖为兜底 0.0）
+        amount: hasAmountKey ? d.Value(amount) : const d.Value.absent(),
         // 审计 T8：仅「解析成功」才覆盖 —— 键存在但值非法时保留本地日期，
         // 防止脏 payload 把交易时间刷成应用时刻（M7 缺键保护的解析失败版）
         happenedAt: parsedHappenedAt != null
@@ -483,6 +490,17 @@ extension SyncEngineApplyExt on SyncEngine {
     final int localId;
     if (existing != null) {
       localId = existing.id;
+      // 审计 PathB-H2：可选字段缺键保护 —— hidden 早已走 containsKey 范式
+      // （见上方 D6 注释），但 creditLimit/bankName/note 等同样"只改名字的
+      // partial 更新不会携带"的字段此前无条件写 null，一条 partial payload
+      // 就会把本地信用额度/开户行/备注清空。统一对齐 containsKey 守卫；
+      // insert 分支行是新建，缺键落 null 默认无破坏性。
+      final hasCreditLimit = payload.containsKey('creditLimit');
+      final hasBillingDay = payload.containsKey('billingDay');
+      final hasPaymentDueDay = payload.containsKey('paymentDueDay');
+      final hasBankName = payload.containsKey('bankName');
+      final hasCardLastFour = payload.containsKey('cardLastFour');
+      final hasNote = payload.containsKey('note');
       await (db.update(db.accounts)..where((a) => a.id.equals(localId)))
           .write(AccountsCompanion(
         name: d.Value(name),
@@ -490,12 +508,24 @@ extension SyncEngineApplyExt on SyncEngine {
         currency: d.Value(currency),
         initialBalance: d.Value(initialBalance),
         sortOrder: d.Value(sortOrder),
-        creditLimit: d.Value((payload['creditLimit'] as num?)?.toDouble()),
-        billingDay: d.Value((payload['billingDay'] as num?)?.toInt()),
-        paymentDueDay: d.Value((payload['paymentDueDay'] as num?)?.toInt()),
-        bankName: d.Value(payload['bankName'] as String?),
-        cardLastFour: d.Value(payload['cardLastFour'] as String?),
-        note: d.Value(payload['note'] as String?),
+        creditLimit: hasCreditLimit
+            ? d.Value((payload['creditLimit'] as num?)?.toDouble())
+            : const d.Value.absent(),
+        billingDay: hasBillingDay
+            ? d.Value((payload['billingDay'] as num?)?.toInt())
+            : const d.Value.absent(),
+        paymentDueDay: hasPaymentDueDay
+            ? d.Value((payload['paymentDueDay'] as num?)?.toInt())
+            : const d.Value.absent(),
+        bankName: hasBankName
+            ? d.Value(payload['bankName'] as String?)
+            : const d.Value.absent(),
+        cardLastFour: hasCardLastFour
+            ? d.Value(payload['cardLastFour'] as String?)
+            : const d.Value.absent(),
+        note: hasNote
+            ? d.Value(payload['note'] as String?)
+            : const d.Value.absent(),
         hidden: hidden == null ? const d.Value.absent() : d.Value(hidden),
       ));
       logger.debug('SyncEngine', 'pull: 更新账户 $syncId');
@@ -647,6 +677,12 @@ extension SyncEngineApplyExt on SyncEngine {
     if (existing.isNotEmpty) {
       final target = existing.first;
       localCategoryId = target.id;
+      // 审计 PathB-H2：parentId 由 parentName 解析而来 —— payload 不带
+      // parentName 的 partial 更新若无条件写 parentId，会把本地父子链清掉。
+      // communityIconId 同理。均走 containsKey 守卫；customIconPath 已有
+      // 独立解析策略（见上），保持原样。
+      final hasParentKey = payload.containsKey('parentName');
+      final hasCommunityIconId = payload.containsKey('communityIconId');
       await (db.update(db.categories)
             ..where((c) => c.id.equals(localCategoryId!)))
           .write(CategoriesCompanion(
@@ -657,8 +693,11 @@ extension SyncEngineApplyExt on SyncEngine {
         icon: d.Value(icon),
         iconType: d.Value(iconType),
         customIconPath: d.Value(resolvedCustomIconPath),
-        communityIconId: d.Value(payload['communityIconId'] as String?),
-        parentId: d.Value(parentId),
+        communityIconId: hasCommunityIconId
+            ? d.Value(payload['communityIconId'] as String?)
+            : const d.Value.absent(),
+        parentId:
+            hasParentKey ? d.Value(parentId) : const d.Value.absent(),
       ));
       logger.debug('SyncEngine', 'pull: 更新分类 $syncId');
     } else {
