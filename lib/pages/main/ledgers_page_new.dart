@@ -1286,8 +1286,13 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       await AppDialog.info(
         context,
         title: AppLocalizations.of(context).ledgersUploadAllComplete,
-        message: AppLocalizations.of(context)
-            .ledgersUploadAllResult(result.success, result.failed),
+        // 审计 A4：uploadAllLedgers 不再强制覆盖，被 M7 闸门拦下的账本
+        // 单独计数并复用与页面级批量一致的「跳过冲突」文案
+        message: result.conflicts > 0
+            ? AppLocalizations.of(context).ledgersUploadAllConflictSkipped(
+                result.success, result.conflicts)
+            : AppLocalizations.of(context)
+                .ledgersUploadAllResult(result.success, result.failed),
       );
     } catch (e) {
       // 异常路径也必须关掉进度弹窗，否则它会永久挡住页面

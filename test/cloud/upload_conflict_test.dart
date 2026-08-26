@@ -161,15 +161,20 @@ void main() {
     expect(storage.uploadCallCount, 1, reason: '用户确认后必须能完成覆盖上传');
   });
 
-  test('getMetadata 探测自身失败 → 放行上传（可用性优先）', () async {
+  test('getMetadata 探测自身失败 → 中止上传（审计 A5 策略变更）', () async {
     final storage = _FakeConflictStorage(metadata: null)
       ..metadataError = Exception('simulated network error');
     final manager = buildManager(storage);
 
-    await manager.uploadCurrentLedger(ledgerId: 1);
+    await expectLater(
+      manager.uploadCurrentLedger(ledgerId: 1),
+      throwsA(isA<fcs.CloudSyncException>()),
+    );
 
-    expect(storage.uploadCallCount, 1,
-        reason: '探测失败不应阻塞上传——行为等同修复前的旧版');
+    expect(storage.uploadCallCount, 0,
+        reason:
+            '无法确认云端状态时不得盲传（旧行为放行上传会静默覆盖他机增量）；'
+            '抛错引导用户稍后重试，数据安全不再取决于网络运气');
   });
 
   test('方向仲裁：仅剩已推送的 local_changes（时间戳失真）→ 判 unknown 拦截，不放行覆盖',

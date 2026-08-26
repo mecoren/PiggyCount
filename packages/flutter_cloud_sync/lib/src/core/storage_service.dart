@@ -25,12 +25,22 @@ class CloudFile {
   /// Used to store fingerprint, version, etc.
   final Map<String, dynamic>? metadata;
 
+  /// Entity tag (optional)
+  ///
+  /// 方案C（并发全面加固）：后端能提供 ETag 时透出（S3 来自
+  /// PUT/GET/HEAD 响应头；WebDAV 来自 PROPFIND 的 getetag 属性），
+  /// 供 [ConditionalWriteStorage] 做乐观并发控制。
+  /// 无法获取 ETag 的后端为 null，调用方必须容忍 null 并退化为
+  /// "读指纹比对 + 写后校验"的弱一致路径。
+  final String? eTag;
+
   const CloudFile({
     required this.name,
     required this.path,
     this.size,
     this.lastModified,
     this.metadata,
+    this.eTag,
   });
 
   @override
@@ -85,6 +95,15 @@ abstract class CloudStorageService {
   ///
   /// Returns list of files in the directory.
   /// Throws [CloudStorageException] if listing fails.
+  ///
+  /// ⚠️ 后端语义差异（调用方必须知晓，勿依赖跨后端一致的递归行为）：
+  /// - S3：ListObjectsV2 无 delimiter —— 返回前缀下**所有层级**的 key
+  ///   （递归扁平化），嵌套子目录中的文件也会出现；
+  /// - WebDAV：PROPFIND Depth 1 —— 仅返回该目录**直接子项**，
+  ///   子目录内容不会出现。
+  /// 当前业务约定快照/附件/备份均存放于扁平路径（如
+  /// `ledger_<id>.json`、`attachments/<sha>.bin` 一级目录），
+  /// 两后端在该约定下行为一致；若未来引入更深层级，须逐调用方复核。
   Future<List<CloudFile>> list({required String path});
 
   /// Check if file exists
@@ -158,6 +177,57 @@ abstract class BinaryCapableStorage {
   /// 下载原始字节；文件不存在返回 null。
   /// 返回内容约定为 uploadBinary 上传的原始字节（不做任何文本编码）。
   Future<Uint8List?> downloadBinary({required String path});
+}
+
+/// 可选能力接口：支持条件写（乐观并发控制）的存储后端。
+///
+/// 方案C（并发全面加固）：普通 [upload] 是盲覆盖（last-writer-wins），
+/// 两台设备并发「读指纹 → 写」会静默丢失一方更新。实现本接口的后端
+/// 可把「读到的远端状态」作为前置条件原子地下推到写请求：
+///
+/// - S3：`If-Match: <etag>` / `If-None-Match: *`，服务器端原子判定，
+///   失败返回 412 → 抛 [CloudPreconditionFailedException]
+/// - WebDAV：无标准条件 PUT（webdav_client 不透传 If-Match），实现方
+///   以「上传前重取 eTag 比对」近似，窗口显著缩小但非原子 —— 调用方
+///   仍需配合 manager 层的写后校验兜底
+abstract class ConditionalWriteStorage {
+  /// 是否真正支持条件写。
+  ///
+  /// 装饰器（如端到端加密层）必须按 inner 的能力**如实**申报：
+  /// inner 不支持时返回 false，调用方据此退化为盲上传 + 写后校验。
+  /// 直接后端（S3/WebDAV）恒为 true。
+  bool get supportsConditionalWrite;
+
+  /// 带前置条件的字节上传。
+  ///
+  /// - [ifMatchEtag] 非空时：仅当远端当前 ETag 与之相等才写入，
+  ///   否则抛 [CloudPreconditionFailedException]（远端不存在同样算
+  ///   条件失败）
+  /// - [ifNoneMatch] 为 true 时：仅当远端**不存在**该对象才写入
+  ///   （create-only），已存在抛 [CloudPreconditionFailedException]；
+  ///   与 [ifMatchEtag] 互斥，同时传入抛 ArgumentError
+  Future<void> uploadBinaryConditional({
+    required String path,
+    required List<int> bytes,
+    Map<String, String>? metadata,
+    String? ifMatchEtag,
+    bool ifNoneMatch = false,
+  });
+}
+
+/// 条件写能力解析：穿透常见装饰器形态直接问实例本身。
+///
+/// 调用方（manager/应用层）统一用它判定，而不是裸 `is` 检查 ——
+/// 加密装饰器实现了接口但能力取决于 inner，靠 [ConditionalWriteStorage.supportsConditionalWrite]
+/// 如实申报。
+extension CloudStorageConditionalExt on CloudStorageService {
+  ConditionalWriteStorage? get conditionalOrNull {
+    if (this is ConditionalWriteStorage) {
+      final c = this as ConditionalWriteStorage;
+      return c.supportsConditionalWrite ? c : null;
+    }
+    return null;
+  }
 }
 
 /// 二进制读写入口：按后端能力自动分派。

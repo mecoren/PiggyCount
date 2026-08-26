@@ -1,5 +1,8 @@
 library;
 
+import 'dart:async';
+
+import 'package:dio/dio.dart' show CancelToken;
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:webdav_client/webdav_client.dart' as webdav;
 
@@ -77,10 +80,19 @@ class WebDAVProvider implements CloudProvider {
 
     // P2-7：WebDAV 使用 HTTP Basic Auth，用户名密码以 Base64（可逆）
     // 随每个请求明文传输。强制 https，避免 http 链路上凭据被窃取。
+    //
+    // 审计 W-K：`davs://` 是部分客户端自造的 scheme，标准 WebDAV over TLS
+    // 就是 https://。dio/http 不支持 davs，放行只会在首个请求时以晦涩的
+    // 「Unsupported scheme」失败 —— 校验阶段直接拒绝并给出可执行的指引。
     final scheme = Uri.tryParse(url)?.scheme.toLowerCase() ?? '';
-    if (scheme != 'https' && scheme != 'davs') {
+    if (scheme == 'davs') {
       throw CloudConfigurationException(
-          'WebDAV 地址必须使用 HTTPS（当前为 $scheme://，'
+          '不支持 davs:// 地址（dio 无法处理该协议）。'
+          'WebDAV over TLS 请直接填写 https:// 形式地址');
+    }
+    if (scheme != 'https') {
+      throw CloudConfigurationException(
+          'WebDAV 地址必须使用 HTTPS（当前为 ${scheme.isEmpty ? '(无协议)' : '$scheme://'}，'
           'Basic Auth 凭据将在链路上明文传输）');
     }
 
@@ -116,11 +128,11 @@ class WebDAVProvider implements CloudProvider {
 
       // Verify connection by reading the remote path
       try {
-        // P3：60s 超时防服务器无响应导致初始化永久挂起
-        await _client!.readDir(remotePath).timeout(
-            const Duration(seconds: 60),
-            onTimeout: () => throw CloudStorageException(
-                'WebDAV 连接超时（60s），请检查网络或服务器'));
+        // 审计 W-J：探测超时同时取消底层请求（对齐存储层 _op 策略）。
+        // 此前仅 Future.timeout 放弃等待，PROPFIND/MKCOL 仍在后台飞行，
+        // 迟到的响应会与后续 mkdirAll 竞态。
+        await _probeWithTimeout(
+            'readDir', (t) => _client!.readDir(remotePath, t));
       } catch (e) {
         // 仅在 404（远端路径不存在）时触发创建；其他错误（网络中断、
         // 403 权限不足等）直接抛出，避免掩盖真实问题导致误导性的 mkdir。
@@ -134,14 +146,18 @@ class WebDAVProvider implements CloudProvider {
           // 缺父目录返回 409 → 直接初始化失败。mkdirAll 在 409 时逐级补建
           // （webdav_client client.mkdirAll），与 uploadBinary 内
           // _createDirectoryRecursively 的逐级语义一致。
-          await _client!.mkdirAll(remotePath).timeout(
-              const Duration(seconds: 60),
-              onTimeout: () => throw CloudStorageException(
-                  'WebDAV 创建目录超时（60s），请检查网络或服务器'));
+          await _probeWithTimeout(
+              'mkdirAll', (t) => _client!.mkdirAll(remotePath, t));
         } else if (_isUnauthorized(e)) {
           // 401/403 凭据错误：抛专属认证异常，上层（如 ensureInitialized
-          // 调用方）据此引导用户重新配置，而非误报网络/配置格式问题
-          throw CloudAuthException('WebDAV 认证失败（账号或密码错误）', e);
+          // 调用方）据此引导用户重新配置，而非误报网络/配置格式问题。
+          // 审计 W-X：401 与 403 分开表述（403 多为权限不足而非密码错误）
+          final code = _statusCodeOf(e);
+          throw code == 403
+              ? CloudAuthException(
+                  'WebDAV 访问被拒绝（权限不足）：请检查账号对该目录的读写权限或服务器配额',
+                  e)
+              : CloudAuthException('WebDAV 认证失败（账号或密码错误）', e);
         } else {
           rethrow;
         }
@@ -213,9 +229,23 @@ class WebDAVProvider implements CloudProvider {
     await _disposeQuietly();
   }
 
+  /// 初始化探测的统一超时包装（P3 + 审计 W-J）：
+  /// 超时先取消底层 HTTP 请求再抛 [CloudStorageException]，
+  /// 避免放弃等待后请求仍在后台飞行、迟到响应与后续操作竞态。
+  static const _probeTimeout = Duration(seconds: 60);
+
+  Future<T> _probeWithTimeout<T>(
+      String opName, Future<T> Function(CancelToken token) op) {
+    final token = CancelToken();
+    final timer = Timer(_probeTimeout, () => token.cancel('WebDAV $opName 超时'));
+    return op(token).timeout(_probeTimeout, onTimeout: () {
+      throw CloudStorageException(
+          'WebDAV $opName 超时（${_probeTimeout.inSeconds}s），请检查网络或服务器');
+    }).whenComplete(timer.cancel);
+  }
+
   /// 提取异常携带的结构化 HTTP 状态码（dio 系异常），无则返回 null。
-  int? _statusCodeOf(Object e) {
-    try {
+  int? _statusCodeOf(Object e) {    try {
       final dynamic dyn = e;
       final dynamic response = dyn.response;
       if (response != null) {

@@ -620,8 +620,12 @@ class DatabaseSyncManager {
     );
 
     if (localUpdated != null && cloudUpdated != null) {
-      if (localUpdated.isAfter(cloudUpdated)) {
-        // Local is newer, potential conflict
+      // 审计 A2 修复：方向判定必须**对称**。此前只把「本地较新」当冲突，
+      // 「云端较新」落入 return null → syncRecord 无条件用本地记录覆盖
+      // 云端，旧数据静默盖掉新数据（方向性错误，正是冲突检测要拦的）。
+      // 现在任一方向更新都交由冲突策略裁决 —— lastWriteWins 会选出
+      // 时间上真正的新者，preferCloud/preferLocal 各按语义处理。
+      if (!localUpdated.isAtSameMomentAs(cloudUpdated)) {
         return SyncConflict(
           localRecord: localRecord,
           cloudRecord: cloudRecord,

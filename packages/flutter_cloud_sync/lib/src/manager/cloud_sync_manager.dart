@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../core/cloud_provider.dart';
 import '../core/data_serializer.dart';
 import '../core/exceptions.dart';
+import '../core/storage_service.dart';
 import '../core/sync_status.dart';
 import '../utils/logger.dart';
 
@@ -117,6 +118,10 @@ class CloudSyncManager<T> {
   /// [data] - Business data to upload (e.g., ledger ID)
   /// [path] - Cloud storage path (e.g., 'ledgers/123.json')
   /// [metadata] - Optional metadata to attach
+  /// [ifMatchEtag] - 方案C 乐观并发锚点：非空且后端支持条件写时，
+  ///   仅当远端 ETag 仍等于该值才写入；远端已被其他设备修改则抛
+  ///   [CloudPreconditionFailedException]（本次写入未落盘）。
+  ///   后端不支持条件写时静默退化为盲上传（由写后校验兜底）。
   ///
   /// Throws [CloudNotAuthenticatedException] if user not authenticated.
   /// Throws [CloudStorageException] if upload fails.
@@ -135,6 +140,7 @@ class CloudSyncManager<T> {
     Map<String, String>? metadata,
     String? serializedData,
     String? fingerprint,
+    String? ifMatchEtag,
   }) async {
     logger?.info('Starting upload: $path');
 
@@ -189,11 +195,39 @@ class CloudSyncManager<T> {
       };
 
       // 5. Upload to cloud storage
-      await provider.storage.upload(
-        path: path,
-        data: payload,
-        metadata: fullMetadata,
-      );
+      //
+      // 方案C：调用方传入乐观并发锚点（冲突探测时读到的云端 eTag）且
+      // 后端支持条件写时，走条件上传 —— 远端在探测后被其他设备先行修改
+      // 会抛 [CloudPreconditionFailedException]，本次写入不落盘，从
+      // 「静默覆盖他机数据」变为显式冲突。不支持时退化为盲上传，
+      // 由步骤 5.5 的写后校验兜底。
+      final conditional = provider.storage.conditionalOrNull;
+      if (ifMatchEtag != null && conditional != null) {
+        await conditional.uploadBinaryConditional(
+          path: path,
+          bytes: utf8.encode(payload),
+          metadata: fullMetadata,
+          ifMatchEtag: ifMatchEtag,
+        );
+      } else {
+        if (ifMatchEtag != null) {
+          logger?.warning(
+              'Conditional write requested but backend lacks support; '
+              'falling back to blind upload: $path');
+        }
+        await provider.storage.upload(
+          path: path,
+          data: payload,
+          metadata: fullMetadata,
+        );
+      }
+
+      // 5.5 写后校验（defense-in-depth）：重新读取云端指纹，与我们写入的
+      // 比对。不一致说明「写入被并发覆盖」或「网关返回了陈旧副本」。
+      // 不硬抛 —— 部分网关（R2/OSS 边缘缓存）存在读写短暂不一致窗口，
+      // 硬抛会把成功上传误报为失败；强一致保证由条件写承担，此处仅
+      // 记录错误并失效状态缓存，让下次 getStatus 强制重查真实指纹。
+      await _verifyAfterUpload(path, actualFingerprint);
 
       // 6. Invalidate cache
       _statusCache.remove(path);
@@ -205,6 +239,29 @@ class CloudSyncManager<T> {
         rethrow;
       }
       throw CloudStorageException('Upload failed', e);
+    }
+  }
+
+  /// 写后校验（方案C，defense-in-depth）。
+  ///
+  /// 上传成功后重读云端指纹与我们写入的比对。任何失败（元数据不可用、
+  /// 网络抖动等）都只降级为 warning，绝不阻断已成功的上传。
+  Future<void> _verifyAfterUpload(String path, String expectedFingerprint) async {
+    try {
+      final file = await provider.storage.getMetadata(path: path);
+      final actual = _metaValue(file?.metadata, 'fingerprint');
+      if (actual != null && actual != expectedFingerprint) {
+        logger?.error('Post-upload verify FAILED (cloud fingerprint mismatch): '
+            '$path (expected=$expectedFingerprint, actual=$actual)。'
+            '云端内容可能已被并发覆盖或网关返回陈旧副本');
+        // 失效缓存：下次 getStatus 强制重查，UI 会据真实指纹给出
+        // outOfSync/conflict 判定
+        _statusCache.remove(path);
+      } else {
+        logger?.debug('Post-upload verify passed: $path');
+      }
+    } catch (e) {
+      logger?.warning('Post-upload verify skipped (metadata unavailable): $e');
     }
   }
 

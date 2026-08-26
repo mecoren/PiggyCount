@@ -481,11 +481,29 @@ class TransactionsSyncManager implements SyncService {
       return 'ledger_$existing.json';
     }
     final generated = const Uuid().v4();
-    await (db.update(db.ledgers)..where((l) => l.id.equals(row.id)))
+    // 审计 T3（TOCTOU）：并发调用可能都读到 syncId=null、各自生成 UUID
+    // 互相覆盖，先返回者的路径成为孤儿云端槽位。带 `syncId IS NULL`
+    // 条件的更新保证只有一个写入者生效；affected=0 说明并发方已写入，
+    // 重读行取**实际落库值**，双方拿到同一身份。
+    final updated = await (db.update(db.ledgers)
+          ..where((l) => l.id.equals(row.id) & l.syncId.isNull()))
         .write(LedgersCompanion(syncId: drift.Value(generated)));
+    String effectiveId = generated;
+    if (updated == 0) {
+      final reread = await (db.select(db.ledgers)
+            ..where((l) => l.id.equals(row.id)))
+          .getSingleOrNull();
+      final rereadSyncId = reread?.syncId?.trim();
+      if (rereadSyncId == null || rereadSyncId.isEmpty) {
+        // 理论不可达（条件更新失败但值仍空）：保守沿用本次生成值
+        logger.warning('CloudSync', 'pathForLedger syncId 并发回读为空（保留生成值）');
+      } else {
+        effectiveId = rereadSyncId;
+      }
+    }
     logger.info('CloudSync',
-        'pathForLedger 就地生成账本 syncId: ${row.id} → $generated');
-    return 'ledger_$generated.json';
+        'pathForLedger 就地生成账本 syncId: ${row.id} → $effectiveId');
+    return 'ledger_$effectiveId.json';
   }
 
   /// 把下载到的原始内容规整为「可解析的明文」。
@@ -731,18 +749,23 @@ class TransactionsSyncManager implements SyncService {
       // 云端快照更新 / 方向无法判定但内容不同 → 抛 CloudConflictException，
       // 由 UI 确认后 force:true 重试。内部流程（全量上传已有双重确认、
       // 合并后回传、Critical-07 换名）直接传 force:true 不受影响。
+      //
+      // 方案C：探测同时捕获云端 ETag 作为乐观并发锚点 —— 后端支持条件写
+      // 时，「探测通过 → 上传落盘」之间云端被并发修改会显式失败而非覆盖。
+      String? cloudETag;
       if (!force) {
-        final conflict = await _detectUploadConflict(
+        final probe = await _detectUploadConflict(
           provider: provider,
           ledgerId: ledgerId,
           localFp: localFp,
         );
-        if (conflict != null) {
+        if (probe.hasConflict) {
           logger.warning('CloudSync',
-              '上传冲突拦截: ledger=$ledgerId direction=$conflict '
+              '上传冲突拦截: ledger=$ledgerId direction=${probe.direction} '
               '(等待用户确认覆盖)');
-          throw CloudConflictException(direction: conflict);
+          throw CloudConflictException(direction: probe.direction!);
         }
+        cloudETag = probe.cloudETag;
       }
 
       // m-02 修复：将账本摘要信息写入 metadata，
@@ -774,16 +797,27 @@ class TransactionsSyncManager implements SyncService {
         logger.warning('CloudSync', '附件对象上传异常(不阻断账本上传): $e');
       }
 
-      await manager.upload(
-        data: ledgerId,
-        path: await pathForLedger(ledgerId),
-        metadata: uploadMetadata,
-        // F6：复用刚导出的同一份 JSON 与指纹，避免 manager 内部二次全量
-        // 导出（大账本代价高），并消除两次导出间 DB 变化导致的
-        // 「本地缓存指纹 ≠ 云端 metadata 指纹」错位。
-        serializedData: exportedJson,
-        fingerprint: localFp,
-      );
+      try {
+        await manager.upload(
+          data: ledgerId,
+          path: await pathForLedger(ledgerId),
+          metadata: uploadMetadata,
+          // F6：复用刚导出的同一份 JSON 与指纹，避免 manager 内部二次全量
+          // 导出（大账本代价高），并消除两次导出间 DB 变化导致的
+          // 「本地缓存指纹 ≠ 云端 metadata 指纹」错位。
+          serializedData: exportedJson,
+          fingerprint: localFp,
+          // 方案C：乐观并发锚点。S3 走 If-Match 原子条件写；WebDAV 走
+          // eTag 预检；不支持的后端由 manager 内部降级为盲上传+写后校验。
+          ifMatchEtag: cloudETag,
+        );
+      } on fcs.CloudPreconditionFailedException {
+        // 探测到写入之间云端已被其他设备修改，本次未落盘。翻译为冲突
+        // 异常走既有的用户确认/合并流程，绝不静默重试（重试=覆盖他机数据）。
+        logger.warning('CloudSync',
+            '条件写失败（云端已被并发修改）: ledger=$ledgerId → 转入冲突流程');
+        throw CloudConflictException(direction: 'cloudNewer');
+      }
 
       // 记录近期上传，用于处理 CDN 缓存延迟
       if (localFp != null && localCount != null) {
@@ -840,11 +874,17 @@ class TransactionsSyncManager implements SyncService {
   ///
   /// 串行而非并行：避免并发上传打满 WebDAV/S3 连接数限制，且
   /// uploadCurrentLedger 内部写 _recentUpload/_statusCache（Map），
-  /// 串行天然无竞态。返回 (success, failed) 统计，语义对齐
+  /// 串行天然无竞态。返回 (success, failed, conflicts) 统计，语义对齐
   /// [restoreAllRemoteLedgers]。
   ///
+  /// 审计 A4 修复：移除强制 `force:true`。此前整批绕过 M7 冲突闸门，
+  /// 与页面级批量上传（保留拦截并单独计数 conflicts）安全语义相反 ——
+  /// 同一动作两个入口行为不同，误用即覆盖他机更新。现在统一走逐账本
+  /// 冲突检测；被云端较新/方向不明拦下的账本计入 [conflicts]，UI 据此
+  /// 引导用户对个别账本走「对比合并」或显式确认覆盖。
+  ///
   /// [onProgress] 每完成一个账本回调 (done, total)，供 UI 阻塞弹窗展示进度。
-  Future<({int success, int failed})> uploadAllLedgers({
+  Future<({int success, int failed, int conflicts})> uploadAllLedgers({
     void Function(int done, int total)? onProgress,
   }) async {
     await _ensureInitialized();
@@ -852,13 +892,16 @@ class TransactionsSyncManager implements SyncService {
     final ledgers = await db.select(db.ledgers).get();
     var success = 0;
     var failed = 0;
+    var conflicts = 0;
     var done = 0;
     for (final ledger in ledgers) {
       try {
-        // M7：批量上传是显式的「全量覆盖」动作（UI 侧已有双重危险确认），
-        // force 跳过逐账本冲突拦截，避免整批被逐个弹窗打断。
-        await uploadCurrentLedger(ledgerId: ledger.id, force: true);
+        await uploadCurrentLedger(ledgerId: ledger.id);
         success++;
+      } on CloudConflictException {
+        // 云端较新/方向无法判定：跳过该账本（不静默覆盖），单独计数
+        logger.warning('CloudSync', '批量上传：账本 ${ledger.id} 存在云端更新，已跳过待用户处理');
+        conflicts++;
       } catch (e) {
         // 单个账本失败只计数并继续，避免一个账本故障拖垮整批备份
         logger.warning('CloudSync', '批量上传账本 ${ledger.id} 失败: $e');
@@ -867,7 +910,7 @@ class TransactionsSyncManager implements SyncService {
       done++;
       onProgress?.call(done, ledgers.length);
     }
-    return (success: success, failed: failed);
+    return (success: success, failed: failed, conflicts: conflicts);
   }
 
   // ============================================================
@@ -1362,10 +1405,12 @@ class TransactionsSyncManager implements SyncService {
       logger.error('CloudSync', '下载失败: $ledgerId', e);
       logger.error('CloudSync', '堆栈', stack);
 
-      // m-04 修复：优先用类型匹配判断 404，字符串匹配作为兜底
-      if (e is fcs.CloudFileNotFoundException ||
-          e.toString().contains('404') ||
-          e.toString().contains('not found')) {
+      // m-04 契约澄清：S3/WebDAV 的 download/getMetadata 在 404 时返回
+      // null（见 core exceptions.dart 契约注释），正常路径根本不会以异常
+      // 形式到达这里 —— 此处的字符串匹配只是对「网关把 404 包成存储故障
+      // 上抛」的防御性兜底。CloudFileNotFoundException 类型分支已删：
+      // 当前两个适配器均不抛该类型，保留只会误导读者以为它会命中。
+      if (e.toString().contains('404') || e.toString().contains('not found')) {
         return (inserted: 0, deletedDup: 0);
       }
 
@@ -1382,7 +1427,9 @@ class TransactionsSyncManager implements SyncService {
   /// 返回 (preview, importData, jsonVersion) 或 null（云端无数据）
   /// - preview 为 null 表示无法计算 diff（旧格式），应走全量替换
   /// - preview 不为 null 表示可以预览
-  Future<({SyncPreview? preview, ImportData importData, int version})?> downloadAndPreview({
+  Future<
+      ({SyncPreview? preview, ImportData importData, int version,
+          String? cloudFingerprint})?> downloadAndPreview({
     required int ledgerId,
   }) async {
     await _ensureInitialized();
@@ -1412,6 +1459,11 @@ class TransactionsSyncManager implements SyncService {
     final jsonData = jsonDecode(jsonStr) as Map<String, dynamic>;
     final version = (jsonData['version'] as num?)?.toInt() ?? 1;
     final importData = parseJsonToImportData(jsonStr);
+    // 审计 H6：快照自描述的内嵌指纹（与内容同生共死）。启动检查的
+    // merge-then-publish 用它做「回传前新鲜度校验」的基线 —— 合并决策
+    // 所依据的云端内容若在回传前被其他设备更新，回传即中止而非覆盖。
+    final cloudFingerprint =
+        jsonData['contentFingerprint'] as String?;
 
     // 检查是否含 syncId（v6+）
     if (version >= 6) {
@@ -1422,12 +1474,22 @@ class TransactionsSyncManager implements SyncService {
       );
 
       if (preview != null) {
-        return (preview: preview, importData: importData, version: version);
+        return (
+          preview: preview,
+          importData: importData,
+          version: version,
+          cloudFingerprint: cloudFingerprint,
+        );
       }
     }
 
     // 旧格式或无法计算 diff
-    return (preview: null, importData: importData, version: version);
+    return (
+      preview: null,
+      importData: importData,
+      version: version,
+      cloudFingerprint: cloudFingerprint,
+    );
   }
 
   /// 应用预览中选中的变更
@@ -1704,8 +1766,12 @@ class TransactionsSyncManager implements SyncService {
     logger.info('CloudSync', '标记本地变更: $ledgerId');
   }
 
-  /// M7：上传前冲突判定。返回冲突方向（'cloudNewer'/'unknown'），
-  /// null = 可安全上传。
+  /// M7：上传前冲突判定。返回探测结果：
+  /// - [UploadProbe.direction] 非 null = 冲突（'cloudNewer'/'unknown'），禁止盲传；
+  /// - null = 可安全上传；
+  /// - [UploadProbe.cloudETag] 为探测时读到的云端 ETag（可能为 null），
+  ///   方案C：作为乐观并发锚点传给 manager.upload，后端支持条件写时
+  ///   「探测 → 写入」之间的并发修改会以 412 显式暴露而非静默覆盖。
   ///
   /// 判定链：
   /// 1. 云端无快照 → 直接传（localOnly 语义）；
@@ -1718,12 +1784,15 @@ class TransactionsSyncManager implements SyncService {
   ///      recordChanges:false 导入会让纯 local_changes 时间戳失真，
   ///      既可能把新数据判旧放行覆盖、也可能把旧数据判新误报云端较新）
   ///      → 'unknown' 冲突，由上层给出「对比合并」入口而非二选一；
-  /// 4. 探测自身失败（网络等）→ 放行：可用性优先，行为等同旧版。
+  /// 4. 探测自身失败（网络等）→ **中止上传**（审计 A5 策略变更）：
+  ///    旧取舍「可用性优先、行为等同旧版」意味着网络抖动时可能盖掉他机
+  ///    刚写入的数据且用户毫不知情；改为抛出带指引的错误，重试即可恢复
+  ///    可用性，而数据安全不再取决于网络运气。
   ///
   /// 注意 M2 指纹算法升级的迁移窗口：旧元数据指纹与新算法必有一轮错位，
   /// 此时会落到 unknown 冲突——用户走一次对比合并（或确认覆盖）即写入
   /// 新算法元数据，永久收敛。
-  Future<String?> _detectUploadConflict({
+  Future<UploadProbe> _detectUploadConflict({
     required fcs.CloudProvider provider,
     required int ledgerId,
     required String? localFp,
@@ -1731,13 +1800,13 @@ class TransactionsSyncManager implements SyncService {
     try {
       final meta = await provider.storage
           .getMetadata(path: await pathForLedger(ledgerId));
-      if (meta == null) return null; // 云端无备份
+      if (meta == null) return const UploadProbe(); // 云端无备份
 
       final remoteFp = _metaValue(meta.metadata, 'fingerprint');
       if (localFp != null &&
           remoteFp != null &&
           localFp == remoteFp) {
-        return null; // 内容一致
+        return UploadProbe(cloudETag: meta.eTag); // 内容一致
       }
 
       // 审计 TSM-P3：元数据指纹缺失（WebDAV sidecar 丢失/写失败、S3 头被
@@ -1755,7 +1824,7 @@ class TransactionsSyncManager implements SyncService {
           if (embeddedFp == localFp) {
             logger.info('CloudSync',
                 '冲突检测：元数据指纹缺失/错位，内嵌指纹一致 → 放行上传');
-            return null;
+            return UploadProbe(cloudETag: meta.eTag);
           }
           // 内容确实不同：跳过下面基于「指纹可能只是丢失」的乐观假设，
           // 直接按内容不同走时间仲裁
@@ -1766,22 +1835,33 @@ class TransactionsSyncManager implements SyncService {
       final remoteAt =
           DateTime.tryParse(_metaValue(meta.metadata, 'uploadedAt') ?? '') ??
               meta.lastModified;
-      if (remoteAt == null) return 'unknown';
+      if (remoteAt == null) return UploadProbe(direction: 'unknown');
       final evidence = await _localChangeEvidence(ledgerId);
       final localAt = evidence.at;
-      if (!evidence.trusted || localAt == null) return 'unknown';
-      if (localAt.isAfter(remoteAt)) return null; // 本地较新：正常覆盖
-      if (remoteAt.isAfter(localAt)) return 'cloudNewer';
-      return 'unknown'; // 同秒且内容不同：无法判定
+      if (!evidence.trusted || localAt == null) {
+        return UploadProbe(direction: 'unknown');
+      }
+      if (localAt.isAfter(remoteAt)) {
+        return UploadProbe(cloudETag: meta.eTag); // 本地较新：正常覆盖
+      }
+      if (remoteAt.isAfter(localAt)) {
+        return UploadProbe(direction: 'cloudNewer');
+      }
+      return UploadProbe(direction: 'unknown'); // 同秒且内容不同：无法判定
     } catch (e) {
       // F5：认证失败不是「探测不到」而是「确定读不到云端状态」——此时
       // 放行上传会静默盖掉其他设备的数据，且用户得不到任何修复指引。
       // 向上抛出由调用方按凭据错误引导（启动检查器/UI 均已区分
-      // CloudAuthException）。其余瞬态故障（网络抖动等）维持原取舍：
-      // 可用性优先，行为等同旧版。
+      // CloudAuthException）。
       if (e is fcs.CloudAuthException) rethrow;
-      logger.warning('CloudSync', '上传冲突检测失败（放行上传）: $e');
-      return null;
+      // 审计 A5 策略变更：其余瞬态故障（网络抖动等）从「放行上传」改为
+      // 「中止上传」。可用性损失仅是一次可重试的失败提示；数据安全收益
+      // 是不再有「探测不到就盲传」的覆盖窗口。
+      logger.warning('CloudSync', '上传冲突检测失败（已中止上传）: $e');
+      throw fcs.CloudSyncException(
+        '无法确认云端当前状态（$e）。为避免覆盖其他设备的更新已中止本次上传，请稍后重试',
+        e,
+      );
     }
   }
 
@@ -1911,10 +1991,9 @@ class TransactionsSyncManager implements SyncService {
 
       logger.info('CloudSync', '删除完成: $ledgerId');
     } catch (e) {
-      // m-04 修复：优先用类型匹配判断 404，字符串匹配作为兜底
-      if (e is fcs.CloudFileNotFoundException ||
-          e.toString().contains('404') ||
-          e.toString().contains('not found')) {
+      // m-04 契约澄清（同 downloadAndRestoreToCurrentLedger 处注释）：
+      // delete 幂等吞 404 由适配器完成；此处仅防御网关包装上抛的场景
+      if (e.toString().contains('404') || e.toString().contains('not found')) {
         logger.warning('CloudSync', '云端备份不存在（忽略）: $ledgerId');
         return;
       }
@@ -2217,10 +2296,8 @@ class TransactionsSyncManager implements SyncService {
 
       logger.info('CloudSync', '删除完成: $remotePath');
     } catch (e) {
-      // m-04 修复：优先用类型匹配判断 404，字符串匹配作为兜底
-      if (e is fcs.CloudFileNotFoundException ||
-          e.toString().contains('404') ||
-          e.toString().contains('not found')) {
+      // m-04 契约澄清（同上）：适配器幂等吞 404，这里只防网关包装上抛
+      if (e.toString().contains('404') || e.toString().contains('not found')) {
         logger.warning('CloudSync', '远程账本不存在（忽略）: $remotePath');
         return;
       }

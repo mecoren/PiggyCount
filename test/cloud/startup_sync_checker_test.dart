@@ -384,11 +384,13 @@ void main() {
           preview: _preview(added: 2, modified: 1),
           importData: const ImportData(),
           version: 6,
+          cloudFingerprint: null,
         ),
         2: (
           preview: _preview(deleted: 3),
           importData: const ImportData(),
           version: 6,
+          cloudFingerprint: null,
         ),
       };
     });
@@ -409,6 +411,7 @@ void main() {
         preview: _preview(deleted: 3, selectDeleted: true),
         importData: const ImportData(),
         version: 6,
+        cloudFingerprint: null,
       );
       await checker.runIfNeeded();
 
@@ -420,6 +423,7 @@ void main() {
         preview: _preview(deleted: 3, selectDeleted: true),
         importData: const ImportData(),
         version: 6,
+        cloudFingerprint: null,
       );
       await checker.runIfNeeded();
 
@@ -433,6 +437,7 @@ void main() {
         preview: _preview(deleted: 3, selectDeleted: true),
         importData: const ImportData(),
         version: 6,
+        cloudFingerprint: null,
       );
       await checker.runIfNeeded();
 
@@ -453,8 +458,8 @@ void main() {
 
     test('preview == null 全量替换后同样回传', () async {
       deps.previewByLedger = {
-        1: (preview: null, importData: const ImportData(), version: 5),
-        2: (preview: null, importData: const ImportData(), version: 5),
+        1: (preview: null, importData: const ImportData(), version: 5, cloudFingerprint: null),
+        2: (preview: null, importData: const ImportData(), version: 5, cloudFingerprint: null),
       };
 
       await checker.runIfNeeded();
@@ -465,8 +470,8 @@ void main() {
 
     test('S14: 用户拒绝 legacy 全量替换确认 → 跳过该账本不回传', () async {
       deps.previewByLedger = {
-        1: (preview: null, importData: const ImportData(), version: 5),
-        2: (preview: _preview(added: 1), importData: const ImportData(), version: 6),
+        1: (preview: null, importData: const ImportData(), version: 5, cloudFingerprint: null),
+        2: (preview: _preview(added: 1), importData: const ImportData(), version: 6, cloudFingerprint: null),
       };
       deps.legacyReplaceConfirmReturn = false;
 
@@ -482,7 +487,7 @@ void main() {
 
     test('S14: 用户确认后 legacy 全量替换照常执行', () async {
       deps.previewByLedger = {
-        1: (preview: null, importData: const ImportData(), version: 5),
+        1: (preview: null, importData: const ImportData(), version: 5, cloudFingerprint: null),
       };
       deps.legacyReplaceConfirmReturn = true;
 
@@ -495,8 +500,8 @@ void main() {
 
     test('preview.isEmpty 合并元数据后同样回传', () async {
       deps.previewByLedger = {
-        1: (preview: _preview(), importData: const ImportData(), version: 6),
-        2: (preview: _preview(), importData: const ImportData(), version: 6),
+        1: (preview: _preview(), importData: const ImportData(), version: 6, cloudFingerprint: null),
+        2: (preview: _preview(), importData: const ImportData(), version: 6, cloudFingerprint: null),
       };
 
       await checker.runIfNeeded();
@@ -510,6 +515,7 @@ void main() {
         preview: _preview(deleted: 3, selectDeleted: true),
         importData: const ImportData(),
         version: 6,
+        cloudFingerprint: null,
       );
 
       await checker.runIfNeeded();
@@ -525,7 +531,7 @@ void main() {
     test('云端无数据的账本跳过且不回传', () async {
       // 账本 1 不设 preview → downloadAndPreview 返回 null → 跳过
       deps.previewByLedger = {
-        2: (preview: _preview(added: 1), importData: const ImportData(), version: 6),
+        2: (preview: _preview(added: 1), importData: const ImportData(), version: 6, cloudFingerprint: null),
       };
 
       await checker.runIfNeeded();
@@ -539,6 +545,7 @@ void main() {
         preview: _preview(deleted: 3, selectDeleted: true),
         importData: const ImportData(),
         version: 6,
+        cloudFingerprint: null,
       );
       await checker.runIfNeeded();
 
@@ -559,8 +566,8 @@ void main() {
 
     test('preview == null 的账本走全量替换', () async {
       deps.previewByLedger = {
-        1: (preview: null, importData: const ImportData(), version: 5),
-        2: (preview: _preview(added: 1), importData: const ImportData(), version: 6),
+        1: (preview: null, importData: const ImportData(), version: 5, cloudFingerprint: null),
+        2: (preview: _preview(added: 1), importData: const ImportData(), version: 6, cloudFingerprint: null),
       };
 
       await checker.runIfNeeded();
@@ -573,8 +580,8 @@ void main() {
       // 纯账户变更场景：交易 diff 为空，但云端 importData 携带新账户。
       // 旧行为直接 continue 导致账户永远不落库（account_metadata_sync_fix G5）。
       deps.previewByLedger = {
-        1: (preview: _preview(), importData: const ImportData(), version: 6),
-        2: (preview: _preview(added: 1), importData: const ImportData(), version: 6),
+        1: (preview: _preview(), importData: const ImportData(), version: 6, cloudFingerprint: null),
+        2: (preview: _preview(added: 1), importData: const ImportData(), version: 6, cloudFingerprint: null),
       };
 
       await checker.runIfNeeded();
@@ -587,8 +594,8 @@ void main() {
 
     test('全部账本 preview.isEmpty 时均合并元数据并计入成功', () async {
       deps.previewByLedger = {
-        1: (preview: _preview(), importData: const ImportData(), version: 6),
-        2: (preview: _preview(), importData: const ImportData(), version: 6),
+        1: (preview: _preview(), importData: const ImportData(), version: 6, cloudFingerprint: null),
+        2: (preview: _preview(), importData: const ImportData(), version: 6, cloudFingerprint: null),
       };
 
       await checker.runIfNeeded();
@@ -609,6 +616,7 @@ void main() {
         preview: _preview(deleted: 3, selectDeleted: true),
         importData: const ImportData(),
         version: 6,
+        cloudFingerprint: null,
       );
 
       await checker.runIfNeeded();
@@ -626,6 +634,7 @@ void main() {
         preview: _preview(deleted: 3, selectDeleted: true),
         importData: const ImportData(),
         version: 6,
+        cloudFingerprint: null,
       );
 
       await checker.runIfNeeded();
@@ -654,11 +663,13 @@ void main() {
           preview: _preview(added: 1),
           importData: const ImportData(),
           version: 6,
+          cloudFingerprint: null,
         ),
         2: (
           preview: _preview(added: 1),
           importData: const ImportData(),
           version: 6,
+          cloudFingerprint: null,
         ),
       };
     });
@@ -723,16 +734,19 @@ void main() {
           preview: _preview(added: 1),
           importData: const ImportData(),
           version: 6,
+          cloudFingerprint: null,
         ),
         2: (
           preview: _preview(added: 1),
           importData: const ImportData(),
           version: 6,
+          cloudFingerprint: null,
         ),
         3: (
           preview: _preview(added: 1),
           importData: const ImportData(),
           version: 6,
+          cloudFingerprint: null,
         ),
       };
       deps.conflictConfirmReturn = true;
@@ -784,11 +798,13 @@ void main() {
           preview: _preview(added: 2),
           importData: const ImportData(),
           version: 6,
+          cloudFingerprint: null,
         ),
         2: (
           preview: _preview(modified: 1),
           importData: const ImportData(),
           version: 6,
+          cloudFingerprint: null,
         ),
       };
     });
@@ -830,6 +846,7 @@ void main() {
           preview: _preview(added: 1, deleted: 1),
           importData: const ImportData(),
           version: 6,
+          cloudFingerprint: null,
         ),
       };
       deps.ledgers = [_ledger(1, 'L1')];
@@ -855,6 +872,7 @@ void main() {
           preview: _preview(added: 1, deleted: 1, selectDeleted: true),
           importData: const ImportData(),
           version: 6,
+          cloudFingerprint: null,
         ),
       };
       deps.ledgers = [_ledger(1, 'L1')];
@@ -895,8 +913,8 @@ void main() {
       // 纯账户变更：交易 diff 为空时逐账本对话框只会展示空列表（无意义），
       // 应静默走空变更 apply 完成元数据合并（account_metadata_sync_fix G5'）
       deps.previewByLedger = {
-        1: (preview: _preview(), importData: const ImportData(), version: 6),
-        2: (preview: _preview(added: 1), importData: const ImportData(), version: 6),
+        1: (preview: _preview(), importData: const ImportData(), version: 6, cloudFingerprint: null),
+        2: (preview: _preview(added: 1), importData: const ImportData(), version: 6, cloudFingerprint: null),
       };
       deps.perLedgerChoice = LedgerDialogChoice.viewDetail;
       deps.syncPreviewReturn = [SyncChange(type: SyncChangeType.added)];
@@ -931,7 +949,7 @@ void main() {
 
     test('preview == null 时走全量替换确认流程', () async {
       deps.previewByLedger = {
-        1: (preview: null, importData: const ImportData(), version: 5),
+        1: (preview: null, importData: const ImportData(), version: 5, cloudFingerprint: null),
       };
       deps.perLedgerChoice = LedgerDialogChoice.viewDetail;
 
@@ -1280,7 +1298,9 @@ class _FakeDeps implements StartupSyncCheckerDeps {
   Map<int, SyncStatus> statusByLedger = {};
   Set<int> statusThrowForLedgerIds = {};
 
-  Map<int, ({SyncPreview? preview, ImportData importData, int version})>
+  Map<int,
+          ({SyncPreview? preview, ImportData importData, int version,
+              String? cloudFingerprint})>
       previewByLedger = {};
   Set<int> downloadAndPreviewThrowForLedgerIds = {};
 
@@ -1370,8 +1390,9 @@ class _FakeDeps implements StartupSyncCheckerDeps {
   }
 
   @override
-  Future<({SyncPreview? preview, ImportData importData, int version})?>
-      downloadAndPreview(int ledgerId) async {
+  Future<
+      ({SyncPreview? preview, ImportData importData, int version,
+          String? cloudFingerprint})?> downloadAndPreview(int ledgerId) async {
     if (downloadAndPreviewThrowForLedgerIds.contains(ledgerId)) {
       throw Exception('downloadAndPreview boom for ledger $ledgerId');
     }
@@ -1419,6 +1440,23 @@ class _FakeDeps implements StartupSyncCheckerDeps {
     if (uploadThrowForLedgerIds.contains(ledgerId)) {
       throw Exception('uploadLedger boom for ledger $ledgerId');
     }
+  }
+
+  // ============ 审计 H6：回传前新鲜度校验 mock ============
+
+  /// refreshCloudFingerprint 返回的云端指纹（缺省 = 拿不到，调用方降级放行）
+  Map<int, String?> refreshCloudFingerprintByLedger = {};
+
+  /// refreshCloudFingerprint 调用记录
+  List<int> refreshCloudFingerprintCallIds = [];
+
+  @override
+  Future<({String? fingerprint, int? count, DateTime? exportedAt})?>
+      refreshCloudFingerprint(int ledgerId) async {
+    refreshCloudFingerprintCallIds.add(ledgerId);
+    if (!refreshCloudFingerprintByLedger.containsKey(ledgerId)) return null;
+    final fp = refreshCloudFingerprintByLedger[ledgerId];
+    return (fingerprint: fp, count: null, exportedAt: null);
   }
 
   // ============ 云端账本发现 mock ============

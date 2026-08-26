@@ -44,7 +44,13 @@ class S3AuthService implements CloudAuthService {
   @override
   Future<void> signOut() async {
     // S3 无需登出操作
-    // 认证信息在 provider dispose 时清除
+    // 认证信息在 provider dispose 时清除。
+    //
+    // 跨后端语义差异（备案）：WebDAV 的 signOut 会置空 currentUser 并
+    // 广播 null —— manager 的「未登录」门禁（CloudNotAuthenticatedException）
+    // 只对 WebDAV 生效；S3 凭据静态存于配置，signOut 后仍可同步。
+    // 这是凭据模型差异（AK/SK 静态配置 vs 会话式登录）的固有结果，
+    // 调用方不应假设 signOut 后 storage 操作必然被拒。
   }
 
   @override

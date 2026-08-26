@@ -7,7 +7,8 @@ import 's3_client.dart';
 import 's3_exceptions.dart';
 
 /// S3 存储服务实现
-class S3StorageService implements CloudStorageService, BinaryCapableStorage {
+class S3StorageService
+    implements CloudStorageService, BinaryCapableStorage, ConditionalWriteStorage {
   final S3Client client;
   final String bucket;
 
@@ -262,6 +263,43 @@ class S3StorageService implements CloudStorageService, BinaryCapableStorage {
   }
 
   @override
+  bool get supportsConditionalWrite => true;
+
+  @override
+  Future<void> uploadBinaryConditional({
+    required String path,
+    required List<int> bytes,
+    Map<String, String>? metadata,
+    String? ifMatchEtag,
+    bool ifNoneMatch = false,
+  }) async {
+    try {
+      final data = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
+      await client.putObject(
+        bucket: bucket,
+        key: _buildKey(path),
+        data: data,
+        metadata: metadata,
+        ifMatch: ifMatchEtag,
+        ifNoneMatch: ifNoneMatch,
+      );
+    } on S3PreconditionFailedException catch (e) {
+      // 方案C：412 翻译为跨后端统一语义，上层据此走冲突流程
+      throw CloudPreconditionFailedException(path, e.message);
+    } on CloudAuthException {
+      rethrow;
+    } on S3AuthException catch (e) {
+      throw _authException(e);
+    } on S3PermissionDeniedException catch (e) {
+      throw _authException(e);
+    } on S3Exception catch (e) {
+      throw CloudStorageException('Failed to upload file: ${e.message}');
+    } catch (e) {
+      throw CloudStorageException('Failed to upload file: $e');
+    }
+  }
+
+  @override
   Future<String?> download({required String path}) async {
     try {
       final bytes = await downloadBinary(path: path);
@@ -367,6 +405,7 @@ class S3StorageService implements CloudStorageService, BinaryCapableStorage {
         size: info.size,
         lastModified: info.lastModified,
         metadata: info.metadata,
+        eTag: info.eTag,
       );
     } on S3AuthException catch (e) {
       throw _authException(e);

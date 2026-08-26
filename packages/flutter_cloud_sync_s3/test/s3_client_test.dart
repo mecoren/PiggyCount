@@ -231,9 +231,11 @@ void main() {
       expect(capturedHeaders['host'], 'minio.local:9000');
       expect(capturedHeaders['content-type'], 'application/octet-stream');
       expect(capturedHeaders['authorization'], contains('AWS4-HMAC-SHA256'));
+      // 审计 S-A：Content-Length 退出签名头集合（与 AWS SDK 行为一致，
+      // 防止传输层 chunked/代理改写 CL 导致恒定 403）
       expect(
         capturedHeaders['authorization'],
-        contains('SignedHeaders=content-length;content-type;host;x-amz-content-sha256;x-amz-date'),
+        contains('SignedHeaders=content-type;host;x-amz-content-sha256;x-amz-date'),
       );
     });
   });

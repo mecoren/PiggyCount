@@ -94,7 +94,8 @@ bool _isAuthErrorText(String? text) {
 
 /// downloadAndPreview 返回类型别名
 typedef DownloadAndPreviewResult =
-    ({SyncPreview? preview, ImportData importData, int version});
+    ({SyncPreview? preview, ImportData importData, int version,
+        String? cloudFingerprint});
 
 /// 启动检查编排器的外部依赖接口
 ///
@@ -130,6 +131,14 @@ abstract class StartupSyncCheckerDeps {
   /// M7 冲突拦截若在此触发会打断收敛循环（本地刚合并完，时间戳仲裁可能
   /// 仍判 cloudNewer），实现方应传 true。
   Future<void> uploadLedger({required int ledgerId, bool force = false});
+
+  /// 读取云端当前指纹（审计 H6 回传前新鲜度校验用）。
+  ///
+  /// 优先读元数据指纹，缺失时下载内嵌指纹；实现可适度更新缓存。
+  /// 失败时抛异常（调用方按「无法确认云端状态」处理）或返回 null 由
+  /// 调用方自行降级 —— 实现方二选一，契约以返回 null 表示「拿不到」。
+  Future<({String? fingerprint, int? count, DateTime? exportedAt})?>
+      refreshCloudFingerprint(int ledgerId);
 
   /// 云端账本发现：列出云端 ledger_*.json 中本机没有对应账本行的文件
   ///
@@ -564,8 +573,28 @@ class StartupSyncChecker {
   /// 只下载合并不回传时，指纹永不收敛，下次启动仍判 cloudNewer
   /// 重复弹「云端有更新」。回传失败不回滚合并、不中断剩余账本，
   /// 仅返回 false 由调用方计入汇总提示（下次启动会再次提醒，可重试）。
-  Future<bool> _publishAfterMerge(int ledgerId, String ledgerName) async {
+  ///
+  /// 审计 H6（回传前新鲜度校验）：[expectedCloudFp] 是阶段 1 下载时的
+  /// 云端内嵌指纹 —— 合并决策的基线。回传前重读当前云端指纹，若已变化
+  /// 说明其他设备在「下载 → 回传」窗口推了新数据，此时 force 覆盖会把
+  /// 它们静默盖掉；改为**跳过本轮回传**（返回 false），合并成果保留在
+  /// 本地、下次启动重新检查收敛。基线不可得（旧快照无内嵌指纹/读取
+  /// 失败）时保持原行为放行，可用性优先。
+  Future<bool> _publishAfterMerge(int ledgerId, String ledgerName,
+      {String? expectedCloudFp}) async {
     try {
+      if (expectedCloudFp != null) {
+        final current = await deps
+            .refreshCloudFingerprint(ledgerId)
+            .timeout(_publishTimeout);
+        final currentFp = current?.fingerprint;
+        if (currentFp != null && currentFp != expectedCloudFp) {
+          deps.log('StartupSyncChecker: 账本 $ledgerName 云端在合并期间已被'
+              '其他设备更新，跳过本轮回传以防覆盖（本地已保留合并结果，'
+              '下次启动将重新检查）');
+          return false;
+        }
+      }
       await deps
           .uploadLedger(ledgerId: ledgerId, force: true)
           .timeout(_publishTimeout);
@@ -627,7 +656,9 @@ class StartupSyncChecker {
     // 阶段 1 产出：合并成功的账本（id + name），供阶段 2 统一回传。
     // 致命 S1：skipPublish 标记该账本存在用户未勾选的云端删除，
     // 阶段 2 必须跳过回传以防已删交易随快照复活传播。
-    final merged = <({LedgerCandidate cand, bool skipPublish})>[];
+    // 审计 H6：mergedFromFp 记录合并决策所依据的云端内嵌指纹，
+    // 回传前做新鲜度校验（云端被并发更新则跳过回传）。
+    final merged = <({LedgerCandidate cand, bool skipPublish, String? mergedFromFp})>[];
 
     // ---------- 阶段 1：逐账本下载 + 合并（只写本地） ----------
     for (final c in candidates) {
@@ -665,7 +696,11 @@ class StartupSyncChecker {
               .downloadAndRestoreToCurrentLedger(ledgerId: c.ledger.id)
               .timeout(_applyTimeout);
           deps.runAfterDownload();
-          merged.add((cand: c, skipPublish: false));
+          merged.add((
+            cand: c,
+            skipPublish: false,
+            mergedFromFp: previewResult.cloudFingerprint,
+          ));
           successCount++;
           deps.log('StartupSyncChecker: 账本 ${c.ledger.name} 全量替换完成');
           applied++;
@@ -686,7 +721,11 @@ class StartupSyncChecker {
               )
               .timeout(_applyTimeout);
           deps.runAfterDownload();
-          merged.add((cand: c, skipPublish: false));
+          merged.add((
+            cand: c,
+            skipPublish: false,
+            mergedFromFp: previewResult.cloudFingerprint,
+          ));
           successCount++;
           applied++;
           deps.log('StartupSyncChecker: 账本 ${c.ledger.name} preview 为空，'
@@ -719,6 +758,7 @@ class StartupSyncChecker {
           cand: c,
           skipPublish: StartupSyncChecker.shouldSkipMergePublish(
               previewExists: true, unselectedDeletedCount: unselectedDeleted),
+          mergedFromFp: previewResult.cloudFingerprint,
         ));
         successCount++;
         applied++;
@@ -777,8 +817,9 @@ class StartupSyncChecker {
         applied++;
         continue;
       }
-      if (!await _publishAfterMerge(
-          entry.cand.ledger.id, entry.cand.ledger.name)) {
+      if (!await _publishAfterMerge(entry.cand.ledger.id,
+          entry.cand.ledger.name,
+          expectedCloudFp: entry.mergedFromFp)) {
         uploadFailCount++;
       }
       applied++;
@@ -819,7 +860,9 @@ class StartupSyncChecker {
     // 致命 S1：与 _applyAll 同款守卫 —— 用户在预览弹窗未勾选的云端删除
     // 会把已删交易留在本地，若照常回传，它们将随快照复活并传播到所有
     // 设备。skipPublish 标记该账本轮次必须跳过回传。
-    final merged = <({LedgerCandidate cand, bool skipPublish})>[];
+    // 审计 H6：mergedFromFp 与 _applyAll 同款回传前新鲜度基线。
+    final merged =
+        <({LedgerCandidate cand, bool skipPublish, String? mergedFromFp})>[];
     for (final c in candidates) {
       try {
         final previewResult =
@@ -832,7 +875,13 @@ class StartupSyncChecker {
         if (previewResult.preview == null) {
           // 旧格式：弹全量替换确认
           final ok = await _handleLegacyFormat(c.ledger);
-          if (ok) merged.add((cand: c, skipPublish: false));
+          if (ok) {
+            merged.add((
+              cand: c,
+              skipPublish: false,
+              mergedFromFp: previewResult.cloudFingerprint,
+            ));
+          }
           continue;
         }
 
@@ -848,7 +897,11 @@ class StartupSyncChecker {
               )
               .timeout(_applyTimeout);
           deps.runAfterDownload();
-          merged.add((cand: c, skipPublish: false));
+          merged.add((
+            cand: c,
+            skipPublish: false,
+            mergedFromFp: previewResult.cloudFingerprint,
+          ));
           deps.log('StartupSyncChecker: 账本 ${c.ledger.name} preview 为空，'
               '已合并元数据');
           continue;
@@ -892,6 +945,7 @@ class StartupSyncChecker {
               skipPublish: StartupSyncChecker.shouldSkipMergePublish(
                   previewExists: true,
                   unselectedDeletedCount: unselectedDeleted),
+              mergedFromFp: previewResult.cloudFingerprint,
             ));
             deps.showLegacyInfo(
                 '账本「${c.ledger.name}」已应用 ${result.totalCount} 条变更');
@@ -948,16 +1002,18 @@ class StartupSyncChecker {
   /// 回传失败不中断剩余账本，仅记日志（下次启动会再次提示，可重试）。
   /// S1 守卫：存在用户未勾选的云端删除时跳过回传，防止已删交易随快照
   /// 复活传播（与 _applyAll 阶段 2 同语义）。
+  /// 审计 H6：回传前新鲜度校验与 _applyAll 同款。
   Future<void> _publishMerged(
-      List<({LedgerCandidate cand, bool skipPublish})> merged) async {
+      List<({LedgerCandidate cand, bool skipPublish, String? mergedFromFp})>
+          merged) async {
     for (final entry in merged) {
       if (entry.skipPublish) {
         deps.log('StartupSyncChecker: 账本 ${entry.cand.ledger.name} 存在未应用'
             '的云端删除，本轮跳过回传以防删除复活（下次启动将再次提示）');
         continue;
       }
-      await _publishAfterMerge(
-          entry.cand.ledger.id, entry.cand.ledger.name);
+      await _publishAfterMerge(entry.cand.ledger.id, entry.cand.ledger.name,
+          expectedCloudFp: entry.mergedFromFp);
     }
   }
 
@@ -1072,6 +1128,19 @@ class WidgetRefDeps implements StartupSyncCheckerDeps {
   @override
   Future<void> uploadLedger({required int ledgerId, bool force = false}) =>
       _syncManager.uploadCurrentLedger(ledgerId: ledgerId, force: force);
+
+  @override
+  Future<({String? fingerprint, int? count, DateTime? exportedAt})?>
+      refreshCloudFingerprint(int ledgerId) async {
+    try {
+      return await _syncManager.refreshCloudFingerprint(ledgerId: ledgerId);
+    } catch (_) {
+      // 新鲜度校验拿不到云端状态时返回 null（调用方降级为放行），
+      // 不让探测失败阻塞整个回传流程；失败细节由
+      // TransactionsSyncManager.refreshCloudFingerprint 内部日志覆盖
+      return null;
+    }
+  }
 
   @override
   Future<List<RemoteLedgerMeta>> discoverRemoteLedgers() =>

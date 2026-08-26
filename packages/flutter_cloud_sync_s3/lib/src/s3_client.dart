@@ -148,18 +148,33 @@ class S3Client {
   /// [metadata] 中的 key-value 对会作为 `x-amz-meta-{key}` 头发送，
   /// 供后续 HeadObject/GetMetadata 读取（C-01 修复）。
   ///
-  /// 非幂等操作（重复写入可能覆盖最新版本），不进行自动重试。
-  Future<void> putObject({
+  /// 方案C（并发全面加固）条件写：
+  /// - [ifMatch] 非空时携带 `If-Match: <etag>`，仅当远端当前对象 ETag
+  ///   与之相等才写入；不匹配返回 412 → 抛 [S3PreconditionFailedException]
+  /// - [ifNoneMatch] 为 true 时携带 `If-None-Match: *`（create-only），
+  ///   远端已存在同 key 对象时同样 412。与 [ifMatch] 互斥。
+  ///
+  /// 返回服务端响应的 ETag（网关未返回时为 null），供写后校验使用。
+  ///
+  /// 非幂等操作（重复写入可能覆盖最新版本），不进行自动重试；
+  /// 条件写失败（412）更不可重试 —— 重试必然再次失败或造成覆盖。
+  Future<String?> putObject({
     required String bucket,
     required String key,
     required Uint8List data,
     String? contentType,
     Map<String, String>? metadata,
+    String? ifMatch,
+    bool ifNoneMatch = false,
   }) async {
     _checkDisposed();
+    if (ifMatch != null && ifNoneMatch) {
+      throw ArgumentError('ifMatch 与 ifNoneMatch 互斥，不能同时传入');
+    }
     final uri = _buildUri(bucket, key: key);
 
-    var headers = _signedPutHeaders(uri, data, contentType, metadata);
+    var headers = _signedPutHeaders(uri, data, contentType, metadata,
+        ifMatch: ifMatch, ifNoneMatch: ifNoneMatch);
 
     // M9：时钟偏差（RequestTimeTooSkewed）时服务器**没有处理本次请求**
     // （403 拒签），与「超时但服务端已写入」的 A-1 覆盖竞态本质不同 ——
@@ -173,15 +188,29 @@ class S3Client {
             .timeout(timeout);
 
         if (response.statusCode != 200 && response.statusCode != 204) {
+          // 方案C：条件写失败（远端已被其他设备先行修改/创建），
+          // 本次写入未落盘，翻译为专属异常供上层走冲突流程
+          if (response.statusCode == 412) {
+            throw S3PreconditionFailedException(key,
+                message: '条件写失败（远端已被其他设备修改）: $key');
+          }
+          // 审计 A5：PUT 路径的桶级 404（NoSuchBucket）也要区分出来，
+          // 不能落进 _handleError 的通用 404 分支丢失语义
+          if (response.statusCode == 404) {
+            _throwIfNoSuchBucket('PutObject', response, bucket);
+          }
           _handleError('PutObject', response);
         }
-        return;
+        return _normalizeEtag(response.headers['etag']);
+      } on S3PreconditionFailedException {
+        rethrow;
       } on S3ClockSkewException {
         skewRetries++;
         if (skewRetries > 2) rethrow;
         await Future.delayed(const Duration(milliseconds: 200));
         // 用更新后的偏移重新签名再发
-        headers = _signedPutHeaders(uri, data, contentType, metadata);
+        headers = _signedPutHeaders(uri, data, contentType, metadata,
+            ifMatch: ifMatch, ifNoneMatch: ifNoneMatch);
       } on SocketException catch (e) {
         throw S3NetworkException('Network error: ${e.message}',
             originalException: e);
@@ -208,13 +237,23 @@ class S3Client {
   /// package:http）会把响应头名转小写，读取端拿到的键恒为小写形态。
   /// 写入端显式小写使键的存储形态确定，避免依赖各网关对大小写的
   /// 保留行为。
+  ///
+  /// 审计 S-A 修复：Content-Length 不再参与签名。AWS 官方 SDK 不签 CL，
+  /// 一旦传输层改用 chunked 编码或代理改写 CL，签了 CL 就恒定
+  /// 403 SignatureDoesNotMatch。Host/Content-Type/x-amz-* 保持参与。
   Map<String, String> _signedPutHeaders(Uri uri, Uint8List data,
-      String? contentType, Map<String, String>? metadata) {
+      String? contentType, Map<String, String>? metadata,
+      {String? ifMatch, bool ifNoneMatch = false}) {
     final headers = <String, String>{
       'Host': uri.authority,
       'Content-Type': contentType ?? 'application/octet-stream',
-      'Content-Length': '${data.length}',
     };
+    if (ifMatch != null) {
+      headers['If-Match'] = ifMatch;
+    }
+    if (ifNoneMatch) {
+      headers['If-None-Match'] = '*';
+    }
     if (metadata != null) {
       for (final entry in metadata.entries) {
         headers['x-amz-meta-${entry.key.toLowerCase()}'] =
@@ -375,6 +414,7 @@ class S3Client {
             lastModified: _parseHttpDate(response.headers['last-modified']),
             contentType: response.headers['content-type'],
             metadata: _extractCustomMetadata(response.headers),
+            eTag: _normalizeEtag(response.headers['etag']),
           );
         }
         if (response.statusCode == 404) {
@@ -742,6 +782,18 @@ class S3Client {
       }
     }
     return value;
+  }
+
+  /// 归一化 ETag：剥掉引号包装（"abc"/W/"abc" → abc），供条件写
+  /// If-Match 回传与写后校验比较。缺失/空值返回 null。
+  static String? _normalizeEtag(String? raw) {
+    if (raw == null) return null;
+    var v = raw.trim();
+    if (v.startsWith('W/')) v = v.substring(2);
+    if (v.length >= 2 && v.startsWith('"') && v.endsWith('"')) {
+      v = v.substring(1, v.length - 1);
+    }
+    return v.isEmpty ? null : v;
   }
 
   /// URL 编码 Key（保留 /）

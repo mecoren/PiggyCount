@@ -17,6 +17,22 @@ class CloudConflictException extends CloudSyncException {
   bool get isCloudNewer => direction == 'cloudNewer';
 }
 
+/// M7 冲突探测结果（方案C 扩展）。
+///
+/// [direction] 非 null 表示探测到冲突、禁止盲传；null 表示可安全上传。
+/// [cloudETag] 是探测时读到的云端 ETag（后端不支持时为 null），
+/// 作为乐观并发锚点传给 [CloudSyncManager.upload] 的 `ifMatchEtag`：
+/// 「探测 → 写入」之间云端被其他设备先行修改时，条件写会以
+/// CloudPreconditionFailedException 显式失败，而非静默覆盖。
+class UploadProbe {
+  final String? direction;
+  final String? cloudETag;
+
+  const UploadProbe({this.direction, this.cloudETag});
+
+  bool get hasConflict => direction != null;
+}
+
 // ---- 同步服务接口 ----
 
 abstract class SyncService {

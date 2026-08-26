@@ -31,7 +31,10 @@ class S3Provider implements CloudProvider {
   @override
   CloudAuthService get auth {
     if (_authService == null) {
-      throw StateError('S3Provider not initialized. Call initialize() first.');
+      // 与 WebDAVProvider 对齐：未初始化抛配置异常而非 StateError，
+      // 上层可按统一类型捕获并提示「先完成云服务配置」
+      throw CloudConfigurationException(
+          'S3Provider not initialized. Call initialize() first.');
     }
     return _authService!;
   }
@@ -39,7 +42,8 @@ class S3Provider implements CloudProvider {
   @override
   CloudStorageService get storage {
     if (_storageService == null) {
-      throw StateError('S3Provider not initialized. Call initialize() first.');
+      throw CloudConfigurationException(
+          'S3Provider not initialized. Call initialize() first.');
     }
     return _storageService!;
   }
@@ -60,8 +64,8 @@ class S3Provider implements CloudProvider {
     final accessKey = config['accessKey'] as String? ?? '';
     final secretKey = config['secretKey'] as String? ?? '';
     final bucket = config['bucket'] as String? ?? '';
-    final useSSL = config['useSSL'] as bool?;
-    final port = config['port'] as int?;
+    final useSSL = _optionalBool(config, 'useSSL');
+    final port = _optionalInt(config, 'port');
     // key 前缀：用于在共享 bucket 中隔离应用数据，默认为空（不前缀）
     final keyPrefix = config['keyPrefix'] as String? ?? '';
 
@@ -83,8 +87,8 @@ class S3Provider implements CloudProvider {
 
     // 寻址方式：托管云（AWS/OSS/COS/R2 等）默认 virtual-hosted-style；
     // 自托管（MinIO 等）默认 path-style。可通过 forcePathStyle 显式覆盖。
-    final forcePathStyle = config['forcePathStyle'] as bool? ??
-        !isManagedCloudEndpoint(info.host);
+    final forcePathStyle =
+        _optionalBool(config, 'forcePathStyle') ?? !isManagedCloudEndpoint(info.host);
 
     // S-M2 修复：创建新 client 前先释放旧实例，
     // 避免 initialize 重复调用时旧 httpClient 泄漏连接资源
@@ -102,9 +106,18 @@ class S3Provider implements CloudProvider {
     _bucket = bucket;
 
     // 测试连接：仅请求 1 个 key 即可验证连接/认证/桶可访问性，
-    // 避免大 bucket 全量列举浪费带宽和时间
+    // 避免大 bucket 全量列举浪费带宽和时间。
+    //
+    // 审计 S-E：探测必须带上 keyPrefix。此前列举的是**桶根** —— 使用
+    // 前缀级最小权限凭据（仅授权 `prefix/piggycount/*` 的 List）时，
+    // 桶根列举被拒 → 误判为「权限不足/配置错误」，无法完成接入；
+    // 带上前缀后探测范围与实际使用范围一致。
     try {
-      await _client!.listObjects(bucket: bucket, maxKeys: 1);
+      await _client!.listObjects(
+        bucket: bucket,
+        prefix: keyPrefix.isEmpty ? null : keyPrefix,
+        maxKeys: 1,
+      );
     } catch (e) {
       // 审计 S3-11：探测失败 = 半初始化状态，必须释放已创建的 client，
       // 否则调用方丢弃 provider 后 httpClient 连接池泄漏（重复 initialize
@@ -179,10 +192,39 @@ class S3Provider implements CloudProvider {
     final secretKey = config['secretKey'] as String?;
     final bucket = config['bucket'] as String?;
 
-    return endpoint != null && endpoint.isNotEmpty &&
+    return endpoint != null && endpoint.trim().isNotEmpty &&
            accessKey != null && accessKey.isNotEmpty &&
            secretKey != null && secretKey.isNotEmpty &&
            bucket != null && bucket.isNotEmpty;
+  }
+
+  /// 可选 bool 配置的安全解析（审计 S-F）：此前 `as bool?` 强转在传入
+  /// 字符串（'true'/'false'）时抛裸 TypeError 而非配置异常，报错面目全非。
+  /// 现兼容 bool 与常见字符串形态；类型非法抛 [CloudConfigurationException]。
+  static bool? _optionalBool(Map<String, dynamic> config, String key) {
+    final v = config[key];
+    if (v == null) return null;
+    if (v is bool) return v;
+    if (v is String) {
+      final s = v.toLowerCase();
+      if (s == 'true') return true;
+      if (s == 'false') return false;
+    }
+    throw CloudConfigurationException(
+        "Invalid '$key' config value: expected bool, got ${v.runtimeType}");
+  }
+
+  /// 可选 int 配置的安全解析（审计 S-F 同款）
+  static int? _optionalInt(Map<String, dynamic> config, String key) {
+    final v = config[key];
+    if (v == null) return null;
+    if (v is int) return v;
+    if (v is String) {
+      final parsed = int.tryParse(v);
+      if (parsed != null) return parsed;
+    }
+    throw CloudConfigurationException(
+        "Invalid '$key' config value: expected int, got ${v.runtimeType}");
   }
 
   @override

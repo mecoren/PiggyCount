@@ -65,3 +65,16 @@ class S3ClockSkewException extends S3Exception {
   S3ClockSkewException(String message, {this.serverTime})
       : super(message, statusCode: 403);
 }
+
+/// 条件写前置条件失败（HTTP 412 Precondition Failed）。
+///
+/// 方案C（并发全面加固）：putObject 携带 If-Match / If-None-Match 时，
+/// 远端实际状态与前置条件不符（已被其他设备先行写入/删除），本次
+/// 写入**未落盘**。调用方应翻译为冲突流程，而非盲目重试。
+class S3PreconditionFailedException extends S3Exception {
+  final String key;
+
+  S3PreconditionFailedException(this.key, {String? message})
+      : super(message ?? 'Precondition failed for object: $key',
+            statusCode: 412);
+}

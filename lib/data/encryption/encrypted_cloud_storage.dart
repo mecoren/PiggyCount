@@ -26,7 +26,7 @@ import '../../domain/encryption/encryption_service.dart';
 ///   - 信封解密失败（密钥不匹配等）：降级返回原始 map，调用方按
 ///     「无指纹」走全量下载兜底，不抛异常阻断状态检查。
 class EncryptedCloudStorageService
-    implements CloudStorageService, BinaryCapableStorage {
+    implements CloudStorageService, BinaryCapableStorage, ConditionalWriteStorage {
   final CloudStorageService inner;
   final EncryptionService encryptionService;
 
@@ -34,6 +34,11 @@ class EncryptedCloudStorageService
     required this.inner,
     required this.encryptionService,
   });
+
+  /// 条件写能力如实申报（方案C）：inner 支持（S3/WebDAV）才支持。
+  /// 加密发生在上传前、条件头作用在密文对象上，二者正交不冲突。
+  @override
+  bool get supportsConditionalWrite => inner.conditionalOrNull != null;
 
   /// 元数据加密信封键。
   ///
@@ -110,6 +115,30 @@ class EncryptedCloudStorageService
     final payload = await encryptionService.encrypt(base64Encode(bytes));
     await inner.upload(
         path: path, data: payload, metadata: await _wrapMetadata(metadata));
+  }
+
+  @override
+  Future<void> uploadBinaryConditional({
+    required String path,
+    required List<int> bytes,
+    Map<String, String>? metadata,
+    String? ifMatchEtag,
+    bool ifNoneMatch = false,
+  }) async {
+    final conditional = inner.conditionalOrNull;
+    if (conditional == null) {
+      // 能力申报已挡住常规路径；防御性兜底保证语义明确
+      throw UnsupportedError(
+          'Underlying storage does not support conditional writes: $path');
+    }
+    final payload = await encryptionService.encrypt(base64Encode(bytes));
+    await conditional.uploadBinaryConditional(
+      path: path,
+      bytes: utf8.encode(payload),
+      metadata: await _wrapMetadata(metadata),
+      ifMatchEtag: ifMatchEtag,
+      ifNoneMatch: ifNoneMatch,
+    );
   }
 
   @override
@@ -206,6 +235,9 @@ class EncryptedCloudStorageService
       size: file.size,
       lastModified: file.lastModified,
       metadata: unwrapped,
+      // 方案C：ETag 与加密正交，装饰时必须透传，否则上层拿不到
+      // 条件写锚点，乐观并发静默退化为盲上传
+      eTag: file.eTag,
     );
   }
 }

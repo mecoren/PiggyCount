@@ -10,7 +10,8 @@ import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:webdav_client/webdav_client.dart' as webdav;
 
 /// WebDAV implementation of [CloudStorageService].
-class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage {
+class WebDAVStorageService
+    implements CloudStorageService, BinaryCapableStorage, ConditionalWriteStorage {
   final webdav.Client _client;
   final String _remotePath;
 
@@ -25,6 +26,9 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
   /// 毫秒时间戳，同一目标的并发上传落在同一毫秒时互相覆盖对方写了一半
   /// 的 tmp，先完成者 rename 发布的可能是对方截断的数据（与 S3 侧
   /// _tempSeq 修复同款）。时间戳 + 序号保证每次上传独占自己的 tmp。
+  ///
+  /// 审计 W-F：降级交换的 backup 文件名同样复用本序号 —— 此前 backup
+  /// 只有毫秒时间戳，同毫秒两路并发降级交换撞名吃 412 直接失败。
   static int _tempSeq = 0;
 
   /// M15：上传临时文件标记（`<name>.tmp.<毫秒>_<序号>`，见 [uploadBinary]）。
@@ -40,6 +44,91 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
   /// 备份清理失败时 list() 据此过滤，避免孤儿备份被下游当有效文件。
   /// 正则理由同 [_tempFilePattern]。
   static final RegExp _backupFilePattern = RegExp(r'\.old\.\d');
+
+  /// 审计 W-G：内部产物判定统一入口。此前 list 过滤 `.tmp./.old.` 而
+  /// exists/getMetadata 不过滤，形成「list 看不见、exists 却为 true」
+  /// 的三态分裂。三个读路径一律走本判定，口径一致。
+  static bool _isInternalArtifact(String name) {
+    return name.endsWith('.metadata.json') ||
+        _tempFilePattern.hasMatch(name) ||
+        _backupFilePattern.hasMatch(name);
+  }
+
+  /// 信封格式标记（方案C / 审计 W-I 修复）。
+  ///
+  /// 此前主文件与 sidecar 元数据分两次 PUT：主文件落位到 sidecar 更新
+  /// 完成之间存在窗口，他机此刻 download 会拿到新内容+旧指纹，
+  /// CloudSyncManager.download 的完整性校验直接硬失败。信封把元数据
+  /// 与数据合并进**同一个文件**原子发布，窗口归零：
+  ///
+  /// ```json
+  /// {"fmt":"pc-wdav-env-v1","b64":false,"data":<原始内容字符串>,
+  ///  "meta":{...metadata}}
+  /// ```
+  ///
+  /// - 文本上传（manager 快照 JSON）：data 为原始文本原样嵌入
+  /// - 带元数据的二进制上传：data 为 base64（b64:true），体积 +33%
+  ///   仅发生在确实携带元数据的二进制上；无元数据的二进制仍写裸字节
+  /// - 旧版裸文件（无信封）：下载端按原文返回，元数据回退读 sidecar，
+  ///   无需任何迁移
+  static const String _envelopeFmt = 'pc-wdav-env-v1';
+
+  static String _wrapEnvelope(String data, Map<String, String>? metadata,
+      {bool b64 = false}) {
+    return jsonEncode({
+      'fmt': _envelopeFmt,
+      'b64': b64,
+      'data': data,
+      if (metadata != null && metadata.isNotEmpty) 'meta': metadata,
+    });
+  }
+
+  /// 尝试按信封解包；非信封内容返回 null（调用方按裸数据处理）。
+  static ({String data, Map<String, dynamic>? meta, bool b64})?
+      _tryUnwrapEnvelope(Uint8List bytes) {
+    // 快速预检：信封必以 '{' 开头，绝大多数二进制第一字节即排除
+    if (bytes.isEmpty || bytes[0] != 0x7B) return null;
+    final Map<String, dynamic> json;
+    try {
+      json = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
+    } catch (_) {
+      return null; // 非法 JSON：是裸二进制/裸文本
+    }
+    if (json['fmt'] != _envelopeFmt || !json.containsKey('data')) {
+      return null; // 普通JSON业务数据（如老快照），不当信封拆包
+    }
+    return (
+      data: json['data'] as String,
+      meta: json['meta'] as Map<String, dynamic>?,
+      b64: json['b64'] as bool? ?? false,
+    );
+  }
+
+  /// 幂等操作自动重试（对齐 S3 适配器 P5：弱网成功率）。
+  ///
+  /// 仅用于 read/readDir/remove 等幂等操作；write/rename/mkdir 非幂等，
+  /// 绝不进入本包装。重试条件：完全无结构化 HTTP 状态码（连接层故障）
+  /// 或 5xx 服务端临时错误；4xx 一律立即上抛。
+  Future<T> _retryIdempotent<T>(
+      Future<T> Function() operation) async {
+    const maxRetries = 2; // 共 1+2 次
+    var attempt = 0;
+    while (true) {
+      try {
+        return await operation();
+      } catch (e) {
+        final code = _statusCodeOf(e);
+        final retriable =
+            attempt < maxRetries && (code == null || code >= 500);
+        if (!retriable) rethrow;
+        attempt++;
+        // 指数退避 + 抖动：400ms、800ms（±50%）
+        final baseMs = 400 * (1 << (attempt - 1));
+        final jitter = DateTime.now().microsecondsSinceEpoch % (baseMs ~/ 2 + 1);
+        await Future<void>.delayed(Duration(milliseconds: baseMs ~/ 2 + jitter));
+      }
+    }
+  }
 
   /// 包裹单次 WebDAV 操作，超时抛 [CloudStorageException]（带操作名），
   /// 与其他网络错误走同一异常通道，调用方无需新增捕获分支。
@@ -61,15 +150,35 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
     }).whenComplete(timer.cancel);
   }
 
+  /// 幂等操作组合入口：[_op] 超时取消 + [_retryIdempotent] 自动重试
+  Future<T> _opRetryable<T>(
+          String opName, Future<T> Function(CancelToken token) op) =>
+      _retryIdempotent(() => _op(opName, op));
+
+  /// 写路径空 path 防御（审计 W-Y）：空字符串会拼出与目录前缀同名的
+  /// 远端**文件**，破坏该前缀下所有后续目录操作的语义。写/读单文件
+  /// 操作一律显式拒绝；list('') 表示列根目录，属合法用法不拦。
+  void _assertNonEmptyPath(String path) {
+    if (path.trim().isEmpty) {
+      throw CloudConfigurationException('WebDAV path 不能为空');
+    }
+  }
+
   @override
   Future<void> upload({
     required String path,
     required String data,
     Map<String, String>? metadata,
   }) async {
-    // 字符串上传统一委托字节路径（原子写逻辑唯一），utf8 编码与历史行为一致
-    await uploadBinary(
-        path: path, bytes: utf8.encode(data), metadata: metadata);
+    _assertNonEmptyPath(path);
+    final hasMeta = metadata != null && metadata.isNotEmpty;
+    // 方案C（审计 W-I）：带元数据的文本上传合并为单信封文件原子发布，
+    // 消除「主文件已落位、sidecar 未更新」窗口期的完整性校验硬失败。
+    // 无元数据时保持裸文本写入（外部工具可直读）。
+    final payload = hasMeta
+        ? utf8.encode(_wrapEnvelope(data, metadata))
+        : utf8.encode(data);
+    await _atomicPublish(_buildPath(path), payload);
   }
 
   @override
@@ -78,21 +187,108 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
     required List<int> bytes,
     Map<String, String>? metadata,
   }) async {
-    final fullPath = _buildPath(path);
-    // 临时文件 + rename 实现原子写入，避免网络中断在远端留下损坏的半截文件。
-    //
-    // SYNC-09 修复：改为「先 rename(overwrite) 再按需降级」。
-    // 此前先 remove(fullPath) 再 rename，若 rename 失败（网络中断等）旧文件
-    // 已被删除 → 云端账本文件出现丢失窗口。
-    //
-    // 审计 WD-1 二次修复：SYNC-09 的降级分支对**任意** rename 错误都会先
-    // remove(fullPath)，弱网下「删除成功、二次 rename 也失败」仍会把云端
-    // 唯一备份彻底删没。现在：
-    //   1. 只有错误明确指向「服务器不支持覆盖式 MOVE」（405/409/412）才降级，
-    //      其余错误一律原样上抛 —— 此时旧文件完好；
-    //   2. 降级本身改为无损交换：旧文件先挪到备份位 → 新文件落位 → 成功后
-    //      删备份。任一步失败都尽力把备份挪回原位，全程不存在
-    //      「目标已删、新未落位且无备份」的窗口。
+    _assertNonEmptyPath(path);
+    final hasMeta = metadata != null && metadata.isNotEmpty;
+    // 带元数据的二进制走 base64 信封；无元数据保持裸字节（零开销，
+    // 附件/ZIP 备份等大头不受影响）
+    final Uint8List payload = hasMeta
+        ? utf8.encode(_wrapEnvelope(base64.encode(bytes), metadata, b64: true))
+        : (bytes is Uint8List ? bytes : Uint8List.fromList(bytes));
+    await _atomicPublish(_buildPath(path), payload);
+  }
+
+  @override
+  bool get supportsConditionalWrite => true;
+
+  @override
+  Future<void> uploadBinaryConditional({
+    required String path,
+    required List<int> bytes,
+    Map<String, String>? metadata,
+    String? ifMatchEtag,
+    bool ifNoneMatch = false,
+  }) async {
+    if (ifMatchEtag != null && ifNoneMatch) {
+      throw ArgumentError('ifMatchEtag 与 ifNoneMatch 互斥，不能同时传入');
+    }
+    _assertNonEmptyPath(path);
+
+    // 方案C：WebDAV 无标准条件 PUT（webdav_client 不透传 If-Match），
+    // 以「上传前重取 eTag 比对」近似乐观锁 —— 显著收窄竞态窗口但非原子，
+    // 调用方仍需配合 manager 层写后校验兜底（见 ConditionalWriteStorage 注释）。
+    final currentETag = await _currentETag(_buildPath(path));    if (ifMatchEtag != null) {
+      if (currentETag == null ||
+          _normalizeETag(currentETag) != _normalizeETag(ifMatchEtag)) {
+        throw CloudPreconditionFailedException(
+            path, 'WebDAV 条件写失败（远端已被其他设备修改或不存在）: $path');
+      }
+    }
+    if (ifNoneMatch && currentETag != null) {
+      throw CloudPreconditionFailedException(
+          path, 'WebDAV 条件写失败（远端已存在同名对象）: $path');
+    }
+
+    await uploadBinary(path: path, bytes: bytes, metadata: metadata);
+  }
+
+  /// 读取远端对象当前 ETag；不存在返回 null；服务器不返回 etag 属性
+  /// 也返回 null（调用方须容忍弱化语义）。
+  ///
+  /// 实现说明：走父目录 Depth-1 扫描而非 readProps —— 上游
+  /// webdav_client 的 readProps 会给路径强加尾斜杠（fixSlashes），
+  /// 多数服务器对「/file.json/」返回 404，对普通文件不可靠；
+  /// 目录列举是包内既有验证过的路径，且 PROPFIND 响应天然携带 getetag。
+  Future<String?> _currentETag(String fullPath) async {
+    final entry = await _findEntry(fullPath);
+    return entry?.eTag;
+  }
+
+  /// 在父目录 Depth-1 列举中查找单个文件条目（排除目录）。
+  /// 「确认不存在」收敛为 null；网络/权限等真实错误原样上抛。
+  Future<webdav.File?> _findEntry(String fullPath) async {
+    final parentDir = PathHelper.dirname(fullPath);
+    final fileName = PathHelper.basename(fullPath);
+    try {
+      final files =
+          await _opRetryable('readDir', (t) => _client.readDir(parentDir, t));
+      for (final f in files) {
+        if (!(f.isDir ?? false) && f.name == fileName) {
+          return f;
+        }
+      }
+      return null;
+    } catch (e) {
+      if (_isNotFound(e)) return null;
+      rethrow;
+    }
+  }
+
+  /// ETag 归一化比较用：剥弱验证器前缀与引号包装
+  static String? _normalizeETag(String? raw) {
+    if (raw == null) return null;
+    var v = raw.trim();
+    if (v.startsWith('W/')) v = v.substring(2);
+    if (v.length >= 2 && v.startsWith('"') && v.endsWith('"')) {
+      v = v.substring(1, v.length - 1);
+    }
+    return v.isEmpty ? null : v;
+  }
+
+  /// 原子发布核心：temp PUT → overwrite MOVE → 按需降级交换（无损）。
+  ///
+  /// SYNC-09 / 审计 WD-1 的既有修复全部保留：
+  /// - 只有「服务器不支持覆盖式 MOVE」（405/409/412）才降级，其余错误
+  ///   一律原样上抛 —— 此时旧文件完好；
+  /// - 降级本身为无损交换：旧文件先挪到备份位 → 新文件落位 → 成功后删
+  ///   备份。任一步失败都尽力把备份挪回原位，全程不存在
+  ///   「目标已删、新未落位且无备份」的窗口。
+  ///
+  /// 新增修复：
+  /// - 审计 W-A：部分服务器对**成功**的 MOVE 返回 200，上游只认
+  ///   201/204/207 会误报错误。降级判定前先探测「目标已在、临时已消失」，
+  ///   命中按成功处理，消除假失败。
+  /// - 审计 W-F：备份名加入进程内序号，同毫秒并发降级不再撞名吃 412。
+  Future<void> _atomicPublish(String fullPath, Uint8List payload) async {
     final tempPath =
         '$fullPath.tmp.${DateTime.now().millisecondsSinceEpoch}_${_tempSeq++}';
     try {
@@ -100,19 +296,24 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
       await _ensureDirectory(PathHelper.dirname(fullPath));
 
       // 1. 先写临时文件（webdav write 需要 Uint8List，避免多余拷贝）
-      final data = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
-      await _op('write', (t) => _client.write(tempPath, data, cancelToken: t));
+      await _op('write', (t) => _client.write(tempPath, payload, cancelToken: t));
 
       // 2. 直接覆盖 rename（overwrite=true），失败时旧文件保持原样
       try {
         await _op('rename', (_) => _client.rename(tempPath, fullPath, true));
       } catch (renameError) {
-        // 3. 降级（仅限不支持覆盖 MOVE 的服务器）：交换式替换，见上方注释
+        // 审计 W-A：数据可能已经落盘（服务器对成功 MOVE 回了 200）。
+        // 先核实「目标存在且临时消失」，命中直接按成功返回 —— 数据在远端
+        // 是一致的（要么旧文件完好、要么新文件完整落位），绝无半成品。
+        if (await _moveLandedAnyway(tempPath, fullPath)) {
+          return;
+        }
+        // 3. 降级（仅限不支持覆盖 MOVE 的服务器）：交换式替换
         if (!_isOverwriteUnsupported(renameError)) {
           rethrow;
         }
         final backupPath =
-            '$fullPath.old.${DateTime.now().millisecondsSinceEpoch}';
+            '$fullPath.old.${DateTime.now().millisecondsSinceEpoch}_${_tempSeq++}';
         // 旧文件挪到备份位。此步失败则旧文件仍在原位，直接向上抛
         // （外层 catch 清理临时文件即可，无数据风险）。
         await _op('rename', (_) => _client.rename(fullPath, backupPath, false));
@@ -136,8 +337,7 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
         try {
           await _op('remove', (t) => _client.remove(backupPath, t));
         } catch (cleanupError) {
-          dev.log(
-              '[WebDAV] Warning: backup cleanup failed for $backupPath: $cleanupError',
+          dev.log('[WebDAV] Warning: backup cleanup failed for $backupPath: $cleanupError',
               name: 'WebDAVStorage');
         }
       }
@@ -151,14 +351,30 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
       }
       // 401/403 认证失败：抛专属异常供上层引导用户修正凭据
       if (_isUnauthorized(e)) {
-        throw CloudAuthException('WebDAV 认证失败（账号或密码错误）', e);
+        throw _authExceptionOf(e);
       }
       throw CloudStorageException('Upload failed: $e', e);
     }
+  }
 
-    // 元数据写入失败仅记日志，不影响主文件上传成功
-    if (metadata != null && metadata.isNotEmpty) {
-      await _storeMetadata(fullPath, metadata);
+  /// 审计 W-A 探测：目标文件已出现且临时文件已消失 → MOVE 实际成功。
+  ///
+  /// 同一父目录一次列举同时核实两个名字（目标出现 + 临时消失），
+  /// 任一探测出错都保守返回 false，走原有错误处理路径。
+  Future<bool> _moveLandedAnyway(String tempPath, String fullPath) async {
+    try {
+      final parentDir = PathHelper.dirname(fullPath);
+      final targetName = PathHelper.basename(fullPath);
+      final tempName = PathHelper.basename(tempPath);
+      final files =
+          await _opRetryable('readDir', (t) => _client.readDir(parentDir, t));
+      final targetLanded = files.any(
+          (f) => !(f.isDir ?? false) && f.name == targetName);
+      final tempGone = !files
+          .any((f) => !(f.isDir ?? false) && f.name == tempName);
+      return targetLanded && tempGone;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -167,7 +383,9 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
     try {
       final bytes = await downloadBinary(path: path);
       if (bytes == null) return null;
-      return utf8.decode(bytes);
+      // 方案C：信封解包（旧裸文件原样返回，无需迁移）
+      final envelope = _tryUnwrapEnvelope(bytes);
+      return envelope?.data ?? utf8.decode(bytes);
     } on CloudAuthException {
       // downloadBinary 已识别的认证失败原样透传（不依赖字符串兜底）
       rethrow;
@@ -187,20 +405,29 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
 
   @override
   Future<Uint8List?> downloadBinary({required String path}) async {
+    _assertNonEmptyPath(path);
+    // 路径构造（含遍历防护）置于 try 之外：配置类错误必须原样上抛，
+    // 不落入下方通用包装变成「存储故障」
+    final fullPath = _buildPath(path);
     try {
-      // Build full path
-      final fullPath = _buildPath(path);
-
       // Download file
-      final bytes = await _op('read', (t) => _client.read(fullPath, cancelToken: t));
+      final bytes = await _opRetryable(
+          'read', (t) => _client.read(fullPath, cancelToken: t));
 
-      return Uint8List.fromList(bytes);
+      final raw = Uint8List.fromList(bytes);
+      // 方案C：信封解包 —— 返回调用方写入的原始字节，保证
+      // uploadBinary ⇄ downloadBinary 往返一致（信封只是传输载体）
+      final envelope = _tryUnwrapEnvelope(raw);
+      if (envelope == null) return raw;
+      return envelope.b64
+          ? base64Decode(envelope.data)
+          : utf8.encode(envelope.data);
     } catch (e) {
       if (_isNotFound(e)) {
         return null;
       }
       if (_isUnauthorized(e)) {
-        throw CloudAuthException('WebDAV 认证失败（账号或密码错误）', e);
+        throw _authExceptionOf(e);
       }
       throw CloudStorageException('Download failed: $e', e);
     }
@@ -208,6 +435,7 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
 
   @override
   Future<void> delete({required String path}) async {
+    _assertNonEmptyPath(path);
     final fullPath = _buildPath(path);
 
     // C-02 修复：删除操作应幂等，404（文件不存在）视为成功
@@ -220,7 +448,7 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
         // 审计 WD-M1：凭据失效必须抛认证异常（与 upload/download/list/
         // exists/getMetadata 及 S3 实现对齐），让上层引导用户改密码，
         // 而不是报成笼统的存储故障。
-        throw CloudAuthException('WebDAV 认证失败（账号或密码错误）', e);
+        throw _authExceptionOf(e);
       } else {
         throw CloudStorageException('Delete failed: $e', e);
       }
@@ -236,20 +464,15 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
       // Build full path
       final fullPath = _buildPath(path);
 
-      // List files
-      final files = await _op('readDir', (t) => _client.readDir(fullPath, t));
+      // List files（幂等读，自动重试瞬时网络故障）
+      final files = await _opRetryable('readDir', (t) => _client.readDir(fullPath, t));
 
-      // Convert to CloudFile objects, excluding directories and metadata files
+      // Convert to CloudFile objects, excluding directories and internal
+      // artifacts（sidecar/临时/备份，审计 W-G 统一口径）
       return files
           .where((file) =>
               !(file.isDir ?? true) &&
-              !(file.name?.endsWith('.metadata.json') ?? false) &&
-              // M15：上传中断残留的临时文件（upload 用 `<name>.tmp.<毫秒>`，
-              // PUT 后 MOVE 前崩溃即永久滞留）不得混进列表 —— 下游列举型
-              // 消费者（备份/恢复候选）会把它当有效文件展示甚至恢复半截数据
-              !(file.name != null && _tempFilePattern.hasMatch(file.name!)) &&
-              // 审计 WD-1：降级交换后清理失败的备份文件同理过滤
-              !(file.name != null && _backupFilePattern.hasMatch(file.name!)))
+              !(file.name != null && _isInternalArtifact(file.name!)))
           .map((file) {
         final name = file.name ?? '';
         // 构造相对于 remotePath 的路径，供下游 _buildPath 重新拼接。
@@ -269,12 +492,14 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
           size: file.size,
           lastModified: file.mTime,
           metadata: const {},
+          // 方案C：PROPFIND 携带的 getetag 透出，供条件写/写后校验使用
+          eTag: _normalizeETag(file.eTag),
         );
       }).toList();
     } catch (e) {
       // 401/403 认证失败：抛专属异常供上层引导用户修正凭据
       if (_isUnauthorized(e)) {
-        throw CloudAuthException('WebDAV 认证失败（账号或密码错误）', e);
+        throw _authExceptionOf(e);
       }
       throw CloudStorageException('List failed: $e', e);
     }
@@ -282,16 +507,20 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
 
   @override
   Future<bool> exists({required String path}) async {
+    _assertNonEmptyPath(path);
     final fullPath = _buildPath(path);
     final parentDir = PathHelper.dirname(fullPath);
     final fileName = PathHelper.basename(fullPath);
 
     try {
       final files =
-          await _op('readDir', (t) => _client.readDir(parentDir, t));
-      // 审计 B7：排除目录 —— 同名目录会让 exists()=true 但 download 必败
+          await _opRetryable('readDir', (t) => _client.readDir(parentDir, t));
+      // 审计 B7：排除目录 —— 同名目录会让 exists()=true 但 download 必败。
+      // 审计 W-G：内部产物与 list() 口径一致过滤，消除三态分裂。
       return files.any((f) =>
-          !(f.isDir ?? false) && f.name == fileName);
+          !(f.isDir ?? false) &&
+          f.name == fileName &&
+          !_isInternalArtifact(fileName));
     } catch (e) {
       // 仅在目录不存在（404）时返回 false；其他错误（网络中断、
       // 403 权限不足等）必须抛出，避免调用方误判文件不存在而触发
@@ -301,7 +530,7 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
       }
       // 401/403 认证失败必须抛出：误判为「不存在」会触发覆盖上传等危险操作
       if (_isUnauthorized(e)) {
-        throw CloudAuthException('WebDAV 认证失败（账号或密码错误）', e);
+        throw _authExceptionOf(e);
       }
       throw CloudStorageException('Failed to check file existence: $e', e);
     }
@@ -309,32 +538,39 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
 
   @override
   Future<CloudFile?> getMetadata({required String path}) async {
+    _assertNonEmptyPath(path);
     try {
-      // Build full path
       final fullPath = _buildPath(path);
 
-      // Get file list to find the file
-      final parentDir = PathHelper.dirname(fullPath);
-      final fileName = PathHelper.basename(fullPath);
+      // 父目录 Depth-1 扫描定位条目（readProps 对普通文件不可靠，
+      // 见 _findEntry 注释）。404 由统一异常分类器收敛为 null。
+      final file = await _findEntry(fullPath);
+      if (file == null) return null;
 
-      final files =
-          await _op('readDir', (t) => _client.readDir(parentDir, t));
-      // W2：用类型化异常表达「文件不存在」，与超时/网络等通用存储故障区分。
-      // 之前 orElse 抛通用 CloudStorageException，下方 `e is
-      // CloudStorageException` 分支把 _op 超时抛的同类异常一并吞成 null，
-      // 上层（getStatus）据此误判「云端无备份」→ 放行覆盖上传，弱网环境
-      // 下可能拿旧数据盖掉云端新备份。
-      // 审计 B7：排除目录 —— 同名目录会产出伪 CloudFile 让上层误判存在。
-      final file = files.firstWhere(
-        (f) => !(f.isDir ?? false) && f.name == fileName,
-        orElse: () => throw CloudFileNotFoundException(path),
-      );
-
-      // Try to load custom metadata
-      final customMetadata = await _getMetadata(fullPath);
+      // 元数据来源优先级：
+      // 1) 信封内嵌 meta（新格式，随主文件原子写入）
+      // 2) sidecar JSON（旧格式裸文件的兼容回退）
+      //
+      // 注意必须读**原始字节**（信封形态）——downloadBinary 会把信封
+      // 解包成业务数据，二次解包永远得到 null。
+      Map<String, dynamic> customMetadata = const {};
+      try {
+        final rawBytes = await _opRetryable(
+            'read', (t) => _client.read(fullPath, cancelToken: t));
+        final envelope =
+            _tryUnwrapEnvelope(Uint8List.fromList(rawBytes));
+        if (envelope?.meta != null) {
+          customMetadata = envelope!.meta!;
+        } else {
+          customMetadata = await _getMetadata(fullPath);
+        }
+      } catch (e) {
+        dev.log('[WebDAV] Warning: metadata source read failed for $fullPath: $e',
+            name: 'WebDAVStorage');
+      }
 
       return CloudFile(
-        name: file.name ?? '',
+        name: PathHelper.basename(fullPath),
         // 口径对齐其余方法（upload/download/delete/list）：返回**逻辑相对
         // 路径**（即调用方传入的 path），保证 getMetadata 的返回值可直接
         // 回传给 _buildPath 重新拼接而不产生双前缀。file.path 是 webdav_client
@@ -343,19 +579,13 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
         size: file.size,
         lastModified: file.mTime,
         metadata: customMetadata,
+        eTag: _normalizeETag(file.eTag),
       );
     } catch (e) {
-      // 审计 WD-M2：「确认不存在」必须最先判定 —— CloudFileNotFoundException
-      // 由本方法内部抛出、不携带结构化状态码，若先走 _isUnauthorized 的
-      // 字符串兜底，文件路径含 forbidden/401 等子串时（如 notes/forbidden.txt）
-      // 普通的「文件不存在」会被误判成认证失败，UI 误导用户去改密码。
-      if (_isNotFound(e) || e is CloudFileNotFoundException) {
-        return null;
-      }
       // 401/403 认证失败需原样抛出：下方其余异常上抛为通用存储故障，
       // 认证错误必须可区分以引导用户改凭据
       if (_isUnauthorized(e)) {
-        throw CloudAuthException('WebDAV 认证失败（账号或密码错误）', e);
+        throw _authExceptionOf(e);
       }
       // 仅「确认不存在」收敛为 null（接口契约：getMetadata 缺失返回 null）；
       // 超时/网络等其余故障一律上抛，绝不静默变成「云端无元数据」
@@ -364,8 +594,37 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
   }
 
   /// Builds the full path with remote path prefix.
+  ///
+  /// 审计 W-D：拒绝 `..` 段 —— `PathHelper.normalize` 只折叠斜杠不解析
+  /// 相对段，`../` 会逐级消解后**完全逃逸 remotePath 沙箱**（对齐 S3 侧
+  /// `_assertNoTraversal` 的防护）。
   String _buildPath(String path) {
+    _assertNoTraversal(path);
     return PathHelper.join([_remotePath, path]);
+  }
+
+  /// 按 `/` 分段后存在恰为 `..` 的段才拒绝（不误伤 `ledger..backup.json`）
+  static void _assertNoTraversal(String value) {
+    for (final seg in value.split('/')) {
+      if (seg == '..') {
+        throw CloudConfigurationException(
+            'Invalid path containing ".." segment: $value');
+      }
+    }
+  }
+
+  /// 审计 W-X：401 与 403 分开表述 —— 401 才是凭据错误（改密码），
+  /// 403 多为权限不足（目录 ACL / 配额），一律让用户改密码会误导排查。
+  /// 两者同为 [CloudAuthException]（RetryHelper 对认证类均不重试，
+  /// 类型语义不变，仅文案更准确）。
+  CloudAuthException _authExceptionOf(Object e) {
+    final code = _statusCodeOf(e);
+    if (code == 403) {
+      return CloudAuthException(
+          'WebDAV 访问被拒绝（权限不足）：请检查账号对该目录的读写权限或服务器配额',
+          e);
+    }
+    return CloudAuthException('WebDAV 认证失败（账号或密码错误）', e);
   }
 
   /// 提取异常携带的结构化 HTTP 状态码（dio 系异常），无则返回 null。
@@ -515,43 +774,15 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
     }
   }
 
-  /// Stores custom metadata as a separate JSON file.
+  /// Retrieves custom metadata from JSON sidecar（旧格式裸文件的兼容回退）。
   ///
-  /// 元数据存储失败不影响主数据的完整性（主文件已上传成功），但必须尽力
-  /// 作废可能残留的**陈旧** sidecar（F3）：旧指纹 + 新内容的组合会让读取端
-  /// （CloudSyncManager.download 完整性自检）拿旧指纹比对新内容而硬失败，
-  /// 把「一次性元数据写失败」放大成「该备份永久无法下载」，比
-  /// 「无指纹 → 跳过校验」危险得多。返回是否写入成功。
-  Future<bool> _storeMetadata(
-      String filePath, Map<String, String> metadata) async {
-    final metadataPath = '$filePath.metadata.json';
-    try {
-      final metadataJson = jsonEncode({
-        'metadata': metadata,
-        'updatedAt': DateTime.now().toIso8601String(),
-      });
-      final bytes = utf8.encode(metadataJson);
-      await _op('write', (t) => _client.write(metadataPath, bytes, cancelToken: t));
-      return true;
-    } catch (e) {
-      // 元数据是辅助功能（主数据已上传成功），失败不阻塞主流程，
-      // 但记录 warning 便于排查，避免完全静默
-      dev.log('[WebDAV] Warning: metadata storage failed for $filePath: $e', name: 'WebDAVStorage');
-      // F3：尽力删除陈旧 sidecar。删除也失败（网络异常时的常见组合）时
-      // 读取端仍会看到陈旧指纹 —— 该残余风险记录在案，属极端场景。
-      try {
-        await _op('remove', (t) => _client.remove(metadataPath, t));
-      } catch (_) {}
-      return false;
-    }
-  }
-
-  /// Retrieves custom metadata from JSON file.
+  /// 方案C 后新上传均为信封自包含，本方法仅服务旧版裸文件：信封无 meta
+  /// 时回退读 sidecar。不再有写入方 —— 新上传的元数据内嵌于信封。
   Future<Map<String, dynamic>> _getMetadata(String filePath) async {
     try {
       final metadataPath = '$filePath.metadata.json';
-      final bytes =
-          await _op('read', (t) => _client.read(metadataPath, cancelToken: t));
+      final bytes = await _opRetryable(
+          'read', (t) => _client.read(metadataPath, cancelToken: t));
       final json = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
       return json['metadata'] as Map<String, dynamic>? ?? {};
     } catch (e) {

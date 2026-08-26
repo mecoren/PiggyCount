@@ -40,12 +40,16 @@ class S3HeadInfo {
   /// 自定义元数据（从 x-amz-meta-* 响应头解析）
   final Map<String, String>? metadata;
 
+  /// 对象 ETag（方案C：供条件写/写后校验使用；网关未返回时为 null）
+  final String? eTag;
+
   const S3HeadInfo({
     required this.exists,
     this.size,
     this.lastModified,
     this.contentType,
     this.metadata,
+    this.eTag,
   });
 
   /// 对象不存在的哨兵实例
