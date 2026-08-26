@@ -35,6 +35,13 @@ class Ledgers extends Table {
   // 1=自然月。随 sync 跨设备(payload key `monthStartDay`,server 列
   // ledgers.month_start_day)。见 .docs/period-start-date/design.md。
   IntColumn get monthStartDay => integer().withDefault(const Constant(1))();
+
+  /// 审计 T1（v40）：本行最后一次被**本设备写**的时刻（UTC epoch）。
+  /// NULL = 本设备从未更新过该行（新建即导入的行保持 NULL，语义明确）。
+  /// 由数据库触发器 trg_ledgers_touch_updated_at 在普通 UPDATE 时自动维护；
+  /// 显式写入不同值（如未来 pull apply 回填远端时间）不会被触发器覆盖。
+  /// 用途：本地新旧证据 / 未来 LWW 方向仲裁的基础字段。
+  DateTimeColumn get updatedAt => dateTime().nullable()();
 }
 
 class Accounts extends Table {
@@ -104,6 +111,10 @@ class Categories extends Table {
   TextColumn get customIconPath => text().nullable()(); // 自定义图标本地路径
   TextColumn get communityIconId => text().nullable()(); // 社区图标ID（预留）
   TextColumn get syncId => text().nullable()(); // 跨设备同步唯一标识 (UUID)
+
+  /// 审计 T1（v40）：见 Ledgers.updatedAt 注释。触发器
+  /// trg_categories_touch_updated_at 自动维护。
+  DateTimeColumn get updatedAt => dateTime().nullable()();
 }
 
 class Transactions extends Table {
@@ -141,6 +152,10 @@ class Transactions extends Table {
   /// 不计入预算:true 时从预算用量剔除。与 excludeFromStats 完全独立(D2)。
   BoolColumn get excludeFromBudget =>
       boolean().withDefault(const Constant(false))();
+
+  /// 审计 T1（v40）：见 Ledgers.updatedAt 注释。触发器
+  /// trg_transactions_touch_updated_at 自动维护。
+  DateTimeColumn get updatedAt => dateTime().nullable()();
 
   /// v30 交易级多币种(.docs/multi-currency-ledger):交易币种(ISO 大写)。
   /// 有账户 → 恒等于账户 currency(账户内不混币);无账户 → 用户所选(L12,
@@ -219,6 +234,10 @@ class Tags extends Table {
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();  // 排序
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   TextColumn get syncId => text().nullable()(); // 跨设备同步唯一标识 (UUID)
+
+  /// 审计 T1（v40）：见 Ledgers.updatedAt 注释。触发器
+  /// trg_tags_touch_updated_at 自动维护。
+  DateTimeColumn get updatedAt => dateTime().nullable()();
 }
 
 // 本地变更追踪表（用于增量同步）
@@ -459,7 +478,7 @@ class PiggyDatabase extends _$PiggyDatabase {
   PiggyDatabase.forTesting(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 39; // v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
+  int get schemaVersion => 40; // v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1338,6 +1357,29 @@ class PiggyDatabase extends _$PiggyDatabase {
                 'ON local_changes (ledger_id, pushed_at);');
             logger.info('DBMigration', 'v39 迁移完成: local_changes 查询索引');
           }
+          if (from < 40) {
+            // v40（审计 T1）:业务表补 updated_at + UPDATE 触碰触发器。
+            // 此前 transactions/categories/tags/ledgers 完全没有 updated_at
+            // （accounts 有列但几乎无人维护），本地无法做任何新旧判断，
+            // 方向仲裁只能依赖 local_changes.created_at 会话证据 + 墙钟。
+            // - 列可空，存量行保持 NULL =「本设备从未更新过」，不伪造时间；
+            //   用户明确不考虑历史数据回填。
+            // - 维护走 SQLite 触发器而非散落 ~30 处的应用层赋值 —— 后者
+            //   正是 accounts.updated_at 沦为摆设的根因（漏一处即脏数据）。
+            //   WHEN NEW IS OLD 守卫：显式写入不同值（未来 pull 回填远端
+            //   时间戳）不被覆盖；内部自更新即使 recursive_triggers 开启
+            //   也不会二次触发（新值 ≠ 旧值）。
+            logger.info('DBMigration',
+                '开始迁移到 v40: 业务表 updated_at 列 + 触碰触发器');
+            for (final t in const {
+              'transactions', 'categories', 'tags', 'ledgers'
+            }) {
+              await _addColumnIfMissing(
+                  t, 'updated_at', 'ALTER TABLE $t ADD COLUMN updated_at INTEGER;');
+            }
+            await _createUpdatedAtTouchTriggers();
+            logger.info('DBMigration', 'v40 迁移完成: updated_at 列 + 触发器');
+          }
         },
         onCreate: (m) async {
           await m.createAll();
@@ -1396,6 +1438,9 @@ class PiggyDatabase extends _$PiggyDatabase {
               'CREATE UNIQUE INDEX IF NOT EXISTS uq_recurring_sync_id ON recurring_transactions(sync_id);');
           await customStatement(
               'CREATE UNIQUE INDEX IF NOT EXISTS uq_exchange_rate_overrides_sync_id ON exchange_rate_overrides(sync_id);');
+          // v40: updated_at 触碰触发器（审计 T1，与 onUpgrade v40 同构 ——
+          // 新装库走 onCreate 而非 migration）。IF NOT EXISTS 幂等。
+          await _createUpdatedAtTouchTriggers();
         },
       );
 
@@ -1417,6 +1462,43 @@ class PiggyDatabase extends _$PiggyDatabase {
       return;
     }
     await customStatement(ddl);
+  }
+
+  /// 审计 T1：需要 updated_at 触碰触发器的表（v40）。
+  /// accounts 列早已存在（v1.15.0），一并纳入触发器维护。
+  static const Set<String> _updatedAtTouchTables = {
+    'transactions', 'categories', 'tags', 'accounts', 'ledgers',
+  };
+
+  /// 审计 T1（v40）：创建 updated_at 触碰触发器（幂等）。
+  ///
+  /// 设计：
+  /// - `AFTER UPDATE ... WHEN NEW.updated_at IS OLD.updated_at`：语句未触碰
+  ///   该列（含列值为 NULL 的存量行首次被更新）时自动盖 UTC 秒级时间戳；
+  ///   语句**显式写入不同值**时守卫不成立 → 应用层/未来 pull 回填的时间
+  ///   原样保留。
+  /// - 内部自更新把值改成 now ≠ OLD，即便宿主开启 recursive_triggers 也
+  ///   不会二次递归。
+  /// - `CAST(strftime('%s','now') AS INTEGER)`：strftime 返回 TEXT，必须
+  ///   显式转 INTEGER 才与 drift 的 epoch-seconds DateTime 映射一致。
+  /// - INSERT 不设触发器：新建行保持 NULL =「本设备从未更新过」，语义
+  ///   明确且不伪造时间；restore/import 批量插入路径零额外开销。
+  Future<void> _createUpdatedAtTouchTriggers() async {
+    // 注意：本方法在 onCreate 路径执行，而部分纯 DB 单测不初始化平台
+    // binding（logger 单例初始化需要）。此处必须保持静默，不得触碰 logger；
+    // 迁移进度日志由 onUpgrade 的 v40 块负责（仅真实升级路径执行）。
+    for (final table in _updatedAtTouchTables) {
+      await customStatement(
+        'CREATE TRIGGER IF NOT EXISTS trg_${table}_touch_updated_at '
+        'AFTER UPDATE ON $table '
+        'FOR EACH ROW '
+        'WHEN NEW.updated_at IS OLD.updated_at '
+        'BEGIN '
+        'UPDATE $table SET updated_at = '
+        "CAST(strftime('%s','now') AS INTEGER) WHERE id = NEW.id; "
+        'END',
+      );
+    }
   }
 
   /// Migration helper: 表不存在再 createTable,避免 partial state 重跑时

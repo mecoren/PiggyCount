@@ -89,6 +89,12 @@ class $LedgersTable extends Ledgers with TableInfo<$LedgersTable, Ledger> {
       type: DriftSqlType.int,
       requiredDuringInsert: false,
       defaultValue: const Constant(1));
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -101,7 +107,8 @@ class $LedgersTable extends Ledgers with TableInfo<$LedgersTable, Ledger> {
         memberCount,
         isShared,
         ownerUserId,
-        monthStartDay
+        monthStartDay,
+        updatedAt
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -164,6 +171,10 @@ class $LedgersTable extends Ledgers with TableInfo<$LedgersTable, Ledger> {
           monthStartDay.isAcceptableOrUnknown(
               data['month_start_day']!, _monthStartDayMeta));
     }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
     return context;
   }
 
@@ -195,6 +206,8 @@ class $LedgersTable extends Ledgers with TableInfo<$LedgersTable, Ledger> {
           .read(DriftSqlType.string, data['${effectivePrefix}owner_user_id']),
       monthStartDay: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}month_start_day'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at']),
     );
   }
 
@@ -216,6 +229,13 @@ class Ledger extends DataClass implements Insertable<Ledger> {
   final bool isShared;
   final String? ownerUserId;
   final int monthStartDay;
+
+  /// 审计 T1（v40）：本行最后一次被**本设备写**的时刻（UTC epoch）。
+  /// NULL = 本设备从未更新过该行（新建即导入的行保持 NULL，语义明确）。
+  /// 由数据库触发器 trg_ledgers_touch_updated_at 在普通 UPDATE 时自动维护；
+  /// 显式写入不同值（如未来 pull apply 回填远端时间）不会被触发器覆盖。
+  /// 用途：本地新旧证据 / 未来 LWW 方向仲裁的基础字段。
+  final DateTime? updatedAt;
   const Ledger(
       {required this.id,
       required this.name,
@@ -227,7 +247,8 @@ class Ledger extends DataClass implements Insertable<Ledger> {
       required this.memberCount,
       required this.isShared,
       this.ownerUserId,
-      required this.monthStartDay});
+      required this.monthStartDay,
+      this.updatedAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -246,6 +267,9 @@ class Ledger extends DataClass implements Insertable<Ledger> {
       map['owner_user_id'] = Variable<String>(ownerUserId);
     }
     map['month_start_day'] = Variable<int>(monthStartDay);
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<DateTime>(updatedAt);
+    }
     return map;
   }
 
@@ -265,6 +289,9 @@ class Ledger extends DataClass implements Insertable<Ledger> {
           ? const Value.absent()
           : Value(ownerUserId),
       monthStartDay: Value(monthStartDay),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
     );
   }
 
@@ -283,6 +310,7 @@ class Ledger extends DataClass implements Insertable<Ledger> {
       isShared: serializer.fromJson<bool>(json['isShared']),
       ownerUserId: serializer.fromJson<String?>(json['ownerUserId']),
       monthStartDay: serializer.fromJson<int>(json['monthStartDay']),
+      updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
     );
   }
   @override
@@ -300,6 +328,7 @@ class Ledger extends DataClass implements Insertable<Ledger> {
       'isShared': serializer.toJson<bool>(isShared),
       'ownerUserId': serializer.toJson<String?>(ownerUserId),
       'monthStartDay': serializer.toJson<int>(monthStartDay),
+      'updatedAt': serializer.toJson<DateTime?>(updatedAt),
     };
   }
 
@@ -314,7 +343,8 @@ class Ledger extends DataClass implements Insertable<Ledger> {
           int? memberCount,
           bool? isShared,
           Value<String?> ownerUserId = const Value.absent(),
-          int? monthStartDay}) =>
+          int? monthStartDay,
+          Value<DateTime?> updatedAt = const Value.absent()}) =>
       Ledger(
         id: id ?? this.id,
         name: name ?? this.name,
@@ -327,6 +357,7 @@ class Ledger extends DataClass implements Insertable<Ledger> {
         isShared: isShared ?? this.isShared,
         ownerUserId: ownerUserId.present ? ownerUserId.value : this.ownerUserId,
         monthStartDay: monthStartDay ?? this.monthStartDay,
+        updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
       );
   Ledger copyWithCompanion(LedgersCompanion data) {
     return Ledger(
@@ -345,6 +376,7 @@ class Ledger extends DataClass implements Insertable<Ledger> {
       monthStartDay: data.monthStartDay.present
           ? data.monthStartDay.value
           : this.monthStartDay,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
 
@@ -361,14 +393,15 @@ class Ledger extends DataClass implements Insertable<Ledger> {
           ..write('memberCount: $memberCount, ')
           ..write('isShared: $isShared, ')
           ..write('ownerUserId: $ownerUserId, ')
-          ..write('monthStartDay: $monthStartDay')
+          ..write('monthStartDay: $monthStartDay, ')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
 
   @override
   int get hashCode => Object.hash(id, name, currency, type, createdAt, syncId,
-      myRole, memberCount, isShared, ownerUserId, monthStartDay);
+      myRole, memberCount, isShared, ownerUserId, monthStartDay, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -383,7 +416,8 @@ class Ledger extends DataClass implements Insertable<Ledger> {
           other.memberCount == this.memberCount &&
           other.isShared == this.isShared &&
           other.ownerUserId == this.ownerUserId &&
-          other.monthStartDay == this.monthStartDay);
+          other.monthStartDay == this.monthStartDay &&
+          other.updatedAt == this.updatedAt);
 }
 
 class LedgersCompanion extends UpdateCompanion<Ledger> {
@@ -398,6 +432,7 @@ class LedgersCompanion extends UpdateCompanion<Ledger> {
   final Value<bool> isShared;
   final Value<String?> ownerUserId;
   final Value<int> monthStartDay;
+  final Value<DateTime?> updatedAt;
   const LedgersCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
@@ -410,6 +445,7 @@ class LedgersCompanion extends UpdateCompanion<Ledger> {
     this.isShared = const Value.absent(),
     this.ownerUserId = const Value.absent(),
     this.monthStartDay = const Value.absent(),
+    this.updatedAt = const Value.absent(),
   });
   LedgersCompanion.insert({
     this.id = const Value.absent(),
@@ -423,6 +459,7 @@ class LedgersCompanion extends UpdateCompanion<Ledger> {
     this.isShared = const Value.absent(),
     this.ownerUserId = const Value.absent(),
     this.monthStartDay = const Value.absent(),
+    this.updatedAt = const Value.absent(),
   }) : name = Value(name);
   static Insertable<Ledger> custom({
     Expression<int>? id,
@@ -436,6 +473,7 @@ class LedgersCompanion extends UpdateCompanion<Ledger> {
     Expression<bool>? isShared,
     Expression<String>? ownerUserId,
     Expression<int>? monthStartDay,
+    Expression<DateTime>? updatedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -449,6 +487,7 @@ class LedgersCompanion extends UpdateCompanion<Ledger> {
       if (isShared != null) 'is_shared': isShared,
       if (ownerUserId != null) 'owner_user_id': ownerUserId,
       if (monthStartDay != null) 'month_start_day': monthStartDay,
+      if (updatedAt != null) 'updated_at': updatedAt,
     });
   }
 
@@ -463,7 +502,8 @@ class LedgersCompanion extends UpdateCompanion<Ledger> {
       Value<int>? memberCount,
       Value<bool>? isShared,
       Value<String?>? ownerUserId,
-      Value<int>? monthStartDay}) {
+      Value<int>? monthStartDay,
+      Value<DateTime?>? updatedAt}) {
     return LedgersCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
@@ -476,6 +516,7 @@ class LedgersCompanion extends UpdateCompanion<Ledger> {
       isShared: isShared ?? this.isShared,
       ownerUserId: ownerUserId ?? this.ownerUserId,
       monthStartDay: monthStartDay ?? this.monthStartDay,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -515,6 +556,9 @@ class LedgersCompanion extends UpdateCompanion<Ledger> {
     if (monthStartDay.present) {
       map['month_start_day'] = Variable<int>(monthStartDay.value);
     }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
     return map;
   }
 
@@ -531,7 +575,8 @@ class LedgersCompanion extends UpdateCompanion<Ledger> {
           ..write('memberCount: $memberCount, ')
           ..write('isShared: $isShared, ')
           ..write('ownerUserId: $ownerUserId, ')
-          ..write('monthStartDay: $monthStartDay')
+          ..write('monthStartDay: $monthStartDay, ')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
@@ -1410,6 +1455,12 @@ class $CategoriesTable extends Categories
   late final GeneratedColumn<String> syncId = GeneratedColumn<String>(
       'sync_id', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -1422,7 +1473,8 @@ class $CategoriesTable extends Categories
         iconType,
         customIconPath,
         communityIconId,
-        syncId
+        syncId,
+        updatedAt
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1485,6 +1537,10 @@ class $CategoriesTable extends Categories
       context.handle(_syncIdMeta,
           syncId.isAcceptableOrUnknown(data['sync_id']!, _syncIdMeta));
     }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
     return context;
   }
 
@@ -1516,6 +1572,8 @@ class $CategoriesTable extends Categories
           DriftSqlType.string, data['${effectivePrefix}community_icon_id']),
       syncId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}sync_id']),
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at']),
     );
   }
 
@@ -1537,6 +1595,10 @@ class Category extends DataClass implements Insertable<Category> {
   final String? customIconPath;
   final String? communityIconId;
   final String? syncId;
+
+  /// 审计 T1（v40）：见 Ledgers.updatedAt 注释。触发器
+  /// trg_categories_touch_updated_at 自动维护。
+  final DateTime? updatedAt;
   const Category(
       {required this.id,
       required this.name,
@@ -1548,7 +1610,8 @@ class Category extends DataClass implements Insertable<Category> {
       required this.iconType,
       this.customIconPath,
       this.communityIconId,
-      this.syncId});
+      this.syncId,
+      this.updatedAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1573,6 +1636,9 @@ class Category extends DataClass implements Insertable<Category> {
     if (!nullToAbsent || syncId != null) {
       map['sync_id'] = Variable<String>(syncId);
     }
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<DateTime>(updatedAt);
+    }
     return map;
   }
 
@@ -1596,6 +1662,9 @@ class Category extends DataClass implements Insertable<Category> {
           : Value(communityIconId),
       syncId:
           syncId == null && nullToAbsent ? const Value.absent() : Value(syncId),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
     );
   }
 
@@ -1614,6 +1683,7 @@ class Category extends DataClass implements Insertable<Category> {
       customIconPath: serializer.fromJson<String?>(json['customIconPath']),
       communityIconId: serializer.fromJson<String?>(json['communityIconId']),
       syncId: serializer.fromJson<String?>(json['syncId']),
+      updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
     );
   }
   @override
@@ -1631,6 +1701,7 @@ class Category extends DataClass implements Insertable<Category> {
       'customIconPath': serializer.toJson<String?>(customIconPath),
       'communityIconId': serializer.toJson<String?>(communityIconId),
       'syncId': serializer.toJson<String?>(syncId),
+      'updatedAt': serializer.toJson<DateTime?>(updatedAt),
     };
   }
 
@@ -1645,7 +1716,8 @@ class Category extends DataClass implements Insertable<Category> {
           String? iconType,
           Value<String?> customIconPath = const Value.absent(),
           Value<String?> communityIconId = const Value.absent(),
-          Value<String?> syncId = const Value.absent()}) =>
+          Value<String?> syncId = const Value.absent(),
+          Value<DateTime?> updatedAt = const Value.absent()}) =>
       Category(
         id: id ?? this.id,
         name: name ?? this.name,
@@ -1661,6 +1733,7 @@ class Category extends DataClass implements Insertable<Category> {
             ? communityIconId.value
             : this.communityIconId,
         syncId: syncId.present ? syncId.value : this.syncId,
+        updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
       );
   Category copyWithCompanion(CategoriesCompanion data) {
     return Category(
@@ -1679,6 +1752,7 @@ class Category extends DataClass implements Insertable<Category> {
           ? data.communityIconId.value
           : this.communityIconId,
       syncId: data.syncId.present ? data.syncId.value : this.syncId,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
 
@@ -1695,14 +1769,15 @@ class Category extends DataClass implements Insertable<Category> {
           ..write('iconType: $iconType, ')
           ..write('customIconPath: $customIconPath, ')
           ..write('communityIconId: $communityIconId, ')
-          ..write('syncId: $syncId')
+          ..write('syncId: $syncId, ')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
 
   @override
   int get hashCode => Object.hash(id, name, kind, icon, sortOrder, parentId,
-      level, iconType, customIconPath, communityIconId, syncId);
+      level, iconType, customIconPath, communityIconId, syncId, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1717,7 +1792,8 @@ class Category extends DataClass implements Insertable<Category> {
           other.iconType == this.iconType &&
           other.customIconPath == this.customIconPath &&
           other.communityIconId == this.communityIconId &&
-          other.syncId == this.syncId);
+          other.syncId == this.syncId &&
+          other.updatedAt == this.updatedAt);
 }
 
 class CategoriesCompanion extends UpdateCompanion<Category> {
@@ -1732,6 +1808,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   final Value<String?> customIconPath;
   final Value<String?> communityIconId;
   final Value<String?> syncId;
+  final Value<DateTime?> updatedAt;
   const CategoriesCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
@@ -1744,6 +1821,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     this.customIconPath = const Value.absent(),
     this.communityIconId = const Value.absent(),
     this.syncId = const Value.absent(),
+    this.updatedAt = const Value.absent(),
   });
   CategoriesCompanion.insert({
     this.id = const Value.absent(),
@@ -1757,6 +1835,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     this.customIconPath = const Value.absent(),
     this.communityIconId = const Value.absent(),
     this.syncId = const Value.absent(),
+    this.updatedAt = const Value.absent(),
   })  : name = Value(name),
         kind = Value(kind);
   static Insertable<Category> custom({
@@ -1771,6 +1850,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     Expression<String>? customIconPath,
     Expression<String>? communityIconId,
     Expression<String>? syncId,
+    Expression<DateTime>? updatedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1784,6 +1864,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       if (customIconPath != null) 'custom_icon_path': customIconPath,
       if (communityIconId != null) 'community_icon_id': communityIconId,
       if (syncId != null) 'sync_id': syncId,
+      if (updatedAt != null) 'updated_at': updatedAt,
     });
   }
 
@@ -1798,7 +1879,8 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       Value<String>? iconType,
       Value<String?>? customIconPath,
       Value<String?>? communityIconId,
-      Value<String?>? syncId}) {
+      Value<String?>? syncId,
+      Value<DateTime?>? updatedAt}) {
     return CategoriesCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
@@ -1811,6 +1893,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       customIconPath: customIconPath ?? this.customIconPath,
       communityIconId: communityIconId ?? this.communityIconId,
       syncId: syncId ?? this.syncId,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -1850,6 +1933,9 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     if (syncId.present) {
       map['sync_id'] = Variable<String>(syncId.value);
     }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
     return map;
   }
 
@@ -1866,7 +1952,8 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
           ..write('iconType: $iconType, ')
           ..write('customIconPath: $customIconPath, ')
           ..write('communityIconId: $communityIconId, ')
-          ..write('syncId: $syncId')
+          ..write('syncId: $syncId, ')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
@@ -2001,6 +2088,12 @@ class $TransactionsTable extends Transactions
       defaultConstraints: GeneratedColumn.constraintIsAlways(
           'CHECK ("exclude_from_budget" IN (0, 1))'),
       defaultValue: const Constant(false));
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
   static const VerificationMeta _currencyCodeMeta =
       const VerificationMeta('currencyCode');
   @override
@@ -2034,6 +2127,7 @@ class $TransactionsTable extends Transactions
         tagSyncIdsOverride,
         excludeFromStats,
         excludeFromBudget,
+        updatedAt,
         currencyCode,
         nativeAmount
       ];
@@ -2153,6 +2247,10 @@ class $TransactionsTable extends Transactions
           excludeFromBudget.isAcceptableOrUnknown(
               data['exclude_from_budget']!, _excludeFromBudgetMeta));
     }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
     if (data.containsKey('currency_code')) {
       context.handle(
           _currencyCodeMeta,
@@ -2215,6 +2313,8 @@ class $TransactionsTable extends Transactions
           DriftSqlType.bool, data['${effectivePrefix}exclude_from_stats'])!,
       excludeFromBudget: attachedDatabase.typeMapping.read(
           DriftSqlType.bool, data['${effectivePrefix}exclude_from_budget'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at']),
       currencyCode: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}currency_code']),
       nativeAmount: attachedDatabase.typeMapping
@@ -2254,6 +2354,10 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   /// 不计入预算:true 时从预算用量剔除。与 excludeFromStats 完全独立(D2)。
   final bool excludeFromBudget;
 
+  /// 审计 T1（v40）：见 Ledgers.updatedAt 注释。触发器
+  /// trg_transactions_touch_updated_at 自动维护。
+  final DateTime? updatedAt;
+
   /// v30 交易级多币种(.docs/multi-currency-ledger):交易币种(ISO 大写)。
   /// 有账户 → 恒等于账户 currency(账户内不混币);无账户 → 用户所选(L12,
   /// 默认账本本位币)。显式存让交易自包含(同步/统计不必每次 join 账户)。
@@ -2283,6 +2387,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       this.tagSyncIdsOverride,
       required this.excludeFromStats,
       required this.excludeFromBudget,
+      this.updatedAt,
       this.currencyCode,
       this.nativeAmount});
   @override
@@ -2333,6 +2438,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     }
     map['exclude_from_stats'] = Variable<bool>(excludeFromStats);
     map['exclude_from_budget'] = Variable<bool>(excludeFromBudget);
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<DateTime>(updatedAt);
+    }
     if (!nullToAbsent || currencyCode != null) {
       map['currency_code'] = Variable<String>(currencyCode);
     }
@@ -2384,6 +2492,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           : Value(tagSyncIdsOverride),
       excludeFromStats: Value(excludeFromStats),
       excludeFromBudget: Value(excludeFromBudget),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
       currencyCode: currencyCode == null && nullToAbsent
           ? const Value.absent()
           : Value(currencyCode),
@@ -2421,6 +2532,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           serializer.fromJson<String?>(json['tagSyncIdsOverride']),
       excludeFromStats: serializer.fromJson<bool>(json['excludeFromStats']),
       excludeFromBudget: serializer.fromJson<bool>(json['excludeFromBudget']),
+      updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
       currencyCode: serializer.fromJson<String?>(json['currencyCode']),
       nativeAmount: serializer.fromJson<double?>(json['nativeAmount']),
     );
@@ -2451,6 +2563,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'tagSyncIdsOverride': serializer.toJson<String?>(tagSyncIdsOverride),
       'excludeFromStats': serializer.toJson<bool>(excludeFromStats),
       'excludeFromBudget': serializer.toJson<bool>(excludeFromBudget),
+      'updatedAt': serializer.toJson<DateTime?>(updatedAt),
       'currencyCode': serializer.toJson<String?>(currencyCode),
       'nativeAmount': serializer.toJson<double?>(nativeAmount),
     };
@@ -2476,6 +2589,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           Value<String?> tagSyncIdsOverride = const Value.absent(),
           bool? excludeFromStats,
           bool? excludeFromBudget,
+          Value<DateTime?> updatedAt = const Value.absent(),
           Value<String?> currencyCode = const Value.absent(),
           Value<double?> nativeAmount = const Value.absent()}) =>
       Transaction(
@@ -2510,6 +2624,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
             : this.tagSyncIdsOverride,
         excludeFromStats: excludeFromStats ?? this.excludeFromStats,
         excludeFromBudget: excludeFromBudget ?? this.excludeFromBudget,
+        updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
         currencyCode:
             currencyCode.present ? currencyCode.value : this.currencyCode,
         nativeAmount:
@@ -2556,6 +2671,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       excludeFromBudget: data.excludeFromBudget.present
           ? data.excludeFromBudget.value
           : this.excludeFromBudget,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       currencyCode: data.currencyCode.present
           ? data.currencyCode.value
           : this.currencyCode,
@@ -2587,6 +2703,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('tagSyncIdsOverride: $tagSyncIdsOverride, ')
           ..write('excludeFromStats: $excludeFromStats, ')
           ..write('excludeFromBudget: $excludeFromBudget, ')
+          ..write('updatedAt: $updatedAt, ')
           ..write('currencyCode: $currencyCode, ')
           ..write('nativeAmount: $nativeAmount')
           ..write(')'))
@@ -2614,6 +2731,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         tagSyncIdsOverride,
         excludeFromStats,
         excludeFromBudget,
+        updatedAt,
         currencyCode,
         nativeAmount
       ]);
@@ -2640,6 +2758,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.tagSyncIdsOverride == this.tagSyncIdsOverride &&
           other.excludeFromStats == this.excludeFromStats &&
           other.excludeFromBudget == this.excludeFromBudget &&
+          other.updatedAt == this.updatedAt &&
           other.currencyCode == this.currencyCode &&
           other.nativeAmount == this.nativeAmount);
 }
@@ -2664,6 +2783,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<String?> tagSyncIdsOverride;
   final Value<bool> excludeFromStats;
   final Value<bool> excludeFromBudget;
+  final Value<DateTime?> updatedAt;
   final Value<String?> currencyCode;
   final Value<double?> nativeAmount;
   const TransactionsCompanion({
@@ -2686,6 +2806,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.tagSyncIdsOverride = const Value.absent(),
     this.excludeFromStats = const Value.absent(),
     this.excludeFromBudget = const Value.absent(),
+    this.updatedAt = const Value.absent(),
     this.currencyCode = const Value.absent(),
     this.nativeAmount = const Value.absent(),
   });
@@ -2709,6 +2830,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.tagSyncIdsOverride = const Value.absent(),
     this.excludeFromStats = const Value.absent(),
     this.excludeFromBudget = const Value.absent(),
+    this.updatedAt = const Value.absent(),
     this.currencyCode = const Value.absent(),
     this.nativeAmount = const Value.absent(),
   })  : ledgerId = Value(ledgerId),
@@ -2734,6 +2856,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<String>? tagSyncIdsOverride,
     Expression<bool>? excludeFromStats,
     Expression<bool>? excludeFromBudget,
+    Expression<DateTime>? updatedAt,
     Expression<String>? currencyCode,
     Expression<double>? nativeAmount,
   }) {
@@ -2762,6 +2885,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
         'tag_sync_ids_override': tagSyncIdsOverride,
       if (excludeFromStats != null) 'exclude_from_stats': excludeFromStats,
       if (excludeFromBudget != null) 'exclude_from_budget': excludeFromBudget,
+      if (updatedAt != null) 'updated_at': updatedAt,
       if (currencyCode != null) 'currency_code': currencyCode,
       if (nativeAmount != null) 'native_amount': nativeAmount,
     });
@@ -2787,6 +2911,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       Value<String?>? tagSyncIdsOverride,
       Value<bool>? excludeFromStats,
       Value<bool>? excludeFromBudget,
+      Value<DateTime?>? updatedAt,
       Value<String?>? currencyCode,
       Value<double?>? nativeAmount}) {
     return TransactionsCompanion(
@@ -2812,6 +2937,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       tagSyncIdsOverride: tagSyncIdsOverride ?? this.tagSyncIdsOverride,
       excludeFromStats: excludeFromStats ?? this.excludeFromStats,
       excludeFromBudget: excludeFromBudget ?? this.excludeFromBudget,
+      updatedAt: updatedAt ?? this.updatedAt,
       currencyCode: currencyCode ?? this.currencyCode,
       nativeAmount: nativeAmount ?? this.nativeAmount,
     );
@@ -2881,6 +3007,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (excludeFromBudget.present) {
       map['exclude_from_budget'] = Variable<bool>(excludeFromBudget.value);
     }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
     if (currencyCode.present) {
       map['currency_code'] = Variable<String>(currencyCode.value);
     }
@@ -2912,6 +3041,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('tagSyncIdsOverride: $tagSyncIdsOverride, ')
           ..write('excludeFromStats: $excludeFromStats, ')
           ..write('excludeFromBudget: $excludeFromBudget, ')
+          ..write('updatedAt: $updatedAt, ')
           ..write('currencyCode: $currencyCode, ')
           ..write('nativeAmount: $nativeAmount')
           ..write(')'))
@@ -4614,9 +4744,15 @@ class $TagsTable extends Tags with TableInfo<$TagsTable, Tag> {
   late final GeneratedColumn<String> syncId = GeneratedColumn<String>(
       'sync_id', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns =>
-      [id, name, color, sortOrder, createdAt, syncId];
+      [id, name, color, sortOrder, createdAt, syncId, updatedAt];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -4652,6 +4788,10 @@ class $TagsTable extends Tags with TableInfo<$TagsTable, Tag> {
       context.handle(_syncIdMeta,
           syncId.isAcceptableOrUnknown(data['sync_id']!, _syncIdMeta));
     }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
     return context;
   }
 
@@ -4673,6 +4813,8 @@ class $TagsTable extends Tags with TableInfo<$TagsTable, Tag> {
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
       syncId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}sync_id']),
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at']),
     );
   }
 
@@ -4689,13 +4831,18 @@ class Tag extends DataClass implements Insertable<Tag> {
   final int sortOrder;
   final DateTime createdAt;
   final String? syncId;
+
+  /// 审计 T1（v40）：见 Ledgers.updatedAt 注释。触发器
+  /// trg_tags_touch_updated_at 自动维护。
+  final DateTime? updatedAt;
   const Tag(
       {required this.id,
       required this.name,
       this.color,
       required this.sortOrder,
       required this.createdAt,
-      this.syncId});
+      this.syncId,
+      this.updatedAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -4708,6 +4855,9 @@ class Tag extends DataClass implements Insertable<Tag> {
     map['created_at'] = Variable<DateTime>(createdAt);
     if (!nullToAbsent || syncId != null) {
       map['sync_id'] = Variable<String>(syncId);
+    }
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<DateTime>(updatedAt);
     }
     return map;
   }
@@ -4722,6 +4872,9 @@ class Tag extends DataClass implements Insertable<Tag> {
       createdAt: Value(createdAt),
       syncId:
           syncId == null && nullToAbsent ? const Value.absent() : Value(syncId),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
     );
   }
 
@@ -4735,6 +4888,7 @@ class Tag extends DataClass implements Insertable<Tag> {
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       syncId: serializer.fromJson<String?>(json['syncId']),
+      updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
     );
   }
   @override
@@ -4747,6 +4901,7 @@ class Tag extends DataClass implements Insertable<Tag> {
       'sortOrder': serializer.toJson<int>(sortOrder),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'syncId': serializer.toJson<String?>(syncId),
+      'updatedAt': serializer.toJson<DateTime?>(updatedAt),
     };
   }
 
@@ -4756,7 +4911,8 @@ class Tag extends DataClass implements Insertable<Tag> {
           Value<String?> color = const Value.absent(),
           int? sortOrder,
           DateTime? createdAt,
-          Value<String?> syncId = const Value.absent()}) =>
+          Value<String?> syncId = const Value.absent(),
+          Value<DateTime?> updatedAt = const Value.absent()}) =>
       Tag(
         id: id ?? this.id,
         name: name ?? this.name,
@@ -4764,6 +4920,7 @@ class Tag extends DataClass implements Insertable<Tag> {
         sortOrder: sortOrder ?? this.sortOrder,
         createdAt: createdAt ?? this.createdAt,
         syncId: syncId.present ? syncId.value : this.syncId,
+        updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
       );
   Tag copyWithCompanion(TagsCompanion data) {
     return Tag(
@@ -4773,6 +4930,7 @@ class Tag extends DataClass implements Insertable<Tag> {
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       syncId: data.syncId.present ? data.syncId.value : this.syncId,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
 
@@ -4784,14 +4942,15 @@ class Tag extends DataClass implements Insertable<Tag> {
           ..write('color: $color, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('createdAt: $createdAt, ')
-          ..write('syncId: $syncId')
+          ..write('syncId: $syncId, ')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
 
   @override
   int get hashCode =>
-      Object.hash(id, name, color, sortOrder, createdAt, syncId);
+      Object.hash(id, name, color, sortOrder, createdAt, syncId, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4801,7 +4960,8 @@ class Tag extends DataClass implements Insertable<Tag> {
           other.color == this.color &&
           other.sortOrder == this.sortOrder &&
           other.createdAt == this.createdAt &&
-          other.syncId == this.syncId);
+          other.syncId == this.syncId &&
+          other.updatedAt == this.updatedAt);
 }
 
 class TagsCompanion extends UpdateCompanion<Tag> {
@@ -4811,6 +4971,7 @@ class TagsCompanion extends UpdateCompanion<Tag> {
   final Value<int> sortOrder;
   final Value<DateTime> createdAt;
   final Value<String?> syncId;
+  final Value<DateTime?> updatedAt;
   const TagsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
@@ -4818,6 +4979,7 @@ class TagsCompanion extends UpdateCompanion<Tag> {
     this.sortOrder = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.syncId = const Value.absent(),
+    this.updatedAt = const Value.absent(),
   });
   TagsCompanion.insert({
     this.id = const Value.absent(),
@@ -4826,6 +4988,7 @@ class TagsCompanion extends UpdateCompanion<Tag> {
     this.sortOrder = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.syncId = const Value.absent(),
+    this.updatedAt = const Value.absent(),
   }) : name = Value(name);
   static Insertable<Tag> custom({
     Expression<int>? id,
@@ -4834,6 +4997,7 @@ class TagsCompanion extends UpdateCompanion<Tag> {
     Expression<int>? sortOrder,
     Expression<DateTime>? createdAt,
     Expression<String>? syncId,
+    Expression<DateTime>? updatedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -4842,6 +5006,7 @@ class TagsCompanion extends UpdateCompanion<Tag> {
       if (sortOrder != null) 'sort_order': sortOrder,
       if (createdAt != null) 'created_at': createdAt,
       if (syncId != null) 'sync_id': syncId,
+      if (updatedAt != null) 'updated_at': updatedAt,
     });
   }
 
@@ -4851,7 +5016,8 @@ class TagsCompanion extends UpdateCompanion<Tag> {
       Value<String?>? color,
       Value<int>? sortOrder,
       Value<DateTime>? createdAt,
-      Value<String?>? syncId}) {
+      Value<String?>? syncId,
+      Value<DateTime?>? updatedAt}) {
     return TagsCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
@@ -4859,6 +5025,7 @@ class TagsCompanion extends UpdateCompanion<Tag> {
       sortOrder: sortOrder ?? this.sortOrder,
       createdAt: createdAt ?? this.createdAt,
       syncId: syncId ?? this.syncId,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -4883,6 +5050,9 @@ class TagsCompanion extends UpdateCompanion<Tag> {
     if (syncId.present) {
       map['sync_id'] = Variable<String>(syncId.value);
     }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
     return map;
   }
 
@@ -4894,7 +5064,8 @@ class TagsCompanion extends UpdateCompanion<Tag> {
           ..write('color: $color, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('createdAt: $createdAt, ')
-          ..write('syncId: $syncId')
+          ..write('syncId: $syncId, ')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
@@ -10823,6 +10994,7 @@ typedef $$LedgersTableCreateCompanionBuilder = LedgersCompanion Function({
   Value<bool> isShared,
   Value<String?> ownerUserId,
   Value<int> monthStartDay,
+  Value<DateTime?> updatedAt,
 });
 typedef $$LedgersTableUpdateCompanionBuilder = LedgersCompanion Function({
   Value<int> id,
@@ -10836,6 +11008,7 @@ typedef $$LedgersTableUpdateCompanionBuilder = LedgersCompanion Function({
   Value<bool> isShared,
   Value<String?> ownerUserId,
   Value<int> monthStartDay,
+  Value<DateTime?> updatedAt,
 });
 
 class $$LedgersTableFilterComposer
@@ -10879,6 +11052,9 @@ class $$LedgersTableFilterComposer
 
   ColumnFilters<int> get monthStartDay => $composableBuilder(
       column: $table.monthStartDay, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
 }
 
 class $$LedgersTableOrderingComposer
@@ -10923,6 +11099,9 @@ class $$LedgersTableOrderingComposer
   ColumnOrderings<int> get monthStartDay => $composableBuilder(
       column: $table.monthStartDay,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
 }
 
 class $$LedgersTableAnnotationComposer
@@ -10966,6 +11145,9 @@ class $$LedgersTableAnnotationComposer
 
   GeneratedColumn<int> get monthStartDay => $composableBuilder(
       column: $table.monthStartDay, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 }
 
 class $$LedgersTableTableManager extends RootTableManager<
@@ -11002,6 +11184,7 @@ class $$LedgersTableTableManager extends RootTableManager<
             Value<bool> isShared = const Value.absent(),
             Value<String?> ownerUserId = const Value.absent(),
             Value<int> monthStartDay = const Value.absent(),
+            Value<DateTime?> updatedAt = const Value.absent(),
           }) =>
               LedgersCompanion(
             id: id,
@@ -11015,6 +11198,7 @@ class $$LedgersTableTableManager extends RootTableManager<
             isShared: isShared,
             ownerUserId: ownerUserId,
             monthStartDay: monthStartDay,
+            updatedAt: updatedAt,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
@@ -11028,6 +11212,7 @@ class $$LedgersTableTableManager extends RootTableManager<
             Value<bool> isShared = const Value.absent(),
             Value<String?> ownerUserId = const Value.absent(),
             Value<int> monthStartDay = const Value.absent(),
+            Value<DateTime?> updatedAt = const Value.absent(),
           }) =>
               LedgersCompanion.insert(
             id: id,
@@ -11041,6 +11226,7 @@ class $$LedgersTableTableManager extends RootTableManager<
             isShared: isShared,
             ownerUserId: ownerUserId,
             monthStartDay: monthStartDay,
+            updatedAt: updatedAt,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -11416,6 +11602,7 @@ typedef $$CategoriesTableCreateCompanionBuilder = CategoriesCompanion Function({
   Value<String?> customIconPath,
   Value<String?> communityIconId,
   Value<String?> syncId,
+  Value<DateTime?> updatedAt,
 });
 typedef $$CategoriesTableUpdateCompanionBuilder = CategoriesCompanion Function({
   Value<int> id,
@@ -11429,6 +11616,7 @@ typedef $$CategoriesTableUpdateCompanionBuilder = CategoriesCompanion Function({
   Value<String?> customIconPath,
   Value<String?> communityIconId,
   Value<String?> syncId,
+  Value<DateTime?> updatedAt,
 });
 
 class $$CategoriesTableFilterComposer
@@ -11474,6 +11662,9 @@ class $$CategoriesTableFilterComposer
 
   ColumnFilters<String> get syncId => $composableBuilder(
       column: $table.syncId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
 }
 
 class $$CategoriesTableOrderingComposer
@@ -11519,6 +11710,9 @@ class $$CategoriesTableOrderingComposer
 
   ColumnOrderings<String> get syncId => $composableBuilder(
       column: $table.syncId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
 }
 
 class $$CategoriesTableAnnotationComposer
@@ -11562,6 +11756,9 @@ class $$CategoriesTableAnnotationComposer
 
   GeneratedColumn<String> get syncId =>
       $composableBuilder(column: $table.syncId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 }
 
 class $$CategoriesTableTableManager extends RootTableManager<
@@ -11598,6 +11795,7 @@ class $$CategoriesTableTableManager extends RootTableManager<
             Value<String?> customIconPath = const Value.absent(),
             Value<String?> communityIconId = const Value.absent(),
             Value<String?> syncId = const Value.absent(),
+            Value<DateTime?> updatedAt = const Value.absent(),
           }) =>
               CategoriesCompanion(
             id: id,
@@ -11611,6 +11809,7 @@ class $$CategoriesTableTableManager extends RootTableManager<
             customIconPath: customIconPath,
             communityIconId: communityIconId,
             syncId: syncId,
+            updatedAt: updatedAt,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
@@ -11624,6 +11823,7 @@ class $$CategoriesTableTableManager extends RootTableManager<
             Value<String?> customIconPath = const Value.absent(),
             Value<String?> communityIconId = const Value.absent(),
             Value<String?> syncId = const Value.absent(),
+            Value<DateTime?> updatedAt = const Value.absent(),
           }) =>
               CategoriesCompanion.insert(
             id: id,
@@ -11637,6 +11837,7 @@ class $$CategoriesTableTableManager extends RootTableManager<
             customIconPath: customIconPath,
             communityIconId: communityIconId,
             syncId: syncId,
+            updatedAt: updatedAt,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -11678,6 +11879,7 @@ typedef $$TransactionsTableCreateCompanionBuilder = TransactionsCompanion
   Value<String?> tagSyncIdsOverride,
   Value<bool> excludeFromStats,
   Value<bool> excludeFromBudget,
+  Value<DateTime?> updatedAt,
   Value<String?> currencyCode,
   Value<double?> nativeAmount,
 });
@@ -11702,6 +11904,7 @@ typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
   Value<String?> tagSyncIdsOverride,
   Value<bool> excludeFromStats,
   Value<bool> excludeFromBudget,
+  Value<DateTime?> updatedAt,
   Value<String?> currencyCode,
   Value<double?> nativeAmount,
 });
@@ -11779,6 +11982,9 @@ class $$TransactionsTableFilterComposer
   ColumnFilters<bool> get excludeFromBudget => $composableBuilder(
       column: $table.excludeFromBudget,
       builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get currencyCode => $composableBuilder(
       column: $table.currencyCode, builder: (column) => ColumnFilters(column));
@@ -11861,6 +12067,9 @@ class $$TransactionsTableOrderingComposer
       column: $table.excludeFromBudget,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get currencyCode => $composableBuilder(
       column: $table.currencyCode,
       builder: (column) => ColumnOrderings(column));
@@ -11936,6 +12145,9 @@ class $$TransactionsTableAnnotationComposer
   GeneratedColumn<bool> get excludeFromBudget => $composableBuilder(
       column: $table.excludeFromBudget, builder: (column) => column);
 
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
   GeneratedColumn<String> get currencyCode => $composableBuilder(
       column: $table.currencyCode, builder: (column) => column);
 
@@ -11988,6 +12200,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<String?> tagSyncIdsOverride = const Value.absent(),
             Value<bool> excludeFromStats = const Value.absent(),
             Value<bool> excludeFromBudget = const Value.absent(),
+            Value<DateTime?> updatedAt = const Value.absent(),
             Value<String?> currencyCode = const Value.absent(),
             Value<double?> nativeAmount = const Value.absent(),
           }) =>
@@ -12011,6 +12224,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             tagSyncIdsOverride: tagSyncIdsOverride,
             excludeFromStats: excludeFromStats,
             excludeFromBudget: excludeFromBudget,
+            updatedAt: updatedAt,
             currencyCode: currencyCode,
             nativeAmount: nativeAmount,
           ),
@@ -12034,6 +12248,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<String?> tagSyncIdsOverride = const Value.absent(),
             Value<bool> excludeFromStats = const Value.absent(),
             Value<bool> excludeFromBudget = const Value.absent(),
+            Value<DateTime?> updatedAt = const Value.absent(),
             Value<String?> currencyCode = const Value.absent(),
             Value<double?> nativeAmount = const Value.absent(),
           }) =>
@@ -12057,6 +12272,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             tagSyncIdsOverride: tagSyncIdsOverride,
             excludeFromStats: excludeFromStats,
             excludeFromBudget: excludeFromBudget,
+            updatedAt: updatedAt,
             currencyCode: currencyCode,
             nativeAmount: nativeAmount,
           ),
@@ -12865,6 +13081,7 @@ typedef $$TagsTableCreateCompanionBuilder = TagsCompanion Function({
   Value<int> sortOrder,
   Value<DateTime> createdAt,
   Value<String?> syncId,
+  Value<DateTime?> updatedAt,
 });
 typedef $$TagsTableUpdateCompanionBuilder = TagsCompanion Function({
   Value<int> id,
@@ -12873,6 +13090,7 @@ typedef $$TagsTableUpdateCompanionBuilder = TagsCompanion Function({
   Value<int> sortOrder,
   Value<DateTime> createdAt,
   Value<String?> syncId,
+  Value<DateTime?> updatedAt,
 });
 
 class $$TagsTableFilterComposer extends Composer<_$PiggyDatabase, $TagsTable> {
@@ -12900,6 +13118,9 @@ class $$TagsTableFilterComposer extends Composer<_$PiggyDatabase, $TagsTable> {
 
   ColumnFilters<String> get syncId => $composableBuilder(
       column: $table.syncId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
 }
 
 class $$TagsTableOrderingComposer
@@ -12928,6 +13149,9 @@ class $$TagsTableOrderingComposer
 
   ColumnOrderings<String> get syncId => $composableBuilder(
       column: $table.syncId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
 }
 
 class $$TagsTableAnnotationComposer
@@ -12956,6 +13180,9 @@ class $$TagsTableAnnotationComposer
 
   GeneratedColumn<String> get syncId =>
       $composableBuilder(column: $table.syncId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 }
 
 class $$TagsTableTableManager extends RootTableManager<
@@ -12987,6 +13214,7 @@ class $$TagsTableTableManager extends RootTableManager<
             Value<int> sortOrder = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<String?> syncId = const Value.absent(),
+            Value<DateTime?> updatedAt = const Value.absent(),
           }) =>
               TagsCompanion(
             id: id,
@@ -12995,6 +13223,7 @@ class $$TagsTableTableManager extends RootTableManager<
             sortOrder: sortOrder,
             createdAt: createdAt,
             syncId: syncId,
+            updatedAt: updatedAt,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
@@ -13003,6 +13232,7 @@ class $$TagsTableTableManager extends RootTableManager<
             Value<int> sortOrder = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<String?> syncId = const Value.absent(),
+            Value<DateTime?> updatedAt = const Value.absent(),
           }) =>
               TagsCompanion.insert(
             id: id,
@@ -13011,6 +13241,7 @@ class $$TagsTableTableManager extends RootTableManager<
             sortOrder: sortOrder,
             createdAt: createdAt,
             syncId: syncId,
+            updatedAt: updatedAt,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
