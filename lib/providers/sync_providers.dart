@@ -332,7 +332,12 @@ final syncServiceProvider = Provider<SyncService>((ref) {
 
     // AI 配置变更时推到 server。包含 providers / binding / custom_prompt /
     // strategy 等;调用在 AIProviderManager 的 save 点。
-    AIProviderManager.onConfigChanged = () {
+    //
+    // 审计 M8：静态回调槽必须随 provider 生命周期清理 —— 此前直接赋值后，
+    // 用户切走 piggycountCloud 后端时 provider dispose，闭包仍持有旧 ref
+    // （内部 catch 吞掉 StateError → 推送静默失效 + ref 泄漏）。dispose 时
+    // 以 identical 校验安全清槽，不误伤后来者注册的新回调。
+    void aiConfigChangedHandler() {
       unawaited(() async {
         try {
           final cloud = await ref.read(piggycountCloudProviderInstance.future);
@@ -345,7 +350,14 @@ final syncServiceProvider = Provider<SyncService>((ref) {
               'CloudSync', 'AI 配置推送失败 (non-blocking): $e', st);
         }
       }());
-    };
+    }
+
+    AIProviderManager.onConfigChanged = aiConfigChangedHandler;
+    ref.onDispose(() {
+      if (identical(AIProviderManager.onConfigChanged, aiConfigChangedHandler)) {
+        AIProviderManager.onConfigChanged = null;
+      }
+    });
 
     engine.startListeningRealtime();
 

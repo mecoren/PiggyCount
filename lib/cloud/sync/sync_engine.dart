@@ -189,6 +189,28 @@ class SyncEngine implements app.SyncService {
   /// recurringId 置 null + warning(下次 edit 同步自然修复)。
   final Map<String, String> pendingRecurringBindings = {};
 
+  /// 审计 L4：清理失效的延迟绑定 —— 对应交易已被删除（账本被清/GC/踢出）
+  /// 时，map 里的 key 永远不会再被回扫命中，会话内缓慢累积。以
+  /// transactions 表现存 syncId 为准修剪；空表/空 map 零开销直接返回。
+  Future<void> _prunePendingRecurringBindings() async {
+    if (pendingRecurringBindings.isEmpty) return;
+    final keys = pendingRecurringBindings.keys.toList();
+    final alive = await (db.select(db.transactions)
+          ..where((t) => t.syncId.isIn(keys)))
+        .get();
+    final aliveSyncIds = alive.map((a) => a.syncId).toSet();
+    final removed = pendingRecurringBindings.keys
+        .where((k) => !aliveSyncIds.contains(k))
+        .toList();
+    for (final k in removed) {
+      pendingRecurringBindings.remove(k);
+    }
+    if (removed.isNotEmpty) {
+      logger.debug('SyncEngine',
+          'prune pendingRecurringBindings: 清理 ${removed.length} 条失效绑定');
+    }
+  }
+
   /// push / fullPush 的 in-flight 单飞锁。**per-ledger** —— 不同 ledger
   /// 并发不互相阻塞,只阻塞同 ledger 的并发触发。
   ///
@@ -588,8 +610,33 @@ class SyncEngine implements app.SyncService {
     final current = ledger.syncId?.trim() ?? '';
     if (current.length >= 3) return current;
     final newSyncId = _uuid.v4();
-    await (db.update(db.ledgers)..where((l) => l.id.equals(ledger.id)))
+    // 审计 M2（TOCTOU）：并发调用可能都读到空身份或 legacy 短值，各自生成
+    // UUID 互相覆盖 —— 先返回者拿到的路径成为孤儿云端槽位。以「函数入口
+    // 读到的旧值」做 compare-and-swap 条件更新（NULL 走 IS NULL，短值走
+    // 等值），只允许一个写入者生效；未生效方重读取实际落库值，双方拿到
+    // 同一身份。
+    final updated = await (db.update(db.ledgers)
+          ..where((l) =>
+              l.id.equals(ledger.id) &
+              (ledger.syncId == null
+                  ? l.syncId.isNull()
+                  : l.syncId.equals(ledger.syncId!))))
         .write(LedgersCompanion(syncId: d.Value(newSyncId)));
+    if (updated == 0) {
+      final reread = await (db.select(db.ledgers)
+            ..where((l) => l.id.equals(ledger.id)))
+          .getSingleOrNull();
+      final actual = reread?.syncId?.trim() ?? '';
+      if (actual.length >= 3) {
+        logger.info('SyncEngine',
+            '_ensureLedgerSyncId 并发竞态：采用并发方写入的身份 '
+            '${ledger.id} → $actual');
+        return actual;
+      }
+      // 理论不可达（CAS 失败但回读仍无有效身份）：沿用本次生成值兜底
+      logger.warning('SyncEngine',
+          '_ensureLedgerSyncId CAS 失败且回读仍无有效身份，沿用本次生成值');
+    }
     logger.info(
         'SyncEngine', 'fullPush 前补生成 ledger.syncId: ${ledger.id} → $newSyncId');
     return newSyncId;
@@ -766,6 +813,8 @@ class SyncEngine implements app.SyncService {
         logger.info('SyncEngine', 'GC: server 不再返共享账本 syncId=$sid,清本地数据');
         await _purgeLocalLedgerByExternalId(sid);
       }
+      // 审计 L4：GC 清了账本数据，修剪随之失效的延迟绑定（循环外一次即可）
+      await _prunePendingRecurringBindings();
 
       // GC 2:清掉 SharedLedger* 表里 ledger.syncId 在新拉的 ledgers 表里找不
       // 到的孤儿行(测试残留 / 退出账本残留 / 老 invite 接受过又被 byName
@@ -1599,6 +1648,17 @@ class SyncEngine implements app.SyncService {
   Future<void> debugRunStuckPullRecovery(
           List<PiggyCountCloudSyncChange> stuckChanges) =>
       _recoverStuckPullFromSnapshot(stuckChanges);
+
+  /// 审计 M2 测试入口：对指定账本行做身份补生成（CAS 路径）。
+  /// [snapshot] 允许调用方传入**过期**的行快照以驱动「CAS 失败」分支。
+  @visibleForTesting
+  Future<String> debugEnsureLedgerSyncIdFromSnapshot(Ledger snapshot) =>
+      _ensureLedgerSyncId(snapshot);
+
+  /// 审计 L4 测试入口：手动修剪失效的延迟绑定。
+  @visibleForTesting
+  Future<void> debugPrunePendingRecurringBindings() =>
+      _prunePendingRecurringBindings();
 
   /// 审计 S5 测试包装：导出账本全量快照 JSON（与 fullPush 上传内容一致）。
   @visibleForTesting

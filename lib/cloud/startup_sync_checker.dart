@@ -406,7 +406,13 @@ class StartupSyncChecker {
           // different 源于 direction=unknown（指纹不同但时间戳/数量相等），
           // 无法断定云端一定更新：不纳入"云端有更新"候选，避免脏数据
           // 指纹永不收敛导致每次启动误弹下载提示；用户仍可在云同步页
-          // 看到该账本的差异状态并手动选择上传/下载
+          // 看到该账本的差异状态并手动选择上传/下载。
+          //
+          // 审计 M1 不变量：当前候选策略**永不产生** diffType == different
+          // 的候选，因此 _applyAll 的 US-7「different 二次确认」扫描实际
+          // 不可达 —— 该扫描保留为候选策略未来变更时的防御性安全网，
+          // 语义见 _applyAll 处注释。若要让它可达，须先解决本注释所述的
+          // 「unknown 指纹永不收敛 → 每次启动误弹」问题。
           unknownDiffLedgers.add(ledger.name);
           deps.log('StartupSyncChecker: 账本 ${ledger.name} 与云端指纹不一致'
               '但无法判断新旧（direction=unknown），不纳入启动下载候选');
@@ -610,6 +616,11 @@ class StartupSyncChecker {
   ///
   /// US-7: 执行前扫描候选列表，若存在 [SyncDiff.different] 的账本，
   /// 弹出二次确认对话框提示"将用云端覆盖本地独有改动"。
+  ///
+  /// 审计 M1 不变量：候选收集（见状态检查循环的 different 分支注释）
+  /// **永不产生** different 候选 —— 本扫描当前不可达，作为防御性安全网
+  /// 保留：一旦未来候选策略放开 different（须先解决 unknown 指纹不收敛
+  /// 的误弹问题），本闸门自动生效，无需重新补建。
   ///
   /// 返回值：
   /// - true：applyAll 已执行（无论成功/部分失败）

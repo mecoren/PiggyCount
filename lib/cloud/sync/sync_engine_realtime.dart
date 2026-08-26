@@ -680,13 +680,23 @@ extension SyncEngineRealtime on SyncEngine {
     await (db.delete(db.sharedLedgerTags)
           ..where((t) => t.ledgerSyncId.equals(ledgerExternalId)))
         .go();
+    // 审计 L4：账本数据已清，其交易的延迟绑定全部失效，顺手修剪
+    await _prunePendingRecurringBindings();
   }
 
   /// 防抖调度 pull（1 秒内多次触发只执行一次）
   void _schedulePull(String? ledgerId) {
     _pullDebounce?.cancel();
     _pullDebounce = Timer(const Duration(seconds: 1), () async {
-      if (_autoPulling) return;
+      if (_autoPulling) {
+        // 审计 M4：auto-pull 进行中到达的事件不再丢弃 —— 重新排队一轮
+        // 防抖。进行中的 pull 在 finally 复位 _autoPulling 后，重排的
+        // timer 会正常执行；若期间又有事件进来也只合并成一次幂等 pull。
+        // 此前直接 return：若那是最后一条通知，该次增量要等下一个无关
+        // 触发源才能补上。
+        _schedulePull(ledgerId);
+        return;
+      }
       _autoPulling = true;
       try {
         final targetLedgerId = ledgerId ?? '';

@@ -2325,7 +2325,7 @@ class TransactionsSyncManager implements SyncService {
     }
   }
 
-  /// 恢复所有远程账本到本地（并行执行）
+  /// 恢复所有远程账本到本地
   ///
   /// W6/S6 补口：本入口内部的 [downloadRemoteLedger] 对同名/同身份账本
   /// 执行「清空+导入」的破坏性替换，与 [fullRestoreAllRemoteLedgers] /
@@ -2333,6 +2333,10 @@ class TransactionsSyncManager implements SyncService {
   /// 定时备份（app.dart BackupScheduler tick 检查 isBusy）让位，否则
   /// 批量恢复进行到一半时到点的备份会把半恢复态 DB 打包上传，覆盖当日
   /// 好备份。此前仅全量覆盖下载有守卫，本入口遗漏。
+  ///
+  /// 审计 L9：改为**串行**执行，与 [fullRestoreAllRemoteLedgers] 的注释
+  /// 口径一致（"恢复会批量写库，并行易触发数据库锁竞争"）—— 此前两条
+  /// 批量恢复路径一条并行一条串行，策略互相矛盾。
   Future<({int success, int failed})> restoreAllRemoteLedgers() {
     return SyncRestoreGuard.run(() => _restoreAllRemoteLedgers());
   }
@@ -2367,60 +2371,59 @@ class TransactionsSyncManager implements SyncService {
 
       logger.info('CloudSync', '找到 ${ledgerFiles.length} 个需要恢复的远程账本文件');
 
-      // 并行恢复所有账本
-      final results = await Future.wait(
-        ledgerFiles.map((file) async {
-          try {
-            // 下载文件内容以获取账本信息（使用 file.name 而非 file.path）
-            final raw = await provider.storage.download(path: file.name);
-            if (raw == null) {
-              logger.warning('CloudSync', '下载失败: ${file.name}');
-              return false;
-            }
-
-            // H3 补漏：密文快照先解密再解析；无密钥/密文损坏计为该文件
-            // 恢复失败，不再让 jsonDecode 报格式错误误导排查。
-            final String jsonStr;
-            try {
-              jsonStr = await _decryptIfNeeded(raw);
-            } on CloudEncryptedLocallyDisabledException {
-              logger.warning('CloudSync', '远程账本 ${file.name} 为密文且本地无可用密钥');
-              return false;
-            } on CloudCiphertextUndecryptableException {
-              logger.warning('CloudSync', '远程账本 ${file.name} 密文无法用本机密钥解密');
-              return false;
-            }
-
-            final json = jsonDecode(jsonStr) as Map<String, dynamic>;
-            final name = json['ledgerName'] as String? ??
-                json['name'] as String? ??
-                'Unknown';
-            final currency = json['currency'] as String? ?? 'CNY';
-
-            // 下载远程账本
-            final ledgerId = await downloadRemoteLedger(
-              name: name,
-              currency: currency,
-              remotePath: file.name,
-            );
-
-            if (ledgerId != null) {
-              logger.info('CloudSync', '恢复成功: ${file.name} -> ledgerId=$ledgerId');
-              return true;
-            } else {
-              logger.warning('CloudSync', '恢复失败: ${file.name}');
-              return false;
-            }
-          } catch (e) {
-            logger.warning('CloudSync', '恢复账本失败: ${file.name} - $e');
-            return false;
+      // 审计 L9：串行恢复（对齐 fullRestoreAllRemoteLedgers 的锁竞争结论）
+      var success = 0;
+      var failed = 0;
+      for (final file in ledgerFiles) {
+        try {
+          // 下载文件内容以获取账本信息（使用 file.name 而非 file.path）
+          final raw = await provider.storage.download(path: file.name);
+          if (raw == null) {
+            logger.warning('CloudSync', '下载失败: ${file.name}');
+            failed++;
+            continue;
           }
-        }),
-      );
 
-      // 统计结果
-      final success = results.where((r) => r).length;
-      final failed = results.where((r) => !r).length;
+          // H3 补漏：密文快照先解密再解析；无密钥/密文损坏计为该文件
+          // 恢复失败，不再让 jsonDecode 报格式错误误导排查。
+          final String jsonStr;
+          try {
+            jsonStr = await _decryptIfNeeded(raw);
+          } on CloudEncryptedLocallyDisabledException {
+            logger.warning('CloudSync', '远程账本 ${file.name} 为密文且本地无可用密钥');
+            failed++;
+            continue;
+          } on CloudCiphertextUndecryptableException {
+            logger.warning('CloudSync', '远程账本 ${file.name} 密文无法用本机密钥解密');
+            failed++;
+            continue;
+          }
+
+          final json = jsonDecode(jsonStr) as Map<String, dynamic>;
+          final name = json['ledgerName'] as String? ??
+              json['name'] as String? ??
+              'Unknown';
+          final currency = json['currency'] as String? ?? 'CNY';
+
+          // 下载远程账本
+          final ledgerId = await downloadRemoteLedger(
+            name: name,
+            currency: currency,
+            remotePath: file.name,
+          );
+
+          if (ledgerId != null) {
+            logger.info('CloudSync', '恢复成功: ${file.name} -> ledgerId=$ledgerId');
+            success++;
+          } else {
+            logger.warning('CloudSync', '恢复失败: ${file.name}');
+            failed++;
+          }
+        } catch (e) {
+          logger.warning('CloudSync', '恢复账本失败: ${file.name} - $e');
+          failed++;
+        }
+      }
 
       logger.info('CloudSync', '恢复完成: 成功=$success, 失败=$failed');
       return (success: success, failed: failed);
