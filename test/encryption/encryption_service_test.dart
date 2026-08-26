@@ -850,7 +850,22 @@ class _FakeCloudStorage implements CloudStorageService {
 
   @override
   Future<List<CloudFile>> list({required String path}) async {
-    return listFiles;
+    // 与真实后端一致：按请求路径过滤（S3 前缀 / WebDAV 目录均只返回
+    // 该作用域内的条目）。根列举('')返回全部；子目录列举返回 name 以
+    // 该目录为前缀的条目。否则 attachments/ 子目录枚举会错误地把根列表
+    // 条目再收一遍（审计 A1 配套测试约束）。
+    if (path.isEmpty || path == '/') return listFiles;
+    final prefix = path.endsWith('/') ? path : '$path/';
+    return listFiles
+        .where((f) => f.name.startsWith(prefix))
+        .map((f) => CloudFile(
+              name: f.name.substring(prefix.length),
+              path: f.name,
+              size: f.size,
+              lastModified: f.lastModified,
+              metadata: f.metadata,
+            ))
+        .toList();
   }
 
   @override

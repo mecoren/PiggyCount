@@ -570,10 +570,15 @@ class EncryptionServiceImpl implements EncryptionService {
   /// - [reEncryptExistingCloudData] 用当前 active key 既解密又加密（无法用于密钥轮换）
   /// - 本方法用 oldKey 解密旧密文、用 newKey 加密为新密文，专为密钥轮换设计
   ///
-  /// 流程：遍历 `ledger_*.json` → 下载 → 用 oldKey 解密 → 用 newKey 加密 → 上传
+  /// 流程：遍历 `ledger_*.json` 与 `attachments/*.bin` → 下载 → 用 oldKey
+  /// 解密 → 用 newKey 加密 → 上传
   /// - 跳过 legacy 明文（非 BEECRYPT1: 格式）：后续 sync 会自动加密
   /// - salt 不匹配 oldSalt 的密文：跳过（无法解密），计入 failed
   /// - 单文件失败不中断整体流程
+  ///
+  /// 审计 A1：目标集合与下载方式对齐 [reEncryptExistingCloudData] ——
+  /// 纳入附件二进制对象、字节感知下载；原生二进制按装饰器信封格式
+  /// base64 化后再加密，保证读回路径一致。
   Future<ReEncryptResult> _reEncryptCloudDataWithKeys({
     required CloudStorageService cloudStorage,
     required Uint8List oldKey,
@@ -591,47 +596,76 @@ class EncryptionServiceImpl implements EncryptionService {
     final failedPaths = <String>[];
     final successPaths = <String>[];
 
+    // 目标集合：账本快照（根列表）+ 附件对象（子目录枚举，WebDAV 非递归）
+    final targets = <String>[];
     for (final file in files) {
       final name = file.name;
-      if (!name.startsWith('ledger_') || !name.endsWith('.json')) {
+      if (name.startsWith('attachments/')) continue;
+      if (name.startsWith('ledger_') && name.endsWith('.json')) {
+        targets.add(name);
+      } else {
         skipped++;
-        continue;
       }
+    }
+    try {
+      final attFiles = await cloudStorage
+          .list(path: _joinCloudDir(pathPrefix, 'attachments/'));
+      for (final f in attFiles) {
+        final n = f.name;
+        if (n.isEmpty || n.endsWith('/')) continue;
+        if (n.contains('.tmp.') || n.contains('.old.')) continue;
+        targets.add('attachments/$n');
+      }
+    } catch (_) {
+      // 无附件目录：忽略
+    }
 
+    for (final name in targets) {
       try {
-        final raw = await cloudStorage.download(path: name);
-        if (raw == null) {
+        final rawBytes = await _downloadObjectBytes(cloudStorage, name);
+        if (rawBytes == null) {
           skipped++;
           continue;
         }
 
-        // 跳过 legacy 明文：后续首次 sync 时会被新密钥加密
-        if (!CiphertextFormat.isEncrypted(raw)) {
-          skipped++;
-          continue;
+        List<int> plaintextBytes;
+        String? text;
+        try {
+          text = utf8.decode(rawBytes);
+        } catch (_) {
+          text = null;
         }
 
-        final decoded = CiphertextFormat.decode(raw);
+        if (text != null && CiphertextFormat.isEncrypted(text)) {
+          final decoded = CiphertextFormat.decode(text);
 
-        // salt 必须与 oldSalt 匹配才能用 oldKey 解密
-        if (!_listsEqual(oldSalt, decoded.salt)) {
-          // 审计 S24：续跑模式下，salt 已等于 newSalt 的文件是上次
-          // 崩溃前已迁移完成的 → 计 skip 而非 failed
-          if (resumeNewSalt != null && _listsEqual(resumeNewSalt, decoded.salt)) {
-            skipped++;
+          // salt 必须与 oldSalt 匹配才能用 oldKey 解密
+          if (!_listsEqual(oldSalt, decoded.salt)) {
+            // 审计 S24：续跑模式下，salt 已等于 newSalt 的文件是上次
+            // 崩溃前已迁移完成的 → 计 skip 而非 failed
+            if (resumeNewSalt != null &&
+                _listsEqual(resumeNewSalt, decoded.salt)) {
+              skipped++;
+              continue;
+            }
+            // salt 不匹配（可能已被其他设备用不同密钥加密），无法解密
+            failed++;
+            failedPaths.add(name);
             continue;
           }
-          // salt 不匹配（可能已被其他设备用不同密钥加密），无法解密
-          failed++;
-          failedPaths.add(name);
-          continue;
-        }
 
-        // 用旧密钥解密
-        final plaintextBytes = await cipher.decrypt(
-          encryptedBytes: decoded.encryptedBytes,
-          key: oldKey,
-        );
+          // 用旧密钥解密
+          plaintextBytes = await cipher.decrypt(
+            encryptedBytes: decoded.encryptedBytes,
+            key: oldKey,
+          );
+        } else if (text != null) {
+          // legacy 明文文本：原样作为明文（后续首次 sync 自动加密的语义不变）
+          plaintextBytes = Uint8List.fromList(rawBytes);
+        } else {
+          // 原生二进制：base64 化后作为信封载荷（与装饰器 uploadBinary 一致）
+          plaintextBytes = utf8.encode(base64Encode(rawBytes));
+        }
 
         // 用新密钥加密
         final newEncryptedBytes = await cipher.encrypt(
@@ -749,27 +783,59 @@ class EncryptionServiceImpl implements EncryptionService {
     int skipped = 0;
     final failedPaths = <String>[];
 
+    // 审计 A1：目标集合纳入附件二进制对象。此前只重加密 ledger_*.json，
+    // E2EE 开启前以原生二进制上传的 attachments/*.bin 永远保持明文上云，
+    // 且在加密设备上经装饰器下载时 utf8 解码失败 → 附件永久不可恢复。
+    // 注意 WebDAV 的 list 是非递归的（readDir depth 1），根列表看不到
+    // attachments/ 内层 —— 必须单独枚举子目录；S3 根列表是递归扁平的，
+    // 会重复给出 attachments/* 项，此处跳过、统一由子目录枚举提供。
+    final targets = <String>[];
     for (final file in files) {
       final name = file.name;
-      // 只处理 ledger_*.json，跳过其他文件（readme.txt / 备份等）
-      if (!name.startsWith('ledger_') || !name.endsWith('.json')) {
+      if (name.startsWith('attachments/')) continue;
+      // 账本快照；其他文件（readme.txt / 手动备份等）跳过
+      if (name.startsWith('ledger_') && name.endsWith('.json')) {
+        targets.add(name);
+      } else {
         skipped++;
-        continue;
       }
+    }
+    final attDirPath = _joinCloudDir(pathPrefix, 'attachments/');
+    try {
+      final attFiles = await cloudStorage.list(path: attDirPath);
+      var attFound = 0;
+      for (final f in attFiles) {
+        final n = f.name;
+        if (n.isEmpty || n.endsWith('/')) continue;
+        // 上传中断残留的半成品/降级交换备份（与 WebDAV list 过滤口径一致）
+        if (n.contains('.tmp.') || n.contains('.old.')) continue;
+        targets.add('attachments/$n');
+        attFound++;
+      }
+      LoggerService().info('CloudReEncrypt',
+          '附件对象枚举: $attFound 个（$attDirPath）');
+    } catch (_) {
+      // 无附件目录（404）或后端不支持子目录列举：忽略，仅处理账本文件
+    }
 
+    for (final name in targets) {
       try {
-        // 下载原始数据（可能是 legacy 明文或 BEECRYPT1: 密文）
-        final raw = await cloudStorage.download(path: name);
+        // 审计 A1：字节感知下载（原生二进制旧附件不是合法 UTF-8，
+        // 纯文本下载会抛 FormatException）
+        final raw = await _downloadObjectBytes(cloudStorage, name);
         if (raw == null) {
           // 云端文件已被删除（list 与 download 之间存在竞态）
           skipped++;
           continue;
         }
 
-        // 先 decrypt：自动识别 legacy 明文（原样返回）或 BEECRYPT1: 密文（解密）
-        // 再 encrypt：用当前激活密钥统一加密为 BEECRYPT1: 格式
-        // 这样可避免对已是密文的数据双重加密
-        final plaintext = await decrypt(raw);
+        // 规整为「待加密明文」：
+        // - BEECRYPT1 密文信封 → 解密为原明文（避免双重加密）；
+        // - 明文文本（legacy JSON / legacy base64 附件文本）→ 原样；
+        // - 原生二进制（E2EE 前的 L4 附件）→ base64 化 —— 与
+        //   EncryptedCloudStorageService.uploadBinary 的信封载荷格式一致，
+        //   保证迁移后装饰器 downloadBinary 能正确读回。
+        final plaintext = await _toReEncryptionPlaintext(raw);
         final reEncrypted = await encrypt(plaintext);
         await cloudStorage.upload(
           path: name,
@@ -790,6 +856,47 @@ class EncryptionServiceImpl implements EncryptionService {
       skipped: skipped,
       failedPaths: failedPaths,
     );
+  }
+
+  /// 云端目录路径拼接（前缀为空时不产生前导斜杠）
+  static String _joinCloudDir(String prefix, String dir) {
+    if (prefix.isEmpty) return dir;
+    return '${prefix.endsWith('/') ? prefix : '$prefix/'}$dir';
+  }
+
+  /// 字节感知的对象下载：优先真字节路径（BinaryCapableStorage），失败回退
+  /// 文本路径转字节。对象不存在返回 null。
+  Future<List<int>?> _downloadObjectBytes(
+      CloudStorageService storage, String path) async {
+    if (storage is BinaryCapableStorage) {
+      try {
+        final bytes =
+            await (storage as BinaryCapableStorage).downloadBinary(path: path);
+        if (bytes != null) return bytes;
+        return null;
+      } catch (_) {
+        // 二进制路径意外失败：回退文本路径再试（历史文本形态兼容）
+      }
+    }
+    final text = await storage.download(path: path);
+    return text == null ? null : utf8.encode(text);
+  }
+
+  /// 把云端原始字节规整为「重加密前的明文字符串」：
+  /// - BEECRYPT1 密文信封 → 用当前激活密钥解密为原明文；
+  /// - 明文文本 → 原样返回；
+  /// - 非 UTF-8 的原生二进制 → base64 编码串（对齐装饰器信封载荷格式）。
+  Future<String> _toReEncryptionPlaintext(List<int> raw) async {
+    String? text;
+    try {
+      text = utf8.decode(raw);
+    } catch (_) {
+      text = null;
+    }
+    if (text != null && CiphertextFormat.isEncrypted(text)) {
+      return await decrypt(text);
+    }
+    return text ?? base64Encode(raw);
   }
 
   @override

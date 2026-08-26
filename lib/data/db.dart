@@ -459,7 +459,7 @@ class PiggyDatabase extends _$PiggyDatabase {
   PiggyDatabase.forTesting(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 38; // v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
+  int get schemaVersion => 39; // v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1321,6 +1321,23 @@ class PiggyDatabase extends _$PiggyDatabase {
                 'CREATE UNIQUE INDEX IF NOT EXISTS uq_exchange_rate_overrides_sync_id ON exchange_rate_overrides(sync_id);');
             logger.info('DBMigration', 'v38 迁移完成: sync_id 唯一索引');
           }
+
+          if (from < 39) {
+            // v39: local_changes (ledger_id, pushed_at) 查询索引（审计 C7）。
+            // push 前取队列（getUnpushedChangesForLedger）、方向仲裁证据
+            // （_localChangeEvidence 的 unpushed 计数）、恢复清队列
+            // （_purgeStaleLocalChanges）都高频走
+            // `WHERE ledger_id IN (?, 0) [AND pushed_at IS NULL]`；
+            // v35 部分唯一索引列序 (entity_type, entity_sync_id, action)
+            // 对 ledger_id 过滤毫无帮助，长期运行设备上已推送行累积后
+            // 每次同步前查询退化为全表扫描。
+            logger.info('DBMigration',
+                '开始迁移到 v39: local_changes (ledger_id, pushed_at) 索引');
+            await customStatement(
+                'CREATE INDEX IF NOT EXISTS idx_local_changes_ledger_pushed '
+                'ON local_changes (ledger_id, pushed_at);');
+            logger.info('DBMigration', 'v39 迁移完成: local_changes 查询索引');
+          }
         },
         onCreate: (m) async {
           await m.createAll();
@@ -1340,6 +1357,11 @@ class PiggyDatabase extends _$PiggyDatabase {
               'CREATE UNIQUE INDEX IF NOT EXISTS idx_local_changes_unpushed_dedup '
               'ON local_changes (entity_type, entity_sync_id, action) '
               'WHERE pushed_at IS NULL;');
+          // v39: local_changes (ledger_id, pushed_at) 查询索引（审计 C7，
+          // 与 onUpgrade v39 同构 —— 新装库走 onCreate）。
+          await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_local_changes_ledger_pushed '
+              'ON local_changes (ledger_id, pushed_at);');
           // L4:各实体 sync_id 查询索引(与 onUpgrade v15/v19/v21/v22 分支同构)。
           // 之前只在 onUpgrade 创建 → 新装库 pull 解析按 entity_sync_id 反查
           // 实体时全表扫描(LookupCache 只缓解部分路径)。IF NOT EXISTS 幂等,

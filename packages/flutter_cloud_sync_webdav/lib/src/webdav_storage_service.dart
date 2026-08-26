@@ -27,13 +27,19 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
   /// _tempSeq 修复同款）。时间戳 + 序号保证每次上传独占自己的 tmp。
   static int _tempSeq = 0;
 
-  /// M15：上传临时文件标记（`<name>.tmp.<毫秒>`，见 [uploadBinary]）。
+  /// M15：上传临时文件标记（`<name>.tmp.<毫秒>_<序号>`，见 [uploadBinary]）。
   /// list() 据此过滤上传中断残留的半成品，避免被下游当有效文件消费。
-  static const _tempFileMarker = '.tmp.';
+  ///
+  /// 审计 B7：改为「标记 + 后继数字」正则而非裸子串 —— 裸子串会误伤
+  /// 合法用户文件（如 `my.tmp.data.json`），且与 exists/getMetadata 的
+  /// 未过滤口径分裂出「存在却看不见」的自相矛盾状态。本服务自产的残留
+  /// 文件名在标记后必然是数字时间戳/序号，`\.tmp\.\d` 精确命中且不误伤。
+  static final RegExp _tempFilePattern = RegExp(r'\.tmp\.\d');
 
   /// 审计 WD-1：降级交换流程的备份文件标记（`<name>.old.<毫秒>`）。
   /// 备份清理失败时 list() 据此过滤，避免孤儿备份被下游当有效文件。
-  static const _backupFileMarker = '.old.';
+  /// 正则理由同 [_tempFilePattern]。
+  static final RegExp _backupFilePattern = RegExp(r'\.old\.\d');
 
   /// 包裹单次 WebDAV 操作，超时抛 [CloudStorageException]（带操作名），
   /// 与其他网络错误走同一异常通道，调用方无需新增捕获分支。
@@ -241,17 +247,18 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
               // M15：上传中断残留的临时文件（upload 用 `<name>.tmp.<毫秒>`，
               // PUT 后 MOVE 前崩溃即永久滞留）不得混进列表 —— 下游列举型
               // 消费者（备份/恢复候选）会把它当有效文件展示甚至恢复半截数据
-              !(file.name?.contains(_tempFileMarker) ?? false) &&
+              !(file.name != null && _tempFilePattern.hasMatch(file.name!)) &&
               // 审计 WD-1：降级交换后清理失败的备份文件同理过滤
-              !(file.name?.contains(_backupFileMarker) ?? false))
+              !(file.name != null && _backupFilePattern.hasMatch(file.name!)))
           .map((file) {
         final name = file.name ?? '';
         // 构造相对于 remotePath 的路径，供下游 _buildPath 重新拼接。
         // file.path 为 null 时回退到基于 name 的拼接，而非回退到目录路径，
         // 避免下游把目录路径当成文件路径处理。
-        // 审计 WD-L2：入参带尾斜杠时归一化，避免产出 `backups//x.json`
-        // 这类双斜杠脏路径直接暴露给消费方。
-        final normalizedDir = path.endsWith('/') && path.length > 1
+        // 审计 WD-L2/B7：入参带尾斜杠时归一化（含根目录 '/' 本身 ——
+        // 旧实现的 `length > 1` 守卫让根目录泄漏出带前导斜杠的脏路径
+        // `/x.json`，与其余方法的口径不一致）。
+        final normalizedDir = path.endsWith('/')
             ? path.substring(0, path.length - 1)
             : path;
         final relativePath =
@@ -282,7 +289,9 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
     try {
       final files =
           await _op('readDir', (t) => _client.readDir(parentDir, t));
-      return files.any((f) => f.name == fileName);
+      // 审计 B7：排除目录 —— 同名目录会让 exists()=true 但 download 必败
+      return files.any((f) =>
+          !(f.isDir ?? false) && f.name == fileName);
     } catch (e) {
       // 仅在目录不存在（404）时返回 false；其他错误（网络中断、
       // 403 权限不足等）必须抛出，避免调用方误判文件不存在而触发
@@ -315,8 +324,9 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
       // CloudStorageException` 分支把 _op 超时抛的同类异常一并吞成 null，
       // 上层（getStatus）据此误判「云端无备份」→ 放行覆盖上传，弱网环境
       // 下可能拿旧数据盖掉云端新备份。
+      // 审计 B7：排除目录 —— 同名目录会产出伪 CloudFile 让上层误判存在。
       final file = files.firstWhere(
-        (f) => f.name == fileName,
+        (f) => !(f.isDir ?? false) && f.name == fileName,
         orElse: () => throw CloudFileNotFoundException(path),
       );
 
@@ -474,18 +484,27 @@ class WebDAVStorageService implements CloudStorageService, BinaryCapableStorage 
         try {
           await _op('mkdir', (t) => _client.mkdir(currentPath, t));
         } catch (createError) {
-          // mkdir 失败可能是并发创建（405/409），再验证一次
-          final msg = createError.toString().toLowerCase();
-          if (msg.contains('405') ||
-              msg.contains('409') ||
-              msg.contains('already exists') ||
-              msg.contains('conflict')) {
+          // mkdir 失败可能是并发创建（405/409），再验证一次。
+          // 审计 B6：判定口径与包内 M5/WD-M3 对齐 —— 有结构化状态码只认
+          // 状态码，措辞兜底仅限无结构化信息时；**不做纯数字子串匹配**
+          // （异常消息内嵌的 URL 端口如 :8405/:8409 必然误判「已存在」）。
+          final code = _statusCodeOf(createError);
+          final maybeAlreadyExists = code != null
+              ? (code == 405 || code == 409)
+              : (() {
+                  final msg = createError.toString().toLowerCase();
+                  return msg.contains('already exists') ||
+                      msg.contains('conflict');
+                })();
+          if (maybeAlreadyExists) {
             try {
               await _op('readDir', (t) => _client.readDir(currentPath, t));
               // 验证成功，目录确实存在（由其他进程创建）
             } catch (_) {
-              // 验证也失败，说明是真实错误，重新抛出
-              rethrow;
+              // 验证也失败，说明是真实错误。审计 B6：抛**原始 mkdir 错误**
+              // 而非 rethrow（Dart 的 rethrow 重抛的是最近一层 catch 的
+              // readDir 异常，会掩盖根因）
+              throw createError;
             }
           } else {
             // 非「已存在」类错误，向上抛出

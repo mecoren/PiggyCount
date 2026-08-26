@@ -281,6 +281,58 @@ void main() {
       expect(rows.first.fileName, 'm.jpg');
     });
   });
+
+  group('enqueueAllMissingAttachmentJobs（审计 A2 回归：启动补扫）', () {
+    test('DB 行存在但本地文件缺失 → 全量重扫入队（不依赖恢复/导入时机）', () async {
+      // 模拟"上次会话恢复后进程被杀"：附件行在、文件不在、内存队列为空
+      final bytes = Uint8List.fromList([1, 2, 3]);
+      final sha = crypto.sha256.convert(bytes).toString();
+      await seedAttachmentRow(fileName: 'lost.jpg', sha256: sha);
+
+      final manager = buildManager(_MapStorage());
+      final added = await manager.enqueueAllMissingAttachmentJobs();
+      expect(added, 1, reason: '重启后必须有机制重新发现缺文件');
+
+      // 云端有对象 → drain 补齐落盘
+      final storage = _MapStorage()
+        ..files['attachments/$sha.bin'] = base64Encode(bytes);
+      final manager2 = buildManager(storage);
+      expect(await manager2.enqueueAllMissingAttachmentJobs(), 1);
+      expect(await manager2.drainAttachmentJobs(), 1);
+      expect(
+        await File('${attDir.path}/lost.jpg').readAsBytes(),
+        bytes,
+      );
+    });
+
+    test('本地文件已存在的行不入队', () async {
+      final bytes = Uint8List.fromList([4, 5, 6]);
+      final sha = crypto.sha256.convert(bytes).toString();
+      await seedAttachmentRow(fileName: 'have.jpg', sha256: sha);
+      await File('${attDir.path}/have.jpg').writeAsBytes(bytes);
+
+      final manager = buildManager(_MapStorage());
+      expect(await manager.enqueueAllMissingAttachmentJobs(), 0);
+    });
+
+    test('云端确认无此对象时 drain 丢弃、下次补扫不再空转（TSM-P2 协同）',
+        () async {
+      final bytes = Uint8List.fromList([7, 8, 9]);
+      final sha = crypto.sha256.convert(bytes).toString();
+      await seedAttachmentRow(fileName: 'never.bin', sha256: sha);
+
+      final storage = _MapStorage(); // 云端空
+      var manager = buildManager(storage);
+      expect(await manager.enqueueAllMissingAttachmentJobs(), 1);
+      expect(await manager.drainAttachmentJobs(), 0,
+          reason: 'objectMissing 不计入成功');
+
+      // 模拟重启后再次补扫 + drain：仍能重新入队并快速收敛，不会死循环
+      manager = buildManager(storage);
+      expect(await manager.enqueueAllMissingAttachmentJobs(), 1);
+      expect(await manager.drainAttachmentJobs(), 0);
+    });
+  });
 }
 
 /// 内存 Map 版 storage:真实记录 upload/exists/download 行为

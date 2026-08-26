@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 
+import 'ciphertext_format.dart';
 import '../../domain/encryption/encryption_service.dart';
 
 /// 加密版 [CloudStorageService] 装饰器
@@ -121,10 +122,61 @@ class EncryptedCloudStorageService
 
   @override
   Future<Uint8List?> downloadBinary({required String path}) async {
-    final data = await inner.download(path: path);
-    if (data == null) return null;
-    final plain = await encryptionService.decrypt(data);
-    return Uint8List.fromList(base64Decode(plain));
+    // 审计 A1：优先取**原始字节**再按形态分流，而不是恒经 inner.download
+    // 的文本路径 —— E2EE 开启前以原生二进制上传的旧附件对象（L4 路径）
+    // 不是合法 UTF-8，旧实现 inner.download 直接抛 FormatException，
+    // 该对象在加密设备上永久不可下载。
+    //
+    // 云端对象的两种来源：
+    // ① 本装饰器 uploadBinary 写入的密文信封（BEECRYPT1 文本 = 加密后的
+    //    base64）→ 解密得 base64 明文 → 解码；
+    // ② E2EE 开启前的原生二进制 / legacy 明文 base64 文本 → 原样字节返回
+    //    （②的最终正确性由调用方 sha256 终审兜底，误判不会落脏数据）。
+    List<int>? raw;
+    final binInner =
+        inner is BinaryCapableStorage ? inner as BinaryCapableStorage : null;
+    if (binInner != null) {
+      raw = await binInner.downloadBinary(path: path);
+    } else {
+      final text = await inner.download(path: path);
+      raw = text == null ? null : utf8.encode(text);
+    }
+    if (raw == null) return null;
+
+    final asText = _tryUtf8Decode(raw);
+    if (asText != null && CiphertextFormat.isEncrypted(asText)) {
+      // 形态①：密文信封。decrypt 自动识别 magic header；解密产物为
+      // base64 明文（uploadBinary 的写入格式），解码失败属信封损坏。
+      final plain = await encryptionService.decrypt(asText);
+      return Uint8List.fromList(base64Decode(plain));
+    }
+    if (asText != null) {
+      // 可解为文本但非密文：兼容 legacy「明文 base64 文本」上传形态
+      // （非 BinaryCapable 后端兜底时期写入）。仅当整体是合法 base64 时
+      // 解码，否则视为内容恰为纯文本的原生对象，原样字节返回。
+      final compact = asText.replaceAll(RegExp(r'\s'), '');
+      if (compact.isNotEmpty &&
+          compact.length % 4 == 0 &&
+          RegExp(r'^[A-Za-z0-9+/=]+$').hasMatch(compact)) {
+        try {
+          return Uint8List.fromList(base64Decode(compact));
+        } catch (_) {
+          // 非法 base64：落入下方原样返回
+        }
+      }
+    }
+    // 形态②（或无法归类的对象）：原样字节。图片/视频等二进制内容的
+    // 首字节几乎必然落在 UTF-8 非法区/非 base64 字符集，不会误入上方分支。
+    return Uint8List.fromList(raw);
+  }
+
+  /// 尝试 UTF-8 解码；含非法序列（典型如二进制内容）时返回 null。
+  static String? _tryUtf8Decode(List<int> bytes) {
+    try {
+      return utf8.decode(bytes);
+    } catch (_) {
+      return null;
+    }
   }
 
   @override

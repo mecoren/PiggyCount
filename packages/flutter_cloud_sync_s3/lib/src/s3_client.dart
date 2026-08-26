@@ -251,6 +251,10 @@ class S3Client {
         if (response.statusCode == 200) {
           return response.bodyBytes;
         } else if (response.statusCode == 404) {
+          // 审计 A5：404 需区分「对象不存在」与「桶不存在」——
+          // 桶配错时抛 S3ObjectNotFoundException 会误导上层按
+          // 「云端无备份」处理，排查方向完全错误。
+          _throwIfNoSuchBucket('GetObject', response, bucket);
           throw S3ObjectNotFoundException(key);
         }
         _handleError('GetObject', response);
@@ -283,9 +287,12 @@ class S3Client {
             .timeout(timeout);
 
         if (response.statusCode != 204 && response.statusCode != 200) {
-          // 404 也算成功（对象已不存在）
+          // 404 也算成功（对象已不存在）；但桶级 404（NoSuchBucket）是
+          // 配置错误，不能静默当成功吞掉（审计 A5）
           if (response.statusCode != 404) {
             _handleError('DeleteObject', response);
+          } else {
+            _throwIfNoSuchBucket('DeleteObject', response, bucket);
           }
         }
       } on SocketException catch (e) {
@@ -743,6 +750,29 @@ class S3Client {
   /// canonical URI 逐字节一致（Uri.encodeComponent 不转义子定界符，
   /// 与签名端口径分裂会导致 403 SignatureDoesNotMatch）。
   String _encodeKey(String key) => S3SignatureV4.encodeKeyRfc3986(key);
+
+  /// 404 响应体中 errorCode 为 NoSuchBucket 时抛 [S3BucketNotFoundException]。
+  ///
+  /// 审计 A5：桶级 404 是配置错误，与「对象不存在」语义完全不同；
+  /// 混同会让上层把「桶配错」当「云端无备份/文件已删」处理。
+  /// 注意：HEAD 响应无 body，协议上无法区分（headObject/headObjectWithMetadata
+  /// 保持「404 = 不存在」语义，桶级错误由初始化探测的 listObjects 兜底发现）。
+  void _throwIfNoSuchBucket(String operation, http.Response response,
+      String bucket) {
+    if (response.body.isEmpty) return;
+    try {
+      final document = XmlDocument.parse(response.body);
+      final errorCode =
+          document.findAllElements('Code').firstOrNull?.innerText;
+      if (errorCode == 'NoSuchBucket') {
+        throw S3BucketNotFoundException(bucket);
+      }
+    } on S3BucketNotFoundException {
+      rethrow;
+    } catch (_) {
+      // XML 解析失败：按对象级 404 处理（调用方决定后续语义）
+    }
+  }
 
   /// 统一错误处理
   ///

@@ -339,9 +339,13 @@ class TransactionsSyncManager implements SyncService {
         _isInitialized = true;
       }
       completer.complete();
-      // 初始化即触发一次 drain:覆盖"上次恢复失败的附件任务"在
-      // 下次同步/启动检查时重试的场景(队列空时是空操作,零成本)。
-      unawaited(drainAttachmentJobs());
+      // 初始化即触发一次补齐：先全量重扫 DB 里「有 sha256 但本地文件缺失」
+      // 的附件并入队（审计 A2：_pendingAttachmentJobs 是内存队列，进程重启
+      // 即丢失；此前 enqueue 只发生在恢复/导入/合并时机，重启后缺文件永久
+      // 无人再发现），再 drain 消费（覆盖"上次恢复失败的附件任务"重试场景；
+      // 队列空时是空操作，零成本）。
+      unawaited(enqueueAllMissingAttachmentJobs()
+          .whenComplete(() => drainAttachmentJobs()));
       // M3：补删上次换名收尾失败的旧远程槽位（网络恢复后重试）。
       unawaited(_retryStaleSlotDeletes());
     } catch (e, st) {
@@ -968,6 +972,48 @@ class TransactionsSyncManager implements SyncService {
     return (uploaded: uploaded, skipped: skipped, failed: failed);
   }
 
+  /// 审计 A2：启动/初始化时全量重扫「有 sha256 但本地文件缺失」的附件并入队。
+  ///
+  /// _pendingAttachmentJobs 是内存队列，进程重启即丢失；此前 enqueue 只发生在
+  /// 恢复/导入/合并三个时机，重启后缺文件永久无人再发现。本方法以 DB 行为
+  /// 事实源做全量补扫，保证缺失附件最终收敛：
+  /// - 云端对象存在的 → drain 正常补齐；
+  /// - 云端确认无此对象的 → TSM-P2 三态判 objectMissing 直接丢弃，不空转；
+  /// - 瞬态失败的 → 仅当次会话内回队，下次启动重新扫描（天然有界）。
+  ///
+  /// 返回本次新入队的任务数（供测试与诊断）。
+  Future<int> enqueueAllMissingAttachmentJobs() async {
+    try {
+      final atts = await (db.select(db.transactionAttachments)
+            ..where((a) => a.localSha256.isNotNull()))
+          .get();
+      if (atts.isEmpty) return 0;
+
+      final appDir = await getApplicationDocumentsDirectory();
+      final attDir = Directory('${appDir.path}/attachments');
+      var added = 0;
+      for (final a in atts) {
+        final sha = a.localSha256!;
+        if (sha.isEmpty) continue;
+        // L3 同款：(sha256, fileName) 整对去重
+        if (_pendingAttachmentJobs.any(
+            (j) => j.sha256 == sha && j.fileName == a.fileName)) {
+          continue;
+        }
+        if (await File('${attDir.path}/${a.fileName}').exists()) continue;
+        _pendingAttachmentJobs.add((sha256: sha, fileName: a.fileName));
+        added++;
+      }
+      if (added > 0) {
+        logger.info('CloudSync', '启动附件补扫: 发现 $added 个缺失文件已入队');
+      }
+      return added;
+    } catch (e) {
+      logger.warning('CloudSync', '启动附件补扫失败(忽略): $e');
+      return 0;
+    }
+  }
+
   /// 恢复/导入完成后,把"清单带 sha256 且本地文件缺失"的附件入下载队列。
   ///
   /// 元数据导入(importTransactionsJson)会落 localSha256 列;这里只做
@@ -1385,32 +1431,41 @@ class TransactionsSyncManager implements SyncService {
   }
 
   /// 应用预览中选中的变更
+  ///
+  /// 审计 A3：合并写入是破坏性批量操作（可达万级行），必须与同账本的
+  /// 「上传 ↔ 恢复」互斥并让定时备份让位 —— 此前本方法不持账本锁、也不进
+  /// SyncRestoreGuard 临界区，启动检查合并期间到点的备份 tick 会把半合并态
+  /// 账本推上云端覆盖好快照（与 W6/TSM-P8 在另两条路径修掉的灾难同构）。
+  /// 守卫与锁的获取顺序对齐 downloadAndRestoreToCurrentLedger
+  /// （先守卫后锁），守卫为计数器、嵌套安全。
   Future<SyncApplyResult> applyPreviewChanges({
     required int ledgerId,
     required List<SyncChange> selectedChanges,
     required ImportData importData,
-  }) async {
-    final result = await syncDiffService.applySyncChanges(
-      repo: repo,
-      ledgerId: ledgerId,
-      selectedChanges: selectedChanges,
-      importData: importData,
-    );
+  }) {
+    return SyncRestoreGuard.run(() => _withLedgerLock(ledgerId, () async {
+          final result = await syncDiffService.applySyncChanges(
+            repo: repo,
+            ledgerId: ledgerId,
+            selectedChanges: selectedChanges,
+            importData: importData,
+          );
 
-    // 清除缓存
-    _statusCache.remove(ledgerId);
-    _recentLocalChangeAt.remove(ledgerId);
-    _recentUpload.remove(ledgerId);
+          // 清除缓存
+          _statusCache.remove(ledgerId);
+          _recentLocalChangeAt.remove(ledgerId);
+          _recentUpload.remove(ledgerId);
 
-    // 附件差异贯通：modified 合并可能带入带 sha256 的附件清单，本地缺的
-    // 文件从 attachments/<sha256>.bin 后台补齐（与下载恢复路径同口径，
-    // 不阻塞 apply 返回）。
-    if (result.totalCount > 0) {
-      unawaited(enqueueMissingAttachmentJobs(ledgerId)
-          .then((_) => drainAttachmentJobs()));
-    }
+          // 附件差异贯通：modified 合并可能带入带 sha256 的附件清单，本地缺的
+          // 文件从 attachments/<sha256>.bin 后台补齐（与下载恢复路径同口径，
+          // 不阻塞 apply 返回）。
+          if (result.totalCount > 0) {
+            unawaited(enqueueMissingAttachmentJobs(ledgerId)
+                .then((_) => drainAttachmentJobs()));
+          }
 
-    return result;
+          return result;
+        }));
   }
 
   @override

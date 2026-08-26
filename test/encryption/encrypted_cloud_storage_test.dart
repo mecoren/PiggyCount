@@ -258,6 +258,77 @@ void main() {
       expect(inner.uploaded['ledger_1.json'], plaintext);
     });
   });
+
+  group('EncryptedCloudStorageService.downloadBinary（审计 A1 回归）', () {
+    late FakeBinaryCloudStorageService binInner;
+    late EncryptedCloudStorageService binDecorated;
+
+    setUp(() {
+      // 注意：keyStorage/encryptionService 复用外层 setUp 的实例，
+      // 保证 decorated / binDecorated 包装的是同一个已 enable 的服务。
+      binInner = FakeBinaryCloudStorageService();
+      binDecorated = EncryptedCloudStorageService(
+        inner: binInner,
+        encryptionService: encryptionService,
+      );
+    });
+
+    test('E2EE 开启：inner 存有原生二进制旧附件 → 原样字节返回（不再抛 utf8 异常）',
+        () async {
+      await encryptionService.enable(password: 'MyPassw0rd');
+      // JPEG 魔数开头的真实二进制（非合法 UTF-8，文本下载必炸）
+      final jpegBytes = Uint8List.fromList(
+          [0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00]);
+      binInner.storedBytes['attachments/abc.bin'] = jpegBytes;
+
+      final result = await binDecorated.downloadBinary(path: 'attachments/abc.bin');
+
+      expect(result, isNotNull);
+      expect(result, jpegBytes);
+    });
+
+    test('E2EE 开启：装饰器 uploadBinary 写入的信封 → downloadBinary 字节往返',
+        () async {
+      await encryptionService.enable(password: 'MyPassw0rd');
+      final pngBytes =
+          Uint8List.fromList([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+
+      await binDecorated.uploadBinary(path: 'attachments/x.bin', bytes: pngBytes);
+      // 云端产物必须是密文信封
+      expect(CiphertextFormat.isEncrypted(binInner.storedText['attachments/x.bin']!),
+          isTrue);
+
+      final result = await binDecorated.downloadBinary(path: 'attachments/x.bin');
+      expect(result, pngBytes);
+    });
+
+    test('E2EE 开启：legacy 明文 base64 文本对象 → 解码为字节', () async {
+      await encryptionService.enable(password: 'MyPassw0rd');
+      final raw = Uint8List.fromList(utf8.encode('legacy attachment'));
+      binInner.storedText['attachments/old.bin'] = base64Encode(raw);
+
+      final result = await binDecorated.downloadBinary(path: 'attachments/old.bin');
+      expect(result, raw);
+    });
+
+    test('E2EE 开启：对象不存在 → 返回 null', () async {
+      await encryptionService.enable(password: 'MyPassw0rd');
+      final result =
+          await binDecorated.downloadBinary(path: 'attachments/none.bin');
+      expect(result, isNull);
+    });
+
+    test('非 BinaryCapable inner + 密文信封（字符串存储）→ downloadBinary 正确解码',
+        () async {
+      // 复用顶部既有的字符串版 fake：模拟不支持真字节路径的后端
+      await encryptionService.enable(password: 'MyPassw0rd');
+      final payload = Uint8List.fromList(utf8.encode('text-backend bytes'));
+      await decorated.uploadBinary(path: 'attachments/t.bin', bytes: payload);
+
+      final result = await decorated.downloadBinary(path: 'attachments/t.bin');
+      expect(result, payload);
+    });
+  });
 }
 
 /// 内存版 CloudStorageService，用于装饰器测试
@@ -381,4 +452,70 @@ class InMemorySecureKeyStorage implements SecureKeyStorage {
   Future<void> clearAll() async {
     _store.clear();
   }
+}
+
+/// 内存版 BinaryCapableStorage：模拟 S3/WebDAV 的真字节后端。
+///
+/// 关键行为：download()（文本路径）对非 UTF-8 字节抛 FormatException ——
+/// 与真实 S3/WebDAV 存储层 utf8.decode 原生二进制对象的行为一致，
+/// 用于锁死审计 A1 的「原生二进制旧附件在 E2EE 下可读」回归。
+class FakeBinaryCloudStorageService
+    implements CloudStorageService, BinaryCapableStorage {
+  /// 真字节存储（path → bytes）
+  final Map<String, Uint8List> storedBytes = {};
+
+  /// 文本存储（path → text），与 storedBytes 互斥使用
+  final Map<String, String> storedText = {};
+
+  @override
+  Future<void> upload({
+    required String path,
+    required String data,
+    Map<String, String>? metadata,
+  }) async {
+    storedText[path] = data;
+  }
+
+  @override
+  Future<void> uploadBinary({
+    required String path,
+    required List<int> bytes,
+    Map<String, String>? metadata,
+  }) async {
+    storedBytes[path] = Uint8List.fromList(bytes);
+  }
+
+  @override
+  Future<String?> download({required String path}) async {
+    final bytes = storedBytes[path];
+    if (bytes != null) {
+      // 与 S3StorageService.download 一致：非文本内容直接炸
+      return utf8.decode(bytes);
+    }
+    return storedText[path];
+  }
+
+  @override
+  Future<Uint8List?> downloadBinary({required String path}) async {
+    final bytes = storedBytes[path];
+    if (bytes != null) return bytes;
+    final text = storedText[path];
+    return text == null ? null : Uint8List.fromList(utf8.encode(text));
+  }
+
+  @override
+  Future<void> delete({required String path}) async {
+    storedBytes.remove(path);
+    storedText.remove(path);
+  }
+
+  @override
+  Future<List<CloudFile>> list({required String path}) async => const [];
+
+  @override
+  Future<bool> exists({required String path}) async =>
+      storedBytes.containsKey(path) || storedText.containsKey(path);
+
+  @override
+  Future<CloudFile?> getMetadata({required String path}) async => null;
 }

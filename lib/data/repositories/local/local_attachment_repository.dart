@@ -123,8 +123,13 @@ class LocalAttachmentRepository implements AttachmentRepository {
 
   @override
   Future<bool> attachmentExistsByFileName(String fileName) async {
+    // 审计 C9：getSingleOrNull 在「多行同名」时抛 TooManyElements 异常。
+    // 多笔交易共享同一物理文件（同 fileName）是被明确支持的语义
+    // （内容寻址去重），必须容忍 —— 取首行判定存在性即可。
     final result = await (db.select(db.transactionAttachments)
-      ..where((t) => t.fileName.equals(fileName))).getSingleOrNull();
+          ..where((t) => t.fileName.equals(fileName))
+          ..limit(1))
+        .getSingleOrNull();
     return result != null;
   }
 

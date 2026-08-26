@@ -23,6 +23,88 @@ String _listXml() {
 }
 
 void main() {
+  group('S3Client 404 语义区分（审计 A5）', () {
+    const noSuchBucketXml = '<?xml version="1.0"?>'
+        '<Error><Code>NoSuchBucket</Code>'
+        '<Message>The specified bucket does not exist</Message></Error>';
+    const noSuchKeyXml = '<?xml version="1.0"?>'
+        '<Error><Code>NoSuchKey</Code>'
+        '<Message>The specified key does not exist.</Message></Error>';
+
+    test('getObject: NoSuchBucket → S3BucketNotFoundException（而非对象不存在）',
+        () async {
+      final mock = MockClient((request) async =>
+          http.Response(noSuchBucketXml, 404, headers: {
+            'content-type': 'application/xml',
+          }));
+      final client = S3Client(
+        endpoint: 's3.example.com',
+        region: 'us-east-1',
+        accessKey: 'ak',
+        secretKey: 'sk',
+        httpClient: mock,
+      );
+
+      await expectLater(
+        client.getObject(bucket: 'missing', key: 'ledger_x.json'),
+        throwsA(isA<S3BucketNotFoundException>()),
+      );
+    });
+
+    test('getObject: NoSuchKey → S3ObjectNotFoundException（语义不变）', () async {
+      final mock = MockClient(
+          (request) async => http.Response(noSuchKeyXml, 404));
+      final client = S3Client(
+        endpoint: 's3.example.com',
+        region: 'us-east-1',
+        accessKey: 'ak',
+        secretKey: 'sk',
+        httpClient: mock,
+      );
+
+      await expectLater(
+        client.getObject(bucket: 'b', key: 'k'),
+        throwsA(isA<S3ObjectNotFoundException>()),
+      );
+    });
+
+    test('deleteObject: NoSuchBucket → 抛 S3BucketNotFoundException（不静默成功）',
+        () async {
+      final mock = MockClient(
+          (request) async => http.Response(noSuchBucketXml, 404));
+      final client = S3Client(
+        endpoint: 's3.example.com',
+        region: 'us-east-1',
+        accessKey: 'ak',
+        secretKey: 'sk',
+        httpClient: mock,
+      );
+
+      await expectLater(
+        client.deleteObject(bucket: 'missing', key: 'k'),
+        throwsA(isA<S3BucketNotFoundException>()),
+      );
+    });
+
+    test('deleteObject: 对象级 404 → 幂等成功（行为不变）', () async {
+      var calls = 0;
+      final mock = MockClient((request) async {
+        calls++;
+        return http.Response(noSuchKeyXml, 404);
+      });
+      final client = S3Client(
+        endpoint: 's3.example.com',
+        region: 'us-east-1',
+        accessKey: 'ak',
+        secretKey: 'sk',
+        httpClient: mock,
+      );
+
+      await client.deleteObject(bucket: 'b', key: 'k');
+      expect(calls, 1);
+    });
+  });
+
   group('S3Client 寻址方式', () {
     test('path-style: 路径含 /bucket，Host 为 endpoint[:port]', () async {
       late Uri capturedUri;

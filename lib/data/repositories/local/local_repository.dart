@@ -109,12 +109,60 @@ class LocalRepository extends BaseRepository {
       );
 
   @override
-  Future<int> createLedger({required String name, String currency = 'CNY'}) =>
-      _ledgerRepo.createLedger(name: name, currency: currency);
+  Future<int> createLedger({required String name, String currency = 'CNY'}) {
+    // 审计 C3：新建账本就地生成跨设备稳定身份（syncId）并登记 ledger:upsert
+    // change。此前 syncId 缺失到首次上传才由 pathForLedger 就地生成，期间
+    // 账本级变更无锚点可登记；提前到创建时生成让身份锚点更早稳定
+    // （与 TSM-P18/P19「上传前即获得稳定身份」同一哲学），也让
+    // _localChangeEvidence 的方向证据不缺账本级变更。
+    return db.transaction(() async {
+      final id = await _ledgerRepo.createLedger(name: name, currency: currency);
+      final row = await (db.select(db.ledgers)
+            ..where((l) => l.id.equals(id)))
+          .getSingleOrNull();
+      if (row == null) return id;
+      var syncId = row.syncId?.trim();
+      if (syncId == null || syncId.isEmpty) {
+        syncId = _uuid.v4();
+        await (db.update(db.ledgers)..where((l) => l.id.equals(id)))
+            .write(LedgersCompanion(syncId: d.Value(syncId)));
+      }
+      if (changeTracker != null) {
+        await changeTracker!.recordLedgerChange(
+          entityType: 'ledger',
+          entityId: id,
+          entitySyncId: syncId,
+          ledgerId: id,
+          action: 'upsert',
+        );
+      }
+      return id;
+    });
+  }
 
   @override
-  Future<void> updateLedgerName({required int id, required String name}) =>
-      _ledgerRepo.updateLedgerName(id: id, name: name);
+  Future<void> updateLedgerName({required int id, required String name}) {
+    // 审计 C3：账本名参与快照指纹/序列化，改名必须登记（此前裸委托，
+    // 增量路径上改名的传播完全依赖 UI 恰好走 updateLedger）。
+    // 口径与 updateLedger 完全一致（TBL-M9 同事务）。
+    return db.transaction(() async {
+      await _ledgerRepo.updateLedgerName(id: id, name: name);
+      if (changeTracker != null) {
+        final row = await (db.select(db.ledgers)
+              ..where((l) => l.id.equals(id)))
+            .getSingleOrNull();
+        if (row != null && row.syncId != null && row.syncId!.isNotEmpty) {
+          await changeTracker!.recordLedgerChange(
+            entityType: 'ledger',
+            entityId: id,
+            entitySyncId: row.syncId!,
+            ledgerId: id,
+            action: 'update',
+          );
+        }
+      }
+    });
+  }
 
   @override
   Future<void> updateLedger(
@@ -1419,9 +1467,31 @@ class LocalRepository extends BaseRepository {
     required String kind,
     String? icon,
     int? sortOrder,
-  }) =>
-      _categoryRepo.upsertCategory(
+  }) {
+    // 审计 C4：底层新建时会生成 syncId（local_category_repository.dart
+    // :220）但本层此前不登记 create change —— 新分类有身份却无推送机会，
+    // 只能靠 backfillUntrackedEntities 兜底（仅在健康检查触发）。
+    // get-or-create 复用已有行时幂等无操作。
+    return db.transaction(() async {
+      final id = await _categoryRepo.upsertCategory(
           name: name, kind: kind, icon: icon, sortOrder: sortOrder);
+      final row = await (db.select(db.categories)
+            ..where((c) => c.id.equals(id)))
+          .getSingleOrNull();
+      if (row != null &&
+          row.syncId != null &&
+          row.syncId!.isNotEmpty &&
+          changeTracker != null) {
+        await changeTracker!.recordUserGlobalChange(
+          entityType: 'category',
+          entityId: id,
+          entitySyncId: row.syncId!,
+          action: 'upsert',
+        );
+      }
+      return id;
+    });
+  }
 
   @override
   Future<Category?> getCategoryById(int categoryId) =>
@@ -1590,8 +1660,16 @@ class LocalRepository extends BaseRepository {
       );
 
   @override
-  Future<void> updateCategorySortOrders(List<({int id, int sortOrder})> updates) =>
-      _categoryRepo.updateCategorySortOrders(updates);
+  Future<void> updateCategorySortOrders(List<({int id, int sortOrder})> updates) {
+    // 审计 C2：排序是参与指纹/序列化的真实数据（sortOrder 随快照传播），
+    // 漏记则「仅调序」的编辑永不传播。写表 + 记 change 同事务（TBL-M9）。
+    return db.transaction(() async {
+      await _categoryRepo.updateCategorySortOrders(updates);
+      for (final u in updates) {
+        await _recordUserGlobalUpdateChange('category', u.id);
+      }
+    });
+  }
 
   @override
   Future<String> getCategoryFullName(int categoryId) =>
@@ -1654,8 +1732,29 @@ class LocalRepository extends BaseRepository {
   }
 
   @override
-  Future<int> insertCategory(CategoriesCompanion category) =>
-      _categoryRepo.insertCategory(category);
+  Future<int> insertCategory(CategoriesCompanion category) {
+    // 审计 C4：与 upsertCategory 同理 —— 底层不补 syncId 也不登记，
+    // companion 未带 syncId 时插入行有本地无身份、永无推送机会。
+    return db.transaction(() async {
+      CategoriesCompanion effective = category;
+      if (category.syncId == const d.Value.absent() ||
+          category.syncId.value == null ||
+          category.syncId.value?.isEmpty == true) {
+        effective = category.copyWith(syncId: d.Value(_uuid.v4()));
+      }
+      final id = await _categoryRepo.insertCategory(effective);
+      final syncId = effective.syncId.value;
+      if (syncId != null && syncId.isNotEmpty && changeTracker != null) {
+        await changeTracker!.recordUserGlobalChange(
+          entityType: 'category',
+          entityId: id,
+          entitySyncId: syncId,
+          action: 'upsert',
+        );
+      }
+      return id;
+    });
+  }
 
   @override
   Future<void> updateCategoryIcon(
@@ -2107,8 +2206,15 @@ class LocalRepository extends BaseRepository {
       _accountRepo.getAccountsByIds(accountIds);
 
   @override
-  Future<void> updateAccountSortOrders(List<({int id, int sortOrder})> updates) =>
-      _accountRepo.updateAccountSortOrders(updates);
+  Future<void> updateAccountSortOrders(List<({int id, int sortOrder})> updates) {
+    // 审计 C2：同 updateCategorySortOrders —— 排序参与快照指纹，漏记不传播。
+    return db.transaction(() async {
+      await _accountRepo.updateAccountSortOrders(updates);
+      for (final u in updates) {
+        await _recordUserGlobalUpdateChange('account', u.id);
+      }
+    });
+  }
 
   @override
   Future<Set<String>> getUsedCurrencies() => _accountRepo.getUsedCurrencies();
@@ -2164,8 +2270,13 @@ class LocalRepository extends BaseRepository {
       _accountRepo.getAssetCompositionByTypeAndCurrency();
 
   @override
-  Future<void> updateAccountValuation(int accountId, double newValue) =>
-      _accountRepo.updateAccountValuation(accountId, newValue);
+  Future<void> updateAccountValuation(int accountId, double newValue) {
+    // 审计 C2：估值调整（initialBalance）参与快照指纹，漏记不传播。
+    return db.transaction(() async {
+      await _accountRepo.updateAccountValuation(accountId, newValue);
+      await _recordUserGlobalUpdateChange('account', accountId);
+    });
+  }
 
   @override
   Future<SharedLedgerAccount?> getSharedAccountBySyncId(String syncId) =>
@@ -2494,8 +2605,42 @@ class LocalRepository extends BaseRepository {
       _recurringTransactionRepo.watchRecurringTransactionsByLedger(ledgerId);
 
   @override
-  Future<void> batchInsertRecurringTransactions(List<RecurringTransactionsCompanion> items) =>
-      _recurringTransactionRepo.batchInsertRecurringTransactions(items);
+  Future<void> batchInsertRecurringTransactions(
+      List<RecurringTransactionsCompanion> items) {
+    // 审计 C4：与其他实体的 batch 包装对齐 —— 预填 syncId（底层 batch
+    // 插入不会自动补，companion 缺失时插成 NULL 且永无推送机会），
+    // 并登记 create change。导入路径（CSV/快照 recordChanges:true）
+    // 依赖此处让批量导入的规则可被同步。
+    if (items.isEmpty) return Future.value();
+    final effective = items.map((r) {
+      if (r.syncId == const d.Value.absent() ||
+          r.syncId.value == null ||
+          r.syncId.value?.isEmpty == true) {
+        return r.copyWith(syncId: d.Value(_uuid.v4()));
+      }
+      return r;
+    }).toList();
+    return db.transaction(() async {
+      await _recurringTransactionRepo.batchInsertRecurringTransactions(effective);
+      if (changeTracker == null) return;
+      final syncIds =
+          effective.map((r) => r.syncId.value).whereType<String>().toList();
+      if (syncIds.isEmpty) return;
+      final inserted = await (db.select(db.recurringTransactions)
+            ..where((r) => r.syncId.isIn(syncIds)))
+          .get();
+      for (final r in inserted) {
+        if (r.syncId == null || r.syncId!.isEmpty) continue;
+        await changeTracker!.recordLedgerChange(
+          entityType: 'recurring',
+          entityId: r.id,
+          entitySyncId: r.syncId!,
+          ledgerId: r.ledgerId,
+          action: 'create',
+        );
+      }
+    });
+  }
 
   // ============================================
   // AIRepository 接口实现 - 委托给 LocalAIRepository
@@ -2683,33 +2828,71 @@ class LocalRepository extends BaseRepository {
   Future<void> addTagToTransaction({
     required int transactionId,
     required int tagId,
-  }) =>
-      _tagRepo.addTagToTransaction(transactionId: transactionId, tagId: tagId);
+  }) {
+    // 审计 C1：标签关联变更必须给父 tx 登记 update change —— 快照/推送
+    // 侧重序列化 tx 时读取 transaction_tags，漏记则「只改标签」的编辑
+    // 永不传播（与附件增删的 _recordTransactionUpdateForAttachmentChange
+    // 同款教训）。写表 + 记 change 同事务（TBL-M9）。
+    return db.transaction(() async {
+      await _tagRepo.addTagToTransaction(
+          transactionId: transactionId, tagId: tagId);
+      await _recordTransactionUpdateForTagChange(transactionId);
+    });
+  }
 
   @override
   Future<void> addTagsToTransaction({
     required int transactionId,
     required List<int> tagIds,
-  }) =>
-      _tagRepo.addTagsToTransaction(transactionId: transactionId, tagIds: tagIds);
+  }) {
+    // 审计 C1：同 addTagToTransaction
+    return db.transaction(() async {
+      await _tagRepo.addTagsToTransaction(
+          transactionId: transactionId, tagIds: tagIds);
+      await _recordTransactionUpdateForTagChange(transactionId);
+    });
+  }
 
   @override
   Future<void> removeTagFromTransaction({
     required int transactionId,
     required int tagId,
-  }) =>
-      _tagRepo.removeTagFromTransaction(transactionId: transactionId, tagId: tagId);
+  }) {
+    // 审计 C1：同 addTagToTransaction
+    return db.transaction(() async {
+      await _tagRepo.removeTagFromTransaction(
+          transactionId: transactionId, tagId: tagId);
+      await _recordTransactionUpdateForTagChange(transactionId);
+    });
+  }
 
   @override
-  Future<void> removeAllTagsFromTransaction(int transactionId) =>
-      _tagRepo.removeAllTagsFromTransaction(transactionId);
+  Future<void> removeAllTagsFromTransaction(int transactionId) {
+    // 审计 C1：同 addTagToTransaction
+    return db.transaction(() async {
+      await _tagRepo.removeAllTagsFromTransaction(transactionId);
+      await _recordTransactionUpdateForTagChange(transactionId);
+    });
+  }
 
   @override
   Future<void> updateTransactionTags({
     required int transactionId,
     required List<int> tagIds,
-  }) =>
-      _tagRepo.updateTransactionTags(transactionId: transactionId, tagIds: tagIds);
+  }) {
+    // 审计 C1：同 addTagToTransaction。云→本合并路径经
+    // withRecordingSuppressed 调用时 tracker 层自动拦截，无回流风险。
+    return db.transaction(() async {
+      await _tagRepo.updateTransactionTags(
+          transactionId: transactionId, tagIds: tagIds);
+      await _recordTransactionUpdateForTagChange(transactionId);
+    });
+  }
+
+  /// 标签关联变更触发父 tx 的 update change（审计 C1）。语义与附件同款：
+  /// tx payload 序列化携带 tags/tagSyncIds，父 tx 不登记则变更永不传播。
+  Future<void> _recordTransactionUpdateForTagChange(int transactionId) =>
+      _recordTransactionUpdateForAttachmentChange(transactionId);
 
   @override
   Future<List<Tag>> getTagsForTransaction(int transactionId) =>
@@ -2770,8 +2953,15 @@ class LocalRepository extends BaseRepository {
       _tagRepo.isTagNameDuplicate(name: name, excludeId: excludeId);
 
   @override
-  Future<void> updateTagSortOrders(List<({int id, int sortOrder})> updates) =>
-      _tagRepo.updateTagSortOrders(updates);
+  Future<void> updateTagSortOrders(List<({int id, int sortOrder})> updates) {
+    // 审计 C2：同 updateCategorySortOrders。
+    return db.transaction(() async {
+      await _tagRepo.updateTagSortOrders(updates);
+      for (final u in updates) {
+        await _recordUserGlobalUpdateChange('tag', u.id);
+      }
+    });
+  }
 
   @override
   Future<List<Tag>> getRecentlyUsedTags({int limit = 10}) =>
@@ -3006,13 +3196,65 @@ class LocalRepository extends BaseRepository {
     );
   }
 
-  @override
-  Future<void> updateAttachmentSortOrder(int id, int sortOrder) =>
-      _attachmentRepo.updateAttachmentSortOrder(id, sortOrder);
+  /// 审计 C2：给 user-global 实体（category/tag/account，ledgerId=0）登记
+  /// update change。供排序/估值等「非正文但参与指纹」的字段编辑复用 ——
+  /// 此前这类写路径全部裸委托，另一端永远收不到变化。
+  /// syncId 缺失（同步纪元前的遗留行）时静默跳过，与既有 delete 路径口径一致。
+  Future<void> _recordUserGlobalUpdateChange(
+      String entityType, int entityId) async {
+    if (changeTracker == null) return;
+    dynamic row;
+    if (entityType == 'category') {
+      row = await (db.select(db.categories)
+            ..where((c) => c.id.equals(entityId)))
+          .getSingleOrNull();
+    } else if (entityType == 'tag') {
+      row = await (db.select(db.tags)..where((t) => t.id.equals(entityId)))
+          .getSingleOrNull();
+    } else if (entityType == 'account') {
+      row = await (db.select(db.accounts)..where((a) => a.id.equals(entityId)))
+          .getSingleOrNull();
+    } else {
+      return;
+    }
+    final syncId = row?.syncId;
+    if (row == null || syncId == null || syncId.isEmpty) return;
+    await changeTracker!.recordUserGlobalChange(
+      entityType: entityType,
+      entityId: entityId,
+      entitySyncId: syncId,
+      action: 'update',
+    );
+  }
 
   @override
-  Future<void> updateAttachmentSortOrders(List<({int id, int sortOrder})> updates) =>
-      _attachmentRepo.updateAttachmentSortOrders(updates);
+  Future<void> updateAttachmentSortOrder(int id, int sortOrder) {
+    // 审计 C2：附件 sortOrder 参与快照指纹与 tx payload 序列化，
+    // 漏记则「仅调序」永不传播（同附件增删给父 tx 登记 update）。
+    return db.transaction(() async {
+      final row = await _attachmentRepo.getAttachmentById(id);
+      await _attachmentRepo.updateAttachmentSortOrder(id, sortOrder);
+      if (row != null) {
+        await _recordTransactionUpdateForAttachmentChange(row.transactionId);
+      }
+    });
+  }
+
+  @override
+  Future<void> updateAttachmentSortOrders(List<({int id, int sortOrder})> updates) {
+    // 审计 C2：同 updateAttachmentSortOrder
+    return db.transaction(() async {
+      final rows = <int, TransactionAttachment>{};
+      for (final u in updates) {
+        final row = await _attachmentRepo.getAttachmentById(u.id);
+        if (row != null) rows[u.id] = row;
+      }
+      await _attachmentRepo.updateAttachmentSortOrders(updates);
+      for (final row in rows.values) {
+        await _recordTransactionUpdateForAttachmentChange(row.transactionId);
+      }
+    });
+  }
 
   @override
   Future<void> updateAttachmentCloudRef(int id, {String? cloudFileId, String? cloudSha256}) =>
