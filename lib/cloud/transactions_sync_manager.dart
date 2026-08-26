@@ -929,6 +929,11 @@ class TransactionsSyncManager implements SyncService {
   /// 账本 JSON 上传(清单仍带 sha256,恢复端 drain 会持续尝试),仅计数
   /// 并 warning。exists() 探测已存在的对象直接跳过(去重 + 省流量)。
   ///
+  /// 审计 T9:构建清单前先对 localSha256 为空的附件行**按需计算并回填**
+  /// —— 此前只靠启动后台任务,任务完成前的上传会把 NULL 锚点行整体排除
+  /// 在清单外,这些附件要等"回填完成 + 下次上传"两个条件才上云。现在
+  /// 上传即自愈,窗口归零(文件缺失的孤儿行保持 NULL,交由启动任务再试)。
+  ///
   /// 返回 (uploaded, skipped, failed) 统计供调用方汇总。
   Future<({int uploaded, int skipped, int failed})>
       uploadAttachmentObjects({required int ledgerId}) async {
@@ -946,6 +951,19 @@ class TransactionsSyncManager implements SyncService {
         .map((row) => row.read(db.transactions.id)!)
         .get();
     if (txIds.isEmpty) return (uploaded: 0, skipped: 0, failed: 0);
+
+    // 审计 T9：NULL 锚点行先按需回填，失败不阻断（清单仍按现有列值构建）
+    try {
+      await backfillAttachmentSha256(
+        db: db,
+        onResolved: repo.updateAttachmentLocalSha256,
+        txIds: txIds,
+        attachmentsDir:
+            Directory('${(await getApplicationDocumentsDirectory()).path}/attachments'),
+      );
+    } catch (e) {
+      logger.warning('CloudSync', '附件 sha256 上传前回填失败(不阻断): $e');
+    }
 
     final atts = await (db.select(db.transactionAttachments)
           ..where((a) =>
@@ -2817,4 +2835,43 @@ class _CachedStatus {
 
   bool get isExpired =>
       DateTime.now().difference(cachedAt) > TransactionsSyncManager._statusCacheTtl;
+}
+
+/// 审计 T9：附件 localSha256 按需回填（attachment_binary_sync）。
+///
+/// v34 只加列不回填，存量行靠启动后台任务（AttachmentService.backfillLocalSha256）
+/// 补齐 —— 任务完成前的快照上传会把 NULL 锚点行整体排除在内容寻址清单外。
+/// 本函数在构建清单前对 NULL 行就地补算：文件可读 → 算 sha256 并经
+/// [onResolved] 落库；文件缺失的孤儿行保持 NULL（本就不可上传），留给
+/// 启动任务下次再试。失败逐行容忍，绝不阻断上传主流程。
+///
+/// 顶层函数便于单元测试直接注入内存库与临时目录。
+@visibleForTesting
+Future<int> backfillAttachmentSha256({
+  required PiggyDatabase db,
+  required Future<void> Function(int attachmentId, String sha256) onResolved,
+  required List<int> txIds,
+  required Directory attachmentsDir,
+}) async {
+  if (txIds.isEmpty) return 0;
+  final pending = await (db.select(db.transactionAttachments)
+        ..where((a) =>
+            a.transactionId.isIn(txIds) & a.localSha256.isNull()))
+      .get();
+  if (pending.isEmpty) return 0;
+
+  var filled = 0;
+  for (final a in pending) {
+    try {
+      final f = File('${attachmentsDir.path}/${a.fileName}');
+      if (!await f.exists()) continue;
+      final digest = crypto.sha256.convert(await f.readAsBytes()).toString();
+      await onResolved(a.id, digest);
+      filled++;
+    } catch (e) {
+      // 单行失败不阻断其余行，也不阻断上传
+      continue;
+    }
+  }
+  return filled;
 }

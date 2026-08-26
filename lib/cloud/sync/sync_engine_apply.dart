@@ -151,11 +151,20 @@ extension SyncEngineApplyExt on SyncEngine {
     // 日期，note/category/account 缺键会被显式清空，而 excludeFromStats 等
     // 字段却做了 containsKey 保护 —— 同一函数两套语义。
     final hasHappenedAtKey = payload.containsKey('happenedAt');
-    final happenedAt = hasHappenedAtKey
-        ? DateTime.tryParse(payload['happenedAt'] as String? ?? '')
-                ?.toLocal() ??
-            DateTime.now()
-        : DateTime.now(); // 仅 insert 兜底用；update 走 absent
+    // 审计 T8：解析成功才具备覆盖资格 —— 键存在但值非法（脏 payload）在
+    // update 时必须保留本地日期，而不是把交易时间改成「现在」。此前
+    // tryParse 失败静默兜底 DateTime.now() 且 update 走覆盖分支，一条坏
+    // 数据就能把交易日期整体刷新成应用时刻。
+    final parsedHappenedAt = hasHappenedAtKey
+        ? DateTime.tryParse(payload['happenedAt'] as String? ?? '')?.toLocal()
+        : null;
+    if (hasHappenedAtKey && parsedHappenedAt == null) {
+      logger.warning('SyncEngine',
+          '[apply] happenedAt 键存在但无法解析，update 将保留本地值: '
+          '${payload['happenedAt']}');
+    }
+    final happenedAt =
+        parsedHappenedAt ?? DateTime.now(); // 仅 insert 兜底用；update 走 absent
     final hasNoteKey = payload.containsKey('note');
     final hasTypeKey = payload.containsKey('type');
     final hasCategoryKey =
@@ -321,8 +330,9 @@ extension SyncEngineApplyExt on SyncEngine {
           .write(TransactionsCompanion(
         type: hasTypeKey ? d.Value(type) : const d.Value.absent(),
         amount: d.Value(amount),
-        // 审计 M7：缺键保留本地（此前 DateTime.now() 破坏性覆盖本地日期）
-        happenedAt: hasHappenedAtKey
+        // 审计 T8：仅「解析成功」才覆盖 —— 键存在但值非法时保留本地日期，
+        // 防止脏 payload 把交易时间刷成应用时刻（M7 缺键保护的解析失败版）
+        happenedAt: parsedHappenedAt != null
             ? d.Value(happenedAt)
             : const d.Value.absent(),
         note: hasNoteKey ? d.Value(note) : const d.Value.absent(),

@@ -69,7 +69,9 @@ void main() {
     expect(await repo.getOverrides('CNY'), isEmpty);
 
     final changes = await tracker.getUnpushedChangesForLedger(0);
-    expect(changes.map((c) => c.action).toList(), ['create', 'update', 'delete']);
+    // 审计 T5：create/update 写入时统一归一化为 upsert；且同实体未推送的
+    // 两次 upsert 被 v35 部分唯一索引去重（insertOrIgnore）→ 只剩一行
+    expect(changes.map((c) => c.action).toList(), ['upsert', 'delete']);
     expect(changes.every((c) => c.entityType == 'exchange_rate_override'), isTrue);
     expect(changes.every((c) => c.ledgerId == 0), isTrue);
   });

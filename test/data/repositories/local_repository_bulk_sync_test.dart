@@ -44,7 +44,7 @@ void main() {
   });
 
   group('insertTransactionsBatch', () {
-    test('为每条插入的交易登记 transaction:create change', () async {
+    test('为每条插入的交易登记 transaction:upsert change（T5 归一化）', () async {
       // 先建账本,batch insert 才能挂在它下面
       final ledgerId = await repo.createLedger(name: 'test');
 
@@ -69,12 +69,13 @@ void main() {
       expect(n, 3);
       final changes = await tracker.getUnpushedChangesForLedger(ledgerId);
       // ledger 创建本身也会登记一条 ledger:update —— 数据库仓库层 createLedger
-      // 走的子仓库直接 insert 没经过 wrapper,所以这里只看到 transaction:create 三条
+      // 走的子仓库直接 insert 没经过 wrapper,所以这里只看到 transaction 三条
       final txChanges =
           changes.where((c) => c.entityType == 'transaction').toList();
       expect(txChanges.length, 3);
       for (final c in txChanges) {
-        expect(c.action, 'create');
+        // 审计 T5：写入时 create/update 统一归一化为 upsert
+        expect(c.action, 'upsert');
         expect(c.ledgerId, ledgerId);
         expect(c.entitySyncId.isNotEmpty, isTrue);
       }
@@ -214,7 +215,8 @@ void main() {
   });
 
   group('insertTransactionCompanion (单条插入,带标签/附件路径)', () {
-    test('登记 transaction:create change(修复带标签交易导入不同步)', () async {
+    test('登记 transaction:upsert change(修复带标签交易导入不同步;T5 归一化)',
+        () async {
       final ledgerId = await repo.createLedger(name: 'with-tags');
 
       await repo.insertTransactionCompanion(
@@ -227,12 +229,12 @@ void main() {
 
       final changes = await tracker.getUnpushedChangesForLedger(ledgerId);
       final creates = changes
-          .where((c) => c.entityType == 'transaction' && c.action == 'create')
+          .where((c) => c.entityType == 'transaction' && c.action == 'upsert')
           .toList();
       expect(creates.length, 1,
           reason:
               'data_import_service 给带标签/附件的交易走这条单条插入路径,'
-              '必须登记 transaction:create change 才能同步到云端');
+              '必须登记 transaction change 才能同步到云端(T5: create 归一化为 upsert)');
     });
 
     test('changeTracker 为 null 时不记录、不抛错', () async {

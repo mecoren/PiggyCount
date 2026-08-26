@@ -69,7 +69,7 @@ void main() {
         changes.where((c) =>
             c.entityType == 'transaction' &&
             c.entityId == tx.id &&
-            c.action == 'update'),
+            c.action == 'upsert'),
         isNotEmpty,
         reason: '只改标签必须给父交易登记 update，否则永不传播',
       );
@@ -92,7 +92,7 @@ void main() {
         changes.where((c) =>
             c.entityType == 'transaction' &&
             c.entityId == tx.id &&
-            c.action == 'update'),
+            c.action == 'upsert'),
         isNotEmpty,
       );
     });
@@ -111,7 +111,7 @@ void main() {
       final changes = await tracker.getUnpushedChangesForLedger(ledgerId);
       expect(
         changes.where((c) =>
-            c.entityType == 'transaction' && c.action == 'update'),
+            c.entityType == 'transaction' && c.action == 'upsert'),
         isNotEmpty,
       );
     });
@@ -132,7 +132,7 @@ void main() {
 
       final changes =
           (await tracker.getUnpushedChangesForLedger(0))
-              .where((c) => c.entityType == 'category' && c.action == 'update')
+              .where((c) => c.entityType == 'category' && c.action == 'upsert')
               .toList();
       expect(changes.map((c) => c.entityId), containsAll([id1, id2]));
     });
@@ -154,7 +154,7 @@ void main() {
       await repo.updateAccountSortOrders([(id: accId, sortOrder: 5)]);
       var changes =
           (await tracker.getUnpushedChangesForLedger(0))
-              .where((c) => c.entityType == 'account' && c.action == 'update')
+              .where((c) => c.entityType == 'account' && c.action == 'upsert')
               .toList();
       expect(changes, isNotEmpty, reason: '排序漏记则另一端永远收不到');
 
@@ -163,7 +163,7 @@ void main() {
       await repo.updateAccountValuation(accId, 123.45);
       changes =
           (await tracker.getUnpushedChangesForLedger(0))
-              .where((c) => c.entityType == 'account' && c.action == 'update')
+              .where((c) => c.entityType == 'account' && c.action == 'upsert')
               .toList();
       expect(changes, isNotEmpty, reason: '估值调整参与指纹，漏记不传播');
     });
@@ -179,7 +179,7 @@ void main() {
 
       final changes =
           (await tracker.getUnpushedChangesForLedger(0))
-              .where((c) => c.entityType == 'tag' && c.action == 'update')
+              .where((c) => c.entityType == 'tag' && c.action == 'upsert')
               .toList();
       expect(changes.map((c) => c.entityId), contains(tagId));
     });
@@ -217,7 +217,7 @@ void main() {
       expect(
         changes.where((c) =>
             c.entityType == 'ledger' &&
-            c.action == 'update' &&
+            c.action == 'upsert' &&
             c.entitySyncId.isNotEmpty),
         isNotEmpty,
         reason: '账本名参与快照指纹，改名必须可被增量证据感知',
@@ -280,7 +280,7 @@ void main() {
       }
 
       final creates = (await tracker.getUnpushedChangesForLedger(ledgerId))
-          .where((c) => c.entityType == 'recurring' && c.action == 'create')
+          .where((c) => c.entityType == 'recurring' && c.action == 'upsert')
           .toList();
       expect(creates.length, 2);
     });

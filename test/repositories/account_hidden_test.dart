@@ -51,12 +51,13 @@ void main() {
 
     final changes = await (db.select(db.localChanges)
           ..where((c) => c.entityType.equals('account'))
-          ..where((c) => c.entitySyncId.equals('ax-hidden-1'))
-          ..where((c) => c.action.equals('update')))
+          ..where((c) => c.entitySyncId.equals('ax-hidden-1')))
         .get();
     expect(changes, isNotEmpty,
         reason:
             '隐藏必须走会记 change 的 updateAccount,否则隐藏状态不会 push 到云端');
+    // 审计 T5：写入时统一归一化为 upsert
+    expect(changes.every((c) => c.action == 'upsert'), isTrue);
   });
 
   test('setAccountHidden 便捷法往返(true → false)', () async {

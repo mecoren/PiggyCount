@@ -15,6 +15,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../data/db.dart';
+import '../../cloud/sync/change_tracker.dart';
 import '../system/logger_service.dart';
 
 class OrphanSeeder {
@@ -224,7 +225,9 @@ class OrphanSeeder {
           entityId: 999990 + _rand.nextInt(1000),
           entitySyncId: 'seed-ghost-tx-c1-${_rand.nextInt(99999)}',
           ledgerId: 1,
-          action: 'update',
+          // 审计 T5：直插路径同样走归一化（update → upsert），
+          // 与 ChangeTracker 写入口径一致
+          action: ChangeTracker.normalizeAction('update'),
         ));
     return 1;
   }

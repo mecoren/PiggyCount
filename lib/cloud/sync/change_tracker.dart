@@ -42,13 +42,35 @@ class ChangeTracker {
   /// [cleanupPushedChanges]（7 天清理）会把这类标记当普通已推送行删掉，
   /// 之后 Path B 的 legacy backfill 扫不到它们 → 把 server 已知实体重新
   /// 登记推送（服务端幂等不丢数据，但 sync_changes 膨胀+带宽浪费）。
-  /// 改用专属值后，清理可精确豁免；存量 'upsert' 标记由下次 pull 的
-  /// recordPulledFromServer 幂等重写自愈。
+  /// 改用专属值后，清理可精确区分两类行的保留策略。
+  ///
+  /// 审计 T7：标记行不再永久豁免 —— [cleanupPushedChanges] 按
+  /// markerRetention（默认 30 天）清理，见该方法注释的折中说明。
   static const String serverMarkerAction = 'server_marker';
 
   /// 公开 read-only 视图给 sync_engine 的 push 路径用,判断"这条 change 是否
   /// 是 user-global 类型",决定 push 时 scope 字段。
   static const Set<String> userGlobalEntityTypes = _userGlobalEntityTypes;
+
+  /// 审计 T5：action 词汇归一化。
+  ///
+  /// `create` / `update` 统一收敛为 `upsert` —— push 端本就把非 delete 的
+  /// action 一律按 upsert 序列化（payload 从 DB 重建，见
+  /// sync_engine.dart `_doPush`），词汇差异从未承载语义，只会让 v35 部分
+  /// 唯一索引 `(entity_type, entity_sync_id, action) WHERE pushed_at IS NULL`
+  /// 失去去重能力：同一实体先 create 后 update 会留下两条未推送行，
+  /// 推送端发两份幂等 upsert（冗余带宽）。归一化后同实体未推送行恒唯一。
+  ///
+  /// `delete` 与 [serverMarkerAction] 各有专属消费方，保持原值。
+  static String normalizeAction(String action) {
+    switch (action) {
+      case 'create':
+      case 'update':
+        return 'upsert';
+      default:
+        return action;
+    }
+  }
 
   /// 记录一条 user-global 实体(account / category / tag)的变更。
   /// 自动挂 ledgerId=0,调用方不用操心 scope 选择。
@@ -147,13 +169,15 @@ class ChangeTracker {
     // pushed_at IS NULL)兜底。已推送行退出部分索引,二次编辑可正常插入。
     // push 路径从 DB 重建 payload(见 _serializeEntityForPush),不读
     // payloadJson,合并不丢数据。
+    //
+    // 审计 T5：写入前统一归一化 action（create/update → upsert）。
     await db.into(db.localChanges).insert(
       LocalChangesCompanion.insert(
         entityType: entityType,
         entityId: entityId,
         entitySyncId: entitySyncId,
         ledgerId: ledgerId,
-        action: action,
+        action: normalizeAction(action),
         payloadJson: d.Value(payloadJson),
       ),
       mode: d.InsertMode.insertOrIgnore,
@@ -171,11 +195,15 @@ class ChangeTracker {
   /// 统一收口到 tracker 后两条纪律与单条路径（[_insert]）完全一致。
   Future<void> recordBatch(List<LocalChangesCompanion> rows) async {
     if (_suppressRecording || rows.isEmpty) return;
+    // 审计 T5：批量路径同样归一化 action，与单条路径纪律一致
     await db.batch((b) {
       for (final row in rows) {
+        final normalized = row.action.present
+            ? row.copyWith(action: d.Value(normalizeAction(row.action.value)))
+            : row;
         b.insert(
           db.localChanges,
-          row,
+          normalized,
           mode: d.InsertMode.insertOrIgnore,
         );
       }
@@ -281,18 +309,34 @@ class ChangeTracker {
     return count;
   }
 
-  /// 清理已推送的旧变更（保留最近 7 天）。
+  /// 清理已推送的旧变更。
   ///
-  /// M2：豁免 [serverMarkerAction] 标记 —— 它们的职责是阻止 Path B
-  /// legacy backfill 把 server 已知实体重推（见常量注释），被 7 天窗口
-  /// 误删会造成推送膨胀。标记行本身幂等：recordPulledFromServer 按
-  /// (entityType, entitySyncId) 去重，不会无限累积。
-  Future<int> cleanupPushedChanges({Duration retention = const Duration(days: 7)}) async {
-    final cutoff = DateTime.now().subtract(retention);
+  /// - 业务行（create/update/upsert/delete）：[retention]（默认 7 天）
+  /// - [serverMarkerAction] 标记行：[markerRetention]（默认 30 天）
+  ///
+  /// 审计 T7：标记行此前**永久豁免**清理 —— 每个被 pull 过的实体留一行
+  /// 永不删除。其消费方只有 Path B 的 legacy backfill 防重推扫描；现在
+  /// 改为更长保留窗的折中：
+  /// - 窗口内行为不变（防重推保护有效）；
+  /// - 过期删除后，若实体再次经 pull 会被 [recordPulledFromServer] 幂等
+  ///   重建（它按 (entityType, entitySyncId) 预检去重）；最坏后果是
+  ///   legacy backfill 对「窗口外且此后不再变更」的实体重推一次 ——
+  ///   服务端幂等，仅带宽浪费，换取表有界增长。
+  /// Path B 当前整体停用（kPiggyCountCloudEnabled=false），该折中无实际
+  /// 风险敞口；开关打开前会重新评估 legacy backfill 的必要性。
+  Future<int> cleanupPushedChanges({
+    Duration retention = const Duration(days: 7),
+    Duration markerRetention = const Duration(days: 30),
+  }) async {
+    final businessCutoff = DateTime.now().subtract(retention);
+    final markerCutoff = DateTime.now().subtract(markerRetention);
     final count = await (db.delete(db.localChanges)
-          ..where((c) => c.pushedAt.isNotNull() &
-              c.pushedAt.isSmallerThanValue(cutoff) &
-              c.action.equals(serverMarkerAction).not()))
+          ..where((c) =>
+              c.pushedAt.isNotNull() &
+              ((c.pushedAt.isSmallerThanValue(businessCutoff) &
+                      c.action.equals(serverMarkerAction).not()) |
+                  (c.action.equals(serverMarkerAction) &
+                      c.pushedAt.isSmallerThanValue(markerCutoff)))))
         .go();
     if (count > 0) {
       logger.info('ChangeTracker', '清理 $count 条已推送的旧变更');

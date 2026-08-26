@@ -276,7 +276,7 @@ void main() {
       expect(await repo.countUnconvertedForeignTx(lid), 1);
     });
 
-    test('重算逐笔记 change(L13):pending 条数 == 改动笔数', () async {
+    test('重算逐笔记 change(L13):pending 覆盖该实体(T5 去重后单行)', () async {
       db = PiggyDatabase.forTesting(NativeDatabase.memory());
       final tracker = ChangeTracker(db);
       repo = LocalRepository(db, changeTracker: tracker);
@@ -291,8 +291,16 @@ void main() {
       final before = (await db.select(db.localChanges).get()).length;
       final n = await repo.recomputeForeignTxForLedger(lid);
       expect(n, 1);
-      final after = (await db.select(db.localChanges).get()).length;
-      expect(after - before, 1, reason: '重算必须逐笔记 change,否则云端投影不更新');
+      final afterRows = await db.select(db.localChanges).get();
+      // 审计 T5：addTransaction 的 create 与重算的 update 归一化后同键，
+      // 被 v35 部分唯一索引合并为一行 —— 云端投影由该行携带的最新 DB
+      // 快照承载，不因行数不增而丢失
+      expect(afterRows.length - before, 0);
+      final txPending = afterRows
+          .where((c) => c.entityType == 'transaction' && c.pushedAt == null)
+          .toList();
+      expect(txPending, hasLength(1),
+          reason: '重算必须留有一条覆盖该交易的待推送变更，否则云端投影不更新');
     });
   });
 }
