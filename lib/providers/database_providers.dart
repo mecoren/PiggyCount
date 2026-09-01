@@ -1,6 +1,7 @@
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../cloud/cloud_feature_flags.dart';
 import '../data/db.dart';
 import '../data/repositories/local/local_repository.dart';
 import '../data/repositories/base_repository.dart';
@@ -25,8 +26,15 @@ final repositoryProvider = Provider<BaseRepository>((ref) {
 
   // 仅 PiggyCount Cloud 后端激活时注入 ChangeTracker(记录增量变更供同步引擎推送)。
   // 其它备份后端(iCloud / WebDAV / S3 / Supabase)走快照备份路径,不需要变更追踪。
+  //
+  // 审计 M21：必须同时检查总开关 kPiggyCountCloudEnabled —— 此前只看激活配置，
+  // flag 关闭后存量配置仍挂 tracker，而 syncServiceProvider 已退化为
+  // LocalOnlySyncService（无人消费 local_changes、永不 markPushed）→
+  // 每次业务写入都进表且无限膨胀。关闭态下 tracker 必须一并下线。
   final config = ref.watch(activeCloudConfigProvider).valueOrNull;
-  final tracker = (config?.type == CloudBackendType.piggycountCloud && config!.valid)
+  final tracker = (kPiggyCountCloudEnabled &&
+          config?.type == CloudBackendType.piggycountCloud &&
+          config!.valid)
       ? ChangeTracker(db)
       : null;
   logger.info('RepositoryProvider', '✅ LocalRepository (changeTracker=${tracker != null})');

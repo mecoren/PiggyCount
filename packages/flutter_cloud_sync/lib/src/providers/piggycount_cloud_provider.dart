@@ -2041,7 +2041,8 @@ class PiggyCountCloudStorageService implements CloudStorageService {
     required String data,
     Map<String, String>? metadata,
   }) async {
-    final ledgerId = _ledgerIdFromPath(path);
+    // 审计 M15：写路径显式执行扁平路径契约
+    final ledgerId = _ledgerIdForWrite(path);
     // 先确保 session 有效（触发 token refresh），再读 deviceId
     await auth.requireAccessToken();
     final deviceId = auth.currentDeviceId;
@@ -2111,7 +2112,8 @@ class PiggyCountCloudStorageService implements CloudStorageService {
 
   @override
   Future<void> delete({required String path}) async {
-    final ledgerId = _ledgerIdFromPath(path);
+    // 审计 M15：写路径显式执行扁平路径契约
+    final ledgerId = _ledgerIdForWrite(path);
     // 先确保 session 有效（触发 token refresh），再读 deviceId
     await auth.requireAccessToken();
     final deviceId = auth.currentDeviceId;
@@ -2247,15 +2249,27 @@ class PiggyCountCloudStorageService implements CloudStorageService {
           continue;
         }
         final changeId = (row['change_id'] as num?)?.toInt();
-        final ledgerId = row['ledger_id'];
+        // 审计 C4：ledger_id 必须防御式解析 —— 客户端推用户级实体
+        // （account/category/tag/exchange_rate_override）时 payload 的
+        // 'ledger_id' 就是 null，server 原样回放 NULL 时硬校验
+        // `is! String` 会把整条 change 静默丢弃（无错误记录、游标照常
+        // 推进 → 该实体变更永久不同步且无感知）。与文件内其余三处
+        // 解析口径对齐（as String? ?? ''）：空串即 user-global 形态，
+        // SyncErrorStore 已按 ledgerId.isEmpty 分流处理。
+        final ledgerId = row['ledger_id'] as String? ?? '';
         final entityType = row['entity_type'];
         final entitySyncId = row['entity_sync_id'];
         final action = row['action'];
         if (changeId == null ||
-            ledgerId is! String ||
             entityType is! String ||
             entitySyncId is! String ||
             action is! String) {
+          assert(() {
+            debugPrint('[BCC] pull: drop malformed change '
+                'changeId=$changeId entityType=${row['entity_type']} '
+                'entitySyncId=${row['entity_sync_id']}');
+            return true;
+          }());
           continue;
         }
         final rawPayload = row['payload'];
@@ -3416,6 +3430,36 @@ class PiggyCountCloudStorageService implements CloudStorageService {
     return PiggyCountCloudWriteCommitMeta.fromJson(payload);
   }
 
+  /// 审计 M15：PiggyCount Cloud 后端为**扁平路径契约** —— 服务端只有
+  /// ledger_id 概念，不存在目录层级。
+  ///
+  /// 契约分两面：
+  /// - **写路径（upload/delete）显式执行**：归一化后仍含 `/` 的路径一律
+  ///   抛 [CloudConfigurationException]。此前 [_ledgerIdFromPath] 用
+  ///   basename 静默丢弃目录段 —— `upload(path: 'a/ledger1.json')` 与
+  ///   `upload(path: 'b/ledger1.json')` 会落到同一服务端 ledger 静默互相
+  ///   覆盖，delete 同理可能删错目标。碰撞类数据损坏必须在配置层暴露，
+  ///   而不是等首个请求之后才以晦涩方式爆发。
+  /// - **读路径（download/list/getMetadata）保持宽松**：层级路径按原
+  ///   语义解析为 404 / 空列表。E2EE 迁移等枚举流程对任意后端统一以
+  ///   `attachments/` 列目录（本后端语义上必为空），不做行为变更。
+  ///
+  /// App 自身的全部路径均由 pathForLedger 生成（`ledger_<syncId>.json`
+  /// 扁平形态），本契约不影响既有链路。
+  String _ledgerIdForWrite(String path) {
+    final normalized = PathHelper.normalize(path);
+    if (normalized.isEmpty) {
+      throw CloudStorageException('Invalid path: path is empty');
+    }
+    if (normalized.contains('/')) {
+      throw CloudConfigurationException(
+          'PiggyCount Cloud 后端为扁平路径契约（仅接受 ledger 文件名，'
+          '不支持层级路径）: $path');
+    }
+    // 扁平路径下 basename(normalized) == normalized
+    return normalized;
+  }
+
   String _ledgerIdFromPath(String path) {
     final normalized = PathHelper.normalize(path);
     if (normalized.isEmpty) {
@@ -4334,10 +4378,17 @@ class PiggyCountCloudRealtimeClient {
   PiggyCountCloudRealtimeClient({
     required this.baseUrl,
     required this.auth,
+    @visibleForTesting this.channelFactory,
   });
 
   final String baseUrl;
   final PiggyCountCloudAuthService auth;
+
+  /// 审计 M18：WS 通道构造注入点。生产为 null（走 IOWebSocketChannel.connect），
+  /// 测试注入假通道以确定性复现 start/stop 竞态，不触网。
+  @visibleForTesting
+  final WebSocketChannel Function(Uri uri, Map<String, String> headers)?
+      channelFactory;
 
   final StreamController<PiggyCountCloudRealtimeEvent> _events =
       StreamController<PiggyCountCloudRealtimeEvent>.broadcast();
@@ -4389,13 +4440,29 @@ class PiggyCountCloudRealtimeClient {
 
     try {
       final token = await auth.requireAccessToken();
+      // 审计 M18：await 期间 stop() 可能已关停会话（配置切换 / 页面
+      // dispose）。继续往下走会在 _running=false 下建出「僵尸」连接：
+      // 心跳照发、事件照收，且 stop 已执行完毕无法再触达它。此处在
+      // 恢复同步执行前复检一次，保证 start/stop 任意交错都幂等收敛。
+      if (!_running) {
+        return;
+      }
       final uri = _buildWebSocketUri(token);
       // 审计 S18：token 改走 Authorization header，避免落入反代/网关
       // 访问日志。query 中的 token 为过渡期双读兼容（服务端迁移到
       // header 鉴权后移除），见 _buildWebSocketUri 注释。
-      final channel = IOWebSocketChannel.connect(uri, headers: <String, String>{
+      final headers = <String, String>{
         'Authorization': 'Bearer $token',
-      });
+      };
+      final channel = channelFactory?.call(uri, headers) ??
+          IOWebSocketChannel.connect(uri, headers: headers);
+      if (!_running) {
+        // M18：connect 构造到赋值之间无 await（IOWebSocketChannel.connect
+        // 同步返回，连接异步完成），stop() 无法在此间隙插入；本分支为
+        // 防御「未来有人在构造与赋值之间引入 await」的守门检查。
+        await channel.sink.close();
+        return;
+      }
       _channel = channel;
 
       _channelSub = channel.stream.listen(

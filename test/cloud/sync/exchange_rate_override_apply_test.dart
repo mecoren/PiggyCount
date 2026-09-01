@@ -170,5 +170,27 @@ void main() {
       expect(rows.first.syncId, 'rate-y', reason: '行 syncId 为收敛后的新值');
       expect(rows.first.rate, '7.2', reason: 'rate 为 rate-y upsert 的值');
     });
+
+    test('审计 M24：pull 应用后登记 server_marker（防 legacy 全量重推）', () async {
+      provider.pushFakeChange(
+        entityType: 'exchange_rate_override',
+        entitySyncId: 'rate-m24',
+        payload: {
+          'syncId': 'rate-m24',
+          'baseCurrency': 'CNY',
+          'quoteCurrency': 'EUR',
+          'rate': '7.9',
+          'updatedAt': '2026-06-11T00:00:00Z',
+        },
+      );
+      await engine.pull('');
+
+      final markers = await (db.select(db.localChanges)
+            ..where((c) => c.entityType.equals('exchange_rate_override')))
+          .get();
+      expect(markers, hasLength(1), reason: 'M24 前无 marker → backfill 每 session 重推');
+      expect(markers.single.entitySyncId, 'rate-m24');
+      expect(markers.single.action, ChangeTracker.serverMarkerAction);
+    });
   });
 }

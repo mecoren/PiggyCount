@@ -37,7 +37,8 @@ void main() {
       );
 
       expect(etag, 'abc123');
-      expect(capturedHeaders['If-Match'], 'abc123');
+      // 审计 M3：RFC 7232 引号形态（裸值在严格兼容网关会 400）
+      expect(capturedHeaders['If-Match'], '"abc123"');
     });
 
     test('ifNoneMatch → 请求携带 If-None-Match: *（create-only）', () async {
@@ -104,6 +105,138 @@ void main() {
         ),
         throwsArgumentError,
       );
+    });
+
+    test('条件写 404（远端已被并发删除）→ S3PreconditionFailedException', () async {
+      // AWS/MinIO：If-Match 无当前版本时返回 404 NoSuchKey，
+      // 契约要求「远端不存在同样算条件失败」
+      final mock = MockClient((request) async => http.Response(
+          '<?xml version="1.0"?><Error><Code>NoSuchKey</Code>'
+          '<Message>Not Found</Message></Error>',
+          404));
+      final client = S3Client(
+        endpoint: 's3.example.com',
+        region: 'us-east-1',
+        accessKey: 'ak',
+        secretKey: 'sk',
+        httpClient: mock,
+      );
+
+      await expectLater(
+        client.putObject(
+          bucket: 'b',
+          key: 'k',
+          data: Uint8List(0),
+          ifMatch: 'stale',
+        ),
+        throwsA(isA<S3PreconditionFailedException>()),
+      );
+    });
+
+    test('条件写 ifNoneMatch 遇 404 同样按条件失败上抛', () async {
+      final mock = MockClient(
+          (request) async => http.Response('<?xml version="1.0"?>'
+              '<Error><Code>NoSuchKey</Code>'
+              '<Message>Not Found</Message></Error>', 404));
+      final client = S3Client(
+        endpoint: 's3.example.com',
+        region: 'us-east-1',
+        accessKey: 'ak',
+        secretKey: 'sk',
+        httpClient: mock,
+      );
+
+      await expectLater(
+        client.putObject(
+          bucket: 'b',
+          key: 'k',
+          data: Uint8List(0),
+          ifNoneMatch: true,
+        ),
+        throwsA(isA<S3PreconditionFailedException>()),
+      );
+    });
+
+    test('非条件写 404 仍走通用错误路径（不误判为冲突）', () async {
+      final mock = MockClient(
+          (request) async => http.Response('<?xml version="1.0"?>'
+              '<Error><Code>NoSuchKey</Code>'
+              '<Message>Not Found</Message></Error>', 404));
+      final client = S3Client(
+        endpoint: 's3.example.com',
+        region: 'us-east-1',
+        accessKey: 'ak',
+        secretKey: 'sk',
+        httpClient: mock,
+      );
+
+      await expectLater(
+        client.putObject(bucket: 'b', key: 'k', data: Uint8List(0)),
+        throwsA(isA<S3Exception>().having(
+            (e) => e is S3PreconditionFailedException, 'not precondition', false)),
+      );
+    });
+
+    test('审计 M2：409 ConditionalRequestConflict 重试后成功', () async {
+      var calls = 0;
+      late Map<String, String> lastHeaders;
+      final mock = MockClient((request) async {
+        calls++;
+        lastHeaders = request.headers;
+        if (calls <= 2) {
+          return http.Response(
+              '<?xml version="1.0"?><Error><Code>ConditionalRequestConflict'
+              '</Code><Message>Conflict</Message></Error>', 409);
+        }
+        return http.Response('', 200, headers: {'etag': '"ok"'});
+      });
+      final client = S3Client(
+        endpoint: 's3.example.com',
+        region: 'us-east-1',
+        accessKey: 'ak',
+        secretKey: 'sk',
+        httpClient: mock,
+      );
+
+      final etag = await client.putObject(
+        bucket: 'b',
+        key: 'k',
+        data: Uint8List(0),
+        ifMatch: 'stale',
+      );
+
+      expect(etag, 'ok');
+      expect(calls, 3);
+      expect(lastHeaders['If-Match'], '"stale"');
+    });
+
+    test('审计 M2：409 持续冲突 → 重试耗尽后按条件失败上抛', () async {
+      var calls = 0;
+      final mock = MockClient((request) async {
+        calls++;
+        return http.Response(
+            '<?xml version="1.0"?><Error><Code>ConditionalRequestConflict'
+            '</Code><Message>Conflict</Message></Error>', 409);
+      });
+      final client = S3Client(
+        endpoint: 's3.example.com',
+        region: 'us-east-1',
+        accessKey: 'ak',
+        secretKey: 'sk',
+        httpClient: mock,
+      );
+
+      await expectLater(
+        client.putObject(
+          bucket: 'b',
+          key: 'k',
+          data: Uint8List(0),
+          ifMatch: 'stale',
+        ),
+        throwsA(isA<S3PreconditionFailedException>()),
+      );
+      // 首发 + 2 次重试
+      expect(calls, 3);
     });
 
     test('弱验证器/引号包装的 ETag 归一化返回', () async {

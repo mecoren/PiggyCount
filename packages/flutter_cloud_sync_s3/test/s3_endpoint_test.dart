@@ -79,6 +79,52 @@ void main() {
       );
     });
 
+    test('审计 S3-M1: 内嵌端口与显式 port 冲突 → 配置期即报错', () {
+      // 旧行为：显式 port 直接生效、内嵌端口滞留 host，
+      // 产出 host='minio.local:9000' + port=9001 的非法组合，
+      // URI 变成 `https://minio.local:9000:9001/...`，首个请求才爆发。
+      expect(
+        () => parseS3Endpoint('minio.local:9000', port: 9001),
+        throwsArgumentError,
+      );
+    });
+
+    test('审计 S3-M1: 内嵌端口与显式 port 一致 → 冗余但放行', () {
+      final info = parseS3Endpoint('minio.local:9000', port: 9000);
+      expect(info.host, 'minio.local');
+      expect(info.port, 9000);
+    });
+
+    test('审计 S3-M1: IPv6 内嵌端口与显式 port 冲突 → 报错', () {
+      expect(
+        () => parseS3Endpoint('[::1]:9000', port: 9001),
+        throwsArgumentError,
+      );
+      // 一致时放行
+      final info = parseS3Endpoint('[::1]:9000', port: 9000);
+      expect(info.host, '[::1]');
+      expect(info.port, 9000);
+    });
+
+    test('审计 S3-M1: 显式 port 越界（0 / >65535）配置期即报错', () {
+      expect(
+        () => parseS3Endpoint('minio.local', port: 0),
+        throwsArgumentError,
+      );
+      expect(
+        () => parseS3Endpoint('minio.local', port: 70000),
+        throwsArgumentError,
+      );
+    });
+
+    test('审计 S3-M1: 显式 port 存在时内嵌端口非法仍报错（不再静默跳过）', () {
+      // 旧行为：port != null 时跳过内嵌解析，'minio.local:abc' 滞留 host。
+      expect(
+        () => parseS3Endpoint('minio.local:abc', port: 9000),
+        throwsArgumentError,
+      );
+    });
+
     test('F8: 方括号 IPv6 字面量（无端口）', () {
       final info = parseS3Endpoint('[::1]');
       expect(info.host, '[::1]');

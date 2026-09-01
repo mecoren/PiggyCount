@@ -96,6 +96,60 @@ void main() {
       expect(await engine.pull(''), 1);
       expect((await db.select(db.transactions).get()).single.amount, 55);
     });
+
+    test('审计 C5：缺 amount 且缺 nativeAmount 的 partial 不清零本地折算',
+        () async {
+      buildEngine('pb-h1-native-partial');
+      // 本地行已有折算金额（多币种记账场景）
+      await (db.update(db.transactions)
+            ..where((t) => t.syncId.equals('tx-P')))
+          .write(const TransactionsCompanion(nativeAmount: d.Value(88.5)));
+
+      provider.pushFakeChange(
+        entityType: 'transaction',
+        entitySyncId: 'tx-P',
+        ledgerId: 'L1',
+        payload: {
+          'syncId': 'tx-P',
+          'type': 'expense',
+          'note': '只改备注，不带任何金额键',
+        },
+      );
+
+      expect(await engine.pull(''), 1);
+      final tx = (await db.select(db.transactions).get()).single;
+      expect(tx.note, '只改备注，不带任何金额键');
+      expect(tx.amount, 100);
+      // C5 前：占位 amount=0.0 参与「金额是否变化」判断（恒真）→
+      // native_amount 被写成 0.0 并随 push 扩散全端
+      expect(tx.nativeAmount, 88.5,
+          reason: '无金额信息的 partial 必须保留本地折算值');
+    });
+
+    test('审计 C5 对照：带 amount 且金额变化 → 折算仍退化 1:1（语义保留）',
+        () async {
+      buildEngine('pb-h1-native-degrade');
+      await (db.update(db.transactions)
+            ..where((t) => t.syncId.equals('tx-P')))
+          .write(const TransactionsCompanion(nativeAmount: d.Value(88.5)));
+
+      provider.pushFakeChange(
+        entityType: 'transaction',
+        entitySyncId: 'tx-P',
+        ledgerId: 'L1',
+        payload: {
+          'syncId': 'tx-P',
+          'type': 'expense',
+          'amount': 200, // 有 amount 键且变了 → 旧客户端语义：折算 =amount
+        },
+      );
+
+      expect(await engine.pull(''), 1);
+      final tx = (await db.select(db.transactions).get()).single;
+      expect(tx.amount, 200);
+      expect(tx.nativeAmount, 200,
+          reason: '快照保护只在「缺 amount 键」时保留本地折算，不改变既有退化语义');
+    });
   });
 
   group('PathB-H2：account/category 可选字段缺键守卫', () {

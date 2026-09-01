@@ -79,26 +79,30 @@ class CloudServiceConfig {
 
   String get id => type.name; // 使用类型作为id
 
+  /// 必填字符串字段是否「实际有值」：null / 空串 / 纯空白（含全角空格）
+  /// 都视为未填。审计 M17：此前只查 isNotEmpty，移动端输入框误触带入
+  /// 首尾空格的半配置会通过 valid → activate() 放行 → 运行期连接失败。
+  static bool _filled(String? v) => v != null && v.trim().isNotEmpty;
+
   bool get valid {
     switch (type) {
       case CloudBackendType.local:
         return true; // 本地存储始终有效
       case CloudBackendType.piggycountCloud:
-        return (piggycountCloudBaseUrl?.isNotEmpty ?? false);
+        return _filled(piggycountCloudBaseUrl);
       case CloudBackendType.supabase:
-        return (supabaseUrl?.isNotEmpty ?? false) &&
-            (supabaseAnonKey?.isNotEmpty ?? false);
+        return _filled(supabaseUrl) && _filled(supabaseAnonKey);
       case CloudBackendType.webdav:
-        return (webdavUrl?.isNotEmpty ?? false) &&
-            (webdavUsername?.isNotEmpty ?? false) &&
-            (webdavPassword?.isNotEmpty ?? false);
+        return _filled(webdavUrl) &&
+            _filled(webdavUsername) &&
+            _filled(webdavPassword);
       case CloudBackendType.icloud:
         return true; // iCloud 无需配置，始终有效
       case CloudBackendType.s3:
-        return (s3Endpoint?.isNotEmpty ?? false) &&
-            (s3AccessKey?.isNotEmpty ?? false) &&
-            (s3SecretKey?.isNotEmpty ?? false) &&
-            (s3Bucket?.isNotEmpty ?? false);
+        return _filled(s3Endpoint) &&
+            _filled(s3AccessKey) &&
+            _filled(s3SecretKey) &&
+            _filled(s3Bucket);
     }
   }
 

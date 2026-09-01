@@ -66,14 +66,14 @@ class S3StorageService
         throw CloudStorageException('File not found: $localPath');
       }
 
-      // 读取文件
-      final bytes = await file.readAsBytes();
-
-      // 上传到 S3
-      await client.putObject(
+      // M4：流式上传 —— openRead 边读边发，大文件不再全量载入内存。
+      // 行为语义（覆盖上传 / 异常翻译）与旧整块路径一致。
+      final length = await file.length();
+      await client.putObjectStream(
         bucket: bucket,
         key: _buildKey(remotePath),
-        data: bytes,
+        data: file.openRead(),
+        contentLength: length,
       );
     } on S3AuthException catch (e) {
       throw _authException(e);
@@ -87,34 +87,104 @@ class S3StorageService
   }
 
   Future<void> downloadFile(String remotePath, String localPath) async {
+    // M5：流式下载落盘（边收边写临时文件，完成后原子 rename），大文件
+    // 不再全量载入内存。downloadToSink 已完成全部异常翻译（Cloud 层），
+    // 此处只补齐「404 → File not found」的历史语义。
+    final written = await downloadToSink(path: remotePath, localPath: localPath);
+    if (written == null) {
+      throw CloudStorageException('File not found: $remotePath');
+    }
+  }
+
+  /// M4：流式上传（大文件内存友好）。
+  ///
+  /// 与 [uploadBinary] 的区别：内容以 [data] 流边读边发，不在内存中
+  /// 拼装完整字节。可选 [ifMatchEtag] / [ifNoneMatch] 提供条件写语义
+  /// （与 [uploadBinaryConditional] 一致：412/远端不存在 →
+  /// [CloudPreconditionFailedException]）。
+  ///
+  /// 注意：流式 body 不可重放，client 层对时钟偏差 / 409 不自动重试
+  /// （见 S3Client.putObjectStream），上层需要重试时用新流重调本方法。
+  Future<void> uploadStream({
+    required String path,
+    required Stream<List<int>> data,
+    int? contentLength,
+    Map<String, String>? metadata,
+    String? ifMatchEtag,
+    bool ifNoneMatch = false,
+  }) async {
     try {
-      // 从 S3 下载
-      final bytes = await client.getObject(
+      await client.putObjectStream(
         bucket: bucket,
-        key: _buildKey(remotePath),
+        key: _buildKey(path),
+        data: data,
+        contentLength: contentLength,
+        metadata: metadata,
+        ifMatch: ifMatchEtag,
+        ifNoneMatch: ifNoneMatch,
+      );
+    } on S3PreconditionFailedException catch (e) {
+      // 方案C：412 翻译为跨后端统一语义，上层据此走冲突流程
+      throw CloudPreconditionFailedException(path, e.message);
+    } on CloudAuthException {
+      rethrow;
+    } on S3AuthException catch (e) {
+      throw _authException(e);
+    } on S3PermissionDeniedException catch (e) {
+      throw _authException(e);
+    } on S3Exception catch (e) {
+      throw CloudStorageException('Failed to upload file: ${e.message}');
+    } catch (e) {
+      throw CloudStorageException('Failed to upload file: $e');
+    }
+  }
+
+  /// M5：流式下载落盘。
+  ///
+  /// 边收边写**临时文件**（时间戳+序号独占，见 [_tempSeq] 注释），全部
+  /// 到齐后原子 rename 发布；任何失败清理 tmp、目标文件保持不动
+  /// （旧数据继续可用）。返回写入字节数；远端不存在返回 null
+  /// （对齐 [downloadBinary] 的判空语义）。
+  Future<int?> downloadToSink({
+    required String path,
+    required String localPath,
+  }) async {
+    try {
+      final stream = await client.downloadStream(
+        bucket: bucket,
+        key: _buildKey(path),
       );
 
-      // 原子写入：先写临时文件再 rename 替换，避免下载中途异常
-      // 导致目标文件被截断/损坏，使原有可用数据丢失。
-      // 审计 S3-12：tmp 文件名加入时间戳+序号，并发下载同一目标时
-      // 各自独立，不再互相覆盖半成品。
       final file = File(localPath);
       await file.parent.create(recursive: true);
       final tempPath =
           '$localPath.tmp.${DateTime.now().microsecondsSinceEpoch}_${_tempSeq++}';
       final tempFile = File(tempPath);
+      IOSink? sink;
+      var written = 0;
       try {
-        await tempFile.writeAsBytes(bytes);
+        sink = tempFile.openWrite();
+        await for (final chunk in stream) {
+          sink.add(chunk);
+          written += chunk.length;
+        }
+        await sink.flush();
+        await sink.close();
+        sink = null;
         await tempFile.rename(localPath);
-      } catch (_) {
-        // rename 失败时尽力清理本次的 tmp，避免残留垃圾文件
+        return written;
+      } catch (e) {
+        // 中途失败：尽力关闭 sink 并清理本次 tmp，目标文件不动
+        try {
+          await sink?.close();
+        } catch (_) {}
         try {
           if (await tempFile.exists()) await tempFile.delete();
         } catch (_) {}
         rethrow;
       }
-    } on S3ObjectNotFoundException catch (e) {
-      throw CloudStorageException('File not found: ${e.key}');
+    } on S3ObjectNotFoundException {
+      return null;
     } on S3AuthException catch (e) {
       throw _authException(e);
     } on S3PermissionDeniedException catch (e) {

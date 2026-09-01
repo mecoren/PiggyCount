@@ -797,8 +797,9 @@ class TransactionsSyncManager implements SyncService {
         logger.warning('CloudSync', '附件对象上传异常(不阻断账本上传): $e');
       }
 
+      final fcs.CloudUploadResult outcome;
       try {
-        await manager.upload(
+        outcome = await manager.upload(
           data: ledgerId,
           path: await pathForLedger(ledgerId),
           metadata: uploadMetadata,
@@ -819,8 +820,20 @@ class TransactionsSyncManager implements SyncService {
         throw CloudConflictException(direction: 'cloudNewer');
       }
 
+      // 审计 C3：盲上传路径的写后校验结论上浮。verified=false 说明云端
+      // 指纹与本次写入不一致 —— 内容可能已被并发覆盖。数据已在云端、
+      // 不算失败，但**不得**标记「已同步」/清除脏标记/markSnapshotPushed：
+      // 保持脏状态让下次 getStatus 探测真实差异走冲突/合并流程，
+      // 否则本地修改被静默掩盖（旧代码此场景完全无感知）。
+      final uploadVerified = outcome.verified;
+      if (!uploadVerified) {
+        logger.warning('CloudSync',
+            '写后校验不一致（云端可能已被并发覆盖）: ledger=$ledgerId '
+            '→ 本次不标记已同步');
+      }
+
       // 记录近期上传，用于处理 CDN 缓存延迟
-      if (localFp != null && localCount != null) {
+      if (uploadVerified && localFp != null && localCount != null) {
         _recentUpload[ledgerId] = _RecentUpload(
           at: DateTime.now(),
           fp: localFp,
@@ -838,12 +851,14 @@ class TransactionsSyncManager implements SyncService {
           ),
         );
       } else {
-        // 指纹计算失败，清除缓存等待下次查询
+        // 指纹计算失败或写后校验不一致：清除缓存等待下次探测真实状态
         _statusCache.remove(ledgerId);
       }
 
-      // 清除本地变更标记
-      _recentLocalChangeAt.remove(ledgerId);
+      // 清除本地变更标记（仅在确认写入未被并发覆盖时）
+      if (uploadVerified) {
+        _recentLocalChangeAt.remove(ledgerId);
+      }
 
       // F2：快照上传成功 = 本账本 + user-global 的未推送变更均已随快照
       // 上云，标记 pushedAt：
@@ -852,14 +867,18 @@ class TransactionsSyncManager implements SyncService {
       // ② 让 _localChangeEvidence 的「未推送行存在才可信」门禁恢复设计
       //    语义（M1/M7）：上传后时间戳与内容新旧状态重新对齐。
       // 失败不阻断（下次上传会重新标记）。
-      try {
-        final tracker = repo.changeTracker;
-        if (tracker != null) {
-          await tracker.markSnapshotPushed(ledgerId: ledgerId);
-          unawaited(tracker.cleanupPushedChanges());
+      // 审计 C3：写后校验不一致时同样跳过 —— 内容是否真正落盘存疑，
+      // 标记 pushed 会把未收敛的变更当成已同步。
+      if (uploadVerified) {
+        try {
+          final tracker = repo.changeTracker;
+          if (tracker != null) {
+            await tracker.markSnapshotPushed(ledgerId: ledgerId);
+            unawaited(tracker.cleanupPushedChanges());
+          }
+        } catch (e) {
+          logger.warning('CloudSync', '标记本地变更已推送失败(不影响本次上传): $e');
         }
-      } catch (e) {
-        logger.warning('CloudSync', '标记本地变更已推送失败(不影响本次上传): $e');
       }
 
       logger.info('CloudSync', '上传完成: $ledgerId');

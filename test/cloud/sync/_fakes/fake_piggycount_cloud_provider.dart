@@ -33,6 +33,10 @@ class FakePiggyCountCloudAuthService extends PiggyCountCloudAuthService {
   String? _userId;
   String? _deviceId;
 
+  /// 注入 currentUser.metadata（审计 M20：引擎的 _getDeviceId 从
+  /// metadata['deviceId'] 解析本机设备号，测试据此控制解析结果）
+  Map<String, dynamic>? userMetadata;
+
   // 覆盖 PiggyCountCloudAuthService 自身的 getter(不在 CloudAuthService 接口
   // 内但 AppCursorStore 强 cast 后用到)
   @override
@@ -44,7 +48,7 @@ class FakePiggyCountCloudAuthService extends PiggyCountCloudAuthService {
   // CloudAuthService 抽象接口实现 — fake 不真做认证
   @override
   Future<CloudUser?> get currentUser async =>
-      _userId == null ? null : CloudUser(id: _userId!);
+      _userId == null ? null : CloudUser(id: _userId!, metadata: userMetadata);
 
   /// 测试入口:模拟用户登录 / 登出
   void setLoggedIn({String? userId = 'test-user-id', String? deviceId = 'test-device-id'}) {
@@ -130,6 +134,9 @@ class FakePiggyCountCloudProvider extends PiggyCountCloudProvider {
     _fakeStorage = FakePiggyCountCloudStorageService();
   }
 
+  /// 注入 currentUser.metadata（透传给 auth，见 FakePiggyCountCloudAuthService）
+  set userMetadata(Map<String, dynamic>? meta) => _fakeAuth.userMetadata = meta;
+
   late final FakePiggyCountCloudAuthService _fakeAuth;
   late final FakePiggyCountCloudStorageService _fakeStorage;
 
@@ -178,6 +185,13 @@ class FakePiggyCountCloudProvider extends PiggyCountCloudProvider {
 
   // ====== 覆盖 SyncEngine 用到的方法 ======
 
+  /// 审计 M22 测试钩子：每次 pullChanges 返回前调用（callIndex 从 1 开始），
+  /// 可篡改返回结果（切片 / 强制 hasMore）或在「prime 之后、页 apply 之前」
+  /// 的窗口注入并发副作用。null = 不干预。
+  PiggyCountCloudPullResult Function(
+          int callIndex, PiggyCountCloudPullResult result)?
+      pullResultTransformer;
+
   @override
   Future<PiggyCountCloudPullResult> pullChanges({
     int? since,
@@ -203,11 +217,16 @@ class FakePiggyCountCloudProvider extends PiggyCountCloudProvider {
     final head = _serverChanges.isEmpty
         ? 0
         : _serverChanges.map((c) => c.changeId).reduce((a, b) => a > b ? a : b);
-    return PiggyCountCloudPullResult(
+    var out = PiggyCountCloudPullResult(
       changes: slice,
       serverCursor: slice.isEmpty ? head : slice.last.changeId,
       hasMore: unread.length > slice.length,
     );
+    final transformer = pullResultTransformer;
+    if (transformer != null) {
+      out = transformer(pullCalls.length, out);
+    }
+    return out;
   }
 
   @override

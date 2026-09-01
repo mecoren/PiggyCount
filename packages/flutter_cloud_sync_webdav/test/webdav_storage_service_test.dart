@@ -27,6 +27,19 @@ class _FakeServer implements HttpClientAdapter {
   bool performMove = true;
 
   int putCalls = 0;
+
+  /// 审计 M10：GET 计数 —— 断言 getMetadata 缓存命中后不再下载主文件
+  int getCalls = 0;
+
+  /// 置 true 时所有 GET 返回 500（模拟瞬时服务端故障）
+  bool failGets = false;
+
+  /// 审计 WD-2：PROPFIND 计数 —— 断言会话内目录探测缓存后，重复上传
+  /// 不再逐次全量列父目录
+  int propfindCalls = 0;
+
+  /// 置 true 时下一次 PUT 返回 404（模拟目录被外部删除后的写入失败）
+  bool failNextPut = false;
   final List<(String, String)> moveCalls = [];
 
   @override
@@ -80,12 +93,20 @@ class _FakeServer implements HttpClientAdapter {
 
       case 'PUT':
         putCalls++;
+        if (failNextPut) {
+          failNextPut = false;
+          return ResponseBody.fromString('not found', 404);
+        }
         final bytes = await _collect(requestStream);
         files[path] = bytes;
         etags[path] = 'put-$putCalls';
         return ResponseBody.fromString('', 201);
 
       case 'GET':
+        getCalls++;
+        if (failGets) {
+          return ResponseBody.fromString('server error', 500);
+        }
         final content = files[path];
         if (content == null) {
           return ResponseBody.fromString('not found', 404);
@@ -113,6 +134,7 @@ class _FakeServer implements HttpClientAdapter {
         return ResponseBody.fromString('', 201);
 
       case 'PROPFIND':
+        propfindCalls++;
         final depthOne = options.headers['depth'] == '1';
         final buf = StringBuffer(
             '<?xml version="1.0"?><d:multistatus xmlns:d="DAV:">');
@@ -164,6 +186,149 @@ void main() {
     // WdDio 实现 Dio：直接替换底层适配器为内存假服务器
     client.c.httpClientAdapter = server;
     service = WebDAVStorageService(client, '/');
+  });
+
+  group('审计 WD-2：父目录探测会话缓存（上传不再逐次全量列父目录）', () {
+    test('同一目录连续上传：第二次不再做 ensure 探测', () async {
+      await service.uploadBinary(path: 'dir/a.bin', bytes: [1]);
+      final propfindAfterFirst = server.propfindCalls;
+      expect(propfindAfterFirst, greaterThan(0), reason: '首次上传必须探测目录');
+
+      await service.uploadBinary(path: 'dir/b.bin', bytes: [2]);
+      expect(server.propfindCalls, propfindAfterFirst,
+          reason: 'WD-2: 会话内已确认的目录不得再逐次全量列父目录');
+    });
+
+    test('写入吃 404（目录被外部删除）→ 失效缓存重建并自愈成功', () async {
+      await service.uploadBinary(path: 'dir/a.bin', bytes: [1]);
+      final propfindAfterFirst = server.propfindCalls;
+
+      server.failNextPut = true;
+      await service.uploadBinary(path: 'dir/b.bin', bytes: [2]);
+
+      expect(server.propfindCalls, propfindAfterFirst + 1,
+          reason: 'WD-2: 自愈路径应重新探测目录一次');
+      expect(server.files['/dir/b.bin'], isNotNull, reason: '重试写入应成功落盘');
+    });
+
+    test('切换到新子目录 → 新目录照常探测', () async {
+      await service.uploadBinary(path: 'dir/a.bin', bytes: [1]);
+      final propfindAfterFirst = server.propfindCalls;
+
+      await service.uploadBinary(path: 'sub/b.bin', bytes: [2]);
+      expect(server.propfindCalls, greaterThan(propfindAfterFirst),
+          reason: 'WD-2: 缓存按目录键控，新目录必须照常探测');
+    });
+  });
+
+  group('审计 WD-Y2：文件操作拒绝尾斜杠路径（目录语义显式分流）', () {
+    test('upload / delete 尾斜杠 → 配置期即拒绝', () async {
+      await expectLater(
+        service.uploadBinary(path: 'x/', bytes: [1]),
+        throwsA(isA<CloudConfigurationException>()),
+      );
+      await expectLater(
+        service.delete(path: 'x/'),
+        throwsA(isA<CloudConfigurationException>()),
+      );
+    });
+
+    test('download 尾斜杠 → 拒绝（防 GET 集合返回目录列表被当文件内容）',
+        () async {
+      await expectLater(
+        service.downloadBinary(path: 'x/'),
+        throwsA(isA<CloudConfigurationException>()),
+      );
+      await expectLater(
+        service.download(path: 'x/'),
+        throwsA(isA<CloudConfigurationException>()),
+      );
+    });
+
+    test('list 目录路径不受影响（含尾斜杠与空路径）', () async {
+      // list 是目录操作，尾斜杠是合法形态（E2EE 迁移等以 attachments/ 列目录）
+      final files = await service.list(path: 'attachments/');
+      expect(files, isA<List<CloudFile>>());
+      final root = await service.list(path: '');
+      expect(root, isA<List<CloudFile>>());
+    });
+  });
+
+  group('审计 M10：getMetadata eTag 键控元数据缓存', () {
+    test('信封文件：第二次 getMetadata 不再下载主文件', () async {
+      await service.upload(
+        path: 'm10_cache.json',
+        data: '{"v":1}',
+        metadata: {'fingerprint': 'fp-m10'},
+      );
+
+      final m1 = await service.getMetadata(path: 'm10_cache.json');
+      expect(m1!.metadata!['fingerprint'], 'fp-m10');
+      final callsAfterFirst = server.getCalls;
+      expect(callsAfterFirst, greaterThan(0), reason: '首次解析必须真实读取');
+
+      final m2 = await service.getMetadata(path: 'm10_cache.json');
+      expect(m2!.metadata!['fingerprint'], 'fp-m10');
+      expect(m2.eTag, m1.eTag);
+      expect(server.getCalls, callsAfterFirst,
+          reason: 'M10: eTag 未变时重复调用零下载');
+    });
+
+    test('eTag 变化 → 缓存失效，重新解析新元数据', () async {
+      await service.upload(
+          path: 'm10_bust.json', data: '{"v":1}', metadata: {'fingerprint': 'v1'});
+      final m1 = await service.getMetadata(path: 'm10_bust.json');
+      expect(m1!.metadata!['fingerprint'], 'v1');
+
+      // 重新上传：PUT 生成新 eTag（fake server put-N 递增）
+      await service.upload(
+          path: 'm10_bust.json', data: '{"v":2}', metadata: {'fingerprint': 'v2'});
+      final m2 = await service.getMetadata(path: 'm10_bust.json');
+      expect(m2!.metadata!['fingerprint'], 'v2',
+          reason: 'M10: eTag 已变必须重新解析，不得返回陈旧元数据');
+    });
+
+    test('服务器不返回 getetag → 无缓存键，维持逐次读取旧行为', () async {
+      server.files['/m10_noetag.json'] = utf8.encode('{"bare":true}');
+      // 不写 etags → PROPFIND 无 getetag
+
+      await service.getMetadata(path: 'm10_noetag.json');
+      final calls1 = server.getCalls;
+      await service.getMetadata(path: 'm10_noetag.json');
+      expect(server.getCalls, greaterThan(calls1),
+          reason: 'M10: 无 eTag 时不能凭空造缓存键（内容可能已变）');
+    });
+
+    test('sidecar 旧格式同样按 eTag 缓存', () async {
+      server.files['/legacy_m10.json'] = utf8.encode('{"legacy":true}');
+      server.etags['/legacy_m10.json'] = 'legacy-e1';
+      server.files['/legacy_m10.json.metadata.json'] =
+          utf8.encode(jsonEncode({
+        'metadata': {'fingerprint': 'side-fp'},
+      }));
+
+      final m1 = await service.getMetadata(path: 'legacy_m10.json');
+      expect(m1!.metadata!['fingerprint'], 'side-fp');
+      final calls1 = server.getCalls;
+
+      final m2 = await service.getMetadata(path: 'legacy_m10.json');
+      expect(m2!.metadata!['fingerprint'], 'side-fp');
+      expect(server.getCalls, calls1, reason: 'M10: sidecar 结果同样可按主文件 eTag 缓存');
+    });
+
+    test('主文件 GET 瞬时失败 → 结果不缓存，恢复后拿到真实元数据', () async {
+      await service.upload(
+          path: 'm10_fail.json', data: '{"v":1}', metadata: {'fingerprint': 'fp-e'});
+
+      server.failGets = true;
+      final m1 = await service.getMetadata(path: 'm10_fail.json');
+      expect(m1!.metadata, isEmpty, reason: '既有降级语义：读失败按无元数据处理');
+
+      server.failGets = false;
+      final m2 = await service.getMetadata(path: 'm10_fail.json');
+      expect(m2!.metadata!['fingerprint'], 'fp-e',
+          reason: 'M10: 瞬时失败不得把空元数据钉死在缓存里');
+    });
   });
 
   group('信封格式（方案C / 审计 W-I）', () {
@@ -282,6 +447,61 @@ void main() {
         ),
         throwsA(isA<CloudPreconditionFailedException>()),
       );
+    });
+
+    // 审计 C2：上游 webdav_client 对不返回 getetag 的服务器给空串而非
+    // null。存在性判定必须以 PROPFIND 是否命中条目为准 —— 否则空串被
+    // 归一化为 null 后 ifNoneMatch 会盲覆盖已存在文件。
+    test('审计 C2：远端存在但服务器不返回 getetag → ifNoneMatch 条件失败',
+        () async {
+      // 只登记文件、不登记 etag → FakeServer 的 PROPFIND 不带 getetag 属性
+      server.files['/no-etag.json'] = utf8.encode('x');
+
+      await expectLater(
+        service.uploadBinaryConditional(
+          path: 'no-etag.json',
+          bytes: utf8.encode('y'),
+          ifNoneMatch: true,
+        ),
+        throwsA(isA<CloudPreconditionFailedException>()),
+      );
+      // 未发生写入（防盲覆盖）
+      expect(utf8.decode(server.files['/no-etag.json']!), 'x');
+    });
+
+    test('审计 C2：远端存在无 getetag + ifMatch → fail-closed 拒绝', () async {
+      server.files['/no-etag.json'] = utf8.encode('x');
+
+      await expectLater(
+        service.uploadBinaryConditional(
+          path: 'no-etag.json',
+          bytes: utf8.encode('y'),
+          ifMatchEtag: 'whatever',
+        ),
+        throwsA(isA<CloudPreconditionFailedException>()),
+      );
+      expect(utf8.decode(server.files['/no-etag.json']!), 'x');
+    });
+
+    test('审计 C2：远端不存在 + ifNoneMatch 正常创建（不受 getetag 影响）',
+        () async {
+      await service.uploadBinaryConditional(
+        path: 'fresh.json',
+        bytes: utf8.encode('first'),
+        ifNoneMatch: true,
+      );
+
+      expect(server.files['/fresh.json'], isNotNull);
+      // 第二次 create-only 必须失败
+      await expectLater(
+        service.uploadBinaryConditional(
+          path: 'fresh.json',
+          bytes: utf8.encode('second'),
+          ifNoneMatch: true,
+        ),
+        throwsA(isA<CloudPreconditionFailedException>()),
+      );
+      expect(utf8.decode(server.files['/fresh.json']!), 'first');
     });
 
     test('ifNoneMatch 且远端不存在 → 创建成功', () async {

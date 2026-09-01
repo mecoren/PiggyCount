@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:meta/meta.dart';
+
 import '../core/cloud_provider.dart';
 import '../core/data_serializer.dart';
 import '../core/exceptions.dart';
@@ -52,6 +54,21 @@ String? _metaValue(Map<String, dynamic>? metadata, String key) {
   }
   return null;
 }
+
+/// [CloudSyncManager.upload] 的写后校验结论（审计 C3）。
+@immutable
+class CloudUploadResult {
+  /// true = 写后校验通过，或后端无法提供 metadata 而无从校验（降级放行）。
+  ///
+  /// false = 云端指纹与本次写入**确定性不一致**：内容已被其他设备并发
+  /// 覆盖，或网关返回了陈旧副本。调用方不应视为上传失败（数据已在
+  /// 云端），但也不应据此标记「已同步」/清除本地脏标记 —— 保持脏状态，
+  /// 由下次 getStatus 探测真实差异并进入冲突/合并流程。
+  final bool verified;
+
+  const CloudUploadResult({required this.verified});
+}
+
 
 /// Cached sync status entry
 class _CachedStatus {
@@ -126,6 +143,14 @@ class CloudSyncManager<T> {
   /// Throws [CloudNotAuthenticatedException] if user not authenticated.
   /// Throws [CloudStorageException] if upload fails.
   ///
+  /// 审计 C3：返回写后校验结论。`verified=false` 表示上传后重读云端
+  /// 指纹与本次写入不一致 —— 内容已被并发覆盖或网关返回陈旧副本。
+  /// 调用方**不得**把它当上传失败（数据确实已在云端，硬抛会诱发盲目
+  /// 重传覆盖他机新版本），但也**不得**据此标记「已同步」/清除本地脏
+  /// 标记 —— 应保持脏状态，让下次 getStatus 探测到真实差异并走冲突/
+  /// 合并流程。旧代码此场景只记日志，调用方无感知地清了脏标记，
+  /// 并发覆盖被双重掩盖。
+  ///
   /// Example:
   /// ```dart
   /// await manager.upload(
@@ -134,7 +159,7 @@ class CloudSyncManager<T> {
   ///   metadata: {'version': '1.0'},
   /// );
   /// ```
-  Future<void> upload({
+  Future<CloudUploadResult> upload({
     required T data,
     required String path,
     Map<String, String>? metadata,
@@ -225,14 +250,16 @@ class CloudSyncManager<T> {
       // 5.5 写后校验（defense-in-depth）：重新读取云端指纹，与我们写入的
       // 比对。不一致说明「写入被并发覆盖」或「网关返回了陈旧副本」。
       // 不硬抛 —— 部分网关（R2/OSS 边缘缓存）存在读写短暂不一致窗口，
-      // 硬抛会把成功上传误报为失败；强一致保证由条件写承担，此处仅
-      // 记录错误并失效状态缓存，让下次 getStatus 强制重查真实指纹。
-      await _verifyAfterUpload(path, actualFingerprint);
+      // 硬抛会把成功上传误报为失败；强一致保证由条件写承担。此处把
+      // 结论经返回值上浮（审计 C3），并失效状态缓存让下次 getStatus
+      // 强制重查真实指纹。
+      final verified = await _verifyAfterUpload(path, actualFingerprint);
 
       // 6. Invalidate cache
       _statusCache.remove(path);
 
       logger?.info('Upload completed: $path');
+      return CloudUploadResult(verified: verified);
     } catch (e) {
       logger?.error('Upload failed: $e');
       if (e is CloudSyncException) {
@@ -244,9 +271,11 @@ class CloudSyncManager<T> {
 
   /// 写后校验（方案C，defense-in-depth）。
   ///
-  /// 上传成功后重读云端指纹与我们写入的比对。任何失败（元数据不可用、
-  /// 网络抖动等）都只降级为 warning，绝不阻断已成功的上传。
-  Future<void> _verifyAfterUpload(String path, String expectedFingerprint) async {
+  /// 上传成功后重读云端指纹与我们写入的比对。返回 false = 确定性不一致
+  /// （云端已被并发覆盖）；true = 一致，或 metadata 不可用/无指纹字段
+  /// 而无法校验（降级放行，绝不阻断已成功的上传）。审计 C3：结论不再
+  /// 只进日志 —— 经 upload() 返回值上浮给调用方。
+  Future<bool> _verifyAfterUpload(String path, String expectedFingerprint) async {
     try {
       final file = await provider.storage.getMetadata(path: path);
       final actual = _metaValue(file?.metadata, 'fingerprint');
@@ -257,11 +286,13 @@ class CloudSyncManager<T> {
         // 失效缓存：下次 getStatus 强制重查，UI 会据真实指纹给出
         // outOfSync/conflict 判定
         _statusCache.remove(path);
-      } else {
-        logger?.debug('Post-upload verify passed: $path');
+        return false;
       }
+      logger?.debug('Post-upload verify passed: $path');
+      return true;
     } catch (e) {
       logger?.warning('Post-upload verify skipped (metadata unavailable): $e');
+      return true;
     }
   }
 
@@ -292,7 +323,10 @@ class CloudSyncManager<T> {
 
     try {
       // 2. Download from cloud storage
-      final serializedData = await provider.storage.download(path: path);
+      //
+      // 审计 M14：非 final —— 完整性校验的竞态重试会替换为重下的新内容，
+      // 反序列化必须使用校验通过的最终版本。
+      var serializedData = await provider.storage.download(path: path);
 
       if (serializedData == null) {
         logger?.info('Download completed: File not found');
@@ -305,30 +339,53 @@ class CloudSyncManager<T> {
       // metadata 指纹与实际内容脱钩（S3 控制台改写/CDN 陈旧副本）把脏
       // 数据交给恢复流程。校验失败硬失败；metadata 读取失败不阻断
       // （部分后端旁路元数据缺失属自愈降级）。
-      try {
+      //
+      // 审计 M14：「下载内容」与「读元数据」是两次独立请求，两请求之间
+      // 被其他设备并发上传时会把合法新内容误判为损坏。故首次不一致时
+      // 重试一次（重下内容 + 重读元数据）：并发竞态 → 第二次两者自洽，
+      // 放行；真实脱钩（控制台改写 / 持久性陈旧副本）→ 仍不一致，硬失败。
+      Future<bool> integrityOk() async {
         final cloudFile = await provider.storage.getMetadata(path: path);
         // metadata 值经 _metaValue 归一化：剥离存储层可能的 'b64:' 包装
         // （S3 兼容网关原样返回编码值），否则指纹永不相等；键按大小写
         // 无关匹配（S3 传输层会把头名转小写）。
         final expected = _metaValue(cloudFile?.metadata, 'fingerprint');
-        if (expected != null) {
-          final actual = serializer.fingerprint(serializedData);
-          if (actual != expected) {
-            logger?.error('Integrity check failed: $path '
-                '(expected=$expected, actual=$actual)');
-            throw CloudStorageException(
-                '云端数据完整性校验失败（指纹不匹配）: $path');
+        if (expected == null) return true; // 无指纹可校验 → 放行
+        return serializer.fingerprint(serializedData!) == expected;
+      }
+
+      try {
+        var ok = await integrityOk();
+        if (!ok) {
+          logger?.warning('Integrity mismatch on first read '
+              '(possible concurrent-update race), re-checking: $path');
+          final retried = await provider.storage.download(path: path);
+          if (retried != null) {
+            serializedData = retried;
+            ok = await integrityOk();
+          } else {
+            // 并发删除窗口：文件已不存在。沿用「元数据不可用」降级语义，
+            // 不阻断本次返回；getStatus 后续探测会给出真实状态。
+            logger?.warning('Integrity re-check skipped: file disappeared '
+                'mid-verification (concurrent delete?): $path');
+            ok = true;
           }
-          logger?.debug('Integrity check passed: $path');
         }
+        if (!ok) {
+          logger?.error('Integrity check failed: $path '
+              '(fingerprint mismatch persisted across re-read)');
+          throw CloudStorageException(
+              '云端数据完整性校验失败（指纹不匹配）: $path');
+        }
+        logger?.debug('Integrity check passed: $path');
       } on CloudSyncException {
         rethrow;
       } catch (e) {
         logger?.warning('Integrity check skipped (metadata unavailable): $e');
       }
 
-      // 3. Deserialize business data
-      final data = await serializer.deserialize(serializedData);
+      // 3. Deserialize business data（M14：使用校验通过的最终内容）
+      final data = await serializer.deserialize(serializedData!);
 
       // 4. Invalidate cache
       _statusCache.remove(path);

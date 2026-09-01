@@ -30,6 +30,10 @@ class S3SignatureV4 {
   /// [headers] 原始请求 headers
   /// [payloadBytes] 请求体字节数组（可选）
   /// [at] 签名时间（仅测试注入用，省略时取当前 UTC 时间）
+  /// [payloadHashOverride] M4：显式覆盖 payload hash。
+  /// 流式上传无法预知完整 body 的 SHA-256，传入 `'UNSIGNED-PAYLOAD'`
+  /// 时只签头部、不签 body（AWS 及 MinIO/OSS/COS/R2 等主流 S3 兼容
+  /// 服务均支持）。canonical request 末行的 payload hash 同样使用该值。
   ///
   /// 返回包含签名的完整 headers
   Map<String, String> sign({
@@ -38,6 +42,7 @@ class S3SignatureV4 {
     required Map<String, String> headers,
     List<int>? payloadBytes,
     DateTime? at,
+    String? payloadHashOverride,
   }) {
     // 审计 S22：叠加时钟偏差补偿，设备时钟不准时仍可产出服务端
     // 容忍窗口（±15min）内的签名时间。
@@ -47,7 +52,8 @@ class S3SignatureV4 {
 
     // 1. 准备 headers
     final mutableHeaders = Map<String, String>.from(headers);
-    final payloadHash = _sha256HashBytes(payloadBytes ?? []);
+    final payloadHash =
+        payloadHashOverride ?? _sha256HashBytes(payloadBytes ?? []);
     mutableHeaders['x-amz-date'] = amzDate;
     mutableHeaders['x-amz-content-sha256'] = payloadHash;
 

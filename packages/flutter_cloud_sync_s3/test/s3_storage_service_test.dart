@@ -186,4 +186,43 @@ void main() {
       }
     });
   });
+
+  // 方案C 契约补全（审计 C1）：条件写遇「远端已被并发删除」时
+  // AWS/MinIO 返回 404 NoSuchKey，必须与 412 同样翻译为
+  // CloudPreconditionFailedException —— 上层据此走冲突流程；
+  // 落成通用 CloudStorageException 会把核心并发竞态误报为存储故障。
+  group('S3StorageService 条件写 404 翻译', () {
+    test('uploadBinaryConditional 遇 404 抛 CloudPreconditionFailedException',
+        () async {
+      final mock = MockClient((request) async =>
+          http.Response('<?xml version="1.0"?><Error><Code>NoSuchKey</Code>'
+              '<Message>Not Found</Message></Error>', 404));
+
+      final service = S3StorageService(_client(mock), 'mybucket');
+      await expectLater(
+        service.uploadBinaryConditional(
+          path: 'ledger_x.json',
+          bytes: [1, 2, 3],
+          ifMatchEtag: 'stale-etag',
+        ),
+        throwsA(isA<CloudPreconditionFailedException>()),
+      );
+    });
+
+    test('uploadBinaryConditional ifNoneMatch 遇 404 同样按条件失败', () async {
+      final mock = MockClient((request) async =>
+          http.Response('<?xml version="1.0"?><Error><Code>NoSuchKey</Code>'
+              '<Message>Not Found</Message></Error>', 404));
+
+      final service = S3StorageService(_client(mock), 'mybucket');
+      await expectLater(
+        service.uploadBinaryConditional(
+          path: 'ledger_x.json',
+          bytes: [1, 2, 3],
+          ifNoneMatch: true,
+        ),
+        throwsA(isA<CloudPreconditionFailedException>()),
+      );
+    });
+  });
 }

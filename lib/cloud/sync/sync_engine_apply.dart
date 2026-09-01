@@ -93,14 +93,22 @@ extension SyncEngineApplyExt on SyncEngine {
     final syncId = change.entitySyncId;
 
     if (change.action == 'delete') {
-      // delete 路径:先看 cache 拿 id(避免 N+1 SELECT);cache miss 再 DB
+      // delete 路径:先看 cache 拿 id(避免 N+1 SELECT);cache miss 再 DB。
+      // 审计 M22：miss 回源不能以「cache 整体不存在」为前提 —— prime 之后
+      // 若有事务外并发写入（用户编辑/恢复）插入了同 syncId 行，cache 不知道；
+      // 此处若直接跳过，远端删除被静默吞掉，本地残留已删交易且无错误记录。
       final cachedTx = activePullCache?.transaction(syncId);
       int? existingId = cachedTx?.id;
-      if (existingId == null && activePullCache == null) {
+      if (existingId == null) {
         final existing = await (db.select(db.transactions)
               ..where((t) => t.syncId.equals(syncId)))
             .getSingleOrNull();
         existingId = existing?.id;
+        // 回源命中则回填 cache，后续同 syncId 的 change 仍走快路径
+        if (existing != null) {
+          activePullCache?.putTransaction(
+              syncId, existing.id, existing.createdByUserId);
+        }
       }
       if (existingId != null) {
         // 先清磁盘附件(原图 + 缩略图),再删 transaction_attachments 行 ——
@@ -273,15 +281,24 @@ extension SyncEngineApplyExt on SyncEngine {
     // 查 existing 优先走 LookupCache(prime 时已全表加载 transactions 的
     // syncId / id / createdByUserId),消除 10k 条 = 10k 次 SELECT 的 N+1。
     // miss(冷启动新设备 / 老数据)再走 DB。
+    // 审计 M22：miss 回源不能以「cache 整体不存在」为前提 —— prime 之后
+    // 有事务外并发写入（用户编辑/另一路 restore）插入同 syncId 行时，cache
+    // 不知道该行存在；若直接走 INSERT 会撞 uq_transactions_sync_id 唯一
+    // 索引 → 整页 rollback、游标停在该页反复重放直至进程重启。cache 只是
+    // 加速器，miss 必须回源 DB 做事实判定（命中后回填 cache 保持快路径）。
     final cachedTx = activePullCache?.transaction(syncId);
     int? existingId = cachedTx?.id;
     String? existingCreatedByUserId = cachedTx?.createdByUserId;
-    if (existingId == null && activePullCache == null) {
+    if (existingId == null) {
       final existing = await (db.select(db.transactions)
             ..where((t) => t.syncId.equals(syncId)))
           .getSingleOrNull();
-      existingId = existing?.id;
-      existingCreatedByUserId = existing?.createdByUserId;
+      if (existing != null) {
+        existingId = existing.id;
+        existingCreatedByUserId = existing.createdByUserId;
+        activePullCache?.putTransaction(
+            syncId, existing.id, existing.createdByUserId);
+      }
     }
 
     // 共享账本(v24):server 注入 createdByUserId / updatedByUserId,本地用来
@@ -321,6 +338,13 @@ extension SyncEngineApplyExt on SyncEngine {
       d.Value<double?> nativeValue;
       if (hasNativeKey) {
         nativeValue = d.Value(payloadNative);
+      } else if (!hasAmountKey) {
+        // 审计 C5：连 amount 键都不携带的 partial payload（只改 note/
+        // type 等）没有金额信息 —— 此处若用占位值 amount=0.0 参与
+        // 「金额是否变化」判断，oldTx.amount != 0.0 几乎恒真，会把
+        // 本地折算值写成 0.0 并随 push 扩散全端。缺键 = 无信息，
+        // 一律保留本地折算。
+        nativeValue = const d.Value.absent();
       } else {
         final oldTx = await (db.select(db.transactions)
               ..where((t) => t.id.equals(existingId!)))
@@ -1109,8 +1133,9 @@ extension SyncEngineApplyExt on SyncEngine {
           ..where((t) =>
               t.baseCurrency.equals(base) & t.quoteCurrency.equals(quote)))
         .getSingleOrNull();
+    late final int rowId;
     if (existing == null) {
-      await db
+      rowId = await db
           .into(db.exchangeRateOverrides)
           .insert(ExchangeRateOverridesCompanion.insert(
             baseCurrency: base,
@@ -1120,6 +1145,7 @@ extension SyncEngineApplyExt on SyncEngine {
             updatedAt: d.Value(updatedAt),
           ));
     } else {
+      rowId = existing.id;
       await (db.update(db.exchangeRateOverrides)
             ..where((t) => t.id.equals(existing.id)))
           .write(ExchangeRateOverridesCompanion(
@@ -1128,6 +1154,17 @@ extension SyncEngineApplyExt on SyncEngine {
         updatedAt: d.Value(updatedAt),
       ));
     }
+    // 审计 M24：与 account/category/tag 对齐，登记 server_marker —— 此前
+    // pull 进来的 override 不留任何 local_changes 行，而它在
+    // _backfillLegacyUserGlobalChanges 的 user-global 白名单里 → 每个
+    // session 首次 push 都把全部已拉取的汇率覆盖当 legacy 重推一遍
+    // （服务端幂等不坏数据，但每次冷启多 N 条冗余变更 + 其他设备多拉一轮回声）。
+    await changeTracker.recordPulledFromServer(
+      entityType: 'exchange_rate_override',
+      entityId: rowId,
+      entitySyncId: change.entitySyncId,
+      ledgerId: 0,
+    );
   }
 
   /// 应用远程下发的账本元数据变更(名字 / 币种)。

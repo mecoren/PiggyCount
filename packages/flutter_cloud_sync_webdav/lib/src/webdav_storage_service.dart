@@ -17,6 +17,46 @@ class WebDAVStorageService
 
   WebDAVStorageService(this._client, this._remotePath);
 
+  /// 审计 M10：getMetadata 元数据解析缓存，键为 `fullPath\u0000eTag`。
+  ///
+  /// 背景：WebDAV 的元数据存在信封内嵌 meta（新格式）或 sidecar JSON
+  /// （旧格式）里，两条解析路径都要求 GET 文件全文；而 getStatus /
+  /// 写后校验会以缓存 TTL（30s）级别的频率反复调 getMetadata，大快照
+  /// 下等于每次状态检查都全量拉一遍主文件。
+  ///
+  /// 依据：eTag（PROPFIND 父目录扫描已免费带回）是内容寻址的——eTag
+  /// 未变 ⇒ 信封内容未变 ⇒ meta 必然相同；sidecar 为旧格式遗留，
+  /// 方案C 后不再有写入方，不会脱离主文件漂移。故解析结果按
+  /// (path, eTag) 缓存，命中直接复用，重复调用零下载。
+  ///
+  /// 边界：
+  /// - 服务器不返回 getetag（审计 C2 已记录的兼容形态）→ 无缓存键，
+  ///   保持逐次读取的旧行为
+  /// - 解析遭遇瞬时故障（网络抖动）→ 不缓存，避免把「读失败」钉死
+  ///   成「无元数据」导致后续永远拿不到 fingerprint
+  /// - 容量上限 [_metaCacheLimit]（插入序淘汰），防超大桶长驻内存
+  final Map<String, Map<String, dynamic>> _metaCache =
+      <String, Map<String, dynamic>>{};
+  static const int _metaCacheLimit = 64;
+
+  /// M10：元数据缓存写入（先删后插刷新插入序，热点条目不被误淘汰）。
+  void _cacheMeta(String key, Map<String, dynamic> meta) {
+    _metaCache.remove(key);
+    if (_metaCache.length >= _metaCacheLimit) {
+      _metaCache.remove(_metaCache.keys.first);
+    }
+    _metaCache[key] = meta;
+  }
+
+  /// 审计 WD-2：已确认存在的父目录缓存（进程内，随服务实例生命周期）。
+  ///
+  /// [_atomicPublish] 此前每次上传都先 [_ensureDirectory] —— 一次父目录
+  /// readDir（Depth-1 全量 listing）。附件目录动辄数千文件时，等于每次
+  /// 上传都把父目录完整列一遍，纯开销。会话内确认过存在的目录直接跳过
+  /// 探测；若目录在会话期间被外部删除，临时文件写入会吃 404，写入失败
+  /// 分支负责失效缓存并重建重试（自愈语义与旧行为一致）。
+  final Set<String> _ensuredDirs = <String>{};
+
   /// P3：WebDAV 单次操作 60s 超时。webdav_client 未暴露 dio 超时配置，
   /// 服务器无响应时 future 永不完成会让同步 UI 永久挂起，
   /// 在服务层统一包 .timeout 兜底。
@@ -164,13 +204,26 @@ class WebDAVStorageService
     }
   }
 
+  /// 审计 WD-Y2：文件操作拒绝以 `/` 结尾的路径 —— 尾斜杠在 WebDAV
+  /// 语义里是「集合（目录）」标记：GET 一个集合，部分服务器返回
+  /// 200 + HTML 目录列表，信封解包失败后**被当文件内容原样返回**，
+  /// 损坏数据无声流入下游；DELETE 一个集合更可能连目录带数据整体
+  /// 删除。文件操作一律显式拒绝（列目录请用 [list]）。
+  void _assertFilePath(String path) {
+    _assertNonEmptyPath(path);
+    if (path.trim().endsWith('/')) {
+      throw CloudConfigurationException(
+          'WebDAV 文件操作不接受以 / 结尾的路径（如需列目录请用 list）: $path');
+    }
+  }
+
   @override
   Future<void> upload({
     required String path,
     required String data,
     Map<String, String>? metadata,
   }) async {
-    _assertNonEmptyPath(path);
+    _assertFilePath(path);
     final hasMeta = metadata != null && metadata.isNotEmpty;
     // 方案C（审计 W-I）：带元数据的文本上传合并为单信封文件原子发布，
     // 消除「主文件已落位、sidecar 未更新」窗口期的完整性校验硬失败。
@@ -187,7 +240,7 @@ class WebDAVStorageService
     required List<int> bytes,
     Map<String, String>? metadata,
   }) async {
-    _assertNonEmptyPath(path);
+    _assertFilePath(path);
     final hasMeta = metadata != null && metadata.isNotEmpty;
     // 带元数据的二进制走 base64 信封；无元数据保持裸字节（零开销，
     // 附件/ZIP 备份等大头不受影响）
@@ -211,36 +264,34 @@ class WebDAVStorageService
     if (ifMatchEtag != null && ifNoneMatch) {
       throw ArgumentError('ifMatchEtag 与 ifNoneMatch 互斥，不能同时传入');
     }
-    _assertNonEmptyPath(path);
+    _assertFilePath(path);
 
     // 方案C：WebDAV 无标准条件 PUT（webdav_client 不透传 If-Match），
     // 以「上传前重取 eTag 比对」近似乐观锁 —— 显著收窄竞态窗口但非原子，
     // 调用方仍需配合 manager 层写后校验兜底（见 ConditionalWriteStorage 注释）。
-    final currentETag = await _currentETag(_buildPath(path));    if (ifMatchEtag != null) {
-      if (currentETag == null ||
-          _normalizeETag(currentETag) != _normalizeETag(ifMatchEtag)) {
+    //
+    // 审计 C2：远端状态判定必须区分「对象不存在」（entry == null，可安全
+    // 放行 ifNoneMatch）与「对象存在但服务器不返回 getetag」（上游
+    // webdav_client 此时给空串而非 null —— 若把空串归一化成 null 再用
+    // 「etag != null」判存在，会让 ifNoneMatch 在此类服务器上盲覆盖已存在
+    // 文件）。故以 entry 是否命中为准，etag 仅用于 ifMatch 的值比对；
+    // etag 未知的 ifMatch 保持 fail-closed（无法验证即拒绝），不丢数据。
+    final entry = await _findEntry(_buildPath(path));
+    final currentETag = _normalizeETag(entry?.eTag);
+    if (ifMatchEtag != null) {
+      if (entry == null ||
+          currentETag == null ||
+          currentETag != _normalizeETag(ifMatchEtag)) {
         throw CloudPreconditionFailedException(
             path, 'WebDAV 条件写失败（远端已被其他设备修改或不存在）: $path');
       }
     }
-    if (ifNoneMatch && currentETag != null) {
+    if (ifNoneMatch && entry != null) {
       throw CloudPreconditionFailedException(
           path, 'WebDAV 条件写失败（远端已存在同名对象）: $path');
     }
 
     await uploadBinary(path: path, bytes: bytes, metadata: metadata);
-  }
-
-  /// 读取远端对象当前 ETag；不存在返回 null；服务器不返回 etag 属性
-  /// 也返回 null（调用方须容忍弱化语义）。
-  ///
-  /// 实现说明：走父目录 Depth-1 扫描而非 readProps —— 上游
-  /// webdav_client 的 readProps 会给路径强加尾斜杠（fixSlashes），
-  /// 多数服务器对「/file.json/」返回 404，对普通文件不可靠；
-  /// 目录列举是包内既有验证过的路径，且 PROPFIND 响应天然携带 getetag。
-  Future<String?> _currentETag(String fullPath) async {
-    final entry = await _findEntry(fullPath);
-    return entry?.eTag;
   }
 
   /// 在父目录 Depth-1 列举中查找单个文件条目（排除目录）。
@@ -292,11 +343,27 @@ class WebDAVStorageService
     final tempPath =
         '$fullPath.tmp.${DateTime.now().millisecondsSinceEpoch}_${_tempSeq++}';
     try {
-      // 确保父目录存在
-      await _ensureDirectory(PathHelper.dirname(fullPath));
+      // 确保父目录存在（会话内已确认过的目录跳过探测，见 _ensuredDirs）
+      final parentDir = PathHelper.dirname(fullPath);
+      if (!_ensuredDirs.contains(parentDir)) {
+        await _ensureDirectory(parentDir);
+        _ensuredDirs.add(parentDir);
+      }
 
       // 1. 先写临时文件（webdav write 需要 Uint8List，避免多余拷贝）
-      await _op('write', (t) => _client.write(tempPath, payload, cancelToken: t));
+      try {
+        await _op('write', (t) => _client.write(tempPath, payload, cancelToken: t));
+      } catch (e) {
+        if (!_ensuredDirs.contains(parentDir) || !_isNotFound(e)) {
+          rethrow;
+        }
+        // WD-2：会话内确认过、现在却 404 —— 目录被外部删除。失效缓存，
+        // 重建目录后重试一次写入，保持与旧行为一致的自愈能力。
+        _ensuredDirs.remove(parentDir);
+        await _ensureDirectory(parentDir);
+        _ensuredDirs.add(parentDir);
+        await _op('write', (t) => _client.write(tempPath, payload, cancelToken: t));
+      }
 
       // 2. 直接覆盖 rename（overwrite=true），失败时旧文件保持原样
       try {
@@ -386,6 +453,10 @@ class WebDAVStorageService
       // 方案C：信封解包（旧裸文件原样返回，无需迁移）
       final envelope = _tryUnwrapEnvelope(bytes);
       return envelope?.data ?? utf8.decode(bytes);
+    } on CloudConfigurationException {
+      // WD-Y2：配置类错误（空 path / 尾斜杠拒绝等）是调用方 bug，
+      // 原样上抛 —— 与 downloadBinary 的口径一致，不伪装成存储故障
+      rethrow;
     } on CloudAuthException {
       // downloadBinary 已识别的认证失败原样透传（不依赖字符串兜底）
       rethrow;
@@ -405,7 +476,7 @@ class WebDAVStorageService
 
   @override
   Future<Uint8List?> downloadBinary({required String path}) async {
-    _assertNonEmptyPath(path);
+    _assertFilePath(path);
     // 路径构造（含遍历防护）置于 try 之外：配置类错误必须原样上抛，
     // 不落入下方通用包装变成「存储故障」
     final fullPath = _buildPath(path);
@@ -435,7 +506,7 @@ class WebDAVStorageService
 
   @override
   Future<void> delete({required String path}) async {
-    _assertNonEmptyPath(path);
+    _assertFilePath(path);
     final fullPath = _buildPath(path);
 
     // C-02 修复：删除操作应幂等，404（文件不存在）视为成功
@@ -507,7 +578,7 @@ class WebDAVStorageService
 
   @override
   Future<bool> exists({required String path}) async {
-    _assertNonEmptyPath(path);
+    _assertFilePath(path);
     final fullPath = _buildPath(path);
     final parentDir = PathHelper.dirname(fullPath);
     final fileName = PathHelper.basename(fullPath);
@@ -538,7 +609,7 @@ class WebDAVStorageService
 
   @override
   Future<CloudFile?> getMetadata({required String path}) async {
-    _assertNonEmptyPath(path);
+    _assertFilePath(path);
     try {
       final fullPath = _buildPath(path);
 
@@ -553,20 +624,30 @@ class WebDAVStorageService
       //
       // 注意必须读**原始字节**（信封形态）——downloadBinary 会把信封
       // 解包成业务数据，二次解包永远得到 null。
-      Map<String, dynamic> customMetadata = const {};
-      try {
-        final rawBytes = await _opRetryable(
-            'read', (t) => _client.read(fullPath, cancelToken: t));
-        final envelope =
-            _tryUnwrapEnvelope(Uint8List.fromList(rawBytes));
-        if (envelope?.meta != null) {
-          customMetadata = envelope!.meta!;
+      //
+      // 审计 M10：解析结果按 (path, eTag) 缓存（见 _metaCache 注释），
+      // eTag 未变的重复调用零下载。
+      final eTag = _normalizeETag(file.eTag);
+      final cacheKey = (eTag == null || eTag.isEmpty)
+          ? null
+          : '$fullPath\u0000$eTag';
+      Map<String, dynamic> customMetadata;
+      final cached = cacheKey == null ? null : _metaCache[cacheKey];
+      if (cached != null) {
+        customMetadata = cached;
+      } else {
+        final resolved = await _resolveCustomMetadata(fullPath);
+        if (resolved == null) {
+          // 瞬时故障：维持既有「元数据缺失」降级语义，但不落缓存——
+          // 否则一次网络抖动会把这个 eTag 的元数据钉死为空，后续
+          // getStatus 永远拿不到 fingerprint 而反复全量回退
+          customMetadata = const {};
         } else {
-          customMetadata = await _getMetadata(fullPath);
+          customMetadata = resolved;
+          if (cacheKey != null) {
+            _cacheMeta(cacheKey, resolved);
+          }
         }
-      } catch (e) {
-        dev.log('[WebDAV] Warning: metadata source read failed for $fullPath: $e',
-            name: 'WebDAVStorage');
       }
 
       return CloudFile(
@@ -590,6 +671,28 @@ class WebDAVStorageService
       // 仅「确认不存在」收敛为 null（接口契约：getMetadata 缺失返回 null）；
       // 超时/网络等其余故障一律上抛，绝不静默变成「云端无元数据」
       throw CloudStorageException('Get metadata failed: $e', e);
+    }
+  }
+
+  /// M10：解析元数据（信封内嵌 meta → sidecar 回退）。
+  ///
+  /// 返回 null 表示解析过程遭遇瞬时故障（调用方不缓存）；
+  /// 非 null（含空 Map）为稳定解析结果（sidecar 缺失的 404 亦属稳定，
+  /// 旧格式裸文件本就无 sidecar），调用方可按 eTag 缓存。
+  Future<Map<String, dynamic>?> _resolveCustomMetadata(String fullPath) async {
+    try {
+      final rawBytes = await _opRetryable(
+          'read', (t) => _client.read(fullPath, cancelToken: t));
+      final envelope = _tryUnwrapEnvelope(Uint8List.fromList(rawBytes));
+      if (envelope?.meta != null) {
+        return envelope!.meta!;
+      }
+      return await _getMetadata(fullPath);
+    } catch (e) {
+      dev.log(
+          '[WebDAV] Warning: metadata source read failed for $fullPath: $e',
+          name: 'WebDAVStorage');
+      return null;
     }
   }
 

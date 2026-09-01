@@ -613,16 +613,47 @@ extension SyncEngineRealtime on SyncEngine {
     if (localId == null) return;
     // 审计 S9：db.dart 无外键级联，"tx + tags + attachments 走级联"的
     // 旧注释不成立——tags/attachments/budgets 同样残留，显式清理。
+    //
+    // 审计 M23：所有行必须在删除**之前**收集 —— 旧代码先 DELETE budgets
+    // 再 SELECT 收集水位 syncId，恒为空集，budget 水位行永不清（L2 声称
+    // 要清但实际失效）。
     final txs = await (db.select(db.transactions)
           ..where((t) => t.ledgerId.equals(localId)))
         .get();
     final txIds = txs.map((t) => t.id).toList();
+    final budgets = await (db.select(db.budgets)
+          ..where((b) => b.ledgerId.equals(localId)))
+        .get();
+    final recurrings = await (db.select(db.recurringTransactions)
+          ..where((r) => r.ledgerId.equals(localId)))
+        .get();
+    // accounts 是 user-global 实体（legacy ledgerId 列仅作归属展示），
+    // 与 deleteLedger S9 口径一致：不删行、只清水位。
+    final accounts = await (db.select(db.accounts)
+          ..where((a) => a.ledgerId.equals(localId)))
+        .get();
+
     if (txIds.isNotEmpty) {
       await (db.delete(db.transactionTags)
             ..where((tt) => tt.transactionId.isIn(txIds)))
           .go();
       await (db.delete(db.transactionAttachments)
             ..where((ta) => ta.transactionId.isIn(txIds)))
+          .go();
+      // 对齐 deleteLedger：共享标签 override 按主键文本 tx.syncId 清理
+      final txSyncIds =
+          txs.map((t) => t.syncId).whereType<String>().toList();
+      if (txSyncIds.isNotEmpty) {
+        await (db.delete(db.transactionTagOverrides)
+              ..where((o) => o.transactionSyncId.isIn(txSyncIds)))
+            .go();
+      }
+    }
+    // 审计 M23（M2 同类）：删除账本自身的周期规则模板 —— 只收水位不删行
+    // 会留下孤儿规则，有被生成器复活成悬空 ledgerId 交易的风险。
+    if (recurrings.isNotEmpty) {
+      await (db.delete(db.recurringTransactions)
+            ..where((r) => r.ledgerId.equals(localId)))
           .go();
     }
     await (db.delete(db.budgets)..where((b) => b.ledgerId.equals(localId))).go();
@@ -641,27 +672,15 @@ extension SyncEngineRealtime on SyncEngine {
     await (db.delete(db.localChanges)
           ..where((c) => c.ledgerId.equals(localId)))
         .go();
+    // 审计 L2：与 deleteLedger S9 口径对齐 —— 该账本名下各实体的水位行
+    // 全部清理（数据已在上方删除前收集），防残留无限累积。
     final watermarkSyncIds = <String>[
       ledgerExternalId,
       ...txs.map((t) => t.syncId).whereType<String>(),
+      ...budgets.map((b) => b.syncId).whereType<String>(),
+      ...recurrings.map((r) => r.syncId).whereType<String>(),
+      ...accounts.map((a) => a.syncId).whereType<String>(),
     ];
-    // 审计 L2：与 deleteLedger S9 口径对齐 —— 该账本名下的 budgets /
-    // recurrings / accounts 的水位行同样要清，否则残留行无限累积。
-    for (final row in await (db.select(db.budgets)
-          ..where((b) => b.ledgerId.equals(localId)))
-        .get()) {
-      if (row.syncId != null) watermarkSyncIds.add(row.syncId!);
-    }
-    for (final row in await (db.select(db.recurringTransactions)
-          ..where((r) => r.ledgerId.equals(localId)))
-        .get()) {
-      if (row.syncId != null) watermarkSyncIds.add(row.syncId!);
-    }
-    for (final row in await (db.select(db.accounts)
-          ..where((a) => a.ledgerId.equals(localId)))
-        .get()) {
-      if (row.syncId != null) watermarkSyncIds.add(row.syncId!);
-    }
     if (watermarkSyncIds.isNotEmpty) {
       await (db.delete(db.entityChangeWatermarks)
             ..where((w) => w.syncId.isIn(watermarkSyncIds)))

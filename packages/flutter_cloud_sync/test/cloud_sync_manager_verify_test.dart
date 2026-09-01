@@ -59,6 +59,9 @@ class _PlainStorage implements CloudStorageService {
   /// 模拟「上传后云端被并发改写」：upload 完成后立刻替换云端内容
   void Function(_PlainStorage storage, String path)? afterUpload;
 
+  /// 非 null 时 getMetadata 抛错（模拟网关抖动导致元数据不可用）
+  Object? metadataError;
+
   @override
   Future<void> upload(
       {required String path,
@@ -85,6 +88,8 @@ class _PlainStorage implements CloudStorageService {
 
   @override
   Future<CloudFile?> getMetadata({required String path}) async {
+    final err = metadataError;
+    if (err != null) throw err;
     final f = files[path];
     if (f == null) return null;
     return CloudFile(
@@ -202,19 +207,47 @@ void main() {
         () async {
       final storage = _PlainStorage();
       // 模拟网关在 PUT 落盘后、写后校验读取前，云端被其他设备覆盖
+      // （覆盖方会写入它自己的 metadata/fingerprint）
       storage.afterUpload = (s, path) {
         final f = s.files[path]!;
-        s.files[path] = _File('{"id":999}', f.metadata);
+        final meta = Map<String, dynamic>.from(f.metadata ?? {});
+        meta['fingerprint'] = 'other-device-fingerprint';
+        s.files[path] = _File('{"id":999}', meta);
       };
       final manager = CloudSyncManager<int>(
           provider: _Provider(_Auth(), storage), serializer: _Ser());
 
       // 不应抛出（可用性优先），但内部已记录错误并失效缓存
-      await manager.upload(data: 1, path: 'a.json');
+      final outcome = await manager.upload(data: 1, path: 'a.json');
+
+      // 审计 C3：校验结论必须上浮 —— 并发覆盖时 verified=false，
+      // 调用方据此不得标记「已同步」/清除脏标记
+      expect(outcome.verified, isFalse,
+          reason: 'C3 前此场景只记日志，调用方无感知地把数据标成已同步');
 
       // 缓存失效的直接可观测效果：getStatus 强制走真实探测路径而非缓存
       final status = await manager.getStatus(path: 'a.json');
       expect(status.cloudFingerprint, isNotNull);
+    });
+
+    test('审计 C3 对照：正常上传 verified=true', () async {
+      final storage = _PlainStorage();
+      final manager = CloudSyncManager<int>(
+          provider: _Provider(_Auth(), storage), serializer: _Ser());
+
+      final outcome = await manager.upload(data: 1, path: 'a.json');
+      expect(outcome.verified, isTrue);
+    });
+
+    test('审计 C3：metadata 不可用 → 降级放行 verified=true', () async {
+      final storage = _PlainStorage();
+      final manager = CloudSyncManager<int>(
+          provider: _Provider(_Auth(), storage), serializer: _Ser());
+      // 模拟 getMetadata 抛错（网关抖动）：不阻断成功上传
+      storage.metadataError = Exception('gateway flake');
+
+      final outcome = await manager.upload(data: 1, path: 'a.json');
+      expect(outcome.verified, isTrue);
     });
   });
 }

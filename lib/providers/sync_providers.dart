@@ -119,10 +119,24 @@ final cloudConfigCorruptionProvider =
     StateProvider<({String backend, String message})?>((_) => null);
 
 // 当前激活配置（Future，因需读 SharedPreferences）
+//
+// 审计 M16：loadActive 因安全存储读失败显式上抛时，这里先复用损坏
+// banner 把失败呈现给用户，再原样上抛——同步链路（syncServiceProvider /
+// authServiceProvider 对 !hasValue 降级 LocalOnly）与 .future 消费点必须
+// 感知失败，不允许伪装成「用户切回了本地模式」无声停摆。
 final activeCloudConfigProvider =
     FutureProvider<CloudServiceConfig>((ref) async {
   final store = ref.watch(cloudServiceStoreProvider);
-  final cfg = await store.loadActive();
+  final CloudServiceConfig cfg;
+  try {
+    cfg = await store.loadActive();
+  } catch (e) {
+    ref.read(cloudConfigCorruptionProvider.notifier).state = (
+      backend: CloudServiceStore.lastLoadErrorBackend ?? 'secure_storage',
+      message: CloudServiceStore.lastLoadErrorMessage ?? e.toString(),
+    );
+    rethrow;
+  }
   final errBackend = CloudServiceStore.lastLoadErrorBackend;
   ref.read(cloudConfigCorruptionProvider.notifier).state =
       errBackend == null

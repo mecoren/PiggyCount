@@ -93,8 +93,15 @@ extension _SyncEngineResolvers on SyncEngine {
     return rows.isEmpty ? null : rows.first.id;
   }
 
-  Future<String> _getDeviceId() async {
+  /// 本机 deviceId。解析失败返回 **null**（审计 M20）。
+  ///
+  /// 此前失败时回落共享哨兵 'unknown'：多台设备同时解析失败（会话异常/
+  /// metadata 缺失）会把**彼此**的 change 都当成自联回声跳过并推进水位，
+  /// 合法远端修改被静默吞掉且在会话内被水位固化。null 化后调用方对
+  /// 「无法确认是回声」的变更一律走正常应用路径 —— 宁可多做一次幂等
+  /// 应用，不可误判回声丢更新。
+  Future<String?> _getDeviceId() async {
     final user = await provider.auth.currentUser;
-    return user?.metadata?['deviceId'] as String? ?? 'unknown';
+    return user?.metadata?['deviceId'] as String?;
   }
 }

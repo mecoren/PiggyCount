@@ -91,13 +91,22 @@ class S3Client {
     }
   }
 
+  /// 审计 S3-M2：ListObjects 翻页页数硬上限。
+  ///
+  /// 单页服务端上限 1000 对象，1000 页 ≈ 100 万对象，正常桶不会触达。
+  /// 故障网关（恒 IsTruncated=true / 回放同一 token / 忽略 marker）下，
+  /// 无护栏的 do-while 会无限翻页：流量与请求费用持续耗散、调用方
+  /// （探测 / list / 附件清理）永久挂起。触顶即抛 [S3Exception] 显式失败。
+  static const int _maxListPages = 1000;
+
   /// 对幂等操作执行指数退避重试，避免瞬时网络故障导致同步失败
   ///
   /// 仅重试 [S3NetworkException]（瞬时网络故障）和 5xx 服务端错误；
   /// 4xx 客户端错误（认证失败、权限不足、参数错误等）立即抛出，
   /// 避免无意义重试浪费时间和请求配额。
   /// putObject 非幂等（重复写入可能造成数据覆盖语义问题），不使用此方法。
-  Future<T> _retry<T>(Future<T> Function() operation, {int maxRetries = 3}) async {
+  Future<T> _retry<T>(Future<T> Function() operation,
+      {int maxRetries = 3, Set<int> neverRetryStatusCodes = const {}}) async {
     int attempt = 0;
     while (true) {
       try {
@@ -116,8 +125,17 @@ class S3Client {
         // P5：指数退避 + jitter（1s/2s/4s 的 50%~100% 区间）
         await Future.delayed(retryDelayForTest(attempt));
       } on S3Exception catch (e) {
-        // 5xx 状态码表示服务端临时错误，可重试
-        if (e.statusCode != null && e.statusCode! >= 500 && e.statusCode! < 600) {
+        // 5xx 状态码表示服务端临时错误，可重试；
+        // 审计 S3-M3：neverRetryStatusCodes 中的状态码（如 501 Not
+        // Implemented）是**确定性**失败，重试只会白耗退避延迟——调用方
+        // （listObjectsDetailed）需要它立即上抛以走 V1 协议回退。
+        final status = e.statusCode;
+        final neverRetry =
+            status != null && neverRetryStatusCodes.contains(status);
+        if (!neverRetry &&
+            status != null &&
+            status >= 500 &&
+            status < 600) {
           attempt++;
           if (attempt >= maxRetries) rethrow;
           await Future.delayed(retryDelayForTest(attempt));
@@ -149,15 +167,25 @@ class S3Client {
   /// 供后续 HeadObject/GetMetadata 读取（C-01 修复）。
   ///
   /// 方案C（并发全面加固）条件写：
-  /// - [ifMatch] 非空时携带 `If-Match: <etag>`，仅当远端当前对象 ETag
-  ///   与之相等才写入；不匹配返回 412 → 抛 [S3PreconditionFailedException]
+  /// - [ifMatch] 非空时携带 `If-Match: "<etag>"`（RFC 7232 引号形态），
+  ///   仅当远端当前对象 ETag 与之相等才写入；不匹配返回 412 → 抛
+  ///   [S3PreconditionFailedException]
   /// - [ifNoneMatch] 为 true 时携带 `If-None-Match: *`（create-only），
   ///   远端已存在同 key 对象时同样 412。与 [ifMatch] 互斥。
+  ///
+  /// 条件写的其余失败形态同样翻译为 [S3PreconditionFailedException]
+  /// （本次写入均未落盘，语义一致）：
+  /// - **404**：远端对象不存在。AWS 对 If-Match 无当前版本/仅有删除
+  ///   标记的对象返回 404 NoSuchKey（MinIO 同），即「条件失败」而非
+  ///   普通存储错误 —— 上层契约要求「远端不存在同样算条件失败」。
+  /// - **409 ConditionalRequestConflict**：瞬时竞态，AWS 明确要求
+  ///   「retry the upload」。写入未落盘、前置条件不变，重发安全；
+  ///   有限重试（2 次）后仍冲突则按条件失败上抛走冲突流程。
   ///
   /// 返回服务端响应的 ETag（网关未返回时为 null），供写后校验使用。
   ///
   /// 非幂等操作（重复写入可能覆盖最新版本），不进行自动重试；
-  /// 条件写失败（412）更不可重试 —— 重试必然再次失败或造成覆盖。
+  /// 条件写失败（412/404）更不可重试 —— 重试必然再次失败或造成覆盖。
   Future<String?> putObject({
     required String bucket,
     required String key,
@@ -181,6 +209,9 @@ class S3Client {
     // _handleError 已按服务器时间写入签名偏移，立即用新偏移重发是安全的，
     // 不违反 putObject 的不重试纪律。偏差最多重试 2 次，持续偏差向上抛。
     var skewRetries = 0;
+    // 审计 M2：409 ConditionalRequestConflict 同理 —— 服务器未落盘本次
+    // 写入，重发同一前置条件安全；最多重试 2 次，仍冲突按条件失败上抛。
+    var conflictRetries = 0;
     while (true) {
       try {
         final response = await _httpClient
@@ -198,6 +229,29 @@ class S3Client {
           // 不能落进 _handleError 的通用 404 分支丢失语义
           if (response.statusCode == 404) {
             _throwIfNoSuchBucket('PutObject', response, bucket);
+            // 方案C 契约补全：条件写时远端对象不存在（并发删除先完成，
+            // AWS/MinIO 对 If-Match 无当前版本返回 404 NoSuchKey）——
+            // 同样是「前置条件失败、写入未落盘」，必须翻译为冲突语义，
+            // 否则上层把核心并发竞态当普通存储故障处理
+            final isConditional = ifMatch != null || ifNoneMatch;
+            if (isConditional) {
+              throw S3PreconditionFailedException(key,
+                  message: '条件写失败（远端不存在，可能已被其他设备删除）: $key');
+            }
+          }
+          // 审计 M2：409 ConditionalRequestConflict 是瞬时竞态（AWS：
+          // 「On a 409 failure, retry the upload」），有限重试后仍冲突
+          // 则按条件失败上抛
+          if (response.statusCode == 409 &&
+              (ifMatch != null || ifNoneMatch)) {
+            conflictRetries++;
+            if (conflictRetries <= 2) {
+              await Future.delayed(
+                  Duration(milliseconds: 200 * conflictRetries));
+              continue;
+            }
+            throw S3PreconditionFailedException(key,
+                message: '条件写失败（HTTP 409 冲突持续存在）: $key');
           }
           _handleError('PutObject', response);
         }
@@ -225,6 +279,217 @@ class S3Client {
     }
   }
 
+  /// 竞速哨兵：putObjectStream 中标识「源流已全部泵入请求体」。
+  static final Object _pumpCompletedSentinel = Object();
+
+  /// M4 修复：流式上传对象（大文件内存友好）。
+  ///
+  /// 与 [putObject] 的区别：body 以 [data] 边读边发，调用方（如本地
+  /// 文件上传）不再需要把整个对象读入内存。签名改用
+  /// `x-amz-content-sha256: UNSIGNED-PAYLOAD` —— SigV4 要求预知完整
+  /// payload 的 SHA-256，流式 body 无法预计算，改只签头部不签 body
+  /// （AWS 及 MinIO/OSS/COS/R2 等主流 S3 兼容服务均支持）。
+  ///
+  /// [contentLength] 可选：已知总长度时传入，请求以固定 Content-Length
+  /// 发送（兼容性最好）；null 时传输层自动降级 chunked encoding。
+  /// 注意 Content-Length 不参与签名（审计 S-A 口径），由传输层附加。
+  ///
+  /// 重试纪律（与 [putObject] 的差异，调用方务必知悉）：
+  /// - 时钟偏差（RequestTimeTooSkewed）：[_handleError] 会写入新偏移并
+  ///   抛 [S3ClockSkewException]，但**流式 body 不可重放**，本方法不
+  ///   自动重试 —— 上层用新流重调本方法即自动获得补偿后的签名。
+  /// - 409 ConditionalRequestConflict：同样不重试，直接按条件失败抛
+  ///   [S3PreconditionFailedException]。
+  ///
+  /// [data] 中途失败（读文件/网络错误）→ 抛 [S3Exception]；S3 PutObject
+  /// 原子性保证不会产生部分对象。条件写语义（412/404 → 条件失败）与
+  /// [putObject] 完全一致。
+  Future<String?> putObjectStream({
+    required String bucket,
+    required String key,
+    required Stream<List<int>> data,
+    int? contentLength,
+    String? contentType,
+    Map<String, String>? metadata,
+    String? ifMatch,
+    bool ifNoneMatch = false,
+  }) async {
+    _checkDisposed();
+    if (ifMatch != null && ifNoneMatch) {
+      throw ArgumentError('ifMatch 与 ifNoneMatch 互斥，不能同时传入');
+    }
+    final uri = _buildUri(bucket, key: key);
+    final headers = _signedStreamingPutHeaders(uri, contentType, metadata,
+        ifMatch: ifMatch, ifNoneMatch: ifNoneMatch);
+
+    final request = http.StreamedRequest('PUT', uri);
+    request.headers.addAll(headers);
+    if (contentLength != null && contentLength > 0) {
+      request.contentLength = contentLength;
+    }
+
+    final pumpDone = Completer<void>();
+    var sinkClosed = false;
+    void closeSink() {
+      if (!sinkClosed) {
+        sinkClosed = true;
+        request.sink.close();
+      }
+    }
+
+    http.StreamedResponse response;
+    StreamSubscription<List<int>>? sub;
+    try {
+      final responseFuture = _httpClient.send(request);
+      // 让出事件循环：确保 client 的同步 finalize 段已执行
+      // （IOClient.send 首行 finalize 请求体流），此后泵入的数据直接
+      // 流向传输层 —— 顺序颠倒会让整个大文件缓冲进无读者的控制器。
+      await Future<void>.delayed(Duration.zero);
+
+      sub = data.listen(
+        (chunk) {
+          if (!sinkClosed) request.sink.add(chunk);
+        },
+        onDone: () {
+          closeSink();
+          pumpDone.complete();
+        },
+        onError: (Object e, StackTrace st) {
+          closeSink();
+          pumpDone.completeError(e, st);
+        },
+        cancelOnError: true,
+      );
+
+      // 竞速：正常路径「body 全部发出」（泵完成）后服务器才响应；
+      // 但条件写失败（412/409）等场景服务器可能在读完全部 body 前
+      // 早响应 —— 此时必须停止泵，避免无消费者的请求体在内存中
+      // 无限堆积（违背流式初衷）。
+      final first = await Future.any<Object?>([
+        pumpDone.future.then<Object?>((_) => _pumpCompletedSentinel),
+        responseFuture,
+      ]);
+      if (!identical(first, _pumpCompletedSentinel)) {
+        // 服务器早于泵完成响应：停止泵，吞掉泵的伴生结果
+        await sub.cancel();
+        sub = null;
+        closeSink();
+        unawaited(pumpDone.future.catchError((Object _) {}));
+        response = first as http.StreamedResponse;
+      } else {
+        // 泵完成（body 已全部发出）→ 等服务器处理响应
+        response = await responseFuture.timeout(timeout);
+      }
+    } on Object catch (e) {
+      await sub?.cancel();
+      closeSink();
+      // 源流失败是根因：泵已以错误完成时优先上报源流错误
+      if (pumpDone.isCompleted) {
+        try {
+          await pumpDone.future;
+        } on Object catch (sourceError) {
+          throw S3Exception('PutObjectStream 上传数据流中途失败: $sourceError',
+              originalException:
+                  sourceError is Exception ? sourceError : null);
+        }
+      }
+      if (e is TimeoutException) {
+        throw S3NetworkException(
+            'PutObjectStream timed out after ${timeout.inSeconds}s');
+      }
+      throw S3Exception('PutObjectStream failed: $e',
+          originalException: e is Exception ? e : null);
+    }
+
+    try {
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return _normalizeEtag(response.headers['etag']);
+      }
+      if (response.statusCode == 412) {
+        throw S3PreconditionFailedException(key,
+            message: '条件写失败（远端已被其他设备修改）: $key');
+      }
+      if (response.statusCode == 404) {
+        // 早响应时 body 可能已被服务器截断，尽力解析桶级错误
+        final body = await _readErrorBody(response);
+        if (body != null) _throwIfNoSuchBucket('PutObject', body, bucket);
+        if (ifMatch != null || ifNoneMatch) {
+          throw S3PreconditionFailedException(key,
+              message: '条件写失败（远端不存在，可能已被其他设备删除）: $key');
+        }
+        if (body != null) _handleError('PutObject', body);
+        throw S3Exception('PutObject failed (HTTP 404, no error body)',
+            statusCode: 404);
+      }
+      if (response.statusCode == 409 && (ifMatch != null || ifNoneMatch)) {
+        // 流式 body 不可重放：不自动重试，直接按条件失败上抛
+        throw S3PreconditionFailedException(key,
+            message: '条件写失败（HTTP 409 冲突）: $key');
+      }
+      final body = await _readErrorBody(response);
+      if (body != null) _handleError('PutObject', body);
+      throw S3Exception(
+        'PutObject failed (HTTP ${response.statusCode}, no error body)',
+        statusCode: response.statusCode,
+      );
+    } on S3PreconditionFailedException {
+      rethrow;
+    } on SocketException catch (e) {
+      throw S3NetworkException('Network error: ${e.message}',
+          originalException: e);
+    } on S3Exception {
+      rethrow;
+    } catch (e) {
+      if (e is S3Exception) rethrow;
+      throw S3Exception('PutObject failed: $e',
+          originalException: _asException(e));
+    }
+  }
+
+  /// 读取错误响应体。早响应/断连时 body 流可能不可读 —— 返回 null，
+  /// 调用方改抛不依赖 body 的语义化异常。
+  Future<http.Response?> _readErrorBody(http.StreamedResponse response) async {
+    try {
+      return await http.Response.fromStream(response).timeout(timeout);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 构造并签名流式 PUT 请求头。
+  ///
+  /// 与 [_signedPutHeaders] 的差异：payload 以
+  /// `x-amz-content-sha256: UNSIGNED-PAYLOAD` 声明（流式 body 无法
+  /// 预计算 SHA-256）；其余（metadata 编码 / If-Match 归一化 / Host /
+  /// Content-Type）完全一致。
+  Map<String, String> _signedStreamingPutHeaders(
+      Uri uri, String? contentType, Map<String, String>? metadata,
+      {String? ifMatch, bool ifNoneMatch = false}) {
+    final headers = <String, String>{
+      'Host': uri.authority,
+      'Content-Type': contentType ?? 'application/octet-stream',
+    };
+    if (ifMatch != null) {
+      final bare = _normalizeEtag(ifMatch) ?? ifMatch;
+      headers['If-Match'] = '"$bare"';
+    }
+    if (ifNoneMatch) {
+      headers['If-None-Match'] = '*';
+    }
+    if (metadata != null) {
+      for (final entry in metadata.entries) {
+        headers['x-amz-meta-${entry.key.toLowerCase()}'] =
+            _encodeMetaValue(entry.value);
+      }
+    }
+    return _signer.sign(
+      method: 'PUT',
+      uri: uri,
+      headers: headers,
+      payloadHashOverride: 'UNSIGNED-PAYLOAD',
+    );
+  }
+
   /// 构造并签名 PUT 请求头（M9：时钟偏差重试需用新偏移重签）。
   ///
   /// C-01 修复：将自定义 metadata 转为 x-amz-meta-* 头。
@@ -249,7 +514,12 @@ class S3Client {
       'Content-Type': contentType ?? 'application/octet-stream',
     };
     if (ifMatch != null) {
-      headers['If-Match'] = ifMatch;
+      // 审计 M3：RFC 7232 要求 If-Match 值为带引号的 entity-tag。
+      // AWS 接受裸值，但部分严格兼容网关会回 400 InvalidArgument；
+      // 统一归一化（剥引号/弱验证器前缀）后加引号最稳，且与
+      // _normalizeEtag 的返回形态（裸值）形成对称往返。
+      final bare = _normalizeEtag(ifMatch) ?? ifMatch;
+      headers['If-Match'] = '"$bare"';
     }
     if (ifNoneMatch) {
       headers['If-None-Match'] = '*';
@@ -305,6 +575,73 @@ class S3Client {
         rethrow;
       } catch (e) {
         throw S3Exception('GetObject failed: $e', originalException: _asException(e));
+      }
+    });
+  }
+
+  /// M5 修复：流式下载对象（大文件内存友好）。
+  ///
+  /// 与 [getObject] 的区别：返回 [Stream]，调用方边收边处理（如直接
+  /// 落盘），不再需要把整个对象读入内存。
+  ///
+  /// 超时语义分两段：
+  /// - **首字节**（响应头到达）：受 [timeout] 约束，超时抛
+  ///   [S3NetworkException]，且此阶段失败（网络/5xx/时钟偏差）可安全
+  ///   自动重试（响应体尚未交给调用方，重发无副作用）；
+  /// - **消费期**：响应流交给调用方后不做总超时（大文件传输时长无法
+  ///   预知），但按 chunk 间隔检测停滞 —— 超过 [stallTimeout]（默认
+  ///   `timeout * 4`）未收到任何新数据视为连接僵死，向流注入
+  ///   [S3NetworkException] 并终止。
+  ///
+  /// 404 抛 [S3ObjectNotFoundException]（桶级 404 抛
+  /// [S3BucketNotFoundException]）；其余错误同 [getObject] 语义。
+  /// 消费期错误透传（可能为 [S3NetworkException] 或底层 I/O 异常），
+  /// 不自动重试 —— 调用方已可能消费部分数据。
+  Future<Stream<List<int>>> downloadStream({
+    required String bucket,
+    required String key,
+    Duration? stallTimeout,
+  }) async {
+    _checkDisposed();
+    final uri = _buildUri(bucket, key: key);
+
+    return _retry(() async {
+      // 每次尝试重新签名（时钟偏差补偿后旧签名必然再次 403，见 getObject）
+      final headers = _signedHeaders(uri, 'GET');
+      try {
+        final response = await _httpClient
+            .send(http.Request('GET', uri)..headers.addAll(headers))
+            .timeout(timeout);
+
+        if (response.statusCode == 200) {
+          final effectiveStall = stallTimeout ?? timeout * 4;
+          return response.stream.timeout(effectiveStall, onTimeout: (sink) {
+            sink.addError(S3NetworkException(
+                '下载流停滞超过 ${effectiveStall.inSeconds}s，连接可能已中断'));
+            sink.close();
+          });
+        } else if (response.statusCode == 404) {
+          final body = await _readErrorBody(response);
+          if (body != null) _throwIfNoSuchBucket('GetObject', body, bucket);
+          throw S3ObjectNotFoundException(key);
+        }
+        final body = await _readErrorBody(response);
+        if (body != null) _handleError('GetObject', body);
+        throw S3Exception(
+          'GetObject failed (HTTP ${response.statusCode}, no error body)',
+          statusCode: response.statusCode,
+        );
+      } on SocketException catch (e) {
+        throw S3NetworkException('Network error: ${e.message}',
+            originalException: e);
+      } on TimeoutException {
+        throw S3NetworkException(
+            'GetObject timed out after ${timeout.inSeconds}s');
+      } on S3Exception {
+        rethrow;
+      } catch (e) {
+        throw S3Exception('GetObject failed: $e',
+            originalException: _asException(e));
       }
     });
   }
@@ -504,68 +841,113 @@ class S3Client {
   /// 每页 max-keys 参数下发，do-while 只看 continuationToken，导致
   /// `listObjects(maxKeys: 1)` 连接探测实际翻页拉取全桶对象
   /// （大桶浪费流量/费用，故障网关恒返回 IsTruncated=true 时死循环）。
+  ///
+  /// 审计 S3-M2：[maxKeys] 为 null 的常规路径此前完全没有终止护栏——
+  /// 故障网关恒返回 IsTruncated=true 时照样无限翻页。现补三重护栏：
+  /// 页数硬上限、continuation-token 无推进检测、畸形响应（截断却无
+  /// token）显式报错。
   Future<List<S3ObjectInfo>> _listObjectsV2Detailed({
     required String bucket,
     String? prefix,
     int? maxKeys,
   }) {
-    return _retry(() async {
-      final allObjects = <S3ObjectInfo>[];
-      String? continuationToken;
+    // 审计 S3-M3：neverRetryStatusCodes 传入 501 —— Not Implemented 是
+    // 确定性失败（网关不支持 ListObjectsV2），重试三次只会白耗退避延迟
+    // 再走 V1 回退；应立即上抛给 listObjectsDetailed 做协议回退。
+    return _retry(
+      () async {
+        final allObjects = <S3ObjectInfo>[];
+        String? continuationToken;
 
-      do {
-        final queryParams = <String, String>{
-          'list-type': '2', // ListObjectsV2
-        };
-        if (prefix != null && prefix.isNotEmpty) {
-          queryParams['prefix'] = prefix;
-        }
-        // 每页请求「还缺多少条」，由服务端钳制到其单页上限
-        if (maxKeys != null) {
-          queryParams['max-keys'] = '${maxKeys - allObjects.length}';
-        }
-        if (continuationToken != null) {
-          queryParams['continuation-token'] = continuationToken;
-        }
+        // S3-M2：翻页终止护栏状态
+        String? previousToken;
+        var pages = 0;
 
-        final uri = _buildUri(bucket, queryParameters: queryParams);
-        final headers = _signedHeaders(uri, 'GET');
-
-        try {
-          final response = await _httpClient
-              .get(uri, headers: headers)
-              .timeout(timeout);
-
-          if (response.statusCode == 200) {
-            final result = _parseListObjectsXml(response.body);
-            final remaining =
-                maxKeys == null ? null : maxKeys - allObjects.length;
-            if (remaining != null && result.objects.length > remaining) {
-              // 服务端可能无视 max-keys 下发超量，截断到上限
-              allObjects.addAll(result.objects.take(remaining));
-              break; // 已达上限，无需继续翻页
-            }
-            allObjects.addAll(result.objects);
-            continuationToken = result.isTruncated ? result.nextContinuationToken : null;
-          } else if (response.statusCode == 404) {
-            throw S3BucketNotFoundException(bucket);
-          } else {
-            _handleError('ListObjects', response);
+        do {
+          // M2-1：页数硬上限。单页服务端上限 1000 对象，1000 页 ≈
+          // 100 万对象，正常桶不会触达；故障网关不再无限翻页。
+          if (++pages > _maxListPages) {
+            throw S3Exception(
+                'ListObjects V2 pagination exceeded $_maxListPages pages; '
+                'aborting to avoid an unbounded loop');
           }
-        } on SocketException catch (e) {
-          throw S3NetworkException('Network error: ${e.message}', originalException: e);
-        } on TimeoutException {
-          throw S3NetworkException('ListObjects timed out after ${timeout.inSeconds}s');
-        } catch (e) {
-          if (e is S3Exception) rethrow;
-          throw S3Exception('ListObjects failed: $e', originalException: _asException(e));
-        }
-        // 达到 maxKeys 上限即停，绝不继续翻页
-      } while (continuationToken != null &&
-          (maxKeys == null || allObjects.length < maxKeys));
+          // M2-2：token 无进展检测。网关回放同一个 continuation-token
+          // 时每页返回相同内容，do-while 永不退出。token 必须单调推进。
+          if (continuationToken != null &&
+              continuationToken == previousToken) {
+            throw S3Exception(
+                'ListObjects V2 pagination stalled: server replayed the '
+                'same continuation-token');
+          }
+          previousToken = continuationToken;
 
-      return allObjects;
-    });
+          final queryParams = <String, String>{
+            'list-type': '2', // ListObjectsV2
+          };
+          if (prefix != null && prefix.isNotEmpty) {
+            queryParams['prefix'] = prefix;
+          }
+          // 每页请求「还缺多少条」，由服务端钳制到其单页上限
+          if (maxKeys != null) {
+            queryParams['max-keys'] = '${maxKeys - allObjects.length}';
+          }
+          if (continuationToken != null) {
+            queryParams['continuation-token'] = continuationToken;
+          }
+
+          final uri = _buildUri(bucket, queryParameters: queryParams);
+          final headers = _signedHeaders(uri, 'GET');
+
+          try {
+            final response = await _httpClient
+                .get(uri, headers: headers)
+                .timeout(timeout);
+
+            if (response.statusCode == 200) {
+              final result = _parseListObjectsXml(response.body);
+              final remaining =
+                  maxKeys == null ? null : maxKeys - allObjects.length;
+              if (remaining != null && result.objects.length > remaining) {
+                // 服务端可能无视 max-keys 下发超量，截断到上限
+                allObjects.addAll(result.objects.take(remaining));
+                break; // 已达上限，无需继续翻页
+              }
+              allObjects.addAll(result.objects);
+              // M2-3：IsTruncated=true 却未携带 NextContinuationToken 属于
+              // 畸形分页响应——旧逻辑静默退出并返回**不完整列表**，下游
+              // 会把残缺当全量消费（附件清理漏删/审计漏检）。显式报错。
+              if (result.isTruncated) {
+                final token = result.nextContinuationToken;
+                if (token == null || token.isEmpty) {
+                  throw S3Exception(
+                      'ListObjects V2 pagination malformed: IsTruncated=true '
+                      'without NextContinuationToken');
+                }
+                continuationToken = token;
+              } else {
+                continuationToken = null;
+              }
+            } else if (response.statusCode == 404) {
+              throw S3BucketNotFoundException(bucket);
+            } else {
+              _handleError('ListObjects', response);
+            }
+          } on SocketException catch (e) {
+            throw S3NetworkException('Network error: ${e.message}', originalException: e);
+          } on TimeoutException {
+            throw S3NetworkException('ListObjects timed out after ${timeout.inSeconds}s');
+          } catch (e) {
+            if (e is S3Exception) rethrow;
+            throw S3Exception('ListObjects failed: $e', originalException: _asException(e));
+          }
+          // 达到 maxKeys 上限即停，绝不继续翻页
+        } while (continuationToken != null &&
+            (maxKeys == null || allObjects.length < maxKeys));
+
+        return allObjects;
+      },
+      neverRetryStatusCodes: const {501},
+    );
   }
 
   /// ListObjects V1（不带 `list-type` 参数），返回含元数据的对象列表
@@ -574,6 +956,10 @@ class S3Client {
   /// 继续请求，直到 IsTruncated=false。
   ///
   /// W3：maxKeys 语义同 V2 路径 —— 结果总数上限，达到即停。
+  ///
+  /// 审计 S3-M2：终止护栏同 V2 路径 —— 页数硬上限、marker 无推进检测
+  /// （网关忽略 marker 时每页返回相同内容）、畸形响应（截断却无尾 key）
+  /// 显式报错。
   Future<List<S3ObjectInfo>> _listObjectsV1Detailed({
     required String bucket,
     String? prefix,
@@ -583,7 +969,26 @@ class S3Client {
       final allObjects = <S3ObjectInfo>[];
       String? marker;
 
+      // S3-M2：翻页终止护栏状态
+      String? previousMarker;
+      var pages = 0;
+
       do {
+        // M2-1：页数硬上限（同 V2）
+        if (++pages > _maxListPages) {
+          throw S3Exception(
+              'ListObjects V1 pagination exceeded $_maxListPages pages; '
+              'aborting to avoid an unbounded loop');
+        }
+        // M2-2：marker 无进展检测。网关忽略 marker 时每页返回相同内容，
+        // 下一页 marker 与上一页相同，do-while 永不退出。
+        if (marker != null && marker == previousMarker) {
+          throw S3Exception(
+              'ListObjects V1 pagination stalled: server ignored the marker '
+              '(no pagination progress)');
+        }
+        previousMarker = marker;
+
         final queryParams = <String, String>{};
         if (prefix != null && prefix.isNotEmpty) {
           queryParams['prefix'] = prefix;
@@ -613,7 +1018,19 @@ class S3Client {
             }
             allObjects.addAll(result.objects);
             // V1 分页：IsTruncated=true 时，用最后一条 key 作为下次请求的 marker
-            marker = result.isTruncated ? result.lastKey : null;
+            if (result.isTruncated) {
+              // M2-3：截断却无尾 key 属于畸形响应——旧逻辑静默退出并
+              // 返回不完整列表。显式报错（V1 亦可经 NextMarker 推进，
+              // 但本实现不解析该元素，空页无法构造 marker）。
+              if (result.lastKey == null) {
+                throw S3Exception(
+                    'ListObjects V1 pagination malformed: IsTruncated=true '
+                    'without a trailing key');
+              }
+              marker = result.lastKey;
+            } else {
+              marker = null;
+            }
           } else if (response.statusCode == 404) {
             throw S3BucketNotFoundException(bucket);
           } else {

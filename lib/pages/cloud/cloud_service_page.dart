@@ -1495,7 +1495,15 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
 
   Future<void> _switchService(CloudBackendType type) async {
     final store = ref.read(cloudServiceStoreProvider);
-    final active = await ref.read(activeCloudConfigProvider.future);
+    // M16：激活配置读失败（安全存储故障）时显式提示并中止切换
+    final CloudServiceConfig active;
+    try {
+      active = await ref.read(activeCloudConfigProvider.future);
+    } catch (e) {
+      logger.warning('CloudService', '读取激活配置失败: $e');
+      if (mounted) showToast(context, e.toString());
+      return;
+    }
 
     if (active.type == type) return; // 已经是当前类型
 
@@ -1621,7 +1629,16 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
   }
 
   Future<void> _showPiggyCountCloudConfigDialog() async {
-    final existing = await ref.read(piggycountCloudConfigProvider.future);
+    // M16：安全存储读失败时 provider 显式上抛——这里提示用户而非
+    // 静默弹空表单（空表单会把「读取失败」伪装成「从未配置过」）
+    final CloudServiceConfig? existing;
+    try {
+      existing = await ref.read(piggycountCloudConfigProvider.future);
+    } catch (e) {
+      logger.warning('CloudService', '读取 PiggyCount Cloud 配置失败: $e');
+      if (mounted) showToast(context, e.toString());
+      return;
+    }
 
     if (!mounted) return;
 
@@ -1765,7 +1782,15 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
   }
 
   Future<void> _showSupabaseConfigDialog() async {
-    final existing = await ref.read(supabaseConfigProvider.future);
+    // M16：同 _showPiggyCountCloudConfigDialog，读失败显式提示
+    final CloudServiceConfig? existing;
+    try {
+      existing = await ref.read(supabaseConfigProvider.future);
+    } catch (e) {
+      logger.warning('CloudService', '读取 Supabase 配置失败: $e');
+      if (mounted) showToast(context, e.toString());
+      return;
+    }
 
     if (!mounted) return;
 
@@ -1821,7 +1846,15 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
   }
 
   Future<void> _showWebdavConfigDialog() async {
-    final existing = await ref.read(webdavConfigProvider.future);
+    // M16：同 _showPiggyCountCloudConfigDialog，读失败显式提示
+    final CloudServiceConfig? existing;
+    try {
+      existing = await ref.read(webdavConfigProvider.future);
+    } catch (e) {
+      logger.warning('CloudService', '读取 WebDAV 配置失败: $e');
+      if (mounted) showToast(context, e.toString());
+      return;
+    }
 
     if (!mounted) return;
 
@@ -1882,7 +1915,15 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
   }
 
   Future<void> _showS3ConfigDialog() async {
-    final existing = await ref.read(s3ConfigProvider.future);
+    // M16：同 _showPiggyCountCloudConfigDialog，读失败显式提示
+    final CloudServiceConfig? existing;
+    try {
+      existing = await ref.read(s3ConfigProvider.future);
+    } catch (e) {
+      logger.warning('CloudService', '读取 S3 配置失败: $e');
+      if (mounted) showToast(context, e.toString());
+      return;
+    }
 
     if (!mounted) return;
 

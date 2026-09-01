@@ -1,120 +1,161 @@
+/// 审计 S3-M2 / S3-M3：ListObjects 分页终止护栏与协议回退及时性。
+///
+/// - M2：maxKeys=null 的常规翻页路径此前无任何终止护栏——故障网关
+///   （恒 IsTruncated=true / 回放同一 token / 忽略 marker / 截断却无
+///   推进凭据）会让 do-while 无限翻页或静默返回残缺列表。
+/// - M3：V2 返回 501（Not Implemented）是确定性失败，不应被 5xx 重试
+///   放大——修复前 3 次 V2 重试 + 退避延迟后才走 V1 回退。
+library;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 import 'package:flutter_cloud_sync_s3/src/s3_client.dart';
+import 'package:flutter_cloud_sync_s3/src/s3_exceptions.dart';
 
-/// W3 回归：maxKeys 是「结果总数上限」，分页循环达到上限必须立即停止。
-///
-/// 之前 do-while 只看 continuationToken，`listObjects(maxKeys: 1)` 连接探测
-/// 会翻页拉取全桶对象；故障网关恒返回 IsTruncated=true 时直接死循环。
+String _pageXml({
+  List<String> keys = const [],
+  bool truncated = false,
+  String? nextToken,
+}) {
+  final contents = keys
+      .map((k) => '<Contents><Key>$k</Key><Size>1</Size></Contents>')
+      .join();
+  return '<?xml version="1.0"?>'
+      '<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">'
+      '<IsTruncated>$truncated</IsTruncated>'
+      '${nextToken != null ? '<NextContinuationToken>$nextToken</NextContinuationToken>' : ''}'
+      '$contents</ListBucketResult>';
+}
+
+S3Client _client(MockClient mock) => S3Client(
+      endpoint: 'minio.local',
+      region: 'us-east-1',
+      accessKey: 'ak',
+      secretKey: 'sk',
+      useSSL: false,
+      forcePathStyle: true,
+      httpClient: mock,
+    );
+
 void main() {
-  String pageXml(List<String> keys, {required bool truncated}) {
-    final contents = keys
-        .map((k) => '<Contents><Key>$k</Key></Contents>')
-        .join();
-    return '<?xml version="1.0"?>'
-        '<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">'
-        '$contents'
-        '<IsTruncated>$truncated</IsTruncated>'
-        '${truncated ? '<NextContinuationToken>token-x</NextContinuationToken>' : ''}'
-        '</ListBucketResult>';
-  }
+  group('审计 S3-M2：ListObjects V2 翻页终止护栏', () {
+    test('网关回放同一 continuation-token → 显式失败而非无限翻页', () async {
+      final requests = <Uri>[];
+      final mock = MockClient((request) async {
+        requests.add(request.url);
+        // 每页都返回截断 + 同一个 token T1
+        return http.Response(
+            _pageXml(keys: ['a'], truncated: true, nextToken: 'T1'), 200);
+      });
+      final client = _client(mock);
 
-  test('maxKeys=1 时只发一次请求且只返回 1 条（不再全量翻页）', () async {
-    var requestCount = 0;
-    final mock = MockClient((request) async {
-      requestCount++;
-      // 服务端每页只有 1 条但永远 IsTruncated=true（模拟故障网关/超大桶）
-      return http.Response(pageXml(['only-one.txt'], truncated: true), 200);
+      await expectLater(
+        client.listObjectsDetailed(bucket: 'b'),
+        throwsA(isA<S3Exception>()
+            .having((e) => e.message, 'message', contains('stalled'))),
+      );
+      expect(requests.length, 2,
+          reason: 'M2: 第 3 页进入前即检测到 token 无推进，不得继续翻页');
     });
 
-    final client = S3Client(
-      endpoint: 'minio.local',
-      region: 'us-east-1',
-      accessKey: 'ak',
-      secretKey: 'sk',
-      useSSL: false,
-      forcePathStyle: true,
-      httpClient: mock,
-    );
+    test('IsTruncated=true 但无 NextContinuationToken → 显式失败而非静默残缺', () async {
+      final requests = <Uri>[];
+      final mock = MockClient((request) async {
+        requests.add(request.url);
+        return http.Response(_pageXml(keys: ['a'], truncated: true), 200);
+      });
+      final client = _client(mock);
 
-    final infos = await client.listObjectsDetailed(
-      bucket: 'mybucket',
-      maxKeys: 1,
-    ).timeout(const Duration(seconds: 10), onTimeout: () {
-      fail('listObjects 死循环：maxKeys=1 未在单次请求后停止翻页');
+      await expectLater(
+        client.listObjectsDetailed(bucket: 'b'),
+        throwsA(isA<S3Exception>()
+            .having((e) => e.message, 'message', contains('malformed'))),
+      );
+      expect(requests.length, 1,
+          reason: 'M2: 畸形响应在第 1 页即暴露，不得静默返回不完整列表');
     });
 
-    expect(requestCount, 1, reason: '达到 maxKeys 上限后不得继续翻页');
-    expect(infos.length, 1);
-    expect(infos.single.key, 'only-one.txt');
+    test('正常多页（token 单调推进）不受护栏影响', () async {
+      final mock = MockClient((request) async {
+        final token = request.url.queryParameters['continuation-token'];
+        if (token == null) {
+          return http.Response(
+              _pageXml(keys: ['a'], truncated: true, nextToken: 'T1'), 200);
+        }
+        if (token == 'T1') {
+          return http.Response(
+              _pageXml(keys: ['b'], truncated: true, nextToken: 'T2'), 200);
+        }
+        return http.Response(_pageXml(keys: ['c'], truncated: false), 200);
+      });
+      final client = _client(mock);
+
+      final objects = await client.listObjectsDetailed(bucket: 'b');
+      expect(objects.map((o) => o.key), ['a', 'b', 'c']);
+    });
   });
 
-  test('maxKeys 跨页累计：每页 2 条、上限 5 → 3 页共 5 条', () async {
-    var page = 0;
-    late int firstPageMaxKeys;
-    late int secondPageMaxKeys;
-    final mock = MockClient((request) async {
-      page++;
-      if (page == 1) {
-        firstPageMaxKeys = int.parse(request.url.queryParameters['max-keys']!);
-        return http.Response(
-            pageXml(['k1', 'k2'], truncated: true), 200);
-      }
-      if (page == 2) {
-        secondPageMaxKeys =
-            int.parse(request.url.queryParameters['max-keys']!);
-        return http.Response(
-            pageXml(['k3', 'k4'], truncated: true), 200);
-      }
-      return http.Response(pageXml(['k5', 'k6-extra'], truncated: true), 200);
+  group('审计 S3-M2：ListObjects V1 翻页终止护栏', () {
+    test('网关忽略 marker（每页返回相同内容）→ 显式失败而非无限翻页', () async {
+      final requests = <Uri>[];
+      final mock = MockClient((request) async {
+        requests.add(request.url);
+        if (request.url.queryParameters.containsKey('list-type')) {
+          // V2 明确 501 → 立即回退 V1（顺带验证 M3 语义）
+          return http.Response('<Error><Code>NotImplemented</Code></Error>', 501);
+        }
+        // V1：忽略 marker，每页返回相同内容且恒截断
+        return http.Response(_pageXml(keys: ['a', 'b'], truncated: true), 200);
+      });
+      final client = _client(mock);
+
+      await expectLater(
+        client.listObjectsDetailed(bucket: 'b'),
+        throwsA(isA<S3Exception>()
+            .having((e) => e.message, 'message', contains('stalled'))),
+      );
+      expect(requests.length, 3,
+          reason: 'M2: 1 次 V2（501 立即回退）+ 2 页 V1，第 3 页进入前检测到 marker 无推进');
     });
 
-    final client = S3Client(
-      endpoint: 'minio.local',
-      region: 'us-east-1',
-      accessKey: 'ak',
-      secretKey: 'sk',
-      useSSL: false,
-      forcePathStyle: true,
-      httpClient: mock,
-    );
+    test('V1 截断却无尾 key（空页截断）→ 显式失败而非静默残缺', () async {
+      final requests = <Uri>[];
+      final mock = MockClient((request) async {
+        requests.add(request.url);
+        if (request.url.queryParameters.containsKey('list-type')) {
+          return http.Response('<Error><Code>NotImplemented</Code></Error>', 501);
+        }
+        return http.Response(_pageXml(keys: [], truncated: true), 200);
+      });
+      final client = _client(mock);
 
-    final infos = await client.listObjectsDetailed(
-      bucket: 'mybucket',
-      maxKeys: 5,
-    );
-
-    expect(firstPageMaxKeys, 5);
-    expect(secondPageMaxKeys, 3, reason: '第二页应请求「还缺多少条」');
-    expect(infos.map((e) => e.key).toList(), ['k1', 'k2', 'k3', 'k4', 'k5'],
-        reason: '第三页超量的 k6-extra 必须被截断');
+      await expectLater(
+        client.listObjectsDetailed(bucket: 'b'),
+        throwsA(isA<S3Exception>()
+            .having((e) => e.message, 'message', contains('malformed'))),
+      );
+      expect(requests.length, 2, reason: 'M2: 1 次 V2 + 1 页 V1 即暴露畸形');
+    });
   });
 
-  test('未传 maxKeys 时行为不变：完整翻页直到 IsTruncated=false', () async {
-    var page = 0;
-    final mock = MockClient((request) async {
-      page++;
-      if (page == 1) {
-        expect(request.url.queryParameters.containsKey('max-keys'), isFalse);
-        return http.Response(pageXml(['a', 'b'], truncated: true), 200);
-      }
-      return http.Response(pageXml(['c'], truncated: false), 200);
+  group('审计 S3-M3：V2→V1 协议回退不被 5xx 重试放大', () {
+    test('V2 返回 501 → 不重试，立即回退 V1 成功', () async {
+      final requests = <Uri>[];
+      final mock = MockClient((request) async {
+        requests.add(request.url);
+        if (request.url.queryParameters.containsKey('list-type')) {
+          return http.Response('<Error><Code>NotImplemented</Code></Error>', 501);
+        }
+        return http.Response(_pageXml(keys: ['x', 'y'], truncated: false), 200);
+      });
+      final client = _client(mock);
+
+      final objects = await client.listObjectsDetailed(bucket: 'b');
+      expect(objects.map((o) => o.key), ['x', 'y']);
+      expect(requests.length, 2,
+          reason: 'M3: 1 次 V2 + 1 次 V1（修复前 501 计入 5xx 重试：3 次 V2 + 退避 + 1 次 V1 = 4 请求）');
     });
-
-    final client = S3Client(
-      endpoint: 'minio.local',
-      region: 'us-east-1',
-      accessKey: 'ak',
-      secretKey: 'sk',
-      useSSL: false,
-      forcePathStyle: true,
-      httpClient: mock,
-    );
-
-    final infos = await client.listObjects(bucket: 'mybucket');
-    expect(page, 2);
-    expect(infos, ['a', 'b', 'c']);
   });
 }

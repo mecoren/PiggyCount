@@ -53,12 +53,22 @@ class CloudServiceStore {
 
   /// 读取配置 JSON：优先安全存储；SharedPreferences 仅作旧版本明文
   /// 数据的迁移回退（读到后迁移到安全存储并删除明文）。
+  ///
+  /// 审计 M16：安全存储【读失败】（keystore 损坏 / Keychain 系统级不可用）
+  /// 与「未配置」（read 正常返回 null）是两类完全不同的状态，绝不能混同：
+  /// 旧实现把读失败仅 debugPrint 后当 null 处理，loadActive 据此静默回退
+  /// localStorage —— 自动同步无声停摆，用户毫无感知，多端数据悄然分叉。
+  /// 现在：读失败且无旧明文可兜底时抛 [CloudStorageException]，由调用方
+  /// 显式呈现（activeCloudConfigProvider → 损坏 banner / 同步链路报错）；
+  /// 仍有旧明文可读时按迁移路径继续 —— 数据可用即工作，不算停摆。
   Future<String?> _readCfg(String key) async {
+    Object? secureReadError;
     try {
       final secure = await _secure.read(key: key);
       if (secure != null) return secure;
     } catch (e) {
       debugPrint('Secure storage read failed for $key: $e');
+      secureReadError = e;
     }
     final sp = await SharedPreferences.getInstance();
     final legacy = sp.getString(key);
@@ -71,8 +81,17 @@ class CloudServiceStore {
       } catch (e) {
         debugPrint('Secure storage migration failed for $key: $e');
       }
+      return legacy;
     }
-    return legacy;
+    // M16：读失败且无明文兜底 → 显式报错（区别于「未配置」的正常 null）
+    if (secureReadError != null) {
+      throw CloudStorageException(
+        '安全存储读取失败，云配置不可访问（自动同步已停止，'
+        '请修复设备安全存储后重启应用或重新配置）: $key',
+        secureReadError,
+      );
+    }
+    return null;
   }
 
   /// 写入配置 JSON 到安全存储。
@@ -93,6 +112,11 @@ class CloudServiceStore {
   }
 
   /// 加载当前激活的云服务配置
+  ///
+  /// 审计 M16：读失败（安全存储不可用）时本方法显式上抛 [CloudSyncException]
+  /// —— 不再静默回退 localStorage。调用方：
+  /// - `activeCloudConfigProvider`（App 层）catch 后转损坏 banner 并继续上抛；
+  /// - `main.dart` 等直连调用点已有 try/catch 留痕。
   Future<CloudServiceConfig> loadActive() async {
     final sp = await SharedPreferences.getInstance();
     final activeType = sp.getString(_kActiveType) ?? 'local';
@@ -105,39 +129,13 @@ class CloudServiceStore {
         return CloudServiceConfig.localStorage();
 
       case 'piggycount_cloud':
-        final raw = await _readCfg(_kPiggyCountCloudCfg);
-        if (raw != null) {
-          try {
-            return decodeCloudConfig(raw);
-          } catch (e) {
-            _recordLoadError(activeType, e);
-          }
-        }
-        return CloudServiceConfig.localStorage();
+        return _loadActiveBackendConfig(activeType, _kPiggyCountCloudCfg);
 
       case 'supabase':
-        final raw = await _readCfg(_kSupabaseCfg);
-        if (raw != null) {
-          try {
-            return decodeCloudConfig(raw);
-          } catch (e) {
-            _recordLoadError(activeType, e);
-          }
-        }
-        // 回退到本地存储
-        return CloudServiceConfig.localStorage();
+        return _loadActiveBackendConfig(activeType, _kSupabaseCfg);
 
       case 'webdav':
-        final raw = await _readCfg(_kWebdavCfg);
-        if (raw != null) {
-          try {
-            return decodeCloudConfig(raw);
-          } catch (e) {
-            _recordLoadError(activeType, e);
-          }
-        }
-        // 回退到本地存储
-        return CloudServiceConfig.localStorage();
+        return _loadActiveBackendConfig(activeType, _kWebdavCfg);
 
       case 'icloud':
         // iCloud 无需额外配置，返回 iCloud 类型的配置
@@ -147,20 +145,37 @@ class CloudServiceStore {
         );
 
       case 's3':
-        final raw = await _readCfg(_kS3Cfg);
-        if (raw != null) {
-          try {
-            return decodeCloudConfig(raw);
-          } catch (e) {
-            _recordLoadError(activeType, e);
-          }
-        }
-        // 回退到本地存储
-        return CloudServiceConfig.localStorage();
+        return _loadActiveBackendConfig(activeType, _kS3Cfg);
 
       default:
         return CloudServiceConfig.localStorage();
     }
+  }
+
+  /// 读取并解析激活后端的配置（M11 + M16 双语义收口）。
+  ///
+  /// - 配置不存在（read 正常返回 null）→ 回退 localStorage（未配置）
+  /// - 配置损坏（解析失败）→ 记录痕迹（M11 banner）+ 回退 localStorage
+  /// - 配置不可读（M16 安全存储故障）→ 记录痕迹 + 显式上抛，绝不静默
+  ///   伪装成「本地模式」—— 同步链路与 UI 必须感知失败
+  Future<CloudServiceConfig> _loadActiveBackendConfig(
+      String activeType, String key) async {
+    final String raw;
+    try {
+      raw = await _readCfg(key) ?? '';
+    } catch (e) {
+      _recordLoadError(activeType, e);
+      rethrow; // M16：显式报错，由上层转 banner / 同步链路感知
+    }
+    if (raw.isNotEmpty) {
+      try {
+        return decodeCloudConfig(raw);
+      } catch (e) {
+        _recordLoadError(activeType, e); // M11：解析损坏 → banner + 回退
+      }
+    }
+    // 未配置或解析损坏：回退到本地存储
+    return CloudServiceConfig.localStorage();
   }
 
   /// 加载 PiggyCount Cloud 配置(不管是否激活)
@@ -290,38 +305,43 @@ class CloudServiceStore {
         return true;
 
       case CloudBackendType.piggycountCloud:
-        final raw = await _readCfg(_kPiggyCountCloudCfg);
-        if (raw == null) return false;
+        // M16：_readCfg 读失败（安全存储故障）也走 false（bool 契约不变），
+        // 但必须留痕——此前裸 catch 静默吞掉，UI 只看到「激活失败」无因可查。
         try {
+          final raw = await _readCfg(_kPiggyCountCloudCfg);
+          if (raw == null) return false;
           final cfg = decodeCloudConfig(raw);
           if (!cfg.valid) return false;
           await sp.setString(_kActiveType, 'piggycount_cloud');
           return true;
         } catch (e) {
+          debugPrint('Activate piggycount_cloud config failed: $e');
           return false;
         }
 
       case CloudBackendType.supabase:
-        final raw = await _readCfg(_kSupabaseCfg);
-        if (raw == null) return false;
         try {
+          final raw = await _readCfg(_kSupabaseCfg);
+          if (raw == null) return false;
           final cfg = decodeCloudConfig(raw);
           if (!cfg.valid) return false;
           await sp.setString(_kActiveType, 'supabase');
           return true;
         } catch (e) {
+          debugPrint('Activate supabase config failed: $e');
           return false;
         }
 
       case CloudBackendType.webdav:
-        final raw = await _readCfg(_kWebdavCfg);
-        if (raw == null) return false;
         try {
+          final raw = await _readCfg(_kWebdavCfg);
+          if (raw == null) return false;
           final cfg = decodeCloudConfig(raw);
           if (!cfg.valid) return false;
           await sp.setString(_kActiveType, 'webdav');
           return true;
         } catch (e) {
+          debugPrint('Activate webdav config failed: $e');
           return false;
         }
 
@@ -331,14 +351,15 @@ class CloudServiceStore {
         return true;
 
       case CloudBackendType.s3:
-        final raw = await _readCfg(_kS3Cfg);
-        if (raw == null) return false;
         try {
+          final raw = await _readCfg(_kS3Cfg);
+          if (raw == null) return false;
           final cfg = decodeCloudConfig(raw);
           if (!cfg.valid) return false;
           await sp.setString(_kActiveType, 's3');
           return true;
         } catch (e) {
+          debugPrint('Activate s3 config failed: $e');
           return false;
         }
     }
