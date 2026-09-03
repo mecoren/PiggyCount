@@ -152,6 +152,23 @@ abstract class EncryptionService {
     required CloudStorageService cloudStorage,
   });
 
+  /// 恢复一次被中断的改密（审计 S24 / R1 接线）。
+  ///
+  /// 场景：改密的「云端重加密」完成或部分完成后、本地持久化新密钥前
+  /// 进程崩溃 —— newKey/newSalt 只存在于 secure storage 的检查点中。
+  /// 本方法用当前（旧）密钥解出检查点，幂等续跑云端重加密（已迁移
+  /// 文件按 salt 自动跳过），最后补上本地持久化与激活。
+  ///
+  /// [cloudStorage] 必须是**未装饰的原始 storage**（同
+  /// [changePasswordWithCloudReEncryption]），否则会双重加密。
+  ///
+  /// 返回 true = 存在检查点且恢复成功；false = 无待恢复的改密。
+  /// 检查点存在但恢复失败时抛异常（如 [ReEncryptPartialFailureException]），
+  /// 由调用方决定重试时机——检查点保留不清除，下次再试。
+  Future<bool> recoverPendingRekey({
+    required CloudStorageService cloudStorage,
+  });
+
   /// 重置加密（清空密钥和配置）
   ///
   /// 删除 secure storage 中的密钥和 verifier，标记加密未开启。

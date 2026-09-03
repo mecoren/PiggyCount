@@ -20,13 +20,16 @@ import '../../domain/encryption/encryption_service.dart';
 /// - 元数据（审计 P1）：E2EE 开启时不允许业务元数据以明文上云
 ///   （S3 x-amz-meta-* / WebDAV sidecar 对存储服务商完全可见，
 ///   泄漏账本名/币种/余额/条数/指纹）。上传前把整个 metadata 序列化为
-///   单个加密信封键 [_encMetaKey]；[getMetadata] 读到该键时解密还原。
+///   单个加密信封键 [encMetaKey]；[getMetadata] 读到该键时解密还原。
 ///   - 未开启加密：行为与历史版本一致（明文透传，不包装）；
 ///   - 旧版写入的明文元数据（无信封键）：读取端原样返回（向后兼容）；
 ///   - 信封解密失败（密钥不匹配等）：降级返回原始 map，调用方按
 ///     「无指纹」走全量下载兜底，不抛异常阻断状态检查。
 class EncryptedCloudStorageService
-    implements CloudStorageService, BinaryCapableStorage, ConditionalWriteStorage {
+    implements
+        CloudStorageService,
+        BinaryCapableStorage,
+        ConditionalWriteStorage {
   final CloudStorageService inner;
   final EncryptionService encryptionService;
 
@@ -44,17 +47,21 @@ class EncryptedCloudStorageService
   ///
   /// S3 链路传输层会把 x-amz-meta-* 头名转小写、写入端也显式小写；
   /// WebDAV sidecar 保留原始键名。读取端一律大小写无关匹配以兼容两类后端。
-  static const String _encMetaKey = '_encmeta';
+  ///
+  /// 公开静态常量：密钥轮换（EncryptionServiceImpl._preservedMetadata）与
+  /// 单元测试需要按同一键名识别/重包信封。
+  static const String encMetaKey = '_encmeta';
 
   /// 上传前的元数据处理：
   /// - null/空 → 原样返回 null；
   /// - 加密未开启 → 原样透传（与历史行为一致）；
-  /// - 加密开启 → 整包序列化加密进单个 [_encMetaKey] 信封。
-  Future<Map<String, String>?> _wrapMetadata(Map<String, String>? metadata) async {
+  /// - 加密开启 → 整包序列化加密进单个 [encMetaKey] 信封。
+  Future<Map<String, String>?> _wrapMetadata(
+      Map<String, String>? metadata) async {
     if (metadata == null || metadata.isEmpty) return metadata;
     if (!await encryptionService.isEnabled) return metadata;
     final envelope = await encryptionService.encrypt(jsonEncode(metadata));
-    return {_encMetaKey: envelope};
+    return {encMetaKey: envelope};
   }
 
   /// 读取端的元数据还原：
@@ -68,7 +75,7 @@ class EncryptedCloudStorageService
 
     String? envelope;
     for (final entry in metadata.entries) {
-      if (entry.key.toLowerCase() == _encMetaKey) {
+      if (entry.key.toLowerCase() == encMetaKey) {
         envelope = entry.value?.toString();
         break;
       }
@@ -131,7 +138,26 @@ class EncryptedCloudStorageService
       throw UnsupportedError(
           'Underlying storage does not support conditional writes: $path');
     }
-    final payload = await encryptionService.encrypt(base64Encode(bytes));
+    // P0-2 修复：条件写的密文形态必须与 [upload]（文本形态 encrypt(原文)）
+    // 对齐，而非 [uploadBinary] 的 encrypt(base64(bytes))。
+    //
+    // 唯一调用方 CloudSyncManager.upload 传入的 bytes 是「明文 JSON 的
+    // utf8 字节」。旧实现按 uploadBinary 口径先 base64 再加密，存储形态
+    // 变成 encrypt(base64(明文)) —— 而 download() 对密文 decrypt 后直接
+    // 返回，读到的是 base64 文本而非 JSON：E2EE + 条件写后端（S3 恒走
+    // 条件写路径）下，该账本所有 download / 恢复 / 完整性校验全部损坏
+    // （jsonDecode 必抛 FormatException）。
+    //
+    // bytes 可解为 UTF-8 文本（manager 契约内恒成立）→ 与 upload 同形态；
+    // 意外的非文本字节（防御）→ 维持 uploadBinary 的 base64 形态，
+    // downloadBinary 侧两种形态均可读（见其注释）。
+    final asText = _tryUtf8Decode(bytes);
+    final String payload;
+    if (asText != null) {
+      payload = await encryptionService.encrypt(asText);
+    } else {
+      payload = await encryptionService.encrypt(base64Encode(bytes));
+    }
     await conditional.uploadBinaryConditional(
       path: path,
       bytes: utf8.encode(payload),

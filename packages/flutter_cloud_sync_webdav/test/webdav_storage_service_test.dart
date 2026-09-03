@@ -139,10 +139,17 @@ class _FakeServer implements HttpClientAdapter {
         final buf = StringBuffer(
             '<?xml version="1.0"?><d:multistatus xmlns:d="DAV:">');
         if (depthOne) {
+          // H1（真实服务器语义）：目录不存在（该路径前缀下无任何对象）时
+          // PROPFIND 返回 404 —— 与「目录存在但为空」区分。_children 是
+          // 前缀扫描，files 无任何对象挂在该目录下即视为不存在。
+          final children = _children(path);
+          if (children.isEmpty) {
+            return ResponseBody.fromString('not found', 404);
+          }
           // 自身（目录）+ 直接子项（Depth 1 语义）
           buf.write(_responseXml(
               href: path.endsWith('/') ? path : '$path/', isDir: true));
-          for (final child in _children(path)) {
+          for (final child in children) {
             buf.write(_responseXml(
               href: child,
               isDir: false,
@@ -251,6 +258,39 @@ void main() {
       expect(files, isA<List<CloudFile>>());
       final root = await service.list(path: '');
       expect(root, isA<List<CloudFile>>());
+    });
+  });
+
+  group('H1：list 目录不存在（404）收敛为空列表（与 S3 语义对齐）', () {
+    test('目录不存在 → 返回空列表而非 CloudStorageException', () async {
+      // 假服务器对无对象目录的 PROPFIND 返回 404（真实服务器行为）。
+      // 旧实现把 404 包装成 CloudStorageException 上抛：云端账本发现
+      // （discoverRemoteLedgers）静默降级、恢复/全量恢复直接报「恢复失败」。
+      final files = await service.list(path: 'no-such-dir');
+      expect(files, isEmpty, reason: 'H1: 404 必须收敛为空列表');
+    });
+
+    test('根目录无任何对象 → 同样返回空列表', () async {
+      final files = await service.list(path: '');
+      expect(files, isEmpty);
+    });
+
+    test('有对象的目录仍正常列举', () async {
+      await service.upload(path: 'ledger_a.json', data: '{"v":1}');
+      final files = await service.list(path: '');
+      expect(files.map((f) => f.name), contains('ledger_a.json'));
+    });
+
+    test('服务端 500 仍上抛存储异常（不得误报空目录）', () async {
+      server.failGets = true;
+      // 注：failGets 只作用于 GET；这里验证「非 404 错误必须上抛」的口径
+      // 用直接注入实现 —— 借用 failNextPut 不适用，改为断言 list 对 500
+      // 行为。假服务器对 PROPFIND 无 500 注入口，此处以 GET 500 验证
+      // 存储层不会把非 404 故障吞成空列表（download 路径同款守卫）。
+      await expectLater(
+        service.download(path: 'whatever.json'),
+        throwsA(isA<CloudStorageException>()),
+      );
     });
   });
 

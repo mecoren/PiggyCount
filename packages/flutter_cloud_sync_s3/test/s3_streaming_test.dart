@@ -409,9 +409,21 @@ void main() {
 
   group('文件路径接口走流式（uploadFile/downloadFile 切换流式后行为兼容）', () {
     test('uploadFile → downloadFile roundtrip（2MB，逐字节一致）', () async {
+      // 存量测试缺陷修复：旧 mock 上传/下载一律返回空 200（_ok()），
+      // 下载端恒拿空文件 → expect 逐字节比对必然失败（基线上即红）。
+      // 正确语义：PUT 捕获 body，GET 回放同一 body —— 模拟真实 S3
+      // 的对象往返，roundtrip 断言才有意义。
+      List<int>? uploadedBody;
       final service = S3StorageService(
         _client(_CapturingClient((request, body) async {
-          return _ok();
+          if (request.method == 'PUT') {
+            uploadedBody = body;
+            return _ok();
+          }
+          return http.StreamedResponse(
+            http.ByteStream.fromBytes(uploadedBody ?? const []),
+            200,
+          );
         })),
         'mybucket',
       );
@@ -427,10 +439,11 @@ void main() {
         final restored = '${dir.path}/restored.json';
         await service.downloadFile(remote, restored);
         expect(File(restored).readAsBytesSync(), payload);
-        // 原子发布后无 tmp 残留
+        // 原子发布后无 tmp 残留（按文件名比较，避免 Windows 路径分隔符
+        // 差异 —— 同款处理见上方 downloadToSink 用例）
         expect(
-          dir.listSync().whereType<File>().map((f) => f.path).toSet(),
-          {local, restored},
+          dir.listSync().whereType<File>().map((f) => f.path.split(Platform.pathSeparator).last).toSet(),
+          {'snapshot.json', 'restored.json'},
         );
       } finally {
         await dir.delete(recursive: true);

@@ -11,7 +11,10 @@ import 'package:webdav_client/webdav_client.dart' as webdav;
 
 /// WebDAV implementation of [CloudStorageService].
 class WebDAVStorageService
-    implements CloudStorageService, BinaryCapableStorage, ConditionalWriteStorage {
+    implements
+        CloudStorageService,
+        BinaryCapableStorage,
+        ConditionalWriteStorage {
   final webdav.Client _client;
   final String _remotePath;
 
@@ -149,8 +152,7 @@ class WebDAVStorageService
   /// 仅用于 read/readDir/remove 等幂等操作；write/rename/mkdir 非幂等，
   /// 绝不进入本包装。重试条件：完全无结构化 HTTP 状态码（连接层故障）
   /// 或 5xx 服务端临时错误；4xx 一律立即上抛。
-  Future<T> _retryIdempotent<T>(
-      Future<T> Function() operation) async {
+  Future<T> _retryIdempotent<T>(Future<T> Function() operation) async {
     const maxRetries = 2; // 共 1+2 次
     var attempt = 0;
     while (true) {
@@ -158,14 +160,15 @@ class WebDAVStorageService
         return await operation();
       } catch (e) {
         final code = _statusCodeOf(e);
-        final retriable =
-            attempt < maxRetries && (code == null || code >= 500);
+        final retriable = attempt < maxRetries && (code == null || code >= 500);
         if (!retriable) rethrow;
         attempt++;
         // 指数退避 + 抖动：400ms、800ms（±50%）
         final baseMs = 400 * (1 << (attempt - 1));
-        final jitter = DateTime.now().microsecondsSinceEpoch % (baseMs ~/ 2 + 1);
-        await Future<void>.delayed(Duration(milliseconds: baseMs ~/ 2 + jitter));
+        final jitter =
+            DateTime.now().microsecondsSinceEpoch % (baseMs ~/ 2 + 1);
+        await Future<void>.delayed(
+            Duration(milliseconds: baseMs ~/ 2 + jitter));
       }
     }
   }
@@ -296,6 +299,11 @@ class WebDAVStorageService
 
   /// 在父目录 Depth-1 列举中查找单个文件条目（排除目录）。
   /// 「确认不存在」收敛为 null；网络/权限等真实错误原样上抛。
+  ///
+  /// M1：isDir 缺省与 [list] / [exists] 统一为 `?? true`（缺 resourcetype
+  /// 时保守视为目录排除）—— 三处旧口径分裂（?? false vs ?? true）会让
+  /// 同一文件在「服务器不返回 resourcetype」时 getMetadata 命中、
+  /// exists 却为 false。
   Future<webdav.File?> _findEntry(String fullPath) async {
     final parentDir = PathHelper.dirname(fullPath);
     final fileName = PathHelper.basename(fullPath);
@@ -303,7 +311,7 @@ class WebDAVStorageService
       final files =
           await _opRetryable('readDir', (t) => _client.readDir(parentDir, t));
       for (final f in files) {
-        if (!(f.isDir ?? false) && f.name == fileName) {
+        if (!(f.isDir ?? true) && f.name == fileName) {
           return f;
         }
       }
@@ -352,7 +360,8 @@ class WebDAVStorageService
 
       // 1. 先写临时文件（webdav write 需要 Uint8List，避免多余拷贝）
       try {
-        await _op('write', (t) => _client.write(tempPath, payload, cancelToken: t));
+        await _op(
+            'write', (t) => _client.write(tempPath, payload, cancelToken: t));
       } catch (e) {
         if (!_ensuredDirs.contains(parentDir) || !_isNotFound(e)) {
           rethrow;
@@ -362,7 +371,8 @@ class WebDAVStorageService
         _ensuredDirs.remove(parentDir);
         await _ensureDirectory(parentDir);
         _ensuredDirs.add(parentDir);
-        await _op('write', (t) => _client.write(tempPath, payload, cancelToken: t));
+        await _op(
+            'write', (t) => _client.write(tempPath, payload, cancelToken: t));
       }
 
       // 2. 直接覆盖 rename（overwrite=true），失败时旧文件保持原样
@@ -404,7 +414,8 @@ class WebDAVStorageService
         try {
           await _op('remove', (t) => _client.remove(backupPath, t));
         } catch (cleanupError) {
-          dev.log('[WebDAV] Warning: backup cleanup failed for $backupPath: $cleanupError',
+          dev.log(
+              '[WebDAV] Warning: backup cleanup failed for $backupPath: $cleanupError',
               name: 'WebDAVStorage');
         }
       }
@@ -414,7 +425,9 @@ class WebDAVStorageService
         await _op('remove', (t) => _client.remove(tempPath, t));
       } catch (cleanupError) {
         // 临时文件清理失败记录日志，便于排查远端残留半成品
-        dev.log('[WebDAV] Warning: temp file cleanup failed for $tempPath: $cleanupError', name: 'WebDAVStorage');
+        dev.log(
+            '[WebDAV] Warning: temp file cleanup failed for $tempPath: $cleanupError',
+            name: 'WebDAVStorage');
       }
       // 401/403 认证失败：抛专属异常供上层引导用户修正凭据
       if (_isUnauthorized(e)) {
@@ -435,10 +448,11 @@ class WebDAVStorageService
       final tempName = PathHelper.basename(tempPath);
       final files =
           await _opRetryable('readDir', (t) => _client.readDir(parentDir, t));
-      final targetLanded = files.any(
-          (f) => !(f.isDir ?? false) && f.name == targetName);
-      final tempGone = !files
-          .any((f) => !(f.isDir ?? false) && f.name == tempName);
+      // M1：isDir 缺省统一 `?? true`（见 _findEntry 注释）。
+      final targetLanded =
+          files.any((f) => !(f.isDir ?? true) && f.name == targetName);
+      final tempGone =
+          !files.any((f) => !(f.isDir ?? true) && f.name == tempName);
       return targetLanded && tempGone;
     } catch (_) {
       return false;
@@ -536,7 +550,8 @@ class WebDAVStorageService
       final fullPath = _buildPath(path);
 
       // List files（幂等读，自动重试瞬时网络故障）
-      final files = await _opRetryable('readDir', (t) => _client.readDir(fullPath, t));
+      final files =
+          await _opRetryable('readDir', (t) => _client.readDir(fullPath, t));
 
       // Convert to CloudFile objects, excluding directories and internal
       // artifacts（sidecar/临时/备份，审计 W-G 统一口径）
@@ -552,9 +567,8 @@ class WebDAVStorageService
         // 审计 WD-L2/B7：入参带尾斜杠时归一化（含根目录 '/' 本身 ——
         // 旧实现的 `length > 1` 守卫让根目录泄漏出带前导斜杠的脏路径
         // `/x.json`，与其余方法的口径不一致）。
-        final normalizedDir = path.endsWith('/')
-            ? path.substring(0, path.length - 1)
-            : path;
+        final normalizedDir =
+            path.endsWith('/') ? path.substring(0, path.length - 1) : path;
         final relativePath =
             normalizedDir.isEmpty ? name : '$normalizedDir/$name';
         return CloudFile(
@@ -568,6 +582,15 @@ class WebDAVStorageService
         );
       }).toList();
     } catch (e) {
+      // H1（审计修复）：目录不存在（404）收敛为空列表，与 S3 的
+      // ListObjects 语义对齐（不存在 prefix 返回 200+空集）。此前 404 被
+      // 包装成 CloudStorageException 上抛，云端账本发现（discoverRemote
+      // Ledgers）静默降级、恢复/全量恢复入口直接报「恢复失败」—— 用户
+      // 中途在服务器删目录 / remotePath 指向未建子路径时整条链路中断。
+      // 其余错误（网络/认证/权限）照旧上抛，不得误报「空目录」。
+      if (_isNotFound(e)) {
+        return const <CloudFile>[];
+      }
       // 401/403 认证失败：抛专属异常供上层引导用户修正凭据
       if (_isUnauthorized(e)) {
         throw _authExceptionOf(e);
@@ -588,8 +611,9 @@ class WebDAVStorageService
           await _opRetryable('readDir', (t) => _client.readDir(parentDir, t));
       // 审计 B7：排除目录 —— 同名目录会让 exists()=true 但 download 必败。
       // 审计 W-G：内部产物与 list() 口径一致过滤，消除三态分裂。
+      // M1：isDir 缺省统一 `?? true`（见 _findEntry 注释）。
       return files.any((f) =>
-          !(f.isDir ?? false) &&
+          !(f.isDir ?? true) &&
           f.name == fileName &&
           !_isInternalArtifact(fileName));
     } catch (e) {
@@ -628,9 +652,8 @@ class WebDAVStorageService
       // 审计 M10：解析结果按 (path, eTag) 缓存（见 _metaCache 注释），
       // eTag 未变的重复调用零下载。
       final eTag = _normalizeETag(file.eTag);
-      final cacheKey = (eTag == null || eTag.isEmpty)
-          ? null
-          : '$fullPath\u0000$eTag';
+      final cacheKey =
+          (eTag == null || eTag.isEmpty) ? null : '$fullPath\u0000$eTag';
       Map<String, dynamic> customMetadata;
       final cached = cacheKey == null ? null : _metaCache[cacheKey];
       if (cached != null) {
@@ -689,8 +712,7 @@ class WebDAVStorageService
       }
       return await _getMetadata(fullPath);
     } catch (e) {
-      dev.log(
-          '[WebDAV] Warning: metadata source read failed for $fullPath: $e',
+      dev.log('[WebDAV] Warning: metadata source read failed for $fullPath: $e',
           name: 'WebDAVStorage');
       return null;
     }
@@ -723,9 +745,7 @@ class WebDAVStorageService
   CloudAuthException _authExceptionOf(Object e) {
     final code = _statusCodeOf(e);
     if (code == 403) {
-      return CloudAuthException(
-          'WebDAV 访问被拒绝（权限不足）：请检查账号对该目录的读写权限或服务器配额',
-          e);
+      return CloudAuthException('WebDAV 访问被拒绝（权限不足）：请检查账号对该目录的读写权限或服务器配额', e);
     }
     return CloudAuthException('WebDAV 认证失败（账号或密码错误）', e);
   }
@@ -785,8 +805,7 @@ class WebDAVStorageService
       return code == 401 || code == 403;
     }
     final msg = e.toString().toLowerCase();
-    return msg.contains('unauthorized') ||
-        msg.contains('forbidden');
+    return msg.contains('unauthorized') || msg.contains('forbidden');
   }
 
   /// 判断 rename(MOVE overwrite=true) 失败是否源于「服务器不支持覆盖式 MOVE」。
@@ -894,7 +913,8 @@ class WebDAVStorageService
       // 兜底，安全设计不变），但必须留下告警 —— 否则弱网下反复全量下载
       // 无从排查。
       if (!_isNotFound(e)) {
-        dev.log('[WebDAV] Warning: metadata sidecar read failed for $filePath: $e',
+        dev.log(
+            '[WebDAV] Warning: metadata sidecar read failed for $filePath: $e',
             name: 'WebDAVStorage');
       }
       return {};

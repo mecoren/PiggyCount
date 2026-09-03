@@ -1,6 +1,7 @@
 /// 云同步服务接口和状态模型
 
-import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' show CloudSyncException;
+import 'package:flutter_cloud_sync/flutter_cloud_sync.dart'
+    show CloudSyncException;
 
 /// M7：上传覆盖冲突 —— 快照同步是整文件覆盖语义（last-writer-wins），
 /// 上传前检测到「云端快照比本地新」或「方向无法判定但内容不同」时抛出，
@@ -36,14 +37,26 @@ class UploadProbe {
 // ---- 同步服务接口 ----
 
 abstract class SyncService {
-  Future<void> uploadCurrentLedger({required int ledgerId, bool force = false});
+  /// 上传当前账本快照到云端。
+  ///
+  /// [bypassRestoreGuard]（P0-1 修复，默认 false）：为 true 时跳过
+  /// 「恢复临界区内禁止上传」守卫。仅限**恢复/合并已完成、DB 处于一致态**
+  /// 的收尾回传使用（如启动检查 merge-then-publish 阶段 2）—— 该流程
+  /// 整体跑在 [SyncRestoreGuard] 临界区内，但阶段 2 执行时合并事务早已
+  /// 提交，上传的快照取自完整数据，不满足「半恢复态」前提；若不豁免，
+  /// 所有回传都会被 TSM-P8 守卫拒掉，指纹永不收敛 → 每次启动重复弹
+  /// 「云端有更新」。**用户主动上传入口绝不允许传 true**。
+  Future<void> uploadCurrentLedger(
+      {required int ledgerId,
+      bool force = false,
+      bool bypassRestoreGuard = false});
 
   /// 下载并导入到当前账本
   /// 返回 (inserted, deletedDup) 二元组：
   /// - inserted: 新增条数
   /// - deletedDup: 保留字段（目前始终为0）
-  Future<({int inserted, int deletedDup})>
-      downloadAndRestoreToCurrentLedger({required int ledgerId});
+  Future<({int inserted, int deletedDup})> downloadAndRestoreToCurrentLedger(
+      {required int ledgerId});
 
   Future<SyncStatus> getStatus({required int ledgerId});
 
@@ -74,14 +87,16 @@ abstract class SyncService {
 
 class LocalOnlySyncService implements SyncService {
   @override
-  Future<({int inserted, int deletedDup})>
-      downloadAndRestoreToCurrentLedger({required int ledgerId}) async {
+  Future<({int inserted, int deletedDup})> downloadAndRestoreToCurrentLedger(
+      {required int ledgerId}) async {
     throw UnsupportedError('Cloud sync not configured');
   }
 
   @override
   Future<void> uploadCurrentLedger(
-      {required int ledgerId, bool force = false}) async {
+      {required int ledgerId,
+      bool force = false,
+      bool bypassRestoreGuard = false}) async {
     throw UnsupportedError('Cloud sync not configured');
   }
 

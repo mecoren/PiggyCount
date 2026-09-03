@@ -2,13 +2,15 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:cryptography/cryptography.dart' show SecretBoxAuthenticationError;
+import 'package:cryptography/cryptography.dart'
+    show SecretBoxAuthenticationError;
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'argon2_key_derivation.dart';
 import 'aes_gcm_cipher.dart';
 import 'ciphertext_format.dart';
+import 'encrypted_cloud_storage.dart' show EncryptedCloudStorageService;
 import 'secure_key_storage.dart';
 import '../../domain/encryption/encryption_service.dart';
 import '../../services/system/logger_service.dart';
@@ -418,8 +420,8 @@ class EncryptionServiceImpl implements EncryptionService {
     // ② 不保存/不激活新密钥，旧密码继续有效；
     // ③ 抛专属异常供 UI 明确告知用户失败文件清单。
     if (result.failed > 0) {
-      LoggerService().warning('CloudReEncrypt',
-          '改密重加密部分失败(${result.failed} 个)，开始回滚已重加密文件并中止改密');
+      LoggerService().warning(
+          'CloudReEncrypt', '改密重加密部分失败(${result.failed} 个)，开始回滚已重加密文件并中止改密');
       final rollbackFailed = await _rollbackReEncryptedFiles(
         cloudStorage: cloudStorage,
         oldKey: oldKey,
@@ -491,21 +493,20 @@ class EncryptionServiceImpl implements EncryptionService {
     // 解出检查点中的 newKey(32) + newSalt(16)
     final plain = await cipher.decrypt(
         encryptedBytes: base64.decode(ckptB64), key: oldKey);
-    final expectedLen = Argon2KeyDerivation.keyLength +
-        Argon2KeyDerivation.saltLength;
+    final expectedLen =
+        Argon2KeyDerivation.keyLength + Argon2KeyDerivation.saltLength;
     if (plain.length != expectedLen) {
       // 检查点损坏：清掉避免永久阻塞，向上提示需手动重新改密
       await storage.clearRekeyCheckpoint();
       throw StateError('改密检查点损坏（长度 ${plain.length} != $expectedLen），'
           '已清除。请确认其他设备数据一致后重新执行改密');
     }
-    final recoveredNewKey = Uint8List.fromList(
-        plain.sublist(0, Argon2KeyDerivation.keyLength));
-    final recoveredNewSalt = Uint8List.fromList(plain.sublist(
-        Argon2KeyDerivation.keyLength));
+    final recoveredNewKey =
+        Uint8List.fromList(plain.sublist(0, Argon2KeyDerivation.keyLength));
+    final recoveredNewSalt =
+        Uint8List.fromList(plain.sublist(Argon2KeyDerivation.keyLength));
 
-    LoggerService().warning(
-        'CloudReEncrypt', '检测到未完成的改密检查点，开始幂等续跑云端重加密');
+    LoggerService().warning('CloudReEncrypt', '检测到未完成的改密检查点，开始幂等续跑云端重加密');
 
     // 幂等续跑：salt 已等于 newSalt 的文件（上次崩溃前已迁移）计 skip
     final result = await _reEncryptCloudDataWithKeys(
@@ -535,8 +536,7 @@ class EncryptionServiceImpl implements EncryptionService {
     _activeKey = recoveredNewKey;
     _activeSalt = recoveredNewSalt;
 
-    LoggerService().info(
-        'CloudReEncrypt', '改密恢复完成：本地已切换到新密钥');
+    LoggerService().info('CloudReEncrypt', '改密恢复完成：本地已切换到新密钥');
     return true;
   }
 
@@ -549,16 +549,97 @@ class EncryptionServiceImpl implements EncryptionService {
   /// 同步上传才恢复（审计 P3）。WebDAV 主文件虽不丢 sidecar，但同样
   /// 回写可保证两端行为一致。读取失败（网络等）返回 null，该文件退回
   /// 「无元数据」旧行为，不阻断重加密主流程。
+  ///
+  /// R2 修复（元数据信封随密钥轮换）：E2EE 开启期间上传的元数据以
+  /// `_encmeta` 信封存储（见 EncryptedCloudStorageService._wrapMetadata），
+  /// 信封本身用**当时的激活密钥**加密。本方法直连 raw storage（未装饰），
+  /// 读到的就是信封密文形态。密钥轮换后旧信封无法用新密钥解开——若原样
+  /// 保留，`_unwrapMetadata` 解密失败降级返回原始 map，fingerprint 读取
+  /// 永久 miss → getStatus/冲突检测永久退化为全量下载 + unknown 冲突。
+  /// 因此 [rekeyNewKey] 非空（改密/续跑路径）时：
+  /// - 旧信封可用 [rekeyOldKey] 解开 → 明文用新密钥重包为新信封；
+  /// - 解不开（信封与其余密文不同源/损坏）→ 剥除信封只保留无元数据，
+  ///   下次正常同步上传时装饰器会重新包裹，避免永久悬挂不可解信封。
+  /// [rekeyNewKey] 为 null（enable 后的首轮全量重加密路径）时元数据以
+  /// 明文形态存在（E2EE 此前未开启），按 `_wrapMetadata` 同款规则用当前
+  /// 激活密钥主动包成信封，保证重加密后元数据不再以明文上云（审计 P1
+  /// 的元数据保密承诺在本路径同样成立）。
   Future<Map<String, String>?> _preservedMetadata(
-      CloudStorageService cloudStorage, String path) async {
+    CloudStorageService cloudStorage,
+    String path, {
+    Uint8List? rekeyOldKey,
+    Uint8List? rekeyNewKey,
+    List<int>? rekeyNewSalt,
+  }) async {
     try {
       final file = await cloudStorage.getMetadata(path: path);
       final meta = file?.metadata;
       if (meta == null || meta.isEmpty) return null;
-      return {
+      final raw = {
         for (final entry in meta.entries)
           if (entry.value != null) entry.key: entry.value.toString(),
       };
+
+      // 定位 _encmeta 信封（大小写无关，对齐装饰器读取端口径）
+      String? envelopeKey;
+      String? envelope;
+      for (final entry in raw.entries) {
+        if (entry.key.toLowerCase() ==
+            EncryptedCloudStorageService.encMetaKey) {
+          envelopeKey = entry.key;
+          envelope = entry.value;
+          break;
+        }
+      }
+
+      if (rekeyNewKey != null) {
+        // 密钥轮换路径：旧信封解密 → 新密钥重包
+        if (envelope != null && CiphertextFormat.isEncrypted(envelope)) {
+          try {
+            final decoded = CiphertextFormat.decode(envelope);
+            final plainBytes = await cipher.decrypt(
+              encryptedBytes: decoded.encryptedBytes,
+              key: rekeyOldKey!,
+            );
+            final plain = utf8.decode(plainBytes);
+            final decodedMeta = jsonDecode(plain) as Map<String, dynamic>;
+            final resealed = await cipher.encrypt(
+              plaintext: utf8.encode(jsonEncode(decodedMeta)),
+              key: rekeyNewKey,
+            );
+            // salt 必须配套换新：读取端 decrypt 以「salt == 当前激活 salt」
+            // 为前置校验（缺陷 F），沿用旧 salt 的新钥密文永远 SaltMismatch
+            return {
+              envelopeKey!: CiphertextFormat.encode(
+                salt: Uint8List.fromList(rekeyNewSalt!),
+                encryptedBytes: resealed,
+              ),
+            };
+          } catch (_) {
+            // 旧信封解不开：剥除信封，等下次正常同步由装饰器重包
+            final stripped = Map<String, String>.from(raw)..remove(envelopeKey);
+            return stripped.isEmpty ? null : stripped;
+          }
+        }
+        return raw.isEmpty ? null : raw;
+      }
+
+      // enable 后首轮重加密路径：E2EE 已开启，明文元数据须包成信封。
+      // 已是信封（异常残留）则原样保留。
+      if (envelope != null) return raw;
+      if (await isEnabled && _activeKey != null && _activeSalt != null) {
+        final wrapped = await cipher.encrypt(
+          plaintext: utf8.encode(jsonEncode(raw)),
+          key: _activeKey!,
+        );
+        return {
+          EncryptedCloudStorageService.encMetaKey: CiphertextFormat.encode(
+            salt: _activeSalt!,
+            encryptedBytes: wrapped,
+          )
+        };
+      }
+      return raw.isEmpty ? null : raw;
     } catch (_) {
       return null;
     }
@@ -608,8 +689,8 @@ class EncryptionServiceImpl implements EncryptionService {
       }
     }
     try {
-      final attFiles = await cloudStorage
-          .list(path: _joinCloudDir(pathPrefix, 'attachments/'));
+      final attFiles = await cloudStorage.list(
+          path: _joinCloudDir(pathPrefix, 'attachments/'));
       for (final f in attFiles) {
         final n = f.name;
         if (n.isEmpty || n.endsWith('/')) continue;
@@ -679,7 +760,15 @@ class EncryptionServiceImpl implements EncryptionService {
         await cloudStorage.upload(
           path: name,
           data: newCiphertext,
-          metadata: await _preservedMetadata(cloudStorage, name),
+          // R2 修复：_encmeta 元数据信封随密钥一起轮换（旧钥解 → 新钥包），
+          // 否则改密后所有 fingerprint 读取永久 miss（见 _preservedMetadata 注释）
+          metadata: await _preservedMetadata(
+            cloudStorage,
+            name,
+            rekeyOldKey: oldKey,
+            rekeyNewKey: newKey,
+            rekeyNewSalt: newSalt,
+          ),
         );
         success++;
         successPaths.add(name);
@@ -740,7 +829,15 @@ class EncryptionServiceImpl implements EncryptionService {
             salt: oldSalt,
             encryptedBytes: oldEncryptedBytes,
           ),
-          metadata: await _preservedMetadata(cloudStorage, name),
+          // R2 对称修复：回滚时把信封换回旧钥（newKey 解 → oldKey 包），
+          // 与文件体一起恢复「全旧密钥」一致状态
+          metadata: await _preservedMetadata(
+            cloudStorage,
+            name,
+            rekeyOldKey: newKey,
+            rekeyNewKey: oldKey,
+            rekeyNewSalt: oldSalt,
+          ),
         );
       } catch (e) {
         LoggerService().error('CloudReEncrypt', '回滚文件失败: $name', e);
@@ -812,8 +909,8 @@ class EncryptionServiceImpl implements EncryptionService {
         targets.add('attachments/$n');
         attFound++;
       }
-      LoggerService().info('CloudReEncrypt',
-          '附件对象枚举: $attFound 个（$attDirPath）');
+      LoggerService()
+          .info('CloudReEncrypt', '附件对象枚举: $attFound 个（$attDirPath）');
     } catch (_) {
       // 无附件目录（404）或后端不支持子目录列举：忽略，仅处理账本文件
     }
@@ -840,6 +937,10 @@ class EncryptionServiceImpl implements EncryptionService {
         await cloudStorage.upload(
           path: name,
           data: reEncrypted,
+          // R2 修复：enable 后的首轮全量重加密路径（raw storage 直传），
+          // 明文元数据包成 _encmeta 信封 —— 对齐装饰器 _wrapMetadata 的
+          // 审计 P1 元数据保密承诺（无此步则 S3 头 / WebDAV sidecar 以明文
+          // 携带账本名/指纹/条数长期驻留云端）
           metadata: await _preservedMetadata(cloudStorage, name),
         );
         success++;

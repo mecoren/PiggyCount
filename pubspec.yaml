@@ -11,6 +11,9 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
+  # @immutable 注解（encryption_settings 等）显式声明，消除
+  # depend_on_referenced_packages（经 flutter SDK 传递可用，lint 要求直声明）
+  meta: ^1.16.0
   flutter_riverpod: ^2.5.1
   collection: ^1.18.0
   drift: ^2.20.2

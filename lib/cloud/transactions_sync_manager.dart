@@ -149,7 +149,16 @@ class TransactionsSyncManager implements SyncService {
   /// 触发延迟初始化（公开入口，供 UI 层在调用 rawStorage 前预热）
   ///
   /// 幂等：已初始化时立即返回，正在初始化时等待完成。
-  Future<void> ensureInitialized() => _ensureInitialized();
+  ///
+  /// R1 接线（审计 S24）：每次调用都尝试恢复滞留的改密检查点
+  ///（[_tryRecoverPendingRekey]，内部单飞 + 无检查点早退，近零成本）。
+  /// 挂在这里而非 [_ensureInitialized] 的原因：真实初始化每 session 只跑
+  /// 一次即可，但测试缝注入（setSyncManagerForTesting）与加密重初始化
+  /// 后的直连调用也构成「同步即将开始」的时机，都应尝试恢复。
+  Future<void> ensureInitialized() {
+    unawaited(_tryRecoverPendingRekey());
+    return _ensureInitialized();
+  }
 
   /// 测试缝：直接注入 [fcs.CloudSyncManager] 与 [fcs.CloudProvider]，
   /// 跳过 [_ensureInitialized] 的真实云服务创建流程。
@@ -210,12 +219,18 @@ class TransactionsSyncManager implements SyncService {
     // E9 补全：_pendingAttachmentJobs（旧加密态的附件补齐任务）与
     // _discoveredPayloads（发现阶段缓存的明文 payload）此前漏清，
     // 会把旧加密态的任务/明文缓存泄漏到新会话。
+    // M5 补全：_cipherProbeCache（旧加密态的 split-brain 探测缓存）——
+    // 残留 true 命中会让新会话的前 60s 沿用「云端密文不可解」判定。
+    // _ledgerOpsLocks 不清：future 链承载在途操作的互斥语义，清空会让
+    // 并发上传/恢复失去排队（详见 _withLedgerLock 注释）；链节点随完成
+    // 自动出表，不构成泄漏。
     _statusCache.clear();
     _recentLocalChangeAt.clear();
     _recentUpload.clear();
     _pendingAttachmentJobs.clear();
     _discoveredPayloads.clear();
     _staleRemoteSlots.clear();
+    _cipherProbeCache.clear();
 
     logger.info('CloudSync', '已标记需重新初始化（加密状态变更）');
   }
@@ -238,12 +253,15 @@ class TransactionsSyncManager implements SyncService {
     _provider = null;
     _syncManager = null;
     _rawStorage = null;
+    // M5：与 reinitializeForEncryption 同口径清 _cipherProbeCache。
+    // _ledgerOpsLocks 保持（见 reinitializeForEncryption 处注释）。
     _statusCache.clear();
     _recentLocalChangeAt.clear();
     _recentUpload.clear();
     _pendingAttachmentJobs.clear();
     _discoveredPayloads.clear();
     _staleRemoteSlots.clear();
+    _cipherProbeCache.clear();
   }
 
   /// 开启加密后的全量重加密 + 重新初始化（原子流程）
@@ -285,7 +303,7 @@ class TransactionsSyncManager implements SyncService {
         logger.info(
           'CloudSync',
           '云端重加密完成: success=${result.success}, '
-          'failed=${result.failed}, skipped=${result.skipped}',
+              'failed=${result.failed}, skipped=${result.skipped}',
         );
       } catch (e, stack) {
         logger.error('CloudSync', '云端重加密失败', e);
@@ -348,6 +366,10 @@ class TransactionsSyncManager implements SyncService {
           .whenComplete(() => drainAttachmentJobs()));
       // M3：补删上次换名收尾失败的旧远程槽位（网络恢复后重试）。
       unawaited(_retryStaleSlotDeletes());
+      // R1 接线（审计 S24）：provider 就绪后再试一次改密检查点恢复 ——
+      // ensureInitialized 入口的首次调用发生在 provider 装配前
+      //（_rawStorage 为 null 时恢复早退），这里补上首个 session 内的恢复。
+      unawaited(_tryRecoverPendingRekey());
     } catch (e, st) {
       completer.completeError(e, st);
       rethrow;
@@ -379,7 +401,8 @@ class TransactionsSyncManager implements SyncService {
 
       if (newProvider == null) {
         // Provider 创建失败（如 iCloud 未登录），标记为已初始化但无法使用
-        logger.warning('CloudSync', 'Provider not available for ${config.type}');
+        logger.warning(
+            'CloudSync', 'Provider not available for ${config.type}');
         return;
       }
 
@@ -425,8 +448,8 @@ class TransactionsSyncManager implements SyncService {
       // 代次终检：装配期间发生过 reinit/dispose → 整体丢弃本轮成果
       //（EncryptedCloudProvider.dispose 会级联释放 inner provider）
       if (_initGeneration != gen) {
-        logger.info('CloudSync',
-            '初始化期间加密状态已变更（代次 $_initGeneration != $gen），丢弃本轮装配');
+        logger.info(
+            'CloudSync', '初始化期间加密状态已变更（代次 $_initGeneration != $gen），丢弃本轮装配');
         await _discardInitArtifacts(newProvider);
         return;
       }
@@ -501,8 +524,8 @@ class TransactionsSyncManager implements SyncService {
         effectiveId = rereadSyncId;
       }
     }
-    logger.info('CloudSync',
-        'pathForLedger 就地生成账本 syncId: ${row.id} → $effectiveId');
+    logger.info(
+        'CloudSync', 'pathForLedger 就地生成账本 syncId: ${row.id} → $effectiveId');
     return 'ledger_$effectiveId.json';
   }
 
@@ -568,8 +591,7 @@ class TransactionsSyncManager implements SyncService {
   /// 弹密码对话框走 [EncryptionService.enableFromCloud] 恢复。
   Future<SyncStatus?> _cloudEncryptedLocallyDisabledStatus(int ledgerId) async {
     if (!await _isCloudCiphertextLocallyDisabled(ledgerId)) return null;
-    logger.warning(
-        'CloudSync', '云端为密文但本地未开启加密，需引导用户开启加密: $ledgerId');
+    logger.warning('CloudSync', '云端为密文但本地未开启加密，需引导用户开启加密: $ledgerId');
     return SyncStatus(
       diff: SyncDiff.error,
       localCount: 0,
@@ -605,9 +627,9 @@ class TransactionsSyncManager implements SyncService {
     final raw = _rawStorage;
     if (raw == null) return false;
     try {
-      final content =
-          await raw.download(path: await pathForLedger(ledgerId));
-      final encrypted = content != null && CiphertextFormat.isEncrypted(content);
+      final content = await raw.download(path: await pathForLedger(ledgerId));
+      final encrypted =
+          content != null && CiphertextFormat.isEncrypted(content);
       if (encrypted) {
         _cipherProbeCache[ledgerId] = (
           at: DateTime.now(),
@@ -683,15 +705,23 @@ class TransactionsSyncManager implements SyncService {
 
   @override
   Future<void> uploadCurrentLedger(
-      {required int ledgerId, bool force = false}) async {
+      {required int ledgerId,
+      bool force = false,
+      bool bypassRestoreGuard = false}) async {
     await _ensureInitialized();
 
     // 审计 TSM-P8：恢复临界区进行中绝不允许上传 —— 半恢复态 DB 会被打包
     // 推上云端覆盖好快照（与 W6 防的灾难同构）。定时备份已检查 isBusy，
     // 这里补上所有手动/自动上传入口。
-    if (SyncRestoreGuard.isBusy) {
-      throw fcs.CloudSyncException(
-          '正在从云端恢复数据，本次上传已取消，请在恢复完成后再试');
+    //
+    // P0-1 修复：[bypassRestoreGuard] 供「恢复已提交、仅剩收尾回传」的
+    // 内部流程豁免（启动检查 merge-then-publish 阶段 2 —— 其临界区由
+    // app.dart 包裹整个 runIfNeeded，阶段 2 执行时合并事务早已提交，
+    // 上传的是完整一致态数据，不构成半恢复态上传）。此前该流程的回传
+    // 在此被无条件拒绝 → 每个账本回传必失败 → 指纹永不收敛 → 每次启动
+    // 重复弹「云端有更新」死循环。
+    if (SyncRestoreGuard.isBusy && !bypassRestoreGuard) {
+      throw fcs.CloudSyncException('正在从云端恢复数据，本次上传已取消，请在恢复完成后再试');
     }
 
     // 审计 TSM-P8：同账本「上传 ↔ 恢复」经 _ledgerOpsLocks 串行化
@@ -760,9 +790,10 @@ class TransactionsSyncManager implements SyncService {
           localFp: localFp,
         );
         if (probe.hasConflict) {
-          logger.warning('CloudSync',
+          logger.warning(
+              'CloudSync',
               '上传冲突拦截: ledger=$ledgerId direction=${probe.direction} '
-              '(等待用户确认覆盖)');
+                  '(等待用户确认覆盖)');
           throw CloudConflictException(direction: probe.direction!);
         }
         cloudETag = probe.cloudETag;
@@ -776,7 +807,8 @@ class TransactionsSyncManager implements SyncService {
         'ledgerId': ledgerId.toString(),
       };
       if (exportMap != null) {
-        final name = exportMap['ledgerName'] as String? ?? exportMap['name'] as String?;
+        final name =
+            exportMap['ledgerName'] as String? ?? exportMap['name'] as String?;
         final currency = exportMap['currency'] as String?;
         final exportedAt = exportMap['exportedAt'] as String?;
         if (name != null) uploadMetadata['ledgerName'] = name;
@@ -815,8 +847,8 @@ class TransactionsSyncManager implements SyncService {
       } on fcs.CloudPreconditionFailedException {
         // 探测到写入之间云端已被其他设备修改，本次未落盘。翻译为冲突
         // 异常走既有的用户确认/合并流程，绝不静默重试（重试=覆盖他机数据）。
-        logger.warning('CloudSync',
-            '条件写失败（云端已被并发修改）: ledger=$ledgerId → 转入冲突流程');
+        logger.warning(
+            'CloudSync', '条件写失败（云端已被并发修改）: ledger=$ledgerId → 转入冲突流程');
         throw CloudConflictException(direction: 'cloudNewer');
       }
 
@@ -827,9 +859,10 @@ class TransactionsSyncManager implements SyncService {
       // 否则本地修改被静默掩盖（旧代码此场景完全无感知）。
       final uploadVerified = outcome.verified;
       if (!uploadVerified) {
-        logger.warning('CloudSync',
+        logger.warning(
+            'CloudSync',
             '写后校验不一致（云端可能已被并发覆盖）: ledger=$ledgerId '
-            '→ 本次不标记已同步');
+                '→ 本次不标记已同步');
       }
 
       // 记录近期上传，用于处理 CDN 缓存延迟
@@ -954,8 +987,8 @@ class TransactionsSyncManager implements SyncService {
   /// 上传即自愈,窗口归零(文件缺失的孤儿行保持 NULL,交由启动任务再试)。
   ///
   /// 返回 (uploaded, skipped, failed) 统计供调用方汇总。
-  Future<({int uploaded, int skipped, int failed})>
-      uploadAttachmentObjects({required int ledgerId}) async {
+  Future<({int uploaded, int skipped, int failed})> uploadAttachmentObjects(
+      {required int ledgerId}) async {
     await _ensureInitialized();
     final provider = _provider;
     if (provider == null) {
@@ -977,16 +1010,16 @@ class TransactionsSyncManager implements SyncService {
         db: db,
         onResolved: repo.updateAttachmentLocalSha256,
         txIds: txIds,
-        attachmentsDir:
-            Directory('${(await getApplicationDocumentsDirectory()).path}/attachments'),
+        attachmentsDir: Directory(
+            '${(await getApplicationDocumentsDirectory()).path}/attachments'),
       );
     } catch (e) {
       logger.warning('CloudSync', '附件 sha256 上传前回填失败(不阻断): $e');
     }
 
     final atts = await (db.select(db.transactionAttachments)
-          ..where((a) =>
-              a.transactionId.isIn(txIds) & a.localSha256.isNotNull()))
+          ..where(
+              (a) => a.transactionId.isIn(txIds) & a.localSha256.isNotNull()))
         .get();
 
     // sha256 -> 候选本地文件名(内容相同,任一存在的物理文件即可作为源)
@@ -1020,8 +1053,8 @@ class TransactionsSyncManager implements SyncService {
         }
         if (srcPath == null) {
           skipped++;
-          logger.warning('CloudSync',
-              '附件本地文件缺失,跳过上传: sha256=$sha (${entry.value.first})');
+          logger.warning(
+              'CloudSync', '附件本地文件缺失,跳过上传: sha256=$sha (${entry.value.first})');
           return;
         }
         if (await provider.storage.exists(path: pathForAttachmentBin(sha))) {
@@ -1076,8 +1109,8 @@ class TransactionsSyncManager implements SyncService {
         final sha = a.localSha256!;
         if (sha.isEmpty) continue;
         // L3 同款：(sha256, fileName) 整对去重
-        if (_pendingAttachmentJobs.any(
-            (j) => j.sha256 == sha && j.fileName == a.fileName)) {
+        if (_pendingAttachmentJobs
+            .any((j) => j.sha256 == sha && j.fileName == a.fileName)) {
           continue;
         }
         if (await File('${attDir.path}/${a.fileName}').exists()) continue;
@@ -1108,8 +1141,8 @@ class TransactionsSyncManager implements SyncService {
       if (txIds.isEmpty) return;
 
       final atts = await (db.select(db.transactionAttachments)
-            ..where((a) =>
-                a.transactionId.isIn(txIds) & a.localSha256.isNotNull()))
+            ..where(
+                (a) => a.transactionId.isIn(txIds) & a.localSha256.isNotNull()))
           .get();
       if (atts.isEmpty) return;
 
@@ -1121,8 +1154,8 @@ class TransactionsSyncManager implements SyncService {
         // L3：按 (sha256, fileName) 整对去重。此前仅按 sha 去重，同 sha
         // 不同扩展名的行（fileName = 'sha_<sha><ext>'，ext 随源文件）只有
         // 第一个物理文件会被补齐，第二个永不恢复。
-        if (_pendingAttachmentJobs.any(
-            (j) => j.sha256 == sha && j.fileName == a.fileName)) {
+        if (_pendingAttachmentJobs
+            .any((j) => j.sha256 == sha && j.fileName == a.fileName)) {
           continue;
         }
         if (await File('${attDir.path}/${a.fileName}').exists()) continue;
@@ -1147,8 +1180,8 @@ class TransactionsSyncManager implements SyncService {
       final provider = _provider;
       if (provider == null) return 0;
 
-      final jobs = List<({String sha256, String fileName})>.from(
-          _pendingAttachmentJobs);
+      final jobs =
+          List<({String sha256, String fileName})>.from(_pendingAttachmentJobs);
       _pendingAttachmentJobs.clear();
 
       final failed = <({String sha256, String fileName})>[];
@@ -1177,9 +1210,10 @@ class TransactionsSyncManager implements SyncService {
       }));
 
       if (missing > 0) {
-        logger.warning('CloudSync',
+        logger.warning(
+            'CloudSync',
             '附件补齐：$missing/${jobs.length} 个对象云端不存在，放弃重试'
-            '（下次上传账本时会重新尝试上传附件）');
+                '（下次上传账本时会重新尝试上传附件）');
       }
       if (failed.isNotEmpty) {
         _pendingAttachmentJobs.addAll(failed);
@@ -1344,8 +1378,8 @@ class TransactionsSyncManager implements SyncService {
   }
 
   @override
-  Future<({int inserted, int deletedDup})>
-      downloadAndRestoreToCurrentLedger({required int ledgerId}) {
+  Future<({int inserted, int deletedDup})> downloadAndRestoreToCurrentLedger(
+      {required int ledgerId}) {
     // W6：整本下载恢复属破坏性全量替换（清空后导入），必须处于
     // SyncRestoreGuard 恢复临界区内 —— 定时备份（app.dart）每轮 tick 检查
     // isBusy 让位。否则恢复进行到一半时到点的备份会把半恢复态 DB 打包
@@ -1354,12 +1388,12 @@ class TransactionsSyncManager implements SyncService {
     // 审计 TSM-P8：守卫只挡住了「定时备份」，挡不住同实例的并发上传 ——
     // 恢复事务提交前后到达的上传会把恢复前旧内容回传云端，两端立即再次
     // outOfSync。同账本操作再经 _ledgerOpsLocks 串行化。
-    return SyncRestoreGuard.run(() => _withLedgerLock(
-        ledgerId, () => _downloadAndRestoreToCurrentLedger(ledgerId: ledgerId)));
+    return SyncRestoreGuard.run(() => _withLedgerLock(ledgerId,
+        () => _downloadAndRestoreToCurrentLedger(ledgerId: ledgerId)));
   }
 
-  Future<({int inserted, int deletedDup})>
-      _downloadAndRestoreToCurrentLedger({required int ledgerId}) async {
+  Future<({int inserted, int deletedDup})> _downloadAndRestoreToCurrentLedger(
+      {required int ledgerId}) async {
     await _ensureInitialized();
 
     // 捕获到局部变量：防止执行期间 reinitializeForEncryption 把
@@ -1408,9 +1442,10 @@ class TransactionsSyncManager implements SyncService {
       logger.info('CloudSync',
           '下载完成: inserted=$result, deletedDup=$deletedDupCount, skippedRecurring=${restored.skippedRecurring}');
       if (restored.skippedRecurring > 0) {
-        logger.warning('CloudSync',
+        logger.warning(
+            'CloudSync',
             '恢复时有 ${restored.skippedRecurring} 笔同日周期实例被判重跳过'
-            '（同规则同日且syncId或金额+备注相同），请核对源端是否存在同日多笔合法交易');
+                '（同规则同日且syncId或金额+备注相同），请核对源端是否存在同日多笔合法交易');
       }
 
       // 附件二进制后台补齐(不阻塞恢复返回):元数据已入库,缺的文件
@@ -1430,8 +1465,7 @@ class TransactionsSyncManager implements SyncService {
     } on CloudEncryptedLocallyDisabledException {
       // BUG-2 残留修复：云端为密文但本地未开启加密（已在 _decryptIfNeeded 抛出）。
       // 不视为下载失败（不打 error 堆栈），向上抛出由 UI 引导用户开启加密。
-      logger.warning(
-          'CloudSync', '云端为密文但本地未开启加密，需引导用户开启加密: $ledgerId');
+      logger.warning('CloudSync', '云端为密文但本地未开启加密，需引导用户开启加密: $ledgerId');
       rethrow;
     } on CloudCiphertextUndecryptableException {
       // SYNC-10 后半：密钥存在但密文不可解密（损坏/salt 错配/密码已变更）。
@@ -1465,8 +1499,12 @@ class TransactionsSyncManager implements SyncService {
   /// - preview 为 null 表示无法计算 diff（旧格式），应走全量替换
   /// - preview 不为 null 表示可以预览
   Future<
-      ({SyncPreview? preview, ImportData importData, int version,
-          String? cloudFingerprint})?> downloadAndPreview({
+      ({
+        SyncPreview? preview,
+        ImportData importData,
+        int version,
+        String? cloudFingerprint
+      })?> downloadAndPreview({
     required int ledgerId,
   }) async {
     await _ensureInitialized();
@@ -1479,8 +1517,8 @@ class TransactionsSyncManager implements SyncService {
 
     logger.info('CloudSync', '开始下载预览: $ledgerId');
 
-    final raw = await provider.storage
-        .download(path: await pathForLedger(ledgerId));
+    final raw =
+        await provider.storage.download(path: await pathForLedger(ledgerId));
 
     if (raw == null) {
       logger.warning('CloudSync', '云端备份不存在');
@@ -1499,8 +1537,7 @@ class TransactionsSyncManager implements SyncService {
     // 审计 H6：快照自描述的内嵌指纹（与内容同生共死）。启动检查的
     // merge-then-publish 用它做「回传前新鲜度校验」的基线 —— 合并决策
     // 所依据的云端内容若在回传前被其他设备更新，回传即中止而非覆盖。
-    final cloudFingerprint =
-        jsonData['contentFingerprint'] as String?;
+    final cloudFingerprint = jsonData['contentFingerprint'] as String?;
 
     // 检查是否含 syncId（v6+）
     if (version >= 6) {
@@ -1587,7 +1624,8 @@ class TransactionsSyncManager implements SyncService {
     // 检查缓存（m-03 修复：TTL 过期则视为未命中）
     final cached = _statusCache[ledgerId];
     if (cached != null && !cached.isExpired) {
-      logger.debug('CloudSync', '缓存命中: ledgerId=$ledgerId, diff=${cached.status.diff}');
+      logger.debug(
+          'CloudSync', '缓存命中: ledgerId=$ledgerId, diff=${cached.status.diff}');
       return cached.status;
     }
     if (cached != null && cached.isExpired) {
@@ -1627,7 +1665,8 @@ class TransactionsSyncManager implements SyncService {
       // 若是，直接返回哨兵 'cloud_encrypted_locally_disabled' 引导用户开启加密，
       // 避免 manager.getStatus 把密文当 JSON 解析报错（用户误以为云端无数据/看到原始异常）。
       // 探测仅在「加密未开启 + 无密钥」这一 inherently broken 状态下触发，正常状态立即返回 null。
-      final disabledStatus = await _cloudEncryptedLocallyDisabledStatus(ledgerId);
+      final disabledStatus =
+          await _cloudEncryptedLocallyDisabledStatus(ledgerId);
       if (disabledStatus != null) return disabledStatus;
 
       logger.info('CloudSync', '获取同步状态: $ledgerId');
@@ -1651,8 +1690,7 @@ class TransactionsSyncManager implements SyncService {
       if (status.diff == SyncDiff.error &&
           status.message != null &&
           status.message!.contains('SaltMismatchException')) {
-        logger.warning('CloudSync',
-            'salt 不匹配，需引导用户重新输入密码: $ledgerId');
+        logger.warning('CloudSync', 'salt 不匹配，需引导用户重新输入密码: $ledgerId');
         return SyncStatus(
           diff: SyncDiff.error,
           localCount: 0,
@@ -1673,14 +1711,16 @@ class TransactionsSyncManager implements SyncService {
           status.localFingerprint.length >= 8) {
         // 指纹不一致时提升为 INFO：sync_convergence 排查依赖本地/云端
         // 指纹对比（前 8 位足够定位），debug 级默认不可见
-        logger.info('CloudSync',
+        logger.info(
+            'CloudSync',
             '指纹不一致 本地: ${status.localFingerprint.substring(0, 8)} '
-            '云端: ${status.cloudFingerprint != null && status.cloudFingerprint!.length >= 8 ? status.cloudFingerprint!.substring(0, 8) : "无"} '
-            '数量 本地${status.localCount}/云端${status.cloudCount ?? "无"}');
+                '云端: ${status.cloudFingerprint != null && status.cloudFingerprint!.length >= 8 ? status.cloudFingerprint!.substring(0, 8) : "无"} '
+                '数量 本地${status.localCount}/云端${status.cloudCount ?? "无"}');
       }
       logger.debug('CloudSync', '本地指纹: ${status.localFingerprint}');
       logger.debug('CloudSync', '云端指纹: ${status.cloudFingerprint ?? "无"}');
-      logger.debug('CloudSync', '本地数量: ${status.localCount}, 云端数量: ${status.cloudCount ?? "无"}');
+      logger.debug('CloudSync',
+          '本地数量: ${status.localCount}, 云端数量: ${status.cloudCount ?? "无"}');
 
       return status;
     } on SaltMismatchException catch (e) {
@@ -1840,9 +1880,7 @@ class TransactionsSyncManager implements SyncService {
       if (meta == null) return const UploadProbe(); // 云端无备份
 
       final remoteFp = _metaValue(meta.metadata, 'fingerprint');
-      if (localFp != null &&
-          remoteFp != null &&
-          localFp == remoteFp) {
+      if (localFp != null && remoteFp != null && localFp == remoteFp) {
         return UploadProbe(cloudETag: meta.eTag); // 内容一致
       }
 
@@ -1855,12 +1893,10 @@ class TransactionsSyncManager implements SyncService {
       // - 内嵌 != 本地 → 内容确实不同，落入下方方向仲裁；
       // - 无内嵌键（旧快照）→ 维持原仲裁路径。
       if (localFp != null) {
-        final embeddedFp =
-            await _embeddedRemoteFingerprint(provider, ledgerId);
+        final embeddedFp = await _embeddedRemoteFingerprint(provider, ledgerId);
         if (embeddedFp != null) {
           if (embeddedFp == localFp) {
-            logger.info('CloudSync',
-                '冲突检测：元数据指纹缺失/错位，内嵌指纹一致 → 放行上传');
+            logger.info('CloudSync', '冲突检测：元数据指纹缺失/错位，内嵌指纹一致 → 放行上传');
             return UploadProbe(cloudETag: meta.eTag);
           }
           // 内容确实不同：跳过下面基于「指纹可能只是丢失」的乐观假设，
@@ -1955,16 +1991,17 @@ class TransactionsSyncManager implements SyncService {
       try {
         map = jsonDecode(plainJson) as Map<String, dynamic>;
       } catch (_) {
-        logger.warning('CloudSync',
-            '完整性自检：下载内容不是 JSON 对象(path=$path)，请留意数据完整性');
+        logger.warning(
+            'CloudSync', '完整性自检：下载内容不是 JSON 对象(path=$path)，请留意数据完整性');
         return;
       }
       final contentFp = _contentFingerprintFromMap(map);
       if (contentFp != remoteFp) {
-        logger.warning('CloudSync',
+        logger.warning(
+            'CloudSync',
             '完整性自检：云端快照指纹不一致(path=$path) '
-            'metadata=$remoteFp content=$contentFp。'
-            '可能为 CDN 陈旧副本或旧算法元数据；恢复继续执行');
+                'metadata=$remoteFp content=$contentFp。'
+                '可能为 CDN 陈旧副本或旧算法元数据；恢复继续执行');
       }
     } catch (e) {
       // 自检是尽力而为的旁路，任何失败都不影响主恢复流程
@@ -2079,6 +2116,53 @@ class TransactionsSyncManager implements SyncService {
     return '$base（$i）';
   }
 
+  /// R1 接线（审计 S24）：尝试恢复一次被中断的改密。
+  ///
+  /// 改密流程在「云端重加密完成 → 本地持久化新密钥」之间崩溃时，新钥
+  /// 只存在于 secure storage 检查点中；此前 recoverPendingRekey 无任何
+  /// 生产调用方，检查点永久滞留 → 云端停留在部分新密钥状态，下次改密
+  /// /解密全部失败。本方法在每次 [ensureInitialized] 时异步尝试：
+  ///
+  /// - 无检查点（常态）：一次 secure-storage 读即返回，近零成本；
+  /// - 有检查点且恢复成功：云端补齐 + 本地切换新钥后重建装饰器，
+  ///   使后续同步立即用新密钥加解密；
+  /// - 恢复失败：记录日志、检查点保留，下次调用自动再试，绝不阻断
+  ///   同步主流程（恢复是后台修复语义，同步可用性优先）。
+  ///
+  /// 单飞锁 [_rekeyRecoveryInFlight]：并发调用（ensureInitialized 是热点
+  /// 入口，几乎每个同步操作都经过）只跑一次恢复，其余直接返回 —— 无
+  /// 检查点场景的成本被压到「并发窗口内一次 secure-storage 读」。
+  Future<void>? _rekeyRecoveryInFlight;
+
+  Future<void> _tryRecoverPendingRekey() async {
+    final inFlight = _rekeyRecoveryInFlight;
+    if (inFlight != null) return inFlight;
+    final future = _doRecoverPendingRekey();
+    _rekeyRecoveryInFlight = future;
+    try {
+      await future;
+    } finally {
+      if (identical(_rekeyRecoveryInFlight, future)) {
+        _rekeyRecoveryInFlight = null;
+      }
+    }
+  }
+
+  Future<void> _doRecoverPendingRekey() async {
+    final svc = encryptionService;
+    final rawStorage = _rawStorage;
+    if (svc == null || rawStorage == null) return;
+    try {
+      final recovered = await svc.recoverPendingRekey(cloudStorage: rawStorage);
+      if (recovered) {
+        logger.info('CloudSync', '检测到未完成的改密检查点并已恢复，重建加密装饰器以启用新密钥');
+        await reinitializeForEncryption();
+      }
+    } catch (e, st) {
+      logger.warning('CloudSync', '改密检查点恢复失败（下次调用重试）: $e', st);
+    }
+  }
+
   /// M3：补删换名收尾失败的旧远程槽位。
   ///
   /// 单个失败保留在列表中等下次重试；全部尝试完毕后未成功项继续留存。
@@ -2136,8 +2220,7 @@ class TransactionsSyncManager implements SyncService {
       final sameNameRows = await (db.select(db.ledgers)
             ..where((t) => t.name.equals(name)))
           .get();
-      final existingByName =
-          sameNameRows.isEmpty ? null : sameNameRows.first;
+      final existingByName = sameNameRows.isEmpty ? null : sameNameRows.first;
 
       final int ledgerId;
       bool reusedExistingRow = false;
@@ -2154,18 +2237,20 @@ class TransactionsSyncManager implements SyncService {
         ledgerId = existingByName.id;
         reusedExistingRow = true;
         final existingSyncId = existingByName.syncId?.trim() ?? '';
-        crossIdentityTakeover =
-            slotKey != null && existingSyncId.isNotEmpty && existingSyncId != slotKey;
-        logger.info('CloudSync',
+        crossIdentityTakeover = slotKey != null &&
+            existingSyncId.isNotEmpty &&
+            existingSyncId != slotKey;
+        logger.info(
+            'CloudSync',
             '本地已存在同名账本，复用账本ID: $ledgerId (名称: $name)'
-            '${crossIdentityTakeover ? '，注意：与云端槽位身份不同（跨身份接管）' : ''}');
+                '${crossIdentityTakeover ? '，注意：与云端槽位身份不同（跨身份接管）' : ''}');
       } else if (slotKey != null) {
         final sameIdentity = await _localLedgerForSlotKey(slotKey);
         if (sameIdentity != null) {
           ledgerId = sameIdentity.id;
           reusedExistingRow = true;
-          logger.info('CloudSync',
-              '本地已有同源账本(syncId=$slotKey)，复用账本ID: $ledgerId');
+          logger.info(
+              'CloudSync', '本地已有同源账本(syncId=$slotKey)，复用账本ID: $ledgerId');
         } else {
           // 新建：id 自动分配、身份锚定槽位 key。不再沿用远端数字 id ——
           // 两台设备各自的自增序列独立，按 id 撞号正是同槽互覆的根源。
@@ -2176,8 +2261,7 @@ class TransactionsSyncManager implements SyncService {
                   syncId: drift.Value(slotKey),
                 ),
               );
-          logger.info('CloudSync',
-              '创建新账本: id=$ledgerId, syncId=$slotKey');
+          logger.info('CloudSync', '创建新账本: id=$ledgerId, syncId=$slotKey');
           createdLedgerThisCall = ledgerId;
         }
       } else {
@@ -2197,103 +2281,112 @@ class TransactionsSyncManager implements SyncService {
       // 旧内容回传云端）。锁在 ledgerId 解析后获取：新建行的 id 在此之前
       // 对其他调用方不可见，不存在锁窗口外的竞态。
       return _withLedgerLock<int?>(ledgerId, () async {
-      // 下载数据
-      final raw = await provider.storage.download(path: remotePath);
+        // 下载数据
+        final raw = await provider.storage.download(path: remotePath);
 
-      if (raw == null) {
-        logger.warning('CloudSync', '云端账本不存在: $remotePath');
-        // 只有本次新建的账本才需要删除
-        if (!reusedExistingRow) {
-          await (db.delete(db.ledgers)..where((t) => t.id.equals(ledgerId))).go();
-          createdLedgerThisCall = null;
-        }
-        return null;
-      }
-
-      // 规整为可解析明文：disable 后密钥仍保留则解密后导入；
-      // 无密钥 / 密文不可解密（SYNC-10 后半）→ 抛专属异常由 UI 明确呈现，
-      // 新建的空壳账本行由外层 catch 统一回收（审计 TSM-P10）。
-      final String jsonStr;
-      try {
-        jsonStr = await _decryptIfNeeded(raw);
-      } on CloudEncryptedLocallyDisabledException catch (e) {
-        logger.warning(
-            'CloudSync', '云端账本 $remotePath 为密文且本地无可用密钥: $e');
-        rethrow;
-      } on CloudCiphertextUndecryptableException catch (e) {
-        logger.warning('CloudSync', '云端账本 $remotePath 密文不可解密: $e');
-        rethrow;
-      }
-
-      // M4：内容 vs 元数据指纹交叉自检（软告警，不阻断）
-      await _warnIfRemoteFingerprintMismatch(
-        provider: provider,
-        path: remotePath,
-        plainJson: jsonStr,
-      );
-
-      // H2：同名/既有账本的云端下载统一走「先清空再导入」的覆盖语义
-      // （restoreLedgerFromJson：含 P1-1 空快照守卫 + 事务原子 +
-      // recordChanges:false + v9 sync_id 回填），与
-      // downloadAndRestoreToCurrentLedger / 全量覆盖恢复对齐，
-      // 消除旧实现「同名账本追加合并 → 交易翻倍」。
-      final restored = await restoreLedgerFromJson(
-          db: db, repo: repo, ledgerId: ledgerId, jsonStr: jsonStr);
-      if (restored == null) {
-        // P1-1 拒绝空覆盖：本地未接受云端状态，云端文件原样保留，
-        // 也不做下方的「上传新槽位/删旧文件」换名操作。
-        logger.warning('CloudSync',
-            '云端快照为空且本地非空，拒绝覆盖，保留本地与云端现状: $remotePath');
-        return null;
-      }
-      logger.info('CloudSync',
-          '下载完成(覆盖语义): ledgerId=$ledgerId, inserted=${restored.inserted}, 清空=${restored.deletedDup}, skippedRecurring=${restored.skippedRecurring}');
-      // 审计 TSM-P10：恢复已成功提交，此后失败不再回收账本行（数据是完整的）
-      createdLedgerThisCall = null;
-      if (restored.skippedRecurring > 0) {
-        logger.warning('CloudSync',
-            '恢复时有 ${restored.skippedRecurring} 笔同日周期实例被判重跳过，请核对源端明细');
-      }
-
-      // 云端文件收尾：目标槽位与远程文件名不一致时才需要换名
-      // （Critical-07：先上传后删除，防删除成功但上传失败丢数据）。
-      //
-      // 审计 TSM-P1：跨身份接管（同名但不同源）时**跳过整个换名收尾** ——
-      // 此前会把 Y 的内容上传到 X 自己的云端槽位（覆盖其他设备上真 X 的
-      // 备份）并删除远程 Y 原文件，静默摧毁超出用户授权范围的数据。
-      // 现在只完成本地覆盖，云端两侧文件原样保留，由用户手动核对后续。
-      if (crossIdentityTakeover) {
-        logger.warning('CloudSync',
-            '跨身份接管：本地账本 $ledgerId 已被云端快照覆盖，但其原云端槽位与'
-            '远程文件均保持原样，请自行核对其他设备的同步状态 ($remotePath)');
-        return ledgerId;
-      }
-      final targetPath = await pathForLedger(ledgerId);
-      if (_baseName(targetPath) != _baseName(remotePath)) {
-        // M7：刚以云端为准恢复完本地（内容一致），force 跳过冲突拦截。
-        // 审计 TSM-P8：已在账本锁内，直接调内部核心避免重入死锁。
-        try {
-          await _uploadCurrentLedgerCore(ledgerId: ledgerId, force: true);
-          logger.info('CloudSync', '账本已上传到云端: $targetPath');
-          // 上传成功后再删除旧文件
-          try {
-            await provider.storage.delete(path: remotePath);
-            logger.info('CloudSync', '旧远程文件已删除: $remotePath');
-          } catch (e) {
-            // M3：删除失败登记会话级重试列表 —— 否则旧 slot 残留且其
-            // slotKey 不匹配任何本地账本，下次启动会被发现流程再次提示
-            // 导入（重复账本窗口）。
-            _staleRemoteSlots.add(remotePath);
-            logger.warning('CloudSync', '删除旧远程文件失败（已登记补删）: $remotePath - $e');
+        if (raw == null) {
+          logger.warning('CloudSync', '云端账本不存在: $remotePath');
+          // 只有本次新建的账本才需要删除
+          if (!reusedExistingRow) {
+            await (db.delete(db.ledgers)..where((t) => t.id.equals(ledgerId)))
+                .go();
+            createdLedgerThisCall = null;
           }
-        } catch (e) {
-          logger.warning('CloudSync', '上传账本失败（旧文件保留）: $e');
+          return null;
         }
-      } else {
-        logger.info('CloudSync', '槽位一致，无需更新云端文件: $targetPath');
-      }
 
-      return ledgerId;
+        // 规整为可解析明文：disable 后密钥仍保留则解密后导入；
+        // 无密钥 / 密文不可解密（SYNC-10 后半）→ 抛专属异常由 UI 明确呈现，
+        // 新建的空壳账本行由外层 catch 统一回收（审计 TSM-P10）。
+        final String jsonStr;
+        try {
+          jsonStr = await _decryptIfNeeded(raw);
+        } on CloudEncryptedLocallyDisabledException catch (e) {
+          logger.warning('CloudSync', '云端账本 $remotePath 为密文且本地无可用密钥: $e');
+          rethrow;
+        } on CloudCiphertextUndecryptableException catch (e) {
+          logger.warning('CloudSync', '云端账本 $remotePath 密文不可解密: $e');
+          rethrow;
+        }
+
+        // M4：内容 vs 元数据指纹交叉自检（软告警，不阻断）
+        await _warnIfRemoteFingerprintMismatch(
+          provider: provider,
+          path: remotePath,
+          plainJson: jsonStr,
+        );
+
+        // H2：同名/既有账本的云端下载统一走「先清空再导入」的覆盖语义
+        // （restoreLedgerFromJson：含 P1-1 空快照守卫 + 事务原子 +
+        // recordChanges:false + v9 sync_id 回填），与
+        // downloadAndRestoreToCurrentLedger / 全量覆盖恢复对齐，
+        // 消除旧实现「同名账本追加合并 → 交易翻倍」。
+        final restored = await restoreLedgerFromJson(
+            db: db, repo: repo, ledgerId: ledgerId, jsonStr: jsonStr);
+        if (restored == null) {
+          // P1-1 拒绝空覆盖：本地未接受云端状态，云端文件原样保留，
+          // 也不做下方的「上传新槽位/删旧文件」换名操作。
+          logger.warning(
+              'CloudSync', '云端快照为空且本地非空，拒绝覆盖，保留本地与云端现状: $remotePath');
+          return null;
+        }
+        logger.info('CloudSync',
+            '下载完成(覆盖语义): ledgerId=$ledgerId, inserted=${restored.inserted}, 清空=${restored.deletedDup}, skippedRecurring=${restored.skippedRecurring}');
+        // 审计 TSM-P10：恢复已成功提交，此后失败不再回收账本行（数据是完整的）
+        createdLedgerThisCall = null;
+        if (restored.skippedRecurring > 0) {
+          logger.warning('CloudSync',
+              '恢复时有 ${restored.skippedRecurring} 笔同日周期实例被判重跳过，请核对源端明细');
+        }
+
+        // 云端文件收尾：目标槽位与远程文件名不一致时才需要换名
+        // （Critical-07：先上传后删除，防删除成功但上传失败丢数据）。
+        //
+        // 审计 TSM-P1：跨身份接管（同名但不同源）时**跳过整个换名收尾** ——
+        // 此前会把 Y 的内容上传到 X 自己的云端槽位（覆盖其他设备上真 X 的
+        // 备份）并删除远程 Y 原文件，静默摧毁超出用户授权范围的数据。
+        // 现在只完成本地覆盖，云端两侧文件原样保留，由用户手动核对后续。
+        if (crossIdentityTakeover) {
+          logger.warning(
+              'CloudSync',
+              '跨身份接管：本地账本 $ledgerId 已被云端快照覆盖，但其原云端槽位与'
+                  '远程文件均保持原样，请自行核对其他设备的同步状态 ($remotePath)');
+          return ledgerId;
+        }
+        final targetPath = await pathForLedger(ledgerId);
+        if (_baseName(targetPath) != _baseName(remotePath)) {
+          // M7：刚以云端为准恢复完本地（内容一致），force 跳过冲突拦截。
+          // 审计 TSM-P8：已在账本锁内，直接调内部核心避免重入死锁。
+          //
+          // H3（审计备案，有意绕过 SyncRestoreGuard）：这里刻意不走公开的
+          // uploadCurrentLedger（其 TSM-P8 守卫会在恢复临界区内拒绝），
+          // 直调 _uploadCurrentLedgerCore。安全性论证：上传发生在
+          // restoreLedgerFromJson 事务**已提交**之后，快照取自完整一致的
+          // 账本数据，不存在「半恢复态上云」；guard 挡的是定时备份打包
+          // 半恢复态 DB，与这里的单账本收尾语义不同。与启动检查
+          // merge-then-publish 的 bypassRestoreGuard 豁免（P0-1）同理。
+          try {
+            await _uploadCurrentLedgerCore(ledgerId: ledgerId, force: true);
+            logger.info('CloudSync', '账本已上传到云端: $targetPath');
+            // 上传成功后再删除旧文件
+            try {
+              await provider.storage.delete(path: remotePath);
+              logger.info('CloudSync', '旧远程文件已删除: $remotePath');
+            } catch (e) {
+              // M3：删除失败登记会话级重试列表 —— 否则旧 slot 残留且其
+              // slotKey 不匹配任何本地账本，下次启动会被发现流程再次提示
+              // 导入（重复账本窗口）。
+              _staleRemoteSlots.add(remotePath);
+              logger.warning('CloudSync', '删除旧远程文件失败（已登记补删）: $remotePath - $e');
+            }
+          } catch (e) {
+            logger.warning('CloudSync', '上传账本失败（旧文件保留）: $e');
+          }
+        } else {
+          logger.info('CloudSync', '槽位一致，无需更新云端文件: $targetPath');
+        }
+
+        return ledgerId;
       });
     } catch (e, stack) {
       logger.error('CloudSync', '下载远程账本失败: $remotePath', e);
@@ -2308,8 +2401,7 @@ class TransactionsSyncManager implements SyncService {
               .go();
           logger.info('CloudSync', '已回收本次新建且恢复失败的空账本行: $orphanId');
         } catch (cleanupError) {
-          logger.warning(
-              'CloudSync', '回收空账本行失败: $orphanId - $cleanupError');
+          logger.warning('CloudSync', '回收空账本行失败: $orphanId - $cleanupError');
         }
       }
       rethrow;
@@ -2432,7 +2524,8 @@ class TransactionsSyncManager implements SyncService {
           );
 
           if (ledgerId != null) {
-            logger.info('CloudSync', '恢复成功: ${file.name} -> ledgerId=$ledgerId');
+            logger.info(
+                'CloudSync', '恢复成功: ${file.name} -> ledgerId=$ledgerId');
             success++;
           } else {
             logger.warning('CloudSync', '恢复失败: ${file.name}');
@@ -2470,8 +2563,8 @@ class TransactionsSyncManager implements SyncService {
     // W6：全量覆盖下载是最大粒度的破坏性恢复，整个批次都处于
     // SyncRestoreGuard 恢复临界区内（守卫为计数器，内部嵌套调用
     // downloadAndRestoreToCurrentLedger 的二次 begin/end 安全）。
-    return SyncRestoreGuard.run(() => _fullRestoreAllRemoteLedgers(
-        onProgress: onProgress));
+    return SyncRestoreGuard.run(
+        () => _fullRestoreAllRemoteLedgers(onProgress: onProgress));
   }
 
   Future<({int success, int failed})> _fullRestoreAllRemoteLedgers({
@@ -2498,8 +2591,7 @@ class TransactionsSyncManager implements SyncService {
       var success = 0;
       var failed = 0;
       for (final file in ledgerFiles) {
-        final slotKey =
-            _ledgerFileNamePattern.firstMatch(file.name)!.group(1)!;
+        final slotKey = _ledgerFileNamePattern.firstMatch(file.name)!.group(1)!;
         try {
           // 按槽位 key 解析本地同身份账本（syncId 匹配，数字 key 兜底 id 匹配）
           final local = await _localLedgerForSlotKey(slotKey);
@@ -2576,9 +2668,8 @@ class TransactionsSyncManager implements SyncService {
   ///    文件仍须能被既有账本认领，否则升级后各设备会把对方的账本
   ///    当「新账本」重复导入。
   Future<Ledger?> _localLedgerForSlotKey(String key) async {
-    final bySyncId = await (db.select(db.ledgers)
-          ..where((l) => l.syncId.equals(key)))
-        .get();
+    final bySyncId =
+        await (db.select(db.ledgers)..where((l) => l.syncId.equals(key))).get();
     if (bySyncId.isNotEmpty) return bySyncId.first;
     final numericId = int.tryParse(key);
     if (numericId == null) return null;
@@ -2694,8 +2785,7 @@ class TransactionsSyncManager implements SyncService {
       // 竞态守卫：发现与导入之间本地可能已导入同身份账本
       final existing = await _localLedgerForSlotKey(meta.slotKey);
       if (existing != null) {
-        logger.warning(
-            'CloudSync', '账本 syncId=${meta.slotKey} 已被本地占用，跳过导入');
+        logger.warning('CloudSync', '账本 syncId=${meta.slotKey} 已被本地占用，跳过导入');
         return null;
       }
 
@@ -2719,9 +2809,8 @@ class TransactionsSyncManager implements SyncService {
           );
 
       // 从云端导入不写本地变更历史（P2-3），与下载恢复路径语义一致
-      final result =
-          await importTransactionsJson(repo, newId, payload,
-              recordChanges: false);
+      final result = await importTransactionsJson(repo, newId, payload,
+          recordChanges: false);
       importSkippedRecurring = result.skippedRecurring;
       inserted = result.inserted;
       return newId;
@@ -2733,8 +2822,8 @@ class TransactionsSyncManager implements SyncService {
     logger.info('CloudSync',
         '云端账本导入完成: localId=$newLedgerId, slotKey=${meta.slotKey}, name=${meta.name}, inserted=$inserted, skippedRecurring=$importSkippedRecurring');
     if (importSkippedRecurring > 0) {
-      logger.warning('CloudSync',
-          '导入时有 $importSkippedRecurring 笔同日周期实例被判重跳过，请核对源端明细');
+      logger.warning(
+          'CloudSync', '导入时有 $importSkippedRecurring 笔同日周期实例被判重跳过，请核对源端明细');
     }
 
     // 附件二进制后台补齐(与下载恢复路径同款:不阻塞导入返回)
@@ -2856,7 +2945,8 @@ class _CachedStatus {
   _CachedStatus(this.status) : cachedAt = DateTime.now();
 
   bool get isExpired =>
-      DateTime.now().difference(cachedAt) > TransactionsSyncManager._statusCacheTtl;
+      DateTime.now().difference(cachedAt) >
+      TransactionsSyncManager._statusCacheTtl;
 }
 
 /// 审计 T9：附件 localSha256 按需回填（attachment_binary_sync）。
@@ -2877,8 +2967,7 @@ Future<int> backfillAttachmentSha256({
 }) async {
   if (txIds.isEmpty) return 0;
   final pending = await (db.select(db.transactionAttachments)
-        ..where((a) =>
-            a.transactionId.isIn(txIds) & a.localSha256.isNull()))
+        ..where((a) => a.transactionId.isIn(txIds) & a.localSha256.isNull()))
       .get();
   if (pending.isEmpty) return 0;
 

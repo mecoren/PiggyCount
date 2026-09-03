@@ -93,9 +93,12 @@ bool _isAuthErrorText(String? text) {
 }
 
 /// downloadAndPreview 返回类型别名
-typedef DownloadAndPreviewResult =
-    ({SyncPreview? preview, ImportData importData, int version,
-        String? cloudFingerprint});
+typedef DownloadAndPreviewResult = ({
+  SyncPreview? preview,
+  ImportData importData,
+  int version,
+  String? cloudFingerprint
+});
 
 /// 启动检查编排器的外部依赖接口
 ///
@@ -130,6 +133,11 @@ abstract class StartupSyncCheckerDeps {
   /// [force] 透传给 uploadCurrentLedger：回传发生在用户确认合并**之后**，
   /// M7 冲突拦截若在此触发会打断收敛循环（本地刚合并完，时间戳仲裁可能
   /// 仍判 cloudNewer），实现方应传 true。
+  ///
+  /// P0-1 修复：本方法必然在启动检查的恢复临界区内被调用（app.dart 用
+  /// SyncRestoreGuard 包住整个 runIfNeeded），而阶段 2 回传时合并事务
+  /// 已提交、DB 是一致态 —— 实现方必须以 bypassRestoreGuard: true 走
+  /// 「收尾回传」豁免通道，否则回传被 TSM-P8 守卫全部拒绝（死循环弹窗）。
   Future<void> uploadLedger({required int ledgerId, bool force = false});
 
   /// 读取云端当前指纹（审计 H6 回传前新鲜度校验用）。
@@ -451,8 +459,7 @@ class StartupSyncChecker {
           controller.error('云端认证失败（账号或密码错误），'
               '请到「我的-云同步-云服务」检查配置后重试');
         } else {
-          controller.error(
-              '${failedLedgers.length} 个账本同步状态检查失败'
+          controller.error('${failedLedgers.length} 个账本同步状态检查失败'
               '（网络或超时），请检查网络后重试');
         }
         return;
@@ -636,8 +643,7 @@ class StartupSyncChecker {
     if (conflictLedgers.isNotEmpty) {
       deps.log('StartupSyncChecker: applyAll 检测到 ${conflictLedgers.length} '
           '个冲突账本（different），弹二次确认');
-      final confirmed =
-          await deps.showConflictConfirmDialog(conflictLedgers);
+      final confirmed = await deps.showConflictConfirmDialog(conflictLedgers);
       if (!confirmed) {
         // 用户取消：返回 false，调用方循环回退到 SummaryView
         deps.log('StartupSyncChecker: 用户取消 applyAll 二次确认，回退到 SummaryView');
@@ -669,7 +675,8 @@ class StartupSyncChecker {
     // 阶段 2 必须跳过回传以防已删交易随快照复活传播。
     // 审计 H6：mergedFromFp 记录合并决策所依据的云端内嵌指纹，
     // 回传前做新鲜度校验（云端被并发更新则跳过回传）。
-    final merged = <({LedgerCandidate cand, bool skipPublish, String? mergedFromFp})>[];
+    final merged =
+        <({LedgerCandidate cand, bool skipPublish, String? mergedFromFp})>[];
 
     // ---------- 阶段 1：逐账本下载 + 合并（只写本地） ----------
     for (final c in candidates) {
@@ -762,8 +769,7 @@ class StartupSyncChecker {
         totalChanges += result.totalCount;
         deps.runAfterDownload();
         final unselectedDeleted = preview.changes
-            .where((ch) =>
-                ch.type == SyncChangeType.deleted && !ch.selected)
+            .where((ch) => ch.type == SyncChangeType.deleted && !ch.selected)
             .length;
         merged.add((
           cand: c,
@@ -819,8 +825,8 @@ class StartupSyncChecker {
     // 指纹一轮收敛
     var publishSkippedCount = 0;
     for (final entry in merged) {
-      controller.updateApplyingProgress(applied, candidates.length * 2,
-          entry.cand.ledger.name, totalChanges);
+      controller.updateApplyingProgress(
+          applied, candidates.length * 2, entry.cand.ledger.name, totalChanges);
       if (entry.skipPublish) {
         publishSkippedCount++;
         deps.log('StartupSyncChecker: 账本 ${entry.cand.ledger.name} 存在未应用的'
@@ -828,8 +834,8 @@ class StartupSyncChecker {
         applied++;
         continue;
       }
-      if (!await _publishAfterMerge(entry.cand.ledger.id,
-          entry.cand.ledger.name,
+      if (!await _publishAfterMerge(
+          entry.cand.ledger.id, entry.cand.ledger.name,
           expectedCloudFp: entry.mergedFromFp)) {
         uploadFailCount++;
       }
@@ -837,9 +843,8 @@ class StartupSyncChecker {
     }
 
     // 回传失败追加提示：合并已成功但指纹未收敛，下次启动会再次弹出更新提示
-    final uploadFailHint = uploadFailCount > 0
-        ? '；$uploadFailCount 个账本回传云端失败，下次启动可能再次提示'
-        : '';
+    final uploadFailHint =
+        uploadFailCount > 0 ? '；$uploadFailCount 个账本回传云端失败，下次启动可能再次提示' : '';
     final publishSkippedHint = publishSkippedCount > 0
         ? '；$publishSkippedCount 个账本存在你未勾选的云端删除，已跳过回传'
             '（这些删除本轮不会生效，如需删除请到云同步页手动处理）'
@@ -948,8 +953,8 @@ class StartupSyncChecker {
             deps.runAfterDownload();
             // S1 守卫：统计用户未勾选的云端删除（对齐 _applyAll）
             final unselectedDeleted = preview.changes
-                .where((ch) =>
-                    ch.type == SyncChangeType.deleted && !ch.selected)
+                .where(
+                    (ch) => ch.type == SyncChangeType.deleted && !ch.selected)
                 .length;
             merged.add((
               cand: c,
@@ -993,8 +998,8 @@ class StartupSyncChecker {
             deps.showRecoveryFailed();
             break;
           case SaltMismatchRecoveryResult.cancelled:
-            deps.showLegacyError(_formatErrorMessage(
-                c.ledger.name, '云端已加密但本设备未开启加密（用户取消）'));
+            deps.showLegacyError(
+                _formatErrorMessage(c.ledger.name, '云端已加密但本设备未开启加密（用户取消）'));
             break;
         }
         deps.log('StartupSyncChecker: 账本 ${c.ledger.name} 云端密文但本地未开启加密'
@@ -1031,8 +1036,7 @@ class StartupSyncChecker {
   /// 旧格式（v5 及以下）的全量替换流程（只合并，回传由调用方统一执行）
   Future<bool> _handleLegacyFormat(Ledger ledger) async {
     // 审计 S14：全量替换前确认（旧注释声称有弹窗但实现里从来没有）
-    final confirmed =
-        await deps.showLegacyReplaceConfirmDialog([ledger.name]);
+    final confirmed = await deps.showLegacyReplaceConfirmDialog([ledger.name]);
     if (!confirmed) {
       deps.log('StartupSyncChecker: 账本 ${ledger.name} '
           '用户取消旧格式全量替换，跳过');
@@ -1138,7 +1142,11 @@ class WidgetRefDeps implements StartupSyncCheckerDeps {
 
   @override
   Future<void> uploadLedger({required int ledgerId, bool force = false}) =>
-      _syncManager.uploadCurrentLedger(ledgerId: ledgerId, force: force);
+      // P0-1：merge-then-publish 回传发生在启动检查的恢复临界区内，
+      // 但合并事务已提交、DB 为一致态 —— 走收尾回传豁免通道（见接口
+      // 注释）。否则 TSM-P8 守卫会拒绝全部回传，指纹永不收敛。
+      _syncManager.uploadCurrentLedger(
+          ledgerId: ledgerId, force: force, bypassRestoreGuard: true);
 
   @override
   Future<({String? fingerprint, int? count, DateTime? exportedAt})?>
@@ -1162,12 +1170,10 @@ class WidgetRefDeps implements StartupSyncCheckerDeps {
       _syncManager.importRemoteLedger(meta);
 
   @override
-  Future<bool> showNewLedgersConfirmDialog(
-      List<RemoteLedgerMeta> metas) async {
+  Future<bool> showNewLedgersConfirmDialog(List<RemoteLedgerMeta> metas) async {
     final l10n = AppLocalizations.of(_context);
     // 展示"名称(条数)"，让用户在下载前了解各账本规模
-    final displayNames =
-        metas.map((m) => '${m.name}(${m.txCount})').join('、');
+    final displayNames = metas.map((m) => '${m.name}(${m.txCount})').join('、');
     final result = await AppDialog.confirm<bool>(
       _context,
       title: l10n.startupSyncNewLedgersTitle,
