@@ -27,6 +27,10 @@ IconData getCategoryIconData({Category? category, String? categoryName}) {
   return CategoryService.getCategoryIcon(null);
 }
 
+/// 自定义图标相对路径 → 已解析绝对路径的进程级缓存。
+/// 列表行每次 rebuild 都会走 _buildCustomIcon,同一路径反复解析是纯浪费。
+final Map<String, String> _iconPathCache = {};
+
 /// 分类图标组件
 /// 支持 Material Icons 和自定义图片
 class CategoryIconWidget extends ConsumerWidget {
@@ -80,52 +84,60 @@ class CategoryIconWidget extends ConsumerWidget {
   }
 
   Widget _buildCustomIcon(String path, Color fallbackColor) {
-    // 需要异步解析相对路径,使用 FutureBuilder
+    // 解析结果按相对路径缓存:同一路径的解析结果恒定,解析过一次后
+    // 后续 rebuild 直接同步渲染,不再走异步任务(列表滚动时的重复
+    // 平台通道开销由此消除)。未完成前保持 FutureBuilder 路径。
+    final cached = _iconPathCache[path];
+    if (cached is String) return _buildCustomIconBody(cached, fallbackColor);
     return FutureBuilder<String>(
       future: CustomIconService().resolveIconPath(path),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          // 加载中,显示占位图标
-          return Icon(
-            Icons.category,
-            size: size,
-            color: fallbackColor,
-          );
+        final absolutePath = snapshot.data;
+        if (absolutePath != null) {
+          _iconPathCache[path] = absolutePath;
+          return _buildCustomIconBody(absolutePath, fallbackColor);
         }
-
-        final absolutePath = snapshot.data!;
-        final file = File(absolutePath);
-
-        // 图标本身 - 不做圆角裁剪，但填满1:1区域
-        final iconWidget = Image.file(
-          file,
-          width: size,
-          height: size,
-          fit: BoxFit.cover, // 填满整个区域，保持1:1比例
-          errorBuilder: (_, __, ___) => Icon(
-            Icons.category,
-            size: size,
-            color: fallbackColor,
-          ),
+        // 加载中或失败,显示占位图标
+        return Icon(
+          Icons.category,
+          size: size,
+          color: fallbackColor,
         );
-
-        if (showBackground) {
-          // circular 参数只影响背景容器的形状
-          final backgroundRadius = circular ? size * 0.75 : size * 0.375;
-          return Container(
-            width: size * 1.5,
-            height: size * 1.5,
-            decoration: BoxDecoration(
-              color: backgroundColor ?? fallbackColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(backgroundRadius),
-            ),
-            child: Center(child: iconWidget),
-          );
-        }
-
-        return iconWidget;
       },
     );
+  }
+
+  Widget _buildCustomIconBody(String absolutePath, Color fallbackColor) {
+    final file = File(absolutePath);
+
+    // 图标本身 - 不做圆角裁剪，但填满1:1区域
+    final iconWidget = Image.file(
+      file,
+      width: size,
+      height: size,
+      fit: BoxFit.cover, // 填满整个区域，保持1:1比例
+      errorBuilder: (_, __, ___) => Icon(
+        Icons.category,
+        size: size,
+        color: fallbackColor,
+      ),
+    );
+
+    if (showBackground) {
+      // circular 参数只影响背景容器的形状
+      final backgroundRadius = circular ? size * 0.75 : size * 0.375;
+      return Container(
+        width: size * 1.5,
+        height: size * 1.5,
+        decoration: BoxDecoration(
+          color: backgroundColor ?? fallbackColor.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(backgroundRadius),
+        ),
+        child: Center(child: iconWidget),
+      );
+    }
+
+    return iconWidget;
   }
 }
 

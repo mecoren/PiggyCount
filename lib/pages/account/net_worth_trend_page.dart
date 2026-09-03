@@ -145,23 +145,26 @@ class _NetWorthTrendPageState extends ConsumerState<NetWorthTrendPage> {
                       SizedBox(height: 12.0.scaled(context, ref)),
                       SizedBox(
                         height: 240.0.scaled(context, ref),
-                        child: LineChart(
-                          values: values,
-                          xLabels: monthly
-                              .map(
-                                  (e) => '${e.date.year % 100}/${e.date.month}')
-                              .toList(),
-                          highlightIndex: values.length - 1,
-                          onSwipeLeft: () {},
-                          onSwipeRight: () {},
-                          showHint: false,
-                          hideAmounts: hide,
-                          themeColor: primary,
-                          whiteBg: !PiggyTokens.isDark(context),
-                          isDark: PiggyTokens.isDark(context),
-                          showGrid: true,
-                          showDots: true,
-                          annotate: true,
+                        // RepaintBoundary:趋势图触摸/tooltip 重绘不扩散整页
+                        child: RepaintBoundary(
+                          child: LineChart(
+                            values: values,
+                            xLabels: monthly
+                                .map((e) =>
+                                    '${e.date.year % 100}/${e.date.month}')
+                                .toList(),
+                            highlightIndex: values.length - 1,
+                            onSwipeLeft: () {},
+                            onSwipeRight: () {},
+                            showHint: false,
+                            hideAmounts: hide,
+                            themeColor: primary,
+                            whiteBg: !PiggyTokens.isDark(context),
+                            isDark: PiggyTokens.isDark(context),
+                            showGrid: true,
+                            showDots: true,
+                            annotate: true,
+                          ),
                         ),
                       ),
                       if (multi)

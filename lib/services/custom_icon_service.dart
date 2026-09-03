@@ -36,13 +36,20 @@ class CustomIconService {
 
   CustomIconService();
 
+  // 目录路径在 app 生命周期内不变;列表行逐行解析图标路径时避免
+  // 每行一次平台通道 + 目录探察。首次调用后缓存。
+  static String? _cachedIconDirPath;
+
   /// 获取自定义图标存储目录
   Future<Directory> getIconDirectory() async {
+    final cached = _cachedIconDirPath;
+    if (cached != null) return Directory(cached);
     final appDir = await getApplicationDocumentsDirectory();
     final dir = Directory('${appDir.path}/custom_icons');
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }
+    _cachedIconDirPath = dir.path;
     return dir;
   }
 

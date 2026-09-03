@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -321,22 +323,6 @@ final appSplashInitProvider = FutureProvider<void>((ref) async {
       await ref.read(countsForLedgerProvider(ledgerId).future);
       logger.info(tag, '账本统计(异步): ${DateTime.now().difference(start).inMilliseconds}ms');
     });
-
-    // 生成待处理的周期交易
-    try {
-      final generatedLedgerIds = await RecurringTransactionService.generatePendingTransactionsStatic(
-        repository: repo,
-        verbose: false,
-      );
-      logger.info(tag, '周期交易生成完成: ${DateTime.now().difference(stepTime).inMilliseconds}ms');
-
-      // 统一后处理：刷新UI + 触发云同步（如果有生成交易）
-      for (final genLedgerId in generatedLedgerIds) {
-        await PostProcessor.runR(ref, ledgerId: genLedgerId);
-      }
-    } catch (e, stackTrace) {
-      logger.error(tag, '周期交易生成失败', e, stackTrace);
-    }
   } catch (e, stackTrace) {
     logger.error(tag, '预加载数据失败', e, stackTrace);
   }
@@ -345,6 +331,30 @@ final appSplashInitProvider = FutureProvider<void>((ref) async {
   final dataLoadTime = DateTime.now().difference(startTime);
   logger.info(tag, '预加载总耗时: ${dataLoadTime.inMilliseconds}ms，切换到主应用');
   ref.read(appInitStateProvider.notifier).state = AppInitState.ready;
+
+  // 周期交易生成后移到 ready 之后:它不是首屏必需数据,但有大量历史
+  // 周期补账的账本(如半年 daily)会把用户按在 Splash 数秒。生成完由
+  // PostProcessor.runR bump statsRefresh 触发 UI/统计刷新,小组件由
+  // _WidgetUpdateObserver 链路跟进,数据晚到一拍不影响已进入的主界面。
+  unawaited(() async {
+    try {
+      final repo = ref.read(repositoryProvider);
+      final generatedLedgerIds =
+          await RecurringTransactionService.generatePendingTransactionsStatic(
+        repository: repo,
+        verbose: false,
+      );
+      logger.info(tag,
+          '周期交易生成完成(后台): 涉及账本 ${generatedLedgerIds.length} 个');
+
+      // 统一后处理：刷新UI + 触发云同步（如果有生成交易）
+      for (final genLedgerId in generatedLedgerIds) {
+        await PostProcessor.runR(ref, ledgerId: genLedgerId);
+      }
+    } catch (e, stackTrace) {
+      logger.error(tag, '周期交易生成失败', e, stackTrace);
+    }
+  }());
 });
 
 // 是否应该显示欢迎页面的Provider
@@ -355,7 +365,7 @@ final welcomeCheckProvider = FutureProvider<bool>((ref) async {
   final prefs = await SharedPreferences.getInstance();
   final welcomeShown = prefs.getBool('welcome_shown') ?? false;
   if (!welcomeShown) {
-    print('👋 首次启动，需要展示欢迎页面');
+    logger.info('App', '👋 首次启动，需要展示欢迎页面');
     ref.read(shouldShowWelcomeProvider.notifier).state = true;
     return true;
   }

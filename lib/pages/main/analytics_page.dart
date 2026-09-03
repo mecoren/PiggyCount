@@ -1148,77 +1148,86 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                             const SizedBox(height: 8),
                             SizedBox(
                               height: 200,
-                              child: LineChart(
-                                values: values,
-                                xLabels: xLabels,
-                                highlightIndex: highlightIndex,
-                                hideAmounts: hide,
-                                themeColor: PiggyTokens.primary(context),
-                                // 使用统一图表令牌
-                                lineWidth: PiggyChartTokens.lineWidth,
-                                dotRadius: PiggyChartTokens.dotRadius,
-                                cornerRadius: PiggyChartTokens.cornerRadius,
-                                xLabelFontSize: PiggyChartTokens.xLabelFontSize,
-                                yLabelFontSize: PiggyChartTokens.yLabelFontSize,
-                                onSwipeLeft: () {
-                                  // 根据scope切换周期
-                                  _onChartSwipeLeft();
-                                  setState(() => _chartSwiped = true);
-                                },
-                                onSwipeRight: () {
-                                  // 根据scope切换周期
-                                  _onChartSwipeRight();
-                                  setState(() => _chartSwiped = true);
-                                },
-                                showHint: !chartDismissed,
-                                hintText: AppLocalizations.of(context)
-                                    .analyticsSwipeHint,
-                                onCloseHint: () async {
-                                  final setter =
-                                      ref.read(analyticsHintsSetterProvider);
-                                  await setter.dismissChart();
-                                  if (mounted) {
-                                    setState(() => _localChartDismissed = true);
-                                  }
-                                },
-                                // minimal：背景/轴线/平均线交给外层卡片
-                                whiteBg: false,
-                                isDark: PiggyTokens.isDark(context),
-                                showGrid: false,
-                                showDots: true,
-                                annotate: false,
-                                minimal: true,
-                                smooth: true,
-                                showYAxisLabels: true,
-                                isChineseLocale: isZh,
-                                pointTooltipText: tooltipText,
+                              // RepaintBoundary:图表触摸/tooltip 只重绘图表层,
+                              // 不把整页(三图表+排行榜)卷进 repaint
+                              child: RepaintBoundary(
+                                child: LineChart(
+                                  values: values,
+                                  xLabels: xLabels,
+                                  highlightIndex: highlightIndex,
+                                  hideAmounts: hide,
+                                  themeColor: PiggyTokens.primary(context),
+                                  // 使用统一图表令牌
+                                  lineWidth: PiggyChartTokens.lineWidth,
+                                  dotRadius: PiggyChartTokens.dotRadius,
+                                  cornerRadius: PiggyChartTokens.cornerRadius,
+                                  xLabelFontSize:
+                                      PiggyChartTokens.xLabelFontSize,
+                                  yLabelFontSize:
+                                      PiggyChartTokens.yLabelFontSize,
+                                  onSwipeLeft: () {
+                                    // 根据scope切换周期
+                                    _onChartSwipeLeft();
+                                    setState(() => _chartSwiped = true);
+                                  },
+                                  onSwipeRight: () {
+                                    // 根据scope切换周期
+                                    _onChartSwipeRight();
+                                    setState(() => _chartSwiped = true);
+                                  },
+                                  showHint: !chartDismissed,
+                                  hintText: AppLocalizations.of(context)
+                                      .analyticsSwipeHint,
+                                  onCloseHint: () async {
+                                    final setter =
+                                        ref.read(analyticsHintsSetterProvider);
+                                    await setter.dismissChart();
+                                    if (mounted) {
+                                      setState(() =>
+                                          _localChartDismissed = true);
+                                    }
+                                  },
+                                  // minimal：背景/轴线/平均线交给外层卡片
+                                  whiteBg: false,
+                                  isDark: PiggyTokens.isDark(context),
+                                  showGrid: false,
+                                  showDots: true,
+                                  annotate: false,
+                                  minimal: true,
+                                  smooth: true,
+                                  showYAxisLabels: true,
+                                  isChineseLocale: isZh,
+                                  pointTooltipText: tooltipText,
+                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(height: 12),
-                      AnalyticsBarChart(
-                        values: values,
-                        xLabels: xLabels,
-                        highlightIndex: highlightIndex,
-                        hideAmounts: hide,
-                        themeColor: PiggyTokens.primary(context),
-                        isDark: PiggyTokens.isDark(context),
-                        title: l10n.analyticsTrendTitle(typeWord),
-                        badgeText: barBadge,
-                        isChineseLocale: isZh,
-                        pointTooltipText: tooltipText,
-                        onSwipeLeft: () {
-                          // 根据scope切换周期
-                          _onChartSwipeLeft();
-                          setState(() => _chartSwiped = true);
-                        },
-                        onSwipeRight: () {
-                          // 根据scope切换周期
-                          _onChartSwipeRight();
-                          setState(() => _chartSwiped = true);
-                        },
+                      RepaintBoundary(
+                        child: AnalyticsBarChart(
+                          values: values,
+                          xLabels: xLabels,
+                          highlightIndex: highlightIndex,
+                          hideAmounts: hide,
+                          themeColor: PiggyTokens.primary(context),
+                          isDark: PiggyTokens.isDark(context),
+                          title: l10n.analyticsTrendTitle(typeWord),
+                          badgeText: barBadge,
+                          isChineseLocale: isZh,
+                          pointTooltipText: tooltipText,
+                          onSwipeLeft: () {
+                            // 根据scope切换周期
+                            _onChartSwipeLeft();
+                            setState(() => _chartSwiped = true);
+                          },
+                          onSwipeRight: () {
+                            // 根据scope切换周期
+                            _onChartSwipeRight();
+                            setState(() => _chartSwiped = true);
+                          },
+                        ),
                       ),
                       const SizedBox(height: 12),
                       // 结余视角不显示分类构成与排行榜
@@ -1280,9 +1289,12 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                                     ),
                                     const SizedBox(height: 8),
                                     if (pieData.isNotEmpty && sum > 0)
-                                      CategoryPieChart(
-                                        data: pieData,
-                                        sum: sum,
+                                      RepaintBoundary(
+                                        // 环形图扇区触摸高亮隔离,避免排行榜重绘
+                                        child: CategoryPieChart(
+                                          data: pieData,
+                                          sum: sum,
+                                        ),
                                       ),
                                   ],
                                 ),

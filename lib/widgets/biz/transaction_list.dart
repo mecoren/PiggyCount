@@ -340,6 +340,20 @@ class TransactionListState extends ConsumerState<TransactionList> {
     }
     final sortedKeys = groups.keys.toList()..sort((a, b) => b.compareTo(a));
 
+    // 日合计预计算:income/expense 在构建期一次算好存入 flat item,
+    // 渲染期(DaySectionHeader/头部分支)不再每帧循环当天交易列表。
+    // 转账不计入收支统计(与原渲染期口径一致)。
+    (double, double) dayTotals(
+        List<({Transaction t, Category? category, Account? account, Account? toAccount})>
+            list) {
+      double income = 0, expense = 0;
+      for (final it in list) {
+        if (it.t.type == 'income') income += it.t.nativeAmount ?? it.t.amount;
+        if (it.t.type == 'expense') expense += it.t.nativeAmount ?? it.t.amount;
+      }
+      return (income, expense);
+    }
+
     // 构建扁平的项目列表和日期索引映射
     _flatItems = <dynamic>[];
     _dateIndexMap.clear();
@@ -368,7 +382,8 @@ class TransactionListState extends ConsumerState<TransactionList> {
           list,
           flatDayStart,
           i == 0,        // isFirst
-          i == lastIndex // isLast
+          i == lastIndex, // isLast
+          dayTotals(list), // (dayIncome, dayExpense) 预计算
         ));
         flatDayStart += list.length;
       }
@@ -377,7 +392,7 @@ class TransactionListState extends ConsumerState<TransactionList> {
       for (final key in sortedKeys) {
         final list = groups[key]!;
         _dateIndexMap[key] = _flatItems.length;
-        _flatItems.add(('header', key, list));
+        _flatItems.add(('header', key, list, dayTotals(list)));
         for (final item in list) {
           _flatItems.add(('transaction', item, list));
         }
@@ -485,17 +500,8 @@ class TransactionListState extends ConsumerState<TransactionList> {
           if (type == 'header') {
             // 渲染日期头部(平铺旧风格用)
             final dateKey = item.$2 as String;
-            final list = item.$3 as List<({Transaction t, Category? category, Account? account, Account? toAccount})>;
-            double dayIncome = 0, dayExpense = 0;
-            for (final it in list) {
-              // 转账不计入收支统计
-              if (it.t.type == 'income') {
-                dayIncome += it.t.nativeAmount ?? it.t.amount;
-              }
-              if (it.t.type == 'expense') {
-                dayExpense += it.t.nativeAmount ?? it.t.amount;
-              }
-            }
+            // 日合计在 _buildFlatItems 构建期预计算($4),渲染期零循环
+            final totals = item.$4 as (double, double);
             final isFirst = index == 0;
 
             Widget header = Column(
@@ -507,8 +513,8 @@ class TransactionListState extends ConsumerState<TransactionList> {
                   ),
                 DaySectionHeader(
                   dateText: dateKey,
-                  income: dayIncome,
-                  expense: dayExpense,
+                  income: totals.$1,
+                  expense: totals.$2,
                   hide: widget.hideAmounts,
                 ),
               ],
@@ -537,7 +543,9 @@ class TransactionListState extends ConsumerState<TransactionList> {
             final flatDayStart = item.$4 as int;
             final isFirst = item.$5 as bool;
             final isLast = item.$6 as bool;
-            return _buildDayCard(context, dateKey, list, flatDayStart, isFirst, isLast);
+            final dayTotals = item.$7 as (double, double);
+            return _buildDayCard(context, dateKey, list, flatDayStart, isFirst,
+                isLast, dayTotals: dayTotals);
           } else {
             // 'transaction' 平铺旧风格(wrapInOuterCard = false):平铺单条交易,
             // 项之间用 PiggyDivider.short 分隔,项的具体渲染复用 _buildTransactionRow。
@@ -770,21 +778,30 @@ class TransactionListState extends ConsumerState<TransactionList> {
     List<({Transaction t, Category? category, Account? account, Account? toAccount})> list,
     int flatDayStart,
     bool isFirst,
-    bool isLast,
-  ) {
+    bool isLast, {
+    /// 日合计:由 _buildFlatItems 构建期预计算,渲染期零循环。
+    /// 未传时兜底现算(防御未来新增调用点)。
+    (double, double)? dayTotals,
+  }) {
     final isDark = PiggyTokens.isDark(context);
     final primary = ref.watch(primaryColorProvider);
     final borderWidth = 1.5;
     final borderColor = primary;
 
     // 当天收支(用于 DaySectionHeader)
-    double dayIncome = 0, dayExpense = 0;
-    for (final it in list) {
-      if (it.t.type == 'income') {
-        dayIncome += it.t.nativeAmount ?? it.t.amount;
-      }
-      if (it.t.type == 'expense') {
-        dayExpense += it.t.nativeAmount ?? it.t.amount;
+    double dayIncome, dayExpense;
+    if (dayTotals != null) {
+      (dayIncome, dayExpense) = dayTotals;
+    } else {
+      dayIncome = 0;
+      dayExpense = 0;
+      for (final it in list) {
+        if (it.t.type == 'income') {
+          dayIncome += it.t.nativeAmount ?? it.t.amount;
+        }
+        if (it.t.type == 'expense') {
+          dayExpense += it.t.nativeAmount ?? it.t.amount;
+        }
       }
     }
     Widget header = DaySectionHeader(
