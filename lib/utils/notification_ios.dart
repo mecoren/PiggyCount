@@ -1,6 +1,6 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/timezone.dart' as tz;
 import 'notification_util.dart' as util;
+import '../services/system/logger_service.dart';
 
 /// iOS 特定的通知实现
 class IOSNotificationUtil implements util.NotificationUtil {
@@ -28,7 +28,7 @@ class IOSNotificationUtil implements util.NotificationUtil {
 
     _initialized = true;
 
-    print('[iOS] 通知服务初始化完成');
+    logger.info('Notification', '[iOS] 通知服务初始化完成');
   }
 
   @override
@@ -44,7 +44,7 @@ class IOSNotificationUtil implements util.NotificationUtil {
       sound: true,
     );
 
-    print('[iOS] 通知权限请求结果: ${granted ?? false}');
+    logger.info('Notification', '[iOS] 通知权限请求结果: ${granted ?? false}');
     return granted ?? false;
   }
 
@@ -83,9 +83,9 @@ class IOSNotificationUtil implements util.NotificationUtil {
         matchDateTimeComponents: DateTimeComponents.time, // 每天重复
       );
 
-      print('[iOS] 每日提醒设置成功: $hour:$minute (下次: $scheduledDate)');
+      logger.info('Notification', '[iOS] 每日提醒设置成功: $hour:$minute (下次: $scheduledDate)');
     } catch (e) {
-      print('[iOS] 设置每日提醒失败: $e');
+      logger.warning('Notification', '[iOS] 设置每日提醒失败: $e');
       rethrow;
     }
   }
@@ -120,21 +120,21 @@ class IOSNotificationUtil implements util.NotificationUtil {
           UILocalNotificationDateInterpretation.absoluteTime,
     );
 
-    print('[iOS] 单次提醒设置成功: $scheduledDate');
+    logger.info('Notification', '[iOS] 单次提醒设置成功: $scheduledDate');
   }
 
   @override
   Future<void> cancelNotification(int id) async {
     if (!_initialized) await initialize();
     await _plugin.cancel(id);
-    print('[iOS] 通知已取消: $id');
+    logger.info('Notification', '[iOS] 通知已取消: $id');
   }
 
   @override
   Future<void> cancelAllNotifications() async {
     if (!_initialized) await initialize();
     await _plugin.cancelAll();
-    print('[iOS] 所有通知已取消');
+    logger.info('Notification', '[iOS] 所有通知已取消');
   }
 
   @override
@@ -154,7 +154,7 @@ class IOSNotificationUtil implements util.NotificationUtil {
     const notificationDetails = NotificationDetails(iOS: iosDetails);
 
     await _plugin.show(id, title, body, notificationDetails);
-    print('[iOS] 即时通知已显示: $title');
+    logger.info('Notification', '[iOS] 即时通知已显示: $title');
   }
 
   @override

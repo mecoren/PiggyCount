@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../automation/auto_billing_service.dart';
+import '../../services/system/logger_service.dart';
 
 /// Google Play 版本(CI 注入)。Photo & Video Permissions 政策禁止记账类 app
 /// 长期持有 READ_MEDIA_IMAGES,所以 Google Play 版本砍掉截屏自动记账功能。
@@ -35,12 +36,12 @@ class ScreenshotMonitorService {
 
   /// 设置方法调用处理器
   void _setupMethodCallHandler() {
-    print('📸 [ScreenshotMonitor] 初始化方法调用处理器');
+    logger.info('Screenshot', '📸 [ScreenshotMonitor] 初始化方法调用处理器');
     _channel.setMethodCallHandler((call) async {
-      print('📸 [ScreenshotMonitor] 收到方法调用: ${call.method}');
+      logger.info('Screenshot', '📸 [ScreenshotMonitor] 收到方法调用: ${call.method}');
       if (call.method == 'onScreenshotDetected') {
         final path = call.arguments as String;
-        print('📸 [ScreenshotMonitor] 检测到截图，路径: $path');
+        logger.info('Screenshot', '📸 [ScreenshotMonitor] 检测到截图，路径: $path');
         await _handleScreenshot(path);
       }
     });
@@ -57,7 +58,7 @@ class ScreenshotMonitorService {
   /// 启用截图监听
   Future<void> enable() async {
     try {
-      print('📸 [ScreenshotMonitor] 开始启用截图监听...');
+      logger.info('Screenshot', '📸 [ScreenshotMonitor] 开始启用截图监听...');
 
       if (_isGooglePlayBuild) {
         throw UnsupportedError('Screenshot monitoring is not available in Google Play builds');
@@ -68,7 +69,7 @@ class ScreenshotMonitorService {
         throw UnsupportedError('仅支持 Android 平台');
       }
 
-      print('📸 [ScreenshotMonitor] 调用原生方法 startScreenshotObserver');
+      logger.info('Screenshot', '📸 [ScreenshotMonitor] 调用原生方法 startScreenshotObserver');
       await _channel.invokeMethod('startScreenshotObserver');
 
       final prefs = await SharedPreferences.getInstance();
@@ -76,9 +77,9 @@ class ScreenshotMonitorService {
       _isEnabled = true;
       _isMonitoring = true;
 
-      print('✅ [ScreenshotMonitor] 截图监听已启用，_isEnabled=$_isEnabled, _isMonitoring=$_isMonitoring');
+      logger.info('Screenshot', '✅ [ScreenshotMonitor] 截图监听已启用，_isEnabled=$_isEnabled, _isMonitoring=$_isMonitoring');
     } catch (e) {
-      print('❌ [ScreenshotMonitor] 启用截图监听失败: $e');
+      logger.warning('Screenshot', '❌ [ScreenshotMonitor] 启用截图监听失败: $e');
       rethrow;
     }
   }
@@ -95,20 +96,20 @@ class ScreenshotMonitorService {
       _isEnabled = false;
       _isMonitoring = false;
 
-      print('✅ 截图监听已禁用');
+      logger.info('Screenshot', '✅ 截图监听已禁用');
     } catch (e) {
-      print('❌ 禁用截图监听失败: $e');
+      logger.warning('Screenshot', '❌ 禁用截图监听失败: $e');
       rethrow;
     }
   }
 
   /// 处理截图
   Future<void> _handleScreenshot(String path) async {
-    print('📸 [ScreenshotMonitor] _handleScreenshot 被调用，path=$path');
-    print('📸 [ScreenshotMonitor] 当前状态: _isEnabled=$_isEnabled, _isMonitoring=$_isMonitoring');
+    logger.info('Screenshot', '📸 [ScreenshotMonitor] _handleScreenshot 被调用，path=$path');
+    logger.info('Screenshot', '📸 [ScreenshotMonitor] 当前状态: _isEnabled=$_isEnabled, _isMonitoring=$_isMonitoring');
 
     if (!_isEnabled || !_isMonitoring) {
-      print('⚠️ [ScreenshotMonitor] 截图监听未启用或未监控，跳过处理');
+      logger.warning('Screenshot', '⚠️ [ScreenshotMonitor] 截图监听未启用或未监控，跳过处理');
       return;
     }
 

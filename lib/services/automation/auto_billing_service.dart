@@ -117,12 +117,12 @@ class AutoBillingService {
     bool showNotification = true,
   }) async {
     final totalStartTime = DateTime.now().millisecondsSinceEpoch;
-    print('📸 [AutoBilling] 开始处理截图: $imagePath');
+    logger.info('AutoBilling', '📸 [AutoBilling] 开始处理截图: $imagePath');
     logger.info('AutoBilling', '开始处理截图', imagePath);
 
     // 防重复处理: 已处理过的跳过
     if (_isProcessed(imagePath)) {
-      print('⚠️ [AutoBilling] 截图已处理过，跳过');
+      logger.warning('AutoBilling', '⚠️ [AutoBilling] 截图已处理过，跳过');
       logger.warning('AutoBilling', '截图已处理过，跳过', imagePath);
       return null;
     }
@@ -132,7 +132,7 @@ class AutoBillingService {
     if (_lastProcessedPath == imagePath &&
         (now - _lastProcessedTime) < AutoBillingConfig.duplicateCheckWindow) {
       final timeDiff = now - _lastProcessedTime;
-      print('⚠️ [AutoBilling] 重复截图，跳过处理 (${timeDiff}ms前已处理)');
+      logger.warning('AutoBilling', '⚠️ [AutoBilling] 重复截图，跳过处理 (${timeDiff}ms前已处理)');
       logger.warning('AutoBilling', '重复截图，跳过处理', '${timeDiff}ms前已处理');
       return null;
     }
@@ -170,7 +170,7 @@ class AutoBillingService {
 
         while (waitTime < maxWait) {
           if (await file.exists() && await file.length() > 0) {
-            print('✅ 文件已就绪，等待时间=${waitTime}ms');
+            logger.info('AutoBilling', '✅ 文件已就绪，等待时间=${waitTime}ms');
             logger.info('AutoBilling', '文件就绪', '等待时间=${waitTime}ms');
             break;
           }
@@ -194,7 +194,7 @@ class AutoBillingService {
           return null;
         }
       } else {
-        print('✅ 文件已就绪,无需等待');
+        logger.info('AutoBilling', '✅ 文件已就绪,无需等待');
         logger.debug('AutoBilling', '文件已就绪，无需等待');
       }
 
@@ -331,7 +331,7 @@ class AutoBillingService {
           'ids=${result.transactionIds}, 总金额=${result.totalAbsAmount}');
       return result.firstTransactionId;
     } catch (e, stackTrace) {
-      print('❌ 处理截图失败: $e');
+      logger.warning('AutoBilling', '❌ 处理截图失败: $e');
       logger.error('AutoBilling', '处理截图失败', {
         'path': imagePath,
         'error': e.toString(),
@@ -353,7 +353,7 @@ class AutoBillingService {
     } finally {
       final totalElapsed =
           DateTime.now().millisecondsSinceEpoch - totalStartTime;
-      print('⏱️ [性能] 整个流程完成, 总耗时=${totalElapsed}ms');
+      logger.info('AutoBilling', '⏱️ [性能] 整个流程完成, 总耗时=${totalElapsed}ms');
     }
   }
 
@@ -366,7 +366,7 @@ class AutoBillingService {
     bool showNotification = true,
   }) async {
     final totalStartTime = DateTime.now().millisecondsSinceEpoch;
-    print('📝 [AutoBilling] 开始处理文本: $text');
+    logger.info('AutoBilling', '📝 [AutoBilling] 开始处理文本: $text');
 
     try {
       const notificationId = 1002;

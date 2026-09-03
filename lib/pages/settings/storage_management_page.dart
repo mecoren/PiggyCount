@@ -9,6 +9,7 @@ import '../../widgets/biz/biz.dart';
 import '../../styles/tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/ui_scale_extensions.dart';
+import '../../services/system/logger_service.dart';
 
 /// 存储空间管理页面
 class StorageManagementPage extends ConsumerStatefulWidget {
@@ -47,7 +48,7 @@ class _StorageManagementPageState extends ConsumerState<StorageManagementPage> {
         await _scanAPKFiles();
       }
     } catch (e) {
-      print('扫描存储空间失败: $e');
+      logger.warning('Storage', '扫描存储空间失败: $e');
     }
 
     if (mounted) {
@@ -84,7 +85,7 @@ class _StorageManagementPageState extends ConsumerState<StorageManagementPage> {
         _aiModelsSize = 0;
       }
     } catch (e) {
-      print('扫描AI模型失败: $e');
+      logger.warning('Storage', '扫描AI模型失败: $e');
       _aiModelFiles = [];
       _aiModelsSize = 0;
     }
@@ -118,7 +119,7 @@ class _StorageManagementPageState extends ConsumerState<StorageManagementPage> {
       _apkFiles = files;
       _apkFilesSize = totalSize;
     } catch (e) {
-      print('扫描APK文件失败: $e');
+      logger.warning('Storage', '扫描APK文件失败: $e');
       _apkFiles = [];
       _apkFilesSize = 0;
     }

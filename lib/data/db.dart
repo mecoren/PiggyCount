@@ -572,13 +572,13 @@ class PiggyDatabase extends _$PiggyDatabase {
                 'UPDATE categories SET level = 1 WHERE level IS NULL OR level = 0;');
           }
           if (from < 7) {
-            print('[DB Migration] 开始迁移到 v7: 周期账单支持转账');
+            logger.info('DB', '[DB Migration] 开始迁移到 v7: 周期账单支持转账');
             // v7: 周期账单支持转账
             // 需要将 category_id 改为可空，并添加 to_account_id 字段
             // SQLite 不支持修改列约束，所以需要重建表
 
             // 1. 创建新表
-            print('[DB Migration] 步骤1: 创建新表');
+            logger.info('DB', '[DB Migration] 步骤1: 创建新表');
             await customStatement('''
               CREATE TABLE IF NOT EXISTS recurring_transactions_new (
                 id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -604,7 +604,7 @@ class PiggyDatabase extends _$PiggyDatabase {
             ''');
 
             // 2. 复制数据
-            print('[DB Migration] 步骤2: 复制数据');
+            logger.info('DB', '[DB Migration] 步骤2: 复制数据');
             await customStatement('''
               INSERT INTO recurring_transactions_new
               (id, ledger_id, type, amount, category_id, account_id, to_account_id, note,
@@ -618,25 +618,25 @@ class PiggyDatabase extends _$PiggyDatabase {
             ''');
 
             // 3. 删除旧表
-            print('[DB Migration] 步骤3: 删除旧表');
+            logger.info('DB', '[DB Migration] 步骤3: 删除旧表');
             await customStatement('DROP TABLE recurring_transactions;');
 
             // 4. 重命名新表
-            print('[DB Migration] 步骤4: 重命名新表');
+            logger.info('DB', '[DB Migration] 步骤4: 重命名新表');
             await customStatement('ALTER TABLE recurring_transactions_new RENAME TO recurring_transactions;');
-            print('[DB Migration] v7 迁移完成');
+            logger.info('DB', '[DB Migration] v7 迁移完成');
           }
           if (from < 8) {
             // v8: AI 对话助手
-            print('[DB Migration] 开始迁移到 v8: AI 对话助手');
+            logger.info('DB', '[DB Migration] 开始迁移到 v8: AI 对话助手');
             await migrator.createTable(conversations);
             await migrator.createTable(messages);
             logger.info('DB', 'v8 迁移完成: AI Chat tables created');
-            print('[DB Migration] v8 迁移完成');
+            logger.info('DB', '[DB Migration] v8 迁移完成');
           }
           if (from < 9) {
             // v9: 为 ledgers 表添加 type 字段（支持家庭账本）
-            print('[DB Migration] 开始迁移到 v9: 添加 ledgers.type 字段');
+            logger.info('DB', '[DB Migration] 开始迁移到 v9: 添加 ledgers.type 字段');
 
             // 检查字段是否已存在，避免重复添加
             final tableInfo =
@@ -652,11 +652,11 @@ class PiggyDatabase extends _$PiggyDatabase {
               logger.info('DB', 'v9 迁移跳过: ledgers.type 字段已存在');
             }
 
-            print('[DB Migration] v9 迁移完成');
+            logger.info('DB', '[DB Migration] v9 迁移完成');
           }
           if (from < 10) {
             // v10: 添加标签功能
-            print('[DB Migration] 开始迁移到 v10: 添加标签功能');
+            logger.info('DB', '[DB Migration] 开始迁移到 v10: 添加标签功能');
 
             // 创建 tags 表
             await migrator.createTable(tags);
@@ -673,11 +673,11 @@ class PiggyDatabase extends _$PiggyDatabase {
                 'CREATE INDEX IF NOT EXISTS idx_transaction_tags_tag ON transaction_tags(tag_id)');
             logger.info('DB', 'v10: 索引已创建');
 
-            print('[DB Migration] v10 迁移完成');
+            logger.info('DB', '[DB Migration] v10 迁移完成');
           }
           if (from < 11) {
             // v11: 添加预算功能
-            print('[DB Migration] 开始迁移到 v11: 添加预算功能');
+            logger.info('DB', '[DB Migration] 开始迁移到 v11: 添加预算功能');
 
             // 创建 budgets 表
             await migrator.createTable(budgets);
@@ -692,11 +692,11 @@ class PiggyDatabase extends _$PiggyDatabase {
                 'CREATE INDEX IF NOT EXISTS idx_budgets_ledger_type ON budgets(ledger_id, type)');
             logger.info('DB', 'v11: 预算索引已创建');
 
-            print('[DB Migration] v11 迁移完成');
+            logger.info('DB', '[DB Migration] v11 迁移完成');
           }
           if (from < 12) {
             // v12: 添加交易附件功能
-            print('[DB Migration] 开始迁移到 v12: 添加交易附件功能');
+            logger.info('DB', '[DB Migration] 开始迁移到 v12: 添加交易附件功能');
 
             // 创建 transaction_attachments 表
             await migrator.createTable(transactionAttachments);
@@ -707,11 +707,11 @@ class PiggyDatabase extends _$PiggyDatabase {
                 'CREATE INDEX IF NOT EXISTS idx_attachments_transaction ON transaction_attachments(transaction_id)');
             logger.info('DB', 'v12: 附件索引已创建');
 
-            print('[DB Migration] v12 迁移完成');
+            logger.info('DB', '[DB Migration] v12 迁移完成');
           }
           if (from < 13) {
             // v13: 分类自定义图标支持
-            print('[DB Migration] 开始迁移到 v13: 分类自定义图标支持');
+            logger.info('DB', '[DB Migration] 开始迁移到 v13: 分类自定义图标支持');
 
             // 检查字段是否已存在，避免重复添加
             final tableInfo =
@@ -741,18 +741,18 @@ class PiggyDatabase extends _$PiggyDatabase {
               logger.info('DB', 'v13: community_icon_id 字段已添加');
             }
 
-            print('[DB Migration] v13 迁移完成');
+            logger.info('DB', '[DB Migration] v13 迁移完成');
           }
           if (from < 14) {
             // v14: 迁移转账记录到虚拟转账分类
-            print('[DB Migration] 开始迁移到 v14: 迁移转账记录到虚拟转账分类');
+            logger.info('DB', '[DB Migration] 开始迁移到 v14: 迁移转账记录到虚拟转账分类');
             await SeedService.migrateTransferTransactions(this);
             logger.info('DB', 'v14 迁移完成: 转账记录已关联到虚拟转账分类');
-            print('[DB Migration] v14 迁移完成');
+            logger.info('DB', '[DB Migration] v14 迁移完成');
           }
           if (from < 15) {
             // v15: 交易添加 syncId 用于云同步
-            print('[DB Migration] 开始迁移到 v15: 添加 syncId 字段');
+            logger.info('DB', '[DB Migration] 开始迁移到 v15: 添加 syncId 字段');
 
             // 1. 添加 sync_id 列
             await customStatement(
@@ -779,11 +779,11 @@ class PiggyDatabase extends _$PiggyDatabase {
                 'CREATE INDEX IF NOT EXISTS idx_transactions_sync_id ON transactions(sync_id);');
             logger.info('DB', 'v15: syncId 索引已创建');
 
-            print('[DB Migration] v15 迁移完成');
+            logger.info('DB', '[DB Migration] v15 迁移完成');
           }
           if (from < 16) {
             // v16: 账户添加 sortOrder 排序字段
-            print('[DB Migration] 开始迁移到 v16: 账户排序');
+            logger.info('DB', '[DB Migration] 开始迁移到 v16: 账户排序');
 
             await customStatement(
                 'ALTER TABLE accounts ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0;');
@@ -803,11 +803,11 @@ class PiggyDatabase extends _$PiggyDatabase {
             ''');
             logger.info('DB', 'v16: 已为现有账户回填 sortOrder');
 
-            print('[DB Migration] v16 迁移完成');
+            logger.info('DB', '[DB Migration] v16 迁移完成');
           }
           if (from < 17) {
             // v17: 账户添加信用卡字段
-            print('[DB Migration] 开始迁移到 v17: 信用卡字段');
+            logger.info('DB', '[DB Migration] 开始迁移到 v17: 信用卡字段');
 
             final tableInfo =
                 await customSelect('PRAGMA table_info(accounts)').get();
@@ -836,11 +836,11 @@ class PiggyDatabase extends _$PiggyDatabase {
               logger.info('DB', 'v17: payment_due_day 字段已添加');
             }
 
-            print('[DB Migration] v17 迁移完成');
+            logger.info('DB', '[DB Migration] v17 迁移完成');
           }
           if (from < 18) {
             // v18: 账户添加元信息字段
-            print('[DB Migration] 开始迁移到 v18: 账户元信息');
+            logger.info('DB', '[DB Migration] 开始迁移到 v18: 账户元信息');
 
             final tableInfo =
                 await customSelect('PRAGMA table_info(accounts)').get();
@@ -869,11 +869,11 @@ class PiggyDatabase extends _$PiggyDatabase {
               logger.info('DB', 'v18: note 字段已添加');
             }
 
-            print('[DB Migration] v18 迁移完成');
+            logger.info('DB', '[DB Migration] v18 迁移完成');
           }
           if (from < 19) {
             // v19: 同步基础设施
-            print('[DB Migration] 开始迁移到 v19: 同步基础设施');
+            logger.info('DB', '[DB Migration] 开始迁移到 v19: 同步基础设施');
 
             // 1. 为 accounts 添加 sync_id
             final accountInfo =
@@ -946,11 +946,11 @@ class PiggyDatabase extends _$PiggyDatabase {
             // （历史上的第 5 步 sync_state 建表已移除：该表 v37 起 DROP，
             //   不再属于 schema。）
 
-            print('[DB Migration] v19 迁移完成');
+            logger.info('DB', '[DB Migration] v19 迁移完成');
           }
           if (from < 20) {
             // v20: 附件云端同步字段
-            print('[DB Migration] 开始迁移到 v20: 附件云端同步字段');
+            logger.info('DB', '[DB Migration] 开始迁移到 v20: 附件云端同步字段');
 
             final tableInfo =
                 await customSelect('PRAGMA table_info(transaction_attachments)').get();
@@ -971,11 +971,11 @@ class PiggyDatabase extends _$PiggyDatabase {
               logger.info('DB', 'v20: cloud_sha256 字段已添加');
             }
 
-            print('[DB Migration] v20 迁移完成');
+            logger.info('DB', '[DB Migration] v20 迁移完成');
           }
           if (from < 21) {
             // v21: ledgers 加 syncId（跨设备同步 ledger 匹配）
-            print('[DB Migration] 开始迁移到 v21: ledgers.sync_id');
+            logger.info('DB', '[DB Migration] 开始迁移到 v21: ledgers.sync_id');
 
             final ledgerInfo =
                 await customSelect('PRAGMA table_info(ledgers)').get();
@@ -992,11 +992,11 @@ class PiggyDatabase extends _$PiggyDatabase {
               logger.info('DB', 'v21: ledgers.sync_id 已添加并回填');
             }
 
-            print('[DB Migration] v21 迁移完成');
+            logger.info('DB', '[DB Migration] v21 迁移完成');
           }
           if (from < 22) {
             // v22: budgets 加 syncId(跨设备同步 budget 匹配)
-            print('[DB Migration] 开始迁移到 v22: budgets.sync_id');
+            logger.info('DB', '[DB Migration] 开始迁移到 v22: budgets.sync_id');
 
             final budgetInfo =
                 await customSelect('PRAGMA table_info(budgets)').get();
@@ -1013,7 +1013,7 @@ class PiggyDatabase extends _$PiggyDatabase {
               logger.info('DB', 'v22: budgets.sync_id 已添加并回填');
             }
 
-            print('[DB Migration] v22 迁移完成');
+            logger.info('DB', '[DB Migration] v22 迁移完成');
           }
           if (from < 23) {
             // v23: 清理"分类图标靠 getCategoryIconByName 运行时推导"的毒瘤代码。
@@ -1026,7 +1026,7 @@ class PiggyDatabase extends _$PiggyDatabase {
             // 之后渲染层 getCategoryIconData 只认 icon 字段、不再 byName 推导。
             // 结合服务端 alembic 0002 的同名 backfill,两端同步"迁 read-time 到
             // write-time"。
-            print('[DB Migration] 开始迁移到 v23: backfill category icons via byName');
+            logger.info('DB', '[DB Migration] 开始迁移到 v23: backfill category icons via byName');
 
             // 取所有 icon 空的分类,按 name 推导图标字符串回填
             final rows = await customSelect(
@@ -1046,7 +1046,7 @@ class PiggyDatabase extends _$PiggyDatabase {
               updated++;
             }
             logger.info('DB', 'v23: backfilled $updated categories');
-            print('[DB Migration] v23 迁移完成: 回填 $updated 条分类');
+            logger.info('DB', '[DB Migration] v23 迁移完成: 回填 $updated 条分类');
           }
           if (from < 24) {
             // v24: 共享账本完整 schema(合并自 v24/v25/v26/v27 的迭代,测试阶段
@@ -1057,7 +1057,7 @@ class PiggyDatabase extends _$PiggyDatabase {
             // 已经隐式 commit(SQLite DDL 不可回滚),user_version 仍 23。
             // 装新版本再跑 onUpgrade(from=23) 时 v24 第一句又会 duplicate column
             // 卡死。每条都要幂等。
-            print('[DB Migration] 开始迁移到 v24: 共享账本完整 schema');
+            logger.info('DB', '[DB Migration] 开始迁移到 v24: 共享账本完整 schema');
 
             await _addColumnIfMissing(
                 'ledgers', 'my_role',
@@ -1104,7 +1104,7 @@ class PiggyDatabase extends _$PiggyDatabase {
             // no such table 让迁移回滚、App 永久打不开。表存在才重置。
             await _resetServerCursorIfSyncStateExists();
 
-            print('[DB Migration] v24 迁移完成');
+            logger.info('DB', '[DB Migration] v24 迁移完成');
           }
           if (from < 25) {
             // v25: SharedLedgerCategories 加 parent_sync_id 列。

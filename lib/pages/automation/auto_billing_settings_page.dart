@@ -11,6 +11,7 @@ import '../../l10n/app_localizations.dart';
 import '../../utils/notification_factory.dart';
 import '../../utils/notification_android.dart';
 import 'ios_auto_billing_page.dart';
+import '../../services/system/logger_service.dart';
 
 /// 自动记账设置页面（根据平台路由）
 class AutoBillingSettingsPage extends StatelessWidget {
@@ -77,7 +78,7 @@ class _AndroidAutoBillingPageState extends ConsumerState<AndroidAutoBillingPage>
       final batteryInfo = await androidUtil.getBatteryOptimizationInfo();
       batteryOptimizationIgnored = batteryInfo['isIgnoring'] == true;
     } catch (e) {
-      print('检查电池优化状态失败: $e');
+      logger.warning('AutoBilling', '检查电池优化状态失败: $e');
     }
 
     setState(() {
@@ -92,23 +93,23 @@ class _AndroidAutoBillingPageState extends ConsumerState<AndroidAutoBillingPage>
 
     if (value) {
       // 请求存储权限（适用于所有Android设备包括华为）
-      print('📸 [AutoBilling] 准备请求存储权限');
+      logger.info('AutoBilling', '📸 [AutoBilling] 准备请求存储权限');
       PermissionStatus status;
 
       // Android 13+ 使用 photos，Android 13以下使用 storage
       if (await Permission.photos.isRestricted || await Permission.photos.isPermanentlyDenied) {
         // 如果photos权限受限，尝试使用storage
         status = await Permission.storage.request();
-        print('📸 [AutoBilling] 存储权限请求结果: $status');
+        logger.info('AutoBilling', '📸 [AutoBilling] 存储权限请求结果: $status');
       } else {
         // 尝试photos权限
         status = await Permission.photos.request();
-        print('📸 [AutoBilling] 照片权限请求结果: $status');
+        logger.info('AutoBilling', '📸 [AutoBilling] 照片权限请求结果: $status');
 
         // 如果photos被拒绝，尝试storage
         if (!status.isGranted) {
           status = await Permission.storage.request();
-          print('📸 [AutoBilling] 存储权限请求结果: $status');
+          logger.info('AutoBilling', '📸 [AutoBilling] 存储权限请求结果: $status');
         }
       }
 
@@ -120,9 +121,9 @@ class _AndroidAutoBillingPageState extends ConsumerState<AndroidAutoBillingPage>
       }
 
       try {
-        print('📸 [AutoBilling] 开始启用截图监听');
+        logger.info('AutoBilling', '📸 [AutoBilling] 开始启用截图监听');
         await _screenshotMonitor.enable();
-        print('📸 [AutoBilling] 截图监听启用完成');
+        logger.info('AutoBilling', '📸 [AutoBilling] 截图监听启用完成');
         setState(() {
           _isMonitorEnabled = true;
         });

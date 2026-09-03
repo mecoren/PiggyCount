@@ -5,6 +5,7 @@ import 'package:timezone/timezone.dart' as tz;
 import 'notification_util.dart';
 import 'notification_android.dart';
 import 'notification_ios.dart';
+import '../services/system/logger_service.dart';
 
 /// 通知工厂类 - 根据平台创建对应的通知实现
 class NotificationFactory {
@@ -35,15 +36,15 @@ class NotificationFactory {
       // 尝试设置为 Asia/Shanghai
       try {
         tz.setLocalLocation(tz.getLocation('Asia/Shanghai'));
-        print('[Timezone] 设置为: Asia/Shanghai');
+        logger.info('Notification', '[Timezone] 设置为: Asia/Shanghai');
       } catch (e) {
         // 降级到系统时区
-        print('[Timezone] 使用系统时区: ${tz.local.name}');
+        logger.info('Notification', '[Timezone] 使用系统时区: ${tz.local.name}');
       }
 
-      print('[Timezone] ✅ 时区初始化完成');
+      logger.info('Notification', '[Timezone] ✅ 时区初始化完成');
     } catch (e) {
-      print('[Timezone] ❌ 时区初始化失败: $e');
+      logger.warning('Notification', '[Timezone] ❌ 时区初始化失败: $e');
     }
   }
 
