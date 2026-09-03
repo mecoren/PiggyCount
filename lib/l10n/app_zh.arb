@@ -1,4 +1,4 @@
-{
+﻿{
   "@@locale": "zh",
   "aiConsentTitle": "开启 AI 功能前,请知悉",
   "aiConsentBody": "AI 功能需将相关数据发送给你所配置的第三方 AI 服务商进行处理:\n\n• 发送给谁:默认「智谱 GLM」(open.bigmodel.cn,由智谱华章运营);若你自行配置了其它第三方 AI 服务商,则发送给你填写的服务商。\n• 发送什么:你主动用于识别/对话的内容 —— 账单图片、语音录音、你输入的文字,以及为完成识别/分析所需的分类名称、账户名称和相关交易记录。\n• 用途:仅用于账单识别、记账与你发起的对话分析;小猪记账自身不收集、不存储这些数据。\n\n数据由该第三方服务商按其隐私政策处理。开启即表示你同意上述数据共享。",
@@ -65,16 +65,24 @@
   "startupSyncCheckCheckingProgress": "正在检查 {checked}/{total}",
   "@startupSyncCheckCheckingProgress": {
     "placeholders": {
-      "checked": {"type": "int"},
-      "total": {"type": "int"}
+      "checked": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "startupSyncCheckApplyingTitle": "正在合并云端数据",
   "startupSyncCheckApplyingProgress": "正在合并 {applied}/{total}",
   "@startupSyncCheckApplyingProgress": {
     "placeholders": {
-      "applied": {"type": "int"},
-      "total": {"type": "int"}
+      "applied": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "startupSyncCheckUpToDate": "所有账本都是最新的",
@@ -83,8 +91,12 @@
   "startupSyncConflictConfirmMessage": "将用云端覆盖 {count} 个账本的本地改动（{names}），是否继续？",
   "@startupSyncConflictConfirmMessage": {
     "placeholders": {
-      "count": {"type": "int"},
-      "names": {"type": "String"}
+      "count": {
+        "type": "int"
+      },
+      "names": {
+        "type": "String"
+      }
     }
   },
   "startupSyncConflictConfirmOk": "覆盖本地",
@@ -96,7 +108,9 @@
   "startupSyncNewLedgersCancel": "跳过",
   "@startupSyncConflictAndMore": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "commonSuccess": "成功",
@@ -718,8 +732,12 @@
   "syncBlockingDownloadLedger": "正在下载账本 {n}/{m}…",
   "@syncBlockingDownloadLedger": {
     "placeholders": {
-      "n": {"type": "int"},
-      "m": {"type": "int"}
+      "n": {
+        "type": "int"
+      },
+      "m": {
+        "type": "int"
+      }
     }
   },
   "syncBlockingApplying": "正在应用变更…",
@@ -750,8 +768,12 @@
   "cloudFirstSyncBlockingStatus": "正在上传账本 {n}/{m}…",
   "@cloudFirstSyncBlockingStatus": {
     "placeholders": {
-      "n": {"type": "int"},
-      "m": {"type": "int"}
+      "n": {
+        "type": "int"
+      },
+      "m": {
+        "type": "int"
+      }
     }
   },
   "mineDownloadTitle": "下载同步",
@@ -1837,23 +1859,43 @@
   "autoBillingNotifyProcessFailedTitle": "❌ 处理失败",
   "autoBillingNotifyProcessFailedBody": "错误：{error}",
   "@autoBillingNotifyProcessFailedBody": {
-    "placeholders": { "error": { "type": "String" } }
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "autoBillingNotifySuccessSingleTitle": "✅ 自动记账成功 ¥{amount}",
   "@autoBillingNotifySuccessSingleTitle": {
-    "placeholders": { "amount": { "type": "String" } }
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
   },
   "autoBillingNotifySuccessMultiTitle": "✅ 自动记账成功 {count} 笔",
   "@autoBillingNotifySuccessMultiTitle": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "autoBillingNotifySuccessMultiBody": "合计 ¥{amount}",
   "@autoBillingNotifySuccessMultiBody": {
-    "placeholders": { "amount": { "type": "String" } }
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
   },
   "autoBillingNotifySuccessSingleBodyNote": "备注：{note}",
   "@autoBillingNotifySuccessSingleBodyNote": {
-    "placeholders": { "note": { "type": "String" } }
+    "placeholders": {
+      "note": {
+        "type": "String"
+      }
+    }
   },
   "autoBillingNotifySuccessSingleBodyDefault": "已自动创建记录",
   "aiOcrNoLedger": "未找到账本",
@@ -1906,8 +1948,12 @@
   "cloudSyncComplete": "同步完成：推送 {pushed} 条，拉取 {pulled} 条",
   "@cloudSyncComplete": {
     "placeholders": {
-      "pushed": {"type": "int"},
-      "pulled": {"type": "int"}
+      "pushed": {
+        "type": "int"
+      },
+      "pulled": {
+        "type": "int"
+      }
     }
   },
   "cloudAutoSyncHint": "数据变更后自动同步到云端",
@@ -1985,13 +2031,17 @@
   "productPromoEmailSubject": "申请内测 - {productName}",
   "@productPromoEmailSubject": {
     "placeholders": {
-      "productName": { "type": "String" }
+      "productName": {
+        "type": "String"
+      }
     }
   },
   "productPromoEmailBody": "你好,\n\n我希望加入「{productName}」的 Google Play 内测,我的 Google 账号邮箱是:\n\n(请填写你的 Gmail / Google 账号邮箱)\n\n谢谢!",
   "@productPromoEmailBody": {
     "placeholders": {
-      "productName": { "type": "String" }
+      "productName": {
+        "type": "String"
+      }
     }
   },
   "logCenterTitle": "日志中心",
@@ -2969,7 +3019,6 @@
   "budgetManagementDesc": "设置月度预算，控制支出",
   "budgetSetupHint": "设置预算，轻松掌控每月开支",
   "budgetSetupAction": "去设置",
-
   "cloudCollabDevicesPageTitle": "设备会话",
   "cloudCollabDevicesPageSubtitle": "管理当前账号活跃设备",
   "cloudCollabDevicesViewAllSessions": "显示全部会话",
@@ -2981,65 +3030,86 @@
   "cloudCollabDeviceAppVersion": "应用：{version}",
   "@cloudCollabDeviceAppVersion": {
     "placeholders": {
-      "version": { "type": "String" }
+      "version": {
+        "type": "String"
+      }
     }
   },
   "cloudCollabDeviceOsVersion": "系统：{version}",
   "@cloudCollabDeviceOsVersion": {
     "placeholders": {
-      "version": { "type": "String" }
+      "version": {
+        "type": "String"
+      }
     }
   },
   "cloudCollabDeviceModel": "型号：{model}",
   "@cloudCollabDeviceModel": {
     "placeholders": {
-      "model": { "type": "String" }
+      "model": {
+        "type": "String"
+      }
     }
   },
   "cloudCollabDeviceLastIp": "IP：{ip}",
   "@cloudCollabDeviceLastIp": {
     "placeholders": {
-      "ip": { "type": "String" }
+      "ip": {
+        "type": "String"
+      }
     }
   },
   "cloudCollabDeviceSessionCount": "会话数：{count}",
   "@cloudCollabDeviceSessionCount": {
     "placeholders": {
-      "count": { "type": "String" }
+      "count": {
+        "type": "String"
+      }
     }
   },
   "cloudCollabDeviceLastSeen": "最近活跃：{time}",
   "@cloudCollabDeviceLastSeen": {
     "placeholders": {
-      "time": { "type": "String" }
+      "time": {
+        "type": "String"
+      }
     }
   },
   "cloudCollabDeviceCreatedAt": "创建时间：{time}",
   "@cloudCollabDeviceCreatedAt": {
     "placeholders": {
-      "time": { "type": "String" }
+      "time": {
+        "type": "String"
+      }
     }
   },
   "cloudCollabDeviceRevokeTitle": "远程下线设备",
   "cloudCollabDeviceRevokeMessage": "确认下线设备 {name}（{id}）吗？",
   "@cloudCollabDeviceRevokeMessage": {
     "placeholders": {
-      "name": { "type": "String" },
-      "id": { "type": "String" }
+      "name": {
+        "type": "String"
+      },
+      "id": {
+        "type": "String"
+      }
     }
   },
   "cloudCollabDeviceRevokeMultipleMessage": "确认下线设备 {name} 的 {count} 个会话吗？",
   "@cloudCollabDeviceRevokeMultipleMessage": {
     "placeholders": {
-      "name": { "type": "String" },
-      "count": { "type": "String" }
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
     }
   },
   "cloudCollabDeviceRevoked": "设备已下线",
   "cloudCollabUnavailableMessage": "云同步功能暂不可用。",
   "cloudCollabScopeDeniedHint": "服务端尚未开启 ALLOW_APP_RW_SCOPES，当前设备会话不可用。",
   "cloudCollabScopeDeniedAction": "请在服务端 .env 或部署环境中设置 ALLOW_APP_RW_SCOPES=true，重启服务后重新登录 App。",
-
   "syncHealthTitle": "同步状态",
   "cloudSyncHelpTitle": "同步说明 · 为什么有时同步不动？",
   "cloudSyncHelpModesTitle": "三种同步方式",
@@ -3054,7 +3124,9 @@
   "syncHealthCheckFailed": "检测失败：{msg}",
   "@syncHealthCheckFailed": {
     "placeholders": {
-      "msg": { "type": "String" }
+      "msg": {
+        "type": "String"
+      }
     }
   },
   "syncHealthHasDiff": "检测到差异，已自动同步",
@@ -3072,17 +3144,22 @@
   "syncHealthValue": "本地 {local} · 云端 {remote}",
   "@syncHealthValue": {
     "placeholders": {
-      "local": { "type": "int" },
-      "remote": { "type": "int" }
+      "local": {
+        "type": "int"
+      },
+      "remote": {
+        "type": "int"
+      }
     }
   },
   "syncHealthValueRemoteMissing": "本地 {local} · 云端 —",
   "@syncHealthValueRemoteMissing": {
     "placeholders": {
-      "local": { "type": "int" }
+      "local": {
+        "type": "int"
+      }
     }
   },
-
   "twofaChallengeTitle": "二次验证",
   "twofaMethodTotp": "动态码",
   "twofaMethodRecovery": "恢复码",
@@ -3093,7 +3170,9 @@
   "twofaCountdown": "剩余时间 {time}",
   "@twofaCountdown": {
     "placeholders": {
-      "time": { "type": "String" }
+      "time": {
+        "type": "String"
+      }
     }
   },
   "twofaVerifyButton": "验证",
@@ -3103,7 +3182,9 @@
   "twofaStatusEnabledAt": "启用于 {date}",
   "@twofaStatusEnabledAt": {
     "placeholders": {
-      "date": { "type": "String" }
+      "date": {
+        "type": "String"
+      }
     }
   },
   "twofaStatusManageHint": "请前往 Web 端管理(启用 / 禁用 / 重新生成恢复码)",
@@ -3120,17 +3201,53 @@
   "sharedJoinPreviewButton": "验证邀请码",
   "sharedJoinAcceptButton": "加入账本",
   "sharedJoinInvitedBy": "{name} 邀请你加入",
-  "@sharedJoinInvitedBy": { "placeholders": { "name": { "type": "String" } } },
+  "@sharedJoinInvitedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "sharedJoinRoleLine": "角色:{role}",
-  "@sharedJoinRoleLine": { "placeholders": { "role": { "type": "String" } } },
+  "@sharedJoinRoleLine": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
   "sharedJoinExpiresInMinutes": "有效期还剩 {n} 分钟",
-  "@sharedJoinExpiresInMinutes": { "placeholders": { "n": { "type": "int" } } },
+  "@sharedJoinExpiresInMinutes": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "sharedJoinExpiresInHours": "有效期还剩 {n} 小时",
-  "@sharedJoinExpiresInHours": { "placeholders": { "n": { "type": "int" } } },
+  "@sharedJoinExpiresInHours": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "sharedJoinExpiresInDays": "有效期还剩 {n} 天",
-  "@sharedJoinExpiresInDays": { "placeholders": { "n": { "type": "int" } } },
+  "@sharedJoinExpiresInDays": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "sharedJoinSuccess": "已加入「{name}」",
-  "@sharedJoinSuccess": { "placeholders": { "name": { "type": "String" } } },
+  "@sharedJoinSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "sharedJoinCodeFormatError": "邀请码格式不对,请输入 6 位字母数字",
   "sharedJoinInvalidOrExpired": "邀请码无效或已过期,请向邀请人索取新码",
   "sharedJoinAlreadyMember": "你已经是该账本成员",
@@ -3139,24 +3256,48 @@
   "sharedInviteFormRole": "角色",
   "sharedInviteFormExpiry": "有效期",
   "sharedInviteExpiryHours": "{n} 小时",
-  "@sharedInviteExpiryHours": { "placeholders": { "n": { "type": "int" } } },
+  "@sharedInviteExpiryHours": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "sharedInviteExpiryDays": "{n} 天",
-  "@sharedInviteExpiryDays": { "placeholders": { "n": { "type": "int" } } },
+  "@sharedInviteExpiryDays": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "sharedInviteGenerate": "生成邀请码",
   "sharedInviteGenerateAnother": "生成另一个邀请码",
   "sharedInviteCopyCode": "复制邀请码",
   "sharedInviteCopyLink": "复制链接",
   "sharedInviteShareLink": "分享给好友",
   "sharedInviteExpiresAt": "邀请将在 {dt} 失效",
-  "@sharedInviteExpiresAt": { "placeholders": { "dt": { "type": "String" } } },
+  "@sharedInviteExpiresAt": {
+    "placeholders": {
+      "dt": {
+        "type": "String"
+      }
+    }
+  },
   "sharedInviteWarning": "⚠️ 不要把邀请码发到公开群 / 朋友圈。拿到码的任何人都可加入账本;泄露后请到成员管理页撤销并重新生成。",
   "sharedInviteInstruction": "把邀请码或短链发给对方。对方装上 PiggyCount 后,点击链接或在「我的 → 加入共享账本」输入码即可加入。",
   "sharedInviteShareText": "邀请你加入 PiggyCount 共享账本「{ledger}」\n\n邀请码:{code}\n链接:{url}\n\n点击链接或在 PiggyCount → 我的 → 加入共享账本输入此码即可。",
   "@sharedInviteShareText": {
     "placeholders": {
-      "ledger": { "type": "String" },
-      "code": { "type": "String" },
-      "url": { "type": "String" }
+      "ledger": {
+        "type": "String"
+      },
+      "code": {
+        "type": "String"
+      },
+      "url": {
+        "type": "String"
+      }
     }
   },
   "sharedMembersPageTitle": "成员管理",
@@ -3165,27 +3306,69 @@
   "sharedMembersLeaveCta": "退出账本",
   "sharedMembersLeaveTitle": "退出账本",
   "sharedMembersLeaveConfirm": "退出「{name}」后将无法再访问其中的交易。确定继续吗?",
-  "@sharedMembersLeaveConfirm": { "placeholders": { "name": { "type": "String" } } },
+  "@sharedMembersLeaveConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "sharedMembersLeaveDone": "已退出账本",
   "sharedMembersRemoveTitle": "移除成员",
   "sharedMembersRemoveCta": "移除该成员",
   "sharedMembersRemoveConfirm": "确定移除 {name}?ta 将立即失去对该账本的访问。",
-  "@sharedMembersRemoveConfirm": { "placeholders": { "name": { "type": "String" } } },
+  "@sharedMembersRemoveConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "sharedMembersRemoved": "已移除成员",
   "sharedMembersTransferTitle": "转让所有权",
   "sharedMembersTransferTo": "转让给该成员",
   "sharedMembersTransferConfirm": "把账本所有权转给 {name}?你将变为编辑者,无法再邀请人 / 改账本名 / 删账本。",
-  "@sharedMembersTransferConfirm": { "placeholders": { "name": { "type": "String" } } },
+  "@sharedMembersTransferConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "sharedMembersTransferConfirmCta": "确认转让",
   "sharedMembersTransferDone": "已转让所有权",
   "sharedTxRecordedBy": "{name} 记的",
-  "@sharedTxRecordedBy": { "placeholders": { "name": { "type": "String" } } },
+  "@sharedTxRecordedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "sharedTxCreatedBy": "{name} 创建",
-  "@sharedTxCreatedBy": { "placeholders": { "name": { "type": "String" } } },
+  "@sharedTxCreatedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "sharedTxEditedBy": "{name} 最后编辑",
-  "@sharedTxEditedBy": { "placeholders": { "name": { "type": "String" } } },
+  "@sharedTxEditedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "sharedTxCreatedAndEditedBy": "{name} 创建并编辑",
-  "@sharedTxCreatedAndEditedBy": { "placeholders": { "name": { "type": "String" } } },
+  "@sharedTxCreatedAndEditedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "sharedRequiresCloudSync": "请先启用云同步",
   "sharedMembersStatsTitle": "成员收支",
   "sharedMembersStatsEmpty": "本期暂无记账",
@@ -3193,7 +3376,13 @@
   "sharedMembersStatsIncome": "总收入",
   "sharedMembersStatsExpense": "总支出",
   "sharedMembersStatsTxCount": "{count}笔",
-  "@sharedMembersStatsTxCount": { "placeholders": { "count": { "type": "int" } } },
+  "@sharedMembersStatsTxCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "maintenanceOrphanCleanupTitle": "数据清理",
   "maintenanceOrphanCleanupSubtitle": "检查并清理本地孤儿数据",
   "maintenanceOrphanRescan": "重新扫描",
@@ -3202,27 +3391,81 @@
   "maintenanceOrphanGroupFile": "磁盘文件孤儿",
   "maintenanceOrphanGroupSync": "同步状态孤儿",
   "maintenanceOrphanSummary": "发现 {count} 项异常",
-  "@maintenanceOrphanSummary": { "placeholders": { "count": { "type": "int" } } },
+  "@maintenanceOrphanSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "maintenanceOrphanSummarySize": "可释放空间约 {size}",
-  "@maintenanceOrphanSummarySize": { "placeholders": { "size": { "type": "String" } } },
+  "@maintenanceOrphanSummarySize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
   "maintenanceOrphanSelectAll": "全选",
   "maintenanceOrphanDeselectAll": "取消全选",
   "maintenanceOrphanDeleteOne": "删除此项",
   "maintenanceOrphanSelectedHint": "已选 {count} 项",
-  "@maintenanceOrphanSelectedHint": { "placeholders": { "count": { "type": "int" } } },
+  "@maintenanceOrphanSelectedHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "maintenanceOrphanCleanSelected": "清理已选",
   "maintenanceOrphanConfirmTitle": "确认清理",
   "maintenanceOrphanConfirmDeleteOne": "确定清理「{title}」吗？操作不可撤销。",
-  "@maintenanceOrphanConfirmDeleteOne": { "placeholders": { "title": { "type": "String" } } },
+  "@maintenanceOrphanConfirmDeleteOne": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "maintenanceOrphanConfirmDeleteBatch": "确定清理选中的 {count} 项吗？操作不可撤销。",
-  "@maintenanceOrphanConfirmDeleteBatch": { "placeholders": { "count": { "type": "int" } } },
+  "@maintenanceOrphanConfirmDeleteBatch": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "maintenanceOrphanCleanSuccess": "已清理 {count} 项",
-  "@maintenanceOrphanCleanSuccess": { "placeholders": { "count": { "type": "int" } } },
+  "@maintenanceOrphanCleanSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "maintenanceOrphanCleanPartial": "成功 {ok} 项,失败 {fail} 项",
-  "@maintenanceOrphanCleanPartial": { "placeholders": { "ok": { "type": "int" }, "fail": { "type": "int" } } },
+  "@maintenanceOrphanCleanPartial": {
+    "placeholders": {
+      "ok": {
+        "type": "int"
+      },
+      "fail": {
+        "type": "int"
+      }
+    }
+  },
   "syncProgressTitle": "正在同步",
   "syncProgressCount": "{applied} / {total} 条",
-  "@syncProgressCount": { "placeholders": { "applied": { "type": "int" }, "total": { "type": "int" } } },
+  "@syncProgressCount": {
+    "placeholders": {
+      "applied": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "exchangeRatePageTitle": "汇率管理",
   "exchangeRateEntrySubtitle": "自动获取汇率，支持手动修正",
   "baseCurrencyLabel": "主币种",
@@ -3266,20 +3509,37 @@
   "txCurrencyLabel": "币种",
   "txRateLabel": "汇率",
   "txConvertedPreview": "≈ {amount} {currency}",
-  "@txConvertedPreview": { "placeholders": { "amount": {}, "currency": {} } },
+  "@txConvertedPreview": {
+    "placeholders": {
+      "amount": {},
+      "currency": {}
+    }
+  },
   "txRateMissingHint": "请手动填写本笔汇率后保存",
   "txCrossCurrencyTransferBlocked": "暂不支持跨币种转账,请分别记两笔或使用同币种账户",
   "ledgerBaseCurrencyLabel": "主币种",
   "statsConvertedFootnote": "含外币,已按各笔记账时汇率折算为 {currency}",
-  "@statsConvertedFootnote": { "placeholders": { "currency": {} } },
+  "@statsConvertedFootnote": {
+    "placeholders": {
+      "currency": {}
+    }
+  },
   "ledgerCurrencyChangeRecalcHint": "修改本位币将按当前汇率重算全部历史交易的折算值",
   "recalcForeignTxBanner": "检测到该账本有未折算的外币交易",
   "recalcForeignTxAction": "按当前汇率重算折算",
   "recalcForeignTxDone": "已重算 {count} 笔外币交易的折算值",
-  "@recalcForeignTxDone": { "placeholders": { "count": {} } },
+  "@recalcForeignTxDone": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "txCurrencyPickerTitle": "选择币种",
   "recalcSyncCountHint": "将重算并同步 {count} 笔交易",
-  "@recalcSyncCountHint": { "placeholders": { "count": {} } },
+  "@recalcSyncCountHint": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "exportCsvHeaderCurrency": "币种",
   "importFieldCurrency": "币种",
   "currencyMOP": "澳门元",
@@ -3465,5 +3725,78 @@
   },
   "budgetOnlyOwnerCanEdit": "只有账本所有者能编辑预算",
   "transferSelectFromAccount": "请选择转出账户",
-  "transferSelectToAccount": "请选择转入账户"
+  "transferSelectToAccount": "请选择转入账户",
+  "commonNoMessages": "暂无消息",
+  "commonLoadFailed": "加载失败: {error}",
+  "@commonLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "commonNoMatches": "无匹配项",
+  "attachmentCustomIcons": "自定义图标 ({count})",
+  "@attachmentCustomIcons": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "annualReportInsightTitle": "年度洞察",
+  "annualReportInsightSubtitle": "从数据中发现你的消费习惯",
+  "annualReportAvgPerTxTitle": "平均每笔消费",
+  "annualReportAvgPerTxDesc": "你每次记账的平均金额",
+  "annualReportAvgDailyTitle": "日均支出",
+  "annualReportAvgDailyDesc": "平均每天花费金额",
+  "annualReportAvgMonthlyTitle": "月均支出",
+  "annualReportAvgMonthlyDesc": "平均每月花费金额",
+  "annualReportActiveMonthTitle": "最活跃月份",
+  "annualReportActiveMonthDesc": "记账活动最频繁的月份",
+  "annualReportCategoryCountTitle": "消费分类数",
+  "annualReportCategoryCountDesc": "你使用过的消费分类数量",
+  "annualReportSavingsRateTitle": "储蓄率",
+  "annualReportSavingsRateDescPos": "今年你攒下了收入的这个比例",
+  "annualReportSavingsRateDescNeg": "今年支出超过了收入",
+  "annualReportCompareTitle": "收支对比",
+  "annualReportCompareSubtitle": "每月收入与支出的对比",
+  "annualReportTopIncome": "收入最高",
+  "annualReportTopExpense": "支出最高",
+  "annualReportUnitDay": "天",
+  "annualReportUnitEntries": "笔",
+  "posterUnitPerDay": "元/天",
+  "posterUnitPerMonth": "元/月",
+  "annualReportMonthValue": "{month}月",
+  "@annualReportMonthValue": {
+    "placeholders": {
+      "month": {
+        "type": "int"
+      }
+    }
+  },
+  "annualReportCategoryCountValue": "{count}个",
+  "@annualReportCategoryCountValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "annualReportPosterSavedPos": "恭喜你攒下了",
+  "annualReportPosterOverspent": "今年花超了",
+  "annualReportPosterBookkeeping": "记账坚持",
+  "annualReportPosterTrend": "月度支出趋势",
+  "annualReportPosterAchieved": "已达成",
+  "annualReportPosterNotAchieved": "未达成",
+  "annualReportPosterQrCta": "扫码下载小猪记账，开启你的记账之旅",
+  "commonUnitYuan": "元",
+  "annualReportConsecutiveDaysValue": "{count}天",
+  "@annualReportConsecutiveDaysValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

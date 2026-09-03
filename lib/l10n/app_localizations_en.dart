@@ -8385,4 +8385,134 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get transferSelectToAccount => 'Select a to account';
+
+  @override
+  String get commonNoMessages => 'No messages yet';
+
+  @override
+  String commonLoadFailed(String error) {
+    return 'Failed to load: $error';
+  }
+
+  @override
+  String get commonNoMatches => 'No matches';
+
+  @override
+  String attachmentCustomIcons(int count) {
+    return 'Custom icons ($count)';
+  }
+
+  @override
+  String get annualReportInsightTitle => 'Yearly Insights';
+
+  @override
+  String get annualReportInsightSubtitle =>
+      'Discover your spending habits from the data';
+
+  @override
+  String get annualReportAvgPerTxTitle => 'Avg. per entry';
+
+  @override
+  String get annualReportAvgPerTxDesc => 'Your average amount per entry';
+
+  @override
+  String get annualReportAvgDailyTitle => 'Daily average';
+
+  @override
+  String get annualReportAvgDailyDesc => 'Average spend per day';
+
+  @override
+  String get annualReportAvgMonthlyTitle => 'Monthly average';
+
+  @override
+  String get annualReportAvgMonthlyDesc => 'Average spend per month';
+
+  @override
+  String get annualReportActiveMonthTitle => 'Most active month';
+
+  @override
+  String get annualReportActiveMonthDesc => 'The month with the most entries';
+
+  @override
+  String get annualReportCategoryCountTitle => 'Categories used';
+
+  @override
+  String get annualReportCategoryCountDesc =>
+      'Number of categories you\'ve used';
+
+  @override
+  String get annualReportSavingsRateTitle => 'Savings rate';
+
+  @override
+  String get annualReportSavingsRateDescPos =>
+      'The share of income you saved this year';
+
+  @override
+  String get annualReportSavingsRateDescNeg =>
+      'You spent more than you earned this year';
+
+  @override
+  String get annualReportCompareTitle => 'Income vs Expense';
+
+  @override
+  String get annualReportCompareSubtitle =>
+      'Monthly income and expense comparison';
+
+  @override
+  String get annualReportTopIncome => 'Top income';
+
+  @override
+  String get annualReportTopExpense => 'Top expense';
+
+  @override
+  String get annualReportUnitDay => 'days';
+
+  @override
+  String get annualReportUnitEntries => 'entries';
+
+  @override
+  String get posterUnitPerDay => '/day';
+
+  @override
+  String get posterUnitPerMonth => '/mo';
+
+  @override
+  String annualReportMonthValue(int month) {
+    return 'Month $month';
+  }
+
+  @override
+  String annualReportCategoryCountValue(int count) {
+    return '$count';
+  }
+
+  @override
+  String get annualReportPosterSavedPos => 'Congrats, you saved';
+
+  @override
+  String get annualReportPosterOverspent => 'You overspent this year';
+
+  @override
+  String get annualReportPosterBookkeeping => 'Bookkeeping streak';
+
+  @override
+  String get annualReportPosterTrend => 'Monthly expense trend';
+
+  @override
+  String get annualReportPosterAchieved => 'Achieved';
+
+  @override
+  String get annualReportPosterNotAchieved => 'Not achieved';
+
+  @override
+  String get annualReportPosterQrCta =>
+      'Scan to download PiggyCount and start your ledger journey';
+
+  @override
+  String get commonUnitYuan => 'yuan';
+
+  @override
+  String annualReportConsecutiveDaysValue(int count) {
+    return '$count days';
+  }
 }

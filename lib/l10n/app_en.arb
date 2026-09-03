@@ -1,4 +1,4 @@
-{
+﻿{
   "@@locale": "en",
   "aiConsentTitle": "Before enabling AI features",
   "aiConsentBody": "AI features need to send related data to the third-party AI provider you configure:\n\n• Who it goes to: by default Zhipu GLM (open.bigmodel.cn, operated by Zhipu); if you configure another third-party AI service, it goes to the provider you entered.\n• What is sent: the content you actively use for recognition/chat — receipt images, voice recordings, text you type, plus the category names, account names and relevant transaction records needed to complete recognition/analysis.\n• Purpose: only for bill recognition, bookkeeping and chats you initiate; PiggyCount itself does not collect or store this data.\n\nThe data is processed by that third-party provider under its own privacy policy. Enabling means you consent to the data sharing above.",
@@ -16,12 +16,16 @@
   "tabMine": "Mine",
   "commonCancel": "Cancel",
   "conflictUploadTitle": "Sync Conflict Detected",
-  "@conflictUploadTitle": { "description": "M7: title for the upload-overwrite conflict confirmation dialog" },
+  "@conflictUploadTitle": {
+    "description": "M7: title for the upload-overwrite conflict confirmation dialog"
+  },
   "conflictUploadCloudNewerMessage": "The cloud snapshot is newer than this device — another device may have synced recently. Uploading now will overwrite the cloud copy and it will be lost. Overwrite anyway?",
   "conflictUploadUnknownMessage": "Unable to tell which side is newer (contents differ but timestamps match). Uploading will overwrite the cloud copy. Overwrite anyway?",
   "conflictForceUploadAction": "Overwrite Cloud",
   "conflictCompareMergeAction": "Compare & Merge",
-  "@conflictCompareMergeAction": { "description": "Action to open the per-item diff preview and merge both sides instead of overwriting either one (direction arbitration fallback)" },
+  "@conflictCompareMergeAction": {
+    "description": "Action to open the per-item diff preview and merge both sides instead of overwriting either one (direction arbitration fallback)"
+  },
   "cloudConfigCorruptWarning": "Cloud configuration could not be read — automatic sync has been paused. Please set up your cloud service again.",
   "commonConfirm": "Confirm",
   "commonSave": "Save",
@@ -70,16 +74,24 @@
   "startupSyncCheckCheckingProgress": "Checking {checked}/{total}",
   "@startupSyncCheckCheckingProgress": {
     "placeholders": {
-      "checked": {"type": "int"},
-      "total": {"type": "int"}
+      "checked": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "startupSyncCheckApplyingTitle": "Merging cloud data",
   "startupSyncCheckApplyingProgress": "Merging {applied}/{total}",
   "@startupSyncCheckApplyingProgress": {
     "placeholders": {
-      "applied": {"type": "int"},
-      "total": {"type": "int"}
+      "applied": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "startupSyncCheckUpToDate": "All ledgers are up to date",
@@ -88,8 +100,12 @@
   "startupSyncConflictConfirmMessage": "This will overwrite local changes in {count} ledger(s) ({names}) with cloud version. Continue?",
   "@startupSyncConflictConfirmMessage": {
     "placeholders": {
-      "count": {"type": "int"},
-      "names": {"type": "String"}
+      "count": {
+        "type": "int"
+      },
+      "names": {
+        "type": "String"
+      }
     }
   },
   "startupSyncConflictConfirmOk": "Overwrite local",
@@ -97,15 +113,21 @@
   "startupSyncConflictAndMore": "and {count} more",
   "@startupSyncConflictAndMore": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "startupSyncNewLedgersTitle": "Cloud ledgers found",
   "startupSyncNewLedgersMessage": "Found {count} ledger(s) on cloud that are not on this device: {names}. Download them?",
   "@startupSyncNewLedgersMessage": {
     "placeholders": {
-      "count": {"type": "int"},
-      "names": {"type": "String"}
+      "count": {
+        "type": "int"
+      },
+      "names": {
+        "type": "String"
+      }
     }
   },
   "startupSyncNewLedgersOk": "Download",
@@ -852,8 +874,12 @@
   "syncBlockingDownloadLedger": "Downloading ledger {n}/{m}…",
   "@syncBlockingDownloadLedger": {
     "placeholders": {
-      "n": {"type": "int"},
-      "m": {"type": "int"}
+      "n": {
+        "type": "int"
+      },
+      "m": {
+        "type": "int"
+      }
     }
   },
   "syncBlockingApplying": "Applying changes…",
@@ -864,7 +890,9 @@
   "fullUploadConfirm1Message": "This will upload all {count} local ledgers. The matching cloud ledgers will be completely replaced by local data. Cloud-only ledgers will be kept.",
   "@fullUploadConfirm1Message": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "fullUploadConfirm2Message": "Final confirmation: replaced cloud data cannot be recovered. Continue?",
@@ -873,7 +901,9 @@
   "dangerConfirmCountdown": "Confirm ({seconds}s)",
   "@dangerConfirmCountdown": {
     "placeholders": {
-      "seconds": {"type": "int"}
+      "seconds": {
+        "type": "int"
+      }
     }
   },
   "fullUploadBlockingStatus": "Uploading all local ledgers…",
@@ -883,8 +913,12 @@
   "fullDownloadResult": "Full download finished: {success} succeeded, {failed} failed.",
   "@fullDownloadResult": {
     "placeholders": {
-      "success": {"type": "int"},
-      "failed": {"type": "int"}
+      "success": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
     }
   },
   "fullSyncUnsupported": "Full coverage sync is not available for the current cloud backend.",
@@ -900,8 +934,12 @@
   "cloudFirstSyncBlockingStatus": "Uploading ledger {n}/{m}…",
   "@cloudFirstSyncBlockingStatus": {
     "placeholders": {
-      "n": {"type": "int"},
-      "m": {"type": "int"}
+      "n": {
+        "type": "int"
+      },
+      "m": {
+        "type": "int"
+      }
     }
   },
   "mineDownloadTitle": "Download & Sync",
@@ -3943,9 +3981,24 @@
   "backupNoLedgers": "There are no ledgers to back up.",
   "backupRunningStatus": "Creating backup…",
   "backupPackingProgress": "Packing ledger {done}/{total}…",
-  "@backupPackingProgress": { "placeholders": { "done": { "type": "int" }, "total": { "type": "int" } } },
+  "@backupPackingProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "backupSuccessMessage": "Backup uploaded: piggycount-bak/{fileName}",
-  "@backupSuccessMessage": { "placeholders": { "fileName": { "type": "String" } } },
+  "@backupSuccessMessage": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
   "backupFailedAuthMessage": "Cloud authentication failed. Please check your cloud service configuration and retry.",
   "backupFailedNetworkMessage": "Backup failed. Please check your network and retry.",
   "restoreFromBackupTitle": "Restore from Backup",
@@ -3953,20 +4006,59 @@
   "backupListDialogTitle": "Loading backups…",
   "backupListEmptyMessage": "No backups found in the cloud yet.",
   "restoreConfirm1Message": "This will overwrite ALL local ledger data (accounts, categories, transactions) with the backup from {date}. Newer local changes will be lost.",
-  "@restoreConfirm1Message": { "placeholders": { "date": { "type": "String" } } },
+  "@restoreConfirm1Message": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "restoreConfirm2Message": "This operation cannot be undone. Are you sure you want to continue?",
   "restoreRunningStatus": "Restoring from backup…",
   "restoreLedgerProgress": "Restoring ledger {done}/{total}…",
-  "@restoreLedgerProgress": { "placeholders": { "done": { "type": "int" }, "total": { "type": "int" } } },
+  "@restoreLedgerProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "restoreResultMessage": "Restore finished: {success} succeeded, {failed} failed.",
-  "@restoreResultMessage": { "placeholders": { "success": { "type": "int" }, "failed": { "type": "int" } } },
+  "@restoreResultMessage": {
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
   "restoreSkippedRecurringHint": "Note: {count} same-day recurring instance(s) were skipped as duplicates during restore (same rule & day with identical syncId or amount+note). Please verify the source if multiple same-day entries were expected.",
-  "@restoreSkippedRecurringHint": { "placeholders": { "count": { "type": "int" } } },
+  "@restoreSkippedRecurringHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "backupAutoTitle": "Scheduled Backup",
   "backupAutoSubtitle": "Automatically back up once per day at the configured time (while the app is running)",
   "backupTimeTitle": "Daily Backup Time",
   "lastBackupCaption": "Last backup: {date} · {ok}",
-  "@lastBackupCaption": { "placeholders": { "date": { "type": "String" }, "ok": { "type": "String" } } },
+  "@lastBackupCaption": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "ok": {
+        "type": "String"
+      }
+    }
+  },
   "ledgersCreatedSuccess": "Ledger created",
   "ledgersCreateFailed": "Create failed: {error}",
   "@ledgersCreateFailed": {
@@ -3978,5 +4070,78 @@
   },
   "budgetOnlyOwnerCanEdit": "Only the ledger owner can edit budgets",
   "transferSelectFromAccount": "Select a from account",
-  "transferSelectToAccount": "Select a to account"
+  "transferSelectToAccount": "Select a to account",
+  "commonNoMessages": "No messages yet",
+  "commonLoadFailed": "Failed to load: {error}",
+  "@commonLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "commonNoMatches": "No matches",
+  "attachmentCustomIcons": "Custom icons ({count})",
+  "@attachmentCustomIcons": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "annualReportInsightTitle": "Yearly Insights",
+  "annualReportInsightSubtitle": "Discover your spending habits from the data",
+  "annualReportAvgPerTxTitle": "Avg. per entry",
+  "annualReportAvgPerTxDesc": "Your average amount per entry",
+  "annualReportAvgDailyTitle": "Daily average",
+  "annualReportAvgDailyDesc": "Average spend per day",
+  "annualReportAvgMonthlyTitle": "Monthly average",
+  "annualReportAvgMonthlyDesc": "Average spend per month",
+  "annualReportActiveMonthTitle": "Most active month",
+  "annualReportActiveMonthDesc": "The month with the most entries",
+  "annualReportCategoryCountTitle": "Categories used",
+  "annualReportCategoryCountDesc": "Number of categories you've used",
+  "annualReportSavingsRateTitle": "Savings rate",
+  "annualReportSavingsRateDescPos": "The share of income you saved this year",
+  "annualReportSavingsRateDescNeg": "You spent more than you earned this year",
+  "annualReportCompareTitle": "Income vs Expense",
+  "annualReportCompareSubtitle": "Monthly income and expense comparison",
+  "annualReportTopIncome": "Top income",
+  "annualReportTopExpense": "Top expense",
+  "annualReportUnitDay": "days",
+  "annualReportUnitEntries": "entries",
+  "posterUnitPerDay": "/day",
+  "posterUnitPerMonth": "/mo",
+  "annualReportMonthValue": "Month {month}",
+  "@annualReportMonthValue": {
+    "placeholders": {
+      "month": {
+        "type": "int"
+      }
+    }
+  },
+  "annualReportCategoryCountValue": "{count}",
+  "@annualReportCategoryCountValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "annualReportPosterSavedPos": "Congrats, you saved",
+  "annualReportPosterOverspent": "You overspent this year",
+  "annualReportPosterBookkeeping": "Bookkeeping streak",
+  "annualReportPosterTrend": "Monthly expense trend",
+  "annualReportPosterAchieved": "Achieved",
+  "annualReportPosterNotAchieved": "Not achieved",
+  "annualReportPosterQrCta": "Scan to download PiggyCount and start your ledger journey",
+  "commonUnitYuan": "yuan",
+  "annualReportConsecutiveDaysValue": "{count} days",
+  "@annualReportConsecutiveDaysValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

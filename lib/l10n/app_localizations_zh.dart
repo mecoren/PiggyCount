@@ -8061,6 +8061,130 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get transferSelectToAccount => '请选择转入账户';
+
+  @override
+  String get commonNoMessages => '暂无消息';
+
+  @override
+  String commonLoadFailed(String error) {
+    return '加载失败: $error';
+  }
+
+  @override
+  String get commonNoMatches => '无匹配项';
+
+  @override
+  String attachmentCustomIcons(int count) {
+    return '自定义图标 ($count)';
+  }
+
+  @override
+  String get annualReportInsightTitle => '年度洞察';
+
+  @override
+  String get annualReportInsightSubtitle => '从数据中发现你的消费习惯';
+
+  @override
+  String get annualReportAvgPerTxTitle => '平均每笔消费';
+
+  @override
+  String get annualReportAvgPerTxDesc => '你每次记账的平均金额';
+
+  @override
+  String get annualReportAvgDailyTitle => '日均支出';
+
+  @override
+  String get annualReportAvgDailyDesc => '平均每天花费金额';
+
+  @override
+  String get annualReportAvgMonthlyTitle => '月均支出';
+
+  @override
+  String get annualReportAvgMonthlyDesc => '平均每月花费金额';
+
+  @override
+  String get annualReportActiveMonthTitle => '最活跃月份';
+
+  @override
+  String get annualReportActiveMonthDesc => '记账活动最频繁的月份';
+
+  @override
+  String get annualReportCategoryCountTitle => '消费分类数';
+
+  @override
+  String get annualReportCategoryCountDesc => '你使用过的消费分类数量';
+
+  @override
+  String get annualReportSavingsRateTitle => '储蓄率';
+
+  @override
+  String get annualReportSavingsRateDescPos => '今年你攒下了收入的这个比例';
+
+  @override
+  String get annualReportSavingsRateDescNeg => '今年支出超过了收入';
+
+  @override
+  String get annualReportCompareTitle => '收支对比';
+
+  @override
+  String get annualReportCompareSubtitle => '每月收入与支出的对比';
+
+  @override
+  String get annualReportTopIncome => '收入最高';
+
+  @override
+  String get annualReportTopExpense => '支出最高';
+
+  @override
+  String get annualReportUnitDay => '天';
+
+  @override
+  String get annualReportUnitEntries => '笔';
+
+  @override
+  String get posterUnitPerDay => '元/天';
+
+  @override
+  String get posterUnitPerMonth => '元/月';
+
+  @override
+  String annualReportMonthValue(int month) {
+    return '$month月';
+  }
+
+  @override
+  String annualReportCategoryCountValue(int count) {
+    return '$count个';
+  }
+
+  @override
+  String get annualReportPosterSavedPos => '恭喜你攒下了';
+
+  @override
+  String get annualReportPosterOverspent => '今年花超了';
+
+  @override
+  String get annualReportPosterBookkeeping => '记账坚持';
+
+  @override
+  String get annualReportPosterTrend => '月度支出趋势';
+
+  @override
+  String get annualReportPosterAchieved => '已达成';
+
+  @override
+  String get annualReportPosterNotAchieved => '未达成';
+
+  @override
+  String get annualReportPosterQrCta => '扫码下载小猪记账，开启你的记账之旅';
+
+  @override
+  String get commonUnitYuan => '元';
+
+  @override
+  String annualReportConsecutiveDaysValue(int count) {
+    return '$count天';
+  }
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -16120,4 +16244,128 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get transferSelectToAccount => '請選擇轉入帳戶';
+
+  @override
+  String get commonNoMessages => '暫無訊息';
+
+  @override
+  String commonLoadFailed(String error) {
+    return '載入失敗: $error';
+  }
+
+  @override
+  String get commonNoMatches => '無符合項目';
+
+  @override
+  String attachmentCustomIcons(int count) {
+    return '自訂圖示 ($count)';
+  }
+
+  @override
+  String get annualReportInsightTitle => '年度洞察';
+
+  @override
+  String get annualReportInsightSubtitle => '從資料中發現你的消費習慣';
+
+  @override
+  String get annualReportAvgPerTxTitle => '平均每筆消費';
+
+  @override
+  String get annualReportAvgPerTxDesc => '你每次記帳的平均金額';
+
+  @override
+  String get annualReportAvgDailyTitle => '日均支出';
+
+  @override
+  String get annualReportAvgDailyDesc => '平均每天花費金額';
+
+  @override
+  String get annualReportAvgMonthlyTitle => '月均支出';
+
+  @override
+  String get annualReportAvgMonthlyDesc => '平均每月花費金額';
+
+  @override
+  String get annualReportActiveMonthTitle => '最活躍月份';
+
+  @override
+  String get annualReportActiveMonthDesc => '記帳活動最頻繁的月份';
+
+  @override
+  String get annualReportCategoryCountTitle => '消費分類數';
+
+  @override
+  String get annualReportCategoryCountDesc => '你使用過的消費分類數量';
+
+  @override
+  String get annualReportSavingsRateTitle => '儲蓄率';
+
+  @override
+  String get annualReportSavingsRateDescPos => '今年你存下了收入的這個比例';
+
+  @override
+  String get annualReportSavingsRateDescNeg => '今年支出超過了收入';
+
+  @override
+  String get annualReportCompareTitle => '收支對比';
+
+  @override
+  String get annualReportCompareSubtitle => '每月收入與支出的對比';
+
+  @override
+  String get annualReportTopIncome => '收入最高';
+
+  @override
+  String get annualReportTopExpense => '支出最高';
+
+  @override
+  String get annualReportUnitDay => '天';
+
+  @override
+  String get annualReportUnitEntries => '筆';
+
+  @override
+  String get posterUnitPerDay => '元/天';
+
+  @override
+  String get posterUnitPerMonth => '元/月';
+
+  @override
+  String annualReportMonthValue(int month) {
+    return '$month月';
+  }
+
+  @override
+  String annualReportCategoryCountValue(int count) {
+    return '$count個';
+  }
+
+  @override
+  String get annualReportPosterSavedPos => '恭喜你存下了';
+
+  @override
+  String get annualReportPosterOverspent => '今年花超了';
+
+  @override
+  String get annualReportPosterBookkeeping => '記帳堅持';
+
+  @override
+  String get annualReportPosterTrend => '月度支出趨勢';
+
+  @override
+  String get annualReportPosterAchieved => '已達成';
+
+  @override
+  String get annualReportPosterNotAchieved => '未達成';
+
+  @override
+  String get annualReportPosterQrCta => '掃碼下載小豬記帳，開啟你的記帳之旅';
+
+  @override
+  String get commonUnitYuan => '元';
+
+  @override
+  String annualReportConsecutiveDaysValue(int count) {
+    return '$count天';
+  }
 }

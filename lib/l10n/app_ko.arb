@@ -64,16 +64,24 @@
   "startupSyncCheckCheckingProgress": "확인 중 {checked}/{total}",
   "@startupSyncCheckCheckingProgress": {
     "placeholders": {
-      "checked": {"type": "int"},
-      "total": {"type": "int"}
+      "checked": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "startupSyncCheckApplyingTitle": "클라우드 데이터 병합 중",
   "startupSyncCheckApplyingProgress": "병합 중 {applied}/{total}",
   "@startupSyncCheckApplyingProgress": {
     "placeholders": {
-      "applied": {"type": "int"},
-      "total": {"type": "int"}
+      "applied": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "startupSyncCheckUpToDate": "모든 장부가 최신 상태입니다",
@@ -82,8 +90,12 @@
   "startupSyncConflictConfirmMessage": "{count}개 장부의 로컬 변경사항({names})을 클라우드 버전으로 덮어씁니다. 계속하시겠습니까?",
   "@startupSyncConflictConfirmMessage": {
     "placeholders": {
-      "count": {"type": "int"},
-      "names": {"type": "String"}
+      "count": {
+        "type": "int"
+      },
+      "names": {
+        "type": "String"
+      }
     }
   },
   "startupSyncConflictConfirmOk": "로컬 덮어쓰기",
@@ -95,7 +107,9 @@
   "startupSyncNewLedgersCancel": "건너뛰기",
   "@startupSyncConflictAndMore": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "commonSuccess": "성공",
@@ -564,7 +578,6 @@
   "syncBlockingApplying": "변경 사항 적용 중…",
   "fullUploadTitle": "전체 업로드",
   "fullUploadSubtitle": "로컬의 모든 가계부로 클라우드 덮어쓰기",
-  "conflictCompareMergeAction": "비교 후 병합",
   "fullDownloadTitle": "전체 다운로드",
   "fullDownloadSubtitle": "클라우드의 모든 가계부로 로컬 덮어쓰기",
   "fullUploadConfirm1Message": "로컬 가계부 {count}개를 전체 업로드합니다. 클라우드의 해당 가계부 데이터가 로컬 데이터로 완전히 덮어쓰여집니다. 클라우드에만 있는 가계부는 유지됩니다.",
@@ -2391,5 +2404,241 @@
   },
   "budgetOnlyOwnerCanEdit": "장부 소유자만 예산을 편집할 수 있습니다",
   "transferSelectFromAccount": "송금 계좌를 선택하세요",
-  "transferSelectToAccount": "입금 계좌를 선택하세요"
+  "transferSelectToAccount": "입금 계좌를 선택하세요",
+  "aboutChangelog": "업데이트 내역",
+  "aboutTelegram": "텔레그램 그룹",
+  "accountHiddenSection": "숨김",
+  "accountHiddenSectionSummary": "숨김 {count} · 합계 {total}",
+  "accountHiddenTag": "숨김",
+  "accountHiddenToast": "숨겼습니다",
+  "accountHide": "계정 숨기기",
+  "accountHideClearedDefault": "기본 계정 설정이 해제되었습니다",
+  "accountHideConfirmBody": "숨긴 후에는 새 기록에서 선택할 수 없습니다. 거래 내역과 잔액은 유지되며 언제든 복원할 수 있습니다.",
+  "accountHideConfirmTitle": "이 계정을 숨기시겠습니까?",
+  "accountHideRecurringWarn": "이 계정을 사용하는 정기 거래가 {count}건 있습니다. 숨기는 동안 해당 거래는 생성되지 않습니다.",
+  "accountRestore": "복원",
+  "accountRestoredToast": "복원되었습니다",
+  "accountUnhide": "계정 복원",
+  "exportCsvHeaderCurrency": "통화",
+  "headerSkinBubbles": "버블",
+  "headerSkinGalaxy": "갤럭시",
+  "headerSkinLowPoly": "로우폴리",
+  "headerSkinPrism": "프리즘",
+  "headerSkinSilk": "실크",
+  "headerSkinTerrazzo": "테라조",
+  "importFieldCurrency": "통화",
+  "ledgerBaseCurrencyLabel": "기준 통화",
+  "ledgerCurrencyChangeRecalcHint": "기준 통화를 변경하면 모든 과거 거래가 현재 환율로 재계산됩니다",
+  "recalcForeignTxAction": "현재 환율로 재계산",
+  "recalcForeignTxBanner": "이 장부에서 환산되지 않은 외화 거래가 발견되었습니다",
+  "recalcForeignTxDone": "외화 거래 {count}건을 재계산했습니다",
+  "recalcSyncCountHint": "{count}건의 거래가 재계산 및 동기화됩니다",
+  "statsConvertedFootnote": "외화 포함, 입력 시 환율 기준으로 {currency}(으)로 환산됨",
+  "txConvertedPreview": "≈ {amount} {currency}",
+  "txCrossCurrencyTransferBlocked": "통화 간 이체는 아직 지원되지 않습니다. 두 건으로 나누어 기록하거나 같은 통화 계정을 사용하세요.",
+  "txCurrencyLabel": "통화",
+  "txCurrencyPickerTitle": "통화 선택",
+  "txRateLabel": "환율",
+  "txRateMissingHint": "저장하기 전에 이 건의 환율을 입력해 주세요",
+  "widgetBudgetRemaining": "남음",
+  "widgetBudgetTotal": "총액",
+  "widgetDashboardTitle": "이번 달",
+  "widgetGalleryBudgetDesc": "한눈에 확인하는 예산 진행률",
+  "widgetGalleryDashboardDesc": "수입·추세·최근 거래를 한 화면에",
+  "widgetGalleryDashboardTitle": "대시보드",
+  "widgetGalleryDesc": "미리보기는 예시 데이터입니다. 실제 위젯은 현재 장부를 표시하며 앱 테마 색상을 따릅니다.",
+  "widgetGalleryGlanceDesc": "오늘과 이번 달 수입·지출을 한눈에",
+  "widgetGalleryGlanceTitle": "요약",
+  "widgetGalleryNetWorthDesc": "총자산·총부채·순자산 추이",
+  "widgetGalleryQuickAddDesc": "자주 쓰는 분류 한 번에 기록",
+  "widgetGalleryQuickAddTitle": "빠른 기록",
+  "widgetGalleryRecentDesc": "최근 거래를 빠르게 확인",
+  "widgetGalleryTitle": "위젯 갤러리",
+  "widgetNoAccounts": "계정 없음",
+  "widgetNoBudget": "예산 없음",
+  "widgetNoTransactions": "거래 없음",
+  "widgetQuickAddLabel": "기록",
+  "widgetRecentTransactions": "최근 거래",
+  "widgetSizeLarge": "대형",
+  "widgetSizeMedium": "중형",
+  "widgetSizeSmall": "소형",
+  "widgetToday": "오늘",
+  "currencyAFN": "아프가니 아프가니",
+  "currencyALL": "알바니아 레크",
+  "currencyAMD": "아르메니아 드람",
+  "currencyANG": "네덜란드 휠던",
+  "currencyAOA": "앙골라 콴자",
+  "currencyAWG": "아루바 플로린",
+  "currencyAZN": "아제르바이잔 마나트",
+  "currencyBAM": "보스니아 헤르츠고비나 마르크",
+  "currencyBBD": "바베이도스 달러",
+  "currencyBGN": "불가리아 레프",
+  "currencyBHD": "바레인 디나르",
+  "currencyBIF": "부룬디 프랑",
+  "currencyBOB": "볼리비아 볼리비아노",
+  "currencyBWP": "보츠와나 플라",
+  "currencyBZD": "벨리즈 달러",
+  "currencyCDF": "콩고 프랑",
+  "currencyCRC": "코스타리카 콜론",
+  "currencyCUP": "쿠바 페소",
+  "currencyDOP": "도미니카 페소",
+  "currencyDZD": "알제리 디나르",
+  "currencyETB": "에티오피아 비르",
+  "currencyFJD": "피지 달러",
+  "currencyGEL": "조지아 라리",
+  "currencyGHS": "가나 세디",
+  "currencyGMD": "감비아 달라시",
+  "currencyGNF": "기니 프랑",
+  "currencyGTQ": "과테말라 케찰",
+  "currencyGYD": "가이아나 달러",
+  "currencyHNL": "온두라스 렘피라",
+  "currencyIQD": "이라크 디나르",
+  "currencyIRR": "이란 리얄",
+  "currencyISK": "아이슬란드 크로나",
+  "currencyJMD": "자메이카 달러",
+  "currencyKGS": "키르기스스탄 솜",
+  "currencyKHR": "캄보디아 리엘",
+  "currencyKMF": "코모로 프랑",
+  "currencyKWD": "쿠웨이트 디나르",
+  "currencyLAK": "라오스 키프",
+  "currencyLBP": "레바논 파운드",
+  "currencyLRD": "라이베리아 달러",
+  "currencyLSL": "레소토 로티",
+  "currencyLYD": "리비아 디나르",
+  "currencyMAD": "모로코 디르함",
+  "currencyMDL": "몰도바 레우",
+  "currencyMGA": "마다가스카르 아리아리",
+  "currencyMKD": "북마케도니아 데나르",
+  "currencyMOP": "마카오 파타카",
+  "currencyMUR": "모리셔스 루피",
+  "currencyMVR": "몰디브 루피야",
+  "currencyMWK": "말라위 콰차",
+  "currencyMZN": "모잠비크 메티칼",
+  "currencyNAD": "나미비아 달러",
+  "currencyNIO": "니카라과 코르도바",
+  "currencyNPR": "네팔 루피",
+  "currencyOMR": "오만 리얄",
+  "currencyPAB": "파나마 발보아",
+  "currencyPGK": "파푸아뉴기니 키나",
+  "currencyPYG": "파라과이 과라니",
+  "currencyQAR": "카타르 리얄",
+  "currencyRSD": "세르비아 디나르",
+  "currencyRWF": "르완다 프랑",
+  "currencySBD": "솔로몬 제도 달러",
+  "currencySCR": "세이셸 루피",
+  "currencySDG": "수단 파운드",
+  "currencySOS": "소말리아 실링",
+  "currencySRD": "수리남 달러",
+  "currencySTN": "상투메 도브라",
+  "currencySYP": "시리아 파운드",
+  "currencySZL": "스와질란드 릴랑게니",
+  "currencyTJS": "타지키스탄 소모니",
+  "currencyTND": "튀니지 디나르",
+  "currencyTOP": "통가 파앙가",
+  "currencyTTD": "트리니다드 토바고 달러",
+  "currencyTZS": "탄자니아 실링",
+  "currencyUGX": "우간다 실링",
+  "currencyUYU": "우루과이 페소",
+  "currencyUZS": "우즈베키스탄 숨",
+  "currencyVUV": "바누아투 바투",
+  "currencyWST": "사모아 탈라",
+  "currencyXAF": "중앙아프리카 CFA 프랑",
+  "currencyXOF": "서아프리카 CFA 프랑",
+  "currencyYER": "예멘 리얄",
+  "currencyZMW": "잠비아 콰차",
+  "currencyXCD": "동카리브 달러",
+  "currencyTMT": "투르크메니스탄 마나트",
+  "currencySSP": "남수단 파운드",
+  "currencyMRU": "모리타니 우기야",
+  "currencyVES": "베네수엘라 볼리바르",
+  "commonNoMessages": "메시지가 없습니다",
+  "commonLoadFailed": "불러오기 실패: {error}",
+  "@commonLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "commonNoMatches": "일치하는 항목 없음",
+  "attachmentCustomIcons": "사용자 지정 아이콘 ({count})",
+  "@attachmentCustomIcons": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "annualReportInsightTitle": "연간 인사이트",
+  "annualReportInsightSubtitle": "데이터에서 발견하는 소비 습관",
+  "annualReportAvgPerTxTitle": "건당 평균 소비",
+  "annualReportAvgPerTxDesc": "한 건당 평균 금액",
+  "annualReportAvgDailyTitle": "일평균 지출",
+  "annualReportAvgDailyDesc": "하루 평균 지출 금액",
+  "annualReportAvgMonthlyTitle": "월평균 지출",
+  "annualReportAvgMonthlyDesc": "한 달 평균 지출 금액",
+  "annualReportActiveMonthTitle": "가장 활발한 달",
+  "annualReportActiveMonthDesc": "기록이 가장 많은 달",
+  "annualReportCategoryCountTitle": "사용한 분류 수",
+  "annualReportCategoryCountDesc": "사용해 본 소비 분류 수",
+  "annualReportSavingsRateTitle": "저축률",
+  "annualReportSavingsRateDescPos": "올해 수입에서 저축한 비율",
+  "annualReportSavingsRateDescNeg": "올해 지출이 수입을 초과했습니다",
+  "annualReportCompareTitle": "수입·지출 비교",
+  "annualReportCompareSubtitle": "월별 수입과 지출 비교",
+  "annualReportTopIncome": "최고 수입",
+  "annualReportTopExpense": "최고 지출",
+  "annualReportUnitDay": "일",
+  "annualReportUnitEntries": "건",
+  "posterUnitPerDay": "위안/일",
+  "posterUnitPerMonth": "위안/월",
+  "currencyBMD": "버뮤다 달러",
+  "currencyBND": "브루나이 달러",
+  "currencyBSD": "바하마 달러",
+  "currencyBTN": "부탄 눌트럼",
+  "currencyCVE": "카보베르데 에스쿠도",
+  "currencyDJF": "지부티 프랑",
+  "currencyERN": "에리트레아 나크파",
+  "currencyGIP": "지브롤터 파운드",
+  "currencyHTG": "아이티 구르드",
+  "currencyJOD": "요르단 디나르",
+  "currencyKES": "케냐 실링",
+  "currencyKPW": "북한 원",
+  "currencyKYD": "케이맨 제도 달러",
+  "currencyMNT": "몽골 투그릭",
+  "currencyRON": "루마니아 레우",
+  "currencySLE": "시에라리온 레온",
+  "currencyXPF": "CFP 프랑",
+  "annualReportMonthValue": "{month}월",
+  "@annualReportMonthValue": {
+    "placeholders": {
+      "month": {
+        "type": "int"
+      }
+    }
+  },
+  "annualReportCategoryCountValue": "{count}개",
+  "@annualReportCategoryCountValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "annualReportPosterSavedPos": "축하합니다, 저축했어요",
+  "annualReportPosterOverspent": "올해 지출이 초과됐어요",
+  "annualReportPosterBookkeeping": "기록 지속",
+  "annualReportPosterTrend": "월별 지출 추세",
+  "annualReportPosterAchieved": "달성",
+  "annualReportPosterNotAchieved": "미달성",
+  "annualReportPosterQrCta": "스캔해서 피기카운트를 다운로드하고 가계부를 시작하세요",
+  "commonUnitYuan": "위안",
+  "annualReportConsecutiveDaysValue": "{count}일",
+  "@annualReportConsecutiveDaysValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

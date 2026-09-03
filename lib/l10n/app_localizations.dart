@@ -15072,6 +15072,234 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Select a to account'**
   String get transferSelectToAccount;
+
+  /// No description provided for @commonNoMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'No messages yet'**
+  String get commonNoMessages;
+
+  /// No description provided for @commonLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load: {error}'**
+  String commonLoadFailed(String error);
+
+  /// No description provided for @commonNoMatches.
+  ///
+  /// In en, this message translates to:
+  /// **'No matches'**
+  String get commonNoMatches;
+
+  /// No description provided for @attachmentCustomIcons.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom icons ({count})'**
+  String attachmentCustomIcons(int count);
+
+  /// No description provided for @annualReportInsightTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Yearly Insights'**
+  String get annualReportInsightTitle;
+
+  /// No description provided for @annualReportInsightSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover your spending habits from the data'**
+  String get annualReportInsightSubtitle;
+
+  /// No description provided for @annualReportAvgPerTxTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Avg. per entry'**
+  String get annualReportAvgPerTxTitle;
+
+  /// No description provided for @annualReportAvgPerTxDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Your average amount per entry'**
+  String get annualReportAvgPerTxDesc;
+
+  /// No description provided for @annualReportAvgDailyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily average'**
+  String get annualReportAvgDailyTitle;
+
+  /// No description provided for @annualReportAvgDailyDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Average spend per day'**
+  String get annualReportAvgDailyDesc;
+
+  /// No description provided for @annualReportAvgMonthlyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly average'**
+  String get annualReportAvgMonthlyTitle;
+
+  /// No description provided for @annualReportAvgMonthlyDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Average spend per month'**
+  String get annualReportAvgMonthlyDesc;
+
+  /// No description provided for @annualReportActiveMonthTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Most active month'**
+  String get annualReportActiveMonthTitle;
+
+  /// No description provided for @annualReportActiveMonthDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'The month with the most entries'**
+  String get annualReportActiveMonthDesc;
+
+  /// No description provided for @annualReportCategoryCountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Categories used'**
+  String get annualReportCategoryCountTitle;
+
+  /// No description provided for @annualReportCategoryCountDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Number of categories you\'ve used'**
+  String get annualReportCategoryCountDesc;
+
+  /// No description provided for @annualReportSavingsRateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Savings rate'**
+  String get annualReportSavingsRateTitle;
+
+  /// No description provided for @annualReportSavingsRateDescPos.
+  ///
+  /// In en, this message translates to:
+  /// **'The share of income you saved this year'**
+  String get annualReportSavingsRateDescPos;
+
+  /// No description provided for @annualReportSavingsRateDescNeg.
+  ///
+  /// In en, this message translates to:
+  /// **'You spent more than you earned this year'**
+  String get annualReportSavingsRateDescNeg;
+
+  /// No description provided for @annualReportCompareTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Income vs Expense'**
+  String get annualReportCompareTitle;
+
+  /// No description provided for @annualReportCompareSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly income and expense comparison'**
+  String get annualReportCompareSubtitle;
+
+  /// No description provided for @annualReportTopIncome.
+  ///
+  /// In en, this message translates to:
+  /// **'Top income'**
+  String get annualReportTopIncome;
+
+  /// No description provided for @annualReportTopExpense.
+  ///
+  /// In en, this message translates to:
+  /// **'Top expense'**
+  String get annualReportTopExpense;
+
+  /// No description provided for @annualReportUnitDay.
+  ///
+  /// In en, this message translates to:
+  /// **'days'**
+  String get annualReportUnitDay;
+
+  /// No description provided for @annualReportUnitEntries.
+  ///
+  /// In en, this message translates to:
+  /// **'entries'**
+  String get annualReportUnitEntries;
+
+  /// No description provided for @posterUnitPerDay.
+  ///
+  /// In en, this message translates to:
+  /// **'/day'**
+  String get posterUnitPerDay;
+
+  /// No description provided for @posterUnitPerMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'/mo'**
+  String get posterUnitPerMonth;
+
+  /// No description provided for @annualReportMonthValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Month {month}'**
+  String annualReportMonthValue(int month);
+
+  /// No description provided for @annualReportCategoryCountValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}'**
+  String annualReportCategoryCountValue(int count);
+
+  /// No description provided for @annualReportPosterSavedPos.
+  ///
+  /// In en, this message translates to:
+  /// **'Congrats, you saved'**
+  String get annualReportPosterSavedPos;
+
+  /// No description provided for @annualReportPosterOverspent.
+  ///
+  /// In en, this message translates to:
+  /// **'You overspent this year'**
+  String get annualReportPosterOverspent;
+
+  /// No description provided for @annualReportPosterBookkeeping.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookkeeping streak'**
+  String get annualReportPosterBookkeeping;
+
+  /// No description provided for @annualReportPosterTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly expense trend'**
+  String get annualReportPosterTrend;
+
+  /// No description provided for @annualReportPosterAchieved.
+  ///
+  /// In en, this message translates to:
+  /// **'Achieved'**
+  String get annualReportPosterAchieved;
+
+  /// No description provided for @annualReportPosterNotAchieved.
+  ///
+  /// In en, this message translates to:
+  /// **'Not achieved'**
+  String get annualReportPosterNotAchieved;
+
+  /// No description provided for @annualReportPosterQrCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan to download PiggyCount and start your ledger journey'**
+  String get annualReportPosterQrCta;
+
+  /// No description provided for @commonUnitYuan.
+  ///
+  /// In en, this message translates to:
+  /// **'yuan'**
+  String get commonUnitYuan;
+
+  /// No description provided for @annualReportConsecutiveDaysValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} days'**
+  String annualReportConsecutiveDaysValue(int count);
 }
 
 class _AppLocalizationsDelegate
