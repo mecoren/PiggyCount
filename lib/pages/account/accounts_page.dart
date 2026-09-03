@@ -588,24 +588,27 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
           borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
           child: SizedBox(
             height: 180.0.scaled(context, ref),
-            child: LineChart(
-              values: monthly.map((e) => e.net).toList(),
-              xLabels: monthly
-                  .map((e) => '${e.date.year % 100}/${e.date.month}')
-                  .toList(),
-              highlightIndex: monthly.length - 1,
-              onSwipeLeft: () {},
-              onSwipeRight: () {},
-              showHint: false,
-              hideAmounts: hide,
-              themeColor: primary,
-              whiteBg: !PiggyTokens.isDark(context),
-              isDark: PiggyTokens.isDark(context),
-              showGrid: true,
-              showDots: false,
-              annotate: true,
-              interactive: false, // 点击交给外层 InkWell 进全屏页
-              minimal: true, // 去背景/Y轴/均线，避免嵌在 SectionCard 内暗黑模式「卡中卡」
+            // RepaintBoundary:迷你趋势图重绘不影响下方长账户列表
+            child: RepaintBoundary(
+              child: LineChart(
+                values: monthly.map((e) => e.net).toList(),
+                xLabels: monthly
+                    .map((e) => '${e.date.year % 100}/${e.date.month}')
+                    .toList(),
+                highlightIndex: monthly.length - 1,
+                onSwipeLeft: () {},
+                onSwipeRight: () {},
+                showHint: false,
+                hideAmounts: hide,
+                themeColor: primary,
+                whiteBg: !PiggyTokens.isDark(context),
+                isDark: PiggyTokens.isDark(context),
+                showGrid: true,
+                showDots: false,
+                annotate: true,
+                interactive: false, // 点击交给外层 InkWell 进全屏页
+                minimal: true, // 去背景/Y轴/均线，避免嵌在 SectionCard 内暗黑模式「卡中卡」
+              ),
             ),
           ),
         );
@@ -1512,7 +1515,11 @@ class _ConversionDetailRow extends ConsumerWidget {
               ),
               child: Text(
                 l10n.unconvertedBadge,
-                style: const TextStyle(fontSize: 11, color: Colors.orange),
+                style: TextStyle(
+                  fontSize: 11,
+                  // 与边框同源 warning token,暗色下也是可读的琥珀色
+                  color: PiggyTokens.warning(context),
+                ),
               ),
             )
           else if (entry.convertedValue != null)

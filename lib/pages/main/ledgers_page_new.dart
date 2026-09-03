@@ -75,7 +75,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       if (previous?.running == true &&
           next.isJustCompleted &&
           next.ledgerId != null) {
-        print('🟢 [LedgersPage] 检测到导入完成: ledgerId=${next.ledgerId}');
+        logger.info('Ledger', '🟢 [LedgersPage] 检测到导入完成: ledgerId=${next.ledgerId}');
         // 触发同步状态刷新和账本列表刷新
         PostProcessor.sync(ref, ledgerId: next.ledgerId!);
       }
@@ -1870,7 +1870,9 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: PiggyTokens.info(context),
+                          // 语义色仅作 12% 底,正文/副文用 onSurface 系,
+                          // 暗色模式下高饱和实底会压垮浅色正文字(可读性)
+                          color: PiggyTokens.info(context).withValues(alpha: 0.12),
                           borderRadius:
                               BorderRadius.circular(PiggyDimens.radiusSm),
                         ),
@@ -1888,8 +1890,9 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                               l10n.ledgersConflictLocalFingerprint(
                                 syncStatus.localFingerprint.substring(0, 8),
                               ),
-                              style: const TextStyle(
-                                  fontSize: 12, color: Colors.black54),
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: PiggyTokens.textSecondary(context)),
                             ),
                           ],
                         ),
@@ -1903,7 +1906,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: PiggyTokens.warning(context),
+                            color: PiggyTokens.warning(context)
+                                .withValues(alpha: 0.12),
                             borderRadius:
                                 BorderRadius.circular(PiggyDimens.radiusSm),
                           ),
@@ -1922,16 +1926,18 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                                   dateFormat.format(
                                       syncStatus.cloudExportedAt!.toLocal()),
                                 ),
-                                style: const TextStyle(
-                                    fontSize: 12, color: Colors.black54),
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: PiggyTokens.textSecondary(context)),
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 l10n.ledgersConflictRemoteFingerprint(
                                   syncStatus.cloudFingerprint!.substring(0, 8),
                                 ),
-                                style: const TextStyle(
-                                    fontSize: 12, color: Colors.black54),
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: PiggyTokens.textSecondary(context)),
                               ),
                             ],
                           ),
