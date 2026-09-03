@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../../styles/tokens.dart';
 
 typedef SearchableDropdownItemBuilder<T> = Widget Function(T item);
@@ -108,7 +109,7 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
                     controller: _searchController,
                     focusNode: _focusNode,
                     decoration: InputDecoration(
-                      hintText: '搜索...',
+                      hintText: AppLocalizations.of(context).commonSearch,
                       prefixIcon: const Icon(Icons.search),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
@@ -134,9 +135,12 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
                       ).toList();
                       
                       if (filteredItems.isEmpty) {
-                        return const Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Text('无匹配项', textAlign: TextAlign.center),
+                        return Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Text(
+                            AppLocalizations.of(context).commonNoMatches,
+                            textAlign: TextAlign.center,
+                          ),
                         );
                       }
                       

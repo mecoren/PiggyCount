@@ -76,7 +76,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
                   ),
                   WaitSlidingSegment(
                     value: 'customIcon',
-                    label: '自定义图标 ($customIconCount)',
+                    label: l10n.attachmentCustomIcons(customIconCount),
                   ),
                 ],
                 onValueChanged: (value) => setState(() => _selectedTab = value),

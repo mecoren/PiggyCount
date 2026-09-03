@@ -239,7 +239,9 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
                     }
 
                     if (messages.isEmpty) {
-                      return const Center(child: Text('暂无消息'));
+                      return Center(
+                        child: Text(AppLocalizations.of(context).commonNoMessages),
+                      );
                     }
 
                     return ListView.builder(
@@ -256,7 +258,10 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
                   },
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
-                  error: (e, st) => Center(child: Text('加载失败: $e')),
+                  error: (e, st) => Center(
+                    child: Text(
+                        AppLocalizations.of(context).commonLoadFailed(e.toString())),
+                  ),
                 ),
 
                 // 回到底部按钮
@@ -635,6 +640,10 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
     try {
       final repo = ref.read(repositoryProvider);
 
+      // await 前取好 context 相关依赖,避免跨 async gap 使用 context。
+      final currentLocale = Localizations.localeOf(context);
+      final l10n = AppLocalizations.of(context);
+
       // 保存用户消息（使用displayText作为显示内容，如果没有则使用text）
       await repo.createMessage(
         MessagesCompanion.insert(
@@ -651,9 +660,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
       // chat_service 内部走 BillExtractionService.forLedger,会自动查
       // 当前账本可用分类 + 同币种账户,page 层不再预查。
       final chatService = ref.read(aiChatServiceProvider);
-      final currentLocale = Localizations.localeOf(context);
       final ledgerId = ref.read(currentLedgerIdProvider);
-      final l10n = AppLocalizations.of(context);
 
       logger.info('AIChat', '当前账本ID: $ledgerId');
 

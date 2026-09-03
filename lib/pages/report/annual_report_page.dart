@@ -213,6 +213,10 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
   int _currentPage = 0;
   late int _selectedYear;
 
+  /// 各 _buildPage* 方法签名不带 l10n(历史原因),统一经此取词。
+  AppLocalizations l10nInsight(BuildContext context) =>
+      AppLocalizations.of(context);
+
   @override
   void initState() {
     super.initState();
@@ -287,6 +291,12 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
   }
 
   Widget _buildNoData(AppLocalizations l10n) {
+    // 空态文字/图标默认白色;用户选浅主题色(如蜂蜜黄)时白字对比度
+    // 跌破 WCAG,按 primary 亮度切换深色
+    final primary = ref.read(primaryColorProvider);
+    final onPrimary = primary.computeLuminance() > 0.5
+        ? Colors.black.withValues(alpha: 0.7)
+        : Colors.white;
     return SafeArea(
       child: Column(
         children: [
@@ -296,12 +306,11 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.inbox_outlined,
-                      color: Colors.white54, size: 64),
+                  Icon(Icons.inbox_outlined, color: onPrimary, size: 64),
                   const SizedBox(height: 16),
                   Text(
                     l10n.annualReportNoData(_selectedYear),
-                    style: const TextStyle(color: Colors.white70, fontSize: 16),
+                    style: TextStyle(color: onPrimary, fontSize: 16),
                   ),
                   const SizedBox(height: 24),
                   _buildYearSelector(),
@@ -443,6 +452,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
 
     final l10n = AppLocalizations.of(context);
     final primaryColor = ref.read(primaryColorProvider);
+    final currencyCode = ref.read(baseCurrencyProvider);
 
     // Show loading
     showDialog(
@@ -498,6 +508,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
         child: AnnualReportPoster(
           data: data,
           primaryColor: primaryColor,
+          currencyCode: ref.read(baseCurrencyProvider),
         ),
       );
 
@@ -515,6 +526,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
           initialImageBytes: pngBytes,
           data: data,
           primaryColor: primaryColor,
+          currencyCode: currencyCode,
         ),
       );
     } catch (e) {
@@ -592,7 +604,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                   icon: Icons.calendar_today_rounded,
                   label: l10n.annualReportTotalDays,
                   value: '${data.totalDays}',
-                  unit: '天',
+                  unit: l10n.annualReportUnitDay,
                 ),
               ),
               const SizedBox(width: 16),
@@ -601,7 +613,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                   icon: Icons.edit_note_rounded,
                   label: l10n.annualReportTotalRecords,
                   value: '${data.totalRecords}',
-                  unit: '笔',
+                  unit: l10n.annualReportUnitEntries,
                 ),
               ),
             ],
@@ -784,9 +796,9 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '年度洞察',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context).annualReportInsightTitle,
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 32,
               fontWeight: FontWeight.bold,
@@ -794,7 +806,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            '从数据中发现你的消费习惯',
+            AppLocalizations.of(context).annualReportInsightSubtitle,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.8),
               fontSize: 16,
@@ -805,45 +817,46 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
           // 洞察卡片
           _buildInsightItem(
             icon: Icons.receipt_long_rounded,
-            title: '平均每笔消费',
+            title: l10nInsight(context).annualReportAvgPerTxTitle,
             value: '¥${formatter.format(avgExpensePerRecord)}',
-            description: '你每次记账的平均金额',
+            description: l10nInsight(context).annualReportAvgPerTxDesc,
             primaryColor: primaryColor,
           ),
           const SizedBox(height: 12),
 
           _buildInsightItem(
             icon: Icons.schedule_rounded,
-            title: '日均支出',
+            title: l10nInsight(context).annualReportAvgDailyTitle,
             value: '¥${formatter.format(dailyAvg)}',
-            description: '平均每天花费金额',
+            description: l10nInsight(context).annualReportAvgDailyDesc,
             primaryColor: primaryColor,
           ),
           const SizedBox(height: 12),
 
           _buildInsightItem(
             icon: Icons.date_range_rounded,
-            title: '月均支出',
+            title: l10nInsight(context).annualReportAvgMonthlyTitle,
             value: '¥${formatter.format(monthlyAvg)}',
-            description: '平均每月花费金额',
+            description: l10nInsight(context).annualReportAvgMonthlyDesc,
             primaryColor: primaryColor,
           ),
           const SizedBox(height: 12),
 
           _buildInsightItem(
             icon: Icons.calendar_month_rounded,
-            title: '最活跃月份',
-            value: '$busiestMonth月',
-            description: '记账活动最频繁的月份',
+            title: l10nInsight(context).annualReportActiveMonthTitle,
+            value: l10nInsight(context).annualReportMonthValue(busiestMonth),
+            description: l10nInsight(context).annualReportActiveMonthDesc,
             primaryColor: primaryColor,
           ),
           const SizedBox(height: 12),
 
           _buildInsightItem(
             icon: Icons.category_rounded,
-            title: '消费分类数',
-            value: '${data.topExpenseCategories.length}个',
-            description: '你使用过的消费分类数量',
+            title: l10nInsight(context).annualReportCategoryCountTitle,
+            value: l10nInsight(context)
+                .annualReportCategoryCountValue(data.topExpenseCategories.length),
+            description: l10nInsight(context).annualReportCategoryCountDesc,
             primaryColor: primaryColor,
           ),
           const SizedBox(height: 12),
@@ -852,9 +865,11 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
           if (data.totalIncome > 0)
             _buildInsightItem(
               icon: Icons.savings_rounded,
-              title: '储蓄率',
+              title: l10nInsight(context).annualReportSavingsRateTitle,
               value: '${savingsRate.toStringAsFixed(1)}%',
-              description: savingsRate >= 0 ? '今年你攒下了收入的这个比例' : '今年支出超过了收入',
+              description: savingsRate >= 0
+                  ? l10nInsight(context).annualReportSavingsRateDescPos
+                  : l10nInsight(context).annualReportSavingsRateDescNeg,
               primaryColor: savingsRate >= 0
                   ? PiggyTokens.success(context)
                   : PiggyTokens.error(context),
@@ -958,9 +973,9 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '收支对比',
-            style: TextStyle(
+          Text(
+            l10nInsight(context).annualReportCompareTitle,
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 32,
               fontWeight: FontWeight.bold,
@@ -968,7 +983,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            '每月收入与支出的对比',
+            l10nInsight(context).annualReportCompareSubtitle,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.8),
               fontSize: 16,
@@ -990,7 +1005,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
               ),
               const SizedBox(width: 6),
               Text(
-                '收入',
+                l10nInsight(context).analyticsIncome,
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.8),
                   fontSize: 14,
@@ -1007,7 +1022,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
               ),
               const SizedBox(width: 6),
               Text(
-                '支出',
+                l10nInsight(context).analyticsExpense,
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.8),
                   fontSize: 14,
@@ -1033,7 +1048,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                   Row(
                     children: [
                       Text(
-                        '${m.month}月',
+                        l10nInsight(context).annualReportMonthValue(m.month),
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.9),
                           fontSize: 14,
@@ -1052,7 +1067,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                                 BorderRadius.circular(PiggyDimens.radiusXs),
                           ),
                           child: Text(
-                            '收入最高',
+                            l10nInsight(context).annualReportTopIncome,
                             style: TextStyle(
                               color: PiggyTokens.success(context),
                               fontSize: 10,
@@ -1071,7 +1086,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                                 BorderRadius.circular(PiggyDimens.radiusXs),
                           ),
                           child: Text(
-                            '支出最高',
+                            l10nInsight(context).annualReportTopExpense,
                             style: TextStyle(
                               color: PiggyTokens.error(context),
                               fontSize: 10,
@@ -1237,7 +1252,15 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                         child: Text(
                           '${index + 1}',
                           style: TextStyle(
-                            color: index < 3 ? Colors.white : Colors.black54,
+                            // 底色亮度自适应:金银铜牌(亮底)用深字,
+                            // 半透明白徽(叠在深主题色上)与深主题色下用浅字,
+                            // 避免 black54 在深色主题上跌破对比度
+                            color: index < 3
+                                ? Colors.black87
+                                : (Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? Colors.white
+                                    : Colors.black87),
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
@@ -1757,11 +1780,13 @@ class _AnnualReportPosterPreview extends StatefulWidget {
   final Uint8List initialImageBytes;
   final AnnualReportData data;
   final Color primaryColor;
+  final String currencyCode;
 
   const _AnnualReportPosterPreview({
     required this.initialImageBytes,
     required this.data,
     required this.primaryColor,
+    required this.currencyCode,
   });
 
   @override
@@ -1796,6 +1821,7 @@ class _AnnualReportPosterPreviewState
           data: widget.data,
           primaryColor: widget.primaryColor,
           hideIncome: _hideIncome,
+          currencyCode: widget.currencyCode,
         ),
       );
 

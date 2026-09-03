@@ -10,6 +10,7 @@ import 'dart:math' as math;
 import '../../pages/report/annual_report_page.dart';
 import '../../services/data/category_service.dart';
 import '../../l10n/app_localizations.dart';
+import '../../utils/currencies.dart';
 
 /// 年度账单长图海报
 /// 将多个页面内容合并成一张长图用于分享
@@ -18,12 +19,22 @@ class AnnualReportPoster extends StatelessWidget {
   final Color primaryColor;
   final bool hideIncome;
 
+  /// 账本主币种代码(如 CNY/USD):金额符号与单位跟随账本币种,
+  /// 避免外币账本生成 "¥" 的错误海报。缺省 CNY 保持旧行为。
+  final String currencyCode;
+
   const AnnualReportPoster({
     super.key,
     required this.data,
     required this.primaryColor,
     this.hideIncome = false,
+    this.currencyCode = 'CNY',
   });
+
+  /// 金额符号(按账本币种)
+  String get currencySymbol => getCurrencySymbol(currencyCode);
+
+  /// 计数类单位(天/笔/日)与金额单位不同,保持 l10n 原样
 
   @override
   Widget build(BuildContext context) {
@@ -531,13 +542,15 @@ class AnnualReportPoster extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Text(
-                            data.netSavings >= 0 ? '恭喜你攒下了' : '今年花超了',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.white.withValues(alpha: 0.7),
-                            ),
-                          ),
+                      Text(
+                        data.netSavings >= 0
+                            ? l10n.annualReportPosterSavedPos
+                            : l10n.annualReportPosterOverspent,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white.withValues(alpha: 0.7),
+                        ),
+                      ),
                         ],
                       ),
                       const Spacer(),
@@ -551,8 +564,8 @@ class AnnualReportPoster extends StatelessWidget {
                           color: Colors.white,
                         ),
                       ),
-                      const Text(
-                        ' 元',
+                      Text(
+                        currencySymbol,
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.white70,
@@ -601,7 +614,7 @@ class AnnualReportPoster extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            '¥$amount',
+            '$currencySymbol$amount',
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
@@ -635,7 +648,7 @@ class AnnualReportPoster extends StatelessWidget {
             child: _buildStatCard(
               icon: Icons.calendar_today_rounded,
               value: '${data.totalDays}',
-              unit: '天',
+              unit: l10n.annualReportUnitDay,
               label: l10n.annualReportTotalDays,
               color: primaryColor,
             ),
@@ -645,7 +658,7 @@ class AnnualReportPoster extends StatelessWidget {
             child: _buildStatCard(
               icon: Icons.receipt_long_rounded,
               value: '${data.totalRecords}',
-              unit: '笔',
+              unit: l10n.annualReportUnitEntries,
               label: l10n.annualReportTotalRecords,
               color: primaryColor,
             ),
@@ -655,8 +668,8 @@ class AnnualReportPoster extends StatelessWidget {
             child: _buildStatCard(
               icon: Icons.schedule_rounded,
               value: formatter.format(dailyAvg),
-              unit: '元/天',
-              label: '日均支出',
+              unit: l10n.posterUnitPerDay,
+              label: l10n.annualReportAvgDailyTitle,
               color: primaryColor,
             ),
           ),
@@ -665,8 +678,8 @@ class AnnualReportPoster extends StatelessWidget {
             child: _buildStatCard(
               icon: Icons.date_range_rounded,
               value: formatter.format(monthlyAvg),
-              unit: '元/月',
-              label: '月均支出',
+              unit: l10n.posterUnitPerMonth,
+              label: l10n.annualReportAvgMonthlyTitle,
               color: primaryColor,
             ),
           ),
@@ -773,8 +786,8 @@ class AnnualReportPoster extends StatelessWidget {
         children: [
           _buildSectionTitle(
             icon: Icons.lightbulb_rounded,
-            title: '年度洞察',
-            subtitle: '从数据中发现你的消费习惯',
+            title: l10n.annualReportInsightTitle,
+            subtitle: l10n.annualReportInsightSubtitle,
           ),
           const SizedBox(height: 20),
 
@@ -784,8 +797,8 @@ class AnnualReportPoster extends StatelessWidget {
               Expanded(
                 child: _buildInsightCard(
                   icon: Icons.receipt_long_rounded,
-                  title: '平均每笔',
-                  value: '¥${formatter.format(avgExpensePerRecord)}',
+                  title: l10n.annualReportAvgPerTxTitle,
+                  value: '$currencySymbol${formatter.format(avgExpensePerRecord)}',
                   color: primaryColor,
                 ),
               ),
@@ -793,8 +806,8 @@ class AnnualReportPoster extends StatelessWidget {
               Expanded(
                 child: _buildInsightCard(
                   icon: Icons.calendar_month_rounded,
-                  title: '最活跃月份',
-                  value: '$busiestMonth月',
+                  title: l10n.annualReportActiveMonthTitle,
+                  value: l10n.annualReportMonthValue(busiestMonth),
                   color: primaryColor,
                 ),
               ),
@@ -806,8 +819,9 @@ class AnnualReportPoster extends StatelessWidget {
               Expanded(
                 child: _buildInsightCard(
                   icon: Icons.category_rounded,
-                  title: '消费分类',
-                  value: '${data.topExpenseCategories.length}个',
+                  title: l10n.annualReportCategoryCountTitle,
+                  value: l10n.annualReportCategoryCountValue(
+                      data.topExpenseCategories.length),
                   color: primaryColor,
                 ),
               ),
@@ -815,9 +829,12 @@ class AnnualReportPoster extends StatelessWidget {
               Expanded(
                 child: _buildInsightCard(
                   icon: Icons.savings_rounded,
-                  title: hideIncome ? '记账坚持' : '储蓄率',
+                  title: hideIncome
+                      ? l10n.annualReportPosterBookkeeping
+                      : l10n.annualReportSavingsRateTitle,
                   value: hideIncome
-                      ? '${data.maxConsecutiveDays}天'
+                      ? l10n.annualReportConsecutiveDaysValue(
+                          data.maxConsecutiveDays)
                       : '${savingsRate.toStringAsFixed(1)}%',
                   // 储蓄率用红绿色区分正负
                   color: savingsRate >= 0
@@ -1038,7 +1055,7 @@ class AnnualReportPoster extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                '¥${formatter.format(category.total)}',
+                                '$currencySymbol${formatter.format(category.total)}',
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
@@ -1152,8 +1169,8 @@ class AnnualReportPoster extends StatelessWidget {
               Expanded(
                 child: _buildHighlightMonthCard(
                   label: l10n.annualReportHighestMonth,
-                  month: '$maxMonth月',
-                  amount: '¥${formatter.format(maxExpense)}',
+                  month: l10n.annualReportMonthValue(maxMonth),
+                  amount: '$currencySymbol${formatter.format(maxExpense)}',
                   color: const Color(0xFFFF5252),
                   icon: Icons.arrow_upward_rounded,
                 ),
@@ -1162,8 +1179,8 @@ class AnnualReportPoster extends StatelessWidget {
               Expanded(
                 child: _buildHighlightMonthCard(
                   label: l10n.annualReportLowestMonth,
-                  month: '$minMonth月',
-                  amount: '¥${formatter.format(minExpense)}',
+                  month: l10n.annualReportMonthValue(minMonth),
+                  amount: '$currencySymbol${formatter.format(minExpense)}',
                   color: const Color(0xFF4CAF50),
                   icon: Icons.arrow_downward_rounded,
                 ),
@@ -1192,9 +1209,9 @@ class AnnualReportPoster extends StatelessWidget {
                   children: [
                     Icon(Icons.bar_chart_rounded, color: primaryColor, size: 20),
                     const SizedBox(width: 8),
-                    const Text(
-                      '月度支出趋势',
-                      style: TextStyle(
+                    Text(
+                      l10n.annualReportPosterTrend,
+                      style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: Color(0xFF1A1A2E),
@@ -1478,7 +1495,7 @@ class AnnualReportPoster extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '¥$amount',
+                  '$currencySymbol$amount',
                   style: TextStyle(
                     color: color,
                     fontSize: 24,
@@ -1639,7 +1656,7 @@ class AnnualReportPoster extends StatelessWidget {
                                   Icon(Icons.check, color: a.color, size: 16),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '已达成',
+                                    l10n.annualReportPosterAchieved,
                                     style: TextStyle(
                                       color: a.color,
                                       fontSize: 12,
@@ -1662,7 +1679,7 @@ class AnnualReportPoster extends StatelessWidget {
                                   Icon(Icons.lock_outline, color: Colors.grey[400], size: 16),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '未达成',
+                                    l10n.annualReportPosterNotAchieved,
                                     style: TextStyle(
                                       color: Colors.grey[400],
                                       fontSize: 12,
@@ -1712,7 +1729,7 @@ class AnnualReportPoster extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '扫码下载小猪记账，开启你的记账之旅',
+            l10n.annualReportPosterQrCta,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.5),
               fontSize: 12,
