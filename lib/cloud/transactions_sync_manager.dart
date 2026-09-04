@@ -97,6 +97,106 @@ class TransactionsSyncManager implements SyncService {
   /// 不同账本各持各的锁，互不阻塞。
   final Map<int, Future<void>> _ledgerOpsLocks = {};
 
+  /// Path A 自动同步防抖（对齐 Path B SyncEngine._scheduleAutoSync 治理）。
+  ///
+  /// 背景：PostProcessor 在**每笔**交易保存后立即触发
+  /// uploadCurrentLedger —— 全量导出 JSON + 附件对象探测 + 整快照 PUT。
+  /// 连续记账（批量补录/导入几十笔）时每次编辑都完整跑一遍：慢网络下
+  /// 前一次上传尚未返回，后续每次编辑仍在 TSM-P8 锁上排队，DB 侧每笔
+  /// 都全量导出，网络侧串行打满。防抖把「窗口内的多次触发」收敛为
+  /// 最后一次：窗口内再有编辑只重置计时；已有防抖上传在跑时新到的触发
+  /// 记为 pending，跑完后自动补一轮（保证最后状态必然上云）。
+  ///
+  /// 与 Path B 相同的 2s 窗口；手动上传/合并回传不受影响（仍走
+  /// uploadCurrentLedger 直传，不经过防抖）。
+  static const Duration _autoSyncDebounce = Duration(seconds: 2);
+
+  /// 每账本的自动同步防抖计时器（仅 [uploadCurrentLedgerDebounced] 使用）
+  final Map<int, Timer> _autoSyncTimers = {};
+
+  /// 每账本「防抖上传进行中」标志：进行中的上传结束后若期间又有触发，
+  /// 由本标志触发补跑，保证「最后一次编辑必然上云」。
+  final Map<int, bool> _autoSyncPending = {};
+
+  /// 防抖版自动上传入口（auto_sync 后台路径专用）。
+  ///
+  /// 语义保证：最终一致 —— 调用后只要不再有新触发，账本最终必然以
+  /// 「最后一次调用时刻的 DB 状态」完成一次上传（补跑机制兜底）。
+  /// 立即上传语义请直接用 [uploadCurrentLedger]（手动按钮/合并回传）。
+  @override
+  Future<void> uploadCurrentLedgerDebounced({
+    required int ledgerId,
+    bool force = false,
+    bool bypassRestoreGuard = false,
+  }) async {
+    final timer = _autoSyncTimers[ledgerId];
+    if (timer != null) {
+      // 窗口内已有待执行的防抖上传：重置计时即可（force/bypass 标志
+      // 取最后一次触发的值，与「最后状态上云」语义一致）。
+      timer.cancel();
+      _autoSyncTimers.remove(ledgerId);
+    } else if (_autoSyncPending[ledgerId] == true) {
+      // 上传进行中：本轮触发已记录为 pending，无需再排计时。
+      // 保留语义：pending 轮用本轮 force/bypass 参数。
+      _pendingForce[ledgerId] = force;
+      _pendingBypass[ledgerId] = bypassRestoreGuard;
+      return;
+    }
+    _autoSyncTimers[ledgerId] = Timer(_autoSyncDebounce, () {
+      _autoSyncTimers.remove(ledgerId);
+      unawaited(_runAutoSyncUpload(
+        ledgerId: ledgerId,
+        force: force,
+        bypassRestoreGuard: bypassRestoreGuard,
+      ));
+    });
+  }
+
+  /// pending 轮上传的参数快照（见 [uploadCurrentLedgerDebounced]）
+  final Map<int, bool> _pendingForce = {};
+  final Map<int, bool> _pendingBypass = {};
+
+  Future<void> _runAutoSyncUpload({
+    required int ledgerId,
+    required bool force,
+    required bool bypassRestoreGuard,
+  }) async {
+    _autoSyncPending[ledgerId] = true;
+    try {
+      try {
+        await uploadCurrentLedger(
+          ledgerId: ledgerId,
+          force: force,
+          bypassRestoreGuard: bypassRestoreGuard,
+        );
+      } finally {
+        _autoSyncPending[ledgerId] = false;
+        // 上传执行期间又有防抖触发到达（当时因「进行中」被记 pending）：
+        // 立即补跑一轮（参数取 pending 期间最后一次触发的值）。
+        if (_pendingForce.containsKey(ledgerId)) {
+          final f = _pendingForce.remove(ledgerId)!;
+          final b = _pendingBypass.remove(ledgerId) ?? false;
+          unawaited(_runAutoSyncUpload(
+              ledgerId: ledgerId, force: f, bypassRestoreGuard: b));
+        }
+      }
+    } catch (e) {
+      logger.warning('CloudSync', '自动同步上传失败(等下次数据变更重试): ledgerId=$ledgerId: $e');
+    }
+  }
+
+  /// 释放防抖资源（dispose 路径调用，取消全部计时器）
+  @visibleForTesting
+  void cancelAutoSyncTimers() {
+    for (final t in _autoSyncTimers.values) {
+      t.cancel();
+    }
+    _autoSyncTimers.clear();
+    _autoSyncPending.clear();
+    _pendingForce.clear();
+    _pendingBypass.clear();
+  }
+
   /// 在 [ledgerId] 的操作锁内执行 [body]。同账本操作严格排队，异常原样透传。
   Future<T> _withLedgerLock<T>(int ledgerId, Future<T> Function() body) {
     final prev = _ledgerOpsLocks[ledgerId] ?? Future<void>.value();
@@ -262,6 +362,10 @@ class TransactionsSyncManager implements SyncService {
     _discoveredPayloads.clear();
     _staleRemoteSlots.clear();
     _cipherProbeCache.clear();
+    // Path A 防抖：取消全部待执行的自动上传计时器。进行中的一轮（如有）
+    // 会自然结束（provider 已置 null，其内部会按「云服务不可用」失败并
+    // 记 warning，不再补跑）。
+    cancelAutoSyncTimers();
   }
 
   /// 开启加密后的全量重加密 + 重新初始化（原子流程）
@@ -840,6 +944,9 @@ class TransactionsSyncManager implements SyncService {
           // 「本地缓存指纹 ≠ 云端 metadata 指纹」错位。
           serializedData: exportedJson,
           fingerprint: localFp,
+          // F6 延伸：exportMap 是上面已 jsonDecode 的同一份 payload，
+          // count 直接透传，manager 跳过对大快照的第二次 jsonDecode。
+          preParsedCount: localCount,
           // 方案C：乐观并发锚点。S3 走 If-Match 原子条件写；WebDAV 走
           // eTag 预检；不支持的后端由 manager 内部降级为盲上传+写后校验。
           ifMatchEtag: cloudETag,
@@ -979,7 +1086,10 @@ class TransactionsSyncManager implements SyncService {
   /// 上传顺序协议:必须先于 ledger_<id>.json 调用 —— 清单里引用的对象
   /// 得先存在,否则恢复端拿到"永远缺文件"的清单。单个对象失败不阻断
   /// 账本 JSON 上传(清单仍带 sha256,恢复端 drain 会持续尝试),仅计数
-  /// 并 warning。exists() 探测已存在的对象直接跳过(去重 + 省流量)。
+  /// 并 warning。云端已存在的对象直接跳过(去重 + 省流量):批量上传前
+  /// 单次 list('attachments') 建立存在集合,替代逐对象 exists() 探测
+  /// (WebDAV exists 是父目录全量 PROPFIND,N 个附件 = N 次整目录拉取);
+  /// list 失败时退回逐对象 exists(),语义不变。
   ///
   /// 审计 T9:构建清单前先对 localSha256 为空的附件行**按需计算并回填**
   /// —— 此前只靠启动后台任务,任务完成前的上传会把 NULL 锚点行整体排除
@@ -1034,6 +1144,24 @@ class TransactionsSyncManager implements SyncService {
     final appDir = await getApplicationDocumentsDirectory();
     final attDir = Directory('${appDir.path}/attachments');
 
+    // 上传前一次性列举云端附件目录，替代逐对象 exists() 探测。
+    //
+    // WebDAV 的 exists() 是「父目录 PROPFIND 全量列举」，N 个附件 = N 次
+    // 同一目录的整目录拉取（目录大时每次都是全量 XML），auto_sync 场景下
+    // 每笔记账都重复整套；S3 是 N 次 HEAD。单次 list 后用名字集合判存在，
+    // 次数从 N 降到 1。列举失败不阻断 —— 退回逐对象 exists()（多一次网络
+    // 往返但语义与旧行为完全一致），上传流程永不因探测故障而中止。
+    Set<String>? remoteNames;
+    try {
+      final remoteFiles = await provider.storage.list(path: 'attachments');
+      remoteNames = remoteFiles.map((f) => f.name).toSet();
+    } catch (e) {
+      logger.warning('CloudSync', '附件目录列举失败，退回逐对象探测: $e');
+    }
+    String attachmentBinName(String sha) => '$sha.bin';
+    bool remoteHas(String sha) =>
+        remoteNames?.contains(attachmentBinName(sha)) ?? false;
+
     var uploaded = 0;
     var skipped = 0;
     var failed = 0;
@@ -1057,7 +1185,9 @@ class TransactionsSyncManager implements SyncService {
               'CloudSync', '附件本地文件缺失,跳过上传: sha256=$sha (${entry.value.first})');
           return;
         }
-        if (await provider.storage.exists(path: pathForAttachmentBin(sha))) {
+        if (remoteNames != null
+            ? remoteHas(sha)
+            : await provider.storage.exists(path: pathForAttachmentBin(sha))) {
           skipped++;
           return;
         }
@@ -1679,7 +1809,10 @@ class TransactionsSyncManager implements SyncService {
           forceRefresh: true,
           // F6：复用上方已导出的 JSON，省去 manager 内部对同一账本的
           // 第二次全量导出
-          localSerializedData: jsonStr);
+          localSerializedData: jsonStr,
+          // F6 延伸：localMap 是同一份 payload 的已解析形态，count
+          // 直接透传，manager 跳过第二次 jsonDecode
+          localParsedCount: localCount);
 
       // 转换包的 SyncStatus 为 PiggyCount 的 SyncStatus
       final status = _convertSyncStatus(fcsStatus);

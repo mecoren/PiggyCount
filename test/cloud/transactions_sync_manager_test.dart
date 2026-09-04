@@ -695,9 +695,153 @@ void main() {
       expect(txs.length, 1);
     });
   });
+
+  group('Path A auto_sync 防抖: uploadCurrentLedgerDebounced', () {
+    TransactionsSyncManager buildManager(fcs.CloudStorageService storage) {
+      final provider = _FakeCloudProvider(storage: storage);
+      final manager = TransactionsSyncManager(
+        config: const fcs.CloudServiceConfig(
+          type: fcs.CloudBackendType.supabase,
+          name: 'test',
+        ),
+        db: db,
+        repo: LocalRepository(db),
+      );
+      manager.setSyncManagerForTesting(
+        syncManager:
+            fcs.CloudSyncManager<int>(provider: provider, serializer: _NoopSerializer()),
+        provider: provider,
+      );
+      return manager;
+    }
+
+    Future<void> seedLedger() async {
+      await db.into(db.ledgers).insert(LedgersCompanion.insert(
+            id: const d.Value(1),
+            name: 'L',
+            currency: const d.Value('CNY'),
+          ));
+    }
+
+    test('防抖窗口内多次触发只执行一次上传', () async {
+      await seedLedger();
+      final storage = _CountingStorage();
+      final manager = buildManager(storage);
+
+      // 窗口内连续触发 3 次（模拟连续记账）
+      await manager.uploadCurrentLedgerDebounced(ledgerId: 1);
+      await manager.uploadCurrentLedgerDebounced(ledgerId: 1);
+      await manager.uploadCurrentLedgerDebounced(ledgerId: 1);
+      // 触发后立即检查：防抖窗口内不应有任何上传
+      expect(storage.uploadCount, 0,
+          reason: '防抖窗口内不应触发任何上传');
+
+      // 等 2s 窗口 + 执行时间
+      await Future<void>.delayed(const Duration(milliseconds: 2600));
+      expect(storage.uploadCount, 1,
+          reason: '3 次触发应收敛为 1 次上传');
+
+      manager.cancelAutoSyncTimers();
+      await manager.dispose();
+    });
+
+    test('上传进行中到达的触发在当前轮结束后补跑(最终一致)', () async {
+      await seedLedger();
+      final storage = _CountingStorage(uploadDelay: const Duration(milliseconds: 800));
+      final manager = buildManager(storage);
+
+      // 第一次触发:防抖窗口 2s 后开始上传,storage 上传另有 800ms 延迟
+      // (计数在延迟结束时才递增,断言需覆盖 2s + 流程 + 800ms)
+      await manager.uploadCurrentLedgerDebounced(ledgerId: 1);
+      await Future<void>.delayed(const Duration(milliseconds: 3300));
+      expect(storage.uploadCount, 1, reason: '第一轮防抖上传应已完成');
+
+      // 第一轮已结束(无在途):再次触发走新一轮防抖
+      await manager.uploadCurrentLedgerDebounced(ledgerId: 1);
+      await Future<void>.delayed(const Duration(milliseconds: 3300));
+
+      expect(storage.uploadCount, 2, reason: '第二轮防抖正常执行');
+
+      manager.cancelAutoSyncTimers();
+      await manager.dispose();
+    });
+
+    test('上传进行中到达的触发在当前轮结束后补跑(最终一致,在途窗口)', () async {
+      await seedLedger();
+      final storage = _CountingStorage(uploadDelay: const Duration(milliseconds: 800));
+      final manager = buildManager(storage);
+
+      // 触发后等防抖窗口 + 上传流程启动(此时 storage.upload 在途,
+      // 800ms 延迟尚未结束)
+      await manager.uploadCurrentLedgerDebounced(ledgerId: 1);
+      await Future<void>.delayed(const Duration(milliseconds: 2400));
+
+      // 上传进行中(在途,计数未落)再次触发:应记为 pending 补跑
+      await manager.uploadCurrentLedgerDebounced(ledgerId: 1);
+      // 等第一轮在途结束 + pending 补跑的完整链路(2s 窗口 + 上传)
+      await Future<void>.delayed(const Duration(milliseconds: 5000));
+
+      // 两轮:第一轮(已在途) + pending 补跑轮
+      expect(storage.uploadCount, 2,
+          reason: '进行中触发的变更应在当前轮结束后补跑一次');
+
+      manager.cancelAutoSyncTimers();
+      await manager.dispose();
+    });
+
+    test('dispose 清理待执行计时器,不再触发上传', () async {
+      await seedLedger();
+      final storage = _CountingStorage();
+      final manager = buildManager(storage);
+
+      await manager.uploadCurrentLedgerDebounced(ledgerId: 1);
+      // 防抖窗口内 dispose:计时器应被取消
+      await manager.dispose();
+
+      await Future<void>.delayed(const Duration(milliseconds: 2600));
+      expect(storage.uploadCount, 0,
+          reason: 'dispose 后不应再执行任何防抖上传');
+    });
+  });
 }
 
 // --- Fakes ---
+
+/// 计数版 storage:记录 upload 次数,可选上传延迟(模拟慢网络在途窗口),
+/// 供 uploadCurrentLedgerDebounced 防抖测试观测实际上传轮数。
+class _CountingStorage implements fcs.CloudStorageService {
+  int uploadCount = 0;
+  final Duration uploadDelay;
+
+  _CountingStorage({this.uploadDelay = Duration.zero});
+
+  @override
+  Future<void> upload({
+    required String path,
+    required String data,
+    Map<String, String>? metadata,
+  }) async {
+    if (uploadDelay > Duration.zero) {
+      await Future<void>.delayed(uploadDelay);
+    }
+    uploadCount++;
+  }
+
+  @override
+  Future<String?> download({required String path}) async => null;
+
+  @override
+  Future<void> delete({required String path}) async {}
+
+  @override
+  Future<List<fcs.CloudFile>> list({required String path}) async => [];
+
+  @override
+  Future<bool> exists({required String path}) async => false;
+
+  @override
+  Future<fcs.CloudFile?> getMetadata({required String path}) async => null;
+}
 
 /// 第一次 download 抛异常，之后返回 [successJson]
 class _ThrowThenSuccessStorage implements fcs.CloudStorageService {

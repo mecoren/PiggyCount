@@ -126,7 +126,10 @@ class PostProcessor {
       final syncDone = ref.read(snapshotSyncCompletedProvider.notifier);
       Future(() async {
         try {
-          await sync.uploadCurrentLedger(ledgerId: ledgerId);
+          // 防抖版自动上传（2s 窗口 + pending 补跑）：连续记账时每次编辑
+          // 不再各自触发一次全量快照导出+PUT，收敛为最后一次。手动上传
+          // 入口不受影响（仍走直传）。
+          await sync.uploadCurrentLedgerDebounced(ledgerId: ledgerId);
           refresh.state++;
           syncDone.state++;
           logger.info('PostProcessor', '后台同步完成', 'ledgerId=$ledgerId');
@@ -176,7 +179,7 @@ class PostProcessor {
       final syncDone = c.read(snapshotSyncCompletedProvider.notifier);
       Future(() async {
         try {
-          await sync.uploadCurrentLedger(ledgerId: ledgerId);
+          await sync.uploadCurrentLedgerDebounced(ledgerId: ledgerId);
           refresh.state++;
           syncDone.state++;
           logger.info('PostProcessor', '后台同步完成', 'ledgerId=$ledgerId');
@@ -226,7 +229,7 @@ class PostProcessor {
       final syncDone = ref.read(snapshotSyncCompletedProvider.notifier);
       Future(() async {
         try {
-          await sync.uploadCurrentLedger(ledgerId: ledgerId);
+          await sync.uploadCurrentLedgerDebounced(ledgerId: ledgerId);
           refresh.state++;
           syncDone.state++;
           logger.info('PostProcessor', '后台同步完成', 'ledgerId=$ledgerId');

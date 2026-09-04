@@ -51,6 +51,25 @@ abstract class SyncService {
       bool force = false,
       bool bypassRestoreGuard = false});
 
+  /// 防抖版自动上传（auto_sync 后台路径专用）。
+  ///
+  /// 2 秒窗口内多次触发只执行最后一次；上传进行中到达的触发会在当前
+  /// 轮结束后自动补跑一轮 —— 保证「最后一次数据变更必然最终上云」。
+  /// 手动上传/合并回传请用 [uploadCurrentLedger]（立即语义）。
+  ///
+  /// 默认实现直接透传 [uploadCurrentLedger]：Path B（SyncEngine）自身
+  /// 增量推送代价低且已有 auto sync 防抖，无需窗口收敛；仅
+  /// TransactionsSyncManager（Path A，全量快照导出+PUT）重写本方法。
+  Future<void> uploadCurrentLedgerDebounced(
+      {required int ledgerId,
+      bool force = false,
+      bool bypassRestoreGuard = false}) {
+    return uploadCurrentLedger(
+        ledgerId: ledgerId,
+        force: force,
+        bypassRestoreGuard: bypassRestoreGuard);
+  }
+
   /// 下载并导入到当前账本
   /// 返回 (inserted, deletedDup) 二元组：
   /// - inserted: 新增条数
@@ -94,6 +113,14 @@ class LocalOnlySyncService implements SyncService {
 
   @override
   Future<void> uploadCurrentLedger(
+      {required int ledgerId,
+      bool force = false,
+      bool bypassRestoreGuard = false}) async {
+    throw UnsupportedError('Cloud sync not configured');
+  }
+
+  @override
+  Future<void> uploadCurrentLedgerDebounced(
       {required int ledgerId,
       bool force = false,
       bool bypassRestoreGuard = false}) async {

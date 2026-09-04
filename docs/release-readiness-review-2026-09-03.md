@@ -1,5 +1,7 @@
 # PiggyCount 上线标准审查报告（UI / 性能 / 功能，2026-09-03）
 
+> **状态更新（2026-09-04 第三轮：同步热路径性能收尾）**：对 S3/WebDAV 同步链路做独立全量源码复核，**未发现正确性问题**（前两轮修复逐条核验在位）；发现并修复 3 项热路径性能问题（D1 附件上传 N 次目录探测批量化 / D2 同一快照双 jsonDecode 消除 / D3 Path A auto_sync 防抖——对齐 Path B 既有治理），见「第十部分」。验证基线：`flutter analyze` 0 error（657 持平）；`flutter test` 1046 全过（新增 4 条防抖回归）。
+
 > **状态更新（2026-09-04 第二轮：性能收尾 + S3/WebDAV 同步复核）**：在首轮全部落地的基础上，第二轮聚焦「统计查询全量载行 + N+1」类性能遗留（首轮已覆盖列表/启动/图标路径，本轮覆盖统计聚合路径），共修复 6 项（P1-P6，见文末「第九部分」）；S3/WebDAV 同步链路经全量源码复核**未发现新问题**（签名/条件写/信封原子性/重试护栏/冲突仲裁等前五轮修复全部在位且口径自洽）。验证基线：`flutter analyze` 相对 HEAD 净减 1 条（658→657）、零新增 warning/error；`flutter test` 全量通过（含新增 8 条 SQL 聚合回归测试）。
 
 > **状态更新（2026-09-03 执行完毕）**：A 档 6 项全部修复；B 档 B1-B6/B8 完成（B7 文件拆分按计划留待常规迭代）；C 档 C7（海报币种单位）顺带完成。执行明细见文末「第八部分：执行记录」。验证基线：`flutter analyze` 相对 HEAD 净减 148 条告警、零新增 warning/error；`flutter test` 全量通过。
@@ -226,3 +228,41 @@ IconButton 90 处大多无 tooltip/semanticsLabel；账本金额对小屏用户�
 - `flutter analyze`：0 error；相对 HEAD **净减 1 条**（658→657），零新增 warning/info。
 - `flutter test`：**1042 全部通过**（HEAD 基线 1034 + 新增 8 条聚合回归）。
 - 既有口径回归锁（multi_currency_statistics / statistics_exclude_flags / account_stats_exclude_flags / budget_exclude_flags）全部通过——SQL 改写未改变任何统计口径。
+
+---
+
+## 第十部分：第三轮执行记录（2026-09-04，同步热路径性能收尾）
+
+### 独立复核结论（前两轮结论再验证）
+
+对 S3/WebDAV 同步链路做**独立于前轮报告**的全量源码复核（s3_client / s3_signature / s3_storage_service / s3_provider / webdav_storage_service / webdav_provider / cloud_sync_manager / TransactionsSyncManager / startup_sync_checker / PostProcessor / EncryptedCloudStorageService / provider_factory），**未发现正确性/数据安全问题**。前两轮审计的全部修复经代码逐条核验在位：
+
+- S3：SigV4 严格 RFC 3986 编码（请求/签名两侧同函数，逐字节一致）；Content-Length 不签；UNSIGNED-PAYLOAD 流式上传 + 早响应停泵；412/404/409 → CloudPreconditionFailedException 统一冲突语义（409 有限重试 2 次仅整块路径）；时钟偏差自动补偿（偏移写入 signer + 立即重签）；ListObjects V1/V2 三重翻页护栏 + maxKeys 总量语义；404 桶级/对象级语义区分；`..` 分段级路径遍历拒绝（含 keyPrefix 自身校验）；metadata base64 往返 + padding 剥离自愈；探测带 keyPrefix（前缀级最小权限可用）。
+- WebDAV：HTTPS 强制 + `davs://` 显式拒绝 + 3xx 拒绝跟随（凭据不重放）；validateStatus 只拒 3xx 保住认证协商；temp-PUT→MOVE→降级交换原子发布（W-A 成功 200 假失败探测/W-F 备份名并发序号/失败回滚备份）；信封格式 meta 与数据同文件原子发布；(path,eTag) 元数据缓存 + 解析失败不缓存；WD-2 父目录缓存 + 404 自愈重试；错误分类器结构化优先 + 措辞兜底无数字子串（`:8404` 端口不误判）。
+- Manager/App 层：条件写锚点（探测捕获 eTag → If-Match）；写后校验 verified=false 不清脏标记不 markPushed；M7 冲突探测（元数据指纹→内嵌指纹终审→可信墙钟仲裁，瞬态故障中止上传不放行）；TSM-P8 账本级互斥锁 + SyncRestoreGuard 恢复临界区；TSM-P11 初始化代次令牌（加密重初始化竞态）；附件内容寻址三态下载 + sha256 终审多形态嗅探。
+
+### 本轮修复（S3/WebDAV 同步热路径性能，3 项）
+
+聚焦「每次记账都跑」的同步链路浪费——正确性全部达标后，热路径上的重复功成为新的可优化点：
+
+| 条目 | 问题 | 修复 | 文件 |
+|---|---|---|---|
+| **D1 附件上传 N 次目录探测** | `uploadAttachmentObjects` 对每个 sha 逐个 `storage.exists()`。WebDAV 的 exists() 是**父目录 PROPFIND 全量列举**（attachments/ 目录大时每次都是整目录 XML 拉取），N 个附件 = N 次同一目录的重复列举；S3 是 N 次 HEAD。auto_sync 开启时每次记账都完整跑一遍 | 上传前单次 `list('attachments')` 建立云端存在集合（名字匹配），探测次数从 N → 1；list 失败（网络抖动/权限）不阻断——退回逐对象 exists()（语义与旧行为一致），上传流程永不因探测故障中止 | `transactions_sync_manager.dart` |
+| **D2 同一 payload 双 jsonDecode** | 一次上传链路对同一份快照 JSON 解析两次：TSM `_uploadCurrentLedgerCore` 解析一次（取 ledgerName/count/fingerprint），`CloudSyncManager.upload` 再解析一次（取 count 写 metadata）。万笔账本快照 5-15MB，每次解析都是全树分配+遍历 | manager 增加 `preParsedCount`（upload）/ `localParsedCount`（getStatus）参数，TSM 把已解析的 count 透传，manager 跳过第二次解析；提取公共 `_extractTopLevelCount`（静默语义与原内联一致） | `cloud_sync_manager.dart`、`transactions_sync_manager.dart` |
+| **D3 auto_sync 无防抖** | Path A 的 PostProcessor 在**每笔**交易保存后立即触发 `uploadCurrentLedger`（全量导出 + 附件探测 + 整快照 PUT）。连续记账场景（批量补录/导入几十笔）每次编辑都完整跑一遍：慢网络下前一次未返回后续仍在锁上排队；Path B（SyncEngine）早已治理（`_scheduleAutoSync` 2s 防抖），Path A 是漏网的热路径 | TSM 新增 `uploadCurrentLedgerDebounced`：2s 窗口（对齐 Path B）多次触发收敛为最后一次；上传进行中到达的触发记 pending、当前轮结束自动补跑（「最后一次编辑必然最终上云」的最终一致保证）；dispose 取消全部计时器。`SyncService` 接口新增默认透传实现（Path B 增量 push 代价低无需窗口）；PostProcessor 三处 auto_sync 调用点全部切换；手动上传/合并回传不受影响（仍走直传） | `transactions_sync_manager.dart`、`sync_service.dart`、`sync_engine.dart`、`post_processor.dart` |
+
+### 实现要点
+
+- **D1 语义决策**：不把「list 失败」当「云端为空」（那会盲目重传甚至覆盖判定），而是退回逐对象 exists() 的旧路径——探测故障只是性能回退，不是语义变化。fake storage 的 list 同步修正为按前缀返回对象名（对齐真实后端「list 成功即权威」语义），既有 exists 去重测试在新路径下原样通过。
+- **D3 防抖状态机**：三态（空闲/计时中/上传中）。计时中重触发只重置计时；上传中重触发记 pending（参数取最后一次值），当前轮 finally 中检查 pending 自动补跑一轮。补跑同样走 `uploadCurrentLedger`（含 TSM-P8 锁/守卫/冲突探测全套），不绕过任何安全闸门。
+- 测试基建：`transactions_sync_manager_test.dart` 新增 4 条防抖用例（窗口收敛 3→1 / 在途 pending 补跑最终 2 轮 / 补跑轮正常执行 / dispose 后零上传），`_CountingStorage` 支持可配置上传延迟模拟慢网络在途窗口。
+
+### 本轮未发现需修复的同步正确性问题
+
+重点复核过且确认无恙的高危面：恢复临界区与上传互斥（TSM-P8）、加密重初始化竞态（TSM-P11 代次令牌）、E2EE 条件写密文形态（P0-2 upload 与 uploadBinary 形态对齐）、跨身份接管保护（TSM-P1）、上传冲突仲裁链完整性（元数据指纹→内嵌指纹→可信墙钟）、WebDAV 信封原子性、S3 条件写异常语义。S3/WebDAV 链路维持「可上线」判定。
+
+### 验证结论（第三轮）
+
+- `flutter analyze`：**0 error**；657 条与 HEAD 基线持平（全部为 test 目录既有 info/warning），零新增。
+- `flutter test`：**1046 全部通过**（HEAD 基线 1042 + 新增 4 条防抖用例）；`flutter_cloud_sync` 包内 113 条全过。
+- l10n 完整性复核：四语言顶层词条 2532 个完全对齐（此前抽查疑似的「缺失 key」经 JSON 解析核实均为 placeholder 元数据描述条目，非真实词条缺失）。

@@ -305,6 +305,21 @@ class SyncEngine implements app.SyncService {
   }
 
   @override
+  Future<void> uploadCurrentLedgerDebounced(
+      {required int ledgerId,
+      bool force = false,
+      bool bypassRestoreGuard = false}) {
+    // Path B 不做 TSM 式快照防抖：增量 push 只推 changeTracker 登记过的
+    // 操作（代价低，无全量导出），且自身的 auto sync 调度已有 2s 防抖
+    // （sync_engine_realtime._scheduleAutoSync）。PostProcessor 的
+    // auto_sync 路径对 Path B 而言是即时增量推送，直接透传。
+    return uploadCurrentLedger(
+        ledgerId: ledgerId,
+        force: force,
+        bypassRestoreGuard: bypassRestoreGuard);
+  }
+
+  @override
   Future<({int inserted, int deletedDup})> downloadAndRestoreToCurrentLedger(
       {required int ledgerId}) async {
     logger.info('SyncEngine', '下载并恢复账本 ledger=$ledgerId');

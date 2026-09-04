@@ -335,7 +335,9 @@ void main() {
   });
 }
 
-/// 内存 Map 版 storage:真实记录 upload/exists/download 行为
+/// 内存 Map 版 storage:真实记录 upload/exists/download 行为。
+/// list 按路径前缀返回 files 中的对象名（对齐真实后端语义：
+/// list 成功即权威，供 uploadAttachmentObjects 的批量存在性判定使用）。
 class _MapStorage implements fcs.CloudStorageService {
   final Map<String, String> files = {};
   final List<String> downloads = [];
@@ -361,7 +363,17 @@ class _MapStorage implements fcs.CloudStorageService {
   }
 
   @override
-  Future<List<fcs.CloudFile>> list({required String path}) async => [];
+  Future<List<fcs.CloudFile>> list({required String path}) async {
+    // 附件目录列举：返回该目录下的对象名（path 形如 'attachments'）
+    final prefix = path.isEmpty ? '' : '$path/';
+    return files.keys
+        .where((k) => k.startsWith(prefix))
+        .map((k) => fcs.CloudFile(
+              name: k.substring(prefix.length),
+              path: k,
+            ))
+        .toList();
+  }
 
   @override
   Future<bool> exists({required String path}) async => files.containsKey(path);

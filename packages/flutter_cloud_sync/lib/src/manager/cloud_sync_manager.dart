@@ -55,6 +55,24 @@ String? _metaValue(Map<String, dynamic>? metadata, String key) {
   return null;
 }
 
+/// 从序列化 payload（JSON 对象形态）提取顶层 'count' 数值。
+///
+/// 仅顶层键读取，非 JSON / 无 count 键 / 类型异常一律返回 null
+/// （与旧内联逻辑的静默语义一致）。供 upload/getStatus 写 metadata
+/// 使用；调用方已解析过 payload 时可经 [CloudSyncManager.upload] 的
+/// preParsedCount / getStatus 的 localParsedCount 直接传入跳过解析。
+int? _extractTopLevelCount(String payload) {
+  try {
+    final json = jsonDecode(payload) as Map<String, dynamic>?;
+    if (json != null && json.containsKey('count')) {
+      return (json['count'] as num?)?.toInt();
+    }
+  } catch (_) {
+    // Not JSON or doesn't have count field, ignore
+  }
+  return null;
+}
+
 /// [CloudSyncManager.upload] 的写后校验结论（审计 C3）。
 @immutable
 class CloudUploadResult {
@@ -166,6 +184,7 @@ class CloudSyncManager<T> {
     String? serializedData,
     String? fingerprint,
     String? ifMatchEtag,
+    int? preParsedCount,
   }) async {
     logger?.info('Starting upload: $path');
 
@@ -191,17 +210,13 @@ class CloudSyncManager<T> {
       logger?.debug('Fingerprint: $actualFingerprint');
 
       // 3.5 尝试从序列化数据中提取 count，写入 metadata 供 getStatus
-      // 直接读取（无需下载全量文件）
-      String? countStr;
-      try {
-        final json = jsonDecode(payload) as Map<String, dynamic>?;
-        if (json != null && json.containsKey('count')) {
-          final count = (json['count'] as num?)?.toInt();
-          if (count != null) countStr = count.toString();
-        }
-      } catch (_) {
-        // Not JSON or doesn't have count field, ignore
-      }
+      // 直接读取（无需下载全量文件）。
+      //
+      // preParsedCount：调用方（如 TransactionsSyncManager）往往已经
+      // jsonDecode 过同一份 payload 提取元信息，这里允许直接传入已解析
+      // 的 count，跳过对大快照的第二次 jsonDecode + 全树遍历。
+      final count = preParsedCount ?? _extractTopLevelCount(payload);
+      final countStr = count?.toString();
 
       // 4. Prepare metadata
       // 用户 metadata 放在前面，保留字段（fingerprint/uploadedAt/userId/count）
@@ -430,6 +445,7 @@ class CloudSyncManager<T> {
     DateTime? localUpdatedAt,
     bool forceRefresh = false,
     String? localSerializedData,
+    int? localParsedCount,
   }) async {
     logger?.debug('Getting sync status: $path (forceRefresh: $forceRefresh)');
 
@@ -465,15 +481,9 @@ class CloudSyncManager<T> {
         localData = localSerializedData ?? await serializer.serialize(data);
         localFingerprint = serializer.fingerprint(localData);
 
-        // Try to extract count from serialized data (if it's JSON with a 'count' field)
-        try {
-          final json = jsonDecode(localData) as Map<String, dynamic>?;
-          if (json != null && json.containsKey('count')) {
-            localCount = (json['count'] as num?)?.toInt();
-          }
-        } catch (_) {
-          // Not JSON or doesn't have count field, ignore
-        }
+        // localParsedCount：调用方（TSM.getStatus）已 jsonDecode 过同一份
+        // payload 提取 count 时直接复用，跳过对大快照的第二次解析。
+        localCount = localParsedCount ?? _extractTopLevelCount(localData);
 
         logger?.debug('Local fingerprint: $localFingerprint, count: $localCount');
       }
