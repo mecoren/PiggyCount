@@ -65,6 +65,12 @@ abstract class CategoryRepository {
   /// 根据ID获取分类
   Future<Category?> getCategoryById(int categoryId);
 
+  /// 批量获取分类（一次查询，返回 id → Category 映射）。
+  ///
+  /// 供聚合/统计场景消除「循环内逐条 getCategoryById」的 N+1；
+  /// 查不到的 id 不会出现在结果 map 中，由调用方按缺失处理。
+  Future<Map<int, Category>> getCategoriesByIds(Iterable<int> ids);
+
   /// 获取所有分类
   Future<List<Category>> getAllCategories();
 

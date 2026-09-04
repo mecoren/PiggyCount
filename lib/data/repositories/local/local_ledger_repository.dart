@@ -104,20 +104,46 @@ class LocalLedgerRepository implements LedgerRepository {
     bool accountFeatureEnabled = true,
     List<Transaction>? transactions,
   }) async {
-    // 如果没有传入 transactions，则查询
-    final rows = transactions ?? await (db.select(db.transactions)
-          ..where((t) => t.ledgerId.equals(ledgerId)))
-        .get();
+    // 调用方已持有交易行（如共享同一批数据的批量统计）时直接内存累加，
+    // 不再回库。
+    if (transactions != null) {
+      return _statsFromRows(transactions);
+    }
 
-    // 交易数
-    final transactionCount = rows.length;
+    // 单账本：一条 GROUP BY 聚合 SQL。此前把该账本全部交易行加载进内存
+    // 再逐行累加 —— 万笔账本每次状态刷新都全量分配行对象（isolate 间
+    // 传输 + GC 压力），SUM/CASE 在 SQLite 引擎内完成只需一行结果。
+    // 余额口径与 _statsFromRows 完全一致：nativeAmount ?? amount 兜底、
+    // income 加 / expense 减 / **transfer 不计入**（同一账户间转移不
+    // 改变账本总余额）。
+    final row = await db
+        .customSelect(
+          'SELECT COUNT(*) AS cnt, '
+          "COALESCE(SUM(CASE type WHEN 'income' THEN 1 "
+          "WHEN 'expense' THEN -1 ELSE 0 END "
+          '* COALESCE(native_amount, amount)), 0) AS balance '
+          'FROM transactions WHERE ledger_id = ?1',
+          variables: [d.Variable.withInt(ledgerId)],
+          readsFrom: {db.transactions},
+        )
+        .getSingle();
+    int parseCount(dynamic v) {
+      if (v is int) return v;
+      if (v is BigInt) return v.toInt();
+      if (v is num) return v.toInt();
+      return 0;
+    }
 
-    // v1.15.0: 账户独立后，账本余额仅计算交易收支，不再叠加账户初始余额
+    return (
+      balance: (row.data['balance'] as num?)?.toDouble() ?? 0.0,
+      transactionCount: parseCount(row.data['cnt']),
+    );
+  }
+
+  /// 从已有交易行内存累加统计（口径与 SQL 聚合版严格一致）。
+  static ({double balance, int transactionCount}) _statsFromRows(
+      List<Transaction> rows) {
     double balance = 0.0;
-
-    // 账本余额 = 跨账户收支汇总 → 账本维度,读折算值 nativeAmount(?? amount
-    // 兜底,单币种账本 native==amount 结果不变)。原先裸加 t.amount 在多币种
-    // 账本下把不同币种原值直接相加(CNY+JPY),且改主币种后不随折算更新。
     for (final t in rows) {
       final v = t.nativeAmount ?? t.amount;
       if (t.type == 'income') {
@@ -127,8 +153,34 @@ class LocalLedgerRepository implements LedgerRepository {
       }
       // transfer 不影响总余额
     }
+    return (balance: balance, transactionCount: rows.length);
+  }
 
-    return (balance: balance, transactionCount: transactionCount);
+  @override
+  Future<Map<int, ({double balance, int transactionCount})>>
+      getAllLedgerStats() async {
+    // 一条 GROUP BY 返回所有账本聚合（无交易的账本聚合行缺失，由
+    // ledgers 表补零 —— 列表页需要给空账本显示 0/0.00 而非缺条目）。
+    final rows = await db
+        .customSelect(
+          'SELECT l.id AS id, '
+          'COALESCE(a.cnt, 0) AS cnt, COALESCE(a.balance, 0) AS balance '
+          'FROM ledgers l LEFT JOIN ('
+          '  SELECT ledger_id, COUNT(*) AS cnt, '
+          "  SUM(CASE type WHEN 'income' THEN 1 WHEN 'expense' THEN -1 "
+          '  ELSE 0 END * COALESCE(native_amount, amount)) AS balance '
+          '  FROM transactions GROUP BY ledger_id'
+          ') a ON a.ledger_id = l.id',
+          readsFrom: {db.ledgers, db.transactions},
+        )
+        .get();
+    return {
+      for (final row in rows)
+        row.read<int>('id'): (
+          balance: (row.data['balance'] as num?)?.toDouble() ?? 0.0,
+          transactionCount: row.read<int>('cnt'),
+        ),
+    };
   }
 
   @override

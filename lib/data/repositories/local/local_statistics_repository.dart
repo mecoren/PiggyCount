@@ -201,21 +201,30 @@ class LocalStatisticsRepository implements StatisticsRepository {
     required DateTime start,
     required DateTime end,
   }) async {
-    final rows = await (db.select(db.transactions)
-          ..where((t) =>
-              t.ledgerId.equals(ledgerId) &
-              t.type.equals(type) &
-              t.excludeFromStats.equals(false) &
-              t.happenedAt.isBiggerOrEqualValue(start) & t.happenedAt.isSmallerThanValue(end)))
-        .get();
-    final map = <DateTime, double>{};
-    for (final t in rows) {
-      final dt = t.happenedAt.toLocal();
-      final day = DateTime(dt.year, dt.month, dt.day);
-      map.update(day, (v) => v + (t.nativeAmount ?? t.amount),
-          ifAbsent: () => t.nativeAmount ?? t.amount);
-    }
-    // ensure full range continuity
+    // SQL 分组聚合（此前全量加载日期范围内交易行再 Dart 循环累加）。
+    // 分组键与旧实现严格一致：本地时区的日界（date(happened_at, 'unixepoch',
+    // 'localtime')），原生 Dart 构造的 DateTime(local) 转 unixepoch 传入。
+    // 结果补零保证 [start, end) 区间逐日连续。
+    final rows = await db.customSelect(
+      "SELECT date(happened_at, 'unixepoch', 'localtime') AS day, "
+      'SUM(COALESCE(native_amount, amount)) AS total '
+      'FROM transactions '
+      'WHERE ledger_id = ?1 AND type = ?2 AND exclude_from_stats = 0 '
+      'AND happened_at >= ?3 AND happened_at < ?4 '
+      'GROUP BY day',
+      variables: [
+        d.Variable<int>(ledgerId),
+        d.Variable<String>(type),
+        d.Variable<DateTime>(start),
+        d.Variable<DateTime>(end),
+      ],
+      readsFrom: {db.transactions},
+    ).get();
+    final map = <DateTime, double>{
+      for (final r in rows)
+        DateTime.parse(r.read<String>('day')):
+            (r.read<double>('total') as num).toDouble(),
+    };
     final result = <({DateTime day, double total})>[];
     for (DateTime d = DateTime(start.year, start.month, start.day);
         d.isBefore(end);
@@ -233,21 +242,34 @@ class LocalStatisticsRepository implements StatisticsRepository {
   }) async {
     final sd = await _monthStartDayOf(ledgerId);
     final yr = yearRangeFor(year, sd);
-    final rows = await (db.select(db.transactions)
-          ..where((t) =>
-              t.ledgerId.equals(ledgerId) &
-              t.type.equals(type) &
-              t.excludeFromStats.equals(false) &
-              t.happenedAt.isBiggerOrEqualValue(yr.start) &
-              t.happenedAt.isSmallerThanValue(yr.end)))
-        .get();
-    final map = <int, double>{};
-    for (final t in rows) {
-      // 年范围 [当年1月周期起点, 次年1月周期起点) 内的标签必属 year,直接取 month
-      final label = labelForDate(t.happenedAt.toLocal(), sd);
-      map.update(label.month, (v) => v + (t.nativeAmount ?? t.amount),
-          ifAbsent: () => t.nativeAmount ?? t.amount);
-    }
+    // SQL 聚合（此前全量载行再 Dart 循环）。startDay=1 时直接按自然月
+    // 分组；startDay>1 时先用 WHERE 剪到该年范围，再按「周期标签月」在
+    // SQL 内计算分组键（day >= startDay 归当月，否则归上月，与
+    // labelForDate 逐字一致）。
+    final rows = await db.customSelect(
+      "SELECT strftime('%Y-%m', happened_at, 'unixepoch', 'localtime', "
+      "CASE WHEN CAST(strftime('%d', happened_at, 'unixepoch', 'localtime') AS INTEGER) >= ?4 "
+      "THEN 'start of month' ELSE '-1 month' END) AS label, "
+      'SUM(COALESCE(native_amount, amount)) AS total '
+      'FROM transactions '
+      'WHERE ledger_id = ?1 AND type = ?2 AND exclude_from_stats = 0 '
+      'AND happened_at >= ?3 AND happened_at < ?5 '
+      "GROUP BY label HAVING substr(label, 1, 4) = ?6",
+      variables: [
+        d.Variable<int>(ledgerId),
+        d.Variable<String>(type),
+        d.Variable<DateTime>(yr.start),
+        d.Variable<int>(sd),
+        d.Variable<DateTime>(yr.end),
+        d.Variable<String>(year.toString()),
+      ],
+      readsFrom: {db.transactions},
+    ).get();
+    final map = <int, double>{
+      for (final r in rows)
+        int.parse(r.read<String>('label').split('-')[1]):
+            (r.read<double>('total') as num).toDouble(),
+    };
     final result = <({DateTime month, double total})>[];
     for (int m = 1; m <= 12; m++) {
       result.add((month: DateTime(year, m, 1), total: map[m] ?? 0));
@@ -260,24 +282,35 @@ class LocalStatisticsRepository implements StatisticsRepository {
     required int ledgerId,
     required String type,
   }) async {
-    final rows = await (db.select(db.transactions)
-          ..where((t) =>
-              t.ledgerId.equals(ledgerId) &
-              t.type.equals(type) &
-              t.excludeFromStats.equals(false)))
-        .get();
-    if (rows.isEmpty) return const [];
     final sd = await _monthStartDayOf(ledgerId);
-    final map = <int, double>{};
-    int minYear = 9999, maxYear = 0;
-    for (final t in rows) {
-      final y = labelForDate(t.happenedAt.toLocal(), sd).year;
-      if (y < minYear) minYear = y;
-      if (y > maxYear) maxYear = y;
-      map.update(y, (v) => v + (t.nativeAmount ?? t.amount),
-          ifAbsent: () => t.nativeAmount ?? t.amount);
-    }
+    // SQL 聚合（此前**无任何时间过滤**全量载入该账本全部交易行）。
+    // startDay>1 时按周期标签年分组（同 totalsByMonth 的 label 规则）；
+    // startDay=1 直接自然年。MIN/MAX 用同一标签列，保证首尾年连续性
+    // 与旧实现一致（无数据返回空列表）。
+    final rows = await db.customSelect(
+      "WITH labeled AS (SELECT "
+      "strftime('%Y', happened_at, 'unixepoch', 'localtime', "
+      "CASE WHEN CAST(strftime('%d', happened_at, 'unixepoch', 'localtime') AS INTEGER) >= ?3 "
+      "THEN 'start of month' ELSE '-1 month' END) AS label, "
+      'COALESCE(native_amount, amount) AS v '
+      'FROM transactions '
+      'WHERE ledger_id = ?1 AND type = ?2 AND exclude_from_stats = 0) '
+      'SELECT label, SUM(v) AS total FROM labeled GROUP BY label ORDER BY label',
+      variables: [
+        d.Variable<int>(ledgerId),
+        d.Variable<String>(type),
+        d.Variable<int>(sd),
+      ],
+      readsFrom: {db.transactions},
+    ).get();
+    if (rows.isEmpty) return const [];
     final out = <({int year, double total})>[];
+    var minYear = int.parse(rows.first.read<String>('label'));
+    var maxYear = int.parse(rows.last.read<String>('label'));
+    final map = <int, double>{
+      for (final r in rows)
+        int.parse(r.read<String>('label')): (r.read<double>('total') as num).toDouble(),
+    };
     for (int y = minYear; y <= maxYear; y++) {
       out.add((year: y, total: map[y] ?? 0));
     }

@@ -35,7 +35,27 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
   DateTime _selWeek = weekLabelFor(DateTime.now());
 
   /// 审计 U8：FutureBuilder future 缓存（key: type|start|end|refreshTick）
-  final Map<String, Future<List<dynamic>>> _analyticsFutureCache = {};
+  ///
+  /// 单条记忆化：只保留**最近一次**查询的 future —— 键含 refreshTick/时间戳/
+  /// 类型，交互每次变化都产生新键，无淘汰的 Map 会让旧 future（及其持有的
+  /// 整段查询结果 list）随交互无限累积（本页常驻主 Tab 栈，泄漏随会话增长）。
+  /// 唯一消费点只在 build 里读当前键，历史条目无人再读，保留单条即满足
+  /// 「setState 重建复用已发查询」的原始目的。
+  Future<List<dynamic>>? _lastAnalyticsFuture;
+  String? _lastAnalyticsKey;
+
+  /// U8 缓存的记忆化入口：键命中返回已发 future；未命中发起查询并替换
+  /// 旧条目（单条容量，见 _lastAnalyticsFuture 注释）。
+  Future<List<dynamic>> _rememberAnalyticsFuture(
+      String key, Future<List<dynamic>> Function() create) {
+    if (_lastAnalyticsKey == key && _lastAnalyticsFuture != null) {
+      return _lastAnalyticsFuture!;
+    }
+    final future = create();
+    _lastAnalyticsKey = key;
+    _lastAnalyticsFuture = future;
+    return future;
+  }
 
   // 显示周期选择器
   void _showPeriodPicker() async {
@@ -739,8 +759,9 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
               key: ValueKey('analytics_$_type'),
               // 审计 U8：缓存 future——任意 setState（横幅交互等）重建时
               // 复用已发查询，不再整段重发导致闪烁；数据变化（refreshTick）
-              // 或时间范围/类型变化才发起新查询。
-              future: _analyticsFutureCache.putIfAbsent(
+              // 或时间范围/类型变化才发起新查询。单条记忆化：旧键的 future
+              // 无人再读，直接丢弃防止随交互无限累积（见字段注释）。
+              future: _rememberAnalyticsFuture(
                 '$_type|${start.millisecondsSinceEpoch}|'
                 '${end.millisecondsSinceEpoch}|$refreshTick|'
                 '$ledgerId',
@@ -1520,13 +1541,28 @@ Future<
   final topLevelInfo = <int, db.Category>{};
   final topLevelNames = <int?, String>{};
   final topLevelIcons = <int?, String?>{};
+
+  // 批量预取全部正 id 分类（此前三段循环内逐条 await getCategoryById，
+  // 分类层级典型 20-60 个 → 每次刷新串行 20-60 条点查）。负 id（共享
+  // 账本 synthetic）仍从 sharedSynthetic map 取，主表查不到。
+  final positiveIds = <int>{
+    for (final item in hierarchyData)
+      if (item.id != null && item.id! > 0) item.id!,
+    for (final item in hierarchyData)
+      if (item.level == 2 &&
+          item.parentId != null &&
+          item.parentId! > 0)
+        item.parentId!,
+  };
+  final categoriesById = await repo.getCategoriesByIds(positiveIds);
+
   for (final item in hierarchyData) {
     if (item.level == 1) {
       topLevelNames[item.id] = item.name;
       topLevelIcons[item.id] = item.icon;
       if (item.id != null && item.id! > 0) {
         // 主表正 id:查 db.Category
-        final category = await repo.getCategoryById(item.id!);
+        final category = categoriesById[item.id!];
         if (category != null) {
           topLevelInfo[item.id!] = category;
         }
@@ -1564,7 +1600,7 @@ Future<
       topLevelIcons[parentId] = synthetic.icon;
       continue;
     }
-    final category = await repo.getCategoryById(parentId);
+    final category = categoriesById[parentId];
     if (category != null) {
       topLevelInfo[parentId] = category;
     }
@@ -1597,7 +1633,7 @@ Future<
         if (item.id! < 0) {
           subCategory = sharedSynthetic[item.id!];
         } else {
-          subCategory = await repo.getCategoryById(item.id!);
+          subCategory = categoriesById[item.id!];
         }
         if (subCategory != null) {
           subCategoriesMap.putIfAbsent(item.parentId, () => []);

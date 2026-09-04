@@ -481,12 +481,89 @@ class LocalAccountRepository implements AccountRepository {
   @override
   Future<Map<int, ({double balance, double expense, double income})>> getAllAccountStats() async {
     final accounts = await db.select(db.accounts).get();
+    final valuationIds =
+        accounts.where((a) => isValuationOnlyType(a.type)).map((a) => a.id).toSet();
+
+    // 单条聚合 SQL 同时算出所有账户的三个口径（此前逐账户串行 4-7 条查询，
+    // 且每条全量加载行到内存再 Dart 累加）。口径与 getAccountBalance /
+    // getAccountExpense / getAccountIncome 逐字对齐：
+    // - balance：initialBalance + income − expense − 转出 transfer + adjustment
+    //   + 转入 transfer（均排除成员共享账本，不排除 excludeFromStats）；
+    // - expense：主账户 expense + 转出 transfer（排除 excludeFromStats）；
+    // - income：主账户 income + 转入 transfer（排除 excludeFromStats）。
+    // 估值账户无日常交易，直接返回 initialBalance / 0 / 0。
+    final exclude = _kExcludeJoinedSharedLedgerSql;
+    final rows = await db.customSelect(
+      "SELECT a.id AS id, a.initial_balance AS initial_balance, "
+      'COALESCE(b.main_income, 0) AS main_income, '
+      'COALESCE(b.main_expense, 0) AS main_expense, '
+      'COALESCE(b.main_transfer_out, 0) AS main_transfer_out, '
+      'COALESCE(b.main_adjustment, 0) AS main_adjustment, '
+      'COALESCE(t.transfer_in, 0) AS transfer_in, '
+      'COALESCE(e.expense, 0) AS expense, '
+      'COALESCE(im.income_main, 0) AS income_main, '
+      'COALESCE(i.income, 0) AS income_in '
+      'FROM accounts a '
+      'LEFT JOIN ('
+      '  SELECT account_id AS aid, '
+      "  SUM(CASE type WHEN 'income' THEN amount ELSE 0 END) AS main_income, "
+      "  SUM(CASE type WHEN 'expense' THEN amount ELSE 0 END) AS main_expense, "
+      "  SUM(CASE type WHEN 'transfer' THEN amount ELSE 0 END) AS main_transfer_out, "
+      "  SUM(CASE type WHEN 'adjustment' THEN amount ELSE 0 END) AS main_adjustment "
+      '  FROM transactions '
+      '  WHERE account_id IS NOT NULL AND $exclude '
+      '  GROUP BY account_id'
+      ') b ON b.aid = a.id '
+      'LEFT JOIN ('
+      '  SELECT to_account_id AS tid, SUM(amount) AS transfer_in '
+      "  FROM transactions WHERE type = 'transfer' AND to_account_id IS NOT NULL "
+      '  AND $exclude GROUP BY to_account_id'
+      ') t ON t.tid = a.id '
+      'LEFT JOIN ('
+      '  SELECT account_id AS eid, SUM(amount) AS expense '
+      '  FROM transactions '
+      '  WHERE account_id IS NOT NULL AND exclude_from_stats = 0 '
+      "  AND type IN ('expense', 'transfer') AND $exclude "
+      '  GROUP BY account_id'
+      ') e ON e.eid = a.id '
+      'LEFT JOIN ('
+      '  SELECT account_id AS iid, '
+      "  SUM(CASE type WHEN 'income' THEN amount ELSE 0 END) AS income_main "
+      "  FROM transactions WHERE account_id IS NOT NULL AND exclude_from_stats = 0 "
+      '  AND $exclude GROUP BY account_id'
+      ') im ON im.iid = a.id '
+      'LEFT JOIN ('
+      '  SELECT to_account_id AS tid2, SUM(amount) AS income '
+      "  FROM transactions WHERE type = 'transfer' AND to_account_id IS NOT NULL "
+      '  AND exclude_from_stats = 0 AND $exclude GROUP BY to_account_id'
+      ') i ON i.tid2 = a.id',
+      readsFrom: {db.accounts, db.transactions, db.ledgers},
+    ).get();
+
+    double dval(dynamic v) => v is num ? v.toDouble() : 0.0;
 
     final Map<int, ({double balance, double expense, double income})> stats = {};
-    for (final account in accounts) {
-      stats[account.id] = await getAccountStats(account.id);
+    for (final row in rows) {
+      final id = row.read<int>('id');
+      if (valuationIds.contains(id)) {
+        stats[id] = (
+          balance: dval(row.data['initial_balance']),
+          expense: 0.0,
+          income: 0.0,
+        );
+        continue;
+      }
+      stats[id] = (
+        balance: dval(row.data['initial_balance']) +
+            dval(row.data['main_income']) -
+            dval(row.data['main_expense']) -
+            dval(row.data['main_transfer_out']) +
+            dval(row.data['main_adjustment']) +
+            dval(row.data['transfer_in']),
+        expense: dval(row.data['expense']),
+        income: dval(row.data['income_main']) + dval(row.data['income_in']),
+      );
     }
-
     return stats;
   }
 

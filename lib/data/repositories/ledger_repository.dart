@@ -33,6 +33,14 @@ abstract class LedgerRepository {
     List<Transaction>? transactions,
   });
 
+  /// 一次查询返回所有账本的 (balance, transactionCount)。
+  ///
+  /// 供账本列表类 UI 使用：逐账本调用 [getLedgerStats] 是 N+1（N 个账本
+  /// N 次往返），本方法合并为一条 GROUP BY 聚合 SQL。无交易的账本不出
+  /// 现在聚合行中，由实现方补零条目。
+  Future<Map<int, ({double balance, int transactionCount})>>
+      getAllLedgerStats();
+
   /// 创建账本
   Future<int> createLedger({
     required String name,

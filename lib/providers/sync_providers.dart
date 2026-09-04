@@ -1033,18 +1033,15 @@ final localLedgersProvider =
   try {
     final repo = ref.watch(repositoryProvider);
 
-    // 获取账户功能开启状态
-    final accountFeatureEnabled =
-        await ref.watch(accountFeatureEnabledProvider.future);
-
     final localLedgers = await repo.getAllLedgers();
+    // 一条 GROUP BY 聚合取全部账本统计。此前逐账本 getLedgerStats 是
+    // N+1（N 个账本 N 次查询，且旧实现每次全量加载该账本交易行）。
+    final statsMap = await repo.getAllLedgerStats();
 
     final result = <LedgerDisplayItem>[];
     for (final ledger in localLedgers) {
-      final stats = await repo.getLedgerStats(
-        ledgerId: ledger.id,
-        accountFeatureEnabled: accountFeatureEnabled,
-      );
+      final stats = statsMap[ledger.id] ??
+          (balance: 0.0, transactionCount: 0);
 
       result.add(LedgerDisplayItem.fromLocal(
         id: ledger.id,
@@ -1144,13 +1141,13 @@ final allLedgersProvider = FutureProvider<List<LedgerDisplayItem>>((ref) async {
   try {
     final repo = ref.watch(repositoryProvider);
     final localLedgers = await repo.getAllLedgers();
+    // 同 localLedgersProvider：单条聚合 SQL 代替逐账本 N+1 查询
+    final statsMap = await repo.getAllLedgerStats();
 
     final result = <LedgerDisplayItem>[];
     for (final ledger in localLedgers) {
-      final stats = await repo.getLedgerStats(
-        ledgerId: ledger.id,
-        accountFeatureEnabled: false,
-      );
+      final stats = statsMap[ledger.id] ??
+          (balance: 0.0, transactionCount: 0);
 
       result.add(LedgerDisplayItem.fromLocal(
         id: ledger.id,

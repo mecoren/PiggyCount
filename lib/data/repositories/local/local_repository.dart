@@ -109,6 +109,10 @@ class LocalRepository extends BaseRepository {
       );
 
   @override
+  Future<Map<int, ({double balance, int transactionCount})>>
+      getAllLedgerStats() => _ledgerRepo.getAllLedgerStats();
+
+  @override
   Future<int> createLedger({required String name, String currency = 'CNY'}) {
     // 审计 C3：新建账本就地生成跨设备稳定身份（syncId）并登记 ledger:upsert
     // change。此前 syncId 缺失到首次上传才由 pathForLedger 就地生成，期间
@@ -1496,6 +1500,10 @@ class LocalRepository extends BaseRepository {
   @override
   Future<Category?> getCategoryById(int categoryId) =>
       _categoryRepo.getCategoryById(categoryId);
+
+  @override
+  Future<Map<int, Category>> getCategoriesByIds(Iterable<int> ids) =>
+      _categoryRepo.getCategoriesByIds(ids);
 
   @override
   Future<List<Category>> getTopLevelCategories(String kind) =>

@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -58,6 +59,7 @@ final annualReportDataProvider =
     FutureProvider.family<AnnualReportData?, int>((ref, year) async {
   final ledgerId = ref.watch(currentLedgerIdProvider);
   final repo = ref.watch(repositoryProvider);
+  final db = ref.watch(databaseProvider);
 
   // 获取年度收支总额
   final (income, expense) =
@@ -111,14 +113,47 @@ final annualReportDataProvider =
   }).toList();
 
   // 获取月度数据
-  final monthlyData = <({int month, double income, double expense})>[];
-  for (int m = 1; m <= 12; m++) {
-    final (monthIncome, monthExpense) = await repo.monthlyTotals(
-      ledgerId: ledgerId,
-      month: DateTime(year, m),
-    );
-    monthlyData.add((month: m, income: monthIncome, expense: monthExpense));
-  }
+  // 单条 SQL 按「周期标签月」聚合（此前串行 12 次 monthlyTotals = 12 次
+  // 查询往返）。startDay>1 时周期与自然月错位，直接按自然月分组会算错
+  // 月份归属 —— 用与 labelForDate 相同的规则在 SQL 内计算标签月。
+  final sdValue = sd;
+  final monthRows = await db.customSelect(
+    "WITH t AS (SELECT "
+    "strftime('%Y-%m', happened_at, 'unixepoch', 'localtime', "
+    "CASE WHEN CAST(strftime('%d', happened_at, 'unixepoch', 'localtime') AS INTEGER) >= ?3 "
+    "THEN 'start of month' ELSE '-1 month' END) AS label, "
+    'type AS type, '
+    'COALESCE(native_amount, amount) AS v '
+    'FROM transactions '
+    'WHERE ledger_id = ?1 AND exclude_from_stats = 0 '
+    'AND happened_at >= ?2 AND happened_at < ?4) '
+    "SELECT label, "
+    "SUM(CASE type WHEN 'income' THEN v ELSE 0 END) AS income, "
+    "SUM(CASE type WHEN 'expense' THEN v ELSE 0 END) AS expense "
+    'FROM t GROUP BY label',
+    variables: [
+      drift.Variable<int>(ledgerId),
+      drift.Variable<DateTime>(startDate),
+      drift.Variable<int>(sdValue),
+      drift.Variable<DateTime>(endDate),
+    ],
+    readsFrom: {db.transactions},
+  ).get();
+  final monthMap = <int, ({double income, double expense})>{
+    for (final r in monthRows)
+      int.parse(r.read<String>('label').split('-')[1]): (
+        income: (r.read<double>('income') as num?)?.toDouble() ?? 0.0,
+        expense: (r.read<double>('expense') as num?)?.toDouble() ?? 0.0,
+      ),
+  };
+  final monthlyData = <({int month, double income, double expense})>[
+    for (int m = 1; m <= 12; m++)
+      (
+        month: m,
+        income: monthMap[m]?.income ?? 0.0,
+        expense: monthMap[m]?.expense ?? 0.0,
+      ),
+  ];
 
   // 找出最大支出、最大收入、首笔记录
   Transaction? largestExpense;

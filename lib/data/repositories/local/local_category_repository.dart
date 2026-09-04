@@ -229,6 +229,16 @@ class LocalCategoryRepository implements CategoryRepository {
   }
 
   @override
+  Future<Map<int, Category>> getCategoriesByIds(Iterable<int> ids) async {
+    final idList = ids.where((id) => id > 0).toList();
+    if (idList.isEmpty) return const {};
+    final rows = await (db.select(db.categories)
+          ..where((c) => c.id.isIn(idList)))
+        .get();
+    return {for (final c in rows) c.id: c};
+  }
+
+  @override
   Future<List<Category>> getTopLevelCategories(String kind) async {
     return await (db.select(db.categories)
           ..where((c) => c.kind.equals(kind) & c.level.equals(1) & c.parentId.isNull())
