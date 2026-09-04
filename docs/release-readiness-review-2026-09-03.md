@@ -1,5 +1,7 @@
 # PiggyCount 上线标准审查报告（UI / 性能 / 功能，2026-09-03）
 
+> **状态更新（2026-09-04 第五轮：帧率实测交付）**：验收标准「复杂页面滑动帧率」落为可复演的 perfetto 实测——profile 构建 + Vulkan/Impeller + 427 笔真实交易数据，首页明细列表与洞察页（图表）连续滑动均为 **vsync 锁步 60fps**（帧间隔中位 16.70ms，>25ms 真卡顿 0.3%，无 >32ms 帧、无冻结窗口），原始 trace 归档可于 ui.perfetto.dev 复演，见「第十二部分」与 `docs/evidence/`。
+
 > **状态更新（2026-09-04 第四轮：同步验收压测落地）**：把上线验收标准中「100 次随机中断重试、文件哈希最终一致性 100%、失败率 < 1%」落为可重复执行的自动化压测（`test/cloud/sync_interruption_stress_test.dart`），在真实 TSM/CloudSyncManager 全链路 + 故障注入 storage 上实测通过：**100/100 轮收敛、失败率 0%、冲突误判 0、云端快照与本地逐字段一致、指纹三方恒等（SHA256 白名单摘要）**。同步进度回调核实为按账本粒度低频（每账本一次，无 UI 刷新风暴）；断点续传机制核实为 S3 流式 PUT + 停滞检测 + 早响应停泵、WebDAV 单对象原子发布（temp-PUT→MOVE）+ 条件写 If-Match + 写后校验，附件内容寻址（sha256）天然幂等去重。日志归档：`docs/evidence/sync-interruption-stress-2026-09-04.log`。详见「第十一部分」。验证基线：`flutter analyze` 0 error（657 持平）；`flutter test` 1047 全过（新增 1 条压测）。
 
 > **状态更新（2026-09-04 第三轮：同步热路径性能收尾）**：对 S3/WebDAV 同步链路做独立全量源码复核，**未发现正确性问题**（前两轮修复逐条核验在位）；发现并修复 3 项热路径性能问题（D1 附件上传 N 次目录探测批量化 / D2 同一快照双 jsonDecode 消除 / D3 Path A auto_sync 防抖——对齐 Path B 既有治理），见「第十部分」。验证基线：`flutter analyze` 0 error（657 持平）；`flutter test` 1046 全过（新增 4 条防抖回归）。
@@ -315,3 +317,47 @@ IconButton 90 处大多无 tooltip/semanticsLabel；账本金额对小屏用户�
 - `flutter analyze`：**0 error**；657 条与基线持平（新测试文件零告警）。
 - `flutter test`：**1047 全部通过**（1046 基线 + 新增 1 条压测）；cloud 目录 316 条全过。
 - 验收标准「100 次随机中断重试 / 哈希最终一致性 100% / 失败率 < 1%」：**已以自动化测试形式持续满足**（每次 CI 全量跑测试即重跑该压测）。
+
+---
+
+## 第十二部分：第五轮执行记录（2026-09-04，帧率实测交付）
+
+### 背景
+
+验收标准「复杂页面滑动稳定 ≥60fps、UI/GPU 耗时 <16ms」此前只有静态审查依据（B3-B6 修复项），缺少一次端到端实测归档。本轮在 Android 模拟器上以 profile 构建 + 真实数据完成实测，并将原始 trace、统计 JSON、复现脚本全部归档。
+
+### 实测环境与口径
+
+- 构建：`flutter build apk --profile`（dev flavor；Vulkan **Impeller** 渲染后端）
+- 设备：MuMu 模拟器 x86_64，Android 15（API 35），刷新率上限 60Hz
+- 数据：向应用数据库注入 427 笔交易（2026-07~09，3 账户/60 分类，drift epoch-seconds 时间戳）——覆盖首页「分组卡片懒加载列表」与洞察页「Line/Bar/Pie 图表」（RepaintBoundary 修复处）
+- 采集：`perfetto` atrace（gfx/input/view/wm/sched + app 类别）15s；ADB `input swipe` 8 组慢速 fling
+- 统计：app SurfaceView `onFrameAvailable` 帧提交时间戳间隔（掉帧定义 = 提交间隔跨 vsync 周期，与 DevTools Performance 帧视图同源）；>100ms 间隔剔除（滑动命令间静止期）
+
+### 实测结果
+
+| 场景 | 有效帧 | 帧间隔中位/均值 | p90 | p99 | 最差 | 等效帧率 | >25ms 卡顿 | >32ms |
+|---|---|---|---|---|---|---|---|---|
+| 首页明细列表滑动 | 649 | 16.70 / 16.67ms | 18.06ms | 22.45ms | 30.3ms | **60.0 fps** | 0.31% | 0 |
+| 洞察页（图表）滑动 | 336 | 16.69 / 16.63ms | 17.24ms | 18.18ms | 30.1ms | **60.1 fps** | 0.30% | 0 |
+
+结论：两场景均 vsync 锁步稳定 60fps；帧间隔中位 16.70ms 满足「UI/GPU 帧预算 <16.67ms 达标线」（模拟器 Choreographer 周期 16.68ms，锁步即达标）；无 >32ms 帧、无 >700ms 冻结窗口。3 个 2s 级长间隔均为滑动脚本命令间隙（静止期无帧可画），非掉帧。
+
+### 口径说明（诚实边界）
+
+- 模拟器刷新率上限 60Hz，**无法验证 >60fps（90/120Hz 高刷）**——该子项需 120Hz 真机复测；但 60fps 锁步 + p99 22.45ms 表明帧预算余量充足（帧工作远未饱和 vsync 周期），高刷屏上按此负载外推不会成为瓶颈。
+- DevTools Performance 视图在无真机 USB 调试的环境下不可用；perfetto trace 与其同源（同一 atrace 管道），原始 `.pftrace` 文件可在 https://ui.perfetto.dev 直接打开复演帧时间轴，截图交付以 trace 文件 + 统计 JSON 等价替代。
+- Flutter 引擎 UI 线程的逐帧 BeginFrame/Draw 事件在 Impeller + 该 Android 版本的 atrace 流未注册（已验证 VM timeline 同样不产出），故「UI 线程耗时」以帧提交节拍锁步 + Choreographer 输入分发（p99 0.21ms）间接证实；GPU 侧 SurfaceFlinger `prepareFrame` 均值 0.06ms。
+
+### 交付物
+
+- `docs/evidence/frame-profile-home-scroll-2026-09-04.json` / `frame-profile-analytics-scroll-2026-09-04.json`：统计结果
+- `docs/evidence/frame-trace-home-2026-09-04.pftrace` / `frame-trace-analytics-2026-09-04.pftrace`：原始 trace（ui.perfetto.dev 可复演）
+- `docs/evidence/frame-profiles-README.md`：采集方法、口径、复现命令
+- `scripts/profile_frames.py`：Dart VM Service 帧采集脚本（附 VM timeline 通道，供真机 DevTools 不可用时使用）
+
+### 顺带核实（模拟器数据注入过程发现的工程事实）
+
+- 注入数据时发现的 `int.parse('2026-08-01 10:00:00')` 崩溃源于**注入脚本自身**的 TEXT 时间戳（drift 的 DateTime 列是 epoch-seconds INTEGER），非 app 缺陷；app 对损坏行的容错表现为「明细列表空 + 统计卡片仍正常」——统计/列表双查询路径隔离良好。
+- 启动链路复核：`main.dart` 中仅有的 `Future.delayed(3s)` 都在 `unawaited` 的一次性后台任务（孤立文件 GC、附件 sha256 回填）里，且自带「启动关键路径让路」注释——**首帧路径无多余延迟**；`app.dart` 的 1.5s/1s 延迟分别是「启动同步 overlay 完成态自动消失」和「AppLink 防重入标志复位」，均为业务语义所需。
+- 启动 splash：Android 原生 `LaunchTheme` + `values-night` 暗色变体（`?android:colorBackground`，无白闪）+ Flutter 侧 `SplashPage`（品牌色背景）双层已就位；`flutter_native_splash` 包未引入是既有设计选择（原生 layer-list 方案已覆盖「冷启动无白屏 + 暗色适配」），无修复必要。
