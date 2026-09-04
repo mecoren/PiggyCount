@@ -387,7 +387,7 @@ IconButton 90 处大多无 tooltip/semanticsLabel；账本金额对小屏用户�
 
 | # | 门禁项 | 验收标准 | 验证方法 | 当前状态 |
 |---|---|---|---|---|
-| G1 | **120Hz 真机帧率** | 复杂页面滑动 ≥90fps（120Hz 设备无掉帧，DevTools UI/GPU 帧耗时 <8.33ms） | 120Hz 真机 + USB 调试 + DevTools Performance（或 `flutter run --profile` + timeline），复用 `docs/evidence/frame-profiles-README.md` 的滑动脚本与 perfetto 配置；数据建议 1000+ 笔 | **未验证**（模拟器 vsync 上限 60Hz；60fps 锁步 + p99 22ms 表明帧余量充足，但 ≥90fps 需真机实测确认） |
-| G2 | 高刷下慢帧长尾 | 滑动中无 >2 个 vsync 周期的帧（>16.7ms@120Hz） | 同 G1，统计 >8.33ms/>16.7ms 帧占比 | 未验证（随 G1） |
+| G1 | **120Hz 真机帧率** | 复杂页面滑动 ≥90fps（120Hz 设备无掉帧，DevTools UI/GPU 帧耗时 <8.33ms） | 120Hz 真机 + USB 调试 + DevTools Performance（或 `flutter run --profile` + timeline），复用 `docs/evidence/frame-profiles-README.md` 的滑动脚本与 perfetto 配置；数据建议 1000+ 笔 | **硬件依赖阻塞**（2026-09-04 环境探测：USB 无手机、局域网无开放 5555、仅有两台 60Hz 物理模式的 MuMu 模拟器——探测记录与拿到真机后的逐步执行指南见 `docs/evidence/gate-g1-g2-120hz-device-checklist.md`） |
+| G2 | 高刷下慢帧长尾 | 滑动中无 >2 个 vsync 周期的帧（>16.7ms@120Hz） | 同 G1，统计 >8.33ms/>16.7ms 帧占比 | 硬件依赖阻塞（随 G1，同上指南） |
 
 模拟器实测（60Hz）已达：两场景 vsync 锁步 60fps、>25ms 卡顿 0.3%、无 >32ms 帧、无冻结窗口——60fps 验收子项达标；G1/G2 为 90/120Hz 子项的**真机遗留门禁**，发布前必须执行。
