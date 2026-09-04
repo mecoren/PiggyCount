@@ -1,0 +1,20 @@
+{
+  "scene": "洞察(分析)页滑动 —— 图表(Line/Bar/Pie, RepaintBoundary 修复处) + 列表",
+  "device": "MuMu 模拟器 x86_64, Android 15, Vulkan/Impeller, profile 构建",
+  "frames_total": 344,
+  "frames_active": 336,
+  "interval_ms": {
+    "median": 16.69,
+    "avg": 16.63,
+    "p90": 17.24,
+    "p99": 18.18,
+    "max": 30.08
+  },
+  "fps_effective_active": 60.1,
+  "jank": {
+    "over_20ms_pct": 0.6,
+    "over_25ms_pct": 0.3,
+    "over_32ms": 0,
+    "over_50ms": 0
+  }
+}

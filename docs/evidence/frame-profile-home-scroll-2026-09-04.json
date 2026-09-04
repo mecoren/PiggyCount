@@ -1,0 +1,23 @@
+{
+  "scene": "首页交易明细列表连续滑动（427 笔交易/3 个月，分组卡片懒加载列表）",
+  "device": "MuMu 模拟器 x86_64, Android 15, Vulkan/Impeller, profile 构建",
+  "vsync": "60Hz（模拟器上限；60fps = 帧间隔 16.67ms）",
+  "method": "perfetto atrace (gfx/input/view/wm/sched) 15s 录制；app 帧提交节拍 onFrameAvailable(SurfaceView) 间隔统计 —— 与 DevTools Performance 帧视图同源数据",
+  "frames_total": 653,
+  "frames_active": 649,
+  "interval_ms": {
+    "median": 16.7,
+    "avg": 16.67,
+    "p90": 18.06,
+    "p99": 22.45,
+    "max": 30.3
+  },
+  "fps_effective_active": 60.0,
+  "jank": {
+    "over_20ms_pct": 2.31,
+    "over_25ms_pct": 0.31,
+    "over_32ms": 0,
+    "over_50ms": 0
+  },
+  "verdict": "滑动帧率稳定 60fps（vsync 锁步，中位 16.70ms）；>25ms 真卡顿 0.3%，无 >32ms 帧；3 个 >2s 间隔均为滑动命令间静止期而非冻结帧。模拟器 vsync 上限 60Hz，>60fps（90/120Hz 高刷）需真机复测。"
+}
