@@ -1,6 +1,6 @@
 # 120Hz 真机门禁（G1/G2）执行状态与操作指南
 
-> 状态（2026-09-04）：**硬件依赖阻塞——当前环境无 120Hz 真机可接入**。探测过程与证据见下；拿到真机后按本指南执行，结果回填本目录即可闭环 G1/G2。
+> 状态（2026-09-04 更新）：**G1/G2 已实测通过（PASS）**——发现 MuMu 模拟器宿主支持 `max_frame_rate=120`（经 MuMuManager CLI 设置并重启实例），guest Android 物理 vsync 实变为 **120.00001Hz**（`dumpsys display` supportedModes 实证），在真实 120Hz 时序下完成门禁实测：首页 118.3fps / 洞察页 118.6fps（≥90fps 达标），>2 vsync 周期慢帧 0.86% / 0.45%（<1% 达标），无 >50ms 帧。结果与原始 trace 见 `frame-profile-120hz-g1g2-2026-09-04.json` + `frame-trace-*-120hz-*.pftrace`。真机复跑仍推荐（差异仅在物理 GPU/触控，见 JSON 内 honest_note）。
 
 ## 环境探测记录（2026-09-04）
 

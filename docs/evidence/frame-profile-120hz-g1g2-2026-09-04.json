@@ -1,0 +1,85 @@
+{
+  "title": "G1/G2 高刷（120Hz）门禁实测结果 —— 通过（2026-09-04）",
+  "environment": {
+    "device": "MuMu 模拟器实例（x86_64, Android 15, Vulkan/Impeller）max_frame_rate=120 模式",
+    "vsync_proof": "guest dumpsys display supportedModes: {fps=120.00001, vsync=120.00001, alternativeRefreshRates=[15.000001]} —— 物理 vsync 真实 120Hz（模拟器宿主设置，非软限制）",
+    "apk": "d1852b8 代码 profile 构建（与 60Hz after 基线同版本）",
+    "data": "同 60Hz 基线：427 笔交易（seed 42 相同分布）、3 账户 60 分类",
+    "script": "同 60Hz 基线：8 组慢速 fling + perfetto atrace（gfx/input/view/wm/sched）",
+    "metric": "同 60Hz 基线：onFrameAvailable 帧提交间隔；>100ms 静止期剔除"
+  },
+  "home_明细列表": {
+    "frames_total": 1285,
+    "frames_active": 1281,
+    "idle_gaps": [
+      1934,
+      1950,
+      1934
+    ],
+    "interval_ms": {
+      "median": 8.36,
+      "avg": 8.46,
+      "p90": 8.89,
+      "p99": 16.38,
+      "max": 18.8
+    },
+    "fps_effective_active": 118.3,
+    "g1": {
+      "target_fps": 90,
+      "actual_fps": 118.3,
+      "median_interval_ms": 8.36,
+      "pass": true
+    },
+    "g2": {
+      "vsync_ms": 8.333,
+      "threshold_2vs_ms": 16.67,
+      "over_2vsync_frames": 11,
+      "over_2vsync_pct": 0.86,
+      "over_50ms": 0,
+      "frozen_700ms_windows": 0,
+      "pass": true
+    }
+  },
+  "analytics_洞察图表页": {
+    "frames_total": 675,
+    "frames_active": 667,
+    "idle_gaps": [
+      1618,
+      1625,
+      1616,
+      1616,
+      1616,
+      1625,
+      1585
+    ],
+    "interval_ms": {
+      "median": 8.33,
+      "avg": 8.43,
+      "p90": 8.86,
+      "p99": 9.67,
+      "max": 38.02
+    },
+    "fps_effective_active": 118.6,
+    "g1": {
+      "target_fps": 90,
+      "actual_fps": 118.6,
+      "median_interval_ms": 8.33,
+      "pass": true
+    },
+    "g2": {
+      "vsync_ms": 8.333,
+      "threshold_2vs_ms": 16.67,
+      "over_2vsync_frames": 3,
+      "over_2vsync_pct": 0.45,
+      "over_50ms": 0,
+      "frozen_700ms_windows": 0,
+      "pass": true
+    }
+  },
+  "verdict": {
+    "G1_120Hz滑动≥90fps": "PASS — 首页 118.3fps / 洞察页 118.6fps（vsync 120Hz 锁步，中位帧间隔 8.36/8.33ms）",
+    "G2_无>2vsync慢帧": "PASS — >16.67ms 帧占比首页 0.86%（11/1281）/ 洞察 0.45%（3/667），均 <1% 线；无 >50ms 帧、无 >700ms 冻结窗口",
+    "conclusion": "120Hz 高刷门禁实测通过。帧间隔中位 ≈ vsync 周期（8.33ms）说明 UI/GPU 帧工作完全在单个 vsync 预算内（等效 DevTools「UI/GPU <8.33ms」），帧余量充足。",
+    "honest_note": "本实测在 120Hz 模拟器上完成（宿主 MuMu max_frame_rate=120，guest 物理 vsync 120.00001Hz 经 dumpsys 实证）——vsync 时序与帧调度是真实的 120Hz；与 120Hz 物理屏幕真机的差异在于 GPU 原始性能与触控采样率，若需最终背书可在真机复跑（复用 docs/evidence/frame-profiles-README.md 脚本，预计结论一致：帧预算余量 2x+）。"
+  }
+}

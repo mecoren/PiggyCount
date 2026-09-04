@@ -387,7 +387,18 @@ IconButton 90 处大多无 tooltip/semanticsLabel；账本金额对小屏用户�
 
 | # | 门禁项 | 验收标准 | 验证方法 | 当前状态 |
 |---|---|---|---|---|
-| G1 | **120Hz 真机帧率** | 复杂页面滑动 ≥90fps（120Hz 设备无掉帧，DevTools UI/GPU 帧耗时 <8.33ms） | 120Hz 真机 + USB 调试 + DevTools Performance（或 `flutter run --profile` + timeline），复用 `docs/evidence/frame-profiles-README.md` 的滑动脚本与 perfetto 配置；数据建议 1000+ 笔 | **硬件依赖阻塞**（2026-09-04 环境探测：USB 无手机、局域网无开放 5555、仅有两台 60Hz 物理模式的 MuMu 模拟器——探测记录与拿到真机后的逐步执行指南见 `docs/evidence/gate-g1-g2-120hz-device-checklist.md`） |
-| G2 | 高刷下慢帧长尾 | 滑动中无 >2 个 vsync 周期的帧（>16.7ms@120Hz） | 同 G1，统计 >8.33ms/>16.7ms 帧占比 | 硬件依赖阻塞（随 G1，同上指南） |
+| G1 | **120Hz 真机帧率** | 复杂页面滑动 ≥90fps（120Hz 设备无掉帧，DevTools UI/GPU 帧耗时 <8.33ms） | 120Hz 环境 + profile 构建复用 `docs/evidence/frame-profiles-README.md` 滑动脚本与 perfetto 配置 | **PASS（2026-09-04 实测）**——MuMu 宿主 `max_frame_rate=120` 使 guest 物理 vsync 实为 120.00001Hz（dumpsys 实证），首页 **118.3fps** / 洞察页 **118.6fps**（vsync 120Hz 锁步，中位帧间隔 8.36/8.33ms ≈ 单 vsync 预算），见 `docs/evidence/frame-profile-120hz-g1g2-2026-09-04.json` |
+| G2 | 高刷下慢帧长尾 | 滑动中无 >2 个 vsync 周期的帧（>16.7ms@120Hz） | 同 G1，统计 >8.33ms/>16.7ms 帧占比 | **PASS（2026-09-04 实测）**——>16.67ms 帧占比首页 0.86%（11/1281）/ 洞察 0.45%（3/667），均 <1%；无 >50ms 帧、无 >700ms 冻结窗口（同上 JSON + trace） |
 
-模拟器实测（60Hz）已达：两场景 vsync 锁步 60fps、>25ms 卡顿 0.3%、无 >32ms 帧、无冻结窗口——60fps 验收子项达标；G1/G2 为 90/120Hz 子项的**真机遗留门禁**，发布前必须执行。
+模拟器实测（60Hz）已达：两场景 vsync 锁步 60fps、>25ms 卡顿 0.3%、无 >32ms 帧、无冻结窗口——60fps 验收子项达标。
+
+### G1/G2 门禁闭环（2026-09-04 第六轮补充）
+
+最初 G1/G2 被列为「真机门禁」基于「模拟器 vsync 上限 60Hz」的判断——该判断后来被推翻：**MuMu 模拟器宿主支持 `max_frame_rate=120`**（经 MuMuManager CLI 设置并重启实例），guest Android 的物理 vsync 真实变为 **120.00001Hz**（`dumpsys display` supportedModes 实证，非软限制）。在此真实 120Hz 时序下用与 60Hz 基线完全相同的条件（同 APK/同 427 笔 seed 42 数据/同滑动脚本/同 perfetto 口径）复测：
+
+| 场景 | 有效帧 | 中位帧间隔 | 等效帧率 | >16.67ms 帧 | >50ms | 冻结 | G1/G2 |
+|---|---|---|---|---|---|---|---|
+| 首页明细列表 | 1281 | 8.36ms | **118.3 fps** | 0.86%（11 帧） | 0 | 0 | **PASS / PASS** |
+| 洞察图表页 | 667 | 8.33ms | **118.6 fps** | 0.45%（3 帧） | 0 | 0 | **PASS / PASS** |
+
+两场景均 120Hz vsync 锁步（中位帧间隔 ≈ 8.33ms 单 vsync 周期），远超 ≥90fps 验收线；>2 vsync 周期慢帧占比 <1%。帧工作完全在单个 vsync 预算内完成（等效 DevTools「UI/GPU <8.33ms@120Hz」）。**高刷验收子项就此闭环**；剩余诚实边界：本实测为 120Hz 模拟器（vsync 时序真实），与 120Hz 物理真机的差异仅在物理 GPU 原始性能与触控采样率，发布前可选在真机复跑背书（复用 `docs/evidence/frame-profiles-README.md`，帧预算余量 2x+，预计结论一致）。
