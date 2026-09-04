@@ -1,0 +1,48 @@
+{
+  "apk": "before: 3b8f956（2026-09-01，UI/性能审计优化前）",
+  "device": "MuMu 模拟器 x86_64, Android 15, Vulkan/Impeller, profile 构建",
+  "data": "同 after：427 笔交易（seed 42 完全相同分布）、3 账户 60 分类",
+  "method": "同 after：perfetto atrace 15s + 8 组慢速 fling；onFrameAvailable 帧提交节拍；>100ms 静止期剔除",
+  "scenes": {
+    "home": {
+      "scene": "首页交易明细列表滑动（427 笔交易/3 个月）",
+      "apk": "before: 3b8f956（UI/性能审计优化前）",
+      "frames_total": 656,
+      "frames_active": 652,
+      "interval_ms": {
+        "median": 16.67,
+        "avg": 16.67,
+        "p90": 17.45,
+        "p99": 20.7,
+        "max": 28.48
+      },
+      "fps_effective_active": 60.0,
+      "jank": {
+        "over_20ms_pct": 1.38,
+        "over_25ms_pct": 0.46,
+        "over_32ms": 0,
+        "over_50ms": 0
+      }
+    },
+    "analytics": {
+      "scene": "洞察页滑动（图表+列表）",
+      "apk": "before: 3b8f956（UI/性能审计优化前）",
+      "frames_total": 346,
+      "frames_active": 338,
+      "interval_ms": {
+        "median": 16.67,
+        "avg": 16.77,
+        "p90": 17.38,
+        "p99": 21.34,
+        "max": 53.21
+      },
+      "fps_effective_active": 59.6,
+      "jank": {
+        "over_20ms_pct": 1.18,
+        "over_25ms_pct": 0.59,
+        "over_32ms": 1,
+        "over_50ms": 1
+      }
+    }
+  }
+}

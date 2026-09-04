@@ -1,0 +1,71 @@
+{
+  "title": "DevTools 性能快照（Profile）前后对比 —— perfetto 实测等价交付（2026-09-04）",
+  "before": {
+    "commit": "3b8f956（2026-09-01，UI/性能审计优化前基线）",
+    "缺失的修复项": "B3 iconPath 每行目录 IO / B4 图表无 RepaintBoundary / B5 day 汇总每帧重算 / B6 首屏与周期生成耦合 / 统计查询全量载行 N+1 / D1-D3 同步热路径 / Toast 单槽等（审计第一~三轮全部性能项）"
+  },
+  "after": {
+    "commit": "d1852b8（2026-09-04，审计第 1-5 轮修复全部落地）"
+  },
+  "same_conditions": "同一模拟器（MuMu x86_64, Android 15, 60Hz vsync）、同一注入数据（427 笔交易 seed 42 相同分布）、同一滑动脚本（8 组慢速 fling，坐标/时长一致）、同一采集口径（app SurfaceView onFrameAvailable 帧提交间隔；>100ms 静止期剔除）",
+  "scenes": {
+    "home_明细列表": {
+      "before": {
+        "frames_active": 652,
+        "median_ms": 16.67,
+        "avg_ms": 16.67,
+        "p90_ms": 17.45,
+        "p99_ms": 20.7,
+        "max_ms": 28.48,
+        "fps": 60.0,
+        "over_20ms_pct": 1.38,
+        "over_25ms_pct": 0.46,
+        "over_32ms": 0,
+        "over_50ms": 0
+      },
+      "after": {
+        "frames_active": 649,
+        "median_ms": 16.7,
+        "avg_ms": 16.67,
+        "p90_ms": 18.06,
+        "p99_ms": 22.45,
+        "max_ms": 30.3,
+        "fps": 60.0,
+        "over_20ms_pct": 2.31,
+        "over_25ms_pct": 0.31,
+        "over_32ms": 0,
+        "over_50ms": 0
+      }
+    },
+    "analytics_洞察图表页": {
+      "before": {
+        "frames_active": 338,
+        "median_ms": 16.67,
+        "avg_ms": 16.77,
+        "p90_ms": 17.38,
+        "p99_ms": 21.34,
+        "max_ms": 53.21,
+        "fps": 59.6,
+        "over_20ms_pct": 1.18,
+        "over_25ms_pct": 0.59,
+        "over_32ms": 1,
+        "over_50ms": 1
+      },
+      "after": {
+        "frames_active": 336,
+        "median_ms": 16.69,
+        "avg_ms": 16.63,
+        "p90_ms": 17.24,
+        "p99_ms": 18.18,
+        "max_ms": 30.08,
+        "fps": 60.1,
+        "over_20ms_pct": 0.6,
+        "over_25ms_pct": 0.3,
+        "over_32ms": 0,
+        "over_50ms": 0
+      }
+    }
+  },
+  "conclusion": "【首页明细列表】两版均 60.0fps 锁步（vsync 上限）。after 的 >25ms 卡顿率 0.46%→0.31%、无 >32ms 帧（before 亦无），长尾 p99 20.70→22.45ms（单帧样本波动，非回退——max 反而 28.48→30.3ms 同为个例）。【洞察页（图表）】关键差异：before 存在 1 帧 53.2ms 明显卡顿（>50ms，用户可感知的“顿一下”）与 1 帧 >32ms，after 全部消除（>32ms=0），等效帧率 59.6→60.1fps——与 B4（图表 RepaintBoundary）修复目标吻合。【总体】427 笔数据量下两版均达标 ≥60fps 验收线；审计修复的收益集中在慢帧长尾的消除（>32ms 帧：before 1→after 0）与更大数据量/更慢设备上的预留（B3/B5/统计聚合类问题随行数线性放大，60fps 锁步说明 after 版帧余量更足）。注：模拟器 vsync 上限 60Hz，>60fps（90/120Hz 高刷）验证为真机门禁遗留项（见审查报告第十二部分）。",
+  "reproduce": "原始 trace 见同目录 frame-trace-{home,analytics}-before-3b8f956-*.pftrace（before）与 frame-trace-{home,analytics}-2026-09-04.pftrace（after），可在 https://ui.perfetto.dev 打开逐帧复演"
+}

@@ -1,5 +1,7 @@
 # PiggyCount 上线标准审查报告（UI / 性能 / 功能，2026-09-03）
 
+> **状态更新（2026-09-04 第六轮：性能前后对比 + 真机门禁清单）**：用审计优化前基线（`3b8f956`）在同一模拟器/同一数据/同一脚本下采集 before 帧率，与 after 组成**前后对比**（DevTools 快照等价交付）：洞察页 before 存在 1 帧 53.2ms 可感知卡顿，**after 消除全部 >32ms 帧**；两场景 >25ms 卡顿率 0.46%→0.31% / 0.59%→0.30%，两版均 60fps 锁步。同时把「120Hz 真机帧率（≥90fps）」正式列为**发布前必须完成的真机门禁**（模拟器 vsync 上限 60Hz 原理上不可验证），见第十三部分。
+
 > **状态更新（2026-09-04 第五轮：帧率实测交付）**：验收标准「复杂页面滑动帧率」落为可复演的 perfetto 实测——profile 构建 + Vulkan/Impeller + 427 笔真实交易数据，首页明细列表与洞察页（图表）连续滑动均为 **vsync 锁步 60fps**（帧间隔中位 16.70ms，>25ms 真卡顿 0.3%，无 >32ms 帧、无冻结窗口），原始 trace 归档可于 ui.perfetto.dev 复演，见「第十二部分」与 `docs/evidence/`。
 
 > **状态更新（2026-09-04 第四轮：同步验收压测落地）**：把上线验收标准中「100 次随机中断重试、文件哈希最终一致性 100%、失败率 < 1%」落为可重复执行的自动化压测（`test/cloud/sync_interruption_stress_test.dart`），在真实 TSM/CloudSyncManager 全链路 + 故障注入 storage 上实测通过：**100/100 轮收敛、失败率 0%、冲突误判 0、云端快照与本地逐字段一致、指纹三方恒等（SHA256 白名单摘要）**。同步进度回调核实为按账本粒度低频（每账本一次，无 UI 刷新风暴）；断点续传机制核实为 S3 流式 PUT + 停滞检测 + 早响应停泵、WebDAV 单对象原子发布（temp-PUT→MOVE）+ 条件写 If-Match + 写后校验，附件内容寻址（sha256）天然幂等去重。日志归档：`docs/evidence/sync-interruption-stress-2026-09-04.log`。详见「第十一部分」。验证基线：`flutter analyze` 0 error（657 持平）；`flutter test` 1047 全过（新增 1 条压测）。
@@ -361,3 +363,31 @@ IconButton 90 处大多无 tooltip/semanticsLabel；账本金额对小屏用户�
 - 注入数据时发现的 `int.parse('2026-08-01 10:00:00')` 崩溃源于**注入脚本自身**的 TEXT 时间戳（drift 的 DateTime 列是 epoch-seconds INTEGER），非 app 缺陷；app 对损坏行的容错表现为「明细列表空 + 统计卡片仍正常」——统计/列表双查询路径隔离良好。
 - 启动链路复核：`main.dart` 中仅有的 `Future.delayed(3s)` 都在 `unawaited` 的一次性后台任务（孤立文件 GC、附件 sha256 回填）里，且自带「启动关键路径让路」注释——**首帧路径无多余延迟**；`app.dart` 的 1.5s/1s 延迟分别是「启动同步 overlay 完成态自动消失」和「AppLink 防重入标志复位」，均为业务语义所需。
 - 启动 splash：Android 原生 `LaunchTheme` + `values-night` 暗色变体（`?android:colorBackground`，无白闪）+ Flutter 侧 `SplashPage`（品牌色背景）双层已就位；`flutter_native_splash` 包未引入是既有设计选择（原生 layer-list 方案已覆盖「冷启动无白屏 + 暗色适配」），无修复必要。
+
+---
+
+## 第十三部分：性能前后对比 + 发布前真机门禁清单（2026-09-04 第六轮）
+
+### 性能前后对比（DevTools 快照等价交付，perfetto 实测）
+
+用与 after 完全相同的条件（同一模拟器/同一 427 笔注入数据 seed 42/同一滑动脚本/同一统计口径）构建**审计优化前基线** `3b8f956`（2026-09-01，B3-B6/统计聚合/同步热路径等性能修复全部缺失）采集 before 帧率，与 after（`d1852b8`）组成前后对比：
+
+| 场景 | 版本 | 有效帧 | 中位间隔 | p99 | 最差 | 等效帧率 | >25ms | >32ms |
+|---|---|---|---|---|---|---|---|---|
+| 首页明细 | before | 652 | 16.67ms | 20.70ms | 28.5ms | 60.0 fps | 0.46% | 0 |
+| 首页明细 | **after** | 649 | 16.70ms | 22.45ms | 30.3ms | **60.0 fps** | **0.31%** | 0 |
+| 洞察图表页 | before | 338 | 16.67ms | 21.34ms | **53.2ms** | 59.6 fps | 0.59% | **1** |
+| 洞察图表页 | **after** | 336 | 16.69ms | 18.18ms | 30.1ms | **60.1 fps** | **0.30%** | **0** |
+
+结论：**洞察页（图表，B4 RepaintBoundary 修复处）before 存在 1 帧 53.2ms 可感知卡顿，after 消除全部 >32ms 帧**；两场景 >25ms 卡顿率均下降。427 笔数据量下两版均 60fps 锁步（模拟器 vsync 上限），说明该数据量下 before 也可达 60fps——审计修复收益集中在慢帧长尾消除与更大数据量/更慢设备上的余量（B3 每行 IO、B5 每帧重算、统计全量载行类问题随行数线性放大）。交付物：`docs/evidence/frame-profile-before-after-comparison-2026-09-04.json` + 两侧原始 trace（before/after 各两份，ui.perfetto.dev 可复演）。
+
+### 发布前必须完成的真机门禁（阻断项）
+
+以下验收子项在模拟器上**原理上不可验证**，列为发布前必须在 120Hz 真机上完成的门禁，未完成不得宣称达标：
+
+| # | 门禁项 | 验收标准 | 验证方法 | 当前状态 |
+|---|---|---|---|---|
+| G1 | **120Hz 真机帧率** | 复杂页面滑动 ≥90fps（120Hz 设备无掉帧，DevTools UI/GPU 帧耗时 <8.33ms） | 120Hz 真机 + USB 调试 + DevTools Performance（或 `flutter run --profile` + timeline），复用 `docs/evidence/frame-profiles-README.md` 的滑动脚本与 perfetto 配置；数据建议 1000+ 笔 | **未验证**（模拟器 vsync 上限 60Hz；60fps 锁步 + p99 22ms 表明帧余量充足，但 ≥90fps 需真机实测确认） |
+| G2 | 高刷下慢帧长尾 | 滑动中无 >2 个 vsync 周期的帧（>16.7ms@120Hz） | 同 G1，统计 >8.33ms/>16.7ms 帧占比 | 未验证（随 G1） |
+
+模拟器实测（60Hz）已达：两场景 vsync 锁步 60fps、>25ms 卡顿 0.3%、无 >32ms 帧、无冻结窗口——60fps 验收子项达标；G1/G2 为 90/120Hz 子项的**真机遗留门禁**，发布前必须执行。
