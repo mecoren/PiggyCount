@@ -4,7 +4,7 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:drift/drift.dart' as drift;
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/foundation.dart' show compute, visibleForTesting;
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' as fcs;
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
@@ -1660,14 +1660,17 @@ class TransactionsSyncManager implements SyncService {
     // 「云端无数据」静默返回 null。
     final jsonStr = await _decryptIfNeeded(raw);
 
-    // 解析 JSON
-    final jsonData = jsonDecode(jsonStr) as Map<String, dynamic>;
-    final version = (jsonData['version'] as num?)?.toInt() ?? 1;
-    final importData = parseJsonToImportData(jsonStr);
+    // 一次 isolate 解析取回全部所需产物（ImportData + version + 内嵌指纹）。
+    // 此前是主线程 jsonDecode 取元数据 + parseJsonToImportData 再解一遍
+    // —— 大快照（万笔交易）下双份 jsonDecode 都发生在 UI 线程；合并为
+    // 单次后台解析后，主线程只剩 isolate 结果的直接引用。
+    final parsed = await compute(parseSnapshotIsolate, jsonStr);
+    final version = parsed.version;
+    final importData = parsed.importData;
     // 审计 H6：快照自描述的内嵌指纹（与内容同生共死）。启动检查的
     // merge-then-publish 用它做「回传前新鲜度校验」的基线 —— 合并决策
     // 所依据的云端内容若在回传前被其他设备更新，回传即中止而非覆盖。
-    final cloudFingerprint = jsonData['contentFingerprint'] as String?;
+    final cloudFingerprint = parsed.contentFingerprint;
 
     // 检查是否含 syncId（v6+）
     if (version >= 6) {

@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart' as d;
+import 'package:flutter/foundation.dart' show compute;
 import 'package:uuid/uuid.dart';
 import '../cloud/transactions_json.dart';
 import '../data/db.dart';
@@ -1565,7 +1566,9 @@ Future<({int inserted, int deletedDup, int skippedRecurring})?>
   required int ledgerId,
   required String jsonStr,
 }) async {
-  final remoteImport = parseJsonToImportData(jsonStr);
+  // 万笔级大快照的 jsonDecode + 逐条校验放后台 isolate，解析在 DB 事务
+  // 外完成（结果为纯数据对象，可直接跨 isolate 返回），UI 线程零解析耗时。
+  final remoteImport = await compute(parseJsonToImportData, jsonStr);
   if (remoteImport.transactions.isEmpty) {
     final localRows = await (db.select(db.transactions)
           ..where((t) => t.ledgerId.equals(ledgerId)))

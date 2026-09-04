@@ -1,5 +1,7 @@
 # PiggyCount 上线标准审查报告（UI / 性能 / 功能，2026-09-03）
 
+> **状态更新（2026-09-04 第七轮：JSON 重计算 isolate 化收尾 + 死代码清理）**：对照验收标准「将 JSON 解析等重计算放入 compute()/Isolate」做专项复核——CSV 导入解析与 Argon2 密钥派生既有 compute 在位；本轮补齐两处遗漏的热路径：`downloadAndPreview`（下载预览，恢复/合并的入口路径）此前对同一份大快照在 **UI 线程做两次 jsonDecode**（一次取 version/指纹元数据、一次 parseJsonToImportData 取业务数据），现合并为 `parseSnapshotIsolate` 单次后台 isolate 解析（元数据 + 业务数据一次取回，主线程只剩结果引用）；`restoreLedgerFromJson`（恢复管线单一事实源）的万笔级解析同样移入 compute。新增 5 条等价性回归测试（`test/cloud/parse_snapshot_isolate_test.dart`）锁定「元数据口径逐字段一致 / importData 逐字段一致（含防空转守卫）/ 损坏输入 FormatException 契约不变 / compute 跨 isolate 全链路」。顺带清理 6 处 lib 侧 unused import（含 D2 优化后遗留的 `sync_engine.dart` 对 transactions_json 的死引用）。内存泄漏专项复核：全部 StreamSubscription/AnimationController/FocusNode 生命周期闭环（dispose 链路、幂等守卫、onDone 清悬挂引用均核实）。验证基线：`flutter analyze` 0 error（654 条，lib 死代码净减）；`flutter test` **1052 全过**（1047 基线 + 新增 5 条）。详见「第十四部分」。
+
 > **状态更新（2026-09-04 第六轮：性能前后对比 + 真机门禁清单）**：用审计优化前基线（`3b8f956`）在同一模拟器/同一数据/同一脚本下采集 before 帧率，与 after 组成**前后对比**（DevTools 快照等价交付）：洞察页 before 存在 1 帧 53.2ms 可感知卡顿，**after 消除全部 >32ms 帧**；两场景 >25ms 卡顿率 0.46%→0.31% / 0.59%→0.30%，两版均 60fps 锁步。同时把「120Hz 真机帧率（≥90fps）」正式列为**发布前必须完成的真机门禁**（模拟器 vsync 上限 60Hz 原理上不可验证），见第十三部分。
 
 > **状态更新（2026-09-04 第五轮：帧率实测交付）**：验收标准「复杂页面滑动帧率」落为可复演的 perfetto 实测——profile 构建 + Vulkan/Impeller + 427 笔真实交易数据，首页明细列表与洞察页（图表）连续滑动均为 **vsync 锁步 60fps**（帧间隔中位 16.70ms，>25ms 真卡顿 0.3%，无 >32ms 帧、无冻结窗口），原始 trace 归档可于 ui.perfetto.dev 复演，见「第十二部分」与 `docs/evidence/`。
@@ -402,3 +404,43 @@ IconButton 90 处大多无 tooltip/semanticsLabel；账本金额对小屏用户�
 | 洞察图表页 | 667 | 8.33ms | **118.6 fps** | 0.45%（3 帧） | 0 | 0 | **PASS / PASS** |
 
 两场景均 120Hz vsync 锁步（中位帧间隔 ≈ 8.33ms 单 vsync 周期），远超 ≥90fps 验收线；>2 vsync 周期慢帧占比 <1%。帧工作完全在单个 vsync 预算内完成（等效 DevTools「UI/GPU <8.33ms@120Hz」）。**高刷验收子项就此闭环**；剩余诚实边界：本实测为 120Hz 模拟器（vsync 时序真实），与 120Hz 物理真机的差异仅在物理 GPU 原始性能与触控采样率，发布前可选在真机复跑背书（复用 `docs/evidence/frame-profiles-README.md`，帧预算余量 2x+，预计结论一致）。
+
+---
+
+## 第十四部分：第七轮执行记录（2026-09-04，JSON 重计算 isolate 化收尾 + 死代码清理）
+
+### 背景
+
+对照验收标准逐条做完成度审计时发现一条未完全闭环的子项：「将 JSON 解析等重计算放入 compute() 或 Isolate，避免 UI 线程卡顿」。既有覆盖：CSV 导入解析（`import_confirm_page` 的 `_parseRowsIsolate`）与 Argon2 密钥派生（`argon2_key_derivation`）已走 compute。但云同步链路上有两处万笔级大快照解析仍在 UI 线程。
+
+### 本轮修复（2 项热路径 + 死代码清理）
+
+| 条目 | 问题 | 修复 | 文件 |
+|---|---|---|---|
+| D-IP1 `downloadAndPreview` 双解析 | 对同一份下载快照在 UI 线程做**两次 jsonDecode**：一次取 version/contentFingerprint 元数据、一次 `parseJsonToImportData` 取业务数据。该方法是恢复/合并/UI 预览的入口路径，大快照下两份解析 + 逐条校验全部阻塞主线程 | 新增 `parseSnapshotIsolate`（顶层函数，ParsedSnapshot 携带 importData/version/count/contentFingerprint 一次取回），调用点改为 `await compute(parseSnapshotIsolate, jsonStr)`——主线程只剩 isolate 结果的直接引用 | `transactions_json.dart`（+ParsedSnapshot/parseSnapshotIsolate）、`transactions_sync_manager.dart:1661` |
+| D-IP2 `restoreLedgerFromJson` 解析 | 恢复管线单一事实源（S3/WebDAV 恢复 + 云备份恢复共用）在 UI 线程做 `parseJsonToImportData` 万笔级解析 | 解析移入 `compute(parseJsonToImportData, jsonStr)`，在 DB 事务外完成（ImportData 及嵌套 Import* 类均为纯数据，可跨 isolate 边界直接传递） | `data_import_service.dart:1568` |
+| D-DC 死代码 | 6 处 lib 侧 unused import，其中 `sync_engine.dart:24` 对 transactions_json 的引用是 v2 改走 `restoreLedgerFromJson` 公共管线后的遗留 | 全部移除（sync_engine / calendar_page×2 / recurring_transaction_edit_page / ai_chat_providers / amount_editor_sheet） | 6 文件 |
+
+**有意不动**的其余 jsonDecode（逐处核实过口径）：`_embeddedRemoteFingerprint`（仅读一个键的探测旁路）、`_warnIfRemoteFingerprintMismatch`（软告警自检旁路）、`getLedgerSnapshotEntry`（列表页取 name/currency 两键）——都是「只取元数据不做全量业务解析」的小解析，且各自有 try-catch 尽力而为语义，改 isolate 收益为负（compute 的 isolate 生成开销反超小解析本身）；upload 侧 `exportMap`（F6）与 `localMap`（F6 延伸）是防二次导出的**已解析透传**缓存，属于消除重复解析的既有治理，非新增负担。
+
+### 内存泄漏专项复核（验收「未关闭的 StreamSubscription/AnimationController/FocusNode」）
+
+全仓生命周期审计结论：**零泄漏**。逐文件核实：
+
+- StreamSubscription（9 文件）：全部在 `ref.onDispose`/`dispose()`/`stopListeningRealtime()` 中 cancel；`sync_engine_realtime` 有幂等守卫（S19，重复订阅不 cancel 重建）+ onDone 清悬挂引用；`sync_providers` 的 connectivity 防抖 Timer 同步 cancel。
+- AnimationController（5 文件）：`app.dart`/`toast.dart`/`skeleton.dart`/`message_popover_menu.dart`/`product_promo_card.dart` 均在 dispose 链路关闭。
+- FocusNode（3 文件）：`amount_editor_sheet.dart`/`liquid_glass_title_bar.dart`/`searchable_dropdown.dart` 均在 dispose 链路关闭。
+
+### 新增测试（`test/cloud/parse_snapshot_isolate_test.dart`，5 条）
+
+1. 真实导出快照的元数据与主线程口径逐字段一致（version 默认 1 / contentFingerprint 无默认 / count 透传）；
+2. importData 与直接 `parseJsonToImportData` 逐字段一致——含**防空转守卫**（`hasLength(1)` 断言插入的 1 笔交易确实出现在导出快照中，防逐字段断言对空列表假通过）；
+3. version 缺失默认 1、count 缺失 null（口径兼容旧快照）；
+4. 顶层非 JSON 对象仍抛 FormatException（H1「拒绝恢复」上游契约不变）；
+5. ParsedSnapshot 可跨 isolate 传递（compute 全链路，与生产路径同一入口）。
+
+### 验证结论（第七轮）
+
+- `flutter analyze`：**0 error**；654 条（第六轮 657 → 净减 3：移除 6 处 lib unused import，新增测试文件带 3 条 info），lib 侧 unused import 清零。
+- `flutter test`：**1052 全部通过**（1047 基线 + 新增 5 条）；其中 cloud 目录 321 条全过（含 100 轮随机中断压测、S3 往返一致性、恢复管线守卫等同步全量回归）。
+- 验收子项「JSON 解析等重计算放入 compute()/Isolate」：**闭环**——CSV/Argon2/下载预览/恢复管线四条重计算路径全部 isolate 化，小解析旁路经逐处口径核实不改（防过度设计）。

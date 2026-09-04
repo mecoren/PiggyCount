@@ -493,6 +493,47 @@ void _skip(Map<String, int> skipped, String section) =>
 // （云端有、恢复后没有 → 真实数据丢失）。新增交易类型时务必同步这里。
 const _kValidTxTypes = {'expense', 'income', 'transfer', 'adjustment'};
 
+/// 后台 isolate 解析的产物：一次 [parseSnapshotIsolate] 同时取回
+/// 解析结果与调用方所需的顶层元数据，避免主线程再 jsonDecode 一遍。
+class ParsedSnapshot {
+  final ImportData importData;
+  /// 快照顶层 version（缺失按 1，与 downloadAndPreview 既有口径一致）
+  final int version;
+  /// H6：快照自描述的内嵌指纹（与内容同生共死），merge-then-publish
+  /// 回传前新鲜度校验的基线。缺失为 null。
+  final String? contentFingerprint;
+  /// 顶层 count（缺失为 null）
+  final int? count;
+
+  const ParsedSnapshot({
+    required this.importData,
+    required this.version,
+    this.contentFingerprint,
+    this.count,
+  });
+}
+
+/// isolate 入口：解析快照 JSON 为 [ParsedSnapshot]。
+///
+/// 必须是顶层函数（compute 要求 static/顶层入口），且 [ParsedSnapshot] 及
+/// 其嵌套的 Import* 类均为纯数据（String/num/bool/DateTime/List/Map），
+/// 可跨 isolate 边界直接传递。大快照（万笔交易）的 jsonDecode + 逐条
+/// 校验在这里整个离开 UI 线程。
+ParsedSnapshot parseSnapshotIsolate(String jsonStr) {
+  final importData = parseJsonToImportData(jsonStr);
+  final decoded = jsonDecode(jsonStr);
+  if (decoded is! Map) {
+    throw const FormatException('快照格式损坏：顶层不是 JSON 对象');
+  }
+  final data = decoded.cast<String, dynamic>();
+  return ParsedSnapshot(
+    importData: importData,
+    version: (data['version'] as num?)?.toInt() ?? 1,
+    contentFingerprint: data['contentFingerprint'] as String?,
+    count: (data['count'] as num?)?.toInt(),
+  );
+}
+
 /// 将 JSON 数据转换为统一的 ImportData 格式
 ImportData parseJsonToImportData(String jsonStr) {
   final decoded = jsonDecode(jsonStr);

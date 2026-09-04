@@ -21,7 +21,6 @@ import '../../services/data_import_service.dart' show restoreLedgerFromJson;
 import '../../services/system/logger_service.dart';
 import '../../services/ui/avatar_service.dart';
 import '../sync_service.dart' as app;
-import '../transactions_json.dart';
 import 'change_tracker.dart';
 import 'entity_serializer.dart';
 import 'sync_events.dart';
