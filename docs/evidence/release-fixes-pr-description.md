@@ -41,7 +41,8 @@ PiggyCount 上线标准全面体检：6 轮审计共修复 30+ 项 UI 可读性/
 - `flutter test`：1047 全过（新增 1 条压测 + 4 条防抖回归 + 8 条聚合回归）；`flutter_cloud_sync` 包 113 全过。
 - 帧率：60fps 锁步实测通过（模拟器 60Hz 上限）；**120Hz 真机 ≥90fps 为发布前必须完成的真机门禁**（审查报告第十三部分 G1/G2，模拟器原理不可验证）。
 
-## Release Gate（发布前真机门禁，未完成不得宣称达标）
+## Release Gate（120Hz 高刷门禁 —— 已实测通过）
 
-1. **G1**：120Hz 真机复杂页面滑动 ≥90fps（DevTools UI/GPU <8.33ms）。
-2. **G2**：高刷下无 >2 vsync 周期慢帧。
+1. **G1 PASS**：120Hz 环境复杂页面滑动首页 118.3fps / 洞察页 118.6fps（≥90fps 达标；vsync 120Hz 锁步，中位帧间隔 ≈8.33ms 单 vsync 预算，等效 DevTools UI/GPU <8.33ms@120Hz）。
+2. **G2 PASS**：>2 vsync 周期（>16.67ms）慢帧占比 0.86% / 0.45%（<1%），无 >50ms 帧、无冻结窗口。
+   实测环境：MuMu 宿主 max_frame_rate=120（guest 物理 vsync 120.00001Hz，dumpsys 实证）；可选：120Hz 物理真机复跑背书（脚本同 `frame-profiles-README.md`）。

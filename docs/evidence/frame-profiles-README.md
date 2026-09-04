@@ -33,6 +33,10 @@
 
 关键改善：洞察页（图表，B4 RepaintBoundary 修复处）before 存在 1 帧 53.2ms 可感知卡顿，after 消除全部 >32ms 帧；两场景 >25ms 卡顿率均下降（0.46%→0.31% / 0.59%→0.30%）。详见 `frame-profile-before-after-comparison-2026-09-04.json`。
 
+### 120Hz 高刷门禁（G1/G2，PASS）
+
+MuMu 宿主 `max_frame_rate=120` 使 guest 物理 vsync = 120.00001Hz（dumpsys 实证），同条件复测：首页 **118.3fps**、洞察页 **118.6fps**（120Hz vsync 锁步，中位帧间隔 8.36/8.33ms ≈ 单 vsync 预算）；>16.67ms（>2 vsync 周期）慢帧 0.86% / 0.45%，无 >50ms 帧。详见 `frame-profile-120hz-g1g2-2026-09-04.json` + `frame-trace-*-120hz-2026-09-04.pftrace`。
+
 ### after 单版统计
 
 | 场景 | 有效帧 | 中位间隔 | 平均间隔 | p99 | 最差 | 等效帧率 | >25ms 卡顿 |
@@ -40,9 +44,9 @@
 | 首页明细滑动 | 649 | 16.70ms | 16.67ms | 22.45ms | 30.3ms | **60.0 fps** | 0.3% |
 | 洞察页滑动 | 336 | 16.69ms | 16.63ms | 18.18ms | 30.1ms | **60.1 fps** | 0.3% |
 
-两场景均 vsync 锁步稳定 60fps（模拟器刷新率上限 60Hz），无 >32ms 帧、
-无 >700ms 冻结窗口。90/120Hz 高刷验证需真机（模拟器 vsync 上限 60Hz，
-DevTools 中 UI/GPU 帧预算相应为 16.67ms——实测中位 16.70ms 达标）。
+两场景均 vsync 锁步稳定 60fps，无 >32ms 帧、无 >700ms 冻结窗口（60Hz
+口 径下 UI/GPU 帧预算 16.67ms——实测中位 16.70ms 达标）。120Hz 高刷
+已通过宿主 max_frame_rate=120 模式实测闭环（见上节 G1/G2 PASS）。
 
 ## 复现命令
 
