@@ -74,6 +74,26 @@ class StartupSyncController extends ChangeNotifier {
   OverlayState? _overlay;
   bool _attached = false;
 
+  /// 用户取消请求（W1）：检查阶段用户点了「取消」后置 true。
+  /// 编排器在检查完成后轮询 [cancelRequested] 静默退出；overlay 侧的
+  /// 迟到进度推送由 [updateCheckingProgress] 的 isCancelled 分支拦截，
+  /// 不会复活已关闭的遮罩。
+  bool _cancelRequested = false;
+
+  bool get cancelRequested => _cancelRequested;
+
+  /// 请求取消：关闭遮罩并标记取消（编排器据此静默退出检查流程）。
+  /// 仅检查阶段（CheckingState）有效；下载/应用阶段涉及本地数据
+  /// 一致性，不允许中途取消。
+  void requestCancel() {
+    if (_state is! CheckingState) return;
+    _cancelRequested = true;
+    _setState(DismissedState());
+  }
+
+  /// 开始新一轮检查前重置取消标记（reattach/salt 恢复重入场景）。
+  void _resetCancel() => _cancelRequested = false;
+
   StartupSyncState get state => _state;
 
   void _setState(StartupSyncState s) {
@@ -125,11 +145,16 @@ class StartupSyncController extends ChangeNotifier {
 
   // ===== 状态推送方法 =====
 
-  void startChecking(int total) =>
-      _setState(CheckingState(checked: 0, total: total));
+  void startChecking(int total) {
+    _resetCancel();
+    _setState(CheckingState(checked: 0, total: total));
+  }
 
-  void updateCheckingProgress(int checked, int total) =>
-      _setState(CheckingState(checked: checked, total: total));
+  void updateCheckingProgress(int checked, int total) {
+    // 取消后迟到的完成回调不再推送，避免复活已关闭的遮罩
+    if (_cancelRequested) return;
+    _setState(CheckingState(checked: checked, total: total));
+  }
 
   void showHasUpdates(
           List<LedgerCandidate> candidates, Completer<SummaryChoice> completer) =>
@@ -202,7 +227,8 @@ class _StartupSyncOverlayView extends StatelessWidget {
         boxShadow: PiggyShadows.card,
       ),
       child: switch (state) {
-        CheckingState() => _CheckingView(state: state),
+        CheckingState() =>
+          _CheckingView(state: state, controller: controller),
         HasUpdatesState() => _HasUpdatesView(state: state, controller: controller),
         ApplyingState() => _ApplyingView(state: state),
         DoneState() => _DoneView(state: state, controller: controller),
@@ -213,10 +239,16 @@ class _StartupSyncOverlayView extends StatelessWidget {
   }
 }
 
-/// 检查中视图：spinner + 进度
+/// 检查中视图：spinner + 进度 + 取消按钮
+///
+/// W1：云端不可达时并行检查仍需等待单个 _statusTimeout（约 20s），
+/// 遮罩期间 App 不可操作；提供「取消」让用户先进入 App，稍后可在
+/// 云同步页手动检查。仅探测阶段可取消——下载/应用涉及本地数据
+/// 一致性，中途放弃风险更高。
 class _CheckingView extends StatelessWidget {
-  const _CheckingView({required this.state});
+  const _CheckingView({required this.state, required this.controller});
   final CheckingState state;
+  final StartupSyncController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -249,6 +281,18 @@ class _CheckingView extends StatelessWidget {
               : l10n.startupSyncCheckCheckingHint,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: PiggyTokens.textSecondary(context),
+              ),
+        ),
+        const SizedBox(height: 16),
+        TextButton(
+          onPressed: () => controller.requestCancel(),
+          child: Text(l10n.commonCancel),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          l10n.startupSyncCheckCancelHint,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: PiggyTokens.textTertiary(context),
               ),
         ),
       ],

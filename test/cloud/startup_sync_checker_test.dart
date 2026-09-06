@@ -361,6 +361,82 @@ void main() {
       // 应该有 CheckingState 出现
       expect(states.any((s) => s is CheckingState), isTrue);
     });
+
+    test('W1 并行化：getStatus 并发执行，串行慢账本不再线性累积等待', () async {
+      deps.activeConfig = const CloudServiceConfig(
+        type: CloudBackendType.webdav,
+        name: 'webdav',
+        webdavUrl: 'https://webdav.example.com',
+        webdavUsername: 'u',
+        webdavPassword: 'p',
+      );
+      deps.ledgers = [
+        _ledger(1, 'L1'),
+        _ledger(2, 'L2'),
+        _ledger(3, 'L3'),
+      ];
+      deps.statusByLedger = {
+        for (final l in deps.ledgers) l.id: _status(SyncDiff.inSync),
+      };
+      deps.summaryChoice = SummaryChoice.skip;
+
+      // 每个 getStatus 挂起 300ms 才返回；串行实现需 ≥ 900ms，
+      // 并行实现应接近单个调用的时长
+      deps.getStatusDelay = const Duration(milliseconds: 300);
+      final sw = Stopwatch()..start();
+      await checker.runIfNeeded();
+      sw.stop();
+
+      expect(deps.getStatusCallCount, 3);
+      expect(sw.elapsed, lessThan(const Duration(milliseconds: 800)),
+          reason: '串行实现下 3 × 300ms = 900ms；并行应约 300ms');
+    });
+
+    test('W1 取消：检查阶段 requestCancel 后静默退出，不弹汇总/错误', () async {
+      deps.activeConfig = const CloudServiceConfig(
+        type: CloudBackendType.s3,
+        name: 's3',
+        s3Endpoint: 'https://s3.example.com',
+        s3AccessKey: 'ak',
+        s3SecretKey: 'sk',
+        s3Bucket: 'b',
+      );
+      // 一个 cloudNewer 候选：若取消未生效，会弹 HasUpdatesState
+      deps.ledgers = [_ledger(1, 'L1'), _ledger(2, 'L2')];
+      deps.statusByLedger = {
+        1: _status(SyncDiff.cloudNewer),
+        2: _status(SyncDiff.cloudNewer),
+      };
+      deps.getStatusDelay = const Duration(milliseconds: 100);
+      deps.summaryChoice = SummaryChoice.skip;
+
+      // 检查开始后立即取消（等首个 CheckingState 推送再触发）
+      void onState() {
+        if (controller.state is CheckingState) {
+          controller.requestCancel();
+        }
+      }
+
+      controller.addListener(onState);
+      await checker.runIfNeeded();
+      controller.removeListener(onState);
+
+      expect(controller.cancelRequested, isTrue);
+      expect(deps.lastCandidates, isEmpty,
+          reason: '取消后不应到达 HasUpdatesState');
+      expect(controller.state, isA<DismissedState>());
+      expect(deps.applyPreviewChangesCallCount, 0);
+    });
+
+    test('W1 取消：updateCheckingProgress 在取消后不复活遮罩', () async {
+      final controller2 = StartupSyncController();
+      controller2.startChecking(3);
+      controller2.requestCancel();
+      controller2.updateCheckingProgress(1, 3);
+      expect(controller2.state, isA<DismissedState>(),
+          reason: '取消后迟到的进度回调应被拦截');
+      controller2.dispose();
+    });
   });
 
   group('一键应用全部（applyAll）', () {
@@ -1297,6 +1373,8 @@ class _FakeDeps implements StartupSyncCheckerDeps {
 
   Map<int, SyncStatus> statusByLedger = {};
   Set<int> statusThrowForLedgerIds = {};
+  /// W1 并行化测试：getStatus 人为延迟（模拟慢速后端）
+  Duration? getStatusDelay;
 
   Map<int,
           ({SyncPreview? preview, ImportData importData, int version,
@@ -1378,6 +1456,9 @@ class _FakeDeps implements StartupSyncCheckerDeps {
   @override
   Future<SyncStatus> getStatus(int ledgerId) async {
     getStatusCallCount++;
+    if (getStatusDelay != null) {
+      await Future.delayed(getStatusDelay!);
+    }
     if (statusThrowForLedgerIds.contains(ledgerId)) {
       throw Exception('getStatus boom for ledger $ledgerId');
     }

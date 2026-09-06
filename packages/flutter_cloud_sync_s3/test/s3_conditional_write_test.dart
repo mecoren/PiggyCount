@@ -316,4 +316,250 @@ void main() {
       expect(signed.containsKey('Authorization'), isTrue);
     });
   });
+
+  // 网关兼容性（真机同步第二轮实测发现）：部分 S3 兼容网关不支持
+  // If-Match 条件头，返回 400 + NotImplemented 错误体（"A header you
+  // provided implies functionality that is not implemented"）。putObject
+  // 应识别该特征、去掉条件头重试一次盲写，而不是让覆盖上传整体失败。
+  group('putObject 网关不支持条件头降级', () {
+    test('ifMatch 收到 400+NotImplemented → 去掉条件头盲写重试成功', () async {
+      var callCount = 0;
+      late Map<String, String> secondHeaders;
+      final mock = MockClient((request) async {
+        callCount++;
+        if (callCount == 1) {
+          expect(request.headers.containsKey('If-Match'), isTrue);
+          return http.Response(
+            '<Error><Code>NotImplemented</Code><Message>A header you '
+                'provided implies functionality that is not implemented.'
+                '</Message></Error>',
+            400,
+          );
+        }
+        secondHeaders = Map<String, String>.from(request.headers);
+        return http.Response('', 200, headers: {'etag': '"newetag"'});
+      });
+      final client = S3Client(
+        endpoint: 's3.example.com',
+        region: 'us-east-1',
+        accessKey: 'ak',
+        secretKey: 'sk',
+        httpClient: mock,
+      );
+
+      final etag = await client.putObject(
+        bucket: 'b',
+        key: 'ledger_x.json',
+        data: Uint8List.fromList(utf8.encode('{}')),
+        ifMatch: 'abc123',
+      );
+
+      expect(etag, 'newetag');
+      expect(callCount, 2, reason: '第一次条件写 400 后必须重试一次盲写');
+      expect(secondHeaders.containsKey('If-Match'), isFalse,
+          reason: '重试请求必须去掉 If-Match 条件头');
+      expect(secondHeaders.containsKey('If-None-Match'), isFalse);
+    });
+
+    test('盲写重试再次 400（非条件头原因）→ 正常上抛 S3Exception', () async {
+      var callCount = 0;
+      final mock = MockClient((request) async {
+        callCount++;
+        if (callCount == 1) {
+          return http.Response(
+            '<Error><Code>NotImplemented</Code><Message>A header you '
+                'provided implies functionality that is not implemented.'
+                '</Message></Error>',
+            400,
+          );
+        }
+        // 去掉条件头后仍 400 → 签名/桶等其他问题，不得无限降级
+        return http.Response('<Error><Code>BadDigest</Code></Error>', 400);
+      });
+      final client = S3Client(
+        endpoint: 's3.example.com',
+        region: 'us-east-1',
+        accessKey: 'ak',
+        secretKey: 'sk',
+        httpClient: mock,
+      );
+
+      await expectLater(
+        client.putObject(
+          bucket: 'b',
+          key: 'k',
+          data: Uint8List.fromList([1]),
+          ifMatch: 'abc',
+        ),
+        throwsA(isA<S3Exception>()),
+      );
+      expect(callCount, 2, reason: '降级只允许一次');
+    });
+
+    test('无 ifMatch 的普通 400 → 不触发降级，直接上抛', () async {
+      var callCount = 0;
+      final mock = MockClient((request) async {
+        callCount++;
+        return http.Response(
+            '<Error><Code>NotImplemented</Code><Message>A header you '
+                'provided implies functionality that is not implemented.'
+                '</Message></Error>',
+            400);
+      });
+      final client = S3Client(
+        endpoint: 's3.example.com',
+        region: 'us-east-1',
+        accessKey: 'ak',
+        secretKey: 'sk',
+        httpClient: mock,
+      );
+
+      await expectLater(
+        client.putObject(
+          bucket: 'b',
+          key: 'k',
+          data: Uint8List.fromList([1]),
+        ),
+        throwsA(isA<S3Exception>()),
+      );
+      expect(callCount, 1, reason: '非条件写的 400 与条件头无关，不能降级重试');
+    });
+  });
+
+  // S3-W2 能力记忆：首次 400+NotImplemented 降级后，同 client 的后续
+  // 上传必须直接盲写（省一次失败往返），并通过 onConditionalWriteDowngrade
+  // 回调留 warning 线索（此前静默降级排查无痕迹）。
+  group('putObject 条件写能力记忆（S3-W2）', () {
+    http.Response notImplemented400() => http.Response(
+        '<Error><Code>NotImplemented</Code><Message>A header you provided '
+        'implies functionality that is not implemented.</Message></Error>',
+        400);
+
+    test('首次降级后记忆能力：第二次上传直接盲写，只发 1 次请求', () async {
+      var callCount = 0;
+      List<String> firstHeadersOf(int call) => const [];
+      final mock = MockClient((request) async {
+        callCount++;
+        if (callCount == 1) {
+          expect(request.headers.containsKey('If-Match'), isTrue);
+          return notImplemented400();
+        }
+        // 第二次 putObject（记忆生效）：根本不应带条件头，直接 200
+        expect(request.headers.containsKey('If-Match'), isFalse,
+            reason: '能力记忆生效后，后续上传入口直接盲写');
+        return http.Response('', 200, headers: {'etag': '"e2"'});
+      });
+      final client = S3Client(
+        endpoint: 's3.example.com',
+        region: 'us-east-1',
+        accessKey: 'ak',
+        secretKey: 'sk',
+        httpClient: mock,
+      );
+
+      // 第一次：条件写 → 400 降级 → 盲写成功（2 次请求）
+      await client.putObject(
+        bucket: 'b',
+        key: 'k1',
+        data: Uint8List.fromList([1]),
+        ifMatch: 'abc',
+      );
+      expect(callCount, 2);
+      expect(client.conditionalWriteUnsupportedForTest, isTrue,
+          reason: '首次踩坑后必须记忆网关能力');
+
+      // 第二次：记忆生效，直接盲写（1 次请求）
+      final etag = await client.putObject(
+        bucket: 'b',
+        key: 'k2',
+        data: Uint8List.fromList([2]),
+        ifMatch: 'def',
+      );
+      expect(etag, 'e2');
+      expect(callCount, 3, reason: '第二次上传不应再白付一次 400 失败往返');
+      // 静态分析用：避免 unused 提示
+      expect(firstHeadersOf(callCount), isNotNull);
+    });
+
+    test('降级时回调 onConditionalWriteDowngrade（warning 线索）', () async {
+      final downgradeMessages = <String>[];
+      final mock = MockClient((request) async {
+        if (request.headers.containsKey('If-Match')) {
+          return notImplemented400();
+        }
+        return http.Response('', 200);
+      });
+      final client = S3Client(
+        endpoint: 's3.example.com',
+        region: 'us-east-1',
+        accessKey: 'ak',
+        secretKey: 'sk',
+        httpClient: mock,
+      )..onConditionalWriteDowngrade = downgradeMessages.add;
+
+      await client.putObject(
+        bucket: 'b',
+        key: 'k',
+        data: Uint8List.fromList([1]),
+        ifMatch: 'abc',
+      );
+
+      expect(downgradeMessages, hasLength(1),
+          reason: '首次降级必须留一条 warning 线索');
+      expect(downgradeMessages.first, contains('不支持条件写'));
+      // 第二次上传（记忆盲写）：不应重复告警
+      await client.putObject(
+        bucket: 'b',
+        key: 'k',
+        data: Uint8List.fromList([1]),
+        ifMatch: 'abc',
+      );
+      expect(downgradeMessages, hasLength(1),
+          reason: '能力记忆后不再走降级路径，不应重复告警');
+    });
+
+    test('putObjectStream 同样消费能力记忆：入口直接盲写', () async {
+      var callCount = 0;
+      final mock = MockClient.streaming((request, bodyStream) async {
+        callCount++;
+        if (request.headers.containsKey('If-Match')) {
+          final body = utf8.encode(
+              '<Error><Code>NotImplemented</Code><Message>A header you '
+              'provided implies functionality that is not implemented.'
+              '</Message></Error>');
+          return http.StreamedResponse(Stream.value(body), 400);
+        }
+        return http.StreamedResponse(Stream.value([]), 200);
+      });
+      final client = S3Client(
+        endpoint: 's3.example.com',
+        region: 'us-east-1',
+        accessKey: 'ak',
+        secretKey: 'sk',
+        httpClient: mock,
+      );
+
+      // 先用 putObject 触发降级记忆
+      await client.putObject(
+        bucket: 'b',
+        key: 'k1',
+        data: Uint8List.fromList([1]),
+        ifMatch: 'abc',
+      );
+      expect(client.conditionalWriteUnsupportedForTest, isTrue);
+
+      // putObjectStream 一次成功：入口直接盲写，不先吃 400
+      callCount = 0;
+      await client.putObjectStream(
+        bucket: 'b',
+        key: 'k2',
+        data: Stream.value([1, 2, 3]),
+        contentLength: 3,
+        ifMatch: 'def',
+      );
+      expect(callCount, 1,
+          reason: '流式路径记忆生效后直接盲写（流式 body 不可重放，'
+              '入口必须消费能力记忆）');
+    });
+  });
 }

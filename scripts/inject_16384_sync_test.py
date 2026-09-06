@@ -35,6 +35,15 @@ ATT_DIR = os.path.join(ROOT, "scripts", "live_db", "seed_attachments")
 NOW = int(time.time())
 OWNER = "dev-owner-16384"
 
+# 与 app seed_service.dart 完全一致的确定性 syncId 体系(uuid v5):
+# 本轮库是清库后的全新 schema(ledgers 为空、无 seed),必须先复刻应用的
+# ensureSeed 成果(默认账本/虚拟转账分类/默认账户),否则注入脚本的
+# "默认账本 id=1" 前提不成立,且 16416 恢复后两端的默认实体身份不同源。
+SEED_NS = uuid.UUID("b3e7c0de-0000-4000-8000-beec00000001")
+
+def seed_sync_id(name: str) -> str:
+    return str(uuid.uuid5(SEED_NS, name))
+
 FX_RATE = {"CNY": 1.0, "USD": 7.10, "JPY": 0.048, "EUR": 7.70, "HKD": 0.91,
            "GBP": 9.00, "SGD": 5.30, "AUD": 4.70, "KRW": 0.0052, "THB": 0.20}
 FX_QUOTES = {k: v for k, v in FX_RATE.items() if k != "CNY"}
@@ -207,18 +216,57 @@ def main():
 
     changes = []  # (entity_type, entity_id, entity_sync_id, ledger_id, action)
 
+    # ---------- 0) 复刻应用 seed(全新空库时) ----------
+    # 等价于 welcome 页 ensureSeed 的产物:默认账本(确定性 syncId)+
+    # 虚拟转账分类 + 3 个默认账户。均写 local_changes 走正常推送。
+    n_seed = 0
+    if cur.execute("SELECT COUNT(*) FROM ledgers").fetchone()[0] == 0:
+        print("=== 复刻应用 seed(空库) ===")
+        cur.execute(
+            "INSERT INTO ledgers (name, currency, type, created_at, sync_id, my_role, "
+            "member_count, is_shared, owner_user_id, month_start_day) "
+            "VALUES ('默认账本','CNY','personal',?,?,'owner',1,0,NULL,1)",
+            (NOW, seed_sync_id("ledger:default")))
+        assert cur.lastrowid == 1, f"默认账本应拿 id=1, 实际 {cur.lastrowid}"
+        changes.append(("ledger", 1, seed_sync_id("ledger:default"), 1, "upsert"))
+        # 虚拟转账分类:sort_order=-1, kind='transfer'
+        cur.execute(
+            "INSERT INTO categories (name, kind, icon, sort_order, level, icon_type, sync_id) "
+            "VALUES ('转账','transfer','swap_horiz',-1,1,'material',?)",
+            (seed_sync_id("cat:transfer:1:transfer"),))
+        changes.append(("category", cur.lastrowid, seed_sync_id("cat:transfer:1:transfer"), 0, "upsert"))
+        # 3 个默认账户(与 createDefaultAccounts 同名同 syncId)
+        for atype, aname in (("cash", "现金"), ("bank_card", "储蓄卡"), ("credit_card", "信用卡")):
+            cur.execute(
+                "INSERT INTO accounts (ledger_id, name, type, currency, initial_balance, "
+                "created_at, updated_at, sort_order, sync_id) VALUES (1,?,?, 'CNY',0.0,?,?,0,?)",
+                (aname, atype, NOW, NOW, seed_sync_id(f"acc:{atype}")))
+            changes.append(("account", cur.lastrowid, seed_sync_id(f"acc:{atype}"), 0, "upsert"))
+        n_seed = 5
+        print(f"  默认账本/转账分类/3默认账户 (确定性 syncId, {n_seed} 条 local_changes)")
+
     # ---------- 1) 账本 ----------
     print("=== 账本 ===")
     all_ledgers = []  # (id, name, tag, cfg, owner_uid)
-    def_sync = str(uuid.uuid4())
-    cur.execute("UPDATE ledgers SET sync_id=? WHERE id=1 AND (sync_id IS NULL OR sync_id='')",
-                (def_sync,))
+    # 默认账本:seed 复刻路径已用确定性 syncId 建好 id=1;若来自旧库
+    # (id=1 已存在但无 sync_id)则补随机 UUID。两种路径都收进 local_changes。
+    def_row = cur.execute("SELECT id, sync_id FROM ledgers WHERE id=1").fetchone()
+    if def_row is None:
+        raise SystemExit("[FAIL] 默认账本 id=1 不存在(seed 复刻未生效)")
+    if not def_row[1]:
+        def_sync = str(uuid.uuid4())
+        cur.execute("UPDATE ledgers SET sync_id=? WHERE id=1", (def_sync,))
+        changes.append(("ledger", 1, def_sync, 1, "upsert"))
+        # 旧库补 sync_id 路径:seed 复刻未跑过,这里首次入列;新库路径
+        # seed 复刻段已入列,上面 if 不触发,不会重复 append。
+    else:
+        def_sync = def_row[1]
+    # 默认账本账户规格:seed 已建 现金/储蓄卡/信用卡(CNY,确定性 syncId),
+    # 这里只补差异账户,避免同名同类型重复。
     all_ledgers.append((1, "默认账本", "默认", {
         "start": recent_years(3)[0], "end": NOW, "msd": 1, "shared": 0, "accs": [
-            ("cash", "CNY", 0), ("bank_card", "CNY", 0), ("credit_card", "CNY", 0),
             ("alipay", "CNY", 0), ("wechat", "CNY", 0), ("cash", "USD", 0),
-            ("bank_card", "CNY", 0), ("other", "CNY", 0)]}, None))
-    changes.append(("ledger", 1, def_sync, 1, "upsert"))
+            ("other", "CNY", 0)]}, None))
 
     for cfg in LEDGERS:
         sid = str(uuid.uuid4())
@@ -313,10 +361,19 @@ def main():
         ledger_accounts[lid] = accs
         print(f"  [{lid} {lname}] {len(accs)} 个 (微信/支付宝: {sum(1 for a in accs if a[2])})")
 
+    # 默认账本:并入 seed 建的 3 个默认账户(现金/储蓄卡/信用卡)参与交易,
+    # 否则这三个账户零流水,与真实设备形态不符。
+    seeded = cur.execute(
+        "SELECT id, currency FROM accounts WHERE ledger_id=1 AND sync_id IN (?,?,?)",
+        (seed_sync_id("acc:cash"), seed_sync_id("acc:bank_card"),
+         seed_sync_id("acc:credit_card"))).fetchall()
+    if seeded:
+        ledger_accounts[1] = [(r[0], r[1], False) for r in seeded] + ledger_accounts[1]
+        print(f"  [1 默认账本] 并入 seed 默认账户 {len(seeded)} 个参与交易")
+
     # ---------- 5) 交易 ----------
     print("=== 交易 ===")
     random.seed(20260824)
-    att_targets = []  # (lid, tx_sync_id) 候选附件挂载
     total_tx = 0
     for lid, lname, tag, cfg, owner in all_ledgers:
         accs = ledger_accounts[lid]
@@ -361,7 +418,9 @@ def main():
                 to_account_id = random.choice(others)[0] if others else None
                 note = "转账-还信用卡" if random.random() < 0.5 else "转账-归集"
                 base = random.uniform(100, 20000) if not is_hist else random.uniform(50, 2000)
-                category_id = random.choice(tr) if tr else None
+                # 应用正常路径不给 transfer 交易挂分类(导入端也会置 null,
+                # data_import_service.dart:1461),造数对齐避免形态差异
+                category_id = None
             else:  # adjustment
                 account_id = random.choice(accs)[0]
                 note = "余额校准"
@@ -386,13 +445,15 @@ def main():
             "to_account_id, happened_at, note, sync_id, created_by_user_id, last_edited_by_user_id, "
             "exclude_from_stats, exclude_from_budget, currency_code, native_amount) "
             "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", rows)
-        last_tx = cur.lastrowid
-        tx_ids = list(range(last_tx - len(rows) + 1, last_tx + 1))
+        # executemany 后 lastrowid 不可靠,AUTOINCREMENT 续号也不可控:
+        # 按 ledger_id + sync_id 顺序取回本批真实 id 列表
+        tx_ids = [r[0] for r in cur.execute(
+            "SELECT id FROM transactions WHERE ledger_id=? ORDER BY id", (lid,)).fetchall()]
+        assert len(tx_ids) == len(rows), f"tx_ids={len(tx_ids)} rows={len(rows)} 取回失败"
         for i, tid in enumerate(tx_ids):
             changes.append(("transaction", tid, rows[i][8], lid, "upsert"))
         cur.executemany("INSERT INTO transaction_tags (transaction_id, tag_id) VALUES (?,?)",
                         [(tx_ids[i], t) for i, t in tx_tags])
-        att_targets.append((lid, tx_ids[len(tx_ids) // 2], rows[len(rows) // 2][8]))
         total_tx += len(rows)
         span = (datetime.fromtimestamp(min(r[6] for r in rows)),
                 datetime.fromtimestamp(max(r[6] for r in rows)))
@@ -405,7 +466,19 @@ def main():
     print("=== 附件 ===")
     jpegs = make_jpegs()
     att_rows, att_files = [], []
-    for i, (lid, tid, tsid) in enumerate(att_targets):
+    # G-ATT: 按账本**名**显式定位（不按 att_targets 下标推算）。
+    # 本轮实测教训：账本 id 由 AUTOINCREMENT 续号,旧库残留行会把下标
+    # 空间推扁/错位,跨账本去重附件落点随 id 漂移 —— 第 7 条附件挂到了
+    # 同账本同交易上,「跨账本去重」验证语义失效。名字在 all_ledgers
+    # 里稳定可寻,不受 id 断号影响。
+    def tx_of_ledger(lname):
+        lid = next(l[0] for l in all_ledgers if l[1] == lname)
+        row = cur.execute(
+            "SELECT id, sync_id FROM transactions WHERE ledger_id=? ORDER BY id LIMIT 1 OFFSET ?",
+            (lid, TX_PER_LEDGER // 2)).fetchone()
+        return lid, row[0], row[1]
+    for i, (lid, lname, *_rest) in enumerate(all_ledgers):
+        tid = tx_of_ledger(lname)[1]
         meta = jpegs[i % len(jpegs)]
         fname = f"sha_{meta['sha']}.jpg"
         cur.execute("SELECT id FROM transaction_attachments WHERE transaction_id=? AND local_sha256=?",
@@ -418,9 +491,10 @@ def main():
             (tid, fname, f"sync-test-{i+1}.jpg", meta["size"], meta["w"], meta["h"], 0,
              meta["sha"], NOW))
         att_files.append(fname)
-    # 第 8 张与第 1 张同 sha:再挂到另一个账本的交易上,验证跨账本去重
+    # 第 8 张与第 1 张同 sha:显式挂到「海外旅行账本」(与第 1 张所在的
+    # 「默认账本」不同账本),验证跨账本去重 —— 落点不再随 id 推算漂移
     dup_meta = jpegs[0]
-    lid2, tid2, _ = att_targets[(len(att_targets) // 2)]
+    _, tid2, _ = tx_of_ledger("海外旅行账本")
     cur.execute(
         "INSERT INTO transaction_attachments (transaction_id, file_name, original_name, file_size, "
         "width, height, sort_order, local_sha256, created_at) VALUES (?,?,?,?,?,?,?,?,?)",

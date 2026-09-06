@@ -1109,6 +1109,7 @@
   "startupSyncCheckViewDetail": "查看詳情並套用",
   "startupSyncCheckSkip": "暫不合併",
   "startupSyncCheckSkipRest": "跳過剩餘",
+  "startupSyncCheckCancelHint": "可稍後在「我的-雲端同步」手動檢查",
   "startupSyncCheckCheckingTitle": "正在檢查雲端更新",
   "startupSyncCheckCheckingHint": "請稍候...",
   "startupSyncCheckCheckingProgress": "正在檢查 {checked}/{total}",

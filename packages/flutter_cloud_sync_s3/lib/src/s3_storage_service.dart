@@ -19,8 +19,15 @@ class S3StorageService
   /// 为空时行为与无前缀一致（向后兼容）。
   final String keyPrefix;
 
-  S3StorageService(this.client, this.bucket, {String keyPrefix = ''})
-      : keyPrefix = _normalizePrefix(_validatePrefix(keyPrefix));
+  S3StorageService(this.client, this.bucket,
+      {String keyPrefix = '', CloudSyncLogger? logger})
+      : keyPrefix = _normalizePrefix(_validatePrefix(keyPrefix)) {
+    // S3-W2：条件写降级 warning 线索。此前静默降级，双后端实测时排查
+    // 缺痕迹；注入 logger 后由宿主 app 的日志体系统一记录。
+    client.onConditionalWriteDowngrade = logger == null
+        ? null
+        : (message) => logger.warning(message);
+  }
 
   /// 认证/权限类异常转 [CloudAuthException]，保持语义保真（与 WebDAV 修复同款）
   ///

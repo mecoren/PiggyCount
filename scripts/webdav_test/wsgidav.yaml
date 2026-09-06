@@ -1,0 +1,12 @@
+host: 0.0.0.0
+port: 8443
+provider_mapping:
+  "/": "./share"
+server: "cheroot"
+ssl_certificate: "server.crt"
+ssl_private_key: "server.key"
+simple_dc:
+  user_mapping:
+    "*":
+      "pctest":
+        password: "piggy123"

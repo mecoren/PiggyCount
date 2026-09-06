@@ -1,11 +1,15 @@
 import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
-import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
+import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' hide LogLevel;
+import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' as fcs_log
+    show LogLevel;
 import 'package:flutter_cloud_sync_supabase/flutter_cloud_sync_supabase.dart';
 import 'package:flutter_cloud_sync_webdav/flutter_cloud_sync_webdav.dart';
 import 'package:flutter_cloud_sync_icloud/flutter_cloud_sync_icloud.dart';
 import 'package:flutter_cloud_sync_s3/flutter_cloud_sync_s3.dart';
+
+import '../services/system/logger_service.dart';
 
 /// 根据 CloudServiceConfig 创建对应的 CloudProvider 和 CloudAuthService
 ///
@@ -87,6 +91,15 @@ Future<({CloudProvider? provider, CloudAuthService? auth})> createCloudServices(
 
     case CloudBackendType.s3:
       // S3 初始化 - 不捕获异常，让错误向上传递以便调试
+      // S3-W2：条件写降级 warning 线索（网关 400+NotImplemented 时
+      // 静默降级排查无痕迹），接线到应用日志
+      S3Provider.downgradeLogger = CloudSyncLogger(
+        onLog: (level, message) {
+          if (level == fcs_log.LogLevel.warning) {
+            logger.warning('CloudSync', message);
+          }
+        },
+      );
       final provider = S3Provider();
       await provider.initialize({
         'endpoint': config.s3Endpoint!,

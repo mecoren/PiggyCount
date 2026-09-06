@@ -60,6 +60,7 @@
   "startupSyncCheckViewDetail": "查看详情并应用",
   "startupSyncCheckSkip": "暂不合并",
   "startupSyncCheckSkipRest": "跳过剩余",
+  "startupSyncCheckCancelHint": "可稍后在「我的-云同步」手动检查",
   "startupSyncCheckCheckingTitle": "正在检查云端更新",
   "startupSyncCheckCheckingHint": "请稍候...",
   "startupSyncCheckCheckingProgress": "正在检查 {checked}/{total}",

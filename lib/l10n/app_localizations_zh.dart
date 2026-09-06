@@ -128,6 +128,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get startupSyncCheckSkipRest => '跳过剩余';
 
   @override
+  String get startupSyncCheckCancelHint => '可稍后在「我的-云同步」手动检查';
+
+  @override
   String get startupSyncCheckCheckingTitle => '正在检查云端更新';
 
   @override
@@ -8309,6 +8312,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get startupSyncCheckSkipRest => '跳過剩餘';
+
+  @override
+  String get startupSyncCheckCancelHint => '可稍後在「我的-雲端同步」手動檢查';
 
   @override
   String get startupSyncCheckCheckingTitle => '正在檢查雲端更新';

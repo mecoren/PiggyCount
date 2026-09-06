@@ -129,6 +129,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get startupSyncCheckSkipRest => '나머지 건너뛰기';
 
   @override
+  String get startupSyncCheckCancelHint =>
+      '나중에 \'내 정보 > 클라우드 동기화\'에서 확인할 수 있습니다';
+
+  @override
   String get startupSyncCheckCheckingTitle => '클라우드 업데이트 확인 중';
 
   @override

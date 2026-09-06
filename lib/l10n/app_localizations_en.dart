@@ -129,6 +129,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get startupSyncCheckSkipRest => 'Skip rest';
 
   @override
+  String get startupSyncCheckCancelHint =>
+      'You can check later in Me > Cloud Sync';
+
+  @override
   String get startupSyncCheckCheckingTitle => 'Checking cloud updates';
 
   @override

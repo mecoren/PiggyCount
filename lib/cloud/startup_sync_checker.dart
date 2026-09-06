@@ -344,13 +344,46 @@ class StartupSyncChecker {
     // 失败中是否含认证失败（WebDAV 401/403）：处置动作与网络故障不同
     // （改凭据 vs 重试），汇总文案需区分
     var sawAuthError = false;
-    var checked = 0;
-    for (final ledger in ledgers) {
-      try {
-        final status = await deps
-            .getStatus(ledger.id)
-            // P1-4：网络超时守卫，避免连接挂起导致启动检查无限阻塞
-            .timeout(_statusTimeout);
+    // 并行化（W1 优化）：逐账本串行 getStatus 在云端不可达时按
+    // _statusTimeout × N 线性累积（6 账本 ≈ 2 分钟模态遮罩，期间 App
+    // 完全不可操作）。改为全部并发 + 每账本各自超时，最坏阻塞时长
+    // 收敛到单个 _statusTimeout；进度随各 future 完成实时递增。
+    var completed = 0;
+    final results = await Future.wait(
+      ledgers.map((ledger) async {
+        try {
+          final status = await deps
+              .getStatus(ledger.id)
+              // P1-4：网络超时守卫，避免连接挂起导致启动检查无限阻塞
+              .timeout(_statusTimeout);
+          return (ledger: ledger, status: status, error: null);
+        } catch (e) {
+          // 单账本 getStatus 失败不影响其他账本，但必须记录失败账本，
+          // 防止全部失败时被误报为"已是最新"（P1-3）
+          return (ledger: ledger, status: null, error: e);
+        } finally {
+          completed++;
+          controller.updateCheckingProgress(completed, ledgers.length);
+        }
+      }),
+    );
+    // 用户在检查阶段点了「取消」（overlay _CheckingView 的取消按钮）：
+    // 已完成的探测作废，静默退出。可稍后在云同步页手动检查。
+    if (controller.cancelRequested) {
+      deps.log('StartupSyncChecker: 用户取消启动检查，静默退出');
+      return;
+    }
+    for (final r in results) {
+      final ledger = r.ledger;
+      if (r.error != null) {
+        // 单账本 getStatus 失败不影响其他账本，但必须记录失败账本，
+        // 防止全部失败时被误报为"已是最新"（P1-3）
+        failedLedgers.add(ledger.name);
+        if (_isAuthErrorText(r.error.toString())) sawAuthError = true;
+        deps.log('StartupSyncChecker: 账本 ${ledger.name}（id=${ledger.id}）'
+            'getStatus 失败: ${r.error}');
+      } else {
+        final status = r.status!;
         // 加密哨兵是全局问题（影响所有账本），首次检测到时弹密码对话框引导用户
         // 重输密码/开启加密，激活后重新检查。isRetry 防止无限递归（用户再次输入
         // 错误密码时不再弹窗）。两类哨兵均走 handleSaltMismatch（即 promptPasswordAndActivate）：
@@ -392,9 +425,7 @@ class StartupSyncChecker {
           deps.log('StartupSyncChecker: 账本 ${ledger.name} 密钥激活后仍'
               '加密状态异常（${status.message}），同步未完全恢复');
           retrySentinelLedgers.add(ledger.name);
-          continue;
-        }
-        if (status.diff == SyncDiff.error) {
+        } else if (status.diff == SyncDiff.error) {
           // P1-3 补强：非哨兵 error 状态（fcs manager 内部捕获网络/认证/
           // 存储异常后返回 error 而非抛出）同样计入失败账本。旧实现静默
           // 跳过，全部失败时会被误报"已是最新"，新设备密码错误场景下
@@ -425,16 +456,7 @@ class StartupSyncChecker {
           deps.log('StartupSyncChecker: 账本 ${ledger.name} 与云端指纹不一致'
               '但无法判断新旧（direction=unknown），不纳入启动下载候选');
         }
-      } catch (e) {
-        // 单账本 getStatus 失败不影响其他账本，但必须记录失败账本，
-        // 防止全部失败时被误报为"已是最新"（P1-3）
-        failedLedgers.add(ledger.name);
-        if (_isAuthErrorText(e.toString())) sawAuthError = true;
-        deps.log('StartupSyncChecker: 账本 ${ledger.name}（id=${ledger.id}）'
-            'getStatus 失败: $e');
       }
-      checked++;
-      controller.updateCheckingProgress(checked, ledgers.length);
     }
 
     if (retrySentinelLedgers.isNotEmpty) {

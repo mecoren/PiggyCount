@@ -1,8 +1,11 @@
 library;
 
 import 'dart:async';
+import 'dart:io' show HttpClient;
 
 import 'package:dio/dio.dart' show CancelToken;
+import 'package:dio/io.dart' show IOHttpClientAdapter;
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:webdav_client/webdav_client.dart' as webdav;
 
@@ -15,6 +18,26 @@ import 'webdav_storage_service.dart';
 /// DioException。详见 [WebDAVProvider.initialize] 内 W1 修复注释。
 bool webdavValidateStatus(int? status) =>
     status == null || status < 300 || status >= 400;
+
+/// dev 测试基础设施：模拟器内网自签 WebDAV 服务器豁免。
+///
+/// 仅当 (a) debug 构建 (kDebugMode) 且 (b) URL 命中 Android 模拟器
+/// 宿主别名 10.0.2.2 的 8443 端口（scripts/webdav_test/webdav_server.py
+/// 搭的自签 HTTPS 测试服务器）时，对 dart:io HttpClient 放宽证书校验。
+/// 生产/坚果云/自建 NAS 等任何其他 URL 完全不受影响——证书链校验保持
+/// 严格。服务器端 Basic Auth 仍然生效，仅豁免链路证书可信性。
+bool _isDevTestServer(Uri uri) =>
+    kDebugMode &&
+    ((uri.host == '10.0.2.2' || uri.host == '127.0.0.1') &&
+        uri.port == 8443);
+
+/// 为 dev 测试服务器构造信任其自签证书的 HttpClient。
+HttpClient _createDevTestHttpClient() {
+  final client = HttpClient();
+  client.badCertificateCallback =
+      (cert, host, port) => host == '10.0.2.2' || host == '127.0.0.1';
+  return client;
+}
 
 /// WebDAV implementation of [CloudProvider].
 ///
@@ -41,6 +64,12 @@ class WebDAVProvider implements CloudProvider {
   webdav.Client? _client;
   WebDAVAuthService? _authService;
   WebDAVStorageService? _storageService;
+
+  /// W5 测试口：initialize 后底层 client 的 auth 模式。
+  /// null = 未初始化；否则为 webdav_client 的 AuthType（预置 BasicAuth
+  /// 后应为 BasicAuth；Digest 服务器兜底升级后为 DigestAuth）。
+  webdav.AuthType? get authTypeForTest =>
+      _client == null ? null : _client!.auth.type;
 
   @override
   String get providerId => 'webdav';
@@ -109,6 +138,14 @@ class WebDAVProvider implements CloudProvider {
         debug: false,
       );
 
+      // W5 预置 BasicAuth：webdav_client 初始 Auth 为 NoAuth —— 每个操作
+      // 都先无凭据发一次请求、吃 401、再由上游按 WWW-Authenticate 升级
+      // Basic 重试，一倍额外往返。App 明知配置的是 Basic 凭据，直接预置
+      // BasicAuth 省掉协商；也顺带绕开了「401 + 同连接 keep-alive 重试」
+      // 的边缘场景（自签测试服务器实测踩坑点）。Digest 服务器兜底见下方
+      // 探测后的 401 处理。
+      _client!.auth = webdav.BasicAuth(user: username, pwd: password);
+
       // 审计 S23：禁用自动重定向。dart:io 对 301/302/303 会把 PUT/MOVE/
       // DELETE 改写成 GET 并丢弃 body——「上传成功」假象但什么都没写；
       // 且 Basic Auth 凭据会原样重放到重定向目标，https→http 302 即可
@@ -116,15 +153,21 @@ class WebDAVProvider implements CloudProvider {
       // 引导用户直接填写最终地址。
       //
       // W1 修复：validateStatus 只拒 3xx，4xx/5xx 一律放行给上游处理。
-      // 上游 webdav_client 的设计是「响应作为返回值」：首个请求不带凭据
-      // （NoAuth），收到 401 后由上游读 WWW-Authenticate 协商升级
-      // Basic/Digest 并重试；404/403 等也由上层各操作显式检查状态码抛错。
-      // 之前把阈值设为 <300，401 直接变成 DioException，认证协商成死代码，
-      // 正确密码也会被报「认证失败」。只拦 3xx 可同时保住两个目标：
-      // 认证协商正常工作 + 重定向绝不跟随（含上游的手工 302 跟随路径）。
+      // 上游 webdav_client 的设计是「响应作为返回值」：404/403 等由上层
+      // 各操作显式检查状态码抛错。只拦 3xx 可同时保住两个目标：
+      // 错误状态码正常交给上层语义判断 + 重定向绝不跟随。
       _client!.c.options.followRedirects = false;
       _client!.c.options.maxRedirects = 0;
       _client!.c.options.validateStatus = webdavValidateStatus;
+
+      // dev 测试基础设施：见 _isDevTestServer 注释。仅对模拟器宿主的
+      // 自签测试服务器放宽 dart:io 证书校验，其余 URL 保持严格校验。
+      final parsedUri = Uri.tryParse(url);
+      if (parsedUri != null && _isDevTestServer(parsedUri)) {
+        final adapter = IOHttpClientAdapter();
+        adapter.createHttpClient = _createDevTestHttpClient;
+        _client!.c.httpClientAdapter = adapter;
+      }
 
       // Verify connection by reading the remote path
       try {
@@ -149,15 +192,39 @@ class WebDAVProvider implements CloudProvider {
           await _probeWithTimeout(
               'mkdirAll', (t) => _client!.mkdirAll(remotePath, t));
         } else if (_isUnauthorized(e)) {
-          // 401/403 凭据错误：抛专属认证异常，上层（如 ensureInitialized
-          // 调用方）据此引导用户重新配置，而非误报网络/配置格式问题。
-          // 审计 W-X：401 与 403 分开表述（403 多为权限不足而非密码错误）
-          final code = _statusCodeOf(e);
-          throw code == 403
-              ? CloudAuthException(
-                  'WebDAV 访问被拒绝（权限不足）：请检查账号对该目录的读写权限或服务器配额',
-                  e)
-              : CloudAuthException('WebDAV 认证失败（账号或密码错误）', e);
+          // W5 Digest 兜底：预置 BasicAuth 后，Digest-only 服务器的 401
+          // 不会被上游协商分支处理（该分支仅在 NoAuth 起态可达）。这里读
+          // WWW-Authenticate challenge：Digest → 升级 DigestAuth 后重探测
+          // 一次；否则按凭据错误处理。
+          final challenge = _wwwAuthenticateOf(e);
+          if (challenge != null &&
+              challenge.toLowerCase().contains('digest')) {
+            _client!.auth = webdav.DigestAuth(
+              user: username,
+              pwd: password,
+              dParts: webdav.DigestParts(challenge),
+            );
+            try {
+              await _probeWithTimeout(
+                  'readDir(digest)', (t) => _client!.readDir(remotePath, t));
+              // Digest 探测成功：继续正常初始化流程
+            } catch (e2) {
+              if (_isUnauthorized(e2)) {
+                throw CloudAuthException('WebDAV 认证失败（账号或密码错误）', e2);
+              }
+              rethrow;
+            }
+          } else {
+            // 401/403 凭据错误：抛专属认证异常，上层（如 ensureInitialized
+            // 调用方）据此引导用户重新配置，而非误报网络/配置格式问题。
+            // 审计 W-X：401 与 403 分开表述（403 多为权限不足而非密码错误）
+            final code = _statusCodeOf(e);
+            throw code == 403
+                ? CloudAuthException(
+                    'WebDAV 访问被拒绝（权限不足）：请检查账号对该目录的读写权限或服务器配额',
+                    e)
+                : CloudAuthException('WebDAV 认证失败（账号或密码错误）', e);
+          }
         } else {
           rethrow;
         }
@@ -254,6 +321,24 @@ class WebDAVProvider implements CloudProvider {
       }
     } catch (_) {
       // 非 dio 异常类型，无 response 字段
+    }
+    return null;
+  }
+
+  /// W5：提取 401 响应的 WWW-Authenticate challenge 头（dio 系异常）。
+  /// 判定 Digest 兜底升级用；非 dio 异常/无头返回 null。
+  String? _wwwAuthenticateOf(Object e) {
+    try {
+      final dynamic dyn = e;
+      final dynamic response = dyn.response;
+      if (response != null) {
+        final dynamic headers = response.headers;
+        final dynamic value =
+            headers.value?.call('www-authenticate') as String?;
+        if (value != null && value.isNotEmpty) return value;
+      }
+    } catch (_) {
+      // 非 dio 异常类型
     }
     return null;
   }

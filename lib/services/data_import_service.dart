@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../cloud/transactions_json.dart';
 import '../data/db.dart';
 import '../data/repositories/base_repository.dart';
+import '../data/repositories/local/local_repository.dart';
 import '../data/repositories/transaction_repository.dart'
     show
         BatchAttachmentData,
@@ -1101,6 +1102,15 @@ class DataImportService {
 
   /// 导入手动汇率覆盖（v8 G4）。按 (base, quote) 唯一键 upsert，
   /// setOverride 内部已处理插入/更新两种情况。
+  ///
+  /// TBL-M3 补全（云端新账本导入路径）：按 (base, quote) 业务键把快照
+  /// 携带的 syncId 回写本地行。此前只调 setOverride，行不存在时生成全新
+  /// UUID，两端身份撕裂——restoreLedgerFromJson 路径已有
+  /// _restoreRateOverrideSyncIds 回写，本路径（importTransactionsJson →
+  /// 云端账本发现导入新账本）漏掉了同款处理。行已存在且 syncId 相同则
+  /// 幂等跳过；业务键冲突（本地已有行）时保留快照身份（新账本导入场景
+  /// 云端即权威）。仅 LocalRepository 能直查 drift 表，其他实现静默跳过
+  /// （与 _restoreRateOverrideSyncIds 的防御语义一致）。
   Future<void> importRateOverrides(
     BaseRepository repo,
     List<ImportRateOverride> overrides,
@@ -1114,13 +1124,29 @@ class DataImportService {
           quote: o.quoteCurrency,
           // setOverride 接口收 String；toStringAsFixed 丢失精度可控
           //（汇率 6 位小数足够），跨设备由快照统一值覆盖。
-          rate: o.rate.toStringAsFixed(6),
+          rate: _normalizeRateForStorage(o.rate),
         );
+      }
+      // TBL-M3 补全：回写快照携带的 syncId（身份对齐，防未来按 syncId
+      // 的增量 diff 配不上对）
+      if (repo is LocalRepository) {
+        await _restoreRateOverrideSyncIds(repo.db, overrides);
       }
       logger.info('RateOverrideImport', '手动汇率导入完成');
     } catch (e, st) {
       logger.error('RateOverrideImport', '手动汇率导入失败', e, st);
     }
+  }
+
+  /// 手动汇率存储口径（#4 统一）：导出端写 '7.1'，导入端此前写
+  /// '7.100000'，两端 DB 字面不一致（指纹已数值规范化，不影响同步，
+  /// 但字面差异让跨端对比/排查困惑）。统一为「去掉多余尾零」的最简
+  /// 小数形态，与导出端一致。
+  static String _normalizeRateForStorage(double rate) {
+    var s = rate.toStringAsFixed(6);
+    s = s.replaceFirst(RegExp(r'0+$'), '');
+    s = s.replaceFirst(RegExp(r'\.$'), '');
+    return s;
   }
 
   /// 两个可空日期取较新者（周期规则进度合并用）。

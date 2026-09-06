@@ -22,6 +22,15 @@ class S3Provider implements CloudProvider {
   S3AuthService? _authService;
   S3StorageService? _storageService;
 
+  /// S3-W2：条件写降级日志注入口（静态，宿主 app 装配时设置）。
+  ///
+  /// [CloudProvider] 接口的 initialize 只收 config map，无法优雅传
+  /// logger；S3Client 的 400+NotImplemented 降级需要 warning 线索
+  /// （双后端实测暴露的静默降级问题），宿主在创建 provider 前设置
+  /// 此静态字段即可。不设置时降级静默，但能力记忆（本会话后续直接
+  /// 盲写）仍生效。
+  static CloudSyncLogger? downgradeLogger;
+
   @override
   String get providerId => 's3';
 
@@ -128,7 +137,11 @@ class S3Provider implements CloudProvider {
 
     // 初始化服务
     _authService = S3AuthService(_client!, _bucket!);
-    _storageService = S3StorageService(_client!, _bucket!, keyPrefix: keyPrefix);
+    // S3-W2：降级 warning 注入（CloudSyncLogger 由宿主 app 装配时传入；
+    // S3Provider 接口无 logger 参数，这里用 provider 级静态注入口，
+    // 宿主 initialize 前设置即可，未设置时降级静默但能力记忆仍生效）
+    _storageService = S3StorageService(_client!, _bucket!,
+        keyPrefix: keyPrefix, logger: S3Provider.downgradeLogger);
   }
 
   /// 释放半初始化状态的资源（探测失败路径）

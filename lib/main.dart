@@ -183,10 +183,12 @@ Future<void> main() async {
     return await Login2FAChallengeDialog.show(ctx, request);
   };
 
-  // 启动一次性磁盘孤立文件 GC(attachments / attachment_thumbs / custom_icons),
-  // 清理历史版本遗留的文件。标志位 SharedPreferences 保证只跑一次。后台异步
-  // 执行,失败不致命。
-  unawaited(_runOrphanFileGcOnce(container));
+  // 启动磁盘孤立文件 GC(attachments / attachment_thumbs / custom_icons),
+  // 清理历史版本遗留的文件。周期性执行（G-ORPH：一次性标志位版本让
+  // 历史轮次留下的孤儿文件永远清不掉——本轮实测 A 端就留着 4 个历史
+  // 轮次的孤儿附件）。低频触发：距上次成功清理 ≥30 天才跑，标志位记录
+  // 上次成功时间。后台异步执行,失败不致命。
+  unawaited(_runOrphanFileGcPeriodic(container));
 
   // 启动后台回填附件 localSha256(v34 列,attachment_binary_sync)。
   // 分批读文件算哈希,补齐后退化为空查询;失败不致命,下次启动自愈。
@@ -741,19 +743,34 @@ class MainApp extends ConsumerWidget {
   }
 }
 
-/// 一次性磁盘孤立文件清理 —— 清历史版本遗留的:
+/// 周期性磁盘孤立文件清理 —— 清历史版本遗留的:
 ///   - `attachments/*.jpg` + `attachment_thumbs/*.jpg`:历史 sync pull 删交易时
 ///     只删表行不清磁盘,或者用户端在某版本之前没有完整清理的附件
 ///   - `custom_icons/*.png`:旧版 deleteCategory 只删分类行,customIconPath 指向
 ///     的本地图标文件遗留
 ///
-/// SharedPreferences 标志位 `orphan_file_gc_v1_done` 保证只跑一次。失败全部
+/// G-ORPH（双后端实测反馈）：旧实现 `orphan_file_gc_v1_done` 标志位守卫的
+/// 一次性 GC，历史轮次留下的孤儿文件永远清不掉。改为低频周期任务：
+/// 距上次成功清理 ≥[interval] 才执行（SharedPreferences 记录上次成功时间，
+/// 旧一次性标志位视为「刚跑过」，30 天后自然重新纳入周期）。失败全部
 /// try/catch 吞掉 —— 这是 nice-to-have,不应 block app 启动。
-Future<void> _runOrphanFileGcOnce(ProviderContainer container) async {
+Future<void> _runOrphanFileGcPeriodic(ProviderContainer container) async {
+  const flagKey = 'orphan_file_gc_v1_done';
+  const lastRunKey = 'orphan_file_gc_last_run';
+  const interval = Duration(days: 30);
   try {
     final prefs = await SharedPreferences.getInstance();
-    const flagKey = 'orphan_file_gc_v1_done';
-    if (prefs.getBool(flagKey) == true) return;
+    // 旧版本（一次性 GC）用户：迁移为「上次运行 = 现在」，30 天后进入周期
+    if (prefs.getBool(flagKey) == true && prefs.getInt(lastRunKey) == null) {
+      await prefs.setInt(
+          lastRunKey, DateTime.now().millisecondsSinceEpoch);
+    }
+    final lastRun = prefs.getInt(lastRunKey);
+    if (lastRun != null &&
+        DateTime.now().millisecondsSinceEpoch - lastRun <
+            interval.inMilliseconds) {
+      return;
+    }
 
     final db = container.read(databaseProvider);
 
@@ -842,14 +859,17 @@ Future<void> _runOrphanFileGcOnce(ProviderContainer container) async {
       logger.warning('OrphanGC', 'custom_icons scan failed: $e\n$st');
     }
 
+    // 成功才写时间戳：中途异常下次启动重试（不写 lastRunKey）
+    await prefs.setInt(
+        lastRunKey, DateTime.now().millisecondsSinceEpoch);
     await prefs.setBool(flagKey, true);
     logger.info(
       'OrphanGC',
-      '一次性清理完成 attachments=$attCleaned thumbs=$thumbCleaned icons=$iconCleaned',
+      '周期清理完成 attachments=$attCleaned thumbs=$thumbCleaned icons=$iconCleaned',
     );
   } catch (e, st) {
-    // 任何异常都不该影响 app 启动。下次启动还会重试(因为没设 flag)。
-    logger.warning('OrphanGC', '一次性清理异常(会在下次启动重试): $e\n$st');
+    // 任何异常都不该影响 app 启动。下次启动还会重试(因为没写 lastRunKey)。
+    logger.warning('OrphanGC', '周期清理异常(下次启动重试): $e\n$st');
   }
 }
 

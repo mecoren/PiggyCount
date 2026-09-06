@@ -69,6 +69,7 @@
   "startupSyncCheckViewDetail": "View detail & apply",
   "startupSyncCheckSkip": "Skip",
   "startupSyncCheckSkipRest": "Skip rest",
+  "startupSyncCheckCancelHint": "You can check later in Me > Cloud Sync",
   "startupSyncCheckCheckingTitle": "Checking cloud updates",
   "startupSyncCheckCheckingHint": "Please wait...",
   "startupSyncCheckCheckingProgress": "Checking {checked}/{total}",

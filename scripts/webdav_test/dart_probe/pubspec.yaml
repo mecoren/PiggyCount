@@ -1,0 +1,6 @@
+name: dart_probe
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+dependencies:
+  dio: ^5.11.0
+  webdav_client: ^1.2.2

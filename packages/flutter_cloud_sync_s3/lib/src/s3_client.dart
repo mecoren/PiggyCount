@@ -161,6 +161,24 @@ class S3Client {
         milliseconds: baseMs ~/ 2 + random.nextInt(baseMs ~/ 2 + 1));
   }
 
+  /// 网关条件写能力探测缓存（S3-W2 能力记忆）：
+  /// null = 未知（尚未探测）；true = 已确认网关不支持条件头。
+  ///
+  /// 部分 S3 兼容网关（某些第三方对象存储）对 If-Match/If-None-Match
+  /// 返回 400 + NotImplemented。首次踩坑后记忆该能力，后续上传直接
+  /// 盲写（写后由 manager 的 verifyAfterUpload 兜底并发覆盖检测），
+  /// 不再每次上传都白付一次失败往返。S3Client 生命周期与 provider 一致
+  /// （S3Provider.initialize 重建 client 时自然重置，后端更换后重新探测）。
+  bool? _conditionalWriteUnsupported;
+
+  /// 测试口：暴露条件写能力缓存（断言降级记忆 / 重置）。
+  bool? get conditionalWriteUnsupportedForTest => _conditionalWriteUnsupported;
+
+  /// 降级回调（可选）：条件头降级为盲写时通知上层记 warning 日志。
+  /// S3Client 自身不依赖日志设施（包保持零 Flutter/日志依赖），由
+  /// S3StorageService 在构造时注入。
+  void Function(String message)? onConditionalWriteDowngrade;
+
   /// PUT Object - 上传文件
   ///
   /// [metadata] 中的 key-value 对会作为 `x-amz-meta-{key}` 头发送，
@@ -199,6 +217,12 @@ class S3Client {
     if (ifMatch != null && ifNoneMatch) {
       throw ArgumentError('ifMatch 与 ifNoneMatch 互斥，不能同时传入');
     }
+    // S3-W2 能力记忆：首次 400+NotImplemented 降级后，后续上传直接
+    // 盲写，省掉每次一失败往返（写后校验仍兜底并发覆盖检测）
+    if (_conditionalWriteUnsupported == true) {
+      ifMatch = null;
+      ifNoneMatch = false;
+    }
     final uri = _buildUri(bucket, key: key);
 
     var headers = _signedPutHeaders(uri, data, contentType, metadata,
@@ -212,6 +236,11 @@ class S3Client {
     // 审计 M2：409 ConditionalRequestConflict 同理 —— 服务器未落盘本次
     // 写入，重发同一前置条件安全；最多重试 2 次，仍冲突按条件失败上抛。
     var conflictRetries = 0;
+    // 网关能力探测：部分 S3 兼容网关（如某些 MinIO 旧版/第三方对象存储）
+    // 不支持 If-Match/If-None-Match 条件头，返回 400 + NotImplemented。
+    // 服务器未处理本次请求（未落盘），去掉条件头重发是安全的；盲写后由
+    // 上层 manager 的写后校验（verifyAfterUpload）兜底并发覆盖检测。
+    var conditionalDropped = false;
     while (true) {
       try {
         final response = await _httpClient
@@ -224,6 +253,28 @@ class S3Client {
           if (response.statusCode == 412) {
             throw S3PreconditionFailedException(key,
                 message: '条件写失败（远端已被其他设备修改）: $key');
+          }
+          // 网关不支持条件头：400 + NotImplemented（错误体含
+          // "A header you provided implies functionality that is not
+          // implemented"）。仅在携带条件头时判定，且只降级一次，
+          // 防止把无关 400（如签名错误）误判为条件写不支持。
+          if (response.statusCode == 400 &&
+              (ifMatch != null || ifNoneMatch) &&
+              !conditionalDropped &&
+              _isConditionalHeaderNotSupported(response)) {
+            conditionalDropped = true;
+            // S3-W2 能力记忆 + warning 线索：此前每次上传都重新踩一遍
+            // 坑（先发条件写、吃 400、再盲写），且静默降级排查无痕迹。
+            // 首次确认后记忆能力并回调日志，后续 putObject 入口直接盲写。
+            _conditionalWriteUnsupported = true;
+            onConditionalWriteDowngrade?.call(
+                'S3 网关不支持条件写（If-Match/If-None-Match 返回 400 '
+                'NotImplemented），本次降级为盲写+写后校验，本会话后续上传'
+                '直接走盲写: bucket=$bucket key=$key');
+            ifMatch = null;
+            ifNoneMatch = false;
+            headers = _signedPutHeaders(uri, data, contentType, metadata);
+            continue;
           }
           // 审计 A5：PUT 路径的桶级 404（NoSuchBucket）也要区分出来，
           // 不能落进 _handleError 的通用 404 分支丢失语义
@@ -317,6 +368,13 @@ class S3Client {
     _checkDisposed();
     if (ifMatch != null && ifNoneMatch) {
       throw ArgumentError('ifMatch 与 ifNoneMatch 互斥，不能同时传入');
+    }
+    // S3-W2 能力记忆：与 putObject 同款——已确认不支持的网关直接盲写，
+    // 避免流式路径每次上传白付一次 400 失败往返（流式 body 不可重放，
+    // 首次 400 后调用方须用新流重调，代价更高）
+    if (_conditionalWriteUnsupported == true) {
+      ifMatch = null;
+      ifNoneMatch = false;
     }
     final uri = _buildUri(bucket, key: key);
     final headers = _signedStreamingPutHeaders(uri, contentType, metadata,
@@ -426,6 +484,26 @@ class S3Client {
         throw S3PreconditionFailedException(key,
             message: '条件写失败（HTTP 409 冲突）: $key');
       }
+      // S3-W2：400 + NotImplemented 特征（网关不支持条件头）时记忆能力，
+      // 流式 body 不可重放——记忆后上抛，调用方用新流重调本方法时
+      // 入口即直接走盲写，不再吃第二次 400。
+      if (response.statusCode == 400 &&
+          (ifMatch != null || ifNoneMatch) &&
+          _conditionalWriteUnsupported != true) {
+        final body = await _readErrorBody(response);
+        if (body != null && _isConditionalHeaderNotSupported(body)) {
+          _conditionalWriteUnsupported = true;
+          onConditionalWriteDowngrade?.call(
+              'S3 网关不支持条件写（If-Match/If-None-Match 返回 400 '
+              'NotImplemented），已记忆为盲写模式（流式 body 不可重放，'
+              '请用新流重调）: bucket=$bucket key=$key');
+        }
+        if (body != null) _handleError('PutObject', body);
+        throw S3Exception(
+          'PutObject failed (HTTP ${response.statusCode}, no conditional support)',
+          statusCode: response.statusCode,
+        );
+      }
       final body = await _readErrorBody(response);
       if (body != null) _handleError('PutObject', body);
       throw S3Exception(
@@ -454,6 +532,20 @@ class S3Client {
     } catch (_) {
       return null;
     }
+  }
+
+  /// 判断 400 响应是否为「网关不支持条件头」特征（S3 兼容网关的
+  /// NotImplemented 语义）。匹配错误体关键字而非依赖具体错误码字段，
+  /// 因为第三方网关的 XML 错误体形态各异（Code/Message 大小写不齐）。
+  bool _isConditionalHeaderNotSupported(http.Response response) {
+    final body = response.body;
+    if (body.isEmpty) return false;
+    final lower = body.toLowerCase();
+    return lower.contains('notimplemented') ||
+        (lower.contains('not implemented') &&
+            (lower.contains('if-match') ||
+                lower.contains('if-none-match') ||
+                lower.contains('a header you provided implies')));
   }
 
   /// 构造并签名流式 PUT 请求头。

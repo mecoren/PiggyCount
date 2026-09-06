@@ -478,7 +478,7 @@ class PiggyDatabase extends _$PiggyDatabase {
   PiggyDatabase.forTesting(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 40; // v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
+  int get schemaVersion => 41; // v41: local_changes 已推送行存量清理(数据治理 G-LC,双后端实测 6143 行无界增长); v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1379,6 +1379,26 @@ class PiggyDatabase extends _$PiggyDatabase {
             }
             await _createUpdatedAtTouchTriggers();
             logger.info('DBMigration', 'v40 迁移完成: updated_at 列 + 触发器');
+          }
+          if (from < 41) {
+            // v41（数据治理 G-LC，双后端实测反馈）：清理 local_changes 已推送
+            // 历史行。快照式同步（Path A）的 markSnapshotPushed 只标
+            // pushed_at 不删行，应用层 cleanupPushedChanges（7 天保留）要
+            // 到下一次上传成功才被调度——实测 A 端上传成功后 local_changes
+            // 仍留着 6143 行注入时写入的量。已推送行对快照同步无消费方，
+            // 一次性 DELETE 收敛存量（保留 server_marker 行 30 天窗语义：
+            // 只清 30 天前的，窗口内的留给 ChangeTracker.cleanupPushedChanges
+            // 的双保留窗逻辑统一处理）。
+            logger.info('DBMigration',
+                '开始迁移到 v41: 清理 local_changes 已推送历史行');
+            await customStatement(
+                "DELETE FROM local_changes WHERE pushed_at IS NOT NULL "
+                "AND action != 'server_marker' "
+                "AND pushed_at < strftime('%s','now') - 30*86400;");
+            await customStatement(
+                "DELETE FROM local_changes WHERE action = 'server_marker' "
+                "AND pushed_at < strftime('%s','now') - 30*86400;");
+            logger.info('DBMigration', 'v41 迁移完成: local_changes 存量收敛');
           }
         },
         onCreate: (m) async {

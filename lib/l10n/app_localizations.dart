@@ -324,6 +324,12 @@ abstract class AppLocalizations {
   /// **'Skip rest'**
   String get startupSyncCheckSkipRest;
 
+  /// No description provided for @startupSyncCheckCancelHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You can check later in Me > Cloud Sync'**
+  String get startupSyncCheckCancelHint;
+
   /// No description provided for @startupSyncCheckCheckingTitle.
   ///
   /// In en, this message translates to:
