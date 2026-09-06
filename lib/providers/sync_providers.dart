@@ -8,13 +8,8 @@ import '../cloud/provider_factory.dart';
 import '../cloud/sync_service.dart';
 import '../cloud/transactions_sync_manager.dart';
 import '../models/ledger_display_item.dart';
-import '../services/attachment_service.dart' show attachmentListRefreshProvider;
 import '../services/system/logger_service.dart';
-import 'budget_providers.dart';
-import 'calendar_providers.dart';
 import 'database_providers.dart';
-import 'tag_providers.dart';
-import 'ui_state_providers.dart';
 import 'statistics_providers.dart';
 import 'encryption_providers.dart';
 
@@ -48,9 +43,9 @@ final lastSyncStatusProvider =
 /// 派生 Provider（首页交易列表/统计/账户等）watch 这个值，即可在增量同步
 /// 完成后重新运行，UI 不再读到旧缓存。
 ///
-/// 为什么不直接 `ref.invalidate(watchTransactionsProvider)`：Supabase Realtime
-/// 通道绑在同一个 stream provider 上，invalidate 会把通道拆掉再建，反而更慢；
-/// 用一个独立 bump 计数器是最便宜的信号。
+/// 为什么不直接 `ref.invalidate(watchTransactionsProvider)`：stream provider
+/// 重建有额外开销，且派生链上的其他 watcher 也会被连带打断；用一个独立
+/// bump 计数器是最便宜的信号。
 final syncGenerationProvider = StateProvider<int>((ref) => 0);
 
 /// 最近一次同步错误信息（供 UI 状态栏展示）。

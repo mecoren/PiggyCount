@@ -1,4 +1,3 @@
-import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/db.dart';

@@ -313,7 +313,7 @@ class _RecurringTransactionCard extends ConsumerWidget {
                           await repo.toggleRecurringTransaction(
                               recurring.id, value);
 
-                          // 给Realtime一点时间触发更新
+                          // 等待本地写入落库后再失效重建列表
                           await Future.delayed(
                               const Duration(milliseconds: 100));
 

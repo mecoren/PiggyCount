@@ -9,7 +9,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' hide SyncStatus;
 import 'package:flutter_cloud_sync_icloud/flutter_cloud_sync_icloud.dart';
 import '../../providers/sync_providers.dart';
-import '../../providers/database_providers.dart';
 import '../../providers/theme_providers.dart';
 import '../../services/system/logger_service.dart';
 import '../../widgets/ui/ui.dart';

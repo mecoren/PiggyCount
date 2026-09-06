@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/note_history.dart';
-import '../services/system/logger_service.dart';
 import '../widget/widget_manager.dart';
 import '../providers.dart';
 

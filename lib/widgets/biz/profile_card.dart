@@ -4,8 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
-import '../../providers/sync_providers.dart' as sp;
-import '../../services/system/logger_service.dart';
 import '../../services/ui/avatar_service.dart';
 import '../../providers/avatar_providers.dart';
 import '../../styles/header_skins.dart';

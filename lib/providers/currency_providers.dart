@@ -9,7 +9,6 @@ import '../services/currency/rate_math.dart';
 import '../services/currency/exchange_rate_service.dart';
 import 'database_providers.dart';
 import 'statistics_providers.dart';
-import 'sync_providers.dart';
 
 /// 多币种 MVP 的 provider 层(.docs/multi-currency/02-tech-design-app.md §五/§六)。
 /// 主币种链照 displayName(theme_providers.dart:275-312)同款。
