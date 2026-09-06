@@ -2,13 +2,12 @@
 
 > 🌐 [English](cloud-setup_EN.md)
 
-PiggyCount 支持 5 种云同步方案,根据你的使用场景选择最合适的一种。
+PiggyCount 支持 4 种云同步方案，根据你的使用场景选择最合适的一种。
 
 ## 方案对比
 
 | 方案 | 适用场景 | 特点 |
 |---|---|---|
-| **PiggyCount Cloud** | 多端实时协同 + 自托管 | Docker 一键、多设备秒同步、自带 Web 端、多用户 |
 | **iCloud** | iOS 单平台用户 | 零配置、原生集成、Apple 生态 |
 | **Supabase** | 无 NAS 的跨平台用户 | 免费额度充足、配置简单、云端托管 |
 | **WebDAV** | NAS 用户 | 数据本地化、群晖/绿联云/Nextcloud |
@@ -16,77 +15,7 @@ PiggyCount 支持 5 种云同步方案,根据你的使用场景选择最合适�
 
 ---
 
-## 🆕 PiggyCount Cloud(自建云同步 + Web 端)
-
-> **多端实时秒级同步 + Web 管理端 + 多用户独立**,推荐有 NAS / VPS / Docker 环境的用户。
-
-### 一键部署
-
-```yaml
-# docker-compose.yml
-services:
-  piggycount-cloud:
-    image: sunxiao0721/piggycount-cloud:latest
-    restart: unless-stopped
-    ports:
-      - "8869:8080"
-    volumes:
-      - ./data:/data
-```
-
-```bash
-docker compose up -d
-docker compose logs piggycount-cloud | grep -A 10 "初次启动"
-```
-
-输出类似:
-
-```
- PiggyCount Cloud — 初次启动,已自动创建管理员账号:
-
-   邮箱:    owner@example.com
-   密码:    FIDodUnwprkw1zUi
-```
-
-拿这个账号:
-
-- 浏览器访问 `http://<服务器 IP>:8869` 即可用 **Web 管理端**
-- App 里选「PiggyCount Cloud」,填服务器地址 + 上面账号登录
-
-### 添加家人 / 队友
-
-Web 后台 →「用户」→「新增用户」输入对方邮箱和密码 → 告诉他们登录就行。每个用户数据互相隔离,看不到别人的账本。
-
-### 进阶配置
-
-```yaml
-services:
-  piggycount-cloud:
-    image: sunxiao0721/piggycount-cloud:latest
-    restart: unless-stopped
-    ports:
-      - "8869:8080"
-    environment:
-      # 自指定管理员账号(替代默认随机生成):
-      BOOTSTRAP_ADMIN_EMAIL: me@example.com
-      BOOTSTRAP_ADMIN_PASSWORD: <你的强密码>
-      # 自指定 JWT 密钥(默认会自动生成到 /data/.jwt_secret):
-      # JWT_SECRET: <32+ 字节随机串>
-    volumes:
-      - ./data:/data
-```
-
-### 提示
-
-- **PWA 支持**:Web 管理端已接入 PWA,浏览器地址栏右侧会出现"安装"图标,点一下就能把 Web 作为独立 app 装到桌面 / Dock / 开始菜单
-- **数据位置**:SQLite 数据库 + 附件 + JWT 密钥全部在 `./data/` 目录,迁移/备份整个目录就行
-- **公网部署**:建议在前面套一层 nginx / caddy 做 HTTPS + 域名
-
-[📖 PiggyCount-Cloud 仓库 + 备份系统 + 代码审查报告 →](https://github.com/TNT-Likely/PiggyCount-Cloud)
-
----
-
-## 方案二:iCloud(推荐 iOS 用户)
+## 方案一:iCloud(推荐 iOS 用户)
 
 **适用场景**:iOS 用户,追求零配置、无缝同步体验。
 
@@ -103,11 +32,11 @@ services:
 2. 打开小猪记账 → 个人中心 → 云服务
 3. 选择 **iCloud**,即可开始同步
 
-> 💡 iCloud 同步仅支持 iOS 设备。需要 iOS + Android 跨平台请用 Supabase / S3 / PiggyCount Cloud。
+> 💡 iCloud 同步仅支持 iOS 设备。需要 iOS + Android 跨平台请用 Supabase / S3 / WebDAV。
 
 ---
 
-## 方案三:Supabase(推荐新手)
+## 方案二:Supabase(推荐新手)
 
 **适用场景**:没有 NAS 设备,想要快速开始的用户。
 
@@ -149,7 +78,7 @@ services:
 
 ---
 
-## 方案四:WebDAV(推荐 NAS 用户)
+## 方案三:WebDAV(推荐 NAS 用户)
 
 **适用场景**:已有 NAS 设备或私有云存储的用户。
 
@@ -204,7 +133,7 @@ services:
 
 ---
 
-## 方案五:S3 协议存储(推荐追求灵活性)
+## 方案四:S3 协议存储(推荐追求灵活性)
 
 **适用场景**:需要灵活选择云服务商,或想利用免费额度的用户。
 
@@ -285,7 +214,6 @@ MinIO(自建):
 **Q: 应该选哪个方案?**
 
 - iOS 单设备 → **iCloud**
-- 多端实时协同 + 自托管 → **PiggyCount Cloud**
 - 跨平台无 NAS → **Supabase** 或 **S3**
 - 有 NAS → **WebDAV**
 
@@ -306,7 +234,6 @@ MinIO(自建):
 **Q: 如何在多设备间同步?**
 
 - iCloud:iOS 设备登录同一 Apple ID,数据自动同步
-- PiggyCount Cloud:所有设备配置相同服务器地址 + 同账号登录
 - Supabase:所有设备配置相同的 URL 和 anon key,登录同一账号
 - WebDAV:所有设备配置相同的 WebDAV 服务器地址和凭据
 - S3:所有设备配置相同的 S3 端点、Access Key 和存储桶名称

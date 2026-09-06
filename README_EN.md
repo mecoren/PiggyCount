@@ -11,7 +11,7 @@
 
 **Your Data, Your Control — Open Source Accounting App**
 
-Sync via PiggyCount Cloud (self-hosted) / iCloud / Supabase / WebDAV / S3
+Sync via iCloud / Supabase / WebDAV / S3
 
 <br/>
 
@@ -20,9 +20,6 @@ Sync via PiggyCount Cloud (self-hosted) / iCloud / Supabase / WebDAV / S3
 </a>
 <a href="https://play.google.com/store/apps/details?id=com.wait.piggycount">
   <img src="https://img.shields.io/badge/Google%20Play-414141?style=for-the-badge&logo=google-play&logoColor=white" alt="Get it on Google Play" height="64"/>
-</a>
-<a href="https://github.com/TNT-Likely/PiggyCount-Cloud/blob/main/README.en.md">
-  <img src="https://img.shields.io/badge/Web%20(Self--Hosted)-4A90E2?style=for-the-badge&logo=docker&logoColor=white" alt="Self-host Web" height="64"/>
 </a>
 
 <br/>
@@ -34,10 +31,6 @@ Sync via PiggyCount Cloud (self-hosted) / iCloud / Supabase / WebDAV / S3
 
 ---
 
-> 🤖 **New: [MCP](https://count.beejz.com/en/docs/mcp) support** — pair with [PiggyCount Cloud](https://github.com/TNT-Likely/PiggyCount-Cloud) to drive your ledger from any MCP client.
-
----
-
 ## 💡 Why PiggyCount
 
 A lightweight, open-source, privacy-first **personal finance** and **expense tracking** app.
@@ -46,11 +39,11 @@ A lightweight, open-source, privacy-first **personal finance** and **expense tra
 |---|---|
 | ❌ Data on third-party servers, no audit | ✅ **Fully open-source**, code auditable |
 | ❌ Privacy may be analyzed and exploited | ✅ **Offline-first** + self-hosted, developer can't access your data |
-| ❌ Service shutdown = data loss | ✅ **Data sovereignty**, choose from 5 sync options |
+| ❌ Service shutdown = data loss | ✅ **Data sovereignty**, choose from 4 sync options |
 | ❌ Premium features behind paywalls | ✅ **Completely free** (including AI / OCR / voice input) |
 | ❌ Ads / financial product recommendations | ✅ **Zero ads / zero tracking / zero data collection** |
 
-> **Platform support**: 🤖 Android 5.0+ · 🍎 iOS 15.5+ · 🌐 Web (built into PiggyCount Cloud, see below)
+> **Platform support**: 🤖 Android 5.0+ · 🍎 iOS 15.5+
 >
 > ~~📱 HarmonyOS — [Discontinued](https://github.com/TNT-Likely/piggycount-openharmony)~~
 
@@ -153,64 +146,16 @@ A lightweight, open-source, privacy-first **personal finance** and **expense tra
 
 ## ☁️ Sync Options
 
-PiggyCount offers 5 sync options. Your data, your control. **See [docs/cloud-setup_EN.md](docs/cloud-setup_EN.md) for full setup guides.**
+PiggyCount offers 4 sync options. Your data, your control. **See [docs/cloud-setup_EN.md](docs/cloud-setup_EN.md) for full setup guides.**
 
 | Option | Best For | Highlights |
 |---|---|---|
-| **PiggyCount Cloud** | Real-time multi-device + self-hosted + multi-user co-write | One-click Docker, sub-second sync, built-in Web, multi-user, **shared ledgers** |
 | **iCloud** | iOS-only users | Zero config, native integration |
 | **Supabase** | Cross-platform without NAS | Generous free tier, easy setup |
 | **WebDAV** | NAS users | Local data, Synology/UGREEN/Nextcloud |
 | **S3 protocol** | Flexible cloud storage | Cloudflare R2/AWS S3/MinIO, large free tier |
 
 > 🔐 **Why self-host?** Privacy first, cost control, data security, fully open-source. All sync code is auditable.
-
----
-
-## 🆕 PiggyCount Cloud (Self-hosted)
-
-> **Sub-second multi-device sync + Web admin + multi-user isolation + AES-256 encrypted backup** — Recommended for users with NAS / VPS / Docker.
-
-### Highlights
-
-- 📱 **Real-time multi-device** — Phone A makes a change, Phone B and Web see it within seconds (WebSocket)
-- 🌐 **Built-in Web admin** — One Docker image = server + web; open server URL to use
-- 👥 **Multi-user isolation** — One server, many user accounts, each only sees their own data
-- 🤝 **Shared ledgers** — Owner generates an invite code; family / team join the same book. Owner / Editor roles, realtime sync, every transaction tagged with creator + last editor, plus member balance stats. iOS / Android / Web all supported.
-- 🔐 **AES-256 encrypted backup** — Multi-remote fan-out (R2 / S3 / WebDAV / B2), AES zip encryption — recoverable with standard tools even without the service
-
-### Deploy + Full Documentation
-
-Full Docker Compose deployment, backup system, PWA, and ops details live in the Cloud repo:
-
-**[👉 PiggyCount-Cloud repo — One-click Docker deploy + full docs](https://github.com/TNT-Likely/PiggyCount-Cloud)**
-
-### Web Admin Preview
-
-<div align="center">
-  <img src="preview/web/en-01-home.png" alt="Web home" width="600" />
-  <br/>
-  <sub>💰 Home: income/expense, asset breakdown, category heatmap, trends — at a glance (dark mode)</sub>
-</div>
-
-<details>
-<summary>More Web screenshots</summary>
-
-<div align="center">
-  <img src="preview/web/en-02-transactions.png" alt="Web transactions" width="600" />
-  <br/>
-  <sub>📒 Transactions: keyword / category / account / date / tag multi-filter</sub>
-</div>
-
-<br/>
-
-<div align="center">
-  <img src="preview/web/en-03-devices.png" alt="Web devices" width="600" />
-  <br/>
-  <sub>📱 Online devices + backup archive management</sub>
-</div>
-
-</details>
 
 ---
 
@@ -224,7 +169,7 @@ Full Docker Compose deployment, backup system, PWA, and ops details live in the 
 - **Flutter 3.27+** · Cross-platform UI framework
 - **Riverpod** · State management
 - **Drift (SQLite)** · Local database ORM
-- **Supabase / Self-hosted PiggyCount Cloud / WebDAV / S3** · Multi-option cloud sync
+- **Supabase / WebDAV / S3 / iCloud** · Multi-option cloud sync
 
 ### Quick Start
 
@@ -289,12 +234,11 @@ A: Absolutely! The app uses local storage by default. All features work normally
 **Q: Which sync option should I pick?**
 A:
 - iOS single device → **iCloud** (zero config)
-- Cross-platform + real-time multi-device → **PiggyCount Cloud** (self-hosted, recommended)
 - Cross-platform without NAS → **Supabase / S3**
 - Have a NAS → **WebDAV**
 
 **Q: How is data security ensured?**
-A: Use your own server / Storage / Bucket. WebDAV and S3 should use HTTPS. PiggyCount Cloud backups are AES-256 encrypted by default.
+A: Use your own server / Storage / Bucket. WebDAV and S3 should use HTTPS.
 
 For more details, see [docs/cloud-setup_EN.md](docs/cloud-setup_EN.md) or [Issues](https://github.com/mecoren/PiggyCount/issues).
 
@@ -368,7 +312,7 @@ For commercial licensing pricing and process, see [COMMERCIAL_LICENSE.md](COMMER
 
 | Repository | Description |
 |---|---|
-| [PiggyCount-Cloud](https://github.com/TNT-Likely/PiggyCount-Cloud) | Self-hosted sync server + Web admin (FastAPI + React) |
+| [PiggyCount-Cloud](https://github.com/TNT-Likely/PiggyCount-Cloud) | Self-hosted sync server + Web admin (FastAPI + React; real-time collaboration has been retired — legacy project) |
 | [PiggyCount-Website](https://github.com/TNT-Likely/PiggyCount-Website) | Website / docs repo |
 | [piggycount-openharmony](https://github.com/TNT-Likely/piggycount-openharmony) | HarmonyOS version (discontinued) |
 | [BeeShot](https://github.com/TNT-Likely/BeeShot) | App Store screenshot generator |

@@ -1689,9 +1689,9 @@ Future<void> _restoreRateOverrideSyncIds(
 /// v9：账本身份回填。快照携带 ledgerSyncId 时对账本地行做保守收敛：
 /// - 本地行无 syncId → 回填快照值（legacy 账本首次恢复后获得跨设备身份）；
 /// - 本地行已有 syncId 且与快照一致 → 幂等无操作（最常见：两端同源）；
-/// - 两者不同 → 保留本地身份不动，仅告警。本地 syncId 可能已被
-///   PiggyCount Cloud 引擎锚定 server external_id，贸然覆盖会撕裂
-///   push/pull 的实体映射；身份冲突应交给用户在设置里处理而非静默改写。
+/// - 两者不同 → 保留本地身份不动，仅告警。本地 syncId 是该账本在全部
+///   设备与快照间的实体锚点,贸然覆盖会撕裂实体映射;身份冲突应交给
+///   用户在设置里处理而非静默改写。
 ///
 /// 必须在 restoreLedgerFromJson 的恢复事务内调用。快照无 ledgerSyncId
 /// （v8- 旧格式）时为空操作。

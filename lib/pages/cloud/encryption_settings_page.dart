@@ -204,8 +204,8 @@ class _EncryptionSettingsPageState
           }
         }
       } else {
-        // 非 TransactionsSyncManager（如 SyncEngine/PiggyCount Cloud）：
-        // 走普通改密。变更日志后端的加密覆盖由缺陷 B 修复处理。
+        // 非 TransactionsSyncManager（LocalOnly,云存储不可用）：走普通
+        // 改密,不做云端密文重加密。
         await service.changePassword(
           oldPassword: result.oldPassword!,
           newPassword: result.password,

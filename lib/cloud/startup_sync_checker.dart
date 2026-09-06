@@ -1,8 +1,7 @@
 // 启动时云端数据拉取检查编排器
 //
-// 仅适用于路径 A（S3 / WebDAV / Supabase / iCloud）。
-// 路径 B（PiggyCount Cloud）保持现有 _triggerInitialCloudSync 自动同步，
-// 不在本编排器范围内。
+// 仅适用于路径 A（S3 / WebDAV / Supabase / iCloud）。PiggyCount Cloud
+// （路径 B）已随云端协同下线移除，不在本编排器范围内。
 //
 // 设计原则：
 // - 通过 StartupSyncCheckerDeps 接口注入所有外部依赖，

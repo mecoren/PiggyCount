@@ -85,9 +85,8 @@ EncryptionServiceImpl makeService(SecureKeyStorage storage) =>
     );
 
 
-/// 内存版 CloudStorageService —— 模拟云端密文快照存储(原 Path B 测试
-/// FakePiggyCountCloudStorageService 的通用部分,云端协同下线后内联保留,
-/// 加密换钥恢复测试仍需要一个可控的云端假实现)。
+/// 内存版 CloudStorageService —— 模拟快照后端的密文存储(加密换钥恢复
+/// 测试需要一个可控的云端假实现)。
 class _FakeCloudStorage implements CloudStorageService {
   final Map<String, String> _files = {};
 

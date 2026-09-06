@@ -3,10 +3,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// 应用模式枚举
 ///
-/// 历史上还有过一个 `cloud`(仅云端模式)值,数据完全存 Supabase。
-/// 但 PiggyCount Cloud 上线后,所有云同步统一走「LocalRepository + ChangeTracker
-/// + 推送到 PiggyCount Cloud」 — 离线优先 + 多设备实时秒同步,跟「数据存远端」
-/// 完全是两条范式,cloud-only 没有用户入口,清理时已删。
+/// 历史上还有过两个已删值:`cloud`(数据完全存 Supabase)与 PiggyCount Cloud
+/// 上线后的「LocalRepository + ChangeTracker 实时推送」范式 —— 后者已随云端
+/// 协同下线移除,现所有云同步走「本地优先 + 快照同步」,cloud-only 没有
+/// 用户入口。
 ///
 /// 保留 enum 而非改 bool 是为了:
 /// 1) SharedPreferences 旧数据 `app_mode=cloud` 能 fallback 到 local,不崩

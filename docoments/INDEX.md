@@ -7,6 +7,15 @@
 
 ---
 
+> ⚠️ **时效性说明(2026-09-06)**：PiggyCount Cloud 实时协同同步(SyncEngine /
+> WebSocket 推送 / 共享账本 / 多用户服务端)已整体下线,现仅保留
+> S3 / WebDAV / Supabase / iCloud 四种**快照同步**后端。本目录 17 篇文档写于
+> 下线之前,属时间点快照,其中关于 PiggyCount Cloud、SyncEngine、路径 B、
+> ChangeTracker 注入、共享账本的章节均为**历史记录**,不再反映当前实现。
+> 现状请以源码与 `docs/cloud-setup.md` 为准。
+
+---
+
 ## 📖 文档系列总览
 
 本工程文档系统是 PiggyCount 项目的**面向开发者的工程化文档**，目标读者为：

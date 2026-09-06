@@ -2,13 +2,12 @@
 
 > 🌐 [中文](cloud-setup.md)
 
-PiggyCount supports 5 cloud sync options. Choose based on your scenario.
+PiggyCount supports 4 cloud sync options. Choose based on your scenario.
 
 ## Comparison
 
 | Option | Best For | Highlights |
 |---|---|---|
-| **PiggyCount Cloud** | Real-time multi-device + self-hosted | One-click Docker, sub-second sync, built-in Web, multi-user |
 | **iCloud** | iOS-only users | Zero config, native integration, Apple ecosystem |
 | **Supabase** | Cross-platform without NAS | Generous free tier, easy setup, hosted |
 | **WebDAV** | NAS users | Local data, Synology/Nextcloud/etc. |
@@ -16,77 +15,7 @@ PiggyCount supports 5 cloud sync options. Choose based on your scenario.
 
 ---
 
-## 🆕 PiggyCount Cloud (Self-hosted Sync + Web)
-
-> **Sub-second multi-device sync + Web admin + multi-user isolation.** Recommended for users with NAS / VPS / Docker.
-
-### One-click Deploy
-
-```yaml
-# docker-compose.yml
-services:
-  piggycount-cloud:
-    image: sunxiao0721/piggycount-cloud:latest
-    restart: unless-stopped
-    ports:
-      - "8869:8080"
-    volumes:
-      - ./data:/data
-```
-
-```bash
-docker compose up -d
-docker compose logs piggycount-cloud | grep -A 10 "first launch"
-```
-
-Output similar to:
-
-```
- PiggyCount Cloud — first launch, admin account auto-created:
-
-   Email:    owner@example.com
-   Password: FIDodUnwprkw1zUi
-```
-
-With this account:
-
-- Open `http://<server-ip>:8869` in browser → **Web admin console**
-- In the App, choose "PiggyCount Cloud", enter server URL + credentials
-
-### Add Family / Teammates
-
-Web console → "Users" → "Add User" with their email and password → tell them to log in. Each user's data is isolated.
-
-### Advanced Configuration
-
-```yaml
-services:
-  piggycount-cloud:
-    image: sunxiao0721/piggycount-cloud:latest
-    restart: unless-stopped
-    ports:
-      - "8869:8080"
-    environment:
-      # Override default random admin:
-      BOOTSTRAP_ADMIN_EMAIL: me@example.com
-      BOOTSTRAP_ADMIN_PASSWORD: <strong password>
-      # Override JWT secret (default: auto-generated to /data/.jwt_secret):
-      # JWT_SECRET: <32+ byte random string>
-    volumes:
-      - ./data:/data
-```
-
-### Tips
-
-- **PWA support**: Web admin is a PWA — install icon appears in the address bar to install as a desktop app
-- **Data location**: SQLite + attachments + JWT secret all live in `./data/`. Migrate / back up the whole directory.
-- **Public deployment**: Front with nginx / caddy for HTTPS + domain.
-
-[📖 PiggyCount-Cloud repo + backup system + audit reports →](https://github.com/TNT-Likely/PiggyCount-Cloud)
-
----
-
-## Option 2: iCloud (Recommended for iOS)
+## Option 1: iCloud (Recommended for iOS)
 
 **Best for**: iOS users wanting zero-config, seamless sync.
 
@@ -103,11 +32,11 @@ services:
 2. Open PiggyCount → Profile → Cloud Service
 3. Choose **iCloud**
 
-> 💡 iCloud only works between iOS devices. For iOS + Android, use Supabase / S3 / PiggyCount Cloud.
+> 💡 iCloud only works between iOS devices. For iOS + Android, use Supabase / S3 / WebDAV.
 
 ---
 
-## Option 3: Supabase (Beginner-friendly)
+## Option 2: Supabase (Beginner-friendly)
 
 **Best for**: Users without NAS who want quick setup.
 
@@ -149,7 +78,7 @@ services:
 
 ---
 
-## Option 4: WebDAV (Recommended for NAS Users)
+## Option 3: WebDAV (Recommended for NAS Users)
 
 **Best for**: Users with NAS or private cloud storage.
 
@@ -201,7 +130,7 @@ Jianguoyun:
 
 ---
 
-## Option 5: S3 Protocol (Recommended for Flexibility)
+## Option 4: S3 Protocol (Recommended for Flexibility)
 
 **Best for**: Users who want flexible cloud providers or generous free tiers.
 
@@ -281,7 +210,6 @@ Aliyun OSS (S3-compatible):
 **Q: Which option should I pick?**
 
 - iOS single device → **iCloud**
-- Multi-device real-time + self-host → **PiggyCount Cloud**
 - Cross-platform without NAS → **Supabase** or **S3**
 - Have a NAS → **WebDAV**
 
@@ -302,7 +230,6 @@ Aliyun OSS (S3-compatible):
 **Q: How to sync between devices?**
 
 - iCloud: log into the same Apple ID
-- PiggyCount Cloud: same server URL + same account
 - Supabase: same URL and anon key, same account
 - WebDAV: same server URL and credentials
 - S3: same endpoint, Access Key, and bucket

@@ -238,8 +238,7 @@ final uploadingLedgerIdsProvider = StateProvider<Set<int>>((ref) => {});
 /// 快照同步（TransactionsSyncManager）上传完成信号。
 ///
 /// 每次 [TransactionsSyncManager.uploadCurrentLedger] 成功 +1，供 UI
-/// `ref.listen` 弹出「已同步」toast。SyncEngine（PiggyCount Cloud）模式走
-/// [syncEventStreamProvider] 事件流，不走这里 —— 两者互不干扰。
+/// `ref.listen` 弹出「已同步」toast。
 final snapshotSyncCompletedProvider = StateProvider<int>((ref) => 0);
 
 /// 本地账本列表（快速，仅本地）
@@ -286,9 +285,7 @@ final localLedgersProvider =
 ///
 /// 列云端根目录下的 ledger_*.json 文件,过滤掉本地已有对应身份(syncId)
 /// 的账本,只把「纯远程」的账本展示在账本页的远程区,供用户手动恢复。
-/// 历史上另有 PiggyCount Cloud 版本(server API readLedgers),随云端
-/// 协同下线移除;本版本基于通用 CloudStorageService 接口,覆盖全部
-/// 快照后端。
+/// 基于通用 CloudStorageService 接口,覆盖全部快照后端。
 final remoteLedgersProvider =
     FutureProvider<List<LedgerDisplayItem>>((ref) async {
   ref.watch(ledgerListRefreshProvider);

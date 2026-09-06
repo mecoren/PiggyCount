@@ -272,7 +272,8 @@ class LocalRepository extends BaseRepository {
             .go();
       }
 
-      // ---- 以下为 PiggyCount Cloud 链路专属收尾（快照后端无此数据）----
+      // ---- 以下为 ChangeTracker 链路专属收尾（快照后端无此数据;
+      // tracker 已随云端协同下线停止注入,正常装配下不会走到）----
       if (changeTracker == null) return;
 
       // 审计 S9：被删账本的 pull 错误记录悬挂（UI 会持续显示已不存在

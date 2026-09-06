@@ -26,8 +26,8 @@ void main() {
 
   setUp(() {
     db = PiggyDatabase.forTesting(NativeDatabase.memory());
-    // 故意不注入 changeTracker —— 与 repositoryProvider 在非 Cloud 后端下
-    // 的装配完全一致（database_providers.dart: tracker 仅 piggycountCloud 注入）
+    // 故意不注入 changeTracker —— 与 repositoryProvider 的装配完全一致
+    // （database_providers.dart: ChangeTracker 已随云端协同下线移除,不注入）
     repo = LocalRepository(db);
   });
 

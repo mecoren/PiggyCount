@@ -21,10 +21,10 @@ class Ledgers extends Table {
   TextColumn get type => text().withDefault(const Constant('personal'))();  // personal / shared
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   // 跨设备同步唯一标识：跟 accounts/categories/tags 的 syncId 同语义，
-  // 对齐 PiggyCount Cloud server 的 ledger.external_id。device B 首次登录
-  // 通过 readLedgers() 拉到的 ext_id 会写到这里，后续 push/pull 都用这个
-  // 做设备间的 ledger 匹配，而不是本地 autoIncrement id（A/B 本地 id 必然
-  // 不一致）。v21 migration 里已为旧数据把 id 回填成 syncId 以兼容。
+  // 历史上对齐 PiggyCount Cloud server 的 ledger.external_id(该服务已
+  // 下线)。快照同步沿用该字段做设备间账本匹配,而不是本地 autoIncrement
+  // id(A/B 本地 id 必然不一致)。v21 migration 里已为旧数据把 id 回填成
+  // syncId 以兼容。
   TextColumn get syncId => text().nullable()();
   // v24: 共享账本字段 — server 端 LedgerMember.role 同步下来
   TextColumn get myRole => text().withDefault(const Constant('owner'))();  // owner / editor

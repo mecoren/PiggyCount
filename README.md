@@ -11,7 +11,7 @@
 
 **你的数据,你做主的开源记账应用**
 
-支持 PiggyCount Cloud 自建云端 / iCloud / Supabase / WebDAV / S3 五种同步方案
+支持 iCloud / Supabase / WebDAV / S3 四种同步方案
 
 <br/>
 
@@ -20,9 +20,6 @@
 </a>
 <a href="https://play.google.com/store/apps/details?id=com.wait.piggycount">
   <img src="https://img.shields.io/badge/Google%20Play-414141?style=for-the-badge&logo=google-play&logoColor=white" alt="Get it on Google Play" height="64"/>
-</a>
-<a href="https://github.com/TNT-Likely/PiggyCount-Cloud">
-  <img src="https://img.shields.io/badge/Web%20(Self--Hosted)-4A90E2?style=for-the-badge&logo=docker&logoColor=white" alt="Self-host Web" height="64"/>
 </a>
 
 <br/>
@@ -34,10 +31,6 @@
 
 ---
 
-> 🤖 **新:[MCP](https://count.beejz.com/docs/mcp) 支持** — 搭配 [PiggyCount Cloud](https://github.com/TNT-Likely/PiggyCount-Cloud),用 LLM 直接管账本。
-
----
-
 ## 💡 为什么选择小猪记账
 
 一款轻量、开源、隐私可控的**个人财务管理**和**支出追踪** App。
@@ -46,11 +39,11 @@
 |---|---|
 | ❌ 数据存第三方,无法审计 | ✅ **完全开源**,代码可审计 |
 | ❌ 隐私可能被分析利用 | ✅ **离线优先** + 自建云端,开发者无法访问 |
-| ❌ 服务商倒闭数据丢失 | ✅ **数据主权**,5 种同步方案任选 |
+| ❌ 服务商倒闭数据丢失 | ✅ **数据主权**,4 种同步方案任选 |
 | ❌ 高级功能付费墙 | ✅ **完全免费**(包括 AI / OCR / 语音记账) |
 | ❌ 广告 / 理财推荐 | ✅ **零广告 / 零追踪 / 零数据收集** |
 
-> **平台支持**:🤖 Android 5.0+ · 🍎 iOS 15.5+ · 🌐 Web(PiggyCount Cloud 自带,见下文)
+> **平台支持**:🤖 Android 5.0+ · 🍎 iOS 15.5+
 >
 > ~~📱 HarmonyOS — [已停止更新](https://github.com/TNT-Likely/piggycount-openharmony)~~
 
@@ -153,64 +146,16 @@
 
 ## ☁️ 云同步方案
 
-小猪记账提供 5 种同步方案,所有方案数据完全由你掌控,**详细配置教程见 [docs/cloud-setup.md](docs/cloud-setup.md)**。
+小猪记账提供 4 种同步方案,所有方案数据完全由你掌控,**详细配置教程见 [docs/cloud-setup.md](docs/cloud-setup.md)**。
 
 | 方案 | 适用场景 | 特点 |
 |---|---|---|
-| **PiggyCount Cloud** | 多端实时协同 + 自托管 + 多人共账 | Docker 一键、秒同步、自带 Web 端、多用户、**共享账本** |
 | **iCloud** | iOS 单平台用户 | 零配置、原生集成 |
 | **Supabase** | 无 NAS 的跨平台用户 | 免费额度充足、配置简单 |
 | **WebDAV** | NAS 用户 | 数据本地化、群晖/绿联云/Nextcloud |
 | **S3 协议** | 灵活云存储 | Cloudflare R2 / AWS S3 / MinIO,免费额度大 |
 
 > 🔐 **为什么自建?** 隐私第一、成本可控、数据安全、开源可审计。所有同步代码开源。
-
----
-
-## 🆕 PiggyCount Cloud 自建云
-
-> **多端实时秒级同步 + Web 管理端 + 多用户独立 + AES-256 加密备份** — 推荐有 NAS / VPS / Docker 环境的用户。
-
-### 核心能力
-
-- 📱 **多设备实时协同** — 手机 A 改一笔,手机 B 和 Web 几秒内看到(WebSocket 推送)
-- 🌐 **自带 Web 管理端** — 一个 Docker 镜像 = server + web,浏览器直接打开服务器地址即用
-- 👥 **多用户独立** — 一个服务器多人注册,数据互相隔离
-- 🤝 **共享账本** — Owner 一键生成邀请码,家人 / 团队加入同一本,Owner / Editor 双角色,实时同步 + 每笔交易标记"谁记的 / 谁编辑的" + 成员收支统计(三端等价)
-- 🔐 **AES-256 加密备份** — 多远端 fan-out(R2 / S3 / WebDAV / B2),备份用 AES zip 加密,丢失服务也能用标准解压工具自助恢复
-
-### 部署 + 完整文档
-
-完整 Docker Compose 部署教程、备份系统、PWA、运维细节都在 Cloud 仓库:
-
-**[👉 PiggyCount-Cloud 仓库 — 一键 Docker 部署 + 完整文档](https://github.com/TNT-Likely/PiggyCount-Cloud)**
-
-### Web 管理端预览
-
-<div align="center">
-  <img src="preview/web/zh-01-home.png" alt="Web 首页" width="600" />
-  <br/>
-  <sub>💰 首页:收支、资产构成、分类热力、趋势 — 一屏总览(暗黑模式)</sub>
-</div>
-
-<details>
-<summary>更多 Web 截图</summary>
-
-<div align="center">
-  <img src="preview/web/zh-02-transactions.png" alt="Web 交易列表" width="600" />
-  <br/>
-  <sub>📒 交易列表:关键字 / 分类 / 账户 / 日期 / 标签多维筛选</sub>
-</div>
-
-<br/>
-
-<div align="center">
-  <img src="preview/web/zh-03-devices.png" alt="Web 在线设备" width="600" />
-  <br/>
-  <sub>📱 在线设备 + 备份归档管理</sub>
-</div>
-
-</details>
 
 ---
 
@@ -224,7 +169,7 @@
 - **Flutter 3.27+** · 跨平台 UI 框架
 - **Riverpod** · 状态管理
 - **Drift (SQLite)** · 本地数据库 ORM
-- **Supabase / 自建 PiggyCount Cloud / WebDAV / S3** · 云端同步多方案
+- **Supabase / WebDAV / S3 / iCloud** · 云端同步多方案
 
 ### 快速开始
 
@@ -289,12 +234,11 @@ A: 完全可以!应用默认本地存储,所有功能都能正常使用。可随
 **Q: 应该选哪个云方案?**
 A:
 - iOS 单设备 → **iCloud**(零配置)
-- 跨平台 + 多端实时协同 → **PiggyCount Cloud**(自托管,推荐)
 - 跨平台无 NAS → **Supabase / S3**
 - 有 NAS → **WebDAV**
 
 **Q: 如何确保数据安全?**
-A: 使用自己的服务器 / Storage / Bucket,WebDAV 和 S3 建议 HTTPS 加密传输。PiggyCount Cloud 备份默认 AES-256 加密。
+A: 使用自己的服务器 / Storage / Bucket,WebDAV 和 S3 建议 HTTPS 加密传输。
 
 更多详情见 [docs/cloud-setup.md](docs/cloud-setup.md) 或 [Issues](https://github.com/mecoren/PiggyCount/issues)。
 
@@ -368,7 +312,7 @@ A: 使用自己的服务器 / Storage / Bucket,WebDAV 和 S3 建议 HTTPS 加密
 
 | 仓库 | 说明 |
 |---|---|
-| [PiggyCount-Cloud](https://github.com/TNT-Likely/PiggyCount-Cloud) | 自建云同步服务端 + Web 管理端(FastAPI + React) |
+| [PiggyCount-Cloud](https://github.com/TNT-Likely/PiggyCount-Cloud) | 自建云同步服务端 + Web 管理端(FastAPI + React,实时协同已下线,历史项目) |
 | [PiggyCount-Website](https://github.com/TNT-Likely/PiggyCount-Website) | 官网 / 文档仓库 |
 | [piggycount-openharmony](https://github.com/TNT-Likely/piggycount-openharmony) | 鸿蒙版本(已停止更新) |
 | [BeeShot](https://github.com/TNT-Likely/BeeShot) | App Store 截图生成器 |

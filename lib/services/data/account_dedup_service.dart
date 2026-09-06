@@ -47,8 +47,8 @@ class AccountDedupService {
   /// 执行收敛。整个合并在单个事务内完成，任一步失败整体回滚，
   /// 不会留下「交易已重定向但账户未删」的半合并状态。
   ///
-  /// [changeTracker] 可选:PiggyCount Cloud 激活时传入,被重定向的
-  /// recurring_transactions 行补登记 update change(cloud_recurring_sync),
+  /// [changeTracker] 可选(历史参数,云端协同下线后生产装配不再传入):
+  /// 传入时被重定向的 recurring_transactions 行补登记 update change,
   /// 否则对端规则的账户引用仍指向已被合并掉的重复账户。
   static Future<AccountDedupResult> run(
     PiggyDatabase db, {
