@@ -4199,8 +4199,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get welcomeCloudSyncFeature1 => '完全离线使用，无需云服务';
 
   @override
-  String get welcomeCloudSyncFeature2 =>
-      'PiggyCount Cloud 自建云（多设备实时协同 + Web 端）';
+  String get welcomeCloudSyncFeature2 => '多设备快照同步，数据存在你自己的云盘';
 
   @override
   String get welcomeCloudSyncFeature3 => 'iCloud / WebDAV / Supabase / S3 任选';
@@ -11798,8 +11797,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get welcomeCloudSyncFeature1 => '完全離線使用，無需雲端服務';
 
   @override
-  String get welcomeCloudSyncFeature2 =>
-      'PiggyCount Cloud 自建雲（多裝置即時協同 + Web 端）';
+  String get welcomeCloudSyncFeature2 => '多裝置快照同步，資料存在你自己的雲端';
 
   @override
   String get welcomeCloudSyncFeature3 => 'iCloud / WebDAV / Supabase / S3 任選';

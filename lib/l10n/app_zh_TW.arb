@@ -2396,7 +2396,7 @@
   "welcomeCategoryModeTitle": "選擇分類模式",
   "welcomeCloudSyncDescription": "PiggyCount 支援多種同步方式，資料完全由你掌控",
   "welcomeCloudSyncFeature1": "完全離線使用，無需雲端服務",
-  "welcomeCloudSyncFeature2": "PiggyCount Cloud 自建雲（多裝置即時協同 + Web 端）",
+  "welcomeCloudSyncFeature2": "多裝置快照同步，資料存在你自己的雲端",
   "welcomeCloudSyncFeature3": "iCloud / WebDAV / Supabase / S3 任選",
   "welcomeCloudSyncTitle": "可選的雲端同步",
   "welcomeCurrencyDescription": "選擇您常用的貨幣，之後可以隨時在設定中更改",

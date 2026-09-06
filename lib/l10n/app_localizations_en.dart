@@ -4355,7 +4355,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get welcomeCloudSyncFeature2 =>
-      'PiggyCount Cloud self-hosted (real-time multi-device + Web UI)';
+      'Multi-device snapshot sync, stored in your own cloud';
 
   @override
   String get welcomeCloudSyncFeature3 =>

@@ -349,9 +349,6 @@ class SupabaseConfig {
       );
 }
 
-/// PiggyCount Cloud 配置（自部署 FastAPI 后端的 base URL + 可选登录态）
-///
-
 /// WebDAV配置
 class WebdavConfig {
   final String url;

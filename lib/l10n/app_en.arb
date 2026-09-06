@@ -1932,7 +1932,7 @@
   "welcomeCloudSyncTitle": "Optional Cloud Sync",
   "welcomeCloudSyncDescription": "PiggyCount supports multiple sync methods - your data, your control",
   "welcomeCloudSyncFeature1": "Completely offline usage, no cloud needed",
-  "welcomeCloudSyncFeature2": "PiggyCount Cloud self-hosted (real-time multi-device + Web UI)",
+  "welcomeCloudSyncFeature2": "Multi-device snapshot sync, stored in your own cloud",
   "welcomeCloudSyncFeature3": "Or pick iCloud / WebDAV / Supabase / S3",
   "widgetManagement": "Home Screen Widget",
   "widgetManagementDesc": "Quick view of income and expenses on home screen",

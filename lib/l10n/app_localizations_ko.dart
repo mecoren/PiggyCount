@@ -4229,8 +4229,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get welcomeCloudSyncFeature1 => '클라우드 없이 완전히 오프라인으로 사용 가능';
 
   @override
-  String get welcomeCloudSyncFeature2 =>
-      'PiggyCount 클라우드 셀프 호스팅 (실시간 다중 기기 + 웹 UI)';
+  String get welcomeCloudSyncFeature2 => '다중 기기 스냅샷 동기화, 내 클라우드에 직접 저장';
 
   @override
   String get welcomeCloudSyncFeature3 =>

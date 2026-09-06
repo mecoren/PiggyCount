@@ -1698,7 +1698,7 @@
   "welcomeCloudSyncTitle": "可选的云同步",
   "welcomeCloudSyncDescription": "PiggyCount 支持多种同步方式，数据完全由你掌控",
   "welcomeCloudSyncFeature1": "完全离线使用，无需云服务",
-  "welcomeCloudSyncFeature2": "PiggyCount Cloud 自建云（多设备实时协同 + Web 端）",
+  "welcomeCloudSyncFeature2": "多设备快照同步，数据存在你自己的云盘",
   "welcomeCloudSyncFeature3": "iCloud / WebDAV / Supabase / S3 任选",
   "widgetManagement": "桌面小组件",
   "widgetManagementDesc": "在主屏幕快速查看收支情况",

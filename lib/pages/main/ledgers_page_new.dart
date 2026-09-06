@@ -4,8 +4,6 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_cloud_sync/flutter_cloud_sync.dart'
-    show CloudBackendType;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -458,10 +456,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
   /// 显示本地账本操作菜单
   Future<void> _showLocalLedgerActions(
       BuildContext context, LedgerDisplayItem ledger) async {
-    // v24 共享账本权限矩阵(详见 .docs/shared-ledger/01-product-design.md §6):
-    // - Owner / 单人账本:edit / clear / deleteLocal / delete + members 全部可用
-    // - Editor(共享账本 + myRole != owner):仅 members(看成员/退出),
-    //   隐藏 edit / clear / deleteLocal / delete 4 项 owner-only 操作
+    // myRole 沿自 v24 共享账本(云端协同已下线):存量 Editor 角色的账本
+    // 隐藏 edit / clear / delete 等 owner-only 操作,仅保留预算/上传/仅删本地
     final isOwner = ledger.myRole == 'owner';
     // 手动上传仅对快照同步类后端开放
     final canUpload = ref.read(syncServiceProvider) is TransactionsSyncManager;

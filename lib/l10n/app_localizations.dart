@@ -7898,7 +7898,7 @@ abstract class AppLocalizations {
   /// No description provided for @welcomeCloudSyncFeature2.
   ///
   /// In en, this message translates to:
-  /// **'PiggyCount Cloud self-hosted (real-time multi-device + Web UI)'**
+  /// **'Multi-device snapshot sync, stored in your own cloud'**
   String get welcomeCloudSyncFeature2;
 
   /// No description provided for @welcomeCloudSyncFeature3.

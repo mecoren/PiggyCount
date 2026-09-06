@@ -1338,7 +1338,7 @@
   "welcomeCloudSyncTitle": "선택적 클라우드 동기화",
   "welcomeCloudSyncDescription": "PiggyCount는 다양한 동기화 방식을 지원합니다 - 내 데이터는 내가 관리합니다",
   "welcomeCloudSyncFeature1": "클라우드 없이 완전히 오프라인으로 사용 가능",
-  "welcomeCloudSyncFeature2": "PiggyCount 클라우드 셀프 호스팅 (실시간 다중 기기 + 웹 UI)",
+  "welcomeCloudSyncFeature2": "다중 기기 스냅샷 동기화, 내 클라우드에 직접 저장",
   "welcomeCloudSyncFeature3": "또는 iCloud / WebDAV / Supabase / S3 중 선택",
   "widgetManagement": "홈 화면 위젯",
   "widgetManagementDesc": "홈 화면에서 수입과 지출을 빠르게 확인하세요",
