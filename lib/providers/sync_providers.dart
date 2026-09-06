@@ -310,7 +310,9 @@ final remoteLedgersProvider =
           remoteSyncId: m.slotKey,
           name: m.name.isEmpty ? '(unnamed)' : m.name,
           currency: m.currency,
-          updatedAt: DateTime.now(),
+          // 云端真实上传时间（metadata uploadedAt / payload exportedAt）；
+          // 缺失时回退发现时刻，绝不拿本地时钟冒充云端时间
+          updatedAt: m.uploadedAt ?? DateTime.now(),
           transactionCount: m.txCount,
           balance: m.balance,
         ),

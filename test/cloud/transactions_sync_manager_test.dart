@@ -869,6 +869,92 @@ void main() {
         expect(metas.length, 1);
         expect(metas.first.slotKey, 'uuid-new');
       });
+
+      test('metadata 含 monthStartDay/uploadedAt 时快路径带出真实值', () async {
+        final storage = _LedgerFileStorage(
+          metadataByName: {
+            'ledger_uuid-msd.json': {
+              'ledgerName': 'With MSD',
+              'currency': 'CNY',
+              'count': '3',
+              'monthStartDay': '15',
+              'uploadedAt': '2026-09-01T08:00:00.000Z',
+            },
+          },
+        );
+        final manager = buildManager(storage);
+
+        final metas = await manager.discoverRemoteLedgers();
+
+        expect(metas.length, 1);
+        expect(metas.first.monthStartDay, 15,
+            reason: '快路径应从 metadata 读到真实月起始日，而非默认 1');
+        expect(metas.first.uploadedAt, DateTime.utc(2026, 9, 1, 8));
+        expect(storage.downloadCount, 0);
+      });
+
+      test('metadata 异常(超时/网络)时本轮跳过该文件,不再叠加慢路径下载',
+          () async {
+        final storage = _MetadataFailsStorage(
+          legacyNames: const ['ledger_uuid-slow.json'],
+          ledgerJson: '{"ledgerName":"ShouldNotDownload","count":1,"items":[]}',
+        );
+        final manager = buildManager(storage);
+
+        final metas = await manager.discoverRemoteLedgers();
+
+        // getMetadata 抛异常 → 本轮跳过（不落入慢路径再给一次下载预算）
+        expect(metas, isEmpty,
+            reason: '快路径失败必须跳过本轮，不得叠加慢路径');
+        expect(storage.downloadCount, 0,
+            reason: '快路径失败不应触发下载（防止单文件双段超时击穿整体预算）');
+      });
+
+      test('importRemoteLedger 失败(事务异常)后 payload 缓存被清理,重试走重新下载',
+          () async {
+        // 慢路径下载并缓存 payload（快照带唯一 syncId，无 recurring 关联，
+        // 不会被周期实例去重规则跳过）
+        final storage = _LedgerFileStorage(
+          metadataByName: const {}, // 无 metadata → 慢路径下载并缓存 payload
+          legacyNames: const ['ledger_uuid-fail.json'],
+          ledgerJson: '{"version":6,'
+              '"exportedAt":"2026-07-28T10:00:00Z",'
+              '"ledgerId":99,"ledgerName":"Failing","currency":"CNY","count":1,'
+              '"accounts":[],"categories":[],"tags":[],'
+              '"items":[{"type":"expense","amount":10,'
+              '"categoryName":null,"categoryKind":null,'
+              '"happenedAt":"2026-07-01T00:00:00.000","note":"retry",'
+              '"tags":"","syncId":"tx-retry-1"}]}',
+        );
+        final manager = buildManager(storage);
+
+        final metas = await manager.discoverRemoteLedgers();
+        expect(metas.length, 1);
+        expect(storage.downloadCount, 1, reason: '慢路径已下载一次并缓存');
+
+        // 构造确定性失败：先插入同 syncId 行，让竞态守卫在事务内命中
+        // null 返回（导入被跳过，账本行未新建）。
+        await db.into(db.ledgers).insert(LedgersCompanion.insert(
+              name: 'Occupied',
+              currency: const d.Value('CNY'),
+              syncId: const d.Value('uuid-fail'),
+            ));
+
+        final result = await manager.importRemoteLedger(metas.first);
+        expect(result, isNull, reason: '竞态守卫应命中并跳过导入');
+        // remove 已挪进 finally：无论结果如何，缓存都被释放
+        expect(manager.discoveredPayloadCountForTest, 0,
+            reason: '导入收尾必须释放发现阶段缓存（finally 语义）');
+        // 移除占用行后重试：缓存已清，必须重新下载云端内容
+        await (db.delete(db.ledgers)
+              ..where((l) => l.syncId.equals('uuid-fail')))
+            .go();
+        storage.downloadCount = 0;
+        final ok = await manager.importRemoteLedger(metas.first);
+        expect(ok, 1, reason: '重试应成功导入 1 笔');
+        expect(storage.downloadCount, 1,
+            reason: '缓存已被清理，重试必须重新下载云端内容');
+      });
     });
   });
 
@@ -910,6 +996,45 @@ class _CountingStorage implements fcs.CloudStorageService {
 
   @override
   Future<fcs.CloudFile?> getMetadata({required String path}) async => null;
+}
+
+/// getMetadata 恒抛异常（模拟快路径网络失败/超时），download 正常的 storage。
+/// 验证发现环节「快路径失败 → 本轮跳过该文件、不叠加慢路径下载」。
+class _MetadataFailsStorage implements fcs.CloudStorageService {
+  final List<String> legacyNames;
+  final String? ledgerJson;
+  int downloadCount = 0;
+
+  _MetadataFailsStorage({this.legacyNames = const [], this.ledgerJson});
+
+  @override
+  Future<List<fcs.CloudFile>> list({required String path}) async => [
+        for (final name in legacyNames) fcs.CloudFile(name: name, path: name),
+      ];
+
+  @override
+  Future<String?> download({required String path}) async {
+    downloadCount++;
+    return ledgerJson;
+  }
+
+  @override
+  Future<fcs.CloudFile?> getMetadata({required String path}) async {
+    throw fcs.CloudStorageException('metadata read failed (simulated)');
+  }
+
+  @override
+  Future<void> upload({
+    required String path,
+    required String data,
+    Map<String, String>? metadata,
+  }) async {}
+
+  @override
+  Future<void> delete({required String path}) async {}
+
+  @override
+  Future<bool> exists({required String path}) async => false;
 }
 
 /// 第一次 download 抛异常，之后返回 [successJson]

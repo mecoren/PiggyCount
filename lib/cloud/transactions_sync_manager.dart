@@ -97,7 +97,7 @@ class TransactionsSyncManager implements SyncService {
   /// 不同账本各持各的锁，互不阻塞。
   final Map<int, Future<void>> _ledgerOpsLocks = {};
 
-  /// Path A 自动同步防抖（对齐 Path B SyncEngine._scheduleAutoSync 治理）。
+  /// 快照同步的自动上传防抖（对齐旧增量引擎时代的 _scheduleAutoSync 治理）。
   ///
   /// 背景：PostProcessor 在**每笔**交易保存后立即触发
   /// uploadCurrentLedger —— 全量导出 JSON + 附件对象探测 + 整快照 PUT。
@@ -107,7 +107,7 @@ class TransactionsSyncManager implements SyncService {
   /// 最后一次：窗口内再有编辑只重置计时；已有防抖上传在跑时新到的触发
   /// 记为 pending，跑完后自动补一轮（保证最后状态必然上云）。
   ///
-  /// 与 Path B 相同的 2s 窗口；手动上传/合并回传不受影响（仍走
+  /// 相同的 2s 窗口；手动上传/合并回传不受影响（仍走
   /// uploadCurrentLedger 直传，不经过防抖）。
   static const Duration _autoSyncDebounce = Duration(seconds: 2);
 
@@ -196,6 +196,10 @@ class TransactionsSyncManager implements SyncService {
     _pendingForce.clear();
     _pendingBypass.clear();
   }
+
+  /// 测试观测：发现阶段 payload 缓存的当前条目数（验证导入收尾释放语义）
+  @visibleForTesting
+  int get discoveredPayloadCountForTest => _discoveredPayloads.length;
 
   /// 在 [ledgerId] 的操作锁内执行 [body]。同账本操作严格排队，异常原样透传。
   Future<T> _withLedgerLock<T>(int ledgerId, Future<T> Function() body) {
@@ -362,7 +366,7 @@ class TransactionsSyncManager implements SyncService {
     _discoveredPayloads.clear();
     _staleRemoteSlots.clear();
     _cipherProbeCache.clear();
-    // Path A 防抖：取消全部待执行的自动上传计时器。进行中的一轮（如有）
+    // 自动上传防抖收尾：取消全部待执行计时器。进行中的一轮（如有）
     // 会自然结束（provider 已置 null，其内部会按「云服务不可用」失败并
     // 记 warning，不再补跑）。
     cancelAutoSyncTimers();
@@ -918,6 +922,13 @@ class TransactionsSyncManager implements SyncService {
         if (name != null) uploadMetadata['ledgerName'] = name;
         if (currency != null) uploadMetadata['currency'] = currency;
         if (localCount != null) uploadMetadata['count'] = localCount.toString();
+        // 月起始日（m-02 延伸）：发现阶段快路径读它构造 RemoteLedgerMeta，
+        // 免得导入前展示/建行默认 1；老快照无该键时导入阶段 payload
+        // 回写兜底。
+        final monthStartDay = exportMap['monthStartDay'] as num?;
+        if (monthStartDay != null) {
+          uploadMetadata['monthStartDay'] = monthStartDay.toInt().toString();
+        }
         // 余额合计（m-02 延伸）：口径与 getLedgerStats 的 SQL 聚合一致 ——
         // income 加 / expense 减 / transfer 不计、nativeAmount ?? amount 兜底。
         // 供账本页「远程账本」卡片展示，发现阶段零下载即可读到。items 已在
@@ -1020,7 +1031,7 @@ class TransactionsSyncManager implements SyncService {
 
       // F2：快照上传成功 = 本账本 + user-global 的未推送变更均已随快照
       // 上云，标记 pushedAt：
-      // ① 阻止 local_changes 无限膨胀（Path A 此前永不 markPushed，
+      // ① 阻止 local_changes 无限膨胀（快照同步此前永不 markPushed，
       //    cleanupPushedChanges 也因此无行可清）；
       // ② 让 _localChangeEvidence 的「未推送行存在才可信」门禁恢复设计
       //    语义（M1/M7）：上传后时间戳与内容新旧状态重新对齐。
@@ -1091,7 +1102,7 @@ class TransactionsSyncManager implements SyncService {
   }
 
   // ============================================================
-  // 附件二进制同步(attachment_binary_sync,快照链路 Path A)
+  // 附件二进制同步(attachment_binary_sync,快照同步链路)
   // ============================================================
 
   /// 附件对象的云端路径:与 ledger_<id>.json 同级的 attachments/ 目录,
@@ -2867,34 +2878,62 @@ class TransactionsSyncManager implements SyncService {
       if (await _localLedgerForSlotKey(slotKey) != null) continue;
 
       // ---- 快路径：读上传时写入的 metadata（一次轻量请求，零下载）----
+      // 单文件总预算 10s（M4 收口）：快路径超时/失败即跳过该文件本轮，
+      // 不再落入慢路径下载。否则快路径 10s + 慢路径 10s = 单文件最多
+      // 20s+，恰好击穿启动检查器对 discover 的整体 _statusTimeout(20s)，
+      // 后续待发现的账本会被整体超时静默丢弃——复活 M4 修掉的
+      // 「整体必超时 → 发现环节静默降级」老问题。慢路径只服务
+      // 「metadata 确认缺失（老文件/网关剥头）」这一确定性场景。
+      final mdDeadline = DateTime.now().add(const Duration(seconds: 10));
+      Map<String, dynamic>? fastMeta;
+      var fastPathFailed = false;
       try {
         final meta = await provider.storage
             .getMetadata(path: file.name)
             .timeout(const Duration(seconds: 10));
-        final md = meta?.metadata;
-        final name = _metaValue(md, 'ledgerName');
-        final currency = _metaValue(md, 'currency');
-        final countStr = _metaValue(md, 'count');
-        final balanceStr = _metaValue(md, 'balance');
+        fastMeta = meta?.metadata;
+      } catch (e) {
+        // metadata 读取失败（网络/权限/超时）：本轮跳过该文件，等下次
+        // 发现重试（启动检查器/App 生命周期内会周期重跑）。不落入慢
+        // 路径下载——快路径失败说明网络/权限状态不确定，再叠加 10s
+        // 下载预算会让单文件最坏 20s+，击穿启动检查器整体预算。
+        fastPathFailed = true;
+        logger.warning('CloudSync', '发现账本 $slotKey 元数据读取失败，本轮跳过: $e');
+      }
+      if (fastPathFailed) continue;
+      if (fastMeta != null) {
+        final name = _metaValue(fastMeta, 'ledgerName');
+        final currency = _metaValue(fastMeta, 'currency');
+        final countStr = _metaValue(fastMeta, 'count');
+        final balanceStr = _metaValue(fastMeta, 'balance');
+        final uploadedAtStr = _metaValue(fastMeta, 'uploadedAt');
         if (name != null && name.isNotEmpty) {
           metas.add(RemoteLedgerMeta(
             slotKey: slotKey,
             name: name,
             currency: currency ?? 'CNY',
-            // monthStartDay 不在 metadata 里（上传时未写）；导入阶段
-            // payload 会带上真实值，列表展示用默认即可
-            monthStartDay: 1,
+            // monthStartDay 在 metadata 里（与上传侧同批写入）；老文件
+            // 未写该键时回退 1，导入阶段 payload 回写兜底真实值
+            monthStartDay: (int.tryParse(
+                        _metaValue(fastMeta, 'monthStartDay') ?? '') ??
+                    1)
+                .clamp(1, 28),
             txCount: int.tryParse(countStr ?? '') ?? 0,
             balance: double.tryParse(balanceStr ?? '') ?? 0,
+            uploadedAt: DateTime.tryParse(uploadedAtStr ?? ''),
           ));
           continue;
         }
-      } catch (e) {
-        // metadata 读取失败（网络/权限/超时）不阻断：降级走下载路径
-        logger.info('CloudSync', '发现账本 $slotKey 元数据读取降级: $e');
       }
 
       // ---- 慢路径：下载快照 JSON 提取元信息（老文件无 metadata）----
+      // 只在快路径**确定性缺失**（读到 metadata 但无 ledgerName）时走，
+      // 且受单文件总预算约束（剩余时间不足 2s 直接跳过，避免叠加超时）。
+      final remaining = mdDeadline.difference(DateTime.now());
+      if (remaining < const Duration(seconds: 2)) {
+        logger.warning('CloudSync', '发现账本 $slotKey 剩余预算不足，跳过本轮');
+        continue;
+      }
       try {
         // M4：逐文件 10s 超时。此前依赖启动检查器的整体 _statusTimeout(20s)
         // 罩住「list + N 个文件全量下载」，云端有多个新账本（或单个大账本）
@@ -2902,7 +2941,7 @@ class TransactionsSyncManager implements SyncService {
         // 只牺牲自己，其余账本仍可被发现。
         final raw = await provider.storage
             .download(path: file.name)
-            .timeout(const Duration(seconds: 10));
+            .timeout(remaining);
         if (raw == null) {
           logger.warning('CloudSync', '发现账本 $slotKey 下载返回空，跳过');
           continue;
@@ -2936,6 +2975,8 @@ class TransactionsSyncManager implements SyncService {
               ((payload['monthStartDay'] as num?)?.toInt() ?? 1).clamp(1, 28),
           txCount: (payload['count'] as num?)?.toInt() ?? 0,
           balance: balance,
+          uploadedAt:
+              DateTime.tryParse((payload['exportedAt'] as String?) ?? ''),
         ));
       } on CloudEncryptedLocallyDisabledException {
         // 无可用密钥：跳过该账本（加密恢复走既有的哨兵引导流程）
@@ -2988,42 +3029,49 @@ class TransactionsSyncManager implements SyncService {
     var inserted = 0;
     // 缓存命中/重新下载两条路径到这里都已提升为非空
     final payload = jsonStr;
-    final newLedgerId = await db.transaction(() async {
-      // 竞态守卫：发现与导入之间本地可能已导入同身份账本
-      final existing = await _localLedgerForSlotKey(meta.slotKey);
-      if (existing != null) {
-        logger.warning('CloudSync', '账本 syncId=${meta.slotKey} 已被本地占用，跳过导入');
-        return null;
-      }
+    final int? newLedgerId;
+    try {
+      newLedgerId = await db.transaction(() async {
+        // 竞态守卫：发现与导入之间本地可能已导入同身份账本
+        final existing = await _localLedgerForSlotKey(meta.slotKey);
+        if (existing != null) {
+          logger.warning('CloudSync', '账本 syncId=${meta.slotKey} 已被本地占用，跳过导入');
+          return null;
+        }
 
-      // 审计 S12：能走到这里的同名行必然身份不同（同身份已在上方守卫
-      // 返回），一律改名导入（"账本（2）"），避免两个完全同名账本干扰
-      // 用户与后续按名匹配逻辑。
-      final importNameRows = await (db.select(db.ledgers)
-            ..where((l) => l.name.equals(meta.name)))
-          .get();
-      final importName = importNameRows.isEmpty
-          ? meta.name
-          : _dedupeLedgerName(importNameRows, meta.name);
+        // 审计 S12：能走到这里的同名行必然身份不同（同身份已在上方守卫
+        // 返回），一律改名导入（"账本（2）"），避免两个完全同名账本干扰
+        // 用户与后续按名匹配逻辑。
+        final importNameRows = await (db.select(db.ledgers)
+              ..where((l) => l.name.equals(meta.name)))
+            .get();
+        final importName = importNameRows.isEmpty
+            ? meta.name
+            : _dedupeLedgerName(importNameRows, meta.name);
 
-      final newId = await db.into(db.ledgers).insert(
-            LedgersCompanion.insert(
-              name: importName,
-              currency: drift.Value(meta.currency),
-              monthStartDay: drift.Value(meta.monthStartDay),
-              syncId: drift.Value(meta.slotKey),
-            ),
-          );
+        final newId = await db.into(db.ledgers).insert(
+              LedgersCompanion.insert(
+                name: importName,
+                currency: drift.Value(meta.currency),
+                monthStartDay: drift.Value(meta.monthStartDay),
+                syncId: drift.Value(meta.slotKey),
+              ),
+            );
 
-      // 从云端导入不写本地变更历史（P2-3），与下载恢复路径语义一致
-      final result = await importTransactionsJson(repo, newId, payload,
-          recordChanges: false);
-      importSkippedRecurring = result.skippedRecurring;
-      inserted = result.inserted;
-      return newId;
-    });
+        // 从云端导入不写本地变更历史（P2-3），与下载恢复路径语义一致
+        final result = await importTransactionsJson(repo, newId, payload,
+            recordChanges: false);
+        importSkippedRecurring = result.skippedRecurring;
+        inserted = result.inserted;
+        return newId;
+      });
+    } finally {
+      // 无论导入成功、竞态守卫命中还是事务异常，都释放发现阶段的
+      // payload 缓存——事务回滚后残留的缓存对应的是一份导入失败的
+      // 快照，下次导入必须重新拉云端（保证拿到最新内容）。
+      _discoveredPayloads.remove(meta.slotKey);
+    }
 
-    _discoveredPayloads.remove(meta.slotKey);
     if (newLedgerId == null) return null;
 
     logger.info('CloudSync',
@@ -3082,7 +3130,7 @@ class _Semaphore {
   }
 }
 
-/// 云端账本元信息（发现阶段从 `ledger_<slotKey>.json` payload 提取）
+/// 云端账本元信息（发现阶段从 `ledger_<slotKey>.json` metadata 或 payload 提取）
 class RemoteLedgerMeta {
   /// 云端槽位 key（= 源端账本 syncId；legacy 数字命名文件为 id 字符串）。
   /// 导入侧以它作为新账本行的 syncId，保证跨设备身份稳定。
@@ -3096,6 +3144,10 @@ class RemoteLedgerMeta {
   /// 或快照 items 内存累加，仅供「远程账本」卡片展示，不参与导入。
   final double balance;
 
+  /// 云端快照的上传时间（快路径读 metadata uploadedAt / 慢路径读 payload
+  /// exportedAt；缺键为 null）。展示层用它替代本地时钟当"最近更新"。
+  final DateTime? uploadedAt;
+
   const RemoteLedgerMeta({
     required this.slotKey,
     required this.name,
@@ -3103,6 +3155,7 @@ class RemoteLedgerMeta {
     required this.monthStartDay,
     required this.txCount,
     this.balance = 0,
+    this.uploadedAt,
   });
 }
 

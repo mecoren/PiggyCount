@@ -908,14 +908,11 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       await repo.deleteLedger(deletedLedgerId);
       await _cleanupLedgerAttachmentFiles(attachmentFiles);
 
-      // 显式触发对被删账本的 sync,把 delete change 推到 server 清掉 canonical
-      // state。SyncCoordinator 的 ledgerIdResolver 拿的是新切换的 currentLedger,
-      // 不会触发被删账本的 sync,不调这里 → delete change 永远 stranded → server
-      // 还保留账本和它的全部记录,remote ledgers 列表里还会显示。
-      // sync_engine.sync() 内部已对 ledgerRow==null 短路:跳过 hasRemote/fullPush/
-      // pull,只走 _push 把 delete change 推上去。
-      // ignore: unawaited_futures
-      PostProcessor.sync(ref, ledgerId: deletedLedgerId);
+      // 注：不再对被删账本触发 PostProcessor.sync。云端的快照文件已由
+      // 上方 deleteRemoteBackup 删除（该调用必须发生在 deleteLedger 之前，
+      // 见上方注释）；快照同步模型里没有服务端 canonical state 需要额外
+      // 推送 delete 变更，旧增量引擎下线后这段调用只会对已删除的账本行
+      // 触发一次注定失败的导出（被防抖链捕获记一条 error 日志，无效果）。
 
       if (!mounted) return;
 
