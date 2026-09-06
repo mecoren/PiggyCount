@@ -283,9 +283,11 @@ final localLedgersProvider =
 
 /// 远程账本列表（快照同步类后端：S3/WebDAV/Supabase/iCloud）。
 ///
-/// 列云端根目录下的 ledger_*.json 文件,过滤掉本地已有对应身份(syncId)
-/// 的账本,只把「纯远程」的账本展示在账本页的远程区,供用户手动恢复。
-/// 基于通用 CloudStorageService 接口,覆盖全部快照后端。
+/// 基于 [TransactionsSyncManager.discoverRemoteLedgers]：列出云端存在、
+/// 本地无对应身份的账本槽位。元信息优先读上传时随文件写入的 metadata
+/// （零下载），仅老文件回退下载快照解析。
+/// 历史上另有 PiggyCount Cloud 版本(server API readLedgers),随云端
+/// 协同下线移除。
 final remoteLedgersProvider =
     FutureProvider<List<LedgerDisplayItem>>((ref) async {
   ref.watch(ledgerListRefreshProvider);
@@ -301,31 +303,18 @@ final remoteLedgersProvider =
   if (sync is! TransactionsSyncManager) return const [];
 
   try {
-    final remote = await sync.listRemoteLedgerFiles();
-    if (remote.isEmpty) return const [];
-
-    // 本地已有的 syncId 集合,过滤掉"已下载过"的账本
-    final repo = ref.read(repositoryProvider);
-    final localLedgers = await repo.getAllLedgers();
-    final localSyncIds = <String>{
-      for (final l in localLedgers)
-        if (l.syncId != null && l.syncId!.isNotEmpty) l.syncId!,
-    };
-
-    final out = <LedgerDisplayItem>[];
-    for (final item in remote) {
-      final slotKey = item.slotKey;
-      if (localSyncIds.contains(slotKey)) continue;
-      out.add(LedgerDisplayItem.fromRemote(
-        remoteSyncId: item.slotKey,
-        name: item.name.isEmpty ? '(unnamed)' : item.name,
-        currency: item.currency,
-        updatedAt: item.updatedAt ?? DateTime.now(),
-        transactionCount: item.transactionCount,
-        balance: item.incomeTotal - item.expenseTotal,
-      ));
-    }
-    return out;
+    final metas = await sync.discoverRemoteLedgers();
+    return [
+      for (final m in metas)
+        LedgerDisplayItem.fromRemote(
+          remoteSyncId: m.slotKey,
+          name: m.name.isEmpty ? '(unnamed)' : m.name,
+          currency: m.currency,
+          updatedAt: DateTime.now(),
+          transactionCount: m.txCount,
+          balance: m.balance,
+        ),
+    ];
   } catch (e, st) {
     logger.warning('SyncProvider', 'remoteLedgersProvider: 列远程账本失败: $e', st);
     return const [];

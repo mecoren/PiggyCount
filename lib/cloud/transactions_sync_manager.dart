@@ -590,62 +590,6 @@ class TransactionsSyncManager implements SyncService {
   /// 现改为缺失时**就地生成并持久化** UUID 身份后再返回路径：账本首次上传
   /// 前即获得稳定身份，槽位从此不再变化。公开供 UI 层复用同一命名规则。
   ///
-  /// 列出云端全部远程账本文件的元信息（快照同步类后端）。
-  ///
-  /// 供账本页「远程账本」区展示纯远程账本（本地无对应 syncId 的槽位）。
-  /// 与 [_restoreAllRemoteLedgers] 的发现口径一致：storage.list 根目录
-  /// + `_ledgerFileNamePattern` 过滤;名称/币种/交易统计从快照 JSON 的
-  /// 头部字段读取,不落库。密文快照(本地无密钥)降级为仅文件名可展示。
-  Future<List<RemoteLedgerInfo>> listRemoteLedgerFiles() async {
-    await _ensureInitialized();
-    final provider = _provider;
-    if (provider == null) {
-      throw fcs.CloudSyncException('云服务不可用，请检查配置或登录状态');
-    }
-
-    final files = await provider.storage.list(path: '');
-    final out = <RemoteLedgerInfo>[];
-    for (final file in files) {
-      final match = _ledgerFileNamePattern.firstMatch(file.name);
-      if (match == null) continue;
-      var name = file.name;
-      var currency = 'CNY';
-      int transactionCount = 0;
-      double incomeTotal = 0;
-      double expenseTotal = 0;
-      try {
-        final raw = await provider.storage.download(path: file.name);
-        if (raw != null) {
-          final jsonStr = await _decryptIfNeeded(raw);
-          final json = jsonDecode(jsonStr) as Map<String, dynamic>;
-          name = json['ledgerName'] as String? ??
-              json['name'] as String? ??
-              file.name;
-          currency = json['currency'] as String? ?? 'CNY';
-          final items = json['items'];
-          if (items is List) transactionCount = items.length;
-          incomeTotal =
-              (json['incomeTotal'] as num?)?.toDouble() ?? 0;
-          expenseTotal =
-              (json['expenseTotal'] as num?)?.toDouble() ?? 0;
-        }
-      } catch (e) {
-        // 元信息读取失败(密文无密钥/字段缺失等)不阻塞列表,展示文件名兜底
-        logger.info('CloudSync', '远程账本元信息读取降级: ${file.name} - $e');
-      }
-      out.add(RemoteLedgerInfo(
-        slotKey: match.group(1)!,
-        name: name,
-        currency: currency,
-        transactionCount: transactionCount,
-        incomeTotal: incomeTotal,
-        expenseTotal: expenseTotal,
-        updatedAt: file.lastModified,
-      ));
-    }
-    return out;
-  }
-
   /// 键字符约束：slotKey 为 UUID（32 位 hex + 连字符），URL 安全且全部为
   /// unreserved 字符 —— S3 SigV4 的严格 RFC 3986 编码链路（审计 S3-1）
   /// 对其恒等透传。
@@ -974,8 +918,26 @@ class TransactionsSyncManager implements SyncService {
         if (name != null) uploadMetadata['ledgerName'] = name;
         if (currency != null) uploadMetadata['currency'] = currency;
         if (localCount != null) uploadMetadata['count'] = localCount.toString();
-        // L1：原此处还读 exportMap['balance']，但导出 payload 从无 balance
-        // 顶层键（见 transactions_json export 结构），属死读取已删除。
+        // 余额合计（m-02 延伸）：口径与 getLedgerStats 的 SQL 聚合一致 ——
+        // income 加 / expense 减 / transfer 不计、nativeAmount ?? amount 兜底。
+        // 供账本页「远程账本」卡片展示，发现阶段零下载即可读到。items 已在
+        // 内存（exportMap 已解析），内存累加零额外查询。
+        final items = exportMap['items'];
+        if (items is List && items.isNotEmpty) {
+          double balance = 0;
+          for (final it in items) {
+            if (it is! Map) continue;
+            final type = it['type'];
+            final amount = ((it['nativeAmount'] as num?) ?? (it['amount'] as num?))?.toDouble();
+            if (amount == null) continue;
+            if (type == 'income') {
+              balance += amount;
+            } else if (type == 'expense') {
+              balance -= amount;
+            }
+          }
+          uploadMetadata['balance'] = balance.toString();
+        }
         if (exportedAt != null) uploadMetadata['exportedAt'] = exportedAt;
         if (localFp != null) uploadMetadata['fingerprint'] = localFp;
       }
@@ -2874,8 +2836,15 @@ class TransactionsSyncManager implements SyncService {
   /// 设计见 /prd/remote_ledger_discovery/design.md（v2 槽位语义）：
   /// - 槽位 key 即账本 syncId；本地没有对应 syncId（纯数字 key 也撞不上
   ///   本地 id）时，说明该账本是在其他设备新建后上传的
-  /// - 单个文件下载/解密/解析失败只跳过该账本（记日志），不影响其他
-  /// - 返回的 meta 供确认弹窗展示；payload 已缓存供后续导入复用
+  /// - 元信息两级来源，**先轻后重**：
+  ///   1. 上传时随文件写入的 metadata（m-02：ledgerName / currency / count
+  ///      等，[uploadCurrentLedger] 的 uploadMetadata）——一次 HEAD 请求
+  ///      即可读取，不下载快照本体。账本页「远程账本」列表与启动检查
+  ///      的发现阶段走这条快路径，多账本场景零全量下载。
+  ///   2. metadata 缺失（槽位改版前的老文件 / 网关剥头）才回退下载快照
+  ///      JSON 解析，并顺带缓存 payload 供 [importRemoteLedger] 复用。
+  /// - 单个文件失败只跳过该账本（记日志），不影响其他
+  /// - 返回的 meta 供确认弹窗展示
   Future<List<RemoteLedgerMeta>> discoverRemoteLedgers() async {
     await _ensureInitialized();
 
@@ -2897,6 +2866,35 @@ class TransactionsSyncManager implements SyncService {
       // 不属于"发现"范畴
       if (await _localLedgerForSlotKey(slotKey) != null) continue;
 
+      // ---- 快路径：读上传时写入的 metadata（一次轻量请求，零下载）----
+      try {
+        final meta = await provider.storage
+            .getMetadata(path: file.name)
+            .timeout(const Duration(seconds: 10));
+        final md = meta?.metadata;
+        final name = _metaValue(md, 'ledgerName');
+        final currency = _metaValue(md, 'currency');
+        final countStr = _metaValue(md, 'count');
+        final balanceStr = _metaValue(md, 'balance');
+        if (name != null && name.isNotEmpty) {
+          metas.add(RemoteLedgerMeta(
+            slotKey: slotKey,
+            name: name,
+            currency: currency ?? 'CNY',
+            // monthStartDay 不在 metadata 里（上传时未写）；导入阶段
+            // payload 会带上真实值，列表展示用默认即可
+            monthStartDay: 1,
+            txCount: int.tryParse(countStr ?? '') ?? 0,
+            balance: double.tryParse(balanceStr ?? '') ?? 0,
+          ));
+          continue;
+        }
+      } catch (e) {
+        // metadata 读取失败（网络/权限/超时）不阻断：降级走下载路径
+        logger.info('CloudSync', '发现账本 $slotKey 元数据读取降级: $e');
+      }
+
+      // ---- 慢路径：下载快照 JSON 提取元信息（老文件无 metadata）----
       try {
         // M4：逐文件 10s 超时。此前依赖启动检查器的整体 _statusTimeout(20s)
         // 罩住「list + N 个文件全量下载」，云端有多个新账本（或单个大账本）
@@ -2914,6 +2912,22 @@ class TransactionsSyncManager implements SyncService {
         final jsonStr = await _decryptIfNeeded(raw);
         final payload = jsonDecode(jsonStr) as Map<String, dynamic>;
         _discoveredPayloads[slotKey] = jsonStr;
+        // 余额合计从 items 内存累加（与上传 metadata 写入口径一致）
+        double balance = 0;
+        final items = payload['items'];
+        if (items is List) {
+          for (final it in items) {
+            if (it is! Map) continue;
+            final type = it['type'];
+            final amount = ((it['nativeAmount'] as num?) ?? (it['amount'] as num?))?.toDouble();
+            if (amount == null) continue;
+            if (type == 'income') {
+              balance += amount;
+            } else if (type == 'expense') {
+              balance -= amount;
+            }
+          }
+        }
         metas.add(RemoteLedgerMeta(
           slotKey: slotKey,
           name: (payload['ledgerName'] as String?) ?? '云端账本 $slotKey',
@@ -2921,6 +2935,7 @@ class TransactionsSyncManager implements SyncService {
           monthStartDay:
               ((payload['monthStartDay'] as num?)?.toInt() ?? 1).clamp(1, 28),
           txCount: (payload['count'] as num?)?.toInt() ?? 0,
+          balance: balance,
         ));
       } on CloudEncryptedLocallyDisabledException {
         // 无可用密钥：跳过该账本（加密恢复走既有的哨兵引导流程）
@@ -3077,12 +3092,17 @@ class RemoteLedgerMeta {
   final int monthStartDay;
   final int txCount;
 
+  /// 余额合计（income 加 / expense 减 / transfer 不计）。来自上传 metadata
+  /// 或快照 items 内存累加，仅供「远程账本」卡片展示，不参与导入。
+  final double balance;
+
   const RemoteLedgerMeta({
     required this.slotKey,
     required this.name,
     required this.currency,
     required this.monthStartDay,
     required this.txCount,
+    this.balance = 0,
   });
 }
 
@@ -3177,25 +3197,4 @@ Future<int> backfillAttachmentSha256({
     }
   }
   return filled;
-}
-
-/// 远程账本文件的展示元信息(账本页「远程账本」区用)。
-class RemoteLedgerInfo {
-  final String slotKey;
-  final String name;
-  final String currency;
-  final int transactionCount;
-  final double incomeTotal;
-  final double expenseTotal;
-  final DateTime? updatedAt;
-
-  const RemoteLedgerInfo({
-    required this.slotKey,
-    required this.name,
-    required this.currency,
-    required this.transactionCount,
-    required this.incomeTotal,
-    required this.expenseTotal,
-    this.updatedAt,
-  });
 }

@@ -802,7 +802,76 @@ void main() {
       expect(storage.uploadCount, 0,
           reason: 'dispose 后不应再执行任何防抖上传');
     });
+
+    group('discoverRemoteLedgers 元数据快路径', () {
+      test('metadata 有 ledgerName/count/balance 时不下载快照', () async {
+        final storage = _LedgerFileStorage(
+          metadataByName: {
+            'ledger_uuid-meta-1.json': {
+              'ledgerName': 'Meta Only',
+              'currency': 'USD',
+              'count': '7',
+              'balance': '123.45',
+            },
+          },
+        );
+        final manager = buildManager(storage);
+
+        final metas = await manager.discoverRemoteLedgers();
+
+        expect(metas.length, 1);
+        expect(metas.first.name, 'Meta Only');
+        expect(metas.first.currency, 'USD');
+        expect(metas.first.txCount, 7);
+        expect(metas.first.balance, 123.45);
+        // 快路径:零 download 调用
+        expect(storage.downloadCount, 0);
+      });
+
+      test('metadata 缺失(老文件)回退下载 JSON 提取元信息', () async {
+        final storage = _LedgerFileStorage(
+          metadataByName: const {}, // 无 metadata
+          legacyNames: const ['ledger_uuid-legacy.json'],
+          ledgerJson: '{"version":9,"ledgerName":"Legacy","currency":"CNY",'
+              '"monthStartDay":5,"count":2,'
+              '"items":[{"type":"income","amount":10},{"type":"expense","amount":3}]}',
+        );
+        final manager = buildManager(storage);
+
+        final metas = await manager.discoverRemoteLedgers();
+
+        expect(metas.length, 1);
+        expect(metas.first.name, 'Legacy');
+        expect(metas.first.monthStartDay, 5);
+        expect(metas.first.txCount, 2);
+        // 慢路径余额: income +10 / expense -3
+        expect(metas.first.balance, 7);
+        expect(storage.downloadCount, 1, reason: '老文件必须回退下载一次');
+      });
+
+      test('本地已有同身份账本的槽位被过滤', () async {
+        final repo = LocalRepository(db);
+        await db.into(db.ledgers).insert(LedgersCompanion.insert(
+              name: 'Mine',
+              currency: const d.Value('CNY'),
+              syncId: const d.Value('uuid-owned'),
+            ));
+        final storage = _LedgerFileStorage(
+          metadataByName: {
+            'ledger_uuid-owned.json': {'ledgerName': 'Owned Remote'},
+            'ledger_uuid-new.json': {'ledgerName': 'New Remote'},
+          },
+        );
+        final manager = buildManager(storage);
+
+        final metas = await manager.discoverRemoteLedgers();
+
+        expect(metas.length, 1);
+        expect(metas.first.slotKey, 'uuid-new');
+      });
+    });
   });
+
 }
 
 // --- Fakes ---
@@ -1063,4 +1132,58 @@ class _DisabledNoKeyEncryptionService implements EncryptionService {
   // 其余方法测试中不会触发
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
+}
+
+/// 账本文件版 fake storage：list 返回 ledger_*.json，metadata 按
+/// [metadataByName] 配置（模拟 m-02 上传元数据），download 返回
+/// [ledgerJson]（模拟老文件无元数据的回退路径），并计数调用次数。
+class _LedgerFileStorage implements fcs.CloudStorageService {
+  final Map<String, Map<String, String>> metadataByName;
+
+  /// 无 metadata 的老账本文件（慢路径回退场景）
+  final List<String> legacyNames;
+  final String? ledgerJson;
+  int downloadCount = 0;
+
+  _LedgerFileStorage(
+      {required this.metadataByName, this.ledgerJson, this.legacyNames = const []});
+
+  @override
+  Future<List<fcs.CloudFile>> list({required String path}) async => [
+        for (final name in metadataByName.keys)
+          fcs.CloudFile(name: name, path: name),
+        for (final name in legacyNames)
+          fcs.CloudFile(name: name, path: name),
+      ];
+
+  @override
+  Future<String?> download({required String path}) async {
+    downloadCount++;
+    return ledgerJson;
+  }
+
+  @override
+  Future<fcs.CloudFile?> getMetadata({required String path}) async {
+    final md = metadataByName[path];
+    if (md == null) return null;
+    return fcs.CloudFile(
+      name: path,
+      path: path,
+      lastModified: DateTime.now(),
+      metadata: md,
+    );
+  }
+
+  @override
+  Future<void> upload({
+    required String path,
+    required String data,
+    Map<String, String>? metadata,
+  }) async {}
+
+  @override
+  Future<void> delete({required String path}) async {}
+
+  @override
+  Future<bool> exists({required String path}) async => true;
 }

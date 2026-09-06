@@ -415,12 +415,16 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     try {
       final syncService = ref.read(syncServiceProvider);
       if (syncService is TransactionsSyncManager) {
-        // 槽位路径按 syncId 解析（与上传同规则），不手拼
-        // ledger_<本地id>.json —— 数字 id 跨设备无意义。
+        // remote-only 账本本地无行：不能用 pathForLedger(回退数字 id 路径,
+        // 指向不存在的文件),直接按槽位 key(= 源端 syncId)拼云端路径。
+        final slotKey = ledger.remoteSyncId;
+        if (slotKey == null || slotKey.isEmpty) {
+          throw Exception('Remote ledger slot key missing');
+        }
         await syncService.downloadRemoteLedger(
           name: ledger.name,
           currency: ledger.currency,
-          remotePath: await syncService.pathForLedger(ledger.id),
+          remotePath: 'ledger_$slotKey.json',
         );
       } else {
         throw Exception('Cloud sync not available');
@@ -953,9 +957,12 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
         throw Exception('Cloud sync not available');
       }
 
-      // 槽位路径按 syncId 解析（与上传同规则），不手拼数字 id
-      await syncService.deleteRemoteLedger(
-          remotePath: await syncService.pathForLedger(ledger.id));
+      // remote-only 账本本地无行：按槽位 key 拼云端路径（同下载入口）
+      final slotKey = ledger.remoteSyncId;
+      if (slotKey == null || slotKey.isEmpty) {
+        throw Exception('Remote ledger slot key missing');
+      }
+      await syncService.deleteRemoteLedger(remotePath: 'ledger_$slotKey.json');
 
       if (!mounted) return;
 
