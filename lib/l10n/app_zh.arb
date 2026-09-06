@@ -765,18 +765,6 @@
   "encryptionBlockingReinit": "正在初始化加密同步…",
   "encryptionBlockingChangePassword": "正在重新加密云端数据…",
   "encryptionBlockingReset": "正在重置加密…",
-  "cloudFirstSyncBlockingTitle": "首次云同步",
-  "cloudFirstSyncBlockingStatus": "正在上传账本 {n}/{m}…",
-  "@cloudFirstSyncBlockingStatus": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      },
-      "m": {
-        "type": "int"
-      }
-    }
-  },
   "mineDownloadTitle": "下载同步",
   "mineDownloadNeedCloudService": "仅限云服务模式可用",
   "mineDownloadComplete": "同步完成",

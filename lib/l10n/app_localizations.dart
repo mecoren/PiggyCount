@@ -3433,18 +3433,6 @@ abstract class AppLocalizations {
   /// **'Resetting encryption…'**
   String get encryptionBlockingReset;
 
-  /// No description provided for @cloudFirstSyncBlockingTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'First cloud sync'**
-  String get cloudFirstSyncBlockingTitle;
-
-  /// No description provided for @cloudFirstSyncBlockingStatus.
-  ///
-  /// In en, this message translates to:
-  /// **'Uploading ledger {n}/{m}…'**
-  String cloudFirstSyncBlockingStatus(int n, int m);
-
   /// No description provided for @mineDownloadTitle.
   ///
   /// In en, this message translates to:

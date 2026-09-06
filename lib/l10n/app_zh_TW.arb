@@ -1732,8 +1732,6 @@
   "encryptionBlockingReinit": "正在初始化加密同步…",
   "encryptionBlockingChangePassword": "正在重新加密雲端資料…",
   "encryptionBlockingReset": "正在重置加密…",
-  "cloudFirstSyncBlockingTitle": "首次雲端同步",
-  "cloudFirstSyncBlockingStatus": "正在上傳帳本 {n}/{m}…",
   "mineUploadSynced": "已同步",
   "mineUploadTitle": "上傳",
   "monthExpense": "本月支出",

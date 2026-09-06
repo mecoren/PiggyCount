@@ -1848,14 +1848,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get encryptionBlockingReset => '암호화 재설정 중…';
 
   @override
-  String get cloudFirstSyncBlockingTitle => '첫 클라우드 동기화';
-
-  @override
-  String cloudFirstSyncBlockingStatus(int n, int m) {
-    return '가계부 업로드 중 $n/$m…';
-  }
-
-  @override
   String get mineDownloadTitle => '다운로드 및 동기화';
 
   @override

@@ -600,8 +600,6 @@
   "encryptionBlockingReinit": "암호화 동기화 초기화 중…",
   "encryptionBlockingChangePassword": "클라우드 데이터 재암호화 중…",
   "encryptionBlockingReset": "암호화 재설정 중…",
-  "cloudFirstSyncBlockingTitle": "첫 클라우드 동기화",
-  "cloudFirstSyncBlockingStatus": "가계부 업로드 중 {n}/{m}…",
   "mineDownloadTitle": "다운로드 및 동기화",
   "mineDownloadNeedCloudService": "클라우드 서비스 모드에서만 사용 가능합니다",
   "mineDownloadComplete": "동기화 완료",

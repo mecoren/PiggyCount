@@ -254,7 +254,7 @@ class LocalChanges extends Table {
 }
 
 // 注：历史上的 sync_state 表（deviceId/providerType/serverCursor 游标）在
-// Supabase 增量同步废弃后已无任何读写方（游标改由 SyncEngine 内存 +
+// Supabase 增量同步废弃后已无任何读写方（游标后由旧增量引擎内存 +
 // entity_change_watermarks 承载），v37 迁移统一 DROP，见 onUpgrade。
 
 /// 审计 S3：每实体已见最大服务端 change_id 水位。
@@ -1281,7 +1281,7 @@ class PiggyDatabase extends _$PiggyDatabase {
           }
           if (from < 37) {
             // v37: DROP 死表 sync_state。Supabase 增量同步时代的服务端游标
-            // 表，全仓库零读写（游标现由 SyncEngine 内存 + 水位表承载）。
+            // 表，全仓库零读写（游标后由旧增量引擎内存 + 水位表承载）。
             // DROP IF EXISTS 幂等：新装库（onCreate 走 createAll，本就没有
             // 此表）与极端 partial state 重跑均安全。
             logger.info('DBMigration', '开始迁移到 v37: DROP 死表 sync_state');

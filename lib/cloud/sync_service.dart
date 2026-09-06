@@ -57,9 +57,9 @@ abstract class SyncService {
   /// 轮结束后自动补跑一轮 —— 保证「最后一次数据变更必然最终上云」。
   /// 手动上传/合并回传请用 [uploadCurrentLedger]（立即语义）。
   ///
-  /// 默认实现直接透传 [uploadCurrentLedger]：Path B（SyncEngine）自身
-  /// 增量推送代价低且已有 auto sync 防抖，无需窗口收敛；仅
-  /// TransactionsSyncManager（Path A，全量快照导出+PUT）重写本方法。
+  /// 默认实现直接透传 [uploadCurrentLedger]（无窗口收敛），供尚不需要
+  /// 防抖的实现兜底；快照同步实现（TransactionsSyncManager，全量
+  /// 导出+PUT 代价高）重写本方法获得 2s 窗口收敛。
   Future<void> uploadCurrentLedgerDebounced(
       {required int ledgerId,
       bool force = false,

@@ -1871,14 +1871,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get encryptionBlockingReset => 'Resetting encryption…';
 
   @override
-  String get cloudFirstSyncBlockingTitle => 'First cloud sync';
-
-  @override
-  String cloudFirstSyncBlockingStatus(int n, int m) {
-    return 'Uploading ledger $n/$m…';
-  }
-
-  @override
   String get mineDownloadTitle => 'Download & Sync';
 
   @override

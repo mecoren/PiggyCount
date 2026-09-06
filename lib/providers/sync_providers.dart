@@ -48,10 +48,6 @@ final lastSyncStatusProvider =
 /// bump 计数器是最便宜的信号。
 final syncGenerationProvider = StateProvider<int>((ref) => 0);
 
-/// 最近一次同步错误信息（供 UI 状态栏展示）。
-/// PostProcessor / SyncEngine 的 catch 分支把错误写到这里，避免 silent swallow。
-final lastSyncErrorProvider = StateProvider<String?>((ref) => null);
-
 // 自动同步开关：值与设置
 final autoSyncValueProvider = FutureProvider.autoDispose<bool>((ref) async {
   final prefs = await SharedPreferences.getInstance();

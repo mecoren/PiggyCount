@@ -1839,14 +1839,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get encryptionBlockingReset => '正在重置加密…';
 
   @override
-  String get cloudFirstSyncBlockingTitle => '首次云同步';
-
-  @override
-  String cloudFirstSyncBlockingStatus(int n, int m) {
-    return '正在上传账本 $n/$m…';
-  }
-
-  @override
   String get mineDownloadTitle => '下载同步';
 
   @override
@@ -9435,14 +9427,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get encryptionBlockingReset => '正在重置加密…';
-
-  @override
-  String get cloudFirstSyncBlockingTitle => '首次雲端同步';
-
-  @override
-  String cloudFirstSyncBlockingStatus(int n, int m) {
-    return '正在上傳帳本 $n/$m…';
-  }
 
   @override
   String get mineDownloadTitle => '下載同步';

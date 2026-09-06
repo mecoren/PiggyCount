@@ -931,18 +931,6 @@
   "encryptionBlockingReinit": "Initializing encrypted sync…",
   "encryptionBlockingChangePassword": "Re-encrypting cloud data…",
   "encryptionBlockingReset": "Resetting encryption…",
-  "cloudFirstSyncBlockingTitle": "First cloud sync",
-  "cloudFirstSyncBlockingStatus": "Uploading ledger {n}/{m}…",
-  "@cloudFirstSyncBlockingStatus": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      },
-      "m": {
-        "type": "int"
-      }
-    }
-  },
   "mineDownloadTitle": "Download & Sync",
   "mineDownloadNeedCloudService": "Available in cloud service mode only",
   "mineDownloadComplete": "Sync Complete",

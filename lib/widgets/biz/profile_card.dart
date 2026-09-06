@@ -191,9 +191,8 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
 
   @override
   Widget build(BuildContext context) {
-    // 监听云同步写下来的头像路径：当 SyncEngine.syncMyProfile 从服务端拉到
-    // 新头像并 bump avatarRefreshProvider 时，这里自动拿到新值，无需手动刷新。
-    // 优先级：云同步路径 > 本地 optimistic (_avatarPath)。
+    // 监听本地头像变更信号：新头像写入并 bump avatarPathProvider 时，这里
+    // 自动拿到新值；_avatarPath 仅作 provider 未就绪时的 optimistic 兜底。
     final avatarAsync = ref.watch(avatarPathProvider);
     final effectiveAvatarPath = avatarAsync.asData?.value ?? _avatarPath;
 
