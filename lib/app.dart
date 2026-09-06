@@ -22,7 +22,6 @@ import 'widgets/ui/ui.dart';
 import 'widgets/ui/speed_dial_fab.dart';
 import 'cloud/sync_service.dart';
 import 'cloud/transactions_sync_manager.dart';
-import 'cloud/sync/sync_engine.dart';
 import 'cloud/startup_sync_checker.dart';
 import 'cloud/startup_sync_overlay.dart';
 import 'cloud/backup/backup_scheduler.dart';
@@ -67,7 +66,6 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
   ProviderSubscription<AppLinkAction?>? _appLinkSubscription;
 
   // 同步完成提示气泡(增量同步)相关状态
-  ProviderSubscription<AsyncValue<SyncEvent>>? _syncToastSubscription;
   ProviderSubscription<int>? _snapshotSyncToastSubscription;
   Timer? _syncToastTimer;
   int _syncToastPushed = 0;
@@ -79,15 +77,6 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
   // 防止 AppLink 动作重复执行（使用静态变量，跨实例共享）
   static bool _isHandlingAppLink = false;
   static DateTime? _lastAppLinkHandleTime;
-
-  // _triggerInitialCloudSync 节流戳。app 启动期 microtask + listenManual
-  // 两路都会触发,曾导致 fullPush 2-3 路并发把 sync_changes 表撑膨胀 2-2.5x
-  // (详见 .docs/concurrent-fullpush-bloat.md)。5 秒内只跑第一次。
-  //
-  // 注意:fullPush / push 内部已经有 in-flight 单飞兜底,这里是防御性的第二
-  // 层 —— 避免 trigger 内的 phase 1(syncMyProfile / storage.list / pull)
-  // 重复跑浪费 HTTP。
-  DateTime? _lastInitialCloudSyncTriggeredAt;
 
   // 记账按钮相关状态
   late AnimationController _expandController;
@@ -119,7 +108,7 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _setupAppLinkListener();
       _setupQuickActions();
-      // 启动时检查路径 A 的云端更新（仅路径 A，路径 B 走现有 _triggerInitialCloudSync）
+      // 启动时检查云端更新
       _triggerStartupSyncCheck();
       // 每日定时备份：1 分钟粒度检查，触发条件在闭包内判定
       _backupScheduler = BackupScheduler(onCheck: _runScheduledBackupCheck)
@@ -315,36 +304,11 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
   /// 订阅同步完成信号,在「本地数据变更 / 其它操作触发的同步」完成后弹出
   /// 提示气泡,让用户明确感知云端已同步,避免"改了数据不知道有没有存到云端"。
   ///
-  /// 两条互补的监听路径:
-  /// 1. SyncEngine(PiggyCount Cloud 增量同步):engine 只往 `events` stream 写,
-  ///    [syncEventStreamProvider] 把它暴露成 StreamProvider。收到
-  ///    PushCompleted / PullCompleted 后提取计数值;一次 sync() 可能同时 fire
-  ///    push + pull 两个事件,用短窗口聚合,避免同一轮同步弹两条 toast。
-  /// 2. TransactionsSyncManager(S3 / WebDAV / Supabase 快照同步):该模式不发射
-  ///    SyncEvent,由 PostProcessor 在「数据变更后的自动上传」成功时 bump
-  ///    [sp.snapshotSyncCompletedProvider](手动上传走 cloud_sync_page 已有弹窗,
-  ///    不走这里,避免双重提示)。两种模式互斥,不会同时命中。
+  /// TransactionsSyncManager(S3 / WebDAV / Supabase 快照同步)不发射事件流,
+  /// 由 PostProcessor 在「数据变更后的自动上传」成功时 bump
+  /// [sp.snapshotSyncCompletedProvider](手动上传走 cloud_sync_page 已有弹窗,
+  /// 不走这里,避免双重提示)。
   void _setupSyncCompletionToast() {
-    _syncToastSubscription = ref.listenManual<AsyncValue<SyncEvent>>(
-      sp.syncEventStreamProvider,
-      (previous, next) {
-        final event = next.valueOrNull;
-        if (event == null) return;
-        int pushed = 0;
-        int pulled = 0;
-        switch (event) {
-          case PushCompleted():
-            pushed = event.pushed;
-          case PullCompleted():
-            pulled = event.applied;
-          default:
-            return;
-        }
-        if (pushed <= 0 && pulled <= 0) return;
-        _scheduleSyncCompletionToast(pushed: pushed, pulled: pulled);
-      },
-    );
-
     // 快照同步完成信号:upload 成功 → 弹「已同步」提示。
     _snapshotSyncToastSubscription = ref.listenManual<int>(
       sp.snapshotSyncCompletedProvider,
@@ -380,228 +344,22 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
     });
   }
 
-  /// 后台刷新账本同步状态 / 触发首次同步
-  ///
-  /// 坑点：syncServiceProvider 只在 cloud_sync_page 里被 watch。重启 app 后
-  /// 这里是一次 ref.read，等 piggycountCloudProviderInstance 异步就绪再重建时没有
-  /// 监听者，provider 内部的 auto-sync 块永远跑不到 —— 用户看到"app 启动没同步本地
-  /// 数据到 PiggyCount Cloud"。这里 listenManual 保持 provider 活跃，并在它从占位
-  /// 对象变成真正的 SyncEngine 时主动触发一次 sync。
+  /// 后台刷新账本同步状态
   void _refreshLedgersStatusInBackground() {
-    // 冷启动时先 eager-await piggycountCloudProviderInstance 一次，强制让这个
-    // FutureProvider 真正跑起来。否则只是"被定义"但没人读，
-    // PiggyCountCloudAuthService.initialize() 永远不会跑，session 不会从
-    // SharedPreferences 恢复 —— 就是之前用户感受到的"必须打开配置保存才会
-    // 登录"bug 的根因。后面的 listenManual 再做后续响应式逻辑。
-    Future.microtask(() async {
-      try {
-        await ref.read(sp.piggycountCloudProviderInstance.future);
-      } catch (_) {
-        // 非 PiggyCount Cloud 配置或初始化失败：忽略，让下面的 listenManual 兜住。
-      }
-    });
-
     // 启动同步走 `Future.microtask` 而**不是** `addPostFrameCallback`。
-    //
     // 历史:之前为了首屏更快试过 addPostFrameCallback,首帧渲染完才开始 sync,
     // 代价是 sync 完成后 bump 一堆 refresh ticker → home 已渲染好的内容触发
-    // 二次 cascade rebuild,FutureProvider invalidate 走 loading→data 切换,
-    // 用户感知"进首页 → 出现预算卡片 / 列表展开 → 整页刷新一遍"。
-    //
-    // 改回 microtask:让 sync 在首屏渲染**之前**就开始抢占主线程跑,首屏出
-    // 来时 ticker bump 已经发生或正在发生,跟首屏渲染叠加成单次"加载",没
-    // 有"先显示后又刷新"的二次绘制感。Phase1/Phase2 分层结构保留(下面的
-    // `_triggerInitialCloudSync` 还是分层并行,避免多账本场景重复跑用户级
-    // 操作),只换了 trigger 时机。
+    // 二次 cascade rebuild。改回 microtask:让 sync 在首屏渲染之前就开始跑,
+    // 跟首屏渲染叠加成单次"加载",没有"先显示后又刷新"的二次绘制感。
     Future.microtask(() async {
       try {
         final syncService = ref.read(syncServiceProvider);
         if (syncService is TransactionsSyncManager) {
           await syncService.refreshAllLedgersStatus();
           ref.read(ledgerListRefreshProvider.notifier).state++;
-        } else if (syncService is SyncEngine) {
-          _triggerInitialCloudSync(syncService);
         }
       } catch (e) {
         // 静默失败,不影响 App 启动
-      }
-    });
-
-    // 持续监听 syncServiceProvider：即使第一次读到的是 LocalOnly（配置尚未加载）
-    // 也能在 SyncEngine 实例就绪后再触发一次同步。
-    ref.listenManual<SyncService>(
-      syncServiceProvider,
-      (prev, next) {
-        if (prev is SyncEngine || next is! SyncEngine) return;
-        _triggerInitialCloudSync(next);
-      },
-      fireImmediately: false,
-    );
-  }
-
-  void _triggerInitialCloudSync(SyncEngine engine) {
-    // 5 秒幂等节流:microtask + listenManual 在启动期可能两路都触发,这里挡掉
-    // 第二次,phase 1 / phase 2 都只跑一次。详见 [_lastInitialCloudSyncTriggeredAt]。
-    final now = DateTime.now();
-    final last = _lastInitialCloudSyncTriggeredAt;
-    if (last != null && now.difference(last).inSeconds < 5) {
-      logger.info('AppStart',
-          '_triggerInitialCloudSync 5 秒内已触发过(${now.difference(last).inMilliseconds}ms 前),跳过');
-      return;
-    }
-    _lastInitialCloudSyncTriggeredAt = now;
-
-    Future(() async {
-      try {
-        // 启动同步分层策略(2026-05-24 改造):
-        //
-        // 旧实现 `for (ledger in ledgers) { engine.sync(ledger) }` 串行 5
-        // 次完整 sync,每次内部都跑 `syncMyProfile` / `storage.list` / `pull`
-        // 等**用户级**操作(跟 ledgerId 无关),5 次重复浪费;且串行 HTTP 任
-        // 一慢就累积卡 UI。
-        //
-        // 改造:
-        //   Phase 1 — 用户级数据(只跑一次,跨 ledger 共享)
-        //     a. syncMyProfile         HTTP profile/me
-        //     b. storage.list          HTTP /sync/ledgers 拿远端账本列表
-        //     c. pull                  HTTP /sync/pull 用户级 sync_changes 流
-        //   Phase 2 — 每个 ledger 并行(push + 附件上下行)
-        //     a. fast skip:无 unpushed change + 已在远端 → 跳
-        //     b. 否则:uploadAttachments + push + downloadAttachments
-        //   并发限制由 SQLite mutex 自然控制(Drift 内部排队,不会真并发写)
-        final ledgers = await ref.read(repositoryProvider).getAllLedgers();
-        if (ledgers.isEmpty) {
-          logger.info('AppStart', '本地无账本,跳过首次同步');
-          return;
-        }
-        logger.info(
-            'AppStart', 'PiggyCount Cloud 首次同步: 本地账本数=${ledgers.length}');
-        final overallStart = DateTime.now();
-
-        // ========== Phase 1: 用户级一次性 ==========
-        // a) profile + appearance + AI config + avatar
-        unawaited(() async {
-          try {
-            await engine.syncMyProfile();
-          } catch (e, st) {
-            logger.warning('AppStart', 'syncMyProfile 失败', st);
-            logger.warning('AppStart', 'error: $e');
-          }
-        }());
-
-        // b) 远端账本列表(单次拉,所有 ledger 用同一份决定 fullPush)
-        List<dynamic>? remoteLedgers;
-        try {
-          remoteLedgers = await engine.provider.storage.list(path: '');
-          logger.info('AppStart', 'Phase1: 远端账本=${remoteLedgers.length}');
-        } catch (e, st) {
-          logger.warning(
-              'AppStart', 'Phase1: 拉 remote_ledgers 失败,fallback', st);
-          logger.warning('AppStart', 'error: $e');
-        }
-
-        // c) 用户级 sync_changes 流(只拉一次,所有 ledger 共享 cursor)
-        try {
-          final pulled = await engine.pull('');
-          logger.info('AppStart', 'Phase1: pull(用户级) applied=$pulled');
-        } catch (e, st) {
-          logger.error('AppStart', 'Phase1: pull 失败', e, st);
-        }
-
-        // d) 推 user-global change(account / category / tag)。
-        //    放在 Phase 2(每个 ledger 并行)之前显式跑一次,确保:
-        //    1) Phase 2 并发 push 时,各 ledger 的 _push/fullPush 调
-        //       pushUserGlobalEntities 都会复用这次的 in-flight,不会重复推
-        //    2) 即使 Phase 2 全部 fast-skip(无 ledger-scope 待推 + 已在远端),
-        //       user-global 的新增/重命名也能推上去(原来 Phase 2 skip 时会漏)
-        try {
-          final pushed = await engine.pushUserGlobalEntities();
-          logger.info(
-              'AppStart', 'Phase1: pushUserGlobalEntities pushed=$pushed');
-        } catch (e, st) {
-          logger.error('AppStart', 'Phase1: pushUserGlobalEntities 失败', e, st);
-        }
-
-        // ========== Phase 2: 每个 ledger 并行 push + 附件 ==========
-        final remoteSyncIds = <String>{
-          if (remoteLedgers != null)
-            for (final r in remoteLedgers)
-              if (r.path is String) r.path as String,
-        };
-
-        final futures = ledgers.map((ledger) async {
-          final tag = '${ledger.name}(${ledger.id})';
-          try {
-            final unpushed = await engine.changeTracker
-                .getUnpushedChangesForLedger(ledger.id);
-            final mySyncId = ledger.syncId;
-            final hasSyncId = mySyncId != null && mySyncId.isNotEmpty;
-            final inRemote = hasSyncId && remoteSyncIds.contains(mySyncId);
-
-            // fast skip:无待推送 + 已在远端 + 非共享 Editor 或 Owner
-            if (unpushed.isEmpty && inRemote) {
-              logger.info('AppStart', 'Phase2 skip $tag (无待推送 + 已绑定)');
-              return _LedgerSyncResult.skip();
-            }
-
-            // 共享账本 Editor:只 push 自己的 unpushed change,不 fullPush
-            // (会覆盖 Owner 数据)
-            final isSharedAsEditor =
-                ledger.isShared && ledger.myRole != 'owner';
-
-            // 需要 fullPush:非 Editor 且账本不在远端
-            if (!inRemote && !isSharedAsEditor) {
-              logger.info('AppStart', 'Phase2 $tag → fullPush');
-              try {
-                await engine.uploadAttachments(ledgerId: ledger.id);
-              } catch (e, st) {
-                logger.warning('AppStart', '$tag uploadAttachments 失败', st);
-                logger.warning('AppStart', 'error: $e');
-              }
-              await engine.fullPush(ledgerId: ledger.id);
-              // 推剩余 delete change
-              final extra = await engine.push(ledger.id.toString());
-              try {
-                await engine.downloadAttachments(ledgerId: ledger.id);
-              } catch (e, st) {
-                logger.warning('AppStart', '$tag downloadAttachments 失败', st);
-                logger.warning('AppStart', 'error: $e');
-              }
-              return _LedgerSyncResult(pushed: extra + 1, pulled: 0);
-            }
-
-            // 普通 push 路径:有 unpushed 才走附件 + push
-            try {
-              await engine.uploadAttachments(ledgerId: ledger.id);
-            } catch (e, st) {
-              logger.warning('AppStart', '$tag uploadAttachments 失败', st);
-              logger.warning('AppStart', 'error: $e');
-            }
-            final pushed = await engine.push(ledger.id.toString());
-            try {
-              await engine.downloadAttachments(ledgerId: ledger.id);
-            } catch (e, st) {
-              logger.warning('AppStart', '$tag downloadAttachments 失败', st);
-              logger.warning('AppStart', 'error: $e');
-            }
-            logger.info('AppStart', 'Phase2 $tag done: pushed=$pushed');
-            return _LedgerSyncResult(pushed: pushed, pulled: 0);
-          } catch (e, st) {
-            logger.error('AppStart', 'Phase2 $tag 异常', e, st);
-            return _LedgerSyncResult(pushed: 0, pulled: 0);
-          }
-        });
-        final results = await Future.wait(futures);
-
-        final totalPushed = results.fold<int>(0, (a, b) => a + b.pushed);
-        final skipped = results.where((r) => r.skipped).length;
-        final totalMs = DateTime.now().difference(overallStart).inMilliseconds;
-        logger.info('AppStart',
-            'PiggyCount Cloud 首次同步完成: synced=${ledgers.length - skipped} skipped=$skipped pushed=$totalPushed 总耗时 ${totalMs}ms');
-        ref.read(syncStatusRefreshProvider.notifier).state++;
-        ref.read(ledgerListRefreshProvider.notifier).state++;
-      } catch (e, st) {
-        logger.error('AppStart', 'PiggyCount Cloud 首次同步异常', e, st);
       }
     });
   }
@@ -815,7 +573,6 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
   void dispose() {
     _drainTimer?.cancel();
     _appLinkSubscription?.close();
-    _syncToastSubscription?.close();
     _snapshotSyncToastSubscription?.close();
     _syncToastTimer?.cancel();
     _backupScheduler?.dispose();
@@ -1498,15 +1255,3 @@ class _SpeedDialOverlay extends StatelessWidget {
   }
 }
 
-/// `_triggerInitialCloudSync` Phase2 单 ledger 处理结果。
-class _LedgerSyncResult {
-  const _LedgerSyncResult({required this.pushed, required this.pulled})
-      : skipped = false;
-  const _LedgerSyncResult.skip()
-      : pushed = 0,
-        pulled = 0,
-        skipped = true;
-  final int pushed;
-  final int pulled;
-  final bool skipped;
-}

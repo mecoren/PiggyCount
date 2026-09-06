@@ -83,7 +83,6 @@ export 'src/config/cloud_service_config.dart';
 export 'src/config/cloud_service_store.dart';
 // 注：provider_factory（createCloudServices）已迁至 app 层（L3 循环依赖
 // 解除）。core 不再依赖任何 provider 包；具体后端的装配由宿主 app 完成。
-export 'src/providers/piggycount_cloud_provider.dart';
 
 // Utilities
 export 'src/utils/logger.dart';

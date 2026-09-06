@@ -7,7 +7,7 @@ import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:piggycount/widgets/ui/wheel_date_picker.dart';
 import '../../data/db.dart';
-import '../../providers/shared_ledger_providers.dart';
+import '../../providers/sync_providers.dart';
 import '../../styles/tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/data/note_history_service.dart';
@@ -27,162 +27,6 @@ import '../../pages/attachment/attachment_preview_page.dart';
 
 /// 共享账本 tx 作者信息(创建人 + 最后编辑人)— 编辑器底部 sheet 用。
 /// editingTransactionId=null(新建 tx)或非共享账本 → 返 null,widget 不渲染。
-class _TxAuthorInfo {
-  const _TxAuthorInfo({
-    required this.creatorUserId,
-    required this.lastEditedByUserId,
-    required this.currentUserId,
-    required this.members,
-  });
-
-  final String? creatorUserId;
-  final String? lastEditedByUserId;
-  final String? currentUserId;
-  final List<PiggyCountCloudLedgerMember> members;
-
-  PiggyCountCloudLedgerMember? memberOf(String? userId) {
-    if (userId == null || userId.isEmpty) return null;
-    for (final m in members) {
-      if (m.userId == userId) return m;
-    }
-    return null;
-  }
-}
-
-final _txAuthorInfoProvider =
-    FutureProvider.autoDispose.family<_TxAuthorInfo?, int>((ref, txId) async {
-  final repo = ref.watch(repositoryProvider);
-  final tx = await repo.getTransactionById(txId);
-  if (tx == null) return null;
-  final ledger = await repo.getLedgerById(tx.ledgerId);
-  if (ledger == null || !ledger.isShared) return null;
-  final ledgerSyncId = ledger.syncId;
-  if (ledgerSyncId == null || ledgerSyncId.isEmpty) return null;
-  if (tx.createdByUserId == null && tx.lastEditedByUserId == null) return null;
-
-  final cloud = await ref.watch(piggycountCloudProviderInstance.future);
-  if (cloud == null) return null;
-  ref.watch(sharedResourceRefreshProvider);
-  final me = await cloud.auth.currentUser;
-  final members = await cloud.listMembers(ledgerId: ledgerSyncId);
-  return _TxAuthorInfo(
-    creatorUserId: tx.createdByUserId,
-    lastEditedByUserId: tx.lastEditedByUserId,
-    currentUserId: me?.id,
-    members: members,
-  );
-});
-
-/// 紧凑头像组 — UX 规则(用户指定):
-///   - 创建人 != 编辑人:展示两个头像(long-press tooltip 区分"创建" / "最后编辑")
-///   - 创建人 == 编辑人 == 自己:不展示(自己的 tx 看自己头像无意义)
-///   - 创建人 == 编辑人 != 自己:展示一个头像(long-press tooltip "X 创建并编辑")
-class _TxAuthorAvatars extends ConsumerWidget {
-  const _TxAuthorAvatars({required this.editingTransactionId});
-
-  final int editingTransactionId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
-    final infoAsync = ref.watch(_txAuthorInfoProvider(editingTransactionId));
-    final info = infoAsync.valueOrNull;
-    if (info == null) return const SizedBox.shrink();
-
-    final creatorId = info.creatorUserId;
-    final editorId = info.lastEditedByUserId;
-    final meId = info.currentUserId;
-    final sameUser = creatorId != null && creatorId == editorId;
-
-    // 单人(创建 == 编辑)且就是自己 → 整体不显示
-    if (sameUser && creatorId == meId) return const SizedBox.shrink();
-
-    final cloud = ref.watch(piggycountCloudProviderInstance).valueOrNull;
-    final baseUrl = cloud?.baseUrl;
-
-    final widgets = <Widget>[];
-    if (sameUser) {
-      // 同一人(非自己):展示一个头像,tooltip 提示"创建并编辑"
-      widgets.add(_AvatarSlot(
-        member: info.memberOf(creatorId),
-        userIdFallback: creatorId,
-        baseUrl: baseUrl,
-        tooltipBuilder: (name) => l10n.sharedTxCreatedAndEditedBy(name),
-      ));
-    } else {
-      // 创建人 + 编辑人是两个人:两个头像都展示
-      if (creatorId != null) {
-        widgets.add(_AvatarSlot(
-          member: info.memberOf(creatorId),
-          userIdFallback: creatorId,
-          baseUrl: baseUrl,
-          tooltipBuilder: (name) => l10n.sharedTxCreatedBy(name),
-        ));
-      }
-      if (editorId != null && editorId != creatorId) {
-        if (widgets.isNotEmpty) widgets.add(const SizedBox(width: 4));
-        widgets.add(_AvatarSlot(
-          member: info.memberOf(editorId),
-          userIdFallback: editorId,
-          baseUrl: baseUrl,
-          tooltipBuilder: (name) => l10n.sharedTxEditedBy(name),
-        ));
-      }
-    }
-    if (widgets.isEmpty) return const SizedBox.shrink();
-    return Row(mainAxisSize: MainAxisSize.min, children: widgets);
-  }
-}
-
-/// 单个头像槽位 — 不管 member 是否查得到都返回一个 CircleAvatar(带 tooltip)。
-/// long-press 触发 Tooltip,tooltip 文案带角色("X 创建" / "X 最后编辑" / ...)。
-class _AvatarSlot extends StatelessWidget {
-  const _AvatarSlot({
-    required this.member,
-    required this.userIdFallback,
-    required this.baseUrl,
-    required this.tooltipBuilder,
-  });
-
-  final PiggyCountCloudLedgerMember? member;
-  final String userIdFallback;
-  final String? baseUrl;
-  final String Function(String name) tooltipBuilder;
-
-  @override
-  Widget build(BuildContext context) {
-    final m = member;
-    final name = m != null
-        ? (m.displayName?.isNotEmpty == true
-            ? m.displayName!
-            : m.email.split('@').first)
-        : userIdFallback;
-    final letter = name.isNotEmpty ? name[0].toUpperCase() : '?';
-    final rel = m?.avatarUrl;
-    final base = baseUrl;
-    final absolute = (rel != null && rel.isNotEmpty)
-        ? (rel.startsWith('http') ? rel : (base != null ? '$base$rel' : null))
-        : null;
-    return Tooltip(
-      message: tooltipBuilder(name),
-      triggerMode: TooltipTriggerMode.longPress,
-      child: CircleAvatar(
-        radius: 11,
-        backgroundColor: PiggyTokens.surfaceCapsule(context),
-        foregroundImage: absolute != null ? NetworkImage(absolute) : null,
-        child: Text(
-          letter,
-          style: TextStyle(
-            fontSize: 11,
-            color: PiggyTokens.textSecondary(context),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 typedef AmountEditorResult = ({
   double amount,
   String? note,
@@ -819,13 +663,9 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                // 表达式行:左侧 = 共享账本作者头像(仅编辑模式 + 共享账本时
-                // 显示);右侧 = 金额表达式。新建 tx / 单人账本时左侧为空。
+                // 表达式行:金额表达式。左侧币种标,右侧运算显示。
                 Row(
                   children: [
-                    if (widget.editingTransactionId != null)
-                      _TxAuthorAvatars(
-                          editingTransactionId: widget.editingTransactionId!),
                     const Spacer(),
                     // v30 币种标:整个金额表达式的最左侧(反馈11:运算模式下
                     // 不能夹在「10 + 20」中间),点开选币种。

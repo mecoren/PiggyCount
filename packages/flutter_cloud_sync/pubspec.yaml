@@ -12,19 +12,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  crypto: ^3.0.3
-  device_info_plus: ^11.1.0
-  package_info_plus: ^8.1.2
-  http: ^1.2.2
   meta: ^1.9.0
   shared_preferences: ^2.2.2
   flutter_secure_storage: ^9.2.2
-  web_socket_channel: ^3.0.1
   # L3 循环依赖解除：core 不再依赖任何 provider 包（supabase/webdav/
   # icloud/s3）。此前 core 内的 createCloudServices 工厂反向依赖全部
   # provider，而 provider 又依赖 core 形成循环；工厂已迁至 app 层
-  # （lib/cloud/provider_factory.dart），core 回归「接口 + PiggyCount
-  # Cloud 协议实现」的纯底层定位。
+  # （lib/cloud/provider_factory.dart），core 回归纯接口层的定位
+  # （原 PiggyCount Cloud 协议实现已随云端协同下线整体移除）。
 
 dev_dependencies:
   flutter_test:
@@ -32,9 +27,6 @@ dev_dependencies:
   flutter_lints: ^2.0.0
   mockito: ^5.4.0
   build_runner: ^2.4.0
-  # M18 realtime 幂等测试：_FakeWebSocketChannel 继承 StreamChannelMixin
-  # 以满足 WebSocketChannel 接口（web_socket_channel 的传递依赖，测试直接引用）
-  stream_channel: ^2.1.0
 
 flutter:
   # This package is a pure Dart package

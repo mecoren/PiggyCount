@@ -147,11 +147,6 @@ class ExportOptions {
   final bool budgets;
   final bool appSettings; // 包含云服务配置等
   final bool ai; // AI 服务商配置、能力绑定等
-  /// 是否把 PiggyCount Cloud 的登录态（access/refresh token）一起导出。
-  /// 默认 false —— 只导出 base_url + email，密码 / token 不写进 yaml。
-  /// 测试或跨设备快速登录时显式勾选。
-  final bool piggycountCloudCredentials;
-
   /// 是否在导出文件中包含真实凭据（密码/密钥/API key）。
   /// 默认 false —— 凭据以 **** 占位写出，避免备份文件泄露导致账户失陷。
   /// 需真实凭据时显式勾选，并注意保管导出文件。
@@ -166,7 +161,6 @@ class ExportOptions {
     this.budgets = true,
     this.appSettings = true,
     this.ai = true,
-    this.piggycountCloudCredentials = false,
     this.includeCredentials = false,
   });
 
@@ -191,7 +185,6 @@ class AppConfig {
   final SupabaseConfig? supabase;
   final WebdavConfig? webdav;
   final S3Config? s3;
-  final PiggyCountCloudConfig? piggycountCloud;
   final AIConfig? ai;
   final AppSettingsConfig? appSettings;
   final LedgersConfig? ledgers;
@@ -205,7 +198,6 @@ class AppConfig {
     this.supabase,
     this.webdav,
     this.s3,
-    this.piggycountCloud,
     this.ai,
     this.appSettings,
     this.ledgers,
@@ -221,10 +213,6 @@ class AppConfig {
 
     if (supabase != null) {
       map['supabase'] = supabase!.toMap();
-    }
-
-    if (piggycountCloud != null) {
-      map['piggycount_cloud'] = piggycountCloud!.toMap();
     }
 
     if (webdav != null) {
@@ -283,10 +271,6 @@ class AppConfig {
       s3: yaml.containsKey('s3')
           ? S3Config.fromMap(
               Map<String, dynamic>.from(yaml['s3'] as Map))
-          : null,
-      piggycountCloud: yaml.containsKey('piggycount_cloud')
-          ? PiggyCountCloudConfig.fromMap(
-              Map<String, dynamic>.from(yaml['piggycount_cloud'] as Map))
           : null,
       ai: yaml.containsKey('ai')
           ? AIConfig.fromMap(_convertToStringDynamicMap(yaml['ai'] as Map))
@@ -367,54 +351,6 @@ class SupabaseConfig {
 
 /// PiggyCount Cloud 配置（自部署 FastAPI 后端的 base URL + 可选登录态）
 ///
-/// 多设备同步测试的便利入口：A 设备导出配置，B 设备导入就能直接进入 Cloud 模式
-/// 而不用再手动敲 server URL / 登录。
-///
-/// 安全：accessToken / refreshToken 是登录态，导出的 yaml 文件要当作密钥级别
-/// 保管。导出 UI 应默认不带 token，只有显式勾选"包含登录态"才会写进来。
-class PiggyCountCloudConfig {
-  final String baseUrl;
-  final String? email;
-  final String? password;
-  final String? accessToken;
-  final String? refreshToken;
-  final String? deviceId;
-
-  const PiggyCountCloudConfig({
-    required this.baseUrl,
-    this.email,
-    this.password,
-    this.accessToken,
-    this.refreshToken,
-    this.deviceId,
-  });
-
-  Map<String, dynamic> toMap() {
-    final map = <String, dynamic>{
-      'base_url': baseUrl,
-    };
-    if (email != null && email!.isNotEmpty) map['email'] = email;
-    if (password != null && password!.isNotEmpty) map['password'] = password;
-    if (accessToken != null && accessToken!.isNotEmpty) {
-      map['access_token'] = accessToken;
-    }
-    if (refreshToken != null && refreshToken!.isNotEmpty) {
-      map['refresh_token'] = refreshToken;
-    }
-    if (deviceId != null && deviceId!.isNotEmpty) map['device_id'] = deviceId;
-    return map;
-  }
-
-  static PiggyCountCloudConfig fromMap(Map<String, dynamic> map) =>
-      PiggyCountCloudConfig(
-        baseUrl: map['base_url'] as String,
-        email: map['email'] as String?,
-        password: map['password'] as String?,
-        accessToken: map['access_token'] as String?,
-        refreshToken: map['refresh_token'] as String?,
-        deviceId: map['device_id'] as String?,
-      );
-}
 
 /// WebDAV配置
 class WebdavConfig {
@@ -1423,33 +1359,6 @@ class ConfigExportService {
       }
     }
 
-    // 读取 PiggyCount Cloud 配置。base_url + email 总是导出（方便 B 设备导入
-    // 快速填回登录表单）；access/refresh token 属于登录态，需 options 显式
-    // 勾选才带上。当前实现：cloud_piggycount_cloud_cfg 里只存 base_url+email，
-    // session token 另一把 SharedPreferences key 管 —— 导出 yaml 只取前者。
-    PiggyCountCloudConfig? piggycountCloudConfig;
-    final piggycountCfgRaw = prefs.getString('cloud_piggycount_cloud_cfg');
-    if (piggycountCfgRaw != null) {
-      try {
-        final cfg = decodeCloudConfig(piggycountCfgRaw);
-        final baseUrl = cfg.piggycountCloudBaseUrl ?? '';
-        if (baseUrl.isNotEmpty) {
-          piggycountCloudConfig = PiggyCountCloudConfig(
-            baseUrl: baseUrl,
-            email: cfg.piggycountCloudEmail,
-            // 跟 Supabase 一样：如果用户在 mobile 勾过 "记住账号密码"，
-            // piggycountCloudPassword 就会在 SharedPreferences 里，带上它方便
-            // B 设备导入后无感登录。没勾就是 null，yaml 也不写这一行。
-            password: mask(cfg.piggycountCloudPassword),
-            // access/refresh token 走独立 session storage（key 里带 baseUrl
-            // sha1），跨设备迁移风险高，导出 yaml 不带。
-          );
-        }
-      } catch (e) {
-        logger.warning('ConfigExport', '读取 PiggyCount Cloud 配置失败: $e');
-      }
-    }
-
     // 读取AI配置
     AIConfig? aiConfig;
     final glmApiKey = prefs.getString(AIConstants.keyGlmApiKey);
@@ -1832,8 +1741,6 @@ class ConfigExportService {
     final exportSupabase = options.appSettings ? supabaseConfig : null;
     final exportWebdav = options.appSettings ? webdavConfig : null;
     final exportS3 = options.appSettings ? s3Config : null;
-    final exportPiggycountCloud =
-        options.appSettings ? piggycountCloudConfig : null;
     final exportAi = options.ai ? aiConfig : null;
     final exportAppSettings = options.appSettings ? appSettings : null;
 
@@ -1846,7 +1753,6 @@ class ConfigExportService {
       supabase: exportSupabase,
       webdav: exportWebdav,
       s3: exportS3,
-      piggycountCloud: exportPiggycountCloud,
       ai: exportAi,
       appSettings: exportAppSettings,
       ledgers: ledgersConfig,
@@ -1921,31 +1827,6 @@ class ConfigExportService {
       buffer.writeln();
     }
 
-    if (yamlMap.containsKey('piggycount_cloud')) {
-      buffer.writeln('piggycount_cloud:');
-      final bc = yamlMap['piggycount_cloud'] as Map<String, dynamic>;
-      buffer.writeln('  # PiggyCount Cloud 自部署后端配置');
-      buffer.writeln('  base_url: ${_yamlQuote(bc['base_url'])}');
-      if (bc.containsKey('email') || bc.containsKey('password')) {
-        buffer.writeln('  # 记住账号密码功能：导入后登录页面会自动填充');
-      }
-      if (bc.containsKey('email')) {
-        buffer.writeln('  email: ${_yamlQuote(bc['email'])}');
-      }
-      if (bc.containsKey('password')) {
-        buffer.writeln('  password: ${_yamlQuote(bc['password'])}');
-      }
-      if (bc.containsKey('access_token')) {
-        buffer.writeln('  access_token: ${_yamlQuote(bc['access_token'])}');
-      }
-      if (bc.containsKey('refresh_token')) {
-        buffer.writeln('  refresh_token: ${_yamlQuote(bc['refresh_token'])}');
-      }
-      if (bc.containsKey('device_id')) {
-        buffer.writeln('  device_id: ${_yamlQuote(bc['device_id'])}');
-      }
-      buffer.writeln();
-    }
 
     if (yamlMap.containsKey('ai')) {
       buffer.writeln('ai:');
@@ -2391,26 +2272,6 @@ class ConfigExportService {
       );
       await prefs.setString('cloud_s3_cfg', encodeCloudConfig(s3Cfg));
       logger.info('ConfigImport', 'S3配置已导入');
-    }
-
-    // 导入 PiggyCount Cloud 配置（base_url + 可选 email/password）。
-    // 有 email+password 时跟 Supabase 一样，导入后 app 启动可自动登录；
-    // 只有 email 时登录页预填邮箱，等用户输密码。
-    if (options.appSettings && config.piggycountCloud != null) {
-      final bcCfg = CloudServiceConfig(
-        type: CloudBackendType.piggycountCloud,
-        name: 'PiggyCount Cloud',
-        piggycountCloudBaseUrl: config.piggycountCloud!.baseUrl,
-        piggycountCloudEmail: config.piggycountCloud!.email,
-        piggycountCloudPassword: config.piggycountCloud!.password,
-      );
-      await prefs.setString(
-          'cloud_piggycount_cloud_cfg', encodeCloudConfig(bcCfg));
-      logger.info(
-          'ConfigImport',
-          'PiggyCount Cloud 配置已导入 url=${config.piggycountCloud!.baseUrl} '
-              'hasEmail=${config.piggycountCloud!.email != null} '
-              'hasPassword=${config.piggycountCloud!.password != null}');
     }
 
     // 导入AI配置

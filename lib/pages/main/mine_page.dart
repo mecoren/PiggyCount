@@ -15,8 +15,6 @@ import '../settings/help_center_page.dart';
 import '../../services/export/share_poster_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../cloud/cloud_sync_page.dart';
-import '../cloud/piggycount_cloud_sync_page.dart';
-import '../../cloud/cloud_feature_flags.dart';
 import '../../utils/website_urls.dart';
 import '../settings/data_management_page.dart';
 import '../settings/appearance_settings_page.dart';
@@ -78,14 +76,7 @@ class MinePage extends ConsumerWidget {
 
                   return SettingsCard(
                     children: [
-                      // 云服务 —— PiggyCount Cloud 模式下 subtitle 带上
-                      // server 版本号(从 fetchServerVersion 拉的 FutureProvider),
-                      // 一眼看到 cloud 哪版。其它模式没版本概念,保留原文案。
-                      Consumer(builder: (ctx, r, _) {
-                        final cloudVersion = r
-                            .watch(piggycountCloudServerVersionProvider)
-                            .valueOrNull;
-                        return SettingsNavItem(
+                      SettingsNavItem(
                           icon: Icons.cloud_queue_outlined,
                           title: AppLocalizations.of(sectionContext)
                               .mineCloudService,
@@ -109,15 +100,6 @@ class MinePage extends ConsumerWidget {
                                       .mineCloudServiceCustom;
                                 case CloudBackendType.s3:
                                   return 'S3';
-                                case CloudBackendType.piggycountCloud:
-                                  // 云端协同已关闭（见 cloud_feature_flags.dart）：
-                                  // 即便配置里仍是该类型，也标注为「未启用」。
-                                  return !kPiggyCountCloudEnabled
-                                      ? 'PiggyCount Cloud（未启用）'
-                                      : (cloudVersion != null &&
-                                              cloudVersion.isNotEmpty
-                                          ? 'PiggyCount Cloud v$cloudVersion'
-                                          : 'PiggyCount Cloud');
                               }
                             },
                           ),
@@ -127,8 +109,7 @@ class MinePage extends ConsumerWidget {
                                   builder: (_) => const CloudServicePage()),
                             );
                           },
-                        );
-                      }),
+                        ),
                       // 同步状态
                       Builder(
                         builder: (ctx) {
@@ -277,22 +258,10 @@ class MinePage extends ConsumerWidget {
                                   enabled: !isLocalMode,
                                   trailing: trailingWidget,
                                   onTap: () async {
-                                    // PiggyCount Cloud 专属页跟老的
-                                    // iCloud/WebDAV/Supabase 页语义完全不同,
-                                    // 路由按 config.type 分叉,避免 UI 里
-                                    // 大段 if-else 分支。
-                                    final cfg = ref
-                                        .read(activeCloudConfigProvider)
-                                        .valueOrNull;
-                                    final isPiggyCount = cfg != null &&
-                                        cfg.type ==
-                                            CloudBackendType.piggycountCloud &&
-                                        kPiggyCountCloudEnabled;
                                     await Navigator.of(sectionContext).push(
                                       MaterialPageRoute(
-                                          builder: (_) => isPiggyCount
-                                              ? const PiggyCountCloudSyncPage()
-                                              : const CloudSyncPage()),
+                                          builder: (_) =>
+                                              const CloudSyncPage()),
                                     );
                                   },
                                 );

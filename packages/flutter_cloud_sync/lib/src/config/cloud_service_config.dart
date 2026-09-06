@@ -3,7 +3,6 @@ import 'dart:convert';
 /// 云服务后端类型
 enum CloudBackendType {
   local, // 本地存储(不同步)
-  piggycountCloud, // PiggyCount Cloud（自建云服务）
   supabase, // Supabase (自建)
   webdav, // WebDAV (坚果云、Nextcloud、群晖等)
   icloud, // iCloud (iOS only)
@@ -13,12 +12,6 @@ enum CloudBackendType {
 class CloudServiceConfig {
   final CloudBackendType type;
   final String name; // UI 展示名称
-
-  // PiggyCount Cloud 配置
-  final String? piggycountCloudBaseUrl;
-  final String? piggycountCloudApiPrefix;
-  final String? piggycountCloudEmail; // 保存的账号（用于记住账号功能）
-  final String? piggycountCloudPassword; // 保存的密码（用于记住账号功能）
 
   // Supabase 配置
   final String? supabaseUrl;
@@ -50,11 +43,6 @@ class CloudServiceConfig {
   const CloudServiceConfig({
     required this.type,
     required this.name,
-    // PiggyCount Cloud
-    this.piggycountCloudBaseUrl,
-    this.piggycountCloudApiPrefix,
-    this.piggycountCloudEmail,
-    this.piggycountCloudPassword,
     // Supabase
     this.supabaseUrl,
     this.supabaseAnonKey,
@@ -88,8 +76,6 @@ class CloudServiceConfig {
     switch (type) {
       case CloudBackendType.local:
         return true; // 本地存储始终有效
-      case CloudBackendType.piggycountCloud:
-        return _filled(piggycountCloudBaseUrl);
       case CloudBackendType.supabase:
         return _filled(supabaseUrl) && _filled(supabaseAnonKey);
       case CloudBackendType.webdav:
@@ -109,11 +95,6 @@ class CloudServiceConfig {
   Map<String, dynamic> toJson() => {
         'type': type.name,
         'name': name,
-        // PiggyCount Cloud
-        'piggycountCloudBaseUrl': piggycountCloudBaseUrl,
-        'piggycountCloudApiPrefix': piggycountCloudApiPrefix,
-        'piggycountCloudEmail': piggycountCloudEmail,
-        'piggycountCloudPassword': piggycountCloudPassword,
         // Supabase
         'supabaseUrl': supabaseUrl,
         'supabaseAnonKey': supabaseAnonKey,
@@ -152,11 +133,6 @@ class CloudServiceConfig {
               ) ??
           CloudBackendType.local,
       name: j['name'] as String,
-      // PiggyCount Cloud
-      piggycountCloudBaseUrl: j['piggycountCloudBaseUrl'] as String?,
-      piggycountCloudApiPrefix: j['piggycountCloudApiPrefix'] as String?,
-      piggycountCloudEmail: j['piggycountCloudEmail'] as String?,
-      piggycountCloudPassword: j['piggycountCloudPassword'] as String?,
       // Supabase
       supabaseUrl: j['supabaseUrl'] as String?,
       supabaseAnonKey: j['supabaseAnonKey'] as String?,
@@ -190,17 +166,6 @@ class CloudServiceConfig {
     switch (type) {
       case CloudBackendType.local:
         return '__LOCAL_DEVICE__';
-      case CloudBackendType.piggycountCloud:
-        if (piggycountCloudBaseUrl == null || piggycountCloudBaseUrl!.isEmpty) {
-          return '__NOT_CONFIGURED__';
-        }
-        try {
-          final uri = Uri.parse(piggycountCloudBaseUrl!);
-          if (uri.host.isEmpty) return piggycountCloudBaseUrl!;
-          return uri.host;
-        } catch (_) {
-          return piggycountCloudBaseUrl!;
-        }
       case CloudBackendType.supabase:
         if (supabaseUrl == null || supabaseUrl!.isEmpty) {
           return '__NOT_CONFIGURED__'; // 特殊标记，在UI层处理本地化

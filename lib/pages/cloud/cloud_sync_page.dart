@@ -618,14 +618,9 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                     final cloudConfig = ref.watch(activeCloudConfigProvider);
                     final isLocalMode = cloudConfig.hasValue &&
                         cloudConfig.value!.type == CloudBackendType.local;
-                    final isPiggyCountCloud = cloudConfig.hasValue &&
-                        cloudConfig.value!.type ==
-                            CloudBackendType.piggycountCloud;
                     final needsLogin = cloudConfig.hasValue &&
-                        (cloudConfig.value!.type == CloudBackendType.supabase ||
-                            cloudConfig.value!.type ==
-                                CloudBackendType.piggycountCloud);
-                    // Supabase 和 PiggyCount Cloud 需要登录，其他云服务（iCloud/S3/WebDAV）使用配置文件认证
+                        (cloudConfig.value!.type == CloudBackendType.supabase);
+                    // Supabase 需要登录，其他云服务（iCloud/S3/WebDAV）使用配置文件认证
                     final canUseCloud =
                         !isLocalMode && (!needsLogin || user != null);
 
@@ -734,9 +729,8 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                         child: ListView(
                           padding: const EdgeInsets.all(16),
                           children: [
-                            // 提示文案（仅非 PiggyCount Cloud 模式显示）
-                            if (!isPiggyCountCloud)
-                              Padding(
+                            // 提示文案
+                            Padding(
                                 padding: const EdgeInsets.only(bottom: 12),
                                 child: Text(
                                   AppLocalizations.of(context).cloudSyncHint,
@@ -867,127 +861,8 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                                 message: lines.join('\n'));
                                           },
                                   ),
-                                  // ===== PiggyCount Cloud 模式：同步状态 + 登录（无需手动操作） =====
-                                  if (isPiggyCountCloud) ...[
-                                    // 登录（未登录时显示登录入口）
-                                    Consumer(builder: (ctx, r, _) {
-                                      final userNow = user;
-                                      final cfg = r
-                                          .watch(activeCloudConfigProvider)
-                                          .valueOrNull;
-                                      final cachedEmail =
-                                          cfg?.piggycountCloudEmail ?? '';
-                                      final cachedPassword =
-                                          cfg?.piggycountCloudPassword ?? '';
-                                      final hasCachedCredentials =
-                                          cachedEmail.isNotEmpty &&
-                                              cachedPassword.isNotEmpty;
-                                      if (userNow != null) {
-                                        // 已登录：仅显示账号信息，不提供退出
-                                        return Column(
-                                          children: [
-                                            PiggyTokens.cardDivider(context),
-                                            AppListTile(
-                                              leading:
-                                                  Icons.verified_user_outlined,
-                                              title: userNow.email ??
-                                                  AppLocalizations.of(context)
-                                                      .mineLoggedInEmail,
-                                            ),
-                                          ],
-                                        );
-                                      }
-                                      // 未登录：如果 config 里有保存的邮密,直接给"重新登录"
-                                      // 按钮,不需要跳登录页;否则才显示老的跳登录页入口。
-                                      if (hasCachedCredentials) {
-                                        return Column(
-                                          children: [
-                                            PiggyTokens.cardDivider(context),
-                                            AppListTile(
-                                              leading: Icons.refresh,
-                                              title:
-                                                  AppLocalizations.of(context)
-                                                      .cloudReloginTitle,
-                                              subtitle: cachedEmail,
-                                              onTap: () async {
-                                                final providerAsync = ref.read(
-                                                    piggycountCloudProviderInstance);
-                                                final provider =
-                                                    providerAsync.valueOrNull;
-                                                if (provider == null) {
-                                                  showToast(
-                                                      context,
-                                                      AppLocalizations.of(
-                                                              context)
-                                                          .cloudReloginFailed);
-                                                  return;
-                                                }
-                                                try {
-                                                  await provider.auth
-                                                      .signInWithEmail(
-                                                    email: cachedEmail,
-                                                    password: cachedPassword,
-                                                  );
-                                                  if (!context.mounted) return;
-                                                  showToast(
-                                                      context,
-                                                      AppLocalizations.of(
-                                                              context)
-                                                          .cloudReloginSuccess);
-                                                  ref
-                                                      .read(
-                                                          syncStatusRefreshProvider
-                                                              .notifier)
-                                                      .state++;
-                                                  ref
-                                                      .read(statsRefreshProvider
-                                                          .notifier)
-                                                      .state++;
-                                                } catch (e) {
-                                                  if (!context.mounted) return;
-                                                  showToast(context,
-                                                      '${AppLocalizations.of(context).cloudReloginFailed}: $e');
-                                                }
-                                              },
-                                            ),
-                                          ],
-                                        );
-                                      }
-                                      // 没凭证时,走原来的登录页
-                                      return Column(
-                                        children: [
-                                          PiggyTokens.cardDivider(context),
-                                          AppListTile(
-                                            leading: Icons.login,
-                                            title: AppLocalizations.of(context)
-                                                .mineLoginTitle,
-                                            subtitle:
-                                                AppLocalizations.of(context)
-                                                    .mineLoginSubtitle,
-                                            onTap: () async {
-                                              await Navigator.of(context).push(
-                                                  MaterialPageRoute(
-                                                      builder: (_) =>
-                                                          const LoginPage()));
-                                              if (!mounted) return;
-                                              ref
-                                                  .read(
-                                                      syncStatusRefreshProvider
-                                                          .notifier)
-                                                  .state++;
-                                              ref
-                                                  .read(statsRefreshProvider
-                                                      .notifier)
-                                                  .state++;
-                                            },
-                                          ),
-                                        ],
-                                      );
-                                    }),
-                                  ],
-                                  // ===== 其他 Provider 模式：上传/下载按钮 =====
-                                  if (!isPiggyCountCloud) ...[
-                                    PiggyTokens.cardDivider(context),
+                                  // ===== 上传/下载按钮 =====
+                                  PiggyTokens.cardDivider(context),
                                     // 上传
                                     AppListTile(
                                       leading: Icons.cloud_upload_outlined,
@@ -1694,7 +1569,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                           ],
                                         );
                                       }),
-                                    // 自动同步 (非 PiggyCount Cloud 的其他云服务)
+                                    // 自动同步
                                     if (!isLocalMode)
                                       Consumer(builder: (ctx, r, _) {
                                         final autoSync =
@@ -1729,14 +1604,11 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                           ],
                                         );
                                       }),
-                                  ],
                                 ],
                               ),
                             ),
-                            // 全量覆盖同步（仅路径 A 快照后端）：
-                            // PiggyCount Cloud 的 sync_changes 日志模型
-                            // 没有「整本快照覆盖」语义，不展示此卡片
-                            if (canUseCloud && !isPiggyCountCloud)
+                            // 全量覆盖同步
+                            if (canUseCloud)
                               Padding(
                                 padding: const EdgeInsets.only(top: 12),
                                 child: SectionCard(
@@ -1801,8 +1673,8 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                   ),
                                 ),
                               ),
-                            // 云端备份卡片（仅路径 A，与全量同步卡片同口径）
-                            if (canUseCloud && !isPiggyCountCloud)
+                            // 云端备份卡片
+                            if (canUseCloud)
                               Padding(
                                 padding: const EdgeInsets.only(top: 12),
                                 child: SectionCard(
@@ -1943,9 +1815,8 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                   ),
                                 ),
                               ),
-                            // 同步加密入口（仅路径 A：S3/WebDAV/Supabase/iCloud）
-                            // 路径 B（PiggyCount Cloud）服务端需做 LWW 合并与共享账本，不加密
-                            if (canUseCloud && !isPiggyCountCloud)
+                            // 同步加密入口（S3/WebDAV/Supabase/iCloud）
+                            if (canUseCloud)
                               Consumer(builder: (ctx, r, _) {
                                 final encEnabledAsync =
                                     r.watch(encryptionEnabledProvider);

@@ -17,8 +17,7 @@ import 'package:piggycount/data/encryption/ciphertext_format.dart';
 import 'package:piggycount/data/encryption/encryption_service_impl.dart';
 import 'package:piggycount/data/encryption/secure_key_storage.dart';
 
-import '../cloud/sync/_fakes/fake_piggycount_cloud_provider.dart'
-    show FakePiggyCountCloudStorageService;
+
 
 /// 内存版存储（含审计 S24 检查点位）
 class MemoryKeyStorage implements SecureKeyStorage {
@@ -85,6 +84,50 @@ EncryptionServiceImpl makeService(SecureKeyStorage storage) =>
       cipher: AesGcmCipher(),
     );
 
+
+/// 内存版 CloudStorageService —— 模拟云端密文快照存储(原 Path B 测试
+/// FakePiggyCountCloudStorageService 的通用部分,云端协同下线后内联保留,
+/// 加密换钥恢复测试仍需要一个可控的云端假实现)。
+class _FakeCloudStorage implements CloudStorageService {
+  final Map<String, String> _files = {};
+
+  @override
+  Future<void> upload({
+    required String path,
+    required String data,
+    Map<String, String>? metadata,
+  }) async {
+    _files[path] = data;
+  }
+
+  @override
+  Future<String?> download({required String path}) async {
+    return _files[path];
+  }
+
+  @override
+  Future<void> delete({required String path}) async {
+    _files.remove(path);
+  }
+
+  @override
+  Future<List<CloudFile>> list({required String path}) async {
+    return List.unmodifiable(
+        [for (final e in _files.entries) CloudFile(name: e.key, path: e.key)]);
+  }
+
+  @override
+  Future<bool> exists({required String path}) async {
+    return _files.containsKey(path);
+  }
+
+  @override
+  Future<CloudFile?> getMetadata({required String path}) async {
+    if (!_files.containsKey(path)) return null;
+    return CloudFile(name: path, path: path);
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -95,7 +138,7 @@ void main() {
     await enc.enable(password: 'OldPass123');
 
     // 云端一份旧钥密文快照
-    final cloud = FakePiggyCountCloudStorageService();
+    final cloud = _FakeCloudStorage();
     await cloud.upload(
       path: 'ledger_1.json',
       data: await enc.encrypt('{"version":6,"items":[]}'),
@@ -138,7 +181,7 @@ void main() {
   test('S24: 无检查点时 recoverPendingRekey 返回 false', () async {
     SharedPreferences.setMockInitialValues({});
     final enc = makeService(MemoryKeyStorage());
-    final cloud = FakePiggyCountCloudStorageService();
+    final cloud = _FakeCloudStorage();
     expect(await enc.recoverPendingRekey(cloudStorage: cloud), isFalse);
   });
 }

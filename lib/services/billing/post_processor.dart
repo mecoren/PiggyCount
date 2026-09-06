@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers.dart';
-import '../../cloud/sync/sync_engine.dart';
 import '../../cloud/sync_service.dart';
 import '../attachment_service.dart';
 import '../system/logger_service.dart';
@@ -102,21 +101,6 @@ class PostProcessor {
     ref.read(syncStatusRefreshProvider.notifier).state++;
     ref.read(ledgerListRefreshProvider.notifier).state++;
 
-    // PiggyCount Cloud：始终自动双向同步
-    if (sync is SyncEngine) {
-      final refresh = ref.read(syncStatusRefreshProvider.notifier);
-      Future(() async {
-        try {
-          await sync.sync(ledgerId: ledgerId.toString());
-          refresh.state++;
-          logger.info('PostProcessor', 'PiggyCount Cloud 自动同步完成', 'ledgerId=$ledgerId');
-        } catch (e) {
-          logger.error('PostProcessor', 'PiggyCount Cloud 自动同步失败', e);
-        }
-      });
-      return;
-    }
-
     // 其他 provider：检查 auto_sync 开关
     final prefs = await SharedPreferences.getInstance();
     if (prefs.getBool('auto_sync') ?? false) {
@@ -155,21 +139,6 @@ class PostProcessor {
     c.read(syncStatusRefreshProvider.notifier).state++;
     c.read(ledgerListRefreshProvider.notifier).state++;
 
-    // PiggyCount Cloud：始终自动双向同步
-    if (sync is SyncEngine) {
-      final refresh = c.read(syncStatusRefreshProvider.notifier);
-      Future(() async {
-        try {
-          await sync.sync(ledgerId: ledgerId.toString());
-          refresh.state++;
-          logger.info('PostProcessor', 'PiggyCount Cloud 自动同步完成', 'ledgerId=$ledgerId');
-        } catch (e) {
-          logger.error('PostProcessor', 'PiggyCount Cloud 自动同步失败', e);
-        }
-      });
-      return;
-    }
-
     // 其他 provider：检查 auto_sync 开关
     final prefs = await SharedPreferences.getInstance();
     if (prefs.getBool('auto_sync') ?? false) {
@@ -204,21 +173,6 @@ class PostProcessor {
 
     ref.read(syncStatusRefreshProvider.notifier).state++;
     ref.read(ledgerListRefreshProvider.notifier).state++;
-
-    // PiggyCount Cloud：始终自动双向同步
-    if (sync is SyncEngine) {
-      final refresh = ref.read(syncStatusRefreshProvider.notifier);
-      Future(() async {
-        try {
-          await sync.sync(ledgerId: ledgerId.toString());
-          refresh.state++;
-          logger.info('PostProcessor', 'PiggyCount Cloud 自动同步完成', 'ledgerId=$ledgerId');
-        } catch (e) {
-          logger.error('PostProcessor', 'PiggyCount Cloud 自动同步失败', e);
-        }
-      });
-      return;
-    }
 
     // 其他 provider：检查 auto_sync 开关
     final prefs = await SharedPreferences.getInstance();

@@ -42,12 +42,6 @@ class _AuthPageState extends ConsumerState<AuthPage> {
       if (cloudConfig.type == CloudBackendType.supabase) {
         savedEmail = cloudConfig.supabaseEmail;
         savedPassword = cloudConfig.supabasePassword;
-      } else if (cloudConfig.type == CloudBackendType.piggycountCloud) {
-        // PiggyCount Cloud：跟 Supabase 一样，勾选"记住账号"时同时存邮箱+密码，
-        // 作为 token 失效时的兜底登录途径（见 piggycountCloudProviderInstance
-        // 里的 fallback signInWithEmail）。
-        savedEmail = cloudConfig.piggycountCloudEmail;
-        savedPassword = cloudConfig.piggycountCloudPassword;
       } else {
         return;
       }
@@ -86,26 +80,6 @@ class _AuthPageState extends ConsumerState<AuthPage> {
         ref.invalidate(supabaseConfigProvider);
         ref.invalidate(activeCloudConfigProvider);
         logger.info('auth', 'Supabase 账号密码保存状态：${_rememberAccount ? "已保存" : "已清除"}');
-        return;
-      }
-
-      if (cloudConfig.type == CloudBackendType.piggycountCloud) {
-        // PiggyCount Cloud：勾选"记住账号"时存邮箱+密码 —— token 机制平时够用，
-        // 但 token 失效 / 老版本升级 / 本地 SharedPreferences 被清等场景都靠
-        // 这份密码做兜底自动登录。
-        final updatedConfig = CloudServiceConfig(
-          type: cloudConfig.type,
-          name: cloudConfig.name,
-          piggycountCloudBaseUrl: cloudConfig.piggycountCloudBaseUrl,
-          piggycountCloudApiPrefix: cloudConfig.piggycountCloudApiPrefix,
-          piggycountCloudEmail: _rememberAccount ? email : null,
-          piggycountCloudPassword: _rememberAccount ? password : null,
-        );
-        await store.saveOnly(updatedConfig);
-        ref.invalidate(piggycountCloudConfigProvider);
-        ref.invalidate(activeCloudConfigProvider);
-        logger.info('auth',
-            'PiggyCount Cloud 账号密码保存状态：${_rememberAccount ? "已保存" : "已清除"}');
       }
     } catch (e, st) {
       logger.error('auth', '保存账号密码失败', e, st);
@@ -169,14 +143,12 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     return AppLocalizations.of(context).authErrorLoginFailed;
   }
 
-  /// 按当前云后端选注册指引文档的 topic:Supabase / PiggyCount Cloud 各跳自己的
-  /// 配置文档,其它(含加载中)兜底到云同步概览。
+  /// 按当前云后端选注册指引文档的 topic:Supabase 跳自己的配置文档,
+  /// 其它(含加载中)兜底到云同步概览。
   static String _registerDocTopic(CloudBackendType? type) {
     switch (type) {
       case CloudBackendType.supabase:
         return 'supabase';
-      case CloudBackendType.piggycountCloud:
-        return 'piggycount-cloud';
       default:
         return 'overview';
     }

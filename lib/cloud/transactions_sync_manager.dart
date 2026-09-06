@@ -590,6 +590,62 @@ class TransactionsSyncManager implements SyncService {
   /// 现改为缺失时**就地生成并持久化** UUID 身份后再返回路径：账本首次上传
   /// 前即获得稳定身份，槽位从此不再变化。公开供 UI 层复用同一命名规则。
   ///
+  /// 列出云端全部远程账本文件的元信息（快照同步类后端）。
+  ///
+  /// 供账本页「远程账本」区展示纯远程账本（本地无对应 syncId 的槽位）。
+  /// 与 [_restoreAllRemoteLedgers] 的发现口径一致：storage.list 根目录
+  /// + `_ledgerFileNamePattern` 过滤;名称/币种/交易统计从快照 JSON 的
+  /// 头部字段读取,不落库。密文快照(本地无密钥)降级为仅文件名可展示。
+  Future<List<RemoteLedgerInfo>> listRemoteLedgerFiles() async {
+    await _ensureInitialized();
+    final provider = _provider;
+    if (provider == null) {
+      throw fcs.CloudSyncException('云服务不可用，请检查配置或登录状态');
+    }
+
+    final files = await provider.storage.list(path: '');
+    final out = <RemoteLedgerInfo>[];
+    for (final file in files) {
+      final match = _ledgerFileNamePattern.firstMatch(file.name);
+      if (match == null) continue;
+      var name = file.name;
+      var currency = 'CNY';
+      int transactionCount = 0;
+      double incomeTotal = 0;
+      double expenseTotal = 0;
+      try {
+        final raw = await provider.storage.download(path: file.name);
+        if (raw != null) {
+          final jsonStr = await _decryptIfNeeded(raw);
+          final json = jsonDecode(jsonStr) as Map<String, dynamic>;
+          name = json['ledgerName'] as String? ??
+              json['name'] as String? ??
+              file.name;
+          currency = json['currency'] as String? ?? 'CNY';
+          final items = json['items'];
+          if (items is List) transactionCount = items.length;
+          incomeTotal =
+              (json['incomeTotal'] as num?)?.toDouble() ?? 0;
+          expenseTotal =
+              (json['expenseTotal'] as num?)?.toDouble() ?? 0;
+        }
+      } catch (e) {
+        // 元信息读取失败(密文无密钥/字段缺失等)不阻塞列表,展示文件名兜底
+        logger.info('CloudSync', '远程账本元信息读取降级: ${file.name} - $e');
+      }
+      out.add(RemoteLedgerInfo(
+        slotKey: match.group(1)!,
+        name: name,
+        currency: currency,
+        transactionCount: transactionCount,
+        incomeTotal: incomeTotal,
+        expenseTotal: expenseTotal,
+        updatedAt: file.lastModified,
+      ));
+    }
+    return out;
+  }
+
   /// 键字符约束：slotKey 为 UUID（32 位 hex + 连字符），URL 安全且全部为
   /// unreserved 字符 —— S3 SigV4 的严格 RFC 3986 编码链路（审计 S3-1）
   /// 对其恒等透传。
@@ -3121,4 +3177,25 @@ Future<int> backfillAttachmentSha256({
     }
   }
   return filled;
+}
+
+/// 远程账本文件的展示元信息(账本页「远程账本」区用)。
+class RemoteLedgerInfo {
+  final String slotKey;
+  final String name;
+  final String currency;
+  final int transactionCount;
+  final double incomeTotal;
+  final double expenseTotal;
+  final DateTime? updatedAt;
+
+  const RemoteLedgerInfo({
+    required this.slotKey,
+    required this.name,
+    required this.currency,
+    required this.transactionCount,
+    required this.incomeTotal,
+    required this.expenseTotal,
+    this.updatedAt,
+  });
 }

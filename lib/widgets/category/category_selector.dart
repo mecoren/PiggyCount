@@ -5,7 +5,7 @@ import '../../data/db.dart';
 import '../../data/repositories/local/local_repository.dart';
 import '../../providers.dart';
 import '../../l10n/app_localizations.dart';
-import '../../providers/shared_ledger_providers.dart';
+import '../../providers/sync_providers.dart';
 import '../../utils/category_utils.dart';
 import '../../utils/shared_ledger_picker_filter.dart';
 import '../../styles/tokens.dart';

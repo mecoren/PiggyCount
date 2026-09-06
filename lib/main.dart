@@ -9,7 +9,6 @@ import 'app.dart';
 import 'services/data/account_dedup_service.dart';
 import 'cloud/sync/change_tracker.dart';
 import 'styles/tokens.dart';
-import 'widgets/biz/login_2fa_challenge_view.dart';
 import 'widgets/ui/toast.dart';
 import 'theme.dart';
 import 'providers.dart';
@@ -42,7 +41,6 @@ import 'package:path_provider/path_provider.dart';
 
 
 /// 全局 navigator key — 给 service 层(没有 BuildContext)push 路由使用。
-/// 当前用途:PiggyCount Cloud 登录拿到 requires_2fa 时弹出 [Login2FAChallengeView]。
 final GlobalKey<NavigatorState> globalNavigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
@@ -135,16 +133,9 @@ Future<void> main() async {
   // 账户去重收敛（prd/account_dedup）：合并历史遗留的按账本重复账户。
   // 必须在 runApp 前完成——后续启动同步检查的指纹计算/上传导出会并发
   // 读账户表。幂等：无重复时零写入直接返回，失败仅记日志不阻塞启动。
-  // PiggyCount Cloud 激活时传 ChangeTracker:被重定向的 recurring 规则
-  // 补登记 update change,否则收敛结果推不到对端(cloud_recurring_sync)。
   try {
     final db = container.read(databaseProvider);
-    final activeConfig = await CloudServiceStore().loadActive();
-    final cloudTracker = (activeConfig.valid &&
-            activeConfig.type == CloudBackendType.piggycountCloud)
-        ? ChangeTracker(db)
-        : null;
-    await AccountDedupService.run(db, changeTracker: cloudTracker);
+    await AccountDedupService.run(db);
   } catch (e, st) {
     logger.warning('AccountDedup', '账户去重收敛失败(不阻塞启动): $e\n$st');
   }
@@ -170,18 +161,6 @@ Future<void> main() async {
 
   // 启动 URL 监听（用于快捷指令/AppLink 自动记账）
   _setupUrlListener(container);
-
-  // 注册 PiggyCount Cloud 2FA challenge handler。当 server 返回 requires_2fa=true,
-  // service 层会调这个 handler 弹出 Login2FAChallengeDialog 让用户输码。
-  // 验证失败留在对话框就地展示错误,验证通过 / 用户取消才关闭。详见 .docs/2fa-design.md
-  PiggyCountCloudProvider.globalTwoFactorHandler = (request) async {
-    final ctx = globalNavigatorKey.currentContext;
-    if (ctx == null) {
-      // 极端场景:cloud auth 在 navigator 还没 attach 之前触发,只能视为取消
-      return false;
-    }
-    return await Login2FAChallengeDialog.show(ctx, request);
-  };
 
   // 启动磁盘孤立文件 GC(attachments / attachment_thumbs / custom_icons),
   // 清理历史版本遗留的文件。周期性执行（G-ORPH：一次性标志位版本让

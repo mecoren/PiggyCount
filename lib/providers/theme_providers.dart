@@ -88,22 +88,6 @@ final primaryColorInitProvider = FutureProvider<void>((ref) async {
       // Silently fail
     }
 
-    // 推送主题色到 server，让 web 端通过 WS profile_change 自动跟随。
-    // 同步方向单向：mobile → server → web；web 本地改色不回推。
-    unawaited(() async {
-      try {
-        final cloudProvider =
-            await ref.read(piggycountCloudProviderInstance.future);
-        if (cloudProvider == null) return;
-        final hex = _colorToHex(next);
-        await cloudProvider.updateMyProfileThemeColor(hex: hex);
-        logger.info(
-            'theme_providers', 'primary color pushed to server: $hex');
-      } catch (e) {
-        logger.warning(
-            'theme_providers', 'push primary color failed (non-blocking): $e');
-      }
-    }());
   });
 });
 
@@ -181,7 +165,6 @@ final compactAmountInitProvider = FutureProvider<void>((ref) async {
   }
   ref.listen<bool>(compactAmountProvider, (prev, next) async {
     await prefs.setBool('compactAmount', next);
-    _pushAppearanceToCloud(ref);
   });
 });
 
@@ -199,7 +182,6 @@ final showTransactionTimeInitProvider = FutureProvider<void>((ref) async {
   }
   ref.listen<bool>(showTransactionTimeProvider, (prev, next) async {
     await prefs.setBool('showTransactionTime', next);
-    _pushAppearanceToCloud(ref);
   });
 });
 
@@ -217,7 +199,6 @@ final noteDisplayModeInitProvider = FutureProvider<void>((ref) async {
   }
   ref.listen<String>(noteDisplayModeProvider, (prev, next) async {
     await prefs.setString('noteDisplayMode', next);
-    _pushAppearanceToCloud(ref);
   });
 });
 
@@ -284,19 +265,16 @@ final noteHistoryPreferencesInitProvider = FutureProvider<void>((ref) async {
   await prefs.setInt('noteHistoryLimit', limit);
 
   ref.listen<NoteHistoryScope>(noteHistoryScopeProvider, (prev, next) async {
-    // 用户选择变化后写本机偏好，并在 PiggyCount Cloud 模式下同步。
+    // 用户选择变化后写本机偏好。
     await prefs.setString('noteHistoryScope', next.name);
-    _pushAppearanceToCloud(ref);
   });
   ref.listen<NoteHistorySort>(noteHistorySortProvider, (prev, next) async {
-    // 用户选择变化后写本机偏好，并在 PiggyCount Cloud 模式下同步。
+    // 用户选择变化后写本机偏好。
     await prefs.setString('noteHistorySort', next.name);
-    _pushAppearanceToCloud(ref);
   });
   ref.listen<int>(noteHistoryLimitProvider, (prev, next) async {
-    // 用户修改数量后写本机偏好，并在 PiggyCount Cloud 模式下同步。
+    // 用户修改数量后写本机偏好。
     await prefs.setInt('noteHistoryLimit', next);
-    _pushAppearanceToCloud(ref);
   });
 });
 
@@ -309,12 +287,11 @@ final headerDecorationStyleInitProvider = FutureProvider<void>((ref) async {
   }
   ref.listen<String>(headerDecorationStyleProvider, (prev, next) async {
     await prefs.setString('headerDecorationStyle', next);
-    _pushAppearanceToCloud(ref);
   });
 });
 
 // 头部皮肤:跟随主题色的装饰层 id;'none' = 纯主题色。见 lib/styles/header_skins.dart。
-// 本地持久化 + 并入 appearance 包,随 PiggyCount Cloud 多设备同步。
+// 本地持久化。
 final headerSkinProvider = StateProvider<String>((ref) => 'none');
 
 final headerSkinInitProvider = FutureProvider<void>((ref) async {
@@ -325,42 +302,8 @@ final headerSkinInitProvider = FutureProvider<void>((ref) async {
   }
   ref.listen<String>(headerSkinProvider, (prev, next) async {
     await prefs.setString('headerSkin', next);
-    _pushAppearanceToCloud(ref);
   });
 });
-
-/// 把 header_decoration_style / compact_amount / show_transaction_time
-/// 的当前值打包推给 server 的 /profile/me。非 PiggyCount Cloud 模式 provider
-/// 返回 null 直接跳过。fire-and-forget,失败只打 warning。
-///
-/// 用整包 PATCH 是故意的:三者属于同一组"外观",任何一个改动都重发全量,server
-/// 写入 appearance_json 整体替换,对端用 WS profile_change 事件拉 /profile/me
-/// 拿到最新 dict 应用。
-void _pushAppearanceToCloud(Ref ref) {
-  unawaited(() async {
-    try {
-      final cloudProvider =
-          await ref.read(piggycountCloudProviderInstance.future);
-      if (cloudProvider == null) return;
-      final appearance = <String, dynamic>{
-        'header_decoration_style': ref.read(headerDecorationStyleProvider),
-        'compact_amount': ref.read(compactAmountProvider),
-        'show_transaction_time': ref.read(showTransactionTimeProvider),
-        'header_skin': ref.read(headerSkinProvider),
-        'note_display_mode': ref.read(noteDisplayModeProvider),
-        'note_history_scope': ref.read(noteHistoryScopeProvider).name,
-        'note_history_sort': ref.read(noteHistorySortProvider).name,
-        'note_history_limit': ref.read(noteHistoryLimitProvider),
-      };
-      await cloudProvider.updateMyProfileAppearance(appearance: appearance);
-      logger.info(
-          'theme_providers', 'pushed appearance to server: $appearance');
-    } catch (e, st) {
-      logger.warning(
-          'theme_providers', 'push appearance failed (non-blocking): $e', st);
-    }
-  }());
-}
 
 // 收支颜色方案(v2:从 bool 升级为枚举,新增「蓝色收入/橙色支出」方案)。
 //
@@ -482,32 +425,13 @@ final incomeExpenseColorSchemeInitProvider =
       // Silently fail
     }
 
-    // PiggyCount Cloud 模式下把配色偏好推给 server；web 端会通过 WS
-    // profile_change 事件实时刷新。非 Cloud 模式 provider 返回 null，跳过。
-    unawaited(() async {
-      try {
-        final cloudProvider =
-            await ref.read(piggycountCloudProviderInstance.future);
-        if (cloudProvider == null) return;
-        await cloudProvider.updateMyProfileIncomeColorScheme(
-          scheme: next.persistenceKey,
-        );
-        logger.info('theme_providers',
-            'income color scheme pushed to server: scheme=$next');
-      } catch (e) {
-        logger.warning('theme_providers',
-            'push income color scheme failed (non-blocking): $e');
-      }
-    }());
   });
 });
 
-// 用户显示名(昵称)。本地真值存 prefs 'displayName';PiggyCount Cloud 模式下改动
-// 会推到 server,其余云模式 / 纯本地只存本地。空串 = 未设置。v1 不支持"清空已设
-// 昵称"——不会推空串给 server,因此无需改后端 / 包层(包层对空串本就 throw)。
+// 用户显示名(昵称)。本地真值存 prefs 'displayName';只存本地。空串 = 未设置。
 final displayNameProvider = StateProvider<String>((ref) => '');
 
-// 显示名持久化初始化:启动加载 prefs + 监听变化写回本地,并在 cloud 模式下推送。
+// 显示名持久化初始化:启动加载 prefs + 监听变化写回本地。
 // 完全照搬 themeMode / compactAmount 的写法。
 final displayNameInitProvider = FutureProvider<void>((ref) async {
   final prefs = await SharedPreferences.getInstance();
@@ -517,26 +441,5 @@ final displayNameInitProvider = FutureProvider<void>((ref) async {
   }
   ref.listen<String>(displayNameProvider, (prev, next) async {
     await prefs.setString('displayName', next);
-    _pushDisplayNameToCloud(ref, next);
   });
 });
-
-/// 把显示名推给 server 的 /profile/me(仅 PiggyCount Cloud 模式)。非 cloud 模式
-/// provider 返回 null 直接跳过;空串不推(v1 不支持清空,且包层对空串会 throw)。
-/// fire-and-forget,失败只打 warning。
-void _pushDisplayNameToCloud(Ref ref, String name) {
-  final trimmed = name.trim();
-  if (trimmed.isEmpty) return;
-  unawaited(() async {
-    try {
-      final cloudProvider =
-          await ref.read(piggycountCloudProviderInstance.future);
-      if (cloudProvider == null) return;
-      await cloudProvider.updateMyProfileDisplayName(displayName: trimmed);
-      logger.info('theme_providers', 'display name pushed to server: $trimmed');
-    } catch (e, st) {
-      logger.warning('theme_providers',
-          'push display name failed (non-blocking): $e', st);
-    }
-  }());
-}

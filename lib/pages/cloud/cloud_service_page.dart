@@ -17,7 +17,6 @@ import '../../widgets/ui/wait_sliding_segmented_control.dart';
 import '../../widgets/biz/section_card.dart';
 import '../../styles/tokens.dart';
 import '../../l10n/app_localizations.dart';
-import '../../cloud/cloud_feature_flags.dart';
 import '../../cloud/provider_factory.dart';
 
 // GitHub配置教程链接
@@ -40,7 +39,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
   bool _testingConnection = false;
   final Map<String, bool> _connectionTestResults = {};
   bool _hasAutoTested = false;
-  String _selectedTab = 'offline'; // 'offline' | 'backup' | 'cloud'
+  String _selectedTab = 'offline'; // 'offline' | 'backup'
 
   @override
   void initState() {
@@ -51,9 +50,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
       final activeAsync = ref.read(activeCloudConfigProvider);
       if (activeAsync.hasValue) {
         final active = activeAsync.value!;
-        if (active.type == CloudBackendType.piggycountCloud) {
-          setState(() => _selectedTab = 'cloud');
-        } else if (active.type != CloudBackendType.local) {
+        if (active.type != CloudBackendType.local) {
           setState(() => _selectedTab = 'backup');
         }
       }
@@ -83,7 +80,6 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
   @override
   Widget build(BuildContext context) {
     final activeAsync = ref.watch(activeCloudConfigProvider);
-    final piggycountCloudAsync = ref.watch(piggycountCloudConfigProvider);
     final supabaseAsync = ref.watch(supabaseConfigProvider);
     final webdavAsync = ref.watch(webdavConfigProvider);
     final s3Async = ref.watch(s3ConfigProvider);
@@ -145,9 +141,6 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                 WaitSlidingSegment(
                     value: 'backup',
                     label: AppLocalizations.of(context).cloudTabBackup),
-                WaitSlidingSegment(
-                    value: 'cloud',
-                    label: AppLocalizations.of(context).cloudTabCloudSync),
               ],
               onValueChanged: (value) => setState(() => _selectedTab = value),
             ),
@@ -193,14 +186,13 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                       ),
                     ],
                   );
-                } else if (_selectedTab == 'backup') {
+                } else {
                   // ===== 备份同步 =====
                   return ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
                       // 多设备同步警告
-                      if (active.type != CloudBackendType.local &&
-                          active.type != CloudBackendType.piggycountCloud) ...[
+                      if (active.type != CloudBackendType.local) ...[
                         _buildMultiDeviceWarning(context),
                         const SizedBox(height: 12),
                       ],
@@ -330,59 +322,6 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                                   _configureService(CloudBackendType.supabase)
                               : null,
                           onShowGuide: _showSupabaseHelpDialog,
-                          primaryColor: primaryColor,
-                        ),
-                      ),
-                    ],
-                  );
-                } else {
-                  // ===== 云端协同 (PiggyCount Cloud) =====
-                  return ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      piggycountCloudAsync.when(
-                        loading: () => DelayedSkeleton(
-                          placeholder: const SizedBox(height: 100),
-                          child: PulseSkeleton(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 6),
-                              child: SkeletonBar(
-                                  height: 88,
-                                  borderRadius: BorderRadius.circular(
-                                      PiggyDimens.radiusLg)),
-                            ),
-                          ),
-                        ),
-                        error: (e, _) => const SizedBox.shrink(),
-                        data: (bcCfg) => _buildServiceCard(
-                          context: context,
-                          icon: Icons.cloud_circle,
-                          iconColor: PiggyTokens.brandCloud,
-                          title: AppLocalizations.of(context)
-                              .cloudPiggyCountCloudTitle,
-                          // 云端协同已关闭（见 cloud_feature_flags.dart）：
-                          // 卡片置灰、标注「未启用」，且不可被选择。
-                          subtitle: !kPiggyCountCloudEnabled
-                              ? AppLocalizations.of(context)
-                                  .cloudPiggyCountCloudDisabled
-                              : (bcCfg?.valid == true
-                                  ? bcCfg!.obfuscatedUrl()
-                                  : AppLocalizations.of(context)
-                                      .cloudPiggyCountCloudSubtitle),
-                          isSelected:
-                              active.type == CloudBackendType.piggycountCloud,
-                          isConfigured: bcCfg?.valid == true,
-                          isDisabled: !kPiggyCountCloudEnabled,
-                          onTap: () => (bcCfg?.valid == true
-                              ? _switchService(CloudBackendType.piggycountCloud)
-                              : _configureService(
-                                  CloudBackendType.piggycountCloud)),
-                          onConfigure:
-                              kPiggyCountCloudEnabled && bcCfg?.valid == true
-                                  ? () => _configureService(
-                                      CloudBackendType.piggycountCloud)
-                                  : null,
-                          onShowGuide: _showPiggyCountCloudHelpDialog,
                           primaryColor: primaryColor,
                         ),
                       ),
@@ -1056,167 +995,6 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
     );
   }
 
-  void _showPiggyCountCloudHelpDialog() {
-    final l10n = AppLocalizations.of(context);
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.cloud_circle, color: PiggyTokens.brandCloud),
-            const SizedBox(width: 8),
-            Text(l10n.cloudTutorialTitle),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 介绍
-              Text(
-                l10n.cloudTutorialIntro,
-                style: PiggyTextTokens.label(context)
-                    .copyWith(fontSize: 13, height: 1.5),
-              ),
-              const SizedBox(height: 16),
-              // 4 步教程
-              _buildPiggyCloudStep('1', l10n.cloudTutorialStep1Title,
-                  l10n.cloudTutorialStep1Desc),
-              _buildPiggyCloudStep('2', l10n.cloudTutorialStep2Title,
-                  l10n.cloudTutorialStep2Desc),
-              _buildPiggyCloudStep('3', l10n.cloudTutorialStep3Title,
-                  l10n.cloudTutorialStep3Desc),
-              _buildPiggyCloudStep('4', l10n.cloudTutorialStep4Title,
-                  l10n.cloudTutorialStep4Desc),
-              const SizedBox(height: 4),
-              // 特色功能 —— 强调 Web + 多设备协同 + 多用户 + 共享账本
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: PiggyTokens.brandCloud.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.cloudTutorialFeaturesTitle,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: PiggyTokens.brandCloud,
-                        fontSize: 13,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(l10n.cloudTutorialFeature1,
-                        style: const TextStyle(fontSize: 12.5, height: 1.7)),
-                    Text(l10n.cloudTutorialFeature2,
-                        style: const TextStyle(fontSize: 12.5, height: 1.7)),
-                    Text(l10n.cloudTutorialFeature3,
-                        style: const TextStyle(fontSize: 12.5, height: 1.7)),
-                    Text(l10n.cloudTutorialFeature4,
-                        style: const TextStyle(fontSize: 12.5, height: 1.7)),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Tip
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: PiggyTokens.brandCloud.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.info_outline,
-                        color: PiggyTokens.brandCloud, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text.rich(
-                        TextSpan(
-                          children: [
-                            TextSpan(
-                              text: '${l10n.cloudTutorialTipTitle}: ',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: PiggyTokens.textSecondary(context),
-                              ),
-                            ),
-                            TextSpan(
-                              text: l10n.cloudTutorialTipDesc,
-                              style: PiggyTextTokens.label(context)
-                                  .copyWith(fontSize: 13),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(l10n.cloudTutorialGotIt),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPiggyCloudStep(String num, String title, String desc) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 22,
-            height: 22,
-            decoration: BoxDecoration(
-              color: PiggyTokens.brandCloud,
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              num,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    )),
-                const SizedBox(height: 3),
-                Text(
-                  desc,
-                  style: PiggyTextTokens.label(context).copyWith(height: 1.5),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showWebdavHelpDialog() {
     final l10n = AppLocalizations.of(context);
     showDialog(
@@ -1617,9 +1395,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
 
   Future<void> _configureService(CloudBackendType type) async {
     // 根据类型显示配置对话框
-    if (type == CloudBackendType.piggycountCloud) {
-      await _showPiggyCountCloudConfigDialog();
-    } else if (type == CloudBackendType.supabase) {
+    if (type == CloudBackendType.supabase) {
       await _showSupabaseConfigDialog();
     } else if (type == CloudBackendType.webdav) {
       await _showWebdavConfigDialog();
@@ -1628,161 +1404,8 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
     }
   }
 
-  Future<void> _showPiggyCountCloudConfigDialog() async {
-    // M16：安全存储读失败时 provider 显式上抛——这里提示用户而非
-    // 静默弹空表单（空表单会把「读取失败」伪装成「从未配置过」）
-    final CloudServiceConfig? existing;
-    try {
-      existing = await ref.read(piggycountCloudConfigProvider.future);
-    } catch (e) {
-      logger.warning('CloudService', '读取 PiggyCount Cloud 配置失败: $e');
-      if (mounted) showToast(context, e.toString());
-      return;
-    }
-
-    if (!mounted) return;
-
-    final result = await showDialog<Map<String, dynamic>?>(
-      context: context,
-      builder: (dialogContext) => _PiggyCountCloudConfigDialog(
-        initialUrl: existing?.piggycountCloudBaseUrl ?? '',
-        initialApiPrefix: existing?.piggycountCloudApiPrefix ?? '/api/v1',
-        initialEmail: existing?.piggycountCloudEmail ?? '',
-        initialPassword: existing?.piggycountCloudPassword ?? '',
-      ),
-    );
-
-    if (result != null) {
-      if (!mounted) return;
-      final url = result['url'] as String;
-      final apiPrefix = result['apiPrefix'] as String;
-      final email = result['email'] as String;
-      final password = result['password'] as String;
-
-      // 对话框已进行内联校验，此处 cfg.valid 作为防御性检查
-      final cfg = CloudServiceConfig(
-        type: CloudBackendType.piggycountCloud,
-        name: AppLocalizations.of(context).cloudPiggyCountCloudTitle,
-        piggycountCloudBaseUrl: url,
-        piggycountCloudApiPrefix: apiPrefix.isEmpty ? '/api/v1' : apiPrefix,
-        piggycountCloudEmail: email.isNotEmpty ? email : null,
-        piggycountCloudPassword: password.isNotEmpty ? password : null,
-      );
-
-      if (!cfg.valid) {
-        if (mounted) {
-          await AppDialog.error(context,
-              title: AppLocalizations.of(context).cloudConfigInvalidTitle,
-              message: AppLocalizations.of(context).cloudConfigInvalidMessage);
-        }
-        return;
-      }
-
-      // REC-05 防御纵深：路径 B 总开关关闭时禁止保存配置与登录
-      //（UI 入口已禁用，此处兜底拦截深链/残留调用）。
-      if (!kPiggyCountCloudEnabled) {
-        if (mounted) {
-          await AppDialog.error(context,
-              title: AppLocalizations.of(context).cloudConfigInvalidTitle,
-              message: 'PiggyCount Cloud 已停用');
-        }
-        return;
-      }
-
-      try {
-        await ref.read(cloudServiceStoreProvider).saveOnly(cfg);
-        ref.invalidate(piggycountCloudConfigProvider);
-        ref.invalidate(activeCloudConfigProvider);
-        if (mounted)
-          showToast(context, AppLocalizations.of(context).cloudConfigSaved);
-
-        // 如果提供了邮箱和密码，尝试登录（恢复旧行为）
-        if (email.isNotEmpty && password.isNotEmpty) {
-          try {
-            final services = await createCloudServices(cfg);
-            if (services.auth != null) {
-              await services.auth!.signInWithEmail(
-                email: email,
-                password: password,
-              );
-              ref.invalidate(authServiceProvider);
-              ref.invalidate(syncServiceProvider);
-
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.setBool('auto_sync', true);
-              ref.invalidate(autoSyncValueProvider);
-
-              // 首次同步上传所有本地账本（与帮助文案"首次全量上传
-              // 所有账本数据"的承诺一致）。强制阻塞弹窗：期间禁止一切
-              // 页面操作，防止用户中途编辑数据与上传互相踩写
-              final ledgers =
-                  await ref.read(repositoryProvider).getAllLedgers();
-              if (!mounted) return;
-              final sync = ref.read(syncServiceProvider);
-              final l10nCs = AppLocalizations.of(context);
-              final block = showBlockingProgressDialog(
-                context,
-                title: l10nCs.cloudFirstSyncBlockingTitle,
-                initialStatus:
-                    l10nCs.cloudFirstSyncBlockingStatus(0, ledgers.length),
-              );
-              var success = 0;
-              var failed = 0;
-              try {
-                for (final ledger in ledgers) {
-                  block.status.value = l10nCs.cloudFirstSyncBlockingStatus(
-                      success + failed + 1, ledgers.length);
-                  try {
-                    // M7：登录后首次同步是显式批量发布（且 Cloud 引擎无覆盖
-                    // 冲突概念），force 跳过快照路径的冲突拦截
-                    await sync.uploadCurrentLedger(
-                        ledgerId: ledger.id, force: true);
-                    success++;
-                  } catch (e) {
-                    // 单个账本失败不中断其余账本
-                    failed++;
-                    logger.warning('CloudServicePage',
-                        'PiggyCount Cloud 首次同步账本 ${ledger.id} 失败', e);
-                  }
-                }
-              } finally {
-                await block.close();
-              }
-              logger.info('CloudServicePage',
-                  'PiggyCount Cloud 首次同步完成: 成功 $success, 失败 $failed');
-              ref.read(syncStatusRefreshProvider.notifier).state++;
-              ref.read(ledgerListRefreshProvider.notifier).state++;
-
-              if (mounted) {
-                showToast(
-                    context,
-                    AppLocalizations.of(context)
-                        .cloudPiggyCountCloudLoginSuccess);
-              }
-            }
-          } catch (e) {
-            if (mounted) {
-              await AppDialog.error(
-                context,
-                title: AppLocalizations.of(context)
-                    .cloudPiggyCountCloudLoginFailed,
-                message: e.toString(),
-              );
-            }
-          }
-        }
-      } catch (e) {
-        if (mounted) {
-          await AppDialog.error(context,
-              title: AppLocalizations.of(context).cloudSaveFailed,
-              message: e.toString());
-        }
-      }
-    }
-  }
-
   Future<void> _showSupabaseConfigDialog() async {
-    // M16：同 _showPiggyCountCloudConfigDialog，读失败显式提示
+    // M16：安全存储读失败时显式提示
     final CloudServiceConfig? existing;
     try {
       existing = await ref.read(supabaseConfigProvider.future);
@@ -1846,7 +1469,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
   }
 
   Future<void> _showWebdavConfigDialog() async {
-    // M16：同 _showPiggyCountCloudConfigDialog，读失败显式提示
+    // M16：安全存储读失败时显式提示
     final CloudServiceConfig? existing;
     try {
       existing = await ref.read(webdavConfigProvider.future);
@@ -1915,7 +1538,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
   }
 
   Future<void> _showS3ConfigDialog() async {
-    // M16：同 _showPiggyCountCloudConfigDialog，读失败显式提示
+    // M16：安全存储读失败时显式提示
     final CloudServiceConfig? existing;
     try {
       existing = await ref.read(s3ConfigProvider.future);
@@ -2007,8 +1630,6 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
         return 'iCloud';
       case CloudBackendType.s3:
         return 'S3';
-      case CloudBackendType.piggycountCloud:
-        return 'PiggyCount Cloud';
     }
   }
 
@@ -2102,29 +1723,6 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
               }
             } else {
               throw Exception('iCloud 不可用，请检查设备是否已登录 iCloud 并开启 iCloud Drive');
-            }
-            break;
-
-          case CloudBackendType.piggycountCloud:
-            // PiggyCount Cloud 连接测试 - 调用健康检查接口
-            // REC-05 防御纵深：总开关关闭时直接判定失败，不创建云服务。
-            if (!kPiggyCountCloudEnabled) {
-              throw Exception('PiggyCount Cloud 已停用');
-            }
-            try {
-              final services = await createCloudServices(config);
-              if (services.provider == null) {
-                throw Exception('PiggyCount Cloud provider 初始化失败');
-              }
-              // 尝试列出文件验证连接
-              await services.provider!.storage.list(path: '');
-              connectionSuccess = true;
-            } catch (e) {
-              String errorMsg = e.toString();
-              if (errorMsg.contains('Exception:')) {
-                errorMsg = errorMsg.replaceFirst('Exception: ', '');
-              }
-              throw Exception(errorMsg);
             }
             break;
 
@@ -2225,146 +1823,6 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
     } finally {
       if (mounted) setState(() => _testingConnection = false);
     }
-  }
-}
-
-// Supabase配置对话框(独立Widget,避免controller生命周期问题)
-class _PiggyCountCloudConfigDialog extends StatefulWidget {
-  final String initialUrl;
-  final String initialApiPrefix;
-  final String initialEmail;
-  final String initialPassword;
-
-  const _PiggyCountCloudConfigDialog({
-    required this.initialUrl,
-    required this.initialApiPrefix,
-    this.initialEmail = '',
-    this.initialPassword = '',
-  });
-
-  @override
-  State<_PiggyCountCloudConfigDialog> createState() =>
-      _PiggyCountCloudConfigDialogState();
-}
-
-class _PiggyCountCloudConfigDialogState
-    extends State<_PiggyCountCloudConfigDialog> {
-  late final TextEditingController urlController;
-  late final TextEditingController apiPrefixController;
-  late final TextEditingController emailController;
-  late final TextEditingController passwordController;
-  bool obscurePassword = true;
-
-  // 内联校验错误状态：PiggyCount Cloud 必填字段仅为 URL
-  bool _urlError = false;
-
-  @override
-  void initState() {
-    super.initState();
-    urlController = TextEditingController(text: widget.initialUrl);
-    apiPrefixController = TextEditingController(text: widget.initialApiPrefix);
-    emailController = TextEditingController(text: widget.initialEmail);
-    passwordController = TextEditingController(text: widget.initialPassword);
-  }
-
-  @override
-  void dispose() {
-    urlController.dispose();
-    apiPrefixController.dispose();
-    emailController.dispose();
-    passwordController.dispose();
-    super.dispose();
-  }
-
-  // 校验必填字段，返回是否全部通过
-  bool _validate() {
-    bool hasError = false;
-    setState(() {
-      _urlError = urlController.text.trim().isEmpty;
-      hasError = _urlError;
-    });
-    return !hasError;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return AlertDialog(
-      title: Text(l10n.cloudConfigurePiggyCountCloudTitle),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: urlController,
-              decoration: InputDecoration(
-                labelText: l10n.cloudPiggyCountCloudUrlLabel,
-                hintText: l10n.cloudPiggyCountCloudUrlHint,
-                errorText: _urlError
-                    ? l10n.fieldCannotBeEmpty(l10n.cloudPiggyCountCloudUrlLabel)
-                    : null,
-              ),
-              keyboardType: TextInputType.url,
-              onChanged: (_) {
-                if (_urlError) setState(() => _urlError = false);
-              },
-            ),
-            // API Prefix 输入框移除 —— 后端固定 /api/v1,前端用户没有配置场景;
-            // 保留 apiPrefixController(默认 /api/v1)让 save 流程不破。
-            const SizedBox(height: 16),
-            TextField(
-              controller: emailController,
-              decoration: InputDecoration(
-                labelText: l10n.cloudPiggyCountCloudEmailLabel,
-                hintText: l10n.cloudPiggyCountCloudEmailHint,
-              ),
-              keyboardType: TextInputType.emailAddress,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: passwordController,
-              decoration: InputDecoration(
-                labelText: l10n.cloudPiggyCountCloudPasswordLabel,
-                hintText: l10n.cloudPiggyCountCloudPasswordHint,
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    obscurePassword
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                    size: 20,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      obscurePassword = !obscurePassword;
-                    });
-                  },
-                ),
-              ),
-              obscureText: obscurePassword,
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(null),
-          child: Text(l10n.commonCancel),
-        ),
-        FilledButton(
-          onPressed: () {
-            if (_validate()) {
-              Navigator.of(context).pop({
-                'url': urlController.text.trim(),
-                'apiPrefix': apiPrefixController.text.trim(),
-                'email': emailController.text.trim(),
-                'password': passwordController.text.trim(),
-              });
-            }
-          },
-          child: Text(l10n.commonSave),
-        ),
-      ],
-    );
   }
 }
 

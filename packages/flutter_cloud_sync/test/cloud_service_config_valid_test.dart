@@ -55,21 +55,13 @@ void main() {
       );
     });
 
-    test('supabase / piggycountCloud：空白必填项无效', () {
+    test('supabase：空白必填项无效', () {
       expect(
         const CloudServiceConfig(
           type: CloudBackendType.supabase,
           name: 't',
           supabaseUrl: 'https://sb.example.com',
           supabaseAnonKey: ' ',
-        ).valid,
-        isFalse,
-      );
-      expect(
-        const CloudServiceConfig(
-          type: CloudBackendType.piggycountCloud,
-          name: 't',
-          piggycountCloudBaseUrl: '  ',
         ).valid,
         isFalse,
       );

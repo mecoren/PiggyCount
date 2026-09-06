@@ -15,13 +15,8 @@ import '../../models/ledger_display_item.dart';
 import '../../cloud/transactions_sync_manager.dart';
 import '../../cloud/sync_service.dart';
 import '../../cloud/sync_diff_service.dart' show SyncChange;
-import '../../cloud/cloud_feature_flags.dart';
-import '../../cloud/sync/sync_engine.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/biz.dart';
-import '../cloud/member_list_page.dart';
-import '../cloud/member_stats_page.dart';
-import '../cloud/join_shared_ledger_page.dart';
 import '../cloud/upload_conflict_helper.dart';
 import '../budget/budget_page.dart';
 import '../cloud/sync_preview_dialog.dart' show showSyncPreviewDialog;
@@ -210,57 +205,19 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     bool remoteLoading = false,
     Object? remoteError,
   }) {
-    // 共享账本是 PiggyCount Cloud 独有能力(server 端的成员管理 / WS fan-out
-    // 都在 PiggyCount Cloud 后端),非 PiggyCount Cloud 用户(local / WebDAV /
-    // S3 / Supabase 等)就算扫码也走不通,按钮藏起来避免误导。
-    final cloudConfigAsync = ref.watch(activeCloudConfigProvider);
-    // 共享账本是云端协同（PiggyCount Cloud）的独占能力；云端协同关闭时
-    // （见 cloud_feature_flags.dart）不再展示「加入共享账本」入口。
-    final isPiggyCountCloud = cloudConfigAsync.valueOrNull?.type ==
-            CloudBackendType.piggycountCloud &&
-        kPiggyCountCloudEnabled;
-
     return ListView(
       padding: EdgeInsets.symmetric(
         vertical: 8.0.scaled(context, ref),
       ),
       children: [
-        // §7 共享账本入口 — 跟 web 端 LedgersSection 顶部"加入共享账本"
-        // 按钮一致,放在列表顶部,比 header 角落 icon 显眼。
-        if (isPiggyCountCloud)
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              16.0.scaled(context, ref),
-              4.0.scaled(context, ref),
-              16.0.scaled(context, ref),
-              8.0.scaled(context, ref),
-            ),
-            child: OutlinedButton.icon(
-              icon: const Icon(Icons.group_add_outlined, size: 18),
-              label: Text(AppLocalizations.of(context).sharedJoinPageTitle),
-              onPressed: () async {
-                await Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const JoinSharedLedgerPage(),
-                  ),
-                );
-              },
-              style: OutlinedButton.styleFrom(
-                minimumSize: Size(double.infinity, 40.0.scaled(context, ref)),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-                ),
-              ),
-            ),
-          ),
         // 本地账本区域
         if (localLedgers.isNotEmpty) ...[
           _SectionHeader(
             title: AppLocalizations.of(context).ledgersLocal,
             trailing: localLedgers.length.toString(),
-            // 「全部上传」仅快照同步类（WebDAV/S3/Supabase/iCloud）显示：
-            // PiggyCount Cloud 是增量自动同步、未配置云服务时无上传目标，
-            // 其余情况隐藏入口避免误导。与远程区「全部恢复」按钮对称。
+            // 「全部上传」仅快照同步类（WebDAV/S3/Supabase/iCloud）显示；
+            // 未配置云服务时无上传目标，隐藏入口避免误导。与远程区
+            // 「全部恢复」按钮对称。
             action: ref.watch(syncServiceProvider) is TransactionsSyncManager
                 ? TextButton.icon(
                     icon: const Icon(Icons.cloud_upload, size: 18),
@@ -459,20 +416,9 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     Object? error;
     try {
       final syncService = ref.read(syncServiceProvider);
-      if (syncService is SyncEngine) {
-        // PiggyCount Cloud 路径（sync_changes 增量日志模型）：
-        // 1) syncLedgersFromServer 把账本行插到本地 Drift
-        // 2) replayAllChanges 从 cursor=0 重拉整段 sync_changes 并幂等应用，
-        //    把历史 tx/account/category/tag 挂到刚刚插好的新账本上
-        //
-        // 不走 `_fullPull`（整包 JSON 下载）—— 那是 S3/WebDAV 的玩法，PiggyCount
-        // Cloud 的模型就是 sync_changes，所有恢复都应该走这条日志。apply 是
-        // 按 entity_sync_id upsert 幂等的，重放不会产生副本。
-        await syncService.syncLedgersFromServer();
-        await syncService.replayAllChanges();
-      } else if (syncService is TransactionsSyncManager) {
-        // 老的 Supabase 路径。槽位路径按 syncId 解析（与上传同规则），
-        // 不再手拼 ledger_<本地id>.json —— 数字 id 跨设备无意义。
+      if (syncService is TransactionsSyncManager) {
+        // 槽位路径按 syncId 解析（与上传同规则），不手拼
+        // ledger_<本地id>.json —— 数字 id 跨设备无意义。
         await syncService.downloadRemoteLedger(
           name: ledger.name,
           currency: ledger.currency,
@@ -517,12 +463,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     // - Editor(共享账本 + myRole != owner):仅 members(看成员/退出),
     //   隐藏 edit / clear / deleteLocal / delete 4 项 owner-only 操作
     final isOwner = ledger.myRole == 'owner';
-    // 共享账本/成员管理是 PiggyCount Cloud 独有能力,非 PiggyCount Cloud 模式
-    // (local / WebDAV / S3 / Supabase 等)直接隐藏这些入口。
-    final cloudConfig = ref.read(activeCloudConfigProvider).valueOrNull;
-    final isPiggyCountCloud =
-        cloudConfig?.type == CloudBackendType.piggycountCloud;
-    // 手动上传仅对快照同步类后端开放（PiggyCount Cloud 增量自动同步无需手动上传）
+    // 手动上传仅对快照同步类后端开放
     final canUpload = ref.read(syncServiceProvider) is TransactionsSyncManager;
     final action = await showDialog<String>(
       context: context,
@@ -556,43 +497,6 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                 ],
               ),
             ),
-            // v24 共享账本:成员管理入口(任意 member 可看,owner 可邀请 / 踢人,
-            // Editor 可看列表 + 退出账本)。非 PiggyCount Cloud 模式没成员概念,
-            // 整个入口隐藏。
-            if (isPiggyCountCloud) ...[
-              SimpleDialogOption(
-                onPressed: () => Navigator.pop(dctx, 'members'),
-                child: Row(
-                  children: [
-                    Icon(Icons.people, color: primary),
-                    const SizedBox(width: 8),
-                    Text(AppLocalizations.of(context).sharedMembersPageTitle),
-                    if (ledger.isShared) ...[
-                      const SizedBox(width: 6),
-                      Text(
-                        '(${ledger.memberCount})',
-                        style: PiggyTextTokens.label(context).copyWith(
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              // 共享账本成员收支统计(简版)— 只对已同步的共享账本展示。
-              if (ledger.isShared)
-                SimpleDialogOption(
-                  onPressed: () => Navigator.pop(dctx, 'memberStats'),
-                  child: Row(
-                    children: [
-                      Icon(Icons.insert_chart_outlined, color: primary),
-                      const SizedBox(width: 8),
-                      Text(
-                          AppLocalizations.of(context).sharedMembersStatsTitle),
-                    ],
-                  ),
-                ),
-            ],
             // 单账本上传 — 放在破坏性操作（清空/删除）之前，与编辑类操作分组。
             if (canUpload)
               SimpleDialogOption(
@@ -663,43 +567,6 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
         await Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const BudgetPage()),
         );
-      }
-    } else if (action == 'members') {
-      // 跳转成员管理 — 需要 ledger.syncId(server external_id)。本地仅 ledger
-      // (没 syncId,从未同步过的)无成员概念,提示用户先建云账户。
-      final row = await ref.read(repositoryProvider).getLedgerById(ledger.id);
-      final syncId = row?.syncId;
-      if (syncId == null || syncId.isEmpty) {
-        if (mounted)
-          showToast(
-              context, AppLocalizations.of(context).sharedRequiresCloudSync);
-        return;
-      }
-      if (mounted) {
-        await Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => MemberListPage(
-            ledgerExternalId: syncId,
-            ledgerName: ledger.name,
-          ),
-        ));
-      }
-    } else if (action == 'memberStats') {
-      // 跟成员管理同源:取 ledger.syncId 再跳 MemberStatsPage。
-      final row = await ref.read(repositoryProvider).getLedgerById(ledger.id);
-      final syncId = row?.syncId;
-      if (syncId == null || syncId.isEmpty) {
-        if (mounted)
-          showToast(
-              context, AppLocalizations.of(context).sharedRequiresCloudSync);
-        return;
-      }
-      if (mounted) {
-        await Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => MemberStatsPage(
-            ledgerExternalId: syncId,
-            ledgerName: ledger.name,
-          ),
-        ));
       }
     } else if (action == 'upload') {
       await _handleUploadLedger(context, ledger);
@@ -1140,21 +1007,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     Object? error;
     try {
       final syncService = ref.read(syncServiceProvider);
-      if (syncService is SyncEngine) {
-        // PiggyCount Cloud 批量（sync_changes 日志模型）：
-        // 1) syncLedgersFromServer 把所有 remote-only ledger 插到本地
-        // 2) replayAllChanges 一次性从 cursor=0 重拉历史 sync_changes，apply
-        //    按 entity_sync_id 幂等 upsert，把所有账本的历史统一刷回来
-        // 不走 `_fullPull` 的 JSON snapshot 下载 —— 那是 S3/WebDAV 的模型。
-        await syncService.syncLedgersFromServer();
-        try {
-          await syncService.replayAllChanges();
-          success = remoteLedgers.length;
-        } catch (e, st) {
-          logger.warning('LedgersPage', '批量恢复远程账本失败: $e', st);
-          failed = remoteLedgers.length;
-        }
-      } else if (syncService is TransactionsSyncManager) {
+      if (syncService is TransactionsSyncManager) {
         final result = await syncService.restoreAllRemoteLedgers();
         success = result.success;
         failed = result.failed;

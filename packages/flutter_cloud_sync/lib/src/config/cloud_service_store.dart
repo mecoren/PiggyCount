@@ -5,7 +5,7 @@ import '../core/exceptions.dart';
 import 'cloud_service_config.dart';
 
 /// 云服务配置持久化存储
-/// 支持类型: 本地存储、PiggyCount Cloud、自定义 Supabase、自定义 WebDAV、iCloud、S3
+/// 支持类型: 本地存储、自定义 Supabase、自定义 WebDAV、iCloud、S3
 ///
 /// P2-4 安全加固：含凭据的配置（云密码 / Supabase anonKey / WebDAV 密码 /
 /// S3 SecretKey 等）统一存入 flutter_secure_storage（Android 加密
@@ -13,8 +13,7 @@ import 'cloud_service_config.dart';
 /// 激活类型标记。老版本明文数据在首次读取时自动迁移到安全存储并删除明文。
 class CloudServiceStore {
   static const _kActiveType =
-      'cloud_active_type'; // local | piggycount_cloud | supabase | webdav | icloud | s3
-  static const _kPiggyCountCloudCfg = 'cloud_piggycount_cloud_cfg';
+      'cloud_active_type'; // local | supabase | webdav | icloud | s3（历史 piggycount_cloud 落 default 回退本地）
   static const _kSupabaseCfg = 'cloud_supabase_cfg';
   static const _kWebdavCfg = 'cloud_webdav_cfg';
   static const _kS3Cfg = 'cloud_s3_cfg';
@@ -128,9 +127,6 @@ class CloudServiceStore {
       case 'local':
         return CloudServiceConfig.localStorage();
 
-      case 'piggycount_cloud':
-        return _loadActiveBackendConfig(activeType, _kPiggyCountCloudCfg);
-
       case 'supabase':
         return _loadActiveBackendConfig(activeType, _kSupabaseCfg);
 
@@ -176,17 +172,6 @@ class CloudServiceStore {
     }
     // 未配置或解析损坏：回退到本地存储
     return CloudServiceConfig.localStorage();
-  }
-
-  /// 加载 PiggyCount Cloud 配置(不管是否激活)
-  Future<CloudServiceConfig?> loadPiggyCountCloud() async {
-    final raw = await _readCfg(_kPiggyCountCloudCfg);
-    if (raw == null) return null;
-    try {
-      return decodeCloudConfig(raw);
-    } catch (e) {
-      return null;
-    }
   }
 
   /// 加载Supabase配置(不管是否激活)
@@ -236,11 +221,6 @@ class CloudServiceStore {
         // Provider 会在下次使用时自动初始化
         break;
 
-      case CloudBackendType.piggycountCloud:
-        await _writeCfg(_kPiggyCountCloudCfg, encodeCloudConfig(cfg));
-        await sp.setString(_kActiveType, 'piggycount_cloud');
-        break;
-
       case CloudBackendType.supabase:
         await _writeCfg(_kSupabaseCfg, encodeCloudConfig(cfg));
         await sp.setString(_kActiveType, 'supabase');
@@ -273,10 +253,6 @@ class CloudServiceStore {
         // 本地存储无需保存
         break;
 
-      case CloudBackendType.piggycountCloud:
-        await _writeCfg(_kPiggyCountCloudCfg, encodeCloudConfig(cfg));
-        break;
-
       case CloudBackendType.supabase:
         await _writeCfg(_kSupabaseCfg, encodeCloudConfig(cfg));
         break;
@@ -303,21 +279,6 @@ class CloudServiceStore {
       case CloudBackendType.local:
         await sp.setString(_kActiveType, 'local');
         return true;
-
-      case CloudBackendType.piggycountCloud:
-        // M16：_readCfg 读失败（安全存储故障）也走 false（bool 契约不变），
-        // 但必须留痕——此前裸 catch 静默吞掉，UI 只看到「激活失败」无因可查。
-        try {
-          final raw = await _readCfg(_kPiggyCountCloudCfg);
-          if (raw == null) return false;
-          final cfg = decodeCloudConfig(raw);
-          if (!cfg.valid) return false;
-          await sp.setString(_kActiveType, 'piggycount_cloud');
-          return true;
-        } catch (e) {
-          debugPrint('Activate piggycount_cloud config failed: $e');
-          return false;
-        }
 
       case CloudBackendType.supabase:
         try {

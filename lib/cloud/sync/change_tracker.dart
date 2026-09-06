@@ -328,8 +328,7 @@ class ChangeTracker {
   ///   重建（它按 (entityType, entitySyncId) 预检去重）；最坏后果是
   ///   legacy backfill 对「窗口外且此后不再变更」的实体重推一次 ——
   ///   服务端幂等，仅带宽浪费，换取表有界增长。
-  /// Path B 当前整体停用（kPiggyCountCloudEnabled=false），该折中无实际
-  /// 风险敞口；开关打开前会重新评估 legacy backfill 的必要性。
+  /// （原路径 B 已整体下线;本清理逻辑保留供快照同步的 pushed_at 标记消费。）
   Future<int> cleanupPushedChanges({
     Duration retention = const Duration(days: 7),
     Duration markerRetention = const Duration(days: 30),

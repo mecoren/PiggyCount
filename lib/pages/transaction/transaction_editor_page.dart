@@ -17,7 +17,6 @@ import '../../widgets/transaction/transfer_form.dart';
 import '../../styles/tokens.dart';
 import '../../services/billing/post_processor.dart';
 import '../../services/attachment_service.dart';
-import '../../services/data/tx_author_service.dart';
 
 /// 以底部抽屉形式弹出交易编辑器（新建 / 编辑通用）
 ///
@@ -463,9 +462,6 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
               nativeAmount: res.nativeAmount,
             );
             transactionId = widget.editingTransactionId!;
-            // 共享账本:本地 lastEditedByUserId 立即回填,UI 头像组直接展示
-            // 当前 user 为编辑人(否则要等 server 下次 pull 才回来)
-            await TxAuthorService.markEdited(ref, transactionId);
           } else {
             transactionId = await repo.addTransaction(
               ledgerId: ledgerId,
@@ -482,8 +478,6 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
               currencyCode: res.currencyCode,
               nativeAmount: res.nativeAmount,
             );
-            // 共享账本:新建本地 tx 也回填创建人 + 编辑人(同一个 user)
-            await TxAuthorService.markCreated(ref, transactionId);
           }
           // 保存待上传的附件
           if (res.pendingAttachments.isNotEmpty) {

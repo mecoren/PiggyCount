@@ -14,8 +14,7 @@ import 'sync_providers.dart';
 /// 多币种 MVP 的 provider 层(.docs/multi-currency/02-tech-design-app.md §五/§六)。
 /// 主币种链照 displayName(theme_providers.dart:275-312)同款。
 
-/// 用户主币种(大写 ISO code)。本地真值存 prefs 'baseCurrency';PiggyCount Cloud
-/// 模式下改动会推到 server,其余云模式 / 纯本地只存本地。
+/// 用户主币种(大写 ISO code)。本地真值存 prefs 'baseCurrency',只存本地。
 final baseCurrencyProvider = StateProvider<String>((ref) => 'CNY');
 
 /// 汇率数据变更信号:拉取成功 / 手动编辑后 bump,触发 effectiveRates 重算。
@@ -43,31 +42,8 @@ final baseCurrencyInitProvider = FutureProvider<void>((ref) async {
 
   ref.listen<String>(baseCurrencyProvider, (prev, next) async {
     await prefs.setString('baseCurrency', next);
-    _pushBaseCurrencyToCloud(ref, next);
   });
 });
-
-/// 把主币种推给 server 的 /profile/me(仅 PiggyCount Cloud 模式)。非 cloud 模式
-/// provider 返回 null 直接跳过。fire-and-forget,失败只打 warning。照
-/// _pushDisplayNameToCloud(theme_providers.dart)的写法。
-void _pushBaseCurrencyToCloud(Ref ref, String code) {
-  final normalized = code.trim().toUpperCase();
-  if (normalized.isEmpty) return;
-  unawaited(() async {
-    try {
-      final cloudProvider =
-          await ref.read(piggycountCloudProviderInstance.future);
-      if (cloudProvider == null) return;
-      await cloudProvider.updateMyProfileBaseCurrency(
-          primaryCurrency: normalized);
-      logger.info(
-          'currency_providers', 'primary currency pushed to server: $normalized');
-    } catch (e, st) {
-      logger.warning('currency_providers',
-          'push primary currency failed (non-blocking): $e', st);
-    }
-  }());
-}
 
 /// 使用中币种 ∪ {主币种}(大写)。watch statsRefresh 跟随账户增删改。
 final usedCurrenciesProvider = FutureProvider<Set<String>>((ref) async {
@@ -324,34 +300,10 @@ Future<bool> _fetchAndStoreRatesForBase({
   try {
     String rateDate, source;
     Map<String, String> baseToQuote;
-    Map<String, dynamic>? serverBody;
-    try {
-      final cloudProvider = await readFuture(piggycountCloudProviderInstance);
-      serverBody = cloudProvider == null
-          ? null
-          : await cloudProvider.fetchExchangeRates(base: base);
-    } catch (e) {
-      logger.warning('currency_providers', 'server 汇率源失败,下滑公网: $e');
-      serverBody = null;
-    }
-    // serverBody['stale'] 有意不消费:rateDate 如实落库(UI 日期不撒谎),代价是
-    // stale 数据会被 24h 节流当新鲜缓存一天;有 force 刷新兜底,MVP 接受。
-    final rawRateDate = serverBody?['rate_date']?.toString() ?? '';
-    if (serverBody != null &&
-        serverBody['rates'] is Map &&
-        rawRateDate.isNotEmpty) {
-      rateDate = rawRateDate;
-      source = 'server';
-      baseToQuote = {
-        for (final e in (serverBody['rates'] as Map).entries)
-          e.key.toString().toUpperCase(): e.value.toString(),
-      };
-    } else {
-      final result = await read(exchangeRateServiceProvider).fetch(base);
-      rateDate = result.rateDate;
-      source = result.source;
-      baseToQuote = result.ratesBaseToQuote;
-    }
+    final result = await read(exchangeRateServiceProvider).fetch(base);
+    rateDate = result.rateDate;
+    source = result.source;
+    baseToQuote = result.ratesBaseToQuote;
 
     // 倒数成「1 quote = x base」,只保留需要的币种
     final inverted = <String, String>{};

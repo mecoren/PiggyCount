@@ -113,18 +113,6 @@ void main() {
       expect(deps.applyPreviewChangesCallCount, 0);
     });
 
-    test('配置为 piggycountCloud 时直接跳过（路径 B 不处理）', () async {
-      deps.activeConfig = const CloudServiceConfig(
-        type: CloudBackendType.piggycountCloud,
-        name: 'piggycount',
-        piggycountCloudBaseUrl: 'https://example.com',
-      );
-
-      await checker.runIfNeeded();
-
-      expect(deps.getAllLedgersCalled, isFalse);
-      expect(controller.state, isA<DismissedState>());
-    });
 
     test('配置为 supabase 但 invalid 时跳过', () async {
       deps.activeConfig = const CloudServiceConfig(

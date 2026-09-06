@@ -1,14 +1,11 @@
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../cloud/cloud_feature_flags.dart';
 import '../data/db.dart';
 import '../data/repositories/local/local_repository.dart';
 import '../data/repositories/base_repository.dart';
-import '../cloud/sync/change_tracker.dart';
 import '../services/system/logger_service.dart';
 import '../utils/shared_ledger_picker_filter.dart';
-import 'shared_ledger_providers.dart';
 import 'sync_providers.dart';
 
 // 数据库Provider
@@ -18,27 +15,14 @@ final databaseProvider = Provider<PiggyDatabase>((ref) {
   return db;
 });
 
-// 仓储Provider — 一律 LocalRepository(本地优先 + ChangeTracker 推 PiggyCount Cloud)。
-// 历史上还有过 CloudRepository(数据全存 Supabase),但 PiggyCount Cloud 上线后
-// 整条范式从「云优先」迁到「本地优先 + 推送」,Cloud* 仓库整组随之删掉。
+// 仓储Provider — 一律 LocalRepository(本地优先)。ChangeTracker(增量变更
+// 推送)随 PiggyCount Cloud 云端协同下线移除;快照备份路径(iCloud / WebDAV /
+// S3 / Supabase)不注入 tracker,TransactionsSyncManager 直接读
+// local_changes 表做冲突证据(见 _localChangeEvidence)。
 final repositoryProvider = Provider<BaseRepository>((ref) {
   final db = ref.watch(databaseProvider);
-
-  // 仅 PiggyCount Cloud 后端激活时注入 ChangeTracker(记录增量变更供同步引擎推送)。
-  // 其它备份后端(iCloud / WebDAV / S3 / Supabase)走快照备份路径,不需要变更追踪。
-  //
-  // 审计 M21：必须同时检查总开关 kPiggyCountCloudEnabled —— 此前只看激活配置，
-  // flag 关闭后存量配置仍挂 tracker，而 syncServiceProvider 已退化为
-  // LocalOnlySyncService（无人消费 local_changes、永不 markPushed）→
-  // 每次业务写入都进表且无限膨胀。关闭态下 tracker 必须一并下线。
-  final config = ref.watch(activeCloudConfigProvider).valueOrNull;
-  final tracker = (kPiggyCountCloudEnabled &&
-          config?.type == CloudBackendType.piggycountCloud &&
-          config!.valid)
-      ? ChangeTracker(db)
-      : null;
-  logger.info('RepositoryProvider', '✅ LocalRepository (changeTracker=${tracker != null})');
-  return LocalRepository(db, changeTracker: tracker);
+  logger.info('RepositoryProvider', '✅ LocalRepository');
+  return LocalRepository(db);
 });
 
 // 记住当前账本：启动时加载，切换时持久化

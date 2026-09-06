@@ -15,13 +15,13 @@ import '../services/system/logger_service.dart';
 ///
 /// 返回 (CloudProvider, CloudAuthService) 元组
 ///
-/// 支持后端: PiggyCount Cloud / Supabase / WebDAV / iCloud / S3
+/// 支持后端: Supabase / WebDAV / iCloud / S3
 ///
 /// 位置说明（L3 循环依赖解除）：本工厂此前位于 flutter_cloud_sync 包内
 /// （src/config/provider_factory.dart），导致 core 反向依赖全部 provider
 /// 包、与「provider 包依赖 core」形成循环。现迁至 app 层 —— app 本就直接
-/// 依赖所有包，core 回归纯接口+通用实现（PiggyCount Cloud 协议实现仍在
-/// core 内，无循环）。
+/// 依赖所有包，core 回归纯接口层（原 PiggyCount Cloud 协议实现已随
+/// 云端协同下线移除）。
 Future<({CloudProvider? provider, CloudAuthService? auth})> createCloudServices(
   CloudServiceConfig config,
 ) async {
@@ -32,14 +32,6 @@ Future<({CloudProvider? provider, CloudAuthService? auth})> createCloudServices(
   switch (config.type) {
     case CloudBackendType.local:
       return (provider: null, auth: null);
-
-    case CloudBackendType.piggycountCloud:
-      final provider = PiggyCountCloudProvider();
-      await provider.initialize({
-        'baseUrl': config.piggycountCloudBaseUrl!,
-        'apiPrefix': config.piggycountCloudApiPrefix ?? '/api/v1',
-      });
-      return (provider: provider, auth: provider.auth);
 
     case CloudBackendType.supabase:
       // 创建并初始化 Supabase provider
