@@ -7673,4 +7673,33 @@ class AppLocalizationsKo extends AppLocalizations {
   String annualReportConsecutiveDaysValue(int count) {
     return '$count일';
   }
+
+  @override
+  String aiBillingRateMissingHint(String currency) {
+    return '⚠️ $currency 환율을 가져오지 못해 1:1로 임시 기록했습니다. 통계 페이지의 \'재환산\'에서 수정할 수 있습니다';
+  }
+
+  @override
+  String get aiPromptVarCurrencies => '원장 기본 통화 + 사용 중인 외화 계좌';
+
+  @override
+  String get aiPromptVarBillGuard => '결제 내역 필터 (스크린샷 / 자동 기록 시에만 삽입)';
+
+  @override
+  String aiPromptMissingVarsHint(String vars) {
+    return '사용자 지정 템플릿에 이 변수들이 없어 해당 기능이 작동하지 않습니다: $vars';
+  }
+
+  @override
+  String aiPromptInsertVarSection(String name) {
+    return '$name 단락 삽입';
+  }
+
+  @override
+  String aiPromptVarSectionInserted(String name) {
+    return '$name 단락이 추가되었습니다. 확인 후 저장하세요';
+  }
+
+  @override
+  String get tagSelectOwnerManaged => '공유 원장의 태그는 소유자가 관리합니다';
 }

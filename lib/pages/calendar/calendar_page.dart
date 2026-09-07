@@ -23,6 +23,22 @@ class CalendarPage extends ConsumerStatefulWidget {
 }
 
 class _CalendarPageState extends ConsumerState<CalendarPage> {
+  // 日历可浏览范围(移植 BeeCount #429)。下界从硬编码 2020-01-01 放宽到
+  // 2000-01-01(与 WheelDatePicker 默认 minDate 对齐),导入 2020 年前账单
+  // 的用户也能翻到;上界沿用「今天 + 1 年」以覆盖未来记账/周期记账。
+  //
+  // TableCalendar 与年月选择器必须绑同一份边界 —— focusedDay 落到界外会踩
+  // table_calendar 内部 assert(table_calendar_base.dart:77)。
+  static final DateTime _calFirstDay = DateTime(2000, 1, 1);
+
+  // 取整到「日」:同一天内多次读取结果恒等,避免 TableCalendar 与选择器
+  // 各自 DateTime.now() 差出微秒级不一致。
+  DateTime get _calLastDay {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day)
+        .add(const Duration(days: 365));
+  }
+
   late DateTime _focusedMonth;
   DateTime? _selectedDay;
 
@@ -67,6 +83,44 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     ref.read(calendarSelectedDateProvider.notifier).state = _selectedDay;
   }
 
+  // 点头部「20xx年xx月 ▾」跳转指定年月(移植 BeeCount #429)。复用全 App
+  // 通用的年月滚轮,与分析页同一范式。
+  Future<void> _showMonthJumpPicker() async {
+    // 上界故意跟随日历的 _calLastDay 而非 DateTime.now():日历本身能横滑到
+    // 未来一年,若选择器卡在今天就会出现「手能滑到、选择器跳不到」的割裂。
+    final picked = await showWheelDatePicker(
+      context,
+      initial: _focusedMonth,
+      mode: WheelDatePickerMode.ym,
+      minDate: _calFirstDay,
+      maxDate: _calLastDay,
+    );
+    if (picked == null || !mounted) return;
+    _jumpToMonth(picked);
+  }
+
+  void _jumpToMonth(DateTime target) {
+    // 选择器已按 min/max 限制返回值,这里只是兜底,防止将来改动边界后越界崩溃。
+    // 钳制同样落到月初 —— _focusedMonth 恒为月初是本页各处共同的前置假设。
+    var month = DateTime(target.year, target.month, 1);
+    if (month.isBefore(_calFirstDay)) {
+      month = DateTime(_calFirstDay.year, _calFirstDay.month, 1);
+    }
+    final lastDay = _calLastDay;
+    if (month.isAfter(lastDay)) {
+      month = DateTime(lastDay.year, lastDay.month, 1);
+    }
+
+    setState(() {
+      _focusedMonth = month;
+      // 与滑动切月(_onPageChanged)保持同一语义:清空选中日,下方当日列表收起
+      _selectedDay = null;
+    });
+    // 程序化跳转时 table_calendar 不会回调 onPageChanged,两个 provider 必须手动同步
+    ref.read(calendarSelectedMonthProvider.notifier).state = month;
+    ref.read(calendarSelectedDateProvider.notifier).state = null;
+  }
+
   Future<void> _addTransactionForSelectedDate() async {
     // 优先使用当前选中日期，未选中时回退到今天。
     // 把时间锁到中午,避开 UTC 边界导致跨日的问题(交易列表按日期分组,
@@ -96,12 +150,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final ledgerId = ref.watch(currentLedgerIdProvider);
-    final ledgerAsync = ref.watch(currentLedgerProvider);
     final primaryColor = ref.watch(primaryColorProvider);
-    final currencySymbol = ledgerAsync.maybeWhen(
-      data: (ledger) => ledger?.currency ?? 'CNY',
-      orElse: () => 'CNY',
-    );
 
     // 监听数据刷新
     ref.watch(calendarRefreshProvider);
@@ -193,10 +242,15 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   ) {
     final locale = Localizations.localeOf(context);
 
+    // 头部标题样式:headerStyle 与自定义 headerTitleBuilder 共用同一份,避免走样
+    final titleTextStyle = PiggyTextTokens.strongTitle(context).copyWith(
+      fontSize: 16,
+    );
+
     return TableCalendar(
       locale: locale.toString(),
-      firstDay: DateTime(2020, 1, 1),
-      lastDay: DateTime.now().add(const Duration(days: 365)),
+      firstDay: _calFirstDay,
+      lastDay: _calLastDay,
       focusedDay: _focusedMonth,
       selectedDayPredicate: (day) {
         return _selectedDay != null && isSameDay(_selectedDay, day);
@@ -217,9 +271,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
         titleCentered: true,
         leftChevronIcon: Icon(Icons.chevron_left, color: primaryColor),
         rightChevronIcon: Icon(Icons.chevron_right, color: primaryColor),
-        titleTextStyle: PiggyTextTokens.strongTitle(context).copyWith(
-          fontSize: 16,
-        ),
+        titleTextStyle: titleTextStyle,
       ),
 
       // 日历样式
@@ -275,6 +327,45 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 
       // 日期标记构建器
       calendarBuilders: CalendarBuilders(
+        // 头部标题改为「20xx年xx月 ▾」可点入口(移植 BeeCount #429)。
+        // 注意:headerTitleBuilder 会整体替换掉 table_calendar 内置那层
+        // GestureDetector,onHeaderTapped 因此不会回调 —— 点击手势挂在这里。
+        headerTitleBuilder: (context, month) {
+          // SectionCard 是纯 Container,不提供 Material —— 水波纹会画到
+          // Scaffold 那层 Material 上、被卡片背景挡住。补一层透明 Material。
+          return Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _showMonthJumpPicker,
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Flexible + ellipsis:标题字号固定 16,系统「更大字体」放大后
+                    // 纯 Text 会先吃满整行、把 20pt 的箭头挤出去触发 RenderFlex
+                    // overflow
+                    Flexible(
+                      child: Text(
+                        // 与内置实现同格式,四语显示与改造前完全一致
+                        DateFormat.yMMMM(locale.toString()).format(month),
+                        style: titleTextStyle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Icon(
+                      Icons.arrow_drop_down,
+                      size: 20,
+                      color: PiggyTokens.textPrimary(context),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
         // 自定义默认日期单元格
         defaultBuilder: (context, day, focusedDay) {
           return _buildDateCell(
@@ -572,105 +663,8 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     );
   }
 
-  // 构建当月交易列表（不显示日期和统计）
-  Widget _buildMonthTransactionsList(
-      BuildContext context, int ledgerId, DateTime month) {
-    final l10n = AppLocalizations.of(context);
-
-    // 使用 Provider 查询当月交易
-    final startDate = DateTime(month.year, month.month, 1);
-    final endDate = DateTime(month.year, month.month + 1, 0, 23, 59, 59);
-
-    final transactionsAsync = ref.watch(
-      monthTransactionsProvider(
-          (ledgerId: ledgerId, startDate: startDate, endDate: endDate)),
-    );
-
-    return SectionCard(
-      margin: EdgeInsets.zero,
-      borderColor: ref.watch(primaryColorProvider),
-      child: transactionsAsync.when(
-        data: (transactions) {
-          if (transactions.isEmpty) {
-            return Padding(
-              padding: EdgeInsets.all(24.0.scaled(context, ref)),
-              child: Center(
-                child: Text(
-                  l10n.calendarNoTransactions,
-                  style: TextStyle(
-                    color: PiggyTokens.textTertiary(context),
-                  ),
-                ),
-              ),
-            );
-          }
-
-          // 直接显示交易列表
-          return ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            padding: EdgeInsets.zero,
-            itemCount: transactions.length,
-            itemBuilder: (context, index) {
-              final item = transactions[index];
-              final category = item.category;
-              final isExpense = item.t.type == 'expense';
-              final isTransfer = item.t.type == 'transfer';
-
-              // 分类名称
-              final categoryName = category?.name ?? l10n.commonUncategorized;
-
-              // 备注作为副标题
-              final subtitle = item.t.note ?? '';
-
-              // 标签列表
-              final tagsList = item.tags
-                  .map((tag) => (id: tag.id, name: tag.name, color: tag.color))
-                  .toList();
-
-              return TransactionListItem(
-                icon: getCategoryIconData(
-                    category: category, categoryName: categoryName),
-                category: category,
-                title: isTransfer
-                    ? (subtitle.isNotEmpty ? subtitle : l10n.transferTitle)
-                    : (subtitle.isNotEmpty ? subtitle : categoryName),
-                categoryName: isTransfer
-                    ? null
-                    : (subtitle.isNotEmpty ? categoryName : null),
-                amount: item.t.amount,
-                transactionId: item.t.id,
-                currencyCode: item.t.currencyCode,
-                nativeAmount: item.t.nativeAmount,
-                isExpense: isExpense,
-                isTransfer: isTransfer,
-                happenedAt: item.t.happenedAt,
-                accountName: item.account?.name,
-                tags: tagsList.isNotEmpty ? tagsList : null,
-                attachmentCount: item.attachments.length,
-                onTap: () async {
-                  await TransactionEditUtils.editTransaction(
-                    context,
-                    ref,
-                    item.t,
-                    item.category,
-                  );
-                },
-              );
-            },
-          );
-        },
-        loading: () => const Padding(
-          padding: EdgeInsets.all(24),
-          child: Center(child: CircularProgressIndicator()),
-        ),
-        error: (err, stack) => Padding(
-          padding: const EdgeInsets.all(24),
-          child: Center(child: Text('Error: $err')),
-        ),
-      ),
-    );
-  }
+  // _buildMonthTransactionsList 已随 BeeCount #429 移植删除:全文件无调用方,
+  // 唯一引用的 monthTransactionsProvider 也一并清理(死代码,无行为变更)。
 
   String _formatDate(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';

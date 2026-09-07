@@ -5,10 +5,12 @@ import '../../data/db.dart' as db;
 import '../../providers.dart';
 import '../../providers/budget_providers.dart';
 import '../../widgets/ui/ui.dart';
+import '../../widgets/ui/wait_sliding_segmented_control.dart';
 import '../../widgets/biz/biz.dart';
 import '../../widgets/category_icon.dart';
 import '../../styles/tokens.dart';
 import '../../utils/transaction_edit_utils.dart';
+import '../../utils/month_range.dart';
 import '../../services/billing/post_processor.dart';
 import '../../utils/category_utils.dart';
 import '../../utils/shared_ledger_picker_filter.dart';
@@ -36,6 +38,50 @@ class TagDetailPage extends ConsumerStatefulWidget {
 class _TagDetailPageState extends ConsumerState<TagDetailPage> {
   // 缓存分类数据
   Map<int, db.Category> _categoryCache = {};
+
+  // #461 时间维度:month | year | all。默认 all 保持旧行为(与标签管理列表的
+  // 总笔数对得上)。
+  String _scope = 'all';
+  // 月/年视角选中的周期标签(DateTime(y,m,1));null = 当前周期
+  DateTime? _selMonth;
+
+  /// 当前 scope 的统计/列表时间范围;all 返回 null(全部历史,含未来的预记账)。
+  /// 月/年周期口径与洞察页一致(自定义每月起始日,periodForLabel/yearRangeFor)。
+  DateRange? _rangeForScope(int startDay, DateTime selMonth) {
+    switch (_scope) {
+      case 'month':
+        return periodForLabel(selMonth.year, selMonth.month, startDay);
+      case 'year':
+        return yearRangeFor(selMonth.year, startDay);
+      default:
+        return null;
+    }
+  }
+
+  // 显示周期选择器(对齐洞察页:月=年月轮盘,年=年轮盘)
+  void _showPeriodPicker(DateTime selMonth) async {
+    if (_scope == 'month') {
+      final res = await showWheelDatePicker(
+        context,
+        initial: selMonth,
+        mode: WheelDatePickerMode.ym,
+        maxDate: DateTime.now(),
+      );
+      if (res != null) {
+        setState(() => _selMonth = DateTime(res.year, res.month, 1));
+      }
+    } else if (_scope == 'year') {
+      final res = await showWheelDatePicker(
+        context,
+        initial: selMonth,
+        mode: WheelDatePickerMode.y,
+        maxDate: DateTime.now(),
+      );
+      if (res != null) {
+        setState(() => _selMonth = DateTime(res.year, 1, 1));
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -77,10 +123,22 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
     final tagAsync = ref.watch(_tagStreamProvider(widget.tagId));
     final ledgerScope =
         widget.allLedgers ? null : ref.watch(currentLedgerIdProvider);
-    final statsAsync = ref
-        .watch(_tagStatsProvider((tagId: widget.tagId, ledgerId: ledgerScope)));
-    final transactionsAsync = ref.watch(_tagTransactionsStreamProvider(
-        (tagId: widget.tagId, ledgerId: ledgerScope)));
+    // #461 时间维度:月/年/全部。all = null(全部历史,与旧行为一致)
+    final startDay = ref.watch(currentMonthStartDayProvider);
+    final selMonth = _selMonth ?? labelForDate(DateTime.now(), startDay);
+    final range = _rangeForScope(startDay, selMonth);
+    final statsAsync = ref.watch(_tagStatsProvider((
+      tagId: widget.tagId,
+      ledgerId: ledgerScope,
+      start: range?.start,
+      end: range?.end,
+    )));
+    final transactionsAsync = ref.watch(_tagTransactionsStreamProvider((
+      tagId: widget.tagId,
+      ledgerId: ledgerScope,
+      start: range?.start,
+      end: range?.end,
+    )));
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
@@ -155,6 +213,8 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
                       );
                     },
                   ),
+                  // 时间维度筛选条(#461):月/年/全部 + 周期跳转
+                  _buildScopeBar(l10n, selMonth),
                   // 交易列表标题
                   Padding(
                     padding:
@@ -182,8 +242,12 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
                     child: RefreshIndicator(
                       onRefresh: () async {
                         PiggyHaptics.light();
-                        final params =
-                            (tagId: widget.tagId, ledgerId: ledgerScope);
+                        final params = (
+                          tagId: widget.tagId,
+                          ledgerId: ledgerScope,
+                          start: range?.start,
+                          end: range?.end,
+                        );
                         ref.invalidate(_tagTransactionsStreamProvider(params));
                         ref.invalidate(_tagStatsProvider(params));
                         try {
@@ -212,6 +276,50 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildScopeBar(AppLocalizations l10n, DateTime selMonth) {
+    final periodLabel = _scope == 'year'
+        ? '${selMonth.year}'
+        : '${selMonth.year}-${selMonth.month.toString().padLeft(2, '0')}';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: WaitSlidingSegmentedControl<String>(
+              selected: _scope,
+              height: 36,
+              fontSize: 13,
+              segments: [
+                WaitSlidingSegment(
+                    value: 'month', label: l10n.analyticsMonth),
+                WaitSlidingSegment(value: 'year', label: l10n.analyticsYear),
+                WaitSlidingSegment(value: 'all', label: l10n.analyticsAll),
+              ],
+              onValueChanged: (value) => setState(() => _scope = value),
+            ),
+          ),
+          if (_scope != 'all') ...[
+            const SizedBox(width: 12),
+            InkWell(
+              onTap: () => _showPeriodPicker(selMonth),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(periodLabel, style: PiggyTextTokens.strongTitle(context)),
+                  Icon(
+                    Icons.arrow_drop_down,
+                    size: 20,
+                    color: PiggyTokens.textPrimary(context),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -488,19 +596,31 @@ final _tagStreamProvider = StreamProvider.family<db.Tag?, int>((ref, tagId) {
   return repo.watchTag(tagId);
 });
 
-/// 获取标签统计信息
-final _tagStatsProvider = FutureProvider.family<
+/// 获取标签统计信息(start/end 为 #461 时间维度筛选,null = 全部)。
+/// autoDispose:参数含时间范围,用户切换周期会产生新 family 实例,旧实例及时释放。
+final _tagStatsProvider = FutureProvider.autoDispose.family<
     ({int count, double expense, double income}),
-    ({int tagId, int? ledgerId})>((ref, params) async {
+    ({int tagId, int? ledgerId, DateTime? start, DateTime? end})>(
+    (ref, params) async {
   ref.watch(tagListRefreshProvider);
   final repo = ref.watch(repositoryProvider);
-  return await repo.getTagStats(params.tagId, ledgerId: params.ledgerId);
+  return await repo.getTagStats(
+    params.tagId,
+    ledgerId: params.ledgerId,
+    start: params.start,
+    end: params.end,
+  );
 });
 
-/// 监听标签下的交易
-final _tagTransactionsStreamProvider =
-    StreamProvider.family<List<db.Transaction>, ({int tagId, int? ledgerId})>(
-        (ref, params) {
+/// 监听标签下的交易(start/end 为 #461 时间维度筛选,null = 全部)
+final _tagTransactionsStreamProvider = StreamProvider.autoDispose.family<
+    List<db.Transaction>,
+    ({int tagId, int? ledgerId, DateTime? start, DateTime? end})>((ref, params) {
   final repo = ref.watch(repositoryProvider);
-  return repo.watchTransactionsByTag(params.tagId, ledgerId: params.ledgerId);
+  return repo.watchTransactionsByTag(
+    params.tagId,
+    ledgerId: params.ledgerId,
+    start: params.start,
+    end: params.end,
+  );
 });

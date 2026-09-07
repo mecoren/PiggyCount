@@ -200,6 +200,11 @@ class RecurringTransactions extends Table {
   // 状态
   BoolColumn get enabled => boolean().withDefault(const Constant(true))();
 
+  /// v42 周期账单币种(移植 BeeCount #444):模板币种(ISO 大写)。
+  /// NULL = 账本本位币(存量语义);挂了账户时生成仍以账户币种为准(账户内不混币)。
+  /// 汇率不锁在模板上 —— 每次生成按当日有效汇率折算 nativeAmount。
+  TextColumn get currencyCode => text().nullable()();
+
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
@@ -478,7 +483,7 @@ class PiggyDatabase extends _$PiggyDatabase {
   PiggyDatabase.forTesting(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 41; // v41: local_changes 已推送行存量清理(数据治理 G-LC,双后端实测 6143 行无界增长); v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
+  int get schemaVersion => 42; // v42: 周期账单币种 — recurring_transactions.currency_code(移植 BeeCount #444); v41: local_changes 已推送行存量清理(数据治理 G-LC,双后端实测 6143 行无界增长); v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1399,6 +1404,18 @@ class PiggyDatabase extends _$PiggyDatabase {
                 "DELETE FROM local_changes WHERE action = 'server_marker' "
                 "AND pushed_at < strftime('%s','now') - 30*86400;");
             logger.info('DBMigration', 'v41 迁移完成: local_changes 存量收敛');
+          }
+
+          if (from < 42) {
+            // v42(移植 BeeCount #444):周期账单模板币种。不回填 ——
+            // NULL = 账本本位币/跟随账户,与迁移前生成行为一字不差。
+            logger.info('DBMigration',
+                '开始迁移到 v42: 周期账单币种(currency_code)');
+            await _addColumnIfMissing(
+                'recurring_transactions',
+                'currency_code',
+                'ALTER TABLE recurring_transactions ADD COLUMN currency_code TEXT;');
+            logger.info('DBMigration', 'v42 迁移完成');
           }
         },
         onCreate: (m) async {

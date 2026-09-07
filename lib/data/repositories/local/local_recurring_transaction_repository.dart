@@ -50,6 +50,7 @@ class LocalRecurringTransactionRepository implements RecurringTransactionReposit
     DateTime? endDate,
     bool enabled = true,
     String? syncId,
+    String? currencyCode,
   }) async {
     // 每条新规则分配 syncId（导入路径显式传，UI 路径生成）—— v8 快照与
     // Cloud 引擎都靠它做跨设备锚定；缺失时业务键匹配是兜底而非主路径。
@@ -71,8 +72,17 @@ class LocalRecurringTransactionRepository implements RecurringTransactionReposit
         endDate: d.Value(endDate),
         enabled: d.Value(enabled),
         syncId: d.Value(syncId ?? _uuid.v4()),
+        currencyCode: d.Value(_normalizeCurrency(currencyCode)),
       ),
     );
+  }
+
+  /// 币种统一大写存储(与 transactions.currency_code 一致);空串按 null。
+  /// (v42,移植 BeeCount #444)
+  static String? _normalizeCurrency(String? code) {
+    if (code == null) return null;
+    final trimmed = code.trim();
+    return trimmed.isEmpty ? null : trimmed.toUpperCase();
   }
 
   @override
@@ -95,6 +105,7 @@ class LocalRecurringTransactionRepository implements RecurringTransactionReposit
     bool? enabled,
     DateTime? lastGeneratedDate,
     String? syncId,
+    String? currencyCode,
   }) async {
     await (db.update(db.recurringTransactions)..where((t) => t.id.equals(id)))
         .write(
@@ -118,6 +129,8 @@ class LocalRecurringTransactionRepository implements RecurringTransactionReposit
         // 仅显式传入时回填（name 命中业务键的导入匹配后补身份锚点）；
         // null → absent，避免把已有 syncId 清掉。
         syncId: syncId != null ? d.Value(syncId) : const d.Value.absent(),
+        // null 即写 NULL(改回本位币要能清掉旧外币),与本方法其它字段同语义
+        currencyCode: d.Value(_normalizeCurrency(currencyCode)),
         updatedAt: d.Value(DateTime.now()),
       ),
     );

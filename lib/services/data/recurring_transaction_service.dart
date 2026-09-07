@@ -252,6 +252,16 @@ class RecurringTransactionService {
               happenedAt: nextDate,
               note: currentRecurring.note,
               recurringId: recurringId,
+              // 币种(v42 / 移植 BeeCount #444):
+              // - 挂了账户 → 传 null,让 repo 从账户解析(账户内不混币;
+              //   账户事后被改币种时模板值可能已漂移,以账户为准才不会往
+              //   账户里塞异币种交易)。
+              // - 无账户 → 用模板币种(null 即账本本位币,存量行为不变)。
+              // nativeAmount 一律不传:由 repo 按**本次生成当日**的有效汇率
+              // 折算 —— 周期账单的语义是「每月 10 美元」,不是「每月固定 72 元」。
+              currencyCode: currentRecurring.accountId != null
+                  ? null
+                  : currentRecurring.currencyCode,
             );
 
             // 使用流式查询获取生成的交易（取第一个）

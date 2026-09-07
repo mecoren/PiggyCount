@@ -10,7 +10,10 @@ import '../../l10n/app_localizations.dart';
 import '../../services/data/recurring_transaction_service.dart';
 import '../../services/system/logger_service.dart';
 import '../../utils/category_utils.dart';
+import '../../utils/currencies.dart';
 import '../../styles/tokens.dart';
+import '../../widgets/currency/currency_flag.dart';
+import '../../widgets/currency/currency_picker_sheet.dart';
 
 class RecurringTransactionEditPage extends ConsumerStatefulWidget {
   final RecurringTransaction? recurring;
@@ -41,6 +44,14 @@ class _RecurringTransactionEditPageState
   bool _hasAttemptedSave = false; // 是否已尝试保存
   int? _selectedLedgerId; // 选中的账本ID
 
+  /// v42(移植 BeeCount #444)模板币种:null = 所选账本的本位币。
+  /// 与记账页 L12 同构 —— 币种优先联动:改币种 → 账户列表按新币种过滤、
+  /// 已选账户清空。
+  String? _currencyCode;
+
+  /// 所选账本的本位币(异步查,用于判断「是否外币」与币种选择器的汇率基准)。
+  String? _ledgerCurrency;
+
   bool get _isEditing => widget.recurring != null;
 
   @override
@@ -57,6 +68,7 @@ class _RecurringTransactionEditPageState
       _selectedToAccountId = widget.recurring!.toAccountId;
       _enabled = widget.recurring!.enabled;
       _selectedLedgerId = widget.recurring!.ledgerId;
+      _currencyCode = widget.recurring!.currencyCode?.toUpperCase();
       _amountController.text = widget.recurring!.amount.toStringAsFixed(2);
       _noteController.text = widget.recurring!.note ?? '';
       _loadCategoryAndAccount();
@@ -71,11 +83,34 @@ class _RecurringTransactionEditPageState
       _selectedLedgerId = ref.read(currentLedgerIdProvider);
     }
 
+    _loadLedgerCurrency();
+
     // 监听金额输入变化，更新按钮状态
     _amountController.addListener(() {
       setState(() {});
     });
   }
+
+  /// 加载所选账本的本位币。账本切换后重新加载(币种字段与账户过滤都依赖它)。
+  Future<void> _loadLedgerCurrency() async {
+    final ledgerId = _selectedLedgerId;
+    if (ledgerId == null) return;
+    final ledger = await ref.read(repositoryProvider).getLedgerById(ledgerId);
+    if (!mounted) return;
+    setState(() {
+      _ledgerCurrency = (ledger?.currency.isNotEmpty ?? false)
+          ? ledger!.currency.toUpperCase()
+          : 'CNY';
+      // 模板币种恰等于新账本本位币 → 归一成 null(非外币)
+      if (_currencyCode?.toUpperCase() == _ledgerCurrency) {
+        _currencyCode = null;
+      }
+    });
+  }
+
+  /// 有效币种:模板币种 ?? 账本本位币。账户列表按它过滤,交易生成也落它。
+  String _effectiveCurrency() =>
+      _currencyCode ?? _ledgerCurrency ?? ref.read(currentLedgerCurrencyProvider);
 
   Future<void> _loadCategoryAndAccount() async {
     if (_isEditing && widget.recurring!.categoryId != null) {
@@ -135,6 +170,10 @@ class _RecurringTransactionEditPageState
 
                     // Ledger selection
                     _buildLedgerSelector(l10n),
+                    const SizedBox(height: 16),
+
+                    // Currency (v42 / 移植 BeeCount #444)
+                    _buildCurrencySelector(l10n),
                     const SizedBox(height: 16),
 
                     // Amount
@@ -332,6 +371,52 @@ class _RecurringTransactionEditPageState
         ),
       ),
     );
+  }
+
+  /// 币种字段(v42 / 移植 BeeCount #444)。默认=账本本位币,点开可改;改了之后
+  /// 账户列表按新币种过滤(已选账户清空)。汇率不在此锁定 —— 每次生成按当日
+  /// 汇率折算,故不展示折算预览,以免暗示「这笔换算已定」。
+  Widget _buildCurrencySelector(AppLocalizations l10n) {
+    final currency = _effectiveCurrency();
+    return InkWell(
+      onTap: _selectCurrency,
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: l10n.txCurrencyLabel,
+          border: const OutlineInputBorder(),
+        ),
+        child: Row(
+          children: [
+            currencyFlag(context, currency, width: 22, height: 16, radius: 4),
+            const SizedBox(width: 8),
+            Expanded(child: Text(displayCurrency(currency, context))),
+            const Icon(Icons.arrow_drop_down, size: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _selectCurrency() async {
+    final l10n = AppLocalizations.of(context)!;
+    final String base =
+        _ledgerCurrency ?? ref.read(currentLedgerCurrencyProvider);
+    final picked = await showCurrencyPickerSheet(
+      context,
+      selected: _effectiveCurrency(),
+      primaryColor: ref.read(primaryColorProvider),
+      title: l10n.txCurrencyPickerTitle,
+      rateBase: base, // 展示各币种对账本本位币的汇率
+    );
+    if (picked == null || !mounted) return;
+    final upper = picked.toUpperCase();
+    if (upper == _effectiveCurrency()) return;
+    setState(() {
+      _currencyCode = upper == base.toUpperCase() ? null : upper;
+      // 币种优先联动:账户列表按币种过滤,旧账户可能已不符 → 清空重选
+      _selectedAccountId = null;
+      _selectedToAccountId = null;
+    });
   }
 
   Widget _buildAccountSelector(AppLocalizations l10n,
@@ -658,6 +743,8 @@ class _RecurringTransactionEditPageState
       setState(() {
         _selectedLedgerId = selected;
       });
+      // 新账本本位币可能不同 → 重载并归一币种(_loadLedgerCurrency 内部处理)
+      await _loadLedgerCurrency();
     }
   }
 
@@ -679,16 +766,15 @@ class _RecurringTransactionEditPageState
 
   Future<void> _selectAccount({required bool isFromAccount}) async {
     final repo = ref.read(repositoryProvider);
-    final ledgerId = ref.read(currentLedgerIdProvider);
-    final ledger = await ref.read(ledgerByIdProvider(ledgerId).future);
 
-    if (ledger == null) return;
-
-    // 获取所有账户，然后过滤与当前账本币种相同的账户;排除已隐藏账户
+    // 按**本模板的有效币种**过滤(v42 / 移植 BeeCount #444:此前硬按账本
+    // 本位币过滤,外币账户根本选不到,且读的是 currentLedgerId 而非所选账本);
+    // 排除已隐藏账户
     // (账户隐藏 #240 E2:该处历史上也缺 isTradableType,本期只补 hidden,不扩范围)
+    final currency = _effectiveCurrency().toUpperCase();
     final allAccounts = await repo.getAllAccounts();
     var accounts = allAccounts
-        .where((a) => a.currency == ledger.currency && !a.hidden)
+        .where((a) => a.currency.toUpperCase() == currency && !a.hidden)
         .toList();
 
     // 如果是选择转入账户，排除已选择的转出账户
@@ -710,7 +796,11 @@ class _RecurringTransactionEditPageState
         title: Text(title),
         content: SizedBox(
           width: double.maxFinite,
-          child: ListView.builder(
+          // 转入账户不给「不选择账户」兜底 → 该币种没有可选账户时列表会全空,
+          // 给一句空态,别让用户对着空白弹窗猜(移植 BeeCount #444:切外币后常见)
+          child: accounts.isEmpty && _type == 'transfer' && !isFromAccount
+              ? Text(AppLocalizations.of(context)!.commonEmpty)
+              : ListView.builder(
             shrinkWrap: true,
             itemCount: accounts.length +
                 (_type == 'transfer' && !isFromAccount ? 0 : 1), // 转入账户不显示"无账户"
@@ -793,6 +883,7 @@ class _RecurringTransactionEditPageState
           startDate: _startDate,
           endDate: _endDate,
           enabled: _enabled,
+          currencyCode: _currencyCode, // null = 账本本位币
         );
 
         // 如果需要重置最后生成日期，单独更新
@@ -818,6 +909,7 @@ class _RecurringTransactionEditPageState
           monthOfYear: null,
           startDate: _startDate,
           endDate: _endDate,
+          currencyCode: _currencyCode, // null = 账本本位币
         );
       }
 

@@ -2431,6 +2431,7 @@ class LocalRepository extends BaseRepository {
     DateTime? endDate,
     bool enabled = true,
     String? syncId,
+    String? currencyCode,
   }) {
     // TBL-M9：写表 + 记 change 同事务
     return db.transaction(() async {
@@ -2451,6 +2452,7 @@ class LocalRepository extends BaseRepository {
         endDate: endDate,
         enabled: enabled,
         syncId: syncId,
+        currencyCode: currencyCode,
       );
       // cloud_recurring_sync:新建规则登记 create change(对齐 budget 的包装模式)
       if (changeTracker != null) {
@@ -2491,6 +2493,7 @@ class LocalRepository extends BaseRepository {
     bool? enabled,
     DateTime? lastGeneratedDate,
     String? syncId,
+    String? currencyCode,
   }) {
     // TBL-M9：写表 + 记 change 同事务
     return db.transaction(() async {
@@ -2513,6 +2516,7 @@ class LocalRepository extends BaseRepository {
         enabled: enabled,
         lastGeneratedDate: lastGeneratedDate,
         syncId: syncId,
+        currencyCode: currencyCode,
       );
       // cloud_recurring_sync:编辑规则登记 update change。lastGeneratedDate 是
       // 普通 LWW 字段随行整体传播,其他设备拿到新进度后不会重放生成。
@@ -2924,8 +2928,10 @@ class LocalRepository extends BaseRepository {
       _tagRepo.getAllTagTransactionCounts();
 
   @override
-  Future<({int count, double expense, double income})> getTagStats(int tagId, {int? ledgerId}) =>
-      _tagRepo.getTagStats(tagId, ledgerId: ledgerId);
+  Future<({int count, double expense, double income})> getTagStats(int tagId,
+          {int? ledgerId, DateTime? start, DateTime? end}) =>
+      _tagRepo.getTagStats(tagId,
+          ledgerId: ledgerId, start: start, end: end);
 
   @override
   Future<List<Transaction>> getTransactionsByTag(int tagId) =>
@@ -2954,8 +2960,10 @@ class LocalRepository extends BaseRepository {
       _tagRepo.watchTagsForTransaction(transactionId);
 
   @override
-  Stream<List<Transaction>> watchTransactionsByTag(int tagId, {int? ledgerId}) =>
-      _tagRepo.watchTransactionsByTag(tagId, ledgerId: ledgerId);
+  Stream<List<Transaction>> watchTransactionsByTag(int tagId,
+          {int? ledgerId, DateTime? start, DateTime? end}) =>
+      _tagRepo.watchTransactionsByTag(tagId,
+          ledgerId: ledgerId, start: start, end: end);
 
   @override
   Future<bool> isTagNameDuplicate({required String name, int? excludeId}) =>

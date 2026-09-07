@@ -7905,4 +7905,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String annualReportConsecutiveDaysValue(int count) {
     return '$count days';
   }
+
+  @override
+  String aiBillingRateMissingHint(String currency) {
+    return '⚠️ No $currency rate available — recorded 1:1 for now; use “Reconvert” on the stats page to fix.';
+  }
+
+  @override
+  String get aiPromptVarCurrencies =>
+      'Ledger base currency + foreign-currency accounts in use';
+
+  @override
+  String get aiPromptVarBillGuard =>
+      'Bill filter (injected for screenshots / auto billing only)';
+
+  @override
+  String aiPromptMissingVarsHint(String vars) {
+    return 'Your custom template is missing these variables; those capabilities won\'t work: $vars';
+  }
+
+  @override
+  String aiPromptInsertVarSection(String name) {
+    return 'Insert $name section';
+  }
+
+  @override
+  String aiPromptVarSectionInserted(String name) {
+    return '$name section appended; save to confirm';
+  }
+
+  @override
+  String get tagSelectOwnerManaged =>
+      'Shared ledger tags are managed by the owner';
 }

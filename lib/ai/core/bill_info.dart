@@ -1,3 +1,4 @@
+import '../../utils/currency_aliases.dart';
 /// 账单类型
 ///
 /// AI 多模态记账底座 · 数据模型。底座 (Layer 1) 把 text/image/audio 输入
@@ -47,6 +48,10 @@ class BillInfo {
   /// 账本 ID(由应用层注入,AI 不感知)
   final int? ledgerId;
 
+  /// 交易币种(ISO 4217 大写)。`null` = AI 未识别 → 落库时回落账本本位币
+  /// (移植 BeeCount #437 A1)。解析/兜底见 [_parseCurrency]。
+  final String? currency;
+
   /// 置信度 0.0 - 1.0
   final double confidence;
 
@@ -61,6 +66,7 @@ class BillInfo {
     this.toAccount,
     this.tags,
     this.ledgerId,
+    this.currency,
     this.confidence = 0.0,
   });
 
@@ -83,6 +89,7 @@ class BillInfo {
     String? toAccount,
     List<String>? tags,
     int? ledgerId,
+    String? currency,
     double? confidence,
   }) {
     return BillInfo(
@@ -96,6 +103,7 @@ class BillInfo {
       toAccount: toAccount ?? this.toAccount,
       tags: tags ?? this.tags,
       ledgerId: ledgerId ?? this.ledgerId,
+      currency: currency ?? this.currency,
       confidence: confidence ?? this.confidence,
     );
   }
@@ -125,6 +133,8 @@ class BillInfo {
       toAccount: json['to_account'] as String? ?? json['toAccount'] as String?,
       tags: _parseTags(json['tags'] ?? json['tag']),
       ledgerId: json['ledgerId'] as int?,
+      currency: _parseCurrency(
+          json['currency'] ?? json['currency_code'] ?? json['currencyCode']),
       confidence: _parseDouble(json['confidence']) ?? 0.8,
     );
   }
@@ -140,8 +150,20 @@ class BillInfo {
         'to_account': toAccount,
         'tags': tags,
         'ledgerId': ledgerId,
+        'currency': currency,
         'confidence': confidence,
       };
+
+  /// 币种解析(移植 BeeCount #437 A4):ISO 码直通 → 口语/符号别名兜底。
+  ///
+  /// 无法唯一确定(未知码、歧义符号 `\$`/`¥` 无上下文)一律返回 null 按缺失
+  /// 处理,落库时回落账本本位币 —— **绝不猜**,记错币种比不识别代价大得多。
+  /// 这里拿不到账本/账户上下文,所以不传 `disambiguateWith`;需要消歧的场景
+  /// 由 BillCreationService 在有账本上下文时再判。
+  static String? _parseCurrency(dynamic value) {
+    if (value is! String) return null;
+    return currencyCodeFromAlias(value);
+  }
 
   /// 解析数值字段,兼容 `num` 与字符串(部分模型把 amount 输出成 `"-800.00"`,
   /// 甚至带千分位 `"1,234.50"`)。无法解析返回 null,交由上层兜底/丢弃。

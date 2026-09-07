@@ -823,6 +823,7 @@ class RecurringTransactionItem {
   final String startDate; // ISO 8601 format
   final String? endDate;
   final bool enabled;
+  final String? currencyCode; // v42(移植 BeeCount #444)模板币种;null = 账本本位币
 
   const RecurringTransactionItem({
     required this.ledgerName,
@@ -840,6 +841,7 @@ class RecurringTransactionItem {
     required this.startDate,
     this.endDate,
     required this.enabled,
+    this.currencyCode,
   });
 
   Map<String, dynamic> toMap() {
@@ -860,6 +862,7 @@ class RecurringTransactionItem {
     if (dayOfWeek != null) map['day_of_week'] = dayOfWeek;
     if (monthOfYear != null) map['month_of_year'] = monthOfYear;
     if (endDate != null) map['end_date'] = endDate;
+    if (currencyCode != null) map['currency_code'] = currencyCode;
     return map;
   }
 
@@ -880,6 +883,7 @@ class RecurringTransactionItem {
       startDate: map['start_date'] as String,
       endDate: map['end_date'] as String?,
       enabled: map['enabled'] as bool,
+      currencyCode: map['currency_code'] as String?,
     );
   }
 
@@ -906,6 +910,7 @@ class RecurringTransactionItem {
       startDate: rt.startDate.toIso8601String(),
       endDate: rt.endDate?.toIso8601String(),
       enabled: rt.enabled,
+      currencyCode: rt.currencyCode,
     );
   }
 }
@@ -2071,6 +2076,10 @@ class ConfigExportService {
             buffer.writeln('      month_of_year: ${itemMap['month_of_year']}');
           }
 
+          if (itemMap.containsKey('currency_code') &&
+              itemMap['currency_code'] != null) {
+            buffer.writeln('      currency_code: "${itemMap['currency_code']}"');
+          }
           buffer.writeln('      start_date: ${_yamlQuote(itemMap['start_date'])}');
           if (itemMap.containsKey('end_date') && itemMap['end_date'] != null) {
             buffer.writeln('      end_date: ${_yamlQuote(itemMap['end_date'])}');
@@ -2741,6 +2750,7 @@ class ConfigExportService {
             startDate: DateTime.parse(item.startDate),
             endDate: item.endDate != null ? DateTime.parse(item.endDate!) : null,
             enabled: item.enabled,
+            currencyCode: item.currencyCode,
           );
           importedCount++;
         }

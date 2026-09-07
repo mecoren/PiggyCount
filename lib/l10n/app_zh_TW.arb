@@ -3084,5 +3084,24 @@
         "type": "int"
       }
     }
-  }
+  },
+  "aiBillingRateMissingHint": "⚠️ 未取得 {currency} 匯率，已按 1:1 暫記，可在統計頁「補折算」修正",
+  "@aiBillingRateMissingHint": {
+    "placeholders": { "currency": { "type": "String" } }
+  },
+  "aiPromptVarCurrencies": "帳本主幣種 + 已在用的外幣帳戶",
+  "aiPromptVarBillGuard": "帳單過濾段（僅截圖 / 自動記帳時注入）",
+  "aiPromptMissingVarsHint": "你的自訂模板缺少這些變數，對應能力會失效：{vars}",
+  "@aiPromptMissingVarsHint": {
+    "placeholders": { "vars": { "type": "String" } }
+  },
+  "aiPromptInsertVarSection": "插入 {name} 段落",
+  "@aiPromptInsertVarSection": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "aiPromptVarSectionInserted": "已追加 {name} 段落，確認後儲存",
+  "@aiPromptVarSectionInserted": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "tagSelectOwnerManaged": "共享帳本標籤由所有者管理"
 }

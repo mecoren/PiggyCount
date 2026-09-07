@@ -3168,6 +3168,12 @@ class $RecurringTransactionsTable extends RecurringTransactions
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('CHECK ("enabled" IN (0, 1))'),
       defaultValue: const Constant(true));
+  static const VerificationMeta _currencyCodeMeta =
+      const VerificationMeta('currencyCode');
+  @override
+  late final GeneratedColumn<String> currencyCode = GeneratedColumn<String>(
+      'currency_code', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -3204,6 +3210,7 @@ class $RecurringTransactionsTable extends RecurringTransactions
         endDate,
         lastGeneratedDate,
         enabled,
+        currencyCode,
         createdAt,
         updatedAt
       ];
@@ -3311,6 +3318,12 @@ class $RecurringTransactionsTable extends RecurringTransactions
       context.handle(_enabledMeta,
           enabled.isAcceptableOrUnknown(data['enabled']!, _enabledMeta));
     }
+    if (data.containsKey('currency_code')) {
+      context.handle(
+          _currencyCodeMeta,
+          currencyCode.isAcceptableOrUnknown(
+              data['currency_code']!, _currencyCodeMeta));
+    }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -3364,6 +3377,8 @@ class $RecurringTransactionsTable extends RecurringTransactions
           DriftSqlType.dateTime, data['${effectivePrefix}last_generated_date']),
       enabled: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}enabled'])!,
+      currencyCode: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}currency_code']),
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
@@ -3401,6 +3416,11 @@ class RecurringTransaction extends DataClass
   final DateTime? endDate;
   final DateTime? lastGeneratedDate;
   final bool enabled;
+
+  /// v42 周期账单币种(移植 BeeCount #444):模板币种(ISO 大写)。
+  /// NULL = 账本本位币(存量语义);挂了账户时生成仍以账户币种为准(账户内不混币)。
+  /// 汇率不锁在模板上 —— 每次生成按当日有效汇率折算 nativeAmount。
+  final String? currencyCode;
   final DateTime createdAt;
   final DateTime updatedAt;
   const RecurringTransaction(
@@ -3422,6 +3442,7 @@ class RecurringTransaction extends DataClass
       this.endDate,
       this.lastGeneratedDate,
       required this.enabled,
+      this.currencyCode,
       required this.createdAt,
       required this.updatedAt});
   @override
@@ -3465,6 +3486,9 @@ class RecurringTransaction extends DataClass
       map['last_generated_date'] = Variable<DateTime>(lastGeneratedDate);
     }
     map['enabled'] = Variable<bool>(enabled);
+    if (!nullToAbsent || currencyCode != null) {
+      map['currency_code'] = Variable<String>(currencyCode);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -3507,6 +3531,9 @@ class RecurringTransaction extends DataClass
           ? const Value.absent()
           : Value(lastGeneratedDate),
       enabled: Value(enabled),
+      currencyCode: currencyCode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(currencyCode),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -3535,6 +3562,7 @@ class RecurringTransaction extends DataClass
       lastGeneratedDate:
           serializer.fromJson<DateTime?>(json['lastGeneratedDate']),
       enabled: serializer.fromJson<bool>(json['enabled']),
+      currencyCode: serializer.fromJson<String?>(json['currencyCode']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -3561,6 +3589,7 @@ class RecurringTransaction extends DataClass
       'endDate': serializer.toJson<DateTime?>(endDate),
       'lastGeneratedDate': serializer.toJson<DateTime?>(lastGeneratedDate),
       'enabled': serializer.toJson<bool>(enabled),
+      'currencyCode': serializer.toJson<String?>(currencyCode),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -3585,6 +3614,7 @@ class RecurringTransaction extends DataClass
           Value<DateTime?> endDate = const Value.absent(),
           Value<DateTime?> lastGeneratedDate = const Value.absent(),
           bool? enabled,
+          Value<String?> currencyCode = const Value.absent(),
           DateTime? createdAt,
           DateTime? updatedAt}) =>
       RecurringTransaction(
@@ -3608,6 +3638,8 @@ class RecurringTransaction extends DataClass
             ? lastGeneratedDate.value
             : this.lastGeneratedDate,
         enabled: enabled ?? this.enabled,
+        currencyCode:
+            currencyCode.present ? currencyCode.value : this.currencyCode,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );
@@ -3637,6 +3669,9 @@ class RecurringTransaction extends DataClass
           ? data.lastGeneratedDate.value
           : this.lastGeneratedDate,
       enabled: data.enabled.present ? data.enabled.value : this.enabled,
+      currencyCode: data.currencyCode.present
+          ? data.currencyCode.value
+          : this.currencyCode,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -3663,6 +3698,7 @@ class RecurringTransaction extends DataClass
           ..write('endDate: $endDate, ')
           ..write('lastGeneratedDate: $lastGeneratedDate, ')
           ..write('enabled: $enabled, ')
+          ..write('currencyCode: $currencyCode, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -3670,27 +3706,29 @@ class RecurringTransaction extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(
-      id,
-      ledgerId,
-      syncId,
-      type,
-      amount,
-      categoryId,
-      accountId,
-      toAccountId,
-      note,
-      frequency,
-      interval,
-      dayOfMonth,
-      dayOfWeek,
-      monthOfYear,
-      startDate,
-      endDate,
-      lastGeneratedDate,
-      enabled,
-      createdAt,
-      updatedAt);
+  int get hashCode => Object.hashAll([
+        id,
+        ledgerId,
+        syncId,
+        type,
+        amount,
+        categoryId,
+        accountId,
+        toAccountId,
+        note,
+        frequency,
+        interval,
+        dayOfMonth,
+        dayOfWeek,
+        monthOfYear,
+        startDate,
+        endDate,
+        lastGeneratedDate,
+        enabled,
+        currencyCode,
+        createdAt,
+        updatedAt
+      ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3713,6 +3751,7 @@ class RecurringTransaction extends DataClass
           other.endDate == this.endDate &&
           other.lastGeneratedDate == this.lastGeneratedDate &&
           other.enabled == this.enabled &&
+          other.currencyCode == this.currencyCode &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -3737,6 +3776,7 @@ class RecurringTransactionsCompanion
   final Value<DateTime?> endDate;
   final Value<DateTime?> lastGeneratedDate;
   final Value<bool> enabled;
+  final Value<String?> currencyCode;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   const RecurringTransactionsCompanion({
@@ -3758,6 +3798,7 @@ class RecurringTransactionsCompanion
     this.endDate = const Value.absent(),
     this.lastGeneratedDate = const Value.absent(),
     this.enabled = const Value.absent(),
+    this.currencyCode = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
@@ -3780,6 +3821,7 @@ class RecurringTransactionsCompanion
     this.endDate = const Value.absent(),
     this.lastGeneratedDate = const Value.absent(),
     this.enabled = const Value.absent(),
+    this.currencyCode = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   })  : ledgerId = Value(ledgerId),
@@ -3806,6 +3848,7 @@ class RecurringTransactionsCompanion
     Expression<DateTime>? endDate,
     Expression<DateTime>? lastGeneratedDate,
     Expression<bool>? enabled,
+    Expression<String>? currencyCode,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
   }) {
@@ -3828,6 +3871,7 @@ class RecurringTransactionsCompanion
       if (endDate != null) 'end_date': endDate,
       if (lastGeneratedDate != null) 'last_generated_date': lastGeneratedDate,
       if (enabled != null) 'enabled': enabled,
+      if (currencyCode != null) 'currency_code': currencyCode,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
@@ -3852,6 +3896,7 @@ class RecurringTransactionsCompanion
       Value<DateTime?>? endDate,
       Value<DateTime?>? lastGeneratedDate,
       Value<bool>? enabled,
+      Value<String?>? currencyCode,
       Value<DateTime>? createdAt,
       Value<DateTime>? updatedAt}) {
     return RecurringTransactionsCompanion(
@@ -3873,6 +3918,7 @@ class RecurringTransactionsCompanion
       endDate: endDate ?? this.endDate,
       lastGeneratedDate: lastGeneratedDate ?? this.lastGeneratedDate,
       enabled: enabled ?? this.enabled,
+      currencyCode: currencyCode ?? this.currencyCode,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -3935,6 +3981,9 @@ class RecurringTransactionsCompanion
     if (enabled.present) {
       map['enabled'] = Variable<bool>(enabled.value);
     }
+    if (currencyCode.present) {
+      map['currency_code'] = Variable<String>(currencyCode.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -3965,6 +4014,7 @@ class RecurringTransactionsCompanion
           ..write('endDate: $endDate, ')
           ..write('lastGeneratedDate: $lastGeneratedDate, ')
           ..write('enabled: $enabled, ')
+          ..write('currencyCode: $currencyCode, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -12318,6 +12368,7 @@ typedef $$RecurringTransactionsTableCreateCompanionBuilder
   Value<DateTime?> endDate,
   Value<DateTime?> lastGeneratedDate,
   Value<bool> enabled,
+  Value<String?> currencyCode,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
 });
@@ -12341,6 +12392,7 @@ typedef $$RecurringTransactionsTableUpdateCompanionBuilder
   Value<DateTime?> endDate,
   Value<DateTime?> lastGeneratedDate,
   Value<bool> enabled,
+  Value<String?> currencyCode,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
 });
@@ -12408,6 +12460,9 @@ class $$RecurringTransactionsTableFilterComposer
 
   ColumnFilters<bool> get enabled => $composableBuilder(
       column: $table.enabled, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get currencyCode => $composableBuilder(
+      column: $table.currencyCode, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
@@ -12480,6 +12535,10 @@ class $$RecurringTransactionsTableOrderingComposer
   ColumnOrderings<bool> get enabled => $composableBuilder(
       column: $table.enabled, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get currencyCode => $composableBuilder(
+      column: $table.currencyCode,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 
@@ -12550,6 +12609,9 @@ class $$RecurringTransactionsTableAnnotationComposer
   GeneratedColumn<bool> get enabled =>
       $composableBuilder(column: $table.enabled, builder: (column) => column);
 
+  GeneratedColumn<String> get currencyCode => $composableBuilder(
+      column: $table.currencyCode, builder: (column) => column);
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -12606,6 +12668,7 @@ class $$RecurringTransactionsTableTableManager extends RootTableManager<
             Value<DateTime?> endDate = const Value.absent(),
             Value<DateTime?> lastGeneratedDate = const Value.absent(),
             Value<bool> enabled = const Value.absent(),
+            Value<String?> currencyCode = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
           }) =>
@@ -12628,6 +12691,7 @@ class $$RecurringTransactionsTableTableManager extends RootTableManager<
             endDate: endDate,
             lastGeneratedDate: lastGeneratedDate,
             enabled: enabled,
+            currencyCode: currencyCode,
             createdAt: createdAt,
             updatedAt: updatedAt,
           ),
@@ -12650,6 +12714,7 @@ class $$RecurringTransactionsTableTableManager extends RootTableManager<
             Value<DateTime?> endDate = const Value.absent(),
             Value<DateTime?> lastGeneratedDate = const Value.absent(),
             Value<bool> enabled = const Value.absent(),
+            Value<String?> currencyCode = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
           }) =>
@@ -12672,6 +12737,7 @@ class $$RecurringTransactionsTableTableManager extends RootTableManager<
             endDate: endDate,
             lastGeneratedDate: lastGeneratedDate,
             enabled: enabled,
+            currencyCode: currencyCode,
             createdAt: createdAt,
             updatedAt: updatedAt,
           ),

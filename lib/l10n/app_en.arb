@@ -3724,5 +3724,24 @@
         "type": "int"
       }
     }
-  }
+  },
+  "aiBillingRateMissingHint": "⚠️ No {currency} rate available — recorded 1:1 for now; use “Reconvert” on the stats page to fix.",
+  "@aiBillingRateMissingHint": {
+    "placeholders": { "currency": { "type": "String" } }
+  },
+  "aiPromptVarCurrencies": "Ledger base currency + foreign-currency accounts in use",
+  "aiPromptVarBillGuard": "Bill filter (injected for screenshots / auto billing only)",
+  "aiPromptMissingVarsHint": "Your custom template is missing these variables; those capabilities won't work: {vars}",
+  "@aiPromptMissingVarsHint": {
+    "placeholders": { "vars": { "type": "String" } }
+  },
+  "aiPromptInsertVarSection": "Insert {name} section",
+  "@aiPromptInsertVarSection": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "aiPromptVarSectionInserted": "{name} section appended; save to confirm",
+  "@aiPromptVarSectionInserted": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "tagSelectOwnerManaged": "Shared ledger tags are managed by the owner"
 }

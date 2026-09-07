@@ -31,6 +31,10 @@ abstract class RecurringTransactionRepository {
     DateTime? endDate,
     bool enabled = true,
     String? syncId,
+
+    /// v42(移植 BeeCount #444)模板币种(ISO,大小写不敏感)。
+    /// null = 账本本位币;挂了账户时生成仍以账户币种为准(账户内不混币)。
+    String? currencyCode,
   });
 
   Future<void> updateRecurringTransaction({
@@ -52,6 +56,9 @@ abstract class RecurringTransactionRepository {
     bool? enabled,
     DateTime? lastGeneratedDate,
     String? syncId,
+
+    /// v42(移植 BeeCount #444)模板币种;null 即写 NULL(改回本位币要能清掉旧外币)。
+    String? currencyCode,
   });
 
   /// 删除周期记账

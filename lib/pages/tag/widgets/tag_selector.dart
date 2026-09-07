@@ -64,9 +64,16 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    // §7 共享账本:Editor + 共享账本 picker 只显示 Owner mirror tags
-    final allTagsAsync = ref.watch(tagsForCurrentLedgerProvider);
-    final recentTagsAsync = ref.watch(recentTagsForCurrentLedgerProvider);
+    // §7 共享账本:Editor + 共享账本 picker 只显示 Owner mirror tags。
+    // unwrapPrevious:切账本 reload 期间沿用旧数据渲染,不闪 loading。
+    final allTagsAsync =
+        ref.watch(tagsForCurrentLedgerProvider).unwrapPrevious();
+    final recentTagsAsync =
+        ref.watch(recentTagsForCurrentLedgerProvider).unwrapPrevious();
+    // Editor 不可在共享账本 picker 新建标签(移植 BeeCount #436)
+    final canCreateTag = ref.watch(canCreateTagForCurrentLedgerProvider);
+    final visibleTagIds =
+        allTagsAsync.valueOrNull?.map((tag) => tag.id).toSet();
 
     return Container(
       constraints: BoxConstraints(
@@ -117,8 +124,21 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
                   ],
                 ),
                 TextButton(
-                  onPressed: () =>
-                      Navigator.of(context).pop(_selectedIds.toList()),
+                  // Editor 必须等当前账本标签加载完成后才能确认。正数 ID 是
+                  // 升级前残留的个人标签,必须清掉;负数是 Owner mirror 的
+                  // synthetic ID,即使本轮资源拉取失败暂不可见也要保留,
+                  // 避免静默删除有效关联。
+                  onPressed: !canCreateTag && visibleTagIds == null
+                      ? null
+                      : () {
+                          final selected = canCreateTag
+                              ? _selectedIds.toList()
+                              : _selectedIds
+                                  .where((id) =>
+                                      id < 0 || visibleTagIds!.contains(id))
+                                  .toList();
+                          Navigator.of(context).pop(selected);
+                        },
                   child: Text(l10n.commonConfirm),
                 ),
               ],
@@ -170,7 +190,10 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
                             .toList();
 
                     if (filteredTags.isEmpty && allTags.isEmpty) {
-                      return _buildEmptyState(l10n);
+                      return _buildEmptyState(
+                        l10n,
+                        canCreateTag: canCreateTag,
+                      );
                     }
 
                     return ListView(
@@ -201,9 +224,15 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
                             filteredTags,
                           ),
 
-                        // 新建标签入口
-                        const SizedBox(height: 8),
-                        _buildCreateNew(l10n),
+                        // 新建标签入口;Editor 在同一位置显示权限说明
+                        //(移植 BeeCount #436)。
+                        if (canCreateTag) ...[
+                          const SizedBox(height: 8),
+                          _buildCreateNew(l10n),
+                        ] else ...[
+                          const SizedBox(height: 8),
+                          _buildOwnerManagedHint(l10n),
+                        ],
                         const SizedBox(height: 16),
                       ],
                     );
@@ -217,7 +246,10 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
     );
   }
 
-  Widget _buildEmptyState(AppLocalizations l10n) {
+  Widget _buildEmptyState(
+    AppLocalizations l10n, {
+    required bool canCreateTag,
+  }) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -229,18 +261,38 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
           ),
           const SizedBox(height: 12),
           Text(
-            '暂无标签',
+            l10n.tagManageEmpty,
             style: TextStyle(
               color: PiggyTokens.textSecondary(context),
             ),
           ),
-          const SizedBox(height: 16),
-          OutlinedButton.icon(
-            onPressed: _createNewTag,
-            icon: const Icon(Icons.add, size: 18),
-            label: Text(l10n.tagSelectCreateNew),
-          ),
+          if (canCreateTag) ...[
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: _createNewTag,
+              icon: const Icon(Icons.add, size: 18),
+              label: Text(l10n.tagSelectCreateNew),
+            ),
+          ] else ...[
+            const SizedBox(height: 8),
+            _buildOwnerManagedHint(l10n),
+          ],
         ],
+      ),
+    );
+  }
+
+  // Editor 视角下替代「新建标签」入口的权限说明(#436)
+  Widget _buildOwnerManagedHint(AppLocalizations l10n) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Text(
+        l10n.tagSelectOwnerManaged,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 13,
+          color: PiggyTokens.textTertiary(context),
+        ),
       ),
     );
   }
@@ -327,6 +379,9 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
         builder: (_) => const TagEditPage(),
       ),
     );
+
+    // 异步返回后页面可能已卸载,先查 mounted 再动状态。
+    if (!mounted) return;
 
     // 如果创建了新标签，自动选中
     if (result != null) {

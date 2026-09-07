@@ -424,6 +424,7 @@ class _FailOnNoteRepo extends LocalRepository {
     DateTime? endDate,
     bool enabled = true,
     String? syncId,
+    String? currencyCode,
   }) async {
     if (note == failNote) {
       throw Exception('simulated rule failure for note=$failNote');
@@ -445,6 +446,7 @@ class _FailOnNoteRepo extends LocalRepository {
       endDate: endDate,
       enabled: enabled,
       syncId: syncId,
+      currencyCode: currencyCode,
     );
   }
 }
