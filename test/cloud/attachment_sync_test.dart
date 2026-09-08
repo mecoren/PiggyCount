@@ -333,6 +333,130 @@ void main() {
       expect(await manager.drainAttachmentJobs(), 0);
     });
   });
+
+  group('drain 队尾续消费（WebDAV 报告 §6.1 回归）', () {
+    /// seedAttachmentRow 固定 ledgerId=1;本组需要多账本,故提供带 id 参数版本
+    Future<int> seedRowInLedger(
+      int ledgerId,
+      String txSyncId,
+      String fileName,
+      String sha256,
+    ) async {
+      await db.into(db.ledgers).insert(LedgersCompanion.insert(
+            id: d.Value(ledgerId),
+            name: 'L$ledgerId',
+            currency: const d.Value('CNY'),
+          ));
+      final txId = await db.into(db.transactions).insert(
+            TransactionsCompanion.insert(
+              ledgerId: ledgerId,
+              type: 'expense',
+              amount: 10.0,
+              happenedAt: d.Value(DateTime(2026, 8, 1)),
+              syncId: d.Value(txSyncId),
+            ),
+          );
+      await db.into(db.transactionAttachments).insert(
+            TransactionAttachmentsCompanion.insert(
+              transactionId: txId,
+              fileName: fileName,
+              localSha256: d.Value(sha256),
+            ),
+          );
+      return txId;
+    }
+
+    test('drain 进行中新账本入队 → 队尾续消费,不滞留内存队列', () async {
+      // 复刻生产时序:账本1 enqueue 完成后 drain 启动;drain 尚在执行时
+      // 账本2 导入完成并发 enqueue,其 drain 调用被守卫吞掉。
+      // 修复前:账本2 的任务滞留到进程重启;修复后:第一轮 drain 队尾续消费。
+      final bytes1 = Uint8List.fromList([11, 22, 33]);
+      final sha1 = crypto.sha256.convert(bytes1).toString();
+      await seedRowInLedger(1, 'tx-1', 'ledger1.jpg', sha1);
+      final bytes2 = Uint8List.fromList([44, 55]);
+      final sha2 = crypto.sha256.convert(bytes2).toString();
+      await seedRowInLedger(2, 'tx-2', 'ledger2.jpg', sha2);
+
+      final storage = _MapStorage()
+        ..files['attachments/$sha1.bin'] = base64Encode(bytes1)
+        ..files['attachments/$sha2.bin'] = base64Encode(bytes2);
+      final manager = buildManager(storage);
+
+      await manager.enqueueMissingAttachmentJobs(1);
+      // 在 storage 上装一个「第一次 download 时放行账本2 enqueue」的钩子,
+      // 确保新任务落在 drain 的快照之后(生产缺陷的精确时序)
+      storage.onDownload = () async {
+        storage.onDownload = null; // 只触发一次
+        await manager.enqueueMissingAttachmentJobs(2);
+      };
+      final ok = await manager.drainAttachmentJobs();
+
+      expect(ok, 2, reason: '两轮合计补齐 2 个文件');
+      expect(await File('${attDir.path}/ledger1.jpg').exists(), isTrue);
+      expect(
+        await File('${attDir.path}/ledger2.jpg').readAsBytes(),
+        bytes2,
+        reason: '续消费后账本2的附件必须落盘,无需等进程重启',
+      );
+    });
+
+    test('本轮失败回队的任务不触发即时重试（退避语义保留）', () async {
+      // 若队尾续消费不加「排除失败回队」约束,瞬态故障会退化为无限即时
+      // 重试循环。本测试固定该约束:失败任务回队后,drain 必须就此停止,
+      // 等下次外部触发(启动补扫/下次同步)再重试。
+      final bytes = Uint8List.fromList([13, 37]);
+      final sha = crypto.sha256.convert(bytes).toString();
+      await seedRowInLedger(1, 'tx-1', 'flaky.jpg', sha);
+
+      // 云端存在但内容损坏 → 3 次重试全部校验失败 → transientFailure 回队
+      final corrupt = Uint8List.fromList([9, 9, 9, 9]);
+      final storage = _MapStorage()
+        ..files['attachments/$sha.bin'] = base64Encode(corrupt);
+      final manager = buildManager(storage);
+
+      await manager.enqueueMissingAttachmentJobs(1);
+      final ok = await manager.drainAttachmentJobs();
+
+      expect(ok, 0, reason: '校验失败不应计为成功');
+      // 3 次重试 = 3 次下载;若退避语义被破坏,这里会远大于 3
+      expect(storage.downloads.length, 3,
+          reason: '失败任务回队后必须停止,不得立即再 drain');
+      expect(await File('${attDir.path}/flaky.jpg').exists(), isFalse);
+    });
+
+    test('同轮既有失败回队又有新任务入队 → 只续消费新任务', () async {
+      // 队尾检测的最精细场景:失败任务与新任务同时在队,续消费必须
+      // 只拉新任务。断言:新任务在第二轮落盘;失败任务未被再次尝试。
+      final flakyBytes = Uint8List.fromList([1, 3]);
+      final flakySha = crypto.sha256.convert(flakyBytes).toString();
+      await seedRowInLedger(1, 'tx-1', 'flaky.jpg', flakySha);
+      final goodBytes = Uint8List.fromList([4, 2]);
+      final goodSha = crypto.sha256.convert(goodBytes).toString();
+      await seedRowInLedger(2, 'tx-2', 'good.jpg', goodSha);
+
+      // flaky 在云端是损坏对象;good 正常
+      final corrupt = Uint8List.fromList([9, 9, 9, 9]);
+      final storage = _MapStorage()
+        ..files['attachments/$flakySha.bin'] = base64Encode(corrupt)
+        ..files['attachments/$goodSha.bin'] = base64Encode(goodBytes);
+      final manager = buildManager(storage);
+
+      // 账本1 先入队并启动 drain;flaky 首次下载时触发账本2 的 enqueue
+      await manager.enqueueMissingAttachmentJobs(1);
+      storage.onDownload = () async {
+        storage.onDownload = null;
+        await manager.enqueueMissingAttachmentJobs(2);
+      };
+      final ok = await manager.drainAttachmentJobs();
+
+      expect(ok, 1, reason: '仅 good.jpg 在续消费轮中落盘');
+      expect(await File('${attDir.path}/good.jpg').exists(), isTrue);
+      // flaky 第一轮 3 次重试后回队;第二轮续消费被「排除失败回队」
+      // 约束挡住,未被再次尝试。总下载 = flaky 3 次 + good 1 次。
+      expect(storage.downloads.length, 4);
+      expect(await File('${attDir.path}/flaky.jpg').exists(), isFalse);
+    });
+  });
 }
 
 /// 内存 Map 版 storage:真实记录 upload/exists/download 行为。
@@ -342,8 +466,14 @@ class _MapStorage implements fcs.CloudStorageService {
   final Map<String, String> files = {};
   final List<String> downloads = [];
 
+  /// 测试钩子:每次 download 前异步触发(用于把 enqueue 精确卡进
+  /// drain 执行期,复刻连续导入的并发时序)。置 null 可自撤销。
+  Future<void> Function()? onDownload;
+
   @override
   Future<String?> download({required String path}) async {
+    final hook = onDownload;
+    if (hook != null) await hook();
     downloads.add(path);
     return files[path];
   }

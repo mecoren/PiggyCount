@@ -1332,6 +1332,15 @@ class TransactionsSyncManager implements SyncService {
   /// 恢复主流程不等待本方法(附件下载可能分钟级,交易数据必须先可用);
   /// 在恢复完成、云端账本导入、以及下次任何同步操作(_ensureInitialized)
   /// 时触发。返回成功补齐的文件数。
+  ///
+  /// 审计修复（WebDAV 报告 §6.1）：此前每轮只消费快照时刻的任务,drain
+  /// 执行期间新入队的任务（连续导入的并发 enqueue,其 drain 调用被
+  /// _isDrainingAttachments 守卫吞掉）无人再触发,滞留内存队列直至进程
+  /// 重启。现在改为循环消费:每轮队尾若队列非空（此时只可能是新任务,
+  /// 见下）则续消费。关键约束:失败任务在循环期间滞留在 heldFailed,
+  /// 循环退出后才回插队列 —— 若直接回插,「失败回队 → 队尾发现非空 →
+  /// 立即重试 → 又失败回队」会把「回队等下次外部 drain」的天然退避
+  /// 语义变成无限即时重试循环,持续轰击服务器。
   Future<int> drainAttachmentJobs() async {
     if (_isDrainingAttachments || _pendingAttachmentJobs.isEmpty) return 0;
     _isDrainingAttachments = true;
@@ -1339,51 +1348,66 @@ class TransactionsSyncManager implements SyncService {
       final provider = _provider;
       if (provider == null) return 0;
 
-      final jobs =
-          List<({String sha256, String fileName})>.from(_pendingAttachmentJobs);
-      _pendingAttachmentJobs.clear();
-
-      final failed = <({String sha256, String fileName})>[];
-      var missing = 0;
-      final pool = _Semaphore(4);
-      final results = await Future.wait(jobs.map((job) async {
-        await pool.acquire();
-        try {
-          final outcome = await _downloadAttachmentBinWithRetry(provider, job);
-          switch (outcome) {
-            case _AttachmentDownloadOutcome.ok:
-              break;
-            case _AttachmentDownloadOutcome.objectMissing:
-              // 审计 TSM-P2：云端确认无此对象（上传端源文件缺失/上传失败），
-              // 回队也永远拉不到 —— 不回队，否则每次初始化都 3×N 次网络
-              // 重试空转，队列永不收敛。下次该账本快照上传时附件对象会
-              // 重新尝试上传，届时自然恢复。
-              missing++;
-            case _AttachmentDownloadOutcome.transientFailure:
-              failed.add(job);
+      var totalOk = 0;
+      // 循环期间「回队等下次外部 drain」的失败任务都暂存于此,退出循环
+      // 后统一回插 —— 保证续消费轮的快照里只有新入队的任务。
+      final heldFailed = <({String sha256, String fileName})>[];
+      var continueDrain = true;
+      while (continueDrain) {
+        final jobs = List<
+                ({String sha256, String fileName})>.from(
+            _pendingAttachmentJobs);
+        _pendingAttachmentJobs.clear();
+        final failed = <({String sha256, String fileName})>[];
+        var missing = 0;
+        final pool = _Semaphore(4);
+        final results = await Future.wait(jobs.map((job) async {
+          await pool.acquire();
+          try {
+            final outcome =
+                await _downloadAttachmentBinWithRetry(provider, job);
+            switch (outcome) {
+              case _AttachmentDownloadOutcome.ok:
+                break;
+              case _AttachmentDownloadOutcome.objectMissing:
+                // 审计 TSM-P2：云端确认无此对象（上传端源文件缺失/上传失败），
+                // 回队也永远拉不到 —— 不回队，否则每次初始化都 3×N 次网络
+                // 重试空转，队列永不收敛。下次该账本快照上传时附件对象会
+                // 重新尝试上传，届时自然恢复。
+                missing++;
+              case _AttachmentDownloadOutcome.transientFailure:
+                failed.add(job);
+            }
+            return outcome == _AttachmentDownloadOutcome.ok;
+          } finally {
+            pool.release();
           }
-          return outcome == _AttachmentDownloadOutcome.ok;
-        } finally {
-          pool.release();
-        }
-      }));
+        }));
 
-      if (missing > 0) {
-        logger.warning(
-            'CloudSync',
-            '附件补齐：$missing/${jobs.length} 个对象云端不存在，放弃重试'
-                '（下次上传账本时会重新尝试上传附件）');
+        if (missing > 0) {
+          logger.warning(
+              'CloudSync',
+              '附件补齐：$missing/${jobs.length} 个对象云端不存在，放弃重试'
+                  '（下次上传账本时会重新尝试上传附件）');
+        }
+        if (failed.isNotEmpty) {
+          heldFailed.addAll(failed);
+          logger.warning('CloudSync',
+              '附件补齐下载失败 ${failed.length}/${jobs.length},回队等下次 drain');
+        }
+        final ok = results.where((r) => r).length;
+        if (ok > 0) {
+          logger.info('CloudSync', '附件补齐完成: $ok/${jobs.length}');
+        }
+        totalOk += ok;
+        // 队尾:队列此刻只含 drain 执行期间新入队的任务(failed 已被
+        // 暂存),非空即续消费一轮
+        continueDrain = _pendingAttachmentJobs.isNotEmpty;
       }
-      if (failed.isNotEmpty) {
-        _pendingAttachmentJobs.addAll(failed);
-        logger.warning('CloudSync',
-            '附件补齐下载失败 ${failed.length}/${jobs.length},回队等下次 drain');
+      if (heldFailed.isNotEmpty) {
+        _pendingAttachmentJobs.addAll(heldFailed);
       }
-      final ok = results.where((r) => r).length;
-      if (ok > 0) {
-        logger.info('CloudSync', '附件补齐完成: $ok/${jobs.length}');
-      }
-      return ok;
+      return totalOk;
     } finally {
       _isDrainingAttachments = false;
     }
