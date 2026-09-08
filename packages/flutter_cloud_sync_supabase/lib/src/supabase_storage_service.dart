@@ -14,6 +14,52 @@ class SupabaseStorageService implements CloudStorageService {
 
   SupabaseStorageService(this._client, this._bucketName, [this._pathPrefix]);
 
+  /// P0-3：单次操作超时。Supabase SDK 未暴露底层 http client 超时配置，
+  /// 服务器无响应时 future 永不完成会让同步 UI 永久挂起（S3/WebDAV/iCloud
+  /// 均已有超时护栏，此处对齐）。60s 与 WebDAV _opTimeout 同档。
+  static const _opTimeout = Duration(seconds: 60);
+
+  /// P0-3：统一错误分类器。
+  ///
+  /// ① 404 判定收敛为 `statusCode == '404'` 精确匹配 —— 旧实现
+  /// `e.message.contains('not found')` 在错误消息内嵌对象路径（路径含
+  /// "not found" 子串的合法文件名）时误判为「不存在」，进而
+  /// exists()=false → 触发覆盖上传等危险操作（与 iCloud P0-2 同款
+  /// 子串误判模式）。statusCode 是 SDK 结构化字段，精确可信；仅当
+  /// statusCode 为 null（SDK 某些路径不填）时才回退措辞匹配，且
+  /// 匹配串收紧为 `Object not found`（Storage API 的标准错误文案）。
+  /// ② 401/403 翻译为 [CloudAuthException] —— 认证失败与网络故障的
+  /// 处置动作完全不同（改凭据 vs 查网络），上层（enableFromCloud 探测、
+  /// 启动检查器）依赖异常类型引导用户，误报为存储故障会误导排查方向
+  /// （对齐 S3/WebDAV 的 CloudAuthException 语义）。
+  CloudSyncException _classify(String op, supabase.StorageException e) {
+    final code = e.statusCode;
+    if (code == '401' || code == '403') {
+      return CloudAuthException(
+        code == '403' ? 'Supabase 访问被拒绝（权限不足）：请检查 bucket 策略或 anonKey 权限' : 'Supabase 认证失败（anonKey 无效或已过期）',
+        e,
+      );
+    }
+    return CloudStorageException('$op failed: ${e.message}', e);
+  }
+
+  /// P0-3：404 精确判定（见 [_classify] 注释：statusCode 精确匹配，
+  /// 无结构化码时才回退标准措辞，不做子串数字匹配）。
+  bool _isNotFound(supabase.StorageException e) {
+    final code = e.statusCode;
+    if (code != null) return code == '404';
+    return e.message.contains('Object not found') ||
+        e.message.contains('not found');
+  }
+
+  /// P0-3：超时包装（对齐 WebDAV _op 策略）。
+  Future<T> _op<T>(String opName, Future<T> Function() op) {
+    return op().timeout(_opTimeout, onTimeout: () {
+      throw CloudStorageException(
+          'Supabase $opName 超时（${_opTimeout.inSeconds}s），请检查网络或服务器');
+    });
+  }
+
   @override
   Future<void> upload({
     required String path,
@@ -33,24 +79,31 @@ class SupabaseStorageService implements CloudStorageService {
       // Upload file with metadata
       // Use UTF-8 encoding to properly handle multi-byte characters (e.g., Chinese)
       final bytes = utf8.encode(data);
-      await _client.storage.from(_bucketName).uploadBinary(
-            fullPath,
-            bytes,
-            fileOptions: const supabase.FileOptions(
-              upsert: true,
-              contentType: 'application/json',
-              cacheControl: '3600',
+      await _op(
+        'upload',
+        () => _client.storage.from(_bucketName).uploadBinary(
+              fullPath,
+              bytes,
+              fileOptions: const supabase.FileOptions(
+                upsert: true,
+                contentType: 'application/json',
+                cacheControl: '3600',
+              ),
             ),
-          );
+      );
 
       // Store metadata separately if provided
       if (metadata != null && metadata.isNotEmpty) {
         await _storeMetadata(fullPath, metadata);
       }
     } on supabase.StorageException catch (e) {
-      throw CloudStorageException('Upload failed: ${e.message}', e);
+      throw _classify('Upload', e);
     } catch (e) {
-      if (e is CloudNotAuthenticatedException) rethrow;
+      if (e is CloudNotAuthenticatedException ||
+          e is CloudAuthException ||
+          e is CloudStorageException) {
+        rethrow;
+      }
       throw CloudStorageException('Upload failed: $e', e);
     }
   }
@@ -68,18 +121,23 @@ class SupabaseStorageService implements CloudStorageService {
       final fullPath = _buildUserPath(user.id, path);
 
       // Download file
-      final bytes = await _client.storage.from(_bucketName).download(fullPath);
+      final bytes = await _op(
+          'download', () => _client.storage.from(_bucketName).download(fullPath));
 
       // Convert bytes to string using UTF-8 decoding
       return utf8.decode(bytes);
     } on supabase.StorageException catch (e) {
       // Return null if file not found
-      if (e.statusCode == '404' || e.message.contains('not found')) {
+      if (_isNotFound(e)) {
         return null;
       }
-      throw CloudStorageException('Download failed: ${e.message}', e);
+      throw _classify('Download', e);
     } catch (e) {
-      if (e is CloudNotAuthenticatedException) rethrow;
+      if (e is CloudNotAuthenticatedException ||
+          e is CloudAuthException ||
+          e is CloudStorageException) {
+        rethrow;
+      }
       throw CloudStorageException('Download failed: $e', e);
     }
   }
@@ -98,10 +156,11 @@ class SupabaseStorageService implements CloudStorageService {
 
       // Delete file
       try {
-        await _client.storage.from(_bucketName).remove([fullPath]);
+        await _op('remove',
+            () => _client.storage.from(_bucketName).remove([fullPath]));
       } on supabase.StorageException catch (e) {
         // 忽略 404（文件不存在），删除操作幂等
-        if (e.statusCode != '404' && !e.message.contains('not found')) {
+        if (!_isNotFound(e)) {
           rethrow;
         }
       }
@@ -109,9 +168,13 @@ class SupabaseStorageService implements CloudStorageService {
       // Delete metadata
       await _deleteMetadata(fullPath);
     } on supabase.StorageException catch (e) {
-      throw CloudStorageException('Delete failed: ${e.message}', e);
+      throw _classify('Delete', e);
     } catch (e) {
-      if (e is CloudNotAuthenticatedException) rethrow;
+      if (e is CloudNotAuthenticatedException ||
+          e is CloudAuthException ||
+          e is CloudStorageException) {
+        rethrow;
+      }
       throw CloudStorageException('Delete failed: $e', e);
     }
   }
@@ -129,9 +192,8 @@ class SupabaseStorageService implements CloudStorageService {
       final fullPath = _buildUserPath(user.id, path);
 
       // List files
-      final files = await _client.storage.from(_bucketName).list(
-            path: fullPath,
-          );
+      final files = await _op(
+          'list', () => _client.storage.from(_bucketName).list(path: fullPath));
 
       // Convert to CloudFile objects
       return files
@@ -146,9 +208,13 @@ class SupabaseStorageService implements CloudStorageService {
               ))
           .toList();
     } on supabase.StorageException catch (e) {
-      throw CloudStorageException('List failed: ${e.message}', e);
+      throw _classify('List', e);
     } catch (e) {
-      if (e is CloudNotAuthenticatedException) rethrow;
+      if (e is CloudNotAuthenticatedException ||
+          e is CloudAuthException ||
+          e is CloudStorageException) {
+        rethrow;
+      }
       throw CloudStorageException('List failed: $e', e);
     }
   }
@@ -166,20 +232,23 @@ class SupabaseStorageService implements CloudStorageService {
       final fullPath = _buildUserPath(user.id, path);
 
       // Try to get file info - if it doesn't throw, file exists
-      final files = await _client.storage.from(_bucketName).list(
-            path: PathHelper.dirname(fullPath),
-          );
+      final files = await _op('list',
+          () => _client.storage.from(_bucketName).list(path: PathHelper.dirname(fullPath)));
 
       final fileName = PathHelper.basename(fullPath);
       return files.any((file) => file.name == fileName);
     } on supabase.StorageException catch (e) {
       // If path not found, file doesn't exist
-      if (e.statusCode == '404' || e.message.contains('not found')) {
+      if (_isNotFound(e)) {
         return false;
       }
-      throw CloudStorageException('Exists check failed: ${e.message}', e);
+      throw _classify('Exists check', e);
     } catch (e) {
-      if (e is CloudNotAuthenticatedException) rethrow;
+      if (e is CloudNotAuthenticatedException ||
+          e is CloudAuthException ||
+          e is CloudStorageException) {
+        rethrow;
+      }
       throw CloudStorageException('Exists check failed: $e', e);
     }
   }
@@ -197,9 +266,8 @@ class SupabaseStorageService implements CloudStorageService {
       final fullPath = _buildUserPath(user.id, path);
 
       // Get file list to retrieve metadata
-      final files = await _client.storage.from(_bucketName).list(
-            path: PathHelper.dirname(fullPath),
-          );
+      final files = await _op('list',
+          () => _client.storage.from(_bucketName).list(path: PathHelper.dirname(fullPath)));
 
       final fileName = PathHelper.basename(fullPath);
       // 文件不在列表中时通过私有标记异常跳出，由外层捕获后返回 null，
@@ -227,12 +295,14 @@ class SupabaseStorageService implements CloudStorageService {
       // 文件不存在时返回 null 而非抛异常（Minor）
       return null;
     } on supabase.StorageException catch (e) {
-      if (e.statusCode == '404' || e.message.contains('not found')) {
+      if (_isNotFound(e)) {
         return null;
       }
-      throw CloudStorageException('Get metadata failed: ${e.message}', e);
+      throw _classify('Get metadata', e);
     } catch (e) {
-      if (e is CloudNotAuthenticatedException || e is CloudStorageException) {
+      if (e is CloudNotAuthenticatedException ||
+          e is CloudAuthException ||
+          e is CloudStorageException) {
         rethrow;
       }
       throw CloudStorageException('Get metadata failed: $e', e);

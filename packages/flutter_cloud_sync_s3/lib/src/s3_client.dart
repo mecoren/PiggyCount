@@ -48,7 +48,33 @@ class S3Client {
   ///
   /// 所有 S3 API 请求（put/get/delete/head/list）均受此限制，
   /// 防止服务器无响应时同步 UI 无限挂起。超时后抛 [S3NetworkException]。
+  ///
+  /// P1-2（上轮审计 N12 收口）：固定 30s 对**对象传输**过紧 ——
+  /// 实测单账本快照 ~350KB，上行带宽 <117KB/s（移动弱网/跨境网关
+  /// 常态）即确定性超时且 putObject 不重试（非幂等纪律），上传必败。
+  /// 此值降级为**元数据类操作**（HEAD/list/小对象探测）的默认档；
+  /// 对象传输（PUT/GET body）改走 [transferTimeoutFor]，按体积自适应
+  /// （30s 基线 + 30s/MB，上限 5min，对齐 StartupSyncChecker._publishTimeout
+  /// 的慢速 S3 实测结论）。
   final Duration timeout;
+
+  /// P1-2：对象传输超时上限（对齐启动检查器 _publishTimeout=5min）。
+  static const Duration _transferTimeoutCap = Duration(minutes: 5);
+
+  /// P1-2：按传输体积计算对象传输（PUT/GET）超时。
+  ///
+  /// 基线 30s + 30s/MB，钳制在 [timeout, _transferTimeoutCap] 区间：
+  /// - 空对象：30s（与旧行为一致，元数据级请求不受影响）；
+  /// - 350KB 快照（弱网 117KB/s）：30+10.5 ≈ 40.5s（旧值 30s 必超）；
+  /// - 5MB 大附件：180s（旧值 30s 必超，慢网 5MB 本就该给分钟级）；
+  /// - 超大对象：封顶 5min，保留「服务器无响应可恢复」的挂起保护。
+  Duration transferTimeoutFor(int contentLength) {
+    final sizeMb = contentLength / (1024 * 1024);
+    final dynamicMs =
+        timeout.inMilliseconds + (sizeMb * 30 * 1000).round();
+    return Duration(milliseconds:
+        dynamicMs.clamp(timeout.inMilliseconds, _transferTimeoutCap.inMilliseconds));
+  }
 
   /// dispose 标志：避免释放后继续使用导致状态错误
   bool _disposed = false;
@@ -179,6 +205,11 @@ class S3Client {
   /// S3StorageService 在构造时注入。
   void Function(String message)? onConditionalWriteDowngrade;
 
+  /// LOG-02：协议级事件回调（可选）—— V2→V1 回退、时钟偏差补偿等
+  /// 「继续工作但环境异常」的关键线索。S3Client 不依赖日志设施，
+  /// 由 S3StorageService 构造时注入；未注入时静默（测试无感）。
+  void Function(String message)? onProtocolEvent;
+
   /// PUT Object - 上传文件
   ///
   /// [metadata] 中的 key-value 对会作为 `x-amz-meta-{key}` 头发送，
@@ -243,9 +274,11 @@ class S3Client {
     var conditionalDropped = false;
     while (true) {
       try {
+        // P1-2：PUT 按体积自适应超时（350KB 快照在弱网 117KB/s 下
+        // 旧固定 30s 必超时；见 transferTimeoutFor）
         final response = await _httpClient
             .put(uri, headers: headers, body: data)
-            .timeout(timeout);
+            .timeout(transferTimeoutFor(data.length));
 
         if (response.statusCode != 200 && response.statusCode != 204) {
           // 方案C：条件写失败（远端已被其他设备先行修改/创建），
@@ -382,7 +415,10 @@ class S3Client {
 
     final request = http.StreamedRequest('PUT', uri);
     request.headers.addAll(headers);
-    if (contentLength != null && contentLength > 0) {
+    // S3P-04：contentLength == 0 时也显式设置 —— 0 是合法的
+    // Content-Length（空对象），不设置会让传输层退化 chunked
+    // encoding，部分严格 S3 网关对 PUT 拒绝 chunked（400/411）。
+    if (contentLength != null && contentLength >= 0) {
       request.contentLength = contentLength;
     }
 
@@ -423,10 +459,24 @@ class S3Client {
       // 但条件写失败（412/409）等场景服务器可能在读完全部 body 前
       // 早响应 —— 此时必须停止泵，避免无消费者的请求体在内存中
       // 无限堆积（违背流式初衷）。
+      //
+      // S3P-02：竞速本身必须有超时 —— 源流停滞（磁盘慢读/上游卡死
+      // 不发数据也不结束）且网关半开不回响应头时，Future.any 永久
+      // 阻塞，与 M-02「所有请求受超时约束」的纪律相悖。两路各自
+      // 套 transferTimeoutFor(contentLength)（P1-2 体积自适应档）：
+      // 源流停滞按传输时长判死，首响应超时同理；任一路超时都取消
+      // 泵/清理后抛 S3NetworkException。
+      final effectiveTimeout = transferTimeoutFor(contentLength ?? 0);
       final first = await Future.any<Object?>([
         pumpDone.future.then<Object?>((_) => _pumpCompletedSentinel),
-        responseFuture,
-      ]);
+        responseFuture
+            .then<Object?>((r) => r)
+            .timeout(effectiveTimeout, onTimeout: () => throw TimeoutException(
+                'PutObjectStream response timed out after '
+                '${effectiveTimeout.inSeconds}s')),
+      ]).timeout(effectiveTimeout, onTimeout: () => throw TimeoutException(
+          'PutObjectStream source stream stalled for '
+          '${effectiveTimeout.inSeconds}s'));
       if (!identical(first, _pumpCompletedSentinel)) {
         // 服务器早于泵完成响应：停止泵，吞掉泵的伴生结果
         await sub.cancel();
@@ -435,8 +485,11 @@ class S3Client {
         unawaited(pumpDone.future.catchError((Object _) {}));
         response = first as http.StreamedResponse;
       } else {
-        // 泵完成（body 已全部发出）→ 等服务器处理响应
-        response = await responseFuture.timeout(timeout);
+        // 泵完成（body 已全部发出）→ 等服务器处理响应。
+        // P1-2：按体积自适应（流式上传多为大附件，旧固定 30s 在
+        // 慢网大对象下，body 发完后服务端落盘+响应的时间窗口不够）
+        final effectiveTimeout = transferTimeoutFor(contentLength ?? 0);
+        response = await responseFuture.timeout(effectiveTimeout);
       }
     } on Object catch (e) {
       await sub?.cancel();
@@ -453,7 +506,8 @@ class S3Client {
       }
       if (e is TimeoutException) {
         throw S3NetworkException(
-            'PutObjectStream timed out after ${timeout.inSeconds}s');
+            'PutObjectStream timed out after '
+            '${transferTimeoutFor(contentLength ?? 0).inSeconds}s');
       }
       throw S3Exception('PutObjectStream failed: $e',
           originalException: e is Exception ? e : null);
@@ -630,6 +684,15 @@ class S3Client {
     );
   }
 
+  /// P1-2：非流式对象下载（getObject）专用超时档。
+  ///
+  /// getObject 一次性把整个对象读入内存（快照 JSON，KB~数 MB 级；
+  /// 大文件下载走 [downloadStream] 流式路径，不受此影响）。旧固定
+  /// 30s 在 117KB/s 弱网下仅支持 ~350KB；90s 支持到 ~10MB，覆盖
+  /// 万笔级账本快照的慢网下载。元数据类操作（HEAD/LIST/DELETE）与
+  /// 探测仍用 [timeout]（30s），挂起保护不弱化。
+  static const Duration _getObjectTimeout = Duration(seconds: 90);
+
   /// GET Object - 下载文件（幂等，自动重试瞬时网络故障）
   Future<Uint8List> getObject({
     required String bucket,
@@ -647,7 +710,7 @@ class S3Client {
       try {
         final response = await _httpClient
             .get(uri, headers: headers)
-            .timeout(timeout);
+            .timeout(_getObjectTimeout);
 
         if (response.statusCode == 200) {
           return response.bodyBytes;
@@ -913,6 +976,10 @@ class S3Client {
       );
     } on S3Exception catch (e) {
       if (e.statusCode == 400 || e.statusCode == 501) {
+        // LOG-02：协议级降级是网关能力异常的首要排查线索，warning 留痕
+        onProtocolEvent?.call(
+            'ListObjectsV2 被 HTTP ${e.statusCode} 拒绝（网关不支持 V2），'
+            '自动回退 ListObjects V1: bucket=$bucket prefix=$prefix');
         return _listObjectsV1Detailed(
           bucket: bucket,
           prefix: prefix,
@@ -1372,6 +1439,12 @@ class S3Client {
       }
       if (serverTime != null) {
         _signer.clockOffset = serverTime.difference(DateTime.now().toUtc());
+        // LOG-02：设备时钟与服务器偏差 >15min 是用户环境问题（改配置
+        // 无用，需校时），补偿已生效但线索必须留痕
+        onProtocolEvent?.call(
+            '检测到设备时钟偏差（已自动补偿 '
+            '${_signer.clockOffset.inMinutes} 分钟，服务器时间: '
+            '${serverTime.toIso8601String()}）。若持续失败请校准系统时间');
       }
       throw S3ClockSkewException(
         '设备时钟与服务器偏差过大，已尝试校准（服务器时间: '

@@ -78,6 +78,22 @@ class S3Provider implements CloudProvider {
     // key 前缀：用于在共享 bucket 中隔离应用数据，默认为空（不前缀）
     final keyPrefix = config['keyPrefix'] as String? ?? '';
 
+    // SEC-04：bucket 名字符集校验。keyPrefix 有 _validatePrefix（S3-22）、
+    // path 有 _assertNoTraversal（S3-21），bucket 此前只查非空 —— 含 `/`、
+    // `..`、`@` 的值会直接拼进 URI（path-style 的 /bucket/key 路径或
+    // virtual-hosted 的 bucket.endpoint authority），可构造畸形目标
+    // （如 `user@evil.com` 形态的 userinfo 注入把请求与签名凭据定向到
+    // 攻击者主机）。配置导入通道（config_export_service 重建配置）使
+    // 非手动输入成为真实入口，构造期即按 S3 命名规范白名单拒绝。
+    if (!RegExp(r'^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$').hasMatch(bucket) ||
+        bucket.contains('..')) {
+      throw CloudConfigurationException(
+        'Invalid bucket name "$bucket": S3 bucket 命名规范为 3-63 个小写字母/'
+        '数字/点/连字符，不能以点/连字符开头结尾，也不能包含连续点或 '
+        '`..` 路径段',
+      );
+    }
+
     // 归一化 endpoint：
     // - 剥离 http(s):// 前缀并按协议自动推导 useSSL
     // - 剥离路径部分（endpoint 只保留 host[:port]）

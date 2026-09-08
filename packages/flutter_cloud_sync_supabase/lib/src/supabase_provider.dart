@@ -85,6 +85,22 @@ class SupabaseProvider implements CloudProvider {
     _bucketName = config['bucket'] as String? ?? 'storage';
     _pathPrefix = config['pathPrefix'] as String?;
 
+    // SEC-01（对齐 WebDAV P2-7 / S3 SYNC-04 的 HTTPS 强制）：
+    // anonKey 是具备 Storage 读写能力的长效凭据，随每个请求以
+    // apikey/Authorization 头发送；http:// 链路上可被嗅探获得，
+    // 进而在网外持续访问该 bucket（未开 E2EE 时即明文账本备份）。
+    // 自托管 Supabase 用户按局域网地址填 http:// 是真实场景，
+    // 必须在配置期显式拒绝并给出可执行指引。
+    final scheme = Uri.tryParse(url)?.scheme.toLowerCase() ?? '';
+    if (scheme != 'https') {
+      throw CloudConfigurationException(
+        'Supabase 地址必须使用 HTTPS（当前为 '
+        '${scheme.isEmpty ? '(无协议)' : '$scheme://'}，'
+        'anonKey 将随每个请求在该链路上明文传输）。'
+        '本地开发请通过代理或内网 HTTPS 网关暴露 Supabase',
+      );
+    }
+
     try {
       // 审计 S21：Supabase SDK 是进程级单例，initialize 不支持原地换
       // url/anonKey。旧实现配置变更时仅 signOut 旧 client 再靠异常字符串

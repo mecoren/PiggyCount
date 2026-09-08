@@ -50,6 +50,25 @@ Future<({CloudProvider? provider, CloudAuthService? auth})> createCloudServices(
       return (provider: provider, auth: auth);
 
     case CloudBackendType.webdav:
+      // LOG-01（对齐 S3 的 downgradeLogger 接线）：存储层关键告警
+      // （降级交换备份还原失败/临时清理失败/元数据读取失败）接入应用
+      // 日志管线 —— 此前只走 dev.log，release 构建无痕迹。
+      WebDAVProvider.storageLogger = CloudSyncLogger(
+        onLog: (level, message) {
+          switch (level) {
+            case fcs_log.LogLevel.debug:
+            case fcs_log.LogLevel.info:
+              logger.info('CloudSync', message);
+              break;
+            case fcs_log.LogLevel.warning:
+              logger.warning('CloudSync', message);
+              break;
+            case fcs_log.LogLevel.error:
+              logger.error('CloudSync', message);
+              break;
+          }
+        },
+      );
       final provider = WebDAVProvider();
       await provider.initialize({
         'url': config.webdavUrl!,

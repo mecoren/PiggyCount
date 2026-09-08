@@ -138,12 +138,18 @@ class S3SignatureV4 {
   }) {
     // Canonical URI
     //
-    // 审计 S3-1：uri.path 是「已解码」形态，直接参与签名会与线上编码
-    // 路径不一致。这里对每段重新做严格 RFC 3986 编码；请求 URL 由
-    // S3Client 用同一编码器构造，两侧逐字节一致。
-    final canonicalUri = uri.path.isEmpty
-        ? '/'
-        : encodeKeyRfc3986(uri.path);
+    // S3P-01 修复（实证）：Dart 的 [Uri.path] 返回**已编码**形态
+    // （`Uri.parse('https://h/b/My%20x.json').path` 保留 `%20` 不解码），
+    // 此前注释「uri.path 是已解码形态」为误判，对它再跑
+    // [encodeKeyRfc3986] 会把 `%` 编成 `%25`（`%20` → `%2520`），
+    // 签名所用 canonical URI 与线上实际路径逐字节不一致 →
+    // 含空格/中文/子定界符的 key 恒 403 SignatureDoesNotMatch（且被
+    // _handleError 误报为「凭据错误」误导排查方向）。
+    // 请求 URL 由 S3Client._buildUri 用 encodeKeyRfc3986 构造（线上
+    // 所发 = uri.path），签名端直接取 uri.path 即两侧逐字节一致。
+    // 纯 unreserved 字符的 key（UUID/sha256 等当前业务路径）重编码为
+    // 恒等变换，不触发——这也是既有测试全绿的原因。
+    final canonicalUri = uri.path.isEmpty ? '/' : uri.path;
 
     // Canonical Query String
     // 同样用严格编码器（encodeComponent 会保留子定界符，造成口径分裂）。

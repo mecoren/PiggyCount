@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import 'icloud_method_channel_contract.dart';
+
 /// Method Channel for iCloud native communication
-class ICloudMethodChannel {
+class ICloudMethodChannel implements ICloudMethodChannelLike {
   static const MethodChannel _channel =
       MethodChannel('com.piggycount.app/icloud');
 
@@ -72,6 +74,7 @@ class ICloudMethodChannel {
   }
 
   /// Upload file to iCloud
+  @override
   Future<void> uploadFile({
     required String path,
     required String data,
@@ -85,6 +88,7 @@ class ICloudMethodChannel {
   }
 
   /// Download file from iCloud
+  @override
   Future<String?> downloadFile({required String path}) async {
     return await _invoke<String>('downloadFile', {
       'path': path,
@@ -92,6 +96,7 @@ class ICloudMethodChannel {
   }
 
   /// Delete file from iCloud
+  @override
   Future<void> deleteFile({required String path}) async {
     await _invoke<void>('deleteFile', {
       'path': path,
@@ -99,6 +104,7 @@ class ICloudMethodChannel {
   }
 
   /// List files in directory
+  @override
   Future<List<Map<String, dynamic>>> listFiles({required String path}) async {
     final result = await _invoke<List>('listFiles', {
       'path': path,
@@ -108,6 +114,7 @@ class ICloudMethodChannel {
   }
 
   /// Check if file exists
+  @override
   Future<bool> fileExists({required String path}) async {
     final result = await _invoke<bool>('fileExists', {
       'path': path,
@@ -116,6 +123,7 @@ class ICloudMethodChannel {
   }
 
   /// Get file metadata
+  @override
   Future<Map<String, dynamic>?> getFileMetadata({required String path}) async {
     final result = await _invoke<Map>('getFileMetadata', {
       'path': path,

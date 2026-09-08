@@ -3,11 +3,15 @@ import 'dart:convert';
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 
-import 'icloud_method_channel.dart';
+import 'icloud_method_channel_contract.dart';
 
 /// iCloud storage service implementation
+///
+/// P0-2 测试注入口：[_methodChannel] 的类型放宽为 method 兼容契约
+/// （生产恒传 ICloudMethodChannel，测试注入 FakeICloudMethodChannel），
+/// 使 _isNotFoundError 的错误分类可单测。
 class ICloudStorageService implements CloudStorageService {
-  final ICloudMethodChannel _methodChannel;
+  final ICloudMethodChannelLike _methodChannel;
 
   ICloudStorageService(this._methodChannel);
 
@@ -27,20 +31,34 @@ class ICloudStorageService implements CloudStorageService {
   /// 其次检查 message 中的关键词（兼容未规范 code 的原生实现）。
   /// 命中返回 true，调用方据此返回 null / 空列表 / false（幂等语义）；
   /// 未命中时调用方应抛出异常，避免把网络中断、权限不足误判为「不存在」。
+  ///
+  /// P0-2 修复（对齐 WebDAV WD-M3 审计口径）：此前 message 兜底含
+  /// `contains('404')` 纯数字子串匹配 —— 异常消息内嵌 host:port
+  /// （如 `:8404`）或对象名含 "404" 时，**任何网络/权限错误都会被误判
+  /// 为「不存在」** → exists()=false → 调用方触发覆盖上传，静默盖掉云端
+  /// 数据。WebDAV 侧同款问题已修（有结构化信息只看状态码；无结构化信息
+  /// 仅措辞匹配、绝不做数字子串匹配），iCloud 侧同步收口：
+  /// - code 判定收紧为精确值（原生侧约定错误码枚举），不再 contains；
+  /// - message 兜底删除全部数字子串，仅保留明确的「不存在」措辞。
   bool _isNotFoundError(Object e) {
     if (e is PlatformException) {
       final code = e.code.toLowerCase();
-      if (code.contains('404') ||
-          code.contains('notfound') ||
-          code.contains('not_found') ||
-          code.contains('no_such_file') ||
-          code.contains('file_not_found')) {
+      const notFoundCodes = {
+        '404',
+        'notfound',
+        'not_found',
+        'no_such_file',
+        'file_not_found',
+        'filenotfound',
+        'nsfilenosuchfileerror',
+        'nsfilereadnosuchfileerror',
+      };
+      if (notFoundCodes.contains(code)) {
         return true;
       }
     }
     final msg = e.toString().toLowerCase();
-    return msg.contains('404') ||
-        msg.contains('not found') ||
+    return msg.contains('not found') ||
         msg.contains('does not exist') ||
         msg.contains('nsfilereadnosuchfileerror') ||
         msg.contains('nsfilenosuchfileerror');

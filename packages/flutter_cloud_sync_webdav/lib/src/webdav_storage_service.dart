@@ -3,6 +3,7 @@ library;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as dev;
+import 'dart:math' show Random;
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart' show CancelToken;
@@ -18,7 +19,34 @@ class WebDAVStorageService
   final webdav.Client _client;
   final String _remotePath;
 
-  WebDAVStorageService(this._client, this._remotePath);
+  /// LOG-01：应用日志注入口（宿主经 WebDAVProvider.storageLogger 设置）。
+  ///
+  /// 此前本服务的全部关键告警（降级交换的备份还原失败/临时文件清理
+  /// 失败/元数据读取失败）走 `dart:developer` 的 dev.log —— 只在
+  /// `flutter run` 控制台可见，不进应用日志系统，release 构建完全
+  /// 无痕迹。这些恰是「数据半落地」的高危场景，线上排障需要留痕。
+  /// null（未注入，如包内单测）时退回 dev.log，行为与旧版一致。
+  final CloudSyncLogger? logger;
+
+  WebDAVStorageService(this._client, this._remotePath, {this.logger});
+
+  /// LOG-01：统一告警出口 —— 注入 logger 时进应用日志管线（warning
+  /// 级），否则退回 dev.log（旧行为）。备份还原失败（数据可能未回滚）
+  /// 升级为 error 级。
+  void _warn(String message, {bool critical = false}) {
+    if (logger != null) {
+      if (critical) {
+        logger!.error(message);
+      } else {
+        logger!.warning(message);
+      }
+      return;
+    }
+    dev.log(
+      '[WebDAV] ${critical ? 'Error' : 'Warning'}: $message',
+      name: 'WebDAVStorage',
+    );
+  }
 
   /// 审计 M10：getMetadata 元数据解析缓存，键为 `fullPath\u0000eTag`。
   ///
@@ -147,11 +175,21 @@ class WebDAVStorageService
     );
   }
 
+  /// P1-1（对齐 S3 适配器 P5 的真随机 jitter）：退避抖动随机源。
+  /// 实例级，生命周期与 service 一致。
+  final Random _retryRandom = Random();
+
   /// 幂等操作自动重试（对齐 S3 适配器 P5：弱网成功率）。
   ///
   /// 仅用于 read/readDir/remove 等幂等操作；write/rename/mkdir 非幂等，
   /// 绝不进入本包装。重试条件：完全无结构化 HTTP 状态码（连接层故障）
   /// 或 5xx 服务端临时错误；4xx 一律立即上抛。
+  ///
+  /// P1-1：jitter 此前用 `DateTime.now().microsecondsSinceEpoch % range`
+  /// —— 时间戳取模**不是随机**：同一毫秒内触发的多设备/多操作退避
+  /// 完全同相，thundering herd 防护名存实亡（多设备瞬时故障后同一
+  /// 时刻集中重试，正是 jitter 要防的场景）。改用 [Random]（与 S3
+  /// 侧 retryDelayForTest 的 P5 实现同款）。
   Future<T> _retryIdempotent<T>(Future<T> Function() operation) async {
     const maxRetries = 2; // 共 1+2 次
     var attempt = 0;
@@ -163,10 +201,9 @@ class WebDAVStorageService
         final retriable = attempt < maxRetries && (code == null || code >= 500);
         if (!retriable) rethrow;
         attempt++;
-        // 指数退避 + 抖动：400ms、800ms（±50%）
+        // 指数退避 + 真随机抖动：400ms、800ms（各 ±50% 区间均匀分布）
         final baseMs = 400 * (1 << (attempt - 1));
-        final jitter =
-            DateTime.now().microsecondsSinceEpoch % (baseMs ~/ 2 + 1);
+        final jitter = _retryRandom.nextInt(baseMs ~/ 2 + 1);
         await Future<void>.delayed(
             Duration(milliseconds: baseMs ~/ 2 + jitter));
       }
@@ -403,9 +440,12 @@ class WebDAVStorageService
             await _op(
                 'rename', (_) => _client.rename(backupPath, fullPath, false));
           } catch (restoreError) {
-            dev.log(
-                '[WebDAV] Error: failed to restore backup $backupPath -> $fullPath: $restoreError',
-                name: 'WebDAVStorage');
+            // LOG-01：备份还原失败 = 旧数据可能不在原位（数据半落地），
+            // error 级上报（此前 dev.log release 无痕迹）
+            _warn(
+                '降级交换的备份还原失败（旧数据可能未回原位）: '
+                '$backupPath -> $fullPath: $restoreError',
+                critical: true);
           }
           rethrow;
         }
@@ -414,9 +454,7 @@ class WebDAVStorageService
         try {
           await _op('remove', (t) => _client.remove(backupPath, t));
         } catch (cleanupError) {
-          dev.log(
-              '[WebDAV] Warning: backup cleanup failed for $backupPath: $cleanupError',
-              name: 'WebDAVStorage');
+          _warn('backup cleanup failed for $backupPath: $cleanupError');
         }
       }
     } catch (e) {
@@ -425,9 +463,7 @@ class WebDAVStorageService
         await _op('remove', (t) => _client.remove(tempPath, t));
       } catch (cleanupError) {
         // 临时文件清理失败记录日志，便于排查远端残留半成品
-        dev.log(
-            '[WebDAV] Warning: temp file cleanup failed for $tempPath: $cleanupError',
-            name: 'WebDAVStorage');
+        _warn('temp file cleanup failed for $tempPath: $cleanupError');
       }
       // 401/403 认证失败：抛专属异常供上层引导用户修正凭据
       if (_isUnauthorized(e)) {
@@ -712,8 +748,7 @@ class WebDAVStorageService
       }
       return await _getMetadata(fullPath);
     } catch (e) {
-      dev.log('[WebDAV] Warning: metadata source read failed for $fullPath: $e',
-          name: 'WebDAVStorage');
+      _warn('metadata source read failed for $fullPath: $e');
       return null;
     }
   }
@@ -913,9 +948,7 @@ class WebDAVStorageService
       // 兜底，安全设计不变），但必须留下告警 —— 否则弱网下反复全量下载
       // 无从排查。
       if (!_isNotFound(e)) {
-        dev.log(
-            '[WebDAV] Warning: metadata sidecar read failed for $filePath: $e',
-            name: 'WebDAVStorage');
+        _warn('metadata sidecar read failed for $filePath: $e');
       }
       return {};
     }
@@ -929,8 +962,7 @@ class WebDAVStorageService
     } catch (e) {
       // 元数据是辅助数据，删除失败（如文件本就不存在）不阻塞主流程，
       // 但记录 warning 便于排查，与 _storeMetadata 的日志策略保持一致
-      dev.log('[WebDAV] Warning: metadata delete failed for $filePath: $e',
-          name: 'WebDAVStorage');
+      _warn('metadata delete failed for $filePath: $e');
     }
   }
 }

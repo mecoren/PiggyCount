@@ -12,12 +12,17 @@ import 'package:webdav_client/webdav_client.dart' as webdav;
 import 'webdav_auth_service.dart';
 import 'webdav_storage_service.dart';
 
-/// WebDAV 状态码过滤：仅拒绝 3xx（重定向），其余一律放行。
+/// WebDAV 状态码过滤：拒绝 3xx（重定向）与无状态码响应，其余放行。
 ///
 /// 返回 true 表示 dio 把该响应当作正常结果返回给上游；返回 false 则抛
 /// DioException。详见 [WebDAVProvider.initialize] 内 W1 修复注释。
+///
+/// WDP-05：status == null（无状态响应，极罕见的传输层异常形态）不再
+/// 当成功放行 —— 放行后 _statusCodeOf 拿不到结构化码，错误分类退化到
+/// 字符串匹配（本包明确要避免的路径），异常响应可能被当正常数据流
+/// 下发。null 视为失败，交由 dio 异常通道统一处理。
 bool webdavValidateStatus(int? status) =>
-    status == null || status < 300 || status >= 400;
+    status != null && status < 300 || status != null && status >= 400;
 
 /// dev 测试基础设施：模拟器内网自签 WebDAV 服务器豁免。
 ///
@@ -65,6 +70,15 @@ class WebDAVProvider implements CloudProvider {
   WebDAVAuthService? _authService;
   WebDAVStorageService? _storageService;
 
+  /// LOG-01（对齐 S3 的 downgradeLogger 注入模式）：存储层关键告警
+  /// （降级交换备份还原失败/临时文件清理失败/元数据读取失败）此前走
+  /// `dart:developer` 的 dev.log —— 只在 `flutter run` 控制台可见，
+  /// 不进应用日志系统（LoggerService），release 构建完全无痕迹。
+  /// 这些恰是「数据半落地」的高危场景，线上排障需要留痕。宿主 app
+  /// 在创建 provider 前设置此静态字段即可把告警接入应用日志管线；
+  /// 不设置时退回 dev.log（行为与旧版一致，测试无感）。
+  static CloudSyncLogger? storageLogger;
+
   /// W5 测试口：initialize 后底层 client 的 auth 模式。
   /// null = 未初始化；否则为 webdav_client 的 AuthType（预置 BasicAuth
   /// 后应为 BasicAuth；Digest 服务器兜底升级后为 DigestAuth）。
@@ -106,6 +120,19 @@ class WebDAVProvider implements CloudProvider {
     final username = config['username'] as String;
     final password = config['password'] as String;
     final remotePath = config['remotePath'] as String? ?? '/';
+
+    // SEC-07（W-D 修复面的互补配置入口）：_buildPath 已拒绝**相对 path**
+    // 的 `..` 段，但 remotePath 前缀本身（用户配置，亦来自配置导入通道）
+    // 此前全程无分段校验 —— `remotePath = '/piggy/../../shared'` 会把
+    // 应用全部对象重定向到前缀之外的目录（依赖服务器 ACL 兜底）。此处
+    // 与 _assertNoTraversal 同口径：按 `/` 分段后存在恰为 `..` 的段
+    // 即拒绝。
+    for (final seg in remotePath.split('/')) {
+      if (seg == '..') {
+        throw CloudConfigurationException(
+            'Invalid remotePath containing ".." segment: $remotePath');
+      }
+    }
 
     // P2-7：WebDAV 使用 HTTP Basic Auth，用户名密码以 Base64（可逆）
     // 随每个请求明文传输。强制 https，避免 http 链路上凭据被窃取。
@@ -233,7 +260,10 @@ class WebDAVProvider implements CloudProvider {
       // Create service instances
       _authService = WebDAVAuthService(username);
 
-      _storageService = WebDAVStorageService(_client!, remotePath);
+      // LOG-01：注入应用日志（宿主经 WebDAVProvider.storageLogger 设置），
+      // 存储层关键告警不再只走 dev.log（release 无痕迹）。
+      _storageService = WebDAVStorageService(_client!, remotePath,
+          logger: WebDAVProvider.storageLogger);
     } on CloudAuthException {
       // 保真透传：认证失败不能被包装成 CloudConfigurationException，
       // 否则调用方无法区分「密码错误」与「配置格式错误」

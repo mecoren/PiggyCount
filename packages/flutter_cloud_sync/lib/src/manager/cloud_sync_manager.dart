@@ -462,11 +462,13 @@ class CloudSyncManager<T> {
       // 2. Check authentication
       final user = await provider.auth.currentUser;
       if (user == null) {
+        // CORE-03：与 error 状态同口径（Major-12）——不写缓存。瞬时
+        // 认证故障（代理 401/token 刷新窗口）在 cacheTTL 内持续命中
+        // 陈旧的「未登录」，自动同步被无谓挂起 30s。
         const status = SyncStatus(
           state: SyncState.notAuthenticated,
           message: 'User not authenticated',
         );
-        _cacheStatus(path, status);
         return status;
       }
 

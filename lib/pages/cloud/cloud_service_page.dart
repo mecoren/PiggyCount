@@ -1652,6 +1652,18 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
           case CloudBackendType.supabase:
             // Supabase 连接测试 - 查询不存在的表验证 URL 和 anon key
             // 200 或 404 表示连接正常且 key 有效，401/403 表示 key 无效
+            //
+            // SEC-01（对齐 provider 层 HTTPS 强制）：连接测试同样不得
+            // 把 apikey/Authorization 头发往 http:// 明文链路——配置
+            // 对话框尚未保存时 provider 校验管不到这里，测试路径必须
+            // 自行校验 scheme。
+            final supabaseScheme =
+                Uri.tryParse(config.supabaseUrl!)?.scheme.toLowerCase() ?? '';
+            if (supabaseScheme != 'https') {
+              throw Exception('Supabase 地址必须使用 HTTPS'
+                  '（当前为 ${supabaseScheme.isEmpty ? '(无协议)' : '$supabaseScheme://'}，'
+                  'anonKey 将在该链路上明文传输）');
+            }
             final testUrl = Uri.parse(
                 '${config.supabaseUrl}/rest/v1/_piggycount_health_check?select=id&limit=1');
             final response = await http.get(
@@ -1677,34 +1689,62 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
 
           case CloudBackendType.webdav:
             // WebDAV 连接测试 - 发送 OPTIONS 请求
-            final testUrl = Uri.parse(config.webdavUrl!);
+            //
+            // SEC-02（两处旁路收口）：
+            // ① scheme 校验——provider 层 P2-7 强制 HTTPS，但历史遗留的
+            //   http:// 配置（保存于 P2-7 之前）在连接测试（含页面打开的
+            //   自动测试）仍会把 Basic 凭据（即用户网盘主账号密码）明文
+            //   发出。测试路径必须先校验再发请求；
+            // ② 禁止重定向跟随——provider 层 S23 加固（followRedirects=
+            //   false，防 3xx 把凭据原样转发到第三方域）在裸 http.Request
+            //   上不生效。dart:io 默认跟随 301/302/303 并携带 Authorization
+            //   头，中间人 302 即可截获凭据。这里用 http.Client 并显式
+            //   关闭重定向，3xx 一律按错误呈现（与 provider 行为一致：
+            //   引导用户直接填最终地址）。
+            final webdavUrl = Uri.parse(config.webdavUrl!);
+            if (webdavUrl.scheme.toLowerCase() != 'https') {
+              throw Exception('WebDAV 地址必须使用 HTTPS'
+                  '（当前为 ${webdavUrl.scheme}://，'
+                  'Basic Auth 凭据将在链路上明文传输）');
+            }
             final credentials = base64Encode(
               utf8.encode('${config.webdavUsername}:${config.webdavPassword}'),
             );
 
-            final request = http.Request('OPTIONS', testUrl);
-            request.headers['Authorization'] = 'Basic $credentials';
+            final client = http.Client();
+            try {
+              final request = http.Request('OPTIONS', webdavUrl)
+                ..followRedirects = false
+                ..maxRedirects = 0
+                ..headers['Authorization'] = 'Basic $credentials';
 
-            final streamedResponse =
-                await request.send().timeout(const Duration(seconds: 10));
-            final response = await http.Response.fromStream(streamedResponse);
+              final streamedResponse =
+                  await client.send(request).timeout(const Duration(seconds: 10));
+              final response = await http.Response.fromStream(streamedResponse);
 
-            if (response.statusCode == 200 || response.statusCode == 204) {
-              final davHeader = response.headers['dav'];
-              if (davHeader != null || response.headers.containsKey('allow')) {
-                connectionSuccess = true;
+              if (response.statusCode == 200 || response.statusCode == 204) {
+                final davHeader = response.headers['dav'];
+                if (davHeader != null || response.headers.containsKey('allow')) {
+                  connectionSuccess = true;
+                } else {
+                  throw Exception(l10n.cloudErrorWebdavNotSupported);
+                }
+              } else if (response.statusCode == 401) {
+                throw Exception(l10n.cloudErrorAuthFailedCredentials);
+              } else if (response.statusCode == 403) {
+                throw Exception(l10n.cloudErrorAccessDenied);
+              } else if (response.statusCode == 404) {
+                throw Exception(l10n.cloudErrorPathNotFound(webdavUrl.path));
+              } else if (response.statusCode >= 300 && response.statusCode < 400) {
+                // SEC-02②：不跟随重定向，3xx 直接报错（与 provider S23 一致）
+                throw Exception('WebDAV 服务器返回重定向（${response.statusCode}），'
+                    '请直接填写重定向后的最终地址，避免凭据被转发到第三方域名');
               } else {
-                throw Exception(l10n.cloudErrorWebdavNotSupported);
+                throw Exception(
+                    l10n.cloudErrorServerStatus('${response.statusCode}'));
               }
-            } else if (response.statusCode == 401) {
-              throw Exception(l10n.cloudErrorAuthFailedCredentials);
-            } else if (response.statusCode == 403) {
-              throw Exception(l10n.cloudErrorAccessDenied);
-            } else if (response.statusCode == 404) {
-              throw Exception(l10n.cloudErrorPathNotFound(testUrl.path));
-            } else {
-              throw Exception(
-                  l10n.cloudErrorServerStatus('${response.statusCode}'));
+            } finally {
+              client.close();
             }
             break;
 
@@ -1758,13 +1798,25 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                     'S3 provider 初始化失败 - createCloudServices 返回 null');
               }
 
-              // 实际测试连接：尝试列出 bucket 中的文件
-              // 这会触发真正的 S3 API 调用，验证凭证和连接
-              logger.info('CloudServicePage', 'S3 开始测试列出文件');
-              await services.provider!.storage.list(path: '');
+              // N-1 修复：测试用 provider 必须在 finally 释放 ——
+              // S3Provider.dispose 会关闭底层 http.Client 连接池；此前
+              // 每次连接测试（含页面打开时的自动测试）都泄漏一份连接池
+              // （包内 S-M2 修过的同款问题在 UI 层复发）。
+              try {
+                // 实际测试连接：尝试列出 bucket 中的文件
+                // 这会触发真正的 S3 API 调用，验证凭证和连接
+                logger.info('CloudServicePage', 'S3 开始测试列出文件');
+                await services.provider!.storage.list(path: '');
 
-              logger.info('CloudServicePage', 'S3 连接测试成功');
-              connectionSuccess = true;
+                logger.info('CloudServicePage', 'S3 连接测试成功');
+                connectionSuccess = true;
+              } finally {
+                try {
+                  await services.provider!.dispose();
+                } catch (e) {
+                  logger.warning('CloudServicePage', 'S3 测试 provider 释放失败（忽略）: $e');
+                }
+              }
             } catch (e, stackTrace) {
               logger.error('CloudServicePage', 'S3 连接测试失败: $e', e, stackTrace);
               // 提取最有用的错误信息
@@ -1849,6 +1901,11 @@ class _SupabaseConfigDialogState extends State<_SupabaseConfigDialog> {
   bool _urlError = false;
   bool _keyError = false;
 
+  // SEC-05：anonKey 按凭据处理（连接测试随 Authorization 头发送、
+  // 持久化到安全存储），输入框与 WebDAV 密码/S3 SecretKey 同款遮蔽
+  // + 眼睛切换，防肩窥/屏幕录制。
+  bool obscureAnonKey = true;
+
   @override
   void initState() {
     super.initState();
@@ -1908,7 +1965,23 @@ class _SupabaseConfigDialogState extends State<_SupabaseConfigDialog> {
                 errorText: _keyError
                     ? l10n.fieldCannotBeEmpty(l10n.cloudAnonKeyLabel)
                     : null,
+                // SEC-05：anonKey 是长效凭据（Storage 读写能力），
+                // 与 WebDAV 密码/S3 SecretKey 同款遮蔽 + 眼睛切换
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    obscureAnonKey
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    size: 20,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      obscureAnonKey = !obscureAnonKey;
+                    });
+                  },
+                ),
               ),
+              obscureText: obscureAnonKey,
               keyboardType: TextInputType.text,
               minLines: 1,
               maxLines: 5,
