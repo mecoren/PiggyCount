@@ -30,8 +30,9 @@ void main() {
       expect(webdavValidateStatus(308), isFalse);
     });
 
-    test('null 状态放行', () {
-      expect(webdavValidateStatus(null), isTrue);
+    test('null 状态拒绝（9ecf378：放行 null 会让 _statusCodeOf 拿不到'
+        '结构化码，错误分类退化到字符串匹配；null 交由 dio 异常通道）', () {
+      expect(webdavValidateStatus(null), isFalse);
     });
   });
 }

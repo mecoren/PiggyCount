@@ -143,10 +143,12 @@ class S3Client {
         // 偏差持续存在时终止循环，避免无限重试。
         await Future.delayed(const Duration(milliseconds: 200));
         attempt++;
+        onRetryEvent?.call('时钟偏差补偿后重试（第 $attempt 次）');
         if (attempt >= maxRetries) rethrow;
       } on S3NetworkException {
         // 网络瞬时故障（SocketException/Timeout）可安全重试
         attempt++;
+        onRetryEvent?.call('网络瞬时故障，第 $attempt/$maxRetries 次重试');
         if (attempt >= maxRetries) rethrow;
         // P5：指数退避 + jitter（1s/2s/4s 的 50%~100% 区间）
         await Future.delayed(retryDelayForTest(attempt));
@@ -163,6 +165,7 @@ class S3Client {
             status >= 500 &&
             status < 600) {
           attempt++;
+          onRetryEvent?.call('服务端 $status 错误，第 $attempt/$maxRetries 次重试');
           if (attempt >= maxRetries) rethrow;
           await Future.delayed(retryDelayForTest(attempt));
         } else {
@@ -210,6 +213,11 @@ class S3Client {
   /// 由 S3StorageService 构造时注入；未注入时静默（测试无感）。
   void Function(String message)? onProtocolEvent;
 
+  /// LOG-06（P1-1 配套）：重试事件回调（可选）—— 幂等读重试与条件 PUT
+  /// 安全重试的逐次痕迹。弱网排障时区分「一次成功」与「重试后成功」
+  /// 依赖此回调；未注入时静默。
+  void Function(String message)? onRetryEvent;
+
   /// PUT Object - 上传文件
   ///
   /// [metadata] 中的 key-value 对会作为 `x-amz-meta-{key}` 头发送，
@@ -233,7 +241,10 @@ class S3Client {
   ///
   /// 返回服务端响应的 ETag（网关未返回时为 null），供写后校验使用。
   ///
-  /// 非幂等操作（重复写入可能覆盖最新版本），不进行自动重试；
+  /// 盲写（无 If-Match/If-None-Match）不自动重试 —— 非幂等且 A-1 覆盖
+  /// 竞态未修，重试旧快照会覆盖新数据，由写后校验兜底；
+  /// 条件 PUT 例外（P1-1）：超时/断连时按 If-Match 锚点安全重试 ≤2 次
+  ///（远端已落盘则重试吃 412 转冲突流程，不丢他机数据）。
   /// 条件写失败（412/404）更不可重试 —— 重试必然再次失败或造成覆盖。
   Future<String?> putObject({
     required String bucket,
@@ -267,6 +278,10 @@ class S3Client {
     // 审计 M2：409 ConditionalRequestConflict 同理 —— 服务器未落盘本次
     // 写入，重发同一前置条件安全；最多重试 2 次，仍冲突按条件失败上抛。
     var conflictRetries = 0;
+    // P1-1（2026-09-09）：条件 PUT 的瞬时网络故障安全重试计数（超时/
+    // 断连）。安全性由 If-Match 锚点保证（见 on SocketException 分支
+    // 注释）；盲写不重试。
+    var netRetries = 0;
     // 网关能力探测：部分 S3 兼容网关（如某些 MinIO 旧版/第三方对象存储）
     // 不支持 If-Match/If-None-Match 条件头，返回 400 + NotImplemented。
     // 服务器未处理本次请求（未落盘），去掉条件头重发是安全的；盲写后由
@@ -350,11 +365,31 @@ class S3Client {
         headers = _signedPutHeaders(uri, data, contentType, metadata,
             ifMatch: ifMatch, ifNoneMatch: ifNoneMatch);
       } on SocketException catch (e) {
+        // P1-1（2026-09-09）：仅条件 PUT 有限安全重试。带 If-Match 锚点时
+        // 「超时但服务端已落盘」的 A-1 歧态由锚点化解：远端 ETag 已变 →
+        // 重试吃 412 → 翻译为冲突流程，绝不静默覆盖他机数据；未落盘则
+        // 重试正常完成。盲写路径维持不重试纪律（A-1 未修，写后校验兜底）。
+        if ((ifMatch != null || ifNoneMatch) && netRetries < 2) {
+          netRetries++;
+          onRetryEvent?.call(
+              'PutObject(conditional) 网络错误，第 $netRetries/2 次安全重试: '
+              '${e.message}');
+          await Future.delayed(retryDelayForTest(netRetries));
+          continue;
+        }
         throw S3NetworkException('Network error: ${e.message}',
             originalException: e);
       } on TimeoutException {
+        if ((ifMatch != null || ifNoneMatch) && netRetries < 2) {
+          netRetries++;
+          onRetryEvent?.call(
+              'PutObject(conditional) 超时，第 $netRetries/2 次安全重试'
+              '（当前预算 ${transferTimeoutFor(data.length).inSeconds}s）');
+          await Future.delayed(retryDelayForTest(netRetries));
+          continue;
+        }
         throw S3NetworkException(
-            'PutObject timed out after ${timeout.inSeconds}s');
+            'PutObject timed out after ${transferTimeoutFor(data.length).inSeconds}s');
       } catch (e) {
         if (e is S3Exception) rethrow;
         throw S3Exception('PutObject failed: $e',

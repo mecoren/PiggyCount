@@ -30,6 +30,10 @@ class S3StorageService
     // LOG-02：协议级事件（V2→V1 回退 / 时钟偏差补偿）同样经注入的
     // logger 留痕 —— 「继续工作但环境异常」的线索对排障价值极高。
     client.onProtocolEvent = logger == null ? null : (message) => logger.warning(message);
+    // LOG-06（P1-1 配套）：重试逐次留痕 —— 弱网排障时区分「一次成功」
+    // 与「重试后成功」；条件 PUT 安全重试同样在此暴露。info 级
+    //（重试属正常自愈行为，非告警）。
+    client.onRetryEvent = logger == null ? null : (message) => logger.info(message);
   }
 
   /// 认证/权限类异常转 [CloudAuthException]，保持语义保真（与 WebDAV 修复同款）

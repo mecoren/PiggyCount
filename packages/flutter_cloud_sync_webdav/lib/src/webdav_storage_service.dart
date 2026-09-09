@@ -201,6 +201,12 @@ class WebDAVStorageService
         final retriable = attempt < maxRetries && (code == null || code >= 500);
         if (!retriable) rethrow;
         attempt++;
+        // LOG-06：重试逐次留痕（info 级——重试属正常自愈行为，非告警）。
+        // 弱网排障需区分「一次成功」与「重试后成功」；logger 未注入时
+        // 静默（测试无感）。
+        logger?.info(
+            '[WebDAV] 幂等操作瞬时故障${code != null ? '（HTTP $code）' : ''}，'
+            '第 $attempt/$maxRetries 次重试: $e');
         // 指数退避 + 真随机抖动：400ms、800ms（各 ±50% 区间均匀分布）
         final baseMs = 400 * (1 << (attempt - 1));
         final jitter = _retryRandom.nextInt(baseMs ~/ 2 + 1);
