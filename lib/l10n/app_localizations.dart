@@ -14472,6 +14472,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to export diagnostics: {error}'**
   String syncHealthExportFailed(String error);
+
+  /// No description provided for @cloudCapabilityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Backend capabilities'**
+  String get cloudCapabilityTitle;
+
+  /// No description provided for @cloudCapabilityLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Concurrency guard: {concurrency} · Binary transfer: {binary}'**
+  String cloudCapabilityLine(String concurrency, String binary);
+
+  /// No description provided for @cloudCapYes.
+  ///
+  /// In en, this message translates to:
+  /// **'Native'**
+  String get cloudCapYes;
+
+  /// No description provided for @cloudCapApprox.
+  ///
+  /// In en, this message translates to:
+  /// **'Approximate (verify-fallback)'**
+  String get cloudCapApprox;
+
+  /// No description provided for @cloudCapNo.
+  ///
+  /// In en, this message translates to:
+  /// **'Degraded'**
+  String get cloudCapNo;
 }
 
 class _AppLocalizationsDelegate

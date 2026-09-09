@@ -1633,6 +1633,27 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
   }
 
   // 测试连接
+  /// P1-4：后端能力静态映射（连接测试成功弹窗的透明化说明行）。
+  ///
+  /// 各后端能力是实现事实（随包版本演进），非运行时探测 ——
+  /// 与包内 ConditionalWriteStorage/BinaryCapableStorage 的实现矩阵
+  /// 对齐，改动后端实现时须同步更新此表。
+  String _backendCapabilityLine(AppLocalizations l10n, CloudBackendType t) {
+    // 并发保护：S3 原子条件写 / WebDAV eTag 预检近似 / 其余校验兜底
+    final concurrency = switch (t) {
+      CloudBackendType.s3 => l10n.cloudCapYes,
+      CloudBackendType.webdav => l10n.cloudCapApprox,
+      _ => l10n.cloudCapNo,
+    };
+    // 二进制传输：S3/WebDAV/Supabase 原生字节 / iCloud base64 文本
+    //（P2-3 留待迭代：method channel 原生侧改造，无法本环境验证）
+    final binary = switch (t) {
+      CloudBackendType.icloud => l10n.cloudCapNo,
+      _ => l10n.cloudCapYes,
+    };
+    return l10n.cloudCapabilityLine(concurrency, binary);
+  }
+
   Future<void> _testConnection(CloudServiceConfig config,
       {bool showDialog = true}) async {
     if (!config.valid || config.type == CloudBackendType.local) return;
@@ -1851,9 +1872,14 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
       // 只在手动测试时显示对话框
       if (mounted && showDialog) {
         if (connectionSuccess) {
+          // P1-4：连接成功时附后端能力说明 —— 把「条件写/二进制」的
+          // 降级从静默变透明（Supabase/iCloud 并发保护为校验兜底、
+          // iCloud 二进制为 base64 文本形态），用户在选型时可见差异。
           await AppDialog.info(context,
               title: l10n.cloudTestSuccessTitle,
-              message: l10n.cloudTestSuccessMessage);
+              message:
+                  '${l10n.cloudTestSuccessMessage}\n\n${l10n.cloudCapabilityTitle}：'
+                  '${_backendCapabilityLine(l10n, config.type)}');
         } else {
           await AppDialog.error(context,
               title: l10n.cloudTestFailedTitle,

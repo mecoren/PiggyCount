@@ -8035,4 +8035,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String syncHealthExportFailed(String error) {
     return 'Failed to export diagnostics: $error';
   }
+
+  @override
+  String get cloudCapabilityTitle => 'Backend capabilities';
+
+  @override
+  String cloudCapabilityLine(String concurrency, String binary) {
+    return 'Concurrency guard: $concurrency · Binary transfer: $binary';
+  }
+
+  @override
+  String get cloudCapYes => 'Native';
+
+  @override
+  String get cloudCapApprox => 'Approximate (verify-fallback)';
+
+  @override
+  String get cloudCapNo => 'Degraded';
 }

@@ -3120,5 +3120,10 @@
   "@aiPromptVarSectionInserted": {
     "placeholders": { "name": { "type": "String" } }
   },
-  "tagSelectOwnerManaged": "共享帳本標籤由所有者管理"
+  "tagSelectOwnerManaged": "共享帳本標籤由所有者管理",
+  "cloudCapabilityTitle": "後端能力",
+  "cloudCapabilityLine": "並發保護：{concurrency} · 二進位傳輸：{binary}",
+  "cloudCapYes": "原生支援",
+  "cloudCapApprox": "近似（校驗兜底）",
+  "cloudCapNo": "降級模式"
 }

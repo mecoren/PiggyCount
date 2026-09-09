@@ -3423,5 +3423,10 @@
   "syncHealthTopErrors": "主要失败类别",
   "syncHealthExport": "导出诊断数据",
   "syncHealthExported": "诊断数据已导出：{fileName}",
-  "syncHealthExportFailed": "诊断数据导出失败：{error}"
+  "syncHealthExportFailed": "诊断数据导出失败：{error}",
+  "cloudCapabilityTitle": "后端能力",
+  "cloudCapabilityLine": "并发保护：{concurrency} · 二进制传输：{binary}",
+  "cloudCapYes": "原生支持",
+  "cloudCapApprox": "近似（校验兜底）",
+  "cloudCapNo": "降级模式"
 }

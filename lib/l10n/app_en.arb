@@ -3772,5 +3772,11 @@
   "@syncHealthRate": { "placeholders": { "rate": { "type": "String" } } },
   "@syncHealthDetail": { "placeholders": { "success": { "type": "int" }, "failed": { "type": "int" }, "softFail": { "type": "int" }, "conflict": { "type": "int" } } },
   "@syncHealthExported": { "placeholders": { "fileName": { "type": "String" } } },
-  "@syncHealthExportFailed": { "placeholders": { "error": { "type": "String" } } }
+  "@syncHealthExportFailed": { "placeholders": { "error": { "type": "String" } } },
+  "cloudCapabilityTitle": "Backend capabilities",
+  "cloudCapabilityLine": "Concurrency guard: {concurrency} · Binary transfer: {binary}",
+  "cloudCapYes": "Native",
+  "cloudCapApprox": "Approximate (verify-fallback)",
+  "cloudCapNo": "Degraded",
+  "@cloudCapabilityLine": { "placeholders": { "concurrency": { "type": "String" }, "binary": { "type": "String" } } }
 }

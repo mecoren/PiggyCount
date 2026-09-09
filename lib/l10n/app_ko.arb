@@ -2514,5 +2514,10 @@
   "syncHealthTopErrors": "주요 실패 유형",
   "syncHealthExport": "진단 데이터 내보내기",
   "syncHealthExported": "진단 데이터 내보냄: {fileName}",
-  "syncHealthExportFailed": "진단 데이터 내보내기 실패: {error}"
+  "syncHealthExportFailed": "진단 데이터 내보내기 실패: {error}",
+  "cloudCapabilityTitle": "백엔드 기능",
+  "cloudCapabilityLine": "동시성 보호: {concurrency} · 바이너리 전송: {binary}",
+  "cloudCapYes": "네이티브",
+  "cloudCapApprox": "근사(검증 대체)",
+  "cloudCapNo": "저하 모드"
 }

@@ -7716,6 +7716,23 @@ class AppLocalizationsZh extends AppLocalizations {
   String syncHealthExportFailed(String error) {
     return '诊断数据导出失败：$error';
   }
+
+  @override
+  String get cloudCapabilityTitle => '后端能力';
+
+  @override
+  String cloudCapabilityLine(String concurrency, String binary) {
+    return '并发保护：$concurrency · 二进制传输：$binary';
+  }
+
+  @override
+  String get cloudCapYes => '原生支持';
+
+  @override
+  String get cloudCapApprox => '近似（校验兜底）';
+
+  @override
+  String get cloudCapNo => '降级模式';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -15398,4 +15415,21 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get tagSelectOwnerManaged => '共享帳本標籤由所有者管理';
+
+  @override
+  String get cloudCapabilityTitle => '後端能力';
+
+  @override
+  String cloudCapabilityLine(String concurrency, String binary) {
+    return '並發保護：$concurrency · 二進位傳輸：$binary';
+  }
+
+  @override
+  String get cloudCapYes => '原生支援';
+
+  @override
+  String get cloudCapApprox => '近似（校驗兜底）';
+
+  @override
+  String get cloudCapNo => '降級模式';
 }

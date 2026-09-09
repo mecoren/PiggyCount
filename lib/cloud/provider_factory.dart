@@ -36,6 +36,25 @@ Future<({CloudProvider? provider, CloudAuthService? auth})> createCloudServices(
     case CloudBackendType.supabase:
       // 创建并初始化 Supabase provider
       // 包内会处理重复初始化的问题
+      // LOG-01（Supabase 侧收编，对齐 WebDAV/S3 注入模式）：metadata
+      // DB 表读写失败等关键告警接入应用日志管线（此前 dev.log 只到
+      // console，release 构建无痕迹）。
+      SupabaseStorageService.storageLogger = CloudSyncLogger(
+        onLog: (level, message) {
+          switch (level) {
+            case fcs_log.LogLevel.debug:
+            case fcs_log.LogLevel.info:
+              logger.info('CloudSync', message);
+              break;
+            case fcs_log.LogLevel.warning:
+              logger.warning('CloudSync', message);
+              break;
+            case fcs_log.LogLevel.error:
+              logger.error('CloudSync', message);
+              break;
+          }
+        },
+      );
       final provider = SupabaseProvider();
       await provider.initialize({
         'url': config.supabaseUrl!,

@@ -7800,4 +7800,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String syncHealthExportFailed(String error) {
     return '진단 데이터 내보내기 실패: $error';
   }
+
+  @override
+  String get cloudCapabilityTitle => '백엔드 기능';
+
+  @override
+  String cloudCapabilityLine(String concurrency, String binary) {
+    return '동시성 보호: $concurrency · 바이너리 전송: $binary';
+  }
+
+  @override
+  String get cloudCapYes => '네이티브';
+
+  @override
+  String get cloudCapApprox => '근사(검증 대체)';
+
+  @override
+  String get cloudCapNo => '저하 모드';
 }

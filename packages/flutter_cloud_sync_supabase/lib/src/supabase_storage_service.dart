@@ -2,15 +2,29 @@ library;
 
 import 'dart:convert';
 import 'dart:developer' as dev;
+import 'dart:typed_data';
 
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
 /// Supabase implementation of [CloudStorageService].
-class SupabaseStorageService implements CloudStorageService {
+///
+/// P1-4（2026-09-09）：实现 [BinaryCapableStorage] —— Supabase SDK 的
+/// uploadBinary/download 本身就是字节接口，此前未实现可选能力接口导致
+/// 附件/ZIP 备份恒走 base64 文本兜底（流量 +33%、云端文件非原生格式）。
+/// 实现后 [CloudStorageBinaryExt] 自动分派到真字节路径，与 S3/WebDAV
+/// 归一；旧行为（base64 文本对象）由 downloadBinary 的嗅探兜底兼容读取。
+class SupabaseStorageService
+    implements CloudStorageService, BinaryCapableStorage {
   final supabase.SupabaseClient _client;
   final String _bucketName;
   final String? _pathPrefix;
+
+  /// LOG-01（Supabase 侧收编，对齐 WebDAV storageLogger / S3 downgradeLogger
+  /// 模式）：metadata DB 表读写失败等「继续工作但环境异常」的关键告警，
+  /// 此前走 dev.log 只到 console，release 构建用户排查时线索丢失。
+  /// 由 provider 装配处注入；未注入时静默（测试无感）。
+  static CloudSyncLogger? storageLogger;
 
   SupabaseStorageService(this._client, this._bucketName, [this._pathPrefix]);
 
@@ -139,6 +153,79 @@ class SupabaseStorageService implements CloudStorageService {
         rethrow;
       }
       throw CloudStorageException('Download failed: $e', e);
+    }
+  }
+
+  /// P1-4：原生字节上传。与 [upload] 同语义（upsert 覆盖 + 可选 metadata
+  /// 落 DB 表），内容不经过 base64 文本化 —— 附件/ZIP 备份流量直降 33%，
+  /// 云端对象为原生二进制（外部工具可直读）。
+  @override
+  Future<void> uploadBinary({
+    required String path,
+    required List<int> bytes,
+    Map<String, String>? metadata,
+  }) async {
+    try {
+      final user = _client.auth.currentUser;
+      if (user == null) {
+        throw CloudNotAuthenticatedException('User not authenticated');
+      }
+      final fullPath = _buildUserPath(user.id, path);
+      final data = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
+      await _op(
+        'uploadBinary',
+        () => _client.storage.from(_bucketName).uploadBinary(
+              fullPath,
+              data,
+              fileOptions: const supabase.FileOptions(
+                upsert: true,
+                contentType: 'application/octet-stream',
+                cacheControl: '3600',
+              ),
+            ),
+      );
+      if (metadata != null && metadata.isNotEmpty) {
+        await _storeMetadata(fullPath, metadata);
+      }
+    } on supabase.StorageException catch (e) {
+      throw _classify('UploadBinary', e);
+    } catch (e) {
+      if (e is CloudNotAuthenticatedException ||
+          e is CloudAuthException ||
+          e is CloudStorageException) {
+        rethrow;
+      }
+      throw CloudStorageException('UploadBinary failed: $e', e);
+    }
+  }
+
+  /// P1-4：原生字节下载。404 → null（对齐 [download] 幂等语义）；
+  /// 旧行为遗留的 base64 文本对象（实现 BinaryCapableStorage 之前经
+  /// 兜底路径写入的）由调用方嗅探（如备份恢复的 ZIP 魔数探测、附件的
+  /// sha256 终审）保证兼容，本层不做形态猜测。
+  @override
+  Future<Uint8List?> downloadBinary({required String path}) async {
+    try {
+      final user = _client.auth.currentUser;
+      if (user == null) {
+        throw CloudNotAuthenticatedException('User not authenticated');
+      }
+      final fullPath = _buildUserPath(user.id, path);
+      final bytes = await _op(
+          'downloadBinary', () => _client.storage.from(_bucketName).download(fullPath));
+      return bytes;
+    } on supabase.StorageException catch (e) {
+      if (_isNotFound(e)) {
+        return null;
+      }
+      throw _classify('DownloadBinary', e);
+    } catch (e) {
+      if (e is CloudNotAuthenticatedException ||
+          e is CloudAuthException ||
+          e is CloudStorageException) {
+        rethrow;
+      }
+      throw CloudStorageException('DownloadBinary failed: $e', e);
     }
   }
 
@@ -341,6 +428,10 @@ class SupabaseStorageService implements CloudStorageService {
     } catch (e) {
       // 元数据是辅助功能（主数据已上传成功），失败不阻塞主流程，
       // 但记录 warning 便于排查（如 metadata 表未创建）
+      // LOG-01：经 storageLogger 进应用日志（release 可留痕），对齐
+      // WebDAV/S3 的注入模式；未注入时保留 dev.log 兜底（本地调试可见）。
+      storageLogger?.warning(
+          '[Supabase] metadata storage failed for $path: $e');
       dev.log('[Supabase] Warning: metadata storage failed for $path: $e', name: 'SupabaseStorage');
     }
   }
@@ -360,11 +451,7 @@ class SupabaseStorageService implements CloudStorageService {
     } catch (e) {
       // 元数据是辅助功能，失败不阻塞主流程，但记录 warning 便于排查
       // （如 metadata 表未创建）（P-M8）
-      dev.log(
-        '[Supabase] Warning: getMetadata failed for $path: $e',
-        name: 'SupabaseStorage',
-        level: 900,
-      );
+      storageLogger?.warning('[Supabase] getMetadata failed for $path: $e');
       return {};
     }
   }
@@ -376,17 +463,10 @@ class SupabaseStorageService implements CloudStorageService {
     } on supabase.PostgrestException catch (e) {
       // 区分表不存在的错误与其他错误：表不存在属于环境配置问题，降级为 warning；
       // 其他 Postgrest 错误同样记录 warning 但不阻塞删除主流程（P-M8）
-      dev.log(
-        '[Supabase] Warning: deleteMetadata Postgrest error for $path: ${e.message} (code: ${e.code})',
-        name: 'SupabaseStorage',
-        level: 900,
-      );
+      storageLogger?.warning(
+          '[Supabase] deleteMetadata Postgrest error for $path: ${e.message} (code: ${e.code})');
     } catch (e) {
-      dev.log(
-        '[Supabase] Warning: deleteMetadata failed for $path: $e',
-        name: 'SupabaseStorage',
-        level: 900,
-      );
+      storageLogger?.warning('[Supabase] deleteMetadata failed for $path: $e');
     }
   }
 }

@@ -85,7 +85,7 @@
 | SEC-06 | P3 | 安全 | enable 失败 clearAll 抹掉 disable 后保留的旧密钥 | encryption_service_impl.dart:117-125 | ●(留待迭代) |
 | SEC-07 | P3 | 安全 | WebDAV remotePath 前缀自身无 `..` 校验(W-D 互补面) | webdav_provider.dart:108 | ✓ 已修复 |
 | SEC-08 | P3 | 安全 | 备份触发无最小间隔,时钟回拨可重复触发 | backup_scheduler.dart:47-56 | ●(留待迭代) |
-| LOG-01 | P2 | 日志 | dev.log 双轨:WebDAV 7 处+Supabase 5 处关键告警不进应用日志,release 无痕 | webdav_storage_service / supabase_storage_service | ✓ 已修复(WebDAV 侧;Supabase dev.log 3 处随 P1-4 一并收编) |
+| LOG-01 | P2 | 日志 | dev.log 双轨:WebDAV 7 处+Supabase 5 处关键告警不进应用日志,release 无痕 | webdav_storage_service / supabase_storage_service | ✓ 全部修复(WebDAV 7 处 09-08;Supabase 5 处 09-09 经 storageLogger 注入) |
 | LOG-02 | P3 | 日志 | S3 V2→V1 回退与时钟偏差补偿静默 | s3_client.dart:914/1374 | ✓ 已修复 |
 | LOG-03 | P3 | 日志 | 元数据信封解密失败静默,全量下载退化无痕迹 | encrypted_cloud_storage.dart:85-98 | ✓ 已修复 |
 | LOG-04 | P3 | 日志 | LoggerService 启动加载竞态:2s 窗口新日志覆盖丢失历史 | logger_service.dart:215-253 | ●(留待迭代) |
@@ -96,7 +96,7 @@
 | P1-1 | P1 | 归一化 | 四套重试机制参数漂移;WebDAV jitter 时间戳取模非随机;条件 PUT 可安全重试未利用 | s3_client/webdav/TSM/retry_helper | ◐ 2026-09-09:条件 PUT 网络故障安全重试已落地(If-Match 锚点保证,≤2 次,盲写维持不重试)+重试逐次日志(LOG-06);四套收编单一策略层仍留待迭代 |
 | P1-2 | P1 | 弱网 | S3 传输固定 30s 超时,慢网 >350KB 上传确定性失败 | s3_client.dart:67 | ✓ 已修复(自适应+90s 下载档) |
 | P1-3 | P1 | 监控 | verified=false/软失败无计数出口 | cloud_sync_manager/TSM | ✓ 已修复(随 P0-1:soft_fail 独立 outcome,verified=false/objectMissing/备份单账本失败均计数) |
-| P1-4 | P1 | 归一化 | Supabase/iCloud 能力缺口未显式化,盲写降级用户无感知 | cloud_service_page/manager | ●(留待迭代) |
+| P1-4 | P1 | 归一化 | Supabase/iCloud 能力缺口未显式化,盲写降级用户无感知 | cloud_service_page/manager | ✓ 已修复(2026-09-09:Supabase BinaryCapableStorage 落地(流量-33%)+LOG-01 Supabase 侧 dev.log 收编+连接测试弹窗能力矩阵;iCloud 二进制(P2-3,原生侧改造)留待迭代) |
 | P1-5 | P1 | 一致性 | 完整性校验双轨(manager 死代码 vs app 软告警) | cloud_sync_manager.dart:362-400 | ✓ 已修复(2026-09-09:TSM 三破坏性入口内嵌指纹硬校验+单次重下自愈,旧快照保留软告警兼容) |
 | P1-6 | P1 | 数据一致性 | _staleRemoteSlots 仅内存,换名中断+重启→旧槽位重复导入 | transactions_sync_manager.dart:76 | ✓ 已修复(2026-09-09:stale_remote_slots 表 v43,登记/装载/补删跨重启存活) |
 | P2-1 | P2 | 性能 | getStatus 冷启动每账本全量导出算指纹 | TSM:1856 | ●(留待迭代) |
@@ -104,7 +104,7 @@
 | P2-3 | P2 | 性能 | iCloud base64 method channel 内存峰值 4× | icloud_storage_service.dart:56 | ●(留待迭代) |
 | P2-4 | P2 | 健壮性 | 备份调度成败均记当日已触发,弱网日备份失败不再重试 | app.dart:216/backup_scheduler | ●(留待迭代) |
 | P2-5 | P2 | 清理 | 死代码与 meta 归一化 3 处重复 | (死代码已随 3ac366a 清理) | ✓(部分) |
-| P2-6 | P2 | 文档 | 超时/重试参数无集中文档 | — | ○ |
+| P2-6 | P2 | 文档 | 超时/重试参数无集中文档 | — | ✓ 已修复(2026-09-09:docs/sync-reliability-params.md——超时分级/重试矩阵/三层并发防护/非重试面备案) |
 | P2-7 | P2 | 备案 | 已确认非问题清单(is_shared 不同步等 5 项) | — | ✓ |
 
 加密强度正面结论(专项审计,无需整改):AES-256-GCM(nonce 随机 12B)+Argon2id 64MB/3iter(OWASP 下限)+密钥安全存储+弱密码黑名单+密钥轮换检查点,实现正确;日志语句逐点核验无凭据泄漏。

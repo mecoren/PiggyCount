@@ -113,3 +113,26 @@ Provider 装配（`sync_providers.dart` / `cloud_backup_providers.dart`）：`sy
 
 - P1-1 尾巴：四套重试收编单一 RetryPolicy 策略层（S3 条件重试与逐次日志已就位，收编主要是参数集中与 TSM 附件重试迁移）；
 - P1-4（Supabase/iCloud 能力显式化）、P2-1/2/3/4、SEC-03/06/08、LOG-04/05——方案均已定，按批次推进。
+
+---
+
+## 九、第三批实施（同日：P1-4 能力显式化 + P2-6 参数文档 + LOG-01 收尾）
+
+### P1-4：Supabase BinaryCapableStorage + 能力矩阵展示
+
+- **Supabase 二进制路径**（`supabase_storage_service.dart`）：实现 `BinaryCapableStorage`（uploadBinary 直传字节 + downloadBinary 返回原生字节，均带认证门禁/超时包装/异常分类）——SDK 的 uploadBinary/download 本就是字节接口，此前未实现可选能力接口导致附件/ZIP 备份恒走 base64 文本兜底。落地后 `CloudStorageBinaryExt` 自动分派真字节路径，**流量 -33%**，云端对象原生格式。旧 base64 文本对象由既有嗅探兜底兼容（备份恢复 ZIP 魔数/附件 sha256 终审）。新增 4 项语义单测（类型分派/双路径认证门禁/logger 注入），包 23 项全过；
+- **LOG-01 Supabase 侧收编**：5 处 dev.log → `storageLogger` 静态注入（对齐 WebDAV/S3 模式），provider_factory 装配时接线进应用日志（release 可留痕）；
+- **能力矩阵展示**：连接测试成功弹窗附「后端能力」行（并发保护：S3 原生/WebDAV 近似/其余校验兜底；二进制传输：iCloud 标注降级形态）——把降级从静默变透明，l10n×4；
+- **留待迭代备案**：iCloud 二进制路径（P2-3）需原生侧 method channel 改造，本环境无法验证 iOS 原生行为，不在本批实施。
+
+### P2-6：参数集中文档
+
+新增 `docs/sync-reliability-params.md`：四后端超时分级表（S3 自适应 30s+30s/MB 等 13 项）、五套重试策略矩阵（含 S3 条件 PUT 新增的安全重试行）、三层并发防护、四条设计纪律、非重试面备案。此后改参数的唯一权威口径。
+
+### P1-1 尾巴结论（不实施收编，备案理由）
+
+TSM 附件重试（1s/2s/4s）**不迁移**到 core RetryHelper：它是业务级三态语义（ok/objectMissing/transientFailure 需调用方区分），与传输级重试（成功/失败二元）不同构，强行收编会破坏三态返回；且为会话内内存队列 drain，无多端共享风暴面，jitter 无必要。P1-1 的实质债务（WebDAV 假 jitter、条件 PUT 安全重试、参数漂移文档化）已全部落地。
+
+### 回归验证
+
+`flutter analyze` 0 error / 0 warning；全库 `flutter test test/` **1074 项全过**（Supabase 包 23，新增 4）。
