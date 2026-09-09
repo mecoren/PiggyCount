@@ -1028,6 +1028,7 @@
   "conflictForceUploadAction": "覆蓋上傳",
   "conflictCompareMergeAction": "對比合併",
   "cloudConfigCorruptWarning": "雲端設定讀取失敗，自動同步已暫停。請重新設定雲端服務。",
+  "cloudMigrationWarning": "雲端憑證安全遷移失敗，憑證暫以明文形式留在本機。建議重新儲存雲端設定以完成安全遷移。",
   "commonClose": "關閉",
   "commonOther": "其他",
   "commonYesterday": "昨天",

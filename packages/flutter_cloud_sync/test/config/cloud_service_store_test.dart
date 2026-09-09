@@ -1,4 +1,8 @@
 /// P1：secure storage 写失败时必须硬失败，凭据绝不明文落 SharedPreferences。
+///
+/// SEC-03（2026-09-09）：明文迁移失败必须留下结构化痕迹（凭据仍残留
+/// 明文 SharedPreferences，仅 debugPrint 用户不可见）——
+/// lastMigrationErrorKey/Message 供 App 层 banner 呈现。
 library;
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -151,6 +155,74 @@ void main() {
 
       await expectLater(
           store.loadWebdav(), throwsA(isA<CloudStorageException>()));
+    });
+  });
+
+  group('SEC-03：明文迁移失败凭据残留告警', () {
+    tearDown(() {
+      // 静态痕迹是跨测试共享的进程级状态，逐用例复位
+      CloudServiceStore.clearLoadError();
+      CloudServiceStore.clearMigrationError();
+      SharedPreferences.setMockInitialValues({});
+    });
+
+    test('迁移失败（write 抛异常）→ 结构化痕迹记录 key 与原因，明文仍在',
+        () async {
+      SharedPreferences.setMockInitialValues({
+        'cloud_webdav_cfg':
+            '{"type":"webdav","name":"old","webdavUrl":"https://old.example.com",'
+            '"webdavUsername":"u","webdavPassword":"p"}',
+      });
+      // read 返回 null（安全存储无该 key）+ write 抛异常（迁移失败）
+      final store = CloudServiceStore(secureStorage: _BrokenSecureStorage());
+
+      final cfg = await store.loadWebdav();
+      expect(cfg?.type, CloudBackendType.webdav,
+          reason: '迁移失败不阻塞读取——数据可用即工作');
+      expect(CloudServiceStore.lastMigrationErrorKey, 'cloud_webdav_cfg');
+      expect(CloudServiceStore.lastMigrationErrorMessage, isNotNull);
+      final sp = await SharedPreferences.getInstance();
+      expect(sp.getString('cloud_webdav_cfg'), isNotNull,
+          reason: '迁移失败时明文不被误删（否则凭据丢失）');
+    });
+
+    test('迁移成功 → 痕迹清除 + 明文删除（自愈路径）', () async {
+      SharedPreferences.setMockInitialValues({
+        'cloud_s3_cfg': '{"type":"s3","name":"old","s3Bucket":"b"}',
+      });
+      final store = CloudServiceStore(secureStorage: _NoopSecureStorage());
+
+      await store.loadS3();
+      expect(CloudServiceStore.lastMigrationErrorKey, isNull);
+      final sp = await SharedPreferences.getInstance();
+      expect(sp.getString('cloud_s3_cfg'), isNull,
+          reason: '迁移成功后明文必须删除');
+    });
+
+    test('迁移失败后重新保存配置（_writeCfg 清掉明文）→ 痕迹清除', () async {
+      SharedPreferences.setMockInitialValues({
+        'cloud_webdav_cfg':
+            '{"type":"webdav","name":"old","webdavUrl":"https://old.example.com",'
+            '"webdavUsername":"u","webdavPassword":"p"}',
+      });
+      final store = CloudServiceStore(secureStorage: _NoopSecureStorage());
+      // 直接注入上次迁移失败的痕迹（模拟历史失败后用户重新保存）
+      CloudServiceStore.lastMigrationErrorKey = 'cloud_webdav_cfg';
+      CloudServiceStore.lastMigrationErrorMessage = 'prev failure';
+
+      const cfg = CloudServiceConfig(
+        type: CloudBackendType.webdav,
+        name: 'w',
+        webdavUrl: 'https://dav.example.com',
+        webdavUsername: 'u',
+        webdavPassword: 'p',
+      );
+      await store.saveOnly(cfg);
+
+      expect(CloudServiceStore.lastMigrationErrorKey, isNull,
+          reason: '写入成功清掉明文残留后，迁移失败痕迹随之失效');
+      final sp = await SharedPreferences.getInstance();
+      expect(sp.getString('cloud_webdav_cfg'), isNull);
     });
   });
 }

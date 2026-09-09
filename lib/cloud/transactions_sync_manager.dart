@@ -61,6 +61,11 @@ class TransactionsSyncManager implements SyncService {
   /// m-03 修复：状态缓存 TTL，防止其他设备上传后本地仍显示过时的"已同步"状态
   static const _statusCacheTtl = Duration(seconds: 60);
 
+  /// P2-2：附件目录列举缓存 TTL。60s 与状态缓存同档 —— auto_sync 连续
+  /// 记账（防抖 2s 窗口）在 60s 内的重复上传共享一次列举；窗口过后
+  /// 重新列举一次，把他设备的并发上传吸收进来（多判无谓但不漏判）。
+  static const _attachmentListCacheTtl = Duration(seconds: 60);
+
   /// 审计修复（附件原子落盘）：下载写盘临时文件名的进程内自增序号，
   /// 与时间戳组合保证并发下载（semaphore 4）各自独占 tmp 文件。
   static int _attachWriteSeq = 0;
@@ -68,6 +73,26 @@ class TransactionsSyncManager implements SyncService {
   final Map<int, _CachedStatus> _statusCache = {};
   final Map<int, DateTime> _recentLocalChangeAt = {};
   final Map<int, _RecentUpload> _recentUpload = {};
+
+  /// P2-1：本地快照指纹的内存缓存（ledgerId → (导出指纹, 变更校验位)）。
+  ///
+  /// 冷启动首轮 getStatus 曾对每个账本全量导出算指纹（大账本 CPU 重）；
+  /// 60s 状态缓存失效后每次重新导出。现在缓存「上次导出时的指纹 +
+  /// local_changes 轻量校验位（MAX(id) + 未推送行数）」：
+  /// - 命中（校验位不变）→ 跳过全量导出，直接复用指纹；
+  /// - 校验位变了（有新写操作，含 recordChanges:false 导入插入行后的
+  ///   MAX(id) 变化）→ 失效重算。
+  /// 校验位兜底的意义：recordChanges:false 的导入路径不写 local_changes，
+  /// 但其触发的 UI 后处理（PostProcessor.markLocalChanged）与导入
+  /// 恢复后 recompute 快照等场景中，tracker 回调 + 校验位双保险覆盖。
+  final Map<int, ({String fingerprint, String changeGuard})> _localFpCache =
+      {};
+
+  /// P2-1：清理过的指纹缓存条目集合（ledgerId 删除后防复活）。
+  /// 与 [_localFpCache] 分开存：删除账本后 MAX(id) 校验位可能恒定不变，
+  /// 若不记住「曾删除」状态，该 ledgerId 的指纹会在下次 getStatus 复活。
+  /// 上传成功后重新登记即恢复正常缓存语义。
+  final Set<int> _localFpCacheInvalidated = {};
 
   /// 待补齐的附件二进制下载队列(attachment_binary_sync)。
   /// 元组:云对象 sha256 + 落盘目标 fileName。恢复/导入事务提交后入队,
@@ -89,6 +114,16 @@ class TransactionsSyncManager implements SyncService {
   /// 全量下载云端内容探测是否为密文；该状态在用户主动开启加密前是稳定的，
   /// 按 ledgerId 缓存命中结果（60s TTL），避免 broken 态下反复全量下载。
   final Map<int, ({DateTime at, bool encrypted})> _cipherProbeCache = {};
+
+  /// P2-2：云端附件目录名的会话级缓存（名字集合 + 列举时刻）。
+  ///
+  /// 附件对象是内容寻址且 upsert 语义 —— 云端集合在一个会话内只会
+  /// 增（本设备/他设备上传）不会「改名删除」（删除只有换名收尾与
+  /// deleteRemoteLedger 两条路径，均不触碰 attachments/ 前缀）。他设备
+  /// 并发上传只会让缓存「少判已有」→ 多一次无谓探测/上传，不会错判
+  /// 已有 → 漏传（upsert 幂等），故短 TTL 缓存安全。reinit/dispose 清
+  /// 空（换后端/加密态后旧集合无意义）。
+  ({DateTime at, Set<String> names})? _attachmentNameCache;
 
   /// drain 重入守卫:恢复完成 / 初始化完成可能几乎同时触发 drain,
   /// 串行执行避免同一 .bin 被并发下载两次。
@@ -270,8 +305,13 @@ class TransactionsSyncManager implements SyncService {
   void clearStatusCache({int? ledgerId}) {
     if (ledgerId != null) {
       _statusCache.remove(ledgerId);
+      // P2-1：状态缓存与指纹缓存同口径失效——备份恢复等外部导入路径
+      // （recordChanges:false）经 UI 刷新触发本方法，两条缓存必须一起
+      // 过期，否则 getStatus 拿旧指纹把新导入内容误判为「本地未变」
+      invalidateLocalFingerprintCache(ledgerId: ledgerId);
     } else {
       _statusCache.clear();
+      invalidateLocalFingerprintCache();
     }
   }
 
@@ -379,6 +419,9 @@ class TransactionsSyncManager implements SyncService {
     _discoveredPayloads.clear();
     _staleRemoteSlots.clear();
     _cipherProbeCache.clear();
+    _attachmentNameCache = null; // P2-2：换后端/加密态后旧集合无意义
+    _localFpCache.clear(); // P2-1
+    _localFpCacheInvalidated.clear(); // P2-1
 
     logger.info('CloudSync', '已标记需重新初始化（加密状态变更）');
   }
@@ -410,6 +453,9 @@ class TransactionsSyncManager implements SyncService {
     _discoveredPayloads.clear();
     _staleRemoteSlots.clear();
     _cipherProbeCache.clear();
+    _attachmentNameCache = null; // P2-2：换后端/加密态后旧集合无意义
+    _localFpCache.clear(); // P2-1
+    _localFpCacheInvalidated.clear(); // P2-1
     // 自动上传防抖收尾：取消全部待执行计时器。进行中的一轮（如有）
     // 会自然结束（provider 已置 null，其内部会按「云服务不可用」失败并
     // 记 warning，不再补跑）。
@@ -509,6 +555,10 @@ class TransactionsSyncManager implements SyncService {
         _isInitialized = true;
       }
       completer.complete();
+      // P2-1：接线 ChangeTracker 写路径回调——任何登记的本地写操作
+      // 主动失效指纹缓存（ledgerId=0 的 user-global 变更影响全部快照，
+      // 按全部失效处理）。幂等挂载（重复初始化不叠加回调）。
+      _wireChangeTrackerGeneration();
       // 初始化即触发一次补齐：先全量重扫 DB 里「有 sha256 但本地文件缺失」
       // 的附件并入队（审计 A2：_pendingAttachmentJobs 是内存队列，进程重启
       // 即丢失；此前 enqueue 只发生在恢复/导入/合并时机，重启后缺文件永久
@@ -1073,6 +1123,9 @@ class TransactionsSyncManager implements SyncService {
           fp: localFp,
           count: localCount,
         );
+        // P2-1：上传刚导出的指纹登记进本地缓存——上传后紧随的
+        // getStatus（UI 刷新同步状态）命中缓存，零导出
+        await rememberLocalFingerprint(ledgerId, localFp);
         // 立即更新缓存为"已同步"状态
         _statusCache[ledgerId] = _CachedStatus(
           SyncStatus(
@@ -1201,6 +1254,37 @@ class TransactionsSyncManager implements SyncService {
   /// 上传即自愈,窗口归零(文件缺失的孤儿行保持 NULL,交由启动任务再试)。
   ///
   /// 返回 (uploaded, skipped, failed) 统计供调用方汇总。
+  /// P2-2：云端附件目录名集合（带会话级缓存）。
+  ///
+  /// 返回 null = 列举失败（调用方退回逐对象 exists()，与旧行为一致，
+  /// 且不污染缓存）。命中缓存直接复用；过期或首次则列举并刷新缓存。
+  Future<Set<String>?> _remoteAttachmentNames(
+      fcs.CloudProvider provider) async {
+    final cached = _attachmentNameCache;
+    if (cached != null) {
+      final age = DateTime.now().difference(cached.at);
+      if (age < _attachmentListCacheTtl) {
+        logger.debug('CloudSync', '附件目录列举走会话缓存(${cached.names.length} 项, ${age.inSeconds}s)');
+        return cached.names;
+      }
+    }
+    try {
+      final remoteFiles = await provider.storage.list(path: 'attachments');
+      final names = remoteFiles.map((f) => f.name).toSet();
+      _attachmentNameCache = (at: DateTime.now(), names: names);
+      return names;
+    } catch (e) {
+      logger.warning('CloudSync', '附件目录列举失败，退回逐对象探测: $e');
+      return null; // 不刷新缓存：失败态不能覆盖上次成功集合
+    }
+  }
+
+  /// P2-2：本会话上传成功的附件对象登记进缓存（upsert 语义下自己
+  /// 刚写的对象必然存在）。文件级私有小方法，调用点唯一。
+  void _markAttachmentUploaded(String sha) {
+    _attachmentNameCache?.names.add('$sha.bin');
+  }
+
   Future<({int uploaded, int skipped, int failed})> uploadAttachmentObjects(
       {required int ledgerId}) async {
     await _ensureInitialized();
@@ -1255,13 +1339,15 @@ class TransactionsSyncManager implements SyncService {
     // 每笔记账都重复整套；S3 是 N 次 HEAD。单次 list 后用名字集合判存在，
     // 次数从 N 降到 1。列举失败不阻断 —— 退回逐对象 exists()（多一次网络
     // 往返但语义与旧行为完全一致），上传流程永不因探测故障而中止。
-    Set<String>? remoteNames;
-    try {
-      final remoteFiles = await provider.storage.list(path: 'attachments');
-      remoteNames = remoteFiles.map((f) => f.name).toSet();
-    } catch (e) {
-      logger.warning('CloudSync', '附件目录列举失败，退回逐对象探测: $e');
-    }
+    //
+    // P2-2（2026-09-09）：会话级缓存 —— auto_sync 防抖后每笔记账仍要
+    // 重新全量列举附件目录，大附件库（千级对象）下 WebDAV 每轮整目录
+    // XML / S3 全前缀翻页，成本随目录规模线性放大。改为：
+    // - 会话内首次列举后按 TTL（_attachmentListCacheTtl）缓存名字集合；
+    // - 本会话上传成功的对象直接加入缓存（内容寻址 + upsert 语义，
+    //   自己刚写的对象必然存在，无需回读确认）；
+    // - 列举失败不污染缓存（保持回退路径的旧语义）。
+    final remoteNames = await _remoteAttachmentNames(provider);
     String attachmentBinName(String sha) => '$sha.bin';
     bool remoteHas(String sha) =>
         remoteNames?.contains(attachmentBinName(sha)) ?? false;
@@ -1304,6 +1390,9 @@ class TransactionsSyncManager implements SyncService {
         await provider.storage.uploadBinaryOrFallback(
             path: pathForAttachmentBin(sha), bytes: bytes);
         uploaded++;
+        // P2-2：登记进会话缓存，同会话后续上传（含其他账本同 sha
+        // 去重判断）零网络探测
+        _markAttachmentUploaded(sha);
       } catch (e) {
         failed++;
         logger.warning('CloudSync', '附件对象上传失败 sha256=$sha: $e');
@@ -1741,6 +1830,10 @@ class TransactionsSyncManager implements SyncService {
       _statusCache.remove(ledgerId);
       _recentLocalChangeAt.remove(ledgerId);
       _recentUpload.remove(ledgerId);
+      // P2-1：恢复导入（recordChanges:false）不写 local_changes、guard
+      // 校验位不变，必须显式失效指纹缓存——否则后续 getStatus 命中
+      // 恢复前的旧指纹，把刚导入的内容误判为「本地未变」
+      invalidateLocalFingerprintCache(ledgerId: ledgerId);
 
       // P0-1：恢复成功计入指标
       _recordMetrics(SyncOpScenario.snapshotRestore, SyncOpOutcome.success,
@@ -1907,6 +2000,9 @@ class TransactionsSyncManager implements SyncService {
           _statusCache.remove(ledgerId);
           _recentLocalChangeAt.remove(ledgerId);
           _recentUpload.remove(ledgerId);
+          // P2-1：合并写入与恢复同理（不写 local_changes / guard 不变），
+          // 显式失效指纹缓存
+          invalidateLocalFingerprintCache(ledgerId: ledgerId);
 
           // 附件差异贯通：modified 合并可能带入带 sha256 的附件清单，本地缺的
           // 文件从 attachments/<sha256>.bin 后台补齐（与下载恢复路径同口径，
@@ -1952,11 +2048,16 @@ class TransactionsSyncManager implements SyncService {
     logger.debug('CloudSync', '缓存未命中，开始计算: ledgerId=$ledgerId');
 
     try {
-      // 计算本地指纹
-      final jsonStr = await exportTransactionsJson(db, ledgerId);
-      final localMap = jsonDecode(jsonStr) as Map<String, dynamic>;
-      final localFp = _contentFingerprintFromMap(localMap);
-      final localCount = (localMap['count'] as num?)?.toInt() ?? 0;
+      // 计算本地指纹（P2-1：优先走指纹缓存——冷启动首轮 getStatus 曾对
+      // 每个账本全量导出算指纹，大账本 CPU 重；缓存 + 变更校验位命中时
+      // 直接复用，跳过导出。jsonStr 为 null 表示走缓存路径，下方按需
+      // 传给 manager 的 F6 复用参数随之省略——manager 内部会自行导出，
+      // 退化为旧行为一次，不影响正确性）
+      final local =
+          await _localFingerprintWithCache(ledgerId);
+      final localFp = local.fingerprint;
+      final localCount = local.count;
+      final jsonStr = local.jsonStr;
 
       // 若刚刚上传成功且在短时间窗口内（15秒），且本地指纹与上传时一致，直接认定已同步
       final ru = _recentUpload[ledgerId];
@@ -1994,11 +2095,14 @@ class TransactionsSyncManager implements SyncService {
           localUpdatedAt: await _computeLocalUpdatedAt(ledgerId),
           forceRefresh: true,
           // F6：复用上方已导出的 JSON，省去 manager 内部对同一账本的
-          // 第二次全量导出
+          // 第二次全量导出（P2-1 缓存命中路径 jsonStr 为 null，包内
+          // 按需自行导出——该场景云端指纹必然要全量下载比对，导出
+          // 无法避免，不构成退化）
           localSerializedData: jsonStr,
           // F6 延伸：localMap 是同一份 payload 的已解析形态，count
-          // 直接透传，manager 跳过第二次 jsonDecode
-          localParsedCount: localCount);
+          // 直接透传，manager 跳过第二次 jsonDecode（缓存命中路径
+          // count=0 时省略——包内自行重算，避免拿 0 当真实 count）
+          localParsedCount: jsonStr != null ? localCount : null);
 
       // 转换包的 SyncStatus 为 PiggyCount 的 SyncStatus
       final status = _convertSyncStatus(fcsStatus);
@@ -2159,7 +2263,119 @@ class TransactionsSyncManager implements SyncService {
   void markLocalChanged({required int ledgerId}) {
     _statusCache.remove(ledgerId);
     _recentLocalChangeAt[ledgerId] = DateTime.now();
+    // P2-1：UI 后处理显式标记本地变更 → 指纹缓存一并失效
+    invalidateLocalFingerprintCache(ledgerId: ledgerId);
     logger.info('CloudSync', '标记本地变更: $ledgerId');
+  }
+
+  // ============ P2-1：本地快照指纹缓存 ============
+
+  /// 挂载 ChangeTracker 写路径回调（幂等）。user-global（ledgerId=0）
+  /// 变更影响所有快照 → 全部失效。
+  void _wireChangeTrackerGeneration() {
+    final tracker = repo.changeTracker;
+    if (tracker == null) return;
+    tracker.onLocalContentGeneration ??= (ledgerId) {
+      if (ledgerId == null || ledgerId == 0) {
+        invalidateLocalFingerprintCache();
+      } else {
+        invalidateLocalFingerprintCache(ledgerId: ledgerId);
+      }
+    };
+  }
+
+  /// 失效本地指纹缓存。不带 [ledgerId] = 全部失效（user-global 变更/
+  /// 批量导入/未知作用域）。
+  void invalidateLocalFingerprintCache({int? ledgerId}) {
+    if (ledgerId == null) {
+      if (_localFpCache.isNotEmpty) {
+        _localFpCacheInvalidated.addAll(_localFpCache.keys);
+        _localFpCache.clear();
+      }
+      return;
+    }
+    if (_localFpCache.remove(ledgerId) != null) {
+      _localFpCacheInvalidated.add(ledgerId);
+    }
+  }
+
+  /// local_changes 轻量校验位：MAX(id) + 未推送行数。
+  ///
+  /// 指纹缓存命中前的兜底校验——两次调用间该值不变，则期间无任何
+  /// 新登记的写操作（recordChanges:false 导入不插行，但 MAX(id) 在
+  /// 其他写后单调增会反映出来；纯 suppressed 导入后 UI 刷新通常伴
+  /// 随 markLocalChanged 主动失效）。两条防线（tracker 回调 + 校验位）
+  /// 任一发现变化都会失效。
+  Future<String> _localChangeGuard() async {
+    try {
+      final maxQuery = db.selectOnly(db.localChanges)
+        ..addColumns([
+          db.localChanges.id.max(),
+          db.localChanges.id.count(),
+        ]);
+      final row = await maxQuery.getSingleOrNull();
+      final maxId = row?.read(db.localChanges.id.max()) ?? -1;
+      final total = row?.read(db.localChanges.id.count()) ?? 0;
+      return '$maxId/$total';
+    } catch (_) {
+      // 查询失败：返回随机值强制失效（宁可多算不可漏算）
+      return 'err/${DateTime.now().millisecondsSinceEpoch}';
+    }
+  }
+
+  /// 取本地指纹（P2-1 缓存路径）。
+  ///
+  /// 命中且校验位不变 → 复用上次导出的指纹，跳过全量导出（冷启动/
+  /// 缓存过期后的 getStatus 主要 CPU 成本归零）；否则全量导出并刷新
+  /// 缓存。上传成功路径调用 [rememberLocalFingerprint] 登记后同样受益。
+  Future<({String fingerprint, int count, String? jsonStr})>
+      _localFingerprintWithCache(int ledgerId) async {
+    final guard = await _localChangeGuard();
+    final cached = _localFpCache[ledgerId];
+    if (cached != null &&
+        !_localFpCacheInvalidated.contains(ledgerId) &&
+        cached.changeGuard == guard) {
+      logger.debug('CloudSync',
+          '本地指纹走缓存: ledgerId=$ledgerId (guard=$guard)');
+      return (
+        fingerprint: cached.fingerprint,
+        count: 0, // count 缓存未存——复用方需 count 时另行查询或全量导出
+        jsonStr: null,
+      );
+    }
+    // 全量导出（同时刷新缓存）
+    final jsonStr = await exportTransactionsJson(db, ledgerId);
+    final localMap = jsonDecode(jsonStr) as Map<String, dynamic>;
+    final fp = _contentFingerprintFromMap(localMap);
+    final count = (localMap['count'] as num?)?.toInt() ?? 0;
+    _localFpCache[ledgerId] = (fingerprint: fp, changeGuard: guard);
+    _localFpCacheInvalidated.remove(ledgerId);
+    return (fingerprint: fp, count: count, jsonStr: jsonStr);
+  }
+
+  /// 上传/导出路径已有全量导出结果时登记进缓存（省去 getStatus 侧
+  /// 重复导出）。guard 以登记时刻现算——登记前的写操作已包含在
+  /// 导出的内容里，无漏判。
+  Future<void> rememberLocalFingerprint(
+      int ledgerId, String fingerprint) async {
+    _localFpCache[ledgerId] = (
+      fingerprint: fingerprint,
+      changeGuard: await _localChangeGuard(),
+    );
+    _localFpCacheInvalidated.remove(ledgerId);
+  }
+
+  /// 测试钩子（@visibleForTesting）：手动执行 tracker 回调接线
+  /// （生产在 _ensureInitialized 提交后自动挂；测试不走初始化）。
+  @visibleForTesting
+  void wireChangeTrackerGenerationForTesting() => _wireChangeTrackerGeneration();
+
+  /// 测试钩子（@visibleForTesting）：取本地指纹（走 P2-1 缓存路径）。
+  /// 生产代码禁止使用——getStatus 才是正式消费方。
+  @visibleForTesting
+  Future<String> localFingerprintForTesting(int ledgerId) async {
+    final r = await _localFingerprintWithCache(ledgerId);
+    return r.fingerprint;
   }
 
   /// M7：上传前冲突判定。返回探测结果：
@@ -2762,6 +2978,9 @@ class TransactionsSyncManager implements SyncService {
             '下载完成(覆盖语义): ledgerId=$ledgerId, inserted=${restored.inserted}, 清空=${restored.deletedDup}, skippedRecurring=${restored.skippedRecurring}');
         // 审计 TSM-P10：恢复已成功提交，此后失败不再回收账本行（数据是完整的）
         createdLedgerThisCall = null;
+        // P2-1：覆盖恢复（recordChanges:false）显式失效指纹缓存；
+        // 下方换名收尾若走 _uploadCurrentLedgerCore 会重新登记新值
+        invalidateLocalFingerprintCache(ledgerId: ledgerId);
         if (restored.skippedRecurring > 0) {
           logger.warning('CloudSync',
               '恢复时有 ${restored.skippedRecurring} 笔同日周期实例被判重跳过，请核对源端明细');
@@ -3368,6 +3587,10 @@ class TransactionsSyncManager implements SyncService {
     }
 
     if (newLedgerId == null) return null;
+
+    // P2-1：云端账本导入（recordChanges:false）不写 local_changes、
+    // guard 校验位不变，显式失效新账本的指纹缓存
+    invalidateLocalFingerprintCache(ledgerId: newLedgerId);
 
     logger.info('CloudSync',
         '云端账本导入完成: localId=$newLedgerId, slotKey=${meta.slotKey}, name=${meta.name}, inserted=$inserted, skippedRecurring=$importSkippedRecurring');

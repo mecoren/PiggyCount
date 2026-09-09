@@ -27,6 +27,7 @@
     "description": "Action to open the per-item diff preview and merge both sides instead of overwriting either one (direction arbitration fallback)"
   },
   "cloudConfigCorruptWarning": "Cloud configuration could not be read — automatic sync has been paused. Please set up your cloud service again.",
+  "cloudMigrationWarning": "Cloud credentials could not be migrated to secure storage and are still stored in plain text on this device. Please re-save your cloud configuration to complete the secure migration.",
   "commonConfirm": "Confirm",
   "commonSave": "Save",
   "commonDelete": "Delete",

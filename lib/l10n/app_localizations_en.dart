@@ -67,6 +67,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Cloud configuration could not be read — automatic sync has been paused. Please set up your cloud service again.';
 
   @override
+  String get cloudMigrationWarning =>
+      'Cloud credentials could not be migrated to secure storage and are still stored in plain text on this device. Please re-save your cloud configuration to complete the secure migration.';
+
+  @override
   String get commonConfirm => 'Confirm';
 
   @override

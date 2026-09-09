@@ -136,3 +136,59 @@ TSM 附件重试（1s/2s/4s）**不迁移**到 core RetryHelper：它是业务�
 ### 回归验证
 
 `flutter analyze` 0 error / 0 warning；全库 `flutter test test/` **1074 项全过**（Supabase 包 23，新增 4）。
+
+---
+
+## 十、第四批实施(2026-09-10:P2-1/P2-2/P2-4/SEC-03/SEC-06/SEC-08/LOG-04/LOG-05 收尾批)
+
+### P2-4 + SEC-08:备份失败补试 + 时钟回拨防护
+
+- **语义变更**:`backup_auto_last_date` 去重 key **仅成功写入**——弱网日 22:00 备份失败不再占用当日名额,按 30 分钟退避自动补试直至成功或跨日(P2-4);
+- **回拨防护**(SEC-08):`BackupScheduler.attemptAllowed` 纯函数——`backup_auto_last_attempt_ms` 锚点 + `minAttemptInterval` 30 分钟失败退避(调度器分钟级 tick 不连打云端) + `clockRollbackTolerance` 5 分钟回拨容差(now 早于锚点减容差一律拦截,NTP 小幅修正不误伤、回拨后爬回仍须满退避间隔);手动备份同口径写 attempt 锚点(用户刚试过,30 分钟内不叠加自动补试);
+- **测试**:`backup_scheduler_test.dart` 新增 6 项(attemptAllowed 全矩阵 + 失败不占名额),组内 16 项全过。
+
+### SEC-03:明文迁移失败凭据残留告警
+
+- 包侧:`CloudServiceStore.lastMigrationErrorKey/Message` 结构化痕迹(迁移失败时记录,迁移成功/_writeCfg 清明文时自愈清除),`activeCloudConfigProvider` 同步转 `cloudMigrationWarningProvider`;
+- App 侧:云同步页新增 tertiary 色 banner(区别于损坏的 error 红,非致命——数据可用即工作),l10n ×4(`cloudMigrationWarning`);
+- **测试**:包内新增 3 项(失败记录痕迹且明文不被误删/成功清除+明文删除/重保存配置清除痕迹),包 93 项全过。
+
+### SEC-06:enable 失败不清旧密钥
+
+- enable 前快照旧三件套(key/salt/verifier),失败路径**恢复旧材料**而非 `clearAll`(旧版会把 disable 后特意保留的旧密钥一并抹掉,存量密文从此不可解密);首次 enable(无旧材料)维持 clearAll 清半写入状态;恢复失败记 error 提示重置加密;
+- **测试**:新增 2 项(disable→enable 失败→旧三件套字节级恢复+旧密码可解旧 verifier/首次失败→清半写入),文件 55 项全过。
+
+### LOG-04:LoggerService 启动加载竞态
+
+- 症状:fire-and-forget `_loadLogs` + `_isLoaded` 立即置 true——窗口期新日志先入队,2s 节流保存把「只含新日志」的队列覆盖写盘(**历史永久丢失**);加载完成后旧日志追加队尾(时序颠倒);
+- 修复:single-flight `_ensureLoaded` + `_pendingLogs` 暂存(未加载完成的新日志一律暂存,完成后历史在前按序并入) + `_doSaveLogs` 写盘前等加载 + `clear` 世代计数(加载在 flight 时清空,完成后不回填);`exportAsText`/`logs` 含暂存条目;
+- **测试**:新增 4 项(窗口期不丢+时序/写盘不被覆盖/清空优先/正常路径),`logger_service_test.dart` 12 项全过。
+
+### LOG-05:日志中央脱敏层
+
+- `LogSanitizer`:全部日志(Flutter+原生桥接)入队/落盘前统一过滤——URL userinfo(`https://u:p@h` → `https://***@h`)、键值对凭据(password/secret/anonKey/apiKey/token/authorization 等 15 词,`k=v`/`k:v` 形态,大小写不敏感)、JSON 凭据字段、Bearer/Basic 头;
+- 顺序敏感:Bearer/Basic 头先于键值对(否则 `Authorization: Bearer xxx` 会脱成 `Authorization: *** xxx` 留 token 残值);幂等(`***` 不被再改写);账本名/指纹哈希按备案保留(非凭据,排障对账需要);
+- **测试**:8 项单测(URL/双形态键值对/JSON/头/多处/不受影响项/幂等/入口统一 message+error)。
+
+### P2-1:getStatus 冷启动指纹缓存
+
+- `_localFpCache`(ledgerId → 指纹+校验位):命中时跳过全量导出(冷启动大账本 CPU 归零);**双失效防线**——①`local_changes` 轻量校验位(MAX(id)+COUNT,查询失败返回随机值强制失效——宁可多算不可漏算)②`ChangeTracker.onLocalContentGeneration` 写路径回调(user-global=0 影响全部快照,按全部失效);
+- **recordChanges:false 导入路径显式失效**(不写 local_changes、guard 不变的漏判窗口):恢复(downloadAndRestore/restoreAll 覆盖语义)、合并(applyPreviewChanges)、云端账本导入(importRemoteLedger)、备份恢复(runAfterDownload/C → clearStatusCache 全量)逐点补失效;`clearStatusCache` 与指纹缓存同口径;上传成功 `rememberLocalFingerprint` 登记(上传后 UI 刷新 getStatus 零导出);reinit/dispose 清空;
+- getStatus 缓存命中路径 `localSerializedData/localParsedCount` 省略(包内按需自行导出——该场景云端指纹必然全量下载比对,导出无法避免,不构成退化);
+- **测试**:`local_fingerprint_cache_test.dart` 5 项(命中复用/guard 变化失效/tracker 回调失效/user-global 全失效/markLocalChanged 失效)。
+
+### 弱网档双端实测:评估完成,执行受环境阻断
+
+单模拟器(PS16k 镜像)2 小时冷启动窗口 `adb offline`(qemu 近闲置、非 crash),双端无从开展;已排除 adb 重启/锁清理/递增等待,残留已清理。弱网相关修复以单测矩阵为替代性证据(P1-2 超时档 5 项/P1-1 条件重试 5 项/P2-4 矩阵 6 项),完整评估与重跑指引归档 `docs/synctest/弱网档双端实测评估-2026-09-10.md`。
+
+### 回归验证(2026-09-10)
+
+- `flutter analyze`:0 error / 0 warning(info 级既有遗留不变);
+- 全库 `flutter test test/`:**1103 项全过**(基线 1074 + 本批净增:备份 6/SEC-06 2/LOG 12/P2-1 5,另 l10n 重生成);
+- 包套件:core 93(基线 90+SEC-03 3)/S3 129/WebDAV 59/iCloud 8/Supabase 23,全过;合计 **1215 项,0 失败**(1 skip 为 W5 集成测试按设计);
+- 审计问题清单 28 项全部闭环或备案:26 项已修复(✓),P2-3(iCloud 原生侧)/N-2 留待迭代备案,弱网双端实测待环境具备时按指引补做。
+
+### 本批后剩余待办
+
+- P2-3 iCloud base64 method channel 内存峰值(原生侧改造,本环境无法验证 iOS 原生行为);
+- 弱网档双端实测(条件具备时按 §五指引执行)。

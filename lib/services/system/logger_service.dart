@@ -137,6 +137,79 @@ class LogEntry {
   static String _threeDigits(int n) => n.toString().padLeft(3, '0');
 }
 
+/// 日志脱敏（LOG-05）：日志明文落盘且可分享/导出，此前防泄漏完全依赖
+/// 每处调用点自觉不写敏感值。这里是中央脱敏层——所有日志（含原生桥接
+/// 与未来的新调用点）在进入内存队列/落盘前统一过滤，防线不再依赖人。
+///
+/// 策略（模式匹配，宁可多脱不可漏脱）：
+/// - URL 内嵌凭据：`https://user:pass@host` → `https://***@host`
+///   （WebDAV/Supabase 端点误带凭据的直接外泄面）；
+/// - 键值对凭据：`password=X` / `passwd` / `secret` / `secretKey` /
+///   `anonKey` / `apiKey` / `api_key` / `token` / `accessToken` /
+///   `authorization`（大小写不敏感，值的边界为行尾/空白/引号/逗号/分号/
+///   括号/`&`）→ `key=***`；
+/// - JSON 字段凭据：`"password": "x"` 等同款 key 的 JSON 形态 → `***`
+///   （值里已有引号边界，正则与键值对分开写）；
+/// - Bearer 头：`Bearer xxx` → `Bearer ***`；
+/// - Base64 Basic 头：`Basic xxx` → `Basic ***`。
+///
+/// 已知取舍（审计确认无泄漏，脱敏不针对这些形态）：
+/// - 指纹哈希（sha256 十六进制）非凭据，保留用于排障对账；
+/// - 账本名（seed/导入日志）不脱敏——业务语义量，且不构成凭据。
+class LogSanitizer {
+  LogSanitizer._();
+
+  /// 键值对凭据：key 部分的大小写不敏感词表。组 1 = key+分隔符
+  /// （`=` 或 `:`，含周围空白），组 2 = 值。值的边界为行尾/空白/
+  /// 引号/逗号/分号/圆括号/&/方括号（字符类内逐个列举，避免嵌套转义）。
+  /// 大小写不敏感经构造参数实现（Dart RegExp 不支持 (?i) 全局内联）。
+  static final RegExp _kvCredential = RegExp(
+    '\\b(password|passwd|secret|secretKey|secret_key|anonKey|anon_key|'
+    'apiKey|api_key|token|accessToken|access_token|refreshToken|'
+    'refresh_token|authorization)\\b(\\s*[=:]\\s*)'
+    '([^\\s,;&)(\\[\\]+\'"]+)',
+    caseSensitive: false,
+  );
+
+  /// JSON 字段凭据："password": "x" / "apiKey": "x"。
+  static final RegExp _jsonCredential = RegExp(
+    '("(?:password|passwd|secret|secretKey|secret_key|anonKey|anon_key|'
+    'apiKey|api_key|token|accessToken|access_token|refreshToken|'
+    'refresh_token|authorization)"\\s*:\\s*)"[^"]*"',
+    caseSensitive: false,
+  );
+
+  /// URL 内嵌 userinfo：scheme://user:pass@ → scheme://***@。
+  static final RegExp _urlUserInfo = RegExp(
+    r'([a-zA-Z][a-zA-Z0-9+.\-]*://)([^/@:\s]+):([^@\s]+)@',
+  );
+
+  /// Bearer / Basic 认证头值。
+  static final RegExp _authHeader = RegExp(
+    r'\b(bearer|basic)\s+[A-Za-z0-9\-_.=+/]+',
+    caseSensitive: false,
+  );
+
+  static const _masked = '***';
+
+  /// 对单条日志文本做脱敏（幂等：`***` 不会被再次改写）。
+  ///
+  /// 顺序敏感：先脱 Bearer/Basic 头再脱键值对——`Authorization: Bearer xxx`
+  /// 若键值对先行，会把 `Bearer` 误认作值脱成 `Authorization: *** xxx`，
+  /// 留下 token 残值；头规则先行则整体命中一次脱净。
+  static String sanitize(String input) {
+    var out = input;
+    out = out.replaceAllMapped(
+        _urlUserInfo, (m) => '${m[1]}***@');
+    out = out.replaceAllMapped(
+        _authHeader, (m) => '${m[1]} $_masked');
+    out = out.replaceAllMapped(_jsonCredential, (m) => '${m[1]}"$_masked"');
+    out = out.replaceAllMapped(
+        _kvCredential, (m) => '${m[1]}${m[2]}$_masked');
+    return out;
+  }
+}
+
 /// 日志服务
 class LoggerService {
   static final LoggerService _instance = LoggerService._internal();
@@ -157,15 +230,34 @@ class LoggerService {
   final _listeners = <VoidCallback>[];
 
   bool _isLoaded = false;
+
+  /// LOG-04：历史日志加载的 single-flight Future。
+  ///
+  /// 修复前 _loadLogs 是 fire-and-forget：_isLoaded 立即置 true，历史日志
+  /// 在 SharedPreferences 回调里才入队——窗口期内的新日志直入内存队，
+  /// 2s 节流保存把「只含新日志」的队列覆盖写盘，历史永久丢失；加载
+  /// 完成后旧日志再追加队尾，时序颠倒。现在：加载未完成期间新日志进
+  /// [_pendingLogs] 暂存（不入队、不触发保存），加载完成后按时间序
+  /// （历史在前）并入；[_doSaveLogs] 写盘前先等加载完成，覆盖竞态归零。
+  Future<void>? _loadFuture;
+
+  /// LOG-04：加载竞态窗口期暂存的新日志（等历史日志入队后并入）。
+  final _pendingLogs = Queue<LogEntry>();
+
+  /// LOG-04：clear 的世代计数——加载在 flight 时用户清空日志，随后
+  /// 完成的加载不得把历史日志再填回来（清空语义优先于加载）。
+  int _logsGeneration = 0;
+
   Timer? _saveTimer;
   bool _isSaving = false;
 
-  /// 获取所有日志（自动加载持久化的日志）
+  /// 获取所有日志（自动触发加载，返回当前内存视图 + 暂存日志）
   List<LogEntry> get logs {
     if (!_isLoaded) {
-      _loadLogs();
+      _ensureLoaded();
     }
-    return _logs.toList();
+    if (_pendingLogs.isEmpty) return _logs.toList();
+    return [..._logs, ..._pendingLogs];
   }
 
   /// 添加监听器
@@ -186,10 +278,33 @@ class LoggerService {
   }
 
   /// 添加日志
-  void _addLog(LogEntry entry) {
-    // 确保已加载
+  void _addLog(LogEntry rawEntry) {
+    // LOG-05：中央脱敏层——所有日志（Flutter/原生、新旧调用点）入队
+    // 与落盘前统一过滤，凭据不再依赖每处调用点自觉不写
+    final entry = LogEntry(
+      timestamp: rawEntry.timestamp,
+      level: rawEntry.level,
+      platform: rawEntry.platform,
+      tag: rawEntry.tag,
+      message: LogSanitizer.sanitize(rawEntry.message),
+      error: rawEntry.error == null
+          ? null
+          : LogSanitizer.sanitize(rawEntry.error.toString()),
+      stackTrace: rawEntry.stackTrace,
+    );
+
+    // LOG-04：历史日志尚未加载完成（无论加载是否已触发）→ 暂存，
+    // 等加载完成后按序并入。不触发监听器保存（保存前会等加载完成，
+    // 暂存日志一并入盘）。注意首次写日志也要走这里——_addLog 自身
+    // 触发的 _ensureLoaded 是异步的，本条日志若直接入队会先于历史
+    // 落盘窗口出现（覆盖竞态的根源）。
     if (!_isLoaded) {
-      _loadLogs();
+      _ensureLoaded(); // 幂等：已在 flight 则返回同一 Future
+      _pendingLogs.add(entry);
+      if (kDebugMode) {
+        debugPrint(entry.toFormattedString());
+      }
+      return;
     }
 
     // 循环缓冲：如果超过最大数量，移除最旧的
@@ -211,38 +326,71 @@ class LoggerService {
     _saveLogs();
   }
 
-  /// 加载持久化的日志
-  void _loadLogs() {
-    if (_isLoaded) return;
+  /// LOG-04：single-flight 加载历史日志。
+  ///
+  /// 首个调用方执行实际 IO；窗口期内（_loadFuture 非 null）新日志全部
+  /// 暂存进 [_pendingLogs]；加载完成后历史入队、暂存日志按时间序并入、
+  /// 通知监听器并安排一次保存。进程内只有一个 LoggerService 单例，
+  /// _loadFuture 的生命周期即「启动加载窗口」。
+  Future<void> _ensureLoaded() {
+    if (_isLoaded) return Future.value();
+    return _loadFuture ??= _loadLogs();
+  }
 
+  /// 加载持久化的日志（幂等：并发调用共享同一 Future）
+  Future<void> _loadLogs() async {
+    final generation = _logsGeneration;
     try {
-      SharedPreferences.getInstance().then((prefs) {
-        final jsonStr = prefs.getString(_storageKey);
-        if (jsonStr != null && jsonStr.isNotEmpty) {
-          final List<dynamic> jsonList = jsonDecode(jsonStr);
-          final now = DateTime.now();
+      final prefs = await SharedPreferences.getInstance();
+      // 加载期间用户 clear 过 → 丢弃历史（清空语义优先于加载）
+      if (generation != _logsGeneration) {
+        debugPrint('加载完成前日志已被清空，丢弃历史日志');
+        return;
+      }
+      final jsonStr = prefs.getString(_storageKey);
+      if (jsonStr != null && jsonStr.isNotEmpty) {
+        final List<dynamic> jsonList = jsonDecode(jsonStr);
+        final now = DateTime.now();
 
-          // 过滤掉超过48小时的日志
-          for (final json in jsonList) {
-            try {
-              final entry = LogEntry.fromJson(json as Map<String, dynamic>);
-              final age = now.difference(entry.timestamp);
+        // 过滤掉超过48小时的日志
+        for (final json in jsonList) {
+          try {
+            final entry = LogEntry.fromJson(json as Map<String, dynamic>);
+            final age = now.difference(entry.timestamp);
 
-              if (age.inHours < _maxStorageHours) {
-                _logs.add(entry);
-              }
-            } catch (e) {
-              debugPrint('加载日志条目失败: $e');
+            if (age.inHours < _maxStorageHours) {
+              _logs.add(entry);
             }
+          } catch (e) {
+            debugPrint('加载日志条目失败: $e');
           }
-
-          debugPrint('从持久化存储加载了 ${_logs.length} 条日志');
         }
-      });
+
+        debugPrint('从持久化存储加载了 ${_logs.length} 条日志');
+      }
     } catch (e) {
       debugPrint('加载日志失败: $e');
     } finally {
       _isLoaded = true;
+
+      // 暂存日志并入（历史在前，保持时间序）。暂存可能超出 _maxLogs，
+      // 从队头挤出最旧的历史条目，语义与循环缓冲一致。
+      while (_pendingLogs.isNotEmpty) {
+        if (_logs.length >= _maxLogs) {
+          _logs.removeFirst();
+        }
+        _logs.add(_pendingLogs.removeFirst());
+      }
+
+      _loadFuture = null;
+
+      // 窗口期有暂存日志或有历史并入 → 通知 UI 并安排保存
+      // （保存前 _doSaveLogs 会再等一次 _loadFuture——此刻为 null，
+      // 直接落盘，历史 + 新日志一起写入）
+      if (_listeners.isNotEmpty) {
+        _notifyListeners();
+      }
+      _saveLogs();
     }
   }
 
@@ -256,6 +404,12 @@ class LoggerService {
     if (_isSaving) return;
     _isSaving = true;
     try {
+      // LOG-04：写盘前等启动加载完成——否则会把「只含窗口期新日志」
+      // 的队列覆盖写盘，历史日志永久丢失
+      final loading = _loadFuture;
+      if (loading != null) {
+        await loading;
+      }
       final now = DateTime.now();
       final validLogs = _logs.where((log) {
         final age = now.difference(log.timestamp);
@@ -325,20 +479,51 @@ class LoggerService {
 
   /// 清空日志
   void clear() {
+    // LOG-04：世代计数 +1——若历史加载仍在 flight，加载完成时会
+    // 检测到世代变化而丢弃历史，避免「刚清空又冒出旧日志」。
+    _logsGeneration++;
     _logs.clear();
+    _pendingLogs.clear();
     _notifyListeners();
   }
 
-  /// 导出所有日志为文本
+  /// 单测复位口（@visibleForTesting）：单例状态归零，隔离用例间
+  /// 的加载标志/队列/世代残留。生产代码禁止调用。
+  @visibleForTesting
+  void resetForTesting() {
+    _saveTimer?.cancel();
+    _logs.clear();
+    _pendingLogs.clear();
+    _isLoaded = false;
+    _loadFuture = null;
+    _logsGeneration = 0;
+    _isSaving = false;
+  }
+
+  /// 单测等待口（@visibleForTesting）：等历史日志加载完成。
+  @visibleForTesting
+  Future<void> ensureLoadedForTest() => _ensureLoaded();
+
+  /// 单测保存口（@visibleForTesting）：立即执行一次落盘（绕过 2s 节流）。
+  @visibleForTesting
+  Future<void> doSaveLogsForTest() => _doSaveLogs();
+
+  /// 导出所有日志为文本（LOG-04：含加载窗口期暂存的日志）
   String exportAsText() {
+    if (!_isLoaded) {
+      _ensureLoaded();
+    }
+    final all = _pendingLogs.isEmpty
+        ? _logs.toList()
+        : [..._logs, ..._pendingLogs];
     final buffer = StringBuffer();
     buffer.writeln('=== PiggyCount 日志导出 ===');
     buffer.writeln('导出时间: ${DateTime.now()}');
-    buffer.writeln('日志数量: ${_logs.length}');
+    buffer.writeln('日志数量: ${all.length}');
     buffer.writeln('=' * 50);
     buffer.writeln();
 
-    for (final log in _logs) {
+    for (final log in all) {
       buffer.write(log.toFormattedString());
       buffer.writeln();
     }

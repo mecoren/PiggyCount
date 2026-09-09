@@ -94,6 +94,14 @@ class EncryptionServiceImpl implements EncryptionService {
     // 2. 派生 key
     final key = await keyDerivation.deriveKey(password: password, salt: salt);
 
+    // SEC-06：快照 enable 前的旧密钥材料。disable() 特意保留 secure
+    // storage 中的密钥（用于解密存量密文）；enable 失败时必须把这些
+    // 旧材料**原样恢复**，而不是 clearAll 一并抹掉——否则 disable→
+    // 重设密码失败一次，旧密钥永久丢失，存量密文从此不可解密。
+    final oldKey = await storage.getKey();
+    final oldSalt = await storage.getSalt();
+    final oldVerifier = await storage.getVerifier();
+
     try {
       // 3. 加密 verifier
       final verifier = await cipher.encrypt(
@@ -118,9 +126,25 @@ class EncryptionServiceImpl implements EncryptionService {
       // 避免密钥泄漏 + secure storage 中残留无 verifier 的 key 导致锁死
       key.fillRange(0, key.length, 0);
       salt.fillRange(0, salt.length, 0);
+      // SEC-06：恢复 enable 前的旧材料（disable 保留的旧密钥）。
+      // 三件套齐备 → 逐项写回；原本就没有旧材料（首次 enable）→
+      // clearAll 清掉半写入状态（原语义）。恢复失败不吞原始异常，
+      // 留 warning 由调用方感知（此时旧材料已丢失，需重置加密）。
       try {
-        await storage.clearAll();
-      } catch (_) {}
+        if (oldKey != null && oldSalt != null && oldVerifier != null) {
+          await storage.saveKey(oldKey);
+          await storage.saveSalt(oldSalt);
+          await storage.saveVerifier(oldVerifier);
+        } else {
+          await storage.clearAll();
+        }
+      } catch (rollbackErr) {
+        LoggerService().error(
+          'Encryption',
+          'enable 失败后恢复旧密钥材料失败，存量密文可能无法解密，需重置加密',
+          rollbackErr,
+        );
+      }
       rethrow;
     }
   }

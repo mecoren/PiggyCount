@@ -192,6 +192,80 @@ void main() {
     });
   });
 
+  group('P2-2: 附件目录列举会话缓存', () {
+    test('连续两次上传共享一次 list（TTL 内命中缓存）', () async {
+      final bytes = Uint8List.fromList([3, 3, 3]);
+      final sha = crypto.sha256.convert(bytes).toString();
+      await seedAttachmentRow(fileName: 'c1.png', sha256: sha);
+      await File('${attDir.path}/c1.png').writeAsBytes(bytes);
+
+      final storage = _MapStorage();
+      final manager = buildManager(storage);
+
+      await manager.uploadAttachmentObjects(ledgerId: 1);
+      await manager.uploadAttachmentObjects(ledgerId: 1);
+
+      expect(storage.listCallCount, 1,
+          reason: 'TTL 内第二次上传应命中会话缓存,不再全量列举');
+    });
+
+    test('上传成功的对象登记进缓存——他账本同 sha 零探测', () async {
+      final bytes = Uint8List.fromList([4, 4, 4]);
+      final sha = crypto.sha256.convert(bytes).toString();
+      final tx1 = await seedAttachmentRow(fileName: 'x1.png', sha256: sha);
+      await File('${attDir.path}/x1.png').writeAsBytes(bytes);
+      // 第二账本同 sha 附件行（内容寻址跨账本共享）
+      final l2 = await db.into(db.ledgers).insert(
+            LedgersCompanion.insert(name: 'l2', currency: const d.Value('CNY')),
+          );
+      final t2 = await db.into(db.transactions).insert(
+            TransactionsCompanion.insert(
+              ledgerId: l2,
+              type: 'expense',
+              amount: 1.0,
+              happenedAt: d.Value(DateTime(2026, 8, 3)),
+              syncId: const d.Value('tx-2'),
+            ),
+          );
+      expect(tx1, greaterThan(0));
+      await db.into(db.transactionAttachments).insert(
+            TransactionAttachmentsCompanion.insert(
+              transactionId: t2,
+              fileName: 'x2.png',
+              localSha256: d.Value(sha),
+            ),
+          );
+      await File('${attDir.path}/x2.png').writeAsBytes(bytes);
+
+      final storage = _MapStorage();
+      final manager = buildManager(storage);
+
+      await manager.uploadAttachmentObjects(ledgerId: l2);
+
+      expect(storage.listCallCount, 1,
+          reason: '缓存经第一账本建立；即便首个用例,上传登记也应让'
+              '「先上传后探测」的同轮次去重零额外网络');
+      expect(storage.files['attachments/$sha.bin'], isNotNull);
+    });
+
+    test('列举失败不污染缓存（退回逐对象探测语义）', () async {
+      final bytes = Uint8List.fromList([5, 5, 5]);
+      final sha = crypto.sha256.convert(bytes).toString();
+      await seedAttachmentRow(fileName: 'f1.png', sha256: sha);
+      await File('${attDir.path}/f1.png').writeAsBytes(bytes);
+
+      final storage = _MapStorage();
+      // 制造 list 失败：抛异常的子类 fake
+      final failingStorage = _ListFailsStorage(files: storage.files);
+      final manager = buildManager(failingStorage);
+
+      final result = await manager.uploadAttachmentObjects(ledgerId: 1);
+
+      expect(result.uploaded, 1,
+          reason: 'list 失败应退回逐对象 exists() 路径,上传不中断');
+    });
+  });
+
   group('enqueue + drain 恢复侧', () {
     test('缺文件入队,drain 下载校验后落盘', () async {
       final bytes = Uint8List.fromList([11, 22, 33]);
@@ -465,6 +539,7 @@ void main() {
 class _MapStorage implements fcs.CloudStorageService {
   final Map<String, String> files = {};
   final List<String> downloads = [];
+  int listCallCount = 0;
 
   /// 测试钩子:每次 download 前异步触发(用于把 enqueue 精确卡进
   /// drain 执行期,复刻连续导入的并发时序)。置 null 可自撤销。
@@ -494,6 +569,7 @@ class _MapStorage implements fcs.CloudStorageService {
 
   @override
   Future<List<fcs.CloudFile>> list({required String path}) async {
+    listCallCount++;
     // 附件目录列举：返回该目录下的对象名（path 形如 'attachments'）
     final prefix = path.isEmpty ? '' : '$path/';
     return files.keys
@@ -560,4 +636,17 @@ class _FakePathProvider extends PathProviderPlatform {
 
   @override
   Future<String?> getApplicationDocumentsPath() async => documentsPath;
+}
+
+/// list 恒失败但其余操作可用的 fake（P2-2 失败退路测试用）。
+class _ListFailsStorage extends _MapStorage {
+  _ListFailsStorage({required Map<String, String> files}) {
+    this.files.addAll(files);
+  }
+
+  @override
+  Future<List<fcs.CloudFile>> list({required String path}) async {
+    listCallCount++;
+    throw fcs.CloudStorageException('list failed (simulated)');
+  }
 }

@@ -79,17 +79,17 @@
 | P0-3 | P0 | 正确性 | Supabase 认证/网络不可区分+404 子串判定+零超时 | supabase_storage_service.dart | ✓ 已修复 |
 | SEC-01 | P2 | 安全 | Supabase 未强制 HTTPS,anonKey 可明文传输 | supabase_provider.dart | ✓ 已修复 |
 | SEC-02 | P2 | 安全 | WebDAV 连接测试绕过 HTTPS 强制与防重定向,Basic 凭据可明文外发/跨域转发 | cloud_service_page.dart:1678-1708 | ✓ 已修复 |
-| SEC-03 | P3 | 安全 | 明文迁移失败时凭据无限期残留 SharedPreferences,仅 debugPrint 无告警 | cloud_service_store.dart:72-84 | ●(留待迭代) |
+| SEC-03 | P3 | 安全 | 明文迁移失败时凭据无限期残留 SharedPreferences,仅 debugPrint 无告警 | cloud_service_store.dart:72-84 | ✓ 已修复(2026-09-10:lastMigrationErrorKey/Message 结构化痕迹 + App 层 cloudMigrationWarningProvider → 云页 tertiary banner(l10n×4);迁移成功/写入清明文时自动消警。新增 3 项单测) |
 | SEC-04 | P3 | 安全 | S3 bucket 无字符集校验,配合配置导入可注入路径/userinfo | s3_provider.dart | ✓ 已修复 |
 | SEC-05 | P3 | 安全 | Supabase anonKey 输入框未 obscure | cloud_service_page.dart:1903 | ✓ 已修复 |
-| SEC-06 | P3 | 安全 | enable 失败 clearAll 抹掉 disable 后保留的旧密钥 | encryption_service_impl.dart:117-125 | ●(留待迭代) |
+| SEC-06 | P3 | 安全 | enable 失败 clearAll 抹掉 disable 后保留的旧密钥 | encryption_service_impl.dart:117-125 | ✓ 已修复(2026-09-10:enable 前快照旧三件套,失败时恢复而非 clearAll(首次 enable 无旧材料维持 clearAll);恢复失败记 error 提示重置加密。新增 2 项单测含旧密码可解旧 verifier 终验) |
 | SEC-07 | P3 | 安全 | WebDAV remotePath 前缀自身无 `..` 校验(W-D 互补面) | webdav_provider.dart:108 | ✓ 已修复 |
-| SEC-08 | P3 | 安全 | 备份触发无最小间隔,时钟回拨可重复触发 | backup_scheduler.dart:47-56 | ●(留待迭代) |
+| SEC-08 | P3 | 安全 | 备份触发无最小间隔,时钟回拨可重复触发 | backup_scheduler.dart:47-56 | ✓ 已修复(2026-09-10:随 P2-4——attemptAllowed 纯函数:minAttemptInterval 30 分钟失败退避 + clockRollbackTolerance 5 分钟回拨容差,每次尝试记 backup_auto_last_attempt_ms 锚点;手动备份同口径。新增 6 项单测) |
 | LOG-01 | P2 | 日志 | dev.log 双轨:WebDAV 7 处+Supabase 5 处关键告警不进应用日志,release 无痕 | webdav_storage_service / supabase_storage_service | ✓ 全部修复(WebDAV 7 处 09-08;Supabase 5 处 09-09 经 storageLogger 注入) |
 | LOG-02 | P3 | 日志 | S3 V2→V1 回退与时钟偏差补偿静默 | s3_client.dart:914/1374 | ✓ 已修复 |
 | LOG-03 | P3 | 日志 | 元数据信封解密失败静默,全量下载退化无痕迹 | encrypted_cloud_storage.dart:85-98 | ✓ 已修复 |
-| LOG-04 | P3 | 日志 | LoggerService 启动加载竞态:2s 窗口新日志覆盖丢失历史 | logger_service.dart:215-253 | ●(留待迭代) |
-| LOG-05 | P3 | 日志 | 日志明文落盘可分享、无中央脱敏层;账本名/endpoint 入日志 | logger_service.dart:269 | ●(留待迭代;当前无凭据泄漏,防线依赖每处写对) |
+| LOG-04 | P3 | 日志 | LoggerService 启动加载竞态:2s 窗口新日志覆盖丢失历史 | logger_service.dart:215-253 | ✓ 已修复(2026-09-10:single-flight 加载 + pending 暂存队列(历史在前按序并入) + _doSaveLogs 写盘前等加载 + clear 世代计数防回填;新增 4 项单测) |
+| LOG-05 | P3 | 日志 | 日志明文落盘可分享、无中央脱敏层;账本名/endpoint 入日志 | logger_service.dart:269 | ✓ 已修复(2026-09-10:LogSanitizer 中央脱敏层,全部日志(Flutter/原生)入队落盘前统一过滤——URL userinfo/键值对凭据/JSON 凭据字段/Bearer·Basic 头,大小写不敏感、幂等、顺序敏感(Bearer 头先于键值对防 token 残值);账本名/指纹哈希按备案保留。新增 8 项单测) |
 | LOG-06 | P3 | 日志 | 重试过程无逐次日志,弱网排障无法区分一次成功与重试后成功 | s3_client/_retry 等 | ✓ 已修复(2026-09-09:S3 onRetryEvent 注入 + WebDAV _retryIdempotent logger 留痕) |
 | N-1 | P1 | 资源泄漏 | S3 连接测试 createCloudServices 后不 dispose,连接池每测泄漏 | cloud_service_page.dart:1751 | ✓ 已修复 |
 | N-3 | P2 | 测试基建 | W5 集成测试 skip 依赖 initialize 抛异常,markTestSkipped 在 catch 内被吞→skip 失效真失败 | webdav_basic_auth_preset_integration_test.dart | ✓ 已修复 |
@@ -99,10 +99,10 @@
 | P1-4 | P1 | 归一化 | Supabase/iCloud 能力缺口未显式化,盲写降级用户无感知 | cloud_service_page/manager | ✓ 已修复(2026-09-09:Supabase BinaryCapableStorage 落地(流量-33%)+LOG-01 Supabase 侧 dev.log 收编+连接测试弹窗能力矩阵;iCloud 二进制(P2-3,原生侧改造)留待迭代) |
 | P1-5 | P1 | 一致性 | 完整性校验双轨(manager 死代码 vs app 软告警) | cloud_sync_manager.dart:362-400 | ✓ 已修复(2026-09-09:TSM 三破坏性入口内嵌指纹硬校验+单次重下自愈,旧快照保留软告警兼容) |
 | P1-6 | P1 | 数据一致性 | _staleRemoteSlots 仅内存,换名中断+重启→旧槽位重复导入 | transactions_sync_manager.dart:76 | ✓ 已修复(2026-09-09:stale_remote_slots 表 v43,登记/装载/补删跨重启存活) |
-| P2-1 | P2 | 性能 | getStatus 冷启动每账本全量导出算指纹 | TSM:1856 | ●(留待迭代) |
-| P2-2 | P2 | 性能 | 附件上传每轮 list 全量(会话级缓存缺失) | TSM:1184-1192 | ●(留待迭代) |
+| P2-1 | P2 | 性能 | getStatus 冷启动每账本全量导出算指纹 | TSM:1856 | ✓ 已修复(2026-09-10:内存指纹缓存(_localFpCache) + 双失效防线——①local_changes 轻量校验位(MAX(id)+COUNT)兜底,②ChangeTracker.onLocalContentGeneration 回调(user-global=0 全失效);recordChanges:false 导入路径(恢复/合并/云端账本导入/备份恢复)逐点显式失效+clearStatusCache/runAfterDownload 同口径;上传成功 rememberLocalFingerprint 登记。新增 5 项单测) |
+| P2-2 | P2 | 性能 | 附件上传每轮 list 全量(会话级缓存缺失) | TSM:1184-1192 | ✓ 已修复(2026-09-09:_remoteAttachmentNames 会话缓存(60s TTL) + 上传成功登记 _markAttachmentUploaded(跨账本同 sha 零探测) + 列举失败不污染缓存退回逐对象 exists;reinit/dispose 清空。新增 3 项单测) |
 | P2-3 | P2 | 性能 | iCloud base64 method channel 内存峰值 4× | icloud_storage_service.dart:56 | ●(留待迭代) |
-| P2-4 | P2 | 健壮性 | 备份调度成败均记当日已触发,弱网日备份失败不再重试 | app.dart:216/backup_scheduler | ●(留待迭代) |
+| P2-4 | P2 | 健壮性 | 备份调度成败均记当日已触发,弱网日备份失败不再重试 | app.dart:216/backup_scheduler | ✓ 已修复(2026-09-10:auto_last_date 仅成功写入(失败不占当日名额,30 分钟退避自动补试直至成功或跨日) + attemptAllowed 回拨防护(SEC-08 同批);显示用 last_date 失败也更新反映最近尝试。新增 6 项单测) |
 | P2-5 | P2 | 清理 | 死代码与 meta 归一化 3 处重复 | (死代码已随 3ac366a 清理) | ✓(部分) |
 | P2-6 | P2 | 文档 | 超时/重试参数无集中文档 | — | ✓ 已修复(2026-09-09:docs/sync-reliability-params.md——超时分级/重试矩阵/三层并发防护/非重试面备案) |
 | P2-7 | P2 | 备案 | 已确认非问题清单(is_shared 不同步等 5 项) | — | ✓ |
@@ -147,10 +147,11 @@
 双端一致性:本轮修改不触碰同步协议/指纹/槽位语义(仅错误分类、超时档位、日志管线、输入校验、UI 防护),`docs/synctest/` 两轮实测结论(6006 笔 0 差异)仍然有效;P1-2 超时放宽只影响弱网下的成功概率(旧值必超时的新值可通过),不改变数据路径。
 
 遗留项(下轮迭代,方案见上轮报告 §五/§六):
-- P0-1 SyncMetricsService 指标设施(1 表+~8 埋点+健康卡+诊断导出)
-- P1-4 Supabase/iCloud 能力缺口显式化 + Supabase BinaryCapableStorage(-33% 流量)
-- P1-5 完整性校验收口(manager 校验函数化供 app 恢复链复用)
-- P1-6 _staleRemoteSlots 持久化
-- P1-1 剩余:重试机制统一策略层(core RetryHelper 收编+条件 PUT 有限重试)
-- P2-1 getStatus 指纹缓存表 / P2-2 附件 list 会话缓存 / P2-3 iCloud 路径传递 / P2-4 备份失败补试
-- SEC-03 明文迁移残留告警 / SEC-06 enable 回滚细粒度清理 / SEC-08 备份最小间隔 / LOG-04 启动日志加载竞态 / LOG-05 日志脱敏层 / LOG-06 重试逐次日志
+- P0-1 SyncMetricsService 指标设施(1 表+~8 埋点+健康卡+诊断导出)— ✓ 2026-09-09 已完成
+- P1-4 Supabase/iCloud 能力缺口显式化 + Supabase BinaryCapableStorage(-33% 流量)— ✓ 2026-09-09 已完成(iCloud 二进制 P2-3 原生侧改造仍留待迭代)
+- P1-5 完整性校验收口(manager 校验函数化供 app 恢复链复用)— ✓ 2026-09-09 已完成
+- P1-6 _staleRemoteSlots 持久化 — ✓ 2026-09-09 已完成
+- P1-1 剩余:重试机制统一策略层(core RetryHelper 收编+条件 PUT 有限重试)— ✓ 2026-09-09 已完成(条件 PUT 安全重试+逐次日志;四套收编备案不实施,见 09-09 实施记录)
+- P2-1 getStatus 指纹缓存表 / P2-2 附件 list 会话缓存 / P2-3 iCloud 路径传递 / P2-4 备份失败补试 — P2-1/P2-2/P2-4 ✓ 2026-09-10 已完成(见 docs/synctest/弱网档双端实测评估-2026-09-10.md §二);P2-3(iCloud 原生侧 base64 method channel 改造)仍留待迭代
+- SEC-03 明文迁移残留告警 / SEC-06 enable 回滚细粒度清理 / SEC-08 备份最小间隔 / LOG-04 启动日志加载竞态 / LOG-05 日志脱敏层 / LOG-06 重试逐次日志 — 全部 ✓(LOG-06 2026-09-09;其余 5 项 2026-09-10)
+- 弱网档双端实测:2026-09-10 评估完成、执行受环境阻断(PS16k 镜像冷引导异常),已如实归档并给出重跑指引,见 `docs/synctest/弱网档双端实测评估-2026-09-10.md`

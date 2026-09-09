@@ -18,6 +18,7 @@
   "conflictForceUploadAction": "覆盖上传",
   "conflictCompareMergeAction": "对比合并",
   "cloudConfigCorruptWarning": "云端配置读取失败，自动同步已暂停。请重新配置云服务。",
+  "cloudMigrationWarning": "云凭据安全迁移失败，凭据暂以明文形式留在本机。建议重新保存云配置以完成安全迁移。",
   "commonConfirm": "确定",
   "commonSave": "保存",
   "commonDelete": "删除",

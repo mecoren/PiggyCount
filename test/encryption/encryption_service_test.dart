@@ -13,6 +13,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -130,6 +131,80 @@ void main() {
       await service.enable(password: 'MyPassw0rd');
       expect(service.activeSalt, isNotNull);
       expect(service.activeSalt!.length, 16);
+    });
+
+    test('SEC-06：disable 后 enable 失败 → 旧密钥材料保留（不清密钥）', () async {
+      // 场景：曾开启加密（存在旧 key/salt/verifier）→ disable（材料保留）
+      // → 重新 enable 时中途失败。修复前 clearAll 会把旧材料一并抹掉，
+      // 存量密文从此不可解密。
+      await service.enable(password: 'MyPassw0rd');
+      final oldKey = await storage.getKey();
+      final oldSalt = await storage.getSalt();
+      final oldVerifier = await storage.getVerifier();
+      await service.disable(); // 保留 secure storage 材料
+
+      // saveVerifier 阶段失败：模拟 keystore 写入故障（半持久化状态）
+      final failingStorage = _FailOnNthSaveStorage(
+        base: storage,
+        failOnVerifierSave: true,
+      );
+      final failingService = EncryptionServiceImpl(
+        storage: failingStorage,
+        keyDerivation: Argon2KeyDerivation.forTesting(),
+        cipher: AesGcmCipher(),
+      );
+
+      await expectLater(
+        failingService.enable(password: 'NewPassw0rd'),
+        throwsA(isA<Exception>()),
+      );
+
+      // SEC-06 核心：旧三件套必须原样恢复（字节级一致）
+      final keyAfter = await storage.getKey();
+      final saltAfter = await storage.getSalt();
+      final verifierAfter = await storage.getVerifier();
+      expect(keyAfter, isNotNull, reason: 'disable 保留的旧 key 不得被清除');
+      expect(saltAfter, isNotNull, reason: 'disable 保留的旧 salt 不得被清除');
+      expect(verifierAfter, isNotNull, reason: 'disable 保留的旧 verifier 不得被清除');
+      expect(listEquals(keyAfter, oldKey), isTrue, reason: 'key 字节级一致');
+      expect(listEquals(saltAfter, oldSalt), isTrue, reason: 'salt 字节级一致');
+      expect(
+          listEquals(verifierAfter, oldVerifier), isTrue, reason: 'verifier 字节级一致');
+
+      // 旧密钥体系完好：以「旧密码 + 恢复的旧 salt」重新派生密钥，
+      // 应能解开恢复的旧 verifier（verifier 即用旧密钥加密的已知
+      // 明文——解开即证明恢复的三件套是配套一致的旧材料，
+      // 存量密文未失去钥匙）
+      final derivedOldKey = await Argon2KeyDerivation.forTesting()
+          .deriveKey(password: 'MyPassw0rd', salt: saltAfter!);
+      final verifierPlain = await AesGcmCipher().decrypt(
+        encryptedBytes: verifierAfter!,
+        key: derivedOldKey,
+      );
+      expect(utf8.decode(verifierPlain), 'BEECOUNT_VERIFIER_v1');
+    });
+
+    test('SEC-06：首次 enable 失败（无旧材料）→ clearAll 清掉半写入状态',
+        () async {
+      // 场景：从未开启过加密（无旧材料）→ enable 中途失败。
+      // 原语义保持：clearAll 清掉半写入的 key/salt，避免残留
+      // 「无 verifier 的 key」锁死后续流程。
+      final failingStorage =
+          _FailOnNthSaveStorage(base: storage, failOnVerifierSave: true);
+      final failingService = EncryptionServiceImpl(
+        storage: failingStorage,
+        keyDerivation: Argon2KeyDerivation.forTesting(),
+        cipher: AesGcmCipher(),
+      );
+
+      await expectLater(
+        failingService.enable(password: 'MyPassw0rd'),
+        throwsA(isA<Exception>()),
+      );
+
+      expect(await storage.getKey(), isNull, reason: '无旧材料时半写入的 key 应清除');
+      expect(await storage.getSalt(), isNull);
+      expect(await storage.getVerifier(), isNull);
     });
   });
 
@@ -802,6 +877,52 @@ class InMemorySecureKeyStorage implements SecureKeyStorage {
   Future<void> clearAll() async {
     _store.clear();
   }
+}
+
+/// SEC-06 测试用：saveVerifier 阶段抛异常的装饰 storage——
+/// 模拟 keystore 写入故障，制造 enable 的半持久化失败态。
+/// 读操作全部穿透到 base，保证旧材料快照/恢复断言观察同一底层存储。
+class _FailOnNthSaveStorage implements SecureKeyStorage {
+  _FailOnNthSaveStorage({required this.base, this.failOnVerifierSave = false});
+
+  final InMemorySecureKeyStorage base;
+  final bool failOnVerifierSave;
+
+  @override
+  Future<void> saveKey(List<int> key) => base.saveKey(key);
+
+  @override
+  Future<Uint8List?> getKey() => base.getKey();
+
+  @override
+  Future<void> saveVerifier(List<int> verifier) async {
+    if (failOnVerifierSave) {
+      throw Exception('keystore write failure (simulated)');
+    }
+    return base.saveVerifier(verifier);
+  }
+
+  @override
+  Future<Uint8List?> getVerifier() => base.getVerifier();
+
+  @override
+  Future<void> saveSalt(List<int> salt) => base.saveSalt(salt);
+
+  @override
+  Future<Uint8List?> getSalt() => base.getSalt();
+
+  @override
+  Future<void> saveRekeyCheckpoint(String ciphertextB64) =>
+      base.saveRekeyCheckpoint(ciphertextB64);
+
+  @override
+  Future<String?> getRekeyCheckpoint() => base.getRekeyCheckpoint();
+
+  @override
+  Future<void> clearRekeyCheckpoint() => base.clearRekeyCheckpoint();
+
+  @override
+  Future<void> clearAll() => base.clearAll();
 }
 
 /// 内存版 CloudStorageService，用于 reEncryptExistingCloudData 测试

@@ -28,16 +28,38 @@ class CloudServiceStore {
   static String? lastLoadErrorBackend;
   static String? lastLoadErrorMessage;
 
+  /// SEC-03：明文迁移失败的结构化痕迹（凭据仍残留明文 SharedPreferences）。
+  ///
+  /// _readCfg 旧明文迁移到安全存储失败时记录（key + 原因）。凭据会无限期
+  /// 残留在明文 prefs 里（迁移失败不阻塞读取——数据可用即工作），此前仅
+  /// debugPrint 无任何可见告警。App 层可据此在云页面提示用户「凭据迁移
+  /// 失败，建议重新保存配置以完成安全迁移」。迁移成功、或 _writeCfg
+  /// 写入成功清除明文时清除。
+  static String? lastMigrationErrorKey;
+  static String? lastMigrationErrorMessage;
+
   /// 清除加载错误痕迹（App 层在用户重新配置成功后调用亦可）。
   static void clearLoadError() {
     lastLoadErrorBackend = null;
     lastLoadErrorMessage = null;
   }
 
+  /// 清除迁移失败痕迹（迁移成功 / 新配置写入并清掉明文残留时）。
+  static void clearMigrationError() {
+    lastMigrationErrorKey = null;
+    lastMigrationErrorMessage = null;
+  }
+
   static void _recordLoadError(String backend, Object e) {
     debugPrint('Config parse failed for $backend: $e');
     lastLoadErrorBackend = backend;
     lastLoadErrorMessage = e.toString();
+  }
+
+  static void _recordMigrationError(String key, Object e) {
+    debugPrint('Secure storage migration failed for $key: $e');
+    lastMigrationErrorKey = key;
+    lastMigrationErrorMessage = e.toString();
   }
 
   /// 安全存储实例。Android 使用 EncryptedSharedPreferences 加密。
@@ -77,8 +99,12 @@ class CloudServiceStore {
         await _secure.write(key: key, value: legacy);
         await sp.remove(key);
         debugPrint('Migrated config $key from plaintext prefs to secure storage');
+        // SEC-03：本次迁移成功即清除失败痕迹（上次失败本次成功的自愈）
+        clearMigrationError();
       } catch (e) {
-        debugPrint('Secure storage migration failed for $key: $e');
+        // SEC-03：迁移失败 → 结构化痕迹（凭据仍残留明文 prefs，App 层
+        // 须可见），不再只 debugPrint 无告警
+        _recordMigrationError(key, e);
       }
       return legacy;
     }
@@ -108,6 +134,9 @@ class CloudServiceStore {
     // 写入成功后清除可能残留的历史明文
     final sp = await SharedPreferences.getInstance();
     await sp.remove(key);
+    // SEC-03：明文残留已清 → 迁移失败痕迹随之失效（该 key 的凭据
+    // 已安全落位，不再残留明文）
+    clearMigrationError();
   }
 
   /// 加载当前激活的云服务配置

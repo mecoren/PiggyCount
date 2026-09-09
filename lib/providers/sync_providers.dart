@@ -83,6 +83,14 @@ final cloudServiceStoreProvider =
 final cloudConfigCorruptionProvider =
     StateProvider<({String backend, String message})?>((_) => null);
 
+/// SEC-03：明文迁移失败的呈现状态（null = 正常）。
+/// 旧明文凭据迁移到安全存储失败时仍残留明文 SharedPreferences——
+/// 仅 debugPrint 用户不可见。这里把包侧痕迹转成 UI 可监听状态，
+/// 由云同步页 banner 提示「凭据未完成安全迁移，建议重新保存配置」。
+/// 保存新配置（_writeCfg 清掉明文）或下次迁移成功时自动清除。
+final cloudMigrationWarningProvider =
+    StateProvider<({String key, String message})?>((_) => null);
+
 // 当前激活配置（Future，因需读 SharedPreferences）
 //
 // 审计 M16：loadActive 因安全存储读失败显式上抛时，这里先复用损坏
@@ -110,6 +118,14 @@ final activeCloudConfigProvider =
               backend: errBackend,
               message: CloudServiceStore.lastLoadErrorMessage ?? ''
             );
+  // SEC-03：迁移失败痕迹同步转 UI 状态（成功/清除时置回 null）
+  final migKey = CloudServiceStore.lastMigrationErrorKey;
+  ref.read(cloudMigrationWarningProvider.notifier).state = migKey == null
+      ? null
+      : (
+          key: migKey,
+          message: CloudServiceStore.lastMigrationErrorMessage ?? ''
+        );
   return cfg;
 });
 

@@ -13,6 +13,17 @@ class BackupScheduler {
   /// 每日默认触发时间（HH:mm）
   static const String defaultBackupTime = '22:00';
 
+  /// P2-4/SEC-08：两次自动尝试的最小间隔（失败补试的退避间隔）。
+  ///
+  /// 备份失败不再占用当日名额（P2-4），弱网日按此时长自动补试，
+  /// 直到当日成功或跨日；同时也是失败后的防抖——调度器每分钟 tick，
+  /// 无间隔会分钟级连打云端。
+  static const Duration minAttemptInterval = Duration(minutes: 30);
+
+  /// SEC-08：时钟回拨判定容差。当前时刻比上次尝试记录早于该值视为
+  /// 回拨（NTP 小幅修正不误伤），回拨期间不再触发自动备份。
+  static const Duration clockRollbackTolerance = Duration(minutes: 5);
+
   final Future<void> Function() onCheck;
 
   Timer? _timer;
@@ -53,6 +64,33 @@ class BackupScheduler {
     if (!enabled) return false;
     if (lastDate == formatDate(now)) return false;
     return _minutesOfDay(now) >= scheduledMinutes;
+  }
+
+  /// P2-4/SEC-08：失败补试的当次尝试是否放行（纯函数，可单测）。
+  ///
+  /// [lastAttemptMillis] 为上次自动尝试的 epoch 毫秒（可能成功可能失败，
+  /// 无记录为 null）。放行条件：
+  /// 1. 与上次尝试间隔 ≥ [minAttemptInterval]（失败退避：调度器分钟级
+  ///    tick，弱网失败日每 30 分钟补试一次，直到成功或跨日）；
+  /// 2. 未发生时钟回拨（now 早于上次尝试减 [clockRollbackTolerance]）——
+  ///    时钟回拨到当日窗口起点会重复触发备份，重复上传同内容对象虽
+  ///    幂等（内容寻址/当日文件名覆盖），但会打满云端请求与流量；
+  ///    小幅 NTP 修正（≤容差）不误伤。
+  ///
+  /// 上次尝试已是「今日之前」（跨日残留）→ 间隔条件必然满足，放行。
+  static bool attemptAllowed({
+    required int? lastAttemptMillis,
+    required DateTime now,
+  }) {
+    if (lastAttemptMillis == null) return true;
+    final lastAttempt = DateTime.fromMillisecondsSinceEpoch(lastAttemptMillis);
+    final elapsed = now.difference(lastAttempt);
+    if (elapsed < clockRollbackTolerance) {
+      // 负值 = 时钟早于上次尝试（回拨）；正值小于容差 = 回拨后小幅爬回，
+      // 两者一律按回拨处理，等真实时钟追平或跨日。
+      return false;
+    }
+    return elapsed >= minAttemptInterval;
   }
 
   /// 解析 "HH:mm" 为当日分钟数；非法输入回落 0 点（当日必触发兜底）

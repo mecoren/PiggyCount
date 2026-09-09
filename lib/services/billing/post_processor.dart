@@ -76,6 +76,12 @@ class PostProcessor {
     ref.read(ledgerListRefreshProvider.notifier).state++;
     ref.read(tagListRefreshProvider.notifier).state++;
     ref.read(attachmentListRefreshProvider.notifier).state++;
+    // P2-1：全量下载/备份恢复（recordChanges:false 导入）不写
+    // local_changes，guard 校验位不变——刷新前显式失效状态+指纹缓存，
+    // 否则 getStatus 命中恢复前的旧指纹误判「本地未变」
+    try {
+      ref.read(syncServiceProvider).clearStatusCache();
+    } catch (_) {}
     logger.info('PostProcessor', '云端下载后刷新完成');
   }
 
@@ -87,6 +93,10 @@ class PostProcessor {
     c.read(ledgerListRefreshProvider.notifier).state++;
     c.read(tagListRefreshProvider.notifier).state++;
     c.read(attachmentListRefreshProvider.notifier).state++;
+    // P2-1：同 runAfterDownload——外部导入路径缓存失效
+    try {
+      c.read(syncServiceProvider).clearStatusCache();
+    } catch (_) {}
     logger.info('PostProcessor', '云端下载后刷新完成');
   }
 

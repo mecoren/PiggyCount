@@ -67,6 +67,10 @@ class AppLocalizationsKo extends AppLocalizations {
       '클라우드 설정을 읽을 수 없어 자동 동기화가 일시 중지되었습니다. 클라우드 서비스를 다시 설정해 주세요.';
 
   @override
+  String get cloudMigrationWarning =>
+      '클라우드 자격 증명을 보안 저장소로 이전하지 못해 이 기기에 평문으로 남아 있습니다. 안전한 이전을 완료하려면 클라우드 설정을 다시 저장해 주세요.';
+
+  @override
   String get commonConfirm => '확인';
 
   @override

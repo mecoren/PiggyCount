@@ -31,6 +31,14 @@ class ChangeTracker {
 
   ChangeTracker(this.db);
 
+  /// P2-1：本地内容代际回调——任何登记的写操作后触发，ledgerId 作用域
+  /// （user-global 记 ledgerId=0，快照指纹含 user-global 数据，失效全部）。
+  ///
+  /// TSM 用它失效本地指纹缓存（getStatus 冷启动免全量导出的关键——
+  /// 否则缓存命中与内容真实变化之间存在漏判窗口）。null ledgerId =
+  /// 批量/未知作用域，消费方按「全部失效」处理。
+  void Function(int? ledgerId)? onLocalContentGeneration;
+
   /// 已知的 user-global 实体类型。recordUserGlobalChange 用白名单校验防止
   /// 调用方误用(把 transaction 之类传进来也能通过,但被 assert 拦住)。
   static const Set<String> _userGlobalEntityTypes = {'account', 'category', 'tag', 'exchange_rate_override'};
@@ -189,6 +197,9 @@ class ChangeTracker {
       mode: d.InsertMode.insertOrIgnore,
     );
     logger.debug('ChangeTracker', '$action $entityType($entitySyncId)');
+    // P2-1：insertOrIgnore 静默合并（无新行）时同样失效——内容可能
+    // 已变化（同实体二次编辑），指纹缓存宁可多算一次不可漏算
+    onLocalContentGeneration?.call(ledgerId);
   }
 
   /// 批量登记变更（batch 导入路径专用，审计 TBL-M8）。
@@ -214,6 +225,9 @@ class ChangeTracker {
         );
       }
     });
+    // P2-1：批量行可能混合多账本作用域，按全部失效处理（指纹计算
+    // 成本远低于漏判）
+    onLocalContentGeneration?.call(null);
   }
 
   /// 登记一个**从 server pull 拉下来**的实体在本地的状态。

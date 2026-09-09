@@ -66,6 +66,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cloudConfigCorruptWarning => '云端配置读取失败，自动同步已暂停。请重新配置云服务。';
 
   @override
+  String get cloudMigrationWarning =>
+      '云凭据安全迁移失败，凭据暂以明文形式留在本机。建议重新保存云配置以完成安全迁移。';
+
+  @override
   String get commonConfirm => '确定';
 
   @override
@@ -7795,6 +7799,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get cloudConfigCorruptWarning => '雲端設定讀取失敗，自動同步已暫停。請重新設定雲端服務。';
+
+  @override
+  String get cloudMigrationWarning =>
+      '雲端憑證安全遷移失敗，憑證暫以明文形式留在本機。建議重新儲存雲端設定以完成安全遷移。';
 
   @override
   String get commonConfirm => '確定';

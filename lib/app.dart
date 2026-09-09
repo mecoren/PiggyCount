@@ -173,11 +173,13 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
   }
 
   /// 定时备份检查（BackupScheduler 每分钟调用）：
-  /// 开关开启 && 到达设定时间 && 当日定时未触发 && 云服务就绪 → 后台非阻塞执行。
-  /// 去重 key 用 backup_auto_last_date（仅定时写入）：手动备份不占用当日
-  /// 自动名额，到点仍会执行一次（用最新数据覆盖当日文件）。
-  /// 成败均写 auto key（当日不重试，失败状态显示在卡片供手动补救）。
-  /// 云服务未就绪（LocalOnly 等待期等）不写 key，下一分钟重查。
+  /// 开关开启 && 到达设定时间 && 当日定时未成功 && 上次尝试间隔 ≥30min
+  /// && 云服务就绪 → 后台非阻塞执行。
+  /// 去重 key 用 backup_auto_last_date（仅定时成功写入）：手动备份不占用
+  /// 当日自动名额，失败不占用（P2-4 弱网日自动补试直至成功或跨日）。
+  /// backup_auto_last_attempt_ms 记录每次尝试时刻：失败退避 30 分钟 +
+  /// 时钟回拨防护（SEC-08，回拨期不重复触发）。
+  /// 云服务未就绪（LocalOnly 等待期等）不写任何 key，下一分钟重查。
   Future<void> _runScheduledBackupCheck() async {
     // 审计 S6：启动恢复/全量同步进行中时本轮备份让位——半恢复态 DB
     // 打包上传会覆盖当日好备份。下一分钟重查。
@@ -200,22 +202,34 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
       )) {
         return;
       }
+      // P2-4/SEC-08：失败补试退避 + 时钟回拨防护（纯函数判定，可单测）
+      if (!BackupScheduler.attemptAllowed(
+        lastAttemptMillis: prefs.getInt('backup_auto_last_attempt_ms'),
+        now: now,
+      )) {
+        return;
+      }
 
       final backup = ref.read(cloudBackupServiceProvider);
       if (backup == null) return; // 云未就绪：不计为当日已备
 
+      // 每次尝试（成败均记）：失败退避的锚点 + 回拨判定基准
+      await prefs.setInt(
+          'backup_auto_last_attempt_ms', now.millisecondsSinceEpoch);
       final today = BackupScheduler.formatDate(now);
       try {
         await backup.createBackup();
         await prefs.setString('backup_last_result', 'ok');
         logger.info('Backup', '定时备份完成');
+        // 成功才写 auto 去重 key：当日不再触发。失败不写（P2-4 补试）
+        await prefs.setString('backup_auto_last_date', today);
       } catch (e) {
         await prefs.setString('backup_last_result', 'fail');
-        logger.warning('Backup', '定时备份失败: $e');
+        logger.warning('Backup',
+            '定时备份失败: $e（${BackupScheduler.minAttemptInterval.inMinutes} 分钟后自动补试）');
       }
-      // 显示用 last_date 与定时去重 auto key 都要写
+      // 显示用 last_date 失败时也更新（卡片反映最近一次尝试的日期）
       await prefs.setString('backup_last_date', today);
-      await prefs.setString('backup_auto_last_date', today);
       if (mounted) {
         ref.read(backupRefreshProvider.notifier).state++;
       }

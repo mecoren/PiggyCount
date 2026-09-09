@@ -209,6 +209,12 @@ abstract class AppLocalizations {
   /// **'Cloud configuration could not be read — automatic sync has been paused. Please set up your cloud service again.'**
   String get cloudConfigCorruptWarning;
 
+  /// No description provided for @cloudMigrationWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud credentials could not be migrated to secure storage and are still stored in plain text on this device. Please re-save your cloud configuration to complete the secure migration.'**
+  String get cloudMigrationWarning;
+
   /// No description provided for @commonConfirm.
   ///
   /// In en, this message translates to:

@@ -298,11 +298,15 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
       await block.close();
     }
 
-    // 成败均写当日状态：当日不再自动触发（与定时备份同一规则）
+    // 成败均写当日状态：当日不再自动触发（与定时备份同一规则）。
+    // 失败也顺带刷新 attempt 锚点——用户刚手动试过，30 分钟内自动
+    // 补试不再叠加（P2-4 同一退避口径）。
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-        'backup_last_date', BackupScheduler.formatDate(DateTime.now()));
+    final now = DateTime.now();
+    await prefs.setString('backup_last_date', BackupScheduler.formatDate(now));
     await prefs.setString('backup_last_result', error == null ? 'ok' : 'fail');
+    await prefs.setInt('backup_auto_last_attempt_ms',
+        now.millisecondsSinceEpoch);
 
     if (mounted) {
       setState(() => backupBusy = false);
@@ -520,6 +524,33 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
     );
   }
 
+  /// SEC-03：凭据明文迁移失败 banner。旧明文凭据迁移到安全存储失败时
+  /// 无限期残留明文 SharedPreferences（此前仅 debugPrint），此处显式
+  /// 提示用户重新保存配置以完成安全迁移。
+  Widget _buildMigrationWarningBanner(BuildContext context) {
+    final warning = ref.watch(cloudMigrationWarningProvider);
+    if (warning == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Card(
+        // 非致命（数据可用即工作），用 tertiary 容器区别于损坏的 error 红
+        color: Theme.of(context).colorScheme.tertiaryContainer,
+        elevation: 0,
+        child: ListTile(
+          leading: Icon(Icons.shield_outlined,
+              color: Theme.of(context).colorScheme.onTertiaryContainer),
+          title: Text(
+            AppLocalizations.of(context).cloudMigrationWarning,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onTertiaryContainer,
+                ),
+          ),
+          dense: true,
+        ),
+      ),
+    );
+  }
+
   Widget build(BuildContext context) {
     final authAsync = ref.watch(authServiceProvider);
     final sync = ref.watch(syncServiceProvider);
@@ -573,6 +604,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
         child: Column(
           children: [
             _buildConfigCorruptionBanner(context),
+            _buildMigrationWarningBanner(context),
             Expanded(
               child: authAsync.when(
                 loading: () => DelayedSkeleton(
