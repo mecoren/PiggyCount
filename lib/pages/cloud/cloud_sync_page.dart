@@ -20,6 +20,7 @@ import '../../domain/encryption/encryption_service.dart';
 import '../auth/login_page.dart';
 import 'encryption_dialogs.dart';
 import 'encryption_settings_page.dart';
+import 'sync_health_card.dart';
 import 'sync_preview_dialog.dart';
 
 /// 云同步与备份二级页面 - 包含所有同步操作
@@ -1814,6 +1815,12 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                     ],
                                   ),
                                 ),
+                              ),
+                            // 同步健康卡（审计 P0-1）：本地成功率指标聚合展示
+                            if (canUseCloud)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 12),
+                                child: const SyncHealthCard(),
                               ),
                             // 同步加密入口（S3/WebDAV/Supabase/iCloud）
                             if (canUseCloud)

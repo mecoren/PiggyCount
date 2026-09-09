@@ -295,6 +295,7 @@
   "searchBatchChangeCategory": "调整分类",
   "searchBatchDeleteConfirmTitle": "确认删除",
   "searchBatchDeleteConfirmMessage": "确定要删除选中的 {count} 笔记账吗?\n此操作无法撤销。",
+  "searchBatchDeleteReconfirmMessage": "再次确认：删除后这些记账无法找回。确定要继续吗？",
   "@searchBatchDeleteConfirmMessage": {
     "placeholders": {
       "count": {
@@ -413,11 +414,13 @@
   "ledgersNew": "新建账本",
   "ledgersClear": "清空账本",
   "ledgersClearMessage": "确定要清空账本\"{name}\"的所有账单吗？此操作不可恢复。\\n账本本身会保留，仅删除账单数据。",
+  "ledgersClearReconfirmMessage": "再次确认：清空后账本内的账单数据将永久删除、无法恢复。确定要继续吗？",
   "ledgerDefaultName": "默认账本",
   "ledgersEdit": "编辑账本",
   "ledgersDelete": "删除账本",
   "ledgersDeleteConfirm": "删除账本",
   "ledgersDeleteMessage": "确定要删除该账本及其全部记录吗？此操作不可恢复。\\n若云端存在备份，也会一并删除。",
+  "ledgersDeleteReconfirmMessage": "再次确认：删除后该账本及其全部记录将永久消失（含云端备份），无法恢复。确定要继续吗？",
   "ledgersDeleted": "已删除",
   "ledgersDeleteFailed": "删除失败",
   "ledgersClearTitle": "清空账本",
@@ -432,6 +435,7 @@
   "ledgersDeleteLocal": "仅删除本地账本",
   "ledgersDeleteLocalTitle": "删除本地账本",
   "ledgersDeleteLocalMessage": "确定要删除本地账本\"{name}\"吗？\\n云端备份会保留，您可以随时恢复。",
+  "ledgersDeleteLocalReconfirmMessage": "再次确认：仅删除本机上的该账本，云端备份保留、可随时恢复下载。确定要继续吗？",
   "@ledgersDeleteLocalMessage": {
     "placeholders": {
       "name": {
@@ -847,6 +851,7 @@
   "categoryClearUnused": "清空未使用分类",
   "categoryClearUnusedTitle": "清空未使用分类",
   "categoryClearUnusedMessage": "确定要删除 {count} 个未使用的分类吗？此操作无法撤销。",
+  "categoryClearUnusedReconfirmMessage": "再次确认：删除后这些分类不可恢复，若误删需要重新创建。确定要继续吗？",
   "@categoryClearUnusedMessage": {
     "placeholders": {
       "count": {
@@ -1658,6 +1663,7 @@
     }
   },
   "accountDeleteConfirm": "确认删除该账户吗？",
+  "accountDeleteReconfirmMessage": "再次确认：删除后该账户不可恢复，已保存的账户信息将永久丢失。确定要继续吗？",
   "accountSelectTitle": "选择账户",
   "accountNone": "不选择账户",
   "accountsEnableFeature": "启用账户功能",
@@ -2015,6 +2021,8 @@
   "configImportSubtitle": "从YAML文件恢复配置",
   "configImportNoFilePath": "未选择文件",
   "configImportConfirmTitle": "确认导入",
+  "configImportReconfirmTitle": "确认导入",
+  "configImportReconfirmMessage": "再次确认：导入将覆盖现有配置且不可恢复，建议先备份。确定要继续吗？",
   "configImportSuccess": "配置导入成功",
   "configImportFailed": "配置导入失败",
   "configImportRestartTitle": "需要重启",
@@ -2085,6 +2093,7 @@
   "ledgersDeleteRemote": "删除云端账本",
   "ledgersDeleteRemoteConfirm": "删除云端账本",
   "ledgersDeleteRemoteMessage": "确认删除云端账本\"{name}\"？此操作不可恢复。",
+  "ledgersDeleteRemoteReconfirmMessage": "再次确认：删除后云端该账本及其全部数据将永久消失，多设备将无法再恢复它。确定要继续吗？",
   "@ledgersDeleteRemoteMessage": {
     "placeholders": {
       "name": {
@@ -2097,6 +2106,7 @@
   "ledgersCannotDeleteLastOne": "无法删除最后一个账本",
   "ledgersRestoreAllTitle": "批量恢复",
   "ledgersRestoreAllMessage": "确认恢复所有云端账本？共 {count} 个。",
+  "ledgersRestoreAllReconfirmMessage": "再次确认：恢复将用云端内容覆盖本地账本数据，被覆盖的本地改动无法找回。确定要继续吗？",
   "@ledgersRestoreAllMessage": {
     "placeholders": {
       "count": {
@@ -2119,6 +2129,7 @@
   },
   "ledgersUploadAll": "全部上传",
   "ledgersUploadAllMessage": "确认将 {count} 个本地账本上传到云端？云端现有内容将被本地内容覆盖。",
+  "ledgersUploadAllReconfirmMessage": "再次确认：覆盖后云端原有数据无法恢复，确定要继续吗？",
   "@ledgersUploadAllMessage": {
     "placeholders": {
       "count": {
@@ -2225,6 +2236,7 @@
   "storageHint": "点击项目可清理对应的缓存文件",
   "storageClearConfirmTitle": "确认清理",
   "storageClearAIModelsMessage": "确定要清理所有AI模型吗？大小: {size}",
+  "storageClearReconfirmMessage": "再次确认：清理后需要重新下载，确定要继续吗？",
   "@storageClearAIModelsMessage": {
     "placeholders": {
       "size": {
@@ -2510,6 +2522,7 @@
   "tagClearUnusedEmpty": "没有未使用的标签",
   "tagClearUnusedTitle": "清理未使用标签",
   "tagClearUnusedMessage": "确定要删除 {count} 个未使用的标签吗？",
+  "tagClearUnusedReconfirmMessage": "再次确认：删除后这些标签不可恢复，若误删需要重新创建。确定要继续吗？",
   "@tagClearUnusedMessage": {
     "placeholders": {
       "count": {
@@ -2665,6 +2678,8 @@
     }
   },
   "attachmentStartImport": "开始导入",
+  "attachmentImportReconfirmTitle": "覆盖导入确认",
+  "attachmentImportReconfirmMessage": "再次确认：选择「覆盖」后，同名附件将被归档中的文件替换且无法恢复。确定要继续吗？",
   "attachmentPreview": "预览附件",
   "attachmentPreviewSubtitle": "共 {count} 张图片",
   "@attachmentPreviewSubtitle": {
@@ -3009,6 +3024,7 @@
     }
   },
   "maintenanceOrphanConfirmDeleteBatch": "确定清理选中的 {count} 项吗？操作不可撤销。",
+  "maintenanceOrphanReconfirmMessage": "再次确认：清理后这些数据将被永久删除、无法找回。确定要继续吗？",
   "@maintenanceOrphanConfirmDeleteBatch": {
     "placeholders": {
       "count": {
@@ -3251,6 +3267,7 @@
   "cloudSyncEncryptChangeSuccess": "密码已修改",
   "cloudSyncEncryptResetConfirmTitle": "重置加密",
   "cloudSyncEncryptResetConfirmMessage": "重置将清空云端所有账本备份且不可恢复，确定继续吗？",
+  "cloudSyncEncryptResetReconfirmMessage": "再次确认：重置后云端所有账本备份将永久删除，无法恢复。确定要继续吗？",
   "cloudSyncEncryptResetSuccess": "加密已重置",
   "cloudSyncEncryptDecryptFailed": "解密失败，请检查密码",
   "cloudSyncEncryptMultiDeviceHint": "在其他设备上用相同密码即可解密",
@@ -3398,5 +3415,13 @@
   "@aiPromptVarSectionInserted": {
     "placeholders": { "name": { "type": "String" } }
   },
-  "tagSelectOwnerManaged": "共享账本标签由所有者管理"
+  "tagSelectOwnerManaged": "共享账本标签由所有者管理",
+  "syncHealthTitle": "同步健康",
+  "syncHealthEmpty": "近 30 天暂无同步记录",
+  "syncHealthRate": "近 30 天成功率：{rate}",
+  "syncHealthDetail": "成功 {success} · 失败 {failed} · 未收敛 {softFail} · 并发拦截 {conflict}",
+  "syncHealthTopErrors": "主要失败类别",
+  "syncHealthExport": "导出诊断数据",
+  "syncHealthExported": "诊断数据已导出：{fileName}",
+  "syncHealthExportFailed": "诊断数据导出失败：{error}"
 }

@@ -540,6 +540,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get searchBatchDeleteReconfirmMessage => '再次确认：删除后这些记账无法找回。确定要继续吗？';
+
+  @override
   String get searchBatchSetNoteTitle => '批量设置备注';
 
   @override
@@ -733,6 +736,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get ledgersClearReconfirmMessage =>
+      '再次确认：清空后账本内的账单数据将永久删除、无法恢复。确定要继续吗？';
+
+  @override
   String get ledgerDefaultName => '默认账本';
 
   @override
@@ -747,6 +754,10 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get ledgersDeleteMessage =>
       '确定要删除该账本及其全部记录吗？此操作不可恢复。\\n若云端存在备份，也会一并删除。';
+
+  @override
+  String get ledgersDeleteReconfirmMessage =>
+      '再次确认：删除后该账本及其全部记录将永久消失（含云端备份），无法恢复。确定要继续吗？';
 
   @override
   String get ledgersDeleted => '已删除';
@@ -770,6 +781,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String ledgersDeleteLocalMessage(String name) {
     return '确定要删除本地账本\"$name\"吗？\\n云端备份会保留，您可以随时恢复。';
   }
+
+  @override
+  String get ledgersDeleteLocalReconfirmMessage =>
+      '再次确认：仅删除本机上的该账本，云端备份保留、可随时恢复下载。确定要继续吗？';
 
   @override
   String get ledgersDeleteLocalSuccess => '本地账本已删除';
@@ -870,6 +885,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get ledgersDeleteRemoteReconfirmMessage =>
+      '再次确认：删除后云端该账本及其全部数据将永久消失，多设备将无法再恢复它。确定要继续吗？';
+
+  @override
   String get ledgersDeleting => '删除中...';
 
   @override
@@ -885,6 +904,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String ledgersRestoreAllMessage(int count) {
     return '确认恢复所有云端账本？共 $count 个。';
   }
+
+  @override
+  String get ledgersRestoreAllReconfirmMessage =>
+      '再次确认：恢复将用云端内容覆盖本地账本数据，被覆盖的本地改动无法找回。确定要继续吗？';
 
   @override
   String get ledgersRestoring => '恢复中...';
@@ -904,6 +927,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String ledgersUploadAllMessage(int count) {
     return '确认将 $count 个本地账本上传到云端？云端现有内容将被本地内容覆盖。';
   }
+
+  @override
+  String get ledgersUploadAllReconfirmMessage => '再次确认：覆盖后云端原有数据无法恢复，确定要继续吗？';
 
   @override
   String get ledgersUploadAllComplete => '上传完成';
@@ -2097,6 +2123,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String categoryClearUnusedMessage(int count) {
     return '确定要删除 $count 个未使用的分类吗？此操作无法撤销。';
   }
+
+  @override
+  String get categoryClearUnusedReconfirmMessage =>
+      '再次确认：删除后这些分类不可恢复，若误删需要重新创建。确定要继续吗？';
 
   @override
   String get categoryClearUnusedListTitle => '将被删除的分类：';
@@ -4097,6 +4127,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get accountDeleteConfirm => '确认删除该账户吗？';
 
   @override
+  String get accountDeleteReconfirmMessage =>
+      '再次确认：删除后该账户不可恢复，已保存的账户信息将永久丢失。确定要继续吗？';
+
+  @override
   String get accountSelectTitle => '选择账户';
 
   @override
@@ -4972,6 +5006,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get configImportConfirmTitle => '确认导入';
 
   @override
+  String get configImportReconfirmTitle => '确认导入';
+
+  @override
+  String get configImportReconfirmMessage =>
+      '再次确认：导入将覆盖现有配置且不可恢复，建议先备份。确定要继续吗？';
+
+  @override
   String get configImportSuccess => '配置导入成功';
 
   @override
@@ -5139,6 +5180,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String storageClearAIModelsMessage(String size) {
     return '确定要清理所有AI模型吗？大小: $size';
   }
+
+  @override
+  String get storageClearReconfirmMessage => '再次确认：清理后需要重新下载，确定要继续吗？';
 
   @override
   String storageClearAPKMessage(String size) {
@@ -5815,6 +5859,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get tagClearUnusedReconfirmMessage =>
+      '再次确认：删除后这些标签不可恢复，若误删需要重新创建。确定要继续吗？';
+
+  @override
   String tagClearUnusedSuccess(int count) {
     return '已删除 $count 个标签';
   }
@@ -5988,6 +6036,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get attachmentStartImport => '开始导入';
+
+  @override
+  String get attachmentImportReconfirmTitle => '覆盖导入确认';
+
+  @override
+  String get attachmentImportReconfirmMessage =>
+      '再次确认：选择「覆盖」后，同名附件将被归档中的文件替换且无法恢复。确定要继续吗？';
 
   @override
   String get attachmentPreview => '预览附件';
@@ -6714,6 +6769,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get maintenanceOrphanReconfirmMessage =>
+      '再次确认：清理后这些数据将被永久删除、无法找回。确定要继续吗？';
+
+  @override
   String maintenanceOrphanCleanSuccess(int count) {
     return '已清理 $count 项';
   }
@@ -7301,6 +7360,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cloudSyncEncryptResetConfirmMessage => '重置将清空云端所有账本备份且不可恢复，确定继续吗？';
 
   @override
+  String get cloudSyncEncryptResetReconfirmMessage =>
+      '再次确认：重置后云端所有账本备份将永久删除，无法恢复。确定要继续吗？';
+
+  @override
   String get cloudSyncEncryptResetSuccess => '加密已重置';
 
   @override
@@ -7621,6 +7684,38 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get tagSelectOwnerManaged => '共享账本标签由所有者管理';
+
+  @override
+  String get syncHealthTitle => '同步健康';
+
+  @override
+  String get syncHealthEmpty => '近 30 天暂无同步记录';
+
+  @override
+  String syncHealthRate(String rate) {
+    return '近 30 天成功率：$rate';
+  }
+
+  @override
+  String syncHealthDetail(int success, int failed, int softFail, int conflict) {
+    return '成功 $success · 失败 $failed · 未收敛 $softFail · 并发拦截 $conflict';
+  }
+
+  @override
+  String get syncHealthTopErrors => '主要失败类别';
+
+  @override
+  String get syncHealthExport => '导出诊断数据';
+
+  @override
+  String syncHealthExported(String fileName) {
+    return '诊断数据已导出：$fileName';
+  }
+
+  @override
+  String syncHealthExportFailed(String error) {
+    return '诊断数据导出失败：$error';
+  }
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -8159,6 +8254,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
+  String get searchBatchDeleteReconfirmMessage => '再次確認：刪除後這些記帳無法找回。確定要繼續嗎？';
+
+  @override
   String get searchBatchSetNoteTitle => '批次設定備註';
 
   @override
@@ -8352,6 +8450,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
+  String get ledgersClearReconfirmMessage =>
+      '再次確認：清空後帳本內的帳單資料將永久刪除、無法復原。確定要繼續嗎？';
+
+  @override
   String get ledgerDefaultName => '預設帳本';
 
   @override
@@ -8366,6 +8468,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String get ledgersDeleteMessage =>
       '確定要刪除該帳本及其全部記錄嗎？此操作不可復原。\\n若雲端存在備份，也會一併刪除。';
+
+  @override
+  String get ledgersDeleteReconfirmMessage =>
+      '再次確認：刪除後該帳本及其全部記錄將永久消失（含雲端備份），無法復原。確定要繼續嗎？';
 
   @override
   String get ledgersDeleted => '已刪除';
@@ -8389,6 +8495,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String ledgersDeleteLocalMessage(String name) {
     return '確定要刪除本地帳本「$name」嗎？\n雲端備份會保留，您可以隨時恢復。';
   }
+
+  @override
+  String get ledgersDeleteLocalReconfirmMessage =>
+      '再次確認：僅刪除本機上的該帳本，雲端備份保留、可隨時恢復下載。確定要繼續嗎？';
 
   @override
   String get ledgersDeleteLocalSuccess => '本地帳本已刪除';
@@ -8489,6 +8599,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
+  String get ledgersDeleteRemoteReconfirmMessage =>
+      '再次確認：刪除後雲端該帳本及其全部資料將永久消失，多裝置將無法再恢復它。確定要繼續嗎？';
+
+  @override
   String get ledgersDeleting => '刪除中...';
 
   @override
@@ -8504,6 +8618,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String ledgersRestoreAllMessage(int count) {
     return '確認恢復所有雲端帳本？共 $count 個。';
   }
+
+  @override
+  String get ledgersRestoreAllReconfirmMessage =>
+      '再次確認：恢復將用雲端內容覆蓋本機帳本資料，被覆蓋的本機變更無法找回。確定要繼續嗎？';
 
   @override
   String get ledgersRestoring => '恢復中...';
@@ -8523,6 +8641,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String ledgersUploadAllMessage(int count) {
     return '確認將 $count 個本機帳本上傳到雲端？雲端現有內容將被本機內容覆蓋。';
   }
+
+  @override
+  String get ledgersUploadAllReconfirmMessage => '再次確認：覆蓋後雲端原有資料無法復原，確定要繼續嗎？';
 
   @override
   String get ledgersUploadAllComplete => '上傳完成';
@@ -9716,6 +9837,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String categoryClearUnusedMessage(int count) {
     return '確定要刪除 $count 個未使用的分類嗎？此操作無法撤銷。';
   }
+
+  @override
+  String get categoryClearUnusedReconfirmMessage =>
+      '再次確認：刪除後這些分類不可復原，若誤刪需要重新建立。確定要繼續嗎？';
 
   @override
   String get categoryClearUnusedListTitle => '將被刪除的分類：';
@@ -11716,6 +11841,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get accountDeleteConfirm => '確認刪除該帳戶嗎？';
 
   @override
+  String get accountDeleteReconfirmMessage =>
+      '再次確認：刪除後該帳戶不可復原，已儲存的帳戶資訊將永久丟失。確定要繼續嗎？';
+
+  @override
   String get accountSelectTitle => '選擇帳戶';
 
   @override
@@ -12591,6 +12720,13 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get configImportConfirmTitle => '確認匯入';
 
   @override
+  String get configImportReconfirmTitle => '確認匯入';
+
+  @override
+  String get configImportReconfirmMessage =>
+      '再次確認：匯入將覆蓋現有配置且不可復原，建議先備份。確定要繼續嗎？';
+
+  @override
   String get configImportSuccess => '配置匯入成功';
 
   @override
@@ -12758,6 +12894,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String storageClearAIModelsMessage(String size) {
     return '確定要清理所有AI模型嗎？大小：$size';
   }
+
+  @override
+  String get storageClearReconfirmMessage => '再次確認：清理後需要重新下載，確定要繼續嗎？';
 
   @override
   String storageClearAPKMessage(String size) {
@@ -13434,6 +13573,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
+  String get tagClearUnusedReconfirmMessage =>
+      '再次確認：刪除後這些標籤不可復原，若誤刪需要重新建立。確定要繼續嗎？';
+
+  @override
   String tagClearUnusedSuccess(int count) {
     return '已刪除 $count 個標籤';
   }
@@ -13607,6 +13750,13 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get attachmentStartImport => '開始匯入';
+
+  @override
+  String get attachmentImportReconfirmTitle => '覆蓋匯入確認';
+
+  @override
+  String get attachmentImportReconfirmMessage =>
+      '再次確認：選擇「覆蓋」後，同名附件將被封存中的檔案替換且無法復原。確定要繼續嗎？';
 
   @override
   String get attachmentPreview => '預覽附件';
@@ -14333,6 +14483,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
+  String get maintenanceOrphanReconfirmMessage =>
+      '再次確認：清理後這些資料將被永久刪除、無法找回。確定要繼續嗎？';
+
+  @override
   String maintenanceOrphanCleanSuccess(int count) {
     return '已清理 $count 項';
   }
@@ -14918,6 +15072,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get cloudSyncEncryptResetConfirmMessage => '重置將清空雲端所有帳本備份且不可復原，確定繼續嗎？';
+
+  @override
+  String get cloudSyncEncryptResetReconfirmMessage =>
+      '再次確認：重置後雲端所有帳本備份將永久刪除，無法復原。確定要繼續嗎？';
 
   @override
   String get cloudSyncEncryptResetSuccess => '加密已重置';

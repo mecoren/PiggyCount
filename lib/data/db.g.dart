@@ -10970,6 +10970,659 @@ class EntityChangeWatermarksCompanion
   }
 }
 
+class $SyncOpLogTable extends SyncOpLog
+    with TableInfo<$SyncOpLogTable, SyncOpLogData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SyncOpLogTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _tsMeta = const VerificationMeta('ts');
+  @override
+  late final GeneratedColumn<DateTime> ts = GeneratedColumn<DateTime>(
+      'ts', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  static const VerificationMeta _backendMeta =
+      const VerificationMeta('backend');
+  @override
+  late final GeneratedColumn<String> backend = GeneratedColumn<String>(
+      'backend', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _scenarioMeta =
+      const VerificationMeta('scenario');
+  @override
+  late final GeneratedColumn<String> scenario = GeneratedColumn<String>(
+      'scenario', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _outcomeMeta =
+      const VerificationMeta('outcome');
+  @override
+  late final GeneratedColumn<String> outcome = GeneratedColumn<String>(
+      'outcome', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _errorClassMeta =
+      const VerificationMeta('errorClass');
+  @override
+  late final GeneratedColumn<String> errorClass = GeneratedColumn<String>(
+      'error_class', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _ledgerIdMeta =
+      const VerificationMeta('ledgerId');
+  @override
+  late final GeneratedColumn<int> ledgerId = GeneratedColumn<int>(
+      'ledger_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _attemptsMeta =
+      const VerificationMeta('attempts');
+  @override
+  late final GeneratedColumn<int> attempts = GeneratedColumn<int>(
+      'attempts', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(1));
+  static const VerificationMeta _durationMsMeta =
+      const VerificationMeta('durationMs');
+  @override
+  late final GeneratedColumn<int> durationMs = GeneratedColumn<int>(
+      'duration_ms', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        ts,
+        backend,
+        scenario,
+        outcome,
+        errorClass,
+        ledgerId,
+        attempts,
+        durationMs
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sync_op_log';
+  @override
+  VerificationContext validateIntegrity(Insertable<SyncOpLogData> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('ts')) {
+      context.handle(_tsMeta, ts.isAcceptableOrUnknown(data['ts']!, _tsMeta));
+    }
+    if (data.containsKey('backend')) {
+      context.handle(_backendMeta,
+          backend.isAcceptableOrUnknown(data['backend']!, _backendMeta));
+    } else if (isInserting) {
+      context.missing(_backendMeta);
+    }
+    if (data.containsKey('scenario')) {
+      context.handle(_scenarioMeta,
+          scenario.isAcceptableOrUnknown(data['scenario']!, _scenarioMeta));
+    } else if (isInserting) {
+      context.missing(_scenarioMeta);
+    }
+    if (data.containsKey('outcome')) {
+      context.handle(_outcomeMeta,
+          outcome.isAcceptableOrUnknown(data['outcome']!, _outcomeMeta));
+    } else if (isInserting) {
+      context.missing(_outcomeMeta);
+    }
+    if (data.containsKey('error_class')) {
+      context.handle(
+          _errorClassMeta,
+          errorClass.isAcceptableOrUnknown(
+              data['error_class']!, _errorClassMeta));
+    }
+    if (data.containsKey('ledger_id')) {
+      context.handle(_ledgerIdMeta,
+          ledgerId.isAcceptableOrUnknown(data['ledger_id']!, _ledgerIdMeta));
+    }
+    if (data.containsKey('attempts')) {
+      context.handle(_attemptsMeta,
+          attempts.isAcceptableOrUnknown(data['attempts']!, _attemptsMeta));
+    }
+    if (data.containsKey('duration_ms')) {
+      context.handle(
+          _durationMsMeta,
+          durationMs.isAcceptableOrUnknown(
+              data['duration_ms']!, _durationMsMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SyncOpLogData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SyncOpLogData(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      ts: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}ts'])!,
+      backend: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}backend'])!,
+      scenario: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}scenario'])!,
+      outcome: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}outcome'])!,
+      errorClass: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}error_class']),
+      ledgerId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}ledger_id']),
+      attempts: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}attempts'])!,
+      durationMs: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}duration_ms']),
+    );
+  }
+
+  @override
+  $SyncOpLogTable createAlias(String alias) {
+    return $SyncOpLogTable(attachedDatabase, alias);
+  }
+}
+
+class SyncOpLogData extends DataClass implements Insertable<SyncOpLogData> {
+  final int id;
+  final DateTime ts;
+  final String backend;
+  final String scenario;
+  final String outcome;
+  final String? errorClass;
+  final int? ledgerId;
+  final int attempts;
+  final int? durationMs;
+  const SyncOpLogData(
+      {required this.id,
+      required this.ts,
+      required this.backend,
+      required this.scenario,
+      required this.outcome,
+      this.errorClass,
+      this.ledgerId,
+      required this.attempts,
+      this.durationMs});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['ts'] = Variable<DateTime>(ts);
+    map['backend'] = Variable<String>(backend);
+    map['scenario'] = Variable<String>(scenario);
+    map['outcome'] = Variable<String>(outcome);
+    if (!nullToAbsent || errorClass != null) {
+      map['error_class'] = Variable<String>(errorClass);
+    }
+    if (!nullToAbsent || ledgerId != null) {
+      map['ledger_id'] = Variable<int>(ledgerId);
+    }
+    map['attempts'] = Variable<int>(attempts);
+    if (!nullToAbsent || durationMs != null) {
+      map['duration_ms'] = Variable<int>(durationMs);
+    }
+    return map;
+  }
+
+  SyncOpLogCompanion toCompanion(bool nullToAbsent) {
+    return SyncOpLogCompanion(
+      id: Value(id),
+      ts: Value(ts),
+      backend: Value(backend),
+      scenario: Value(scenario),
+      outcome: Value(outcome),
+      errorClass: errorClass == null && nullToAbsent
+          ? const Value.absent()
+          : Value(errorClass),
+      ledgerId: ledgerId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ledgerId),
+      attempts: Value(attempts),
+      durationMs: durationMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(durationMs),
+    );
+  }
+
+  factory SyncOpLogData.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SyncOpLogData(
+      id: serializer.fromJson<int>(json['id']),
+      ts: serializer.fromJson<DateTime>(json['ts']),
+      backend: serializer.fromJson<String>(json['backend']),
+      scenario: serializer.fromJson<String>(json['scenario']),
+      outcome: serializer.fromJson<String>(json['outcome']),
+      errorClass: serializer.fromJson<String?>(json['errorClass']),
+      ledgerId: serializer.fromJson<int?>(json['ledgerId']),
+      attempts: serializer.fromJson<int>(json['attempts']),
+      durationMs: serializer.fromJson<int?>(json['durationMs']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'ts': serializer.toJson<DateTime>(ts),
+      'backend': serializer.toJson<String>(backend),
+      'scenario': serializer.toJson<String>(scenario),
+      'outcome': serializer.toJson<String>(outcome),
+      'errorClass': serializer.toJson<String?>(errorClass),
+      'ledgerId': serializer.toJson<int?>(ledgerId),
+      'attempts': serializer.toJson<int>(attempts),
+      'durationMs': serializer.toJson<int?>(durationMs),
+    };
+  }
+
+  SyncOpLogData copyWith(
+          {int? id,
+          DateTime? ts,
+          String? backend,
+          String? scenario,
+          String? outcome,
+          Value<String?> errorClass = const Value.absent(),
+          Value<int?> ledgerId = const Value.absent(),
+          int? attempts,
+          Value<int?> durationMs = const Value.absent()}) =>
+      SyncOpLogData(
+        id: id ?? this.id,
+        ts: ts ?? this.ts,
+        backend: backend ?? this.backend,
+        scenario: scenario ?? this.scenario,
+        outcome: outcome ?? this.outcome,
+        errorClass: errorClass.present ? errorClass.value : this.errorClass,
+        ledgerId: ledgerId.present ? ledgerId.value : this.ledgerId,
+        attempts: attempts ?? this.attempts,
+        durationMs: durationMs.present ? durationMs.value : this.durationMs,
+      );
+  SyncOpLogData copyWithCompanion(SyncOpLogCompanion data) {
+    return SyncOpLogData(
+      id: data.id.present ? data.id.value : this.id,
+      ts: data.ts.present ? data.ts.value : this.ts,
+      backend: data.backend.present ? data.backend.value : this.backend,
+      scenario: data.scenario.present ? data.scenario.value : this.scenario,
+      outcome: data.outcome.present ? data.outcome.value : this.outcome,
+      errorClass:
+          data.errorClass.present ? data.errorClass.value : this.errorClass,
+      ledgerId: data.ledgerId.present ? data.ledgerId.value : this.ledgerId,
+      attempts: data.attempts.present ? data.attempts.value : this.attempts,
+      durationMs:
+          data.durationMs.present ? data.durationMs.value : this.durationMs,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncOpLogData(')
+          ..write('id: $id, ')
+          ..write('ts: $ts, ')
+          ..write('backend: $backend, ')
+          ..write('scenario: $scenario, ')
+          ..write('outcome: $outcome, ')
+          ..write('errorClass: $errorClass, ')
+          ..write('ledgerId: $ledgerId, ')
+          ..write('attempts: $attempts, ')
+          ..write('durationMs: $durationMs')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, ts, backend, scenario, outcome,
+      errorClass, ledgerId, attempts, durationMs);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SyncOpLogData &&
+          other.id == this.id &&
+          other.ts == this.ts &&
+          other.backend == this.backend &&
+          other.scenario == this.scenario &&
+          other.outcome == this.outcome &&
+          other.errorClass == this.errorClass &&
+          other.ledgerId == this.ledgerId &&
+          other.attempts == this.attempts &&
+          other.durationMs == this.durationMs);
+}
+
+class SyncOpLogCompanion extends UpdateCompanion<SyncOpLogData> {
+  final Value<int> id;
+  final Value<DateTime> ts;
+  final Value<String> backend;
+  final Value<String> scenario;
+  final Value<String> outcome;
+  final Value<String?> errorClass;
+  final Value<int?> ledgerId;
+  final Value<int> attempts;
+  final Value<int?> durationMs;
+  const SyncOpLogCompanion({
+    this.id = const Value.absent(),
+    this.ts = const Value.absent(),
+    this.backend = const Value.absent(),
+    this.scenario = const Value.absent(),
+    this.outcome = const Value.absent(),
+    this.errorClass = const Value.absent(),
+    this.ledgerId = const Value.absent(),
+    this.attempts = const Value.absent(),
+    this.durationMs = const Value.absent(),
+  });
+  SyncOpLogCompanion.insert({
+    this.id = const Value.absent(),
+    this.ts = const Value.absent(),
+    required String backend,
+    required String scenario,
+    required String outcome,
+    this.errorClass = const Value.absent(),
+    this.ledgerId = const Value.absent(),
+    this.attempts = const Value.absent(),
+    this.durationMs = const Value.absent(),
+  })  : backend = Value(backend),
+        scenario = Value(scenario),
+        outcome = Value(outcome);
+  static Insertable<SyncOpLogData> custom({
+    Expression<int>? id,
+    Expression<DateTime>? ts,
+    Expression<String>? backend,
+    Expression<String>? scenario,
+    Expression<String>? outcome,
+    Expression<String>? errorClass,
+    Expression<int>? ledgerId,
+    Expression<int>? attempts,
+    Expression<int>? durationMs,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (ts != null) 'ts': ts,
+      if (backend != null) 'backend': backend,
+      if (scenario != null) 'scenario': scenario,
+      if (outcome != null) 'outcome': outcome,
+      if (errorClass != null) 'error_class': errorClass,
+      if (ledgerId != null) 'ledger_id': ledgerId,
+      if (attempts != null) 'attempts': attempts,
+      if (durationMs != null) 'duration_ms': durationMs,
+    });
+  }
+
+  SyncOpLogCompanion copyWith(
+      {Value<int>? id,
+      Value<DateTime>? ts,
+      Value<String>? backend,
+      Value<String>? scenario,
+      Value<String>? outcome,
+      Value<String?>? errorClass,
+      Value<int?>? ledgerId,
+      Value<int>? attempts,
+      Value<int?>? durationMs}) {
+    return SyncOpLogCompanion(
+      id: id ?? this.id,
+      ts: ts ?? this.ts,
+      backend: backend ?? this.backend,
+      scenario: scenario ?? this.scenario,
+      outcome: outcome ?? this.outcome,
+      errorClass: errorClass ?? this.errorClass,
+      ledgerId: ledgerId ?? this.ledgerId,
+      attempts: attempts ?? this.attempts,
+      durationMs: durationMs ?? this.durationMs,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (ts.present) {
+      map['ts'] = Variable<DateTime>(ts.value);
+    }
+    if (backend.present) {
+      map['backend'] = Variable<String>(backend.value);
+    }
+    if (scenario.present) {
+      map['scenario'] = Variable<String>(scenario.value);
+    }
+    if (outcome.present) {
+      map['outcome'] = Variable<String>(outcome.value);
+    }
+    if (errorClass.present) {
+      map['error_class'] = Variable<String>(errorClass.value);
+    }
+    if (ledgerId.present) {
+      map['ledger_id'] = Variable<int>(ledgerId.value);
+    }
+    if (attempts.present) {
+      map['attempts'] = Variable<int>(attempts.value);
+    }
+    if (durationMs.present) {
+      map['duration_ms'] = Variable<int>(durationMs.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncOpLogCompanion(')
+          ..write('id: $id, ')
+          ..write('ts: $ts, ')
+          ..write('backend: $backend, ')
+          ..write('scenario: $scenario, ')
+          ..write('outcome: $outcome, ')
+          ..write('errorClass: $errorClass, ')
+          ..write('ledgerId: $ledgerId, ')
+          ..write('attempts: $attempts, ')
+          ..write('durationMs: $durationMs')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $StaleRemoteSlotsTable extends StaleRemoteSlots
+    with TableInfo<$StaleRemoteSlotsTable, StaleRemoteSlot> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $StaleRemoteSlotsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _pathMeta = const VerificationMeta('path');
+  @override
+  late final GeneratedColumn<String> path = GeneratedColumn<String>(
+      'path', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  @override
+  List<GeneratedColumn> get $columns => [path, createdAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'stale_remote_slots';
+  @override
+  VerificationContext validateIntegrity(Insertable<StaleRemoteSlot> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('path')) {
+      context.handle(
+          _pathMeta, path.isAcceptableOrUnknown(data['path']!, _pathMeta));
+    } else if (isInserting) {
+      context.missing(_pathMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {path};
+  @override
+  StaleRemoteSlot map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StaleRemoteSlot(
+      path: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}path'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+    );
+  }
+
+  @override
+  $StaleRemoteSlotsTable createAlias(String alias) {
+    return $StaleRemoteSlotsTable(attachedDatabase, alias);
+  }
+}
+
+class StaleRemoteSlot extends DataClass implements Insertable<StaleRemoteSlot> {
+  final String path;
+  final DateTime createdAt;
+  const StaleRemoteSlot({required this.path, required this.createdAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['path'] = Variable<String>(path);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  StaleRemoteSlotsCompanion toCompanion(bool nullToAbsent) {
+    return StaleRemoteSlotsCompanion(
+      path: Value(path),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory StaleRemoteSlot.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StaleRemoteSlot(
+      path: serializer.fromJson<String>(json['path']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'path': serializer.toJson<String>(path),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  StaleRemoteSlot copyWith({String? path, DateTime? createdAt}) =>
+      StaleRemoteSlot(
+        path: path ?? this.path,
+        createdAt: createdAt ?? this.createdAt,
+      );
+  StaleRemoteSlot copyWithCompanion(StaleRemoteSlotsCompanion data) {
+    return StaleRemoteSlot(
+      path: data.path.present ? data.path.value : this.path,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StaleRemoteSlot(')
+          ..write('path: $path, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(path, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StaleRemoteSlot &&
+          other.path == this.path &&
+          other.createdAt == this.createdAt);
+}
+
+class StaleRemoteSlotsCompanion extends UpdateCompanion<StaleRemoteSlot> {
+  final Value<String> path;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const StaleRemoteSlotsCompanion({
+    this.path = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  StaleRemoteSlotsCompanion.insert({
+    required String path,
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : path = Value(path);
+  static Insertable<StaleRemoteSlot> custom({
+    Expression<String>? path,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (path != null) 'path': path,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  StaleRemoteSlotsCompanion copyWith(
+      {Value<String>? path, Value<DateTime>? createdAt, Value<int>? rowid}) {
+    return StaleRemoteSlotsCompanion(
+      path: path ?? this.path,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (path.present) {
+      map['path'] = Variable<String>(path.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StaleRemoteSlotsCompanion(')
+          ..write('path: $path, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$PiggyDatabase extends GeneratedDatabase {
   _$PiggyDatabase(QueryExecutor e) : super(e);
   $PiggyDatabaseManager get managers => $PiggyDatabaseManager(this);
@@ -11003,6 +11656,9 @@ abstract class _$PiggyDatabase extends GeneratedDatabase {
       $ExchangeRateOverridesTable(this);
   late final $EntityChangeWatermarksTable entityChangeWatermarks =
       $EntityChangeWatermarksTable(this);
+  late final $SyncOpLogTable syncOpLog = $SyncOpLogTable(this);
+  late final $StaleRemoteSlotsTable staleRemoteSlots =
+      $StaleRemoteSlotsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -11028,7 +11684,9 @@ abstract class _$PiggyDatabase extends GeneratedDatabase {
         syncPullErrors,
         exchangeRates,
         exchangeRateOverrides,
-        entityChangeWatermarks
+        entityChangeWatermarks,
+        syncOpLog,
+        staleRemoteSlots
       ];
 }
 
@@ -16239,6 +16897,360 @@ typedef $$EntityChangeWatermarksTableProcessedTableManager
         ),
         EntityChangeWatermark,
         PrefetchHooks Function()>;
+typedef $$SyncOpLogTableCreateCompanionBuilder = SyncOpLogCompanion Function({
+  Value<int> id,
+  Value<DateTime> ts,
+  required String backend,
+  required String scenario,
+  required String outcome,
+  Value<String?> errorClass,
+  Value<int?> ledgerId,
+  Value<int> attempts,
+  Value<int?> durationMs,
+});
+typedef $$SyncOpLogTableUpdateCompanionBuilder = SyncOpLogCompanion Function({
+  Value<int> id,
+  Value<DateTime> ts,
+  Value<String> backend,
+  Value<String> scenario,
+  Value<String> outcome,
+  Value<String?> errorClass,
+  Value<int?> ledgerId,
+  Value<int> attempts,
+  Value<int?> durationMs,
+});
+
+class $$SyncOpLogTableFilterComposer
+    extends Composer<_$PiggyDatabase, $SyncOpLogTable> {
+  $$SyncOpLogTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get ts => $composableBuilder(
+      column: $table.ts, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get backend => $composableBuilder(
+      column: $table.backend, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get scenario => $composableBuilder(
+      column: $table.scenario, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get outcome => $composableBuilder(
+      column: $table.outcome, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get errorClass => $composableBuilder(
+      column: $table.errorClass, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get ledgerId => $composableBuilder(
+      column: $table.ledgerId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get attempts => $composableBuilder(
+      column: $table.attempts, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get durationMs => $composableBuilder(
+      column: $table.durationMs, builder: (column) => ColumnFilters(column));
+}
+
+class $$SyncOpLogTableOrderingComposer
+    extends Composer<_$PiggyDatabase, $SyncOpLogTable> {
+  $$SyncOpLogTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get ts => $composableBuilder(
+      column: $table.ts, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get backend => $composableBuilder(
+      column: $table.backend, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get scenario => $composableBuilder(
+      column: $table.scenario, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get outcome => $composableBuilder(
+      column: $table.outcome, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get errorClass => $composableBuilder(
+      column: $table.errorClass, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get ledgerId => $composableBuilder(
+      column: $table.ledgerId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get attempts => $composableBuilder(
+      column: $table.attempts, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get durationMs => $composableBuilder(
+      column: $table.durationMs, builder: (column) => ColumnOrderings(column));
+}
+
+class $$SyncOpLogTableAnnotationComposer
+    extends Composer<_$PiggyDatabase, $SyncOpLogTable> {
+  $$SyncOpLogTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get ts =>
+      $composableBuilder(column: $table.ts, builder: (column) => column);
+
+  GeneratedColumn<String> get backend =>
+      $composableBuilder(column: $table.backend, builder: (column) => column);
+
+  GeneratedColumn<String> get scenario =>
+      $composableBuilder(column: $table.scenario, builder: (column) => column);
+
+  GeneratedColumn<String> get outcome =>
+      $composableBuilder(column: $table.outcome, builder: (column) => column);
+
+  GeneratedColumn<String> get errorClass => $composableBuilder(
+      column: $table.errorClass, builder: (column) => column);
+
+  GeneratedColumn<int> get ledgerId =>
+      $composableBuilder(column: $table.ledgerId, builder: (column) => column);
+
+  GeneratedColumn<int> get attempts =>
+      $composableBuilder(column: $table.attempts, builder: (column) => column);
+
+  GeneratedColumn<int> get durationMs => $composableBuilder(
+      column: $table.durationMs, builder: (column) => column);
+}
+
+class $$SyncOpLogTableTableManager extends RootTableManager<
+    _$PiggyDatabase,
+    $SyncOpLogTable,
+    SyncOpLogData,
+    $$SyncOpLogTableFilterComposer,
+    $$SyncOpLogTableOrderingComposer,
+    $$SyncOpLogTableAnnotationComposer,
+    $$SyncOpLogTableCreateCompanionBuilder,
+    $$SyncOpLogTableUpdateCompanionBuilder,
+    (
+      SyncOpLogData,
+      BaseReferences<_$PiggyDatabase, $SyncOpLogTable, SyncOpLogData>
+    ),
+    SyncOpLogData,
+    PrefetchHooks Function()> {
+  $$SyncOpLogTableTableManager(_$PiggyDatabase db, $SyncOpLogTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SyncOpLogTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SyncOpLogTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SyncOpLogTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<DateTime> ts = const Value.absent(),
+            Value<String> backend = const Value.absent(),
+            Value<String> scenario = const Value.absent(),
+            Value<String> outcome = const Value.absent(),
+            Value<String?> errorClass = const Value.absent(),
+            Value<int?> ledgerId = const Value.absent(),
+            Value<int> attempts = const Value.absent(),
+            Value<int?> durationMs = const Value.absent(),
+          }) =>
+              SyncOpLogCompanion(
+            id: id,
+            ts: ts,
+            backend: backend,
+            scenario: scenario,
+            outcome: outcome,
+            errorClass: errorClass,
+            ledgerId: ledgerId,
+            attempts: attempts,
+            durationMs: durationMs,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<DateTime> ts = const Value.absent(),
+            required String backend,
+            required String scenario,
+            required String outcome,
+            Value<String?> errorClass = const Value.absent(),
+            Value<int?> ledgerId = const Value.absent(),
+            Value<int> attempts = const Value.absent(),
+            Value<int?> durationMs = const Value.absent(),
+          }) =>
+              SyncOpLogCompanion.insert(
+            id: id,
+            ts: ts,
+            backend: backend,
+            scenario: scenario,
+            outcome: outcome,
+            errorClass: errorClass,
+            ledgerId: ledgerId,
+            attempts: attempts,
+            durationMs: durationMs,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$SyncOpLogTableProcessedTableManager = ProcessedTableManager<
+    _$PiggyDatabase,
+    $SyncOpLogTable,
+    SyncOpLogData,
+    $$SyncOpLogTableFilterComposer,
+    $$SyncOpLogTableOrderingComposer,
+    $$SyncOpLogTableAnnotationComposer,
+    $$SyncOpLogTableCreateCompanionBuilder,
+    $$SyncOpLogTableUpdateCompanionBuilder,
+    (
+      SyncOpLogData,
+      BaseReferences<_$PiggyDatabase, $SyncOpLogTable, SyncOpLogData>
+    ),
+    SyncOpLogData,
+    PrefetchHooks Function()>;
+typedef $$StaleRemoteSlotsTableCreateCompanionBuilder
+    = StaleRemoteSlotsCompanion Function({
+  required String path,
+  Value<DateTime> createdAt,
+  Value<int> rowid,
+});
+typedef $$StaleRemoteSlotsTableUpdateCompanionBuilder
+    = StaleRemoteSlotsCompanion Function({
+  Value<String> path,
+  Value<DateTime> createdAt,
+  Value<int> rowid,
+});
+
+class $$StaleRemoteSlotsTableFilterComposer
+    extends Composer<_$PiggyDatabase, $StaleRemoteSlotsTable> {
+  $$StaleRemoteSlotsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get path => $composableBuilder(
+      column: $table.path, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$StaleRemoteSlotsTableOrderingComposer
+    extends Composer<_$PiggyDatabase, $StaleRemoteSlotsTable> {
+  $$StaleRemoteSlotsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get path => $composableBuilder(
+      column: $table.path, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$StaleRemoteSlotsTableAnnotationComposer
+    extends Composer<_$PiggyDatabase, $StaleRemoteSlotsTable> {
+  $$StaleRemoteSlotsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get path =>
+      $composableBuilder(column: $table.path, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$StaleRemoteSlotsTableTableManager extends RootTableManager<
+    _$PiggyDatabase,
+    $StaleRemoteSlotsTable,
+    StaleRemoteSlot,
+    $$StaleRemoteSlotsTableFilterComposer,
+    $$StaleRemoteSlotsTableOrderingComposer,
+    $$StaleRemoteSlotsTableAnnotationComposer,
+    $$StaleRemoteSlotsTableCreateCompanionBuilder,
+    $$StaleRemoteSlotsTableUpdateCompanionBuilder,
+    (
+      StaleRemoteSlot,
+      BaseReferences<_$PiggyDatabase, $StaleRemoteSlotsTable, StaleRemoteSlot>
+    ),
+    StaleRemoteSlot,
+    PrefetchHooks Function()> {
+  $$StaleRemoteSlotsTableTableManager(
+      _$PiggyDatabase db, $StaleRemoteSlotsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$StaleRemoteSlotsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$StaleRemoteSlotsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$StaleRemoteSlotsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> path = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              StaleRemoteSlotsCompanion(
+            path: path,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String path,
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              StaleRemoteSlotsCompanion.insert(
+            path: path,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$StaleRemoteSlotsTableProcessedTableManager = ProcessedTableManager<
+    _$PiggyDatabase,
+    $StaleRemoteSlotsTable,
+    StaleRemoteSlot,
+    $$StaleRemoteSlotsTableFilterComposer,
+    $$StaleRemoteSlotsTableOrderingComposer,
+    $$StaleRemoteSlotsTableAnnotationComposer,
+    $$StaleRemoteSlotsTableCreateCompanionBuilder,
+    $$StaleRemoteSlotsTableUpdateCompanionBuilder,
+    (
+      StaleRemoteSlot,
+      BaseReferences<_$PiggyDatabase, $StaleRemoteSlotsTable, StaleRemoteSlot>
+    ),
+    StaleRemoteSlot,
+    PrefetchHooks Function()>;
 
 class $PiggyDatabaseManager {
   final _$PiggyDatabase _db;
@@ -16288,4 +17300,8 @@ class $PiggyDatabaseManager {
   $$EntityChangeWatermarksTableTableManager get entityChangeWatermarks =>
       $$EntityChangeWatermarksTableTableManager(
           _db, _db.entityChangeWatermarks);
+  $$SyncOpLogTableTableManager get syncOpLog =>
+      $$SyncOpLogTableTableManager(_db, _db.syncOpLog);
+  $$StaleRemoteSlotsTableTableManager get staleRemoteSlots =>
+      $$StaleRemoteSlotsTableTableManager(_db, _db.staleRemoteSlots);
 }

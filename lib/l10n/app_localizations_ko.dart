@@ -542,6 +542,10 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get searchBatchDeleteReconfirmMessage =>
+      '다시 확인: 삭제 후 이 거래 기록들은 되찾을 수 없습니다. 계속하시겠습니까?';
+
+  @override
   String get searchBatchSetNoteTitle => '메모 일괄 설정';
 
   @override
@@ -738,6 +742,10 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get ledgersClearReconfirmMessage =>
+      '다시 확인: 비우면 이 가계부의 거래 데이터가 영구 삭제되어 복구할 수 없습니다. 계속하시겠습니까?';
+
+  @override
   String get ledgerDefaultName => '기본 가계부';
 
   @override
@@ -752,6 +760,10 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get ledgersDeleteMessage =>
       '이 가계부와 모든 기록을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.\\n클라우드에 백업이 있는 경우 함께 삭제됩니다.';
+
+  @override
+  String get ledgersDeleteReconfirmMessage =>
+      '다시 확인: 삭제 후 이 가계부와 모든 기록이 영구적으로 사라지며(클라우드 백업 포함) 복구할 수 없습니다. 계속하시겠습니까?';
 
   @override
   String get ledgersDeleted => '삭제됨';
@@ -775,6 +787,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String ledgersDeleteLocalMessage(String name) {
     return '로컬 가계부 \"$name\"를 삭제하시겠습니까?\\n클라우드 백업은 유지되며 언제든지 복원할 수 있습니다.';
   }
+
+  @override
+  String get ledgersDeleteLocalReconfirmMessage =>
+      '다시 확인: 이 기기의 로컬 사본만 삭제되며, 클라우드 백업은 유지되어 언제든 복원할 수 있습니다. 계속하시겠습니까?';
 
   @override
   String get ledgersDeleteLocalSuccess => '로컬 가계부가 삭제되었습니다';
@@ -876,6 +892,10 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get ledgersDeleteRemoteReconfirmMessage =>
+      '다시 확인: 삭제 후 클라우드의 이 가계부와 모든 데이터가 영구적으로 사라지며 어느 기기에서도 복원할 수 없습니다. 계속하시겠습니까?';
+
+  @override
   String get ledgersDeleting => '삭제 중...';
 
   @override
@@ -891,6 +911,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String ledgersRestoreAllMessage(int count) {
     return '모든 클라우드 가계부를 복원하시겠습니까? 총 $count개입니다.';
   }
+
+  @override
+  String get ledgersRestoreAllReconfirmMessage =>
+      '다시 확인: 복원하면 클라우드 내용으로 로컬 가계부 데이터를 덮어쓰며, 덮어쓴 로컬 변경 내용은 되돌릴 수 없습니다. 계속하시겠습니까?';
 
   @override
   String get ledgersRestoring => '복원 중...';
@@ -910,6 +934,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String ledgersUploadAllMessage(int count) {
     return '모든 로컬 가계부를 클라우드에 업로드하시겠습니까? 총 $count개이며, 기존 클라우드 내용이 덮어써집니다.';
   }
+
+  @override
+  String get ledgersUploadAllReconfirmMessage =>
+      '다시 확인: 덮어쓴 후 기존 클라우드 데이터는 복구할 수 없습니다. 계속하시겠습니까?';
 
   @override
   String get ledgersUploadAllComplete => '업로드 완료';
@@ -2108,6 +2136,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String categoryClearUnusedMessage(int count) {
     return '사용하지 않는 카테고리 $count개를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.';
   }
+
+  @override
+  String get categoryClearUnusedReconfirmMessage =>
+      '다시 확인: 삭제 후 이 분류들은 복구할 수 없으며, 잘못 삭제하면 다시 만들어야 합니다. 계속하시겠습니까?';
 
   @override
   String get categoryClearUnusedListTitle => '삭제될 카테고리:';
@@ -4123,6 +4155,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get accountDeleteConfirm => '이 계정을 삭제하시겠습니까?';
 
   @override
+  String get accountDeleteReconfirmMessage =>
+      '다시 확인: 삭제 후 이 계정은 복구할 수 없으며 저장된 계정 정보가 영구적으로 사라집니다. 계속하시겠습니까?';
+
+  @override
   String get accountSelectTitle => '계정 선택';
 
   @override
@@ -5023,6 +5059,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get configImportConfirmTitle => '가져오기 확인';
 
   @override
+  String get configImportReconfirmTitle => '가져오기 확인';
+
+  @override
+  String get configImportReconfirmMessage =>
+      '다시 확인: 가져오면 기존 설정을 덮어쓰며 되돌릴 수 없으므로 먼저 백업하는 것이 좋습니다. 계속하시겠습니까?';
+
+  @override
   String get configImportSuccess => '설정을 가져왔습니다';
 
   @override
@@ -5191,6 +5234,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String storageClearAIModelsMessage(String size) {
     return '모든 AI 모델을 정리하시겠습니까? 크기: $size';
   }
+
+  @override
+  String get storageClearReconfirmMessage =>
+      '다시 확인: 정리 후 다시 다운로드해야 합니다. 계속하시겠습니까?';
 
   @override
   String storageClearAPKMessage(String size) {
@@ -5873,6 +5920,10 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get tagClearUnusedReconfirmMessage =>
+      '다시 확인: 삭제 후 이 태그들은 복구할 수 없으며, 잘못 삭제하면 다시 만들어야 합니다. 계속하시겠습니까?';
+
+  @override
   String tagClearUnusedSuccess(int count) {
     return '태그 $count개를 삭제했습니다';
   }
@@ -6046,6 +6097,13 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get attachmentStartImport => '가져오기 시작';
+
+  @override
+  String get attachmentImportReconfirmTitle => '덮어쓰기 가져오기 확인';
+
+  @override
+  String get attachmentImportReconfirmMessage =>
+      '다시 확인: \"덮어쓰기\"를 선택하면 같은 이름의 첨부파일이 아카이브 파일로 교체되며 복구할 수 없습니다. 계속하시겠습니까?';
 
   @override
   String get attachmentPreview => '첨부파일 미리보기';
@@ -6783,6 +6841,10 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get maintenanceOrphanReconfirmMessage =>
+      '다시 확인: 정리 후 이 데이터는 영구 삭제되어 되찾을 수 없습니다. 계속하시겠습니까?';
+
+  @override
   String maintenanceOrphanCleanSuccess(int count) {
     return '$count개 항목을 정리했습니다';
   }
@@ -7376,6 +7438,10 @@ class AppLocalizationsKo extends AppLocalizations {
       '재설정하면 클라우드의 모든 가계부 백업이 삭제되며 복구할 수 없습니다. 계속하시겠습니까?';
 
   @override
+  String get cloudSyncEncryptResetReconfirmMessage =>
+      '다시 확인: 재설정 후 클라우드의 모든 가계부 백업이 영구 삭제되어 복구할 수 없습니다. 계속하시겠습니까?';
+
+  @override
   String get cloudSyncEncryptResetSuccess => '암호화가 재설정되었습니다';
 
   @override
@@ -7702,4 +7768,36 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get tagSelectOwnerManaged => '공유 원장의 태그는 소유자가 관리합니다';
+
+  @override
+  String get syncHealthTitle => '동기화 상태';
+
+  @override
+  String get syncHealthEmpty => '최근 30일 동기화 기록 없음';
+
+  @override
+  String syncHealthRate(String rate) {
+    return '최근 30일 성공률: $rate';
+  }
+
+  @override
+  String syncHealthDetail(int success, int failed, int softFail, int conflict) {
+    return '성공 $success · 실패 $failed · 미수렴 $softFail · 충돌 차단 $conflict';
+  }
+
+  @override
+  String get syncHealthTopErrors => '주요 실패 유형';
+
+  @override
+  String get syncHealthExport => '진단 데이터 내보내기';
+
+  @override
+  String syncHealthExported(String fileName) {
+    return '진단 데이터 내보냄: $fileName';
+  }
+
+  @override
+  String syncHealthExportFailed(String error) {
+    return '진단 데이터 내보내기 실패: $error';
+  }
 }

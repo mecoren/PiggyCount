@@ -15,6 +15,7 @@ import '../../data/repositories/base_repository.dart';
 import '../../domain/encryption/encryption_service.dart';
 import '../../services/data_import_service.dart';
 import '../../services/system/logger_service.dart';
+import '../sync_metrics_service.dart';
 import '../sync_restore_guard.dart';
 import '../transactions_json.dart';
 import 'backup_scheduler.dart';
@@ -59,6 +60,8 @@ class CloudBackupService {
     required this.repo,
     required this.storageResolver,
     this.encryptionService,
+    this.metrics,
+    this.metricsBackend = 'unknown',
     Future<Directory> Function()? documentsDir,
   }) : _documentsDir = documentsDir ?? getApplicationDocumentsDirectory;
 
@@ -72,7 +75,32 @@ class CloudBackupService {
   /// 用于防御性解密 ZIP 内意外为密文的 ledger JSON（正常流程内层恒为明文）
   final EncryptionService? encryptionService;
 
-  final Future<Directory> Function() _documentsDir;
+  /// 同步成功率本地监控（审计 P0-1）。null 时埋点 no-op。
+  /// 后端标识从 storageResolver 解析到的 provider 不易获取，由调用方
+  /// 在记录时传入（见 [metricsBackend]）。
+  final SyncMetricsService? metrics;
+
+  /// 指标分组用的后端标识；未设置时记 'unknown'（不影响计数，仅分组）。
+  final String metricsBackend;
+
+  Future<Directory> Function() _documentsDir;
+
+  /// P0-1：备份场景埋点（含 backend 分组）。备份恢复的软失败
+  /// （单账本 failed>0 但整体流程完成）单独计 soft_fail。
+  void _recordMetrics(SyncOpOutcome outcome,
+      {Object? error, Duration? duration, SyncOpScenario? scenario}) {
+    final m = metrics;
+    if (m == null) return;
+    m.recordUnawaited(SyncOpRecord(
+      backend: metricsBackend,
+      scenario: scenario ?? SyncOpScenario.cloudBackup,
+      outcome: outcome,
+      errorClass: error == null && outcome == SyncOpOutcome.success
+          ? null
+          : SyncMetricsService.classifyError(error),
+      duration: duration,
+    ));
+  }
 
   /// 备份/恢复互斥锁：手动与定时共用，防止并发写云端/写本地
   bool _busy = false;
@@ -114,6 +142,8 @@ class CloudBackupService {
       throw StateError('已有备份/恢复操作正在执行');
     }
     _busy = true;
+    // P0-1：备份计时
+    final watch = Stopwatch()..start();
     try {
       final storage = await _requireStorage();
       final ledgers = await repo.getAllLedgers();
@@ -183,11 +213,16 @@ class CloudBackupService {
 
       logger.info('Backup',
           '备份完成: $fileName 账本=${ledgers.length} 附件=$attPacked');
+      _recordMetrics(SyncOpOutcome.success, duration: watch.elapsed);
       return (
         ledgers: ledgers.length,
         attachments: attPacked,
         fileName: fileName
       );
+    } catch (e) {
+      // P0-1：备份失败计入指标（不吞异常，原样上抛由调用方呈现）
+      _recordMetrics(SyncOpOutcome.failed, error: e, duration: watch.elapsed);
+      rethrow;
     } finally {
       _busy = false;
     }
@@ -243,6 +278,8 @@ class CloudBackupService {
     // 让定时备份（app.dart 每轮 tick 检查 isBusy）让位，避免半恢复态
     // DB 被打包上传覆盖当日好备份。begin/end 配对等价于 Guard.run。
     SyncRestoreGuard.begin();
+    // P0-1：恢复计时
+    final watch = Stopwatch()..start();
     try {
       final storage = await _requireStorage();
 
@@ -346,6 +383,15 @@ class CloudBackupService {
             '恢复时有 $skippedRecurring 笔同日周期实例被判重跳过（同规则同日且syncId或金额+备注相同）。'
             '若源端存在同日多笔合法交易，请核对明细。');
       }
+      // P0-1/P1-3：恢复整体流程完成但存在单账本失败 → soft_fail
+      //（部分数据未收敛但非整体故障）；全成功 → success。
+      _recordMetrics(
+          failed > 0 ? SyncOpOutcome.softFail : SyncOpOutcome.success,
+          error: failed > 0
+              ? fcs.CloudStorageException('备份恢复单账本失败 $failed 个')
+              : null,
+          scenario: SyncOpScenario.snapshotRestore,
+          duration: watch.elapsed);
       return (
         success: success,
         failed: failed,
@@ -353,6 +399,13 @@ class CloudBackupService {
         skippedRecurring: skippedRecurring,
         fileName: fileName
       );
+    } catch (e) {
+      // P0-1：恢复整体失败（下载/解包失败，本地数据未动）
+      _recordMetrics(SyncOpOutcome.failed,
+          error: e,
+          scenario: SyncOpScenario.snapshotRestore,
+          duration: watch.elapsed);
+      rethrow;
     } finally {
       SyncRestoreGuard.end();
       _busy = false;

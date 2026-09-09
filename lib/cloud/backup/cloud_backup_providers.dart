@@ -3,7 +3,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../providers/database_providers.dart';
 import '../../providers/encryption_providers.dart';
-import '../../providers/sync_providers.dart' show syncServiceProvider;
+import '../../providers/sync_providers.dart'
+    show
+        activeCloudConfigProvider,
+        syncServiceProvider,
+        syncMetricsServiceProvider;
 import '../transactions_sync_manager.dart';
 import 'backup_scheduler.dart';
 import 'cloud_backup_service.dart';
@@ -12,12 +16,17 @@ import 'cloud_backup_service.dart';
 final cloudBackupServiceProvider = Provider<CloudBackupService?>((ref) {
   final sync = ref.watch(syncServiceProvider);
   if (sync is! TransactionsSyncManager) return null;
+  // P0-1：备份场景指标注入；backend 分组键取当前激活配置的后端名
+  final activeAsync = ref.watch(activeCloudConfigProvider);
   return CloudBackupService(
     db: ref.watch(databaseProvider),
     repo: ref.watch(repositoryProvider),
     // 复用同步管理器的 E2EE 装饰 storage：备份与同步同一加密口径
     storageResolver: () => sync.decoratedStorage(),
     encryptionService: ref.watch(encryptionServiceProvider),
+    metrics: ref.watch(syncMetricsServiceProvider),
+    metricsBackend:
+        activeAsync.hasValue ? activeAsync.value!.type.name : 'unknown',
   );
 });
 

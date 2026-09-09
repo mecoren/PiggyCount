@@ -74,7 +74,7 @@
 
 | 编号 | 级别 | 类别 | 问题 | 定位 | 状态 |
 |---|---|---|---|---|---|
-| P0-1 | P0 | 监控 | 同步成功率零测量,99.9% 无基线 | 全局(无 SyncMetrics 设施) | ●(留待迭代) |
+| P0-1 | P0 | 监控 | 同步成功率零测量,99.9% 无基线 | 全局(无 SyncMetrics 设施) | ✓ 已修复(2026-09-09:v43 sync_op_log + SyncMetricsService + 埋点 + 同步健康卡 + 诊断导出,详见实施记录) |
 | P0-2 | P0 | 正确性 | iCloud「不存在」判定含数字子串,异常消息内嵌端口可误判→覆盖上传 | icloud_storage_service.dart:33,42 | ✓ 已修复 |
 | P0-3 | P0 | 正确性 | Supabase 认证/网络不可区分+404 子串判定+零超时 | supabase_storage_service.dart | ✓ 已修复 |
 | SEC-01 | P2 | 安全 | Supabase 未强制 HTTPS,anonKey 可明文传输 | supabase_provider.dart | ✓ 已修复 |
@@ -90,15 +90,15 @@
 | LOG-03 | P3 | 日志 | 元数据信封解密失败静默,全量下载退化无痕迹 | encrypted_cloud_storage.dart:85-98 | ✓ 已修复 |
 | LOG-04 | P3 | 日志 | LoggerService 启动加载竞态:2s 窗口新日志覆盖丢失历史 | logger_service.dart:215-253 | ●(留待迭代) |
 | LOG-05 | P3 | 日志 | 日志明文落盘可分享、无中央脱敏层;账本名/endpoint 入日志 | logger_service.dart:269 | ●(留待迭代;当前无凭据泄漏,防线依赖每处写对) |
-| LOG-06 | P3 | 日志 | 重试过程无逐次日志,弱网排障无法区分一次成功与重试后成功 | s3_client/_retry 等 | ●(随 P1-1 统一策略层一并接线) |
+| LOG-06 | P3 | 日志 | 重试过程无逐次日志,弱网排障无法区分一次成功与重试后成功 | s3_client/_retry 等 | ✓ 已修复(2026-09-09:S3 onRetryEvent 注入 + WebDAV _retryIdempotent logger 留痕) |
 | N-1 | P1 | 资源泄漏 | S3 连接测试 createCloudServices 后不 dispose,连接池每测泄漏 | cloud_service_page.dart:1751 | ✓ 已修复 |
 | N-3 | P2 | 测试基建 | W5 集成测试 skip 依赖 initialize 抛异常,markTestSkipped 在 catch 内被吞→skip 失效真失败 | webdav_basic_auth_preset_integration_test.dart | ✓ 已修复 |
-| P1-1 | P1 | 归一化 | 四套重试机制参数漂移;WebDAV jitter 时间戳取模非随机;条件 PUT 可安全重试未利用 | s3_client/webdav/TSM/retry_helper | ◐ jitter 已修真随机;策略层统一留待迭代 |
+| P1-1 | P1 | 归一化 | 四套重试机制参数漂移;WebDAV jitter 时间戳取模非随机;条件 PUT 可安全重试未利用 | s3_client/webdav/TSM/retry_helper | ◐ 2026-09-09:条件 PUT 网络故障安全重试已落地(If-Match 锚点保证,≤2 次,盲写维持不重试)+重试逐次日志(LOG-06);四套收编单一策略层仍留待迭代 |
 | P1-2 | P1 | 弱网 | S3 传输固定 30s 超时,慢网 >350KB 上传确定性失败 | s3_client.dart:67 | ✓ 已修复(自适应+90s 下载档) |
-| P1-3 | P1 | 监控 | verified=false/软失败无计数出口 | cloud_sync_manager/TSM | ●(随 P0-1) |
+| P1-3 | P1 | 监控 | verified=false/软失败无计数出口 | cloud_sync_manager/TSM | ✓ 已修复(随 P0-1:soft_fail 独立 outcome,verified=false/objectMissing/备份单账本失败均计数) |
 | P1-4 | P1 | 归一化 | Supabase/iCloud 能力缺口未显式化,盲写降级用户无感知 | cloud_service_page/manager | ●(留待迭代) |
-| P1-5 | P1 | 一致性 | 完整性校验双轨(manager 死代码 vs app 软告警) | cloud_sync_manager.dart:362-400 | ●(留待迭代) |
-| P1-6 | P1 | 数据一致性 | _staleRemoteSlots 仅内存,换名中断+重启→旧槽位重复导入 | transactions_sync_manager.dart:76 | ●(留待迭代) |
+| P1-5 | P1 | 一致性 | 完整性校验双轨(manager 死代码 vs app 软告警) | cloud_sync_manager.dart:362-400 | ✓ 已修复(2026-09-09:TSM 三破坏性入口内嵌指纹硬校验+单次重下自愈,旧快照保留软告警兼容) |
+| P1-6 | P1 | 数据一致性 | _staleRemoteSlots 仅内存,换名中断+重启→旧槽位重复导入 | transactions_sync_manager.dart:76 | ✓ 已修复(2026-09-09:stale_remote_slots 表 v43,登记/装载/补删跨重启存活) |
 | P2-1 | P2 | 性能 | getStatus 冷启动每账本全量导出算指纹 | TSM:1856 | ●(留待迭代) |
 | P2-2 | P2 | 性能 | 附件上传每轮 list 全量(会话级缓存缺失) | TSM:1184-1192 | ●(留待迭代) |
 | P2-3 | P2 | 性能 | iCloud base64 method channel 内存峰值 4× | icloud_storage_service.dart:56 | ●(留待迭代) |

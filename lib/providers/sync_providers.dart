@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' hide SyncStatus;
 import '../cloud/provider_factory.dart';
+import '../cloud/sync_metrics_service.dart';
 import '../cloud/sync_service.dart';
 import '../cloud/transactions_sync_manager.dart';
 import '../models/ledger_display_item.dart';
@@ -153,9 +154,22 @@ final authServiceProvider = FutureProvider<CloudAuthService>((ref) async {
   return NoopAuthService();
 });
 
-// 按 config.id 跟踪正在执行的 bootstrap，避免全局锁跨 Provider 重建互相阻塞。
-// 不同 config 的 bootstrap 互不影响；同 config 重建时跳过重复触发。
-final _bootstrappingConfigs = <String>{};
+/// 同步成功率本地监控（审计 P0-1）。共享单实例 —— sync_op_log 表与
+/// 使用它的服务（TSM/备份）同库同生命周期；TSM 与 CloudBackupService
+/// 均从本 provider 取注入，保证指标同源可聚合（健康卡/诊断导出同源）。
+final syncMetricsServiceProvider = Provider<SyncMetricsService>((ref) {
+  final db = ref.watch(databaseProvider);
+  return SyncMetricsService(db);
+});
+
+/// 指标滚动清理兜底（审计 P0-1）：provider 重建时清一次过期行。
+/// 高频路径的清理由 TSM 在快照上传成功后与 local_changes 清理同批
+/// unawaited 触发（对齐 cleanupPushedChanges 的节流思路），此处只是
+/// 「长期只恢复不写入」场景下的兜底，成本近零。
+final syncMetricsCleanupProvider = FutureProvider<int>((ref) async {
+  final metrics = ref.watch(syncMetricsServiceProvider);
+  return metrics.cleanupExpired();
+});
 
 final syncServiceProvider = Provider<SyncService>((ref) {
   final activeAsync = ref.watch(activeCloudConfigProvider);
@@ -201,6 +215,8 @@ final syncServiceProvider = Provider<SyncService>((ref) {
     db: db,
     repo: repo,
     encryptionService: encryptionService,
+    // P0-1：同步成功率指标注入（未注入时 TSM 埋点 no-op）
+    metrics: ref.watch(syncMetricsServiceProvider),
   );
   // F5：provider 重建（切云配置/依赖变更）时释放旧实例的 HTTP 连接池，
   // 否则 WebDAV dio / S3 http.Client 随每次重建泄漏

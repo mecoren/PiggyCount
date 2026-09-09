@@ -1074,6 +1074,12 @@ abstract class AppLocalizations {
   /// **'Are you sure you want to delete the selected {count} transactions?\nThis action cannot be undone.'**
   String searchBatchDeleteConfirmMessage(int count);
 
+  /// No description provided for @searchBatchDeleteReconfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Final confirmation: these transactions cannot be recovered after deletion. Continue?'**
+  String get searchBatchDeleteReconfirmMessage;
+
   /// No description provided for @searchBatchSetNoteTitle.
   ///
   /// In en, this message translates to:
@@ -1404,6 +1410,12 @@ abstract class AppLocalizations {
   /// **'Are you sure to clear all transactions in ledger \"{name}\"? This action cannot be undone.\\nThe ledger will be kept, only transaction data will be deleted.'**
   String ledgersClearMessage(String name);
 
+  /// No description provided for @ledgersClearReconfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Final confirmation: transactions in this ledger will be permanently deleted and cannot be recovered. Continue?'**
+  String get ledgersClearReconfirmMessage;
+
   /// No description provided for @ledgerDefaultName.
   ///
   /// In en, this message translates to:
@@ -1433,6 +1445,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Are you sure you want to delete this ledger and all its records? This action cannot be undone.\\nIf there is a backup in the cloud, it will also be deleted.'**
   String get ledgersDeleteMessage;
+
+  /// No description provided for @ledgersDeleteReconfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Final confirmation: this ledger and all its records will be permanently removed (including cloud backup) and cannot be recovered. Continue?'**
+  String get ledgersDeleteReconfirmMessage;
 
   /// No description provided for @ledgersDeleted.
   ///
@@ -1475,6 +1493,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Are you sure to delete local ledger \"{name}\"?\\nCloud backup will be kept and you can restore it anytime.'**
   String ledgersDeleteLocalMessage(String name);
+
+  /// No description provided for @ledgersDeleteLocalReconfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Final confirmation: only the local copy on this device will be removed; the cloud backup is kept and can be restored anytime. Continue?'**
+  String get ledgersDeleteLocalReconfirmMessage;
 
   /// No description provided for @ledgersDeleteLocalSuccess.
   ///
@@ -1644,6 +1668,12 @@ abstract class AppLocalizations {
   /// **'Confirm delete cloud ledger \"{name}\"? This action cannot be undone.'**
   String ledgersDeleteRemoteMessage(String name);
 
+  /// No description provided for @ledgersDeleteRemoteReconfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Final confirmation: this cloud ledger and all its data will be permanently removed and can no longer be restored on any device. Continue?'**
+  String get ledgersDeleteRemoteReconfirmMessage;
+
   /// No description provided for @ledgersDeleting.
   ///
   /// In en, this message translates to:
@@ -1674,6 +1704,12 @@ abstract class AppLocalizations {
   /// **'Confirm restore all cloud ledgers? Total {count}.'**
   String ledgersRestoreAllMessage(int count);
 
+  /// No description provided for @ledgersRestoreAllReconfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Final confirmation: restoring overwrites local ledger data with cloud content; overwritten local changes cannot be recovered. Continue?'**
+  String get ledgersRestoreAllReconfirmMessage;
+
   /// No description provided for @ledgersRestoring.
   ///
   /// In en, this message translates to:
@@ -1703,6 +1739,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Upload all {count} local ledgers to the cloud? Existing cloud content will be overwritten.'**
   String ledgersUploadAllMessage(int count);
+
+  /// No description provided for @ledgersUploadAllReconfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Final confirmation: replaced cloud data cannot be recovered. Continue?'**
+  String get ledgersUploadAllReconfirmMessage;
 
   /// No description provided for @ledgersUploadAllComplete.
   ///
@@ -3925,6 +3967,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Are you sure you want to delete {count} unused categories? This action cannot be undone.'**
   String categoryClearUnusedMessage(int count);
+
+  /// No description provided for @categoryClearUnusedReconfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Final confirmation: deleted categories cannot be recovered and would need to be recreated. Continue?'**
+  String get categoryClearUnusedReconfirmMessage;
 
   /// No description provided for @categoryClearUnusedListTitle.
   ///
@@ -7703,6 +7751,12 @@ abstract class AppLocalizations {
   /// **'Confirm to delete this account?'**
   String get accountDeleteConfirm;
 
+  /// No description provided for @accountDeleteReconfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Final confirmation: the account cannot be recovered after deletion and its saved details will be lost permanently. Continue?'**
+  String get accountDeleteReconfirmMessage;
+
   /// No description provided for @accountSelectTitle.
   ///
   /// In en, this message translates to:
@@ -9359,6 +9413,18 @@ abstract class AppLocalizations {
   /// **'Confirm Import'**
   String get configImportConfirmTitle;
 
+  /// No description provided for @configImportReconfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Import'**
+  String get configImportReconfirmTitle;
+
+  /// No description provided for @configImportReconfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Final confirmation: importing overwrites existing configuration and cannot be undone; a backup is recommended. Continue?'**
+  String get configImportReconfirmMessage;
+
   /// No description provided for @configImportSuccess.
   ///
   /// In en, this message translates to:
@@ -9664,6 +9730,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Are you sure you want to clear all AI models? Size: {size}'**
   String storageClearAIModelsMessage(String size);
+
+  /// No description provided for @storageClearReconfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Final confirmation: cleared files must be downloaded again. Continue?'**
+  String get storageClearReconfirmMessage;
 
   /// No description provided for @storageClearAPKMessage.
   ///
@@ -10955,6 +11027,12 @@ abstract class AppLocalizations {
   /// **'Delete {count} unused tags?'**
   String tagClearUnusedMessage(int count);
 
+  /// No description provided for @tagClearUnusedReconfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Final confirmation: deleted tags cannot be recovered and would need to be recreated. Continue?'**
+  String get tagClearUnusedReconfirmMessage;
+
   /// No description provided for @tagClearUnusedSuccess.
   ///
   /// In en, this message translates to:
@@ -11262,6 +11340,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Start Import'**
   String get attachmentStartImport;
+
+  /// No description provided for @attachmentImportReconfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Overwrite Import'**
+  String get attachmentImportReconfirmTitle;
+
+  /// No description provided for @attachmentImportReconfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Final confirmation: with \"Overwrite\" selected, existing attachments with the same name will be replaced by archive files and cannot be recovered. Continue?'**
+  String get attachmentImportReconfirmMessage;
 
   /// No description provided for @attachmentPreview.
   ///
@@ -12637,6 +12727,12 @@ abstract class AppLocalizations {
   /// **'Delete the {count} selected item(s)? This cannot be undone.'**
   String maintenanceOrphanConfirmDeleteBatch(int count);
 
+  /// No description provided for @maintenanceOrphanReconfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Final confirmation: cleaned-up data will be permanently deleted and cannot be recovered. Continue?'**
+  String get maintenanceOrphanReconfirmMessage;
+
   /// No description provided for @maintenanceOrphanCleanSuccess.
   ///
   /// In en, this message translates to:
@@ -13759,6 +13855,12 @@ abstract class AppLocalizations {
   /// **'Reset will clear all cloud ledger backups and cannot be undone. Continue?'**
   String get cloudSyncEncryptResetConfirmMessage;
 
+  /// No description provided for @cloudSyncEncryptResetReconfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Final confirmation: all cloud ledger backups will be permanently deleted and cannot be recovered. Continue?'**
+  String get cloudSyncEncryptResetReconfirmMessage;
+
   /// No description provided for @cloudSyncEncryptResetSuccess.
   ///
   /// In en, this message translates to:
@@ -14322,6 +14424,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Shared ledger tags are managed by the owner'**
   String get tagSelectOwnerManaged;
+
+  /// No description provided for @syncHealthTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync Health'**
+  String get syncHealthTitle;
+
+  /// No description provided for @syncHealthEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No sync records in the last 30 days'**
+  String get syncHealthEmpty;
+
+  /// No description provided for @syncHealthRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Success rate (last 30 days): {rate}'**
+  String syncHealthRate(String rate);
+
+  /// No description provided for @syncHealthDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Success {success} · Failed {failed} · Unconverged {softFail} · Conflict-blocked {conflict}'**
+  String syncHealthDetail(int success, int failed, int softFail, int conflict);
+
+  /// No description provided for @syncHealthTopErrors.
+  ///
+  /// In en, this message translates to:
+  /// **'Top failure categories'**
+  String get syncHealthTopErrors;
+
+  /// No description provided for @syncHealthExport.
+  ///
+  /// In en, this message translates to:
+  /// **'Export diagnostic data'**
+  String get syncHealthExport;
+
+  /// No description provided for @syncHealthExported.
+  ///
+  /// In en, this message translates to:
+  /// **'Diagnostics exported: {fileName}'**
+  String syncHealthExported(String fileName);
+
+  /// No description provided for @syncHealthExportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to export diagnostics: {error}'**
+  String syncHealthExportFailed(String error);
 }
 
 class _AppLocalizationsDelegate

@@ -273,6 +273,46 @@ class EntityChangeWatermarks extends Table {
   Set<Column> get primaryKey => {syncId};
 }
 
+// v43（审计 P0-1）：同步操作结构化指标（本地测量，零遥测）。
+//
+// 每次核心同步场景（快照上传/恢复/启动检查/附件补齐/云端备份）的
+// outcome 落一行，供「同步健康」卡按 30 天窗口聚合成功率：
+// success / (success + failed + soft_fail)，conflict 不计入分母
+// （它是并发保护正确工作的证据，不是失败）。
+// soft_fail 单列（审计 P1-3）：verified=false / objectMissing / 指纹
+// 交叉自检不一致等「操作报成功但数据未收敛」的信号 —— 这正是 99.9%
+// 与 99% 之间的差距主体，与 failed 必须分开可查。
+//
+// 隐私约束（PRIVACY.md 零遥测承诺）：本表只存本地、不上云、不导出
+// 除非用户主动操作「诊断包导出」；error_detail 只留错误类别枚举与
+// 摘要（异常类型名 + 首行消息，截断 200 字符），不含凭据/完整堆栈。
+class SyncOpLog extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  DateTimeColumn get ts => dateTime().withDefault(currentDateAndTime)();
+  TextColumn get backend => text()();  // s3 / webdav / supabase / icloud / local
+  TextColumn get scenario => text()(); // snapshotUpload / snapshotRestore / startupCheck / attachmentFill / cloudBackup / remoteDiscovery
+  TextColumn get outcome => text()();  // success / failed / soft_fail / conflict
+  TextColumn get errorClass => text().nullable()(); // network_timeout / auth / gateway / precondition / data_corruption / unknown
+  IntColumn get ledgerId => integer().nullable()();
+  IntColumn get attempts => integer().withDefault(const Constant(1))();
+  IntColumn get durationMs => integer().nullable()();
+}
+
+// v43（审计 P1-6）：换名收尾删除失败的旧远程槽位，持久化登记。
+//
+// 此前 _staleRemoteSlots 仅存内存：downloadRemoteLedger「先传新槽位再删
+// 旧文件」两步之间删除失败（网络抖动）时，旧 slot 文件残留且 slotKey
+// 不匹配任何本地账本 —— 进程重启后登记丢失，下次启动被发现流程当
+// 「云端新账本」再次提示导入（2026-09-07 双端实测即踩中，B 端多出 6
+// 个重复账本）。落到 DB 后跨重启存活，初始化时统一补删。
+class StaleRemoteSlots extends Table {
+  TextColumn get path => text()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column> get primaryKey => {path};
+}
+
 // 交易-标签关联表
 class TransactionTags extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -473,6 +513,8 @@ class SharedLedgerTags extends Table {
   ExchangeRates,
   ExchangeRateOverrides,
   EntityChangeWatermarks,
+  SyncOpLog,
+  StaleRemoteSlots,
 ])
 class PiggyDatabase extends _$PiggyDatabase {
   PiggyDatabase() : super(_openConnection());
@@ -483,7 +525,7 @@ class PiggyDatabase extends _$PiggyDatabase {
   PiggyDatabase.forTesting(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 42; // v42: 周期账单币种 — recurring_transactions.currency_code(移植 BeeCount #444); v41: local_changes 已推送行存量清理(数据治理 G-LC,双后端实测 6143 行无界增长); v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
+  int get schemaVersion => 43; // v43: 同步指标 sync_op_log(审计 P0-1,本地成功率测量) + stale_remote_slots(审计 P1-6,换名收尾补删持久化); v42: 周期账单币种 — recurring_transactions.currency_code(移植 BeeCount #444); v41: local_changes 已推送行存量清理(数据治理 G-LC,双后端实测 6143 行无界增长); v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1417,6 +1459,19 @@ class PiggyDatabase extends _$PiggyDatabase {
                 'ALTER TABLE recurring_transactions ADD COLUMN currency_code TEXT;');
             logger.info('DBMigration', 'v42 迁移完成');
           }
+          if (from < 43) {
+            // v43(审计 P0-1/P1-6): 同步指标表 + 换名收尾补删持久化表。
+            // 两表均为新增、零回填,用 drift 的 createTable 保持与生成代码
+            // 一致的 DDL;m.createAll 已覆盖新装库,此处只管升级库。
+            logger.info(
+                'DBMigration', '开始迁移到 v43: sync_op_log + stale_remote_slots');
+            await migrator.createTable(syncOpLog);
+            await migrator.createTable(staleRemoteSlots);
+            // 指标按时间窗口聚合,补 (ts) 索引避免 30 天窗口查询全表扫描。
+            await customStatement(
+                'CREATE INDEX IF NOT EXISTS idx_sync_op_log_ts ON sync_op_log(ts);');
+            logger.info('DBMigration', 'v43 迁移完成');
+          }
         },
         onCreate: (m) async {
           await m.createAll();
@@ -1478,6 +1533,10 @@ class PiggyDatabase extends _$PiggyDatabase {
           // v40: updated_at 触碰触发器（审计 T1，与 onUpgrade v40 同构 ——
           // 新装库走 onCreate 而非 migration）。IF NOT EXISTS 幂等。
           await _createUpdatedAtTouchTriggers();
+          // v43: 同步指标时间索引（与 onUpgrade v43 同构 —— 新装库走
+          // onCreate）。表本体由上方 m.createAll 创建。
+          await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_sync_op_log_ts ON sync_op_log(ts);');
         },
       );
 

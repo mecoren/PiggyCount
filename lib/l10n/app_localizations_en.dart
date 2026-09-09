@@ -549,6 +549,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get searchBatchDeleteReconfirmMessage =>
+      'Final confirmation: these transactions cannot be recovered after deletion. Continue?';
+
+  @override
   String get searchBatchSetNoteTitle => 'Batch Set Note';
 
   @override
@@ -750,6 +754,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get ledgersClearReconfirmMessage =>
+      'Final confirmation: transactions in this ledger will be permanently deleted and cannot be recovered. Continue?';
+
+  @override
   String get ledgerDefaultName => 'Default Ledger';
 
   @override
@@ -764,6 +772,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get ledgersDeleteMessage =>
       'Are you sure you want to delete this ledger and all its records? This action cannot be undone.\\nIf there is a backup in the cloud, it will also be deleted.';
+
+  @override
+  String get ledgersDeleteReconfirmMessage =>
+      'Final confirmation: this ledger and all its records will be permanently removed (including cloud backup) and cannot be recovered. Continue?';
 
   @override
   String get ledgersDeleted => 'Deleted';
@@ -787,6 +799,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String ledgersDeleteLocalMessage(String name) {
     return 'Are you sure to delete local ledger \"$name\"?\\nCloud backup will be kept and you can restore it anytime.';
   }
+
+  @override
+  String get ledgersDeleteLocalReconfirmMessage =>
+      'Final confirmation: only the local copy on this device will be removed; the cloud backup is kept and can be restored anytime. Continue?';
 
   @override
   String get ledgersDeleteLocalSuccess => 'Local ledger deleted';
@@ -888,6 +904,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get ledgersDeleteRemoteReconfirmMessage =>
+      'Final confirmation: this cloud ledger and all its data will be permanently removed and can no longer be restored on any device. Continue?';
+
+  @override
   String get ledgersDeleting => 'Deleting...';
 
   @override
@@ -903,6 +923,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String ledgersRestoreAllMessage(int count) {
     return 'Confirm restore all cloud ledgers? Total $count.';
   }
+
+  @override
+  String get ledgersRestoreAllReconfirmMessage =>
+      'Final confirmation: restoring overwrites local ledger data with cloud content; overwritten local changes cannot be recovered. Continue?';
 
   @override
   String get ledgersRestoring => 'Restoring...';
@@ -922,6 +946,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String ledgersUploadAllMessage(int count) {
     return 'Upload all $count local ledgers to the cloud? Existing cloud content will be overwritten.';
   }
+
+  @override
+  String get ledgersUploadAllReconfirmMessage =>
+      'Final confirmation: replaced cloud data cannot be recovered. Continue?';
 
   @override
   String get ledgersUploadAllComplete => 'Upload Complete';
@@ -2135,6 +2163,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String categoryClearUnusedMessage(int count) {
     return 'Are you sure you want to delete $count unused categories? This action cannot be undone.';
   }
+
+  @override
+  String get categoryClearUnusedReconfirmMessage =>
+      'Final confirmation: deleted categories cannot be recovered and would need to be recreated. Continue?';
 
   @override
   String get categoryClearUnusedListTitle => 'Categories to be deleted:';
@@ -4243,6 +4275,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountDeleteConfirm => 'Confirm to delete this account?';
 
   @override
+  String get accountDeleteReconfirmMessage =>
+      'Final confirmation: the account cannot be recovered after deletion and its saved details will be lost permanently. Continue?';
+
+  @override
   String get accountSelectTitle => 'Select Account';
 
   @override
@@ -5184,6 +5220,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get configImportConfirmTitle => 'Confirm Import';
 
   @override
+  String get configImportReconfirmTitle => 'Confirm Import';
+
+  @override
+  String get configImportReconfirmMessage =>
+      'Final confirmation: importing overwrites existing configuration and cannot be undone; a backup is recommended. Continue?';
+
+  @override
   String get configImportSuccess => 'Config imported successfully';
 
   @override
@@ -5356,6 +5399,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String storageClearAIModelsMessage(String size) {
     return 'Are you sure you want to clear all AI models? Size: $size';
   }
+
+  @override
+  String get storageClearReconfirmMessage =>
+      'Final confirmation: cleared files must be downloaded again. Continue?';
 
   @override
   String storageClearAPKMessage(String size) {
@@ -6061,6 +6108,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get tagClearUnusedReconfirmMessage =>
+      'Final confirmation: deleted tags cannot be recovered and would need to be recreated. Continue?';
+
+  @override
   String tagClearUnusedSuccess(int count) {
     return 'Deleted $count tags';
   }
@@ -6237,6 +6288,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get attachmentStartImport => 'Start Import';
+
+  @override
+  String get attachmentImportReconfirmTitle => 'Confirm Overwrite Import';
+
+  @override
+  String get attachmentImportReconfirmMessage =>
+      'Final confirmation: with \"Overwrite\" selected, existing attachments with the same name will be replaced by archive files and cannot be recovered. Continue?';
 
   @override
   String get attachmentPreview => 'Preview Attachments';
@@ -6993,6 +7051,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get maintenanceOrphanReconfirmMessage =>
+      'Final confirmation: cleaned-up data will be permanently deleted and cannot be recovered. Continue?';
+
+  @override
   String maintenanceOrphanCleanSuccess(int count) {
     return 'Cleaned $count item(s)';
   }
@@ -7595,6 +7657,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Reset will clear all cloud ledger backups and cannot be undone. Continue?';
 
   @override
+  String get cloudSyncEncryptResetReconfirmMessage =>
+      'Final confirmation: all cloud ledger backups will be permanently deleted and cannot be recovered. Continue?';
+
+  @override
   String get cloudSyncEncryptResetSuccess => 'Encryption has been reset';
 
   @override
@@ -7937,4 +8003,36 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get tagSelectOwnerManaged =>
       'Shared ledger tags are managed by the owner';
+
+  @override
+  String get syncHealthTitle => 'Sync Health';
+
+  @override
+  String get syncHealthEmpty => 'No sync records in the last 30 days';
+
+  @override
+  String syncHealthRate(String rate) {
+    return 'Success rate (last 30 days): $rate';
+  }
+
+  @override
+  String syncHealthDetail(int success, int failed, int softFail, int conflict) {
+    return 'Success $success · Failed $failed · Unconverged $softFail · Conflict-blocked $conflict';
+  }
+
+  @override
+  String get syncHealthTopErrors => 'Top failure categories';
+
+  @override
+  String get syncHealthExport => 'Export diagnostic data';
+
+  @override
+  String syncHealthExported(String fileName) {
+    return 'Diagnostics exported: $fileName';
+  }
+
+  @override
+  String syncHealthExportFailed(String error) {
+    return 'Failed to export diagnostics: $error';
+  }
 }

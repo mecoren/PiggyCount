@@ -59,6 +59,7 @@
   "accountDefaultIncomeTitle": "預設收入帳戶",
   "accountDefaultNone": "不設定",
   "accountDeleteConfirm": "確認刪除該帳戶嗎？",
+  "accountDeleteReconfirmMessage": "再次確認：刪除後該帳戶不可復原，已儲存的帳戶資訊將永久丟失。確定要繼續嗎？",
   "accountDeleteWarningMessage": "該帳戶有 {count} 筆關聯交易，刪除後交易記錄中的帳戶信息將被清空。確認刪除嗎？",
   "accountDeleteWarningTitle": "確認刪除",
   "accountEditTitle": "編輯帳戶",
@@ -541,6 +542,8 @@
   "attachmentImportTitle": "匯入附件",
   "attachmentMaxReached": "已達到最大附件數量",
   "attachmentStartImport": "開始匯入",
+  "attachmentImportReconfirmTitle": "覆蓋匯入確認",
+  "attachmentImportReconfirmMessage": "再次確認：選擇「覆蓋」後，同名附件將被封存中的檔案替換且無法復原。確定要繼續嗎？",
   "attachmentPreview": "預覽附件",
   "attachmentPreviewSubtitle": "共 {count} 張圖片",
   "@attachmentPreviewSubtitle": {
@@ -642,6 +645,7 @@
   "categoryClearUnusedEmpty": "沒有未使用的分類",
   "categoryClearUnusedFailed": "清空失敗",
   "categoryClearUnusedMessage": "確定要刪除 {count} 個未使用的分類嗎？此操作無法撤銷。",
+  "categoryClearUnusedReconfirmMessage": "再次確認：刪除後這些分類不可復原，若誤刪需要重新建立。確定要繼續嗎？",
   "categoryClearUnusedListTitle": "將被刪除的分類：",
   "categoryClearUnusedSuccess": "已刪除 {count} 個分類",
   "categoryClearUnusedTitle": "清空未使用分類",
@@ -1167,6 +1171,8 @@
   "configExportTitle": "匯出配置",
   "configExportViewContent": "檢視內容",
   "configImportConfirmTitle": "確認匯入",
+  "configImportReconfirmTitle": "確認匯入",
+  "configImportReconfirmMessage": "再次確認：匯入將覆蓋現有配置且不可復原，建議先備份。確定要繼續嗎？",
   "configImportExportIncludesTitle": "包含的配置項",
   "configImportExportInfoMessage": "此功能用於匯出和匯入應用配置，包括雲端服務配置、AI配置等。配置檔案採用YAML格式，方便檢視和編輯。\\n\\n⚠️ 配置檔案包含敏感資訊（如API金鑰、密碼等），請妥善保管。",
   "configImportExportInfoTitle": "功能說明",
@@ -1492,6 +1498,7 @@
   "ledgersCannotDeleteLastOne": "無法刪除最後一個帳本",
   "ledgersClear": "清空當前帳本",
   "ledgersClearMessage": "將刪除該帳本下所有交易記錄，且不可復原。",
+  "ledgersClearReconfirmMessage": "再次確認：清空後帳本內的帳單資料將永久刪除、無法復原。確定要繼續嗎？",
   "ledgersClearSuccess": "帳本已清空",
   "ledgersClearTitle": "清空帳本",
   "ledgersConflictDownload": "下載到本地",
@@ -1519,12 +1526,15 @@
   "ledgersDeleteFailed": "刪除失敗",
   "ledgersDeleteLocal": "僅刪除本地帳本",
   "ledgersDeleteLocalMessage": "確定要刪除本地帳本「{name}」嗎？\n雲端備份會保留，您可以隨時恢復。",
+  "ledgersDeleteLocalReconfirmMessage": "再次確認：僅刪除本機上的該帳本，雲端備份保留、可隨時恢復下載。確定要繼續嗎？",
   "ledgersDeleteLocalSuccess": "本地帳本已刪除",
   "ledgersDeleteLocalTitle": "刪除本地帳本",
   "ledgersDeleteMessage": "確定要刪除該帳本及其全部記錄嗎？此操作不可復原。\\n若雲端存在備份，也會一併刪除。",
+  "ledgersDeleteReconfirmMessage": "再次確認：刪除後該帳本及其全部記錄將永久消失（含雲端備份），無法復原。確定要繼續嗎？",
   "ledgersDeleteRemote": "刪除雲端帳本",
   "ledgersDeleteRemoteConfirm": "刪除雲端帳本",
   "ledgersDeleteRemoteMessage": "確認刪除雲端帳本「{name}」？此操作無法復原。",
+  "ledgersDeleteRemoteReconfirmMessage": "再次確認：刪除後雲端該帳本及其全部資料將永久消失，多裝置將無法再恢復它。確定要繼續嗎？",
   "ledgersDeleteRemoteSuccess": "已刪除雲端帳本",
   "ledgersDeleted": "已刪除",
   "ledgersDeleting": "刪除中...",
@@ -1542,11 +1552,13 @@
   "ledgersRemote": "雲端帳本",
   "ledgersRestoreAll": "全部恢復",
   "ledgersRestoreAllMessage": "確認恢復所有雲端帳本？共 {count} 個。",
+  "ledgersRestoreAllReconfirmMessage": "再次確認：恢復將用雲端內容覆蓋本機帳本資料，被覆蓋的本機變更無法找回。確定要繼續嗎？",
   "ledgersRestoreAllTitle": "批次恢復",
   "ledgersRestoreComplete": "恢復完成",
   "ledgersRestoreResult": "成功: {success}，失敗: {failed}",
   "ledgersUploadAll": "全部上傳",
   "ledgersUploadAllMessage": "確認將 {count} 個本機帳本上傳到雲端？雲端現有內容將被本機內容覆蓋。",
+  "ledgersUploadAllReconfirmMessage": "再次確認：覆蓋後雲端原有資料無法復原，確定要繼續嗎？",
   "ledgersUploadAllComplete": "上傳完成",
   "ledgersUploadAllResult": "成功: {success}，失敗: {failed}",
   "ledgersUploadAllConflictSkipped": "已上傳 {success} 個帳本；{conflicts} 個帳本因雲端較新被跳過，請核對後逐個上傳。",
@@ -1877,6 +1889,7 @@
   "searchBatchChangeCategoryFailed": "調整分類失敗: {error}",
   "searchBatchChangeCategorySuccess": "成功為 {count} 筆記帳調整分類",
   "searchBatchDeleteConfirmMessage": "確定要刪除選中的 {count} 筆記帳嗎?\n此操作無法復原。",
+  "searchBatchDeleteReconfirmMessage": "再次確認：刪除後這些記帳無法找回。確定要繼續嗎？",
   "searchBatchDeleteConfirmTitle": "確認刪除",
   "searchBatchDeleteFailed": "刪除失敗: {error}",
   "searchBatchDeleteSuccess": "成功刪除 {count} 筆記帳",
@@ -2051,6 +2064,7 @@
   "storageAIModels": "AI模型",
   "storageAPKFiles": "安裝包",
   "storageClearAIModelsMessage": "確定要清理所有AI模型嗎？大小：{size}",
+  "storageClearReconfirmMessage": "再次確認：清理後需要重新下載，確定要繼續嗎？",
   "@storageClearAIModelsMessage": {
     "placeholders": {
       "size": {
@@ -2088,6 +2102,7 @@
   "tagClearUnusedEmpty": "沒有未使用的標籤",
   "tagClearUnusedFailed": "清理失敗",
   "tagClearUnusedMessage": "確定要刪除 {count} 個未使用的標籤嗎？",
+  "tagClearUnusedReconfirmMessage": "再次確認：刪除後這些標籤不可復原，若誤刪需要重新建立。確定要繼續嗎？",
   "@tagClearUnusedMessage": {
     "placeholders": {
       "count": {
@@ -2714,6 +2729,7 @@
     }
   },
   "maintenanceOrphanConfirmDeleteBatch": "確定清理選中的 {count} 項嗎？操作不可撤銷。",
+  "maintenanceOrphanReconfirmMessage": "再次確認：清理後這些資料將被永久刪除、無法找回。確定要繼續嗎？",
   "@maintenanceOrphanConfirmDeleteBatch": {
     "placeholders": {
       "count": {
@@ -2956,6 +2972,7 @@
   "cloudSyncEncryptChangeSuccess": "密碼已修改",
   "cloudSyncEncryptResetConfirmTitle": "重置加密",
   "cloudSyncEncryptResetConfirmMessage": "重置將清空雲端所有帳本備份且不可復原，確定繼續嗎？",
+  "cloudSyncEncryptResetReconfirmMessage": "再次確認：重置後雲端所有帳本備份將永久刪除，無法復原。確定要繼續嗎？",
   "cloudSyncEncryptResetSuccess": "加密已重置",
   "cloudSyncEncryptDecryptFailed": "解密失敗，請檢查密碼",
   "cloudSyncEncryptMultiDeviceHint": "在其他裝置上用相同密碼即可解密",
