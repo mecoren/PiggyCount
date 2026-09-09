@@ -491,32 +491,18 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     }
   }
 
-  /// 批量删除对话框
-  void _showBatchDeleteDialog() {
+  /// 批量删除：双重危险确认（各 5 秒倒计时）后才执行
+  Future<void> _showBatchDeleteDialog() async {
     final count = _selectedIds.length;
     final l10n = AppLocalizations.of(context);
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.searchBatchDeleteConfirmTitle),
-        content: Text(l10n.searchBatchDeleteConfirmMessage(count)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.commonCancel),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await _executeBatchDelete();
-            },
-            style: TextButton.styleFrom(
-                foregroundColor: PiggyTokens.error(context)),
-            child: Text(l10n.commonDelete),
-          ),
-        ],
-      ),
+    final confirmed = await showDoubleDangerConfirmDialog(
+      context,
+      title: l10n.searchBatchDeleteConfirmTitle,
+      firstMessage: l10n.searchBatchDeleteConfirmMessage(count),
+      secondMessage: l10n.searchBatchDeleteReconfirmMessage,
     );
+    if (!confirmed || !mounted) return;
+    await _executeBatchDelete();
   }
 
   /// 执行批量删除

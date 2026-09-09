@@ -922,59 +922,22 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
   Future<void> _delete() async {
     final l10n = AppLocalizations.of(context);
 
-    // 检查是否有关联交易
+    // 双重危险确认（各 5 秒倒计时）：有关联交易时第一段会
+    // 额外警告交易记录中的账户信息将被清空
     final repo = ref.read(repositoryProvider);
     final txCount = await repo.getTransactionCountByAccount(widget.account!.id);
 
-    if (txCount > 0) {
-      // 有关联交易，提示用户
-      if (!mounted) return;
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(l10n.accountDeleteWarningTitle),
-          content: Text(l10n.accountDeleteWarningMessage(txCount)),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(l10n.commonCancel),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: TextButton.styleFrom(
-                  foregroundColor: PiggyTokens.error(context)),
-              child: Text(l10n.commonDelete),
-            ),
-          ],
-        ),
-      );
-
-      if (confirm != true) return;
-    } else {
-      // 没有关联交易，简单确认
-      if (!mounted) return;
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(l10n.commonConfirm),
-          content: Text(l10n.accountDeleteConfirm),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(l10n.commonCancel),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: TextButton.styleFrom(
-                  foregroundColor: PiggyTokens.error(context)),
-              child: Text(l10n.commonDelete),
-            ),
-          ],
-        ),
-      );
-
-      if (confirm != true) return;
-    }
+    if (!mounted) return;
+    final firstMessage = txCount > 0
+        ? l10n.accountDeleteWarningMessage(txCount)
+        : l10n.accountDeleteConfirm;
+    final confirmed = await showDoubleDangerConfirmDialog(
+      context,
+      title: l10n.accountDeleteWarningTitle,
+      firstMessage: firstMessage,
+      secondMessage: l10n.accountDeleteReconfirmMessage,
+    );
+    if (!confirmed || !mounted) return;
 
     setState(() => _saving = true);
 

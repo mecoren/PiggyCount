@@ -414,17 +414,35 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
 
     // 显示确认弹窗
     final dialogResult = await _showImportConfirmDialog(filePath, info);
-    if (dialogResult != null) {
-      final conflictStrategy = dialogResult['strategy'] as String;
-      final shouldPreview = dialogResult['preview'] as bool? ?? false;
+    if (dialogResult == null) return;
+    if (!mounted) return;
 
-      if (shouldPreview) {
-        // 显示预览
-        await _handleImportPreview(filePath);
-      } else {
-        // 直接导入
+    final conflictStrategy = dialogResult['strategy'] as String;
+    final shouldPreview = dialogResult['preview'] as bool? ?? false;
+
+    if (shouldPreview) {
+      // 显示预览
+      await _handleImportPreview(filePath);
+    } else if (conflictStrategy ==
+        AttachmentExportImportService.conflictOverwrite) {
+      // 覆盖策略破坏性强：双重危险确认（各 3 秒倒计时）后才导入。
+      // 跳过策略不动现有文件，保持原有单次确认即可。
+      // l10n 提前取：确认弹窗 await 后再取需重新判 mounted
+      final l10n = AppLocalizations.of(context);
+      final reconfirmed = await showDoubleDangerConfirmDialog(
+        context,
+        title: l10n.attachmentImportReconfirmTitle,
+        firstMessage: l10n.attachmentImportReconfirmMessage,
+        secondMessage: l10n.attachmentImportReconfirmMessage,
+        countdownSeconds: 3,
+      );
+      if (!mounted) return;
+      if (reconfirmed) {
         await _handleImport(filePath, info, conflictStrategy);
       }
+    } else {
+      // 直接导入（跳过策略）
+      await _handleImport(filePath, info, conflictStrategy);
     }
   }
 

@@ -758,14 +758,16 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
   Future<void> _handleClearLedger(
       BuildContext context, LedgerDisplayItem ledger) async {
     final l10n = AppLocalizations.of(context);
-    final confirmed = await AppDialog.confirm<bool>(
+    // 双重危险确认（各 5 秒倒计时）：清空账单不可恢复
+    final confirmed = await showDoubleDangerConfirmDialog(
       context,
       title: l10n.ledgersClearTitle,
-      message:
+      firstMessage:
           l10n.ledgersClearMessage(translateLedgerName(context, ledger.name)),
+      secondMessage: l10n.ledgersClearReconfirmMessage,
     );
 
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     try {
       final repo = ref.read(repositoryProvider);
@@ -808,14 +810,17 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     final repo = ref.read(repositoryProvider);
     final allLedgers = await repo.getAllLedgers();
 
-    final confirmed = await AppDialog.confirm<bool>(
+    // 双重危险确认：仅删本地不影响云端，倒计时时间可稍短
+    final confirmed = await showDoubleDangerConfirmDialog(
       context,
       title: l10n.ledgersDeleteLocalTitle,
-      message: l10n
+      firstMessage: l10n
           .ledgersDeleteLocalMessage(translateLedgerName(context, ledger.name)),
+      secondMessage: l10n.ledgersDeleteLocalReconfirmMessage,
+      countdownSeconds: 3,
     );
 
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     try {
       final current = ref.read(currentLedgerIdProvider);
@@ -866,13 +871,15 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     final repo = ref.read(repositoryProvider);
     final allLedgers = await repo.getAllLedgers();
 
-    final confirmed = await AppDialog.confirm<bool>(
+    // 双重危险确认（各 5 秒倒计时）：删账本含云端备份，不可恢复
+    final confirmed = await showDoubleDangerConfirmDialog(
       context,
       title: l10n.ledgersDeleteConfirm,
-      message: l10n.ledgersDeleteMessage,
+      firstMessage: l10n.ledgersDeleteMessage,
+      secondMessage: l10n.ledgersDeleteReconfirmMessage,
     );
 
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     try {
       final sync = ref.read(syncServiceProvider);
@@ -937,14 +944,17 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
   /// 删除远程账本
   Future<void> _handleDeleteRemoteLedger(
       BuildContext context, LedgerDisplayItem ledger) async {
-    final confirmed = await AppDialog.confirm<bool>(
+    final l10n = AppLocalizations.of(context);
+    // 双重危险确认（各 5 秒倒计时）：删的是云端唯一副本
+    final confirmed = await showDoubleDangerConfirmDialog(
       context,
-      title: AppLocalizations.of(context).ledgersDeleteRemoteConfirm,
-      message: AppLocalizations.of(context).ledgersDeleteRemoteMessage(
+      title: l10n.ledgersDeleteRemoteConfirm,
+      firstMessage: l10n.ledgersDeleteRemoteMessage(
           translateLedgerName(context, ledger.name)),
+      secondMessage: l10n.ledgersDeleteRemoteReconfirmMessage,
     );
 
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     try {
       showToast(context, AppLocalizations.of(context).ledgersDeleting);
@@ -983,14 +993,15 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     final remoteLedgersAsync = ref.read(remoteLedgersProvider);
     final remoteLedgers = remoteLedgersAsync.value ?? [];
 
-    final confirmed = await AppDialog.confirm<bool>(
+    final confirmed = await showDoubleDangerConfirmDialog(
       context,
       title: AppLocalizations.of(context).ledgersRestoreAllTitle,
-      message: AppLocalizations.of(context)
+      firstMessage: AppLocalizations.of(context)
           .ledgersRestoreAllMessage(remoteLedgers.length),
+      secondMessage: AppLocalizations.of(context).ledgersRestoreAllReconfirmMessage,
     );
 
-    if (confirmed != true || !mounted || !context.mounted) return;
+    if (!confirmed || !mounted || !context.mounted) return;
 
     setState(() => _isRestoring = true);
 
@@ -1051,21 +1062,23 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
 
   /// 批量上传所有本地账本到云端（快照同步类后端专属）。
   ///
-  /// 语义：以本地为准覆盖云端（用户已在确认弹窗中知晓覆盖警示）。
-  /// 流程：确认 → **阻塞式进度弹窗**（期间禁止一切页面操作）→
-  /// uploadAllLedgers（串行、单个失败不中断）→ 关闭弹窗 → 刷新 providers
-  /// → 结果弹窗。
+  /// 语义：以本地为准覆盖云端（用户已在双重危险确认中知晓覆盖警示）。
+  /// 流程：双重危险确认（各 5 秒倒计时）→ **阻塞式进度弹窗**（期间禁止
+  /// 一切页面操作）→ uploadAllLedgers（串行、单个失败不中断）→ 关闭弹窗
+  /// → 刷新 providers → 结果弹窗。
   Future<void> _handleBatchUpload(BuildContext context) async {
     final localLedgers = ref.read(localLedgersProvider).value ?? [];
 
-    final confirmed = await AppDialog.confirm<bool>(
+    final confirmed = await showDoubleDangerConfirmDialog(
       context,
       title: AppLocalizations.of(context).ledgersUploadAll,
-      message: AppLocalizations.of(context)
+      firstMessage: AppLocalizations.of(context)
           .ledgersUploadAllMessage(localLedgers.length),
+      secondMessage:
+          AppLocalizations.of(context).ledgersUploadAllReconfirmMessage,
     );
 
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     setState(() => _isUploadingAll = true);
 

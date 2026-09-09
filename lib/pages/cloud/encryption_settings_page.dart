@@ -256,12 +256,15 @@ class _EncryptionSettingsPageState
   Future<void> _onResetEncryption() async {
     if (_busy) return;
     final l10n = AppLocalizations.of(context);
-    final confirmed = await AppDialog.confirm<bool>(
+    // 双重危险确认（各 5 秒倒计时）：重置将清空云端所有账本备份。
+    // 之后的密码验证是额外防线，保留原有语义。
+    final confirmed = await showDoubleDangerConfirmDialog(
       context,
       title: l10n.cloudSyncEncryptResetConfirmTitle,
-      message: l10n.cloudSyncEncryptResetConfirmMessage,
+      firstMessage: l10n.cloudSyncEncryptResetConfirmMessage,
+      secondMessage: l10n.cloudSyncEncryptResetReconfirmMessage,
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
     if (!mounted) return;
 
     // 重置前要求用户验证密码（若已开启加密）

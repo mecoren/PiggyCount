@@ -261,6 +261,41 @@ class BlockingProgressDialogHandle {
 ///   await block.close();
 /// }
 /// ```
+/// 高危操作双重强制确认：连弹两次 [showDangerConfirmDialog]，
+/// 各带 [countdownSeconds] 倒计时，用户两次都点「确认」才放行。
+/// - 第一次 [firstMessage]：说明操作范围与后果（如将删除多少数据）
+/// - 第二次 [secondMessage]：强调不可恢复，给用户反悔窗口
+/// 两次之间取消/倒计时期间返回键均视为放弃，返回 false。
+/// 参考全量同步（fullUpload/fullDownload/restore）的既有确认模式。
+Future<bool> showDoubleDangerConfirmDialog(
+  BuildContext context, {
+  required String title,
+  required String firstMessage,
+  required String secondMessage,
+  String? okLabel,
+  String? cancelLabel,
+  int countdownSeconds = 5,
+}) async {
+  final first = await showDangerConfirmDialog(
+    context,
+    title: title,
+    message: firstMessage,
+    okLabel: okLabel,
+    cancelLabel: cancelLabel,
+    countdownSeconds: countdownSeconds,
+  );
+  if (!first || !context.mounted) return false;
+  final second = await showDangerConfirmDialog(
+    context,
+    title: title,
+    message: secondMessage,
+    okLabel: okLabel,
+    cancelLabel: cancelLabel,
+    countdownSeconds: countdownSeconds,
+  );
+  return second;
+}
+
 /// 危险操作强制确认弹窗（用于全量覆盖等不可逆操作）：
 /// - barrierDismissible=false + PopScope(canPop:false)，点外部/返回键
 ///   均无法关闭，用户必须在「取消」与「确认」之间显式二选一

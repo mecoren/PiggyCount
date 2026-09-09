@@ -219,6 +219,20 @@ class _ConfigImportExportPageState
         return;
       }
 
+      // Step 3.5: 双重危险确认（各 5 秒倒计时）——
+      // 导入会覆盖现有配置，预览对话框本身不算强制确认
+      final l10n = AppLocalizations.of(context);
+      final reconfirmed = await showDoubleDangerConfirmDialog(
+        context,
+        title: l10n.configImportReconfirmTitle,
+        firstMessage: l10n.configImportReconfirmMessage,
+        secondMessage: l10n.configImportReconfirmMessage,
+      );
+      if (!reconfirmed || !mounted) {
+        setState(() => _isImporting = false);
+        return;
+      }
+
       // Step 4: 执行导入
       // 注意：不传入 ledgerId，让导入逻辑使用 yml 中指定的账本名称
       // 这样预算等数据会导入到正确的账本，而不是当前账本

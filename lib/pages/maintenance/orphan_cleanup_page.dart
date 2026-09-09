@@ -318,9 +318,11 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
 
   Future<void> _cleanOne(OrphanRecord r) async {
     final l10n = AppLocalizations.of(context);
+    // 双重危险确认（倒计时较短）：单个孤儿数据体量小
     final confirmed = await _showConfirm(
       title: l10n.maintenanceOrphanConfirmTitle,
       message: l10n.maintenanceOrphanConfirmDeleteOne(r.title),
+      reconfirmMessage: l10n.maintenanceOrphanReconfirmMessage,
     );
     if (!confirmed) return;
     await _runClean([r], l10n);
@@ -334,6 +336,7 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
     final confirmed = await _showConfirm(
       title: l10n.maintenanceOrphanConfirmTitle,
       message: l10n.maintenanceOrphanConfirmDeleteBatch(selected.length),
+      reconfirmMessage: l10n.maintenanceOrphanReconfirmMessage,
     );
     if (!confirmed) return;
     await _runClean(selected, l10n);
@@ -366,27 +369,40 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
     }
   }
 
+  /// 双重危险确认（各 3 秒倒计时）：第一次说明清理对象，
+  /// 第二次强调不可恢复；传入 [reconfirmMessage] 为空则退化为单次确认
   Future<bool> _showConfirm(
-      {required String title, required String message}) async {
+      {required String title,
+      required String message,
+      String? reconfirmMessage}) async {
     final l10n = AppLocalizations.of(context);
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(l10n.commonCancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(l10n.commonOk),
-          ),
-        ],
-      ),
+    if (reconfirmMessage == null || reconfirmMessage.isEmpty) {
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(l10n.commonCancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(l10n.commonOk),
+            ),
+          ],
+        ),
+      );
+      return result == true;
+    }
+    return showDoubleDangerConfirmDialog(
+      context,
+      title: title,
+      firstMessage: message,
+      secondMessage: reconfirmMessage,
+      countdownSeconds: 3,
     );
-    return result == true;
   }
 
   /// debug 按钮:塞 ≥10 项孤儿到本地 DB / 磁盘,然后重扫。

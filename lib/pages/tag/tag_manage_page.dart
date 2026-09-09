@@ -446,28 +446,16 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
       return;
     }
 
-    // 确认对话框
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.tagClearUnusedTitle),
-        content: Text(l10n.tagClearUnusedMessage(unusedTags.length)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.commonCancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(
-                foregroundColor: PiggyTokens.error(context)),
-            child: Text(l10n.commonDelete),
-          ),
-        ],
-      ),
+    // 双重危险确认（各 3 秒倒计时）：删除标签不可恢复
+    final confirm = await showDoubleDangerConfirmDialog(
+      context,
+      title: l10n.tagClearUnusedTitle,
+      firstMessage: l10n.tagClearUnusedMessage(unusedTags.length),
+      secondMessage: l10n.tagClearUnusedReconfirmMessage,
+      countdownSeconds: 3,
     );
 
-    if (confirm != true || !mounted) return;
+    if (!confirm || !mounted) return;
 
     try {
       final repo = ref.read(repositoryProvider);

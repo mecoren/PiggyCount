@@ -141,13 +141,16 @@ class _StorageManagementPageState extends ConsumerState<StorageManagementPage> {
   /// 清理AI模型
   Future<void> _clearAIModels() async {
     final l10n = AppLocalizations.of(context);
-    final confirmed = await AppDialog.confirm(
+    // 双重危险确认：清理后需重新下载，用较短倒计时
+    final confirmed = await showDoubleDangerConfirmDialog(
       context,
       title: l10n.storageClearConfirmTitle,
-      message: l10n.storageClearAIModelsMessage(_formatSize(_aiModelsSize)),
+      firstMessage: l10n.storageClearAIModelsMessage(_formatSize(_aiModelsSize)),
+      secondMessage: l10n.storageClearReconfirmMessage,
+      countdownSeconds: 3,
     );
 
-    if (confirmed != true) return;
+    if (!confirmed) return;
 
     try {
       for (var file in _aiModelFiles) {
@@ -166,13 +169,16 @@ class _StorageManagementPageState extends ConsumerState<StorageManagementPage> {
   /// 清理APK文件
   Future<void> _clearAPKFiles() async {
     final l10n = AppLocalizations.of(context);
-    final confirmed = await AppDialog.confirm(
+    // 双重危险确认：清理后需重新下载，用较短倒计时
+    final confirmed = await showDoubleDangerConfirmDialog(
       context,
       title: l10n.storageClearConfirmTitle,
-      message: l10n.storageClearAPKMessage(_formatSize(_apkFilesSize)),
+      firstMessage: l10n.storageClearAPKMessage(_formatSize(_apkFilesSize)),
+      secondMessage: l10n.storageClearReconfirmMessage,
+      countdownSeconds: 3,
     );
 
-    if (confirmed != true) return;
+    if (!confirmed) return;
 
     try {
       for (var file in _apkFiles) {

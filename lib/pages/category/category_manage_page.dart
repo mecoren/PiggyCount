@@ -393,44 +393,20 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
       }
     }
 
-    // 确认对话框
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.categoryClearUnusedTitle),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(l10n.categoryClearUnusedMessage(unusedCategories.length)),
-            const SizedBox(height: 16),
-            Text(
-              l10n.categoryClearUnusedListTitle,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              toDeleteList.join('\n'),
-              style: const TextStyle(fontSize: 13),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.commonCancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(
-                foregroundColor: PiggyTokens.error(context)),
-            child: Text(l10n.commonDelete),
-          ),
-        ],
-      ),
+    // 双重危险确认（各 3 秒倒计时）：第一次列出将被删除的分类清单，
+    // 第二次强调不可恢复
+    final firstMessage =
+        '${l10n.categoryClearUnusedMessage(unusedCategories.length)}\n\n'
+        '${l10n.categoryClearUnusedListTitle}\n${toDeleteList.join('\n')}';
+    final confirm = await showDoubleDangerConfirmDialog(
+      context,
+      title: l10n.categoryClearUnusedTitle,
+      firstMessage: firstMessage,
+      secondMessage: l10n.categoryClearUnusedReconfirmMessage,
+      countdownSeconds: 3,
     );
 
-    if (confirm != true || !mounted) return;
+    if (!confirm || !mounted) return;
 
     try {
       final repo = ref.read(repositoryProvider);
