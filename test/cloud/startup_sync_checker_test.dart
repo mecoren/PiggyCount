@@ -1346,6 +1346,73 @@ void main() {
           reason: '零账本设备不能在 ledgers.isEmpty 处提前跳过');
     });
   });
+
+  group('同名多槽位甄别（两次实测 §4.2 改进点）', () {
+    RemoteLedgerMeta _m(String slotKey, String name,
+            {int txCount = 10, DateTime? uploadedAt}) =>
+        RemoteLedgerMeta(
+          slotKey: slotKey,
+          name: name,
+          currency: 'CNY',
+          monthStartDay: 1,
+          txCount: txCount,
+          uploadedAt: uploadedAt,
+        );
+
+    test('无同名（各名唯一）→ 无警示组', () {
+      final metas = [
+        _m('aaa', 'A'),
+        _m('bbb', 'B'),
+      ];
+      expect(StartupSyncChecker.duplicateNameGroups(metas), isEmpty);
+    });
+
+    test('同名 2 槽位 → 分组返回且按 uploadedAt 新者在前', () {
+      final older = _m('slot-old', '回忆',
+          txCount: 800, uploadedAt: DateTime(2026, 9, 1, 10, 0));
+      final newer = _m('slot-new', '回忆',
+          txCount: 1001, uploadedAt: DateTime(2026, 9, 10, 23, 0));
+      final groups = StartupSyncChecker.duplicateNameGroups([older, newer]);
+
+      expect(groups.keys, ['回忆']);
+      expect(groups['回忆']!.first.slotKey, 'slot-new',
+          reason: '新上传的排在前，供弹窗优先展示');
+      expect(groups['回忆']!.last.slotKey, 'slot-old');
+    });
+
+    test('多个名称各自分组，互不混并；单槽位名称不警示', () {
+      final groups = StartupSyncChecker.duplicateNameGroups([
+        _m('a1', 'X', uploadedAt: DateTime(2026, 9, 5)),
+        _m('a2', 'X', uploadedAt: DateTime(2026, 9, 6)),
+        _m('b1', 'Y', uploadedAt: DateTime(2026, 9, 1)),
+        _m('b2', 'Y', uploadedAt: DateTime(2026, 9, 2)),
+        _m('c1', 'Z'),
+      ]);
+      expect(groups.keys, containsAll(['X', 'Y']));
+      expect(groups.containsKey('Z'), isFalse, reason: '单槽位名称不警示');
+      expect(groups['X']!.length, 2);
+      expect(groups['Y']!.length, 2);
+    });
+
+    test('uploadedAt 为 null 的槽位排在有值之后（DateTime(0) 兜底）', () {
+      final noTime = _m('n1', 'D');
+      final hasTime = _m('n2', 'D', uploadedAt: DateTime(2020, 1, 1));
+      final groups = StartupSyncChecker.duplicateNameGroups([noTime, hasTime]);
+      // null 兜底为 DateTime(0)，比任何真实时间都旧 → 排后
+      expect(groups['D']!.first.slotKey, 'n2');
+    });
+
+    test('组名顺序按发现序稳定（首个出现的名称先输出）', () {
+      final groups = StartupSyncChecker.duplicateNameGroups([
+        _m('y1', 'B', uploadedAt: DateTime(2026, 9, 1)),
+        _m('y2', 'B', uploadedAt: DateTime(2026, 9, 2)),
+        _m('x1', 'A', uploadedAt: DateTime(2026, 9, 1)),
+        _m('x2', 'A', uploadedAt: DateTime(2026, 9, 2)),
+      ]);
+      expect(groups.keys, ['B', 'A'],
+          reason: '按首次出现顺序，与弹窗展示顺序一致');
+    });
+  });
 }
 
 /// 测试用的假依赖实现

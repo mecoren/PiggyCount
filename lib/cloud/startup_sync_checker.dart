@@ -602,6 +602,35 @@ class StartupSyncChecker {
   }) =>
       previewExists && unselectedDeletedCount > 0;
 
+  /// 云端发现同名多槽位甄别（两次实测报告 §4.2 共同提出的改进点）。
+  ///
+  /// 云端可同时存在多个**同名**账本槽位（上次测试遗留、或不同设备用
+  /// 相同名字各建了账本——真实场景：换机后旧槽位未删）。一键「下载」
+  /// 会把它们全部引入，本地出现重复账本且陈旧副本与最新副本难分。
+  ///
+  /// 返回按名称分组的同名槽位列表（仅含 ≥2 个槽位的名称，按发现顺序）；
+  /// 组内按 [RemoteLedgerMeta.uploadedAt] 新者在前。弹窗据此外追加警示
+  /// 文案；用户如需甄别可到账本管理页「远程账本」卡片按同一 slotKey
+  /// 短 ID 逐个下载。
+  @visibleForTesting
+  static Map<String, List<RemoteLedgerMeta>> duplicateNameGroups(
+      List<RemoteLedgerMeta> metas) {
+    final byName = <String, List<RemoteLedgerMeta>>{};
+    for (final m in metas) {
+      byName.putIfAbsent(m.name, () => []).add(m);
+    }
+    final dup = <String, List<RemoteLedgerMeta>>{};
+    for (final m in metas) {
+      final group = byName[m.name];
+      if (group == null || group.length < 2) continue;
+      dup.putIfAbsent(m.name, () {
+        return [...group]..sort((a, b) => (b.uploadedAt ?? DateTime(0))
+            .compareTo(a.uploadedAt ?? DateTime(0)));
+      });
+    }
+    return dup;
+  }
+
   /// 合并后回传（merge-then-publish）：上传合并结果收敛本地/云端指纹。
   ///
   /// 只下载合并不回传时，指纹永不收敛，下次启动仍判 cloudNewer
@@ -1194,14 +1223,41 @@ class WidgetRefDeps implements StartupSyncCheckerDeps {
     final l10n = AppLocalizations.of(_context);
     // 展示"名称(条数)"，让用户在下载前了解各账本规模
     final displayNames = metas.map((m) => '${m.name}(${m.txCount})').join('、');
+    var message = l10n.startupSyncNewLedgersMessage(metas.length, displayNames);
+    // 同名多槽位甄别（两次实测 §4.2 改进点）：一键下载会引入重复账本，
+    // 追加警示行（槽位短 ID + 上传时间 + 条数，新者在前）。短 ID 与
+    // 账本管理页「远程账本」卡片一致，用户可按 ID 转去逐个甄别下载。
+    final dupGroups = StartupSyncChecker.duplicateNameGroups(metas);
+    if (dupGroups.isNotEmpty) {
+      final detail = dupGroups.entries
+          .map((e) {
+            final slots = e.value
+                .map((m) =>
+                    '${m.slotKey.length > 6 ? m.slotKey.substring(0, 6) : m.slotKey}'
+                    '·${_shortDate(m.uploadedAt)}(${m.txCount})')
+                .join('、');
+            return '${e.key}: $slots';
+          })
+          .join('；');
+      message = '$message\n${l10n.startupSyncDuplicateSlots(detail)}';
+    }
     final result = await AppDialog.confirm<bool>(
       _context,
       title: l10n.startupSyncNewLedgersTitle,
-      message: l10n.startupSyncNewLedgersMessage(metas.length, displayNames),
+      message: message,
       okLabel: l10n.startupSyncNewLedgersOk,
       cancelLabel: l10n.startupSyncNewLedgersCancel,
     );
     return result ?? false;
+  }
+
+  /// 上传时间的展示级格式（yyyy-MM-dd HH:mm，本地时区）。null 显示 '?'。
+  static String _shortDate(DateTime? at) {
+    if (at == null) return '?';
+    final local = at.toLocal();
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${local.year}-${two(local.month)}-${two(local.day)} '
+        '${two(local.hour)}:${two(local.minute)}';
   }
 
   @override

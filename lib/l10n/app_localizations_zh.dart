@@ -193,6 +193,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get startupSyncNewLedgersCancel => '跳过';
 
   @override
+  String startupSyncDuplicateSlots(Object detail) {
+    return '注意：以下名称在云端存在多个槽位，全部下载会产生重复账本（可稍后在 账本管理-云端账本 按 ID 甄别下载）：$detail';
+  }
+
+  @override
   String get commonSuccess => '成功';
 
   @override
@@ -7926,6 +7931,11 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get startupSyncNewLedgersCancel => '跳過';
+
+  @override
+  String startupSyncDuplicateSlots(Object detail) {
+    return '注意：以下名稱在雲端存在多個槽位，全部下載會產生重複帳本（可稍後在 帳本管理-雲端帳本 按 ID 選別下載）：$detail';
+  }
 
   @override
   String get commonSuccess => '成功';

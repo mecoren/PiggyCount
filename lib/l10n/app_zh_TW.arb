@@ -1118,6 +1118,7 @@
   "startupSyncNewLedgersMessage": "雲端發現 {count} 個本機沒有的賬本：{names}。是否下載到本機？",
   "startupSyncNewLedgersOk": "下載",
   "startupSyncNewLedgersCancel": "跳過",
+  "startupSyncDuplicateSlots": "注意：以下名稱在雲端存在多個槽位，全部下載會產生重複帳本（可稍後在 帳本管理-雲端帳本 按 ID 選別下載）：{detail}",
   "@startupSyncConflictAndMore": {
     "placeholders": {
       "count": {

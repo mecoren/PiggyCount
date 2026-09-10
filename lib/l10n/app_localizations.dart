@@ -432,6 +432,12 @@ abstract class AppLocalizations {
   /// **'Skip'**
   String get startupSyncNewLedgersCancel;
 
+  /// No description provided for @startupSyncDuplicateSlots.
+  ///
+  /// In en, this message translates to:
+  /// **'Note: multiple cloud slots share these names. Downloading all will create duplicate ledgers (you can pick by ID later in Ledger Management - Cloud Ledgers): {detail}'**
+  String startupSyncDuplicateSlots(Object detail);
+
   /// No description provided for @commonSuccess.
   ///
   /// In en, this message translates to:

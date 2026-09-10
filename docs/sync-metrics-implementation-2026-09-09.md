@@ -204,3 +204,15 @@ TSM 附件重试（1s/2s/4s）**不迁移**到 core RetryHelper：它是业务�
 - **用例 2(P2-4)**: 真实时间轴全链路——手动备份 attempt 锚点 → 定时触发失败(Connection refused,`backup_auto_last_date` 不写/失败呈现/「30 分钟后自动补试」日志)→ 退避期 tick 静默 → 31 分钟后自动补试成功(`backup_auto_last_date` 写入/服务器 ZIP 落盘)→ 成功后当日去重。SEC-08 回拨端到端受非 root 限制,单测矩阵覆盖备案。
 - **用例 3(P2-1/P2-2)**: 双端「本地指纹走缓存(guard=...)」日志命中;A 端「附件目录列举走会话缓存」;B 端恢复路径指纹缓存失效链(recordChanges:false 显式失效→unknown 方向如实呈现)。
 - **用例 4**: B 端一键恢复 5/5 新账本+默认账本合并,A 端 Apply all 反向回传;DB 级比对已同步 5005 笔逐字段 0 差异(账本 1 同 syncId 异名为已知设计边界,连同 is_shared 边界如实定性)。
+
+---
+
+## 十二、实测建议落地:云端发现同名多槽位甄别(2026-09-10)
+
+两次实测报告 §4.2(S3 双端 + 弱网双端)共同提出的改进点:云端存在**同名**账本多槽位时,启动「发现云端账本」一键下载会引入重复账本且新旧难分。
+
+- **纯函数** `StartupSyncChecker.duplicateNameGroups`(按名称分组,组内 uploadedAt 新者在前,null 兜底排后,组名按发现序稳定)——可单测的甄别核心;
+- **弹窗组装**:`showNewLedgersConfirmDialog` 在 message 尾追加警示行「名称: 短ID·上传时间(条数)」;短 ID 取 slotKey 前 6 位,**与账本管理页「远程账本」卡片 ID 同口径**——用户可按同一 ID 转去逐个甄别下载;l10n×4(`startupSyncDuplicateSlots`);
+- **测试**:`startup_sync_checker_test.dart` 新增 5 项(无同名/分组排序/多组不混并+单槽位排除/null 兜底/顺序稳定),文件 66 项全过;test/cloud 255 项、全库 1108 项全过,analyze 0 error/warning。
+
+至此两次实测的全部可落地建议均已闭环;剩余 P2-3(iCloud 原生侧)仍按备案留待 iOS 环境。

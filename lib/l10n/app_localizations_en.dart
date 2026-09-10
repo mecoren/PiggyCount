@@ -196,6 +196,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get startupSyncNewLedgersCancel => 'Skip';
 
   @override
+  String startupSyncDuplicateSlots(Object detail) {
+    return 'Note: multiple cloud slots share these names. Downloading all will create duplicate ledgers (you can pick by ID later in Ledger Management - Cloud Ledgers): $detail';
+  }
+
+  @override
   String get commonSuccess => 'Success';
 
   @override
