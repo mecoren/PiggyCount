@@ -192,3 +192,15 @@ TSM 附件重试（1s/2s/4s）**不迁移**到 core RetryHelper：它是业务�
 
 - P2-3 iCloud base64 method channel 内存峰值(原生侧改造,本环境无法验证 iOS 原生行为);
 - 弱网档双端实测(条件具备时按 §五指引执行)。
+
+---
+
+## 十一、弱网档双端实测执行(2026-09-10 凌晨:四组用例全通过)
+
+评估文档(`docs/synctest/弱网档双端实测评估-2026-09-10.md`)所述环境阻断已解决并完成实测,完整报告见 `docs/synctest/弱网档双端实测报告-2026-09-10.md`。要点:
+
+- **环境修复**: PS16k 引导阻断 root cause = userdata qcow2 损坏,`-wipe-data` 后 90s 引导;双实例=AVD 克隆;凭据改用仓库固化 WebDAV 测试栈(S3 secure 备份因 Keystore 随 wipe 重置不可移植)。
+- **用例 1**: EDGE 弱网 6 账本/6000 笔全量上传,每快照 ~425KB(超 350KB 档),Post-upload verify ×6 全过——P1-2 自适应超时实测通过。
+- **用例 2(P2-4)**: 真实时间轴全链路——手动备份 attempt 锚点 → 定时触发失败(Connection refused,`backup_auto_last_date` 不写/失败呈现/「30 分钟后自动补试」日志)→ 退避期 tick 静默 → 31 分钟后自动补试成功(`backup_auto_last_date` 写入/服务器 ZIP 落盘)→ 成功后当日去重。SEC-08 回拨端到端受非 root 限制,单测矩阵覆盖备案。
+- **用例 3(P2-1/P2-2)**: 双端「本地指纹走缓存(guard=...)」日志命中;A 端「附件目录列举走会话缓存」;B 端恢复路径指纹缓存失效链(recordChanges:false 显式失效→unknown 方向如实呈现)。
+- **用例 4**: B 端一键恢复 5/5 新账本+默认账本合并,A 端 Apply all 反向回传;DB 级比对已同步 5005 笔逐字段 0 差异(账本 1 同 syncId 异名为已知设计边界,连同 is_shared 边界如实定性)。
