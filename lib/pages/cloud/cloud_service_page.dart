@@ -28,6 +28,13 @@ const _kSupabaseGuideUrl =
 /// 也不符合 S3 桶名命名规范（仅允许小写字母、数字、点、连字符）。
 const _kDefaultProjectName = 'piggycount';
 
+/// Supabase / iCloud 后端对用户隐藏（2026-09-10 同步审计：Supabase 存在
+/// list() SDK 默认 limit:100 静默截断的 P0-1，iCloud 缺 Dart 层兜底）。
+/// 上线口径仅开放 S3 / WebDAV 双主力后端；协议实现与存量激活用户的
+/// 同步链路保留不动，待 P0 修复后将本开关改回 true 即可恢复入口。
+/// 用 final 而非 const：const false 会让 if 分支触发 dead_code 告警。
+final _kShowSupabaseAndICloud = false;
+
 class CloudServicePage extends ConsumerStatefulWidget {
   const CloudServicePage({super.key});
   @override
@@ -197,7 +204,9 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                       ],
 
                       // iCloud (仅 iOS)
-                      if (!kIsWeb && Platform.isIOS) ...[
+                      if (_kShowSupabaseAndICloud &&
+                          !kIsWeb &&
+                          Platform.isIOS) ...[
                         _buildICloudCard(context, active,
                             isDisabled: false, primaryColor: primaryColor),
                         const SizedBox(height: 12),
@@ -286,7 +295,8 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                       const SizedBox(height: 12),
 
                       // Supabase
-                      supabaseAsync.when(
+                      if (_kShowSupabaseAndICloud)
+                        supabaseAsync.when(
                         loading: () => DelayedSkeleton(
                           placeholder: const SizedBox(height: 100),
                           child: PulseSkeleton(

@@ -11,18 +11,8 @@
 
 **你的数据,你做主的开源记账应用**
 
-支持 iCloud / Supabase / WebDAV / S3 四种同步方案
+支持 WebDAV / S3 两种自建云同步方案
 
-<br/>
-
-<a href="https://apps.apple.com/app/id6754611670">
-  <img src="https://img.shields.io/badge/App%20Store-000000?style=for-the-badge&logo=app-store&logoColor=white" alt="Download on App Store" height="64"/>
-</a>
-<a href="https://play.google.com/store/apps/details?id=com.wait.piggycount">
-  <img src="https://img.shields.io/badge/Google%20Play-414141?style=for-the-badge&logo=google-play&logoColor=white" alt="Get it on Google Play" height="64"/>
-</a>
-
-<br/>
 <br/>
 
 [🌐 官网](https://count.beejz.com) · [📖 文档](https://count.beejz.com/docs/intro) · [💝 捐赠](#-捐赠支持) · [💬 Telegram](https://t.me/piggycount) · [📦 APK](https://github.com/mecoren/PiggyCount/releases/latest) · [🚀 TestFlight](https://testflight.apple.com/join/Eaw2rWxa)
@@ -39,7 +29,7 @@
 |---|---|
 | ❌ 数据存第三方,无法审计 | ✅ **完全开源**,代码可审计 |
 | ❌ 隐私可能被分析利用 | ✅ **离线优先** + 自建云端,开发者无法访问 |
-| ❌ 服务商倒闭数据丢失 | ✅ **数据主权**,4 种同步方案任选 |
+| ❌ 服务商倒闭数据丢失 | ✅ **数据主权**,自建云同步任选 |
 | ❌ 高级功能付费墙 | ✅ **完全免费**(包括 AI / OCR / 语音记账) |
 | ❌ 广告 / 理财推荐 | ✅ **零广告 / 零追踪 / 零数据收集** |
 
@@ -146,12 +136,10 @@
 
 ## ☁️ 云同步方案
 
-小猪记账提供 4 种同步方案,所有方案数据完全由你掌控,**详细配置教程见 [docs/cloud-setup.md](docs/cloud-setup.md)**。
+小猪记账提供 WebDAV / S3 两种自建同步方案,所有方案数据完全由你掌控,**详细配置教程见 [docs/cloud-setup.md](docs/cloud-setup.md)**。
 
 | 方案 | 适用场景 | 特点 |
 |---|---|---|
-| **iCloud** | iOS 单平台用户 | 零配置、原生集成 |
-| **Supabase** | 无 NAS 的跨平台用户 | 免费额度充足、配置简单 |
 | **WebDAV** | NAS 用户 | 数据本地化、群晖/绿联云/Nextcloud |
 | **S3 协议** | 灵活云存储 | Cloudflare R2 / AWS S3 / MinIO,免费额度大 |
 
@@ -169,7 +157,7 @@
 - **Flutter 3.27+** · 跨平台 UI 框架
 - **Riverpod** · 状态管理
 - **Drift (SQLite)** · 本地数据库 ORM
-- **Supabase / WebDAV / S3 / iCloud** · 云端同步多方案
+- **WebDAV / S3** · 云端同步多方案
 
 ### 快速开始
 
@@ -233,8 +221,7 @@ A: 完全可以!应用默认本地存储,所有功能都能正常使用。可随
 
 **Q: 应该选哪个云方案?**
 A:
-- iOS 单设备 → **iCloud**(零配置)
-- 跨平台无 NAS → **Supabase / S3**
+- 跨平台、有免费云存储额度 → **S3 协议**(Cloudflare R2 / MinIO)
 - 有 NAS → **WebDAV**
 
 **Q: 如何确保数据安全?**

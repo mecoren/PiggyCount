@@ -11,18 +11,8 @@
 
 **Your Data, Your Control — Open Source Accounting App**
 
-Sync via iCloud / Supabase / WebDAV / S3
+Sync via WebDAV / S3
 
-<br/>
-
-<a href="https://apps.apple.com/app/id6754611670">
-  <img src="https://img.shields.io/badge/App%20Store-000000?style=for-the-badge&logo=app-store&logoColor=white" alt="Download on App Store" height="64"/>
-</a>
-<a href="https://play.google.com/store/apps/details?id=com.wait.piggycount">
-  <img src="https://img.shields.io/badge/Google%20Play-414141?style=for-the-badge&logo=google-play&logoColor=white" alt="Get it on Google Play" height="64"/>
-</a>
-
-<br/>
 <br/>
 
 [🌐 Website](https://count.beejz.com/en/) · [📖 Docs](https://count.beejz.com/en/docs/intro) · [💝 Donate](#-donate) · [💬 Telegram](https://t.me/piggycount) · [📦 APK](https://github.com/mecoren/PiggyCount/releases/latest) · [🚀 TestFlight](https://testflight.apple.com/join/Eaw2rWxa)
@@ -39,7 +29,7 @@ A lightweight, open-source, privacy-first **personal finance** and **expense tra
 |---|---|
 | ❌ Data on third-party servers, no audit | ✅ **Fully open-source**, code auditable |
 | ❌ Privacy may be analyzed and exploited | ✅ **Offline-first** + self-hosted, developer can't access your data |
-| ❌ Service shutdown = data loss | ✅ **Data sovereignty**, choose from 4 sync options |
+| ❌ Service shutdown = data loss | ✅ **Data sovereignty**, self-hosted sync options |
 | ❌ Premium features behind paywalls | ✅ **Completely free** (including AI / OCR / voice input) |
 | ❌ Ads / financial product recommendations | ✅ **Zero ads / zero tracking / zero data collection** |
 
@@ -146,12 +136,10 @@ A lightweight, open-source, privacy-first **personal finance** and **expense tra
 
 ## ☁️ Sync Options
 
-PiggyCount offers 4 sync options. Your data, your control. **See [docs/cloud-setup_EN.md](docs/cloud-setup_EN.md) for full setup guides.**
+PiggyCount offers WebDAV / S3 self-hosted sync options. Your data, your control. **See [docs/cloud-setup_EN.md](docs/cloud-setup_EN.md) for full setup guides.**
 
 | Option | Best For | Highlights |
 |---|---|---|
-| **iCloud** | iOS-only users | Zero config, native integration |
-| **Supabase** | Cross-platform without NAS | Generous free tier, easy setup |
 | **WebDAV** | NAS users | Local data, Synology/UGREEN/Nextcloud |
 | **S3 protocol** | Flexible cloud storage | Cloudflare R2/AWS S3/MinIO, large free tier |
 
@@ -169,7 +157,7 @@ PiggyCount offers 4 sync options. Your data, your control. **See [docs/cloud-set
 - **Flutter 3.27+** · Cross-platform UI framework
 - **Riverpod** · State management
 - **Drift (SQLite)** · Local database ORM
-- **Supabase / WebDAV / S3 / iCloud** · Multi-option cloud sync
+- **WebDAV / S3** · Multi-option cloud sync
 
 ### Quick Start
 
@@ -233,8 +221,7 @@ A: Absolutely! The app uses local storage by default. All features work normally
 
 **Q: Which sync option should I pick?**
 A:
-- iOS single device → **iCloud** (zero config)
-- Cross-platform without NAS → **Supabase / S3**
+- Cross-platform with free cloud storage quota → **S3 protocol** (Cloudflare R2 / MinIO)
 - Have a NAS → **WebDAV**
 
 **Q: How is data security ensured?**
