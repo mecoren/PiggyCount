@@ -35,7 +35,7 @@ void main() {
   test('导出快照携带内嵌指纹，且与共享函数计算值一致', () async {
     final ledgerId = await repo.createLedger(name: 'L', currency: 'CNY');
 
-    final jsonStr = await exportTransactionsJson(db, ledgerId);
+    final jsonStr = await exportTransactionsJson(db, ledgerId).then((e) => e.jsonStr);
     final map = jsonDecode(jsonStr) as Map<String, dynamic>;
 
     final embedded = map['contentFingerprint'];

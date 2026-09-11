@@ -170,7 +170,7 @@ class CloudBackupService {
       // 1. 账本快照：exportTransactionsJson 原始产物（与同步上传完全同构）
       var done = 0;
       for (final ledger in ledgers) {
-        final jsonStr = await exportTransactionsJson(db, ledger.id);
+        final jsonStr = (await exportTransactionsJson(db, ledger.id)).jsonStr;
         final bytes = utf8.encode(jsonStr);
         archive.addFile(
             ArchiveFile('ledger_${ledger.id}.json', bytes.length, bytes));

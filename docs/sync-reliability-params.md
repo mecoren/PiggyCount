@@ -69,3 +69,5 @@
   - iCloud：补 BinaryCapableStorage（P1-5，单次编码 + 原始字节落盘 + 旧 base64 文本嗅探）；补幂等读重试（P1-8）。
   - App 层：startupCheck 场景埋点补齐（P1-3，四态，backend=startup）；uploadCurrentLedger 返回 verified（P1-4 softFail UI 可见化）；备份恢复跨进程检查点 cloud_backup_restore_pending（P1-2，调度器让位 + 恢复入口提示）。
 
+- **2026-09-11（第三批：性能）**：
+  - P2-2①：`exportTransactionsJson` 返回类型 `String → ExportedLedgerJson`（jsonStr + fingerprint/count/balance/ledgerName/currency/monthStartDay 伴随字段，编码前旁路收集）——上传链路（`_uploadCurrentLedgerCore`/`_localFingerprintWithCache`/备份 ZIP 打包/序列化器）不再对同一几百 KB~MB 级 JSON 整串 jsonDecode 取 4 个元信息字段。

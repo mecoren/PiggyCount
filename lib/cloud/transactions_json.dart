@@ -33,8 +33,8 @@ String _sanitizeString(String? input) {
 /// [db] - 数据库实例
 /// [ledgerId] - 账本ID
 ///
-/// 返回包含以下字段的 JSON：
-/// - version: 数据格式版本（当前为7）
+/// 返回 [ExportedLedgerJson]：jsonStr 内包含以下字段——
+/// - version: 数据格式版本（当前为9）
 /// - exportedAt: 导出时间戳
 /// - ledgerId: 账本ID
 /// - ledgerName: 账本名称
@@ -45,7 +45,11 @@ String _sanitizeString(String? input) {
 /// - tags: 标签列表（name, color, syncId, sortOrder）
 /// - items: 交易明细（type, amount, categoryName, categoryKind, happenedAt,
 ///   note, tags, tagSyncIds, override 字段）
-Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
+///
+/// 伴随字段（P2-2①）fingerprint/count/balance/ledgerName/currency/
+/// monthStartDay 在编码前旁路收集 —— 上传链路不再对同一 JSON 二次解析。
+Future<ExportedLedgerJson> exportTransactionsJson(
+    PiggyDatabase db, int ledgerId) async {
   logger.debug('TransactionsJson', '开始导出账本 $ledgerId');
 
   final txs = await (db.select(db.transactions)
@@ -461,7 +465,32 @@ Future<String> exportTransactionsJson(PiggyDatabase db, int ledgerId) async {
   payload['contentFingerprint'] = contentFingerprintFromMap(payload);
 
   logger.debug('TransactionsJson', '导出完成: ${items.length} 条交易, ${categoryItems.length} 个分类');
-  return jsonEncode(payload);
+
+  // P2-2①：伴随元信息在编码前旁路收集（零额外遍历），消除调用方对
+  // 同一 JSON 的第二次整串 jsonDecode。balance 口径与 getLedgerStats
+  // SQL 聚合一致（income 加 / expense 减 / transfer 不计、
+  // nativeAmount ?? amount 兜底），与 m-02 上传元数据的历史口径恒等。
+  double balance = 0;
+  for (final it in items) {
+    final type = it['type'];
+    final amount =
+        ((it['nativeAmount'] as num?) ?? (it['amount'] as num?))?.toDouble();
+    if (amount == null) continue;
+    if (type == 'income') {
+      balance += amount;
+    } else if (type == 'expense') {
+      balance -= amount;
+    }
+  }
+  return ExportedLedgerJson(
+    jsonStr: jsonEncode(payload),
+    fingerprint: payload['contentFingerprint'] as String,
+    count: items.length,
+    balance: balance,
+    ledgerName: ledger.name,
+    currency: ledger.currency,
+    monthStartDay: ledger.monthStartDay,
+  );
 }
 
 // --- 导入 ---
@@ -492,6 +521,52 @@ void _skip(Map<String, int> skipped, String section) =>
 // 估值变动的合法业务类型，早期漏登记导致 S3 快照恢复时被当作非法类型静默丢弃
 // （云端有、恢复后没有 → 真实数据丢失）。新增交易类型时务必同步这里。
 const _kValidTxTypes = {'expense', 'income', 'transfer', 'adjustment'};
+
+/// P2-2①：导出产物伴随结构 —— 导出侧在构建 payload 时零成本收集调用方
+/// 需要的顶层元信息，消除上传链路对同一大 JSON 的第二次整串 jsonDecode
+///（万笔交易账本的编码产物几百 KB~MB 级，逐字符解析纯浪费 CPU/内存，
+/// 且发生在每次上传/自动防抖上传的主 isolate 上）。
+///
+/// 字段语义与 payload 顶层键一一对应；[jsonStr] 是权威产物（含
+/// contentFingerprint 自描述键），其余字段是编码前的旁路快照，
+/// 调用方不再需要解析 JSON 才能拿到。
+class ExportedLedgerJson {
+  /// 完整快照 JSON 字符串（上传/落盘的唯一权威产物）
+  final String jsonStr;
+
+  /// contentFingerprintFromMap 的结果（与 jsonStr 内嵌键恒等）
+  final String fingerprint;
+
+  /// items.length
+  final int count;
+
+  /// 余额合计（income 加 / expense 减 / transfer 不计、nativeAmount ??
+  /// amount 兜底 —— 与 getLedgerStats SQL 聚合同口径；m-02 上传元数据用）
+  final double balance;
+
+  /// 账本名（payload['ledgerName']）
+  final String? ledgerName;
+
+  /// 本位币（payload['currency']）
+  final String? currency;
+
+  /// 月起始日（payload['monthStartDay']）
+  final int? monthStartDay;
+
+  const ExportedLedgerJson({
+    required this.jsonStr,
+    required this.fingerprint,
+    required this.count,
+    required this.balance,
+    this.ledgerName,
+    this.currency,
+    this.monthStartDay,
+  });
+
+  /// 旧 String 语义兼容：字符串拼接场景直接内插本对象即可。
+  @override
+  String toString() => jsonStr;
+}
 
 /// 后台 isolate 解析的产物：一次 [parseSnapshotIsolate] 同时取回
 /// 解析结果与调用方所需的顶层元数据，避免主线程再 jsonDecode 一遍。

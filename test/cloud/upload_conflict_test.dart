@@ -48,7 +48,7 @@ void main() {
 
   /// 本地快照的真实内容指纹（与 uploadCurrentLedger 内部算法同源）
   Future<String> computeLocalFingerprint() async {
-    final jsonStr = await exportTransactionsJson(db, 1);
+    final jsonStr = await exportTransactionsJson(db, 1).then((e) => e.jsonStr);
     return contentFingerprintFromMap(jsonDecode(jsonStr));
   }
 

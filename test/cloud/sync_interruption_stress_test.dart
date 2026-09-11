@@ -368,7 +368,7 @@ void main() {
     final path = await manager.pathForLedger(1);
     final cloudJson = cleanStorage._objects[path]?.data;
     expect(cloudJson, isNotNull, reason: '最终收敛上传后云端必须有快照');
-    final localJson = await exportTransactionsJson(db, 1);
+    final localJson = await exportTransactionsJson(db, 1).then((e) => e.jsonStr);
     final cloudMap = jsonDecode(cloudJson!) as Map<String, dynamic>;
     final localMap = jsonDecode(localJson) as Map<String, dynamic>;
     // 数据面逐字段一致（除导出时间戳外全部键值必须相等）
@@ -458,7 +458,7 @@ class _LedgerSerializer implements fcs.DataSerializer<int> {
 
   @override
   Future<String> serialize(int ledgerId) =>
-      exportTransactionsJson(db, ledgerId);
+      exportTransactionsJson(db, ledgerId).then((e) => e.jsonStr);
 
   @override
   Future<int> deserialize(String data) async => 0;

@@ -445,14 +445,14 @@ void main() {
     });
 
     test('导出 JSON version 必须为 9', () async {
-      final json = await exportTransactionsJson(db, 1);
+      final json = await exportTransactionsJson(db, 1).then((e) => e.jsonStr);
       final data = jsonDecode(json) as Map<String, dynamic>;
       expect(data['version'], 9,
           reason: 'v9：快照版本随 ledgerSyncId 升级（v8 budgets/recurring/汇率覆盖 + 全量分类/标签）');
     });
 
     test('账户扩展字段在导出→解析后完整保留', () async {
-      final json = await exportTransactionsJson(db, 1);
+      final json = await exportTransactionsJson(db, 1).then((e) => e.jsonStr);
       final importData = parseJsonToImportData(json);
 
       expect(importData.accounts.length, 1);
@@ -471,7 +471,7 @@ void main() {
     });
 
     test('标签 syncId + sortOrder 在导出→解析后完整保留', () async {
-      final json = await exportTransactionsJson(db, 1);
+      final json = await exportTransactionsJson(db, 1).then((e) => e.jsonStr);
       final importData = parseJsonToImportData(json);
 
       expect(importData.tags.length, 1);
@@ -483,7 +483,7 @@ void main() {
     });
 
     test('交易 tagSyncIds + override 字段在导出→解析后完整保留', () async {
-      final json = await exportTransactionsJson(db, 1);
+      final json = await exportTransactionsJson(db, 1).then((e) => e.jsonStr);
       final importData = parseJsonToImportData(json);
 
       expect(importData.transactions.length, 1);
@@ -518,7 +518,7 @@ void main() {
       ]);
 
       // 再次导出 → 交易 items 必须带 tagSyncIds
-      final json = await exportTransactionsJson(db, 1);
+      final json = await exportTransactionsJson(db, 1).then((e) => e.jsonStr);
       final importData = parseJsonToImportData(json);
       final tx2 = importData.transactions.firstWhere((t) => t.syncId == 'tx-sync-002');
       expect(tx2.tagSyncIds, ['tag-sync-009'],

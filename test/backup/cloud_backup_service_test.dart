@@ -295,7 +295,7 @@ void main() {
       // 手工构造：账本条目来自真实导出，附件条目内容与声明 sha 不符
       final id = await addLedger('Main');
       await addTx(id);
-      final jsonStr = await exportTransactionsJson(db, id);
+      final jsonStr = await exportTransactionsJson(db, id).then((e) => e.jsonStr);
       final archive = Archive();
       final lb = utf8.encode(jsonStr);
       archive.addFile(ArchiveFile('ledger_$id.json', lb.length, lb));

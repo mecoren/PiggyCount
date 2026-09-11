@@ -85,7 +85,7 @@ void main() {
     final snapshots = <int, String>{};
     final snapshotMeta = <int, Map<String, dynamic>>{};
     for (final lg in srcLedgers) {
-      final json = await exportTransactionsJson(src, lg.id);
+      final json = await exportTransactionsJson(src, lg.id).then((e) => e.jsonStr);
       snapshots[lg.id] = json;
       final m = (jsonDecode(json) as Map).cast<String, dynamic>();
       snapshotMeta[lg.id] = {

@@ -993,16 +993,24 @@ class TransactionsSyncManager implements SyncService {
       // 上传前先计算本地指纹（用于记录上传快照）。
       // 审计 TSM-P3：导出现在自带内嵌指纹（'contentFingerprint' 键），优先
       // 采用 —— 与上传元数据、云端内容三方恒等，杜绝任何一侧口径漂移。
+      // P2-2①：指纹/count 等直接取导出伴随字段（编码前旁路收集），
+      // 不再对刚编码的几百 KB~MB 级 JSON 整串 jsonDecode 一次。
       String? localFp;
       int? localCount;
-      Map<String, dynamic>? exportMap;
       String? exportedJson;
+      String? exportName;
+      String? exportCurrency;
+      int? exportMonthStartDay;
+      double? exportBalance;
       try {
-        exportedJson = await exportTransactionsJson(db, ledgerId);
-        exportMap = jsonDecode(exportedJson) as Map<String, dynamic>;
-        localFp = (exportMap['contentFingerprint'] as String?) ??
-            _contentFingerprintFromMap(exportMap);
-        localCount = (exportMap['count'] as num?)?.toInt();
+        final exported = await exportTransactionsJson(db, ledgerId);
+        exportedJson = exported.jsonStr;
+        localFp = exported.fingerprint;
+        localCount = exported.count;
+        exportName = exported.ledgerName;
+        exportCurrency = exported.currency;
+        exportMonthStartDay = exported.monthStartDay;
+        exportBalance = exported.balance;
       } catch (e) {
         logger.warning('CloudSync', '计算本地指纹失败: $e');
       }
@@ -1042,42 +1050,20 @@ class TransactionsSyncManager implements SyncService {
         'uploadedAt': DateTime.now().toUtc().toIso8601String(),
         'ledgerId': ledgerId.toString(),
       };
-      if (exportMap != null) {
-        final name =
-            exportMap['ledgerName'] as String? ?? exportMap['name'] as String?;
-        final currency = exportMap['currency'] as String?;
-        final exportedAt = exportMap['exportedAt'] as String?;
-        if (name != null) uploadMetadata['ledgerName'] = name;
-        if (currency != null) uploadMetadata['currency'] = currency;
+      // P2-2①：摘要信息直接来自导出伴随字段（编码前旁路收集）。
+      // balance 口径与 getLedgerStats SQL 聚合一致 —— income 加 /
+      // expense 减 / transfer 不计、nativeAmount ?? amount 兜底。
+      if (exportedJson != null) {
+        if (exportName != null) uploadMetadata['ledgerName'] = exportName;
+        if (exportCurrency != null) uploadMetadata['currency'] = exportCurrency;
         if (localCount != null) uploadMetadata['count'] = localCount.toString();
         // 月起始日（m-02 延伸）：发现阶段快路径读它构造 RemoteLedgerMeta，
         // 免得导入前展示/建行默认 1；老快照无该键时导入阶段 payload
         // 回写兜底。
-        final monthStartDay = exportMap['monthStartDay'] as num?;
-        if (monthStartDay != null) {
-          uploadMetadata['monthStartDay'] = monthStartDay.toInt().toString();
+        if (exportMonthStartDay != null) {
+          uploadMetadata['monthStartDay'] = exportMonthStartDay.toString();
         }
-        // 余额合计（m-02 延伸）：口径与 getLedgerStats 的 SQL 聚合一致 ——
-        // income 加 / expense 减 / transfer 不计、nativeAmount ?? amount 兜底。
-        // 供账本页「远程账本」卡片展示，发现阶段零下载即可读到。items 已在
-        // 内存（exportMap 已解析），内存累加零额外查询。
-        final items = exportMap['items'];
-        if (items is List && items.isNotEmpty) {
-          double balance = 0;
-          for (final it in items) {
-            if (it is! Map) continue;
-            final type = it['type'];
-            final amount = ((it['nativeAmount'] as num?) ?? (it['amount'] as num?))?.toDouble();
-            if (amount == null) continue;
-            if (type == 'income') {
-              balance += amount;
-            } else if (type == 'expense') {
-              balance -= amount;
-            }
-          }
-          uploadMetadata['balance'] = balance.toString();
-        }
-        if (exportedAt != null) uploadMetadata['exportedAt'] = exportedAt;
+        uploadMetadata['balance'] = exportBalance.toString();
         if (localFp != null) uploadMetadata['fingerprint'] = localFp;
       }
 
@@ -2374,11 +2360,12 @@ class TransactionsSyncManager implements SyncService {
         jsonStr: null,
       );
     }
-    // 全量导出（同时刷新缓存）
-    final jsonStr = await exportTransactionsJson(db, ledgerId);
-    final localMap = jsonDecode(jsonStr) as Map<String, dynamic>;
-    final fp = _contentFingerprintFromMap(localMap);
-    final count = (localMap['count'] as num?)?.toInt() ?? 0;
+    // 全量导出（同时刷新缓存）。P2-2①：伴随字段直接来自导出产物，
+    // 不再对同一 JSON 整串 jsonDecode 取指纹/count。
+    final exported = await exportTransactionsJson(db, ledgerId);
+    final jsonStr = exported.jsonStr;
+    final fp = exported.fingerprint;
+    final count = exported.count;
     _localFpCache[ledgerId] = (fingerprint: fp, changeGuard: guard);
     _localFpCacheInvalidated.remove(ledgerId);
     return (fingerprint: fp, count: count, jsonStr: jsonStr);
@@ -3740,7 +3727,8 @@ class _TransactionSerializer implements fcs.DataSerializer<int> {
 
   @override
   Future<String> serialize(int ledgerId) async {
-    return await exportTransactionsJson(db, ledgerId);
+    // P2-2①：导出产物取 jsonStr（manager 契约要 String）
+    return (await exportTransactionsJson(db, ledgerId)).jsonStr;
   }
 
   @override

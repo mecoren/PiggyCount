@@ -43,7 +43,7 @@ void main() {
   test('快照整体覆盖：清空本地后导入快照内容', () async {
     final id = await addLedger('Main');
     await addTx(id, amount: 10);
-    final snapshot = await exportTransactionsJson(db, id);
+    final snapshot = await exportTransactionsJson(db, id).then((e) => e.jsonStr);
 
     // 快照后再新增一笔，恢复应回到快照时点
     await addTx(id, amount: 99);
@@ -66,7 +66,7 @@ void main() {
     final id = await addLedger('Main');
     await addTx(id);
     // 手工构造空交易快照（复用 export 再清空 items）
-    final map = jsonDecodeMap(await exportTransactionsJson(db, id));
+    final map = jsonDecodeMap(await exportTransactionsJson(db, id).then((e) => e.jsonStr));
     (map['items'] as List).clear();
     final emptySnapshot = jsonEncode(map);
 
@@ -240,7 +240,7 @@ void main() {
 
   test('v9 回填：快照带 ledgerSyncId 且本地行缺失时补写 sync_id', () async {
     final id = await addLedger('Main'); // 无 syncId（legacy 行）
-    final map = jsonDecodeMap(await exportTransactionsJson(db, id));
+    final map = jsonDecodeMap(await exportTransactionsJson(db, id).then((e) => e.jsonStr));
     // 模拟 v9 快照：源端账本身份
     map['version'] = 9;
     map['ledgerSyncId'] = '0f1e2d3c-4b5a-6789-abcd-ef0123456789';
@@ -261,7 +261,7 @@ void main() {
   test('v9 身份冲突：本地已有不同 syncId 时保留本地不覆盖', () async {
     final id = await db.into(db.ledgers).insert(LedgersCompanion.insert(
         name: 'Main', syncId: const drift.Value('local-identity')));
-    final map = jsonDecodeMap(await exportTransactionsJson(db, id));
+    final map = jsonDecodeMap(await exportTransactionsJson(db, id).then((e) => e.jsonStr));
     map['version'] = 9;
     map['ledgerSyncId'] = 'cloud-other-identity';
     final snapshot = jsonEncode(map);
@@ -278,7 +278,7 @@ void main() {
 
   test('v8- 旧快照无 ledgerSyncId 时保持现状不回填', () async {
     final id = await addLedger('Main');
-    final map = jsonDecodeMap(await exportTransactionsJson(db, id));
+    final map = jsonDecodeMap(await exportTransactionsJson(db, id).then((e) => e.jsonStr));
     map['version'] = 8;
     map.remove('ledgerSyncId');
 

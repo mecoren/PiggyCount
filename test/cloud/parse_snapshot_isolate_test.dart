@@ -41,7 +41,7 @@ void main() {
 
   test('真实导出快照：isolate 解析的元数据与主线程口径逐字段一致', () async {
     final ledgerId = await repo.createLedger(name: 'L', currency: 'CNY');
-    final jsonStr = await exportTransactionsJson(db, ledgerId);
+    final jsonStr = await exportTransactionsJson(db, ledgerId).then((e) => e.jsonStr);
 
     final parsed = parseSnapshotIsolate(jsonStr);
     // 与原实现的取值口径对齐：
@@ -81,7 +81,7 @@ void main() {
       ),
     ]);
 
-    final jsonStr = await exportTransactionsJson(db, ledgerId);
+    final jsonStr = await exportTransactionsJson(db, ledgerId).then((e) => e.jsonStr);
     final parsed = parseSnapshotIsolate(jsonStr);
     final direct = parseJsonToImportData(jsonStr);
 
@@ -133,7 +133,7 @@ void main() {
   test('ParsedSnapshot 可跨 isolate 传递（compute 全链路）', () async {
     final ledgerId =
         await repo.createLedger(name: 'L2', currency: 'CNY');
-    final jsonStr = await exportTransactionsJson(db, ledgerId);
+    final jsonStr = await exportTransactionsJson(db, ledgerId).then((e) => e.jsonStr);
 
     // 与生产路径同一入口：compute + 顶层函数
     final parsed = await compute(parseSnapshotIsolate, jsonStr);
