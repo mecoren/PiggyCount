@@ -467,3 +467,9 @@ S3 的体积自适应超时是弱网实测调优成果（`sync-reliability-param
 | 报告项 | 修复内容 | 文件 | 测试 |
 |---|---|---|---|
 | **P2-10** | ① Supabase database/realtime 服务懒装配（getter 化）——App 同步链只用 auth+storage，旧实现 initialize 无条件实例化两个零消费服务（realtime 还持有 channel 资源）；公开 getter 契约不变（独立包对外发布），首次访问才创建。② `_initializeAppMode` 去仪式化——AppMode 仅剩 local，启动只做 SharedPreferences 旧值规范化（历史 `cloud` → `local`），不再触碰 appModeProvider（grep 核验全库无其他消费者）；cloud_mode_providers.dart 注记为历史壳保留。③ 同日两份审计文档（连字符/下划线版）加互见注记——核验后确认内容不同（一份含包内全审、一份应用侧排除包），不删不改名，注记防引用错乱。 | supabase_provider.dart / main.dart / cloud_mode_providers.dart / docs×2 | supabase 29 项 + 全库 1129 项全绿，analyze 0 error |
+
+### §八补记四：第六批修复（2026-09-11 测试补齐：P2-15）
+
+| 报告项 | 修复内容 | 文件 | 测试 |
+|---|---|---|---|
+| **P2-15** | 三个此前零测试面的补齐：① 冲突守卫 widget 测试 8 项——首传成功不弹窗/三选一（取消不重试、force 重试断言 forceArgs=[true]、合并走回调且不触发 force）/二选一分支/cloudNewer 方向文案/非冲突异常透传不弹窗（数据安全交互此前全靠人工）；② 健康卡 widget 测试 5 项——空窗口「暂无数据」/四态明细渲染/conflict 不入分母（1 success+1 conflict=100%+verified 图标）/softFail 拉低成功率（<95% 档 error 图标）/Top 失败类别行（99.9% 阈值渲染此前全靠人工）；③ TSM 埋点接线断言 3 项——上传成功/失败真实落库（真 SyncMetricsService+内存 drift 表，非只测服务自身的旧覆盖）、无 metrics 注入 no-op 不影响主流程（接线此前只靠实现纪律维持） | test/widgets/upload_conflict_guard_test.dart（新）/ test/widgets/sync_health_card_test.dart（新）/ test/cloud/transactions_sync_manager_test.dart（+组） | 16 项新用例全过，全库 1145 项全绿，analyze 0 error |

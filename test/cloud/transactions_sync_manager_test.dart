@@ -8,6 +8,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:piggycount/cloud/transactions_sync_manager.dart';
+import 'package:piggycount/cloud/sync_metrics_service.dart';
 import 'package:piggycount/cloud/sync_service.dart';
 import 'package:piggycount/data/db.dart';
 import 'package:piggycount/data/repositories/base_repository.dart';
@@ -958,9 +959,131 @@ void main() {
     });
   });
 
+  group('P2-15: 同步指标埋点接线（metrics 注入后 TSM 写入真实表）', () {
+    // 接线断言：metrics 服务测试只覆盖自身计数，本组验证 TSM 业务路径
+    // 确实调用埋点（此前该接线只靠实现纪律维持）。
+    late SyncMetricsService metrics;
+
+    setUp(() {
+      metrics = SyncMetricsService(db);
+    });
+
+    TransactionsSyncManager buildManager(fcs.CloudStorageService storage) {
+      final provider = _FakeCloudProvider(storage: storage);
+      final manager = TransactionsSyncManager(
+        config: const fcs.CloudServiceConfig(
+          type: fcs.CloudBackendType.s3,
+          name: 'test',
+        ),
+        db: db,
+        repo: LocalRepository(db),
+        metrics: metrics,
+      );
+      manager.setSyncManagerForTesting(
+        syncManager: fcs.CloudSyncManager<int>(
+            provider: provider, serializer: _NoopSerializer()),
+        provider: provider,
+      );
+      return manager;
+    }
+
+    test('上传成功 → snapshotUpload success 落库（backend=s3）', () async {
+      await db.into(db.ledgers).insert(LedgersCompanion.insert(
+            id: const d.Value(1),
+            name: 'L',
+            currency: const d.Value('CNY'),
+          ));
+      final manager = buildManager(_CountingStorage());
+
+      final result = await manager.uploadCurrentLedger(ledgerId: 1);
+      expect(result.verified, isTrue);
+
+      final summary = await metrics.summarize(backend: 's3');
+      expect(summary.success, 1,
+          reason: '上传成功必须写入 snapshotUpload success 一条');
+
+      await manager.dispose();
+    });
+
+    test('上传 storage 异常 → snapshotUpload failed 落库', () async {
+      await db.into(db.ledgers).insert(LedgersCompanion.insert(
+            id: const d.Value(1),
+            name: 'L',
+            currency: const d.Value('CNY'),
+          ));
+      final manager = buildManager(_UploadThrowingStorage());
+
+      await expectLater(
+        manager.uploadCurrentLedger(ledgerId: 1),
+        throwsA(anything),
+      );
+
+      final summary = await metrics.summarize(backend: 's3');
+      expect(summary.failed, 1, reason: '上传失败必须计入指标');
+
+      await manager.dispose();
+    });
+
+    test('metrics 未注入 → 全程 no-op，不影响上传主流程', () async {
+      await db.into(db.ledgers).insert(LedgersCompanion.insert(
+            id: const d.Value(1),
+            name: 'L',
+            currency: const d.Value('CNY'),
+          ));
+      final provider = _FakeCloudProvider(storage: _CountingStorage());
+      final manager = TransactionsSyncManager(
+        config: const fcs.CloudServiceConfig(
+          type: fcs.CloudBackendType.s3,
+          name: 'test',
+        ),
+        db: db,
+        repo: LocalRepository(db),
+        // metrics 不传 —— 埋点旁路
+      );
+      manager.setSyncManagerForTesting(
+        syncManager: fcs.CloudSyncManager<int>(
+            provider: provider, serializer: _NoopSerializer()),
+        provider: provider,
+      );
+
+      final result = await manager.uploadCurrentLedger(ledgerId: 1);
+      expect(result.verified, isTrue,
+          reason: '无 metrics 注入时上传不受任何影响');
+
+      await manager.dispose();
+    });
+  });
+
 }
 
 // --- Fakes ---
+
+/// 上传恒抛异常的 storage（P2-15 埋点接线测试用）。
+class _UploadThrowingStorage implements fcs.CloudStorageService {
+  @override
+  Future<void> upload({
+    required String path,
+    required String data,
+    Map<String, String>? metadata,
+  }) async {
+    throw fcs.CloudStorageException('network down (test)');
+  }
+
+  @override
+  Future<String?> download({required String path}) async => null;
+
+  @override
+  Future<void> delete({required String path}) async {}
+
+  @override
+  Future<List<fcs.CloudFile>> list({required String path}) async => [];
+
+  @override
+  Future<bool> exists({required String path}) async => false;
+
+  @override
+  Future<fcs.CloudFile?> getMetadata({required String path}) async => null;
+}
 
 /// 计数版 storage:记录 upload 次数,可选上传延迟(模拟慢网络在途窗口),
 /// 供 uploadCurrentLedgerDebounced 防抖测试观测实际上传轮数。
