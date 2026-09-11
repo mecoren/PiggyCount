@@ -1196,6 +1196,9 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     final l10n = AppLocalizations.of(context);
     Object? error;
     var uploaded = false;
+    // P1-4 softFail 可见化：单账本上传若未确认收敛（verified=false），
+    // 提示差异化文案而非普通成功 —— 数据已在云端，用户无需重传。
+    var unverified = false;
 
     /// 单次上传尝试（自带阻塞弹窗）。CloudConflictException 会先经
     /// finally 关闭进度弹窗再上抛，让守卫在无遮拦状态下弹确认框。
@@ -1208,10 +1211,11 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
         initialStatus: l10n.ledgersUploadOneBlockingStatus,
       );
       try {
-        await ref
+        final result = await ref
             .read(syncServiceProvider)
             .uploadCurrentLedger(ledgerId: ledger.id, force: force);
         ok = true;
+        unverified = !result.verified;
       } on CloudConflictException {
         rethrow;
       } catch (e) {
@@ -1244,6 +1248,12 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
           title: AppLocalizations.of(context).commonFailed,
           message: '$error',
         );
+      } else if (uploaded && unverified) {
+        // softFail：数据已上云但写后校验未确认收敛 —— 明确告知而非
+        // 普通成功（脏标记未清，下次 getStatus 会重新比对）
+        showToast(context, AppLocalizations.of(context).mineUploadUnverified);
+        ref.read(ledgerListRefreshProvider.notifier).state++;
+        ref.read(syncStatusRefreshProvider.notifier).state++;
       } else if (uploaded) {
         showToast(context, AppLocalizations.of(context).mineUploadSuccess);
         ref.read(ledgerListRefreshProvider.notifier).state++;

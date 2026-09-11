@@ -1789,6 +1789,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mineUploadSuccessMessage => '모든 가계부가 클라우드에 동기화되었습니다';
 
   @override
+  String get mineUploadUnverified => '업로드됨(확인 안 됨)';
+
+  @override
+  String get mineUploadUnverifiedMessage =>
+      '데이터가 업로드되었으나 클라우드 내용이 이번 업로드와 일치하는지 확인하지 못했습니다(다른 기기에서 업데이트되었을 수 있음). 다음 동기화 시 자동으로 다시 비교하며, 지금 조치할 필요는 없습니다.';
+
+  @override
+  String get backupRestoreInterrupted => '이전 복원이 완료되지 않음';
+
+  @override
+  String get backupRestoreInterruptedMessage =>
+      '지난번 백업 복원이 중단되었습니다. 데이터가 일부만 복원되었을 수 있으며 자동 백업이 일시 중지되었습니다. 복원을 다시 실행하면 해결됩니다(복원은 덮어쓰기 방식이므로 반복해도 안전합니다).';
+
+  @override
   String get syncBlockingDownloadTitle => '동기화 다운로드';
 
   @override

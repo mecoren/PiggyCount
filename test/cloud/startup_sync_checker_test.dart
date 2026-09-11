@@ -14,6 +14,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:piggycount/cloud/startup_sync_checker.dart';
 import 'package:piggycount/cloud/startup_sync_overlay.dart';
 import 'package:piggycount/cloud/sync_diff_service.dart';
+import 'package:piggycount/cloud/sync_metrics_service.dart';
 import 'package:piggycount/cloud/sync_service.dart';
 import 'package:piggycount/cloud/transactions_sync_manager.dart';
 import 'package:piggycount/data/db.dart';
@@ -1347,6 +1348,129 @@ void main() {
     });
   });
 
+  group('startupCheck 埋点（P1-3 口径补缺）', () {
+    /// 轻量记录器：实现 record 即可（summarize 等查询方法不进本组断言）。
+    _RecordingMetrics setupRecording() {
+      final rec = _RecordingMetrics();
+      deps.metricsOverride = rec;
+      return rec;
+    }
+
+    test('全部账本最新 → 记录 success 一条（backend=startup）', () async {
+      final rec = setupRecording();
+      deps.activeConfig = const CloudServiceConfig(
+        type: CloudBackendType.s3,
+        name: 's3',
+        s3Endpoint: 'https://s3.example.com',
+        s3AccessKey: 'ak',
+        s3SecretKey: 'sk',
+        s3Bucket: 'b',
+      );
+      deps.ledgers = [_ledger(1, 'L1')];
+      deps.statusByLedger = {
+        1: const SyncStatus(
+            diff: SyncDiff.inSync, localCount: 0, localFingerprint: 'fp'),
+      };
+
+      await checker.runIfNeeded();
+
+      expect(controller.state, isA<DoneState>());
+      expect(rec.records, hasLength(1));
+      final r = rec.records.single;
+      expect(r.scenario, SyncOpScenario.startupCheck);
+      expect(r.outcome, SyncOpOutcome.success);
+      expect(r.backend, 'startup');
+      expect(r.duration, isNotNull);
+    });
+
+    test('getStatus 全部失败 → 记录 failed（errorClass=network_timeout）',
+        () async {
+      final rec = setupRecording();
+      deps.activeConfig = const CloudServiceConfig(
+        type: CloudBackendType.webdav,
+        name: 'wdav',
+        webdavUrl: 'https://dav.example.com',
+        webdavUsername: 'u',
+        webdavPassword: 'p',
+      );
+      deps.ledgers = [_ledger(1, 'L1')];
+      deps.statusThrowForLedgerIds = {1};
+
+      await checker.runIfNeeded();
+
+      expect(controller.state, isA<ErrorState>());
+      expect(rec.records.single.outcome, SyncOpOutcome.failed);
+      expect(rec.records.single.errorClass, SyncErrorClass.networkTimeout);
+    });
+
+    test('方向未知差异（different）→ 记录 softFail 而非 success', () async {
+      final rec = setupRecording();
+      deps.activeConfig = const CloudServiceConfig(
+        type: CloudBackendType.s3,
+        name: 's3',
+        s3Endpoint: 'https://s3.example.com',
+        s3AccessKey: 'ak',
+        s3SecretKey: 'sk',
+        s3Bucket: 'b',
+      );
+      deps.ledgers = [_ledger(1, 'L1')];
+      deps.statusByLedger = {
+        1: const SyncStatus(
+            diff: SyncDiff.different, localCount: 1, localFingerprint: 'a'),
+      };
+
+      await checker.runIfNeeded();
+
+      // different 不弹更新、静默关闭 —— 数据未收敛，按 softFail 计量
+      expect(rec.records.single.outcome, SyncOpOutcome.softFail);
+    });
+
+    test('用户在汇总弹窗选择 skip → 仍记 success（用户主动决策非失败）',
+        () async {
+      final rec = setupRecording();
+      deps.activeConfig = const CloudServiceConfig(
+        type: CloudBackendType.s3,
+        name: 's3',
+        s3Endpoint: 'https://s3.example.com',
+        s3AccessKey: 'ak',
+        s3SecretKey: 'sk',
+        s3Bucket: 'b',
+      );
+      deps.ledgers = [_ledger(1, 'L1')];
+      deps.statusByLedger = {
+        1: const SyncStatus(
+            diff: SyncDiff.cloudNewer, localCount: 0, localFingerprint: 'fp'),
+      };
+      deps.summaryChoiceSequence = [SummaryChoice.skip];
+
+      await checker.runIfNeeded();
+
+      expect(rec.records.single.outcome, SyncOpOutcome.success);
+    });
+
+    test('metrics 为 null（旧测试桩/极早期装配）→ 主流程不受任何影响',
+        () async {
+      deps.metricsOverride = null;
+      deps.activeConfig = const CloudServiceConfig(
+        type: CloudBackendType.s3,
+        name: 's3',
+        s3Endpoint: 'https://s3.example.com',
+        s3AccessKey: 'ak',
+        s3SecretKey: 'sk',
+        s3Bucket: 'b',
+      );
+      deps.ledgers = [_ledger(1, 'L1')];
+      deps.statusByLedger = {
+        1: const SyncStatus(
+            diff: SyncDiff.inSync, localCount: 0, localFingerprint: 'fp'),
+      };
+
+      // 不抛异常即通过（埋点旁路语义）
+      await checker.runIfNeeded();
+      expect(controller.state, isA<DoneState>());
+    });
+  });
+
   group('同名多槽位甄别（两次实测 §4.2 改进点）', () {
     RemoteLedgerMeta _m(String slotKey, String name,
             {int txCount = 10, DateTime? uploadedAt}) =>
@@ -1710,8 +1834,53 @@ class _FakeDeps implements StartupSyncCheckerDeps {
   @override
   String getUpToDateMessage() => 'All ledgers up to date (test)';
 
+  /// P1-3 埋点补缺：测试桩默认无 metrics（no-op 埋点）。
+  /// 需要断言指标写入的用例覆写本 getter 注入记录器。
+  _RecordingMetrics? metricsOverride;
+
+  @override
+  SyncMetricsService? get metrics => metricsOverride;
+
   @override
   void log(String message) {
     errorLog.add(message);
+  }
+}
+
+/// P1-3 埋点测试记录器：只实现 record（runIfNeeded 的 finally 只调它）；
+/// 其余成员按接口要求提供空实现。db 字段提供不可用占位（本记录器
+/// 不落库），retention 常量经类静态成员继承不可行（implements），显式补。
+class _RecordingMetrics implements SyncMetricsService {
+  final records = <SyncOpRecord>[];
+
+  @override
+  PiggyDatabase get db =>
+      throw UnsupportedError('recording stub has no db');
+
+  @override
+  Future<void> record(SyncOpRecord r) async => records.add(r);
+
+  @override
+  void recordUnawaited(SyncOpRecord r) => records.add(r);
+
+  @override
+  Future<SyncHealthSummary> summarize(
+      {Duration window = const Duration(days: 30), String? backend}) async {
+    return const SyncHealthSummary();
+  }
+
+  @override
+  Future<List<({String errorClass, int count})>> topErrorClasses(
+      {Duration window = const Duration(days: 30), int limit = 5}) async {
+    return const [];
+  }
+
+  @override
+  Future<int> cleanupExpired() async => 0;
+
+  @override
+  Future<List<Map<String, dynamic>>> exportJson(
+      {Duration window = const Duration(days: 30)}) async {
+    return const [];
   }
 }

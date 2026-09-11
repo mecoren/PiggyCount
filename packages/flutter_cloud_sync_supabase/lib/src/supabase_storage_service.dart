@@ -2,6 +2,7 @@ library;
 
 import 'dart:convert';
 import 'dart:developer' as dev;
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
@@ -14,8 +15,29 @@ import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 /// 附件/ZIP 备份恒走 base64 文本兜底（流量 +33%、云端文件非原生格式）。
 /// 实现后 [CloudStorageBinaryExt] 自动分派到真字节路径，与 S3/WebDAV
 /// 归一；旧行为（base64 文本对象）由 downloadBinary 的嗅探兜底兼容读取。
+///
+/// 2026-09-11 归一化批次（对照 docs/sync-comprehensive-audit-2026-09-10.md）：
+/// - P0-1：list() 改走 listPaginated 游标翻页 —— 旧 list() 不传
+///   SearchOptions，SDK 默认 limit:100 静默截断；目录超 100 对象后
+///   exists()/getMetadata()（当时依赖同一 list）把第 101+ 个对象误判
+///   不存在，触发重复上传/覆盖、发现流程漏账本。exists() 同步改为
+///   游标翻页全量判定。
+/// - P1-8：幂等读重试（download/downloadBinary/list/getMetadata/exists/
+///   delete），对齐 WebDAV `_retryIdempotent` 参数（2 次、400/800ms ±50%
+///   真随机 jitter）；非幂等写（upload/upsert 覆盖语义）不重试。
+/// - P1-1：实现 [ConditionalWriteStorage] 读后比对近似（对齐 WebDAV
+///   模式：探测 updatedAt/lastModified 锚点 → 比对 → upsert，窗口收窄
+///   非原子，写后校验兜底），Supabase Storage 无 If-Match 语义。
+/// - P1-1b：CloudFile.path 口径修正 —— 旧实现返回带 users/{uid}/ 前缀的
+///   fullPath，与其他包「相对路径可回传」契约分裂（回传 delete/exists
+///   会双拼前缀）；现统一返回调用方视角的相对路径（name=basename、
+///   path=与入参同目录的相对路径）。
+/// - P1-1c：_storeMetadata 失败从静默降级升级为可观察信号 —— DB 表写
+///   失败（如 file_metadata 表未建）时抛 MetadataPersistFailedException，
+///   manager 写后校验会以 verified=false 上浮（softFail 而非假 success），
+///   消除「指纹永久缺失 → getStatus 反复全量下载」的无痕退化。
 class SupabaseStorageService
-    implements CloudStorageService, BinaryCapableStorage {
+    implements CloudStorageService, BinaryCapableStorage, ConditionalWriteStorage {
   final supabase.SupabaseClient _client;
   final String _bucketName;
   final String? _pathPrefix;
@@ -32,6 +54,19 @@ class SupabaseStorageService
   /// 服务器无响应时 future 永不完成会让同步 UI 永久挂起（S3/WebDAV/iCloud
   /// 均已有超时护栏，此处对齐）。60s 与 WebDAV _opTimeout 同档。
   static const _opTimeout = Duration(seconds: 60);
+
+  /// P1-8：幂等读重试参数，对齐 WebDAV `_retryIdempotent`（2 次重试、
+  /// 400ms/800ms 基数 ±50% 真随机 jitter）。真随机源与 WebDAV/S3 同款
+  /// （P1-1 修复：时间戳取模同相会让整点重试风暴，jitter 失效）。
+  static const _maxRetries = 2;
+  final Random _retryRandom = Random();
+
+  /// P0-1：单页对象数。listPaginated 服务器端默认 1000；显式传值便于
+  /// 测试与未来调参，且与翻页终止条件（不足一页）解耦。
+  static const _pageLimit = 1000;
+
+  /// P0-1：翻页安全护栏 —— 游标异常（服务端 bug/异常目录）时防无限翻页。
+  static const _maxPages = 100;
 
   /// P0-3：统一错误分类器。
   ///
@@ -74,71 +109,253 @@ class SupabaseStorageService
     });
   }
 
+  /// P1-8：幂等操作组合入口 —— [_op] 超时 + 自动重试。
+  ///
+  /// 可重试判定（对齐 WebDAV）：异常无状态码（连接层故障/超时包装后的
+  /// CloudStorageException）或 Postgrest/Storage 5xx 类瞬时故障。认证类
+  /// 与 4xx 确定性失败立即上抛，不消耗重试预算。
+  Future<T> _opRetryable<T>(String opName, Future<T> Function() op) async {
+    var attempt = 0;
+    while (true) {
+      try {
+        return await _op(opName, op);
+      } catch (e) {
+        if (e is CloudNotAuthenticatedException || e is CloudAuthException) {
+          rethrow; // 改凭据才能解决，重试无意义
+        }
+        if (e is MetadataPersistFailedException) rethrow;
+        final retriable = attempt < _maxRetries && _isTransient(e);
+        if (!retriable) rethrow;
+        attempt++;
+        storageLogger?.info(
+            '[Supabase] $opName 瞬时故障，第 $attempt/$_maxRetries 次重试: $e');
+        // 指数退避 + 真随机抖动：400ms、800ms（各 ±50% 区间均匀分布），
+        // 与 WebDAV _retryIdempotent 同参数表（sync-reliability-params.md）
+        final baseMs = 400 * (1 << (attempt - 1));
+        final jitter = _retryRandom.nextInt(baseMs ~/ 2 + 1);
+        await Future<void>.delayed(
+            Duration(milliseconds: baseMs ~/ 2 + jitter));
+      }
+    }
+  }
+
+  /// 瞬时故障判定：超时包装（CloudStorageException 且 originalError 为空）
+  /// 或底层 SocketException/TimeoutException；Supabase SDK 的 5xx 经
+  /// StorageException.statusCode 字符串判（'5xx' 前缀）。
+  bool _isTransient(Object e) {
+    Object? root = e;
+    // 解开 CloudStorageException 的 originalError 包装
+    while (root is CloudStorageException && root.originalError != null) {
+      root = root.originalError;
+    }
+    if (root is supabase.StorageException) {
+      final code = root.statusCode;
+      if (code == null) return true; // 无结构化码 → 连接层故障
+      return code.startsWith('5');
+    }
+    // dart:io SocketException / TimeoutException 等（Web 端为字符串匹配兜底）
+    final text = root.toString().toLowerCase();
+    return text.contains('socketexception') ||
+        text.contains('timeoutexception') ||
+        text.contains('timed out') ||
+        text.contains('timeout') ||
+        text.contains('connection') ||
+        text.contains('network');
+  }
+
   @override
   Future<void> upload({
     required String path,
     required String data,
     Map<String, String>? metadata,
   }) async {
+    await _uploadBytes(
+      opName: 'upload',
+      path: path,
+      bytes: utf8.encode(data),
+      contentType: 'application/json',
+      metadata: metadata,
+    );
+  }
+
+  @override
+  Future<void> uploadBinary({
+    required String path,
+    required List<int> bytes,
+    Map<String, String>? metadata,
+  }) async {
+    await _uploadBytes(
+      opName: 'uploadBinary',
+      path: path,
+      bytes: bytes is Uint8List ? bytes : Uint8List.fromList(bytes),
+      contentType: 'application/octet-stream',
+      metadata: metadata,
+    );
+  }
+
+  /// upload/uploadBinary 共用核心（upsert 覆盖语义；P1-8：非幂等写不重试）。
+  Future<void> _uploadBytes({
+    required String opName,
+    required String path,
+    required Uint8List bytes,
+    required String contentType,
+    Map<String, String>? metadata,
+  }) async {
     try {
-      // Check if user is authenticated
       final user = _client.auth.currentUser;
       if (user == null) {
         throw CloudNotAuthenticatedException('User not authenticated');
       }
-
-      // Build full path with user ID prefix
       final fullPath = _buildUserPath(user.id, path);
-
-      // Upload file with metadata
-      // Use UTF-8 encoding to properly handle multi-byte characters (e.g., Chinese)
-      final bytes = utf8.encode(data);
       await _op(
-        'upload',
+        opName,
         () => _client.storage.from(_bucketName).uploadBinary(
               fullPath,
               bytes,
-              fileOptions: const supabase.FileOptions(
+              fileOptions: supabase.FileOptions(
                 upsert: true,
-                contentType: 'application/json',
+                contentType: contentType,
                 cacheControl: '3600',
               ),
             ),
       );
-
-      // Store metadata separately if provided
       if (metadata != null && metadata.isNotEmpty) {
         await _storeMetadata(fullPath, metadata);
       }
     } on supabase.StorageException catch (e) {
-      throw _classify('Upload', e);
+      throw _classify(opName, e);
     } catch (e) {
       if (e is CloudNotAuthenticatedException ||
           e is CloudAuthException ||
           e is CloudStorageException) {
         rethrow;
       }
-      throw CloudStorageException('Upload failed: $e', e);
+      throw CloudStorageException('$opName failed: $e', e);
     }
   }
+
+  /// P1-1：读后比对近似条件写（对齐 WebDAV 模式）。
+  ///
+  /// Supabase Storage 无 If-Match 语义（upsert 恒覆盖），本实现以
+  /// 「重读远端锚点 → 比对 → upsert」收窄并发窗口：
+  /// - [ifMatchEtag]：锚点取 getMetadata 透出的 eTag（updatedAt/
+  ///   lastModified 归一化形态）。比对不一致（或锚点缺失于已存在对象）
+  /// → 抛 [CloudPreconditionFailedException]，本次不落盘；
+  /// - [ifNoneMatch]：探测对象存在即抛条件失败（create-only 语义）；
+  /// - 窗口内（比对 → 落盘）他机写入仍可能被覆盖 —— 非原子，与
+  ///   WebDAV 实现同款取舍，由 manager 层写后校验兜底（verified=false
+  ///   → softFail，脏标记不清）。
+  @override
+  bool get supportsConditionalWrite => true;
+
+  @override
+  Future<void> uploadBinaryConditional({
+    required String path,
+    required List<int> bytes,
+    Map<String, String>? metadata,
+    String? ifMatchEtag,
+    bool ifNoneMatch = false,
+  }) async {
+    if (ifMatchEtag != null && ifNoneMatch) {
+      throw ArgumentError('ifMatchEtag 与 ifNoneMatch 互斥');
+    }
+    final user = _client.auth.currentUser;
+    if (user == null) {
+      throw CloudNotAuthenticatedException('User not authenticated');
+    }
+    final fullPath = _buildUserPath(user.id, path);
+
+    final current = await _opRetryable(
+        'conditionalProbe', () => _probeRawMetadata(fullPath));
+
+    if (ifNoneMatch) {
+      if (current != null) {
+        throw CloudPreconditionFailedException(
+            '远端对象已存在（create-only 条件失败）: $path');
+      }
+    } else if (ifMatchEtag != null) {
+      if (current == null) {
+        // 远端不存在同样算条件失败（对齐接口契约：探测时存在、
+        // 写入时消失 = 中途被并发改动/删除，按冲突处理）
+        throw CloudPreconditionFailedException(
+            '远端对象已不存在（条件锚点失效）: $path');
+      }
+      final currentEtag = _etagOf(current);
+      if (currentEtag == null || currentEtag != ifMatchEtag) {
+        throw CloudPreconditionFailedException(
+            '远端对象已被并发修改（锚点 $ifMatchEtag ≠ 当前 $currentEtag）: $path');
+      }
+    }
+
+    await _uploadBytes(
+      opName: 'uploadBinaryConditional',
+      path: path,
+      bytes: bytes is Uint8List ? bytes : Uint8List.fromList(bytes),
+      contentType: 'application/octet-stream',
+      metadata: metadata,
+    );
+  }
+
+  /// 条件写探测：直接调 listPaginated 单页在对象父目录内定位（复用
+  /// P0-1 翻页语义，小目录单页即命中）。返回原始条目或 null。
+  Future<_RemoteEntry?> _probeRawMetadata(String fullPath) async {
+    final dir = PathHelper.dirname(fullPath);
+    final base = PathHelper.basename(fullPath);
+    String? cursor;
+    for (var page = 0; page < _maxPages; page++) {
+      final result = await _client.storage.from(_bucketName).listPaginated(
+            options: supabase.PaginatedSearchOptions(
+              prefix: dir.isEmpty ? '' : '$dir/',
+              limit: _pageLimit,
+              cursor: cursor,
+            ),
+          );
+      for (final obj in result.objects) {
+        // 对象 name 为 basename；key 为完整对象键（兼容部分实现只回 name）
+        final name = obj.name;
+        final key = obj.key ?? (dir.isEmpty ? name : '$dir/$name');
+        if (name == base || key == fullPath) {
+          return _RemoteEntry(
+            name: obj.name,
+            size: _sizeOfMeta(obj.metadata),
+            updatedAt: obj.updatedAt,
+            etag: null, // PaginatedFile 无 etag 字段，eTag 由 _getMetadata 全量补
+            metadata: obj.metadata,
+          );
+        }
+      }
+      if (!result.hasNext || result.nextCursor == null) break;
+      cursor = result.nextCursor;
+    }
+    return null;
+  }
+
+  /// eTag 归一化：PaginatedFile 无 etag 字段，以 updatedAt（内容变更时间，
+  /// 覆盖写必刷新）作为等价锚点 —— 比对语义与 S3 eTag 一致（探测时读到的
+  /// 值 vs 写入时重读的值，任何他机覆盖都会刷新该值）。
+  String? _etagOf(_RemoteEntry o) => o.updatedAt;
+
+  /// FileObjectV2/PaginatedFile 的 metadata map 中取 size。
+  int? _sizeOfMeta(Map<String, dynamic>? m) {
+    final s = m?['size'];
+    if (s is int) return s;
+    if (s is num) return s.toInt();
+    return null;
+  }
+
+  DateTime? _parseDate(String? raw) =>
+      raw == null ? null : DateTime.tryParse(raw);
 
   @override
   Future<String?> download({required String path}) async {
     try {
-      // Check if user is authenticated
       final user = _client.auth.currentUser;
       if (user == null) {
         throw CloudNotAuthenticatedException('User not authenticated');
       }
-
-      // Build full path with user ID prefix
       final fullPath = _buildUserPath(user.id, path);
-
-      // Download file
-      final bytes = await _op(
+      final bytes = await _opRetryable(
           'download', () => _client.storage.from(_bucketName).download(fullPath));
-
-      // Convert bytes to string using UTF-8 decoding
       return utf8.decode(bytes);
     } on supabase.StorageException catch (e) {
       // Return null if file not found
@@ -156,49 +373,6 @@ class SupabaseStorageService
     }
   }
 
-  /// P1-4：原生字节上传。与 [upload] 同语义（upsert 覆盖 + 可选 metadata
-  /// 落 DB 表），内容不经过 base64 文本化 —— 附件/ZIP 备份流量直降 33%，
-  /// 云端对象为原生二进制（外部工具可直读）。
-  @override
-  Future<void> uploadBinary({
-    required String path,
-    required List<int> bytes,
-    Map<String, String>? metadata,
-  }) async {
-    try {
-      final user = _client.auth.currentUser;
-      if (user == null) {
-        throw CloudNotAuthenticatedException('User not authenticated');
-      }
-      final fullPath = _buildUserPath(user.id, path);
-      final data = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
-      await _op(
-        'uploadBinary',
-        () => _client.storage.from(_bucketName).uploadBinary(
-              fullPath,
-              data,
-              fileOptions: const supabase.FileOptions(
-                upsert: true,
-                contentType: 'application/octet-stream',
-                cacheControl: '3600',
-              ),
-            ),
-      );
-      if (metadata != null && metadata.isNotEmpty) {
-        await _storeMetadata(fullPath, metadata);
-      }
-    } on supabase.StorageException catch (e) {
-      throw _classify('UploadBinary', e);
-    } catch (e) {
-      if (e is CloudNotAuthenticatedException ||
-          e is CloudAuthException ||
-          e is CloudStorageException) {
-        rethrow;
-      }
-      throw CloudStorageException('UploadBinary failed: $e', e);
-    }
-  }
-
   /// P1-4：原生字节下载。404 → null（对齐 [download] 幂等语义）；
   /// 旧行为遗留的 base64 文本对象（实现 BinaryCapableStorage 之前经
   /// 兜底路径写入的）由调用方嗅探（如备份恢复的 ZIP 魔数探测、附件的
@@ -211,7 +385,7 @@ class SupabaseStorageService
         throw CloudNotAuthenticatedException('User not authenticated');
       }
       final fullPath = _buildUserPath(user.id, path);
-      final bytes = await _op(
+      final bytes = await _opRetryable(
           'downloadBinary', () => _client.storage.from(_bucketName).download(fullPath));
       return bytes;
     } on supabase.StorageException catch (e) {
@@ -229,30 +403,24 @@ class SupabaseStorageService
     }
   }
 
+  /// delete 是幂等操作（404 视为成功），纳入 P1-8 重试。
   @override
   Future<void> delete({required String path}) async {
     try {
-      // Check if user is authenticated
       final user = _client.auth.currentUser;
       if (user == null) {
         throw CloudNotAuthenticatedException('User not authenticated');
       }
-
-      // Build full path with user ID prefix
       final fullPath = _buildUserPath(user.id, path);
-
-      // Delete file
-      try {
-        await _op('remove',
-            () => _client.storage.from(_bucketName).remove([fullPath]));
-      } on supabase.StorageException catch (e) {
-        // 忽略 404（文件不存在），删除操作幂等
-        if (!_isNotFound(e)) {
-          rethrow;
+      await _opRetryable('remove', () async {
+        try {
+          return await _client.storage.from(_bucketName).remove([fullPath]);
+        } on supabase.StorageException catch (e) {
+          // 忽略 404（文件不存在），删除操作幂等
+          if (!_isNotFound(e)) rethrow;
+          return <dynamic>[];
         }
-      }
-
-      // Delete metadata
+      });
       await _deleteMetadata(fullPath);
     } on supabase.StorageException catch (e) {
       throw _classify('Delete', e);
@@ -266,35 +434,52 @@ class SupabaseStorageService
     }
   }
 
+  /// P0-1：list() 改走 listPaginated 游标翻页，取回目录下**全部**对象。
+  ///
+  /// 旧实现调 list() 不传 SearchOptions —— SDK 默认 limit:100 静默截断，
+  /// 多账本+附件用户（对象数轻易破百）在发现/清理流程漏对象、
+  /// exists() 把第 101+ 个对象误判不存在。
+  ///
+  /// path 口径（P1-1b）：返回的 CloudFile.path 是**调用方视角的相对路径**
+  /// （与入参 path 同目录），不带 users/{uid}/ 前缀 —— 旧实现返回
+  /// fullPath，调用方把 CloudFile.path 回传 delete/exists 时会双拼前缀。
   @override
   Future<List<CloudFile>> list({required String path}) async {
     try {
-      // Check if user is authenticated
       final user = _client.auth.currentUser;
       if (user == null) {
         throw CloudNotAuthenticatedException('User not authenticated');
       }
-
-      // Build full path with user ID prefix
       final fullPath = _buildUserPath(user.id, path);
 
-      // List files
-      final files = await _op(
-          'list', () => _client.storage.from(_bucketName).list(path: fullPath));
+      final objects = await _opRetryable(
+          'list', () => _listAllObjects(fullPath));
 
-      // Convert to CloudFile objects
-      return files
-          .map((file) => CloudFile(
-                name: file.name,
-                path: '$fullPath/${file.name}',
-                size: file.metadata?['size'] as int?,
-                lastModified: file.updatedAt != null
-                    ? DateTime.parse(file.updatedAt!)
-                    : null,
-                metadata: file.metadata,
-              ))
+      return objects
+          .map((obj) {
+            // 相对路径 = 入参目录 + basename；入参 path 本身可能带
+            // 前缀（如 'attachments/'），保持与调用方入参一致
+            final relPath = PathHelper.join([path, obj.name]);
+            return CloudFile(
+              name: obj.name,
+              path: relPath,
+              size: obj.size,
+              lastModified: _parseDate(obj.updatedAt),
+              metadata: obj.metadata,
+              // 列表接口无 etag 字段；updatedAt 是「内容变更时间」的
+              // 等价锚点（Supabase 覆盖写必刷新 updatedAt），供条件写
+              // 比对（对齐 S3 eTag 的用途位）
+              eTag: obj.updatedAt,
+            );
+          })
           .toList();
     } on supabase.StorageException catch (e) {
+      // P1-9：空目录/前缀不存在时 Supabase 可能返回 404 —— 归一为
+      // 空列表（对齐 WebDAV :627-634 与 iCloud :137-139 的收敛语义），
+      // 调用方无需 catch 吞错。
+      if (_isNotFound(e)) {
+        return const <CloudFile>[];
+      }
       throw _classify('List', e);
     } catch (e) {
       if (e is CloudNotAuthenticatedException ||
@@ -306,26 +491,53 @@ class SupabaseStorageService
     }
   }
 
+  /// 游标翻页取回 prefix 下全部条目（P0-1）。
+  ///
+  /// - hasNext/nextCursor 驱动翻页；护栏 [_maxPages] 防游标异常死循环；
+  /// - size 优先取 metadata['size']（PaginatedFile 携带），getMetadata
+  ///   单对象探测路径会经 _getMetadata 补全 DB 侧自定义元数据；
+  /// - 翻页参数必须含 prefix 尾斜杠（Supabase 按前缀匹配，'a' 会命中
+  ///   'ab.txt'）—— 空目录（根列举）传 ''。
+  Future<List<_RemoteEntry>> _listAllObjects(String prefix) async {
+    final all = <_RemoteEntry>[];
+    String? cursor;
+    for (var page = 0; page < _maxPages; page++) {
+      final result = await _client.storage.from(_bucketName).listPaginated(
+            options: supabase.PaginatedSearchOptions(
+              prefix: prefix.isEmpty ? '' : '$prefix/',
+              limit: _pageLimit,
+              cursor: cursor,
+            ),
+          );
+      for (final obj in result.objects) {
+        all.add(_RemoteEntry(
+          name: obj.name,
+          size: _sizeOfMeta(obj.metadata),
+          updatedAt: obj.updatedAt,
+          etag: null,
+          metadata: obj.metadata,
+        ));
+      }
+      if (!result.hasNext || result.nextCursor == null) break;
+      cursor = result.nextCursor;
+    }
+    return all;
+  }
+
+  /// P0-1：exists() 改走翻页全量判定（旧实现单次 list 100 条截断 →
+  /// 第 101+ 个对象误判不存在 → 重复上传/覆盖）。
   @override
   Future<bool> exists({required String path}) async {
     try {
-      // Check if user is authenticated
       final user = _client.auth.currentUser;
       if (user == null) {
         throw CloudNotAuthenticatedException('User not authenticated');
       }
-
-      // Build full path with user ID prefix
       final fullPath = _buildUserPath(user.id, path);
-
-      // Try to get file info - if it doesn't throw, file exists
-      final files = await _op('list',
-          () => _client.storage.from(_bucketName).list(path: PathHelper.dirname(fullPath)));
-
-      final fileName = PathHelper.basename(fullPath);
-      return files.any((file) => file.name == fileName);
+      final found = await _opRetryable(
+          'exists', () => _probeRawMetadata(fullPath));
+      return found != null;
     } on supabase.StorageException catch (e) {
-      // If path not found, file doesn't exist
       if (_isNotFound(e)) {
         return false;
       }
@@ -343,44 +555,32 @@ class SupabaseStorageService
   @override
   Future<CloudFile?> getMetadata({required String path}) async {
     try {
-      // Check if user is authenticated
       final user = _client.auth.currentUser;
       if (user == null) {
         throw CloudNotAuthenticatedException('User not authenticated');
       }
-
-      // Build full path with user ID prefix
       final fullPath = _buildUserPath(user.id, path);
 
-      // Get file list to retrieve metadata
-      final files = await _op('list',
-          () => _client.storage.from(_bucketName).list(path: PathHelper.dirname(fullPath)));
-
-      final fileName = PathHelper.basename(fullPath);
-      // 文件不在列表中时通过私有标记异常跳出，由外层捕获后返回 null，
-      // 避免抛出 CloudStorageException 导致调用方需 catch 字符串匹配（Minor）
-      final file = files.firstWhere(
-        (f) => f.name == fileName,
-        orElse: () => throw _FileNotFoundInList(),
-      );
+      // P0-1：翻页定位（不再单次 list 截断）
+      final file = await _opRetryable(
+          'getMetadata', () => _probeRawMetadata(fullPath));
+      if (file == null) return null;
 
       // Get stored custom metadata
       final customMetadata = await _getMetadata(fullPath);
 
       return CloudFile(
         name: file.name,
-        path: fullPath,
-        size: file.metadata?['size'] as int?,
-        lastModified:
-            file.updatedAt != null ? DateTime.parse(file.updatedAt!) : null,
+        // P1-1b：调用方视角相对路径（可安全回传 delete/exists）
+        path: path,
+        size: file.size,
+        lastModified: _parseDate(file.updatedAt),
+        eTag: _etagOf(file),
         metadata: {
           ...?file.metadata,
           ...customMetadata,
         },
       );
-    } on _FileNotFoundInList {
-      // 文件不存在时返回 null 而非抛异常（Minor）
-      return null;
     } on supabase.StorageException catch (e) {
       if (_isNotFound(e)) {
         return null;
@@ -415,24 +615,32 @@ class SupabaseStorageService
   /// Since Supabase Storage doesn't support custom metadata directly,
   /// we store it in a metadata table.
   ///
-  /// 元数据存储失败不影响主数据的完整性（主文件已上传成功），
-  /// 但需记录 warning 便于排查，而非完全静默吞掉。
+  /// P1-1c（2026-09-11）：写入失败不再静默降级 —— 抛
+  /// [MetadataPersistFailedException]（CloudStorageException 子类，不中断
+  /// 上传主流程的语义由调用方/manager 决定：manager 写后校验读不到指纹
+  /// 会以 verified=false 上浮 softFail）。幂等 upsert 重试 1 次后仍失败
+  /// 才抛（网络抖动自愈，表未建/RSL 策略拒绝等确定性原因快速失败）。
   Future<void> _storeMetadata(
       String path, Map<String, String> metadata) async {
-    try {
-      await _client.from('file_metadata').upsert({
-        'path': path,
-        'metadata': metadata,
-        'updated_at': DateTime.now().toIso8601String(),
-      });
-    } catch (e) {
-      // 元数据是辅助功能（主数据已上传成功），失败不阻塞主流程，
-      // 但记录 warning 便于排查（如 metadata 表未创建）
-      // LOG-01：经 storageLogger 进应用日志（release 可留痕），对齐
-      // WebDAV/S3 的注入模式；未注入时保留 dev.log 兜底（本地调试可见）。
-      storageLogger?.warning(
-          '[Supabase] metadata storage failed for $path: $e');
-      dev.log('[Supabase] Warning: metadata storage failed for $path: $e', name: 'SupabaseStorage');
+    for (var attempt = 1; attempt <= 2; attempt++) {
+      try {
+        await _client.from('file_metadata').upsert({
+          'path': path,
+          'metadata': metadata,
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+        return;
+      } catch (e) {
+        storageLogger?.warning(
+            '[Supabase] metadata storage failed for $path (attempt $attempt/2): $e');
+        if (attempt == 2) {
+          dev.log('[Supabase] metadata storage failed for $path: $e', name: 'SupabaseStorage');
+          throw MetadataPersistFailedException(
+              '元数据写入失败（file_metadata 表）：$path —— 云端指纹将缺失，'
+              '本次上传将标记为未确认收敛（softFail），请检查表与 RLS 策略',
+              e);
+        }
+      }
     }
   }
 
@@ -471,6 +679,31 @@ class SupabaseStorageService
   }
 }
 
-/// 私有标记异常：用于 getMetadata 中 firstWhere 的 orElse 跳出，
-/// 外层捕获后返回 null，避免文件不存在时抛出业务异常（Minor）
-class _FileNotFoundInList implements Exception {}
+/// 翻页条目的内部归一记录：隔离 SDK 类型（PaginatedFile / FileObjectV2
+/// 字段集随版本演进），本文件内统一消费。
+class _RemoteEntry {
+  final String name;
+  final int? size;
+  final String? updatedAt;
+  final String? etag;
+  final Map<String, dynamic>? metadata;
+
+  const _RemoteEntry({
+    required this.name,
+    this.size,
+    this.updatedAt,
+    this.etag,
+    this.metadata,
+  });
+}
+
+/// P1-1c：元数据持久化失败信号 —— 主对象已上传成功但指纹等元数据未落库。
+///
+/// 设计为 [CloudStorageException] 子类：manager 的 upload 流程会把非
+/// CloudSyncException 包装后上抛 → TSM 侧按 failed/softFail 计量；
+/// 同时保留独立类型让未来调用方可以精确识别「内容在、元数据缺」场景
+/// （如维护页提示补建 file_metadata 表）。
+class MetadataPersistFailedException extends CloudStorageException {
+  MetadataPersistFailedException(String message, [Object? cause])
+      : super(message, cause);
+}

@@ -1,6 +1,7 @@
 # PiggyCount 同步功能全面系统性排查报告
 
 - **排查日期**：2026-09-10
+- **修复状态**：2026-09-11 归一化批次已实施 —— 本报告的 **P0-1、P1-1（Supabase 条件写/元数据/path 口径）、P1-2、P1-3、P1-4、P1-5（iCloud）、P1-8、P1-9 已全部修复**（详见 §八修复记录）；其余 P1/P2 项维持排查结论原状，待后续批次。
 - **排查方式**：静态代码审计（只读，**未修改任何代码**）
 - **排查范围**：全部同步功能——S3 协议包、WebDAV 协议包、Supabase 协议包、iCloud 协议包、core 同步框架（flutter_cloud_sync）、App 层快照同步主链路（TransactionsSyncManager）、启动检查编排器、diff/指纹/变更追踪、云端备份调度、端到端加密装饰层、同步成功率监控机制
 - **对照基线**：`docs/sync-normalization-audit-2026-09-07.md`、`docs/s3-webdav-sync-audit-2026-09-08.md`、`docs/sync-metrics-implementation-2026-09-09.md`、`docs/sync-reliability-params.md`
@@ -416,3 +417,27 @@ S3 的体积自适应超时是弱网实测调优成果（`sync-reliability-param
 - 协议包：packages/flutter_cloud_sync{,_s3,_webdav,_supabase,_icloud}/lib 全部源文件
 - 测试：test/ 同步相关 40+ 文件覆盖面盘点（未执行，仅静态盘点）
 - 文档：docs/ 与 docoments/ 同步审计/测试报告清单盘点
+
+---
+
+## 八、修复记录（2026-09-11 归一化批次）
+
+用户授权后按本报告第六章方案实施的修复，全部完成并回归验证（全库 1115 项测试 + 四协议包 93/59/129/29/15 项全过，flutter analyze 0 error）：
+
+| 报告项 | 修复内容 | 文件 | 测试 |
+|---|---|---|---|
+| **P0-1** | Supabase `list()` 改 `listPaginated` 游标翻页（护栏 100 页）；`exists()`/`getMetadata()`/条件写探测共用翻页定位——不再被 SDK 默认 limit:100 截断误判 | packages/flutter_cloud_sync_supabase/lib/src/supabase_storage_service.dart | supabase_pagination_conditional_test.dart（8 新用例） |
+| P1-1（条件写） | Supabase 实现 `ConditionalWriteStorage` 读后比对近似（updatedAt 锚点，对齐 WebDAV 取舍：窗口收窄非原子 + 写后校验兜底） | 同上 | 能力申报 + 互斥契约用例 |
+| P1-1（path 口径） | `CloudFile.path` 改调用方视角相对路径（可回传 delete/exists，消除 users/{uid}/ 双前缀风险） | 同上 | — |
+| P1-1（元数据） | `_storeMetadata` 幂等重试 1 次后失败抛 `MetadataPersistFailedException`（CloudStorageException 子类）——manager 写后校验读不到指纹 → verified=false → softFail，替代静默降级 | 同上 | 子类契约用例 |
+| P1-8 | Supabase `_opRetryable`（2 次、400/800ms ±50% 真随机 jitter，对齐 WebDAV 参数表）；iCloud `_retryIdempotent` 同参数——四协议重试策略归一 | supabase_storage_service.dart / icloud_storage_service.dart | iCloud 重试用例（瞬时故障 2 次自愈/预算耗尽上抛/404 不耗预算） |
+| P1-9 | Supabase list 404 → 空列表（对齐 WebDAV/iCloud 收敛语义） | supabase_storage_service.dart | — |
+| **P1-5（iCloud）** | 实现 `BinaryCapableStorage`：`uploadBinary` 单次 base64 直达原生契约（原生解码落盘**原始字节**，消除双重编码 +33% 体积）；`downloadBinary` 带旧格式嗅探（base64 文本对象解包兼容） | icloud_storage_service.dart | 新格式原样/旧格式解包/404→null 用例 |
+| **P1-3** | startupCheck 埋点：Deps 注入 metrics（与 TSM 同实例），`runIfNeeded` finally 单点四态记录（backend='startup'，整轮 duration）；failed（探测失败/激活后哨兵）/softFail（取消/方向未知）细分 | startup_sync_checker.dart / app.dart 接线 | 5 新用例，文件 71 项全过 |
+| **P1-4** | softFail 可见化：`uploadCurrentLedger` 返回 `({bool verified})`；UI 三处差异化提示「已上传但未确认收敛」（账本页 toast / 云同步页批量汇总 / 弹窗文案）；l10n×4 | sync_service.dart / transactions_sync_manager.dart / ledgers_page_new.dart / cloud_sync_page.dart / app_localizations* | 54 项相关测试全过 |
+| **P1-2** | 备份恢复跨进程检查点 `cloud_backup_restore_pending`（SharedPreferences）：恢复前置位、终态清除；调度器 tick 检查让位（手动备份不受限）；恢复入口检测残留 → 弹「重新执行一次恢复即可修复」提示 | cloud_backup_service.dart / app.dart / cloud_sync_page.dart | 2 新用例（成功清除/损坏备份失败路径清除），备份 15 项全过 |
+
+**实施偏差与备案**：
+- 条件写锚点采用 `updatedAt`（Supabase PaginatedFile 无 etag 字段）——比对语义等价（覆盖写必刷新 updatedAt），已在 `_etagOf` 注释论证；
+- Supabase 元数据原子性受限于 Storage API（无对象级原子元数据写），采用「失败可见化（softFail 上浮）+ 幂等重试」替代方案 ②，与报告 6.1 方案 5 的推荐路径一致；
+- 修复后监控口径：六场景全部进 99.9% 分母（startupCheck 于 2026-09-11 补齐），Supabase/iCloud 的结构性失败源（截断/零重试/元数据静默）已消除。

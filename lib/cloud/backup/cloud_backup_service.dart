@@ -7,6 +7,7 @@ import 'package:crypto/crypto.dart' as crypto;
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' as fcs;
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../data/db.dart';
@@ -104,6 +105,19 @@ class CloudBackupService {
 
   /// 备份/恢复互斥锁：手动与定时共用，防止并发写云端/写本地
   bool _busy = false;
+
+  /// P1-2（2026-09-11）：恢复中断检查点 key（SharedPreferences）。
+  ///
+  /// 进程在恢复中途崩溃时，[SyncRestoreGuard]（内存态）随进程消亡，
+  /// 重启后 DB 处于半恢复状态且无任何痕迹 —— 若此时定时备份到窗，会把
+  /// 半恢复 DB 打包上传**覆盖当日好备份**。本键跨进程持久化「恢复进行
+  /// 中」状态：
+  /// - 恢复成功/整体失败：清除（失败时本地数据未动，见 restoreBackup
+  ///   注释 —— 下载/解包失败不动本地，逐账本软失败已是终态）；
+  /// - 崩溃残留：下次进程启动时调度器检查本键，存在则当日自动备份
+  ///   让位（手动备份不受限），并提示用户重跑恢复（恢复是覆盖语义，
+  ///   幂等重跑即自愈）。
+  static const String restorePendingKey = 'cloud_backup_restore_pending';
 
   /// 云端备份专用目录
   static const String backupDir = 'piggycount-bak';
@@ -278,6 +292,14 @@ class CloudBackupService {
     // 让定时备份（app.dart 每轮 tick 检查 isBusy）让位，避免半恢复态
     // DB 被打包上传覆盖当日好备份。begin/end 配对等价于 Guard.run。
     SyncRestoreGuard.begin();
+    // P1-2：跨进程检查点先行落盘 —— 进程崩溃时 Guard（内存态）失效，
+    // 但本键存活，重启后调度器据此让位（见 [restorePendingKey] 注释）。
+    // 写失败不阻断恢复（键缺失的后果只是「崩溃后少一层防护」，
+    // 不比现状更差）。
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(restorePendingKey, true);
+    } catch (_) {}
     // P0-1：恢复计时
     final watch = Stopwatch()..start();
     try {
@@ -409,6 +431,16 @@ class CloudBackupService {
     } finally {
       SyncRestoreGuard.end();
       _busy = false;
+      // P1-2：清除跨进程检查点。恢复走到 finally 说明流程有终态：
+      // - 整体异常：下载/解包失败，本地数据未动；
+      // - 正常完成：逐账本软失败已计入 failed 返回值（重跑恢复幂等，
+      //   用户可按需再来一次）。
+      // 两种都不是「进程崩溃残留的半恢复态」，清除让调度器恢复正常。
+      // 清除失败保留键 —— 下次调度让位是保守方向，可接受。
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool(restorePendingKey, false);
+      } catch (_) {}
     }
   }
 

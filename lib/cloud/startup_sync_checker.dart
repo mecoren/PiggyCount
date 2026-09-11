@@ -33,6 +33,7 @@ import '../services/system/logger_service.dart';
 import '../styles/tokens.dart';
 import '../widgets/ui/dialog.dart';
 import 'startup_sync_overlay.dart';
+import 'sync_metrics_service.dart';
 
 /// 汇总弹窗三选项
 enum SummaryChoice {
@@ -225,6 +226,21 @@ abstract class StartupSyncCheckerDeps {
   /// 全部账本均是最新时显示的成功提示文案
   String getUpToDateMessage();
 
+  /// P1-3 埋点补缺（2026-09-11）：同步成功率监控（审计 P0-1）。
+  ///
+  /// startupCheck 是最高频同步链路（每次冷启动必经），此前六场景中
+  /// 唯一零埋点 —— 健康卡的成功率分母实际不含启动链路，与「99.9%
+  /// 覆盖核心场景」的口径声明不符。返回 null 的实现（测试桩/旧装配）
+  /// 全程 no-op，与 metrics 旁路设计一致。
+  ///
+  /// 口径：整轮记录一条 startupCheck；
+  /// - success：走完主流程（含用户 skip —— 用户主动决策不算失败）；
+  /// - failed：顶层异常 / failedLedgers 非空（探测失败）/ 激活后仍有
+  ///   哨兵（同步未完全恢复）；
+  /// - softFail：方向未知差异（unknownDiffLedgers，数据未收敛但不阻断）；
+  /// - conflict：本链路无并发写语义，不产生。
+  SyncMetricsService? get metrics;
+
   /// 日志
   void log(String message);
 }
@@ -250,16 +266,51 @@ class StartupSyncChecker {
   /// 启动级幂等标志：本次进程内只执行一次
   bool _done = false;
 
+  /// P1-3 埋点补缺：本轮检查的细化结论（由 [_runInternal] 各退出路径
+  /// 写入，[runIfNeeded] 的 finally 据此记录 startupCheck 指标）。
+  /// null = 默认 success。递归重试（isRetry）覆盖前值，以最终轮为准。
+  SyncOpOutcome? _lastRunOutcome;
+  Object? _lastRunError;
+
   /// 执行启动检查。若已执行过则直接返回。
+  ///
+  /// P1-3 埋点补缺：整轮 startupCheck 计时在此包装（_runInternal 的
+  /// 递归重试（密钥激活 isRetry）与全部早退路径都收敛到本层的
+  /// finally 记录，单点无遗漏）。
   Future<void> runIfNeeded() async {
     if (_done) return;
     _done = true;
 
+    final watch = Stopwatch()..start();
+    _lastRunOutcome = null;
+    _lastRunError = null;
     try {
       await _runInternal();
     } catch (e, st) {
+      _lastRunError = e;
+      _lastRunOutcome = SyncOpOutcome.failed;
       deps.log('StartupSyncChecker 顶层异常: $e\n$st');
       controller.error('启动检查失败: $e');
+    } finally {
+      // 埋点旁路：metrics 为 null（测试桩）或落库失败均不影响主流程。
+      // _lastRunOutcome 为 failed/softFail 的细分结论，覆盖 _runInternal
+      // 内部已给出明确结论的退出路径；null = 主流程正常走完 = success。
+      final m = deps.metrics;
+      if (m != null) {
+        final outcome = _lastRunOutcome ?? SyncOpOutcome.success;
+        try {
+          m.record(SyncOpRecord(
+            backend: 'startup',
+            scenario: SyncOpScenario.startupCheck,
+            outcome: outcome,
+            errorClass: outcome == SyncOpOutcome.failed
+                ? SyncMetricsService.classifyError(_lastRunError)
+                : null,
+            attempts: 1,
+            duration: watch.elapsed,
+          ));
+        } catch (_) {/* 埋点绝不阻断 */}
+      }
     }
   }
 
@@ -370,6 +421,10 @@ class StartupSyncChecker {
     // 已完成的探测作废，静默退出。可稍后在云同步页手动检查。
     if (controller.cancelRequested) {
       deps.log('StartupSyncChecker: 用户取消启动检查，静默退出');
+      // 用户主动取消：同步未完成但也非系统故障，记 softFail
+      //（数据未收敛，下次启动/手动检查再走）。不算 failed —— 取消是
+      // 用户决策；但也不是 success —— 探测结果作废，本轮无产出。
+      _lastRunOutcome = SyncOpOutcome.softFail;
       return;
     }
     for (final r in results) {
@@ -405,6 +460,8 @@ class StartupSyncChecker {
               // 密码错误/激活失败：明确告知用户同步未恢复，
               // 避免静默退出后只能到设置页看到错误
               deps.log('StartupSyncChecker: 密钥激活失败，同步未恢复');
+              _lastRunOutcome = SyncOpOutcome.failed;
+              _lastRunError = 'salt_mismatch_recovery_failed';
               controller.dismiss();
               deps.showRecoveryFailed();
               return;
@@ -462,6 +519,8 @@ class StartupSyncChecker {
       // 激活后仍有账本密钥不匹配：明确告知用户，避免错误只在设置页可见。
       deps.log('StartupSyncChecker: 激活后仍有 ${retrySentinelLedgers.length} '
           '个账本密钥不匹配（${retrySentinelLedgers.join('、')}），同步未完全恢复');
+      _lastRunOutcome = SyncOpOutcome.failed;
+      _lastRunError = 'salt_mismatch_retry_sentinel';
       controller.dismiss();
       deps.showRecoveryFailed();
       return;
@@ -473,6 +532,8 @@ class StartupSyncChecker {
       if (failedLedgers.isNotEmpty) {
         deps.log('StartupSyncChecker: ${failedLedgers.length} 个账本检查失败'
             '（${failedLedgers.join('、')}），未计入候选');
+        _lastRunOutcome = SyncOpOutcome.failed;
+        _lastRunError = sawAuthError ? 'auth' : 'network_timeout';
         // 认证失败与网络故障分别提示：前者重试无效，需修正云存储凭据；
         // 旧实现统一报「请检查网络」会误导用户排查方向（新设备 WebDAV
         // 密码输错被当成网络问题）
@@ -491,6 +552,11 @@ class StartupSyncChecker {
         deps.log('StartupSyncChecker: ${unknownDiffLedgers.length} 个账本与'
             '云端数据不一致但方向未知（${unknownDiffLedgers.join('、')}），'
             '不弹更新提示，请到云同步页面手动处理');
+        // 数据未收敛（指纹不一致但方向不可判）→ softFail：不算失败
+        //（检查链路本身工作正常），也非 success（数据未同步）—— 与
+        // TSM 侧 verified=false 的口径一致，这正是 99.9% 与 99% 之间
+        // 差距的可观测来源。
+        _lastRunOutcome = SyncOpOutcome.softFail;
         controller.dismiss();
         return;
       }
@@ -1149,6 +1215,19 @@ class WidgetRefDeps implements StartupSyncCheckerDeps {
   final WidgetRef _ref;
   final TransactionsSyncManager _syncManager;
   final BuildContext _context;
+
+  /// P1-3 埋点补缺：启动链路指标经 provider 家族读取（与 TSM 注入
+  /// 同一实例 —— syncMetricsServiceProvider 是共享单例）。只读不 watch
+  ///（启动检查是一次性动作，无重建语义）。
+  @override
+  SyncMetricsService? get metrics {
+    try {
+      return _ref.read(syncMetricsServiceProvider);
+    } catch (_) {
+      // provider 未就绪（极早期启动）：埋点旁路语义 —— 放弃而非阻断
+      return null;
+    }
+  }
 
   @override
   Future<CloudServiceConfig> getActiveConfig() async {

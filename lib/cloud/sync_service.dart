@@ -36,6 +36,15 @@ class UploadProbe {
 
 // ---- 同步服务接口 ----
 
+/// 单次上传的结果（P1-4 softFail 可见化）。
+///
+/// [verified] = true：写后校验确认云端指纹与本次写入一致（或后端
+/// 不可校验但上传成功）—— 正常成功；
+/// [verified] = false：数据已 PUT 到云端但回读指纹不一致（可能被并发
+/// 覆盖/网关陈旧）—— TSM 侧已记 softFail 指标、保持脏标记，UI 应以
+/// 「已上传但未确认收敛」提示而非普通成功。
+typedef UploadLedgerResult = ({bool verified});
+
 abstract class SyncService {
   /// 上传当前账本快照到云端。
   ///
@@ -46,7 +55,7 @@ abstract class SyncService {
   /// 提交，上传的快照取自完整数据，不满足「半恢复态」前提；若不豁免，
   /// 所有回传都会被 TSM-P8 守卫拒掉，指纹永不收敛 → 每次启动重复弹
   /// 「云端有更新」。**用户主动上传入口绝不允许传 true**。
-  Future<void> uploadCurrentLedger(
+  Future<UploadLedgerResult> uploadCurrentLedger(
       {required int ledgerId,
       bool force = false,
       bool bypassRestoreGuard = false});
@@ -112,7 +121,7 @@ class LocalOnlySyncService implements SyncService {
   }
 
   @override
-  Future<void> uploadCurrentLedger(
+  Future<UploadLedgerResult> uploadCurrentLedger(
       {required int ledgerId,
       bool force = false,
       bool bypassRestoreGuard = false}) async {

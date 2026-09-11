@@ -26,6 +26,7 @@ import 'cloud/startup_sync_checker.dart';
 import 'cloud/startup_sync_overlay.dart';
 import 'cloud/backup/backup_scheduler.dart';
 import 'cloud/backup/cloud_backup_providers.dart';
+import 'cloud/backup/cloud_backup_service.dart' show CloudBackupService;
 import 'cloud/sync_restore_guard.dart';
 import 'providers/sync_providers.dart' as sp;
 import 'utils/voice_billing_helper.dart';
@@ -187,6 +188,17 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
       logger.info('Backup', '恢复进行中，本轮定时备份跳过');
       return;
     }
+    // P1-2：跨进程恢复检查点（崩溃残留）。上次恢复中进程被杀时内存
+    // Guard 已失效，但持久化键存活 —— 半恢复 DB 不能被备份打包覆盖。
+    // 让位直至用户重跑恢复（覆盖语义幂等）成功清除键。手动备份不受限。
+    try {
+      final cp = await SharedPreferences.getInstance();
+      if (cp.getBool(CloudBackupService.restorePendingKey) ?? false) {
+        logger.warning('Backup', '检测到上次备份恢复未完成的检查点，'
+            '本轮定时备份跳过（请到云同步页重跑恢复以清除）');
+        return;
+      }
+    } catch (_) {/* prefs 读取失败按无检查点处理，不阻断调度 */}
     try {
       final prefs = await SharedPreferences.getInstance();
       if (!(prefs.getBool('backup_auto_enabled') ?? false)) return;

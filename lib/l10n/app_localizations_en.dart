@@ -1811,6 +1811,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mineUploadSuccessMessage => 'All ledgers synced to cloud';
 
   @override
+  String get mineUploadUnverified => 'Uploaded (unverified)';
+
+  @override
+  String get mineUploadUnverifiedMessage =>
+      'Data was uploaded, but the cloud copy could not be confirmed to match this upload (it may have been updated by another device). It will be re-checked automatically on the next sync. No action needed now.';
+
+  @override
+  String get backupRestoreInterrupted => 'Previous restore unfinished';
+
+  @override
+  String get backupRestoreInterruptedMessage =>
+      'A backup restore was interrupted last time. Data may be partially restored and automatic backups are paused. Running the restore again will fix this (restore overwrites, so it is safe to repeat).';
+
+  @override
   String get syncBlockingDownloadTitle => 'Download sync';
 
   @override

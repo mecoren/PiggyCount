@@ -340,6 +340,21 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
       return;
     }
 
+    // P1-2：上次恢复被进程中断的残留检查点 → 提示用户重跑恢复。
+    // 恢复是覆盖语义、幂等可重入，重跑成功即清除检查点（调度器恢复）。
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool(CloudBackupService.restorePendingKey) ?? false) {
+        if (context.mounted) {
+          await AppDialog.info(
+            context,
+            title: l10n.backupRestoreInterrupted,
+            message: l10n.backupRestoreInterruptedMessage,
+          );
+        }
+      }
+    } catch (_) {/* 检查点读取失败不阻断恢复入口 */}
+
     setState(() => restoreBusy = true);
     List<BackupFileInfo> backups;
     try {
@@ -1019,11 +1034,16 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                           var failed = 0;
                                           // M7：因云端更新被拦截跳过的账本数
                                           var conflicts = 0;
+                                          // P1-4 softFail 可见化：
+                                          // 已上云但未确认收敛的账本数
+                                          var unverified = 0;
                                           for (final ledger in ledgers) {
                                             try {
-                                              await sync.uploadCurrentLedger(
-                                                  ledgerId: ledger.id);
+                                              final r = await sync
+                                                  .uploadCurrentLedger(
+                                                      ledgerId: ledger.id);
                                               success++;
+                                              if (!r.verified) unverified++;
                                             } on CloudConflictException {
                                               conflicts++;
                                             } catch (e) {
@@ -1053,21 +1073,25 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                               .state++;
 
                                           await AppDialog.info(context,
-                                              title:
-                                                  AppLocalizations.of(context)
-                                                      .mineUploadSuccess,
+                                              title: AppLocalizations.of(context)
+                                                  .mineUploadSuccess,
                                               message: conflicts > 0
                                                   ? AppLocalizations.of(context)
                                                       .ledgersUploadAllConflictSkipped(
                                                           success, conflicts)
-                                                  : failed == 0
+                                                  : failed == 0 && unverified > 0
                                                       ? AppLocalizations.of(
                                                               context)
-                                                          .mineUploadSuccessMessage
-                                                      : AppLocalizations.of(
-                                                              context)
-                                                          .ledgersUploadAllResult(
-                                                              success, failed));
+                                                          .mineUploadUnverifiedMessage
+                                                      : failed == 0
+                                                          ? AppLocalizations.of(
+                                                                  context)
+                                                              .mineUploadSuccessMessage
+                                                          : AppLocalizations.of(
+                                                                  context)
+                                                              .ledgersUploadAllResult(
+                                                                  success,
+                                                                  failed));
                                         } catch (e) {
                                           // 异常路径也必须关掉进度弹窗，
                                           // 否则它会永久挡住页面

@@ -1781,6 +1781,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mineUploadSuccessMessage => '所有账本已同步到云端';
 
   @override
+  String get mineUploadUnverified => '已上传但未确认收敛';
+
+  @override
+  String get mineUploadUnverifiedMessage =>
+      '数据已上传到云端，但未能确认云端内容与本次写入一致（可能被其他设备并发更新）。下次同步时会自动重新比对，无需立即处理。';
+
+  @override
+  String get backupRestoreInterrupted => '检测到上次恢复未完成';
+
+  @override
+  String get backupRestoreInterruptedMessage =>
+      '上次从备份恢复时进程被中断，数据可能处于半恢复状态，自动备份已暂停。重新执行一次恢复即可修复（恢复是覆盖式，重复执行安全）。';
+
+  @override
   String get syncBlockingDownloadTitle => '下载同步';
 
   @override
@@ -9519,6 +9533,20 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get mineUploadSuccessMessage => '所有帳本已同步到雲端';
+
+  @override
+  String get mineUploadUnverified => '已上傳但未確認收斂';
+
+  @override
+  String get mineUploadUnverifiedMessage =>
+      '資料已上傳到雲端，但未能確認雲端內容與本次寫入一致（可能被其他裝置並行更新）。下次同步時會自動重新比對，無需立即處理。';
+
+  @override
+  String get backupRestoreInterrupted => '偵測到上次恢復未完成';
+
+  @override
+  String get backupRestoreInterruptedMessage =>
+      '上次從備份恢復時程序被中斷，資料可能處於半恢復狀態，自動備份已暫停。重新執行一次恢復即可修復（恢復是覆蓋式，重複執行安全）。';
 
   @override
   String get syncBlockingDownloadTitle => '下載同步';

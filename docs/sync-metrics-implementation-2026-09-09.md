@@ -33,6 +33,7 @@ onUpgrade（v42→v43：`migrator.createTable` 两表 + ts 索引）与 onCreate
 | TSM `importRemoteLedger` | snapshotRestore：导入成功 → success（带 newLedgerId）；任意异常 → failed |
 | TSM `discoverRemoteLedgers` | remoteDiscovery：整轮成功 / 失败 |
 | CloudBackupService `createBackup` / `restoreBackup` | cloudBackup / snapshotRestore：备份成功失败；恢复整体成功、**单账本失败 → soft_fail**（保留 P1-3 的部分收敛语义）、整体失败 → failed；metricsBackend 由 provider 从激活配置注入分组键 |
+| `StartupSyncChecker.runIfNeeded`（2026-09-11 P1-3 补缺） | **startupCheck 整轮四态**：主流程正常走完（含用户 skip）→ success；failedLedgers 非空 / 激活后仍有哨兵 → failed；用户取消 / 方向未知差异 → soft_fail。backend='startup'（启动链路跨后端，按场景而非后端分组）；duration 整轮计时 |
 
 Provider 装配（`sync_providers.dart` / `cloud_backup_providers.dart`）：`syncMetricsServiceProvider` 共享单实例注入 TSM 与备份服务，健康卡/诊断导出同源；上传成功后 `metrics.cleanupExpired()` 与 local_changes 清理同批（滚动窗口近零成本）。顺手清理了 PiggyCountCloud 下线遗留的孤儿 `_bootstrappingConfigs`（既有 unused 警告）。
 
@@ -216,3 +217,13 @@ TSM 附件重试（1s/2s/4s）**不迁移**到 core RetryHelper：它是业务�
 - **测试**:`startup_sync_checker_test.dart` 新增 5 项(无同名/分组排序/多组不混并+单槽位排除/null 兜底/顺序稳定),文件 66 项全过;test/cloud 255 项、全库 1108 项全过,analyze 0 error/warning。
 
 至此两次实测的全部可落地建议均已闭环;剩余 P2-3(iCloud 原生侧)仍按备案留待 iOS 环境。
+
+---
+
+## 十三、归一化批次：监控口径补全（2026-09-11）
+
+对照 `docs/sync-comprehensive-audit-2026-09-10.md`（全面排查报告）实施的修复批次，监控机制相关变更：
+
+- **startupCheck 埋点补缺（报告 P1-3）**：六场景此前唯一零埋点，健康卡成功率分母实际不含启动链路。现 `StartupSyncCheckerDeps` 注入 `metrics`（`WidgetRefDeps` 从 `syncMetricsServiceProvider` 读取，与 TSM 同一实例），`runIfNeeded` 的 finally 单点记录整轮四态（isRetry 递归与全部早退路径收敛于此），细分结论经 `_lastRunOutcome` 字段从 `_runInternal` 各退出路径写入：failed（getStatus 失败账本/激活后哨兵/顶层异常）、softFail（用户取消/方向未知差异）。新增 5 项单测（success/failed/softFail/skip=success/null 旁路），`startup_sync_checker_test.dart` 71 项全过。
+- **softFail 操作级用户反馈（报告 P1-4）**：`SyncService.uploadCurrentLedger` 返回类型 `void → ({bool verified})`，TSM `_uploadCurrentLedgerCore` 上浮写后校验结论；UI 三处消费（账本页单传 toast「已上传但未确认收敛」、云同步页逐账本批量汇总弹窗、批量结果文案），l10n×4（`mineUploadUnverified/Message`）。旧调用点忽略返回值自动兼容。
+- **回归**：全库 1115 项测试 + 四协议包 93/59/129/29/15 项全过，`flutter analyze` 0 error。

@@ -908,7 +908,7 @@ class TransactionsSyncManager implements SyncService {
   }
 
   @override
-  Future<void> uploadCurrentLedger(
+  Future<UploadLedgerResult> uploadCurrentLedger(
       {required int ledgerId,
       bool force = false,
       bool bypassRestoreGuard = false}) async {
@@ -929,15 +929,16 @@ class TransactionsSyncManager implements SyncService {
     }
 
     // 审计 TSM-P8：同账本「上传 ↔ 恢复」经 _ledgerOpsLocks 串行化
-    await _withLedgerLock(ledgerId,
+    final result = await _withLedgerLock(ledgerId,
         () => _uploadCurrentLedgerCore(ledgerId: ledgerId, force: force));
+    return result;
   }
 
   /// 上传核心流程（调用方必须已持有 [ledgerId] 的账本锁）。
   ///
   /// 内部路径（downloadRemoteLedger 换名收尾）在锁内直接调用本方法，
   /// 避免重入死锁；公开入口一律走 [uploadCurrentLedger]。
-  Future<void> _uploadCurrentLedgerCore(
+  Future<UploadLedgerResult> _uploadCurrentLedgerCore(
       {required int ledgerId, required bool force}) async {
     // 捕获到局部变量：防止执行期间 reinitializeForEncryption 把
     // _syncManager 置 null 导致 NPE（ATTACH-2 竞态防护）
@@ -1172,6 +1173,9 @@ class TransactionsSyncManager implements SyncService {
       }
 
       logger.info('CloudSync', '上传完成: $ledgerId');
+      // P1-4 softFail 可见化：verified 经返回值上浮给 UI —— 数据已在
+      // 云端但未确认收敛时，调用方提示「已上传但未确认收敛」而非成功。
+      return (verified: uploadVerified);
     } catch (e, stack) {
       logger.error('CloudSync', '上传失败: $ledgerId', e);
       logger.error('CloudSync', '堆栈', stack);

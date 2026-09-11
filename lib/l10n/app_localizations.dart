@@ -3319,6 +3319,30 @@ abstract class AppLocalizations {
   /// **'All ledgers synced to cloud'**
   String get mineUploadSuccessMessage;
 
+  /// No description provided for @mineUploadUnverified.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploaded (unverified)'**
+  String get mineUploadUnverified;
+
+  /// No description provided for @mineUploadUnverifiedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Data was uploaded, but the cloud copy could not be confirmed to match this upload (it may have been updated by another device). It will be re-checked automatically on the next sync. No action needed now.'**
+  String get mineUploadUnverifiedMessage;
+
+  /// No description provided for @backupRestoreInterrupted.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous restore unfinished'**
+  String get backupRestoreInterrupted;
+
+  /// No description provided for @backupRestoreInterruptedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'A backup restore was interrupted last time. Data may be partially restored and automatic backups are paused. Running the restore again will fix this (restore overwrites, so it is safe to repeat).'**
+  String get backupRestoreInterruptedMessage;
+
   /// No description provided for @syncBlockingDownloadTitle.
   ///
   /// In en, this message translates to:

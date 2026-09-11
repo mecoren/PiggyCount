@@ -177,6 +177,49 @@ void main() {
   });
 
   group('restoreBackup', () {
+    test('P1-2 恢复检查点：恢复前置位、完成后清除（跨进程崩溃防护）', () async {
+      final id = await addLedger('Main');
+      await addTx(id);
+      final out = await service.createBackup();
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getBool(CloudBackupService.restorePendingKey) ?? false,
+          isFalse,
+          reason: '初始无检查点');
+
+      final res = await service.restoreBackup(fileName: out.fileName);
+      expect(res.failed, 0);
+
+      // 恢复正常完成 → 检查点清除（调度器恢复正常触发）
+      expect(prefs.getBool(CloudBackupService.restorePendingKey) ?? false,
+          isFalse);
+    });
+
+    test('P1-2 恢复检查点：整体失败（备份损坏）也清除 —— 本地未动，无半恢复态',
+        () async {
+      final id = await addLedger('Main');
+      await addTx(id);
+      await service.createBackup();
+
+      // 塞一个损坏备份（合法命名、非法内容）
+      await storage.upload(
+          path:
+              '${CloudBackupService.backupDir}/PiggyCount-2026-09-11.zip',
+          data: 'not-a-zip',
+          metadata: null);
+
+      final prefs = await SharedPreferences.getInstance();
+      try {
+        await service.restoreBackup(fileName: 'PiggyCount-2026-09-11.zip');
+        fail('损坏备份应抛错');
+      } on Exception {
+        // 预期：备份文件损坏，无法解析
+      }
+      expect(prefs.getBool(CloudBackupService.restorePendingKey) ?? false,
+          isFalse,
+          reason: '整体失败路径本地数据未动，检查点必须清除');
+    });
+
     test('全新环境恢复：账本与附件均落位', () async {
       // 源库备份
       final id = await addLedger('Main');

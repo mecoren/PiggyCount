@@ -1,7 +1,8 @@
 # 同步可靠性参数表（重试/超时/并发防护）
 
 > 依据：docs/sync-normalization-audit-2026-09-07.md §四 N11/N12（4 套重试/5 处超时漂移）与 P2-6；
-> 实施状态以 2026-09-09 为准。本表是唯一权威口径，改参数必须同步此表。
+> 实施状态以 2026-09-09 为准，2026-09-11 归一化批次更新（Supabase/iCloud 补齐，见文末变更记录）。
+> 本表是唯一权威口径，改参数必须同步此表。
 
 ## 一、超时分级
 
@@ -29,6 +30,8 @@
 | S3 putObject 条件重试 | **仅带 If-Match/If-None-Match**（P1-1, 2026-09-09） | ≤2 次，复用同退避表 | SocketException/TimeoutException；安全性由锚点保证（已落盘则重试吃 412 转冲突） | 同上 |
 | S3 putObject 盲写 | 无条件头 | **0 次**（不重试纪律） | —— | A-1 覆盖竞态未修，写后校验兜底 |
 | WebDAV `_retryIdempotent` | read/readDir/remove 幂等读 | 2 次，400ms/800ms | 无结构化状态码（连接层）或 5xx；4xx 立即上抛 | 真随机（P1-1 修复，时间戳取模同相问题） |
+| Supabase `_opRetryable`（2026-09-11 补齐） | download/downloadBinary/list/exists/getMetadata/delete 幂等操作 | 2 次，400ms/800ms（对齐 WebDAV） | 连接层故障（无状态码）/超时/5xx；认证与 404 确定性失败立即上抛；盲写不重试 | 真随机 ±50% |
+| iCloud `_retryIdempotent`（2026-09-11 补齐） | download/downloadBinary/list/exists/getMetadata/delete | 2 次，400ms/800ms（对齐 WebDAV） | 非 NOT_FOUND 的 PlatformException 瞬时故障（daemon 未就绪）；NOT_FOUND 立即上抛转幂等语义 | 真随机 ±50% |
 | TSM 附件下载 | 后台附件补齐 | 3 次总尝试，1s/2s/4s | 全异常（三态结果由调用方区分 objectMissing/transientFailure） | 无（内存队列会话级 drain，无多端风暴面） |
 | core `RetryHelper` | （当前无生产调用方） | 预设三档 | 异常类型判定（auth/404 不重试） | 25% |
 
@@ -41,8 +44,8 @@
 ## 三、并发防护三层（快照写路径）
 
 1. **上传前探测**（`_detectUploadConflict`）：元数据指纹快路径 → 内嵌指纹终审 → 时间戳证据链方向仲裁；探测失败**中止上传**（不盲传）；
-2. **条件写**：S3 If-Match 原子（412/404/409 翻译为 CloudPreconditionFailedException）；WebDAV eTag 预检近似（非原子，fail-closed）；Supabase/iCloud 不支持 → 盲写+写后校验（UI 能力矩阵已标注，P1-4）；
-3. **写后校验**（`verifyAfterUpload`）：指纹回读，不一致上浮 `CloudUploadResult.verified=false` → TSM 记 soft_fail 指标、不清脏标记，下次 getStatus 走冲突/合并流程。
+2. **条件写**：S3 If-Match 原子（412/404/409 翻译为 CloudPreconditionFailedException）；WebDAV eTag 预检近似（非原子，fail-closed）；**Supabase 读后比对近似（2026-09-11 补齐，updatedAt 锚点，非原子，对齐 WebDAV 取舍）**；iCloud 不支持 → 盲写+写后校验（UI 能力矩阵已标注，P1-4）；
+3. **写后校验**（`verifyAfterUpload`）：指纹回读，不一致上浮 `CloudUploadResult.verified=false` → TSM 记 soft_fail 指标、不清脏标记，**返回值上浮 UI 差异化提示（P1-4 softFail 可见化，2026-09-11）**，下次 getStatus 走冲突/合并流程。
 
 下载方向：P1-5 完整性硬校验（内嵌指纹终审 + 单次重下自愈 + 持续不一致硬失败），接于三个破坏性入口（恢复/云端账本导入/合并预览）。
 
@@ -50,4 +53,13 @@
 
 - WebDAV 写路径（tmp PUT → MOVE 原子发布）不自动重试——MOVE 不可取消 + 降级交换已内置无损回滚；
 - iCloud 写路径不重试——method channel 原生侧行为不可探（P2-3 一并处理时评估）；
+- Supabase 盲写（upsert 覆盖）不重试——非幂等；条件写路径的探测步进重试（2026-09-11）；
 - core RetryHelper 为 example/预留设施，生产收编时以本表参数为基准。
+
+## 五、变更记录
+
+- **2026-09-11**（归一化批次，对照 docs/sync-comprehensive-audit-2026-09-10.md）：
+  - Supabase：list/exists/getMetadata 改 listPaginated 游标翻页（P0-1，消除 SDK 默认 100 条静默截断）；补幂等读重试（P1-8）；补 ConditionalWriteStorage 读后比对近似（P1-1，updatedAt 锚点）；CloudFile.path 改相对路径口径（P1-1b）；_storeMetadata 失败上抛 MetadataPersistFailedException（P1-1c，幂等 upsert 重试 1 次后）；空目录 list 404 → 空列表（P1-9）。
+  - iCloud：补 BinaryCapableStorage（P1-5，单次编码 + 原始字节落盘 + 旧 base64 文本嗅探）；补幂等读重试（P1-8）。
+  - App 层：startupCheck 场景埋点补齐（P1-3，四态，backend=startup）；uploadCurrentLedger 返回 verified（P1-4 softFail UI 可见化）；备份恢复跨进程检查点 cloud_backup_restore_pending（P1-2，调度器让位 + 恢复入口提示）。
+
