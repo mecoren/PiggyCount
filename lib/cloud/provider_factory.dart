@@ -10,6 +10,7 @@ import 'package:flutter_cloud_sync_icloud/flutter_cloud_sync_icloud.dart';
 import 'package:flutter_cloud_sync_s3/flutter_cloud_sync_s3.dart';
 
 import '../services/system/logger_service.dart';
+import 'gzip_cloud_storage.dart';
 
 /// 根据 CloudServiceConfig 创建对应的 CloudProvider 和 CloudAuthService
 ///
@@ -28,6 +29,13 @@ Future<({CloudProvider? provider, CloudAuthService? auth})> createCloudServices(
   if (!config.valid) {
     return (provider: null, auth: null);
   }
+
+  // P2-2③：gzip 压缩统计进应用日志（压缩比/体积对弱网排障有价值；
+  // info 级 —— 压缩是常规路径非告警）。装配发生在 TSM 的 E2EE 包装
+  // 分支，此处统一注入一次。
+  GzipCloudStorageService.compressionLogger = CloudSyncLogger(
+    onLog: (level, message) => logger.info('CloudSync', message),
+  );
 
   switch (config.type) {
     case CloudBackendType.local:

@@ -13,6 +13,7 @@ import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:piggycount/cloud/gzip_cloud_storage.dart';
 import 'package:piggycount/data/encryption/aes_gcm_cipher.dart';
 import 'package:piggycount/data/encryption/argon2_key_derivation.dart';
 import 'package:piggycount/data/encryption/ciphertext_format.dart';
@@ -126,6 +127,54 @@ void main() {
       await decoratedProvider.dispose();
 
       expect(innerProvider.disposed, isTrue);
+    });
+  });
+
+  group('P2-2③ gzip 装配链（innerStorageOverride）', () {
+    test('E2EE 开启 + override：storage = Encrypted(Gzip(inner))，'
+        '上传的大明文经 压缩→加密 两层，下载完整还原', () async {
+      await encryptionService.enable(password: 'password123');
+      final gz = GzipCloudStorageService(inner: innerStorage);
+      final provider = EncryptedCloudProvider(
+        inner: innerProvider,
+        encryptionService: encryptionService,
+        innerStorageOverride: gz,
+      );
+
+      // 大量重复的明文快照（确保 gzip 路径触发）
+      final items =
+          List.generate(300, (i) => '{"amount":$i,"note":"买咖啡日常消费"}');
+      final payload = '{"items":[${items.join(',')}],"count":300}';
+
+      final storage = provider.storage;
+      await storage.upload(
+          path: 'ledger_1.json', data: payload, metadata: {'fingerprint': 'fp1'});
+
+      // 存储层拿到的是密文，既非明文也非裸 gzip（压缩后的密文）
+      final rawStored = innerStorage.stored['ledger_1.json'];
+      expect(rawStored, isNotNull);
+      expect(rawStored!.startsWith('BEECRYPT1:'), isTrue,
+          reason: '云端只见密文');
+
+      // 下载端完整还原（解密→解压）
+      final back = await storage.download(path: 'ledger_1.json');
+      expect(back, payload);
+
+      await encryptionService.disable();
+    });
+
+    test('override 为 null（默认）：行为与历史装配完全一致', () async {
+      await encryptionService.enable(password: 'password123');
+      const payload = '{"count":1}';
+      final storage = decoratedProvider.storage;
+      await storage.upload(path: 'a.json', data: payload);
+
+      final rawStored = innerStorage.stored['a.json'];
+      expect(rawStored!.startsWith('BEECRYPT1:'), isTrue);
+      // 无 gzip 层：密文解密后即原文
+      expect(await storage.download(path: 'a.json'), payload);
+
+      await encryptionService.disable();
     });
   });
 }

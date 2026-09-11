@@ -23,9 +23,19 @@ class EncryptedCloudProvider implements CloudProvider {
   /// 缓存的加密版 storage，避免每次 getter 调用都新建装饰器
   CloudStorageService? _cachedStorage;
 
+  /// P2-2③（可选）：加密层之下的 storage 覆盖（gzip 压缩层）。
+  ///
+  /// 非 null 时 [storage] 用它替代 `inner.storage` 作为加密装饰的
+  /// inner —— 装配链 raw → Gzip → Encrypted（压明文、压后加密，
+  /// 顺序与备份链路「ZIP→加密」一致）。语义上等效「先换 inner 的
+  /// storage 再包装」，但不需要侵入各协议 Provider 实现。
+  /// null 时行为与历史版本完全一致。
+  final CloudStorageService? innerStorageOverride;
+
   EncryptedCloudProvider({
     required this.inner,
     required this.encryptionService,
+    this.innerStorageOverride,
   });
 
   @override
@@ -40,7 +50,7 @@ class EncryptedCloudProvider implements CloudProvider {
   @override
   CloudStorageService get storage {
     return _cachedStorage ??= EncryptedCloudStorageService(
-      inner: inner.storage,
+      inner: innerStorageOverride ?? inner.storage,
       encryptionService: encryptionService,
     );
   }

@@ -16,6 +16,7 @@ import '../data/repositories/base_repository.dart';
 import '../domain/encryption/encryption_service.dart';
 import '../services/data_import_service.dart';
 import '../services/system/logger_service.dart';
+import 'gzip_cloud_storage.dart';
 import 'provider_factory.dart';
 import 'sync_diff_service.dart';
 import 'sync_fingerprint.dart';
@@ -633,11 +634,19 @@ class TransactionsSyncManager implements SyncService {
       if (encryptionService != null) {
         final enabled = await encryptionService!.isEnabled;
         if (enabled) {
+          // P2-2③：gzip 压缩层先包 raw storage（压缩明文），加密层再包
+          // gzip 层（压后加密，顺序与备份链路「ZIP→加密」一致）。
+          // 装配链：raw → Gzip → Encrypted；rekey/enableFromCloud 走
+          // [newRawStorage]（raw，无 gzip），全量重加密不受影响。
+          // 加密未开启不装配 gzip：历史明文对象永不压缩，旧版 App/
+          // 外部工具可读性不受升级影响（无回滚风险）。
+          final gzipWrapped = GzipCloudStorageService(inner: newRawStorage!);
           newProvider = EncryptedCloudProvider(
             inner: newProvider,
             encryptionService: encryptionService!,
+            innerStorageOverride: gzipWrapped,
           );
-          logger.info('CloudSync', 'E2EE enabled, provider wrapped');
+          logger.info('CloudSync', 'E2EE enabled, provider wrapped (gzip+encrypted)');
         }
       }
 
