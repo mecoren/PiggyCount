@@ -461,3 +461,9 @@ S3 的体积自适应超时是弱网实测调优成果（`sync-reliability-param
 | **P2-2③** | 快照 gzip 压缩装饰器：E2EE 开启时装配 raw→Gzip→Encrypted（压明文后加密）；≥2KB 且压缩比 ≤60% 阈值；download 嗅探三态（gzip 解压/BEECRYPT1 透传/其余原样）；Latin-1 无损桥过文本通道；能力接口镜像（附件真字节/条件写锚点不因新层断裂）；加密未开启不装配（明文可读性零回滚风险） | lib/cloud/gzip_cloud_storage.dart（新）、encrypted_cloud_provider.dart（innerStorageOverride）、transactions_sync_manager.dart（装配）、provider_factory.dart（压缩统计日志） | gzip 专项 12 项 + 装配链 2 项（压缩→加密→解密→解压完整往返），全库 1129 项全绿 |
 
 实施偏差与备案：UTF-8 传输 gzip 字节的早期方案会重编码破坏字节流（测试首跑抓出），改 Latin-1（每字节一码点）无损桥；装配位置选在加密装饰器的 inner 而非独立 provider 包装——rekey/enableFromCloud 全部传 rawStorage，与压缩层零交互（核验三入口源码确认），无兼容裂口。
+
+### §八补记三：第五批修复（2026-09-11 治理：死代码收缩）
+
+| 报告项 | 修复内容 | 文件 | 测试 |
+|---|---|---|---|
+| **P2-10** | ① Supabase database/realtime 服务懒装配（getter 化）——App 同步链只用 auth+storage，旧实现 initialize 无条件实例化两个零消费服务（realtime 还持有 channel 资源）；公开 getter 契约不变（独立包对外发布），首次访问才创建。② `_initializeAppMode` 去仪式化——AppMode 仅剩 local，启动只做 SharedPreferences 旧值规范化（历史 `cloud` → `local`），不再触碰 appModeProvider（grep 核验全库无其他消费者）；cloud_mode_providers.dart 注记为历史壳保留。③ 同日两份审计文档（连字符/下划线版）加互见注记——核验后确认内容不同（一份含包内全审、一份应用侧排除包），不删不改名，注记防引用错乱。 | supabase_provider.dart / main.dart / cloud_mode_providers.dart / docs×2 | supabase 29 项 + 全库 1129 项全绿，analyze 0 error |

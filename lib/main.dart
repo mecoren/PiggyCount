@@ -110,8 +110,7 @@ Future<void> main() async {
     observers: [_WidgetUpdateObserver()],
   );
 
-  // 初始化应用模式（需要在生成重复交易之前，确保模式正确）
-  // 直接从 SharedPreferences 读取并设置到 appModeProvider
+  // 初始化应用模式（P2-10：仅规范化历史持久值，见 _initializeAppMode）
   await _initializeAppMode(container);
 
   // 注意：不再在启动时生成重复交易
@@ -319,21 +318,27 @@ Future<void> _restoreScreenshotMonitor(ProviderContainer container) async {
 
 /// 初始化应用模式
 ///
-/// 在应用启动时从 SharedPreferences 读取模式并设置到 appModeProvider
-/// 这样可以确保后续使用 repositoryProvider 时能获取到正确的模式
-/// [container] Provider容器
+/// P2-10（2026-09-11 简化）：AppMode 现仅剩 local 一个值（云端协同
+/// 下线后的历史壳），唯一持久化语义是「把历史 `app_mode=cloud` 等旧值
+/// 规范化回 local」——本函数只做读取 + 规范化 + 持久值校正，不再走
+/// appModeProvider 的 StateNotifier 仪式（App 启动顺序里没有任何
+/// 消费者依赖该 provider 状态，grep 核验仅本函数一处引用）。
+/// [container] 参数保留以备未来模式恢复 provider 语义时使用（P2-10
+/// 简化后本函数只操作 SharedPreferences，不再触碰 container）。
 Future<void> _initializeAppMode(ProviderContainer container) async {
   try {
     logger.info('App', '⏳ 初始化应用模式...');
 
-    // 从 SharedPreferences 直接读取模式
     final prefs = await SharedPreferences.getInstance();
     final modeStr = prefs.getString('app_mode');
     final mode = modeStr != null ? AppMode.fromString(modeStr) : AppMode.local;
 
-    // 使用 switchMode 方法设置模式，确保 repositoryProvider 能立即获取到正确的模式
-    // switchMode 不会重复写入 SharedPreferences，因为值已经存在
-    await container.read(appModeProvider.notifier).switchMode(mode);
+    // 历史旧值（cloud 等）规范化回 local 并落盘；恒等值不写
+    if (modeStr != mode.name) {
+      await prefs.setString('app_mode', mode.name);
+      logger.info('App', '应用模式旧值已规范化: $modeStr → ${mode.name}');
+    }
+    // provider 状态保持 local 初值即可（与 mode 恒等）
 
     logger.info('App', '✅ 应用模式已初始化: ${mode.label}');
   } catch (e, stackTrace) {

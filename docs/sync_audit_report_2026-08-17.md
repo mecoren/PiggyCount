@@ -1,5 +1,10 @@
 # PiggyCount 同步功能代码审查报告（应用侧，排除 cloud 包）
 
+> ⚠️ 同日同主题文档互见（仅分隔符不同，易引用错乱）：本文件为**应用侧
+> 专项**（排除 packages/* 包）；`sync-audit-report-2026-08-17.md`
+> （连字符版）覆盖**含 cloud 包在内**的全部同步代码。两者范围不同、
+> 均有效，引用时按范围区分。
+>
 > 审查日期：2026-08-17
 > 审查方式：只读静态分析（未修改任何代码）。对 `lib/cloud/` 应用侧同步编排、同步引擎、实时通道、状态机、序列化、备份、云同步页面、Provider、账户去重、共享账本等模块进行分区并行审查，并对最严重的若干发现做了逐行复核。
 > 排除范围（按用户确认）：`packages/flutter_cloud_sync`、`flutter_cloud_sync_s3`、`flutter_cloud_sync_supabase`、`flutter_cloud_sync_webdav`、`flutter_cloud_sync_icloud` 等远程传输实现包（其内部不可见，仅审查应用侧"如何使用"它们）。

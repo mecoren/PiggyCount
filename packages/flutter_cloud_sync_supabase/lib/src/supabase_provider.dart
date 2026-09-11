@@ -65,10 +65,18 @@ class SupabaseProvider implements CloudProvider {
   }
 
   /// Database service for direct database operations
-  CloudDatabaseService? get databaseService => _databaseService;
+  ///
+  /// P2-10：懒装配 —— PiggyCount 的同步链只用 auth+storage（记录级
+  /// 同步未启用，App 层零消费），旧实现在 initialize 时无条件实例化
+  /// database+realtime 两个服务（realtime 还持有 channel 资源，dispose
+  /// 要多跑 disconnect/dispose）。作为独立发布的包公开契约不变，
+  /// 首次访问才创建。
+  CloudDatabaseService? get databaseService =>
+      _databaseService ??= _client == null ? null : SupabaseDatabaseService(_client!);
 
-  /// Realtime service for WebSocket-based subscriptions
-  CloudRealtimeService? get realtimeService => _realtimeService;
+  /// Realtime service for WebSocket-based subscriptions（懒装配，见上）
+  CloudRealtimeService? get realtimeService =>
+      _realtimeService ??= _client == null ? null : SupabaseRealtimeService(_client!);
 
   /// Supabase client instance
   supabase.SupabaseClient? get client => _client;
@@ -133,8 +141,7 @@ class SupabaseProvider implements CloudProvider {
       // Create service instances
       _authService = SupabaseAuthService(_client!);
       _storageService = SupabaseStorageService(_client!, _bucketName, _pathPrefix);
-      _databaseService = SupabaseDatabaseService(_client!);
-      _realtimeService = SupabaseRealtimeService(_client!);
+      // P2-10：database/realtime 不在此实例化（懒装配，见 getter 注释）
     } catch (e) {
       // 同配置重复 initialize（SDK 抛 already initialized）→ 复用现有实例。
       // 注意：仅在「配置未变」时才允许兜底，防止静默错连旧项目（审计 S21）。
@@ -145,8 +152,6 @@ class SupabaseProvider implements CloudProvider {
         _client = supabase.Supabase.instance.client;
         _authService = SupabaseAuthService(_client!);
         _storageService = SupabaseStorageService(_client!, _bucketName, _pathPrefix);
-        _databaseService = SupabaseDatabaseService(_client!);
-        _realtimeService = SupabaseRealtimeService(_client!);
         _isInitialized = true;
       } else {
         throw CloudConfigurationException(
