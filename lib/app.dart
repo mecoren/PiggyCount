@@ -111,6 +111,12 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
       _setupQuickActions();
       // 启动时检查云端更新
       _triggerStartupSyncCheck();
+      // P2-7：同步指标滚动清理兜底接线 —— 此前 syncMetricsCleanupProvider
+      // 定义了但全库无消费者，「长期只恢复不写入」设备的 sync_op_log
+      // 过期行永不清理（主清理挂在 TSM 上传成功路径）。启动时清一次，
+      // 30 天窗口外行删除近零成本，失败静默（服务内部已吞错）。
+      unawaited(
+          ref.read(sp.syncMetricsServiceProvider).cleanupExpired());
       // 每日定时备份：1 分钟粒度检查，触发条件在闭包内判定
       _backupScheduler = BackupScheduler(onCheck: _runScheduledBackupCheck)
         ..start();

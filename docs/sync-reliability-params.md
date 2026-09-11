@@ -58,6 +58,12 @@
 
 ## 五、变更记录
 
+- **2026-09-11（第二批：监控收尾 + 判定加固）**：
+  - P1-12：core `getStatus` 新增 `localUpdatedAtTrusted` 参数 —— 不可信墙钟（全部已推送/recordChanges:false 导入）不做时间戳方向断言，让位 count 兜底或 unknown；TSM `_localUpdatedAtTrusted` 透传（cloud_sync_manager.dart / transactions_sync_manager.dart）。
+  - P2-6：`downloadRemoteLedger` 补 snapshotRestore 四态埋点（主路 success/对象缺失 softFail/空快照守卫 softFail/异常 failed）——批量恢复失败率进健康卡分母。
+  - P2-7：指标清理兜底接线到 PiggyApp 启动（原 `syncMetricsCleanupProvider` 无消费者已删）。
+  - P2-8：自动防抖上传失败轻反馈 —— TSM 新增 `onAutoSyncFailure` 回调（分层：TSM 不依赖 UI 框架），provider 接线刷状态卡（不弹 toast）。
+  - P2-9：E2EE 元数据信封解密失败从 debugPrint 升级 logger.warning（release 可留痕）。
 - **2026-09-11**（归一化批次，对照 docs/sync-comprehensive-audit-2026-09-10.md）：
   - Supabase：list/exists/getMetadata 改 listPaginated 游标翻页（P0-1，消除 SDK 默认 100 条静默截断）；补幂等读重试（P1-8）；补 ConditionalWriteStorage 读后比对近似（P1-1，updatedAt 锚点）；CloudFile.path 改相对路径口径（P1-1b）；_storeMetadata 失败上抛 MetadataPersistFailedException（P1-1c，幂等 upsert 重试 1 次后）；空目录 list 404 → 空列表（P1-9）。
   - iCloud：补 BinaryCapableStorage（P1-5，单次编码 + 原始字节落盘 + 旧 base64 文本嗅探）；补幂等读重试（P1-8）。

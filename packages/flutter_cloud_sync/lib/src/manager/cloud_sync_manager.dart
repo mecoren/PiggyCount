@@ -421,6 +421,14 @@ class CloudSyncManager<T> {
   /// [data] - Local business data (optional, for fingerprint comparison)
   /// [path] - Cloud storage path
   /// [localUpdatedAt] - Local data update timestamp (optional, for direction determination)
+  /// [localUpdatedAtTrusted] - P1-12（时钟偏移加固）：调用方对
+  /// [localUpdatedAt] 的可信度背书。false 时**跳过时间戳方向断言**
+  /// 直接输出 unknown —— 跨设备时钟偏移下，失真的本地墙钟会把
+  /// cloudNewer 误判为 localNewer（或反之），UI 据此展示错误的
+  /// 「上传/下载」指引。不可信时间戳的典型来源：全部变更已推送
+  /// （时间只能证明「上次同步前有过编辑」）或 recordChanges:false
+  /// 导入路径（不写 local_changes）。count 对比兜底保留 —— count
+  /// 是内容性证据而非墙钟，不受时钟偏移影响。
   /// [forceRefresh] - Bypass cache and fetch fresh status
   ///
   /// Returns [SyncStatus] with current sync state, direction, and timestamps.
@@ -443,6 +451,7 @@ class CloudSyncManager<T> {
     T? data,
     required String path,
     DateTime? localUpdatedAt,
+    bool localUpdatedAtTrusted = true,
     bool forceRefresh = false,
     String? localSerializedData,
     int? localParsedCount,
@@ -599,8 +608,10 @@ class CloudSyncManager<T> {
         state = SyncState.outOfSync;
 
         // Determine direction using timestamps or counts
-        if (localUpdatedAt != null && cloudUpdatedAt != null) {
-          // Use timestamps if available
+        if (localUpdatedAt != null &&
+            cloudUpdatedAt != null &&
+            localUpdatedAtTrusted) {
+          // Use timestamps if available（P1-12：不可信墙钟不做方向断言）
           if (localUpdatedAt.isAfter(cloudUpdatedAt)) {
             direction = SyncDirection.localNewer;
             message = 'Local data is newer (timestamp)';
@@ -610,6 +621,30 @@ class CloudSyncManager<T> {
           } else {
             direction = SyncDirection.unknown;
             message = 'Data differs but same timestamp';
+          }
+        } else if (localUpdatedAt != null &&
+            cloudUpdatedAt != null &&
+            !localUpdatedAtTrusted) {
+          // P1-12：时间戳存在但调用方声明不可信 —— 时钟偏移/证据链
+          // 失真下面向 UI 的方向断言比 unknown 更危险（错误的
+          // 「上传/下载」指引），直接让位 count 兜底或 unknown。
+          if (localCount != null && cloudCount != null) {
+            if (localCount > cloudCount) {
+              direction = SyncDirection.localNewer;
+              message =
+                  'Local has more items ($localCount vs $cloudCount, count-based; timestamp untrusted)';
+            } else if (cloudCount > localCount) {
+              direction = SyncDirection.cloudNewer;
+              message =
+                  'Cloud has more items ($cloudCount vs $localCount, count-based; timestamp untrusted)';
+            } else {
+              direction = SyncDirection.unknown;
+              message =
+                  'Data differs, timestamp untrusted and counts equal';
+            }
+          } else {
+            direction = SyncDirection.unknown;
+            message = 'Data differs, local timestamp untrusted';
           }
         } else if (localCount != null && cloudCount != null) {
           // Fallback to count comparison

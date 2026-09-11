@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 
+import '../../services/system/logger_service.dart';
 import 'ciphertext_format.dart';
 import '../../domain/encryption/encryption_service.dart';
 
@@ -96,9 +96,12 @@ class EncryptedCloudStorageService
     } catch (e) {
       // LOG-03：此前完全静默 —— 密钥错配/信封损坏时装饰器把含密文的
       // 原始 map 当无指纹数据返回，上层永远走全量下载兜底，流量异常
-      // 但日志零线索。debugPrint 留痕（不含密文内容）。
-      debugPrint('EncryptedCloudStorage: 元数据信封解密失败（降级原样'
-          '返回，指纹不可用，上层将走全量下载）: $e');
+      // 但日志零线索。P2-9（2026-09-11）：debugPrint 升级为应用日志
+      // warning —— release 构建可留痕，长期密钥错配可被健康排查发现
+      //（不含密文内容）。
+      logger.warning('CloudSync',
+          '元数据信封解密失败（降级原样返回，指纹不可用，上层将走全量'
+          '下载；若持续出现请核对加密密码是否在所有设备一致）: $e');
       return metadata;
     }
   }

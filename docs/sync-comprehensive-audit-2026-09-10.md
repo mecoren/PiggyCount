@@ -1,7 +1,7 @@
 # PiggyCount 同步功能全面系统性排查报告
 
 - **排查日期**：2026-09-10
-- **修复状态**：2026-09-11 归一化批次已实施 —— 本报告的 **P0-1、P1-1（Supabase 条件写/元数据/path 口径）、P1-2、P1-3、P1-4、P1-5（iCloud）、P1-8、P1-9 已全部修复**（详见 §八修复记录）；其余 P1/P2 项维持排查结论原状，待后续批次。
+- **修复状态**：2026-09-11 已实施两批 —— 第一批 **P0-1、P1-1（Supabase 条件写/元数据/path 口径）、P1-2、P1-3、P1-4、P1-5（iCloud）、P1-8、P1-9**（§八修复记录）；第二批 **P1-12、P2-6、P2-7、P2-8、P2-9**（监控收尾 + 方向判定加固 + 可观测化，见 §八补记）。其余 P1/P2 项维持排查结论原状，待后续批次。
 - **排查方式**：静态代码审计（只读，**未修改任何代码**）
 - **排查范围**：全部同步功能——S3 协议包、WebDAV 协议包、Supabase 协议包、iCloud 协议包、core 同步框架（flutter_cloud_sync）、App 层快照同步主链路（TransactionsSyncManager）、启动检查编排器、diff/指纹/变更追踪、云端备份调度、端到端加密装饰层、同步成功率监控机制
 - **对照基线**：`docs/sync-normalization-audit-2026-09-07.md`、`docs/s3-webdav-sync-audit-2026-09-08.md`、`docs/sync-metrics-implementation-2026-09-09.md`、`docs/sync-reliability-params.md`
@@ -441,3 +441,15 @@ S3 的体积自适应超时是弱网实测调优成果（`sync-reliability-param
 - 条件写锚点采用 `updatedAt`（Supabase PaginatedFile 无 etag 字段）——比对语义等价（覆盖写必刷新 updatedAt），已在 `_etagOf` 注释论证；
 - Supabase 元数据原子性受限于 Storage API（无对象级原子元数据写），采用「失败可见化（softFail 上浮）+ 幂等重试」替代方案 ②，与报告 6.1 方案 5 的推荐路径一致；
 - 修复后监控口径：六场景全部进 99.9% 分母（startupCheck 于 2026-09-11 补齐），Supabase/iCloud 的结构性失败源（截断/零重试/元数据静默）已消除。
+
+### §八补记：第二批修复（2026-09-11 监控收尾 + 判定加固）
+
+| 报告项 | 修复内容 | 文件 | 测试 |
+|---|---|---|---|
+| **P1-12** | core `getStatus` 新增 `localUpdatedAtTrusted`：不可信墙钟（全部已推送/recordChanges:false 导入来源）不做时间戳方向断言，让位 count 兜底（内容性证据不受时钟偏移影响）或 unknown；TSM `_localUpdatedAtTrusted` 与墙钟同源透传 | cloud_sync_manager.dart / transactions_sync_manager.dart | 2 新用例（不可信→不断言 localNewer / 可信→回归保护），core 23 项过 |
+| P2-6 | `downloadRemoteLedger` 补 snapshotRestore 埋点：主路 success、对象缺失→softFail（与 drainAttachmentJobs 的 objectMissing 同口径）、空快照守卫→softFail、异常→failed——三条批量恢复调用方的失败率首次进健康卡分母 | transactions_sync_manager.dart | 既有 34 项 TSM 测试回归 |
+| P2-7 | 指标清理兜底接线 PiggyApp 启动（`cleanupExpired()` fire-and-forget）；原 `syncMetricsCleanupProvider` 死代码删除 | app.dart / sync_providers.dart | — |
+| P2-8 | 自动防抖上传失败轻反馈：TSM 新增 `onAutoSyncFailure` 回调（TSM 不依赖 UI 框架的分层约束），provider 接线刷 `syncStatusRefreshProvider`——状态卡显示真实差异，不弹 toast（后台失败属常态） | transactions_sync_manager.dart / sync_providers.dart | — |
+| P2-9 | E2EE 元数据信封解密失败从 debugPrint 升级 logger.warning（release 留痕 + 措辞含「核对密码一致性」排查指引） | encrypted_cloud_storage.dart | 测试补 binding 初始化（logger 桥需要） |
+
+回归：全库 1115 项 + core 包 95 项全绿，analyze 0 error。

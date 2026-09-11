@@ -78,6 +78,9 @@ class _DisabledEncryption implements EncryptionService {
 }
 
 void main() {
+  // P2-9：_unwrapMetadata 降级路径现走应用 logger（logger_service），
+  // 其 native method channel 桥需要 binding 初始化（此前 debugPrint 无此要求）
+  TestWidgetsFlutterBinding.ensureInitialized();
   const sampleMetadata = {
     'fingerprint': 'abc123',
     'ledgerName': '现金账本',

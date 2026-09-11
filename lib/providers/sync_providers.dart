@@ -178,14 +178,11 @@ final syncMetricsServiceProvider = Provider<SyncMetricsService>((ref) {
   return SyncMetricsService(db);
 });
 
-/// 指标滚动清理兜底（审计 P0-1）：provider 重建时清一次过期行。
-/// 高频路径的清理由 TSM 在快照上传成功后与 local_changes 清理同批
-/// unawaited 触发（对齐 cleanupPushedChanges 的节流思路），此处只是
-/// 「长期只恢复不写入」场景下的兜底，成本近零。
-final syncMetricsCleanupProvider = FutureProvider<int>((ref) async {
-  final metrics = ref.watch(syncMetricsServiceProvider);
-  return metrics.cleanupExpired();
-});
+/// 指标滚动清理兜底（审计 P0-1，P2-7 接线后简化）：主清理由 TSM 在
+/// 快照上传成功后与 local_changes 清理同批 unawaited 触发；「长期只
+/// 恢复不写入」场景的兜底已接线到 PiggyApp 启动
+/// （app.dart initState → syncMetricsServiceProvider.cleanupExpired()）。
+/// 原始 FutureProvider 包装（syncMetricsCleanupProvider）因无消费者已删。
 
 final syncServiceProvider = Provider<SyncService>((ref) {
   final activeAsync = ref.watch(activeCloudConfigProvider);
@@ -233,6 +230,11 @@ final syncServiceProvider = Provider<SyncService>((ref) {
     encryptionService: encryptionService,
     // P0-1：同步成功率指标注入（未注入时 TSM 埋点 no-op）
     metrics: ref.watch(syncMetricsServiceProvider),
+    // P2-8：自动防抖上传失败 → 轻反馈（状态卡 +1，下次 getStatus 显示
+    // 真实差异；不弹 toast —— 后台路径失败属常态，弹窗打扰记账场景）
+    onAutoSyncFailure: (_) {
+      ref.read(syncStatusRefreshProvider.notifier).state++;
+    },
   );
   // F5：provider 重建（切云配置/依赖变更）时释放旧实例的 HTTP 连接池，
   // 否则 WebDAV dio / S3 http.Client 随每次重建泄漏

@@ -412,6 +412,55 @@ void main() {
       expect(status.localFingerprint, isNot(equals(status.cloudFingerprint)));
     });
 
+    test('P1-12: 不可信墙钟（localUpdatedAtTrusted=false）不做时间戳方向断言',
+        () async {
+      // Arrange：指纹不同（outOfSync），墙钟显示本地显著更新 —— 但调用方
+      // 声明墙钟不可信（典型：全部变更已推送 / recordChanges:false 导入）。
+      const testUser = CloudUser(id: 'user123');
+      const uploadedData = 123;
+      const localData = 456;
+      const testPath = 'test.json';
+
+      mockAuth.setCurrentUser(testUser);
+      await syncManager.upload(data: uploadedData, path: testPath);
+
+      // Act：不可信墙钟 + 本地时间晚于云端 3 小时
+      final status = await syncManager.getStatus(
+        data: localData,
+        path: testPath,
+        localUpdatedAt: DateTime.now().add(const Duration(hours: 3)),
+        localUpdatedAtTrusted: false,
+        forceRefresh: true,
+      );
+
+      // Assert：不得凭失真墙钟断言 localNewer —— 时间戳路径被跳过，
+      // 让位 count 兜底（无 count 证据）→ unknown。时钟偏移下错误的
+      // 「本地较新」指引比 unknown 更危险。
+      expect(status.state, equals(SyncState.outOfSync));
+      expect(status.direction, isNot(equals(SyncDirection.localNewer)));
+    });
+
+    test('P1-12: 可信墙钟（默认 trusted=true）保持既有时间戳方向判定',
+        () async {
+      const testUser = CloudUser(id: 'user123');
+      const uploadedData = 123;
+      const localData = 456;
+      const testPath = 'test.json';
+
+      mockAuth.setCurrentUser(testUser);
+      await syncManager.upload(data: uploadedData, path: testPath);
+
+      final status = await syncManager.getStatus(
+        data: localData,
+        path: testPath,
+        localUpdatedAt: DateTime.now().add(const Duration(hours: 3)),
+        forceRefresh: true,
+      );
+
+      // 默认 trusted：墙钟晚于云端 uploadedAt → localNewer（回归保护）
+      expect(status.direction, equals(SyncDirection.localNewer));
+    });
+
     test('should use cache when not expired', () async {
       // Arrange
       const testUser = CloudUser(id: 'user123');

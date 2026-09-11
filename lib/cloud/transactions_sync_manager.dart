@@ -41,6 +41,15 @@ class TransactionsSyncManager implements SyncService {
   /// 单例，保持可测性。
   final SyncMetricsService? metrics;
 
+  /// P2-8：自动防抖上传失败的轻反馈回调（可选）。
+  ///
+  /// TSM 不依赖 UI 框架（分层），自动路径失败此前只进日志、状态卡不知
+  /// 情 —— provider 层接线本回调做一次状态刷新（下次 getStatus 显示
+  /// 真实差异），让「自动同步没成功」在云同步页可见，而非引入 toast
+  /// 噪音（后台路径失败属常态，弹窗会打扰记账场景）。未接线时行为与
+  /// 旧版一致。
+  final void Function(int ledgerId)? onAutoSyncFailure;
+
   fcs.CloudSyncManager<int>? _syncManager;
   fcs.CloudProvider? _provider;
 
@@ -227,6 +236,9 @@ class TransactionsSyncManager implements SyncService {
       }
     } catch (e) {
       logger.warning('CloudSync', '自动同步上传失败(等下次数据变更重试): ledgerId=$ledgerId: $e');
+      // P2-8：失败轻反馈 —— 刷新状态卡让「未同步」可见（下次 getStatus
+      // 显示真实差异），回调缺省时与旧版行为一致
+      onAutoSyncFailure?.call(ledgerId);
     }
   }
 
@@ -299,6 +311,7 @@ class TransactionsSyncManager implements SyncService {
     required this.repo,
     this.encryptionService,
     this.metrics,
+    this.onAutoSyncFailure,
   });
 
   @override
@@ -902,9 +915,21 @@ class TransactionsSyncManager implements SyncService {
   /// 「下载预览合并」入口（有 diff 预览兜底，不会静默覆盖），失真时间戳
   /// 在此的最坏后果是多弹一次可取消的合并提示；真正的覆盖放行决策走
   /// [_detectUploadConflict] 的可信度门禁。
+  ///
+  /// P1-12：证据可信度经 [localUpdatedAtTrusted] 一并透传 —— core 侧
+  /// 对不可信墙钟不再做时间戳方向断言（时钟偏移下错误方向比 unknown
+  /// 更危险），让位 count 兜底或 unknown；TSM→UI 的 different 展示
+  /// 语义不变。
   Future<DateTime?> _computeLocalUpdatedAt(int ledgerId) async {
     final evidence = await _localChangeEvidence(ledgerId);
     return evidence.at;
+  }
+
+  /// P1-12：[getStatus] 用的墙钟可信度（与 [_computeLocalUpdatedAt]
+  /// 同一证据源）。
+  Future<bool> _localUpdatedAtTrusted(int ledgerId) async {
+    final evidence = await _localChangeEvidence(ledgerId);
+    return evidence.trusted;
   }
 
   @override
@@ -2097,6 +2122,8 @@ class TransactionsSyncManager implements SyncService {
           data: ledgerId,
           path: await pathForLedger(ledgerId),
           localUpdatedAt: await _computeLocalUpdatedAt(ledgerId),
+          // P1-12：墙钟可信度透传（无未推送行时 core 不做时间戳方向断言）
+          localUpdatedAtTrusted: await _localUpdatedAtTrusted(ledgerId),
           forceRefresh: true,
           // F6：复用上方已导出的 JSON，省去 manager 内部对同一账本的
           // 第二次全量导出（P2-1 缓存命中路径 jsonStr 为 null，包内
@@ -2854,6 +2881,9 @@ class TransactionsSyncManager implements SyncService {
     // 退出时由外层 catch 回收，避免数据库残留空壳账本（此前只清理两类
     // 加密异常，解析/网络等失败路径会漏）。
     int? createdLedgerThisCall;
+    // P2-6：恢复单元埋点计时（downloadRemoteLedger 此前零埋点 —— 批量
+    // 恢复只统计返回值，失败率不进健康卡分母）
+    final metricsWatch = Stopwatch()..start();
 
     try {
       logger.info('CloudSync', '下载远程账本: $remotePath');
@@ -2939,6 +2969,12 @@ class TransactionsSyncManager implements SyncService {
                 .go();
             createdLedgerThisCall = null;
           }
+          // P2-6：云端对象缺失（404/被删）→ softFail 而非 failed：
+          // 恢复流程工作正常，只是目标已不存在（与 drainAttachmentJobs
+          // 的 objectMissing 同口径）
+          _recordMetrics(SyncOpScenario.snapshotRestore,
+              SyncOpOutcome.softFail,
+              ledgerId: ledgerId, duration: metricsWatch.elapsed);
           return null;
         }
 
@@ -2976,6 +3012,10 @@ class TransactionsSyncManager implements SyncService {
           // 也不做下方的「上传新槽位/删旧文件」换名操作。
           logger.warning(
               'CloudSync', '云端快照为空且本地非空，拒绝覆盖，保留本地与云端现状: $remotePath');
+          // P2-6：空快照守卫触发 —— 本地数据未动，属「未收敛」而非故障
+          _recordMetrics(SyncOpScenario.snapshotRestore,
+              SyncOpOutcome.softFail,
+              ledgerId: ledgerId, duration: metricsWatch.elapsed);
           return null;
         }
         logger.info('CloudSync',
@@ -3002,6 +3042,8 @@ class TransactionsSyncManager implements SyncService {
               'CloudSync',
               '跨身份接管：本地账本 $ledgerId 已被云端快照覆盖，但其原云端槽位与'
                   '远程文件均保持原样，请自行核对其他设备的同步状态 ($remotePath)');
+          _recordMetrics(SyncOpScenario.snapshotRestore, SyncOpOutcome.success,
+              ledgerId: ledgerId, duration: metricsWatch.elapsed);
           return ledgerId;
         }
         final targetPath = await pathForLedger(ledgerId);
@@ -3037,11 +3079,17 @@ class TransactionsSyncManager implements SyncService {
           logger.info('CloudSync', '槽位一致，无需更新云端文件: $targetPath');
         }
 
+        // P2-6：主路径成功（含换名收尾完成/槽位一致两种形态）
+        _recordMetrics(SyncOpScenario.snapshotRestore, SyncOpOutcome.success,
+            ledgerId: ledgerId, duration: metricsWatch.elapsed);
         return ledgerId;
       });
     } catch (e, stack) {
       logger.error('CloudSync', '下载远程账本失败: $remotePath', e);
       logger.error('CloudSync', '堆栈', stack);
+      // P2-6：解析/网络等失败 → failed（此处回收空壳账本后原样上抛）
+      _recordMetrics(SyncOpScenario.snapshotRestore, SyncOpOutcome.failed,
+          error: e, duration: metricsWatch.elapsed);
 
       // 审计 TSM-P10：本次新建且恢复未成功的账本行统一回收，
       // 避免解析/网络等任意失败路径残留空壳账本
