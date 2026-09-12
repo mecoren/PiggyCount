@@ -176,9 +176,22 @@ class ICloudStorageService
   }
 
   /// 旧格式嗅探：合法 UTF-8 且整体合法 base64 → 解包内层字节。
+  ///
+  /// N-9 修复（2026-09-12）：第一闸从 `String.fromCharCodes`（任意字节
+  /// 均成功，无 UTF-8 校验）改为严格 `utf8.decode` try/catch —— 与
+  /// 加密装饰器 `_tryUtf8Decode` 同款。旧 base64 文本对象本来就是合法
+  /// UTF-8（纯 ASCII），行为不变；全 ASCII 且恰为合法 base64 的**新格式
+  /// 原始二进制**此前会被误解包返回内层垃圾（附件 sha256 终审兜底不落
+  /// 脏数据，但表现为「附件永远补不齐」难以诊断），严格 UTF-8 闸后该
+  /// 歧义面归零（二进制附件几乎必含非 UTF-8 字节序列）。
   static Uint8List _unwrapLegacyBase64Text(Uint8List bytes) {
-    final text = String.fromCharCodes(bytes);
-    // 快速排除：base64 字符集之外的字符（含中文附件名/二进制字节）
+    final String text;
+    try {
+      text = utf8.decode(bytes);
+    } catch (_) {
+      return bytes; // 非 UTF-8 → 新格式原始二进制，原样返回
+    }
+    // 快速排除：base64 字符集之外的字符（含中文文本/控制字符）
     final isBase64Chars = text.isNotEmpty &&
         !text.contains(RegExp(r'[^A-Za-z0-9+/=\s]'));
     if (!isBase64Chars) return bytes;

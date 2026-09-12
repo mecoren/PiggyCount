@@ -125,12 +125,18 @@ class WebDAVProvider implements CloudProvider {
     // 的 `..` 段，但 remotePath 前缀本身（用户配置，亦来自配置导入通道）
     // 此前全程无分段校验 —— `remotePath = '/piggy/../../shared'` 会把
     // 应用全部对象重定向到前缀之外的目录（依赖服务器 ACL 兜底）。此处
-    // 与 _assertNoTraversal 同口径：按 `/` 分段后存在恰为 `..` 的段
-    // 即拒绝。
-    for (final seg in remotePath.split('/')) {
-      if (seg == '..') {
-        throw CloudConfigurationException(
-            'Invalid remotePath containing ".." segment: $remotePath');
+    // 与 _assertNoTraversal 同口径。
+    //
+    // 审计 N-1（2026-09-12）：分段校验按未解码的 `/` 切分，URL 编码的
+    // `%2e%2e` 与反斜杠 `\..` 在部分服务器（IIS / Windows mod_dav）解码
+    // 或归一化后同样构成父目录引用 —— 先做防御性归一化（反斜杠转斜杠 +
+    // 尝试 URI 解码，失败保持原样）再分段校验，杜绝编码绕过。
+    for (final candidate in <String>[remotePath, _decodeLoosely(remotePath)]) {
+      for (final seg in candidate.replaceAll('\\', '/').split('/')) {
+        if (seg == '..') {
+          throw CloudConfigurationException(
+              'Invalid remotePath containing ".." segment (after decode/normalize): $remotePath');
+        }
       }
     }
 
@@ -423,5 +429,16 @@ class WebDAVProvider implements CloudProvider {
         msg.contains('307 temporary') ||
         msg.contains('308 permanent') ||
         msg.contains('redirect');
+  }
+
+  /// N-1：防御性 URI 解码 —— 尝试一层百分号解码（`%2e%2e` → `..`），
+  /// 解码失败（非法序列/非文本）时原样返回。仅用于校验前的形态归一，
+  /// 不改变实际发往服务器的路径值。
+  static String _decodeLoosely(String value) {
+    try {
+      return Uri.decodeComponent(value);
+    } catch (_) {
+      return value;
+    }
   }
 }

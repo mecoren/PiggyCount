@@ -769,13 +769,31 @@ class WebDAVStorageService
     return PathHelper.join([_remotePath, path]);
   }
 
-  /// 按 `/` 分段后存在恰为 `..` 的段才拒绝（不误伤 `ledger..backup.json`）
+  /// 按分段校验拒绝父目录引用（不误伤 `ledger..backup.json`）。
+  ///
+  /// 审计 N-1（2026-09-12）：分段校验按未解码的 `/` 切分存在编码盲区 ——
+  /// `%2e%2e`（URL 编码的 `..`）与 `\..`（反斜杠形态）在部分服务器解码/
+  /// 归一化后同样构成父目录引用。校验前做防御性归一化：反斜杠统一转斜杠
+  /// + 尝试一层 URI 解码（失败保持原判定），对原始与归一化两种形态分别
+  /// 分段校验。归一化仅用于校验，不改变实际传输的路径值。
   static void _assertNoTraversal(String value) {
-    for (final seg in value.split('/')) {
-      if (seg == '..') {
-        throw CloudConfigurationException(
-            'Invalid path containing ".." segment: $value');
+    final normalized = value.replaceAll('\\', '/');
+    for (final candidate in <String>[normalized, _decodeLoosely(normalized)]) {
+      for (final seg in candidate.split('/')) {
+        if (seg == '..') {
+          throw CloudConfigurationException(
+              'Invalid path containing ".." segment: $value');
+        }
       }
+    }
+  }
+
+  /// N-1：防御性 URI 解码（与 WebDAVProvider._decodeLoosely 同口径）。
+  static String _decodeLoosely(String value) {
+    try {
+      return Uri.decodeComponent(value);
+    } catch (_) {
+      return value;
     }
   }
 

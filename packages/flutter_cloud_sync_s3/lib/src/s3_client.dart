@@ -501,7 +501,14 @@ class S3Client {
       // 套 transferTimeoutFor(contentLength)（P1-2 体积自适应档）：
       // 源流停滞按传输时长判死，首响应超时同理；任一路超时都取消
       // 泵/清理后抛 S3NetworkException。
-      final effectiveTimeout = transferTimeoutFor(contentLength ?? 0);
+      //
+      // N-11：contentLength 缺省（chunked 传输）时按保守上限档
+      // （5min cap）计算 —— `?? 0` 会按 0 字节档（30s 基线）判死，
+      // 大文件弱网流式上传确定性超时。传入超上限体积的字节数，
+      // transferTimeoutFor 的 clamp 保证结果就是 _transferTimeoutCap。
+      final streamTimeout =
+          contentLength ?? _transferTimeoutCap.inMilliseconds * 1024 ~/ 30;
+      final effectiveTimeout = transferTimeoutFor(streamTimeout);
       final first = await Future.any<Object?>([
         pumpDone.future.then<Object?>((_) => _pumpCompletedSentinel),
         responseFuture
@@ -523,7 +530,7 @@ class S3Client {
         // 泵完成（body 已全部发出）→ 等服务器处理响应。
         // P1-2：按体积自适应（流式上传多为大附件，旧固定 30s 在
         // 慢网大对象下，body 发完后服务端落盘+响应的时间窗口不够）
-        final effectiveTimeout = transferTimeoutFor(contentLength ?? 0);
+        final effectiveTimeout = transferTimeoutFor(streamTimeout);
         response = await responseFuture.timeout(effectiveTimeout);
       }
     } on Object catch (e) {
@@ -542,7 +549,7 @@ class S3Client {
       if (e is TimeoutException) {
         throw S3NetworkException(
             'PutObjectStream timed out after '
-            '${transferTimeoutFor(contentLength ?? 0).inSeconds}s');
+            '${transferTimeoutFor(contentLength ?? 10 * 1024 * 1024).inSeconds}s');
       }
       throw S3Exception('PutObjectStream failed: $e',
           originalException: e is Exception ? e : null);
@@ -550,6 +557,10 @@ class S3Client {
 
     try {
       if (response.statusCode == 200 || response.statusCode == 204) {
+        // N-14：成功路径消费掉 body 流 —— 2xx 直接 return 会让
+        // StreamedResponse.bodyStream 处于无读者状态，keep-alive 连接
+        // 无法回池被弃置，高频流式上传时连接复用率下降。
+        unawaited(response.stream.drain<void>().catchError((Object _) {}));
         return _normalizeEtag(response.headers['etag']);
       }
       if (response.statusCode == 412) {
@@ -626,15 +637,23 @@ class S3Client {
   /// 判断 400 响应是否为「网关不支持条件头」特征（S3 兼容网关的
   /// NotImplemented 语义）。匹配错误体关键字而非依赖具体错误码字段，
   /// 因为第三方网关的 XML 错误体形态各异（Code/Message 大小写不齐）。
+  ///
+  /// N-7 修复（2026-09-12）：裸 `notimplemented` 子串不再单独命中 ——
+  /// 任何 400 错误体恰含该字样（如网关把「不支持某 x-amz-meta 头」也
+  /// 报 NotImplemented）都会让 `_conditionalWriteUnsupported` 被误记，
+  /// 此后本 client 全生命周期静默盲写（无 TTL 无复试探针）。收紧为：
+  /// NotImplemented/Not Implemented 语义必须**配合条件头关键词**
+  /// （if-match / if-none-match / a header you provided）同时出现才判定。
   bool _isConditionalHeaderNotSupported(http.Response response) {
     final body = response.body;
     if (body.isEmpty) return false;
     final lower = body.toLowerCase();
-    return lower.contains('notimplemented') ||
-        (lower.contains('not implemented') &&
-            (lower.contains('if-match') ||
-                lower.contains('if-none-match') ||
-                lower.contains('a header you provided implies')));
+    final notImplemented = lower.contains('notimplemented') ||
+        lower.contains('not implemented');
+    if (!notImplemented) return false;
+    return lower.contains('if-match') ||
+        lower.contains('if-none-match') ||
+        lower.contains('a header you provided');
   }
 
   /// 构造并签名流式 PUT 请求头。
@@ -760,7 +779,8 @@ class S3Client {
       } on SocketException catch (e) {
         throw S3NetworkException('Network error: ${e.message}', originalException: e);
       } on TimeoutException {
-        throw S3NetworkException('GetObject timed out after ${timeout.inSeconds}s');
+        // N-11：报实际超时档（_getObjectTimeout=90s），非元数据档 timeout（30s）
+        throw S3NetworkException('GetObject timed out after ${_getObjectTimeout.inSeconds}s');
       } on S3Exception {
         rethrow;
       } catch (e) {
@@ -1297,15 +1317,36 @@ class S3Client {
   /// 和最后一个对象的 key（V1 的 Marker），使调用方能够迭代获取全部对象。
   /// S3 ListObjects 单次最多返回 1000 个对象，不处理分页会导致多账本用户
   /// 只能看到前 1000 个文件。
+  ///
+  /// N-6 修复（2026-09-12）：元素匹配改 localName（xml 包的 findAllElements
+  /// 按字面名匹配不剥命名空间前缀）—— 带 `<s3:Contents>` 前缀的第三方网关
+  /// 响应此前解析出 0 对象 + isTruncated=false，静默返回空桶视图且 S-M1
+  /// 抛错护栏不触发（解析本身成功、只是什么都找不到）。localName 匹配
+  /// 对 AWS/MinIO/R2/OSS 等无前缀主流实现行为不变。
   ({List<S3ObjectInfo> objects, bool isTruncated, String? nextContinuationToken, String? lastKey})
       _parseListObjectsXml(String xmlBody) {
     try {
       final document = XmlDocument.parse(xmlBody);
 
-      final objects = document.findAllElements('Contents').map((element) {
-        final keyElement = element.findElements('Key').firstOrNull;
-        final sizeElement = element.findElements('Size').firstOrNull;
-        final modifiedElement = element.findElements('LastModified').firstOrNull;
+      List<XmlElement> findAllLocal(XmlElement root, String localName) =>
+          root.descendants
+              .whereType<XmlElement>()
+              .where((e) => e.name.local == localName)
+              .toList();
+
+      final objects = findAllLocal(document.rootElement, 'Contents')
+          .map((element) {
+        XmlElement? findChildLocal(String localName) {
+          for (final child in element.children) {
+            if (child is XmlElement && child.name.local == localName) {
+              return child;
+            }
+          }
+          return null;
+        }
+        final keyElement = findChildLocal('Key');
+        final sizeElement = findChildLocal('Size');
+        final modifiedElement = findChildLocal('LastModified');
 
         final key = keyElement?.innerText;
         if (key == null) return null;
@@ -1319,9 +1360,16 @@ class S3Client {
         return S3ObjectInfo(key: key, size: size, lastModified: lastModified);
       }).whereType<S3ObjectInfo>().toList();
 
-      // 分页信息
-      final isTruncated = document.findAllElements('IsTruncated').firstOrNull?.innerText.toLowerCase() == 'true';
-      final nextContinuationToken = document.findAllElements('NextContinuationToken').firstOrNull?.innerText;
+      // 分页信息（localName 匹配，理由同上）
+      final isTruncated = findAllLocal(document.rootElement, 'IsTruncated')
+              .firstOrNull
+              ?.innerText
+              .toLowerCase() ==
+          'true';
+      final nextContinuationToken = findAllLocal(
+              document.rootElement, 'NextContinuationToken')
+          .firstOrNull
+          ?.innerText;
       final lastKey = objects.isNotEmpty ? objects.last.key : null;
 
       return (

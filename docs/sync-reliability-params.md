@@ -30,7 +30,7 @@
 | S3 putObject 条件重试 | **仅带 If-Match/If-None-Match**（P1-1, 2026-09-09） | ≤2 次，复用同退避表 | SocketException/TimeoutException；安全性由锚点保证（已落盘则重试吃 412 转冲突） | 同上 |
 | S3 putObject 盲写 | 无条件头 | **0 次**（不重试纪律） | —— | A-1 覆盖竞态未修，写后校验兜底 |
 | WebDAV `_retryIdempotent` | read/readDir/remove 幂等读 | 2 次，400ms/800ms | 无结构化状态码（连接层）或 5xx；4xx 立即上抛 | 真随机（P1-1 修复，时间戳取模同相问题） |
-| Supabase `_opRetryable`（2026-09-11 补齐） | download/downloadBinary/list/exists/getMetadata/delete 幂等操作 | 2 次，400ms/800ms（对齐 WebDAV） | 连接层故障（无状态码）/超时/5xx；认证与 404 确定性失败立即上抛；盲写不重试 | 真随机 ±50% |
+| Supabase `_opRetryable`（2026-09-11 补齐） | download/downloadBinary/list/exists/getMetadata/delete 幂等操作 | 2 次，400ms/800ms（对齐 WebDAV） | 连接层故障（无状态码）/超时/5xx；认证与 404 确定性失败立即上抛；盲写不重试。**2026-09-12 N-8 收紧**：无结构化码的文本兜底从 toString 宽词（'network'/'connection'/'timeout'）改为异常类型判定（SocketException/TimeoutException/HttpException；Web 平台按类型名兜底） | 真随机 ±50% |
 | iCloud `_retryIdempotent`（2026-09-11 补齐） | download/downloadBinary/list/exists/getMetadata/delete | 2 次，400ms/800ms（对齐 WebDAV） | 非 NOT_FOUND 的 PlatformException 瞬时故障（daemon 未就绪）；NOT_FOUND 立即上抛转幂等语义 | 真随机 ±50% |
 | TSM 附件下载 | 后台附件补齐 | 3 次总尝试，1s/2s/4s | 全异常（三态结果由调用方区分 objectMissing/transientFailure） | 无（内存队列会话级 drain，无多端风暴面） |
 | core `RetryHelper` | （当前无生产调用方） | 预设三档 | 异常类型判定（auth/404 不重试） | 25% |
@@ -75,3 +75,13 @@
   - P2-2③：快照 gzip 压缩传输——新增 `GzipCloudStorageService` 装饰器（lib/cloud/gzip_cloud_storage.dart），E2EE 开启时装配链 raw → Gzip → Encrypted（压明文、压后加密，与备份链路「ZIP→加密」同序）。阈值：≥2KB 且压缩比 ≤60% 才存压缩形态，否则原文；附件二进制/元数据/列举全部透传（gzip 层镜像实现 BinaryCapableStorage/ConditionalWriteStorage，附件真字节与条件写锚点不退化）。Latin-1（码点=字节）无损桥过文本通道。加密未开启不装配（历史明文永不压缩，旧版本可读性无回滚风险）。rekey/enableFromCloud 三入口均传 rawStorage（无 gzip 层）——全量重加密读写未压缩形态，不受影响（嗅探端透传非 gzip 字节）。重复 JSON 实测压缩率 ~10-15%，弱网流量/耗时同比例下降。
 - **2026-09-11（第五批：治理）**：
   - P2-10：Supabase database/realtime 懒装配（App 零消费，仅 auth+storage 即时创建）；_initializeAppMode 简化为持久值规范化（appModeProvider 不再被启动路径触碰）；两份同日审计文档加互见注记（内容不同非重复，保留）。
+- **2026-09-12（第六批：2026-09-12 审计新发现修复，详见 docs/sync-comprehensive-audit-2026-09-12.md 附录 C）**：
+  - N-1（P1）：WebDAV 路径校验编码盲区收口——`_assertNoTraversal`/remotePath 校验前置防御性归一化（反斜杠转斜杠 + 尝试一层 URI 解码），对原始与归一化形态分别做 `..` 分段校验（webdav_provider.dart:130-141 / webdav_storage_service.dart:774-796）。
+  - N-2（P1/P2）：Supabase `_storeMetadata` 最终失败**不再上抛**——warning + dev.log 留痕，指纹缺失由 manager 写后校验上浮 verified=false → softFail；消除缺表环境 100% 硬失败回归与「failed ≠ softFail」口径偏差（supabase_storage_service.dart:233-243/648-676/731-736）。
+  - N-3（P2）：Supabase list 翻页护栏触达不再静默——warning 留痕（supabase_storage_service.dart:523-553）；单页级重试粒度未动（渐进路线，后续批次）。
+  - N-6/N-7/N-11/N-14（S3 网关兼容与口径）：ListObjects 解析改 localName 匹配（带 `<s3:Contents>` 前缀不再静默空列表）；条件写不支持判定要求 NotImplemented × 条件头关键词同时命中；getObject 超时消息改报实际档 90s；putObjectStream contentLength 缺省按 5min cap 档 + 成功路径 drain body 流回池（s3_client.dart:505-512/560-563/641-655/782-784/1321-1372）。新增 s3_gateway_compat_test.dart 7 用例。
+  - N-8（P2）：Supabase `_isTransient` 文本兜底收紧为异常类型判定（§二 表已同步）。
+  - N-9（P3）：iCloud 旧格式嗅探第一闸改严格 `utf8.decode` 校验，非 UTF-8 原始二进制原样返回，歧义面归零（icloud_storage_service.dart:180-197）；icloud_binary_retry_test.dart 新增 4 用例（含纯 ASCII 固有歧义残留声明）。
+  - N-13（P3）：Supabase CloudPreconditionFailedException 改双参构造，path 字段不再被消息污染。
+  - 实施期附带修复：iCloud N-9 新测试曾因字符串裸换行致前端编译器 tokenize 崩溃（表现为 flutter test 僵死零输出、dart 进程残留），已修（icloud_binary_retry_test.dart:206-207）。
+  - 回归基线：四包 + 全库测试全绿（iCloud 19 / S3 136 / Supabase 29 / WebDAV 59 / core 95 / 根 1145，1 skip）。

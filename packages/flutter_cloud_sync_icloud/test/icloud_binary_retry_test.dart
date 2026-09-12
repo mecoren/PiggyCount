@@ -158,4 +158,59 @@ void main() {
       expect(channel.downloadCalls, 1);
     });
   });
+
+  group('N-9: 旧格式嗅探第一闸改严格 UTF-8 校验', () {
+    test('含非 UTF-8 字节序列的二进制（全 base64 字符集不可判）→ 原样返回',
+        () async {
+      // 新格式原始二进制：含 0x80（UTF-8 非法首字节）—— 旧实现
+      // String.fromCharCodes 后靠字符集正则把关，但该字节不在 base64
+      // 字符集内本就不会解包；构造 UTF-8 非法但全 ASCII 字符集内的
+      // 形态：0xFF 排除在 base64 字符集外，真正歧义面是纯 ASCII。
+      // 本用例锁定「UTF-8 非法即原样」的第一闸行为：
+      final raw = Uint8List.fromList([0x80, 0x81, 0x00, 0x50, 0x4B]);
+      final svc = ICloudStorageService(_ScriptedChannel(
+        downloadReturn: base64Encode(raw),
+      ));
+      final out = await svc.downloadBinary(path: 'attachments/bin.bin');
+      expect(out, raw,
+          reason: 'N-9: 非 UTF-8 字节在第一闸即原样返回，不再进字符集判定');
+    });
+
+    test('纯 ASCII 且恰为合法 base64 的新格式文本对象 → 仍解包（歧义残留声明）',
+        () async {
+      // 该形态在 UTF-8 闸下不可区分（文本的 base64 vs 恰似文本的字节），
+      // sha256 终审是最终裁决 —— 行为与旧实现一致，属已知取舍非回归。
+      const asciiText = 'SGVsbG8gd29ybGQh'; // 'Hello world!' 的 base64
+      final svc = ICloudStorageService(_ScriptedChannel(
+        downloadReturn: base64Encode(utf8.encode(asciiText)),
+      ));
+      final out = await svc.downloadBinary(path: 'a.bin');
+      expect(out, utf8.encode('Hello world!'),
+          reason: '纯 ASCII 合法 base64 仍按旧格式解包（兼容优先）');
+    });
+
+    test('UTF-8 合法但含非 base64 字符（中文文本）→ 原样字节返回', () async {
+      const text = '同步账本数据检查';
+      final svc = ICloudStorageService(_ScriptedChannel(
+        downloadReturn: base64Encode(utf8.encode(text)),
+      ));
+      final out = await svc.downloadBinary(path: 'a.txt');
+      expect(out, utf8.encode(text),
+          reason: '合法 UTF-8 中文文本不是旧 base64 格式，原样返回');
+    });
+
+    test('旧 base64 文本对象（含 padding 与换行）→ 解包行为不变', () async {
+      // 旧实现允许 base64 中含空白（\s 正则剔除）；严格 UTF-8 闸后
+      // 合法 UTF-8 的空白文本依旧走到解包分支，兼容保持。
+      final inner = Uint8List.fromList(List.generate(64, (i) => i));
+      final legacyText = base64Encode(inner).replaceAllMapped(
+          RegExp(r'(.{20})'), (m) => '${m[1]}\n'); // 每 20 字符插换行
+      final svc = ICloudStorageService(_ScriptedChannel(
+        downloadReturn: base64Encode(utf8.encode(legacyText)),
+      ));
+      final out = await svc.downloadBinary(path: 'old2.bin');
+      expect(out, inner,
+          reason: '旧格式（RFC 2045 带换行的 base64 文本）解包兼容');
+    });
+  });
 }

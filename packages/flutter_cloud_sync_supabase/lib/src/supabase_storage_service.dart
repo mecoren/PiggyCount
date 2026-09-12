@@ -1,7 +1,9 @@
 library;
 
+import 'dart:async' show TimeoutException;
 import 'dart:convert';
 import 'dart:developer' as dev;
+import 'dart:io' show HttpException, SocketException;
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -32,10 +34,12 @@ import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 ///   fullPath，与其他包「相对路径可回传」契约分裂（回传 delete/exists
 ///   会双拼前缀）；现统一返回调用方视角的相对路径（name=basename、
 ///   path=与入参同目录的相对路径）。
-/// - P1-1c：_storeMetadata 失败从静默降级升级为可观察信号 —— DB 表写
-///   失败（如 file_metadata 表未建）时抛 MetadataPersistFailedException，
-///   manager 写后校验会以 verified=false 上浮（softFail 而非假 success），
-///   消除「指纹永久缺失 → getStatus 反复全量下载」的无痕退化。
+/// - P1-1c（2026-09-11）→ N-2 修订（2026-09-12）：_storeMetadata 失败
+///   从「静默降级」（P1-1c 曾改为上抛 MetadataPersistFailedException，
+///   实测使整个 upload 记 failed 且缺表环境 100% 硬失败）修订为「留痕
+///   不上抛」—— 指纹缺失由 manager 写后校验以 verified=false 上浮
+///   （softFail），消除「指纹永久缺失 → getStatus 反复全量下载」的
+///   无痕退化，同时不引入缺表环境的可用性回归。
 class SupabaseStorageService
     implements CloudStorageService, BinaryCapableStorage, ConditionalWriteStorage {
   final supabase.SupabaseClient _client;
@@ -142,6 +146,14 @@ class SupabaseStorageService
   /// 瞬时故障判定：超时包装（CloudStorageException 且 originalError 为空）
   /// 或底层 SocketException/TimeoutException；Supabase SDK 的 5xx 经
   /// StorageException.statusCode 字符串判（'5xx' 前缀）。
+  ///
+  /// N-8 修复（2026-09-12）：无结构化码时的文本兜底从 toString 子串
+  /// （曾含 'network'/'connection'/'timeout' 宽词——确定性 4xx 的错误
+  /// 文案含这些词即被误判可重试，浪费预算+延迟）收紧为**异常类型判定**
+  /// （SocketException / TimeoutException / HttpException 的运行时类型），
+  /// 与 S3 `_isTransient` 的类型化口径对齐。Web 平台无 dart:io 类型时
+  /// 保留 'socketexception'/'timeoutexception' 两个类型名字符串兜底
+  /// （对应 dart:html 抛出的同名字符串形态），不再匹配消息内容。
   bool _isTransient(Object e) {
     Object? root = e;
     // 解开 CloudStorageException 的 originalError 包装
@@ -153,14 +165,13 @@ class SupabaseStorageService
       if (code == null) return true; // 无结构化码 → 连接层故障
       return code.startsWith('5');
     }
-    // dart:io SocketException / TimeoutException 等（Web 端为字符串匹配兜底）
-    final text = root.toString().toLowerCase();
-    return text.contains('socketexception') ||
-        text.contains('timeoutexception') ||
-        text.contains('timed out') ||
-        text.contains('timeout') ||
-        text.contains('connection') ||
-        text.contains('network');
+    if (root is SocketException) return true;
+    if (root is TimeoutException) return true;
+    if (root is HttpException) return true;
+    // Web 平台兜底：dart:html 的网络层异常无 dart:io 类型，按类型名匹配
+    final typeName = root.runtimeType.toString().toLowerCase();
+    return typeName.contains('socketexception') ||
+        typeName.contains('timeoutexception');
   }
 
   @override
@@ -220,6 +231,14 @@ class SupabaseStorageService
             ),
       );
       if (metadata != null && metadata.isNotEmpty) {
+        // N-2（2026-09-12）：元数据持久化失败不再上抛 —— 上抛路径会让
+        // 整个 upload 记 failed（manager 的 catch 按 CloudStorageException
+        // 整体上抛，TSM 计硬失败），且 file_metadata 表未建的存量环境下
+        // Supabase 上传会从「静默降级可工作」变为 100% 硬失败。改为
+        // 返回失败信号：主对象已在云端，manager 写后校验读不到指纹会以
+        // verified=false 上浮 softFail（数据在、未确认收敛），与
+        // MetadataPersistFailedException 的原始设计声明对齐。判定失败的
+        // warning 已在此留痕（含表未建/RSL 策略的排查指引）。
         await _storeMetadata(fullPath, metadata);
       }
     } on supabase.StorageException catch (e) {
@@ -270,20 +289,22 @@ class SupabaseStorageService
 
     if (ifNoneMatch) {
       if (current != null) {
-        throw CloudPreconditionFailedException(
-            '远端对象已存在（create-only 条件失败）: $path');
+        // N-13：双参构造（path, message）—— 单参会把整句消息当 path
+        // 字段污染，与 S3/WebDAV 的构造口径分裂。
+        throw CloudPreconditionFailedException(path,
+            '远端对象已存在（create-only 条件失败）');
       }
     } else if (ifMatchEtag != null) {
       if (current == null) {
         // 远端不存在同样算条件失败（对齐接口契约：探测时存在、
         // 写入时消失 = 中途被并发改动/删除，按冲突处理）
-        throw CloudPreconditionFailedException(
-            '远端对象已不存在（条件锚点失效）: $path');
+        throw CloudPreconditionFailedException(path,
+            '远端对象已不存在（条件锚点失效）');
       }
       final currentEtag = _etagOf(current);
       if (currentEtag == null || currentEtag != ifMatchEtag) {
-        throw CloudPreconditionFailedException(
-            '远端对象已被并发修改（锚点 $ifMatchEtag ≠ 当前 $currentEtag）: $path');
+        throw CloudPreconditionFailedException(path,
+            '远端对象已被并发修改（锚点 $ifMatchEtag ≠ 当前 $currentEtag）');
       }
     }
 
@@ -498,6 +519,10 @@ class SupabaseStorageService
   ///   单对象探测路径会经 _getMetadata 补全 DB 侧自定义元数据；
   /// - 翻页参数必须含 prefix 尾斜杠（Supabase 按前缀匹配，'a' 会命中
   ///   'ab.txt'）—— 空目录（根列举）传 ''。
+  ///
+  /// N-3（2026-09-12）：护栏触达不再静默 —— 返回条目可能不完整
+  /// （>10 万对象的异常目录），warning 留痕供健康排查发现，语义对齐
+  /// S3 分页的畸形响应告警。
   Future<List<_RemoteEntry>> _listAllObjects(String prefix) async {
     final all = <_RemoteEntry>[];
     String? cursor;
@@ -520,6 +545,11 @@ class SupabaseStorageService
       }
       if (!result.hasNext || result.nextCursor == null) break;
       cursor = result.nextCursor;
+      if (page == _maxPages - 1) {
+        storageLogger?.warning(
+            '[Supabase] list 翻页护栏触达（${_maxPages} 页 × $_pageLimit 条），'
+            '目录 $prefix 的返回可能不完整 —— 请检查是否存在异常目录堆积');
+      }
     }
     return all;
   }
@@ -615,11 +645,14 @@ class SupabaseStorageService
   /// Since Supabase Storage doesn't support custom metadata directly,
   /// we store it in a metadata table.
   ///
-  /// P1-1c（2026-09-11）：写入失败不再静默降级 —— 抛
-  /// [MetadataPersistFailedException]（CloudStorageException 子类，不中断
-  /// 上传主流程的语义由调用方/manager 决定：manager 写后校验读不到指纹
-  /// 会以 verified=false 上浮 softFail）。幂等 upsert 重试 1 次后仍失败
-  /// 才抛（网络抖动自愈，表未建/RSL 策略拒绝等确定性原因快速失败）。
+  /// P1-1c（2026-09-11）→ N-2 修订（2026-09-12）：幂等 upsert 重试 1 次
+  /// 后仍失败**不再上抛** —— 上抛会让整个 upload 按存储异常整体失败
+  /// （manager catch → TSM 记 failed），file_metadata 表未建的存量环境
+  /// 下 Supabase 上传从「静默降级可工作」变为 100% 硬失败。改为：失败
+  /// 只留 warning（含表未建/RSL 策略排查指引），指纹缺失由 manager 写后
+  /// 校验自然发现（getMetadata 读不到 → verified=false → softFail），
+  /// 与「数据在云端、未确认收敛」的语义对齐。表建好后下次上传自动补写
+  /// 指纹，无需人工干预。
   Future<void> _storeMetadata(
       String path, Map<String, String> metadata) async {
     for (var attempt = 1; attempt <= 2; attempt++) {
@@ -634,11 +667,9 @@ class SupabaseStorageService
         storageLogger?.warning(
             '[Supabase] metadata storage failed for $path (attempt $attempt/2): $e');
         if (attempt == 2) {
+          // N-2：吞掉最终失败 —— 主对象已在云端，指纹缺失走写后校验
+          // softFail 路径（见方法注释）。dev.log 保留 console 线索。
           dev.log('[Supabase] metadata storage failed for $path: $e', name: 'SupabaseStorage');
-          throw MetadataPersistFailedException(
-              '元数据写入失败（file_metadata 表）：$path —— 云端指纹将缺失，'
-              '本次上传将标记为未确认收敛（softFail），请检查表与 RLS 策略',
-              e);
         }
       }
     }
@@ -697,12 +728,15 @@ class _RemoteEntry {
   });
 }
 
-/// P1-1c：元数据持久化失败信号 —— 主对象已上传成功但指纹等元数据未落库。
+/// P1-1c（2026-09-11）→ N-2 修订（2026-09-12）：元数据持久化失败信号。
 ///
-/// 设计为 [CloudStorageException] 子类：manager 的 upload 流程会把非
-/// CloudSyncException 包装后上抛 → TSM 侧按 failed/softFail 计量；
-/// 同时保留独立类型让未来调用方可以精确识别「内容在、元数据缺」场景
-/// （如维护页提示补建 file_metadata 表）。
+/// 历史上（P1-1c 批次）曾把该异常从 `_storeMetadata` 上抛以结束静默
+/// 降级；实测上抛路径使整个 upload 记 failed，且 file_metadata 表未建
+/// 的存量环境下 Supabase 上传 100% 硬失败（可用性回归）。N-2 修订后
+/// `_storeMetadata` 失败只留 warning、不上抛 —— 指纹缺失由 manager
+/// 写后校验发现（verified=false → softFail）。本异常类型保留导出：
+/// 供未来调用方精确识别「内容在、元数据缺」场景（如维护页提示补建
+/// file_metadata 表），当前生产代码不再依赖其上抛语义。
 class MetadataPersistFailedException extends CloudStorageException {
   MetadataPersistFailedException(String message, [Object? cause])
       : super(message, cause);
