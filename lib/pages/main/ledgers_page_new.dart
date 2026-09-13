@@ -29,6 +29,41 @@ import '../../l10n/app_localizations.dart';
 import '../../providers/budget_providers.dart';
 import '../../widget/widget_manager.dart';
 
+/// 批量恢复确认文案中的同名多槽位明细（两次实测 §4.2 遗留缺口）。
+///
+/// 「全部恢复」走 downloadRemoteLedger 的同名复用语义：同名槽位依次
+/// 覆盖，**本地最终只留恢复到的最后一个**（与启动检查「改名导入产生
+/// 账本（2）」不同），所以措辞是「相互覆盖」而非「产生重复」。
+/// 明细格式与警示弹窗/远程卡片同口径：`短ID·上传时间(条数)`。
+/// 无同名槽位时返回 null（确认文案保持原样）。
+String? batchRestoreDuplicateDetail(List<LedgerDisplayItem> remoteLedgers) {
+  final byName = <String, List<LedgerDisplayItem>>{};
+  for (final l in remoteLedgers) {
+    byName.putIfAbsent(l.name, () => []).add(l);
+  }
+  final dupNames = [
+    for (final e in byName.entries)
+      if (e.value.length >= 2) e.key
+  ];
+  if (dupNames.isEmpty) return null;
+  final dup = <String, List<LedgerDisplayItem>>{};
+  // 组内按云端上传时间新者在前（与 startupSyncDuplicateSlots 展示一致）
+  for (final name in dupNames) {
+    dup[name] = [...byName[name]!]
+      ..sort((a, b) => b.lastUpdated.compareTo(a.lastUpdated));
+  }
+  return dup.entries
+      .map((e) {
+        final slots = e.value
+            .map((l) =>
+                '${l.remoteSyncId == null ? '?' : formatSlotShortId(l.remoteSyncId!)}'
+                '·${formatCloudUploadDate(l.lastUpdated)}(${l.transactionCount})')
+            .join('、');
+        return '${e.key}: $slots';
+      })
+      .join('；');
+}
+
 class LedgersPageNew extends ConsumerStatefulWidget {
   /// 进入页面后自动弹出「创建账本」对话框。用于首页账本胶囊在没账本时直接
   /// 引导用户新建,省一步点击。
@@ -993,12 +1028,21 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     final remoteLedgersAsync = ref.read(remoteLedgersProvider);
     final remoteLedgers = remoteLedgersAsync.value ?? [];
 
+    // 同名多槽位警示：云端存在同名槽位时，全部恢复会依次相互覆盖，
+    // 本地只留其一。拼进第一段确认，让用户在倒计时内看到具体名单。
+    final l10n = AppLocalizations.of(context);
+    final dupDetail = batchRestoreDuplicateDetail(remoteLedgers);
+    var firstMessage = l10n.ledgersRestoreAllMessage(remoteLedgers.length);
+    if (dupDetail != null) {
+      firstMessage =
+          '$firstMessage\n${l10n.ledgersRestoreAllDuplicateSlots(dupDetail)}';
+    }
+
     final confirmed = await showDoubleDangerConfirmDialog(
       context,
-      title: AppLocalizations.of(context).ledgersRestoreAllTitle,
-      firstMessage: AppLocalizations.of(context)
-          .ledgersRestoreAllMessage(remoteLedgers.length),
-      secondMessage: AppLocalizations.of(context).ledgersRestoreAllReconfirmMessage,
+      title: l10n.ledgersRestoreAllTitle,
+      firstMessage: firstMessage,
+      secondMessage: l10n.ledgersRestoreAllReconfirmMessage,
     );
 
     if (!confirmed || !mounted || !context.mounted) return;
@@ -1007,7 +1051,6 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
 
     // 强制阻塞弹窗：批量恢复期间禁止切账本/触发上传等一切页面操作，
     // 防止恢复写入与用户操作互相踩写
-    final l10n = AppLocalizations.of(context);
     final block = showBlockingProgressDialog(
       context,
       title: l10n.ledgersRestoreAllTitle,

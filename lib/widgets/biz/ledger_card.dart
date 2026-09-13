@@ -109,7 +109,12 @@ class LedgerCard extends ConsumerWidget {
                     // 顶部：名称 + 状态图标
                     Row(
                       children: [
-                        // 账本名称
+                        // 账本名称。ID 部分按本地/远程分口径：
+                        // - 本地账本：数据库 id，日常辨识足够；
+                        // - 远程账本：槽位短 ID（slotKey 前 6 位，与同名
+                        //   多槽位警示弹窗同一口径 formatSlotShortId）。
+                        //   此前展示 remoteSyncId.hashCode（Dart 整型哈希），
+                        //   与弹窗承诺的短 ID 对不上号，甄别无法兑现。
                         Expanded(
                           child: RichText(
                             text: TextSpan(
@@ -121,7 +126,9 @@ class LedgerCard extends ConsumerWidget {
                                       .copyWith(fontWeight: FontWeight.w600),
                                 ),
                                 TextSpan(
-                                  text: ' (ID:${ledger.id})',
+                                  text: isRemote
+                                      ? ' (ID:${ledger.remoteSyncId == null ? '?' : formatSlotShortId(ledger.remoteSyncId!)})'
+                                      : ' (ID:${ledger.id})',
                                   // UI-07：字号走 PiggyTextTokens（body=14）
                                   style: PiggyTextTokens.body(context)
                                       .copyWith(
@@ -204,12 +211,23 @@ class LedgerCard extends ConsumerWidget {
                                     ledger.balance, ledger.currency),
                           ),
                           style: PiggyTextTokens.body(context).copyWith(
-                            fontWeight: FontWeight.w500,
-                            color: ledger.balance >= 0
-                                ? PiggyTokens.success(context)
-                                : PiggyTokens.error(context),
+                              fontWeight: FontWeight.w500,
+                              color: ledger.balance >= 0
+                                  ? PiggyTokens.success(context)
+                                  : PiggyTokens.error(context),
                           ),
                         ),
+                        // 云端上传时间：仅远程账本显示（供同名多槽位甄别：
+                        // 与短 ID 一起构成「哪个是最新槽位」的判断依据；
+                        // 蒙层半透明会压暗底层，故蒙层内也同步展示短 ID）
+                        if (isRemote) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            '${l10n.ledgerCardCloudUploaded}：${formatCloudUploadDate(ledger.lastUpdated)}',
+                            style: PiggyTextTokens.body(context).copyWith(
+                                color: PiggyTokens.textSecondary(context)),
+                          ),
+                        ],
                       ],
                     ),
                   ],
@@ -241,6 +259,21 @@ class LedgerCard extends ConsumerWidget {
                             fontWeight: FontWeight.w600,
                             color: primaryColor,
                           ),
+                        ),
+                        // 同名多槽位甄别信息（与警示弹窗同口径）：短 ID +
+                        // 上传时间。蒙层压暗底层，这两行才是用户实际可读的
+                        const SizedBox(height: 4),
+                        Text(
+                          'ID:${ledger.remoteSyncId == null ? '?' : formatSlotShortId(ledger.remoteSyncId!)}',
+                          style: PiggyTextTokens.body(context).copyWith(
+                              fontWeight: FontWeight.w500,
+                              color: primaryColor.withValues(alpha: 0.8)),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${l10n.ledgerCardCloudUploaded}：${formatCloudUploadDate(ledger.lastUpdated)}',
+                          style: PiggyTextTokens.body(context).copyWith(
+                              color: PiggyTokens.textSecondary(context)),
                         ),
                       ],
                     ),

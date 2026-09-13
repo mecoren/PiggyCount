@@ -1602,6 +1602,18 @@ abstract class AppLocalizations {
   /// **'Download from Cloud'**
   String get ledgerCardDownloadCloud;
 
+  /// No description provided for @ledgerCardCloudUploaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud uploaded at'**
+  String get ledgerCardCloudUploaded;
+
+  /// No description provided for @ledgersRestoreAllDuplicateSlots.
+  ///
+  /// In en, this message translates to:
+  /// **'Note: multiple cloud slots share these names. Restoring all will overwrite them one by one — only the last one will remain locally (to pick a specific slot, download individually from the cards above by ID and upload time): {detail}'**
+  String ledgersRestoreAllDuplicateSlots(String detail);
+
   /// No description provided for @ledgersLocal.
   ///
   /// In en, this message translates to:

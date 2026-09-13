@@ -847,6 +847,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ledgerCardDownloadCloud => '下载云账本';
 
   @override
+  String get ledgerCardCloudUploaded => '云端上传时间';
+
+  @override
+  String ledgersRestoreAllDuplicateSlots(String detail) {
+    return '注意：以下名称在云端存在多个槽位，全部恢复会依次相互覆盖，本地最终只保留其中一个（如需逐个甄别，可先在上方卡片按 ID 与上传时间选择下载）：$detail';
+  }
+
+  @override
   String get ledgersLocal => '本地账本';
 
   @override
@@ -8599,6 +8607,14 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get ledgerCardDownloadCloud => '下載雲帳本';
+
+  @override
+  String get ledgerCardCloudUploaded => '雲端上傳時間';
+
+  @override
+  String ledgersRestoreAllDuplicateSlots(String detail) {
+    return '注意：以下名稱在雲端存在多個槽位，全部復原會依次相互覆蓋，本機最終只保留其中一個（如需逐一選別，可先在上方卡片按 ID 與上傳時間選擇下載）：$detail';
+  }
 
   @override
   String get ledgersLocal => '本地帳本';

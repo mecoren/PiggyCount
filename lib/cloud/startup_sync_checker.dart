@@ -31,6 +31,7 @@ import '../services/billing/post_processor.dart';
 import '../services/data_import_service.dart';
 import '../services/system/logger_service.dart';
 import '../styles/tokens.dart';
+import '../utils/format_utils.dart';
 import '../widgets/ui/dialog.dart';
 import 'startup_sync_overlay.dart';
 import 'sync_metrics_service.dart';
@@ -697,6 +698,39 @@ class StartupSyncChecker {
     return dup;
   }
 
+  /// 云端发现新账本弹窗的完整文案拼装（消息体，不含标题/按钮）。
+  ///
+  /// 启动检查弹窗与云同步页「同步云端」的发现弹窗共用：同一批 metas、
+  /// 同一份「同名多槽位」警示行，避免两个入口行为漂移（一个警示另一个
+  /// 静默放行）。槽位信息片格式 = `短ID·上传时间(条数)`，新者在前。
+  static String newLedgersDialogMessage(
+      AppLocalizations l10n, List<RemoteLedgerMeta> metas) {
+    final displayNames = metas.map((m) => '${m.name}(${m.txCount})').join('、');
+    var message = l10n.startupSyncNewLedgersMessage(metas.length, displayNames);
+    final dupGroups = duplicateNameGroups(metas);
+    if (dupGroups.isNotEmpty) {
+      message = '$message\n${l10n.startupSyncDuplicateSlots(
+          _duplicateSlotsDetail(dupGroups))}';
+    }
+    return message;
+  }
+
+  /// 同名多槽位警示的明细串：`名称: 短ID·时间(条数)、…；名称: …`。
+  /// 短 ID 与账本管理页「云端账本」卡片同口径（formatSlotShortId）。
+  static String _duplicateSlotsDetail(
+      Map<String, List<RemoteLedgerMeta>> dupGroups) {
+    return dupGroups.entries
+        .map((e) {
+          final slots = e.value
+              .map((m) =>
+                  '${formatSlotShortId(m.slotKey)}'
+                  '·${formatCloudUploadDate(m.uploadedAt)}(${m.txCount})')
+              .join('、');
+          return '${e.key}: $slots';
+        })
+        .join('；');
+  }
+
   /// 合并后回传（merge-then-publish）：上传合并结果收敛本地/云端指纹。
   ///
   /// 只下载合并不回传时，指纹永不收敛，下次启动仍判 cloudNewer
@@ -1300,26 +1334,8 @@ class WidgetRefDeps implements StartupSyncCheckerDeps {
   @override
   Future<bool> showNewLedgersConfirmDialog(List<RemoteLedgerMeta> metas) async {
     final l10n = AppLocalizations.of(_context);
-    // 展示"名称(条数)"，让用户在下载前了解各账本规模
-    final displayNames = metas.map((m) => '${m.name}(${m.txCount})').join('、');
-    var message = l10n.startupSyncNewLedgersMessage(metas.length, displayNames);
-    // 同名多槽位甄别（两次实测 §4.2 改进点）：一键下载会引入重复账本，
-    // 追加警示行（槽位短 ID + 上传时间 + 条数，新者在前）。短 ID 与
-    // 账本管理页「远程账本」卡片一致，用户可按 ID 转去逐个甄别下载。
-    final dupGroups = StartupSyncChecker.duplicateNameGroups(metas);
-    if (dupGroups.isNotEmpty) {
-      final detail = dupGroups.entries
-          .map((e) {
-            final slots = e.value
-                .map((m) =>
-                    '${m.slotKey.length > 6 ? m.slotKey.substring(0, 6) : m.slotKey}'
-                    '·${_shortDate(m.uploadedAt)}(${m.txCount})')
-                .join('、');
-            return '${e.key}: $slots';
-          })
-          .join('；');
-      message = '$message\n${l10n.startupSyncDuplicateSlots(detail)}';
-    }
+    final message =
+        StartupSyncChecker.newLedgersDialogMessage(l10n, metas);
     final result = await AppDialog.confirm<bool>(
       _context,
       title: l10n.startupSyncNewLedgersTitle,
@@ -1328,15 +1344,6 @@ class WidgetRefDeps implements StartupSyncCheckerDeps {
       cancelLabel: l10n.startupSyncNewLedgersCancel,
     );
     return result ?? false;
-  }
-
-  /// 上传时间的展示级格式（yyyy-MM-dd HH:mm，本地时区）。null 显示 '?'。
-  static String _shortDate(DateTime? at) {
-    if (at == null) return '?';
-    final local = at.toLocal();
-    String two(int n) => n.toString().padLeft(2, '0');
-    return '${local.year}-${two(local.month)}-${two(local.day)} '
-        '${two(local.hour)}:${two(local.minute)}';
   }
 
   @override

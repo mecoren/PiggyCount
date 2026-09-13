@@ -12,6 +12,7 @@ import '../../styles/tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/billing/post_processor.dart';
 import '../../cloud/sync_service.dart';
+import '../../cloud/startup_sync_checker.dart';
 import '../../cloud/transactions_sync_manager.dart';
 import '../../cloud/backup/backup_scheduler.dart';
 import '../../cloud/backup/cloud_backup_providers.dart';
@@ -1195,29 +1196,27 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                                   : null;
 
                                           if (syncManager != null) {
-                                            // 1) 云端账本发现：新设备上云端有、
-                                            // 本地没有对应账本行的文件，不先导入
-                                            // 的话逐账本合并永远覆盖不到它们
-                                            //（语义对齐启动检查的发现流程）
-                                            try {
-                                              final metas = await syncManager
-                                                  .discoverRemoteLedgers();
-                                              if (metas.isNotEmpty &&
-                                                  context.mounted) {
-                                                final displayNames = metas
-                                                    .map((m) =>
-                                                        '${m.name}(${m.txCount})')
-                                                    .join('、');
-                                                final confirmed =
-                                                    await AppDialog.confirm<
-                                                            bool>(
+                                          // 1) 云端账本发现：新设备上云端有、
+                                          // 本地没有对应账本行的文件，不先导入
+                                          // 的话逐账本合并永远覆盖不到它们
+                                          //（语义对齐启动检查的发现流程；
+                                          //  弹窗文案也走同一拼装方法，
+                                          //  含同名多槽位警示——两个入口
+                                          //  行为一致，此处不再静默放行）
+                                          try {
+                                            final metas = await syncManager
+                                                .discoverRemoteLedgers();
+                                            if (metas.isNotEmpty &&
+                                                context.mounted) {
+                                              final confirmed =
+                                                  await AppDialog.confirm<
+                                                          bool>(
                                                           context,
                                                           title: l10n
                                                               .startupSyncNewLedgersTitle,
-                                                          message: l10n
-                                                              .startupSyncNewLedgersMessage(
-                                                                  metas.length,
-                                                                  displayNames),
+                                                          message: StartupSyncChecker
+                                                              .newLedgersDialogMessage(
+                                                                  l10n, metas),
                                                           okLabel: l10n
                                                               .startupSyncNewLedgersOk,
                                                           cancelLabel: l10n

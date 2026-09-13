@@ -854,6 +854,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get ledgerCardDownloadCloud => '클라우드에서 다운로드';
 
   @override
+  String get ledgerCardCloudUploaded => '클라우드 업로드 시간';
+
+  @override
+  String ledgersRestoreAllDuplicateSlots(String detail) {
+    return '주의: 클라우드에 같은 이름의 슬롯이 여러 개 있습니다. 모두 복원하면 차례로 덮어써지며 로컬에는 마지막 하나만 남습니다(특정 슬롯을 고르려면 위 카드에서 ID와 업로드 시간으로 개별 다운로드하세요): $detail';
+  }
+
+  @override
   String get ledgersLocal => '로컬 가계부';
 
   @override

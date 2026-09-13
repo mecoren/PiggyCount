@@ -437,6 +437,15 @@
     }
   },
   "ledgerCardDownloadCloud": "Download from Cloud",
+  "ledgerCardCloudUploaded": "Cloud uploaded at",
+  "ledgersRestoreAllDuplicateSlots": "Note: multiple cloud slots share these names. Restoring all will overwrite them one by one — only the last one will remain locally (to pick a specific slot, download individually from the cards above by ID and upload time): {detail}",
+  "@ledgersRestoreAllDuplicateSlots": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
   "ledgersLocal": "Local Ledgers",
   "ledgersRemote": "Cloud Ledgers",
   "ledgersEmpty": "No ledgers",

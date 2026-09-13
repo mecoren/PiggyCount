@@ -460,6 +460,15 @@
   "ledgersRecords": "笔数：{count}",
   "ledgersBalance": "余额：{balance}",
   "ledgerCardDownloadCloud": "下载云账本",
+  "ledgerCardCloudUploaded": "云端上传时间",
+  "ledgersRestoreAllDuplicateSlots": "注意：以下名称在云端存在多个槽位，全部恢复会依次相互覆盖，本地最终只保留其中一个（如需逐个甄别，可先在上方卡片按 ID 与上传时间选择下载）：{detail}",
+  "@ledgersRestoreAllDuplicateSlots": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
   "categoryTitle": "分类管理",
   "categoryNew": "新建分类",
   "categoryExpense": "支出",

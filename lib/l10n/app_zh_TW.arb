@@ -1492,6 +1492,15 @@
   "languageSystemDefault": "跟隨系統",
   "languageTitle": "語言設定",
   "ledgerCardDownloadCloud": "下載雲帳本",
+  "ledgerCardCloudUploaded": "雲端上傳時間",
+  "ledgersRestoreAllDuplicateSlots": "注意：以下名稱在雲端存在多個槽位，全部復原會依次相互覆蓋，本機最終只保留其中一個（如需逐一選別，可先在上方卡片按 ID 與上傳時間選擇下載）：{detail}",
+  "@ledgersRestoreAllDuplicateSlots": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
   "ledgerDefaultName": "預設帳本",
   "ledgerSelect": "選擇帳本",
   "ledgerSelectTitle": "選擇帳本",

@@ -206,3 +206,23 @@ String stripCurrencySymbolPrefix(String formatted, String symbol) {
       ? '-${body.substring(symbol.length).trimLeft()}'
       : body.substring(symbol.length).trimLeft();
 }
+
+/// 云端槽位 key 的展示级短 ID（前 6 位）。
+///
+/// 账本管理页「云端账本」卡片与各处同名多槽位警示弹窗**必须**走同一
+/// 口径（否则用户拿着弹窗里的短 ID 到卡片页对不上号，甄别承诺无法
+/// 兑现）。legacy 数字命名文件本身不足 6 位时原样返回。
+String formatSlotShortId(String slotKey) =>
+    slotKey.length > 6 ? slotKey.substring(0, 6) : slotKey;
+
+/// 云端快照上传时间的展示级格式（yyyy-MM-dd HH:mm，本地时区）。
+///
+/// 远程账本卡片/警示弹窗共用。null（老文件无 metadata/导出时间键）
+/// 显示 '?'，绝不拿发现时刻的本地时钟冒充云端时间。
+String formatCloudUploadDate(DateTime? at) {
+  if (at == null) return '?';
+  final local = at.toLocal();
+  String two(int n) => n.toString().padLeft(2, '0');
+  return '${local.year}-${two(local.month)}-${two(local.day)} '
+      '${two(local.hour)}:${two(local.minute)}';
+}

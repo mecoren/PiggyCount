@@ -866,6 +866,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ledgerCardDownloadCloud => 'Download from Cloud';
 
   @override
+  String get ledgerCardCloudUploaded => 'Cloud uploaded at';
+
+  @override
+  String ledgersRestoreAllDuplicateSlots(String detail) {
+    return 'Note: multiple cloud slots share these names. Restoring all will overwrite them one by one — only the last one will remain locally (to pick a specific slot, download individually from the cards above by ID and upload time): $detail';
+  }
+
+  @override
   String get ledgersLocal => 'Local Ledgers';
 
   @override
