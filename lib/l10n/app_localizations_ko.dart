@@ -4066,7 +4066,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get cloudSwitchConfirmMessage =>
-      '클라우드 서비스를 전환하면 현재 계정이 로그아웃됩니다. 전환하시겠습니까?';
+      '클라우드 서비스를 전환하면 현재 계정이 로그아웃됩니다. 전환하시겠습니까? 저장된 클라우드 자격 증명은 삭제되지 않으며 언제든 다시 전환할 수 있습니다.';
 
   @override
   String get cloudSwitchFailedTitle => '전환 실패';

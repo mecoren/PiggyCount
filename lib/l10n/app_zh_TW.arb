@@ -952,7 +952,7 @@
   "cloudSupabaseHelpTitle": "Supabase 設定說明",
   "cloudSupabaseUrlHint": "https://xxx.supabase.co",
   "cloudSupabaseUrlLabel": "Supabase URL",
-  "cloudSwitchConfirmMessage": "切換雲端服務將登出目前帳號。確認切換？",
+  "cloudSwitchConfirmMessage": "切換雲端服務將登出目前帳號。確認切換？已儲存的雲端服務憑證不會被刪除，可隨時切回。",
   "cloudSwitchConfirmTitle": "切換雲端服務",
   "cloudSwitchFailed": "切換失敗",
   "cloudSwitchFailedConfigMissing": "請先設定此雲端服務",

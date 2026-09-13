@@ -1296,7 +1296,7 @@
   "cloudTestFailedMessage": "연결에 실패했습니다",
   "cloudTestErrorTitle": "테스트 오류",
   "cloudSwitchConfirmTitle": "클라우드 서비스 전환",
-  "cloudSwitchConfirmMessage": "클라우드 서비스를 전환하면 현재 계정이 로그아웃됩니다. 전환하시겠습니까?",
+  "cloudSwitchConfirmMessage": "클라우드 서비스를 전환하면 현재 계정이 로그아웃됩니다. 전환하시겠습니까? 저장된 클라우드 자격 증명은 삭제되지 않으며 언제든 다시 전환할 수 있습니다.",
   "cloudSwitchFailedTitle": "전환 실패",
   "cloudSwitchFailedConfigMissing": "먼저 이 클라우드 서비스를 설정해 주세요",
   "cloudConfigInvalidTitle": "설정이 올바르지 않습니다",

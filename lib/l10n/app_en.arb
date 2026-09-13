@@ -1837,7 +1837,7 @@
   "cloudTestFailedMessage": "Connection failed",
   "cloudTestErrorTitle": "Test Error",
   "cloudSwitchConfirmTitle": "Switch Cloud Service",
-  "cloudSwitchConfirmMessage": "Switching cloud service will log out current account. Confirm switch?",
+  "cloudSwitchConfirmMessage": "Switching cloud service will log out current account. Confirm switch? Saved cloud credentials will not be deleted and can be switched back anytime.",
   "cloudSwitchFailedTitle": "Switch Failed",
   "cloudSwitchFailedConfigMissing": "Please configure this cloud service first",
   "cloudConfigInvalidTitle": "Invalid Configuration",

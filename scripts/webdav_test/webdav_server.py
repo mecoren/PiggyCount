@@ -9,10 +9,11 @@ PiggyCount WebDAV 同步测试服务器（单文件、无第三方依赖）
 - 数据落盘 ./data/ 目录, 带 .bin 附件对象(二进制)与 sidecar 元数据
   (app 的 webdav_storage_service 用 <path>.meta JSON sidecar 携带指纹)
 
-运行: python webdav_server.py  (默认 127.0.0.1:8443；如需从局域网访问,
-     改 HOST = "0.0.0.0" —— 注意本服务无强制鉴权, 勿暴露公网)
+运行: python webdav_server.py  (默认 127.0.0.1:8443；绑定地址/端口可用
+     --host/--port 或 WEBDAV_HOST/WEBDAV_PORT 环境变量覆盖。绑定非回环地址时
+     启动即打印警告——本服务不强制鉴权, 仅限本地测试, 勿暴露公网)
 """
-import base64
+import argparse
 import json
 import os
 import ssl
@@ -30,10 +31,11 @@ except Exception:
 # 默认只绑 loopback: 测试服务器不强制鉴权(规避 webdav_client 的
 # 401+keep-alive 竞态), 绑 0.0.0.0 会把无鉴权服务暴露到局域网;
 # Android 模拟器的 10.0.2.2 本就映射宿主 loopback, 127.0.0.1 已足够。
-HOST, PORT = "127.0.0.1", 8443
+# 需暴露局域网时显式 --host 0.0.0.0(启动时打印警告), 不必改源码。
+HOST = os.environ.get("WEBDAV_HOST", "127.0.0.1")
+PORT = int(os.environ.get("WEBDAV_PORT", "8443"))
 USER, PASSWORD = "pctest", "piggy123"
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
-AUTH = base64.b64encode(f"{USER}:{PASSWORD}".encode()).decode()
 
 os.makedirs(ROOT, exist_ok=True)
 
@@ -42,9 +44,18 @@ def fs_path(url_path: str) -> str:
     """URL 路径 -> 本地路径（防穿越）。/a/b.json -> ROOT/a/b.json"""
     rel = urllib.parse.unquote(url_path.lstrip("/"))
     p = os.path.normpath(os.path.join(ROOT, rel))
-    if not p.startswith(os.path.normpath(ROOT)):
+    root = os.path.normpath(ROOT)
+    # 前缀比较必须带分隔符: 裸 startswith(root) 会让兄弟目录 <ROOT>x/
+    # 绕过; 绝对路径(C:/ 或 UNC)拼入后不再位于 root 之下, 同样在此拦截
+    if p != root and not p.startswith(root + os.sep):
         raise ValueError("path traversal")
     return p
+
+
+def xml_escape(s: str) -> str:
+    """displayname 等文本节点的最小 XML 转义（& < > "）。"""
+    return (s.replace("&", "&amp;").replace("<", "&lt;")
+             .replace(">", "&gt;").replace('"', "&quot;"))
 
 
 def etag_of(path: str) -> str:
@@ -101,6 +112,11 @@ class WebDAVHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", "0")
         self.end_headers()
 
+    def _bad_request(self):
+        self.send_response(400)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     # ---- OPTIONS ----
     # webdav_client 1.2.2 的 wdWriteWithBytes/wdCopyMove 前置 wdOptions 探测:
     # 非 200 直接抛错,PUT/MOVE 根本不会发出。真实 WebDAV 服务器(坚果云/
@@ -122,21 +138,21 @@ class WebDAVHandler(BaseHTTPRequestHandler):
         if not self.authorized():
             return
         self._body()  # 排空 body
-        src = fs_path(self.path)
+        try:
+            src = fs_path(self.path)
+        except ValueError:
+            self._bad_request()
+            return
         dest_hdr = self.headers.get("Destination")
         if not dest_hdr:
-            self.send_response(400)
-            self.send_header("Content-Length", "0")
-            self.end_headers()
+            self._bad_request()
             return
         # Destination 形如 https://10.0.2.2:8443/piggycount/xxx.json —— 取 path 部分
         dest_rel = urllib.parse.urlparse(dest_hdr).path
         try:
             dst = fs_path(urllib.parse.unquote(dest_rel))
         except ValueError:
-            self.send_response(400)
-            self.send_header("Content-Length", "0")
-            self.end_headers()
+            self._bad_request()
             return
         overwrite = (self.headers.get("Overwrite", "T").upper() != "F")
         if not os.path.exists(src):
@@ -165,7 +181,11 @@ class WebDAVHandler(BaseHTTPRequestHandler):
         if not self.authorized():
             return
         data = self._body()
-        p = fs_path(self.path)
+        try:
+            p = fs_path(self.path)
+        except ValueError:
+            self._bad_request()
+            return
         os.makedirs(os.path.dirname(p), exist_ok=True)
         with open(p, "wb") as f:
             f.write(data)
@@ -178,7 +198,11 @@ class WebDAVHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if not self.authorized():
             return
-        p = fs_path(self.path)
+        try:
+            p = fs_path(self.path)
+        except ValueError:
+            self._bad_request()
+            return
         if not os.path.isfile(p):
             self._not_found()
             return
@@ -195,7 +219,11 @@ class WebDAVHandler(BaseHTTPRequestHandler):
     def do_HEAD(self):
         if not self.authorized():
             return
-        p = fs_path(self.path)
+        try:
+            p = fs_path(self.path)
+        except ValueError:
+            self._bad_request()
+            return
         if not os.path.isfile(p):
             self._not_found()
             return
@@ -205,15 +233,23 @@ class WebDAVHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     # ---- DELETE ----
+    # RFC 4918 §9.6.1: DELETE 集合应递归删除。此前对非空目录 os.rmdir
+    # 抛 OSError → 连接 500 断开; App 侧 webdav_storage_service 的
+    # _removeIfObsolete 清理目录时依赖该行为(客户端 c.remove 递归语义)。
     def do_DELETE(self):
         if not self.authorized():
             return
-        p = fs_path(self.path)
+        try:
+            p = fs_path(self.path)
+        except ValueError:
+            self._bad_request()
+            return
         if os.path.isfile(p):
             os.remove(p)
             self.send_response(204)
         elif os.path.isdir(p):
-            os.rmdir(p)
+            import shutil
+            shutil.rmtree(p)
             self.send_response(204)
         else:
             self._not_found()
@@ -226,7 +262,11 @@ class WebDAVHandler(BaseHTTPRequestHandler):
         if not self.authorized():
             return
         self._body()  # 排空 body
-        p = fs_path(self.path)
+        try:
+            p = fs_path(self.path)
+        except ValueError:
+            self._bad_request()
+            return
         if os.path.isdir(p):
             self.send_response(405)  # 已存在
         else:
@@ -241,7 +281,11 @@ class WebDAVHandler(BaseHTTPRequestHandler):
             return
         self._body()
         depth = self.headers.get("Depth", "1")
-        p = fs_path(self.path)
+        try:
+            p = fs_path(self.path)
+        except ValueError:
+            self._bad_request()
+            return
         # 根路径 PROPFIND 上 list: app 的 readDir 实现以 PROPFIND depth=1 实现
         base_exists = os.path.isdir(p) or os.path.isfile(p)
         if not base_exists:
@@ -273,7 +317,7 @@ class WebDAVHandler(BaseHTTPRequestHandler):
                 parts.append(
                     f"<D:response><D:href>{it[1]}</D:href>"
                     f"<D:propstat><D:prop>"
-                    f"<D:displayname>{urllib.parse.unquote(it[1].rstrip('/').split('/')[-1])}</D:displayname>"
+                    f"<D:displayname>{xml_escape(urllib.parse.unquote(it[1].rstrip('/').split('/')[-1]))}</D:displayname>"
                     f"<D:resourcetype><D:collection/></D:resourcetype>"
                     f"<D:getlastmodified>{it[2]}</D:getlastmodified>"
                     f"</D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat></D:response>")
@@ -281,7 +325,7 @@ class WebDAVHandler(BaseHTTPRequestHandler):
                 parts.append(
                     f"<D:response><D:href>{it[1]}</D:href>"
                     f"<D:propstat><D:prop>"
-                    f"<D:displayname>{urllib.parse.unquote(it[1].split('/')[-1])}</D:displayname>"
+                    f"<D:displayname>{xml_escape(urllib.parse.unquote(it[1].split('/')[-1]))}</D:displayname>"
                     f"<D:resourcetype/>"
                     f"<D:getlastmodified>{it[2]}</D:getlastmodified>"
                     f"<D:getcontentlength>{it[3]}</D:getcontentlength>"
@@ -309,6 +353,16 @@ class LoggingServer(ThreadingHTTPServer):
 
 
 def main():
+    global HOST, PORT
+    ap = argparse.ArgumentParser(
+        description="PiggyCount WebDAV 测试服务器（不强制鉴权，仅限本地测试）")
+    ap.add_argument("--host", default=HOST,
+                    help=f"绑定地址（默认 {HOST}；WEBDAV_HOST 环境变量同效）")
+    ap.add_argument("--port", type=int, default=PORT,
+                    help=f"端口（默认 {PORT}；WEBDAV_PORT 环境变量同效）")
+    args = ap.parse_args()
+    HOST, PORT = args.host, args.port
+
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     here = os.path.dirname(os.path.abspath(__file__))
     ctx.load_cert_chain(os.path.join(here, "server.crt"),
@@ -318,6 +372,9 @@ def main():
     print(f"[WebDAV test server] https://{HOST}:{PORT}  root={ROOT}")
     print(f"[auth] {USER} / {PASSWORD}")
     print(f"[data] {json.dumps({'files': len(os.listdir(ROOT))})}")
+    if HOST not in ("127.0.0.1", "localhost", "::1"):
+        print("[warn] 绑定了非回环地址——本服务不强制鉴权, "
+              "正在暴露到网络接口, 仅限本机测试环境使用!", file=sys.stderr)
     httpd.serve_forever()
 
 

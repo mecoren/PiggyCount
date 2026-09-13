@@ -7574,7 +7574,7 @@ abstract class AppLocalizations {
   /// No description provided for @cloudSwitchConfirmMessage.
   ///
   /// In en, this message translates to:
-  /// **'Switching cloud service will log out current account. Confirm switch?'**
+  /// **'Switching cloud service will log out current account. Confirm switch? Saved cloud credentials will not be deleted and can be switched back anytime.'**
   String get cloudSwitchConfirmMessage;
 
   /// No description provided for @cloudSwitchFailedTitle.

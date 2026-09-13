@@ -1190,7 +1190,7 @@
   "cloudCustomSupabaseTitle": "自定义 Supabase",
   "cloudCustomWebdavTitle": "自定义 WebDAV",
   "cloudSwitchConfirmTitle": "切换云服务",
-  "cloudSwitchConfirmMessage": "切换云服务将登出当前账号,确认切换?",
+  "cloudSwitchConfirmMessage": "切换云服务将登出当前账号,确认切换?已保存的云服务凭据不会被删除,可随时切回。",
   "cloudSwitchFailedTitle": "切换失败",
   "cloudSwitchFailedConfigMissing": "请先配置该云服务",
   "cloudConfigInvalidTitle": "配置无效",

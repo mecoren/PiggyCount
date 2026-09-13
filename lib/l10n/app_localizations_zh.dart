@@ -4038,7 +4038,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cloudSwitchConfirmTitle => '切换云服务';
 
   @override
-  String get cloudSwitchConfirmMessage => '切换云服务将登出当前账号,确认切换?';
+  String get cloudSwitchConfirmMessage =>
+      '切换云服务将登出当前账号,确认切换?已保存的云服务凭据不会被删除,可随时切回。';
 
   @override
   String get cloudSwitchFailedTitle => '切换失败';
@@ -11800,7 +11801,8 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get cloudSwitchConfirmTitle => '切換雲端服務';
 
   @override
-  String get cloudSwitchConfirmMessage => '切換雲端服務將登出目前帳號。確認切換？';
+  String get cloudSwitchConfirmMessage =>
+      '切換雲端服務將登出目前帳號。確認切換？已儲存的雲端服務憑證不會被刪除，可隨時切回。';
 
   @override
   String get cloudSwitchFailedTitle => '切換失敗';

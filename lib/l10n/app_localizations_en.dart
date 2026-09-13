@@ -4181,7 +4181,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cloudSwitchConfirmMessage =>
-      'Switching cloud service will log out current account. Confirm switch?';
+      'Switching cloud service will log out current account. Confirm switch? Saved cloud credentials will not be deleted and can be switched back anytime.';
 
   @override
   String get cloudSwitchFailedTitle => 'Switch Failed';
