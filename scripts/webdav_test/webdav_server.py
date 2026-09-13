@@ -9,7 +9,8 @@ PiggyCount WebDAV 同步测试服务器（单文件、无第三方依赖）
 - 数据落盘 ./data/ 目录, 带 .bin 附件对象(二进制)与 sidecar 元数据
   (app 的 webdav_storage_service 用 <path>.meta JSON sidecar 携带指纹)
 
-运行: python webdav_server.py  (默认 0.0.0.0:8443)
+运行: python webdav_server.py  (默认 127.0.0.1:8443；如需从局域网访问,
+     改 HOST = "0.0.0.0" —— 注意本服务无强制鉴权, 勿暴露公网)
 """
 import base64
 import json
@@ -26,7 +27,10 @@ try:
 except Exception:
     pass
 
-HOST, PORT = "0.0.0.0", 8443
+# 默认只绑 loopback: 测试服务器不强制鉴权(规避 webdav_client 的
+# 401+keep-alive 竞态), 绑 0.0.0.0 会把无鉴权服务暴露到局域网;
+# Android 模拟器的 10.0.2.2 本就映射宿主 loopback, 127.0.0.1 已足够。
+HOST, PORT = "127.0.0.1", 8443
 USER, PASSWORD = "pctest", "piggy123"
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 AUTH = base64.b64encode(f"{USER}:{PASSWORD}".encode()).decode()
