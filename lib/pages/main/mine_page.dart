@@ -35,6 +35,9 @@ import '../donation/donation_page.dart';
 class MinePage extends ConsumerWidget {
   const MinePage({super.key});
 
+  /// 主壳 Tab 懒加载入口(见 app.dart _LazyTab):首次切到我的 Tab 才 build。
+  static Widget builder(BuildContext context) => const MinePage();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authAsync = ref.watch(authServiceProvider);

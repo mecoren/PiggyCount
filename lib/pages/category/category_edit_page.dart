@@ -725,6 +725,12 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
                                 width: 48,
                                 height: 48,
                                 fit: BoxFit.cover,
+                                // 48px 预览格:钉住解码宽度,自定义图标
+                                // 原图不整张进内存。
+                                cacheWidth: (48 *
+                                        MediaQuery.devicePixelRatioOf(
+                                            context))
+                                    .round(),
                                 errorBuilder: (_, __, ___) => Icon(
                                   Icons.broken_image,
                                   size: 24,

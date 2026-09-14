@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -65,8 +66,46 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
   List<File> _pendingFiles = [];
   bool _isLoading = true;
 
-  /// 总项目数（已保存 + 待上传）
-  int get _totalCount => _savedAttachments.length + _pendingFiles.length;
+  /// 页内展示过的图片 provider,dispose 时逐个 evict 释放解码内存。
+  /// cacheWidth 路径的缓存 key 是 ResizeImage 而非 FileImage,必须用
+  /// provider.evict() 让 provider 自行解析 key,不能手拼 FileImage key。
+  final Set<ImageProvider<Object>> _displayedProviders = {};
+
+  /// 共享给所有页的 InteractiveViewer:新页挂载会把矩阵重置回 identity,
+  /// 监听器据此感知缩放档位变化。
+  final TransformationController _transformCtrl = TransformationController();
+
+  /// 是否需要原图解码(用户放大超过阈值)。ValueListenable 而非 setState:
+  /// 捏合过程每帧触发,setState 会重建整页 PageView,这里只重建图片。
+  final ValueNotifier<bool> _fullDecode = ValueNotifier(false);
+
+  /// 捏合结束后切档的去抖:缩放跨阈值来回抖动时避免每帧切换 cacheWidth
+  /// 触发重复解码。
+  Timer? _decodeModeDebounce;
+
+  void _onMatrixChanged() {
+    final scale = _transformCtrl.value.getMaxScaleOnAxis();
+    _decodeModeDebounce?.cancel();
+    _decodeModeDebounce = Timer(const Duration(milliseconds: 150), () {
+      if (mounted) _fullDecode.value = scale > 1.05;
+    });
+  }
+
+  /// 全屏预览图:缩略态按屏幕短边×dpr 解码(BoxFit.contain 不放大,铺满
+  /// 全屏够用);放大超过阈值后取消 cacheWidth 解码原图。4:3 的 4000×3000
+  /// 原图解码约 45MB,缩略态可省 90%+。
+  Widget _previewImage(File file, bool fullDecode) {
+    final provider = fullDecode
+        ? FileImage(file)
+        : ResizeImage.resizeIfNeeded(
+            (MediaQuery.sizeOf(context).shortestSide *
+                    MediaQuery.devicePixelRatioOf(context))
+                .round(),
+            null,
+            FileImage(file));
+    _displayedProviders.add(provider);
+    return Image(image: provider, fit: BoxFit.contain);
+  }
 
   @override
   void initState() {
@@ -74,6 +113,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: _currentIndex);
     _pendingFiles = List.from(widget.pendingFiles ?? []);
+    _transformCtrl.addListener(_onMatrixChanged);
 
     // 隐藏状态栏，显示为全屏沉浸式
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
@@ -106,9 +146,24 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
     }
   }
 
+  /// 总项目数（已保存 + 待上传）
+  int get _totalCount => _savedAttachments.length + _pendingFiles.length;
+
   @override
   void dispose() {
     _pageController.dispose();
+    _decodeModeDebounce?.cancel();
+    _fullDecode.dispose();
+    _transformCtrl.removeListener(_onMatrixChanged);
+    _transformCtrl.dispose();
+    // 释放本页翻过的图片解码缓存:连续翻多张大图时,前后页的解码帧会
+    // 驻留全局 imageCache 叠加撑高峰值。逐个 evict 后峰值只取决于
+    // 当前页一张图。provider.evict() 让 provider 自行解析缓存 key
+    // (cacheWidth 路径是 ResizeImage 包裹,手拼 FileImage key 匹配不上)。
+    for (final provider in _displayedProviders) {
+      provider.evict();
+    }
+    _displayedProviders.clear();
     // 恢复状态栏
     SystemChrome.setEnabledSystemUIMode(
       SystemUiMode.manual,
@@ -280,13 +335,18 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
           );
         }
 
+        // 缩略态:屏幕短边×dpr 解码即可铺满全屏(BoxFit.contain 不放大);
+        // InteractiveViewer 放大到 >1 时再按缩放档位换 cacheWidth 解码原图。
+        // 4:3 的 4000×3000 原图解码约 45MB,这里可省 90%+。
         return InteractiveViewer(
+          transformationController: _transformCtrl,
           minScale: 0.5,
           maxScale: 4.0,
           child: Center(
-            child: Image.file(
-              file,
-              fit: BoxFit.contain,
+            child: ValueListenableBuilder<bool>(
+              valueListenable: _fullDecode,
+              builder: (context, fullDecode, _) =>
+                  _previewImage(file, fullDecode),
             ),
           ),
         );
@@ -298,12 +358,14 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
     return Stack(
       children: [
         InteractiveViewer(
+          transformationController: _transformCtrl,
           minScale: 0.5,
           maxScale: 4.0,
           child: Center(
-            child: Image.file(
-              file,
-              fit: BoxFit.contain,
+            child: ValueListenableBuilder<bool>(
+              valueListenable: _fullDecode,
+              builder: (context, fullDecode, _) =>
+                  _previewImage(file, fullDecode),
             ),
           ),
         ),

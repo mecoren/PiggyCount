@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -29,7 +30,18 @@ IconData getCategoryIconData({Category? category, String? categoryName}) {
 
 /// 自定义图标相对路径 → 已解析绝对路径的进程级缓存。
 /// 列表行每次 rebuild 都会走 _buildCustomIcon,同一路径反复解析是纯浪费。
-final Map<String, String> _iconPathCache = {};
+/// LRU 上限:图标库可达数百张,无界 Map 长会话慢涨;超出时按插入序淘汰
+/// 最旧条目(LinkedHashMap 保持插入序,删除头元素即最久未解析路径)。
+const int _iconPathCacheLimit = 200;
+final Map<String, String> _iconPathCache = LinkedHashMap();
+
+/// 写入并执行 LRU 淘汰。
+void _cacheIconPath(String path, String absolutePath) {
+  _iconPathCache[path] = absolutePath;
+  while (_iconPathCache.length > _iconPathCacheLimit) {
+    _iconPathCache.remove(_iconPathCache.keys.first);
+  }
+}
 
 /// 分类图标组件
 /// 支持 Material Icons 和自定义图片
@@ -60,7 +72,7 @@ class CategoryIconWidget extends ConsumerWidget {
 
     // 检查是否有自定义图标
     if (category != null && category!.iconType == 'custom' && category!.customIconPath != null) {
-      return _buildCustomIcon(category!.customIconPath!, iconColor);
+      return _buildCustomIcon(context, category!.customIconPath!, iconColor);
     }
 
     // 使用 Material Icon
@@ -83,19 +95,21 @@ class CategoryIconWidget extends ConsumerWidget {
     return Icon(iconData, size: size, color: iconColor);
   }
 
-  Widget _buildCustomIcon(String path, Color fallbackColor) {
+  Widget _buildCustomIcon(BuildContext context, String path, Color fallbackColor) {
     // 解析结果按相对路径缓存:同一路径的解析结果恒定,解析过一次后
     // 后续 rebuild 直接同步渲染,不再走异步任务(列表滚动时的重复
     // 平台通道开销由此消除)。未完成前保持 FutureBuilder 路径。
     final cached = _iconPathCache[path];
-    if (cached is String) return _buildCustomIconBody(cached, fallbackColor);
+    if (cached is String) {
+      return _buildCustomIconBody(context, cached, fallbackColor);
+    }
     return FutureBuilder<String>(
       future: CustomIconService().resolveIconPath(path),
       builder: (context, snapshot) {
         final absolutePath = snapshot.data;
         if (absolutePath != null) {
-          _iconPathCache[path] = absolutePath;
-          return _buildCustomIconBody(absolutePath, fallbackColor);
+          _cacheIconPath(path, absolutePath);
+          return _buildCustomIconBody(context, absolutePath, fallbackColor);
         }
         // 加载中或失败,显示占位图标
         return Icon(
@@ -107,14 +121,18 @@ class CategoryIconWidget extends ConsumerWidget {
     );
   }
 
-  Widget _buildCustomIconBody(String absolutePath, Color fallbackColor) {
+  Widget _buildCustomIconBody(
+      BuildContext context, String absolutePath, Color fallbackColor) {
     final file = File(absolutePath);
 
     // 图标本身 - 不做圆角裁剪，但填满1:1区域
+    // cacheWidth:图标 24~48 逻辑像素,原图可达数百万像素;解码宽度钉在
+    // 显示尺寸×dpr,单张解码内存从数十 MB 降到几十 KB。
     final iconWidget = Image.file(
       file,
       width: size,
       height: size,
+      cacheWidth: (size * MediaQuery.devicePixelRatioOf(context)).round(),
       fit: BoxFit.cover, // 填满整个区域，保持1:1比例
       errorBuilder: (_, __, ___) => Icon(
         Icons.category,

@@ -299,6 +299,13 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
                                         key: ValueKey(effectiveAvatarPath),
                                         File(effectiveAvatarPath),
                                         fit: BoxFit.cover,
+                                        // 80px 头像格:解码宽度钉在 80×dpr,
+                                        // 头像原图(相机出图数 MB)不再整张进内存。
+                                        cacheWidth: (80.0.scaled(context, ref) *
+                                                MediaQuery
+                                                    .devicePixelRatioOf(
+                                                        context))
+                                            .round(),
                                         errorBuilder:
                                             (context, error, stackTrace) {
                                           return PiggyIcon(

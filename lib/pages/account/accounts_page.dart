@@ -29,6 +29,10 @@ class AccountsPage extends ConsumerStatefulWidget {
   final bool asTab;
   const AccountsPage({super.key, this.asTab = false});
 
+  /// 主壳 Tab 懒加载入口(见 app.dart _LazyTab):首次切到账户 Tab 才 build。
+  static Widget asTabBuilder(BuildContext context) =>
+      const AccountsPage(asTab: true);
+
   @override
   ConsumerState<AccountsPage> createState() => _AccountsPageState();
 }

@@ -339,6 +339,30 @@ class _TransferFormState extends ConsumerState<TransferForm> {
     return accounts;
   }
 
+  // FutureBuilder future 记忆化(审计 U8 同款):本组件在 build 里 future:
+  // _loadFilteredAccounts(),rebuild(选账户 setState / sharedResourceRefresh
+  // tick / 账本流更新)每次都会触发新的 getAllAccounts + filterAccountsForLedger
+  // 查询并闪 loading。账本/账本上下文/编辑对象不变时结果恒定,缓存上次
+  // future 让 rebuild 复用;账本切换(编辑态钉住集合也依赖 initial ids,
+  // 一并入键)时失效。
+  Future<List<Account>>? _accountsFuture;
+  int? _accountsFutureLedgerId;
+  String? _accountsFutureKey;
+
+  Future<List<Account>> _loadFilteredAccountsCached() {
+    final ledgerId = ref.read(currentLedgerIdProvider);
+    final key =
+        '${widget.editingTransactionId}-${widget.initialFromAccountId}-${widget.initialToAccountId}';
+    if (_accountsFuture == null ||
+        _accountsFutureLedgerId != ledgerId ||
+        _accountsFutureKey != key) {
+      _accountsFutureLedgerId = ledgerId;
+      _accountsFutureKey = key;
+      _accountsFuture = _loadFilteredAccounts();
+    }
+    return _accountsFuture!;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -350,7 +374,7 @@ class _TransferFormState extends ConsumerState<TransferForm> {
     ref.watch(sharedResourceRefreshProvider);
 
     return FutureBuilder<List<Account>>(
-      future: _loadFilteredAccounts(),
+      future: _loadFilteredAccountsCached(),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const Center(child: CircularProgressIndicator());

@@ -265,6 +265,10 @@ class UserProfilePoster extends StatelessWidget {
                   ? Image.file(
                       File(data.avatarPath!),
                       fit: BoxFit.cover,
+                      // 140px 海报头像钉住解码宽度。海报是 750px 固定画布
+                      // (RepaintBoundary 截图,与屏幕 dpr 无关),2x 头像
+                      // 280px 足够清晰,大图解码纯属浪费内存。
+                      cacheWidth: 280,
                       errorBuilder: (context, error, stackTrace) =>
                           _buildDefaultAvatar(),
                     )

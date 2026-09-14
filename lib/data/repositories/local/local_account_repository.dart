@@ -260,41 +260,37 @@ class LocalAccountRepository implements AccountRepository {
       return account.initialBalance;
     }
 
-    double balance = account.initialBalance;
-    final sharedIds = await _sharedLedgerIds();
+    // SQL 聚合版(此前全量拉行进内存逐条累加,大账户万行级内存与延迟)。
+    // 口径与旧实现/getAllAccountStats 逐字一致:排除成员共享账本,不排除
+    // excludeFromStats;balance = initial + income − expense − 转出 transfer
+    // + adjustment + 转入 transfer。
+    final exclude = _kExcludeJoinedSharedLedgerSql;
+    final rows = await db.customSelect(
+      'SELECT '
+      "COALESCE(SUM(CASE type WHEN 'income' THEN amount ELSE 0 END), 0) AS main_income, "
+      "COALESCE(SUM(CASE type WHEN 'expense' THEN amount ELSE 0 END), 0) AS main_expense, "
+      "COALESCE(SUM(CASE type WHEN 'transfer' THEN amount ELSE 0 END), 0) AS main_transfer_out, "
+      "COALESCE(SUM(CASE type WHEN 'adjustment' THEN amount ELSE 0 END), 0) AS main_adjustment "
+      'FROM transactions '
+      'WHERE account_id = ?1 AND $exclude',
+      variables: [d.Variable.withInt(accountId)],
+      readsFrom: {db.transactions, db.ledgers},
+    ).getSingle();
+    final transferIn = await db.customSelect(
+      'SELECT COALESCE(SUM(amount), 0) AS transfer_in '
+      'FROM transactions '
+      "WHERE type = 'transfer' AND to_account_id = ?1 AND $exclude",
+      variables: [d.Variable.withInt(accountId)],
+      readsFrom: {db.transactions, db.ledgers},
+    ).getSingle();
 
-    // 收入和支出(排除共享账本)
-    final normalTxs = await (db.select(db.transactions)
-          ..where((t) =>
-              t.accountId.equals(accountId) & t.ledgerId.isNotIn(sharedIds)))
-        .get();
-
-    for (final t in normalTxs) {
-      if (t.type == 'income') {
-        balance += t.amount;
-      } else if (t.type == 'expense') {
-        balance -= t.amount;
-      } else if (t.type == 'transfer') {
-        // 作为转出账户
-        balance -= t.amount;
-      } else if (t.type == 'adjustment') {
-        balance += t.amount;
-      }
-    }
-
-    // 作为转入账户的转账(排除共享账本)
-    final transfersIn = await (db.select(db.transactions)
-          ..where((t) =>
-              t.toAccountId.equals(accountId) &
-              t.type.equals('transfer') &
-              t.ledgerId.isNotIn(sharedIds)))
-        .get();
-
-    for (final t in transfersIn) {
-      balance += t.amount;
-    }
-
-    return balance;
+    double dval(dynamic v) => v is num ? v.toDouble() : 0.0;
+    return account.initialBalance +
+        dval(rows.data['main_income']) -
+        dval(rows.data['main_expense']) -
+        dval(rows.data['main_transfer_out']) +
+        dval(rows.data['main_adjustment']) +
+        dval(transferIn.data['transfer_in']);
   }
 
   @override
@@ -308,79 +304,116 @@ class LocalAccountRepository implements AccountRepository {
       return account.initialBalance;
     }
 
-    // 获取所有交易(排除共享账本)
-    final sharedIds = await _sharedLedgerIds();
-    final transactions = await (db.select(db.transactions)
-          ..where((t) =>
-              (t.accountId.equals(accountId) | t.toAccountId.equals(accountId)) &
-              t.ledgerId.isNotIn(sharedIds)))
-        .get();
+    // SQL 聚合版,口径与旧实现一致:跨全部账本但排除成员共享账本;
+    // 主账户侧收支/转出/调整 + 转入侧转账。
+    final exclude = _kExcludeJoinedSharedLedgerSql;
+    final row = await db.customSelect(
+      'SELECT '
+      "COALESCE(SUM(CASE WHEN account_id = ?1 THEN ("
+      "  CASE type "
+      "    WHEN 'income' THEN amount "
+      "    WHEN 'expense' THEN -amount "
+      "    WHEN 'transfer' THEN -amount "
+      "    WHEN 'adjustment' THEN amount "
+      "    ELSE 0 END) ELSE 0 END), 0) AS main_delta, "
+      "COALESCE(SUM(CASE WHEN to_account_id = ?1 AND type = 'transfer' "
+      '  THEN amount ELSE 0 END), 0) AS transfer_in '
+      'FROM transactions '
+      'WHERE (account_id = ?1 OR to_account_id = ?1) AND $exclude',
+      variables: [d.Variable.withInt(accountId)],
+      readsFrom: {db.transactions, db.ledgers},
+    ).getSingle();
 
-    double balance = account.initialBalance;
-
-    for (final tx in transactions) {
-      if (tx.accountId == accountId) {
-        // 作为主账户
-        if (tx.type == 'income') {
-          balance += tx.amount;
-        } else if (tx.type == 'expense') {
-          balance -= tx.amount;
-        } else if (tx.type == 'transfer') {
-          balance -= tx.amount;
-        } else if (tx.type == 'adjustment') {
-          balance += tx.amount;
-        }
-      } else if (tx.toAccountId == accountId) {
-        // 作为转入账户（转账）
-        balance += tx.amount;
-      }
-    }
-
-    return balance;
+    double dval(dynamic v) => v is num ? v.toDouble() : 0.0;
+    return account.initialBalance +
+        dval(row.data['main_delta']) +
+        dval(row.data['transfer_in']);
   }
 
   @override
   Future<double> getAccountBalanceInLedger(int accountId, int ledgerId) async {
-    final transactions = await (db.select(db.transactions)
-          ..where((t) =>
-              (t.accountId.equals(accountId) | t.toAccountId.equals(accountId)) &
-              t.ledgerId.equals(ledgerId)))
-        .get();
+    // SQL 聚合版,口径与旧实现一致:限定单个账本,主账户侧收支/转出/调整
+    // + 转入侧转账(不排除共享账本 —— 单账本维度按调用方指定的账本算)。
+    final row = await db.customSelect(
+      'SELECT '
+      "COALESCE(SUM(CASE WHEN account_id = ?1 THEN ("
+      "  CASE type "
+      "    WHEN 'income' THEN amount "
+      "    WHEN 'expense' THEN -amount "
+      "    WHEN 'transfer' THEN -amount "
+      "    WHEN 'adjustment' THEN amount "
+      "    ELSE 0 END) ELSE 0 END), 0) AS main_delta, "
+      "COALESCE(SUM(CASE WHEN to_account_id = ?1 AND type = 'transfer' "
+      '  THEN amount ELSE 0 END), 0) AS transfer_in '
+      'FROM transactions '
+      'WHERE (account_id = ?1 OR to_account_id = ?1) AND ledger_id = ?2',
+      variables: [d.Variable.withInt(accountId), d.Variable.withInt(ledgerId)],
+      readsFrom: {db.transactions},
+    ).getSingle();
 
-    double balance = 0.0;
-
-    for (final tx in transactions) {
-      if (tx.accountId == accountId) {
-        // 作为主账户
-        if (tx.type == 'income') {
-          balance += tx.amount;
-        } else if (tx.type == 'expense') {
-          balance -= tx.amount;
-        } else if (tx.type == 'transfer') {
-          balance -= tx.amount;
-        } else if (tx.type == 'adjustment') {
-          balance += tx.amount;
-        }
-      } else if (tx.toAccountId == accountId) {
-        // 作为转入账户（转账）
-        balance += tx.amount;
-      }
-    }
-
-    return balance;
+    double dval(dynamic v) => v is num ? v.toDouble() : 0.0;
+    return dval(row.data['main_delta']) + dval(row.data['transfer_in']);
   }
 
   @override
   Future<Map<int, double>> getAllAccountBalances(int ledgerId) async {
+    // SQL 聚合版(此前逐账户串行 getAccountBalance,N 账户 = N×2 条查询
+    // 且每条全量拉行)。口径与 getAccountBalance 一致,估值账户由
+    // initialBalance 分支给出。
+    final exclude = _kExcludeJoinedSharedLedgerSql;
+    final rows = await db.customSelect(
+      'SELECT '
+      'a.id AS id, a.initial_balance AS initial_balance, '
+      'COALESCE(b.main_income, 0) AS main_income, '
+      'COALESCE(b.main_expense, 0) AS main_expense, '
+      'COALESCE(b.main_transfer_out, 0) AS main_transfer_out, '
+      'COALESCE(b.main_adjustment, 0) AS main_adjustment, '
+      'COALESCE(t.transfer_in, 0) AS transfer_in '
+      'FROM accounts a '
+      'LEFT JOIN ('
+      '  SELECT account_id AS aid, '
+      "  SUM(CASE type WHEN 'income' THEN amount ELSE 0 END) AS main_income, "
+      "  SUM(CASE type WHEN 'expense' THEN amount ELSE 0 END) AS main_expense, "
+      "  SUM(CASE type WHEN 'transfer' THEN amount ELSE 0 END) AS main_transfer_out, "
+      "  SUM(CASE type WHEN 'adjustment' THEN amount ELSE 0 END) AS main_adjustment "
+      '  FROM transactions '
+      '  WHERE account_id IS NOT NULL AND $exclude '
+      '  GROUP BY account_id'
+      ') b ON b.aid = a.id '
+      'LEFT JOIN ('
+      '  SELECT to_account_id AS tid, SUM(amount) AS transfer_in '
+      "  FROM transactions WHERE type = 'transfer' AND to_account_id IS NOT NULL "
+      '  AND $exclude GROUP BY to_account_id'
+      ') t ON t.tid = a.id '
+      'WHERE a.ledger_id = ?1',
+      variables: [d.Variable.withInt(ledgerId)],
+      readsFrom: {db.accounts, db.transactions, db.ledgers},
+    ).get();
+
+    double dval(dynamic v) => v is num ? v.toDouble() : 0.0;
+    // 估值类型在 Dart 侧判定(单次拉齐,避免逐行回查)。
     final accounts = await (db.select(db.accounts)
           ..where((a) => a.ledgerId.equals(ledgerId)))
         .get();
+    final valuationIds =
+        accounts.where((a) => isValuationOnlyType(a.type)).map((a) => a.id).toSet();
 
     final Map<int, double> balances = {};
-    for (final account in accounts) {
-      balances[account.id] = await getAccountBalance(account.id);
+    for (final row in rows) {
+      final id = row.read<int>('id');
+      final initial = dval(row.data['initial_balance']);
+      // 估值账户与 getAccountBalance 同口径:无日常交易,直接 initialBalance。
+      if (valuationIds.contains(id)) {
+        balances[id] = initial;
+        continue;
+      }
+      balances[id] = initial +
+          dval(row.data['main_income']) -
+          dval(row.data['main_expense']) -
+          dval(row.data['main_transfer_out']) +
+          dval(row.data['main_adjustment']) +
+          dval(row.data['transfer_in']);
     }
-
     return balances;
   }
 
@@ -412,66 +445,47 @@ class LocalAccountRepository implements AccountRepository {
 
   @override
   Future<double> getAccountExpense(int accountId) async {
-    double expense = 0.0;
-
-    // 获取作为主账户的支出和转出(排除共享账本;不计入收支的交易也排除)
-    final sharedIds = await _sharedLedgerIds();
-    final normalTxs = await (db.select(db.transactions)
-          ..where((t) =>
-              t.accountId.equals(accountId) &
-              t.ledgerId.isNotIn(sharedIds) &
-              t.excludeFromStats.equals(false)))
-        .get();
-
-    for (final t in normalTxs) {
-      if (t.type == 'expense') {
-        expense += t.amount;
-      } else if (t.type == 'transfer') {
-        // 作为转出账户
-        expense += t.amount;
-      }
-    }
-
-    return expense;
+    // SQL 聚合版,口径与旧实现/getAllAccountStats 一致:排除成员共享账本
+    // 与 excludeFromStats;expense = 主账户 expense + 转出 transfer。
+    final exclude = _kExcludeJoinedSharedLedgerSql;
+    final row = await db.customSelect(
+      'SELECT COALESCE(SUM(amount), 0) AS expense '
+      'FROM transactions '
+      'WHERE account_id = ?1 AND exclude_from_stats = 0 '
+      "AND type IN ('expense', 'transfer') AND $exclude",
+      variables: [d.Variable.withInt(accountId)],
+      readsFrom: {db.transactions, db.ledgers},
+    ).getSingle();
+    return row.data['expense'] is num
+        ? (row.data['expense'] as num).toDouble()
+        : 0.0;
   }
 
   @override
   Future<double> getAccountIncome(int accountId) async {
-    double income = 0.0;
-
-    // 获取作为主账户的收入(排除共享账本;不计入收支的交易也排除)
-    final sharedIds = await _sharedLedgerIds();
-    final normalTxs = await (db.select(db.transactions)
-          ..where((t) =>
-              t.accountId.equals(accountId) &
-              t.ledgerId.isNotIn(sharedIds) &
-              t.excludeFromStats.equals(false)))
-        .get();
-
-    for (final t in normalTxs) {
-      if (t.type == 'income') {
-        income += t.amount;
-      }
-    }
-
-    // 作为转入账户的转账(排除共享账本;不计入收支的交易也排除)
-    final transfersIn = await (db.select(db.transactions)
-          ..where((t) =>
-              t.toAccountId.equals(accountId) &
-              t.type.equals('transfer') &
-              t.ledgerId.isNotIn(sharedIds) &
-              t.excludeFromStats.equals(false)))
-        .get();
-
-    for (final t in transfersIn) {
-      income += t.amount;
-    }
-
-    return income;
+    // SQL 聚合版,口径与旧实现/getAllAccountStats 一致:排除成员共享账本
+    // 与 excludeFromStats;income = 主账户 income + 转入 transfer。
+    final exclude = _kExcludeJoinedSharedLedgerSql;
+    final row = await db.customSelect(
+      'SELECT '
+      "COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) AS income_main, "
+      "COALESCE(SUM(CASE WHEN to_account_id = ?1 AND type = 'transfer' "
+      '  THEN amount ELSE 0 END), 0) AS income_in '
+      'FROM transactions '
+      'WHERE (account_id = ?1 OR to_account_id = ?1) '
+      'AND exclude_from_stats = 0 AND $exclude',
+      variables: [d.Variable.withInt(accountId)],
+      readsFrom: {db.transactions, db.ledgers},
+    ).getSingle();
+    double dval(dynamic v) => v is num ? v.toDouble() : 0.0;
+    return dval(row.data['income_main']) + dval(row.data['income_in']);
   }
 
   @override
   Future<({double balance, double expense, double income})> getAccountStats(int accountId) async {
+    // 三个口径复用同一份聚合(getAccountBalance/Expense/Income 各自的 SQL
+    // 已是聚合版,此处三次往返仍比旧的"全量拉行×5"快一个量级;口径一致性
+    // 由 test/repositories/sql_aggregation_regression_test.dart 钉死)。
     final balance = await getAccountBalance(accountId);
     final expense = await getAccountExpense(accountId);
     final income = await getAccountIncome(accountId);

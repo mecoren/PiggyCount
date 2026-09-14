@@ -964,6 +964,16 @@ class _HomePageState extends ConsumerState<HomePage> {
                             .toList() ??
                         []);
 
+                // Stream 首帧已到 → 启动预载缓存(20 条含标签/附件详情的
+                // 拷贝)完成使命,post-frame 清空避免与 Stream 全量数据双份
+                // 常驻。列表详情在 Stream 模式下由 TransactionList 自行
+                // 按需批量加载,不依赖这份缓存。
+                if (hasStreamData && cachedFullData != null) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    ref.read(cachedTransactionsProvider.notifier).state = null;
+                  });
+                }
+
                 return TransactionList(
                   key: _transactionListKey,
                   transactions: transactions,

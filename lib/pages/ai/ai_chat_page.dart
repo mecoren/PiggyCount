@@ -498,6 +498,10 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
         child: Image.file(
           File(_userAvatarPath!),
           fit: BoxFit.cover,
+          // 32px 头像:解码宽度钉在显示尺寸×dpr,头像原图不整张进内存。
+          cacheWidth: (32.0.scaled(context, ref) *
+                  MediaQuery.devicePixelRatioOf(context))
+              .round(),
           errorBuilder: (context, error, stackTrace) {
             // 加载失败时不显示
             return const SizedBox.shrink();

@@ -159,6 +159,11 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
   }
 
   Widget _buildImage(int index, bool isAttachment) {
+    // 3 列网格格位约 = 屏宽/3,按该宽度×dpr 解码即可,原图直解在批量
+    // 导出场景下会把数百张图各数十 MB 的解码内存叠进 imageCache。
+    final cellPx = (MediaQuery.sizeOf(context).width / 3 *
+            MediaQuery.devicePixelRatioOf(context))
+        .round();
     if (widget.exportData != null) {
       // 本地文件
       final file = isAttachment
@@ -167,6 +172,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
       return Image.file(
         file,
         fit: BoxFit.cover,
+        cacheWidth: cellPx,
         errorBuilder: (context, error, stackTrace) {
           return Container(
             color: PiggyTokens.surface(context),
@@ -185,6 +191,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
       return Image.memory(
         item.bytes,
         fit: BoxFit.cover,
+        cacheWidth: cellPx,
         errorBuilder: (context, error, stackTrace) {
           return Container(
             color: PiggyTokens.surface(context),
@@ -211,13 +218,26 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
           ? widget.exportData!.attachments[index]
           : widget.exportData!.customIcons[index];
       fileName = file.path.split('/').last;
-      imageWidget = Image.file(file);
+      // 弹窗全屏查看:按屏幕宽×dpr 解码足够( Dialog 内容宽 ≤ 屏宽)。
+      imageWidget = Image.file(
+        file,
+        cacheWidth:
+            (MediaQuery.sizeOf(context).width *
+                    MediaQuery.devicePixelRatioOf(context))
+                .round(),
+      );
     } else {
       final item = isAttachment
           ? widget.archiveData!.attachments[index]
           : widget.archiveData!.customIcons[index];
       fileName = item.fileName;
-      imageWidget = Image.memory(item.bytes);
+      imageWidget = Image.memory(
+        item.bytes,
+        cacheWidth:
+            (MediaQuery.sizeOf(context).width *
+                    MediaQuery.devicePixelRatioOf(context))
+                .round(),
+      );
     }
 
     showDialog(

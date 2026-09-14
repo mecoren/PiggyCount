@@ -49,11 +49,14 @@ class PiggyApp extends ConsumerStatefulWidget {
 
 class _PiggyAppState extends ConsumerState<PiggyApp>
     with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+  // 底部 4 Tab 懒加载(见 _LazyTab):首页恒激活,其余 3 个 Tab 首次
+  // 切换到才 build。冷启动构建量 4 Tab → 1 Tab;分析页图表控制器、
+  // 账户页首查、我的页设置读取全部延迟到真正进入。已构建保活。
   final _pages = const [
     HomePage(),
-    AnalyticsPage(),
-    AccountsPage(asTab: true),
-    MinePage(),
+    _LazyTab(id: 1, builder: AnalyticsPage.builder),
+    _LazyTab(id: 2, builder: AccountsPage.asTabBuilder),
+    _LazyTab(id: 3, builder: MinePage.builder),
   ];
 
   // 双击检测：记录最后一次点击的时间和索引
@@ -853,9 +856,12 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
         children: [
           Scaffold(
             extendBody: false, // 底部栏贴底固定，为内容预留空间
-            body: IndexedStack(
+            body: _ActiveTabIndex(
               index: idx,
-              children: _pages,
+              child: IndexedStack(
+                index: idx,
+                children: _pages,
+              ),
             ),
             bottomNavigationBar: _PiggyBottomBar(
               currentIndex: idx,
@@ -1287,3 +1293,45 @@ class _SpeedDialOverlay extends StatelessWidget {
   }
 }
 
+
+
+/// 当前激活 tab 索向 [_LazyTab] 的广播。InheritedWidget 而非遍历回调:
+/// IndexedStack 每次 tab 切换只 rebuild 自身,_LazyTab 依赖本 widget,
+/// 自身 id 与当前 index 相等时永久激活,一次 build 完成懒加载判定。
+class _ActiveTabIndex extends InheritedWidget {
+  final int index;
+
+  const _ActiveTabIndex({required this.index, required super.child});
+
+  @override
+  bool updateShouldNotify(_ActiveTabIndex old) => old.index != index;
+
+  static _ActiveTabIndex of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_ActiveTabIndex>()!;
+}
+
+/// 底部 Tab 懒加载:首帧只构建首页,其余 Tab 首次切换到才 build,
+/// 已构建的保持存活(保留滚动位置/状态,与全量 IndexedStack 语义一致,
+/// 同 transaction_editor_page 的懒 IndexedStack 范式)。
+class _LazyTab extends StatefulWidget {
+  final int id;
+  final WidgetBuilder builder;
+
+  const _LazyTab({required this.id, required this.builder});
+
+  @override
+  State<_LazyTab> createState() => _LazyTabState();
+}
+
+class _LazyTabState extends State<_LazyTab> {
+  bool _activated = false;
+
+  @override
+  Widget build(BuildContext context) {
+    // 首次成为当前 tab 时激活(永久,不回退)。home 页恒 0 号,不需要包装。
+    if (!_activated && _ActiveTabIndex.of(context).index == widget.id) {
+      _activated = true;
+    }
+    return _activated ? widget.builder(context) : const SizedBox.shrink();
+  }
+}

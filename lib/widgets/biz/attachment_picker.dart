@@ -382,6 +382,11 @@ class _AttachmentThumbnail extends ConsumerWidget {
                       fit: BoxFit.cover,
                       width: size,
                       height: size,
+                      // 缩略文件本身已被压到 200px,再按显示尺寸×dpr 钉
+                      // 住解码宽度,大字体缩放档位下也不超配。
+                      cacheWidth:
+                          (size * MediaQuery.devicePixelRatioOf(context))
+                              .round(),
                     );
                   }
                   return Center(
@@ -469,6 +474,10 @@ class _PendingFileThumbnail extends ConsumerWidget {
                   fit: BoxFit.cover,
                   width: size,
                   height: size,
+                  // 待上传文件还是原图(压缩发生在保存时),64px 格位直解
+                  // 4000px 原图是数十 MB 级浪费。
+                  cacheWidth:
+                      (size * MediaQuery.devicePixelRatioOf(context)).round(),
                 ),
                 // 待上传的半透明遮罩
                 Container(

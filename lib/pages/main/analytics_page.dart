@@ -22,6 +22,9 @@ import '../../utils/analytics_average.dart';
 class AnalyticsPage extends ConsumerStatefulWidget {
   const AnalyticsPage({super.key});
 
+  /// 主壳 Tab 懒加载入口(见 app.dart _LazyTab):首次切到分析 Tab 才 build。
+  static Widget builder(BuildContext context) => const AnalyticsPage();
+
   @override
   ConsumerState<AnalyticsPage> createState() => _AnalyticsPageState();
 }

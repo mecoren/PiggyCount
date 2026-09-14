@@ -44,6 +44,12 @@ final GlobalKey<NavigatorState> globalNavigatorKey = GlobalKey<NavigatorState>()
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 图片解码缓存上限:默认 1000 条/100MB,重度用户连翻大附件时可逼近上限
+  // 仍嫌过大;配合各处 cacheWidth 降采样,收紧到 500 条/50MB 足以容纳典型
+  // 工作集(缩略图 + 头像 + 图标),超出按 LRU 逐出。必须首帧解码前设置。
+  PaintingBinding.instance.imageCache.maximumSize = 500;
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 50 << 20; // 50MB
+
   // 全局异常兜底:release 下未捕获异常不再只进系统日志,统一持久化到
   // 日志中心(48h 本地),用户报障时可在「日志中心」页导出给开发者定位。
   // widget_manager 渲染窗口内的临时接管(渲染完即还原)与本钩子链式兼容:
