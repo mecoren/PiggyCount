@@ -36,7 +36,17 @@ class BackupFileInfo {
 }
 
 /// 单次备份结果
-typedef BackupOutcome = ({int ledgers, int attachments, String fileName});
+/// [attachmentsSkipped] 物理文件缺失被跳过的附件数（孤儿行，不影响
+/// 备份完整性——缺失文件本就不在本地）。
+/// [attachmentsTotalBytes] 打包附件的原始字节总量（BKV-1：备份为全
+/// 内存装配 ZIP，大附件库有 OOM 风险，调用方据总量给出阈值告警）。
+typedef BackupOutcome = ({
+  int ledgers,
+  int attachments,
+  int attachmentsSkipped,
+  int attachmentsTotalBytes,
+  String fileName
+});
 
 /// 单次恢复结果
 /// [skippedRecurring] 恢复侧周期实例去重跳过数（REC-05：同规则同日且
@@ -84,7 +94,7 @@ class CloudBackupService {
   /// 指标分组用的后端标识；未设置时记 'unknown'（不影响计数，仅分组）。
   final String metricsBackend;
 
-  Future<Directory> Function() _documentsDir;
+  final Future<Directory> Function() _documentsDir;
 
   /// P0-1：备份场景埋点（含 backend 分组）。备份恢复的软失败
   /// （单账本 failed>0 但整体流程完成）单独计 soft_fail。
@@ -121,6 +131,26 @@ class CloudBackupService {
 
   /// 云端备份专用目录
   static const String backupDir = 'piggycount-bak';
+
+  /// BKV-1 附件总量告警阈值（200MB）。超过此值的全内存 ZIP 装配在
+  /// 典型移动端（可用堆 ~512MB-1GB）峰值内存约 3 倍总量，OOM 风险
+  /// 显著。仅告警不阻断——备份完整性优先于稳定性风险，由用户决定
+  /// 是否精简附件库。流式/分卷为完整修复方向（设计评审项）。
+  static const int attachmentThresholdBytes = 200 * 1024 * 1024;
+
+  /// 字节数人类可读格式（日志/告警用）
+  static String _fmtBytes(int bytes) {
+    if (bytes >= 1024 * 1024 * 1024) {
+      return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)}GB';
+    }
+    if (bytes >= 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
+    }
+    if (bytes >= 1024) {
+      return '${(bytes / 1024).toStringAsFixed(0)}KB';
+    }
+    return '${bytes}B';
+  }
 
   /// 合法备份文件名：PiggyCount-yyyy-MM-dd.zip
   static final RegExp _backupNamePattern =
@@ -193,6 +223,8 @@ class CloudBackupService {
       final attDir = Directory('${appDir.path}/attachments');
       var attDone = 0;
       var attPacked = 0;
+      var attSkipped = 0;
+      var attTotalBytes = 0;
       for (final entry in filesBySha.entries) {
         String? srcPath;
         for (final name in entry.value) {
@@ -203,15 +235,30 @@ class CloudBackupService {
           }
         }
         if (srcPath == null) {
+          attSkipped++;
           logger.warning('Backup', '附件本地文件缺失，跳过打包: sha256=${entry.key}');
         } else {
           final bytes = await File(srcPath).readAsBytes();
+          attTotalBytes += bytes.length;
           archive.addFile(ArchiveFile(
               'attachments/${entry.key}.bin', bytes.length, bytes));
           attPacked++;
         }
         attDone++;
         onAttachmentsProgress?.call(attDone, filesBySha.length);
+      }
+
+      // BKV-1（审计 2026-09-12 P1）止血告警：备份为全内存装配 ZIP，
+      // 附件总量超过阈值时峰值内存约为总量 3 倍（读入 + ZIP + base64/
+      // 加密中间态），移动端大附件库可能在上传前 OOM 崩溃且当日备份
+      // 丢失。超阈值仍继续（备份完整性优先），但告警日志 + 结果字段
+      // 透传，调用方可提示用户精简附件库或关注备份稳定性。
+      // 流式/分卷方案列入后续设计评审（BKV-1 完整修复）。
+      if (attTotalBytes > attachmentThresholdBytes) {
+        logger.warning('Backup',
+            '附件总量 ${_fmtBytes(attTotalBytes)} 超过阈值 '
+            '${_fmtBytes(attachmentThresholdBytes)}，备份内存峰值风险高'
+            '（全内存装配 ZIP，BKV-1 已知边界）');
       }
 
       // 3. ZIP → 二进制上传（upsert 语义天然实现当日覆盖）。
@@ -226,11 +273,14 @@ class CloudBackupService {
           path: '$backupDir/$fileName', bytes: zipData);
 
       logger.info('Backup',
-          '备份完成: $fileName 账本=${ledgers.length} 附件=$attPacked');
+          '备份完成: $fileName 账本=${ledgers.length} 附件=$attPacked '
+          '(跳过=$attSkipped, ${_fmtBytes(attTotalBytes)})');
       _recordMetrics(SyncOpOutcome.success, duration: watch.elapsed);
       return (
         ledgers: ledgers.length,
         attachments: attPacked,
+        attachmentsSkipped: attSkipped,
+        attachmentsTotalBytes: attTotalBytes,
         fileName: fileName
       );
     } catch (e) {

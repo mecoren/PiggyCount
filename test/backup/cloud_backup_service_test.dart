@@ -121,6 +121,9 @@ void main() {
 
     expect(out.ledgers, 1);
     expect(out.attachments, 1);
+    // BKV-1：结果透传附件总量与跳过数（阈值告警的数据源）
+    expect(out.attachmentsTotalBytes, 3, reason: '唯一附件 3 字节');
+    expect(out.attachmentsSkipped, 0, reason: '附件物理文件在位，无跳过');
     final key =
         'piggycount-bak/PiggyCount-${BackupScheduler.formatDate(DateTime.now())}.zip';
     expect(storage.files.containsKey(key), isTrue,
@@ -131,6 +134,36 @@ void main() {
     final ledgerJson =
         utf8.decode(archive.findFile('ledger_$id.json')!.content as List<int>);
     expect((jsonDecode(ledgerJson) as Map)['ledgerName'], 'Main');
+  });
+
+  test('BKV-1：孤儿附件行计入 attachmentsSkipped，不阻断备份', () async {
+    final id = await addLedger('Main');
+    await addTx(id);
+    // DB 挂载 2 个附件行（不同 sha），本地物理文件只放 1 个
+    const shaOk = 'aabbccdd00112233';
+    const shaOrphan = 'deadbeefdeadbeef';
+    final txs = await (db.select(db.transactions)
+          ..where((t) => t.ledgerId.equals(id)))
+        .get();
+    for (final sha in [shaOk, shaOrphan]) {
+      await db.into(db.transactionAttachments).insert(
+          TransactionAttachmentsCompanion.insert(
+              transactionId: txs.first.id,
+              fileName: 'f_$sha.jpg',
+              fileSize: const drift.Value(3),
+              localSha256: drift.Value(sha)));
+    }
+    await addAttachmentFile('f_$shaOk.jpg', [1, 2, 3]);
+
+    final out = await service.createBackup();
+
+    expect(out.attachments, 1, reason: '只有物理在位的附件被打包');
+    expect(out.attachmentsSkipped, 1, reason: '孤儿行（文件缺失）计入跳过');
+    expect(out.attachmentsTotalBytes, 3);
+    // 备份本身正常产出（缺文件不阻断，对齐 uploadAttachmentObjects 口径）
+    expect(storage.files.keys
+        .where((k) => k.startsWith('piggycount-bak/'))
+        .length, 1);
   });
 
   test('同日再次备份覆盖同一文件（只留一份，内容为最新）', () async {

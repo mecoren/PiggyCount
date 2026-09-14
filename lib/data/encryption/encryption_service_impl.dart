@@ -497,6 +497,7 @@ class EncryptionServiceImpl implements EncryptionService {
   /// 幂等续跑云端重加密（salt 已等于 newSalt 的文件自动跳过）→
   /// 完成本地持久化与激活 → 清除检查点。返回 true 表示有检查点且
   /// 恢复成功；false 表示无待恢复的改密。
+  @override
   Future<bool> recoverPendingRekey({
     required CloudStorageService cloudStorage,
   }) async {
@@ -675,8 +676,8 @@ class EncryptionServiceImpl implements EncryptionService {
   /// - [reEncryptExistingCloudData] 用当前 active key 既解密又加密（无法用于密钥轮换）
   /// - 本方法用 oldKey 解密旧密文、用 newKey 加密为新密文，专为密钥轮换设计
   ///
-  /// 流程：遍历 `ledger_*.json` 与 `attachments/*.bin` → 下载 → 用 oldKey
-  /// 解密 → 用 newKey 加密 → 上传
+  /// 流程：遍历 `ledger_*.json`、`attachments/*.bin` 与 `piggycount-bak/*.zip`
+  /// → 下载 → 用 oldKey 解密 → 用 newKey 加密 → 上传
   /// - 跳过 legacy 明文（非 BEECRYPT1: 格式）：后续 sync 会自动加密
   /// - salt 不匹配 oldSalt 的密文：跳过（无法解密），计入 failed
   /// - 单文件失败不中断整体流程
@@ -684,6 +685,11 @@ class EncryptionServiceImpl implements EncryptionService {
   /// 审计 A1：目标集合与下载方式对齐 [reEncryptExistingCloudData] ——
   /// 纳入附件二进制对象、字节感知下载；原生二进制按装饰器信封格式
   /// base64 化后再加密，保证读回路径一致。
+  ///
+  /// 审计 BKV-2：目标集合纳入云端备份目录 piggycount-bak/ —— 此前 rekey
+  /// 只处理账本快照与附件，改密后历史备份 ZIP（E2EE 下为旧钥密文）永久
+  /// 不可解密，灾难恢复能力静默失效。备份 ZIP 是二进制对象（装饰器
+  /// uploadBinary 路径产物），下载走字节感知通道，与附件同口径。
   Future<ReEncryptResult> _reEncryptCloudDataWithKeys({
     required CloudStorageService cloudStorage,
     required Uint8List oldKey,
@@ -701,11 +707,16 @@ class EncryptionServiceImpl implements EncryptionService {
     final failedPaths = <String>[];
     final successPaths = <String>[];
 
-    // 目标集合：账本快照（根列表）+ 附件对象（子目录枚举，WebDAV 非递归）
-    final targets = <String>[];
+    // 目标集合：账本快照（根列表）+ 附件对象 + 备份 ZIP（子目录枚举，
+    // WebDAV 非递归）。S3 根列表是递归扁平的会重复给出子目录项，根列表
+    // 侧统一跳过、由子目录枚举提供（Set 去重保证幂等）。
+    final targets = <String>{};
     for (final file in files) {
       final name = file.name;
-      if (name.startsWith('attachments/')) continue;
+      if (name.startsWith('attachments/') ||
+          name.startsWith('piggycount-bak/')) {
+        continue;
+      }
       if (name.startsWith('ledger_') && name.endsWith('.json')) {
         targets.add(name);
       } else {
@@ -723,6 +734,18 @@ class EncryptionServiceImpl implements EncryptionService {
       }
     } catch (_) {
       // 无附件目录：忽略
+    }
+    try {
+      final bakFiles = await cloudStorage.list(
+          path: _joinCloudDir(pathPrefix, 'piggycount-bak/'));
+      for (final f in bakFiles) {
+        final n = f.name;
+        if (n.isEmpty || n.endsWith('/')) continue;
+        if (!n.endsWith('.zip')) continue;
+        targets.add('piggycount-bak/$n');
+      }
+    } catch (_) {
+      // 无备份目录（从未备份过）：忽略
     }
 
     for (final name in targets) {
@@ -772,7 +795,10 @@ class EncryptionServiceImpl implements EncryptionService {
           plaintextBytes = utf8.encode(base64Encode(rawBytes));
         }
 
-        // 用新密钥加密
+        // 用新密钥加密并上传。二进制对象（备份 ZIP / 附件）优先走真字节
+        // 通道写回，与 uploadBinaryOrFallback 的写入路径对齐（S3/WebDAV
+        // 云端保持字节形态）；非 BinaryCapable 后端回退文本 upload，读取
+        // 端 downloadBinary 的形态分流两种均可解（见装饰器注释）。
         final newEncryptedBytes = await cipher.encrypt(
           plaintext: plaintextBytes,
           key: newKey,
@@ -781,19 +807,33 @@ class EncryptionServiceImpl implements EncryptionService {
           salt: newSalt,
           encryptedBytes: newEncryptedBytes,
         );
-        await cloudStorage.upload(
-          path: name,
-          data: newCiphertext,
-          // R2 修复：_encmeta 元数据信封随密钥一起轮换（旧钥解 → 新钥包），
-          // 否则改密后所有 fingerprint 读取永久 miss（见 _preservedMetadata 注释）
-          metadata: await _preservedMetadata(
-            cloudStorage,
-            name,
-            rekeyOldKey: oldKey,
-            rekeyNewKey: newKey,
-            rekeyNewSalt: newSalt,
-          ),
+        final preservedMeta = await _preservedMetadata(
+          cloudStorage,
+          name,
+          rekeyOldKey: oldKey,
+          rekeyNewKey: newKey,
+          rekeyNewSalt: newSalt,
         );
+        final isBinaryObject = name.startsWith('piggycount-bak/') ||
+            name.startsWith('attachments/');
+        final binStorage = cloudStorage is BinaryCapableStorage
+            ? cloudStorage as BinaryCapableStorage
+            : null;
+        if (isBinaryObject && binStorage != null) {
+          await binStorage.uploadBinary(
+            path: name,
+            bytes: utf8.encode(newCiphertext),
+            metadata: preservedMeta,
+          );
+        } else {
+          await cloudStorage.upload(
+            path: name,
+            data: newCiphertext,
+            // R2 修复：_encmeta 元数据信封随密钥一起轮换（旧钥解 → 新钥包），
+            // 否则改密后所有 fingerprint 读取永久 miss（见 _preservedMetadata 注释）
+            metadata: preservedMeta,
+          );
+        }
         success++;
         successPaths.add(name);
       } catch (e) {
@@ -910,10 +950,20 @@ class EncryptionServiceImpl implements EncryptionService {
     // 注意 WebDAV 的 list 是非递归的（readDir depth 1），根列表看不到
     // attachments/ 内层 —— 必须单独枚举子目录；S3 根列表是递归扁平的，
     // 会重复给出 attachments/* 项，此处跳过、统一由子目录枚举提供。
-    final targets = <String>[];
+    //
+    // 审计 BKV-2（对齐 _reEncryptCloudDataWithKeys）：目标集合同样纳入
+    // 云端备份目录 piggycount-bak/*.zip —— enable 前上传的备份是明文，
+    // 首轮重加密不处理它们的话，E2EE 承诺对备份内容不成立（服务端可
+    // 直接读取全部账本数据）。备份 ZIP 走 _toReEncryptionPlaintext 的
+    // base64 信封口径，重加密后 restoreBackup 的 downloadBinaryOrFallback
+    // 可正常读回。
+    final targets = <String>{};
     for (final file in files) {
       final name = file.name;
-      if (name.startsWith('attachments/')) continue;
+      if (name.startsWith('attachments/') ||
+          name.startsWith('piggycount-bak/')) {
+        continue;
+      }
       // 账本快照；其他文件（readme.txt / 手动备份等）跳过
       if (name.startsWith('ledger_') && name.endsWith('.json')) {
         targets.add(name);
@@ -938,6 +988,22 @@ class EncryptionServiceImpl implements EncryptionService {
     } catch (_) {
       // 无附件目录（404）或后端不支持子目录列举：忽略，仅处理账本文件
     }
+    final bakDirPath = _joinCloudDir(pathPrefix, 'piggycount-bak/');
+    try {
+      final bakFiles = await cloudStorage.list(path: bakDirPath);
+      var bakFound = 0;
+      for (final f in bakFiles) {
+        final n = f.name;
+        if (n.isEmpty || n.endsWith('/')) continue;
+        if (!n.endsWith('.zip')) continue;
+        targets.add('piggycount-bak/$n');
+        bakFound++;
+      }
+      LoggerService()
+          .info('CloudReEncrypt', '备份对象枚举: $bakFound 个（$bakDirPath）');
+    } catch (_) {
+      // 无备份目录（从未备份过）：忽略
+    }
 
     for (final name in targets) {
       try {
@@ -958,15 +1024,32 @@ class EncryptionServiceImpl implements EncryptionService {
         //   保证迁移后装饰器 downloadBinary 能正确读回。
         final plaintext = await _toReEncryptionPlaintext(raw);
         final reEncrypted = await encrypt(plaintext);
-        await cloudStorage.upload(
-          path: name,
-          data: reEncrypted,
-          // R2 修复：enable 后的首轮全量重加密路径（raw storage 直传），
-          // 明文元数据包成 _encmeta 信封 —— 对齐装饰器 _wrapMetadata 的
-          // 审计 P1 元数据保密承诺（无此步则 S3 头 / WebDAV sidecar 以明文
-          // 携带账本名/指纹/条数长期驻留云端）
-          metadata: await _preservedMetadata(cloudStorage, name),
-        );
+        // 与 _reEncryptCloudDataWithKeys 同口径：二进制对象优先真字节
+        // 通道写回（对齐 uploadBinaryOrFallback 的写入路径），非
+        // BinaryCapable 后端回退文本 upload。
+        final preservedMeta = await _preservedMetadata(cloudStorage, name);
+        final isBinaryObject = name.startsWith('piggycount-bak/') ||
+            name.startsWith('attachments/');
+        final binStorage = cloudStorage is BinaryCapableStorage
+            ? cloudStorage as BinaryCapableStorage
+            : null;
+        if (isBinaryObject && binStorage != null) {
+          await binStorage.uploadBinary(
+            path: name,
+            bytes: utf8.encode(reEncrypted),
+            metadata: preservedMeta,
+          );
+        } else {
+          await cloudStorage.upload(
+            path: name,
+            data: reEncrypted,
+            // R2 修复：enable 后的首轮全量重加密路径（raw storage 直传），
+            // 明文元数据包成 _encmeta 信封 —— 对齐装饰器 _wrapMetadata 的
+            // 审计 P1 元数据保密承诺（无此步则 S3 头 / WebDAV sidecar 以明文
+            // 携带账本名/指纹/条数长期驻留云端）
+            metadata: preservedMeta,
+          );
+        }
         success++;
       } catch (e) {
         // 单文件失败不中断整体流程，记录后继续
