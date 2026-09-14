@@ -14,6 +14,8 @@ class FakeICloudMethodChannel implements ICloudMethodChannelLike {
     this.listError,
     this.deleteError,
     this.metadataError,
+    this.listFilesResult,
+    this.getMetadataResult,
   });
 
   final Object? downloadError;
@@ -23,8 +25,20 @@ class FakeICloudMethodChannel implements ICloudMethodChannelLike {
   final Object? deleteError;
   final Object? metadataError;
 
+  /// 成功路径返回值（ICL-1 eTag 接线测试用）
+  final List<Map<String, dynamic>>? listFilesResult;
+  final Map<String, dynamic>? getMetadataResult;
+
+  /// 上传调用记录（uploadBinaryConditional 放行验证用）
+  void Function(String path)? uploadRecorder;
+
   void _maybeThrow(Object? error) {
     if (error != null) throw error;
+  }
+
+  /// 测试辅助：注册上传记录器
+  void setUploadRecorder(void Function(String path) recorder) {
+    uploadRecorder = recorder;
   }
 
   @override
@@ -34,6 +48,7 @@ class FakeICloudMethodChannel implements ICloudMethodChannelLike {
     Map<String, String>? metadata,
   }) async {
     _maybeThrow(uploadError);
+    uploadRecorder?.call(path);
   }
 
   @override
@@ -50,7 +65,7 @@ class FakeICloudMethodChannel implements ICloudMethodChannelLike {
   @override
   Future<List<Map<String, dynamic>>> listFiles({required String path}) async {
     _maybeThrow(listError);
-    return const [];
+    return listFilesResult ?? const [];
   }
 
   @override
@@ -62,6 +77,6 @@ class FakeICloudMethodChannel implements ICloudMethodChannelLike {
   @override
   Future<Map<String, dynamic>?> getFileMetadata({required String path}) async {
     _maybeThrow(metadataError);
-    return null;
+    return getMetadataResult;
   }
 }

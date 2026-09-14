@@ -213,6 +213,8 @@ class SupabaseStorageService
     Map<String, String>? metadata,
   }) async {
     try {
+      // SUP-1：路径遍历校验先于认证/网络——恶意路径在任何请求发出前拒绝
+      _assertNoTraversal(path);
       final user = _client.auth.currentUser;
       if (user == null) {
         throw CloudNotAuthenticatedException('User not authenticated');
@@ -246,6 +248,7 @@ class SupabaseStorageService
     } catch (e) {
       if (e is CloudNotAuthenticatedException ||
           e is CloudAuthException ||
+          e is CloudConfigurationException ||
           e is CloudStorageException) {
         rethrow;
       }
@@ -278,6 +281,8 @@ class SupabaseStorageService
     if (ifMatchEtag != null && ifNoneMatch) {
       throw ArgumentError('ifMatchEtag 与 ifNoneMatch 互斥');
     }
+    // SUP-1：路径遍历校验先于认证/网络——恶意路径在任何请求发出前拒绝
+    _assertNoTraversal(path);
     final user = _client.auth.currentUser;
     if (user == null) {
       throw CloudNotAuthenticatedException('User not authenticated');
@@ -370,6 +375,8 @@ class SupabaseStorageService
   @override
   Future<String?> download({required String path}) async {
     try {
+      // SUP-1：路径遍历校验先于认证/网络——恶意路径在任何请求发出前拒绝
+      _assertNoTraversal(path);
       final user = _client.auth.currentUser;
       if (user == null) {
         throw CloudNotAuthenticatedException('User not authenticated');
@@ -387,6 +394,7 @@ class SupabaseStorageService
     } catch (e) {
       if (e is CloudNotAuthenticatedException ||
           e is CloudAuthException ||
+          e is CloudConfigurationException ||
           e is CloudStorageException) {
         rethrow;
       }
@@ -401,6 +409,8 @@ class SupabaseStorageService
   @override
   Future<Uint8List?> downloadBinary({required String path}) async {
     try {
+      // SUP-1：路径遍历校验先于认证/网络——恶意路径在任何请求发出前拒绝
+      _assertNoTraversal(path);
       final user = _client.auth.currentUser;
       if (user == null) {
         throw CloudNotAuthenticatedException('User not authenticated');
@@ -417,6 +427,7 @@ class SupabaseStorageService
     } catch (e) {
       if (e is CloudNotAuthenticatedException ||
           e is CloudAuthException ||
+          e is CloudConfigurationException ||
           e is CloudStorageException) {
         rethrow;
       }
@@ -428,6 +439,8 @@ class SupabaseStorageService
   @override
   Future<void> delete({required String path}) async {
     try {
+      // SUP-1：路径遍历校验先于认证/网络——恶意路径在任何请求发出前拒绝
+      _assertNoTraversal(path);
       final user = _client.auth.currentUser;
       if (user == null) {
         throw CloudNotAuthenticatedException('User not authenticated');
@@ -448,6 +461,7 @@ class SupabaseStorageService
     } catch (e) {
       if (e is CloudNotAuthenticatedException ||
           e is CloudAuthException ||
+          e is CloudConfigurationException ||
           e is CloudStorageException) {
         rethrow;
       }
@@ -467,6 +481,8 @@ class SupabaseStorageService
   @override
   Future<List<CloudFile>> list({required String path}) async {
     try {
+      // SUP-1：路径遍历校验先于认证/网络——恶意路径在任何请求发出前拒绝
+      _assertNoTraversal(path);
       final user = _client.auth.currentUser;
       if (user == null) {
         throw CloudNotAuthenticatedException('User not authenticated');
@@ -505,6 +521,7 @@ class SupabaseStorageService
     } catch (e) {
       if (e is CloudNotAuthenticatedException ||
           e is CloudAuthException ||
+          e is CloudConfigurationException ||
           e is CloudStorageException) {
         rethrow;
       }
@@ -547,7 +564,7 @@ class SupabaseStorageService
       cursor = result.nextCursor;
       if (page == _maxPages - 1) {
         storageLogger?.warning(
-            '[Supabase] list 翻页护栏触达（${_maxPages} 页 × $_pageLimit 条），'
+            '[Supabase] list 翻页护栏触达（$_maxPages 页 × $_pageLimit 条），'
             '目录 $prefix 的返回可能不完整 —— 请检查是否存在异常目录堆积');
       }
     }
@@ -559,6 +576,8 @@ class SupabaseStorageService
   @override
   Future<bool> exists({required String path}) async {
     try {
+      // SUP-1：路径遍历校验先于认证/网络——恶意路径在任何请求发出前拒绝
+      _assertNoTraversal(path);
       final user = _client.auth.currentUser;
       if (user == null) {
         throw CloudNotAuthenticatedException('User not authenticated');
@@ -575,6 +594,7 @@ class SupabaseStorageService
     } catch (e) {
       if (e is CloudNotAuthenticatedException ||
           e is CloudAuthException ||
+          e is CloudConfigurationException ||
           e is CloudStorageException) {
         rethrow;
       }
@@ -585,6 +605,8 @@ class SupabaseStorageService
   @override
   Future<CloudFile?> getMetadata({required String path}) async {
     try {
+      // SUP-1：路径遍历校验先于认证/网络——恶意路径在任何请求发出前拒绝
+      _assertNoTraversal(path);
       final user = _client.auth.currentUser;
       if (user == null) {
         throw CloudNotAuthenticatedException('User not authenticated');
@@ -619,6 +641,7 @@ class SupabaseStorageService
     } catch (e) {
       if (e is CloudNotAuthenticatedException ||
           e is CloudAuthException ||
+          e is CloudConfigurationException ||
           e is CloudStorageException) {
         rethrow;
       }
@@ -630,15 +653,50 @@ class SupabaseStorageService
   ///
   /// If pathPrefix is provided, it will be used as the prefix (supports {userId} placeholder).
   /// Otherwise, defaults to 'users/{userId}/' for backward compatibility.
+  ///
+  /// 审计 SUP-1（2026-09-12 P1）：`users/{uid}/` 前缀是 Supabase 模式下
+  /// 的**唯一租户隔离手段**，`../` 段可构造跨用户对象键。此前的直接
+  /// join 会产出 `users/uidA/../uidB/x.json` 形态，服务端按语义解析后
+  /// 即越权读写。分段校验对齐 WebDAV `_assertNoTraversal`（N-1）双形态
+  /// 口径：反斜杠归一化 + 一层 URI 解码（`%2e%2e` 编码盲区），原始与
+  /// 归一化形态任一命中恰为 `..` 的段即拒绝。
   String _buildUserPath(String userId, String path) {
-    // If no prefix configured, use default 'users/{userId}/' pattern
+    // If no prefix configured, use default 'users/{userId}' pattern
     final prefix = _pathPrefix ?? 'users/{userId}';
 
     // Replace {userId} placeholder with actual user ID
     final expandedPrefix = prefix.replaceAll('{userId}', userId);
 
+    // 按分段拒绝父目录引用（不误伤 `ledger..backup.json` 等合法文件名）
+    _assertNoTraversal(path);
+
     // Join prefix with path
     return PathHelper.join([expandedPrefix, path]);
+  }
+
+  /// SUP-1：按 `/` 分段后存在恰为 `..` 的段才拒绝。校验前做防御性
+  /// 归一化（反斜杠统一转斜杠 + 尝试一层 URI 解码，失败保持原判定），
+  /// 对原始与归一化两种形态分别分段校验；归一化仅用于校验，不改变
+  /// 实际传输的路径值。与 WebDAV `_assertNoTraversal`（N-1）同口径。
+  static void _assertNoTraversal(String value) {
+    final normalized = value.replaceAll('\\', '/');
+    for (final candidate in <String>[normalized, _decodeLoosely(normalized)]) {
+      for (final seg in candidate.split('/')) {
+        if (seg == '..') {
+          throw CloudConfigurationException(
+              'Invalid path containing ".." segment: $value');
+        }
+      }
+    }
+  }
+
+  /// SUP-1：防御性 URI 解码（与 WebDAV `_decodeLoosely` 同口径）。
+  static String _decodeLoosely(String value) {
+    try {
+      return Uri.decodeComponent(value);
+    } catch (_) {
+      return value;
+    }
   }
 
   /// Stores custom metadata in a separate database table.

@@ -24,7 +24,8 @@ import 'icloud_method_channel_contract.dart';
 ///   delete），对齐 WebDAV/Supabase 的 2 次、400/800ms ±50% 真随机
 ///   jitter —— iCloud 原生 daemon 未就绪/瞬时竞态是常态而非异常。
 class ICloudStorageService
-    implements CloudStorageService, BinaryCapableStorage {
+    implements CloudStorageService, BinaryCapableStorage,
+        ConditionalWriteStorage {
   final ICloudMethodChannelLike _methodChannel;
 
   ICloudStorageService(this._methodChannel);
@@ -83,6 +84,24 @@ class ICloudStorageService
   /// 仅措辞匹配、绝不做数字子串匹配），iCloud 侧同步收口：
   /// - code 判定收紧为精确值（原生侧约定错误码枚举），不再 contains；
   /// - message 兜底删除全部数字子串，仅保留明确的「不存在」措辞。
+  /// ICL-1（2026-09-12 P1）：lastModified 归一化为弱 eTag 锚点。
+  ///
+  /// iCloud 原生无 ETag 概念，CloudFile.eTag 此前恒 null →
+  /// transactions_sync_manager 冲突探测拿到的 cloudETag 恒为空，
+  /// 并发防护只剩「盲上传 + 写后校验」（两机并发静默 last-writer-wins）。
+  /// 最小接线：lastModified（秒级文件系统精度）以 ISO 字符串透出，
+  /// 供上层 If-Match 语义做弱锚点——同秒并发窗口仍不可分辨（诚实
+  /// 边界），但跨秒的两机先后写入从此可被冲突探测识别。原生侧
+  /// 无条件写语义不变，锚点比对失败由 manager 层按 unknown 冲突
+  /// 上浮（用户对比合并/确认覆盖），不会静默丢数据。
+  String? _lastModifiedEtag(Object? raw) {
+    if (raw == null) return null;
+    final parsed = DateTime.tryParse(raw as String);
+    // 以 UTC ISO 精确到秒：同文件同 lastModified 必然同 eTag（往返
+    // 稳定），原生 lastModified 精度即秒级，不引入伪精度
+    return parsed?.toUtc().toIso8601String();
+  }
+
   bool _isNotFoundError(Object e) {
     if (e is PlatformException) {
       final code = e.code.toLowerCase();
@@ -149,6 +168,57 @@ class ICloudStorageService
     } catch (e) {
       throw CloudStorageException('UploadBinary failed: $e', e);
     }
+  }
+
+  /// ICL-1（2026-09-12 P1）延伸：读后比对近似条件写（对齐 Supabase
+  /// P1-1 模式）。iCloud 原生无 If-Match 语义，本实现以「重读 lastModified
+  /// 锚点 → 比对 → 写入」收窄并发窗口：
+  /// - [ifMatchEtag]：锚点取 getMetadata 透出的 eTag（lastModified 的
+  ///   UTC ISO 归一化形态）。比对不一致（或锚点缺失于已存在对象）→
+  ///   抛 [CloudPreconditionFailedException]，本次不落盘；
+  /// - [ifNoneMatch]：探测对象存在即抛条件失败（create-only 语义）；
+  /// - 窗口内（比对 → 落盘）他机写入仍可能被覆盖 —— 非原子，与
+  ///   Supabase 实现同款取舍，由 manager 层写后校验兜底
+  ///   （verified=false → softFail，脏标记不清）。
+  ///
+  /// 诚实边界：lastModified 秒级精度，同秒并发窗口锚点不可分辨
+  /// （比对会误判「未变」放行）；跨秒的两机先后写入可被正确拦截。
+  @override
+  bool get supportsConditionalWrite => true;
+
+  @override
+  Future<void> uploadBinaryConditional({
+    required String path,
+    required List<int> bytes,
+    Map<String, String>? metadata,
+    String? ifMatchEtag,
+    bool ifNoneMatch = false,
+  }) async {
+    if (ifMatchEtag != null && ifNoneMatch) {
+      throw ArgumentError('ifMatchEtag 与 ifNoneMatch 互斥');
+    }
+
+    final current = await getMetadata(path: path);
+
+    if (ifNoneMatch) {
+      if (current != null) {
+        throw CloudPreconditionFailedException(
+            path, '远端对象已存在（create-only 条件失败）');
+      }
+    } else if (ifMatchEtag != null) {
+      if (current == null) {
+        // 远端不存在同样算条件失败（对齐接口契约：探测时存在、写入时
+        // 消失 = 中途被并发改动/删除，按冲突处理）
+        throw CloudPreconditionFailedException(path, '远端对象已不存在（条件锚点失效）');
+      }
+      final currentEtag = current.eTag;
+      if (currentEtag == null || currentEtag != ifMatchEtag) {
+        throw CloudPreconditionFailedException(
+            path, '远端对象已被并发修改（锚点 $ifMatchEtag ≠ 当前 $currentEtag）');
+      }
+    }
+
+    await uploadBinary(path: path, bytes: bytes, metadata: metadata);
   }
 
   /// P1-5：原生字节下载（带旧格式嗅探）。
@@ -252,6 +322,8 @@ class ICloudStorageService
               ? DateTime.tryParse(fileInfo['lastModified'] as String)
               : null,
           metadata: _convertToStringDynamicMap(fileInfo['metadata']),
+          // ICL-1：lastModified 归一化为 eTag（弱锚点形态）
+          eTag: _lastModifiedEtag(fileInfo['lastModified']),
         );
       }).toList();
     } catch (e) {
@@ -296,6 +368,8 @@ class ICloudStorageService
             ? DateTime.tryParse(metadata['lastModified'] as String)
             : null,
         metadata: _convertToStringDynamicMap(metadata['customMetadata']),
+        // ICL-1：lastModified 归一化为 eTag（弱锚点形态）
+        eTag: _lastModifiedEtag(metadata['lastModified']),
       );
     } catch (e) {
       if (_isNotFoundError(e)) {

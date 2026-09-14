@@ -187,7 +187,15 @@ class SupabaseDatabaseService implements CloudDatabaseService {
       // Execute query
       final response = await query;
 
-      return List<Map<String, dynamic>>.from(response as List);
+      // SUP-D2（2026-09-12 P1）：防御式转换——服务端返回非 List 形态
+      // （RLS 策略改写/视图/标量）时 `as List` 抛 TypeError（Error 类，
+      // 穿透 catch (Exception) 边界），改走可捕获的 CloudStorageException
+      if (response is! List) {
+        throw CloudStorageException(
+            'Query failed: unexpected response type '
+            '${response.runtimeType} (expected List)');
+      }
+      return List<Map<String, dynamic>>.from(response);
     } on supabase.PostgrestException catch (e) {
       throw CloudStorageException('Query failed: ${e.message}', e);
     } catch (e) {
@@ -234,8 +242,15 @@ class SupabaseDatabaseService implements CloudDatabaseService {
   }) {
     // Note: Realtime subscriptions should be handled by SupabaseRealtimeService
     // This method is kept for interface compatibility but delegates to realtime service
-    throw UnimplementedError(
-      'Use SupabaseRealtimeService for realtime subscriptions',
+    //
+    // SUP-D1（2026-09-12 P1）：原实现裸抛 UnimplementedError（Error 而非
+    // Exception），会穿透调用方 `catch (Exception)` 的异常边界直达 zone
+    // 顶层。改抛 CloudConfigurationException（包契约异常）：当前 App 无
+    // 消费方（realtime 走 SupabaseRealtimeService），但任何未来调用方
+    // 都应得到可捕获、可归类的配置类异常而非进程级 Error。
+    throw CloudConfigurationException(
+      'SupabaseDatabaseService does not support subscribe; '
+      'use SupabaseRealtimeService for realtime subscriptions',
     );
   }
 

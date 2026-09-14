@@ -201,8 +201,25 @@ public class FlutterCloudSyncIcloudPlugin: NSObject, FlutterPlugin {
             return
         }
 
-        let exists = icloudManager.fileExists(at: path)
-        result(exists)
+        // ICL-2：fileExists 现为 throws——容器未初始化/路径校验失败
+        // 以 FlutterError 透传（Dart 侧转 PlatformException 上抛），
+        // 不再压成 false 诱发调用方覆盖上传
+        do {
+            let exists = try icloudManager.fileExists(at: path)
+            result(exists)
+        } catch let error as NSError {
+            result(FlutterError(
+                code: "ICLOUD_\(error.code)",
+                message: error.localizedDescription,
+                details: nil
+            ))
+        } catch {
+            result(FlutterError(
+                code: "ICLOUD_UNKNOWN",
+                message: "\(error)",
+                details: nil
+            ))
+        }
     }
 
     private func handleGetFileMetadata(call: FlutterMethodCall, result: @escaping FlutterResult) {

@@ -114,6 +114,12 @@ class ICloudMethodChannel implements ICloudMethodChannelLike {
   }
 
   /// Check if file exists
+  ///
+  /// ICL-2（2026-09-12 P1）：原生侧容器未初始化/路径校验失败以
+  /// FlutterError（code ICLOUD_1001/1002）透传为 PlatformException，
+  /// 本方法不捕获——让 ICloudStorageService.exists 的错误分类
+  /// （非 NotFound 一律上抛）把环境故障与「文件不存在」区分开。
+  /// `result ?? false` 仅兜底原生返回 null 的防御形态。
   @override
   Future<bool> fileExists({required String path}) async {
     final result = await _invoke<bool>('fileExists', {

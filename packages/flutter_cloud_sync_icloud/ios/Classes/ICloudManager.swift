@@ -457,9 +457,15 @@ class ICloudManager {
         }
     }
 
-    func fileExists(at path: String) -> Bool {
-        // safeURL 内部校验 containerURL 与路径遍历；容器未初始化或逃逸路径均返回 false
-        guard let fileURL = try? safeURL(for: path) else { return false }
+    /// ICL-2（2026-09-12 P1）：错误透传签名。
+    ///
+    /// 旧实现 `try? safeURL(...)` 把容器未初始化（1001）与路径校验失败
+    /// （1002）静默压成 false —— 调用方（exists 探测锚点/上传冲突仲裁）
+    /// 会把环境故障误判为「文件不存在」进而触发覆盖上传。现改为 throws，
+    /// 两类失败均以 NSError 上抛，由插件层转 FlutterError 透传给 Dart。
+    /// 文件真实不存在时仍返回 false（正常语义不受影响）。
+    func fileExists(at path: String) throws -> Bool {
+        let fileURL = try safeURL(for: path)
         return fileManager.fileExists(atPath: fileURL.path)
     }
 
