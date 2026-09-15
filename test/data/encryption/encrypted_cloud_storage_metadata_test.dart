@@ -99,9 +99,9 @@ void main() {
       await svc.upload(path: 'ledger_x.json', data: '{}', metadata: sampleMetadata);
 
       final sent = storage.uploaded['ledger_x.json']!.metadata!;
-      expect(sent.keys, ['_encmeta']);
+      expect(sent.keys, [EncryptedCloudStorageService.encMetaKey]);
       // 信封值是密文，不含任何明文键值对痕迹
-      expect(sent['_encmeta'], startsWith('XENC:'));
+      expect(sent[EncryptedCloudStorageService.encMetaKey], startsWith('XENC:'));
       for (final plain in sampleMetadata.values) {
         expect(sent.values.join(), isNot(contains(plain)));
       }
@@ -140,7 +140,7 @@ void main() {
           metadata: {'fingerprint': 'zzz'});
 
       final sent = storage.uploaded['attachments/a.bin']!.metadata!;
-      expect(sent.keys, ['_encmeta']);
+      expect(sent.keys, [EncryptedCloudStorageService.encMetaKey]);
     });
 
     test('E2EE 关闭：元数据明文透传（历史行为不变）', () async {
@@ -152,7 +152,7 @@ void main() {
 
       final sent = storage.uploaded['ledger_x.json']!.metadata;
       expect(sent, sampleMetadata);
-      expect(sent!.containsKey('_encmeta'), isFalse);
+      expect(sent!.containsKey(EncryptedCloudStorageService.encMetaKey), isFalse);
     });
 
     test('旧版明文元数据（无信封键）：getMetadata 原样返回，不破坏向后兼容', () async {
@@ -173,11 +173,42 @@ void main() {
           inner: storage, encryptionService: _EnabledEncryption());
 
       await storage.upload(path: 'broken.json', data: '{}',
-          metadata: {'_encmeta': 'XENC:not-valid-base64!!'});
+          metadata: {EncryptedCloudStorageService.legacyEncMetaKey: 'XENC:not-valid-base64!!'});
 
       final cf = await svc.getMetadata(path: 'broken.json');
       expect(cf, isNotNull);
-      expect(cf!.metadata, {'_encmeta': 'XENC:not-valid-base64!!'});
+      expect(cf!.metadata,
+          {EncryptedCloudStorageService.legacyEncMetaKey: 'XENC:not-valid-base64!!'});
+    });
+
+    test('旧版 _encmeta 信封键（S3 下划线头名兼容）：读取端仍可解封', () async {
+      final storage = _CapturingStorage();
+      final svc = EncryptedCloudStorageService(
+          inner: storage, encryptionService: _EnabledEncryption());
+
+      // 模拟旧版本写入的云端对象：信封键为旧 '_encmeta'
+      await storage.upload(
+          path: 'old_key.json',
+          data: '{}',
+          metadata: {
+            EncryptedCloudStorageService.legacyEncMetaKey:
+                await _EnabledEncryption().encrypt('{}'),
+          });
+      // 注入真实元数据信封：手工构造旧键 + 新键内容一致的信封
+      await storage.upload(
+          path: 'old_key2.json',
+          data: '{}',
+          metadata: {
+            EncryptedCloudStorageService.legacyEncMetaKey:
+                await _EnabledEncryption().encrypt('{"fingerprint":"old"}'),
+          });
+
+      final cf = await svc.getMetadata(path: 'old_key.json');
+      // jsonDecode('{}') 得到空 map，走「解密成功→返回还原 map」分支
+      expect(cf!.metadata, isEmpty);
+
+      final cf2 = await svc.getMetadata(path: 'old_key2.json');
+      expect(cf2!.metadata, {'fingerprint': 'old'});
     });
 
     test('无元数据上传不受影响', () async {

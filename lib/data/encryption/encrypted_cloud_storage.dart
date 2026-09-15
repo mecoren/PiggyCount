@@ -51,7 +51,18 @@ class EncryptedCloudStorageService
   ///
   /// 公开静态常量：密钥轮换（EncryptionServiceImpl._preservedMetadata）与
   /// 单元测试需要按同一键名识别/重包信封。
-  static const String encMetaKey = '_encmeta';
+  ///
+  /// 2026-09-15 实测修复：旧键 `_encmeta` 会让 S3 请求携带
+  /// `x-amz-meta-_encmeta`（头名含下划线）。OSS 等 S3 兼容网关
+  /// （nginx 系 `underscores_in_headers off` 默认行为）会丢弃下划线头，
+  /// 而签名器把所有 x-amz-* 头计入 SignedHeaders → 服务端收到的请求
+  /// 缺少已签名头 → 恒定 403 "Not all the signed headers are found in
+  /// the request"。故改为连字符键名 `pc-encmeta`；旧键仅在读取端兼容。
+  static const String encMetaKey = 'pc-encmeta';
+
+  /// 旧版信封键（下划线头名，见 [encMetaKey] 注释）。仅读取端兼容：
+  /// 旧版 E2EE 写入的云端对象元数据仍能解出指纹，避免触发全量下载兜底。
+  static const String legacyEncMetaKey = '_encmeta';
 
   /// 上传前的元数据处理：
   /// - null/空 → 原样返回 null；
@@ -76,7 +87,8 @@ class EncryptedCloudStorageService
 
     String? envelope;
     for (final entry in metadata.entries) {
-      if (entry.key.toLowerCase() == encMetaKey) {
+      final key = entry.key.toLowerCase();
+      if (key == encMetaKey || key == legacyEncMetaKey) {
         envelope = entry.value?.toString();
         break;
       }
