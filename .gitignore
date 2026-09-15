@@ -11,12 +11,18 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
-.ai/*
-.claude/
-CLAUDE.md
-PROJECT_IMPROVEMENTS.md
 assets/config.json
 /marketing/
+
+# AI / agent working files (local-only, never commit)
+.ai/
+.claude/
+.codebuddy/
+.zcode/
+.workbuddy/
+.superpowers/
+CLAUDE.md
+PROJECT_IMPROVEMENTS.md
 
 
 # IntelliJ related
@@ -59,11 +65,18 @@ android/app/*.keystore
 docs/superpowers/
 .tmp
 tmp
+
 # Playwright MCP capture artifacts
 .playwright-mcp/
 
-# visual brainstorm 涓存椂鏂囦欢
-.superpowers/
+# ---------------------------------------------------------------------------
+# WebDAV test server: never commit TLS private keys / serial files / local DB
+# Even though these are self-signed test certs, private keys must stay local.
+# The wsgidav.yaml hardcoded credentials below are binded to 127.0.0.1 only.
+scripts/webdav_test/*.key
+scripts/webdav_test/*.srl
+scripts/webdav_test/*.csr
+scripts/webdav_test/data/
 
-# 本地实盘数据夹具（s3_roundtrip_consistency_test 专用，含真实账本数据）
+# live_db roundtrip test fixtures contain real-looking ledger dumps
 scripts/live_db/
