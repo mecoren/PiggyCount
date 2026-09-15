@@ -17,6 +17,7 @@ import '../../cloud/transactions_sync_manager.dart';
 import '../../cloud/backup/backup_scheduler.dart';
 import '../../cloud/backup/cloud_backup_providers.dart';
 import '../../cloud/backup/cloud_backup_service.dart';
+import '../../cloud/backend_identity.dart';
 import '../../domain/encryption/encryption_service.dart';
 import '../auth/login_page.dart';
 import 'encryption_dialogs.dart';
@@ -30,6 +31,20 @@ class CloudSyncPage extends ConsumerStatefulWidget {
 
   @override
   ConsumerState<CloudSyncPage> createState() => _CloudSyncPageState();
+}
+
+/// 当前激活后端的身份摘要，供「发现云端账本」弹窗展示（见 backend_identity）。
+///
+/// 配置尚未加载完成或读取失败时返回 null —— 身份提示只是辅助判断信息，
+/// 宁可不显示也不能阻塞发现流程本身。
+String? _backendIdentitySummary(WidgetRef ref, AppLocalizations l10n) {
+  try {
+    final cfg = ref.read(activeCloudConfigProvider).valueOrNull;
+    if (cfg == null) return null;
+    return backendIdentitySummary(l10n, cfg);
+  } catch (_) {
+    return null;
+  }
 }
 
 class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
@@ -1216,7 +1231,11 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                                               .startupSyncNewLedgersTitle,
                                                           message: StartupSyncChecker
                                                               .newLedgersDialogMessage(
-                                                                  l10n, metas),
+                                                                  l10n, metas,
+                                                                  backend:
+                                                                      _backendIdentitySummary(
+                                                                          ref,
+                                                                          l10n)),
                                                           okLabel: l10n
                                                               .startupSyncNewLedgersOk,
                                                           cancelLabel: l10n

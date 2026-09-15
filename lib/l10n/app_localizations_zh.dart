@@ -193,6 +193,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get startupSyncNewLedgersCancel => '跳过';
 
   @override
+  String startupSyncNewLedgersBackend(String backend) {
+    return '当前后端：$backend';
+  }
+
+  @override
   String startupSyncDuplicateSlots(Object detail) {
     return '注意：以下名称在云端存在多个槽位，全部下载会产生重复账本（可稍后在 账本管理-云端账本 按 ID 甄别下载）：$detail';
   }
@@ -7954,6 +7959,11 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get startupSyncNewLedgersCancel => '跳過';
+
+  @override
+  String startupSyncNewLedgersBackend(String backend) {
+    return '目前後端：$backend';
+  }
 
   @override
   String startupSyncDuplicateSlots(Object detail) {

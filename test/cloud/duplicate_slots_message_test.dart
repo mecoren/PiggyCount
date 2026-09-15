@@ -82,6 +82,44 @@ void main() {
       ]);
       expect(msg, contains('slot-b·?(3)'));
     });
+
+    // 后端标识行：多后端轮换（S3 ↔ WebDAV）时避免误连旧后端下载串台
+    //（2026-09-15 双模拟器回归实测两次踩坑）。
+    test('backend 非空 → 前置「当前后端」行，基础文案整体保留在后', () {
+      final base = l10n.startupSyncNewLedgersMessage(2, 'A(10)、B(10)');
+      final msg = StartupSyncChecker.newLedgersDialogMessage(l10n, [
+        _m('slot-aaa111', 'A'),
+        _m('slot-bbb222', 'B'),
+      ], backend: 'S3 · oss-cn-shenzhen.aliyuncs.com · piggycount');
+      expect(msg,
+          '${l10n.startupSyncNewLedgersBackend('S3 · oss-cn-shenzhen.aliyuncs.com · piggycount')}\n$base');
+    });
+
+    test('backend 为 null / 空串 / 纯空白 → 不加后端行（保持原文案）', () {
+      final base = l10n.startupSyncNewLedgersMessage(1, 'A(10)');
+      for (final backend in <String?>[null, '', '   ']) {
+        expect(
+            StartupSyncChecker.newLedgersDialogMessage(l10n, [_m('s1', 'A')],
+                backend: backend),
+            base);
+      }
+    });
+
+    test('后端行 + 同名多槽位警示行：三行顺序为 后端 / 基础 / 警示', () {
+      final msg = StartupSyncChecker.newLedgersDialogMessage(l10n, [
+        _m('slot-a1111', 'D', uploadedAt: DateTime(2026, 9, 5)),
+        _m('slot-b2222', 'D', txCount: 3),
+      ], backend: 'WebDAV · dav.example.com');
+      final lines = msg.split('\n');
+      expect(lines.length, 3);
+      expect(
+          lines[0], l10n.startupSyncNewLedgersBackend('WebDAV · dav.example.com'));
+      expect(lines[1], l10n.startupSyncNewLedgersMessage(2, 'D(10)、D(3)'));
+      expect(
+          lines[2],
+          l10n.startupSyncDuplicateSlots(
+              'D: slot-a·2026-09-05 00:00(10)、slot-b·?(3)'));
+    });
   });
 
   group('batchRestoreDuplicateDetail（全部恢复 · 覆盖语义）', () {

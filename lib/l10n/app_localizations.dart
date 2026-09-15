@@ -432,6 +432,12 @@ abstract class AppLocalizations {
   /// **'Skip'**
   String get startupSyncNewLedgersCancel;
 
+  /// No description provided for @startupSyncNewLedgersBackend.
+  ///
+  /// In en, this message translates to:
+  /// **'Current backend: {backend}'**
+  String startupSyncNewLedgersBackend(String backend);
+
   /// No description provided for @startupSyncDuplicateSlots.
   ///
   /// In en, this message translates to:

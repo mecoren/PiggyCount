@@ -195,6 +195,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get startupSyncNewLedgersCancel => '건너뛰기';
 
   @override
+  String startupSyncNewLedgersBackend(String backend) {
+    return '현재 백엔드: $backend';
+  }
+
+  @override
   String startupSyncDuplicateSlots(Object detail) {
     return '주의: 클라우드에 같은 이름의 슬롯이 여러 개 있습니다. 모두 내려받으면 중복 가계부가 생깁니다(가계부 관리-클라우드 가계부에서 ID로 나중에 선택 가능): $detail';
   }

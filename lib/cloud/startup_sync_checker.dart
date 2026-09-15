@@ -16,6 +16,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' hide SyncStatus;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../cloud/backend_identity.dart';
 import '../cloud/sync_diff_service.dart';
 import '../cloud/sync_service.dart';
 import '../cloud/transactions_sync_manager.dart';
@@ -703,10 +704,20 @@ class StartupSyncChecker {
   /// 启动检查弹窗与云同步页「同步云端」的发现弹窗共用：同一批 metas、
   /// 同一份「同名多槽位」警示行，避免两个入口行为漂移（一个警示另一个
   /// 静默放行）。槽位信息片格式 = `短ID·上传时间(条数)`，新者在前。
+  ///
+  /// [backend] 为当前激活后端的身份摘要（见 backendIdentitySummary）。
+  /// 非空时前置一行「当前后端：…」——多后端轮换（S3 ↔ WebDAV）时用户
+  /// 据此判断这次发现的是哪个后端的数据，避免误连旧后端下载串台
+  /// （2026-09-15 实测两次踩坑）；取不到激活配置时传 null，文案退回原样。
   static String newLedgersDialogMessage(
-      AppLocalizations l10n, List<RemoteLedgerMeta> metas) {
+      AppLocalizations l10n, List<RemoteLedgerMeta> metas,
+      {String? backend}) {
     final displayNames = metas.map((m) => '${m.name}(${m.txCount})').join('、');
     var message = l10n.startupSyncNewLedgersMessage(metas.length, displayNames);
+    final backendLabel = backend?.trim();
+    if (backendLabel != null && backendLabel.isNotEmpty) {
+      message = '${l10n.startupSyncNewLedgersBackend(backendLabel)}\n$message';
+    }
     final dupGroups = duplicateNameGroups(metas);
     if (dupGroups.isNotEmpty) {
       message = '$message\n${l10n.startupSyncDuplicateSlots(
@@ -1334,8 +1345,9 @@ class WidgetRefDeps implements StartupSyncCheckerDeps {
   @override
   Future<bool> showNewLedgersConfirmDialog(List<RemoteLedgerMeta> metas) async {
     final l10n = AppLocalizations.of(_context);
-    final message =
-        StartupSyncChecker.newLedgersDialogMessage(l10n, metas);
+    final message = StartupSyncChecker.newLedgersDialogMessage(
+        l10n, metas,
+        backend: _currentBackendSummary(l10n));
     final result = await AppDialog.confirm<bool>(
       _context,
       title: l10n.startupSyncNewLedgersTitle,
@@ -1344,6 +1356,21 @@ class WidgetRefDeps implements StartupSyncCheckerDeps {
       cancelLabel: l10n.startupSyncNewLedgersCancel,
     );
     return result ?? false;
+  }
+
+  /// 当前激活后端的身份摘要；配置尚未加载完成（或读取失败）时返回 null，
+  /// 弹窗沿用无后端行的原文案——身份提示是辅助信息，不可因它阻塞发现流程。
+  ///
+  /// 用 read（不 watch）：启动检查是一次性动作，无重建语义。
+  String? _currentBackendSummary(AppLocalizations l10n) {
+    try {
+      final cfg = _ref.read(activeCloudConfigProvider).valueOrNull;
+      if (cfg == null) return null;
+      return backendIdentitySummary(l10n, cfg);
+    } catch (e) {
+      logger.warning('CloudSync', '读取后端身份用于发现弹窗失败: $e');
+      return null;
+    }
   }
 
   @override
