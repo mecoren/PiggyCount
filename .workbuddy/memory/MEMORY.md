@@ -69,3 +69,30 @@
 - **E2EE 为可选**：未配置时 WebDAV 落盘为明文信封
   `{"fmt":"pc-wdav-env-v1","b64":false,"data":"<快照JSON>"}`；开启后才是密文
   （见 `docs/encryption-security-boundary.md`）。做"一致性"结论时须声明加密配置。
+
+## E2EE 双后端回归（2026-09-15 固化）
+
+- **S3 + E2EE 的元数据信封键必须是连字符 `pc-encmeta`**。原 `_encmeta` 会变成请求头
+  `x-amz-meta-_encmeta`，OSS 网关默认丢弃下划线头名（`underscores_in_headers off`），
+  而 S3 签名器已把该头计入 SignedHeaders → `HTTP 403 Not all the signed headers are found
+  in the request`（伴随账本 1–3 `PutObject timed out after ~100s` 的网络抖动）。
+  修复点 `lib/data/encryption/encrypted_cloud_storage.dart`，读取端保留
+  `legacyEncMetaKey` 兼容旧密文（**不设清理期限**：快照同步没有"全体升级完成"信号）。
+- **上传超时不是配置问题**：`transferTimeoutFor()` = 30s 基线 + 30s/MB，上限 5min；
+  E2EE 信封约 2.3MB → 99~100s 是公式结果。重试有 P5 指数退避 + jitter（1s/2s/4s 的 50%~100%）。
+- **发现弹窗已带后端标识**：`lib/cloud/backend_identity.dart` 生成
+  `类型 · host · 桶/远端路径`（复用 `obfuscatedUrl()`，不含凭据），
+  `StartupSyncChecker.newLedgersDialogMessage(..., backend:)` 前置一行；
+  两个入口：启动检查 `WidgetRefDeps.showNewLedgersConfirmDialog`、云同步页「同步云端」。
+  触发验证的低成本办法：往 `scripts/webdav_test/data/piggycount/` 复制一份
+  `ledger_<已存在syncId>.json` 成新文件名（合法 E2EE 信封可被识别），验证完删除。
+- **对比脚本口径**：`scripts/live_db/compare_sync_final.py` 把 ledgers 拆「同步字段（严格）」
+  与「设备本地字段 `is_shared`/`member_count`（`[OK*]` 预期差异，不计入 issues）」；
+  **退出码 0 = 无非预期差异、2 = 存在不一致**。该脚本位于被 gitignore 的
+  `scripts/live_db/`，改动需 `git add -f` 才能纳管。
+- **WebDAV 测试服务器落盘目录是 `scripts/webdav_test/data/piggycount/`**（remotePath 决定），
+  且该目录**被 git 跟踪**；`rm -rf data` 清环境会在 git 里留下删除记录。
+- 模拟器被关闭时 `adb devices` 为空、`adb connect` 报 10061；先查
+  MuMuPlayer/dnplayer/qemu 进程是否存在，进程没了就只能等重开（本机 Bash 工具不可用，
+  全流程用 PowerShell：截图必须 `shell screencap` + `adb pull`，Python 中文输出先设
+  `[Console]::OutputEncoding = UTF8`）。
