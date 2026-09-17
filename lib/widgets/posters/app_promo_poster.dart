@@ -260,7 +260,7 @@ class AppPromoPoster extends StatelessWidget {
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w500,
-              color: Color(0xFF333333),
+              color: PiggyPosterTokens.textPrimary,
               letterSpacing: 0.5,
             ),
           ),

@@ -14,7 +14,7 @@ import '../../styles/tokens.dart';
   required Size chartSize,
 }) {
   final alignX = ((anchor.dx / chartSize.width) * 2 - 1).clamp(-0.72, 0.72);
-  // 单行 11px 文案气泡的估算高度（fontSize 11 + 上下 padding 5×2）
+  // 单行文案气泡的估算高度（tooltipFontSize(11) + 上下 padding 5×2）
   const bubbleHeight = 26.0;
   const gap = 10.0;
   double top = anchor.dy - bubbleHeight - gap;
@@ -50,7 +50,7 @@ class ChartTooltipBubble extends StatelessWidget {
         text,
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 11,
+          fontSize: PiggyChartTokens.tooltipFontSize,
           fontWeight: FontWeight.w600,
         ),
       ),

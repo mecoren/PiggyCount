@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/note_history.dart';
+import '../styles/tokens.dart' show PiggyPersonalizeDefaults;
 import '../widget/widget_manager.dart';
 import '../providers.dart';
 
@@ -43,10 +44,12 @@ final themeModeInitProvider = FutureProvider<void>((ref) async {
 });
 
 // 可变主色（个性化换装使用）
-// 默认值：天空蓝（与 personalize_page.dart 中 personalizeThemeSkyBlue 选项一致，
-// 列表第一位）。老用户已在 prefs 存过 primaryColor 的，由 primaryColorInitProvider
+// 默认值：天空蓝，与 personalize_page.dart 色板首位共用
+// PiggyPersonalizeDefaults.defaultPrimaryColor 常量（单源，防漂移）。
+// 老用户已在 prefs 存过 primaryColor 的，由 primaryColorInitProvider
 // 覆盖为本机选择；未存过的新用户走此默认。
-final primaryColorProvider = StateProvider<Color>((ref) => const Color(0xFF497FF8));
+final primaryColorProvider = StateProvider<Color>(
+    (ref) => PiggyPersonalizeDefaults.defaultPrimaryColor);
 
 // 是否隐藏金额显示
 final hideAmountsProvider = StateProvider<bool>((ref) => false);

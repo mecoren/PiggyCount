@@ -1437,8 +1437,9 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
 // 旧的自定义年月选择器已移除，统一使用 showWheelDatePicker。
 
 /// 排行榜第 i 名的颜色：与环形图扇区调色板一致（前 8 名），其余归入「其他」灰
-Color _pieColorAt(BuildContext context, int i) =>
-    i < 8 ? kAnalyticsPieColors[i] : PiggyTokens.textTertiary(context);
+Color _pieColorAt(BuildContext context, int i) => i < 8
+    ? PiggyChartTokens.seriesColors[i]
+    : PiggyTokens.textTertiary(context);
 
 // 加载分类数据并聚合
 // 返回 [catData, seriesRaw, txCount, (本期收入,本期支出), (上期收入,上期支出), chartSeriesRaw]

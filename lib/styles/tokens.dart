@@ -676,13 +676,93 @@ class PiggyDivider {
       );
 }
 
-/// 图表令牌：统一折线图的视觉参数
+/// 图表令牌：统一图表组件的视觉参数
 class PiggyChartTokens {
   static const double lineWidth = 2.0;
   static const double dotRadius = 2.5;
   static const double cornerRadius = 12.0;
   static const double xLabelFontSize = 10.0;
   static const double yLabelFontSize = 10.0;
+
+  /// 分类系列调色板（12 色，覆盖常见分类数量）。
+  /// 饼图扇区与排行榜按分类排序下标取同一色板，保证扇区色与排行行色一一对应。
+  static const List<Color> seriesColors = [
+    Color(0xFF5B8FF9), // 蓝
+    Color(0xFF5AD8A6), // 绿
+    Color(0xFFF6BD16), // 黄
+    Color(0xFFE86452), // 红
+    Color(0xFF6DC8EC), // 浅蓝
+    Color(0xFF945FB9), // 紫
+    Color(0xFFFF9845), // 橙
+    Color(0xFF1E9493), // 青
+    Color(0xFFFF99C3), // 粉
+    Color(0xFF269A99), // 深青
+    Color(0xFFBDD2FD), // 淡蓝
+    Color(0xFFA0DC2C), // 黄绿
+  ];
+
+  // ---- 语义字号槽位（P1-D：charts 内 fontSize 字面量的唯一来源）----
+  /// 气泡提示文字
+  static const double tooltipFontSize = 11.0;
+
+  /// 图例行 / 环形中心标签
+  static const double legendFontSize = 11.0;
+
+  /// 区块标题（「资产构成 / 余额趋势 / 分类占比」等）
+  static const double sectionTitleFontSize = 14.0;
+
+  /// 图表标题（analytics_bar_chart 顶部标题）
+  static const double titleFontSize = 15.0;
+
+  /// 环形图中心金额
+  static const double centerValueFontSize = 16.0;
+}
+
+/// 海报令牌：分享海报（RepaintBoundary.toImage 导出 PNG）专用语义色。
+///
+/// 全静态、无 BuildContext——海报是导出图片，必须与 App 明暗模式无关
+/// （主题色由调用方通过 primaryColor 参数传入）；与 PiggyDimens 的静态
+/// 设计哲学一致。收入/支出取「海报家族多数值」，annual_report 已对齐。
+class PiggyPosterTokens {
+  /// 收入 / 正向增长（month / year / ledger 海报多数值）
+  static const Color income = Color(0xFF51CF66);
+
+  /// 支出 / 负向下降
+  static const Color expense = Color(0xFFFF6B6B);
+
+  /// 收入徽章底色（浅绿）
+  static const Color incomeBadgeBg = Color(0xFFE8F5E9);
+
+  /// 支出徽章底色（浅红）
+  static const Color expenseBadgeBg = Color(0xFFFFEBEE);
+
+  /// 海报文字主色（浅底深字）
+  static const Color textPrimary = Color(0xFF333333);
+
+  /// 海报文字次色
+  static const Color textSecondary = Color(0xFF666666);
+
+  /// 海报文字弱色
+  static const Color textTertiary = Color(0xFF999999);
+
+  /// 奖牌金（年度成就 / 用户资料页勋章）
+  static const Color medalGold = Color(0xFFFFD700);
+
+  /// 奖牌银
+  static const Color medalSilver = Color(0xFFC0C0C0);
+
+  /// 奖牌铜
+  static const Color medalBronze = Color(0xFFCD7F32);
+
+  /// 年度海报深墨标题（primaryColor 顶栏上的标题文字）
+  static const Color darkInk = Color(0xFF1A1A2E);
+}
+
+/// 个性化默认值令牌：跨文件共享的缺省常量（P1-D 单源化）
+class PiggyPersonalizeDefaults {
+  /// 默认主题色（天空蓝）。personalize_page 色板首选项与
+  /// primaryColorProvider 默认值共用此常量，避免双处定义漂移。
+  static const Color defaultPrimaryColor = Color(0xFF497FF8);
 }
 
 /// 文本样式令牌：全局统一字号与字重

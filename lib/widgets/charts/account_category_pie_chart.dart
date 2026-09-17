@@ -75,7 +75,7 @@ class _AccountCategoryPieChartState
             child: Text(
               l10n.commonEmpty,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: PiggyChartTokens.sectionTitleFontSize,
                 color: PiggyTokens.textTertiary(context),
               ),
             ),
@@ -96,7 +96,7 @@ class _AccountCategoryPieChartState
                 Text(
                   l10n.accountCategoryBreakdown,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: PiggyChartTokens.sectionTitleFontSize,
                     fontWeight: FontWeight.w600,
                     color: PiggyTokens.textPrimary(context),
                   ),
@@ -126,7 +126,7 @@ class _AccountCategoryPieChartState
                   child: Text(
                     l10n.commonEmpty,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: PiggyChartTokens.sectionTitleFontSize,
                       color: PiggyTokens.textTertiary(context),
                     ),
                   ),
@@ -175,6 +175,8 @@ class _TypeChip extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
+            // 切换 chip 是交互控件而非图表标注：12 对齐 App label 档，
+            // 不入图表字号槽位
             fontSize: 12,
             color: isSelected ? primaryColor : PiggyTokens.textSecondary(context),
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,

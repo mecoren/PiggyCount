@@ -138,7 +138,7 @@ class _AnalyticsBarChartState extends State<AnalyticsBarChart> {
                     child: Text(
                       widget.title!,
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: PiggyChartTokens.titleFontSize,
                         fontWeight: FontWeight.w600,
                         color: PiggyTokens.textPrimary(context),
                       ),
@@ -157,7 +157,7 @@ class _AnalyticsBarChartState extends State<AnalyticsBarChart> {
                         widget.badgeText!,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 10,
+                          fontSize: PiggyChartTokens.xLabelFontSize,
                           fontWeight: FontWeight.w600,
                         ),
                       ),

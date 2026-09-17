@@ -78,7 +78,7 @@ class _BalanceTrendChartState extends ConsumerState<BalanceTrendChart> {
             Text(
               l10n.accountBalanceTrend,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: PiggyChartTokens.sectionTitleFontSize,
                 fontWeight: FontWeight.w600,
                 color: PiggyTokens.textPrimary(context),
               ),

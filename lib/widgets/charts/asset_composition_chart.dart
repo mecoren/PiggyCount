@@ -120,7 +120,10 @@ class _AssetCompositionChartState extends ConsumerState<AssetCompositionChart> {
                       title: pct >= 5 ? '${pct.toStringAsFixed(1)}%' : '',
                       radius: isTouched ? 48 : 40,
                       titleStyle: TextStyle(
-                        fontSize: isTouched ? 12 : 10,
+                        // 触摸态放大 +2：交互反馈，随基准字号联动
+                        fontSize: isTouched
+                            ? PiggyChartTokens.xLabelFontSize + 2
+                            : PiggyChartTokens.xLabelFontSize,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
@@ -139,7 +142,7 @@ class _AssetCompositionChartState extends ConsumerState<AssetCompositionChart> {
                         : l10n.assetComposition,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: PiggyTokens.textTertiary(context),
-                          fontSize: 10,
+                          fontSize: PiggyChartTokens.xLabelFontSize,
                         ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -150,6 +153,8 @@ class _AssetCompositionChartState extends ConsumerState<AssetCompositionChart> {
                     signed: false,
                     decimals: 0,
                     style: TextStyle(
+                      // 资产环形图 centerSpaceRadius(42) 小于分类饼图(52)，
+                      // 中心数值刻意比 centerValueFontSize(16) 小一档
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: PiggyTokens.textPrimary(context),
@@ -186,7 +191,7 @@ class _AssetCompositionChartState extends ConsumerState<AssetCompositionChart> {
                   displayName,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: PiggyTokens.textPrimary(context),
-                        fontSize: 11,
+                        fontSize: PiggyChartTokens.legendFontSize,
                       ),
                 ),
                 const SizedBox(width: 2),
@@ -194,7 +199,7 @@ class _AssetCompositionChartState extends ConsumerState<AssetCompositionChart> {
                   '$pct%',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: PiggyTokens.textTertiary(context),
-                        fontSize: 10,
+                        fontSize: PiggyChartTokens.xLabelFontSize,
                       ),
                 ),
               ],
@@ -218,7 +223,7 @@ class _AssetCompositionChartState extends ConsumerState<AssetCompositionChart> {
             Text(
               l10n.assetComposition,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: PiggyChartTokens.sectionTitleFontSize,
                 fontWeight: FontWeight.w600,
                 color: PiggyTokens.textPrimary(context),
               ),

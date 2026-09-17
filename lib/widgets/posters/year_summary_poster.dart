@@ -299,7 +299,7 @@ class YearSummaryPoster extends StatelessWidget {
             label: l10n.sharePosterTotalExpense,
             value: formatter.format(data.totalExpense),
             unit: l10n.sharePosterUnitYuan,
-            color: const Color(0xFFFF6B6B),
+            color: PiggyPosterTokens.expense,
             isHighlight: true,
           ),
           const SizedBox(height: 16),
@@ -312,7 +312,7 @@ class YearSummaryPoster extends StatelessWidget {
             label: l10n.sharePosterTotalIncome,
             value: hideIncome ? '**' : formatter.format(data.totalIncome),
             unit: l10n.sharePosterUnitYuan,
-            color: const Color(0xFF51CF66),
+            color: PiggyPosterTokens.income,
             isHighlight: true,
           ),
           const SizedBox(height: 16),
@@ -353,7 +353,7 @@ class YearSummaryPoster extends StatelessWidget {
           label,
           style: const TextStyle(
             fontSize: 20,
-            color: Color(0xFF666666),
+            color: PiggyPosterTokens.textSecondary,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -364,7 +364,7 @@ class YearSummaryPoster extends StatelessWidget {
           style: TextStyle(
             fontSize: isHighlight ? 32 : 28,
             fontWeight: FontWeight.bold,
-            color: isHighlight ? color : const Color(0xFF333333),
+            color: isHighlight ? color : PiggyPosterTokens.textPrimary,
           ),
         ),
         const SizedBox(width: 6),
@@ -373,7 +373,7 @@ class YearSummaryPoster extends StatelessWidget {
           unit,
           style: TextStyle(
             fontSize: 18,
-            color: Color(0xFF999999),
+            color: PiggyPosterTokens.textTertiary,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -397,7 +397,7 @@ class YearSummaryPoster extends StatelessWidget {
           label,
           style: const TextStyle(
             fontSize: 14,
-            color: Color(0xFF999999),
+            color: PiggyPosterTokens.textTertiary,
           ),
         ),
         const SizedBox(height: 4),
@@ -435,7 +435,7 @@ class YearSummaryPoster extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final formatter = NumberFormat('#,##0.00', 'zh_CN');
     final isPositive = data.balance >= 0;
-    final balanceColor = isPositive ? const Color(0xFF51CF66) : const Color(0xFFFF6B6B);
+    final balanceColor = isPositive ? PiggyPosterTokens.income : PiggyPosterTokens.expense;
     final balanceIcon = isPositive ? Icons.savings_rounded : Icons.warning_rounded;
 
     return Container(
@@ -519,9 +519,9 @@ class YearSummaryPoster extends StatelessWidget {
 
     // 排名徽章颜色
     final rankColors = [
-      const Color(0xFFFFD700), // 金色
-      const Color(0xFFC0C0C0), // 银色
-      const Color(0xFFCD7F32), // 铜色
+      PiggyPosterTokens.medalGold,
+      PiggyPosterTokens.medalSilver,
+      PiggyPosterTokens.medalBronze,
     ];
     final rankColor = rankColors[rank - 1];
 

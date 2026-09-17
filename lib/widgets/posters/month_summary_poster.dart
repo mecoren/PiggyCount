@@ -91,8 +91,8 @@ class MonthSummaryPoster extends StatelessWidget {
       final formatter = NumberFormat('#,##0', 'zh_CN');
       final rate = data.expenseChangeRate!;
       final savedAmount = data.totalExpense * (-rate) / (1 + rate);
-      // 使用与主题色协调的绿色
-      const savedColor = Color(0xFF4CAF50);
+      // 使用与主题色协调的绿色（对齐海报家族收入绿令牌）
+      const savedColor = PiggyPosterTokens.income;
 
       return Row(
         children: [
@@ -246,7 +246,7 @@ class MonthSummaryPoster extends StatelessWidget {
                   context,
                   label: l10n.sharePosterTotalExpense,
                   value: formatter.format(data.totalExpense),
-                  color: const Color(0xFFFF6B6B),
+                  color: PiggyPosterTokens.expense,
                   icon: Icons.arrow_downward_rounded,
                 ),
               ),
@@ -260,7 +260,7 @@ class MonthSummaryPoster extends StatelessWidget {
                   context,
                   label: l10n.sharePosterTotalIncome,
                   value: hideIncome ? '**' : formatter.format(data.totalIncome),
-                  color: const Color(0xFF51CF66),
+                  color: PiggyPosterTokens.income,
                   icon: Icons.arrow_upward_rounded,
                 ),
               ),
@@ -280,8 +280,8 @@ class MonthSummaryPoster extends StatelessWidget {
                   label: l10n.sharePosterMonthBalance,
                   value: hideIncome ? '**' : formatter.format(data.balance),
                   color: data.balance >= 0
-                      ? const Color(0xFF51CF66)
-                      : const Color(0xFFFF6B6B),
+                      ? PiggyPosterTokens.income
+                      : PiggyPosterTokens.expense,
                   icon: data.balance >= 0
                       ? Icons.trending_up_rounded
                       : Icons.trending_down_rounded,
@@ -340,7 +340,7 @@ class MonthSummaryPoster extends StatelessWidget {
           label,
           style: const TextStyle(
             fontSize: 16,
-            color: Color(0xFF999999),
+            color: PiggyPosterTokens.textTertiary,
           ),
         ),
         const SizedBox(height: 8),
@@ -464,7 +464,7 @@ class MonthSummaryPoster extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF333333),
+                color: PiggyPosterTokens.textPrimary,
               ),
             ),
           ),
@@ -477,7 +477,7 @@ class MonthSummaryPoster extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF333333),
+                  color: PiggyPosterTokens.textPrimary,
                 ),
               ),
               Text(
@@ -532,7 +532,7 @@ class MonthSummaryPoster extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final rate = data.expenseChangeRate!;
     final isIncrease = rate > 0;
-    final color = isIncrease ? const Color(0xFFFF6B6B) : const Color(0xFF51CF66);
+    final color = isIncrease ? PiggyPosterTokens.expense : PiggyPosterTokens.income;
     final icon = isIncrease ? Icons.trending_up : Icons.trending_down;
     final text = isIncrease ? l10n.sharePosterIncreaseRate : l10n.sharePosterDecreaseRate;
     final percentText = '${(rate.abs() * 100).toStringAsFixed(1)}%';
@@ -545,7 +545,7 @@ class MonthSummaryPoster extends StatelessWidget {
           l10n.sharePosterCompareLastMonth,
           style: const TextStyle(
             fontSize: 16,
-            color: Color(0xFF666666),
+            color: PiggyPosterTokens.textSecondary,
           ),
         ),
         const Spacer(),
@@ -584,7 +584,7 @@ class MonthSummaryPoster extends StatelessWidget {
           label,
           style: const TextStyle(
             fontSize: 16,
-            color: Color(0xFF666666),
+            color: PiggyPosterTokens.textSecondary,
           ),
         ),
         const Spacer(),

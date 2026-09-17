@@ -443,6 +443,8 @@ class AnnualReportPoster extends StatelessWidget {
                 colors: [
                   primaryColor,
                   primaryColor.withValues(alpha: 0.7),
+                  // 顶栏装饰渐变终点（珊瑚色过渡），数值恰与 expense 令牌
+                  // 相同但非支出语义，故保留字面量
                   const Color(0xFFFF6B6B),
                 ],
               ),
@@ -463,7 +465,7 @@ class AnnualReportPoster extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A1A2E),
+                        color: PiggyPosterTokens.darkInk,
                       ),
                     ),
                   ],
@@ -478,8 +480,8 @@ class AnnualReportPoster extends StatelessWidget {
                         icon: Icons.trending_up_rounded,
                         label: l10n.annualReportTotalIncome,
                         amount: hideIncome ? '****' : formatter.format(data.totalIncome),
-                        color: const Color(0xFF4CAF50),
-                        bgColor: const Color(0xFFE8F5E9),
+                        color: PiggyPosterTokens.income,
+                        bgColor: PiggyPosterTokens.incomeBadgeBg,
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -488,8 +490,8 @@ class AnnualReportPoster extends StatelessWidget {
                         icon: Icons.trending_down_rounded,
                         label: l10n.annualReportTotalExpense,
                         amount: formatter.format(data.totalExpense),
-                        color: const Color(0xFFFF5252),
-                        bgColor: const Color(0xFFFFEBEE),
+                        color: PiggyPosterTokens.expense,
+                        bgColor: PiggyPosterTokens.expenseBadgeBg,
                       ),
                     ),
                   ],
@@ -501,14 +503,17 @@ class AnnualReportPoster extends StatelessWidget {
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
+                      // 渐变 ramp：深档/浅档成对，语义端锚定令牌，伴随档为版面设计值
                       colors: data.netSavings >= 0
-                          ? [const Color(0xFF4CAF50), const Color(0xFF66BB6A)]
-                          : [const Color(0xFFFF5252), const Color(0xFFFF6B6B)],
+                          ? [PiggyPosterTokens.income, const Color(0xFF66BB6A)]
+                          : [const Color(0xFFFF5252), PiggyPosterTokens.expense],
                     ),
                     borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
                     boxShadow: [
                       BoxShadow(
-                        color: (data.netSavings >= 0 ? const Color(0xFF4CAF50) : const Color(0xFFFF5252))
+                        color: (data.netSavings >= 0
+                                ? PiggyPosterTokens.income
+                                : PiggyPosterTokens.expense)
                             .withValues(alpha: 0.3),
                         blurRadius: 15,
                         offset: const Offset(0, 8),
@@ -838,8 +843,8 @@ class AnnualReportPoster extends StatelessWidget {
                       : '${savingsRate.toStringAsFixed(1)}%',
                   // 储蓄率用红绿色区分正负
                   color: savingsRate >= 0
-                      ? const Color(0xFF4CAF50)
-                      : const Color(0xFFFF5252),
+                      ? PiggyPosterTokens.income
+                      : PiggyPosterTokens.expense,
                 ),
               ),
             ],
@@ -928,12 +933,13 @@ class AnnualReportPoster extends StatelessWidget {
 
     final formatter = NumberFormat('#,##0.00', 'zh_CN');
     final rankColors = [
-      const Color(0xFFFFD700), // Gold
-      const Color(0xFFC0C0C0), // Silver
-      const Color(0xFFCD7F32), // Bronze
+      PiggyPosterTokens.medalGold,
+      PiggyPosterTokens.medalSilver,
+      PiggyPosterTokens.medalBronze,
       Colors.white.withValues(alpha: 0.6),
       Colors.white.withValues(alpha: 0.6),
     ];
+    // 名次底色：金银铜配套浅底为一次性版面色，不入语义令牌
     final rankBgColors = [
       const Color(0xFFFFF8E1),
       const Color(0xFFF5F5F5),
@@ -1030,7 +1036,7 @@ class AnnualReportPoster extends StatelessWidget {
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
-                                    color: Color(0xFF1A1A2E),
+                                    color: PiggyPosterTokens.darkInk,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -1059,7 +1065,7 @@ class AnnualReportPoster extends StatelessWidget {
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1A1A2E),
+                                  color: PiggyPosterTokens.darkInk,
                                 ),
                               ),
                               Text(
@@ -1171,7 +1177,7 @@ class AnnualReportPoster extends StatelessWidget {
                   label: l10n.annualReportHighestMonth,
                   month: l10n.annualReportMonthValue(maxMonth),
                   amount: '$currencySymbol${formatter.format(maxExpense)}',
-                  color: const Color(0xFFFF5252),
+                  color: PiggyPosterTokens.expense,
                   icon: Icons.arrow_upward_rounded,
                 ),
               ),
@@ -1181,7 +1187,7 @@ class AnnualReportPoster extends StatelessWidget {
                   label: l10n.annualReportLowestMonth,
                   month: l10n.annualReportMonthValue(minMonth),
                   amount: '$currencySymbol${formatter.format(minExpense)}',
-                  color: const Color(0xFF4CAF50),
+                  color: PiggyPosterTokens.income,
                   icon: Icons.arrow_downward_rounded,
                 ),
               ),
@@ -1214,7 +1220,7 @@ class AnnualReportPoster extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF1A1A2E),
+                        color: PiggyPosterTokens.darkInk,
                       ),
                     ),
                   ],
@@ -1229,9 +1235,9 @@ class AnnualReportPoster extends StatelessWidget {
                       final isMax = m.month == maxMonth;
                       final isMin = m.month == minMonth;
                       final barColor = isMax
-                          ? const Color(0xFFFF5252)
+                          ? PiggyPosterTokens.expense
                           : isMin
-                              ? const Color(0xFF4CAF50)
+                              ? PiggyPosterTokens.income
                               : primaryColor.withValues(alpha: 0.6);
 
                       return Expanded(
@@ -1366,7 +1372,7 @@ class AnnualReportPoster extends StatelessWidget {
         amount: formatter.format(data.largestExpense!.amount),
         note: data.largestExpense!.note ?? data.largestExpenseCategory?.name ?? '',
         date: dateFormatter.format(data.largestExpense!.happenedAt),
-        color: const Color(0xFFFF5252),
+        color: PiggyPosterTokens.expense,
         icon: Icons.arrow_downward_rounded,
       ));
     }
@@ -1377,7 +1383,7 @@ class AnnualReportPoster extends StatelessWidget {
         amount: hideIncome ? '****' : formatter.format(data.largestIncome!.amount),
         note: data.largestIncome!.note ?? data.largestIncomeCategory?.name ?? '',
         date: dateFormatter.format(data.largestIncome!.happenedAt),
-        color: const Color(0xFF4CAF50),
+        color: PiggyPosterTokens.income,
         icon: Icons.arrow_upward_rounded,
       ));
     }
@@ -1537,7 +1543,7 @@ class AnnualReportPoster extends StatelessWidget {
         desc: l10n.annualReportAchievementSaverDesc,
         icon: Icons.savings_rounded,
         unlocked: data.netSavings > 0,
-        color: const Color(0xFF4CAF50), // 储蓄用绿色
+        color: PiggyPosterTokens.income, // 储蓄用绿色
       ),
       (
         title: l10n.annualReportAchievementDetail,
@@ -1626,7 +1632,7 @@ class AnnualReportPoster extends StatelessWidget {
                                 Text(
                                   a.title,
                                   style: TextStyle(
-                                    color: a.unlocked ? const Color(0xFF1A1A2E) : Colors.grey[400],
+                                    color: a.unlocked ? PiggyPosterTokens.darkInk : Colors.grey[400],
                                     fontSize: 17,
                                     fontWeight: FontWeight.bold,
                                   ),

@@ -397,7 +397,7 @@ class UserProfilePoster extends StatelessWidget {
           label,
           style: const TextStyle(
             fontSize: 16,
-            color: Color(0xFF999999),
+            color: PiggyPosterTokens.textTertiary,
           ),
         ),
         const SizedBox(height: 8),
@@ -457,7 +457,7 @@ class UserProfilePoster extends StatelessWidget {
             children: [
               Icon(
                 achievementIcon,
-                color: const Color(0xFFFFD700),
+                color: PiggyPosterTokens.medalGold,
                 size: 28,
               ),
               const SizedBox(width: 12),

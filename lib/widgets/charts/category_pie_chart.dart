@@ -8,23 +8,6 @@ import '../../utils/category_utils.dart';
 import '../../data/db.dart' as db;
 import '../biz/biz.dart';
 
-/// 饼图/排行榜共用的分类调色板（12 色，覆盖常见分类数量）。
-/// 排行榜按分类排序下标取色，与环形图扇区颜色一一对应。
-const kAnalyticsPieColors = <Color>[
-  Color(0xFF5B8FF9), // 蓝
-  Color(0xFF5AD8A6), // 绿
-  Color(0xFFF6BD16), // 黄
-  Color(0xFFE86452), // 红
-  Color(0xFF6DC8EC), // 浅蓝
-  Color(0xFF945FB9), // 紫
-  Color(0xFFFF9845), // 橙
-  Color(0xFF1E9493), // 青
-  Color(0xFFFF99C3), // 粉
-  Color(0xFF269A99), // 深青
-  Color(0xFFBDD2FD), // 淡蓝
-  Color(0xFFA0DC2C), // 黄绿
-];
-
 /// 分类饼图条目
 typedef PieCategoryItem = ({
   int? id,
@@ -87,8 +70,8 @@ class _CategoryPieChartState extends ConsumerState<CategoryPieChart> {
         slices.add((
           name: item.name,
           total: item.total,
-          color:
-              kAnalyticsPieColors[slices.length % kAnalyticsPieColors.length],
+          color: PiggyChartTokens
+              .seriesColors[slices.length % PiggyChartTokens.seriesColors.length],
           originalIndex: idx,
         ));
       } else {
@@ -197,7 +180,7 @@ class _CategoryPieChartState extends ConsumerState<CategoryPieChart> {
                     : l10n.analyticsTotalAmount,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: PiggyTokens.textTertiary(context),
-                      fontSize: 11,
+                      fontSize: PiggyChartTokens.legendFontSize,
                     ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -208,7 +191,7 @@ class _CategoryPieChartState extends ConsumerState<CategoryPieChart> {
                 signed: false,
                 useCompactFormat: true,
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: PiggyChartTokens.centerValueFontSize,
                   fontWeight: FontWeight.w600,
                   color: PiggyTokens.textPrimary(context),
                 ),
@@ -256,7 +239,7 @@ class _ExternalLabel extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: PiggyChartTokens.xLabelFontSize,
                   fontWeight:
                       highlighted ? FontWeight.w600 : FontWeight.w400,
                   color: PiggyTokens.textPrimary(context),
@@ -270,7 +253,7 @@ class _ExternalLabel extends StatelessWidget {
           // 百分比是关键信息：比名称略小但需高对比（此前 9px + textTertiary
           // 在浅色扇区上几乎看不清）
           style: TextStyle(
-            fontSize: 10,
+            fontSize: PiggyChartTokens.xLabelFontSize,
             fontWeight: FontWeight.w600,
             color: PiggyTokens.textSecondary(context),
           ),

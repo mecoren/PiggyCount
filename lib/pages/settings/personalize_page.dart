@@ -21,9 +21,14 @@ class _PersonalizePageState extends ConsumerState<PersonalizePage> {
     final primary = ref.watch(primaryColorProvider);
     final l10n = AppLocalizations.of(context);
 
+    // 主题色板选项：这些 Color(0x…) 是「用户可选的数据」（色板本身），
+    // 不是绕过令牌系统的样式硬编码，故不入 PiggyTokens。
+    // 例外：首位天空蓝是 App 默认主题色，须与 primaryColorProvider 默认值
+    // 同源（PiggyPersonalizeDefaults.defaultPrimaryColor）。
     final options = <_ThemeOption>[
       // 前三为默认推荐色：天空蓝（默认）/ 小猪粉 / 晴空蓝
-      _ThemeOption(l10n.personalizeThemeSkyBlue, const Color(0xFF497FF8)),
+      _ThemeOption(l10n.personalizeThemeSkyBlue,
+          PiggyPersonalizeDefaults.defaultPrimaryColor),
       _ThemeOption(l10n.personalizeThemePiggyPink, const Color(0xFFFF5C8D)),
       _ThemeOption(l10n.personalizeThemeBlue, const Color(0xFF2196F3)),
       _ThemeOption(l10n.personalizeThemeGradientBlue, const Color(0xFF2563EB)),
