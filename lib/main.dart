@@ -10,10 +10,8 @@ import 'styles/tokens.dart';
 import 'widgets/ui/toast.dart';
 import 'theme.dart';
 import 'providers.dart';
-import 'providers/currency_providers.dart';
 import 'providers/font_scale_provider.dart';
 import 'providers/cloud_mode_providers.dart';
-import 'providers/ui_state_providers.dart';
 import 'utils/notification_factory.dart';
 import 'pages/auth/splash_page.dart';
 import 'pages/auth/welcome_page.dart';
@@ -79,34 +77,8 @@ Future<void> main() async {
     logger.warning('App', '⚠️  时区初始化失败（可能在不支持的平台上运行）: $e');
   }
 
-  // 配置iOS App Group（widget和主app共享数据必需）
-  try {
-    if (Platform.isIOS) {
-      await HomeWidget.setAppGroupId('group.com.wait.piggycount');
-    }
-  } catch (e) {
-    logger.warning('App', '⚠️  HomeWidget 插件初始化失败（可能在不支持的平台上运行）: $e');
-  }
-
-  // 初始化通知服务
-  try {
-    final notificationUtil = NotificationFactory.getInstance();
-    await notificationUtil.initialize();
-  } catch (e) {
-    logger.warning('App', '⚠️  通知服务初始化失败（可能在不支持的平台上运行）: $e');
-  }
-
-  // 恢复用户的记账提醒设置（关键修复：应用重启后自动恢复提醒）
-  await _restoreUserReminder();
-
-  // 启动提醒监控服务（监听应用生命周期，自动恢复丢失的提醒）
-  try {
-    ReminderMonitorService().startMonitoring();
-  } catch (e) {
-    logger.warning('App', '⚠️  提醒监控服务启动失败（可能在不支持的平台上运行）: $e');
-  }
-
-  // 创建全局ProviderContainer（需要在周期交易生成之前创建，因为需要使用 repositoryProvider）
+  // 创建全局ProviderContainer —— 同步构造（无 IO），提前到所有初始化链
+  // 之前：通知/截图/去重链都要从它读取依赖。
   // observers 必须挂在这里(根容器):无 override 的全局 provider 元素都挂载
   // 于根容器,riverpod 只通知元素所属容器的 observers;历史上挂在下面
   // ProviderScope(parent: ...) 子作用域上,didUpdateProvider 从未被回调,
@@ -116,46 +88,42 @@ Future<void> main() async {
     observers: [_WidgetUpdateObserver()],
   );
 
-  // 初始化应用模式（P2-10：仅规范化历史持久值，见 _initializeAppMode）
-  await _initializeAppMode(container);
+  // —— 启动路径并行化(P0-4)：以下 6 条初始化链互不依赖。原先串行
+  //    await 时,每个平台通道/DB/SharedPreferences 往返都要等上一个
+  //    完成才开跑;Future.wait 后总耗时≈最慢一条链(通常是「通知初始化
+  //    + 提醒恢复」或「DB 去重」)。全部链仍在 runApp 前完成,完成顺序
+  //    与语义和串行版等价:各链吞掉自身异常,不会让 Future.wait 短路。 ——
+  await Future.wait([
+    // 链1:通知服务初始化 → (记账提醒 + 信用卡提醒并行恢复)
+    _initNotificationChain(container),
+    // 链2:iOS App Group(widget 和主 app 共享数据必需,仅平台通道)
+    _initIOSAppGroup(),
+    // 链3:应用模式规范化(P2-10,仅 SharedPreferences)
+    _initializeAppMode(container),
+    // 链4:账户去重收敛(仅 DB;必须在 runApp 前完成——启动同步检查的
+    //      指纹计算/上传导出会并发读账户表,详见 _dedupAccounts)
+    _dedupAccounts(container),
+    // 链5:小组件交互回调注册(仅平台通道)
+    _registerWidgetCallback(),
+    // 链6:截图自动识别恢复(Android 专属,SharedPreferences + 服务开关)
+    _restoreScreenshotMonitor(container),
+  ]);
 
   // 注意：不再在启动时生成重复交易
   // 周期交易生成已移至 appSplashInitProvider 中（等待数据库完全初始化后执行）
   // await _generatePendingRecurringTransactions(container);
 
-  // 恢复信用卡还款提醒
-  try {
-    final repo = container.read(repositoryProvider);
-    await CreditCardReminderService.restoreAllReminders(
-      getCreditCardAccounts: () => repo.getCreditCardAccounts(),
-    );
-  } catch (e) {
-    // 静默失败，不影响启动
-  }
-
-  // 账户去重收敛（prd/account_dedup）：合并历史遗留的按账本重复账户。
-  // 必须在 runApp 前完成——后续启动同步检查的指纹计算/上传导出会并发
-  // 读账户表。幂等：无重复时零写入直接返回，失败仅记日志不阻塞启动。
-  try {
-    final db = container.read(databaseProvider);
-    await AccountDedupService.run(db);
-  } catch (e, st) {
-    logger.warning('AccountDedup', '账户去重收敛失败(不阻塞启动): $e\n$st');
-  }
-
   // [已删除] v1.15.0 账户独立迁移 & v2.7.1 转账分类迁移
   // 所有活跃用户已完成，Drift onUpgrade 已覆盖相关 schema 变更
   // 硬编码 SQL 重建表会导致新增字段丢失（如 sort_order），故移除
 
-  // 注册小组件交互回调
+  // 启动提醒监控服务（监听应用生命周期，自动恢复丢失的提醒）。
+  // 放在并行链之后：两类提醒已恢复完，监控接管的是之后的生命周期变化。
   try {
-    await WidgetManager.registerCallback();
+    ReminderMonitorService().startMonitoring();
   } catch (e) {
-    logger.warning('App', '小组件回调注册失败（可能在不支持的平台上运行）: $e');
+    logger.warning('App', '⚠️  提醒监控服务启动失败（可能在不支持的平台上运行）: $e');
   }
-
-  // 恢复截图自动识别设置（Android专属），传入container
-  await _restoreScreenshotMonitor(container);
 
   // 初始化图片分享处理服务（Android专属）
   if (Platform.isAndroid) {
@@ -180,6 +148,69 @@ Future<void> main() async {
     parent: container,
     child: const MainApp(),
   ));
+}
+
+/// 启动链1：通知服务初始化 + 两类提醒恢复。
+///
+/// 通知服务就绪后，记账提醒与信用卡还款提醒只依赖通知服务、彼此独立
+/// （通知 ID 互不冲突），再并行恢复。全程吞异常并记日志，不让
+/// Future.wait 短路。
+Future<void> _initNotificationChain(ProviderContainer container) async {
+  try {
+    final notificationUtil = NotificationFactory.getInstance();
+    await notificationUtil.initialize();
+  } catch (e) {
+    logger.warning('App', '⚠️  通知服务初始化失败（可能在不支持的平台上运行）: $e');
+  }
+
+  await Future.wait([
+    _restoreUserReminder(),
+    _restoreCreditCardReminders(container),
+  ]);
+}
+
+/// 启动链2：配置iOS App Group（widget和主app共享数据必需）
+Future<void> _initIOSAppGroup() async {
+  try {
+    if (Platform.isIOS) {
+      await HomeWidget.setAppGroupId('group.com.wait.piggycount');
+    }
+  } catch (e) {
+    logger.warning('App', '⚠️  HomeWidget 插件初始化失败（可能在不支持的平台上运行）: $e');
+  }
+}
+
+/// 启动链1 子步骤：恢复信用卡还款提醒
+Future<void> _restoreCreditCardReminders(ProviderContainer container) async {
+  try {
+    final repo = container.read(repositoryProvider);
+    await CreditCardReminderService.restoreAllReminders(
+      getCreditCardAccounts: () => repo.getCreditCardAccounts(),
+    );
+  } catch (e) {
+    // 静默失败，不影响启动
+  }
+}
+
+/// 启动链4：账户去重收敛（prd/account_dedup）：合并历史遗留的按账本重复账户。
+/// 必须在 runApp 前完成——后续启动同步检查的指纹计算/上传导出会并发
+/// 读账户表。幂等：无重复时零写入直接返回，失败仅记日志不阻塞启动。
+Future<void> _dedupAccounts(ProviderContainer container) async {
+  try {
+    final db = container.read(databaseProvider);
+    await AccountDedupService.run(db);
+  } catch (e, st) {
+    logger.warning('AccountDedup', '账户去重收敛失败(不阻塞启动): $e\n$st');
+  }
+}
+
+/// 启动链5：注册小组件交互回调
+Future<void> _registerWidgetCallback() async {
+  try {
+    await WidgetManager.registerCallback();
+  } catch (e) {
+    logger.warning('App', '小组件回调注册失败（可能在不支持的平台上运行）: $e');
+  }
 }
 
 /// Provider observer to update widget on app start
