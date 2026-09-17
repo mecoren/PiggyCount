@@ -40,6 +40,9 @@ class HelpCenterPage extends ConsumerStatefulWidget {
 }
 
 class _HelpCenterPageState extends ConsumerState<HelpCenterPage> {
+  // P1 生命周期审计（2026-09）：webview_flutter 4.x 的 WebViewController
+  // 无公开 dispose API——原生 WebView 由 WebViewWidget 挂载时创建、随其
+  // 卸载自动释放；路由 pop 后 State 与 Controller 一起被 GC，无泄漏路径。
   WebViewController? _controller;
   String _url = '';
   int _progress = 0;

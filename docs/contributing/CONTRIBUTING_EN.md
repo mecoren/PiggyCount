@@ -441,6 +441,39 @@ class Transactions extends Table {
    - Avoid N+1 queries
    - Use streaming queries to respond to data changes
 
+### Resource & Subscription Lifecycle
+
+**Rule: every `StreamSubscription` held by a `State` must be cancelled in
+`dispose`.** Page-scoped listeners (event channels, service broadcast streams)
+that are not cancelled stack up as leaks when routes are re-entered.
+
+1. **Three legitimate forms**
+
+   - **Page-level**: the `State` holds the subscription and cancels it in
+     `dispose()` (example: `donation_page.dart`)
+   - **Provider-level**: `ref.onDispose(() => sub?.cancel())`
+     (example: `txTableSub` in `sync_providers.dart`)
+   - **Repository bridge streams**: subscribe in the `StreamController`'s
+     `onListen`, cancel in `onCancel` — closes automatically when consumers
+     stop listening (example: `local_transaction_repository.dart`)
+
+2. **Global singleton subscription inventory** (alive for the whole app
+   lifetime, intentionally never cancelled; additions require review)
+
+   | Location | Stream | Reason |
+   |----------|--------|--------|
+   | `main.dart` `_setupUrlListener` | `appLinks.uriLinkStream` | Cold-start + background URL dispatch |
+   | `app_link_service.dart` | AppIntents EventChannel | iOS Shortcuts entry |
+   | `donation_service.dart` | `in_app_purchase.purchaseStream` | Deferred purchases may arrive after the page is closed; the singleton intentionally has no dispose |
+
+   Global singletons must **not** expose a whole-instance `dispose()` — a
+   broadcast `StreamController` cannot be reused after close, and one stray
+   call permanently cripples the singleton.
+
+3. **WebView**: `webview_flutter` 4.x `WebViewController` has no public
+   dispose API; the native view is released automatically when
+   `WebViewWidget` unmounts — no manual teardown is needed.
+
 ## Commit Message Convention
 
 We use a commit convention based on [Conventional Commits](https://www.conventionalcommits.org/), **in Chinese**.

@@ -442,6 +442,35 @@ class Transactions extends Table {
    - 避免 N+1 查询
    - 使用流式查询响应数据变化
 
+### 资源与订阅生命周期
+
+**规则：State 内的 `StreamSubscription` 必须在 `dispose` 中取消。** 页面级监听
+（事件通道、服务广播流）若不随页面销毁取消，会在路由栈复用时叠加泄漏。
+
+1. **三种合法形态**
+
+   - **页面级**：`State` 持有订阅，`dispose()` 中 `cancel()`
+     （范例：`donation_page.dart`）
+   - **Provider 级**：`ref.onDispose(() => sub?.cancel())`
+     （范例：`sync_providers.dart` 的 txTableSub）
+   - **Repository 桥接流**：`StreamController` 的 `onListen` 中订阅、
+     `onCancel` 中取消，随消费方停止监听自动闭合
+     （范例：`local_transaction_repository.dart`）
+
+2. **全局单例订阅清单**（app 生命周期存活，刻意不取消，新增须先评审）
+
+   | 位置 | 流 | 理由 |
+   |------|----|------|
+   | `main.dart` `_setupUrlListener` | `appLinks.uriLinkStream` | 冷启动 + 后台唤起 URL 分发 |
+   | `app_link_service.dart` | AppIntents EventChannel | iOS 快捷指令入口 |
+   | `donation_service.dart` | `in_app_purchase.purchaseStream` | 延迟补单可能在页面关闭后送达；单例刻意无 dispose |
+
+   全局单例**不得**暴露 `dispose()` 之类的整体释放方法——广播
+   `StreamController` close 后无法复用，误调一次即永久致残单例。
+
+3. **WebView**：`webview_flutter` 4.x 的 `WebViewController` 无公开 dispose
+   API，原生视图随 `WebViewWidget` 卸载自动释放，无需手工释放。
+
 ## 提交信息规范
 
 我们使用基于 [约定式提交](https://www.conventionalcommits.org/zh-hans/) 的提交规范，**使用中文**。

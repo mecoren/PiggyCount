@@ -20,10 +20,7 @@ class DonationService {
   // IAP实例
   final InAppPurchase _iap = InAppPurchase.instance;
 
-  // 购买监听订阅
-  StreamSubscription<List<PurchaseDetails>>? _subscription;
-
-  // 事件流控制器
+  // 购买事件流控制器
   final _successController = StreamController<String>.broadcast();
   final _errorController = StreamController<String>.broadcast();
 
@@ -99,8 +96,8 @@ class DonationService {
         return false;
       }
 
-      // 监听购买事件流
-      _subscription = _iap.purchaseStream.listen(
+      // 监听购买事件流（单例 app 级存活，无需持有引用——见类尾生命周期注释）
+      _iap.purchaseStream.listen(
         _onPurchaseUpdate,
         onDone: () {
           logger.info('Donation', '购买流结束');
@@ -288,13 +285,11 @@ class DonationService {
     }
   }
 
-  /// 释放资源
-  void dispose() {
-    logger.info('Donation', '释放DonationService资源');
-    _subscription?.cancel();
-    _successController.close();
-    _errorController.close();
-  }
+  // P1 生命周期审计（2026-09）：本服务是 app 级单例，刻意不提供 dispose。
+  // IAP 购买流订阅必须存活整个应用生命周期——延迟补单/后台完成的购买
+  // 可能在捐赠页已关闭后才送达，取消订阅会永久丢失这些事件；广播
+  // StreamController 一旦 close 也无法复用。历史上的 dispose() 方法
+  // 是陷阱（无调用方 + 一旦误调即永久致残单例），已删除。
 }
 
 /// 模拟商品详情（仅用于开发和截图）
