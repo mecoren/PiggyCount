@@ -613,8 +613,6 @@ class _HomePageState extends ConsumerState<HomePage> {
     // 预加载数据（含标签、附件、账户，仅前 N 条）
     final cachedFullData = ref.watch(cachedTransactionsProvider);
     final ledgerId = ref.watch(currentLedgerIdProvider);
-    final aiEnabledAsync = ref.watch(aiAssistantEnabledProvider);
-    final aiEnabled = aiEnabledAsync.asData?.value ?? true; // 默认开启
 
     // 检测账本切换 → 用 listen,避免在 build 中直接写 state 触发
     // "Tried to modify a provider while the widget tree was building"
@@ -663,6 +661,11 @@ class _HomePageState extends ConsumerState<HomePage> {
         children: [
           Consumer(builder: (context, ref, _) {
             ref.watch(headerStyleProvider);
+            // P1-C provider 收敛：AI 开关只影响头部入口按钮，watch 收敛在
+            // 头部 Consumer 内 —— 设置页切换 AI 不再整页重建（StreamBuilder
+            // 子树保持不动），仅本 Consumer 重建。
+            final aiEnabled =
+                ref.watch(aiAssistantEnabledProvider).asData?.value ?? true;
             return PiggyHeader(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,

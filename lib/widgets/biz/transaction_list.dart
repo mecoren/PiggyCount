@@ -14,6 +14,7 @@ import '../../services/billing/post_processor.dart';
 import '../../utils/transaction_edit_utils.dart';
 import '../../utils/category_utils.dart';
 import '../category_icon.dart';
+import 'transaction_day_grouper.dart';
 import '../../pages/transaction/category_detail_page.dart';
 import '../../pages/tag/tag_detail_page.dart';
 import '../../pages/attachment/attachment_preview_page.dart';
@@ -97,6 +98,12 @@ class TransactionListState extends ConsumerState<TransactionList> {
   int? _flatItemsSourceLength;
   int? _firstTxId;
   int? _lastTxId;
+
+  // P1-C 增量分组：分组卡片模式（wrapInOuterCard）的分组状态与日合计缓存。
+  // _dayTotalsCache 仅脏日失效重算，未脏日（列表实例未变）直接复用。
+  final TransactionDayGrouper _grouper = TransactionDayGrouper();
+  bool _groupingSeeded = false;
+  final Map<String, (double, double)> _dayTotalsCache = {};
 
   // 缓存标签数据（仅用于非预加载模式）
   Map<int, List<Tag>> _cachedTagsMap = {};
@@ -327,10 +334,33 @@ class TransactionListState extends ConsumerState<TransactionList> {
   }
 
   /// 构建扁平化的项目列表
+  ///
+  /// P1-C 增量分组：分组卡片模式（wrapInOuterCard，首页在用）走
+  /// TransactionDayGrouper —— 已 seed 时先增量 diff，无变化直接返回（Drift
+  /// 等值重复 emit 零重建成本），有变化仅重建脏日；首次构建 fullRebuild。
+  /// 单笔增删改从「全量 DateFormat×n + 排序 + 全部扁平项重建」降为
+  /// O(n) 值比较 + 脏日重建。平铺旧风格（无调用方）保留原全量路径。
   void _buildFlatItems() {
     final transactions = _transactionsList;
 
-    // 按天分组
+    if (widget.wrapInOuterCard) {
+      if (_groupingSeeded) {
+        final dirty = _grouper.applyDiff(transactions);
+        if (dirty == null) return;
+        // 脏日的合计缓存失效，扁平项重建时重算
+        for (final key in dirty) {
+          _dayTotalsCache.remove(key);
+        }
+      } else {
+        _grouper.fullRebuild(transactions);
+        _dayTotalsCache.clear();
+        _groupingSeeded = true;
+      }
+      _rebuildFlatItemsFromGroups();
+      return;
+    }
+
+    // ---- 平铺旧风格（wrapInOuterCard = false）：原全量路径 ----
     final dateFmt = DateFormat('yyyy-MM-dd');
     final groups = <String, List<({Transaction t, Category? category, Account? account, Account? toAccount})>>{};
     for (final item in transactions) {
@@ -340,69 +370,71 @@ class TransactionListState extends ConsumerState<TransactionList> {
     }
     final sortedKeys = groups.keys.toList()..sort((a, b) => b.compareTo(a));
 
-    // 日合计预计算:income/expense 在构建期一次算好存入 flat item,
-    // 渲染期(DaySectionHeader/头部分支)不再每帧循环当天交易列表。
-    // 转账不计入收支统计(与原渲染期口径一致)。
-    (double, double) dayTotals(
-        List<({Transaction t, Category? category, Account? account, Account? toAccount})>
-            list) {
-      double income = 0, expense = 0;
-      for (final it in list) {
-        if (it.t.type == 'income') income += it.t.nativeAmount ?? it.t.amount;
-        if (it.t.type == 'expense') expense += it.t.nativeAmount ?? it.t.amount;
-      }
-      return (income, expense);
+    _flatItems = <dynamic>[];
+    _dateIndexMap.clear();
+    if (widget.listHeader != null) {
+      _flatItems.add(('listHeader', null, null));
     }
+    for (final key in sortedKeys) {
+      final list = groups[key]!;
+      _dateIndexMap[key] = _flatItems.length;
+      _flatItems.add(('header', key, list, _computeDayTotals(list)));
+      for (final item in list) {
+        _flatItems.add(('transaction', item, list));
+      }
+    }
+    if (_flatItems.isNotEmpty) {
+      _flatItems.add(('bottomSpacer', null, null));
+    }
+  }
 
-    // 构建扁平的项目列表和日期索引映射
+  /// O(days)：从 grouper 结果重建扁平项 / 日期索引 / 累计起点 / 首末日标记。
+  /// 首末日标记每次重排（新日插入或末日删除会改变归属），O(days) 可接受。
+  void _rebuildFlatItemsFromGroups() {
     _flatItems = <dynamic>[];
     _dateIndexMap.clear();
 
-    // 列表头部内容(如月份总结卡片)作为第一项随列表滚动
     if (widget.listHeader != null) {
       _flatItems.add(('listHeader', null, null));
     }
 
-    if (widget.wrapInOuterCard && sortedKeys.isNotEmpty) {
-      // 「分组卡片」风格:每个 day 作为独立的懒加载项(FlutterListView delegate
-      // 按 index 按需构建),但视觉上首日/末日的圆角+边框与中日共享连续边线,
-      // 形成"一个大卡片"观感。flatDayStart 记录该 day 第一条交易在全局交易
-      // 序号中的起点,供 Dismissible 的 key 保持全局唯一稳定。`isFirst`/`isLast`
-      // 用于决定哪个 day 渲染顶/底圆角与顶/底边线——只有首日画顶部圆角+阴影,
-      // 只有末日画底部圆角,中日只画左右边线,整体连接成一张大卡片。
+    final keys = _grouper.sortedDayKeys;
+    if (keys.isNotEmpty) {
       int flatDayStart = 0;
-      final lastIndex = sortedKeys.length - 1;
-      for (int i = 0; i < sortedKeys.length; i++) {
-        final key = sortedKeys[i];
-        final list = groups[key]!;
+      final lastIndex = keys.length - 1;
+      for (int i = 0; i < keys.length; i++) {
+        final key = keys[i];
+        final list = _grouper.dayGroups[key]!;
         _dateIndexMap[key] = _flatItems.length;
         _flatItems.add((
           'day',
           key,
           list,
           flatDayStart,
-          i == 0,        // isFirst
-          i == lastIndex, // isLast
-          dayTotals(list), // (dayIncome, dayExpense) 预计算
+          i == 0, // isFirst：首日画顶部圆角+顶边+阴影
+          i == lastIndex, // isLast：末日画底部圆角
+          _dayTotalsCache.putIfAbsent(key, () => _computeDayTotals(list)),
         ));
         flatDayStart += list.length;
       }
-    } else if (!widget.wrapInOuterCard) {
-      // 平铺旧风格:header + 每个交易项独立占一行
-      for (final key in sortedKeys) {
-        final list = groups[key]!;
-        _dateIndexMap[key] = _flatItems.length;
-        _flatItems.add(('header', key, list, dayTotals(list)));
-        for (final item in list) {
-          _flatItems.add(('transaction', item, list));
-        }
-      }
     }
 
-    // 底部留白，避免被悬浮 Tab 栏遮挡
     if (_flatItems.isNotEmpty) {
       _flatItems.add(('bottomSpacer', null, null));
     }
+  }
+
+  /// 日合计预计算：income/expense 构建期一次算好存入 flat item，渲染期不再
+  /// 每帧循环当天交易列表。转账不计入收支统计（与原口径一致）。
+  (double, double) _computeDayTotals(
+      List<({Transaction t, Category? category, Account? account, Account? toAccount})>
+          list) {
+    double income = 0, expense = 0;
+    for (final it in list) {
+      if (it.t.type == 'income') income += it.t.nativeAmount ?? it.t.amount;
+      if (it.t.type == 'expense') expense += it.t.nativeAmount ?? it.t.amount;
+    }
+    return (income, expense);
   }
 
   @override
