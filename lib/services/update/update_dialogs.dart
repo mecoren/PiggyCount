@@ -191,6 +191,9 @@ class UpdateDialogs {
       ),
     );
 
+    // showDialog之后存在异步间隙，继续使用context前需确认其仍然挂载
+    if (!context.mounted) return;
+
     if (result == true) {
       await launchGitHubReleases(context);
     }
@@ -232,6 +235,9 @@ class UpdateDialogs {
         ],
       ),
     );
+
+    // showDialog之后存在异步间隙，继续使用context前需确认其仍然挂载
+    if (!context.mounted) return;
 
     if (result == true) {
       await launchGitHubReleases(context);

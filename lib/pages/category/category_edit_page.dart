@@ -792,6 +792,8 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
     setState(() => _isPickingImage = true);
 
     try {
+      // 在进入 async gap 前获取本地化实例,后续使用不再依赖 BuildContext
+      final l10n = AppLocalizations.of(context);
       final picker = ImagePicker();
       final image = await picker.pickImage(
         source: ImageSource.gallery,
@@ -803,7 +805,6 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
       }
 
       // 在异步调用前提取需要的值
-      final l10n = AppLocalizations.of(context);
       final primaryColor = ref.read(primaryColorProvider);
 
       // 裁剪图片为 1:1 比例

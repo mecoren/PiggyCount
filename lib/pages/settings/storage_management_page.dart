@@ -159,9 +159,13 @@ class _StorageManagementPageState extends ConsumerState<StorageManagementPage> {
         }
       }
 
+      // 删除文件是 async 操作,toast 前校验页面是否仍挂载
+      if (!mounted) return;
       showToast(context, l10n.storageClearSuccess);
       await _scanStorage();
     } catch (e) {
+      // 异常分支同样跨 async gap,先校验再提示
+      if (!mounted) return;
       showToast(context, '${l10n.commonError}: $e');
     }
   }
@@ -187,9 +191,13 @@ class _StorageManagementPageState extends ConsumerState<StorageManagementPage> {
         }
       }
 
+      // 删除文件是 async 操作,toast 前校验页面是否仍挂载
+      if (!mounted) return;
       showToast(context, l10n.storageClearSuccess);
       await _scanStorage();
     } catch (e) {
+      // 异常分支同样跨 async gap,先校验再提示
+      if (!mounted) return;
       showToast(context, '${l10n.commonError}: $e');
     }
   }

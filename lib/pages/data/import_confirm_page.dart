@@ -458,66 +458,68 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
     );
 
     bool dialogOpen = true;
-    // 进度弹窗（可转后台）
-    showDialog(
-      context: currentContext,
-      barrierDismissible: false,
-      builder: (dctx) {
-        return Consumer(builder: (dctx, r, _) {
-          final p = r.watch(importProgressProvider);
-          final percent =
-              p.total == 0 ? 0.0 : (p.done / p.total).clamp(0.0, 1.0);
-          return AlertDialog(
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
-            title: Text(AppLocalizations.of(context)!.importInProgress),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                LinearProgressIndicator(
-                    value: percent > 0 && percent < 1 ? percent : null),
-                const SizedBox(height: 8),
-                // 实时进度文案（每50条更新一次，足够流畅）
-                Text(
-                    AppLocalizations.of(context)!
-                        .importProgressDetail(p.done, p.fail, p.ok, p.total),
-                    style: Theme.of(dctx)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: PiggyTokens.textTertiary(context))),
+    // 进度弹窗（可转后台）;页面已销毁时跳过弹窗,导入流程继续后台执行
+    if (currentContext.mounted) {
+      showDialog(
+        context: currentContext,
+        barrierDismissible: false,
+        builder: (dctx) {
+          return Consumer(builder: (dctx, r, _) {
+            final p = r.watch(importProgressProvider);
+            final percent =
+                p.total == 0 ? 0.0 : (p.done / p.total).clamp(0.0, 1.0);
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
+              title: Text(AppLocalizations.of(context)!.importInProgress),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  LinearProgressIndicator(
+                      value: percent > 0 && percent < 1 ? percent : null),
+                  const SizedBox(height: 8),
+                  // 实时进度文案（每50条更新一次，足够流畅）
+                  Text(
+                      AppLocalizations.of(context)!
+                          .importProgressDetail(p.done, p.fail, p.ok, p.total),
+                      style: Theme.of(dctx)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: PiggyTokens.textTertiary(context))),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    dialogOpen = false;
+                    Navigator.of(dctx).pop();
+                    // 返回到数据管理页面继续后台导入
+                    if (mounted) {
+                      // Pop回DataManagementPage: ImportConfirmPage -> ImportPage
+                      Navigator.of(currentContext)
+                          .pop(); // Close ImportConfirmPage
+                      Navigator.of(currentContext)
+                          .pop(); // Close ImportPage, back to DataManagementPage
+                    }
+                  },
+                  child:
+                      Text(AppLocalizations.of(context)!.importBackgroundImport),
+                ),
+                TextButton(
+                  onPressed: () {
+                    _cancelled = true;
+                    dialogOpen = false;
+                    Navigator.of(dctx).pop();
+                  },
+                  child: Text(AppLocalizations.of(context)!.importCancelImport),
+                ),
               ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  dialogOpen = false;
-                  Navigator.of(dctx).pop();
-                  // 返回到数据管理页面继续后台导入
-                  if (mounted) {
-                    // Pop回DataManagementPage: ImportConfirmPage -> ImportPage
-                    Navigator.of(currentContext)
-                        .pop(); // Close ImportConfirmPage
-                    Navigator.of(currentContext)
-                        .pop(); // Close ImportPage, back to DataManagementPage
-                  }
-                },
-                child:
-                    Text(AppLocalizations.of(context)!.importBackgroundImport),
-              ),
-              TextButton(
-                onPressed: () {
-                  _cancelled = true;
-                  dialogOpen = false;
-                  Navigator.of(dctx).pop();
-                },
-                child: Text(AppLocalizations.of(context)!.importCancelImport),
-              ),
-            ],
-          );
-        });
-      },
-    );
+            );
+          });
+        },
+      );
+    }
 
     // 定义进度变量
     int done = 0;

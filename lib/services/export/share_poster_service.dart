@@ -141,6 +141,9 @@ class SharePosterService {
         year: year,
       );
 
+      // 数据计算存在异步间隙，使用context生成海报前需确认其仍然挂载
+      if (!context.mounted) return null;
+
       return await _generatePosterFromWidgetStatic(
         context,
         YearSummaryPoster(data: data, primaryColor: primaryColor, hideIncome: hideIncome),
@@ -170,6 +173,9 @@ class SharePosterService {
         month: month,
       );
 
+      // 数据计算存在异步间隙，使用context生成海报前需确认其仍然挂载
+      if (!context.mounted) return null;
+
       return await _generatePosterFromWidgetStatic(
         context,
         MonthSummaryPoster(data: data, primaryColor: primaryColor, hideIncome: hideIncome),
@@ -194,6 +200,9 @@ class SharePosterService {
       final data = await dataService.calculateLedgerSummary(
         ledgerId: ledgerId,
       );
+
+      // 数据计算存在异步间隙，使用context生成海报前需确认其仍然挂载
+      if (!context.mounted) return null;
 
       return await _generatePosterFromWidgetStatic(
         context,

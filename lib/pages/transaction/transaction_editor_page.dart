@@ -395,7 +395,8 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
     }
 
     // await 后检查 mounted，避免页面已卸载仍使用 context 弹出底部表单
-    if (!mounted) return;
+    // context 为方法参数,需与 State.mounted 一并校验
+    if (!mounted || !context.mounted) return;
 
     await showModalBottomSheet(
       context: context,

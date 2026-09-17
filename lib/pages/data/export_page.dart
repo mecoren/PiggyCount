@@ -90,6 +90,8 @@ class _ExportPageState extends ConsumerState<ExportPage> {
   }
 
   Future<void> _export(BaseRepository repo, int ledgerId) async {
+    // 在首个 await 前获取本地化实例,避免 async gap 后使用 BuildContext
+    final l10n = AppLocalizations.of(context);
     try {
       setState(() {
         exporting = true;
@@ -118,7 +120,6 @@ class _ExportPageState extends ConsumerState<ExportPage> {
           await repo.transactionsWithCategoryAll(ledgerId: ledgerId).first;
       final total = transactionsWithCategory.length;
       final rows = <List<dynamic>>[];
-      final l10n = AppLocalizations.of(context);
       rows.add([
         l10n.exportCsvHeaderType,
         l10n.exportCsvHeaderCategory,
@@ -167,6 +168,9 @@ class _ExportPageState extends ConsumerState<ExportPage> {
           allCategories[subCat.id] = subCat;
         }
       }
+
+      // await 后校验 mounted,后续循环中会将 context 传给工具方法
+      if (!mounted) return;
 
       for (int i = 0; i < transactionsWithCategory.length; i++) {
         final txWithCat = transactionsWithCategory[i];
@@ -278,6 +282,8 @@ class _ExportPageState extends ConsumerState<ExportPage> {
         // 触发分享面板
         await Share.shareXFiles([XFile(path)],
             text: l10nDialog.exportShareText);
+        // 分享面板关闭后再校验,页面已销毁则不再弹成功提示
+        if (!mounted) return;
         await AppDialog.info(context,
             title: l10nDialog.exportSuccessTitle,
             message: l10nDialog.exportSuccessMessageIOS(path));

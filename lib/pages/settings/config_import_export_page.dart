@@ -152,18 +152,18 @@ class _ConfigImportExportPageState
       final content = await file.readAsString();
 
       if (!mounted) return;
-      final dialogContext = context;
       final l10n = AppLocalizations.of(context);
 
       await showDialog(
-        context: dialogContext,
-        builder: (context) => _ConfigContentDialog(
+        context: context,
+        builder: (dctx) => _ConfigContentDialog(
           content: content,
           onCopy: () async {
             await Clipboard.setData(ClipboardData(text: content));
-            if (!mounted) return;
-            Navigator.pop(context);
-            showToast(dialogContext, l10n.configExportContentCopied);
+            // 复制完成后同时校验页面与弹窗 context:pop 用弹窗,toast 用页面
+            if (!mounted || !dctx.mounted) return;
+            Navigator.pop(dctx);
+            showToast(context, l10n.configExportContentCopied);
           },
         ),
       );

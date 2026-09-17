@@ -396,6 +396,8 @@ class _AuthPageState extends ConsumerState<AuthPage> {
 
                                             // Save credentials if "remember account" is checked
                                             await _saveCredentials(email, pwd);
+                                            // await 后 context 可能失效,重新校验再继续后续导航
+                                            if (!context.mounted) return;
 
                                             // 刷新认证服务和同步服务以触发状态更新
                                             ref.invalidate(authServiceProvider);

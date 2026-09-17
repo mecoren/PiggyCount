@@ -231,7 +231,8 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                   ),
                 ),
               );
-              if (result == true && mounted) {
+              // context 是 build 参数,State.mounted 不足以证明其有效,需一并校验
+              if (result == true && mounted && context.mounted) {
                 Navigator.pop(context, true);
               }
             },
@@ -567,7 +568,8 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
       final storedValue = isLiability ? -result.abs() : result;
       await repo.updateAccountValuation(account.id, storedValue);
 
-      if (mounted) {
+      // context 为方法参数,与 State.mounted 一并校验,保证 ref 与 context 均可用
+      if (mounted && context.mounted) {
         // 刷新数据
         ref.invalidate(accountStatsProvider(account.id));
         showToast(context, l10n.commonSave);

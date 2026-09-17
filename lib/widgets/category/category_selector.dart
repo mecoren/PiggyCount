@@ -197,7 +197,8 @@ class _CategorySelectorState extends ConsumerState<CategorySelector> {
 
                   final key = _keys[scrollTargetId];
                   final ctx = key?.currentContext;
-                  if (ctx != null) {
+                  // GlobalKey 取到的 context 在 async gap 后需校验挂载状态
+                  if (ctx != null && ctx.mounted) {
                     Scrollable.ensureVisible(
                       ctx,
                       alignment: 0.0,

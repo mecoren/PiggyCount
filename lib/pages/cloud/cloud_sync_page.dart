@@ -370,6 +370,8 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
         }
       }
     } catch (_) {/* 检查点读取失败不阻断恢复入口 */}
+    // await 后同时校验页面与参数 context,避免 async gap 后误用
+    if (!mounted || !context.mounted) return;
 
     setState(() => restoreBusy = true);
     List<BackupFileInfo> backups;
@@ -1629,7 +1631,11 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                                                   .notifier)
                                                           .state++;
                                                     } catch (e) {
-                                                      if (!mounted) return;
+                                                      // context 为 build 参数,需与 State.mounted 一并校验
+                                                      if (!mounted ||
+                                                          !context.mounted) {
+                                                        return;
+                                                      }
                                                       await AppDialog.error(
                                                         context,
                                                         title:

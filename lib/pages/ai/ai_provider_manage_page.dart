@@ -338,7 +338,8 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
       final success = await AIProviderManager.deleteProvider(provider.id);
       if (success) {
         ref.read(aiProviderListRefreshProvider.notifier).state++;
-        if (mounted) {
+        // context 为方法参数,需与 State.mounted 一并校验
+        if (mounted && context.mounted) {
           showToast(context, deletedMessage);
         }
       }

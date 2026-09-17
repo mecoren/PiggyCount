@@ -587,7 +587,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       },
     );
 
-    if (!mounted) return;
+    if (!mounted || !context.mounted) return;
 
     if (action == 'edit') {
       await _handleEditLedger(context, ledger);
@@ -598,7 +598,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
         ref.read(currentLedgerIdProvider.notifier).state = ledger.id;
         ref.invalidate(currentLedgerProvider);
       }
-      if (mounted) {
+      if (mounted && context.mounted) {
         await Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const BudgetPage()),
         );
@@ -652,7 +652,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       },
     );
 
-    if (!mounted) return;
+    if (!mounted || !context.mounted) return;
 
     if (action == 'download') {
       await _handleRemoteLedgerTap(context, ledger);
@@ -667,7 +667,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     final repo = ref.read(repositoryProvider);
     final ledgerData = await repo.getLedgerById(ledger.id);
 
-    if (ledgerData == null || !mounted) return;
+    if (ledgerData == null || !mounted || !context.mounted) return;
 
     final result = await _showLedgerEditorDialog(
       context,
@@ -817,20 +817,21 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       // 删行后精准清理这些附件的物理文件(引用计数)
       await _cleanupLedgerAttachmentFiles(attachmentFiles);
 
-      if (!mounted) return;
+      if (!mounted || !context.mounted) return;
 
       // 清空缓存的交易数据（避免首页使用旧缓存）
       ref.read(cachedTransactionsProvider.notifier).state = null;
 
       // 触发同步状态刷新
       await PostProcessor.sync(ref, ledgerId: ledger.id);
+      if (!mounted || !context.mounted) return;
 
       ref.read(ledgerListRefreshProvider.notifier).state++;
       ref.read(statsRefreshProvider.notifier).state++;
 
       showToast(context, l10n.ledgersClearSuccess);
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || !context.mounted) return;
       await AppDialog.error(
         context,
         title: l10n.commonFailed,
@@ -846,6 +847,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
 
     final repo = ref.read(repositoryProvider);
     final allLedgers = await repo.getAllLedgers();
+    if (!mounted || !context.mounted) return;
 
     // 双重危险确认：仅删本地不影响云端，倒计时时间可稍短
     final confirmed = await showDoubleDangerConfirmDialog(
@@ -881,7 +883,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       await repo.deleteLedger(ledger.id);
       await _cleanupLedgerAttachmentFiles(attachmentFiles);
 
-      if (!mounted) return;
+      if (!mounted || !context.mounted) return;
 
       // currentLedgerProvider 已是 StreamProvider(Drift watch 自动推送),
       // 此 invalidate 仅作防御性重订阅(如流曾进入 error 态),正常路径冗余无害。
@@ -891,7 +893,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
 
       showToast(context, l10n.ledgersDeleteLocalSuccess);
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || !context.mounted) return;
       await AppDialog.error(
         context,
         title: l10n.commonFailed,
@@ -907,6 +909,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
 
     final repo = ref.read(repositoryProvider);
     final allLedgers = await repo.getAllLedgers();
+    if (!mounted || !context.mounted) return;
 
     // 双重危险确认（各 5 秒倒计时）：删账本含云端备份，不可恢复
     final confirmed = await showDoubleDangerConfirmDialog(
@@ -958,7 +961,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       // 推送 delete 变更，旧增量引擎下线后这段调用只会对已删除的账本行
       // 触发一次注定失败的导出（被防抖链捕获记一条 error 日志，无效果）。
 
-      if (!mounted) return;
+      if (!mounted || !context.mounted) return;
 
       // 同 _handleDeleteLocalLedgerOnly:显式 invalidate currentLedgerProvider,
       // 哪怕 ledgerId 没切(没其他账本可切),也得让首页胶囊重读 → 查不到行 →
@@ -969,7 +972,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
 
       showToast(context, AppLocalizations.of(context).ledgersDeleted);
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || !context.mounted) return;
       await AppDialog.error(
         context,
         title: AppLocalizations.of(context).ledgersDeleteFailed,
@@ -991,7 +994,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       secondMessage: l10n.ledgersDeleteRemoteReconfirmMessage,
     );
 
-    if (!confirmed || !mounted) return;
+    if (!confirmed || !mounted || !context.mounted) return;
 
     try {
       showToast(context, AppLocalizations.of(context).ledgersDeleting);
@@ -1008,14 +1011,14 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       }
       await syncService.deleteRemoteLedger(remotePath: 'ledger_$slotKey.json');
 
-      if (!mounted) return;
+      if (!mounted || !context.mounted) return;
 
       ref.read(ledgerListRefreshProvider.notifier).state++;
 
       showToast(
           context, AppLocalizations.of(context).ledgersDeleteRemoteSuccess);
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || !context.mounted) return;
       await AppDialog.error(
         context,
         title: AppLocalizations.of(context).commonFailed,
@@ -1123,7 +1126,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
           AppLocalizations.of(context).ledgersUploadAllReconfirmMessage,
     );
 
-    if (!confirmed || !mounted) return;
+    if (!confirmed || !mounted || !context.mounted) return;
 
     setState(() => _isUploadingAll = true);
 
@@ -1179,13 +1182,13 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       );
 
       // 上传结束（成败皆关）：关闭进度弹窗，dialogFuture 由 pop 落定
-      if (mounted && dialogOpen) {
+      if (mounted && context.mounted && dialogOpen) {
         Navigator.of(context, rootNavigator: true).pop();
         dialogOpen = false;
       }
       await dialogFuture;
 
-      if (!mounted) return;
+      if (!mounted || !context.mounted) return;
 
       setState(() => _isUploadingAll = false);
 
@@ -1207,11 +1210,11 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       );
     } catch (e) {
       // 异常路径也必须关掉进度弹窗，否则它会永久挡住页面
-      if (mounted && dialogOpen) {
+      if (mounted && context.mounted && dialogOpen) {
         Navigator.of(context, rootNavigator: true).pop();
         dialogOpen = false;
       }
-      if (!mounted) return;
+      if (!mounted || !context.mounted) return;
       setState(() => _isUploadingAll = false);
 
       await AppDialog.error(
@@ -1357,10 +1360,10 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       // ignore: unawaited_futures
       PostProcessor.sync(ref, ledgerId: newLedgerId);
 
-      if (!mounted) return;
+      if (!mounted || !context.mounted) return;
       showToast(context, AppLocalizations.of(context).ledgersCreatedSuccess);
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || !context.mounted) return;
       showToast(context,
           AppLocalizations.of(context).ledgersCreateFailed(e.toString()));
     }
@@ -1692,6 +1695,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       } else {
         // 预览弹窗不能被阻塞遮罩压住：先关阻塞框再弹预览
         await block.close();
+        if (!mounted || !context.mounted) return;
         selected = (await showSyncPreviewDialog(
               context,
               preview: preview,
@@ -1746,7 +1750,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     // 获取同步状态详情
     final syncStatus = await syncService.getStatus(ledgerId: ledger.id);
 
-    if (!mounted) return;
+    if (!mounted || !context.mounted) return;
 
     final DateFormat dateFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
 
@@ -1910,10 +1914,9 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                             Navigator.pop(dialogContext);
                           }
 
-                          if (!mounted) return;
-
                           // 下载完成后，触发刷新状态和账本列表
                           await PostProcessor.sync(ref, ledgerId: ledger.id);
+                          if (!mounted || !context.mounted) return;
 
                           // 刷新统计
                           ref.read(statsRefreshProvider.notifier).state++;
@@ -1957,7 +1960,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                             Navigator.pop(dialogContext);
                           }
 
-                          if (!mounted) return;
+                          if (!mounted || !context.mounted) return;
 
                           // 刷新列表和同步状态
                           ref.read(ledgerListRefreshProvider.notifier).state++;

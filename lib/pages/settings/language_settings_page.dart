@@ -38,7 +38,10 @@ class LanguageSettingsPage extends ConsumerWidget {
               ref.read(languageProvider.notifier).setLanguage(null);
               // 延迟更新widget,等待locale变化生效
               Future.delayed(const Duration(milliseconds: 100), () {
-                updateAppWidget(ref, context);
+                // 延迟回调属于 async gap,先校验 context 再使用
+                if (context.mounted) {
+                  updateAppWidget(ref, context);
+                }
               });
             },
           ),
@@ -52,7 +55,10 @@ class LanguageSettingsPage extends ConsumerWidget {
             onTap: () {
               ref.read(languageProvider.notifier).setLanguage(const Locale('zh'));
               Future.delayed(const Duration(milliseconds: 100), () {
-                updateAppWidget(ref, context);
+                // 延迟回调属于 async gap,先校验 context 再使用
+                if (context.mounted) {
+                  updateAppWidget(ref, context);
+                }
               });
             },
           ),
@@ -66,7 +72,10 @@ class LanguageSettingsPage extends ConsumerWidget {
             onTap: () {
               ref.read(languageProvider.notifier).setLanguage(const Locale('zh', 'TW'));
               Future.delayed(const Duration(milliseconds: 100), () {
-                updateAppWidget(ref, context);
+                // 延迟回调属于 async gap,先校验 context 再使用
+                if (context.mounted) {
+                  updateAppWidget(ref, context);
+                }
               });
             },
           ),
@@ -80,7 +89,10 @@ class LanguageSettingsPage extends ConsumerWidget {
             onTap: () {
               ref.read(languageProvider.notifier).setLanguage(const Locale('en'));
               Future.delayed(const Duration(milliseconds: 100), () {
-                updateAppWidget(ref, context);
+                // 延迟回调属于 async gap,先校验 context 再使用
+                if (context.mounted) {
+                  updateAppWidget(ref, context);
+                }
               });
             },
           ),
@@ -94,7 +106,10 @@ class LanguageSettingsPage extends ConsumerWidget {
             onTap: () {
               ref.read(languageProvider.notifier).setLanguage(const Locale('ko'));
               Future.delayed(const Duration(milliseconds: 100), () {
-                updateAppWidget(ref, context);
+                // 延迟回调属于 async gap,先校验 context 再使用
+                if (context.mounted) {
+                  updateAppWidget(ref, context);
+                }
               });
             },
           ),
