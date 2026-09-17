@@ -451,8 +451,10 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
     int? categoryId,
     String? page,
   }) {
-    SharedPreferences.getInstance().then((p) {
-      p.setString(
+    // P1-B：持久化失败只损失「重建可恢复」能力（本次会话内仍会直接打开），
+    // 属后台链路，异常必须落日志而非静默消失。
+    unawaitedLog(
+      SharedPreferences.getInstance().then((p) => p.setString(
           _kPendingDeepLink,
           jsonEncode({
             'action': action.name,
@@ -460,8 +462,9 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
             if (categoryId != null) 'categoryId': categoryId,
             if (page != null) 'page': page,
             'ts': DateTime.now().millisecondsSinceEpoch,
-          }));
-    }).catchError((_) {});
+          }))),
+      '持久化待恢复深链',
+    );
   }
 
   void _drainPendingDeepLink({String trigger = ''}) {

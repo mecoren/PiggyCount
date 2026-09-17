@@ -7,6 +7,7 @@ import '../../styles/tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/ui_scale_extensions.dart';
 import '../../services/attachment_export_import_service.dart';
+import '../../services/system/logger_service.dart' show unawaitedLog;
 import '../../providers.dart';
 
 /// 附件预览页面
@@ -240,51 +241,57 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
       );
     }
 
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // 关闭按钮
-            Align(
-              alignment: Alignment.topRight,
-              child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ),
-            // 图片
-            Flexible(
-              child: InteractiveViewer(
-                child: imageWidget,
-              ),
-            ),
-            const SizedBox(height: 16),
-            // 文件名
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
-              ),
-              child: Text(
-                fileName,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
+    // P1-B：大图弹窗关闭后清理选中态；fire-and-forget 链异常落日志，
+    // 并补 mounted 守卫（弹窗未关而页面先销毁时 setState 会抛错）
+    unawaitedLog(
+      showDialog(
+        context: context,
+        builder: (context) => Dialog(
+          backgroundColor: Colors.transparent,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 关闭按钮
+              Align(
+                alignment: Alignment.topRight,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.of(context).pop(),
                 ),
-                textAlign: TextAlign.center,
               ),
-            ),
-          ],
+              // 图片
+              Flexible(
+                child: InteractiveViewer(
+                  child: imageWidget,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // 文件名
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+                ),
+                child: Text(
+                  fileName,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-    ).then((_) {
-      setState(() {
-        _selectedIndex = null;
-      });
-    });
+      ).then((_) {
+        if (!mounted) return;
+        setState(() {
+          _selectedIndex = null;
+        });
+      }),
+      '附件大图预览关闭回执',
+    );
   }
 }

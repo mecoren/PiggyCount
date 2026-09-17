@@ -13,6 +13,7 @@ import '../../widgets/analytics/category_rank_row.dart';
 import '../../widgets/ui/wait_sliding_segmented_control.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/export/share_poster_service.dart';
+import '../../services/system/logger_service.dart';
 import '../../data/db.dart' as db;
 import '../../utils/month_range.dart';
 import '../../utils/week_range.dart';
@@ -54,7 +55,13 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
     if (_lastAnalyticsKey == key && _lastAnalyticsFuture != null) {
       return _lastAnalyticsFuture!;
     }
-    final future = create();
+    // P1-B：查询失败必须落日志（带记忆键上下文，可定位是哪个视角/类型的
+    // 查询挂了）；错误仍原样传给 FutureBuilder 渲染错误态。catchError 返回
+    // 占位空列表仅为满足签名，返回值被丢弃，不影响错误向 builder 传播。
+    final future = create()..catchError((Object e, StackTrace st) {
+      logger.warning('Analytics', '统计数据查询失败 key=$key: $e\n$st');
+      return <dynamic>[];
+    });
     _lastAnalyticsKey = key;
     _lastAnalyticsFuture = future;
     return future;
@@ -790,6 +797,37 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                         seriesFuture, prevStart, prevEnd, chartSeriesFuture),
               ),
               builder: (context, snapshot) {
+                // P1-B：查询失败时不能落进「!hasData → 无限转圈」（DB 异常
+                // 后页面永久卡死），渲染错误态；重试通过 bump statsRefresh
+                // 改变记忆化键，触发重新发起查询。
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.error_outline,
+                            size: 40,
+                            color: PiggyTokens.textTertiary(context)),
+                        const SizedBox(height: 12),
+                        Text(
+                          AppLocalizations.of(context)
+                              .commonLoadFailed(snapshot.error.toString()),
+                          textAlign: TextAlign.center,
+                          style: PiggyTextTokens.body(context).copyWith(
+                              color: PiggyTokens.textSecondary(context)),
+                        ),
+                        const SizedBox(height: 16),
+                        OutlinedButton(
+                          onPressed: () => ref
+                              .read(statsRefreshProvider.notifier)
+                              .state++,
+                          child: Text(
+                              AppLocalizations.of(context).helpCenterRetry),
+                        ),
+                      ],
+                    ),
+                  );
+                }
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }

@@ -577,9 +577,10 @@ class TransactionsSyncManager implements SyncService {
       // 的附件并入队（审计 A2：_pendingAttachmentJobs 是内存队列，进程重启
       // 即丢失；此前 enqueue 只发生在恢复/导入/合并时机，重启后缺文件永久
       // 无人再发现），再 drain 消费（覆盖"上次恢复失败的附件任务"重试场景；
-      // 队列空时是空操作，零成本）。
-      unawaited(enqueueAllMissingAttachmentJobs()
-          .whenComplete(() => drainAttachmentJobs()));
+      // 队列空时是空操作，零成本）。P1-B：链路异常落日志（per-job 失败
+      // 已在 drain 内部按 outcome 处理，这里兜意外异常）。
+      unawaitedLog(enqueueAllMissingAttachmentJobs()
+          .whenComplete(() => drainAttachmentJobs()), '启动时附件补扫+补齐');
       // P1-6：先装载持久化的补删登记（reinit/dispose 只清了内存缓存），
       // 再补删（网络恢复后重试）。装载失败退化为空集，下次初始化重试。
       unawaited(_loadStaleSlotRecords()

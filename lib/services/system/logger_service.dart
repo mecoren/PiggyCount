@@ -600,3 +600,19 @@ class LoggerService {
 
 /// 全局日志实例
 final logger = LoggerService();
+
+/// fire-and-forget 但异常必须落日志 —— 替代裸 `unawaited(future)`。
+///
+/// 全局 `PlatformDispatcher.onError` 能兜住未处理异常，但没有业务上下文，
+/// 报障日志里只有一行孤零零的堆栈，定位不到是哪条链路。此封装给每条
+/// 后台链一个可检索的 context；失败记 warning（后台链路失败通常不该
+/// 打扰前台，故不弹 toast，需要用户感知的场景由调用方自行补 UI）。
+void unawaitedLog(Future<void> future, String context) {
+  unawaited(() async {
+    try {
+      await future;
+    } catch (e, st) {
+      logger.warning('Unawaited', '$context 失败（后台链路，不阻塞前台）: $e\n$st');
+    }
+  }());
+}

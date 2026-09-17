@@ -6,6 +6,7 @@ import 'package:collection/collection.dart';
 
 import '../../providers.dart';
 import '../../services/billing/post_processor.dart';
+import '../../services/system/logger_service.dart' show unawaitedLog;
 import '../../services/currency/rate_math.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/amount_text.dart';
@@ -80,18 +81,23 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
       updates.add((id: list[i].id, sortOrder: i));
     }
 
-    // 写入数据库，延迟清除本地状态让 stream 先到位
-    ref.read(repositoryProvider).updateAccountSortOrders(updates).then((_) {
-      // 账户拖拽排序也推到服务端。账户的 ChangeTracker 变更用的是 account.ledgerId
-      // （非 0），走常规 push 路径即可。
-      final activeLedgerId = ref.read(currentLedgerIdProvider);
-      if (activeLedgerId > 0) {
-        unawaited(PostProcessor.sync(ref, ledgerId: activeLedgerId));
-      }
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) setState(() => _reorderingGroups = null);
-      });
-    });
+    // 写入数据库，延迟清除本地状态让 stream 先到位。
+    // P1-B：用户主动拖拽的排序写库失败必须落日志（此前 fire-and-forget
+    // 静默消失，用户以为已保存）；后台同步推送见链内。
+    unawaitedLog(
+      ref.read(repositoryProvider).updateAccountSortOrders(updates).then((_) {
+        // 账户拖拽排序也推到服务端。账户的 ChangeTracker 变更用的是 account.ledgerId
+        // （非 0），走常规 push 路径即可。
+        final activeLedgerId = ref.read(currentLedgerIdProvider);
+        if (activeLedgerId > 0) {
+          unawaited(PostProcessor.sync(ref, ledgerId: activeLedgerId));
+        }
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted) setState(() => _reorderingGroups = null);
+        });
+      }),
+      '账户拖拽排序落库',
+    );
   }
 
   @override
