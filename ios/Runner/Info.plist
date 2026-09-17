@@ -56,12 +56,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
-	<!-- Allow arbitrary network loads for Supabase -->
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<true/>
-	</dict>
+	<!-- ATS 恢复 Apple 默认（仅 HTTPS）：
+	     全部网络请求由 Dart 层发起（http/dio/webdav_client 走 dart:io socket，
+	     不经过 URLSession，ATS 本就不管辖），WebDAV 等用户自配端点的明文 HTTP
+	     不受影响；删除 NSAllowsArbitraryLoads 消除 App Store 提审时的 ATS
+	     豁免质询。 -->
 	<!-- Query URL Schemes - Required for opening other apps -->
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
