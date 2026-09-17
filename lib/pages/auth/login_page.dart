@@ -100,10 +100,8 @@ class _AuthPageState extends ConsumerState<AuthPage> {
   }
 
   String? _supabaseCode(Object e) {
-    try {
-      if (e is s.AuthApiException) return e.code;
-      if (e is s.AuthException) return null;
-    } catch (_) {}
+    if (e is s.AuthApiException) return e.code;
+    if (e is s.AuthException) return null;
     final txt = e.toString().toLowerCase();
     final m = RegExp(r'code:\s*([a-z0-9_\-]+)').firstMatch(txt);
     return m?.group(1);

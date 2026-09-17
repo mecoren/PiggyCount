@@ -23,7 +23,9 @@ abstract final class PiggyHaptics {
       await HapticFeedback.vibrate();
       await Future<void>.delayed(const Duration(milliseconds: 80));
       await HapticFeedback.lightImpact();
-    } catch (_) {}
+    } catch (_) {
+      // 预期失败：不支持触感的设备静默降级（见类文档）
+    }
   }
 
   /// 警示三连击,用于破坏性操作确认。
@@ -33,12 +35,16 @@ abstract final class PiggyHaptics {
         await HapticFeedback.mediumImpact();
         await Future<void>.delayed(const Duration(milliseconds: 60));
       }
-    } catch (_) {}
+    } catch (_) {
+      // 预期失败：不支持触感的设备静默降级（见类文档）
+    }
   }
 
   static void _run(void Function() fn) {
     try {
       fn();
-    } catch (_) {}
+    } catch (_) {
+      // 预期失败：不支持触感的设备静默降级（见类文档）
+    }
   }
 }

@@ -431,7 +431,9 @@ class AIAssistantSetter {
     // 改变也能 push 到 server,跨设备和 web 拿到同样的值。
     try {
       AIProviderManager.onConfigChanged?.call();
-    } catch (_) {}
+    } catch (e) {
+      logger.warning('AIAssistant', 'AI 助手开关变更推送失败(本地已保存)', e);
+    }
   }
 }
 

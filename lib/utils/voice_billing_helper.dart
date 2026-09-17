@@ -419,10 +419,14 @@ class _VoiceRecordingDialogState extends ConsumerState<_VoiceRecordingDialog> {
     }
     try {
       await widget.recorder.stop();
-    } catch (_) {}
+    } catch (_) {
+      // 录音未真正开始时 stop 会抛错，丢弃场景无需处理
+    }
     try {
       await File(widget.audioPath).delete();
-    } catch (_) {}
+    } catch (_) {
+      // 音频文件可能不存在（未开始录音），删除失败忽略
+    }
   }
 
   Future<void> _stopAndProcess() async {
@@ -501,7 +505,9 @@ class _VoiceRecordingDialogState extends ConsumerState<_VoiceRecordingDialog> {
     } finally {
       try {
         await File(widget.audioPath).delete();
-      } catch (_) {}
+      } catch (_) {
+        // 音频文件可能不存在，删除失败忽略
+      }
     }
   }
 

@@ -349,7 +349,9 @@ class CloudBackupService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(restorePendingKey, true);
-    } catch (_) {}
+    } catch (e) {
+      logger.warning('Backup', '写入恢复检查点失败，崩溃防护降级', e);
+    }
     // P0-1：恢复计时
     final watch = Stopwatch()..start();
     try {
@@ -490,7 +492,9 @@ class CloudBackupService {
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool(restorePendingKey, false);
-      } catch (_) {}
+      } catch (e) {
+        logger.warning('Backup', '清除恢复检查点失败，下次定时备份将保守让位', e);
+      }
     }
   }
 
@@ -628,7 +632,9 @@ class CloudBackupService {
       } catch (_) {
         try {
           if (await tempFile.exists()) await tempFile.delete();
-        } catch (_) {}
+        } catch (_) {
+          // tmp 清理失败无碍：仅残留占位文件，原错误已 rethrow 上报
+        }
         rethrow;
       }
       restored++;

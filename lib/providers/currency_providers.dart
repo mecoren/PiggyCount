@@ -103,7 +103,9 @@ final currencyPickerRatesProvider =
       final r = double.tryParse(o.rate);
       if (r != null && r > 0) out[o.quoteCurrency.toUpperCase()] = r;
     }
-  } catch (_) {}
+  } catch (e) {
+    logger.warning('Currency', '读取手动汇率失败，选择器将缺少手动汇率', e);
+  }
   return out;
 });
 

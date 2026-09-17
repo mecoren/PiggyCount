@@ -683,7 +683,9 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
     // 返回后再显式刷新一次全局统计，确保顶部汇总即时更新
     try {
       container.read(statsRefreshProvider.notifier).state++;
-    } catch (_) {}
+    } catch (_) {
+      // 页面已返回/container 已释放时跳过本次统计刷新
+    }
 
     // 导入完成后，账本列表页面会通过监听 importProgressProvider 自动刷新
     // ledgerId 已经在上面的 importProgressProvider 中设置

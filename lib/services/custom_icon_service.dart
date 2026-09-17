@@ -182,7 +182,9 @@ class CustomIconService {
           sourceFile.path.contains('tmp')) {
         try {
           await sourceFile.delete();
-        } catch (_) {}
+        } catch (_) {
+          // 临时文件删除失败可忽略：位于 cache/tmp 目录，系统会自动清理
+        }
       }
 
       // 5. 返回相对路径（用于跨设备同步）

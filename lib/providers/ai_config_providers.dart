@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../ai/providers/ai_constants.dart';
 import '../ai/providers/ai_provider_config.dart';
 import '../ai/providers/ai_provider_manager.dart';
+import '../services/system/logger_service.dart';
 
 /// AI 执行策略
 enum AIStrategy {
@@ -137,7 +138,9 @@ class AIConfigNotifier extends StateNotifier<AIConfigData> {
     // web/B 设备只能拉到 providers + binding + prompt,strategy 等设置落不下去。
     try {
       AIProviderManager.onConfigChanged?.call();
-    } catch (_) {}
+    } catch (e) {
+      logger.warning('AIConfig', 'AI 配置变更推送失败(本地已保存)', e);
+    }
   }
 
   /// 设置执行策略

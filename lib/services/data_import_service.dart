@@ -370,7 +370,9 @@ class DataImportService {
           name: data.ledgerName,
           currency: data.currency,
         );
-      } catch (_) {}
+      } catch (e) {
+        logger.warning('DataImport', '导入时回写账本名称/币种失败', e);
+      }
     }
     if (data.monthStartDay != null) {
       try {
@@ -378,7 +380,9 @@ class DataImportService {
           id: ledgerId,
           monthStartDay: data.monthStartDay!.clamp(1, 28),
         );
-      } catch (_) {}
+      } catch (e) {
+        logger.warning('DataImport', '导入时回写月起始日失败', e);
+      }
     }
 
     // 2. 导入账户
@@ -1339,7 +1343,9 @@ class DataImportService {
               kind: tx.categoryKind!,
             );
             localCategoryCache[key] = categoryId;
-          } catch (_) {}
+          } catch (e) {
+            logger.warning('DataImport', '导入时创建分类失败: ${tx.categoryName}', e);
+          }
         }
       }
 
@@ -1404,7 +1410,9 @@ class DataImportService {
                 tagId = await repo.createTag(name: tagName);
               }
               tagNameToId[tagName] = tagId;
-            } catch (_) {}
+            } catch (e) {
+              logger.warning('DataImport', '导入时创建标签失败: $tagName', e);
+            }
           }
           if (tagId != null) {
             resolvedTagIds.add(tagId);

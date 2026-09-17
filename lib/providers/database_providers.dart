@@ -67,14 +67,18 @@ final _currentLedgerPersist = Provider<void>((ref) {
           ref.read(currentLedgerIdProvider.notifier).state = saved;
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      logger.warning('LedgerState', '恢复上次选中账本失败，回退默认账本', e);
+    }
   }();
   // persist on change
   ref.listen<int>(currentLedgerIdProvider, (prev, next) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('current_ledger_id', next);
-    } catch (_) {}
+    } catch (e) {
+      logger.warning('LedgerState', '持久化当前账本 ID 失败，下次启动将回退默认', e);
+    }
   });
 });
 

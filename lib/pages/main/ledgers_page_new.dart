@@ -771,7 +771,9 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
         colorScheme: colorScheme,
         baseCurrency: ref.read(baseCurrencyProvider),
       );
-    } catch (_) {}
+    } catch (e) {
+      logger.warning('LedgersPage', '改账本起始日后刷新小组件失败', e);
+    }
   }
 
   /// 清空 / 删除账本后,精准清理该账本关联的附件物理文件(best-effort)。

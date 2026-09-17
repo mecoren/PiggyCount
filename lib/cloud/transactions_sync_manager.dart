@@ -1753,7 +1753,9 @@ class TransactionsSyncManager implements SyncService {
           // rename 失败尽力清理本次 tmp，避免残留垃圾文件
           try {
             if (await tempFile.exists()) await tempFile.delete();
-          } catch (_) {}
+          } catch (_) {
+            // tmp 清理失败无碍：仅残留占位文件，原错误已 rethrow 上报
+          }
           rethrow;
         }
         return _AttachmentDownloadOutcome.ok;

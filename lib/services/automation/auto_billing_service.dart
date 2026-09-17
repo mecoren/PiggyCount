@@ -42,7 +42,9 @@ class AutoBillingService {
     try {
       final id = _container.read(currentLedgerIdProvider);
       return id;
-    } catch (_) {}
+    } catch (_) {
+      // provider 尚未就绪（启动早期窗口），回退 prefs/数据库解析
+    }
     final prefs = await SharedPreferences.getInstance();
     final fromPrefs = prefs.getInt(_ledgerIdKey);
     if (fromPrefs != null) return fromPrefs;
@@ -347,7 +349,9 @@ class AutoBillingService {
             title: l10n.autoBillingNotifyRecognizeFailedTitle,
             body: l10n.autoBillingNotifyRecognizeFailedBody,
           );
-        } catch (_) {}
+        } catch (_) {
+          // 通知展示失败不影响主流程，错误本体已记录在上方日志
+        }
       }
       return null;
     } finally {

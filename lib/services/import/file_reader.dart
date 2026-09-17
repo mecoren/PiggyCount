@@ -112,7 +112,9 @@ class FileReaderService {
             codeUnits.add(bytes[i] | (bytes[i + 1] << 8));
           }
           return String.fromCharCodes(codeUnits);
-        } catch (_) {}
+        } catch (_) {
+          // 解码失败回退后续编码探测（UTF-8/GBK/Latin1 兜底）
+        }
       }
       // UTF-16 BE BOM FE FF
       if (bytes[0] == 0xFE && bytes[1] == 0xFF) {
@@ -122,7 +124,9 @@ class FileReaderService {
             codeUnits.add((bytes[i] << 8) | bytes[i + 1]);
           }
           return String.fromCharCodes(codeUnits);
-        } catch (_) {}
+        } catch (_) {
+          // 解码失败回退后续编码探测（UTF-8/GBK/Latin1 兜底）
+        }
       }
     }
 

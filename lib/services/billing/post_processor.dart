@@ -81,7 +81,9 @@ class PostProcessor {
     // 否则 getStatus 命中恢复前的旧指纹误判「本地未变」
     try {
       ref.read(syncServiceProvider).clearStatusCache();
-    } catch (_) {}
+    } catch (e) {
+      logger.warning('PostProcessor', '云端下载后清理同步状态缓存失败', e);
+    }
     logger.info('PostProcessor', '云端下载后刷新完成');
   }
 
@@ -96,7 +98,9 @@ class PostProcessor {
     // P2-1：同 runAfterDownload——外部导入路径缓存失效
     try {
       c.read(syncServiceProvider).clearStatusCache();
-    } catch (_) {}
+    } catch (e) {
+      logger.warning('PostProcessor', '云端下载后清理同步状态缓存失败', e);
+    }
     logger.info('PostProcessor', '云端下载后刷新完成');
   }
 
@@ -106,7 +110,9 @@ class PostProcessor {
     final sync = ref.read(syncServiceProvider);
     try {
       sync.markLocalChanged(ledgerId: ledgerId);
-    } catch (_) {}
+    } catch (e) {
+      logger.warning('PostProcessor', '标记本地变更失败，可能影响下次同步判断', e);
+    }
 
     ref.read(syncStatusRefreshProvider.notifier).state++;
     ref.read(ledgerListRefreshProvider.notifier).state++;
@@ -144,7 +150,9 @@ class PostProcessor {
     final sync = c.read(syncServiceProvider);
     try {
       sync.markLocalChanged(ledgerId: ledgerId);
-    } catch (_) {}
+    } catch (e) {
+      logger.warning('PostProcessor', '标记本地变更失败，可能影响下次同步判断', e);
+    }
 
     c.read(syncStatusRefreshProvider.notifier).state++;
     c.read(ledgerListRefreshProvider.notifier).state++;
@@ -179,7 +187,9 @@ class PostProcessor {
     final sync = ref.read(syncServiceProvider);
     try {
       sync.markLocalChanged(ledgerId: ledgerId);
-    } catch (_) {}
+    } catch (e) {
+      logger.warning('PostProcessor', '标记本地变更失败，可能影响下次同步判断', e);
+    }
 
     ref.read(syncStatusRefreshProvider.notifier).state++;
     ref.read(ledgerListRefreshProvider.notifier).state++;
