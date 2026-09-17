@@ -319,6 +319,8 @@ class _AndroidAutoBillingPageState extends ConsumerState<AndroidAutoBillingPage>
               value: value,
               onChanged: onChanged,
               activeColor: primaryColor,
+              // 无障碍基线：开关补语义标签，读出所控制的设置项名称
+              semanticLabel: title,
             ),
           ],
         ),

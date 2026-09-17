@@ -236,42 +236,52 @@ class _WaitSlidingSegmentedControlState<T>
                               index == widget.segments.length - 1;
 
                           return Expanded(
-                            child: Center(
-                              child: Container(
-                                height: widget.height,
-                                alignment: Alignment.center,
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Center(
-                                        child: AnimatedDefaultTextStyle(
-                                          duration: const Duration(
-                                            milliseconds: 200,
+                            // 无障碍基线：每个分段独立成为可聚焦选项
+                            // （button 角色 + selected 状态 + 双击切换动作），
+                            // 不再是整条控件一个无法操作的焦点；label 由
+                            // 内部 Text 语义合并提供
+                            child: Semantics(
+                              button: true,
+                              selected: isSelected,
+                              onTap: () => widget.onValueChanged(
+                                  widget.segments[index].value),
+                              child: Center(
+                                child: Container(
+                                  height: widget.height,
+                                  alignment: Alignment.center,
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Center(
+                                          child: AnimatedDefaultTextStyle(
+                                            duration: const Duration(
+                                              milliseconds: 200,
+                                            ),
+                                            style: TextStyle(
+                                              fontSize: widget.fontSize,
+                                              fontWeight: FontWeight.w500,
+                                              color: isSelected
+                                                  ? colorScheme.surface
+                                                  : colorScheme.onSurfaceVariant,
+                                            ),
+                                            child: Text(segment.label),
                                           ),
-                                          style: TextStyle(
-                                            fontSize: widget.fontSize,
-                                            fontWeight: FontWeight.w500,
-                                            color: isSelected
-                                                ? colorScheme.surface
-                                                : colorScheme.onSurfaceVariant,
-                                          ),
-                                          child: Text(segment.label),
                                         ),
                                       ),
-                                    ),
-                                    // 分割线：上下留出间距，不全满（随高度缩放）
-                                    if (!isLast)
-                                      Padding(
-                                        padding: EdgeInsets.symmetric(
-                                          vertical: widget.height * 0.25,
+                                      // 分割线：上下留出间距，不全满（随高度缩放）
+                                      if (!isLast)
+                                        Padding(
+                                          padding: EdgeInsets.symmetric(
+                                            vertical: widget.height * 0.25,
+                                          ),
+                                          child: Container(
+                                            width: 0.5,
+                                            color: colorScheme.outline
+                                                .withValues(alpha: 0.2),
+                                          ),
                                         ),
-                                        child: Container(
-                                          width: 0.5,
-                                          color: colorScheme.outline
-                                              .withValues(alpha: 0.2),
-                                        ),
-                                      ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),

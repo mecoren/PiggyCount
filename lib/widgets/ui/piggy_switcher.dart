@@ -21,6 +21,7 @@ class PiggySwitcher extends StatelessWidget {
     this.onChanged,
     this.activeColor,
     this.duration = const Duration(milliseconds: 300),
+    this.semanticLabel,
   });
 
   /// 当前是否开启
@@ -34,6 +35,13 @@ class PiggySwitcher extends StatelessWidget {
 
   /// 动画时长；默认 300 ms
   final Duration duration;
+
+  /// 无障碍标签（TalkBack/VoiceOver 读出的开关名称）。
+  ///
+  /// 独立使用时（如自定义 Row 的 trailing）务必传入所控制的设置项名称，
+  /// 否则屏幕阅读器只能读出「开关，已开启」而不知道开关管什么；
+  /// 随行内标题一起合并语义的场景（如 [PiggySwitchListTile]）可不传。
+  final String? semanticLabel;
 
   // 规格尺寸（逻辑像素 == dp）
   static const double _trackWidth = 46;
@@ -55,6 +63,10 @@ class PiggySwitcher extends StatelessWidget {
     return Semantics(
       toggled: value,
       enabled: enabled,
+      // button 角色 + toggled 状态：屏幕阅读器读出「标签，开关，已开启」，
+      // 并提供双击切换动作（动作由内部 GestureDetector 的手势语义合并而来）
+      button: true,
+      label: semanticLabel,
       container: true,
       child: GestureDetector(
         onTap: enabled
@@ -157,50 +169,55 @@ class PiggySwitchListTile extends StatelessWidget {
             fontWeight: FontWeight.w500,
           );
 
-    return InkWell(
-      onTap: onChanged != null
-          ? () {
-              PiggyHaptics.selection();
-              onChanged!(!value);
-            }
-          : null,
-      child: Padding(
-        padding: padding,
-        child: Row(
-          children: [
-            if (leading != null) ...[
-              leading!,
-              const SizedBox(width: 12),
-            ],
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DefaultTextStyle(
-                    style: titleStyle ?? const TextStyle(),
-                    child: title,
-                  ),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: 4),
+    // MergeSemantics：整行合并为一个无障碍焦点（对齐 Material
+    // SwitchListTile 行为）——标题文字、开关状态、点击动作合在一起，
+    // TalkBack/VoiceOver 用户一次聚焦即读「标题，开关，已开启，双击切换」。
+    return MergeSemantics(
+      child: InkWell(
+        onTap: onChanged != null
+            ? () {
+                PiggyHaptics.selection();
+                onChanged!(!value);
+              }
+            : null,
+        child: Padding(
+          padding: padding,
+          child: Row(
+            children: [
+              if (leading != null) ...[
+                leading!,
+                const SizedBox(width: 12),
+              ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                     DefaultTextStyle(
-                      style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ) ??
-                          const TextStyle(),
-                      child: subtitle!,
+                      style: titleStyle ?? const TextStyle(),
+                      child: title,
                     ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 4),
+                      DefaultTextStyle(
+                        style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ) ??
+                            const TextStyle(),
+                        child: subtitle!,
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            PiggySwitcher(
-              value: value,
-              onChanged: onChanged,
-              activeColor: activeColor,
-            ),
-          ],
+              const SizedBox(width: 8),
+              PiggySwitcher(
+                value: value,
+                onChanged: onChanged,
+                activeColor: activeColor,
+              ),
+            ],
+          ),
         ),
       ),
     );

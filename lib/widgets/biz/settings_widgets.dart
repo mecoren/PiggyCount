@@ -240,6 +240,7 @@ class SettingsToggleItem extends StatelessWidget {
         value: value,
         onChanged: onChanged,
         activeColor: accentColor,
+        semanticLabel: title,
       ),
     );
   }

@@ -2402,6 +2402,8 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
                 ),
                 PiggySwitcher(
                   value: useSSL,
+                  // 无障碍基线：开关补语义标签，读出所控制的设置项名称
+                  semanticLabel: l10n.cloudS3UseSSLLabel,
                   onChanged: (value) {
                     setState(() {
                       useSSL = value;

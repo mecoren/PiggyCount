@@ -1006,7 +1006,8 @@ class _PiggyBottomBar extends StatelessWidget {
                           Icons.account_balance_wallet,
                           l10n.tabAssets,
                           inactiveColor),
-                      _buildAvatarTabItem(context, 3, l10n.tabMine, inactiveColor),
+                      _buildAvatarTabItem(
+                          context, 3, l10n.tabMine, inactiveColor),
                     ],
                   ),
                 ),
@@ -1019,42 +1020,45 @@ class _PiggyBottomBar extends StatelessWidget {
     );
   }
 
-  Widget _buildTabItem(
-      BuildContext context,
-      int index,
-      IconData icon,
-      IconData activeIcon,
-      String label,
-      Color inactiveColor) {
+  Widget _buildTabItem(BuildContext context, int index, IconData icon,
+      IconData activeIcon, String label, Color inactiveColor) {
     final isActive = index == currentIndex;
     final iconColor = isActive ? primaryColor : inactiveColor;
 
     return Expanded(
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => onTabTap(index),
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(isActive ? activeIcon : icon, color: iconColor, size: 22),
-                const SizedBox(height: 1),
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  softWrap: false,
-                  textScaler: TextScaler.noScaling,
-                  // UI-07：字号走 caption token（10），颜色/字重按激活态覆写
-                  style: PiggyTextTokens.caption(context).copyWith(
-                    color: isActive ? primaryColor : inactiveColor,
-                    fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+      // 无障碍基线：tab 提供 button 角色 + selected 状态，TalkBack/VoiceOver
+      // 读出「首页，选项卡，已选中，双击切换」；label 与点击动作由内部
+      // Text/GestureDetector 语义合并提供
+      child: Semantics(
+        button: true,
+        selected: isActive,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => onTabTap(index),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(isActive ? activeIcon : icon,
+                      color: iconColor, size: 22),
+                  const SizedBox(height: 1),
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: false,
+                    textScaler: TextScaler.noScaling,
+                    // UI-07：字号走 caption token（10），颜色/字重按激活态覆写
+                    style: PiggyTextTokens.caption(context).copyWith(
+                      color: isActive ? primaryColor : inactiveColor,
+                      fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -1064,30 +1068,35 @@ class _PiggyBottomBar extends StatelessWidget {
 
   Widget _buildCenterTabItem(BuildContext context, Color inactiveColor) {
     return Expanded(
-      child: GestureDetector(
-        key: centerButtonKey,
-        behavior: HitTestBehavior.opaque,
-        onTap: onCenterTap,
-        onLongPressStart: onCenterLongPressStart,
-        onLongPressMoveUpdate: onCenterLongPressMoveUpdate,
-        onLongPressEnd: onCenterLongPressEnd,
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.add_circle_outline, color: inactiveColor, size: 22),
-              const SizedBox(height: 1),
-              Text(
-                l10n.tabRecord,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                softWrap: false,
-                textScaler: TextScaler.noScaling,
-                // UI-07：同上
-                style: PiggyTextTokens.caption(context),
-              ),
-            ],
+      // 无障碍基线：记账主操作按钮提供 button 角色；label（记账）与
+      // 双击/长按动作由内部 Text/GestureDetector 语义合并提供
+      child: Semantics(
+        button: true,
+        child: GestureDetector(
+          key: centerButtonKey,
+          behavior: HitTestBehavior.opaque,
+          onTap: onCenterTap,
+          onLongPressStart: onCenterLongPressStart,
+          onLongPressMoveUpdate: onCenterLongPressMoveUpdate,
+          onLongPressEnd: onCenterLongPressEnd,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.add_circle_outline, color: inactiveColor, size: 22),
+                const SizedBox(height: 1),
+                Text(
+                  l10n.tabRecord,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
+                  textScaler: TextScaler.noScaling,
+                  // UI-07：同上
+                  style: PiggyTextTokens.caption(context),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1121,31 +1130,36 @@ class _PiggyBottomBar extends StatelessWidget {
     }
 
     return Expanded(
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => onTabTap(index),
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                iconWidget,
-                const SizedBox(height: 1),
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  softWrap: false,
-                  textScaler: TextScaler.noScaling,
-                  // UI-07：同上
-                  style: PiggyTextTokens.caption(context).copyWith(
-                    color: isActive ? primaryColor : inactiveColor,
-                    fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+      // 无障碍基线：同 _buildTabItem，button 角色 + selected 状态
+      child: Semantics(
+        button: true,
+        selected: isActive,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => onTabTap(index),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  iconWidget,
+                  const SizedBox(height: 1),
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: false,
+                    textScaler: TextScaler.noScaling,
+                    // UI-07：同上
+                    style: PiggyTextTokens.caption(context).copyWith(
+                      color: isActive ? primaryColor : inactiveColor,
+                      fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

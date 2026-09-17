@@ -584,13 +584,19 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const SizedBox(
+                                    SizedBox(
                                       width: 50,
                                       height: 50,
+                                      // 无障碍基线：加载动画补语义标签，
+                                      // TalkBack/VoiceOver 读出「正在生成海报」
+                                      // 而非静默的 Busy 状态
                                       child: CircularProgressIndicator(
                                         strokeWidth: 3,
                                         valueColor: AlwaysStoppedAnimation(
                                             Colors.white),
+                                        semanticsLabel:
+                                            AppLocalizations.of(context)
+                                                .mineShareGenerating,
                                       ),
                                     ),
                                     const SizedBox(height: 20),

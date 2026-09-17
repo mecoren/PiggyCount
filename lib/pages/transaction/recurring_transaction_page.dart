@@ -340,6 +340,11 @@ class _RecurringTransactionCard extends ConsumerWidget {
                     // 开关：PiggySwitcher（参考 wait-home WaitSwitcher 视觉规格）
                     PiggySwitcher(
                       value: recurring.enabled,
+                      // 语义标签：优先用备注识别是哪条周期交易的开关，
+                      // 无备注时退化为频率描述
+                      semanticLabel: (recurring.note?.isNotEmpty ?? false)
+                          ? recurring.note
+                          : _getFrequencyDescription(context),
                       onChanged: (value) async {
                         try {
                           await repo.toggleRecurringTransaction(

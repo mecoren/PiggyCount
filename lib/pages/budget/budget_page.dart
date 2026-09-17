@@ -295,6 +295,7 @@ class BudgetPage extends ConsumerWidget {
           onChanged: (value) {
             ref.read(homeBudgetCardEnabledProvider.notifier).toggle(value);
           },
+          semanticLabel: l10n.budgetShowOnHome,
         ),
         onTap: () {
           final current = ref.read(homeBudgetCardEnabledProvider);
