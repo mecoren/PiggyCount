@@ -161,6 +161,25 @@ abstract class TransactionRepository {
     int limit = 20,
   });
 
+  /// 取该账本 + 该类型下**最近一笔带分类交易**的分类 —— 快捷记账模式的记忆源。
+  ///
+  /// 返回 `null` 表示扫描窗口内没有可用记忆，调用方应退回分类网格（**不要**预填空分类）。
+  ///
+  /// 返回值可能是**负数**：共享账本下 Owner 分类以 `category_id = NULL` +
+  /// `category_sync_id_override` 落库，此处用
+  /// [syntheticIdForSyncId] 在**读取时**派生负数 id。
+  /// ⚠️ 该派生值**绝不可持久化** —— 它基于 Dart `String.hashCode`，
+  /// 跨 VM 版本/平台无稳定性保证（这正是本特性选择「从 transactions 派生」
+  /// 而非「存 SharedPreferences」的决定性理由）。
+  ///
+  /// 只扫描最近 [scanLimit] 笔以保证工作量有上界；`type` 与 `category_id`
+  /// 都不在 `idx_transactions_ledger_happened` 里，需要回表逐行判定。
+  Future<int?> getLastUsedCategoryId({
+    required int ledgerId,
+    required String kind,
+    int scanLimit,
+  });
+
   /// 根据ID获取单条交易
   Future<Transaction?> getTransactionById(int id);
 

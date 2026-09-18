@@ -978,6 +978,18 @@ class LocalRepository extends BaseRepository {
       );
 
   @override
+  Future<int?> getLastUsedCategoryId({
+    required int ledgerId,
+    required String kind,
+    int scanLimit = 100,
+  }) =>
+      _transactionRepo.getLastUsedCategoryId(
+        ledgerId: ledgerId,
+        kind: kind,
+        scanLimit: scanLimit,
+      );
+
+  @override
   Future<List<({Transaction t, Category? category, Account? account, Account? toAccount})>> getRecentTransactionsWithCategory({
     required int ledgerId,
     required int limit,

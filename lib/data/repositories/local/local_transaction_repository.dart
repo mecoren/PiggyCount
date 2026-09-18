@@ -13,6 +13,38 @@ import '../../../models/note_history.dart';
 import '../transaction_repository.dart';
 import '../../../services/system/logger_service.dart';
 
+/// 快捷记账「上次分类」的取数语句（P1-E R1）。
+///
+/// **为什么公开**：让 `quick_entry_last_category_test.dart` 能对**同一份 SQL**
+/// 跑 `EXPLAIN QUERY PLAN`，断言命中 `idx_transactions_ledger_happened`。
+/// 若测试自己另抄一份字面量，那么改这里就能悄悄骗过测试，索引退化会直接溜进 CI。
+///
+/// 生产代码请走 [LocalTransactionRepository.getLastUsedCategoryId]，不要直接用本串。
+///
+/// ⚠️ **`type` 过滤刻意不写进 WHERE，而是在 Dart 侧做** —— 这是上界成立的前提。
+/// SQLite 的 `LIMIT` 约束的是**结果行数**，不是**扫描行数**：若写成
+/// `WHERE ledger_id = ? AND type = ? ... LIMIT ?`，当最近若干笔都不是目标类型时，
+/// SQLite 必须沿索引一路回表扫描到凑满 K 行匹配记录（或扫完整个索引）才返回 ——
+/// 上界直接丢失，退化成与被否决的「全账本 GROUP BY」同量级的 O(N)。
+/// 把 `type` 判在结果集之外，`LIMIT` 才真正等价于「只看最近 K 笔」。
+///
+/// （本设计文档 `prd/p1e_quick_entry_mode/design.md` 决策 1 最初给出的 SQL 就是
+/// 带 `type = ?` 的版本，其「工作量上界 100 次索引项」的推理是错的；
+/// 该 bug 由本方法的单测在实现当天测出，详见测试文件头注释。）
+///
+/// 语句要点：
+/// - `ledger_id` 等值 + `happened_at DESC` 由复合索引一次满足；
+/// - `id` 是 INTEGER PRIMARY KEY（即 rowid），索引倒序扫描天然给出
+///   `happened_at DESC, id DESC`，无需额外排序步骤；
+/// - `happened_at IS NOT NULL` 排除排序位置无意义的行（NULL 在 DESC 下落到末尾）。
+const String quickEntryLastCategorySql = '''
+SELECT type, category_id, category_sync_id_override
+FROM transactions
+WHERE ledger_id = ? AND happened_at IS NOT NULL
+ORDER BY happened_at DESC, id DESC
+LIMIT ?
+''';
+
 /// 本地交易Repository实现
 /// 基于 Drift 数据库实现
 class LocalTransactionRepository implements TransactionRepository {
@@ -828,6 +860,51 @@ class LocalTransactionRepository implements TransactionRepository {
         usageCount: count,
       );
     }).toList();
+  }
+
+  @override
+  Future<int?> getLastUsedCategoryId({
+    required int ledgerId,
+    required String kind,
+    int scanLimit = 100,
+  }) async {
+    // 与 getNoteHistory 同一取径：直接从已保存交易派生，不维护可能与同步脱节的缓存副本。
+    //
+    // 为什么是「索引倒序游走 + K 上限」而不是 GROUP BY 全账本聚合：
+    // `ledger_id` 等值 + `happened_at` 倒序由 idx_transactions_ledger_happened
+    // 一次满足，窗口恒定 = 最近 K 笔（K 次索引项 + 至多 K 次回表）。
+    // ⚠️ type 必须在 Dart 侧判，不能进 WHERE —— 否则 LIMIT 不再约束扫描量，
+    // 上界会丢失（理由见 [quickEntryLastCategorySql] 的文档）。
+    final limit = scanLimit.clamp(1, 500).toInt();
+    final rows = await db
+        .customSelect(
+          quickEntryLastCategorySql,
+          variables: [
+            d.Variable<int>(ledgerId),
+            d.Variable<int>(limit),
+          ],
+          readsFrom: {db.transactions},
+        )
+        .get();
+
+    for (final row in rows) {
+      // 转账与另一类型直接跳过：窗口内它们不占用记忆位。
+      if (row.data['type'] != kind) continue;
+
+      final localId = row.data['category_id'];
+      if (localId is num) return localId.toInt();
+
+      final override = row.data['category_sync_id_override'];
+      // 共享账本 Owner 分类以 syncId override 落库，读取时派生负数 synthetic id。
+      // 绝不持久化该值（见方法文档）。
+      if (override is String && override.isNotEmpty) {
+        return syntheticIdForSyncId(override);
+      }
+
+      // 两者皆空 = 这笔没有分类。**不能提前中断** ——
+      // AC-R1 #4 要求继续往前找最近一笔「带分类」的交易。
+    }
+    return null;
   }
 
   @override
