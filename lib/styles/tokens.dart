@@ -143,19 +143,38 @@ class PiggyTokens {
 
   // ========== 文字颜色 Token (Text) ==========
 
+  /// 亮色下主要文字的原值（单一来源，供 *_On 方法复用）。
+  static const Color _textPrimaryLight = Color(0xFF111827);
+
+  /// 亮色下次要文字的原值（= Colors.black54）。
+  static const Color _textSecondaryLight = Color(0x8A000000);
+
   /// 主要文字颜色（标题、正文）
   /// - 亮色模式：#111827 (灰900)
   /// - 暗黑模式：#FFFFFF (白色)
   static Color textPrimary(BuildContext context) =>
-      isDark(context) ? Colors.white : const Color(0xFF111827);
+      textPrimaryOn(isDark(context));
+
+  /// 主要文字颜色（无 context 场景：CustomPainter、ThemeData 构建）。
+  ///
+  /// 为什么需要它：Painter 与主题构建拿不到 BuildContext，只有一个
+  /// [isDark] 标记。原先 token 层只导出「亮色常量」（`primaryTextStatic`），
+  /// 于是每个调用点自己补暗色分支（`isDark ? Colors.white : xxxStatic`）——
+  /// 等于把 token 的暗色取值复制到各处，改 token 改不动，而且很容易漏：
+  /// 实际就漏了一处，图表平均线在暗色模式下仍用亮色灰。
+  /// 把「按模式取值」也放进 token 后，调用点不再复制。
+  static Color textPrimaryOn(bool isDark) =>
+      isDark ? Colors.white : _textPrimaryLight;
 
   /// 次要文字颜色（副标题、说明文字）
   /// - 亮色模式：rgba(0,0,0,0.54) 即 Colors.black54
   /// - 暗黑模式：rgba(255,255,255,0.7)
   static Color textSecondary(BuildContext context) =>
-      isDark(context)
-          ? Colors.white.withValues(alpha: 0.7)
-          : const Color(0x8A000000);
+      textSecondaryOn(isDark(context));
+
+  /// 次要文字颜色（无 context 场景），理由同 [textPrimaryOn]。
+  static Color textSecondaryOn(bool isDark) =>
+      isDark ? Colors.white.withValues(alpha: 0.7) : _textSecondaryLight;
 
   /// 提示文字颜色（placeholder、hint、辅助说明）
   /// - 亮色模式：#9CA3AF (灰400)
@@ -246,6 +265,27 @@ class PiggyTokens {
       isDark(context)
           ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
           : Colors.black.withValues(alpha: 0.12);
+
+  // ========== 控件轨道 Token (Control Track) ==========
+
+  /// 开关「关闭态」轨道色。
+  ///
+  /// WCAG 1.4.11（非文本对比度）要求可交互控件的可视边界与相邻颜色
+  /// 至少 3:1。原先关闭态用 `textSecondary @ 10% alpha`（亮色下等效
+  /// 黑色 @5.4%），与白底对比度仅约 1.13:1：轨道几乎看不见，连带
+  /// 「中心透明 + 白色描边」的滑块也失去参照——用户看不出滑块停在哪侧，
+  /// 关闭态与「控件被禁用」也难分辨。
+  ///
+  /// 取值按对比度反推（相对亮度 L，contrast = (L1+0.05)/(L2+0.05)）：
+  /// - 亮色 `#8A8A8A`：L≈0.254 → 对白底 3.45:1，对卡片底(#F7F6F3) 3.12:1
+  /// - 暗色 `white@42%`：叠在 #121212 上约 #6E6E6E，L≈0.155 → 对比 3.7:1
+  ///
+  /// 注意：这比原设计的淡轨道明显更深（也更接近系统原生开关）。
+  /// 若要回到接近原设计的淡轨道，只改这里一处即可——但会低于 3:1。
+  static Color switchTrackOff(BuildContext context) =>
+      isDark(context)
+          ? Colors.white.withValues(alpha: 0.42)
+          : const Color(0xFF8A8A8A);
 
   /// 主题色边框（用于卡片等）
   /// - 亮色模式：transparent
@@ -541,19 +581,10 @@ class PiggyTokens {
   }
 
   // ========== 静态常量（用于无 context 场景，如 CustomPainter、主题定义） ==========
-  // 注意：这些是亮色模式下的值，暗黑模式请使用带 context 的方法
-
-  /// 主要文字颜色（亮色模式）
-  static const Color primaryTextStatic = Color(0xFF111827);
-
-  /// 次要文字颜色（亮色模式）
-  static const Color secondaryTextStatic = Color(0xFF6B7280);
-
-  /// 提示文字颜色（亮色模式）
-  static const Color hintTextStatic = Color(0xFF9CA3AF);
-
-  /// 54% 黑色（亮色模式，兼容 Colors.black54）
-  static const Color black54Static = Color(0x8A000000);
+  // 注意：这些是亮色或暗色模式下的具体值，需要「按模式取值」时请用
+  // PiggyTokens.textPrimaryOn(bool isDark) / textSecondaryOn(bool isDark)。
+  // 历史上这里曾导出「只有亮色」的 primaryTextStatic / secondaryTextStatic，
+  // 导致调用点各自复制暗色分支（见 *_On 的注释），已下线。
 
   /// Scaffold 背景色（亮色模式）— #E5EEFE (淡蓝)
   /// 单一来源：PiggyTokens.scaffoldBackground(context) 与 PiggyTheme.lightTheme 共享

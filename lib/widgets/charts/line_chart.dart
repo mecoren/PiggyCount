@@ -448,11 +448,11 @@ class _LinePainter extends CustomPainter {
 
   // 获取主文字颜色（暗黑模式感知）
   Color get primaryTextColor =>
-      isDark ? Colors.white : PiggyTokens.primaryTextStatic;
+      PiggyTokens.textPrimaryOn(isDark);
 
   // 获取次要文字颜色（暗黑模式感知）
   Color get secondaryTextColor =>
-      isDark ? Colors.white70 : PiggyTokens.secondaryTextStatic;
+      PiggyTokens.textSecondaryOn(isDark);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -629,7 +629,7 @@ class _LinePainter extends CustomPainter {
     if (!minimal) {
       final avgY = yFor(avgV);
       final avgLinePaint = Paint()
-        ..color = PiggyTokens.secondaryTextStatic.withValues(alpha: 0.55)
+        ..color = PiggyTokens.textSecondaryOn(isDark).withValues(alpha: 0.55)
         ..strokeWidth = 1.0
         ..style = PaintingStyle.stroke;
       _drawDashedLine(

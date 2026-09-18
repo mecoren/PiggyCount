@@ -8,7 +8,8 @@ import 'haptics.dart';
 /// 参考 wait-home 项目的 `WaitSwitcher`（SaltUI `SaltSwitcher` 视觉规格）：
 /// - 轨道尺寸 46×26 dp，全圆角
 /// - 内边距 5 dp
-/// - 开启态轨道使用强调色 [activeColor]，关闭态轨道使用次要文字色 @ 10% alpha
+/// - 开启态轨道使用强调色 [activeColor]，关闭态使用
+///   [PiggyTokens.switchTrackOff]（满足 WCAG 1.4.11 的 3:1 对比度）
 /// - 滑块为 16 dp 圆形，4 dp 白色描边，中心透明以透出轨道色
 /// - 位移动画 + 颜色动画 300 ms，[Curves.fastOutSlowIn]
 /// - 使用 [GestureDetector] 实现无 ripple 点击
@@ -55,10 +56,11 @@ class PiggySwitcher extends StatelessWidget {
     final enabled = onChanged != null;
     final accent = activeColor ?? Theme.of(context).colorScheme.primary;
 
-    // 关闭态轨道色：次要文字色 @ 10% alpha，与 wait-home 一致的极淡灰
-    final trackColor = value
-        ? accent
-        : PiggyTokens.textSecondary(context).withValues(alpha: 0.1);
+    // 关闭态轨道色：专用 token `switchTrackOff`，满足 WCAG 1.4.11 的 3:1
+    // 非文本对比度（对比度反推过程见 token 注释）。原先的
+    // `textSecondary @ 10% alpha` 只有约 1.13:1，轨道近乎不可见，
+    // 白色描边滑块也失去参照。
+    final trackColor = value ? accent : PiggyTokens.switchTrackOff(context);
 
     return Semantics(
       toggled: value,

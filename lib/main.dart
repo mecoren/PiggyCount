@@ -45,8 +45,16 @@ Future<void> main() async {
   // 图片解码缓存上限:默认 1000 条/100MB,重度用户连翻大附件时可逼近上限
   // 仍嫌过大;配合各处 cacheWidth 降采样,收紧到 500 条/50MB 足以容纳典型
   // 工作集(缩略图 + 头像 + 图标),超出按 LRU 逐出。必须首帧解码前设置。
-  PaintingBinding.instance.imageCache.maximumSize = 500;
-  PaintingBinding.instance.imageCache.maximumSizeBytes = 50 << 20; // 50MB
+  //
+  // 但 500/50MB 对 720p 档设备(通常 2GB RAM 以内)仍偏激进,故按屏幕
+  // 物理分辨率分档(设备档位在现实中与分辨率强相关)。
+  //
+  // 为什么不用 RAM 分档:Flutter 没有跨平台内存查询 API,只为读一个字段
+  // 引入 device_info_plus 不划算。另外这里只是**稳态**调优——真正的内存
+  // 压力兜底由框架负责:OS 发 memoryPressure 时
+  // `PaintingBinding.handleMemoryPressure()` 会 `imageCache.clear()`,
+  // 不受本处上限影响。
+  _configureImageCache();
 
   // 全局异常兜底:release 下未捕获异常不再只进系统日志,统一持久化到
   // 日志中心(48h 本地),用户报障时可在「日志中心」页导出给开发者定位。
@@ -155,6 +163,36 @@ Future<void> main() async {
     container: container,
     child: const MainApp(),
   ));
+}
+
+/// 按屏幕物理长边给图片解码缓存分档(调用处注释说明为何用分辨率而非 RAM)。
+///
+/// 门槛按常见档位划分:≥2400px 视作 FHD+/QHD 旗舰档,≥1800px 视作 FHD
+/// 主流档,其余(720p 及以下)视作低端档。必须在首帧解码前调用。
+void _configureImageCache() {
+  final cache = PaintingBinding.instance.imageCache;
+
+  // 测试环境/无 view 时兜底走主流档,避免依赖 views 非空。
+  final views = WidgetsBinding.instance.platformDispatcher.views;
+  final longSide = views.isEmpty
+      ? 1080.0
+      : views
+          .map((v) => v.physicalSize.longestSide)
+          .reduce((a, b) => a > b ? a : b);
+
+  if (longSide >= 2400) {
+    cache.maximumSize = 500;
+    cache.maximumSizeBytes = 50 << 20;
+  } else if (longSide >= 1800) {
+    cache.maximumSize = 300;
+    cache.maximumSizeBytes = 32 << 20;
+  } else {
+    cache.maximumSize = 150;
+    cache.maximumSizeBytes = 20 << 20;
+  }
+
+  logger.info('App',
+      'imageCache 分档: 长边 ${longSide.toInt()}px → ${cache.maximumSize} 张 / ${cache.maximumSizeBytes >> 20}MB');
 }
 
 /// 启动链1：通知服务初始化 + 两类提醒恢复。
@@ -575,15 +613,15 @@ class _AppThemes {
       listTileTheme: ListTileThemeData(
         dense: true,
         contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-        iconColor: PiggyTokens.primaryTextStatic,
+        iconColor: PiggyTokens.textPrimaryOn(false),
       ),
       dialogTheme: base.dialogTheme.copyWith(
         backgroundColor: PiggyTokens.cardBackgroundLightStatic,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
         titleTextStyle: baseTextTheme.titleMedium?.copyWith(
-            color: PiggyTokens.primaryTextStatic, fontWeight: FontWeight.w600),
+            color: PiggyTokens.textPrimaryOn(false), fontWeight: FontWeight.w600),
         contentTextStyle:
-            baseTextTheme.bodyMedium?.copyWith(color: PiggyTokens.secondaryTextStatic),
+            baseTextTheme.bodyMedium?.copyWith(color: PiggyTokens.textSecondaryOn(false)),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(

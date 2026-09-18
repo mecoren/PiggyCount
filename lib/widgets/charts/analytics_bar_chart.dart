@@ -95,7 +95,7 @@ class _AnalyticsBarChartState extends State<AnalyticsBarChart> {
     if (step < 1) step = 1;
 
     final axisLabelColor =
-        widget.isDark ? Colors.white70 : PiggyTokens.secondaryTextStatic;
+        PiggyTokens.textSecondaryOn(widget.isDark);
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,

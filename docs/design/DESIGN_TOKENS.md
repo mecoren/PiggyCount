@@ -312,17 +312,34 @@ final textTheme = PiggyTypography.buildBase(
 
 ---
 
-## 17. 静态常量（无 context 场景）
+## 17. 无 context 场景取色（CustomPainter / 主题定义）
 
-用于 `CustomPainter`、主题定义等无法访问 `BuildContext` 的场景。
+`CustomPainter`、`ThemeData` 构建等拿不到 `BuildContext`，只能拿到一个
+`isDark` 标记。这类场景**不要**自己写 `isDark ? Colors.white : xxx`——
+暗色取值会被复制到每个调用点，改 token 改不动（历史上就漏了一处：图表
+平均线在暗色下仍用亮色灰）。请用下面两个「按模式取值」的方法：
+
+| Token 名称 | 参数 | 亮色 | 暗色 |
+|-----------|------|------|------|
+| `PiggyTokens.textPrimaryOn(bool isDark)` | 模式标记 | `#111827` | `#FFFFFF` |
+| `PiggyTokens.textSecondaryOn(bool isDark)` | 模式标记 | `rgba(0,0,0,0.54)` | `rgba(255,255,255,0.7)` |
+
+带 context 的对应版本 `textPrimary(context)` / `textSecondary(context)`
+是这两个方法的薄封装，取值单一来源。
+
+其余静态常量（仅少数亮色专用场景）：
 
 | Token 名称 | 值 | 用途 |
 |-----------|-----|------|
-| `PiggyTokens.primaryTextStatic` | `#111827` | 主要文字（亮色模式） |
-| `PiggyTokens.secondaryTextStatic` | `#6B7280` | 次要文字（亮色模式） |
-| `PiggyTokens.hintTextStatic` | `#9CA3AF` | 提示文字（亮色模式） |
-| `PiggyTokens.black54Static` | `0x8A000000` | 54% 黑色（亮色模式） |
 | `PiggyTokens.dividerStatic` | `rgba(0,0,0,0.06)` | 分割线（亮色模式） |
+| `PiggyTokens.dividerDarkStatic` | `rgba(255,255,255,0.12)` | 分割线（暗色模式） |
+| `PiggyTokens.scaffoldBackgroundLightStatic` | `#E5EEFE` | 页面背景（亮色） |
+| `PiggyTokens.scaffoldBackgroundDarkStatic` | `#151A24` | 页面背景（暗色） |
+| `PiggyTokens.cardBackgroundLightStatic` | `#F9F9F9` | 卡片背景（亮色） |
+| `PiggyTokens.cardBackgroundDarkStatic` | `#1C2330` | 卡片背景（暗色） |
+
+> 已下线：`primaryTextStatic` / `secondaryTextStatic` / `hintTextStatic` /
+> `black54Static`。前两者由 `*_On` 方法取代；后两者全库无调用点，直接删除。
 
 ---
 

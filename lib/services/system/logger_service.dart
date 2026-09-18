@@ -301,9 +301,7 @@ class LoggerService {
     if (!_isLoaded) {
       _ensureLoaded(); // 幂等：已在 flight 则返回同一 Future
       _pendingLogs.add(entry);
-      if (kDebugMode) {
-        debugPrint(entry.toFormattedString());
-      }
+      _verbose(() => entry.toFormattedString());
       return;
     }
 
@@ -314,10 +312,8 @@ class LoggerService {
 
     _logs.add(entry);
 
-    // 同时打印到控制台（开发模式）
-    if (kDebugMode) {
-      debugPrint(entry.toFormattedString());
-    }
+    // 同时打印到控制台（仅 debug；release 下 _verbose 整条短路）
+    _verbose(() => entry.toFormattedString());
 
     // 通知监听器
     _notifyListeners();
@@ -344,7 +340,7 @@ class LoggerService {
       final prefs = await SharedPreferences.getInstance();
       // 加载期间用户 clear 过 → 丢弃历史（清空语义优先于加载）
       if (generation != _logsGeneration) {
-        debugPrint('加载完成前日志已被清空，丢弃历史日志');
+        _verbose(() => '加载完成前日志已被清空，丢弃历史日志');
         return;
       }
       final jsonStr = prefs.getString(_storageKey);
@@ -362,14 +358,14 @@ class LoggerService {
               _logs.add(entry);
             }
           } catch (e) {
-            debugPrint('加载日志条目失败: $e');
+            _verbose(() => '加载日志条目失败: $e');
           }
         }
 
-        debugPrint('从持久化存储加载了 ${_logs.length} 条日志');
+        _verbose(() => '从持久化存储加载了 ${_logs.length} 条日志');
       }
     } catch (e) {
-      debugPrint('加载日志失败: $e');
+      _verbose(() => '加载日志失败: $e');
     } finally {
       _isLoaded = true;
 
@@ -422,7 +418,7 @@ class LoggerService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_storageKey, jsonStr);
     } catch (e) {
-      debugPrint('保存日志失败: $e');
+      _verbose(() => '保存日志失败: $e');
     } finally {
       _isSaving = false;
     }
@@ -531,6 +527,18 @@ class LoggerService {
     return buffer.toString();
   }
 
+  /// release 下整条短路的调试输出（[kDebugMode] 守卫 + 闭包参数）。
+  ///
+  /// 为什么不直接写 `if (kDebugMode) debugPrint('...$x');`：
+  /// - `debugPrint` 底层是 `print`，release 下依然会写到系统日志，
+  ///   不是空操作，必须先判模式；
+  /// - 闭包参数保证 release 下连**字符串插值**都不构造。原生日志桥接
+  ///   （[_handleNativeLog]）可能被原生侧高频调用，每条都拼一次字符串
+  ///   是实打实的白费开销。
+  static void _verbose(String Function() buildMessage) {
+    if (kDebugMode) debugPrint(buildMessage());
+  }
+
   /// 设置原生日志桥接
   void _setupNativeBridge() {
     _channel.setMethodCallHandler((call) async {
@@ -544,7 +552,7 @@ class LoggerService {
   /// 处理原生日志
   void _handleNativeLog(Map args) {
     try {
-      debugPrint('📱 收到原生日志: $args');
+      _verbose(() => '📱 收到原生日志: $args');
 
       final platformStr = args['platform'] as String;
       final levelStr = args['level'] as String;
@@ -562,7 +570,7 @@ class LoggerService {
       // 解析日志级别
       final level = _parseLogLevel(levelStr);
 
-      debugPrint('📝 添加原生日志到队列: [$platformStr] [$levelStr] [$tag] $message');
+      _verbose(() => '📝 添加原生日志到队列: [$platformStr] [$levelStr] [$tag] $message');
 
       _addLog(LogEntry(
         timestamp: DateTime.fromMillisecondsSinceEpoch(timestamp),
@@ -572,8 +580,8 @@ class LoggerService {
         message: message,
       ));
     } catch (e, stackTrace) {
-      debugPrint('处理原生日志失败: $e');
-      debugPrint('堆栈: $stackTrace');
+      _verbose(() => '处理原生日志失败: $e');
+      _verbose(() => '堆栈: $stackTrace');
     }
   }
 

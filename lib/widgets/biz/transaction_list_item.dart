@@ -183,11 +183,19 @@ class TransactionListItem extends ConsumerWidget {
         ],
       );
       if (onAttachmentTap != null) {
-        return GestureDetector(
+        // InkWell 而非 GestureDetector：给出涟漪反馈（原先点了没任何视觉
+        // 响应，用户不确定是否点中）。
+        //
+        // 内边距从 4/2 放大到 8/6 —— 触控区随 Wrap 行高一起增长，而不是
+        // 硬套 48×48。理由：这是次要信息行（标签/附件计数），整行本身
+        // 也有「打开交易详情」的点击；若每个内联元素各占 48dp 垂直空间，
+        // 主列表每条交易会增高约 28dp，万级列表的滚动密度会被彻底破坏。
+        // Material 的 48dp 下限针对独立可交互控件，不适用于行内文本级入口。
+        return InkWell(
           onTap: onAttachmentTap,
-          behavior: HitTestBehavior.opaque,
+          borderRadius: BorderRadius.circular(4),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
             child: widget,
           ),
         );
@@ -199,11 +207,11 @@ class TransactionListItem extends ConsumerWidget {
     final tagWidgets = <Widget>[
       if (tags != null)
         for (final tag in tags!)
-          GestureDetector(
+          InkWell(
             onTap: onTagTap != null ? () => onTagTap!(tag.id, tag.name) : null,
-            behavior: HitTestBehavior.opaque,
+            borderRadius: BorderRadius.circular(4),
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
               child: Text(
                 tag.name,
                 style: textStyle.copyWith(
