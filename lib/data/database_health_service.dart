@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -80,67 +81,92 @@ class DatabaseHealthService {
       return DbHealthResult(DbHealth.ok, dbPath: dbPath);
     }
 
+    // 放到后台 isolate 执行：`quick_check` 要逐页做结构校验，实测约
+    // 4.5ms/MB（0.6MB≈4ms / 3MB≈15ms / 9.6MB≈44ms），且**随数据增长无上界**。
+    // 跑在 UI isolate 上就是「数据越多、启动掉帧越久」——这类无上界成本必须
+    // 移出主线程。drift 自身也是同一思路（NativeDatabase.createInBackground）。
+    //
+    // 探测体刻意不落日志、不碰平台通道：后台 isolate 里没有
+    // BackgroundIsolateBinaryMessenger，logger 的 MethodChannel 会失败。
+    // 判定与日志一律回到主 isolate 做。
+    final probe = await _probeOffMain(dbPath);
+    if (probe == null) {
+      // isolate 起不来（平台限制/资源紧张）不该被判成库损坏
+      return DbHealthResult(DbHealth.ok, dbPath: dbPath);
+    }
+    final (opened, headerOk, quickCheck, error) = probe;
+
+    // 1) 探测完全成功
+    if (error == null && quickCheck == 'ok') {
+      return DbHealthResult(DbHealth.ok, dbPath: dbPath);
+    }
+    // 2) 探测跑通但 quick_check 报了非 ok → 页级损坏
+    if (error == null) {
+      return DbHealthResult(DbHealth.corrupted, dbPath: dbPath, detail: quickCheck);
+    }
+    // 3) 连接已建立却不可用：SQLite 接受了这个文件却无法使用它 → 正面证据。
+    //    头合法说明它曾是合法库（页级损坏）；头非法说明它根本不是库。
+    if (opened) {
+      return DbHealthResult(
+        headerOk ? DbHealth.corrupted : DbHealth.unreadable,
+        dbPath: dbPath,
+        detail: error,
+      );
+    }
+    // 4) 连 open 都没成功：**必须有正面证据才报损坏**。
+    //    误报代价不对称——全屏「数据可能已损坏」会推给每一个健康用户，
+    //    而漏报只是回到改动前的静默行为（用户仍会因查询失败报障）。
+    //    「打不开」有大量非损坏成因：文件被其他进程独占、目录权限、以及
+    //    **以只读方式打开 WAL 库的额外约束**（需 `-shm` 可写）。
+    if (!headerOk) {
+      return DbHealthResult(DbHealth.unreadable,
+          dbPath: dbPath, detail: error);
+    }
+    logger.warning('DbHealth',
+        '数据库打开失败但文件头合法，按环境问题处理（不判定损坏）: $error');
+    return DbHealthResult(DbHealth.ok, dbPath: dbPath);
+  }
+
+  /// 在后台 isolate 跑 [DatabaseHealthService._probeSync]。
+  ///
+  /// isolate 无法启动时返回 null（调用方按「不判定」处理）——探测是旁路
+  /// 观察能力，它自己的失败绝不能升级成对用户数据的判断。
+  static Future<(bool, bool, String?, String?)?> _probeOffMain(
+      String dbPath) async {
+    try {
+      return await Isolate.run(() => _probeSync(dbPath));
+    } catch (e) {
+      logger.warning('DbHealth', '后台健康探测无法执行，跳过本次判定: $e');
+      return null;
+    }
+  }
+
+  /// 纯探测体：可在任意 isolate 运行。不落日志、不碰平台通道。
+  ///
+  /// 返回 `(open 是否成功, 文件头是否合法, quick_check 结论, 原始错误)`。
+  /// 为什么返回值要拆这么细：SQLite 的 `open` 是**惰性**的——对「不是数据库」
+  /// 的文件也会成功返回，直到执行第一条语句才报 `SQLITE_NOTADB`。因此
+  /// 「open 失败」与「open 成功但语句失败」的含义完全不同，必须分开上报。
+  static (bool, bool, String?, String?) _probeSync(String dbPath) {
+    final headerOk = _hasSqliteHeader(dbPath);
     Database? db;
-    // 关键区分：SQLite 的 open 是惰性的——它不读文件，对「不是数据库」
-    // 的文件也会成功返回，直到执行第一条语句才报 SQLITE_NOTADB。
-    // 所以「open 本身失败」与「open 成功但语句失败」的含义完全不同：
-    // 前者多半是环境（占用/权限/WAL 只读约束），后者说明 SQLite 已把文件
-    // 当成数据库接受、却发现它不可用，属正面损坏证据。
     var opened = false;
     try {
       db = sqlite3.open(dbPath, mode: OpenMode.readOnly);
       opened = true;
       final rows = db.select('PRAGMA quick_check');
       if (rows.isEmpty) {
-        return DbHealthResult(DbHealth.corrupted,
-            dbPath: dbPath, detail: 'quick_check returned no rows');
+        return (true, headerOk, null, 'quick_check returned no rows');
       }
-      final first = rows.first.values.first?.toString().toLowerCase();
-      if (first == 'ok') {
-        return DbHealthResult(DbHealth.ok, dbPath: dbPath);
-      }
-      return DbHealthResult(DbHealth.corrupted, dbPath: dbPath, detail: first);
+      final v = rows.first.values.first?.toString().toLowerCase();
+      return (true, headerOk, v, null);
     } on SqliteException catch (e) {
-      return opened
-          ? _verdictUnusableAfterOpen(dbPath, e.message)
-          : _verdictOnOpenFailure(dbPath, e.message);
+      return (opened, headerOk, null, e.message);
     } catch (e) {
-      return opened
-          ? _verdictUnusableAfterOpen(dbPath, '$e')
-          : _verdictOnOpenFailure(dbPath, '$e');
+      return (opened, headerOk, null, '$e');
     } finally {
       db?.close();
     }
-  }
-
-  /// 连接已建立、但语句失败：SQLite 接受了这个文件却无法使用它 → 正面证据。
-  /// 文件头合法说明它曾是合法库（页级损坏）；头非法说明它根本不是库。
-  static DbHealthResult _verdictUnusableAfterOpen(
-      String dbPath, String detail) {
-    final looksLikeDb = _hasSqliteHeader(dbPath);
-    return DbHealthResult(
-      looksLikeDb ? DbHealth.corrupted : DbHealth.unreadable,
-      dbPath: dbPath,
-      detail: detail,
-    );
-  }
-
-  /// 连 `open` 都没成功时的判定：**必须有正面证据才报损坏**。
-  ///
-  /// 误报的代价是不对称的——把全屏「数据可能已损坏」引导推给每一个健康用户，
-  /// 远重于漏报（漏报只是回到改动前的静默行为，用户仍会因查询失败而报障）。
-  /// 而「打不开」有大量非损坏成因：文件被其他进程独占、目录权限、以及
-  /// **以只读方式打开 WAL 库的额外约束**（需要 `-shm` 可写）。故只有在
-  /// 文件头不是 SQLite 魔数时——即它根本不可能是数据库——才判 unreadable；
-  /// 头合法却打不开的，按环境问题处理并留痕，不打扰用户。
-  static DbHealthResult _verdictOnOpenFailure(String dbPath, String detail) {
-    if (!_hasSqliteHeader(dbPath)) {
-      return DbHealthResult(DbHealth.unreadable,
-          dbPath: dbPath, detail: detail);
-    }
-    logger.warning('DbHealth',
-        '数据库打开失败但文件头合法，按环境问题处理（不判定损坏）: $detail');
-    return DbHealthResult(DbHealth.ok, dbPath: dbPath);
   }
 
   /// 文件头是否为 `SQLite format 3\0`（16 字节魔数）。
@@ -159,8 +185,7 @@ class DatabaseHealthService {
       } finally {
         raf.closeSync();
       }
-    } catch (e) {
-      logger.warning('DbHealth', '读取数据库文件头失败，不作损坏判定: $e');
+    } catch (_) {
       return true;
     }
   }
