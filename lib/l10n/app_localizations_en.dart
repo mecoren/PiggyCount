@@ -8088,4 +8088,87 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cloudCapNo => 'Degraded';
+
+  @override
+  String get syncErrNotConfigured => 'Not configured';
+
+  @override
+  String get syncErrAuth => 'Authentication failed';
+
+  @override
+  String get syncErrNetworkTimeout => 'Network timeout';
+
+  @override
+  String get syncErrGateway => 'Remote / gateway';
+
+  @override
+  String get syncErrPrecondition => 'Concurrency conflict';
+
+  @override
+  String get syncErrDataCorruption => 'Data integrity';
+
+  @override
+  String get syncErrOther => 'Other';
+
+  @override
+  String get syncErrNotConfiguredMessage =>
+      'Cloud sync is not configured yet. Set the server address and credentials on the Cloud service page first, then try again.';
+
+  @override
+  String get syncErrCorruptionMessage =>
+      'Data integrity check failed; local or cloud data may be corrupted. Export a backup first, then restore from a cloud snapshot — do not overwrite local data blindly.';
+
+  @override
+  String get syncErrGenericMessage =>
+      'Sync failed. Please try again later. If it keeps failing, export diagnostics from the Log center and send them over.';
+
+  @override
+  String get dbHealthCorruptTitle => 'Local database problem';
+
+  @override
+  String get dbHealthCorruptBodyCorrupted =>
+      'The local database failed its integrity check (page-level corruption). Reads and writes are paused to avoid making it worse. Export the damaged file for safekeeping, then restore from a cloud backup — or reset the local database once you are sure.';
+
+  @override
+  String get dbHealthCorruptBodyUnreadable =>
+      'The local database file could not be read (it may be locked by another process, or no longer a valid database). Fully close and reopen the app first; if it persists, export the file and reset the local database.';
+
+  @override
+  String get dbHealthActionRestoreCloud => 'Restore from cloud backup';
+
+  @override
+  String get dbHealthActionExport => 'Export damaged file';
+
+  @override
+  String get dbHealthActionReset => 'Reset local database';
+
+  @override
+  String get dbHealthActionLater => 'Later';
+
+  @override
+  String dbHealthExported(String path) {
+    return 'Exported to: $path';
+  }
+
+  @override
+  String dbHealthExportFailed(String error) {
+    return 'Export failed: $error';
+  }
+
+  @override
+  String get dbHealthResetConfirmTitle => 'Reset local database?';
+
+  @override
+  String get dbHealthResetConfirmMessage =>
+      'The damaged database file will be moved to a preserved folder (not deleted), and the app must restart to create a fresh, empty database. You can then restore data from a cloud backup or a backup file.';
+
+  @override
+  String dbHealthResetDone(String path) {
+    return 'Damaged file preserved at: $path\nPlease fully quit and reopen the app.';
+  }
+
+  @override
+  String dbHealthResetFailed(String error) {
+    return 'Reset failed: $error';
+  }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../data/database_health_service.dart';
 import '../data/db.dart';
 import '../data/repositories/local/local_repository.dart';
 import '../data/repositories/base_repository.dart';
@@ -13,6 +14,19 @@ final databaseProvider = Provider<PiggyDatabase>((ref) {
   ref.onDispose(() => db.close());
   return db;
 });
+
+/// 本地库健康状态（审计 P1-6）。
+///
+/// 刻意**不**挂进 main() 的启动并行链：探测器要扫页，挂进 Future.wait 会把
+/// 它变成 runApp 前的关键路径、拖慢每一次冷启动。改为由 UI 首帧惰性订阅触发，
+/// 全程在 runApp 之后，对正常启动零成本。
+final dbHealthProvider = FutureProvider<DbHealthResult>((ref) {
+  return DatabaseHealthService.check();
+});
+
+/// 「忽略损坏提示」的会话态开关：用户点「稍后处理」后本次运行不再弹，
+/// 但不持久化——下次启动仍会提示，避免损坏被永久静默。
+final dbHealthDismissedProvider = StateProvider<bool>((ref) => false);
 
 // 仓储Provider — 一律 LocalRepository(本地优先)。ChangeTracker(增量变更
 // 推送)随 PiggyCount Cloud 云端协同下线移除;快照备份路径(iCloud / WebDAV /

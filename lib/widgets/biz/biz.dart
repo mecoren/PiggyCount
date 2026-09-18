@@ -14,3 +14,4 @@ export 'attachment_picker.dart';
 export 'product_promo_card.dart';
 export 'settings_widgets.dart';
 export 'profile_card.dart';
+export 'database_recovery_overlay.dart';

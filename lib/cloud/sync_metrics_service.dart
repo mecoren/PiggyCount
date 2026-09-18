@@ -80,6 +80,9 @@ enum SyncOpOutcome {
 enum SyncErrorClass {
   networkTimeout,
   auth,
+  /// 未配置：本地还没填云端凭据、或该能力在当前平台/构建不支持。
+  /// 与 [auth] 分开的理由见 [SyncMetricsService.classifyError]。
+  notConfigured,
   gateway,
   precondition,
   dataCorruption,
@@ -91,6 +94,8 @@ enum SyncErrorClass {
         return 'network_timeout';
       case SyncErrorClass.auth:
         return 'auth';
+      case SyncErrorClass.notConfigured:
+        return 'not_configured';
       case SyncErrorClass.gateway:
         return 'gateway';
       case SyncErrorClass.precondition:
@@ -313,15 +318,39 @@ class SyncMetricsService {
 
   /// 异常 → 错误类别归因（埋点调用方复用，保证全链路口径一致）。
   ///
-  /// 优先级：条件写/冲突 → 认证 → 超时 → 网关 5xx → 数据损坏 → unknown。
+  /// 优先级：条件写/冲突 → 未配置 → 认证 → 超时 → 网关 5xx → 数据损坏 → unknown。
   static SyncErrorClass classifyError(Object? e) {
     if (e == null) return SyncErrorClass.unknown;
     if (e is fcs.CloudPreconditionFailedException ||
         e is CloudConflictException) {
       return SyncErrorClass.precondition;
     }
-    if (e is fcs.CloudAuthException) return SyncErrorClass.auth;
+    // 未配置**必须**排在认证之前：两者对用户都表现为「拿不到凭据」，
+    // 但修复动作完全相反——未配置要去「云服务」页填地址与密钥，认证失败
+    // 才是去改密码。误判成认证会让用户反复改密码却永远修不好。
+    if (e is fcs.CloudConfigurationException || e is UnsupportedError) {
+      return SyncErrorClass.notConfigured;
+    }
+    // CloudNotAuthenticatedException 与 CloudAuthException 是**兄弟**而非父子
+    // （两者都直接 extends CloudSyncException）。Supabase 后端与 manager 的
+    // 「未登录」门禁抛的是前者，漏判会让「没登录」掉进 unknown → 归因卡显示
+    // 「其他」，把用户引向错误的处置方向。两者用户动作一致：去登录/查凭据。
+    if (e is fcs.CloudAuthException ||
+        e is fcs.CloudNotAuthenticatedException) {
+      return SyncErrorClass.auth;
+    }
     final text = e.toString().toLowerCase();
+    // 文案兜底：兜住「无专用异常类型、只在 message 里带语义」的路径。
+    // 注意本分支只覆盖**非 auth 类**输入——上面的类型判断已先行返回。
+    // 故 transactions_sync_manager 刻意包成 CloudAuthException 的
+    // `'cloud encrypted locally disabled'` 落到 auth（该处调用方明确要
+    // auth 口径，见其「手动指定 auth」注释）；这里的 `locally disabled`
+    // 只对裸 Exception('...locally disabled') 生效。
+    if (text.contains('未配置') ||
+        text.contains('not configured') ||
+        text.contains('locally disabled')) {
+      return SyncErrorClass.notConfigured;
+    }
     if (text.contains('timed out') ||
         text.contains('timeout') ||
         text.contains('超时')) {

@@ -14556,6 +14556,144 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Degraded'**
   String get cloudCapNo;
+
+  /// No description provided for @syncErrNotConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'Not configured'**
+  String get syncErrNotConfigured;
+
+  /// No description provided for @syncErrAuth.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication failed'**
+  String get syncErrAuth;
+
+  /// No description provided for @syncErrNetworkTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'Network timeout'**
+  String get syncErrNetworkTimeout;
+
+  /// No description provided for @syncErrGateway.
+  ///
+  /// In en, this message translates to:
+  /// **'Remote / gateway'**
+  String get syncErrGateway;
+
+  /// No description provided for @syncErrPrecondition.
+  ///
+  /// In en, this message translates to:
+  /// **'Concurrency conflict'**
+  String get syncErrPrecondition;
+
+  /// No description provided for @syncErrDataCorruption.
+  ///
+  /// In en, this message translates to:
+  /// **'Data integrity'**
+  String get syncErrDataCorruption;
+
+  /// No description provided for @syncErrOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get syncErrOther;
+
+  /// No description provided for @syncErrNotConfiguredMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud sync is not configured yet. Set the server address and credentials on the Cloud service page first, then try again.'**
+  String get syncErrNotConfiguredMessage;
+
+  /// No description provided for @syncErrCorruptionMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Data integrity check failed; local or cloud data may be corrupted. Export a backup first, then restore from a cloud snapshot — do not overwrite local data blindly.'**
+  String get syncErrCorruptionMessage;
+
+  /// No description provided for @syncErrGenericMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync failed. Please try again later. If it keeps failing, export diagnostics from the Log center and send them over.'**
+  String get syncErrGenericMessage;
+
+  /// No description provided for @dbHealthCorruptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Local database problem'**
+  String get dbHealthCorruptTitle;
+
+  /// No description provided for @dbHealthCorruptBodyCorrupted.
+  ///
+  /// In en, this message translates to:
+  /// **'The local database failed its integrity check (page-level corruption). Reads and writes are paused to avoid making it worse. Export the damaged file for safekeeping, then restore from a cloud backup — or reset the local database once you are sure.'**
+  String get dbHealthCorruptBodyCorrupted;
+
+  /// No description provided for @dbHealthCorruptBodyUnreadable.
+  ///
+  /// In en, this message translates to:
+  /// **'The local database file could not be read (it may be locked by another process, or no longer a valid database). Fully close and reopen the app first; if it persists, export the file and reset the local database.'**
+  String get dbHealthCorruptBodyUnreadable;
+
+  /// No description provided for @dbHealthActionRestoreCloud.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore from cloud backup'**
+  String get dbHealthActionRestoreCloud;
+
+  /// No description provided for @dbHealthActionExport.
+  ///
+  /// In en, this message translates to:
+  /// **'Export damaged file'**
+  String get dbHealthActionExport;
+
+  /// No description provided for @dbHealthActionReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset local database'**
+  String get dbHealthActionReset;
+
+  /// No description provided for @dbHealthActionLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get dbHealthActionLater;
+
+  /// No description provided for @dbHealthExported.
+  ///
+  /// In en, this message translates to:
+  /// **'Exported to: {path}'**
+  String dbHealthExported(String path);
+
+  /// No description provided for @dbHealthExportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Export failed: {error}'**
+  String dbHealthExportFailed(String error);
+
+  /// No description provided for @dbHealthResetConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset local database?'**
+  String get dbHealthResetConfirmTitle;
+
+  /// No description provided for @dbHealthResetConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The damaged database file will be moved to a preserved folder (not deleted), and the app must restart to create a fresh, empty database. You can then restore data from a cloud backup or a backup file.'**
+  String get dbHealthResetConfirmMessage;
+
+  /// No description provided for @dbHealthResetDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Damaged file preserved at: {path}\nPlease fully quit and reopen the app.'**
+  String dbHealthResetDone(String path);
+
+  /// No description provided for @dbHealthResetFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset failed: {error}'**
+  String dbHealthResetFailed(String error);
 }
 
 class _AppLocalizationsDelegate

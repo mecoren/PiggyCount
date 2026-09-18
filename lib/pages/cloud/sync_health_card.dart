@@ -85,7 +85,7 @@ class SyncHealthCard extends ConsumerWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              _errorClassLabel(context, e.errorClass),
+                              _errorClassLabel(l10n, e.errorClass),
                               style: PiggyTextTokens.caption(context),
                             ),
                           ),
@@ -129,20 +129,26 @@ class SyncHealthCard extends ConsumerWidget {
         '${l10n.syncHealthDetail(data.success, data.failed, data.softFail, data.conflict)}';
   }
 
-  String _errorClassLabel(BuildContext context, String cls) {
+  /// 错误类别本地化标签。入参是 [SyncErrorClass.label] 落库的稳定英文枚举串，
+  /// 展示层必须走 l10n —— 早期这里硬编码英文，非英文语言下会漏出英文。
+  /// 未知/新增枚举值落入 [AppLocalizations.syncErrOther] 而非抛异常
+  /// （指标卡只读历史数据，旧库可能含新代码不认识的类别）。
+  String _errorClassLabel(AppLocalizations l10n, String cls) {
     switch (cls) {
       case 'network_timeout':
-        return 'Network timeout';
+        return l10n.syncErrNetworkTimeout;
+      case 'not_configured':
+        return l10n.syncErrNotConfigured;
       case 'auth':
-        return 'Authentication';
+        return l10n.syncErrAuth;
       case 'gateway':
-        return 'Remote / gateway';
+        return l10n.syncErrGateway;
       case 'precondition':
-        return 'Concurrency';
+        return l10n.syncErrPrecondition;
       case 'data_corruption':
-        return 'Data integrity';
+        return l10n.syncErrDataCorruption;
       default:
-        return 'Other';
+        return l10n.syncErrOther;
     }
   }
 

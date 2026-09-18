@@ -7770,6 +7770,87 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get cloudCapNo => '降级模式';
+
+  @override
+  String get syncErrNotConfigured => '未配置';
+
+  @override
+  String get syncErrAuth => '认证失败';
+
+  @override
+  String get syncErrNetworkTimeout => '网络超时';
+
+  @override
+  String get syncErrGateway => '远端／网关异常';
+
+  @override
+  String get syncErrPrecondition => '并发冲突';
+
+  @override
+  String get syncErrDataCorruption => '数据完整性异常';
+
+  @override
+  String get syncErrOther => '其他';
+
+  @override
+  String get syncErrNotConfiguredMessage => '云端同步尚未配置。请先到「云服务」页填写服务地址与凭据，然后再试。';
+
+  @override
+  String get syncErrCorruptionMessage =>
+      '数据完整性校验失败，本地或云端数据可能已损坏。建议先导出备份留存，再从云端快照恢复，避免直接覆盖本地数据。';
+
+  @override
+  String get syncErrGenericMessage => '同步失败，请稍后重试。若反复失败，可在「日志中心」导出诊断数据反馈。';
+
+  @override
+  String get dbHealthCorruptTitle => '本地数据库异常';
+
+  @override
+  String get dbHealthCorruptBodyCorrupted =>
+      '本地数据库未通过完整性校验（页级损坏）。为避免进一步损坏，本机读写已暂停。建议先导出损坏文件留存，再从云端备份恢复；确认无误后也可重置本地数据库。';
+
+  @override
+  String get dbHealthCorruptBodyUnreadable =>
+      '无法读取本地数据库文件（可能被其他程序占用，或文件已不是有效的数据库）。请先彻底关闭并重新打开应用；若仍然如此，可导出文件留存后重置本地数据库。';
+
+  @override
+  String get dbHealthActionRestoreCloud => '从云端备份恢复';
+
+  @override
+  String get dbHealthActionExport => '导出损坏文件';
+
+  @override
+  String get dbHealthActionReset => '重置本地数据库';
+
+  @override
+  String get dbHealthActionLater => '稍后处理';
+
+  @override
+  String dbHealthExported(String path) {
+    return '已导出到：$path';
+  }
+
+  @override
+  String dbHealthExportFailed(String error) {
+    return '导出失败：$error';
+  }
+
+  @override
+  String get dbHealthResetConfirmTitle => '重置本地数据库？';
+
+  @override
+  String get dbHealthResetConfirmMessage =>
+      '损坏的数据库文件会被移到一个保留目录（不会删除），随后需要重启应用以新建空数据库。之后可用云端备份或备份文件恢复数据。';
+
+  @override
+  String dbHealthResetDone(String path) {
+    return '损坏文件已保留在：$path\n请完全退出并重新打开应用。';
+  }
+
+  @override
+  String dbHealthResetFailed(String error) {
+    return '重置失败：$error';
+  }
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -15506,4 +15587,86 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get cloudCapNo => '降級模式';
+
+  @override
+  String get syncErrNotConfigured => '未設定';
+
+  @override
+  String get syncErrAuth => '認證失敗';
+
+  @override
+  String get syncErrNetworkTimeout => '網路逾時';
+
+  @override
+  String get syncErrGateway => '遠端／閘道異常';
+
+  @override
+  String get syncErrPrecondition => '並行衝突';
+
+  @override
+  String get syncErrDataCorruption => '資料完整性異常';
+
+  @override
+  String get syncErrOther => '其他';
+
+  @override
+  String get syncErrNotConfiguredMessage =>
+      '雲端同步尚未設定。請先到「雲端服務」頁面填寫伺服器位址與憑證，然後再試。';
+
+  @override
+  String get syncErrCorruptionMessage =>
+      '資料完整性檢查失敗，本機或雲端資料可能已損毀。建議先匯出備份留存，再從雲端快照還原，避免直接覆寫本機資料。';
+
+  @override
+  String get syncErrGenericMessage => '同步失敗，請稍後重試。若反覆失敗，可在「日誌中心」匯出診斷資料回報。';
+
+  @override
+  String get dbHealthCorruptTitle => '本機資料庫異常';
+
+  @override
+  String get dbHealthCorruptBodyCorrupted =>
+      '本機資料庫未通過完整性檢查（頁面層級損毀）。為避免進一步損毀，本機讀寫已暫停。建議先匯出損毀檔案留存，再從雲端備份還原；確認無誤後也可重置本機資料庫。';
+
+  @override
+  String get dbHealthCorruptBodyUnreadable =>
+      '無法讀取本機資料庫檔案（可能被其他程式占用，或檔案已非有效的資料庫）。請先徹底關閉並重新開啟應用程式；若仍如此，可匯出檔案留存後重置本機資料庫。';
+
+  @override
+  String get dbHealthActionRestoreCloud => '從雲端備份還原';
+
+  @override
+  String get dbHealthActionExport => '匯出損毀檔案';
+
+  @override
+  String get dbHealthActionReset => '重置本機資料庫';
+
+  @override
+  String get dbHealthActionLater => '稍後處理';
+
+  @override
+  String dbHealthExported(String path) {
+    return '已匯出至：$path';
+  }
+
+  @override
+  String dbHealthExportFailed(String error) {
+    return '匯出失敗：$error';
+  }
+
+  @override
+  String get dbHealthResetConfirmTitle => '重置本機資料庫？';
+
+  @override
+  String get dbHealthResetConfirmMessage =>
+      '損毀的資料庫檔案會被移到保留目錄（不會刪除），之後需要重啟應用程式以建立空白資料庫。之後可用雲端備份或備份檔案還原資料。';
+
+  @override
+  String dbHealthResetDone(String path) {
+    return '損毀檔案已保留在：$path\n請完全結束並重新開啟應用程式。';
+  }
+
+  @override
+  String dbHealthResetFailed(String error) {
+    return '重置失敗：$error';
+  }
 }

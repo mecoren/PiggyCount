@@ -7853,4 +7853,87 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get cloudCapNo => '저하 모드';
+
+  @override
+  String get syncErrNotConfigured => '미설정';
+
+  @override
+  String get syncErrAuth => '인증 실패';
+
+  @override
+  String get syncErrNetworkTimeout => '네트워크 시간 초과';
+
+  @override
+  String get syncErrGateway => '원격/게이트웨이 오류';
+
+  @override
+  String get syncErrPrecondition => '동시성 충돌';
+
+  @override
+  String get syncErrDataCorruption => '데이터 무결성 오류';
+
+  @override
+  String get syncErrOther => '기타';
+
+  @override
+  String get syncErrNotConfiguredMessage =>
+      '클라우드 동기화가 아직 설정되지 않았습니다. 먼저 「클라우드 서비스」 화면에서 서버 주소와 자격 증명을 입력한 뒤 다시 시도하세요.';
+
+  @override
+  String get syncErrCorruptionMessage =>
+      '데이터 무결성 검사에 실패했습니다. 로컬 또는 클라우드 데이터가 손상되었을 수 있습니다. 먼저 백업을 내보낸 뒤 클라우드 스냅샷에서 복구하세요. 로컬 데이터를 그대로 덮어쓰지 마세요.';
+
+  @override
+  String get syncErrGenericMessage =>
+      '동기화에 실패했습니다. 잠시 후 다시 시도하세요. 계속 실패하면 「로그 센터」에서 진단 데이터를 내보내 알려주세요.';
+
+  @override
+  String get dbHealthCorruptTitle => '로컬 데이터베이스 이상';
+
+  @override
+  String get dbHealthCorruptBodyCorrupted =>
+      '로컬 데이터베이스가 무결성 검사(페이지 수준 손상)를 통과하지 못했습니다. 추가 손상을 막기 위해 로컬 읽기/쓰기를 중지했습니다. 손상된 파일을 먼저 내보내 보관한 뒤 클라우드 백업에서 복원하세요. 확인 후 로컬 데이터베이스를 초기화할 수도 있습니다.';
+
+  @override
+  String get dbHealthCorruptBodyUnreadable =>
+      '로컬 데이터베이스 파일을 읽을 수 없습니다(다른 프로세스가 점유 중이거나 더 이상 유효한 데이터베이스가 아닐 수 있습니다). 먼저 앱을 완전히 종료했다가 다시 여세요. 계속되면 파일을 내보내 보관한 뒤 로컬 데이터베이스를 초기화하세요.';
+
+  @override
+  String get dbHealthActionRestoreCloud => '클라우드 백업에서 복원';
+
+  @override
+  String get dbHealthActionExport => '손상된 파일 내보내기';
+
+  @override
+  String get dbHealthActionReset => '로컬 데이터베이스 초기화';
+
+  @override
+  String get dbHealthActionLater => '나중에';
+
+  @override
+  String dbHealthExported(String path) {
+    return '내보냄: $path';
+  }
+
+  @override
+  String dbHealthExportFailed(String error) {
+    return '내보내기 실패: $error';
+  }
+
+  @override
+  String get dbHealthResetConfirmTitle => '로컬 데이터베이스를 초기화할까요?';
+
+  @override
+  String get dbHealthResetConfirmMessage =>
+      '손상된 데이터베이스 파일은 보존 폴더로 이동되며(삭제되지 않음), 빈 데이터베이스를 만들려면 앱을 재시작해야 합니다. 이후 클라우드 백업이나 백업 파일로 데이터를 복원할 수 있습니다.';
+
+  @override
+  String dbHealthResetDone(String path) {
+    return '손상된 파일 보존 위치: $path\n앱을 완전히 종료한 뒤 다시 열어 주세요.';
+  }
+
+  @override
+  String dbHealthResetFailed(String error) {
+    return '초기화 실패: $error';
+  }
 }

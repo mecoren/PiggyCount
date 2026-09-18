@@ -11,10 +11,12 @@ import '../../widgets/biz/biz.dart';
 import '../../styles/tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/billing/post_processor.dart';
+import '../../services/system/logger_service.dart';
 import '../../cloud/sync_service.dart';
 import '../../cloud/startup_sync_checker.dart';
 import '../../cloud/transactions_sync_manager.dart';
 import '../../cloud/backup/backup_scheduler.dart';
+import '../../cloud/sync_metrics_service.dart';
 import '../../cloud/backup/cloud_backup_providers.dart';
 import '../../cloud/backup/cloud_backup_service.dart';
 import '../../cloud/backend_identity.dart';
@@ -331,18 +333,36 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
     if (!mounted || !context.mounted) return;
 
     if (error != null) {
-      // 认证失败与网络失败分开提示（对齐 startup_sync_checker 口径）
-      if (error is CloudAuthException) {
-        await AppDialog.error(context,
-            title: l10n.commonFailed, message: l10n.backupFailedAuthMessage);
-      } else {
-        await AppDialog.error(context,
-            title: l10n.commonFailed, message: l10n.backupFailedNetworkMessage);
-      }
+      // 错误分类提示（审计 P1-4）：复用指标侧同一 [SyncMetricsService.classifyError]
+      // 口径。此前只区分认证/非认证，导致「未配置」「数据损坏」也被兜成
+      // 「网络问题」——而这三类的用户动作完全不同（去配置 / 先导出备份再恢复 /
+      // 重试）。分类逻辑单一实现，避免两处各写一套枚举判断而漂移。
+      await AppDialog.error(context,
+          title: l10n.commonFailed, message: _syncErrorMessage(l10n, error));
     } else {
       await AppDialog.info(context,
           title: l10n.backupNowTitle,
           message: l10n.backupSuccessMessage(fileName ?? ''));
+    }
+  }
+
+  /// 同步类失败的用户可读文案映射（纯展示，不做异常转换或重试）。
+  /// precondition/unknown 归入通用文案：前者是并发保护，用户动作仍是重试；
+  /// 后者无归因信息，妄加「请检查网络」会误导。
+  String _syncErrorMessage(AppLocalizations l10n, Object error) {
+    switch (SyncMetricsService.classifyError(error)) {
+      case SyncErrorClass.notConfigured:
+        return l10n.syncErrNotConfiguredMessage;
+      case SyncErrorClass.auth:
+        return l10n.backupFailedAuthMessage;
+      case SyncErrorClass.dataCorruption:
+        return l10n.syncErrCorruptionMessage;
+      case SyncErrorClass.networkTimeout:
+      case SyncErrorClass.gateway:
+        return l10n.backupFailedNetworkMessage;
+      case SyncErrorClass.precondition:
+      case SyncErrorClass.unknown:
+        return l10n.syncErrGenericMessage;
     }
   }
 
@@ -1205,7 +1225,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                         );
                                         var totalInserted = 0;
                                         var aborted = false;
-                                        String? errorMessage;
+                                        Object? error;
                                         try {
                                           // 尝试使用 diff 预览模式
                                           final syncManager =
@@ -1479,7 +1499,9 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                             totalInserted = inserted;
                                           }
                                         } catch (e) {
-                                          errorMessage = '$e';
+                                          error = e;
+                                          logger.warning('CloudSyncPage',
+                                              '云端下载失败: $e');
                                         } finally {
                                           // 先关阻塞弹窗再展示结果：
                                           // 错误/结果弹窗若在阻塞弹窗存活时
@@ -1505,12 +1527,15 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                             .state++;
                                         if (!context.mounted) return;
 
-                                        if (errorMessage != null) {
+                                        if (error != null) {
+                                          // 走统一分类文案；原始异常已写日志，
+                                          // 不再把英文异常串直接怼到用户脸上
+                                          final l10n = AppLocalizations.of(
+                                              context);
                                           await AppDialog.error(context,
-                                              title:
-                                                  AppLocalizations.of(context)
-                                                      .commonFailed,
-                                              message: errorMessage);
+                                              title: l10n.commonFailed,
+                                              message: _syncErrorMessage(
+                                                  l10n, error));
                                         } else if (aborted) {
                                           // 密钥激活未成功：明确告知同步
                                           // 未恢复，避免用户误以为已完成

@@ -25,6 +25,10 @@ dependencies:
   collection: ^1.18.0
   drift: ^2.20.2
   sqlite3_flutter_libs: ^0.5.24
+  # 直声明：DatabaseHealthService 用只读连接跑 PRAGMA quick_check 探测损坏
+  # （drift 未暴露「先校验再迁移」的钩子）。此前仅经 drift 传递可用，属隐式
+  # 依赖，lint(depend_on_referenced_packages) 要求直声明。
+  sqlite3: ^3.5.1
   path_provider: ^2.1.4
   path: ^1.9.0
   intl: ^0.20.2

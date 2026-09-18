@@ -46,6 +46,8 @@ void main() {
       expect(SyncOpOutcome.softFail.label, 'soft_fail');
       expect(SyncOpOutcome.conflict.label, 'conflict');
       expect(SyncErrorClass.networkTimeout.label, 'network_timeout');
+      // 新增枚举值也必须落稳定串：历史库与该串绑定，改名即读不懂旧数据
+      expect(SyncErrorClass.notConfigured.label, 'not_configured');
     });
   });
 
@@ -160,6 +162,42 @@ void main() {
     test('认证异常 → auth(优先于其他特征)', () {
       expect(SyncMetricsService.classifyError(fcs.CloudAuthException('401')),
           SyncErrorClass.auth);
+    });
+
+    test('未登录异常 → auth(CloudNotAuthenticatedException 是 auth 的兄弟类)', () {
+      // Supabase 后端与 manager「未登录」门禁抛的是这个，且它**不**继承
+      // CloudAuthException；漏判会掉进 unknown，让归因卡显示「其他」。
+      expect(
+          SyncMetricsService.classifyError(
+              fcs.CloudNotAuthenticatedException('User not authenticated')),
+          SyncErrorClass.auth);
+    });
+
+    test('未配置异常 → notConfigured,且先于 auth(修配置 ≠ 改密码)', () {
+      expect(
+          SyncMetricsService.classifyError(
+              fcs.CloudConfigurationException('云服务未配置')),
+          SyncErrorClass.notConfigured);
+      expect(SyncMetricsService.classifyError(UnsupportedError('unsupported')),
+          SyncErrorClass.notConfigured);
+    });
+
+    test('类型判断先于文案兜底:包成 auth 的加密未启用串 → auth,不落 notConfigured',
+        () {
+      // transactions_sync_manager 刻意用它来计入 auth 口径；此处锁定该契约，
+      // 若哪天把文案兜底提到类型判断之前，这条会红。
+      expect(
+          SyncMetricsService.classifyError(
+              fcs.CloudAuthException('cloud encrypted locally disabled')),
+          SyncErrorClass.auth);
+    });
+
+    test('无专用类型的裸异常 → 文案兜底生效', () {
+      expect(SyncMetricsService.classifyError(Exception('云服务未配置')),
+          SyncErrorClass.notConfigured);
+      expect(
+          SyncMetricsService.classifyError(Exception('cloud locally disabled')),
+          SyncErrorClass.notConfigured);
     });
 
     test('超时措辞(中英) → networkTimeout', () {

@@ -124,7 +124,22 @@ void main() {
 
     await pumpCard(tester);
 
-    expect(find.text('Network timeout'), findsOneWidget);
+    // 本测试 locale 固定为 zh：标签必须走 l10n 而非硬编码英文
+    // （此前断言 'Network timeout' 恰好把「中文界面漏英文」的 bug 固化了）
+    expect(find.text('网络超时'), findsOneWidget);
     expect(find.text('× 2'), findsOneWidget);
+  });
+
+  testWidgets('Top 失败类别行：未配置与未知类别都落到本地化标签', (tester) async {
+    await metrics.record(rec(SyncOpOutcome.failed,
+        errorClass: SyncErrorClass.notConfigured));
+    // unknown 属于兜底分支：不得抛异常、不得显示原始枚举串
+    await metrics.record(
+        rec(SyncOpOutcome.failed, errorClass: SyncErrorClass.unknown));
+
+    await pumpCard(tester);
+
+    expect(find.text('未配置'), findsOneWidget);
+    expect(find.text('其他'), findsOneWidget);
   });
 }
