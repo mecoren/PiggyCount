@@ -55,6 +55,14 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
   int ok = 0, fail = 0, skipped = 0; // skipped: 跳过的非收支类型记录
   int step = 0; // 0: 字段映射, 1: 分类映射
   bool _cancelled = false;
+
+  /// 「后台导入」已把确认页与导入页一起 pop 掉。
+  ///
+  /// 本地库写入在微任务级完成，导入完成回调经常赶在退出动画结束前到达 ——
+  /// 那一刻 `currentContext.mounted` **仍为 true**，但 Navigator 里已经没有
+  /// 这两个路由了：再 pop 会 `Bad state: No element`（空栈 lastWhere 崩溃），
+  /// 在数据页上弹完成提示也是打扰。用它把完成时的 UI 收尾整个短路掉。
+  bool _poppedToBackground = false;
   List<String> distinctCategories = [];
   Map<String, int?> categoryMapping = {}; // 源分类名 -> 目标分类ID（null表示保持原名）
   Future<List<schema.Category>>? allCategoriesFuture;
@@ -238,8 +246,11 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
                           final totalRows = rows.length;
                           final dataStart =
                               widget.hasHeader ? (headerRow + 1) : 0;
-                          // 保证包含表头行 + 最多 maxPreview-1 行数据
-                          final header = widget.hasHeader
+                          // 保证包含表头行 + 最多 maxPreview-1 行数据。
+                          // rows 为空（空 CSV / 全是空行）时 headerRow 仍是 0，
+                          // 直接下标会 RangeError —— 上面的「未解析到任何数据」
+                          // 提示是给用户的，这里崩了用户看到的却是报错页。
+                          final header = widget.hasHeader && rows.isNotEmpty
                               ? [rows[headerRow]]
                               : <List<String>>[];
                           final body = totalRows > dataStart
@@ -359,8 +370,10 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
                 child: Row(
                   children: [
                     if (importing)
+                      // gen-l10n 的占位符按**字母序**生成形参（fail, ok），
+                      // 与中文文案里的出现顺序相反 —— 传错会把「成功/失败」对调。
                       Text(AppLocalizations.of(context)
-                          .importProgress(ok, fail)),
+                          .importProgress(fail, ok)),
                     const Spacer(),
                     if (step == 0)
                       FilledButton(
@@ -493,6 +506,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
                 TextButton(
                   onPressed: () {
                     dialogOpen = false;
+                    _poppedToBackground = true;
                     Navigator.of(dctx).pop();
                     // 返回到数据管理页面继续后台导入
                     if (mounted) {
@@ -621,6 +635,11 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
 
     // Check if context is still mounted for UI operations
     if (!currentContext.mounted) {
+      return;
+    }
+    // 已转后台：页面已关，不得再 pop（会 pop 空栈崩溃），
+    // 也不该在数据页上再弹一次完成提示。
+    if (_poppedToBackground) {
       return;
     }
 
