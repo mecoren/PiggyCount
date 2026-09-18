@@ -18,15 +18,16 @@ import '../../styles/tokens.dart';
 /// Navigator **之上**，`Navigator.of` 取不到栈（项目因此才用 globalNavigatorKey）。
 /// 故确认步骤与结果反馈全部内联渲染，不依赖 Navigator。
 ///
+/// 为什么**不**提供「从云端备份恢复」入口：云端恢复本身要往本地库里写，
+/// 库坏时它必然失败。正确顺序是「导出留存 → 重置 → 重启 →（重启后）云端恢复」，
+/// 而最后一步应在重启后的「云服务」页做。摆一个点不通的主按钮只会让用户
+/// 反复失败、失去信任，所以这里只保留前两步。
+///
 /// 安全边界：本组件**只读**健康状态；唯一的写操作是 [DatabaseHealthService.quarantine]，
 /// 且必须经用户二次确认。它只移动、不删除，且不在此处重建数据库——重建需要
 /// 进程重启，硬换库会把正在持有旧文件句柄的 provider 弄成半死状态。
 class DatabaseRecoveryOverlay extends ConsumerStatefulWidget {
-  /// 「从云端备份恢复」的跳转回调。由 main.dart 注入——只有它持有
-  /// globalNavigatorKey。
-  final VoidCallback? onRestoreFromCloud;
-
-  const DatabaseRecoveryOverlay({super.key, this.onRestoreFromCloud});
+  const DatabaseRecoveryOverlay({super.key});
 
   @override
   ConsumerState<DatabaseRecoveryOverlay> createState() =>
@@ -107,30 +108,26 @@ class _DatabaseRecoveryOverlayState
     );
   }
 
+  /// 动作按**正确执行顺序**排列：先导出留存（只读、无风险、不可逆性最高的一步
+  /// 必须先做），再重置（二次确认），最后才是「稍后处理」。
   Widget _buildActions(BuildContext context, AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (widget.onRestoreFromCloud != null)
-          FilledButton.icon(
-            onPressed: _busy ? null : _restoreFromCloud,
-            icon: const Icon(Icons.cloud_download_outlined),
-            label: Text(l10n.dbHealthActionRestoreCloud),
-          ),
-        const SizedBox(height: 8),
         OutlinedButton.icon(
           onPressed: _busy ? null : _export,
           icon: const Icon(Icons.ios_share_outlined),
           label: Text(l10n.dbHealthActionExport),
         ),
         const SizedBox(height: 8),
-        TextButton(
+        FilledButton.icon(
           onPressed:
               _busy ? null : () => setState(() => _confirmingReset = true),
-          child: Text(
-            l10n.dbHealthActionReset,
-            style: TextStyle(color: PiggyTokens.warning(context)),
+          style: FilledButton.styleFrom(
+            backgroundColor: PiggyTokens.warning(context),
           ),
+          icon: const Icon(Icons.restart_alt_rounded),
+          label: Text(l10n.dbHealthActionReset),
         ),
         const SizedBox(height: 8),
         // 「稍后处理」只作用于本次会话：不持久化，下次启动仍提示，
@@ -175,12 +172,6 @@ class _DatabaseRecoveryOverlayState
         ),
       ],
     );
-  }
-
-  void _restoreFromCloud() {
-    // 先去云端页；用户在那里走既有的快照恢复流程（覆盖语义、幂等可重入）。
-    ref.read(dbHealthDismissedProvider.notifier).state = true;
-    widget.onRestoreFromCloud?.call();
   }
 
   Future<void> _export() async {

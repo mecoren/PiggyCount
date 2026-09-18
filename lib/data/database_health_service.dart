@@ -81,8 +81,15 @@ class DatabaseHealthService {
     }
 
     Database? db;
+    // 关键区分：SQLite 的 open 是惰性的——它不读文件，对「不是数据库」
+    // 的文件也会成功返回，直到执行第一条语句才报 SQLITE_NOTADB。
+    // 所以「open 本身失败」与「open 成功但语句失败」的含义完全不同：
+    // 前者多半是环境（占用/权限/WAL 只读约束），后者说明 SQLite 已把文件
+    // 当成数据库接受、却发现它不可用，属正面损坏证据。
+    var opened = false;
     try {
       db = sqlite3.open(dbPath, mode: OpenMode.readOnly);
+      opened = true;
       final rows = db.select('PRAGMA quick_check');
       if (rows.isEmpty) {
         return DbHealthResult(DbHealth.corrupted,
@@ -94,14 +101,67 @@ class DatabaseHealthService {
       }
       return DbHealthResult(DbHealth.corrupted, dbPath: dbPath, detail: first);
     } on SqliteException catch (e) {
-      // 打开成功但语句失败：SQLite 对「不是数据库」这类错误是延迟到
-      // 首次语句执行时才报的（SQLITE_NOTADB）。
-      return DbHealthResult(DbHealth.unreadable,
-          dbPath: dbPath, detail: e.message);
+      return opened
+          ? _verdictUnusableAfterOpen(dbPath, e.message)
+          : _verdictOnOpenFailure(dbPath, e.message);
     } catch (e) {
-      return DbHealthResult(DbHealth.unreadable, dbPath: dbPath, detail: '$e');
+      return opened
+          ? _verdictUnusableAfterOpen(dbPath, '$e')
+          : _verdictOnOpenFailure(dbPath, '$e');
     } finally {
       db?.close();
+    }
+  }
+
+  /// 连接已建立、但语句失败：SQLite 接受了这个文件却无法使用它 → 正面证据。
+  /// 文件头合法说明它曾是合法库（页级损坏）；头非法说明它根本不是库。
+  static DbHealthResult _verdictUnusableAfterOpen(
+      String dbPath, String detail) {
+    final looksLikeDb = _hasSqliteHeader(dbPath);
+    return DbHealthResult(
+      looksLikeDb ? DbHealth.corrupted : DbHealth.unreadable,
+      dbPath: dbPath,
+      detail: detail,
+    );
+  }
+
+  /// 连 `open` 都没成功时的判定：**必须有正面证据才报损坏**。
+  ///
+  /// 误报的代价是不对称的——把全屏「数据可能已损坏」引导推给每一个健康用户，
+  /// 远重于漏报（漏报只是回到改动前的静默行为，用户仍会因查询失败而报障）。
+  /// 而「打不开」有大量非损坏成因：文件被其他进程独占、目录权限、以及
+  /// **以只读方式打开 WAL 库的额外约束**（需要 `-shm` 可写）。故只有在
+  /// 文件头不是 SQLite 魔数时——即它根本不可能是数据库——才判 unreadable；
+  /// 头合法却打不开的，按环境问题处理并留痕，不打扰用户。
+  static DbHealthResult _verdictOnOpenFailure(String dbPath, String detail) {
+    if (!_hasSqliteHeader(dbPath)) {
+      return DbHealthResult(DbHealth.unreadable,
+          dbPath: dbPath, detail: detail);
+    }
+    logger.warning('DbHealth',
+        '数据库打开失败但文件头合法，按环境问题处理（不判定损坏）: $detail');
+    return DbHealthResult(DbHealth.ok, dbPath: dbPath);
+  }
+
+  /// 文件头是否为 `SQLite format 3\0`（16 字节魔数）。
+  /// 读取本身失败时返回 true——读不了就不该下结论。
+  static bool _hasSqliteHeader(String dbPath) {
+    const magic = 'SQLite format 3\u0000';
+    try {
+      final raf = File(dbPath).openSync();
+      try {
+        final head = raf.readSync(magic.length);
+        if (head.length < magic.length) return false; // 空文件/被截断
+        for (var i = 0; i < magic.length; i++) {
+          if (head[i] != magic.codeUnitAt(i)) return false;
+        }
+        return true;
+      } finally {
+        raf.closeSync();
+      }
+    } catch (e) {
+      logger.warning('DbHealth', '读取数据库文件头失败，不作损坏判定: $e');
+      return true;
     }
   }
 

@@ -14,7 +14,6 @@ import 'providers/font_scale_provider.dart';
 import 'providers/cloud_mode_providers.dart';
 import 'utils/notification_factory.dart';
 import 'pages/auth/splash_page.dart';
-import 'pages/cloud/cloud_sync_page.dart';
 import 'widgets/biz/database_recovery_overlay.dart';
 import 'pages/auth/welcome_page.dart';
 import 'pages/auth/app_lock_screen.dart';
@@ -792,11 +791,7 @@ class MainApp extends ConsumerWidget {
                 ),
               // 本地库损坏时的恢复引导（审计 P1-6）。置顶是因为库不可用时
               // 整棵树读不出数据，提示必须盖在最上层且不依赖 DB。
-              DatabaseRecoveryOverlay(
-                onRestoreFromCloud: () => globalNavigatorKey.currentState?.push(
-                  MaterialPageRoute(builder: (_) => const CloudSyncPage()),
-                ),
-              ),
+              const DatabaseRecoveryOverlay(),
             ],
           ),
         );

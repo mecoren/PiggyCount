@@ -8127,14 +8127,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dbHealthCorruptBodyCorrupted =>
-      'The local database failed its integrity check (page-level corruption). Reads and writes are paused to avoid making it worse. Export the damaged file for safekeeping, then restore from a cloud backup — or reset the local database once you are sure.';
+      'The local database failed its integrity check (page-level corruption). Reads and writes are paused to avoid making it worse. Export the damaged file for safekeeping, then reset the local database and restart the app; after restarting you can restore data from a cloud backup on the Cloud service page.';
 
   @override
   String get dbHealthCorruptBodyUnreadable =>
-      'The local database file could not be read (it may be locked by another process, or no longer a valid database). Fully close and reopen the app first; if it persists, export the file and reset the local database.';
-
-  @override
-  String get dbHealthActionRestoreCloud => 'Restore from cloud backup';
+      'The local database file could not be read (it may be locked by another process, or no longer a valid database). Fully close and reopen the app first; if it persists, export the file for safekeeping, then reset the local database and restart.';
 
   @override
   String get dbHealthActionExport => 'Export damaged file';

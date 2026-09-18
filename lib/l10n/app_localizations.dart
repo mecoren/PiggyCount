@@ -14626,20 +14626,14 @@ abstract class AppLocalizations {
   /// No description provided for @dbHealthCorruptBodyCorrupted.
   ///
   /// In en, this message translates to:
-  /// **'The local database failed its integrity check (page-level corruption). Reads and writes are paused to avoid making it worse. Export the damaged file for safekeeping, then restore from a cloud backup — or reset the local database once you are sure.'**
+  /// **'The local database failed its integrity check (page-level corruption). Reads and writes are paused to avoid making it worse. Export the damaged file for safekeeping, then reset the local database and restart the app; after restarting you can restore data from a cloud backup on the Cloud service page.'**
   String get dbHealthCorruptBodyCorrupted;
 
   /// No description provided for @dbHealthCorruptBodyUnreadable.
   ///
   /// In en, this message translates to:
-  /// **'The local database file could not be read (it may be locked by another process, or no longer a valid database). Fully close and reopen the app first; if it persists, export the file and reset the local database.'**
+  /// **'The local database file could not be read (it may be locked by another process, or no longer a valid database). Fully close and reopen the app first; if it persists, export the file for safekeeping, then reset the local database and restart.'**
   String get dbHealthCorruptBodyUnreadable;
-
-  /// No description provided for @dbHealthActionRestoreCloud.
-  ///
-  /// In en, this message translates to:
-  /// **'Restore from cloud backup'**
-  String get dbHealthActionRestoreCloud;
 
   /// No description provided for @dbHealthActionExport.
   ///

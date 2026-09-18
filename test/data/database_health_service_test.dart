@@ -60,6 +60,27 @@ void main() {
       expect(r.detail, isNotNull);
     });
 
+    test('有合法文件头但内容是垃圾 → 不得判为 ok（正面证据不可放过）', () async {
+      // 这条与上一条互补：头合法就不能靠「头不对」脱身，必须仍然报警。
+      // 否则「头对了但库废了」会漏报，用户看到空数据却没有任何提示。
+      final path = p.join(tmp.path, 'bogus.sqlite');
+      final magic = 'SQLite format 3\u0000'.codeUnits;
+      File(path).writeAsBytesSync([...magic, ...List.filled(8192, 0xAB)]);
+      final r = await DatabaseHealthService.check(path: path);
+      expect(r.health, isNot(DbHealth.ok),
+          reason: '正头 + 垃圾内容被判为健康，等于回到静默失败');
+    });
+
+    test('空文件(0 字节) → ok：SQLite 视其为合法的空库', () async {
+      // 这不是「损坏」：0 字节文件在 SQLite 里是合法的空数据库，
+      // quick_check 也会返回 ok。语义上等同首装——drift 随后走 onCreate
+      // 建全表。若在此处报损坏，会把「库还没建」误报成「库坏了」。
+      final path = p.join(tmp.path, 'empty.sqlite');
+      File(path).writeAsBytesSync(const []);
+      final r = await DatabaseHealthService.check(path: path);
+      expect(r.health, DbHealth.ok);
+    });
+
     test('探测不修改文件(只读连接)', () async {
       final path = makeHealthyDb();
       final before = File(path).readAsBytesSync();
@@ -67,6 +88,37 @@ void main() {
       await DatabaseHealthService.check(path: path);
       expect(File(path).readAsBytesSync(), before);
       expect(File(path).lastModifiedSync(), beforeMtime);
+    });
+
+    test('WAL 模式 + 主连接仍打开 → 必须 ok（只读探测不得误报）', () async {
+      // 这是本服务最危险的失败模式：健康库被判 unreadable，会把全屏恢复
+      // 引导推给所有用户。SQLite 对**只读方式打开 WAL 库**有额外约束
+      //（需要 -shm 的写权限/存在性），因此必须显式覆盖这个场景。
+      final path = p.join(tmp.path, 'wal.sqlite');
+      final holder = sqlite3.open(path);
+      holder.execute('PRAGMA journal_mode=WAL');
+      holder.execute('CREATE TABLE t (id INTEGER PRIMARY KEY, v TEXT)');
+      holder.execute("INSERT INTO t (v) VALUES ('x')");
+      // 刻意不关闭 holder —— 模拟 app 正持有主库连接（真实运行态）
+
+      final r = await DatabaseHealthService.check(path: path);
+      expect(r.health, DbHealth.ok,
+          reason: 'WAL 库被误判：health=${r.health} detail=${r.detail}');
+
+      holder.close();
+    });
+
+    test('WAL 库关闭后仅剩 -wal/-shm 残留 → 仍 ok', () async {
+      final path = p.join(tmp.path, 'wal2.sqlite');
+      final d = sqlite3.open(path);
+      d.execute('PRAGMA journal_mode=WAL');
+      d.execute('CREATE TABLE t (id INTEGER PRIMARY KEY, v TEXT)');
+      d.execute("INSERT INTO t (v) VALUES ('x')");
+      d.close();
+
+      final r = await DatabaseHealthService.check(path: path);
+      expect(r.health, DbHealth.ok,
+          reason: 'health=${r.health} detail=${r.detail}');
     });
   });
 

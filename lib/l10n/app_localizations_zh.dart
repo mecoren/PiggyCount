@@ -7807,14 +7807,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get dbHealthCorruptBodyCorrupted =>
-      '本地数据库未通过完整性校验（页级损坏）。为避免进一步损坏，本机读写已暂停。建议先导出损坏文件留存，再从云端备份恢复；确认无误后也可重置本地数据库。';
+      '本地数据库未通过完整性校验（页级损坏）。为避免进一步损坏，本机读写已暂停。建议先导出损坏文件留存，再重置本地数据库并重启应用；重启后可在「云服务」页用云端备份恢复数据。';
 
   @override
   String get dbHealthCorruptBodyUnreadable =>
-      '无法读取本地数据库文件（可能被其他程序占用，或文件已不是有效的数据库）。请先彻底关闭并重新打开应用；若仍然如此，可导出文件留存后重置本地数据库。';
-
-  @override
-  String get dbHealthActionRestoreCloud => '从云端备份恢复';
+      '无法读取本地数据库文件（可能被其他程序占用，或文件已不是有效的数据库）。请先彻底关闭并重新打开应用；若仍然如此，可导出文件留存，再重置本地数据库并重启。';
 
   @override
   String get dbHealthActionExport => '导出损坏文件';
@@ -15625,14 +15622,11 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get dbHealthCorruptBodyCorrupted =>
-      '本機資料庫未通過完整性檢查（頁面層級損毀）。為避免進一步損毀，本機讀寫已暫停。建議先匯出損毀檔案留存，再從雲端備份還原；確認無誤後也可重置本機資料庫。';
+      '本機資料庫未通過完整性檢查（頁面層級損毀）。為避免進一步損毀，本機讀寫已暫停。建議先匯出損毀檔案留存，再重置本機資料庫並重啟應用程式；重啟後可在「雲端服務」頁用雲端備份還原資料。';
 
   @override
   String get dbHealthCorruptBodyUnreadable =>
-      '無法讀取本機資料庫檔案（可能被其他程式占用，或檔案已非有效的資料庫）。請先徹底關閉並重新開啟應用程式；若仍如此，可匯出檔案留存後重置本機資料庫。';
-
-  @override
-  String get dbHealthActionRestoreCloud => '從雲端備份還原';
+      '無法讀取本機資料庫檔案（可能被其他程式占用，或檔案已非有效的資料庫）。請先徹底關閉並重新開啟應用程式；若仍如此，可匯出檔案留存，再重置本機資料庫並重啟。';
 
   @override
   String get dbHealthActionExport => '匯出損毀檔案';
