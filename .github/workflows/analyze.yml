@@ -11,9 +11,11 @@ name: Analyze
 # 如果将来确需临时放宽，把 `--fatal-infos` 换成 `--no-fatal-infos`
 # 并在 PR 说明里写清原因与归还计划，不要静默改成非阻断。
 #
-# 注意：FLUTTER_VERSION 必须与 pubspec.lock 的 `sdks.flutter` 约束一致
-# （当前 >=3.44.0），否则 `flutter pub get` 会在 runner 上解析失败或
-# 静默降级依赖版本。
+# 注意：Flutter 版本由 pubspec.yaml 的 `environment.flutter` 单一提供
+# （当前 3.44.3），这里用 flutter-version-file 读取，避免与 pubspec.lock 的
+# `sdks.flutter` 约束（>=3.44.0）漂移——历史上 release.yml 曾停留 3.27.3，
+# 会让 runner 上的 `flutter pub get` 直接解析失败。
+# 升版本请只改 pubspec.yaml 一处。
 
 on:
   push:
@@ -28,9 +30,6 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  FLUTTER_VERSION: "3.44.3"
-
 jobs:
   analyze:
     name: flutter analyze (0-issue gate)
@@ -42,7 +41,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
+          flutter-version-file: pubspec.yaml
           channel: "stable"
           cache: true
 

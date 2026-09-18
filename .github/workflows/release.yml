@@ -31,8 +31,11 @@ concurrency:
 permissions:
   contents: write
 
-env:
-  FLUTTER_VERSION: "3.27.3"
+# Flutter 版本由 pubspec.yaml 的 environment.flutter 单一提供（当前 3.44.3），
+# 通过 flutter-version-file 读取。不要再在这里写 FLUTTER_VERSION：
+# 历史上此处曾固定 3.27.3，而 pubspec.lock 已要求 >=3.44.0，
+# 两者漂移会让下一次打 tag 发版在 `flutter pub get` 阶段直接失败。
+# 升级 Flutter 请只改 pubspec.yaml 一处。
 
 jobs:
   check-branch:
@@ -99,7 +102,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
+          flutter-version-file: pubspec.yaml
           channel: "stable"
           cache: true
 
@@ -406,8 +409,9 @@ jobs:
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
+        id: flutter-action
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
+          flutter-version-file: pubspec.yaml
           channel: "stable"
           cache: false
 
@@ -416,9 +420,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.pub-cache
-          key: pub-${{ runner.os }}-${{ env.FLUTTER_VERSION }}-${{ github.sha }}
+          key: pub-${{ runner.os }}-${{ steps.flutter-action.outputs.VERSION }}-${{ github.sha }}
           restore-keys: |
-            pub-${{ runner.os }}-${{ env.FLUTTER_VERSION }}-
+            pub-${{ runner.os }}-${{ steps.flutter-action.outputs.VERSION }}-
 
       - name: Flutter pub get
         run: flutter pub get
