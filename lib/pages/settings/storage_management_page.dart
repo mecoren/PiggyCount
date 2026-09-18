@@ -11,6 +11,8 @@ import '../../l10n/app_localizations.dart';
 import '../../utils/ui_scale_extensions.dart';
 import '../../services/system/logger_service.dart';
 
+import '../../utils/platform_info.dart';
+
 /// 存储空间管理页面
 class StorageManagementPage extends ConsumerStatefulWidget {
   const StorageManagementPage({super.key});
@@ -44,7 +46,7 @@ class _StorageManagementPageState extends ConsumerState<StorageManagementPage> {
       await _scanAIModels();
 
       // 扫描APK文件(仅Android)
-      if (Platform.isAndroid) {
+      if (PlatformInfo.isAndroid) {
         await _scanAPKFiles();
       }
     } catch (e) {
@@ -249,7 +251,7 @@ class _StorageManagementPageState extends ConsumerState<StorageManagementPage> {
                 ),
 
                 // APK安装包(仅Android)
-                if (Platform.isAndroid) ...[
+                if (PlatformInfo.isAndroid) ...[
                   SizedBox(height: 8.0.scaled(context, ref)),
                   SettingsCard(
                     children: [

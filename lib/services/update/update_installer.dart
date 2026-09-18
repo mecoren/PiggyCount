@@ -9,6 +9,8 @@ import '../../l10n/app_localizations.dart';
 import 'update_permissions.dart';
 import 'update_cache.dart';
 
+import '../../utils/platform_info.dart';
+
 /// 更新安装管理类
 class UpdateInstaller {
   UpdateInstaller._();
@@ -99,7 +101,7 @@ class UpdateInstaller {
     try {
       logger.info('UpdateInstaller', 'UPDATE_CRASH: 开始使用Intent安装APK');
 
-      if (!Platform.isAndroid) {
+      if (!PlatformInfo.isAndroid) {
         logger.error('UpdateInstaller', 'UPDATE_CRASH: 非Android平台，无法使用Intent安装');
         return false;
       }
@@ -128,7 +130,7 @@ class UpdateInstaller {
     try {
       // 获取下载目录
       Directory? downloadDir;
-      if (Platform.isAndroid) {
+      if (PlatformInfo.isAndroid) {
         downloadDir = await getExternalStorageDirectory();
       }
       downloadDir ??= await getApplicationDocumentsDirectory();

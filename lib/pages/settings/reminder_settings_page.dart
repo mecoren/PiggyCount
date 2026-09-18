@@ -1,4 +1,3 @@
-import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../l10n/app_localizations.dart';
@@ -8,6 +7,8 @@ import '../../utils/notification_android.dart';
 import '../../styles/tokens.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/biz.dart';
+
+import '../../utils/platform_info.dart';
 
 class ReminderSettingsPage extends ConsumerWidget {
   const ReminderSettingsPage({super.key});
@@ -119,7 +120,7 @@ class ReminderSettingsPage extends ConsumerWidget {
           ),
 
           // Android专用电池和渠道检查按钮
-          if (Platform.isAndroid) ...[
+          if (PlatformInfo.isAndroid) ...[
             const SizedBox(height: 16),
             SettingsCard(
               children: [
@@ -406,7 +407,7 @@ class ReminderSettingsPage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  Platform.isIOS
+                  PlatformInfo.isIOS
                       ? AppLocalizations.of(context).reminderIOSInstructions
                       : AppLocalizations.of(context)
                           .reminderAndroidInstructions,

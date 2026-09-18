@@ -1,4 +1,3 @@
-import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -18,6 +17,8 @@ import 'app_icon_page.dart';
 import 'help_center_page.dart';
 import 'log_center_page.dart';
 import 'privacy_policy_page.dart';
+
+import '../../utils/platform_info.dart';
 
 /// 是否为 Google Play 版本（通过 CI 构建时 --dart-define=GOOGLE_PLAY=true 注入）
 const _isGooglePlayBuild =
@@ -147,7 +148,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
           SettingsCard(
             children: [
               // iOS 与 Google Play 版本隐藏检查更新(走应用商店分发)
-              if (!Platform.isIOS && !_isGooglePlayBuild)
+              if (!PlatformInfo.isIOS && !_isGooglePlayBuild)
                 Consumer(builder: (context, ref2, child) {
                   final isLoading = ref2.watch(checkUpdateLoadingProvider);
                   final downloadProgress = ref2.watch(updateProgressProvider);

@@ -1,8 +1,9 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
 import '../system/logger_service.dart';
+
+import '../../utils/platform_info.dart';
 
 /// 打赏服务
 ///
@@ -84,7 +85,7 @@ class DonationService {
   Future<bool> initialize() async {
     try {
       // 仅支持iOS平台
-      if (!Platform.isIOS) {
+      if (!PlatformInfo.isIOS) {
         logger.info('Donation', 'Android平台暂不支持打赏功能');
         return false;
       }

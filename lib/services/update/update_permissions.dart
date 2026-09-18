@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:permission_handler/permission_handler.dart';
 import '../system/logger_service.dart';
 
+import '../../utils/platform_info.dart';
+
 /// 更新权限管理类
 class UpdatePermissions {
   UpdatePermissions._();
@@ -18,7 +20,7 @@ class UpdatePermissions {
 
   /// 检查和申请权限
   static Future<bool> checkAndRequestPermissions() async {
-    if (!Platform.isAndroid) return true;
+    if (!PlatformInfo.isAndroid) return true;
 
     logger.info('UpdatePermissions', '开始检查权限...');
 

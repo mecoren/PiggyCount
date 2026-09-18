@@ -8,6 +8,8 @@ import 'update_result.dart';
 import 'update_notifications.dart';
 import 'github_mirror_service.dart';
 
+import '../../utils/platform_info.dart';
+
 /// 更新下载管理类
 class UpdateDownloader {
   UpdateDownloader._();
@@ -58,7 +60,7 @@ class UpdateDownloader {
 
       // 获取下载目录
       Directory? downloadDir;
-      if (Platform.isAndroid) {
+      if (PlatformInfo.isAndroid) {
         downloadDir = await getExternalStorageDirectory();
       }
       downloadDir ??= await getApplicationDocumentsDirectory();

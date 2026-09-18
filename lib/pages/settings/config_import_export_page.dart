@@ -17,6 +17,8 @@ import '../../l10n/app_localizations.dart';
 import '../../services/export/config_export_service.dart';
 import '../../services/system/logger_service.dart';
 
+import '../../utils/platform_info.dart';
+
 /// 配置导入导出页面
 class ConfigImportExportPage extends ConsumerStatefulWidget {
   const ConfigImportExportPage({super.key});
@@ -34,7 +36,7 @@ class _ConfigImportExportPageState
 
   /// 获取配置导出目录
   Future<Directory> _getExportDirectory() async {
-    if (Platform.isAndroid) {
+    if (PlatformInfo.isAndroid) {
       // Android: 保存到公共 Download/PiggyCount 目录
       final downloadPath = '/storage/emulated/0/Download/PiggyCount';
       final dir = Directory(downloadPath);
@@ -91,7 +93,7 @@ class _ConfigImportExportPageState
       final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
       final fileName = 'piggycount_config_$timestamp.yml';
 
-      if (Platform.isAndroid) {
+      if (PlatformInfo.isAndroid) {
         // Android: 直接保存到 Download/PiggyCount 目录
         final exportDir = await _getExportDirectory();
         final filePath = '${exportDir.path}/$fileName';
@@ -425,7 +427,7 @@ class _ConfigImportExportPageState
                 onTap: _isExporting ? null : _exportConfig,
               ),
               // Android平台显示导出路径和打开按钮
-              if (Platform.isAndroid && _lastExportedFilePath != null)
+              if (PlatformInfo.isAndroid && _lastExportedFilePath != null)
                 Container(
                   padding: EdgeInsets.symmetric(
                     horizontal: 16.0.scaled(context, ref),

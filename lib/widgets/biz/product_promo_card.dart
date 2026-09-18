@@ -1,4 +1,3 @@
-import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -6,6 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../services/system/logger_service.dart';
 import '../../styles/tokens.dart';
 import '../ui/toast.dart';
+
+import '../../utils/platform_info.dart';
 
 // ============================================================================
 // 数据 + 行为(可被任意 widget 复用)
@@ -398,15 +399,15 @@ class ProductPromoLauncher {
   /// 用 TestFlight + AppStore 两按钮并排的"双轨分发"布局?
   /// 仅 iOS + 有 TF URL + 已上架时为 true。其他场景退回常规布局。
   static bool _showTestFlightRow(ProductPromo info, bool hasStore) {
-    return Platform.isIOS && info.testFlightUrl != null && hasStore;
+    return PlatformInfo.isIOS && info.testFlightUrl != null && hasStore;
   }
 
   /// 当前平台已上架时返回商店 URI,否则返回 null。
   static Uri? _resolveStoreUri(ProductPromo info) {
-    if (Platform.isIOS && info.appStoreId != null) {
+    if (PlatformInfo.isIOS && info.appStoreId != null) {
       return Uri.parse('https://apps.apple.com/app/id${info.appStoreId}');
     }
-    if (Platform.isAndroid && info.googlePlayUrl != null) {
+    if (PlatformInfo.isAndroid && info.googlePlayUrl != null) {
       return Uri.parse(info.googlePlayUrl!);
     }
     return null;

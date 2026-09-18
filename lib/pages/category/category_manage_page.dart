@@ -20,6 +20,8 @@ import '../../styles/tokens.dart';
 import '../../widgets/category_icon.dart';
 import 'category_edit_page.dart';
 
+import '../../utils/platform_info.dart';
+
 class CategoryManagePage extends ConsumerStatefulWidget {
   final int initialTabIndex; // 0: 支出, 1: 收入
 
@@ -220,7 +222,7 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
       final fileName = 'piggycount_categories_$timestamp.zip';
 
       String outputPath;
-      if (Platform.isAndroid) {
+      if (PlatformInfo.isAndroid) {
         final downloadPath = '/storage/emulated/0/Download/PiggyCount';
         final dir = Directory(downloadPath);
         if (!await dir.exists()) {
@@ -241,7 +243,7 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
 
       if (!mounted) return;
 
-      if (Platform.isAndroid) {
+      if (PlatformInfo.isAndroid) {
         showToast(
             context,
             l10n.categoryShareSuccess(

@@ -16,6 +16,8 @@ import 'custom_icon_service.dart';
 import 'system/logger_service.dart';
 import 'ui/avatar_service.dart';
 
+import '../utils/platform_info.dart';
+
 /// 附件导出导入服务
 /// 负责附件的打包导出和解压导入
 class AttachmentExportImportService {
@@ -714,7 +716,7 @@ class AttachmentExportImportService {
 
   /// 获取导出目录
   Future<Directory> _getExportDirectory() async {
-    if (Platform.isAndroid) {
+    if (PlatformInfo.isAndroid) {
       // Android: 使用公共下载目录
       final dir = Directory('/storage/emulated/0/Download/PiggyCount');
       if (!await dir.exists()) {

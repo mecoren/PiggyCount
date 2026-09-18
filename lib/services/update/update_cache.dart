@@ -3,6 +3,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../system/logger_service.dart';
 
+import '../../utils/platform_info.dart';
+
 /// 更新缓存管理类
 class UpdateCache {
   UpdateCache._();
@@ -21,7 +23,7 @@ class UpdateCache {
 
       // 获取下载目录
       Directory? downloadDir;
-      if (Platform.isAndroid) {
+      if (PlatformInfo.isAndroid) {
         downloadDir = await getExternalStorageDirectory();
       }
       downloadDir ??= await getApplicationDocumentsDirectory();

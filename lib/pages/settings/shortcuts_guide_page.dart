@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +8,8 @@ import '../../widgets/biz/biz.dart';
 import '../../styles/tokens.dart';
 import '../../providers.dart';
 import '../../services/platform/app_link_service.dart';
+
+import '../../utils/platform_info.dart';
 
 /// 快捷方式引导页面
 class ShortcutsGuidePage extends ConsumerWidget {
@@ -414,13 +415,13 @@ class ShortcutsGuidePage extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 16),
-              if (Platform.isIOS)
+              if (PlatformInfo.isIOS)
                 _buildIOSGuide(context, l10n, theme)
               else
                 _buildAndroidGuide(context, l10n, theme),
 
               // iOS 快捷指令 App 入口
-              if (Platform.isIOS) ...[
+              if (PlatformInfo.isIOS) ...[
                 const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,

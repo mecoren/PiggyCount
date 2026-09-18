@@ -1,4 +1,3 @@
-import 'dart:io' show Platform;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -6,6 +5,8 @@ import 'notification_util.dart';
 import 'notification_android.dart';
 import 'notification_ios.dart';
 import '../services/system/logger_service.dart';
+
+import 'platform_info.dart';
 
 /// 通知工厂类 - 根据平台创建对应的通知实现
 class NotificationFactory {
@@ -17,12 +18,14 @@ class NotificationFactory {
   static NotificationUtil getInstance() {
     if (_instance != null) return _instance!;
 
-    if (Platform.isAndroid) {
+    if (PlatformInfo.isAndroid) {
       _instance = AndroidNotificationUtil(_plugin);
-    } else if (Platform.isIOS) {
+    } else if (PlatformInfo.isIOS) {
       _instance = IOSNotificationUtil(_plugin);
     } else {
-      throw UnsupportedError('不支持的平台: ${Platform.operatingSystem}');
+      throw UnsupportedError(
+        '不支持的平台: ${PlatformInfo.operatingSystemName}',
+      );
     }
 
     return _instance!;

@@ -1,4 +1,3 @@
-import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -12,6 +11,8 @@ import '../ai/ai_settings_page.dart';
 import '../automation/auto_billing_settings_page.dart';
 import 'shortcuts_guide_page.dart';
 import '../../l10n/app_localizations.dart';
+
+import '../../utils/platform_info.dart';
 
 /// Google Play 版本(CI 注入)。截屏自动记账依赖 READ_MEDIA_IMAGES,在 Google
 /// Play 渠道被砍掉,这里用来隐藏入口。详见 release.yml 的临时 manifest 配置。
@@ -306,7 +307,7 @@ class SmartBillingPage extends ConsumerWidget {
           SettingsCard(
             children: [
               // 分享记账（Android：门槛低、GP 版唯一截图类入口，置顶）
-              if (Platform.isAndroid)
+              if (PlatformInfo.isAndroid)
                 SettingsNavItem(
                   icon: Icons.share_outlined,
                   title: l10n.shareBilling,
@@ -323,13 +324,13 @@ class SmartBillingPage extends ConsumerWidget {
                   },
                 ),
               // 截图自动记账
-              if (!(Platform.isAndroid && _isGooglePlayBuild))
+              if (!(PlatformInfo.isAndroid && _isGooglePlayBuild))
                 SettingsNavItem(
                   icon: Icons.auto_fix_high,
-                  title: Platform.isAndroid
+                  title: PlatformInfo.isAndroid
                       ? l10n.autoScreenshotBilling
                       : l10n.autoScreenshotBillingIosTitle,
-                  subtitle: Platform.isAndroid
+                  subtitle: PlatformInfo.isAndroid
                       ? l10n.autoScreenshotBillingDesc
                       : l10n.autoScreenshotBillingIosDesc,
                   onTap: () async {

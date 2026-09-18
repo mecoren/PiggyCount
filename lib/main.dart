@@ -37,6 +37,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 
+import 'utils/platform_info.dart';
+
 /// 全局 navigator key — 给 service 层(没有 BuildContext)push 路由使用。
 final GlobalKey<NavigatorState> globalNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -135,7 +137,7 @@ Future<void> main() async {
   }
 
   // 初始化图片分享处理服务（Android专属）
-  if (Platform.isAndroid) {
+  if (PlatformInfo.isAndroid) {
     _setupImageShareHandler(container);
   }
 
@@ -218,7 +220,7 @@ Future<void> _initNotificationChain(ProviderContainer container) async {
 /// 启动链2：配置iOS App Group（widget和主app共享数据必需）
 Future<void> _initIOSAppGroup() async {
   try {
-    if (Platform.isIOS) {
+    if (PlatformInfo.isIOS) {
       await HomeWidget.setAppGroupId('group.com.wait.piggycount');
     }
   } catch (e) {
@@ -378,7 +380,7 @@ Future<void> _restoreUserReminder() async {
 /// - 在应用启动时检查用户是否开启了截图监听
 /// - 如果开启了，重新启动监听服务
 Future<void> _restoreScreenshotMonitor(ProviderContainer container) async {
-  if (!Platform.isAndroid) return;
+  if (!PlatformInfo.isAndroid) return;
 
   try {
     logger.info('App', '📸 检查并恢复截图自动识别...');

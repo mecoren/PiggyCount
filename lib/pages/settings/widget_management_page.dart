@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -25,6 +24,8 @@ import '../../widget/widget_data_service.dart'
 import '../../widget/widget_spec.dart' show HWSize;
 import '../../widgets/biz/biz.dart';
 import '../../widgets/ui/ui.dart';
+
+import '../../utils/platform_info.dart';
 
 /// 小组件管理页 ——「组件库」画廊。
 ///
@@ -446,7 +447,7 @@ class WidgetManagementPage extends ConsumerWidget {
                 ],
               ),
               SizedBox(height: 14.0.scaled(context, ref)),
-              if (Platform.isIOS)
+              if (PlatformInfo.isIOS)
                 _buildStepList(context, ref, [
                   l10n.iosWidgetStep1,
                   l10n.iosWidgetStep2,

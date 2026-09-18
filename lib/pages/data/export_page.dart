@@ -15,6 +15,8 @@ import '../../widgets/ui/ui.dart';
 import '../../utils/category_utils.dart';
 import '../../styles/tokens.dart';
 
+import '../../utils/platform_info.dart';
+
 class ExportPage extends ConsumerStatefulWidget {
   const ExportPage({super.key});
   @override
@@ -54,7 +56,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
                       onPressed:
                           exporting ? null : () => _export(repo, ledgerId),
                       icon: const Icon(Icons.save_alt_outlined),
-                      label: Text(Platform.isIOS
+                      label: Text(PlatformInfo.isIOS
                           ? AppLocalizations.of(context).exportButtonIOS
                           : AppLocalizations.of(context).exportButtonAndroid),
                     ),
@@ -100,7 +102,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
       });
       String directory;
       bool shareAfter = false;
-      if (Platform.isIOS) {
+      if (PlatformInfo.isIOS) {
         // iOS: 写入应用文档目录，然后使用系统分享
         final docDir = await getApplicationDocumentsDirectory();
         directory = docDir.path;

@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +16,8 @@ import '../../widgets/biz/section_card.dart';
 import '../../styles/tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../cloud/provider_factory.dart';
+
+import '../../utils/platform_info.dart';
 
 // GitHub配置教程链接
 const _kSupabaseGuideUrl =
@@ -206,7 +207,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                       // iCloud (仅 iOS)
                       if (_kShowSupabaseAndICloud &&
                           !kIsWeb &&
-                          Platform.isIOS) ...[
+                          PlatformInfo.isIOS) ...[
                         _buildICloudCard(context, active,
                             isDisabled: false, primaryColor: primaryColor),
                         const SizedBox(height: 12),

@@ -13,6 +13,8 @@ import '../update/update_downloader.dart';
 import '../update/update_installer.dart';
 import '../update/update_cache.dart';
 
+import '../../utils/platform_info.dart';
+
 /// 本地化UpdateResult消息的辅助函数
 String _localizeUpdateMessage(BuildContext context, String? message) {
   if (message == null) return '';
@@ -320,7 +322,7 @@ class UpdateService {
     required Function(double progress, String status) setProgress,
   }) async {
     // 防重复点击
-    if (Platform.isAndroid) {
+    if (PlatformInfo.isAndroid) {
       setLoading(true);
       setProgress(0.0, AppLocalizations.of(context).updateCheckingUpdate);
 

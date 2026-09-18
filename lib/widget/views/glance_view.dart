@@ -1,11 +1,11 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/material.dart';
 
 import '../../providers/theme_providers.dart';
 import '../../styles/tokens.dart';
 import '../widget_spec.dart' show HWSize;
 import 'widget_view_style.dart';
+
+import '../../utils/platform_info.dart';
 
 /// 收支速览(glance)小组件视图:小/中两档,`WidgetSpec.glanceSmall` /
 /// `WidgetSpec.glanceMedium` 对应渲染。
@@ -223,7 +223,7 @@ class GlanceView extends StatelessWidget {
   Widget _buildMedium() {
     // iOS systemMedium 与 Android 2:1 网格宽高比不同,外层透明容器撑到
     // width×height,内容始终按 364×169 画并垂直居中(D2 back-compat)。
-    final isAndroid = Platform.isAndroid;
+    final isAndroid = PlatformInfo.isAndroid;
     final verticalPadding = isAndroid ? (182 - 169) / 2 : 0.0;
     final textSecondary = widgetTextSecondary(dark);
 

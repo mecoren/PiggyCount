@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +10,8 @@ import '../../styles/tokens.dart';
 import '../../utils/ui_scale_extensions.dart';
 import '../../providers/theme_providers.dart';
 import '../../l10n/app_localizations.dart';
+
+import '../../utils/platform_info.dart';
 
 /// 日志中心页面
 class LogCenterPage extends ConsumerStatefulWidget {
@@ -218,11 +219,11 @@ class _LogCenterPageState extends ConsumerState<LogCenterPage> {
                         runSpacing: 4.0.scaled(context, ref),
                         children: LogPlatform.values.where((platform) {
                           // 在 Android 上隐藏 iOS，在 iOS 上隐藏 Android
-                          if (Platform.isAndroid &&
+                          if (PlatformInfo.isAndroid &&
                               platform == LogPlatform.ios) {
                             return false;
                           }
-                          if (Platform.isIOS &&
+                          if (PlatformInfo.isIOS &&
                               platform == LogPlatform.android) {
                             return false;
                           }

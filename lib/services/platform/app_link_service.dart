@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,6 +9,8 @@ import '../../providers/database_providers.dart';
 import '../automation/auto_billing_service.dart';
 import '../billing/post_processor.dart';
 import '../system/logger_service.dart';
+
+import '../../utils/platform_info.dart';
 
 /// AppLink 动作类型
 enum AppLinkAction {
@@ -194,7 +195,7 @@ class AppLinkService {
 
   /// 初始化 iOS AppIntents 监听器
   void _initAppIntentsListener() {
-    if (!Platform.isIOS) return;
+    if (!PlatformInfo.isIOS) return;
 
     logger.info('AppLink', '初始化 AppIntents 监听器');
 
@@ -252,7 +253,7 @@ class AppLinkService {
       // iOS: 通知 Swift AppIntent 处理完成,可以放 perform() 返回了。
       // 不发这个信号的话 perform() 会一直 await(直到 25s 超时),iOS 在 30s
       // 后台窗口内会 kill 进程,「成功」通知发不出去。
-      if (Platform.isIOS) {
+      if (PlatformInfo.isIOS) {
         try {
           await _methodChannel.invokeMethod('notifyBillingComplete');
         } catch (e) {

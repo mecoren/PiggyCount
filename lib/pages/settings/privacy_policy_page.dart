@@ -1,5 +1,3 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -11,6 +9,8 @@ import '../../providers/theme_providers.dart';
 import '../../styles/tokens.dart';
 import '../../utils/website_urls.dart';
 import '../../widgets/ui/ui.dart';
+
+import '../../utils/platform_info.dart';
 
 /// 隐私政策 — 内嵌 WebView 打开官网 /privacy(embed 模式)。
 ///
@@ -98,7 +98,7 @@ class _PrivacyPolicyPageState extends ConsumerState<PrivacyPolicyPage> {
     return PopScope(
       // iOS:单页隐私政策无 SPA 历史,直接放行退出;
       // Android:先在网页历史内回退,到底再退出路由。
-      canPop: Platform.isIOS,
+      canPop: PlatformInfo.isIOS,
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
         final controller = _controller;

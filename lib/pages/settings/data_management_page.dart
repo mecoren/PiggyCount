@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,6 +19,8 @@ import '../settings/attachment_preview_page.dart';
 import '../maintenance/orphan_cleanup_page.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/attachment_export_import_service.dart';
+
+import '../../utils/platform_info.dart';
 
 /// 数据管理二级页面
 class DataManagementPage extends ConsumerStatefulWidget {
@@ -379,7 +379,7 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
       showToast(context, l10n.attachmentExportSuccess);
 
       // iOS 弹出分享
-      if (Platform.isIOS) {
+      if (PlatformInfo.isIOS) {
         await SharePlus.instance
             .share(ShareParams(files: [XFile(exportPath)]));
       } else {

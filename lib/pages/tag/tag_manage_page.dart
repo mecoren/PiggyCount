@@ -18,6 +18,8 @@ import '../../widgets/biz/app_empty.dart';
 import 'tag_detail_page.dart';
 import 'tag_edit_page.dart';
 
+import '../../utils/platform_info.dart';
+
 /// 标签管理页面
 class TagManagePage extends ConsumerStatefulWidget {
   const TagManagePage({super.key});
@@ -285,7 +287,7 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
           .first;
       final fileName = 'piggycount_tags_$timestamp.yml';
 
-      if (Platform.isAndroid) {
+      if (PlatformInfo.isAndroid) {
         final downloadPath = '/storage/emulated/0/Download/PiggyCount';
         final dir = Directory(downloadPath);
         if (!await dir.exists()) {

@@ -1,5 +1,4 @@
 import 'dart:async' show Completer;
-import 'dart:io';
 import 'dart:ui' show PlatformDispatcher;
 
 import 'package:flutter/material.dart';
@@ -19,6 +18,8 @@ import 'views/quick_add_view.dart';
 import 'views/recent_view.dart';
 import 'widget_data_service.dart';
 import 'widget_spec.dart';
+
+import '../utils/platform_info.dart';
 
 const _tag = 'WidgetManager';
 
@@ -299,7 +300,7 @@ class WidgetManager {
       // 宿主类名(主类 + 按尺寸拆分的入口子类,见 WidgetSpec.
       // androidExtraClassNames)——用户可能装的是"净资产·大"这类子类入口。
       // 无实例的 kind/provider 触发是无害 no-op。
-      if (Platform.isIOS) {
+      if (PlatformInfo.isIOS) {
         final kinds = <String>{
           for (final spec in specs)
             if (spec.iosKind != null) spec.iosKind!,
@@ -565,7 +566,7 @@ class WidgetManager {
       // iOS systemMedium 与 Android 2:1 网格的宽高比不同,渲染尺寸沿用
       // 升级前的平台分叉逻辑,不直接使用 spec.logicalSize——避免改变现有
       // 原生壳对图片像素尺寸的假设,属 D2 back-compat 的一部分。
-      renderSize = Platform.isIOS
+      renderSize = PlatformInfo.isIOS
           ? const Size(364, 169) // iOS systemMedium
           : const Size(364, 182); // Android 2:1 比例(364/2=182)
       view = GlanceView.medium(
@@ -837,7 +838,7 @@ class WidgetManager {
   }) async {
     logger.debug(
       _tag,
-      '渲染 ${spec.imageKey} - Platform: ${Platform.isIOS ? "iOS" : "Android"}, '
+      '渲染 ${spec.imageKey} - Platform: ${PlatformInfo.isIOS ? "iOS" : "Android"}, '
       'Size: ${logicalSize.width}x${logicalSize.height}',
     );
 

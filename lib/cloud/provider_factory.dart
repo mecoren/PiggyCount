@@ -1,5 +1,3 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' hide LogLevel;
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' as fcs_log
@@ -11,6 +9,8 @@ import 'package:flutter_cloud_sync_s3/flutter_cloud_sync_s3.dart';
 
 import '../services/system/logger_service.dart';
 import 'gzip_cloud_storage.dart';
+
+import '../utils/platform_info.dart';
 
 /// 根据 CloudServiceConfig 创建对应的 CloudProvider 和 CloudAuthService
 ///
@@ -110,7 +110,7 @@ Future<({CloudProvider? provider, CloudAuthService? auth})> createCloudServices(
 
     case CloudBackendType.icloud:
       // iCloud 仅支持 iOS/iPadOS
-      if (kIsWeb || !Platform.isIOS) {
+      if (kIsWeb || !PlatformInfo.isIOS) {
         return (provider: null, auth: null);
       }
 

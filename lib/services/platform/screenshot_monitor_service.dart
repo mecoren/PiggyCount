@@ -1,9 +1,10 @@
-import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../automation/auto_billing_service.dart';
 import '../../services/system/logger_service.dart';
+
+import '../../utils/platform_info.dart';
 
 /// Google Play 版本(CI 注入)。Photo & Video Permissions 政策禁止记账类 app
 /// 长期持有 READ_MEDIA_IMAGES,所以 Google Play 版本砍掉截屏自动记账功能。
@@ -65,7 +66,7 @@ class ScreenshotMonitorService {
       }
 
       // 只在 Android 平台启用
-      if (!Platform.isAndroid) {
+      if (!PlatformInfo.isAndroid) {
         throw UnsupportedError('仅支持 Android 平台');
       }
 
@@ -87,7 +88,7 @@ class ScreenshotMonitorService {
   /// 禁用截图监听
   Future<void> disable() async {
     try {
-      if (Platform.isAndroid) {
+      if (PlatformInfo.isAndroid) {
         await _channel.invokeMethod('stopScreenshotObserver');
       }
 

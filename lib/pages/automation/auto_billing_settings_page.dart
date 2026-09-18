@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -12,13 +11,15 @@ import '../../utils/notification_android.dart';
 import 'ios_auto_billing_page.dart';
 import '../../services/system/logger_service.dart';
 
+import '../../utils/platform_info.dart';
+
 /// 自动记账设置页面（根据平台路由）
 class AutoBillingSettingsPage extends StatelessWidget {
   const AutoBillingSettingsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    if (Platform.isIOS) {
+    if (PlatformInfo.isIOS) {
       return const IOSAutoBillingPage();
     } else {
       return const AndroidAutoBillingPage();

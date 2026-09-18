@@ -1,5 +1,3 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -11,6 +9,8 @@ import '../../providers/theme_providers.dart';
 import '../../styles/tokens.dart';
 import '../../utils/website_urls.dart';
 import '../../widgets/ui/ui.dart';
+
+import '../../utils/platform_info.dart';
 
 /// 审核兜底开关:内嵌 WebView 万一被应用商店审核拒绝,把这里改成 false
 /// 重新打包提审,「使用帮助」即回退为外部浏览器打开,其余零改动。
@@ -156,7 +156,7 @@ class _HelpCenterPageState extends ConsumerState<HelpCenterPage> {
       //   canPop=true,左滑正常退出页面。注意 Flutter 路由手势优先级高于
       //   WKWebView 手势,所以 iOS 不能像 Android 一样常开拦截(左滑退不出页),
       //   也不能常不拦截(左滑直接退整页)
-      canPop: Platform.isIOS ? !_awayFromHome : false,
+      canPop: PlatformInfo.isIOS ? !_awayFromHome : false,
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
         final controller = _controller;

@@ -1,4 +1,3 @@
-import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,6 +25,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:in_app_review/in_app_review.dart';
 import '../../utils/ui_scale_extensions.dart';
 import '../donation/donation_page.dart';
+
+import '../../utils/platform_info.dart';
 
 /// 我的页面（设置主页）
 ///
@@ -380,7 +381,7 @@ class MinePage extends ConsumerWidget {
                 SettingsCard(
                   children: [
                     // 仅在iOS显示打赏入口
-                    if (Platform.isIOS)
+                    if (PlatformInfo.isIOS)
                       Consumer(
                         builder: (context, ref, _) {
                           final primaryColor = ref.watch(primaryColorProvider);
@@ -440,7 +441,7 @@ class MinePage extends ConsumerWidget {
                       },
                     ),
                     // 只在iOS上显示评分入口（Android还未上架）
-                    if (Platform.isIOS)
+                    if (PlatformInfo.isIOS)
                       SettingsNavItem(
                         icon: Icons.star_border_rounded,
                         title: AppLocalizations.of(context).mineRateApp,
@@ -502,7 +503,7 @@ Future<void> _rateApp(BuildContext context) async {
     final InAppReview inAppReview = InAppReview.instance;
 
     // 直接打开应用商店评分页面（更可靠，不受系统限制）
-    if (Platform.isIOS) {
+    if (PlatformInfo.isIOS) {
       await inAppReview.openStoreListing(
         appStoreId: '6754611670', // PiggyCount的App Store ID
       );
