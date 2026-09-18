@@ -484,19 +484,25 @@ class _HomePageState extends ConsumerState<HomePage> {
                   const SizedBox(width: 12),
                   // 关闭按钮
                   // 无障碍基线：图标按钮补语义（button 角色 +「关闭」标签），
-                  // TalkBack/VoiceOver 用户可感知并操作
-                  Semantics(
-                    button: true,
-                    label: l10n.commonClose,
-                    child: GestureDetector(
-                      onTap: _dismissAnnualReportReminder,
-                      behavior: HitTestBehavior.opaque,
-                      child: Padding(
-                        padding: const EdgeInsets.all(6),
-                        child: Icon(
-                          Icons.close,
-                          size: 18,
-                          color: PiggyTokens.textDisabled(context),
+                  // TalkBack/VoiceOver 用户可感知并操作；
+                  // 外面再包 Tooltip 提供视觉长按提示，excludeFromSemantics
+                  // 避免读屏重复播报（否则会念「关闭，关闭」）。
+                  Tooltip(
+                    message: l10n.commonClose,
+                    excludeFromSemantics: true,
+                    child: Semantics(
+                      button: true,
+                      label: l10n.commonClose,
+                      child: GestureDetector(
+                        onTap: _dismissAnnualReportReminder,
+                        behavior: HitTestBehavior.opaque,
+                        child: Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: Icon(
+                            Icons.close,
+                            size: 18,
+                            color: PiggyTokens.textDisabled(context),
+                          ),
                         ),
                       ),
                     ),
@@ -583,17 +589,22 @@ class _HomePageState extends ConsumerState<HomePage> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  // 关闭按钮（无障碍基线：button 角色 +「关闭」标签）
-                  Semantics(
-                    button: true,
-                    label: l10n.commonClose,
-                    child: GestureDetector(
-                      onTap: _dismissBudgetSetupHint,
-                      behavior: HitTestBehavior.opaque,
-                      child: Icon(
-                        Icons.close,
-                        size: 18,
-                        color: PiggyTokens.textDisabled(context),
+                  // 关闭按钮（无障碍基线：button 角色 +「关闭」标签；
+                  // Tooltip 提供视觉长按提示，excludeFromSemantics 防重复播报）
+                  Tooltip(
+                    message: l10n.commonClose,
+                    excludeFromSemantics: true,
+                    child: Semantics(
+                      button: true,
+                      label: l10n.commonClose,
+                      child: GestureDetector(
+                        onTap: _dismissBudgetSetupHint,
+                        behavior: HitTestBehavior.opaque,
+                        child: Icon(
+                          Icons.close,
+                          size: 18,
+                          color: PiggyTokens.textDisabled(context),
+                        ),
                       ),
                     ),
                   ),
