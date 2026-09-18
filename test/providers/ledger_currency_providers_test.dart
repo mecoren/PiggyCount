@@ -2,6 +2,7 @@
 ///   ① currentLedgerCurrencyProvider:账本本位币别名(大写/兜底 CNY)
 ///   ② effectiveRatesForLedgerProvider:以账本本位币为 base 合成有效汇率
 ///      (与 effectiveRatesProvider 的差异仅在 base 来源)
+library;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

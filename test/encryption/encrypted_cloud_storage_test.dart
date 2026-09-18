@@ -449,6 +449,7 @@ class InMemorySecureKeyStorage implements SecureKeyStorage {
   Future<void> clearRekeyCheckpoint() async {
     _store.remove('piggycount_enc_rekey_ckpt');
   }
+  @override
   Future<void> clearAll() async {
     _store.clear();
   }

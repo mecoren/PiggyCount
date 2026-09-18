@@ -185,9 +185,9 @@ void main() {
     await tester.pumpWidget(_wrap());
     final ctx = tester.element(find.byType(Scaffold));
 
-    final run = ({required bool force}) async {
+    Future<Never> run({required bool force}) async {
       throw Exception('network down');
-    };
+    }
     await expectLater(
       uploadLedgerWithConflictGuard(ctx, run: run),
       throwsA(isA<Exception>().having((e) => e.toString(), 'text',

@@ -119,7 +119,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
       return Scaffold(
         extendBodyBehindAppBar: true,
         appBar: PiggyTitleBar(
-          title: AppLocalizations.of(context)!.importPreparing,
+          title: AppLocalizations.of(context).importPreparing,
           showBack: true,
         ),
         body: Padding(
@@ -148,7 +148,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
                   i < header.length &&
                   header[i].trim().isNotEmpty)
               ? header[i].trim()
-              : AppLocalizations.of(context)!.importColumnNumber(i + 1);
+              : AppLocalizations.of(context).importColumnNumber(i + 1);
           return DropdownMenuItem(
               value: i, child: Text(label, overflow: TextOverflow.ellipsis));
         });
@@ -157,8 +157,8 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
       extendBodyBehindAppBar: true,
       appBar: PiggyTitleBar(
         title: step == 0
-            ? AppLocalizations.of(context)!.importConfirmMapping
-            : AppLocalizations.of(context)!.importCategoryMapping,
+            ? AppLocalizations.of(context).importConfirmMapping
+            : AppLocalizations.of(context).importCategoryMapping,
         showBack: true,
       ),
       body: Padding(
@@ -174,52 +174,52 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
                 children: [
                   if (step == 0) ...[
                     if (rows.isEmpty)
-                      Text(AppLocalizations.of(context)!.importNoDataParsed),
+                      Text(AppLocalizations.of(context).importNoDataParsed),
                     Wrap(
                       spacing: 12,
                       runSpacing: 8,
                       children: [
-                        _mapRow(AppLocalizations.of(context)!.importFieldDate,
+                        _mapRow(AppLocalizations.of(context).importFieldDate,
                             'date', items()),
-                        _mapRow(AppLocalizations.of(context)!.importFieldType,
+                        _mapRow(AppLocalizations.of(context).importFieldType,
                             'type', items()),
-                        _mapRow(AppLocalizations.of(context)!.importFieldAmount,
+                        _mapRow(AppLocalizations.of(context).importFieldAmount,
                             'amount', items()),
                         _mapRow(
-                            AppLocalizations.of(context)!.importFieldCurrency,
+                            AppLocalizations.of(context).importFieldCurrency,
                             'currency',
                             items()),
                         _mapRow(
-                            AppLocalizations.of(context)!.importFieldCategory,
+                            AppLocalizations.of(context).importFieldCategory,
                             'category',
                             items()),
                         _mapRow(
-                            AppLocalizations.of(context)!
+                            AppLocalizations.of(context)
                                 .exportCsvHeaderSubCategory,
                             'sub_category',
                             items()),
                         _mapRow(
-                            AppLocalizations.of(context)!.importFieldAccount,
+                            AppLocalizations.of(context).importFieldAccount,
                             'account',
                             items()),
                         _mapRow(
-                            AppLocalizations.of(context)!
+                            AppLocalizations.of(context)
                                 .exportCsvHeaderFromAccount,
                             'from_account',
                             items()),
                         _mapRow(
-                            AppLocalizations.of(context)!
+                            AppLocalizations.of(context)
                                 .exportCsvHeaderToAccount,
                             'to_account',
                             items()),
-                        _mapRow(AppLocalizations.of(context)!.importFieldNote,
+                        _mapRow(AppLocalizations.of(context).importFieldNote,
                             'note', items()),
                         _mapRow(
-                            AppLocalizations.of(context)!.exportCsvHeaderTags,
+                            AppLocalizations.of(context).exportCsvHeaderTags,
                             'tags',
                             items()),
                         _mapRow(
-                            AppLocalizations.of(context)!
+                            AppLocalizations.of(context)
                                 .exportCsvHeaderAttachments,
                             'attachments',
                             items()),
@@ -227,7 +227,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
                     ),
                     const SizedBox(height: 12),
                     // 预览仅展示前 N 行，避免大文件一次性渲染导致卡顿
-                    Text(AppLocalizations.of(context)!.importPreview,
+                    Text(AppLocalizations.of(context).importPreview,
                         style: Theme.of(context).textTheme.labelLarge),
                     const SizedBox(height: 6),
                     SizedBox(
@@ -260,7 +260,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
                                 Padding(
                                   padding: const EdgeInsets.only(top: 6.0),
                                   child: Text(
-                                    AppLocalizations.of(context)!
+                                    AppLocalizations.of(context)
                                         .importPreviewLimit(
                                             limited.length, totalRows),
                                     style: Theme.of(context)
@@ -278,16 +278,16 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
                     ),
                   ] else ...[
                     if (mapping['category'] == null)
-                      Text(AppLocalizations.of(context)!
+                      Text(AppLocalizations.of(context)
                           .importCategoryNotSelected),
-                    Text(AppLocalizations.of(context)!
+                    Text(AppLocalizations.of(context)
                         .importCategoryMappingDescription),
                     const SizedBox(height: 8),
                     FutureBuilder<List<schema.Category>>(
                       future: allCategoriesFuture,
                       builder: (context, snap) {
                         final cats = snap.data ?? [];
-                        final l10n = AppLocalizations.of(context)!;
+                        final l10n = AppLocalizations.of(context);
                         final items = <DropdownMenuItem<int?>>[
                           DropdownMenuItem(
                               value: null,
@@ -359,7 +359,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
                 child: Row(
                   children: [
                     if (importing)
-                      Text(AppLocalizations.of(context)!
+                      Text(AppLocalizations.of(context)
                           .importProgress(ok, fail)),
                     const Spacer(),
                     if (step == 0)
@@ -375,7 +375,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
                             } else {
                               showToast(
                                   context,
-                                  AppLocalizations.of(context)!
+                                  AppLocalizations.of(context)
                                       .importSelectCategoryFirst);
                             }
                             return;
@@ -384,20 +384,20 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
                           setState(() => step = 1);
                         },
                         child:
-                            Text(AppLocalizations.of(context)!.importNextStep),
+                            Text(AppLocalizations.of(context).importNextStep),
                       )
                     else ...[
                       OutlinedButton(
                         onPressed:
                             importing ? null : () => setState(() => step = 0),
                         child: Text(
-                            AppLocalizations.of(context)!.importPreviousStep),
+                            AppLocalizations.of(context).importPreviousStep),
                       ),
                       const SizedBox(width: 12),
                       FilledButton(
                         onPressed: importing ? null : _startImport,
                         child: Text(
-                            AppLocalizations.of(context)!.importStartImport),
+                            AppLocalizations.of(context).importStartImport),
                       ),
                     ],
                   ],
@@ -421,7 +421,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
           child: DropdownButton<int>(
             isExpanded: true,
             value: mapping[key],
-            hint: Text(AppLocalizations.of(context)!.importAutoDetect),
+            hint: Text(AppLocalizations.of(context).importAutoDetect),
             items: items,
             onChanged: (v) => setState(() => mapping[key] = v),
           ),
@@ -471,7 +471,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
             return AlertDialog(
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
-              title: Text(AppLocalizations.of(context)!.importInProgress),
+              title: Text(AppLocalizations.of(context).importInProgress),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -481,7 +481,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
                   const SizedBox(height: 8),
                   // 实时进度文案（每50条更新一次，足够流畅）
                   Text(
-                      AppLocalizations.of(context)!
+                      AppLocalizations.of(context)
                           .importProgressDetail(p.done, p.fail, p.ok, p.total),
                       style: Theme.of(dctx)
                           .textTheme
@@ -504,7 +504,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
                     }
                   },
                   child:
-                      Text(AppLocalizations.of(context)!.importBackgroundImport),
+                      Text(AppLocalizations.of(context).importBackgroundImport),
                 ),
                 TextButton(
                   onPressed: () {
@@ -512,7 +512,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
                     dialogOpen = false;
                     Navigator.of(dctx).pop();
                   },
-                  child: Text(AppLocalizations.of(context)!.importCancelImport),
+                  child: Text(AppLocalizations.of(context).importCancelImport),
                 ),
               ],
             );
@@ -578,7 +578,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
       // 导入失败
       if (mounted) {
         showToast(context,
-            AppLocalizations.of(context)!.importTransactionFailed('$e'));
+            AppLocalizations.of(context).importTransactionFailed('$e'));
       }
       fail = total - ok; // 更新失败数
     }
@@ -626,8 +626,8 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
 
     // 显示导入完成提示
     final cancelledText =
-        _cancelled ? AppLocalizations.of(currentContext)!.importCancelled : '';
-    final l10nToast = AppLocalizations.of(currentContext)!;
+        _cancelled ? AppLocalizations.of(currentContext).importCancelled : '';
+    final l10nToast = AppLocalizations.of(currentContext);
 
     // 构建提示信息
     String message = l10nToast.importCompleted(cancelledText, fail, ok);

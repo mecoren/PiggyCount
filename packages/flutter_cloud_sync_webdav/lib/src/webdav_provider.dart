@@ -83,7 +83,7 @@ class WebDAVProvider implements CloudProvider {
   /// null = 未初始化；否则为 webdav_client 的 AuthType（预置 BasicAuth
   /// 后应为 BasicAuth；Digest 服务器兜底升级后为 DigestAuth）。
   webdav.AuthType? get authTypeForTest =>
-      _client == null ? null : _client!.auth.type;
+      _client?.auth.type;
 
   @override
   String get providerId => 'webdav';

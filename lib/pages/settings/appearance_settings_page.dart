@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers.dart';
 import '../../models/note_history.dart';
-import '../../providers/theme_providers.dart' show IncomeExpenseColorScheme;
 import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/biz.dart';
 import '../../styles/tokens.dart';
@@ -529,27 +528,31 @@ class AppearanceSettingsPage extends ConsumerWidget {
                     fontSize: 13.scaled(context, ref),
                   ),
                 ),
-                RadioListTile<NoteHistoryScope>(
-                  value: NoteHistoryScope.allCategories,
+                RadioGroup<NoteHistoryScope>(
                   groupValue: selectedScope,
-                  title: Text(l10n.appearanceNoteHistoryScopeAllCategories),
-                  contentPadding: EdgeInsets.zero,
                   onChanged: (value) {
                     if (value == null) return;
                     setDialogState(() => selectedScope = value);
                     ref.read(noteHistoryScopeProvider.notifier).state = value;
                   },
-                ),
-                RadioListTile<NoteHistoryScope>(
-                  value: NoteHistoryScope.currentCategory,
-                  groupValue: selectedScope,
-                  title: Text(l10n.appearanceNoteHistoryScopeCurrentCategory),
-                  contentPadding: EdgeInsets.zero,
-                  onChanged: (value) {
-                    if (value == null) return;
-                    setDialogState(() => selectedScope = value);
-                    ref.read(noteHistoryScopeProvider.notifier).state = value;
-                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      RadioListTile<NoteHistoryScope>(
+                        value: NoteHistoryScope.allCategories,
+                        title: Text(
+                            l10n.appearanceNoteHistoryScopeAllCategories),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      RadioListTile<NoteHistoryScope>(
+                        value: NoteHistoryScope.currentCategory,
+                        title: Text(
+                            l10n.appearanceNoteHistoryScopeCurrentCategory),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ],
+                  ),
                 ),
                 SizedBox(height: 8.scaled(context, ref)),
                 Text(
@@ -559,27 +562,29 @@ class AppearanceSettingsPage extends ConsumerWidget {
                     fontSize: 13.scaled(context, ref),
                   ),
                 ),
-                RadioListTile<NoteHistorySort>(
-                  value: NoteHistorySort.frequency,
+                RadioGroup<NoteHistorySort>(
                   groupValue: selectedSort,
-                  title: Text(l10n.appearanceNoteHistorySortFrequency),
-                  contentPadding: EdgeInsets.zero,
                   onChanged: (value) {
                     if (value == null) return;
                     setDialogState(() => selectedSort = value);
                     ref.read(noteHistorySortProvider.notifier).state = value;
                   },
-                ),
-                RadioListTile<NoteHistorySort>(
-                  value: NoteHistorySort.recent,
-                  groupValue: selectedSort,
-                  title: Text(l10n.appearanceNoteHistorySortRecent),
-                  contentPadding: EdgeInsets.zero,
-                  onChanged: (value) {
-                    if (value == null) return;
-                    setDialogState(() => selectedSort = value);
-                    ref.read(noteHistorySortProvider.notifier).state = value;
-                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      RadioListTile<NoteHistorySort>(
+                        value: NoteHistorySort.frequency,
+                        title: Text(l10n.appearanceNoteHistorySortFrequency),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      RadioListTile<NoteHistorySort>(
+                        value: NoteHistorySort.recent,
+                        title: Text(l10n.appearanceNoteHistorySortRecent),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ],
+                  ),
                 ),
                 SizedBox(height: 12.scaled(context, ref)),
                 Row(

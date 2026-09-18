@@ -130,14 +130,14 @@ void main() {
       expect(methodBody, isNotNull);
       final hasNplus1Loop = RegExp(
         r'for\s*\(\s*final\s+transaction\s+in\s+transactions\s*\)[\s\S]*?await\s*\(\s*db\.select',
-      ).hasMatch(methodBody!);
+      ).hasMatch(methodBody);
       expect(hasNplus1Loop, isFalse,
           reason: 'getTransactionsByDateRange 不得在交易循环内逐条 SELECT(N+1)');
     });
 
     test('使用批量 isIn 查询 transaction_tags', () {
       expect(methodBody, isNotNull);
-      expect(methodBody!.contains('transactionId.isIn('), isTrue,
+      expect(methodBody.contains('transactionId.isIn('), isTrue,
           reason: '应批量查 transaction_tags: where(transactionId.isIn(txIds))');
     });
   });

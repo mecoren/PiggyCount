@@ -1,6 +1,7 @@
 /// 周期账单编辑页的币种交互(issue #444):
 ///   - 币种字段默认 = 账本本位币;编辑外币模板时回显模板币种
 ///   - 账户候选按**模板有效币种**过滤(此前硬按账本本位币过滤 → 外币账户选不到)
+library;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

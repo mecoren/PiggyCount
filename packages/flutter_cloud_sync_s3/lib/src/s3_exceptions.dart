@@ -21,8 +21,8 @@ class S3Exception implements Exception {
 
 /// S3 认证异常（AccessKey 或 SecretKey 无效）
 class S3AuthException extends S3Exception {
-  S3AuthException(String message, {Exception? originalException})
-      : super(message, statusCode: 403, originalException: originalException);
+  S3AuthException(super.message, {super.originalException})
+      : super(statusCode: 403);
 }
 
 /// S3 对象未找到异常
@@ -43,14 +43,13 @@ class S3BucketNotFoundException extends S3Exception {
 
 /// S3 网络异常
 class S3NetworkException extends S3Exception {
-  S3NetworkException(String message, {Exception? originalException})
-      : super(message, originalException: originalException);
+  S3NetworkException(super.message, {super.originalException});
 }
 
 /// S3 权限不足异常
 class S3PermissionDeniedException extends S3Exception {
-  S3PermissionDeniedException(String message, {Exception? originalException})
-      : super(message, statusCode: 403, originalException: originalException);
+  S3PermissionDeniedException(super.message, {super.originalException})
+      : super(statusCode: 403);
 }
 
 /// 审计 S22：设备时钟与服务端偏差过大（RequestTimeTooSkewed）。
@@ -62,8 +61,8 @@ class S3ClockSkewException extends S3Exception {
   /// 服务器时间（若可解析，UTC）
   final DateTime? serverTime;
 
-  S3ClockSkewException(String message, {this.serverTime})
-      : super(message, statusCode: 403);
+  S3ClockSkewException(super.message, {this.serverTime})
+      : super(statusCode: 403);
 }
 
 /// 条件写前置条件失败（HTTP 412 Precondition Failed）。

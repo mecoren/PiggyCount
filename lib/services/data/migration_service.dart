@@ -66,32 +66,6 @@ class AccountMigrationService {
     }
   }
 
-  /// 检查是否有账户的 currency 为 null
-  Future<bool> _hasAccountsWithNullCurrency() async {
-    try {
-      // 先检查 currency 字段是否存在
-      final hasCurrencyField = await _checkAccountsTableHasCurrency();
-      if (!hasCurrencyField) {
-        return false; // 字段都没有，不存在 null 的问题
-      }
-
-      // 检查是否有 currency 为 null 的账户
-      final result = await db.customSelect(
-        'SELECT COUNT(*) as count FROM accounts WHERE currency IS NULL',
-      ).getSingle();
-
-      final count = result.data['count'];
-      if (count == null) return false;
-      if (count is int) return count > 0;
-      if (count is BigInt) return count > BigInt.zero;
-      if (count is num) return count > 0;
-      return false;
-    } catch (e) {
-      logger.error('MigrationService', '检查 null currency 失败', e);
-      return false;
-    }
-  }
-
   /// 执行 v1.15.0 迁移
   ///
   /// 迁移步骤：
@@ -120,41 +94,6 @@ class AccountMigrationService {
         error: e,
       );
     }
-  }
-
-  /// 轻量迁移：更新所有账户的 currency（从账本继承）
-  Future<void> _lightweightMigration() async {
-    logger.info('MigrationService', '📦 执行轻量迁移（currency 字段已存在）...');
-
-    await db.transaction(() async {
-      // 更新所有账户的currency，从账本继承正确的币种
-      // 注意：不仅更新null值，因为Drift可能已自动填充了错误的默认值
-      logger.info('MigrationService', '📊 更新所有账户的currency（从账本继承）...');
-      await db.customStatement('''
-        UPDATE accounts
-        SET currency = COALESCE(
-          (SELECT currency FROM ledgers WHERE ledgers.id = accounts.ledger_id),
-          'CNY'
-        )
-        WHERE ledger_id IS NOT NULL
-      ''');
-
-      // 记录迁移版本
-      logger.info('MigrationService', '📝 记录迁移版本...');
-      await db.customStatement('''
-        CREATE TABLE IF NOT EXISTS schema_migrations (
-          version INTEGER PRIMARY KEY,
-          applied_at TEXT NOT NULL
-        )
-      ''');
-
-      await db.customStatement('''
-        INSERT OR REPLACE INTO schema_migrations (version, applied_at)
-        VALUES (2, datetime('now'))
-      ''');
-
-      logger.info('MigrationService', '✅ 轻量迁移完成');
-    });
   }
 
   /// 完整迁移：重建表并迁移数据

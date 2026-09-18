@@ -13,6 +13,7 @@
 /// （端口已监听、TLS/路由未就绪）等中间态可能以非预期形态失败，被记为
 /// 真失败而非 skip。现在 setUpAll 先用裸 TCP 探测端口连通性：连不上 →
 /// 整组 skip；能连上再走原 initialize 路径（其 catch 仍兜底标记 skip）。
+library;
 import 'dart:io' show Socket, InternetAddress;
 import 'package:flutter/foundation.dart' show kDebugMode, debugPrint;
 import 'package:flutter_cloud_sync_webdav/flutter_cloud_sync_webdav.dart';

@@ -4,6 +4,7 @@
 ///   - 单币种账本(native==amount)结果与旧口径一致(回归锁)
 ///   - 账户维度(getAccountBalance)仍 amount 原币(回归锁,防误改)
 ///   - NULL native(绕过 repo 的历史写入)COALESCE 回退 amount
+library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
 import 'package:shared_preferences/shared_preferences.dart';

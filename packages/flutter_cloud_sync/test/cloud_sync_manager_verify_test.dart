@@ -45,7 +45,7 @@ class _Auth implements CloudAuthService {
 }
 
 class _File {
-  _File(this.data, this.metadata, [this.eTag]);
+  _File(this.data, this.metadata) : eTag = null;
   String data;
   Map<String, dynamic>? metadata;
   final String? eTag;
@@ -132,7 +132,7 @@ class _ConditionalStorage extends _PlainStorage
 
   @override
   Future<Uint8List?> downloadBinary({required String path}) async =>
-      files[path] == null ? null : utf8.encode(files[path]!.data) as Uint8List;
+      files[path] == null ? null : utf8.encode(files[path]!.data);
 }
 
 class _Provider implements CloudProvider {

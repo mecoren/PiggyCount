@@ -1,6 +1,7 @@
 /// v30 记账页手选币种的汇率拉取(L12 配套):
 /// 手选币种不在 usedCurrencies(账户币种∪主币种)里,常规 refresh 拉回的组
 /// 永远没有它 —— refreshExchangeRates 的 extraQuotes 参数把它并入拉取集合。
+library;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -75,6 +76,7 @@ void main() {
 /// refreshExchangeRates 需要 Ref;测试里用 ProviderContainer 适配出
 /// read / readFuture 两个能力(与 Ref 等价)。
 class _RefLike implements Ref {
+  @override
   final ProviderContainer container;
   _RefLike(this.container);
 

@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart' as drift show InsertMode, QueryExecutor;
+import 'package:drift/drift.dart' as drift show InsertMode;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' as fcs;

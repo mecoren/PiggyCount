@@ -1,4 +1,3 @@
-import 'dart:collection';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -33,7 +32,7 @@ IconData getCategoryIconData({Category? category, String? categoryName}) {
 /// LRU 上限:图标库可达数百张,无界 Map 长会话慢涨;超出时按插入序淘汰
 /// 最旧条目(LinkedHashMap 保持插入序,删除头元素即最久未解析路径)。
 const int _iconPathCacheLimit = 200;
-final Map<String, String> _iconPathCache = LinkedHashMap();
+final Map<String, String> _iconPathCache = {};
 
 /// 写入并执行 LRU 淘汰。
 void _cacheIconPath(String path, String absolutePath) {

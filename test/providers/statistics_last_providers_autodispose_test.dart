@@ -5,6 +5,7 @@
 ///
 /// 验证方式:autoDispose StateProvider 在所有监听者断开后会重置为默认值
 /// (null)。普通 StateProvider 则会保留上一次写入的值。
+library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 

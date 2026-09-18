@@ -10,7 +10,6 @@
 /// - N-11：getObject 超时消息报实际档位（90s）而非元数据档（30s）。
 library;
 
-import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -145,7 +144,7 @@ void main() {
       final requests = <http.Request>[];
       final mock = MockClient((request) async {
         // 记录请求形态：条件头是否随请求发出
-        final req = request as http.Request;
+        final req = request;
         requests.add(req);
         if (req.headers.containsKey('If-Match')) {
           return http.Response(

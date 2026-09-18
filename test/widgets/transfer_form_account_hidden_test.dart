@@ -3,6 +3,7 @@
 ///   - 编辑历史转账(有 editingTransactionId)时,若转出/转入账户当前已被隐藏,
 ///     选择器补回该账户候选并打「已隐藏」灰标,让用户能原样保存
 ///   - 新建转账(无 editingTransactionId)不钉住,隐藏账户不出现
+library;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

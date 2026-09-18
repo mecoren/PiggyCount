@@ -65,7 +65,7 @@ class _PersonalizePageState extends ConsumerState<PersonalizePage> {
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
       appBar: PiggyTitleBar(
-        title: AppLocalizations.of(context)!.personalizeTitle,
+        title: AppLocalizations.of(context).personalizeTitle,
         showBack: true,
       ),
       body: GridView.builder(
@@ -107,7 +107,7 @@ class _PersonalizePageState extends ConsumerState<PersonalizePage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(AppLocalizations.of(context)!.personalizeCustomTitle),
+        title: Text(AppLocalizations.of(context).personalizeCustomTitle),
         content: SingleChildScrollView(
           child: _ColorPicker(
             onColorSelected: (color) {
@@ -230,7 +230,7 @@ class _CustomColorCard extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               alignment: Alignment.center,
               child: Text(
-                AppLocalizations.of(context)!.personalizeCustomColor,
+                AppLocalizations.of(context).personalizeCustomColor,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: PiggyTokens.textSecondary(context),
                     ),
@@ -285,7 +285,7 @@ class _ColorPickerState extends State<_ColorPicker> {
           const SizedBox(height: 20),
 
           // 色相滑块
-          Text(AppLocalizations.of(context)!.personalizeHue(currentColor.hue.round()), style: TextStyle(fontWeight: FontWeight.w500, color: PiggyTokens.textPrimary(context))),
+          Text(AppLocalizations.of(context).personalizeHue(currentColor.hue.round()), style: TextStyle(fontWeight: FontWeight.w500, color: PiggyTokens.textPrimary(context))),
           Container(
             height: 40,
             decoration: BoxDecoration(
@@ -317,7 +317,7 @@ class _ColorPickerState extends State<_ColorPicker> {
           const SizedBox(height: 10),
 
           // 饱和度滑块
-          Text(AppLocalizations.of(context)!.personalizeSaturation((currentColor.saturation * 100).round()), style: TextStyle(fontWeight: FontWeight.w500, color: PiggyTokens.textPrimary(context))),
+          Text(AppLocalizations.of(context).personalizeSaturation((currentColor.saturation * 100).round()), style: TextStyle(fontWeight: FontWeight.w500, color: PiggyTokens.textPrimary(context))),
           Container(
             height: 40,
             decoration: BoxDecoration(
@@ -352,7 +352,7 @@ class _ColorPickerState extends State<_ColorPicker> {
           const SizedBox(height: 10),
 
           // 亮度滑块
-          Text(AppLocalizations.of(context)!.personalizeBrightness((currentColor.value * 100).round()), style: TextStyle(fontWeight: FontWeight.w500, color: PiggyTokens.textPrimary(context))),
+          Text(AppLocalizations.of(context).personalizeBrightness((currentColor.value * 100).round()), style: TextStyle(fontWeight: FontWeight.w500, color: PiggyTokens.textPrimary(context))),
           Container(
             height: 40,
             decoration: BoxDecoration(
@@ -399,7 +399,7 @@ class _ColorPickerState extends State<_ColorPicker> {
                   borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                 ),
               ),
-              child: Text(AppLocalizations.of(context)!.personalizeSelectColor, style: const TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(AppLocalizations.of(context).personalizeSelectColor, style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),
         ],

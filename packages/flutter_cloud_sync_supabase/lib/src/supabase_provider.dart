@@ -126,7 +126,7 @@ class SupabaseProvider implements CloudProvider {
         // Initialize Supabase client
         await supabase.Supabase.initialize(
           url: url,
-          anonKey: anonKey,
+          publishableKey: anonKey,
           authOptions: const supabase.FlutterAuthClientOptions(
             authFlowType: supabase.AuthFlowType.pkce,
           ),

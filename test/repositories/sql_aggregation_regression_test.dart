@@ -16,6 +16,7 @@
 /// - 回归契约：getAccountStats（单账户）与 getAllAccountStats（批量 SQL）
 ///   同数据下结果一致 —— 批量路径是 UI 主消费方，两者口径漂移会直接
 ///   表现为账户页数字随代码路径不同而不同。
+library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
 import 'package:drift/drift.dart' as d;

@@ -9,6 +9,7 @@
 ///   全部规则 → 改为单条隔离；
 /// - REC-04：导入前批量预加载去重键，循环内 O(1) 查内存（功能正确性由
 ///   本文件用例覆盖；批内去重为附带能力，单独验证）。
+library;
 import 'package:drift/drift.dart' show OrderingTerm;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';

@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'dart:io';
 
@@ -114,10 +113,10 @@ class SharePosterService {
       await file.writeAsBytes(imageBytes);
 
       // 分享文件
-      await Share.shareXFiles(
-        [XFile(file.path)],
+      await SharePlus.instance.share(ShareParams(
+        files: [XFile(file.path)],
         text: 'PiggyCount - 小猪记账',
-      );
+      ));
     } catch (e) {
       // 忽略错误
     }

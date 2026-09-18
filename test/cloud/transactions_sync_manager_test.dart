@@ -4,7 +4,6 @@
 // 验证 getStatus 在异常路径下的缓存行为（US-6）与 salt 错配降级（US-2）等。
 // 不依赖真实网络 / 真实云服务。
 
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:piggycount/cloud/transactions_sync_manager.dart';
@@ -20,7 +19,7 @@ import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' as fcs hide SyncStat
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:piggycount/cloud/sync_service.dart' show SyncStatus, SyncDiff;
+import 'package:piggycount/cloud/sync_service.dart' show SyncDiff;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -851,7 +850,6 @@ void main() {
       });
 
       test('本地已有同身份账本的槽位被过滤', () async {
-        final repo = LocalRepository(db);
         await db.into(db.ledgers).insert(LedgersCompanion.insert(
               name: 'Mine',
               currency: const d.Value('CNY'),
@@ -1210,6 +1208,7 @@ class _ThrowThenSuccessStorage implements fcs.CloudStorageService {
 }
 
 class _FakeCloudProvider implements fcs.CloudProvider {
+  @override
   final fcs.CloudStorageService storage;
   _FakeCloudProvider({required this.storage});
 

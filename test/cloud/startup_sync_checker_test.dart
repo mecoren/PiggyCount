@@ -6,7 +6,6 @@
 // 一键应用全部、逐个确认、错误隔离、幂等性），
 // 不依赖真实网络 / 数据库 / UI 框架。
 
-import 'dart:async';
 
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' hide SyncStatus;
 import 'package:flutter_test/flutter_test.dart';
@@ -57,7 +56,7 @@ void main() {
     controller.dispose();
   });
 
-  Ledger _ledger(int id, String name) => Ledger(
+  Ledger ledger(int id, String name) => Ledger(
         id: id,
         name: name,
         currency: 'CNY',
@@ -69,14 +68,14 @@ void main() {
         monthStartDay: 1,
       );
 
-  SyncStatus _status(SyncDiff diff, {String? message}) => SyncStatus(
+  SyncStatus status(SyncDiff diff, {String? message}) => SyncStatus(
         diff: diff,
         localCount: 0,
         localFingerprint: 'local-fp',
         message: message,
       );
 
-  SyncPreview _preview({
+  SyncPreview preview({
     int added = 0,
     int modified = 0,
     int deleted = 0,
@@ -154,7 +153,7 @@ void main() {
         s3SecretKey: 'sk',
         s3Bucket: 'b',
       );
-      deps.ledgers = [_ledger(1, 'L1')];
+      deps.ledgers = [ledger(1, 'L1')];
       deps.syncServiceIsPathA = false;
 
       await checker.runIfNeeded();
@@ -174,10 +173,10 @@ void main() {
         s3SecretKey: 'sk',
         s3Bucket: 'b',
       );
-      deps.ledgers = [_ledger(1, 'L1'), _ledger(2, 'L2')];
+      deps.ledgers = [ledger(1, 'L1'), ledger(2, 'L2')];
       deps.statusByLedger = {
-        1: _status(SyncDiff.inSync),
-        2: _status(SyncDiff.inSync),
+        1: status(SyncDiff.inSync),
+        2: status(SyncDiff.inSync),
       };
 
       await checker.runIfNeeded();
@@ -199,14 +198,14 @@ void main() {
         s3Bucket: 'b',
       );
       deps.ledgers = [
-        _ledger(1, 'L1'),
-        _ledger(2, 'L2'),
-        _ledger(3, 'L3'),
+        ledger(1, 'L1'),
+        ledger(2, 'L2'),
+        ledger(3, 'L3'),
       ];
       deps.statusByLedger = {
-        1: _status(SyncDiff.cloudNewer),
-        2: _status(SyncDiff.inSync),
-        3: _status(SyncDiff.different),
+        1: status(SyncDiff.cloudNewer),
+        2: status(SyncDiff.inSync),
+        3: status(SyncDiff.different),
       };
       deps.summaryChoice = SummaryChoice.skip;
 
@@ -228,14 +227,14 @@ void main() {
         s3Bucket: 'b',
       );
       deps.ledgers = [
-        _ledger(1, 'L1'),
-        _ledger(2, 'L2'),
-        _ledger(3, 'L3'),
+        ledger(1, 'L1'),
+        ledger(2, 'L2'),
+        ledger(3, 'L3'),
       ];
       deps.statusByLedger = {
-        1: _status(SyncDiff.noRemote),
-        2: _status(SyncDiff.localNewer),
-        3: _status(SyncDiff.notLoggedIn),
+        1: status(SyncDiff.noRemote),
+        2: status(SyncDiff.localNewer),
+        3: status(SyncDiff.notLoggedIn),
       };
       deps.summaryChoice = SummaryChoice.skip;
 
@@ -258,14 +257,14 @@ void main() {
         s3Bucket: 'b',
       );
       deps.ledgers = [
-        _ledger(1, 'L1'),
-        _ledger(2, 'L2'),
+        ledger(1, 'L1'),
+        ledger(2, 'L2'),
       ];
       deps.statusByLedger = {
-        1: _status(SyncDiff.inSync),
+        1: status(SyncDiff.inSync),
         // P1-3 补强：非哨兵 error（网络/超时）绝不能静默计入"已是最新"，
         // 否则全部失败时用户被误报"已全部同步"
-        2: _status(SyncDiff.error, message: 'Connection timeout'),
+        2: status(SyncDiff.error, message: 'Connection timeout'),
       };
       deps.summaryChoice = SummaryChoice.skip;
 
@@ -289,12 +288,12 @@ void main() {
         s3Bucket: 'b',
       );
       deps.ledgers = [
-        _ledger(1, 'L1'),
+        ledger(1, 'L1'),
       ];
       // WebDAV 401/403 被识别为认证失败：处置动作是改凭据而非重试网络，
       // 文案必须区分，避免误导用户排查方向
       deps.statusByLedger = {
-        1: _status(SyncDiff.error, message: 'CloudAuthException: 401 Unauthorized'),
+        1: status(SyncDiff.error, message: 'CloudAuthException: 401 Unauthorized'),
       };
       deps.summaryChoice = SummaryChoice.skip;
 
@@ -314,8 +313,8 @@ void main() {
         s3SecretKey: 'sk',
         s3Bucket: 'b',
       );
-      deps.ledgers = [_ledger(1, 'L1'), _ledger(2, 'L2')];
-      deps.statusByLedger = {2: _status(SyncDiff.cloudNewer)};
+      deps.ledgers = [ledger(1, 'L1'), ledger(2, 'L2')];
+      deps.statusByLedger = {2: status(SyncDiff.cloudNewer)};
       deps.statusThrowForLedgerIds = {1};
       deps.summaryChoice = SummaryChoice.skip;
 
@@ -335,10 +334,10 @@ void main() {
         s3SecretKey: 'sk',
         s3Bucket: 'b',
       );
-      deps.ledgers = [_ledger(1, 'L1'), _ledger(2, 'L2')];
+      deps.ledgers = [ledger(1, 'L1'), ledger(2, 'L2')];
       deps.statusByLedger = {
-        1: _status(SyncDiff.inSync),
-        2: _status(SyncDiff.inSync),
+        1: status(SyncDiff.inSync),
+        2: status(SyncDiff.inSync),
       };
       deps.summaryChoice = SummaryChoice.skip;
 
@@ -360,12 +359,12 @@ void main() {
         webdavPassword: 'p',
       );
       deps.ledgers = [
-        _ledger(1, 'L1'),
-        _ledger(2, 'L2'),
-        _ledger(3, 'L3'),
+        ledger(1, 'L1'),
+        ledger(2, 'L2'),
+        ledger(3, 'L3'),
       ];
       deps.statusByLedger = {
-        for (final l in deps.ledgers) l.id: _status(SyncDiff.inSync),
+        for (final l in deps.ledgers) l.id: status(SyncDiff.inSync),
       };
       deps.summaryChoice = SummaryChoice.skip;
 
@@ -391,10 +390,10 @@ void main() {
         s3Bucket: 'b',
       );
       // 一个 cloudNewer 候选：若取消未生效，会弹 HasUpdatesState
-      deps.ledgers = [_ledger(1, 'L1'), _ledger(2, 'L2')];
+      deps.ledgers = [ledger(1, 'L1'), ledger(2, 'L2')];
       deps.statusByLedger = {
-        1: _status(SyncDiff.cloudNewer),
-        2: _status(SyncDiff.cloudNewer),
+        1: status(SyncDiff.cloudNewer),
+        2: status(SyncDiff.cloudNewer),
       };
       deps.getStatusDelay = const Duration(milliseconds: 100);
       deps.summaryChoice = SummaryChoice.skip;
@@ -438,21 +437,21 @@ void main() {
         s3SecretKey: 'sk',
         s3Bucket: 'b',
       );
-      deps.ledgers = [_ledger(1, 'L1'), _ledger(2, 'L2')];
+      deps.ledgers = [ledger(1, 'L1'), ledger(2, 'L2')];
       deps.statusByLedger = {
-        1: _status(SyncDiff.cloudNewer),
-        2: _status(SyncDiff.cloudNewer),
+        1: status(SyncDiff.cloudNewer),
+        2: status(SyncDiff.cloudNewer),
       };
       deps.summaryChoice = SummaryChoice.applyAll;
       deps.previewByLedger = {
         1: (
-          preview: _preview(added: 2, modified: 1),
+          preview: preview(added: 2, modified: 1),
           importData: const ImportData(),
           version: 6,
           cloudFingerprint: null,
         ),
         2: (
-          preview: _preview(deleted: 3),
+          preview: preview(deleted: 3),
           importData: const ImportData(),
           version: 6,
           cloudFingerprint: null,
@@ -473,7 +472,7 @@ void main() {
 
     test('每次 apply 后触发 runAfterDownload', () async {
       deps.previewByLedger[2] = (
-        preview: _preview(deleted: 3, selectDeleted: true),
+        preview: preview(deleted: 3, selectDeleted: true),
         importData: const ImportData(),
         version: 6,
         cloudFingerprint: null,
@@ -485,7 +484,7 @@ void main() {
 
     test('合并成功后对每个账本回传云端（merge-then-publish）', () async {
       deps.previewByLedger[2] = (
-        preview: _preview(deleted: 3, selectDeleted: true),
+        preview: preview(deleted: 3, selectDeleted: true),
         importData: const ImportData(),
         version: 6,
         cloudFingerprint: null,
@@ -499,7 +498,7 @@ void main() {
     test('两阶段：全部账本合并完成后才统一回传（sync_convergence_fix）',
         () async {
       deps.previewByLedger[2] = (
-        preview: _preview(deleted: 3, selectDeleted: true),
+        preview: preview(deleted: 3, selectDeleted: true),
         importData: const ImportData(),
         version: 6,
         cloudFingerprint: null,
@@ -536,7 +535,7 @@ void main() {
     test('S14: 用户拒绝 legacy 全量替换确认 → 跳过该账本不回传', () async {
       deps.previewByLedger = {
         1: (preview: null, importData: const ImportData(), version: 5, cloudFingerprint: null),
-        2: (preview: _preview(added: 1), importData: const ImportData(), version: 6, cloudFingerprint: null),
+        2: (preview: preview(added: 1), importData: const ImportData(), version: 6, cloudFingerprint: null),
       };
       deps.legacyReplaceConfirmReturn = false;
 
@@ -565,8 +564,8 @@ void main() {
 
     test('preview.isEmpty 合并元数据后同样回传', () async {
       deps.previewByLedger = {
-        1: (preview: _preview(), importData: const ImportData(), version: 6, cloudFingerprint: null),
-        2: (preview: _preview(), importData: const ImportData(), version: 6, cloudFingerprint: null),
+        1: (preview: preview(), importData: const ImportData(), version: 6, cloudFingerprint: null),
+        2: (preview: preview(), importData: const ImportData(), version: 6, cloudFingerprint: null),
       };
 
       await checker.runIfNeeded();
@@ -577,7 +576,7 @@ void main() {
     test('回传失败不影响合并结果，汇总提示回传失败', () async {
       deps.uploadThrowForLedgerIds = {1};
       deps.previewByLedger[2] = (
-        preview: _preview(deleted: 3, selectDeleted: true),
+        preview: preview(deleted: 3, selectDeleted: true),
         importData: const ImportData(),
         version: 6,
         cloudFingerprint: null,
@@ -596,7 +595,7 @@ void main() {
     test('云端无数据的账本跳过且不回传', () async {
       // 账本 1 不设 preview → downloadAndPreview 返回 null → 跳过
       deps.previewByLedger = {
-        2: (preview: _preview(added: 1), importData: const ImportData(), version: 6, cloudFingerprint: null),
+        2: (preview: preview(added: 1), importData: const ImportData(), version: 6, cloudFingerprint: null),
       };
 
       await checker.runIfNeeded();
@@ -607,7 +606,7 @@ void main() {
 
     test('最后状态为 DoneState 显示汇总结果', () async {
       deps.previewByLedger[2] = (
-        preview: _preview(deleted: 3, selectDeleted: true),
+        preview: preview(deleted: 3, selectDeleted: true),
         importData: const ImportData(),
         version: 6,
         cloudFingerprint: null,
@@ -632,7 +631,7 @@ void main() {
     test('preview == null 的账本走全量替换', () async {
       deps.previewByLedger = {
         1: (preview: null, importData: const ImportData(), version: 5, cloudFingerprint: null),
-        2: (preview: _preview(added: 1), importData: const ImportData(), version: 6, cloudFingerprint: null),
+        2: (preview: preview(added: 1), importData: const ImportData(), version: 6, cloudFingerprint: null),
       };
 
       await checker.runIfNeeded();
@@ -645,8 +644,8 @@ void main() {
       // 纯账户变更场景：交易 diff 为空，但云端 importData 携带新账户。
       // 旧行为直接 continue 导致账户永远不落库（account_metadata_sync_fix G5）。
       deps.previewByLedger = {
-        1: (preview: _preview(), importData: const ImportData(), version: 6, cloudFingerprint: null),
-        2: (preview: _preview(added: 1), importData: const ImportData(), version: 6, cloudFingerprint: null),
+        1: (preview: preview(), importData: const ImportData(), version: 6, cloudFingerprint: null),
+        2: (preview: preview(added: 1), importData: const ImportData(), version: 6, cloudFingerprint: null),
       };
 
       await checker.runIfNeeded();
@@ -659,8 +658,8 @@ void main() {
 
     test('全部账本 preview.isEmpty 时均合并元数据并计入成功', () async {
       deps.previewByLedger = {
-        1: (preview: _preview(), importData: const ImportData(), version: 6, cloudFingerprint: null),
-        2: (preview: _preview(), importData: const ImportData(), version: 6, cloudFingerprint: null),
+        1: (preview: preview(), importData: const ImportData(), version: 6, cloudFingerprint: null),
+        2: (preview: preview(), importData: const ImportData(), version: 6, cloudFingerprint: null),
       };
 
       await checker.runIfNeeded();
@@ -678,7 +677,7 @@ void main() {
     test('单个账本 apply 抛异常不影响其他账本，最终 DoneState 包含失败计数', () async {
       deps.applyThrowForLedgerIds = {1};
       deps.previewByLedger[2] = (
-        preview: _preview(deleted: 3, selectDeleted: true),
+        preview: preview(deleted: 3, selectDeleted: true),
         importData: const ImportData(),
         version: 6,
         cloudFingerprint: null,
@@ -696,7 +695,7 @@ void main() {
     test('downloadAndPreview 抛异常时该账本计入失败，其他账本继续', () async {
       deps.downloadAndPreviewThrowForLedgerIds = {1};
       deps.previewByLedger[2] = (
-        preview: _preview(deleted: 3, selectDeleted: true),
+        preview: preview(deleted: 3, selectDeleted: true),
         importData: const ImportData(),
         version: 6,
         cloudFingerprint: null,
@@ -721,17 +720,17 @@ void main() {
         s3SecretKey: 'sk',
         s3Bucket: 'b',
       );
-      deps.ledgers = [_ledger(1, 'L1'), _ledger(2, 'L2')];
+      deps.ledgers = [ledger(1, 'L1'), ledger(2, 'L2')];
       deps.summaryChoice = SummaryChoice.applyAll;
       deps.previewByLedger = {
         1: (
-          preview: _preview(added: 1),
+          preview: preview(added: 1),
           importData: const ImportData(),
           version: 6,
           cloudFingerprint: null,
         ),
         2: (
-          preview: _preview(added: 1),
+          preview: preview(added: 1),
           importData: const ImportData(),
           version: 6,
           cloudFingerprint: null,
@@ -741,8 +740,8 @@ void main() {
 
     test('AC-7.6: 全 cloudNewer 不弹二次确认对话框', () async {
       deps.statusByLedger = {
-        1: _status(SyncDiff.cloudNewer),
-        2: _status(SyncDiff.cloudNewer),
+        1: status(SyncDiff.cloudNewer),
+        2: status(SyncDiff.cloudNewer),
       };
       deps.conflictConfirmReturn = true; // 即使返回 true 也不应被调用
 
@@ -756,8 +755,8 @@ void main() {
 
     test('AC-7.4: different 账本不进候选，不弹二次确认，仅 apply cloudNewer', () async {
       deps.statusByLedger = {
-        1: _status(SyncDiff.cloudNewer),
-        2: _status(SyncDiff.different),
+        1: status(SyncDiff.cloudNewer),
+        2: status(SyncDiff.different),
       };
       deps.conflictConfirmReturn = true; // 即使返回 true 也不应被调用
 
@@ -774,8 +773,8 @@ void main() {
 
     test('AC-7.5: 无 different 候选时 applyAll 直接执行，不触发取消回退', () async {
       deps.statusByLedger = {
-        1: _status(SyncDiff.cloudNewer),
-        2: _status(SyncDiff.cloudNewer),
+        1: status(SyncDiff.cloudNewer),
+        2: status(SyncDiff.cloudNewer),
       };
       deps.conflictConfirmReturn = false; // 即使取消也不应被调用
 
@@ -788,27 +787,27 @@ void main() {
     });
 
     test('AC-7.4: 多个 different 账本均不收集，仅 apply cloudNewer 账本', () async {
-      deps.ledgers = [_ledger(1, 'L1'), _ledger(2, 'L2'), _ledger(3, 'L3')];
+      deps.ledgers = [ledger(1, 'L1'), ledger(2, 'L2'), ledger(3, 'L3')];
       deps.statusByLedger = {
-        1: _status(SyncDiff.cloudNewer),
-        2: _status(SyncDiff.different),
-        3: _status(SyncDiff.different),
+        1: status(SyncDiff.cloudNewer),
+        2: status(SyncDiff.different),
+        3: status(SyncDiff.different),
       };
       deps.previewByLedger = {
         1: (
-          preview: _preview(added: 1),
+          preview: preview(added: 1),
           importData: const ImportData(),
           version: 6,
           cloudFingerprint: null,
         ),
         2: (
-          preview: _preview(added: 1),
+          preview: preview(added: 1),
           importData: const ImportData(),
           version: 6,
           cloudFingerprint: null,
         ),
         3: (
-          preview: _preview(added: 1),
+          preview: preview(added: 1),
           importData: const ImportData(),
           version: 6,
           cloudFingerprint: null,
@@ -826,8 +825,8 @@ void main() {
 
     test('AC-7.1/7.2: LedgerCandidate 携带 diffType 字段', () async {
       deps.statusByLedger = {
-        1: _status(SyncDiff.cloudNewer),
-        2: _status(SyncDiff.different),
+        1: status(SyncDiff.cloudNewer),
+        2: status(SyncDiff.different),
       };
       deps.summaryChoice = SummaryChoice.skip; // 不进入 applyAll，只验证候选构建
 
@@ -852,21 +851,21 @@ void main() {
         s3SecretKey: 'sk',
         s3Bucket: 'b',
       );
-      deps.ledgers = [_ledger(1, 'L1'), _ledger(2, 'L2')];
+      deps.ledgers = [ledger(1, 'L1'), ledger(2, 'L2')];
       deps.statusByLedger = {
-        1: _status(SyncDiff.cloudNewer),
-        2: _status(SyncDiff.cloudNewer),
+        1: status(SyncDiff.cloudNewer),
+        2: status(SyncDiff.cloudNewer),
       };
       deps.summaryChoice = SummaryChoice.confirmEach;
       deps.previewByLedger = {
         1: (
-          preview: _preview(added: 2),
+          preview: preview(added: 2),
           importData: const ImportData(),
           version: 6,
           cloudFingerprint: null,
         ),
         2: (
-          preview: _preview(modified: 1),
+          preview: preview(modified: 1),
           importData: const ImportData(),
           version: 6,
           cloudFingerprint: null,
@@ -908,14 +907,14 @@ void main() {
       // 云端快照删除了 1 笔本地交易；用户在预览弹窗只勾选新增、未勾选删除
       deps.previewByLedger = {
         1: (
-          preview: _preview(added: 1, deleted: 1),
+          preview: preview(added: 1, deleted: 1),
           importData: const ImportData(),
           version: 6,
           cloudFingerprint: null,
         ),
       };
-      deps.ledgers = [_ledger(1, 'L1')];
-      deps.statusByLedger = {1: _status(SyncDiff.cloudNewer)};
+      deps.ledgers = [ledger(1, 'L1')];
+      deps.statusByLedger = {1: status(SyncDiff.cloudNewer)};
       deps.perLedgerChoice = LedgerDialogChoice.viewDetail;
       // 模拟弹窗返回：仅返回用户勾选的 added（deleted 保持未勾选）
       deps.syncPreviewReturn = [SyncChange(type: SyncChangeType.added)];
@@ -934,14 +933,14 @@ void main() {
           SyncChange(type: SyncChangeType.deleted, selected: true);
       deps.previewByLedger = {
         1: (
-          preview: _preview(added: 1, deleted: 1, selectDeleted: true),
+          preview: preview(added: 1, deleted: 1, selectDeleted: true),
           importData: const ImportData(),
           version: 6,
           cloudFingerprint: null,
         ),
       };
-      deps.ledgers = [_ledger(1, 'L1')];
-      deps.statusByLedger = {1: _status(SyncDiff.cloudNewer)};
+      deps.ledgers = [ledger(1, 'L1')];
+      deps.statusByLedger = {1: status(SyncDiff.cloudNewer)};
       deps.perLedgerChoice = LedgerDialogChoice.viewDetail;
       // 弹窗把勾选实例原样返回（真实实现为 changes.where(selected)）
       deps.syncPreviewReturn = [
@@ -978,8 +977,8 @@ void main() {
       // 纯账户变更：交易 diff 为空时逐账本对话框只会展示空列表（无意义），
       // 应静默走空变更 apply 完成元数据合并（account_metadata_sync_fix G5'）
       deps.previewByLedger = {
-        1: (preview: _preview(), importData: const ImportData(), version: 6, cloudFingerprint: null),
-        2: (preview: _preview(added: 1), importData: const ImportData(), version: 6, cloudFingerprint: null),
+        1: (preview: preview(), importData: const ImportData(), version: 6, cloudFingerprint: null),
+        2: (preview: preview(added: 1), importData: const ImportData(), version: 6, cloudFingerprint: null),
       };
       deps.perLedgerChoice = LedgerDialogChoice.viewDetail;
       deps.syncPreviewReturn = [SyncChange(type: SyncChangeType.added)];
@@ -1056,8 +1055,8 @@ void main() {
         s3SecretKey: 'sk',
         s3Bucket: 'b',
       );
-      deps.ledgers = [_ledger(1, 'L1')];
-      deps.statusByLedger = {1: _status(SyncDiff.cloudNewer)};
+      deps.ledgers = [ledger(1, 'L1')];
+      deps.statusByLedger = {1: status(SyncDiff.cloudNewer)};
       deps.summaryChoice = SummaryChoice.skip;
 
       await checker.runIfNeeded();
@@ -1082,8 +1081,8 @@ void main() {
         s3SecretKey: 'sk',
         s3Bucket: 'b',
       );
-      deps.ledgers = [_ledger(1, 'L1')];
-      deps.statusByLedger = {1: _status(SyncDiff.cloudNewer)};
+      deps.ledgers = [ledger(1, 'L1')];
+      deps.statusByLedger = {1: status(SyncDiff.cloudNewer)};
       deps.summaryChoice = SummaryChoice.skip;
 
       await checker.runIfNeeded();
@@ -1105,7 +1104,7 @@ void main() {
         s3SecretKey: 'sk',
         s3Bucket: 'b',
       );
-      deps.ledgers = [_ledger(1, 'L1')];
+      deps.ledgers = [ledger(1, 'L1')];
       deps.summaryChoice = SummaryChoice.skip;
     });
 
@@ -1121,7 +1120,7 @@ void main() {
       };
       // handleSaltMismatch 返回 activated（激活成功），并把状态改为 cloudNewer
       deps.handleSaltMismatchReturn = SaltMismatchRecoveryResult.activated;
-      deps.statusAfterSaltMismatch = _status(SyncDiff.cloudNewer);
+      deps.statusAfterSaltMismatch = status(SyncDiff.cloudNewer);
 
       // Act
       await checker.runIfNeeded();
@@ -1257,7 +1256,7 @@ void main() {
   });
 
   group('云端账本发现（/prd/remote_ledger_discovery）', () {
-    RemoteLedgerMeta _meta(int id, String name, {int txCount = 3}) =>
+    RemoteLedgerMeta meta(int id, String name, {int txCount = 3}) =>
         RemoteLedgerMeta(
           slotKey: id.toString(),
           name: name,
@@ -1278,9 +1277,9 @@ void main() {
     });
 
     test('US-1/US-2: 发现新账本 → 弹确认 → 导入 → 重新拉取账本继续检查', () async {
-      deps.ledgers = [_ledger(1, 'L1')];
-      deps.statusByLedger = {1: _status(SyncDiff.inSync), 2: _status(SyncDiff.inSync)};
-      deps.remoteLedgerMetas = [_meta(2, 'Remote')];
+      deps.ledgers = [ledger(1, 'L1')];
+      deps.statusByLedger = {1: status(SyncDiff.inSync), 2: status(SyncDiff.inSync)};
+      deps.remoteLedgerMetas = [meta(2, 'Remote')];
       deps.newLedgersConfirmReturn = true;
 
       await checker.runIfNeeded();
@@ -1296,9 +1295,9 @@ void main() {
     });
 
     test('US-2: 用户选择跳过时不导入，原检查流程照常', () async {
-      deps.ledgers = [_ledger(1, 'L1')];
-      deps.statusByLedger = {1: _status(SyncDiff.inSync)};
-      deps.remoteLedgerMetas = [_meta(2, 'Remote')];
+      deps.ledgers = [ledger(1, 'L1')];
+      deps.statusByLedger = {1: status(SyncDiff.inSync)};
+      deps.remoteLedgerMetas = [meta(2, 'Remote')];
       deps.newLedgersConfirmReturn = false;
 
       await checker.runIfNeeded();
@@ -1308,8 +1307,8 @@ void main() {
     });
 
     test('US-3: discover 抛异常时静默降级，不阻塞原检查', () async {
-      deps.ledgers = [_ledger(1, 'L1')];
-      deps.statusByLedger = {1: _status(SyncDiff.cloudNewer)};
+      deps.ledgers = [ledger(1, 'L1')];
+      deps.statusByLedger = {1: status(SyncDiff.cloudNewer)};
       deps.discoverThrow = Exception('list failed');
       deps.summaryChoice = SummaryChoice.skip;
 
@@ -1322,9 +1321,9 @@ void main() {
     });
 
     test('US-3: 单个账本导入失败不影响其他账本', () async {
-      deps.ledgers = [_ledger(1, 'L1')];
-      deps.statusByLedger = {1: _status(SyncDiff.inSync)};
-      deps.remoteLedgerMetas = [_meta(2, 'A'), _meta(3, 'B')];
+      deps.ledgers = [ledger(1, 'L1')];
+      deps.statusByLedger = {1: status(SyncDiff.inSync)};
+      deps.remoteLedgerMetas = [meta(2, 'A'), meta(3, 'B')];
       deps.importThrowForSlotKeys = {'2'};
 
       await checker.runIfNeeded();
@@ -1337,7 +1336,7 @@ void main() {
 
     test('US-1: 本地零账本的全新设备也能发现云端账本', () async {
       deps.ledgers = [];
-      deps.remoteLedgerMetas = [_meta(1, 'Only')];
+      deps.remoteLedgerMetas = [meta(1, 'Only')];
       deps.newLedgersConfirmReturn = true;
 
       await checker.runIfNeeded();
@@ -1366,7 +1365,7 @@ void main() {
         s3SecretKey: 'sk',
         s3Bucket: 'b',
       );
-      deps.ledgers = [_ledger(1, 'L1')];
+      deps.ledgers = [ledger(1, 'L1')];
       deps.statusByLedger = {
         1: const SyncStatus(
             diff: SyncDiff.inSync, localCount: 0, localFingerprint: 'fp'),
@@ -1393,7 +1392,7 @@ void main() {
         webdavUsername: 'u',
         webdavPassword: 'p',
       );
-      deps.ledgers = [_ledger(1, 'L1')];
+      deps.ledgers = [ledger(1, 'L1')];
       deps.statusThrowForLedgerIds = {1};
 
       await checker.runIfNeeded();
@@ -1413,7 +1412,7 @@ void main() {
         s3SecretKey: 'sk',
         s3Bucket: 'b',
       );
-      deps.ledgers = [_ledger(1, 'L1')];
+      deps.ledgers = [ledger(1, 'L1')];
       deps.statusByLedger = {
         1: const SyncStatus(
             diff: SyncDiff.different, localCount: 1, localFingerprint: 'a'),
@@ -1436,7 +1435,7 @@ void main() {
         s3SecretKey: 'sk',
         s3Bucket: 'b',
       );
-      deps.ledgers = [_ledger(1, 'L1')];
+      deps.ledgers = [ledger(1, 'L1')];
       deps.statusByLedger = {
         1: const SyncStatus(
             diff: SyncDiff.cloudNewer, localCount: 0, localFingerprint: 'fp'),
@@ -1459,7 +1458,7 @@ void main() {
         s3SecretKey: 'sk',
         s3Bucket: 'b',
       );
-      deps.ledgers = [_ledger(1, 'L1')];
+      deps.ledgers = [ledger(1, 'L1')];
       deps.statusByLedger = {
         1: const SyncStatus(
             diff: SyncDiff.inSync, localCount: 0, localFingerprint: 'fp'),
@@ -1472,7 +1471,7 @@ void main() {
   });
 
   group('同名多槽位甄别（两次实测 §4.2 改进点）', () {
-    RemoteLedgerMeta _m(String slotKey, String name,
+    RemoteLedgerMeta m(String slotKey, String name,
             {int txCount = 10, DateTime? uploadedAt}) =>
         RemoteLedgerMeta(
           slotKey: slotKey,
@@ -1485,16 +1484,16 @@ void main() {
 
     test('无同名（各名唯一）→ 无警示组', () {
       final metas = [
-        _m('aaa', 'A'),
-        _m('bbb', 'B'),
+        m('aaa', 'A'),
+        m('bbb', 'B'),
       ];
       expect(StartupSyncChecker.duplicateNameGroups(metas), isEmpty);
     });
 
     test('同名 2 槽位 → 分组返回且按 uploadedAt 新者在前', () {
-      final older = _m('slot-old', '回忆',
+      final older = m('slot-old', '回忆',
           txCount: 800, uploadedAt: DateTime(2026, 9, 1, 10, 0));
-      final newer = _m('slot-new', '回忆',
+      final newer = m('slot-new', '回忆',
           txCount: 1001, uploadedAt: DateTime(2026, 9, 10, 23, 0));
       final groups = StartupSyncChecker.duplicateNameGroups([older, newer]);
 
@@ -1506,11 +1505,11 @@ void main() {
 
     test('多个名称各自分组，互不混并；单槽位名称不警示', () {
       final groups = StartupSyncChecker.duplicateNameGroups([
-        _m('a1', 'X', uploadedAt: DateTime(2026, 9, 5)),
-        _m('a2', 'X', uploadedAt: DateTime(2026, 9, 6)),
-        _m('b1', 'Y', uploadedAt: DateTime(2026, 9, 1)),
-        _m('b2', 'Y', uploadedAt: DateTime(2026, 9, 2)),
-        _m('c1', 'Z'),
+        m('a1', 'X', uploadedAt: DateTime(2026, 9, 5)),
+        m('a2', 'X', uploadedAt: DateTime(2026, 9, 6)),
+        m('b1', 'Y', uploadedAt: DateTime(2026, 9, 1)),
+        m('b2', 'Y', uploadedAt: DateTime(2026, 9, 2)),
+        m('c1', 'Z'),
       ]);
       expect(groups.keys, containsAll(['X', 'Y']));
       expect(groups.containsKey('Z'), isFalse, reason: '单槽位名称不警示');
@@ -1519,8 +1518,8 @@ void main() {
     });
 
     test('uploadedAt 为 null 的槽位排在有值之后（DateTime(0) 兜底）', () {
-      final noTime = _m('n1', 'D');
-      final hasTime = _m('n2', 'D', uploadedAt: DateTime(2020, 1, 1));
+      final noTime = m('n1', 'D');
+      final hasTime = m('n2', 'D', uploadedAt: DateTime(2020, 1, 1));
       final groups = StartupSyncChecker.duplicateNameGroups([noTime, hasTime]);
       // null 兜底为 DateTime(0)，比任何真实时间都旧 → 排后
       expect(groups['D']!.first.slotKey, 'n2');
@@ -1528,10 +1527,10 @@ void main() {
 
     test('组名顺序按发现序稳定（首个出现的名称先输出）', () {
       final groups = StartupSyncChecker.duplicateNameGroups([
-        _m('y1', 'B', uploadedAt: DateTime(2026, 9, 1)),
-        _m('y2', 'B', uploadedAt: DateTime(2026, 9, 2)),
-        _m('x1', 'A', uploadedAt: DateTime(2026, 9, 1)),
-        _m('x2', 'A', uploadedAt: DateTime(2026, 9, 2)),
+        m('y1', 'B', uploadedAt: DateTime(2026, 9, 1)),
+        m('y2', 'B', uploadedAt: DateTime(2026, 9, 2)),
+        m('x1', 'A', uploadedAt: DateTime(2026, 9, 1)),
+        m('x2', 'A', uploadedAt: DateTime(2026, 9, 2)),
       ]);
       expect(groups.keys, ['B', 'A'],
           reason: '按首次出现顺序，与弹窗展示顺序一致');

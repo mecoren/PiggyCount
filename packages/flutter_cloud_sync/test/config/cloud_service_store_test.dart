@@ -10,7 +10,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
-import 'package:flutter_cloud_sync/src/config/cloud_service_store.dart';
 
 /// 模拟 keystore 损坏：write 永远抛异常、read 返回 null。
 class _BrokenSecureStorage extends FlutterSecureStorage {

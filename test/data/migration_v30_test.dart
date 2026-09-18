@@ -5,6 +5,7 @@
 /// in-memory db 由 create_all 建出 v30 全 schema,这里用「插 NULL 行 +
 /// 执行 onUpgrade 里同一段回填 SQL」验证语义(SQL 与 db.dart v30 迁移块
 /// 保持一字不差,改一处必须同步另一处)。
+library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
 

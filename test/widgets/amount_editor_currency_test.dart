@@ -2,6 +2,7 @@
 ///   - 单币种态(无账户,未选币种):只有轻量币种标(=本位币),无汇率行
 ///   - 编辑外币交易:汇率行出现,初值=隐含汇率(nativeAmount/amount),
 ///     折算预览按隐含汇率(改备注不漂移)
+library;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +12,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:piggycount/data/db.dart';
 import 'package:piggycount/data/repositories/local/local_repository.dart';
 import 'package:piggycount/l10n/app_localizations.dart';
-import 'package:piggycount/providers/currency_providers.dart';
 import 'package:piggycount/providers/database_providers.dart';
 import 'package:piggycount/widgets/biz/amount_editor_sheet.dart';
 

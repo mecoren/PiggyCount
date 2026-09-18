@@ -796,6 +796,5 @@ class _RemoteEntry {
 /// 供未来调用方精确识别「内容在、元数据缺」场景（如维护页提示补建
 /// file_metadata 表），当前生产代码不再依赖其上抛语义。
 class MetadataPersistFailedException extends CloudStorageException {
-  MetadataPersistFailedException(String message, [Object? cause])
-      : super(message, cause);
+  MetadataPersistFailedException(super.message, [Object? super.cause]);
 }

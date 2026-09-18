@@ -1,7 +1,7 @@
 /// 本地孤儿数据清理 — 数据模型。
 ///
 /// `OrphanScanner` 扫出来的每条异常对应一个 `OrphanRecord`。`OrphanCleaner`
-/// 接 List<OrphanRecord> 按 `type` dispatch 到具体删除分支。UI 层按 type
+/// 接 `List<OrphanRecord>` 按 `type` dispatch 到具体删除分支。UI 层按 type
 /// 分组显示、按 record 勾选。
 ///
 /// type 枚举跟 plan 文件里的 A1..A10 / B1..B3 / C1 一一对应,后续加新检测

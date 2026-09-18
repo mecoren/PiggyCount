@@ -1,5 +1,6 @@
 /// computeNativeAmount(交易级多币种):amount × rate(1 账户币种 = rate 本位币)。
 /// 同币种 → amount;缺失/非法 rate → null(L8 红线,绝不静默 1.0)。
+library;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:piggycount/services/currency/rate_math.dart';

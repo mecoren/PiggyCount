@@ -2,6 +2,7 @@
 ///   - 导入到本位币账户/无账户 → currencyCode=本位币, nativeAmount=amount
 ///   - 导入到外币账户 → currencyCode=账户币种, nativeAmount=折算(有汇率)
 ///     或 =amount(无汇率,命中 L11 检测),**不落 NULL**
+library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/drift.dart' show OrderingTerm;
 import 'package:drift/native.dart';

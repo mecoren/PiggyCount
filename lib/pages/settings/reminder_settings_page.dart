@@ -22,7 +22,7 @@ class ReminderSettingsPage extends ConsumerWidget {
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
       appBar: PiggyTitleBar(
-        title: AppLocalizations.of(context)!.reminderTitle,
+        title: AppLocalizations.of(context).reminderTitle,
         showBack: true,
       ),
       body: ListView(
@@ -39,8 +39,8 @@ class ReminderSettingsPage extends ConsumerWidget {
               // 提醒开关
               SettingsToggleItem(
                 icon: Icons.notifications_active_outlined,
-                title: AppLocalizations.of(context)!.reminderDailyTitle,
-                subtitle: AppLocalizations.of(context)!.reminderDailySubtitle,
+                title: AppLocalizations.of(context).reminderDailyTitle,
+                subtitle: AppLocalizations.of(context).reminderDailySubtitle,
                 value: reminderSettings.isEnabled,
                 onChanged: (value) {
                   ref
@@ -51,7 +51,7 @@ class ReminderSettingsPage extends ConsumerWidget {
               // 提醒时间设置
               SettingsNavItem(
                 icon: Icons.access_time_rounded,
-                title: AppLocalizations.of(context)!.reminderTimeTitle,
+                title: AppLocalizations.of(context).reminderTimeTitle,
                 subtitle: reminderSettings.timeString,
                 onTap: () async {
                   final selectedTime = await showWheelTimePicker(
@@ -88,12 +88,12 @@ class ReminderSettingsPage extends ConsumerWidget {
                           NotificationFactory.getInstance();
                       await notificationUtil.showNotification(
                         id: 9999,
-                        title: AppLocalizations.of(context)!.reminderTestTitle,
-                        body: AppLocalizations.of(context)!.reminderTestBody,
+                        title: AppLocalizations.of(context).reminderTestTitle,
+                        body: AppLocalizations.of(context).reminderTestBody,
                       );
                       if (context.mounted) {
                         showToast(context,
-                            AppLocalizations.of(context)!.reminderTestSent);
+                            AppLocalizations.of(context).reminderTestSent);
                       }
                     },
                     style: ElevatedButton.styleFrom(
@@ -106,7 +106,7 @@ class ReminderSettingsPage extends ConsumerWidget {
                       ),
                     ),
                     child: Text(
-                      AppLocalizations.of(context)!.reminderTestNotification,
+                      AppLocalizations.of(context).reminderTestNotification,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
@@ -138,29 +138,29 @@ class ReminderSettingsPage extends ConsumerWidget {
                           showDialog(
                             context: context,
                             builder: (context) => AlertDialog(
-                              title: Text(AppLocalizations.of(context)!
+                              title: Text(AppLocalizations.of(context)
                                   .reminderBatteryStatus),
                               content: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(AppLocalizations.of(context)!
+                                  Text(AppLocalizations.of(context)
                                       .reminderManufacturer(
                                           batteryInfo['manufacturer'] ??
                                               'Unknown')),
-                                  Text(AppLocalizations.of(context)!
+                                  Text(AppLocalizations.of(context)
                                       .reminderModel(
                                           batteryInfo['model'] ?? 'Unknown')),
-                                  Text(AppLocalizations.of(context)!
+                                  Text(AppLocalizations.of(context)
                                       .reminderAndroidVersion(
                                           batteryInfo['androidVersion'] ??
                                               'Unknown')),
                                   const SizedBox(height: 8),
                                   Text(
                                     (batteryInfo['isIgnoring'] == true)
-                                        ? AppLocalizations.of(context)!
+                                        ? AppLocalizations.of(context)
                                             .reminderBatteryIgnored
-                                        : AppLocalizations.of(context)!
+                                        : AppLocalizations.of(context)
                                             .reminderBatteryNotIgnored,
                                     style: TextStyle(
                                       color: (batteryInfo['isIgnoring'] == true)
@@ -172,7 +172,7 @@ class ReminderSettingsPage extends ConsumerWidget {
                                   if (batteryInfo['isIgnoring'] != true) ...[
                                     const SizedBox(height: 8),
                                     Text(
-                                      AppLocalizations.of(context)!
+                                      AppLocalizations.of(context)
                                           .reminderBatteryAdvice,
                                       style: const TextStyle(
                                           fontSize: 12, color: Colors.red),
@@ -192,12 +192,12 @@ class ReminderSettingsPage extends ConsumerWidget {
                                       await androidUtil
                                           .requestIgnoreBatteryOptimizations();
                                     },
-                                    child: Text(AppLocalizations.of(context)!
+                                    child: Text(AppLocalizations.of(context)
                                         .commonSettings),
                                   ),
                                 TextButton(
                                   onPressed: () => Navigator.of(context).pop(),
-                                  child: Text(AppLocalizations.of(context)!
+                                  child: Text(AppLocalizations.of(context)
                                       .commonConfirm),
                                 ),
                               ],
@@ -213,7 +213,7 @@ class ReminderSettingsPage extends ConsumerWidget {
                         ),
                       ),
                       child: Text(
-                        AppLocalizations.of(context)!.reminderCheckBattery,
+                        AppLocalizations.of(context).reminderCheckBattery,
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
@@ -238,36 +238,36 @@ class ReminderSettingsPage extends ConsumerWidget {
                           showDialog(
                             context: context,
                             builder: (context) => AlertDialog(
-                              title: Text(AppLocalizations.of(context)!
+                              title: Text(AppLocalizations.of(context)
                                   .reminderChannelStatus),
                               content: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text((channelInfo['isEnabled'] == true)
-                                      ? AppLocalizations.of(context)!
+                                      ? AppLocalizations.of(context)
                                           .reminderChannelEnabled
-                                      : AppLocalizations.of(context)!
+                                      : AppLocalizations.of(context)
                                           .reminderChannelDisabled),
-                                  Text(AppLocalizations.of(context)!
+                                  Text(AppLocalizations.of(context)
                                       .reminderChannelImportance(
                                           channelInfo['importance'] ??
                                               'unknown')),
                                   Text((channelInfo['sound'] == true)
-                                      ? AppLocalizations.of(context)!
+                                      ? AppLocalizations.of(context)
                                           .reminderChannelSoundOn
-                                      : AppLocalizations.of(context)!
+                                      : AppLocalizations.of(context)
                                           .reminderChannelSoundOff),
                                   Text((channelInfo['vibration'] == true)
-                                      ? AppLocalizations.of(context)!
+                                      ? AppLocalizations.of(context)
                                           .reminderChannelVibrationOn
-                                      : AppLocalizations.of(context)!
+                                      : AppLocalizations.of(context)
                                           .reminderChannelVibrationOff),
                                   if (channelInfo['bypassDnd'] != null)
                                     Text((channelInfo['bypassDnd'] == true)
-                                        ? AppLocalizations.of(context)!
+                                        ? AppLocalizations.of(context)
                                             .reminderChannelDndBypass
-                                        : AppLocalizations.of(context)!
+                                        : AppLocalizations.of(context)
                                             .reminderChannelDndNoBypass),
                                   const SizedBox(height: 8),
                                   if (channelInfo['isEnabled'] != true ||
@@ -275,23 +275,23 @@ class ReminderSettingsPage extends ConsumerWidget {
                                       channelInfo['importance'] == 'min' ||
                                       channelInfo['importance'] == 'low') ...[
                                     Text(
-                                      AppLocalizations.of(context)!
+                                      AppLocalizations.of(context)
                                           .reminderChannelAdvice,
                                       style: const TextStyle(
                                           fontWeight: FontWeight.bold,
                                           color: Colors.orange),
                                     ),
-                                    Text(AppLocalizations.of(context)!
+                                    Text(AppLocalizations.of(context)
                                         .reminderChannelAdviceImportance),
-                                    Text(AppLocalizations.of(context)!
+                                    Text(AppLocalizations.of(context)
                                         .reminderChannelAdviceSound),
-                                    Text(AppLocalizations.of(context)!
+                                    Text(AppLocalizations.of(context)
                                         .reminderChannelAdviceBanner),
-                                    Text(AppLocalizations.of(context)!
+                                    Text(AppLocalizations.of(context)
                                         .reminderChannelAdviceXiaomi),
                                   ] else ...[
                                     Text(
-                                      AppLocalizations.of(context)!
+                                      AppLocalizations.of(context)
                                           .reminderChannelGood,
                                       style: const TextStyle(
                                           color: Colors.green,
@@ -310,12 +310,12 @@ class ReminderSettingsPage extends ConsumerWidget {
                                     await androidUtil
                                         .openNotificationChannelSettings();
                                   },
-                                  child: Text(AppLocalizations.of(context)!
+                                  child: Text(AppLocalizations.of(context)
                                       .commonSettings),
                                 ),
                                 TextButton(
                                   onPressed: () => Navigator.of(context).pop(),
-                                  child: Text(AppLocalizations.of(context)!
+                                  child: Text(AppLocalizations.of(context)
                                       .commonConfirm),
                                 ),
                               ],
@@ -331,7 +331,7 @@ class ReminderSettingsPage extends ConsumerWidget {
                         ),
                       ),
                       child: Text(
-                        AppLocalizations.of(context)!.reminderCheckChannel,
+                        AppLocalizations.of(context).reminderCheckChannel,
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
@@ -354,7 +354,7 @@ class ReminderSettingsPage extends ConsumerWidget {
                         if (context.mounted) {
                           showToast(
                               context,
-                              AppLocalizations.of(context)!
+                              AppLocalizations.of(context)
                                   .reminderAppSettingsMessage);
                         }
                       },
@@ -366,7 +366,7 @@ class ReminderSettingsPage extends ConsumerWidget {
                         ),
                       ),
                       child: Text(
-                        AppLocalizations.of(context)!.reminderOpenAppSettings,
+                        AppLocalizations.of(context).reminderOpenAppSettings,
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
@@ -397,7 +397,7 @@ class ReminderSettingsPage extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  AppLocalizations.of(context)!.reminderDescription,
+                  AppLocalizations.of(context).reminderDescription,
                   style: TextStyle(
                     fontSize: 13,
                     color: PiggyTokens.textSecondary(context),
@@ -407,8 +407,8 @@ class ReminderSettingsPage extends ConsumerWidget {
                 const SizedBox(height: 8),
                 Text(
                   Platform.isIOS
-                      ? AppLocalizations.of(context)!.reminderIOSInstructions
-                      : AppLocalizations.of(context)!
+                      ? AppLocalizations.of(context).reminderIOSInstructions
+                      : AppLocalizations.of(context)
                           .reminderAndroidInstructions,
                   style: PiggyTextTokens.label(context).copyWith(
                       color: PiggyTokens.textTertiary(context), height: 1.4),

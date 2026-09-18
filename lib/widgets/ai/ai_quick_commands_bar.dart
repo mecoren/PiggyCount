@@ -82,32 +82,10 @@ class _QuickCommandCard extends ConsumerWidget {
     }
   }
 
-  String? _getDescription() {
-    if (command.descriptionKey == null) return null;
-
-    switch (command.descriptionKey) {
-      case 'aiQuickCommandFinancialHealthDesc':
-        return l10n.aiQuickCommandFinancialHealthDesc;
-      case 'aiQuickCommandMonthlyExpenseDesc':
-        return l10n.aiQuickCommandMonthlyExpenseDesc;
-      case 'aiQuickCommandCategoryAnalysisDesc':
-        return l10n.aiQuickCommandCategoryAnalysisDesc;
-      case 'aiQuickCommandBudgetPlanningDesc':
-        return l10n.aiQuickCommandBudgetPlanningDesc;
-      case 'aiQuickCommandAbnormalExpenseDesc':
-        return l10n.aiQuickCommandAbnormalExpenseDesc;
-      case 'aiQuickCommandSavingTipsDesc':
-        return l10n.aiQuickCommandSavingTipsDesc;
-      default:
-        return command.descriptionKey;
-    }
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = PiggyTokens.isDark(context);
     final title = _getTitle();
-    final description = _getDescription();
 
     return Material(
       color: PiggyTokens.surface(context),

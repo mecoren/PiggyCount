@@ -144,8 +144,15 @@ Future<void> main() async {
   // 分批读文件算哈希,补齐后退化为空查询;失败不致命,下次启动自愈。
   unawaited(_runAttachmentShaBackfillOnce(container));
 
-  runApp(ProviderScope(
-    parent: container,
+  // 直接把 main() 自建的 container 交给 widget 树，而不是
+  // `ProviderScope(parent: container)` ——
+  // 后者会在 State.initState 里再 `ProviderContainer(parent: container)` 建一个
+  // **子容器**，于是：① widget 侧与后台任务（本文件里传 container 的那几条链）
+  // 读写的是两份独立 state；② 子容器未继承 `observers`，`_WidgetUpdateObserver`
+  // 只看得见后台侧。`UncontrolledProviderScope` 是 ProviderScope 内部实际
+  // 使用的同一组件，容器生命周期由本函数持有（与 App 同寿），语义一致。
+  runApp(UncontrolledProviderScope(
+    container: container,
     child: const MainApp(),
   ));
 }

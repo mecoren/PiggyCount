@@ -8,6 +8,7 @@
 /// 1. 快照携带 syncId 时回写本地行（新导入 / 覆盖本地已有身份）；
 /// 2. 行已存在且 syncId 一致时幂等不重写；
 /// 3. rate 存储口径与导出端一致（'7.1' 而非 '7.100000'，#4 统一）。
+library;
 import 'package:drift/drift.dart' as d;
 import 'package:drift/native.dart';import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -41,7 +42,7 @@ void main() {
   }
 
   // ignore: unused_element
-  Future<List<ExchangeRateOverride>> _allOverrides() =>
+  Future<List<ExchangeRateOverride>> allOverrides() =>
       (db.select(db.exchangeRateOverrides)
             ..orderBy([(t) => d.OrderingTerm.asc(t.id)]))
           .get();

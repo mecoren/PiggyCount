@@ -4,6 +4,7 @@
 ///   - updateTransaction 联动(与 Cloud merge/mutator L14 同规则):不传两字段
 ///     且 amount 变了 → 按隐含汇率联动;改备注不动快照
 ///   - recompute/recalc/count:补折算/全量重算/检测,逐笔记 change(L13)
+library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
 import 'package:shared_preferences/shared_preferences.dart';

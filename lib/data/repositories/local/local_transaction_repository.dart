@@ -1043,8 +1043,10 @@ class LocalTransactionRepository implements TransactionRepository {
     for (final row in results) {
       final date = row.read<String?>('date');
       if (date == null) continue; // 跳过null日期
-      final income = row.read<double>('income') ?? 0.0;
-      final expense = row.read<double>('expense') ?? 0.0;
+      // SQL 聚合值为 NULL（该日无收入/支出）时兜 0，而不是让非空
+      // `read<double>` 直接抛类型错误。
+      final income = row.read<double?>('income') ?? 0.0;
+      final expense = row.read<double?>('expense') ?? 0.0;
       map[date] = (income, expense);
     }
 
@@ -1211,7 +1213,9 @@ class LocalTransactionRepository implements TransactionRepository {
       final list = await (db.select(db.sharedLedgerCategories)
             ..where((t) => t.syncId.isIn(catSyncIds.toList())))
           .get();
-      for (final s in list) sharedCatBySyncId[s.syncId] = s;
+      for (final s in list) {
+        sharedCatBySyncId[s.syncId] = s;
+      }
     }
 
     // 批量查共享账户
@@ -1220,7 +1224,9 @@ class LocalTransactionRepository implements TransactionRepository {
       final list = await (db.select(db.sharedLedgerAccounts)
             ..where((t) => t.syncId.isIn(accSyncIds.toList())))
           .get();
-      for (final s in list) sharedAccBySyncId[s.syncId] = s;
+      for (final s in list) {
+        sharedAccBySyncId[s.syncId] = s;
+      }
     }
 
     // 批量查 tag overrides + shared tags
@@ -1240,7 +1246,9 @@ class LocalTransactionRepository implements TransactionRepository {
         final sharedTags = await (db.select(db.sharedLedgerTags)
               ..where((t) => t.syncId.isIn(tagSids)))
             .get();
-        for (final s in sharedTags) sharedTagBySyncId[s.syncId] = s;
+        for (final s in sharedTags) {
+          sharedTagBySyncId[s.syncId] = s;
+        }
       }
     }
 

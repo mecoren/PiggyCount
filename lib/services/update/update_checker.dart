@@ -187,10 +187,10 @@ class UpdateChecker {
   /// 从 GitHub Release assets 列表里挑出适配当前设备的 APK。
   ///
   /// v3.2.1 起 Release 含多个按 ABI 拆分的 APK:
-  ///   - piggycount-<ver>.apk             主分发(arm64-v8a,99% 现役真机)
-  ///   - piggycount-<ver>-armeabi-v7a.apk armv7 老 32-bit 设备
-  ///   - piggycount-<ver>-x86_64.apk      Intel/Win/Linux 模拟器
-  ///   - piggycount-<ver>-universal.apk   三 ABI 全打,兜底
+  ///   - `piggycount-<ver>.apk`             主分发(arm64-v8a,99% 现役真机)
+  ///   - `piggycount-<ver>-armeabi-v7a.apk` armv7 老 32-bit 设备
+  ///   - `piggycount-<ver>-x86_64.apk`      Intel/Win/Linux 模拟器
+  ///   - `piggycount-<ver>-universal.apk`   三 ABI 全打,兜底
   ///
   /// 历史 bug:之前 `endsWith('.apk') break` 取第一个,因 GitHub assets 按
   /// 字母序排列,第一个就是 `-armeabi-v7a.apk` — arm64 真机装上跑 32-bit 兼容

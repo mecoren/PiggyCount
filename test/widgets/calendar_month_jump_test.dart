@@ -6,6 +6,7 @@
 ///     TableCalendar 的 firstDay/lastDay 绑同一份 —— 否则跳到下界之前会踩
 ///     table_calendar_base.dart:77 的 assert
 ///   - 跳月语义与滑动切月(_onPageChanged)一致:清空选中日 → 下方当日交易列表收起
+library;
 import 'package:drift/native.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';

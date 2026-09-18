@@ -8,7 +8,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../providers.dart';
-import '../../providers/currency_providers.dart';
 import '../../models/ledger_display_item.dart';
 import '../../cloud/transactions_sync_manager.dart';
 import '../../cloud/sync_service.dart';
@@ -324,81 +323,6 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
         ],
 
         SizedBox(height: 60.0.scaled(context, ref)),
-      ],
-    );
-  }
-
-  /// 构建账本列表（旧版，保留用于兼容）
-  Widget _buildLedgerList(
-    BuildContext context,
-    WidgetRef ref,
-    List<LedgerDisplayItem> ledgers,
-    int? currentId, {
-    bool showLoadingOverlay = false,
-  }) {
-    // 分组：本地账本 vs 远程账本
-    final localLedgers = ledgers.where((l) => !l.isRemoteOnly).toList();
-    final remoteLedgers = ledgers.where((l) => l.isRemoteOnly).toList();
-
-    return Stack(
-      children: [
-        ListView(
-          padding: EdgeInsets.symmetric(
-            vertical: 8.0.scaled(context, ref),
-          ),
-          children: [
-            // 账本区域
-            if (localLedgers.isNotEmpty) ...[
-              _SectionHeader(
-                title: AppLocalizations.of(context).ledgersLocal,
-                trailing: localLedgers.length.toString(),
-              ),
-              ...localLedgers.map((ledger) => LedgerCard(
-                    ledger: ledger,
-                    selected: !ledger.isRemoteOnly && ledger.id == currentId,
-                    onTap: () => _handleLocalLedgerTap(ledger),
-                    onLongPress: () => _showLocalLedgerActions(context, ledger),
-                    onMore: () => _showLocalLedgerActions(context, ledger),
-                  )),
-            ],
-
-            // 远程账本区域
-            if (remoteLedgers.isNotEmpty) ...[
-              SizedBox(height: 16.0.scaled(context, ref)),
-              _SectionHeader(
-                title: AppLocalizations.of(context).ledgersRemote,
-                trailing: remoteLedgers.length.toString(),
-                action: TextButton.icon(
-                  icon: const Icon(Icons.cloud_download, size: 18),
-                  label: Text(AppLocalizations.of(context).ledgersRestoreAll),
-                  onPressed:
-                      _isRestoring ? null : () => _handleBatchRestore(context),
-                ),
-              ),
-              ...remoteLedgers.map((ledger) => LedgerCard(
-                    ledger: ledger,
-                    onTap: () => _handleRemoteLedgerTap(context, ledger),
-                    onLongPress: () =>
-                        _showRemoteLedgerActions(context, ledger),
-                    onMore: () => _showRemoteLedgerActions(context, ledger),
-                  )),
-            ],
-
-            SizedBox(height: 60.0.scaled(context, ref)),
-          ],
-        ),
-
-        // 加载蒙层：刷新时显示
-        if (showLoadingOverlay)
-          Positioned.fill(
-            child: Container(
-              color:
-                  PiggyTokens.surfaceElevated(context).withValues(alpha: 0.7),
-              child: const Center(
-                child: CircularProgressIndicator(),
-              ),
-            ),
-          ),
       ],
     );
   }

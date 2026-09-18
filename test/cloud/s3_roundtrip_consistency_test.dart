@@ -3,13 +3,14 @@
 /// 模拟用户在 127.0.0.1:16384 注入数据后「同步到 S3」、在 16416「从 S3 同步到本地」：
 ///   1. 打开真实拉取并注入过的 16384 库（scripts/live_db/live_16384.sqlite）
 ///   2. 对 6 个账本逐一调用 exportTransactionsJson —— 这正是 TransactionsSyncManager
-///      上传到 S3 的 ledger_<id>.json 快照内容
+///      上传到 S3 的 `ledger_<id>.json` 快照内容
 ///   3. 新建一个空库代表 16416 设备，对每个云端账本 JSON 调用 restoreLedgerFromJson
 ///      （即 downloadAndRestoreToCurrentLedger / downloadRemoteLedger 的落地逻辑）
 ///   4. 逐表比较两端数据，输出一致性报告
 ///
 /// 注意：网络传输（storage.upload/download）被略过，直接 export→import，
 /// 因为 S3 快照的内容与缺陷完全由序列化/反序列化代码决定，与传输层无关。
+library;
 
 import 'dart:convert';
 import 'dart:io';
@@ -29,14 +30,14 @@ const String kReportPath = 'scripts/live_db/roundtrip_report.txt';
 
 Future<int> _count(PiggyDatabase db, String table) async {
   final rows = await db.customSelect('SELECT COUNT(*) AS c FROM $table').get();
-  return rows.first.read<int>('c')!;
+  return rows.first.read<int>('c');
 }
 
 Future<Map<String, int>> _accountTypeDist(PiggyDatabase db) async {
   final rows = await db.customSelect(
           'SELECT type, COUNT(*) AS c FROM accounts GROUP BY type')
       .get();
-  return {for (final r in rows) r.read<String>('type'): r.read<int>('c')!};
+  return {for (final r in rows) r.read<String>('type'): r.read<int>('c')};
 }
 
 /// 按交易类型统计。总数+金额只能间接暴露丢失，按类型断言才能一眼定位
@@ -45,14 +46,14 @@ Future<Map<String, int>> _txTypeDist(PiggyDatabase db) async {
   final rows = await db.customSelect(
           'SELECT type, COUNT(*) AS c FROM transactions GROUP BY type')
       .get();
-  return {for (final r in rows) r.read<String>('type'): r.read<int>('c')!};
+  return {for (final r in rows) r.read<String>('type'): r.read<int>('c')};
 }
 
 Future<Map<int, int>> _txPerLedger(PiggyDatabase db) async {
   final rows = await db.customSelect(
           'SELECT ledger_id, COUNT(*) AS c FROM transactions GROUP BY ledger_id')
       .get();
-  return {for (final r in rows) r.read<int>('ledger_id'): r.read<int>('c')!};
+  return {for (final r in rows) r.read<int>('ledger_id'): r.read<int>('c')};
 }
 
 Future<Map<int, double>> _txSumPerLedger(PiggyDatabase db) async {
@@ -60,7 +61,7 @@ Future<Map<int, double>> _txSumPerLedger(PiggyDatabase db) async {
           'SELECT ledger_id, COALESCE(SUM(amount),0) AS s FROM transactions GROUP BY ledger_id')
       .get();
   return {
-    for (final r in rows) r.read<int>('ledger_id'): r.read<double>('s')!
+    for (final r in rows) r.read<int>('ledger_id'): r.read<double>('s')
   };
 }
 
@@ -207,12 +208,15 @@ void main() {
           '经 S3 快照往返后均无丢失。');
     } else {
       report.writeln('结论：发现 ${mismatches.length} 处不一致：');
-      for (final m in mismatches) report.writeln('  - $m');
+      for (final m in mismatches) {
+        report.writeln('  - $m');
+      }
     }
 
     // 落盘报告
     await File(kReportPath).writeAsString(report.toString());
     // 同时打到日志便于 CI / 终端查看
+    // ignore: avoid_print
     print(report.toString());
 
     await src.close();

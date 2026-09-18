@@ -59,15 +59,6 @@ void main() {
 
         // 2) 服务端口径：以「线上编码路径」为 canonical URI 手工重算
         //    （AWS 服务端按收到的原始路径复算签名）
-        final canonicalRequest = 'PUT\n'
-            '${uri.path}\n' // 直接使用线上编码路径，无二次编码
-            '\n'
-            'host:${uri.authority}\n'
-            'x-amz-content-sha256:${clientSigned['x-amz-content-sha256']}\n'
-            'x-amz-date:20260908T120000Z\n'
-            '\n'
-            'host;x-amz-content-sha256;x-amz-date\n'
-            '${clientSigned['x-amz-content-sha256']}';
         final serverAuth = signer.sign(
           method: 'PUT',
           uri: uri,

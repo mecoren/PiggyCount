@@ -71,9 +71,6 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
 
   // 同步完成提示气泡(增量同步)相关状态
   ProviderSubscription<int>? _snapshotSyncToastSubscription;
-  Timer? _syncToastTimer;
-  int _syncToastPushed = 0;
-  int _syncToastPulled = 0;
 
   // 快捷操作服务
   final QuickActionsService _quickActionsService = QuickActionsService();
@@ -356,29 +353,6 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
     );
   }
 
-  /// 聚合 push/pull 计数值,并在短窗口结束时统一弹一次完成 toast。
-  ///
-  /// 说明:同一轮同步里 push 与 pull 可能先后到达,若各自立即弹 toast 会连续
-  /// 弹两条;这里把 500ms 内到达的事件累加,等安静后一次性展示
-  /// `cloudSyncComplete(pushed, pulled)`(该 l10n key 各语言已就绪,符合现有
-  /// 文案规范)。toast 本身自动 2s 后消失,不会占布局。
-  void _scheduleSyncCompletionToast(
-      {required int pushed, required int pulled}) {
-    _syncToastPushed += pushed;
-    _syncToastPulled += pulled;
-    _syncToastTimer?.cancel();
-    _syncToastTimer = Timer(const Duration(milliseconds: 500), () {
-      if (!mounted) return;
-      final l10n = AppLocalizations.of(context);
-      showToast(
-        context,
-        l10n.cloudSyncComplete(_syncToastPushed, _syncToastPulled),
-      );
-      _syncToastPushed = 0;
-      _syncToastPulled = 0;
-    });
-  }
-
   /// 后台刷新账本同步状态
   void _refreshLedgersStatusInBackground() {
     // 启动同步走 `Future.microtask` 而**不是** `addPostFrameCallback`。
@@ -470,8 +444,9 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
   void _drainPendingDeepLink({String trigger = ''}) {
     if (!mounted) return;
     if (ref.read(appInitStateProvider) != AppInitState.ready) return;
-    if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed)
+    if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
       return;
+    }
     // 重建有时在 resumed 之后还会再发生一次:延迟一拍再认领,只在「存活过这段缓冲期」的
     // 最终页面树上打开。若本页在缓冲期内被销毁(重建),timer 随 dispose 取消,新页面会
     // 重新排程,自然落到稳定的页面树上。
@@ -484,8 +459,9 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
     if (!mounted) return;
     // 必须就绪 + 前台稳定:冷启动/主题变更的重建窗口(inactive/hidden)里打开会被丢弃
     if (ref.read(appInitStateProvider) != AppInitState.ready) return;
-    if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed)
+    if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
       return;
+    }
 
     SharedPreferences prefs;
     try {
@@ -612,7 +588,6 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
     _drainTimer?.cancel();
     _appLinkSubscription?.close();
     _snapshotSyncToastSubscription?.close();
-    _syncToastTimer?.cancel();
     _backupScheduler?.dispose();
     _backupScheduler = null;
     _removeOverlay();

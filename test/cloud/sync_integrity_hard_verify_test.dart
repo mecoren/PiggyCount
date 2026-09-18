@@ -25,6 +25,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// 本文件自包含的最小 fake（与 transactions_sync_manager_test 同构，
 /// 私有类不跨文件导出）。
 class _FakeCloudProvider implements fcs.CloudProvider {
+  @override
   final fcs.CloudStorageService storage;
   _FakeCloudProvider({required this.storage});
 

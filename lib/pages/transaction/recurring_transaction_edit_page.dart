@@ -134,7 +134,7 @@ class _RecurringTransactionEditPageState
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -277,59 +277,50 @@ class _RecurringTransactionEditPageState
   }
 
   Widget _buildTypeSelector(AppLocalizations l10n) {
-    return Row(
-      children: [
-        Expanded(
-          child: RadioListTile<String>(
-            title: Text(l10n.categoryExpense,
-                style: const TextStyle(fontSize: 14)),
-            value: 'expense',
-            groupValue: _type,
-            contentPadding: EdgeInsets.zero,
-            visualDensity: VisualDensity.compact,
-            onChanged: (value) {
-              setState(() {
-                _type = value!;
-                _selectedCategory = null; // Reset category when type changes
-                _selectedToAccountId = null; // Reset transfer account
-              });
-            },
+    return RadioGroup<String>(
+      groupValue: _type,
+      onChanged: (value) {
+        if (value == null) return;
+        setState(() {
+          _type = value;
+          _selectedCategory = null; // Reset category when type changes
+          // 转入账户只在收支两类下重置（转账选择自身带账户语义）
+          if (value != 'transfer') {
+            _selectedToAccountId = null; // Reset transfer account
+          }
+        });
+      },
+      child: Row(
+        children: [
+          Expanded(
+            child: RadioListTile<String>(
+              title: Text(l10n.categoryExpense,
+                  style: const TextStyle(fontSize: 14)),
+              value: 'expense',
+              contentPadding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+            ),
           ),
-        ),
-        Expanded(
-          child: RadioListTile<String>(
-            title:
-                Text(l10n.categoryIncome, style: const TextStyle(fontSize: 14)),
-            value: 'income',
-            groupValue: _type,
-            contentPadding: EdgeInsets.zero,
-            visualDensity: VisualDensity.compact,
-            onChanged: (value) {
-              setState(() {
-                _type = value!;
-                _selectedCategory = null; // Reset category when type changes
-                _selectedToAccountId = null; // Reset transfer account
-              });
-            },
+          Expanded(
+            child: RadioListTile<String>(
+              title: Text(l10n.categoryIncome,
+                  style: const TextStyle(fontSize: 14)),
+              value: 'income',
+              contentPadding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+            ),
           ),
-        ),
-        Expanded(
-          child: RadioListTile<String>(
-            title:
-                Text(l10n.transferTitle, style: const TextStyle(fontSize: 14)),
-            value: 'transfer',
-            groupValue: _type,
-            contentPadding: EdgeInsets.zero,
-            visualDensity: VisualDensity.compact,
-            onChanged: (value) {
-              setState(() {
-                _type = value!;
-                _selectedCategory = null; // Reset category when type changes
-              });
-            },
+          Expanded(
+            child: RadioListTile<String>(
+              title: Text(l10n.transferTitle,
+                  style: const TextStyle(fontSize: 14)),
+              value: 'transfer',
+              contentPadding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -398,7 +389,7 @@ class _RecurringTransactionEditPageState
   }
 
   Future<void> _selectCurrency() async {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final String base =
         _ledgerCurrency ?? ref.read(currentLedgerCurrencyProvider);
     final picked = await showCurrencyPickerSheet(
@@ -698,7 +689,7 @@ class _RecurringTransactionEditPageState
         child: Text(
           date != null
               ? DateFormat.yMd().format(date)
-              : AppLocalizations.of(context)!.recurringTransactionNoEndDate,
+              : AppLocalizations.of(context).recurringTransactionNoEndDate,
         ),
       ),
     );
@@ -786,9 +777,9 @@ class _RecurringTransactionEditPageState
 
     final title = isFromAccount
         ? (_type == 'transfer'
-            ? AppLocalizations.of(context)!.transferFromAccount
-            : AppLocalizations.of(context)!.accountSelectTitle)
-        : AppLocalizations.of(context)!.transferToAccount;
+            ? AppLocalizations.of(context).transferFromAccount
+            : AppLocalizations.of(context).accountSelectTitle)
+        : AppLocalizations.of(context).transferToAccount;
 
     final selected = await showDialog<int?>(
       context: context,
@@ -799,7 +790,7 @@ class _RecurringTransactionEditPageState
           // 转入账户不给「不选择账户」兜底 → 该币种没有可选账户时列表会全空,
           // 给一句空态,别让用户对着空白弹窗猜(移植 BeeCount #444:切外币后常见)
           child: accounts.isEmpty && _type == 'transfer' && !isFromAccount
-              ? Text(AppLocalizations.of(context)!.commonEmpty)
+              ? Text(AppLocalizations.of(context).commonEmpty)
               : ListView.builder(
             shrinkWrap: true,
             itemCount: accounts.length +
@@ -807,7 +798,7 @@ class _RecurringTransactionEditPageState
             itemBuilder: (context, index) {
               if (index == 0 && (_type != 'transfer' || isFromAccount)) {
                 return ListTile(
-                  title: Text(AppLocalizations.of(context)!.accountNone),
+                  title: Text(AppLocalizations.of(context).accountNone),
                   onTap: () => Navigator.of(context).pop(null),
                 );
               }
@@ -839,7 +830,7 @@ class _RecurringTransactionEditPageState
   }
 
   Future<void> _saveRecurringTransaction() async {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     // 标记为已尝试保存，触发错误提示显示
     setState(() {
@@ -929,17 +920,17 @@ class _RecurringTransactionEditPageState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(AppLocalizations.of(context)!.commonDelete),
+        title: Text(AppLocalizations.of(context).commonDelete),
         content: Text(
-            AppLocalizations.of(context)!.recurringTransactionDeleteConfirm),
+            AppLocalizations.of(context).recurringTransactionDeleteConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text(AppLocalizations.of(context)!.commonCancel),
+            child: Text(AppLocalizations.of(context).commonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text(AppLocalizations.of(context)!.commonDelete),
+            child: Text(AppLocalizations.of(context).commonDelete),
           ),
         ],
       ),

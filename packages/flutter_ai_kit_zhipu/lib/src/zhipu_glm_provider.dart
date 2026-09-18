@@ -119,7 +119,7 @@ class ZhipuGLMProvider implements AIProvider<String, String> {
         return {'role': m['role'], 'content': contentPreview};
       }).toList();
 
-      print('🔍 [GLM] 请求: model=$model, messages=${simplifiedMessages.length}条, temperature=$temperature');
+      debugLog(() => '🔍 [GLM] 请求: model=$model, messages=${simplifiedMessages.length}条, temperature=$temperature');
 
       final response = await _dio.post(
         'https://open.bigmodel.cn/api/paas/v4/chat/completions',
@@ -134,7 +134,7 @@ class ZhipuGLMProvider implements AIProvider<String, String> {
         },
       );
 
-      print('📦 [GLM] 响应数据: ${jsonEncode(response.data)}');
+      debugLog(() => '📦 [GLM] 响应数据: ${jsonEncode(response.data)}');
 
       final content = response.data['choices'][0]['message']['content'];
       final tokens = response.data['usage']['total_tokens'];
@@ -149,10 +149,10 @@ class ZhipuGLMProvider implements AIProvider<String, String> {
         ),
       );
     } on DioException catch (e) {
-      print('❌ [GLM] DioException: ${e.type} - ${e.message}');
+      debugLog(() => '❌ [GLM] DioException: ${e.type} - ${e.message}');
       if (e.response != null) {
-        print('❌ [GLM] 响应状态码: ${e.response?.statusCode}');
-        print('❌ [GLM] 响应数据: ${e.response?.data}');
+        debugLog(() => '❌ [GLM] 响应状态码: ${e.response?.statusCode}');
+        debugLog(() => '❌ [GLM] 响应数据: ${e.response?.data}');
       }
       return AIResult.failure(
         _parseDioError(e),
@@ -160,8 +160,8 @@ class ZhipuGLMProvider implements AIProvider<String, String> {
         metadata: AIResultMetadata(providerName: name),
       );
     } catch (e, stackTrace) {
-      print('❌ [GLM] Exception: $e');
-      print('❌ [GLM] Stack trace: $stackTrace');
+      debugLog(() => '❌ [GLM] Exception: $e');
+      debugLog(() => '❌ [GLM] Stack trace: $stackTrace');
       return AIResult.failure(
         e.toString(),
         DateTime.now().difference(startTime),
@@ -192,9 +192,9 @@ class ZhipuGLMProvider implements AIProvider<String, String> {
 
   /// 准备消息内容（支持图片和音频上传）
   Future<dynamic> _prepareMessageContent(String text) async {
-    print('📝 [GLM] 准备消息内容，文本长度: ${text.length}');
-    print('📝 [GLM] 音频文件: ${audioFile?.path ?? "无"}');
-    print('📝 [GLM] 图片文件: ${imageFile?.path ?? "无"}');
+    debugLog(() => '📝 [GLM] 准备消息内容，文本长度: ${text.length}');
+    debugLog(() => '📝 [GLM] 音频文件: ${audioFile?.path ?? "无"}');
+    debugLog(() => '📝 [GLM] 图片文件: ${imageFile?.path ?? "无"}');
 
     final List<Map<String, dynamic>> content = [];
 
@@ -222,7 +222,7 @@ class ZhipuGLMProvider implements AIProvider<String, String> {
           }
         });
       } catch (e) {
-        print('⚠️ [GLM] 音频编码失败: $e');
+        debugLog(() => '⚠️ [GLM] 音频编码失败: $e');
       }
     }
 
@@ -250,7 +250,7 @@ class ZhipuGLMProvider implements AIProvider<String, String> {
           }
         });
       } catch (e) {
-        print('⚠️ [GLM] 图片编码失败: $e');
+        debugLog(() => '⚠️ [GLM] 图片编码失败: $e');
       }
     }
 
@@ -269,12 +269,12 @@ class ZhipuGLMProvider implements AIProvider<String, String> {
 
     // 如果有多模态内容，返回数组
     if (content.isNotEmpty) {
-      print('📝 [GLM] 返回多模态内容数组（${content.length}个块）');
+      debugLog(() => '📝 [GLM] 返回多模态内容数组（${content.length}个块）');
       return content;
     }
 
     // 默认返回文本
-    print('📝 [GLM] 默认返回文本');
+    debugLog(() => '📝 [GLM] 默认返回文本');
     return text;
   }
 

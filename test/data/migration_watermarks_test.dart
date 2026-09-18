@@ -6,6 +6,7 @@
 ///
 /// 升级路径验证说明同 migration_v33_test.dart：onUpgrade 不会在 create-all
 /// 内存库上运行，此处只做结构回归（新装/测试库走 onCreate → createAll）。
+library;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 

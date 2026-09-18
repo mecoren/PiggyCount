@@ -1,4 +1,5 @@
 /// 云同步服务接口和状态模型
+library;
 
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart'
     show CloudSyncException;

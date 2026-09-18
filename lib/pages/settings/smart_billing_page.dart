@@ -167,35 +167,37 @@ class SmartBillingPage extends ConsumerWidget {
       builder: (dialogContext) => AlertDialog(
         title: Text(l10n.smartBillingVoiceTrigger),
         contentPadding: const EdgeInsets.symmetric(vertical: 8),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final mode in VoiceTriggerMode.values)
-              RadioListTile<VoiceTriggerMode>(
-                value: mode,
-                groupValue: current,
-                activeColor: primaryColor,
-                title: Text(
-                  mode == VoiceTriggerMode.auto
-                      ? l10n.voiceTriggerModeAuto
-                      : l10n.voiceTriggerModeHold,
-                  style: const TextStyle(fontSize: 14),
+        content: RadioGroup<VoiceTriggerMode>(
+          groupValue: current,
+          onChanged: (value) async {
+            if (value == null) return;
+            Navigator.pop(dialogContext);
+            await ref
+                .read(voiceBillingSettingsProvider.notifier)
+                .setTriggerMode(value);
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final mode in VoiceTriggerMode.values)
+                RadioListTile<VoiceTriggerMode>(
+                  value: mode,
+                  activeColor: primaryColor,
+                  title: Text(
+                    mode == VoiceTriggerMode.auto
+                        ? l10n.voiceTriggerModeAuto
+                        : l10n.voiceTriggerModeHold,
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  subtitle: Text(
+                    mode == VoiceTriggerMode.auto
+                        ? l10n.voiceTriggerModeAutoDesc
+                        : l10n.voiceTriggerModeHoldDesc,
+                    style: const TextStyle(fontSize: 12),
+                  ),
                 ),
-                subtitle: Text(
-                  mode == VoiceTriggerMode.auto
-                      ? l10n.voiceTriggerModeAutoDesc
-                      : l10n.voiceTriggerModeHoldDesc,
-                  style: const TextStyle(fontSize: 12),
-                ),
-                onChanged: (value) async {
-                  if (value == null) return;
-                  Navigator.pop(dialogContext);
-                  await ref
-                      .read(voiceBillingSettingsProvider.notifier)
-                      .setTriggerMode(value);
-                },
-              ),
-          ],
+            ],
+          ),
         ),
         actions: [
           TextButton(

@@ -37,12 +37,12 @@ void main() {
     if (await tmp.exists()) await tmp.delete(recursive: true);
   });
 
-  Future<int> _insertLedger({String name = 'L1', String? syncId}) async {
+  Future<int> insertLedger({String name = 'L1', String? syncId}) async {
     return db.into(db.ledgers).insert(LedgersCompanion.insert(
         name: name, syncId: d.Value(syncId)));
   }
 
-  Future<int> _insertCategory({
+  Future<int> insertCategory({
     String name = 'cat',
     String kind = 'expense',
     int? parentId,
@@ -56,7 +56,7 @@ void main() {
         ));
   }
 
-  Future<int> _insertTransaction({
+  Future<int> insertTransaction({
     required int ledgerId,
     int? categoryId,
     int? accountId,
@@ -78,7 +78,7 @@ void main() {
 
   group('A 类 — DB 孤儿', () {
     test('A1 预算指向已删账本', () async {
-      final lid = await _insertLedger();
+      final lid = await insertLedger();
       await db.into(db.budgets).insert(BudgetsCompanion.insert(
             ledgerId: lid,
             amount: 100,
@@ -92,8 +92,8 @@ void main() {
     });
 
     test('A2 附件行指向已删交易', () async {
-      final lid = await _insertLedger();
-      final tid = await _insertTransaction(ledgerId: lid);
+      final lid = await insertLedger();
+      final tid = await insertTransaction(ledgerId: lid);
       await db.into(db.transactionAttachments).insert(
             TransactionAttachmentsCompanion.insert(
               transactionId: tid,
@@ -109,11 +109,11 @@ void main() {
     });
 
     test('A5 tx 失主 account', () async {
-      final lid = await _insertLedger();
+      final lid = await insertLedger();
       final accId = await db.into(db.accounts).insert(
             AccountsCompanion.insert(ledgerId: lid, name: 'A'),
           );
-      await _insertTransaction(ledgerId: lid, accountId: accId);
+      await insertTransaction(ledgerId: lid, accountId: accId);
       await (db.delete(db.accounts)..where((t) => t.id.equals(accId))).go();
 
       final report = await scanner.scanAll();
@@ -126,9 +126,9 @@ void main() {
     });
 
     test('A6 tx 失主 category', () async {
-      final lid = await _insertLedger();
-      final cid = await _insertCategory();
-      await _insertTransaction(ledgerId: lid, categoryId: cid);
+      final lid = await insertLedger();
+      final cid = await insertCategory();
+      await insertTransaction(ledgerId: lid, categoryId: cid);
       await (db.delete(db.categories)..where((t) => t.id.equals(cid))).go();
 
       final report = await scanner.scanAll();
@@ -137,8 +137,8 @@ void main() {
     });
 
     test('A7 二级分类失父', () async {
-      final parent = await _insertCategory(name: 'food', level: 1);
-      await _insertCategory(name: 'lunch', level: 2, parentId: parent);
+      final parent = await insertCategory(name: 'food', level: 1);
+      await insertCategory(name: 'lunch', level: 2, parentId: parent);
       await (db.delete(db.categories)..where((t) => t.id.equals(parent))).go();
 
       final report = await scanner.scanAll();
@@ -148,8 +148,8 @@ void main() {
     });
 
     test('A8 预算分类失主', () async {
-      final lid = await _insertLedger();
-      final cid = await _insertCategory();
+      final lid = await insertLedger();
+      final cid = await insertCategory();
       await db.into(db.budgets).insert(BudgetsCompanion.insert(
             ledgerId: lid,
             amount: 50,
@@ -182,8 +182,8 @@ void main() {
     });
 
     test('B1 已引用的不算孤儿', () async {
-      final lid = await _insertLedger();
-      final tid = await _insertTransaction(ledgerId: lid);
+      final lid = await insertLedger();
+      final tid = await insertTransaction(ledgerId: lid);
       await db.into(db.transactionAttachments).insert(
             TransactionAttachmentsCompanion.insert(
               transactionId: tid,

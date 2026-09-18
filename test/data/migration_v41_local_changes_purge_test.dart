@@ -52,7 +52,7 @@ void main() {
         variables: [
           d.Variable('transaction'),
           d.Variable(1),
-          d.Variable('sid-${action}-${pushedAt.millisecondsSinceEpoch}'),
+          d.Variable('sid-$action-${pushedAt.millisecondsSinceEpoch}'),
           d.Variable(1),
           d.Variable(action),
           d.Variable(pushedAt.millisecondsSinceEpoch ~/ 1000),

@@ -8,7 +8,6 @@ import '../../utils/lru_cache.dart';
 import '../../utils/account_type_utils.dart';
 import '../../utils/shared_ledger_picker_filter.dart';
 import '../../providers.dart';
-import '../../providers/sync_providers.dart';
 import '../../services/system/logger_service.dart';
 import '../../l10n/app_localizations.dart';
 

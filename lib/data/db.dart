@@ -522,7 +522,7 @@ class PiggyDatabase extends _$PiggyDatabase {
   /// 测试专用:直接注入 [QueryExecutor](通常是 NativeDatabase.memory()),
   /// 跳过 [_openConnection] 的文件系统 / 平台副作用。test/ 下的 unit test
   /// 用这个。
-  PiggyDatabase.forTesting(QueryExecutor executor) : super(executor);
+  PiggyDatabase.forTesting(super.executor);
 
   @override
   int get schemaVersion => 43; // v43: 同步指标 sync_op_log(审计 P0-1,本地成功率测量) + stale_remote_slots(审计 P1-6,换名收尾补删持久化); v42: 周期账单币种 — recurring_transactions.currency_code(移植 BeeCount #444); v41: local_changes 已推送行存量清理(数据治理 G-LC,双后端实测 6143 行无界增长); v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)

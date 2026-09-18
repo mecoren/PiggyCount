@@ -1465,8 +1465,9 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
         ref.invalidate(supabaseConfigProvider);
         // 刷新激活配置，确保同步服务使用最新配置
         ref.invalidate(activeCloudConfigProvider);
-        if (mounted)
+        if (mounted) {
           showToast(context, AppLocalizations.of(context).cloudConfigSaved);
+        }
       } catch (e) {
         if (mounted) {
           await AppDialog.error(context,
@@ -1534,8 +1535,9 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
         ref.invalidate(webdavConfigProvider);
         // 刷新激活配置，确保同步服务使用最新配置
         ref.invalidate(activeCloudConfigProvider);
-        if (mounted)
+        if (mounted) {
           showToast(context, AppLocalizations.of(context).cloudConfigSaved);
+        }
       } catch (e) {
         if (mounted) {
           await AppDialog.error(context,
@@ -1615,8 +1617,9 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
         ref.invalidate(s3ConfigProvider);
         // 刷新激活配置，确保同步服务使用最新配置
         ref.invalidate(activeCloudConfigProvider);
-        if (mounted)
+        if (mounted) {
           showToast(context, AppLocalizations.of(context).cloudConfigSaved);
+        }
       } catch (e) {
         if (mounted) {
           await AppDialog.error(context,

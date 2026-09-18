@@ -280,8 +280,8 @@ class _ExportPageState extends ConsumerState<ExportPage> {
       final l10nDialog = AppLocalizations.of(context);
       if (shareAfter) {
         // 触发分享面板
-        await Share.shareXFiles([XFile(path)],
-            text: l10nDialog.exportShareText);
+        await SharePlus.instance.share(ShareParams(
+            files: [XFile(path)], text: l10nDialog.exportShareText));
         // 分享面板关闭后再校验,页面已销毁则不再弹成功提示
         if (!mounted) return;
         await AppDialog.info(context,

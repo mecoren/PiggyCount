@@ -295,15 +295,11 @@ class DonationService {
 /// 模拟商品详情（仅用于开发和截图）
 class _MockProductDetails extends ProductDetails {
   _MockProductDetails({
-    required String id,
-    required String title,
-    required String description,
-    required String price,
+    required super.id,
+    required super.title,
+    required super.description,
+    required super.price,
   }) : super(
-          id: id,
-          title: title,
-          description: description,
-          price: price,
           rawPrice: 0.0,
           currencyCode: 'CNY',
         );

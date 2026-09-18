@@ -25,8 +25,6 @@ class YearSummaryPoster extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-
     // 创建渐变背景色
     final gradient = LinearGradient(
       begin: Alignment.topLeft,

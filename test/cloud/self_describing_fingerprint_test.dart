@@ -7,6 +7,7 @@
 /// 2. 内嵌值 == 对同一 payload 用共享函数计算的值
 ///    （白名单式规范化忽略未知键 → 嵌入不改变哈希，无循环依赖）;
 /// 3. 嵌入前后指纹稳定（向后兼容：旧读取端算法不受新键影响）。
+library;
 import 'dart:convert';
 
 import 'package:drift/native.dart';

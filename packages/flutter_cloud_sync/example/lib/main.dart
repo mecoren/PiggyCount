@@ -1,3 +1,7 @@
+// ignore_for_file: avoid_print
+// 示例程序：print 即本文件的输出方式（`flutter run` 控制台演示同步流程），
+// 非库代码，故整体豁免 avoid_print。
+
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';

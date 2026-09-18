@@ -56,7 +56,7 @@ void main() {
 
   /// 构造一个标准的设备 A 加密上传场景：
   /// deviceA enable(password) → 加密 ledger_1.json → 上传到 cloud
-  Future<void> _simulateDeviceAUpload({
+  Future<void> simulateDeviceAUpload({
     required String password,
     String ledgerContent = '{"version":6,"items":[{"amount":99.9}]}',
     String ledgerPath = 'ledger_1.json',
@@ -155,7 +155,7 @@ void main() {
   group('TC-M3: 新设备加入 - 云端有 BEECRYPT1 密文 + 正确密码', () {
     test('提取 salt，派生 key，验证通过，secure storage 写入，enabled=true', () async {
       // 1. 设备 A 加密上传
-      await _simulateDeviceAUpload(password: 'SharedPass7');
+      await simulateDeviceAUpload(password: 'SharedPass7');
 
       // 2. 设备 B 加入（使用相同密码）
       await deviceB.enableFromCloud(
@@ -180,7 +180,7 @@ void main() {
     });
 
     test('deviceB 的 key 应与 deviceA 一致（同密码 + 同 salt 派生）', () async {
-      await _simulateDeviceAUpload(password: 'SharedPass7');
+      await simulateDeviceAUpload(password: 'SharedPass7');
 
       await deviceB.enableFromCloud(
         password: 'SharedPass7',
@@ -198,7 +198,7 @@ void main() {
   group('TC-M4: 新设备加入 - 错误密码', () {
     test('抛 ArgumentError，secure storage 未写入', () async {
       // 设备 A 用 'CorrectPass1' 加密
-      await _simulateDeviceAUpload(password: 'CorrectPass1');
+      await simulateDeviceAUpload(password: 'CorrectPass1');
 
       // 设备 B 用错误密码加入
       expect(
@@ -426,7 +426,7 @@ void main() {
 
   group('TC-M6: 加入后 verifier 可通过 verifyPassword 验证', () {
     test('verifyPassword 正确密码返回 true', () async {
-      await _simulateDeviceAUpload(password: 'SharedPass7');
+      await simulateDeviceAUpload(password: 'SharedPass7');
 
       await deviceB.enableFromCloud(
         password: 'SharedPass7',
@@ -437,7 +437,7 @@ void main() {
     });
 
     test('verifyPassword 错误密码返回 false', () async {
-      await _simulateDeviceAUpload(password: 'SharedPass7');
+      await simulateDeviceAUpload(password: 'SharedPass7');
 
       await deviceB.enableFromCloud(
         password: 'SharedPass7',
@@ -534,7 +534,7 @@ void main() {
   });
 }
 
-/// 列表逐元素比较（List<int> 等值）
+/// 列表逐元素比较（`List<int>` 等值）
 bool _listEquals(List<int> a, List<int> b) {
   if (a.length != b.length) return false;
   for (var i = 0; i < a.length; i++) {
@@ -656,6 +656,7 @@ class InMemorySecureKeyStorage implements SecureKeyStorage {
   Future<void> clearRekeyCheckpoint() async {
     _store.remove('piggycount_enc_rekey_ckpt');
   }
+  @override
   Future<void> clearAll() async {
     _store.clear();
   }

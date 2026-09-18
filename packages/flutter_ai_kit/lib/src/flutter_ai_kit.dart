@@ -7,6 +7,7 @@ import 'core/ai_result.dart';
 import 'core/ai_execution_context.dart';
 import 'strategies/ai_execution_strategy.dart';
 import 'strategies/local_first_strategy.dart';
+import 'utils/debug_log.dart';
 
 /// Flutter AI Kit 核心类
 ///
@@ -95,7 +96,7 @@ class FlutterAIKit {
     AIResult<TOutput>? lastResult;
 
     for (final provider in selectedProviders) {
-      print('🚀 [FlutterAIKit] Trying provider: ${provider.name}');
+      debugLog(() => '🚀 [FlutterAIKit] Trying provider: ${provider.name}');
 
       try {
         // 执行任务（带超时）
@@ -106,26 +107,26 @@ class FlutterAIKit {
             ) as AIResult<TOutput>;
 
         if (result.success) {
-          print('✅ [FlutterAIKit] Success with ${provider.name} in ${result.duration.inMilliseconds}ms');
+          debugLog(() => '✅ [FlutterAIKit] Success with ${provider.name} in ${result.duration.inMilliseconds}ms');
           return result;
         }
 
         lastResult = result;
-        print('⚠️ [FlutterAIKit] ${provider.name} failed: ${result.error}');
+        debugLog(() => '⚠️ [FlutterAIKit] ${provider.name} failed: ${result.error}');
       } on TimeoutException {
         lastResult = AIResult.failure(
           'Provider timeout after ${ctx.timeout?.inSeconds ?? 30}s',
           ctx.timeout ?? const Duration(seconds: 30),
           metadata: AIResultMetadata(providerName: provider.name),
         );
-        print('⏱️ [FlutterAIKit] ${provider.name} timed out');
+        debugLog(() => '⏱️ [FlutterAIKit] ${provider.name} timed out');
       } catch (e) {
         lastResult = AIResult.failure(
           e.toString(),
           Duration.zero,
           metadata: AIResultMetadata(providerName: provider.name),
         );
-        print('❌ [FlutterAIKit] ${provider.name} threw exception: $e');
+        debugLog(() => '❌ [FlutterAIKit] ${provider.name} threw exception: $e');
       }
     }
 

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
-import '../../providers/currency_providers.dart';
 import '../../styles/tokens.dart';
 import '../../utils/currencies.dart';
 import 'currency_flag.dart';
@@ -112,11 +111,11 @@ Future<String?> showCurrencyPickerSheet(
                         // 汇率行:1 该币种 ≈ x rateBase(base 自身/缺失不显示)
                         String? rateText;
                         if (rateBase != null &&
-                            c.code != rateBase!.toUpperCase()) {
+                            c.code != rateBase.toUpperCase()) {
                           final r = rates[c.code];
                           if (r != null) {
                             rateText =
-                                '1 ${c.code} ≈ ${r.toStringAsPrecision(4)} ${rateBase!.toUpperCase()}';
+                                '1 ${c.code} ≈ ${r.toStringAsPrecision(4)} ${rateBase.toUpperCase()}';
                           }
                         }
                         return ListTile(

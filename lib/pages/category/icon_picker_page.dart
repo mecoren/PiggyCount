@@ -42,14 +42,14 @@ class _IconPickerPageState extends State<IconPickerPage> with TickerProviderStat
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: PiggyTitleBar(
-        title: AppLocalizations.of(context)!.iconPickerTitle,
+        title: AppLocalizations.of(context).iconPickerTitle,
         showBack: true,
         actions: [
           TextButton(
             onPressed: () {
               Navigator.of(context).pop(_selectedIcon);
             },
-            child: Text(AppLocalizations.of(context)!.commonConfirm),
+            child: Text(AppLocalizations.of(context).commonConfirm),
           ),
         ],
         bottom: TabBar(
@@ -87,7 +87,7 @@ class _IconPickerPageState extends State<IconPickerPage> with TickerProviderStat
     if (widget.kind == 'expense') {
       return [
         _IconCategory(
-          name: AppLocalizations.of(context)!.iconCategoryDining,
+          name: AppLocalizations.of(context).iconCategoryDining,
           icons: [
             _IconItem('restaurant', Icons.restaurant, '餐厅'),
             _IconItem('local_dining', Icons.local_dining, '用餐'),
@@ -100,7 +100,7 @@ class _IconPickerPageState extends State<IconPickerPage> with TickerProviderStat
           ],
         ),
         _IconCategory(
-          name: AppLocalizations.of(context)!.iconCategoryTransport,
+          name: AppLocalizations.of(context).iconCategoryTransport,
           icons: [
             _IconItem('directions_car', Icons.directions_car, '汽车'),
             _IconItem('directions_bus', Icons.directions_bus, '公交'),
@@ -115,7 +115,7 @@ class _IconPickerPageState extends State<IconPickerPage> with TickerProviderStat
           ],
         ),
         _IconCategory(
-          name: AppLocalizations.of(context)!.iconCategoryShopping,
+          name: AppLocalizations.of(context).iconCategoryShopping,
           icons: [
             _IconItem('shopping_cart', Icons.shopping_cart, '购物车'),
             _IconItem('shopping_bag', Icons.shopping_bag, '购物袋'),
@@ -128,7 +128,7 @@ class _IconPickerPageState extends State<IconPickerPage> with TickerProviderStat
           ],
         ),
         _IconCategory(
-          name: AppLocalizations.of(context)!.iconCategoryEntertainment,
+          name: AppLocalizations.of(context).iconCategoryEntertainment,
           icons: [
             _IconItem('movie', Icons.movie, '电影'),
             _IconItem('music_note', Icons.music_note, '音乐'),
@@ -141,7 +141,7 @@ class _IconPickerPageState extends State<IconPickerPage> with TickerProviderStat
           ],
         ),
         _IconCategory(
-          name: AppLocalizations.of(context)!.iconCategoryLife,
+          name: AppLocalizations.of(context).iconCategoryLife,
           icons: [
             _IconItem('home', Icons.home, '居家'),
             _IconItem('local_laundry_service', Icons.local_laundry_service, '洗衣'),
@@ -154,7 +154,7 @@ class _IconPickerPageState extends State<IconPickerPage> with TickerProviderStat
           ],
         ),
         _IconCategory(
-          name: AppLocalizations.of(context)!.iconCategoryHealth,
+          name: AppLocalizations.of(context).iconCategoryHealth,
           icons: [
             _IconItem('local_hospital', Icons.local_hospital, '医院'),
             _IconItem('medical_services', Icons.medical_services, '医疗'),
@@ -167,7 +167,7 @@ class _IconPickerPageState extends State<IconPickerPage> with TickerProviderStat
           ],
         ),
         _IconCategory(
-          name: AppLocalizations.of(context)!.iconCategoryEducation,
+          name: AppLocalizations.of(context).iconCategoryEducation,
           icons: [
             _IconItem('school', Icons.school, '学校'),
             _IconItem('library_books', Icons.library_books, '书籍'),
@@ -180,7 +180,7 @@ class _IconPickerPageState extends State<IconPickerPage> with TickerProviderStat
           ],
         ),
         _IconCategory(
-          name: AppLocalizations.of(context)!.iconCategoryOther,
+          name: AppLocalizations.of(context).iconCategoryOther,
           icons: [
             _IconItem('business', Icons.business, '商务'),
             _IconItem('work', Icons.work, '工作'),
@@ -197,7 +197,7 @@ class _IconPickerPageState extends State<IconPickerPage> with TickerProviderStat
       // 收入分类图标
       return [
         _IconCategory(
-          name: AppLocalizations.of(context)!.iconCategoryWork,
+          name: AppLocalizations.of(context).iconCategoryWork,
           icons: [
             _IconItem('work', Icons.work, '工资'),
             _IconItem('business_center', Icons.business_center, '商务'),
@@ -210,7 +210,7 @@ class _IconPickerPageState extends State<IconPickerPage> with TickerProviderStat
           ],
         ),
         _IconCategory(
-          name: AppLocalizations.of(context)!.iconCategoryFinance,
+          name: AppLocalizations.of(context).iconCategoryFinance,
           icons: [
             _IconItem('account_balance', Icons.account_balance, '银行'),
             _IconItem('savings', Icons.savings, '储蓄'),
@@ -223,7 +223,7 @@ class _IconPickerPageState extends State<IconPickerPage> with TickerProviderStat
           ],
         ),
         _IconCategory(
-          name: AppLocalizations.of(context)!.iconCategoryReward,
+          name: AppLocalizations.of(context).iconCategoryReward,
           icons: [
             _IconItem('card_giftcard', Icons.card_giftcard, '红包'),
             _IconItem('redeem', Icons.redeem, '奖金'),
@@ -236,7 +236,7 @@ class _IconPickerPageState extends State<IconPickerPage> with TickerProviderStat
           ],
         ),
         _IconCategory(
-          name: AppLocalizations.of(context)!.iconCategoryOther,
+          name: AppLocalizations.of(context).iconCategoryOther,
           icons: [
             _IconItem('receipt_long', Icons.receipt_long, '报销'),
             _IconItem('part_time', Icons.schedule, '兼职'),

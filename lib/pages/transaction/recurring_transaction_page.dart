@@ -25,13 +25,13 @@ class RecurringTransactionPage extends ConsumerWidget {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: PiggyTitleBar(
-        title: AppLocalizations.of(context)!.recurringTransactionTitle,
+        title: AppLocalizations.of(context).recurringTransactionTitle,
         showBack: true,
         actions: [
           IconButton(
             onPressed: () => _addRecurringTransaction(context, ref),
             icon: const Icon(Icons.add),
-            tooltip: AppLocalizations.of(context)!.recurringTransactionAdd,
+            tooltip: AppLocalizations.of(context).recurringTransactionAdd,
           ),
         ],
       ),
@@ -64,9 +64,9 @@ class RecurringTransactionPage extends ConsumerWidget {
                   data: (recurringTransactions) {
                     if (recurringTransactions.isEmpty) {
                       return AppEmpty(
-                        text: AppLocalizations.of(context)!
+                        text: AppLocalizations.of(context)
                             .recurringTransactionEmpty,
-                        subtext: AppLocalizations.of(context)!
+                        subtext: AppLocalizations.of(context)
                             .recurringTransactionEmptyHint,
                         icon: Icons.repeat,
                       );
@@ -191,7 +191,7 @@ class _RecurringTransactionCard extends ConsumerWidget {
                       // 第一行：分类名称
                       recurring.type == 'transfer'
                           ? Text(
-                              AppLocalizations.of(context)!.transferTitle,
+                              AppLocalizations.of(context).transferTitle,
                               style: PiggyTextTokens.strongTitle(context)
                                   .copyWith(fontSize: 16),
                             )
@@ -364,7 +364,7 @@ class _RecurringTransactionCard extends ConsumerWidget {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                   content: Text(
-                                      '${AppLocalizations.of(context)!.commonFailed}: $e')),
+                                      '${AppLocalizations.of(context).commonFailed}: $e')),
                             );
                           }
                         }
@@ -381,7 +381,7 @@ class _RecurringTransactionCard extends ConsumerWidget {
   }
 
   String _getFrequencyDescription(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final frequency = RecurringFrequency.fromString(recurring.frequency);
     final interval = recurring.interval;
 
@@ -426,7 +426,7 @@ class _RecurringTransactionCard extends ConsumerWidget {
 class _UsageGuideCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final primaryColor = ref.watch(primaryColorProvider);
 
     return SectionCard(

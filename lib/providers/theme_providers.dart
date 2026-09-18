@@ -93,17 +93,6 @@ final primaryColorInitProvider = FutureProvider<void>((ref) async {
   });
 });
 
-/// Flutter [Color] → `#RRGGBB`。忽略 alpha，server 只存 6 位 hex。
-String _colorToHex(Color color) {
-  final r = (color.r * 255).toInt() & 0xff;
-  final g = (color.g * 255).toInt() & 0xff;
-  final b = (color.b * 255).toInt() & 0xff;
-  return '#${r.toRadixString(16).padLeft(2, '0')}'
-          '${g.toRadixString(16).padLeft(2, '0')}'
-          '${b.toRadixString(16).padLeft(2, '0')}'
-      .toUpperCase();
-}
-
 // 隐私模式持久化初始化：
 // - 启动时加载保存的隐私模式状态
 // - 监听隐私模式变化并写入本地

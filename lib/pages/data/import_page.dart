@@ -45,7 +45,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: PiggyTitleBar(
-        title: AppLocalizations.of(context)!.importTitle,
+        title: AppLocalizations.of(context).importTitle,
         showBack: true,
       ),
       body: Padding(
@@ -62,10 +62,10 @@ class _ImportPageState extends ConsumerState<ImportPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(AppLocalizations.of(context)!.importSelectCsvFile),
+                        Text(AppLocalizations.of(context).importSelectCsvFile),
                         const SizedBox(height: 16),
                         // 账单类型选择器
-                        Text(AppLocalizations.of(context)!.importBillType,
+                        Text(AppLocalizations.of(context).importBillType,
                             style: PiggyTextTokens.body(context).copyWith(
                                 color: PiggyTokens.textSecondary(context))),
                         const SizedBox(height: 8),
@@ -74,17 +74,17 @@ class _ImportPageState extends ConsumerState<ImportPage> {
                           segments: [
                             WaitSlidingSegment(
                               value: BillSourceType.generic,
-                              label: AppLocalizations.of(context)!
+                              label: AppLocalizations.of(context)
                                   .importBillTypeGeneric,
                             ),
                             WaitSlidingSegment(
                               value: BillSourceType.alipay,
-                              label: AppLocalizations.of(context)!
+                              label: AppLocalizations.of(context)
                                   .importBillTypeAlipay,
                             ),
                             WaitSlidingSegment(
                               value: BillSourceType.wechat,
-                              label: AppLocalizations.of(context)!
+                              label: AppLocalizations.of(context)
                                   .importBillTypeWechat,
                             ),
                           ],
@@ -100,14 +100,14 @@ class _ImportPageState extends ConsumerState<ImportPage> {
                             FilledButton.icon(
                               onPressed: _pickFile,
                               icon: const Icon(Icons.folder_open),
-                              label: Text(AppLocalizations.of(context)!
+                              label: Text(AppLocalizations.of(context)
                                   .importChooseFile),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
                                 _picked?.name ??
-                                    AppLocalizations.of(context)!
+                                    AppLocalizations.of(context)
                                         .importNoFileSelected,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -117,7 +117,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
                         ),
                         const Spacer(),
                         if (_picked == null)
-                          Text(AppLocalizations.of(context)!.importHint,
+                          Text(AppLocalizations.of(context).importHint,
                               style: TextStyle(
                                   color: PiggyTokens.textTertiary(context))),
                       ],
@@ -139,13 +139,13 @@ class _ImportPageState extends ConsumerState<ImportPage> {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(AppLocalizations.of(context)!
+                                Text(AppLocalizations.of(context)
                                     .importReading),
                                 const SizedBox(height: 12),
                                 LinearProgressIndicator(value: _readProgress),
                                 const SizedBox(height: 8),
                                 Text(_readProgress == null
-                                    ? AppLocalizations.of(context)!
+                                    ? AppLocalizations.of(context)
                                         .importPreparing
                                     : '${((_readProgress ?? 0) * 100).clamp(0, 100).toStringAsFixed(0)}%'),
                                 const SizedBox(height: 12),
@@ -153,7 +153,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
                                   onPressed: () {
                                     setState(() => _cancelRead = true);
                                   },
-                                  child: Text(AppLocalizations.of(context)!
+                                  child: Text(AppLocalizations.of(context)
                                       .commonCancel),
                                 ),
                               ],
@@ -210,7 +210,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
     } on Exception catch (e) {
       if (!mounted) return;
       showToast(context,
-          AppLocalizations.of(context)!.importFileOpenError(e.toString()));
+          AppLocalizations.of(context).importFileOpenError(e.toString()));
     }
   }
 

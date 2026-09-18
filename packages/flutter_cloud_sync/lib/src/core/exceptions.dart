@@ -22,14 +22,12 @@ class CloudNotAuthenticatedException extends CloudSyncException {
 
 /// Thrown when cloud service configuration is invalid
 class CloudConfigurationException extends CloudSyncException {
-  CloudConfigurationException(String message, [dynamic error])
-      : super(message, error);
+  CloudConfigurationException(super.message, [super.error]);
 }
 
 /// Thrown when storage operations fail
 class CloudStorageException extends CloudSyncException {
-  CloudStorageException(String message, [dynamic error])
-      : super(message, error);
+  CloudStorageException(super.message, [super.error]);
 }
 
 /// Thrown when a file/object is not found (HTTP 404).
@@ -63,5 +61,5 @@ class CloudPreconditionFailedException extends CloudSyncException {
 
 /// Thrown when authentication operations fail
 class CloudAuthException extends CloudSyncException {
-  CloudAuthException(String message, [dynamic error]) : super(message, error);
+  CloudAuthException(super.message, [super.error]);
 }

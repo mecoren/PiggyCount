@@ -5,6 +5,7 @@
 /// 若 syncId 漏生成,ChangeTracker 会在登记 local_changes 时静默跳过该笔
 /// (local_repository.dart `if (tx.syncId == null) continue;`),导致该笔
 /// 永远不会被推送到云端,且 SyncEngine 没有 transaction backfill 兜底。
+library;
 import 'package:drift/drift.dart' show OrderingTerm;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';

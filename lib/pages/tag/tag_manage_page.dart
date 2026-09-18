@@ -307,10 +307,10 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
         await file.writeAsString(yamlContent);
 
         if (!mounted) return;
-        await Share.shareXFiles(
-          [XFile(filePath)],
+        await SharePlus.instance.share(ShareParams(
+          files: [XFile(filePath)],
           subject: l10n.tagShareSubject,
-        );
+        ));
       }
     } catch (e) {
       logger.error('TagManage', '分享标签失败: $e');

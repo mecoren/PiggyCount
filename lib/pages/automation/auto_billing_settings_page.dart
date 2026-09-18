@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../styles/tokens.dart';
@@ -482,47 +481,4 @@ class _AndroidAutoBillingPageState extends ConsumerState<AndroidAutoBillingPage>
     );
   }
 
-  Widget _buildSupportCard(
-    BuildContext context,
-    Color primaryColor,
-    AppLocalizations l10n, {
-    required IconData icon,
-    required String title,
-    required List<String> items,
-  }) {
-    final theme = Theme.of(context);
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: primaryColor, size: 24),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ...items.map((item) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                item,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: PiggyTokens.textPrimary(context).withValues(alpha: 0.7),
-                ),
-              ),
-            )),
-          ],
-        ),
-      ),
-    );
-  }
 }

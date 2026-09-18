@@ -25,8 +25,6 @@ class LedgerSummaryPoster extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-
     // 使用清新的单色背景 + 柔和渐变
     final lightPrimary = Color.lerp(primaryColor, Colors.white, 0.85)!;
     final gradient = LinearGradient(
@@ -79,38 +77,6 @@ class LedgerSummaryPoster extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  /// 构建背景装饰图案
-  List<Widget> _buildBackgroundPatterns() {
-    return [
-      // 右上角圆形
-      Positioned(
-        right: -80,
-        top: -80,
-        child: Container(
-          width: 200,
-          height: 200,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white.withValues(alpha: 0.05),
-          ),
-        ),
-      ),
-      // 左下角圆形
-      Positioned(
-        left: -100,
-        bottom: 150,
-        child: Container(
-          width: 250,
-          height: 250,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white.withValues(alpha: 0.03),
-          ),
-        ),
-      ),
-    ];
   }
 
   /// 构建标题区域

@@ -13,7 +13,6 @@
 //
 // 用 in-memory Drift DB + 真实 ChangeTracker 跑端到端断言。
 
-import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -169,7 +168,8 @@ void main() {
     });
 
     test('updateTagSortOrders 登记 tag:update', () async {
-      final ledgerId = await repo.createLedger(name: 'tag-sort');
+      // 账本本身是该用例的前置（tag 归属账本），仅需存在、不校验 id
+      await repo.createLedger(name: 'tag-sort');
       final tagId = await repo.createTag(name: 'sort-tag');
 
       await tracker

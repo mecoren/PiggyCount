@@ -247,10 +247,10 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
             l10n.categoryShareSuccess(
                 outputPath.replaceAll('/storage/emulated/0/', '')));
       } else {
-        await Share.shareXFiles(
-          [XFile(outputPath)],
+        await SharePlus.instance.share(ShareParams(
+          files: [XFile(outputPath)],
           subject: l10n.categoryShareSubject,
-        );
+        ));
       }
     } catch (e) {
       logger.error('CategoryManage', '分享分类失败: $e');
@@ -758,10 +758,9 @@ class _CategoryItem {
     required this.transactionCount,
     required this.isDefault,
     required this.isSubCategory,
-    this.parent,
     this.hasSubCategories = false,
-    this.isActionButtons = false,
-  });
+  })  : parent = null,
+        isActionButtons = false;
 }
 
 class _CategoryCard extends ConsumerWidget {

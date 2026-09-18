@@ -10,6 +10,7 @@
 ///
 /// - 新装库（onCreate）同样创建该索引
 /// - EXPLAIN QUERY PLAN 验证 unpushed 查询命中该索引
+library;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 

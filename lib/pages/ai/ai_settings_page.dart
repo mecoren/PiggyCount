@@ -442,69 +442,75 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
               ),
             ),
 
-            RadioListTile<AIStrategy>(
-              value: AIStrategy.cloudFirst,
+            RadioGroup<AIStrategy>(
               groupValue: config.strategy,
               onChanged: (value) async {
-                if (value != null) {
-                  await notifier.setStrategy(value);
-                  if (mounted) {
-                    showToast(context,
-                        l10n.aiStrategySwitched(l10n.aiStrategyCloudFirst));
-                  }
-                }
+                if (value == null) return;
+                // 本地两项为 enabled:false，这里再兜一道，避免将来误开
+                final isCloud = value == AIStrategy.cloudFirst ||
+                    value == AIStrategy.cloudOnly;
+                if (!isCloud) return;
+                await notifier.setStrategy(value);
+                if (!mounted) return;
+                showToast(
+                  context,
+                  l10n.aiStrategySwitched(value == AIStrategy.cloudFirst
+                      ? l10n.aiStrategyCloudFirst
+                      : l10n.aiStrategyCloudOnly),
+                );
               },
-              title: Text(l10n.aiStrategyCloudFirst,
-                  style: const TextStyle(fontSize: 14)),
-              subtitle: Text(l10n.aiStrategyCloudFirstDesc,
-                  style: const TextStyle(fontSize: 12)),
-              activeColor: primaryColor,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-              dense: true,
-            ),
-            RadioListTile<AIStrategy>(
-              value: AIStrategy.cloudOnly,
-              groupValue: config.strategy,
-              onChanged: (value) async {
-                if (value != null) {
-                  await notifier.setStrategy(value);
-                  if (mounted) {
-                    showToast(context,
-                        l10n.aiStrategySwitched(l10n.aiStrategyCloudOnly));
-                  }
-                }
-              },
-              title: Text(l10n.aiStrategyCloudOnly,
-                  style: const TextStyle(fontSize: 14)),
-              subtitle: Text(l10n.aiStrategyCloudOnlyDesc,
-                  style: const TextStyle(fontSize: 12)),
-              activeColor: primaryColor,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-              dense: true,
-            ),
-            RadioListTile<AIStrategy>(
-              value: AIStrategy.localFirst,
-              groupValue: config.strategy,
-              onChanged: null,
-              title: Text(l10n.aiStrategyLocalFirst,
-                  style: const TextStyle(fontSize: 14)),
-              subtitle: Text(l10n.aiStrategyUnavailable,
-                  style: const TextStyle(fontSize: 12)),
-              activeColor: primaryColor,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-              dense: true,
-            ),
-            RadioListTile<AIStrategy>(
-              value: AIStrategy.localOnly,
-              groupValue: config.strategy,
-              onChanged: null,
-              title: Text(l10n.aiStrategyLocalOnly,
-                  style: const TextStyle(fontSize: 14)),
-              subtitle: Text(l10n.aiStrategyUnavailable,
-                  style: const TextStyle(fontSize: 12)),
-              activeColor: primaryColor,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-              dense: true,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  RadioListTile<AIStrategy>(
+                    value: AIStrategy.cloudFirst,
+                    title: Text(l10n.aiStrategyCloudFirst,
+                        style: const TextStyle(fontSize: 14)),
+                    subtitle: Text(l10n.aiStrategyCloudFirstDesc,
+                        style: const TextStyle(fontSize: 12)),
+                    activeColor: primaryColor,
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 8),
+                    dense: true,
+                  ),
+                  RadioListTile<AIStrategy>(
+                    value: AIStrategy.cloudOnly,
+                    title: Text(l10n.aiStrategyCloudOnly,
+                        style: const TextStyle(fontSize: 14)),
+                    subtitle: Text(l10n.aiStrategyCloudOnlyDesc,
+                        style: const TextStyle(fontSize: 12)),
+                    activeColor: primaryColor,
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 8),
+                    dense: true,
+                  ),
+                  RadioListTile<AIStrategy>(
+                    value: AIStrategy.localFirst,
+                    enabled: false,
+                    title: Text(l10n.aiStrategyLocalFirst,
+                        style: const TextStyle(fontSize: 14)),
+                    subtitle: Text(l10n.aiStrategyUnavailable,
+                        style: const TextStyle(fontSize: 12)),
+                    activeColor: primaryColor,
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 8),
+                    dense: true,
+                  ),
+                  RadioListTile<AIStrategy>(
+                    value: AIStrategy.localOnly,
+                    enabled: false,
+                    title: Text(l10n.aiStrategyLocalOnly,
+                        style: const TextStyle(fontSize: 14)),
+                    subtitle: Text(l10n.aiStrategyUnavailable,
+                        style: const TextStyle(fontSize: 12)),
+                    activeColor: primaryColor,
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 8),
+                    dense: true,
+                  ),
+                ],
+              ),
             ),
 
             PiggyTokens.cardDivider(context),

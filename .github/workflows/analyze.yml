@@ -1,0 +1,53 @@
+name: Analyze
+
+# 静态分析质量门 —— 2026-09-18 起基线为 **0 条**（0 error / 0 warning / 0 info）。
+#
+# 历史：2026-09-17 的全面优化评估报告测得 566 条（250 warning / 316 info），
+# 其中 unnecessary_non_null_assertion 207、avoid_print 154、
+# deprecated_member_use 50、unused_* 25 等。经「dart fix 批量修 + 人工复核
+# 死代码/弃用 API」一轮治理后清零。因此这里不再需要「允许存量」的基线文件，
+# 直接用 `--fatal-infos` 把任何新增问题（含 info 级）挡在门外。
+#
+# 如果将来确需临时放宽，把 `--fatal-infos` 换成 `--no-fatal-infos`
+# 并在 PR 说明里写清原因与归还计划，不要静默改成非阻断。
+#
+# 注意：FLUTTER_VERSION 必须与 pubspec.lock 的 `sdks.flutter` 约束一致
+# （当前 >=3.44.0），否则 `flutter pub get` 会在 runner 上解析失败或
+# 静默降级依赖版本。
+
+on:
+  push:
+    branches-ignore:
+      - "gh-pages"
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: "3.44.3"
+
+jobs:
+  analyze:
+    name: flutter analyze (0-issue gate)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: "stable"
+          cache: true
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: flutter analyze (fail on any issue, including info)
+        run: flutter analyze --fatal-infos

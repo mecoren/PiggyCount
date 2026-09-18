@@ -9,6 +9,7 @@
 /// - 新装库（onCreate）同样创建全部唯一索引
 /// - 插入重复 sync_id 必须被 SQLite 拒绝
 /// - NULL sync_id 不受唯一约束（legacy 未回填行可共存）
+library;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 

@@ -380,7 +380,8 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
 
       // iOS 弹出分享
       if (Platform.isIOS) {
-        await Share.shareXFiles([XFile(exportPath)]);
+        await SharePlus.instance
+            .share(ShareParams(files: [XFile(exportPath)]));
       } else {
         // Android 显示保存路径
         showToast(context, l10n.attachmentExportSavedTo(exportPath));
@@ -545,37 +546,40 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                     style: const TextStyle(fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 8),
-                  // 跳过选项
-                  RadioListTile<String>(
-                    title: Text(l10n.attachmentImportConflictSkip,
-                        style: const TextStyle(fontSize: 14)),
-                    value: AttachmentExportImportService.conflictSkip,
+                  RadioGroup<String>(
                     groupValue: conflictStrategy,
                     onChanged: (v) {
                       if (v != null) {
                         setDialogState(() => conflictStrategy = v);
                       }
                     },
-                    activeColor: primary,
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  // 覆盖选项
-                  RadioListTile<String>(
-                    title: Text(l10n.attachmentImportConflictOverwrite,
-                        style: const TextStyle(fontSize: 14)),
-                    value: AttachmentExportImportService.conflictOverwrite,
-                    groupValue: conflictStrategy,
-                    onChanged: (v) {
-                      if (v != null) {
-                        setDialogState(() => conflictStrategy = v);
-                      }
-                    },
-                    activeColor: primary,
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                    visualDensity: VisualDensity.compact,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // 跳过选项
+                        RadioListTile<String>(
+                          title: Text(l10n.attachmentImportConflictSkip,
+                              style: const TextStyle(fontSize: 14)),
+                          value: AttachmentExportImportService.conflictSkip,
+                          activeColor: primary,
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        // 覆盖选项
+                        RadioListTile<String>(
+                          title: Text(l10n.attachmentImportConflictOverwrite,
+                              style: const TextStyle(fontSize: 14)),
+                          value:
+                              AttachmentExportImportService.conflictOverwrite,
+                          activeColor: primary,
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),

@@ -118,10 +118,10 @@ class _ConfigImportExportPageState
 
         if (!mounted) return;
 
-        final result = await Share.shareXFiles(
-          [XFile(filePath)],
+        final result = await SharePlus.instance.share(ShareParams(
+          files: [XFile(filePath)],
           subject: AppLocalizations.of(context).configExportShareSubject,
-        );
+        ));
 
         if (result.status == ShareResultStatus.success) {
           if (!mounted) return;

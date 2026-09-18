@@ -382,65 +382,68 @@ class _MirrorSelectDialogState extends State<_MirrorSelectDialog> {
                 ),
               ),
             const SizedBox(height: 8),
-            Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: GitHubMirrorService.mirrors.length,
-                itemBuilder: (context, index) {
-                  final mirror = GitHubMirrorService.mirrors[index];
-                  final testResult = _testResults[mirror.id];
-                  final isSelected = _selectedMirrorId == mirror.id;
+            RadioGroup<String>(
+              groupValue: _selectedMirrorId,
+              // _isTesting 期间整组只读：回调短路 + 每项 enabled:false，
+              // 保持与原 onChanged:null 一致的灰化外观（RadioGroup.onChanged
+              // 为 required 非空，禁用只能用短路表达）
+              onChanged: (value) {
+                if (_isTesting) return;
+                setState(() => _selectedMirrorId = value);
+              },
+              child: Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: GitHubMirrorService.mirrors.length,
+                  itemBuilder: (context, index) {
+                    final mirror = GitHubMirrorService.mirrors[index];
+                    final testResult = _testResults[mirror.id];
+                    final isSelected = _selectedMirrorId == mirror.id;
 
-                  return RadioListTile<String>(
-                    value: mirror.id,
-                    groupValue: _selectedMirrorId,
-                    onChanged: _isTesting
-                        ? null
-                        : (value) {
-                            setState(() {
-                              _selectedMirrorId = value;
-                            });
-                          },
-                    title: Text(
-                      isZh ? mirror.name : mirror.nameEn,
-                      style: TextStyle(
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    return RadioListTile<String>(
+                      value: mirror.id,
+                      enabled: !_isTesting,
+                      title: Text(
+                        isZh ? mirror.name : mirror.nameEn,
+                        style: TextStyle(
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
                       ),
-                    ),
-                    subtitle: testResult != null
-                        ? Text(
-                            isZh ? testResult.latencyText : testResult.latencyTextEn,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: testResult.isAvailable
-                                  ? (testResult.latency < 300
-                                      ? Colors.green
-                                      : (testResult.latency < 800
-                                          ? Colors.orange
-                                          : Colors.red))
-                                  : Colors.red,
-                            ),
-                          )
-                        : (mirror.isDefault
-                            ? Text(
-                                l10n.updateMirrorDirectHint,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: PiggyTokens.textTertiary(context),
-                                ),
-                              )
-                            : null),
-                    secondary: testResult != null
-                        ? Icon(
-                            testResult.isAvailable ? Icons.check_circle : Icons.error,
-                            color: testResult.isAvailable ? Colors.green : Colors.red,
-                            size: 20,
-                          )
-                        : null,
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                  );
-                },
+                      subtitle: testResult != null
+                          ? Text(
+                              isZh ? testResult.latencyText : testResult.latencyTextEn,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: testResult.isAvailable
+                                    ? (testResult.latency < 300
+                                        ? Colors.green
+                                        : (testResult.latency < 800
+                                            ? Colors.orange
+                                            : Colors.red))
+                                    : Colors.red,
+                              ),
+                            )
+                          : (mirror.isDefault
+                              ? Text(
+                                  l10n.updateMirrorDirectHint,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: PiggyTokens.textTertiary(context),
+                                  ),
+                                )
+                              : null),
+                      secondary: testResult != null
+                          ? Icon(
+                              testResult.isAvailable ? Icons.check_circle : Icons.error,
+                              color: testResult.isAvailable ? Colors.green : Colors.red,
+                              size: 20,
+                            )
+                          : null,
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                    );
+                  },
+                ),
               ),
             ),
           ],

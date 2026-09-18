@@ -5,6 +5,7 @@
 /// 策略与 WebDAV 后端对齐（webdav_provider P2-7 强制 HTTPS）：
 /// 拒绝动作放在 provider.initialize 边界，保持 parseS3Endpoint 纯函数
 /// 语义不变（s3_endpoint_test 依赖其解析行为）。
+library;
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
 

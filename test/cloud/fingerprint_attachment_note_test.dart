@@ -7,7 +7,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:piggycount/cloud/sync_fingerprint.dart';
-import 'package:piggycount/cloud/transactions_json.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

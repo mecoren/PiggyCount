@@ -5,7 +5,6 @@ import '../../data/db.dart';
 import '../../data/repositories/local/local_repository.dart';
 import '../../providers.dart';
 import '../../l10n/app_localizations.dart';
-import '../../providers/sync_providers.dart';
 import '../../utils/category_utils.dart';
 import '../../utils/shared_ledger_picker_filter.dart';
 import '../../styles/tokens.dart';
@@ -482,10 +481,9 @@ class _CategoryItem extends StatelessWidget {
     required this.onTap,
     this.selected = false,
     this.isSubCategory = false,
-    this.parent,
     this.hasChildren = false,
     this.expanded = false,
-  });
+  }) : parent = null;
 
   @override
   Widget build(BuildContext context) {

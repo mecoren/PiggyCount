@@ -26,7 +26,6 @@ import '../../widgets/biz/ledger_picker_sheet.dart';
 import '../../widgets/biz/home_budget_summary.dart';
 import '../../widgets/biz/home_month_summary_card.dart';
 import 'ledgers_page_new.dart';
-import '../../providers/sync_providers.dart';
 
 // 优化版首页 - 使用FlutterListView实现精准定位和丝滑跳转
 class HomePage extends ConsumerStatefulWidget {

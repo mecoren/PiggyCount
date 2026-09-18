@@ -184,15 +184,15 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
                       segments: [
                         WaitSlidingSegment(
                           value: 'expense',
-                          label: AppLocalizations.of(context)!.categoryExpense,
+                          label: AppLocalizations.of(context).categoryExpense,
                         ),
                         WaitSlidingSegment(
                           value: 'income',
-                          label: AppLocalizations.of(context)!.categoryIncome,
+                          label: AppLocalizations.of(context).categoryIncome,
                         ),
                         WaitSlidingSegment(
                           value: 'transfer',
-                          label: AppLocalizations.of(context)!.transferTitle,
+                          label: AppLocalizations.of(context).transferTitle,
                         ),
                       ],
                       onValueChanged: (value) => setState(() {
@@ -203,7 +203,7 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
                   ),
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: Text(AppLocalizations.of(context)!.commonCancel,
+                    child: Text(AppLocalizations.of(context).commonCancel,
                         style:
                             TextStyle(color: PiggyTokens.textPrimary(context))),
                   )
@@ -278,7 +278,7 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
 
   /// 底部抽屉模式渲染：复用分类选择器与转账表单，分段选择器放进标题栏 bottom 槽。
   Widget _buildBottomSheet(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     // 分段选择器：放标题栏 bottom 槽，宽度铺满（无取消按钮，关闭走左上角 ×）
     final segmentControl = Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
@@ -566,10 +566,12 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
             updateAppWidget(ref, context);
           }
           // 先关闭页面，再播放反馈
-          if (ctx.mounted && Navigator.of(ctx).canPop())
+          if (ctx.mounted && Navigator.of(ctx).canPop()) {
             Navigator.of(ctx).pop();
-          if (context.mounted && Navigator.of(context).canPop())
+          }
+          if (context.mounted && Navigator.of(context).canPop()) {
             Navigator.of(context).pop();
+          }
           // 反馈：轻微触感 + 系统点击音
           HapticFeedback.lightImpact();
           SystemSound.play(SystemSoundType.click);

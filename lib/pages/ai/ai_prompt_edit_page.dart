@@ -165,10 +165,10 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
     final text = _promptController.text;
     if (text.isEmpty) return;
 
-    await Share.share(
-      text,
+    await SharePlus.instance.share(ShareParams(
+      text: text,
       subject: l10n.aiPromptEditTitle,
-    );
+    ));
   }
 
   /// 生成预览内容

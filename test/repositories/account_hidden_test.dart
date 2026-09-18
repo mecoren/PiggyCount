@@ -10,6 +10,7 @@
 /// 关键风险(见 CLAUDE.md 数据库访问规则 + 02-tech-design-app.md §三.1):隐藏开关
 /// 必须走会记 change 的 `updateAccount`,不能像 `updateAccountSortOrders` /
 /// `updateAccountValuation` 那样直接委托底层、不记 change、不同步。
+library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
 import 'package:shared_preferences/shared_preferences.dart';

@@ -7,6 +7,7 @@
 /// 升级路径的 sync_id 回填(存量行 randomblob(16))无法用 create-all 内存库
 /// 直接验证 —— onUpgrade 不会跑;回填语义由 data_import 侧 lastGeneratedDate
 /// 取 max 合并兜底,此处只做结构回归。
+library;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 

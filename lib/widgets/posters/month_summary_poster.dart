@@ -29,8 +29,6 @@ class MonthSummaryPoster extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-
     // 创建渐变背景色 - 月度用更清新的配色
     final lightPrimary = Color.lerp(primaryColor, Colors.white, 0.7)!;
     final gradient = LinearGradient(

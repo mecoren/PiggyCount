@@ -19,6 +19,7 @@ assets/config.json
 .claude/
 .codebuddy/
 .zcode/
+.trae-html-share-packages/
 .workbuddy/
 .superpowers/
 CLAUDE.md

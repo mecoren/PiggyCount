@@ -148,7 +148,9 @@ class _PasswordSetupDialogState extends ConsumerState<PasswordSetupDialog> {
     int score = 0;
     if (pwd.length >= 8) score++;
     if (RegExp(r'[A-Z]').hasMatch(pwd) ||
-        RegExp(r'[a-z]').hasMatch(pwd)) score++;
+        RegExp(r'[a-z]').hasMatch(pwd)) {
+      score++;
+    }
     if (RegExp(r'[0-9]').hasMatch(pwd)) score++;
     if (RegExp(r'[^A-Za-z0-9]').hasMatch(pwd)) score++;
     return score > 3 ? 3 : score;

@@ -12,10 +12,10 @@
 ///    parseJsonToImportData 的结果逐字段一致（真实导出快照往返）；
 /// 3. 损坏输入行为一致：顶层非对象仍抛 FormatException（H1「拒绝恢复」
 ///    分支的上游契约不变）。
+library;
 import 'dart:convert';
 
-import 'package:drift/drift.dart'
-    show LedgersCompanion, TransactionsCompanion, Value;
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter_test/flutter_test.dart';

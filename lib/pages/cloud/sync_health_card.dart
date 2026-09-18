@@ -165,7 +165,7 @@ class SyncHealthCard extends ConsumerWidget {
             'records': rows,
           }),
           flush: true);
-      await Share.shareXFiles([XFile(file.path)]);
+      await SharePlus.instance.share(ShareParams(files: [XFile(file.path)]));
       if (context.mounted) {
         await AppDialog.info(context,
             title: l10n.syncHealthTitle,

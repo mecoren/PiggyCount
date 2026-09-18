@@ -35,6 +35,7 @@ class LocalRepository extends BaseRepository {
   final PiggyDatabase db;
 
   /// 可选的变更追踪器，用于云同步
+  @override
   ChangeTracker? changeTracker;
 
   /// UUID 生成器,批量方法需要预填 syncId 才能查回插入的行登记变更。
@@ -1117,6 +1118,7 @@ class LocalRepository extends BaseRepository {
   /// v30:该账本交易涉及的全部外币币种(≠本位币,含 NULL 列按账户币种兜底后
   /// 的判定)。补折算/改本位币重算前把它们并入汇率拉取(extraQuotes),否则
   /// 无对应账户的币种(CSV 导入/手选)拉不到汇率,重算永远补不上。
+  @override
   Future<Set<String>> getLedgerForeignCurrencies(int ledgerId) async {
     final ledger = await getLedgerById(ledgerId);
     final base = ((ledger?.currency.isNotEmpty ?? false)
@@ -1139,6 +1141,7 @@ class LocalRepository extends BaseRepository {
   /// v30:按 picker 给的账户 id 解析币种 —— 正数查主表;负数是共享账本
   /// Owner 资源的 synthetic id(§7),查 SharedLedgerAccounts 镜像。
   /// (审查发现:金额弹窗对 synthetic 账户解析不到币种,外币被静默按本位币。)
+  @override
   Future<String?> getAccountCurrencyByAnyId(int accountId) async {
     if (accountId >= 0) {
       final acc = await getAccount(accountId);

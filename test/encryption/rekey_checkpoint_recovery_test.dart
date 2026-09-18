@@ -10,7 +10,6 @@ import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:piggycount/data/db.dart';
 import 'package:piggycount/data/encryption/aes_gcm_cipher.dart';
 import 'package:piggycount/data/encryption/argon2_key_derivation.dart';
 import 'package:piggycount/data/encryption/ciphertext_format.dart';

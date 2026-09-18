@@ -20,16 +20,18 @@ class UpdateResult {
     this.type,
   });
 
+  /// 私有构造：仅供各 factory 使用，均表示「非版本检查结果」，
+  /// 因此 hasUpdate 恒为 false；version/downloadUrl/releaseNotes 保持 null
+  /// （由公共构造 [UpdateResult.new] 承载版本检查场景）。
   UpdateResult._({
     required this.success,
-    this.hasUpdate = false,
     this.message,
     this.filePath,
-    this.version,
-    this.downloadUrl,
-    this.releaseNotes,
     required this.type,
-  });
+  })  : hasUpdate = false,
+        version = null,
+        downloadUrl = null,
+        releaseNotes = null;
 
   factory UpdateResult.downloadSuccess(String filePath) => UpdateResult._(
         success: true,

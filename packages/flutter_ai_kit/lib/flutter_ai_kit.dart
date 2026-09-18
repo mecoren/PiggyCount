@@ -1,7 +1,7 @@
 /// Flutter AI Kit - A universal AI capability kit for Flutter
 ///
 /// Supports local models (TFLite, ONNX) and cloud APIs (OpenAI, Zhipu, etc.)
-library flutter_ai_kit;
+library;
 
 // Core
 export 'src/core/ai_task.dart';
@@ -20,3 +20,6 @@ export 'src/strategies/custom_priority_strategy.dart';
 
 // Main class
 export 'src/flutter_ai_kit.dart';
+
+// Utils
+export 'src/utils/debug_log.dart';

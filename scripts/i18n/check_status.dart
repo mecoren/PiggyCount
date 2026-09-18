@@ -1,4 +1,7 @@
 #!/usr/bin/env dart
+// ignore_for_file: avoid_print
+// 命令行工具：print 即本程序的输出方式（终端报表），非库代码。
+
 /// PiggyCount 国际化翻译状态检查工具
 ///
 /// 功能：
@@ -9,6 +12,7 @@
 ///
 /// 使用方法：
 /// dart scripts/i18n/check_status.dart
+library;
 
 import 'dart:io';
 import 'dart:convert';
@@ -129,7 +133,6 @@ Future<void> checkTranslationCompleteness() async {
 
   for (final lang in languages) {
     final count = keyCount[lang] ?? 0;
-    final name = languageNames[lang] ?? lang;
     final percentage =
         zhCount > 0 ? (count / zhCount * 100).toStringAsFixed(1) : '0.0';
 

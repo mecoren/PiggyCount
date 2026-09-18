@@ -1,6 +1,7 @@
 /// 创建标签后将已落库的 Tag 通过路由返回给调用方(移植 BeeCount #455)。
 /// TagSelector 的自动选中逻辑依赖这个返回值;此前 TagEditPage 保存后
 /// pop() 不带参数,自动选中从未生效。
+library;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

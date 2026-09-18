@@ -237,10 +237,10 @@ class SaltMismatchException extends DecryptionException {
   final String ciphertextSaltBase64;
 
   const SaltMismatchException(
-    String message, {
+    super.message, {
     required this.ciphertextSaltBase64,
-    Object? cause,
-  }) : super(message, cause: cause);
+    super.cause,
+  });
 
   @override
   String toString() => 'SaltMismatchException: $message';

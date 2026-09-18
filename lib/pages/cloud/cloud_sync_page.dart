@@ -584,6 +584,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
     );
   }
 
+  @override
   Widget build(BuildContext context) {
     final authAsync = ref.watch(authServiceProvider);
     final sync = ref.watch(syncServiceProvider);

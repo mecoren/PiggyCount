@@ -641,7 +641,7 @@ class TransactionsSyncManager implements SyncService {
           // [newRawStorage]（raw，无 gzip），全量重加密不受影响。
           // 加密未开启不装配 gzip：历史明文对象永不压缩，旧版 App/
           // 外部工具可读性不受升级影响（无回滚风险）。
-          final gzipWrapped = GzipCloudStorageService(inner: newRawStorage!);
+          final gzipWrapped = GzipCloudStorageService(inner: newRawStorage);
           newProvider = EncryptedCloudProvider(
             inner: newProvider,
             encryptionService: encryptionService!,
@@ -1258,14 +1258,14 @@ class TransactionsSyncManager implements SyncService {
   // 附件二进制同步(attachment_binary_sync,快照同步链路)
   // ============================================================
 
-  /// 附件对象的云端路径:与 ledger_<id>.json 同级的 attachments/ 目录,
+  /// 附件对象的云端路径:与 `ledger_<id>.json` 同级的 attachments/ 目录,
   /// 按内容寻址命名 —— 相同内容(同 sha256)跨账本/跨交易只存一份。
   @visibleForTesting
   String pathForAttachmentBin(String sha256) => 'attachments/$sha256.bin';
 
   /// 上传某账本全部附件二进制对象到云端(内容寻址)。
   ///
-  /// 上传顺序协议:必须先于 ledger_<id>.json 调用 —— 清单里引用的对象
+  /// 上传顺序协议:必须先于 `ledger_<id>.json` 调用 —— 清单里引用的对象
   /// 得先存在,否则恢复端拿到"永远缺文件"的清单。单个对象失败不阻断
   /// 账本 JSON 上传(清单仍带 sha256,恢复端 drain 会持续尝试),仅计数
   /// 并 warning。云端已存在的对象直接跳过(去重 + 省流量):批量上传前
@@ -3343,7 +3343,7 @@ class TransactionsSyncManager implements SyncService {
   /// [importRemoteLedger] 优先用缓存避免同一文件二次下载。
   final Map<String, String> _discoveredPayloads = {};
 
-  /// 云端账本文件名模式：ledger_<slotKey>.json
+  /// 云端账本文件名模式：`ledger_<slotKey>.json`
   ///
   /// slotKey 是账本 syncId（新建账本为 UUID；v21 迁移把 legacy 账本回填成
   /// 数字 id 字符串）。历史快照（槽位改版前）直接用本地数字 id 当 key，

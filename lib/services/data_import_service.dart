@@ -192,7 +192,7 @@ class ImportAttachment {
   final String? cloudSha256;
 
   /// 快照链路内容哈希(attachment_binary_sync)。恢复端落列后据此
-  /// 从 attachments/<sha256>.bin 后台补齐文件。
+  /// 从 `attachments/<sha256>.bin` 后台补齐文件。
   final String? sha256;
 
   const ImportAttachment({

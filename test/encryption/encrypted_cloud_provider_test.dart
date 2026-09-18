@@ -181,7 +181,9 @@ void main() {
 
 /// 内存版 CloudProvider，用于装饰器测试
 class FakeCloudProvider implements CloudProvider {
+  @override
   final CloudStorageService storage;
+  @override
   final CloudAuthService auth;
 
   FakeCloudProvider({
@@ -309,6 +311,7 @@ class InMemorySecureKeyStorage implements SecureKeyStorage {
   Future<void> clearRekeyCheckpoint() async {
     _store.remove('piggycount_enc_rekey_ckpt');
   }
+  @override
   Future<void> clearAll() async {
     _store.clear();
   }

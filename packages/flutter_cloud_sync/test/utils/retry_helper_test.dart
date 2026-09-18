@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// 测试用：CloudStorageException 的子类，用于验证 C-M13
 /// "子类也应被重试"的语义（列表未命中时回退默认 is 检查）。
 class _SubStorageException extends CloudStorageException {
-  _SubStorageException(String message) : super(message);
+  _SubStorageException(super.message);
 }
 
 void main() {

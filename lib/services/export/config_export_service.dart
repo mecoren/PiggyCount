@@ -46,7 +46,7 @@ Object? _loadIncomeColorSchemeFromPrefs(SharedPreferences prefs) {
 // 导入 OrderingTerm
 typedef OrderingTerm = d.OrderingTerm;
 
-/// 递归转换 Map 为 Map<String, dynamic>
+/// 递归转换 Map 为 `Map<String, dynamic>`
 /// YAML 解析后的 Map 可能是 YamlMap，键可能不是 String 类型
 Map<String, dynamic> _convertToStringDynamicMap(Map map) {
   return map.map((key, value) {
@@ -1478,60 +1478,36 @@ class ConfigExportService {
       }
     }
 
-    // 如果有任何应用设置，就创建配置对象
-    if (accountFeatureEnabled != null ||
-        defaultIncomeAccountName != null ||
-        defaultExpenseAccountName != null ||
-        reminderEnabled != null ||
-        reminderHour != null ||
-        reminderMinute != null ||
-        languageCode != null ||
-        countryCode != null ||
-        primaryColor != null ||
-        fontScaleLevel != null ||
-        customFontScale != null ||
-        themeMode != null ||
-        darkModePatternStyle != null ||
-        headerSkin != null ||
-        compactAmount != null ||
-        showTransactionTime != null ||
-        noteDisplayMode != null ||
-        noteHistoryScope != null ||
-        noteHistorySort != null ||
-        noteHistoryLimit != null ||
-        incomeExpenseColorScheme != null ||
-        cloudServiceType != null ||
-        autoSync != null ||
-        autoScreenshotEnabled != null ||
-        shortcutPreferCamera != null) {
-      appSettings = AppSettingsConfig(
-        accountFeatureEnabled: accountFeatureEnabled,
-        defaultIncomeAccountName: defaultIncomeAccountName,
-        defaultExpenseAccountName: defaultExpenseAccountName,
-        reminderEnabled: reminderEnabled,
-        reminderHour: reminderHour,
-        reminderMinute: reminderMinute,
-        languageCode: languageCode,
-        countryCode: countryCode,
-        primaryColor: primaryColor,
-        fontScaleLevel: fontScaleLevel,
-        customFontScale: customFontScale,
-        themeMode: themeMode,
-        darkModePatternStyle: darkModePatternStyle,
-        headerSkin: headerSkin,
-        compactAmount: compactAmount,
-        showTransactionTime: showTransactionTime,
-        noteDisplayMode: noteDisplayMode,
-        noteHistoryScope: noteHistoryScope,
-        noteHistorySort: noteHistorySort,
-        noteHistoryLimit: noteHistoryLimit,
-        incomeExpenseColorScheme: incomeExpenseColorScheme,
-        cloudServiceType: cloudServiceType,
-        autoSync: autoSync,
-        autoScreenshotEnabled: autoScreenshotEnabled,
-        shortcutPreferCamera: shortcutPreferCamera,
-      );
-    }
+    // 恒建 AppSettingsConfig：其中 noteHistoryScope / noteHistorySort /
+    // noteHistoryLimit 由 `prefs.getX(...) ?? 默认值` 保证非空，原先判断式里的
+    // 三项 `!= null` 恒真，整个 if 也就恒成立 —— 去掉外壳，行为不变。
+    appSettings = AppSettingsConfig(
+      accountFeatureEnabled: accountFeatureEnabled,
+      defaultIncomeAccountName: defaultIncomeAccountName,
+      defaultExpenseAccountName: defaultExpenseAccountName,
+      reminderEnabled: reminderEnabled,
+      reminderHour: reminderHour,
+      reminderMinute: reminderMinute,
+      languageCode: languageCode,
+      countryCode: countryCode,
+      primaryColor: primaryColor,
+      fontScaleLevel: fontScaleLevel,
+      customFontScale: customFontScale,
+      themeMode: themeMode,
+      darkModePatternStyle: darkModePatternStyle,
+      headerSkin: headerSkin,
+      compactAmount: compactAmount,
+      showTransactionTime: showTransactionTime,
+      noteDisplayMode: noteDisplayMode,
+      noteHistoryScope: noteHistoryScope,
+      noteHistorySort: noteHistorySort,
+      noteHistoryLimit: noteHistoryLimit,
+      incomeExpenseColorScheme: incomeExpenseColorScheme,
+      cloudServiceType: cloudServiceType,
+      autoSync: autoSync,
+      autoScreenshotEnabled: autoScreenshotEnabled,
+      shortcutPreferCamera: shortcutPreferCamera,
+    );
 
     // 读取周期账单配置（导出全部账本的周期记账）
     RecurringTransactionsConfig? recurringConfig;

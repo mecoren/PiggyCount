@@ -10,6 +10,7 @@
 /// 升级路径(旧库带 sync_state → onUpgrade DROP)无法用 create-all 内存库
 /// 直接验证 —— onUpgrade 不会跑;DROP TABLE IF EXISTS 本身幂等,partial
 /// state 重跑安全,此处只做结构回归(惯例同 migration_v33_test)。
+library;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
