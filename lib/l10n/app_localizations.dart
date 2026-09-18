@@ -4598,6 +4598,18 @@ abstract class AppLocalizations {
   /// **'Display time in transaction list, allow time selection when editing'**
   String get appearanceShowTransactionTimeDesc;
 
+  /// No description provided for @appearanceQuickEntryMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Entry Mode'**
+  String get appearanceQuickEntryMode;
+
+  /// No description provided for @appearanceQuickEntryModeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap Record to jump straight to the amount form with your most recent category; turn off to pick a category first'**
+  String get appearanceQuickEntryModeDesc;
+
   /// No description provided for @appearanceNoteDisplay.
   ///
   /// In en, this message translates to:

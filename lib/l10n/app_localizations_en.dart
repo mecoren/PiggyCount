@@ -2549,6 +2549,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Display time in transaction list, allow time selection when editing';
 
   @override
+  String get appearanceQuickEntryMode => 'Quick Entry Mode';
+
+  @override
+  String get appearanceQuickEntryModeDesc =>
+      'Tap Record to jump straight to the amount form with your most recent category; turn off to pick a category first';
+
+  @override
   String get appearanceNoteDisplay => 'Note display';
 
   @override

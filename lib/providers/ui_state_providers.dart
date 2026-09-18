@@ -12,6 +12,7 @@ import 'budget_providers.dart';
 import 'font_scale_provider.dart';
 import 'update_providers.dart';
 import 'smart_billing_providers.dart';
+import 'quick_entry_providers.dart';
 import '../data/db.dart';
 import '../utils/month_range.dart';
 import '../services/data/recurring_transaction_service.dart';
@@ -216,6 +217,8 @@ final appSplashInitProvider = FutureProvider<void>((ref) async {
       ref.watch(baseCurrencyInitProvider.future),
       ref.watch(headerSkinInitProvider.future),
       ref.watch(securityInitProvider.future),
+      // P1-E 快捷记账模式开关（pref 读取 + 变更写回），与上面各项同批加载
+      ref.watch(quickEntryModeEnabledInitProvider.future),
     ]);
     logger.info(tag, '基础配置初始化完成: ${DateTime.now().difference(stepTime).inMilliseconds}ms');
     stepTime = DateTime.now();

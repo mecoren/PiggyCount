@@ -151,6 +151,18 @@ class AppearanceSettingsPage extends ConsumerWidget {
                   ref.read(showTransactionTimeProvider.notifier).state = value;
                 },
               ),
+              // 快捷记账模式（P1-E）：管「记一笔」的落点，与上面几项同属
+              // 「记一笔表单/账单列表」层面的偏好。留这个开关是 AC-R4 的落点：
+              // 关闭后行为必须与改动前完全一致（quickMode 不进任何新分支）。
+              SettingsToggleItem(
+                icon: Icons.bolt_outlined,
+                title: l10n.appearanceQuickEntryMode,
+                subtitle: l10n.appearanceQuickEntryModeDesc,
+                value: ref.watch(quickEntryModeEnabledProvider),
+                onChanged: (value) {
+                  ref.read(quickEntryModeEnabledProvider.notifier).state = value;
+                },
+              ),
               // 备注显示方式
               SettingsNavItem(
                 icon: Icons.notes_outlined,

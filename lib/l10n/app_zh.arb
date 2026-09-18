@@ -997,6 +997,8 @@
   "appearanceAmountFormatCompactDesc": "大金额缩写，如 12.3万（仅对账户余额生效）",
   "appearanceShowTransactionTime": "显示交易时间",
   "appearanceShowTransactionTimeDesc": "在账单列表显示时分，编辑时可选择时间",
+  "appearanceQuickEntryMode": "快捷记账模式",
+  "appearanceQuickEntryModeDesc": "点「记一笔」直接用最近用过的分类，直达金额输入；关闭则先选分类",
   "appearanceNoteDisplay": "备注显示方式",
   "appearanceNoteDisplayCategory": "分类优先",
   "appearanceNoteDisplayCategoryDesc": "显示分类名,备注以括号附在后面",

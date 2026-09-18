@@ -38,3 +38,6 @@ export 'tag_providers.dart';
 
 // 智能记账相关
 export 'smart_billing_providers.dart';
+
+// 快捷记账模式相关（P1-E）
+export 'quick_entry_providers.dart';

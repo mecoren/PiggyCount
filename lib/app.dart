@@ -120,6 +120,15 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
       // 每日定时备份：1 分钟粒度检查，触发条件在闭包内判定
       _backupScheduler = BackupScheduler(onCheck: _runScheduledBackupCheck)
         ..start();
+      // P1-E 快捷记账模式：首帧后 fire-and-forget 预热「记忆分类」，
+      // 使 FAB 点击 → 金额表单之间没有 DB 往返延迟（design.md 决策 3）。
+      // provider 自身 watch currentLedgerIdProvider，账本切换会自动重算，
+      // 这里只需把两种收支各预热一次；开关关闭时不做无谓查询。
+      if (ref.read(quickEntryModeEnabledProvider)) {
+        for (final kind in const ['expense', 'income']) {
+          unawaited(ref.read(quickEntryLastCategoryProvider(kind).future));
+        }
+      }
     });
   }
 
@@ -409,6 +418,20 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
     _openDeepLink(action, type, categoryId: categoryId, page: page);
   }
 
+  /// 「记一笔」入口（底部中间按钮与调试悬浮按钮共用，保持两者行为一致）。
+  ///
+  /// P1-E 快捷记账（design.md 决策 6）：开关打开时把 R1 的记忆分类带下去，
+  /// 由 TransactionEditorPage.initState 直落金额表单；关闭时 quickMode=false，
+  /// 走原有的「分类网格 → 点分类 → 金额表单」老流程（与改动前逐帧一致）。
+  /// 长按的扇形菜单（拍照/相册/语音）完全不受本次分流影响。
+  void _openNewTransactionSheet() {
+    unawaited(showTransactionFormBottomSheet(
+      context,
+      initialKind: 'expense',
+      quickMode: ref.read(quickEntryModeEnabledProvider),
+    ));
+  }
+
   // ——— 深链「重建可恢复」打开 ———
   // 背景:部分厂商(如 ColorOS)在浏览器→App 拉起 deep-link 时会触发主题变更
   // (onConfigurationChanged: themeChanged),导致页面树/Activity 重建;若在重建前就
@@ -544,10 +567,15 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
       case AppLinkAction.newTransaction:
         // 小组件「快速记账」点分类格携带 categoryId 时,预填该分类(见
         // TransactionEditorPage.initialCategoryId);普通「记一笔」categoryId 为 null。
+        // P1-E（决策 6）：无 categoryId 的普通「记一笔」也带上快捷模式，使
+        // 深链入口与 FAB 入口行为一致；带 category 的既有路径本就直落金额表单，
+        // 保持原样。开关关闭时 quickMode=false，行为与改动前一致。
         nav.push(MaterialPageRoute(
           builder: (_) => TransactionEditorPage(
             initialKind: type ?? 'expense',
             quickAdd: true,
+            quickMode: categoryId == null &&
+                ref.read(quickEntryModeEnabledProvider),
             initialCategoryId: categoryId,
           ),
         ));
@@ -866,13 +894,7 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
                   ref.read(bottomTabIndexProvider.notifier).state = index;
                 }
               },
-              onCenterTap: () {
-                // 新建记账：底部抽屉弹出（参考 wait-home 影视新增抽屉）
-                showTransactionFormBottomSheet(
-                  context,
-                  initialKind: 'expense',
-                );
-              },
+              onCenterTap: _openNewTransactionSheet,
               onCenterLongPressStart: _onLongPressStart,
               onCenterLongPressMoveUpdate: _onLongPressMoveUpdate,
               onCenterLongPressEnd: _onLongPressEnd,
@@ -887,10 +909,7 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
                 behavior: HitTestBehavior.opaque,
                 onTap: () {
                   // 与底部中间记账按钮 onCenterTap 行为一致
-                  showTransactionFormBottomSheet(
-                    context,
-                    initialKind: 'expense',
-                  );
+                  _openNewTransactionSheet();
                 },
                 child: Container(
                   width: 48,

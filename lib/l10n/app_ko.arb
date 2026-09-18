@@ -801,6 +801,8 @@
   "appearanceAmountFormatCompactDesc": "큰 금액을 축약합니다. 예: 12.3K (계좌 잔액에만 적용)",
   "appearanceShowTransactionTime": "거래 시간 표시",
   "appearanceShowTransactionTimeDesc": "거래 목록에 시간을 표시하고, 편집 시 시간 선택을 허용합니다",
+  "appearanceQuickEntryMode": "빠른 기록 모드",
+  "appearanceQuickEntryModeDesc": "기록 버튼을 누르면 최근 사용한 분류로 바로 금액 입력으로 이동합니다. 끄면 분류를 먼저 선택합니다",
   "appearanceNoteDisplay": "메모 표시",
   "appearanceNoteDisplayCategory": "카테고리 우선",
   "appearanceNoteDisplayCategoryDesc": "카테고리를 표시하고 메모는 괄호 안에 표시합니다",

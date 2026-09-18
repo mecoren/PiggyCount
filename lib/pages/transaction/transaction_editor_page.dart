@@ -28,6 +28,9 @@ Future<void> showTransactionFormBottomSheet(
   String initialKind = 'expense',
   int? initialCategoryId,
   bool quickAdd = true,
+  /// P1-E 快捷记账模式：无 [initialCategoryId] 时用 R1 的记忆分类直接落金额
+  /// 表单（记忆未命中或校验失败则退回分类网格）。见 prd/p1e_quick_entry_mode。
+  bool quickMode = false,
   String? initialNote,
   double? initialAmount,
   DateTime? initialDate,
@@ -48,6 +51,7 @@ Future<void> showTransactionFormBottomSheet(
     builder: (context) => TransactionEditorPage(
       initialKind: initialKind,
       quickAdd: quickAdd,
+      quickMode: quickMode,
       initialCategoryId: initialCategoryId,
       renderAsBottomSheet: true,
       initialNote: initialNote,
@@ -71,6 +75,9 @@ class TransactionEditorPage extends ConsumerStatefulWidget {
   final String initialKind; // 'expense', 'income', or 'transfer'
   // quickAdd: 点击分类后在当前弹窗上叠加金额输入，保存成功后依次关闭两个弹窗
   final bool quickAdd;
+  /// P1-E：无 [initialCategoryId] 时用 R1 记忆分类直落金额表单
+  /// （记忆未命中 / 校验失败 → 退回分类网格，不做「先出网格再跳表单」的闪跳）。
+  final bool quickMode;
   final int? initialCategoryId;
   final String? initialNote; // 用于金额输入弹窗回填备注
   final double? initialAmount;
@@ -95,6 +102,7 @@ class TransactionEditorPage extends ConsumerStatefulWidget {
     super.key,
     required this.initialKind,
     this.quickAdd = false,
+    this.quickMode = false,
     this.initialCategoryId,
     this.initialNote,
     this.initialAmount,
@@ -120,6 +128,12 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
   String _selectedKind = 'expense';
   bool _autoOpened = false;
 
+  /// P1-E 换分类回路（design.md 决策 5）：金额表单里点分类位时把当前已输金额
+  /// 带回存这里，用户在另一个分类上重弹表单时以它作 initialAmount ——
+  /// 「换分类保留已输金额」由此只用几行实现，无需把金额提升成额外状态源。
+  /// 只在 [_onCategorySelected] 里读，不进 build，故不需要 setState。
+  double? _lastAmount;
+
   /// 已激活（至少构建过一次）的类型集合，用于 IndexedStack 懒加载：
   /// 未访问过的类型返回 SizedBox.shrink()，避免三个子树同时初始化。
   /// 首次切换到某类型时才构建对应组件，已构建的保持存活以保留状态。
@@ -134,21 +148,24 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
 
     // 若需要自动打开金额输入，则在首帧后查询分类并触发
     // 注意：转账类型不走这个逻辑
+    //
+    // P1-E：条件从「有 initialCategoryId」放宽为「有 initialCategoryId **或**
+    // 快捷模式」。快捷模式取 R1 的记忆分类（provider 侧已校验存在性与账本归属）；
+    // 缓存未就绪或记忆未命中 → 不预填、不报错，直接落回分类网格 ——
+    //「预填错分类的危害大于不预填」，也刻意不做「先出网格再跳表单」的闪跳
+    // （design.md 决策 5 与第四节风险表）。
     if (widget.quickAdd &&
-        widget.initialCategoryId != null &&
-        widget.initialKind != 'transfer') {
+        widget.initialKind != 'transfer' &&
+        (widget.initialCategoryId != null || widget.quickMode)) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted || _autoOpened) return;
-        final repo = ref.read(repositoryProvider);
-        // §7 共享账本:initialCategoryId 可能是 synthetic(< 0)— Editor 编辑
-        // 共享账本下记的 tx,反查走 SharedLedger* 表。
-        Category? c;
-        if (widget.initialCategoryId! < 0 && repo is LocalRepository) {
-          c = await repo.db
-              .findCategoryBySyntheticId(widget.initialCategoryId!);
-        } else {
-          c = await repo.getCategoryById(widget.initialCategoryId!);
-        }
+        // 显式传入的分类优先于记忆：小组件点分类格 / 深链带 category 走前者。
+        final categoryId = widget.initialCategoryId ??
+            ref
+                .read(quickEntryLastCategoryProvider(widget.initialKind))
+                .valueOrNull;
+        if (categoryId == null) return;
+        final c = await _resolveCategoryById(categoryId);
         if (!mounted || c == null) return;
         // 切换到对应的类型（提前取出 kind 避免 closure 内流分析丢失非空信息）
         final kind = c.kind;
@@ -378,6 +395,17 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
     }
   }
 
+  /// 按 id 取分类：synthetic(<0) 走共享账本表反查，否则走本地分类表。
+  /// §7 共享账本：Editor 编辑共享账本下记的 tx 时，initialCategoryId 可能是
+  /// synthetic —— 反查必须走 SharedLedger* 表。
+  Future<Category?> _resolveCategoryById(int categoryId) async {
+    final repo = ref.read(repositoryProvider);
+    if (categoryId < 0 && repo is LocalRepository) {
+      return repo.db.findCategoryBySyntheticId(categoryId);
+    }
+    return repo.getCategoryById(categoryId);
+  }
+
   Future<void> _onCategorySelected(
       BuildContext context, Category c, String kind) async {
     if (!widget.quickAdd) {
@@ -410,8 +438,19 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
         categoryName: c.name,
         categoryId: c.id,
         categorySyncId: c.id < 0 ? c.syncId : null,
+        // P1-E 分类位（决策 4）：编辑交易、小组件带分类的既有调用方一并显示，
+        // 不做「只有快捷模式才显示分类」的分叉。
+        displayCategory: c,
+        // 换分类（决策 5）：本表单只在 quickAdd 下被打开（此刻分类网格仍在
+        // 下层），所以点分类位总是可换 —— 把当前已输金额存起来并关掉表单，
+        // 回到网格重选，用户再点分类时由 _lastAmount 回填。
+        onPickCategory: (amount) {
+          _lastAmount = amount;
+          Navigator.of(ctx).pop();
+        },
         initialDate: widget.initialDate ?? DateTime.now(),
-        initialAmount: widget.initialAmount,
+        // 换分类回路回填的金额优先于进入页面时的初始金额
+        initialAmount: _lastAmount ?? widget.initialAmount,
         initialNote: widget.initialNote,
         initialAccountId: initialAccountId,
         initialTagIds: widget.initialTagIds,
@@ -561,6 +600,9 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
           ref.read(statsRefreshProvider.notifier).state++;
           // 刷新：预算数据
           ref.read(budgetRefreshProvider.notifier).state++;
+          // P1-E：这里的 statsRefreshProvider 递增同时就是快捷记账「记忆分类」
+          // 的失效锚点（该 provider 直接跟随 statsRefreshProvider 重算，
+          // 不在各写入点逐个 invalidate —— 理由见 quick_entry_providers.dart）。
           // 更新小组件数据（后台执行，不阻塞UI）
           if (context.mounted) {
             updateAppWidget(ref, context);

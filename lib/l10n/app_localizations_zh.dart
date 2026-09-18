@@ -2470,6 +2470,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appearanceShowTransactionTimeDesc => '在账单列表显示时分，编辑时可选择时间';
 
   @override
+  String get appearanceQuickEntryMode => '快捷记账模式';
+
+  @override
+  String get appearanceQuickEntryModeDesc => '点「记一笔」直接用最近用过的分类，直达金额输入；关闭则先选分类';
+
+  @override
   String get appearanceNoteDisplay => '备注显示方式';
 
   @override
@@ -10314,6 +10320,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get appearanceShowTransactionTimeDesc => '在帳單列表顯示時分，編輯時可選擇時間';
+
+  @override
+  String get appearanceQuickEntryMode => '快捷記帳模式';
+
+  @override
+  String get appearanceQuickEntryModeDesc => '點「記一筆」直接用最近用過的類別，直達金額輸入；關閉則先選類別';
 
   @override
   String get appearanceNoteDisplay => '備註顯示方式';

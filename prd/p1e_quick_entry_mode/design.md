@@ -98,9 +98,18 @@ ON transactions(ledger_id, happened_at)`（`db.dart:1256-1258` 迁移、`db.dart
   `currentLedgerIdProvider`，`keepAlive`，暴露给 UI 时用 `.valueOrNull` **同步**读取。
 - **预热**：首页首帧后 fire-and-forget 读一次（`ref.read(provider('expense').future)` 不必 await），
   使 FAB 被点击时缓存已就绪，**点击到出表单之间没有 DB 往返延迟**。
-- **失效锚点**：唯一写入点 `transaction_editor_page.dart:558-563` 一带（现有 `countsForLedgerProvider`
-  `invalidate` + `statsRefreshProvider` / `budgetRefreshProvider` 递增处）追加一句
-  `ref.invalidate(quickEntryCategoryProvider)`。与既有刷新点同址，避免「刷新漏一处导致记忆陈旧」。
+- **失效锚点（实现期修正，2026-09-18）**：原文写「唯一写入点 `transaction_editor_page.dart:558-563`
+  一带追加一句 `ref.invalidate(quickEntryCategoryProvider)`」——**该前提经全库 grep 不成立**：
+  交易写入点有十来处（编辑器保存 / 明细页删除 `transaction_list.dart:696` / 分类详情
+  `category_detail_page.dart:534` / 标签详情 `tag_detail_page.dart:511` / AI 对话 / 图像语音
+  `PostProcessor` 五处 / 自动化记账 `auto_billing_service.dart` / CSV 导入
+  `import_confirm_page.dart` / 云恢复 `cloud_sync_page.dart` + `sync_providers.dart:214`）。
+  逐个挂线等于把「刷新漏一处 → 记忆陈旧」的风险面复制十来份，且新增写入点必然漏挂。
+  **改为一句话解决**：provider 跟随 `statsRefreshProvider` 重算 —— 它正是上述所有写入点
+  本来就**都会** bump 的粗粒度「数据变了」信号。代价只是一次走索引且 LIMIT 有界的查询，
+  正确性由构造保证：今后新增写入点只要遵守既有约定（写完 bump 统计刷新）就自动被覆盖。
+- 常驻性：Riverpod 2 里普通（非 `.autoDispose`）`FutureProvider.family` 即为常驻，
+  无需额外 `keepAlive`。
 - 账本切换天然正确：provider 读 `currentLedgerIdProvider`，账本变更自动重算。
 
 ### 决策 4：`AmountEditorSheet` 补分类位（唯一硬约束）
@@ -157,6 +166,35 @@ synthetic 翻译、后处理与同步触发——见 `transaction_editor_page.da
 6. **widget 测试**：覆盖 AC-R2 的 7 个场景（尤其 #4 记忆失效不预填、#6 提交结果与旧路径等价）。
 7. `flutter analyze --fatal-infos` + 全量 `flutter test`。
 8. 手动回归：支出/收入/转账、编辑交易、小组件三入口、冷启动 deep link、共享账本账本下的记忆。
+
+### 实现状态（2026-09-18）
+
+| 步 | 状态 | 落点 |
+|---|---|---|
+| 1 R1 数据层 | ✅ | `local_transaction_repository.dart`（`quickEntryLastCategorySql` + `getLastUsedCategoryId`）；测试 `test/data/repositories/local/quick_entry_last_category_test.dart`（13 例，含 EXPLAIN 断言） |
+| 2 provider | ✅ | `providers/quick_entry_providers.dart`；接入 `ui_state_providers.dart` 的 `appSplashInitProvider`；首帧预热在 `app.dart` initState |
+| 3 R2 表单 | ✅ | `AmountEditorSheet.displayCategory` / `onPickCategory` + `_effectiveAmount()`；`TransactionEditorPage.quickMode` / `_lastAmount` / `_resolveCategoryById` |
+| 4 R3 入口 | ✅ | `app.dart` `_openNewTransactionSheet()`（FAB 点击 + 调试悬浮按钮共用）；deep link `quickMode: categoryId == null && 开关` |
+| 5 R4 开关 | ✅ | `appearance_settings_page.dart`（「显示交易时间」下一项）+ `appearanceQuickEntryMode{,Desc}` 四语言词条 |
+| 6 widget 测试 | ✅ | `test/widgets/quick_entry_mode_test.dart`（分类位 5 例，含窄屏让位守卫 + 对照组；落点 6 例；provider 校验 4 例） |
+
+实现期对决策 4 的一处收窄：分类位**不再**是「可换 + 只读」两种调用形态，
+而是由 `onPickCategory` 是否非空决定 —— 当前金额表单只在 `quickAdd` 下被打开
+（`_onCategorySelected` 的非 quickAdd 分支直接 pop 页面），所以调用点恒传回调；
+参数保留 null 语义是为了让 `AmountEditorSheet` 自身不假设调用方。
+位置落在金额表达式行**最左**（原本是 `Spacer()` 让出的空白）：不增加纵向高度，
+从而规避决策 4 列出的「表单因此显得拥挤」风险。
+
+决策 4 风险项「是否显得拥挤」经实现期实测后**如实收窄**：分类位的槽位宽度由
+金额行决定（它是 `Expanded`，吃的是「币种标 + 算式」剩下的余量），窄屏 + 大字
+模式下可能只剩二三十像素，而分类位内部「图标 + 间距 + 箭头」是三件不可压缩的
+固定物。故分类位改为**按可用宽度三级让位**（`_buildCategoryChip`）：宽 ≥72 显示
+图标+名字+箭头；≥53 收掉名字、留图标+箭头；再窄只留图标（最小 24px）。
+守卫用例 `test/widgets/quick_entry_mode_test.dart` 的窄屏那条即为此设。
+
+AC-R2 #6（提交字段等价）由**结构性**保证而非新增断言：`quickMode` 只改
+`initState` 的自动开窗条件，提交链仍是同一个 `_onCategorySelected` → `onSubmit`，
+未新增任何写库分支 —— 这也是「不新建 QuickEntrySheet」这条非目标的直接收益。
 
 ## 四、边界条件与风险
 

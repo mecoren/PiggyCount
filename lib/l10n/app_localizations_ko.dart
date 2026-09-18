@@ -2486,6 +2486,13 @@ class AppLocalizationsKo extends AppLocalizations {
       '거래 목록에 시간을 표시하고, 편집 시 시간 선택을 허용합니다';
 
   @override
+  String get appearanceQuickEntryMode => '빠른 기록 모드';
+
+  @override
+  String get appearanceQuickEntryModeDesc =>
+      '기록 버튼을 누르면 최근 사용한 분류로 바로 금액 입력으로 이동합니다. 끄면 분류를 먼저 선택합니다';
+
+  @override
   String get appearanceNoteDisplay => '메모 표시';
 
   @override

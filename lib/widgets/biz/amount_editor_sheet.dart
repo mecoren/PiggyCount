@@ -21,6 +21,7 @@ import '../currency/currency_flag.dart';
 import '../ui/toast.dart';
 import '../ui/piggy_switcher.dart';
 import 'tag_chip.dart';
+import '../category_icon.dart';
 import '../../pages/attachment/attachment_preview_page.dart';
 
 /// 共享账本 tx 作者信息(创建人 + 最后编辑人)— 编辑器底部 sheet 用。
@@ -44,6 +45,20 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
   final String categoryName; // 仅用于上层提交，不在UI展示
   final int? categoryId; // 当前本地分类ID，用于筛选历史备注
   final String? categorySyncId; // 共享账本分类同步ID，用于筛选历史备注
+  /// 分类位（P1-E，design.md 决策 4）：金额表达式行最左侧展示的分类。
+  ///
+  /// 为 null 时不渲染该位 —— 转账金额表单、以及未传分类的调用方，布局与
+  /// 改动前逐字一致。**刻意不做「只有快捷模式才显示分类」的分叉**：同一个
+  /// 表单不该有两套信息层级（编辑交易、小组件带分类的既有调用方一并传它）。
+  final Category? displayCategory;
+
+  /// 点分类位的回调，入参为**当前已输金额**。null = 只读不可换
+  /// （下层没有分类网格可退时，如全屏编辑场景）。
+  ///
+  /// 动作由调用方决定：快捷记账的调用方拿到金额后 pop 掉本表单回到分类网格，
+  /// 用户点新分类时再以该金额作 initialAmount 重弹 —— 即决策 5 的换分类回路，
+  /// 「换分类保留已输金额」由此免费获得，无需把金额提升成额外状态源。
+  final ValueChanged<double>? onPickCategory;
   final DateTime initialDate;
   final double? initialAmount;
   final String? initialNote;
@@ -66,6 +81,8 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
     required this.categoryName,
     this.categoryId,
     this.categorySyncId,
+    this.displayCategory,
+    this.onPickCategory,
     required this.initialDate,
     this.initialAmount,
     this.initialNote,
@@ -308,6 +325,94 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
 
   /// 币种标(金额表达式最左):点开即选(币种优先联动:选后账户重置、账户
   /// 列表按新币种过滤)。转账不显示:转账币种恒=账户币种,选了也会被忽略。
+  /// 当前「有效金额」：未进运算模式时即输入值；运算模式未按等号时是累加结果。
+  /// 与 `doneKey` 里判「完成」可用性的算法一致（那处是 build 内的局部闭包，
+  /// 不便共用，此处按同一口径重算一次）。用于换分类时回传金额。
+  double _effectiveAmount() {
+    final cur = double.tryParse(_amountStr) ?? 0.0;
+    return _op == null ? cur : _compute(_acc, _op!, cur);
+  }
+
+  /// 分类位（P1-E，design.md 决策 4）：放在金额表达式行**最左**。
+  ///
+  /// 那里本来就是 `Spacer()` 让出的空白，加进去不增加纵向高度 —— 决策 4 的
+  /// 风险项「金额表单是否因此显得拥挤」由此规避；同时它落在数字键盘的视觉
+  /// 主注视区内，没有藏在备注/标签之下。
+  ///
+  /// **按可用宽度三级让位**。槽位宽度不由分类位决定：它是 `Expanded`，吃的是
+  /// 「币种标 + 算式」剩下的余量，小屏 + 大字模式（或窄屏 + 长金额）下可能
+  /// 只剩二三十像素。实测过：槽位剩 ~31px 而分类位内部「图标 16 + 间距 5 +
+  /// 箭头 16 = 37px」是硬的，分类名已被 `Flexible` 压到 0 也还是顶出 22px 的
+  /// `RenderFlex overflowed`。分类位是**附加信息**、金额才是这张表单的主内容，
+  /// 所以窄到一定程度它必须自己让位，而不是把金额行顶坏：
+  ///   1. 宽 ≥ 72：图标 + 分类名（96px 上限，超出省略）+ 下拉箭头；
+  ///   2. 宽 ≥ 53：去掉名字，图标 + 箭头（仍看得出「可点换分类」）；
+  ///   3. 再窄：只剩图标（最小占用 24px）—— 图标是硬约束（分类必须可辨认）。
+  Widget _buildCategoryChip(BuildContext context) {
+    final category = widget.displayCategory;
+    if (category == null) return const SizedBox.shrink();
+    final text = Theme.of(context).textTheme;
+    final canPick = widget.onPickCategory != null;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 53 = 图标 16 + 间距 5 + 箭头 16 + 左右内边距 16，是「带箭头」的
+        // 最小占用；72 再给分类名留 19px，否则名字只剩省略号、不如不给。
+        final showName = constraints.maxWidth >= 72;
+        final showArrow = canPick && constraints.maxWidth >= 53;
+        // 只剩图标时把内边距收到 4：24px 总宽是分类位能缩到的极限。
+        final pad = showArrow || showName ? 8.0 : 4.0;
+        return InkWell(
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+          onTap:
+              canPick ? () => widget.onPickCategory!(_effectiveAmount()) : null,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: pad, vertical: 5),
+            decoration: BoxDecoration(
+              color: PiggyTokens.surfaceKeySecondary(context),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CategoryIconWidget(
+                  category: category,
+                  size: 16,
+                  color: PiggyTokens.iconSecondary(context),
+                ),
+                if (showName) ...[
+                  const SizedBox(width: 5),
+                  // 自定义分类名可能很长。三重收窄：Flexible（可被压缩）+
+                  // 96px 上限（宽屏也不让它挤走金额）+ 省略号。空间不够时
+                  // 优先让分类名让位，图标始终保留 —— 分类仍是可辨认的。
+                  Flexible(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 96),
+                      child: Text(
+                        category.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        softWrap: false,
+                        style: text.bodySmall?.copyWith(
+                          color: PiggyTokens.textSecondary(context),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+                if (showArrow) ...[
+                  const SizedBox(width: 5),
+                  Icon(Icons.arrow_drop_down,
+                      size: 16, color: PiggyTokens.iconSecondary(context)),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildCurrencyChip(BuildContext context) {
     if (widget.transactionKind == 'transfer') return const SizedBox.shrink();
     final text = Theme.of(context).textTheme;
@@ -663,8 +768,20 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                 // 表达式行:金额表达式。左侧币种标,右侧运算显示。
                 Row(
                   children: [
-                    const Spacer(),
-                    // v30 币种标:整个金额表达式的最左侧(反馈11:运算模式下
+                    // P1-E 分类位：金额行最左，占住「币种标 + 算式」之外的全部剩余
+                    // 空间。**必须用 Expanded 而不是原来的 Spacer**：Spacer 只是
+                    // 空白、不承载内容，换成它占位后分类位在窄屏上无法被压缩 ——
+                    // 实测 320dp + 长分类名 + 6 位金额时把整行顶出 158px。
+                    // Expanded 同时满足两件事：宽屏时吃掉剩余空间（视觉与 Spacer
+                    // 等价），窄屏时缩到剩余的宽度、由分类位自己三级让位
+                    // （收名字 → 收箭头 → 只剩图标，见 `_buildCategoryChip`）。
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: _buildCategoryChip(context),
+                      ),
+                    ),
+                    // v30 币种标:金额表达式的最左侧(反馈11:运算模式下
                     // 不能夹在「10 + 20」中间),点开选币种。
                     _buildCurrencyChip(context),
                     const SizedBox(width: 6),

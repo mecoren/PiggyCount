@@ -418,6 +418,8 @@
   "appearanceSettingsPageTitle": "個性化設定",
   "appearanceShowTransactionTime": "顯示交易時間",
   "appearanceShowTransactionTimeDesc": "在帳單列表顯示時分，編輯時可選擇時間",
+  "appearanceQuickEntryMode": "快捷記帳模式",
+  "appearanceQuickEntryModeDesc": "點「記一筆」直接用最近用過的類別，直達金額輸入；關閉則先選類別",
   "appearanceNoteDisplay": "備註顯示方式",
   "appearanceNoteDisplayCategory": "分類優先",
   "appearanceNoteDisplayCategoryDesc": "顯示分類名,備註以括號附在後面",
