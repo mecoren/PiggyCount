@@ -12,9 +12,9 @@
 |---|---|---|
 | `p1c_list_incremental_grouping` | 交易列表按日期段增量分组，替代全量重算 | 已落地（`62e6ed2`） |
 | `p1d_style_token_convergence_batch1` | 样式令牌收敛第一批（图表色板 / 海报语义色 / 默认主色单源） | 已落地（`5317308`）；后续批次见文末 |
-| `p2a_analyzer_baseline` | 静态分析清零（566→0）+ CI 锁基线 | 已落地（`252a4e8`） |
-| `p1f_rec6_error_observability` | 同步异常→用户提示映射表 + 本地库损坏恢复引导 | 已落地（`7330b26` → `74d3b16` → `4b337c6` → `dce6a0d`）|
 | `p1e_quick_entry_mode` | 快捷记账模式（记忆上次分类 + 金额优先的极简表单） | **设计待确认**——`requirements.md` 第五节 5 个待拍板项 |
+| `p1f_rec6_error_observability` | 同步异常→用户提示映射表 + 本地库损坏恢复引导 | 已落地（`7330b26` → `74d3b16` → `4b337c6` → `dce6a0d`）|
+| `p2a_analyzer_baseline` | 静态分析清零（566→0）+ CI 锁基线 | 已落地（`252a4e8`） |
 
 ## 历史需求（按主题分组）
 
