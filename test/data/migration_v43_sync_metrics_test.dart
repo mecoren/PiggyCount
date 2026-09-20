@@ -83,5 +83,14 @@ void main() {
         .insert(StaleRemoteSlotsCompanion.insert(path: 'ledger_b.json'));
     expect((await db.select(db.staleRemoteSlots).get()).single.path,
         'ledger_b.json');
+
+    // 审计（2026-09-20）：onCreate 此前遗漏 idx_sync_op_log_ts —— 全新安装
+    // 用户的 30 天窗口聚合会全表扫描。与 onUpgrade v43 分支同构补建。
+    final idx = await db
+        .customSelect("SELECT name FROM sqlite_master WHERE type='index' "
+            "AND name='idx_sync_op_log_ts'")
+        .get();
+    expect(idx, isNotEmpty,
+        reason: 'onCreate 也必须建 ts 索引（新装库走 onCreate 而非 migration）');
   });
 }

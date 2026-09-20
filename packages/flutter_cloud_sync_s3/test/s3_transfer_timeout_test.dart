@@ -37,6 +37,19 @@ void main() {
       expect(d, const Duration(minutes: 5));
     });
 
+    test('审计 S3-L2：timeout 超过封顶值时不抛 ArgumentError', () {
+      final long = S3Client(
+        endpoint: 'https://s3.test',
+        region: 'us-east-1',
+        accessKey: 'a',
+        secretKey: 'b',
+        timeout: const Duration(minutes: 10),
+      );
+      // 旧实现 dynamicMs.clamp(10min, 5min) 抛 ArgumentError（lower > upper）
+      expect(() => long.transferTimeoutFor(5 * 1024 * 1024), returnsNormally);
+      expect(long.transferTimeoutFor(0), const Duration(minutes: 10));
+    });
+
     test('自定义基线 timeout 时下限随基线抬升', () {
       final tuned = S3Client(
         endpoint: 'https://s3.test',

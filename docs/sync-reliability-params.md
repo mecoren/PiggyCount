@@ -72,7 +72,8 @@
 - **2026-09-11（第三批：性能）**：
   - P2-2①：`exportTransactionsJson` 返回类型 `String → ExportedLedgerJson`（jsonStr + fingerprint/count/balance/ledgerName/currency/monthStartDay 伴随字段，编码前旁路收集）——上传链路（`_uploadCurrentLedgerCore`/`_localFingerprintWithCache`/备份 ZIP 打包/序列化器）不再对同一几百 KB~MB 级 JSON 整串 jsonDecode 取 4 个元信息字段。
 - **2026-09-11（第四批：性能）**：
-  - P2-2③：快照 gzip 压缩传输——新增 `GzipCloudStorageService` 装饰器（lib/cloud/gzip_cloud_storage.dart），E2EE 开启时装配链 raw → Gzip → Encrypted（压明文、压后加密，与备份链路「ZIP→加密」同序）。阈值：≥2KB 且压缩比 ≤60% 才存压缩形态，否则原文；附件二进制/元数据/列举全部透传（gzip 层镜像实现 BinaryCapableStorage/ConditionalWriteStorage，附件真字节与条件写锚点不退化）。Latin-1（码点=字节）无损桥过文本通道。加密未开启不装配（历史明文永不压缩，旧版本可读性无回滚风险）。rekey/enableFromCloud 三入口均传 rawStorage（无 gzip 层）——全量重加密读写未压缩形态，不受影响（嗅探端透传非 gzip 字节）。重复 JSON 实测压缩率 ~10-15%，弱网流量/耗时同比例下降。
+  - P2-2③：快照 gzip 压缩传输——新增 `GzipCloudStorageService` 装饰器（lib/cloud/gzip_cloud_storage.dart），E2EE 开启时装配链 raw → Encrypted → **Gzip（外层）**（压明文、压后加密，与备份链路「ZIP→加密」同序）。阈值：≥2KB 且压缩比 ≤60% 才存压缩形态，否则原文；附件二进制/元数据/列举全部透传（gzip 层镜像实现 BinaryCapableStorage/ConditionalWriteStorage，附件真字节与条件写锚点不退化）。Latin-1（码点=字节）无损桥过文本通道。加密未开启不装配（历史明文永不压缩，旧版本可读性无回滚风险）。rekey/enableFromCloud 三入口均传 rawStorage（无 gzip 层）——全量重加密读写未压缩形态，不受影响（嗅探端透传非 gzip 字节）。重复 JSON 实测压缩率 ~10-15%，弱网流量/耗时同比例下降。
+    - **2026-09-20 修正（P1，见 docs/s3-webdav-sync-audit-2026-09-20.md）**：2026-09-11 的实现把 gzip 放在了加密层**之下**（`Encrypted(Gzip(raw))`，经 `innerStorageOverride`）—— 上传时加密层先产出 `BEECRYPT1:` 密文，gzip 层命中密文透传短路 → **永不压缩**，该特性在生产完全失效（仅测试假阳性掩盖；条件写路径也整体绕过 gzip）。现改为 `outerStorageWrapper` 把 gzip 装在加密层**外层**，并让 `uploadBinaryConditional`（S3 恒走）同样压缩；测试补上「密文体积显著小于不压缩基线」的真实压缩断言。
 - **2026-09-11（第五批：治理）**：
   - P2-10：Supabase database/realtime 懒装配（App 零消费，仅 auth+storage 即时创建）；_initializeAppMode 简化为持久值规范化（appModeProvider 不再被启动路径触碰）；两份同日审计文档加互见注记（内容不同非重复，保留）。
 - **2026-09-12（第六批：2026-09-12 审计新发现修复，详见 docs/sync-comprehensive-audit-2026-09-12.md 附录 C）**：

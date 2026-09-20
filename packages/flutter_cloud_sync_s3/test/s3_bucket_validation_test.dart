@@ -12,12 +12,14 @@ import 'package:flutter_cloud_sync_s3/flutter_cloud_sync_s3.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  // 合法 bucket：initialize 走到连接探测（无网络环境下抛 Cloud-
-  // ConfigurationException，但消息为网络/连接类，不含 'bucket name'）。
+  // 合法 bucket：initialize 走到连接探测。端点用本机保留的关闭端口
+  // （127.0.0.1:1）—— 连接被立即拒绝（ECONNREFUSED），探测快速失败，
+  // 不依赖 DNS/外网。此前用 `minio.local` 在无 DNS 环境下会挂到测试
+  // 30s 超时（测试基建缺陷）。
   Future<Object?> tryInit(String bucket) async {
     try {
       await S3Provider().initialize({
-        'endpoint': 'minio.local:9000',
+        'endpoint': '127.0.0.1:1',
         'region': 'us-east-1',
         'accessKey': 'ak',
         'secretKey': 'sk',

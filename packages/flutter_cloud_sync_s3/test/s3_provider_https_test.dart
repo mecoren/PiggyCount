@@ -47,13 +47,14 @@ void main() {
     test('https:// endpoint 正常通过防护（失败只可能是后续网络层）', () async {
       final provider = S3Provider();
 
-      // https 合法：不应命中 SYNC-04 明文拒绝。无网络环境下 initialize
-      // 会在连接阶段失败（provider 会把 S3NetworkException 包装成
-      // CloudConfigurationException），因此这里校验"错误文案"而非类型。
+      // https 合法：不应命中 SYNC-04 明文拒绝。端点用本机关闭端口
+      // （127.0.0.1:1）→ 连接被立即拒绝，探测快速失败，不依赖外网。
+      // provider 会把 S3NetworkException 包装成 CloudConfigurationException，
+      // 因此这里校验"错误文案"而非类型。
       Object? caught;
       try {
         await provider.initialize({
-          'endpoint': 'https://minio.local:9000',
+          'endpoint': 'https://127.0.0.1:1',
           'accessKey': 'ak',
           'secretKey': 'sk',
           'bucket': 'bucket',

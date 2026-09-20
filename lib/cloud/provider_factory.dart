@@ -130,11 +130,25 @@ Future<({CloudProvider? provider, CloudAuthService? auth})> createCloudServices(
     case CloudBackendType.s3:
       // S3 初始化 - 不捕获异常，让错误向上传递以便调试
       // S3-W2：条件写降级 warning 线索（网关 400+NotImplemented 时
-      // 静默降级排查无痕迹），接线到应用日志
+      // 静默降级排查无痕迹），接线到应用日志。
+      //
+      // 审计 S3-M2：此前只转发 warning，其余级别被**丢弃** —— 而
+      // S3StorageService 把「重试逐次事件」（LOG-06，弱网排障区分一次成功
+      // 与重试后成功的关键线索）以 **info** 级注入，故 LOG-06 在 release
+      // 构建中完全失效。现按 level 全量转发，与 WebDAV/Supabase 侧接线一致。
       S3Provider.downgradeLogger = CloudSyncLogger(
         onLog: (level, message) {
-          if (level == fcs_log.LogLevel.warning) {
-            logger.warning('CloudSync', message);
+          switch (level) {
+            case fcs_log.LogLevel.debug:
+            case fcs_log.LogLevel.info:
+              logger.info('CloudSync', message);
+              break;
+            case fcs_log.LogLevel.warning:
+              logger.warning('CloudSync', message);
+              break;
+            case fcs_log.LogLevel.error:
+              logger.error('CloudSync', message);
+              break;
           }
         },
       );

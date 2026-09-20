@@ -130,31 +130,45 @@ void main() {
     });
   });
 
-  group('P2-2③ gzip 装配链（innerStorageOverride）', () {
-    test('E2EE 开启 + override：storage = Encrypted(Gzip(inner))，'
-        '上传的大明文经 压缩→加密 两层，下载完整还原', () async {
+  group('P2-2③ gzip 装配链（outerStorageWrapper）', () {
+    test('E2EE + gzip 外层：storage = Gzip(Encrypted(inner))，'
+        '大明文经 压缩→加密 两层，密文体积显著小于不压缩，下载完整还原', () async {
       await encryptionService.enable(password: 'password123');
-      final gz = GzipCloudStorageService(inner: innerStorage);
-      final provider = EncryptedCloudProvider(
-        inner: innerProvider,
-        encryptionService: encryptionService,
-        innerStorageOverride: gz,
-      );
 
       // 大量重复的明文快照（确保 gzip 路径触发）
       final items =
           List.generate(300, (i) => '{"amount":$i,"note":"买咖啡日常消费"}');
       final payload = '{"items":[${items.join(',')}],"count":300}';
 
-      final storage = provider.storage;
+      // 基线：只加密不压缩（无 gzip 层），用于对比密文体积
+      final baselineStorage = EncryptedCloudProvider(
+        inner: innerProvider,
+        encryptionService: encryptionService,
+      ).storage;
+      await baselineStorage.upload(path: 'baseline.json', data: payload);
+      final baselineCipher = innerStorage.stored['baseline.json']!;
+
+      // gzip 在加密层**外层**
+      final gzProvider = EncryptedCloudProvider(
+        inner: innerProvider,
+        encryptionService: encryptionService,
+        outerStorageWrapper: (base) => GzipCloudStorageService(inner: base),
+      );
+      final storage = gzProvider.storage;
       await storage.upload(
           path: 'ledger_1.json', data: payload, metadata: {'fingerprint': 'fp1'});
 
-      // 存储层拿到的是密文，既非明文也非裸 gzip（压缩后的密文）
       final rawStored = innerStorage.stored['ledger_1.json'];
       expect(rawStored, isNotNull);
-      expect(rawStored!.startsWith('BEECRYPT1:'), isTrue,
-          reason: '云端只见密文');
+      expect(rawStored!.startsWith('BEECRYPT1:'), isTrue, reason: '云端只见密文');
+      // 关键断言（旧测试缺失 —— 装配方向错误长期假绿）：压缩确实发生。
+      // AES-GCM/base64 开销恒定，压缩后密文应显著短于未压缩基线；
+      // 若两者等长说明 gzip 仍被加密层挡在外面（压缩未生效）。
+      expect(
+        rawStored.length,
+        lessThan(baselineCipher.length * 0.7),
+        reason: 'gzip 必须在加密前压缩明文；与基线等长即装配方向反了',
+      );
 
       // 下载端完整还原（解密→解压）
       final back = await storage.download(path: 'ledger_1.json');
@@ -163,7 +177,7 @@ void main() {
       await encryptionService.disable();
     });
 
-    test('override 为 null（默认）：行为与历史装配完全一致', () async {
+    test('outerStorageWrapper 为 null（默认）：行为与历史装配完全一致', () async {
       await encryptionService.enable(password: 'password123');
       const payload = '{"count":1}';
       final storage = decoratedProvider.storage;

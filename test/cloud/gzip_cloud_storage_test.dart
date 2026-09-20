@@ -82,6 +82,8 @@ class _MemStorage implements CloudStorageService, BinaryCapableStorage, Conditio
       ifMatch: ifMatchEtag,
       ifNoneMatch: ifNoneMatch,
     ));
+    // 落盘形态记录（bytes 经 UTF-8 文本通道）——供压缩断言检查
+    map[path] = utf8.decode(bytes);
   }
 }
 
@@ -249,6 +251,29 @@ void main() {
         ifMatchEtag: 'etag-1',
       );
       expect(mem.conditionalCalls.single.ifMatch, 'etag-1');
+    });
+
+    test('审计 P1：条件写路径（S3 恒走）同样压缩明文并原样还原', () async {
+      final mem = _MemStorage();
+      final svc = GzipCloudStorageService(inner: mem);
+      // 大量重复的明文 JSON（manager 传入条件写的字节形态）
+      final items = List.generate(200, (i) => '{"amount":$i,"note":"买咖啡日常消费"}');
+      final payload = '{"items":[${items.join(',')}]}';
+      final bytes = utf8.encode(payload);
+
+      await svc.uploadBinaryConditional(
+          path: 'ledger_1.json', bytes: bytes, ifMatchEtag: 'e1');
+
+      expect(mem.conditionalCalls.single.ifMatch, 'e1');
+      // 落盘形态是 gzip（Latin-1 桥：码点 = 字节），说明压缩确实发生
+      final stored = mem.map['ledger_1.json']!;
+      final storedBytes = Uint8List.fromList(stored.codeUnits);
+      expect(storedBytes[0], 0x1f);
+      expect(storedBytes[1], 0x8b);
+      expect(storedBytes[2], 0x08);
+      expect(storedBytes.length, lessThan(bytes.length * 0.6));
+      // 下载端还原为原明文
+      expect(await svc.download(path: 'ledger_1.json'), payload);
     });
 
     test('inner 无条件写能力 → 如实申报不支持（manager 走写后校验兜底）',

@@ -26,6 +26,14 @@ class _FakeServer implements HttpClientAdapter {
   /// MOVE 是否真的执行移动（false = 模拟不支持覆盖 MOVE 的服务器）
   bool performMove = true;
 
+  /// 审计 WebDAV-T1：置 true 时，对「目标已存在的覆盖式 MOVE」返回 501
+  /// Not Implemented（不执行移动）；非覆盖 MOVE 与「目标不存在」的 MOVE
+  /// 仍正常。用于验证 501 会被纳入交换降级判定。
+  bool rejectOverwriteMoveToExisting = false;
+
+  /// 审计 WebDAV-T2：PROPFIND 延迟（配合 opTimeoutForTest 验证超时不重试）
+  Duration? delayReads;
+
   int putCalls = 0;
 
   /// 审计 M10：GET 计数 —— 断言 getMetadata 缓存命中后不再下载主文件
@@ -123,6 +131,12 @@ class _FakeServer implements HttpClientAdapter {
         final dest =
             Uri.parse(options.headers['destination'] as String).path;
         moveCalls.add((path, dest));
+        final overwrite =
+            (options.headers['overwrite'] as String?)?.toUpperCase() == 'T';
+        // 模拟「不支持覆盖语义」的服务器：目标已存在 + Overwrite: T → 501
+        if (overwrite && files.containsKey(dest) && rejectOverwriteMoveToExisting) {
+          return ResponseBody.fromString('not implemented', 501);
+        }
         if (performMove && files.containsKey(path)) {
           files[dest] = files.remove(path)!;
           final e = etags.remove(path);
@@ -135,6 +149,9 @@ class _FakeServer implements HttpClientAdapter {
 
       case 'PROPFIND':
         propfindCalls++;
+        if (delayReads != null) {
+          await Future<void>.delayed(delayReads!);
+        }
         final depthOne = options.headers['depth'] == '1';
         final buf = StringBuffer(
             '<?xml version="1.0"?><d:multistatus xmlns:d="DAV:">');
@@ -666,6 +683,39 @@ void main() {
             .having((e) => e.message, 'message', anyOf(
                 contains('账号或密码错误'), contains('认证失败')))),
       );
+    });
+  });
+
+  group('审计 WebDAV-T1/T2：降级覆盖与超时不重试', () {
+    test('T1：覆盖式 MOVE 返回 501 → 走无损交换降级并成功落位', () async {
+      server.files['/dir/a.json'] = utf8.encode('OLD');
+      server.etags['/dir/a.json'] = 'e-old';
+      // 服务器不支持「覆盖已存在目标」的 MOVE（501），但非覆盖 MOVE 与
+      // 目标不存在的覆盖 MOVE 仍可用 —— 正是交换降级要覆盖的形态。
+      server.rejectOverwriteMoveToExisting = true;
+
+      await service.upload(path: 'dir/a.json', data: 'NEW-CONTENT');
+
+      expect(utf8.decode(server.files['/dir/a.json']!), 'NEW-CONTENT');
+      expect(server.files.keys.where((k) => k.contains('.old.')), isEmpty,
+          reason: '降级交换成功后备份位必须清理');
+      expect(server.files.keys.where((k) => k.contains('.tmp.')), isEmpty,
+          reason: '降级交换成功后临时文件必须清理');
+    });
+
+    test('T2：读操作超时只尝试一次（超时不进入幂等重试）', () async {
+      WebDAVStorageService.opTimeoutForTest =
+          const Duration(milliseconds: 50);
+      addTearDown(() => WebDAVStorageService.opTimeoutForTest = null);
+      server.files['/dir/a.json'] = utf8.encode('{}');
+      server.delayReads = const Duration(milliseconds: 400);
+
+      await expectLater(
+        service.list(path: 'dir/'),
+        throwsA(isA<CloudStorageException>()),
+      );
+      expect(server.propfindCalls, 1,
+          reason: 'T2：超时不得被当作「连接层瞬时故障」重试（旧实现最坏 3 次 × 60s）');
     });
   });
 }

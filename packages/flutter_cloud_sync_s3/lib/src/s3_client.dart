@@ -12,6 +12,17 @@ import 's3_exceptions.dart';
 
 export 's3_object_info.dart';
 
+/// ListObjects 单页解析结果（V2 continuation-token / V1 last-key 共用）。
+///
+/// 审计 S3-M1：作为「单页」重试单元的数据载体 —— 重试只重发当前页，
+/// 不再从第 1 页全量重翻（大桶带宽/费用倍增）。
+typedef _ListPage = ({
+  List<S3ObjectInfo> objects,
+  bool isTruncated,
+  String? nextContinuationToken,
+  String? lastKey,
+});
+
 /// S3 REST API 客户端
 ///
 /// 实现基础的 S3 操作：
@@ -72,8 +83,15 @@ class S3Client {
     final sizeMb = contentLength / (1024 * 1024);
     final dynamicMs =
         timeout.inMilliseconds + (sizeMb * 30 * 1000).round();
-    return Duration(milliseconds:
-        dynamicMs.clamp(timeout.inMilliseconds, _transferTimeoutCap.inMilliseconds));
+    // 审计 S3-L2：num.clamp 要求 lower ≤ upper。自定义 timeout 大于封顶值
+    // （如 Duration(minutes: 10)）时旧式 `clamp(timeout, cap)` 会抛
+    // ArgumentError —— timeout 是公开参数，调用方一旦显式要求长超时即崩。
+    // 此时以 timeout 自身为上界：调用方显式声明的长超时不应被静默钳短。
+    final upperMs = timeout.inMilliseconds > _transferTimeoutCap.inMilliseconds
+        ? timeout.inMilliseconds
+        : _transferTimeoutCap.inMilliseconds;
+    return Duration(
+        milliseconds: dynamicMs.clamp(timeout.inMilliseconds, upperMs));
   }
 
   /// dispose 标志：避免释放后继续使用导致状态错误
@@ -564,6 +582,9 @@ class S3Client {
         return _normalizeEtag(response.headers['etag']);
       }
       if (response.statusCode == 412) {
+        // N-14 同款：失败分支也要消费 body 流，否则 keep-alive 连接因
+        // 存在无读者响应体而无法回池；高频条件写冲突时连接复用率下降。
+        unawaited(response.stream.drain<void>().catchError((Object _) {}));
         throw S3PreconditionFailedException(key,
             message: '条件写失败（远端已被其他设备修改）: $key');
       }
@@ -581,6 +602,7 @@ class S3Client {
       }
       if (response.statusCode == 409 && (ifMatch != null || ifNoneMatch)) {
         // 流式 body 不可重放：不自动重试，直接按条件失败上抛
+        unawaited(response.stream.drain<void>().catchError((Object _) {}));
         throw S3PreconditionFailedException(key,
             message: '条件写失败（HTTP 409 冲突）: $key');
       }
@@ -1064,104 +1086,114 @@ class S3Client {
     required String bucket,
     String? prefix,
     int? maxKeys,
-  }) {
-    // 审计 S3-M3：neverRetryStatusCodes 传入 501 —— Not Implemented 是
-    // 确定性失败（网关不支持 ListObjectsV2），重试三次只会白耗退避延迟
-    // 再走 V1 回退；应立即上抛给 listObjectsDetailed 做协议回退。
-    return _retry(
-      () async {
-        final allObjects = <S3ObjectInfo>[];
-        String? continuationToken;
+  }) async {
+    final allObjects = <S3ObjectInfo>[];
+    String? continuationToken;
 
-        // S3-M2：翻页终止护栏状态
-        String? previousToken;
-        var pages = 0;
+    // S3-M2：翻页终止护栏状态
+    String? previousToken;
+    var pages = 0;
 
-        do {
-          // M2-1：页数硬上限。单页服务端上限 1000 对象，1000 页 ≈
-          // 100 万对象，正常桶不会触达；故障网关不再无限翻页。
-          if (++pages > _maxListPages) {
-            throw S3Exception(
-                'ListObjects V2 pagination exceeded $_maxListPages pages; '
-                'aborting to avoid an unbounded loop');
-          }
-          // M2-2：token 无进展检测。网关回放同一个 continuation-token
-          // 时每页返回相同内容，do-while 永不退出。token 必须单调推进。
-          if (continuationToken != null &&
-              continuationToken == previousToken) {
-            throw S3Exception(
-                'ListObjects V2 pagination stalled: server replayed the '
-                'same continuation-token');
-          }
-          previousToken = continuationToken;
+    while (true) {
+      // M2-1：页数硬上限。单页服务端上限 1000 对象，1000 页 ≈
+      // 100 万对象，正常桶不会触达；故障网关不再无限翻页。
+      if (++pages > _maxListPages) {
+        throw S3Exception(
+            'ListObjects V2 pagination exceeded $_maxListPages pages; '
+            'aborting to avoid an unbounded loop');
+      }
+      // M2-2：token 无进展检测。网关回放同一个 continuation-token
+      // 时每页返回相同内容，do-while 永不退出。token 必须单调推进。
+      if (continuationToken != null && continuationToken == previousToken) {
+        throw S3Exception(
+            'ListObjects V2 pagination stalled: server replayed the '
+            'same continuation-token');
+      }
+      previousToken = continuationToken;
 
-          final queryParams = <String, String>{
-            'list-type': '2', // ListObjectsV2
-          };
-          if (prefix != null && prefix.isNotEmpty) {
-            queryParams['prefix'] = prefix;
-          }
-          // 每页请求「还缺多少条」，由服务端钳制到其单页上限
-          if (maxKeys != null) {
-            queryParams['max-keys'] = '${maxKeys - allObjects.length}';
-          }
-          if (continuationToken != null) {
-            queryParams['continuation-token'] = continuationToken;
-          }
+      final remaining = maxKeys == null ? null : maxKeys - allObjects.length;
+      final pageToken = continuationToken;
+      final queryParams = <String, String>{
+        'list-type': '2', // ListObjectsV2
+      };
+      if (prefix != null && prefix.isNotEmpty) {
+        queryParams['prefix'] = prefix;
+      }
+      // 每页请求「还缺多少条」，由服务端钳制到其单页上限
+      if (remaining != null) {
+        queryParams['max-keys'] = '$remaining';
+      }
+      if (pageToken != null) {
+        queryParams['continuation-token'] = pageToken;
+      }
 
-          final uri = _buildUri(bucket, queryParameters: queryParams);
-          final headers = _signedHeaders(uri, 'GET');
+      // 审计 S3-M1：重试粒度收敛到**单页**。此前 _retry 包裹整个翻页循环，
+      // 大桶在第 N 页遇到一次瞬时 5xx/网络抖动 → 从第 1 页全量重翻，带宽与
+      // 请求费用倍增（重试 3 次即 3 倍全量列举）。现仅对当前页重试。
+      // 审计 S3-M3：neverRetryStatusCodes 传 501 —— Not Implemented 是
+      // 确定性失败（网关不支持 ListObjectsV2），应立即上抛走 V1 回退。
+      final result = await _retry(
+        () => _fetchListPage(bucket, queryParams),
+        neverRetryStatusCodes: const {501},
+      );
 
-          try {
-            final response = await _httpClient
-                .get(uri, headers: headers)
-                .timeout(timeout);
+      if (remaining != null && result.objects.length > remaining) {
+        // 服务端可能无视 max-keys 下发超量，截断到上限
+        allObjects.addAll(result.objects.take(remaining));
+        break; // 已达上限，无需继续翻页
+      }
+      allObjects.addAll(result.objects);
+      // M2-3：IsTruncated=true 却未携带 NextContinuationToken 属于
+      // 畸形分页响应——旧逻辑静默退出并返回**不完整列表**，下游
+      // 会把残缺当全量消费（附件清理漏删/审计漏检）。显式报错。
+      if (result.isTruncated) {
+        final token = result.nextContinuationToken;
+        if (token == null || token.isEmpty) {
+          throw S3Exception(
+              'ListObjects V2 pagination malformed: IsTruncated=true '
+              'without NextContinuationToken');
+        }
+        continuationToken = token;
+      } else {
+        continuationToken = null;
+      }
+      // 达到 maxKeys 上限即停，绝不继续翻页
+      if (continuationToken == null) break;
+      if (maxKeys != null && allObjects.length >= maxKeys) break;
+    }
 
-            if (response.statusCode == 200) {
-              final result = _parseListObjectsXml(response.body);
-              final remaining =
-                  maxKeys == null ? null : maxKeys - allObjects.length;
-              if (remaining != null && result.objects.length > remaining) {
-                // 服务端可能无视 max-keys 下发超量，截断到上限
-                allObjects.addAll(result.objects.take(remaining));
-                break; // 已达上限，无需继续翻页
-              }
-              allObjects.addAll(result.objects);
-              // M2-3：IsTruncated=true 却未携带 NextContinuationToken 属于
-              // 畸形分页响应——旧逻辑静默退出并返回**不完整列表**，下游
-              // 会把残缺当全量消费（附件清理漏删/审计漏检）。显式报错。
-              if (result.isTruncated) {
-                final token = result.nextContinuationToken;
-                if (token == null || token.isEmpty) {
-                  throw S3Exception(
-                      'ListObjects V2 pagination malformed: IsTruncated=true '
-                      'without NextContinuationToken');
-                }
-                continuationToken = token;
-              } else {
-                continuationToken = null;
-              }
-            } else if (response.statusCode == 404) {
-              throw S3BucketNotFoundException(bucket);
-            } else {
-              _handleError('ListObjects', response);
-            }
-          } on SocketException catch (e) {
-            throw S3NetworkException('Network error: ${e.message}', originalException: e);
-          } on TimeoutException {
-            throw S3NetworkException('ListObjects timed out after ${timeout.inSeconds}s');
-          } catch (e) {
-            if (e is S3Exception) rethrow;
-            throw S3Exception('ListObjects failed: $e', originalException: _asException(e));
-          }
-          // 达到 maxKeys 上限即停，绝不继续翻页
-        } while (continuationToken != null &&
-            (maxKeys == null || allObjects.length < maxKeys));
+    return allObjects;
+  }
 
-        return allObjects;
-      },
-      neverRetryStatusCodes: const {501},
-    );
+  /// 拉取 ListObjects 单页（V2/V1 共用）。
+  ///
+  /// 审计 S3-M1：作为 [_retry] 的最小重试单元，单页瞬时故障不再触发整段
+  /// 翻页重来；query 参数由调用方按协议（V2 continuation-token / V1 marker）
+  /// 构造。抛出的 [S3NetworkException]/5xx [S3Exception] 由 [_retry] 决定
+  /// 是否重试，4xx（含 501）按原语义上抛。
+  Future<_ListPage> _fetchListPage(
+      String bucket, Map<String, String> queryParams) async {
+    final uri = _buildUri(bucket, queryParameters: queryParams);
+    final headers = _signedHeaders(uri, 'GET');
+
+    try {
+      final response = await _httpClient.get(uri, headers: headers).timeout(timeout);
+
+      if (response.statusCode == 200) {
+        return _parseListObjectsXml(response.body);
+      } else if (response.statusCode == 404) {
+        throw S3BucketNotFoundException(bucket);
+      } else {
+        _handleError('ListObjects', response);
+      }
+    } on SocketException catch (e) {
+      throw S3NetworkException('Network error: ${e.message}', originalException: e);
+    } on TimeoutException {
+      throw S3NetworkException('ListObjects timed out after ${timeout.inSeconds}s');
+    } catch (e) {
+      if (e is S3Exception) rethrow;
+      throw S3Exception('ListObjects failed: $e', originalException: _asException(e));
+    }
   }
 
   /// ListObjects V1（不带 `list-type` 参数），返回含元数据的对象列表
@@ -1178,92 +1210,73 @@ class S3Client {
     required String bucket,
     String? prefix,
     int? maxKeys,
-  }) {
-    return _retry(() async {
-      final allObjects = <S3ObjectInfo>[];
-      String? marker;
+  }) async {
+    final allObjects = <S3ObjectInfo>[];
+    String? marker;
 
-      // S3-M2：翻页终止护栏状态
-      String? previousMarker;
-      var pages = 0;
+    // S3-M2：翻页终止护栏状态
+    String? previousMarker;
+    var pages = 0;
 
-      do {
-        // M2-1：页数硬上限（同 V2）
-        if (++pages > _maxListPages) {
+    while (true) {
+      // M2-1：页数硬上限（同 V2）
+      if (++pages > _maxListPages) {
+        throw S3Exception(
+            'ListObjects V1 pagination exceeded $_maxListPages pages; '
+            'aborting to avoid an unbounded loop');
+      }
+      // M2-2：marker 无进展检测。网关忽略 marker 时每页返回相同内容，
+      // 下一页 marker 与上一页相同，do-while 永不退出。
+      if (marker != null && marker == previousMarker) {
+        throw S3Exception(
+            'ListObjects V1 pagination stalled: server ignored the marker '
+            '(no pagination progress)');
+      }
+      previousMarker = marker;
+
+      final remaining = maxKeys == null ? null : maxKeys - allObjects.length;
+      final pageMarker = marker;
+      final queryParams = <String, String>{};
+      if (prefix != null && prefix.isNotEmpty) {
+        queryParams['prefix'] = prefix;
+      }
+      if (remaining != null) {
+        queryParams['max-keys'] = '$remaining';
+      }
+      if (pageMarker != null) {
+        queryParams['marker'] = pageMarker;
+      }
+
+      // 审计 S3-M1：与 V2 同款 —— 重试只针对当前页，单页瞬时故障不再
+      // 从第一页全量重翻。
+      final result =
+          await _retry(() => _fetchListPage(bucket, queryParams));
+
+      if (remaining != null && result.objects.length > remaining) {
+        allObjects.addAll(result.objects.take(remaining));
+        break; // 已达上限，无需继续翻页
+      }
+      allObjects.addAll(result.objects);
+      // V1 分页：IsTruncated=true 时，用最后一条 key 作为下次请求的 marker
+      if (result.isTruncated) {
+        // M2-3：截断却无尾 key 属于畸形响应——旧逻辑静默退出并
+        // 返回不完整列表。显式报错（V1 亦可经 NextMarker 推进，
+        // 但本实现不解析该元素，空页无法构造 marker）。
+        if (result.lastKey == null) {
           throw S3Exception(
-              'ListObjects V1 pagination exceeded $_maxListPages pages; '
-              'aborting to avoid an unbounded loop');
+              'ListObjects V1 pagination malformed: IsTruncated=true '
+              'without a trailing key');
         }
-        // M2-2：marker 无进展检测。网关忽略 marker 时每页返回相同内容，
-        // 下一页 marker 与上一页相同，do-while 永不退出。
-        if (marker != null && marker == previousMarker) {
-          throw S3Exception(
-              'ListObjects V1 pagination stalled: server ignored the marker '
-              '(no pagination progress)');
-        }
-        previousMarker = marker;
+        marker = result.lastKey;
+      } else {
+        marker = null;
+      }
+      // 达到 maxKeys 上限即停，绝不继续翻页
+      if (marker == null) break;
+      if (maxKeys != null && allObjects.length >= maxKeys) break;
+    }
 
-        final queryParams = <String, String>{};
-        if (prefix != null && prefix.isNotEmpty) {
-          queryParams['prefix'] = prefix;
-        }
-        if (maxKeys != null) {
-          queryParams['max-keys'] = '${maxKeys - allObjects.length}';
-        }
-        if (marker != null) {
-          queryParams['marker'] = marker;
-        }
-
-        final uri = _buildUri(bucket, queryParameters: queryParams);
-        final headers = _signedHeaders(uri, 'GET');
-
-        try {
-          final response = await _httpClient
-              .get(uri, headers: headers)
-              .timeout(timeout);
-
-          if (response.statusCode == 200) {
-            final result = _parseListObjectsXml(response.body);
-            final remaining =
-                maxKeys == null ? null : maxKeys - allObjects.length;
-            if (remaining != null && result.objects.length > remaining) {
-              allObjects.addAll(result.objects.take(remaining));
-              break; // 已达上限，无需继续翻页
-            }
-            allObjects.addAll(result.objects);
-            // V1 分页：IsTruncated=true 时，用最后一条 key 作为下次请求的 marker
-            if (result.isTruncated) {
-              // M2-3：截断却无尾 key 属于畸形响应——旧逻辑静默退出并
-              // 返回不完整列表。显式报错（V1 亦可经 NextMarker 推进，
-              // 但本实现不解析该元素，空页无法构造 marker）。
-              if (result.lastKey == null) {
-                throw S3Exception(
-                    'ListObjects V1 pagination malformed: IsTruncated=true '
-                    'without a trailing key');
-              }
-              marker = result.lastKey;
-            } else {
-              marker = null;
-            }
-          } else if (response.statusCode == 404) {
-            throw S3BucketNotFoundException(bucket);
-          } else {
-            _handleError('ListObjects', response);
-          }
-        } on SocketException catch (e) {
-          throw S3NetworkException('Network error: ${e.message}', originalException: e);
-        } on TimeoutException {
-          throw S3NetworkException('ListObjects timed out after ${timeout.inSeconds}s');
-        } catch (e) {
-          if (e is S3Exception) rethrow;
-          throw S3Exception('ListObjects failed: $e', originalException: _asException(e));
-        }
-        // 达到 maxKeys 上限即停，绝不继续翻页
-      } while (marker != null &&
-          (maxKeys == null || allObjects.length < maxKeys));
-
-      return allObjects;
-    });
+    return allObjects;
   }
 
   /// 为请求生成带签名的 headers
@@ -1504,7 +1517,7 @@ class S3Client {
       // XML 解析失败，使用原始 body
     }
 
-    final message = errorMessage ?? _sanitizeHtmlBody(body);
+    final message = _truncateForLog(errorMessage ?? _sanitizeHtmlBody(body));
 
     // 审计 S22：时钟偏差检测。AWS 默认容忍 ±15min，超窗后所有请求
     // 403 RequestTimeTooSkewed——旧逻辑误报成「权限不足」且不重试，
@@ -1568,6 +1581,12 @@ class S3Client {
       );
     }
   }
+
+  /// 审计 S3-L5：XML `<Message>` 无长度约束，畸形/恶意网关可回传数 KB
+  /// 文本进入异常与日志（此前只有非 XML 回退分支经 _sanitizeHtmlBody
+  /// 截断 300 字符，XML 消息体直通）。统一 300 字符截断，避免日志膨胀。
+  static String _truncateForLog(String value, [int max = 300]) =>
+      value.length > max ? '${value.substring(0, max)}…' : value;
 
   /// 去除 HTML 标签并压缩空白，避免把原始 HTML 错误页直接抛给用户
   String _sanitizeHtmlBody(String body) {

@@ -635,19 +635,26 @@ class TransactionsSyncManager implements SyncService {
       if (encryptionService != null) {
         final enabled = await encryptionService!.isEnabled;
         if (enabled) {
-          // P2-2③：gzip 压缩层先包 raw storage（压缩明文），加密层再包
-          // gzip 层（压后加密，顺序与备份链路「ZIP→加密」一致）。
-          // 装配链：raw → Gzip → Encrypted；rekey/enableFromCloud 走
-          // [newRawStorage]（raw，无 gzip），全量重加密不受影响。
+          // P2-2③：gzip 压缩层必须在加密层**外层**。
+          // 装配链：raw → Encrypted → Gzip（对 manager 而言：先压缩明文、
+          // 再加密压缩结果，与备份链路「ZIP→加密」同序）。
+          //
+          // 审计 P1（2026-09-20 修复）：旧实现把 gzip 放在加密层之下
+          // （Encrypted(Gzip(raw))）—— 上传时加密层先产出 BEECRYPT1 密文，
+          // gzip 层命中密文透传短路 → 永不压缩，该特性在生产完全失效。
+          // 现改为外层包装，压缩才真正生效（含 S3 恒走的条件写路径）。
+          // rekey/enableFromCloud 走 [newRawStorage]（raw，无 gzip），
+          // 全量重加密不受影响。
           // 加密未开启不装配 gzip：历史明文对象永不压缩，旧版 App/
           // 外部工具可读性不受升级影响（无回滚风险）。
-          final gzipWrapped = GzipCloudStorageService(inner: newRawStorage);
           newProvider = EncryptedCloudProvider(
             inner: newProvider,
             encryptionService: encryptionService!,
-            innerStorageOverride: gzipWrapped,
+            outerStorageWrapper: (base) =>
+                GzipCloudStorageService(inner: base),
           );
-          logger.info('CloudSync', 'E2EE enabled, provider wrapped (gzip+encrypted)');
+          logger.info('CloudSync',
+              'E2EE enabled, provider wrapped (encrypted+gzip outer)');
         }
       }
 
@@ -2304,7 +2311,11 @@ class TransactionsSyncManager implements SyncService {
   void _wireChangeTrackerGeneration() {
     final tracker = repo.changeTracker;
     if (tracker == null) return;
-    tracker.onLocalContentGeneration ??= (ledgerId) {
+    // 审计：此前用 `??=` 只在首次挂载时写入回调，而 ChangeTracker 由 repo
+    // 长生命周期持有、TSM 会随 syncServiceProvider 重建（配置/加密态变更）
+    // —— 重建后新 TSM 的回调被 `??=` 挡下，本地写回调永远指向已 dispose 的
+    // 旧实例，新实例的 _localFpCache 不再被回调失效。改为每次重绑最新实例。
+    tracker.onLocalContentGeneration = (ledgerId) {
       if (ledgerId == null || ledgerId == 0) {
         invalidateLocalFingerprintCache();
       } else {
@@ -3341,7 +3352,37 @@ class TransactionsSyncManager implements SyncService {
   ///
   /// [discoverRemoteLedgers] 下载文件提取元信息时顺手缓存，
   /// [importRemoteLedger] 优先用缓存避免同一文件二次下载。
+  ///
+  /// **必须封顶**：缓存的是整本账本的明文 JSON，一万笔的账本按每笔 ~200B
+  /// 估就是 2MB 起，而发现阶段会把云端**所有**待发现账本都过一遍。不封顶的
+  /// 话「云端有 5 个大账本、用户一个都没点导入」= 常驻 10MB+ 直到下一轮发现
+  /// 清空。超出 [_maxCachedPayloadChars] / [_maxCachedPayloadTotalChars] 就
+  /// **干脆不缓存**：导入走 [importRemoteLedger] 的未命中分支重新下载，
+  /// 语义不变，只是多一次下载。
+  /// 两个上限是**估式不是实测**（无真机/真实云端语料），编号 TODO-M19。
   final Map<String, String> _discoveredPayloads = {};
+
+  static const int _maxCachedPayloadChars = 8 * 1024 * 1024;
+  static const int _maxCachedPayloadTotalChars = 16 * 1024 * 1024;
+
+  int get _cachedPayloadChars =>
+      _discoveredPayloads.values.fold(0, (sum, j) => sum + j.length);
+
+  /// 只给「发现后马上点导入」这一条链省一次下载，装不下就不省
+  void _cacheDiscoveredPayload(String slotKey, String jsonStr) {
+    final replaced = _discoveredPayloads[slotKey]?.length ?? 0;
+    if (!payloadWorthCaching(jsonStr.length,
+        alreadyCached: _cachedPayloadChars - replaced)) {
+      return;
+    }
+    _discoveredPayloads[slotKey] = jsonStr;
+  }
+
+  /// 预算判定抽成静态口：阈值是 MB 级，单测里真造一份 8MB 明文只为验证分支不划算。
+  @visibleForTesting
+  static bool payloadWorthCaching(int chars, {required int alreadyCached}) =>
+      chars <= _maxCachedPayloadChars &&
+      alreadyCached + chars <= _maxCachedPayloadTotalChars;
 
   /// 云端账本文件名模式：`ledger_<slotKey>.json`
   ///
@@ -3502,7 +3543,7 @@ class TransactionsSyncManager implements SyncService {
         // 加密）或密文不可解密（SYNC-10）时 _decryptIfNeeded 抛专属异常
         final jsonStr = await _decryptIfNeeded(raw);
         final payload = jsonDecode(jsonStr) as Map<String, dynamic>;
-        _discoveredPayloads[slotKey] = jsonStr;
+        _cacheDiscoveredPayload(slotKey, jsonStr);
         // 余额合计从 items 内存累加（与上传 metadata 写入口径一致）
         double balance = 0;
         final items = payload['items'];

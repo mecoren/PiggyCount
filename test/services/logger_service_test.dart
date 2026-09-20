@@ -127,6 +127,25 @@ void main() {
       );
     });
 
+    test('审计：后端配置真实字段名（s3SecretKey/s3AccessKey/webdavPassword/'
+        'supabaseAnonKey/supabasePassword）也脱敏', () {
+      // CloudServiceConfig.toJson 的真实键名：由于 \b 词边界不切分
+      // s3SecretKey 内的 secretKey，旧词表对这些键完全失效。
+      expect(
+        LogSanitizer.sanitize(
+            'cfg {"s3SecretKey":"AKIAxxxx","s3AccessKey":"AKIAyyyy"}'),
+        'cfg {"s3SecretKey":"***","s3AccessKey":"***"}',
+      );
+      expect(
+        LogSanitizer.sanitize('webdavPassword=hunter2 supabaseAnonKey=anon-x'),
+        'webdavPassword=*** supabaseAnonKey=***',
+      );
+      expect(
+        LogSanitizer.sanitize('{"supabasePassword":"pw"}'),
+        '{"supabasePassword":"***"}',
+      );
+    });
+
     test('JSON 字段凭据脱敏', () {
       expect(
         LogSanitizer.sanitize('cfg {"password":"hunter2","url":"https://x"}'),

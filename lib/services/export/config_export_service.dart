@@ -2208,6 +2208,13 @@ class ConfigExportService {
 
     final config = AppConfig.fromYaml(doc);
     final prefs = await SharedPreferences.getInstance();
+    // 审计 S3/WebDAV 专项（2026-09-20）：云配置必须经 CloudServiceStore
+    // 写入安全存储 —— 此前直接 prefs.setString('cloud_*_cfg') 把 WebDAV
+    // 密码 / S3 SecretKey / Supabase anonKey 落到**明文 SharedPreferences**，
+    // 绕过 P2-4「凭据绝不落明文」的硬约束（且导入不激活后端，明文会无限期
+    // 残留，直到用户手动激活触发一次读取迁移）。saveOnly 走
+    // flutter_secure_storage 且写后清除明文残留。
+    final cloudStore = CloudServiceStore();
 
     // 导入Supabase配置
     if (options.appSettings && config.supabase != null) {
@@ -2220,9 +2227,8 @@ class ConfigExportService {
         supabaseEmail: config.supabase!.email,
         supabasePassword: config.supabase!.password,
       );
-      await prefs.setString(
-          'cloud_supabase_cfg', encodeCloudConfig(supabaseCfg));
-      logger.info('ConfigImport', 'Supabase配置已导入');
+      await cloudStore.saveOnly(supabaseCfg);
+      logger.info('ConfigImport', 'Supabase配置已导入（凭据已入安全存储）');
     }
 
     // 导入WebDAV配置
@@ -2235,8 +2241,8 @@ class ConfigExportService {
         webdavPassword: config.webdav!.password,
         webdavRemotePath: config.webdav!.remotePath,
       );
-      await prefs.setString('cloud_webdav_cfg', encodeCloudConfig(webdavCfg));
-      logger.info('ConfigImport', 'WebDAV配置已导入');
+      await cloudStore.saveOnly(webdavCfg);
+      logger.info('ConfigImport', 'WebDAV配置已导入（凭据已入安全存储）');
     }
 
     // 导入S3配置
@@ -2252,8 +2258,8 @@ class ConfigExportService {
         s3UseSSL: config.s3!.useSSL,
         s3Port: config.s3!.port,
       );
-      await prefs.setString('cloud_s3_cfg', encodeCloudConfig(s3Cfg));
-      logger.info('ConfigImport', 'S3配置已导入');
+      await cloudStore.saveOnly(s3Cfg);
+      logger.info('ConfigImport', 'S3配置已导入（凭据已入安全存储）');
     }
 
     // 导入AI配置

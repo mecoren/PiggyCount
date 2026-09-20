@@ -6,6 +6,23 @@ import 's3_storage_service.dart';
 import 's3_exceptions.dart';
 import 's3_endpoint.dart';
 
+/// 解析 S3 寻址方式（纯函数，便于单测）。
+///
+/// [explicit] 非 null 时以调用方显式配置为准；否则按「端点 + bucket」推断：
+/// - 自托管（非托管云端点，如 MinIO）→ path-style；
+/// - 托管云 + **含点 bucket** → path-style（审计 S3-M3，对齐 AWS SDK：
+///   `my.bucket.s3.amazonaws.com` 会命中通配证书 `*.s3.amazonaws.com`
+///   的单层标签限制，TLS 握手失败，用户配了合法 dotted bucket 却完全无法
+///   连接，且错误停在 TLS 层与「配置错误」提示方向不符）。
+bool resolveForcePathStyle({
+  required bool? explicit,
+  required String host,
+  required String bucket,
+}) {
+  if (explicit != null) return explicit;
+  return !isManagedCloudEndpoint(host) || bucket.contains('.');
+}
+
 /// S3 Provider 实现
 ///
 /// 支持所有 S3 兼容存储服务：
@@ -111,9 +128,13 @@ class S3Provider implements CloudProvider {
     }
 
     // 寻址方式：托管云（AWS/OSS/COS/R2 等）默认 virtual-hosted-style；
-    // 自托管（MinIO 等）默认 path-style。可通过 forcePathStyle 显式覆盖。
-    final forcePathStyle =
-        _optionalBool(config, 'forcePathStyle') ?? !isManagedCloudEndpoint(info.host);
+    // 自托管（MinIO 等）默认 path-style。含点 bucket 的 TLS 陷阱见
+    // [resolveForcePathStyle]；用户可用 forcePathStyle 显式覆盖。
+    final forcePathStyle = resolveForcePathStyle(
+      explicit: _optionalBool(config, 'forcePathStyle'),
+      host: info.host,
+      bucket: bucket,
+    );
 
     // S-M2 修复：创建新 client 前先释放旧实例，
     // 避免 initialize 重复调用时旧 httpClient 泄漏连接资源

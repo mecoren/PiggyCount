@@ -847,6 +847,37 @@ void main() {
         // 慢路径余额: income +10 / expense -3
         expect(metas.first.balance, 7);
         expect(storage.downloadCount, 1, reason: '老文件必须回退下载一次');
+        expect(manager.discoveredPayloadCountForTest, 1,
+            reason: '小 payload 仍进缓存：导入不该再下一遍');
+      });
+
+      test('payload 缓存预算：单本超限或总量超限都不缓存', () {
+        const mb = 1024 * 1024;
+        // 阈值出自 transactions_sync_manager 的 _maxCachedPayloadChars(8MB)
+        // 与 _maxCachedPayloadTotalChars(16MB)，是估式不是实测（TODO-M19）。
+        expect(
+            TransactionsSyncManager.payloadWorthCaching(8 * mb,
+                alreadyCached: 0),
+            isTrue);
+        expect(
+            TransactionsSyncManager.payloadWorthCaching(8 * mb + 1,
+                alreadyCached: 0),
+            isFalse,
+            reason: '单本整本明文超 8MB → 不缓存，导入时重新下载');
+        expect(
+            TransactionsSyncManager.payloadWorthCaching(8 * mb,
+                alreadyCached: 8 * mb),
+            isTrue,
+            reason: '总预算 16MB 刚好用满是允许的');
+        expect(
+            TransactionsSyncManager.payloadWorthCaching(8 * mb,
+                alreadyCached: 8 * mb + 1),
+            isFalse,
+            reason: '总量封顶：装不下的账本不许再挤进来常驻');
+        expect(
+            TransactionsSyncManager.payloadWorthCaching(1,
+                alreadyCached: 16 * mb),
+            isFalse);
       });
 
       test('本地已有同身份账本的槽位被过滤', () async {

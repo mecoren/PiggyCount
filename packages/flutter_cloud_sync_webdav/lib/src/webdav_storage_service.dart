@@ -10,6 +10,18 @@ import 'package:dio/dio.dart' show CancelToken;
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:webdav_client/webdav_client.dart' as webdav;
 
+/// [_op] 超时专用异常（审计 WebDAV-T2）。
+///
+/// [_op] 超时此前统一抛 [CloudStorageException]，而 [WebDAVStorageService]
+/// 的幂等重试把「无结构化 HTTP 状态码」一律视为连接层瞬时故障 →
+/// 超时被默认可重试，单次 60s 超时最坏放大为 3×60s = 180s（服务器挂死时
+/// 同步 UI 长时间卡顿）。用独立类型把「超时」从「连接层瞬时故障」中区分
+/// 出来，禁止对同一挂死服务器重复等待。仍继承 [CloudStorageException]，
+/// 既有 `catch (CloudStorageException)` 调用方不受影响。
+class _WebDavTimeoutException extends CloudStorageException {
+  _WebDavTimeoutException(super.message);
+}
+
 /// WebDAV implementation of [CloudStorageService].
 class WebDAVStorageService
     implements
@@ -91,7 +103,12 @@ class WebDAVStorageService
   /// P3：WebDAV 单次操作 60s 超时。webdav_client 未暴露 dio 超时配置，
   /// 服务器无响应时 future 永不完成会让同步 UI 永久挂起，
   /// 在服务层统一包 .timeout 兜底。
-  static const _opTimeout = Duration(seconds: 60);
+  ///
+  /// 测试口 [opTimeoutForTest] 可把它覆盖成毫秒级，用于验证「超时不进入
+  /// 幂等重试」（否则单测需真等 60s）。命名沿用代码库 ForTest 约定。
+  static Duration? opTimeoutForTest;
+  static Duration get _opTimeout =>
+      opTimeoutForTest ?? const Duration(seconds: 60);
 
   /// 审计修复：进程内自增计数器，参与上传临时文件名构造。此前仅用
   /// 毫秒时间戳，同一目标的并发上传落在同一毫秒时互相覆盖对方写了一半
@@ -198,7 +215,11 @@ class WebDAVStorageService
         return await operation();
       } catch (e) {
         final code = _statusCodeOf(e);
-        final retriable = attempt < maxRetries && (code == null || code >= 500);
+        // 审计 WebDAV-T2：超时（[_WebDavTimeoutException]）不算「连接层
+        // 瞬时故障」—— 重试同一挂死服务器只会重复等待（最坏 3×60s）。
+        final retriable = attempt < maxRetries &&
+            e is! _WebDavTimeoutException &&
+            (code == null || code >= 500);
         if (!retriable) rethrow;
         attempt++;
         // LOG-06：重试逐次留痕（info 级——重试属正常自愈行为，非告警）。
@@ -207,7 +228,8 @@ class WebDAVStorageService
         logger?.info(
             '[WebDAV] 幂等操作瞬时故障${code != null ? '（HTTP $code）' : ''}，'
             '第 $attempt/$maxRetries 次重试: $e');
-        // 指数退避 + 真随机抖动：400ms、800ms（各 ±50% 区间均匀分布）
+        // 指数退避 + 真随机抖动：base 的 [0.5×base, base] 区间均匀分布
+        //（400ms → 200~400ms，800ms → 400~800ms）。
         final baseMs = 400 * (1 << (attempt - 1));
         final jitter = _retryRandom.nextInt(baseMs ~/ 2 + 1);
         await Future<void>.delayed(
@@ -225,15 +247,32 @@ class WebDAVStorageService
   /// 注意：rename(MOVE) 的上游 client.rename 声明了 cancelToken 形参但未
   /// 向下传递（webdav_client 1.2.2 已知问题），MOVE 无法被取消，维持
   /// timeout-only；其余操作全部可取消。
-  Future<T> _op<T>(String opName, Future<T> Function(CancelToken token) op) {
+  Future<T> _op<T>(String opName, Future<T> Function(CancelToken token) op) async {
     final token = CancelToken();
+    var timedOut = false;
+    String timeoutMessage() =>
+        'WebDAV $opName 超时（${_opTimeout.inSeconds}s），请检查网络或服务器';
     final timer = Timer(_opTimeout, () {
+      timedOut = true;
       token.cancel('WebDAV $opName 超时');
     });
-    return op(token).timeout(_opTimeout, onTimeout: () {
-      throw CloudStorageException(
-          'WebDAV $opName 超时（${_opTimeout.inSeconds}s），请检查网络或服务器');
-    }).whenComplete(timer.cancel);
+    try {
+      return await op(token).timeout(_opTimeout, onTimeout: () {
+        timedOut = true;
+        token.cancel('WebDAV $opName 超时');
+        throw _WebDavTimeoutException(timeoutMessage());
+      });
+    } catch (e) {
+      // 审计 WebDAV-T2：CancelToken 中止底层请求引发的异常（DioException
+      // cancel 等）无结构化状态码，会被幂等重试误判为「连接层瞬时故障」。
+      // 只要已进入超时窗口，一律归为超时型（不可重试）。
+      if (timedOut && e is! _WebDavTimeoutException) {
+        throw _WebDavTimeoutException(timeoutMessage());
+      }
+      rethrow;
+    } finally {
+      timer.cancel();
+    }
   }
 
   /// 幂等操作组合入口：[_op] 超时取消 + [_retryIdempotent] 自动重试
@@ -566,8 +605,11 @@ class WebDAVStorageService
     final fullPath = _buildPath(path);
 
     // C-02 修复：删除操作应幂等，404（文件不存在）视为成功
+    // 审计 WebDAV-T3：DELETE 是幂等操作，此前走 [_op]（无重试）—— 与
+    // [_retryIdempotent] 注释「覆盖 remove」及「幂等操作自动重试」的
+    // 设计承诺不符，瞬时网络抖动即删除失败。改用 [_opRetryable]。
     try {
-      await _op('remove', (t) => _client.remove(fullPath, t));
+      await _opRetryable('remove', (t) => _client.remove(fullPath, t));
     } catch (e) {
       if (_isNotFound(e)) {
         // 文件已不存在，删除幂等成功
@@ -876,11 +918,19 @@ class WebDAVStorageService
   bool _isOverwriteUnsupported(Object e) {
     final code = _statusCodeOf(e);
     if (code != null) {
-      return code == 405 || code == 409 || code == 412;
+      // 405 Method Not Allowed / 409 Conflict / 412 Precondition Failed /
+      // 501 Not Implemented（RFC 4918 明确定义为「服务器不支持该方法」——
+      // 部分服务器仅对 Overwrite: T 的覆盖式 MOVE 返回 501，而交换降级
+      // 使用的 Overwrite: F MOVE 仍可用）。
+      //
+      // 423 Locked 有意不纳入：被锁资源同样会挡住交换降级自身的 MOVE
+      //（先 `full → backup` 即 423），降级无法成功，纳入只会多一次无效尝试。
+      return code == 405 || code == 409 || code == 412 || code == 501;
     }
     final msg = e.toString().toLowerCase();
     return msg.contains('method not allowed') ||
         msg.contains('precondition failed') ||
+        msg.contains('not implemented') ||
         msg.contains('conflict');
   }
 
