@@ -90,7 +90,8 @@ While we don't collect your data, we implement security best practices:
 
 - Local data is stored using SQLite with Android's built-in security
 - Cloud sync uses HTTPS/TLS encryption when communicating with your servers
-- Authentication credentials are stored securely using Android Keystore
+- Sync encryption keys are stored in platform secure storage (Android Keystore / iOS Keychain) via `flutter_secure_storage`
+- The app lock PIN is never stored in plain text: an Argon2id hash plus a random salt is kept in local preferences
 - The app is open source - you can audit our code: [GitHub Repository](https://github.com/mecoren/PiggyCount)
 
 ## 6. Children's Privacy
@@ -108,7 +109,7 @@ You have complete control over your data:
 
 ## 8. Open Source
 
-PiggyCount is fully open source under the MIT License. You can:
+PiggyCount's source code is public and auditable. It is **not** MIT-licensed: use is governed by [LICENSE](LICENSE), which is free for non-commercial use and requires a paid license for commercial use. You can:
 
 - Review our entire codebase: https://github.com/mecoren/PiggyCount
 - Verify that we don't collect any data
@@ -215,7 +216,7 @@ Since we don't collect any data, there's actually nothing to consent to - your p
 
 ### 5. 开源透明
 
-小猪记账完全开源（MIT许可）：
+小猪记账代码公开可审计，但**不是 MIT 许可**：使用条款见 [LICENSE](LICENSE)（非商业使用免费，商业使用需付费授权）：
 - 查看完整代码：https://github.com/mecoren/PiggyCount
 - 验证我们不收集任何数据
 - 从源代码自行构建

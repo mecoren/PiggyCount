@@ -30,7 +30,7 @@ A lightweight, open-source, privacy-first **personal finance** and **expense tra
 | ❌ Data on third-party servers, no audit | ✅ **Fully open-source**, code auditable |
 | ❌ Privacy may be analyzed and exploited | ✅ **Offline-first** + self-hosted, developer can't access your data |
 | ❌ Service shutdown = data loss | ✅ **Data sovereignty**, self-hosted sync options |
-| ❌ Premium features behind paywalls | ✅ **Completely free** (including AI / OCR / voice input) |
+| ❌ Premium features behind paywalls | ✅ **Completely free** (including AI recognition / voice input) |
 | ❌ Ads / financial product recommendations | ✅ **Zero ads / zero tracking / zero data collection** |
 
 > **Platform support**: 🤖 Android 5.0+ · 🍎 iOS 15.5+
@@ -42,10 +42,10 @@ A lightweight, open-source, privacy-first **personal finance** and **expense tra
 ## 🌟 Core Features
 
 <details>
-<summary><b>🤖 AI-Powered</b> — AI assistant / OCR / voice / auto-capture from screenshots</summary>
+<summary><b>🤖 AI-Powered</b> — AI assistant / photo recognition / voice / auto-capture from screenshots</summary>
 
 - **AI Assistant** — Natural language conversation, intent recognition, powered by Zhipu GLM-4
-- **OCR Photo Capture** — Dual engines (local TFLite + GLM cloud), recognizes Alipay/WeChat/UnionPay screenshots
+- **Photo / Screenshot Recognition** — Recognizes Alipay/WeChat/UnionPay screenshots and receipts via the AI vision model (`glm-4v-flash`); requires a Zhipu API Key. There is no offline local OCR engine (removed in v3.2.1)
 - **Voice Input** — Hold to speak, GLM models understand colloquial expressions
 - **Auto Capture from Screenshots** — Android accessibility service / iOS Shortcuts back-tap
 
@@ -57,7 +57,7 @@ A lightweight, open-source, privacy-first **personal finance** and **expense tra
 - **Multi-ledger** — Separate ledgers for life/work/investment, each with its own currency
 - **Multiple accounts** — Cash/card/credit, transfer auto-updates both balances
 - **Two-tier categories** — Parent-child hierarchy
-- **Budgets** — Total + category budgets, overspending alerts
+- **Budgets** — Total + category budgets
 - **Recurring transactions** — Daily/weekly/monthly/yearly auto-records for fixed income/expenses
 - **Tags** — Multi-tag with color labels for flexible filtering
 - **Charts** — Monthly reports / category rankings / trends / annual report
@@ -81,7 +81,7 @@ A lightweight, open-source, privacy-first **personal finance** and **expense tra
 
 <div align="center">
   <img src="demo/videos/en/01-add-transaction.gif" alt="Add transaction" width="200" />
-  <img src="demo/videos/en/02-ocr-recognition.gif" alt="AI OCR" width="200" />
+  <img src="demo/videos/en/02-ocr-recognition.gif" alt="AI screenshot recognition" width="200" />
   <img src="demo/videos/en/04-data-analysis.gif" alt="Analytics" width="200" />
 </div>
 

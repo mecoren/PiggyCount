@@ -41,7 +41,11 @@
 - **声明位置**：[PRIVACY.md:93](file:///d:/DevTools/project/PiggyCount/PRIVACY.md)
   > "Authentication credentials are stored securely using Android Keystore"
 - **实际实现**：
-  - 全局 Grep `AndroidKeystore|iOSKeychain|Keystore|Keychain` 在 `lib/` 中**零匹配**
+  - ⚠️ **2026-09-19 复核，本条已部分失效**：`lib/` 内已有 `FlutterSecureStorage`（仅用于
+    E2EE 密钥，`lib/data/encryption/secure_key_storage.dart:27-31`），"零匹配"不再成立；
+    PIN 也已改为 Argon2id + 每次新 salt（`app_lock_service.dart:40-54`，原文称"SHA-256
+    未加盐"同样过期）。**仍然成立的部分**：PIN 哈希与应用锁开关仍在 SharedPreferences
+    （`app_lock_service.dart:49,62`），未进 Keychain/Keystore。
   - 全部凭证（PIN 哈希、API Token、密码）存储在 `SharedPreferences`（明文 XML 文件）
   - 文件位置：[lib/services/security/app_lock_service.dart:26-37](file:///d:/DevTools/project/PiggyCount/lib/services/security/app_lock_service.dart)、[lib/pages/auth/login_page.dart:69-113](file:///d:/DevTools/project/PiggyCount/lib/pages/auth/login_page.dart)、`packages/flutter_cloud_sync/lib/src/providers/piggycount_cloud_provider.dart:1748-1754`
 - **风险**：
@@ -198,7 +202,11 @@ LazyDatabase _openConnection() {
 
 **问题位置**：[lib/data/db.dart](file:///d:/DevTools/project/PiggyCount/lib/data/db.dart)
 
-- **现状**：`transactions` 表缺少 `(ledger_id, happened_at)` 复合索引
+- **现状**：✅ **本节已过期（2026-09-19 核实）**——`(ledger_id, happened_at)` 复合索引已存在：
+  `db.dart:1324`（`onUpgrade` 里的 v32 迁移补建）与 `db.dart:1560`（`onCreate` 全新库路径），
+  `test/data/repositories/local/transaction_query_benchmark_test.dart` 断言其命中。
+  （行号取之于 2026-09-19；`db.dart` 在 B10 加过 `beforeOpen`，日后引用前先 grep
+  `idx_transactions_ledger_happened`。）下文保留为历史记录。
 - **影响**：首页交易列表按时间倒序分页查询的最热路径，数据量增长后会触发全表扫描
 - **建议修复**：在 schemaVersion=32 迁移中补充：
   ```dart

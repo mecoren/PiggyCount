@@ -9,9 +9,9 @@
 
 **已经做得好的（不需要重复做）**：
 - 列表渲染：`FlutterListView` 回收式懒渲染（`lib/widgets/biz/transaction_list.dart:481`），3000 条卡顿问题已修
-- 数据库：`NativeDatabase.createInBackground` 后台 isolate（`lib/data/db.dart:1685`）、WAL 默认启用、`idx_transactions_ledger_happened` 复合索引已有（`db.dart:1257`）、N+1 已改批量查询（`getTagsForTransactions` 等）
+- 数据库：`NativeDatabase.createInBackground` 后台 isolate（`lib/data/db.dart:1770`）、WAL 默认启用、`idx_transactions_ledger_happened` 复合索引已有（`db.dart:1324` / `:1560`）、N+1 已改批量查询（`getTagsForTransactions` 等）
 - 多币种：6 源汇率容灾 + 手动覆盖 + 交易级折算快照
-- 迁移：手写 onUpgrade v1→v43 全链路 + 迁移测试
+- 迁移：手写 onUpgrade v1→v43 全链路 + 迁移测试（2026-09-19 已到 **v44**，回收站表，见 `optimization-plan-2026-09-19.md` F1-a）
 - 汇总类 FutureProvider 已带 key 缓存（analytics_page.dart:37 审计 U8）
 
 **主要短板（本方案的对象）**：
@@ -214,6 +214,7 @@
 
 - **SQLCipher 全库加密**、PIN 加盐与失败锁定、FLAG_SECURE：属安全项，已在 `docoments/16-known-issues.md` 短期清单，优先级独立于本方案（且 PIN 是 P0 安全债，建议先于 B2 处理）
 - **Web 端 / Flutter SDK 升级**：known-issues P3，工具链锁 3.27.3 有因（pubspec.yaml:48-52 注释），不动
+  - ⚠️ **2026-09-19 复核，本条已过期**：SDK 已升级到 **Flutter 3.44.3**（`pubspec.yaml:14`，且 version 单一来源注释已改写到 `pubspec.yaml:8-13`，原 `:48-52` 那段"锁 3.27.3"的注释不存在了）。"不动"结论仍然成立，但依据变成"已升到当前稳定线、无进一步升级需求"，不是"锁在旧版"。
 - **实时协同**：历史项目已下线，不复活
 - **性能 P1-3 statsRefresh 分频道**（本轮评估后决定不做）：全局 tick 共 35 个 bump 点 / 22 处 watch，分频道要改全部调用方且「写入类别→读取类别」对应关系易错配（同步完成影响全部类别），改动面大。M3 Tab 懒加载落地后，非活跃 Tab 的统计 provider 已无人订阅，bump 不再触发其重算——P1-3 的主要收益已被覆盖，剩余部分性价比不足。
 
