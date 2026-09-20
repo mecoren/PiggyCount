@@ -75,6 +75,7 @@ class SharePosterService {
       final ByteData? byteData =
           await image.toByteData(format: ui.ImageByteFormat.png);
       final Uint8List pngBytes = byteData!.buffer.asUint8List();
+      image.dispose(); // pixelRatio 3.0 的位图 8~15MB,不释放不会随作用域结束回收
 
       // 移除OverlayEntry
       overlayEntry.remove();
@@ -254,6 +255,7 @@ class SharePosterService {
       final byteData = await image.toByteData(
         format: ui.ImageByteFormat.png,
       );
+      image.dispose();
 
       overlayEntry.remove();
 
@@ -713,6 +715,7 @@ class _PosterCarouselPreviewDialogState
       final byteData = await image.toByteData(
         format: ui.ImageByteFormat.png,
       );
+      image.dispose();
 
       overlayEntry.remove();
 

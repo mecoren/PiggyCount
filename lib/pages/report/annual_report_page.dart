@@ -533,8 +533,12 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
     );
 
     try {
-      // Precache logo image
-      await precacheImage(const AssetImage('assets/logo2.png'), context);
+      // Precache logo image —— key 必须和 annual_report_poster.dart 的
+      // Image.asset(cacheWidth: 256) 一致，否则预热的是另一个缓存条目，海报上会空出 logo
+      await precacheImage(
+        ResizeImage(const AssetImage('assets/logo2.png'), width: 256),
+        context,
+      );
 
       // Create poster widget
       final posterKey = GlobalKey();
@@ -597,6 +601,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
 
       final image = await boundary.toImage(pixelRatio: 2.0);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      image.dispose();
       return byteData!.buffer.asUint8List();
     } finally {
       overlayEntry.remove();
@@ -1900,6 +1905,7 @@ class _AnnualReportPosterPreviewState
 
       final image = await boundary.toImage(pixelRatio: 2.0);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      image.dispose();
       return byteData!.buffer.asUint8List();
     } finally {
       overlayEntry.remove();
