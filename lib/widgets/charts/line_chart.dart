@@ -144,6 +144,17 @@ class _LineChartState extends State<LineChart> {
           return Stack(
             fit: StackFit.expand,
             children: [
+              // 读屏摘要：整张图是 CustomPaint + TextPainter 画的，语义树里本来
+              // 一个节点都没有。空 Semantics 在 StackFit.expand 下铺满图表矩形。
+              Semantics(
+                label: chartSeriesSemantics(context,
+                    xLabels: widget.xLabels,
+                    series: [
+                      widget.values,
+                      if (widget.secondaryValues != null) widget.secondaryValues!
+                    ],
+                    hideAmounts: widget.hideAmounts),
+              ),
               CustomPaint(
                 painter: _LinePainter(
                   values: widget.values,

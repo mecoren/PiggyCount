@@ -1,7 +1,35 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../../styles/tokens.dart';
+
+/// 趋势图读屏摘要（折线 / 柱状共用）。
+///
+/// 图是画出来的：TalkBack/VoiceOver 对着柱状图只能念出坐标轴上那几个采样的
+/// 标签，等于没有信息。这里把整条序列摊成一句话，调用方把它放进
+/// `Semantics(label:)`，同时给轴标签加 `excludeSemantics`（避免摘要与散标签混着念）。
+///
+/// ponytail: 全量摊平，31 个点的月视图约 20~30 秒朗读。升级点是逐点语义节点
+/// （fl_chart 的 `BarTouchData`/自绘侧发 `SemanticsData`），让读屏能一柱一柱滑。
+String chartSeriesSemantics(
+  BuildContext context, {
+  required List<String> xLabels,
+  required List<List<double>> series,
+  required bool hideAmounts,
+}) {
+  final parts = <String>[
+    for (var i = 0; i < xLabels.length; i++)
+      hideAmounts
+          ? xLabels[i]
+          : '${xLabels[i]} ${[
+              for (final s in series)
+                if (i < s.length) s[i].toStringAsFixed(2)
+            ].join(' / ')}'
+  ];
+  return AppLocalizations.of(context)
+      .semanticsChartSeries(xLabels.length, parts.join(', '));
+}
 
 /// 图表点按气泡锚定布局参数（折线图 / 柱状图共用）。
 ///

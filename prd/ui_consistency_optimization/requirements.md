@@ -55,3 +55,22 @@
 5. `main.dart` 中不再出现 `scaffoldBackgroundColor`、`dividerColor`、`cardTheme.color` 等覆盖（保留 `primaryColor`、`colorScheme.primary` 等动态主色覆盖）
 6. `splash_page.dart` 全部使用 `BeeTokens` / `BeeTextTokens` / `BeeDimens`，不再使用 `Theme.of(context).colorScheme`、`Colors.white.withOpacity`
 7. 亮色/暗色模式下视觉无回归（背景色统一为 `Colors.grey.shade50` 浅灰；卡片圆角统一为 `radiusXl`）
+
+## 五、追加（2026-09-19，`docs/optimization-plan-2026-09-19.md` §五 U1/U2）
+
+本文档前五节写于 `BeeTokens` 时期，类名已改 `PiggyTokens` / `PiggyTextTokens` / `PiggyDimens`，
+按现名读。本节是本轮实际验收的部分，与上面 P0-P3 的清单**并列**，不覆盖它们。
+
+| 编号 | 需求 | 状态 | 验收依据 |
+|------|------|------|----------|
+| U1 | `pages/` + `widgets/` 硬编码字号收敛到令牌 | **交付门禁，未做收敛** | `test/styles/font_size_token_ratchet_test.dart`：基线 340（pages）/ 209（widgets），新增一处即红 |
+| U2-a | 图表在语义树里有可读节点 | 已落地（柱状图 + 折线图） | `test/widgets/chart_semantics_test.dart` 3 例（含 `hideAmounts` 不泄露金额） |
+| U2-b | 文字/背景对比度 ≥4.5:1（WCAG 1.4.3） | **测了没改**：亮色 `textTertiary` 2.18/2.41 不合格，`textSecondary` 页面底 4.44；暗色全过 | `scripts/contrast_check.py`（可复跑），数字与候选值记在 §13 |
+| U2-c | 读屏实测、热区 ≥48×48 全量核查、大字号下 UI 不破 | **未开始**：无真机/模拟器 | —— |
+
+U1 判"本轮不收敛"的三条理由（数字与 `file:line` 见 §13），共同点是**它们互相咬着**：
+① 最高频的 16（125 次）与 13（64 次）在 `PiggyTextTokens` 里没有档位，要先做设计决定；
+② 令牌成员返回整只 `TextStyle`（含 color/weight，`tokens.dart:800-856`），替换即改视觉；
+③ 本方案给 U1 定的出口就是"每批带视觉 diff 截图"，本轮无设备。
+U2-b 同理：能把 `textTertiary` 改到合格的 `#5F6B7A` 与 `textSecondary` 的合成色几乎同色 ——
+一次机械调暗会把三级文字并到二级上去。**两项都等到有截图回归条件再动，届时的开手顺序由门禁的直方图给出。**

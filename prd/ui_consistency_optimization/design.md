@@ -234,3 +234,46 @@ class BeeDimens {
    - `grep -rn "Theme.of(context).colorScheme.primary" lib/pages/`
    - `grep -rn "Colors\.red\b\|Colors\.green\b" lib/pages/`
 4. 全部完成后跑现有测试套件（如有），确保无破坏
+
+---
+
+## 六、追加决策（2026-09-19 · U1 字号 ratchet / U2 图表无障碍）
+
+证据全在 `docs/optimization-plan-2026-09-19.md` §13 的「U1/U2」一节，这里只留决策与否决。
+
+### D-1 语义节点用「无 child 的 `Semantics`」塞进 `Stack`，而不是包住图表
+
+`Semantics` 是 `SingleChildRenderObjectWidget` 且 `child` 可空（SDK `basic.dart:7945`）；
+在 `Stack(fit: StackFit.expand)` 下它的 `RenderProxyBox.performResize()` 取 `constraints.biggest`，
+于是拿到整张图表的矩形 —— 读屏命中区域就是图表本身。
+**否决「包一层」写法**：那要把 `analytics_bar_chart.dart` / `line_chart.dart` 各约 150 行整体重排缩进，
+而本仓 HEAD 不是 `dart format` 产物（`dart format lib test` 曾重排 357 文件，事故记录在 §13），
+一次为样式服务的重排会把真实改动埋进 diff 噪声里。
+
+### D-2 摘要文本生成放 `chart_tooltip_bubble.dart`，两图共用
+
+该文件已经承担「折线图与柱状图共用的气泡布局规则」（`chartTooltipLayout`）。
+再开一个 `chart_semantics.dart` 是给一个函数建目录。措辞单一来源，两图不会漂移。
+
+### D-3 `hideAmounts` 为真时摘要只念标签、不念数值
+
+「隐藏金额」是既有隐私开关（锁屏/他人围观场景）。无障碍补全不能反过来把它打穿 ——
+这条是硬约束，测试里有专门一例。
+
+### D-4 排除轴标签用 `ExcludeSemantics(child: Text(...))`
+
+`Text` **没有** `excludeSemantics` 命名参数（写了就是编译错误，第一版两处都踩）。
+轴标签是刻度、不是信息，留在语义树里会和序列摘要混着念。
+
+### D-5 U1 的门禁只数「`fontSize:` 后紧跟数字」的字面量
+
+`fontSize: PiggyChartTokens.xLabelFontSize` 已经在令牌上，数进去会让基线虚高（pages 344 vs 字面量 340）。
+注释行跳过（照 `native_image_dispose_contract_test.dart` 的口径）。
+守卫自带自检：两处目录合计 <500 处即红 —— 正则或目录写错时，门禁会静默变成"永远绿"，那是最坏结果。
+**否决「按文件钉死基线」**（549 处 / 92 个文件的字面量映射）：维护成本高于它能拦住的东西。
+目录级合计的漏洞是「pages 减 2、widgets 加 2 蒙混过关」，接受 —— 下一轮真收敛时本来就要逐文件过。
+
+### D-6 不做：金额侧语义、饼图侧语义
+
+`AmountText` 渲染的是 `Text`，金额已在语义树里；`Semantics(label:)` 是**替换**子节点文本而非追加，
+包一层是净退化。三个饼图/构成图各有 4-5 个真实 `Text` 图例，读屏念得出分类名，本轮不重复补。

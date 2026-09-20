@@ -173,6 +173,15 @@ class _AnalyticsBarChartState extends State<AnalyticsBarChart> {
                   final chartSize = Size(constraints.maxWidth, constraints.maxHeight);
                   return Stack(
                     children: [
+                      // 读屏摘要：柱体是画出来的，不补这层 TalkBack/VoiceOver 只能
+                      // 念到零散的轴标签（下面两个轴标签已 excludeSemantics）。
+                      // 空 Semantics 在 Stack 里铺满图表矩形，不画任何东西。
+                      Semantics(
+                        label: chartSeriesSemantics(context,
+                            xLabels: widget.xLabels,
+                            series: [widget.values],
+                            hideAmounts: widget.hideAmounts),
+                      ),
                       Positioned.fill(
                         child: BarChart(
                           BarChartData(
@@ -207,17 +216,21 @@ class _AnalyticsBarChartState extends State<AnalyticsBarChart> {
                                     return SideTitleWidget(
                                       axisSide: meta.axisSide,
                                       space: 4,
-                                      child: Text(
-                                        widget.hideAmounts
-                                            ? '**'
-                                            : formatCompactAxis(value,
-                                                isChinese: widget
-                                                    .isChineseLocale),
-                                        style: TextStyle(
-                                          fontSize: PiggyChartTokens
-                                                  .xLabelFontSize -
-                                              1,
-                                          color: axisLabelColor,
+                                      // 轴标签是刻度，不是信息：读屏交给整条序列的
+                                      // 摘要，这里排除避免混着念。
+                                      child: ExcludeSemantics(
+                                        child: Text(
+                                          widget.hideAmounts
+                                              ? '**'
+                                              : formatCompactAxis(value,
+                                                  isChinese: widget
+                                                      .isChineseLocale),
+                                          style: TextStyle(
+                                            fontSize: PiggyChartTokens
+                                                    .xLabelFontSize -
+                                                1,
+                                            color: axisLabelColor,
+                                          ),
                                         ),
                                       ),
                                     );
@@ -241,17 +254,20 @@ class _AnalyticsBarChartState extends State<AnalyticsBarChart> {
                                     return SideTitleWidget(
                                       axisSide: meta.axisSide,
                                       space: 6,
-                                      child: Text(
-                                        widget.xLabels[i],
-                                        style: TextStyle(
-                                          fontSize:
-                                              PiggyChartTokens.xLabelFontSize,
-                                          color: isHi
-                                              ? PiggyTokens.textPrimary(context)
-                                              : axisLabelColor,
-                                          fontWeight: isHi
-                                              ? FontWeight.w600
-                                              : FontWeight.w400,
+                                      // 同上：日期轴是采样显示的，序列摘要里每个点都有
+                                      child: ExcludeSemantics(
+                                        child: Text(
+                                          widget.xLabels[i],
+                                          style: TextStyle(
+                                            fontSize:
+                                                PiggyChartTokens.xLabelFontSize,
+                                            color: isHi
+                                                ? PiggyTokens.textPrimary(context)
+                                                : axisLabelColor,
+                                            fontWeight: isHi
+                                                ? FontWeight.w600
+                                                : FontWeight.w400,
+                                          ),
                                         ),
                                       ),
                                     );
