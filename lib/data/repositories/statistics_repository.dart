@@ -46,6 +46,18 @@ abstract class StatisticsRepository {
     required String type,
   });
 
+  /// 按标签统计（指定时间范围和类型），total 按金额降序由调用方排。
+  ///
+  /// 口径与分类维度一致：`COALESCE(native_amount, amount)` + `exclude_from_stats
+  /// = 0`，区间为半开 `[start, end)`，与 [totalsByCategory] 可直接对账。
+  Future<List<({int id, String name, String? color, double total, int count})>>
+      totalsByTag({
+    required int ledgerId,
+    required String type,
+    required DateTime start,
+    required DateTime end,
+  });
+
   /// 获取指定时间范围的收支总额
   Future<(double income, double expense)> totalsInRange({
     required int ledgerId,

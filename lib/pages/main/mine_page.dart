@@ -21,6 +21,7 @@ import '../settings/smart_billing_page.dart';
 import '../settings/automation_page.dart';
 import '../settings/about_page.dart';
 import '../report/annual_report_page.dart';
+import '../report/range_report_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:in_app_review/in_app_review.dart';
 import '../../utils/ui_scale_extensions.dart';
@@ -410,6 +411,19 @@ class MinePage extends ConsumerWidget {
                         Navigator.of(context).push(
                           MaterialPageRoute(
                               builder: (_) => const AnnualReportPage()),
+                        );
+                      },
+                    ),
+                    // 自定义区间报表（F2：任意起止 + 环比/同比 + 标签维度）
+                    SettingsNavItem(
+                      icon: Icons.date_range_outlined,
+                      title: AppLocalizations.of(context).rangeReportTitle,
+                      subtitle:
+                          AppLocalizations.of(context).rangeReportEntrySubtitle,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (_) => const RangeReportPage()),
                         );
                       },
                     ),

@@ -317,6 +317,90 @@ class LocalStatisticsRepository implements StatisticsRepository {
     return out;
   }
 
+  /// 标签维度：一笔交易可挂多个标签，各标签分别计入（与标签详情页同源，
+  /// 所以各行之和通常 **大于** 该区间总额，这是标签不互斥的口径而非 bug）。
+  ///
+  /// 两条 SQL 在 Dart 侧按 tag id 合并：
+  /// 1. 主表路 `transaction_tags → tags`（本机拥有的标签）；
+  /// 2. 共享账本 Editor 路 `transaction_tag_overrides → shared_ledger_tags`
+  ///    （标签行不在主表，按 syncId 转 synthetic 负 id，同 `LocalTagRepository`）。
+  /// 外键未启用、`native_amount` 可空 → 与既有统计一样 `COALESCE(native_amount, amount)`。
+  @override
+  Future<List<({int id, String name, String? color, double total, int count})>>
+      totalsByTag({
+    required int ledgerId,
+    required String type,
+    required DateTime start,
+    required DateTime end,
+  }) async {
+    int ival(dynamic v) => v is num ? v.toInt() : (v is BigInt ? v.toInt() : 0);
+    double dval(dynamic v) => v is num ? v.toDouble() : (v is BigInt ? v.toDouble() : 0.0);
+
+    final rows = await db.customSelect(
+      'SELECT tg.id AS id, tg.name AS name, tg.color AS color, '
+      'COUNT(*) AS cnt, SUM(COALESCE(t.native_amount, t.amount)) AS total '
+      'FROM transaction_tags tt '
+      'INNER JOIN transactions t ON t.id = tt.transaction_id '
+      'INNER JOIN tags tg ON tg.id = tt.tag_id '
+      'WHERE t.ledger_id = ?1 AND t.type = ?2 AND t.exclude_from_stats = 0 '
+      'AND t.happened_at >= ?3 AND t.happened_at < ?4 '
+      'GROUP BY tg.id',
+      variables: [
+        d.Variable<int>(ledgerId),
+        d.Variable<String>(type),
+        d.Variable<DateTime>(start),
+        d.Variable<DateTime>(end),
+      ],
+      readsFrom: {db.transactionTags, db.transactions, db.tags},
+    ).get();
+    final map = <int, ({int id, String name, String? color, double total, int count})>{
+      for (final r in rows)
+        r.read<int>('id'): (
+          id: r.read<int>('id'),
+          name: r.read<String>('name'),
+          color: r.readNullable<String>('color'),
+          total: dval(r.data['total']),
+          count: ival(r.data['cnt']),
+        )
+    };
+
+    final overrides = await db.customSelect(
+      'SELECT o.tag_sync_id AS sync_id, st.name AS name, st.color AS color, '
+      'COUNT(*) AS cnt, SUM(COALESCE(t.native_amount, t.amount)) AS total '
+      'FROM transaction_tag_overrides o '
+      'INNER JOIN transactions t ON t.sync_id = o.transaction_sync_id '
+      'INNER JOIN shared_ledger_tags st ON st.sync_id = o.tag_sync_id '
+      'WHERE t.ledger_id = ?1 AND t.type = ?2 AND t.exclude_from_stats = 0 '
+      'AND t.happened_at >= ?3 AND t.happened_at < ?4 '
+      'GROUP BY o.tag_sync_id',
+      variables: [
+        d.Variable<int>(ledgerId),
+        d.Variable<String>(type),
+        d.Variable<DateTime>(start),
+        d.Variable<DateTime>(end),
+      ],
+      readsFrom: {
+        db.transactionTagOverrides,
+        db.transactions,
+        db.sharedLedgerTags
+      },
+    ).get();
+    for (final r in overrides) {
+      final id = syntheticIdForSyncId(r.read<String>('sync_id'));
+      final inc = dval(r.data['total']);
+      final cnt = ival(r.data['cnt']);
+      final prev = map[id];
+      map[id] = (
+        id: id,
+        name: r.read<String>('name'),
+        color: r.readNullable<String>('color'),
+        total: (prev?.total ?? 0) + inc,
+        count: (prev?.count ?? 0) + cnt,
+      );
+    }
+    return map.values.toList()..sort((a, b) => b.total.compareTo(a.total));
+  }
+
   @override
   Future<(double income, double expense)> totalsInRange({
     required int ledgerId,
