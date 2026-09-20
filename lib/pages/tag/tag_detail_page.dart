@@ -503,7 +503,8 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
     final ledgerId = ref.read(currentLedgerIdProvider);
 
     try {
-      await repo.deleteTransaction(transaction.id);
+      // F1 回收站：软删除，可在「设置 > 数据管理 > 回收站」恢复
+      await repo.softDeleteTransaction(transaction.id);
 
       await PostProcessor.sync(ref, ledgerId: ledgerId);
 
@@ -511,6 +512,7 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
       ref.read(statsRefreshProvider.notifier).state++;
       ref.read(budgetRefreshProvider.notifier).state++;
       ref.read(tagListRefreshProvider.notifier).state++;
+      if (mounted) showToast(context, l10n.recycleBinMoved);
     } catch (e) {
       if (mounted) {
         showToast(context, '${l10n.commonError}: $e');

@@ -92,15 +92,25 @@ class OrphanScanner {
   }
 
   /// A2 — 附件行的 `transaction_id` 在 transactions 表不存在。
+  ///
+  /// v44 回收站：软删除期间交易本体搬进 `deleted_transactions`，标签/附件
+  /// 行**刻意原地保留**（恢复要无损，且 30 天附件文件 GC 以附件行为引用
+  /// 依据）。所以归档中的 txId 不是孤儿，是"暂存"—— 漏掉这一条会让清理
+  /// 页每次软删都报假孤儿，用户点清理就把恢复所需的附件行删了。
   Future<List<OrphanRecord>> scanAttachmentMissingTx() async {
     final rows = await db.customSelect(
       '''
       SELECT a.id AS att_id, a.transaction_id, a.file_name, a.file_size
       FROM transaction_attachments a
       LEFT JOIN transactions t ON t.id = a.transaction_id
-      WHERE t.id IS NULL
+      LEFT JOIN deleted_transactions dt ON dt.tx_id = a.transaction_id
+      WHERE t.id IS NULL AND dt.tx_id IS NULL
       ''',
-      readsFrom: {db.transactionAttachments, db.transactions},
+      readsFrom: {
+        db.transactionAttachments,
+        db.transactions,
+        db.deletedTransactions
+      },
     ).get();
     return rows.map((row) {
       final attId = row.read<int>('att_id');
@@ -119,15 +129,18 @@ class OrphanScanner {
   }
 
   /// A3 — `transaction_tags.transaction_id` 在 transactions 表不存在。
+  ///
+  /// 回收站豁免理由同 [scanAttachmentMissingTx]。
   Future<List<OrphanRecord>> scanTxTagMissingTx() async {
     final rows = await db.customSelect(
       '''
       SELECT tt.id AS link_id, tt.transaction_id, tt.tag_id
       FROM transaction_tags tt
       LEFT JOIN transactions t ON t.id = tt.transaction_id
-      WHERE t.id IS NULL
+      LEFT JOIN deleted_transactions dt ON dt.tx_id = tt.transaction_id
+      WHERE t.id IS NULL AND dt.tx_id IS NULL
       ''',
-      readsFrom: {db.transactionTags, db.transactions},
+      readsFrom: {db.transactionTags, db.transactions, db.deletedTransactions},
     ).get();
     return rows.map((row) {
       final linkId = row.read<int>('link_id');

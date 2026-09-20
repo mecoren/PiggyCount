@@ -17,6 +17,7 @@ import '../settings/config_import_export_page.dart';
 import '../settings/storage_management_page.dart';
 import '../settings/attachment_preview_page.dart';
 import '../maintenance/orphan_cleanup_page.dart';
+import '../maintenance/recycle_bin_page.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/attachment_export_import_service.dart';
 
@@ -206,6 +207,17 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                   await Navigator.of(context).push(
                     MaterialPageRoute(
                         builder: (_) => const OrphanCleanupPage()),
+                  );
+                },
+              ),
+              // 回收站(软删除的交易)
+              SettingsNavItem(
+                icon: Icons.delete_outline,
+                title: l10n.recycleBin,
+                subtitle: l10n.recycleBinSubtitle,
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const RecycleBinPage()),
                   );
                 },
               ),

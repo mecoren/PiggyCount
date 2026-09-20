@@ -336,6 +336,27 @@ abstract class TransactionRepository {
   /// 删除交易
   Future<void> deleteTransaction(int id);
 
+  // --- v44 回收站（F1）---------------------------------------------------
+  //
+  // 软删除 = 把整行搬进 deleted_transactions，标签/附件行原地保留；
+  // `deleteTransaction` 保持"彻底删除"语义（同步/清库等内部路径专用）。
+  // 返回 false 表示目标不存在（软删）或主键已被占用（恢复），调用方需提示。
+
+  /// 软删除一笔交易（进回收站）
+  Future<bool> softDeleteTransaction(int id);
+
+  /// 回收站列表，按删除时间倒序；[ledgerId] 为空则跨账本
+  Future<List<DeletedTransaction>> getDeletedTransactions({int? ledgerId});
+
+  /// 从回收站恢复一笔交易
+  Future<bool> restoreDeletedTransaction(int txId);
+
+  /// 回收站里彻底删除一笔（连带附件行与磁盘文件）
+  Future<void> purgeDeletedTransaction(int txId);
+
+  /// 清空某账本的回收站（删账本 / 清空账本时内部调用）
+  Future<int> purgeDeletedTransactionsForLedger(int ledgerId);
+
   /// 获取指定类型和时间范围内的交易数量
   Future<int> countByTypeInRange({
     required int ledgerId,

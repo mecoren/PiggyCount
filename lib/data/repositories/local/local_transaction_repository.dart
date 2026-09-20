@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart' as d;
@@ -120,8 +121,14 @@ class LocalTransactionRepository implements TransactionRepository {
       ];
 
   @override
-  Stream<List<({Transaction t, Category? category, Account? account, Account? toAccount})>>
-      watchTransactionsWithCategoryAll({
+  Stream<
+      List<
+          ({
+            Transaction t,
+            Category? category,
+            Account? account,
+            Account? toAccount
+          })>> watchTransactionsWithCategoryAll({
     int? ledgerId,
   }) {
     final select = db.select(db.transactions);
@@ -129,8 +136,7 @@ class LocalTransactionRepository implements TransactionRepository {
       select.where((t) => t.ledgerId.equals(ledgerId));
     }
     select.orderBy([
-      (t) => d.OrderingTerm(
-          expression: t.happenedAt, mode: d.OrderingMode.desc)
+      (t) => d.OrderingTerm(expression: t.happenedAt, mode: d.OrderingMode.desc)
     ]);
     final q = select.join(_txJoins());
     return _watchTxJoinWithSharedHydration(q);
@@ -144,9 +150,22 @@ class LocalTransactionRepository implements TransactionRepository {
   /// re-emit → tx tile 显示旧名字/图标,跟 picker 不一致。这里手动加两路
   /// db.tableUpdates(SharedLedger{Categories,Accounts}) 监听,触发时拿上一次
   /// Drift 结果重 hydrate 再 emit。
-  Stream<List<({Transaction t, Category? category, Account? account, Account? toAccount})>>
-      _watchTxJoinWithSharedHydration(d.JoinedSelectStatement q) {
-    late StreamController<List<({Transaction t, Category? category, Account? account, Account? toAccount})>> ctrl;
+  Stream<
+      List<
+          ({
+            Transaction t,
+            Category? category,
+            Account? account,
+            Account? toAccount
+          })>> _watchTxJoinWithSharedHydration(d.JoinedSelectStatement q) {
+    late StreamController<
+        List<
+            ({
+              Transaction t,
+              Category? category,
+              Account? account,
+              Account? toAccount
+            })>> ctrl;
     StreamSubscription? txSub;
     StreamSubscription? sharedCatSub;
     StreamSubscription? sharedAccSub;
@@ -166,7 +185,14 @@ class LocalTransactionRepository implements TransactionRepository {
       if (!ctrl.isClosed) ctrl.add(hydrated);
     }
 
-    ctrl = StreamController<List<({Transaction t, Category? category, Account? account, Account? toAccount})>>(
+    ctrl = StreamController<
+        List<
+            ({
+              Transaction t,
+              Category? category,
+              Account? account,
+              Account? toAccount
+            })>>(
       onListen: () {
         txSub = q.watch().listen((rows) {
           lastRows = rows;
@@ -194,9 +220,22 @@ class LocalTransactionRepository implements TransactionRepository {
   ///
   /// 合并 category + from-account + to-account 三类 hydration:共用同一遍 rows
   /// 扫描;每类各一个 batch query。
-  Future<List<({Transaction t, Category? category, Account? account, Account? toAccount})>>
-      _hydrateSharedOverrides(
-    List<({Transaction t, Category? category, Account? account, Account? toAccount})> rows,
+  Future<
+      List<
+          ({
+            Transaction t,
+            Category? category,
+            Account? account,
+            Account? toAccount
+          })>> _hydrateSharedOverrides(
+    List<
+            ({
+              Transaction t,
+              Category? category,
+              Account? account,
+              Account? toAccount
+            })>
+        rows,
   ) async {
     // 1. 收集所有需要反查的 syncId(分类 / from 账户 / to 账户)
     final catSyncIds = <String>{};
@@ -316,8 +355,14 @@ class LocalTransactionRepository implements TransactionRepository {
   }
 
   @override
-  Stream<List<({Transaction t, Category? category, Account? account, Account? toAccount})>>
-      watchTransactionsWithCategoryInMonth({
+  Stream<
+      List<
+          ({
+            Transaction t,
+            Category? category,
+            Account? account,
+            Account? toAccount
+          })>> watchTransactionsWithCategoryInMonth({
     required int ledgerId,
     required DateTime month,
   }) {
@@ -338,8 +383,14 @@ class LocalTransactionRepository implements TransactionRepository {
   }
 
   @override
-  Stream<List<({Transaction t, Category? category, Account? account, Account? toAccount})>>
-      watchTransactionsWithCategoryInYear({
+  Stream<
+      List<
+          ({
+            Transaction t,
+            Category? category,
+            Account? account,
+            Account? toAccount
+          })>> watchTransactionsWithCategoryInYear({
     required int ledgerId,
     required int year,
   }) {
@@ -348,7 +399,8 @@ class LocalTransactionRepository implements TransactionRepository {
     final q = (db.select(db.transactions)
           ..where((t) =>
               t.ledgerId.equals(ledgerId) &
-              t.happenedAt.isBiggerOrEqualValue(start) & t.happenedAt.isSmallerThanValue(end))
+              t.happenedAt.isBiggerOrEqualValue(start) &
+              t.happenedAt.isSmallerThanValue(end))
           ..orderBy([
             (t) => d.OrderingTerm(
                 expression: t.happenedAt, mode: d.OrderingMode.desc)
@@ -358,8 +410,14 @@ class LocalTransactionRepository implements TransactionRepository {
   }
 
   @override
-  Stream<List<({Transaction t, Category? category, Account? account, Account? toAccount})>>
-      watchTransactionsForCategoryInRange({
+  Stream<
+      List<
+          ({
+            Transaction t,
+            Category? category,
+            Account? account,
+            Account? toAccount
+          })>> watchTransactionsForCategoryInRange({
     required int ledgerId,
     required DateTime start,
     required DateTime end,
@@ -370,7 +428,8 @@ class LocalTransactionRepository implements TransactionRepository {
           ..where((t) =>
               t.ledgerId.equals(ledgerId) &
               t.type.equals(type) &
-              t.happenedAt.isBiggerOrEqualValue(start) & t.happenedAt.isSmallerThanValue(end))
+              t.happenedAt.isBiggerOrEqualValue(start) &
+              t.happenedAt.isSmallerThanValue(end))
           ..orderBy([
             (t) => d.OrderingTerm(
                 expression: t.happenedAt, mode: d.OrderingMode.desc)
@@ -600,8 +659,7 @@ class LocalTransactionRepository implements TransactionRepository {
   }) async {
     await (db.update(db.transactions)..where((t) => t.id.equals(txId))).write(
       TransactionsCompanion(
-        createdByUserId:
-            isCreate ? d.Value(userId) : const d.Value.absent(),
+        createdByUserId: isCreate ? d.Value(userId) : const d.Value.absent(),
         lastEditedByUserId: d.Value(userId),
       ),
     );
@@ -609,13 +667,24 @@ class LocalTransactionRepository implements TransactionRepository {
 
   @override
   Future<void> deleteTransaction(int id) async {
-    // 先查出 syncId,用于级联清理 transaction_tag_overrides(该表用
+    // 先查出整行:syncId 用于级联清理 transaction_tag_overrides(该表用
     // transactionSyncId 文本列作主键,不能按 int id 删)。不查则删除后留下孤儿行,
     // 共享账本 Editor 视角 _hydrateSharedOverridesFull 会挂载幽灵标签。
-    final tx = await (db.select(db.transactions)
-          ..where((t) => t.id.equals(id)))
+    final tx = await (db.select(db.transactions)..where((t) => t.id.equals(id)))
         .getSingleOrNull();
-    final syncId = tx?.syncId;
+    if (tx == null) return;
+    await _deleteTransactionCascade(tx);
+  }
+
+  /// 彻底删除一笔交易的级联：标签关联 → 附件(行+磁盘文件) → 共享标签
+  /// override → 交易本体。[deleteTransaction] 与回收站的 purge 共用这一份，
+  /// 避免"两条删除路径清理范围不一致"（历史上批量删除就漏过文件清理）。
+  ///
+  /// 传入 [tx] 而不是 id：回收站里的行已经不在 transactions 表，只能由
+  /// payload 反序列化出来再交给我们。
+  Future<void> _deleteTransactionCascade(Transaction tx) async {
+    final id = tx.id;
+    final syncId = tx.syncId;
 
     // 先删除关联的标签
     await (db.delete(db.transactionTags)
@@ -689,11 +758,106 @@ class LocalTransactionRepository implements TransactionRepository {
         }
       }
 
-      logger.info('LocalTransactionRepository', '已删除交易 $transactionId 的 ${attachments.length} 个附件');
+      logger.info('LocalTransactionRepository',
+          '已删除交易 $transactionId 的 ${attachments.length} 个附件');
     } catch (e, stackTrace) {
       logger.error('LocalTransactionRepository', '删除交易附件失败', e, stackTrace);
       // 不抛出异常，继续删除交易
     }
+  }
+
+  // --- v44 回收站（F1）---------------------------------------------------
+
+  @override
+  Future<bool> softDeleteTransaction(int id) async {
+    final tx = await (db.select(db.transactions)..where((t) => t.id.equals(id)))
+        .getSingleOrNull();
+    if (tx == null) return false;
+
+    // 只搬交易本体：transaction_tags / transaction_attachments /
+    // transaction_tag_overrides 原地保留，恢复才是无损的，且附件文件不会被
+    // 30 天孤儿 GC 回收（GC 以 transaction_attachments 行为引用依据）。
+    await db.transaction(() async {
+      await db.into(db.deletedTransactions).insert(DeletedTransactionsCompanion(
+            txId: d.Value(tx.id),
+            ledgerId: d.Value(tx.ledgerId),
+            syncId: d.Value(tx.syncId),
+            happenedAt: d.Value(tx.happenedAt),
+            deletedAt: d.Value(DateTime.now()),
+            payload: d.Value(jsonEncode(tx.toJson())),
+          ));
+      await (db.delete(db.transactions)..where((t) => t.id.equals(id))).go();
+    });
+    logger.info('LocalTransactionRepository', '交易 $id 已移入回收站');
+    return true;
+  }
+
+  @override
+  Future<List<DeletedTransaction>> getDeletedTransactions(
+      {int? ledgerId}) async {
+    final q = db.select(db.deletedTransactions)
+      ..orderBy([(t) => d.OrderingTerm.desc(t.deletedAt)]);
+    if (ledgerId != null) q.where((t) => t.ledgerId.equals(ledgerId));
+    return q.get();
+  }
+
+  @override
+  Future<bool> restoreDeletedTransaction(int txId) async {
+    final row = await (db.select(db.deletedTransactions)
+          ..where((t) => t.txId.equals(txId)))
+        .getSingleOrNull();
+    if (row == null) return false;
+
+    // 原 id 必须还能用：transaction_tags / transaction_attachments 是按这个
+    // int id 挂着的，换个 id 落回去就等于把标签和附件丢在原地。id 被占
+    // （正常路径下 AUTOINCREMENT 不会复用，防御的是导入/换库这类非常规来源）
+    // 时拒绝恢复，宁可让用户先腾出位置，也不做"恢复成功但数据错位"。
+    final clash = await (db.select(db.transactions)
+          ..where((t) => t.id.equals(txId)))
+        .getSingleOrNull();
+    if (clash != null) {
+      logger.warning('LocalTransactionRepository', '回收站恢复被拒: 交易 id=$txId 已被占用');
+      return false;
+    }
+
+    final tx =
+        Transaction.fromJson(jsonDecode(row.payload) as Map<String, dynamic>);
+    await db.transaction(() async {
+      await db.into(db.transactions).insert(tx);
+      await (db.delete(db.deletedTransactions)
+            ..where((t) => t.txId.equals(txId)))
+          .go();
+    });
+    logger.info('LocalTransactionRepository', '交易 $txId 已从回收站恢复');
+    return true;
+  }
+
+  @override
+  Future<void> purgeDeletedTransaction(int txId) async {
+    final row = await (db.select(db.deletedTransactions)
+          ..where((t) => t.txId.equals(txId)))
+        .getSingleOrNull();
+    if (row == null) return;
+    final tx =
+        Transaction.fromJson(jsonDecode(row.payload) as Map<String, dynamic>);
+    // 级联与彻底删除共用一份实现（标签行 / 附件行+磁盘文件 / override）。
+    await db.transaction(() async {
+      await _deleteTransactionCascade(tx);
+      await (db.delete(db.deletedTransactions)
+            ..where((t) => t.txId.equals(txId)))
+          .go();
+    });
+  }
+
+  @override
+  Future<int> purgeDeletedTransactionsForLedger(int ledgerId) async {
+    final rows = await (db.select(db.deletedTransactions)
+          ..where((t) => t.ledgerId.equals(ledgerId)))
+        .get();
+    for (final row in rows) {
+      await purgeDeletedTransaction(row.txId);
+    }
+    return rows.length;
   }
 
   @override
@@ -735,8 +899,7 @@ class LocalTransactionRepository implements TransactionRepository {
     final rows = await (db.select(db.transactions)
           ..where((t) => t.recurringId.isIn(ids)))
         .get();
-    final result =
-        <String, List<RecurringInstanceFingerprint>>{};
+    final result = <String, List<RecurringInstanceFingerprint>>{};
     for (final t in rows) {
       final rid = t.recurringId;
       if (rid == null) continue;
@@ -759,22 +922,35 @@ class LocalTransactionRepository implements TransactionRepository {
     bool recordChanges = true,
   }) async {
     // 子仓库不挂 changeTracker,recordChanges 仅为接口一致保留。
-    final effective = item.syncId == const d.Value.absent() || item.syncId.value == null
-        ? item.copyWith(syncId: d.Value(_uuid.v4()))
-        : item;
+    final effective =
+        item.syncId == const d.Value.absent() || item.syncId.value == null
+            ? item.copyWith(syncId: d.Value(_uuid.v4()))
+            : item;
     return await db.into(db.transactions).insert(effective);
   }
 
   @override
-  Stream<List<({Transaction t, Category? category, Account? account, Account? toAccount})>>
-      transactionsWithCategoryAll({
+  Stream<
+      List<
+          ({
+            Transaction t,
+            Category? category,
+            Account? account,
+            Account? toAccount
+          })>> transactionsWithCategoryAll({
     int? ledgerId,
   }) =>
-          watchTransactionsWithCategoryAll(ledgerId: ledgerId);
+      watchTransactionsWithCategoryAll(ledgerId: ledgerId);
 
   @override
-  Future<List<({Transaction t, Category? category, Account? account, Account? toAccount})>>
-      getRecentTransactionsWithCategory({
+  Future<
+      List<
+          ({
+            Transaction t,
+            Category? category,
+            Account? account,
+            Account? toAccount
+          })>> getRecentTransactionsWithCategory({
     required int ledgerId,
     required int limit,
   }) async {
@@ -876,16 +1052,14 @@ class LocalTransactionRepository implements TransactionRepository {
     // ⚠️ type 必须在 Dart 侧判，不能进 WHERE —— 否则 LIMIT 不再约束扫描量，
     // 上界会丢失（理由见 [quickEntryLastCategorySql] 的文档）。
     final limit = scanLimit.clamp(1, 500).toInt();
-    final rows = await db
-        .customSelect(
-          quickEntryLastCategorySql,
-          variables: [
-            d.Variable<int>(ledgerId),
-            d.Variable<int>(limit),
-          ],
-          readsFrom: {db.transactions},
-        )
-        .get();
+    final rows = await db.customSelect(
+      quickEntryLastCategorySql,
+      variables: [
+        d.Variable<int>(ledgerId),
+        d.Variable<int>(limit),
+      ],
+      readsFrom: {db.transactions},
+    ).get();
 
     for (final row in rows) {
       // 转账与另一类型直接跳过：窗口内它们不占用记忆位。
@@ -936,8 +1110,8 @@ class LocalTransactionRepository implements TransactionRepository {
     return await (db.select(db.transactions)
           ..where((t) => t.ledgerId.equals(ledgerId))
           ..orderBy([
-            (t) =>
-                d.OrderingTerm(expression: t.happenedAt, mode: d.OrderingMode.desc)
+            (t) => d.OrderingTerm(
+                expression: t.happenedAt, mode: d.OrderingMode.desc)
           ]))
         .get();
   }
@@ -954,8 +1128,8 @@ class LocalTransactionRepository implements TransactionRepository {
               t.happenedAt.isBiggerOrEqualValue(start) &
               t.happenedAt.isSmallerThanValue(end))
           ..orderBy([
-            (t) =>
-                d.OrderingTerm(expression: t.happenedAt, mode: d.OrderingMode.desc)
+            (t) => d.OrderingTerm(
+                expression: t.happenedAt, mode: d.OrderingMode.desc)
           ]))
         .get();
   }
@@ -1025,8 +1199,8 @@ class LocalTransactionRepository implements TransactionRepository {
     return await (db.select(db.transactions)
           ..where((t) => t.ledgerId.equals(ledgerId))
           ..orderBy([
-            (t) =>
-                d.OrderingTerm(expression: t.happenedAt, mode: d.OrderingMode.asc)
+            (t) => d.OrderingTerm(
+                expression: t.happenedAt, mode: d.OrderingMode.asc)
           ])
           ..limit(1))
         .getSingleOrNull();
@@ -1037,8 +1211,8 @@ class LocalTransactionRepository implements TransactionRepository {
     return await (db.select(db.transactions)
           ..where((t) => t.ledgerId.equals(ledgerId))
           ..orderBy([
-            (t) =>
-                d.OrderingTerm(expression: t.happenedAt, mode: d.OrderingMode.desc)
+            (t) => d.OrderingTerm(
+                expression: t.happenedAt, mode: d.OrderingMode.desc)
           ])
           ..limit(1))
         .getSingleOrNull();
@@ -1127,19 +1301,21 @@ class LocalTransactionRepository implements TransactionRepository {
       map[date] = (income, expense);
     }
 
-    logger.debug('LocalTransactionRepository',
-        'dailyTotalsByMonth 结果: ${map.length} 天');
+    logger.debug(
+        'LocalTransactionRepository', 'dailyTotalsByMonth 结果: ${map.length} 天');
     return map;
   }
 
   @override
-  Future<List<({
-    Transaction t,
-    Category? category,
-    List<Tag> tags,
-    List<TransactionAttachment> attachments,
-    Account? account,
-  })>> getTransactionsByDate({
+  Future<
+      List<
+          ({
+            Transaction t,
+            Category? category,
+            List<Tag> tags,
+            List<TransactionAttachment> attachments,
+            Account? account,
+          })>> getTransactionsByDate({
     required int ledgerId,
     required DateTime date,
   }) async {
@@ -1249,20 +1425,24 @@ class LocalTransactionRepository implements TransactionRepository {
   /// 日历页 / 详情页等任何返回 tx + category + tags + account 完整 tuple 的查询
   /// 都用这个 helper 兜底,跟 transaction_list 走 _hydrateSharedCategoryOverrides
   /// 一致。
-  Future<List<({
-    Transaction t,
-    Category? category,
-    List<Tag> tags,
-    List<TransactionAttachment> attachments,
-    Account? account,
-  })>> _hydrateSharedOverridesFull(
-    List<({
-      Transaction t,
-      Category? category,
-      List<Tag> tags,
-      List<TransactionAttachment> attachments,
-      Account? account,
-    })> rows,
+  Future<
+      List<
+          ({
+            Transaction t,
+            Category? category,
+            List<Tag> tags,
+            List<TransactionAttachment> attachments,
+            Account? account,
+          })>> _hydrateSharedOverridesFull(
+    List<
+            ({
+              Transaction t,
+              Category? category,
+              List<Tag> tags,
+              List<TransactionAttachment> attachments,
+              Account? account,
+            })>
+        rows,
   ) async {
     if (rows.isEmpty) return rows;
 
@@ -1419,13 +1599,15 @@ class LocalTransactionRepository implements TransactionRepository {
   }
 
   @override
-  Future<List<({
-    Transaction t,
-    Category? category,
-    List<Tag> tags,
-    List<TransactionAttachment> attachments,
-    Account? account,
-  })>> getTransactionsByDateRange({
+  Future<
+      List<
+          ({
+            Transaction t,
+            Category? category,
+            List<Tag> tags,
+            List<TransactionAttachment> attachments,
+            Account? account,
+          })>> getTransactionsByDateRange({
     required int ledgerId,
     required DateTime startDate,
     required DateTime endDate,
@@ -1494,7 +1676,9 @@ class LocalTransactionRepository implements TransactionRepository {
           ..where((a) => a.transactionId.isIn(txIds)))
         .get();
     for (final attachment in attachments) {
-      attachmentsMap.putIfAbsent(attachment.transactionId, () => []).add(attachment);
+      attachmentsMap
+          .putIfAbsent(attachment.transactionId, () => [])
+          .add(attachment);
     }
 
     // 批量查询账户
@@ -1675,8 +1859,8 @@ class LocalTransactionRepository implements TransactionRepository {
         if (list == null) continue;
         final txId = syncIdToTxId[u.syncId];
         if (txId == null) continue;
-        removedFileNames.addAll(
-            await _replaceAttachmentsForTransaction(txId, list));
+        removedFileNames
+            .addAll(await _replaceAttachmentsForTransaction(txId, list));
       }
       if (removedFileNames.isNotEmpty) {
         await _gcUnreferencedAttachmentFiles(removedFileNames);
@@ -1723,18 +1907,20 @@ class LocalTransactionRepository implements TransactionRepository {
     if (incoming.isNotEmpty) {
       await db.batch((b) {
         for (final a in incoming) {
-          b.insert(db.transactionAttachments, TransactionAttachmentsCompanion.insert(
-            transactionId: transactionId,
-            fileName: a.fileName,
-            originalName: d.Value(a.originalName),
-            fileSize: d.Value(a.fileSize),
-            width: d.Value(a.width),
-            height: d.Value(a.height),
-            sortOrder: d.Value(a.sortOrder),
-            cloudFileId: d.Value(a.cloudFileId),
-            cloudSha256: d.Value(a.cloudSha256),
-            localSha256: d.Value(a.localSha256),
-          ));
+          b.insert(
+              db.transactionAttachments,
+              TransactionAttachmentsCompanion.insert(
+                transactionId: transactionId,
+                fileName: a.fileName,
+                originalName: d.Value(a.originalName),
+                fileSize: d.Value(a.fileSize),
+                width: d.Value(a.width),
+                height: d.Value(a.height),
+                sortOrder: d.Value(a.sortOrder),
+                cloudFileId: d.Value(a.cloudFileId),
+                cloudSha256: d.Value(a.cloudSha256),
+                localSha256: d.Value(a.localSha256),
+              ));
         }
       });
     }
@@ -1761,16 +1947,15 @@ class LocalTransactionRepository implements TransactionRepository {
 
       final appDir = await getApplicationDocumentsDirectory();
       final attachmentDir = Directory('${appDir.path}/attachments');
-      final thumbDir =
-          Directory('${(await getTemporaryDirectory()).path}/attachment_thumbs');
+      final thumbDir = Directory(
+          '${(await getTemporaryDirectory()).path}/attachment_thumbs');
       for (final name in candidates) {
         if (stillReferenced.contains(name)) continue;
         final file = File('${attachmentDir.path}/$name');
         if (await file.exists()) {
           await file.delete();
         }
-        final thumbName =
-            '${path.basenameWithoutExtension(name)}_thumb.jpg';
+        final thumbName = '${path.basenameWithoutExtension(name)}_thumb.jpg';
         final thumbFile = File('${thumbDir.path}/$thumbName');
         if (await thumbFile.exists()) {
           await thumbFile.delete();

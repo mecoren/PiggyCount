@@ -512,9 +512,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
     try {
       final repo = ref.read(repositoryProvider);
-      // 批量删除交易
+      // 批量删除交易（F1 回收站：软删除，可在回收站找回）
       for (final id in _selectedIds) {
-        await repo.deleteTransaction(id);
+        await repo.softDeleteTransaction(id);
       }
       ref.read(budgetRefreshProvider.notifier).state++;
       await _refreshAfterBatchOperation(

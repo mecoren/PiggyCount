@@ -524,7 +524,8 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
         final ledgerId = ref.read(currentLedgerIdProvider);
 
         try {
-          await repo.deleteTransaction(transaction.id);
+          // F1 回收站：软删除，可在「设置 > 数据管理 > 回收站」恢复
+          await repo.softDeleteTransaction(transaction.id);
 
           // 统一处理：自动/手动同步与状态刷新（后台静默）
           await PostProcessor.sync(ref, ledgerId: ledgerId);
@@ -533,6 +534,9 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
           ref.invalidate(countsForLedgerProvider(ledgerId));
           ref.read(statsRefreshProvider.notifier).state++;
           ref.read(budgetRefreshProvider.notifier).state++;
+          if (mounted) {
+            showToast(context, AppLocalizations.of(context).recycleBinMoved);
+          }
         } catch (e) {
           if (mounted) {
             showToast(context,
