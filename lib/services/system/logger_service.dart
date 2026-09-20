@@ -78,6 +78,11 @@ class LogEntry {
   });
 
   /// 序列化为 JSON
+  ///
+  /// error/stackTrace 必须截断：一条带全栈的 error 光堆栈就 2~20KB，而整份队列
+  /// 每 2 秒 jsonEncode 一次写进 SharedPreferences，那条 JSON 又会常驻在 prefs
+  /// 的内存缓存里 —— 不截断的话几条错误就能把持久化串顶到 MB 级。
+  /// message 不截断：它是排障主体，且长度由调用点控制。
   Map<String, dynamic> toJson() {
     return {
       'timestamp': timestamp.millisecondsSinceEpoch,
@@ -85,9 +90,19 @@ class LogEntry {
       'platform': platform.index,
       'tag': tag,
       'message': message,
-      'error': error?.toString(),
-      'stackTrace': stackTrace?.toString(),
+      'error': _clip(error, _maxErrorChars),
+      'stackTrace': _clip(stackTrace?.toString(), _maxTraceChars),
     };
+  }
+
+  static const int _maxErrorChars = 1000;
+  static const int _maxTraceChars = 2000;
+
+  static String? _clip(Object? value, int maxChars) {
+    if (value == null) return null;
+    final text = value.toString();
+    if (text.length <= maxChars) return text;
+    return '${text.substring(0, maxChars)}…(已截断，原长 ${text.length} 字符)';
   }
 
   /// 从 JSON 反序列化
@@ -164,20 +179,30 @@ class LogSanitizer {
   /// 引号/逗号/分号/圆括号/&/方括号（字符类内逐个列举，避免嵌套转义）。
   /// 大小写不敏感经构造参数实现（Dart RegExp 不支持 (?i) 全局内联）。
   static final RegExp _kvCredential = RegExp(
-    '\\b(password|passwd|secret|secretKey|secret_key|anonKey|anon_key|'
-    'apiKey|api_key|token|accessToken|access_token|refreshToken|'
-    'refresh_token|authorization)\\b(\\s*[=:]\\s*)'
+    '\\b($_credentialKeys)\\b(\\s*[=:]\\s*)'
     '([^\\s,;&)(\\[\\]+\'"]+)',
     caseSensitive: false,
   );
 
   /// JSON 字段凭据："password": "x" / "apiKey": "x"。
   static final RegExp _jsonCredential = RegExp(
-    '("(?:password|passwd|secret|secretKey|secret_key|anonKey|anon_key|'
-    'apiKey|api_key|token|accessToken|access_token|refreshToken|'
-    'refresh_token|authorization)"\\s*:\\s*)"[^"]*"',
+    '("(?:$_credentialKeys)"\\s*:\\s*)"[^"]*"',
     caseSensitive: false,
   );
+
+  /// 凭据键名词表（大小写不敏感）。
+  ///
+  /// 审计 LOG-05 补：`CloudServiceConfig.toJson` 的真实键名为
+  /// `s3SecretKey` / `s3AccessKey` / `webdavPassword` / `supabaseAnonKey` /
+  /// `supabasePassword` —— 由于 `\b` 词边界不切分 `s3SecretKey` 内的
+  /// `secretKey`，旧词表对这些键完全失效，配置一旦被日志化即整段明文外泄。
+  /// 现按前缀全名补齐（大小写不敏感由 RegExp 构造参数承担）。
+  static const String _credentialKeys =
+      'password|passwd|secret|secretKey|secret_key|anonKey|anon_key|'
+      'apiKey|api_key|token|accessToken|access_token|refreshToken|'
+      'refresh_token|accessKey|access_key|authorization|'
+      's3SecretKey|s3AccessKey|webdavPassword|supabaseAnonKey|'
+      'supabasePassword';
 
   /// URL 内嵌 userinfo：scheme://user:pass@ → scheme://***@。
   static final RegExp _urlUserInfo = RegExp(
@@ -199,13 +224,10 @@ class LogSanitizer {
   /// 留下 token 残值；头规则先行则整体命中一次脱净。
   static String sanitize(String input) {
     var out = input;
-    out = out.replaceAllMapped(
-        _urlUserInfo, (m) => '${m[1]}***@');
-    out = out.replaceAllMapped(
-        _authHeader, (m) => '${m[1]} $_masked');
+    out = out.replaceAllMapped(_urlUserInfo, (m) => '${m[1]}***@');
+    out = out.replaceAllMapped(_authHeader, (m) => '${m[1]} $_masked');
     out = out.replaceAllMapped(_jsonCredential, (m) => '${m[1]}"$_masked"');
-    out = out.replaceAllMapped(
-        _kvCredential, (m) => '${m[1]}${m[2]}$_masked');
+    out = out.replaceAllMapped(_kvCredential, (m) => '${m[1]}${m[2]}$_masked');
     return out;
   }
 }
@@ -252,13 +274,19 @@ class LoggerService {
   bool _isSaving = false;
 
   /// 获取所有日志（自动触发加载，返回当前内存视图 + 暂存日志）
+  ///
+  /// 返回缓存的不可变快照：日志中心页每次 build 都读这个 getter，旧实现每次
+  /// 现场 `_logs.toList()` 复制 2000 条，且列表身份变化会带着下游 widget 重建。
+  /// 队列任何一处改动都要置空 [_snapshot]。
   List<LogEntry> get logs {
     if (!_isLoaded) {
       _ensureLoaded();
     }
-    if (_pendingLogs.isEmpty) return _logs.toList();
-    return [..._logs, ..._pendingLogs];
+    return _snapshot ??= List.unmodifiable(
+        _pendingLogs.isEmpty ? _logs : [..._logs, ..._pendingLogs]);
   }
+
+  List<LogEntry>? _snapshot;
 
   /// 添加监听器
   void addListener(VoidCallback listener) {
@@ -279,6 +307,12 @@ class LoggerService {
 
   /// 添加日志
   void _addLog(LogEntry rawEntry) {
+    // release 下 debug 级不入队。省的不是条数（队列本来就 2000 条封顶），是
+    // **条的体量**：debug 里躺着「完整 prompt:\n$prompt」这类几十 KB 的行，
+    // 每条入队都要过 4 趟正则脱敏（每趟一份副本）、被 jsonEncode 落盘、
+    // 再常驻在 prefs 缓存里。线上排障要的是 info/warn/error。
+    if (!levelAccepted(rawEntry.level)) return;
+
     // LOG-05：中央脱敏层——所有日志（Flutter/原生、新旧调用点）入队
     // 与落盘前统一过滤，凭据不再依赖每处调用点自觉不写
     final entry = LogEntry(
@@ -301,6 +335,7 @@ class LoggerService {
     if (!_isLoaded) {
       _ensureLoaded(); // 幂等：已在 flight 则返回同一 Future
       _pendingLogs.add(entry);
+      _snapshot = null;
       _verbose(() => entry.toFormattedString());
       return;
     }
@@ -311,6 +346,7 @@ class LoggerService {
     }
 
     _logs.add(entry);
+    _snapshot = null;
 
     // 同时打印到控制台（仅 debug；release 下 _verbose 整条短路）
     _verbose(() => entry.toFormattedString());
@@ -321,6 +357,12 @@ class LoggerService {
     // 异步保存到持久化存储
     _saveLogs();
   }
+
+  /// 某条级别的日志是否进内存队列/落盘。抽出成静态口是为了让 release 分支
+  /// 可测（`kDebugMode` 在单测里恒为 true，直接在 `_addLog` 里判没法覆盖）。
+  @visibleForTesting
+  static bool levelAccepted(LogLevel level, {bool debugMode = kDebugMode}) =>
+      debugMode || level != LogLevel.debug;
 
   /// LOG-04：single-flight 加载历史日志。
   ///
@@ -379,6 +421,7 @@ class LoggerService {
       }
 
       _loadFuture = null;
+      _snapshot = null;
 
       // 窗口期有暂存日志或有历史并入 → 通知 UI 并安排保存
       // （保存前 _doSaveLogs 会再等一次 _loadFuture——此刻为 null，
@@ -461,7 +504,8 @@ class LoggerService {
   }
 
   /// Error 日志
-  void error(String tag, String message, [dynamic error, StackTrace? stackTrace]) {
+  void error(String tag, String message,
+      [dynamic error, StackTrace? stackTrace]) {
     _addLog(LogEntry(
       timestamp: DateTime.now(),
       level: LogLevel.error,
@@ -480,6 +524,7 @@ class LoggerService {
     _logsGeneration++;
     _logs.clear();
     _pendingLogs.clear();
+    _snapshot = null;
     _notifyListeners();
   }
 
@@ -490,6 +535,7 @@ class LoggerService {
     _saveTimer?.cancel();
     _logs.clear();
     _pendingLogs.clear();
+    _snapshot = null;
     _isLoaded = false;
     _loadFuture = null;
     _logsGeneration = 0;
@@ -506,12 +552,7 @@ class LoggerService {
 
   /// 导出所有日志为文本（LOG-04：含加载窗口期暂存的日志）
   String exportAsText() {
-    if (!_isLoaded) {
-      _ensureLoaded();
-    }
-    final all = _pendingLogs.isEmpty
-        ? _logs.toList()
-        : [..._logs, ..._pendingLogs];
+    final all = logs; // 走 getter：自带触发加载 + 含暂存，不再复制一份
     final buffer = StringBuffer();
     buffer.writeln('=== PiggyCount 日志导出 ===');
     buffer.writeln('导出时间: ${DateTime.now()}');
@@ -570,7 +611,8 @@ class LoggerService {
       // 解析日志级别
       final level = _parseLogLevel(levelStr);
 
-      _verbose(() => '📝 添加原生日志到队列: [$platformStr] [$levelStr] [$tag] $message');
+      _verbose(
+          () => '📝 添加原生日志到队列: [$platformStr] [$levelStr] [$tag] $message');
 
       _addLog(LogEntry(
         timestamp: DateTime.fromMillisecondsSinceEpoch(timestamp),

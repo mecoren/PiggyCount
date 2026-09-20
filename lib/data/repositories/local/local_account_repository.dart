@@ -17,8 +17,7 @@ class LocalAccountRepository implements AccountRepository {
 
   @override
   Stream<List<Account>> watchAccountsForLedger(int ledgerId) {
-    return (db.select(db.accounts)
-          ..where((a) => a.ledgerId.equals(ledgerId)))
+    return (db.select(db.accounts)..where((a) => a.ledgerId.equals(ledgerId)))
         .watch();
   }
 
@@ -44,8 +43,7 @@ class LocalAccountRepository implements AccountRepository {
 
   @override
   Future<Account?> getAccount(int accountId) async {
-    return await (db.select(db.accounts)
-          ..where((a) => a.id.equals(accountId)))
+    return await (db.select(db.accounts)..where((a) => a.id.equals(accountId)))
         .getSingleOrNull();
   }
 
@@ -152,9 +150,8 @@ class LocalAccountRepository implements AccountRepository {
     String currency = 'CNY',
     double initialBalance = 0.0,
   }) async {
-    final existing = await (db.select(db.accounts)
-          ..where((a) => a.name.equals(name)))
-        .get();
+    final existing =
+        await (db.select(db.accounts)..where((a) => a.name.equals(name))).get();
     if (existing.isNotEmpty) return existing.first.id;
     // 复用 createAccount(此时 name 不冲突,不会抛)
     return createAccount(
@@ -189,13 +186,35 @@ class LocalAccountRepository implements AccountRepository {
         name: name != null ? d.Value(name) : const d.Value.absent(),
         type: type != null ? d.Value(type) : const d.Value.absent(),
         currency: currency != null ? d.Value(currency) : const d.Value.absent(),
-        initialBalance: initialBalance != null ? d.Value(initialBalance) : const d.Value.absent(),
-        creditLimit: clearCreditCardFields ? const d.Value(null) : (creditLimit != null ? d.Value(creditLimit) : const d.Value.absent()),
-        billingDay: clearCreditCardFields ? const d.Value(null) : (billingDay != null ? d.Value(billingDay) : const d.Value.absent()),
-        paymentDueDay: clearCreditCardFields ? const d.Value(null) : (paymentDueDay != null ? d.Value(paymentDueDay) : const d.Value.absent()),
-        bankName: clearMetadataFields ? const d.Value(null) : (bankName != null ? d.Value(bankName) : const d.Value.absent()),
-        cardLastFour: clearMetadataFields ? const d.Value(null) : (cardLastFour != null ? d.Value(cardLastFour) : const d.Value.absent()),
-        note: clearMetadataFields ? const d.Value(null) : (note != null ? d.Value(note) : const d.Value.absent()),
+        initialBalance: initialBalance != null
+            ? d.Value(initialBalance)
+            : const d.Value.absent(),
+        creditLimit: clearCreditCardFields
+            ? const d.Value(null)
+            : (creditLimit != null
+                ? d.Value(creditLimit)
+                : const d.Value.absent()),
+        billingDay: clearCreditCardFields
+            ? const d.Value(null)
+            : (billingDay != null
+                ? d.Value(billingDay)
+                : const d.Value.absent()),
+        paymentDueDay: clearCreditCardFields
+            ? const d.Value(null)
+            : (paymentDueDay != null
+                ? d.Value(paymentDueDay)
+                : const d.Value.absent()),
+        bankName: clearMetadataFields
+            ? const d.Value(null)
+            : (bankName != null ? d.Value(bankName) : const d.Value.absent()),
+        cardLastFour: clearMetadataFields
+            ? const d.Value(null)
+            : (cardLastFour != null
+                ? d.Value(cardLastFour)
+                : const d.Value.absent()),
+        note: clearMetadataFields
+            ? const d.Value(null)
+            : (note != null ? d.Value(note) : const d.Value.absent()),
         hidden: hidden == null ? const d.Value.absent() : d.Value(hidden),
         // 仅回填,不清空:老账户恢复快照时收敛跨设备身份
         syncId: syncId != null ? d.Value(syncId) : const d.Value.absent(),
@@ -395,8 +414,10 @@ class LocalAccountRepository implements AccountRepository {
     final accounts = await (db.select(db.accounts)
           ..where((a) => a.ledgerId.equals(ledgerId)))
         .get();
-    final valuationIds =
-        accounts.where((a) => isValuationOnlyType(a.type)).map((a) => a.id).toSet();
+    final valuationIds = accounts
+        .where((a) => isValuationOnlyType(a.type))
+        .map((a) => a.id)
+        .toSet();
 
     final Map<int, double> balances = {};
     for (final row in rows) {
@@ -440,7 +461,8 @@ class LocalAccountRepository implements AccountRepository {
       return 0;
     }
 
-    return parseCount(mainCount.data['count']) + parseCount(toCount.data['count']);
+    return parseCount(mainCount.data['count']) +
+        parseCount(toCount.data['count']);
   }
 
   @override
@@ -482,7 +504,8 @@ class LocalAccountRepository implements AccountRepository {
   }
 
   @override
-  Future<({double balance, double expense, double income})> getAccountStats(int accountId) async {
+  Future<({double balance, double expense, double income})> getAccountStats(
+      int accountId) async {
     // 三个口径复用同一份聚合(getAccountBalance/Expense/Income 各自的 SQL
     // 已是聚合版,此处三次往返仍比旧的"全量拉行×5"快一个量级;口径一致性
     // 由 test/repositories/sql_aggregation_regression_test.dart 钉死)。
@@ -493,10 +516,13 @@ class LocalAccountRepository implements AccountRepository {
   }
 
   @override
-  Future<Map<int, ({double balance, double expense, double income})>> getAllAccountStats() async {
+  Future<Map<int, ({double balance, double expense, double income})>>
+      getAllAccountStats() async {
     final accounts = await db.select(db.accounts).get();
-    final valuationIds =
-        accounts.where((a) => isValuationOnlyType(a.type)).map((a) => a.id).toSet();
+    final valuationIds = accounts
+        .where((a) => isValuationOnlyType(a.type))
+        .map((a) => a.id)
+        .toSet();
 
     // 单条聚合 SQL 同时算出所有账户的三个口径（此前逐账户串行 4-7 条查询，
     // 且每条全量加载行到内存再 Dart 累加）。口径与 getAccountBalance /
@@ -556,7 +582,8 @@ class LocalAccountRepository implements AccountRepository {
 
     double dval(dynamic v) => v is num ? v.toDouble() : 0.0;
 
-    final Map<int, ({double balance, double expense, double income})> stats = {};
+    final Map<int, ({double balance, double expense, double income})> stats =
+        {};
     for (final row in rows) {
       final id = row.read<int>('id');
       if (valuationIds.contains(id)) {
@@ -582,13 +609,15 @@ class LocalAccountRepository implements AccountRepository {
   }
 
   @override
+
   /// ⚠️ 多币种口径未处理:本方法跨所有账本/账户按 type 裸加 amount。当前
   /// 无 UI 消费(allAccountsTotalStatsProvider 是死代码),故不影响任何界面。
   /// 若将来接「全局总收支」卡片:这是跨账本汇总,正确口径是按各账户币种
   /// rate 折算到用户主币种(同净值卡 convertedNetWorth),**不是** nativeAmount
   /// (各账本本位币可能不同,nativeAmount 相加无意义)。届时须重写,勿直接
   /// 套账本维度的 nativeAmount 折算。
-  Future<({double totalBalance, double totalExpense, double totalIncome})> getAllAccountsTotalStats() async {
+  Future<({double totalBalance, double totalExpense, double totalIncome})>
+      getAllAccountsTotalStats() async {
     final accounts = await db.select(db.accounts).get();
 
     // 总余额 = 所有账户余额之和（转账不影响总余额）
@@ -598,34 +627,31 @@ class LocalAccountRepository implements AccountRepository {
       totalBalance += balance;
     }
 
-    // 总收入/支出：直接从交易表查询，排除转账类型
-    final accountIds = accounts.map((a) => a.id).toSet();
+    // 总收入/支出：SQL 聚合版(此前把**全库**交易拉进 Dart 再按 type 累加)。
+    // 口径逐字对齐旧实现：限定 account_id 非空且账户行仍存在（旧实现按
+    // accountIds 集合过滤）、排除成员共享账本、排除 excludeFromStats、
+    // 只算 income/expense 两类（transfer/adjustment 不进收支）。
+    final exclude = _kExcludeJoinedSharedLedgerSql;
+    final totals = await db.customSelect(
+      'SELECT '
+      "COALESCE(SUM(CASE type WHEN 'income' THEN amount ELSE 0 END), 0) AS total_income, "
+      "COALESCE(SUM(CASE type WHEN 'expense' THEN amount ELSE 0 END), 0) AS total_expense "
+      'FROM transactions '
+      'WHERE account_id IS NOT NULL AND exclude_from_stats = 0 '
+      "AND type IN ('income', 'expense') "
+      'AND account_id IN (SELECT id FROM accounts) AND $exclude',
+      readsFrom: {db.transactions, db.ledgers, db.accounts},
+    ).getSingle();
 
-    // 收入/支出排除不计入收支的交易(余额不受影响,见上方 totalBalance)
-    final sharedIds = await _sharedLedgerIds();
-    final allTxs = await (db.select(db.transactions)
-          ..where((t) =>
-              t.accountId.isNotNull() &
-              t.ledgerId.isNotIn(sharedIds) &
-              t.excludeFromStats.equals(false)))
-        .get();
+    double dval(dynamic v) => v is num ? v.toDouble() : 0.0;
+    final totalIncome = dval(totals.data['total_income']);
+    final totalExpense = dval(totals.data['total_expense']);
 
-    double totalIncome = 0.0;
-    double totalExpense = 0.0;
-
-    for (final t in allTxs) {
-      // 只统计属于已有账户的交易
-      if (t.accountId != null && accountIds.contains(t.accountId)) {
-        if (t.type == 'income') {
-          totalIncome += t.amount;
-        } else if (t.type == 'expense') {
-          totalExpense += t.amount;
-        }
-        // 转账类型不计入总收入/支出
-      }
-    }
-
-    return (totalBalance: totalBalance, totalExpense: totalExpense, totalIncome: totalIncome);
+    return (
+      totalBalance: totalBalance,
+      totalExpense: totalExpense,
+      totalIncome: totalIncome
+    );
   }
 
   @override
@@ -705,7 +731,8 @@ class LocalAccountRepository implements AccountRepository {
   @override
   Stream<List<Transaction>> watchAccountTransactions(int accountId) {
     return (db.select(db.transactions)
-          ..where((t) => t.accountId.equals(accountId) | t.toAccountId.equals(accountId))
+          ..where((t) =>
+              t.accountId.equals(accountId) | t.toAccountId.equals(accountId))
           ..orderBy([
             (t) => d.OrderingTerm(
                 expression: t.happenedAt, mode: d.OrderingMode.desc)
@@ -723,8 +750,7 @@ class LocalAccountRepository implements AccountRepository {
   @override
   Future<List<Account>> getAccountsByIds(List<int> accountIds) async {
     if (accountIds.isEmpty) return [];
-    return await (db.select(db.accounts)
-          ..where((a) => a.id.isIn(accountIds)))
+    return await (db.select(db.accounts)..where((a) => a.id.isIn(accountIds)))
         .get();
   }
 
@@ -740,8 +766,8 @@ class LocalAccountRepository implements AccountRepository {
   }
 
   @override
-  Future<List<Transaction>> getAccountTransactions(
-    int accountId, {int limit = 50, int offset = 0, String? flow}) async {
+  Future<List<Transaction>> getAccountTransactions(int accountId,
+      {int limit = 50, int offset = 0, String? flow}) async {
     // flow 过滤按资金流向:支出视图含转出,收入视图含转入,null 为全部
     final where = switch (flow) {
       'expense' => "account_id = ?1 AND type IN ('expense', 'transfer')",
@@ -786,14 +812,17 @@ class LocalAccountRepository implements AccountRepository {
 
   @override
   Future<List<({DateTime date, double balance})>> getAccountDailyBalances(
-    int accountId, {required DateTime startDate, required DateTime endDate}) async {
+      int accountId,
+      {required DateTime startDate,
+      required DateTime endDate}) async {
     final account = await getAccount(accountId);
     if (account == null) return [];
 
     // 估值账户：每天返回固定估值
     if (isValuationOnlyType(account.type)) {
       final result = <({DateTime date, double balance})>[];
-      var currentDate = DateTime(startDate.year, startDate.month, startDate.day);
+      var currentDate =
+          DateTime(startDate.year, startDate.month, startDate.day);
       final end = DateTime(endDate.year, endDate.month, endDate.day);
       while (!currentDate.isAfter(end)) {
         result.add((date: currentDate, balance: account.initialBalance));
@@ -810,35 +839,47 @@ class LocalAccountRepository implements AccountRepository {
         .add(const Duration(days: 1));
     final sharedIds = await _sharedLedgerIds();
     final allTxs = await (db.select(db.transactions)
-          ..where((t) => t.accountId.equals(accountId) | t.toAccountId.equals(accountId))
+          ..where((t) =>
+              t.accountId.equals(accountId) | t.toAccountId.equals(accountId))
           ..where((t) => t.happenedAt.isSmallerThanValue(endExclusive))
+          // startDate 之前的行只要一个累计值，不再拉进内存（见下方 SQL 基线）
+          ..where((t) => t.happenedAt.isBiggerOrEqualValue(startDate))
           ..where((t) => t.ledgerId.isNotIn(sharedIds))
           ..orderBy([(t) => d.OrderingTerm(expression: t.happenedAt)]))
         .get();
 
-    // 计算 startDate 之前的余额
-    double runningBalance = account.initialBalance;
-    int txIndex = 0;
+    // startDate 之前的累计余额：SQL 聚合版(此前把该账户全部历史拉进 Dart 逐条
+    // 累加，几年老账户上万行)。口径与 getAccountGlobalBalance 逐字一致：主账户侧
+    // income + / expense - / transfer - / adjustment +，转入侧 transfer +；
+    // 不排除 excludeFromStats（与原实现一致，趋势看的是账户真实余额）。
+    final exclude = _kExcludeJoinedSharedLedgerSql;
+    final baseline = await db.customSelect(
+      'SELECT '
+      "COALESCE(SUM(CASE WHEN account_id = ?1 THEN ("
+      '  CASE type '
+      "    WHEN 'income' THEN amount "
+      "    WHEN 'expense' THEN -amount "
+      "    WHEN 'transfer' THEN -amount "
+      "    WHEN 'adjustment' THEN amount "
+      '    ELSE 0 END) ELSE 0 END), 0) AS main_delta, '
+      "COALESCE(SUM(CASE WHEN to_account_id = ?1 AND type = 'transfer' "
+      '  THEN amount ELSE 0 END), 0) AS transfer_in '
+      'FROM transactions '
+      'WHERE (account_id = ?1 OR to_account_id = ?1) AND $exclude '
+      'AND happened_at < ?2',
+      variables: [
+        d.Variable.withInt(accountId),
+        d.Variable<DateTime>(startDate),
+      ],
+      readsFrom: {db.transactions, db.ledgers},
+    ).getSingle();
 
-    // 先累加 startDate 之前的交易
-    while (txIndex < allTxs.length && allTxs[txIndex].happenedAt.isBefore(startDate)) {
-      final tx = allTxs[txIndex];
-      if (tx.accountId == accountId) {
-        if (tx.type == 'income') {
-          runningBalance += tx.amount;
-        } else if (tx.type == 'expense') {
-          runningBalance -= tx.amount;
-        } else if (tx.type == 'transfer') {
-          runningBalance -= tx.amount;
-        } else if (tx.type == 'adjustment') {
-          runningBalance += tx.amount;
-        }
-      }
-      if (tx.toAccountId == accountId && tx.type == 'transfer') {
-        runningBalance += tx.amount;
-      }
-      txIndex++;
-    }
+    double dval(dynamic v) => v is num ? v.toDouble() : 0.0;
+    // 计算 startDate 之前的余额
+    double runningBalance = account.initialBalance +
+        dval(baseline.data['main_delta']) +
+        dval(baseline.data['transfer_in']);
+    int txIndex = 0;
 
     // 按天填充
     final result = <({DateTime date, double balance})>[];
@@ -849,7 +890,8 @@ class LocalAccountRepository implements AccountRepository {
       final nextDate = currentDate.add(const Duration(days: 1));
 
       // 累加当天的交易
-      while (txIndex < allTxs.length && allTxs[txIndex].happenedAt.isBefore(nextDate)) {
+      while (txIndex < allTxs.length &&
+          allTxs[txIndex].happenedAt.isBefore(nextDate)) {
         final tx = allTxs[txIndex];
         if (tx.accountId == accountId) {
           if (tx.type == 'income') {
@@ -906,11 +948,13 @@ class LocalAccountRepository implements AccountRepository {
   }
 
   @override
+
   /// ⚠️ 审计 U12：多币种口径未处理——本方法跨所有账户按币种裸加余额。
   /// 当前无 UI 消费（netWorthBreakdownProvider 已标记 deprecated）。
   /// 多币种场景必须用 [getNetWorthBreakdownByCurrency] + 折算链路
   /// （convertedNetWorth），勿直接接入本方法。
-  Future<({double totalAssets, double totalLiabilities, double netWorth})> getNetWorthBreakdown() async {
+  Future<({double totalAssets, double totalLiabilities, double netWorth})>
+      getNetWorthBreakdown() async {
     final accounts = await getAllAccounts();
     double totalAssets = 0.0;
     double totalLiabilities = 0.0;
@@ -932,14 +976,20 @@ class LocalAccountRepository implements AccountRepository {
   }
 
   @override
-  Future<Map<String, ({double totalAssets, double totalLiabilities, double netWorth})>> getNetWorthBreakdownByCurrency() async {
+  Future<
+          Map<String,
+              ({double totalAssets, double totalLiabilities, double netWorth})>>
+      getNetWorthBreakdownByCurrency() async {
     final accounts = await getAllAccounts();
-    final Map<String, ({double totalAssets, double totalLiabilities, double netWorth})> result = {};
+    final Map<String,
+            ({double totalAssets, double totalLiabilities, double netWorth})>
+        result = {};
 
     for (final account in accounts) {
       final balance = await getAccountBalance(account.id);
       final currency = account.currency.toUpperCase();
-      final prev = result[currency] ?? (totalAssets: 0.0, totalLiabilities: 0.0, netWorth: 0.0);
+      final prev = result[currency] ??
+          (totalAssets: 0.0, totalLiabilities: 0.0, netWorth: 0.0);
 
       if (isAssetType(account.type)) {
         result[currency] = (
@@ -1011,11 +1061,12 @@ class LocalAccountRepository implements AccountRepository {
 
     final allBalances = <int, List<({DateTime date, double balance})>>{};
     for (final account in accounts) {
-      allBalances[account.id] =
-          await getAccountDailyBalances(account.id, startDate: startDate, endDate: endDate);
+      allBalances[account.id] = await getAccountDailyBalances(account.id,
+          startDate: startDate, endDate: endDate);
     }
 
-    final result = <({DateTime date, double assets, double liabilities, double net})>[];
+    final result =
+        <({DateTime date, double assets, double liabilities, double net})>[];
     var currentDate = DateTime(startDate.year, startDate.month, startDate.day);
     final end = DateTime(endDate.year, endDate.month, endDate.day);
     int dayIndex = 0;
@@ -1035,7 +1086,12 @@ class LocalAccountRepository implements AccountRepository {
           }
         }
       }
-      result.add((date: currentDate, assets: assets, liabilities: liabilities, net: assets + liabilities));
+      result.add((
+        date: currentDate,
+        assets: assets,
+        liabilities: liabilities,
+        net: assets + liabilities
+      ));
       currentDate = currentDate.add(const Duration(days: 1));
       dayIndex++;
     }
@@ -1043,13 +1099,15 @@ class LocalAccountRepository implements AccountRepository {
   }
 
   @override
-  Future<List<({String type, double totalBalance})>> getAssetCompositionByType() async {
+  Future<List<({String type, double totalBalance})>>
+      getAssetCompositionByType() async {
     final accounts = await getAllAccounts();
     final Map<String, double> typeBalances = {};
 
     for (final account in accounts) {
       final balance = await getAccountBalance(account.id);
-      typeBalances.update(account.type, (v) => v + balance, ifAbsent: () => balance);
+      typeBalances.update(account.type, (v) => v + balance,
+          ifAbsent: () => balance);
     }
 
     return typeBalances.entries
@@ -1066,7 +1124,8 @@ class LocalAccountRepository implements AccountRepository {
 
     for (final account in accounts) {
       final balance = await getAccountBalance(account.id);
-      final key = (type: account.type, currency: account.currency.toUpperCase());
+      final key =
+          (type: account.type, currency: account.currency.toUpperCase());
       balances.update(key, (v) => v + balance, ifAbsent: () => balance);
     }
 
@@ -1098,11 +1157,8 @@ class LocalAccountRepository implements AccountRepository {
 
   @override
   Future<Set<String>> getUsedCurrencies() async {
-    final rows = await db
-        .customSelect('SELECT DISTINCT currency FROM accounts')
-        .get();
-    return rows
-        .map((r) => (r.read<String>('currency')).toUpperCase())
-        .toSet();
+    final rows =
+        await db.customSelect('SELECT DISTINCT currency FROM accounts').get();
+    return rows.map((r) => (r.read<String>('currency')).toUpperCase()).toSet();
   }
 }

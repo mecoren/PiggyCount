@@ -28,9 +28,9 @@ class FileReaderService {
     final isXlsx = fileName.endsWith('.xlsx');
 
     // 读取文件字节
-    List<int> bytes;
+    final Uint8List bytes;
     if (file.path == null || file.path!.isEmpty) {
-      bytes = file.bytes ?? [];
+      bytes = file.bytes ?? Uint8List(0);
       if (bytes.isEmpty) return '';
     } else {
       bytes = await _readFileWithProgress(
@@ -46,50 +46,49 @@ class FileReaderService {
       if (xlsxConverter == null) {
         throw ArgumentError('xlsxConverter is required for XLSX files');
       }
-      return xlsxConverter(Uint8List.fromList(bytes));
+      return xlsxConverter(bytes);
     } else {
       return decodeBytes(bytes);
     }
   }
 
   /// 流式读取文件并显示进度
-  static Future<List<int>> _readFileWithProgress(
+  ///
+  /// 直接 readInto 一块预分配的 `Uint8List`：10MB 文件 = 10MB 峰值。
+  /// 旧实现是分块存进 `List<List<int>>` 再 `addAll` 到 `List<int>`，
+  /// Dart 的 `List<int>` 每元素占 8 字节（Smi），同样的 10MB 文件要吃 ~80MB
+  /// 外加倍增冗余 + 分块本身，峰值约 9 倍。
+  static Future<Uint8List> _readFileWithProgress(
     String filePath, {
     ProgressCallback? onProgress,
   }) async {
     final file = File(filePath);
     final exists = await file.exists();
-    if (!exists) return [];
+    if (!exists) return Uint8List(0);
 
-    const int chunkSize = 256 * 1024; // 256KB
     final length = await file.length();
+    if (length == 0) return Uint8List(0);
     final raf = await file.open();
 
     try {
-      final chunks = <List<int>>[];
+      final buffer = Uint8List(length);
       int offset = 0;
 
       while (offset < length) {
-        final toRead =
-            (length - offset) < chunkSize ? (length - offset) : chunkSize;
-        final bytes = await raf.read(toRead);
-        if (bytes.isEmpty) break;
-
-        chunks.add(bytes);
-        offset += bytes.length;
+        final read = await raf.readInto(buffer, offset, length);
+        if (read <= 0) break;
+        offset += read;
 
         if (onProgress != null) {
-          onProgress(offset / (length == 0 ? 1 : length));
+          onProgress(offset / length);
         }
 
         await Future<void>.delayed(Duration.zero);
       }
 
-      final all = <int>[];
-      for (final c in chunks) {
-        all.addAll(c);
-      }
-      return all;
+      return offset == length
+          ? buffer
+          : Uint8List.sublistView(buffer, 0, offset);
     } finally {
       await raf.close();
     }
