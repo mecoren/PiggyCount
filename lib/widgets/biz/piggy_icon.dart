@@ -16,6 +16,8 @@ class PiggyIcon extends StatelessWidget {
       'assets/icon/icon_master.png',
       width: size,
       height: size,
+      // 原图 1024²（解码 4MB），10 处调用点里多数用不到这个尺寸
+      cacheWidth: (size * MediaQuery.devicePixelRatioOf(context)).round(),
       fit: BoxFit.contain,
     );
   }

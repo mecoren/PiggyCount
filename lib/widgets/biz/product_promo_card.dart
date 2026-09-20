@@ -194,6 +194,9 @@ class ProductPromoLauncher {
                           info.logoAsset,
                           width: 44,
                           height: 44,
+                          cacheWidth:
+                              (44 * MediaQuery.devicePixelRatioOf(context))
+                                  .round(),
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => Icon(
                             Icons.apps_rounded,
@@ -457,11 +460,17 @@ class _ScreenshotThumb extends StatelessWidget {
                 ),
               ],
             ),
-            child: Image.asset(
-              asset,
-              fit: BoxFit.cover,
-              alignment: Alignment.topCenter,
-              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            child: LayoutBuilder(
+              builder: (context, box) => Image.asset(
+                asset,
+                // 原图 1179×2556，解码 11.5MB/张；缩略位只需盒宽 × dpr
+                cacheWidth:
+                    (box.maxWidth * MediaQuery.devicePixelRatioOf(context))
+                        .round(),
+                fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
             ),
           ),
         ),
@@ -496,6 +505,10 @@ class _ScreenshotGalleryPageState extends State<_ScreenshotGalleryPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 全屏预览按「屏幕宽 × dpr」解码就够；原图更宽时 ResizeImage 不会放大
+    final decodeWidth = (MediaQuery.sizeOf(context).width *
+            MediaQuery.devicePixelRatioOf(context))
+        .round();
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: GestureDetector(
@@ -512,6 +525,7 @@ class _ScreenshotGalleryPageState extends State<_ScreenshotGalleryPage> {
                   child: Center(
                     child: Image.asset(
                       widget.assets[i],
+                      cacheWidth: decodeWidth,
                       fit: BoxFit.contain,
                       errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                     ),
@@ -893,6 +907,7 @@ class _ProductLogo extends StatelessWidget {
         asset,
         width: size,
         height: size,
+        cacheWidth: (size * MediaQuery.devicePixelRatioOf(context)).round(),
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) => Container(
           width: size,

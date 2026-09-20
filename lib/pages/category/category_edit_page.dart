@@ -1545,7 +1545,14 @@ class _GroupedIconGrid extends StatelessWidget {
     );
   }
 
-  List<_IconGroup> _getIconGroups() {
+  // 268 个 _IconData 只在首次用到时构建：以前每次 build 重建两份全表，
+  // 而选择器面板在键盘/输入每次 rebuild 都会走一遍。
+  static final Map<String, List<_IconGroup>> _groupsByKind = {};
+
+  List<_IconGroup> _getIconGroups() =>
+      _groupsByKind.putIfAbsent(kind, _buildIconGroups);
+
+  List<_IconGroup> _buildIconGroups() {
     if (kind == 'expense') {
       return [
         _IconGroup('基础', [

@@ -41,6 +41,8 @@ class SplashPage extends ConsumerWidget {
                   padding: const EdgeInsets.all(16),
                   child: Image.asset(
                     'assets/logo2.png',
+                    // 盒子里净宽 88pt；原图 1024² 解码 4MB，320 够到 dpr 3.5
+                    cacheWidth: 320,
                     fit: BoxFit.contain,
                   ),
                 ),

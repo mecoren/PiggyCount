@@ -175,6 +175,7 @@ class UserProfilePoster extends StatelessWidget {
                     child: ClipOval(
                       child: Image.asset(
                         'assets/logo2.png',
+                        cacheWidth: 256,
                         fit: BoxFit.cover,
                       ),
                     ),

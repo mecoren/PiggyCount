@@ -300,6 +300,7 @@ class AnnualReportPoster extends StatelessWidget {
               padding: const EdgeInsets.all(8),
               child: Image.asset(
                 'assets/logo2.png',
+                cacheWidth: 256,
                 fit: BoxFit.contain,
               ),
             ),
