@@ -6,19 +6,31 @@
 > 约定：新增需求请建 `prd/<snake_case_id>/`，两个文件都写。
 > `requirements.md` 是验收依据，缺了它这个需求就无法判定「做完了没有」。
 
-## 本轮（2026-09 优化评估）新增
+## 本轮（2026-09-19 内存专项 + F1/F2 + U1/U2）新增
+
+方案正文只有一份：`docs/optimization-plan-2026-09-19.md`（编号表 M10-M21 / B6-B11 / F1-F3 / U1-U3
+与 §13 批次记录都在里面，file:line 证据以它为准）。本轮**未提交**，所以「落地」列写的是测试与门禁，不是 commit。
+
+| 目录 | 主题 | 状态 |
+|---|---|---|
+| `mem_baseline_and_leaks` | 内存基线设施 + 泄漏收口（B6-B10 / M10-M21） | 代码与门禁已落地；**RSS 数字未测**（无设备），见 `docs/evidence/mem-baseline-2026-09-19.md` 空表 |
+| `transaction_model_completion` | 退款/冲正 + 报销 + 软删除回收站（F1，v44 迁移） | F1-a 回收站/软删除已落地；F1-b 退款关联移交并写明理由 |
+| `report_range_and_comparison` | 任意日期区间报表 + 环比/同比 + 标签维度（F2） | 已落地，`test/data/report_range_aggregation_test.dart`（9）+ `test/pages/report/range_report_page_test.dart`（3） |
+| `ui_consistency_optimization`（既有目录，追加第五/六节） | 字号令牌收敛门禁 + 图表无障碍（U1/U2） | U2-a 已落地；**U1 交的是 ratchet 不是收敛**；U2-b 对比度测了没改 |
+
+## 上一轮（2026-09-14 评估）新增
 
 | 目录 | 主题 | 状态 |
 |---|---|---|
 | `p1a_webview_subscription_lifecycle` | WebView / StreamSubscription 生命周期审计 + 成文规范 | 已落地（`7012c81`） |
 | `p1b_unawaited_log_error_exit` | 后台链路统一异常出口（`unawaitedLog`）+ 统计页错误态 | 已落地（`3658b85`） |
 | `p1c_list_incremental_grouping` | 交易列表按日期段增量分组，替代全量重算 | 已落地（`62e6ed2`） |
-| `p1d_style_token_convergence_batch1` | 样式令牌收敛第一批（图表色板 / 海报语义色 / 默认主色单源） | 已落地（`5317308`）；后续批次见文末 |
-| `p1e_quick_entry_mode` | 快捷记账模式（记忆上次分类 + 金额优先的极简表单） | **设计待确认**——`requirements.md` 第五节 5 个待拍板项 |
+| `p1d_style_token_convergence_batch1` | 样式令牌收敛第一批（图表色板 / 海报语义色 / 默认主色单源） | 已落地（`5317308`）；后续批次见「仍在进行中的五项余量」 |
+| `p1e_quick_entry_mode` | 快捷记账模式（记忆上次分类 + 金额优先的极简表单） | 已落地（R1-R4，`c8c6e9c` + `ad807bc`），见下方对照表第 9 行 |
 | `p1f_rec6_error_observability` | 同步异常→用户提示映射表 + 本地库损坏恢复引导 | 已落地（`7330b26` → `74d3b16` → `4b337c6` → `dce6a0d`）|
 | `p2a_analyzer_baseline` | 静态分析清零（566→0）+ CI 锁基线 | 已落地（`252a4e8`） |
 
-## 报告 14 条建议 → 落地对照（截至 2026-09-18）
+## 报告 14 条建议 → 落地对照（截至 2026-09-19）
 
 一张表回答「这条做完没有 / 证据在哪 / 有没有文档」，避免每次翻报告对进度。
 
@@ -28,24 +40,28 @@
 | 2 | iOS ATS 收紧 | 已落地 | `a25572f` | 无 |
 | 3 | use_build_context_synchronously（100 处） | 已落地 | `340242d` | 无 |
 | 4 | 启动路径瘦身 | 已落地 | `b66d228` | 无 |
-| 5 | 无障碍基线 | 已落地（第一阶段） | `a61bd25` + `64d950d` + `f298cca` | 无 |
+| 5 | 无障碍基线 | 已落地（第一阶段 + 09-19 图表语义摘要） | `a61bd25` + `64d950d` + `f298cca`；09-19 部分**未提交** | `ui_consistency_optimization` 第五/六节 |
 | 6 | 可观测性封装 + 异常映射表 | 已落地 | `7330b26`→`74d3b16`→`4b337c6`→`dce6a0d`；`.then onError` 部分 `3658b85` | `p1f_rec6_error_observability`、`p1b_unawaited_log_error_exit` |
 | 7 | 列表增量分组 + provider 收敛 | 已落地 | `62e6ed2` | `p1c_list_incremental_grouping` |
-| 8 | 样式令牌收敛 + 图表响应式 | **部分完成** | `5317308`（第一批） | `p1d_style_token_convergence_batch1` |
-| 9 | 记账效率：快捷记账模式 | **待拍板** | — | `p1e_quick_entry_mode`（设计就绪，等第五节 5 个决策） |
+| 8 | 样式令牌收敛 + 图表响应式 | **部分完成**（09-19 只交了字号 ratchet 门禁，收敛未做） | `5317308`（第一批）；09-19 部分**未提交** | `p1d_style_token_convergence_batch1`、`ui_consistency_optimization` 第五/六节 |
+| 9 | 记账效率：快捷记账模式 | 已落地（R1-R4） | `c8c6e9c` + `ad807bc` | `p1e_quick_entry_mode` |
 | 10 | WebView / 订阅生命周期 | 已落地 | `7012c81` | `p1a_webview_subscription_lifecycle` |
 | 11 | 静态分析清零 + CI 基线 | 已落地 | `252a4e8` | `p2a_analyzer_baseline` |
-| 12 | 高风险页面回归测试 | **部分完成** | `0317fb8`（deep link 契约 50 例） | 无 |
-| 13 | 运行时性能监控接入 | **未开始** | — | 无 |
-| 14 | 平台能力与文档治理 | **部分完成** | `e62f122` + `c6f879e`（文档部分） | 无 |
+| 12 | 高风险页面回归测试 | **部分完成** | `0317fb8`（deep link 契约 50 例）+ `dae4ab2`（同步冲突 10）+ `39938d5`（账本删除/清空 10）+ `ee17696`（导入流程 13） | 无 |
+| 13 | 运行时性能监控接入 | **部分完成**（09-19 只接了内存这一条：30s 心跳 + 基线脚本；FPS / 冷启动 / 页面切换三条仍未开始） | **未提交**，见 `lib/app.dart` `_startMemoryHeartbeat()`、`scripts/profile_memory.py` | `mem_baseline_and_leaks` |
+| 14 | 平台能力与文档治理 | **部分完成** | `e62f122` + `c6f879e`（文档部分）+ `63a02e9`（14a `PlatformFeature`，见 `lib/utils/platform_info.dart`） | 无 |
 
-**仍在进行中的四项余量**：
+**仍在进行中的五项余量**：
 
-- **8 余量**：`pages/` 下约 338 处硬编码 `fontSize`、图表响应式、`tokens.dart` 静态亮色常量下线。
-- **9**：等 `p1e_quick_entry_mode/requirements.md` 第五节拍板后实施。
-- **12 余量**：云同步页 / 账本页 / 编辑器的**页面级**回归（deep link 契约已覆盖）。
-- **13**：冷启动 / 页面切换 / 列表滚动帧率基线 + 仪表盘。
-- **14 余量**：`PlatformFeature` 封装（58 处 `Platform.is`）。
+- **8 余量**：硬编码字号实测 **549 处字面量**（`pages/` 340 / `widgets/` 209，最高频 `16×125`、`13×64`），
+  09-19 起由 `test/styles/font_size_token_ratchet_test.dart` 钉死只减不增，**收敛本身未做**
+  （16/13 在 `PiggyTextTokens` 里没有档位 + 令牌返回整只 `TextStyle`，理由见 `ui_consistency_optimization` 第五节）。
+  另有图表响应式、`tokens.dart` 静态亮色常量下线。
+- **5 余量**：无障碍欠的是需要真机的那半张清单 —— 读屏实测、热区 ≥48×48 全量核查、大字号下 UI 不破；
+  外加对比度一项**测了没改**（亮色 `textTertiary` 2.18/2.41 < 4.5，`scripts/contrast_check.py`）。
+- **12 余量**：编辑器 / 设置页 / 账户页的**页面级**回归（deep link 契约、同步冲突、账本删除清空、导入流程已覆盖）。
+- **13**：冷启动 / 页面切换 / 列表滚动帧率基线 + 仪表盘。**内存维度另立专项**，见 `docs/optimization-plan-2026-09-19.md`。
+- **14 余量**：`PlatformFeature` 尚未收口的 `Platform.is` 剩 27 处（报告原文称 58 处，14a `63a02e9` 后见 `lib/utils/platform_info.dart`）。
 
 > 注：建议 1–5、12、13、14 落地时未建 `prd/` 目录，需求与决策只存在于提交说明与代码注释里。
 > 这是文档治理的遗留缺口，按「不追溯补写已验收完毕的历史工作」处理——需要时以提交为入口。
@@ -103,4 +119,4 @@
 ## 已知待办
 
 - `mine_header_fullwidth` 原先只有 `design.md`，本轮补了 `requirements.md`。
-- 进度类事项（哪条建议未完成）统一看上面「剩余未完成」表，此处不重复维护。
+- 进度类事项（哪条建议未完成）统一看上面「仍在进行中的五项余量」，此处不重复维护。
