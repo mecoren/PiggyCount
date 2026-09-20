@@ -11623,6 +11623,346 @@ class StaleRemoteSlotsCompanion extends UpdateCompanion<StaleRemoteSlot> {
   }
 }
 
+class $DeletedTransactionsTable extends DeletedTransactions
+    with TableInfo<$DeletedTransactionsTable, DeletedTransaction> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DeletedTransactionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _txIdMeta = const VerificationMeta('txId');
+  @override
+  late final GeneratedColumn<int> txId = GeneratedColumn<int>(
+      'tx_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _ledgerIdMeta =
+      const VerificationMeta('ledgerId');
+  @override
+  late final GeneratedColumn<int> ledgerId = GeneratedColumn<int>(
+      'ledger_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _syncIdMeta = const VerificationMeta('syncId');
+  @override
+  late final GeneratedColumn<String> syncId = GeneratedColumn<String>(
+      'sync_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _happenedAtMeta =
+      const VerificationMeta('happenedAt');
+  @override
+  late final GeneratedColumn<DateTime> happenedAt = GeneratedColumn<DateTime>(
+      'happened_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _deletedAtMeta =
+      const VerificationMeta('deletedAt');
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+      'deleted_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _payloadMeta =
+      const VerificationMeta('payload');
+  @override
+  late final GeneratedColumn<String> payload = GeneratedColumn<String>(
+      'payload', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [txId, ledgerId, syncId, happenedAt, deletedAt, payload];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'deleted_transactions';
+  @override
+  VerificationContext validateIntegrity(Insertable<DeletedTransaction> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('tx_id')) {
+      context.handle(
+          _txIdMeta, txId.isAcceptableOrUnknown(data['tx_id']!, _txIdMeta));
+    }
+    if (data.containsKey('ledger_id')) {
+      context.handle(_ledgerIdMeta,
+          ledgerId.isAcceptableOrUnknown(data['ledger_id']!, _ledgerIdMeta));
+    } else if (isInserting) {
+      context.missing(_ledgerIdMeta);
+    }
+    if (data.containsKey('sync_id')) {
+      context.handle(_syncIdMeta,
+          syncId.isAcceptableOrUnknown(data['sync_id']!, _syncIdMeta));
+    }
+    if (data.containsKey('happened_at')) {
+      context.handle(
+          _happenedAtMeta,
+          happenedAt.isAcceptableOrUnknown(
+              data['happened_at']!, _happenedAtMeta));
+    } else if (isInserting) {
+      context.missing(_happenedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(_deletedAtMeta,
+          deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta));
+    } else if (isInserting) {
+      context.missing(_deletedAtMeta);
+    }
+    if (data.containsKey('payload')) {
+      context.handle(_payloadMeta,
+          payload.isAcceptableOrUnknown(data['payload']!, _payloadMeta));
+    } else if (isInserting) {
+      context.missing(_payloadMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {txId};
+  @override
+  DeletedTransaction map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DeletedTransaction(
+      txId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}tx_id'])!,
+      ledgerId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}ledger_id'])!,
+      syncId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}sync_id']),
+      happenedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}happened_at'])!,
+      deletedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}deleted_at'])!,
+      payload: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}payload'])!,
+    );
+  }
+
+  @override
+  $DeletedTransactionsTable createAlias(String alias) {
+    return $DeletedTransactionsTable(attachedDatabase, alias);
+  }
+}
+
+class DeletedTransaction extends DataClass
+    implements Insertable<DeletedTransaction> {
+  /// 原 transactions.id，同时作主键：一笔交易最多进一次回收站。
+  final int txId;
+  final int ledgerId;
+  final String? syncId;
+
+  /// 业务时间冗余列：回收站列表排序/展示用，不必解析 payload。
+  final DateTime happenedAt;
+  final DateTime deletedAt;
+  final String payload;
+  const DeletedTransaction(
+      {required this.txId,
+      required this.ledgerId,
+      this.syncId,
+      required this.happenedAt,
+      required this.deletedAt,
+      required this.payload});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['tx_id'] = Variable<int>(txId);
+    map['ledger_id'] = Variable<int>(ledgerId);
+    if (!nullToAbsent || syncId != null) {
+      map['sync_id'] = Variable<String>(syncId);
+    }
+    map['happened_at'] = Variable<DateTime>(happenedAt);
+    map['deleted_at'] = Variable<DateTime>(deletedAt);
+    map['payload'] = Variable<String>(payload);
+    return map;
+  }
+
+  DeletedTransactionsCompanion toCompanion(bool nullToAbsent) {
+    return DeletedTransactionsCompanion(
+      txId: Value(txId),
+      ledgerId: Value(ledgerId),
+      syncId:
+          syncId == null && nullToAbsent ? const Value.absent() : Value(syncId),
+      happenedAt: Value(happenedAt),
+      deletedAt: Value(deletedAt),
+      payload: Value(payload),
+    );
+  }
+
+  factory DeletedTransaction.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DeletedTransaction(
+      txId: serializer.fromJson<int>(json['txId']),
+      ledgerId: serializer.fromJson<int>(json['ledgerId']),
+      syncId: serializer.fromJson<String?>(json['syncId']),
+      happenedAt: serializer.fromJson<DateTime>(json['happenedAt']),
+      deletedAt: serializer.fromJson<DateTime>(json['deletedAt']),
+      payload: serializer.fromJson<String>(json['payload']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'txId': serializer.toJson<int>(txId),
+      'ledgerId': serializer.toJson<int>(ledgerId),
+      'syncId': serializer.toJson<String?>(syncId),
+      'happenedAt': serializer.toJson<DateTime>(happenedAt),
+      'deletedAt': serializer.toJson<DateTime>(deletedAt),
+      'payload': serializer.toJson<String>(payload),
+    };
+  }
+
+  DeletedTransaction copyWith(
+          {int? txId,
+          int? ledgerId,
+          Value<String?> syncId = const Value.absent(),
+          DateTime? happenedAt,
+          DateTime? deletedAt,
+          String? payload}) =>
+      DeletedTransaction(
+        txId: txId ?? this.txId,
+        ledgerId: ledgerId ?? this.ledgerId,
+        syncId: syncId.present ? syncId.value : this.syncId,
+        happenedAt: happenedAt ?? this.happenedAt,
+        deletedAt: deletedAt ?? this.deletedAt,
+        payload: payload ?? this.payload,
+      );
+  DeletedTransaction copyWithCompanion(DeletedTransactionsCompanion data) {
+    return DeletedTransaction(
+      txId: data.txId.present ? data.txId.value : this.txId,
+      ledgerId: data.ledgerId.present ? data.ledgerId.value : this.ledgerId,
+      syncId: data.syncId.present ? data.syncId.value : this.syncId,
+      happenedAt:
+          data.happenedAt.present ? data.happenedAt.value : this.happenedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      payload: data.payload.present ? data.payload.value : this.payload,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DeletedTransaction(')
+          ..write('txId: $txId, ')
+          ..write('ledgerId: $ledgerId, ')
+          ..write('syncId: $syncId, ')
+          ..write('happenedAt: $happenedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('payload: $payload')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(txId, ledgerId, syncId, happenedAt, deletedAt, payload);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DeletedTransaction &&
+          other.txId == this.txId &&
+          other.ledgerId == this.ledgerId &&
+          other.syncId == this.syncId &&
+          other.happenedAt == this.happenedAt &&
+          other.deletedAt == this.deletedAt &&
+          other.payload == this.payload);
+}
+
+class DeletedTransactionsCompanion extends UpdateCompanion<DeletedTransaction> {
+  final Value<int> txId;
+  final Value<int> ledgerId;
+  final Value<String?> syncId;
+  final Value<DateTime> happenedAt;
+  final Value<DateTime> deletedAt;
+  final Value<String> payload;
+  const DeletedTransactionsCompanion({
+    this.txId = const Value.absent(),
+    this.ledgerId = const Value.absent(),
+    this.syncId = const Value.absent(),
+    this.happenedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.payload = const Value.absent(),
+  });
+  DeletedTransactionsCompanion.insert({
+    this.txId = const Value.absent(),
+    required int ledgerId,
+    this.syncId = const Value.absent(),
+    required DateTime happenedAt,
+    required DateTime deletedAt,
+    required String payload,
+  })  : ledgerId = Value(ledgerId),
+        happenedAt = Value(happenedAt),
+        deletedAt = Value(deletedAt),
+        payload = Value(payload);
+  static Insertable<DeletedTransaction> custom({
+    Expression<int>? txId,
+    Expression<int>? ledgerId,
+    Expression<String>? syncId,
+    Expression<DateTime>? happenedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<String>? payload,
+  }) {
+    return RawValuesInsertable({
+      if (txId != null) 'tx_id': txId,
+      if (ledgerId != null) 'ledger_id': ledgerId,
+      if (syncId != null) 'sync_id': syncId,
+      if (happenedAt != null) 'happened_at': happenedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (payload != null) 'payload': payload,
+    });
+  }
+
+  DeletedTransactionsCompanion copyWith(
+      {Value<int>? txId,
+      Value<int>? ledgerId,
+      Value<String?>? syncId,
+      Value<DateTime>? happenedAt,
+      Value<DateTime>? deletedAt,
+      Value<String>? payload}) {
+    return DeletedTransactionsCompanion(
+      txId: txId ?? this.txId,
+      ledgerId: ledgerId ?? this.ledgerId,
+      syncId: syncId ?? this.syncId,
+      happenedAt: happenedAt ?? this.happenedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      payload: payload ?? this.payload,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (txId.present) {
+      map['tx_id'] = Variable<int>(txId.value);
+    }
+    if (ledgerId.present) {
+      map['ledger_id'] = Variable<int>(ledgerId.value);
+    }
+    if (syncId.present) {
+      map['sync_id'] = Variable<String>(syncId.value);
+    }
+    if (happenedAt.present) {
+      map['happened_at'] = Variable<DateTime>(happenedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (payload.present) {
+      map['payload'] = Variable<String>(payload.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DeletedTransactionsCompanion(')
+          ..write('txId: $txId, ')
+          ..write('ledgerId: $ledgerId, ')
+          ..write('syncId: $syncId, ')
+          ..write('happenedAt: $happenedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('payload: $payload')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$PiggyDatabase extends GeneratedDatabase {
   _$PiggyDatabase(QueryExecutor e) : super(e);
   $PiggyDatabaseManager get managers => $PiggyDatabaseManager(this);
@@ -11659,6 +11999,8 @@ abstract class _$PiggyDatabase extends GeneratedDatabase {
   late final $SyncOpLogTable syncOpLog = $SyncOpLogTable(this);
   late final $StaleRemoteSlotsTable staleRemoteSlots =
       $StaleRemoteSlotsTable(this);
+  late final $DeletedTransactionsTable deletedTransactions =
+      $DeletedTransactionsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -11686,7 +12028,8 @@ abstract class _$PiggyDatabase extends GeneratedDatabase {
         exchangeRateOverrides,
         entityChangeWatermarks,
         syncOpLog,
-        staleRemoteSlots
+        staleRemoteSlots,
+        deletedTransactions
       ];
 }
 
@@ -17251,6 +17594,193 @@ typedef $$StaleRemoteSlotsTableProcessedTableManager = ProcessedTableManager<
     ),
     StaleRemoteSlot,
     PrefetchHooks Function()>;
+typedef $$DeletedTransactionsTableCreateCompanionBuilder
+    = DeletedTransactionsCompanion Function({
+  Value<int> txId,
+  required int ledgerId,
+  Value<String?> syncId,
+  required DateTime happenedAt,
+  required DateTime deletedAt,
+  required String payload,
+});
+typedef $$DeletedTransactionsTableUpdateCompanionBuilder
+    = DeletedTransactionsCompanion Function({
+  Value<int> txId,
+  Value<int> ledgerId,
+  Value<String?> syncId,
+  Value<DateTime> happenedAt,
+  Value<DateTime> deletedAt,
+  Value<String> payload,
+});
+
+class $$DeletedTransactionsTableFilterComposer
+    extends Composer<_$PiggyDatabase, $DeletedTransactionsTable> {
+  $$DeletedTransactionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get txId => $composableBuilder(
+      column: $table.txId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get ledgerId => $composableBuilder(
+      column: $table.ledgerId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get syncId => $composableBuilder(
+      column: $table.syncId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get happenedAt => $composableBuilder(
+      column: $table.happenedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get payload => $composableBuilder(
+      column: $table.payload, builder: (column) => ColumnFilters(column));
+}
+
+class $$DeletedTransactionsTableOrderingComposer
+    extends Composer<_$PiggyDatabase, $DeletedTransactionsTable> {
+  $$DeletedTransactionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get txId => $composableBuilder(
+      column: $table.txId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get ledgerId => $composableBuilder(
+      column: $table.ledgerId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get syncId => $composableBuilder(
+      column: $table.syncId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get happenedAt => $composableBuilder(
+      column: $table.happenedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get payload => $composableBuilder(
+      column: $table.payload, builder: (column) => ColumnOrderings(column));
+}
+
+class $$DeletedTransactionsTableAnnotationComposer
+    extends Composer<_$PiggyDatabase, $DeletedTransactionsTable> {
+  $$DeletedTransactionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get txId =>
+      $composableBuilder(column: $table.txId, builder: (column) => column);
+
+  GeneratedColumn<int> get ledgerId =>
+      $composableBuilder(column: $table.ledgerId, builder: (column) => column);
+
+  GeneratedColumn<String> get syncId =>
+      $composableBuilder(column: $table.syncId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get happenedAt => $composableBuilder(
+      column: $table.happenedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get payload =>
+      $composableBuilder(column: $table.payload, builder: (column) => column);
+}
+
+class $$DeletedTransactionsTableTableManager extends RootTableManager<
+    _$PiggyDatabase,
+    $DeletedTransactionsTable,
+    DeletedTransaction,
+    $$DeletedTransactionsTableFilterComposer,
+    $$DeletedTransactionsTableOrderingComposer,
+    $$DeletedTransactionsTableAnnotationComposer,
+    $$DeletedTransactionsTableCreateCompanionBuilder,
+    $$DeletedTransactionsTableUpdateCompanionBuilder,
+    (
+      DeletedTransaction,
+      BaseReferences<_$PiggyDatabase, $DeletedTransactionsTable,
+          DeletedTransaction>
+    ),
+    DeletedTransaction,
+    PrefetchHooks Function()> {
+  $$DeletedTransactionsTableTableManager(
+      _$PiggyDatabase db, $DeletedTransactionsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DeletedTransactionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DeletedTransactionsTableOrderingComposer(
+                  $db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DeletedTransactionsTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> txId = const Value.absent(),
+            Value<int> ledgerId = const Value.absent(),
+            Value<String?> syncId = const Value.absent(),
+            Value<DateTime> happenedAt = const Value.absent(),
+            Value<DateTime> deletedAt = const Value.absent(),
+            Value<String> payload = const Value.absent(),
+          }) =>
+              DeletedTransactionsCompanion(
+            txId: txId,
+            ledgerId: ledgerId,
+            syncId: syncId,
+            happenedAt: happenedAt,
+            deletedAt: deletedAt,
+            payload: payload,
+          ),
+          createCompanionCallback: ({
+            Value<int> txId = const Value.absent(),
+            required int ledgerId,
+            Value<String?> syncId = const Value.absent(),
+            required DateTime happenedAt,
+            required DateTime deletedAt,
+            required String payload,
+          }) =>
+              DeletedTransactionsCompanion.insert(
+            txId: txId,
+            ledgerId: ledgerId,
+            syncId: syncId,
+            happenedAt: happenedAt,
+            deletedAt: deletedAt,
+            payload: payload,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$DeletedTransactionsTableProcessedTableManager = ProcessedTableManager<
+    _$PiggyDatabase,
+    $DeletedTransactionsTable,
+    DeletedTransaction,
+    $$DeletedTransactionsTableFilterComposer,
+    $$DeletedTransactionsTableOrderingComposer,
+    $$DeletedTransactionsTableAnnotationComposer,
+    $$DeletedTransactionsTableCreateCompanionBuilder,
+    $$DeletedTransactionsTableUpdateCompanionBuilder,
+    (
+      DeletedTransaction,
+      BaseReferences<_$PiggyDatabase, $DeletedTransactionsTable,
+          DeletedTransaction>
+    ),
+    DeletedTransaction,
+    PrefetchHooks Function()>;
 
 class $PiggyDatabaseManager {
   final _$PiggyDatabase _db;
@@ -17304,4 +17834,6 @@ class $PiggyDatabaseManager {
       $$SyncOpLogTableTableManager(_db, _db.syncOpLog);
   $$StaleRemoteSlotsTableTableManager get staleRemoteSlots =>
       $$StaleRemoteSlotsTableTableManager(_db, _db.staleRemoteSlots);
+  $$DeletedTransactionsTableTableManager get deletedTransactions =>
+      $$DeletedTransactionsTableTableManager(_db, _db.deletedTransactions);
 }

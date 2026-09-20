@@ -18,7 +18,8 @@ class Ledgers extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text()();
   TextColumn get currency => text().withDefault(const Constant('CNY'))();
-  TextColumn get type => text().withDefault(const Constant('personal'))();  // personal / shared
+  TextColumn get type =>
+      text().withDefault(const Constant('personal'))(); // personal / shared
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   // 跨设备同步唯一标识：跟 accounts/categories/tags 的 syncId 同语义，
   // 历史上对齐 PiggyCount Cloud server 的 ledger.external_id(该服务已
@@ -27,10 +28,11 @@ class Ledgers extends Table {
   // syncId 以兼容。
   TextColumn get syncId => text().nullable()();
   // v24: 共享账本字段 — server 端 LedgerMember.role 同步下来
-  TextColumn get myRole => text().withDefault(const Constant('owner'))();  // owner / editor
+  TextColumn get myRole =>
+      text().withDefault(const Constant('owner'))(); // owner / editor
   IntColumn get memberCount => integer().withDefault(const Constant(1))();
   BoolColumn get isShared => boolean().withDefault(const Constant(false))();
-  TextColumn get ownerUserId => text().nullable()();  // 当前 Owner 是谁
+  TextColumn get ownerUserId => text().nullable()(); // 当前 Owner 是谁
   // v27: 自定义每月起始日(1-28),统计/预算/小部件按 [当月N日, 次月N日) 聚合,
   // 1=自然月。随 sync 跨设备(payload key `monthStartDay`,server 列
   // ledgers.month_start_day)。见 .docs/period-start-date/design.md。
@@ -106,8 +108,8 @@ class Categories extends Table {
   IntColumn get level =>
       integer().withDefault(const Constant(1))(); // 层级：1=一级，2=二级
   // v13: 自定义图标支持
-  TextColumn get iconType =>
-      text().withDefault(const Constant('material'))(); // material / custom / community
+  TextColumn get iconType => text().withDefault(
+      const Constant('material'))(); // material / custom / community
   TextColumn get customIconPath => text().nullable()(); // 自定义图标本地路径
   TextColumn get communityIconId => text().nullable()(); // 社区图标ID（预留）
   TextColumn get syncId => text().nullable()(); // 跨设备同步唯一标识 (UUID)
@@ -142,7 +144,7 @@ class Transactions extends Table {
   TextColumn get categorySyncIdOverride => text().nullable()();
   TextColumn get accountSyncIdOverride => text().nullable()();
   TextColumn get toAccountSyncIdOverride => text().nullable()();
-  TextColumn get tagSyncIdsOverride => text().nullable()();  // JSON list
+  TextColumn get tagSyncIdsOverride => text().nullable()(); // JSON list
 
   /// 不计入收支:true 时从收支统计/图表/月年汇总剔除,但仍计入账户余额、净资产、
   /// 账单列表(.docs/transaction-flags/01 §二 D1)。
@@ -234,9 +236,9 @@ class Messages extends Table {
 // 标签表
 class Tags extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get name => text()();                    // 标签名称
-  TextColumn get color => text().nullable()();        // 颜色值（如 #FF5722）
-  IntColumn get sortOrder => integer().withDefault(const Constant(0))();  // 排序
+  TextColumn get name => text()(); // 标签名称
+  TextColumn get color => text().nullable()(); // 颜色值（如 #FF5722）
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))(); // 排序
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   TextColumn get syncId => text().nullable()(); // 跨设备同步唯一标识 (UUID)
 
@@ -248,11 +250,11 @@ class Tags extends Table {
 // 本地变更追踪表（用于增量同步）
 class LocalChanges extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get entityType => text()();       // transaction/account/category/tag
-  IntColumn get entityId => integer()();       // 本地实体ID
-  TextColumn get entitySyncId => text()();     // 实体的 syncId (UUID)
-  IntColumn get ledgerId => integer()();       // 关联账本ID
-  TextColumn get action => text()();           // create/update/delete
+  TextColumn get entityType => text()(); // transaction/account/category/tag
+  IntColumn get entityId => integer()(); // 本地实体ID
+  TextColumn get entitySyncId => text()(); // 实体的 syncId (UUID)
+  IntColumn get ledgerId => integer()(); // 关联账本ID
+  TextColumn get action => text()(); // create/update/delete
   TextColumn get payloadJson => text().nullable()(); // 变更后的完整 JSON
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get pushedAt => dateTime().nullable()(); // 非null表示已推送
@@ -289,10 +291,12 @@ class EntityChangeWatermarks extends Table {
 class SyncOpLog extends Table {
   IntColumn get id => integer().autoIncrement()();
   DateTimeColumn get ts => dateTime().withDefault(currentDateAndTime)();
-  TextColumn get backend => text()();  // s3 / webdav / supabase / icloud / local
-  TextColumn get scenario => text()(); // snapshotUpload / snapshotRestore / startupCheck / attachmentFill / cloudBackup / remoteDiscovery
-  TextColumn get outcome => text()();  // success / failed / soft_fail / conflict
-  TextColumn get errorClass => text().nullable()(); // network_timeout / auth / gateway / precondition / data_corruption / unknown
+  TextColumn get backend => text()(); // s3 / webdav / supabase / icloud / local
+  TextColumn get scenario =>
+      text()(); // snapshotUpload / snapshotRestore / startupCheck / attachmentFill / cloudBackup / remoteDiscovery
+  TextColumn get outcome => text()(); // success / failed / soft_fail / conflict
+  TextColumn get errorClass => text()
+      .nullable()(); // network_timeout / auth / gateway / precondition / data_corruption / unknown
   IntColumn get ledgerId => integer().nullable()();
   IntColumn get attempts => integer().withDefault(const Constant(1))();
   IntColumn get durationMs => integer().nullable()();
@@ -313,11 +317,41 @@ class StaleRemoteSlots extends Table {
   Set<Column> get primaryKey => {path};
 }
 
+/// v44 (F1 回收站): 软删除的交易整行搬进本表，**不是**给 transactions
+/// 加 deleted_at 列。
+///
+/// 为什么不加列：transactions 的读路径约 75 处，其中约 50 处是手写的
+/// SQL 字符串（账户余额、分类/日/月/年统计、预算用量）。"每条读都记得
+/// 带 WHERE deleted_at IS NULL" 编译器管不着，漏一条就是"已删的交易仍
+/// 计入余额"——静默的账目错误，比没有回收站更糟。搬空原行则既有全部
+/// 查询自动正确，"回收站可见"这件事由表结构本身保证。
+///
+/// payload 存 drift 的 `Transaction.toJson()`：transactions 以后加列，
+/// 归档与恢复都自动跟随，无需维护列清单。恢复时按 tx_id 原样回写
+/// (AUTOINCREMENT 保证 id 不被复用)，所以 transaction_tags /
+/// transaction_attachments 的 int 外键在归档期间保持有效且**不删**——
+/// 这同时是附件文件不被 30 天孤儿 GC 吃掉的前提(main.dart 的 GC 按
+/// transaction_attachments 行判断引用)。
+class DeletedTransactions extends Table {
+  /// 原 transactions.id，同时作主键：一笔交易最多进一次回收站。
+  IntColumn get txId => integer()();
+  IntColumn get ledgerId => integer()();
+  TextColumn get syncId => text().nullable()();
+
+  /// 业务时间冗余列：回收站列表排序/展示用，不必解析 payload。
+  DateTimeColumn get happenedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime()();
+  TextColumn get payload => text()();
+
+  @override
+  Set<Column> get primaryKey => {txId};
+}
+
 // 交易-标签关联表
 class TransactionTags extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get transactionId => integer()();         // 交易ID
-  IntColumn get tagId => integer()();                 // 标签ID
+  IntColumn get transactionId => integer()(); // 交易ID
+  IntColumn get tagId => integer()(); // 标签ID
 }
 
 // v27: 共享账本 §7 — 交易标签 sync_id override
@@ -326,8 +360,8 @@ class TransactionTags extends Table {
 // override 表按 (transaction_id, tag_sync_id) 存,sync push 时 union 进 tagIds
 // payload;tx 反查 / 编辑回显时 union 主表 transaction_tags + 本表。
 class TransactionTagOverrides extends Table {
-  TextColumn get transactionSyncId => text()();   // tx.syncId(全局唯一)
-  TextColumn get tagSyncId => text()();           // Owner tag syncId
+  TextColumn get transactionSyncId => text()(); // tx.syncId(全局唯一)
+  TextColumn get tagSyncId => text()(); // Owner tag syncId
   DateTimeColumn get createdAt => dateTime()();
 
   @override
@@ -339,19 +373,21 @@ class TransactionTagOverrides extends Table {
 // 远程诊断。详见 .docs/full-pull-refactor/04-data-model.md。
 class SyncPullErrors extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get changeId => integer().unique()();      // server change_id,唯一
-  TextColumn get ledgerExternalId => text().nullable()(); // user-global change 可空
+  IntColumn get changeId => integer().unique()(); // server change_id,唯一
+  TextColumn get ledgerExternalId =>
+      text().nullable()(); // user-global change 可空
   TextColumn get entityType => text()();
   TextColumn get entitySyncId => text()();
-  TextColumn get action => text()();                   // upsert / delete
-  TextColumn get rawChangeJson => text()();            // 完整 change JSON,供诊断 + 复制给用户
-  TextColumn get errorClass => text().nullable()();    // Dart exception 类名
-  TextColumn get errorMessage => text().nullable()();  // exception.toString() 首行
-  TextColumn get stackTrace => text().nullable()();    // 截断到 ~2KB
+  TextColumn get action => text()(); // upsert / delete
+  TextColumn get rawChangeJson => text()(); // 完整 change JSON,供诊断 + 复制给用户
+  TextColumn get errorClass => text().nullable()(); // Dart exception 类名
+  TextColumn get errorMessage => text().nullable()(); // exception.toString() 首行
+  TextColumn get stackTrace => text().nullable()(); // 截断到 ~2KB
   DateTimeColumn get firstSeenAt => dateTime()();
   DateTimeColumn get lastAttemptAt => dateTime()();
   IntColumn get attemptCount => integer().withDefault(const Constant(1))();
-  TextColumn get userAction => text().nullable()();    // null / 'skip' / 'retry_requested'
+  TextColumn get userAction =>
+      text().nullable()(); // null / 'skip' / 'retry_requested'
   DateTimeColumn get resolvedAt => dateTime().nullable()();
 }
 
@@ -359,14 +395,14 @@ class SyncPullErrors extends Table {
 class TransactionAttachments extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get transactionId => integer()(); // 关联的交易ID
-  TextColumn get fileName => text()();        // 文件名（不含路径）
+  TextColumn get fileName => text()(); // 文件名（不含路径）
   TextColumn get originalName => text().nullable()(); // 原始文件名
-  IntColumn get fileSize => integer().nullable()();   // 文件大小（bytes）
-  IntColumn get width => integer().nullable()();      // 图片宽度
-  IntColumn get height => integer().nullable()();     // 图片高度
+  IntColumn get fileSize => integer().nullable()(); // 文件大小（bytes）
+  IntColumn get width => integer().nullable()(); // 图片宽度
+  IntColumn get height => integer().nullable()(); // 图片高度
   IntColumn get sortOrder => integer().withDefault(const Constant(0))(); // 排序序号
-  TextColumn get cloudFileId => text().nullable()();   // 云端文件ID
-  TextColumn get cloudSha256 => text().nullable()();   // 云端文件SHA256
+  TextColumn get cloudFileId => text().nullable()(); // 云端文件ID
+  TextColumn get cloudSha256 => text().nullable()(); // 云端文件SHA256
 
   /// 本地文件内容 SHA256(hex)。v34 新增(attachment_binary_sync):
   /// 快照链路按内容寻址上传 `attachments/<sha256>.bin`,此列是清单锚点。
@@ -421,14 +457,14 @@ class Budgets extends Table {
 /// 离线渲染。`GET /api/v1/ledgers/{id}/members` 拉来后写入;`member_change`
 /// WS 事件触发增量更新。
 class LedgerMembers extends Table {
-  TextColumn get ledgerSyncId => text()();        // ledger.syncId(全 user 唯一)
+  TextColumn get ledgerSyncId => text()(); // ledger.syncId(全 user 唯一)
   TextColumn get userId => text()();
   TextColumn get email => text().nullable()();
   TextColumn get displayName => text().nullable()();
   TextColumn get avatarUrl => text().nullable()();
-  TextColumn get role => text()();                // owner / editor
+  TextColumn get role => text()(); // owner / editor
   DateTimeColumn get joinedAt => dateTime()();
-  DateTimeColumn get updatedAt => dateTime()();   // 本地更新时间,用于 cache 失效
+  DateTimeColumn get updatedAt => dateTime()(); // 本地更新时间,用于 cache 失效
 
   @override
   Set<Column> get primaryKey => {ledgerSyncId, userId};
@@ -439,13 +475,15 @@ class LedgerMembers extends Table {
 /// 拉来落库;`shared_resource_change` WS 事件增量更新。
 class SharedLedgerCategories extends Table {
   TextColumn get ledgerSyncId => text()();
-  TextColumn get syncId => text()();              // Owner 的 user-global category sync_id
+  TextColumn get syncId => text()(); // Owner 的 user-global category sync_id
   TextColumn get name => text()();
-  TextColumn get kind => text()();                // expense / income
+  TextColumn get kind => text()(); // expense / income
   TextColumn get icon => text().nullable()();
   TextColumn get iconType => text().withDefault(const Constant('material'))();
-  TextColumn get iconCloudFileId => text().nullable()();   // 自定义图标:attachment UUID
-  TextColumn get iconCloudSha256 => text().nullable()();   // 自定义图标:sha256(本地 cache 去重)
+  TextColumn get iconCloudFileId =>
+      text().nullable()(); // 自定义图标:attachment UUID
+  TextColumn get iconCloudSha256 =>
+      text().nullable()(); // 自定义图标:sha256(本地 cache 去重)
   TextColumn get color => text().nullable()();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
   IntColumn get level => integer().withDefault(const Constant(1))();
@@ -515,6 +553,7 @@ class SharedLedgerTags extends Table {
   EntityChangeWatermarks,
   SyncOpLog,
   StaleRemoteSlots,
+  DeletedTransactions,
 ])
 class PiggyDatabase extends _$PiggyDatabase {
   PiggyDatabase() : super(_openConnection());
@@ -525,10 +564,33 @@ class PiggyDatabase extends _$PiggyDatabase {
   PiggyDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 43; // v43: 同步指标 sync_op_log(审计 P0-1,本地成功率测量) + stale_remote_slots(审计 P1-6,换名收尾补删持久化); v42: 周期账单币种 — recurring_transactions.currency_code(移植 BeeCount #444); v41: local_changes 已推送行存量清理(数据治理 G-LC,双后端实测 6143 行无界增长); v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
+  int get schemaVersion =>
+      44; // v44: 回收站 deleted_transactions(F1 交易建模,软删除搬行而非加列); v43: 同步指标 sync_op_log(审计 P0-1,本地成功率测量) + stale_remote_slots(审计 P1-6,换名收尾补删持久化); v42: 周期账单币种 — recurring_transactions.currency_code(移植 BeeCount #444); v41: local_changes 已推送行存量清理(数据治理 G-LC,双后端实测 6143 行无界增长); v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
+
+  /// WAL 检查点后允许残留的字节数（见 [migration] 的 beforeOpen）。
+  /// 公开给回归测试取期望值，别处不要依赖。
+  static const int walRetainBytes = 8 * 1024 * 1024;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+        // M18（B10）连接级 PRAGMA 显式化。库跑在 `_openConnection` 起的**第二个
+        // isolate**里，而 PRAGMA 是 per-connection 的 —— 只有挂在 beforeOpen
+        // （drift 每次打开这条连接都会走）才真正抵达那条连接。两条备选路都不通：
+        // `NativeDatabase(file, setup:)` 与 `createInBackground` 互斥；改用
+        // `DatabaseConnection.custom` + 手动 spawn 会绕开 database_health_service
+        // 的 quick_check 通路。
+        beforeOpen: (detail) async {
+          // WAL：写放大从"每改一页复制整页回滚日志"降成追加 -wal，读也不再被写挡。
+          // **synchronous 保持默认 FULL**：WAL+FULL 仍然每次提交 fsync，掉电不丢最后
+          // 几笔；换 NORMAL 是拿账本数据换写入速度，一个记账 app 不该做这个交易。
+          await customStatement('PRAGMA journal_mode=WAL');
+          // -wal 检查点后的保留上限（**磁盘**占用，不是内存）：不设时一次批量导入
+          // 把 -wal 顶到几十 MB 后就不回落了。
+          await customStatement('PRAGMA journal_size_limit=$walRetainBytes');
+          // **故意不开** cache_size / mmap_size：那是拿内存换读盘（RSS 可能 +8~24MB），
+          // 与本轮降内存的目标反向。方案给这项定的门禁是"B6 真机基线之后再判"，
+          // 基线还没跑（无设备），所以留 **TODO-M18**。
+        },
         onUpgrade: (migrator, from, to) async {
           if (from < 2) {
             // 添加 sortOrder 字段（使用原始 SQL，因为此时代码还未生成）
@@ -670,7 +732,8 @@ class PiggyDatabase extends _$PiggyDatabase {
 
             // 4. 重命名新表
             logger.info('DB', '[DB Migration] 步骤4: 重命名新表');
-            await customStatement('ALTER TABLE recurring_transactions_new RENAME TO recurring_transactions;');
+            await customStatement(
+                'ALTER TABLE recurring_transactions_new RENAME TO recurring_transactions;');
             logger.info('DB', '[DB Migration] v7 迁移完成');
           }
           if (from < 8) {
@@ -688,8 +751,7 @@ class PiggyDatabase extends _$PiggyDatabase {
             // 检查字段是否已存在，避免重复添加
             final tableInfo =
                 await customSelect('PRAGMA table_info(ledgers)').get();
-            final hasType =
-                tableInfo.any((row) => row.data['name'] == 'type');
+            final hasType = tableInfo.any((row) => row.data['name'] == 'type');
 
             if (!hasType) {
               await customStatement(
@@ -895,8 +957,7 @@ class PiggyDatabase extends _$PiggyDatabase {
                 tableInfo.any((row) => row.data['name'] == 'bank_name');
             final hasCardLastFour =
                 tableInfo.any((row) => row.data['name'] == 'card_last_four');
-            final hasNote =
-                tableInfo.any((row) => row.data['name'] == 'note');
+            final hasNote = tableInfo.any((row) => row.data['name'] == 'note');
 
             if (!hasBankName) {
               await customStatement(
@@ -966,8 +1027,7 @@ class PiggyDatabase extends _$PiggyDatabase {
             }
 
             // 3. 为 tags 添加 sync_id
-            final tagInfo =
-                await customSelect('PRAGMA table_info(tags)').get();
+            final tagInfo = await customSelect('PRAGMA table_info(tags)').get();
             if (!tagInfo.any((row) => row.data['name'] == 'sync_id')) {
               await customStatement(
                   'ALTER TABLE tags ADD COLUMN sync_id TEXT;');
@@ -1000,7 +1060,8 @@ class PiggyDatabase extends _$PiggyDatabase {
             logger.info('DB', '[DB Migration] 开始迁移到 v20: 附件云端同步字段');
 
             final tableInfo =
-                await customSelect('PRAGMA table_info(transaction_attachments)').get();
+                await customSelect('PRAGMA table_info(transaction_attachments)')
+                    .get();
             final hasCloudFileId =
                 tableInfo.any((row) => row.data['name'] == 'cloud_file_id');
             final hasCloudSha256 =
@@ -1073,7 +1134,8 @@ class PiggyDatabase extends _$PiggyDatabase {
             // 之后渲染层 getCategoryIconData 只认 icon 字段、不再 byName 推导。
             // 结合服务端 alembic 0002 的同名 backfill,两端同步"迁 read-time 到
             // write-time"。
-            logger.info('DB', '[DB Migration] 开始迁移到 v23: backfill category icons via byName');
+            logger.info('DB',
+                '[DB Migration] 开始迁移到 v23: backfill category icons via byName');
 
             // 取所有 icon 空的分类,按 name 推导图标字符串回填
             final rows = await customSelect(
@@ -1106,43 +1168,44 @@ class PiggyDatabase extends _$PiggyDatabase {
             // 卡死。每条都要幂等。
             logger.info('DB', '[DB Migration] 开始迁移到 v24: 共享账本完整 schema');
 
-            await _addColumnIfMissing(
-                'ledgers', 'my_role',
+            await _addColumnIfMissing('ledgers', 'my_role',
                 "ALTER TABLE ledgers ADD COLUMN my_role TEXT NOT NULL DEFAULT 'owner';");
-            await _addColumnIfMissing(
-                'ledgers', 'member_count',
+            await _addColumnIfMissing('ledgers', 'member_count',
                 "ALTER TABLE ledgers ADD COLUMN member_count INTEGER NOT NULL DEFAULT 1;");
-            await _addColumnIfMissing(
-                'ledgers', 'is_shared',
+            await _addColumnIfMissing('ledgers', 'is_shared',
                 "ALTER TABLE ledgers ADD COLUMN is_shared INTEGER NOT NULL DEFAULT 0;");
-            await _addColumnIfMissing(
-                'ledgers', 'owner_user_id',
+            await _addColumnIfMissing('ledgers', 'owner_user_id',
                 "ALTER TABLE ledgers ADD COLUMN owner_user_id TEXT;");
 
-            await _addColumnIfMissing(
-                'transactions', 'created_by_user_id',
+            await _addColumnIfMissing('transactions', 'created_by_user_id',
                 "ALTER TABLE transactions ADD COLUMN created_by_user_id TEXT;");
-            await _addColumnIfMissing(
-                'transactions', 'last_edited_by_user_id',
+            await _addColumnIfMissing('transactions', 'last_edited_by_user_id',
                 "ALTER TABLE transactions ADD COLUMN last_edited_by_user_id TEXT;");
             await _addColumnIfMissing(
-                'transactions', 'category_sync_id_override',
+                'transactions',
+                'category_sync_id_override',
                 'ALTER TABLE transactions ADD COLUMN category_sync_id_override TEXT;');
             await _addColumnIfMissing(
-                'transactions', 'account_sync_id_override',
+                'transactions',
+                'account_sync_id_override',
                 'ALTER TABLE transactions ADD COLUMN account_sync_id_override TEXT;');
             await _addColumnIfMissing(
-                'transactions', 'to_account_sync_id_override',
+                'transactions',
+                'to_account_sync_id_override',
                 'ALTER TABLE transactions ADD COLUMN to_account_sync_id_override TEXT;');
-            await _addColumnIfMissing(
-                'transactions', 'tag_sync_ids_override',
+            await _addColumnIfMissing('transactions', 'tag_sync_ids_override',
                 'ALTER TABLE transactions ADD COLUMN tag_sync_ids_override TEXT;');
 
-            await _createTableIfMissing(migrator, 'ledger_members', ledgerMembers);
-            await _createTableIfMissing(migrator, 'shared_ledger_categories', sharedLedgerCategories);
-            await _createTableIfMissing(migrator, 'shared_ledger_accounts', sharedLedgerAccounts);
-            await _createTableIfMissing(migrator, 'shared_ledger_tags', sharedLedgerTags);
-            await _createTableIfMissing(migrator, 'transaction_tag_overrides', transactionTagOverrides);
+            await _createTableIfMissing(
+                migrator, 'ledger_members', ledgerMembers);
+            await _createTableIfMissing(
+                migrator, 'shared_ledger_categories', sharedLedgerCategories);
+            await _createTableIfMissing(
+                migrator, 'shared_ledger_accounts', sharedLedgerAccounts);
+            await _createTableIfMissing(
+                migrator, 'shared_ledger_tags', sharedLedgerTags);
+            await _createTableIfMissing(
+                migrator, 'transaction_tag_overrides', transactionTagOverrides);
 
             // 重置 server_cursor — 强制下次启动全量重拉,确保 sync_engine_apply
             // 用最新的 override 写入逻辑填回 *SyncIdOverride 字段。
@@ -1161,7 +1224,8 @@ class PiggyDatabase extends _$PiggyDatabase {
             logger.info('DBMigration',
                 '开始迁移到 v25: SharedLedgerCategories.parent_sync_id');
             await _addColumnIfMissing(
-                'shared_ledger_categories', 'parent_sync_id',
+                'shared_ledger_categories',
+                'parent_sync_id',
                 'ALTER TABLE shared_ledger_categories ADD COLUMN parent_sync_id TEXT;');
             // 数据回填:对每个 level=2 行,在同 ledger_sync_id + kind 内按
             // parent_name 反查 level=1 行的 syncId 填进 parent_sync_id。
@@ -1191,7 +1255,8 @@ class PiggyDatabase extends _$PiggyDatabase {
             // 抛错时写入,UI 据此显示"同步异常"banner + 重试/跳过操作。
             // 详见 .docs/full-pull-refactor/04-data-model.md
             logger.info('DBMigration', '开始迁移到 v26: sync_pull_errors');
-            await _createTableIfMissing(migrator, 'sync_pull_errors', syncPullErrors);
+            await _createTableIfMissing(
+                migrator, 'sync_pull_errors', syncPullErrors);
             logger.info('DBMigration', 'v26 迁移完成');
           }
           if (from < 27) {
@@ -1199,16 +1264,17 @@ class PiggyDatabase extends _$PiggyDatabase {
             // v27: 账本自定义每月起始日(1-28),默认 1=自然月
             // W5:改走幂等 helper。裸 ALTER 在 partial state 重跑(上次迁移
             // 中途崩溃)时会 duplicate column 卡死,违反本项目迁移纪律。
-            await _addColumnIfMissing(
-                'ledgers',
-                'month_start_day',
+            await _addColumnIfMissing('ledgers', 'month_start_day',
                 'ALTER TABLE ledgers ADD COLUMN month_start_day INTEGER NOT NULL DEFAULT 1;');
             logger.info('DBMigration', 'v27 迁移完成');
           }
           if (from < 28) {
-            logger.info('DBMigration', '开始迁移到 v28: 多币种 MVP(exchange_rates / exchange_rate_overrides)');
-            await _createTableIfMissing(migrator, 'exchange_rates', exchangeRates);
-            await _createTableIfMissing(migrator, 'exchange_rate_overrides', exchangeRateOverrides);
+            logger.info('DBMigration',
+                '开始迁移到 v28: 多币种 MVP(exchange_rates / exchange_rate_overrides)');
+            await _createTableIfMissing(
+                migrator, 'exchange_rates', exchangeRates);
+            await _createTableIfMissing(
+                migrator, 'exchange_rate_overrides', exchangeRateOverrides);
             await customStatement(
                 'CREATE UNIQUE INDEX IF NOT EXISTS idx_rate_override_pair '
                 'ON exchange_rate_overrides (base_currency, quote_currency);');
@@ -1223,7 +1289,8 @@ class PiggyDatabase extends _$PiggyDatabase {
             logger.info('DBMigration', 'v29 迁移完成');
           }
           if (from < 30) {
-            logger.info('DBMigration', '开始迁移到 v30: 交易级多币种(currency_code + native_amount)');
+            logger.info('DBMigration',
+                '开始迁移到 v30: 交易级多币种(currency_code + native_amount)');
             await _addColumnIfMissing('transactions', 'currency_code',
                 'ALTER TABLE transactions ADD COLUMN currency_code TEXT;');
             await _addColumnIfMissing('transactions', 'native_amount',
@@ -1263,7 +1330,8 @@ class PiggyDatabase extends _$PiggyDatabase {
             // 周期规则此前双链路均不同步,换设备即丢;加列后快照 v8 / Cloud
             // 引擎(cloud_recurring_sync)都按此锚定实体。回填用 32 位随机
             // hex,与 v22 budgets 同款(SQLite 无原生 UUID,server 只要求非空)。
-            logger.info('DBMigration', '开始迁移到 v33: recurring_transactions.sync_id');
+            logger.info(
+                'DBMigration', '开始迁移到 v33: recurring_transactions.sync_id');
             await _addColumnIfMissing('recurring_transactions', 'sync_id',
                 'ALTER TABLE recurring_transactions ADD COLUMN sync_id TEXT;');
             await customStatement(
@@ -1279,8 +1347,8 @@ class PiggyDatabase extends _$PiggyDatabase {
             // 只加列不回填 —— 读全量附件文件算哈希可能几百 MB I/O,放启动
             // 后台任务(attachment_service.backfillLocalSha256)分批执行,
             // 避免迁移卡启动。
-            logger.info(
-                'DBMigration', '开始迁移到 v34: transaction_attachments.local_sha256');
+            logger.info('DBMigration',
+                '开始迁移到 v34: transaction_attachments.local_sha256');
             await _addColumnIfMissing('transaction_attachments', 'local_sha256',
                 'ALTER TABLE transaction_attachments ADD COLUMN local_sha256 TEXT;');
             logger.info('DBMigration', 'v34 迁移完成');
@@ -1295,8 +1363,7 @@ class PiggyDatabase extends _$PiggyDatabase {
             //
             // 建索引前先清已存在的未推送重复行(保留 id 最小的一条),否则
             // CREATE UNIQUE INDEX 会因重复行失败。
-            logger.info(
-                'DBMigration', '开始迁移到 v35: local_changes 部分唯一索引');
+            logger.info('DBMigration', '开始迁移到 v35: local_changes 部分唯一索引');
             await customStatement('''
               DELETE FROM local_changes
               WHERE rowid NOT IN (
@@ -1416,13 +1483,15 @@ class PiggyDatabase extends _$PiggyDatabase {
             //   WHEN NEW IS OLD 守卫：显式写入不同值（未来 pull 回填远端
             //   时间戳）不被覆盖；内部自更新即使 recursive_triggers 开启
             //   也不会二次触发（新值 ≠ 旧值）。
-            logger.info('DBMigration',
-                '开始迁移到 v40: 业务表 updated_at 列 + 触碰触发器');
+            logger.info('DBMigration', '开始迁移到 v40: 业务表 updated_at 列 + 触碰触发器');
             for (final t in const {
-              'transactions', 'categories', 'tags', 'ledgers'
+              'transactions',
+              'categories',
+              'tags',
+              'ledgers'
             }) {
-              await _addColumnIfMissing(
-                  t, 'updated_at', 'ALTER TABLE $t ADD COLUMN updated_at INTEGER;');
+              await _addColumnIfMissing(t, 'updated_at',
+                  'ALTER TABLE $t ADD COLUMN updated_at INTEGER;');
             }
             await _createUpdatedAtTouchTriggers();
             logger.info('DBMigration', 'v40 迁移完成: updated_at 列 + 触发器');
@@ -1436,8 +1505,7 @@ class PiggyDatabase extends _$PiggyDatabase {
             // 一次性 DELETE 收敛存量（保留 server_marker 行 30 天窗语义：
             // 只清 30 天前的，窗口内的留给 ChangeTracker.cleanupPushedChanges
             // 的双保留窗逻辑统一处理）。
-            logger.info('DBMigration',
-                '开始迁移到 v41: 清理 local_changes 已推送历史行');
+            logger.info('DBMigration', '开始迁移到 v41: 清理 local_changes 已推送历史行');
             await customStatement(
                 "DELETE FROM local_changes WHERE pushed_at IS NOT NULL "
                 "AND action != 'server_marker' "
@@ -1451,11 +1519,8 @@ class PiggyDatabase extends _$PiggyDatabase {
           if (from < 42) {
             // v42(移植 BeeCount #444):周期账单模板币种。不回填 ——
             // NULL = 账本本位币/跟随账户,与迁移前生成行为一字不差。
-            logger.info('DBMigration',
-                '开始迁移到 v42: 周期账单币种(currency_code)');
-            await _addColumnIfMissing(
-                'recurring_transactions',
-                'currency_code',
+            logger.info('DBMigration', '开始迁移到 v42: 周期账单币种(currency_code)');
+            await _addColumnIfMissing('recurring_transactions', 'currency_code',
                 'ALTER TABLE recurring_transactions ADD COLUMN currency_code TEXT;');
             logger.info('DBMigration', 'v42 迁移完成');
           }
@@ -1471,6 +1536,17 @@ class PiggyDatabase extends _$PiggyDatabase {
             await customStatement(
                 'CREATE INDEX IF NOT EXISTS idx_sync_op_log_ts ON sync_op_log(ts);');
             logger.info('DBMigration', 'v43 迁移完成');
+          }
+          if (from < 44) {
+            // v44(F1 回收站): deleted_transactions 表。纯新增、零回填，
+            // 用 drift 的 createTable 保持与生成代码一致的 DDL(同 v43 先例)。
+            // (ledger_id) 索引服务于「删账本 / 清空账本」时按账本 purge。
+            logger.info('DBMigration', '开始迁移到 v44: deleted_transactions');
+            await migrator.createTable(deletedTransactions);
+            await customStatement(
+                'CREATE INDEX IF NOT EXISTS idx_deleted_transactions_ledger '
+                'ON deleted_transactions(ledger_id);');
+            logger.info('DBMigration', 'v44 迁移完成');
           }
         },
         onCreate: (m) async {
@@ -1496,6 +1572,17 @@ class PiggyDatabase extends _$PiggyDatabase {
           await customStatement(
               'CREATE INDEX IF NOT EXISTS idx_local_changes_ledger_pushed '
               'ON local_changes (ledger_id, pushed_at);');
+          // v44: 回收站 (ledger_id) 索引(与 onUpgrade v44 同构 —— 新装库走
+          // onCreate，表本身由 m.createAll 建，索引要在这里补一次)。
+          await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_deleted_transactions_ledger '
+              'ON deleted_transactions(ledger_id);');
+          // v43: 同步指标 (ts) 索引（与 onUpgrade v43 同构）。此前 onUpgrade
+          // 建了该索引但 onCreate 遗漏 —— 全新安装用户 SyncMetricsService
+          // 的 30 天窗口聚合（summarize/topErrorClasses/cleanupExpired）全表
+          // 扫描。表本身由 m.createAll 建，索引必须在这里补一次。
+          await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_sync_op_log_ts ON sync_op_log(ts);');
           // L4:各实体 sync_id 查询索引(与 onUpgrade v15/v19/v21/v22 分支同构)。
           // 之前只在 onUpgrade 创建 → 新装库 pull 解析按 entity_sync_id 反查
           // 实体时全表扫描(LookupCache 只缓解部分路径)。IF NOT EXISTS 幂等,
@@ -1548,13 +1635,10 @@ class PiggyDatabase extends _$PiggyDatabase {
   /// 报 duplicate。每条 ALTER 都通过这里走 PRAGMA 检查可幂等。
   Future<void> _addColumnIfMissing(
       String table, String column, String ddl) async {
-    final cols =
-        await customSelect("PRAGMA table_info($table)").get();
-    final exists =
-        cols.any((r) => r.read<String>('name') == column);
+    final cols = await customSelect("PRAGMA table_info($table)").get();
+    final exists = cols.any((r) => r.read<String>('name') == column);
     if (exists) {
-      logger.info(
-          'DBMigration', '$table.$column 已存在,跳过 ALTER');
+      logger.info('DBMigration', '$table.$column 已存在,跳过 ALTER');
       return;
     }
     await customStatement(ddl);
@@ -1563,7 +1647,11 @@ class PiggyDatabase extends _$PiggyDatabase {
   /// 审计 T1：需要 updated_at 触碰触发器的表（v40）。
   /// accounts 列早已存在（v1.15.0），一并纳入触发器维护。
   static const Set<String> _updatedAtTouchTables = {
-    'transactions', 'categories', 'tags', 'accounts', 'ledgers',
+    'transactions',
+    'categories',
+    'tags',
+    'accounts',
+    'ledgers',
   };
 
   /// 审计 T1（v40）：创建 updated_at 触碰触发器（幂等）。
@@ -1621,8 +1709,8 @@ class PiggyDatabase extends _$PiggyDatabase {
   Future<void> _resetServerCursorIfSyncStateExists() async {
     final info = await customSelect('PRAGMA table_info(sync_state)').get();
     if (info.isEmpty) {
-      logger.info('DBMigration',
-          'sync_state 表不存在(from<19 升级路径),跳过 server_cursor 重置');
+      logger.info(
+          'DBMigration', 'sync_state 表不存在(from<19 升级路径),跳过 server_cursor 重置');
       return;
     }
     await customStatement('UPDATE sync_state SET server_cursor = 0');
@@ -1675,8 +1763,11 @@ LazyDatabase _openConnection() {
       final walFile = File(p.join(dir.path, 'piggycount.sqlite-wal'));
 
       if (shmFile.existsSync() || walFile.existsSync()) {
-        logger.warning('db', '检测到 SQLite 临时文件，可能存在锁定');
-        // 注意：只在开发环境中记录，不自动删除，因为可能正在使用
+        // M18 起 WAL 是**显式设定**的连接模式（见 migration.beforeOpen），旁路文件
+        // 上次进程被杀时留下属正常，不能再报 warning —— 恒告警等于没有告警。
+        // 真正的锁问题由 `PRAGMA quick_check` 那条路（database_health_service）负责。
+        logger.info('db', '存在 SQLite 旁路文件（WAL），正常残留');
+        // 注意：不自动删除，可能正在使用
       }
     } catch (e) {
       logger.debug('db', '检查锁文件时出错: $e');
