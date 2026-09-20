@@ -90,6 +90,7 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _startMemoryHeartbeat();
 
     // 初始化记账按钮动画控制器
     _expandController = AnimationController(
@@ -614,6 +615,7 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
   @override
   void dispose() {
     _drainTimer?.cancel();
+    _memHeartbeat?.cancel();
     _appLinkSubscription?.close();
     _snapshotSyncToastSubscription?.close();
     _backupScheduler?.dispose();
@@ -783,6 +785,32 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
       // 前台稳定后认领待处理深链(冷启动/主题变更重建后,在最终页面树上打开)
       _drainPendingDeepLink(trigger: 'resumed');
     }
+  }
+
+  /// B6 内存心跳：每 30s 记一次进程 RSS 与峰值，用来把 `dumpsys meminfo` 的
+  /// 曲线和"用户在干什么"对齐（脚本侧只有时间戳，没有场景标签）。
+  /// info 级而非 debug —— release 下 debug 级被 M17 的入队门控挡掉，
+  /// 而基线恰恰要在 release/profile 上跑。
+  /// 代价：2000 条环形缓冲里每 30s 占一格（16.7 小时才填满），换得到基线数据。
+  Timer? _memHeartbeat;
+
+  void _startMemoryHeartbeat() {
+    _memHeartbeat?.cancel();
+    _memHeartbeat = Timer.periodic(const Duration(seconds: 30), (_) {
+      logger.info(
+        'mem',
+        'rss=${(ProcessInfo.currentRss / 1048576).toStringAsFixed(1)}MB'
+            ' max_rss=${(ProcessInfo.maxRss / 1048576).toStringAsFixed(1)}MB',
+      );
+    });
+  }
+
+  @override
+  void didHaveMemoryPressure() {
+    super.didHaveMemoryPressure();
+    // 系统主动喊内存紧张 —— 只有这一条是 warning，值得长期留在日志里
+    logger.warning('mem',
+        '系统内存压力 (rss=${(ProcessInfo.currentRss / 1048576).toStringAsFixed(1)}MB)');
   }
 
   @override
