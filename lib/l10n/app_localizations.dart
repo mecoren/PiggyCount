@@ -1089,13 +1089,13 @@ abstract class AppLocalizations {
   /// No description provided for @searchBatchDeleteConfirmMessage.
   ///
   /// In en, this message translates to:
-  /// **'Are you sure you want to delete the selected {count} transactions?\nThis action cannot be undone.'**
+  /// **'Are you sure you want to delete the selected {count} transactions?\nDeleted items can be restored from the recycle bin.'**
   String searchBatchDeleteConfirmMessage(int count);
 
   /// No description provided for @searchBatchDeleteReconfirmMessage.
   ///
   /// In en, this message translates to:
-  /// **'Final confirmation: these transactions cannot be recovered after deletion. Continue?'**
+  /// **'Final confirmation: these transactions will be moved to the recycle bin. Continue?'**
   String get searchBatchDeleteReconfirmMessage;
 
   /// No description provided for @searchBatchSetNoteTitle.
@@ -1119,7 +1119,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchBatchDeleteSuccess.
   ///
   /// In en, this message translates to:
-  /// **'Successfully deleted {count} transactions'**
+  /// **'Moved {count} transactions to the recycle bin'**
   String searchBatchDeleteSuccess(int count);
 
   /// No description provided for @searchBatchDeleteFailed.
@@ -2272,7 +2272,7 @@ abstract class AppLocalizations {
   /// No description provided for @deleteConfirmMessage.
   ///
   /// In en, this message translates to:
-  /// **'Are you sure you want to delete this record?'**
+  /// **'Are you sure you want to delete this record?\nIt will be moved to the recycle bin.'**
   String get deleteConfirmMessage;
 
   /// No description provided for @mineSlogan.
@@ -14700,6 +14700,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reset failed: {error}'**
   String dbHealthResetFailed(String error);
+
+  /// No description provided for @recycleBin.
+  ///
+  /// In en, this message translates to:
+  /// **'Recycle bin'**
+  String get recycleBin;
+
+  /// No description provided for @recycleBinSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted transactions stay here until you remove them for good'**
+  String get recycleBinSubtitle;
+
+  /// No description provided for @recycleBinEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Recycle bin is empty'**
+  String get recycleBinEmpty;
+
+  /// No description provided for @recycleBinMoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved to recycle bin'**
+  String get recycleBinMoved;
+
+  /// No description provided for @recycleBinUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get recycleBinUndo;
+
+  /// No description provided for @recycleBinRestored.
+  ///
+  /// In en, this message translates to:
+  /// **'Restored'**
+  String get recycleBinRestored;
+
+  /// No description provided for @recycleBinRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get recycleBinRestore;
+
+  /// No description provided for @recycleBinPurge.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete permanently'**
+  String get recycleBinPurge;
+
+  /// No description provided for @recycleBinPurgeConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'This removes the transaction and its attachments for good and cannot be undone.'**
+  String get recycleBinPurgeConfirm;
+
+  /// No description provided for @recycleBinRestoreConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot restore: another transaction already occupies this slot.'**
+  String get recycleBinRestoreConflict;
+
+  /// No description provided for @rangeReportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Range Report'**
+  String get rangeReportTitle;
+
+  /// No description provided for @rangeReportEntrySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Any date range with month-over-month and year-over-year change, plus a tag breakdown'**
+  String get rangeReportEntrySubtitle;
+
+  /// No description provided for @rangeReportColumnCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'This period'**
+  String get rangeReportColumnCurrent;
+
+  /// No description provided for @rangeReportColumnMom.
+  ///
+  /// In en, this message translates to:
+  /// **'Prev period'**
+  String get rangeReportColumnMom;
+
+  /// No description provided for @rangeReportColumnYoy.
+  ///
+  /// In en, this message translates to:
+  /// **'Last year'**
+  String get rangeReportColumnYoy;
+
+  /// No description provided for @analyticsTagComposition.
+  ///
+  /// In en, this message translates to:
+  /// **'{type} by Tag'**
+  String analyticsTagComposition(Object type);
+
+  /// No description provided for @rangeReportChangeRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Change range'**
+  String get rangeReportChangeRange;
+
+  /// No description provided for @rangeReportEmptySubtext.
+  ///
+  /// In en, this message translates to:
+  /// **'No records in this range. Tap the dates above to pick another one.'**
+  String get rangeReportEmptySubtext;
+
+  /// No description provided for @semanticsChartSeries.
+  ///
+  /// In en, this message translates to:
+  /// **'Chart, {count} points: {points}'**
+  String semanticsChartSeries(int count, String points);
 }
 
 class _AppLocalizationsDelegate

@@ -552,12 +552,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String searchBatchDeleteConfirmMessage(int count) {
-    return '선택한 $count건의 거래를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.';
+    return '선택한 $count건의 거래를 삭제하시겠습니까?\n삭제 후 휴지통에서 복원할 수 있습니다.';
   }
 
   @override
   String get searchBatchDeleteReconfirmMessage =>
-      '다시 확인: 삭제 후 이 거래 기록들은 되찾을 수 없습니다. 계속하시겠습니까?';
+      '다시 확인: 이 거래 내역은 휴지통으로 이동됩니다. 계속하시겠습니까?';
 
   @override
   String get searchBatchSetNoteTitle => '메모 일괄 설정';
@@ -572,7 +572,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String searchBatchDeleteSuccess(int count) {
-    return '$count건의 거래를 삭제했습니다';
+    return '$count건의 거래를 휴지통으로 이동했습니다';
   }
 
   @override
@@ -1235,7 +1235,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get deleteConfirmTitle => '삭제 확인';
 
   @override
-  String get deleteConfirmMessage => '이 기록을 삭제하시겠습니까?';
+  String get deleteConfirmMessage => '이 기록을 삭제하시겠습니까?\n휴지통으로 이동됩니다.';
 
   @override
   String get mineSlogan => '소 돼지 가계부, 점점 더 좋아져 가고 있어요.';
@@ -7939,5 +7939,68 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String dbHealthResetFailed(String error) {
     return '초기화 실패: $error';
+  }
+
+  @override
+  String get recycleBin => '휴지통';
+
+  @override
+  String get recycleBinSubtitle => '삭제한 내역은 완전히 삭제할 때까지 여기에 보관됩니다';
+
+  @override
+  String get recycleBinEmpty => '휴지통이 비어 있습니다';
+
+  @override
+  String get recycleBinMoved => '휴지통으로 이동했습니다';
+
+  @override
+  String get recycleBinUndo => '실행 취소';
+
+  @override
+  String get recycleBinRestored => '복원했습니다';
+
+  @override
+  String get recycleBinRestore => '복원';
+
+  @override
+  String get recycleBinPurge => '영구 삭제';
+
+  @override
+  String get recycleBinPurgeConfirm =>
+      '완전히 삭제하면 복원할 수 없고 첨부 파일도 함께 삭제됩니다. 계속할까요?';
+
+  @override
+  String get recycleBinRestoreConflict => '복원 실패: 해당 위치를 다른 내역이 사용 중입니다';
+
+  @override
+  String get rangeReportTitle => '기간 선택 리포트';
+
+  @override
+  String get rangeReportEntrySubtitle => '임의 기간과 이전 기간·전년 동기 대비, 태그별 분류까지';
+
+  @override
+  String get rangeReportColumnCurrent => '해당 기간';
+
+  @override
+  String get rangeReportColumnMom => '이전 기간';
+
+  @override
+  String get rangeReportColumnYoy => '전년 동기';
+
+  @override
+  String analyticsTagComposition(Object type) {
+    return '태그별 $type';
+  }
+
+  @override
+  String get rangeReportChangeRange => '기간 변경';
+
+  @override
+  String get rangeReportEmptySubtext =>
+      '이 기간에는 내역이 없습니다. 위 날짜를 눌러 다른 기간을 고르세요.';
+
+  @override
+  String semanticsChartSeries(int count, String points) {
+    return '차트, $count개 지점: $points';
   }
 }

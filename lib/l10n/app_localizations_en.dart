@@ -559,12 +559,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String searchBatchDeleteConfirmMessage(int count) {
-    return 'Are you sure you want to delete the selected $count transactions?\nThis action cannot be undone.';
+    return 'Are you sure you want to delete the selected $count transactions?\nDeleted items can be restored from the recycle bin.';
   }
 
   @override
   String get searchBatchDeleteReconfirmMessage =>
-      'Final confirmation: these transactions cannot be recovered after deletion. Continue?';
+      'Final confirmation: these transactions will be moved to the recycle bin. Continue?';
 
   @override
   String get searchBatchSetNoteTitle => 'Batch Set Note';
@@ -580,7 +580,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String searchBatchDeleteSuccess(int count) {
-    return 'Successfully deleted $count transactions';
+    return 'Moved $count transactions to the recycle bin';
   }
 
   @override
@@ -1250,7 +1250,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get deleteConfirmMessage =>
-      'Are you sure you want to delete this record?';
+      'Are you sure you want to delete this record?\nIt will be moved to the recycle bin.';
 
   @override
   String get mineSlogan => 'Piggy Accounting, Every Penny Counts';
@@ -8174,5 +8174,71 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String dbHealthResetFailed(String error) {
     return 'Reset failed: $error';
+  }
+
+  @override
+  String get recycleBin => 'Recycle bin';
+
+  @override
+  String get recycleBinSubtitle =>
+      'Deleted transactions stay here until you remove them for good';
+
+  @override
+  String get recycleBinEmpty => 'Recycle bin is empty';
+
+  @override
+  String get recycleBinMoved => 'Moved to recycle bin';
+
+  @override
+  String get recycleBinUndo => 'Undo';
+
+  @override
+  String get recycleBinRestored => 'Restored';
+
+  @override
+  String get recycleBinRestore => 'Restore';
+
+  @override
+  String get recycleBinPurge => 'Delete permanently';
+
+  @override
+  String get recycleBinPurgeConfirm =>
+      'This removes the transaction and its attachments for good and cannot be undone.';
+
+  @override
+  String get recycleBinRestoreConflict =>
+      'Cannot restore: another transaction already occupies this slot.';
+
+  @override
+  String get rangeReportTitle => 'Custom Range Report';
+
+  @override
+  String get rangeReportEntrySubtitle =>
+      'Any date range with month-over-month and year-over-year change, plus a tag breakdown';
+
+  @override
+  String get rangeReportColumnCurrent => 'This period';
+
+  @override
+  String get rangeReportColumnMom => 'Prev period';
+
+  @override
+  String get rangeReportColumnYoy => 'Last year';
+
+  @override
+  String analyticsTagComposition(Object type) {
+    return '$type by Tag';
+  }
+
+  @override
+  String get rangeReportChangeRange => 'Change range';
+
+  @override
+  String get rangeReportEmptySubtext =>
+      'No records in this range. Tap the dates above to pick another one.';
+
+  @override
+  String semanticsChartSeries(int count, String points) {
+    return 'Chart, $count points: $points';
   }
 }

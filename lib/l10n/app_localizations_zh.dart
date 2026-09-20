@@ -550,11 +550,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String searchBatchDeleteConfirmMessage(int count) {
-    return '确定要删除选中的 $count 笔记账吗?\n此操作无法撤销。';
+    return '确定要删除选中的 $count 笔记账吗?\n删除后可在回收站找回。';
   }
 
   @override
-  String get searchBatchDeleteReconfirmMessage => '再次确认：删除后这些记账无法找回。确定要继续吗？';
+  String get searchBatchDeleteReconfirmMessage => '再次确认：这些记账将移入回收站。确定要继续吗？';
 
   @override
   String get searchBatchSetNoteTitle => '批量设置备注';
@@ -569,7 +569,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String searchBatchDeleteSuccess(int count) {
-    return '成功删除 $count 笔记账';
+    return '已将 $count 笔记账移入回收站';
   }
 
   @override
@@ -1227,7 +1227,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get deleteConfirmTitle => '删除确认';
 
   @override
-  String get deleteConfirmMessage => '确定要删除这条记账吗？';
+  String get deleteConfirmMessage => '确定要删除这条记账吗？\n删除后可在回收站找回。';
 
   @override
   String get mineSlogan => '小猪记账，越来越棒';
@@ -7854,6 +7854,67 @@ class AppLocalizationsZh extends AppLocalizations {
   String dbHealthResetFailed(String error) {
     return '重置失败：$error';
   }
+
+  @override
+  String get recycleBin => '回收站';
+
+  @override
+  String get recycleBinSubtitle => '已删除的交易留在这里，直到你彻底删除';
+
+  @override
+  String get recycleBinEmpty => '回收站是空的';
+
+  @override
+  String get recycleBinMoved => '已移入回收站';
+
+  @override
+  String get recycleBinUndo => '撤销';
+
+  @override
+  String get recycleBinRestored => '已恢复';
+
+  @override
+  String get recycleBinRestore => '恢复';
+
+  @override
+  String get recycleBinPurge => '彻底删除';
+
+  @override
+  String get recycleBinPurgeConfirm => '彻底删除后无法恢复，附件文件也会一并清除，确定吗？';
+
+  @override
+  String get recycleBinRestoreConflict => '恢复失败：该位置已被另一笔交易占用';
+
+  @override
+  String get rangeReportTitle => '自定义区间报表';
+
+  @override
+  String get rangeReportEntrySubtitle => '任意起止区间，含环比与同比变化，另按标签维度拆分';
+
+  @override
+  String get rangeReportColumnCurrent => '本期';
+
+  @override
+  String get rangeReportColumnMom => '环比上期';
+
+  @override
+  String get rangeReportColumnYoy => '同比去年同期';
+
+  @override
+  String analyticsTagComposition(Object type) {
+    return '$type标签构成';
+  }
+
+  @override
+  String get rangeReportChangeRange => '更换区间';
+
+  @override
+  String get rangeReportEmptySubtext => '这段时间还没有记账，点上方日期换一个区间';
+
+  @override
+  String semanticsChartSeries(int count, String points) {
+    return '图表，共 $count 个点：$points';
+  }
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -8402,11 +8463,11 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String searchBatchDeleteConfirmMessage(int count) {
-    return '確定要刪除選中的 $count 筆記帳嗎?\n此操作無法復原。';
+    return '確定要刪除選中的 $count 筆記帳嗎?\n刪除後可在回收筒找回。';
   }
 
   @override
-  String get searchBatchDeleteReconfirmMessage => '再次確認：刪除後這些記帳無法找回。確定要繼續嗎？';
+  String get searchBatchDeleteReconfirmMessage => '再次確認：這些記帳將移入回收筒。確定要繼續嗎？';
 
   @override
   String get searchBatchSetNoteTitle => '批次設定備註';
@@ -8421,7 +8482,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String searchBatchDeleteSuccess(int count) {
-    return '成功刪除 $count 筆記帳';
+    return '已將 $count 筆記帳移入回收筒';
   }
 
   @override
@@ -9079,7 +9140,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get deleteConfirmTitle => '刪除確認';
 
   @override
-  String get deleteConfirmMessage => '確定要刪除這條記帳嗎？';
+  String get deleteConfirmMessage => '確定要刪除這條記帳嗎？\n刪除後可在回收筒找回。';
 
   @override
   String get mineSlogan => '小豬記帳，越來越棒';
@@ -15674,5 +15735,66 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String dbHealthResetFailed(String error) {
     return '重置失敗：$error';
+  }
+
+  @override
+  String get recycleBin => '回收筒';
+
+  @override
+  String get recycleBinSubtitle => '已刪除的交易會留在這裡，直到你徹底刪除';
+
+  @override
+  String get recycleBinEmpty => '回收筒是空的';
+
+  @override
+  String get recycleBinMoved => '已移入回收筒';
+
+  @override
+  String get recycleBinUndo => '復原';
+
+  @override
+  String get recycleBinRestored => '已復原';
+
+  @override
+  String get recycleBinRestore => '復原';
+
+  @override
+  String get recycleBinPurge => '徹底刪除';
+
+  @override
+  String get recycleBinPurgeConfirm => '徹底刪除後無法復原，附件檔案也會一併清除，確定嗎？';
+
+  @override
+  String get recycleBinRestoreConflict => '復原失敗：該位置已被另一筆交易佔用';
+
+  @override
+  String get rangeReportTitle => '自訂區間報表';
+
+  @override
+  String get rangeReportEntrySubtitle => '任意起止區間，含環比與同比變化，另依標籤維度拆分';
+
+  @override
+  String get rangeReportColumnCurrent => '本期';
+
+  @override
+  String get rangeReportColumnMom => '環比上期';
+
+  @override
+  String get rangeReportColumnYoy => '同比去年同期';
+
+  @override
+  String analyticsTagComposition(Object type) {
+    return '$type標籤構成';
+  }
+
+  @override
+  String get rangeReportChangeRange => '更換區間';
+
+  @override
+  String get rangeReportEmptySubtext => '這段時間還沒有記帳，點上方日期換一個區間';
+
+  @override
+  String semanticsChartSeries(int count, String points) {
+    return '圖表，共 $count 個點：$points';
   }
 }
