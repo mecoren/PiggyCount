@@ -173,10 +173,10 @@ TSM 附件重试（1s/2s/4s）**不迁移**到 core RetryHelper：它是业务�
 
 ### P2-1:getStatus 冷启动指纹缓存
 
-- `_localFpCache`(ledgerId → 指纹+校验位):命中时跳过全量导出(冷启动大账本 CPU 归零);**双失效防线**——①`local_changes` 轻量校验位(MAX(id)+COUNT,查询失败返回随机值强制失效——宁可多算不可漏算)②`ChangeTracker.onLocalContentGeneration` 写路径回调(user-global=0 影响全部快照,按全部失效);
+- `_localFpCache`(ledgerId → 指纹+count+校验位):命中时跳过全量导出(冷启动大账本 CPU 归零);**校验位自 2026-09-21 起改用 `_contentGenerationGuard`（业务表代际 + local_changes 叠加，查询失败返回随机值强制失效——宁可多算不可漏算）**。原「双失效防线」①`local_changes` 轻量校验位(MAX(id)+COUNT)②`ChangeTracker.onLocalContentGeneration` 写路径回调(user-global=0 影响全部快照) 在**生产快照装配下双双失效**：不注入 tracker ⇒ 回调不接线、local_changes 恒空 ⇒ 校验位恒 `-1/0`（详见 `docs/s3-webdav-sync-audit-2026-09-20.md` §六 L-03）;
 - **recordChanges:false 导入路径显式失效**(不写 local_changes、guard 不变的漏判窗口):恢复(downloadAndRestore/restoreAll 覆盖语义)、合并(applyPreviewChanges)、云端账本导入(importRemoteLedger)、备份恢复(runAfterDownload/C → clearStatusCache 全量)逐点补失效;`clearStatusCache` 与指纹缓存同口径;上传成功 `rememberLocalFingerprint` 登记(上传后 UI 刷新 getStatus 零导出);reinit/dispose 清空;
-- getStatus 缓存命中路径 `localSerializedData/localParsedCount` 省略(包内按需自行导出——该场景云端指纹必然全量下载比对,导出无法避免,不构成退化);
-- **测试**:`local_fingerprint_cache_test.dart` 5 项(命中复用/guard 变化失效/tracker 回调失效/user-global 全失效/markLocalChanged 失效)。
+- getStatus 缓存命中路径 `localSerializedData/localParsedCount` 省略。**2026-09-21 修正(L-03)**:原判定「导出无法避免,不构成退化」不成立——core `getStatus` 因缺 `localFingerprint` 入参,在只给指纹不给 JSON 时仍会走一次 `serializer.serialize` 全量导出,恰好把缓存省下的开销付回。现 core 新增 `localFingerprint` 预计算入参;TSM 缓存命中路径改传 `localFingerprint: localFp` + `localParsedCount: localCount`,并新增 `localCount` 随指纹一并缓存(命中路径不再为拿 count 而导出),缓存收益真正落地;
+- **测试**:`local_fingerprint_cache_test.dart` 10 项(命中复用/guard 变化失效/tracker 回调失效/user-global 全失效/markLocalChanged 失效 + 2026-09-21 新增 5 项业务表代际:交易入库·UPDATE·DELETE·user-global 分类改动·无写操作仍命中)。
 
 ### 弱网档双端实测:评估完成,执行受环境阻断
 

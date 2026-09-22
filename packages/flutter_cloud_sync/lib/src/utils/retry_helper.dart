@@ -2,6 +2,24 @@ import 'dart:math';
 
 import '../core/exceptions.dart';
 
+// ===========================================================================
+// ⚠️ 状态声明（审计 L-05，2026-09-21）
+//
+// 本文件的 `RetryHelper` / `RetryConfig` **当前没有任何生产调用方**：
+// 只有 `example/` 与测试引用。四个真实适配器各自持有私有重试实现
+// （`S3Client._retry`、`WebDAVStorageService._retryIdempotent`、
+// Supabase / iCloud 的同名实现），参数与 jitter 以
+// `docs/sync-reliability-params.md` §二 为**唯一权威口径**。
+//
+// 因此：
+// 1. 不要为了让「四套重试统一」而直接把 `RetryHelper` 接到适配器上 ——
+//    它的预设档（3 次 / 1s / 无适配器级 jitter 语义）与上表并不等价，
+//    直接接入等于静默回退各后端已实测调优的参数（S3 的 neverRetry
+//    状态码、WebDAV 的超时不重试、条件写的锚点安全重试都会丢失）。
+// 2. 真要收编，先按 §二 表逐项对齐并同步更新该表，再改各适配器。
+// 3. 本文件保留为 example/预留设施；若长期无接入计划，可按 YAGNI 删除。
+// ===========================================================================
+
 /// Retry configuration
 class RetryConfig {
   /// Maximum number of retry attempts

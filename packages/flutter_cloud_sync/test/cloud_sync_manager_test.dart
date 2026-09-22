@@ -142,8 +142,13 @@ class _StoredFile {
 }
 
 class MockDataSerializer implements DataSerializer<int> {
+  /// L-03：serialize 被调用次数 —— 「预计算复用」类入参
+  /// （localSerializedData / localFingerprint）生效时应当保持为 0。
+  int serializeCount = 0;
+
   @override
   Future<String> serialize(int data) async {
+    serializeCount++;
     return jsonEncode({'id': data});
   }
 
@@ -389,6 +394,59 @@ void main() {
       // Assert
       expect(status.state, equals(SyncState.synced));
       expect(status.localFingerprint, equals(status.cloudFingerprint));
+    });
+
+    test('L-03: localFingerprint 透传时跳过 serialize（指纹缓存命中路径）',
+        () async {
+      // Arrange：调用方（TSM 指纹缓存命中）手上只有指纹，没有 JSON
+      const testUser = CloudUser(id: 'user123');
+      const testData = 123;
+      const testPath = 'test.json';
+
+      mockAuth.setCurrentUser(testUser);
+      await syncManager.upload(data: testData, path: testPath);
+
+      final fp = mockSerializer.fingerprint(jsonEncode({'id': testData}));
+      mockSerializer.serializeCount = 0;
+
+      // Act
+      final status = await syncManager.getStatus(
+        data: testData,
+        path: testPath,
+        forceRefresh: true,
+        localFingerprint: fp,
+      );
+
+      // Assert
+      expect(mockSerializer.serializeCount, equals(0),
+          reason: 'L-03：调用方已给出可信指纹时不得再全量导出一次 —— '
+              '旧实现会在这里 serialize，把指纹缓存省下的开销原样付回');
+      expect(status.localFingerprint, equals(fp));
+      expect(status.state, equals(SyncState.synced));
+    });
+
+    test('L-03: 只给指纹不给 count → localCount 保持 null（不臆造 0）', () async {
+      // Arrange
+      const testUser = CloudUser(id: 'user123');
+      const testData = 123;
+      const testPath = 'test.json';
+
+      mockAuth.setCurrentUser(testUser);
+      await syncManager.upload(data: testData, path: testPath);
+      mockSerializer.serializeCount = 0;
+
+      // Act
+      final status = await syncManager.getStatus(
+        data: testData,
+        path: testPath,
+        forceRefresh: true,
+        localFingerprint: mockSerializer.fingerprint(jsonEncode({'id': testData})),
+      );
+
+      // Assert：count 是墙钟不可信时的方向兜底输入，未知就该是 null；
+      // 臆造 0 会让「本地 0 条 vs 云端 N 条」误判方向
+      expect(mockSerializer.serializeCount, equals(0));
+      expect(status.localCount, isNull);
     });
 
     test('should return outOfSync when fingerprints differ', () async {

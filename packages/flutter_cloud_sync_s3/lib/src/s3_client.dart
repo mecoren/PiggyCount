@@ -549,7 +549,20 @@ class S3Client {
         // P1-2：按体积自适应（流式上传多为大附件，旧固定 30s 在
         // 慢网大对象下，body 发完后服务端落盘+响应的时间窗口不够）
         final effectiveTimeout = transferTimeoutFor(streamTimeout);
-        response = await responseFuture.timeout(effectiveTimeout);
+        try {
+          response = await responseFuture.timeout(effectiveTimeout);
+        } on TimeoutException {
+          // 审计 L-02：放弃等待后响应仍可能稍后到达（服务端只是慢），
+          // 此时没有任何人会消费它的 body —— keep-alive 连接因存在无读者
+          // 响应体而无法回池，被静默弃置。挂一个只负责 drain 的兜底。
+          // 仅在超时路径挂载：正常路径不挂，避免与下游的 body 读取争抢
+          // 同一个单订阅流（二次 listen 会抛 StateError）。
+          unawaited(responseFuture.then(
+            (r) => r.stream.drain<void>().catchError((Object _) {}),
+            onError: (Object _) {},
+          ));
+          rethrow;
+        }
       }
     } on Object catch (e) {
       await sub?.cancel();
@@ -648,12 +661,34 @@ class S3Client {
 
   /// 读取错误响应体。早响应/断连时 body 流可能不可读 —— 返回 null，
   /// 调用方改抛不依赖 body 的语义化异常。
+  ///
+  /// 审计 L-02：本方法必须保证 **body 流的生命周期终有人负责**。
+  /// 旧实现 `http.Response.fromStream(response).timeout(timeout)` 的超时
+  /// 分支是漏网之鱼：外层 future 被放弃，而 `fromStream` 内部对 body 流的
+  /// 订阅既不取消也不消费 —— keep-alive 连接因存在无读者响应体而无法回池，
+  /// 被静默弃置。（N-14/P3-S3DRAIN 已覆盖「成功/412/409 不读 body 的分支」，
+  /// 本处补齐「读 body 但读不完」的分支。）
+  ///
+  /// 现改为自行消费：`await for` 配合 [Stream.timeout]（无 onTimeout 时
+  /// 超时会取消底层订阅），任何退出路径（正常读完 / 超时 / 读失败）都会
+  /// 释放 body 流，连接随流关闭回收。
   Future<http.Response?> _readErrorBody(http.StreamedResponse response) async {
+    final builder = BytesBuilder(copy: false);
     try {
-      return await http.Response.fromStream(response).timeout(timeout);
+      await for (final chunk in response.stream.timeout(timeout)) {
+        builder.add(chunk);
+      }
     } catch (_) {
+      // 超时/读失败：`await for` 异常退出会取消对 body 流的订阅（连接随流
+      // 关闭回收）；按契约返回 null，调用方抛不依赖 body 的语义化异常。
       return null;
     }
+    return http.Response.bytes(
+      builder.takeBytes(),
+      response.statusCode,
+      headers: response.headers,
+      request: response.request,
+    );
   }
 
   /// 判断 400 响应是否为「网关不支持条件头」特征（S3 兼容网关的
@@ -728,6 +763,12 @@ class S3Client {
   /// 审计 S-A 修复：Content-Length 不再参与签名。AWS 官方 SDK 不签 CL，
   /// 一旦传输层改用 chunked 编码或代理改写 CL，签了 CL 就恒定
   /// 403 SignatureDoesNotMatch。Host/Content-Type/x-amz-* 保持参与。
+  ///
+  /// 审计 L-01：本方法设置的 `If-Match` / `If-None-Match` **不在
+  /// SignedHeaders 集合内**（口径见 [resolveSignedHeaderKeys]）。条件头由
+  /// 服务端在收到请求后求值，不签名不影响条件写语义（412/404 照常）；
+  /// 传输完整性由强制 HTTPS + 禁重定向保证。此前测试标题声称「参与签名」
+  /// 但只断言了头存在，属假绿 —— 现已在测试中显式钉住真实集合。
   Map<String, String> _signedPutHeaders(Uri uri, Uint8List data,
       String? contentType, Map<String, String>? metadata,
       {String? ifMatch, bool ifNoneMatch = false}) {

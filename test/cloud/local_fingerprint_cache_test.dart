@@ -135,6 +135,103 @@ void main() {
       expect(fp, isNot('fp-cached-0000'));
     });
   });
+
+  group('L-03 加固：业务表代际（生产可用的指纹缓存新鲜度信号）', () {
+    // 本组是「L-03 加固」的验收闸门。修复前 `_localFingerprintWithCache`
+    // 的 guard 只读 local_changes，而生产快照装配下该表恒空
+    // （LocalRepository(db) 无 tracker，55 处登记点全部跳过）→ guard 恒为
+    // '-1/0' → 下面每条用例都会命中陈旧缓存并返回 'fp-cached-0000' 而失败。
+    Future<int> localChangesCount() async =>
+        (await db.select(db.localChanges).get()).length;
+
+    test('交易入库（生产写路径，不写 local_changes）→ 缓存失效', () async {
+      await manager.rememberLocalFingerprint(1, 'fp-cached-0000');
+
+      await db.into(db.transactions).insert(TransactionsCompanion.insert(
+            ledgerId: 1,
+            type: 'expense',
+            amount: 10.0,
+            happenedAt: d.Value(DateTime(2026, 8, 1)),
+            syncId: const d.Value('tx-guard-1'),
+          ));
+
+      expect(await localChangesCount(), 0,
+          reason: '前提：生产 LocalRepository(db) 无 tracker → 本写入不登记 '
+              'local_changes，旧校验位察觉不到这次改动');
+
+      final fp = await managerDebugLocalFingerprint(manager, 1);
+      expect(fp, isNot('fp-cached-0000'),
+          reason: 'L-03 加固：业务表写入必须让指纹缓存失效，'
+              '否则 core getStatus 会拿到陈旧指纹做同步判定');
+    });
+
+    test('交易 UPDATE（v40 触发器维护 updated_at）→ 缓存失效', () async {
+      final id = await db.into(db.transactions).insert(
+            TransactionsCompanion.insert(
+              ledgerId: 1,
+              type: 'expense',
+              amount: 10.0,
+              happenedAt: d.Value(DateTime(2026, 8, 1)),
+              syncId: const d.Value('tx-guard-2'),
+            ),
+          );
+      // 入库已改变代际，重新登记以单独验证 UPDATE 路径
+      await manager.rememberLocalFingerprint(1, 'fp-cached-0000');
+
+      await (db.update(db.transactions)..where((t) => t.id.equals(id)))
+          .write(const TransactionsCompanion(amount: d.Value(20.0)));
+
+      expect(await localChangesCount(), 0,
+          reason: '前提：就地修改同样不登记 local_changes');
+
+      final fp = await managerDebugLocalFingerprint(manager, 1);
+      expect(fp, isNot('fp-cached-0000'),
+          reason: 'L-03 加固：行数与 MAX(id) 都不变的就地修改，'
+              '必须被 updated_at 代际捕获（v40 触碰触发器）');
+    });
+
+    test('交易 DELETE → 缓存失效', () async {
+      final id = await db.into(db.transactions).insert(
+            TransactionsCompanion.insert(
+              ledgerId: 1,
+              type: 'expense',
+              amount: 10.0,
+              happenedAt: d.Value(DateTime(2026, 8, 1)),
+              syncId: const d.Value('tx-guard-3'),
+            ),
+          );
+      await manager.rememberLocalFingerprint(1, 'fp-cached-0000');
+
+      await (db.delete(db.transactions)..where((t) => t.id.equals(id))).go();
+
+      final fp = await managerDebugLocalFingerprint(manager, 1);
+      expect(fp, isNot('fp-cached-0000'),
+          reason: 'L-03 加固：删除只减行数（updated_at 触发器不覆盖 DELETE），'
+              '必须靠 COUNT 分量捕获');
+    });
+
+    test('user-global 表（分类）改动 → 该账本缓存失效', () async {
+      await manager.rememberLocalFingerprint(1, 'fp-cached-0000');
+
+      await db.into(db.categories).insert(CategoriesCompanion.insert(
+            name: '代际测试分类',
+            kind: 'expense',
+          ));
+
+      final fp = await managerDebugLocalFingerprint(manager, 1);
+      expect(fp, isNot('fp-cached-0000'),
+          reason: '每份快照都携带全量分类 → 任何账本的指纹缓存都要失效');
+    });
+
+    test('无写操作 → 仍命中缓存（代际稳定，不过度失效）', () async {
+      await manager.rememberLocalFingerprint(1, 'fp-cached-0000');
+
+      expect(await managerDebugLocalFingerprint(manager, 1), 'fp-cached-0000');
+      expect(await managerDebugLocalFingerprint(manager, 1), 'fp-cached-0000',
+          reason: '连续读取不得让代际漂移 —— 否则缓存命中率归零，'
+              'L-03 想省掉的全量导出会每次照付');
+    });
+  });
 }
 
 /// 测试钩子：直接调用 TSM 的 _localFingerprintWithCache。

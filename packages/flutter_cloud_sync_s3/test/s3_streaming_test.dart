@@ -62,6 +62,64 @@ class _StalledStreamClient extends http.BaseClient {
   }
 }
 
+/// 审计 L-02：可观测响应体生命周期的 mock。
+///
+/// [bodyTerminated] 在 body 流**终结**时完成 —— 无论是被读完、被取消还是
+/// 出错。「流终有人负责」正是 L-02 的验收口径：只要它迟迟不完成，说明
+/// 该响应的 body 无人消费，keep-alive 连接会被静默弃置。
+class _TrackedBodyClient extends http.BaseClient {
+  _TrackedBodyClient(this.status, {this.responseDelay, this.neverEndingBody = false});
+
+  final int status;
+
+  /// 响应头延迟返回的时长（用于制造「body 发完后响应超时」场景）
+  final Duration? responseDelay;
+
+  /// true 时 body 流发出 1 块后永不关闭（用于制造「错误体读不完」场景）
+  final bool neverEndingBody;
+
+  final Completer<void> bodyTerminated = Completer<void>();
+
+  void _markTerminated() {
+    if (!bodyTerminated.isCompleted) bodyTerminated.complete();
+  }
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    request.finalize();
+    if (responseDelay != null) {
+      await Future<void>.delayed(responseDelay!);
+    }
+
+    // 用 StreamController（而非 async*）构造 body：
+    // - neverEndingBody 用 async* + `await 永不完成的 future` 会与其订阅
+    //   取消语义相互作用（取消要等生成器清理，而生成器卡在 await 上），
+    //   导致 cancel 永不返回、超时信号无法投递 —— 那是测试夹具的假死，
+    //   不是被测行为的泄漏。StreamController 的 onCancel 同步可解。
+    final controller = StreamController<List<int>>();
+    controller.onCancel = _markTerminated;
+    controller.onListen = () {
+      controller.add(utf8.encode('<Error><Code>AccessDenied</Code></Error>'));
+      if (!neverEndingBody) {
+        // 正常关闭 → done 完成即「被读完」
+        controller.close().then((_) => _markTerminated());
+      }
+    };
+    return http.StreamedResponse(controller.stream, status);
+  }
+}
+
+S3Client _clientWithTimeout(http.BaseClient mock, Duration timeout) => S3Client(
+      endpoint: 'minio.local',
+      region: 'us-east-1',
+      accessKey: 'ak',
+      secretKey: 'sk',
+      useSSL: false,
+      forcePathStyle: true,
+      timeout: timeout,
+      httpClient: mock,
+    );
+
 http.StreamedResponse _ok({Map<String, String> headers = const {}}) =>
     http.StreamedResponse(http.ByteStream.fromBytes(const []), 200,
         headers: headers);
@@ -470,6 +528,68 @@ void main() {
       } finally {
         await dir.delete(recursive: true);
       }
+    });
+  });
+
+  group('审计 L-02：失败分支不得留下无读者的响应体（keep-alive 连接可回池）', () {
+    test('403（非条件写失败分支）错误体被读完', () async {
+      final mock = _TrackedBodyClient(403);
+      final client = _client(mock);
+
+      await expectLater(
+        client.putObjectStream(
+            bucket: 'b', key: 'k', data: Stream.fromIterable([[1]])),
+        throwsA(isA<S3Exception>()),
+      );
+      // 旧实现该分支走 _readErrorBody 已消费；此断言把口径钉死，防止
+      // 后续有人改成「不读 body 直接抛」而引入连接泄漏
+      await mock.bodyTerminated.future.timeout(const Duration(seconds: 2));
+    });
+
+    test('500 错误体被读完', () async {
+      final mock = _TrackedBodyClient(500);
+      final client = _client(mock);
+
+      await expectLater(
+        client.putObjectStream(
+            bucket: 'b', key: 'k', data: Stream.fromIterable([[1]])),
+        throwsA(isA<S3Exception>()),
+      );
+      await mock.bodyTerminated.future.timeout(const Duration(seconds: 2));
+    });
+
+    test('错误体读不完（流永不结束）→ 超时后取消订阅，不泄漏连接', () async {
+      final mock = _TrackedBodyClient(500, neverEndingBody: true);
+      final client =
+          _clientWithTimeout(mock, const Duration(milliseconds: 200));
+
+      await expectLater(
+        client.putObjectStream(
+            bucket: 'b', key: 'k', data: Stream.fromIterable([[1]])),
+        throwsA(isA<S3Exception>()),
+      );
+      // 旧实现：fromStream(...).timeout() 超时后放弃外层 future，内部订阅
+      // 既不取消也不消费 → 该 future 永不完成，测试侧 2s 超时失败
+      await mock.bodyTerminated.future.timeout(const Duration(seconds: 2));
+    });
+
+    test('body 已发完、响应迟到超时 → 迟到响应仍被 drain', () async {
+      final mock = _TrackedBodyClient(500,
+          responseDelay: const Duration(milliseconds: 600));
+      final client =
+          _clientWithTimeout(mock, const Duration(milliseconds: 200));
+
+      await expectLater(
+        client.putObjectStream(
+          bucket: 'b',
+          key: 'k',
+          data: Stream.fromIterable([[1, 2, 3]]),
+          contentLength: 3,
+        ),
+        throwsA(isA<S3NetworkException>()),
+      );
+      // L-02：放弃等待后响应才到达，必须有人消费它的 body
+      await mock.bodyTerminated.future.timeout(const Duration(seconds: 3));
     });
   });
 }

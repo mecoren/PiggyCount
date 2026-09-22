@@ -11,6 +11,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart' as crypto;
@@ -71,6 +72,41 @@ void main() {
     );
     return manager;
   }
+
+  group('L-05：附件重试退避带真随机抖动（防多端同相重试风暴）', () {
+    test('退避落在 base 的 [0.5×base, base] 区间内', () {
+      final manager = buildManager(_MapStorage());
+
+      // 3 次总尝试 ⇒ 2 次退避：attempt 0 → base 1s；attempt 1 → base 2s
+      for (final (attempt, lo, hi) in <(int, int, int)>[
+        (0, 500, 1000),
+        (1, 1000, 2000),
+      ]) {
+        for (final seed in <int>[1, 7, 42, 2026]) {
+          final d = manager.attachmentRetryDelayForTest(attempt, Random(seed));
+          expect(d.inMilliseconds, inInclusiveRange(lo, hi),
+              reason: 'L-05: attempt=$attempt 退避必须在 base 的 '
+                  '[0.5×base, base] 内（seed=$seed）');
+        }
+      }
+    });
+
+    test('jitter 是真随机而非固定值（旧实现恒为 1s/2s，多设备完全同相）', () {
+      final manager = buildManager(_MapStorage());
+
+      final seen = <int>{};
+      for (var seed = 0; seed < 50; seed++) {
+        seen.add(manager
+            .attachmentRetryDelayForTest(0, Random(seed))
+            .inMilliseconds);
+      }
+      expect(seen.length, greaterThan(1),
+          reason: 'L-05: 不同随机源必须产生不同退避 —— 固定值等于没有 jitter');
+      expect(seen.length, greaterThan(10),
+          reason: 'L-05: 50 个种子应覆盖区间内大量取值（区间宽 500ms），'
+              '取值过少说明抖动幅度被压缩');
+    });
+  });
 
   /// 预置账本 + 一笔交易 + 一条附件行
   Future<int> seedAttachmentRow({

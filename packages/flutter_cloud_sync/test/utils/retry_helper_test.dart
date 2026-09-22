@@ -222,7 +222,7 @@ void main() {
         () async {
           callCount++;
           if (callCount < 3) {
-            throw FormatException('Custom error');
+            throw const FormatException('Custom error');
           }
           return 'success';
         },
@@ -244,7 +244,7 @@ void main() {
         () => RetryHelper.execute(
           () async {
             callCount++;
-            throw FormatException('Custom error');
+            throw const FormatException('Custom error');
           },
           config: RetryConfig(
             maxAttempts: 3,

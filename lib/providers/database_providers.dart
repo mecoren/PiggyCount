@@ -30,8 +30,13 @@ final dbHealthDismissedProvider = StateProvider<bool>((ref) => false);
 
 // 仓储Provider — 一律 LocalRepository(本地优先)。ChangeTracker(增量变更
 // 推送)随 PiggyCount Cloud 云端协同下线移除;快照备份路径(iCloud / WebDAV /
-// S3 / Supabase)不注入 tracker,TransactionsSyncManager 直接读
-// local_changes 表做冲突证据(见 _localChangeEvidence)。
+// S3 / Supabase)不注入 tracker。
+//
+// ⚠️ 推论(CT-1,2026-09-21 已处置):本行「不注入 tracker」意味着 local_changes
+// 生产恒空 —— 凡读该表的下游都会静默失效。TransactionsSyncManager 的两处读端
+// 已分别改造:① 指纹缓存校验位改用业务表代际(_contentGenerationGuard);
+// ② 方向仲裁证据改用 v40 updated_at 触碰列 + 同机上传锚点(_localChangeEvidence)。
+// 新增读 local_changes 的代码前请先确认该表在生产是否仍有写入方。
 final repositoryProvider = Provider<BaseRepository>((ref) {
   final db = ref.watch(databaseProvider);
   logger.info('RepositoryProvider', '✅ LocalRepository');

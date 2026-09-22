@@ -507,6 +507,51 @@ void main() {
       expect(status.message, isNot('cloud_encrypted_locally_disabled'),
           reason: '云端为明文时不应触发 cloud_encrypted_locally_disabled 哨兵');
     });
+
+    test('L-03: 指纹缓存命中时不触发包内全量导出（localFingerprint 透传）', () async {
+      // Arrange: serializer 一旦被调用就抛错 —— 任何一次全量导出都会
+      // 让 getStatus 退化为 error，把「缓存命中却仍然导出」钉死在断言里
+      await db.into(db.ledgers).insert(LedgersCompanion.insert(
+            id: const d.Value(1),
+            name: 'test',
+            currency: const d.Value('CNY'),
+          ));
+
+      final fakeStorage =
+          _FakeStorage(returnJson: _emptyLedgerJson(ledgerId: 1));
+      final fakeProvider = _FakeCloudProvider(storage: fakeStorage);
+
+      final manager = TransactionsSyncManager(
+        config: const fcs.CloudServiceConfig(
+          type: fcs.CloudBackendType.supabase,
+          name: 'test',
+        ),
+        db: db,
+        repo: _DummyRepo(),
+        encryptionService: _DisabledNoKeyEncryptionService(),
+      );
+      manager.setSyncManagerForTesting(
+        syncManager: fcs.CloudSyncManager<int>(
+          provider: fakeProvider,
+          serializer: _NoSerializeSerializer(),
+        ),
+        provider: fakeProvider,
+      );
+
+      // 预登记指纹（模拟上传成功后的登记路径），guard 未变 → 命中缓存
+      await manager.rememberLocalFingerprint(1, 'fp-cached-0000');
+
+      // Act
+      final status = await manager.getStatus(ledgerId: 1);
+
+      // Assert
+      expect(status.diff, isNot(SyncDiff.error),
+          reason: 'L-03：缓存命中路径不得回落到包内 serializer.serialize '
+              '（该 serializer 被调用即抛错）');
+      expect(status.localFingerprint, 'fp-cached-0000',
+          reason: 'L-03：缓存命中必须把指纹透传给包内，否则包内会为了算指纹'
+              '把整个账本再全量导出解析一次，P2-1 的收益被原样抵消');
+    });
   });
 
   group('缺口 1: getStatus 在 SaltMismatchException 时返回哨兵 message', () {
@@ -1272,6 +1317,18 @@ class _NoopSerializer implements fcs.DataSerializer<int> {
   Future<int> deserialize(String data) async => 0;
   @override
   String fingerprint(String data) => '';
+}
+
+/// L-03 专用：serialize 被调用即抛错 —— 用于断言「指纹缓存命中路径
+/// 不得触发包内全量导出」。fingerprint 保持可用（云端指纹仍需计算）。
+class _NoSerializeSerializer implements fcs.DataSerializer<int> {
+  @override
+  Future<String> serialize(int data) async =>
+      throw StateError('L-03: 指纹缓存命中路径不应再序列化本地数据');
+  @override
+  Future<int> deserialize(String data) async => 0;
+  @override
+  String fingerprint(String data) => 'cloud-fp-0000';
 }
 
 class _DummyRepo implements BaseRepository {

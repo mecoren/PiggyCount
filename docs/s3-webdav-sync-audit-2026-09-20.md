@@ -5,6 +5,7 @@
 - **探查范围**: `packages/flutter_cloud_sync_s3`、`packages/flutter_cloud_sync_webdav`、`packages/flutter_cloud_sync`(core)、应用层 `lib/cloud/**`、`lib/data/encryption/**`、`lib/services/system/logger_service.dart`、`lib/data/db.dart`、`lib/services/export/config_export_service.dart`
 - **上轮基线**: `docs/s3-webdav-sync-audit-2026-09-08.md`（上轮 28 项中 16 项当日修复，余项 09-09/09-10 陆续闭环）
 - **本轮产出**: 新发现/复核问题 **22 项**（P1 5 项、P2 6 项、P3 11 项），当日**实施修复 16 项**并回归通过；余 6 项为设计边界/需要更大改造，给出明确方案留待迭代
+- **2026-09-21 收尾**: 遗留 6 项中 **L-01 / L-02 / L-03 / L-04 已修、L-05 部分完成**（详见 §六 处置列），L-06 维持设计边界；全量回归通过（analyze 零 issue，六套单测全绿）。其中 L-04 的原建议方案经实证取证后**判定不可行并改为白名单拒绝**，L-02 的真实漏点与原文描述不同（详见 §六）
 
 ---
 
@@ -151,14 +152,19 @@
 
 ## 六、遗留项与后续方案
 
-| 编号 | 问题 | 建议方案 |
-|---|---|---|
-| L-03 | getStatus 指纹缓存被全量导出抵消 | core `CloudSyncManager.getStatus` 增加可选 `localFingerprint`/`localParsedCount` 入参；TSM 缓存命中时透传（不再让 core 走 `serializer.serialize`）。需同步 core 单测。 |
-| L-04 | WebDAV 路径编码口径不一致 | 在 `_buildPath` 输出端统一对路径段做 RFC 3986 percent-encoding（保留 `/`），并让 MOVE Destination 使用同一编码器；需补含空格/`#`/`?`/中文文件名的端到端用例（回归面较大）。 |
-| L-01 | 条件头未进 SignedHeaders | 二选一：① 显式把 `if-match`/`if-none-match` 纳入签名头（严格但需验证各网关兼容）；② 修正注释与测试标题，明确「条件头依赖 TLS 完整性」。建议先做 ②（零风险），① 视网关实测再定。 |
-| L-05 | 四套重试参数不统一 | 收编到 core 单一策略层（`RetryHelper`），各适配器只声明「操作是否幂等」；TSM 附件重试补 jitter。参数漂移已在文档备案，故列 P3。 |
-| L-06 | 断点续传/multipart/Range 缺失 | 若未来引入大附件/视频，S3 补 multipart upload + GetObject Range（分片与断点），WebDAV 评估 Range 支持面。当前数据规模 <5MB，维持现状。 |
-| L-02 | S3 其余失败分支未 drain | 与 F-07 同款补齐（403/500/其他状态码分支），影响面小。 |
+> **2026-09-21 更新**：下表 5 项（L-01 ~ L-05）已完成处置并全量回归通过；L-06 维持设计边界。
+> 回归证据：`flutter analyze`（应用 lib+test / 四个改动包）零 issue；单测 core 97 / S3 150 /
+> WebDAV 71 / Supabase 38 / iCloud 31 / 应用层 1374（1 skip）全绿。
+
+| 编号 | 问题 | 建议方案 | 2026-09-21 处置 |
+|---|---|---|---|
+| L-03 | getStatus 指纹缓存被全量导出抵消 | core `CloudSyncManager.getStatus` 增加可选 `localFingerprint`/`localParsedCount` 入参；TSM 缓存命中时透传。需同步 core 单测。 | ✅ **已修**。core 新增 `localFingerprint` 预计算入参（与 `localSerializedData`/`localParsedCount` 同族）；TSM `_localFpCache` 增存 `count`，命中路径传 `localFingerprint` + `localParsedCount`，core 连序列化都不做。新增 3 用例（含「serialize 被调用即抛错」的 fake 钉住「命中不得再导出」）。另修正 `docs/sync-metrics-implementation-2026-09-09.md` 中已不成立的「不构成退化」判定。<br>**2026-09-21 加固（生产可用性）**：透传缓存指纹后，缓存新鲜度直接影响同步判定，而原 guard（`local_changes` 的 MAX(id)+COUNT）在生产**恒为 `-1/0`** —— 快照装配下不注入 ChangeTracker（`database_providers.dart:31-34`），`LocalRepository` 全部 local_changes 写入都挂在 `changeTracker != null` 分支（55 处）→ 该表生产恒空。新增 `_contentGenerationGuard(ledgerId)`：快照所涉各表的「行数 + MAX(id) + SUM(updated_at)」代际 —— transactions/categories/tags/accounts/ledgers 由 v40 触碰触发器维护；budgets/recurring_transactions/exchange_rate_overrides 由仓储更新路径显式写 `now()`；transaction_tags/transaction_attachments/transaction_tag_overrides 只增删不改写，COUNT+MAX(id) 已足够；与 `local_changes` 校验位**叠加**（不删除旧防线）。实测（5000 笔单账本，debug VM）：代际查询 **3.89 ms** vs 全量导出 **471.13 ms**，8 账本每轮省 **≈3.7 s**。新增 5 用例并**已取证「修复前必失败」**（两侧 guard 回退到旧实现时，4 项失败且返回陈旧指纹 `fp-cached-0000`）。 |
+| CT-1 | ChangeTracker 生产未注入 → local_changes 全链路空转（[09-12 终审](sync-full-system-audit-final-2026-09-12.md) 已立） | 二选一收敛：(a) 恢复生产注入 tracker；(b) 拆除 TSM 对 local_changes 的读端依赖。 | ✅ **按 (b) 落地（两段）**。产品侧确认 tracker 随云端协同下线（`database_providers.dart` 已注明不注入），故走 (b)：① 指纹缓存校验位 → `_contentGenerationGuard`（业务表行数+MAX(id)+SUM(updated_at)，与 local_changes 叠加；实测 3.89ms vs 全量导出 471.13ms，8 账本省 ≈3.7s/轮；5 用例已取证「修复前必失败」）；② 方向仲裁证据门禁 → `_localChangeEvidence` 改用 v40 触碰列 + `created_at` 兜底（补 INSERT），**trusted 门禁不放松**（仍是「本地确有未上云内容」的内容性断言），新增证据 c「持久痕迹晚于本机上次成功上传时刻」（锚点=`sync_op_log` 该账本 snapshot_upload+success 的 MAX(ts) ∪ 内存 `_recentUpload`）——刻意用**同机时钟锚点**，避免跨设备时钟偏移把「本机更晚」判错而静默覆盖他机数据（P1-12 保护）。6 用例含锚点正/负例与单位断言。**残留**：`transactions`/`categories` 无 created_at 且触发器不覆盖 INSERT → 跨 session 纯新增无持久墙钟（退回 unknown 弹确认，保守不丢数据）；锚点受 30 天指标保留期限制。彻底闭合仍需 (a)。 |
+| L-04 | WebDAV 路径编码口径不一致 | 输出端统一 percent-encoding，MOVE 用同一编码器。 | ✅ **已修（改为白名单拒绝，非主动编码）**。先对 `webdav_client 1.2.2` 实证取证（`scripts/live_db/run_20260920/probe_uri.dart`）：`Uri.parse`（PUT/PROPFIND）与 `Uri.encodeFull`（MOVE Destination）对 `#`/`?`/`%` 口径不一致，**主动编码会双重编码**（`%20`→`%252520`），原建议方案不可行。改为 `_disallowedPathChar` 白名单校验：拒绝 `#`/`?`/`%`/非 ASCII/`[]`/控制字符（均会导致「静默操作了另一个远端对象」），放开空格以外全部白名单字符；`list`/`getMetadata` 的 `_buildPath` 移出 try，配置错误不再被包装成存储故障。新增 10 用例。当前业务路径（UUID/hex/日期 ZIP）全在白名单内，零回归。 |
+| L-01 | 条件头未进 SignedHeaders | ② 修正注释与测试标题（零风险）。 | ✅ **已修（方案 ②）**。抽出唯一口径 `resolveSignedHeaderKeys()`（canonical headers 与 `SignedHeaders=` 曾各自内联同一表达式，存在漂移隐患），并在文档化取舍的同时移除死代码 `content-length`（S-A 决策从「调用方不放」升级为「结构上不可能放」）；修正假绿测试标题并新增 2 用例显式钉住真实签名集合。 |
+| L-05 | 四套重试参数不统一 | 收编 core 单一策略层；TSM 附件重试补 jitter。 | ◐ **部分完成**。TSM 附件重试退避补真随机 jitter（[0.5×base, base]，与四适配器同款，`attachmentRetryDelayForTest` 单测钉住区间与随机性）；core `RetryHelper` 增加「无生产调用方、勿直接接入」状态声明。**「四套参数收编单层」有意不做**：各包参数已实测调优且语义不同（S3 的 neverRetry 状态码 / WebDAV 超时不重试 / 条件写锚点安全重试），强行收编等于静默回退，收益（P3）不抵回归面。参数以 `docs/sync-reliability-params.md` 为唯一权威口径。 |
+| L-02 | S3 其余失败分支未 drain | 与 F-07 同款补齐（403/500/其他状态码分支）。 | ✅ **已修（实测复核后按真实漏点修）**。复核发现 403/500 等分支实际经 `_readErrorBody` 已消费 body，真正的漏网分支是**「读 body 但读不完」**：`http.Response.fromStream(...).timeout(...)` 超时后外层 future 被放弃、内部订阅既不取消也不消费（连接被静默弃置）；另「body 已发完、响应迟到超时」也会留下无读者响应体。已改为自行消费（`await for` + `Stream.timeout` 取消语义）并在超时放弃处挂 drain 兜底。新增 4 用例（含「流永不结束 → 超时后必须取消订阅」的回归闸门）。 |
+| L-06 | 断点续传/multipart/Range 缺失 | 当前数据规模 <5MB，维持现状。 | ● **维持设计边界**（未改动）。 |
 
 ---
 

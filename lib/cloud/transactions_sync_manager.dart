@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' show Random;
 
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:drift/drift.dart' as drift;
@@ -80,6 +81,10 @@ class TransactionsSyncManager implements SyncService {
   /// 与时间戳组合保证并发下载（semaphore 4）各自独占 tmp 文件。
   static int _attachWriteSeq = 0;
 
+  /// L-05：附件重试退避的抖动随机源。实例级，生命周期与 TSM 一致
+  /// （与 S3Client._random / WebDAVStorageService._retryRandom 同款）。
+  final Random _retryRandom = Random();
+
   final Map<int, _CachedStatus> _statusCache = {};
   final Map<int, DateTime> _recentLocalChangeAt = {};
   final Map<int, _RecentUpload> _recentUpload = {};
@@ -95,8 +100,13 @@ class TransactionsSyncManager implements SyncService {
   /// 校验位兜底的意义：recordChanges:false 的导入路径不写 local_changes，
   /// 但其触发的 UI 后处理（PostProcessor.markLocalChanged）与导入
   /// 恢复后 recompute 快照等场景中，tracker 回调 + 校验位双保险覆盖。
-  final Map<int, ({String fingerprint, String changeGuard})> _localFpCache =
-      {};
+  ///
+  /// `count` 随指纹一并缓存（L-03）：命中路径没有 JSON 产物，
+  /// 而 count 是包内方向判定（墙钟不可信时的兜底）的输入；不缓存等于
+  /// 每次命中都要重新全量导出才能拿到它，缓存收益归零。`null` 表示
+  /// 「登记方不知道」（如仅有指纹的上传成功登记路径），消费方按未知处理。
+  final Map<int, ({String fingerprint, int? count, String changeGuard})>
+      _localFpCache = {};
 
   /// P2-1：清理过的指纹缓存条目集合（ledgerId 删除后防复活）。
   /// 与 [_localFpCache] 分开存：删除账本后 MAX(id) 校验位可能恒定不变，
@@ -881,50 +891,184 @@ class TransactionsSyncManager implements SyncService {
   ///
   /// M1：之前取 `MAX(happened_at)`（业务时间）——补录历史账是记账 App 的
   /// 高频操作，MAX(happened_at) 停在过去，与云端 uploadedAt（上传墙钟）
-  /// 比较必然误判方向（本地新数据被判「云端较新」，启动检查弹错误提示；
-  /// 反向误判则触发无意义覆盖上传）。
+  /// 比较必然误判方向。
   ///
-  /// 现在三层来源，全部墙钟语义：
-  /// 1. `_recentLocalChangeAt`：本 session 内存墙钟（写路径已登记）→ 可信；
-  /// 2. `MAX(local_changes.created_at)`（本账本 + user-global ledger_id=0
-  ///    —— 账户/分类/标签改动同样改变快照内容）：持久化墙钟。**仅当该
-  ///    作用域存在未推送行时才可信** —— 未推送行证明最后一次记录的编辑
-  ///    尚未上云，时间戳与内容新旧状态一致；
-  /// 3. 全部已推送 / 无任何行：时间戳只能证明「上次同步前有过编辑」，
-  ///    无法排除其后 recordChanges:false 导入（快照恢复 / fullPull /
-  ///    云端账本导入都不写 local_changes）带来的内容变化 → 标记不可信。
-  ///    仲裁方对不可信证据必须按「方向未知」处理：宁可多弹一次合并
-  ///    确认，也不能凭失真时间戳自动放行覆盖（丢云端他机数据）或误报
-  ///    「云端较新」（诱导用户放弃本地更新数据）。
+  /// CT-1（2026-09-21，(b) 路线第二段）：证据源**从 local_changes 切到
+  /// v40 业务表触碰列**。旧实现读 `MAX(local_changes.created_at)` + 未推送
+  /// 行数，但生产快照装配不注入 ChangeTracker（`database_providers.dart:31-34`），
+  /// 该表**恒空** → dbMax 恒 null、unpushed 恒 0 → `trusted` 恒 false →
+  /// 方向仲裁在生产上永久退化为 'unknown'（每次上传差异都弹人工确认），
+  /// P1-12 的墙钟可信度透传也形同虚设。
+  ///
+  /// 现证据 = 下列「本机写入动作本身留下」的墙钟取最大值（全部墙钟语义）：
+  /// 1. `_recentLocalChangeAt`：本 session 内存墙钟（写路径已登记）；
+  /// 2. v40 触碰列 `MAX(updated_at)`：transactions/categories/tags/accounts/
+  ///    ledgers 由 `trg_*_touch_updated_at` 在 UPDATE 时自动盖章；
+  ///    budgets/recurring_transactions/exchange_rate_overrides 由仓储
+  ///    更新路径显式写 `now()`；
+  /// 3. `MAX(created_at)` 兜底（补 INSERT —— 触发器不覆盖 INSERT）：
+  ///    accounts / tags / budgets / recurring_transactions / ledgers /
+  ///    transaction_attachments（按本账本限定）；
+  /// 4. `MAX(local_changes.created_at)`：**保留为叠加源**（测试装配 /
+  ///    未来重新注入 tracker 时有效；它是一条真实写时刻，不会引入不实）。
+  /// 作用域 = 本账本 + user-global（账户/分类/标签/汇率覆盖改动同样改变
+  /// 快照内容，故一并纳入）。
+  ///
+  /// 另读一个**锚点**（不参与 at，只判可信度）：`sync_op_log` 中本账本
+  /// `snapshot_upload`+`success` 的 `MAX(ts)`（本机时钟；配合内存
+  /// `_recentUpload` 取较新者）= 本机上次成功上传该账本的时刻。
+  ///
+  /// `trusted` 门禁**不放松**，仍是「本地确有未上云内容」这一内容性断言
+  /// （旧实现的 `unpushed > 0` 就是这个断言，只是生产恒 0 而失效）。三条
+  /// 证据任一成立即可信：
+  /// a. 本 session 写路径已登记（`_recentLocalChangeAt`，原有语义）；
+  /// b. `local_changes` 存在未推送行（原有语义；生产恒 0，兼容测试装配
+  ///    与未来重新注入 tracker）；
+  /// c. **新增**：持久写入痕迹**晚于本机上次成功上传本账本的时刻**。
+  ///
+  /// 为什么 c 要用「同机时钟锚点」而不是直接 `at != null`：方向仲裁里
+  /// `localAt > remoteAt` 会**静默放行覆盖云端**（破坏性方向），而 remoteAt
+  /// 来自上传方设备的时钟（可能不是本机）。若把 trusted 放宽成「有写痕迹
+  /// 就信」，则两台设备时钟偏移（例如对方时钟慢 2 小时）会让「本机写得更晚」
+  /// 被误判成立 → 静默盖掉对方刚上传的数据，破坏 P1-12 刻意保留的保护。
+  /// 用 c 的条件则两**端都是本机时钟**（我们的写时刻 vs 我们上次上传时刻），
+  /// 无偏移风险，且结论正是「我们上传之后又写过内容」⟹ 本地必有未上云内容，
+  /// 与 b 同强度。锚点缺失（本机从未上传过该账本 / 指标表 30 天滚动清理）
+  /// 时 c 不成立 → 退回 a/b，跨设备情形保持 'unknown' 让用户确认。
+  ///
+  /// 已知缺口（备案）：`transactions` / `categories` **没有 created_at 列**，
+  /// 而 v40 触发器不覆盖 INSERT → 跨 session 的**纯新增**（记一笔新交易、
+  /// 建一个新分类）不留任何持久墙钟，只能靠 ①（同 session 内存）覆盖。
+  /// 若该账本此后再无其它表触碰，`at` 停在旧值 → c 不成立 → 'unknown'
+  /// → 弹人工确认（保守，不丢数据）。彻底闭合需在生产重新注入 ChangeTracker
+  /// （审计 CT-1 方案 (a)：改动一行，同时复活 55 处登记点、markSnapshotPushed、
+  /// 指纹缓存校验位与 tracker 回调）。
   Future<({DateTime? at, bool trusted})> _localChangeEvidence(
       int ledgerId) async {
-    DateTime? dbMax;
-    var unpushed = 0;
-    try {
-      final maxQuery = db.selectOnly(db.localChanges)
-        ..addColumns([db.localChanges.createdAt.max()])
-        ..where(db.localChanges.ledgerId.isIn([ledgerId, 0]));
-      final row = await maxQuery.getSingleOrNull();
-      dbMax = row?.read(db.localChanges.createdAt.max());
-
-      final countQuery = db.selectOnly(db.localChanges)
-        ..addColumns([db.localChanges.id.count()])
-        ..where(db.localChanges.pushedAt.isNull() &
-            db.localChanges.ledgerId.isIn([ledgerId, 0]));
-      final cntRow = await countQuery.getSingleOrNull();
-      unpushed = cntRow?.read(db.localChanges.id.count()) ?? 0;
-    } catch (e) {
-      logger.warning('CloudSync', '读取本地 local_changes 变更证据失败: $e');
-    }
-
+    // ① 本 session 内存墙钟（写路径已登记）——本机时钟，硬证据
     final recentChange = _recentLocalChangeAt[ledgerId];
-    if (recentChange != null) {
-      return (
-        at: dbMax == null || recentChange.isAfter(dbMax) ? recentChange : dbMax,
-        trusted: true,
-      );
+
+    DateTime? persistedAt; // 持久化写入痕迹的最大值（本机时钟）
+    DateTime? anchor; // 本机上次成功上传本账本的时刻（同机时钟锚点）
+    var unpushed = 0; // local_changes 未推送行数（叠加证据，生产恒 0）
+
+    // ②③④⑤ 单条 SQL（避免 N 次往返）
+    try {
+      final row = await db.customSelect(
+        '''
+        SELECT
+          (SELECT MAX(updated_at) FROM transactions WHERE ledger_id = ?) AS tx_u,
+          (SELECT MAX(updated_at) FROM budgets WHERE ledger_id = ?) AS bg_u,
+          (SELECT MAX(created_at) FROM budgets WHERE ledger_id = ?) AS bg_c,
+          (SELECT MAX(updated_at) FROM recurring_transactions WHERE ledger_id = ?) AS rc_u,
+          (SELECT MAX(created_at) FROM recurring_transactions WHERE ledger_id = ?) AS rc_c,
+          (SELECT MAX(updated_at) FROM ledgers WHERE id = ?) AS lg_u,
+          (SELECT MAX(created_at) FROM ledgers WHERE id = ?) AS lg_c,
+          (SELECT MAX(updated_at) FROM accounts) AS ac_u,
+          (SELECT MAX(created_at) FROM accounts) AS ac_c,
+          (SELECT MAX(updated_at) FROM categories) AS ca_u,
+          (SELECT MAX(updated_at) FROM tags) AS tg_u,
+          (SELECT MAX(created_at) FROM tags) AS tg_c,
+          (SELECT MAX(updated_at) FROM exchange_rate_overrides) AS ex_u,
+          (SELECT MAX(ta.created_at)
+             FROM transaction_attachments ta
+             JOIN transactions t ON t.id = ta.transaction_id
+            WHERE t.ledger_id = ?) AS att_c,
+          (SELECT MAX(created_at) FROM local_changes
+            WHERE ledger_id IN (?, 0)) AS lc_c,
+          (SELECT COUNT(*) FROM local_changes
+            WHERE pushed_at IS NULL AND ledger_id IN (?, 0)) AS lc_n,
+          (SELECT MAX(ts) FROM sync_op_log
+            WHERE ledger_id = ?
+              AND scenario = 'snapshot_upload'
+              AND outcome = 'success') AS up_a
+        ''',
+        // 占位符共 11 个（tx_u/bg_u/bg_c/rc_u/rc_c/lg_u/lg_c/att_c/lc_c/lc_n/up_a），
+        // 必须与下面 variables 数量一致 —— 少给会整条语句抛错并被 catch 吞成
+        // 「无证据」，静默退化为恒 unknown（用测试正面断言钉住）。
+        variables: [
+          drift.Variable.withInt(ledgerId),
+          drift.Variable.withInt(ledgerId),
+          drift.Variable.withInt(ledgerId),
+          drift.Variable.withInt(ledgerId),
+          drift.Variable.withInt(ledgerId),
+          drift.Variable.withInt(ledgerId),
+          drift.Variable.withInt(ledgerId),
+          drift.Variable.withInt(ledgerId),
+          drift.Variable.withInt(ledgerId),
+          drift.Variable.withInt(ledgerId),
+          drift.Variable.withInt(ledgerId),
+        ],
+        readsFrom: {
+          db.transactions,
+          db.budgets,
+          db.recurringTransactions,
+          db.ledgers,
+          db.accounts,
+          db.categories,
+          db.tags,
+          db.exchangeRateOverrides,
+          db.transactionAttachments,
+          db.localChanges,
+          db.syncOpLog,
+        },
+      ).getSingle();
+
+      // 时间列统一为 drift 的 epoch **秒** INTEGER 存储（v40 注释 + 实库
+      // 取证：1789913942 → 2026-09-20），故 ×1000 还原为毫秒时间戳。
+      DateTime? readAt(String key) {
+        final secs = row.read<int?>(key);
+        return secs == null
+            ? null
+            : DateTime.fromMillisecondsSinceEpoch(secs * 1000, isUtc: false);
+      }
+
+      final persisted = <DateTime>[
+        for (final key in const [
+          'tx_u', 'bg_u', 'bg_c', 'rc_u', 'rc_c', 'lg_u', 'lg_c',
+          'ac_u', 'ac_c', 'ca_u', 'tg_u', 'tg_c', 'ex_u', 'att_c', 'lc_c',
+        ])
+          if (readAt(key) != null) readAt(key)!,
+      ]..sort();
+      persistedAt = persisted.isEmpty ? null : persisted.last;
+
+      unpushed = row.read<int?>('lc_n') ?? 0;
+      anchor = readAt('up_a');
+    } catch (e) {
+      // 读取失败：退回「无持久证据」——trust 门禁随之为 false，仲裁方按
+      // unknown 处理（保守多弹窗，绝不凭缺失证据放行覆盖）
+      logger.warning('CloudSync', '读取本地写入痕迹证据失败: $e');
     }
-    return (at: dbMax, trusted: unpushed > 0);
+
+    // 内存锚点：本 session 上次成功上传（_recentUpload）——同机时钟，
+    // 与持久锚点取较新者
+    final memAnchor = _recentUpload[ledgerId]?.at;
+    if (memAnchor != null && (anchor == null || memAnchor.isAfter(anchor))) {
+      anchor = memAnchor;
+    }
+
+    final candidates = <DateTime>[
+      if (recentChange != null) recentChange,
+      if (persistedAt != null) persistedAt,
+    ];
+    if (candidates.isEmpty) return (at: null, trusted: false);
+    candidates.sort();
+
+    // trust 门禁 = 「本地确有未上云内容」的三条证据（任一成立）：
+    //   a. 本 session 写路径已登记（原有语义）；
+    //   b. local_changes 存在未推送行（原有语义；生产恒 0，兼容测试装配
+    //      与未来重新注入 tracker）；
+    //   c. 【新增】持久写入痕迹**晚于本机上次成功上传本账本的时刻** ——
+    //      两端同为本机时钟，无跨设备偏移风险，可直接断言「本地在我们
+    //      上次上传之后又写过本快照内容」⟹ 确有未上云内容。
+    //      反例边界：若该账本本机从未上传（无锚点），c 不成立 → 退回
+    //      a/b；跨设备场景（对方快照 vs 我的本地）本就无法用同机时钟
+    //      判定，保持 unknown 让用户确认才是正确取舍。
+    final wroteAfterLastUpload =
+        persistedAt != null && anchor != null && persistedAt.isAfter(anchor);
+    final trusted =
+        recentChange != null || unpushed > 0 || wroteAfterLastUpload;
+    return (at: candidates.last, trusted: trusted);
   }
 
   /// 方向判断用的本地墙钟（getStatus 透传给 flutter_cloud_sync 做展示级
@@ -942,12 +1086,9 @@ class TransactionsSyncManager implements SyncService {
     return evidence.at;
   }
 
-  /// P1-12：[getStatus] 用的墙钟可信度（与 [_computeLocalUpdatedAt]
-  /// 同一证据源）。
-  Future<bool> _localUpdatedAtTrusted(int ledgerId) async {
-    final evidence = await _localChangeEvidence(ledgerId);
-    return evidence.trusted;
-  }
+  // P1-12 的墙钟可信度（localUpdatedAtTrusted）原由 _localUpdatedAtTrusted()
+  // 单独取；CT-1 改造后 [getStatus] 一次 [_localChangeEvidence] 同时拿到
+  // at/trusted（同源查询避免算两遍），该单字段包装已无调用方，故移除。
 
   @override
   Future<UploadLedgerResult> uploadCurrentLedger(
@@ -1153,8 +1294,9 @@ class TransactionsSyncManager implements SyncService {
           count: localCount,
         );
         // P2-1：上传刚导出的指纹登记进本地缓存——上传后紧随的
-        // getStatus（UI 刷新同步状态）命中缓存，零导出
-        await rememberLocalFingerprint(ledgerId, localFp);
+        // getStatus（UI 刷新同步状态）命中缓存，零导出。
+        // L-03：count 一并登记，命中路径无需再为了拿 count 全量导出。
+        await rememberLocalFingerprint(ledgerId, localFp, count: localCount);
         // 立即更新缓存为"已同步"状态
         _statusCache[ledgerId] = _CachedStatus(
           SyncStatus(
@@ -1713,6 +1855,18 @@ class TransactionsSyncManager implements SyncService {
     return null;
   }
 
+  /// L-05：附件重试退避时长（base 的 [0.5×base, base] 区间真随机抖动）。
+  ///
+  /// [attempt] 从 0 起：base = 1s / 2s（3 次总尝试 ⇒ 2 次退避）。
+  /// 方法名 ForTest 后缀为测试专用约定（与 `S3Client.retryDelayForTest`
+  /// 同款，不依赖 @visibleForTesting 注解）。
+  Duration attachmentRetryDelayForTest(int attempt, [Random? rng]) {
+    final random = rng ?? _retryRandom;
+    final baseMs = (1 << attempt) * 1000;
+    return Duration(
+        milliseconds: baseMs ~/ 2 + random.nextInt(baseMs ~/ 2 + 1));
+  }
+
   /// 单个附件对象下载 + 校验 + 落盘,3 次指数退避重试。
   ///
   /// sha256 校验必做:内容寻址的信任根基是"路径即哈希",不校验就把
@@ -1770,7 +1924,13 @@ class TransactionsSyncManager implements SyncService {
       } catch (e) {
         lastError = e;
         if (attempt < 2) {
-          await Future.delayed(Duration(seconds: 1 << attempt));
+          // L-05：退避加真随机抖动（base 的 [0.5×base, base] 区间），与
+          // S3/WebDAV/Supabase/iCloud 四个适配器同款。附件对象是**内容
+          // 寻址、多端共享**的云端对象，多台设备恢复同一账本时若退避完全
+          // 同相（原实现固定 1s/2s），瞬时故障后会在同一时刻集中重试。
+          // 纪律见 docs/sync-reliability-params.md §二「多端共享的重试路径
+          // 必须有真随机 jitter」。
+          await Future.delayed(attachmentRetryDelayForTest(attempt));
         }
       }
     }
@@ -2084,11 +2244,10 @@ class TransactionsSyncManager implements SyncService {
     try {
       // 计算本地指纹（P2-1：优先走指纹缓存——冷启动首轮 getStatus 曾对
       // 每个账本全量导出算指纹，大账本 CPU 重；缓存 + 变更校验位命中时
-      // 直接复用，跳过导出。jsonStr 为 null 表示走缓存路径，下方按需
-      // 传给 manager 的 F6 复用参数随之省略——manager 内部会自行导出，
-      // 退化为旧行为一次，不影响正确性）
-      final local =
-          await _localFingerprintWithCache(ledgerId);
+      // 直接复用，跳过导出。jsonStr 为 null 表示走缓存路径——此时指纹
+      // 依然可信，作为 localFingerprint 透传给 manager，包内连序列化都
+      // 不做，缓存收益才真正落地（L-03））
+      final local = await _localFingerprintWithCache(ledgerId);
       final localFp = local.fingerprint;
       final localCount = local.count;
       final jsonStr = local.jsonStr;
@@ -2100,7 +2259,7 @@ class TransactionsSyncManager implements SyncService {
         if (age < const Duration(seconds: 15) && ru.fp == localFp) {
           final st = SyncStatus(
             diff: SyncDiff.inSync,
-            localCount: localCount,
+            localCount: localCount ?? 0,
             localFingerprint: localFp,
             cloudCount: ru.count,
             cloudFingerprint: ru.fp,
@@ -2122,23 +2281,28 @@ class TransactionsSyncManager implements SyncService {
 
       logger.info('CloudSync', '获取同步状态: $ledgerId');
 
-      // 调用包的 getStatus，传入时间戳用于方向判断
+      // 调用包的 getStatus，传入时间戳用于方向判断。
+      // 证据只取一次：_computeLocalUpdatedAt 与 _localUpdatedAtTrusted 同源，
+      // 分别调用会把同一条证据查询算两遍（CT-1 改造后该查询是 15 个子查询）。
+      final evidence = await _localChangeEvidence(ledgerId);
       final fcsStatus = await manager.getStatus(
           data: ledgerId,
           path: await pathForLedger(ledgerId),
-          localUpdatedAt: await _computeLocalUpdatedAt(ledgerId),
-          // P1-12：墙钟可信度透传（无未推送行时 core 不做时间戳方向断言）
-          localUpdatedAtTrusted: await _localUpdatedAtTrusted(ledgerId),
+          localUpdatedAt: evidence.at,
+          // P1-12：墙钟可信度透传（证据不可信时 core 不做时间戳方向断言）
+          localUpdatedAtTrusted: evidence.trusted,
           forceRefresh: true,
           // F6：复用上方已导出的 JSON，省去 manager 内部对同一账本的
-          // 第二次全量导出（P2-1 缓存命中路径 jsonStr 为 null，包内
-          // 按需自行导出——该场景云端指纹必然要全量下载比对，导出
-          // 无法避免，不构成退化）
+          // 第二次全量导出
           localSerializedData: jsonStr,
           // F6 延伸：localMap 是同一份 payload 的已解析形态，count
-          // 直接透传，manager 跳过第二次 jsonDecode（缓存命中路径
-          // count=0 时省略——包内自行重算，避免拿 0 当真实 count）
-          localParsedCount: jsonStr != null ? localCount : null);
+          // 直接透传，manager 跳过第二次 jsonDecode；null 表示未知，
+          // 由包内按「无 count 证据」处理，不臆造 0
+          localParsedCount: localCount,
+          // L-03：缓存命中路径没有 JSON 产物，但指纹现成——不透传的话
+          // 包内会为了算指纹把整个账本再全量导出解析一次，P2-1 想省掉的
+          // 开销被原样付回（表现为「缓存命中却仍然卡」）
+          localFingerprint: localFp);
 
       // 转换包的 SyncStatus 为 PiggyCount 的 SyncStatus
       final status = _convertSyncStatus(fcsStatus);
@@ -2346,6 +2510,12 @@ class TransactionsSyncManager implements SyncService {
   /// 其他写后单调增会反映出来；纯 suppressed 导入后 UI 刷新通常伴
   /// 随 markLocalChanged 主动失效）。两条防线（tracker 回调 + 校验位）
   /// 任一发现变化都会失效。
+  ///
+  /// ⚠️ 生产快照装配下本表**恒为空**（ChangeTracker 随云端协同下线不再
+  /// 注入，[LocalRepository] 里所有 local_changes 写入都挂在
+  /// `changeTracker != null` 分支），故本校验位单独不足以作为新鲜度
+  /// 依据 —— 真正的生产信号见 [_contentGenerationGuard]（本方法作为
+  /// 叠加信号保留，兼容测试装配与未来重新注入 tracker 的场景）。
   Future<String> _localChangeGuard() async {
     try {
       final maxQuery = db.selectOnly(db.localChanges)
@@ -2363,23 +2533,129 @@ class TransactionsSyncManager implements SyncService {
     }
   }
 
+  /// L-03 加固：**生产可用的**本地内容代际（指纹缓存新鲜度信号）。
+  ///
+  /// 为什么必须有它：核心 API 透传缓存指纹后（L-03），缓存不新鲜会直接
+  /// 影响同步状态判定，而指纹缓存原有两道防线在生产**双双失效**：
+  /// ① `ChangeTracker.onLocalContentGeneration` 回调 —— 生产不注入
+  /// tracker；② `local_changes` 校验位 —— 生产业务写不写该表。于是只剩
+  /// `markLocalChanged` / `clearStatusCache` 两个显式失效点，任何漏走
+  /// PostProcessor 的写入都会让缓存陈旧。
+  ///
+  /// 信号 = 快照内容所涉各表在本机上的「行数 + 最大 id + updated_at 累加」：
+  /// - `transactions` / `categories` / `tags` / `accounts` / `ledgers`：
+  ///   v40 触发器 `trg_*_touch_updated_at` 在 UPDATE 时自动盖时间戳；
+  /// - `budgets` / `recurring_transactions` / `exchange_rate_overrides`：
+  ///   仓储更新路径显式写 `updatedAt = now()`（无触发器但同样可靠）；
+  /// - `transaction_tags` / `transaction_attachments` / `transaction_tag_overrides`：
+  ///   只增删不改写，COUNT + MAX(id) 已覆盖（附件的 sortOrder/localSha256
+  ///   回填不影响快照内容清单，属可忽略的伪失效）。
+  ///
+  /// 作用域：账本内表按 `ledger_id` 限定；user-global 表（账户/分类/标签/
+  /// 汇率覆盖）取全表 —— 每份快照都携带全量账户/分类/标签，任一改动都必须
+  /// 让所有账本的缓存失效（与 `invalidateLocalFingerprintCache()` 全量
+  /// 失效的语义一致）。
+  ///
+  /// 成本：一条 11 个子查询的聚合（最重的是本账本 5000 行交易的
+  /// `SUM(updated_at)` 与标签关联 join），远低于一次全量导出
+  /// （取数 + 建 map + jsonEncode 1.7MB + sha256）。
+  ///
+  /// 已知残余窗口（备案）：触发器用 `strftime('%s')` 秒级精度，同一行在
+  /// 同一秒内被连续 UPDATE 两次、且该写入路径未走 `markLocalChanged`
+  /// 时，updated_at/COUNT/MAX(id) 均不变 → 代际不变。正常 UI 编辑都要走
+  /// PostProcessor → markLocalChanged（显式失效），故窗口极窄。
+  Future<String> _contentGenerationGuard(int ledgerId) async {
+    // 叠加信号：local_changes（测试装配 / 未来重新注入 tracker 时有效）
+    final localChanges = await _localChangeGuard();
+    try {
+      final row = await db.customSelect(
+        '''
+        SELECT
+          (SELECT COALESCE(MAX(id), -1) || ':' || COUNT(*) || ':' || COALESCE(SUM(updated_at), -1)
+             FROM transactions WHERE ledger_id = ?) AS tx,
+          (SELECT COALESCE(MAX(id), -1) || ':' || COUNT(*) || ':' || COALESCE(SUM(updated_at), -1)
+             FROM budgets WHERE ledger_id = ?) AS bg,
+          (SELECT COALESCE(MAX(id), -1) || ':' || COUNT(*) || ':' || COALESCE(SUM(updated_at), -1)
+             FROM recurring_transactions WHERE ledger_id = ?) AS rc,
+          (SELECT COALESCE(MAX(tt.id), -1) || ':' || COUNT(*)
+             FROM transaction_tags tt
+             JOIN transactions t ON t.id = tt.transaction_id
+            WHERE t.ledger_id = ?) AS tt,
+          (SELECT COALESCE(MAX(ta.id), -1) || ':' || COUNT(*)
+             FROM transaction_attachments ta
+             JOIN transactions t ON t.id = ta.transaction_id
+            WHERE t.ledger_id = ?) AS ta,
+          (SELECT COALESCE(MAX(id), -1) || ':' || COUNT(*) || ':' || COALESCE(SUM(updated_at), -1)
+             FROM accounts) AS ac,
+          (SELECT COALESCE(MAX(id), -1) || ':' || COUNT(*) || ':' || COALESCE(SUM(updated_at), -1)
+             FROM categories) AS ca,
+          (SELECT COALESCE(MAX(id), -1) || ':' || COUNT(*) || ':' || COALESCE(SUM(updated_at), -1)
+             FROM tags) AS tg,
+          (SELECT COALESCE(MAX(id), -1) || ':' || COUNT(*) || ':' || COALESCE(SUM(updated_at), -1)
+             FROM exchange_rate_overrides) AS ex,
+          (SELECT COUNT(*) FROM transaction_tag_overrides) AS ov,
+          COALESCE((SELECT COALESCE(updated_at, -1) || ':' || month_start_day || ':' ||
+                           name || ':' || currency || ':' || COALESCE(sync_id, '')
+                      FROM ledgers WHERE id = ?), '-') AS lg
+        ''',
+        variables: [
+          drift.Variable.withInt(ledgerId),
+          drift.Variable.withInt(ledgerId),
+          drift.Variable.withInt(ledgerId),
+          drift.Variable.withInt(ledgerId),
+          drift.Variable.withInt(ledgerId),
+          drift.Variable.withInt(ledgerId),
+        ],
+        readsFrom: {
+          db.transactions,
+          db.budgets,
+          db.recurringTransactions,
+          db.transactionTags,
+          db.transactionAttachments,
+          db.accounts,
+          db.categories,
+          db.tags,
+          db.exchangeRateOverrides,
+          db.transactionTagOverrides,
+          db.ledgers,
+        },
+      ).getSingle();
+
+      const keys = ['tx', 'bg', 'rc', 'tt', 'ta', 'ac', 'ca', 'tg', 'ex', 'ov', 'lg'];
+      final parts = <String>[
+        for (final k in keys) row.read<String?>(k) ?? '',
+        localChanges,
+      ];
+      return parts.join('|');
+    } catch (e) {
+      // 查询失败：返回随机值强制失效（宁可多算不可漏算）
+      logger.warning('CloudSync', '本地内容代际查询失败，强制失效指纹缓存: $e');
+      return 'err/${DateTime.now().microsecondsSinceEpoch}';
+    }
+  }
+
   /// 取本地指纹（P2-1 缓存路径）。
   ///
   /// 命中且校验位不变 → 复用上次导出的指纹，跳过全量导出（冷启动/
   /// 缓存过期后的 getStatus 主要 CPU 成本归零）；否则全量导出并刷新
   /// 缓存。上传成功路径调用 [rememberLocalFingerprint] 登记后同样受益。
-  Future<({String fingerprint, int count, String? jsonStr})>
+  ///
+  /// 返回的 `jsonStr` 为 null 即「走缓存路径」——此时指纹仍然可信，
+  /// 消费方须把它作为 `localFingerprint` 透传给 [CloudSyncManager.getStatus]，
+  /// 否则包内会为了算指纹再全量导出一次（L-03）。`count` 同样随缓存
+  /// 一并给出，登记方不知道时为 null。
+  Future<({String fingerprint, int? count, String? jsonStr})>
       _localFingerprintWithCache(int ledgerId) async {
-    final guard = await _localChangeGuard();
+    final guard = await _contentGenerationGuard(ledgerId);
     final cached = _localFpCache[ledgerId];
     if (cached != null &&
         !_localFpCacheInvalidated.contains(ledgerId) &&
         cached.changeGuard == guard) {
       logger.debug('CloudSync',
-          '本地指纹走缓存: ledgerId=$ledgerId (guard=$guard)');
+          '本地指纹走缓存: ledgerId=$ledgerId (guard=$guard, count=${cached.count})');
       return (
         fingerprint: cached.fingerprint,
-        count: 0, // count 缓存未存——复用方需 count 时另行查询或全量导出
+        count: cached.count,
         jsonStr: null,
       );
     }
@@ -2389,7 +2665,11 @@ class TransactionsSyncManager implements SyncService {
     final jsonStr = exported.jsonStr;
     final fp = exported.fingerprint;
     final count = exported.count;
-    _localFpCache[ledgerId] = (fingerprint: fp, changeGuard: guard);
+    _localFpCache[ledgerId] = (
+      fingerprint: fp,
+      count: count,
+      changeGuard: guard,
+    );
     _localFpCacheInvalidated.remove(ledgerId);
     return (fingerprint: fp, count: count, jsonStr: jsonStr);
   }
@@ -2397,11 +2677,18 @@ class TransactionsSyncManager implements SyncService {
   /// 上传/导出路径已有全量导出结果时登记进缓存（省去 getStatus 侧
   /// 重复导出）。guard 以登记时刻现算——登记前的写操作已包含在
   /// 导出的内容里，无漏判。
+  ///
+  /// [count] 可选：上传路径手上就有导出产物里的条目数，传进来可让
+  /// 后续缓存命中路径连 count 也不必重算（L-03）。
+  ///
+  /// guard 用 [_contentGenerationGuard]（业务表代际 + local_changes），
+  /// 而非仅 local_changes —— 后者在生产快照装配下恒为空。
   Future<void> rememberLocalFingerprint(
-      int ledgerId, String fingerprint) async {
+      int ledgerId, String fingerprint, {int? count}) async {
     _localFpCache[ledgerId] = (
       fingerprint: fingerprint,
-      changeGuard: await _localChangeGuard(),
+      count: count,
+      changeGuard: await _contentGenerationGuard(ledgerId),
     );
     _localFpCacheInvalidated.remove(ledgerId);
   }
@@ -2419,6 +2706,13 @@ class TransactionsSyncManager implements SyncService {
     return r.fingerprint;
   }
 
+  /// 测试钩子（@visibleForTesting）：取方向仲裁用的本地写入痕迹证据。
+  /// 生产代码禁止使用——`_detectUploadConflict` / getStatus 才是正式消费方。
+  @visibleForTesting
+  Future<({DateTime? at, bool trusted})> localChangeEvidenceForTesting(
+          int ledgerId) =>
+      _localChangeEvidence(ledgerId);
+
   /// M7：上传前冲突判定。返回探测结果：
   /// - [UploadProbe.direction] 非 null = 冲突（'cloudNewer'/'unknown'），禁止盲传；
   /// - null = 可安全上传；
@@ -2433,10 +2727,10 @@ class TransactionsSyncManager implements SyncService {
   ///    （[_localChangeEvidence]）：
   ///    - 可信且本地较新 = 正常覆盖语义放行；
   ///    - 可信且云端较新 = 覆盖会丢另一台设备的同步 → 冲突 'cloudNewer'；
-  ///    - 时间相同 / 本地无证据 / **证据不可信**（全已推送或无行 ——
-  ///      recordChanges:false 导入会让纯 local_changes 时间戳失真，
-  ///      既可能把新数据判旧放行覆盖、也可能把旧数据判新误报云端较新）
-  ///      → 'unknown' 冲突，由上层给出「对比合并」入口而非二选一；
+  ///    - 时间相同 / 本地无证据 / **证据不可信**（无任何本机写入痕迹：
+  ///      跨 session 的纯 INSERT 不留 updated_at/created_at，见
+  ///      [_localChangeEvidence] 的缺口备案）→ 'unknown' 冲突，由上层给出
+  ///      「对比合并」入口而非二选一；
   /// 4. 探测自身失败（网络等）→ **中止上传**（审计 A5 策略变更）：
   ///    旧取舍「可用性优先、行为等同旧版」意味着网络抖动时可能盖掉他机
   ///    刚写入的数据且用户毫不知情；改为抛出带指引的错误，重试即可恢复

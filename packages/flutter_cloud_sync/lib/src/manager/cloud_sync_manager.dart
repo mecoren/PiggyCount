@@ -430,6 +430,15 @@ class CloudSyncManager<T> {
   /// 导入路径（不写 local_changes）。count 对比兜底保留 —— count
   /// 是内容性证据而非墙钟，不受时钟偏移影响。
   /// [forceRefresh] - Bypass cache and fetch fresh status
+  /// [localSerializedData] - 调用方已持有的序列化结果（省去一次全量导出）
+  /// [localParsedCount] - 调用方已持有的条目数（省去一次 jsonDecode）
+  /// [localFingerprint] - 调用方已计算好的本地内容指纹。与
+  /// [localSerializedData] / [localParsedCount] 同族的「预计算复用」入参：
+  /// 传入且未传 [localSerializedData] 时，**连序列化都不做**，直接用该
+  /// 指纹参与比对。调用方（TSM 指纹缓存命中路径）手上只有指纹、没有
+  /// JSON，不给这个入参就只能让本方法重新全量导出一次 —— 那正是
+  /// 「指纹缓存」想省掉的开销，收益被完全抵消。调用方须保证该指纹与
+  /// 当前 data 表示的内容一致（本方法不做二次校验）。
   ///
   /// Returns [SyncStatus] with current sync state, direction, and timestamps.
   ///
@@ -455,6 +464,7 @@ class CloudSyncManager<T> {
     bool forceRefresh = false,
     String? localSerializedData,
     int? localParsedCount,
+    String? localFingerprint,
   }) async {
     logger?.debug('Getting sync status: $path (forceRefresh: $forceRefresh)');
 
@@ -482,21 +492,29 @@ class CloudSyncManager<T> {
       }
 
       // 3. Calculate local fingerprint and extract metadata if data provided
-      String? localFingerprint;
+      String? localFp;
       int? localCount;
       String? localData;
 
       if (data != null) {
         // F6：调用方已持有序列化结果时直接复用，避免同一次状态检查内
         // 对同一账本做第二次全量导出（快照导出在大账本上代价可观）。
-        localData = localSerializedData ?? await serializer.serialize(data);
-        localFingerprint = serializer.fingerprint(localData);
+        //
+        // L-03：调用方已持有**可信指纹**时连序列化都不做。TSM 指纹缓存
+        // 命中路径手上只有指纹没有 JSON，旧实现只能让这里重新全量导出
+        // 一次 —— 恰好把缓存省下的开销又付了回去。
+        localData = localSerializedData ??
+            (localFingerprint == null ? await serializer.serialize(data) : null);
+        localFp = localFingerprint ?? serializer.fingerprint(localData!);
 
         // localParsedCount：调用方（TSM.getStatus）已 jsonDecode 过同一份
         // payload 提取 count 时直接复用，跳过对大快照的第二次解析。
-        localCount = localParsedCount ?? _extractTopLevelCount(localData);
+        // 无序列化产物（预计算指纹路径）且调用方未给 count 时保持 null，
+        // 由方向判定退化为「未知」，不臆造 0。
+        localCount = localParsedCount ??
+            (localData != null ? _extractTopLevelCount(localData) : null);
 
-        logger?.debug('Local fingerprint: $localFingerprint, count: $localCount');
+        logger?.debug('Local fingerprint: $localFp, count: $localCount');
       }
 
       // 4. Check if cloud file exists
@@ -505,7 +523,7 @@ class CloudSyncManager<T> {
       if (cloudFile == null) {
         final status = SyncStatus(
           state: SyncState.localOnly,
-          localFingerprint: localFingerprint,
+          localFingerprint: localFp,
           message: 'No cloud backup found',
         );
         _cacheStatus(path, status);
@@ -590,7 +608,7 @@ class CloudSyncManager<T> {
       SyncDirection? direction;
       String? message;
 
-      if (localFingerprint == null) {
+      if (localFp == null) {
         // No local data to compare, just report cloud state
         state = SyncState.synced;
         message = 'Cloud backup exists';
@@ -599,7 +617,7 @@ class CloudSyncManager<T> {
         state = SyncState.localOnly;
         direction = SyncDirection.localNewer;
         message = 'No cloud backup';
-      } else if (localFingerprint == cloudFingerprint) {
+      } else if (localFp == cloudFingerprint) {
         // Fingerprints match - data is synced
         state = SyncState.synced;
         message = 'Local and cloud data match';
@@ -667,7 +685,7 @@ class CloudSyncManager<T> {
 
       final status = SyncStatus(
         state: state,
-        localFingerprint: localFingerprint,
+        localFingerprint: localFp,
         cloudFingerprint: cloudFingerprint,
         lastSyncedAt: lastSyncedAt,
         localUpdatedAt: localUpdatedAt,

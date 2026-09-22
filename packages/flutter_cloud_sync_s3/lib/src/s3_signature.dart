@@ -2,6 +2,36 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:convert/convert.dart';
 
+/// 参与签名的 header 名称集合（**唯一口径**，小写、已排序）。
+///
+/// SigV4 要求两处逐字一致：canonical request 的 `CanonicalHeaders` 区块与
+/// Authorization 头里的 `SignedHeaders=` 列表。历史上这两处各自内联了一份
+/// 相同的 key 过滤表达式，任何一处被单独改动都会造成服务端重算签名不匹配
+/// 的恒定 403 —— 收敛为单一函数后从结构上杜绝漂移。
+///
+/// 收录：`host`、`content-type`、`x-amz-*`
+/// （含 `x-amz-date` / `x-amz-content-sha256` / `x-amz-meta-*`）。
+///
+/// **有意不收录**（非遗漏，勿随手加回）：
+/// - `content-length`（审计 S-A）：AWS 官方 SDK 同样不签 CL。传输层一旦
+///   改用 chunked 编码、或中间代理改写 CL，签了 CL 就恒定
+///   403 SignatureDoesNotMatch。CL 由传输层在签名**之后**附加。
+/// - `if-match` / `if-none-match`（审计 L-01）：条件头由服务端在收到请求后
+///   求值，不进入 SignedHeaders 不改变其语义（条件写仍然严格生效，
+///   412/404 照常返回）；传输完整性由强制 HTTPS + 禁重定向保证。把它
+///   纳入签名需先实测各家兼容网关对额外 SignedHeaders 的容忍度，
+///   故本轮只固化口径与注释，不改变签名集合。
+List<String> resolveSignedHeaderKeys(Map<String, String> headers) {
+  return headers.keys
+      .where((k) =>
+          k.toLowerCase().startsWith('x-amz-') ||
+          k.toLowerCase() == 'host' ||
+          k.toLowerCase() == 'content-type')
+      .map((k) => k.toLowerCase())
+      .toList()
+    ..sort();
+}
+
 /// AWS Signature Version 4 签名算法实现
 ///
 /// 用于对 S3 REST API 请求进行签名认证
@@ -83,14 +113,7 @@ class S3SignatureV4 {
     );
 
     // 5. 添加 Authorization Header
-    final signedHeaders = mutableHeaders.keys
-        .where((k) => k.toLowerCase().startsWith('x-amz-') ||
-                      k.toLowerCase() == 'host' ||
-                      k.toLowerCase() == 'content-type' ||
-                      k.toLowerCase() == 'content-length')
-        .map((k) => k.toLowerCase())
-        .toList()
-      ..sort();
+    final signedHeaders = resolveSignedHeaderKeys(mutableHeaders);
 
     mutableHeaders['Authorization'] = 'AWS4-HMAC-SHA256 '
         'Credential=$accessKey/$credentialScope, '
@@ -161,14 +184,7 @@ class S3SignatureV4 {
         .join('&');
 
     // Canonical Headers (只包含签名相关的 headers)
-    final signedHeaderKeys = headers.keys
-        .where((k) => k.toLowerCase().startsWith('x-amz-') ||
-                      k.toLowerCase() == 'host' ||
-                      k.toLowerCase() == 'content-type' ||
-                      k.toLowerCase() == 'content-length')
-        .map((k) => k.toLowerCase())
-        .toList()
-      ..sort();
+    final signedHeaderKeys = resolveSignedHeaderKeys(headers);
 
     final canonicalHeaders = signedHeaderKeys
         .map((key) {

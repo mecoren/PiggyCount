@@ -12,7 +12,7 @@ import 'package:flutter_cloud_sync_s3/src/s3_signature.dart';
 /// 方案C（并发全面加固）：S3 条件写与 ETag 透出回归
 void main() {
   group('putObject 条件写', () {
-    test('ifMatch → 请求携带 If-Match 头且参与签名，成功返回归一化 ETag',
+    test('ifMatch → 请求携带 If-Match 头（条件头不进 SignedHeaders），成功返回归一化 ETag',
         () async {
       late Map<String, String> capturedHeaders;
       final mock = MockClient((request) async {
@@ -39,6 +39,20 @@ void main() {
       expect(etag, 'abc123');
       // 审计 M3：RFC 7232 引号形态（裸值在严格兼容网关会 400）
       expect(capturedHeaders['If-Match'], '"abc123"');
+
+      // 审计 L-01：条件头**不在** SignedHeaders 集合内。旧标题声称「参与
+      // 签名」却只断言头存在 —— 假绿：即便条件头真被签名（或签名集合
+      // 整体漂移）该用例依然通过。这里显式钉住真实集合，任何把条件头
+      // 拉进签名的改动都会立刻失败。
+      final auth = capturedHeaders['authorization']!;
+      expect(
+          auth,
+          contains(
+              'SignedHeaders=content-type;host;x-amz-content-sha256;x-amz-date'),
+          reason: 'L-01：SignedHeaders 固定为 host/content-type/x-amz-*');
+      expect(auth, isNot(contains('if-match')),
+          reason: 'L-01：条件头不参与签名（依赖 HTTPS 保证传输完整性）');
+      expect(auth, isNot(contains('if-none-match')));
     });
 
     test('ifNoneMatch → 请求携带 If-None-Match: *（create-only）', () async {
@@ -314,6 +328,69 @@ void main() {
         payloadBytes: Uint8List.fromList([1, 2, 3]),
       );
       expect(signed.containsKey('Authorization'), isTrue);
+    });
+  });
+
+  group('L-01 / S-A: 签名头集合口径', () {
+    test('resolveSignedHeaderKeys 收 host/content-type/x-amz-*，排除条件头与 CL', () {
+      // Arrange：把「会被误签」的头都塞进去
+      final keys = resolveSignedHeaderKeys({
+        'Host': 's3.example.com',
+        'Content-Type': 'application/json',
+        'Content-Length': '3',
+        'If-Match': '"e1"',
+        'If-None-Match': '*',
+        'x-amz-date': '20260921T000000Z',
+        'x-amz-content-sha256': 'UNSIGNED-PAYLOAD',
+        'x-amz-meta-note': 'b64:eA==',
+      });
+
+      // Assert：小写 + 有序 + 白名单
+      expect(keys, [
+        'content-type',
+        'host',
+        'x-amz-content-sha256',
+        'x-amz-date',
+        'x-amz-meta-note',
+      ]);
+      // S-A：CL 由传输层在签名后附加，签它会因 chunked/代理改写恒定 403
+      expect(keys, isNot(contains('content-length')));
+      // L-01：条件头不在签名集合，语义由服务端求值 + HTTPS 保证
+      expect(keys.where((k) => k.startsWith('if-')), isEmpty);
+    });
+
+    test('带条件头与 metadata 的 PUT：SignedHeaders 与实际签名集合同源', () async {
+      late Map<String, String> capturedHeaders;
+      final mock = MockClient((request) async {
+        capturedHeaders = request.headers;
+        return http.Response('', 200, headers: {'etag': '"e"'});
+      });
+      final client = S3Client(
+        endpoint: 's3.example.com',
+        region: 'us-east-1',
+        accessKey: 'ak',
+        secretKey: 'sk',
+        httpClient: mock,
+      );
+
+      await client.putObject(
+        bucket: 'b',
+        key: 'k.json',
+        data: Uint8List.fromList([1, 2, 3]),
+        ifMatch: 'e1',
+        metadata: const {'note': 'x'},
+      );
+
+      final auth = capturedHeaders['authorization']!;
+      expect(
+          auth,
+          contains('SignedHeaders=content-type;host;x-amz-content-sha256;'
+              'x-amz-date;x-amz-meta-note'),
+          reason: 'L-01：SignedHeaders 与 canonical headers 由同一函数产出，'
+              '不会出现两处口径漂移');
+      expect(capturedHeaders['if-match'], '"e1"',
+          reason: '条件头照常随请求发出（只是不签名）');
+      expect(capturedHeaders.containsKey('if-none-match'), isFalse);
     });
   });
 

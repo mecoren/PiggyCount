@@ -212,6 +212,66 @@ void main() {
     service = WebDAVStorageService(client, '/');
   });
 
+  group('审计 L-04：路径编码口径统一（白名单拒绝，不主动编码）', () {
+    test('白名单内路径落盘且 MOVE Destination 与 PUT 路径口径一致', () async {
+      const p = 'a-b_c.d~e/f+g&h=i.bin';
+      await service.uploadBinary(path: p, bytes: [1, 2, 3]);
+
+      expect(server.files['/$p'], isNotNull,
+          reason: 'L-04：白名单字符在上游两条链路均恒等，落盘路径应逐字一致');
+      final move = server.moveCalls.single;
+      expect(move.$1, contains('.tmp.'), reason: '原子发布先写临时文件');
+      expect(move.$2, '/$p',
+          reason: 'L-04：Destination 不得被上游 encodeFull 再编码成另一种形态');
+    });
+
+    // 每类字符对应一种「静默操作了别的远端对象」的故障形态，见
+    // WebDAVStorageService._disallowedPathChar 文档注释的实证表
+    for (final bad in <String>[
+      'a b.json', // 空格：readDir 回传 name 是已编码形态，exists/查找永远失配
+      '中文.json', // 非 ASCII：同上
+      'a[1].json', // []：同上（Uri.parse 会转义成 %5B%5D）
+      'a#b.json', // #：文件名退化成 fragment，对象名被截断
+      'a?b.json', // ?：文件名退化成 query，对象名被截断
+      'a%20b.json', // %：PUT 侧保留、MOVE 侧再编码 → 落成两个不同对象
+      'a\nb.json', // 控制字符：Destination 是 header 值
+    ]) {
+      final label = bad.replaceAll('\n', r'\n');
+      test('拒绝不安全字符 → 配置期即报错而非静默写错对象: $label', () async {
+        await expectLater(
+          service.uploadBinary(path: bad, bytes: [1]),
+          throwsA(isA<CloudConfigurationException>()),
+        );
+      });
+    }
+
+    test('拒绝发生在发起任何请求之前（不产生半个对象）', () async {
+      await expectLater(
+        service.uploadBinary(path: 'a b.json', bytes: [1]),
+        throwsA(isA<CloudConfigurationException>()),
+      );
+      expect(server.putCalls, 0, reason: 'L-04：必须在写任何字节前拒绝');
+      expect(server.files, isEmpty);
+      expect(server.moveCalls, isEmpty);
+    });
+
+    test('读侧同样按配置错误上抛（不被包装成 CloudStorageException）', () async {
+      // downloadBinary/list/getMetadata/exists 四处都必须原样上抛 ——
+      // list/getMetadata 曾把 _buildPath 放在 try 内，配置错误会被包装成
+      // 「存储故障」误导排查方向
+      await expectLater(service.downloadBinary(path: 'a b.bin'),
+          throwsA(isA<CloudConfigurationException>()));
+      await expectLater(service.list(path: 'a b'),
+          throwsA(isA<CloudConfigurationException>()));
+      await expectLater(service.getMetadata(path: 'a b.json'),
+          throwsA(isA<CloudConfigurationException>()));
+      await expectLater(service.exists(path: 'a b.json'),
+          throwsA(isA<CloudConfigurationException>()));
+      await expectLater(service.delete(path: 'a b.json'),
+          throwsA(isA<CloudConfigurationException>()));
+    });
+  });
+
   group('审计 WD-2：父目录探测会话缓存（上传不再逐次全量列父目录）', () {
     test('同一目录连续上传：第二次不再做 ensure 探测', () async {
       await service.uploadBinary(path: 'dir/a.bin', bytes: [1]);

@@ -20,7 +20,7 @@
 | App | 启动检查 apply（下载/合并） | 90s | `startup_sync_checker._applyTimeout` | |
 | App | 启动检查回传（merge-then-publish） | 5min | `startup_sync_checker._publishTimeout` | 慢速 S3+多附件专门调优 |
 | App | 发现阶段单文件 | 10s 总预算 | `discoverRemoteLedgers mdDeadline` | 快路径失败不再落慢路径 |
-| App | 附件下载单任务 | 后端超时 ×3 次内部重试 | `TSM._downloadAttachmentBinWithRetry` | 1s/2s/4s 退避无 jitter（会话内后台任务，无风暴风险） |
+| App | 附件下载单任务 | 后端超时 ×3 次内部重试 | `TSM._downloadAttachmentBinWithRetry` | 1s/2s 退避，**2026-09-21 L-05 起带真随机 jitter**（[0.5×base, base]）—— 附件对象内容寻址且多端共享，多设备恢复同一账本时无 jitter 会退避完全同相 |
 
 ## 二、重试策略
 
@@ -32,8 +32,8 @@
 | WebDAV `_retryIdempotent` | read/readDir/remove 幂等读 | 2 次，400ms/800ms | 无结构化状态码（连接层）或 5xx；4xx 立即上抛 | 真随机（P1-1 修复，时间戳取模同相问题） |
 | Supabase `_opRetryable`（2026-09-11 补齐） | download/downloadBinary/list/exists/getMetadata/delete 幂等操作 | 2 次，400ms/800ms（对齐 WebDAV） | 连接层故障（无状态码）/超时/5xx；认证与 404 确定性失败立即上抛；盲写不重试。**2026-09-12 N-8 收紧**：无结构化码的文本兜底从 toString 宽词（'network'/'connection'/'timeout'）改为异常类型判定（SocketException/TimeoutException/HttpException；Web 平台按类型名兜底） | 真随机 ±50% |
 | iCloud `_retryIdempotent`（2026-09-11 补齐） | download/downloadBinary/list/exists/getMetadata/delete | 2 次，400ms/800ms（对齐 WebDAV） | 非 NOT_FOUND 的 PlatformException 瞬时故障（daemon 未就绪）；NOT_FOUND 立即上抛转幂等语义 | 真随机 ±50% |
-| TSM 附件下载 | 后台附件补齐 | 3 次总尝试，1s/2s/4s | 全异常（三态结果由调用方区分 objectMissing/transientFailure） | 无（内存队列会话级 drain，无多端风暴面） |
-| core `RetryHelper` | （当前无生产调用方） | 预设三档 | 异常类型判定（auth/404 不重试） | 25% |
+| TSM 附件下载 | 后台附件补齐 | 3 次总尝试，1s/2s | 全异常（三态结果由调用方区分 objectMissing/transientFailure） | **真随机 [0.5×base, base]**（2026-09-21 L-05：原为固定值；附件对象多端共享，固定退避在瞬时故障后同相重试） |
+| core `RetryHelper` | （当前无生产调用方，仅 example/测试引用） | 预设三档 | 异常类型判定（auth/404 不重试） | 25% |
 
 **设计纪律**（不可破坏）：
 1. 非幂等写操作只在「失败保证未落盘」的前提下可重试（条件写锚点/服务器未处理请求的证据）；
@@ -58,6 +58,11 @@
 
 ## 五、变更记录
 
+- **2026-09-21（L 系列遗留项闭环，对照 docs/s3-webdav-sync-audit-2026-09-20.md 遗留表）**：
+  - **L-03（P2）**：core `CloudSyncManager.getStatus` 新增可选 `localFingerprint` 预计算入参 —— TSM 指纹缓存命中路径（只有指纹、没有 JSON）不再被迫全量导出一次；同时 `_localFpCache` 增存 `count`，命中路径连 count 也不必重算。原判定「导出无法避免，不构成退化」不成立，已在本表 §一/§二 之外的单测（`cloud_sync_manager_test` / `transactions_sync_manager_test`）钉住。
+  - **L-04（P2）**：WebDAV 路径编码口径统一为**白名单拒绝**（`_disallowedPathChar`），不做主动 percent-encoding —— 实证见 `scripts/live_db/run_20260920/probe_uri.dart`：上游 `Uri.parse`（PUT/PROPFIND）与 `Uri.encodeFull`（MOVE Destination）对 `#`/`?`/`%` 口径不一致，主动编码会双重编码并破坏现有 ASCII 路径。`list`/`getMetadata` 的 `_buildPath` 移出 try，配置错误不再被包装成存储故障。
+  - **L-05（P3）**：TSM 附件重试退避补真随机 jitter（§一/§二 表已同步）；core `RetryHelper` 增加「无生产调用方、勿直接接入」的状态声明（src/utils/retry_helper.dart），接入前必须先按本表逐项对齐。
+  - **L-01（P3）/ L-02（P3）**：见 docs/s3-webdav-sync-audit-2026-09-20.md 遗留表状态的更新；重试/超时参数本身未变。
 - **2026-09-11（第二批：监控收尾 + 判定加固）**：
   - P1-12：core `getStatus` 新增 `localUpdatedAtTrusted` 参数 —— 不可信墙钟（全部已推送/recordChanges:false 导入）不做时间戳方向断言，让位 count 兜底或 unknown；TSM `_localUpdatedAtTrusted` 透传（cloud_sync_manager.dart / transactions_sync_manager.dart）。
   - P2-6：`downloadRemoteLedger` 补 snapshotRestore 四态埋点（主路 success/对象缺失 softFail/空快照守卫 softFail/异常 failed）——批量恢复失败率进健康卡分母。

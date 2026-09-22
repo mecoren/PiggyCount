@@ -629,10 +629,10 @@ class WebDAVStorageService
 
   @override
   Future<List<CloudFile>> list({required String path}) async {
+    // 路径构造（遍历/字符集防护）置于 try 之外：配置类错误必须原样上抛，
+    // 不落入下方通用包装变成「存储故障」（与 downloadBinary 同口径）
+    final fullPath = _buildPath(path);
     try {
-      // Build full path
-      final fullPath = _buildPath(path);
-
       // List files（幂等读，自动重试瞬时网络故障）
       final files =
           await _opRetryable('readDir', (t) => _client.readDir(fullPath, t));
@@ -718,9 +718,10 @@ class WebDAVStorageService
   @override
   Future<CloudFile?> getMetadata({required String path}) async {
     _assertFilePath(path);
+    // 路径构造（遍历/字符集防护）置于 try 之外：配置类错误必须原样上抛，
+    // 不落入下方通用包装变成「存储故障」（与 downloadBinary 同口径）
+    final fullPath = _buildPath(path);
     try {
-      final fullPath = _buildPath(path);
-
       // 父目录 Depth-1 扫描定位条目（readProps 对普通文件不可靠，
       // 见 _findEntry 注释）。404 由统一异常分类器收敛为 null。
       final file = await _findEntry(fullPath);
@@ -801,12 +802,63 @@ class WebDAVStorageService
     }
   }
 
+  /// L-04：路径段允许字符集（**白名单，唯一口径**）。
+  ///
+  /// 只收录在上游两条链路下都**保持恒等**的字符：`A-Za-z0-9` 与 `-._~+/&=`。
+  ///
+  /// 依据是对 `webdav_client 1.2.2` 的实证（脚本
+  /// `scripts/live_db/run_20260920/probe_uri.dart`，逐字符比对
+  /// `Uri.parse(join(base, path)).path` 与 `Uri.encodeFull(...)`）：
+  ///
+  /// | 字符        | 上游 PUT/PROPFIND 侧 `Uri.parse` | 上游 MOVE 侧 `Uri.encodeFull` |
+  /// |-------------|----------------------------------|-------------------------------|
+  /// | 空格 / 中文 / `[` `]` | 自动转义成 `%XX`        | 同样转义（两侧一致）           |
+  /// | `#` / `?`   | **保留** → 文件名退化成 fragment/query（对象名被截断） | **保留**（同样截断） |
+  /// | `%`         | **保留**（视为「已编码」，服务端解码后变成另一个名字） | **再编码**成 `%25` |
+  ///
+  /// 三类后果都不是「报错」，而是**静默操作了另一个远端对象**：
+  /// - `#`/`?`：PUT 写到截断后的路径、MOVE Destination 指到截断后的目标；
+  /// - `%`：同一逻辑路径在 PUT 链与 MOVE 链落成两个不同对象名；
+  /// - 空格/中文/`[]`：虽两侧编码一致，但 readDir 回传的 `name` 是**已编码**
+  ///   形态，而本服务用 `PathHelper.basename(fullPath)`（**未编码**）做比对，
+  ///   `_findEntry`/`exists` 永远匹配不上 —— 上传成功却「查不到自己」。
+  ///
+  /// **为什么不做主动 percent-encoding**：尝试过并在实证中否掉 ——
+  /// 预先 `Uri.encodeComponent` 会把 `%` 再翻一倍（`a%20b` → `a%252520b`），
+  /// 且与 MOVE 侧的 `encodeFull` 叠加成双重编码，把当前可用的 ASCII 路径
+  /// 一并弄坏。上游两条链路的编码器不在本仓库内（pub 依赖），无法同时
+  /// 对齐，因此选择**按白名单拒绝**：把「静默写到别的对象」这一整类故障
+  /// 前移为显式配置错误。
+  ///
+  /// 当前业务全部路径（`ledger_<uuid>.json`、`attachments/<sha256>.bin`、
+  /// `piggycount-bak/PiggyCount-yyyy-MM-dd.zip`、`<file>.tmp.<epoch>_<seq>`）
+  /// 均落在白名单内，该约束对现有链路零影响。仅校验**调用方传入的相对
+  /// 路径**，用户自配的 [remotePath] 前缀不受限（前缀不参与 basename 比对）。
+  static final RegExp _disallowedPathChar = RegExp(r'[^A-Za-z0-9\-._~+/&=]');
+
+  void _assertPathCharset(String path) {
+    final m = _disallowedPathChar.firstMatch(path);
+    if (m == null) return;
+    final bad = m.group(0)!;
+    final code =
+        bad.codeUnitAt(0).toRadixString(16).toUpperCase().padLeft(4, '0');
+    throw CloudConfigurationException(
+        'WebDAV 路径段含不支持字符 "$bad"(U+$code): $path —— 上游 webdav_client '
+        '在 PUT/PROPFIND 与 MOVE/COPY 两条链路对该字符的编码口径不一致，'
+        '会造成远端对象名与预期不符（详见 _buildPath 注释）。'
+        '仅允许 A-Za-z0-9 与 -._~+/&=');
+  }
+
   /// Builds the full path with remote path prefix.
   ///
   /// 审计 W-D：拒绝 `..` 段 —— `PathHelper.normalize` 只折叠斜杠不解析
   /// 相对段，`../` 会逐级消解后**完全逃逸 remotePath 沙箱**（对齐 S3 侧
   /// `_assertNoTraversal` 的防护）。
+  ///
+  /// 审计 L-04：先做字符白名单校验（见 [_assertPathCharset]），统一路径
+  /// 编码口径 —— 拒绝而非主动编码，理由见其文档注释。
   String _buildPath(String path) {
+    _assertPathCharset(path);
     _assertNoTraversal(path);
     return PathHelper.join([_remotePath, path]);
   }
