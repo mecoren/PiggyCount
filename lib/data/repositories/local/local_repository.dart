@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' as d;
 import 'package:uuid/uuid.dart';
 
 import '../../db.dart';
+import '../../models/transaction_original_amount.dart';
 import '../../../cloud/sync/change_tracker.dart';
 import '../../../services/currency/rate_math.dart';
 import '../../../utils/shared_ledger_picker_filter.dart';
@@ -497,6 +498,7 @@ class LocalRepository extends BaseRepository {
     bool excludeFromBudget = false,
     String? currencyCode,
     double? nativeAmount,
+    double? originalAmount,
   }) async {
     // v30 带折算兜底(02 §六):任何调用方(单币种记账/AI/周期模板)未传两字段
     // 时在此补齐 —— 外币先查有效汇率,取不到才 =amount(命中 L11 检测可捞回)。
@@ -527,6 +529,7 @@ class LocalRepository extends BaseRepository {
         excludeFromBudget: excludeFromBudget,
         currencyCode: cc,
         nativeAmount: na,
+        originalAmount: originalAmount,
       );
       if (changeTracker != null) {
         final tx = await _transactionRepo.getTransactionById(id);
@@ -602,6 +605,7 @@ class LocalRepository extends BaseRepository {
     bool? excludeFromBudget,
     String? currencyCode,
     double? nativeAmount,
+    dynamic originalAmount,
   }) async {
     final old = await _transactionRepo.getTransactionById(id);
     // v30 联动兜底(与 Cloud merge/mutator 的 L14 同规则):调用方不传两字段时——
@@ -653,6 +657,7 @@ class LocalRepository extends BaseRepository {
             excludeFromBudget: excludeFromBudget,
             currencyCode: effCurrency,
             nativeAmount: effNative,
+            originalAmount: originalAmount,
           );
           await changeTracker!.recordLedgerChange(
             entityType: 'transaction',
@@ -679,6 +684,7 @@ class LocalRepository extends BaseRepository {
       excludeFromBudget: excludeFromBudget,
       currencyCode: effCurrency,
       nativeAmount: effNative,
+      originalAmount: originalAmount,
     );
   }
 
@@ -1328,6 +1334,7 @@ class LocalRepository extends BaseRepository {
     int? toAccountId,
     required DateTime happenedAt,
     String? note,
+    double? originalAmount,
   }) =>
       _transactionRepo.updateTransactionBySyncId(
         syncId: syncId,
@@ -1338,6 +1345,7 @@ class LocalRepository extends BaseRepository {
         toAccountId: toAccountId,
         happenedAt: happenedAt,
         note: note,
+        originalAmount: originalAmount,
       );
 
   @override
@@ -2573,6 +2581,109 @@ class LocalRepository extends BaseRepository {
   Future<Map<int, Category>> getSharedSyntheticCategoriesForLedger(
           int ledgerId) =>
       _statisticsRepo.getSharedSyntheticCategoriesForLedger(ledgerId);
+
+  // v45 原始金额偏差（口径见 StatisticsRepository 声明）。
+
+  @override
+  Future<({
+    int total,
+    int deviated,
+    double diffSum,
+    double absDiffSum,
+    double maxAbsDiff,
+  })> originalAmountDiffSummary({
+    required int ledgerId,
+    required String type,
+    required DateTime start,
+    required DateTime end,
+    required OriginalAmountMetric metric,
+    required OriginalAmountBasis basis,
+  }) =>
+      _statisticsRepo.originalAmountDiffSummary(
+        ledgerId: ledgerId,
+        type: type,
+        start: start,
+        end: end,
+        metric: metric,
+        basis: basis,
+      );
+
+  @override
+  Future<
+      List<
+          ({
+            DateTime bucket,
+            int deviated,
+            double diffSum,
+            double absDiffSum,
+          })>> originalAmountDiffTrend({
+    required int ledgerId,
+    required String type,
+    required DateTime start,
+    required DateTime end,
+    required String granularity,
+    required OriginalAmountMetric metric,
+    required OriginalAmountBasis basis,
+  }) =>
+      _statisticsRepo.originalAmountDiffTrend(
+        ledgerId: ledgerId,
+        type: type,
+        start: start,
+        end: end,
+        granularity: granularity,
+        metric: metric,
+        basis: basis,
+      );
+
+  @override
+  Future<
+      List<
+          ({
+            int? categoryId,
+            String? categoryName,
+            String? categoryIcon,
+            int deviated,
+            double diffSum,
+            double absDiffSum,
+          })>> originalAmountDiffByCategory({
+    required int ledgerId,
+    required String type,
+    required DateTime start,
+    required DateTime end,
+    required OriginalAmountMetric metric,
+    required OriginalAmountBasis basis,
+  }) =>
+      _statisticsRepo.originalAmountDiffByCategory(
+        ledgerId: ledgerId,
+        type: type,
+        start: start,
+        end: end,
+        metric: metric,
+        basis: basis,
+      );
+
+  @override
+  Future<
+      List<
+          ({
+            int ledgerId,
+            int deviated,
+            double diffSum,
+            double absDiffSum,
+          })>> originalAmountDiffByLedger({
+    required String type,
+    required DateTime start,
+    required DateTime end,
+    required OriginalAmountMetric metric,
+    required OriginalAmountBasis basis,
+  }) =>
+      _statisticsRepo.originalAmountDiffByLedger(
+        type: type,
+        start: start,
+        end: end,
+        metric: metric,
+        basis: basis,
+      );
 
   // ============================================
   // RecurringTransactionRepository 接口实现 - 委托给 LocalRecurringTransactionRepository

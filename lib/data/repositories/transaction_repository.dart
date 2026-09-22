@@ -44,6 +44,13 @@ class TransactionUpdateBySyncIdData {
   ///   "云端无此附件"即显式删除。替换后按引用计数清理不再被引用的物理文件。
   final List<BatchAttachmentData>? attachments;
 
+  /// v45 原始金额（用户手填的票面/来源金额）。
+  ///
+  /// null 表示**云端快照未携带该键**（旧版客户端导出），语义为「不改动本地
+  /// 原值」；非 null 才写入。与 currencyCode / override 同模式 —— 避免旧快照
+  /// 因缺键触发全量 modified 并把本地已填值抹成 null。
+  final double? originalAmount;
+
   const TransactionUpdateBySyncIdData({
     required this.syncId,
     required this.type,
@@ -61,6 +68,7 @@ class TransactionUpdateBySyncIdData {
     this.accountSyncIdOverride,
     this.toAccountSyncIdOverride,
     this.attachments,
+    this.originalAmount,
   });
 }
 
@@ -274,6 +282,9 @@ abstract class TransactionRepository {
     // nativeAmount 外币先按有效汇率折算,取不到才 =amount,详设计 02 §六)。
     String? currencyCode,
     double? nativeAmount,
+    // v45 原始金额(用户手填):null = 未填写,语义等价于「默认金额 = amount」,
+    // 不做 ?? amount 兜底落库 —— 物理 null 才能区分「未填」与「手填了相同值」。
+    double? originalAmount,
   });
 
   /// 批量新增交易，单事务内插入，返回插入条数。
@@ -331,6 +342,10 @@ abstract class TransactionRepository {
     // 做折算兜底。
     String? currencyCode,
     double? nativeAmount,
+    // v45 原始金额:dynamic 三态 —— dart null = 不改动既有值(批量改备注/
+    // 改分类等非金额路径必须保持原值),d.Value<double?>(null) = 显式清空
+    // (用户在编辑表单里删掉了原始金额),d.Value(x) = 写入。与 accountId 同模式。
+    dynamic originalAmount,
   });
 
   /// 删除交易
@@ -474,6 +489,8 @@ abstract class TransactionRepository {
     int? toAccountId,
     required DateTime happenedAt,
     String? note,
+    // v45 原始金额:null = 不改动既有值(保持「全字段更新但可缺省」的既有语义)。
+    double? originalAmount,
   });
 
   /// 根据 syncId 删除交易

@@ -464,9 +464,12 @@ class LocalTransactionRepository implements TransactionRepository {
     bool excludeFromBudget = false,
     String? currencyCode,
     double? nativeAmount,
+    double? originalAmount,
   }) async {
     // v30:子仓收「已定值」直写;带折算的兜底(查账户/汇率)在聚合
     // LocalRepository 包装层(子仓拿不到汇率)。
+    // v45:原始金额未填则**落库兜底为记账金额** —— 保证每条明细都有原始
+    // 金额(差异 0),而不是留 NULL 靠读取侧回落。
     return db.into(db.transactions).insert(TransactionsCompanion.insert(
           ledgerId: ledgerId,
           type: type,
@@ -485,6 +488,7 @@ class LocalTransactionRepository implements TransactionRepository {
           excludeFromBudget: d.Value(excludeFromBudget),
           currencyCode: d.Value(currencyCode),
           nativeAmount: d.Value(nativeAmount),
+          originalAmount: d.Value(originalAmount ?? amount),
         ));
   }
 
@@ -604,6 +608,7 @@ class LocalTransactionRepository implements TransactionRepository {
     bool? excludeFromBudget,
     String? currencyCode,
     double? nativeAmount,
+    dynamic originalAmount,
   }) async {
     // 处理 accountId 参数
     final d.Value<int?> accountIdValue;
@@ -613,6 +618,21 @@ class LocalTransactionRepository implements TransactionRepository {
       accountIdValue = accountId;
     } else {
       accountIdValue = d.Value(accountId as int?);
+    }
+
+    // v45 原始金额三态(与 accountId 同模式):dart null = absent(不改动);
+    // d.Value<double?>(null) = 用户清空;d.Value(x) = 写入。批量改备注/改分类
+    // 等非金额路径不传该参数,绝不能顺手清零原始金额。
+    // 清空 → 兜底写本次记账金额(产品口径:每条明细都有原始金额)。
+    final d.Value<double?> originalAmountValue;
+    if (originalAmount == null) {
+      originalAmountValue = const d.Value.absent();
+    } else if (originalAmount is d.Value<double?>) {
+      originalAmountValue = originalAmount.value == null
+          ? d.Value(amount)
+          : originalAmount;
+    } else {
+      originalAmountValue = d.Value(originalAmount as double?);
     }
 
     await (db.update(db.transactions)..where((t) => t.id.equals(id))).write(
@@ -641,6 +661,7 @@ class LocalTransactionRepository implements TransactionRepository {
         nativeAmount: nativeAmount == null
             ? const d.Value.absent()
             : d.Value(nativeAmount),
+        originalAmount: originalAmountValue,
       ),
     );
   }
@@ -1769,6 +1790,7 @@ class LocalTransactionRepository implements TransactionRepository {
     int? toAccountId,
     required DateTime happenedAt,
     String? note,
+    double? originalAmount,
   }) async {
     await (db.update(db.transactions)..where((t) => t.syncId.equals(syncId)))
         .write(TransactionsCompanion(
@@ -1779,6 +1801,11 @@ class LocalTransactionRepository implements TransactionRepository {
       toAccountId: d.Value(toAccountId),
       happenedAt: d.Value(happenedAt),
       note: d.Value(note),
+      // v45 原始金额:null = 不改动既有值(保持「全字段更新但可缺省」语义);
+      // 传值则写入。
+      originalAmount: originalAmount == null
+          ? const d.Value.absent()
+          : d.Value(originalAmount),
     ));
   }
 
@@ -1821,6 +1848,12 @@ class LocalTransactionRepository implements TransactionRepository {
               nativeAmount: u.nativeAmount == null
                   ? const d.Value.absent()
                   : d.Value(u.nativeAmount),
+              // v45 原始金额:云端未携带(u.originalAmount == null,旧快照)→
+              // absent 保留本地原值;非 null → 写入(与 currencyCode 同模式,
+              // 避免旧快照缺键把本地已填值抹平)。
+              originalAmount: u.originalAmount == null
+                  ? const d.Value.absent()
+                  : d.Value(u.originalAmount),
               // 账单标记：diff 合并必须一并写入，否则"不计入统计/预算"
               // 跨设备丢失（与 native_amount 分裂同源问题）。
               excludeFromStats: d.Value(u.excludeFromStats),

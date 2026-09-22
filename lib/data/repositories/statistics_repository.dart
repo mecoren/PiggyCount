@@ -1,4 +1,5 @@
 import '../db.dart' show Category;
+import '../models/transaction_original_amount.dart';
 
 /// 统计Repository接口
 /// 定义统计相关的所有数据操作
@@ -86,4 +87,90 @@ abstract class StatisticsRepository {
   /// 图标路径。单人账本返回空 map。
   Future<Map<int, Category>> getSharedSyntheticCategoriesForLedger(
       int ledgerId);
+
+  // --- v45 原始金额偏差 ---------------------------------------------------
+  //
+  // 差异 = 原始侧 − 记账侧（[OriginalAmountBasis.recorded]）或反向
+  // （[OriginalAmountBasis.original]）；未填写（物理 NULL）→ 回落同口径记账
+  // 金额 → 差异 0，与「默认金额」语义一致，因此下列聚合天然把「未填写」
+  // 当零偏差处理，无需另加兜底。
+  //
+  // [metric] 决定用原币还是本位币折算（后者原始侧按该笔隐含汇率缩放）；
+  // 全部沿用 `exclude_from_stats = 0` 与半开区间 `[start, end)`，
+  // 与 [totalsByDay] / [totalsByCategory] 可直接对账。
+
+  /// 偏差汇总。
+  ///
+  /// [deviated] = 「原始金额 ≠ 记账金额」的明细数。未填写的明细在保存/
+  /// 迁移时已兜底为记账金额（差异恒 0），所以它是"有偏差的明细数"，
+  /// 而不是"用户手填过的明细数"。
+  Future<({
+    int total,
+    int deviated,
+    double diffSum,
+    double absDiffSum,
+    double maxAbsDiff,
+  })> originalAmountDiffSummary({
+    required int ledgerId,
+    required String type,
+    required DateTime start,
+    required DateTime end,
+    required OriginalAmountMetric metric,
+    required OriginalAmountBasis basis,
+  });
+
+  /// 偏差趋势。[granularity] 取 `'day' | 'month' | 'year'`，桶连续补零。
+  /// [deviated] 同 [originalAmountDiffSummary] 的口径。
+  Future<
+      List<
+          ({
+            DateTime bucket,
+            int deviated,
+            double diffSum,
+            double absDiffSum,
+          })>> originalAmountDiffTrend({
+    required int ledgerId,
+    required String type,
+    required DateTime start,
+    required DateTime end,
+    required String granularity,
+    required OriginalAmountMetric metric,
+    required OriginalAmountBasis basis,
+  });
+
+  /// 偏差分类排行。名称/图标随 SQL 一并 LEFT JOIN 出来，调用方不必二次解析；
+  /// 共享账本 Editor 行（category_id 为空）落到 [categoryId] == null。
+  Future<
+      List<
+          ({
+            int? categoryId,
+            String? categoryName,
+            String? categoryIcon,
+            int deviated,
+            double diffSum,
+            double absDiffSum,
+          })>> originalAmountDiffByCategory({
+    required int ledgerId,
+    required String type,
+    required DateTime start,
+    required DateTime end,
+    required OriginalAmountMetric metric,
+    required OriginalAmountBasis basis,
+  });
+
+  /// 偏差账本排行（跨账本视角；[absDiffSum] 降序由调用方排）。
+  Future<
+      List<
+          ({
+            int ledgerId,
+            int deviated,
+            double diffSum,
+            double absDiffSum,
+          })>> originalAmountDiffByLedger({
+    required String type,
+    required DateTime start,
+    required DateTime end,
+    required OriginalAmountMetric metric,
+    required OriginalAmountBasis basis,
+  });
 }

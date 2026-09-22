@@ -88,6 +88,11 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
           'nativeAmount':
               (it['nativeAmount'] as num?)?.toDouble().toString() ?? '0.0',
           'currencyCode': it['currencyCode'] as String? ?? '',
+          // v45 原始金额：必须进白名单，否则"仅改原始金额"时两端指纹相同
+          // → 判 inSync → 该字段永不跨设备传播。缺失键（旧快照/未填写）
+          // 规范化为空串，保证「旧快照无此键」与「显式未填写」指纹相同。
+          'originalAmount':
+              (it['originalAmount'] as num?)?.toDouble().toString() ?? '',
           'excludeFromStats': it['excludeFromStats'] as bool? ?? false,
           'excludeFromBudget': it['excludeFromBudget'] as bool? ?? false,
           'categoryName':

@@ -185,6 +185,11 @@ Future<ExportedLedgerJson> exportTransactionsJson(
       // 因此不收敛）。规范化是导出字段的确定性函数，两端结果一致。
       'currencyCode': t.currencyCode ?? ledger?.currency ?? 'CNY',
       'nativeAmount': t.nativeAmount ?? t.amount,
+      // v45 原始金额：**仅非空才写键**，绝不写 `?? amount` 兜底。未填写行
+      // 的 JSON 与旧版逐字节一致，且旧客户端往返会丢弃未知键 —— 写兜底值
+      // 会让"未填写"与"手填了等于记账金额的值"两端算出不同指纹 → 永久
+      // outOfSync（同上方币种/折算规范化注释的防漂移教训）。
+      if (t.originalAmount != null) 'originalAmount': t.originalAmount,
       // 共享账本 override：Editor 选 Owner 的 category/account，本地主表
       // 无 int id，直接存 syncId。modified 同步后必须保留，否则 override
       // 丢失回退到 categoryId（可能 null）。
@@ -904,6 +909,8 @@ ImportData parseJsonToImportData(String jsonStr) {
         excludeFromBudget: _readBool(m, 'excludeFromBudget') ?? false,
         currencyCode: _readString(m, 'currencyCode'),
         nativeAmount: _readDouble(m, 'nativeAmount'),
+        // v45 原始金额：旧快照缺键 → null（未填写），不报错不跳过。
+        originalAmount: _readDouble(m, 'originalAmount'),
         // 共享账本 override
         categorySyncIdOverride: _readString(m, 'categorySyncIdOverride'),
         accountSyncIdOverride: _readString(m, 'accountSyncIdOverride'),

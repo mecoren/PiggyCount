@@ -20,6 +20,7 @@ import '../settings/appearance_settings_page.dart';
 import '../settings/smart_billing_page.dart';
 import '../settings/automation_page.dart';
 import '../settings/about_page.dart';
+import '../report/amount_deviation_page.dart';
 import '../report/annual_report_page.dart';
 import '../report/range_report_page.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -424,6 +425,19 @@ class MinePage extends ConsumerWidget {
                         Navigator.of(context).push(
                           MaterialPageRoute(
                               builder: (_) => const RangeReportPage()),
+                        );
+                      },
+                    ),
+                    // v45 金额偏差分析（原始金额 vs 记账金额）
+                    SettingsNavItem(
+                      icon: Icons.insights_outlined,
+                      title: AppLocalizations.of(context).amountDeviationTitle,
+                      subtitle: AppLocalizations.of(context)
+                          .amountDeviationEntrySubtitle,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (_) => const AmountDeviationPage()),
                         );
                       },
                     ),

@@ -7269,6 +7269,97 @@ class AppLocalizationsEn extends AppLocalizations {
       'Please enter the rate for this entry before saving';
 
   @override
+  String get txOriginalAmountLabel => 'Original amount (optional)';
+
+  @override
+  String get txOriginalAmountHint => 'Defaults to the recorded amount';
+
+  @override
+  String get txOriginalAmountPrefix => 'Orig';
+
+  @override
+  String get amountDeviationTitle => 'Amount deviations';
+
+  @override
+  String get amountDeviationMetricLabel => 'Amount field';
+
+  @override
+  String get amountDeviationMetricCurrency => 'Original currency';
+
+  @override
+  String get amountDeviationMetricNative => 'Base currency';
+
+  @override
+  String get amountDeviationBasisLabel => 'Diff basis';
+
+  @override
+  String get amountDeviationBasisRecorded => 'Recorded';
+
+  @override
+  String get amountDeviationBasisOriginal => 'Original';
+
+  @override
+  String get amountDeviationEntrySubtitle =>
+      'Gaps between original and recorded amounts';
+
+  @override
+  String get amountDeviationTotalLabel => 'Records';
+
+  @override
+  String get amountDeviationDeviatedLabel => 'With deviation';
+
+  @override
+  String get amountDeviationDiffSumLabel => 'Total diff';
+
+  @override
+  String get amountDeviationMaxDiffLabel => 'Max diff';
+
+  @override
+  String get amountDeviationTrendTitle => 'Deviation trend';
+
+  @override
+  String get amountDeviationCategoryTitle => 'Deviation by category';
+
+  @override
+  String get amountDeviationInsightTitle => 'Insights';
+
+  @override
+  String get amountDeviationSeveritySlight => 'Slight';
+
+  @override
+  String get amountDeviationSeverityNotable => 'Notable';
+
+  @override
+  String get amountDeviationSeveritySevere => 'Severe';
+
+  @override
+  String get amountDeviationReasonAbove =>
+      'Original is higher — a discount or rounding may be unrecorded';
+
+  @override
+  String get amountDeviationReasonBelow =>
+      'Original is lower — extra fees or a later correction may apply';
+
+  @override
+  String get amountDeviationReasonMultiple =>
+      'Difference is close to a whole multiple — likely a unit or currency conversion error';
+
+  @override
+  String get amountDeviationReasonCategoryHabit =>
+      'Several records in this category deviate the same way — the entry convention may be off';
+
+  @override
+  String get amountDeviationEmptySubtext =>
+      'Fill in the original amount while recording and its deviation shows up here';
+
+  @override
+  String get amountDeviationBottomFillHint =>
+      'An empty original amount is saved as the recorded amount, producing no deviation';
+
+  @override
+  String get amountDeviationNoDiff => 'No deviation in this range';
+
+  @override
   String get txCrossCurrencyTransferBlocked =>
       'Cross-currency transfers are not supported yet. Record two entries or use same-currency accounts.';
 

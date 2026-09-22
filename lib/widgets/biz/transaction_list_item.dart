@@ -1,7 +1,11 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/db.dart' as db;
+import '../../data/models/transaction_original_amount.dart';
 import '../../l10n/app_localizations.dart';
+import '../../providers/original_amount_providers.dart';
 import '../../styles/tokens.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/category_icon.dart';
@@ -30,6 +34,10 @@ class TransactionListItem extends ConsumerWidget {
 
   /// v30 多币种:折账本本位币快照。外币交易在金额右下角显示 ≈ 折算小字(反馈13)。
   final double? nativeAmount;
+
+  /// v45 原始金额(用户手填)。非空且偏差达阈值时在金额下方显示「原 x.xx」
+  /// 小字 —— 未填写(null)不渲染,避免整列表被噪音填满。
+  final double? originalAmount;
   final bool isExpense; // 决定正负号
   final bool isTransfer; // 是否为转账（转账不显示正负号）
   final bool isAdjustment; // 是否为估值调整
@@ -71,6 +79,7 @@ class TransactionListItem extends ConsumerWidget {
     required this.transactionId,
     this.currencyCode,
     this.nativeAmount,
+    this.originalAmount,
     required this.isExpense,
     this.isTransfer = false,
     this.isAdjustment = false,
@@ -283,6 +292,33 @@ class TransactionListItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // v45 原始金额角标的口径与基准：与偏差分析页共用同一 provider，
+    // 页面一改口径列表标记立刻跟随（避免"页面一套、列表另一套"）。
+    // 计算与 [TransactionOriginalAmountX] 逐字同义，这里直接由已传入的
+    // amount / nativeAmount / originalAmount 求出，不再另造 Transaction。
+    final originalMetric = ref.watch(originalAmountMetricProvider);
+    final originalBasis = ref.watch(originalAmountBasisProvider);
+    final originalRecordedSide = originalMetric == OriginalAmountMetric.native
+        ? (nativeAmount ?? amount)
+        : amount;
+    final originalSide = originalAmount == null
+        ? originalRecordedSide
+        : (originalMetric == OriginalAmountMetric.native && amount != 0
+            ? originalAmount! * originalRecordedSide / amount
+            : originalAmount!);
+    final originalDiff = originalBasis == OriginalAmountBasis.recorded
+        ? originalSide - originalRecordedSide
+        : originalRecordedSide - originalSide;
+    final originalBaseSide = originalBasis == OriginalAmountBasis.recorded
+        ? originalRecordedSide
+        : originalSide;
+    final showOriginalBadge = originalAmount != null &&
+        originalDiff.abs() >= math.max(1.0, originalBaseSide.abs() * 0.20) &&
+        nativeConversionVisible(
+          hide: hide,
+          globalHide: ref.watch(hideAmountsProvider),
+        );
+
     // 第一行主文本 + 第二行备注。mode='note' 时 primary 即备注(parenNote=null,
     // 第二行不重复);默认 'category' 时 primary=分类名、parenNote=备注(第二行显示)。
     final composed = composeTransactionRowTitle(
@@ -446,6 +482,26 @@ class TransactionListItem extends ConsumerWidget {
                           child: Text(
                             '≈${nativeAmount!.toStringAsFixed(2)}',
                             style: PiggyTextTokens.caption(context),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      // v45 原始金额角标：仅手填且偏差达阈值才显示。
+                      // 阈值/口径与 OriginalAmountInsightService 同源（20% 且 ≥1），
+                      // 保证「列表能看到」与「洞察里能看到」是同一批明细；
+                      // 隐藏金额开关同样遮蔽该角标（金额信息不得泄漏）。
+                      if (showOriginalBadge)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            '${AppLocalizations.of(context).txOriginalAmountPrefix} '
+                            '${originalSide.toStringAsFixed(2)}',
+                            style: PiggyTextTokens.caption(context).copyWith(
+                              fontSize: 10,
+                              color: originalDiff >= 0
+                                  ? PiggyTokens.expenseColor(context, ref)
+                                  : PiggyTokens.incomeColor(context, ref),
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),

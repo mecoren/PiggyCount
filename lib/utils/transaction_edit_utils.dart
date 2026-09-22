@@ -68,6 +68,8 @@ class TransactionEditUtils {
       // v30 多币种:编辑外币交易时汇率行按隐含汇率回显
       initialCurrencyCode: transaction.currencyCode,
       initialNativeAmount: transaction.nativeAmount,
+      // v45 原始金额回显(未填写 → null,输入框留空)
+      initialOriginalAmount: transaction.originalAmount,
     );
   }
 }

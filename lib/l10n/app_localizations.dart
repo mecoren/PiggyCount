@@ -13087,6 +13087,174 @@ abstract class AppLocalizations {
   /// **'Please enter the rate for this entry before saving'**
   String get txRateMissingHint;
 
+  /// No description provided for @txOriginalAmountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Original amount (optional)'**
+  String get txOriginalAmountLabel;
+
+  /// No description provided for @txOriginalAmountHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Defaults to the recorded amount'**
+  String get txOriginalAmountHint;
+
+  /// No description provided for @txOriginalAmountPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Orig'**
+  String get txOriginalAmountPrefix;
+
+  /// No description provided for @amountDeviationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount deviations'**
+  String get amountDeviationTitle;
+
+  /// No description provided for @amountDeviationMetricLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount field'**
+  String get amountDeviationMetricLabel;
+
+  /// No description provided for @amountDeviationMetricCurrency.
+  ///
+  /// In en, this message translates to:
+  /// **'Original currency'**
+  String get amountDeviationMetricCurrency;
+
+  /// No description provided for @amountDeviationMetricNative.
+  ///
+  /// In en, this message translates to:
+  /// **'Base currency'**
+  String get amountDeviationMetricNative;
+
+  /// No description provided for @amountDeviationBasisLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Diff basis'**
+  String get amountDeviationBasisLabel;
+
+  /// No description provided for @amountDeviationBasisRecorded.
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded'**
+  String get amountDeviationBasisRecorded;
+
+  /// No description provided for @amountDeviationBasisOriginal.
+  ///
+  /// In en, this message translates to:
+  /// **'Original'**
+  String get amountDeviationBasisOriginal;
+
+  /// No description provided for @amountDeviationEntrySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Gaps between original and recorded amounts'**
+  String get amountDeviationEntrySubtitle;
+
+  /// No description provided for @amountDeviationTotalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Records'**
+  String get amountDeviationTotalLabel;
+
+  /// No description provided for @amountDeviationDeviatedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'With deviation'**
+  String get amountDeviationDeviatedLabel;
+
+  /// No description provided for @amountDeviationDiffSumLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total diff'**
+  String get amountDeviationDiffSumLabel;
+
+  /// No description provided for @amountDeviationMaxDiffLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Max diff'**
+  String get amountDeviationMaxDiffLabel;
+
+  /// No description provided for @amountDeviationTrendTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Deviation trend'**
+  String get amountDeviationTrendTitle;
+
+  /// No description provided for @amountDeviationCategoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Deviation by category'**
+  String get amountDeviationCategoryTitle;
+
+  /// No description provided for @amountDeviationInsightTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Insights'**
+  String get amountDeviationInsightTitle;
+
+  /// No description provided for @amountDeviationSeveritySlight.
+  ///
+  /// In en, this message translates to:
+  /// **'Slight'**
+  String get amountDeviationSeveritySlight;
+
+  /// No description provided for @amountDeviationSeverityNotable.
+  ///
+  /// In en, this message translates to:
+  /// **'Notable'**
+  String get amountDeviationSeverityNotable;
+
+  /// No description provided for @amountDeviationSeveritySevere.
+  ///
+  /// In en, this message translates to:
+  /// **'Severe'**
+  String get amountDeviationSeveritySevere;
+
+  /// No description provided for @amountDeviationReasonAbove.
+  ///
+  /// In en, this message translates to:
+  /// **'Original is higher — a discount or rounding may be unrecorded'**
+  String get amountDeviationReasonAbove;
+
+  /// No description provided for @amountDeviationReasonBelow.
+  ///
+  /// In en, this message translates to:
+  /// **'Original is lower — extra fees or a later correction may apply'**
+  String get amountDeviationReasonBelow;
+
+  /// No description provided for @amountDeviationReasonMultiple.
+  ///
+  /// In en, this message translates to:
+  /// **'Difference is close to a whole multiple — likely a unit or currency conversion error'**
+  String get amountDeviationReasonMultiple;
+
+  /// No description provided for @amountDeviationReasonCategoryHabit.
+  ///
+  /// In en, this message translates to:
+  /// **'Several records in this category deviate the same way — the entry convention may be off'**
+  String get amountDeviationReasonCategoryHabit;
+
+  /// No description provided for @amountDeviationEmptySubtext.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill in the original amount while recording and its deviation shows up here'**
+  String get amountDeviationEmptySubtext;
+
+  /// No description provided for @amountDeviationBottomFillHint.
+  ///
+  /// In en, this message translates to:
+  /// **'An empty original amount is saved as the recorded amount, producing no deviation'**
+  String get amountDeviationBottomFillHint;
+
+  /// No description provided for @amountDeviationNoDiff.
+  ///
+  /// In en, this message translates to:
+  /// **'No deviation in this range'**
+  String get amountDeviationNoDiff;
+
   /// No description provided for @txCrossCurrencyTransferBlocked.
   ///
   /// In en, this message translates to:

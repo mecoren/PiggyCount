@@ -242,6 +242,9 @@ class ImportTransaction {
   final String? toAccountSyncIdOverride;
   /// v8 G2：周期规则锚点。导入后用于重建 transactions.recurringId。
   final String? recurringSyncId;
+  /// v45 原始金额（用户手填票面/来源金额）。null = 未填写，或旧快照缺键
+  /// （旧版客户端导出），语义等价于「默认金额 = amount」。
+  final double? originalAmount;
 
   const ImportTransaction({
     required this.type,
@@ -266,6 +269,7 @@ class ImportTransaction {
     this.accountSyncIdOverride,
     this.toAccountSyncIdOverride,
     this.recurringSyncId,
+    this.originalAmount,
   });
 }
 
@@ -1500,6 +1504,9 @@ class DataImportService {
         syncId: d.Value(effectiveSyncId),
         currencyCode: d.Value(txCurrency),
         nativeAmount: d.Value(txNative),
+        // v45 原始金额：快照缺键（旧版导出）→ 兜底为记账金额，与写入
+        // 路径/迁移口径一致 —— 每条明细都带原始金额，不留 NULL。
+        originalAmount: d.Value(tx.originalAmount ?? tx.amount),
         // 账单标记：JSON 同步必须传输，否则"不计入统计/预算"跨设备丢失
         excludeFromStats: d.Value(tx.excludeFromStats),
         excludeFromBudget: d.Value(tx.excludeFromBudget),

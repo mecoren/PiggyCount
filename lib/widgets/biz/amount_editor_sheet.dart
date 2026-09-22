@@ -39,6 +39,9 @@ typedef AmountEditorResult = ({
   // 与折本位币快照(同币种 == amount;外币 = amount × 汇率,缺汇率已在提交前阻断)。
   String? currencyCode,
   double? nativeAmount,
+  // v45 原始金额(选填):null = 用户未填写 → 语义为「默认金额 = 记账金额」。
+  // 不在此处做 ?? amount 兜底,保留「是否手填」这一事实供差异统计使用。
+  double? originalAmount,
 });
 
 class AmountEditorSheet extends ConsumerStatefulWidget {
@@ -75,6 +78,8 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
   // 折算基准不漂移,.docs/multi-currency-ledger 01 §4.2)。
   final String? initialCurrencyCode;
   final double? initialNativeAmount;
+  // v45 原始金额回显(编辑既有明细时回填);null = 该笔未填写。
+  final double? initialOriginalAmount;
 
   const AmountEditorSheet({
     super.key,
@@ -97,20 +102,62 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
     this.initialExcludeFromBudget = false,
     this.initialCurrencyCode,
     this.initialNativeAmount,
+    this.initialOriginalAmount,
   });
 
   @override
   ConsumerState<AmountEditorSheet> createState() => _AmountEditorSheetState();
 }
 
+/// v45：自定义数字键盘的输入目标 —— 点哪个金额位，键盘就输哪个。
+enum _AmountEditTarget { amount, original }
+
 class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   late String _amountStr;
   late DateTime _date;
   int? _selectedAccountId;
   final TextEditingController _noteCtrl = TextEditingController();
-  // 运算缓存：支持简单 + / - 键入累计
-  double _acc = 0;
-  String? _op; // 最近一次运算符，null 表示尚未进入运算模式
+  // v45 原始金额(选填)的输入串。空串 = 未填写(提交 null)。
+  // 刻意不用 TextField —— 它由下方**自定义数字键盘**输入，谁被选中就输谁，
+  // 避免点击时弹出系统键盘、两套键盘打架。
+  String _originalStr = '';
+  // 小键盘当前输入目标(记账金额 / 原始金额)。
+  _AmountEditTarget _editTarget = _AmountEditTarget.amount;
+  // 运算缓存：支持简单 + / - 键入累计。
+  // 按**输入目标隔离** —— 否则在原始金额位按 + 会把记账金额的累加器冲掉。
+  final Map<_AmountEditTarget, double> _accByTarget = {};
+  final Map<_AmountEditTarget, String?> _opByTarget = {};
+
+  /// 当前输入目标的运算状态（小键盘把输入送到哪，运算就算在哪）。
+  double get _acc => _accByTarget[_editTarget] ?? 0;
+  set _acc(double v) => _accByTarget[_editTarget] = v;
+  String? get _op => _opByTarget[_editTarget];
+  set _op(String? v) => _opByTarget[_editTarget] = v;
+
+  /// 记账金额位的运算状态 —— 提交求值与算式展示都钉在记账金额上，
+  /// 与当前焦点无关。
+  double get _amountAcc => _accByTarget[_AmountEditTarget.amount] ?? 0;
+  String? get _amountOp => _opByTarget[_AmountEditTarget.amount];
+
+  /// 当前输入目标的数值。
+  double _parsedActive() => double.tryParse(_activeStr) ?? 0.0;
+
+  /// 金额串去尾零（'12.00' → '12'）。
+  static String _trimZeros(double v) {
+    final s = v.abs().toStringAsFixed(2);
+    final r = s.contains('.')
+        ? s.replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '')
+        : s;
+    return r.isEmpty ? '0' : r;
+  }
+
+  /// 原始金额位的显示串：运算模式下带算式（`100 + 50`），否则就是输入值。
+  String get _originalDisplay {
+    final op = _opByTarget[_AmountEditTarget.original];
+    if (op == null) return _originalStr;
+    final acc = _accByTarget[_AmountEditTarget.original] ?? 0;
+    return '${_trimZeros(acc)} ${_opGlyph(op)} $_originalStr';
+  }
   // 两个运算符键各自独立的模式(false=加/减,true=乘/除),长按各自切换,互不影响。
   bool _mulKey1 = false; // 键1:+ ↔ ×
   bool _mulKey2 = false; // 键2:− ↔ ÷
@@ -174,6 +221,15 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
         : s;
     _amountStr = trimmed.isEmpty ? '0' : trimmed;
     _noteCtrl.text = widget.initialNote ?? '';
+    // v45 原始金额回显:null → 留空(即「未填写」，保存时兜底为记账金额)。
+    final initOriginal = widget.initialOriginalAmount;
+    if (initOriginal != null) {
+      final os = initOriginal.toStringAsFixed(2);
+      final ot = os.contains('.')
+          ? os.replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '')
+          : os;
+      _originalStr = ot.isEmpty ? '0' : ot;
+    }
 
     // 监听焦点变化：写入 ValueNotifier，只触发外层 AnimatedPadding 局部重建
     _noteFocusNode.addListener(() {
@@ -330,7 +386,8 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   /// 不便共用，此处按同一口径重算一次）。用于换分类时回传金额。
   double _effectiveAmount() {
     final cur = double.tryParse(_amountStr) ?? 0.0;
-    return _op == null ? cur : _compute(_acc, _op!, cur);
+    // 钉在记账金额口径：换分类回传的是记账金额，与当前焦点无关。
+    return _amountOp == null ? cur : _compute(_amountAcc, _amountOp!, cur);
   }
 
   /// 分类位（P1-E，design.md 决策 4）：放在金额表达式行**最左**。
@@ -498,24 +555,35 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     );
   }
 
+  /// 小键盘当前输入目标对应的串。原始金额位被选中时，键盘就输在那边。
+  String get _activeStr =>
+      _editTarget == _AmountEditTarget.original ? _originalStr : _amountStr;
+
+  set _activeStr(String v) {
+    if (_editTarget == _AmountEditTarget.original) {
+      _originalStr = v;
+    } else {
+      _amountStr = v;
+    }
+  }
+
   void _append(String s) {
     setState(() {
-      if (s == '.') {
-        if (_amountStr.contains('.')) return;
-      }
+      final cur = _activeStr;
+      if (s == '.' && cur.contains('.')) return;
       // 限制两位小数
-      if (_amountStr.contains('.')) {
-        final dot = _amountStr.indexOf('.');
-        final decimals = _amountStr.length - dot - 1;
+      if (cur.contains('.')) {
+        final dot = cur.indexOf('.');
+        final decimals = cur.length - dot - 1;
         if (s != '.' && decimals >= 2) return;
       }
       // 去除前导 0
-      if (_amountStr == '0' && s != '.') {
-        _amountStr = s;
-      } else if (_amountStr == '-0' && s != '.') {
-        _amountStr = '-$s';
+      if (cur == '0' && s != '.') {
+        _activeStr = s;
+      } else if (cur == '-0' && s != '.') {
+        _activeStr = '-$s';
       } else {
-        _amountStr += s;
+        _activeStr = cur + s;
       }
     });
     SystemSound.play(SystemSoundType.click);
@@ -523,9 +591,16 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
 
   void _backspace() {
     setState(() {
-      if (_amountStr.isEmpty) return;
-      _amountStr = _amountStr.substring(0, _amountStr.length - 1);
-      if (_amountStr.isEmpty) _amountStr = '0';
+      final cur = _activeStr;
+      if (cur.isEmpty) return;
+      final next = cur.substring(0, cur.length - 1);
+      if (next.isEmpty) {
+        // 原始金额允许「空」= 未填写（保存时兜底为记账金额）；
+        // 记账金额不能为空，回落到 0。
+        _activeStr = _editTarget == _AmountEditTarget.original ? '' : '0';
+      } else {
+        _activeStr = next;
+      }
     });
     SystemSound.play(SystemSoundType.click);
   }
@@ -614,7 +689,9 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     double parsed() => double.tryParse(_amountStr) ?? 0.0;
 
     void applyOp(String op) {
-      final cur = parsed();
+      // 运算符作用于**当前输入目标**：不再把焦点抢回记账金额，
+      // 两个金额位的运算状态各自独立（_accByTarget / _opByTarget）。
+      final cur = _parsedActive();
       if (_op == null) {
         // 首次点击运算符，将当前值存入累加器
         _acc = cur;
@@ -623,23 +700,19 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
         _acc = _compute(_acc, _op!, cur);
       }
       _op = op;
-      _amountStr = '0';
+      _activeStr = '0';
       HapticFeedback.selectionClick();
       SystemSound.play(SystemSoundType.click);
       setState(() {});
     }
 
-    // 计算等号：完成当前运算，将结果存入 _amountStr，清空运算状态
+    // 计算等号：完成当前运算，将结果写回当前目标，清空该目标的运算状态
     void applyEquals() {
-      if (_op == null) return; // 没有运算符，不执行
-      final cur = parsed();
-      final total = _compute(_acc, _op!, cur);
-      // 格式化结果
-      final s = total.abs().toStringAsFixed(2);
-      final trimmed = s.contains('.')
-          ? s.replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '')
-          : s;
-      _amountStr = trimmed.isEmpty ? '0' : trimmed;
+      final op = _opByTarget[_editTarget];
+      if (op == null) return; // 没有运算符，不执行
+      final cur = _parsedActive();
+      final total = _compute(_acc, op, cur);
+      _activeStr = _trimZeros(total);
       _acc = 0;
       _op = null;
       HapticFeedback.selectionClick();
@@ -649,6 +722,8 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
 
     Widget keyBtn(String label, {Color? bg, Color? fg, VoidCallback? onTap}) {
       return Padding(
+        // 供 widget 测试定位数字键（金额输入目标切换回归）。
+        key: ValueKey('amountKey_$label'),
         padding: const EdgeInsets.all(6),
         child: Material(
           color: bg ?? PiggyTokens.surfaceKey(context),
@@ -689,6 +764,8 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
             fontWeight: FontWeight.w600,
           );
       return Padding(
+        // 供 widget 测试定位运算符键（输入目标不跳转回归）。
+        key: ValueKey('amountOpKey_$addSubOp'),
         padding: const EdgeInsets.all(6),
         child: Material(
           color: PiggyTokens.surfaceKeySecondary(context),
@@ -785,11 +862,11 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                     // 不能夹在「10 + 20」中间),点开选币种。
                     _buildCurrencyChip(context),
                     const SizedBox(width: 6),
-                    if (_op != null) ...[
-                      // 显示累加值
+                    if (_amountOp != null) ...[
+                      // 显示累加值（钉在记账金额口径，与当前焦点无关）
                       Text(
                         (() {
-                          final s = _acc.abs().toStringAsFixed(2);
+                          final s = _amountAcc.abs().toStringAsFixed(2);
                           final r1 = s.contains('.')
                               ? s.replaceFirst(RegExp(r'0+$'), '')
                               : s;
@@ -806,7 +883,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                         child: Text(
-                          _opGlyph(_op!),
+                          _opGlyph(_amountOp!),
                           style: text.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: primary,
@@ -814,19 +891,45 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                         ),
                       ),
                     ],
-                    // 当前输入值
-                    Text(
-                      _amountStr,
-                      style: text.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.0,
-                        color: PiggyTokens.textPrimary(context),
+                    // 当前输入值。
+                    // 可点击：把自定义小键盘的输入目标切回报账金额；选中态用
+                    // 主色描边 + 淡底，与原始金额位形成"谁在接收输入"的对照。
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => setState(
+                          () => _editTarget = _AmountEditTarget.amount),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 120),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: _editTarget == _AmountEditTarget.amount
+                              ? PiggyTokens.surfaceSelected(context)
+                              : Colors.transparent,
+                          borderRadius:
+                              BorderRadius.circular(PiggyDimens.radiusLg),
+                          border: Border.all(
+                            width: 1.5,
+                            color: _editTarget == _AmountEditTarget.amount
+                                ? primary
+                                : Colors.transparent,
+                          ),
+                        ),
+                        child: Text(
+                          _amountStr,
+                          key: const ValueKey('amountEditorAmountValue'),
+                          style: text.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.0,
+                            color: PiggyTokens.textPrimary(context),
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
-                // 等号行：仅在有运算符时显示
-                if (_op != null) ...[
+                // 等号行：仅当记账金额位有运算符时显示
+                if (_amountOp != null) ...[
                   const SizedBox(height: 4),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -841,7 +944,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                       Text(
                         (() {
                           final cur = parsed();
-                          final total = _compute(_acc, _op!, cur);
+                          final total = _compute(_amountAcc, _amountOp!, cur);
                           final s = total.abs().toStringAsFixed(2);
                           final r1 = s.contains('.')
                               ? s.replaceFirst(RegExp(r'0+$'), '')
@@ -860,6 +963,64 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                 ],
                 // v30 折算预览:金额模块区域内、金额/等号下方(反馈11)。
                 _buildCurrencySection(context),
+              ],
+            ),
+            const SizedBox(height: 10),
+            // v45 原始金额(选填):留空 = 未填写(提交 null),统计层按记账
+            // 金额兜底。刻意复用备注框的浅填充无边框样式 —— 只占一行,不
+            // 抢占上方数字键盘的主输入动线。
+            Row(
+              children: [
+                Icon(Icons.receipt_long_outlined,
+                    size: 16, color: PiggyTokens.iconSecondary(context)),
+                const SizedBox(width: 6),
+                Text(
+                  AppLocalizations.of(context).txOriginalAmountLabel,
+                  style: text.labelMedium?.copyWith(
+                    color: PiggyTokens.textSecondary(context),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                // 伪输入框：点它把自定义小键盘的输入目标切到原始金额，
+                // 自身不弹系统键盘（避免两套键盘争抢输入）。
+                Expanded(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => setState(
+                        () => _editTarget = _AmountEditTarget.original),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 120),
+                      height: 40,
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: PiggyTokens.surfaceInput(context),
+                        borderRadius:
+                            BorderRadius.circular(PiggyDimens.radiusLg),
+                        border: Border.all(
+                          width: 1.5,
+                          color: _editTarget == _AmountEditTarget.original
+                              ? primary
+                              : Colors.transparent,
+                        ),
+                      ),
+                      child: Text(
+                        _originalDisplay.isEmpty
+                            ? AppLocalizations.of(context)
+                                .txOriginalAmountHint
+                            : _originalDisplay,
+                        key: const ValueKey('amountEditorOriginalValue'),
+                        style: _originalDisplay.isEmpty
+                            ? text.labelSmall?.copyWith(
+                                color: PiggyTokens.textTertiary(context))
+                            : text.bodyMedium?.copyWith(
+                                color: PiggyTokens.textPrimary(context),
+                                fontWeight: FontWeight.w600,
+                              ),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 10),
@@ -1028,11 +1189,14 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                     ),
                   );
               Widget doneKey() {
-                // 计算当前总额以判断是否启用完成按钮
+                // 提交的是**记账金额**：求值必须用记账金额位的运算状态，
+                // 与当前焦点无关（否则焦点在原始金额时会漏算记账侧的算式）。
                 final cur = parsed();
-                final total = _op == null ? cur : _compute(_acc, _op!, cur);
+                final total = _amountOp == null
+                    ? cur
+                    : _compute(_amountAcc, _amountOp!, cur);
 
-                // 判断是否处于运算模式
+                // 当前焦点位仍在运算中时，「完成」先当等号用。
                 final isInCalcMode = _op != null;
                 final isEnabled =
                     (isInCalcMode ? true : total.abs() > 0) && !_isSubmitting;
@@ -1081,6 +1245,12 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
 
                               HapticFeedback.lightImpact();
                               SystemSound.play(SystemSoundType.click);
+                              // v45 原始金额:空串/非法输入 → null,由仓储层
+                              // 在保存时兜底为记账金额(产品口径:每条明细都有
+                              // 原始金额)。
+                              final ogText = _originalStr.trim();
+                              final originalAmount =
+                                  ogText.isEmpty ? null : double.tryParse(ogText);
                               widget.onSubmit((
                                 amount: total.abs(), // 始终正数
                                 note: _noteCtrl.text.isEmpty
@@ -1094,6 +1264,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                                 excludeFromBudget: _excludeFromBudget,
                                 currencyCode: txCurrency,
                                 nativeAmount: nativeAmount,
+                                originalAmount: originalAmount,
                               ));
 
                               // 注意：不需要在这里重置 _isSubmitting

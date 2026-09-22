@@ -353,6 +353,12 @@ class SyncDiffService {
         (local.nativeAmount ?? 0) != cloud.nativeAmount) {
       diffs.add('折算金额: ${local.nativeAmount} → ${cloud.nativeAmount}');
     }
+    // v45 原始金额：仅当云端显式携带时才比较（旧快照缺键 → null，此时
+    // 不触发 modified，避免"本地已填值 vs 云端无此键"被判成差异并被覆写）。
+    if (cloud.originalAmount != null &&
+        (local.originalAmount ?? 0) != cloud.originalAmount) {
+      diffs.add('原始金额: ${local.originalAmount} → ${cloud.originalAmount}');
+    }
 
     // 比较共享账本 override（仅当 JSON 显式携带时；null==null 不触发，
     // 避免老 JSON 因缺键触发全量 modified）。不比较则 Editor 只改 override
@@ -647,6 +653,8 @@ class SyncDiffService {
           // 账单标记：diff 合并也要带上，避免"不计入统计/预算"跨设备丢失
           excludeFromStats: cloud.excludeFromStats,
           excludeFromBudget: cloud.excludeFromBudget,
+          // v45 原始金额：云端缺键 → null → 本地保持原值（见 Data 类注释）
+          originalAmount: cloud.originalAmount,
           // 共享账本 override：modified 合并必须带上，否则 Editor 视角记的
           // tx 跨设备后 override 丢失、回退到 categoryId int（可能为 null）
           categorySyncIdOverride: cloud.categorySyncIdOverride,

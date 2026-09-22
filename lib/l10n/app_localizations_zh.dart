@@ -6980,6 +6980,91 @@ class AppLocalizationsZh extends AppLocalizations {
   String get txRateMissingHint => '请手动填写本笔汇率后保存';
 
   @override
+  String get txOriginalAmountLabel => '原始金额（选填）';
+
+  @override
+  String get txOriginalAmountHint => '留空则按记账金额';
+
+  @override
+  String get txOriginalAmountPrefix => '原';
+
+  @override
+  String get amountDeviationTitle => '金额偏差分析';
+
+  @override
+  String get amountDeviationMetricLabel => '金额口径';
+
+  @override
+  String get amountDeviationMetricCurrency => '原币金额';
+
+  @override
+  String get amountDeviationMetricNative => '本位币折算';
+
+  @override
+  String get amountDeviationBasisLabel => '差异基准';
+
+  @override
+  String get amountDeviationBasisRecorded => '记账金额';
+
+  @override
+  String get amountDeviationBasisOriginal => '原始金额';
+
+  @override
+  String get amountDeviationEntrySubtitle => '原始金额与记账金额的差异汇总与洞察';
+
+  @override
+  String get amountDeviationTotalLabel => '明细总数';
+
+  @override
+  String get amountDeviationDeviatedLabel => '有偏差明细';
+
+  @override
+  String get amountDeviationDiffSumLabel => '差异合计';
+
+  @override
+  String get amountDeviationMaxDiffLabel => '最大偏差';
+
+  @override
+  String get amountDeviationTrendTitle => '差异趋势';
+
+  @override
+  String get amountDeviationCategoryTitle => '分类偏差排行';
+
+  @override
+  String get amountDeviationInsightTitle => '偏差洞察';
+
+  @override
+  String get amountDeviationSeveritySlight => '轻微';
+
+  @override
+  String get amountDeviationSeverityNotable => '明显';
+
+  @override
+  String get amountDeviationSeveritySevere => '严重';
+
+  @override
+  String get amountDeviationReasonAbove => '原始金额高于记账金额，疑似未记录优惠或折扣';
+
+  @override
+  String get amountDeviationReasonBelow => '原始金额低于记账金额，疑似追加费用或事后补录';
+
+  @override
+  String get amountDeviationReasonMultiple => '差值接近记账金额的整数倍，疑似单位或币种换算误差';
+
+  @override
+  String get amountDeviationReasonCategoryHabit =>
+      '该分类多笔明细出现同向偏差，疑似录入口径存在系统性偏差';
+
+  @override
+  String get amountDeviationEmptySubtext => '记账时填写「原始金额」后，这里会展示偏差与原因';
+
+  @override
+  String get amountDeviationBottomFillHint => '未填写的原始金额按记账金额保存，不产生差异';
+
+  @override
+  String get amountDeviationNoDiff => '该区间没有偏差';
+
+  @override
   String get txCrossCurrencyTransferBlocked => '暂不支持跨币种转账,请分别记两笔或使用同币种账户';
 
   @override
@@ -14891,6 +14976,91 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get txRateMissingHint => '請手動填寫本筆匯率後儲存';
+
+  @override
+  String get txOriginalAmountLabel => '原始金額（選填）';
+
+  @override
+  String get txOriginalAmountHint => '留空則按記帳金額';
+
+  @override
+  String get txOriginalAmountPrefix => '原';
+
+  @override
+  String get amountDeviationTitle => '金額偏差分析';
+
+  @override
+  String get amountDeviationMetricLabel => '金額口徑';
+
+  @override
+  String get amountDeviationMetricCurrency => '原幣金額';
+
+  @override
+  String get amountDeviationMetricNative => '本位幣折算';
+
+  @override
+  String get amountDeviationBasisLabel => '差異基準';
+
+  @override
+  String get amountDeviationBasisRecorded => '記帳金額';
+
+  @override
+  String get amountDeviationBasisOriginal => '原始金額';
+
+  @override
+  String get amountDeviationEntrySubtitle => '原始金額與記帳金額的差異彙總與洞察';
+
+  @override
+  String get amountDeviationTotalLabel => '明細總數';
+
+  @override
+  String get amountDeviationDeviatedLabel => '有偏差明細';
+
+  @override
+  String get amountDeviationDiffSumLabel => '差異合計';
+
+  @override
+  String get amountDeviationMaxDiffLabel => '最大偏差';
+
+  @override
+  String get amountDeviationTrendTitle => '差異趨勢';
+
+  @override
+  String get amountDeviationCategoryTitle => '分類偏差排行';
+
+  @override
+  String get amountDeviationInsightTitle => '偏差洞察';
+
+  @override
+  String get amountDeviationSeveritySlight => '輕微';
+
+  @override
+  String get amountDeviationSeverityNotable => '明顯';
+
+  @override
+  String get amountDeviationSeveritySevere => '嚴重';
+
+  @override
+  String get amountDeviationReasonAbove => '原始金額高於記帳金額，疑似未記錄優惠或折扣';
+
+  @override
+  String get amountDeviationReasonBelow => '原始金額低於記帳金額，疑似追加費用或事後補錄';
+
+  @override
+  String get amountDeviationReasonMultiple => '差值接近記帳金額的整數倍，疑似單位或幣種換算誤差';
+
+  @override
+  String get amountDeviationReasonCategoryHabit =>
+      '該分類多筆明細出現同向偏差，疑似錄入慣例存在系統性偏差';
+
+  @override
+  String get amountDeviationEmptySubtext => '記帳時填寫「原始金額」後，這裡會顯示偏差與原因';
+
+  @override
+  String get amountDeviationBottomFillHint => '未填寫的原始金額按記帳金額儲存，不產生差異';
+
+  @override
+  String get amountDeviationNoDiff => '該區間沒有偏差';
 
   @override
   String get txCrossCurrencyTransferBlocked => '暫不支援跨幣種轉帳,請分別記兩筆或使用同幣種帳戶';

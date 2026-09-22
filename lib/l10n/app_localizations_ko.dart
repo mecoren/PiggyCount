@@ -7054,6 +7054,96 @@ class AppLocalizationsKo extends AppLocalizations {
   String get txRateMissingHint => '저장하기 전에 이 건의 환율을 입력해 주세요';
 
   @override
+  String get txOriginalAmountLabel => '원본 금액 (선택)';
+
+  @override
+  String get txOriginalAmountHint => '비워두면 기록 금액으로 처리';
+
+  @override
+  String get txOriginalAmountPrefix => '원본';
+
+  @override
+  String get amountDeviationTitle => '금액 편차 분석';
+
+  @override
+  String get amountDeviationMetricLabel => '금액 기준';
+
+  @override
+  String get amountDeviationMetricCurrency => '원래 통화';
+
+  @override
+  String get amountDeviationMetricNative => '기준 통화 환산';
+
+  @override
+  String get amountDeviationBasisLabel => '편차 기준';
+
+  @override
+  String get amountDeviationBasisRecorded => '기록 금액';
+
+  @override
+  String get amountDeviationBasisOriginal => '원본 금액';
+
+  @override
+  String get amountDeviationEntrySubtitle => '원본 금액과 기록 금액의 차이 요약과 인사이트';
+
+  @override
+  String get amountDeviationTotalLabel => '전체 내역';
+
+  @override
+  String get amountDeviationDeviatedLabel => '편차 있음';
+
+  @override
+  String get amountDeviationDiffSumLabel => '편차 합계';
+
+  @override
+  String get amountDeviationMaxDiffLabel => '최대 편차';
+
+  @override
+  String get amountDeviationTrendTitle => '편차 추이';
+
+  @override
+  String get amountDeviationCategoryTitle => '카테고리별 편차';
+
+  @override
+  String get amountDeviationInsightTitle => '편차 인사이트';
+
+  @override
+  String get amountDeviationSeveritySlight => '경미';
+
+  @override
+  String get amountDeviationSeverityNotable => '뚜렷';
+
+  @override
+  String get amountDeviationSeveritySevere => '심각';
+
+  @override
+  String get amountDeviationReasonAbove =>
+      '원본 금액이 더 큽니다. 할인이나 반올림이 기록되지 않았을 수 있습니다';
+
+  @override
+  String get amountDeviationReasonBelow =>
+      '원본 금액이 더 작습니다. 추가 비용이나 사후 수정이 있었을 수 있습니다';
+
+  @override
+  String get amountDeviationReasonMultiple =>
+      '차이가 기록 금액의 정수 배에 가깝습니다. 단위나 통화 변환 오류일 수 있습니다';
+
+  @override
+  String get amountDeviationReasonCategoryHabit =>
+      '이 카테고리의 여러 내역이 같은 방향으로 치우쳤습니다. 입력 기준이 어긋났을 수 있습니다';
+
+  @override
+  String get amountDeviationEmptySubtext =>
+      '기록할 때 원본 금액을 입력하면 여기에 편차와 원인이 표시됩니다';
+
+  @override
+  String get amountDeviationBottomFillHint =>
+      '원본 금액을 비워두면 기록 금액으로 저장되어 편차가 없습니다';
+
+  @override
+  String get amountDeviationNoDiff => '이 구간에는 편차가 없습니다';
+
+  @override
   String get txCrossCurrencyTransferBlocked =>
       '통화 간 이체는 아직 지원되지 않습니다. 두 건으로 나누어 기록하거나 같은 통화 계정을 사용하세요.';
 

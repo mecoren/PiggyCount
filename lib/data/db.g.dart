@@ -2106,6 +2106,12 @@ class $TransactionsTable extends Transactions
   late final GeneratedColumn<double> nativeAmount = GeneratedColumn<double>(
       'native_amount', aliasedName, true,
       type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _originalAmountMeta =
+      const VerificationMeta('originalAmount');
+  @override
+  late final GeneratedColumn<double> originalAmount = GeneratedColumn<double>(
+      'original_amount', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -2129,7 +2135,8 @@ class $TransactionsTable extends Transactions
         excludeFromBudget,
         updatedAt,
         currencyCode,
-        nativeAmount
+        nativeAmount,
+        originalAmount
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2263,6 +2270,12 @@ class $TransactionsTable extends Transactions
           nativeAmount.isAcceptableOrUnknown(
               data['native_amount']!, _nativeAmountMeta));
     }
+    if (data.containsKey('original_amount')) {
+      context.handle(
+          _originalAmountMeta,
+          originalAmount.isAcceptableOrUnknown(
+              data['original_amount']!, _originalAmountMeta));
+    }
     return context;
   }
 
@@ -2319,6 +2332,8 @@ class $TransactionsTable extends Transactions
           .read(DriftSqlType.string, data['${effectivePrefix}currency_code']),
       nativeAmount: attachedDatabase.typeMapping
           .read(DriftSqlType.double, data['${effectivePrefix}native_amount']),
+      originalAmount: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}original_amount']),
     );
   }
 
@@ -2367,6 +2382,13 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   /// 单币种/未折算 == amount(隐含汇率 1.0)。账本维度统计读本列(?? amount),
   /// 账户维度(余额等)仍读 amount。
   final double? nativeAmount;
+
+  /// v45:原始金额(记账时用户手动填写的来源/票面金额,如发票原价)。
+  /// NULL = 用户未填写,语义等价于「默认金额 = 记账金额 amount」。
+  /// 刻意不回填存量行 —— 物理 NULL 才能区分「未填写」与「手填了相同值」,
+  /// 且历史明细的统计口径零变化。读取/统计统一走
+  /// `COALESCE(original_amount, amount)`,单一口径避免散落兜底。
+  final double? originalAmount;
   const Transaction(
       {required this.id,
       required this.ledgerId,
@@ -2389,7 +2411,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       required this.excludeFromBudget,
       this.updatedAt,
       this.currencyCode,
-      this.nativeAmount});
+      this.nativeAmount,
+      this.originalAmount});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -2447,6 +2470,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     if (!nullToAbsent || nativeAmount != null) {
       map['native_amount'] = Variable<double>(nativeAmount);
     }
+    if (!nullToAbsent || originalAmount != null) {
+      map['original_amount'] = Variable<double>(originalAmount);
+    }
     return map;
   }
 
@@ -2501,6 +2527,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       nativeAmount: nativeAmount == null && nullToAbsent
           ? const Value.absent()
           : Value(nativeAmount),
+      originalAmount: originalAmount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(originalAmount),
     );
   }
 
@@ -2535,6 +2564,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
       currencyCode: serializer.fromJson<String?>(json['currencyCode']),
       nativeAmount: serializer.fromJson<double?>(json['nativeAmount']),
+      originalAmount: serializer.fromJson<double?>(json['originalAmount']),
     );
   }
   @override
@@ -2566,6 +2596,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
       'currencyCode': serializer.toJson<String?>(currencyCode),
       'nativeAmount': serializer.toJson<double?>(nativeAmount),
+      'originalAmount': serializer.toJson<double?>(originalAmount),
     };
   }
 
@@ -2591,7 +2622,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           bool? excludeFromBudget,
           Value<DateTime?> updatedAt = const Value.absent(),
           Value<String?> currencyCode = const Value.absent(),
-          Value<double?> nativeAmount = const Value.absent()}) =>
+          Value<double?> nativeAmount = const Value.absent(),
+          Value<double?> originalAmount = const Value.absent()}) =>
       Transaction(
         id: id ?? this.id,
         ledgerId: ledgerId ?? this.ledgerId,
@@ -2629,6 +2661,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
             currencyCode.present ? currencyCode.value : this.currencyCode,
         nativeAmount:
             nativeAmount.present ? nativeAmount.value : this.nativeAmount,
+        originalAmount:
+            originalAmount.present ? originalAmount.value : this.originalAmount,
       );
   Transaction copyWithCompanion(TransactionsCompanion data) {
     return Transaction(
@@ -2678,6 +2712,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       nativeAmount: data.nativeAmount.present
           ? data.nativeAmount.value
           : this.nativeAmount,
+      originalAmount: data.originalAmount.present
+          ? data.originalAmount.value
+          : this.originalAmount,
     );
   }
 
@@ -2705,7 +2742,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('excludeFromBudget: $excludeFromBudget, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('currencyCode: $currencyCode, ')
-          ..write('nativeAmount: $nativeAmount')
+          ..write('nativeAmount: $nativeAmount, ')
+          ..write('originalAmount: $originalAmount')
           ..write(')'))
         .toString();
   }
@@ -2733,7 +2771,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         excludeFromBudget,
         updatedAt,
         currencyCode,
-        nativeAmount
+        nativeAmount,
+        originalAmount
       ]);
   @override
   bool operator ==(Object other) =>
@@ -2760,7 +2799,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.excludeFromBudget == this.excludeFromBudget &&
           other.updatedAt == this.updatedAt &&
           other.currencyCode == this.currencyCode &&
-          other.nativeAmount == this.nativeAmount);
+          other.nativeAmount == this.nativeAmount &&
+          other.originalAmount == this.originalAmount);
 }
 
 class TransactionsCompanion extends UpdateCompanion<Transaction> {
@@ -2786,6 +2826,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<DateTime?> updatedAt;
   final Value<String?> currencyCode;
   final Value<double?> nativeAmount;
+  final Value<double?> originalAmount;
   const TransactionsCompanion({
     this.id = const Value.absent(),
     this.ledgerId = const Value.absent(),
@@ -2809,6 +2850,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.updatedAt = const Value.absent(),
     this.currencyCode = const Value.absent(),
     this.nativeAmount = const Value.absent(),
+    this.originalAmount = const Value.absent(),
   });
   TransactionsCompanion.insert({
     this.id = const Value.absent(),
@@ -2833,6 +2875,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.updatedAt = const Value.absent(),
     this.currencyCode = const Value.absent(),
     this.nativeAmount = const Value.absent(),
+    this.originalAmount = const Value.absent(),
   })  : ledgerId = Value(ledgerId),
         type = Value(type),
         amount = Value(amount);
@@ -2859,6 +2902,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<DateTime>? updatedAt,
     Expression<String>? currencyCode,
     Expression<double>? nativeAmount,
+    Expression<double>? originalAmount,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2888,6 +2932,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (updatedAt != null) 'updated_at': updatedAt,
       if (currencyCode != null) 'currency_code': currencyCode,
       if (nativeAmount != null) 'native_amount': nativeAmount,
+      if (originalAmount != null) 'original_amount': originalAmount,
     });
   }
 
@@ -2913,7 +2958,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       Value<bool>? excludeFromBudget,
       Value<DateTime?>? updatedAt,
       Value<String?>? currencyCode,
-      Value<double?>? nativeAmount}) {
+      Value<double?>? nativeAmount,
+      Value<double?>? originalAmount}) {
     return TransactionsCompanion(
       id: id ?? this.id,
       ledgerId: ledgerId ?? this.ledgerId,
@@ -2940,6 +2986,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       updatedAt: updatedAt ?? this.updatedAt,
       currencyCode: currencyCode ?? this.currencyCode,
       nativeAmount: nativeAmount ?? this.nativeAmount,
+      originalAmount: originalAmount ?? this.originalAmount,
     );
   }
 
@@ -3016,6 +3063,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (nativeAmount.present) {
       map['native_amount'] = Variable<double>(nativeAmount.value);
     }
+    if (originalAmount.present) {
+      map['original_amount'] = Variable<double>(originalAmount.value);
+    }
     return map;
   }
 
@@ -3043,7 +3093,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('excludeFromBudget: $excludeFromBudget, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('currencyCode: $currencyCode, ')
-          ..write('nativeAmount: $nativeAmount')
+          ..write('nativeAmount: $nativeAmount, ')
+          ..write('originalAmount: $originalAmount')
           ..write(')'))
         .toString();
   }
@@ -12933,6 +12984,7 @@ typedef $$TransactionsTableCreateCompanionBuilder = TransactionsCompanion
   Value<DateTime?> updatedAt,
   Value<String?> currencyCode,
   Value<double?> nativeAmount,
+  Value<double?> originalAmount,
 });
 typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
     Function({
@@ -12958,6 +13010,7 @@ typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
   Value<DateTime?> updatedAt,
   Value<String?> currencyCode,
   Value<double?> nativeAmount,
+  Value<double?> originalAmount,
 });
 
 class $$TransactionsTableFilterComposer
@@ -13042,6 +13095,10 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<double> get nativeAmount => $composableBuilder(
       column: $table.nativeAmount, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get originalAmount => $composableBuilder(
+      column: $table.originalAmount,
+      builder: (column) => ColumnFilters(column));
 }
 
 class $$TransactionsTableOrderingComposer
@@ -13128,6 +13185,10 @@ class $$TransactionsTableOrderingComposer
   ColumnOrderings<double> get nativeAmount => $composableBuilder(
       column: $table.nativeAmount,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get originalAmount => $composableBuilder(
+      column: $table.originalAmount,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$TransactionsTableAnnotationComposer
@@ -13204,6 +13265,9 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<double> get nativeAmount => $composableBuilder(
       column: $table.nativeAmount, builder: (column) => column);
+
+  GeneratedColumn<double> get originalAmount => $composableBuilder(
+      column: $table.originalAmount, builder: (column) => column);
 }
 
 class $$TransactionsTableTableManager extends RootTableManager<
@@ -13254,6 +13318,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<DateTime?> updatedAt = const Value.absent(),
             Value<String?> currencyCode = const Value.absent(),
             Value<double?> nativeAmount = const Value.absent(),
+            Value<double?> originalAmount = const Value.absent(),
           }) =>
               TransactionsCompanion(
             id: id,
@@ -13278,6 +13343,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             updatedAt: updatedAt,
             currencyCode: currencyCode,
             nativeAmount: nativeAmount,
+            originalAmount: originalAmount,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
@@ -13302,6 +13368,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<DateTime?> updatedAt = const Value.absent(),
             Value<String?> currencyCode = const Value.absent(),
             Value<double?> nativeAmount = const Value.absent(),
+            Value<double?> originalAmount = const Value.absent(),
           }) =>
               TransactionsCompanion.insert(
             id: id,
@@ -13326,6 +13393,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             updatedAt: updatedAt,
             currencyCode: currencyCode,
             nativeAmount: nativeAmount,
+            originalAmount: originalAmount,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

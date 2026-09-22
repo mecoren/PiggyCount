@@ -42,6 +42,8 @@ Future<void> showTransactionFormBottomSheet(
   bool initialExcludeFromBudget = false,
   String? initialCurrencyCode,
   double? initialNativeAmount,
+  // v45 原始金额回显(编辑既有明细)。
+  double? initialOriginalAmount,
 }) async {
   await showModalBottomSheet<void>(
     context: context,
@@ -65,6 +67,7 @@ Future<void> showTransactionFormBottomSheet(
       initialExcludeFromBudget: initialExcludeFromBudget,
       initialCurrencyCode: initialCurrencyCode,
       initialNativeAmount: initialNativeAmount,
+      initialOriginalAmount: initialOriginalAmount,
     ),
   );
 }
@@ -91,6 +94,8 @@ class TransactionEditorPage extends ConsumerStatefulWidget {
   // v30 多币种编辑回显(推隐含汇率用)
   final String? initialCurrencyCode;
   final double? initialNativeAmount;
+  // v45 原始金额回显:null = 该笔未填写。
+  final double? initialOriginalAmount;
 
   /// 是否以底部抽屉形式渲染。
   ///
@@ -115,6 +120,7 @@ class TransactionEditorPage extends ConsumerStatefulWidget {
     this.initialExcludeFromBudget = false,
     this.initialCurrencyCode,
     this.initialNativeAmount,
+    this.initialOriginalAmount,
     this.renderAsBottomSheet = false,
   });
 
@@ -462,6 +468,7 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
         initialExcludeFromBudget: widget.initialExcludeFromBudget,
         initialCurrencyCode: widget.initialCurrencyCode,
         initialNativeAmount: widget.initialNativeAmount,
+        initialOriginalAmount: widget.initialOriginalAmount,
         onSubmit: (res) async {
           final repo = ref.read(repositoryProvider);
           final attachmentService = ref.read(attachmentServiceProvider);
@@ -500,6 +507,10 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
               excludeFromBudget: res.excludeFromBudget,
               currencyCode: res.currencyCode,
               nativeAmount: res.nativeAmount,
+              // v45 必须显式 d.Value,才能把「清空原始金额」写成 NULL:
+              // 直接传 dart null 会被 updateTransaction 当作 absent(不改动),
+              // 用户删掉原始金额后永远清不掉(同 accountIdForUpdate 的坑)。
+              originalAmount: d.Value<double?>(res.originalAmount),
             );
             transactionId = widget.editingTransactionId!;
           } else {
@@ -517,6 +528,7 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
               excludeFromBudget: res.excludeFromBudget,
               currencyCode: res.currencyCode,
               nativeAmount: res.nativeAmount,
+              originalAmount: res.originalAmount,
             );
           }
           // 保存待上传的附件

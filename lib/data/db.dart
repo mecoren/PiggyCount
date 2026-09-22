@@ -168,6 +168,13 @@ class Transactions extends Table {
   /// 单币种/未折算 == amount(隐含汇率 1.0)。账本维度统计读本列(?? amount),
   /// 账户维度(余额等)仍读 amount。
   RealColumn get nativeAmount => real().nullable()();
+
+  /// v45:原始金额(记账时用户手动填写的来源/票面金额,如发票原价)。
+  /// NULL = 用户未填写,语义等价于「默认金额 = 记账金额 amount」。
+  /// 刻意不回填存量行 —— 物理 NULL 才能区分「未填写」与「手填了相同值」,
+  /// 且历史明细的统计口径零变化。读取/统计统一走
+  /// `COALESCE(original_amount, amount)`,单一口径避免散落兜底。
+  RealColumn get originalAmount => real().nullable()();
 }
 
 class RecurringTransactions extends Table {
@@ -565,7 +572,7 @@ class PiggyDatabase extends _$PiggyDatabase {
 
   @override
   int get schemaVersion =>
-      44; // v44: 回收站 deleted_transactions(F1 交易建模,软删除搬行而非加列); v43: 同步指标 sync_op_log(审计 P0-1,本地成功率测量) + stale_remote_slots(审计 P1-6,换名收尾补删持久化); v42: 周期账单币种 — recurring_transactions.currency_code(移植 BeeCount #444); v41: local_changes 已推送行存量清理(数据治理 G-LC,双后端实测 6143 行无界增长); v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
+      45; // v45: 账本明细原始金额 transactions.original_amount(用户手填,NULL=未填写即按记账金额); v44: 回收站 deleted_transactions(F1 交易建模,软删除搬行而非加列); v43: 同步指标 sync_op_log(审计 P0-1,本地成功率测量) + stale_remote_slots(审计 P1-6,换名收尾补删持久化); v42: 周期账单币种 — recurring_transactions.currency_code(移植 BeeCount #444); v41: local_changes 已推送行存量清理(数据治理 G-LC,双后端实测 6143 行无界增长); v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
 
   /// WAL 检查点后允许残留的字节数（见 [migration] 的 beforeOpen）。
   /// 公开给回归测试取期望值，别处不要依赖。
@@ -1547,6 +1554,21 @@ class PiggyDatabase extends _$PiggyDatabase {
                 'CREATE INDEX IF NOT EXISTS idx_deleted_transactions_ledger '
                 'ON deleted_transactions(ledger_id);');
             logger.info('DBMigration', 'v44 迁移完成');
+          }
+          if (from < 45) {
+            // v45: 账本明细原始金额(用户手填的来源/票面金额)。
+            // 加列后**立即回填** `original_amount = amount` —— 产品口径是
+            // 「每条明细都有原始金额」,未填写即等于记账金额(差异 0)。
+            // 写入路径同样兜底(见 local_transaction_repository),读取侧的
+            // COALESCE 只作旧快照/手工插库的防御,不承担业务兜底。
+            // ⚠️ SQL 与 test/data/migration_v45_test.dart 的常量保持一字不差。
+            logger.info(
+                'DBMigration', '开始迁移到 v45: 账本明细原始金额(original_amount)');
+            await _addColumnIfMissing('transactions', 'original_amount',
+                'ALTER TABLE transactions ADD COLUMN original_amount REAL;');
+            await customStatement(
+                'UPDATE transactions SET original_amount = amount WHERE original_amount IS NULL;');
+            logger.info('DBMigration', 'v45 迁移完成');
           }
         },
         onCreate: (m) async {
