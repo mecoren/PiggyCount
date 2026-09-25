@@ -573,5 +573,43 @@ void main() {
       expect(actual.length, equals(expected.length));
       expect(RegExp(r'^[0-9a-f]{64}$').hasMatch(actual), isTrue);
     });
+
+    test('6 键全平局时指纹与输入顺序无关（P2 平局兜底编码缓存的行为锚点）', () {
+      // 同日/同类型/同金额/同分类/同备注的批量行是真实场景（通勤、导入）。
+      // 6 键全平局 → 落到末位「完整规范化串比较」；若该兜底失效（或缓存
+      // 改动改变了比较结果），输入顺序就会影响指纹 → 跨设备永久 outOfSync。
+      Map<String, dynamic> tieItem(String account, String tag) => {
+            'happenedAt': '2026-07-01T10:00:00',
+            'type': 'expense',
+            'amount': 20.0,
+            'categoryName': '餐饮',
+            'categoryKind': 'expense',
+            'note': '',
+            'accountName': account,
+            'tags': tag,
+          };
+
+      final p1 = payload([
+        tieItem('现金', 'a'),
+        tieItem('招行', 'b'),
+        tieItem('微信', 'c'),
+      ]);
+      final p2 = payload([
+        tieItem('微信', 'c'),
+        tieItem('现金', 'a'),
+        tieItem('招行', 'b'),
+      ]);
+      expect(contentFingerprintFromMap(p1),
+          equals(contentFingerprintFromMap(p2)));
+
+      // 尾部字段不同 → 指纹必须不同（排序兜底不能把内容差异吃掉）
+      final p3 = payload([
+        tieItem('现金', 'a'),
+        tieItem('招行', 'b'),
+        tieItem('微信', 'd'),
+      ]);
+      expect(contentFingerprintFromMap(p1),
+          isNot(equals(contentFingerprintFromMap(p3))));
+    });
   });
 }

@@ -42,6 +42,32 @@ import '../services/system/logger_service.dart';
 /// 输入 payload 必须包含 `items` 字段（List<Map>），与 `exportTransactionsJson`
 /// 输出结构一致。
 String contentFingerprintFromMap(Map<String, dynamic> payload) {
+  final (fp, counts) = contentFingerprintCore(payload);
+  logger.debug('Fingerprint',
+      '交易数: ${counts['items']}, 账户数: ${counts['accounts']}, 分类数: ${counts['categories']}, '
+      '标签数: ${counts['tags']}, 自定义字段数: ${counts['customFields']}, '
+      '预算数: ${counts['budgets']}, 周期规则数: ${counts['recurring']}, '
+      '汇率覆盖数: ${counts['rateOverrides']}, 指纹: ${fp.substring(0, 16)}...');
+  return fp;
+}
+
+/// 纯计算核心（无日志、无平台依赖）：isolate 安全版本。
+///
+/// [contentFingerprintFromMap] 的日志走 LoggerService（内部有
+/// MethodChannel + 节流 Timer），不能在 Isolate.run/compute 的后台
+/// isolate 里触达 —— 后台指纹路径（下载完整性校验等）必须调用本函数。
+/// 返回 (指纹, 各实体计数)，计数仅供日志，不参与哈希。
+(String, Map<String, int>) contentFingerprintCore(
+    Map<String, dynamic> payload) {
+  // 平局兜底编码缓存：原实现在各排序比较器内逐次 jsonEncode 完整规范化
+  // map，平局密集时（同日/同类型/同金额的批量导入、转账对）退化为
+  // O(n log n) 次全量编码。putIfAbsent 保证每个元素至多编码一次，无平局
+  // 时零编码开销。Map 的 == 即实例同一性，直接以 map 实例作键；编码串
+  // 仅用于定序，不参与哈希内容（比较结果与原实现逐次编码完全一致）。
+  final tiebreakEncoded = <Map<String, dynamic>, String>{};
+  String tiebreakEncode(Map<String, dynamic> m) =>
+      tiebreakEncoded.putIfAbsent(m, () => jsonEncode(m));
+
   final items = (payload['items'] as List).cast<Map<String, dynamic>>();
   final canon = items
       .map((it) {
@@ -153,7 +179,7 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
     // 输入顺序无关。无平局项的数据指纹不受影响（哈希内容不变）。
     // 已知取舍：算法变更让「存在 6 键平局交易」的存量用户升级后首轮
     // 一次性 outOfSync，同步一轮即收敛（同 M2 迁移先例）。
-    return jsonEncode(a).compareTo(jsonEncode(b));
+    return tiebreakEncode(a).compareTo(tiebreakEncode(b));
   });
   // 账户元数据规范化（account_metadata_sync_fix G4）：
   // 字段集与 exportTransactionsJson 的账户导出保持一致；缺失键以默认值
@@ -193,7 +219,7 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
         : (b['name'] as String);
     final c = ka.compareTo(kb);
     if (c != 0) return c;
-    return jsonEncode(a).compareTo(jsonEncode(b));
+    return tiebreakEncode(a).compareTo(tiebreakEncode(b));
   });
 
   // ---- v8（sync_gap_closure）：全量分类/标签 + 预算/周期/汇率覆盖 ----
@@ -214,7 +240,7 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
         : ((b['name'] as String?) ?? '');
     final c = ka.compareTo(kb);
     if (c != 0) return c;
-    return jsonEncode(a).compareTo(jsonEncode(b));
+    return tiebreakEncode(a).compareTo(tiebreakEncode(b));
   }
 
   final categories = (payload['categories'] as List?)
@@ -288,7 +314,7 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
           : '${b['type']}|${b['categoryName']}|${b['period']}';
       final c = ka.compareTo(kb);
       if (c != 0) return c;
-      return jsonEncode(a).compareTo(jsonEncode(b));
+      return tiebreakEncode(a).compareTo(tiebreakEncode(b));
     });
 
   final recurrings = (payload['recurring'] as List?)
@@ -347,7 +373,7 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
       final c = '${a['baseCurrency']}/${a['quoteCurrency']}'
           .compareTo('${b['baseCurrency']}/${b['quoteCurrency']}');
       if (c != 0) return c;
-      return jsonEncode(a).compareTo(jsonEncode(b));
+      return tiebreakEncode(a).compareTo(tiebreakEncode(b));
     });
 
   final bytes = utf8.encode(jsonEncode({
@@ -372,10 +398,17 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
     'currency': payload['currency'] as String? ?? '',
   }));
   final fp = sha256.convert(bytes).toString();
-  logger.debug('Fingerprint',
-      '交易数: ${canon.length}, 账户数: ${accountCanon.length}, 分类数: ${categoryCanon.length}, '
-      '标签数: ${tagCanon.length}, 自定义字段数: ${customFieldCanon.length}, '
-      '预算数: ${budgetCanon.length}, 周期规则数: ${recurringCanon.length}, '
-      '汇率覆盖数: ${rateOverrideCanon.length}, 指纹: ${fp.substring(0, 16)}...');
-  return fp;
+  return (
+    fp,
+    {
+      'items': canon.length,
+      'accounts': accountCanon.length,
+      'categories': categoryCanon.length,
+      'tags': tagCanon.length,
+      'customFields': customFieldCanon.length,
+      'budgets': budgetCanon.length,
+      'recurring': recurringCanon.length,
+      'rateOverrides': rateOverrideCanon.length,
+    },
+  );
 }

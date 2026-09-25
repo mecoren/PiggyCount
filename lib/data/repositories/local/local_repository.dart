@@ -754,6 +754,58 @@ class LocalRepository extends BaseRepository {
       _transactionRepo.softDeleteTransaction(id);
 
   @override
+  Future<int> softDeleteTransactions(List<int> ids) =>
+      _transactionRepo.softDeleteTransactions(ids);
+
+  // P6 搜索页批量操作：单事务批量改单一字段。逐笔记 changeTracker（同步
+  // 契约与 updateTransaction 一致），事务粒度从每条一次折叠为一次。
+  Future<int> _updateTransactionsBatchField({
+    required List<int> ids,
+    required TransactionsCompanion field,
+  }) async {
+    if (ids.isEmpty) return 0;
+    return db.transaction(() async {
+      final rows = await (db.select(db.transactions)
+            ..where((t) => t.id.isIn(ids)))
+          .get();
+      if (rows.isEmpty) return 0;
+      await (db.update(db.transactions)..where((t) => t.id.isIn(ids)))
+          .write(field);
+      if (changeTracker != null) {
+        for (final tx in rows) {
+          if (tx.syncId != null) {
+            await changeTracker!.recordLedgerChange(
+              entityType: 'transaction',
+              entityId: tx.id,
+              entitySyncId: tx.syncId!,
+              ledgerId: tx.ledgerId,
+              action: 'update',
+            );
+          }
+        }
+      }
+      return rows.length;
+    });
+  }
+
+  @override
+  Future<int> updateTransactionsBatchNote({
+    required List<int> ids,
+    String? note,
+  }) =>
+      _updateTransactionsBatchField(
+          ids: ids, field: TransactionsCompanion(note: d.Value(note)));
+
+  @override
+  Future<int> updateTransactionsBatchCategory({
+    required List<int> ids,
+    required int categoryId,
+  }) =>
+      _updateTransactionsBatchField(
+          ids: ids,
+          field: TransactionsCompanion(categoryId: d.Value(categoryId)));
+
+  @override
   Future<List<DeletedTransaction>> getDeletedTransactions({int? ledgerId}) =>
       _transactionRepo.getDeletedTransactions(ledgerId: ledgerId);
 

@@ -113,6 +113,18 @@ class _CategoryPieChartState extends ConsumerState<CategoryPieChart> {
       child: Stack(
         alignment: Alignment.center,
         children: [
+          // U4：读屏摘要。扇区与外置标签都是画出来的，不补这层
+          // TalkBack/VoiceOver 对饼图无话可念（与柱状/折线图的
+          // chartSeriesSemantics 同思路；饼图只暴露名称+占比，无金额可隐）。
+          Positioned.fill(
+            child: Semantics(
+              label: [
+                for (final s in slices)
+                  '${s.name == "_other_" ? l10n.commonOther : CategoryUtils.getDisplayName(s.name, context)} '
+                      '${(s.total / widget.sum * 100).toStringAsFixed(1)}%'
+              ].join('，'),
+            ),
+          ),
           PieChart(
             PieChartData(
               pieTouchData: PieTouchData(

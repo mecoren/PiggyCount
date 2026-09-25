@@ -306,6 +306,10 @@ class _WidgetUpdateObserver extends ProviderObserver {
       }
 
       final widgetManager = WidgetManager();
+      // P7：全目录预热是 raster→PNG 的 CPU 密集工作，此前在启动窗口内
+      // 与首帧渲染抢主线程 —— 等首帧结束再渲，冷启动更顺滑；触发时机
+      // （启动/切账本）不变。
+      await WidgetsBinding.instance.endOfFrame;
       await widgetManager.updateAllWidgetsLocalized(
         repository,
         ledgerId,

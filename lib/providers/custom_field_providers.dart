@@ -77,12 +77,21 @@ final customFieldValueBadgesProvider = StreamProvider<Map<int,
         ..where((t) =>
             t.ledgerId.equals(ledgerId) & t.customValuesJson.isNotNull()))
       .watch();
+  // P7：decode 结果按 customValuesJson 串缓存 —— 交易表任何写操作都会
+  // 重发全量行，此前每行每次重发都 jsonDecode 一遍；键是取值内容串，
+  // 容量以「不同取值组合数」为界。decode 产物下方只读，可安全共享。
+  final decodeCache = <String, Map<String, dynamic>>{};
+  // P7：DateFormat 构造提出每值循环。
+  final yMd = DateFormat.yMd();
   return valuesStream.asyncMap((rows) async {
     final defs = await repo.getDefinitionsForLedger(ledgerId);
     final out =
         <int, List<({String name, String display})>>{};
     for (final tx in rows) {
-      final values = CustomFieldValueCodec.decode(tx.customValuesJson);
+      final json = tx.customValuesJson;
+      if (json == null) continue;
+      final values = decodeCache.putIfAbsent(
+          json, () => CustomFieldValueCodec.decode(json));
       if (values.isEmpty) continue;
       final badges = <({String name, String display})>[];
       for (final d in defs) {
@@ -92,7 +101,7 @@ final customFieldValueBadgesProvider = StreamProvider<Map<int,
         if (display == null) continue;
         if (d.fieldType == CustomFieldType.date) {
           final parsed = DateTime.tryParse(display);
-          if (parsed != null) display = DateFormat.yMd().format(parsed);
+          if (parsed != null) display = yMd.format(parsed);
         }
         badges.add((name: d.name, display: display));
       }

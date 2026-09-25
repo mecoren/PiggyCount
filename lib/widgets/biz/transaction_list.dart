@@ -183,12 +183,25 @@ class TransactionListState extends ConsumerState<TransactionList> {
       }
     }
 
-    // 检查 transactions 数据变化，重新加载标签和附件
-    if (widget.transactions != null) {
-      final newIds = widget.transactions!.map((t) => t.t.id).toList();
-      if (!_listEquals(newIds, _cachedTransactionIds)) {
-        _loadTags();
-        _loadAttachmentCounts();
+    // 检查 transactions 数据变化，重新加载标签和附件。
+    // P7：先走廉价短路——同一实例必未变；长度 + 首尾 id 一致也可跳过
+    // （id 是自增主键，集合变化必然改长度或首尾）。原实现每次父重建
+    // （隐藏金额切换、横幅等 setState）都 map 出全量 id 列表再比对。
+    final txs = widget.transactions;
+    if (txs != null) {
+      final oldTxs = oldWidget.transactions;
+      final cheapSame = identical(txs, oldTxs) ||
+          (oldTxs != null &&
+              txs.length == oldTxs.length &&
+              (txs.isEmpty ||
+                  (txs.first.t.id == oldTxs.first.t.id &&
+                      txs.last.t.id == oldTxs.last.t.id)));
+      if (!cheapSame) {
+        final newIds = txs.map((t) => t.t.id).toList();
+        if (!_listEquals(newIds, _cachedTransactionIds)) {
+          _loadTags();
+          _loadAttachmentCounts();
+        }
       }
     }
   }

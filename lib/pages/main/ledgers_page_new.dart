@@ -1436,8 +1436,10 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                         ?.copyWith(color: PiggyTokens.textTertiary(ctx))),
                 const SizedBox(height: 12),
                 Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                  // U2：日格 40→44，间距 8→6（28 个格子的月起始日选择，
+                  // 40px 低于 Material 44~48dp 最小点按目标）
+                  spacing: 6,
+                  runSpacing: 6,
                   children: List.generate(28, (index) {
                     final day = index + 1;
                     final isSelected = initial == day;
@@ -1445,8 +1447,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                       onTap: () => Navigator.pop(ctx, day),
                       borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                       child: Container(
-                        width: 40,
-                        height: 40,
+                        width: 44,
+                        height: 44,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           borderRadius:

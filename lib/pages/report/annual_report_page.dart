@@ -1,8 +1,6 @@
 import 'dart:typed_data';
-import 'dart:ui' as ui;
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../styles/tokens.dart';
@@ -11,6 +9,7 @@ import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
 import '../../utils/month_range.dart';
 import '../../utils/currencies.dart';
+import '../../utils/widget_capture.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/posters/annual_report_poster.dart';
 import '../../data/db.dart';
@@ -83,9 +82,11 @@ final annualReportDataProvider =
   );
 
   // 计算记账天数
+  // P7：DateFormat 提出循环（intl 构造不便宜，万行级循环内构造浪费明显）
+  final dayKeyFormat = DateFormat('yyyy-MM-dd');
   final uniqueDays = <String>{};
   for (final tx in transactions) {
-    uniqueDays.add(DateFormat('yyyy-MM-dd').format(tx.happenedAt));
+    uniqueDays.add(dayKeyFormat.format(tx.happenedAt));
   }
   final totalDays = uniqueDays.length;
 
@@ -558,18 +559,18 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
       );
 
       // Create poster widget
-      final posterKey = GlobalKey();
-      final poster = RepaintBoundary(
-        key: posterKey,
-        child: AnnualReportPoster(
+      // U1：统一截屏入口（pixelRatio 3.0，替代旧 2.0 —— 同一张海报此前
+      // 从首页/我的入口分享是高清的，从年报预览入口低 33%）
+      if (!mounted) return; // precacheImage 异步间隙后用 context 前确认挂载
+      final pngBytes = await renderWidgetToImage(
+        context,
+        AnnualReportPoster(
           data: data,
           primaryColor: primaryColor,
           currencyCode: currencyCode,
         ),
       );
-
-      // Render to image using offscreen rendering
-      final pngBytes = await _renderPosterToImage(poster, posterKey);
+      if (pngBytes == null) throw Exception('Failed to render poster');
 
       if (!mounted) return;
       Navigator.pop(context); // Close loading dialog
@@ -589,39 +590,6 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
       if (!mounted) return;
       Navigator.pop(context);
       showToast(context, '${l10n.commonError}: $e');
-    }
-  }
-
-  Future<Uint8List> _renderPosterToImage(Widget poster, GlobalKey key) async {
-    // Use a temporary overlay to render the widget
-    final overlayEntry = OverlayEntry(
-      builder: (context) => Positioned(
-        left: -10000, // Off-screen
-        child: Material(
-          color: Colors.transparent,
-          child: poster,
-        ),
-      ),
-    );
-
-    Overlay.of(context).insert(overlayEntry);
-
-    // Wait for the widget to be laid out and images to load
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    try {
-      final boundary =
-          key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-      if (boundary == null) {
-        throw Exception('Failed to find render boundary');
-      }
-
-      final image = await boundary.toImage(pixelRatio: 2.0);
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      image.dispose();
-      return byteData!.buffer.asUint8List();
-    } finally {
-      overlayEntry.remove();
     }
   }
 
@@ -1871,18 +1839,17 @@ class _AnnualReportPosterPreviewState
 
     try {
       // 重新生成海报
-      final posterKey = GlobalKey();
-      final poster = RepaintBoundary(
-        key: posterKey,
-        child: AnnualReportPoster(
+      // U1：统一截屏入口（见 renderWidgetToImage 注释）
+      final pngBytes = await renderWidgetToImage(
+        context,
+        AnnualReportPoster(
           data: widget.data,
           primaryColor: widget.primaryColor,
           hideIncome: _hideIncome,
           currencyCode: widget.currencyCode,
         ),
       );
-
-      final pngBytes = await _renderPosterToImage(poster, posterKey);
+      if (pngBytes == null) throw Exception('Failed to render poster');
 
       if (mounted) {
         setState(() {
@@ -1895,37 +1862,6 @@ class _AnnualReportPosterPreviewState
         setState(() => _isGenerating = false);
         showToast(context, AppLocalizations.of(context).commonError);
       }
-    }
-  }
-
-  Future<Uint8List> _renderPosterToImage(Widget poster, GlobalKey key) async {
-    final overlayEntry = OverlayEntry(
-      builder: (context) => Positioned(
-        left: -10000,
-        child: Material(
-          color: Colors.transparent,
-          child: poster,
-        ),
-      ),
-    );
-
-    Overlay.of(context).insert(overlayEntry);
-
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    try {
-      final boundary =
-          key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-      if (boundary == null) {
-        throw Exception('Failed to find render boundary');
-      }
-
-      final image = await boundary.toImage(pixelRatio: 2.0);
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      image.dispose();
-      return byteData!.buffer.asUint8List();
-    } finally {
-      overlayEntry.remove();
     }
   }
 

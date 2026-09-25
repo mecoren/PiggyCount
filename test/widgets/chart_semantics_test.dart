@@ -6,10 +6,14 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:piggycount/data/db.dart' as db;
 import 'package:piggycount/l10n/app_localizations.dart';
 import 'package:piggycount/widgets/charts/analytics_bar_chart.dart';
+import 'package:piggycount/widgets/charts/asset_composition_chart.dart';
+import 'package:piggycount/widgets/charts/category_pie_chart.dart';
 import 'package:piggycount/widgets/charts/line_chart.dart';
 
 /// 只取"我们自己加的那个"摘要节点：带 label 且无 child（轴标签是带 child 的
@@ -24,11 +28,13 @@ String summaryLabel(WidgetTester tester) {
 }
 
 Future<void> pump(WidgetTester tester, Widget chart) async {
-  await tester.pumpWidget(MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    locale: const Locale('zh'),
-    home: Scaffold(body: SizedBox(height: 240, child: chart)),
+  await tester.pumpWidget(ProviderScope(
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('zh'),
+      home: Scaffold(body: SizedBox(height: 240, child: chart)),
+    ),
   ));
   await tester.pumpAndSettle();
 }
@@ -98,5 +104,40 @@ void main() {
     final text = summaryLabel(tester);
     expect(text, contains('8月 100.00 / 30.00'));
     expect(text, contains('9月 90.00 / 40.00'));
+  });
+
+  testWidgets('分类饼图：各扇区名称+占比进摘要', (tester) async {
+    final item = (
+      id: 1,
+      name: '餐饮',
+      category: null as db.Category?,
+      total: 60.0,
+      subCategories:
+          <({int id, db.Category category, String name, double total})>[],
+    );
+    await pump(
+      tester,
+      CategoryPieChart(data: [item], sum: 100.0),
+    );
+
+    final text = summaryLabel(tester);
+    expect(text, contains('餐饮 60.0%'));
+  });
+
+  testWidgets('资产构成饼图：各类型名称+占比进摘要', (tester) async {
+    await pump(
+      tester,
+      AssetCompositionChart(
+        data: const [
+          (type: 'cash', totalBalance: 700.0),
+          (type: 'bank_card', totalBalance: 300.0),
+        ],
+        embedded: true,
+      ),
+    );
+
+    final text = summaryLabel(tester);
+    expect(text, contains('70.0%'));
+    expect(text, contains('30.0%'));
   });
 }

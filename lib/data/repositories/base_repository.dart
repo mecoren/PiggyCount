@@ -69,4 +69,26 @@ abstract class BaseRepository
 
   /// 按 picker 账户 id 解析币种:正数=主表账户;负数=共享账本 synthetic id。
   Future<String?> getAccountCurrencyByAnyId(int accountId);
+
+  // -------------------------------------------------------------------
+  // P6 搜索页批量操作:批量改单一字段。声明在聚合层而非
+  // TransactionRepository:实现需要 changeTracker(逐笔记 update change,
+  // 同步契约),交易子仓不挂 tracker —— 同 v30 方法的归属理由。
+  // -------------------------------------------------------------------
+
+  /// 批量设置备注,[note] 为 null = 清空(与单条路径 note.isEmpty→null 语义
+  /// 一致)。单事务完成 IN 查询 + 批量 UPDATE + 逐笔记 change(此前页面
+  /// 逐条调 updateTransaction:每条双份 SELECT + 独立事务,低端机秒级卡顿)。
+  /// 返回实际更新条数(id 不存在自动跳过)。
+  Future<int> updateTransactionsBatchNote({
+    required List<int> ids,
+    String? note,
+  });
+
+  /// 批量调整分类。事务/记 change 契约同 [updateTransactionsBatchNote]。
+  /// 返回实际更新条数。
+  Future<int> updateTransactionsBatchCategory({
+    required List<int> ids,
+    required int categoryId,
+  });
 }

@@ -33,7 +33,11 @@ void main() {
       }
     }
 
-    expect(checkedSites, greaterThanOrEqualTo(6),
+    // 下限锚点（2026-09-25 U1 整合后）：海报截屏 5 份拷贝收敛为
+    // lib/utils/widget_capture.dart 单点（finally 内 dispose），加上
+    // attachment_service 的 codec 点共 2 个。低于 2 说明扫描失效；
+    // 新增产生点时本测试会自动纳入 dispose 窗口检查。
+    expect(checkedSites, greaterThanOrEqualTo(2),
         reason: '只找到 $checkedSites 个位图产生点，守卫本身失效了');
     expect(offenders, isEmpty,
         reason:

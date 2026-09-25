@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
@@ -86,7 +87,10 @@ class GzipCloudStorageService
     final bytes = _textToBytes(text);
     if (!_isGzip(bytes)) return text;
     try {
-      final decompressed = GZipDecoder().decodeBytes(bytes);
+      // 纯 Dart gzip 解压是 CPU 密集同步操作，多 MB 快照在主 isolate
+      // 会卡 UI 数百 ms——移入后台 isolate（encode 同理，见下）。
+      final decompressed =
+          await Isolate.run(() => GZipDecoder().decodeBytes(bytes));
       return utf8.decode(decompressed);
     } catch (e) {
       // 魔数命中但解压失败（半截对象/网关截断）：按损坏数据上抛，
@@ -106,8 +110,8 @@ class GzipCloudStorageService
     if (data.startsWith(_ciphertextPrefix)) {
       return inner.upload(path: path, data: data, metadata: metadata);
     }
-    final compressed =
-        _compressIfBeneficial(Uint8List.fromList(utf8.encode(data)), path: path);
+    final compressed = await _compressIfBeneficial(
+        Uint8List.fromList(utf8.encode(data)), path: path);
     if (compressed == null) {
       // 压缩无收益（高熵内容/极短文本）：存原文，读取端嗅探兼容
       return inner.upload(path: path, data: data, metadata: metadata);
@@ -122,10 +126,12 @@ class GzipCloudStorageService
 
   /// 压缩收益判定：小于 [minCompressSize] 或压缩比不达
   /// [maxCompressionRatio] 时返回 null（调用方存原文，读取端嗅探兼容）。
-  /// 命中时记录压缩统计日志。
-  Uint8List? _compressIfBeneficial(Uint8List bytes, {String? path}) {
+  /// 命中时记录压缩统计日志。gzip 编码移入后台 isolate（CPU 密集，
+  /// 多 MB JSON 主线程压缩会卡 UI 数百 ms）。
+  Future<Uint8List?> _compressIfBeneficial(Uint8List bytes,
+      {String? path}) async {
     if (bytes.length < minCompressSize) return null;
-    final compressed = GZipEncoder().encode(bytes);
+    final compressed = await Isolate.run(() => GZipEncoder().encode(bytes));
     if (compressed == null ||
         compressed.length >= bytes.length * maxCompressionRatio) {
       return null;
@@ -209,7 +215,7 @@ class GzipCloudStorageService
     // 传入的 bytes 是「明文 JSON 的 utf8 字节」，压缩后经 Latin-1 桥交给
     // 内层加密装饰器加密 —— 与 upload 路径的明文形态一致，download 侧
     // 嗅探解压可原样还原。
-    final compressed = _compressIfBeneficial(
+    final compressed = await _compressIfBeneficial(
         bytes is Uint8List ? bytes : Uint8List.fromList(bytes),
         path: path);
     if (compressed == null) {

@@ -513,10 +513,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
     try {
       final repo = ref.read(repositoryProvider);
-      // 批量删除交易（F1 回收站：软删除，可在回收站找回）
-      for (final id in _selectedIds) {
-        await repo.softDeleteTransaction(id);
-      }
+      // 批量删除交易（F1 回收站：软删除，可在回收站找回）。
+      // P6：单事务批量，替代逐条 softDeleteTransaction（N 次事务提交）。
+      await repo.softDeleteTransactions(_selectedIds.toList());
       ref.read(budgetRefreshProvider.notifier).state++;
       await _refreshAfterBatchOperation(
           count, l10n.searchBatchDeleteSuccess(count));
@@ -579,23 +578,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     final l10n = AppLocalizations.of(context);
 
     try {
-      // 批量更新备注
-      for (final id in _selectedIds) {
-        // 先获取交易详情
-        final tx = await repo.getTransactionById(id);
-        if (tx != null) {
-          // 更新交易（保持其他字段不变）
-          await repo.updateTransaction(
-            id: id,
-            type: tx.type,
-            amount: tx.amount,
-            categoryId: tx.categoryId,
-            note: note.isEmpty ? null : note,
-            happenedAt: tx.happenedAt,
-            accountId: tx.accountId,
-          );
-        }
-      }
+      // P6：单事务批量更新备注（null = 清空），替代逐条 get+update
+      // （每条双份 SELECT + 独立事务，同步记 change 契约由批量方法保持）。
+      await repo.updateTransactionsBatchNote(
+        ids: _selectedIds.toList(),
+        note: note.isEmpty ? null : note,
+      );
       await _refreshAfterBatchOperation(
           count, l10n.searchBatchSetNoteSuccess(count));
     } catch (e) {
@@ -652,23 +640,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     final l10n = AppLocalizations.of(context);
 
     try {
-      // 批量更新分类
-      for (final id in _selectedIds) {
-        // 先获取交易详情
-        final tx = await repo.getTransactionById(id);
-        if (tx != null) {
-          // 更新交易（保持其他字段不变）
-          await repo.updateTransaction(
-            id: id,
-            type: tx.type,
-            amount: tx.amount,
-            categoryId: categoryId,
-            note: tx.note,
-            happenedAt: tx.happenedAt,
-            accountId: tx.accountId,
-          );
-        }
-      }
+      // P6：单事务批量调整分类，替代逐条 get+update（契约同批量备注）。
+      await repo.updateTransactionsBatchCategory(
+        ids: _selectedIds.toList(),
+        categoryId: categoryId,
+      );
       await _refreshAfterBatchOperation(
           count, l10n.searchBatchChangeCategorySuccess(count));
     } catch (e) {

@@ -430,70 +430,81 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
     }
 
     // 按视角获取序列
-    Future<dynamic> seriesFuture;
+    Future<dynamic> seriesFuture = Future.value(<dynamic>[]);
     Future<dynamic>? incomeSeriesFuture;
     Future<dynamic>? expenseSeriesFuture;
+    Future<dynamic> chartSeriesFuture = Future.value(<dynamic>[]);
 
-    if (_type == 'balance') {
-      // 结余模式：同时获取收入和支出数据
-      if (_scope == 'week' || _scope == 'month') {
-        incomeSeriesFuture = repo.totalsByDay(
-            ledgerId: ledgerId, type: 'income', start: start, end: end);
-        expenseSeriesFuture = repo.totalsByDay(
-            ledgerId: ledgerId, type: 'expense', start: start, end: end);
-        seriesFuture = Future.value([]); // 占位
-      } else if (_scope == 'year') {
-        incomeSeriesFuture = repo.totalsByMonth(
-            ledgerId: ledgerId, type: 'income', year: selMonth.year);
-        expenseSeriesFuture = repo.totalsByMonth(
-            ledgerId: ledgerId, type: 'expense', year: selMonth.year);
-        seriesFuture = Future.value([]);
+    // P1 优化：先算 U8 记忆化键，命中则整体跳过下方建查询。drift 查询
+    // 调用即执行，原实现每次 setState 都白发 4~6 条聚合 SQL，命中时结果
+    // 被 _rememberAnalyticsFuture 丢弃；命中时闭包不执行，占位 future 安全。
+    final memoKey = '$_type|${start.millisecondsSinceEpoch}|'
+        '${end.millisecondsSinceEpoch}|$refreshTick|$ledgerId';
+    final memoHit =
+        _lastAnalyticsKey == memoKey && _lastAnalyticsFuture != null;
+
+    if (!memoHit) {
+      if (_type == 'balance') {
+        // 结余模式：同时获取收入和支出数据
+        if (_scope == 'week' || _scope == 'month') {
+          incomeSeriesFuture = repo.totalsByDay(
+              ledgerId: ledgerId, type: 'income', start: start, end: end);
+          expenseSeriesFuture = repo.totalsByDay(
+              ledgerId: ledgerId, type: 'expense', start: start, end: end);
+          seriesFuture = Future.value([]); // 占位
+        } else if (_scope == 'year') {
+          incomeSeriesFuture = repo.totalsByMonth(
+              ledgerId: ledgerId, type: 'income', year: selMonth.year);
+          expenseSeriesFuture = repo.totalsByMonth(
+              ledgerId: ledgerId, type: 'expense', year: selMonth.year);
+          seriesFuture = Future.value([]);
+        } else {
+          incomeSeriesFuture =
+              repo.totalsByYearSeries(ledgerId: ledgerId, type: 'income');
+          expenseSeriesFuture =
+              repo.totalsByYearSeries(ledgerId: ledgerId, type: 'expense');
+          seriesFuture = Future.value([]);
+        }
       } else {
-        incomeSeriesFuture =
-            repo.totalsByYearSeries(ledgerId: ledgerId, type: 'income');
-        expenseSeriesFuture =
-            repo.totalsByYearSeries(ledgerId: ledgerId, type: 'expense');
-        seriesFuture = Future.value([]);
+        // 收入或支出模式
+        seriesFuture = (_scope == 'week' || _scope == 'month')
+            ? repo.totalsByDay(
+                ledgerId: ledgerId, type: _type, start: start, end: end)
+            : _scope == 'year'
+                ? repo.totalsByMonth(
+                    ledgerId: ledgerId, type: _type, year: selMonth.year)
+                : repo.totalsByYearSeries(ledgerId: ledgerId, type: _type);
       }
-    } else {
-      // 收入或支出模式
-      seriesFuture = (_scope == 'week' || _scope == 'month')
-          ? repo.totalsByDay(
-              ledgerId: ledgerId, type: _type, start: start, end: end)
-          : _scope == 'year'
-              ? repo.totalsByMonth(
-                  ledgerId: ledgerId, type: _type, year: selMonth.year)
-              : repo.totalsByYearSeries(ledgerId: ledgerId, type: _type);
-    }
 
-    // 图表固定6根柱的序列（柱状图/折线图共用）：
-    //   周报 = 本周 + 前5周；月报 = 本月 + 前5个月；年报 = 本年 + 前5年
-    Future<dynamic> buildChartSeries(dynamic repo, int ledgerId, String type) {
-      if (_scope == 'week') {
-        final cStart = weekAdd(_selWeek, -5);
-        final cEnd = weekRangeFor(_selWeek).end;
-        return repo.totalsByDay(
-            ledgerId: ledgerId, type: type, start: cStart, end: cEnd);
+      // 图表固定6根柱的序列（柱状图/折线图共用）：
+      //   周报 = 本周 + 前5周；月报 = 本月 + 前5个月；年报 = 本年 + 前5年
+      Future<dynamic> buildChartSeries(
+          dynamic repo, int ledgerId, String type) {
+        if (_scope == 'week') {
+          final cStart = weekAdd(_selWeek, -5);
+          final cEnd = weekRangeFor(_selWeek).end;
+          return repo.totalsByDay(
+              ledgerId: ledgerId, type: type, start: cStart, end: cEnd);
+        }
+        if (_scope == 'month') {
+          final firstLabel = DateTime(selMonth.year, selMonth.month - 5, 1);
+          final cStart =
+              periodForLabel(firstLabel.year, firstLabel.month, sd).start;
+          final cEnd = periodForLabel(selMonth.year, selMonth.month, sd).end;
+          return repo.totalsByDay(
+              ledgerId: ledgerId, type: type, start: cStart, end: cEnd);
+        }
+        return repo.totalsByYearSeries(ledgerId: ledgerId, type: type);
       }
-      if (_scope == 'month') {
-        final firstLabel = DateTime(selMonth.year, selMonth.month - 5, 1);
-        final cStart =
-            periodForLabel(firstLabel.year, firstLabel.month, sd).start;
-        final cEnd = periodForLabel(selMonth.year, selMonth.month, sd).end;
-        return repo.totalsByDay(
-            ledgerId: ledgerId, type: type, start: cStart, end: cEnd);
-      }
-      return repo.totalsByYearSeries(ledgerId: ledgerId, type: type);
-    }
 
-    Future<dynamic> chartSeriesFuture;
-    if (_type == 'balance') {
-      chartSeriesFuture = Future.wait<dynamic>([
-        buildChartSeries(repo, ledgerId, 'income'),
-        buildChartSeries(repo, ledgerId, 'expense'),
-      ]).then((r) => _calculateBalanceSeries(r[0], r[1]));
-    } else {
-      chartSeriesFuture = buildChartSeries(repo, ledgerId, _type);
+      if (_type == 'balance') {
+        chartSeriesFuture = Future.wait<dynamic>([
+          buildChartSeries(repo, ledgerId, 'income'),
+          buildChartSeries(repo, ledgerId, 'expense'),
+        ]).then((r) => _calculateBalanceSeries(r[0], r[1]));
+      } else {
+        chartSeriesFuture = buildChartSeries(repo, ledgerId, _type);
+      }
     }
 
     return Scaffold(
@@ -745,9 +756,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
               // 或时间范围/类型变化才发起新查询。单条记忆化：旧键的 future
               // 无人再读，直接丢弃防止随交互无限累积（见字段注释）。
               future: _rememberAnalyticsFuture(
-                '$_type|${start.millisecondsSinceEpoch}|'
-                '${end.millisecondsSinceEpoch}|$refreshTick|'
-                '$ledgerId',
+                // P1：键已在上方计算并用于跳过建查询，此处直接复用
+                memoKey,
                 () => _type == 'balance'
                     ? _loadBalanceData(
                         repo,

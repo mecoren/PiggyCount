@@ -1,8 +1,6 @@
-import 'dart:ui' as ui;
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gal/gal.dart';
@@ -10,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../utils/widget_capture.dart';
 import '../../widgets/ui/ui.dart';
 import '../../providers.dart';
 import '../../styles/tokens.dart';
@@ -35,52 +34,15 @@ class SharePosterService {
     try {
       final l10n = AppLocalizations.of(context);
 
-      // 创建海报Widget的GlobalKey
-      final GlobalKey posterKey = GlobalKey();
-
-      // 构建海报Widget
-      final posterWidget = RepaintBoundary(
-        key: posterKey,
-        child: AppPromoPoster(
+      // U1：离屏截屏统一走 renderWidgetToImage（pixelRatio/等待/dispose
+      // 一处维护），替代本文件与年报页的 5 份拷贝
+      return await renderWidgetToImage(
+        context,
+        AppPromoPoster(
           l10n: l10n,
           primaryColor: primaryColor,
         ),
       );
-
-      // 使用OverlayEntry来渲染Widget
-      final overlay = Overlay.of(context);
-      late OverlayEntry overlayEntry;
-      overlayEntry = OverlayEntry(
-        builder: (context) => Positioned(
-          left: -10000, // 移出屏幕外
-          top: -10000,
-          child: Material(
-            color: Colors.transparent,
-            child: posterWidget,
-          ),
-        ),
-      );
-
-      overlay.insert(overlayEntry);
-
-      // 等待Widget渲染完成
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      // 获取RenderRepaintBoundary
-      final RenderRepaintBoundary boundary =
-          posterKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
-
-      // 转换为图片
-      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
-      final ByteData? byteData =
-          await image.toByteData(format: ui.ImageByteFormat.png);
-      final Uint8List pngBytes = byteData!.buffer.asUint8List();
-      image.dispose(); // pixelRatio 3.0 的位图 8~15MB,不释放不会随作用域结束回收
-
-      // 移除OverlayEntry
-      overlayEntry.remove();
-
-      return pngBytes;
     } catch (e) {
       return null;
     }
@@ -219,47 +181,8 @@ class SharePosterService {
     Widget posterWidget,
   ) async {
     try {
-      final GlobalKey posterKey = GlobalKey();
-
-      final widget = RepaintBoundary(
-        key: posterKey,
-        child: posterWidget,
-      );
-
-      final overlay = Overlay.of(context);
-      late OverlayEntry overlayEntry;
-      overlayEntry = OverlayEntry(
-        builder: (context) => Positioned(
-          left: -10000,
-          top: -10000,
-          child: Material(
-            color: Colors.transparent,
-            child: widget,
-          ),
-        ),
-      );
-
-      overlay.insert(overlayEntry);
-
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      final boundary = posterKey.currentContext?.findRenderObject()
-          as RenderRepaintBoundary?;
-
-      if (boundary == null) {
-        overlayEntry.remove();
-        return null;
-      }
-
-      final image = await boundary.toImage(pixelRatio: 3.0);
-      final byteData = await image.toByteData(
-        format: ui.ImageByteFormat.png,
-      );
-      image.dispose();
-
-      overlayEntry.remove();
-
-      return byteData?.buffer.asUint8List();
+      // U1：统一截屏入口（见 renderWidgetToImage 注释）
+      return await renderWidgetToImage(context, posterWidget);
     } catch (e) {
       return null;
     }
@@ -679,47 +602,8 @@ class _PosterCarouselPreviewDialogState
   /// 从Widget生成海报图片
   Future<Uint8List?> _generatePosterFromWidget(Widget posterWidget) async {
     try {
-      final GlobalKey posterKey = GlobalKey();
-
-      final widget = RepaintBoundary(
-        key: posterKey,
-        child: posterWidget,
-      );
-
-      final overlay = Overlay.of(context);
-      late OverlayEntry overlayEntry;
-      overlayEntry = OverlayEntry(
-        builder: (context) => Positioned(
-          left: -10000,
-          top: -10000,
-          child: Material(
-            color: Colors.transparent,
-            child: widget,
-          ),
-        ),
-      );
-
-      overlay.insert(overlayEntry);
-
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      final boundary = posterKey.currentContext?.findRenderObject()
-          as RenderRepaintBoundary?;
-
-      if (boundary == null) {
-        overlayEntry.remove();
-        return null;
-      }
-
-      final image = await boundary.toImage(pixelRatio: 3.0);
-      final byteData = await image.toByteData(
-        format: ui.ImageByteFormat.png,
-      );
-      image.dispose();
-
-      overlayEntry.remove();
-
-      return byteData?.buffer.asUint8List();
+      // U1：统一截屏入口（见 renderWidgetToImage 注释）
+      return await renderWidgetToImage(context, posterWidget);
     } catch (e) {
       return null;
     }

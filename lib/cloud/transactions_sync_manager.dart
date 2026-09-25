@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:math' show Random;
 
 import 'package:crypto/crypto.dart' as crypto;
@@ -2823,8 +2824,29 @@ class TransactionsSyncManager implements SyncService {
   ///
   /// 委托给共享函数 [contentFingerprintFromMap]（US-5 抽取），
   /// 规范化规则与序列化器侧保持一致，避免双份实现漂移。
-  String _contentFingerprintFromMap(Map<String, dynamic> payload) =>
-      contentFingerprintFromMap(payload);
+  /// P4：快照「jsonDecode + 内嵌指纹读取 + 全量指纹重算」单次后台 isolate
+  /// 完成。MB 级快照此前在主 isolate 执行（恢复前校验/状态检查期间 UI
+  /// 冻结数百 ms~秒级），现只传结果回主线程。解析失败/顶层非 map 返回
+  /// (null, null)；指纹重算异常原样上抛（与旧主线程语义一致）。指纹计算
+  /// 必须走 [contentFingerprintCore]（无日志，isolate 安全），不能调
+  /// [contentFingerprintFromMap]。
+  static Future<(String?, String?)> _fingerprintSnapshotInIsolate(
+      String plainJson) {
+    return Isolate.run<(String?, String?)>(() {
+      final dynamic decoded;
+      try {
+        decoded = jsonDecode(plainJson);
+      } catch (_) {
+        return (null, null);
+      }
+      if (decoded is! Map<String, dynamic>) return (null, null);
+      final v = decoded['contentFingerprint'];
+      return (
+        v is String ? v : null,
+        contentFingerprintCore(decoded).$1,
+      );
+    });
+  }
 
   /// 审计 TSM-P3：读取云端快照**内嵌**的内容指纹（'contentFingerprint' 键）。
   ///
@@ -2837,7 +2859,8 @@ class TransactionsSyncManager implements SyncService {
       final raw =
           await provider.storage.download(path: await pathForLedger(ledgerId));
       if (raw == null) return null;
-      final decoded = jsonDecode(raw);
+      // P4：只为读一个键却全量解析 MB 级快照，解析移入后台 isolate
+      final decoded = await Isolate.run(() => jsonDecode(raw));
       if (decoded is Map<String, dynamic>) {
         final v = decoded['contentFingerprint'];
         if (v is String && v.isNotEmpty) return v;
@@ -2873,16 +2896,14 @@ class TransactionsSyncManager implements SyncService {
     required String plainJson,
     required Future<String?> Function() redownload,
   }) async {
-    Map<String, dynamic> map;
-    try {
-      map = jsonDecode(plainJson) as Map<String, dynamic>;
-    } catch (_) {
+    // P4：jsonDecode + 全量指纹重算单次后台 isolate 完成（见 helper 注释）
+    final (embeddedFp, contentFp) =
+        await _fingerprintSnapshotInIsolate(plainJson);
+    if (contentFp == null) {
       throw fcs.CloudStorageException(
           '云端数据完整性校验失败（内容不是合法 JSON 快照）: $path');
     }
-    final embeddedFp = map['contentFingerprint'];
-    if (embeddedFp is String && embeddedFp.isNotEmpty) {
-      final contentFp = _contentFingerprintFromMap(map);
+    if (embeddedFp != null && embeddedFp.isNotEmpty) {
       if (contentFp == embeddedFp) {
         logger.debug('CloudSync', '完整性终审通过(内嵌指纹): $path');
         return plainJson;
@@ -2892,18 +2913,19 @@ class TransactionsSyncManager implements SyncService {
           '完整性终审不一致，重下再验: $path (embedded=$embeddedFp content=$contentFp)');
       final retried = await redownload();
       if (retried != null) {
+        String? retriedEmbedded;
+        String? retriedContent;
         try {
-          final retriedMap = jsonDecode(retried) as Map<String, dynamic>;
-          final retriedEmbedded = retriedMap['contentFingerprint'];
-          final retriedContent = _contentFingerprintFromMap(retriedMap);
-          if (retriedEmbedded is String &&
-              retriedEmbedded.isNotEmpty &&
-              retriedContent == retriedEmbedded) {
-            logger.info('CloudSync', '重下后完整性终审通过: $path');
-            return retried;
-          }
+          (retriedEmbedded, retriedContent) =
+              await _fingerprintSnapshotInIsolate(retried);
         } catch (_) {
-          // 重下内容不可解析 → 下方统一硬失败
+          // 指纹重算异常 → 下方统一硬失败（对齐旧 catch 全兜口径）
+        }
+        if (retriedEmbedded != null &&
+            retriedEmbedded.isNotEmpty &&
+            retriedContent == retriedEmbedded) {
+          logger.info('CloudSync', '重下后完整性终审通过: $path');
+          return retried;
         }
       }
       throw fcs.CloudStorageException(
@@ -2934,15 +2956,13 @@ class TransactionsSyncManager implements SyncService {
       final raw = _metaValue(meta?.metadata, 'fingerprint');
       if (raw == null || raw.isEmpty) return;
       final remoteFp = _normalizeFingerprintMeta(raw);
-      Map<String, dynamic> map;
-      try {
-        map = jsonDecode(plainJson) as Map<String, dynamic>;
-      } catch (_) {
+      // P4：解析+指纹重算移入后台 isolate（旧快照旁路，语义不变）
+      final (_, contentFp) = await _fingerprintSnapshotInIsolate(plainJson);
+      if (contentFp == null) {
         logger.warning(
             'CloudSync', '完整性自检：下载内容不是 JSON 对象(path=$path)，请留意数据完整性');
         return;
       }
-      final contentFp = _contentFingerprintFromMap(map);
       if (contentFp != remoteFp) {
         logger.warning(
             'CloudSync',
@@ -4101,6 +4121,9 @@ class _TransactionSerializer implements fcs.DataSerializer<int> {
 
   @override
   String fingerprint(String data) {
+    // ponytail: 主 isolate 全量 jsonDecode+指纹。flutter_cloud_sync 的
+    // DataSerializer.fingerprint 是同步接口（15+ 实现/测试），异步化属跨包
+    // 重构；状态检查实测卡顿时先异步化接口，再于此处接 _fingerprintSnapshotInIsolate。
     final json = jsonDecode(data) as Map<String, dynamic>;
     return contentFingerprintFromMap(json);
   }

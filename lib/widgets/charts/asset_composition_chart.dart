@@ -90,6 +90,17 @@ class _AssetCompositionChartState extends ConsumerState<AssetCompositionChart> {
           child: Stack(
             alignment: Alignment.center,
             children: [
+              // U4：读屏摘要（同 category_pie_chart —— 扇区为纯绘制，
+              // 无摘要则读屏对构成图无话可念）
+              Positioned.fill(
+                child: Semantics(
+                  label: [
+                    for (final s in slices)
+                      '${s.type == "_other_" ? l10n.commonOther : getAccountTypeLabel(context, s.type)} '
+                          '${(s.value / positiveSum * 100).toStringAsFixed(1)}%'
+                  ].join('，'),
+                ),
+              ),
               PieChart(
                 PieChartData(
                   pieTouchData: PieTouchData(

@@ -27,13 +27,14 @@ class SharePosterDataService {
     final startDate = yr.start;
     final endDate = yr.end;
 
-    // 1. 获取指定年份的所有交易记录(用于计算天数和笔数)
-    final yearTransactions = await repository.getTransactionsByLedger(ledgerId);
-
-    // 筛选出当年(周期口径)的交易
-    final yearTxs = yearTransactions.where((tx) {
-      return !tx.happenedAt.isBefore(startDate) && tx.happenedAt.isBefore(endDate);
-    }).toList();
+    // 1. 获取指定年份(周期口径)的交易记录(用于计算天数和笔数)。
+    // P5：原实现 getTransactionsByLedger 无界加载账本全部年份再 Dart
+    // 过滤，成本随账本总量线性增长 —— 改范围查询（与年报页同口径）。
+    final yearTxs = await repository.getTransactionsByLedgerInRange(
+      ledgerId: ledgerId,
+      start: startDate,
+      end: endDate,
+    );
 
     // 计算记账天数(按日期去重)
     final recordDays = yearTxs.map((tx) {
@@ -43,23 +44,23 @@ class SharePosterDataService {
 
     final recordCount = yearTxs.length;
 
-    // 2. 计算总收入和总支出
+    // 2. 计算总收入和总支出。
+    // P5：原实现串行 12 次 monthlyTotals（12 次查询往返）—— 改用
+    // totalsByMonth 单条 SQL 按周期标签月聚合（income/expense 各一次，
+    // 并行发起）；startDay>1 的月份归属口径不变。
+    final rows = await Future.wait([
+      repository.totalsByMonth(ledgerId: ledgerId, type: 'income', year: year),
+      repository.totalsByMonth(ledgerId: ledgerId, type: 'expense', year: year),
+    ]);
     double totalIncome = 0.0;
     double totalExpense = 0.0;
     final Map<int, double> monthlyExpenses = {};
-
-    // 遍历12个月
-    for (int month = 1; month <= 12; month++) {
-      final monthStart = DateTime(year, month, 1);
-
-      final (income, expense) = await repository.monthlyTotals(
-        ledgerId: ledgerId,
-        month: monthStart,
-      );
-
-      totalIncome += income;
-      totalExpense += expense;
-      monthlyExpenses[month] = expense;
+    for (final r in rows[0]) {
+      totalIncome += r.total;
+    }
+    for (final r in rows[1]) {
+      totalExpense += r.total;
+      monthlyExpenses[r.month.month] = r.total;
     }
 
     // 3. 找出最高支出月份

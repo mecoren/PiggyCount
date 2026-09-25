@@ -824,6 +824,35 @@ class LocalTransactionRepository implements TransactionRepository {
   }
 
   @override
+  Future<int> softDeleteTransactions(List<int> ids) async {
+    if (ids.isEmpty) return 0;
+    return db.transaction(() async {
+      final rows = await (db.select(db.transactions)
+            ..where((t) => t.id.isIn(ids)))
+          .get();
+      if (rows.isEmpty) return 0;
+      final now = DateTime.now();
+      await db.batch((b) {
+        for (final tx in rows) {
+          b.insert(
+            db.deletedTransactions,
+            DeletedTransactionsCompanion(
+              txId: d.Value(tx.id),
+              ledgerId: d.Value(tx.ledgerId),
+              syncId: d.Value(tx.syncId),
+              happenedAt: d.Value(tx.happenedAt),
+              deletedAt: d.Value(now),
+              payload: d.Value(jsonEncode(tx.toJson())),
+            ),
+          );
+        }
+      });
+      await (db.delete(db.transactions)..where((t) => t.id.isIn(ids))).go();
+      return rows.length;
+    });
+  }
+
+  @override
   Future<List<DeletedTransaction>> getDeletedTransactions(
       {int? ledgerId}) async {
     final q = db.select(db.deletedTransactions)

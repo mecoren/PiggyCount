@@ -643,8 +643,9 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                 onPressed: (_saving || _isNameDuplicate) ? null : _save,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryColor,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: Colors.grey[400],
+                  // U3：文字/禁用色走 token（grey[400] 在暗黑模式下发灰突兀）
+                  foregroundColor: PiggyTokens.buttonPrimaryText(context),
+                  disabledBackgroundColor: PiggyTokens.buttonDisabled(context),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius:
@@ -652,11 +653,13 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                   ),
                 ),
                 child: _saving
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
+                          strokeWidth: 2,
+                          color: PiggyTokens.buttonPrimaryText(context),
+                        ),
                       )
                     : Text(
                         l10n.commonSave,
@@ -706,7 +709,9 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                 onPressed: _saving ? null : _delete,
                 style: OutlinedButton.styleFrom(
                   foregroundColor: PiggyTokens.error(context),
-                  side: const BorderSide(color: Colors.red, width: 1.5),
+                  // U3：边框与前景同源（Colors.red 不跟随暗黑/主题错误色）
+                  side: BorderSide(
+                      color: PiggyTokens.error(context), width: 1.5),
                   shape: RoundedRectangleBorder(
                     borderRadius:
                         BorderRadius.circular(8.0.scaled(context, ref)),
@@ -1110,7 +1115,8 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                     height: 4,
                     margin: const EdgeInsets.only(bottom: 8),
                     decoration: BoxDecoration(
-                      color: Colors.black12,
+                      // U3：token 化（black12 在暗黑模式下不可见）
+                      color: PiggyTokens.divider(bctx),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -1136,7 +1142,9 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                         return ListTile(
                           title: Text('${c.name} (${c.code})'),
                           trailing: sel
-                              ? const Icon(Icons.check, color: Colors.black)
+                              // U3：token 化（black 勾在暗黑模式下不可见）
+                              ? Icon(Icons.check,
+                                  color: Theme.of(bctx).colorScheme.primary)
                               : null,
                           onTap: () => Navigator.pop(bctx, c.code),
                         );

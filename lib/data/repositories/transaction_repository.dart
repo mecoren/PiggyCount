@@ -374,6 +374,12 @@ abstract class TransactionRepository {
   /// 软删除一笔交易（进回收站）
   Future<bool> softDeleteTransaction(int id);
 
+  /// 批量软删除（搜索页批量操作）。语义同 [softDeleteTransaction]：只搬
+  /// 交易本体进回收站，标签/附件/override 原地保留，不写 local_changes。
+  /// 单事务 + batch 合并 N 次插入（逐条调用 = N 次事务提交）。
+  /// 返回实际入回收站条数（id 不存在自动跳过）。
+  Future<int> softDeleteTransactions(List<int> ids);
+
   /// 回收站列表，按删除时间倒序；[ledgerId] 为空则跨账本
   Future<List<DeletedTransaction>> getDeletedTransactions({int? ledgerId});
 

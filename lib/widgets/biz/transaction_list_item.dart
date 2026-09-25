@@ -332,6 +332,10 @@ class TransactionListItem extends ConsumerWidget {
           globalHide: ref.watch(hideAmountsProvider),
         );
 
+    // P7：外币判定一次求出复用（此前金额主/副两处各调一次 _isForeign，
+    // 每次都 watch 账本 + 两次 toUpperCase 分配，按可见行数放大）。
+    final foreign = _isForeign(ref);
+
     // 第一行主文本 + 第二行备注。mode='note' 时 primary 即备注(parenNote=null,
     // 第二行不重复);默认 'category' 时 primary=分类名、parenNote=备注(第二行显示)。
     final composed = composeTransactionRowTitle(
@@ -362,13 +366,16 @@ class TransactionListItem extends ConsumerWidget {
                   activeColor: Theme.of(context).colorScheme.primary,
                 )
               else
-                // 分类图标，支持点击跳转（无背景）
+                // 分类图标，支持点击跳转（无背景）。
+                // U2：视觉 22px 图标不变，命中热区扩到 48×48（Material 最小
+                // 点按目标；列表最高频点击位）。图标中心右移 8px，尾部间隙
+                // 12→4 保持图标-文字视觉间距不变。
                 GestureDetector(
                   onTap: onCategoryTap,
                   behavior: HitTestBehavior.opaque,
                   child: SizedBox(
-                    width: 32,
-                    height: 32,
+                    width: 48,
+                    height: 48,
                     child: Center(
                       child: CategoryIconWidget(
                         category: category,
@@ -377,7 +384,7 @@ class TransactionListItem extends ConsumerWidget {
                     ),
                   ),
                 ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 4),
               // 左侧：分类名称 + 备注 + 时间·账户
               Expanded(
                 child: Padding(
@@ -467,7 +474,7 @@ class TransactionListItem extends ConsumerWidget {
                           hide: hide,
                           signed: !isTransfer, // 转账不显示正负号
                           // v30:外币交易显示其币种符号(原币语义);本位币维持纯数字
-                          showCurrency: _isForeign(ref),
+                          showCurrency: foreign,
                           currencyCode: currencyCode,
                           decimals: 2,
                           style: PiggyTextTokens.title(context).copyWith(
@@ -483,7 +490,7 @@ class TransactionListItem extends ConsumerWidget {
                           )),
                       // ≈折算小字(标签已移到第二行,此处仅保留折算)。
                       // 隐藏金额开关开启时折算同样遮蔽。
-                      if (_isForeign(ref) &&
+                      if (foreign &&
                           nativeAmount != null &&
                           nativeAmount != amount &&
                           nativeConversionVisible(
