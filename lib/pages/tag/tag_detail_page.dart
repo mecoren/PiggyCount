@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../data/db.dart' as db;
 import '../../providers.dart';
 import '../../providers/budget_providers.dart';
+import '../../providers/custom_field_providers.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/ui/wait_sliding_segmented_control.dart';
 import '../../widgets/biz/biz.dart';
@@ -464,6 +465,15 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
               final categoryName =
                   CategoryUtils.getDisplayName(category?.name, context);
 
+              // v47：自定义字段角标（无值/定义解析不出 → 不显示）。
+              final customBadges = ref
+                      .watch(customFieldValueBadgesProvider)
+                      .valueOrNull?[transaction.id] ??
+                  const <({String name, String display})>[];
+              final customBadgeTexts = [
+                for (final b in customBadges) '${b.name}: ${b.display}',
+              ];
+
               // 和首页保持一致：分类名常驻，备注接在后面
               return TransactionListItem(
                 icon: getCategoryIconData(
@@ -476,6 +486,8 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
                 transactionId: transaction.id,
                 currencyCode: transaction.currencyCode,
                 nativeAmount: transaction.nativeAmount,
+                customFieldBadges:
+                    customBadgeTexts.isNotEmpty ? customBadgeTexts : null,
                 isExpense: transaction.type == 'expense',
                 happenedAt: transaction.happenedAt,
                 onTap: () async {

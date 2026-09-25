@@ -12,6 +12,7 @@ import '../../utils/ui_scale_extensions.dart';
 import '../../utils/transaction_edit_utils.dart';
 import '../../providers.dart';
 import '../../providers/calendar_providers.dart';
+import '../../providers/custom_field_providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../transaction/transaction_editor_page.dart';
 
@@ -617,6 +618,15 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                   .map((tag) => (id: tag.id, name: tag.name, color: tag.color))
                   .toList();
 
+              // v47：自定义字段角标（无值/定义解析不出 → 不显示）。
+              final customBadges = ref
+                      .watch(customFieldValueBadgesProvider)
+                      .valueOrNull?[item.t.id] ??
+                  const <({String name, String display})>[];
+              final customBadgeTexts = [
+                for (final b in customBadges) '${b.name}: ${b.display}',
+              ];
+
               return TransactionListItem(
                 icon: getCategoryIconData(
                     category: category, categoryName: categoryName),
@@ -637,6 +647,8 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                 accountName: item.account?.name,
                 tags: tagsList.isNotEmpty ? tagsList : null,
                 attachmentCount: item.attachments.length,
+                customFieldBadges:
+                    customBadgeTexts.isNotEmpty ? customBadgeTexts : null,
                 onTap: () async {
                   await TransactionEditUtils.editTransaction(
                     context,

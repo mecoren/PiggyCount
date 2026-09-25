@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/db.dart' as db;
 import '../../providers.dart';
+import '../../providers/custom_field_providers.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/biz.dart';
 import '../../styles/tokens.dart';
@@ -1461,6 +1462,17 @@ class _TransactionTile extends ConsumerWidget {
       ledgerName = l10n.ledgersDefaultLedgerName;
     }
 
+    // v47：自定义字段角标 —— 并入日期次要行（本页是自绘行，不走
+    // TransactionListItem）。无值/定义解析不出 → 只显示日期。
+    final customBadges = ref
+            .watch(customFieldValueBadgesProvider)
+            .valueOrNull?[transaction.id] ??
+        const <({String name, String display})>[];
+    final secondaryLineText = [
+      _formatDate(transaction.happenedAt),
+      for (final b in customBadges) '${b.name}: ${b.display}',
+    ].join(' | ');
+
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -1549,7 +1561,7 @@ class _TransactionTile extends ConsumerWidget {
                   Padding(
                     padding: EdgeInsets.only(top: 2.0.scaled(context, ref)),
                     child: Text(
-                      _formatDate(transaction.happenedAt),
+                      secondaryLineText,
                       style: TextStyle(
                         fontSize: 12,
                         color: PiggyTokens.textTertiary(context),

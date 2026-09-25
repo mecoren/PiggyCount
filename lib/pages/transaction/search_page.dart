@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/db.dart';
 import '../../providers.dart';
 import '../../providers/budget_providers.dart';
+import '../../providers/custom_field_providers.dart';
 import '../../widgets/biz/biz.dart';
 import '../../widgets/ui/ui.dart';
 import '../../styles/tokens.dart';
@@ -1164,6 +1165,16 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                 category: item.category,
                                 categoryName: categoryName);
 
+                            // v47：自定义字段角标（无值/定义解析不出 → 不显示）。
+                            final customBadges = ref
+                                    .watch(customFieldValueBadgesProvider)
+                                    .valueOrNull?[item.t.id] ??
+                                const <({String name, String display})>[];
+                            final customBadgeTexts = [
+                              for (final b in customBadges)
+                                '${b.name}: ${b.display}',
+                            ];
+
                             return Column(
                               children: [
                                 TransactionListItem(
@@ -1175,6 +1186,10 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                   transactionId: item.t.id,
                                   currencyCode: item.t.currencyCode,
                                   nativeAmount: item.t.nativeAmount,
+                                  customFieldBadges:
+                                      customBadgeTexts.isNotEmpty
+                                          ? customBadgeTexts
+                                          : null,
                                   isExpense: isExpense,
                                   hide: hide,
                                   happenedAt: item.t.happenedAt,
