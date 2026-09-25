@@ -7,6 +7,7 @@ import '../../data/repositories/budget_repository.dart'
 import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
 import '../../styles/tokens.dart';
+import '../../utils/currencies.dart';
 import '../../utils/ui_scale_extensions.dart';
 import '../../widget/views/budget_view.dart';
 import '../../widget/views/dashboard_view.dart';
@@ -48,6 +49,9 @@ class WidgetManagementPage extends ConsumerWidget {
     final primaryColor = ref.watch(primaryColorProvider);
     final colorScheme = ref.watch(incomeExpenseColorSchemeProvider);
     final dark = PiggyTokens.isDark(context);
+    // 预览里的示例金额也跟随主币种符号（与真实组件 updateAppWidget 传的
+    // baseCurrency 同源）—— 否则外币用户看到的画廊示例是 ¥、桌面组件是 $。
+    final currencySymbol = getCurrencySymbol(ref.watch(baseCurrencyProvider));
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
@@ -76,10 +80,10 @@ class WidgetManagementPage extends ConsumerWidget {
             sizeLabel: l10n.widgetSizeMedium,
             previewSize: const Size(364, 169),
             preview: GlanceView.medium(
-              todayExpense: '¥88.5',
-              todayIncome: '¥0',
-              monthExpense: '¥3,200.5',
-              monthIncome: '¥8,000',
+              todayExpense: '${currencySymbol}88.5',
+              todayIncome: '${currencySymbol}0',
+              monthExpense: '${currencySymbol}3,200.5',
+              monthIncome: '${currencySymbol}8,000',
               themeColor: primaryColor,
               colorScheme: colorScheme,
               dark: dark,
@@ -107,9 +111,9 @@ class WidgetManagementPage extends ConsumerWidget {
             sizeLabel: l10n.widgetSizeSmall,
             previewSize: const Size(155, 155),
             preview: GlanceView.small(
-              todayExpense: '¥88.5',
-              monthExpense: '¥3,200.5',
-              monthIncome: '¥8,000',
+              todayExpense: '${currencySymbol}88.5',
+              monthExpense: '${currencySymbol}3,200.5',
+              monthIncome: '${currencySymbol}8,000',
               themeColor: primaryColor,
               colorScheme: colorScheme,
               dark: dark,

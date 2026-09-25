@@ -153,6 +153,17 @@ class GenericBillParser implements BillParser {
     if (noSpace == 'attachments' || _containsAny(s, ['附件', 'Attachments'])) {
       return 'attachments';
     }
+    // v46 自定义字段列（本 App 导出为 `{字段名: 值}` JSON）。放在分类/标签
+    // 之后即可：「自定义字段」不含这些字段的关键词，不会互相抢匹配。
+    // 英文表头把下划线/连字符一并当分隔符（`custom_fields` / `custom-fields`
+    // / `Custom Fields` 都识别）；只影响本地这一个判断，不动上层 noSpace 口径。
+    final compact = noSpace.replaceAll(RegExp(r'[_\-\s]'), '');
+    if (compact == 'customfields' ||
+        compact == 'customfield' ||
+        compact == '사용자정의필드' ||
+        _containsAny(s, ['自定义字段', '自訂欄位', '自定义列', '擴展欄位'])) {
+      return 'custom_fields';
+    }
     // 再匹配收支类型字段
     if (_containsAny(s, ['类型', '收支', '收/支', '方向'])) {
       return 'type';

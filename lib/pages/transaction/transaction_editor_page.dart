@@ -44,6 +44,8 @@ Future<void> showTransactionFormBottomSheet(
   double? initialNativeAmount,
   // v45 原始金额回显(编辑既有明细)。
   double? initialOriginalAmount,
+  // v46 自定义字段已存值回显(fieldSyncId → value)。
+  Map<String, dynamic> initialCustomValues = const {},
 }) async {
   await showModalBottomSheet<void>(
     context: context,
@@ -68,6 +70,7 @@ Future<void> showTransactionFormBottomSheet(
       initialCurrencyCode: initialCurrencyCode,
       initialNativeAmount: initialNativeAmount,
       initialOriginalAmount: initialOriginalAmount,
+      initialCustomValues: initialCustomValues,
     ),
   );
 }
@@ -96,6 +99,8 @@ class TransactionEditorPage extends ConsumerStatefulWidget {
   final double? initialNativeAmount;
   // v45 原始金额回显:null = 该笔未填写。
   final double? initialOriginalAmount;
+  // v46 自定义字段已存值回显(fieldSyncId → value);新建为空。
+  final Map<String, dynamic> initialCustomValues;
 
   /// 是否以底部抽屉形式渲染。
   ///
@@ -121,6 +126,7 @@ class TransactionEditorPage extends ConsumerStatefulWidget {
     this.initialCurrencyCode,
     this.initialNativeAmount,
     this.initialOriginalAmount,
+    this.initialCustomValues = const {},
     this.renderAsBottomSheet = false,
   });
 
@@ -469,6 +475,7 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
         initialCurrencyCode: widget.initialCurrencyCode,
         initialNativeAmount: widget.initialNativeAmount,
         initialOriginalAmount: widget.initialOriginalAmount,
+        initialCustomValues: widget.initialCustomValues,
         onSubmit: (res) async {
           final repo = ref.read(repositoryProvider);
           final attachmentService = ref.read(attachmentServiceProvider);
@@ -511,6 +518,8 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
               // 直接传 dart null 会被 updateTransaction 当作 absent(不改动),
               // 用户删掉原始金额后永远清不掉(同 accountIdForUpdate 的坑)。
               originalAmount: d.Value<double?>(res.originalAmount),
+              // v46 自定义字段:null = 不改动;空 map = 清空;非空 = 覆盖。
+              customValues: res.customValues,
             );
             transactionId = widget.editingTransactionId!;
           } else {
@@ -529,6 +538,7 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
               currencyCode: res.currencyCode,
               nativeAmount: res.nativeAmount,
               originalAmount: res.originalAmount,
+              customValues: res.customValues,
             );
           }
           // 保存待上传的附件

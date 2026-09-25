@@ -193,6 +193,22 @@ String translateLedgerName(BuildContext context, String ledgerName) {
   return ledgerName;
 }
 
+/// 给已格式化的金额串前置币种符号（负号感知）。
+///
+/// `-1,234.00` + `¥` → `-¥1,234.00`（而不是 `¥-1,234.00`），与
+/// [formatBalance] 的负号拼接口径一致。空符号原样返回（长尾币种不会为空，
+/// 但调用方可能拿到空串的本地化单位，保持幂等更安全）。
+///
+/// 与 [stripCurrencySymbolPrefix] 互为逆操作，供海报等「数字与符号分开拼」
+/// 的场景统一走一处，避免各海报各写一遍 `startsWith('-')` 分支。
+String prefixCurrencySymbol(String formatted, String symbol) {
+  if (symbol.isEmpty) return formatted;
+  if (formatted.startsWith('-')) {
+    return '-$symbol${formatted.substring(1)}';
+  }
+  return '$symbol$formatted';
+}
+
 /// 剥离 [formatBalance] 输出开头的币种符号（负号感知）。
 ///
 /// formatBalance 对负数返回 `-¥15万`（负号拼在币种符之前），

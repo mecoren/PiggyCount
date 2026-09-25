@@ -19,6 +19,9 @@ class SharePosterDataService {
   }) async {
     // 时间范围:年 = 12 个自定义周期(design D4),[start, end) 半开
     final ledger = await repository.getLedgerById(ledgerId);
+    // 海报金额单位跟随账本本位币（统计口径已是 native_amount = 本位币，
+    // 单位必须同源，否则外币账本印出「元」）。
+    final ledgerCurrency = _normalizeCurrency(ledger?.currency);
     final sd = (ledger?.monthStartDay ?? 1).clamp(1, 28);
     final yr = yearRangeFor(year, sd);
     final startDate = yr.start;
@@ -116,6 +119,7 @@ class SharePosterDataService {
       maxExpenseMonth: maxExpenseMonth,
       maxExpenseAmount: maxExpenseAmount,
       balance: balance,
+      currencyCode: ledgerCurrency,
     );
   }
 
@@ -128,6 +132,7 @@ class SharePosterDataService {
     // 时间范围:按账本起始日的记账周期 [当月sd日, 次月sd日)。
     // startDate 的 year/month 与标签一致,可直接作 monthlyTotals 的标签参数。
     final ledger = await repository.getLedgerById(ledgerId);
+    final ledgerCurrency = _normalizeCurrency(ledger?.currency);
     final sd = (ledger?.monthStartDay ?? 1).clamp(1, 28);
     final range = periodForLabel(year, month, sd);
     final startDate = range.start;
@@ -210,6 +215,7 @@ class SharePosterDataService {
       avgDailyExpense: avgDailyExpense,
       balance: balance,
       expenseChangeRate: expenseChangeRate,
+      currencyCode: ledgerCurrency,
     );
   }
 
@@ -224,6 +230,7 @@ class SharePosterDataService {
     // 获取账本名称
     final ledger = await repository.getLedgerById(ledgerId);
     final ledgerName = ledger?.name ?? '默认账本';
+    final ledgerCurrency = _normalizeCurrency(ledger?.currency);
 
     // 使用年度序列来计算所有年份的收支
     final yearSeries = await repository.totalsByYearSeries(
@@ -326,6 +333,7 @@ class SharePosterDataService {
       firstRecordDate: firstRecordDate,
       lastRecordDate: lastRecordDate,
       balance: balance,
+      currencyCode: ledgerCurrency,
     );
   }
 
@@ -369,6 +377,13 @@ class SharePosterDataService {
       ledgerName: ledgerName,
       firstRecordDate: firstRecordDate,
     );
+  }
+
+  /// 账本币种规范化：空值兜底 CNY、统一大写（与导出/统计侧的 `toUpperCase`
+  /// 同口径，长尾小写脏数据不会让 `getCurrencySymbol` 回落到币种码）。
+  static String _normalizeCurrency(String? code) {
+    final c = (code ?? '').trim();
+    return c.isEmpty ? 'CNY' : c.toUpperCase();
   }
 
   /// 将仓库数据转换为CategoryTotal列表

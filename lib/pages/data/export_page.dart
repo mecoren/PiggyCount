@@ -12,7 +12,7 @@ import '../../providers.dart';
 import '../../data/repositories/base_repository.dart';
 import '../../data/db.dart';
 import '../../widgets/ui/ui.dart';
-import '../../utils/category_utils.dart';
+import '../../services/export/ledger_csv.dart';
 import '../../styles/tokens.dart';
 
 import '../../utils/platform_info.dart';
@@ -121,21 +121,8 @@ class _ExportPageState extends ConsumerState<ExportPage> {
       final transactionsWithCategory =
           await repo.transactionsWithCategoryAll(ledgerId: ledgerId).first;
       final total = transactionsWithCategory.length;
-      final rows = <List<dynamic>>[];
-      rows.add([
-        l10n.exportCsvHeaderType,
-        l10n.exportCsvHeaderCategory,
-        l10n.exportCsvHeaderSubCategory, // 二级分类名称
-        l10n.exportCsvHeaderAmount,
-        l10n.exportCsvHeaderCurrency, // v30 多币种:交易原币种(反馈10)
-        l10n.exportCsvHeaderAccount,
-        l10n.exportCsvHeaderFromAccount, // 转出账户
-        l10n.exportCsvHeaderToAccount, // 转入账户
-        l10n.exportCsvHeaderNote,
-        l10n.exportCsvHeaderTime,
-        l10n.exportCsvHeaderTags,
-        l10n.exportCsvHeaderAttachments, // 附件文件名（逗号分隔）
-      ]);
+      // 表头与数据行都由 services/export/ledger_csv 唯一构造（列序对齐可单测）
+      final rows = <List<dynamic>>[ledgerCsvHeaders(l10n)];
 
       // 批量获取所有交易的标签
       final transactionIds =
@@ -145,6 +132,13 @@ class _ExportPageState extends ConsumerState<ExportPage> {
       // 批量获取所有交易的附件
       final attachmentsMap =
           await repo.getAttachmentsForTransactions(transactionIds);
+
+      // v46 自定义字段：定义（按 sortOrder）用于把交易上的值翻译成用户看得懂
+      // 的字段名；值批量取一次，避免逐条查询（N+1）。
+      final customFieldDefs = await repo.getDefinitionsForLedger(ledgerId);
+      final customValuesMap = customFieldDefs.isEmpty
+          ? const <int, Map<String, dynamic>>{}
+          : await repo.getValuesForTransactions(transactionIds);
 
       // 缓存所有账户信息，避免重复查询
       final allAccounts = await repo.getAllAccounts();
@@ -177,89 +171,23 @@ class _ExportPageState extends ConsumerState<ExportPage> {
       for (int i = 0; i < transactionsWithCategory.length; i++) {
         final txWithCat = transactionsWithCategory[i];
         final t = txWithCat.t;
-        final c = txWithCat.category;
-        final a = t.accountId != null ? accountMap[t.accountId] : null;
-        // 使用完整的时间格式，包含年份和秒，添加前导空格增加列宽
-        final timeStr = () {
-          try {
-            final localTime = t.happenedAt.toLocal();
-            // 完整时间格式: YYYY-MM-DD HH:mm:ss，前面添加空格增加列宽
-            return '  ${localTime.year}-${localTime.month.toString().padLeft(2, '0')}-${localTime.day.toString().padLeft(2, '0')} ${localTime.hour.toString().padLeft(2, '0')}:${localTime.minute.toString().padLeft(2, '0')}:${localTime.second.toString().padLeft(2, '0')}  ';
-          } catch (e) {
-            return '';
-          }
-        }();
-        final typeStr = _getTypeDisplayName(t.type);
-
-        // 对于转账类型，需要特殊处理账户信息
-        String accountName;
-        String fromAccountName;
-        String toAccountName;
-        String categoryName;
-        String subCategoryName;
-
-        if (t.type == 'transfer') {
-          // 转账记录：账户列留空，填充转出账户和转入账户
-          accountName = '';
-          final fromAccount = accountMap[t.accountId];
-          final toAccount = accountMap[t.toAccountId];
-          fromAccountName = fromAccount?.name ?? '';
-          toAccountName = toAccount?.name ?? '';
-          categoryName = ''; // 转账没有分类
-          subCategoryName = '';
-        } else {
-          // 收入或支出：正常填充账户列，转出转入账户留空
-          accountName = a?.name ?? '';
-          fromAccountName = '';
-          toAccountName = '';
-
-          // 处理分类信息
-          if (c != null) {
-            if (c.level == 2 && c.parentId != null) {
-              // 二级分类：分类列填一级分类名称，二级分类列填当前分类名称
-              final parentCategory = allCategories[c.parentId];
-              categoryName =
-                  CategoryUtils.getDisplayName(parentCategory?.name, context);
-              subCategoryName = CategoryUtils.getDisplayName(c.name, context);
-            } else {
-              // 一级分类：分类列填当前分类，二级分类列留空
-              categoryName = CategoryUtils.getDisplayName(c.name, context);
-              subCategoryName = '';
-            }
-          } else {
-            categoryName = '';
-            subCategoryName = '';
-          }
-        }
-
-        // 获取该交易的标签，用逗号分隔
-        final transactionTags = tagsMap[t.id] ?? [];
-        final tagsStr = transactionTags.map((tag) => tag.name).join(',');
-
-        // 获取该交易的附件，用逗号分隔文件名
-        final transactionAttachments = attachmentsMap[t.id] ?? [];
-        final attachmentsStr =
-            transactionAttachments.map((a) => a.fileName).join(',');
-
-        final currencyStr = (t.currencyCode ??
-                (a?.currency.isNotEmpty ?? false ? a!.currency : null) ??
-                ledgerBase)
-            .toUpperCase();
-
-        rows.add([
-          typeStr,
-          categoryName,
-          subCategoryName,
-          t.amount.toStringAsFixed(2),
-          currencyStr,
-          accountName,
-          fromAccountName,
-          toAccountName,
-          t.note ?? '',
-          timeStr,
-          tagsStr,
-          attachmentsStr,
-        ]);
+        rows.add(buildLedgerCsvRow(
+          l10n: l10n,
+          tx: t,
+          category: txWithCat.category,
+          // 转账时 account 即转出账户（账户名与币种兜底都用它）
+          account: t.accountId != null ? accountMap[t.accountId] : null,
+          toAccount: accountMap[t.toAccountId],
+          allCategories: allCategories,
+          tagNames:
+              (tagsMap[t.id] ?? const []).map((tag) => tag.name).toList(),
+          attachmentFileNames: (attachmentsMap[t.id] ?? const [])
+              .map((att) => att.fileName)
+              .toList(),
+          customFieldDefinitions: customFieldDefs,
+          customValues: customValuesMap[t.id],
+          ledgerBaseCurrency: ledgerBase,
+        ));
         if (i % 50 == 0) {
           setState(() => progress = (i + 1) / (total == 0 ? 1 : total));
         }
@@ -300,21 +228,6 @@ class _ExportPageState extends ConsumerState<ExportPage> {
       final l10nError = AppLocalizations.of(context);
       await AppDialog.error(context,
           title: l10nError.exportFailedTitle, message: e.toString());
-    }
-  }
-
-  /// 将英文类型转换为中文显示名称
-  String _getTypeDisplayName(String type) {
-    final l10nType = AppLocalizations.of(context);
-    switch (type) {
-      case 'income':
-        return l10nType.exportTypeIncome;
-      case 'expense':
-        return l10nType.exportTypeExpense;
-      case 'transfer':
-        return l10nType.exportTypeTransfer;
-      default:
-        return type; // 兜底返回原始值
     }
   }
 }

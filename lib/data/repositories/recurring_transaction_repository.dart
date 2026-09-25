@@ -35,6 +35,10 @@ abstract class RecurringTransactionRepository {
     /// v42(移植 BeeCount #444)模板币种(ISO,大小写不敏感)。
     /// null = 账本本位币;挂了账户时生成仍以账户币种为准(账户内不混币)。
     String? currencyCode,
+
+    /// v47 模板级自定义字段值({fieldSyncId: value})。null/空 map = 未配置,
+    /// 列写 NULL(与 currencyCode 同语义:编辑表单整行以表单为准)。
+    Map<String, dynamic>? templateFieldValues,
   });
 
   Future<void> updateRecurringTransaction({
@@ -59,6 +63,11 @@ abstract class RecurringTransactionRepository {
 
     /// v42(移植 BeeCount #444)模板币种;null 即写 NULL(改回本位币要能清掉旧外币)。
     String? currencyCode,
+
+    /// v47 模板级自定义字段值;null/空 map 即写 NULL(清掉旧值要能清干净)。
+    /// 「云端未携带该键要保留本地值」的合并决策在 importRecurrings 做:
+    /// 它先读本地旧行再显式传入,仓储层不做保留语义。
+    Map<String, dynamic>? templateFieldValues,
   });
 
   /// 删除周期记账

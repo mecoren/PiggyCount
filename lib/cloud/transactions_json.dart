@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../data/db.dart';
+import '../data/models/custom_field_values.dart';
 import '../data/repositories/base_repository.dart';
 import '../services/data_import_service.dart';
 import '../services/system/logger_service.dart';
@@ -165,6 +166,11 @@ Future<ExportedLedgerJson> exportTransactionsJson(
         'amount=${t.amount}, note=${t.note}, happenedAt=${t.happenedAt}');
     }
 
+    // v46 自定义字段值：解码一次供条件键判断（空 map = 该笔没有值）。
+    // 经 codec 解码顺带完成规范化（剔除空值 / 统一数值表示），保证导出串与
+    // 指纹 canon 用的是同一份表示。
+    final customValues = CustomFieldValueCodec.decode(t.customValuesJson);
+
     final item = <String, dynamic>{
       'type': t.type,
       'amount': t.amount,
@@ -190,6 +196,11 @@ Future<ExportedLedgerJson> exportTransactionsJson(
       // 会让"未填写"与"手填了等于记账金额的值"两端算出不同指纹 → 永久
       // outOfSync（同上方币种/折算规范化注释的防漂移教训）。
       if (t.originalAmount != null) 'originalAmount': t.originalAmount,
+      // v46 自定义字段值 `{ fieldSyncId: value }`：**仅非空才写键**（同上方
+      // originalAmount 的防漂移范式）。未填写的行不产生该键，旧客户端往返
+      // 丢弃未知键后也不会变成 `{}`，避免"缺失 vs 显式空"两端指纹分裂 →
+      // 永久 outOfSync。
+      if (customValues.isNotEmpty) 'customValues': customValues,
       // 共享账本 override：Editor 选 Owner 的 category/account，本地主表
       // 无 int id，直接存 syncId。modified 同步后必须保留，否则 override
       // 丢失回退到 categoryId（可能 null）。
@@ -347,6 +358,24 @@ Future<ExportedLedgerJson> exportTransactionsJson(
     return tagItem;
   }).toList();
 
+  // v46 自定义字段定义（ledger-scoped，按 ledgerId 过滤）。
+  // 全量导出：尚未被任何交易填值的字段也要上云 —— 否则在另一台设备上"字段
+  // 不存在"，用户无法录入（同 tags v8 G3 的决策）。按 syncId 稳定排序，
+  // 跨设备导出顺序一致，指纹才可比。
+  final ledgerCustomFields = await (db.select(db.customFieldDefinitions)
+        ..where((f) => f.ledgerId.equals(ledgerId)))
+      .get()
+    ..sort((a, b) =>
+        (a.syncId ?? 'cf_${a.id}').compareTo(b.syncId ?? 'cf_${b.id}'));
+  final customFieldItems = ledgerCustomFields.map((f) {
+    return <String, dynamic>{
+      if (f.syncId != null && f.syncId!.isNotEmpty) 'syncId': f.syncId,
+      'name': _sanitizeString(f.name),
+      'fieldType': f.fieldType,
+      'sortOrder': f.sortOrder,
+    };
+  }).toList();
+
   // v8 G1：预算数组。budgets 是 ledger-scoped（按 ledgerId 过滤），
   // 导出按 syncId 锚定、稳定排序（跨设备指纹可比）。
   final ledgerBudgets = await (db.select(db.budgets)
@@ -389,17 +418,23 @@ Future<ExportedLedgerJson> exportTransactionsJson(
         'accountName': accountIdToName[r.accountId],
       if (accSyncId != null && accSyncId.isNotEmpty)
         'accountSyncId': accSyncId,
-      if (r.toAccountId != null)
-        'toAccountName': accountIdToName[r.toAccountId],
-      if (toAccSyncId != null && toAccSyncId.isNotEmpty)
-        'toAccountSyncId': toAccSyncId,
-      'note': _sanitizeString(r.note),
-      'frequency': r.frequency,
-      'interval': r.interval,
-      if (r.dayOfMonth != null) 'dayOfMonth': r.dayOfMonth,
-      if (r.dayOfWeek != null) 'dayOfWeek': r.dayOfWeek,
-      if (r.monthOfYear != null) 'monthOfYear': r.monthOfYear,
-      'startDate': r.startDate.toUtc().toIso8601String(),
+    if (r.toAccountId != null)
+      'toAccountName': accountIdToName[r.toAccountId],
+    if (toAccSyncId != null && toAccSyncId.isNotEmpty)
+      'toAccountSyncId': toAccSyncId,
+    'note': _sanitizeString(r.note),
+    'frequency': r.frequency,
+    'interval': r.interval,
+    if (r.dayOfMonth != null) 'dayOfMonth': r.dayOfMonth,
+    if (r.dayOfWeek != null) 'dayOfWeek': r.dayOfWeek,
+    if (r.monthOfYear != null) 'monthOfYear': r.monthOfYear,
+    // v47 模板级自定义字段值:防漂移范式(v45 originalAmount / v46
+    // customValues 同款)——仅非空才写键,绝不写 `{}` 兜底。NULL 行的 JSON
+    // 与旧版逐字节一致,指纹把缺键与空规范成同串。
+    if (r.templateFieldValues != null)
+      'templateFieldValues':
+          CustomFieldValueCodec.decode(r.templateFieldValues),
+    'startDate': r.startDate.toUtc().toIso8601String(),
       if (r.endDate != null)
         'endDate': r.endDate!.toUtc().toIso8601String(),
       // lastGeneratedDate 语义说明（与 sync_fingerprint 排除规则对齐）：
@@ -456,6 +491,7 @@ Future<ExportedLedgerJson> exportTransactionsJson(
     'accounts': accountItems,
     'categories': categoryItems,
     'tags': tagItems, // 新增：标签信息
+    'customFields': customFieldItems, // v46：账本自定义字段定义
     'budgets': budgetItems, // v8 G1：预算
     'recurring': recurringItems, // v8 G2：周期规则
     'exchangeRateOverrides': rateOverrideItems, // v8 G4：手动汇率
@@ -518,6 +554,15 @@ bool? _readBool(Map<String, dynamic> m, String key) =>
 
 DateTime? _readDate(Map<String, dynamic> m, String key) =>
     m[key] is String ? DateTime.tryParse(m[key] as String) : null;
+
+/// v47:读取 {fieldSyncId: value} 对象键。非 Map / 含非标量值 → 交
+/// CustomFieldValueCodec.normalize 规范化(剔空、数值统一),绝不抛。
+Map<String, dynamic>? _readJsonMap(Map<String, dynamic> m, String key) {
+  final raw = m[key];
+  if (raw is! Map) return null;
+  return CustomFieldValueCodec.normalize(
+      Map<String, dynamic>.from(raw));
+}
 
 void _skip(Map<String, int> skipped, String section) =>
     skipped[section] = (skipped[section] ?? 0) + 1;
@@ -761,6 +806,9 @@ ImportData parseJsonToImportData(String jsonStr) {
         endDate: _readDate(m, 'endDate'),
         lastGeneratedDate: _readDate(m, 'lastGeneratedDate'),
         enabled: _readBool(m, 'enabled') ?? true,
+        // v47 模板自定义字段值:旧快照缺键 → null(未配置),不报错不跳过。
+        // 值对象经 normalize 规范化(剔空/数值统一),坏类型按缺键处理。
+        templateFieldValues: _readJsonMap(m, 'templateFieldValues'),
       ));
     }
   }
@@ -819,6 +867,34 @@ ImportData parseJsonToImportData(String jsonStr) {
       tags.add(ImportTag(
         name: name,
         color: m['color']?.toString(),
+        syncId: _readString(m, 'syncId'),
+        sortOrder: _readInt(m, 'sortOrder'),
+      ));
+    }
+  }
+
+  // 解析自定义字段定义（v46，H1：name 必填；未知类型退回 text，
+  // 避免渲染端拿到无法识别的类型后没有输入分支）
+  final customFields = <ImportCustomField>[];
+  final jsonCustomFields = data['customFields'] as List?;
+  if (jsonCustomFields != null) {
+    for (final field in jsonCustomFields) {
+      if (field is! Map) {
+        _skip(skipped, 'customFields');
+        continue;
+      }
+      final m = field.cast<String, dynamic>();
+      final name = _readString(m, 'name');
+      if (name == null) {
+        _skip(skipped, 'customFields');
+        continue;
+      }
+      final rawType = _readString(m, 'fieldType');
+      customFields.add(ImportCustomField(
+        name: name,
+        fieldType: (rawType != null && CustomFieldType.isValid(rawType))
+            ? rawType
+            : CustomFieldType.text,
         syncId: _readString(m, 'syncId'),
         sortOrder: _readInt(m, 'sortOrder'),
       ));
@@ -911,6 +987,12 @@ ImportData parseJsonToImportData(String jsonStr) {
         nativeAmount: _readDouble(m, 'nativeAmount'),
         // v45 原始金额：旧快照缺键 → null（未填写），不报错不跳过。
         originalAmount: _readDouble(m, 'originalAmount'),
+        // v46 自定义字段值：旧快照缺键 → null（= 不改动本地已填值）；
+        // 经 codec 规范化，与导出/指纹侧的表示完全同源。
+        customValues: m['customValues'] is Map
+            ? CustomFieldValueCodec.normalize(
+                (m['customValues'] as Map).cast<String, dynamic>())
+            : null,
         // 共享账本 override
         categorySyncIdOverride: _readString(m, 'categorySyncIdOverride'),
         accountSyncIdOverride: _readString(m, 'accountSyncIdOverride'),
@@ -929,6 +1011,7 @@ ImportData parseJsonToImportData(String jsonStr) {
     accounts: accounts,
     categories: categories,
     tags: tags,
+    customFields: customFields,
     transactions: transactions,
     budgets: budgets,
     recurrings: recurrings,

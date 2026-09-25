@@ -36,7 +36,6 @@
   "commonMore": "More",
   "commonOk": "OK",
   "commonKnow": "Got it",
-  "commonNo": "No",
   "commonEmpty": "No data",
   "commonError": "Error",
   "startupSyncCheckTitle": "Cloud update available",
@@ -248,7 +247,6 @@
   "homeBalance": "Balance",
   "homeMonthIncome": "Income",
   "homeMonthExpense": "Expense",
-  "homeMonthBalance": "Balance",
   "homeBudgetSet": "Budget {amount}",
   "@homeBudgetSet": {
     "placeholders": {
@@ -257,7 +255,6 @@
       }
     }
   },
-  "homeBudgetNotSet": "Not set",
   "homeNoRecords": "No records yet",
   "homeSelectDate": "Select date",
   "homeAppTitle": "Piggy Accounting",
@@ -367,7 +364,6 @@
   "analyticsTxCountShort": "{count} txns",
   "analyticsYear": "Year",
   "analyticsAll": "All",
-  "analyticsCategoryRanking": "Category Ranking",
   "analyticsTotalAmount": "Total",
   "analyticsNoDataSubtext": "Swipe left/right to switch periods, or tap button to toggle income/expense",
   "analyticsSwipeHint": "Swipe left/right to change period",
@@ -379,10 +375,7 @@
       }
     }
   },
-  "analyticsTipHeader": "Tip: Top capsule can switch Week/Month/Year/All",
-  "analyticsSwipeToSwitch": "Swipe to switch",
   "analyticsAllYears": "All Years",
-  "analyticsToday": "Today",
   "splashAppName": "Piggy Accounting",
   "splashSlogan": "Piggy Accounting, Getting Better Every Day",
   "splashSecurityTitle": "Open Source Data Security",
@@ -475,7 +468,6 @@
       }
     }
   },
-  "ledgersDownloading": "Downloading...",
   "ledgersDownloadSuccess": "Ledger \"{name}\" downloaded successfully",
   "@ledgersDownloadSuccess": {
     "placeholders": {
@@ -498,7 +490,6 @@
   },
   "ledgersDeleting": "Deleting...",
   "ledgersDeleteRemoteSuccess": "Cloud ledger deleted",
-  "ledgersCannotDeleteLastOne": "Cannot delete the last ledger",
   "ledgersRestoreAllTitle": "Batch Restore",
   "ledgersRestoreAllMessage": "Confirm restore all cloud ledgers? Total {count}.",
   "ledgersRestoreAllReconfirmMessage": "Final confirmation: restoring overwrites local ledger data with cloud content; overwritten local changes cannot be recovered. Continue?",
@@ -509,7 +500,6 @@
       }
     }
   },
-  "ledgersRestoring": "Restoring...",
   "ledgersRestoreComplete": "Restore Complete",
   "ledgersRestoreResult": "Success: {success}, Failed: {failed}",
   "@ledgersRestoreResult": {
@@ -572,7 +562,6 @@
   "categoryExpense": "Expense",
   "categoryIncome": "Income",
   "categoryEmpty": "No categories",
-  "categoryDefault": "Default Category",
   "categoryReorderTip": "Long press to drag and reorder categories",
   "categoryLoadFailed": "Load failed: {error}",
   "@categoryLoadFailed": {
@@ -642,16 +631,12 @@
       }
     }
   },
-  "mineTitle": "Mine",
   "mineCloudBackupSection": "Cloud & Backup",
   "mineFunctionSection": "Features",
   "mineHelpSection": "Help & Info",
   "mineSupportSection": "Support Us",
-  "mineReminder": "Reminder Settings",
   "mineImport": "Import Data",
   "mineExport": "Export Data",
-  "mineCloud": "Cloud Service",
-  "mineUpdate": "Check for Updates",
   "mineLanguageSettings": "Language",
   "languageTitle": "Language Settings",
   "languageChinese": "中文",
@@ -681,7 +666,6 @@
   },
   "mineProfileEditTitle": "Edit profile",
   "headerSkinTitle": "Skin",
-  "headerSkinSubtitle": "Follows your theme color, layered over the header",
   "headerSkinNone": "Solid",
   "headerSkinAurora": "Aurora",
   "headerSkinMountains": "Mountains",
@@ -703,7 +687,6 @@
   "headerSkinLowPoly": "Low-poly",
   "headerSkinPrism": "Prism",
   "headerSkinTerrazzo": "Terrazzo",
-  "mineAvatarTitle": "Avatar Settings",
   "mineAvatarFromGallery": "Choose from Gallery",
   "mineAvatarFromCamera": "Take Photo",
   "mineAvatarDelete": "Delete Avatar",
@@ -844,7 +827,6 @@
   "sharePosterLedgerName": "Ledger Name",
   "sharePosterUnitDay": "days",
   "sharePosterUnitCount": "",
-  "sharePosterUnitYuan": "",
   "userProfilePosterStartDate": "Bookkeeping since {date}",
   "@userProfilePosterStartDate": {
     "placeholders": {
@@ -857,6 +839,7 @@
   "userProfilePosterDaysUnit": "days",
   "userProfilePosterRecordCount": "Records",
   "userProfilePosterCountUnit": "",
+  "userProfilePosterDailyUnit": "per day",
   "userProfilePosterLedgerCount": "Ledgers",
   "userProfilePosterLedgerUnit": "",
   "mineDaysCount": "Days",
@@ -986,14 +969,9 @@
   "mineRecurringTransactionsSubtitle": "Manage recurring bills",
   "mineReminderSettings": "Reminder Settings",
   "mineReminderSettingsSubtitle": "Set daily recording reminders",
-  "minePersonalize": "Personalization",
   "mineDisplayScale": "Display Scale",
   "mineDisplayScaleSubtitle": "Adjust text and UI element sizes",
   "mineCheckUpdate": "Check Update",
-  "mineCheckUpdateSubtitle": "Checking for latest version",
-  "mineUpdateDownload": "Download Update",
-  "mineFeedback": "Feedback",
-  "mineFeedbackSubtitle": "Report issues or suggestions",
   "mineHelp": "Help",
   "helpCenterOpenInBrowser": "Open in browser",
   "helpCenterLoadFailed": "Failed to load. Please check your network.",
@@ -1061,7 +1039,6 @@
   "categoryImportModeMergeDesc": "Keep existing, add new ones",
   "categoryImportModeOverwrite": "Overwrite",
   "categoryImportModeOverwriteDesc": "Clear unused categories then import",
-  "categoryImportSuccess": "Import successful",
   "categoryImportSuccessDetail": "Imported {imported} categories, skipped {skipped}, imported {icons} icons",
   "@categoryImportSuccessDetail": {
     "placeholders": {
@@ -1140,11 +1117,6 @@
   "appearanceThemeModeSystem": "Follow System",
   "appearanceThemeModeLight": "Light Mode",
   "appearanceThemeModeDark": "Dark Mode",
-  "appearanceDarkModePattern": "Dark Mode Header Pattern",
-  "appearancePatternNone": "None",
-  "appearancePatternIcons": "Icon Tiling",
-  "appearancePatternParticles": "Particles",
-  "appearancePatternHoneycomb": "Honeycomb",
   "appearanceAmountFormat": "Balance Display Format",
   "appearanceAmountFormatFull": "Full Amount",
   "appearanceAmountFormatFullDesc": "Show full amount, e.g. 123,456.78",
@@ -1214,7 +1186,6 @@
   "fontSettingsResetTo1x": "Reset to 1.0x",
   "fontSettingsAdaptBase": "Adapt to Base",
   "reminderTitle": "Recording Reminder",
-  "reminderSubtitle": "Set daily recording reminder time",
   "reminderDailyTitle": "Daily Recording Reminder",
   "reminderDailySubtitle": "When enabled, will remind you to record at specified time",
   "reminderTimeTitle": "Reminder Time",
@@ -1285,13 +1256,9 @@
   "mineCheckUpdateDetecting": "Checking update...",
   "mineCheckUpdateSubtitleDetecting": "Checking for latest version",
   "mineUpdateDownloadTitle": "Download Update",
-  "cloudTest": "Test",
-  "cloudSwitched": "Switched",
-  "cloudSwitchFailed": "Switch failed",
   "cloudSupabaseUrlLabel": "Supabase URL",
   "cloudSupabaseUrlHint": "https://xxx.supabase.co",
   "cloudAnonKeyLabel": "Anon Key",
-  "cloudSelectServiceType": "Select Cloud Service Type",
   "cloudMultiDeviceWarningTitle": "Multi-Device Tips",
   "cloudMultiDeviceWarningMessage": "Upload before switching devices, download on the new device before editing. Don't edit the same ledger on two devices at once. Tap for details →",
   "cloudWebdavUrlLabel": "WebDAV Server URL",
@@ -1317,9 +1284,6 @@
   "authRememberAccount": "Remember account",
   "authRememberAccountHint": "Auto-fill on next login (Supabase only)",
   "cloudConfigSaved": "Configuration saved",
-  "cloudTestSuccess": "Connection test successful!",
-  "cloudTestFailed": "Connection test failed, please check if the configuration is correct.",
-  "cloudTestError": "Test failed",
   "authLogin": "Login",
   "authEmail": "Email",
   "authPassword": "Password",
@@ -1331,8 +1295,6 @@
   "authErrorRateLimit": "Too many attempts, please try again later.",
   "authErrorNetworkIssue": "Network error, please check your connection and try again.",
   "authErrorLoginFailed": "Login failed, please try again later.",
-  "authErrorEmailInvalid": "Email address is invalid, please check for spelling errors.",
-  "authErrorWeakPassword": "Password is too simple, please include letters and numbers, at least 6 characters.",
   "importSelectCsvFile": "Please select a file to import (CSV/TSV/XLSX supported)",
   "exportTitle": "Export",
   "exportDescription": "Supported export types:\n• Transactions (Income/Expense/Transfer)\n• Categories\n• Accounts\n\nClick the button below to select save location and export current ledger to CSV file.",
@@ -1350,6 +1312,7 @@
   "exportCsvHeaderTime": "Time",
   "exportCsvHeaderTags": "Tags",
   "exportCsvHeaderAttachments": "Attachments",
+  "exportCsvHeaderCustomFields": "Custom Fields",
   "exportShareText": "PiggyCount Export File",
   "exportSuccessTitle": "Export Successful",
   "exportSuccessMessageIOS": "Saved and available in share history:\n{path}",
@@ -1412,41 +1375,16 @@
   "analyticsMonthlyAvg": "Monthly Avg",
   "analyticsDailyAvg": "Daily Avg",
   "analyticsOverallAvg": "Overall Avg",
-  "analyticsTotalIncome": "Total Income: ",
   "analyticsTotalExpense": "Total Expense: ",
   "analyticsBalance": "Balance: ",
   "analyticsComparedToLastYear": "vs Last Year",
   "analyticsTxCount": "Records",
-  "analyticsAvgIncome": "{avgLabel} Income: ",
-  "@analyticsAvgIncome": {
-    "placeholders": {
-      "avgLabel": {
-        "type": "String"
-      }
-    }
-  },
-  "analyticsAvgExpense": "{avgLabel} Expense: ",
-  "@analyticsAvgExpense": {
-    "placeholders": {
-      "avgLabel": {
-        "type": "String"
-      }
-    }
-  },
   "analyticsExpense": "Expense",
   "analyticsIncome": "Income",
   "analyticsTotal": "Total {type}: ",
   "@analyticsTotal": {
     "placeholders": {
       "type": {
-        "type": "String"
-      }
-    }
-  },
-  "analyticsAverage": "{avgLabel}: ",
-  "@analyticsAverage": {
-    "placeholders": {
-      "avgLabel": {
         "type": "String"
       }
     }
@@ -1480,7 +1418,6 @@
   "updateLaterButton": "Later",
   "updateDownloadButton": "Download",
   "updateInstallingCachedApk": "Installing cached APK",
-  "updateDownloadComplete": "Download Complete",
   "updateInstallStarted": "Download complete, installer started",
   "updateInstallFailed": "Installation failed",
   "updateDownloadFailed": "Download failed",
@@ -1489,7 +1426,6 @@
   "updateCheckFailedTitle": "Update Check Failed",
   "updateDownloadFailedTitle": "Download Failed",
   "updateGoToGitHub": "Go to GitHub",
-  "updateCannotOpenLink": "Cannot open link",
   "updateManualVisit": "Please manually visit in browser:\\nhttps://github.com/mecoren/PiggyCount/releases",
   "updateNoLocalApkTitle": "No Update Package Found",
   "updateInstallPackageTitle": "Install Update Package",
@@ -1873,7 +1809,6 @@
   "cloudConfigureWebdavTitle": "Configure WebDAV",
   "cloudConfigureS3Title": "Configure S3",
   "cloudSupabaseAnonKeyHintLong": "Paste complete anon key",
-  "cloudWebdavRemotePathHelp": "Remote directory path for data storage",
   "cloudWebdavRemotePathLabel": "Remote Path",
   "cloudWebdavRemotePathHelperText": "Remote directory path for data storage",
   "accountsTitle": "Asset Management",
@@ -1887,7 +1822,6 @@
   "accountNameHint": "e.g.: ICBC, Alipay, etc.",
   "accountNameRequired": "Please enter account name",
   "accountNameDuplicate": "Account name already exists, please use a different name",
-  "accountTypeLabel": "Account Type",
   "accountTypeCash": "Cash",
   "accountTypeBankCard": "Bank Card",
   "accountTypeCreditCard": "Credit Card",
@@ -1914,7 +1848,6 @@
   "accountUnhide": "Restore account",
   "accountRestore": "Restore",
   "accountHiddenTag": "Hidden",
-  "accountHiddenSection": "Hidden",
   "accountHiddenSectionSummary": "{count} hidden · {total}",
   "@accountHiddenSectionSummary": {
     "placeholders": {
@@ -1958,8 +1891,6 @@
   "welcomeCloudSyncFeature3": "Or pick iCloud / WebDAV / Supabase / S3",
   "widgetManagement": "Home Screen Widget",
   "widgetManagementDesc": "Quick view of income and expenses on home screen",
-  "widgetPreview": "Widget Preview",
-  "widgetPreviewDesc": "Widget automatically displays actual data from current ledger, theme color follows app settings",
   "widgetGalleryTitle": "Widget Gallery",
   "widgetGalleryDesc": "Previews use sample data — the real widget shows your current ledger and follows your theme color.",
   "widgetGalleryGlanceTitle": "Overview",
@@ -1989,11 +1920,6 @@
   "widgetQuickEntryTitle": "Quick Entry",
   "widgetQuickEntryDesc": "Tap the left side of the widget to quickly add an expense, or tap the right side to add an income. You can also use piggycount://new?type=transfer via Shortcuts to quickly start a transfer.",
   "appName": "PiggyCount",
-  "monthSuffix": "",
-  "todayExpense": "Today's Expense",
-  "todayIncome": "Today's Income",
-  "monthExpense": "Month's Expense",
-  "monthIncome": "Month's Income",
   "autoScreenshotBilling": "Auto Screenshot Billing",
   "autoScreenshotBillingDesc": "Auto-recognize payment info from screenshots",
   "autoScreenshotBillingTitle": "Auto Screenshot Billing",
@@ -2053,7 +1979,6 @@
       }
     }
   },
-  "aiCloudApiKeyHint": "Enter your Zhipu AI API Key",
   "aiCloudApiKeyHintCustom": "Enter API Key",
   "aiCloudApiKeyHelper": "GLM-*-Flash model is completely free",
   "aiCloudApiGetKey": "Get API Key",
@@ -2062,7 +1987,6 @@
   "aiChatConfigWarning": "AI provider not configured. Please add and bind one in Settings",
   "aiChatGoToSettings": "Go to Settings",
   "aiOcrRecognizing": "Recognizing bill...",
-  "aiOcrNoAmount": "No valid amount recognized, please add manually",
   "aiNotConfiguredHint": "AI service not configured. Go to \"Me → AI Settings\" to set up.",
   "aiOcrCheckLog": "Recognition failed. Check logs for details.",
   "aiOcrNoBill": "No bill recognized. Make sure the image is a bill, then try again.",
@@ -2083,8 +2007,6 @@
   "autoBillingNotifyNoLedgerTitle": "❌ Auto billing failed",
   "autoBillingNotifyNoLedgerBody": "No ledger available. Please create one first.",
   "autoBillingNotifyNoAmountBody": "Could not recognize the amount",
-  "autoBillingNotifyCreateFailedTitle": "❌ Failed to create",
-  "autoBillingNotifyCreateFailedBody": "Could not create transaction record",
   "autoBillingNotifyProcessFailedTitle": "❌ Processing failed",
   "autoBillingNotifyProcessFailedBody": "Error: {error}",
   "@autoBillingNotifyProcessFailedBody": {
@@ -2147,36 +2069,18 @@
       }
     }
   },
-  "aiOcrCreateFailed": "Failed to create bill",
   "aiTypeIncome": "Income",
   "aiTypeExpense": "Expense",
   "cloudSyncPageTitle": "Cloud Sync",
   "cloudSyncPageSubtitle": "Manual upload and download ledger data",
   "cloudSyncHint": "Downloads automatically compare differences for selective preview. Not real-time — avoid editing the same ledger on multiple devices simultaneously. Sync scope covers ledger data (including associated accounts, categories, and tags), excluding attachments.",
-  "cloudSyncNow": "Sync Now",
-  "cloudSyncNowHint": "Push local changes and pull remote updates",
-  "cloudSyncInProgress": "Syncing...",
-  "cloudSyncComplete": "Sync complete: pushed {pushed}, pulled {pulled}",
-  "@cloudSyncComplete": {
-    "placeholders": {
-      "pushed": {
-        "type": "int"
-      },
-      "pulled": {
-        "type": "int"
-      }
-    }
-  },
-  "cloudAutoSyncHint": "Auto-sync to cloud after data changes",
   "dataManagement": "Data Management",
   "dataManagementDesc": "Import, export, categories and accounts",
   "dataManagementPageTitle": "Data Management",
-  "dataManagementPageSubtitle": "Manage transaction data and categories",
   "dataManagementAttachmentHint": "When restoring data, please import the attachment package first, then import ledger data (CSV or cloud sync) to ensure attachments are correctly associated.",
   "smartBilling": "Smart Billing",
   "smartBillingDesc": "AI Assistant, smart recognition, auto billing",
   "smartBillingPageTitle": "Smart Billing",
-  "smartBillingPageSubtitle": "AI and automation billing features",
   "smartBillingGuideHint": "Long press the + button at the bottom center of the home page to quickly access these features",
   "smartBillingImageBilling": "Image Billing",
   "smartBillingImageBillingDesc": "Select payment screenshots from gallery for recognition",
@@ -2202,23 +2106,15 @@
   "automation": "Automation",
   "automationDesc": "Recurring transactions and reminders",
   "automationPageTitle": "Automation",
-  "automationPageSubtitle": "Recurring transactions and reminder settings",
   "appearanceSettings": "Personalization",
   "appearanceSettingsDesc": "Theme, font, language, app lock, etc.",
   "appearanceSettingsPageTitle": "Personalization",
-  "appearanceSettingsPageSubtitle": "Appearance, display, security and other app preferences",
   "about": "About",
   "aboutDesc": "Version info, help and feedback",
   "mineRateApp": "Rate the App",
   "mineRateAppSubtitle": "Rate us on the App Store",
   "aboutPageTitle": "About",
-  "aboutPageSubtitle": "App information and help",
   "aboutPageLoadingVersion": "Loading version...",
-  "aboutWebsite": "Official Website",
-  "aboutGitHubRepo": "GitHub Repository",
-  "aboutXiaohongshu": "Xiaohongshu",
-  "aboutDouyin": "Douyin",
-  "aboutTelegram": "Telegram",
   "aboutSupportDevelopment": "Support Development",
   "aboutSupportDevelopmentSubtitle": "Buy me a coffee",
   "aboutDeveloperStoryTitle": "From the Developer",
@@ -2233,7 +2129,6 @@
   "productPromoAndroidMessage": "This app is still in closed testing on Google Play — invitation only.\n\nHow to apply: email us with your Google account address (required) and a brief use case (optional). We'll reply within 1-3 days and add you to the beta whitelist.",
   "productPromoOpenStore": "Open in App Store",
   "productPromoTestFlight": "TestFlight beta",
-  "productPromoLearnMore": "Pro",
   "productPromoEmailLabel": "Application Email (tap to copy)",
   "productPromoCopiedToast": "Email copied to clipboard",
   "productPromoMailUnavailable": "No email app detected. The address has been copied — paste it into any mail app to send.",
@@ -2575,6 +2470,39 @@
   "aiCustomBaseUrlHelper": "Standard chat completion API URL, e.g. https://api.example.com/v1",
   "aiTextModelTitle": "Text Model",
   "aiAudioModelTitle": "Audio Model",
+  "customFieldManageTitle": "Custom Fields",
+  "customFieldManageSubtitle": "Define field names and types for this ledger",
+  "customFieldManageEmpty": "No custom fields yet",
+  "customFieldManageEmptyHint": "Add fields like \"Tax\" or \"Invoice No.\" to record extra details on every entry",
+  "customFieldAdd": "Add Field",
+  "customFieldAddTitle": "New Custom Field",
+  "customFieldEditTitle": "Edit Custom Field",
+  "customFieldNameLabel": "Field Name",
+  "customFieldNameHint": "e.g. Tax",
+  "customFieldNameRequired": "Field name is required",
+  "customFieldNameDuplicate": "A field with this name already exists",
+  "customFieldTypeLabel": "Type",
+  "customFieldTypeAmount": "Amount",
+  "customFieldTypeText": "Text",
+  "customFieldTypeDate": "Date",
+  "customFieldCreateSuccess": "Custom field added",
+  "customFieldUpdateSuccess": "Custom field updated",
+  "customFieldDeleteSuccess": "Custom field deleted",
+  "customFieldDeleteConfirmTitle": "Delete Custom Field",
+  "customFieldDeleteConfirmMessage": "Delete \"{name}\"? Values already recorded on entries in this ledger will be removed as well. This cannot be undone.",
+  "@customFieldDeleteConfirmMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "customFieldSectionTitle": "Custom Fields",
+  "customFieldSectionEmpty": "No custom fields for this ledger",
+  "customFieldDatePick": "Select date",
+  "customFieldTextHint": "Enter text",
+  "customFieldAmountHint": "0.00",
+  "customFieldSortHint": "Long press to reorder",
   "tagManageTitle": "Tags",
   "tagManageSubtitle": "Manage transaction tags",
   "tagManageEmpty": "No tags yet",
@@ -2722,7 +2650,6 @@
   "budgetAmountHint": "Enter budget amount",
   "budgetCategoryLabel": "Select Category",
   "budgetCategoryHint": "Select budget category",
-  "budgetStartDayLabel": "Start Day",
   "budgetPeriodLabel": "Period",
   "budgetSaveSuccess": "Budget saved",
   "budgetDeleteConfirm": "Delete this budget?",
@@ -2732,14 +2659,6 @@
   "attachmentChooseFromGallery": "Choose from Gallery",
   "attachmentMaxReached": "Maximum attachments reached",
   "attachmentDeleteConfirm": "Delete this attachment?",
-  "attachmentCount": "{count} images",
-  "@attachmentCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "commonDeleted": "Deleted",
   "attachmentExportTitle": "Export Attachments",
   "attachmentExportSubtitle": "Export all attachments as a compressed file",
@@ -2830,14 +2749,6 @@
   "attachmentImportReconfirmTitle": "Confirm Overwrite Import",
   "attachmentImportReconfirmMessage": "Final confirmation: with \"Overwrite\" selected, existing attachments with the same name will be replaced by archive files and cannot be recovered. Continue?",
   "attachmentPreview": "Preview Attachments",
-  "attachmentPreviewSubtitle": "{count} images in total",
-  "@attachmentPreviewSubtitle": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "attachmentPreviewEmpty": "No attachments",
   "attachmentExportPreviewTitle": "Export Preview",
   "attachmentImportPreviewTitle": "Import Preview",
@@ -2891,7 +2802,6 @@
   "calendarToday": "Today",
   "calendarNoTransactions": "No transactions",
   "calendarAddTransaction": "Add entry on this day",
-  "calendarAddTransactionTooltip": "Add a record on the selected day",
   "commonUncategorized": "Uncategorized",
   "commonSaved": "Saved",
   "aiProviderManageTitle": "Provider Management",
@@ -2931,7 +2841,6 @@
   "aiCapabilityImageUnderstandDesc": "For image bill recognition",
   "aiCapabilitySpeechToText": "Speech to Text",
   "aiCapabilitySpeechToTextDesc": "For voice billing",
-  "aiProviderTestRun": "Tap to test",
   "aiProviderTestRunning": "Testing...",
   "aiProviderTestSuccess": "Test passed",
   "aiProviderTestFailed": "Test failed",
@@ -2976,7 +2885,6 @@
       }
     }
   },
-  "syncPreviewEmpty": "Cloud data matches local, no sync needed",
   "syncPreviewOldFormat": "Old cloud format, full replace required",
   "syncPreviewOldFormatMessage": "Cloud data does not contain sync IDs. Local data will be cleared and re-imported from cloud.",
   "syncPreviewApplied": "Applied {count} changes",
@@ -3007,8 +2915,6 @@
   "cloudSyncGuideLimitItem2": "No conflict merging: does not auto-merge edits from both sides — last upload wins",
   "cloudSyncGuideLimitItem3": "Cloud service delay: uploaded files may take seconds to minutes before other devices can read them, depending on your cloud provider",
   "cloudSyncGuideLimitItem4": "Excludes attachments: transaction image attachments are not synced — export separately via Data Management",
-  "mineMultiDeviceSyncTitle": "Multi-device Sync",
-  "mineMultiDeviceSyncSubtitle": "Auto-check cloud changes when entering page",
   "appLockTitle": "App Lock",
   "appLockDesc": "PIN & biometric to protect privacy",
   "appLockEnable": "Enable App Lock",
@@ -3099,7 +3005,6 @@
   "valuationAccountHint": "Enter current valuation",
   "valuationDebtHint": "Enter current debt amount",
   "accountGroupTradable": "Daily Accounts",
-  "accountGroupValuation": "Assets/Liabilities",
   "adjustmentTransaction": "Valuation Adjustment",
   "creditCardBillingInfo": "Bills on {billingDay}th · Due on {paymentDueDay}th",
   "@creditCardBillingInfo": {
@@ -3123,11 +3028,8 @@
   "creditCardPaymentDueToday": "Payment due today",
   "creditCardQuickRepay": "Record Repayment",
   "budgetManagement": "Budget",
-  "budgetManagementDesc": "Set monthly budget and control spending",
   "budgetSetupHint": "Set a budget to control monthly spending",
   "budgetSetupAction": "Set up",
-  "commonCopied": "Copied",
-  "commonRemove": "Remove",
   "maintenanceOrphanCleanupTitle": "Data Cleanup",
   "maintenanceOrphanCleanupSubtitle": "Detect and clean local orphan data",
   "maintenanceOrphanRescan": "Rescan",
@@ -3200,18 +3102,6 @@
       }
     }
   },
-  "syncProgressTitle": "Syncing",
-  "syncProgressCount": "{applied} / {total}",
-  "@syncProgressCount": {
-    "placeholders": {
-      "applied": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
   "exchangeRatePageTitle": "Exchange Rates",
   "exchangeRateEntrySubtitle": "Auto-fetched rates with manual override",
   "baseCurrencyLabel": "Primary Currency",
@@ -3274,7 +3164,6 @@
   "unconvertedBadge": "Not converted",
   "commonDetail": "Detail",
   "conversionDetailTitle": "Conversion Details",
-  "assetConversionToggle": "Convert to primary currency",
   "rateManualApplied": "Applied {count} manual rates",
   "@rateManualApplied": {
     "placeholders": {
@@ -3294,7 +3183,6 @@
   "netWorthTrendMultiCurrencyNote": "Historical net worth is the raw sum of each currency, not converted",
   "txFlagExcludeFromStats": "Exclude from income/expense",
   "txFlagExcludeFromBudget": "Exclude from budget",
-  "txFlagMoreOptions": "More options",
   "txFlagDialogTitle": "Transaction flags",
   "txFlagExcludeFromStatsHint": "Excluded from stats, still counts toward balance",
   "txFlagExcludeFromBudgetHint": "Doesn't count against your budget",
@@ -3338,7 +3226,6 @@
   "amountDeviationEmptySubtext": "Fill in the original amount while recording and its deviation shows up here",
   "amountDeviationBottomFillHint": "An empty original amount is saved as the recorded amount, producing no deviation",
   "amountDeviationNoDiff": "No deviation in this range",
-  "txCrossCurrencyTransferBlocked": "Cross-currency transfers are not supported yet. Record two entries or use same-currency accounts.",
   "ledgerBaseCurrencyLabel": "Primary currency",
   "statsConvertedFootnote": "Includes foreign currency, converted to {currency} at entry-time rates",
   "@statsConvertedFootnote": {
@@ -3471,8 +3358,6 @@
   "currencyMRU": "Mauritanian Ouguiya",
   "cloudSyncEncryptTitle": "Sync Encryption",
   "cloudSyncEncryptSubtitle": "Encrypt cloud backups with a password to protect ledger privacy",
-  "cloudSyncEncryptEnable": "Enable sync encryption",
-  "cloudSyncEncryptEnableSubtitle": "New uploads will be stored as ciphertext after enabling",
   "cloudSyncEncryptEnabled": "Enabled",
   "cloudSyncEncryptDisabled": "Disabled",
   "cloudSyncEncryptSettings": "Encryption Settings",
@@ -3488,7 +3373,6 @@
   "cloudSyncEncryptPasswordTooShort": "Password must be at least 8 characters",
   "cloudSyncEncryptWrongPassword": "Wrong password",
   "cloudSyncEncryptEnableSuccess": "Encryption enabled",
-  "cloudSyncEncryptDisableSuccess": "Encryption disabled; new uploads will not be encrypted",
   "cloudSyncEncryptChangeSuccess": "Password changed",
   "cloudSyncEncryptResetConfirmTitle": "Reset Encryption",
   "cloudSyncEncryptResetConfirmMessage": "Reset will clear all cloud ledger backups and cannot be undone. Continue?",
@@ -3496,8 +3380,6 @@
   "cloudSyncEncryptResetSuccess": "Encryption has been reset",
   "cloudSyncEncryptDecryptFailed": "Decryption failed, please check your password",
   "cloudSyncEncryptMultiDeviceHint": "Use the same password on other devices to decrypt",
-  "cloudSyncEncryptLegacyHint": "Existing unencrypted cloud data will be automatically converted to ciphertext",
-  "cloudSyncEncryptReencrypting": "Re-encrypting cloud data...",
   "cloudSyncEncryptReencryptPartialFailed": "Encryption enabled, but {count} cloud file(s) failed to re-encrypt. They will be automatically retried on the next sync.",
   "@cloudSyncEncryptReencryptPartialFailed": {
     "placeholders": {
@@ -3509,11 +3391,9 @@
   "cloudSyncEncryptProbeFailedTitle": "Cloud Probe Failed",
   "cloudSyncEncryptProbeFailedMessage": "Unable to probe whether the cloud already has encrypted data (possibly a network or permission issue). If other devices have encryption enabled, continuing will re-encrypt cloud data with a new password, which may prevent other devices from decrypting. Continue anyway?",
   "cloudSyncEncryptProbeFailedContinue": "Continue as first device",
-  "saltMismatchStatus": "Encryption key mismatch",
   "saltMismatchNeedPasswordHint": "Cloud backup key doesn't match local. Tap to re-enter password.",
   "cloudEncryptedLocallyDisabledHint": "Cloud backup is encrypted but local encryption is disabled. Tap to enable encryption and restore data.",
   "saltMismatchDialogTitle": "Re-enter Password",
-  "saltMismatchRetrySuccess": "Key activated. Retrying sync...",
   "saltMismatchRawStorageUnavailable": "Cloud service not initialized, cannot recover key",
   "saltMismatchProbeFailed": "Cloud probe failed, please check network and retry",
   "saltMismatchCloudCorrupted": "Cloud ciphertext is corrupted, cannot recover key",
@@ -3626,7 +3506,6 @@
       }
     }
   },
-  "backupCardTitle": "Cloud Backup",
   "backupNowTitle": "Back Up Now",
   "backupNowSubtitle": "Pack all ledgers and attachments into one daily backup in piggycount-bak",
   "backupNoLedgers": "There are no ledgers to back up.",
@@ -3786,7 +3665,6 @@
   "annualReportPosterAchieved": "Achieved",
   "annualReportPosterNotAchieved": "Not achieved",
   "annualReportPosterQrCta": "Scan to download PiggyCount and start your ledger journey",
-  "commonUnitYuan": "yuan",
   "annualReportConsecutiveDaysValue": "{count} days",
   "@annualReportConsecutiveDaysValue": {
     "placeholders": {
@@ -3797,21 +3675,37 @@
   },
   "aiBillingRateMissingHint": "⚠️ No {currency} rate available — recorded 1:1 for now; use “Reconvert” on the stats page to fix.",
   "@aiBillingRateMissingHint": {
-    "placeholders": { "currency": { "type": "String" } }
+    "placeholders": {
+      "currency": {
+        "type": "String"
+      }
+    }
   },
   "aiPromptVarCurrencies": "Ledger base currency + foreign-currency accounts in use",
   "aiPromptVarBillGuard": "Bill filter (injected for screenshots / auto billing only)",
   "aiPromptMissingVarsHint": "Your custom template is missing these variables; those capabilities won't work: {vars}",
   "@aiPromptMissingVarsHint": {
-    "placeholders": { "vars": { "type": "String" } }
+    "placeholders": {
+      "vars": {
+        "type": "String"
+      }
+    }
   },
   "aiPromptInsertVarSection": "Insert {name} section",
   "@aiPromptInsertVarSection": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "aiPromptVarSectionInserted": "{name} section appended; save to confirm",
   "@aiPromptVarSectionInserted": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "tagSelectOwnerManaged": "Shared ledger tags are managed by the owner",
   "syncHealthTitle": "Sync Health",
@@ -3822,16 +3716,58 @@
   "syncHealthExport": "Export diagnostic data",
   "syncHealthExported": "Diagnostics exported: {fileName}",
   "syncHealthExportFailed": "Failed to export diagnostics: {error}",
-  "@syncHealthRate": { "placeholders": { "rate": { "type": "String" } } },
-  "@syncHealthDetail": { "placeholders": { "success": { "type": "int" }, "failed": { "type": "int" }, "softFail": { "type": "int" }, "conflict": { "type": "int" } } },
-  "@syncHealthExported": { "placeholders": { "fileName": { "type": "String" } } },
-  "@syncHealthExportFailed": { "placeholders": { "error": { "type": "String" } } },
+  "@syncHealthRate": {
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "@syncHealthDetail": {
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      },
+      "softFail": {
+        "type": "int"
+      },
+      "conflict": {
+        "type": "int"
+      }
+    }
+  },
+  "@syncHealthExported": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "@syncHealthExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "cloudCapabilityTitle": "Backend capabilities",
   "cloudCapabilityLine": "Concurrency guard: {concurrency} · Binary transfer: {binary}",
   "cloudCapYes": "Native",
   "cloudCapApprox": "Approximate (verify-fallback)",
   "cloudCapNo": "Degraded",
-  "@cloudCapabilityLine": { "placeholders": { "concurrency": { "type": "String" }, "binary": { "type": "String" } } },
+  "@cloudCapabilityLine": {
+    "placeholders": {
+      "concurrency": {
+        "type": "String"
+      },
+      "binary": {
+        "type": "String"
+      }
+    }
+  },
   "syncErrNotConfigured": "Not configured",
   "syncErrAuth": "Authentication failed",
   "syncErrNetworkTimeout": "Network timeout",
@@ -3854,15 +3790,38 @@
   "dbHealthResetConfirmMessage": "The damaged database file will be moved to a preserved folder (not deleted), and the app must restart to create a fresh, empty database. You can then restore data from a cloud backup or a backup file.",
   "dbHealthResetDone": "Damaged file preserved at: {path}\nPlease fully quit and reopen the app.",
   "dbHealthResetFailed": "Reset failed: {error}",
-  "@dbHealthExported": {"placeholders":{"path":{"type":"String"}}},
-  "@dbHealthExportFailed": {"placeholders":{"error":{"type":"String"}}},
-  "@dbHealthResetDone": {"placeholders":{"path":{"type":"String"}}},
-  "@dbHealthResetFailed": {"placeholders":{"error":{"type":"String"}}},
+  "@dbHealthExported": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "@dbHealthExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@dbHealthResetDone": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "@dbHealthResetFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "recycleBin": "Recycle bin",
   "recycleBinSubtitle": "Deleted transactions stay here until you remove them for good",
   "recycleBinEmpty": "Recycle bin is empty",
   "recycleBinMoved": "Moved to recycle bin",
-  "recycleBinUndo": "Undo",
   "recycleBinRestored": "Restored",
   "recycleBinRestore": "Restore",
   "recycleBinPurge": "Delete permanently",
@@ -3875,7 +3834,17 @@
   "rangeReportColumnYoy": "Last year",
   "analyticsTagComposition": "{type} by Tag",
   "rangeReportChangeRange": "Change range",
+  "rangeReportCustomFieldTitle": "Custom field breakdown",
   "rangeReportEmptySubtext": "No records in this range. Tap the dates above to pick another one.",
   "semanticsChartSeries": "Chart, {count} points: {points}",
-  "@semanticsChartSeries": {"placeholders": {"count": {"type": "int"}, "points": {"type": "String"}}}
+  "@semanticsChartSeries": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "points": {
+        "type": "String"
+      }
+    }
+  }
 }

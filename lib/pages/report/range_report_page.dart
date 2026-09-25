@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../data/db.dart' as db;
 import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
+import '../../services/custom_field_stats_service.dart';
 import '../../styles/tokens.dart';
 import '../../utils/analytics_category_rollup.dart';
 import '../../utils/format_utils.dart';
@@ -101,6 +102,14 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
       repo.countByTypeInRange(
           ledgerId: ledgerId, type: _dim, start: _start, end: _end),
     ]);
+    // B2(v47):自定义字段汇总。定义非空才查值行(绝大多数账本零定义,少一次查询)。
+    final cfDefs = await repo.getDefinitionsForLedger(ledgerId);
+    final cfRows = cfDefs.isEmpty
+        ? const <({String type, double nativeAmount, String? customValuesJson})>[]
+        : await repo.customFieldStatsRows(
+            ledgerId: ledgerId, start: _start, end: _end);
+    final customFieldStats =
+        CustomFieldStatsService.aggregate(defs: cfDefs, rows: cfRows);
     final rawSeries = results[3] as List<({DateTime day, double total})>;
     return _ReportData(
       cur: results[0] as (double, double),
@@ -131,6 +140,7 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
                 int count
               })>,
       txCount: results[7] as int,
+      customFields: customFieldStats,
     );
   }
 
@@ -272,6 +282,15 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
                     title: l10n.analyticsTagComposition(dimWord),
                     child: _tagRanking(context, l10n, data),
                   ),
+                  // B2(v47):自定义字段汇总(有定义且有值才出现)。
+                  if (data.customFields.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    _card(
+                      context,
+                      title: l10n.rangeReportCustomFieldTitle,
+                      child: _customFieldStats(context, l10n, data),
+                    ),
+                  ],
                 ],
               ],
             );
@@ -609,6 +628,80 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
     );
   }
 
+  /// B2(v47)：自定义字段汇总卡内容。每个字段一段：字段名 + 值桶行。
+  /// 桶按当前维度（_dim）金额降序，超过 [_cfTopN] 合并进「其他」。
+  /// 注意：本卡的文字一律走 PiggyTextTokens —— 不新增 fontSize 字面量，
+  /// 避免把 U1 ratchet 基线顶高。
+  Widget _customFieldStats(
+      BuildContext context, AppLocalizations l10n, _ReportData data) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final field in data.customFields) ...[
+          Padding(
+            padding: const EdgeInsets.only(top: 6, bottom: 2),
+            child: Text(field.name,
+                style: PiggyTextTokens.strongTitle(context)),
+          ),
+          ..._customFieldValueRows(context, l10n, field),
+        ],
+      ],
+    );
+  }
+
+  List<Widget> _customFieldValueRows(
+      BuildContext context, AppLocalizations l10n, CustomFieldFieldStats field) {
+    const topN = 8;
+    final all = field.sorted(_dim);
+    final shown = all.take(topN).toList();
+    final rest = all.skip(topN).toList();
+    ({double income, double expense, int count}) mergeRest(
+        List<({String label, double income, double expense, int count})> src) {
+      var income = 0.0, expense = 0.0, count = 0;
+      for (final b in src) {
+        income += b.income;
+        expense += b.expense;
+        count += b.count;
+      }
+      return (income: income, expense: expense, count: count);
+    }
+
+    final buckets = [...shown];
+    if (rest.isNotEmpty) {
+      final merged = mergeRest(rest);
+      buckets.add((label: l10n.commonOther, income: merged.income,
+          expense: merged.expense, count: merged.count));
+    }
+    return [
+      for (final b in buckets)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(b.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: PiggyTextTokens.body(context)),
+              ),
+              const SizedBox(width: 6),
+              Text(l10n.analyticsTxCountShort(b.count),
+                  style: PiggyTextTokens.caption(context)
+                      .copyWith(color: PiggyTokens.textTertiary(context))),
+              const SizedBox(width: 12),
+              AmountText(
+                value: _dim == 'income' ? b.income : b.expense,
+                signed: false,
+                showCurrency: true,
+                useCompactFormat: true,
+                style: PiggyTextTokens.strongTitle(context),
+              ),
+            ],
+          ),
+        ),
+    ];
+  }
+
   /// 标签颜色是用户输入的 `#RRGGBB` / `#AARRGGBB`，脏值回落到调色板。
   static Color? _parseTagColor(String? raw) {
     if (raw == null) return null;
@@ -630,6 +723,7 @@ class _ReportData {
     required this.cats,
     required this.tags,
     required this.txCount,
+    required this.customFields,
   });
 
   /// (收入, 支出) —— 位次与 `totalsInRange` 的返回一致
@@ -651,4 +745,7 @@ class _ReportData {
   final List<
       ({int id, String name, String? color, double total, int count})> tags;
   final int txCount;
+
+  /// B2(v47)：自定义字段汇总（定义非空且区间内有值才有内容）。
+  final List<CustomFieldFieldStats> customFields;
 }

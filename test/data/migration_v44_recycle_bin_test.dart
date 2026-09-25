@@ -57,7 +57,9 @@ void main() {
 
     await expectTableUsable(db);
     final version = await db.customSelect('PRAGMA user_version').getSingle();
-    expect(version.read<int>('user_version'), 44);
+    // 断言"确实前进到当前 schema 版本"而不是硬编码 44 —— 后续每加一个版本
+    // 都会让这条与 v44 无关的断言失效（v46 起改为动态比对）。
+    expect(version.read<int>('user_version'), db.schemaVersion);
   });
 
   test('v44 onCreate: 全新装库直接具备表与索引（新装路径）', () async {

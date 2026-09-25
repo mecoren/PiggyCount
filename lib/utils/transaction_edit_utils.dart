@@ -18,6 +18,11 @@ class TransactionEditUtils {
     final tags = await repo.getTagsForTransaction(transaction.id);
     final tagIds = <int>[for (final t in tags) t.id];
 
+    // v46 自定义字段:编辑前读一次该笔已存值用于表单回显。
+    // 读的是交易行上的值本身(不依赖定义表),所以即使字段定义尚未从其他设备
+    // 同步下来,这里拿到的已有值也不会因为「定义看不见」而被清掉。
+    final customValues = await repo.getValuesForTransaction(transaction.id);
+
     // §7 共享账本:加 TransactionTagOverrides → synthetic id 加进列表,
     // picker 显示选中
     if (repo is LocalRepository && transaction.syncId != null) {
@@ -70,6 +75,8 @@ class TransactionEditUtils {
       initialNativeAmount: transaction.nativeAmount,
       // v45 原始金额回显(未填写 → null,输入框留空)
       initialOriginalAmount: transaction.originalAmount,
+      // v46 自定义字段回显(fieldSyncId → value)
+      initialCustomValues: customValues,
     );
   }
 }

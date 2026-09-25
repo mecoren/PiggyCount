@@ -10,6 +10,7 @@ import '../../styles/tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
 import '../../utils/month_range.dart';
+import '../../utils/currencies.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/posters/annual_report_poster.dart';
 import '../../data/db.dart';
@@ -252,6 +253,22 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
   AppLocalizations l10nInsight(BuildContext context) =>
       AppLocalizations.of(context);
 
+  /// 页面金额的币种符号（同 [l10nInsight] 的「统一经此取词」思路）。
+  ///
+  /// 口径 = **账本本位币**：本页所有金额都是 `COALESCE(native_amount, amount)`
+  /// （见年度汇总 SQL），与年/月/账本总结海报（A1）同一来源。历史实现写死
+  /// '¥'；后来一度传主币种（baseCurrencyProvider）—— 主币种≠账本币种时
+  /// 整页/整张海报的符号还是错的。屏幕符号与分享海报必须同源。
+  String get currencySymbol => getCurrencySymbol(_ledgerCurrencyCode);
+
+  /// 当前账本的本位币代码（ISO 大写，兜底 CNY）。
+  String get _ledgerCurrencyCode {
+    final currency =
+        ref.read(currentLedgerProvider).asData?.value?.currency ?? '';
+    final code = currency.trim();
+    return code.isEmpty ? 'CNY' : code.toUpperCase();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -487,7 +504,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
 
     final l10n = AppLocalizations.of(context);
     final primaryColor = ref.read(primaryColorProvider);
-    final currencyCode = ref.read(baseCurrencyProvider);
+    final currencyCode = _ledgerCurrencyCode;
 
     // Show loading
     showDialog(
@@ -547,7 +564,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
         child: AnnualReportPoster(
           data: data,
           primaryColor: primaryColor,
-          currencyCode: ref.read(baseCurrencyProvider),
+          currencyCode: currencyCode,
         ),
       );
 
@@ -781,7 +798,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
           ),
           const Spacer(),
           Text(
-            '$sign¥${formatter.format(amount.abs())}',
+            '$sign$currencySymbol${formatter.format(amount.abs())}',
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
@@ -858,7 +875,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
           _buildInsightItem(
             icon: Icons.receipt_long_rounded,
             title: l10nInsight(context).annualReportAvgPerTxTitle,
-            value: '¥${formatter.format(avgExpensePerRecord)}',
+            value: '$currencySymbol${formatter.format(avgExpensePerRecord)}',
             description: l10nInsight(context).annualReportAvgPerTxDesc,
             primaryColor: primaryColor,
           ),
@@ -867,7 +884,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
           _buildInsightItem(
             icon: Icons.schedule_rounded,
             title: l10nInsight(context).annualReportAvgDailyTitle,
-            value: '¥${formatter.format(dailyAvg)}',
+            value: '$currencySymbol${formatter.format(dailyAvg)}',
             description: l10nInsight(context).annualReportAvgDailyDesc,
             primaryColor: primaryColor,
           ),
@@ -876,7 +893,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
           _buildInsightItem(
             icon: Icons.date_range_rounded,
             title: l10nInsight(context).annualReportAvgMonthlyTitle,
-            value: '¥${formatter.format(monthlyAvg)}',
+            value: '$currencySymbol${formatter.format(monthlyAvg)}',
             description: l10nInsight(context).annualReportAvgMonthlyDesc,
             primaryColor: primaryColor,
           ),
@@ -1168,7 +1185,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                       SizedBox(
                         width: 80,
                         child: Text(
-                          '¥${formatter.format(m.income)}',
+                          '$currencySymbol${formatter.format(m.income)}',
                           style: TextStyle(
                             color: PiggyTokens.success(context),
                             fontSize: 12,
@@ -1211,7 +1228,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                       SizedBox(
                         width: 80,
                         child: Text(
-                          '¥${formatter.format(m.expense)}',
+                          '$currencySymbol${formatter.format(m.expense)}',
                           style: TextStyle(
                             color: PiggyTokens.error(context),
                             fontSize: 12,
@@ -1332,7 +1349,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          '¥${formatter.format(category.total)}',
+                          '$currencySymbol${formatter.format(category.total)}',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 18,
@@ -1413,7 +1430,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                 child: _buildHighlightCard(
                   label: l10n.annualReportHighestMonth,
                   value: '$maxMonth月',
-                  subValue: '¥${formatter.format(maxExpense)}',
+                  subValue: '$currencySymbol${formatter.format(maxExpense)}',
                   color: PiggyTokens.error(context),
                 ),
               ),
@@ -1422,7 +1439,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                 child: _buildHighlightCard(
                   label: l10n.annualReportLowestMonth,
                   value: '$minMonth月',
-                  subValue: '¥${formatter.format(minExpense)}',
+                  subValue: '$currencySymbol${formatter.format(minExpense)}',
                   color: PiggyTokens.success(context),
                 ),
               ),
@@ -1649,7 +1666,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
           ),
           const SizedBox(height: 16),
           Text(
-            '¥${formatter.format(amount)}',
+            '$currencySymbol${formatter.format(amount)}',
             style: TextStyle(
               color: color,
               fontSize: 28,

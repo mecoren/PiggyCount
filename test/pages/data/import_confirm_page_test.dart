@@ -33,6 +33,7 @@ import 'package:piggycount/models/ledger_display_item.dart';
 import 'package:piggycount/pages/data/import_confirm_page.dart';
 import 'package:piggycount/pages/data/import_page.dart' show BillSourceType;
 import 'package:piggycount/pages/main/ledgers_page_new.dart';
+import 'package:piggycount/data/models/custom_field_values.dart';
 import 'package:piggycount/providers/database_providers.dart';
 import 'package:piggycount/providers/import_export_providers.dart';
 import 'package:piggycount/providers/statistics_providers.dart';
@@ -475,6 +476,87 @@ void main() {
           reason: '账本列表不刷新 → 用户看不到刚导进去的账单笔数');
       expect(container.read(syncStatusRefreshProvider), greaterThan(syncBefore));
       await pumpFrames(tester, frames: 8);
+    });
+  });
+
+  group('v46 自定义字段列（CSV 往返）', () {
+    Future<void> seedField({required String name, required String syncId}) =>
+        db.into(db.customFieldDefinitions).insert(
+              CustomFieldDefinitionsCompanion.insert(
+                ledgerId: 1,
+                name: name,
+                fieldType: 'amount',
+                syncId: d.Value(syncId),
+              ),
+            );
+
+    /// 与本 App 导出格式一致：该列是 `{字段名: 值}` 的 JSON（CSV 引号转义）。
+    String csvWithCustomFields(String jsonCell) =>
+        '日期,类型,金额,分类,自定义字段\n'
+        '2026-09-01,支出,12.50,餐饮,"$jsonCell"\n';
+
+    testWidgets('值按本地定义的 syncId 落到交易上', (tester) async {
+      await seedField(name: '税费', syncId: 'cf-tax');
+
+      await pumpHost(tester, csvText: csvWithCustomFields('{""税费"":8.5}'));
+      await openConfirmPage(tester);
+      await settleParsing(tester);
+      await tapStartImport(tester);
+      await drainImportTimers(tester);
+
+      final tx = (await db.select(db.transactions).get()).single;
+      expect(
+        CustomFieldValueCodec.decode(tx.customValuesJson),
+        {'cf-tax': 8.5},
+        reason: 'CSV 里的字段名必须翻译成定义的 syncId，值才能被编辑表单看见',
+      );
+    });
+
+    testWidgets('名称大小写与首尾空白不敏感', (tester) async {
+      await seedField(name: '税费', syncId: 'cf-tax');
+
+      await pumpHost(tester, csvText: csvWithCustomFields('{"" 税费 "":3}'));
+      await openConfirmPage(tester);
+      await settleParsing(tester);
+      await tapStartImport(tester);
+      await drainImportTimers(tester);
+
+      final tx = (await db.select(db.transactions).get()).single;
+      expect(CustomFieldValueCodec.decode(tx.customValuesJson),
+          {'cf-tax': 3.0});
+    });
+
+    testWidgets('本地没有该定义 → B4 自动建字段并接住值，交易照常导入', (tester) async {
+      await pumpHost(
+          tester, csvText: csvWithCustomFields('{""不存在的字段"":1}'));
+      await openConfirmPage(tester);
+      await settleParsing(tester);
+      await tapStartImport(tester);
+      await drainImportTimers(tester);
+
+      expect(await txCount(), 1, reason: '建字段失败也不该牵连整笔交易');
+      // B4(v47)：未知字段名按 CSV 值推断类型自动建定义（全数值 → amount），
+      // 值以新定义的 syncId 落到交易上，不再是直接丢弃。
+      final defs = await db.select(db.customFieldDefinitions).get();
+      expect(defs.map((f) => f.name), contains('不存在的字段'));
+      expect(defs.single.fieldType, 'amount');
+      final tx = (await db.select(db.transactions).get()).single;
+      expect(CustomFieldValueCodec.decode(tx.customValuesJson),
+          {defs.single.syncId: 1.0});
+    });
+
+    testWidgets('该列不是 JSON（用户手填）→ 当没有值处理，不阻断导入', (tester) async {
+      await seedField(name: '税费', syncId: 'cf-tax');
+
+      await pumpHost(tester, csvText: csvWithCustomFields('随便写点什么'));
+      await openConfirmPage(tester);
+      await settleParsing(tester);
+      await tapStartImport(tester);
+      await drainImportTimers(tester);
+
+      expect(await txCount(), 1);
+      final tx = (await db.select(db.transactions).get()).single;
+      expect(tx.customValuesJson, isNull);
     });
   });
 }

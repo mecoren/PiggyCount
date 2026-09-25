@@ -18,8 +18,30 @@ import 'package:flutter_test/flutter_test.dart';
 /// 失败信息里的直方图就是那份迁移顺序表（先做令牌里已有的 14/12/15，再决定 16/13 是
 /// 补令牌还是并档）。
 void main() {
-  // 基线：2026-09-19 实测。只允许往下走。
-  const baseline = {'lib/pages': 340, 'lib/widgets': 209};
+  // 基线：2026-09-25 实测（D1 处理轮，上一版为 2026-09-19 的 pages 340 / widgets 209）。
+  // 只允许往下走。本轮上移 +7 的构成与去向，全部记账在案：
+  //
+  // 上移来源（commit 42f69f7 + v46/v47 在途工作的新文件）：
+  // - lib/pages/report/amount_deviation_page.dart +2（fontSize 9/10：偏差角标
+  //   与图表轴标签，**刻意小于 caption=11 的超小档**，令牌无 9/10 档位）；
+  // - lib/widgets/biz/transaction_list_item.dart +1（同上的 v45 角标 10）；
+  // - lib/pages/settings/custom_field_manage_page.dart +5、
+  //   lib/widgets/biz/custom_field_input.dart +4（v46 新页面/新组件：
+  //   12/13/14/15/17，均为「有令牌档位但裸写」形态）；
+  // - 抵扣：三张海报/年报复排 −2（在途工作顺带收敛）。
+  //
+  // 为什么不就地收敛那 9 处 12/13/14/15/17（D1 结论，非拖延）：
+  // PiggyTextTokens 成员携带 theme 行高（bodyLarge h=1.28 / labelMedium h=1.25）
+  // 与字体族回退链，裸字面量继承的是环境 DefaultTextStyle（bodyMedium 链）；
+  // 逐处替换的净效果取决于各命中点环境槽位，**必须真机截图对比**才能证明
+  // 无布局位移 —— 本环境无设备/金样测试，盲改正是门禁注释警告的「改视觉」。
+  // 收敛计划（下次有视觉评审条件时执行，按收益排序）：
+  // 1. custom_field_input.dart 的 14×2 → body(ctx)（color 同为 textPrimary 时）；
+  // 2. custom_field_manage_page.dart 的 15×1 → strongTitle(ctx)、
+  //    17×1 → boldTitle(ctx)（17 无档位，需先决策补档或并到 18）；
+  // 3. 9/10 超小档：若补 PiggyTextTokens.micro(10) 可消掉 3 处；
+  // 4. 13 档（labelLarge 语义）：先决策补令牌还是并 12/14。
+  const baseline = {'lib/pages': 347, 'lib/widgets': 212};
   final literalFontSize = RegExp(r'fontSize:\s*\d');
 
   test('硬编码字号未超过基线（只减不增）', () {

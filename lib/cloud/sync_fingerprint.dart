@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 
+import '../data/models/custom_field_values.dart';
 import '../services/system/logger_service.dart';
 
 /// 从 transactions JSON payload 计算内容指纹
@@ -93,6 +94,15 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
           // 规范化为空串，保证「旧快照无此键」与「显式未填写」指纹相同。
           'originalAmount':
               (it['originalAmount'] as num?)?.toDouble().toString() ?? '',
+          // v46 自定义字段值：必须进白名单，否则「仅改自定义字段值」时两端
+          // 指纹相同 → 判 inSync → 该值永不跨设备传播（同 v45 originalAmount
+          // 的教训）。用 codec 的规范化串（键排序 + 数值表示统一），
+          // 缺失键/空对象/全空值对象都规范化成空串 —— 「旧快照无此键」与
+          // 「显式空」指纹一致，不会产生一轮永久 outOfSync。
+          'customValues': CustomFieldValueCodec.canonical(
+              (it['customValues'] is Map)
+                  ? (it['customValues'] as Map).cast<String, dynamic>()
+                  : null),
           'excludeFromStats': it['excludeFromStats'] as bool? ?? false,
           'excludeFromBudget': it['excludeFromBudget'] as bool? ?? false,
           'categoryName':
@@ -239,6 +249,19 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
       .toList()
     ..sort(compareBySyncIdOrName);
 
+  final customFields = (payload['customFields'] as List?)
+          ?.cast<Map<String, dynamic>>() ??
+      const <Map<String, dynamic>>[];
+  final customFieldCanon = customFields
+      .map((f) => {
+            'syncId': f['syncId'] as String? ?? '',
+            'name': f['name'] as String? ?? '',
+            'fieldType': f['fieldType'] as String? ?? '',
+            'sortOrder': (f['sortOrder'] as num?)?.toInt() ?? 0,
+          })
+      .toList()
+    ..sort(compareBySyncIdOrName);
+
   final budgets = (payload['budgets'] as List?)
           ?.cast<Map<String, dynamic>>() ??
       const <Map<String, dynamic>>[];
@@ -291,6 +314,14 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
             'startDate': r['startDate'] as String? ?? '',
             'endDate': r['endDate'] as String? ?? '',
             'enabled': r['enabled'] as bool? ?? true,
+            // v47 模板级自定义字段值:必须经 canonical(键序/数值表示统一)。
+            // 缺键与空对象在 canonical 下都是 ''——导出侧仅非空写键,两侧
+            // 「未配置」指纹恒等,不会假冲突。
+            'templateFieldValues': CustomFieldValueCodec.canonical(
+                (r['templateFieldValues'] is Map)
+                    ? (r['templateFieldValues'] as Map)
+                        .cast<String, dynamic>()
+                    : null),
             // lastGeneratedDate 刻意排除（本机生成进度，见函数头注释）
           })
       .toList()
@@ -324,6 +355,7 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
     'accounts': accountCanon,
     'categories': categoryCanon,
     'tags': tagCanon,
+    'customFields': customFieldCanon,
     'budgets': budgetCanon,
     'recurring': recurringCanon,
     'exchangeRateOverrides': rateOverrideCanon,
@@ -342,7 +374,8 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
   final fp = sha256.convert(bytes).toString();
   logger.debug('Fingerprint',
       '交易数: ${canon.length}, 账户数: ${accountCanon.length}, 分类数: ${categoryCanon.length}, '
-      '标签数: ${tagCanon.length}, 预算数: ${budgetCanon.length}, 周期规则数: ${recurringCanon.length}, '
+      '标签数: ${tagCanon.length}, 自定义字段数: ${customFieldCanon.length}, '
+      '预算数: ${budgetCanon.length}, 周期规则数: ${recurringCanon.length}, '
       '汇率覆盖数: ${rateOverrideCanon.length}, 指纹: ${fp.substring(0, 16)}...');
   return fp;
 }

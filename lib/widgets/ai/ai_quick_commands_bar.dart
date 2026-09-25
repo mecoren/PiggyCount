@@ -82,12 +82,40 @@ class _QuickCommandCard extends ConsumerWidget {
     }
   }
 
+  /// 指令说明文案的解析（与 [_getTitle] 同构）。
+  ///
+  /// 这套 `aiQuickCommand*Desc`（4 语言都有译文）此前是**死键**：模型上的
+  /// `descriptionKey` 被赋值但全仓库无人读取 —— 静态分析清零那轮
+  /// （commit 252a4e8）把当时未使用的 `_getDescription` 直接删了。见下方
+  /// build 里为何用 Tooltip 而不是第二行文本来消费它。
+  String? _getDescription() {
+    final key = command.descriptionKey;
+    if (key == null || key.isEmpty) return null;
+    switch (key) {
+      case 'aiQuickCommandFinancialHealthDesc':
+        return l10n.aiQuickCommandFinancialHealthDesc;
+      case 'aiQuickCommandMonthlyExpenseDesc':
+        return l10n.aiQuickCommandMonthlyExpenseDesc;
+      case 'aiQuickCommandCategoryAnalysisDesc':
+        return l10n.aiQuickCommandCategoryAnalysisDesc;
+      case 'aiQuickCommandBudgetPlanningDesc':
+        return l10n.aiQuickCommandBudgetPlanningDesc;
+      case 'aiQuickCommandAbnormalExpenseDesc':
+        return l10n.aiQuickCommandAbnormalExpenseDesc;
+      case 'aiQuickCommandSavingTipsDesc':
+        return l10n.aiQuickCommandSavingTipsDesc;
+      default:
+        return key;
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = PiggyTokens.isDark(context);
     final title = _getTitle();
+    final description = _getDescription();
 
-    return Material(
+    final card = Material(
       color: PiggyTokens.surface(context),
       borderRadius: BorderRadius.circular(8.0.scaled(context, ref)),
       child: InkWell(
@@ -122,5 +150,11 @@ class _QuickCommandCard extends ConsumerWidget {
         ),
       ),
     );
+
+    // 指令条是固定 48px 高的单行横滑条（AIQuickCommandsBar 的 SizedBox），
+    // 卡片里放不下第二行 —— 说明文案改用长按/悬停提示承载：既不挤动布局，
+    // 又让已有 4 语言译文的 aiQuickCommand*Desc 不再是死键。
+    if (description == null) return card;
+    return Tooltip(message: description, child: card);
   }
 }

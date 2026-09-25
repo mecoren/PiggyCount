@@ -1,4 +1,4 @@
-﻿{
+{
   "aiConsentTitle": "開啟 AI 功能前,請知悉",
   "aiConsentBody": "AI 功能需將相關資料傳送給你所設定的第三方 AI 服務商進行處理:\n\n• 傳送給誰:預設「智譜 GLM」(open.bigmodel.cn,由智譜華章營運);若你自行設定了其它第三方 AI 服務商,則傳送給你填寫的服務商。\n• 傳送什麼:你主動用於辨識/對話的內容 —— 帳單圖片、語音錄音、你輸入的文字,以及為完成辨識/分析所需的分類名稱、帳戶名稱和相關交易記錄。\n• 用途:僅用於帳單辨識、記帳與你發起的對話分析;小豬記帳本身不收集、不儲存這些資料。\n\n資料由該第三方服務商依其隱私政策處理。開啟即表示你同意上述資料共享。",
   "aiConsentAgree": "同意並開啟",
@@ -16,7 +16,6 @@
   "productPromoAndroidMessage": "這款 App 還在 Google Play 內測階段,需要邀請才能下載。\n\n申請方式:寄信給我們,告訴我們你的 Google 帳號信箱(必填),以及簡單說明使用場景(選填)。我們會在 1-3 天內回覆並加你到內測白名單。",
   "productPromoOpenStore": "前往應用商店",
   "productPromoTestFlight": "TestFlight 內測",
-  "productPromoLearnMore": "Pro",
   "productPromoEmailLabel": "申請信箱(點擊複製)",
   "productPromoCopiedToast": "信箱已複製到剪貼簿",
   "productPromoMailUnavailable": "未偵測到郵件應用,信箱已複製到剪貼簿,請開啟任意郵件應用貼上寄出",
@@ -40,17 +39,11 @@
   },
   "aboutDeveloperStoryTitle": "開發者的話",
   "aboutDeveloperStory": "從 2015 年實習起，我堅持記帳至今已超過十年。因為擔心記帳軟體的廣告、付費、隱私洩露和停運跑路，我決定自己做一個——最初只是給自己和家人用的小工具。\n\n2025 年 9 月，小豬記帳發佈了第一個版本。說實話，那時候心裡沒什麼底，不知道會不會有人用。但慢慢地，開始收到用戶的回饋——有人說終於找到了一款乾淨的記帳軟體，有人提了很好的建議，也有人默默給了五星好評。每一條回饋都讓我覺得，這件事值得繼續做下去。\n\n小豬記帳沒有廣告、沒有會員、完全免費開源。你的每一筆資料都只存在你自己的手機裡，不會被上傳到任何第三方伺服器。但上架和維護一款 App 並非零成本——開發者帳號、伺服器等開支目前靠社群捐贈勉強支撐，每一次適配新系統、修復 Bug、開發新功能，也都是工作之餘一點點完成的。\n\n如果你覺得小豬記帳對你有幫助，一個好評、一次分享或一筆捐贈，都能讓這個小專案走得更遠。謝謝你的信任。",
-  "aboutDouyin": "抖音",
-  "aboutTelegram": "Telegram 群",
-  "aboutGitHubRepo": "GitHub 儲存庫",
   "aboutPageLoadingVersion": "載入版本號中...",
-  "aboutPageSubtitle": "應用程式資訊和說明",
   "aboutPageTitle": "關於",
   "aboutSupportDevelopment": "支持開發",
   "aboutSupportDevelopmentSubtitle": "請開發者喝杯咖啡",
-  "aboutWebsite": "官方網站",
   "aboutWidget": "關于小組件",
-  "aboutXiaohongshu": "小紅書",
   "accountAddButton": "添加帳戶",
   "accountAddTooltip": "添加帳戶",
   "accountBalance": "餘額",
@@ -83,7 +76,6 @@
   "accountTypeBankCard": "銀行卡",
   "accountTypeCash": "現金",
   "accountTypeCreditCard": "信用卡",
-  "accountTypeLabel": "帳戶類型",
   "accountTypeOther": "其他",
   "accountTypeWechat": "微信",
   "accountTypeInvestment": "投資理財",
@@ -101,7 +93,6 @@
   "valuationAccountHint": "請輸入當前估值",
   "valuationDebtHint": "請輸入當前欠款金額",
   "accountGroupTradable": "日常帳戶",
-  "accountGroupValuation": "資產/負債",
   "adjustmentTransaction": "估值調整",
   "accountsEmptyMessage": "還沒有帳戶，點擊右上角添加",
   "accountsEnableFeature": "啟用帳戶功能",
@@ -109,7 +100,6 @@
   "accountUnhide": "恢復帳戶",
   "accountRestore": "恢復",
   "accountHiddenTag": "已隱藏",
-  "accountHiddenSection": "已隱藏",
   "accountHiddenSectionSummary": "已隱藏 {count} · 合計 {total}",
   "accountHideConfirmTitle": "隱藏此帳戶？",
   "accountHideConfirmBody": "隱藏後無法再記帳到它，新增記帳時也不再顯示；歷史交易與餘額保留，可隨時恢復。",
@@ -139,7 +129,6 @@
   "aiChatUndone": "已撤銷",
   "aiCloudApiGetKey": "取得 API Key",
   "aiCloudApiKeyHelper": "GLM-*-Flash 模型完全免費",
-  "aiCloudApiKeyHint": "輸入智譜 AI 的 API Key",
   "aiCloudApiKeyHintCustom": "輸入 API Key",
   "aiCloudApiTestKey": "測試連線",
   "aiCloudApiTutorial": "詳細教學",
@@ -158,9 +147,7 @@
     }
   },
   "aiModelTitle": "文字推理模型",
-  "aiOcrCreateFailed": "建立帳單失敗",
   "aiOcrFailed": "識別失敗: {error}",
-  "aiOcrNoAmount": "未識別到有效金額，請手動記帳",
   "aiNotConfiguredHint": "未配置 AI 服務，請前往「我的 → AI 設定」配置",
   "aiOcrCheckLog": "識別失敗，請查看日誌瞭解詳情",
   "aiOcrNoBill": "未識別到帳單資訊，請確認圖片是帳單後重試",
@@ -181,8 +168,6 @@
   "autoBillingNotifyNoLedgerTitle": "❌ 自動記帳失敗",
   "autoBillingNotifyNoLedgerBody": "無可用帳本，請先建立帳本",
   "autoBillingNotifyNoAmountBody": "未能識別出金額資訊",
-  "autoBillingNotifyCreateFailedTitle": "❌ 建立失敗",
-  "autoBillingNotifyCreateFailedBody": "無法建立交易記錄",
   "autoBillingNotifyProcessFailedTitle": "❌ 處理失敗",
   "autoBillingNotifyProcessFailedBody": "錯誤：{error}",
   "@autoBillingNotifyProcessFailedBody": {
@@ -291,13 +276,9 @@
   "aiCustomBaseUrlHelper": "標準聊天補全API位址，例如 https://api.example.com/v1",
   "analyticsAll": "全部",
   "analyticsAllYears": "全部年份",
-  "analyticsAverage": "{avgLabel}： ",
-  "analyticsAvgExpense": "{avgLabel}支出： ",
-  "analyticsAvgIncome": "{avgLabel}收入： ",
   "analyticsBalance": "結餘： ",
   "analyticsComparedToLastYear": "比上年",
   "analyticsTxCount": "記帳筆數",
-  "analyticsCategoryRanking": "分類排行",
   "analyticsTotalAmount": "總計",
   "analyticsDailyAvg": "日均",
   "analyticsExpense": "支出",
@@ -316,13 +297,9 @@
   "analyticsNoDataSubtext": "可左右滑動切換週期，或點擊按鈕切換收入/支出",
   "analyticsOverallAvg": "平均值",
   "analyticsSwipeHint": "左右滑動切換週期",
-  "analyticsSwipeToSwitch": "橫滑切換",
   "analyticsSwitchTo": "切換到{type}",
-  "analyticsTipHeader": "提示：頂部膠囊可切換週/月/年/全部",
-  "analyticsToday": "今天",
   "analyticsTotal": "總{type}： ",
   "analyticsTotalExpense": "總支出： ",
-  "analyticsTotalIncome": "總收入： ",
   "analyticsYear": "年",
   "androidShortcutStep1": "下載支援建立捷徑的應用程式（如 Shortcut Maker）",
   "androidShortcutStep2": "選擇「URL 捷徑」",
@@ -407,14 +384,8 @@
   "appearanceAmountFormatCompactDesc": "大金額縮寫，如 12.3萬（僅對帳戶餘額生效）",
   "appearanceAmountFormatFull": "完整金額",
   "appearanceAmountFormatFullDesc": "顯示完整金額，如 123,456.78",
-  "appearanceDarkModePattern": "暗黑模式頂部圖案",
-  "appearancePatternHoneycomb": "蜂巢六邊形",
-  "appearancePatternIcons": "圖標平鋪",
-  "appearancePatternNone": "無",
-  "appearancePatternParticles": "粒子星星",
   "appearanceSettings": "個性化設定",
   "appearanceSettingsDesc": "主題、字體、語言、應用鎖等",
-  "appearanceSettingsPageSubtitle": "外觀、顯示、安全等應用偏好",
   "appearanceSettingsPageTitle": "個性化設定",
   "appearanceShowTransactionTime": "顯示交易時間",
   "appearanceShowTransactionTimeDesc": "在帳單列表顯示時分，編輯時可選擇時間",
@@ -459,14 +430,6 @@
     }
   },
   "attachmentChooseFromGallery": "從相簿選擇",
-  "attachmentCount": "{count}張圖片",
-  "@attachmentCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "attachmentDeleteConfirm": "確定刪除此附件？",
   "attachmentExportEmpty": "沒有附件需要匯出",
   "attachmentExportProgress": "正在匯出附件 ({current}/{total})",
@@ -547,26 +510,16 @@
   "attachmentImportReconfirmTitle": "覆蓋匯入確認",
   "attachmentImportReconfirmMessage": "再次確認：選擇「覆蓋」後，同名附件將被封存中的檔案替換且無法復原。確定要繼續嗎？",
   "attachmentPreview": "預覽附件",
-  "attachmentPreviewSubtitle": "共 {count} 張圖片",
-  "@attachmentPreviewSubtitle": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "attachmentPreviewEmpty": "暫無附件",
   "attachmentExportPreviewTitle": "匯出預覽",
   "attachmentImportPreviewTitle": "匯入預覽",
   "attachmentTakePhoto": "拍照",
   "authEmail": "電子郵件",
-  "authErrorEmailInvalid": "電子郵件地址無效，請檢查是否拼寫有誤。",
   "authErrorEmailNotConfirmed": "電子郵件未驗證，請先到電子郵件完成驗證再登入。",
   "authErrorInvalidCredentials": "電子郵件或密碼不正確。",
   "authErrorLoginFailed": "登入失敗，請稍後再試。",
   "authErrorNetworkIssue": "網路異常，請檢查網路後重試。",
   "authErrorRateLimit": "操作過於頻繁，請稍後再試。",
-  "authErrorWeakPassword": "密碼過於簡單，請包含字母和數字，長度至少 6 位。",
   "authInvalidEmail": "請輸入有效的電子郵件地址",
   "authLogin": "登入",
   "authPassword": "密碼",
@@ -591,7 +544,6 @@
   "autoScreenshotBillingTitle": "截圖自動記帳",
   "automation": "自動化",
   "automationDesc": "週期記帳、記帳提醒",
-  "automationPageSubtitle": "週期記帳和提醒設定",
   "automationPageTitle": "自動化功能",
   "availableShortcuts": "可用快捷指令",
   "billCardAccount": "💳 帳戶",
@@ -635,7 +587,6 @@
   "budgetPeriodLabel": "週期",
   "budgetRemaining": "剩餘",
   "budgetSaveSuccess": "預算儲存成功",
-  "budgetStartDayLabel": "起始日",
   "budgetTitle": "預算管理",
   "budgetShowOnHome": "在首頁顯示預算",
   "budgetTypeCategoryLabel": "分類預算",
@@ -653,7 +604,6 @@
   "categoryClearUnusedTitle": "清空未使用分類",
   "categoryCreated": "分類\"{name}\"已建立",
   "categoryDangerousOperations": "危險操作",
-  "categoryDefault": "預設分類",
   "categoryDefaultTitle": "預設分類",
   "categoryDeleteConfirmMessage": "確定要刪除分類\"{name}\"嗎？此操作無法撤銷。",
   "categoryDeleteConfirmTitle": "刪除分類",
@@ -717,7 +667,6 @@
   "categoryImportModeOverwrite": "覆蓋",
   "categoryImportModeOverwriteDesc": "清空未使用分類後匯入",
   "categoryImportModeTitle": "選擇匯入模式",
-  "categoryImportSuccess": "匯入成功",
   "categoryImportSuccessDetail": "已匯入 {imported} 個分類，跳過 {skipped} 個，匯入 {icons} 個圖示",
   "@categoryImportSuccessDetail": {
     "placeholders": {
@@ -907,7 +856,6 @@
   "cloudS3SecretKeyLabel": "Secret Key",
   "cloudS3UseSSLLabel": "使用 HTTPS",
   "cloudSaveFailed": "儲存失敗",
-  "cloudSelectServiceType": "選擇雲端服務類型",
   "cloudMultiDeviceWarningTitle": "多裝置使用提醒",
   "cloudMultiDeviceWarningMessage": "換裝置前記得先上傳，到新裝置後先下載再記帳。不要同時在兩台裝置上記同一個帳本。點擊查看詳情 →",
   "cloudSyncGuideTitle": "雲端同步使用指南",
@@ -956,10 +904,8 @@
   "cloudSupabaseUrlLabel": "Supabase URL",
   "cloudSwitchConfirmMessage": "切換雲端服務將登出目前帳號。確認切換？已儲存的雲端服務憑證不會被刪除，可隨時切回。",
   "cloudSwitchConfirmTitle": "切換雲端服務",
-  "cloudSwitchFailed": "切換失敗",
   "cloudSwitchFailedConfigMissing": "請先設定此雲端服務",
   "cloudSwitchFailedTitle": "切換失敗",
-  "cloudSwitched": "已切換",
   "cloudSwitchedTo": "已切換至 {type}",
   "@cloudSwitchedTo": {
     "placeholders": {
@@ -969,31 +915,12 @@
     }
   },
   "cloudSyncHint": "下載時可自動對比差異並逐條預覽。非即時同步，請避免多裝置同時編輯同一帳本。同步範圍為帳本資料（含關聯的帳戶、分類、標籤），不含附件。",
-  "cloudSyncNow": "立即同步",
-  "cloudSyncNowHint": "推送本機變更並拉取遠端更新",
-  "cloudSyncInProgress": "正在同步...",
-  "cloudSyncComplete": "同步完成：推送 {pushed} 條，拉取 {pulled} 條",
-  "@cloudSyncComplete": {
-    "placeholders": {
-      "pushed": {
-        "type": "int"
-      },
-      "pulled": {
-        "type": "int"
-      }
-    }
-  },
-  "cloudAutoSyncHint": "資料變更後自動同步到雲端",
   "cloudSyncPageSubtitle": "手動上傳和下載帳本資料",
   "cloudSyncPageTitle": "雲同步",
-  "cloudTest": "測試",
   "cloudTestConnection": "測試連線",
-  "cloudTestError": "測試失敗",
   "cloudTestErrorTitle": "測試錯誤",
-  "cloudTestFailed": "連接測試失敗，請檢查設定是否正確。",
   "cloudTestFailedMessage": "連線失敗",
   "cloudTestFailedTitle": "測試失敗",
-  "cloudTestSuccess": "連接測試成功！",
   "cloudTestSuccessMessage": "連線正常，設定有效",
   "cloudTestSuccessTitle": "測試成功",
   "cloudWebdavHelpIntro": "什麼是 WebDAV",
@@ -1015,7 +942,6 @@
   "cloudWebdavHelpTitle": "WebDAV 設定說明",
   "cloudWebdavPasswordLabel": "密碼",
   "cloudWebdavPathHint": "/PiggyCount",
-  "cloudWebdavRemotePathHelp": "數據存储的远程目錄路径",
   "cloudWebdavRemotePathHelperText": "資料儲存的遠端目錄路徑",
   "cloudWebdavRemotePathLabel": "遠端路徑",
   "cloudWebdavUrlHint": "https://dav.jianguoyun.com/dav/",
@@ -1136,7 +1062,6 @@
   "commonLanguage": "語言",
   "commonMore": "更多",
   "commonNext": "下一步",
-  "commonNo": "否",
   "commonNoteHint": "備註…",
   "commonNotice": "提示",
   "commonOk": "確定",
@@ -1255,7 +1180,6 @@
   "dataManagement": "資料管理",
   "dataManagementAttachmentHint": "還原資料時，請先匯入附件包，再匯入帳本資料（CSV或雲同步），以確保附件正確關聯。",
   "dataManagementDesc": "匯入匯出、分類帳戶管理",
-  "dataManagementPageSubtitle": "管理帳單資料和分類",
   "dataManagementPageTitle": "資料管理",
   "deleteConfirmMessage": "確定要刪除這條記帳嗎？\n刪除後可在回收筒找回。",
   "deleteConfirmTitle": "刪除確認",
@@ -1286,6 +1210,7 @@
   "exportCsvHeaderAccount": "帳戶",
   "exportCsvHeaderAmount": "金額",
   "exportCsvHeaderAttachments": "附件",
+  "exportCsvHeaderCustomFields": "自訂欄位",
   "exportCsvHeaderCategory": "分類",
   "exportCsvHeaderFromAccount": "轉出帳戶",
   "exportCsvHeaderNote": "備註",
@@ -1384,9 +1309,7 @@
   "homeIncome": "收入",
   "homeMonthIncome": "本月收入",
   "homeMonthExpense": "本月支出",
-  "homeMonthBalance": "本月結餘",
   "homeBudgetSet": "預算 {amount}",
-  "homeBudgetNotSet": "未設定",
   "homeLastMonthReportSubtitle": "查看上月消費報告並分享",
   "homeLastMonthReportView": "查看",
   "homeManageLedgers": "管理帳本",
@@ -1509,7 +1432,6 @@
   "ledgerSelectTitle": "選擇帳本",
   "ledgersActions": "操作",
   "ledgersBalance": "餘額：{balance}",
-  "ledgersCannotDeleteLastOne": "無法刪除最後一個帳本",
   "ledgersClear": "清空當前帳本",
   "ledgersClearMessage": "將刪除該帳本下所有交易記錄，且不可復原。",
   "ledgersClearReconfirmMessage": "再次確認：清空後帳本內的帳單資料將永久刪除、無法復原。確定要繼續嗎？",
@@ -1556,7 +1478,6 @@
   "ledgersDownloadMessage": "確認下載帳本「{name}」到本地？本地同名帳本的資料將被雲端資料覆蓋。",
   "ledgersDownloadSuccess": "帳本「{name}」下載成功",
   "ledgersDownloadTitle": "下載帳本",
-  "ledgersDownloading": "下載中...",
   "ledgersEdit": "編輯帳本",
   "ledgersEmpty": "暫無帳本",
   "ledgersLocal": "本地帳本",
@@ -1578,7 +1499,6 @@
   "ledgersUploadAllConflictSkipped": "已上傳 {success} 個帳本；{conflicts} 個帳本因雲端較新被跳過，請核對後逐個上傳。",
   "ledgersUploadingProgress": "正在上傳帳本 {done}/{total}，請勿操作…",
   "ledgersUploadThis": "上傳到雲端",
-  "ledgersRestoring": "恢復中...",
   "ledgersSearchCurrency": "搜尋：中文或代碼",
   "ledgersSelectCurrency": "選擇幣種",
   "ledgersSwitched": "已切換到帳本「{name}」",
@@ -1604,16 +1524,13 @@
   "mineAvatarDelete": "刪除頭像",
   "mineAvatarFromCamera": "拍照",
   "mineAvatarFromGallery": "從相簿選擇",
-  "mineAvatarTitle": "頭像設定",
   "mineCategoryManagement": "分類管理",
   "mineCategoryManagementSubtitle": "編輯自訂分類",
   "mineCategoryMigration": "分類遷移",
   "mineCategoryMigrationSubtitle": "將分類資料遷移到其他分類",
   "mineCheckUpdate": "檢測更新",
   "mineCheckUpdateDetecting": "檢測更新中...",
-  "mineCheckUpdateSubtitle": "正在檢查最新版本",
   "mineCheckUpdateSubtitleDetecting": "正在檢查最新版本",
-  "mineCloud": "雲服務",
   "mineCloudService": "雲服務",
   "mineCloudServiceCustom": "自訂 Supabase",
   "mineCloudServiceLoading": "載入中…",
@@ -1630,8 +1547,6 @@
   "mineDownloadResult": "匯入：{inserted} 條",
   "mineDownloadTitle": "下載同步",
   "mineExport": "匯出資料",
-  "mineFeedback": "問題回饋",
-  "mineFeedbackSubtitle": "提交問題或建議",
   "mineHelp": "使用說明",
   "helpCenterOpenInBrowser": "在瀏覽器中開啟",
   "helpCenterLoadFailed": "載入失敗，請檢查網路",
@@ -1650,12 +1565,10 @@
   "mineLogoutConfirmMessage": "確定要退出當前帳號登入嗎？\n退出後將無法使用雲同步功能。",
   "mineLogoutConfirmTitle": "退出登入",
   "mineLogoutSubtitle": "點擊可退出登入",
-  "minePersonalize": "個性裝扮",
   "mineRateApp": "給應用評分",
   "mineRateAppSubtitle": "在App Store上為我們打分",
   "mineRecurringTransactions": "週期帳單",
   "mineRecurringTransactionsSubtitle": "管理週期性帳單",
-  "mineReminder": "提醒設定",
   "mineReminderSettings": "記帳提醒",
   "mineReminderSettingsSubtitle": "設定每日記帳提醒",
   "mineShareApp": "分享應用程式",
@@ -1673,7 +1586,6 @@
   "mineGreetingNamed": "{greeting}，{name}",
   "mineProfileEditTitle": "編輯資料",
   "headerSkinTitle": "皮膚",
-  "headerSkinSubtitle": "跟隨主題色,疊在頁首之上",
   "headerSkinNone": "純色",
   "headerSkinAurora": "極光",
   "headerSkinMountains": "山巒",
@@ -1715,14 +1627,11 @@
   "mineSyncNotLoggedIn": "未登入",
   "mineSyncTitle": "同步",
   "mineSyncChecking": "同步中…",
-  "mineTitle": "我的",
   "mineCloudBackupSection": "雲端同步與備份",
   "mineFunctionSection": "功能管理",
   "mineHelpSection": "說明與資訊",
   "mineSupportSection": "支持我們",
   "mineTotalRecords": "總筆數",
-  "mineUpdate": "檢查更新",
-  "mineUpdateDownload": "下載更新",
   "mineUpdateDownloadTitle": "下載更新",
   "mineUploadInProgress": "正在上傳中…",
   "mineUploadNeedCloudService": "僅限雲端服務模式可用",
@@ -1764,9 +1673,6 @@
   "encryptionBlockingReset": "正在重置加密…",
   "mineUploadSynced": "已同步",
   "mineUploadTitle": "上傳",
-  "monthExpense": "本月支出",
-  "monthIncome": "本月收入",
-  "monthSuffix": "月",
   "personalizeBrightness": "亮度 ({value}%)",
   "personalizeCustomColor": "選擇自訂顏色",
   "personalizeCustomTitle": "自訂",
@@ -1893,7 +1799,6 @@
   "reminderManufacturer": "裝置製造商: {value}",
   "reminderModel": "裝置型號: {value}",
   "reminderOpenAppSettings": "開啟應用程式設定",
-  "reminderSubtitle": "設定每日記帳提醒時間",
   "reminderTestBody": "這是一條測試通知，點擊檢視效果",
   "reminderTestNotification": "發送測試通知",
   "reminderTestSent": "測試通知已發送",
@@ -2002,7 +1907,6 @@
   "sharePosterTotalIncome": "總收入",
   "sharePosterUnitCount": "筆",
   "sharePosterUnitDay": "天",
-  "sharePosterUnitYuan": "元",
   "userProfilePosterStartDate": "記帳始於 {date}",
   "@userProfilePosterStartDate": {
     "placeholders": {
@@ -2015,6 +1919,7 @@
   "userProfilePosterDaysUnit": "天",
   "userProfilePosterRecordCount": "記帳筆數",
   "userProfilePosterCountUnit": "筆",
+  "userProfilePosterDailyUnit": "筆/天",
   "userProfilePosterLedgerCount": "帳本數量",
   "userProfilePosterLedgerUnit": "本",
   "sharePosterYearBalance": "年度結餘",
@@ -2067,7 +1972,6 @@
   "smartBillingImageBilling": "圖片記帳",
   "smartBillingImageBillingDesc": "從相簿選擇支付截圖進行識別",
   "smartBillingImageBillingGuide": "在首頁長按底部中間的 + 按鈕,選擇「相簿」即可使用圖片記帳功能。需先在「我的 → AI 設定」配置 AI 服務,AI 視覺模型會自動識別金額、商家、時間等帳單資訊。",
-  "smartBillingPageSubtitle": "AI和自動化記帳功能",
   "smartBillingPageTitle": "智慧記帳",
   "smartBillingVoiceBilling": "語音記帳",
   "smartBillingVoiceBillingDesc": "透過語音輸入快速記帳",
@@ -2196,6 +2100,39 @@
   "tagManageGenerateDefault": "產生預設標籤",
   "tagManageGenerateDefaultConfirm": "確定要產生預設標籤嗎？已有同名標籤不會被覆蓋。",
   "tagManageGenerateDefaultSuccess": "預設標籤已產生",
+  "customFieldManageTitle": "自訂欄位",
+  "customFieldManageSubtitle": "為本帳本定義欄位名稱與類型",
+  "customFieldManageEmpty": "尚無自訂欄位",
+  "customFieldManageEmptyHint": "新增「稅費」「發票號」等欄位，為每筆明細記錄額外資訊",
+  "customFieldAdd": "新增欄位",
+  "customFieldAddTitle": "新增自訂欄位",
+  "customFieldEditTitle": "編輯自訂欄位",
+  "customFieldNameLabel": "欄位名稱",
+  "customFieldNameHint": "例如：稅費",
+  "customFieldNameRequired": "請輸入欄位名稱",
+  "customFieldNameDuplicate": "已存在同名欄位",
+  "customFieldTypeLabel": "欄位類型",
+  "customFieldTypeAmount": "金額",
+  "customFieldTypeText": "文字",
+  "customFieldTypeDate": "日期",
+  "customFieldCreateSuccess": "欄位已新增",
+  "customFieldUpdateSuccess": "欄位已更新",
+  "customFieldDeleteSuccess": "欄位已刪除",
+  "customFieldDeleteConfirmTitle": "刪除自訂欄位",
+  "customFieldDeleteConfirmMessage": "確定刪除「{name}」嗎？本帳本中已記錄的該欄位值將一併清除，且無法復原。",
+  "@customFieldDeleteConfirmMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "customFieldSectionTitle": "自訂欄位",
+  "customFieldSectionEmpty": "此帳本尚無自訂欄位",
+  "customFieldDatePick": "選擇日期",
+  "customFieldTextHint": "請輸入內容",
+  "customFieldAmountHint": "0.00",
+  "customFieldSortHint": "長按拖曳排序",
   "tagManageSubtitle": "管理交易標籤",
   "tagManageTitle": "標籤管理",
   "tagNameDuplicate": "標籤名稱已存在",
@@ -2228,8 +2165,6 @@
     }
   },
   "tagUpdateSuccess": "標籤更新成功",
-  "todayExpense": "今日支出",
-  "todayIncome": "今日收入",
   "transferCreateSuccess": "轉帳記錄建立成功",
   "transferDifferentCurrencyError": "轉帳只支援相同幣別的帳戶",
   "transferFromAccount": "轉出帳戶",
@@ -2245,7 +2180,6 @@
   "updateCachedVersionMessage": "已找到之前下載的安裝包...點擊\\\"確定\\\"立即安裝，點擊\\\"取消\\\"關閉...",
   "updateCachedVersionTitle": "發現已下載版本",
   "updateCancelButton": "取消",
-  "updateCannotOpenLink": "無法開啟連結",
   "updateCannotOpenLinkTitle": "無法開啟連結",
   "updateCheckFailed": "檢查更新失敗",
   "updateCheckFailedGeneric": "檢查更新失敗",
@@ -2261,7 +2195,6 @@
   "updateCurrentLatestVersion": "當前已是最新版本",
   "updateDownloadBackgroundHint": "可以將應用程式切換到背景，下載會繼續進行",
   "updateDownloadButton": "下載",
-  "updateDownloadComplete": "下載完成",
   "updateDownloadCompleteTitle": "下載完成",
   "updateDownloadCompleted": "下載完成",
   "updateDownloadCompletedContext": "下載完成，請手動安裝",
@@ -2481,8 +2414,6 @@
   "widgetMonthExpense": "本月支出",
   "widgetMonthIncome": "本月收入",
   "widgetMonthSuffix": "月",
-  "widgetPreview": "小組件預覽",
-  "widgetPreviewDesc": "小組件會自動顯示當前帳本的實際數據，主題色跟隨應用設置",
   "widgetGalleryTitle": "組件庫",
   "widgetGalleryDesc": "以下為示例效果，實際將顯示目前帳本的真實資料，主題色跟隨 App 設定",
   "widgetGalleryGlanceTitle": "收支速覽",
@@ -2512,7 +2443,6 @@
   "calendarToday": "今天",
   "calendarNoTransactions": "當天無交易",
   "calendarAddTransaction": "在該日記帳",
-  "calendarAddTransactionTooltip": "新增該日記帳",
   "commonUncategorized": "未分類",
   "commonSaved": "已儲存",
   "aiProviderManageTitle": "服務商管理",
@@ -2552,7 +2482,6 @@
   "aiCapabilityImageUnderstandDesc": "用於圖片帳單識別",
   "aiCapabilitySpeechToText": "語音轉文字",
   "aiCapabilitySpeechToTextDesc": "用於語音記帳",
-  "aiProviderTestRun": "點擊測試",
   "aiProviderTestRunning": "測試中...",
   "aiProviderTestSuccess": "測試通過",
   "aiProviderTestFailed": "測試失敗",
@@ -2599,7 +2528,6 @@
       }
     }
   },
-  "syncPreviewEmpty": "雲端資料與本機一致，無需同步",
   "syncPreviewOldFormat": "雲端資料格式較舊，將執行全量替換",
   "syncPreviewOldFormatMessage": "雲端資料不包含同步標識，無法逐條對比。將清空當前帳本資料並從雲端重新匯入。",
   "syncPreviewApplied": "已套用 {count} 項變更",
@@ -2610,8 +2538,6 @@
       }
     }
   },
-  "mineMultiDeviceSyncTitle": "多裝置同步",
-  "mineMultiDeviceSyncSubtitle": "進入頁面時自動檢查雲端變更",
   "appLockTitle": "應用鎖",
   "appLockDesc": "PIN碼與生物辨識保護隱私",
   "appLockEnable": "啟用應用鎖",
@@ -2697,11 +2623,8 @@
   "creditCardPaymentDueToday": "今天是還款日",
   "creditCardQuickRepay": "記一筆還款",
   "budgetManagement": "預算管理",
-  "budgetManagementDesc": "設置月度預算，控制支出",
   "budgetSetupHint": "設置預算，輕鬆掌控每月開支",
   "budgetSetupAction": "去設置",
-  "commonCopied": "已複製",
-  "commonRemove": "移除",
   "maintenanceOrphanCleanupTitle": "資料清理",
   "maintenanceOrphanCleanupSubtitle": "檢查並清理本地孤兒資料",
   "maintenanceOrphanRescan": "重新掃描",
@@ -2774,18 +2697,6 @@
       }
     }
   },
-  "syncProgressTitle": "正在同步",
-  "syncProgressCount": "{applied} / {total} 條",
-  "@syncProgressCount": {
-    "placeholders": {
-      "applied": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
   "exchangeRatePageTitle": "匯率管理",
   "exchangeRateEntrySubtitle": "自動取得匯率，支援手動修正",
   "baseCurrencyLabel": "主幣種",
@@ -2807,7 +2718,6 @@
   "unconvertedBadge": "未折算",
   "commonDetail": "詳情",
   "conversionDetailTitle": "折算詳情",
-  "assetConversionToggle": "按主幣種折算",
   "rateManualApplied": "已套用 {count} 條手動匯率",
   "netWorthTrendTitle": "淨值趨勢",
   "netWorthTrend3M": "3個月",
@@ -2820,7 +2730,6 @@
   "netWorthTrendMultiCurrencyNote": "歷史淨值為各幣種原值相加,未折算",
   "txFlagExcludeFromStats": "不計入收支",
   "txFlagExcludeFromBudget": "不計入預算",
-  "txFlagMoreOptions": "更多選項",
   "txFlagDialogTitle": "帳單標記",
   "txFlagExcludeFromStatsHint": "不計入收支統計,但仍計入帳戶餘額",
   "txFlagExcludeFromBudgetHint": "不佔用預算額度",
@@ -2864,7 +2773,6 @@
   "amountDeviationEmptySubtext": "記帳時填寫「原始金額」後，這裡會顯示偏差與原因",
   "amountDeviationBottomFillHint": "未填寫的原始金額按記帳金額儲存，不產生差異",
   "amountDeviationNoDiff": "該區間沒有偏差",
-  "txCrossCurrencyTransferBlocked": "暫不支援跨幣種轉帳,請分別記兩筆或使用同幣種帳戶",
   "ledgerBaseCurrencyLabel": "主幣種",
   "statsConvertedFootnote": "含外幣,已按各筆記帳時匯率折算為 {currency}",
   "@statsConvertedFootnote": {
@@ -2997,8 +2905,6 @@
   "currencyMRU": "毛里塔尼亞烏吉亞",
   "cloudSyncEncryptTitle": "同步加密",
   "cloudSyncEncryptSubtitle": "用密碼加密雲端備份，保護帳本隱私",
-  "cloudSyncEncryptEnable": "開啟同步加密",
-  "cloudSyncEncryptEnableSubtitle": "開啟後上傳的備份將以密文儲存",
   "cloudSyncEncryptEnabled": "已開啟",
   "cloudSyncEncryptDisabled": "未開啟",
   "cloudSyncEncryptSettings": "加密設定",
@@ -3014,7 +2920,6 @@
   "cloudSyncEncryptPasswordTooShort": "密碼至少 8 個字元",
   "cloudSyncEncryptWrongPassword": "密碼錯誤",
   "cloudSyncEncryptEnableSuccess": "加密已開啟",
-  "cloudSyncEncryptDisableSuccess": "加密已關閉，新上傳不再加密",
   "cloudSyncEncryptChangeSuccess": "密碼已修改",
   "cloudSyncEncryptResetConfirmTitle": "重置加密",
   "cloudSyncEncryptResetConfirmMessage": "重置將清空雲端所有帳本備份且不可復原，確定繼續嗎？",
@@ -3022,17 +2927,13 @@
   "cloudSyncEncryptResetSuccess": "加密已重置",
   "cloudSyncEncryptDecryptFailed": "解密失敗，請檢查密碼",
   "cloudSyncEncryptMultiDeviceHint": "在其他裝置上用相同密碼即可解密",
-  "cloudSyncEncryptLegacyHint": "雲端如有未加密資料，開啟後將自動轉為密文",
-  "cloudSyncEncryptReencrypting": "正在重新加密雲端資料…",
   "cloudSyncEncryptReencryptPartialFailed": "加密已開啟，但有 {count} 個雲端檔案重新加密失敗，下次同步時會自動重試。",
   "cloudSyncEncryptProbeFailedTitle": "探測雲端失敗",
   "cloudSyncEncryptProbeFailedMessage": "無法探測雲端是否已有加密資料（可能是網路或權限問題）。如果其他裝置已開啟加密，繼續將以新密碼重新加密雲端資料，可能導致其他裝置無法解密。確定繼續嗎？",
   "cloudSyncEncryptProbeFailedContinue": "以首裝置繼續",
-  "saltMismatchStatus": "加密金鑰不匹配",
   "saltMismatchNeedPasswordHint": "雲端備份金鑰與本地不匹配，點擊重新輸入密碼",
   "cloudEncryptedLocallyDisabledHint": "雲端備份為加密密文，但本裝置未開啟加密，點擊開啟加密以恢復資料",
   "saltMismatchDialogTitle": "重新輸入密碼",
-  "saltMismatchRetrySuccess": "金鑰已啟用，正在重試同步...",
   "saltMismatchRawStorageUnavailable": "雲端服務未初始化，無法恢復金鑰",
   "saltMismatchProbeFailed": "雲端探測失敗，請檢查網路後重試",
   "saltMismatchCloudCorrupted": "雲端密文已損壞，無法恢復金鑰",
@@ -3040,7 +2941,6 @@
   "saltMismatchWebdavAuthMessage": "雲端儲存（WebDAV）帳號或密碼錯誤，請前往雲端服務設定修正憑證後重試。",
   "saltMismatchGoConfig": "前往修改設定",
   "startupSyncRecoveryFailedHint": "密鑰啟用失敗，同步未恢復。請確認密碼後重試，或到同步設定重新操作。",
-  "backupCardTitle": "雲端備份",
   "backupNowTitle": "立即備份",
   "backupNowSubtitle": "將全部賬本與附件打包為一份當日備份，存入 piggycount-bak",
   "backupNoLedgers": "沒有可備份的賬本。",
@@ -3139,7 +3039,6 @@
   "annualReportPosterAchieved": "已達成",
   "annualReportPosterNotAchieved": "未達成",
   "annualReportPosterQrCta": "掃碼下載小豬記帳，開啟你的記帳之旅",
-  "commonUnitYuan": "元",
   "annualReportConsecutiveDaysValue": "{count}天",
   "@annualReportConsecutiveDaysValue": {
     "placeholders": {
@@ -3150,23 +3049,47 @@
   },
   "aiBillingRateMissingHint": "⚠️ 未取得 {currency} 匯率，已按 1:1 暫記，可在統計頁「補折算」修正",
   "@aiBillingRateMissingHint": {
-    "placeholders": { "currency": { "type": "String" } }
+    "placeholders": {
+      "currency": {
+        "type": "String"
+      }
+    }
   },
   "aiPromptVarCurrencies": "帳本主幣種 + 已在用的外幣帳戶",
   "aiPromptVarBillGuard": "帳單過濾段（僅截圖 / 自動記帳時注入）",
   "aiPromptMissingVarsHint": "你的自訂模板缺少這些變數，對應能力會失效：{vars}",
   "@aiPromptMissingVarsHint": {
-    "placeholders": { "vars": { "type": "String" } }
+    "placeholders": {
+      "vars": {
+        "type": "String"
+      }
+    }
   },
   "aiPromptInsertVarSection": "插入 {name} 段落",
   "@aiPromptInsertVarSection": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "aiPromptVarSectionInserted": "已追加 {name} 段落，確認後儲存",
   "@aiPromptVarSectionInserted": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "tagSelectOwnerManaged": "共享帳本標籤由所有者管理",
+  "syncHealthTitle": "同步健康",
+  "syncHealthEmpty": "近 30 天暫無同步紀錄",
+  "syncHealthRate": "近 30 天成功率：{rate}",
+  "syncHealthDetail": "成功 {success} · 失敗 {failed} · 未收斂 {softFail} · 並發攔截 {conflict}",
+  "syncHealthTopErrors": "主要失敗類別",
+  "syncHealthExport": "匯出診斷資料",
+  "syncHealthExported": "診斷資料已匯出：{fileName}",
+  "syncHealthExportFailed": "診斷資料匯出失敗：{error}",
   "cloudCapabilityTitle": "後端能力",
   "cloudCapabilityLine": "並發保護：{concurrency} · 二進位傳輸：{binary}",
   "cloudCapYes": "原生支援",
@@ -3198,7 +3121,6 @@
   "recycleBinSubtitle": "已刪除的交易會留在這裡，直到你徹底刪除",
   "recycleBinEmpty": "回收筒是空的",
   "recycleBinMoved": "已移入回收筒",
-  "recycleBinUndo": "復原",
   "recycleBinRestored": "已復原",
   "recycleBinRestore": "復原",
   "recycleBinPurge": "徹底刪除",
@@ -3211,6 +3133,7 @@
   "rangeReportColumnYoy": "同比去年同期",
   "analyticsTagComposition": "{type}標籤構成",
   "rangeReportChangeRange": "更換區間",
+  "rangeReportCustomFieldTitle": "自訂欄位彙總",
   "rangeReportEmptySubtext": "這段時間還沒有記帳，點上方日期換一個區間",
   "semanticsChartSeries": "圖表，共 {count} 個點：{points}"
 }

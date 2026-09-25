@@ -95,9 +95,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get commonKnow => '확인했습니다';
 
   @override
-  String get commonNo => '아니요';
-
-  @override
   String get commonEmpty => '데이터 없음';
 
   @override
@@ -407,15 +404,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeMonthExpense => '지출';
 
   @override
-  String get homeMonthBalance => '잔액';
-
-  @override
   String homeBudgetSet(String amount) {
     return '예산 $amount';
   }
-
-  @override
-  String get homeBudgetNotSet => '미설정';
 
   @override
   String get homeNoRecords => '아직 기록이 없습니다';
@@ -691,9 +682,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get analyticsAll => '전체';
 
   @override
-  String get analyticsCategoryRanking => '카테고리 순위';
-
-  @override
   String get analyticsTotalAmount => '합계';
 
   @override
@@ -709,16 +697,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get analyticsTipHeader => '팁: 상단 캡슐을 눌러 주/월/년/전체를 전환할 수 있습니다';
-
-  @override
-  String get analyticsSwipeToSwitch => '스와이프해 전환';
-
-  @override
   String get analyticsAllYears => '전체 기간';
-
-  @override
-  String get analyticsToday => '오늘';
 
   @override
   String get splashAppName => '소 돼지 가계부';
@@ -892,9 +871,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get ledgersDownloading => '다운로드 중...';
-
-  @override
   String ledgersDownloadSuccess(String name) {
     return '가계부 \"$name\"를 다운로드했습니다';
   }
@@ -924,9 +900,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get ledgersDeleteRemoteSuccess => '클라우드 가계부가 삭제되었습니다';
 
   @override
-  String get ledgersCannotDeleteLastOne => '마지막 남은 가계부는 삭제할 수 없습니다';
-
-  @override
   String get ledgersRestoreAllTitle => '일괄 복원';
 
   @override
@@ -937,9 +910,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get ledgersRestoreAllReconfirmMessage =>
       '다시 확인: 복원하면 클라우드 내용으로 로컬 가계부 데이터를 덮어쓰며, 덮어쓴 로컬 변경 내용은 되돌릴 수 없습니다. 계속하시겠습니까?';
-
-  @override
-  String get ledgersRestoring => '복원 중...';
 
   @override
   String get ledgersRestoreComplete => '복원 완료';
@@ -996,9 +966,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get categoryEmpty => '카테고리가 없습니다';
-
-  @override
-  String get categoryDefault => '기본 카테고리';
 
   @override
   String get categoryReorderTip => '길게 눌러 카테고리 순서를 드래그하여 변경하세요';
@@ -1187,9 +1154,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get mineTitle => '내 정보';
-
-  @override
   String get mineCloudBackupSection => '클라우드 동기화 및 백업';
 
   @override
@@ -1202,19 +1166,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mineSupportSection => '저희를 지원해주세요';
 
   @override
-  String get mineReminder => '알림 설정';
-
-  @override
   String get mineImport => '데이터 가져오기';
 
   @override
   String get mineExport => '데이터 내보내기';
-
-  @override
-  String get mineCloud => '클라우드 서비스';
-
-  @override
-  String get mineUpdate => '업데이트 확인';
 
   @override
   String get mineLanguageSettings => '언어';
@@ -1274,9 +1229,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get headerSkinTitle => '스킨';
-
-  @override
-  String get headerSkinSubtitle => '테마 색상을 따르며 헤더 위에 겹쳐 표시됩니다';
 
   @override
   String get headerSkinNone => '단색';
@@ -1340,9 +1292,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get headerSkinTerrazzo => '테라조';
-
-  @override
-  String get mineAvatarTitle => '아바타 설정';
 
   @override
   String get mineAvatarFromGallery => '갤러리에서 선택';
@@ -1652,9 +1601,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get sharePosterUnitCount => '';
 
   @override
-  String get sharePosterUnitYuan => '';
-
-  @override
   String userProfilePosterStartDate(String date) {
     return '$date부터 기록 시작';
   }
@@ -1670,6 +1616,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get userProfilePosterCountUnit => '';
+
+  @override
+  String get userProfilePosterDailyUnit => '건/일';
 
   @override
   String get userProfilePosterLedgerCount => '가계부 수';
@@ -1993,9 +1942,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mineReminderSettingsSubtitle => '매일 기록 알림 설정';
 
   @override
-  String get minePersonalize => '개인화';
-
-  @override
   String get mineDisplayScale => '화면 배율';
 
   @override
@@ -2003,18 +1949,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get mineCheckUpdate => '업데이트 확인';
-
-  @override
-  String get mineCheckUpdateSubtitle => '최신 버전을 확인합니다';
-
-  @override
-  String get mineUpdateDownload => '업데이트 다운로드';
-
-  @override
-  String get mineFeedback => '피드백';
-
-  @override
-  String get mineFeedbackSubtitle => '문제나 제안 사항을 알려주세요';
 
   @override
   String get mineHelp => '도움말';
@@ -2233,9 +2167,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get categoryImportModeOverwriteDesc => '사용하지 않는 카테고리를 정리한 후 가져옵니다';
 
   @override
-  String get categoryImportSuccess => '가져오기 성공';
-
-  @override
   String categoryImportSuccessDetail(int imported, int skipped, int icons) {
     return '카테고리 $imported개 가져옴, $skipped개 건너뜀, 아이콘 $icons개 가져옴';
   }
@@ -2446,21 +2377,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get appearanceThemeModeDark => '다크 모드';
-
-  @override
-  String get appearanceDarkModePattern => '다크 모드 헤더 패턴';
-
-  @override
-  String get appearancePatternNone => '없음';
-
-  @override
-  String get appearancePatternIcons => '아이콘 타일';
-
-  @override
-  String get appearancePatternParticles => '파티클';
-
-  @override
-  String get appearancePatternHoneycomb => '벌집무늬';
 
   @override
   String get appearanceAmountFormat => '잔액 표시 형식';
@@ -2679,9 +2595,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reminderTitle => '기록 알림';
 
   @override
-  String get reminderSubtitle => '매일 기록 알림 시간을 설정하세요';
-
-  @override
   String get reminderDailyTitle => '매일 기록 알림';
 
   @override
@@ -2893,15 +2806,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mineUpdateDownloadTitle => '업데이트 다운로드';
 
   @override
-  String get cloudTest => '테스트';
-
-  @override
-  String get cloudSwitched => '전환됨';
-
-  @override
-  String get cloudSwitchFailed => '전환 실패';
-
-  @override
   String get cloudSupabaseUrlLabel => 'Supabase URL';
 
   @override
@@ -2909,9 +2813,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get cloudAnonKeyLabel => 'Anon Key';
-
-  @override
-  String get cloudSelectServiceType => '클라우드 서비스 유형 선택';
 
   @override
   String get cloudMultiDeviceWarningTitle => '여러 기기 사용 팁';
@@ -2990,15 +2891,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get cloudConfigSaved => '설정이 저장되었습니다';
 
   @override
-  String get cloudTestSuccess => '연결 테스트 성공!';
-
-  @override
-  String get cloudTestFailed => '연결 테스트에 실패했습니다. 설정이 올바른지 확인해 주세요.';
-
-  @override
-  String get cloudTestError => '테스트 실패';
-
-  @override
   String get authLogin => '로그인';
 
   @override
@@ -3031,13 +2923,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get authErrorLoginFailed => '로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.';
-
-  @override
-  String get authErrorEmailInvalid => '이메일 주소가 올바르지 않습니다. 철자를 확인해 주세요.';
-
-  @override
-  String get authErrorWeakPassword =>
-      '비밀번호가 너무 단순합니다. 영문과 숫자를 포함해 6자 이상 입력해 주세요.';
 
   @override
   String get importSelectCsvFile => '가져올 파일을 선택하세요 (CSV/TSV/XLSX 지원)';
@@ -3092,6 +2977,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exportCsvHeaderAttachments => '첨부파일';
+
+  @override
+  String get exportCsvHeaderCustomFields => '사용자 정의 필드';
 
   @override
   String get exportShareText => 'PiggyCount 내보내기 파일';
@@ -3221,9 +3109,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get analyticsOverallAvg => '전체 평균';
 
   @override
-  String get analyticsTotalIncome => '총 수입: ';
-
-  @override
   String get analyticsTotalExpense => '총 지출: ';
 
   @override
@@ -3236,16 +3121,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get analyticsTxCount => '거래 건수';
 
   @override
-  String analyticsAvgIncome(String avgLabel) {
-    return '$avgLabel 수입: ';
-  }
-
-  @override
-  String analyticsAvgExpense(String avgLabel) {
-    return '$avgLabel 지출: ';
-  }
-
-  @override
   String get analyticsExpense => '지출';
 
   @override
@@ -3254,11 +3129,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String analyticsTotal(String type) {
     return '총 $type: ';
-  }
-
-  @override
-  String analyticsAverage(String avgLabel) {
-    return '$avgLabel: ';
   }
 
   @override
@@ -3311,9 +3181,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get updateInstallingCachedApk => '캐시된 APK 설치 중';
 
   @override
-  String get updateDownloadComplete => '다운로드 완료';
-
-  @override
   String get updateInstallStarted => '다운로드가 완료되어 설치 프로그램이 시작되었습니다';
 
   @override
@@ -3336,9 +3203,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get updateGoToGitHub => 'GitHub로 이동';
-
-  @override
-  String get updateCannotOpenLink => '링크를 열 수 없습니다';
 
   @override
   String get updateManualVisit =>
@@ -4118,9 +3982,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get cloudSupabaseAnonKeyHintLong => '전체 anon key를 붙여넣으세요';
 
   @override
-  String get cloudWebdavRemotePathHelp => '데이터를 저장할 원격 디렉터리 경로';
-
-  @override
   String get cloudWebdavRemotePathLabel => '원격 경로';
 
   @override
@@ -4158,9 +4019,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get accountNameDuplicate => '이미 존재하는 계정 이름입니다. 다른 이름을 사용해 주세요';
-
-  @override
-  String get accountTypeLabel => '계정 유형';
 
   @override
   String get accountTypeCash => '현금';
@@ -4221,9 +4079,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get accountHiddenTag => '숨김';
-
-  @override
-  String get accountHiddenSection => '숨김';
 
   @override
   String accountHiddenSectionSummary(int count, String total) {
@@ -4311,13 +4166,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get widgetManagementDesc => '홈 화면에서 수입과 지출을 빠르게 확인하세요';
-
-  @override
-  String get widgetPreview => '위젯 미리보기';
-
-  @override
-  String get widgetPreviewDesc =>
-      '위젯은 현재 가계부의 실제 데이터를 자동으로 표시하며, 테마 색상은 앱 설정을 따릅니다';
 
   @override
   String get widgetGalleryTitle => '위젯 갤러리';
@@ -4408,21 +4256,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get appName => 'PiggyCount';
-
-  @override
-  String get monthSuffix => '';
-
-  @override
-  String get todayExpense => '오늘 지출';
-
-  @override
-  String get todayIncome => '오늘 수입';
-
-  @override
-  String get monthExpense => '이번 달 지출';
-
-  @override
-  String get monthIncome => '이번 달 수입';
 
   @override
   String get autoScreenshotBilling => '스크린샷 자동 기록';
@@ -4596,9 +4429,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get aiCloudApiKeyHint => '즈푸 AI API 키를 입력하세요';
-
-  @override
   String get aiCloudApiKeyHintCustom => 'API 키를 입력하세요';
 
   @override
@@ -4621,9 +4451,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get aiOcrRecognizing => '영수증 인식 중...';
-
-  @override
-  String get aiOcrNoAmount => '유효한 금액을 인식하지 못했습니다. 직접 추가해 주세요';
 
   @override
   String get aiNotConfiguredHint =>
@@ -4692,12 +4519,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get autoBillingNotifyNoAmountBody => '금액을 인식하지 못했습니다';
 
   @override
-  String get autoBillingNotifyCreateFailedTitle => '❌ 생성 실패';
-
-  @override
-  String get autoBillingNotifyCreateFailedBody => '거래 기록을 생성하지 못했습니다';
-
-  @override
   String get autoBillingNotifyProcessFailedTitle => '❌ 처리 실패';
 
   @override
@@ -4742,9 +4563,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get aiOcrCreateFailed => '영수증 생성 실패';
-
-  @override
   String get aiTypeIncome => '수입';
 
   @override
@@ -4761,23 +4579,6 @@ class AppLocalizationsKo extends AppLocalizations {
       '다운로드 시 차이점을 자동으로 비교해 선택적으로 미리 볼 수 있습니다. 실시간이 아니므로 여러 기기에서 동시에 같은 가계부를 편집하지 마세요. 동기화 범위는 가계부 데이터(연결된 계정, 카테고리, 태그 포함)이며 첨부파일은 제외됩니다.';
 
   @override
-  String get cloudSyncNow => '지금 동기화';
-
-  @override
-  String get cloudSyncNowHint => '로컬 변경 사항을 업로드하고 원격 업데이트를 가져옵니다';
-
-  @override
-  String get cloudSyncInProgress => '동기화 중...';
-
-  @override
-  String cloudSyncComplete(int pushed, int pulled) {
-    return '동기화 완료: 업로드 $pushed건, 다운로드 $pulled건';
-  }
-
-  @override
-  String get cloudAutoSyncHint => '데이터가 변경되면 클라우드에 자동으로 동기화합니다';
-
-  @override
   String get dataManagement => '데이터 관리';
 
   @override
@@ -4785,9 +4586,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dataManagementPageTitle => '데이터 관리';
-
-  @override
-  String get dataManagementPageSubtitle => '거래 데이터와 카테고리를 관리하세요';
 
   @override
   String get dataManagementAttachmentHint =>
@@ -4801,9 +4599,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get smartBillingPageTitle => '스마트 기록';
-
-  @override
-  String get smartBillingPageSubtitle => 'AI 및 자동화 기록 기능';
 
   @override
   String get smartBillingGuideHint =>
@@ -4890,9 +4685,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get automationPageTitle => '자동화';
 
   @override
-  String get automationPageSubtitle => '정기 결제 및 알림 설정';
-
-  @override
   String get appearanceSettings => '개인화';
 
   @override
@@ -4900,9 +4692,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get appearanceSettingsPageTitle => '개인화';
-
-  @override
-  String get appearanceSettingsPageSubtitle => '화면, 표시, 보안 등 앱 환경 설정';
 
   @override
   String get about => '정보';
@@ -4920,25 +4709,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aboutPageTitle => '정보';
 
   @override
-  String get aboutPageSubtitle => '앱 정보 및 도움말';
-
-  @override
   String get aboutPageLoadingVersion => '버전 정보를 불러오는 중...';
-
-  @override
-  String get aboutWebsite => '공식 웹사이트';
-
-  @override
-  String get aboutGitHubRepo => 'GitHub 저장소';
-
-  @override
-  String get aboutXiaohongshu => '샤오홍슈';
-
-  @override
-  String get aboutDouyin => '도우인';
-
-  @override
-  String get aboutTelegram => '텔레그램 그룹';
 
   @override
   String get aboutSupportDevelopment => '개발 후원하기';
@@ -4985,9 +4756,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get productPromoTestFlight => 'TestFlight 베타';
-
-  @override
-  String get productPromoLearnMore => 'Pro';
 
   @override
   String get productPromoEmailLabel => '신청 이메일 (눌러서 복사)';
@@ -5729,6 +5497,87 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aiAudioModelTitle => '오디오 모델';
 
   @override
+  String get customFieldManageTitle => '사용자 정의 필드';
+
+  @override
+  String get customFieldManageSubtitle => '이 장부의 필드 이름과 유형을 정의하세요';
+
+  @override
+  String get customFieldManageEmpty => '사용자 정의 필드가 없습니다';
+
+  @override
+  String get customFieldManageEmptyHint =>
+      '「세금」「영수증 번호」 등 필드를 추가해 각 거래에 추가 정보를 기록하세요';
+
+  @override
+  String get customFieldAdd => '필드 추가';
+
+  @override
+  String get customFieldAddTitle => '새 사용자 정의 필드';
+
+  @override
+  String get customFieldEditTitle => '사용자 정의 필드 편집';
+
+  @override
+  String get customFieldNameLabel => '필드 이름';
+
+  @override
+  String get customFieldNameHint => '예: 세금';
+
+  @override
+  String get customFieldNameRequired => '필드 이름을 입력하세요';
+
+  @override
+  String get customFieldNameDuplicate => '같은 이름의 필드가 이미 있습니다';
+
+  @override
+  String get customFieldTypeLabel => '유형';
+
+  @override
+  String get customFieldTypeAmount => '금액';
+
+  @override
+  String get customFieldTypeText => '텍스트';
+
+  @override
+  String get customFieldTypeDate => '날짜';
+
+  @override
+  String get customFieldCreateSuccess => '필드가 추가되었습니다';
+
+  @override
+  String get customFieldUpdateSuccess => '필드가 업데이트되었습니다';
+
+  @override
+  String get customFieldDeleteSuccess => '필드가 삭제되었습니다';
+
+  @override
+  String get customFieldDeleteConfirmTitle => '사용자 정의 필드 삭제';
+
+  @override
+  String customFieldDeleteConfirmMessage(String name) {
+    return '\"$name\"을(를) 삭제할까요? 이 장부에 기록된 해당 필드 값도 함께 삭제되며 되돌릴 수 없습니다.';
+  }
+
+  @override
+  String get customFieldSectionTitle => '사용자 정의 필드';
+
+  @override
+  String get customFieldSectionEmpty => '이 장부에는 사용자 정의 필드가 없습니다';
+
+  @override
+  String get customFieldDatePick => '날짜 선택';
+
+  @override
+  String get customFieldTextHint => '내용을 입력하세요';
+
+  @override
+  String get customFieldAmountHint => '0.00';
+
+  @override
+  String get customFieldSortHint => '길게 눌러 순서 변경';
+
+  @override
   String get tagManageTitle => '태그';
 
   @override
@@ -6039,9 +5888,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get budgetCategoryHint => '예산 카테고리를 선택하세요';
 
   @override
-  String get budgetStartDayLabel => '시작일';
-
-  @override
   String get budgetPeriodLabel => '기간';
 
   @override
@@ -6067,11 +5913,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get attachmentDeleteConfirm => '이 첨부파일을 삭제하시겠습니까?';
-
-  @override
-  String attachmentCount(int count) {
-    return '이미지 $count개';
-  }
 
   @override
   String get commonDeleted => '삭제됨';
@@ -6150,11 +5991,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get attachmentPreview => '첨부파일 미리보기';
-
-  @override
-  String attachmentPreviewSubtitle(int count) {
-    return '총 $count개 이미지';
-  }
 
   @override
   String get attachmentPreviewEmpty => '첨부파일이 없습니다';
@@ -6319,9 +6155,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get calendarAddTransaction => '이 날짜에 기록 추가';
 
   @override
-  String get calendarAddTransactionTooltip => '선택한 날짜에 기록을 추가합니다';
-
-  @override
   String get commonUncategorized => '미분류';
 
   @override
@@ -6420,9 +6253,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aiCapabilitySpeechToTextDesc => '음성 기록에 사용됩니다';
 
   @override
-  String get aiProviderTestRun => '눌러서 테스트';
-
-  @override
   String get aiProviderTestRunning => '테스트 중...';
 
   @override
@@ -6477,9 +6307,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String syncPreviewApply(int count) {
     return '$count건 적용';
   }
-
-  @override
-  String get syncPreviewEmpty => '클라우드 데이터가 로컬과 일치합니다. 동기화가 필요하지 않습니다';
 
   @override
   String get syncPreviewOldFormat => '이전 클라우드 형식, 전체 교체가 필요합니다';
@@ -6562,12 +6389,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get cloudSyncGuideLimitItem4 =>
       '첨부파일은 제외됩니다: 거래의 이미지 첨부파일은 동기화되지 않으므로 데이터 관리에서 별도로 내보내세요';
-
-  @override
-  String get mineMultiDeviceSyncTitle => '다중 기기 동기화';
-
-  @override
-  String get mineMultiDeviceSyncSubtitle => '페이지 진입 시 클라우드 변경 사항을 자동으로 확인합니다';
 
   @override
   String get appLockTitle => '앱 잠금';
@@ -6783,9 +6604,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get accountGroupTradable => '일상 계정';
 
   @override
-  String get accountGroupValuation => '자산/부채';
-
-  @override
   String get adjustmentTransaction => '평가액 조정';
 
   @override
@@ -6808,19 +6626,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get budgetManagement => '예산';
 
   @override
-  String get budgetManagementDesc => '월간 예산을 설정하고 지출을 관리하세요';
-
-  @override
   String get budgetSetupHint => '예산을 설정해 월간 지출을 관리하세요';
 
   @override
   String get budgetSetupAction => '설정하기';
-
-  @override
-  String get commonCopied => '복사됨';
-
-  @override
-  String get commonRemove => '제거';
 
   @override
   String get maintenanceOrphanCleanupTitle => '데이터 정리';
@@ -6898,14 +6707,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get syncProgressTitle => '동기화 중';
-
-  @override
-  String syncProgressCount(int applied, int total) {
-    return '$applied / $total';
-  }
-
-  @override
   String get exchangeRatePageTitle => '환율';
 
   @override
@@ -6980,9 +6781,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get conversionDetailTitle => '환산 상세';
 
   @override
-  String get assetConversionToggle => '기준 통화로 환산';
-
-  @override
   String rateManualApplied(int count) {
     return '수동 환율 $count건을 적용했습니다';
   }
@@ -7020,9 +6818,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get txFlagExcludeFromBudget => '예산에서 제외';
-
-  @override
-  String get txFlagMoreOptions => '더 많은 옵션';
 
   @override
   String get txFlagDialogTitle => '거래 플래그';
@@ -7142,10 +6937,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get amountDeviationNoDiff => '이 구간에는 편차가 없습니다';
-
-  @override
-  String get txCrossCurrencyTransferBlocked =>
-      '통화 간 이체는 아직 지원되지 않습니다. 두 건으로 나누어 기록하거나 같은 통화 계정을 사용하세요.';
 
   @override
   String get ledgerBaseCurrencyLabel => '기준 통화';
@@ -7506,12 +7297,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get cloudSyncEncryptSubtitle => '비밀번호로 클라우드 백업을 암호화하여 가계부 개인정보 보호';
 
   @override
-  String get cloudSyncEncryptEnable => '동기화 암호화 활성화';
-
-  @override
-  String get cloudSyncEncryptEnableSubtitle => '활성화 후 업로드되는 백업은 암호문으로 저장됩니다';
-
-  @override
   String get cloudSyncEncryptEnabled => '활성화됨';
 
   @override
@@ -7557,10 +7342,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get cloudSyncEncryptEnableSuccess => '암호화가 활성화되었습니다';
 
   @override
-  String get cloudSyncEncryptDisableSuccess =>
-      '암호화가 비활성화되었습니다. 새 업로드는 암호화되지 않습니다';
-
-  @override
   String get cloudSyncEncryptChangeSuccess => '비밀번호가 변경되었습니다';
 
   @override
@@ -7584,13 +7365,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get cloudSyncEncryptMultiDeviceHint => '다른 기기에서 동일한 비밀번호를 사용하여 복호화하세요';
 
   @override
-  String get cloudSyncEncryptLegacyHint =>
-      '기존 암호화되지 않은 클라우드 데이터는 자동으로 암호문으로 변환됩니다';
-
-  @override
-  String get cloudSyncEncryptReencrypting => '클라우드 데이터를 다시 암호화하는 중...';
-
-  @override
   String cloudSyncEncryptReencryptPartialFailed(int count) {
     return '암호화가 활성화되었지만 $count개의 클라우드 파일 재암호화에 실패했습니다. 다음 동기화 시 자동으로 재시도됩니다.';
   }
@@ -7606,9 +7380,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get cloudSyncEncryptProbeFailedContinue => '첫 기기로 계속';
 
   @override
-  String get saltMismatchStatus => '암호화 키 불일치';
-
-  @override
   String get saltMismatchNeedPasswordHint =>
       '클라우드 백업 키가 로컬과 일치하지 않습니다. 비밀번호를 다시 입력하세요.';
 
@@ -7618,9 +7389,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get saltMismatchDialogTitle => '비밀번호 재입력';
-
-  @override
-  String get saltMismatchRetrySuccess => '키가 활성화되었습니다. 동기화를 재시도하는 중...';
 
   @override
   String get saltMismatchRawStorageUnavailable =>
@@ -7645,9 +7413,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get startupSyncRecoveryFailedHint =>
       '키 활성화에 실패했습니다. 동기화가 복원되지 않았습니다. 비밀번호를 확인한 후 다시 시도하거나 동기화 설정에서 다시 작업하세요.';
-
-  @override
-  String get backupCardTitle => '클라우드 백업';
 
   @override
   String get backupNowTitle => '지금 백업';
@@ -7866,9 +7631,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get annualReportPosterQrCta => '스캔해서 피기카운트를 다운로드하고 가계부를 시작하세요';
 
   @override
-  String get commonUnitYuan => '위안';
-
-  @override
   String annualReportConsecutiveDaysValue(int count) {
     return '$count일';
   }
@@ -8044,9 +7806,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get recycleBinMoved => '휴지통으로 이동했습니다';
 
   @override
-  String get recycleBinUndo => '실행 취소';
-
-  @override
   String get recycleBinRestored => '복원했습니다';
 
   @override
@@ -8084,6 +7843,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get rangeReportChangeRange => '기간 변경';
+
+  @override
+  String get rangeReportCustomFieldTitle => '사용자 정의 필드 요약';
 
   @override
   String get rangeReportEmptySubtext =>

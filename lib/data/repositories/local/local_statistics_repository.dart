@@ -796,4 +796,35 @@ class LocalStatisticsRepository implements StatisticsRepository {
             ))
         .toList();
   }
+
+  @override
+  Future<List<({String type, double nativeAmount, String? customValuesJson})>>
+      customFieldStatsRows({
+    required int ledgerId,
+    required DateTime start,
+    required DateTime end,
+  }) async {
+    final rows = await db.customSelect(
+      'SELECT type AS type, '
+      'COALESCE(native_amount, amount) AS total, '
+      'custom_values_json AS custom_values_json '
+      'FROM transactions '
+      'WHERE ledger_id = ?1 AND exclude_from_stats = 0 '
+      'AND custom_values_json IS NOT NULL '
+      'AND happened_at >= ?2 AND happened_at < ?3',
+      variables: [
+        d.Variable<int>(ledgerId),
+        d.Variable<DateTime>(start),
+        d.Variable<DateTime>(end),
+      ],
+      readsFrom: {db.transactions},
+    ).get();
+    return rows
+        .map((r) => (
+              type: r.read<String>('type'),
+              nativeAmount: _f(r.data['total']),
+              customValuesJson: r.readNullable<String>('custom_values_json'),
+            ))
+        .toList();
+  }
 }

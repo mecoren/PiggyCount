@@ -903,12 +903,12 @@ class TransactionsSyncManager implements SyncService {
   /// 现证据 = 下列「本机写入动作本身留下」的墙钟取最大值（全部墙钟语义）：
   /// 1. `_recentLocalChangeAt`：本 session 内存墙钟（写路径已登记）；
   /// 2. v40 触碰列 `MAX(updated_at)`：transactions/categories/tags/accounts/
-  ///    ledgers 由 `trg_*_touch_updated_at` 在 UPDATE 时自动盖章；
-  ///    budgets/recurring_transactions/exchange_rate_overrides 由仓储
-  ///    更新路径显式写 `now()`；
+  ///    ledgers 由 `trg_*_touch_updated_at` 在 UPDATE 时自动盖章（v46 起含
+  ///    custom_field_definitions，B3）；budgets/recurring_transactions/
+  ///    exchange_rate_overrides 由仓储更新路径显式写 `now()`；
   /// 3. `MAX(created_at)` 兜底（补 INSERT —— 触发器不覆盖 INSERT）：
   ///    accounts / tags / budgets / recurring_transactions / ledgers /
-  ///    transaction_attachments（按本账本限定）；
+  ///    custom_field_definitions（B3）/ transaction_attachments（按本账本限定）；
   /// 4. `MAX(local_changes.created_at)`：**保留为叠加源**（测试装配 /
   ///    未来重新注入 tracker 时有效；它是一条真实写时刻，不会引入不实）。
   /// 作用域 = 本账本 + user-global（账户/分类/标签/汇率覆盖改动同样改变
@@ -970,6 +970,12 @@ class TransactionsSyncManager implements SyncService {
           (SELECT MAX(updated_at) FROM tags) AS tg_u,
           (SELECT MAX(created_at) FROM tags) AS tg_c,
           (SELECT MAX(updated_at) FROM exchange_rate_overrides) AS ex_u,
+          -- B3(v47)：自定义字段定义纳入证据源。v46 起定义是快照 customFields
+          -- 段的数据本体（含触发器 trg_custom_field_definitions_touch_updated_at
+          -- 盖 updated_at），定义-only 改动（建/改名/改类型/排序/删除）若不留
+          -- 持久痕迹，方向仲裁会退化为 unknown → 字段定义同步不可靠。
+          (SELECT MAX(updated_at) FROM custom_field_definitions WHERE ledger_id = ?) AS cf_u,
+          (SELECT MAX(created_at) FROM custom_field_definitions WHERE ledger_id = ?) AS cf_c,
           (SELECT MAX(ta.created_at)
              FROM transaction_attachments ta
              JOIN transactions t ON t.id = ta.transaction_id
@@ -983,10 +989,13 @@ class TransactionsSyncManager implements SyncService {
               AND scenario = 'snapshot_upload'
               AND outcome = 'success') AS up_a
         ''',
-        // 占位符共 11 个（tx_u/bg_u/bg_c/rc_u/rc_c/lg_u/lg_c/att_c/lc_c/lc_n/up_a），
+        // 占位符共 13 个（tx_u/bg_u/bg_c/rc_u/rc_c/lg_u/lg_c/cf_u/cf_c/
+        // att_c/lc_c/lc_n/up_a），
         // 必须与下面 variables 数量一致 —— 少给会整条语句抛错并被 catch 吞成
         // 「无证据」，静默退化为恒 unknown（用测试正面断言钉住）。
         variables: [
+          drift.Variable.withInt(ledgerId),
+          drift.Variable.withInt(ledgerId),
           drift.Variable.withInt(ledgerId),
           drift.Variable.withInt(ledgerId),
           drift.Variable.withInt(ledgerId),
@@ -1007,6 +1016,7 @@ class TransactionsSyncManager implements SyncService {
           db.accounts,
           db.categories,
           db.tags,
+          db.customFieldDefinitions,
           db.exchangeRateOverrides,
           db.transactionAttachments,
           db.localChanges,
@@ -1026,7 +1036,8 @@ class TransactionsSyncManager implements SyncService {
       final persisted = <DateTime>[
         for (final key in const [
           'tx_u', 'bg_u', 'bg_c', 'rc_u', 'rc_c', 'lg_u', 'lg_c',
-          'ac_u', 'ac_c', 'ca_u', 'tg_u', 'tg_c', 'ex_u', 'att_c', 'lc_c',
+          'ac_u', 'ac_c', 'ca_u', 'tg_u', 'tg_c', 'ex_u', 'cf_u', 'cf_c',
+          'att_c', 'lc_c',
         ])
           if (readAt(key) != null) readAt(key)!,
       ]..sort();

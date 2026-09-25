@@ -27,12 +27,18 @@ class CategoryUtils {
   ///
   /// - 如果是key格式（新系统），通过 l10n 翻译
   /// - 否则直接返回分类名称（老用户或自定义分类）
-  static String getDisplayName(String? categoryName, BuildContext context, {String kind = 'expense'}) {
-    if (categoryName == null || categoryName.isEmpty) {
-      return AppLocalizations.of(context).categoryDefaultTitle;
-    }
+  static String getDisplayName(String? categoryName, BuildContext context, {String kind = 'expense'}) =>
+      getDisplayNameWith(AppLocalizations.of(context), categoryName, kind: kind);
 
-    final l10n = AppLocalizations.of(context);
+  /// [getDisplayName] 的无 [BuildContext] 版本。
+  ///
+  /// 供拿不到 context 的纯逻辑调用（如 CSV 导出的行构造，需要可单测）；
+  /// 与 [getAllCategoryDisplayNames] / [getSubcategoryDisplayNames] 同款
+  /// 「静态方法直接收 l10n」的形态。
+  static String getDisplayNameWith(AppLocalizations l10n, String? categoryName, {String kind = 'expense'}) {
+    if (categoryName == null || categoryName.isEmpty) {
+      return l10n.categoryDefaultTitle;
+    }
 
     // 如果是key格式（新系统），进行翻译
     if (isCategoryKey(categoryName)) {

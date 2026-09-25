@@ -9,6 +9,8 @@ import '../../styles/tokens.dart';
 import '../../services/export/share_poster_types.dart';
 import '../../services/data/category_service.dart';
 import '../../l10n/app_localizations.dart';
+import '../../utils/currencies.dart';
+import '../../utils/format_utils.dart';
 
 /// 月度总结海报
 class MonthSummaryPoster extends StatelessWidget {
@@ -22,6 +24,13 @@ class MonthSummaryPoster extends StatelessWidget {
     required this.primaryColor,
     this.hideIncome = false,
   });
+
+  /// 金额符号（按账本本位币），见 `AnnualReportPoster.currencySymbol`。
+  String get currencySymbol => getCurrencySymbol(data.currencyCode);
+
+  /// 金额文本：数字千分位 + 币种符号前置（负号在符号之前）。
+  String _money(NumberFormat formatter, double value) =>
+      prefixCurrencySymbol(formatter.format(value), currencySymbol);
 
   /// 是否显示省钱横幅
   bool get _hasSavedMoneyBanner =>
@@ -101,7 +110,7 @@ class MonthSummaryPoster extends StatelessWidget {
           ),
           const SizedBox(width: 6),
           Text(
-            '${l10n.sharePosterSavedMoneyTitle} ¥${formatter.format(savedAmount)}',
+            '${l10n.sharePosterSavedMoneyTitle} ${_money(formatter, savedAmount)}',
             style: TextStyle(
               color: savedColor,
               fontSize: 18,
@@ -309,6 +318,9 @@ class MonthSummaryPoster extends StatelessWidget {
   }
 
   /// 构建统计列
+  ///
+  /// [unit] 非空 = 计数类单位后缀（天/笔，按语言可为空串，空时连间距一起
+  /// 省掉）；为 null = 金额列，[value] 按账本本位币前置币种符号。
   Widget _buildStatColumn(
     BuildContext context, {
     required String label,
@@ -318,8 +330,11 @@ class MonthSummaryPoster extends StatelessWidget {
     String? unit,
     bool showSign = false,
   }) {
-    final l10n = AppLocalizations.of(context);
-    final displayUnit = unit ?? l10n.sharePosterUnitYuan;
+    // 金额列：'**'（隐藏收入）不挂符号；[showSign] 的零值/负号判断一律
+    // 基于未加符号的 [value]，否则 '+¥0.00' 会被当成非零值。
+    final displayValue = (unit == null && value != '**')
+        ? prefixCurrencySymbol(value, currencySymbol)
+        : value;
     return Column(
       children: [
         // 图标
@@ -357,24 +372,27 @@ class MonthSummaryPoster extends StatelessWidget {
                 ),
               ),
             Text(
-              value,
+              displayValue,
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
             ),
-            const SizedBox(width: 4),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 2),
-              child: Text(
-                displayUnit,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: color.withValues(alpha: 0.7),
+            // 单位留空的语言（英/韩）连间距一起省掉，避免空占位。
+            if ((unit ?? '').isNotEmpty) ...[
+              const SizedBox(width: 4),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Text(
+                  unit!,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: color.withValues(alpha: 0.7),
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ],
@@ -471,7 +489,7 @@ class MonthSummaryPoster extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '¥${formatter.format(category.total)}',
+                _money(formatter, category.total),
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -512,7 +530,7 @@ class MonthSummaryPoster extends StatelessWidget {
           // 日均支出
           _buildInfoRow(context, 
             l10n.sharePosterAvgDailyExpense,
-            '¥${formatter.format(data.avgDailyExpense)}',
+            _money(formatter, data.avgDailyExpense),
             Icons.calendar_today_outlined,
           ),
           if (data.expenseChangeRate != null) ...[

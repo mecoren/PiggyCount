@@ -8,6 +8,8 @@
 /// 1. 检查各语言翻译文件的完整性和状态
 /// 2. 检查各语言文件中多余的 key
 /// 3. 检测未使用的翻译 key
+/// 3.1 检测「疑似死键」—— 只有同名 Dart 标识符命中、拿不出 l10n 访问器
+///     证据的 key（旧口径把它们算成已使用，死键因此长期隐身）
 /// 4. 提供清理选项
 ///
 /// 使用方法：
@@ -16,6 +18,50 @@ library;
 
 import 'dart:io';
 import 'dart:convert';
+
+/// 刻意留空的翻译键（**不是**漏翻译）。
+///
+/// 全是「单位后缀」：中文需要（「9月」「3 笔」「1,234 元」），英/韩语境的表达
+/// 里不需要 —— 拼接后空串正是想要的效果（`3.2 per day` 这类成对单位另有
+/// `userProfilePosterDailyUnit` 承担）。
+///
+/// 登记在此，检查工具就不会把它们当漏翻译反复告警；真有漏翻时才不会被这几条
+/// 固定噪音淹没。**新增刻意空值必须在此登记**，否则工具会（正确地）继续告警。
+const intentionalEmptyKeys = <String>{
+  'widgetMonthSuffix',
+  'sharePosterUnitCount',
+  'userProfilePosterCountUnit',
+  'userProfilePosterLedgerUnit',
+};
+
+/// 语言显示名。未登记的语言回落到语言码本身 —— 新增语言包时本工具仍能正常
+/// 报告（只是名字显示为码），不会因漏配名字而打印 `null`。
+const _languageDisplayNames = <String, String>{
+  'zh': '简体中文',
+  'en': 'English',
+  'zh_TW': '繁體中文',
+  'ko': '한국어',
+};
+
+String _displayName(String lang) => _languageDisplayNames[lang] ?? lang;
+
+/// 从 `lib/l10n` 动态发现语言包（`app_<lang>.arb`）。
+///
+/// 此前语言列表在几处写死为 `['zh','en','zh_TW']`，加语言必然漏配 —— `ko`
+/// 就长期没被本工具检查过。改为文件名驱动后，新增 `app_xx.arb` 即刻纳入；
+/// `zh` 固定排首位作为基准，其余按字母序（输出稳定，便于逐次比对）。
+List<String> discoverLanguages(Directory l10nDir) {
+  final langs = <String>[];
+  if (l10nDir.existsSync()) {
+    for (final entity in l10nDir.listSync()) {
+      final m = RegExp(r'^app_(.+)\.arb$').firstMatch(entity.uri.pathSegments.last);
+      if (m != null) langs.add(m.group(1)!);
+    }
+  }
+  langs.sort();
+  if (langs.remove('zh')) langs.insert(0, 'zh');
+  return langs;
+}
 
 void main() async {
   print('');
@@ -83,7 +129,8 @@ void main() async {
 /// 检查翻译完整性
 Future<void> checkTranslationCompleteness() async {
   final l10nDir = Directory('lib/l10n');
-  final languages = ['zh', 'en', 'zh_TW'];
+  // 动态发现（写死列表会让新增语言漏检，ko 就曾被漏掉）
+  final languages = discoverLanguages(l10nDir);
 
   print('📊 第一步：检查翻译文件完整性');
   print('');
@@ -125,12 +172,6 @@ Future<void> checkTranslationCompleteness() async {
   print('语言代码 | 文件名称        | 键数量   | 完成度   | 状态');
   print('-' * 70);
 
-  final languageNames = {
-    'zh': '简体中文',
-    'en': 'English',
-    'zh_TW': '繁體中文',
-  };
-
   for (final lang in languages) {
     final count = keyCount[lang] ?? 0;
     final percentage =
@@ -171,10 +212,10 @@ Future<void> checkTranslationCompleteness() async {
     final missing = zhKeys.difference(langKeys);
 
     if (missing.isEmpty) {
-      print('✅ $lang (${languageNames[lang]}): 完全匹配中文版本');
+      print('✅ $lang (${_displayName(lang)}): 完全匹配中文版本');
     } else {
       hasIssues = true;
-      print('🔴 $lang (${languageNames[lang]}): 缺少 ${missing.length} 个键');
+      print('🔴 $lang (${_displayName(lang)}): 缺少 ${missing.length} 个键');
       if (missing.length <= 10) {
         for (final key in missing.take(10)) {
           print('   - $key');
@@ -206,15 +247,27 @@ Future<void> checkTranslationCompleteness() async {
       }
     }
 
-    if (empty.isNotEmpty) {
+    // 刻意留空的单位后缀与"疑似漏翻译"分开：只有后者值得告警。
+    final intentional =
+        empty.where(intentionalEmptyKeys.contains).toList()..sort();
+    final unexpected =
+        empty.where((k) => !intentionalEmptyKeys.contains(k)).toList();
+
+    if (unexpected.isNotEmpty) {
       hasEmptyValues = true;
-      print('⚠️  ${languageNames[lang]} 有 ${empty.length} 个空值翻译');
-      for (final key in empty.take(5)) {
+      print('⚠️  ${_displayName(lang)} 有 ${unexpected.length} 个空值翻译');
+      for (final key in unexpected.take(5)) {
         print('   - $key');
       }
-      if (empty.length > 5) {
-        print('   ... 还有 ${empty.length - 5} 个');
+      if (unexpected.length > 5) {
+        print('   ... 还有 ${unexpected.length - 5} 个');
       }
+      print('');
+    }
+
+    if (intentional.isNotEmpty) {
+      print('ℹ️  ${_displayName(lang)} 有 ${intentional.length} 个刻意留空的单位后缀'
+          '（见 intentionalEmptyKeys，正常）：${intentional.join('、')}');
       print('');
     }
   }
@@ -262,8 +315,8 @@ Future<Map<String, Set<String>>> checkExtraKeys() async {
   print('📊 基准文件 (app_zh.arb): ${zhKeys.length} 个键');
   print('');
 
-  // 支持的语言列表 (排除中文)
-  final languages = ['en', 'zh_TW'];
+  // 支持的语言列表 (排除中文，动态发现)
+  final languages = discoverLanguages(l10nDir).where((l) => l != 'zh').toList();
 
   // 收集每个语言的多余键
   final Map<String, Set<String>> extraKeysMap = {};
@@ -297,16 +350,11 @@ Future<Map<String, Set<String>>> checkExtraKeys() async {
   print('📋 发现以下语言有多余的键：');
   print('');
 
-  final languageNames = {
-    'en': 'English',
-    'zh_TW': '繁體中文',
-  };
-
   for (final entry in extraKeysMap.entries) {
     final lang = entry.key;
     final keys = entry.value;
 
-    print('🔴 $lang (${languageNames[lang]}): ${keys.length} 个多余的键');
+    print('🔴 $lang (${_displayName(lang)}): ${keys.length} 个多余的键');
     print('─'.padRight(60, '─'));
 
     // 按字母排序显示
@@ -388,8 +436,13 @@ Future<List<String>> checkUnusedKeys() async {
 
   await for (final entity in libDir.list(recursive: true)) {
     if (entity is File && entity.path.endsWith('.dart')) {
-      // 过滤掉 lib/l10n/ 目录下的生成文件
-      if (!entity.path.contains('lib/l10n/')) {
+      // 过滤掉 lib/l10n/ 目录下的生成文件。
+      // 分隔符必须先归一化成 '/'：Windows 的 entity.path 是 'lib\l10n\…'，
+      // 旧写法 contains('lib/l10n/') 恒为假 —— 生成代码被当源码扫，每个 key
+      // 的 `String get <key>;` 都算「使用中」，未使用 keys 于是恒等于 0
+      // （同一份仓库在 macOS/Linux 上却会报出真实列表）。
+      final normalized = entity.path.replaceAll(r'\', '/');
+      if (!normalized.contains('lib/l10n/')) {
         dartFiles.add(entity);
       }
     }
@@ -400,33 +453,30 @@ Future<List<String>> checkUnusedKeys() async {
 
   final unusedKeys = <String>[];
   final usedKeys = <String>{};
+  // 「只有同名 Dart 标识符命中、拿不出 l10n 访问器证据」的键。
+  // 典型来源：参数/字段/局部变量与 key 撞名（如 `String monthSuffix = '月'`、
+  // `required this.monthSuffix`）—— 旧实现把这算成「已使用」，死键就这样
+  // 长期隐身（`l10n.monthSuffix` 无人调用却永远查不出来）。
+  // 单列一份供人工确认，**不并进未使用**：判死会误删真在用的 key。
+  final weakOnlyKeys = <String>[];
+
+  // 统计口径反转成「先扫一遍代码，再逐 key 查集合」：
+  // 旧实现是「逐 key 建正则 × 逐个文件 hasMatch」= O(keys × files)，2500+ key
+  // 的仓库上要跑几十秒，且强证据正则里叠了多段 `\s*` 量词，候选接收者变多后
+  // 回溯会进一步恶化（实测卡死）。集合版只扫 3 遍文件。
+  //
+  // - [strongKeys]：被当作**成员**访问过的名字（`<本地化实例>.<key>`）；
+  // - [identifiers]：真实代码里出现过的所有标识符（宽松兜底）。
+  final strongKeys = await _collectStronglyUsedKeys(dartFiles);
+  final identifiers = await _collectIdentifiers(dartFiles);
 
   for (final key in allKeys) {
-    bool isUsed = false;
-
-    for (final file in dartFiles) {
-      final content = await file.readAsString();
-
-      // 检查各种可能的使用方式
-      if (content.contains('l10n.$key') ||
-          content.contains('l10n!.$key') ||
-          (content.contains('AppLocalizations.of(') &&
-              content.contains(').$key'))) {
-        isUsed = true;
-        usedKeys.add(key);
-        break;
-      }
-
-      // 使用正则表达式匹配更复杂的模式
-      final pattern = RegExp(r'[.\s]\??!?' + key + r'\b');
-      if (pattern.hasMatch(content)) {
-        isUsed = true;
-        usedKeys.add(key);
-        break;
-      }
-    }
-
-    if (!isUsed) {
+    if (strongKeys.contains(key)) {
+      usedKeys.add(key);
+    } else if (identifiers.contains(key)) {
+      usedKeys.add(key);
+      weakOnlyKeys.add(key);
+    } else {
       unusedKeys.add(key);
     }
   }
@@ -439,20 +489,118 @@ Future<List<String>> checkUnusedKeys() async {
   if (unusedKeys.isNotEmpty) {
     print('📝 未使用的 keys 列表：');
     print('=' * 60);
-    for (var i = 0; i < unusedKeys.length && i < 20; i++) {
-      final key = unusedKeys[i];
-      final value = arbData[key];
-      print('  • $key: "$value"');
-    }
-    if (unusedKeys.length > 20) {
-      print('  ... 还有 ${unusedKeys.length - 20} 个');
+    // 列全：这一份是要照着删的清单，截断到 20 条反而看不到全貌。
+    for (final key in unusedKeys) {
+      print('  • $key: "${arbData[key]}"');
     }
     print('=' * 60);
   } else {
     print('🎉 太好了！没有发现未使用的 keys！');
   }
 
+  // 疑似死键：只有同名标识符命中。**不要**直接删 —— 先确认仓库里没有
+  // `AppLocalizations` 实例用别的名字承载（本工具只认显式赋值与类型标注）。
+  if (weakOnlyKeys.isNotEmpty) {
+    print('');
+    print('🟡 疑似死键（${weakOnlyKeys.length} 个）：只有同名 Dart 标识符命中，');
+    print('   没有任何 `<本地化实例>.<key>` 访问器证据 —— 多半是参数/字段撞名');
+    print('   把死键伪装成了「使用中」。人工确认真无调用后再删：');
+    print('=' * 60);
+    // 这份清单按设计应当很短，逐条列全（不像未使用列表可能上百条）。
+    for (final key in weakOnlyKeys) {
+      print('  • $key: "${arbData[key]}"');
+    }
+    print('=' * 60);
+  }
+
   return unusedKeys;
+}
+
+/// 收集「被当作本地化 getter 访问过」的 key 名（强证据）。
+///
+/// 三种访问形态：
+/// - 具名接收者：`l10n.foo`、`l10nError.foo`、`l.foo`（接收者名见
+///   [_collectLocalizationReceivers]）；
+/// - 接收者后的本地封装函数：`l10nInsight(context).foo`（见
+///   `lib/pages/report/annual_report_page.dart` 的同名 helper）；
+/// - 内联调用：`AppLocalizations.of(context).foo`、
+///   `lookupAppLocalizations(locale).foo`。
+///
+/// 接收者与 `.` 之间允许空白与 `!`/`?`：仓库里大量写法是
+/// `AppLocalizations.of(context)\n      .importChooseFile,` —— 旧实现的
+/// `).$key` 相邻判断漏掉这类换行写法，正是「真在用的 key 被误报」的主因。
+Future<Set<String>> _collectStronglyUsedKeys(List<File> dartFiles) async {
+  final receivers = await _collectLocalizationReceivers(dartFiles);
+  final member = r'([A-Za-z_$][A-Za-z0-9_$]*)';
+  final namedRe = RegExp(r'\b(?:' +
+      receivers.map(RegExp.escape).join('|') +
+      r')(?:\s*\([^()]*\))?\s*[!?]?\s*\.\s*' +
+      member);
+  final callRe = RegExp(
+      r'\b(?:AppLocalizations\.of|lookupAppLocalizations)\s*\([^()]*\)'
+      r'\s*[!?]?\s*\.\s*' +
+          member);
+  final keys = <String>{};
+  for (final file in dartFiles) {
+    final content = await file.readAsString();
+    for (final re in [namedRe, callRe]) {
+      for (final m in re.allMatches(content)) {
+        keys.add(m.group(1)!);
+      }
+    }
+  }
+  return keys;
+}
+
+/// 收集 lib 真实代码里出现过的所有标识符（宽松兜底的「弱证据」）。
+///
+/// 与旧实现的正则 `[.\s]\??!?<key>\b` 等价但更快：那次是按 key 逐文件匹配，
+/// 这里扫一遍即可。含注释/字符串里的出现（与旧实现一致，方向偏保守：
+/// 多算「已使用」，不会误导删除）。
+Future<Set<String>> _collectIdentifiers(List<File> dartFiles) async {
+  final idRe = RegExp(r'[A-Za-z_$][A-Za-z0-9_$]*');
+  final ids = <String>{};
+  for (final file in dartFiles) {
+    final content = await file.readAsString();
+    for (final m in idRe.allMatches(content)) {
+      ids.add(m.group(0)!);
+    }
+  }
+  return ids;
+}
+
+/// 从 lib 的 Dart 文件里收集「承载 AppLocalizations 实例」的接收者名。
+///
+/// 三种形态都要收：
+/// - `final l10n = AppLocalizations.of(context)`（赋值目标，无类型标注）；
+/// - `AppLocalizations l10n`（参数/字段的类型标注）；
+/// - `(l) => l.headerSkinAurora`（单参 lambda，参数类型靠推断 —— 见
+///   `lib/styles/header_skins.dart` 的 `nameOf` 回调）。
+///
+/// 写死 `l10n` 不够：仓库里还有 l10nDialog / l10nError / l10nToast / sample
+/// / subtitle / l 等命名，漏收会把它们的正常用法误报成「疑似死键」。
+///
+/// 放宽接收者集合只会让**误报变少**（多算成已使用），不会掩盖死键 ——
+/// 死键的标识符在真实代码里根本不出现，凑不出 `.<key>` 这种文本。
+Future<Set<String>> _collectLocalizationReceivers(List<File> dartFiles) async {
+  final assignRe = RegExp(r'(\w+)\s*=\s*AppLocalizations\.of');
+  final typedRe = RegExp(r'AppLocalizations\??\s+(\w+)');
+  // 单参 lambda：`(l) => l.headerSkinAurora`。参数被 `)` 隔在 `=>` 之前，
+  // 所以必须显式匹配括号，不能写成 `(\w+)\s*=>`。
+  final lambdaRe = RegExp(r'\(\s*(\w+)\s*\)\s*=>\s*\1\s*\.');
+  final names = <String>{};
+  for (final file in dartFiles) {
+    final content = await file.readAsString();
+    for (final re in [assignRe, typedRe, lambdaRe]) {
+      for (final m in re.allMatches(content)) {
+        names.add(m.group(1)!);
+      }
+    }
+  }
+  // 兜底：一个都没扫到就退化回惯用名。空 alternation 会让 `(?:)` 匹配空串，
+  // 强证据正则退化成「任意 `.<key>` 都算强命中」，守卫自身失效。
+  if (names.isEmpty) names.add('l10n');
+  return names;
 }
 
 /// 清理未使用的 keys

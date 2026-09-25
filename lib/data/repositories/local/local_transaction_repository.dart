@@ -11,6 +11,7 @@ import '../../db.dart';
 import '../../../utils/month_range.dart';
 import '../../../utils/shared_ledger_picker_filter.dart';
 import '../../../models/note_history.dart';
+import '../../models/custom_field_values.dart';
 import '../transaction_repository.dart';
 import '../../../services/system/logger_service.dart';
 
@@ -465,6 +466,7 @@ class LocalTransactionRepository implements TransactionRepository {
     String? currencyCode,
     double? nativeAmount,
     double? originalAmount,
+    Map<String, dynamic>? customValues,
   }) async {
     // v30:子仓收「已定值」直写;带折算的兜底(查账户/汇率)在聚合
     // LocalRepository 包装层(子仓拿不到汇率)。
@@ -489,6 +491,8 @@ class LocalTransactionRepository implements TransactionRepository {
           currencyCode: d.Value(currencyCode),
           nativeAmount: d.Value(nativeAmount),
           originalAmount: d.Value(originalAmount ?? amount),
+          // v46:空/null → 列写 NULL(该笔无自定义字段值)。
+          customValuesJson: d.Value(CustomFieldValueCodec.encode(customValues)),
         ));
   }
 
@@ -609,6 +613,7 @@ class LocalTransactionRepository implements TransactionRepository {
     String? currencyCode,
     double? nativeAmount,
     dynamic originalAmount,
+    Map<String, dynamic>? customValues,
   }) async {
     // 处理 accountId 参数
     final d.Value<int?> accountIdValue;
@@ -662,6 +667,11 @@ class LocalTransactionRepository implements TransactionRepository {
             ? const d.Value.absent()
             : d.Value(nativeAmount),
         originalAmount: originalAmountValue,
+        // v46 自定义字段值三态:null = 不改动(批量改备注/改分类等路径不得
+        // 顺手清空);空 map = 清空(encode → null → 列写 NULL);非空 = 覆盖。
+        customValuesJson: customValues == null
+            ? const d.Value.absent()
+            : d.Value(CustomFieldValueCodec.encode(customValues)),
       ),
     );
   }
@@ -1791,6 +1801,7 @@ class LocalTransactionRepository implements TransactionRepository {
     required DateTime happenedAt,
     String? note,
     double? originalAmount,
+    Map<String, dynamic>? customValues,
   }) async {
     await (db.update(db.transactions)..where((t) => t.syncId.equals(syncId)))
         .write(TransactionsCompanion(
@@ -1806,6 +1817,10 @@ class LocalTransactionRepository implements TransactionRepository {
       originalAmount: originalAmount == null
           ? const d.Value.absent()
           : d.Value(originalAmount),
+      // v46 自定义字段值:null = 不改动;非 null(含空 map = 清空)才写入。
+      customValuesJson: customValues == null
+          ? const d.Value.absent()
+          : d.Value(CustomFieldValueCodec.encode(customValues)),
     ));
   }
 
@@ -1854,6 +1869,11 @@ class LocalTransactionRepository implements TransactionRepository {
               originalAmount: u.originalAmount == null
                   ? const d.Value.absent()
                   : d.Value(u.originalAmount),
+              // v46 自定义字段值:旧快照缺键(null)→ absent 保留本地原值;
+              // 非 null(含空 map = 云端显式清空)→ 写入。
+              customValuesJson: u.customValues == null
+                  ? const d.Value.absent()
+                  : d.Value(CustomFieldValueCodec.encode(u.customValues)),
               // 账单标记：diff 合并必须一并写入，否则"不计入统计/预算"
               // 跨设备丢失（与 native_amount 分裂同源问题）。
               excludeFromStats: d.Value(u.excludeFromStats),

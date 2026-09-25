@@ -173,4 +173,16 @@ abstract class StatisticsRepository {
     required OriginalAmountMetric metric,
     required OriginalAmountBasis basis,
   });
+
+  /// B2(v47)：区间内带自定义字段值的交易原始行（按字段值的分组聚合在
+  /// Dart 侧做 —— 值以 JSON 散落在行上，SQL 无 JSON1 依赖；行数受
+  /// custom_values_json IS NOT NULL 过滤约束，绝大多数账本为 0 行）。
+  /// 口径与既有统计一致：排除「不计收支」，金额取
+  /// `COALESCE(native_amount, amount)`（本位币折算）。
+  Future<List<({String type, double nativeAmount, String? customValuesJson})>>
+      customFieldStatsRows({
+    required int ledgerId,
+    required DateTime start,
+    required DateTime end,
+  });
 }

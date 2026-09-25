@@ -9,6 +9,8 @@ import '../../styles/tokens.dart';
 import '../../services/export/share_poster_types.dart';
 import '../../services/data/category_service.dart';
 import '../../l10n/app_localizations.dart';
+import '../../utils/currencies.dart';
+import '../../utils/format_utils.dart';
 
 /// 年度总结海报
 class YearSummaryPoster extends StatelessWidget {
@@ -22,6 +24,14 @@ class YearSummaryPoster extends StatelessWidget {
     required this.primaryColor,
     this.hideIncome = false,
   });
+
+  /// 金额符号（按账本本位币）。海报里的金额一律用 [prefixCurrencySymbol]
+  /// 前置，与 `AnnualReportPoster.currencySymbol` 同口径。
+  String get currencySymbol => getCurrencySymbol(data.currencyCode);
+
+  /// 金额文本：数字千分位 + 币种符号前置（负号在符号之前）。
+  String _money(NumberFormat formatter, double value) =>
+      prefixCurrencySymbol(formatter.format(value), currencySymbol);
 
   @override
   Widget build(BuildContext context) {
@@ -296,8 +306,7 @@ class YearSummaryPoster extends StatelessWidget {
           _buildStatRow(
             icon: Icons.trending_down_rounded,
             label: l10n.sharePosterTotalExpense,
-            value: formatter.format(data.totalExpense),
-            unit: l10n.sharePosterUnitYuan,
+            value: _money(formatter, data.totalExpense),
             color: PiggyPosterTokens.expense,
             isHighlight: true,
           ),
@@ -309,8 +318,7 @@ class YearSummaryPoster extends StatelessWidget {
           _buildStatRow(
             icon: Icons.trending_up_rounded,
             label: l10n.sharePosterTotalIncome,
-            value: hideIncome ? '**' : formatter.format(data.totalIncome),
-            unit: l10n.sharePosterUnitYuan,
+            value: hideIncome ? '**' : _money(formatter, data.totalIncome),
             color: PiggyPosterTokens.income,
             isHighlight: true,
           ),
@@ -325,12 +333,11 @@ class YearSummaryPoster extends StatelessWidget {
     );
   }
 
-  /// 构建统计行
+  /// 构建统计行（金额行：币种符号已由调用方前置进 [value]）
   Widget _buildStatRow({
     required IconData icon,
     required String label,
     required String value,
-    required String unit,
     required Color color,
     bool isHighlight = false,
   }) {
@@ -364,16 +371,6 @@ class YearSummaryPoster extends StatelessWidget {
             fontSize: isHighlight ? 32 : 28,
             fontWeight: FontWeight.bold,
             color: isHighlight ? color : PiggyPosterTokens.textPrimary,
-          ),
-        ),
-        const SizedBox(width: 6),
-        // 单位
-        Text(
-          unit,
-          style: TextStyle(
-            fontSize: 18,
-            color: PiggyPosterTokens.textTertiary,
-            fontWeight: FontWeight.w500,
           ),
         ),
       ],
@@ -412,17 +409,19 @@ class YearSummaryPoster extends StatelessWidget {
                 color: color,
               ),
             ),
-            const SizedBox(width: 2),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 2),
-              child: Text(
-                unit,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: color.withValues(alpha: 0.7),
+            if (unit.isNotEmpty) ...[
+              const SizedBox(width: 2),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Text(
+                  unit,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: color.withValues(alpha: 0.7),
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ],
@@ -457,20 +456,13 @@ class YearSummaryPoster extends StatelessWidget {
           ),
           const Spacer(),
           Text(
-            hideIncome ? '**' : '${isPositive ? '+' : ''}${formatter.format(data.balance)}',
+            hideIncome
+                ? '**'
+                : '${isPositive ? '+' : ''}${_money(formatter, data.balance)}',
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
               color: balanceColor,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            l10n.sharePosterUnitYuan,
-            style: TextStyle(
-              fontSize: 18,
-              color: balanceColor,
-              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -515,7 +507,6 @@ class YearSummaryPoster extends StatelessWidget {
   Widget _buildCategoryItem(CategoryTotal category, int rank) {
     final formatter = NumberFormat('#,##0.00', 'zh_CN');
     final percentText = '${(category.percentage * 100).toStringAsFixed(1)}%';
-
     // 排名徽章颜色
     final rankColors = [
       PiggyPosterTokens.medalGold,
@@ -576,7 +567,7 @@ class YearSummaryPoster extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '¥${formatter.format(category.total)}',
+                _money(formatter, category.total),
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 22,
@@ -613,20 +604,20 @@ class YearSummaryPoster extends StatelessWidget {
           // 月均支出
           _buildInfoRow(
             l10n.sharePosterAvgMonthlyExpense,
-            '¥${formatter.format(data.avgMonthlyExpense)}',
+            _money(formatter, data.avgMonthlyExpense),
           ),
           const SizedBox(height: 18),
           // 月均收入
           _buildInfoRow(
             l10n.sharePosterAvgMonthlyIncome,
-            '¥${formatter.format(data.avgMonthlyIncome)}',
+            _money(formatter, data.avgMonthlyIncome),
           ),
           if (data.maxExpenseMonth != null) ...[
             const SizedBox(height: 18),
             // 最高支出月份
             _buildInfoRow(
               l10n.sharePosterMaxExpenseMonth,
-              '${DateFormat.MMMM(l10n.localeName).format(DateTime(data.year, data.maxExpenseMonth!))} ¥${formatter.format(data.maxExpenseAmount!)}',
+              '${DateFormat.MMMM(l10n.localeName).format(DateTime(data.year, data.maxExpenseMonth!))} ${_money(formatter, data.maxExpenseAmount!)}',
             ),
           ],
         ],

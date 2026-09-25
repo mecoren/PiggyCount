@@ -485,8 +485,12 @@ class UserProfilePoster extends StatelessWidget {
                 ),
               ),
               Text(
+                // 用**成对**文案键而不是 `countUnit/daysUnit` 拼接：英文/韩文
+                // 的 countUnit 是刻意留空的（语序里不需要"笔"），拼出来会是
+                // 「3.2 /days」这种多一个空格又缺单位的残句。整对交给 l10n，
+                // 各语言各自自然：中文「笔/天」、英文「per day」、韩文「건/일」。
                 data.recordDays > 0
-                    ? '${(data.recordCount / data.recordDays).toStringAsFixed(1)} ${l10n.userProfilePosterCountUnit}/${l10n.userProfilePosterDaysUnit}'
+                    ? '${(data.recordCount / data.recordDays).toStringAsFixed(1)} ${l10n.userProfilePosterDailyUnit}'
                     : '-',
                 style: const TextStyle(
                   color: Colors.white,

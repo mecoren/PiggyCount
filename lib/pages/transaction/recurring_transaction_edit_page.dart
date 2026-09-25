@@ -6,12 +6,15 @@ import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/category_selector_dialog.dart';
 import '../../widgets/biz/ledger_selector_dialog.dart';
 import '../../data/db.dart';
+import '../../data/models/custom_field_values.dart';
 import '../../l10n/app_localizations.dart';
+import '../../providers/custom_field_providers.dart';
 import '../../services/data/recurring_transaction_service.dart';
 import '../../services/system/logger_service.dart';
 import '../../utils/category_utils.dart';
 import '../../utils/currencies.dart';
 import '../../styles/tokens.dart';
+import '../../widgets/biz/custom_field_input.dart';
 import '../../widgets/currency/currency_flag.dart';
 import '../../widgets/currency/currency_picker_sheet.dart';
 
@@ -52,6 +55,10 @@ class _RecurringTransactionEditPageState
   /// 所选账本的本位币(异步查,用于判断「是否外币」与币种选择器的汇率基准)。
   String? _ledgerCurrency;
 
+  /// v47 模板级自定义字段值(键为 fieldSyncId)。挂在模板上,每次生成实例
+  /// 时整包注入;实例侧修改不影响模板。空 map = 未配置(落库 NULL)。
+  Map<String, dynamic> _templateFieldValues = {};
+
   bool get _isEditing => widget.recurring != null;
 
   @override
@@ -71,6 +78,8 @@ class _RecurringTransactionEditPageState
       _currencyCode = widget.recurring!.currencyCode?.toUpperCase();
       _amountController.text = widget.recurring!.amount.toStringAsFixed(2);
       _noteController.text = widget.recurring!.note ?? '';
+      _templateFieldValues =
+          CustomFieldValueCodec.decode(widget.recurring!.templateFieldValues);
       _loadCategoryAndAccount();
     } else {
       _type = 'expense';
@@ -256,6 +265,10 @@ class _RecurringTransactionEditPageState
                       ),
                       maxLines: 3,
                     ),
+                    const SizedBox(height: 16),
+
+                    // v47 模板级自定义字段
+                    _buildTemplateCustomFields(l10n),
                   ],
                 ),
               ),
@@ -666,14 +679,43 @@ class _RecurringTransactionEditPageState
     );
   }
 
+  /// v47 模板级自定义字段录入:与交易编辑器同款 [CustomFieldsSection]。
+  /// 定义按所选账本隔离;该账本暂无定义时给一行空态提示(发现性)。
+  /// ValueKey 按账本重建:子组件不随 initialValues 变化重置内部状态,
+  /// 换账本必须换实例,配合 [_pruneTemplateValuesForLedger] 剪掉幽灵键。
+  Widget _buildTemplateCustomFields(AppLocalizations l10n) {
+    final ledgerId = _selectedLedgerId;
+    if (ledgerId == null) return const SizedBox.shrink();
+    final definitions = ref
+            .watch(customFieldDefinitionsOnceProvider(ledgerId))
+            .valueOrNull ??
+        const <CustomFieldDefinition>[];
+    if (definitions.isEmpty) {
+      return Text(
+        l10n.customFieldSectionEmpty,
+        // D1：字号走 label 令牌（12/继承行高与裸字面量同链路），
+        // 不新增 ratchet 计数的 fontSize 字面量。
+        style: PiggyTextTokens.label(context)
+            .copyWith(color: PiggyTokens.textTertiary(context)),
+      );
+    }
+    return CustomFieldsSection(
+      key: ValueKey<String>('template-cf-$ledgerId'),
+      definitions: definitions,
+      initialValues: _templateFieldValues,
+      onChanged: (values) {
+        setState(() => _templateFieldValues = values);
+      },
+    );
+  }
+
   Widget _buildDateField({
     required String label,
     required DateTime? date,
     required VoidCallback onTap,
     bool allowClear = false,
     VoidCallback? onClear,
-  }) {
-    return InkWell(
+  }) {    return InkWell(
       onTap: onTap,
       child: InputDecorator(
         decoration: InputDecoration(
@@ -736,7 +778,26 @@ class _RecurringTransactionEditPageState
       });
       // 新账本本位币可能不同 → 重载并归一币种(_loadLedgerCurrency 内部处理)
       await _loadLedgerCurrency();
+      // v47:换账本后,不属于新账本定义的 fieldSyncId 值剪掉 —— 值挂在
+      // 新账本的字段定义上才有意义,跨账本残留会成为幽灵键(渲染不出、
+      // 快照里却是脏数据)。
+      await _pruneTemplateValuesForLedger(selected);
     }
+  }
+
+  /// 把模板值里不属于 [ledgerId] 字段定义的键剪掉(见 _selectLedger)。
+  Future<void> _pruneTemplateValuesForLedger(int ledgerId) async {
+    final defs =
+        await ref.read(repositoryProvider).getDefinitionsForLedger(ledgerId);
+    final validSyncIds = defs
+        .map((d) => d.syncId)
+        .whereType<String>()
+        .where((s) => s.isNotEmpty)
+        .toSet();
+    final pruned = Map<String, dynamic>.from(_templateFieldValues)
+      ..removeWhere((k, _) => !validSyncIds.contains(k));
+    if (!mounted) return;
+    setState(() => _templateFieldValues = pruned);
   }
 
   Future<void> _selectCategory() async {
@@ -875,6 +936,7 @@ class _RecurringTransactionEditPageState
           endDate: _endDate,
           enabled: _enabled,
           currencyCode: _currencyCode, // null = 账本本位币
+          templateFieldValues: _templateFieldValues, // 空 map = 清空
         );
 
         // 如果需要重置最后生成日期，单独更新
@@ -901,6 +963,7 @@ class _RecurringTransactionEditPageState
           startDate: _startDate,
           endDate: _endDate,
           currencyCode: _currencyCode, // null = 账本本位币
+          templateFieldValues: _templateFieldValues, // 空 map = 未配置
         );
       }
 

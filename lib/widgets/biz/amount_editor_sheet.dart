@@ -12,8 +12,10 @@ import '../../services/data/note_history_service.dart';
 import '../../models/note_history.dart';
 import '../../services/attachment_service.dart';
 import '../../providers.dart';
+import '../../providers/custom_field_providers.dart';
 import '../../utils/ui_scale_extensions.dart';
 import '../../pages/tag/widgets/tag_selector.dart';
+import 'custom_field_input.dart';
 import 'note_picker_dialog.dart';
 import 'account_selector.dart';
 import '../currency/currency_picker_sheet.dart';
@@ -42,6 +44,10 @@ typedef AmountEditorResult = ({
   // v45 原始金额(选填):null = 用户未填写 → 语义为「默认金额 = 记账金额」。
   // 不在此处做 ?? amount 兜底,保留「是否手填」这一事实供差异统计使用。
   double? originalAmount,
+  // v46 自定义字段值 { fieldSyncId: value }。
+  // null = **不改动**（本次编辑未涉及自定义字段，或该笔本来就没值）；空 map
+  // = 显式清空。与 v45 originalAmount 的"三态"同思路，避免顺手清空已有值。
+  Map<String, dynamic>? customValues,
 });
 
 class AmountEditorSheet extends ConsumerStatefulWidget {
@@ -80,6 +86,9 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
   final double? initialNativeAmount;
   // v45 原始金额回显(编辑既有明细时回填);null = 该笔未填写。
   final double? initialOriginalAmount;
+  // v46 自定义字段已存值回显(fieldSyncId → value)。编辑既有明细时由
+  // transaction_edit_utils 读取;新建为空。
+  final Map<String, dynamic> initialCustomValues;
 
   const AmountEditorSheet({
     super.key,
@@ -103,6 +112,7 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
     this.initialCurrencyCode,
     this.initialNativeAmount,
     this.initialOriginalAmount,
+    this.initialCustomValues = const {},
   });
 
   @override
@@ -184,6 +194,10 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   bool _excludeFromStats = false;
   bool _excludeFromBudget = false;
 
+  // v46 自定义字段值(fieldSyncId → value)。初值来自编辑回显;
+  // [CustomFieldsSection] 每次变更上抛全量快照。
+  late Map<String, dynamic> _customValues;
+
   // v30 交易级多币种(L7 自动探测 + L12 无账户手选)
   String? _pickedCurrency; // 无账户时手选的币种;null = 本位币
   String? _selectedAccountCurrency; // 所选账户的币种(异步查,null = 未选/未知)
@@ -200,6 +214,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     _excludeFromBudget = widget.initialExcludeFromBudget;
     _selectedAccountId = widget.initialAccountId;
     _selectedTagIds = List.from(widget.initialTagIds ?? []);
+    _customValues = Map<String, dynamic>.from(widget.initialCustomValues);
     _pickedCurrency = widget.initialCurrencyCode?.toUpperCase();
     // 编辑外币交易:汇率行初值 = 该笔隐含汇率(nativeAmount / amount),
     // 只改备注/分类时折算基准不漂移(01 §4.2)。
@@ -894,34 +909,50 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                     // 当前输入值。
                     // 可点击：把自定义小键盘的输入目标切回报账金额；选中态用
                     // 主色描边 + 淡底，与原始金额位形成"谁在接收输入"的对照。
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () => setState(
-                          () => _editTarget = _AmountEditTarget.amount),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 120),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: _editTarget == _AmountEditTarget.amount
-                              ? PiggyTokens.surfaceSelected(context)
-                              : Colors.transparent,
-                          borderRadius:
-                              BorderRadius.circular(PiggyDimens.radiusLg),
-                          border: Border.all(
-                            width: 1.5,
+                    //
+                    // Flexible(flex 3, loose)：本行只有金额是可缩的主内容。
+                    // 分类位（Expanded，flex 1）的图标有 24px 硬下限，宽度不够
+                    // 时它没法再让；金额若按自然宽硬占，窄屏（360dp）+ 长分类名
+                    // + 6 位金额就会把整行顶出水平溢出。loose 保证宽屏下金额仍取
+                    // 自然宽（视觉与改动前逐像素一致），只有空间不够时才被限宽，
+                    // 再由内层 FittedBox 等比缩放（金额永远完整可见，不会被截断）。
+                    Flexible(
+                      flex: 3,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => setState(
+                            () => _editTarget = _AmountEditTarget.amount),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 120),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
                             color: _editTarget == _AmountEditTarget.amount
-                                ? primary
+                                ? PiggyTokens.surfaceSelected(context)
                                 : Colors.transparent,
+                            borderRadius:
+                                BorderRadius.circular(PiggyDimens.radiusLg),
+                            border: Border.all(
+                              width: 1.5,
+                              color: _editTarget == _AmountEditTarget.amount
+                                  ? primary
+                                  : Colors.transparent,
+                            ),
                           ),
-                        ),
-                        child: Text(
-                          _amountStr,
-                          key: const ValueKey('amountEditorAmountValue'),
-                          style: text.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.0,
-                            color: PiggyTokens.textPrimary(context),
+                          // 空间不够时等比缩小；够用时逐像素不变。
+                          // 金额是主内容，宁可缩小也不截断、也不把行顶破。
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              _amountStr,
+                              key: const ValueKey('amountEditorAmountValue'),
+                              style: text.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.0,
+                                color: PiggyTokens.textPrimary(context),
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -1119,6 +1150,8 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
             // 标签和附件选择区域（一行）
             const SizedBox(height: 8),
             _buildTagAndAttachmentRow(),
+            // v46 自定义字段录入分区（该账本无定义时整块隐藏）
+            _buildCustomFieldsSection(),
             const SizedBox(height: 10),
             // 数字键盘
             LayoutBuilder(builder: (ctx, c) {
@@ -1265,6 +1298,13 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                                 currencyCode: txCurrency,
                                 nativeAmount: nativeAmount,
                                 originalAmount: originalAmount,
+                                // v46 自定义字段:原值与现值都为空 → null
+                                // (不改动,避免把别的设备已填的值抹掉);
+                                // 否则提交全量快照(空 map = 显式清空)。
+                                customValues: (_customValues.isEmpty &&
+                                        widget.initialCustomValues.isEmpty)
+                                    ? null
+                                    : Map<String, dynamic>.from(_customValues),
                               ));
 
                               // 注意：不需要在这里重置 _isSubmitting
@@ -1367,6 +1407,26 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
             })
           ],
         ),
+      ),
+    );
+  }
+
+  /// v46 自定义字段录入分区。
+  ///
+  /// 定义按账本走 `customFieldsForCurrentLedgerProvider`；该账本没有定义 / 定义
+  /// 尚未加载完成时返回 [SizedBox.shrink]，布局与改动前逐字一致。值变更只更新
+  /// 本地快照（不 setState），避免每次击键重建整个 sheet 的数字键盘与标签区。
+  Widget _buildCustomFieldsSection() {
+    final definitions =
+        ref.watch(customFieldsForCurrentLedgerProvider).valueOrNull ??
+            const <CustomFieldDefinition>[];
+    if (definitions.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: CustomFieldsSection(
+        definitions: definitions,
+        initialValues: widget.initialCustomValues,
+        onChanged: (values) => _customValues = values,
       ),
     );
   }

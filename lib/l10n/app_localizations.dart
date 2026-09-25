@@ -263,12 +263,6 @@ abstract class AppLocalizations {
   /// **'Got it'**
   String get commonKnow;
 
-  /// No description provided for @commonNo.
-  ///
-  /// In en, this message translates to:
-  /// **'No'**
-  String get commonNo;
-
   /// No description provided for @commonEmpty.
   ///
   /// In en, this message translates to:
@@ -822,23 +816,11 @@ abstract class AppLocalizations {
   /// **'Expense'**
   String get homeMonthExpense;
 
-  /// No description provided for @homeMonthBalance.
-  ///
-  /// In en, this message translates to:
-  /// **'Balance'**
-  String get homeMonthBalance;
-
   /// No description provided for @homeBudgetSet.
   ///
   /// In en, this message translates to:
   /// **'Budget {amount}'**
   String homeBudgetSet(String amount);
-
-  /// No description provided for @homeBudgetNotSet.
-  ///
-  /// In en, this message translates to:
-  /// **'Not set'**
-  String get homeBudgetNotSet;
 
   /// No description provided for @homeNoRecords.
   ///
@@ -1308,12 +1290,6 @@ abstract class AppLocalizations {
   /// **'All'**
   String get analyticsAll;
 
-  /// No description provided for @analyticsCategoryRanking.
-  ///
-  /// In en, this message translates to:
-  /// **'Category Ranking'**
-  String get analyticsCategoryRanking;
-
   /// No description provided for @analyticsTotalAmount.
   ///
   /// In en, this message translates to:
@@ -1338,29 +1314,11 @@ abstract class AppLocalizations {
   /// **'Switch to {type}'**
   String analyticsSwitchTo(String type);
 
-  /// No description provided for @analyticsTipHeader.
-  ///
-  /// In en, this message translates to:
-  /// **'Tip: Top capsule can switch Week/Month/Year/All'**
-  String get analyticsTipHeader;
-
-  /// No description provided for @analyticsSwipeToSwitch.
-  ///
-  /// In en, this message translates to:
-  /// **'Swipe to switch'**
-  String get analyticsSwipeToSwitch;
-
   /// No description provided for @analyticsAllYears.
   ///
   /// In en, this message translates to:
   /// **'All Years'**
   String get analyticsAllYears;
-
-  /// No description provided for @analyticsToday.
-  ///
-  /// In en, this message translates to:
-  /// **'Today'**
-  String get analyticsToday;
 
   /// No description provided for @splashAppName.
   ///
@@ -1662,12 +1620,6 @@ abstract class AppLocalizations {
   /// **'Download ledger \"{name}\" to this device? Any local ledger with the same name will be overwritten by the cloud version.'**
   String ledgersDownloadMessage(String name);
 
-  /// No description provided for @ledgersDownloading.
-  ///
-  /// In en, this message translates to:
-  /// **'Downloading...'**
-  String get ledgersDownloading;
-
   /// No description provided for @ledgersDownloadSuccess.
   ///
   /// In en, this message translates to:
@@ -1716,12 +1668,6 @@ abstract class AppLocalizations {
   /// **'Cloud ledger deleted'**
   String get ledgersDeleteRemoteSuccess;
 
-  /// No description provided for @ledgersCannotDeleteLastOne.
-  ///
-  /// In en, this message translates to:
-  /// **'Cannot delete the last ledger'**
-  String get ledgersCannotDeleteLastOne;
-
   /// No description provided for @ledgersRestoreAllTitle.
   ///
   /// In en, this message translates to:
@@ -1739,12 +1685,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Final confirmation: restoring overwrites local ledger data with cloud content; overwritten local changes cannot be recovered. Continue?'**
   String get ledgersRestoreAllReconfirmMessage;
-
-  /// No description provided for @ledgersRestoring.
-  ///
-  /// In en, this message translates to:
-  /// **'Restoring...'**
-  String get ledgersRestoring;
 
   /// No description provided for @ledgersRestoreComplete.
   ///
@@ -1835,12 +1775,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No categories'**
   String get categoryEmpty;
-
-  /// No description provided for @categoryDefault.
-  ///
-  /// In en, this message translates to:
-  /// **'Default Category'**
-  String get categoryDefault;
 
   /// No description provided for @categoryReorderTip.
   ///
@@ -2173,12 +2107,6 @@ abstract class AppLocalizations {
   /// **'Unable to open file picker: {error}'**
   String importFileOpenError(String error);
 
-  /// No description provided for @mineTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Mine'**
-  String get mineTitle;
-
   /// No description provided for @mineCloudBackupSection.
   ///
   /// In en, this message translates to:
@@ -2203,12 +2131,6 @@ abstract class AppLocalizations {
   /// **'Support Us'**
   String get mineSupportSection;
 
-  /// No description provided for @mineReminder.
-  ///
-  /// In en, this message translates to:
-  /// **'Reminder Settings'**
-  String get mineReminder;
-
   /// No description provided for @mineImport.
   ///
   /// In en, this message translates to:
@@ -2220,18 +2142,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Export Data'**
   String get mineExport;
-
-  /// No description provided for @mineCloud.
-  ///
-  /// In en, this message translates to:
-  /// **'Cloud Service'**
-  String get mineCloud;
-
-  /// No description provided for @mineUpdate.
-  ///
-  /// In en, this message translates to:
-  /// **'Check for Updates'**
-  String get mineUpdate;
 
   /// No description provided for @mineLanguageSettings.
   ///
@@ -2346,12 +2256,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Skin'**
   String get headerSkinTitle;
-
-  /// No description provided for @headerSkinSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Follows your theme color, layered over the header'**
-  String get headerSkinSubtitle;
 
   /// No description provided for @headerSkinNone.
   ///
@@ -2478,12 +2382,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Terrazzo'**
   String get headerSkinTerrazzo;
-
-  /// No description provided for @mineAvatarTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Avatar Settings'**
-  String get mineAvatarTitle;
 
   /// No description provided for @mineAvatarFromGallery.
   ///
@@ -3073,12 +2971,6 @@ abstract class AppLocalizations {
   /// **''**
   String get sharePosterUnitCount;
 
-  /// No description provided for @sharePosterUnitYuan.
-  ///
-  /// In en, this message translates to:
-  /// **''**
-  String get sharePosterUnitYuan;
-
   /// No description provided for @userProfilePosterStartDate.
   ///
   /// In en, this message translates to:
@@ -3108,6 +3000,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **''**
   String get userProfilePosterCountUnit;
+
+  /// No description provided for @userProfilePosterDailyUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'per day'**
+  String get userProfilePosterDailyUnit;
 
   /// No description provided for @userProfilePosterLedgerCount.
   ///
@@ -3680,12 +3578,6 @@ abstract class AppLocalizations {
   /// **'Set daily recording reminders'**
   String get mineReminderSettingsSubtitle;
 
-  /// No description provided for @minePersonalize.
-  ///
-  /// In en, this message translates to:
-  /// **'Personalization'**
-  String get minePersonalize;
-
   /// No description provided for @mineDisplayScale.
   ///
   /// In en, this message translates to:
@@ -3703,30 +3595,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Check Update'**
   String get mineCheckUpdate;
-
-  /// No description provided for @mineCheckUpdateSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Checking for latest version'**
-  String get mineCheckUpdateSubtitle;
-
-  /// No description provided for @mineUpdateDownload.
-  ///
-  /// In en, this message translates to:
-  /// **'Download Update'**
-  String get mineUpdateDownload;
-
-  /// No description provided for @mineFeedback.
-  ///
-  /// In en, this message translates to:
-  /// **'Feedback'**
-  String get mineFeedback;
-
-  /// No description provided for @mineFeedbackSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Report issues or suggestions'**
-  String get mineFeedbackSubtitle;
 
   /// No description provided for @mineHelp.
   ///
@@ -4130,12 +3998,6 @@ abstract class AppLocalizations {
   /// **'Clear unused categories then import'**
   String get categoryImportModeOverwriteDesc;
 
-  /// No description provided for @categoryImportSuccess.
-  ///
-  /// In en, this message translates to:
-  /// **'Import successful'**
-  String get categoryImportSuccess;
-
   /// No description provided for @categoryImportSuccessDetail.
   ///
   /// In en, this message translates to:
@@ -4525,36 +4387,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Dark Mode'**
   String get appearanceThemeModeDark;
-
-  /// No description provided for @appearanceDarkModePattern.
-  ///
-  /// In en, this message translates to:
-  /// **'Dark Mode Header Pattern'**
-  String get appearanceDarkModePattern;
-
-  /// No description provided for @appearancePatternNone.
-  ///
-  /// In en, this message translates to:
-  /// **'None'**
-  String get appearancePatternNone;
-
-  /// No description provided for @appearancePatternIcons.
-  ///
-  /// In en, this message translates to:
-  /// **'Icon Tiling'**
-  String get appearancePatternIcons;
-
-  /// No description provided for @appearancePatternParticles.
-  ///
-  /// In en, this message translates to:
-  /// **'Particles'**
-  String get appearancePatternParticles;
-
-  /// No description provided for @appearancePatternHoneycomb.
-  ///
-  /// In en, this message translates to:
-  /// **'Honeycomb'**
-  String get appearancePatternHoneycomb;
 
   /// No description provided for @appearanceAmountFormat.
   ///
@@ -4970,12 +4802,6 @@ abstract class AppLocalizations {
   /// **'Recording Reminder'**
   String get reminderTitle;
 
-  /// No description provided for @reminderSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Set daily recording reminder time'**
-  String get reminderSubtitle;
-
   /// No description provided for @reminderDailyTitle.
   ///
   /// In en, this message translates to:
@@ -5356,24 +5182,6 @@ abstract class AppLocalizations {
   /// **'Download Update'**
   String get mineUpdateDownloadTitle;
 
-  /// No description provided for @cloudTest.
-  ///
-  /// In en, this message translates to:
-  /// **'Test'**
-  String get cloudTest;
-
-  /// No description provided for @cloudSwitched.
-  ///
-  /// In en, this message translates to:
-  /// **'Switched'**
-  String get cloudSwitched;
-
-  /// No description provided for @cloudSwitchFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Switch failed'**
-  String get cloudSwitchFailed;
-
   /// No description provided for @cloudSupabaseUrlLabel.
   ///
   /// In en, this message translates to:
@@ -5391,12 +5199,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Anon Key'**
   String get cloudAnonKeyLabel;
-
-  /// No description provided for @cloudSelectServiceType.
-  ///
-  /// In en, this message translates to:
-  /// **'Select Cloud Service Type'**
-  String get cloudSelectServiceType;
 
   /// No description provided for @cloudMultiDeviceWarningTitle.
   ///
@@ -5548,24 +5350,6 @@ abstract class AppLocalizations {
   /// **'Configuration saved'**
   String get cloudConfigSaved;
 
-  /// No description provided for @cloudTestSuccess.
-  ///
-  /// In en, this message translates to:
-  /// **'Connection test successful!'**
-  String get cloudTestSuccess;
-
-  /// No description provided for @cloudTestFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Connection test failed, please check if the configuration is correct.'**
-  String get cloudTestFailed;
-
-  /// No description provided for @cloudTestError.
-  ///
-  /// In en, this message translates to:
-  /// **'Test failed'**
-  String get cloudTestError;
-
   /// No description provided for @authLogin.
   ///
   /// In en, this message translates to:
@@ -5631,18 +5415,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Login failed, please try again later.'**
   String get authErrorLoginFailed;
-
-  /// No description provided for @authErrorEmailInvalid.
-  ///
-  /// In en, this message translates to:
-  /// **'Email address is invalid, please check for spelling errors.'**
-  String get authErrorEmailInvalid;
-
-  /// No description provided for @authErrorWeakPassword.
-  ///
-  /// In en, this message translates to:
-  /// **'Password is too simple, please include letters and numbers, at least 6 characters.'**
-  String get authErrorWeakPassword;
 
   /// No description provided for @importSelectCsvFile.
   ///
@@ -5745,6 +5517,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Attachments'**
   String get exportCsvHeaderAttachments;
+
+  /// No description provided for @exportCsvHeaderCustomFields.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Fields'**
+  String get exportCsvHeaderCustomFields;
 
   /// No description provided for @exportShareText.
   ///
@@ -5992,12 +5770,6 @@ abstract class AppLocalizations {
   /// **'Overall Avg'**
   String get analyticsOverallAvg;
 
-  /// No description provided for @analyticsTotalIncome.
-  ///
-  /// In en, this message translates to:
-  /// **'Total Income: '**
-  String get analyticsTotalIncome;
-
   /// No description provided for @analyticsTotalExpense.
   ///
   /// In en, this message translates to:
@@ -6022,18 +5794,6 @@ abstract class AppLocalizations {
   /// **'Records'**
   String get analyticsTxCount;
 
-  /// No description provided for @analyticsAvgIncome.
-  ///
-  /// In en, this message translates to:
-  /// **'{avgLabel} Income: '**
-  String analyticsAvgIncome(String avgLabel);
-
-  /// No description provided for @analyticsAvgExpense.
-  ///
-  /// In en, this message translates to:
-  /// **'{avgLabel} Expense: '**
-  String analyticsAvgExpense(String avgLabel);
-
   /// No description provided for @analyticsExpense.
   ///
   /// In en, this message translates to:
@@ -6051,12 +5811,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Total {type}: '**
   String analyticsTotal(String type);
-
-  /// No description provided for @analyticsAverage.
-  ///
-  /// In en, this message translates to:
-  /// **'{avgLabel}: '**
-  String analyticsAverage(String avgLabel);
 
   /// No description provided for @updateCheckTitle.
   ///
@@ -6148,12 +5902,6 @@ abstract class AppLocalizations {
   /// **'Installing cached APK'**
   String get updateInstallingCachedApk;
 
-  /// No description provided for @updateDownloadComplete.
-  ///
-  /// In en, this message translates to:
-  /// **'Download Complete'**
-  String get updateDownloadComplete;
-
   /// No description provided for @updateInstallStarted.
   ///
   /// In en, this message translates to:
@@ -6201,12 +5949,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Go to GitHub'**
   String get updateGoToGitHub;
-
-  /// No description provided for @updateCannotOpenLink.
-  ///
-  /// In en, this message translates to:
-  /// **'Cannot open link'**
-  String get updateCannotOpenLink;
 
   /// No description provided for @updateManualVisit.
   ///
@@ -7661,12 +7403,6 @@ abstract class AppLocalizations {
   /// **'Paste complete anon key'**
   String get cloudSupabaseAnonKeyHintLong;
 
-  /// No description provided for @cloudWebdavRemotePathHelp.
-  ///
-  /// In en, this message translates to:
-  /// **'Remote directory path for data storage'**
-  String get cloudWebdavRemotePathHelp;
-
   /// No description provided for @cloudWebdavRemotePathLabel.
   ///
   /// In en, this message translates to:
@@ -7744,12 +7480,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Account name already exists, please use a different name'**
   String get accountNameDuplicate;
-
-  /// No description provided for @accountTypeLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Account Type'**
-  String get accountTypeLabel;
 
   /// No description provided for @accountTypeCash.
   ///
@@ -7864,12 +7594,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hidden'**
   String get accountHiddenTag;
-
-  /// No description provided for @accountHiddenSection.
-  ///
-  /// In en, this message translates to:
-  /// **'Hidden'**
-  String get accountHiddenSection;
 
   /// No description provided for @accountHiddenSectionSummary.
   ///
@@ -8026,18 +7750,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Quick view of income and expenses on home screen'**
   String get widgetManagementDesc;
-
-  /// No description provided for @widgetPreview.
-  ///
-  /// In en, this message translates to:
-  /// **'Widget Preview'**
-  String get widgetPreview;
-
-  /// No description provided for @widgetPreviewDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Widget automatically displays actual data from current ledger, theme color follows app settings'**
-  String get widgetPreviewDesc;
 
   /// No description provided for @widgetGalleryTitle.
   ///
@@ -8212,36 +7924,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'PiggyCount'**
   String get appName;
-
-  /// No description provided for @monthSuffix.
-  ///
-  /// In en, this message translates to:
-  /// **''**
-  String get monthSuffix;
-
-  /// No description provided for @todayExpense.
-  ///
-  /// In en, this message translates to:
-  /// **'Today\'s Expense'**
-  String get todayExpense;
-
-  /// No description provided for @todayIncome.
-  ///
-  /// In en, this message translates to:
-  /// **'Today\'s Income'**
-  String get todayIncome;
-
-  /// No description provided for @monthExpense.
-  ///
-  /// In en, this message translates to:
-  /// **'Month\'s Expense'**
-  String get monthExpense;
-
-  /// No description provided for @monthIncome.
-  ///
-  /// In en, this message translates to:
-  /// **'Month\'s Income'**
-  String get monthIncome;
 
   /// No description provided for @autoScreenshotBilling.
   ///
@@ -8555,12 +8237,6 @@ abstract class AppLocalizations {
   /// **'Switched to: {strategy}'**
   String aiStrategySwitched(String strategy);
 
-  /// No description provided for @aiCloudApiKeyHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter your Zhipu AI API Key'**
-  String get aiCloudApiKeyHint;
-
   /// No description provided for @aiCloudApiKeyHintCustom.
   ///
   /// In en, this message translates to:
@@ -8608,12 +8284,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Recognizing bill...'**
   String get aiOcrRecognizing;
-
-  /// No description provided for @aiOcrNoAmount.
-  ///
-  /// In en, this message translates to:
-  /// **'No valid amount recognized, please add manually'**
-  String get aiOcrNoAmount;
 
   /// No description provided for @aiNotConfiguredHint.
   ///
@@ -8735,18 +8405,6 @@ abstract class AppLocalizations {
   /// **'Could not recognize the amount'**
   String get autoBillingNotifyNoAmountBody;
 
-  /// No description provided for @autoBillingNotifyCreateFailedTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'❌ Failed to create'**
-  String get autoBillingNotifyCreateFailedTitle;
-
-  /// No description provided for @autoBillingNotifyCreateFailedBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Could not create transaction record'**
-  String get autoBillingNotifyCreateFailedBody;
-
   /// No description provided for @autoBillingNotifyProcessFailedTitle.
   ///
   /// In en, this message translates to:
@@ -8807,12 +8465,6 @@ abstract class AppLocalizations {
   /// **'Recognition failed: {error}'**
   String aiOcrFailed(String error);
 
-  /// No description provided for @aiOcrCreateFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Failed to create bill'**
-  String get aiOcrCreateFailed;
-
   /// No description provided for @aiTypeIncome.
   ///
   /// In en, this message translates to:
@@ -8843,36 +8495,6 @@ abstract class AppLocalizations {
   /// **'Downloads automatically compare differences for selective preview. Not real-time — avoid editing the same ledger on multiple devices simultaneously. Sync scope covers ledger data (including associated accounts, categories, and tags), excluding attachments.'**
   String get cloudSyncHint;
 
-  /// No description provided for @cloudSyncNow.
-  ///
-  /// In en, this message translates to:
-  /// **'Sync Now'**
-  String get cloudSyncNow;
-
-  /// No description provided for @cloudSyncNowHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Push local changes and pull remote updates'**
-  String get cloudSyncNowHint;
-
-  /// No description provided for @cloudSyncInProgress.
-  ///
-  /// In en, this message translates to:
-  /// **'Syncing...'**
-  String get cloudSyncInProgress;
-
-  /// No description provided for @cloudSyncComplete.
-  ///
-  /// In en, this message translates to:
-  /// **'Sync complete: pushed {pushed}, pulled {pulled}'**
-  String cloudSyncComplete(int pushed, int pulled);
-
-  /// No description provided for @cloudAutoSyncHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Auto-sync to cloud after data changes'**
-  String get cloudAutoSyncHint;
-
   /// No description provided for @dataManagement.
   ///
   /// In en, this message translates to:
@@ -8890,12 +8512,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Data Management'**
   String get dataManagementPageTitle;
-
-  /// No description provided for @dataManagementPageSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Manage transaction data and categories'**
-  String get dataManagementPageSubtitle;
 
   /// No description provided for @dataManagementAttachmentHint.
   ///
@@ -8920,12 +8536,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Smart Billing'**
   String get smartBillingPageTitle;
-
-  /// No description provided for @smartBillingPageSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'AI and automation billing features'**
-  String get smartBillingPageSubtitle;
 
   /// No description provided for @smartBillingGuideHint.
   ///
@@ -9077,12 +8687,6 @@ abstract class AppLocalizations {
   /// **'Automation'**
   String get automationPageTitle;
 
-  /// No description provided for @automationPageSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Recurring transactions and reminder settings'**
-  String get automationPageSubtitle;
-
   /// No description provided for @appearanceSettings.
   ///
   /// In en, this message translates to:
@@ -9100,12 +8704,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Personalization'**
   String get appearanceSettingsPageTitle;
-
-  /// No description provided for @appearanceSettingsPageSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Appearance, display, security and other app preferences'**
-  String get appearanceSettingsPageSubtitle;
 
   /// No description provided for @about.
   ///
@@ -9137,47 +8735,11 @@ abstract class AppLocalizations {
   /// **'About'**
   String get aboutPageTitle;
 
-  /// No description provided for @aboutPageSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'App information and help'**
-  String get aboutPageSubtitle;
-
   /// No description provided for @aboutPageLoadingVersion.
   ///
   /// In en, this message translates to:
   /// **'Loading version...'**
   String get aboutPageLoadingVersion;
-
-  /// No description provided for @aboutWebsite.
-  ///
-  /// In en, this message translates to:
-  /// **'Official Website'**
-  String get aboutWebsite;
-
-  /// No description provided for @aboutGitHubRepo.
-  ///
-  /// In en, this message translates to:
-  /// **'GitHub Repository'**
-  String get aboutGitHubRepo;
-
-  /// No description provided for @aboutXiaohongshu.
-  ///
-  /// In en, this message translates to:
-  /// **'Xiaohongshu'**
-  String get aboutXiaohongshu;
-
-  /// No description provided for @aboutDouyin.
-  ///
-  /// In en, this message translates to:
-  /// **'Douyin'**
-  String get aboutDouyin;
-
-  /// No description provided for @aboutTelegram.
-  ///
-  /// In en, this message translates to:
-  /// **'Telegram'**
-  String get aboutTelegram;
 
   /// No description provided for @aboutSupportDevelopment.
   ///
@@ -9262,12 +8824,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'TestFlight beta'**
   String get productPromoTestFlight;
-
-  /// No description provided for @productPromoLearnMore.
-  ///
-  /// In en, this message translates to:
-  /// **'Pro'**
-  String get productPromoLearnMore;
 
   /// No description provided for @productPromoEmailLabel.
   ///
@@ -10643,6 +10199,162 @@ abstract class AppLocalizations {
   /// **'Audio Model'**
   String get aiAudioModelTitle;
 
+  /// No description provided for @customFieldManageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Fields'**
+  String get customFieldManageTitle;
+
+  /// No description provided for @customFieldManageSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Define field names and types for this ledger'**
+  String get customFieldManageSubtitle;
+
+  /// No description provided for @customFieldManageEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No custom fields yet'**
+  String get customFieldManageEmpty;
+
+  /// No description provided for @customFieldManageEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add fields like \"Tax\" or \"Invoice No.\" to record extra details on every entry'**
+  String get customFieldManageEmptyHint;
+
+  /// No description provided for @customFieldAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Field'**
+  String get customFieldAdd;
+
+  /// No description provided for @customFieldAddTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New Custom Field'**
+  String get customFieldAddTitle;
+
+  /// No description provided for @customFieldEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Custom Field'**
+  String get customFieldEditTitle;
+
+  /// No description provided for @customFieldNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Field Name'**
+  String get customFieldNameLabel;
+
+  /// No description provided for @customFieldNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Tax'**
+  String get customFieldNameHint;
+
+  /// No description provided for @customFieldNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Field name is required'**
+  String get customFieldNameRequired;
+
+  /// No description provided for @customFieldNameDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'A field with this name already exists'**
+  String get customFieldNameDuplicate;
+
+  /// No description provided for @customFieldTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get customFieldTypeLabel;
+
+  /// No description provided for @customFieldTypeAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get customFieldTypeAmount;
+
+  /// No description provided for @customFieldTypeText.
+  ///
+  /// In en, this message translates to:
+  /// **'Text'**
+  String get customFieldTypeText;
+
+  /// No description provided for @customFieldTypeDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get customFieldTypeDate;
+
+  /// No description provided for @customFieldCreateSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom field added'**
+  String get customFieldCreateSuccess;
+
+  /// No description provided for @customFieldUpdateSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom field updated'**
+  String get customFieldUpdateSuccess;
+
+  /// No description provided for @customFieldDeleteSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom field deleted'**
+  String get customFieldDeleteSuccess;
+
+  /// No description provided for @customFieldDeleteConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Custom Field'**
+  String get customFieldDeleteConfirmTitle;
+
+  /// No description provided for @customFieldDeleteConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete \"{name}\"? Values already recorded on entries in this ledger will be removed as well. This cannot be undone.'**
+  String customFieldDeleteConfirmMessage(String name);
+
+  /// No description provided for @customFieldSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Fields'**
+  String get customFieldSectionTitle;
+
+  /// No description provided for @customFieldSectionEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No custom fields for this ledger'**
+  String get customFieldSectionEmpty;
+
+  /// No description provided for @customFieldDatePick.
+  ///
+  /// In en, this message translates to:
+  /// **'Select date'**
+  String get customFieldDatePick;
+
+  /// No description provided for @customFieldTextHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter text'**
+  String get customFieldTextHint;
+
+  /// No description provided for @customFieldAmountHint.
+  ///
+  /// In en, this message translates to:
+  /// **'0.00'**
+  String get customFieldAmountHint;
+
+  /// No description provided for @customFieldSortHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Long press to reorder'**
+  String get customFieldSortHint;
+
   /// No description provided for @tagManageTitle.
   ///
   /// In en, this message translates to:
@@ -11231,12 +10943,6 @@ abstract class AppLocalizations {
   /// **'Select budget category'**
   String get budgetCategoryHint;
 
-  /// No description provided for @budgetStartDayLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Start Day'**
-  String get budgetStartDayLabel;
-
   /// No description provided for @budgetPeriodLabel.
   ///
   /// In en, this message translates to:
@@ -11290,12 +10996,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete this attachment?'**
   String get attachmentDeleteConfirm;
-
-  /// No description provided for @attachmentCount.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} images'**
-  String attachmentCount(int count);
 
   /// No description provided for @commonDeleted.
   ///
@@ -11424,12 +11124,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Preview Attachments'**
   String get attachmentPreview;
-
-  /// No description provided for @attachmentPreviewSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} images in total'**
-  String attachmentPreviewSubtitle(int count);
 
   /// No description provided for @attachmentPreviewEmpty.
   ///
@@ -11749,12 +11443,6 @@ abstract class AppLocalizations {
   /// **'Add entry on this day'**
   String get calendarAddTransaction;
 
-  /// No description provided for @calendarAddTransactionTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Add a record on the selected day'**
-  String get calendarAddTransactionTooltip;
-
   /// No description provided for @commonUncategorized.
   ///
   /// In en, this message translates to:
@@ -11947,12 +11635,6 @@ abstract class AppLocalizations {
   /// **'For voice billing'**
   String get aiCapabilitySpeechToTextDesc;
 
-  /// No description provided for @aiProviderTestRun.
-  ///
-  /// In en, this message translates to:
-  /// **'Tap to test'**
-  String get aiProviderTestRun;
-
   /// No description provided for @aiProviderTestRunning.
   ///
   /// In en, this message translates to:
@@ -12048,12 +11730,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Apply {count} items'**
   String syncPreviewApply(int count);
-
-  /// No description provided for @syncPreviewEmpty.
-  ///
-  /// In en, this message translates to:
-  /// **'Cloud data matches local, no sync needed'**
-  String get syncPreviewEmpty;
 
   /// No description provided for @syncPreviewOldFormat.
   ///
@@ -12192,18 +11868,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Excludes attachments: transaction image attachments are not synced — export separately via Data Management'**
   String get cloudSyncGuideLimitItem4;
-
-  /// No description provided for @mineMultiDeviceSyncTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Multi-device Sync'**
-  String get mineMultiDeviceSyncTitle;
-
-  /// No description provided for @mineMultiDeviceSyncSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Auto-check cloud changes when entering page'**
-  String get mineMultiDeviceSyncSubtitle;
 
   /// No description provided for @appLockTitle.
   ///
@@ -12619,12 +12283,6 @@ abstract class AppLocalizations {
   /// **'Daily Accounts'**
   String get accountGroupTradable;
 
-  /// No description provided for @accountGroupValuation.
-  ///
-  /// In en, this message translates to:
-  /// **'Assets/Liabilities'**
-  String get accountGroupValuation;
-
   /// No description provided for @adjustmentTransaction.
   ///
   /// In en, this message translates to:
@@ -12661,12 +12319,6 @@ abstract class AppLocalizations {
   /// **'Budget'**
   String get budgetManagement;
 
-  /// No description provided for @budgetManagementDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Set monthly budget and control spending'**
-  String get budgetManagementDesc;
-
   /// No description provided for @budgetSetupHint.
   ///
   /// In en, this message translates to:
@@ -12678,18 +12330,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Set up'**
   String get budgetSetupAction;
-
-  /// No description provided for @commonCopied.
-  ///
-  /// In en, this message translates to:
-  /// **'Copied'**
-  String get commonCopied;
-
-  /// No description provided for @commonRemove.
-  ///
-  /// In en, this message translates to:
-  /// **'Remove'**
-  String get commonRemove;
 
   /// No description provided for @maintenanceOrphanCleanupTitle.
   ///
@@ -12810,18 +12450,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cleaned {ok} item(s), {fail} failed'**
   String maintenanceOrphanCleanPartial(int ok, int fail);
-
-  /// No description provided for @syncProgressTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Syncing'**
-  String get syncProgressTitle;
-
-  /// No description provided for @syncProgressCount.
-  ///
-  /// In en, this message translates to:
-  /// **'{applied} / {total}'**
-  String syncProgressCount(int applied, int total);
 
   /// No description provided for @exchangeRatePageTitle.
   ///
@@ -12949,12 +12577,6 @@ abstract class AppLocalizations {
   /// **'Conversion Details'**
   String get conversionDetailTitle;
 
-  /// No description provided for @assetConversionToggle.
-  ///
-  /// In en, this message translates to:
-  /// **'Convert to primary currency'**
-  String get assetConversionToggle;
-
   /// No description provided for @rateManualApplied.
   ///
   /// In en, this message translates to:
@@ -13026,12 +12648,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Exclude from budget'**
   String get txFlagExcludeFromBudget;
-
-  /// No description provided for @txFlagMoreOptions.
-  ///
-  /// In en, this message translates to:
-  /// **'More options'**
-  String get txFlagMoreOptions;
 
   /// No description provided for @txFlagDialogTitle.
   ///
@@ -13254,12 +12870,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No deviation in this range'**
   String get amountDeviationNoDiff;
-
-  /// No description provided for @txCrossCurrencyTransferBlocked.
-  ///
-  /// In en, this message translates to:
-  /// **'Cross-currency transfers are not supported yet. Record two entries or use same-currency accounts.'**
-  String get txCrossCurrencyTransferBlocked;
 
   /// No description provided for @ledgerBaseCurrencyLabel.
   ///
@@ -13963,18 +13573,6 @@ abstract class AppLocalizations {
   /// **'Encrypt cloud backups with a password to protect ledger privacy'**
   String get cloudSyncEncryptSubtitle;
 
-  /// No description provided for @cloudSyncEncryptEnable.
-  ///
-  /// In en, this message translates to:
-  /// **'Enable sync encryption'**
-  String get cloudSyncEncryptEnable;
-
-  /// No description provided for @cloudSyncEncryptEnableSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'New uploads will be stored as ciphertext after enabling'**
-  String get cloudSyncEncryptEnableSubtitle;
-
   /// No description provided for @cloudSyncEncryptEnabled.
   ///
   /// In en, this message translates to:
@@ -14065,12 +13663,6 @@ abstract class AppLocalizations {
   /// **'Encryption enabled'**
   String get cloudSyncEncryptEnableSuccess;
 
-  /// No description provided for @cloudSyncEncryptDisableSuccess.
-  ///
-  /// In en, this message translates to:
-  /// **'Encryption disabled; new uploads will not be encrypted'**
-  String get cloudSyncEncryptDisableSuccess;
-
   /// No description provided for @cloudSyncEncryptChangeSuccess.
   ///
   /// In en, this message translates to:
@@ -14113,18 +13705,6 @@ abstract class AppLocalizations {
   /// **'Use the same password on other devices to decrypt'**
   String get cloudSyncEncryptMultiDeviceHint;
 
-  /// No description provided for @cloudSyncEncryptLegacyHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Existing unencrypted cloud data will be automatically converted to ciphertext'**
-  String get cloudSyncEncryptLegacyHint;
-
-  /// No description provided for @cloudSyncEncryptReencrypting.
-  ///
-  /// In en, this message translates to:
-  /// **'Re-encrypting cloud data...'**
-  String get cloudSyncEncryptReencrypting;
-
   /// No description provided for @cloudSyncEncryptReencryptPartialFailed.
   ///
   /// In en, this message translates to:
@@ -14149,12 +13729,6 @@ abstract class AppLocalizations {
   /// **'Continue as first device'**
   String get cloudSyncEncryptProbeFailedContinue;
 
-  /// No description provided for @saltMismatchStatus.
-  ///
-  /// In en, this message translates to:
-  /// **'Encryption key mismatch'**
-  String get saltMismatchStatus;
-
   /// No description provided for @saltMismatchNeedPasswordHint.
   ///
   /// In en, this message translates to:
@@ -14172,12 +13746,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Re-enter Password'**
   String get saltMismatchDialogTitle;
-
-  /// No description provided for @saltMismatchRetrySuccess.
-  ///
-  /// In en, this message translates to:
-  /// **'Key activated. Retrying sync...'**
-  String get saltMismatchRetrySuccess;
 
   /// No description provided for @saltMismatchRawStorageUnavailable.
   ///
@@ -14220,12 +13788,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Key activation failed. Sync has not been restored. Please re-enter the password or check sync settings.'**
   String get startupSyncRecoveryFailedHint;
-
-  /// No description provided for @backupCardTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Cloud Backup'**
-  String get backupCardTitle;
 
   /// No description provided for @backupNowTitle.
   ///
@@ -14605,12 +14167,6 @@ abstract class AppLocalizations {
   /// **'Scan to download PiggyCount and start your ledger journey'**
   String get annualReportPosterQrCta;
 
-  /// No description provided for @commonUnitYuan.
-  ///
-  /// In en, this message translates to:
-  /// **'yuan'**
-  String get commonUnitYuan;
-
   /// No description provided for @annualReportConsecutiveDaysValue.
   ///
   /// In en, this message translates to:
@@ -14893,12 +14449,6 @@ abstract class AppLocalizations {
   /// **'Moved to recycle bin'**
   String get recycleBinMoved;
 
-  /// No description provided for @recycleBinUndo.
-  ///
-  /// In en, this message translates to:
-  /// **'Undo'**
-  String get recycleBinUndo;
-
   /// No description provided for @recycleBinRestored.
   ///
   /// In en, this message translates to:
@@ -14970,6 +14520,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Change range'**
   String get rangeReportChangeRange;
+
+  /// No description provided for @rangeReportCustomFieldTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom field breakdown'**
+  String get rangeReportCustomFieldTitle;
 
   /// No description provided for @rangeReportEmptySubtext.
   ///

@@ -284,6 +284,13 @@ class LocalLedgerRepository implements LedgerRepository {
         variables: [d.Variable<int>(toId), d.Variable<int>(fromId)],
         updates: {db.transactions},
       );
+      // v46：自定义字段定义是 ledger-scoped，账本 ID 迁移时必须跟随，
+      // 否则定义会留在旧 id 下（新 id 看不到字段，编辑表单失去录入位）。
+      await db.customUpdate(
+        'UPDATE custom_field_definitions SET ledger_id = ?1 WHERE ledger_id = ?2',
+        variables: [d.Variable<int>(toId), d.Variable<int>(fromId)],
+        updates: {db.customFieldDefinitions},
+      );
       // 再更新主表ID（SQLite 允许更新 INTEGER PRIMARY KEY 的值）
       await db.customUpdate(
         'UPDATE ledgers SET id = ?1 WHERE id = ?2',

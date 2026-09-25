@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers.dart';
 import '../../widgets/ui/ui.dart';
 import '../../data/db.dart' as schema;
+import '../../data/models/custom_field_values.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/import/csv_parser.dart';
 import '../../utils/category_utils.dart';
@@ -50,6 +53,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
     'note': null,
     'tags': null, // 标签（逗号分隔）
     'attachments': null, // 附件文件名（逗号分隔）
+    'custom_fields': null, // v46 自定义字段（{字段名: 值} JSON）
   };
   bool importing = false;
   int ok = 0, fail = 0, skipped = 0; // skipped: 跳过的非收支类型记录
@@ -459,7 +463,28 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
     final currentLedger = await repo.getLedgerById(ledgerId);
     final ledgerCurrency = currentLedger?.currency ?? 'CNY';
 
+    // v46 自定义字段：CSV 里该列是本 App 导出的 `{字段名: 值}` JSON，值必须
+    // 落到**字段定义**上（交易上的值以定义 syncId 为键）。B4(v47)：本地没有
+    // 的字段名不再直接丢弃 —— 按 CSV 值推断类型自动建定义（get-or-create），
+    // 新定义的 syncId 补进映射后值即可落库。
+    final customFieldDefs = await repo.getDefinitionsForLedger(ledgerId);
+    final customFieldNameToSyncId = <String, String>{
+      for (final f in customFieldDefs)
+        if (f.syncId != null && f.syncId!.isNotEmpty)
+          f.name.trim().toLowerCase(): f.syncId!,
+    };
+
     final dataStart = widget.hasHeader ? (headerRow + 1) : 0;
+
+    // B4(v47)：自动建字段。必须在 _buildImportDataFromCsv 之前跑 —— 映射表
+    // 是它收着的参数，补进去的 syncId 要赶在值映射之前就位。
+    await _autoCreateFieldsFromCsv(
+      rows: rows,
+      dataStart: dataStart,
+      customFieldsCol: mapping['custom_fields'],
+      nameToSyncId: customFieldNameToSyncId,
+      nextSortOrder: customFieldDefs.length,
+    );
     final total = rows.length - dataStart;
     // 初始化全局进度
     container.read(importProgressProvider.notifier).state = ImportProgress(
@@ -550,6 +575,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
         categoryMapping: categoryMapping,
         skippedTypes: skippedTypes,
         ledgerCurrency: ledgerCurrency,
+        customFieldNameToSyncId: customFieldNameToSyncId,
       );
 
       // 调用统一导入服务
@@ -720,6 +746,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
     required Map<String, int?> categoryMapping,
     required Map<String, int> skippedTypes,
     required String ledgerCurrency,
+    required Map<String, String> customFieldNameToSyncId,
   }) {
     final accounts = <ImportAccount>[];
     final categories = <ImportCategory>[];
@@ -921,6 +948,11 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
       final note = getBy('note');
       final tagsStr = getBy('tags');
       final attachmentsStr = getBy('attachments');
+      final customFieldsStr = getBy('custom_fields');
+      final customValues = _parseCsvCustomValues(
+        customFieldsStr,
+        customFieldNameToSyncId,
+      );
 
       // 类型识别
       final typeStr = typeRaw.trim().toLowerCase();
@@ -1035,6 +1067,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
         toAccountName: type == 'transfer' ? toAccountName : null,
         tagNames: tagNames,
         attachments: attachments,
+        customValues: customValues,
       ));
     }
 
@@ -1044,6 +1077,115 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
       tags: tags,
       transactions: transactions,
     );
+  }
+
+  /// B4(v47)：扫描 CSV「自定义字段」列，把本地没有定义的字段名自动建成字段
+  /// 定义，并把新定义的 syncId **原地**补进 [nameToSyncId]。
+  ///
+  /// 类型推断（导出侧 ledger_csv 保留原生 JSON 类型）：
+  /// - 全部非空值都是数值 → amount；
+  /// - 全部非空值都能解析成日期 → date；
+  /// - 其余（含整列无值）→ text —— 宁降级不猜测，不会出现"文本被强转数字"。
+  /// 建字段走 upsertDefinition（按名 get-or-create，不抛重名）；名称归一口径
+  /// （trim + lower）与 [nameToSyncId] 一致。单字段创建失败只丢该字段的值，
+  /// 不阻断导入（与周期规则导入 REC-03 同哲学）。
+  Future<void> _autoCreateFieldsFromCsv({
+    required List<List<String>> rows,
+    required int dataStart,
+    required int? customFieldsCol,
+    required Map<String, String> nameToSyncId,
+    required int nextSortOrder,
+  }) async {
+    if (customFieldsCol == null) return;
+    // 收集：字段名(小写归一) → 原始名 + 全部非空值。
+    final names = <String, ({String raw, List<String> values})>{};
+    for (int i = dataStart; i < rows.length; i++) {
+      final r = rows[i];
+      if (customFieldsCol >= r.length) continue;
+      final cell = r[customFieldsCol].trim();
+      if (cell.isEmpty) continue;
+      Object? decoded;
+      try {
+        decoded = jsonDecode(cell);
+      } catch (_) {
+        continue; // 非 JSON（用户手填列）当无值，与 _parseCsvCustomValues 同口径
+      }
+      if (decoded is! Map) continue;
+      for (final e in decoded.entries) {
+        final rawName = e.key.toString().trim();
+        if (rawName.isEmpty) continue;
+        final key = rawName.toLowerCase();
+        if (nameToSyncId.containsKey(key)) continue; // 已有定义，不重建
+        final v = (e.value?.toString() ?? '').trim();
+        final entry =
+            names.putIfAbsent(key, () => (raw: rawName, values: <String>[]));
+        if (v.isNotEmpty) entry.values.add(v);
+      }
+    }
+    if (names.isEmpty) return;
+
+    final repo = ref.read(repositoryProvider);
+    final ledgerId = ref.read(currentLedgerIdProvider);
+    var sortOrder = nextSortOrder;
+    for (final entry in names.entries) {
+      final values = entry.value.values;
+      final allNumeric =
+          values.isNotEmpty && values.every((v) => double.tryParse(v) != null);
+      final allDates = values.isNotEmpty &&
+          values.every((v) => DateTime.tryParse(v) != null);
+      final fieldType = allNumeric
+          ? CustomFieldType.amount
+          : allDates
+              ? CustomFieldType.date
+              : CustomFieldType.text;
+      try {
+        final id = await repo.upsertDefinition(
+          ledgerId: ledgerId,
+          name: entry.value.raw,
+          fieldType: fieldType,
+          sortOrder: sortOrder,
+        );
+        final def = await repo.getDefinitionById(id);
+        final syncId = def?.syncId;
+        if (syncId != null && syncId.isNotEmpty) {
+          nameToSyncId[entry.key] = syncId;
+        }
+        sortOrder++;
+      } catch (_) {
+        // 建失败 → 该字段名保持未知，值在 _parseCsvCustomValues 里照旧丢弃。
+      }
+    }
+  }
+
+  /// 解析 CSV 的「自定义字段」列（本 App 导出为 `{字段名: 值}` JSON）。
+  ///
+  /// 只映射到**本地已有定义**（按名称匹配，忽略大小写与首尾空白）：名称在
+  /// 本地找不到定义时该值被丢弃 —— 交易上的值以定义 syncId 为键，没有定义
+  /// 就没有承载它的位置（UI 也不会渲染）。
+  ///
+  /// 非 JSON（用户手工填写的列）静默当"没有值"处理，绝不阻断导入 ——
+  /// 导入流程的健壮性优先于"猜用户想干什么"。
+  Map<String, dynamic>? _parseCsvCustomValues(
+    String? raw,
+    Map<String, String> nameToSyncId,
+  ) {
+    if (raw == null || raw.isEmpty || nameToSyncId.isEmpty) return null;
+    Object? decoded;
+    try {
+      decoded = jsonDecode(raw);
+    } catch (_) {
+      return null;
+    }
+    if (decoded is! Map) return null;
+    final out = <String, dynamic>{};
+    for (final entry in decoded.entries) {
+      final syncId = nameToSyncId[entry.key.toString().trim().toLowerCase()];
+      if (syncId == null) continue;
+      final value = CustomFieldValueCodec.normalizeValue(entry.value);
+      if (value == null) continue;
+      out[syncId] = value;
+    }
+    return out.isEmpty ? null : out;
   }
 
   void _buildDistinctCategories() {

@@ -1,4 +1,5 @@
 import '../../data/db.dart';
+import '../../data/models/custom_field_values.dart';
 import '../system/logger_service.dart';
 
 /// 重复交易频率枚举
@@ -263,6 +264,31 @@ class RecurringTransactionService {
                   ? null
                   : currentRecurring.currencyCode,
             );
+
+            // v47 模板级自定义字段值:生成实例时整包注入实例的
+            // custom_values_json。经统一 codec 解码(坏 JSON 按无值处理),
+            // 注入后实例侧可自由修改,不影响模板;下一次生成仍按模板值。
+            // 值写入走 setValuesForTransaction(v46 唯一写入口),它与
+            // addTransaction 分两步:多记一条 update change,可接受。
+            // 注入前按**现存定义**过滤:跨设备删字段在途时,模板可能还带
+            // 已删定义的幽灵键(本地 deleteDefinition 会清模板,云端先到
+            // 则未必),幽灵值落库后 UI 渲染不出、只污染快照。
+            final templateValues =
+                CustomFieldValueCodec.decode(currentRecurring.templateFieldValues);
+            final validSyncIds = <String>{
+              for (final def
+                  in await repository.getDefinitionsForLedger(
+                      currentRecurring.ledgerId))
+                if (def.syncId != null && def.syncId!.isNotEmpty) def.syncId!,
+            };
+            final injectable = <String, dynamic>{
+              for (final e in templateValues.entries)
+                if (validSyncIds.contains(e.key)) e.key: e.value,
+            };
+            if (injectable.isNotEmpty) {
+              await repository.setValuesForTransaction(
+                  transactionId, injectable);
+            }
 
             // 使用流式查询获取生成的交易（取第一个）
             final transactionsWithCategory =

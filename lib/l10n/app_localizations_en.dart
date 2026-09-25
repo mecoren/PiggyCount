@@ -95,9 +95,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonKnow => 'Got it';
 
   @override
-  String get commonNo => 'No';
-
-  @override
   String get commonEmpty => 'No data';
 
   @override
@@ -412,15 +409,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeMonthExpense => 'Expense';
 
   @override
-  String get homeMonthBalance => 'Balance';
-
-  @override
   String homeBudgetSet(String amount) {
     return 'Budget $amount';
   }
-
-  @override
-  String get homeBudgetNotSet => 'Not set';
 
   @override
   String get homeNoRecords => 'No records yet';
@@ -699,9 +690,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsAll => 'All';
 
   @override
-  String get analyticsCategoryRanking => 'Category Ranking';
-
-  @override
   String get analyticsTotalAmount => 'Total';
 
   @override
@@ -717,17 +705,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get analyticsTipHeader =>
-      'Tip: Top capsule can switch Week/Month/Year/All';
-
-  @override
-  String get analyticsSwipeToSwitch => 'Swipe to switch';
-
-  @override
   String get analyticsAllYears => 'All Years';
-
-  @override
-  String get analyticsToday => 'Today';
 
   @override
   String get splashAppName => 'Piggy Accounting';
@@ -904,9 +882,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get ledgersDownloading => 'Downloading...';
-
-  @override
   String ledgersDownloadSuccess(String name) {
     return 'Ledger \"$name\" downloaded successfully';
   }
@@ -936,9 +911,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ledgersDeleteRemoteSuccess => 'Cloud ledger deleted';
 
   @override
-  String get ledgersCannotDeleteLastOne => 'Cannot delete the last ledger';
-
-  @override
   String get ledgersRestoreAllTitle => 'Batch Restore';
 
   @override
@@ -949,9 +921,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get ledgersRestoreAllReconfirmMessage =>
       'Final confirmation: restoring overwrites local ledger data with cloud content; overwritten local changes cannot be recovered. Continue?';
-
-  @override
-  String get ledgersRestoring => 'Restoring...';
 
   @override
   String get ledgersRestoreComplete => 'Restore Complete';
@@ -1008,9 +977,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get categoryEmpty => 'No categories';
-
-  @override
-  String get categoryDefault => 'Default Category';
 
   @override
   String get categoryReorderTip => 'Long press to drag and reorder categories';
@@ -1201,9 +1167,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get mineTitle => 'Mine';
-
-  @override
   String get mineCloudBackupSection => 'Cloud & Backup';
 
   @override
@@ -1216,19 +1179,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mineSupportSection => 'Support Us';
 
   @override
-  String get mineReminder => 'Reminder Settings';
-
-  @override
   String get mineImport => 'Import Data';
 
   @override
   String get mineExport => 'Export Data';
-
-  @override
-  String get mineCloud => 'Cloud Service';
-
-  @override
-  String get mineUpdate => 'Check for Updates';
 
   @override
   String get mineLanguageSettings => 'Language';
@@ -1289,10 +1243,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get headerSkinTitle => 'Skin';
-
-  @override
-  String get headerSkinSubtitle =>
-      'Follows your theme color, layered over the header';
 
   @override
   String get headerSkinNone => 'Solid';
@@ -1356,9 +1306,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get headerSkinTerrazzo => 'Terrazzo';
-
-  @override
-  String get mineAvatarTitle => 'Avatar Settings';
 
   @override
   String get mineAvatarFromGallery => 'Choose from Gallery';
@@ -1673,9 +1620,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sharePosterUnitCount => '';
 
   @override
-  String get sharePosterUnitYuan => '';
-
-  @override
   String userProfilePosterStartDate(String date) {
     return 'Bookkeeping since $date';
   }
@@ -1691,6 +1635,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get userProfilePosterCountUnit => '';
+
+  @override
+  String get userProfilePosterDailyUnit => 'per day';
 
   @override
   String get userProfilePosterLedgerCount => 'Ledgers';
@@ -2018,9 +1965,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mineReminderSettingsSubtitle => 'Set daily recording reminders';
 
   @override
-  String get minePersonalize => 'Personalization';
-
-  @override
   String get mineDisplayScale => 'Display Scale';
 
   @override
@@ -2028,18 +1972,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mineCheckUpdate => 'Check Update';
-
-  @override
-  String get mineCheckUpdateSubtitle => 'Checking for latest version';
-
-  @override
-  String get mineUpdateDownload => 'Download Update';
-
-  @override
-  String get mineFeedback => 'Feedback';
-
-  @override
-  String get mineFeedbackSubtitle => 'Report issues or suggestions';
 
   @override
   String get mineHelp => 'Help';
@@ -2260,9 +2192,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get categoryImportModeOverwriteDesc =>
       'Clear unused categories then import';
-
-  @override
-  String get categoryImportSuccess => 'Import successful';
 
   @override
   String categoryImportSuccessDetail(int imported, int skipped, int icons) {
@@ -2510,21 +2439,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appearanceThemeModeDark => 'Dark Mode';
 
   @override
-  String get appearanceDarkModePattern => 'Dark Mode Header Pattern';
-
-  @override
-  String get appearancePatternNone => 'None';
-
-  @override
-  String get appearancePatternIcons => 'Icon Tiling';
-
-  @override
-  String get appearancePatternParticles => 'Particles';
-
-  @override
-  String get appearancePatternHoneycomb => 'Honeycomb';
-
-  @override
   String get appearanceAmountFormat => 'Balance Display Format';
 
   @override
@@ -2750,9 +2664,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reminderTitle => 'Recording Reminder';
 
   @override
-  String get reminderSubtitle => 'Set daily recording reminder time';
-
-  @override
   String get reminderDailyTitle => 'Daily Recording Reminder';
 
   @override
@@ -2970,15 +2881,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mineUpdateDownloadTitle => 'Download Update';
 
   @override
-  String get cloudTest => 'Test';
-
-  @override
-  String get cloudSwitched => 'Switched';
-
-  @override
-  String get cloudSwitchFailed => 'Switch failed';
-
-  @override
   String get cloudSupabaseUrlLabel => 'Supabase URL';
 
   @override
@@ -2986,9 +2888,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cloudAnonKeyLabel => 'Anon Key';
-
-  @override
-  String get cloudSelectServiceType => 'Select Cloud Service Type';
 
   @override
   String get cloudMultiDeviceWarningTitle => 'Multi-Device Tips';
@@ -3069,16 +2968,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cloudConfigSaved => 'Configuration saved';
 
   @override
-  String get cloudTestSuccess => 'Connection test successful!';
-
-  @override
-  String get cloudTestFailed =>
-      'Connection test failed, please check if the configuration is correct.';
-
-  @override
-  String get cloudTestError => 'Test failed';
-
-  @override
   String get authLogin => 'Login';
 
   @override
@@ -3112,14 +3001,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authErrorLoginFailed => 'Login failed, please try again later.';
-
-  @override
-  String get authErrorEmailInvalid =>
-      'Email address is invalid, please check for spelling errors.';
-
-  @override
-  String get authErrorWeakPassword =>
-      'Password is too simple, please include letters and numbers, at least 6 characters.';
 
   @override
   String get importSelectCsvFile =>
@@ -3175,6 +3056,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exportCsvHeaderAttachments => 'Attachments';
+
+  @override
+  String get exportCsvHeaderCustomFields => 'Custom Fields';
 
   @override
   String get exportShareText => 'PiggyCount Export File';
@@ -3304,9 +3188,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsOverallAvg => 'Overall Avg';
 
   @override
-  String get analyticsTotalIncome => 'Total Income: ';
-
-  @override
   String get analyticsTotalExpense => 'Total Expense: ';
 
   @override
@@ -3319,16 +3200,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsTxCount => 'Records';
 
   @override
-  String analyticsAvgIncome(String avgLabel) {
-    return '$avgLabel Income: ';
-  }
-
-  @override
-  String analyticsAvgExpense(String avgLabel) {
-    return '$avgLabel Expense: ';
-  }
-
-  @override
   String get analyticsExpense => 'Expense';
 
   @override
@@ -3337,11 +3208,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String analyticsTotal(String type) {
     return 'Total $type: ';
-  }
-
-  @override
-  String analyticsAverage(String avgLabel) {
-    return '$avgLabel: ';
   }
 
   @override
@@ -3395,9 +3261,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get updateInstallingCachedApk => 'Installing cached APK';
 
   @override
-  String get updateDownloadComplete => 'Download Complete';
-
-  @override
   String get updateInstallStarted => 'Download complete, installer started';
 
   @override
@@ -3421,9 +3284,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get updateGoToGitHub => 'Go to GitHub';
-
-  @override
-  String get updateCannotOpenLink => 'Cannot open link';
 
   @override
   String get updateManualVisit =>
@@ -4234,10 +4094,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cloudSupabaseAnonKeyHintLong => 'Paste complete anon key';
 
   @override
-  String get cloudWebdavRemotePathHelp =>
-      'Remote directory path for data storage';
-
-  @override
   String get cloudWebdavRemotePathLabel => 'Remote Path';
 
   @override
@@ -4278,9 +4134,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get accountNameDuplicate =>
       'Account name already exists, please use a different name';
-
-  @override
-  String get accountTypeLabel => 'Account Type';
 
   @override
   String get accountTypeCash => 'Cash';
@@ -4341,9 +4194,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountHiddenTag => 'Hidden';
-
-  @override
-  String get accountHiddenSection => 'Hidden';
 
   @override
   String accountHiddenSectionSummary(int count, String total) {
@@ -4440,13 +4290,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Quick view of income and expenses on home screen';
 
   @override
-  String get widgetPreview => 'Widget Preview';
-
-  @override
-  String get widgetPreviewDesc =>
-      'Widget automatically displays actual data from current ledger, theme color follows app settings';
-
-  @override
   String get widgetGalleryTitle => 'Widget Gallery';
 
   @override
@@ -4541,21 +4384,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get appName => 'PiggyCount';
-
-  @override
-  String get monthSuffix => '';
-
-  @override
-  String get todayExpense => 'Today\'s Expense';
-
-  @override
-  String get todayIncome => 'Today\'s Income';
-
-  @override
-  String get monthExpense => 'Month\'s Expense';
-
-  @override
-  String get monthIncome => 'Month\'s Income';
 
   @override
   String get autoScreenshotBilling => 'Auto Screenshot Billing';
@@ -4736,9 +4564,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get aiCloudApiKeyHint => 'Enter your Zhipu AI API Key';
-
-  @override
   String get aiCloudApiKeyHintCustom => 'Enter API Key';
 
   @override
@@ -4762,9 +4587,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiOcrRecognizing => 'Recognizing bill...';
-
-  @override
-  String get aiOcrNoAmount => 'No valid amount recognized, please add manually';
 
   @override
   String get aiNotConfiguredHint =>
@@ -4839,13 +4661,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get autoBillingNotifyNoAmountBody => 'Could not recognize the amount';
 
   @override
-  String get autoBillingNotifyCreateFailedTitle => '❌ Failed to create';
-
-  @override
-  String get autoBillingNotifyCreateFailedBody =>
-      'Could not create transaction record';
-
-  @override
   String get autoBillingNotifyProcessFailedTitle => '❌ Processing failed';
 
   @override
@@ -4891,9 +4706,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get aiOcrCreateFailed => 'Failed to create bill';
-
-  @override
   String get aiTypeIncome => 'Income';
 
   @override
@@ -4910,23 +4722,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Downloads automatically compare differences for selective preview. Not real-time — avoid editing the same ledger on multiple devices simultaneously. Sync scope covers ledger data (including associated accounts, categories, and tags), excluding attachments.';
 
   @override
-  String get cloudSyncNow => 'Sync Now';
-
-  @override
-  String get cloudSyncNowHint => 'Push local changes and pull remote updates';
-
-  @override
-  String get cloudSyncInProgress => 'Syncing...';
-
-  @override
-  String cloudSyncComplete(int pushed, int pulled) {
-    return 'Sync complete: pushed $pushed, pulled $pulled';
-  }
-
-  @override
-  String get cloudAutoSyncHint => 'Auto-sync to cloud after data changes';
-
-  @override
   String get dataManagement => 'Data Management';
 
   @override
@@ -4934,10 +4729,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dataManagementPageTitle => 'Data Management';
-
-  @override
-  String get dataManagementPageSubtitle =>
-      'Manage transaction data and categories';
 
   @override
   String get dataManagementAttachmentHint =>
@@ -4952,9 +4743,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get smartBillingPageTitle => 'Smart Billing';
-
-  @override
-  String get smartBillingPageSubtitle => 'AI and automation billing features';
 
   @override
   String get smartBillingGuideHint =>
@@ -5047,10 +4835,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get automationPageTitle => 'Automation';
 
   @override
-  String get automationPageSubtitle =>
-      'Recurring transactions and reminder settings';
-
-  @override
   String get appearanceSettings => 'Personalization';
 
   @override
@@ -5058,10 +4842,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get appearanceSettingsPageTitle => 'Personalization';
-
-  @override
-  String get appearanceSettingsPageSubtitle =>
-      'Appearance, display, security and other app preferences';
 
   @override
   String get about => 'About';
@@ -5079,25 +4859,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutPageTitle => 'About';
 
   @override
-  String get aboutPageSubtitle => 'App information and help';
-
-  @override
   String get aboutPageLoadingVersion => 'Loading version...';
-
-  @override
-  String get aboutWebsite => 'Official Website';
-
-  @override
-  String get aboutGitHubRepo => 'GitHub Repository';
-
-  @override
-  String get aboutXiaohongshu => 'Xiaohongshu';
-
-  @override
-  String get aboutDouyin => 'Douyin';
-
-  @override
-  String get aboutTelegram => 'Telegram';
 
   @override
   String get aboutSupportDevelopment => 'Support Development';
@@ -5145,9 +4907,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get productPromoTestFlight => 'TestFlight beta';
-
-  @override
-  String get productPromoLearnMore => 'Pro';
 
   @override
   String get productPromoEmailLabel => 'Application Email (tap to copy)';
@@ -5916,6 +5675,89 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiAudioModelTitle => 'Audio Model';
 
   @override
+  String get customFieldManageTitle => 'Custom Fields';
+
+  @override
+  String get customFieldManageSubtitle =>
+      'Define field names and types for this ledger';
+
+  @override
+  String get customFieldManageEmpty => 'No custom fields yet';
+
+  @override
+  String get customFieldManageEmptyHint =>
+      'Add fields like \"Tax\" or \"Invoice No.\" to record extra details on every entry';
+
+  @override
+  String get customFieldAdd => 'Add Field';
+
+  @override
+  String get customFieldAddTitle => 'New Custom Field';
+
+  @override
+  String get customFieldEditTitle => 'Edit Custom Field';
+
+  @override
+  String get customFieldNameLabel => 'Field Name';
+
+  @override
+  String get customFieldNameHint => 'e.g. Tax';
+
+  @override
+  String get customFieldNameRequired => 'Field name is required';
+
+  @override
+  String get customFieldNameDuplicate =>
+      'A field with this name already exists';
+
+  @override
+  String get customFieldTypeLabel => 'Type';
+
+  @override
+  String get customFieldTypeAmount => 'Amount';
+
+  @override
+  String get customFieldTypeText => 'Text';
+
+  @override
+  String get customFieldTypeDate => 'Date';
+
+  @override
+  String get customFieldCreateSuccess => 'Custom field added';
+
+  @override
+  String get customFieldUpdateSuccess => 'Custom field updated';
+
+  @override
+  String get customFieldDeleteSuccess => 'Custom field deleted';
+
+  @override
+  String get customFieldDeleteConfirmTitle => 'Delete Custom Field';
+
+  @override
+  String customFieldDeleteConfirmMessage(String name) {
+    return 'Delete \"$name\"? Values already recorded on entries in this ledger will be removed as well. This cannot be undone.';
+  }
+
+  @override
+  String get customFieldSectionTitle => 'Custom Fields';
+
+  @override
+  String get customFieldSectionEmpty => 'No custom fields for this ledger';
+
+  @override
+  String get customFieldDatePick => 'Select date';
+
+  @override
+  String get customFieldTextHint => 'Enter text';
+
+  @override
+  String get customFieldAmountHint => '0.00';
+
+  @override
+  String get customFieldSortHint => 'Long press to reorder';
+
+  @override
   String get tagManageTitle => 'Tags';
 
   @override
@@ -6227,9 +6069,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get budgetCategoryHint => 'Select budget category';
 
   @override
-  String get budgetStartDayLabel => 'Start Day';
-
-  @override
   String get budgetPeriodLabel => 'Period';
 
   @override
@@ -6255,11 +6094,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get attachmentDeleteConfirm => 'Delete this attachment?';
-
-  @override
-  String attachmentCount(int count) {
-    return '$count images';
-  }
 
   @override
   String get commonDeleted => 'Deleted';
@@ -6341,11 +6175,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get attachmentPreview => 'Preview Attachments';
-
-  @override
-  String attachmentPreviewSubtitle(int count) {
-    return '$count images in total';
-  }
 
   @override
   String get attachmentPreviewEmpty => 'No attachments';
@@ -6518,10 +6347,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calendarAddTransaction => 'Add entry on this day';
 
   @override
-  String get calendarAddTransactionTooltip =>
-      'Add a record on the selected day';
-
-  @override
   String get commonUncategorized => 'Uncategorized';
 
   @override
@@ -6622,9 +6447,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiCapabilitySpeechToTextDesc => 'For voice billing';
 
   @override
-  String get aiProviderTestRun => 'Tap to test';
-
-  @override
   String get aiProviderTestRunning => 'Testing...';
 
   @override
@@ -6679,9 +6501,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String syncPreviewApply(int count) {
     return 'Apply $count items';
   }
-
-  @override
-  String get syncPreviewEmpty => 'Cloud data matches local, no sync needed';
 
   @override
   String get syncPreviewOldFormat => 'Old cloud format, full replace required';
@@ -6768,13 +6587,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get cloudSyncGuideLimitItem4 =>
       'Excludes attachments: transaction image attachments are not synced — export separately via Data Management';
-
-  @override
-  String get mineMultiDeviceSyncTitle => 'Multi-device Sync';
-
-  @override
-  String get mineMultiDeviceSyncSubtitle =>
-      'Auto-check cloud changes when entering page';
 
   @override
   String get appLockTitle => 'App Lock';
@@ -6991,9 +6803,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountGroupTradable => 'Daily Accounts';
 
   @override
-  String get accountGroupValuation => 'Assets/Liabilities';
-
-  @override
   String get adjustmentTransaction => 'Valuation Adjustment';
 
   @override
@@ -7016,19 +6825,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get budgetManagement => 'Budget';
 
   @override
-  String get budgetManagementDesc => 'Set monthly budget and control spending';
-
-  @override
   String get budgetSetupHint => 'Set a budget to control monthly spending';
 
   @override
   String get budgetSetupAction => 'Set up';
-
-  @override
-  String get commonCopied => 'Copied';
-
-  @override
-  String get commonRemove => 'Remove';
 
   @override
   String get maintenanceOrphanCleanupTitle => 'Data Cleanup';
@@ -7108,14 +6908,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get syncProgressTitle => 'Syncing';
-
-  @override
-  String syncProgressCount(int applied, int total) {
-    return '$applied / $total';
-  }
-
-  @override
   String get exchangeRatePageTitle => 'Exchange Rates';
 
   @override
@@ -7192,9 +6984,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get conversionDetailTitle => 'Conversion Details';
 
   @override
-  String get assetConversionToggle => 'Convert to primary currency';
-
-  @override
   String rateManualApplied(int count) {
     return 'Applied $count manual rates';
   }
@@ -7232,9 +7021,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get txFlagExcludeFromBudget => 'Exclude from budget';
-
-  @override
-  String get txFlagMoreOptions => 'More options';
 
   @override
   String get txFlagDialogTitle => 'Transaction flags';
@@ -7358,10 +7144,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get amountDeviationNoDiff => 'No deviation in this range';
-
-  @override
-  String get txCrossCurrencyTransferBlocked =>
-      'Cross-currency transfers are not supported yet. Record two entries or use same-currency accounts.';
 
   @override
   String get ledgerBaseCurrencyLabel => 'Primary currency';
@@ -7724,13 +7506,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Encrypt cloud backups with a password to protect ledger privacy';
 
   @override
-  String get cloudSyncEncryptEnable => 'Enable sync encryption';
-
-  @override
-  String get cloudSyncEncryptEnableSubtitle =>
-      'New uploads will be stored as ciphertext after enabling';
-
-  @override
   String get cloudSyncEncryptEnabled => 'Enabled';
 
   @override
@@ -7777,10 +7552,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cloudSyncEncryptEnableSuccess => 'Encryption enabled';
 
   @override
-  String get cloudSyncEncryptDisableSuccess =>
-      'Encryption disabled; new uploads will not be encrypted';
-
-  @override
   String get cloudSyncEncryptChangeSuccess => 'Password changed';
 
   @override
@@ -7806,13 +7577,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Use the same password on other devices to decrypt';
 
   @override
-  String get cloudSyncEncryptLegacyHint =>
-      'Existing unencrypted cloud data will be automatically converted to ciphertext';
-
-  @override
-  String get cloudSyncEncryptReencrypting => 'Re-encrypting cloud data...';
-
-  @override
   String cloudSyncEncryptReencryptPartialFailed(int count) {
     return 'Encryption enabled, but $count cloud file(s) failed to re-encrypt. They will be automatically retried on the next sync.';
   }
@@ -7828,9 +7592,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cloudSyncEncryptProbeFailedContinue => 'Continue as first device';
 
   @override
-  String get saltMismatchStatus => 'Encryption key mismatch';
-
-  @override
   String get saltMismatchNeedPasswordHint =>
       'Cloud backup key doesn\'t match local. Tap to re-enter password.';
 
@@ -7840,9 +7601,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get saltMismatchDialogTitle => 'Re-enter Password';
-
-  @override
-  String get saltMismatchRetrySuccess => 'Key activated. Retrying sync...';
 
   @override
   String get saltMismatchRawStorageUnavailable =>
@@ -7869,9 +7627,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get startupSyncRecoveryFailedHint =>
       'Key activation failed. Sync has not been restored. Please re-enter the password or check sync settings.';
-
-  @override
-  String get backupCardTitle => 'Cloud Backup';
 
   @override
   String get backupNowTitle => 'Back Up Now';
@@ -8099,9 +7854,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Scan to download PiggyCount and start your ledger journey';
 
   @override
-  String get commonUnitYuan => 'yuan';
-
-  @override
   String annualReportConsecutiveDaysValue(int count) {
     return '$count days';
   }
@@ -8281,9 +8033,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recycleBinMoved => 'Moved to recycle bin';
 
   @override
-  String get recycleBinUndo => 'Undo';
-
-  @override
   String get recycleBinRestored => 'Restored';
 
   @override
@@ -8323,6 +8072,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get rangeReportChangeRange => 'Change range';
+
+  @override
+  String get rangeReportCustomFieldTitle => 'Custom field breakdown';
 
   @override
   String get rangeReportEmptySubtext =>

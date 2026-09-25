@@ -7,6 +7,7 @@ import 'statistics_repository.dart';
 import 'recurring_transaction_repository.dart';
 import 'ai_repository.dart';
 import 'tag_repository.dart';
+import 'custom_field_repository.dart';
 import 'budget_repository.dart';
 import 'attachment_repository.dart';
 import 'exchange_rate_repository.dart';
@@ -29,6 +30,7 @@ abstract class BaseRepository
         RecurringTransactionRepository,
         AIRepository,
         TagRepository,
+        CustomFieldRepository,
         BudgetRepository,
         AttachmentRepository,
         ExchangeRateRepository {

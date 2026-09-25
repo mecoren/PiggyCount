@@ -1,4 +1,5 @@
 import '../data/db.dart';
+import '../data/models/custom_field_values.dart';
 import '../data/repositories/base_repository.dart';
 import '../data/repositories/transaction_repository.dart'
     show TransactionUpdateBySyncIdData, BatchAttachmentData;
@@ -359,6 +360,16 @@ class SyncDiffService {
         (local.originalAmount ?? 0) != cloud.originalAmount) {
       diffs.add('原始金额: ${local.originalAmount} → ${cloud.originalAmount}');
     }
+    // v46 自定义字段值：仅当云端显式携带该键时才比较（旧快照缺键 → null，
+    // 不触发 modified，避免"本地已填值 vs 云端无此键"被判成差异并被覆写）。
+    // 用 codec 的规范化比较（键排序 + 数值表示统一），否则键序 / int↔double
+    // 表示抖动会产生假差异，把每笔交易都判成 modified。
+    if (cloud.customValues != null &&
+        !CustomFieldValueCodec.equals(
+            CustomFieldValueCodec.decode(local.customValuesJson),
+            cloud.customValues)) {
+      diffs.add('自定义字段值变更');
+    }
 
     // 比较共享账本 override（仅当 JSON 显式携带时；null==null 不触发，
     // 避免老 JSON 因缺键触发全量 modified）。不比较则 Editor 只改 override
@@ -451,6 +462,13 @@ class SyncDiffService {
       defaultCurrency: importData.currency ?? 'CNY',
     );
     final tagMaps = await dataImportService.importTags(repo, importData.tags);
+    // v46 自定义字段定义：必须先于交易落库。交易值以 fieldSyncId 为键，
+    // 定义缺失时这些值在编辑表单里没有渲染位（数据仍在，只是看不见）。
+    await dataImportService.importCustomFields(
+      repo,
+      ledgerId,
+      importData.customFields,
+    );
 
     // 合并范围对齐指纹范围(sync_fingerprint 覆盖 8 类实体):此前只合并
     // 账户/分类/标签,预算/周期规则/手动汇率/月起始日的云端差异永远不落
@@ -655,6 +673,9 @@ class SyncDiffService {
           excludeFromBudget: cloud.excludeFromBudget,
           // v45 原始金额：云端缺键 → null → 本地保持原值（见 Data 类注释）
           originalAmount: cloud.originalAmount,
+          // v46 自定义字段值：云端缺键 → null → 本地保持原值；非 null
+          // （含空 map = 云端显式清空）才写入。
+          customValues: cloud.customValues,
           // 共享账本 override：modified 合并必须带上，否则 Editor 视角记的
           // tx 跨设备后 override 丢失、回退到 categoryId int（可能为 null）
           categorySyncIdOverride: cloud.categorySyncIdOverride,

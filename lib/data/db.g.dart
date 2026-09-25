@@ -2112,6 +2112,12 @@ class $TransactionsTable extends Transactions
   late final GeneratedColumn<double> originalAmount = GeneratedColumn<double>(
       'original_amount', aliasedName, true,
       type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _customValuesJsonMeta =
+      const VerificationMeta('customValuesJson');
+  @override
+  late final GeneratedColumn<String> customValuesJson = GeneratedColumn<String>(
+      'custom_values_json', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -2136,7 +2142,8 @@ class $TransactionsTable extends Transactions
         updatedAt,
         currencyCode,
         nativeAmount,
-        originalAmount
+        originalAmount,
+        customValuesJson
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2276,6 +2283,12 @@ class $TransactionsTable extends Transactions
           originalAmount.isAcceptableOrUnknown(
               data['original_amount']!, _originalAmountMeta));
     }
+    if (data.containsKey('custom_values_json')) {
+      context.handle(
+          _customValuesJsonMeta,
+          customValuesJson.isAcceptableOrUnknown(
+              data['custom_values_json']!, _customValuesJsonMeta));
+    }
     return context;
   }
 
@@ -2334,6 +2347,8 @@ class $TransactionsTable extends Transactions
           .read(DriftSqlType.double, data['${effectivePrefix}native_amount']),
       originalAmount: attachedDatabase.typeMapping
           .read(DriftSqlType.double, data['${effectivePrefix}original_amount']),
+      customValuesJson: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}custom_values_json']),
     );
   }
 
@@ -2389,6 +2404,15 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   /// 且历史明细的统计口径零变化。读取/统计统一走
   /// `COALESCE(original_amount, amount)`,单一口径避免散落兜底。
   final double? originalAmount;
+
+  /// v46: 自定义字段值,{fieldSyncId: value} 的 JSON 对象。
+  /// - 键是 [CustomFieldDefinitions.syncId](而非本地 int id),天然适配
+  ///   共享账本 —— Editor 写入 Owner 定义的字段值无需 override 表。
+  /// - 值为 JSON 原生类型:金额存 number、日期存 ISO-8601 字符串、文本存原文。
+  /// - NULL = 该笔无任何自定义字段值(未填写/全部清空),存量行保持 NULL,
+  ///   导出时**不写该键**,与 v45 original_amount 同款防漂移范式。
+  /// - 仅在编辑表单读写,不参与列表/统计 SQL,所以不必可查询、无须索引。
+  final String? customValuesJson;
   const Transaction(
       {required this.id,
       required this.ledgerId,
@@ -2412,7 +2436,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       this.updatedAt,
       this.currencyCode,
       this.nativeAmount,
-      this.originalAmount});
+      this.originalAmount,
+      this.customValuesJson});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -2473,6 +2498,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     if (!nullToAbsent || originalAmount != null) {
       map['original_amount'] = Variable<double>(originalAmount);
     }
+    if (!nullToAbsent || customValuesJson != null) {
+      map['custom_values_json'] = Variable<String>(customValuesJson);
+    }
     return map;
   }
 
@@ -2530,6 +2558,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       originalAmount: originalAmount == null && nullToAbsent
           ? const Value.absent()
           : Value(originalAmount),
+      customValuesJson: customValuesJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(customValuesJson),
     );
   }
 
@@ -2565,6 +2596,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       currencyCode: serializer.fromJson<String?>(json['currencyCode']),
       nativeAmount: serializer.fromJson<double?>(json['nativeAmount']),
       originalAmount: serializer.fromJson<double?>(json['originalAmount']),
+      customValuesJson: serializer.fromJson<String?>(json['customValuesJson']),
     );
   }
   @override
@@ -2597,6 +2629,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'currencyCode': serializer.toJson<String?>(currencyCode),
       'nativeAmount': serializer.toJson<double?>(nativeAmount),
       'originalAmount': serializer.toJson<double?>(originalAmount),
+      'customValuesJson': serializer.toJson<String?>(customValuesJson),
     };
   }
 
@@ -2623,7 +2656,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           Value<DateTime?> updatedAt = const Value.absent(),
           Value<String?> currencyCode = const Value.absent(),
           Value<double?> nativeAmount = const Value.absent(),
-          Value<double?> originalAmount = const Value.absent()}) =>
+          Value<double?> originalAmount = const Value.absent(),
+          Value<String?> customValuesJson = const Value.absent()}) =>
       Transaction(
         id: id ?? this.id,
         ledgerId: ledgerId ?? this.ledgerId,
@@ -2663,6 +2697,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
             nativeAmount.present ? nativeAmount.value : this.nativeAmount,
         originalAmount:
             originalAmount.present ? originalAmount.value : this.originalAmount,
+        customValuesJson: customValuesJson.present
+            ? customValuesJson.value
+            : this.customValuesJson,
       );
   Transaction copyWithCompanion(TransactionsCompanion data) {
     return Transaction(
@@ -2715,6 +2752,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       originalAmount: data.originalAmount.present
           ? data.originalAmount.value
           : this.originalAmount,
+      customValuesJson: data.customValuesJson.present
+          ? data.customValuesJson.value
+          : this.customValuesJson,
     );
   }
 
@@ -2743,7 +2783,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('updatedAt: $updatedAt, ')
           ..write('currencyCode: $currencyCode, ')
           ..write('nativeAmount: $nativeAmount, ')
-          ..write('originalAmount: $originalAmount')
+          ..write('originalAmount: $originalAmount, ')
+          ..write('customValuesJson: $customValuesJson')
           ..write(')'))
         .toString();
   }
@@ -2772,7 +2813,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         updatedAt,
         currencyCode,
         nativeAmount,
-        originalAmount
+        originalAmount,
+        customValuesJson
       ]);
   @override
   bool operator ==(Object other) =>
@@ -2800,7 +2842,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.updatedAt == this.updatedAt &&
           other.currencyCode == this.currencyCode &&
           other.nativeAmount == this.nativeAmount &&
-          other.originalAmount == this.originalAmount);
+          other.originalAmount == this.originalAmount &&
+          other.customValuesJson == this.customValuesJson);
 }
 
 class TransactionsCompanion extends UpdateCompanion<Transaction> {
@@ -2827,6 +2870,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<String?> currencyCode;
   final Value<double?> nativeAmount;
   final Value<double?> originalAmount;
+  final Value<String?> customValuesJson;
   const TransactionsCompanion({
     this.id = const Value.absent(),
     this.ledgerId = const Value.absent(),
@@ -2851,6 +2895,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.currencyCode = const Value.absent(),
     this.nativeAmount = const Value.absent(),
     this.originalAmount = const Value.absent(),
+    this.customValuesJson = const Value.absent(),
   });
   TransactionsCompanion.insert({
     this.id = const Value.absent(),
@@ -2876,6 +2921,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.currencyCode = const Value.absent(),
     this.nativeAmount = const Value.absent(),
     this.originalAmount = const Value.absent(),
+    this.customValuesJson = const Value.absent(),
   })  : ledgerId = Value(ledgerId),
         type = Value(type),
         amount = Value(amount);
@@ -2903,6 +2949,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<String>? currencyCode,
     Expression<double>? nativeAmount,
     Expression<double>? originalAmount,
+    Expression<String>? customValuesJson,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2933,6 +2980,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (currencyCode != null) 'currency_code': currencyCode,
       if (nativeAmount != null) 'native_amount': nativeAmount,
       if (originalAmount != null) 'original_amount': originalAmount,
+      if (customValuesJson != null) 'custom_values_json': customValuesJson,
     });
   }
 
@@ -2959,7 +3007,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       Value<DateTime?>? updatedAt,
       Value<String?>? currencyCode,
       Value<double?>? nativeAmount,
-      Value<double?>? originalAmount}) {
+      Value<double?>? originalAmount,
+      Value<String?>? customValuesJson}) {
     return TransactionsCompanion(
       id: id ?? this.id,
       ledgerId: ledgerId ?? this.ledgerId,
@@ -2987,6 +3036,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       currencyCode: currencyCode ?? this.currencyCode,
       nativeAmount: nativeAmount ?? this.nativeAmount,
       originalAmount: originalAmount ?? this.originalAmount,
+      customValuesJson: customValuesJson ?? this.customValuesJson,
     );
   }
 
@@ -3066,6 +3116,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (originalAmount.present) {
       map['original_amount'] = Variable<double>(originalAmount.value);
     }
+    if (customValuesJson.present) {
+      map['custom_values_json'] = Variable<String>(customValuesJson.value);
+    }
     return map;
   }
 
@@ -3094,7 +3147,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('updatedAt: $updatedAt, ')
           ..write('currencyCode: $currencyCode, ')
           ..write('nativeAmount: $nativeAmount, ')
-          ..write('originalAmount: $originalAmount')
+          ..write('originalAmount: $originalAmount, ')
+          ..write('customValuesJson: $customValuesJson')
           ..write(')'))
         .toString();
   }
@@ -3225,6 +3279,12 @@ class $RecurringTransactionsTable extends RecurringTransactions
   late final GeneratedColumn<String> currencyCode = GeneratedColumn<String>(
       'currency_code', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _templateFieldValuesMeta =
+      const VerificationMeta('templateFieldValues');
+  @override
+  late final GeneratedColumn<String> templateFieldValues =
+      GeneratedColumn<String>('template_field_values', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -3262,6 +3322,7 @@ class $RecurringTransactionsTable extends RecurringTransactions
         lastGeneratedDate,
         enabled,
         currencyCode,
+        templateFieldValues,
         createdAt,
         updatedAt
       ];
@@ -3375,6 +3436,12 @@ class $RecurringTransactionsTable extends RecurringTransactions
           currencyCode.isAcceptableOrUnknown(
               data['currency_code']!, _currencyCodeMeta));
     }
+    if (data.containsKey('template_field_values')) {
+      context.handle(
+          _templateFieldValuesMeta,
+          templateFieldValues.isAcceptableOrUnknown(
+              data['template_field_values']!, _templateFieldValuesMeta));
+    }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -3430,6 +3497,8 @@ class $RecurringTransactionsTable extends RecurringTransactions
           .read(DriftSqlType.bool, data['${effectivePrefix}enabled'])!,
       currencyCode: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}currency_code']),
+      templateFieldValues: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}template_field_values']),
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
@@ -3472,6 +3541,16 @@ class RecurringTransaction extends DataClass
   /// NULL = 账本本位币(存量语义);挂了账户时生成仍以账户币种为准(账户内不混币)。
   /// 汇率不锁在模板上 —— 每次生成按当日有效汇率折算 nativeAmount。
   final String? currencyCode;
+
+  /// v47: 周期账单模板级自定义字段值,{fieldSyncId: value} 的 JSON 对象。
+  /// - 生成实例时整包注入 `transactions.custom_values_json`(实例侧再改不影响
+  ///   模板,下一次生成仍按模板值)。
+  /// - 编解码必须走 CustomFieldValueCodec(见 models/custom_field_values.dart,
+  ///   键序/数值表示统一),与交易值同款。
+  /// - NULL = 模板未配置任何字段值;存量行保持 NULL,导出**不写该键**(v45/v46
+  ///   同款防漂移范式:回填 `{}` 会让"旧快照无此键"与"显式空对象"指纹不一致)。
+  /// - 仅编辑表单与生成器读写,无须索引。
+  final String? templateFieldValues;
   final DateTime createdAt;
   final DateTime updatedAt;
   const RecurringTransaction(
@@ -3494,6 +3573,7 @@ class RecurringTransaction extends DataClass
       this.lastGeneratedDate,
       required this.enabled,
       this.currencyCode,
+      this.templateFieldValues,
       required this.createdAt,
       required this.updatedAt});
   @override
@@ -3540,6 +3620,9 @@ class RecurringTransaction extends DataClass
     if (!nullToAbsent || currencyCode != null) {
       map['currency_code'] = Variable<String>(currencyCode);
     }
+    if (!nullToAbsent || templateFieldValues != null) {
+      map['template_field_values'] = Variable<String>(templateFieldValues);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -3585,6 +3668,9 @@ class RecurringTransaction extends DataClass
       currencyCode: currencyCode == null && nullToAbsent
           ? const Value.absent()
           : Value(currencyCode),
+      templateFieldValues: templateFieldValues == null && nullToAbsent
+          ? const Value.absent()
+          : Value(templateFieldValues),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -3614,6 +3700,8 @@ class RecurringTransaction extends DataClass
           serializer.fromJson<DateTime?>(json['lastGeneratedDate']),
       enabled: serializer.fromJson<bool>(json['enabled']),
       currencyCode: serializer.fromJson<String?>(json['currencyCode']),
+      templateFieldValues:
+          serializer.fromJson<String?>(json['templateFieldValues']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -3641,6 +3729,7 @@ class RecurringTransaction extends DataClass
       'lastGeneratedDate': serializer.toJson<DateTime?>(lastGeneratedDate),
       'enabled': serializer.toJson<bool>(enabled),
       'currencyCode': serializer.toJson<String?>(currencyCode),
+      'templateFieldValues': serializer.toJson<String?>(templateFieldValues),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -3666,6 +3755,7 @@ class RecurringTransaction extends DataClass
           Value<DateTime?> lastGeneratedDate = const Value.absent(),
           bool? enabled,
           Value<String?> currencyCode = const Value.absent(),
+          Value<String?> templateFieldValues = const Value.absent(),
           DateTime? createdAt,
           DateTime? updatedAt}) =>
       RecurringTransaction(
@@ -3691,6 +3781,9 @@ class RecurringTransaction extends DataClass
         enabled: enabled ?? this.enabled,
         currencyCode:
             currencyCode.present ? currencyCode.value : this.currencyCode,
+        templateFieldValues: templateFieldValues.present
+            ? templateFieldValues.value
+            : this.templateFieldValues,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );
@@ -3723,6 +3816,9 @@ class RecurringTransaction extends DataClass
       currencyCode: data.currencyCode.present
           ? data.currencyCode.value
           : this.currencyCode,
+      templateFieldValues: data.templateFieldValues.present
+          ? data.templateFieldValues.value
+          : this.templateFieldValues,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -3750,6 +3846,7 @@ class RecurringTransaction extends DataClass
           ..write('lastGeneratedDate: $lastGeneratedDate, ')
           ..write('enabled: $enabled, ')
           ..write('currencyCode: $currencyCode, ')
+          ..write('templateFieldValues: $templateFieldValues, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -3777,6 +3874,7 @@ class RecurringTransaction extends DataClass
         lastGeneratedDate,
         enabled,
         currencyCode,
+        templateFieldValues,
         createdAt,
         updatedAt
       ]);
@@ -3803,6 +3901,7 @@ class RecurringTransaction extends DataClass
           other.lastGeneratedDate == this.lastGeneratedDate &&
           other.enabled == this.enabled &&
           other.currencyCode == this.currencyCode &&
+          other.templateFieldValues == this.templateFieldValues &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -3828,6 +3927,7 @@ class RecurringTransactionsCompanion
   final Value<DateTime?> lastGeneratedDate;
   final Value<bool> enabled;
   final Value<String?> currencyCode;
+  final Value<String?> templateFieldValues;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   const RecurringTransactionsCompanion({
@@ -3850,6 +3950,7 @@ class RecurringTransactionsCompanion
     this.lastGeneratedDate = const Value.absent(),
     this.enabled = const Value.absent(),
     this.currencyCode = const Value.absent(),
+    this.templateFieldValues = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
@@ -3873,6 +3974,7 @@ class RecurringTransactionsCompanion
     this.lastGeneratedDate = const Value.absent(),
     this.enabled = const Value.absent(),
     this.currencyCode = const Value.absent(),
+    this.templateFieldValues = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   })  : ledgerId = Value(ledgerId),
@@ -3900,6 +4002,7 @@ class RecurringTransactionsCompanion
     Expression<DateTime>? lastGeneratedDate,
     Expression<bool>? enabled,
     Expression<String>? currencyCode,
+    Expression<String>? templateFieldValues,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
   }) {
@@ -3923,6 +4026,8 @@ class RecurringTransactionsCompanion
       if (lastGeneratedDate != null) 'last_generated_date': lastGeneratedDate,
       if (enabled != null) 'enabled': enabled,
       if (currencyCode != null) 'currency_code': currencyCode,
+      if (templateFieldValues != null)
+        'template_field_values': templateFieldValues,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
@@ -3948,6 +4053,7 @@ class RecurringTransactionsCompanion
       Value<DateTime?>? lastGeneratedDate,
       Value<bool>? enabled,
       Value<String?>? currencyCode,
+      Value<String?>? templateFieldValues,
       Value<DateTime>? createdAt,
       Value<DateTime>? updatedAt}) {
     return RecurringTransactionsCompanion(
@@ -3970,6 +4076,7 @@ class RecurringTransactionsCompanion
       lastGeneratedDate: lastGeneratedDate ?? this.lastGeneratedDate,
       enabled: enabled ?? this.enabled,
       currencyCode: currencyCode ?? this.currencyCode,
+      templateFieldValues: templateFieldValues ?? this.templateFieldValues,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -4035,6 +4142,10 @@ class RecurringTransactionsCompanion
     if (currencyCode.present) {
       map['currency_code'] = Variable<String>(currencyCode.value);
     }
+    if (templateFieldValues.present) {
+      map['template_field_values'] =
+          Variable<String>(templateFieldValues.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -4066,6 +4177,7 @@ class RecurringTransactionsCompanion
           ..write('lastGeneratedDate: $lastGeneratedDate, ')
           ..write('enabled: $enabled, ')
           ..write('currencyCode: $currencyCode, ')
+          ..write('templateFieldValues: $templateFieldValues, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -5163,6 +5275,431 @@ class TagsCompanion extends UpdateCompanion<Tag> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('color: $color, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('syncId: $syncId, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CustomFieldDefinitionsTable extends CustomFieldDefinitions
+    with TableInfo<$CustomFieldDefinitionsTable, CustomFieldDefinition> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CustomFieldDefinitionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _ledgerIdMeta =
+      const VerificationMeta('ledgerId');
+  @override
+  late final GeneratedColumn<int> ledgerId = GeneratedColumn<int>(
+      'ledger_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _fieldTypeMeta =
+      const VerificationMeta('fieldType');
+  @override
+  late final GeneratedColumn<String> fieldType = GeneratedColumn<String>(
+      'field_type', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _sortOrderMeta =
+      const VerificationMeta('sortOrder');
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+      'sort_order', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  static const VerificationMeta _syncIdMeta = const VerificationMeta('syncId');
+  @override
+  late final GeneratedColumn<String> syncId = GeneratedColumn<String>(
+      'sync_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [id, ledgerId, name, fieldType, sortOrder, createdAt, syncId, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'custom_field_definitions';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<CustomFieldDefinition> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('ledger_id')) {
+      context.handle(_ledgerIdMeta,
+          ledgerId.isAcceptableOrUnknown(data['ledger_id']!, _ledgerIdMeta));
+    } else if (isInserting) {
+      context.missing(_ledgerIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('field_type')) {
+      context.handle(_fieldTypeMeta,
+          fieldType.isAcceptableOrUnknown(data['field_type']!, _fieldTypeMeta));
+    } else if (isInserting) {
+      context.missing(_fieldTypeMeta);
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(_sortOrderMeta,
+          sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    }
+    if (data.containsKey('sync_id')) {
+      context.handle(_syncIdMeta,
+          syncId.isAcceptableOrUnknown(data['sync_id']!, _syncIdMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CustomFieldDefinition map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CustomFieldDefinition(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      ledgerId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}ledger_id'])!,
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      fieldType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}field_type'])!,
+      sortOrder: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}sort_order'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      syncId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}sync_id']),
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at']),
+    );
+  }
+
+  @override
+  $CustomFieldDefinitionsTable createAlias(String alias) {
+    return $CustomFieldDefinitionsTable(attachedDatabase, alias);
+  }
+}
+
+class CustomFieldDefinition extends DataClass
+    implements Insertable<CustomFieldDefinition> {
+  final int id;
+
+  /// 所属账本:字段定义按账本隔离,账本 A 的字段不会出现在账本 B。
+  final int ledgerId;
+
+  /// 用户自定义字段名(同账本内不重名,由应用层校验)。
+  final String name;
+
+  /// amount / text / date。字符串存储以便后续扩展新类型。
+  final String fieldType;
+
+  /// 展示与录入门槛顺序,数字越小越靠前(与 Categories/Tags.sortOrder 同义)。
+  final int sortOrder;
+  final DateTime createdAt;
+
+  /// 跨设备同步唯一标识 (UUID)。字段值的 JSON 键就是本列。
+  final String? syncId;
+
+  /// 审计 T1（v40）：见 Ledgers.updatedAt 注释。触发器
+  /// trg_custom_field_definitions_touch_updated_at 自动维护。
+  final DateTime? updatedAt;
+  const CustomFieldDefinition(
+      {required this.id,
+      required this.ledgerId,
+      required this.name,
+      required this.fieldType,
+      required this.sortOrder,
+      required this.createdAt,
+      this.syncId,
+      this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['ledger_id'] = Variable<int>(ledgerId);
+    map['name'] = Variable<String>(name);
+    map['field_type'] = Variable<String>(fieldType);
+    map['sort_order'] = Variable<int>(sortOrder);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || syncId != null) {
+      map['sync_id'] = Variable<String>(syncId);
+    }
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<DateTime>(updatedAt);
+    }
+    return map;
+  }
+
+  CustomFieldDefinitionsCompanion toCompanion(bool nullToAbsent) {
+    return CustomFieldDefinitionsCompanion(
+      id: Value(id),
+      ledgerId: Value(ledgerId),
+      name: Value(name),
+      fieldType: Value(fieldType),
+      sortOrder: Value(sortOrder),
+      createdAt: Value(createdAt),
+      syncId:
+          syncId == null && nullToAbsent ? const Value.absent() : Value(syncId),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
+    );
+  }
+
+  factory CustomFieldDefinition.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CustomFieldDefinition(
+      id: serializer.fromJson<int>(json['id']),
+      ledgerId: serializer.fromJson<int>(json['ledgerId']),
+      name: serializer.fromJson<String>(json['name']),
+      fieldType: serializer.fromJson<String>(json['fieldType']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      syncId: serializer.fromJson<String?>(json['syncId']),
+      updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'ledgerId': serializer.toJson<int>(ledgerId),
+      'name': serializer.toJson<String>(name),
+      'fieldType': serializer.toJson<String>(fieldType),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'syncId': serializer.toJson<String?>(syncId),
+      'updatedAt': serializer.toJson<DateTime?>(updatedAt),
+    };
+  }
+
+  CustomFieldDefinition copyWith(
+          {int? id,
+          int? ledgerId,
+          String? name,
+          String? fieldType,
+          int? sortOrder,
+          DateTime? createdAt,
+          Value<String?> syncId = const Value.absent(),
+          Value<DateTime?> updatedAt = const Value.absent()}) =>
+      CustomFieldDefinition(
+        id: id ?? this.id,
+        ledgerId: ledgerId ?? this.ledgerId,
+        name: name ?? this.name,
+        fieldType: fieldType ?? this.fieldType,
+        sortOrder: sortOrder ?? this.sortOrder,
+        createdAt: createdAt ?? this.createdAt,
+        syncId: syncId.present ? syncId.value : this.syncId,
+        updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+      );
+  CustomFieldDefinition copyWithCompanion(
+      CustomFieldDefinitionsCompanion data) {
+    return CustomFieldDefinition(
+      id: data.id.present ? data.id.value : this.id,
+      ledgerId: data.ledgerId.present ? data.ledgerId.value : this.ledgerId,
+      name: data.name.present ? data.name.value : this.name,
+      fieldType: data.fieldType.present ? data.fieldType.value : this.fieldType,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      syncId: data.syncId.present ? data.syncId.value : this.syncId,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CustomFieldDefinition(')
+          ..write('id: $id, ')
+          ..write('ledgerId: $ledgerId, ')
+          ..write('name: $name, ')
+          ..write('fieldType: $fieldType, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('syncId: $syncId, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id, ledgerId, name, fieldType, sortOrder, createdAt, syncId, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CustomFieldDefinition &&
+          other.id == this.id &&
+          other.ledgerId == this.ledgerId &&
+          other.name == this.name &&
+          other.fieldType == this.fieldType &&
+          other.sortOrder == this.sortOrder &&
+          other.createdAt == this.createdAt &&
+          other.syncId == this.syncId &&
+          other.updatedAt == this.updatedAt);
+}
+
+class CustomFieldDefinitionsCompanion
+    extends UpdateCompanion<CustomFieldDefinition> {
+  final Value<int> id;
+  final Value<int> ledgerId;
+  final Value<String> name;
+  final Value<String> fieldType;
+  final Value<int> sortOrder;
+  final Value<DateTime> createdAt;
+  final Value<String?> syncId;
+  final Value<DateTime?> updatedAt;
+  const CustomFieldDefinitionsCompanion({
+    this.id = const Value.absent(),
+    this.ledgerId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.fieldType = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.syncId = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  CustomFieldDefinitionsCompanion.insert({
+    this.id = const Value.absent(),
+    required int ledgerId,
+    required String name,
+    required String fieldType,
+    this.sortOrder = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.syncId = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  })  : ledgerId = Value(ledgerId),
+        name = Value(name),
+        fieldType = Value(fieldType);
+  static Insertable<CustomFieldDefinition> custom({
+    Expression<int>? id,
+    Expression<int>? ledgerId,
+    Expression<String>? name,
+    Expression<String>? fieldType,
+    Expression<int>? sortOrder,
+    Expression<DateTime>? createdAt,
+    Expression<String>? syncId,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (ledgerId != null) 'ledger_id': ledgerId,
+      if (name != null) 'name': name,
+      if (fieldType != null) 'field_type': fieldType,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (createdAt != null) 'created_at': createdAt,
+      if (syncId != null) 'sync_id': syncId,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  CustomFieldDefinitionsCompanion copyWith(
+      {Value<int>? id,
+      Value<int>? ledgerId,
+      Value<String>? name,
+      Value<String>? fieldType,
+      Value<int>? sortOrder,
+      Value<DateTime>? createdAt,
+      Value<String?>? syncId,
+      Value<DateTime?>? updatedAt}) {
+    return CustomFieldDefinitionsCompanion(
+      id: id ?? this.id,
+      ledgerId: ledgerId ?? this.ledgerId,
+      name: name ?? this.name,
+      fieldType: fieldType ?? this.fieldType,
+      sortOrder: sortOrder ?? this.sortOrder,
+      createdAt: createdAt ?? this.createdAt,
+      syncId: syncId ?? this.syncId,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (ledgerId.present) {
+      map['ledger_id'] = Variable<int>(ledgerId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (fieldType.present) {
+      map['field_type'] = Variable<String>(fieldType.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (syncId.present) {
+      map['sync_id'] = Variable<String>(syncId.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CustomFieldDefinitionsCompanion(')
+          ..write('id: $id, ')
+          ..write('ledgerId: $ledgerId, ')
+          ..write('name: $name, ')
+          ..write('fieldType: $fieldType, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('createdAt: $createdAt, ')
           ..write('syncId: $syncId, ')
@@ -12026,6 +12563,8 @@ abstract class _$PiggyDatabase extends GeneratedDatabase {
   late final $ConversationsTable conversations = $ConversationsTable(this);
   late final $MessagesTable messages = $MessagesTable(this);
   late final $TagsTable tags = $TagsTable(this);
+  late final $CustomFieldDefinitionsTable customFieldDefinitions =
+      $CustomFieldDefinitionsTable(this);
   late final $TransactionTagsTable transactionTags =
       $TransactionTagsTable(this);
   late final $BudgetsTable budgets = $BudgetsTable(this);
@@ -12065,6 +12604,7 @@ abstract class _$PiggyDatabase extends GeneratedDatabase {
         conversations,
         messages,
         tags,
+        customFieldDefinitions,
         transactionTags,
         budgets,
         transactionAttachments,
@@ -12985,6 +13525,7 @@ typedef $$TransactionsTableCreateCompanionBuilder = TransactionsCompanion
   Value<String?> currencyCode,
   Value<double?> nativeAmount,
   Value<double?> originalAmount,
+  Value<String?> customValuesJson,
 });
 typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
     Function({
@@ -13011,6 +13552,7 @@ typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
   Value<String?> currencyCode,
   Value<double?> nativeAmount,
   Value<double?> originalAmount,
+  Value<String?> customValuesJson,
 });
 
 class $$TransactionsTableFilterComposer
@@ -13098,6 +13640,10 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<double> get originalAmount => $composableBuilder(
       column: $table.originalAmount,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get customValuesJson => $composableBuilder(
+      column: $table.customValuesJson,
       builder: (column) => ColumnFilters(column));
 }
 
@@ -13189,6 +13735,10 @@ class $$TransactionsTableOrderingComposer
   ColumnOrderings<double> get originalAmount => $composableBuilder(
       column: $table.originalAmount,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get customValuesJson => $composableBuilder(
+      column: $table.customValuesJson,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$TransactionsTableAnnotationComposer
@@ -13268,6 +13818,9 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<double> get originalAmount => $composableBuilder(
       column: $table.originalAmount, builder: (column) => column);
+
+  GeneratedColumn<String> get customValuesJson => $composableBuilder(
+      column: $table.customValuesJson, builder: (column) => column);
 }
 
 class $$TransactionsTableTableManager extends RootTableManager<
@@ -13319,6 +13872,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<String?> currencyCode = const Value.absent(),
             Value<double?> nativeAmount = const Value.absent(),
             Value<double?> originalAmount = const Value.absent(),
+            Value<String?> customValuesJson = const Value.absent(),
           }) =>
               TransactionsCompanion(
             id: id,
@@ -13344,6 +13898,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             currencyCode: currencyCode,
             nativeAmount: nativeAmount,
             originalAmount: originalAmount,
+            customValuesJson: customValuesJson,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
@@ -13369,6 +13924,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<String?> currencyCode = const Value.absent(),
             Value<double?> nativeAmount = const Value.absent(),
             Value<double?> originalAmount = const Value.absent(),
+            Value<String?> customValuesJson = const Value.absent(),
           }) =>
               TransactionsCompanion.insert(
             id: id,
@@ -13394,6 +13950,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             currencyCode: currencyCode,
             nativeAmount: nativeAmount,
             originalAmount: originalAmount,
+            customValuesJson: customValuesJson,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -13438,6 +13995,7 @@ typedef $$RecurringTransactionsTableCreateCompanionBuilder
   Value<DateTime?> lastGeneratedDate,
   Value<bool> enabled,
   Value<String?> currencyCode,
+  Value<String?> templateFieldValues,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
 });
@@ -13462,6 +14020,7 @@ typedef $$RecurringTransactionsTableUpdateCompanionBuilder
   Value<DateTime?> lastGeneratedDate,
   Value<bool> enabled,
   Value<String?> currencyCode,
+  Value<String?> templateFieldValues,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
 });
@@ -13532,6 +14091,10 @@ class $$RecurringTransactionsTableFilterComposer
 
   ColumnFilters<String> get currencyCode => $composableBuilder(
       column: $table.currencyCode, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get templateFieldValues => $composableBuilder(
+      column: $table.templateFieldValues,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
@@ -13608,6 +14171,10 @@ class $$RecurringTransactionsTableOrderingComposer
       column: $table.currencyCode,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get templateFieldValues => $composableBuilder(
+      column: $table.templateFieldValues,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 
@@ -13681,6 +14248,9 @@ class $$RecurringTransactionsTableAnnotationComposer
   GeneratedColumn<String> get currencyCode => $composableBuilder(
       column: $table.currencyCode, builder: (column) => column);
 
+  GeneratedColumn<String> get templateFieldValues => $composableBuilder(
+      column: $table.templateFieldValues, builder: (column) => column);
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -13738,6 +14308,7 @@ class $$RecurringTransactionsTableTableManager extends RootTableManager<
             Value<DateTime?> lastGeneratedDate = const Value.absent(),
             Value<bool> enabled = const Value.absent(),
             Value<String?> currencyCode = const Value.absent(),
+            Value<String?> templateFieldValues = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
           }) =>
@@ -13761,6 +14332,7 @@ class $$RecurringTransactionsTableTableManager extends RootTableManager<
             lastGeneratedDate: lastGeneratedDate,
             enabled: enabled,
             currencyCode: currencyCode,
+            templateFieldValues: templateFieldValues,
             createdAt: createdAt,
             updatedAt: updatedAt,
           ),
@@ -13784,6 +14356,7 @@ class $$RecurringTransactionsTableTableManager extends RootTableManager<
             Value<DateTime?> lastGeneratedDate = const Value.absent(),
             Value<bool> enabled = const Value.absent(),
             Value<String?> currencyCode = const Value.absent(),
+            Value<String?> templateFieldValues = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
           }) =>
@@ -13807,6 +14380,7 @@ class $$RecurringTransactionsTableTableManager extends RootTableManager<
             lastGeneratedDate: lastGeneratedDate,
             enabled: enabled,
             currencyCode: currencyCode,
+            templateFieldValues: templateFieldValues,
             createdAt: createdAt,
             updatedAt: updatedAt,
           ),
@@ -14397,6 +14971,225 @@ typedef $$TagsTableProcessedTableManager = ProcessedTableManager<
     (Tag, BaseReferences<_$PiggyDatabase, $TagsTable, Tag>),
     Tag,
     PrefetchHooks Function()>;
+typedef $$CustomFieldDefinitionsTableCreateCompanionBuilder
+    = CustomFieldDefinitionsCompanion Function({
+  Value<int> id,
+  required int ledgerId,
+  required String name,
+  required String fieldType,
+  Value<int> sortOrder,
+  Value<DateTime> createdAt,
+  Value<String?> syncId,
+  Value<DateTime?> updatedAt,
+});
+typedef $$CustomFieldDefinitionsTableUpdateCompanionBuilder
+    = CustomFieldDefinitionsCompanion Function({
+  Value<int> id,
+  Value<int> ledgerId,
+  Value<String> name,
+  Value<String> fieldType,
+  Value<int> sortOrder,
+  Value<DateTime> createdAt,
+  Value<String?> syncId,
+  Value<DateTime?> updatedAt,
+});
+
+class $$CustomFieldDefinitionsTableFilterComposer
+    extends Composer<_$PiggyDatabase, $CustomFieldDefinitionsTable> {
+  $$CustomFieldDefinitionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get ledgerId => $composableBuilder(
+      column: $table.ledgerId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get fieldType => $composableBuilder(
+      column: $table.fieldType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+      column: $table.sortOrder, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get syncId => $composableBuilder(
+      column: $table.syncId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$CustomFieldDefinitionsTableOrderingComposer
+    extends Composer<_$PiggyDatabase, $CustomFieldDefinitionsTable> {
+  $$CustomFieldDefinitionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get ledgerId => $composableBuilder(
+      column: $table.ledgerId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get fieldType => $composableBuilder(
+      column: $table.fieldType, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+      column: $table.sortOrder, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get syncId => $composableBuilder(
+      column: $table.syncId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$CustomFieldDefinitionsTableAnnotationComposer
+    extends Composer<_$PiggyDatabase, $CustomFieldDefinitionsTable> {
+  $$CustomFieldDefinitionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get ledgerId =>
+      $composableBuilder(column: $table.ledgerId, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get fieldType =>
+      $composableBuilder(column: $table.fieldType, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get syncId =>
+      $composableBuilder(column: $table.syncId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$CustomFieldDefinitionsTableTableManager extends RootTableManager<
+    _$PiggyDatabase,
+    $CustomFieldDefinitionsTable,
+    CustomFieldDefinition,
+    $$CustomFieldDefinitionsTableFilterComposer,
+    $$CustomFieldDefinitionsTableOrderingComposer,
+    $$CustomFieldDefinitionsTableAnnotationComposer,
+    $$CustomFieldDefinitionsTableCreateCompanionBuilder,
+    $$CustomFieldDefinitionsTableUpdateCompanionBuilder,
+    (
+      CustomFieldDefinition,
+      BaseReferences<_$PiggyDatabase, $CustomFieldDefinitionsTable,
+          CustomFieldDefinition>
+    ),
+    CustomFieldDefinition,
+    PrefetchHooks Function()> {
+  $$CustomFieldDefinitionsTableTableManager(
+      _$PiggyDatabase db, $CustomFieldDefinitionsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CustomFieldDefinitionsTableFilterComposer(
+                  $db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CustomFieldDefinitionsTableOrderingComposer(
+                  $db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CustomFieldDefinitionsTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<int> ledgerId = const Value.absent(),
+            Value<String> name = const Value.absent(),
+            Value<String> fieldType = const Value.absent(),
+            Value<int> sortOrder = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<String?> syncId = const Value.absent(),
+            Value<DateTime?> updatedAt = const Value.absent(),
+          }) =>
+              CustomFieldDefinitionsCompanion(
+            id: id,
+            ledgerId: ledgerId,
+            name: name,
+            fieldType: fieldType,
+            sortOrder: sortOrder,
+            createdAt: createdAt,
+            syncId: syncId,
+            updatedAt: updatedAt,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required int ledgerId,
+            required String name,
+            required String fieldType,
+            Value<int> sortOrder = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<String?> syncId = const Value.absent(),
+            Value<DateTime?> updatedAt = const Value.absent(),
+          }) =>
+              CustomFieldDefinitionsCompanion.insert(
+            id: id,
+            ledgerId: ledgerId,
+            name: name,
+            fieldType: fieldType,
+            sortOrder: sortOrder,
+            createdAt: createdAt,
+            syncId: syncId,
+            updatedAt: updatedAt,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$CustomFieldDefinitionsTableProcessedTableManager
+    = ProcessedTableManager<
+        _$PiggyDatabase,
+        $CustomFieldDefinitionsTable,
+        CustomFieldDefinition,
+        $$CustomFieldDefinitionsTableFilterComposer,
+        $$CustomFieldDefinitionsTableOrderingComposer,
+        $$CustomFieldDefinitionsTableAnnotationComposer,
+        $$CustomFieldDefinitionsTableCreateCompanionBuilder,
+        $$CustomFieldDefinitionsTableUpdateCompanionBuilder,
+        (
+          CustomFieldDefinition,
+          BaseReferences<_$PiggyDatabase, $CustomFieldDefinitionsTable,
+              CustomFieldDefinition>
+        ),
+        CustomFieldDefinition,
+        PrefetchHooks Function()>;
 typedef $$TransactionTagsTableCreateCompanionBuilder = TransactionTagsCompanion
     Function({
   Value<int> id,
@@ -17868,6 +18661,9 @@ class $PiggyDatabaseManager {
   $$MessagesTableTableManager get messages =>
       $$MessagesTableTableManager(_db, _db.messages);
   $$TagsTableTableManager get tags => $$TagsTableTableManager(_db, _db.tags);
+  $$CustomFieldDefinitionsTableTableManager get customFieldDefinitions =>
+      $$CustomFieldDefinitionsTableTableManager(
+          _db, _db.customFieldDefinitions);
   $$TransactionTagsTableTableManager get transactionTags =>
       $$TransactionTagsTableTableManager(_db, _db.transactionTags);
   $$BudgetsTableTableManager get budgets =>

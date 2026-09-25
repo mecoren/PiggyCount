@@ -175,6 +175,48 @@ class Transactions extends Table {
   /// 且历史明细的统计口径零变化。读取/统计统一走
   /// `COALESCE(original_amount, amount)`,单一口径避免散落兜底。
   RealColumn get originalAmount => real().nullable()();
+
+  /// v46: 自定义字段值,{fieldSyncId: value} 的 JSON 对象。
+  /// - 键是 [CustomFieldDefinitions.syncId](而非本地 int id),天然适配
+  ///   共享账本 —— Editor 写入 Owner 定义的字段值无需 override 表。
+  /// - 值为 JSON 原生类型:金额存 number、日期存 ISO-8601 字符串、文本存原文。
+  /// - NULL = 该笔无任何自定义字段值(未填写/全部清空),存量行保持 NULL,
+  ///   导出时**不写该键**,与 v45 original_amount 同款防漂移范式。
+  /// - 仅在编辑表单读写,不参与列表/统计 SQL,所以不必可查询、无须索引。
+  TextColumn get customValuesJson => text().nullable()();
+}
+
+/// v46: 账本自定义字段定义(按账本独立)。
+///
+/// 与 [Tags] 同属「用户自建字典」:名称/排序/创建时间 + syncId 跨设备锚定。
+/// 与 tags 的差别:值不走关联表,而是以 fieldSyncId 为键落在
+/// [Transactions.customValuesJson] —— 见该列注释中的取舍说明。
+///
+/// fieldType 取 `amount | text | date`,新增类型只改应用层分支,
+/// 不动库结构(存值统一为 JSON 原生类型)。
+class CustomFieldDefinitions extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// 所属账本:字段定义按账本隔离,账本 A 的字段不会出现在账本 B。
+  IntColumn get ledgerId => integer()();
+
+  /// 用户自定义字段名(同账本内不重名,由应用层校验)。
+  TextColumn get name => text()();
+
+  /// amount / text / date。字符串存储以便后续扩展新类型。
+  TextColumn get fieldType => text()();
+
+  /// 展示与录入门槛顺序,数字越小越靠前(与 Categories/Tags.sortOrder 同义)。
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  /// 跨设备同步唯一标识 (UUID)。字段值的 JSON 键就是本列。
+  TextColumn get syncId => text().nullable()();
+
+  /// 审计 T1（v40）：见 Ledgers.updatedAt 注释。触发器
+  /// trg_custom_field_definitions_touch_updated_at 自动维护。
+  DateTimeColumn get updatedAt => dateTime().nullable()();
 }
 
 class RecurringTransactions extends Table {
@@ -213,6 +255,16 @@ class RecurringTransactions extends Table {
   /// NULL = 账本本位币(存量语义);挂了账户时生成仍以账户币种为准(账户内不混币)。
   /// 汇率不锁在模板上 —— 每次生成按当日有效汇率折算 nativeAmount。
   TextColumn get currencyCode => text().nullable()();
+
+  /// v47: 周期账单模板级自定义字段值,{fieldSyncId: value} 的 JSON 对象。
+  /// - 生成实例时整包注入 `transactions.custom_values_json`(实例侧再改不影响
+  ///   模板,下一次生成仍按模板值)。
+  /// - 编解码必须走 CustomFieldValueCodec(见 models/custom_field_values.dart,
+  ///   键序/数值表示统一),与交易值同款。
+  /// - NULL = 模板未配置任何字段值;存量行保持 NULL,导出**不写该键**(v45/v46
+  ///   同款防漂移范式:回填 `{}` 会让"旧快照无此键"与"显式空对象"指纹不一致)。
+  /// - 仅编辑表单与生成器读写,无须索引。
+  TextColumn get templateFieldValues => text().nullable()();
 
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
@@ -545,6 +597,7 @@ class SharedLedgerTags extends Table {
   Conversations,
   Messages,
   Tags,
+  CustomFieldDefinitions,
   TransactionTags,
   Budgets,
   TransactionAttachments,
@@ -572,7 +625,7 @@ class PiggyDatabase extends _$PiggyDatabase {
 
   @override
   int get schemaVersion =>
-      45; // v45: 账本明细原始金额 transactions.original_amount(用户手填,NULL=未填写即按记账金额); v44: 回收站 deleted_transactions(F1 交易建模,软删除搬行而非加列); v43: 同步指标 sync_op_log(审计 P0-1,本地成功率测量) + stale_remote_slots(审计 P1-6,换名收尾补删持久化); v42: 周期账单币种 — recurring_transactions.currency_code(移植 BeeCount #444); v41: local_changes 已推送行存量清理(数据治理 G-LC,双后端实测 6143 行无界增长); v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
+      47; // v47: 周期账单模板自定义字段值 recurring_transactions.template_field_values({fieldSyncId: value} JSON 对象,生成实例时注入); v46: 账本自定义字段 — custom_field_definitions(按账本独立定义名称/类型/排序) + transactions.custom_values_json({fieldSyncId: value} JSON 对象,不参与列表/统计); v45: 账本明细原始金额 transactions.original_amount(用户手填,NULL=未填写即按记账金额); v44: 回收站 deleted_transactions(F1 交易建模,软删除搬行而非加列); v43: 同步指标 sync_op_log(审计 P0-1,本地成功率测量) + stale_remote_slots(审计 P1-6,换名收尾补删持久化); v42: 周期账单币种 — recurring_transactions.currency_code(移植 BeeCount #444); v41: local_changes 已推送行存量清理(数据治理 G-LC,双后端实测 6143 行无界增长); v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
 
   /// WAL 检查点后允许残留的字节数（见 [migration] 的 beforeOpen）。
   /// 公开给回归测试取期望值，别处不要依赖。
@@ -1570,6 +1623,43 @@ class PiggyDatabase extends _$PiggyDatabase {
                 'UPDATE transactions SET original_amount = amount WHERE original_amount IS NULL;');
             logger.info('DBMigration', 'v45 迁移完成');
           }
+          if (from < 46) {
+            // v46: 账本自定义字段。
+            // - custom_field_definitions:按账本独立的字段定义(名称/类型/排序)。
+            // - transactions.custom_values_json:{fieldSyncId: value} JSON 对象。
+            // 两处都是**纯新增、零回填**:值列保持 NULL = 该笔没有自定义字段值,
+            // 存量行导出结果与 v45 逐字节一致(导出侧 NULL 不写键)。不回填是刻意的
+            // —— 回填成 `{}` 会让"旧快照无此键"与"显式空对象"指纹不一致,引发
+            // 永不收敛的假冲突(v45 original_amount 同款教训)。
+            logger.info('DBMigration', '开始迁移到 v46: 自定义字段定义 + 交易自定义值');
+            await _createTableIfMissing(
+                migrator, 'custom_field_definitions', customFieldDefinitions);
+            // (ledger_id) 索引服务「按账本取定义」这一唯一高频查询。
+            await customStatement(
+                'CREATE INDEX IF NOT EXISTS idx_custom_field_definitions_ledger '
+                'ON custom_field_definitions(ledger_id);');
+            // 与 v38 各实体 sync_id 唯一索引同构:防同一定义被重复锚定。
+            await customStatement(
+                'CREATE UNIQUE INDEX IF NOT EXISTS uq_custom_field_definitions_sync_id '
+                'ON custom_field_definitions(sync_id);');
+            await _addColumnIfMissing('transactions', 'custom_values_json',
+                'ALTER TABLE transactions ADD COLUMN custom_values_json TEXT;');
+            // 新表纳入 updated_at 触碰触发器(幂等,顺带补齐其它表)。
+            await _createUpdatedAtTouchTriggers();
+            logger.info('DBMigration', 'v46 迁移完成');
+          }
+          if (from < 47) {
+            // v47: 周期账单模板级自定义字段值。
+            // 纯新增、零回填:NULL = 模板未配置字段值,存量行导出结果与 v46
+            // 逐字节一致(导出侧 NULL 不写键)。不回填是刻意的 —— 回填成 `{}`
+            // 会让"旧快照无此键"与"显式空对象"指纹不一致,引发永不收敛的
+            // 假冲突(v45 original_amount / v46 custom_values_json 同款教训)。
+            logger.info('DBMigration', '开始迁移到 v47: 周期账单模板自定义字段值');
+            await _addColumnIfMissing('recurring_transactions',
+                'template_field_values',
+                'ALTER TABLE recurring_transactions ADD COLUMN template_field_values TEXT;');
+            logger.info('DBMigration', 'v47 迁移完成');
+          }
         },
         onCreate: (m) async {
           await m.createAll();
@@ -1599,6 +1689,14 @@ class PiggyDatabase extends _$PiggyDatabase {
           await customStatement(
               'CREATE INDEX IF NOT EXISTS idx_deleted_transactions_ledger '
               'ON deleted_transactions(ledger_id);');
+          // v46: 自定义字段定义索引(与 onUpgrade v46 同构 —— 新装库走 onCreate,
+          // 表本体由上方 m.createAll 建,索引要在这里补一次)。
+          await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_custom_field_definitions_ledger '
+              'ON custom_field_definitions(ledger_id);');
+          await customStatement(
+              'CREATE UNIQUE INDEX IF NOT EXISTS uq_custom_field_definitions_sync_id '
+              'ON custom_field_definitions(sync_id);');
           // v43: 同步指标 (ts) 索引（与 onUpgrade v43 同构）。此前 onUpgrade
           // 建了该索引但 onCreate 遗漏 —— 全新安装用户 SyncMetricsService
           // 的 30 天窗口聚合（summarize/topErrorClasses/cleanupExpired）全表
@@ -1674,6 +1772,7 @@ class PiggyDatabase extends _$PiggyDatabase {
     'tags',
     'accounts',
     'ledgers',
+    'custom_field_definitions',
   };
 
   /// 审计 T1（v40）：创建 updated_at 触碰触发器（幂等）。

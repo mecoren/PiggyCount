@@ -51,8 +51,10 @@ void main() {
       expect(db.schemaVersion, greaterThanOrEqualTo(40));
     });
 
-    test('五个触碰触发器已创建', () async {
-      expect(await triggerCount(), 5);
+    test('触碰触发器覆盖全部受管表（v46 起为六张）', () async {
+      // v40：transactions / categories / tags / accounts / ledgers；
+      // v46：+ custom_field_definitions（账本自定义字段定义）。
+      expect(await triggerCount(), 6);
     });
   });
 

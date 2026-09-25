@@ -67,6 +67,10 @@ class TransactionListItem extends ConsumerWidget {
   final bool excludeFromStats; // 不计入收支:第二行显示「不计收支」标签
   final bool excludeFromBudget; // 不计入预算:第二行显示「不计预算」标签
 
+  /// B1(v47):自定义字段角标(「字段名: 展示值」文本,调用方已按定义解析好)。
+  /// 空/null 不渲染,避免整列表被噪音填满;放入次要信息行的竖杠分段里。
+  final List<String>? customFieldBadges;
+
   /// 交易唯一 id，用于 Dismissible key，避免同备注同金额的交易 key 碰撞
   final int transactionId;
 
@@ -101,6 +105,7 @@ class TransactionListItem extends ConsumerWidget {
     this.onAttachmentTap,
     this.excludeFromStats = false,
     this.excludeFromBudget = false,
+    this.customFieldBadges,
   });
 
   /// 检查是否有次要信息需要显示（时间、备注、账户、标签、附件）
@@ -120,6 +125,7 @@ class TransactionListItem extends ConsumerWidget {
         accountName != null ||
         attachmentCount > 0 ||
         (tags != null && tags!.isNotEmpty) ||
+        (customFieldBadges != null && customFieldBadges!.isNotEmpty) ||
         excludeFromStats ||
         excludeFromBudget;
   }
@@ -239,10 +245,17 @@ class TransactionListItem extends ConsumerWidget {
             context, AppLocalizations.of(context).txFlagBudgetExcludedTag),
     ];
 
-    // 组装段：文本(join 竖杠) → 附件 → 标签，各段之间用竖杠连接
+    // 组装段：文本(join 竖杠) → 自定义字段角标 → 附件 → 标签，各段之间用竖杠连接
     final segments = <Widget>[];
     if (textParts.isNotEmpty) {
       segments.add(Text(textParts.join(' | '), style: textStyle));
+    }
+    // B1(v47)自定义字段角标:每条一段,跟在时间|备注|账户之后。纯文本段,
+    // 与次要信息同级,Wrap 溢出时自然折行。
+    if (customFieldBadges != null) {
+      for (final badge in customFieldBadges!) {
+        segments.add(Text(badge, style: textStyle));
+      }
     }
     if (attachmentCount > 0) {
       segments.add(buildAttachmentWidget());

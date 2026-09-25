@@ -426,6 +426,7 @@ class _FailOnNoteRepo extends LocalRepository {
     bool enabled = true,
     String? syncId,
     String? currencyCode,
+    Map<String, dynamic>? templateFieldValues,
   }) async {
     if (note == failNote) {
       throw Exception('simulated rule failure for note=$failNote');

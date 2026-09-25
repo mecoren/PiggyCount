@@ -23,6 +23,7 @@ import 'local_statistics_repository.dart';
 import 'local_recurring_transaction_repository.dart';
 import 'local_ai_repository.dart';
 import 'local_tag_repository.dart';
+import 'local_custom_field_repository.dart';
 import 'local_budget_repository.dart';
 import 'local_attachment_repository.dart';
 import 'local_exchange_rate_repository.dart';
@@ -51,6 +52,7 @@ class LocalRepository extends BaseRepository {
   late final LocalRecurringTransactionRepository _recurringTransactionRepo;
   late final LocalAIRepository _aiRepo;
   late final LocalTagRepository _tagRepo;
+  late final LocalCustomFieldRepository _customFieldRepo;
   late final LocalBudgetRepository _budgetRepo;
   late final LocalAttachmentRepository _attachmentRepo;
   late final LocalExchangeRateRepository _exchangeRateRepo;
@@ -64,6 +66,10 @@ class LocalRepository extends BaseRepository {
     _recurringTransactionRepo = LocalRecurringTransactionRepository(db);
     _aiRepo = LocalAIRepository(db);
     _tagRepo = LocalTagRepository(db);
+    _customFieldRepo = LocalCustomFieldRepository(
+      db,
+      trackerGetter: () => changeTracker,
+    );
     _budgetRepo = LocalBudgetRepository(db);
     _attachmentRepo = LocalAttachmentRepository(db);
     _exchangeRateRepo =
@@ -241,6 +247,11 @@ class LocalRepository extends BaseRepository {
       final recurrings = await (db.select(db.recurringTransactions)
             ..where((r) => r.ledgerId.equals(id)))
           .get();
+      // v46：自定义字段定义（ledger-scoped）。删账本后定义无意义，且
+      // ledgerId 可能被复用 —— 残留定义会"复活"到新账本上。
+      final customFieldDefs = await (db.select(db.customFieldDefinitions)
+            ..where((f) => f.ledgerId.equals(id)))
+          .get();
 
       // 底层 deleteLedger 只清 transactions+ledgers 两表（db.dart 无外键
       // 级联，注释里的"级联"并不存在）——照 clearLedgerTransactions 的
@@ -275,6 +286,13 @@ class LocalRepository extends BaseRepository {
       if (budgets.isNotEmpty) {
         await (db.delete(db.budgets)..where((b) => b.ledgerId.equals(id))).go();
       }
+      // v46：自定义字段定义随账本一起清（交易行已由 deleteLedger 删除，
+      // 其上的 custom_values_json 一并消失）。
+      if (customFieldDefs.isNotEmpty) {
+        await (db.delete(db.customFieldDefinitions)
+              ..where((f) => f.ledgerId.equals(id)))
+            .go();
+      }
 
       // ---- 以下为 ChangeTracker 链路专属收尾（快照后端无此数据;
       // tracker 已随云端协同下线停止注入,正常装配下不会走到）----
@@ -295,6 +313,7 @@ class LocalRepository extends BaseRepository {
         ...budgets.map((b) => b.syncId).whereType<String>(),
         ...accounts.map((a) => a.syncId).whereType<String>(),
         ...recurrings.map((r) => r.syncId).whereType<String>(),
+        ...customFieldDefs.map((f) => f.syncId).whereType<String>(),
       ];
       if (watermarkSyncIds.isNotEmpty) {
         await (db.delete(db.entityChangeWatermarks)
@@ -328,6 +347,16 @@ class LocalRepository extends BaseRepository {
           entityType: 'recurring',
           entityId: r.id,
           entitySyncId: r.syncId!,
+          ledgerId: id,
+          action: 'delete',
+        );
+      }
+      for (final f in customFieldDefs) {
+        if (f.syncId == null || f.syncId!.isEmpty) continue;
+        await changeTracker!.recordLedgerChange(
+          entityType: 'custom_field',
+          entityId: f.id,
+          entitySyncId: f.syncId!,
           ledgerId: id,
           action: 'delete',
         );
@@ -499,6 +528,7 @@ class LocalRepository extends BaseRepository {
     String? currencyCode,
     double? nativeAmount,
     double? originalAmount,
+    Map<String, dynamic>? customValues,
   }) async {
     // v30 带折算兜底(02 §六):任何调用方(单币种记账/AI/周期模板)未传两字段
     // 时在此补齐 —— 外币先查有效汇率,取不到才 =amount(命中 L11 检测可捞回)。
@@ -530,6 +560,7 @@ class LocalRepository extends BaseRepository {
         currencyCode: cc,
         nativeAmount: na,
         originalAmount: originalAmount,
+        customValues: customValues,
       );
       if (changeTracker != null) {
         final tx = await _transactionRepo.getTransactionById(id);
@@ -606,6 +637,7 @@ class LocalRepository extends BaseRepository {
     String? currencyCode,
     double? nativeAmount,
     dynamic originalAmount,
+    Map<String, dynamic>? customValues,
   }) async {
     final old = await _transactionRepo.getTransactionById(id);
     // v30 联动兜底(与 Cloud merge/mutator 的 L14 同规则):调用方不传两字段时——
@@ -658,6 +690,7 @@ class LocalRepository extends BaseRepository {
             currencyCode: effCurrency,
             nativeAmount: effNative,
             originalAmount: originalAmount,
+            customValues: customValues,
           );
           await changeTracker!.recordLedgerChange(
             entityType: 'transaction',
@@ -685,6 +718,7 @@ class LocalRepository extends BaseRepository {
       currencyCode: effCurrency,
       nativeAmount: effNative,
       originalAmount: originalAmount,
+      customValues: customValues,
     );
   }
 
@@ -1335,6 +1369,7 @@ class LocalRepository extends BaseRepository {
     required DateTime happenedAt,
     String? note,
     double? originalAmount,
+    Map<String, dynamic>? customValues,
   }) =>
       _transactionRepo.updateTransactionBySyncId(
         syncId: syncId,
@@ -1346,6 +1381,7 @@ class LocalRepository extends BaseRepository {
         happenedAt: happenedAt,
         note: note,
         originalAmount: originalAmount,
+        customValues: customValues,
       );
 
   @override
@@ -2685,6 +2721,19 @@ class LocalRepository extends BaseRepository {
         basis: basis,
       );
 
+  @override
+  Future<List<({String type, double nativeAmount, String? customValuesJson})>>
+      customFieldStatsRows({
+    required int ledgerId,
+    required DateTime start,
+    required DateTime end,
+  }) =>
+      _statisticsRepo.customFieldStatsRows(
+        ledgerId: ledgerId,
+        start: start,
+        end: end,
+      );
+
   // ============================================
   // RecurringTransactionRepository 接口实现 - 委托给 LocalRecurringTransactionRepository
   // ============================================
@@ -2722,6 +2771,7 @@ class LocalRepository extends BaseRepository {
     bool enabled = true,
     String? syncId,
     String? currencyCode,
+    Map<String, dynamic>? templateFieldValues,
   }) {
     // TBL-M9：写表 + 记 change 同事务
     return db.transaction(() async {
@@ -2743,6 +2793,7 @@ class LocalRepository extends BaseRepository {
         enabled: enabled,
         syncId: syncId,
         currencyCode: currencyCode,
+        templateFieldValues: templateFieldValues,
       );
       // cloud_recurring_sync:新建规则登记 create change(对齐 budget 的包装模式)
       if (changeTracker != null) {
@@ -2784,6 +2835,7 @@ class LocalRepository extends BaseRepository {
     DateTime? lastGeneratedDate,
     String? syncId,
     String? currencyCode,
+    Map<String, dynamic>? templateFieldValues,
   }) {
     // TBL-M9：写表 + 记 change 同事务
     return db.transaction(() async {
@@ -2807,6 +2859,7 @@ class LocalRepository extends BaseRepository {
         lastGeneratedDate: lastGeneratedDate,
         syncId: syncId,
         currencyCode: currencyCode,
+        templateFieldValues: templateFieldValues,
       );
       // cloud_recurring_sync:编辑规则登记 update change。lastGeneratedDate 是
       // 普通 LWW 字段随行整体传播,其他设备拿到新进度后不会重放生成。
@@ -3687,4 +3740,114 @@ class LocalRepository extends BaseRepository {
   @override
   Future<void> removeOverride({required String base, required String quote}) =>
       _exchangeRateRepo.removeOverride(base: base, quote: quote);
+
+  // ============================================
+  // CustomFieldRepository 接口实现 - 委托给 LocalCustomFieldRepository
+  // 变更登记（定义 upsert/delete + 值清理时的 transaction update）在子仓内
+  // 完成，故这里是纯薄委托，不再像交易那样包一层 db.transaction。
+  // ============================================
+
+  @override
+  Future<int> createDefinition({
+    required int ledgerId,
+    required String name,
+    required String fieldType,
+    int sortOrder = 0,
+    String? syncId,
+  }) =>
+      _customFieldRepo.createDefinition(
+        ledgerId: ledgerId,
+        name: name,
+        fieldType: fieldType,
+        sortOrder: sortOrder,
+        syncId: syncId,
+      );
+
+  @override
+  Future<int> upsertDefinition({
+    required int ledgerId,
+    required String name,
+    required String fieldType,
+    int? sortOrder,
+    String? syncId,
+  }) =>
+      _customFieldRepo.upsertDefinition(
+        ledgerId: ledgerId,
+        name: name,
+        fieldType: fieldType,
+        sortOrder: sortOrder,
+        syncId: syncId,
+      );
+
+  @override
+  Future<void> updateDefinition(
+    int id, {
+    String? name,
+    String? fieldType,
+    int? sortOrder,
+  }) =>
+      _customFieldRepo.updateDefinition(
+        id,
+        name: name,
+        fieldType: fieldType,
+        sortOrder: sortOrder,
+      );
+
+  @override
+  Future<void> deleteDefinition(int id) => _customFieldRepo.deleteDefinition(id);
+
+  @override
+  Future<void> updateDefinitionSyncId(int id, String syncId) =>
+      _customFieldRepo.updateDefinitionSyncId(id, syncId);
+
+  @override
+  Future<CustomFieldDefinition?> getDefinitionById(int id) =>
+      _customFieldRepo.getDefinitionById(id);
+
+  @override
+  Future<CustomFieldDefinition?> getDefinitionBySyncId(String syncId) =>
+      _customFieldRepo.getDefinitionBySyncId(syncId);
+
+  @override
+  Future<List<CustomFieldDefinition>> getDefinitionsForLedger(int ledgerId) =>
+      _customFieldRepo.getDefinitionsForLedger(ledgerId);
+
+  @override
+  Stream<List<CustomFieldDefinition>> watchDefinitionsForLedger(int ledgerId) =>
+      _customFieldRepo.watchDefinitionsForLedger(ledgerId);
+
+  @override
+  Future<void> updateDefinitionSortOrders(
+          List<({int id, int sortOrder})> updates) =>
+      _customFieldRepo.updateDefinitionSortOrders(updates);
+
+  @override
+  Future<bool> isFieldNameDuplicate({
+    required int ledgerId,
+    required String name,
+    int? excludeId,
+  }) =>
+      _customFieldRepo.isFieldNameDuplicate(
+        ledgerId: ledgerId,
+        name: name,
+        excludeId: excludeId,
+      );
+
+  @override
+  Future<Map<String, dynamic>> getValuesForTransaction(int transactionId) =>
+      _customFieldRepo.getValuesForTransaction(transactionId);
+
+  @override
+  Future<Map<int, Map<String, dynamic>>> getValuesForTransactions(
+          List<int> transactionIds) =>
+      _customFieldRepo.getValuesForTransactions(transactionIds);
+
+  @override
+  Future<void> setValuesForTransaction(
+          int transactionId, Map<String, dynamic>? values) =>
+      _customFieldRepo.setValuesForTransaction(transactionId, values);
+
+  @override
+  Future<int> countTransactionsWithValues(int ledgerId) =>
+      _customFieldRepo.countTransactionsWithValues(ledgerId);
 }

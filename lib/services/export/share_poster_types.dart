@@ -90,6 +90,11 @@ class YearSummaryPosterData {
   /// 结余
   final double balance;
 
+  /// 账本本位币（ISO 大写，如 CNY/USD）。海报金额单位跟随账本币种 ——
+  /// 外币账本若沿用「元」会把 $1,234.00 印成「1,234.00 元」。缺省 CNY 与
+  /// 历史行为一致（`AnnualReportPoster.currencyCode` 同款）。
+  final String currencyCode;
+
   const YearSummaryPosterData({
     required this.year,
     required this.recordDays,
@@ -103,6 +108,7 @@ class YearSummaryPosterData {
     this.maxExpenseMonth,
     this.maxExpenseAmount,
     required this.balance,
+    this.currencyCode = 'CNY',
   });
 }
 
@@ -138,6 +144,10 @@ class MonthSummaryPosterData {
   /// 同比上月支出变化率 (-1.0 到 1.0,如 0.1 表示增长10%)
   final double? expenseChangeRate;
 
+  /// 账本本位币（ISO 大写）。海报金额单位跟随账本币种，见
+  /// [YearSummaryPosterData.currencyCode]。
+  final String currencyCode;
+
   const MonthSummaryPosterData({
     required this.year,
     required this.month,
@@ -149,6 +159,7 @@ class MonthSummaryPosterData {
     required this.avgDailyExpense,
     required this.balance,
     this.expenseChangeRate,
+    this.currencyCode = 'CNY',
   });
 }
 
@@ -184,6 +195,10 @@ class LedgerSummaryPosterData {
   /// 结余
   final double balance;
 
+  /// 账本本位币（ISO 大写）。海报金额单位跟随账本币种，见
+  /// [YearSummaryPosterData.currencyCode]。
+  final String currencyCode;
+
   const LedgerSummaryPosterData({
     required this.ledgerName,
     required this.recordDays,
@@ -195,6 +210,7 @@ class LedgerSummaryPosterData {
     this.firstRecordDate,
     this.lastRecordDate,
     required this.balance,
+    this.currencyCode = 'CNY',
   });
 }
 

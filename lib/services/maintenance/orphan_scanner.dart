@@ -86,7 +86,10 @@ class OrphanScanner {
         localId: budgetId,
         syncId: row.readNullable<String>('sync_id'),
         title: '预算 #$budgetId',
-        subtitle: '$budgetType · ¥${amount.toStringAsFixed(0)} · 账本已删 (ledgerId=$ledgerId)',
+        // 金额不带币种符号：本文件所有副标题都遵循这一点 —— 孤儿行所属的
+        // 账本/分类已被删除，币种无从得知（可能是外币），套用当前币种符号会
+        // 误导；裸数值足以定位这一行。历史实现写死 '¥'。
+        subtitle: '$budgetType · ${amount.toStringAsFixed(0)} · 账本已删 (ledgerId=$ledgerId)',
       );
     }).toList();
   }
@@ -213,7 +216,7 @@ class OrphanScanner {
         type: OrphanType.txMissingAccount,
         localId: txId,
         title: '交易 #$txId',
-        subtitle: '$txType · ¥${amount.toStringAsFixed(2)} · $missing 已删',
+        subtitle: '$txType · ${amount.toStringAsFixed(2)} · $missing 已删',
         extra: {
           'accountMissing': accId != null && accHit == null,
           'toAccountMissing': toAccId != null && toAccHit == null,
@@ -242,7 +245,7 @@ class OrphanScanner {
         type: OrphanType.txMissingCategory,
         localId: txId,
         title: '交易 #$txId',
-        subtitle: '$txType · ¥${amount.toStringAsFixed(2)} · 分类已删 (categoryId=$catId)',
+        subtitle: '$txType · ${amount.toStringAsFixed(2)} · 分类已删 (categoryId=$catId)',
       );
     }).toList();
   }
@@ -292,7 +295,7 @@ class OrphanScanner {
         type: OrphanType.budgetMissingCategory,
         localId: budgetId,
         title: '预算 #$budgetId',
-        subtitle: '$budgetType · ¥${amount.toStringAsFixed(0)} · 分类已删 (categoryId=$catId)',
+        subtitle: '$budgetType · ${amount.toStringAsFixed(0)} · 分类已删 (categoryId=$catId)',
       );
     }).toList();
   }

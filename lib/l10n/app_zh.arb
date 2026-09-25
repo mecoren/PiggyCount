@@ -1,4 +1,4 @@
-﻿{
+{
   "@@locale": "zh",
   "aiConsentTitle": "开启 AI 功能前,请知悉",
   "aiConsentBody": "AI 功能需将相关数据发送给你所配置的第三方 AI 服务商进行处理:\n\n• 发送给谁:默认「智谱 GLM」(open.bigmodel.cn,由智谱华章运营);若你自行配置了其它第三方 AI 服务商,则发送给你填写的服务商。\n• 发送什么:你主动用于识别/对话的内容 —— 账单图片、语音录音、你输入的文字,以及为完成识别/分析所需的分类名称、账户名称和相关交易记录。\n• 用途:仅用于账单识别、记账与你发起的对话分析;小猪记账自身不收集、不存储这些数据。\n\n数据由该第三方服务商按其隐私政策处理。开启即表示你同意上述数据共享。",
@@ -27,7 +27,6 @@
   "commonMore": "更多",
   "commonOk": "确定",
   "commonKnow": "知道了",
-  "commonNo": "否",
   "commonEmpty": "暂无数据",
   "commonError": "错误",
   "startupSyncCheckTitle": "云端有更新",
@@ -222,7 +221,6 @@
   "homeBalance": "结余",
   "homeMonthIncome": "本月收入",
   "homeMonthExpense": "本月支出",
-  "homeMonthBalance": "本月结余",
   "homeBudgetSet": "预算 {amount}",
   "@homeBudgetSet": {
     "placeholders": {
@@ -231,7 +229,6 @@
       }
     }
   },
-  "homeBudgetNotSet": "未设置",
   "homeNoRecords": "还没有记账",
   "homeSelectDate": "选择日期",
   "homeAppTitle": "小猪记账",
@@ -397,15 +394,11 @@
   "analyticsTxCountShort": "{count}笔",
   "analyticsYear": "年",
   "analyticsAll": "全部",
-  "analyticsCategoryRanking": "分类排行",
   "analyticsTotalAmount": "总计",
   "analyticsNoDataSubtext": "可左右滑动切换周期，或点击按钮切换收入/支出",
   "analyticsSwipeHint": "左右滑动切换周期",
   "analyticsSwitchTo": "切换到{type}",
-  "analyticsTipHeader": "提示：顶部胶囊可切换 周/月/年/全部",
-  "analyticsSwipeToSwitch": "横滑切换",
   "analyticsAllYears": "全部年份",
-  "analyticsToday": "今天",
   "splashAppName": "小猪记账",
   "splashSlogan": "小猪记账，越来越棒",
   "splashSecurityTitle": "开源数据安全",
@@ -475,7 +468,6 @@
   "categoryExpense": "支出",
   "categoryIncome": "收入",
   "categoryEmpty": "暂无分类",
-  "categoryDefault": "默认分类",
   "categoryReorderTip": "长按分类可拖拽调整顺序",
   "categoryLoadFailed": "加载失败: {error}",
   "iconPickerTitle": "选择图标",
@@ -500,16 +492,12 @@
   "importReading": "读取文件中…",
   "importPreparing": "准备中…",
   "importFileOpenError": "无法打开文件选择器：{error}",
-  "mineTitle": "我的",
   "mineCloudBackupSection": "云同步与备份",
   "mineFunctionSection": "功能管理",
   "mineHelpSection": "帮助与信息",
   "mineSupportSection": "支持我们",
-  "mineReminder": "提醒设置",
   "mineImport": "导入数据",
   "mineExport": "导出数据",
-  "mineCloud": "云服务",
-  "mineUpdate": "检查更新",
   "mineLanguageSettings": "语言",
   "languageTitle": "语言设置",
   "languageChinese": "中文",
@@ -529,7 +517,6 @@
   "mineGreetingNamed": "{greeting}，{name}",
   "mineProfileEditTitle": "编辑资料",
   "headerSkinTitle": "皮肤",
-  "headerSkinSubtitle": "跟随主题色,叠在头部之上",
   "headerSkinNone": "纯色",
   "headerSkinAurora": "极光",
   "headerSkinMountains": "山峦",
@@ -551,7 +538,6 @@
   "headerSkinLowPoly": "低多边形",
   "headerSkinPrism": "棱镜",
   "headerSkinTerrazzo": "水磨石",
-  "mineAvatarTitle": "头像设置",
   "mineAvatarFromGallery": "从相册选择",
   "mineAvatarFromCamera": "拍照",
   "mineAvatarDelete": "删除头像",
@@ -692,7 +678,6 @@
   "sharePosterLedgerName": "账本名称",
   "sharePosterUnitDay": "天",
   "sharePosterUnitCount": "笔",
-  "sharePosterUnitYuan": "元",
   "userProfilePosterStartDate": "记账始于 {date}",
   "@userProfilePosterStartDate": {
     "placeholders": {
@@ -705,6 +690,7 @@
   "userProfilePosterDaysUnit": "天",
   "userProfilePosterRecordCount": "记账笔数",
   "userProfilePosterCountUnit": "笔",
+  "userProfilePosterDailyUnit": "笔/天",
   "userProfilePosterLedgerCount": "账本数量",
   "userProfilePosterLedgerUnit": "本",
   "mineDaysCount": "记账天数",
@@ -810,14 +796,9 @@
   "mineRecurringTransactionsSubtitle": "管理周期性账单",
   "mineReminderSettings": "记账提醒",
   "mineReminderSettingsSubtitle": "设置每日记账提醒",
-  "minePersonalize": "个性装扮",
   "mineDisplayScale": "显示缩放",
   "mineDisplayScaleSubtitle": "调整文字和界面元素大小",
   "mineCheckUpdate": "检测更新",
-  "mineCheckUpdateSubtitle": "正在检查最新版本",
-  "mineUpdateDownload": "下载更新",
-  "mineFeedback": "问题反馈",
-  "mineFeedbackSubtitle": "提交问题或建议",
   "mineHelp": "使用帮助",
   "helpCenterOpenInBrowser": "在浏览器中打开",
   "helpCenterLoadFailed": "加载失败，请检查网络",
@@ -906,7 +887,6 @@
   "categoryImportModeMergeDesc": "保留现有分类，新增不存在的",
   "categoryImportModeOverwrite": "覆盖",
   "categoryImportModeOverwriteDesc": "清空未使用分类后导入",
-  "categoryImportSuccess": "导入成功",
   "categoryImportSuccessDetail": "已导入 {imported} 个分类，跳过 {skipped} 个，导入 {icons} 个图标",
   "@categoryImportSuccessDetail": {
     "placeholders": {
@@ -985,11 +965,6 @@
   "appearanceThemeModeSystem": "跟随系统",
   "appearanceThemeModeLight": "亮色模式",
   "appearanceThemeModeDark": "暗黑模式",
-  "appearanceDarkModePattern": "暗黑模式头部图案",
-  "appearancePatternNone": "无",
-  "appearancePatternIcons": "图标平铺",
-  "appearancePatternParticles": "粒子星星",
-  "appearancePatternHoneycomb": "蜂巢六边形",
   "appearanceAmountFormat": "余额显示格式",
   "appearanceAmountFormatFull": "完整金额",
   "appearanceAmountFormatFullDesc": "显示完整金额，如 123,456.78",
@@ -1059,7 +1034,6 @@
   "fontSettingsResetTo1x": "重置到1.0x",
   "fontSettingsAdaptBase": "适配基准",
   "reminderTitle": "记账提醒",
-  "reminderSubtitle": "设置每日记账提醒时间",
   "reminderDailyTitle": "每日记账提醒",
   "reminderDailySubtitle": "开启后将在指定时间提醒您记账",
   "reminderTimeTitle": "提醒时间",
@@ -1153,13 +1127,9 @@
   "mineCheckUpdateDetecting": "检测更新中...",
   "mineCheckUpdateSubtitleDetecting": "正在检查最新版本",
   "mineUpdateDownloadTitle": "下载更新",
-  "cloudTest": "测试",
-  "cloudSwitched": "已切换",
-  "cloudSwitchFailed": "切换失败",
   "cloudSupabaseUrlLabel": "Supabase URL",
   "cloudSupabaseUrlHint": "https://xxx.supabase.co",
   "cloudAnonKeyLabel": "Anon Key",
-  "cloudSelectServiceType": "选择云服务类型",
   "cloudMultiDeviceWarningTitle": "多设备使用提醒",
   "cloudMultiDeviceWarningMessage": "换设备前记得先上传，到新设备后先下载再记账。不要同时在两台设备上记同一个账本。点击查看详情 →",
   "cloudWebdavUrlLabel": "WebDAV 服务器地址",
@@ -1185,9 +1155,6 @@
   "authRememberAccount": "记住账号密码",
   "authRememberAccountHint": "下次登录时自动填充（仅Supabase）",
   "cloudConfigSaved": "配置已保存",
-  "cloudTestSuccess": "连接测试成功！",
-  "cloudTestFailed": "连接测试失败，请检查配置是否正确。",
-  "cloudTestError": "测试失败",
   "cloudLocalStorageTitle": "本地存储",
   "cloudLocalStorageSubtitle": "数据仅保存在本地设备",
   "cloudCustomSupabaseTitle": "自定义 Supabase",
@@ -1218,7 +1185,6 @@
   "cloudConfigureSupabaseTitle": "配置 Supabase",
   "cloudConfigureWebdavTitle": "配置 WebDAV",
   "cloudConfigureS3Title": "配置 S3",
-  "cloudWebdavRemotePathHelp": "数据存储的远程目录路径",
   "authLogin": "登录",
   "authEmail": "邮箱",
   "authPassword": "密码",
@@ -1230,8 +1196,6 @@
   "authErrorRateLimit": "操作过于频繁，请稍后再试。",
   "authErrorNetworkIssue": "网络异常，请检查网络后重试。",
   "authErrorLoginFailed": "登录失败，请稍后再试。",
-  "authErrorEmailInvalid": "邮箱地址无效，请检查是否拼写有误。",
-  "authErrorWeakPassword": "密码过于简单，请包含字母和数字，长度至少 6 位。",
   "importSelectCsvFile": "请选择文件进行导入（支持 CSV/TSV/XLSX 格式）",
   "@importFileOpenError": {
     "placeholders": {
@@ -1256,6 +1220,7 @@
   "exportCsvHeaderTime": "时间",
   "exportCsvHeaderTags": "标签",
   "exportCsvHeaderAttachments": "附件",
+  "exportCsvHeaderCustomFields": "自定义字段",
   "exportShareText": "PiggyCount 导出文件",
   "exportSuccessTitle": "导出成功",
   "exportSuccessMessageIOS": "已保存并可在分享历史中找到：\n{path}",
@@ -1318,17 +1283,13 @@
   "analyticsMonthlyAvg": "月均",
   "analyticsDailyAvg": "日均",
   "analyticsOverallAvg": "平均值",
-  "analyticsTotalIncome": "总收入： ",
   "analyticsTotalExpense": "总支出： ",
   "analyticsBalance": "结余： ",
   "analyticsComparedToLastYear": "比上年",
   "analyticsTxCount": "记账笔数",
-  "analyticsAvgIncome": "{avgLabel}收入： ",
-  "analyticsAvgExpense": "{avgLabel}支出： ",
   "analyticsExpense": "支出",
   "analyticsIncome": "收入",
   "analyticsTotal": "总{type}： ",
-  "analyticsAverage": "{avgLabel}： ",
   "updateCheckTitle": "检查更新",
   "updateNewVersionTitle": "发现新版本 {version}",
   "updateNoApkFound": "未找到APK下载链接",
@@ -1344,7 +1305,6 @@
   "updateLaterButton": "稍后",
   "updateDownloadButton": "下载",
   "updateInstallingCachedApk": "正在安装缓存的APK",
-  "updateDownloadComplete": "下载完成",
   "updateInstallStarted": "下载完成，安装程序已启动",
   "updateInstallFailed": "安装失败",
   "updateDownloadFailed": "下载失败",
@@ -1353,7 +1313,6 @@
   "updateCheckFailedTitle": "检测更新失败",
   "updateDownloadFailedTitle": "下载失败",
   "updateGoToGitHub": "前往GitHub",
-  "updateCannotOpenLink": "无法打开链接",
   "updateManualVisit": "请手动在浏览器中访问：\\nhttps://github.com/mecoren/PiggyCount/releases",
   "updateNoLocalApkTitle": "未找到更新包",
   "updateInstallPackageTitle": "安装更新包",
@@ -1662,7 +1621,6 @@
   "accountNameHint": "例如：工商银行、支付宝等",
   "accountNameRequired": "请输入账户名称",
   "accountNameDuplicate": "账户名称已存在，请使用其他名称",
-  "accountTypeLabel": "账户类型",
   "accountTypeCash": "现金",
   "accountTypeBankCard": "银行卡",
   "accountTypeCreditCard": "信用卡",
@@ -1689,7 +1647,6 @@
   "accountUnhide": "恢复账户",
   "accountRestore": "恢复",
   "accountHiddenTag": "已隐藏",
-  "accountHiddenSection": "已隐藏",
   "accountHiddenSectionSummary": "已隐藏 {count} · 合计 {total}",
   "accountHideConfirmTitle": "隐藏此账户？",
   "accountHideConfirmBody": "隐藏后无法再记账到它，新增记账时也不再显示；历史交易与余额保留，可随时恢复。",
@@ -1714,8 +1671,6 @@
   "welcomeCloudSyncFeature3": "iCloud / WebDAV / Supabase / S3 任选",
   "widgetManagement": "桌面小组件",
   "widgetManagementDesc": "在主屏幕快速查看收支情况",
-  "widgetPreview": "小组件预览",
-  "widgetPreviewDesc": "小组件会自动显示当前账本的实际数据，主题色跟随应用设置",
   "widgetGalleryTitle": "组件库",
   "widgetGalleryDesc": "以下为示例效果，实际将显示当前账本的真实数据，主题色跟随 App 设置",
   "widgetGalleryGlanceTitle": "收支速览",
@@ -1745,11 +1700,6 @@
   "widgetQuickEntryTitle": "快捷记账",
   "widgetQuickEntryDesc": "点击小组件左侧区域可快速新建支出，点击右侧区域可快速新建收入。也可通过快捷指令使用 piggycount://new?type=transfer 快速发起转账。",
   "appName": "小猪记账",
-  "monthSuffix": "月",
-  "todayExpense": "今日支出",
-  "todayIncome": "今日收入",
-  "monthExpense": "本月支出",
-  "monthIncome": "本月收入",
   "autoScreenshotBilling": "截图自动记账",
   "autoScreenshotBillingDesc": "截图后自动识别支付信息",
   "autoScreenshotBillingTitle": "截图自动记账",
@@ -1809,7 +1759,6 @@
       }
     }
   },
-  "aiCloudApiKeyHint": "输入智谱AI的API Key",
   "aiCloudApiKeyHintCustom": "输入API Key",
   "aiCloudApiKeyHelper": "GLM-*-Flash模型完全免费",
   "aiCloudApiGetKey": "获取API Key",
@@ -1818,7 +1767,6 @@
   "aiChatConfigWarning": "未配置 AI 服务商，请先在设置中添加并绑定",
   "aiChatGoToSettings": "去设置",
   "aiOcrRecognizing": "正在识别账单...",
-  "aiOcrNoAmount": "未识别到有效金额，请手动记账",
   "aiNotConfiguredHint": "未配置 AI 服务，请前往「我的 → AI 设置」配置",
   "aiOcrCheckLog": "识别失败，请查看日志了解详情",
   "aiOcrNoBill": "未识别到账单信息，请确认图片是账单后重试",
@@ -1839,8 +1787,6 @@
   "autoBillingNotifyNoLedgerTitle": "❌ 自动记账失败",
   "autoBillingNotifyNoLedgerBody": "无可用账本，请先创建账本",
   "autoBillingNotifyNoAmountBody": "未能识别出金额信息",
-  "autoBillingNotifyCreateFailedTitle": "❌ 创建失败",
-  "autoBillingNotifyCreateFailedBody": "无法创建交易记录",
   "autoBillingNotifyProcessFailedTitle": "❌ 处理失败",
   "autoBillingNotifyProcessFailedBody": "错误：{error}",
   "@autoBillingNotifyProcessFailedBody": {
@@ -1903,36 +1849,18 @@
       }
     }
   },
-  "aiOcrCreateFailed": "创建账单失败",
   "aiTypeIncome": "收入",
   "aiTypeExpense": "支出",
   "cloudSyncPageTitle": "云同步",
   "cloudSyncPageSubtitle": "手动上传和下载账本数据",
   "cloudSyncHint": "下载时可自动对比差异并逐条预览。非实时同步，请避免多设备同时编辑同一账本。同步范围为账本数据（含关联的账户、分类、标签），不含附件。",
-  "cloudSyncNow": "立即同步",
-  "cloudSyncNowHint": "推送本地变更并拉取远端更新",
-  "cloudSyncInProgress": "正在同步...",
-  "cloudSyncComplete": "同步完成：推送 {pushed} 条，拉取 {pulled} 条",
-  "@cloudSyncComplete": {
-    "placeholders": {
-      "pushed": {
-        "type": "int"
-      },
-      "pulled": {
-        "type": "int"
-      }
-    }
-  },
-  "cloudAutoSyncHint": "数据变更后自动同步到云端",
   "dataManagement": "数据管理",
   "dataManagementDesc": "导入导出、分类账户管理",
   "dataManagementPageTitle": "数据管理",
-  "dataManagementPageSubtitle": "管理账单数据和分类",
   "dataManagementAttachmentHint": "还原数据时，请先导入附件包，再导入账本数据（CSV或云同步），以确保附件正确关联。",
   "smartBilling": "智能记账",
   "smartBillingDesc": "AI 助手、智能识别、自动记账",
   "smartBillingPageTitle": "智能记账",
-  "smartBillingPageSubtitle": "AI和自动化记账功能",
   "smartBillingGuideHint": "长按首页底部中间的 + 按钮，即可快速使用这些功能",
   "smartBillingImageBilling": "图片记账",
   "smartBillingImageBillingDesc": "从相册选择支付截图进行识别",
@@ -1958,23 +1886,15 @@
   "automation": "自动化",
   "automationDesc": "周期记账、记账提醒",
   "automationPageTitle": "自动化功能",
-  "automationPageSubtitle": "周期记账和提醒设置",
   "appearanceSettings": "个性化设置",
   "appearanceSettingsDesc": "主题、字体、语言、应用锁等",
   "appearanceSettingsPageTitle": "个性化设置",
-  "appearanceSettingsPageSubtitle": "外观、显示、安全等应用偏好",
   "about": "关于",
   "aboutDesc": "版本信息、帮助与反馈",
   "aboutPageTitle": "关于",
-  "aboutPageSubtitle": "应用信息和帮助",
   "mineRateApp": "给应用评分",
   "mineRateAppSubtitle": "在App Store上为我们打分",
   "aboutPageLoadingVersion": "加载版本号中...",
-  "aboutWebsite": "官方网站",
-  "aboutGitHubRepo": "GitHub 仓库",
-  "aboutXiaohongshu": "小红书",
-  "aboutDouyin": "抖音",
-  "aboutTelegram": "Telegram 群",
   "aboutSupportDevelopment": "支持开发",
   "aboutSupportDevelopmentSubtitle": "请开发者喝杯咖啡",
   "aboutDeveloperStoryTitle": "开发者的话",
@@ -1989,7 +1909,6 @@
   "productPromoAndroidMessage": "这款 App 还在 Google Play 内测阶段,需要邀请才能下载。\n\n申请方式:发邮件给我们,告诉我们你的 Google 账号邮箱(必填),以及简单说明使用场景(可选)。我们会在 1-3 天内回复并加你到内测白名单。",
   "productPromoOpenStore": "前往应用商店",
   "productPromoTestFlight": "TestFlight 内测",
-  "productPromoLearnMore": "Pro",
   "productPromoEmailLabel": "申请邮箱(点击复制)",
   "productPromoCopiedToast": "邮箱已复制到剪贴板",
   "productPromoMailUnavailable": "未检测到邮件应用,邮箱已复制到剪贴板,请打开任意邮件应用粘贴发送",
@@ -2098,7 +2017,6 @@
       }
     }
   },
-  "ledgersDownloading": "下载中...",
   "ledgersDownloadSuccess": "账本\"{name}\"下载成功",
   "@ledgersDownloadSuccess": {
     "placeholders": {
@@ -2121,7 +2039,6 @@
   },
   "ledgersDeleting": "删除中...",
   "ledgersDeleteRemoteSuccess": "已删除云端账本",
-  "ledgersCannotDeleteLastOne": "无法删除最后一个账本",
   "ledgersRestoreAllTitle": "批量恢复",
   "ledgersRestoreAllMessage": "确认恢复所有云端账本？共 {count} 个。",
   "ledgersRestoreAllReconfirmMessage": "再次确认：恢复将用云端内容覆盖本地账本数据，被覆盖的本地改动无法找回。确定要继续吗？",
@@ -2132,7 +2049,6 @@
       }
     }
   },
-  "ledgersRestoring": "恢复中...",
   "ledgersRestoreComplete": "恢复完成",
   "ledgersRestoreResult": "成功: {success}，失败: {failed}",
   "@ledgersRestoreResult": {
@@ -2444,6 +2360,39 @@
   "aiCustomBaseUrlHelper": "标准聊天补全API地址，例如 https://api.example.com/v1",
   "aiTextModelTitle": "文本模型",
   "aiAudioModelTitle": "语音模型",
+  "customFieldManageTitle": "自定义字段",
+  "customFieldManageSubtitle": "为本账本定义字段名称与类型",
+  "customFieldManageEmpty": "暂无自定义字段",
+  "customFieldManageEmptyHint": "添加「税费」「发票号」等字段，为每笔明细记录额外信息",
+  "customFieldAdd": "新增字段",
+  "customFieldAddTitle": "新建自定义字段",
+  "customFieldEditTitle": "编辑自定义字段",
+  "customFieldNameLabel": "字段名称",
+  "customFieldNameHint": "例如：税费",
+  "customFieldNameRequired": "请输入字段名称",
+  "customFieldNameDuplicate": "已存在同名字段",
+  "customFieldTypeLabel": "字段类型",
+  "customFieldTypeAmount": "金额",
+  "customFieldTypeText": "文本",
+  "customFieldTypeDate": "日期",
+  "customFieldCreateSuccess": "字段已添加",
+  "customFieldUpdateSuccess": "字段已更新",
+  "customFieldDeleteSuccess": "字段已删除",
+  "customFieldDeleteConfirmTitle": "删除自定义字段",
+  "customFieldDeleteConfirmMessage": "确定删除「{name}」吗？本账本中已记录的该字段值将一并清除，且无法恢复。",
+  "@customFieldDeleteConfirmMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "customFieldSectionTitle": "自定义字段",
+  "customFieldSectionEmpty": "该账本还没有自定义字段",
+  "customFieldDatePick": "选择日期",
+  "customFieldTextHint": "请输入内容",
+  "customFieldAmountHint": "0.00",
+  "customFieldSortHint": "长按拖动排序",
   "tagManageTitle": "标签管理",
   "tagManageSubtitle": "管理交易标签",
   "tagManageEmpty": "暂无标签",
@@ -2591,7 +2540,6 @@
   "budgetAmountHint": "请输入预算金额",
   "budgetCategoryLabel": "选择分类",
   "budgetCategoryHint": "请选择预算分类",
-  "budgetStartDayLabel": "起始日",
   "budgetPeriodLabel": "周期",
   "budgetSaveSuccess": "预算保存成功",
   "budgetDeleteConfirm": "确定删除此预算？",
@@ -2601,14 +2549,6 @@
   "attachmentChooseFromGallery": "从相册选择",
   "attachmentMaxReached": "已达到最大附件数量",
   "attachmentDeleteConfirm": "确定删除此附件？",
-  "attachmentCount": "{count}张图片",
-  "@attachmentCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "commonDeleted": "已删除",
   "attachmentExportTitle": "导出附件",
   "attachmentExportSubtitle": "将所有附件打包导出为压缩文件",
@@ -2699,14 +2639,6 @@
   "attachmentImportReconfirmTitle": "覆盖导入确认",
   "attachmentImportReconfirmMessage": "再次确认：选择「覆盖」后，同名附件将被归档中的文件替换且无法恢复。确定要继续吗？",
   "attachmentPreview": "预览附件",
-  "attachmentPreviewSubtitle": "共 {count} 张图片",
-  "@attachmentPreviewSubtitle": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "attachmentPreviewEmpty": "暂无附件",
   "attachmentExportPreviewTitle": "导出预览",
   "attachmentImportPreviewTitle": "导入预览",
@@ -2760,7 +2692,6 @@
   "calendarToday": "今天",
   "calendarNoTransactions": "当天无交易",
   "calendarAddTransaction": "在该日记账",
-  "calendarAddTransactionTooltip": "添加该日记账",
   "commonUncategorized": "未分类",
   "commonSaved": "已保存",
   "aiProviderManageTitle": "服务商管理",
@@ -2800,7 +2731,6 @@
   "aiCapabilityImageUnderstandDesc": "用于图片账单识别",
   "aiCapabilitySpeechToText": "语音转文字",
   "aiCapabilitySpeechToTextDesc": "用于语音记账",
-  "aiProviderTestRun": "点击测试",
   "aiProviderTestRunning": "测试中...",
   "aiProviderTestSuccess": "测试通过",
   "aiProviderTestFailed": "测试失败",
@@ -2845,7 +2775,6 @@
       }
     }
   },
-  "syncPreviewEmpty": "云端数据与本地一致，无需同步",
   "syncPreviewOldFormat": "云端数据格式较旧，将执行全量替换",
   "syncPreviewOldFormatMessage": "云端数据不包含同步标识，无法逐条对比。将清空当前账本数据并从云端重新导入。",
   "syncPreviewApplied": "已应用 {count} 项变更",
@@ -2876,8 +2805,6 @@
   "cloudSyncGuideLimitItem2": "无冲突合并：不会自动合并两端的修改，以最后上传的为准",
   "cloudSyncGuideLimitItem3": "文件服务延迟：上传后云端文件可能需要几秒到几分钟才能被其他设备读取，取决于你使用的云服务",
   "cloudSyncGuideLimitItem4": "不含附件：交易的图片附件不参与同步，需通过数据管理单独导出",
-  "mineMultiDeviceSyncTitle": "多设备同步",
-  "mineMultiDeviceSyncSubtitle": "进入页面时自动检查云端变更",
   "appLockTitle": "应用锁",
   "appLockDesc": "PIN码与生物识别保护隐私",
   "appLockEnable": "启用应用锁",
@@ -2968,7 +2895,6 @@
   "valuationAccountHint": "请输入当前估值",
   "valuationDebtHint": "请输入当前欠款金额",
   "accountGroupTradable": "日常账户",
-  "accountGroupValuation": "资产/负债",
   "adjustmentTransaction": "估值调整",
   "creditCardBillingInfo": "每月{billingDay}日出账 · {paymentDueDay}日还款",
   "@creditCardBillingInfo": {
@@ -2992,11 +2918,8 @@
   "creditCardPaymentDueToday": "今天是还款日",
   "creditCardQuickRepay": "记一笔还款",
   "budgetManagement": "预算管理",
-  "budgetManagementDesc": "设置月度预算，控制支出",
   "budgetSetupHint": "设置预算，轻松掌控每月开支",
   "budgetSetupAction": "去设置",
-  "commonCopied": "已复制",
-  "commonRemove": "移除",
   "maintenanceOrphanCleanupTitle": "数据清理",
   "maintenanceOrphanCleanupSubtitle": "检查并清理本地孤儿数据",
   "maintenanceOrphanRescan": "重新扫描",
@@ -3069,18 +2992,6 @@
       }
     }
   },
-  "syncProgressTitle": "正在同步",
-  "syncProgressCount": "{applied} / {total} 条",
-  "@syncProgressCount": {
-    "placeholders": {
-      "applied": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
   "exchangeRatePageTitle": "汇率管理",
   "exchangeRateEntrySubtitle": "自动获取汇率，支持手动修正",
   "baseCurrencyLabel": "主币种",
@@ -3102,7 +3013,6 @@
   "unconvertedBadge": "未折算",
   "commonDetail": "详情",
   "conversionDetailTitle": "折算详情",
-  "assetConversionToggle": "按主币种折算",
   "rateManualApplied": "已应用 {count} 条手动汇率",
   "netWorthTrendTitle": "净值趋势",
   "netWorthTrend3M": "3个月",
@@ -3115,7 +3025,6 @@
   "netWorthTrendMultiCurrencyNote": "历史净值为各币种原值相加,未折算",
   "txFlagExcludeFromStats": "不计入收支",
   "txFlagExcludeFromBudget": "不计入预算",
-  "txFlagMoreOptions": "更多选项",
   "txFlagDialogTitle": "账单标记",
   "txFlagExcludeFromStatsHint": "不计入收支统计,但仍计入账户余额",
   "txFlagExcludeFromBudgetHint": "不占用预算额度",
@@ -3159,7 +3068,6 @@
   "amountDeviationEmptySubtext": "记账时填写「原始金额」后，这里会展示偏差与原因",
   "amountDeviationBottomFillHint": "未填写的原始金额按记账金额保存，不产生差异",
   "amountDeviationNoDiff": "该区间没有偏差",
-  "txCrossCurrencyTransferBlocked": "暂不支持跨币种转账,请分别记两笔或使用同币种账户",
   "ledgerBaseCurrencyLabel": "主币种",
   "statsConvertedFootnote": "含外币,已按各笔记账时汇率折算为 {currency}",
   "@statsConvertedFootnote": {
@@ -3292,8 +3200,6 @@
   "currencyMRU": "毛里塔尼亚乌吉亚",
   "cloudSyncEncryptTitle": "同步加密",
   "cloudSyncEncryptSubtitle": "用密码加密云端备份，保护账本隐私",
-  "cloudSyncEncryptEnable": "开启同步加密",
-  "cloudSyncEncryptEnableSubtitle": "开启后上传的备份将以密文保存",
   "cloudSyncEncryptEnabled": "已开启",
   "cloudSyncEncryptDisabled": "未开启",
   "cloudSyncEncryptSettings": "加密设置",
@@ -3309,7 +3215,6 @@
   "cloudSyncEncryptPasswordTooShort": "密码至少 8 个字符",
   "cloudSyncEncryptWrongPassword": "密码错误",
   "cloudSyncEncryptEnableSuccess": "加密已开启",
-  "cloudSyncEncryptDisableSuccess": "加密已关闭，新上传不再加密",
   "cloudSyncEncryptChangeSuccess": "密码已修改",
   "cloudSyncEncryptResetConfirmTitle": "重置加密",
   "cloudSyncEncryptResetConfirmMessage": "重置将清空云端所有账本备份且不可恢复，确定继续吗？",
@@ -3317,17 +3222,13 @@
   "cloudSyncEncryptResetSuccess": "加密已重置",
   "cloudSyncEncryptDecryptFailed": "解密失败，请检查密码",
   "cloudSyncEncryptMultiDeviceHint": "在其他设备上用相同密码即可解密",
-  "cloudSyncEncryptLegacyHint": "云端如有未加密数据，开启后将自动转为密文",
-  "cloudSyncEncryptReencrypting": "正在重加密云端数据…",
   "cloudSyncEncryptReencryptPartialFailed": "加密已开启，但有 {count} 个云端文件重加密失败，下次同步时会自动重试。",
   "cloudSyncEncryptProbeFailedTitle": "探测云端失败",
   "cloudSyncEncryptProbeFailedMessage": "无法探测云端是否已有加密数据（可能是网络或权限问题）。如果其他设备已开启加密，继续将以新密码重加密云端数据，可能导致其他设备无法解密。确定继续吗？",
   "cloudSyncEncryptProbeFailedContinue": "以首设备继续",
-  "saltMismatchStatus": "加密密钥不匹配",
   "saltMismatchNeedPasswordHint": "云端备份密钥与本地不匹配，点击重新输入密码",
   "cloudEncryptedLocallyDisabledHint": "云端备份为加密密文，但本设备未开启加密，点击开启加密以恢复数据",
   "saltMismatchDialogTitle": "重新输入密码",
-  "saltMismatchRetrySuccess": "密钥已激活，正在重试同步...",
   "saltMismatchRawStorageUnavailable": "云服务未初始化，无法恢复密钥",
   "saltMismatchProbeFailed": "云端探测失败，请检查网络后重试",
   "saltMismatchCloudCorrupted": "云端密文已损坏，无法恢复密钥",
@@ -3335,7 +3236,6 @@
   "saltMismatchWebdavAuthMessage": "云存储（WebDAV）账号或密码错误，请前往云服务设置修正凭据后重试。",
   "saltMismatchGoConfig": "去修改配置",
   "startupSyncRecoveryFailedHint": "密钥激活失败，同步未恢复。请确认密码后重试，或到同步设置重新操作。",
-  "backupCardTitle": "云端备份",
   "backupNowTitle": "立即备份",
   "backupNowSubtitle": "将全部账本与附件打包为一份当日备份，存入 piggycount-bak",
   "backupNoLedgers": "没有可备份的账本。",
@@ -3434,7 +3334,6 @@
   "annualReportPosterAchieved": "已达成",
   "annualReportPosterNotAchieved": "未达成",
   "annualReportPosterQrCta": "扫码下载小猪记账，开启你的记账之旅",
-  "commonUnitYuan": "元",
   "annualReportConsecutiveDaysValue": "{count}天",
   "@annualReportConsecutiveDaysValue": {
     "placeholders": {
@@ -3445,21 +3344,37 @@
   },
   "aiBillingRateMissingHint": "⚠️ 未取到 {currency} 汇率，已按 1:1 暂记，可在统计页「补折算」修正",
   "@aiBillingRateMissingHint": {
-    "placeholders": { "currency": { "type": "String" } }
+    "placeholders": {
+      "currency": {
+        "type": "String"
+      }
+    }
   },
   "aiPromptVarCurrencies": "账本主币种 + 已在用的外币账户",
   "aiPromptVarBillGuard": "账单过滤段（仅截图 / 自动记账时注入）",
   "aiPromptMissingVarsHint": "你的自定义模板缺少这些变量，对应能力会失效：{vars}",
   "@aiPromptMissingVarsHint": {
-    "placeholders": { "vars": { "type": "String" } }
+    "placeholders": {
+      "vars": {
+        "type": "String"
+      }
+    }
   },
   "aiPromptInsertVarSection": "插入 {name} 段落",
   "@aiPromptInsertVarSection": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "aiPromptVarSectionInserted": "已追加 {name} 段落，确认后保存",
   "@aiPromptVarSectionInserted": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "tagSelectOwnerManaged": "共享账本标签由所有者管理",
   "syncHealthTitle": "同步健康",
@@ -3501,7 +3416,6 @@
   "recycleBinSubtitle": "已删除的交易留在这里，直到你彻底删除",
   "recycleBinEmpty": "回收站是空的",
   "recycleBinMoved": "已移入回收站",
-  "recycleBinUndo": "撤销",
   "recycleBinRestored": "已恢复",
   "recycleBinRestore": "恢复",
   "recycleBinPurge": "彻底删除",
@@ -3514,6 +3428,7 @@
   "rangeReportColumnYoy": "同比去年同期",
   "analyticsTagComposition": "{type}标签构成",
   "rangeReportChangeRange": "更换区间",
+  "rangeReportCustomFieldTitle": "自定义字段汇总",
   "rangeReportEmptySubtext": "这段时间还没有记账，点上方日期换一个区间",
   "semanticsChartSeries": "图表，共 {count} 个点：{points}"
 }

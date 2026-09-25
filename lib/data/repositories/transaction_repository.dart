@@ -51,6 +51,13 @@ class TransactionUpdateBySyncIdData {
   /// 因缺键触发全量 modified 并把本地已填值抹成 null。
   final double? originalAmount;
 
+  /// v46 自定义字段值 `{ fieldSyncId: value }`。
+  ///
+  /// null 表示**云端快照未携带该键**（旧版客户端导出），语义为「不改动本地
+  /// 原值」；非 null 才写入（空 map = 显式清空 → 列写 NULL）。与
+  /// [originalAmount] 同模式 —— 避免旧快照因缺键把本地已填值抹平。
+  final Map<String, dynamic>? customValues;
+
   const TransactionUpdateBySyncIdData({
     required this.syncId,
     required this.type,
@@ -69,6 +76,7 @@ class TransactionUpdateBySyncIdData {
     this.toAccountSyncIdOverride,
     this.attachments,
     this.originalAmount,
+    this.customValues,
   });
 }
 
@@ -285,6 +293,9 @@ abstract class TransactionRepository {
     // v45 原始金额(用户手填):null = 未填写,语义等价于「默认金额 = amount」,
     // 不做 ?? amount 兜底落库 —— 物理 null 才能区分「未填」与「手填了相同值」。
     double? originalAmount,
+    // v46 自定义字段值 { fieldSyncId: value }:null / 空 = 该笔没有值(列写 NULL)。
+    // 新建路径没有"不改动"语义,直接落库。
+    Map<String, dynamic>? customValues,
   });
 
   /// 批量新增交易，单事务内插入，返回插入条数。
@@ -346,6 +357,9 @@ abstract class TransactionRepository {
     // 改分类等非金额路径必须保持原值),d.Value<double?>(null) = 显式清空
     // (用户在编辑表单里删掉了原始金额),d.Value(x) = 写入。与 accountId 同模式。
     dynamic originalAmount,
+    // v46 自定义字段值三态:null = **不改动**(批量改备注/改分类等路径不得
+    // 顺手清空),空 map = 清空(列写 NULL),非空 = 覆盖写入。
+    Map<String, dynamic>? customValues,
   });
 
   /// 删除交易
@@ -491,6 +505,8 @@ abstract class TransactionRepository {
     String? note,
     // v45 原始金额:null = 不改动既有值(保持「全字段更新但可缺省」的既有语义)。
     double? originalAmount,
+    // v46 自定义字段值:null = 不改动既有值;非 null(含空 map = 清空)才写入。
+    Map<String, dynamic>? customValues,
   });
 
   /// 根据 syncId 删除交易

@@ -9,6 +9,8 @@ import '../../styles/tokens.dart';
 import '../../services/export/share_poster_types.dart';
 import '../../services/data/category_service.dart';
 import '../../l10n/app_localizations.dart';
+import '../../utils/currencies.dart';
+import '../../utils/format_utils.dart';
 
 /// 账本总结海报
 class LedgerSummaryPoster extends StatelessWidget {
@@ -22,6 +24,13 @@ class LedgerSummaryPoster extends StatelessWidget {
     required this.primaryColor,
     this.hideIncome = false,
   });
+
+  /// 金额符号（按账本本位币），见 `AnnualReportPoster.currencySymbol`。
+  String get currencySymbol => getCurrencySymbol(data.currencyCode);
+
+  /// 金额文本：数字千分位 + 币种符号前置（负号在符号之前）。
+  String _money(NumberFormat formatter, double value) =>
+      prefixCurrencySymbol(formatter.format(value), currencySymbol);
 
   @override
   Widget build(BuildContext context) {
@@ -256,6 +265,9 @@ class LedgerSummaryPoster extends StatelessWidget {
   }
 
   /// 构建统计列
+  ///
+  /// [unit] 非空 = 计数类单位后缀（天/笔，按语言可为空串，空时连间距一起
+  /// 省掉）；为 null = 金额列，[value] 按账本本位币前置币种符号。
   Widget _buildStatColumn(
     BuildContext context, {
     required String label,
@@ -265,8 +277,11 @@ class LedgerSummaryPoster extends StatelessWidget {
     String? unit,
     bool showSign = false,
   }) {
-    final l10n = AppLocalizations.of(context);
-    final displayUnit = unit ?? l10n.sharePosterUnitYuan;
+    // 金额列：'**'（隐藏收入）不挂符号；[showSign] 的零值/负号判断一律
+    // 基于未加符号的 [value]，否则 '+¥0.00' 会被当成非零值。
+    final displayValue = (unit == null && value != '**')
+        ? prefixCurrencySymbol(value, currencySymbol)
+        : value;
     return Column(
       children: [
         // 图标
@@ -304,24 +319,27 @@ class LedgerSummaryPoster extends StatelessWidget {
                 ),
               ),
             Text(
-              value,
+              displayValue,
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
             ),
-            const SizedBox(width: 4),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 2),
-              child: Text(
-                displayUnit,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: color.withValues(alpha: 0.8),
+            // 单位留空的语言（英/韩）连间距一起省掉，避免空占位。
+            if ((unit ?? '').isNotEmpty) ...[
+              const SizedBox(width: 4),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Text(
+                  unit!,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: color.withValues(alpha: 0.8),
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ],
@@ -360,17 +378,21 @@ class LedgerSummaryPoster extends StatelessWidget {
                 color: color,
               ),
             ),
-            const SizedBox(width: 3),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 2),
-              child: Text(
-                unit,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: color.withValues(alpha: 0.7),
+            // 单位留空的语言（英/韩的「笔」是空串）连间距一起省掉，
+            // 与同文件 _buildStatColumn / 年·月海报的守卫同款。
+            if (unit.isNotEmpty) ...[
+              const SizedBox(width: 3),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Text(
+                  unit,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: color.withValues(alpha: 0.7),
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ],
@@ -467,7 +489,7 @@ class LedgerSummaryPoster extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '¥${formatter.format(category.total)}',
+                _money(formatter, category.total),
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,

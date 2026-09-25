@@ -194,6 +194,9 @@ class _TransferFormState extends ConsumerState<TransferForm> {
                 happenedAt: result.date,
                 accountId: d.Value<int?>(fromAccountForAdd),
                 accountSyncIdOverride: fromOverride,
+                // v46 自定义字段:转账表单同样渲染录入分区,值必须随保存落库,
+                // 否则用户填了却静默丢弃。null = 本次未涉及(不改动)。
+                customValues: result.customValues,
               );
               // 更新 toAccountId(同时写 toAccountSyncIdOverride,共享账本场景)
               await repo.updateTransactionFields(
@@ -250,6 +253,8 @@ class _TransferFormState extends ConsumerState<TransferForm> {
                 toAccountSyncIdOverride: toOverride,
                 note: result.note,
                 happenedAt: result.date,
+                // v46 自定义字段(同编辑分支,避免用户填了却被丢弃)
+                customValues: result.customValues,
               );
 
               // 关联标签

@@ -6,6 +6,7 @@ import 'package:visibility_detector/visibility_detector.dart';
 import '../../data/db.dart';
 import '../../providers.dart';
 import '../../providers/budget_providers.dart';
+import '../../providers/custom_field_providers.dart';
 import '../../services/system/logger_service.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/biz.dart';
@@ -780,6 +781,16 @@ class TransactionListState extends ConsumerState<TransactionList> {
           // 获取附件数量（优先使用预加载数据）
           final attachmentCount = _getAttachmentCountForTransaction(it.t.id);
 
+          // B1(v47):自定义字段角标 —— 按当前账本定义解析展示文本;
+          // 无值 / 定义解析不出 → 不显示(列表不被噪音填满)。
+          final customBadges = ref
+                  .watch(customFieldValueBadgesProvider)
+                  .valueOrNull?[it.t.id] ??
+              const <({String name, String display})>[];
+          final customBadgeTexts = [
+            for (final b in customBadges) '${b.name}: ${b.display}',
+          ];
+
           return TransactionListItem(
             icon: isAdjustment
                 ? Icons.tune
@@ -809,6 +820,9 @@ class TransactionListState extends ConsumerState<TransactionList> {
                 : accountName,
             tags: tagsList.isNotEmpty ? tagsList : null,
             attachmentCount: attachmentCount,
+            customFieldBadges: customBadgeTexts.isNotEmpty
+                ? customBadgeTexts
+                : null,
             excludeFromStats: it.t.excludeFromStats,
             excludeFromBudget: it.t.excludeFromBudget,
             onAttachmentTap: attachmentCount > 0

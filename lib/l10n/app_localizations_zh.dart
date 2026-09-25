@@ -94,9 +94,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commonKnow => '知道了';
 
   @override
-  String get commonNo => '否';
-
-  @override
   String get commonEmpty => '暂无数据';
 
   @override
@@ -405,15 +402,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeMonthExpense => '本月支出';
 
   @override
-  String get homeMonthBalance => '本月结余';
-
-  @override
   String homeBudgetSet(String amount) {
     return '预算 $amount';
   }
-
-  @override
-  String get homeBudgetNotSet => '未设置';
 
   @override
   String get homeNoRecords => '还没有记账';
@@ -686,9 +677,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get analyticsAll => '全部';
 
   @override
-  String get analyticsCategoryRanking => '分类排行';
-
-  @override
   String get analyticsTotalAmount => '总计';
 
   @override
@@ -703,16 +691,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get analyticsTipHeader => '提示：顶部胶囊可切换 周/月/年/全部';
-
-  @override
-  String get analyticsSwipeToSwitch => '横滑切换';
-
-  @override
   String get analyticsAllYears => '全部年份';
-
-  @override
-  String get analyticsToday => '今天';
 
   @override
   String get splashAppName => '小猪记账';
@@ -885,9 +864,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get ledgersDownloading => '下载中...';
-
-  @override
   String ledgersDownloadSuccess(String name) {
     return '账本\"$name\"下载成功';
   }
@@ -917,9 +893,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ledgersDeleteRemoteSuccess => '已删除云端账本';
 
   @override
-  String get ledgersCannotDeleteLastOne => '无法删除最后一个账本';
-
-  @override
   String get ledgersRestoreAllTitle => '批量恢复';
 
   @override
@@ -930,9 +903,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get ledgersRestoreAllReconfirmMessage =>
       '再次确认：恢复将用云端内容覆盖本地账本数据，被覆盖的本地改动无法找回。确定要继续吗？';
-
-  @override
-  String get ledgersRestoring => '恢复中...';
 
   @override
   String get ledgersRestoreComplete => '恢复完成';
@@ -988,9 +958,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get categoryEmpty => '暂无分类';
-
-  @override
-  String get categoryDefault => '默认分类';
 
   @override
   String get categoryReorderTip => '长按分类可拖拽调整顺序';
@@ -1179,9 +1146,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get mineTitle => '我的';
-
-  @override
   String get mineCloudBackupSection => '云同步与备份';
 
   @override
@@ -1194,19 +1158,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mineSupportSection => '支持我们';
 
   @override
-  String get mineReminder => '提醒设置';
-
-  @override
   String get mineImport => '导入数据';
 
   @override
   String get mineExport => '导出数据';
-
-  @override
-  String get mineCloud => '云服务';
-
-  @override
-  String get mineUpdate => '检查更新';
 
   @override
   String get mineLanguageSettings => '语言';
@@ -1266,9 +1221,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get headerSkinTitle => '皮肤';
-
-  @override
-  String get headerSkinSubtitle => '跟随主题色,叠在头部之上';
 
   @override
   String get headerSkinNone => '纯色';
@@ -1332,9 +1284,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get headerSkinTerrazzo => '水磨石';
-
-  @override
-  String get mineAvatarTitle => '头像设置';
 
   @override
   String get mineAvatarFromGallery => '从相册选择';
@@ -1644,9 +1593,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sharePosterUnitCount => '笔';
 
   @override
-  String get sharePosterUnitYuan => '元';
-
-  @override
   String userProfilePosterStartDate(String date) {
     return '记账始于 $date';
   }
@@ -1662,6 +1608,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get userProfilePosterCountUnit => '笔';
+
+  @override
+  String get userProfilePosterDailyUnit => '笔/天';
 
   @override
   String get userProfilePosterLedgerCount => '账本数量';
@@ -1981,9 +1930,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mineReminderSettingsSubtitle => '设置每日记账提醒';
 
   @override
-  String get minePersonalize => '个性装扮';
-
-  @override
   String get mineDisplayScale => '显示缩放';
 
   @override
@@ -1991,18 +1937,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mineCheckUpdate => '检测更新';
-
-  @override
-  String get mineCheckUpdateSubtitle => '正在检查最新版本';
-
-  @override
-  String get mineUpdateDownload => '下载更新';
-
-  @override
-  String get mineFeedback => '问题反馈';
-
-  @override
-  String get mineFeedbackSubtitle => '提交问题或建议';
 
   @override
   String get mineHelp => '使用帮助';
@@ -2220,9 +2154,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get categoryImportModeOverwriteDesc => '清空未使用分类后导入';
 
   @override
-  String get categoryImportSuccess => '导入成功';
-
-  @override
   String categoryImportSuccessDetail(int imported, int skipped, int icons) {
     return '已导入 $imported 个分类，跳过 $skipped 个，导入 $icons 个图标';
   }
@@ -2432,21 +2363,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get appearanceThemeModeDark => '暗黑模式';
-
-  @override
-  String get appearanceDarkModePattern => '暗黑模式头部图案';
-
-  @override
-  String get appearancePatternNone => '无';
-
-  @override
-  String get appearancePatternIcons => '图标平铺';
-
-  @override
-  String get appearancePatternParticles => '粒子星星';
-
-  @override
-  String get appearancePatternHoneycomb => '蜂巢六边形';
 
   @override
   String get appearanceAmountFormat => '余额显示格式';
@@ -2662,9 +2578,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reminderTitle => '记账提醒';
 
   @override
-  String get reminderSubtitle => '设置每日记账提醒时间';
-
-  @override
   String get reminderDailyTitle => '每日记账提醒';
 
   @override
@@ -2874,15 +2787,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mineUpdateDownloadTitle => '下载更新';
 
   @override
-  String get cloudTest => '测试';
-
-  @override
-  String get cloudSwitched => '已切换';
-
-  @override
-  String get cloudSwitchFailed => '切换失败';
-
-  @override
   String get cloudSupabaseUrlLabel => 'Supabase URL';
 
   @override
@@ -2890,9 +2794,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get cloudAnonKeyLabel => 'Anon Key';
-
-  @override
-  String get cloudSelectServiceType => '选择云服务类型';
 
   @override
   String get cloudMultiDeviceWarningTitle => '多设备使用提醒';
@@ -2971,15 +2872,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cloudConfigSaved => '配置已保存';
 
   @override
-  String get cloudTestSuccess => '连接测试成功！';
-
-  @override
-  String get cloudTestFailed => '连接测试失败，请检查配置是否正确。';
-
-  @override
-  String get cloudTestError => '测试失败';
-
-  @override
   String get authLogin => '登录';
 
   @override
@@ -3011,12 +2903,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get authErrorLoginFailed => '登录失败，请稍后再试。';
-
-  @override
-  String get authErrorEmailInvalid => '邮箱地址无效，请检查是否拼写有误。';
-
-  @override
-  String get authErrorWeakPassword => '密码过于简单，请包含字母和数字，长度至少 6 位。';
 
   @override
   String get importSelectCsvFile => '请选择文件进行导入（支持 CSV/TSV/XLSX 格式）';
@@ -3071,6 +2957,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get exportCsvHeaderAttachments => '附件';
+
+  @override
+  String get exportCsvHeaderCustomFields => '自定义字段';
 
   @override
   String get exportShareText => 'PiggyCount 导出文件';
@@ -3200,9 +3089,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get analyticsOverallAvg => '平均值';
 
   @override
-  String get analyticsTotalIncome => '总收入： ';
-
-  @override
   String get analyticsTotalExpense => '总支出： ';
 
   @override
@@ -3215,16 +3101,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get analyticsTxCount => '记账笔数';
 
   @override
-  String analyticsAvgIncome(String avgLabel) {
-    return '$avgLabel收入： ';
-  }
-
-  @override
-  String analyticsAvgExpense(String avgLabel) {
-    return '$avgLabel支出： ';
-  }
-
-  @override
   String get analyticsExpense => '支出';
 
   @override
@@ -3233,11 +3109,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String analyticsTotal(String type) {
     return '总$type： ';
-  }
-
-  @override
-  String analyticsAverage(String avgLabel) {
-    return '$avgLabel： ';
   }
 
   @override
@@ -3290,9 +3161,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get updateInstallingCachedApk => '正在安装缓存的APK';
 
   @override
-  String get updateDownloadComplete => '下载完成';
-
-  @override
   String get updateInstallStarted => '下载完成，安装程序已启动';
 
   @override
@@ -3315,9 +3183,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get updateGoToGitHub => '前往GitHub';
-
-  @override
-  String get updateCannotOpenLink => '无法打开链接';
 
   @override
   String get updateManualVisit =>
@@ -4090,9 +3955,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cloudSupabaseAnonKeyHintLong => '粘贴完整的 anon key';
 
   @override
-  String get cloudWebdavRemotePathHelp => '数据存储的远程目录路径';
-
-  @override
   String get cloudWebdavRemotePathLabel => '远程路径';
 
   @override
@@ -4130,9 +3992,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get accountNameDuplicate => '账户名称已存在，请使用其他名称';
-
-  @override
-  String get accountTypeLabel => '账户类型';
 
   @override
   String get accountTypeCash => '现金';
@@ -4193,9 +4052,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get accountHiddenTag => '已隐藏';
-
-  @override
-  String get accountHiddenSection => '已隐藏';
 
   @override
   String accountHiddenSectionSummary(int count, String total) {
@@ -4278,12 +4134,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get widgetManagementDesc => '在主屏幕快速查看收支情况';
-
-  @override
-  String get widgetPreview => '小组件预览';
-
-  @override
-  String get widgetPreviewDesc => '小组件会自动显示当前账本的实际数据，主题色跟随应用设置';
 
   @override
   String get widgetGalleryTitle => '组件库';
@@ -4373,21 +4223,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get appName => '小猪记账';
-
-  @override
-  String get monthSuffix => '月';
-
-  @override
-  String get todayExpense => '今日支出';
-
-  @override
-  String get todayIncome => '今日收入';
-
-  @override
-  String get monthExpense => '本月支出';
-
-  @override
-  String get monthIncome => '本月收入';
 
   @override
   String get autoScreenshotBilling => '截图自动记账';
@@ -4555,9 +4390,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get aiCloudApiKeyHint => '输入智谱AI的API Key';
-
-  @override
   String get aiCloudApiKeyHintCustom => '输入API Key';
 
   @override
@@ -4580,9 +4412,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get aiOcrRecognizing => '正在识别账单...';
-
-  @override
-  String get aiOcrNoAmount => '未识别到有效金额，请手动记账';
 
   @override
   String get aiNotConfiguredHint => '未配置 AI 服务，请前往「我的 → AI 设置」配置';
@@ -4645,12 +4474,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoBillingNotifyNoAmountBody => '未能识别出金额信息';
 
   @override
-  String get autoBillingNotifyCreateFailedTitle => '❌ 创建失败';
-
-  @override
-  String get autoBillingNotifyCreateFailedBody => '无法创建交易记录';
-
-  @override
   String get autoBillingNotifyProcessFailedTitle => '❌ 处理失败';
 
   @override
@@ -4695,9 +4518,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get aiOcrCreateFailed => '创建账单失败';
-
-  @override
   String get aiTypeIncome => '收入';
 
   @override
@@ -4714,23 +4534,6 @@ class AppLocalizationsZh extends AppLocalizations {
       '下载时可自动对比差异并逐条预览。非实时同步，请避免多设备同时编辑同一账本。同步范围为账本数据（含关联的账户、分类、标签），不含附件。';
 
   @override
-  String get cloudSyncNow => '立即同步';
-
-  @override
-  String get cloudSyncNowHint => '推送本地变更并拉取远端更新';
-
-  @override
-  String get cloudSyncInProgress => '正在同步...';
-
-  @override
-  String cloudSyncComplete(int pushed, int pulled) {
-    return '同步完成：推送 $pushed 条，拉取 $pulled 条';
-  }
-
-  @override
-  String get cloudAutoSyncHint => '数据变更后自动同步到云端';
-
-  @override
   String get dataManagement => '数据管理';
 
   @override
@@ -4738,9 +4541,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get dataManagementPageTitle => '数据管理';
-
-  @override
-  String get dataManagementPageSubtitle => '管理账单数据和分类';
 
   @override
   String get dataManagementAttachmentHint =>
@@ -4754,9 +4554,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get smartBillingPageTitle => '智能记账';
-
-  @override
-  String get smartBillingPageSubtitle => 'AI和自动化记账功能';
 
   @override
   String get smartBillingGuideHint => '长按首页底部中间的 + 按钮，即可快速使用这些功能';
@@ -4839,9 +4636,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get automationPageTitle => '自动化功能';
 
   @override
-  String get automationPageSubtitle => '周期记账和提醒设置';
-
-  @override
   String get appearanceSettings => '个性化设置';
 
   @override
@@ -4849,9 +4643,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get appearanceSettingsPageTitle => '个性化设置';
-
-  @override
-  String get appearanceSettingsPageSubtitle => '外观、显示、安全等应用偏好';
 
   @override
   String get about => '关于';
@@ -4869,25 +4660,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aboutPageTitle => '关于';
 
   @override
-  String get aboutPageSubtitle => '应用信息和帮助';
-
-  @override
   String get aboutPageLoadingVersion => '加载版本号中...';
-
-  @override
-  String get aboutWebsite => '官方网站';
-
-  @override
-  String get aboutGitHubRepo => 'GitHub 仓库';
-
-  @override
-  String get aboutXiaohongshu => '小红书';
-
-  @override
-  String get aboutDouyin => '抖音';
-
-  @override
-  String get aboutTelegram => 'Telegram 群';
 
   @override
   String get aboutSupportDevelopment => '支持开发';
@@ -4934,9 +4707,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get productPromoTestFlight => 'TestFlight 内测';
-
-  @override
-  String get productPromoLearnMore => 'Pro';
 
   @override
   String get productPromoEmailLabel => '申请邮箱(点击复制)';
@@ -5669,6 +5439,86 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiAudioModelTitle => '语音模型';
 
   @override
+  String get customFieldManageTitle => '自定义字段';
+
+  @override
+  String get customFieldManageSubtitle => '为本账本定义字段名称与类型';
+
+  @override
+  String get customFieldManageEmpty => '暂无自定义字段';
+
+  @override
+  String get customFieldManageEmptyHint => '添加「税费」「发票号」等字段，为每笔明细记录额外信息';
+
+  @override
+  String get customFieldAdd => '新增字段';
+
+  @override
+  String get customFieldAddTitle => '新建自定义字段';
+
+  @override
+  String get customFieldEditTitle => '编辑自定义字段';
+
+  @override
+  String get customFieldNameLabel => '字段名称';
+
+  @override
+  String get customFieldNameHint => '例如：税费';
+
+  @override
+  String get customFieldNameRequired => '请输入字段名称';
+
+  @override
+  String get customFieldNameDuplicate => '已存在同名字段';
+
+  @override
+  String get customFieldTypeLabel => '字段类型';
+
+  @override
+  String get customFieldTypeAmount => '金额';
+
+  @override
+  String get customFieldTypeText => '文本';
+
+  @override
+  String get customFieldTypeDate => '日期';
+
+  @override
+  String get customFieldCreateSuccess => '字段已添加';
+
+  @override
+  String get customFieldUpdateSuccess => '字段已更新';
+
+  @override
+  String get customFieldDeleteSuccess => '字段已删除';
+
+  @override
+  String get customFieldDeleteConfirmTitle => '删除自定义字段';
+
+  @override
+  String customFieldDeleteConfirmMessage(String name) {
+    return '确定删除「$name」吗？本账本中已记录的该字段值将一并清除，且无法恢复。';
+  }
+
+  @override
+  String get customFieldSectionTitle => '自定义字段';
+
+  @override
+  String get customFieldSectionEmpty => '该账本还没有自定义字段';
+
+  @override
+  String get customFieldDatePick => '选择日期';
+
+  @override
+  String get customFieldTextHint => '请输入内容';
+
+  @override
+  String get customFieldAmountHint => '0.00';
+
+  @override
+  String get customFieldSortHint => '长按拖动排序';
+
+  @override
   String get tagManageTitle => '标签管理';
 
   @override
@@ -5978,9 +5828,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get budgetCategoryHint => '请选择预算分类';
 
   @override
-  String get budgetStartDayLabel => '起始日';
-
-  @override
   String get budgetPeriodLabel => '周期';
 
   @override
@@ -6006,11 +5853,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get attachmentDeleteConfirm => '确定删除此附件？';
-
-  @override
-  String attachmentCount(int count) {
-    return '$count张图片';
-  }
 
   @override
   String get commonDeleted => '已删除';
@@ -6089,11 +5931,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get attachmentPreview => '预览附件';
-
-  @override
-  String attachmentPreviewSubtitle(int count) {
-    return '共 $count 张图片';
-  }
 
   @override
   String get attachmentPreviewEmpty => '暂无附件';
@@ -6255,9 +6092,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get calendarAddTransaction => '在该日记账';
 
   @override
-  String get calendarAddTransactionTooltip => '添加该日记账';
-
-  @override
   String get commonUncategorized => '未分类';
 
   @override
@@ -6356,9 +6190,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiCapabilitySpeechToTextDesc => '用于语音记账';
 
   @override
-  String get aiProviderTestRun => '点击测试';
-
-  @override
   String get aiProviderTestRunning => '测试中...';
 
   @override
@@ -6413,9 +6244,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String syncPreviewApply(int count) {
     return '应用 $count 项';
   }
-
-  @override
-  String get syncPreviewEmpty => '云端数据与本地一致，无需同步';
 
   @override
   String get syncPreviewOldFormat => '云端数据格式较旧，将执行全量替换';
@@ -6490,12 +6318,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get cloudSyncGuideLimitItem4 => '不含附件：交易的图片附件不参与同步，需通过数据管理单独导出';
-
-  @override
-  String get mineMultiDeviceSyncTitle => '多设备同步';
-
-  @override
-  String get mineMultiDeviceSyncSubtitle => '进入页面时自动检查云端变更';
 
   @override
   String get appLockTitle => '应用锁';
@@ -6711,9 +6533,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get accountGroupTradable => '日常账户';
 
   @override
-  String get accountGroupValuation => '资产/负债';
-
-  @override
   String get adjustmentTransaction => '估值调整';
 
   @override
@@ -6736,19 +6555,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get budgetManagement => '预算管理';
 
   @override
-  String get budgetManagementDesc => '设置月度预算，控制支出';
-
-  @override
   String get budgetSetupHint => '设置预算，轻松掌控每月开支';
 
   @override
   String get budgetSetupAction => '去设置';
-
-  @override
-  String get commonCopied => '已复制';
-
-  @override
-  String get commonRemove => '移除';
 
   @override
   String get maintenanceOrphanCleanupTitle => '数据清理';
@@ -6826,14 +6636,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get syncProgressTitle => '正在同步';
-
-  @override
-  String syncProgressCount(int applied, int total) {
-    return '$applied / $total 条';
-  }
-
-  @override
   String get exchangeRatePageTitle => '汇率管理';
 
   @override
@@ -6907,9 +6709,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get conversionDetailTitle => '折算详情';
 
   @override
-  String get assetConversionToggle => '按主币种折算';
-
-  @override
   String rateManualApplied(int count) {
     return '已应用 $count 条手动汇率';
   }
@@ -6946,9 +6745,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get txFlagExcludeFromBudget => '不计入预算';
-
-  @override
-  String get txFlagMoreOptions => '更多选项';
 
   @override
   String get txFlagDialogTitle => '账单标记';
@@ -7063,9 +6859,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get amountDeviationNoDiff => '该区间没有偏差';
-
-  @override
-  String get txCrossCurrencyTransferBlocked => '暂不支持跨币种转账,请分别记两笔或使用同币种账户';
 
   @override
   String get ledgerBaseCurrencyLabel => '主币种';
@@ -7425,12 +7218,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cloudSyncEncryptSubtitle => '用密码加密云端备份，保护账本隐私';
 
   @override
-  String get cloudSyncEncryptEnable => '开启同步加密';
-
-  @override
-  String get cloudSyncEncryptEnableSubtitle => '开启后上传的备份将以密文保存';
-
-  @override
   String get cloudSyncEncryptEnabled => '已开启';
 
   @override
@@ -7476,9 +7263,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cloudSyncEncryptEnableSuccess => '加密已开启';
 
   @override
-  String get cloudSyncEncryptDisableSuccess => '加密已关闭，新上传不再加密';
-
-  @override
   String get cloudSyncEncryptChangeSuccess => '密码已修改';
 
   @override
@@ -7501,12 +7285,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cloudSyncEncryptMultiDeviceHint => '在其他设备上用相同密码即可解密';
 
   @override
-  String get cloudSyncEncryptLegacyHint => '云端如有未加密数据，开启后将自动转为密文';
-
-  @override
-  String get cloudSyncEncryptReencrypting => '正在重加密云端数据…';
-
-  @override
   String cloudSyncEncryptReencryptPartialFailed(int count) {
     return '加密已开启，但有 $count 个云端文件重加密失败，下次同步时会自动重试。';
   }
@@ -7522,9 +7300,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cloudSyncEncryptProbeFailedContinue => '以首设备继续';
 
   @override
-  String get saltMismatchStatus => '加密密钥不匹配';
-
-  @override
   String get saltMismatchNeedPasswordHint => '云端备份密钥与本地不匹配，点击重新输入密码';
 
   @override
@@ -7533,9 +7308,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get saltMismatchDialogTitle => '重新输入密码';
-
-  @override
-  String get saltMismatchRetrySuccess => '密钥已激活，正在重试同步...';
 
   @override
   String get saltMismatchRawStorageUnavailable => '云服务未初始化，无法恢复密钥';
@@ -7559,9 +7331,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get startupSyncRecoveryFailedHint =>
       '密钥激活失败，同步未恢复。请确认密码后重试，或到同步设置重新操作。';
-
-  @override
-  String get backupCardTitle => '云端备份';
 
   @override
   String get backupNowTitle => '立即备份';
@@ -7777,9 +7546,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get annualReportPosterQrCta => '扫码下载小猪记账，开启你的记账之旅';
 
   @override
-  String get commonUnitYuan => '元';
-
-  @override
   String annualReportConsecutiveDaysValue(int count) {
     return '$count天';
   }
@@ -7953,9 +7719,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recycleBinMoved => '已移入回收站';
 
   @override
-  String get recycleBinUndo => '撤销';
-
-  @override
   String get recycleBinRestored => '已恢复';
 
   @override
@@ -7992,6 +7755,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get rangeReportChangeRange => '更换区间';
+
+  @override
+  String get rangeReportCustomFieldTitle => '自定义字段汇总';
 
   @override
   String get rangeReportEmptySubtext => '这段时间还没有记账，点上方日期换一个区间';
@@ -8090,9 +7856,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get commonKnow => '知道了';
-
-  @override
-  String get commonNo => '否';
 
   @override
   String get commonEmpty => '暫無資料';
@@ -8403,15 +8166,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get homeMonthExpense => '本月支出';
 
   @override
-  String get homeMonthBalance => '本月結餘';
-
-  @override
   String homeBudgetSet(String amount) {
     return '預算 $amount';
   }
-
-  @override
-  String get homeBudgetNotSet => '未設定';
 
   @override
   String get homeNoRecords => '還沒有記帳';
@@ -8684,9 +8441,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get analyticsAll => '全部';
 
   @override
-  String get analyticsCategoryRanking => '分類排行';
-
-  @override
   String get analyticsTotalAmount => '總計';
 
   @override
@@ -8701,16 +8455,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
-  String get analyticsTipHeader => '提示：頂部膠囊可切換週/月/年/全部';
-
-  @override
-  String get analyticsSwipeToSwitch => '橫滑切換';
-
-  @override
   String get analyticsAllYears => '全部年份';
-
-  @override
-  String get analyticsToday => '今天';
 
   @override
   String get splashAppName => '小豬記帳';
@@ -8883,9 +8628,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
-  String get ledgersDownloading => '下載中...';
-
-  @override
   String ledgersDownloadSuccess(String name) {
     return '帳本「$name」下載成功';
   }
@@ -8915,9 +8657,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get ledgersDeleteRemoteSuccess => '已刪除雲端帳本';
 
   @override
-  String get ledgersCannotDeleteLastOne => '無法刪除最後一個帳本';
-
-  @override
   String get ledgersRestoreAllTitle => '批次恢復';
 
   @override
@@ -8928,9 +8667,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String get ledgersRestoreAllReconfirmMessage =>
       '再次確認：恢復將用雲端內容覆蓋本機帳本資料，被覆蓋的本機變更無法找回。確定要繼續嗎？';
-
-  @override
-  String get ledgersRestoring => '恢復中...';
 
   @override
   String get ledgersRestoreComplete => '恢復完成';
@@ -8986,9 +8722,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get categoryEmpty => '暫無分類';
-
-  @override
-  String get categoryDefault => '預設分類';
 
   @override
   String get categoryReorderTip => '長按分類可拖曳調整順序';
@@ -9177,9 +8910,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
-  String get mineTitle => '我的';
-
-  @override
   String get mineCloudBackupSection => '雲端同步與備份';
 
   @override
@@ -9192,19 +8922,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get mineSupportSection => '支持我們';
 
   @override
-  String get mineReminder => '提醒設定';
-
-  @override
   String get mineImport => '匯入資料';
 
   @override
   String get mineExport => '匯出資料';
-
-  @override
-  String get mineCloud => '雲服務';
-
-  @override
-  String get mineUpdate => '檢查更新';
 
   @override
   String get mineLanguageSettings => '語言';
@@ -9264,9 +8985,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get headerSkinTitle => '皮膚';
-
-  @override
-  String get headerSkinSubtitle => '跟隨主題色,疊在頁首之上';
 
   @override
   String get headerSkinNone => '純色';
@@ -9330,9 +9048,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get headerSkinTerrazzo => '水磨石';
-
-  @override
-  String get mineAvatarTitle => '頭像設定';
 
   @override
   String get mineAvatarFromGallery => '從相簿選擇';
@@ -9642,9 +9357,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get sharePosterUnitCount => '筆';
 
   @override
-  String get sharePosterUnitYuan => '元';
-
-  @override
   String userProfilePosterStartDate(String date) {
     return '記帳始於 $date';
   }
@@ -9660,6 +9372,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get userProfilePosterCountUnit => '筆';
+
+  @override
+  String get userProfilePosterDailyUnit => '筆/天';
 
   @override
   String get userProfilePosterLedgerCount => '帳本數量';
@@ -9979,9 +9694,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get mineReminderSettingsSubtitle => '設定每日記帳提醒';
 
   @override
-  String get minePersonalize => '個性裝扮';
-
-  @override
   String get mineDisplayScale => '顯示縮放';
 
   @override
@@ -9989,18 +9701,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get mineCheckUpdate => '檢測更新';
-
-  @override
-  String get mineCheckUpdateSubtitle => '正在檢查最新版本';
-
-  @override
-  String get mineUpdateDownload => '下載更新';
-
-  @override
-  String get mineFeedback => '問題回饋';
-
-  @override
-  String get mineFeedbackSubtitle => '提交問題或建議';
 
   @override
   String get mineHelp => '使用說明';
@@ -10218,9 +9918,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get categoryImportModeOverwriteDesc => '清空未使用分類後匯入';
 
   @override
-  String get categoryImportSuccess => '匯入成功';
-
-  @override
   String categoryImportSuccessDetail(int imported, int skipped, int icons) {
     return '已匯入 $imported 個分類，跳過 $skipped 個，匯入 $icons 個圖示';
   }
@@ -10430,21 +10127,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get appearanceThemeModeDark => '暗黑模式';
-
-  @override
-  String get appearanceDarkModePattern => '暗黑模式頂部圖案';
-
-  @override
-  String get appearancePatternNone => '無';
-
-  @override
-  String get appearancePatternIcons => '圖標平鋪';
-
-  @override
-  String get appearancePatternParticles => '粒子星星';
-
-  @override
-  String get appearancePatternHoneycomb => '蜂巢六邊形';
 
   @override
   String get appearanceAmountFormat => '餘額顯示格式';
@@ -10660,9 +10342,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get reminderTitle => '記帳提醒';
 
   @override
-  String get reminderSubtitle => '設定每日記帳提醒時間';
-
-  @override
   String get reminderDailyTitle => '每日記帳提醒';
 
   @override
@@ -10872,15 +10551,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get mineUpdateDownloadTitle => '下載更新';
 
   @override
-  String get cloudTest => '測試';
-
-  @override
-  String get cloudSwitched => '已切換';
-
-  @override
-  String get cloudSwitchFailed => '切換失敗';
-
-  @override
   String get cloudSupabaseUrlLabel => 'Supabase URL';
 
   @override
@@ -10888,9 +10558,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get cloudAnonKeyLabel => 'Anon Key';
-
-  @override
-  String get cloudSelectServiceType => '選擇雲端服務類型';
 
   @override
   String get cloudMultiDeviceWarningTitle => '多裝置使用提醒';
@@ -10969,15 +10636,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get cloudConfigSaved => '設定已儲存';
 
   @override
-  String get cloudTestSuccess => '連接測試成功！';
-
-  @override
-  String get cloudTestFailed => '連接測試失敗，請檢查設定是否正確。';
-
-  @override
-  String get cloudTestError => '測試失敗';
-
-  @override
   String get authLogin => '登入';
 
   @override
@@ -11009,12 +10667,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get authErrorLoginFailed => '登入失敗，請稍後再試。';
-
-  @override
-  String get authErrorEmailInvalid => '電子郵件地址無效，請檢查是否拼寫有誤。';
-
-  @override
-  String get authErrorWeakPassword => '密碼過於簡單，請包含字母和數字，長度至少 6 位。';
 
   @override
   String get importSelectCsvFile => '請選擇檔案進行匯入（支援 CSV/TSV/XLSX 格式）';
@@ -11069,6 +10721,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get exportCsvHeaderAttachments => '附件';
+
+  @override
+  String get exportCsvHeaderCustomFields => '自訂欄位';
 
   @override
   String get exportShareText => 'PiggyCount 匯出檔案';
@@ -11198,9 +10853,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get analyticsOverallAvg => '平均值';
 
   @override
-  String get analyticsTotalIncome => '總收入： ';
-
-  @override
   String get analyticsTotalExpense => '總支出： ';
 
   @override
@@ -11213,16 +10865,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get analyticsTxCount => '記帳筆數';
 
   @override
-  String analyticsAvgIncome(String avgLabel) {
-    return '$avgLabel收入： ';
-  }
-
-  @override
-  String analyticsAvgExpense(String avgLabel) {
-    return '$avgLabel支出： ';
-  }
-
-  @override
   String get analyticsExpense => '支出';
 
   @override
@@ -11231,11 +10873,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String analyticsTotal(String type) {
     return '總$type： ';
-  }
-
-  @override
-  String analyticsAverage(String avgLabel) {
-    return '$avgLabel： ';
   }
 
   @override
@@ -11288,9 +10925,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get updateInstallingCachedApk => '正在安裝快取的APK';
 
   @override
-  String get updateDownloadComplete => '下載完成';
-
-  @override
   String get updateInstallStarted => '下載完成，安裝程式已啟動';
 
   @override
@@ -11313,9 +10947,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get updateGoToGitHub => '前往GitHub';
-
-  @override
-  String get updateCannotOpenLink => '無法開啟連結';
 
   @override
   String get updateManualVisit =>
@@ -12088,9 +11719,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get cloudSupabaseAnonKeyHintLong => '貼上完整的 anon key';
 
   @override
-  String get cloudWebdavRemotePathHelp => '數據存储的远程目錄路径';
-
-  @override
   String get cloudWebdavRemotePathLabel => '遠端路徑';
 
   @override
@@ -12128,9 +11756,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get accountNameDuplicate => '帳戶名稱已存在，請使用其他名稱';
-
-  @override
-  String get accountTypeLabel => '帳戶類型';
 
   @override
   String get accountTypeCash => '現金';
@@ -12191,9 +11816,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get accountHiddenTag => '已隱藏';
-
-  @override
-  String get accountHiddenSection => '已隱藏';
 
   @override
   String accountHiddenSectionSummary(int count, String total) {
@@ -12276,12 +11898,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get widgetManagementDesc => '在主屏幕快速查看收支情况';
-
-  @override
-  String get widgetPreview => '小組件預覽';
-
-  @override
-  String get widgetPreviewDesc => '小組件會自動顯示當前帳本的實際數據，主題色跟隨應用設置';
 
   @override
   String get widgetGalleryTitle => '組件庫';
@@ -12371,21 +11987,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get appName => '小豬記帳';
-
-  @override
-  String get monthSuffix => '月';
-
-  @override
-  String get todayExpense => '今日支出';
-
-  @override
-  String get todayIncome => '今日收入';
-
-  @override
-  String get monthExpense => '本月支出';
-
-  @override
-  String get monthIncome => '本月收入';
 
   @override
   String get autoScreenshotBilling => '截圖自動記帳';
@@ -12553,9 +12154,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
-  String get aiCloudApiKeyHint => '輸入智譜 AI 的 API Key';
-
-  @override
   String get aiCloudApiKeyHintCustom => '輸入 API Key';
 
   @override
@@ -12578,9 +12176,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get aiOcrRecognizing => '正在識別帳單...';
-
-  @override
-  String get aiOcrNoAmount => '未識別到有效金額，請手動記帳';
 
   @override
   String get aiNotConfiguredHint => '未配置 AI 服務，請前往「我的 → AI 設定」配置';
@@ -12643,12 +12238,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get autoBillingNotifyNoAmountBody => '未能識別出金額資訊';
 
   @override
-  String get autoBillingNotifyCreateFailedTitle => '❌ 建立失敗';
-
-  @override
-  String get autoBillingNotifyCreateFailedBody => '無法建立交易記錄';
-
-  @override
   String get autoBillingNotifyProcessFailedTitle => '❌ 處理失敗';
 
   @override
@@ -12693,9 +12282,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
-  String get aiOcrCreateFailed => '建立帳單失敗';
-
-  @override
   String get aiTypeIncome => '收入';
 
   @override
@@ -12712,23 +12298,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
       '下載時可自動對比差異並逐條預覽。非即時同步，請避免多裝置同時編輯同一帳本。同步範圍為帳本資料（含關聯的帳戶、分類、標籤），不含附件。';
 
   @override
-  String get cloudSyncNow => '立即同步';
-
-  @override
-  String get cloudSyncNowHint => '推送本機變更並拉取遠端更新';
-
-  @override
-  String get cloudSyncInProgress => '正在同步...';
-
-  @override
-  String cloudSyncComplete(int pushed, int pulled) {
-    return '同步完成：推送 $pushed 條，拉取 $pulled 條';
-  }
-
-  @override
-  String get cloudAutoSyncHint => '資料變更後自動同步到雲端';
-
-  @override
   String get dataManagement => '資料管理';
 
   @override
@@ -12736,9 +12305,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get dataManagementPageTitle => '資料管理';
-
-  @override
-  String get dataManagementPageSubtitle => '管理帳單資料和分類';
 
   @override
   String get dataManagementAttachmentHint =>
@@ -12752,9 +12318,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get smartBillingPageTitle => '智慧記帳';
-
-  @override
-  String get smartBillingPageSubtitle => 'AI和自動化記帳功能';
 
   @override
   String get smartBillingGuideHint => '長按首頁底部中間的 + 按鈕，即可快速使用這些功能';
@@ -12837,9 +12400,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get automationPageTitle => '自動化功能';
 
   @override
-  String get automationPageSubtitle => '週期記帳和提醒設定';
-
-  @override
   String get appearanceSettings => '個性化設定';
 
   @override
@@ -12847,9 +12407,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get appearanceSettingsPageTitle => '個性化設定';
-
-  @override
-  String get appearanceSettingsPageSubtitle => '外觀、顯示、安全等應用偏好';
 
   @override
   String get about => '關於';
@@ -12867,25 +12424,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get aboutPageTitle => '關於';
 
   @override
-  String get aboutPageSubtitle => '應用程式資訊和說明';
-
-  @override
   String get aboutPageLoadingVersion => '載入版本號中...';
-
-  @override
-  String get aboutWebsite => '官方網站';
-
-  @override
-  String get aboutGitHubRepo => 'GitHub 儲存庫';
-
-  @override
-  String get aboutXiaohongshu => '小紅書';
-
-  @override
-  String get aboutDouyin => '抖音';
-
-  @override
-  String get aboutTelegram => 'Telegram 群';
 
   @override
   String get aboutSupportDevelopment => '支持開發';
@@ -12932,9 +12471,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get productPromoTestFlight => 'TestFlight 內測';
-
-  @override
-  String get productPromoLearnMore => 'Pro';
 
   @override
   String get productPromoEmailLabel => '申請信箱(點擊複製)';
@@ -13667,6 +13203,86 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get aiAudioModelTitle => '語音模型';
 
   @override
+  String get customFieldManageTitle => '自訂欄位';
+
+  @override
+  String get customFieldManageSubtitle => '為本帳本定義欄位名稱與類型';
+
+  @override
+  String get customFieldManageEmpty => '尚無自訂欄位';
+
+  @override
+  String get customFieldManageEmptyHint => '新增「稅費」「發票號」等欄位，為每筆明細記錄額外資訊';
+
+  @override
+  String get customFieldAdd => '新增欄位';
+
+  @override
+  String get customFieldAddTitle => '新增自訂欄位';
+
+  @override
+  String get customFieldEditTitle => '編輯自訂欄位';
+
+  @override
+  String get customFieldNameLabel => '欄位名稱';
+
+  @override
+  String get customFieldNameHint => '例如：稅費';
+
+  @override
+  String get customFieldNameRequired => '請輸入欄位名稱';
+
+  @override
+  String get customFieldNameDuplicate => '已存在同名欄位';
+
+  @override
+  String get customFieldTypeLabel => '欄位類型';
+
+  @override
+  String get customFieldTypeAmount => '金額';
+
+  @override
+  String get customFieldTypeText => '文字';
+
+  @override
+  String get customFieldTypeDate => '日期';
+
+  @override
+  String get customFieldCreateSuccess => '欄位已新增';
+
+  @override
+  String get customFieldUpdateSuccess => '欄位已更新';
+
+  @override
+  String get customFieldDeleteSuccess => '欄位已刪除';
+
+  @override
+  String get customFieldDeleteConfirmTitle => '刪除自訂欄位';
+
+  @override
+  String customFieldDeleteConfirmMessage(String name) {
+    return '確定刪除「$name」嗎？本帳本中已記錄的該欄位值將一併清除，且無法復原。';
+  }
+
+  @override
+  String get customFieldSectionTitle => '自訂欄位';
+
+  @override
+  String get customFieldSectionEmpty => '此帳本尚無自訂欄位';
+
+  @override
+  String get customFieldDatePick => '選擇日期';
+
+  @override
+  String get customFieldTextHint => '請輸入內容';
+
+  @override
+  String get customFieldAmountHint => '0.00';
+
+  @override
+  String get customFieldSortHint => '長按拖曳排序';
+
+  @override
   String get tagManageTitle => '標籤管理';
 
   @override
@@ -13976,9 +13592,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get budgetCategoryHint => '請選擇預算分類';
 
   @override
-  String get budgetStartDayLabel => '起始日';
-
-  @override
   String get budgetPeriodLabel => '週期';
 
   @override
@@ -14004,11 +13617,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get attachmentDeleteConfirm => '確定刪除此附件？';
-
-  @override
-  String attachmentCount(int count) {
-    return '$count張圖片';
-  }
 
   @override
   String get commonDeleted => '已刪除';
@@ -14087,11 +13695,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get attachmentPreview => '預覽附件';
-
-  @override
-  String attachmentPreviewSubtitle(int count) {
-    return '共 $count 張圖片';
-  }
 
   @override
   String get attachmentPreviewEmpty => '暫無附件';
@@ -14253,9 +13856,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get calendarAddTransaction => '在該日記帳';
 
   @override
-  String get calendarAddTransactionTooltip => '新增該日記帳';
-
-  @override
   String get commonUncategorized => '未分類';
 
   @override
@@ -14354,9 +13954,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get aiCapabilitySpeechToTextDesc => '用於語音記帳';
 
   @override
-  String get aiProviderTestRun => '點擊測試';
-
-  @override
   String get aiProviderTestRunning => '測試中...';
 
   @override
@@ -14411,9 +14008,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String syncPreviewApply(int count) {
     return '套用 $count 項';
   }
-
-  @override
-  String get syncPreviewEmpty => '雲端資料與本機一致，無需同步';
 
   @override
   String get syncPreviewOldFormat => '雲端資料格式較舊，將執行全量替換';
@@ -14488,12 +14082,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get cloudSyncGuideLimitItem4 => '不含附件：交易的圖片附件不參與同步，需透過資料管理單獨匯出';
-
-  @override
-  String get mineMultiDeviceSyncTitle => '多裝置同步';
-
-  @override
-  String get mineMultiDeviceSyncSubtitle => '進入頁面時自動檢查雲端變更';
 
   @override
   String get appLockTitle => '應用鎖';
@@ -14709,9 +14297,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get accountGroupTradable => '日常帳戶';
 
   @override
-  String get accountGroupValuation => '資產/負債';
-
-  @override
   String get adjustmentTransaction => '估值調整';
 
   @override
@@ -14734,19 +14319,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get budgetManagement => '預算管理';
 
   @override
-  String get budgetManagementDesc => '設置月度預算，控制支出';
-
-  @override
   String get budgetSetupHint => '設置預算，輕鬆掌控每月開支';
 
   @override
   String get budgetSetupAction => '去設置';
-
-  @override
-  String get commonCopied => '已複製';
-
-  @override
-  String get commonRemove => '移除';
 
   @override
   String get maintenanceOrphanCleanupTitle => '資料清理';
@@ -14824,14 +14400,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
-  String get syncProgressTitle => '正在同步';
-
-  @override
-  String syncProgressCount(int applied, int total) {
-    return '$applied / $total 條';
-  }
-
-  @override
   String get exchangeRatePageTitle => '匯率管理';
 
   @override
@@ -14905,9 +14473,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get conversionDetailTitle => '折算詳情';
 
   @override
-  String get assetConversionToggle => '按主幣種折算';
-
-  @override
   String rateManualApplied(int count) {
     return '已套用 $count 條手動匯率';
   }
@@ -14944,9 +14509,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get txFlagExcludeFromBudget => '不計入預算';
-
-  @override
-  String get txFlagMoreOptions => '更多選項';
 
   @override
   String get txFlagDialogTitle => '帳單標記';
@@ -15061,9 +14623,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get amountDeviationNoDiff => '該區間沒有偏差';
-
-  @override
-  String get txCrossCurrencyTransferBlocked => '暫不支援跨幣種轉帳,請分別記兩筆或使用同幣種帳戶';
 
   @override
   String get ledgerBaseCurrencyLabel => '主幣種';
@@ -15423,12 +14982,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get cloudSyncEncryptSubtitle => '用密碼加密雲端備份，保護帳本隱私';
 
   @override
-  String get cloudSyncEncryptEnable => '開啟同步加密';
-
-  @override
-  String get cloudSyncEncryptEnableSubtitle => '開啟後上傳的備份將以密文儲存';
-
-  @override
   String get cloudSyncEncryptEnabled => '已開啟';
 
   @override
@@ -15474,9 +15027,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get cloudSyncEncryptEnableSuccess => '加密已開啟';
 
   @override
-  String get cloudSyncEncryptDisableSuccess => '加密已關閉，新上傳不再加密';
-
-  @override
   String get cloudSyncEncryptChangeSuccess => '密碼已修改';
 
   @override
@@ -15499,12 +15049,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get cloudSyncEncryptMultiDeviceHint => '在其他裝置上用相同密碼即可解密';
 
   @override
-  String get cloudSyncEncryptLegacyHint => '雲端如有未加密資料，開啟後將自動轉為密文';
-
-  @override
-  String get cloudSyncEncryptReencrypting => '正在重新加密雲端資料…';
-
-  @override
   String cloudSyncEncryptReencryptPartialFailed(int count) {
     return '加密已開啟，但有 $count 個雲端檔案重新加密失敗，下次同步時會自動重試。';
   }
@@ -15520,9 +15064,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get cloudSyncEncryptProbeFailedContinue => '以首裝置繼續';
 
   @override
-  String get saltMismatchStatus => '加密金鑰不匹配';
-
-  @override
   String get saltMismatchNeedPasswordHint => '雲端備份金鑰與本地不匹配，點擊重新輸入密碼';
 
   @override
@@ -15531,9 +15072,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get saltMismatchDialogTitle => '重新輸入密碼';
-
-  @override
-  String get saltMismatchRetrySuccess => '金鑰已啟用，正在重試同步...';
 
   @override
   String get saltMismatchRawStorageUnavailable => '雲端服務未初始化，無法恢復金鑰';
@@ -15557,9 +15095,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String get startupSyncRecoveryFailedHint =>
       '密鑰啟用失敗，同步未恢復。請確認密碼後重試，或到同步設定重新操作。';
-
-  @override
-  String get backupCardTitle => '雲端備份';
 
   @override
   String get backupNowTitle => '立即備份';
@@ -15775,9 +15310,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get annualReportPosterQrCta => '掃碼下載小豬記帳，開啟你的記帳之旅';
 
   @override
-  String get commonUnitYuan => '元';
-
-  @override
   String annualReportConsecutiveDaysValue(int count) {
     return '$count天';
   }
@@ -15810,6 +15342,38 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get tagSelectOwnerManaged => '共享帳本標籤由所有者管理';
+
+  @override
+  String get syncHealthTitle => '同步健康';
+
+  @override
+  String get syncHealthEmpty => '近 30 天暫無同步紀錄';
+
+  @override
+  String syncHealthRate(String rate) {
+    return '近 30 天成功率：$rate';
+  }
+
+  @override
+  String syncHealthDetail(int success, int failed, int softFail, int conflict) {
+    return '成功 $success · 失敗 $failed · 未收斂 $softFail · 並發攔截 $conflict';
+  }
+
+  @override
+  String get syncHealthTopErrors => '主要失敗類別';
+
+  @override
+  String get syncHealthExport => '匯出診斷資料';
+
+  @override
+  String syncHealthExported(String fileName) {
+    return '診斷資料已匯出：$fileName';
+  }
+
+  @override
+  String syncHealthExportFailed(String error) {
+    return '診斷資料匯出失敗：$error';
+  }
 
   @override
   String get cloudCapabilityTitle => '後端能力';
@@ -15920,9 +15484,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get recycleBinMoved => '已移入回收筒';
 
   @override
-  String get recycleBinUndo => '復原';
-
-  @override
   String get recycleBinRestored => '已復原';
 
   @override
@@ -15959,6 +15520,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get rangeReportChangeRange => '更換區間';
+
+  @override
+  String get rangeReportCustomFieldTitle => '自訂欄位彙總';
 
   @override
   String get rangeReportEmptySubtext => '這段時間還沒有記帳，點上方日期換一個區間';

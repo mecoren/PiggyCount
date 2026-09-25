@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../cloud/sync_diff_service.dart';
+import '../../providers.dart';
 import '../../styles/tokens.dart';
+import '../../utils/currencies.dart';
 import '../../l10n/app_localizations.dart';
 
 /// 同步预览弹窗
@@ -24,7 +27,7 @@ Future<List<SyncChange>?> showSyncPreviewDialog(
   );
 }
 
-class _SyncPreviewDialog extends StatefulWidget {
+class _SyncPreviewDialog extends ConsumerStatefulWidget {
   final SyncPreview preview;
   final Color primaryColor;
 
@@ -34,10 +37,10 @@ class _SyncPreviewDialog extends StatefulWidget {
   });
 
   @override
-  State<_SyncPreviewDialog> createState() => _SyncPreviewDialogState();
+  ConsumerState<_SyncPreviewDialog> createState() => _SyncPreviewDialogState();
 }
 
-class _SyncPreviewDialogState extends State<_SyncPreviewDialog> {
+class _SyncPreviewDialogState extends ConsumerState<_SyncPreviewDialog> {
   late List<SyncChange> changes;
 
   @override
@@ -231,6 +234,12 @@ class _SyncPreviewDialogState extends State<_SyncPreviewDialog> {
     );
   }
 
+  /// 金额符号：交易自带币种优先（多币种账本里外币行本身就是外币金额），
+  /// 缺失（存量行 / 单币种账本）则跟随主币种 —— 与首页月结卡同口径。
+  /// 历史实现把符号写死成 '¥'，外币账本的整个变更预览都显示错的符号。
+  String _amountSymbol(String? currencyCode) => getCurrencySymbol(
+      (currencyCode?.isNotEmpty ?? false) ? currencyCode! : ref.read(baseCurrencyProvider));
+
   Widget _buildChangeItem(BuildContext context, SyncChange change) {
     final dateFormat = DateFormat('MM-dd');
     String summary;
@@ -241,7 +250,7 @@ class _SyncPreviewDialogState extends State<_SyncPreviewDialog> {
         final tx = change.cloudTransaction!;
         final prefix = tx.type == 'income' ? '+' : '-';
         summary =
-            '${dateFormat.format(tx.happenedAt)} ${tx.categoryName ?? tx.type} $prefix¥${tx.amount.toStringAsFixed(2)}';
+            '${dateFormat.format(tx.happenedAt)} ${tx.categoryName ?? tx.type} $prefix${_amountSymbol(tx.currencyCode)}${tx.amount.toStringAsFixed(2)}';
         if (tx.note != null && tx.note!.isNotEmpty) {
           summary += ' ${tx.note}';
         }
@@ -250,7 +259,7 @@ class _SyncPreviewDialogState extends State<_SyncPreviewDialog> {
         final tx = change.cloudTransaction!;
         final prefix = tx.type == 'income' ? '+' : '-';
         summary =
-            '${dateFormat.format(tx.happenedAt)} ${tx.categoryName ?? tx.type} $prefix¥${tx.amount.toStringAsFixed(2)}';
+            '${dateFormat.format(tx.happenedAt)} ${tx.categoryName ?? tx.type} $prefix${_amountSymbol(tx.currencyCode)}${tx.amount.toStringAsFixed(2)}';
         if (change.diffDetails.isNotEmpty) {
           detail = change.diffDetails.join(', ');
         }
@@ -259,7 +268,7 @@ class _SyncPreviewDialogState extends State<_SyncPreviewDialog> {
         final tx = change.localTransaction!;
         final prefix = tx.type == 'income' ? '+' : '-';
         summary =
-            '${dateFormat.format(tx.happenedAt)} ${tx.type} $prefix¥${tx.amount.toStringAsFixed(2)}';
+            '${dateFormat.format(tx.happenedAt)} ${tx.type} $prefix${_amountSymbol(tx.currencyCode)}${tx.amount.toStringAsFixed(2)}';
         if (tx.note != null && tx.note!.isNotEmpty) {
           summary += ' ${tx.note}';
         }

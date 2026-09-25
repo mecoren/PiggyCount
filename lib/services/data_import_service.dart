@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show compute;
 import 'package:uuid/uuid.dart';
 import '../cloud/transactions_json.dart';
 import '../data/db.dart';
+import '../data/models/custom_field_values.dart';
 import '../data/repositories/base_repository.dart';
 import '../data/repositories/local/local_repository.dart';
 import '../data/repositories/transaction_repository.dart'
@@ -125,6 +126,12 @@ class ImportRecurring {
   final DateTime? lastGeneratedDate;
   final bool enabled;
 
+  /// v47:模板级自定义字段值({fieldSyncId: value})。
+  /// null = 快照未携带该键(旧快照/模板未配置)。指纹把「缺键」与「空」
+  /// 规范成同一个串,导入必须同语义:缺键 → 本地列写 NULL,否则已填值的
+  /// 本地行与云端永远差一个键,表现为永不收敛的假冲突。
+  final Map<String, dynamic>? templateFieldValues;
+
   const ImportRecurring({
     this.syncId,
     required this.type,
@@ -144,6 +151,7 @@ class ImportRecurring {
     this.endDate,
     this.lastGeneratedDate,
     this.enabled = true,
+    this.templateFieldValues,
   });
 }
 
@@ -175,6 +183,24 @@ class ImportTag {
   const ImportTag({
     required this.name,
     this.color,
+    this.syncId,
+    this.sortOrder,
+  });
+}
+
+/// 导入自定义字段定义（v46，快照恢复 / 导入）。
+///
+/// [syncId] 是跨设备锚点，也是交易值 map 的键：恢复时必须原样保留，
+/// 否则交易上已存的值会因为键对不上而全部变成"野键"（定义看不见 → 不渲染）。
+class ImportCustomField {
+  final String name;
+  final String fieldType; // amount / text / date
+  final String? syncId;
+  final int? sortOrder;
+
+  const ImportCustomField({
+    required this.name,
+    this.fieldType = 'text',
     this.syncId,
     this.sortOrder,
   });
@@ -242,9 +268,17 @@ class ImportTransaction {
   final String? toAccountSyncIdOverride;
   /// v8 G2：周期规则锚点。导入后用于重建 transactions.recurringId。
   final String? recurringSyncId;
-  /// v45 原始金额（用户手填票面/来源金额）。null = 未填写，或旧快照缺键
-  /// （旧版客户端导出），语义等价于「默认金额 = amount」。
+  /// v45 原始金额（用户手填票面/来源金额）。null = 未填写（或旧快照缺键），
+  /// **原样落库为 NULL**；「默认金额 = amount」的语义由读取/统计侧的
+  /// `COALESCE(original_amount, amount)` 承担。绝不在此兜底成 amount ——
+  /// 那会让「快照缺键」与「手填同值」产生不同指纹，跨设备往返弹假冲突。
   final double? originalAmount;
+
+  /// v46 自定义字段值 `{ fieldSyncId: value }`。
+  ///
+  /// null = **快照未携带该键**（旧版客户端导出），合并时保持本地原值；
+  /// 空 map = 显式清空；非空 = 覆盖写入。与 [originalAmount] 同模式。
+  final Map<String, dynamic>? customValues;
 
   const ImportTransaction({
     required this.type,
@@ -270,6 +304,7 @@ class ImportTransaction {
     this.toAccountSyncIdOverride,
     this.recurringSyncId,
     this.originalAmount,
+    this.customValues,
   });
 }
 
@@ -278,6 +313,8 @@ class ImportData {
   final List<ImportAccount> accounts;
   final List<ImportCategory> categories;
   final List<ImportTag> tags;
+  /// v46：账本自定义字段定义（快照恢复）
+  final List<ImportCustomField> customFields;
   final List<ImportTransaction> transactions;
   /// v8 G1：预算（快照恢复）
   final List<ImportBudget> budgets;
@@ -308,6 +345,7 @@ class ImportData {
     this.accounts = const [],
     this.categories = const [],
     this.tags = const [],
+    this.customFields = const [],
     this.transactions = const [],
     this.budgets = const [],
     this.recurrings = const [],
@@ -403,6 +441,10 @@ class DataImportService {
     final tagMaps = await importTags(repo, data.tags);
     final tagNameToId = tagMaps.byName;
     final tagSyncIdToId = tagMaps.bySyncId;
+
+    // 4.1 v46 导入自定义字段定义。必须在交易之前：交易上的值以定义 syncId
+    //     为键，定义先落库，编辑表单才能渲染出对应输入位。
+    await importCustomFields(repo, ledgerId, data.customFields);
 
     // 5. 导入周期规则（v8 G2）。必须在交易之前 —— 交易的 recurringSyncId
     //    要靠这里产出的 syncId→id 映射回填 transactions.recurringId。
@@ -705,6 +747,83 @@ class DataImportService {
     return categoryCache;
   }
 
+  /// 导入自定义字段定义（v46，快照恢复 / 增量合并共用）。
+  ///
+  /// 匹配优先级与 [importTags] 一致：syncId 优先（跨设备 rename 后仍稳定
+  /// 锚定），name 兜底。已存在的定义以**远端为准**对齐 fieldType/sortOrder
+  /// —— 否则云端改过的类型/排序在本地永远不收敛，两端指纹永久不同 →
+  /// 每次启动都判 cloudNewer。name 撞车（目标名已被同账本另一字段占用）时
+  /// 保守跳过改名，避免账本内重名脏数据。
+  ///
+  /// 值（custom_values_json）不在这里处理：它随交易条目落库（见
+  /// [importTransactions]），因为值的键就是定义的 syncId，定义先落库即可。
+  Future<void> importCustomFields(
+    BaseRepository repo,
+    int ledgerId,
+    List<ImportCustomField> fields,
+  ) async {
+    if (fields.isEmpty) return;
+
+    final existing = await repo.getDefinitionsForLedger(ledgerId);
+    final byName = <String, CustomFieldDefinition>{
+      for (final f in existing) f.name: f,
+    };
+    final bySyncId = <String, CustomFieldDefinition>{
+      for (final f in existing)
+        if (f.syncId != null && f.syncId!.isNotEmpty) f.syncId!: f,
+    };
+
+    for (final field in fields) {
+      final sid = (field.syncId != null && field.syncId!.trim().isNotEmpty)
+          ? field.syncId!.trim()
+          : null;
+      final current = (sid != null ? bySyncId[sid] : null) ?? byName[field.name];
+
+      if (current == null) {
+        final id = await repo.upsertDefinition(
+          ledgerId: ledgerId,
+          name: field.name,
+          fieldType: field.fieldType,
+          sortOrder: field.sortOrder,
+          syncId: field.syncId,
+        );
+        final created = await repo.getDefinitionById(id);
+        if (created != null) {
+          byName[created.name] = created;
+          if (created.syncId != null && created.syncId!.isNotEmpty) {
+            bySyncId[created.syncId!] = created;
+          }
+        }
+        continue;
+      }
+
+      final renaming = field.name != current.name;
+      final needType = current.fieldType != field.fieldType;
+      final needSort =
+          field.sortOrder != null && field.sortOrder != current.sortOrder;
+      if (!renaming && !needType && !needSort) continue;
+
+      // 改名撞车：目标名已被同账本另一字段占用 → 只对齐类型/排序。
+      final renameBlocked = renaming && byName.containsKey(field.name);
+
+      await repo.updateDefinition(
+        current.id,
+        name: renameBlocked ? null : (renaming ? field.name : null),
+        fieldType: field.fieldType,
+        sortOrder: field.sortOrder,
+      );
+
+      final updated = await repo.getDefinitionById(current.id);
+      if (updated != null) {
+        if (renaming && !renameBlocked) byName.remove(current.name);
+        byName[updated.name] = updated;
+        if (updated.syncId != null && updated.syncId!.isNotEmpty) {
+          bySyncId[updated.syncId!] = updated;
+        }
+      }
+    }
+  }
+
   /// 导入标签。返回 byName + bySyncId 两个映射：
   /// - byName：标签名 → 本地 id（CSV/老 JSON 兜底匹配用）
   /// - bySyncId：标签 syncId → 本地 id（v7 JSON 跨设备稳定匹配，避免 rename 错挂）
@@ -966,6 +1085,7 @@ class DataImportService {
               endDate: r.endDate,
               enabled: r.enabled,
               syncId: r.syncId,
+              templateFieldValues: r.templateFieldValues,
             );
             created++;
             if (r.syncId != null && r.syncId!.isNotEmpty) {
@@ -994,6 +1114,10 @@ class DataImportService {
               endDate: r.endDate,
               enabled: r.enabled,
               lastGeneratedDate: mergedLastGen,
+              // v47 模板值:快照未携带该键 → null → 本地列清 NULL。必须与
+              // 指纹语义一致(缺键 == ''),否则已填值的本地行与云端永远差
+              // 一个键,表现为永不收敛的假冲突(v45 originalAmount 同款)。
+              templateFieldValues: r.templateFieldValues,
               // 业务键命中的本地行可能无 syncId（v33 前建的），回填收敛身份
               syncId: matchedByBizKey ? r.syncId : null,
             );
@@ -1504,9 +1628,18 @@ class DataImportService {
         syncId: d.Value(effectiveSyncId),
         currencyCode: d.Value(txCurrency),
         nativeAmount: d.Value(txNative),
-        // v45 原始金额：快照缺键（旧版导出）→ 兜底为记账金额，与写入
-        // 路径/迁移口径一致 —— 每条明细都带原始金额，不留 NULL。
-        originalAmount: d.Value(tx.originalAmount ?? tx.amount),
+        // v45 原始金额：**原样落库，绝不 `?? amount` 兜底**。导出侧
+        // （transactions_json）是「仅非空才写键」，若这里兜底成记账金额，
+        // 「快照未携带该键」恢复后就变成「手填了等于记账金额的值」→ 两端
+        // 指纹不同 → 首次跨设备往返必然弹一次假的「云端有更新」（下一轮
+        // 才收敛）。原样落库后：缺键 → 列 NULL → 再导出仍不写键，指纹与
+        // 源端一字不差。NULL 即「用户未填写」，读取/统计侧统一走
+        // `COALESCE(original_amount, amount)`（见 db.dart 该列注释），
+        // 与 v45 迁移「物理 NULL 才能区分未填写与手填同值」的取舍一致。
+        originalAmount: d.Value(tx.originalAmount),
+        // v46 自定义字段值：null（旧快照缺键 / 该笔无值）→ 列写 NULL；
+        // 经 codec 编码（键排序 + 空值剔除，与导出侧表示同源）。
+        customValuesJson: d.Value(CustomFieldValueCodec.encode(tx.customValues)),
         // 账单标记：JSON 同步必须传输，否则"不计入统计/预算"跨设备丢失
         excludeFromStats: d.Value(tx.excludeFromStats),
         excludeFromBudget: d.Value(tx.excludeFromBudget),
@@ -1819,6 +1952,24 @@ Future<int> _mirrorDeleteAbsentEntities(
       .go();
   total += delRecs;
 
+  // v46 自定义字段定义（ledger-scoped）：删「不在云端且本地已有 syncId」的行。
+  // 无 syncId 的本地行保留 —— 那是尚未上传过的新字段，云端"缺席"不代表
+  // 用户删过它（同 tags 的保守规则）。对应的交易值无需单独清理：
+  // 交易行已被 clearLedgerTransactions 整体清空后重导。
+  final cloudCustomFieldSyncIds = cloud.customFields
+      .map((f) => f.syncId)
+      .whereType<String>()
+      .where((s) => s.isNotEmpty)
+      .toSet();
+  final delCustomFields = await (db.delete(db.customFieldDefinitions)
+        ..where((f) => f.ledgerId.equals(ledgerId) &
+              f.syncId.isNotNull() &
+              (cloudCustomFieldSyncIds.isEmpty
+                  ? const d.Constant(true)
+                  : f.syncId.isNotIn(cloudCustomFieldSyncIds.toList()))))
+      .go();
+  total += delCustomFields;
+
   // 分类：全局表，仅删「不在云端且无任何引用」的
   // （引用来源：交易 categoryId、预算 categoryId、周期 categoryId、子分类 parentId）
   final cloudCatSyncIds =
@@ -1917,7 +2068,7 @@ Future<int> _mirrorDeleteAbsentEntities(
   if (total > 0) {
     logger.info('DataImport',
         'H3 镜像删除(ledgerId=$ledgerId): 预算=$delBudgets 周期=$delRecs '
-        '分类=$delCats 标签=$delTags 账户=$delAccounts');
+        '自定义字段=$delCustomFields 分类=$delCats 标签=$delTags 账户=$delAccounts');
   }
   return total;
 }

@@ -13,6 +13,7 @@ import '../data/export_page.dart';
 import '../category/category_manage_page.dart';
 import '../category/category_migration_page.dart';
 import '../tag/tag_manage_page.dart';
+import 'custom_field_manage_page.dart';
 import '../settings/config_import_export_page.dart';
 import '../settings/storage_management_page.dart';
 import '../settings/attachment_preview_page.dart';
@@ -165,6 +166,18 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                 onTap: () async {
                   await Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const TagManagePage()),
+                  );
+                },
+              ),
+              // v46 自定义字段（按账本定义名称与类型）
+              SettingsNavItem(
+                icon: Icons.playlist_add_outlined,
+                title: l10n.customFieldManageTitle,
+                subtitle: l10n.customFieldManageSubtitle,
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (_) => const CustomFieldManagePage()),
                   );
                 },
               ),

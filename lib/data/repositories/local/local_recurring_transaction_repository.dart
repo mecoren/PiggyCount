@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' as d;
 import 'package:uuid/uuid.dart';
 
 import '../../db.dart';
+import '../../models/custom_field_values.dart';
 import '../recurring_transaction_repository.dart';
 
 const _uuid = Uuid();
@@ -51,6 +52,7 @@ class LocalRecurringTransactionRepository implements RecurringTransactionReposit
     bool enabled = true,
     String? syncId,
     String? currencyCode,
+    Map<String, dynamic>? templateFieldValues,
   }) async {
     // 每条新规则分配 syncId（导入路径显式传，UI 路径生成）—— v8 快照与
     // Cloud 引擎都靠它做跨设备锚定；缺失时业务键匹配是兜底而非主路径。
@@ -73,6 +75,9 @@ class LocalRecurringTransactionRepository implements RecurringTransactionReposit
         enabled: d.Value(enabled),
         syncId: d.Value(syncId ?? _uuid.v4()),
         currencyCode: d.Value(_normalizeCurrency(currencyCode)),
+        // v47:统一经 codec 编码(规范化+键序);空 map → NULL。
+        templateFieldValues:
+            d.Value(CustomFieldValueCodec.encode(templateFieldValues)),
       ),
     );
   }
@@ -106,6 +111,7 @@ class LocalRecurringTransactionRepository implements RecurringTransactionReposit
     DateTime? lastGeneratedDate,
     String? syncId,
     String? currencyCode,
+    Map<String, dynamic>? templateFieldValues,
   }) async {
     await (db.update(db.recurringTransactions)..where((t) => t.id.equals(id)))
         .write(
@@ -131,6 +137,11 @@ class LocalRecurringTransactionRepository implements RecurringTransactionReposit
         syncId: syncId != null ? d.Value(syncId) : const d.Value.absent(),
         // null 即写 NULL(改回本位币要能清掉旧外币),与本方法其它字段同语义
         currencyCode: d.Value(_normalizeCurrency(currencyCode)),
+        // v47:null/空 map 即写 NULL(编辑表单整行以表单为准;「清掉旧值」要能
+        // 清干净)。导入侧的「云端未携带键则保留本地值」在 importRecurrings
+        // 显式读旧行后传入,这里不做保留语义(与 currencyCode 同款)。
+        templateFieldValues:
+            d.Value(CustomFieldValueCodec.encode(templateFieldValues)),
         updatedAt: d.Value(DateTime.now()),
       ),
     );
