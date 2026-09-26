@@ -307,6 +307,8 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                               icon: Icon(_showPwd
                                   ? Icons.visibility_off_outlined
                                   : Icons.visibility_outlined),
+                              tooltip: AppLocalizations.of(context)
+                                  .tooltipTogglePassword,
                               onPressed: () =>
                                   setState(() => _showPwd = !_showPwd),
                             ),

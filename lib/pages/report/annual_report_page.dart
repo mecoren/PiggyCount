@@ -383,6 +383,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
         children: [
           IconButton(
             icon: const Icon(Icons.close, color: Colors.white),
+            tooltip: l10n.commonClose,
             onPressed: () => Navigator.pop(context),
           ),
           const Spacer(),

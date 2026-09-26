@@ -1004,6 +1004,324 @@ class AppLocalizationsZh extends AppLocalizations {
   String get iconCategoryDining => '餐饮';
 
   @override
+  String get iconLabelRestaurant => '餐厅';
+
+  @override
+  String get iconLabelLocalDining => '用餐';
+
+  @override
+  String get iconLabelFastfood => '快餐';
+
+  @override
+  String get iconLabelLocalCafe => '咖啡';
+
+  @override
+  String get iconLabelLocalBar => '酒吧';
+
+  @override
+  String get iconLabelCake => '蛋糕';
+
+  @override
+  String get iconLabelLocalPizza => '披萨';
+
+  @override
+  String get iconLabelIcecream => '冰淇淋';
+
+  @override
+  String get iconLabelDirectionsCar => '汽车';
+
+  @override
+  String get iconLabelDirectionsBus => '公交';
+
+  @override
+  String get iconLabelDirectionsSubway => '地铁';
+
+  @override
+  String get iconLabelLocalTaxi => '出租车';
+
+  @override
+  String get iconLabelFlight => '飞机';
+
+  @override
+  String get iconLabelTrain => '火车';
+
+  @override
+  String get iconLabelDirectionsBike => '自行车';
+
+  @override
+  String get iconLabelDirectionsWalk => '步行';
+
+  @override
+  String get iconLabelLocalGasStation => '加油';
+
+  @override
+  String get iconLabelLocalParking => '停车';
+
+  @override
+  String get iconLabelShoppingCart => '购物车';
+
+  @override
+  String get iconLabelShoppingBag => '购物袋';
+
+  @override
+  String get iconLabelStore => '商店';
+
+  @override
+  String get iconLabelLocalMall => '商场';
+
+  @override
+  String get iconLabelLocalGroceryStore => '超市';
+
+  @override
+  String get iconLabelCheckroom => '服装';
+
+  @override
+  String get iconLabelWatch => '手表';
+
+  @override
+  String get iconLabelDiamond => '珠宝';
+
+  @override
+  String get iconLabelMovie => '电影';
+
+  @override
+  String get iconLabelMusicNote => '音乐';
+
+  @override
+  String get iconLabelSportsEsports => '游戏';
+
+  @override
+  String get iconLabelSportsSoccer => '足球';
+
+  @override
+  String get iconLabelSportsBasketball => '篮球';
+
+  @override
+  String get iconLabelTheaterComedy => '娱乐';
+
+  @override
+  String get iconLabelCameraAlt => '摄影';
+
+  @override
+  String get iconLabelPalette => '艺术';
+
+  @override
+  String get iconLabelHome => '居家';
+
+  @override
+  String get iconLabelLocalLaundryService => '洗衣';
+
+  @override
+  String get iconLabelCleaningServices => '清洁';
+
+  @override
+  String get iconLabelPlumbing => '维修';
+
+  @override
+  String get iconLabelElectricalServices => '电工';
+
+  @override
+  String get iconLabelHandyman => '维护';
+
+  @override
+  String get iconLabelPets => '宠物';
+
+  @override
+  String get iconLabelChildCare => '母婴';
+
+  @override
+  String get iconLabelLocalHospital => '医院';
+
+  @override
+  String get iconLabelMedicalServices => '医疗';
+
+  @override
+  String get iconLabelLocalPharmacy => '药店';
+
+  @override
+  String get iconLabelFitnessCenter => '健身';
+
+  @override
+  String get iconLabelSpa => '美容';
+
+  @override
+  String get iconLabelPsychology => '心理';
+
+  @override
+  String get iconLabelFace => '护肤';
+
+  @override
+  String get iconLabelContentCut => '理发';
+
+  @override
+  String get iconLabelSchool => '学校';
+
+  @override
+  String get iconLabelLibraryBooks => '书籍';
+
+  @override
+  String get iconLabelComputer => '电脑';
+
+  @override
+  String get iconLabelPhone => '通讯';
+
+  @override
+  String get iconLabelLanguage => '语言';
+
+  @override
+  String get iconLabelScience => '科学';
+
+  @override
+  String get iconLabelCalculate => '计算';
+
+  @override
+  String get iconLabelBrush => '绘画';
+
+  @override
+  String get iconLabelBusiness => '商务';
+
+  @override
+  String get iconLabelWork => '工作';
+
+  @override
+  String get iconLabelFlashOn => '水电';
+
+  @override
+  String get iconLabelWifi => '网络';
+
+  @override
+  String get iconLabelPhoneAndroid => '手机';
+
+  @override
+  String get iconLabelSmokingRooms => '烟酒';
+
+  @override
+  String get iconLabelFavorite => '捐赠';
+
+  @override
+  String get iconLabelCategory => '其他';
+
+  @override
+  String get iconLabelSalary => '工资';
+
+  @override
+  String get iconLabelBusinessCenter => '商务';
+
+  @override
+  String get iconLabelEngineering => '技术';
+
+  @override
+  String get iconLabelDesignServices => '设计';
+
+  @override
+  String get iconLabelAgriculture => '农业';
+
+  @override
+  String get iconLabelConstruction => '建筑';
+
+  @override
+  String get iconLabelLocalShipping => '物流';
+
+  @override
+  String get iconLabelRestaurantMenu => '餐饮';
+
+  @override
+  String get iconLabelAccountBalance => '银行';
+
+  @override
+  String get iconLabelSavings => '储蓄';
+
+  @override
+  String get iconLabelTrendingUp => '投资';
+
+  @override
+  String get iconLabelPaid => '利息';
+
+  @override
+  String get iconLabelCurrencyExchange => '汇率';
+
+  @override
+  String get iconLabelWallet => '钱包';
+
+  @override
+  String get iconLabelCreditCard => '信用卡';
+
+  @override
+  String get iconLabelAccountBalanceWallet => '余额';
+
+  @override
+  String get iconLabelCardGiftcard => '红包';
+
+  @override
+  String get iconLabelRedeem => '奖金';
+
+  @override
+  String get iconLabelEmojiEvents => '奖励';
+
+  @override
+  String get iconLabelStar => '评级';
+
+  @override
+  String get iconLabelGrade => '等级';
+
+  @override
+  String get iconLabelLoyalty => '积分';
+
+  @override
+  String get iconLabelVolunteerActivism => '礼金';
+
+  @override
+  String get iconLabelCelebration => '庆祝';
+
+  @override
+  String get iconLabelReceiptLong => '报销';
+
+  @override
+  String get iconLabelPartTime => '兼职';
+
+  @override
+  String get iconLabelUndo => '退款';
+
+  @override
+  String get iconLabelMoney => '现金';
+
+  @override
+  String get iconLabelApartment => '租金';
+
+  @override
+  String get iconLabelHandshake => '合作';
+
+  @override
+  String get iconLabelHelp => '未分类';
+
+  @override
+  String get tooltipSend => '发送';
+
+  @override
+  String get tooltipShare => '分享';
+
+  @override
+  String get tooltipPaste => '粘贴';
+
+  @override
+  String get tooltipTogglePassword => '显示或隐藏密码';
+
+  @override
+  String get tooltipToggleVisibility => '显示或隐藏';
+
+  @override
+  String get tooltipAddAttachment => '添加附件';
+
+  @override
+  String get tooltipClear => '清除';
+
+  @override
+  String get tooltipPreview => '预览';
+
+  @override
+  String get tooltipRefresh => '刷新';
+
+  @override
   String get importTitle => '导入账单';
 
   @override
@@ -8766,6 +9084,324 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get iconCategoryDining => '餐飲';
+
+  @override
+  String get iconLabelRestaurant => '餐廳';
+
+  @override
+  String get iconLabelLocalDining => '用餐';
+
+  @override
+  String get iconLabelFastfood => '快餐';
+
+  @override
+  String get iconLabelLocalCafe => '咖啡';
+
+  @override
+  String get iconLabelLocalBar => '酒吧';
+
+  @override
+  String get iconLabelCake => '蛋糕';
+
+  @override
+  String get iconLabelLocalPizza => '披薩';
+
+  @override
+  String get iconLabelIcecream => '冰淇淋';
+
+  @override
+  String get iconLabelDirectionsCar => '汽車';
+
+  @override
+  String get iconLabelDirectionsBus => '公車';
+
+  @override
+  String get iconLabelDirectionsSubway => '捷運';
+
+  @override
+  String get iconLabelLocalTaxi => '計程車';
+
+  @override
+  String get iconLabelFlight => '飛機';
+
+  @override
+  String get iconLabelTrain => '火車';
+
+  @override
+  String get iconLabelDirectionsBike => '自行車';
+
+  @override
+  String get iconLabelDirectionsWalk => '步行';
+
+  @override
+  String get iconLabelLocalGasStation => '加油';
+
+  @override
+  String get iconLabelLocalParking => '停車';
+
+  @override
+  String get iconLabelShoppingCart => '購物車';
+
+  @override
+  String get iconLabelShoppingBag => '購物袋';
+
+  @override
+  String get iconLabelStore => '商店';
+
+  @override
+  String get iconLabelLocalMall => '商場';
+
+  @override
+  String get iconLabelLocalGroceryStore => '超市';
+
+  @override
+  String get iconLabelCheckroom => '服裝';
+
+  @override
+  String get iconLabelWatch => '手錶';
+
+  @override
+  String get iconLabelDiamond => '珠寶';
+
+  @override
+  String get iconLabelMovie => '電影';
+
+  @override
+  String get iconLabelMusicNote => '音樂';
+
+  @override
+  String get iconLabelSportsEsports => '遊戲';
+
+  @override
+  String get iconLabelSportsSoccer => '足球';
+
+  @override
+  String get iconLabelSportsBasketball => '籃球';
+
+  @override
+  String get iconLabelTheaterComedy => '娛樂';
+
+  @override
+  String get iconLabelCameraAlt => '攝影';
+
+  @override
+  String get iconLabelPalette => '藝術';
+
+  @override
+  String get iconLabelHome => '居家';
+
+  @override
+  String get iconLabelLocalLaundryService => '洗衣';
+
+  @override
+  String get iconLabelCleaningServices => '清潔';
+
+  @override
+  String get iconLabelPlumbing => '維修';
+
+  @override
+  String get iconLabelElectricalServices => '電工';
+
+  @override
+  String get iconLabelHandyman => '維護';
+
+  @override
+  String get iconLabelPets => '寵物';
+
+  @override
+  String get iconLabelChildCare => '母嬰';
+
+  @override
+  String get iconLabelLocalHospital => '醫院';
+
+  @override
+  String get iconLabelMedicalServices => '醫療';
+
+  @override
+  String get iconLabelLocalPharmacy => '藥局';
+
+  @override
+  String get iconLabelFitnessCenter => '健身';
+
+  @override
+  String get iconLabelSpa => '美容';
+
+  @override
+  String get iconLabelPsychology => '心理';
+
+  @override
+  String get iconLabelFace => '護膚';
+
+  @override
+  String get iconLabelContentCut => '理髮';
+
+  @override
+  String get iconLabelSchool => '學校';
+
+  @override
+  String get iconLabelLibraryBooks => '書籍';
+
+  @override
+  String get iconLabelComputer => '電腦';
+
+  @override
+  String get iconLabelPhone => '通訊';
+
+  @override
+  String get iconLabelLanguage => '語言';
+
+  @override
+  String get iconLabelScience => '科學';
+
+  @override
+  String get iconLabelCalculate => '計算';
+
+  @override
+  String get iconLabelBrush => '繪畫';
+
+  @override
+  String get iconLabelBusiness => '商務';
+
+  @override
+  String get iconLabelWork => '工作';
+
+  @override
+  String get iconLabelFlashOn => '水電';
+
+  @override
+  String get iconLabelWifi => '網路';
+
+  @override
+  String get iconLabelPhoneAndroid => '手機';
+
+  @override
+  String get iconLabelSmokingRooms => '煙酒';
+
+  @override
+  String get iconLabelFavorite => '捐贈';
+
+  @override
+  String get iconLabelCategory => '其他';
+
+  @override
+  String get iconLabelSalary => '工資';
+
+  @override
+  String get iconLabelBusinessCenter => '商務';
+
+  @override
+  String get iconLabelEngineering => '技術';
+
+  @override
+  String get iconLabelDesignServices => '設計';
+
+  @override
+  String get iconLabelAgriculture => '農業';
+
+  @override
+  String get iconLabelConstruction => '建築';
+
+  @override
+  String get iconLabelLocalShipping => '物流';
+
+  @override
+  String get iconLabelRestaurantMenu => '餐飲';
+
+  @override
+  String get iconLabelAccountBalance => '銀行';
+
+  @override
+  String get iconLabelSavings => '儲蓄';
+
+  @override
+  String get iconLabelTrendingUp => '投資';
+
+  @override
+  String get iconLabelPaid => '利息';
+
+  @override
+  String get iconLabelCurrencyExchange => '匯率';
+
+  @override
+  String get iconLabelWallet => '錢包';
+
+  @override
+  String get iconLabelCreditCard => '信用卡';
+
+  @override
+  String get iconLabelAccountBalanceWallet => '餘額';
+
+  @override
+  String get iconLabelCardGiftcard => '紅包';
+
+  @override
+  String get iconLabelRedeem => '獎金';
+
+  @override
+  String get iconLabelEmojiEvents => '獎勵';
+
+  @override
+  String get iconLabelStar => '評級';
+
+  @override
+  String get iconLabelGrade => '等級';
+
+  @override
+  String get iconLabelLoyalty => '積分';
+
+  @override
+  String get iconLabelVolunteerActivism => '禮金';
+
+  @override
+  String get iconLabelCelebration => '慶祝';
+
+  @override
+  String get iconLabelReceiptLong => '報銷';
+
+  @override
+  String get iconLabelPartTime => '兼職';
+
+  @override
+  String get iconLabelUndo => '退款';
+
+  @override
+  String get iconLabelMoney => '現金';
+
+  @override
+  String get iconLabelApartment => '租金';
+
+  @override
+  String get iconLabelHandshake => '合作';
+
+  @override
+  String get iconLabelHelp => '未分類';
+
+  @override
+  String get tooltipSend => '傳送';
+
+  @override
+  String get tooltipShare => '分享';
+
+  @override
+  String get tooltipPaste => '貼上';
+
+  @override
+  String get tooltipTogglePassword => '顯示或隱藏密碼';
+
+  @override
+  String get tooltipToggleVisibility => '顯示或隱藏';
+
+  @override
+  String get tooltipAddAttachment => '新增附件';
+
+  @override
+  String get tooltipClear => '清除';
+
+  @override
+  String get tooltipPreview => '預覽';
+
+  @override
+  String get tooltipRefresh => '重新整理';
 
   @override
   String get importTitle => '匯入帳單';

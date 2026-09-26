@@ -156,6 +156,7 @@ class _RecurringTransactionEditPageState
             ? [
                 IconButton(
                   icon: const Icon(Icons.delete),
+                  tooltip: l10n.commonDelete,
                   onPressed: _deleteRecurringTransaction,
                 ),
               ]
@@ -724,6 +725,7 @@ class _RecurringTransactionEditPageState
           suffixIcon: allowClear && date != null
               ? IconButton(
                   icon: const Icon(Icons.clear),
+                  tooltip: AppLocalizations.of(context).tooltipClear,
                   onPressed: onClear,
                 )
               : null,

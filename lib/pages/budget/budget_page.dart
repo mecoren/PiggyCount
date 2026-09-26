@@ -40,6 +40,7 @@ class BudgetPage extends ConsumerWidget {
           if (!isEditorInShared)
             IconButton(
               onPressed: () => _addBudget(context),
+              tooltip: l10n.commonAdd,
               icon: const Icon(Icons.add),
             ),
         ],

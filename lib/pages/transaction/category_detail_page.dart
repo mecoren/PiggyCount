@@ -101,10 +101,12 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
           actions: [
             IconButton(
               icon: const Icon(Icons.swap_horiz_outlined),
+              tooltip: AppLocalizations.of(context).categoryMigrationTooltip,
               onPressed: null, // 加载时禁用
             ),
             IconButton(
               icon: const Icon(Icons.edit_outlined),
+              tooltip: AppLocalizations.of(context).commonEdit,
               onPressed: null, // 加载时禁用
             ),
           ],
@@ -115,10 +117,12 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
           actions: [
             IconButton(
               icon: const Icon(Icons.swap_horiz_outlined),
+              tooltip: AppLocalizations.of(context).categoryMigrationTooltip,
               onPressed: null, // 错误时禁用
             ),
             IconButton(
               icon: const Icon(Icons.edit_outlined),
+              tooltip: AppLocalizations.of(context).commonEdit,
               onPressed: null, // 错误时禁用
             ),
           ],

@@ -560,6 +560,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
                     ? PiggyTokens.textTertiary(context)
                     : ref.watch(primaryColorProvider),
               ),
+              tooltip: AppLocalizations.of(context).tooltipSend,
               onPressed: _isLoading ? null : _sendMessage,
             ),
           ],

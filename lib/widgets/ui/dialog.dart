@@ -218,6 +218,37 @@ class AppDialog {
 
 }
 
+/// 统一弹窗外壳（Widget 形态）：与 [AppDialog] 系列统一视觉（surfaceElevated
+/// 背景 + radiusXl 圆角），title/content/actions 完全由调用方自定义 ——
+/// 帮助指南、表单配置等 [AppDialog.info]/[AppDialog.confirm] 纯文本 API
+/// 表达不了的弹窗用这个：在 showDialog 的 builder 里返回它（builder 的
+/// context 照常可用），或对话框 State.build 直接 return。内容布局由调用方
+/// 负责（沿用 Material 默认内边距，与迁移前的手写版一致）。
+class AppDialogShell extends StatelessWidget {
+  final Widget? title;
+  final Widget? content;
+  final List<Widget> actions;
+
+  const AppDialogShell({
+    super.key,
+    this.title,
+    this.content,
+    this.actions = const [],
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: PiggyTokens.surfaceElevated(context),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
+      title: title,
+      content: content,
+      actions: actions,
+    );
+  }
+}
+
 /// 阻塞式进度弹窗的句柄：
 /// - [status] 可在弹窗存活期间随时更新底部状态文案（如"账本 2/3…"）
 /// - [close] 幂等，正常/异常路径统一在 finally 中调用

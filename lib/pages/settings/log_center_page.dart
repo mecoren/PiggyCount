@@ -119,6 +119,7 @@ class _LogCenterPageState extends ConsumerState<LogCenterPage> {
                 suffixIcon: _searchKeyword.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear),
+                        tooltip: l10n.tooltipClear,
                         onPressed: () {
                           _searchController.clear();
                           setState(() => _searchKeyword = '');

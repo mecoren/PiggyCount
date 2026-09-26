@@ -6,13 +6,13 @@ import '../../styles/tokens.dart';
 class IconPickerPage extends StatefulWidget {
   final String? currentIcon;
   final String kind; // expense 或 income
-  
+
   const IconPickerPage({
     super.key,
     this.currentIcon,
     required this.kind,
   });
-  
+
   @override
   State<IconPickerPage> createState() => _IconPickerPageState();
 }
@@ -20,25 +20,28 @@ class IconPickerPage extends StatefulWidget {
 class _IconPickerPageState extends State<IconPickerPage> with TickerProviderStateMixin {
   late TabController _tabController;
   String? _selectedIcon;
-  
+
   @override
   void initState() {
     super.initState();
     _selectedIcon = widget.currentIcon;
-    final categories = _getIconCategories();
-    _tabController = TabController(length: categories.length, vsync: this);
+    // tab 数与 kind 固定对应（支出 8 类 / 收入 4 类）。initState 里不能调
+    // _getIconCategories()：它要读 AppLocalizations（inherited widget，
+    // initState 期访问会断言崩溃），且此处本就只需要长度。
+    _tabController =
+        TabController(length: widget.kind == 'expense' ? 8 : 4, vsync: this);
   }
-  
+
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     final categories = _getIconCategories();
-    
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: PiggyTitleBar(
@@ -82,114 +85,115 @@ class _IconPickerPageState extends State<IconPickerPage> with TickerProviderStat
       ),
     );
   }
-  
+
   List<_IconCategory> _getIconCategories() {
+    final l10n = AppLocalizations.of(context);
     if (widget.kind == 'expense') {
       return [
         _IconCategory(
-          name: AppLocalizations.of(context).iconCategoryDining,
+          name: l10n.iconCategoryDining,
           icons: [
-            _IconItem('restaurant', Icons.restaurant, '餐厅'),
-            _IconItem('local_dining', Icons.local_dining, '用餐'),
-            _IconItem('fastfood', Icons.fastfood, '快餐'),
-            _IconItem('local_cafe', Icons.local_cafe, '咖啡'),
-            _IconItem('local_bar', Icons.local_bar, '酒吧'),
-            _IconItem('cake', Icons.cake, '蛋糕'),
-            _IconItem('local_pizza', Icons.local_pizza, '披萨'),
-            _IconItem('icecream', Icons.icecream, '冰淇淋'),
+            _IconItem('restaurant', Icons.restaurant, l10n.iconLabelRestaurant),
+            _IconItem('local_dining', Icons.local_dining, l10n.iconLabelLocalDining),
+            _IconItem('fastfood', Icons.fastfood, l10n.iconLabelFastfood),
+            _IconItem('local_cafe', Icons.local_cafe, l10n.iconLabelLocalCafe),
+            _IconItem('local_bar', Icons.local_bar, l10n.iconLabelLocalBar),
+            _IconItem('cake', Icons.cake, l10n.iconLabelCake),
+            _IconItem('local_pizza', Icons.local_pizza, l10n.iconLabelLocalPizza),
+            _IconItem('icecream', Icons.icecream, l10n.iconLabelIcecream),
           ],
         ),
         _IconCategory(
-          name: AppLocalizations.of(context).iconCategoryTransport,
+          name: l10n.iconCategoryTransport,
           icons: [
-            _IconItem('directions_car', Icons.directions_car, '汽车'),
-            _IconItem('directions_bus', Icons.directions_bus, '公交'),
-            _IconItem('directions_subway', Icons.directions_subway, '地铁'),
-            _IconItem('local_taxi', Icons.local_taxi, '出租车'),
-            _IconItem('flight', Icons.flight, '飞机'),
-            _IconItem('train', Icons.train, '火车'),
-            _IconItem('directions_bike', Icons.directions_bike, '自行车'),
-            _IconItem('directions_walk', Icons.directions_walk, '步行'),
-            _IconItem('local_gas_station', Icons.local_gas_station, '加油'),
-            _IconItem('local_parking', Icons.local_parking, '停车'),
+            _IconItem('directions_car', Icons.directions_car, l10n.iconLabelDirectionsCar),
+            _IconItem('directions_bus', Icons.directions_bus, l10n.iconLabelDirectionsBus),
+            _IconItem('directions_subway', Icons.directions_subway, l10n.iconLabelDirectionsSubway),
+            _IconItem('local_taxi', Icons.local_taxi, l10n.iconLabelLocalTaxi),
+            _IconItem('flight', Icons.flight, l10n.iconLabelFlight),
+            _IconItem('train', Icons.train, l10n.iconLabelTrain),
+            _IconItem('directions_bike', Icons.directions_bike, l10n.iconLabelDirectionsBike),
+            _IconItem('directions_walk', Icons.directions_walk, l10n.iconLabelDirectionsWalk),
+            _IconItem('local_gas_station', Icons.local_gas_station, l10n.iconLabelLocalGasStation),
+            _IconItem('local_parking', Icons.local_parking, l10n.iconLabelLocalParking),
           ],
         ),
         _IconCategory(
-          name: AppLocalizations.of(context).iconCategoryShopping,
+          name: l10n.iconCategoryShopping,
           icons: [
-            _IconItem('shopping_cart', Icons.shopping_cart, '购物车'),
-            _IconItem('shopping_bag', Icons.shopping_bag, '购物袋'),
-            _IconItem('store', Icons.store, '商店'),
-            _IconItem('local_mall', Icons.local_mall, '商场'),
-            _IconItem('local_grocery_store', Icons.local_grocery_store, '超市'),
-            _IconItem('checkroom', Icons.checkroom, '服装'),
-            _IconItem('watch', Icons.watch, '手表'),
-            _IconItem('diamond', Icons.diamond, '珠宝'),
+            _IconItem('shopping_cart', Icons.shopping_cart, l10n.iconLabelShoppingCart),
+            _IconItem('shopping_bag', Icons.shopping_bag, l10n.iconLabelShoppingBag),
+            _IconItem('store', Icons.store, l10n.iconLabelStore),
+            _IconItem('local_mall', Icons.local_mall, l10n.iconLabelLocalMall),
+            _IconItem('local_grocery_store', Icons.local_grocery_store, l10n.iconLabelLocalGroceryStore),
+            _IconItem('checkroom', Icons.checkroom, l10n.iconLabelCheckroom),
+            _IconItem('watch', Icons.watch, l10n.iconLabelWatch),
+            _IconItem('diamond', Icons.diamond, l10n.iconLabelDiamond),
           ],
         ),
         _IconCategory(
-          name: AppLocalizations.of(context).iconCategoryEntertainment,
+          name: l10n.iconCategoryEntertainment,
           icons: [
-            _IconItem('movie', Icons.movie, '电影'),
-            _IconItem('music_note', Icons.music_note, '音乐'),
-            _IconItem('sports_esports', Icons.sports_esports, '游戏'),
-            _IconItem('sports_soccer', Icons.sports_soccer, '足球'),
-            _IconItem('sports_basketball', Icons.sports_basketball, '篮球'),
-            _IconItem('theater_comedy', Icons.theater_comedy, '娱乐'),
-            _IconItem('camera_alt', Icons.camera_alt, '摄影'),
-            _IconItem('palette', Icons.palette, '艺术'),
+            _IconItem('movie', Icons.movie, l10n.iconLabelMovie),
+            _IconItem('music_note', Icons.music_note, l10n.iconLabelMusicNote),
+            _IconItem('sports_esports', Icons.sports_esports, l10n.iconLabelSportsEsports),
+            _IconItem('sports_soccer', Icons.sports_soccer, l10n.iconLabelSportsSoccer),
+            _IconItem('sports_basketball', Icons.sports_basketball, l10n.iconLabelSportsBasketball),
+            _IconItem('theater_comedy', Icons.theater_comedy, l10n.iconLabelTheaterComedy),
+            _IconItem('camera_alt', Icons.camera_alt, l10n.iconLabelCameraAlt),
+            _IconItem('palette', Icons.palette, l10n.iconLabelPalette),
           ],
         ),
         _IconCategory(
-          name: AppLocalizations.of(context).iconCategoryLife,
+          name: l10n.iconCategoryLife,
           icons: [
-            _IconItem('home', Icons.home, '居家'),
-            _IconItem('local_laundry_service', Icons.local_laundry_service, '洗衣'),
-            _IconItem('cleaning_services', Icons.cleaning_services, '清洁'),
-            _IconItem('plumbing', Icons.plumbing, '维修'),
-            _IconItem('electrical_services', Icons.electrical_services, '电工'),
-            _IconItem('handyman', Icons.handyman, '维护'),
-            _IconItem('pets', Icons.pets, '宠物'),
-            _IconItem('child_care', Icons.child_care, '母婴'),
+            _IconItem('home', Icons.home, l10n.iconLabelHome),
+            _IconItem('local_laundry_service', Icons.local_laundry_service, l10n.iconLabelLocalLaundryService),
+            _IconItem('cleaning_services', Icons.cleaning_services, l10n.iconLabelCleaningServices),
+            _IconItem('plumbing', Icons.plumbing, l10n.iconLabelPlumbing),
+            _IconItem('electrical_services', Icons.electrical_services, l10n.iconLabelElectricalServices),
+            _IconItem('handyman', Icons.handyman, l10n.iconLabelHandyman),
+            _IconItem('pets', Icons.pets, l10n.iconLabelPets),
+            _IconItem('child_care', Icons.child_care, l10n.iconLabelChildCare),
           ],
         ),
         _IconCategory(
-          name: AppLocalizations.of(context).iconCategoryHealth,
+          name: l10n.iconCategoryHealth,
           icons: [
-            _IconItem('local_hospital', Icons.local_hospital, '医院'),
-            _IconItem('medical_services', Icons.medical_services, '医疗'),
-            _IconItem('local_pharmacy', Icons.local_pharmacy, '药店'),
-            _IconItem('fitness_center', Icons.fitness_center, '健身'),
-            _IconItem('spa', Icons.spa, '美容'),
-            _IconItem('psychology', Icons.psychology, '心理'),
-            _IconItem('face', Icons.face, '护肤'),
-            _IconItem('content_cut', Icons.content_cut, '理发'),
+            _IconItem('local_hospital', Icons.local_hospital, l10n.iconLabelLocalHospital),
+            _IconItem('medical_services', Icons.medical_services, l10n.iconLabelMedicalServices),
+            _IconItem('local_pharmacy', Icons.local_pharmacy, l10n.iconLabelLocalPharmacy),
+            _IconItem('fitness_center', Icons.fitness_center, l10n.iconLabelFitnessCenter),
+            _IconItem('spa', Icons.spa, l10n.iconLabelSpa),
+            _IconItem('psychology', Icons.psychology, l10n.iconLabelPsychology),
+            _IconItem('face', Icons.face, l10n.iconLabelFace),
+            _IconItem('content_cut', Icons.content_cut, l10n.iconLabelContentCut),
           ],
         ),
         _IconCategory(
-          name: AppLocalizations.of(context).iconCategoryEducation,
+          name: l10n.iconCategoryEducation,
           icons: [
-            _IconItem('school', Icons.school, '学校'),
-            _IconItem('library_books', Icons.library_books, '书籍'),
-            _IconItem('computer', Icons.computer, '电脑'),
-            _IconItem('phone', Icons.phone, '通讯'),
-            _IconItem('language', Icons.language, '语言'),
-            _IconItem('science', Icons.science, '科学'),
-            _IconItem('calculate', Icons.calculate, '计算'),
-            _IconItem('brush', Icons.brush, '绘画'),
+            _IconItem('school', Icons.school, l10n.iconLabelSchool),
+            _IconItem('library_books', Icons.library_books, l10n.iconLabelLibraryBooks),
+            _IconItem('computer', Icons.computer, l10n.iconLabelComputer),
+            _IconItem('phone', Icons.phone, l10n.iconLabelPhone),
+            _IconItem('language', Icons.language, l10n.iconLabelLanguage),
+            _IconItem('science', Icons.science, l10n.iconLabelScience),
+            _IconItem('calculate', Icons.calculate, l10n.iconLabelCalculate),
+            _IconItem('brush', Icons.brush, l10n.iconLabelBrush),
           ],
         ),
         _IconCategory(
-          name: AppLocalizations.of(context).iconCategoryOther,
+          name: l10n.iconCategoryOther,
           icons: [
-            _IconItem('business', Icons.business, '商务'),
-            _IconItem('work', Icons.work, '工作'),
-            _IconItem('flash_on', Icons.flash_on, '水电'),
-            _IconItem('wifi', Icons.wifi, '网络'),
-            _IconItem('phone_android', Icons.phone_android, '手机'),
-            _IconItem('smoking_rooms', Icons.smoking_rooms, '烟酒'),
-            _IconItem('favorite', Icons.favorite, '捐赠'),
-            _IconItem('category', Icons.category, '其他'),
+            _IconItem('business', Icons.business, l10n.iconLabelBusiness),
+            _IconItem('work', Icons.work, l10n.iconLabelWork),
+            _IconItem('flash_on', Icons.flash_on, l10n.iconLabelFlashOn),
+            _IconItem('wifi', Icons.wifi, l10n.iconLabelWifi),
+            _IconItem('phone_android', Icons.phone_android, l10n.iconLabelPhoneAndroid),
+            _IconItem('smoking_rooms', Icons.smoking_rooms, l10n.iconLabelSmokingRooms),
+            _IconItem('favorite', Icons.favorite, l10n.iconLabelFavorite),
+            _IconItem('category', Icons.category, l10n.iconLabelCategory),
           ],
         ),
       ];
@@ -197,55 +201,55 @@ class _IconPickerPageState extends State<IconPickerPage> with TickerProviderStat
       // 收入分类图标
       return [
         _IconCategory(
-          name: AppLocalizations.of(context).iconCategoryWork,
+          name: l10n.iconCategoryWork,
           icons: [
-            _IconItem('work', Icons.work, '工资'),
-            _IconItem('business_center', Icons.business_center, '商务'),
-            _IconItem('engineering', Icons.engineering, '技术'),
-            _IconItem('design_services', Icons.design_services, '设计'),
-            _IconItem('agriculture', Icons.agriculture, '农业'),
-            _IconItem('construction', Icons.construction, '建筑'),
-            _IconItem('local_shipping', Icons.local_shipping, '物流'),
-            _IconItem('restaurant_menu', Icons.restaurant_menu, '餐饮'),
+            _IconItem('work', Icons.work, l10n.iconLabelSalary),
+            _IconItem('business_center', Icons.business_center, l10n.iconLabelBusinessCenter),
+            _IconItem('engineering', Icons.engineering, l10n.iconLabelEngineering),
+            _IconItem('design_services', Icons.design_services, l10n.iconLabelDesignServices),
+            _IconItem('agriculture', Icons.agriculture, l10n.iconLabelAgriculture),
+            _IconItem('construction', Icons.construction, l10n.iconLabelConstruction),
+            _IconItem('local_shipping', Icons.local_shipping, l10n.iconLabelLocalShipping),
+            _IconItem('restaurant_menu', Icons.restaurant_menu, l10n.iconLabelRestaurantMenu),
           ],
         ),
         _IconCategory(
-          name: AppLocalizations.of(context).iconCategoryFinance,
+          name: l10n.iconCategoryFinance,
           icons: [
-            _IconItem('account_balance', Icons.account_balance, '银行'),
-            _IconItem('savings', Icons.savings, '储蓄'),
-            _IconItem('trending_up', Icons.trending_up, '投资'),
-            _IconItem('paid', Icons.paid, '利息'),
-            _IconItem('currency_exchange', Icons.currency_exchange, '汇率'),
-            _IconItem('wallet', Icons.wallet, '钱包'),
-            _IconItem('credit_card', Icons.credit_card, '信用卡'),
-            _IconItem('account_balance_wallet', Icons.account_balance_wallet, '余额'),
+            _IconItem('account_balance', Icons.account_balance, l10n.iconLabelAccountBalance),
+            _IconItem('savings', Icons.savings, l10n.iconLabelSavings),
+            _IconItem('trending_up', Icons.trending_up, l10n.iconLabelTrendingUp),
+            _IconItem('paid', Icons.paid, l10n.iconLabelPaid),
+            _IconItem('currency_exchange', Icons.currency_exchange, l10n.iconLabelCurrencyExchange),
+            _IconItem('wallet', Icons.wallet, l10n.iconLabelWallet),
+            _IconItem('credit_card', Icons.credit_card, l10n.iconLabelCreditCard),
+            _IconItem('account_balance_wallet', Icons.account_balance_wallet, l10n.iconLabelAccountBalanceWallet),
           ],
         ),
         _IconCategory(
-          name: AppLocalizations.of(context).iconCategoryReward,
+          name: l10n.iconCategoryReward,
           icons: [
-            _IconItem('card_giftcard', Icons.card_giftcard, '红包'),
-            _IconItem('redeem', Icons.redeem, '奖金'),
-            _IconItem('emoji_events', Icons.emoji_events, '奖励'),
-            _IconItem('star', Icons.star, '评级'),
-            _IconItem('grade', Icons.grade, '等级'),
-            _IconItem('loyalty', Icons.loyalty, '积分'),
-            _IconItem('volunteer_activism', Icons.volunteer_activism, '礼金'),
-            _IconItem('celebration', Icons.celebration, '庆祝'),
+            _IconItem('card_giftcard', Icons.card_giftcard, l10n.iconLabelCardGiftcard),
+            _IconItem('redeem', Icons.redeem, l10n.iconLabelRedeem),
+            _IconItem('emoji_events', Icons.emoji_events, l10n.iconLabelEmojiEvents),
+            _IconItem('star', Icons.star, l10n.iconLabelStar),
+            _IconItem('grade', Icons.grade, l10n.iconLabelGrade),
+            _IconItem('loyalty', Icons.loyalty, l10n.iconLabelLoyalty),
+            _IconItem('volunteer_activism', Icons.volunteer_activism, l10n.iconLabelVolunteerActivism),
+            _IconItem('celebration', Icons.celebration, l10n.iconLabelCelebration),
           ],
         ),
         _IconCategory(
-          name: AppLocalizations.of(context).iconCategoryOther,
+          name: l10n.iconCategoryOther,
           icons: [
-            _IconItem('receipt_long', Icons.receipt_long, '报销'),
-            _IconItem('part_time', Icons.schedule, '兼职'),
-            _IconItem('undo', Icons.undo, '退款'),
-            _IconItem('money', Icons.attach_money, '现金'),
-            _IconItem('apartment', Icons.apartment, '租金'),
-            _IconItem('handshake', Icons.handshake, '合作'),
-            _IconItem('category', Icons.category, '其他'),
-            _IconItem('help', Icons.help, '未分类'),
+            _IconItem('receipt_long', Icons.receipt_long, l10n.iconLabelReceiptLong),
+            _IconItem('part_time', Icons.schedule, l10n.iconLabelPartTime),
+            _IconItem('undo', Icons.undo, l10n.iconLabelUndo),
+            _IconItem('money', Icons.attach_money, l10n.iconLabelMoney),
+            _IconItem('apartment', Icons.apartment, l10n.iconLabelApartment),
+            _IconItem('handshake', Icons.handshake, l10n.iconLabelHandshake),
+            _IconItem('category', Icons.category, l10n.iconLabelCategory),
+            _IconItem('help', Icons.help, l10n.iconLabelHelp),
           ],
         ),
       ];
@@ -257,13 +261,13 @@ class _IconGrid extends StatelessWidget {
   final List<_IconItem> icons;
   final String? selectedIcon;
   final ValueChanged<String> onIconSelected;
-  
+
   const _IconGrid({
     required this.icons,
     required this.selectedIcon,
     required this.onIconSelected,
   });
-  
+
   @override
   Widget build(BuildContext context) {
     return GridView.builder(
@@ -327,7 +331,7 @@ class _IconGrid extends StatelessWidget {
 class _IconCategory {
   final String name;
   final List<_IconItem> icons;
-  
+
   const _IconCategory({
     required this.name,
     required this.icons,
@@ -338,6 +342,6 @@ class _IconItem {
   final String key;
   final IconData iconData;
   final String label;
-  
+
   const _IconItem(this.key, this.iconData, this.label);
 }

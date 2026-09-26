@@ -1012,6 +1012,324 @@ class AppLocalizationsKo extends AppLocalizations {
   String get iconCategoryDining => '식사';
 
   @override
+  String get iconLabelRestaurant => '식당';
+
+  @override
+  String get iconLabelLocalDining => '식사';
+
+  @override
+  String get iconLabelFastfood => '패스트푸드';
+
+  @override
+  String get iconLabelLocalCafe => '커피';
+
+  @override
+  String get iconLabelLocalBar => '술집';
+
+  @override
+  String get iconLabelCake => '케이크';
+
+  @override
+  String get iconLabelLocalPizza => '피자';
+
+  @override
+  String get iconLabelIcecream => '아이스크림';
+
+  @override
+  String get iconLabelDirectionsCar => '자동차';
+
+  @override
+  String get iconLabelDirectionsBus => '버스';
+
+  @override
+  String get iconLabelDirectionsSubway => '지하철';
+
+  @override
+  String get iconLabelLocalTaxi => '택시';
+
+  @override
+  String get iconLabelFlight => '비행기';
+
+  @override
+  String get iconLabelTrain => '기차';
+
+  @override
+  String get iconLabelDirectionsBike => '자전거';
+
+  @override
+  String get iconLabelDirectionsWalk => '도보';
+
+  @override
+  String get iconLabelLocalGasStation => '주유';
+
+  @override
+  String get iconLabelLocalParking => '주차';
+
+  @override
+  String get iconLabelShoppingCart => '장바구니';
+
+  @override
+  String get iconLabelShoppingBag => '쇼핑백';
+
+  @override
+  String get iconLabelStore => '상점';
+
+  @override
+  String get iconLabelLocalMall => '쇼핑몰';
+
+  @override
+  String get iconLabelLocalGroceryStore => '마트';
+
+  @override
+  String get iconLabelCheckroom => '의류';
+
+  @override
+  String get iconLabelWatch => '시계';
+
+  @override
+  String get iconLabelDiamond => '보석';
+
+  @override
+  String get iconLabelMovie => '영화';
+
+  @override
+  String get iconLabelMusicNote => '음악';
+
+  @override
+  String get iconLabelSportsEsports => '게임';
+
+  @override
+  String get iconLabelSportsSoccer => '축구';
+
+  @override
+  String get iconLabelSportsBasketball => '농구';
+
+  @override
+  String get iconLabelTheaterComedy => '오락';
+
+  @override
+  String get iconLabelCameraAlt => '사진';
+
+  @override
+  String get iconLabelPalette => '예술';
+
+  @override
+  String get iconLabelHome => '홈';
+
+  @override
+  String get iconLabelLocalLaundryService => '세탁';
+
+  @override
+  String get iconLabelCleaningServices => '청소';
+
+  @override
+  String get iconLabelPlumbing => '수리';
+
+  @override
+  String get iconLabelElectricalServices => '전기';
+
+  @override
+  String get iconLabelHandyman => '유지보수';
+
+  @override
+  String get iconLabelPets => '반려동물';
+
+  @override
+  String get iconLabelChildCare => '유아';
+
+  @override
+  String get iconLabelLocalHospital => '병원';
+
+  @override
+  String get iconLabelMedicalServices => '의료';
+
+  @override
+  String get iconLabelLocalPharmacy => '약국';
+
+  @override
+  String get iconLabelFitnessCenter => '헬스';
+
+  @override
+  String get iconLabelSpa => '미용';
+
+  @override
+  String get iconLabelPsychology => '심리';
+
+  @override
+  String get iconLabelFace => '스킨케어';
+
+  @override
+  String get iconLabelContentCut => '이발';
+
+  @override
+  String get iconLabelSchool => '학교';
+
+  @override
+  String get iconLabelLibraryBooks => '도서';
+
+  @override
+  String get iconLabelComputer => '컴퓨터';
+
+  @override
+  String get iconLabelPhone => '통신';
+
+  @override
+  String get iconLabelLanguage => '언어';
+
+  @override
+  String get iconLabelScience => '과학';
+
+  @override
+  String get iconLabelCalculate => '계산';
+
+  @override
+  String get iconLabelBrush => '그림';
+
+  @override
+  String get iconLabelBusiness => '비즈니스';
+
+  @override
+  String get iconLabelWork => '업무';
+
+  @override
+  String get iconLabelFlashOn => '공과';
+
+  @override
+  String get iconLabelWifi => '인터넷';
+
+  @override
+  String get iconLabelPhoneAndroid => '휴대폰';
+
+  @override
+  String get iconLabelSmokingRooms => '담배·술';
+
+  @override
+  String get iconLabelFavorite => '기부';
+
+  @override
+  String get iconLabelCategory => '기타';
+
+  @override
+  String get iconLabelSalary => '급여';
+
+  @override
+  String get iconLabelBusinessCenter => '비즈니스';
+
+  @override
+  String get iconLabelEngineering => '기술';
+
+  @override
+  String get iconLabelDesignServices => '디자인';
+
+  @override
+  String get iconLabelAgriculture => '농업';
+
+  @override
+  String get iconLabelConstruction => '건설';
+
+  @override
+  String get iconLabelLocalShipping => '물류';
+
+  @override
+  String get iconLabelRestaurantMenu => '요식업';
+
+  @override
+  String get iconLabelAccountBalance => '은행';
+
+  @override
+  String get iconLabelSavings => '저축';
+
+  @override
+  String get iconLabelTrendingUp => '투자';
+
+  @override
+  String get iconLabelPaid => '이자';
+
+  @override
+  String get iconLabelCurrencyExchange => '환율';
+
+  @override
+  String get iconLabelWallet => '지갑';
+
+  @override
+  String get iconLabelCreditCard => '신용카드';
+
+  @override
+  String get iconLabelAccountBalanceWallet => '잔액';
+
+  @override
+  String get iconLabelCardGiftcard => '세뱃돈';
+
+  @override
+  String get iconLabelRedeem => '보너스';
+
+  @override
+  String get iconLabelEmojiEvents => '보상';
+
+  @override
+  String get iconLabelStar => '평점';
+
+  @override
+  String get iconLabelGrade => '등급';
+
+  @override
+  String get iconLabelLoyalty => '포인트';
+
+  @override
+  String get iconLabelVolunteerActivism => '축의금';
+
+  @override
+  String get iconLabelCelebration => '축하';
+
+  @override
+  String get iconLabelReceiptLong => '경비';
+
+  @override
+  String get iconLabelPartTime => '알바';
+
+  @override
+  String get iconLabelUndo => '환불';
+
+  @override
+  String get iconLabelMoney => '현금';
+
+  @override
+  String get iconLabelApartment => '임대료';
+
+  @override
+  String get iconLabelHandshake => '제휴';
+
+  @override
+  String get iconLabelHelp => '미분류';
+
+  @override
+  String get tooltipSend => '보내기';
+
+  @override
+  String get tooltipShare => '공유';
+
+  @override
+  String get tooltipPaste => '붙여넣기';
+
+  @override
+  String get tooltipTogglePassword => '비밀번호 표시/숨기기';
+
+  @override
+  String get tooltipToggleVisibility => '표시/숨기기';
+
+  @override
+  String get tooltipAddAttachment => '첨부 파일 추가';
+
+  @override
+  String get tooltipClear => '지우기';
+
+  @override
+  String get tooltipPreview => '미리보기';
+
+  @override
+  String get tooltipRefresh => '새로고침';
+
+  @override
   String get importTitle => '명세서 가져오기';
 
   @override

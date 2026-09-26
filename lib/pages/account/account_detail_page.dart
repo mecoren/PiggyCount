@@ -219,6 +219,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
               color: PiggyTokens.iconPrimary(context),
               size: 20,
             ),
+            tooltip: l10n.commonEdit,
             onPressed: () async {
               final currentLedger =
                   ref.read(currentLedgerProvider).asData?.value;

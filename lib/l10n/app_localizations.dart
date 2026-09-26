@@ -1860,6 +1860,642 @@ abstract class AppLocalizations {
   /// **'Dining'**
   String get iconCategoryDining;
 
+  /// No description provided for @iconLabelRestaurant.
+  ///
+  /// In en, this message translates to:
+  /// **'Restaurant'**
+  String get iconLabelRestaurant;
+
+  /// No description provided for @iconLabelLocalDining.
+  ///
+  /// In en, this message translates to:
+  /// **'Meals'**
+  String get iconLabelLocalDining;
+
+  /// No description provided for @iconLabelFastfood.
+  ///
+  /// In en, this message translates to:
+  /// **'Fast food'**
+  String get iconLabelFastfood;
+
+  /// No description provided for @iconLabelLocalCafe.
+  ///
+  /// In en, this message translates to:
+  /// **'Coffee'**
+  String get iconLabelLocalCafe;
+
+  /// No description provided for @iconLabelLocalBar.
+  ///
+  /// In en, this message translates to:
+  /// **'Bar'**
+  String get iconLabelLocalBar;
+
+  /// No description provided for @iconLabelCake.
+  ///
+  /// In en, this message translates to:
+  /// **'Cake'**
+  String get iconLabelCake;
+
+  /// No description provided for @iconLabelLocalPizza.
+  ///
+  /// In en, this message translates to:
+  /// **'Pizza'**
+  String get iconLabelLocalPizza;
+
+  /// No description provided for @iconLabelIcecream.
+  ///
+  /// In en, this message translates to:
+  /// **'Ice cream'**
+  String get iconLabelIcecream;
+
+  /// No description provided for @iconLabelDirectionsCar.
+  ///
+  /// In en, this message translates to:
+  /// **'Car'**
+  String get iconLabelDirectionsCar;
+
+  /// No description provided for @iconLabelDirectionsBus.
+  ///
+  /// In en, this message translates to:
+  /// **'Bus'**
+  String get iconLabelDirectionsBus;
+
+  /// No description provided for @iconLabelDirectionsSubway.
+  ///
+  /// In en, this message translates to:
+  /// **'Subway'**
+  String get iconLabelDirectionsSubway;
+
+  /// No description provided for @iconLabelLocalTaxi.
+  ///
+  /// In en, this message translates to:
+  /// **'Taxi'**
+  String get iconLabelLocalTaxi;
+
+  /// No description provided for @iconLabelFlight.
+  ///
+  /// In en, this message translates to:
+  /// **'Flight'**
+  String get iconLabelFlight;
+
+  /// No description provided for @iconLabelTrain.
+  ///
+  /// In en, this message translates to:
+  /// **'Train'**
+  String get iconLabelTrain;
+
+  /// No description provided for @iconLabelDirectionsBike.
+  ///
+  /// In en, this message translates to:
+  /// **'Bicycle'**
+  String get iconLabelDirectionsBike;
+
+  /// No description provided for @iconLabelDirectionsWalk.
+  ///
+  /// In en, this message translates to:
+  /// **'Walk'**
+  String get iconLabelDirectionsWalk;
+
+  /// No description provided for @iconLabelLocalGasStation.
+  ///
+  /// In en, this message translates to:
+  /// **'Fuel'**
+  String get iconLabelLocalGasStation;
+
+  /// No description provided for @iconLabelLocalParking.
+  ///
+  /// In en, this message translates to:
+  /// **'Parking'**
+  String get iconLabelLocalParking;
+
+  /// No description provided for @iconLabelShoppingCart.
+  ///
+  /// In en, this message translates to:
+  /// **'Cart'**
+  String get iconLabelShoppingCart;
+
+  /// No description provided for @iconLabelShoppingBag.
+  ///
+  /// In en, this message translates to:
+  /// **'Shopping bag'**
+  String get iconLabelShoppingBag;
+
+  /// No description provided for @iconLabelStore.
+  ///
+  /// In en, this message translates to:
+  /// **'Store'**
+  String get iconLabelStore;
+
+  /// No description provided for @iconLabelLocalMall.
+  ///
+  /// In en, this message translates to:
+  /// **'Mall'**
+  String get iconLabelLocalMall;
+
+  /// No description provided for @iconLabelLocalGroceryStore.
+  ///
+  /// In en, this message translates to:
+  /// **'Supermarket'**
+  String get iconLabelLocalGroceryStore;
+
+  /// No description provided for @iconLabelCheckroom.
+  ///
+  /// In en, this message translates to:
+  /// **'Clothing'**
+  String get iconLabelCheckroom;
+
+  /// No description provided for @iconLabelWatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch'**
+  String get iconLabelWatch;
+
+  /// No description provided for @iconLabelDiamond.
+  ///
+  /// In en, this message translates to:
+  /// **'Jewelry'**
+  String get iconLabelDiamond;
+
+  /// No description provided for @iconLabelMovie.
+  ///
+  /// In en, this message translates to:
+  /// **'Movie'**
+  String get iconLabelMovie;
+
+  /// No description provided for @iconLabelMusicNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Music'**
+  String get iconLabelMusicNote;
+
+  /// No description provided for @iconLabelSportsEsports.
+  ///
+  /// In en, this message translates to:
+  /// **'Games'**
+  String get iconLabelSportsEsports;
+
+  /// No description provided for @iconLabelSportsSoccer.
+  ///
+  /// In en, this message translates to:
+  /// **'Soccer'**
+  String get iconLabelSportsSoccer;
+
+  /// No description provided for @iconLabelSportsBasketball.
+  ///
+  /// In en, this message translates to:
+  /// **'Basketball'**
+  String get iconLabelSportsBasketball;
+
+  /// No description provided for @iconLabelTheaterComedy.
+  ///
+  /// In en, this message translates to:
+  /// **'Fun'**
+  String get iconLabelTheaterComedy;
+
+  /// No description provided for @iconLabelCameraAlt.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo'**
+  String get iconLabelCameraAlt;
+
+  /// No description provided for @iconLabelPalette.
+  ///
+  /// In en, this message translates to:
+  /// **'Art'**
+  String get iconLabelPalette;
+
+  /// No description provided for @iconLabelHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get iconLabelHome;
+
+  /// No description provided for @iconLabelLocalLaundryService.
+  ///
+  /// In en, this message translates to:
+  /// **'Laundry'**
+  String get iconLabelLocalLaundryService;
+
+  /// No description provided for @iconLabelCleaningServices.
+  ///
+  /// In en, this message translates to:
+  /// **'Cleaning'**
+  String get iconLabelCleaningServices;
+
+  /// No description provided for @iconLabelPlumbing.
+  ///
+  /// In en, this message translates to:
+  /// **'Repair'**
+  String get iconLabelPlumbing;
+
+  /// No description provided for @iconLabelElectricalServices.
+  ///
+  /// In en, this message translates to:
+  /// **'Electrician'**
+  String get iconLabelElectricalServices;
+
+  /// No description provided for @iconLabelHandyman.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance'**
+  String get iconLabelHandyman;
+
+  /// No description provided for @iconLabelPets.
+  ///
+  /// In en, this message translates to:
+  /// **'Pets'**
+  String get iconLabelPets;
+
+  /// No description provided for @iconLabelChildCare.
+  ///
+  /// In en, this message translates to:
+  /// **'Baby'**
+  String get iconLabelChildCare;
+
+  /// No description provided for @iconLabelLocalHospital.
+  ///
+  /// In en, this message translates to:
+  /// **'Hospital'**
+  String get iconLabelLocalHospital;
+
+  /// No description provided for @iconLabelMedicalServices.
+  ///
+  /// In en, this message translates to:
+  /// **'Medical'**
+  String get iconLabelMedicalServices;
+
+  /// No description provided for @iconLabelLocalPharmacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Pharmacy'**
+  String get iconLabelLocalPharmacy;
+
+  /// No description provided for @iconLabelFitnessCenter.
+  ///
+  /// In en, this message translates to:
+  /// **'Gym'**
+  String get iconLabelFitnessCenter;
+
+  /// No description provided for @iconLabelSpa.
+  ///
+  /// In en, this message translates to:
+  /// **'Beauty'**
+  String get iconLabelSpa;
+
+  /// No description provided for @iconLabelPsychology.
+  ///
+  /// In en, this message translates to:
+  /// **'Therapy'**
+  String get iconLabelPsychology;
+
+  /// No description provided for @iconLabelFace.
+  ///
+  /// In en, this message translates to:
+  /// **'Skincare'**
+  String get iconLabelFace;
+
+  /// No description provided for @iconLabelContentCut.
+  ///
+  /// In en, this message translates to:
+  /// **'Haircut'**
+  String get iconLabelContentCut;
+
+  /// No description provided for @iconLabelSchool.
+  ///
+  /// In en, this message translates to:
+  /// **'School'**
+  String get iconLabelSchool;
+
+  /// No description provided for @iconLabelLibraryBooks.
+  ///
+  /// In en, this message translates to:
+  /// **'Books'**
+  String get iconLabelLibraryBooks;
+
+  /// No description provided for @iconLabelComputer.
+  ///
+  /// In en, this message translates to:
+  /// **'Computer'**
+  String get iconLabelComputer;
+
+  /// No description provided for @iconLabelPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact'**
+  String get iconLabelPhone;
+
+  /// No description provided for @iconLabelLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get iconLabelLanguage;
+
+  /// No description provided for @iconLabelScience.
+  ///
+  /// In en, this message translates to:
+  /// **'Science'**
+  String get iconLabelScience;
+
+  /// No description provided for @iconLabelCalculate.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculate'**
+  String get iconLabelCalculate;
+
+  /// No description provided for @iconLabelBrush.
+  ///
+  /// In en, this message translates to:
+  /// **'Drawing'**
+  String get iconLabelBrush;
+
+  /// No description provided for @iconLabelBusiness.
+  ///
+  /// In en, this message translates to:
+  /// **'Business'**
+  String get iconLabelBusiness;
+
+  /// No description provided for @iconLabelWork.
+  ///
+  /// In en, this message translates to:
+  /// **'Work'**
+  String get iconLabelWork;
+
+  /// No description provided for @iconLabelFlashOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Utilities'**
+  String get iconLabelFlashOn;
+
+  /// No description provided for @iconLabelWifi.
+  ///
+  /// In en, this message translates to:
+  /// **'Wi-Fi'**
+  String get iconLabelWifi;
+
+  /// No description provided for @iconLabelPhoneAndroid.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get iconLabelPhoneAndroid;
+
+  /// No description provided for @iconLabelSmokingRooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Tobacco & alcohol'**
+  String get iconLabelSmokingRooms;
+
+  /// No description provided for @iconLabelFavorite.
+  ///
+  /// In en, this message translates to:
+  /// **'Donate'**
+  String get iconLabelFavorite;
+
+  /// No description provided for @iconLabelCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get iconLabelCategory;
+
+  /// No description provided for @iconLabelSalary.
+  ///
+  /// In en, this message translates to:
+  /// **'Salary'**
+  String get iconLabelSalary;
+
+  /// No description provided for @iconLabelBusinessCenter.
+  ///
+  /// In en, this message translates to:
+  /// **'Business'**
+  String get iconLabelBusinessCenter;
+
+  /// No description provided for @iconLabelEngineering.
+  ///
+  /// In en, this message translates to:
+  /// **'Engineering'**
+  String get iconLabelEngineering;
+
+  /// No description provided for @iconLabelDesignServices.
+  ///
+  /// In en, this message translates to:
+  /// **'Design'**
+  String get iconLabelDesignServices;
+
+  /// No description provided for @iconLabelAgriculture.
+  ///
+  /// In en, this message translates to:
+  /// **'Farming'**
+  String get iconLabelAgriculture;
+
+  /// No description provided for @iconLabelConstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Construction'**
+  String get iconLabelConstruction;
+
+  /// No description provided for @iconLabelLocalShipping.
+  ///
+  /// In en, this message translates to:
+  /// **'Logistics'**
+  String get iconLabelLocalShipping;
+
+  /// No description provided for @iconLabelRestaurantMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Dining'**
+  String get iconLabelRestaurantMenu;
+
+  /// No description provided for @iconLabelAccountBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank'**
+  String get iconLabelAccountBalance;
+
+  /// No description provided for @iconLabelSavings.
+  ///
+  /// In en, this message translates to:
+  /// **'Savings'**
+  String get iconLabelSavings;
+
+  /// No description provided for @iconLabelTrendingUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Investment'**
+  String get iconLabelTrendingUp;
+
+  /// No description provided for @iconLabelPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Interest'**
+  String get iconLabelPaid;
+
+  /// No description provided for @iconLabelCurrencyExchange.
+  ///
+  /// In en, this message translates to:
+  /// **'Exchange rate'**
+  String get iconLabelCurrencyExchange;
+
+  /// No description provided for @iconLabelWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet'**
+  String get iconLabelWallet;
+
+  /// No description provided for @iconLabelCreditCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Credit card'**
+  String get iconLabelCreditCard;
+
+  /// No description provided for @iconLabelAccountBalanceWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Balance'**
+  String get iconLabelAccountBalanceWallet;
+
+  /// No description provided for @iconLabelCardGiftcard.
+  ///
+  /// In en, this message translates to:
+  /// **'Red packet'**
+  String get iconLabelCardGiftcard;
+
+  /// No description provided for @iconLabelRedeem.
+  ///
+  /// In en, this message translates to:
+  /// **'Bonus'**
+  String get iconLabelRedeem;
+
+  /// No description provided for @iconLabelEmojiEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Reward'**
+  String get iconLabelEmojiEvents;
+
+  /// No description provided for @iconLabelStar.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating'**
+  String get iconLabelStar;
+
+  /// No description provided for @iconLabelGrade.
+  ///
+  /// In en, this message translates to:
+  /// **'Level'**
+  String get iconLabelGrade;
+
+  /// No description provided for @iconLabelLoyalty.
+  ///
+  /// In en, this message translates to:
+  /// **'Points'**
+  String get iconLabelLoyalty;
+
+  /// No description provided for @iconLabelVolunteerActivism.
+  ///
+  /// In en, this message translates to:
+  /// **'Gift money'**
+  String get iconLabelVolunteerActivism;
+
+  /// No description provided for @iconLabelCelebration.
+  ///
+  /// In en, this message translates to:
+  /// **'Celebration'**
+  String get iconLabelCelebration;
+
+  /// No description provided for @iconLabelReceiptLong.
+  ///
+  /// In en, this message translates to:
+  /// **'Reimbursement'**
+  String get iconLabelReceiptLong;
+
+  /// No description provided for @iconLabelPartTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Part-time'**
+  String get iconLabelPartTime;
+
+  /// No description provided for @iconLabelUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Refund'**
+  String get iconLabelUndo;
+
+  /// No description provided for @iconLabelMoney.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash'**
+  String get iconLabelMoney;
+
+  /// No description provided for @iconLabelApartment.
+  ///
+  /// In en, this message translates to:
+  /// **'Rent'**
+  String get iconLabelApartment;
+
+  /// No description provided for @iconLabelHandshake.
+  ///
+  /// In en, this message translates to:
+  /// **'Partnership'**
+  String get iconLabelHandshake;
+
+  /// No description provided for @iconLabelHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Uncategorized'**
+  String get iconLabelHelp;
+
+  /// No description provided for @tooltipSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get tooltipSend;
+
+  /// No description provided for @tooltipShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get tooltipShare;
+
+  /// No description provided for @tooltipPaste.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste'**
+  String get tooltipPaste;
+
+  /// No description provided for @tooltipTogglePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Show or hide password'**
+  String get tooltipTogglePassword;
+
+  /// No description provided for @tooltipToggleVisibility.
+  ///
+  /// In en, this message translates to:
+  /// **'Show or hide'**
+  String get tooltipToggleVisibility;
+
+  /// No description provided for @tooltipAddAttachment.
+  ///
+  /// In en, this message translates to:
+  /// **'Add attachment'**
+  String get tooltipAddAttachment;
+
+  /// No description provided for @tooltipClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get tooltipClear;
+
+  /// No description provided for @tooltipPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get tooltipPreview;
+
+  /// No description provided for @tooltipRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get tooltipRefresh;
+
   /// No description provided for @importTitle.
   ///
   /// In en, this message translates to:

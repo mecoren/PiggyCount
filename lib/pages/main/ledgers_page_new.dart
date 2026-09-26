@@ -124,6 +124,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
           ),
           // 刷新
           IconButton(
+            tooltip: AppLocalizations.of(context).tooltipRefresh,
             onPressed: () {
               ref.read(ledgerListRefreshProvider.notifier).state++;
             },

@@ -547,6 +547,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                       IconButton(
                         icon: Icon(Icons.share,
                             color: PiggyTokens.textPrimary(context)),
+                        tooltip: AppLocalizations.of(context).sharePosterShare,
                         onPressed: () async {
                           final ledgerId = ref.read(currentLedgerIdProvider);
                           if (ledgerId == 0) {

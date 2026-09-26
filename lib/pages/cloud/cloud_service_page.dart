@@ -478,8 +478,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: PiggyTokens.surfaceElevated(context),
+      builder: (context) => AppDialogShell(
         title: Row(
           children: [
             Icon(
@@ -925,7 +924,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
     final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => AppDialogShell(
         title: Row(
           children: [
             Icon(Icons.cloud, color: PiggyTokens.brandSupabase),
@@ -1009,7 +1008,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
     final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => AppDialogShell(
         title: Row(
           children: [
             Icon(Icons.folder_shared, color: PiggyTokens.brandWebdav),
@@ -1090,7 +1089,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
     final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => AppDialogShell(
         title: Row(
           children: [
             Icon(Icons.cloud, color: PiggyTokens.brandIcloud),
@@ -1170,7 +1169,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
     final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => AppDialogShell(
         title: Row(
           children: [
             Icon(Icons.storage, color: PiggyTokens.brandS3),
@@ -1976,7 +1975,7 @@ class _SupabaseConfigDialogState extends State<_SupabaseConfigDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return AlertDialog(
+    return AppDialogShell(
       title: Text(l10n.cloudConfigureSupabaseTitle),
       content: SingleChildScrollView(
         child: Column(
@@ -2014,6 +2013,7 @@ class _SupabaseConfigDialogState extends State<_SupabaseConfigDialog> {
                         : Icons.visibility_off_outlined,
                     size: 20,
                   ),
+                  tooltip: l10n.tooltipToggleVisibility,
                   onPressed: () {
                     setState(() {
                       obscureAnonKey = !obscureAnonKey;
@@ -2131,7 +2131,7 @@ class _WebdavConfigDialogState extends State<_WebdavConfigDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return AlertDialog(
+    return AppDialogShell(
       title: Text(l10n.cloudConfigureWebdavTitle),
       content: SingleChildScrollView(
         child: Column(
@@ -2178,6 +2178,7 @@ class _WebdavConfigDialogState extends State<_WebdavConfigDialog> {
                         : Icons.visibility_off_outlined,
                     size: 20,
                   ),
+                  tooltip: l10n.tooltipTogglePassword,
                   onPressed: () {
                     setState(() {
                       obscurePassword = !obscurePassword;
@@ -2314,7 +2315,7 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return AlertDialog(
+    return AppDialogShell(
       title: Text(l10n.cloudConfigureS3Title),
       content: SingleChildScrollView(
         child: Column(
@@ -2372,6 +2373,7 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
                         : Icons.visibility_off_outlined,
                     size: 20,
                   ),
+                  tooltip: l10n.tooltipToggleVisibility,
                   onPressed: () {
                     setState(() {
                       obscureSecretKey = !obscureSecretKey;

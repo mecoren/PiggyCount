@@ -95,6 +95,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
           if (_isEditing)
             IconButton(
               onPressed: _deleteBudget,
+              tooltip: l10n.commonDelete,
               icon: const Icon(Icons.delete_outline),
             ),
           TextButton(
@@ -407,6 +408,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
+                    tooltip: AppLocalizations.of(context).commonClose,
                     icon: const Icon(Icons.close),
                   ),
                 ],

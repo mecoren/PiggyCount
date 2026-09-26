@@ -256,6 +256,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
                 alignment: Alignment.topRight,
                 child: IconButton(
                   icon: const Icon(Icons.close, color: Colors.white),
+                  tooltip: AppLocalizations.of(context).commonClose,
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ),

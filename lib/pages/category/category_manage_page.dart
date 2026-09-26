@@ -979,6 +979,7 @@ class _SubcategoryDialogState extends ConsumerState<_SubcategoryDialog> {
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
+                  tooltip: l10n.commonClose,
                   icon: const Icon(Icons.close),
                   iconSize: 20,
                   padding: EdgeInsets.zero,

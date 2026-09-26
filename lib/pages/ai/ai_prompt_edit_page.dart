@@ -248,6 +248,7 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
                     const Spacer(),
                     IconButton(
                       icon: const Icon(Icons.close, size: 20),
+                      tooltip: l10n.commonClose,
                       onPressed: () => Navigator.pop(context),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
@@ -330,10 +331,12 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.share),
+            tooltip: l10n.tooltipShare,
             onPressed: _sharePrompt,
           ),
           IconButton(
             icon: const Icon(Icons.paste),
+            tooltip: l10n.tooltipPaste,
             onPressed: _pastePrompt,
           ),
         ],

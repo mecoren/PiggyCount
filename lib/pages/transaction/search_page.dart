@@ -297,6 +297,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                         if (tempSelectedCategory != null)
                           IconButton(
                             icon: const Icon(Icons.clear, size: 20),
+                            tooltip: l10n.tooltipClear,
                             onPressed: () {
                               setState(() {
                                 tempSelectedCategory = null;
@@ -370,6 +371,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                         if (tempStartDate != null)
                           IconButton(
                             icon: const Icon(Icons.clear, size: 20),
+                            tooltip: l10n.tooltipClear,
                             onPressed: () {
                               setState(() {
                                 tempStartDate = null;
@@ -378,6 +380,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                           ),
                         IconButton(
                           icon: const Icon(Icons.calendar_today, size: 20),
+                          tooltip: l10n.searchStartDate,
                           onPressed: () async {
                             final date = await showWheelDatePicker(
                               context,
@@ -409,6 +412,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                         if (tempEndDate != null)
                           IconButton(
                             icon: const Icon(Icons.clear, size: 20),
+                            tooltip: l10n.tooltipClear,
                             onPressed: () {
                               setState(() {
                                 tempEndDate = null;
@@ -417,6 +421,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                           ),
                         IconButton(
                           icon: const Icon(Icons.calendar_today, size: 20),
+                          tooltip: l10n.searchEndDate,
                           onPressed: () async {
                             final date = await showWheelDatePicker(
                               context,
@@ -758,6 +763,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                         onPressed: () {
                                           _searchController.clear();
                                         },
+                                        tooltip: AppLocalizations.of(context)
+                                            .tooltipClear,
                                         icon: Icon(Icons.clear,
                                             color: PiggyTokens.textTertiary(
                                                 context)),

@@ -671,6 +671,7 @@ class _ConfigContentDialog extends StatelessWidget {
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
+                  tooltip: l10n.commonClose,
                   onPressed: () => Navigator.pop(context),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -766,6 +767,7 @@ class _ConfigPreviewDialogState extends State<_ConfigPreviewDialog> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
+                  tooltip: l10n.commonClose,
                   onPressed: () => Navigator.pop(context, false),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -925,6 +927,7 @@ class _ExportOptionsDialogState extends State<_ExportOptionsDialog> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
+                  tooltip: l10n.commonClose,
                   onPressed: () => Navigator.pop(context),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -1094,6 +1097,7 @@ class _ExportPreviewDialog extends StatelessWidget {
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
+                  tooltip: l10n.commonClose,
                   onPressed: () => Navigator.pop(context, false),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -1227,6 +1231,7 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
+                  tooltip: l10n.commonClose,
                   onPressed: () => Navigator.pop(context),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),

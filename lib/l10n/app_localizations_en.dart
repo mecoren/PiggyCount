@@ -1023,6 +1023,324 @@ class AppLocalizationsEn extends AppLocalizations {
   String get iconCategoryDining => 'Dining';
 
   @override
+  String get iconLabelRestaurant => 'Restaurant';
+
+  @override
+  String get iconLabelLocalDining => 'Meals';
+
+  @override
+  String get iconLabelFastfood => 'Fast food';
+
+  @override
+  String get iconLabelLocalCafe => 'Coffee';
+
+  @override
+  String get iconLabelLocalBar => 'Bar';
+
+  @override
+  String get iconLabelCake => 'Cake';
+
+  @override
+  String get iconLabelLocalPizza => 'Pizza';
+
+  @override
+  String get iconLabelIcecream => 'Ice cream';
+
+  @override
+  String get iconLabelDirectionsCar => 'Car';
+
+  @override
+  String get iconLabelDirectionsBus => 'Bus';
+
+  @override
+  String get iconLabelDirectionsSubway => 'Subway';
+
+  @override
+  String get iconLabelLocalTaxi => 'Taxi';
+
+  @override
+  String get iconLabelFlight => 'Flight';
+
+  @override
+  String get iconLabelTrain => 'Train';
+
+  @override
+  String get iconLabelDirectionsBike => 'Bicycle';
+
+  @override
+  String get iconLabelDirectionsWalk => 'Walk';
+
+  @override
+  String get iconLabelLocalGasStation => 'Fuel';
+
+  @override
+  String get iconLabelLocalParking => 'Parking';
+
+  @override
+  String get iconLabelShoppingCart => 'Cart';
+
+  @override
+  String get iconLabelShoppingBag => 'Shopping bag';
+
+  @override
+  String get iconLabelStore => 'Store';
+
+  @override
+  String get iconLabelLocalMall => 'Mall';
+
+  @override
+  String get iconLabelLocalGroceryStore => 'Supermarket';
+
+  @override
+  String get iconLabelCheckroom => 'Clothing';
+
+  @override
+  String get iconLabelWatch => 'Watch';
+
+  @override
+  String get iconLabelDiamond => 'Jewelry';
+
+  @override
+  String get iconLabelMovie => 'Movie';
+
+  @override
+  String get iconLabelMusicNote => 'Music';
+
+  @override
+  String get iconLabelSportsEsports => 'Games';
+
+  @override
+  String get iconLabelSportsSoccer => 'Soccer';
+
+  @override
+  String get iconLabelSportsBasketball => 'Basketball';
+
+  @override
+  String get iconLabelTheaterComedy => 'Fun';
+
+  @override
+  String get iconLabelCameraAlt => 'Photo';
+
+  @override
+  String get iconLabelPalette => 'Art';
+
+  @override
+  String get iconLabelHome => 'Home';
+
+  @override
+  String get iconLabelLocalLaundryService => 'Laundry';
+
+  @override
+  String get iconLabelCleaningServices => 'Cleaning';
+
+  @override
+  String get iconLabelPlumbing => 'Repair';
+
+  @override
+  String get iconLabelElectricalServices => 'Electrician';
+
+  @override
+  String get iconLabelHandyman => 'Maintenance';
+
+  @override
+  String get iconLabelPets => 'Pets';
+
+  @override
+  String get iconLabelChildCare => 'Baby';
+
+  @override
+  String get iconLabelLocalHospital => 'Hospital';
+
+  @override
+  String get iconLabelMedicalServices => 'Medical';
+
+  @override
+  String get iconLabelLocalPharmacy => 'Pharmacy';
+
+  @override
+  String get iconLabelFitnessCenter => 'Gym';
+
+  @override
+  String get iconLabelSpa => 'Beauty';
+
+  @override
+  String get iconLabelPsychology => 'Therapy';
+
+  @override
+  String get iconLabelFace => 'Skincare';
+
+  @override
+  String get iconLabelContentCut => 'Haircut';
+
+  @override
+  String get iconLabelSchool => 'School';
+
+  @override
+  String get iconLabelLibraryBooks => 'Books';
+
+  @override
+  String get iconLabelComputer => 'Computer';
+
+  @override
+  String get iconLabelPhone => 'Contact';
+
+  @override
+  String get iconLabelLanguage => 'Language';
+
+  @override
+  String get iconLabelScience => 'Science';
+
+  @override
+  String get iconLabelCalculate => 'Calculate';
+
+  @override
+  String get iconLabelBrush => 'Drawing';
+
+  @override
+  String get iconLabelBusiness => 'Business';
+
+  @override
+  String get iconLabelWork => 'Work';
+
+  @override
+  String get iconLabelFlashOn => 'Utilities';
+
+  @override
+  String get iconLabelWifi => 'Wi-Fi';
+
+  @override
+  String get iconLabelPhoneAndroid => 'Phone';
+
+  @override
+  String get iconLabelSmokingRooms => 'Tobacco & alcohol';
+
+  @override
+  String get iconLabelFavorite => 'Donate';
+
+  @override
+  String get iconLabelCategory => 'Other';
+
+  @override
+  String get iconLabelSalary => 'Salary';
+
+  @override
+  String get iconLabelBusinessCenter => 'Business';
+
+  @override
+  String get iconLabelEngineering => 'Engineering';
+
+  @override
+  String get iconLabelDesignServices => 'Design';
+
+  @override
+  String get iconLabelAgriculture => 'Farming';
+
+  @override
+  String get iconLabelConstruction => 'Construction';
+
+  @override
+  String get iconLabelLocalShipping => 'Logistics';
+
+  @override
+  String get iconLabelRestaurantMenu => 'Dining';
+
+  @override
+  String get iconLabelAccountBalance => 'Bank';
+
+  @override
+  String get iconLabelSavings => 'Savings';
+
+  @override
+  String get iconLabelTrendingUp => 'Investment';
+
+  @override
+  String get iconLabelPaid => 'Interest';
+
+  @override
+  String get iconLabelCurrencyExchange => 'Exchange rate';
+
+  @override
+  String get iconLabelWallet => 'Wallet';
+
+  @override
+  String get iconLabelCreditCard => 'Credit card';
+
+  @override
+  String get iconLabelAccountBalanceWallet => 'Balance';
+
+  @override
+  String get iconLabelCardGiftcard => 'Red packet';
+
+  @override
+  String get iconLabelRedeem => 'Bonus';
+
+  @override
+  String get iconLabelEmojiEvents => 'Reward';
+
+  @override
+  String get iconLabelStar => 'Rating';
+
+  @override
+  String get iconLabelGrade => 'Level';
+
+  @override
+  String get iconLabelLoyalty => 'Points';
+
+  @override
+  String get iconLabelVolunteerActivism => 'Gift money';
+
+  @override
+  String get iconLabelCelebration => 'Celebration';
+
+  @override
+  String get iconLabelReceiptLong => 'Reimbursement';
+
+  @override
+  String get iconLabelPartTime => 'Part-time';
+
+  @override
+  String get iconLabelUndo => 'Refund';
+
+  @override
+  String get iconLabelMoney => 'Cash';
+
+  @override
+  String get iconLabelApartment => 'Rent';
+
+  @override
+  String get iconLabelHandshake => 'Partnership';
+
+  @override
+  String get iconLabelHelp => 'Uncategorized';
+
+  @override
+  String get tooltipSend => 'Send';
+
+  @override
+  String get tooltipShare => 'Share';
+
+  @override
+  String get tooltipPaste => 'Paste';
+
+  @override
+  String get tooltipTogglePassword => 'Show or hide password';
+
+  @override
+  String get tooltipToggleVisibility => 'Show or hide';
+
+  @override
+  String get tooltipAddAttachment => 'Add attachment';
+
+  @override
+  String get tooltipClear => 'Clear';
+
+  @override
+  String get tooltipPreview => 'Preview';
+
+  @override
+  String get tooltipRefresh => 'Refresh';
+
+  @override
   String get importTitle => 'Import Bills';
 
   @override

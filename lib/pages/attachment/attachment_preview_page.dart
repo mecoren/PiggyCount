@@ -268,6 +268,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
               // 返回按钮
               IconButton(
                 onPressed: _handleClose,
+                tooltip: l10n.commonClose,
                 icon: const Icon(Icons.close, color: Colors.white),
               ),
               const Spacer(),
@@ -284,6 +285,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
               if (widget.allowAdd && _totalCount < 9)
                 IconButton(
                   onPressed: () => _showAddOptions(l10n),
+                  tooltip: l10n.tooltipAddAttachment,
                   icon: const Icon(Icons.add_photo_alternate_outlined,
                       color: Colors.white),
                 ),
@@ -293,6 +295,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
                   onPressed: () => isSavedAttachment
                       ? _deleteSavedAttachment(l10n)
                       : _deletePendingFile(),
+                  tooltip: l10n.commonDelete,
                   icon: const Icon(Icons.delete_outline, color: Colors.white),
                 ),
             ],

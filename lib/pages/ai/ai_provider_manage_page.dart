@@ -171,6 +171,7 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
                         size: 20,
                         color: PiggyTokens.textTertiary(context),
                       ),
+                      tooltip: l10n.commonDelete,
                       onPressed: () => _deleteProvider(context, provider),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
@@ -545,6 +546,7 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
                                       : Icons.visibility,
                                   size: 20,
                                 ),
+                                tooltip: l10n.tooltipToggleVisibility,
                                 onPressed: () {
                                   setState(
                                       () => _obscureApiKey = !_obscureApiKey);

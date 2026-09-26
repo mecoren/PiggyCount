@@ -268,6 +268,7 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                 )
               : IconButton(
                   icon: Icon(Icons.preview, color: primary),
+                  tooltip: l10n.tooltipPreview,
                   onPressed: _handleExportPreview,
                 ),
           onTap: _isExporting ? null : _handleExport,
