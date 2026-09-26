@@ -3775,6 +3775,18 @@ abstract class AppLocalizations {
   /// **'Local and cloud differ, download to compare'**
   String get mineSyncDifferent;
 
+  /// No description provided for @syncPendingCloudDeletesMark.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} cloud deletion(s) pending (not auto-applied; use \"Full download\" below to take the cloud as source of truth)'**
+  String syncPendingCloudDeletesMark(int count);
+
+  /// No description provided for @syncDirectionUnknownHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Direction undetermined — use \"Full download\" or \"Full upload\" below to pick one side as the source of truth'**
+  String get syncDirectionUnknownHint;
+
   /// No description provided for @mineSyncError.
   ///
   /// In en, this message translates to:
@@ -10955,6 +10967,12 @@ abstract class AppLocalizations {
   /// **'Delete \"{name}\"? Values already recorded on entries in this ledger will be removed as well. This cannot be undone.'**
   String customFieldDeleteConfirmMessage(String name);
 
+  /// No description provided for @customFieldDeleteReconfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm again: once deleted, this field and all values recorded in this ledger are gone for good. Continue?'**
+  String get customFieldDeleteReconfirmMessage;
+
   /// No description provided for @customFieldSectionTitle.
   ///
   /// In en, this message translates to:
@@ -14556,6 +14574,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Last backup: {date} · {ok}'**
   String lastBackupCaption(String date, String ok);
+
+  /// No description provided for @lastBackupNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Last backup: none yet'**
+  String get lastBackupNone;
 
   /// No description provided for @ledgersCreatedSuccess.
   ///

@@ -257,6 +257,16 @@ final ledgerDataRefreshByLedgerProvider =
 final remoteApplyInProgressByLedgerProvider =
     StateProvider.family<bool, int>((ref, _) => false);
 
+/// P3：「云端有删除但本轮未应用」的账本 → 待处理删除条数。
+///
+/// SYNC-05 规定 deleted 类变更默认不勾选（防误删），因此合并后本地会**故意**
+/// 保留这些行、指纹不收敛。此前该状态只在合并结束的一行汇总文案里出现，
+/// 用户极易忽略。这里做会话内可见状态，供云同步页给对应账本打标记。
+///
+/// 刻意不落 SharedPreferences：云配置完整性回归要求 prefs 键集合零增删。
+final pendingCloudDeletedProvider =
+    StateProvider<Map<int, int>>((ref) => const <int, int>{});
+
 // ====== 账本同步相关 ======
 
 /// 刷新账本列表的触发器

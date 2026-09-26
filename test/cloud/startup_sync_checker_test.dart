@@ -468,6 +468,11 @@ void main() {
       // 无选中变更，跳过 apply 且不进入合并/回传
       expect(deps.appliedForLedger.containsKey(2), isFalse);
       expect(deps.applyPreviewChangesCallCount, 1);
+      // P3：未勾选的云端删除必须登记下来（供云同步页打「有 N 条待处理」标记）
+      expect(deps.pendingCloudDeletesByLedger[2], 3,
+          reason: 'P3：100% 未勾选删除的账本同样要打标记');
+      expect(deps.pendingCloudDeletesByLedger[1], 0,
+          reason: 'P3：无待处理删除的账本应清除标记');
     });
 
     test('每次 apply 后触发 runAfterDownload', () async {
@@ -926,6 +931,8 @@ void main() {
       expect(deps.uploadedLedgerIds, isEmpty,
           reason: '存在未应用的云端删除时必须跳过回传，'
               '否则本地保留的已删交易随快照复活并传播到所有设备');
+      // P3：逐账本登记待处理删除条数（不再只在结束文案里出现）
+      expect(deps.pendingCloudDeletesByLedger[1], 1);
     });
 
     test('S1 守卫：全部删除被勾选应用时正常回传', () async {
@@ -1656,6 +1663,14 @@ class _FakeDeps implements StartupSyncCheckerDeps {
       throw Exception('downloadAndPreview boom for ledger $ledgerId');
     }
     return previewByLedger[ledgerId];
+  }
+
+  /// P3：本轮各账本「未勾选的云端删除」条数（0 表示已清空标记）
+  final pendingCloudDeletesByLedger = <int, int>{};
+
+  @override
+  void recordPendingCloudDeletes(int ledgerId, int count) {
+    pendingCloudDeletesByLedger[ledgerId] = count;
   }
 
   @override

@@ -1720,6 +1720,8 @@
   "mineSyncCloudRecords": "雲端記錄數: {count}",
   "mineSyncDetailTitle": "同步狀態詳情",
   "mineSyncDifferent": "本機與雲端有差異，建議下載對比",
+  "syncPendingCloudDeletesMark": "有 {count} 筆雲端刪除待處理（預設不自動套用；以雲端為準請用下方「全量下載」）",
+  "syncDirectionUnknownHint": "方向無法判定（兩端都有本機獨有變更），可於下方用「全量下載」或「全量上傳」以其中一端為準",
   "mineSyncError": "狀態取得失敗",
   "mineSyncInSync": "已同步 (本地{count}條)",
   "mineSyncInSyncSimple": "已同步",
@@ -2233,6 +2235,7 @@
       }
     }
   },
+  "customFieldDeleteReconfirmMessage": "再次確認：刪除後該欄位及本帳本中已記錄的值將永久清除、無法復原。確定要繼續嗎？",
   "customFieldSectionTitle": "自訂欄位",
   "customFieldSectionEmpty": "此帳本尚無自訂欄位",
   "customFieldDatePick": "選擇日期",
@@ -3069,6 +3072,7 @@
   "backupAutoSubtitle": "每日在設定時間自動備份一次（僅 App 執行期間生效）",
   "backupTimeTitle": "每日備份時間",
   "lastBackupCaption": "最近備份：{date} · {ok}",
+  "lastBackupNone": "最近備份：尚無記錄",
   "ledgersCreatedSuccess": "帳本建立成功",
   "ledgersCreateFailed": "建立失敗: {error}",
   "@ledgersCreateFailed": {

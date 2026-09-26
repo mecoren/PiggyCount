@@ -123,6 +123,13 @@ abstract class StartupSyncCheckerDeps {
     required ImportData importData,
   });
 
+  /// P3：记录某账本「本轮未应用的云端删除」条数（0 表示已无待处理）。
+  ///
+  /// SYNC-05 默认不勾选 deleted，合并后本地会故意保留这些行且指纹不收敛。
+  /// 实现方应把它写进**会话内**状态（供云同步页给账本打标记），
+  /// 不得落 SharedPreferences —— 云配置完整性回归要求 prefs 键集合零增删。
+  void recordPendingCloudDeletes(int ledgerId, int count);
+
   Future<({int inserted, int deletedDup})> downloadAndRestoreToCurrentLedger({
     required int ledgerId,
   });
@@ -670,6 +677,11 @@ class StartupSyncChecker {
   }) =>
       previewExists && unselectedDeletedCount > 0;
 
+  /// P3：预览里「用户未勾选的云端删除」条数（SYNC-05：deleted 默认不勾选）。
+  static int _unselectedDeleted(SyncPreview preview) => preview.changes
+      .where((ch) => ch.type == SyncChangeType.deleted && !ch.selected)
+      .length;
+
   /// 云端发现同名多槽位甄别（两次实测报告 §4.2 共同提出的改进点）。
   ///
   /// 云端可同时存在多个**同名**账本槽位（上次测试遗留、或不同设备用
@@ -916,6 +928,8 @@ class StartupSyncChecker {
         // 选中，deleted 本地独有交易默认不选，避免破坏性变更静默执行）
         final selected = preview.changes.where((ch) => ch.selected).toList();
         if (selected.isEmpty) {
+          // 全部变更都是未勾选的云端删除 → 100% 待处理，必须记账本标记
+          deps.recordPendingCloudDeletes(c.ledger.id, _unselectedDeleted(preview));
           applied++;
           continue;
         }
@@ -929,9 +943,8 @@ class StartupSyncChecker {
             .timeout(_applyTimeout);
         totalChanges += result.totalCount;
         deps.runAfterDownload();
-        final unselectedDeleted = preview.changes
-            .where((ch) => ch.type == SyncChangeType.deleted && !ch.selected)
-            .length;
+        final unselectedDeleted = _unselectedDeleted(preview);
+        deps.recordPendingCloudDeletes(c.ledger.id, unselectedDeleted);
         merged.add((
           cand: c,
           skipPublish: StartupSyncChecker.shouldSkipMergePublish(
@@ -1113,10 +1126,8 @@ class StartupSyncChecker {
                 .timeout(_applyTimeout);
             deps.runAfterDownload();
             // S1 守卫：统计用户未勾选的云端删除（对齐 _applyAll）
-            final unselectedDeleted = preview.changes
-                .where(
-                    (ch) => ch.type == SyncChangeType.deleted && !ch.selected)
-                .length;
+            final unselectedDeleted = _unselectedDeleted(preview);
+            deps.recordPendingCloudDeletes(c.ledger.id, unselectedDeleted);
             merged.add((
               cand: c,
               skipPublish: StartupSyncChecker.shouldSkipMergePublish(
@@ -1306,6 +1317,17 @@ class WidgetRefDeps implements StartupSyncCheckerDeps {
         selectedChanges: selectedChanges,
         importData: importData,
       );
+
+  @override
+  void recordPendingCloudDeletes(int ledgerId, int count) {
+    final next = Map<int, int>.from(_ref.read(pendingCloudDeletedProvider));
+    if (count > 0) {
+      next[ledgerId] = count;
+    } else {
+      next.remove(ledgerId);
+    }
+    _ref.read(pendingCloudDeletedProvider.notifier).state = next;
+  }
 
   @override
   Future<({int inserted, int deletedDup})> downloadAndRestoreToCurrentLedger({

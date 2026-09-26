@@ -6,6 +6,17 @@ import '../data/repositories/transaction_repository.dart'
 import '../services/data_import_service.dart';
 import '../services/system/logger_service.dart';
 
+/// 同步合并「分阶段耗时」追踪开关（P2 性能定位用）。
+///
+/// 默认 **关闭**：开启后每个账本会多打一行 debug 级
+/// `[perf] ledger=N phase=full categories=..ms accounts=..ms …`，
+/// 供 `scripts/live_db/run_20260926/95_perf_report.sh` 汇总。
+///
+/// 定位已完成（2026-09-26：单账本 apply 由 ≈29.3s 降到 0.05~0.63s），
+/// 常态运行无需该噪声；需要复测性能时把它改为 true 重新构建即可。
+/// 汇总行 `批量更新: size=… 主表=…ms tag=…ms` 始终保持（单行、低频、有诊断价值）。
+const bool kSyncPerfTraceEnabled = false;
+
 /// 同步变更类型
 enum SyncChangeType { added, modified, deleted }
 
@@ -449,26 +460,52 @@ class SyncDiffService {
     required List<SyncChange> selectedChanges,
     required ImportData importData,
   }) async {
+    // P2 定位用：分阶段耗时（毫秒）。合并路径实测单账本可达数十秒而全量
+    // 恢复路径同函数仅几百毫秒，先量化各阶段再决定优化点。debug 级输出，
+    // 默认不刷屏；定位完成后保留汇总口径便于后续回归对比。
+    final perf = <String, int>{};
+    Future<T> timed<T>(String label, Future<T> Function() body) async {
+      final sw = Stopwatch()..start();
+      try {
+        return await body();
+      } finally {
+        perf[label] = (perf[label] ?? 0) + sw.elapsedMilliseconds;
+      }
+    }
+
+    void logPerf(String phase) {
+      if (!kSyncPerfTraceEnabled) return;
+      logger.debug(
+          'SyncDiff',
+          '[perf] ledger=$ledgerId phase=$phase '
+          '${perf.entries.map((e) => '${e.key}=${e.value}ms').join(' ')}');
+    }
+
     // 分类/账户/标签:复用 DataImportService(同一份 batch 优化只在一处维护)。
     // 元数据合并不依赖交易 diff —— 必须在空变更早退之前执行:云端仅有
     // 账户/分类/标签变更时 computeDiff 返回空 preview,若此处先早退,
     // importAccounts 永远不会被调用,账户同步即断链(account_metadata_sync_fix
     // G1+G2)。元数据导入是幂等增量 upsert,多账本循环重复合并无害。
-    final categoryCache =
-        await dataImportService.importCategories(repo, importData.categories);
-    final accountNameToId = await dataImportService.importAccounts(
-      repo,
-      importData.accounts,
-      defaultCurrency: importData.currency ?? 'CNY',
-    );
-    final tagMaps = await dataImportService.importTags(repo, importData.tags);
+    final categoryCache = await timed('categories',
+        () => dataImportService.importCategories(repo, importData.categories));
+    final accountNameToId = await timed(
+        'accounts',
+        () => dataImportService.importAccounts(
+              repo,
+              importData.accounts,
+              defaultCurrency: importData.currency ?? 'CNY',
+            ));
+    final tagMaps = await timed(
+        'tags', () => dataImportService.importTags(repo, importData.tags));
     // v46 自定义字段定义：必须先于交易落库。交易值以 fieldSyncId 为键，
     // 定义缺失时这些值在编辑表单里没有渲染位（数据仍在，只是看不见）。
-    await dataImportService.importCustomFields(
-      repo,
-      ledgerId,
-      importData.customFields,
-    );
+    await timed(
+        'customFields',
+        () => dataImportService.importCustomFields(
+              repo,
+              ledgerId,
+              importData.customFields,
+            ));
 
     // 合并范围对齐指纹范围(sync_fingerprint 覆盖 8 类实体):此前只合并
     // 账户/分类/标签,预算/周期规则/手动汇率/月起始日的云端差异永远不落
@@ -477,23 +514,42 @@ class SyncDiffService {
     // 路径(DataImportService.importData)的幂等 upsert,语义一致。
     // 周期规则必须在交易之前导入:added 交易靠 recurringSyncIdToId 映射
     // 回填 transactions.recurringId 外键。
-    final recurringSyncIdToId = await dataImportService.importRecurrings(
-      repo,
-      ledgerId,
-      importData.recurrings,
-      accountNameToId: accountNameToId,
-      categoryCache: categoryCache,
-    );
-    await dataImportService.importBudgets(
-      repo,
-      ledgerId,
-      importData.budgets,
-      categoryCache: categoryCache,
-    );
-    await dataImportService.importRateOverrides(
-      repo,
-      importData.rateOverrides,
-    );
+    final recurringSyncIdToId = await timed(
+        'recurrings',
+        () => dataImportService.importRecurrings(
+              repo,
+              ledgerId,
+              importData.recurrings,
+              accountNameToId: accountNameToId,
+              categoryCache: categoryCache,
+            ));
+    await timed(
+        'budgets',
+        () => dataImportService.importBudgets(
+              repo,
+              ledgerId,
+              importData.budgets,
+              categoryCache: categoryCache,
+            ));
+    await timed('rates',
+        () => dataImportService.importRateOverrides(repo, importData.rateOverrides));
+    // 账本名 / 本位币同样参与快照指纹（sync_fingerprint M2：顶层
+    // ledgerName/currency 进指纹），但增量合并此前只回写 monthStartDay：
+    // A 端改名后 B 端永远拿不到新名，且本地指纹与云端永久不一致 →
+    // 每次启动反复判 cloudNewer 弹「云端有更新」。口径与全量恢复路径
+    // (DataImportService.importData) 对齐。
+    if (importData.ledgerName != null || importData.currency != null) {
+      try {
+        await repo.updateLedger(
+          id: ledgerId,
+          name: importData.ledgerName,
+          currency: importData.currency,
+        );
+      } catch (e) {
+        // 失败不阻断交易合并，保留异常细节便于排查（同 F7 口径）。
+        logger.debug('SyncDiff', '账本名/币种更新失败(忽略): $e');
+      }
+    }
     if (importData.monthStartDay != null) {
       // 月起始日以云端快照为准(v8 G5 同语义);失败不阻断交易合并
       try {
@@ -509,6 +565,7 @@ class SyncDiffService {
 
     if (selectedChanges.isEmpty) {
       // 交易无差异:仅完成上述元数据合并,交易计数全为 0
+      logPerf('meta-only');
       return const SyncApplyResult();
     }
     final tagNameToId = tagMaps.byName;
@@ -547,17 +604,19 @@ class SyncDiffService {
       final addedTxs = addedChanges
           .map((c) => c.cloudTransaction!)
           .toList(growable: false);
-      final result = await dataImportService.importTransactions(
-        repo,
-        ledgerId,
-        addedTxs,
-        accountNameToId: accountNameToId,
-        categoryCache: categoryCache,
-        tagNameToId: tagNameToId,
-        tagSyncIdToId: tagSyncIdToId,
-        recurringSyncIdToId: recurringSyncIdToId,
-        recordChanges: false, // M3：云→本地路径不回流 local_changes
-      );
+      final result = await timed(
+          'added',
+          () => dataImportService.importTransactions(
+                repo,
+                ledgerId,
+                addedTxs,
+                accountNameToId: accountNameToId,
+                categoryCache: categoryCache,
+                tagNameToId: tagNameToId,
+                tagSyncIdToId: tagSyncIdToId,
+                recurringSyncIdToId: recurringSyncIdToId,
+                recordChanges: false, // M3：云→本地路径不回流 local_changes
+              ));
       addedCount = result.inserted;
       if (result.skippedRecurring > 0) {
         logger.warning('SyncDiff',
@@ -689,8 +748,8 @@ class SyncDiffService {
       // 主表更新（原子操作：单条 BEGIN/COMMIT）
       Map<String, int> syncIdToTxId;
       try {
-        syncIdToTxId = await repo.updateTransactionsBatchBySyncId(updates,
-            recordChanges: false); // M3
+        syncIdToTxId = await timed('modifiedMain',
+            () => repo.updateTransactionsBatchBySyncId(updates, recordChanges: false));
         modifiedCount = syncIdToTxId.length;
       } catch (e, st) {
         // 主表更新失败：不尝试 tag 更新（数据已回滚），记录错误并跳过
@@ -702,18 +761,49 @@ class SyncDiffService {
       // Major-10 修复：跟踪失败计数，汇总日志，不再静默吞掉
       if (syncIdToTxId.isNotEmpty) {
         int tagFailCount = 0;
-        for (final entry in tagIdsBySyncId.entries) {
-          final txId = syncIdToTxId[entry.key];
-          if (txId == null) continue;
-          try {
-            await repo.updateTransactionTags(
-              transactionId: txId,
-              tagIds: entry.value,
-            );
-          } catch (e, st) {
-            tagFailCount++;
-            logger.error('SyncDiff', 'tag 关联更新失败 syncId=${entry.key}', e, st);
+        int tagSkipped = 0;
+        // P2 定位用：逐条 updateTransactionTags 的耗时抽样（每行一次事务，
+        // 历史注释已标注「量大时需专门的 batch tag-update 接口」）。
+        final tagSlow = <(int, String)>[];
+        await timed('modifiedTags', () async {
+          // 先批量读一次现有 tag 关联，只对**真正变化**的行写库：合并场景下
+          // 绝大多数 modified 只是金额/备注变了，tag 集合没变 —— 旧实现每行
+          // 都开一次事务先删后插（实测 1407 行 = 5553ms，是主表批量更新的
+          // 3.9 倍），属于纯 N 次无谓事务。
+          final existingTags =
+              await repo.getTagsForTransactions(syncIdToTxId.values.toList());
+          for (final entry in tagIdsBySyncId.entries) {
+            final txId = syncIdToTxId[entry.key];
+            if (txId == null) continue;
+            final desired = entry.value.toSet();
+            final current =
+                (existingTags[txId] ?? const <Tag>[]).map((t) => t.id).toSet();
+            if (desired.length == current.length &&
+                desired.containsAll(current)) {
+              tagSkipped++;
+              continue;
+            }
+            final itemSw = Stopwatch()..start();
+            try {
+              await repo.updateTransactionTags(
+                transactionId: txId,
+                tagIds: entry.value,
+              );
+            } catch (e, st) {
+              tagFailCount++;
+              logger.error('SyncDiff', 'tag 关联更新失败 syncId=${entry.key}', e, st);
+            }
+            itemSw.stop();
+            if (itemSw.elapsedMilliseconds >= 50) {
+              tagSlow.add((itemSw.elapsedMilliseconds, entry.key));
+            }
           }
+        });
+        if (kSyncPerfTraceEnabled && tagSlow.isNotEmpty) {
+          tagSlow.sort((a, b) => b.$1.compareTo(a.$1));
+          logger.debug('SyncDiff',
+              '[perf] tag 慢行 top${tagSlow.length > 3 ? 3 : tagSlow.length}: '
+              '${tagSlow.take(3).map((e) => '${e.$1}ms(${e.$2.substring(0, 8)})').join(' ')}');
         }
         if (tagFailCount > 0) {
           logger.warning('SyncDiff',
@@ -721,7 +811,9 @@ class SyncDiffService {
               '失败=$tagFailCount（主表数据已更新，tag 可能不一致）');
         }
         logger.info('SyncDiff',
-            '批量更新: size=${updates.length} 成功=$modifiedCount 耗时=${sw.elapsedMilliseconds}ms');
+            '批量更新: size=${updates.length} 成功=$modifiedCount '
+            '主表=${perf['modifiedMain']}ms tag=${perf['modifiedTags']}ms '
+            '(tag 未变跳过 $tagSkipped 行) 合计=${sw.elapsedMilliseconds}ms');
       }
     }
 
@@ -740,9 +832,10 @@ class SyncDiffService {
       }
       if (withSyncIds.isNotEmpty) {
         try {
-          final n =
-              await repo.deleteTransactionsBatchBySyncIds(withSyncIds,
-                  recordChanges: false); // M3
+          final n = await timed(
+              'deleted',
+              () => repo.deleteTransactionsBatchBySyncIds(withSyncIds,
+                  recordChanges: false)); // M3
           deletedCount += n;
           logger.info('SyncDiff',
               '批量删除: syncId 路径 size=${withSyncIds.length} 实删=$n');
@@ -762,6 +855,7 @@ class SyncDiffService {
 
     logger.info('SyncDiff',
         '变更已应用: 新增=$addedCount, 修改=$modifiedCount, 删除=$deletedCount');
+    logPerf('full');
 
     return SyncApplyResult(
       addedCount: addedCount,

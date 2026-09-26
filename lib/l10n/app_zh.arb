@@ -713,6 +713,8 @@
   "mineSyncCloudNewer": "云端有更新 (建议下载同步)",
   "mineSyncCloudNewerSimple": "云端有更新",
   "mineSyncDifferent": "本地与云端有差异，建议下载对比",
+  "syncPendingCloudDeletesMark": "有 {count} 条云端删除待处理（默认不自动应用；以云端为准请用下方「全量下载」）",
+  "syncDirectionUnknownHint": "方向无法判定（两端都有本地独有改动），可在下方用「全量下载」或「全量上传」以其中一端为准",
   "mineSyncError": "状态获取失败",
   "mineSyncDetailTitle": "同步状态详情",
   "mineSyncLocalRecords": "本地记录数: {count}",
@@ -2493,6 +2495,7 @@
       }
     }
   },
+  "customFieldDeleteReconfirmMessage": "再次确认：删除后该字段及本账本中已记录的值将永久清除、无法恢复。确定要继续吗？",
   "customFieldSectionTitle": "自定义字段",
   "customFieldSectionEmpty": "该账本还没有自定义字段",
   "customFieldDatePick": "选择日期",
@@ -3364,6 +3367,7 @@
   "backupAutoSubtitle": "每日在设定时间自动备份一次（仅 App 运行期间生效）",
   "backupTimeTitle": "每日备份时间",
   "lastBackupCaption": "最近备份：{date} · {ok}",
+  "lastBackupNone": "最近备份：尚无记录",
   "ledgersCreatedSuccess": "账本创建成功",
   "ledgersCreateFailed": "创建失败: {error}",
   "@ledgersCreateFailed": {

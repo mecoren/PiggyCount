@@ -764,8 +764,13 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                           icon = Icons.download_outlined;
                           break;
                         case SyncDiff.different:
+                          // direction=unknown（两端都有本地独有改动）时启动
+                          // 检查不会给候选、也不弹合并提示，只在这里显示状态。
+                          // 测试观察到用户会卡在这一步（不知道下一步做什么），
+                          // 故补一行**明确动作指引**，零结构改动。
                           subtitle =
-                              AppLocalizations.of(context).mineSyncDifferent;
+                              '${AppLocalizations.of(context).mineSyncDifferent}\n'
+                              '${AppLocalizations.of(context).syncDirectionUnknownHint}';
                           icon = Icons.change_circle_outlined;
                           break;
                         case SyncDiff.error:
@@ -808,6 +813,19 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                               AppLocalizations.of(context).mineSyncError;
                           icon = Icons.error_outline;
                           break;
+                      }
+                      // P3：本轮合并存在「未勾选的云端删除」→ 在状态行下追加
+                      // 明确标记。SYNC-05 默认不勾选是防误删设计，但此前只有
+                      // 合并结束的一行汇总文案提到，用户极易忽略。
+                      final pendingDeletes =
+                          ref.watch(pendingCloudDeletedProvider)[ledgerId];
+                      if (pendingDeletes != null && pendingDeletes > 0) {
+                        final mark = AppLocalizations.of(context)
+                            .syncPendingCloudDeletesMark(pendingDeletes);
+                        subtitle = subtitle.isEmpty
+                            ? mark
+                            : '$subtitle\n$mark';
+                        icon = Icons.delete_sweep_outlined;
                       }
                     }
 
@@ -1893,17 +1911,28 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                               child: Align(
                                                 alignment: Alignment.centerLeft,
                                                 child: Text(
-                                                  AppLocalizations.of(context)
-                                                      .lastBackupCaption(
-                                                    last?.date ?? '-',
-                                                    (last?.ok ?? false)
-                                                        ? AppLocalizations.of(
-                                                                context)
-                                                            .commonSuccess
-                                                        : AppLocalizations.of(
-                                                                context)
-                                                            .commonFailed,
-                                                  ),
+                                                  // last == null 表示**从未备份**
+                                                  // （backup_last_date 从未写入）。此前
+                                                  // 会渲染成「最近备份：- · 失败」，把
+                                                  // 「还没有记录」误报为「备份失败」——
+                                                  // 2026-09-26 排查时确认两台设备分别是
+                                                  // 这两种状态，属纯展示口径问题。
+                                                  last == null
+                                                      ? AppLocalizations.of(
+                                                              context)
+                                                          .lastBackupNone
+                                                      : AppLocalizations.of(
+                                                              context)
+                                                          .lastBackupCaption(
+                                                          last.date,
+                                                          last.ok
+                                                              ? AppLocalizations.of(
+                                                                      context)
+                                                                  .commonSuccess
+                                                              : AppLocalizations.of(
+                                                                      context)
+                                                                  .commonFailed,
+                                                        ),
                                                   style: Theme.of(context)
                                                       .textTheme
                                                       .bodySmall

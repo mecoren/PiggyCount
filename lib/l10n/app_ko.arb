@@ -664,6 +664,8 @@
   "mineSyncCloudNewer": "클라우드가 최신 상태입니다 (다운로드하여 동기화하세요)",
   "mineSyncCloudNewerSimple": "클라우드가 최신 상태",
   "mineSyncDifferent": "로컬과 클라우드가 다릅니다. 다운로드하여 비교하세요",
+  "syncPendingCloudDeletesMark": "클라우드 삭제 {count}건 대기 중(자동 적용 안 됨; 클라우드 기준은 아래 「전체 다운로드」)",
+  "syncDirectionUnknownHint": "방향을 판단할 수 없습니다(양쪽 모두 로컬 고유 변경 있음). 아래 「전체 다운로드」/「전체 업로드」로 한쪽을 기준으로 삼으세요",
   "mineSyncError": "상태를 가져오지 못했습니다",
   "mineSyncDetailTitle": "동기화 상태 상세",
   "mineSyncLocalRecords": "로컬 기록: {count}건",
@@ -1848,6 +1850,7 @@
       }
     }
   },
+  "customFieldDeleteReconfirmMessage": "다시 확인: 삭제하면 이 필드와 장부에 기록된 값이 영구히 사라지며 복구할 수 없습니다. 계속할까요?",
   "customFieldSectionTitle": "사용자 정의 필드",
   "customFieldSectionEmpty": "이 장부에는 사용자 정의 필드가 없습니다",
   "customFieldDatePick": "날짜 선택",
@@ -2301,6 +2304,7 @@
   "backupAutoSubtitle": "매일 설정한 시간에 자동 백업(앱 실행 중에만 동작)",
   "backupTimeTitle": "매일 백업 시간",
   "lastBackupCaption": "최근 백업: {date} · {ok}",
+  "lastBackupNone": "최근 백업: 기록 없음",
   "ledgersCreatedSuccess": "장부가 생성되었습니다",
   "ledgersCreateFailed": "생성 실패: {error}",
   "@ledgersCreateFailed": {

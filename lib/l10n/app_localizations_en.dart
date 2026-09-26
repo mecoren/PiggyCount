@@ -2028,6 +2028,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mineSyncDifferent => 'Local and cloud differ, download to compare';
 
   @override
+  String syncPendingCloudDeletesMark(int count) {
+    return '$count cloud deletion(s) pending (not auto-applied; use \"Full download\" below to take the cloud as source of truth)';
+  }
+
+  @override
+  String get syncDirectionUnknownHint =>
+      'Direction undetermined — use \"Full download\" or \"Full upload\" below to pick one side as the source of truth';
+
+  @override
   String get mineSyncError => 'Failed to get status';
 
   @override
@@ -6058,6 +6067,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get customFieldDeleteReconfirmMessage =>
+      'Confirm again: once deleted, this field and all values recorded in this ledger are gone for good. Continue?';
+
+  @override
   String get customFieldSectionTitle => 'Custom Fields';
 
   @override
@@ -8031,6 +8044,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String lastBackupCaption(String date, String ok) {
     return 'Last backup: $date · $ok';
   }
+
+  @override
+  String get lastBackupNone => 'Last backup: none yet';
 
   @override
   String get ledgersCreatedSuccess => 'Ledger created';

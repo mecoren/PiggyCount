@@ -1976,6 +1976,15 @@ class LocalTransactionRepository implements TransactionRepository {
 
   /// 整体替换某交易的附件元数据行。返回被移除行的 fileName 集合
   /// （物理文件是否可删由调用方统一做引用计数判定）。
+  ///
+  /// 逐字段等价短路：合并路径构造的 `attachments` **恒非 null**
+  /// （`sync_diff_service.dart` 的 `cloud.attachments ?? const []`），于是
+  /// `updateTransactionsBatchBySyncId` 里 `if (list == null) continue` 永不
+  /// 跳过 —— 每笔 modified 都要「SELECT 旧行 + DELETE 全部 + INSERT 回来」，
+  /// 再把移除的文件名送进 `_gcUnreferencedAttachmentFiles`（含文件系统
+  /// exists/delete）。实测合并场景绝大多数 modified 只改了金额/备注，附件
+  /// 清单逐字段相同；此时整段短路，结果与「先删后插」逐字节一致，但省掉
+  /// 3 条 SQL/行 + 文件系统探测。
   Future<Set<String>> _replaceAttachmentsForTransaction(
     int transactionId,
     List<BatchAttachmentData> incoming,
@@ -1983,6 +1992,7 @@ class LocalTransactionRepository implements TransactionRepository {
     final oldRows = await (db.select(db.transactionAttachments)
           ..where((a) => a.transactionId.equals(transactionId)))
         .get();
+    if (_sameAttachmentSet(oldRows, incoming)) return const {};
     await (db.delete(db.transactionAttachments)
           ..where((a) => a.transactionId.equals(transactionId)))
         .go();
@@ -2010,6 +2020,37 @@ class LocalTransactionRepository implements TransactionRepository {
       for (final r in oldRows)
         if (!incoming.any((a) => a.fileName == r.fileName)) r.fileName,
     };
+  }
+
+  /// 判断「旧附件行集合」与「云端待写入清单」是否逐字段等价（可安全跳过替换）。
+  ///
+  /// 以 `fileName`（内容寻址 sha256）为桶，避免 O(N²) 比对；同 fileName 的
+  /// 重复行按出现顺序配对。任一字段不同即返回 false，走正常替换路径。
+  static bool _sameAttachmentSet(
+    List<TransactionAttachment> oldRows,
+    List<BatchAttachmentData> incoming,
+  ) {
+    if (oldRows.length != incoming.length) return false;
+    final buckets = <String, List<TransactionAttachment>>{};
+    for (final r in oldRows) {
+      buckets.putIfAbsent(r.fileName, () => <TransactionAttachment>[]).add(r);
+    }
+    for (final a in incoming) {
+      final bucket = buckets[a.fileName];
+      if (bucket == null || bucket.isEmpty) return false;
+      final r = bucket.removeAt(0);
+      if (r.originalName != a.originalName ||
+          r.fileSize != a.fileSize ||
+          r.width != a.width ||
+          r.height != a.height ||
+          r.sortOrder != a.sortOrder ||
+          r.cloudFileId != a.cloudFileId ||
+          r.cloudSha256 != a.cloudSha256 ||
+          r.localSha256 != a.localSha256) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /// 引用计数回收附件物理文件：仅当没有任何 transaction_attachments 行

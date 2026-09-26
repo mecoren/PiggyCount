@@ -2009,6 +2009,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mineSyncDifferent => '로컬과 클라우드가 다릅니다. 다운로드하여 비교하세요';
 
   @override
+  String syncPendingCloudDeletesMark(int count) {
+    return '클라우드 삭제 $count건 대기 중(자동 적용 안 됨; 클라우드 기준은 아래 「전체 다운로드」)';
+  }
+
+  @override
+  String get syncDirectionUnknownHint =>
+      '방향을 판단할 수 없습니다(양쪽 모두 로컬 고유 변경 있음). 아래 「전체 다운로드」/「전체 업로드」로 한쪽을 기준으로 삼으세요';
+
+  @override
   String get mineSyncError => '상태를 가져오지 못했습니다';
 
   @override
@@ -5878,6 +5887,10 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get customFieldDeleteReconfirmMessage =>
+      '다시 확인: 삭제하면 이 필드와 장부에 기록된 값이 영구히 사라지며 복구할 수 없습니다. 계속할까요?';
+
+  @override
   String get customFieldSectionTitle => '사용자 정의 필드';
 
   @override
@@ -7814,6 +7827,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String lastBackupCaption(String date, String ok) {
     return '최근 백업: $date · $ok';
   }
+
+  @override
+  String get lastBackupNone => '최근 백업: 기록 없음';
 
   @override
   String get ledgersCreatedSuccess => '장부가 생성되었습니다';

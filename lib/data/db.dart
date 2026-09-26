@@ -625,7 +625,7 @@ class PiggyDatabase extends _$PiggyDatabase {
 
   @override
   int get schemaVersion =>
-      47; // v47: 周期账单模板自定义字段值 recurring_transactions.template_field_values({fieldSyncId: value} JSON 对象,生成实例时注入); v46: 账本自定义字段 — custom_field_definitions(按账本独立定义名称/类型/排序) + transactions.custom_values_json({fieldSyncId: value} JSON 对象,不参与列表/统计); v45: 账本明细原始金额 transactions.original_amount(用户手填,NULL=未填写即按记账金额); v44: 回收站 deleted_transactions(F1 交易建模,软删除搬行而非加列); v43: 同步指标 sync_op_log(审计 P0-1,本地成功率测量) + stale_remote_slots(审计 P1-6,换名收尾补删持久化); v42: 周期账单币种 — recurring_transactions.currency_code(移植 BeeCount #444); v41: local_changes 已推送行存量清理(数据治理 G-LC,双后端实测 6143 行无界增长); v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
+      48; // v48: 索引修复型迁移 — 补建 v10/v11/v12 只写进 onUpgrade 分支、onCreate 遗漏的 transaction_tags ×2 / budgets ×3 / transaction_attachments ×1 索引(2026-09-26 双端实测:新装库 EXPLAIN 报 SCAN transaction_tags,合并路径 tag 批量读固定 ~0.5s); v47: 周期账单模板自定义字段值 recurring_transactions.template_field_values({fieldSyncId: value} JSON 对象,生成实例时注入); v46: 账本自定义字段 — custom_field_definitions(按账本独立定义名称/类型/排序) + transactions.custom_values_json({fieldSyncId: value} JSON 对象,不参与列表/统计); v45: 账本明细原始金额 transactions.original_amount(用户手填,NULL=未填写即按记账金额); v44: 回收站 deleted_transactions(F1 交易建模,软删除搬行而非加列); v43: 同步指标 sync_op_log(审计 P0-1,本地成功率测量) + stale_remote_slots(审计 P1-6,换名收尾补删持久化); v42: 周期账单币种 — recurring_transactions.currency_code(移植 BeeCount #444); v41: local_changes 已推送行存量清理(数据治理 G-LC,双后端实测 6143 行无界增长); v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
 
   /// WAL 检查点后允许残留的字节数（见 [migration] 的 beforeOpen）。
   /// 公开给回归测试取期望值，别处不要依赖。
@@ -1660,6 +1660,17 @@ class PiggyDatabase extends _$PiggyDatabase {
                 'ALTER TABLE recurring_transactions ADD COLUMN template_field_values TEXT;');
             logger.info('DBMigration', 'v47 迁移完成');
           }
+          if (from < 48) {
+            // v48: 索引修复型迁移（2026-09-26 双端实测发现的存量缺陷）。
+            // v10/v11/v12 的 6 个索引当时只写进了对应 onUpgrade 分支，从未进
+            // onCreate；而本文件的「onCreate 补建」是逐次打补丁修的，没有配套
+            // 修复型迁移 —— 于是**版本已越过 v12 的存量库**（`from < 10/11/12`
+            // 永不成立）与**全部新装库**都永远没有这些索引。另开版本号无条件
+            // IF NOT EXISTS 补建，幂等可重入。
+            logger.info('DBMigration', '开始迁移到 v48: 补建缺失的 tag/budget/attachment 索引');
+            await _createV48RepairIndexes();
+            logger.info('DBMigration', 'v48 迁移完成');
+          }
         },
         onCreate: (m) async {
           await m.createAll();
@@ -1740,12 +1751,57 @@ class PiggyDatabase extends _$PiggyDatabase {
           // v40: updated_at 触碰触发器（审计 T1，与 onUpgrade v40 同构 ——
           // 新装库走 onCreate 而非 migration）。IF NOT EXISTS 幂等。
           await _createUpdatedAtTouchTriggers();
+          // v48: 补建 v10/v11/v12 只在 onUpgrade 分支建过的 6 个索引
+          // （新装库走 onCreate，漏建即永久缺失）。详见 [_v48RepairIndexes]。
+          await _createV48RepairIndexes();
           // v43: 同步指标时间索引（与 onUpgrade v43 同构 —— 新装库走
           // onCreate）。表本体由上方 m.createAll 创建。
           await customStatement(
               'CREATE INDEX IF NOT EXISTS idx_sync_op_log_ts ON sync_op_log(ts);');
         },
       );
+
+  /// v48 索引修复清单：6 个「只在 onUpgrade 历史分支建过、onCreate 从未建」
+  /// 的索引。
+  ///
+  /// 背景（2026-09-26 双端实测发现，`lib/data/db.dart` 的 onCreate 与
+  /// onUpgrade 索引集合必须保持一致）：
+  /// - `idx_transaction_tags_transaction` / `idx_transaction_tags_tag`（v10）
+  /// - `idx_budgets_ledger` / `idx_budgets_category` / `idx_budgets_ledger_type`（v11）
+  /// - `idx_attachments_transaction`（v12）
+  ///
+  /// 影响实测：`transaction_tags` 1.2 万行时 `EXPLAIN QUERY PLAN` 对
+  /// `WHERE transaction_id IN (...)` 报 **`SCAN transaction_tags`** —— 合并
+  /// 路径每账本的 tag 批量读因此有 ~0.3~0.6 s 的**固定**成本（6 个 id 与
+  /// 102 个 id 耗时几乎相同，因为代价由全表扫描决定）；按标签筛交易、预算
+  /// 用量统计、附件角标与孤儿附件 GC 同样全表扫描。
+  ///
+  /// 两个动作缺一不可：onCreate 补建只救**新装**用户；存量库 user_version
+  /// 已是 47，`from < 10/11/12` 永不执行，必须靠 v48 无条件补建。
+  static const List<String> _v48RepairIndexes = [
+    'CREATE INDEX IF NOT EXISTS idx_transaction_tags_transaction '
+        'ON transaction_tags(transaction_id);',
+    'CREATE INDEX IF NOT EXISTS idx_transaction_tags_tag '
+        'ON transaction_tags(tag_id);',
+    'CREATE INDEX IF NOT EXISTS idx_budgets_ledger ON budgets(ledger_id);',
+    'CREATE INDEX IF NOT EXISTS idx_budgets_category ON budgets(category_id);',
+    'CREATE INDEX IF NOT EXISTS idx_budgets_ledger_type '
+        'ON budgets(ledger_id, type);',
+    'CREATE INDEX IF NOT EXISTS idx_attachments_transaction '
+        'ON transaction_attachments(transaction_id);',
+  ];
+
+  /// 幂等补建 [_v48RepairIndexes]。
+  ///
+  /// 注意：本方法在 onCreate 路径也会执行，而部分纯 DB 单测不初始化平台
+  /// binding（logger 单例初始化需要）——此处必须保持静默，日志由 onUpgrade
+  /// 的 v48 块负责（仅真实升级路径执行），与 [_createUpdatedAtTouchTriggers]
+  /// 同款纪律。
+  Future<void> _createV48RepairIndexes() async {
+    for (final ddl in _v48RepairIndexes) {
+      await customStatement(ddl);
+    }
+  }
 
   /// Migration helper: 列不存在再 ALTER ADD,避免 partial state 重跑时
   /// "duplicate column" 把启动卡死。

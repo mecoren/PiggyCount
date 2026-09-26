@@ -968,6 +968,15 @@
   "mineSyncCloudNewer": "Cloud updated (download to sync)",
   "mineSyncCloudNewerSimple": "Cloud updated",
   "mineSyncDifferent": "Local and cloud differ, download to compare",
+  "syncPendingCloudDeletesMark": "{count} cloud deletion(s) pending (not auto-applied; use \"Full download\" below to take the cloud as source of truth)",
+  "@syncPendingCloudDeletesMark": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncDirectionUnknownHint": "Direction undetermined — use \"Full download\" or \"Full upload\" below to pick one side as the source of truth",
   "mineSyncError": "Failed to get status",
   "mineSyncDetailTitle": "Sync Status Details",
   "mineSyncLocalRecords": "Local records: {count}",
@@ -2603,6 +2612,7 @@
       }
     }
   },
+  "customFieldDeleteReconfirmMessage": "Confirm again: once deleted, this field and all values recorded in this ledger are gone for good. Continue?",
   "customFieldSectionTitle": "Custom Fields",
   "customFieldSectionEmpty": "No custom fields for this ledger",
   "customFieldDatePick": "Select date",
@@ -3685,6 +3695,7 @@
   "backupAutoSubtitle": "Automatically back up once per day at the configured time (while the app is running)",
   "backupTimeTitle": "Daily Backup Time",
   "lastBackupCaption": "Last backup: {date} · {ok}",
+  "lastBackupNone": "Last backup: none yet",
   "@lastBackupCaption": {
     "placeholders": {
       "date": {

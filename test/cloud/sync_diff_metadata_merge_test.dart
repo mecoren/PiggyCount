@@ -182,6 +182,46 @@ void main() {
         reason: '月起始日以云端快照为准回写（v8 G5 同语义）');
   });
 
+  // sync_fingerprint M2：账本名 / 本位币同样计入快照指纹。此前增量合并只
+  // 回写 monthStartDay，A 端改名/改币种后 B 端永远拿不到，且本地指纹与云端
+  // 永久不一致 → 每次启动反复判 cloudNewer（2026-09-26 双端实测）。
+  test('空变更时也合并账本名与币种（指纹 M2 范围对齐）', () async {
+    await db.customStatement(
+        "INSERT INTO ledgers (id, name, currency) VALUES (1, '投资理财账本', 'CNY')");
+
+    await service.applySyncChanges(
+      repo: repo,
+      ledgerId: 1,
+      selectedChanges: const [],
+      importData: const ImportData(
+        ledgerName: '投资理财账本·R2',
+        currency: 'USD',
+      ),
+    );
+
+    final ledger = await repo.getLedgerById(1);
+    expect(ledger?.name, '投资理财账本·R2',
+        reason: '账本名参与指纹，增量合并必须回写，否则改名永不跨设备生效');
+    expect(ledger?.currency, 'USD',
+        reason: '本位币同为指纹字段，必须与全量恢复路径同口径回写');
+  });
+
+  test('云端未携带账本名/币种时不回写（缺键保留本地原值）', () async {
+    await db.customStatement(
+        "INSERT INTO ledgers (id, name, currency) VALUES (1, '我的账本', 'CNY')");
+
+    await service.applySyncChanges(
+      repo: repo,
+      ledgerId: 1,
+      selectedChanges: const [],
+      importData: const ImportData(),
+    );
+
+    final ledger = await repo.getLedgerById(1);
+    expect(ledger?.name, '我的账本');
+    expect(ledger?.currency, 'CNY');
+  });
+
   test('预算/周期规则合并幂等：重复执行不产生重复行', () async {
     await db.customStatement(
         "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");

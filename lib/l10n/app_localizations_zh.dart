@@ -2001,6 +2001,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mineSyncDifferent => '本地与云端有差异，建议下载对比';
 
   @override
+  String syncPendingCloudDeletesMark(int count) {
+    return '有 $count 条云端删除待处理（默认不自动应用；以云端为准请用下方「全量下载」）';
+  }
+
+  @override
+  String get syncDirectionUnknownHint =>
+      '方向无法判定（两端都有本地独有改动），可在下方用「全量下载」或「全量上传」以其中一端为准';
+
+  @override
   String get mineSyncError => '状态获取失败';
 
   @override
@@ -5819,6 +5828,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get customFieldDeleteReconfirmMessage =>
+      '再次确认：删除后该字段及本账本中已记录的值将永久清除、无法恢复。确定要继续吗？';
+
+  @override
   String get customFieldSectionTitle => '自定义字段';
 
   @override
@@ -7729,6 +7742,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String lastBackupCaption(String date, String ok) {
     return '最近备份：$date · $ok';
   }
+
+  @override
+  String get lastBackupNone => '最近备份：尚无记录';
 
   @override
   String get ledgersCreatedSuccess => '账本创建成功';
@@ -10081,6 +10097,15 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get mineSyncDifferent => '本機與雲端有差異，建議下載對比';
+
+  @override
+  String syncPendingCloudDeletesMark(int count) {
+    return '有 $count 筆雲端刪除待處理（預設不自動套用；以雲端為準請用下方「全量下載」）';
+  }
+
+  @override
+  String get syncDirectionUnknownHint =>
+      '方向無法判定（兩端都有本機獨有變更），可於下方用「全量下載」或「全量上傳」以其中一端為準';
 
   @override
   String get mineSyncError => '狀態取得失敗';
@@ -13901,6 +13926,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
+  String get customFieldDeleteReconfirmMessage =>
+      '再次確認：刪除後該欄位及本帳本中已記錄的值將永久清除、無法復原。確定要繼續嗎？';
+
+  @override
   String get customFieldSectionTitle => '自訂欄位';
 
   @override
@@ -15811,6 +15840,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String lastBackupCaption(String date, String ok) {
     return '最近備份：$date · $ok';
   }
+
+  @override
+  String get lastBackupNone => '最近備份：尚無記錄';
 
   @override
   String get ledgersCreatedSuccess => '帳本建立成功';

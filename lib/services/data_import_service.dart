@@ -500,6 +500,10 @@ class DataImportService {
       // 「同一账户 rename 后」拆成两条(account_sync_fix G2)。
       final accountSyncIdToId = <String, int>{};
       final accountIdToSyncId = <int, String>{};
+      // 账户实体索引：改名判定要比「云端名 vs 本地名」，写库判定要比「云端值
+      // vs 本地值」。ImportAccount 的 name 必填恒非 null，拿非 null 当更新
+      // 信号会对每个账户都做无意义 UPDATE（见下方 hasUpdates 注释）。
+      final existingById = {for (final a in existingAccounts) a.id: a};
       for (final acc in existingAccounts) {
         accountNameToId[acc.name] = acc.id;
         if (acc.syncId != null && acc.syncId!.isNotEmpty) {
@@ -508,6 +512,9 @@ class DataImportService {
         }
       }
 
+      // P2 定位用：单次 updateAccount 耗时抽样（合并路径实测单账本 61 个
+      // 账户 30~54s，全量恢复路径同函数仅数百毫秒，先量化再定位）。
+      final slowWrites = <(int, String)>[];
       for (final acc in accounts) {
         // 匹配优先级: ① syncId —— 跨设备 rename 后仍锚定同一账户;
         // ② name —— 旧快照(无 syncId)或本地账户无 syncId 时兜底。
@@ -550,29 +557,50 @@ class DataImportService {
             await repo.updateAccountSortOrders([(id: id, sortOrder: acc.sortOrder!)]);
           }
         } else {
-          // 已存在账户：仅在存在非 null 扩展字段时才更新（null 保持本地
-          // 原值）。避免全 null 时也触发 updateAccount → 无意义 DB 写入 +
-          // change log 记录假'update' change（下次同步白推一次）。
+          // 已存在账户：仅当**云端值确实与本地不同**时才更新（null 表示
+          // 云端未携带该字段 → 保持本地原值）。旧实现用「任一字段非 null」
+          // 当信号，而完整快照里 type/currency 等恒非 null ⇒ 每轮合并把全部
+          // 账户整表重写一遍：合并路径每个账本都会调一次 importAccounts，
+          // 8 个账本 = 8 × 61 次单事务写（实测该阶段占单账本合并耗时的 75%，
+          // 其中 7/8 是纯冗余——账户是 user-global，每个账本的快照都带同一份）。
+          final existing = existingById[existingId];
+          bool differs<T>(T? incoming, T? local) =>
+              incoming != null && incoming != local;
           final localSyncId = accountIdToSyncId[existingId];
           // name 命中但本地无 syncId 时回填 incoming.syncId:让两台设备
           // 各自创建的同名账户收敛到同一身份,后续导出/同步按 syncId 锚定。
           final needBackfillSyncId =
               matchedByName && localSyncId == null && acc.syncId != null;
-          final hasUpdates = acc.type != null ||
-              acc.currency != null ||
-              acc.initialBalance != null ||
-              acc.creditLimit != null ||
-              acc.billingDay != null ||
-              acc.paymentDueDay != null ||
-              acc.bankName != null ||
-              acc.cardLastFour != null ||
-              acc.note != null ||
-              acc.hidden != null ||
-              acc.sortOrder != null ||
-              needBackfillSyncId;
+          // 改名：ImportAccount.name 必填（恒非 null），只能按「与本地名不同」
+          // 判定。目标名已被**另一个**账户占用时保守跳过 rename —— accounts
+          // 表无 name 唯一约束，强改会让后续按 name 兜底匹配指错账户，
+          // 策略与 importTags 的「目标名被占用则跳过改名」一致。
+          final existingName = existing?.name;
+          final renameTaken = accountNameToId[acc.name] != null &&
+              accountNameToId[acc.name] != existingId;
+          final needRename = existing != null &&
+              acc.name.isNotEmpty &&
+              acc.name != existingName &&
+              !renameTaken;
+          final hasUpdates = existing != null &&
+              (needRename ||
+                  needBackfillSyncId ||
+                  differs(acc.type, existing.type) ||
+                  differs(acc.currency, existing.currency) ||
+                  differs(acc.initialBalance, existing.initialBalance) ||
+                  differs(acc.creditLimit, existing.creditLimit) ||
+                  differs(acc.billingDay, existing.billingDay) ||
+                  differs(acc.paymentDueDay, existing.paymentDueDay) ||
+                  differs(acc.bankName, existing.bankName) ||
+                  differs(acc.cardLastFour, existing.cardLastFour) ||
+                  differs(acc.note, existing.note) ||
+                  differs(acc.hidden, existing.hidden) ||
+                  differs(acc.sortOrder, existing.sortOrder));
           if (hasUpdates) {
+            final writeSw = Stopwatch()..start();
             await repo.updateAccount(
               existingId,
+              name: needRename ? acc.name : null,
               type: acc.type,
               currency: acc.currency,
               initialBalance: acc.initialBalance,
@@ -585,13 +613,23 @@ class DataImportService {
               hidden: acc.hidden,
               syncId: needBackfillSyncId ? acc.syncId : null,
             );
+            writeSw.stop();
+            if (writeSw.elapsedMilliseconds >= 50) {
+              slowWrites.add((writeSw.elapsedMilliseconds, acc.name));
+            }
             if (needBackfillSyncId && acc.syncId != null) {
               accountSyncIdToId[acc.syncId!] = existingId;
               accountIdToSyncId[existingId] = acc.syncId!;
             }
-            // syncId 命中但名称被对端改过 → 同步刷新 name 映射,
-            // 后续交易按新 name 引用才能命中该账户。
-            accountNameToId[acc.name] = existingId;
+            if (needRename) {
+              // 改名落库后同步置换内存索引，否则同一批后续引用旧名的条目
+              // 仍会命中本账户（反过来新名会被判为「未占用」而重复建）。
+              accountNameToId.remove(existingName);
+              existingById[existingId] = existing.copyWith(name: acc.name);
+            }
+            // 目标名未被他人占用时刷新 name 映射，后续交易按新 name 引用
+            // 才能命中该账户；已被占用则不抢占他人映射。
+            if (!renameTaken) accountNameToId[acc.name] = existingId;
             if (acc.sortOrder != null) {
               await repo.updateAccountSortOrders([
                 (id: existingId, sortOrder: acc.sortOrder!)
@@ -603,6 +641,12 @@ class DataImportService {
       }
       logger.info('AccountImport',
           '账户导入完成: 新增=$created 更新=$updated 耗时=${sw.elapsedMilliseconds}ms');
+      if (slowWrites.isNotEmpty) {
+        slowWrites.sort((a, b) => b.$1.compareTo(a.$1));
+        logger.debug('AccountImport',
+            '[perf] 慢写 top${slowWrites.length > 3 ? 3 : slowWrites.length}: '
+            '${slowWrites.take(3).map((e) => '${e.$1}ms(${e.$2})').join(' ')}');
+      }
     } catch (e, st) {
       logger.error('AccountImport', '账户导入失败', e, st);
     }
@@ -638,8 +682,14 @@ class DataImportService {
       final bySyncId = <String, int>{};
       final byKindName = <String, int>{};
       final syncIdById = <int, String>{};
+      // 本地原名/原业务键索引：ImportCategory.name 必填（恒非 null），改名
+      // 判定只能比较「云端名 vs 本地名」；改名会同时置换业务键 kind|name。
+      final nameById = <int, String>{};
+      final kindNameById = <int, String>{};
       for (final c in all) {
         byKindName['${c.kind}|${c.name}'] = c.id;
+        nameById[c.id] = c.name;
+        kindNameById[c.id] = '${c.kind}|${c.name}';
         if (c.syncId != null && c.syncId!.isNotEmpty) {
           bySyncId[c.syncId!] = c.id;
           syncIdById[c.id] = c.syncId!;
@@ -658,18 +708,45 @@ class DataImportService {
         id ??= byKindName[key];
 
         if (id != null) {
-          // 命中：对齐云端 syncId（云端身份优先，null 不覆盖本地）
+          // 命中：① 对齐云端 syncId（云端身份优先，null 不覆盖本地）
+          //      ② 回写云端改名（与 importTags 同口径；此前只对齐 syncId，
+          //        导致 A 端改分类名后 B 端永远拿不到新名）
           final localSyncId = syncIdById[id];
-          if (cat.syncId != null &&
+          final needAlignSyncId = cat.syncId != null &&
               cat.syncId!.isNotEmpty &&
-              cat.syncId != localSyncId) {
-            await repo.updateCategory(id, syncId: cat.syncId);
-            bySyncId[cat.syncId!] = id;
-            syncIdById[id] = cat.syncId!;
+              cat.syncId != localSyncId;
+          // 目标 kind|name 已被**另一条**分类占用时保守跳过 rename：
+          // categories 有 (name,kind) 业务唯一约束，强改会抛
+          // DuplicateNameException 并中止整批导入（见上方历史事故注释）。
+          final renameTaken =
+              byKindName[key] != null && byKindName[key] != id;
+          final localName = nameById[id];
+          final needRename = cat.name.isNotEmpty &&
+              localName != null &&
+              cat.name != localName &&
+              !renameTaken;
+          if (needAlignSyncId || needRename) {
+            await repo.updateCategory(
+              id,
+              name: needRename ? cat.name : null,
+              syncId: needAlignSyncId ? cat.syncId : null,
+            );
+            if (needAlignSyncId) {
+              bySyncId[cat.syncId!] = id;
+              syncIdById[id] = cat.syncId!;
+            }
+            if (needRename) {
+              // 同步置换内存业务键索引，否则同一批后续引用旧 kind|name 的
+              // 条目仍命中本分类、引用新名的条目会被判为空闲而重复建。
+              final oldKey = kindNameById[id];
+              if (oldKey != null) byKindName.remove(oldKey);
+              kindNameById[id] = key;
+              nameById[id] = cat.name;
+            }
             updated++;
           }
           categoryCache[key] = id;
-          byKindName[key] = id;
+          if (!renameTaken) byKindName[key] = id;
           return id;
         }
 

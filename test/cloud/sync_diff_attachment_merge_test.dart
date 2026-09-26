@@ -198,4 +198,89 @@ void main() {
         reason: '合并应用后两端内容一致，再次检查不得再报 modified，'
             '否则 merge-then-publish 每轮都重复执行');
   });
+
+  /// P2 后续优化（2026-09-26）：合并路径构造的 attachments **恒非 null**
+  /// （`sync_diff_service.dart` 的 `cloud.attachments ?? const []`），于是
+  /// `updateTransactionsBatchBySyncId` 里 `if (list == null) continue` 永不
+  /// 跳过 —— 每笔 modified 都要「SELECT + DELETE + INSERT」再进未引用文件
+  /// GC（含文件系统探测），而实测合并场景绝大多数 modified 只改金额/备注。
+  /// `_replaceAttachmentsForTransaction` 现改为**逐字段等价则整段短路**。
+  ///
+  /// 观测手段：删后重插会拿到新的 AUTOINCREMENT id 与新的 createdAt，
+  /// 因此「行 id / createdAt 不变」即证明短路生效。
+  test('附件清单逐字段等价 → 短路跳过替换（行 id/createdAt 不变）', () async {
+    await seedLedger();
+    final txId = await insertLocalTx(
+      syncId: 'tx-att-1',
+      attachments: [(fileName: 'a.jpg', sha: 'hash-a')],
+    );
+    final before = (await (db.select(db.transactionAttachments)
+              ..where((a) => a.transactionId.equals(txId)))
+            .get())
+        .single;
+
+    await service.applySyncChanges(
+      repo: repo,
+      ledgerId: 1,
+      selectedChanges: [
+        SyncChange(
+          type: SyncChangeType.modified,
+          cloudTransaction: cloudTx(attachments: [
+            const ImportAttachment(fileName: 'a.jpg', sha256: 'hash-a'),
+          ]),
+          localTransaction: await repo.getTransactionById(txId),
+        ),
+      ],
+      importData: ImportData(transactions: []),
+    );
+
+    final after = (await (db.select(db.transactionAttachments)
+              ..where((a) => a.transactionId.equals(txId)))
+            .get())
+        .single;
+    expect(after.id, before.id,
+        reason: '附件行被删后重插会换新 id —— 等价时必须整段跳过');
+    expect(after.createdAt, before.createdAt, reason: '同上，证明未重插');
+    expect(after.fileName, 'a.jpg');
+    expect(after.localSha256, 'hash-a');
+  });
+
+  test('附件清单有差异（originalName 变化）→ 仍走替换（短路不得误跳过）', () async {
+    await seedLedger();
+    final txId = await insertLocalTx(
+      syncId: 'tx-att-1',
+      attachments: [(fileName: 'a.jpg', sha: 'hash-a')],
+    );
+    final before = (await (db.select(db.transactionAttachments)
+              ..where((a) => a.transactionId.equals(txId)))
+            .get())
+        .single;
+
+    await service.applySyncChanges(
+      repo: repo,
+      ledgerId: 1,
+      selectedChanges: [
+        SyncChange(
+          type: SyncChangeType.modified,
+          cloudTransaction: cloudTx(attachments: [
+            const ImportAttachment(
+              fileName: 'a.jpg',
+              sha256: 'hash-a',
+              originalName: 'x.jpg',
+            ),
+          ]),
+          localTransaction: await repo.getTransactionById(txId),
+        ),
+      ],
+      importData: ImportData(transactions: []),
+    );
+
+    final after = (await (db.select(db.transactionAttachments)
+              ..where((a) => a.transactionId.equals(txId)))
+            .get())
+        .single;
+    expect(after.originalName, 'x.jpg', reason: '字段确有变化时必须落库');
+    expect(after.id, greaterThan(before.id),
+        reason: '差异路径仍走「删后重插」语义（与既有实现一致）');
+  });
 }

@@ -742,6 +742,12 @@ void main() {
   });
 
   group('Path A auto_sync 防抖: uploadCurrentLedgerDebounced', () {
+    // 防抖窗口注入为 120ms（生产默认 2s）。原先只能拿真实时钟等 2.6~5.0s
+    // 去断言，相对裕度小 —— 并发跑 test/cloud + test/services 时该组用例偶发
+    // 失败。窗口收敛到百毫秒级后「等待/窗口」比值提高一个数量级，且整组耗时
+    // 从 ~14s 降到 ~2s。
+    const debounce = Duration(milliseconds: 120);
+
     TransactionsSyncManager buildManager(fcs.CloudStorageService storage) {
       final provider = _FakeCloudProvider(storage: storage);
       final manager = TransactionsSyncManager(
@@ -751,6 +757,7 @@ void main() {
         ),
         db: db,
         repo: LocalRepository(db),
+        autoSyncDebounce: debounce,
       );
       manager.setSyncManagerForTesting(
         syncManager:
@@ -781,8 +788,8 @@ void main() {
       expect(storage.uploadCount, 0,
           reason: '防抖窗口内不应触发任何上传');
 
-      // 等 2s 窗口 + 执行时间
-      await Future<void>.delayed(const Duration(milliseconds: 2600));
+      // 等防抖窗口 + 执行时间
+      await Future<void>.delayed(const Duration(milliseconds: 700));
       expect(storage.uploadCount, 1,
           reason: '3 次触发应收敛为 1 次上传');
 
@@ -792,18 +799,18 @@ void main() {
 
     test('上传进行中到达的触发在当前轮结束后补跑(最终一致)', () async {
       await seedLedger();
-      final storage = _CountingStorage(uploadDelay: const Duration(milliseconds: 800));
+      final storage = _CountingStorage(uploadDelay: const Duration(milliseconds: 150));
       final manager = buildManager(storage);
 
-      // 第一次触发:防抖窗口 2s 后开始上传,storage 上传另有 800ms 延迟
-      // (计数在延迟结束时才递增,断言需覆盖 2s + 流程 + 800ms)
+      // 第一次触发:防抖窗口后开始上传,storage 上传另有 150ms 延迟
+      // (计数在延迟结束时才递增,断言需覆盖窗口 + 流程 + 150ms)
       await manager.uploadCurrentLedgerDebounced(ledgerId: 1);
-      await Future<void>.delayed(const Duration(milliseconds: 3300));
+      await Future<void>.delayed(const Duration(milliseconds: 900));
       expect(storage.uploadCount, 1, reason: '第一轮防抖上传应已完成');
 
       // 第一轮已结束(无在途):再次触发走新一轮防抖
       await manager.uploadCurrentLedgerDebounced(ledgerId: 1);
-      await Future<void>.delayed(const Duration(milliseconds: 3300));
+      await Future<void>.delayed(const Duration(milliseconds: 900));
 
       expect(storage.uploadCount, 2, reason: '第二轮防抖正常执行');
 
@@ -813,18 +820,18 @@ void main() {
 
     test('上传进行中到达的触发在当前轮结束后补跑(最终一致,在途窗口)', () async {
       await seedLedger();
-      final storage = _CountingStorage(uploadDelay: const Duration(milliseconds: 800));
+      final storage = _CountingStorage(uploadDelay: const Duration(milliseconds: 400));
       final manager = buildManager(storage);
 
       // 触发后等防抖窗口 + 上传流程启动(此时 storage.upload 在途,
-      // 800ms 延迟尚未结束)
+      // 400ms 延迟尚未结束：120ms 窗口 + 150ms < 400ms)
       await manager.uploadCurrentLedgerDebounced(ledgerId: 1);
-      await Future<void>.delayed(const Duration(milliseconds: 2400));
+      await Future<void>.delayed(const Duration(milliseconds: 270));
 
       // 上传进行中(在途,计数未落)再次触发:应记为 pending 补跑
       await manager.uploadCurrentLedgerDebounced(ledgerId: 1);
-      // 等第一轮在途结束 + pending 补跑的完整链路(2s 窗口 + 上传)
-      await Future<void>.delayed(const Duration(milliseconds: 5000));
+      // 等第一轮在途结束 + pending 补跑的完整链路(窗口 + 上传)
+      await Future<void>.delayed(const Duration(milliseconds: 2500));
 
       // 两轮:第一轮(已在途) + pending 补跑轮
       expect(storage.uploadCount, 2,
@@ -843,7 +850,7 @@ void main() {
       // 防抖窗口内 dispose:计时器应被取消
       await manager.dispose();
 
-      await Future<void>.delayed(const Duration(milliseconds: 2600));
+      await Future<void>.delayed(const Duration(milliseconds: 700));
       expect(storage.uploadCount, 0,
           reason: 'dispose 后不应再执行任何防抖上传');
     });

@@ -175,7 +175,15 @@ class TransactionsSyncManager implements SyncService {
   ///
   /// 相同的 2s 窗口；手动上传/合并回传不受影响（仍走
   /// uploadCurrentLedger 直传，不经过防抖）。
-  static const Duration _autoSyncDebounce = Duration(seconds: 2);
+  static const Duration defaultAutoSyncDebounce = Duration(seconds: 2);
+
+  /// 本实例实际使用的防抖窗口（默认 [defaultAutoSyncDebounce]）。
+  ///
+  /// 可注入的原因（2026-09-26）：单测此前只能拿真实时钟等 2.6~5.0s 去断言，
+  /// 相对裕度很小 —— 并发跑 `flutter test test/cloud test/services` 时该组
+  /// 用例偶发失败（分开跑 223 + 345 全绿，合跑偶现 1 例）。把窗口收敛到
+  /// 百毫秒级后，等待与窗口的比值提高一个数量级，既快又稳。
+  final Duration _autoSyncDebounce;
 
   /// 每账本的自动同步防抖计时器（仅 [uploadCurrentLedgerDebounced] 使用）
   final Map<int, Timer> _autoSyncTimers = {};
@@ -324,7 +332,8 @@ class TransactionsSyncManager implements SyncService {
     this.encryptionService,
     this.metrics,
     this.onAutoSyncFailure,
-  });
+    Duration autoSyncDebounce = defaultAutoSyncDebounce,
+  }) : _autoSyncDebounce = autoSyncDebounce;
 
   @override
   void clearStatusCache({int? ledgerId}) {
@@ -2195,12 +2204,25 @@ class TransactionsSyncManager implements SyncService {
     required ImportData importData,
   }) {
     return SyncRestoreGuard.run(() => _withLedgerLock(ledgerId, () async {
-          final result = await syncDiffService.applySyncChanges(
-            repo: repo,
-            ledgerId: ledgerId,
-            selectedChanges: selectedChanges,
-            importData: importData,
-          );
+          // P1（2026-09-26 实测）：整个 apply 包进**一个外层事务**。
+          //
+          // 合并路径此前没有外层事务，于是 importAccounts / importCategories /
+          // importTags / importRecurrings / updateTransactionsBatchBySyncId /
+          // updateTransactionTags 各自自带的 db.transaction 全部成为**顶层
+          // 提交**：本库 WAL + synchronous=FULL（db.dart beforeOpen）且跑在
+          // 第二个 isolate，每次顶层提交都要 isolate 往返 + fsync —— 实测单次
+          // 账户写 0.4~0.6s、单账本合并因此多付 0.5~1.4s，且按账本数线性累加。
+          //
+          // 全量恢复路径（DataImportService._restoreLedgerFromJsonTx）早已用
+          // 外层事务，内部事务降级为 savepoint，每个账本只提交一次；这里对齐
+          // 口径。顺带获得原子性：此前中途失败会留下「半合并」账本 + 指纹不
+          // 收敛，现在整账本回滚，由启动检查下一轮重试（与恢复路径同语义）。
+          final result = await db.transaction(() => syncDiffService.applySyncChanges(
+                repo: repo,
+                ledgerId: ledgerId,
+                selectedChanges: selectedChanges,
+                importData: importData,
+              ));
 
           // 清除缓存
           _statusCache.remove(ledgerId);
