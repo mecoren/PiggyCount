@@ -412,7 +412,7 @@ class _AmountDeviationPageState extends ConsumerState<AmountDeviationPage> {
     final diffColor = s.diffSum >= 0
         ? PiggyTokens.expenseColor(context, ref)
         : PiggyTokens.incomeColor(context, ref);
-    final fmt = (double v) =>
+    String fmt(double v) =>
         '${v >= 0 ? '+' : '−'}${v.abs().toStringAsFixed(2)}';
 
     return _card(
@@ -506,7 +506,7 @@ class _AmountDeviationPageState extends ConsumerState<AmountDeviationPage> {
     final cats = [...data.cats]
       ..sort((a, b) => b.absDiffSum.compareTo(a.absDiffSum));
     final maxAbs = cats.first.absDiffSum;
-    final fmt = (double v) =>
+    String fmt(double v) =>
         '${v >= 0 ? '+' : '−'}${v.abs().toStringAsFixed(2)}';
     return Column(
       children: [

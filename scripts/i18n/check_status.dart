@@ -536,10 +536,12 @@ Future<Set<String>> _collectStronglyUsedKeys(List<File> dartFiles) async {
       receivers.map(RegExp.escape).join('|') +
       r')(?:\s*\([^()]*\))?\s*[!?]?\s*\.\s*' +
       member);
-  final callRe = RegExp(
+  // 拼出的正则与原先 `'…' + member` 逐字节相同（相邻原始字面量先合并），
+  // 只是改用插值以满足 prefer_interpolation_to_compose_strings。
+  const callHeadPattern =
       r'\b(?:AppLocalizations\.of|lookupAppLocalizations)\s*\([^()]*\)'
-      r'\s*[!?]?\s*\.\s*' +
-          member);
+      r'\s*[!?]?\s*\.\s*';
+  final callRe = RegExp('$callHeadPattern$member');
   final keys = <String>{};
   for (final file in dartFiles) {
     final content = await file.readAsString();
