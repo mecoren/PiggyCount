@@ -8,6 +8,11 @@
 ///    原有值被清空 → 空 map（显式清空）。第三态最容易写错 —— 见
 ///    amount_editor_sheet 提交处那段 `_customValues.isEmpty` 判断。
 ///
+/// v47：金额字段在**记账金额表单**里不再挂 TextField，而是与「原始金额」位
+/// 同款的输入位，由下方那套自制数字键盘输入（点金额位切键盘目标）——
+/// 所以「填值/清空」用点金额位 + 点数字键/退格来驱动，不能用 `enterText`。
+/// 文本字段仍是 TextField，`enterText` 照旧。
+///
 /// ⚠️ 点「完成」后**不要**用 `pumpAndSettle()`：提交回调里会把按钮切到
 /// loading 转圈（无限动画），settle 永远等不到静止 → 超时失败。这里统一
 /// 只 `pump()` 一帧 —— 断言只依赖 `onSubmit` 已被同步调用。
@@ -48,8 +53,9 @@ void main() {
   ///   宽近一倍）下，数字键盘的日期键会换行并溢出 —— 这是**既有**问题
   ///   （`quick_entry_mode_test` 的对照组同样溢出），与本需求无关。
   ///   收集后即可只对「水平溢出」与「自定义字段分区」设防。
-  List<String> prepareTest(WidgetTester tester) {
-    tester.view.physicalSize = const Size(400 * 3, 900 * 3);
+  List<String> prepareTest(WidgetTester tester, {bool tall = false}) {
+    // tall：要把整张 sheet（含底部数字键盘）都留在视口内才点得到键。
+    tester.view.physicalSize = Size(400 * 3, (tall ? 1400 : 900) * 3);
     tester.view.devicePixelRatio = 3.0;
     addTearDown(tester.view.reset);
 
@@ -122,6 +128,28 @@ void main() {
   Finder inputFor(String syncId) =>
       find.byKey(ValueKey('custom_field_input_$syncId'));
 
+  /// 金额位的显示文本（v47 起这里是自制键盘的输入位，不再是 TextField）。
+  String amountValueOf(WidgetTester tester, String syncId) => tester
+      .widget<Text>(
+          find.byKey(ValueKey('custom_field_amount_value_$syncId')))
+      .data!;
+
+  /// 点金额位：把下方自制数字键盘的输入目标切到该字段。
+  Future<void> tapAmountField(WidgetTester tester, String syncId) async {
+    await tester.tap(inputFor(syncId));
+    await tester.pump();
+  }
+
+  Future<void> tapKey(WidgetTester tester, String label) async {
+    await tester.tap(find.byKey(ValueKey('amountKey_$label')));
+    await tester.pump();
+  }
+
+  Future<void> tapBackspace(WidgetTester tester) async {
+    await tester.tap(find.byIcon(Icons.backspace_outlined));
+    await tester.pump();
+  }
+
   /// 点「完成」并只推一帧（见文件头注释：loading 转圈会让 settle 超时）。
   Future<void> submit(WidgetTester tester) async {
     await tester.tap(find.text('完成'));
@@ -181,9 +209,9 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    final amountField = tester.widget<TextField>(inputFor('cf-a'));
+    expect(amountValueOf(tester, 'cf-a'), '12.5',
+        reason: '金额位是自制键盘的输入位，回显走显示文本而不是 controller');
     final textField = tester.widget<TextField>(inputFor('cf-b'));
-    expect(amountField.controller!.text, '12.5');
     expect(textField.controller!.text, '发票 001');
   });
 
@@ -214,24 +242,35 @@ void main() {
         reason: '没碰过自定义字段就不该提交值，否则会把别的设备已填的值抹掉');
   });
 
-  testWidgets('提交三态②：填写后 → 提交全量快照', (tester) async {
-    prepareTest(tester);
+  testWidgets('提交三态②：点金额位用数字键盘填写 → 提交全量快照', (tester) async {
+    prepareTest(tester, tall: true);
     await seedField(syncId: 'cf-a', name: '税费', type: 'amount');
     AmountEditorResult? captured;
 
     await tester.pumpWidget(host(onSubmit: (r) => captured = r));
     await tester.pumpAndSettle();
 
-    await tester.enterText(inputFor('cf-a'), '12.5');
-    await tester.pump();
+    await tapAmountField(tester, 'cf-a');
+    await tapKey(tester, '1');
+    await tapKey(tester, '2');
+    await tapKey(tester, '.');
+    await tapKey(tester, '5');
+
+    expect(amountValueOf(tester, 'cf-a'), '12.5');
+    // 键盘输的是自定义字段，记账金额不受影响（host 的初始金额是 100）。
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('amountEditorAmountValue'))).data,
+      '100',
+    );
 
     await submit(tester);
 
     expect(captured!.customValues, {'cf-a': 12.5});
   });
 
-  testWidgets('提交三态③：原有值被清空 → 提交空 map（显式清空）', (tester) async {
-    prepareTest(tester);
+  testWidgets('提交三态③：原有值被退格清空 → 提交空 map（显式清空）',
+      (tester) async {
+    prepareTest(tester, tall: true);
     await seedField(syncId: 'cf-a', name: '税费', type: 'amount');
     AmountEditorResult? captured;
 
@@ -241,8 +280,11 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    await tester.enterText(inputFor('cf-a'), '');
-    await tester.pump();
+    await tapAmountField(tester, 'cf-a');
+    await tapBackspace(tester); // 12.
+    await tapBackspace(tester); // 12
+    await tapBackspace(tester); // 1
+    await tapBackspace(tester); // 空
 
     await submit(tester);
 

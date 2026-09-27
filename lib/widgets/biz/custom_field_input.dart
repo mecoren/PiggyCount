@@ -27,11 +27,33 @@ class CustomFieldsSection extends StatefulWidget {
   /// 任一字段值变化时上抛全量值（父级持有提交用的最新快照）。
   final ValueChanged<Map<String, dynamic>> onChanged;
 
+  /// v47：金额字段是否交给宿主页的**自定义数字键盘**输入。
+  ///
+  /// 金额表单（[AmountEditorSheet]）底部本来就有一套自制数字键盘，而
+  /// [TextField] 一点就弹系统键盘 —— 两套键盘同时抢输入，且金额位的样式
+  /// 也与上方的记账金额/原始金额位不一致。这三个参数是**一组**，宿主全传：
+  /// - [onAmountFieldTapped]：点金额位 → 把键盘输入目标切到该字段；
+  /// - [activeAmountSyncId]：当前接收输入的字段（选中态描边）；
+  /// - [amountTextOverride]：金额位的显示串由宿主维护（空串 = 未填写）。
+  ///
+  /// 不传（模板编辑页等没有自制键盘的调用方）→ 金额字段保持 TextField 原行为。
+  final ValueChanged<String>? onAmountFieldTapped;
+  final String? activeAmountSyncId;
+  final Map<String, String>? amountTextOverride;
+
+  /// 字段名列宽。宿主传「原始金额」行的图标 + 标签宽度，好让金额输入位的
+  /// 左边界与原始金额位对齐；默认 84 是模板编辑页等旧调用方的原值。
+  final double labelWidth;
+
   const CustomFieldsSection({
     super.key,
     required this.definitions,
     required this.initialValues,
     required this.onChanged,
+    this.onAmountFieldTapped,
+    this.activeAmountSyncId,
+    this.amountTextOverride,
+    this.labelWidth = 84,
   });
 
   @override
@@ -149,7 +171,7 @@ class _CustomFieldsSectionState extends State<CustomFieldsSection> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(
-            width: 84,
+            width: widget.labelWidth,
             child: Text(
               def.name,
               maxLines: 1,
@@ -173,6 +195,12 @@ class _CustomFieldsSectionState extends State<CustomFieldsSection> {
       case CustomFieldType.date:
         return _buildDateInput(syncId, l10n);
       case CustomFieldType.amount:
+        // 宿主接管（记账金额表单）→ 与「原始金额」位同款的只读输入位；
+        // 其余调用方（模板编辑页）仍是能弹系统键盘的 TextField。
+        if (widget.onAmountFieldTapped != null &&
+            widget.amountTextOverride != null) {
+          return _buildAmountKeyboardInput(syncId, l10n);
+        }
         return _buildTextInput(
           syncId,
           hint: l10n.customFieldAmountHint,
@@ -237,6 +265,54 @@ class _CustomFieldsSectionState extends State<CustomFieldsSection> {
           ),
         ),
         onChanged: (text) => _setValue(syncId, parse(text)),
+      ),
+    );
+  }
+
+  /// 金额位的「宿主键盘」形态：与记账表单里「原始金额」位逐像素同款
+  /// （填充底 + radiusLg 圆角 + 选中态主色描边 + 高 40），点击只切键盘目标，
+  /// 自身不挂 TextField —— 否则系统键盘会与下方自制数字键盘并存。
+  Widget _buildAmountKeyboardInput(String syncId, AppLocalizations l10n) {
+    final active = widget.activeAmountSyncId == syncId;
+    final primary = Theme.of(context).colorScheme.primary;
+    final theme = Theme.of(context).textTheme;
+    // 显示串由宿主维护（键盘输入中含未完成的小数点，不能用 double 回显）；
+    // 未接入时回退到已存值。
+    final value = widget.amountTextOverride?[syncId] ??
+        CustomFieldValueCodec.toDisplayString(_values[syncId]) ??
+        '';
+    final isEmpty = value.isEmpty;
+
+    return GestureDetector(
+      key: ValueKey('custom_field_input_$syncId'),
+      behavior: HitTestBehavior.opaque,
+      onTap: () => widget.onAmountFieldTapped!(syncId),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        height: 40,
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: PiggyTokens.surfaceInput(context),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+          border: Border.all(
+            width: 1.5,
+            color: active ? primary : Colors.transparent,
+          ),
+        ),
+        child: Text(
+          isEmpty ? l10n.customFieldAmountHint : value,
+          key: ValueKey('custom_field_amount_value_$syncId'),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: isEmpty
+              ? theme.labelSmall?.copyWith(
+                  color: PiggyTokens.textTertiary(context))
+              : theme.bodyMedium?.copyWith(
+                  color: PiggyTokens.textPrimary(context),
+                  fontWeight: FontWeight.w600,
+                ),
+        ),
       ),
     );
   }

@@ -6,6 +6,7 @@ import 'package:decimal/decimal.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:piggycount/widgets/ui/wheel_date_picker.dart';
 import '../../data/db.dart';
+import '../../data/models/custom_field_values.dart';
 import '../../styles/tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/data/note_history_service.dart';
@@ -120,7 +121,9 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
 }
 
 /// v45：自定义数字键盘的输入目标 —— 点哪个金额位，键盘就输哪个。
-enum _AmountEditTarget { amount, original }
+/// v47 增加 [customField]：自定义字段里的金额位也由这套键盘输入（具体是哪个
+/// 字段另由 `_customFieldSyncId` 指定）。
+enum _AmountEditTarget { amount, original, customField }
 
 class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   late String _amountStr;
@@ -131,10 +134,17 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   // 刻意不用 TextField —— 它由下方**自定义数字键盘**输入，谁被选中就输谁，
   // 避免点击时弹出系统键盘、两套键盘打架。
   String _originalStr = '';
-  // 小键盘当前输入目标(记账金额 / 原始金额)。
+  // 小键盘当前输入目标(记账金额 / 原始金额 / 自定义字段金额位)。
   _AmountEditTarget _editTarget = _AmountEditTarget.amount;
+  // v47 自定义字段(仅金额类型)的键盘输入串:fieldSyncId → 串。
+  // 空串 = 未填写(与原始金额同口径,提交时被规范化剔除)。
+  final Map<String, String> _customFieldStrs = {};
+  // 当前键盘目标的自定义字段 syncId(null = 焦点不在自定义字段上)。
+  String? _customFieldSyncId;
   // 运算缓存：支持简单 + / - 键入累计。
   // 按**输入目标隔离** —— 否则在原始金额位按 + 会把记账金额的累加器冲掉。
+  // 自定义字段的算式额外在**切换字段时清空**(见 `_focusCustomField`)：同一个
+  // customField 目标上的半截算式不能跨字段复用。
   final Map<_AmountEditTarget, double> _accByTarget = {};
   final Map<_AmountEditTarget, String?> _opByTarget = {};
 
@@ -167,6 +177,57 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     if (op == null) return _originalStr;
     final acc = _accByTarget[_AmountEditTarget.original] ?? 0;
     return '${_trimZeros(acc)} ${_opGlyph(op)} $_originalStr';
+  }
+
+  /// 自定义金额字段当前编辑用的串：键盘串优先（含未完成的小数点，不能用
+  /// double 回显），没碰过则回退到已存值的展示串。
+  String _customFieldStr(String syncId) =>
+      _customFieldStrs[syncId] ??
+      CustomFieldValueCodec.toDisplayString(_customValues[syncId]) ??
+      '';
+
+  /// 自定义金额字段位的显示串：运算模式下带算式（与原始金额位同口径），
+  /// 算式只在**当前聚焦的那个字段**上显示。
+  String _customFieldDisplay(String syncId) {
+    final op = _opByTarget[_AmountEditTarget.customField];
+    if (op == null || _customFieldSyncId != syncId) {
+      return _customFieldStr(syncId);
+    }
+    final acc = _accByTarget[_AmountEditTarget.customField] ?? 0;
+    return '${_trimZeros(acc)} ${_opGlyph(op)} ${_customFieldStr(syncId)}';
+  }
+
+  /// 把自定义金额字段的键盘串写回值快照。
+  ///
+  /// 键盘串是这些字段的**唯一权威**：空串 / 非法串 → 删键（= 未填写），这样
+  /// 「退格清空」才会真的落成空值，而不是被组件里那份快照的旧值顶回来。
+  /// 幂等，可在每次击键后无脑调用。
+  void _applyCustomFieldAmountValues() {
+    for (final entry in _customFieldStrs.entries) {
+      final value = CustomFieldValueCodec.fromInput(
+          CustomFieldType.amount, entry.value);
+      if (value == null) {
+        _customValues.remove(entry.key);
+      } else {
+        _customValues[entry.key] = value;
+      }
+    }
+  }
+
+  /// 点自定义字段的金额位：把下方数字键盘的输入目标切到它。
+  void _focusCustomField(String syncId) {
+    setState(() {
+      if (_customFieldSyncId != syncId) {
+        // 换字段：上一个字段遗留的半截算式（累加器/运算符）不能带过来
+        _accByTarget.remove(_AmountEditTarget.customField);
+        _opByTarget.remove(_AmountEditTarget.customField);
+      }
+      _customFieldSyncId = syncId;
+      _editTarget = _AmountEditTarget.customField;
+      // 把已存值读成键盘串作为起点（此后首键是「追加」而不是覆盖，
+      // 与原始金额位的既有手感一致）。
+      _customFieldStrs.putIfAbsent(syncId, () => _customFieldStr(syncId));
+    });
   }
   // 两个运算符键各自独立的模式(false=加/减,true=乘/除),长按各自切换,互不影响。
   bool _mulKey1 = false; // 键1:+ ↔ ×
@@ -570,15 +631,29 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     );
   }
 
-  /// 小键盘当前输入目标对应的串。原始金额位被选中时，键盘就输在那边。
-  String get _activeStr =>
-      _editTarget == _AmountEditTarget.original ? _originalStr : _amountStr;
+  /// 小键盘当前输入目标对应的串。原始金额位 / 自定义字段金额位被选中时，
+  /// 键盘就输在那边。
+  String get _activeStr {
+    switch (_editTarget) {
+      case _AmountEditTarget.original:
+        return _originalStr;
+      case _AmountEditTarget.customField:
+        final syncId = _customFieldSyncId;
+        return syncId == null ? '' : _customFieldStr(syncId);
+      case _AmountEditTarget.amount:
+        return _amountStr;
+    }
+  }
 
   set _activeStr(String v) {
-    if (_editTarget == _AmountEditTarget.original) {
-      _originalStr = v;
-    } else {
-      _amountStr = v;
+    switch (_editTarget) {
+      case _AmountEditTarget.original:
+        _originalStr = v;
+      case _AmountEditTarget.customField:
+        final syncId = _customFieldSyncId;
+        if (syncId != null) _customFieldStrs[syncId] = v;
+      case _AmountEditTarget.amount:
+        _amountStr = v;
     }
   }
 
@@ -600,6 +675,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
       } else {
         _activeStr = cur + s;
       }
+      _applyCustomFieldAmountValues();
     });
     SystemSound.play(SystemSoundType.click);
   }
@@ -610,12 +686,13 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
       if (cur.isEmpty) return;
       final next = cur.substring(0, cur.length - 1);
       if (next.isEmpty) {
-        // 原始金额允许「空」= 未填写（保存时兜底为记账金额）；
-        // 记账金额不能为空，回落到 0。
-        _activeStr = _editTarget == _AmountEditTarget.original ? '' : '0';
+        // 原始金额与自定义字段金额位允许「空」= 未填写（原始金额保存时兜底
+        // 为记账金额）；记账金额不能为空，回落到 0。
+        _activeStr = _editTarget == _AmountEditTarget.amount ? '0' : '';
       } else {
         _activeStr = next;
       }
+      _applyCustomFieldAmountValues();
     });
     SystemSound.play(SystemSoundType.click);
   }
@@ -730,6 +807,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
       _activeStr = _trimZeros(total);
       _acc = 0;
       _op = null;
+      _applyCustomFieldAmountValues();
       HapticFeedback.selectionClick();
       SystemSound.play(SystemSoundType.click);
       setState(() {});
@@ -910,13 +988,13 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                     // 可点击：把自定义小键盘的输入目标切回报账金额；选中态用
                     // 主色描边 + 淡底，与原始金额位形成"谁在接收输入"的对照。
                     //
-                    // Flexible(flex 3, loose)：本行只有金额是可缩的主内容。
-                    // 分类位（Expanded，flex 1）的图标有 24px 硬下限，宽度不够
-                    // 时它没法再让；金额若按自然宽硬占，窄屏（360dp）+ 长分类名
-                    // + 6 位金额就会把整行顶出水平溢出。loose 保证宽屏下金额仍取
-                    // 自然宽（视觉与改动前逐像素一致），只有空间不够时才被限宽，
-                    // 再由内层 FittedBox 等比缩放（金额永远完整可见，不会被截断）。
-                    Flexible(
+                    // Expanded(flex 3)：金额位必须**占满**自己的槽位，右边界才会
+                    // 与下方「原始金额」框、自定义字段金额位对齐到同一条竖线
+                    // （原来是 Flexible/loose：金额只包住文字、右侧空一大截，三个
+                    // 输入框长短不一）。与分类位按 1:3 分走剩余宽度，故窄屏不会
+                    // 因此新增溢出；空间不够时内层 FittedBox 等比缩放，金额始终
+                    // 完整可见、不被截断。
+                    Expanded(
                       flex: 3,
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
@@ -1416,19 +1494,65 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   /// 定义按账本走 `customFieldsForCurrentLedgerProvider`；该账本没有定义 / 定义
   /// 尚未加载完成时返回 [SizedBox.shrink]，布局与改动前逐字一致。值变更只更新
   /// 本地快照（不 setState），避免每次击键重建整个 sheet 的数字键盘与标签区。
+  ///
+  /// v47：金额类型的字段改由**下方这套数字键盘**输入（点金额位 → 键盘目标切
+  /// 过去），样式与「原始金额」位一致；字段名列宽也按原始金额行量出，让金额位
+  /// 的左边界与原始金额位对齐。
   Widget _buildCustomFieldsSection() {
     final definitions =
         ref.watch(customFieldsForCurrentLedgerProvider).valueOrNull ??
             const <CustomFieldDefinition>[];
     if (definitions.isEmpty) return const SizedBox.shrink();
+
+    final l10n = AppLocalizations.of(context);
+    final amountFieldIds = [
+      for (final def in definitions)
+        if (def.fieldType == CustomFieldType.amount &&
+            (def.syncId ?? '').isNotEmpty)
+          def.syncId!,
+    ];
+    final hasAmountField = amountFieldIds.isNotEmpty;
+
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: CustomFieldsSection(
         definitions: definitions,
         initialValues: widget.initialCustomValues,
-        onChanged: (values) => _customValues = values,
+        onChanged: (values) {
+          // 组件上抛的是它自己那份快照，金额位的键盘串不在其中 —— 接住其它
+          // 字段的值后立刻用键盘串覆盖回来，否则刚清空的金额会被旧值顶回去。
+          _customValues = values;
+          _applyCustomFieldAmountValues();
+        },
+        onAmountFieldTapped: hasAmountField ? _focusCustomField : null,
+        activeAmountSyncId: _editTarget == _AmountEditTarget.customField
+            ? _customFieldSyncId
+            : null,
+        amountTextOverride: hasAmountField
+            ? {for (final id in amountFieldIds) id: _customFieldDisplay(id)}
+            : null,
+        // 字段名列 + 行内 8px 间距 = 原始金额位的左缩进 → 两个金额位的左边界
+        // 落在同一条竖线上。
+        labelWidth: (_amountFieldLeadingInset(context, l10n) - 8)
+            .clamp(76.0, 212.0),
       ),
     );
+  }
+
+  /// 金额输入位的左缩进：「原始金额」行的图标 + 标签 + 间距总宽。
+  ///
+  /// 用 [TextPainter] 现量而不是写死常量：标签宽度随语言与系统字号变化。
+  /// 记账金额行左侧的币种/分类位是另一个量级，不参与这个对齐。
+  double _amountFieldLeadingInset(BuildContext context, AppLocalizations l10n) {
+    final style = Theme.of(context).textTheme.labelMedium!;
+    final painter = TextPainter(
+      text: TextSpan(text: l10n.txOriginalAmountLabel, style: style),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    // icon 16 + 间距 6 + 标签 + 间距 10（与原始金额行的排布一致）
+    return (16 + 6 + painter.width + 10).clamp(84.0, 220.0);
   }
 
   /// 构建标签和附件选择行（一行显示）
