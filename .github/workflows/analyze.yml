@@ -50,3 +50,36 @@ jobs:
 
       - name: flutter analyze (fail on any issue, including info)
         run: flutter analyze --fatal-infos
+
+  test:
+    name: flutter test (同步一致性守门测试)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        # 与 analyze job 同一份版本来源（pubspec.yaml），避免两处漂移
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: pubspec.yaml
+          channel: "stable"
+          cache: true
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      # 2026-09-27 起本 job 承担「同步契约」回归门禁。它守的是**结构性**问题，
+      # 不是几个孤立用例：
+      #   * test/cloud/sync_contract_coverage_test.dart
+      #       —— 指纹白名单 ↔ _compareTx 覆盖字段的**穷举**一致性检查。
+      #          白名单键由 sync_fingerprint.dart 源码派生，每个键都必须能被
+      #          computeDiff 判成 modified（豁免需写明可复核理由）。历史上
+      #          「指纹有、diff 没有」已出现两次（审计 S11 附件、D-1 分类、
+      #          P1-2 周期锚点），全靠人肉比对才发现；本测试让它无处可藏。
+      #   * test/cloud/sync_diff_category_and_zero_amount_test.dart  —— D-1/D-2
+      #   * test/cloud/restore_preserves_local_only_columns_test.dart —— P1-5
+      # 这三个文件若变红，通常意味着「某字段进了指纹却没进 diff」或
+      # 「检测到了却应用不下去」——请勿直接改测试来通过。
+      - name: flutter test
+        run: flutter test
