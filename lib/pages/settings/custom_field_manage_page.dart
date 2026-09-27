@@ -241,12 +241,16 @@ class _CustomFieldManagePageState extends ConsumerState<CustomFieldManagePage> {
   }
 
   Future<void> _delete(CustomFieldDefinition def, AppLocalizations l10n) async {
-    final confirmed = await AppDialog.confirm<bool>(
+    // 双重危险确认（各 3 秒倒计时）：删定义会连带清除本账本已记录的字段值，
+    // 不可恢复，故与「清理未使用标签」同规格（tag_manage_page）。
+    final confirmed = await showDoubleDangerConfirmDialog(
       context,
       title: l10n.customFieldDeleteConfirmTitle,
-      message: l10n.customFieldDeleteConfirmMessage(def.name),
+      firstMessage: l10n.customFieldDeleteConfirmMessage(def.name),
+      secondMessage: l10n.customFieldDeleteReconfirmMessage,
+      countdownSeconds: 3,
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     setState(() => _busy = true);
     try {
