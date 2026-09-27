@@ -1,27 +1,49 @@
 # -*- coding: utf-8 -*-
-"""S3/WebDAV 同步测试——两端 DB 一致性对比（v3，SPEC 驱动）。
+"""S3/WebDAV 同步测试——两端 DB 一致性对比（v4，SPEC 声明 + 实现派生双向校验）。
 
 用法:
   python compare_sync_final.py <A.sqlite> <B.sqlite> [--label S3|WebDAV]
-  python compare_sync_final.py --spec        # 只打印比对字段清单（由 SPEC 自动生成）
+  python compare_sync_final.py --spec        # 只打印比对字段清单（由 SPEC 生成）
 
-【单一事实来源】本文件末尾的 `SPEC`。运行时打印的「比对字段清单」与 `--spec`
-输出**都由 SPEC 生成**，不依赖 docstring 手写 —— v2 曾出现「docstring 声称比对
-transactions.created_by、生效实现却漏比该列（另有一份 SELECT 了该列但未被调用的
-死函数）」的漂移缺陷，v3 从结构上消除该可能。
+【防漂设计：声明 + 派生，双向校验】
+  v2 曾出现「docstring 声称比对某列、生效实现却漏比该列（另有一份 SELECT 了该列
+  但从未被调用的死函数）」的漂移缺陷。v3 把「运行时清单」与 `--spec` 都改为由
+  `SPEC` 生成，消除了 docstring 手写漂移；但**SPEC 自身**仍可能与 `lib/cloud`
+  实现脱节（实测：SPEC 把 `tag_sync_ids_override` 列为契约内，而 `lib/cloud/**`
+  对它零引用 —— 造数必然假失败）。
+
+  v4 因此再加一层：`_derive_cloud_contract()` 直接从 Dart 实现**派生**「真的会被
+  跨设备搬运」的快照键集合：
+    * 导出端 `lib/cloud/transactions_json.dart` 的事务 item 字面量（大括号配平截取）
+      ＋ 其后按分支赋值的 `item['k'] = …`（账户名/标签只在特定分支写）
+    * 指纹白名单 `lib/cloud/sync_fingerprint.dart` 的事务段 return map（配平截取）
+    * 解析端 `lib/cloud/transactions_json.dart` 的 `_readXxx(m, 'key')` / `m['key']`
+      （注意不是 `data_import_service.dart` —— 它只消费已解析的 ImportTransaction）
+  三处取**交集**即「导出 + 能判差异 + 能读回」的充要字段集。随后对 SPEC 做三向校验，
+  任一不满足即以退出码 3 中止（见 `crosscheck_contract`）：
+    1. 契约内列 → 必须真被实现搬运（否则「声明会同步、其实不会」）；
+    2. 契约外列 → 必须**不**被实现搬运（否则口径失效，应改列契约内）；
+    3. 实现新搬运的键 → 必须已被 SPEC 覆盖（否则比对清单已漂移）。
+  含义：今后任一侧（SPEC 或 Dart 实现）单独改动都会立刻报错，清单不可能再静默漂移。
 
 【字段分三类】
-  key    对齐键 —— 一律解析成 syncId。两端 local 自增 id 不同，绝不直接比。
+  key    对齐键 —— 账本/分类/账户/标签等一律解析成 syncId 后比对
+         （两端 local 自增 id 不同，绝不直接比）。
+         注意**并非全部**对齐键都是 syncId：`transaction_tags` 的第三键是
+         `tag_id`（归一成 tag syncId），`transaction_attachments` 的第三键是
+         文件名 `file_name`（附件是内容寻址的集合，没有稳定 syncId）。
   synced 契约内字段 —— 云快照会搬运的数据。严格逐字段比对，差异计入 issues。
   local  契约外字段 —— 单列 `[OK*]` 统计差异行数，**不计入 issues、不影响退出码**。
 
 【契约外字段的判定依据（代码级）】
   * `ledgers.is_shared / member_count / owner_user_id`、表 `ledger_members`：
-    `lib/cloud/**` 零引用；`lib/data/db.dart:515` 注明 ledger_members 是
+    `lib/cloud/**` 零引用；`lib/data/db.dart` 注明 ledger_members 是
     「server 端 LedgerMember 表的本地副本」，不参与文件式（S3/WebDAV）云同步。
-  * `transactions.created_by_user_id / last_edited_by_user_id`：
-    `lib/cloud/**` 零引用；且全库既无写入方（`markTxAuthor` 只有定义、无调用方）
-    也无读取方，属共享账本场景的预留字段。
+  * `transactions.created_by_user_id / last_edited_by_user_id`：`lib/cloud/**`
+    零引用；且全库**既无写入方调用也无读取方**（`markTxAuthor` 仅有两处定义：
+    `local_transaction_repository` 本体与 `local_repository` 转发，`lib/pages`、
+    `lib/widgets`、`lib/services` 全目录零调用；也无任何 UI/统计读取），属共享账本
+    场景的完全休眠预留字段（由 `crosscheck_contract` 的第 2 条持续守护）。
   * 各表 `created_at / updated_at`：由 v40 的 `trg_*_touch_updated_at`
     触发器按**本机写入时刻**维护（本机写时钟），天然跨设备不同。
   * `transaction_attachments.cloud_sha256 / cloud_file_id`：文件式后端不落该列。
@@ -30,13 +52,21 @@ transactions.created_by、生效实现却漏比该列（另有一份 SELECT 了�
   * `recurring_transactions.last_generated_date`：本机「生成进度」，两端天然不同
     （同 `lib/cloud/sync_fingerprint.dart` 的指纹排除口径）。
   * `exchange_rate_overrides.rate` 存 TEXT，两端可能 '9.0' vs '9'；
-    `sync_fingerprint.dart:363-367` 按 `toDouble()` 归一，故这里也按**数值**比对。
-  * `custom_values_json` / `tag_sync_ids_override` 为 JSON 文本，按**键序归一**后比对。
+    `sync_fingerprint.dart` 按 `toDouble()` 归一，故这里也按**数值**比对。
+  * `custom_values_json` / `tag_sync_ids_override` 为 JSON 文本，按**键序归一**后比对
+    （`_json_canon`；注意 `tag_sync_ids_override` 当前实现未搬运，故列**契约外**）。
+
+【已知覆盖面缺口（本脚本不覆盖的表）】
+  * `custom_field_definitions`（v46 字段定义，属快照 `customFields` 段的数据本体、
+    参与指纹与方向仲裁证据源）：本脚本 SPEC 未含该表。请以
+    `scripts/live_db/run_20260927/extra_tables_check.py` 单独校验。
 
 输出: 每维度 OK/FAIL + 差异样本（前 5 条），末尾一行结论。
-退出码: 0 = 无非预期差异（可能含契约外差异行），2 = 存在不一致。
+退出码: 0 = 无非预期差异（可能含契约外差异行）；2 = 存在不一致；3 = SPEC/实现漂移。
 """
 import json
+import os
+import re
 import sqlite3
 import sys
 from collections import Counter
@@ -92,18 +122,178 @@ NORMS = {
 FK_MAP_TABLES = ("accounts", "categories", "tags", "recurring_transactions")
 
 
+# ====================== 契约清单：实现派生与双向校验 ======================
+_ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+
+# 派生来源：三处实现（导出 / 指纹白名单 / 解析）。
+# 注意「解析」与「导出」同属 transactions_json.dart（exportTransactionsJson 与
+# parseJsonToImportData），而落地落到 DB 的 data_import_service.dart 只消费已解析
+# 好的 ImportTransaction —— 故键集合从解析侧取。落地环节不在本自动校验范围内，
+# 但「解析了却没落库」会直接表现为双端 DB 字段差异，由比对本身兜底。
+CLOUD_SOURCES = {
+    "export": os.path.join(_ROOT, "lib", "cloud", "transactions_json.dart"),
+    "fingerprint": os.path.join(_ROOT, "lib", "cloud", "sync_fingerprint.dart"),
+    "parse": os.path.join(_ROOT, "lib", "cloud", "transactions_json.dart"),
+}
+
+# transactions 列名 -> 快照键（camelCase）。
+# 关系列（分类/账户/标签/周期）在快照里以「名称 + kind」或「syncId」形态传播。
+# 新增云字段时必须同步本表 —— 否则 crosscheck_contract 的第 3 条会报漂移。
+COL_KEYS = {
+    "type": ("type",),
+    "amount": ("amount",),
+    "category_id": ("categoryName", "categoryKind"),
+    "account_id": ("accountName", "fromAccountName"),
+    "to_account_id": ("toAccountName",),
+    "happened_at": ("happenedAt",),
+    "note": ("note",),
+    "exclude_from_stats": ("excludeFromStats",),
+    "exclude_from_budget": ("excludeFromBudget",),
+    "currency_code": ("currencyCode",),
+    "native_amount": ("nativeAmount",),
+    "original_amount": ("originalAmount",),
+    "custom_values_json": ("customValues",),
+    "category_sync_id_override": ("categorySyncIdOverride",),
+    "account_sync_id_override": ("accountSyncIdOverride",),
+    "to_account_sync_id_override": ("toAccountSyncIdOverride",),
+    "tag_sync_ids_override": ("tagSyncIdsOverride",),
+    "recurring_id": ("recurringSyncId",),
+    # 以下为契约外列，保留映射以便校验「实现是否偷偷开始搬运」
+    "created_by_user_id": ("createdByUserId",),
+    "last_edited_by_user_id": ("lastEditedByUserId",),
+    "updated_at": ("updatedAt",),
+}
+
+# 快照里非「列」的派生/关系键，不要求 SPEC 逐列覆盖。
+NON_COLUMN_KEYS = {
+    "syncId", "id", "attachments",
+    "categoryName", "categoryKind",
+    "tags", "tagNames", "tagSyncIds",
+    "accountName", "fromAccountName", "toAccountName",
+    "recurringSyncId",
+}
+
+
+def _read(path):
+    with open(path, encoding="utf-8", errors="replace") as f:
+        return f.read()
+
+
+def _balanced(src, anchor):
+    """从 anchor 所在位置起，截取一个大括号配平块（含花括号）。"""
+    i = src.index(anchor)
+    j = src.index("{", i)
+    depth = 0
+    for k in range(j, len(src)):
+        if src[k] == "{":
+            depth += 1
+        elif src[k] == "}":
+            depth -= 1
+            if depth == 0:
+                return src[j:k + 1]
+    raise ValueError(f"大括号不配平: {anchor!r}")
+
+
+def _map_keys(block):
+    return set(re.findall(r"'([A-Za-z_][A-Za-z0-9_]*)'\s*:", block))
+
+
+def _derive_cloud_contract():
+    """从 Dart 实现派生「真的被跨设备搬运」的快照键（三环节各一份）。"""
+    src = {k: _read(p) for k, p in CLOUD_SOURCES.items()}
+
+    exp_src = src["export"]
+    # 事务 item 的键有两个来源：① `<String, dynamic>{...}` 字面量里的 `'k':`；
+    # ② 字面量之后的条件赋值 `item['k'] = ...`（账户名/标签等，仅特定分支写入）。
+    # 两者都要收集，否则会把"只在转账分支写的 fromAccountName"误判为未搬运。
+    export = _map_keys(_balanced(exp_src, "final item = <String, dynamic>{"))
+    export |= set(re.findall(r"item\['([A-Za-z_][A-Za-z0-9_]*)'\]", exp_src))
+
+    fp = src["fingerprint"]
+    i = fp.index("'happenedAt': it[")          # 事务段的锚点
+    fp_block = _balanced(fp[fp.rindex("return {", 0, i):], "return {")
+    fingerprint = _map_keys(fp_block)
+
+    # 解析侧：parseJsonToImportData 里的 `_readXxx(m, 'k')` 与 `m['k']`。
+    # 该文件同时解析账户/分类/标签/预算/周期等实体，交集会把非交易项滤掉。
+    parse_src = src["parse"]
+    parse = set(re.findall(
+        r"_read\w*\(\s*m\s*,\s*'([A-Za-z_][A-Za-z0-9_]*)'", parse_src))
+    parse |= set(re.findall(r"m\['([A-Za-z_][A-Za-z0-9_]*)'\]", parse_src))
+
+    return {"export": export, "fingerprint": fingerprint, "parse": parse}
+
+
+def crosscheck_contract():
+    """SPEC 声明 vs lib/cloud 实现：双向校验，漂移即退出 3。"""
+    missing = [p for p in CLOUD_SOURCES.values() if not os.path.exists(p)]
+    if missing:
+        print("[DRIFT-SKIP] 未找到实现源码，跳过契约派生校验（建议在仓库内运行）：")
+        for p in missing:
+            print("   -", p)
+        return
+
+    derived = _derive_cloud_contract()
+    # 三环节取交集：导出 + 能判差异（指纹）+ 能读回（解析）
+    transported = derived["export"] & derived["fingerprint"] & derived["parse"]
+
+    spec = next(s for s in SPEC if s.table == "transactions")
+    synced = {e.split(".")[-1]: lab for lab, e, _ in spec.fields}
+    local = {e.split(".")[-1]: lab for lab, e, _ in spec.local_fields}
+
+    problems = []
+    # 1) 契约内列必须真被实现搬运
+    for col, lab in synced.items():
+        keys = COL_KEYS.get(col)
+        if not keys:
+            problems.append(f"契约内 {lab}({col}) 在 COL_KEYS 别名表里无映射 "
+                            f"—— 新增云字段时必须同步别名表")
+            continue
+        miss = [k for k in keys if k not in transported]
+        if miss:
+            problems.append(
+                f"契约内 {lab}({col}) 声明会被同步，但实现未搬运 {miss}"
+                f"（export ∩ fingerprint ∩ import）")
+    # 2) 契约外列不应被实现搬运
+    for col, lab in local.items():
+        keys = COL_KEYS.get(col)
+        if keys and all(k in transported for k in keys):
+            problems.append(
+                f"契约外 {lab}({col}) 其实已被实现搬运 —— 契约外口径失效，"
+                f"应改列契约内（否则该列差异被静默豁免）")
+    # 3) 实现搬运的键必须已被 SPEC 覆盖
+    covered = set()
+    for col in list(synced) + list(local):
+        covered.update(COL_KEYS.get(col, ()))
+    for k in sorted(transported):
+        if k in NON_COLUMN_KEYS or k in covered:
+            continue
+        problems.append(f"实现搬运了快照键 {k!r}，但 SPEC 既未列契约内也未列契约外 "
+                        f"—— 比对清单已漂移")
+
+    if problems:
+        print("[DRIFT] 比对契约清单与 lib/cloud 实现不一致（请修正 SPEC/别名表）：")
+        for p in problems:
+            print("   -", p)
+        sys.exit(3)
+    print(f"[契约派生校验] OK —— 实现搬运 {len(transported)} 个快照键，"
+          f"与 SPEC 声明一致（export={len(derived['export'])} "
+          f"fingerprint={len(derived['fingerprint'])} parse={len(derived['parse'])}）")
+    return derived
+
+
 # ============================== SPEC 定义 ==============================
 class Spec:
     """一张对表。field = (显示名, SQL 表达式, 归一化器)。"""
 
     def __init__(self, table, from_sql, keys, fields=(), local_fields=(),
-                 noun="项", line_tpl=None):
+                 line_tpl=None):
         self.table = table
         self.from_sql = from_sql
         self.keys = keys                 # [(名, 表达式, norm)]
         self.fields = list(fields)       # 契约内
         self.local_fields = list(local_fields)   # 契约外
-        self.noun = noun
         self.line_tpl = line_tpl
 
     @property
@@ -126,7 +316,6 @@ SPEC = [
                        ("owner_user_id", "owner_user_id", None),
                        ("created_at", "created_at", None),
                        ("updated_at", "updated_at", None)],
-         noun="个账本",
          line_tpl="ledgers 同步字段({fields}) 一致（{n}个账本）"),
 
     Spec("accounts", "accounts",
@@ -143,7 +332,6 @@ SPEC = [
                  ("note", "note", None), ("hidden", "hidden", None)],
          local_fields=[("created_at", "created_at", None),
                        ("updated_at", "updated_at", None)],
-         noun="个账户",
          line_tpl="accounts 字段 一致（{n}个账户）"),
 
     Spec("categories", "categories",
@@ -153,7 +341,6 @@ SPEC = [
                  ("parent", "parent_id", _fk("categories")),
                  ("sort_order", "sort_order", None), ("icon", "icon", None)],
          local_fields=[("updated_at", "updated_at", None)],   # 该表无 created_at 列
-         noun="个分类",
          line_tpl="categories 字段 一致（{n}个分类, 父分类按syncId归一）"),
 
     Spec("tags", "tags",
@@ -162,12 +349,13 @@ SPEC = [
                  ("sort_order", "sort_order", None)],
          local_fields=[("created_at", "created_at", None),
                        ("updated_at", "updated_at", None)],
-         noun="个标签",
          line_tpl="tags 字段 一致（{n}个标签）"),
 
     Spec("transactions", "transactions t JOIN ledgers l ON t.ledger_id = l.id",
          keys=[("ledger", "l.sync_id", None), ("sync_id", "t.sync_id", None)],
          fields=[("type", "t.type", None), ("amount", "t.amount", "round2"),
+                 # 关系列：快照以 (categoryKind, categoryName) / 账户名 / tag syncId
+                 # 形态搬运，这里按同样的可跨设备口径归一后比对
                  ("category", "t.category_id", _fk("categories")),
                  ("account", "t.account_id", _fk("accounts")),
                  ("to_account", "t.to_account_id", _fk("accounts")),
@@ -176,18 +364,21 @@ SPEC = [
                  ("exclude_from_budget", "t.exclude_from_budget", None),
                  ("currency_code", "t.currency_code", None),
                  ("native_amount", "t.native_amount", "round2"),
-                 # v45/v46：两者都在云快照与指纹白名单内，必须比
+                 # v45/v46：均在云快照与指纹白名单内，必须比
                  ("original_amount", "t.original_amount", "round2"),
                  ("custom_values_json", "t.custom_values_json", "json"),
                  # 共享账本 override：JSON 显式携带时参与 diff/合并
                  ("category_sync_id_override", "t.category_sync_id_override", None),
                  ("account_sync_id_override", "t.account_sync_id_override", None),
                  ("to_account_sync_id_override", "t.to_account_sync_id_override", None),
-                 ("tag_sync_ids_override", "t.tag_sync_ids_override", "json")],
+                 # v8 G2：周期规则锚点在快照里以 recurringSyncId 传播，且已进指纹
+                 ("recurring", "t.recurring_id", _fk("recurring_transactions"))],
          local_fields=[("created_by_user_id", "t.created_by_user_id", None),
                        ("last_edited_by_user_id", "t.last_edited_by_user_id", None),
-                       ("updated_at", "t.updated_at", None)],
-         noun="笔",
+                       ("updated_at", "t.updated_at", None),
+                       # lib/cloud/** 零引用：导出/指纹/导入三处都没有它
+                       # （比对脚本 v3 曾误列契约内，造数必然假失败）
+                       ("tag_sync_ids_override", "t.tag_sync_ids_override", "json")],
          line_tpl="transactions 逐字段 比对（{n}笔共同行） 仅A={only_a} 仅B={only_b} 字段差异={fdiff}"),
 
     Spec("budgets", "budgets b JOIN ledgers l ON b.ledger_id = l.id",
@@ -228,7 +419,6 @@ SPEC = [
          fields=[("base", "base_currency", None), ("quote", "quote_currency", None),
                  ("rate", "rate", "float")],
          local_fields=[("updated_at", "updated_at", None)],
-         noun="条",
          line_tpl="exchange_rate_overrides 一致（{n}条）"),
 
     Spec("transaction_tags",
@@ -325,16 +515,33 @@ def fmt_key(key):
     return " / ".join(str(k)[:8] for k in key)
 
 
+def print_spec(with_evidence=None):
+    print("===== 比对字段清单（由 SPEC 生成）=====")
+    for s in SPEC:
+        keys = ", ".join(n for n, _, _ in s.keys)
+        print(f"  {s.table}  [键: {keys}]")
+        print(f"        契约内: {s.field_labels or '（无，仅比对键集合）'}")
+        if s.local_labels:
+            print(f"        契约外: {s.local_labels}")
+    if with_evidence:
+        transported = with_evidence["export"] & with_evidence["fingerprint"] \
+            & with_evidence["parse"]
+        print("\n--- transactions 契约内字段的实现证据（派生自 lib/cloud）---")
+        spec = next(s for s in SPEC if s.table == "transactions")
+        for lab, expr, _ in spec.fields:
+            ks = COL_KEYS.get(expr.split(".")[-1], ())
+            mark = "OK" if all(k in transported for k in ks) else "!!"
+            print(f"  [{mark}] {lab:28s} 快照键={list(ks)}")
+
+
 def main():
     argv = sys.argv[1:]
     if "--spec" in argv:
-        print("===== 比对字段清单（由 SPEC 自动生成）=====")
-        for s in SPEC:
-            keys = ", ".join(n for n, _, _ in s.keys)
-            print(f"  {s.table}  [键: {keys}]")
-            print(f"        契约内: {s.field_labels or '（无，仅比对键集合）'}")
-            if s.local_labels:
-                print(f"        契约外: {s.local_labels}")
+        try:
+            print_spec(with_evidence=_derive_cloud_contract())
+        except Exception as e:                                   # noqa: BLE001
+            print(f"[DRIFT-SKIP] 无法派生实现证据：{e}")
+            print_spec()
         return
 
     a_path, b_path = argv[0], argv[1]
@@ -344,7 +551,11 @@ def main():
 
     ca, cb = sqlite3.connect(a_path), sqlite3.connect(b_path)
     qa, qb = ca.cursor(), cb.cursor()
-    validate_spec(qa)              # SPEC 必须与真实 schema 一致，否则显式退出 3
+    # 两道校验：① SPEC 与真实 schema 一致；② SPEC 与 lib/cloud 实现一致。
+    # 任一不过都以退出码 3 中止 —— 绝不产出一份「看起来比了、其实漏比」的结果。
+    validate_spec(qa)
+    crosscheck_contract()
+
     issues = []
     local_rows = Counter()          # table -> 契约外差异行数
 
