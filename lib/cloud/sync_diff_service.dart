@@ -1,3 +1,5 @@
+import 'package:drift/drift.dart' as d;
+
 import '../data/db.dart';
 import '../data/models/custom_field_values.dart';
 import '../data/repositories/base_repository.dart';
@@ -149,6 +151,41 @@ class SyncDiffService {
       accountIdToName[acc.id] = acc.name;
     }
 
+    // 批量获取本地交易涉及的分类（名称 + kind）。
+    //
+    // 与账户名同款解析：`_compareTx` 需要「本机分类的 kind|name」去和快照里的
+    // `categoryKind`/`categoryName` 比对。`sync_fingerprint.dart` 早已把这两项
+    // 纳入指纹白名单，diff 却不比较 → 出现「指纹说不同、diff 说无变化」的
+    // 自相矛盾：同步状态卡一直显示"本地与云端有差异"，用户点「下载同步」
+    // 却一条变更都点不出来，且 merge-then-publish 会把本地旧分类回传覆盖
+    // 云端，两端形成永久 ping-pong（与审计 S11「指纹已纳入附件、diff 不比较
+    // 附件」完全同构的遗留半截，故此处一并补齐）。
+    //
+    // transfer 无分类语义：导出侧与指纹侧都按 `isTransfer ? '' : ...` 归空，
+    // 这里提前剔除，保证 diff 口径与指纹口径严格同源。
+    final categoryIds = <int>{};
+    for (final tx in local) {
+      if (tx.categoryId != null && tx.type != 'transfer') {
+        categoryIds.add(tx.categoryId!);
+      }
+    }
+    final categoriesById = categoryIds.isNotEmpty
+        ? await repo.getCategoriesByIds(categoryIds)
+        : <int, Category>{};
+
+    // 本地周期规则 id → syncId（用于比对交易上的周期锚点 recurringSyncId）。
+    //
+    // 语义必须与导出侧 `transactions_json.dart` 一字不差：那边是
+    // `if (t.recurringId != null && (recurringIdToSyncId[id] ?? '').isNotEmpty)`，
+    // 即「锚点解析不到（规则已删 / 无 syncId）＝ 无锚点，不写键」。这里同样只
+    // 保留可解析的映射，解析不到 → 视为无锚点，两端口径才能对齐。
+    final recurringRows =
+        await repo.getRecurringTransactionsByLedger(ledgerId);
+    final recurringIdToSyncId = <int, String>{
+      for (final r in recurringRows)
+        if (r.syncId != null && r.syncId!.isNotEmpty) r.id: r.syncId!,
+    };
+
     // 建立映射：syncId → 交易
     final localBySyncId = <String, Transaction>{};
     for (final tx in local) {
@@ -223,12 +260,21 @@ class SyncDiffService {
         final localToAccountName = localTx.toAccountId != null
             ? accountIdToName[localTx.toAccountId]
             : null;
+        final localCategory = localTx.categoryId != null
+            ? categoriesById[localTx.categoryId]
+            : null;
+        final localRecurringSyncId = localTx.recurringId != null
+            ? recurringIdToSyncId[localTx.recurringId]
+            : null;
         final diffs = _compareTx(
           localTx,
           cloudTx,
           localTagNames: localTagNames,
           localAccountName: localAccountName,
           localToAccountName: localToAccountName,
+          localCategoryName: localCategory?.name,
+          localCategoryKind: localCategory?.kind,
+          localRecurringSyncId: localRecurringSyncId,
           localAttachments: attachmentsMap[localTx.id] ?? const [],
         );
         if (diffs.isNotEmpty) {
@@ -283,9 +329,32 @@ class SyncDiffService {
     List<String> localTagNames = const [],
     String? localAccountName,
     String? localToAccountName,
+    String? localCategoryName,
+    String? localCategoryKind,
+    String? localRecurringSyncId,
     List<TransactionAttachment> localAttachments = const [],
   }) {
     final diffs = <String>[];
+
+    // ================= 字段比较的两种策略（务必按类别选）=================
+    //
+    // ① **严格比较**（归一后逐值比，`local != cloud`）：
+    //    该字段自引入版本起就在导出侧，**缺键 = 无该属性**。
+    //    适用：type / amount / happenedAt / note / 账户名 / tags /
+    //    excludeFromStats / excludeFromBudget / 分类(kind+name) /
+    //    周期锚点(recurringSyncId) / attachments。
+    //
+    // ② **「缺键不改动」**（先 `cloud.x != null &&` 再比）：
+    //    用于有历史包袱的字段 —— 旧版客户端导出时**不写该键**，此时缺键必须
+    //    理解为"不改动本地值"，否则旧快照会静默抹掉本地已填值。
+    //    适用：currencyCode / nativeAmount / originalAmount / customValues /
+    //    3 个 *_syncId_override。
+    //    ⚠️ **新增字段一律用 ①**。错用 ② 会让「云端真的删掉了该属性」也传不
+    //    下来 → 两端指纹不同而 diff 为空 → 永久不收敛（D-2 的机制）。
+    //
+    // 两类都受 `test/cloud/sync_contract_coverage_test.dart` 的**穷举覆盖**守护：
+    // 指纹白名单里每个键都必须能被这里判成 modified，豁免需写明可复核的理由。
+    // ================================================================
 
     if (local.type != cloud.type) {
       diffs.add('类型: ${local.type} → ${cloud.type}');
@@ -337,6 +406,47 @@ class SyncDiffService {
       }
     }
 
+    // 比较分类（名称 + kind）。
+    //
+    // 不比较则「只改分类」的编辑永不跨设备传播 —— 而且不是"静默不同步"这么
+    // 简单：`sync_fingerprint.dart` 早已把 categoryName/categoryKind 纳入指纹
+    // 白名单，于是两端指纹不一致但 diff 为空，同步状态卡永久显示
+    // 「本地与云端有差异」，用户点「下载同步」却一条变更都没有（无法自愈）；
+    // 更糟的是 merge-then-publish 会把本地旧分类回传覆盖云端，形成 ping-pong。
+    // 与审计 S11 附件差异（指纹已纳入、diff 未比较）同构，故与附件一并纳入。
+    //
+    // 口径与导出/指纹严格同源：transfer 归空（`isTransfer ? '' : ...`），
+    // 避免转账行因主表残留 categoryId 产生伪差异。
+    final localCatName =
+        (local.type == 'transfer') ? '' : (localCategoryName ?? '');
+    final localCatKind =
+        (local.type == 'transfer') ? '' : (localCategoryKind ?? '');
+    final cloudCatName =
+        (cloud.type == 'transfer') ? '' : (cloud.categoryName ?? '');
+    final cloudCatKind =
+        (cloud.type == 'transfer') ? '' : (cloud.categoryKind ?? '');
+    if (localCatName != cloudCatName || localCatKind != cloudCatKind) {
+      diffs.add('分类: ${localCatName.isEmpty ? '无' : localCatName} → '
+          '${cloudCatName.isEmpty ? '无' : cloudCatName}');
+    }
+
+    // 比较 v8 G2 周期规则锚点（recurringSyncId）。
+    //
+    // 指纹白名单早已纳入它（`sync_fingerprint.dart` 的 `'recurringSyncId'`），
+    // 但这里此前**完全没比** —— 与 D-1 分类、S11 附件同构的第三个洞
+    // （由 `test/cloud/sync_contract_coverage_test.dart` 的穷举检查直接抓出：
+    // 构造"只改周期锚点"的快照，computeDiff 返回空 changes）。
+    //
+    // 口径：**严格比较，刻意不加 `cloud != null` 守卫**。理由：导出侧是
+    // `if (t.recurringId != null && resolved.isNotEmpty)` —— 「无锚点不写键」
+    // 是确定性的，不存在 `originalAmount` 那种"旧快照缺键"的历史包袱；
+    // 两端都按 `?? ''` 归一后比较，与指纹逐字同口径，不会出现
+    // 「指纹说不同、diff 说没变化」。
+    if ((localRecurringSyncId ?? '') != (cloud.recurringSyncId ?? '')) {
+      diffs.add('周期锚点: ${localRecurringSyncId ?? '无'} → '
+          '${cloud.recurringSyncId ?? '无'}');
+    }
+
     // 比较标签（去重，避免历史脏数据产生重复标签名导致伪差异）
     final cloudTagNames = (cloud.tagNames ?? []).toSet().toList();
     cloudTagNames.sort();
@@ -361,14 +471,29 @@ class SyncDiffService {
     if (cloud.currencyCode != null && local.currencyCode != cloud.currencyCode) {
       diffs.add('币种: ${local.currencyCode ?? '无'} → ${cloud.currencyCode}');
     }
+    // 折算金额：严格按值比较，**不做 `?? 0` 兜底**。
+    //
+    // 旧写法 `(local.nativeAmount ?? 0) != cloud.nativeAmount` 把「本地未折算
+    // (null)」与「云端显式 0」判成相同 → 云端 0 永不落本地；而导出侧 0 是
+    // 非空（会写键）、null 不写键（`transactions_json.dart`），两端指纹
+    // `''` vs `'0.0'` 不同 → 该行永久不收敛（每次启动判方向未知）。
+    // 与 `originalAmount` 同款缺陷，一并修正。
     if (cloud.nativeAmount != null &&
-        (local.nativeAmount ?? 0) != cloud.nativeAmount) {
+        local.nativeAmount != cloud.nativeAmount) {
       diffs.add('折算金额: ${local.nativeAmount} → ${cloud.nativeAmount}');
     }
-    // v45 原始金额：仅当云端显式携带时才比较（旧快照缺键 → null，此时
-    // 不触发 modified，避免"本地已填值 vs 云端无此键"被判成差异并被覆写）。
+    // v45 原始金额：仅当云端**显式携带该键**时才比较（旧快照缺键 → null，
+    // 此时不触发 modified，避免"本地已填值 vs 云端无此键"被判成差异并被覆写）。
+    //
+    // ⚠️ 这里的判据必须是 `local.originalAmount != cloud.originalAmount`，
+    // **不能**写成 `(local.originalAmount ?? 0) != cloud.originalAmount`：
+    // `originalAmount == 0` 是合法业务值（编辑器 `double.tryParse` 直接接受
+    // `0`，如"折扣 0 元/赠品"），而 `null ?? 0 == 0` 会把「本地未填写」与
+    // 「云端显式 0」判成相同 → 云端 0 永不落本地。导出侧 0 会写键、null 不写键
+    // → 两端指纹 `'0.0'` vs `''` 不同 → 指纹说不同、diff 说无变化，
+    // 该行永久不收敛（同上方 nativeAmount）。
     if (cloud.originalAmount != null &&
-        (local.originalAmount ?? 0) != cloud.originalAmount) {
+        local.originalAmount != cloud.originalAmount) {
       diffs.add('原始金额: ${local.originalAmount} → ${cloud.originalAmount}');
     }
     // v46 自定义字段值：仅当云端显式携带该键时才比较（旧快照缺键 → null，
@@ -505,6 +630,19 @@ class SyncDiffService {
               repo,
               ledgerId,
               importData.customFields,
+            ));
+    // D-4：合并路径同样要**镜像删除**对端已删的字段定义。
+    // 恢复路径有 `_mirrorDeleteAbsentEntities`，合并路径此前漏了 →
+    // 「删除字段」永不传播，且对端 merge-then-publish 会把它们写回云端
+    // （用户视角："删掉的字段又出现了"）。version 门控与恢复路径一致
+    // （null / <8 = 旧快照，不删）；无 syncId 的本地新建字段保留。
+    await timed(
+        'customFieldsMirrorDelete',
+        () async => dataImportService.mirrorDeleteAbsentCustomFields(
+              repo: repo,
+              ledgerId: ledgerId,
+              cloudFields: importData.customFields,
+              version: importData.version,
             ));
 
     // 合并范围对齐指纹范围(sync_fingerprint 覆盖 8 类实体):此前只合并
@@ -740,6 +878,18 @@ class SyncDiffService {
           categorySyncIdOverride: cloud.categorySyncIdOverride,
           accountSyncIdOverride: cloud.accountSyncIdOverride,
           toAccountSyncIdOverride: cloud.toAccountSyncIdOverride,
+          // v8 G2 周期锚点：云端 recurringSyncId → 本地规则 id 后写入。
+          //
+          // **检测与应用必须成对**：只加检测不加写入，会让「只改周期锚点」
+          // 的差异每轮都被报出来却永远应用不了 —— 用户体验是从"静默不同步"
+          // 变成"每轮都提示有变更、点了也没用"，比原来更差。
+          //
+          // 三态：快照未携带该键 → `Value(null)` 清空（与指纹口径一致，见
+          // _compareTx 的严格比较说明）；携带则解析为本地 id，规则已被删 /
+          // 未在快照里 → 解析失败同样写 null（清掉悬空锚点）。
+          recurringId: d.Value(cloud.recurringSyncId == null
+              ? null
+              : recurringSyncIdToId[cloud.recurringSyncId]),
           attachments: cloudAttachments,
         ));
         tagIdsBySyncId[syncId] = tagIds;

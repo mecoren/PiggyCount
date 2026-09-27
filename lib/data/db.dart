@@ -144,7 +144,22 @@ class Transactions extends Table {
   TextColumn get categorySyncIdOverride => text().nullable()();
   TextColumn get accountSyncIdOverride => text().nullable()();
   TextColumn get toAccountSyncIdOverride => text().nullable()();
-  TextColumn get tagSyncIdsOverride => text().nullable()(); // JSON list
+
+  /// ⚠️ **预留未实现（死列），不要使用**。
+  ///
+  /// 2026-09-27 全仓核查结论：**零写入方**（`lib/`、`test/`、`packages/` 内除
+  /// Drift 生成代码外无任何赋值），也**零实际读取方** —— 共享账本 UI 的标签
+  /// hydration 读的是 `transaction_tag_overrides` 表（按 `tx.syncId` 查），
+  /// 与本列无关（见 `local_transaction_repository.dart` 的
+  /// `_hydrateSharedOverridesFull`）。文件式云同步（S3/WebDAV）的导出、指纹
+  /// 白名单、导入解析三处也都没有它。
+  ///
+  /// 因此它不会跨设备传播；比对脚本据此把它列为**契约外**字段。
+  /// 若将来要启用它，必须**同时**补齐三处（导出写键 / 指纹白名单加键 /
+  /// 解析读键），否则会重现「指纹说不同、diff 说没变化」的永久不收敛；
+  /// `scripts/live_db/compare_sync_final.py` 的实现派生校验会在补实现的那一刻
+  /// 立刻报 [DRIFT]，提醒同步更新比对契约。
+  TextColumn get tagSyncIdsOverride => text().nullable()();
 
   /// 不计入收支:true 时从收支统计/图表/月年汇总剔除,但仍计入账户余额、净资产、
   /// 账单列表(.docs/transaction-flags/01 §二 D1)。

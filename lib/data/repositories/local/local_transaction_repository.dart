@@ -1479,8 +1479,14 @@ class LocalTransactionRepository implements TransactionRepository {
   ///   构造 synthetic Category(同 _hydrateSharedCategoryOverrides)
   /// - tx.accountId 为空 + accountSyncIdOverride 非空 → 查 SharedLedgerAccounts
   ///   构造 synthetic Account
-  /// - tx.tagSyncIdsOverride 不为空 → 查 TransactionTagOverrides → SharedLedgerTags
+  /// - **按 `tx.syncId` 查 `transaction_tag_overrides` → SharedLedgerTags**
   ///   union 到 tags 列表(synthetic id<0)
+  ///
+  /// ⚠️ 更正（2026-09-27）：此前这里写的是「tx.tagSyncIdsOverride 不为空 → 查
+  /// TransactionTagOverrides」，但实现从来**没有读** `transactions
+  /// .tag_sync_ids_override` —— 该列零写入方、零实际读取方（详见 `db.dart`
+  /// 该列的注释）。标签 override 的真实来源是 `transaction_tag_overrides`
+  /// 表，以 `tx.syncId` 关联。别按旧注释去找那条读取路径。
   ///
   /// 日历页 / 详情页等任何返回 tx + category + tags + account 完整 tuple 的查询
   /// 都用这个 helper 兜底,跟 transaction_list 走 _hydrateSharedCategoryOverrides
@@ -1918,6 +1924,11 @@ class LocalTransactionRepository implements TransactionRepository {
               toAccountSyncIdOverride: u.toAccountSyncIdOverride == null
                   ? const d.Value.absent()
                   : d.Value(u.toAccountSyncIdOverride),
+              // v8 G2 周期锚点：三态直写 —— null(不传)=不改动 /
+              // Value(null)=清空 / Value(id)=写入。
+              // 不写它会让「只改周期锚点」的差异被 diff 检测出来却**永远应用
+              // 不了** → 每轮「下载同步」都报同一批变更、指纹永不收敛。
+              recurringId: u.recurringId ?? const d.Value.absent(),
             ),
             where: (t) => t.syncId.equals(u.syncId),
           );

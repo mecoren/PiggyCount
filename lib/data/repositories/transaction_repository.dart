@@ -1,3 +1,5 @@
+import 'package:drift/drift.dart' as d;
+
 import '../db.dart';
 import '../../models/note_history.dart';
 
@@ -58,6 +60,17 @@ class TransactionUpdateBySyncIdData {
   /// [originalAmount] 同模式 —— 避免旧快照因缺键把本地已填值抹平。
   final Map<String, dynamic>? customValues;
 
+  /// v8 G2 周期规则锚点（**本地 int id**，由云端的 `recurringSyncId` 解析而来）。
+  ///
+  /// 三态：
+  /// - `null`（不传）：**不改动**本地锚点 —— 调用方未涉及该字段时的默认值；
+  /// - `d.Value(null)`：云端显式无锚点（快照未携带 `recurringSyncId`）→ 清空；
+  /// - `d.Value(id)`：写入。
+  ///
+  /// 为什么用三态而不是"可空即清空"：后者会让所有未涉及该字段的调用方
+  /// （含既有测试）在合并时**静默清掉**本机锚点。
+  final d.Value<int?>? recurringId;
+
   const TransactionUpdateBySyncIdData({
     required this.syncId,
     required this.type,
@@ -77,6 +90,7 @@ class TransactionUpdateBySyncIdData {
     this.attachments,
     this.originalAmount,
     this.customValues,
+    this.recurringId,
   });
 }
 

@@ -1,8 +1,10 @@
 /// v46 自定义字段的快照往返与指纹契约。
 ///
 /// 覆盖三条最容易出事的路径：
-/// 1. 导出：无值交易**不写** `customValues` 键（与 v45 originalAmount 同款
-///    防漂移范式，保证存量行导出逐字节不变）；
+/// 1. 导出：无值交易写**空对象** `customValues: {}`（**D-3 修复** —— 曾"仅非空
+///    才写键"，导致用户清空自定义字段值的动作无法被快照表达：清空后键消失，
+///    diff 的「缺键不改动」守卫识别不到，而指纹仍判不同 → 永久不收敛且会被
+///    对端回滚。空对象与缺键的指纹相同，故不产生"缺失 vs 显式空"的分裂）；
 /// 2. 解析：旧快照缺顶层 `customFields` / item 内缺 `customValues` 时优雅
 ///    降级为空（兼容旧客户端产物）；
 /// 3. 指纹：**只**改自定义字段值或只改定义时，指纹必须变化 —— 否则
@@ -100,7 +102,7 @@ void main() {
       expect(items.first['customValues'], {'cf-1': 12.5});
     });
 
-    test('无值交易不写 customValues 键（存量行导出逐字节不变）', () async {
+    test('无值交易写空对象（D-3：让「清空」可被快照表达）', () async {
       await seedLedger();
       await seedField();
       await seedTx(id: 100, syncId: 'tx-1');
@@ -108,7 +110,18 @@ void main() {
       final exported = await exportTransactionsJson(db, 1);
       final items = payloadOf(exported.jsonStr)['items'] as List;
 
-      expect(items.first.containsKey('customValues'), isFalse);
+      // 不能省掉该键：省掉后「用户清空了值」与「真·旧快照不认识该字段」
+      // 无法区分，diff 的「缺键不改动」会让清空永不传播（且被对端回滚）。
+      expect(items.first.containsKey('customValues'), isTrue,
+          reason: '缺键 = 旧快照；新版快照必须显式表达"确无值"');
+      expect(items.first['customValues'], isEmpty);
+
+      // 且空对象与缺键在指纹口径下等价 —— 这是"始终写键"不会引入
+      // 「缺失 vs 显式空」永久 outOfSync 的前提。
+      expect(
+        CustomFieldValueCodec.canonical(const <String, dynamic>{}),
+        CustomFieldValueCodec.canonical(null),
+      );
     });
 
     test('定义为空 → customFields 为空数组（顶层键始终存在）', () async {
@@ -197,12 +210,20 @@ void main() {
       await seedTx(id: 100, syncId: 'tx-1');
 
       final exported = await exportTransactionsJson(db, 1);
-      final baseline = payloadOf(exported.jsonStr);
+      // D-3 修复后，新版快照本身就带显式空对象；这里**手工去掉键**构造
+      // "真·旧快照"作对照。两者同指纹，是"始终写键"不会引入
+      // 「缺失 vs 显式空」永久 outOfSync 的前提（也是这条修复的安全依据）。
       final withEmpty = payloadOf(exported.jsonStr);
-      (withEmpty['items'] as List).first['customValues'] = <String, dynamic>{};
+      final legacy = payloadOf(exported.jsonStr);
+      for (final it in legacy['items'] as List) {
+        (it as Map).remove('customValues');
+      }
 
-      expect(contentFingerprintFromMap(withEmpty),
-          contentFingerprintFromMap(baseline));
+      expect((withEmpty['items'] as List).first['customValues'], isEmpty);
+      expect(
+          (legacy['items'] as List).first.containsKey('customValues'), isFalse);
+      expect(contentFingerprintFromMap(legacy),
+          contentFingerprintFromMap(withEmpty));
     });
 
     test('旧快照缺顶层 customFields 键 → 与空数组同指纹', () async {

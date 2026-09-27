@@ -901,6 +901,63 @@ class DataImportService {
     }
   }
 
+  /// **D-4**：增量合并路径的「自定义字段定义」镜像删除（对齐恢复路径的 H3）。
+  ///
+  /// 背景：全量恢复由 `_mirrorDeleteAbsentEntities` 负责镜像删除（version ≥ 8
+  /// 门控，其中就有自定义字段分支）；而**增量合并**此前只调 [importCustomFields]
+  /// （upsert-only、无删除分支）→「A 端删掉字段定义」在对端**永不传播**。
+  /// 设备端实测：A 删 8 个定义 → B「下载同步」零变更 → B merge-then-publish
+  /// 又把它们写回云端 → A 再同步时 8 个定义**全部回来**。
+  ///
+  /// 与恢复路径的一处关键差异（不处理会引入新缺陷）：恢复路径的交易行被
+  /// `clearLedgerTransactions` 整体清空后重导，引用被删定义的值随之消失；
+  /// **合并路径的行是保留的**，故这里走 `repo.deleteDefinition` —— 它按仓储
+  /// 职责**连带清理交易值与周期模板里的同名键**，不留孤儿键
+  /// （定义没了，值键既渲染不出又会让快照带幽灵字段）。
+  ///
+  /// 保守规则与恢复路径一致：**只删"本地已有 syncId"的行**。无 syncId 是本机
+  /// 新建、尚未上传过的字段，云端"缺席"不等于用户删过它。
+  ///
+  /// [version] 为快照 payload version；`null` 或 < 8 → 视为旧快照，**不删**
+  /// （旧快照可能根本不携带 `customFields` 段，"云端缺席"不具备删除语义）——
+  /// 与 `_mirrorDeleteAbsentEntities` 的门控完全相同。
+  ///
+  /// 返回删除的定义数。
+  Future<int> mirrorDeleteAbsentCustomFields({
+    required BaseRepository repo,
+    required int ledgerId,
+    required List<ImportCustomField> cloudFields,
+    required int? version,
+  }) async {
+    if (version == null || version < 8) return 0;
+    final cloudSyncIds = cloudFields
+        .map((f) => f.syncId)
+        .whereType<String>()
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toSet();
+    final existing = await repo.getDefinitionsForLedger(ledgerId);
+    var deleted = 0;
+    for (final def in existing) {
+      final sid = def.syncId;
+      if (sid == null || sid.isEmpty) continue; // 本机新建未上传 → 保留
+      if (cloudSyncIds.contains(sid)) continue; // 云端仍在 → 保留
+      try {
+        await repo.deleteDefinition(def.id); // 连带清值（仓储职责）
+        deleted++;
+      } catch (e, st) {
+        logger.error('DataImport',
+            'D-4 删除自定义字段定义失败 id=${def.id}', e, st);
+      }
+    }
+    if (deleted > 0) {
+      logger.info('DataImport',
+          'D-4 镜像删除自定义字段定义(ledgerId=$ledgerId): $deleted 个'
+          '（对端已删；已连带清理交易值/模板值）');
+    }
+    return deleted;
+  }
+
   /// 导入标签。返回 byName + bySyncId 两个映射：
   /// - byName：标签名 → 本地 id（CSV/老 JSON 兜底匹配用）
   /// - bySyncId：标签 syncId → 本地 id（v7 JSON 跨设备稳定匹配，避免 rename 错挂）
@@ -1867,9 +1924,13 @@ Future<(int, ({int inserted, int skippedRecurring}))>
     // 让 legacy 账本在首次恢复后即获得跨设备稳定身份（后续 push 锚点、
     // 云端槽位命名都依赖它，不再退回本地数字 id）。
     await _backfillLedgerSyncId(db, ledgerId, remoteImport.ledgerSyncId);
+    // P1-5：抓取「本机专属列」的旧值（按 syncId），导入完成后回填。
+    // 见 _snapshotLocalOnlyTxColumns 的说明。
+    final localOnlyColumns = await _snapshotLocalOnlyTxColumns(db, ledgerId);
     final cleared = await clearLedgerTransactions(db, ledgerId);
     final result = await importTransactionsJson(repo, ledgerId, jsonStr,
         recordChanges: false);
+    await _restoreLocalOnlyTxColumns(db, ledgerId, localOnlyColumns);
     // 审计 TBL-M3：快照携带的汇率覆盖 syncId 回写本地行。此前解析器丢弃
     // syncId，恢复端身份重建为新 UUID，跨设备 push/pull 映射断裂。
     await _restoreRateOverrideSyncIds(db, remoteImport.rateOverrides);
@@ -1889,6 +1950,70 @@ Future<(int, ({int inserted, int skippedRecurring}))>
     await _purgeStaleLocalChanges(db, ledgerId, remoteImport);
     return (cleared, result);
   });
+}
+
+/// P1-5：恢复前抓取交易的「本机专属列」（按 syncId）。
+///
+/// 【为什么需要】
+/// `created_by_user_id` / `last_edited_by_user_id` **从不出现在云快照里**
+/// （`transactions_json.dart` 的 item map 没有这两个键），而全量恢复是
+/// 「清空后重建行」—— 重建走的 `TransactionsCompanion.insert` 不含它们，
+/// 于是本机值被静默清空（2026-09-27 实测：全量下载后 created_by 非空行
+/// **5075 → 0**）。
+///
+/// 语义上这属于"本机专属信息被远端覆盖"：**云端从未对这两列表达过意见**，
+/// 恢复不应让它们丢失。（增量合并路径本来就不会碰它们 —— 合并用的
+/// `TransactionUpdateBySyncIdData` 里没有这两列，实测 5075 → 5075 不变。）
+///
+/// 只收 `syncId` 非空的行：没有稳定身份就无法在重建后对上号（这类行本来也
+/// 无法跨设备对齐，行为与改动前一致）。
+Future<Map<String, (String?, String?)>> _snapshotLocalOnlyTxColumns(
+    PiggyDatabase db, int ledgerId) async {
+  final rows = await (db.select(db.transactions)
+        ..where((t) => t.ledgerId.equals(ledgerId)))
+      .get();
+  return {
+    for (final r in rows)
+      if (r.syncId != null && r.syncId!.isNotEmpty)
+        r.syncId!: (r.createdByUserId, r.lastEditedByUserId),
+  };
+}
+
+/// P1-5：把本机专属列回填到同 `syncId` 的新行上（恢复事务内调用）。
+///
+/// 只回填**非空**值（旧值本来就是 NULL 的行无需写，避免无用 UPDATE）；
+/// 用 `db.batch` 而非逐条 await —— 实测数据里可能有数千行带值，逐条往返会
+/// 明显拖慢恢复。
+Future<void> _restoreLocalOnlyTxColumns(
+  PiggyDatabase db,
+  int ledgerId,
+  Map<String, (String?, String?)> saved,
+) async {
+  final pending = [
+    for (final e in saved.entries)
+      if (e.value.$1 != null || e.value.$2 != null) e,
+  ];
+  if (pending.isEmpty) return;
+  await db.batch((b) {
+    for (final e in pending) {
+      final (createdBy, lastEditedBy) = e.value;
+      b.update(
+        db.transactions,
+        TransactionsCompanion(
+          createdByUserId: createdBy == null
+              ? const d.Value.absent()
+              : d.Value(createdBy),
+          lastEditedByUserId: lastEditedBy == null
+              ? const d.Value.absent()
+              : d.Value(lastEditedBy),
+        ),
+        where: (t) => t.ledgerId.equals(ledgerId) & t.syncId.equals(e.key),
+      );
+    }
+  });
+  logger.info('DataImport',
+      '恢复后回填本机专属列(created_by/last_edited_by): ${pending.length} 行 '
+      '(ledgerId=$ledgerId)');
 }
 
 /// 审计 TBL-M3：按业务键 (base, quote) 把快照携带的 syncId 回写本地

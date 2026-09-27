@@ -196,11 +196,23 @@ Future<ExportedLedgerJson> exportTransactionsJson(
       // 会让"未填写"与"手填了等于记账金额的值"两端算出不同指纹 → 永久
       // outOfSync（同上方币种/折算规范化注释的防漂移教训）。
       if (t.originalAmount != null) 'originalAmount': t.originalAmount,
-      // v46 自定义字段值 `{ fieldSyncId: value }`：**仅非空才写键**（同上方
-      // originalAmount 的防漂移范式）。未填写的行不产生该键，旧客户端往返
-      // 丢弃未知键后也不会变成 `{}`，避免"缺失 vs 显式空"两端指纹分裂 →
-      // 永久 outOfSync。
-      if (customValues.isNotEmpty) 'customValues': customValues,
+      // v46 自定义字段值 `{ fieldSyncId: value }`：**始终写键**（含空对象）。
+      //
+      // 曾按"仅非空才写键"（照搬上方 originalAmount 的防漂移范式），但那个
+      // 范式在此处会造成 D-3：**用户清空值无法被快照表达** —— 清空后键消失，
+      // `_compareTx` 的「缺键不改动」守卫便无从识别，而指纹仍按 canonical
+      // 比较（有值 vs 空 → 不同）→「指纹说不同、diff 说无变化」→ 永久不
+      // 收敛；且对端 merge-then-publish 会把云端覆盖回旧值，本端再同步时
+      // **刚清空的值被静默恢复**（与 D-2 同族）。
+      //
+      // 原注释担心的"缺失 vs 显式空导致指纹分裂"对本字段**不成立**：指纹走
+      // CustomFieldValueCodec.canonical()，缺失与 `{}` 都归一到空串
+      // （见 sync_fingerprint.dart 白名单处，已有用例锁定）。所以：
+      //   * 空对象 = 新版快照的「确无值」→ diff 按 ① 严格比较（可清空本地）；
+      //   * 缺键   = 真·旧快照（不认识该字段）→ 维持 ②「不改动本地已填值」。
+      // 两者由"键是否存在"自然区分，既不需要 payload 版本判断，也保留了
+      // 旧快照的安全性。
+      'customValues': customValues,
       // 共享账本 override：Editor 选 Owner 的 category/account，本地主表
       // 无 int id，直接存 syncId。modified 同步后必须保留，否则 override
       // 丢失回退到 categoryId（可能 null）。
