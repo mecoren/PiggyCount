@@ -8065,6 +8065,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recycleBinPurgeConfirm => '彻底删除后无法恢复，附件文件也会一并清除，确定吗？';
 
   @override
+  String get recycleBinPurgeReconfirm => '再次确认：彻底删除后该交易及其附件将永久消失、无法恢复。确定要继续吗？';
+
+  @override
   String get recycleBinRestoreConflict => '恢复失败：该位置已被另一笔交易占用';
 
   @override
@@ -16162,6 +16165,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get recycleBinPurgeConfirm => '徹底刪除後無法復原，附件檔案也會一併清除，確定嗎？';
+
+  @override
+  String get recycleBinPurgeReconfirm => '再次確認：徹底刪除後該交易及其附件將永久消失、無法復原。確定要繼續嗎？';
 
   @override
   String get recycleBinRestoreConflict => '復原失敗：該位置已被另一筆交易佔用';

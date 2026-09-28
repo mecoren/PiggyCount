@@ -8153,6 +8153,10 @@ class AppLocalizationsKo extends AppLocalizations {
       '완전히 삭제하면 복원할 수 없고 첨부 파일도 함께 삭제됩니다. 계속할까요?';
 
   @override
+  String get recycleBinPurgeReconfirm =>
+      '다시 확인: 완전히 삭제하면 해당 거래와 첨부 파일이 영구적으로 사라지며 복원할 수 없습니다. 계속할까요?';
+
+  @override
   String get recycleBinRestoreConflict => '복원 실패: 해당 위치를 다른 내역이 사용 중입니다';
 
   @override

@@ -8380,6 +8380,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'This removes the transaction and its attachments for good and cannot be undone.';
 
   @override
+  String get recycleBinPurgeReconfirm =>
+      'Final check: purging will permanently remove this transaction and its attachments. Continue?';
+
+  @override
   String get recycleBinRestoreConflict =>
       'Cannot restore: another transaction already occupies this slot.';
 

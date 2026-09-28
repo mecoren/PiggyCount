@@ -2655,6 +2655,7 @@
   "recycleBinRestore": "복원",
   "recycleBinPurge": "영구 삭제",
   "recycleBinPurgeConfirm": "완전히 삭제하면 복원할 수 없고 첨부 파일도 함께 삭제됩니다. 계속할까요?",
+  "recycleBinPurgeReconfirm": "다시 확인: 완전히 삭제하면 해당 거래와 첨부 파일이 영구적으로 사라지며 복원할 수 없습니다. 계속할까요?",
   "recycleBinRestoreConflict": "복원 실패: 해당 위치를 다른 내역이 사용 중입니다",
   "rangeReportTitle": "기간 선택 리포트",
   "rangeReportEntrySubtitle": "임의 기간과 이전 기간·전년 동기 대비, 태그별 분류까지",

@@ -15133,6 +15133,12 @@ abstract class AppLocalizations {
   /// **'This removes the transaction and its attachments for good and cannot be undone.'**
   String get recycleBinPurgeConfirm;
 
+  /// No description provided for @recycleBinPurgeReconfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Final check: purging will permanently remove this transaction and its attachments. Continue?'**
+  String get recycleBinPurgeReconfirm;
+
   /// No description provided for @recycleBinRestoreConflict.
   ///
   /// In en, this message translates to:

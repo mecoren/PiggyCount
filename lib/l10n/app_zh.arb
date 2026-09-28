@@ -3530,6 +3530,7 @@
   "recycleBinRestore": "恢复",
   "recycleBinPurge": "彻底删除",
   "recycleBinPurgeConfirm": "彻底删除后无法恢复，附件文件也会一并清除，确定吗？",
+  "recycleBinPurgeReconfirm": "再次确认：彻底删除后该交易及其附件将永久消失、无法恢复。确定要继续吗？",
   "recycleBinRestoreConflict": "恢复失败：该位置已被另一笔交易占用",
   "rangeReportTitle": "自定义区间报表",
   "rangeReportEntrySubtitle": "任意起止区间，含环比与同比变化，另按标签维度拆分",
