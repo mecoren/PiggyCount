@@ -422,18 +422,13 @@ class _CustomFieldEditSheetState extends ConsumerState<_CustomFieldEditSheet> {
             const SizedBox(height: 8),
             _buildTypeSelector(l10n),
             const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: canSubmit ? _submit : null,
-                child: _submitting
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(l10n.commonSave),
-              ),
+            // 底部操作：双等宽大按钮（取消描边 + 保存填充，全站统一口径）。
+            PiggySheetActions(
+              cancelLabel: l10n.commonCancel,
+              confirmLabel: l10n.commonSave,
+              onCancel: () => Navigator.of(context).pop(false),
+              onConfirm: canSubmit ? _submit : null,
+              confirmBusy: _submitting,
             ),
           ],
         ),
