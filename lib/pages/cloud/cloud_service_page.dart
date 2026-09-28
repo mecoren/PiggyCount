@@ -2502,7 +2502,7 @@ class _CloudConfigSheet extends StatelessWidget {
                     height: 4,
                     decoration: BoxDecoration(
                       color: PiggyTokens.divider(context),
-                      borderRadius: BorderRadius.circular(2),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                     ),
                   ),
                 ),

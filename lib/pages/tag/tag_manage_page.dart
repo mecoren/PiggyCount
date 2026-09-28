@@ -369,7 +369,7 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
       // 选择导入模式
       final mode = await showDialog<String>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => AppDialogShell(
           title: Text(l10n.tagImportModeTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,

@@ -379,7 +379,7 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
     if (reconfirmMessage == null || reconfirmMessage.isEmpty) {
       final result = await showDialog<bool>(
         context: context,
-        builder: (ctx) => AlertDialog(
+        builder: (ctx) => AppDialogShell(
           title: Text(title),
           content: Text(message),
           actions: [

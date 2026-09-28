@@ -381,7 +381,7 @@ class _CustomFieldEditSheetState extends ConsumerState<_CustomFieldEditSheet> {
                 height: 4,
                 decoration: BoxDecoration(
                   color: PiggyTokens.divider(context),
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                 ),
               ),
             ),

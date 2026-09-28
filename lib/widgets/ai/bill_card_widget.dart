@@ -207,7 +207,7 @@ class BillCardWidget extends ConsumerWidget {
           color: canChange
               ? ref.watch(primaryColorProvider).withValues(alpha: 0.1)
               : PiggyTokens.textSecondary(context).withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12.0.scaled(context, ref)),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg.scaled(context, ref)),
           border: canChange
               ? Border.all(
                   color: ref.watch(primaryColorProvider).withValues(alpha: 0.3),

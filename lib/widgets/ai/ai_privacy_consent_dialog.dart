@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../../pages/settings/privacy_policy_page.dart';
 import '../../providers/ai_privacy_consent_providers.dart';
 import '../../providers/theme_providers.dart';
+import '../ui/ui.dart';
 
 /// 确保已取得"AI 第三方数据共享"的同意。
 ///
@@ -33,7 +34,7 @@ class AiPrivacyConsentDialog extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final primary = ref.watch(primaryColorProvider);
-    return AlertDialog(
+    return AppDialogShell(
       title: Text(l10n.aiConsentTitle),
       content: SingleChildScrollView(
         child: Column(

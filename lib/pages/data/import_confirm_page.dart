@@ -708,7 +708,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
       // 有失败或跳过: 使用弹窗显示详细信息,等待用户确认后再关闭页面
       await showDialog(
         context: currentContext,
-        builder: (ctx) => AlertDialog(
+        builder: (ctx) => AppDialogShell(
           title: Text(l10nToast.importCompleteTitle),
           content: Text(message),
           actions: [

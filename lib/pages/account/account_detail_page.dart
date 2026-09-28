@@ -498,7 +498,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                         vertical: 12.0.scaled(context, ref)),
                     shape: RoundedRectangleBorder(
                       borderRadius:
-                          BorderRadius.circular(8.0.scaled(context, ref)),
+                          BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
                     ),
                   ),
                 ),
@@ -527,7 +527,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
       context: context,
       builder: (ctx) {
         final primaryColor = ref.watch(primaryColorProvider);
-        return AlertDialog(
+        return AppDialogShell(
           title: Text(isLiability
               ? l10n.valuationUpdateDebt
               : l10n.valuationUpdateValue),
@@ -760,7 +760,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
             ),
             SizedBox(height: 8.0.scaled(context, ref)),
             ClipRRect(
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
               child: LinearProgressIndicator(
                 value: usageRate,
                 backgroundColor: PiggyTokens.divider(context),
@@ -786,7 +786,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
               ),
               decoration: BoxDecoration(
                 color: primaryColor.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(8.0.scaled(context, ref)),
+                borderRadius: BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
               ),
               child: Row(
                 children: [
@@ -1060,7 +1060,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                   decoration: BoxDecoration(
                     color: primaryColor.withValues(alpha: 0.1),
                     borderRadius:
-                        BorderRadius.circular(10.0.scaled(context, ref)),
+                        BorderRadius.circular(PiggyDimens.radiusMd.scaled(context, ref)),
                   ),
                   child: Text(
                     '${transactions.length}${state.hasMore ? '+' : ''}',
@@ -1534,7 +1534,7 @@ class _TransactionTile extends ConsumerWidget {
                           decoration: BoxDecoration(
                             color: primaryColor.withValues(alpha: 0.1),
                             borderRadius:
-                                BorderRadius.circular(4.0.scaled(context, ref)),
+                                BorderRadius.circular(PiggyDimens.radiusXs.scaled(context, ref)),
                           ),
                           child: Text(
                             ledgerName,

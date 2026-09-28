@@ -104,7 +104,7 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
     final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: Text(l10n.aiPromptResetConfirmTitle),
         content: Text(l10n.aiPromptResetConfirmMessage),
         actions: [

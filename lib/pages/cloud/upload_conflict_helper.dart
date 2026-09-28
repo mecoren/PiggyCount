@@ -38,7 +38,7 @@ Future<bool> uploadLedgerWithConflictGuard(
       final action = await showDialog<String>(
         context: context,
         barrierDismissible: false,
-        builder: (dctx) => AlertDialog(
+        builder: (dctx) => AppDialogShell(
           title: Text(l10n.conflictUploadTitle),
           content: Text(message),
           actions: [

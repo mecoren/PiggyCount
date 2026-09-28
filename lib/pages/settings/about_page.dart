@@ -55,7 +55,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
     final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: Text(l10n.aboutDeveloperStoryTitle),
         content: SingleChildScrollView(
           child: Text(

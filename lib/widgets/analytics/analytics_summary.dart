@@ -224,7 +224,7 @@ class AnalyticsSummary extends ConsumerWidget {
             margin: const EdgeInsets.only(top: 4, right: 8),
             decoration: BoxDecoration(
               color: PiggyTokens.primary(context),
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
             ),
           ),
           Expanded(

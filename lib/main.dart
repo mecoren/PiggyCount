@@ -607,16 +607,14 @@ class _AppThemes {
   }
 
   /// ⭐ 亮色主题
-  /// 注意：scaffoldBackgroundColor / dividerColor / cardTheme.color 已在
-  /// PiggyTheme.lightTheme 中通过 PiggyTokens 静态常量统一设置，这里不再覆盖。
-  /// 仅覆盖动态主色（primaryColor / colorScheme.primary）等需要 Riverpod 驱动的属性。
+  /// scaffoldBackgroundColor（随主题色派生）/ dividerColor / 主色相关配置均在
+  /// PiggyTheme.lightTheme 内统一设置，这里不再覆盖。
+  /// 仅补充业务侧定制（dialog / listTile / card / 按钮描边色等）。
   static ThemeData _buildLightTheme(TargetPlatform platform, Color primary) {
-    final base = PiggyTheme.lightTheme(platform: platform);
+    final base = PiggyTheme.lightTheme(platform: platform, primary: primary);
     final baseTextTheme = base.textTheme;
     return base.copyWith(
       textTheme: baseTextTheme,
-      colorScheme: base.colorScheme.copyWith(primary: primary),
-      primaryColor: primary,
       listTileTheme: ListTileThemeData(
         dense: true,
         contentPadding: const EdgeInsets.symmetric(horizontal: 12),
@@ -659,12 +657,8 @@ class _AppThemes {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
         ),
       ),
-      floatingActionButtonTheme: base.floatingActionButtonTheme.copyWith(
-        backgroundColor: primary,
-        foregroundColor: Colors.white,
-      ),
+      floatingActionButtonTheme: base.floatingActionButtonTheme,
       bottomNavigationBarTheme: base.bottomNavigationBarTheme.copyWith(
-        selectedItemColor: primary,
         type: BottomNavigationBarType.fixed,
       ),
       cardTheme: base.cardTheme.copyWith(
@@ -681,10 +675,8 @@ class _AppThemes {
   ///
   /// 注意：此前 darkTheme 在同一表达式内被调用两次，这里只构建一次。
   static ThemeData _buildDarkTheme(TargetPlatform platform, Color primary) {
-    final darkBase = PiggyTheme.darkTheme(platform: platform);
+    final darkBase = PiggyTheme.darkTheme(platform: platform, primary: primary);
     return darkBase.copyWith(
-      colorScheme: darkBase.colorScheme.copyWith(primary: primary),
-      primaryColor: primary,
       switchTheme: PiggyTheme.switchThemeData(primary, isDark: true),
     );
   }

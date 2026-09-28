@@ -338,7 +338,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
             color: Colors.transparent,
             child: InkWell(
               onTap: _showMonthJumpPicker,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 child: Row(

@@ -617,7 +617,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       final l10n = AppLocalizations.of(this.context);
       final confirmed = await showDialog<bool>(
         context: this.context,
-        builder: (dctx) => AlertDialog(
+        builder: (dctx) => AppDialogShell(
           title: Text(l10n.ledgerBaseCurrencyLabel),
           content: Text(
             '${l10n.ledgerCurrencyChangeRecalcHint}\n'
@@ -1079,9 +1079,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
         barrierDismissible: false,
         builder: (dctx) => PopScope(
           canPop: false,
-          child: AlertDialog(
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
+          child: AppDialogShell(
             title: Text(l10n.ledgersUploadAll),
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1518,7 +1516,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                     decoration: BoxDecoration(
                       color: PiggyTokens.textTertiary(context)
                           .withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(2),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                     ),
                   ),
                   Text(
@@ -1696,9 +1694,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
           canPop: false,
           child: StatefulBuilder(
             builder: (stateContext, setState) {
-              return AlertDialog(
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
+              return AppDialogShell(
                 title: Row(
                   children: [
                     const Icon(Icons.warning, color: Colors.red, size: 28),

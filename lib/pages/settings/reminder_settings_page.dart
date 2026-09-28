@@ -138,7 +138,7 @@ class ReminderSettingsPage extends ConsumerWidget {
                         if (context.mounted) {
                           showDialog(
                             context: context,
-                            builder: (context) => AlertDialog(
+                            builder: (context) => AppDialogShell(
                               title: Text(AppLocalizations.of(context)
                                   .reminderBatteryStatus),
                               content: Column(
@@ -238,7 +238,7 @@ class ReminderSettingsPage extends ConsumerWidget {
                         if (context.mounted) {
                           showDialog(
                             context: context,
-                            builder: (context) => AlertDialog(
+                            builder: (context) => AppDialogShell(
                               title: Text(AppLocalizations.of(context)
                                   .reminderChannelStatus),
                               content: Column(

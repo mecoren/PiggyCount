@@ -117,17 +117,17 @@ class _QuickCommandCard extends ConsumerWidget {
 
     final card = Material(
       color: PiggyTokens.surface(context),
-      borderRadius: BorderRadius.circular(8.0.scaled(context, ref)),
+      borderRadius: BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8.0.scaled(context, ref)),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
         child: Container(
           padding: EdgeInsets.symmetric(
             horizontal: 10.0.scaled(context, ref),
             vertical: 8.0.scaled(context, ref),
           ),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8.0.scaled(context, ref)),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
             border: Border.all(
               color: isDark
                   ? primaryColor.withAlpha(77) // 30% 透明度

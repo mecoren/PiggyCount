@@ -649,7 +649,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius:
-                        BorderRadius.circular(8.0.scaled(context, ref)),
+                        BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
                   ),
                 ),
                 child: _saving
@@ -687,7 +687,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                   side: BorderSide(color: primaryColor, width: 1.5),
                   shape: RoundedRectangleBorder(
                     borderRadius:
-                        BorderRadius.circular(8.0.scaled(context, ref)),
+                        BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
                   ),
                 ),
                 child: Text(
@@ -714,7 +714,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                       color: PiggyTokens.error(context), width: 1.5),
                   shape: RoundedRectangleBorder(
                     borderRadius:
-                        BorderRadius.circular(8.0.scaled(context, ref)),
+                        BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
                   ),
                 ),
                 child: Text(
@@ -998,7 +998,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
     if (!mounted) return;
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: Text(l10n.accountHideConfirmTitle),
         content: Text(recurringCount > 0
             ? '${l10n.accountHideConfirmBody}\n${l10n.accountHideRecurringWarn(recurringCount)}'
@@ -1117,7 +1117,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                     decoration: BoxDecoration(
                       // U3：token 化（black12 在暗黑模式下不可见）
                       color: PiggyTokens.divider(bctx),
-                      borderRadius: BorderRadius.circular(2),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                     ),
                   ),
                   Text(
@@ -1353,7 +1353,7 @@ class _AccountTypeCard extends ConsumerWidget {
         : (isSelected ? primaryColor : PiggyTokens.textSecondary(context));
     return InkWell(
       onTap: disabled ? null : onTap,
-      borderRadius: BorderRadius.circular(8.0.scaled(context, ref)),
+      borderRadius: BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 2.0.scaled(context, ref)),
         decoration: BoxDecoration(
@@ -1362,7 +1362,7 @@ class _AccountTypeCard extends ConsumerWidget {
             color: borderColor,
             width: isSelected ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(8.0.scaled(context, ref)),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

@@ -30,10 +30,11 @@ class PiggyTokens {
   // ========== 背景色 Token (Surface) ==========
 
   /// 页面背景色（Scaffold 背景）
-  /// - 亮色模式：#E5EEFE (淡蓝)
+  /// - 亮色模式：随主题色派生的同色系淡色（见 PiggyTheme.deriveLightScaffoldBackground）
   /// - 暗黑模式：#151A24 (深蓝灰)
+  /// 直接读 Theme，保证与 Scaffold/AppBar 背景单一来源。
   static Color scaffoldBackground(BuildContext context) =>
-      isDark(context) ? scaffoldBackgroundDarkStatic : scaffoldBackgroundLightStatic;
+      Theme.of(context).scaffoldBackgroundColor;
 
   /// 卡片背景色（贴在页面上的卡片）
   /// - 亮色模式：#F9F9F9 (卡片内部，与淡蓝页面形成对比)
@@ -532,12 +533,12 @@ class PiggyTokens {
   // ========== 悬浮 Tab 栏 Token (Floating Tab Bar) ==========
 
   /// 悬浮 Tab 栏背景色（PiggyHeader/PiggyTitleBar 标题栏与底部导航栏共用）
-  /// - 亮色模式：淡蓝 95% 不透明（与页面背景融为一体）
+  /// - 亮色模式：随主题色派生的页面背景 95% 不透明（与页面背景融为一体）
   /// - 暗黑模式：深蓝灰 95% 不透明
   static Color tabBarBackground(BuildContext context) =>
       isDark(context)
           ? cardBackgroundDarkStatic.withValues(alpha: 0.95)
-          : scaffoldBackgroundLightStatic.withValues(alpha: 0.95);
+          : Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.95);
 
   /// 悬浮 Tab 栏阴影
   static List<BoxShadow> get tabBarShadow => [
@@ -585,10 +586,6 @@ class PiggyTokens {
   // PiggyTokens.textPrimaryOn(bool isDark) / textSecondaryOn(bool isDark)。
   // 历史上这里曾导出「只有亮色」的 primaryTextStatic / secondaryTextStatic，
   // 导致调用点各自复制暗色分支（见 *_On 的注释），已下线。
-
-  /// Scaffold 背景色（亮色模式）— #E5EEFE (淡蓝)
-  /// 单一来源：PiggyTokens.scaffoldBackground(context) 与 PiggyTheme.lightTheme 共享
-  static const Color scaffoldBackgroundLightStatic = Color(0xFFE5EEFE);
 
   /// Scaffold 背景色（暗色模式）— #151A24 (深蓝灰)
   /// 单一来源：PiggyTokens.scaffoldBackground(context) 与 PiggyTheme.darkTheme 共享
@@ -662,6 +659,10 @@ class PiggyDimens {
 
   /// 首页提醒卡片统一外边距（home_page 三张卡片共用）
   static const EdgeInsets cardMargin = EdgeInsets.fromLTRB(12, 4, 12, 8);
+
+  /// 首页提醒卡片统一内边距（home_page 三张卡片共用，含左侧装饰条避让）
+  static const EdgeInsets reminderCardPadding =
+      EdgeInsets.fromLTRB(p16, p12, p12, p12);
 
   /// 通用卡片内边距
   static const EdgeInsets cardPadding = EdgeInsets.all(16);

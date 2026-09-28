@@ -846,7 +846,7 @@ class _RecurringTransactionEditPageState
 
     final selected = await showDialog<int?>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: Text(title),
         content: SizedBox(
           width: double.maxFinite,
@@ -984,7 +984,7 @@ class _RecurringTransactionEditPageState
   Future<void> _deleteRecurringTransaction() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: Text(AppLocalizations.of(context).commonDelete),
         content: Text(
             AppLocalizations.of(context).recurringTransactionDeleteConfirm),

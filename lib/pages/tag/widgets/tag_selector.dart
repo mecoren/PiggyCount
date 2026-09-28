@@ -94,7 +94,7 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
             height: 4,
             decoration: BoxDecoration(
               color: PiggyTokens.divider(context),
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
             ),
           ),
 

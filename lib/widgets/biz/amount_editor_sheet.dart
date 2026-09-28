@@ -22,6 +22,7 @@ import 'account_selector.dart';
 import '../currency/currency_picker_sheet.dart';
 import '../currency/currency_flag.dart';
 import '../ui/toast.dart';
+import '../ui/dialog.dart';
 import '../ui/piggy_switcher.dart';
 import 'tag_chip.dart';
 import '../category_icon.dart';
@@ -423,7 +424,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
         text: _rateStr ?? _currentRate()?.toStringAsPrecision(6) ?? '');
     final entered = await showDialog<String>(
       context: context,
-      builder: (dctx) => AlertDialog(
+      builder: (dctx) => AppDialogShell(
         title: Text(l10n.txRateLabel),
         content: TextField(
           controller: ctrl,

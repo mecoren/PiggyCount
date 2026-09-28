@@ -353,7 +353,7 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
                 margin: const EdgeInsets.only(right: 8),
                 decoration: BoxDecoration(
                   color: PiggyTokens.primary(context),
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                 ),
               ),
               Expanded(
@@ -567,7 +567,7 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
             height: 10,
             margin: const EdgeInsets.only(right: 10),
             decoration: BoxDecoration(
-                color: color, borderRadius: BorderRadius.circular(3)),
+                color: color, borderRadius: BorderRadius.circular(PiggyDimens.radiusXs)),
           ),
           Expanded(
             child: Column(

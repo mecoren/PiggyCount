@@ -179,7 +179,7 @@ class _RecurringTransactionCard extends ConsumerWidget {
                         : recurring.type == 'income'
                             ? PiggyTokens.success(context)
                             : primaryColor,
-                    borderRadius: BorderRadius.circular(1.5),
+                    borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                   ),
                 ),
                 const SizedBox(width: 12),

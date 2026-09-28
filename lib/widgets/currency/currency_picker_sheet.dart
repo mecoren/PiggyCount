@@ -76,7 +76,7 @@ Future<String?> showCurrencyPickerSheet(
                   decoration: BoxDecoration(
                     color:
                         PiggyTokens.textTertiary(bctx).withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(2),
+                    borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                   ),
                 ),
                 Text(

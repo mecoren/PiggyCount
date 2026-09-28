@@ -127,7 +127,7 @@ class _LogCenterPageState extends ConsumerState<LogCenterPage> {
                       )
                     : null,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8.0.scaled(context, ref)),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
                 ),
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: 12.0.scaled(context, ref),
@@ -338,7 +338,7 @@ class _LogCenterPageState extends ConsumerState<LogCenterPage> {
     final l10n = AppLocalizations.of(context);
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: Text(l10n.logCenterClearConfirmTitle),
         content: Text(l10n.logCenterClearConfirmMessage),
         actions: [
@@ -402,7 +402,7 @@ class _LogEntryCard extends ConsumerWidget {
                       decoration: BoxDecoration(
                         color: levelColor.withValues(alpha: 0.1),
                         borderRadius:
-                            BorderRadius.circular(4.0.scaled(context, ref)),
+                            BorderRadius.circular(PiggyDimens.radiusXs.scaled(context, ref)),
                         border: Border.all(color: levelColor, width: 1),
                       ),
                       child: Text(
@@ -423,7 +423,7 @@ class _LogEntryCard extends ConsumerWidget {
                       decoration: BoxDecoration(
                         color: PiggyTokens.surfaceSecondary(context),
                         borderRadius:
-                            BorderRadius.circular(4.0.scaled(context, ref)),
+                            BorderRadius.circular(PiggyDimens.radiusXs.scaled(context, ref)),
                       ),
                       child: Text(
                         log.platform.displayName,
@@ -495,7 +495,7 @@ class _LogEntryCard extends ConsumerWidget {
   void _showLogDetail(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: Text('[${log.tag}]'),
         content: SingleChildScrollView(
           child: Column(

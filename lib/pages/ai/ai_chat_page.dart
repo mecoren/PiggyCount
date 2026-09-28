@@ -177,7 +177,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
               padding: EdgeInsets.all(12.0.scaled(context, ref)),
               decoration: BoxDecoration(
                 color: PiggyTokens.error(context).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8.0.scaled(context, ref)),
+                borderRadius: BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
                 border: Border.all(
                   color: PiggyTokens.error(context).withValues(alpha: 0.3),
                   width: 1,
@@ -272,13 +272,13 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
                     child: Material(
                       color: ref.watch(primaryColorProvider),
                       borderRadius:
-                          BorderRadius.circular(24.0.scaled(context, ref)),
+                          BorderRadius.circular(PiggyDimens.radius3xl.scaled(context, ref)),
                       elevation: 8,
                       shadowColor: Colors.black.withValues(alpha: 0.4),
                       child: InkWell(
                         onTap: _scrollToBottomWithAnimation,
                         borderRadius:
-                            BorderRadius.circular(24.0.scaled(context, ref)),
+                            BorderRadius.circular(PiggyDimens.radius3xl.scaled(context, ref)),
                         child: Container(
                           width: 48.0.scaled(context, ref),
                           height: 48.0.scaled(context, ref),
@@ -416,7 +416,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
                       ? ref.watch(primaryColorProvider).withValues(alpha: 0.1)
                       : PiggyTokens.surface(context),
                   borderRadius:
-                      BorderRadius.circular(12.0.scaled(context, ref)),
+                      BorderRadius.circular(PiggyDimens.radiusLg.scaled(context, ref)),
                   border: Border.all(
                     color: isUser
                         ? ref.watch(primaryColorProvider).withValues(alpha: 0.3)
@@ -536,7 +536,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
                   ),
                   border: OutlineInputBorder(
                     borderRadius:
-                        BorderRadius.circular(20.0.scaled(context, ref)),
+                        BorderRadius.circular(PiggyDimens.radius2xl.scaled(context, ref)),
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
@@ -767,7 +767,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
     final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: Text(l10n.aiChatClearHistoryDialogTitle),
         content: Text(l10n.aiChatClearHistoryDialogContent),
         actions: [

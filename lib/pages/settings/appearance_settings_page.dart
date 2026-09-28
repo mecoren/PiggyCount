@@ -280,8 +280,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: PiggyTokens.surfaceElevated(context),
+      builder: (context) => AppDialogShell(
         title: Text(
           l10n.appearanceThemeMode,
           style: TextStyle(color: PiggyTokens.textPrimary(context)),
@@ -357,8 +356,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: PiggyTokens.surfaceElevated(context),
+      builder: (context) => AppDialogShell(
         title: Text(
           l10n.appearanceAmountFormat,
           style: TextStyle(color: PiggyTokens.textPrimary(context)),
@@ -432,8 +430,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
     final current = ref.read(noteDisplayModeProvider);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: PiggyTokens.surfaceElevated(context),
+      builder: (context) => AppDialogShell(
         title: Text(
           l10n.appearanceNoteDisplay,
           style: TextStyle(color: PiggyTokens.textPrimary(context)),
@@ -522,8 +519,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: PiggyTokens.surfaceElevated(context),
+        builder: (context, setDialogState) => AppDialogShell(
           title: Text(
             l10n.appearanceNoteHistory,
             style: TextStyle(color: PiggyTokens.textPrimary(context)),
@@ -705,8 +701,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: PiggyTokens.surfaceElevated(context),
+      builder: (context) => AppDialogShell(
         title: Text(
           l10n.appearanceColorScheme,
           style: TextStyle(color: PiggyTokens.textPrimary(context)),

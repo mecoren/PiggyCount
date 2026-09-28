@@ -497,7 +497,7 @@ class _CategoryItem extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(48),
+      borderRadius: BorderRadius.circular(PiggyDimens.radius3xl),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

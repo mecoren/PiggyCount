@@ -67,10 +67,10 @@ class MinePage extends ConsumerWidget {
           Expanded(
             child: ListView(
               padding: EdgeInsets.fromLTRB(
-                16,
+                PiggyDimens.p16,
                 PiggyDimens.p12,
-                16,
-                16 + MediaQuery.of(context).padding.bottom + 56 + 12,
+                PiggyDimens.p16,
+                PiggyDimens.p16 + MediaQuery.of(context).padding.bottom + 56 + 12,
               ),
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
