@@ -1864,6 +1864,14 @@ class PiggyDatabase extends _$PiggyDatabase {
     // binding（logger 单例初始化需要）。此处必须保持静默，不得触碰 logger；
     // 迁移进度日志由 onUpgrade 的 v40 块负责（仅真实升级路径执行）。
     for (final table in _updatedAtTouchTables) {
+      // v40 升级路径上，v46 才建的表（custom_field_definitions）尚不存在，
+      // 无守卫的 CREATE TRIGGER 会让整个迁移崩掉、App 打不开；跳过缺失表，
+      // 由对应建表迁移块（如 v46）再次调用本方法补齐触发器。
+      final exists = await customSelect(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+        variables: [Variable<String>(table)],
+      ).get();
+      if (exists.isEmpty) continue;
       await customStatement(
         'CREATE TRIGGER IF NOT EXISTS trg_${table}_touch_updated_at '
         'AFTER UPDATE ON $table '
