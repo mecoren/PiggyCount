@@ -197,6 +197,32 @@ python scripts/gen_ios_icons.py
 - **提交前自检**：`dart format .` → `flutter analyze` → `flutter test` →（改过 schema / codegen 源）`build_runner build` → 新功能有测试 → 暗黑模式正常 → 文案进 `.arb`。
 - **不要主动提交**：除非用户明确要求，否则只改工作区、把结果交用户确认。
 
+## 发版流程（Release）
+
+发版入口只有一个：**推送 `v*` tag** 触发 `.github/workflows/release.yml`。手动 `workflow_dispatch` 默认 `dry_run=true`（只出 Actions Artifacts，不建 Release、不上传 Play / TestFlight），且**只允许从 `wait` 分支发起**；其它 tag 不触发流水线。
+
+**发版前流程（按序执行，缺一不可）：**
+
+1. **确认版本真值**：`pubspec.yaml#version`（当前 `0.1.0`）必须等于要发的 tag 去掉 `v` 前缀（如 tag `v0.1.0` ⇄ `version: 0.1.0`）。只改这一处，不要手工两处维护。
+2. **本地三连门禁**：`dart format .`（无改动）→ `flutter analyze`（0 issue）→ `flutter test`（全绿）；改过 schema / `@freezed` / `@JsonSerializable` 先跑 `dart run build_runner build --delete-conflicting-outputs` 并提交 codegen 产物。
+3. **合入并推送 `wait`**：发版基线必须落在 `wait` 分支且已 push（本地与 `origin/wait` 一致），确保 tag 指向已入库的提交。
+4. **打 tag 并推送**：`git tag v0.1.0 && git push origin v0.1.0`。tag 名必须与 `pubspec.yaml#version` 一致，否则 audit job 硬拦截、整条流水线失败。
+5. **可选预演**：不确定流水线可用时，先在 `wait` 分支跑一次 `workflow_dispatch`（`dry_run=true`），检查 Artifacts 无误后再打 tag 真正发版。
+
+**流水线做了什么（`release.yml` 四个 job）：**
+
+- **audit**（前置门禁，廉价快速失败）：分支守卫（仅手动触发时校验 `wait`）→ tag ⇄ `version` 一致性校验 → 签名物料就位**告警**（缺 keystore / 证书只 warning 不拦截）→ 单点计算发布意图 `publish`（push tag 恒为 true）。
+- **android**：Java 17 + Android SDK 35/36 → 用 tag 名 `sed` 覆盖 pubspec version（`<tag>+<run_number>`）→ `flutter build apk --release --flavor prod`（按 ABI 拆 4 个包）+ AAB → 上传 Artifacts → 有 `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` 时上传 Play。
+- **ios**：最新 Xcode → 同样覆盖版本 → 无签名构建兜底 + 有证书时 `xcodebuild archive` 出签名 IPA → 打包 `app.zip` / 模拟器包 → 有 Apple 凭据时上传 TestFlight。
+- **release**：仅当 `publish=true` 且 android / ios 均成功才执行，生成 release notes（对比上一 tag）并建 GitHub Release，附 Android / iOS 全部产物。
+
+**注意事项：**
+
+- `concurrency.cancel-in-progress: false`（与 `analyze.yml` 刻意相反）——发版宁可排队也不可腰斩，半套资产比排队更糟，**不要手动取消进行中的 release run**。
+- 构建号 = `github.run_number`（自动递增），无需手工维护。
+- 相关 secrets：`ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`、`APPLE_CERTIFICATE_P12` / `APPLE_CERTIFICATE_PASSWORD` / `APPLE_PROVISIONING_PROFILE` / `APPLE_PROVISIONING_PROFILE_WIDGET` / `APPLE_TEAM_ID`、`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`、`APPLE_ID` / `APPLE_APP_SPECIFIC_PASSWORD`；缺失时对应环节降级为未签名 / 跳过上传，仅告警不失败。
+- tag 打错需修正时先删远端再重打：`git push origin :refs/tags/v0.1.0`，不要强推覆盖已有 tag。
+
 ## 外部文档
 
 - 贡献与开发流程：`docs/contributing/CONTRIBUTING_ZH.md`（英文 `CONTRIBUTING_EN.md`）
