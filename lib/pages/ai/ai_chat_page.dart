@@ -812,8 +812,9 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
     final repo = ref.read(repositoryProvider);
     final message = await repo.getMessageById(messageId);
     if (message == null || message.metadata == null) {
-      if (mounted)
+      if (mounted) {
         showToast(context, AppLocalizations.of(context).aiChatUndone);
+      }
       return;
     }
 
