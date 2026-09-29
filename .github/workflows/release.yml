@@ -38,25 +38,64 @@ permissions:
 # 升级 Flutter 请只改 pubspec.yaml 一处。
 
 jobs:
+  # 触发来源守门（tag 与手动都跑）：
+  #   1) 手动触发只允许 wait 分支；
+  #   2) tag 触发要求 tag 所在提交在 wait 分支上——否则任意分支打 tag 都会直推
+  #      Google Play / TestFlight，分支保护形同虚设；
+  #   3) 版本单调性：不允许发出低于历史 v* tag 的版本。
   check-branch:
-    name: Check if wait branch
+    name: Guard trigger source
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
     steps:
-      - name: Check branch
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Guard trigger source
+        shell: bash
         run: |
-          if [ "${{ github.ref_name }}" != "wait" ]; then
-            echo "❌ Release workflow can only be triggered from wait branch"
-            echo "Current branch: ${{ github.ref_name }}"
-            exit 1
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ github.ref_name }}" != "wait" ]; then
+              echo "❌ 手动发版仅允许从 wait 分支触发，当前：${{ github.ref_name }}"
+              exit 1
+            fi
+            TAG="${{ github.event.inputs.tag_name }}"
+            echo "✅ 手动触发分支校验通过：wait"
+          else
+            TAG="${{ github.ref_name }}"
+            git fetch --no-tags origin +refs/heads/wait:refs/remotes/origin/wait
+            if ! git merge-base --is-ancestor "${GITHUB_SHA}" refs/remotes/origin/wait; then
+              echo "❌ tag ${TAG} 所在提交 ${GITHUB_SHA} 不在 wait 分支上，拒绝发版"
+              exit 1
+            fi
+            echo "✅ tag 归属校验通过：${GITHUB_SHA} 在 origin/wait 上"
           fi
-          echo "✅ Branch check passed: ${{ github.ref_name }}"
+
+          # 版本单调性：不允许发出版本号低于最近 v* tag 的版本
+          if [ -n "${TAG:-}" ] && [[ "${TAG}" == v* ]]; then
+            NEW_VER="${TAG#v}"
+            LATEST=$(git tag --list 'v*' --sort=-version:refname | grep -v "^${TAG}$" | head -n1 || true)
+            if [ -n "${LATEST}" ]; then
+              LATEST_VER="${LATEST#v}"
+              LOWEST=$(printf '%s\n%s\n' "${LATEST_VER}" "${NEW_VER}" | sort -V | head -n1)
+              if [ "${LOWEST}" = "${NEW_VER}" ] && [ "${NEW_VER}" != "${LATEST_VER}" ]; then
+                echo "❌ 新版本 ${NEW_VER} 低于最近 tag ${LATEST}，拒绝发版"
+                exit 1
+              fi
+              echo "✅ 版本单调性校验通过：${NEW_VER} >= ${LATEST_VER}"
+            else
+              echo "ℹ️ 未找到历史 v* tag，跳过版本单调性校验"
+            fi
+          fi
 
   android:
     name: Android (APK + AAB)
     runs-on: ubuntu-latest
     needs: [check-branch]
-    if: always() && (needs.check-branch.result == 'success' || github.event_name == 'push')
+    if: always() && needs.check-branch.result == 'success'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -132,37 +171,30 @@ jobs:
             echo "No Android signing secrets provided; will use fallback CI keystore in Gradle."
           fi
 
-      - name: Update pubspec.yaml version
-        run: |
-          VERSION='${{ steps.meta.outputs.tag_name }}'
-          echo "Updating pubspec.yaml version to: $VERSION"
-          # 备份原始 pubspec.yaml
-          cp pubspec.yaml pubspec.yaml.backup
-          # 更新版本号，保持构建号递增
-          # 从标签中提取版本号（去掉 v 前缀）
-          CLEAN_VERSION=${VERSION#v}
-          # 生成构建号（使用 GitHub run number）
-          BUILD_NUMBER=${{ github.run_number }}
-          # 更新 pubspec.yaml
-          sed -i "s/^version: .*/version: ${CLEAN_VERSION}+${BUILD_NUMBER}/" pubspec.yaml
-          echo "Updated version in pubspec.yaml:"
-          grep "^version:" pubspec.yaml
-
+      # 版本不写回 pubspec.yaml（原 sed 会污染工作区、且 GNU/BSD sed 口径不一致）：
+      # 统一用 --build-name / --build-number 注入本次构建。
       - name: Build APK (release)
         run: |
-          export CI_VERSION='${{ steps.meta.outputs.tag_name }}'
+          VERSION='${{ steps.meta.outputs.tag_name }}'
+          BUILD_NAME="${VERSION#v}"
+          BUILD_NUMBER='${{ github.run_number }}'
+          export CI_VERSION="$VERSION"
           export GIT_COMMIT='${{ github.sha }}'
           export BUILD_TIME='${{ github.run_id }}'
-          echo "Debug: CI_VERSION=$CI_VERSION"
-          echo "Debug: TAG_NAME=${{ steps.meta.outputs.tag_name }}"
+          echo "Build name=$BUILD_NAME build number=$BUILD_NUMBER"
           flutter build apk --release --flavor prod \
+            --build-name="$BUILD_NAME" \
+            --build-number="$BUILD_NUMBER" \
             --dart-define=CI_VERSION="$CI_VERSION" \
             --dart-define=GIT_COMMIT="$GIT_COMMIT" \
             --dart-define=BUILD_TIME="$BUILD_TIME"
 
       - name: Build App Bundle (AAB)
         run: |
-          export CI_VERSION='${{ steps.meta.outputs.tag_name }}'
+          VERSION='${{ steps.meta.outputs.tag_name }}'
+          BUILD_NAME="${VERSION#v}"
+          BUILD_NUMBER='${{ github.run_number }}'
+          export CI_VERSION="$VERSION"
           export GIT_COMMIT='${{ github.sha }}'
           export BUILD_TIME='${{ github.run_id }}'
 
@@ -188,6 +220,8 @@ jobs:
           MANIFEST_EOF
 
           flutter build appbundle --release --flavor prod \
+            --build-name="$BUILD_NAME" \
+            --build-number="$BUILD_NUMBER" \
             --dart-define=CI_VERSION="$CI_VERSION" \
             --dart-define=GIT_COMMIT="$GIT_COMMIT" \
             --dart-define=BUILD_TIME="$BUILD_TIME" \
@@ -210,17 +244,19 @@ jobs:
           VERSION="${{ steps.meta.outputs.tag_name }}"
           APK_DIR="build/app/outputs/apk/prod/release"
           # AGP splits.abi 产出 4 个 APK,gradle 内 outputFileName 已经按 ABI 分名:
-          #   - app-prod-release-vX.apk              主分发(arm64-v8a)
+          #   - app-prod-arm64-v8a-release-vX.apk    主分发(arm64-v8a)
           #   - app-prod-armeabi-v7a-release-vX.apk  armv7 老设备兼容
           #   - app-prod-x86_64-release-vX.apk       Intel/Win/Linux 模拟器
           #   - app-prod-universal-release-vX.apk    三 ABI 兜底
-          # 全部重命名成 piggycount-<VERSION>-[<abi>].apk 上 Release。
+          # 全部重命名成 piggycount-<VERSION>-<abi>.apk 上 Release。
+          # 注意:arm64-v8a 也显式带 ABI 后缀——历史上它被命名成不带 ABI 的
+          # `piggycount-<VERSION>.apk`,导致 Release 页上"找不到 v8a 包"。
           for src in "$APK_DIR"/app-prod-*.apk; do
             [ -f "$src" ] || continue
             name="$(basename "$src")"
             case "$name" in
-              app-prod-release-v*.apk)
-                dest="$APK_DIR/piggycount-${VERSION}.apk"
+              app-prod-arm64-v8a-release-v*.apk)
+                dest="$APK_DIR/piggycount-${VERSION}-arm64-v8a.apk"
                 ;;
               app-prod-armeabi-v7a-release-v*.apk)
                 dest="$APK_DIR/piggycount-${VERSION}-armeabi-v7a.apk"
@@ -295,7 +331,10 @@ jobs:
           # 配置
           PACKAGE_NAME = 'com.wait.piggycount'
           AAB_FILE = sys.argv[1]
-          TRACK = 'production'  # internal, alpha, beta, production
+          # 轨道：打 tag 只推到 internal（内部测试），生产发布需在 Play Console 手动提升。
+          # 不要再改回 'production'——tag 触发即直推生产，无人工复核窗口。
+          # 可选值：internal / alpha / beta / production
+          TRACK = 'internal'
 
           # 认证
           credentials = service_account.Credentials.from_service_account_file(
@@ -351,13 +390,14 @@ jobs:
           # 清理
           rm -f /tmp/service-account.json /tmp/upload_to_play.py
 
-          echo "✅ Successfully uploaded to Google Play Console (alpha track)!"
+          echo "✅ Successfully uploaded to Google Play Console (internal track)!"
+          echo "⚠️  已上传到 internal 轨道，生产发布需在 Play Console 手动提升。"
 
   ios:
     name: iOS (app.zip + unsigned .ipa)
     runs-on: macos-latest
     needs: [check-branch]
-    if: always() && (needs.check-branch.result == 'success' || github.event_name == 'push')
+    if: always() && needs.check-branch.result == 'success'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -427,22 +467,8 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
-      - name: Update pubspec.yaml version (iOS)
-        run: |
-          VERSION='${{ steps.meta.outputs.tag_name }}'
-          echo "Updating pubspec.yaml version to: $VERSION"
-          # 备份原始 pubspec.yaml
-          cp pubspec.yaml pubspec.yaml.backup
-          # 更新版本号，保持构建号递增
-          # 从标签中提取版本号（去掉 v 前缀）
-          CLEAN_VERSION=${VERSION#v}
-          # 生成构建号（使用 GitHub run number）
-          BUILD_NUMBER=${{ github.run_number }}
-          # 更新 pubspec.yaml
-          sed -i "" "s/^version: .*/version: ${CLEAN_VERSION}+${BUILD_NUMBER}/" pubspec.yaml
-          echo "Updated version in pubspec.yaml:"
-          grep "^version:" pubspec.yaml
-
+      # 版本不写回 pubspec.yaml（原 sed -i "" 是 BSD sed 口径，与 Android job 的
+      # GNU sed 不一致）：统一用 --build-name / --build-number 注入本次构建。
       - name: Setup iOS signing (optional)
         env:
           IOS_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12 }}
@@ -551,10 +577,13 @@ jobs:
 
       - name: Build iOS (no codesign)
         run: |
-          export CI_VERSION='${{ steps.meta.outputs.tag_name }}'
+          VERSION='${{ steps.meta.outputs.tag_name }}'
+          export CI_VERSION="$VERSION"
           export GIT_COMMIT='${{ github.sha }}'
           export BUILD_TIME='${{ github.run_id }}'
           flutter build ios --release --no-codesign \
+            --build-name="${VERSION#v}" \
+            --build-number='${{ github.run_number }}' \
             --dart-define=CI_VERSION="$CI_VERSION" \
             --dart-define=GIT_COMMIT="$GIT_COMMIT" \
             --dart-define=BUILD_TIME="$BUILD_TIME"
@@ -586,7 +615,7 @@ jobs:
           # 使用perl进行精确匹配和插入
           perl -i -pe '
             # Widget Extension: 在其Bundle ID行前插入Profile配置
-            if (/^\s+PRODUCT_BUNDLE_IDENTIFIER = com\.tntlikely\.piggycount\.PiggyCountWidgetExtension;/) {
+            if (/^\s+PRODUCT_BUNDLE_IDENTIFIER = com\.wait\.piggycount\.PiggyCountWidgetExtension;/) {
               print "\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = \"PiggyCount_Widget_AppStore\";\n";
             }
             # 主应用: 主应用使用变量形式的Bundle ID,通过CODE_SIGN_ENTITLEMENTS识别
@@ -684,10 +713,13 @@ jobs:
 
       - name: Build iOS (debug simulator, unsigned)
         run: |
-          export CI_VERSION='${{ steps.meta.outputs.tag_name }}'
+          VERSION='${{ steps.meta.outputs.tag_name }}'
+          export CI_VERSION="$VERSION"
           export GIT_COMMIT='${{ github.sha }}'
           export BUILD_TIME='${{ github.run_id }}'
           flutter build ios --debug --simulator \
+            --build-name="${VERSION#v}" \
+            --build-number='${{ github.run_number }}' \
             --dart-define=CI_VERSION="$CI_VERSION" \
             --dart-define=GIT_COMMIT="$GIT_COMMIT" \
             --dart-define=BUILD_TIME="$BUILD_TIME"
@@ -770,7 +802,7 @@ jobs:
       - check-branch
       - android
       - ios
-    if: always() && (needs.check-branch.result == 'success' || github.event_name == 'push') && needs.android.result == 'success' && needs.ios.result == 'success'
+    if: always() && needs.check-branch.result == 'success' && needs.android.result == 'success' && needs.ios.result == 'success'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

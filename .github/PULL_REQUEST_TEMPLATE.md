@@ -11,7 +11,7 @@
 - [ ] `flutter analyze` 无新增告警 / no new warnings
 - [ ] `flutter test` 通过 / tests pass
 - [ ] 已实机运行验证；UI 变更已附截图 / verified on a real device; screenshots attached for UI changes
-- [ ] 涉及文案变更：已更新 `lib/l10n/*.arb` 并用 Flutter 3.27.3 运行 `flutter gen-l10n` / for copy changes: arb files updated and `flutter gen-l10n` run with Flutter 3.27.3
+- [ ] 涉及文案变更：已更新 `lib/l10n/*.arb` 并运行 `flutter gen-l10n`（Flutter 版本以 `pubspec.yaml#environment.flutter` 为唯一来源）/ for copy changes: arb files updated and `flutter gen-l10n` run (Flutter version per `pubspec.yaml#environment.flutter`)
 
 ## 贡献者许可条款 / Contributor License Terms
 

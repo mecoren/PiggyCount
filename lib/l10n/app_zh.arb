@@ -4,7 +4,6 @@
   "aiConsentBody": "AI 功能需将相关数据发送给你所配置的第三方 AI 服务商进行处理:\n\n• 发送给谁:默认「智谱 GLM」(open.bigmodel.cn,由智谱华章运营);若你自行配置了其它第三方 AI 服务商,则发送给你填写的服务商。\n• 发送什么:你主动用于识别/对话的内容 —— 账单图片、语音录音、你输入的文字,以及为完成识别/分析所需的分类名称、账户名称和相关交易记录。\n• 用途:仅用于账单识别、记账与你发起的对话分析;小猪记账自身不收集、不存储这些数据。\n\n数据由该第三方服务商按其隐私政策处理。开启即表示你同意上述数据共享。",
   "aiConsentAgree": "同意并开启",
   "aboutPrivacyPolicy": "隐私政策",
-  "aboutChangelog": "更新日志",
   "appTitle": "小猪记账",
   "tabHome": "明细",
   "tabInsights": "洞察",
@@ -801,11 +800,10 @@
   "mineDisplayScale": "显示缩放",
   "mineDisplayScaleSubtitle": "调整文字和界面元素大小",
   "mineCheckUpdate": "检测更新",
-  "mineHelp": "使用帮助",
   "helpCenterOpenInBrowser": "在浏览器中打开",
   "helpCenterLoadFailed": "加载失败，请检查网络",
   "helpCenterRetry": "重试",
-  "mineHelpSubtitle": "查看使用文档和常见问题",
+
   "categoryEditTitle": "编辑分类",
   "categoryNewTitle": "新建分类",
   "categoryDetailTooltip": "分类详情",
@@ -1191,8 +1189,7 @@
   "authEmail": "邮箱",
   "authPassword": "密码",
   "authInvalidEmail": "请输入有效的邮箱地址",
-  "authNoAccountYet": "还没有账号？",
-  "authViewRegisterGuide": "查看注册指引",
+
   "authErrorInvalidCredentials": "邮箱或密码不正确。",
   "authErrorEmailNotConfirmed": "邮箱未验证，请先到邮箱完成验证再登录。",
   "authErrorRateLimit": "操作过于频繁，请稍后再试。",
@@ -1998,13 +1995,11 @@
   "appearanceSettingsDesc": "主题、字体、语言、应用锁等",
   "appearanceSettingsPageTitle": "个性化设置",
   "about": "关于",
-  "aboutDesc": "版本信息、帮助与反馈",
+  "aboutDesc": "版本信息",
   "aboutPageTitle": "关于",
   "mineRateApp": "给应用评分",
   "mineRateAppSubtitle": "在App Store上为我们打分",
   "aboutPageLoadingVersion": "加载版本号中...",
-  "aboutSupportDevelopment": "支持开发",
-  "aboutSupportDevelopmentSubtitle": "请开发者喝杯咖啡",
   "aboutDeveloperStoryTitle": "开发者的话",
   "aboutDeveloperStory": "从 2015 年实习起，我坚持记账至今已超过十年。因为担心记账软件的广告、付费、隐私泄露和停运跑路，我决定自己做一个——最初只是给自己和家人用的小工具。\n\n2025 年 9 月，小猪记账发布了第一个版本。说实话，那时候心里没什么底，不知道会不会有人用。但慢慢地，开始收到用户的反馈——有人说终于找到了一款干净的记账软件，有人提了很好的建议，也有人默默给了五星好评。每一条反馈都让我觉得，这件事值得继续做下去。\n\n小猪记账没有广告、没有会员、完全免费开源。你的每一笔数据都只存在你自己的手机里，不会被上传到任何第三方服务器。但上架和维护一款 App 并非零成本——开发者账号、服务器等开支目前靠社区捐赠勉强支撑，每一次适配新系统、修复 Bug、开发新功能，也都是工作之余一点点完成的。\n\n如果你觉得小猪记账对你有帮助，一个好评、一次分享或一笔捐赠，都能让这个小项目走得更远。谢谢你的信任。",
   "aboutPiggyAssets": "小猪家当 PiggyAssets",
@@ -2411,22 +2406,6 @@
   "billCardUndo": "撤销",
   "billCardEdit": "修改",
   "billCardUnknownLedger": "未知账本",
-  "donationTitle": "捐赠",
-  "donationSubtitle": "请我喝杯咖啡",
-  "donationEntrySubtitle": "支持应用持续开发",
-  "donationDescription": "说明",
-  "donationDescriptionDetail": "感谢您使用小猪记账！如果这个应用对您有帮助，欢迎请开发者喝杯咖啡作为鼓励。您的支持是我持续改进的动力。",
-  "donationNoFeatures": "注: 打赏不会解锁任何功能，所有功能继续完全免费。",
-  "donationNoProducts": "暂无可用商品",
-  "donationThankYouTitle": "感谢支持！",
-  "donationThankYouMessage": "感谢您购买 {productName}！您的支持对我意义重大，我会继续努力改进小猪记账，让它变得更好用！",
-  "@donationThankYouMessage": {
-    "placeholders": {
-      "productName": {
-        "type": "String"
-      }
-    }
-  },
   "aiPromptEditTitle": "提示词编辑",
   "aiPromptEditSubtitle": "自定义AI账单识别提示词",
   "aiPromptAdvancedSettings": "高级设置",

@@ -450,7 +450,6 @@ class Transactions extends Table {
 1. **三种合法形态**
 
    - **页面级**：`State` 持有订阅，`dispose()` 中 `cancel()`
-     （范例：`donation_page.dart`）
    - **Provider 级**：`ref.onDispose(() => sub?.cancel())`
      （范例：`sync_providers.dart` 的 txTableSub）
    - **Repository 桥接流**：`StreamController` 的 `onListen` 中订阅、
@@ -463,7 +462,6 @@ class Transactions extends Table {
    |------|----|------|
    | `main.dart` `_setupUrlListener` | `appLinks.uriLinkStream` | 冷启动 + 后台唤起 URL 分发 |
    | `app_link_service.dart` | AppIntents EventChannel | iOS 快捷指令入口 |
-   | `donation_service.dart` | `in_app_purchase.purchaseStream` | 延迟补单可能在页面关闭后送达；单例刻意无 dispose |
 
    全局单例**不得**暴露 `dispose()` 之类的整体释放方法——广播
    `StreamController` close 后无法复用，误调一次即永久致残单例。

@@ -8,7 +8,7 @@ PiggyCount（小猪记账）是开源、隐私可控、**离线优先**的个人
 
 - **中文工作**：对话、commit message、文档、代码注释全部中文。commit 格式 `type(scope): 中文描述`，多批工作常在末尾附日期，如 `fix(sync): 同步一致性 D-1~D-4 修复 + 契约穷举守门测试（2026-09-27）`。
 - **Flutter 版本单一来源**：只改 `pubspec.yaml` 的 `environment.flutter`（当前 `3.44.3`），CI 用 `flutter-version-file: pubspec.yaml` 读取。**禁止**在 `.github/workflows/*.yml` 里另写版本号——历史上 `release.yml` 停留 3.27.3 而 `pubspec.lock` 已要求 >=3.44.0，漂移会让下一次打 tag 发版直接失败。
-- **应用版本单一来源**：真值在 `pubspec.yaml#version`（当前 `0.7.8`）；`release.yml` 在打 tag 时用 tag 名 `sed` 覆盖（`version: <tag>+<build>`），不要手工两处维护。
+- **应用版本单一来源**：真值在 `pubspec.yaml#version`（当前 `0.1.0`），描述**开发主线当前版本**。发版时 `release.yml` 不修改 `pubspec.yaml`，而是把 tag 名经 `--build-name` / `--build-number` 注入构建（`--build-number` 取 `github.run_number`）。因此**发版产物名只跟 tag 走**，与 `pubspec.yaml` 的当前值无关——不要再手工两处维护，也不要用 `sed` 改 `pubspec.yaml`。
 - **分层不可破**：UI 只碰 Provider；Provider 注入 Service / Repository；Service 只调 Repository；Repository 是数据库唯一入口。跨层调用一律 review 拒绝。
 - **写操作必须经 Repository**：任何改库操作都要走 Repository，由其内部经 `ChangeTracker`（`lib/cloud/sync/change_tracker.dart`）写入 `local_changes`。**绕过 Repository 直接写 DB 是严重 bug**——本地变更不会进 `local_changes`，云端同步静默丢数据。
 - **`ChangeTracker` 作用域契约**：调用方只用两个强类型入口——user-global 实体（account / category / tag / exchange_rate_override）走 `recordUserGlobalChange`（自动挂 `ledgerId = 0`），ledger-scoped 实体（transaction / budget / ledger / ledger_snapshot）走 `recordLedgerChange`（必须传 `> 0` 的具体账本 id）。**不要调私有的 `recordChange`**。作用域记错会让变更卡在本地永不推送。云→本地合并路径（apply / restore）必须用 `withRecordingSuppressed` 包裹，否则云端数据会回流成幻影变更。
@@ -36,7 +36,7 @@ PiggyCount（小猪记账）是开源、隐私可控、**离线优先**的个人
 | 加密 | E2EE = AES-256-GCM + Argon2id（`cryptography`，纯 Dart）；密钥存 `flutter_secure_storage`（iOS Keychain / Android Keystore） |
 | 网络 | `dio`（OTA 更新 / 汇率 / AI 调用等复杂 HTTP）+ `http`（轻量场景），自建云后端各用其 provider 子包的客户端 |
 | UI / 媒体 | Material 3、`fl_chart` 图表、`table_calendar`、`reorderable_grid_view`、`webview_flutter`、`flutter_svg` / `jovial_svg`、`image_picker` + `flutter_image_compress` + `image_cropper` |
-| 平台集成 | `home_widget`（桌面小组件）、`flutter_local_notifications` + `timezone`、`quick_actions`、`local_auth`（应用锁）、`app_links`（`piggycount://`）、`permission_handler`、`in_app_purchase` |
+| 平台集成 | `home_widget`（桌面小组件）、`flutter_local_notifications` + `timezone`、`quick_actions`、`local_auth`（应用锁）、`app_links`（`piggycount://`）、`permission_handler` |
 | 导入导出 | `csv`、`excel`、`yaml`、`file_picker`、`archive`、`gbk_codec`（支付宝 / 微信账单） |
 | 测试 | `flutter_test` + `mocktail`（不用 mockito，避免 codegen）+ Drift `NativeDatabase.memory()` |
 | CI | GitHub Actions：`analyze.yml`（analyze 0-issue 门 + test 同步契约门）、`release.yml`（tag 触发多平台构建发布） |
@@ -95,11 +95,11 @@ lib/
   l10n/                  # app_zh.arb（官方）+ app_zh_TW.arb + app_en.arb（模板）+ app_ko.arb（社区）
   models/                # 业务模型
   pages/<module>/        # 业务页面（account/ai/attachment/auth/automation/budget/calendar/category/
-                         #   cloud/currency/data/donation/main/maintenance/report/settings/tag/transaction）
+                         #   cloud/currency/data/main/maintenance/report/settings/tag/transaction）
                          #   页面专用子组件放 pages/<module>/widgets/<page>_<purpose>.dart
   providers/             # Riverpod provider，all_providers.dart 汇总导出
   services/<module>/     # 业务服务（ai/automation/billing/currency/data/export/import/maintenance/
-                         #   marketing/payment/platform/security/system/ui/update）
+                         #   marketing/platform/security/system/ui/update）
   styles/
     tokens.dart          # PiggyTokens / PiggyDimens / PiggyChartTokens / PiggyPosterTokens / PiggyTextTokens
     header_skins.dart    # 顶部皮肤注册表 + 各 *_skin.dart（CustomPainter / SVG）
@@ -145,7 +145,71 @@ python scripts/gen_ios_icons.py
 
 - **Windows 本地跑测试的坑**：依赖 `NativeDatabase.memory()`（drift FFI）的用例需要 `sqlite3.dll` 在 PATH 上（CI 的 ubuntu-latest 自带 libsqlite3）。本地先把 DLL 目录加进 PATH 再 `flutter test`（如 `$env:PATH="D:\DevTools\sqlite3-bin;$env:PATH"`）；纯 mock 用例不需要。**不要**给 `flutter_cloud_sync_s3` 子包加 `meta` 依赖——会引发解析冲突导致 `flutter pub get` 静默失败。
 - **CI**（`.github/workflows/analyze.yml`）两个 job：`analyze`（`flutter analyze --fatal-infos`）+ `test`（`flutter test`，承担同步契约结构性回归门禁：`test/cloud/sync_contract_coverage_test.dart`、`sync_diff_category_and_zero_amount_test.dart`、`restore_preserves_local_only_columns_test.dart`）。issue-lint / pullfrog 为辅助检查。
-- **发版**：`.github/workflows/release.yml` 由 tag 触发（多平台构建 + GitHub Release，tag 名写入 `pubspec.yaml#version` 作为版本真值）；`workflow_dispatch` 手动触发**仅允许从 `wait` 分支**。当前开发主线分支为 `wait`。
+- **发版**：唯一入口 `.github/workflows/release.yml`，当前开发主线分支 `wait`。完整链路、产物命名与踩坑清单见下方「发版流程」章节。
+
+## 发版流程
+
+**唯一入口**：`.github/workflows/release.yml`。
+
+### 触发与守门
+
+| 触发方式 | 条件 | 结果 |
+| --- | --- | --- |
+| 打 tag（推荐） | `git tag vX.Y.Z && git push origin vX.Y.Z`，**tag 必须建在 `wait` 的提交上** | GitHub Release（非 prerelease）+ Play `internal` 轨道 |
+| 手动 `workflow_dispatch` | **仅允许 `wait` 分支**；可指定 tag 名，留空则用 `manual-<short_sha>` | 默认 prerelease；`create_release` 未显式传 `true` 时**不建 Release**，只出 Actions Artifacts |
+
+`check-branch` job 是**全流程守门**（tag / 手动都跑，`android` / `ios` / `release` 均要求它 `success`）：
+
+1. 手动触发校验分支必须是 `wait`；
+2. tag 触发用 `git merge-base --is-ancestor` 校验 tag 提交在 `origin/wait` 上——**任意分支打 tag 不再能发版**（否则会直推 Play / TestFlight）；
+3. 版本单调性：取历史 `v*` tag 中版本最高者，新 tag 版本低于它即拒绝，防止误发低版本。
+
+### 版本注入（不写回 pubspec.yaml）
+
+- **版本真值**：`pubspec.yaml#version`（当前 `0.1.0`）只代表**开发主线当前版本**。
+- **发版版本**：`release.yml` 把 tag 名注入构建，**不改 `pubspec.yaml`**——`--build-name=<tag 去掉 v 前缀>` + `--build-number=github.run_number`，并 `--dart-define=CI_VERSION=<tag>` 供应用内「关于」页与 OTA 检查读取（`lib/pages/settings/about_page.dart`、`lib/services/update/update_checker.dart`，未定义时回退 `PackageInfo`）。
+- **禁止**再用 `sed -i "s/^version: .*//"` 改 `pubspec.yaml`：Android job 是 GNU sed、iOS job 是 BSD sed（`-i ""`），口径不一致且会污染工作区。
+- **产物名只跟 tag 走**：打 `v0.1.0` 得到 `piggycount-v0.1.0-*`，与 `pubspec.yaml` 当前值无关。**Release 页停在旧版本 ≠ 代码没更新，只是没打新 tag**——`v0.1.0` 长期在线而 `pubspec` 已前进就是这种情况。
+
+### 产物命名
+
+Android（`splits.abi` 拆 3 ABI + universal，见 `android/app/build.gradle`）：
+
+| Gradle 内部名 | Release 资产名 | 用途 |
+| --- | --- | --- |
+| `app-prod-arm64-v8a-release-v*.apk` | `piggycount-<VERSION>-arm64-v8a.apk` | 主流真机 / Apple Silicon 模拟器（主分发） |
+| `app-prod-armeabi-v7a-release-v*.apk` | `piggycount-<VERSION>-armeabi-v7a.apk` | 32 位老设备 |
+| `app-prod-x86_64-release-v*.apk` | `piggycount-<VERSION>-x86_64.apk` | Intel / Win / Linux 模拟器 |
+| `app-prod-universal-release-v*.apk` | `piggycount-<VERSION>-universal.apk` | 三 ABI 兜底 |
+| `app-prod-release.aab` | `piggycount-<VERSION>.aab` | Google Play（按设备分发 ABI） |
+
+- **四个 APK 必须都带 ABI 后缀**：历史上 arm64-v8a 被命名成不带 ABI 的 `piggycount-<VERSION>.apk`，Release 页上看起来「没有 v8a 包」——已修正为显式 `-arm64-v8a`（这会改变主分发的下载文件名，属对外可感知变更）。
+- **AAB 绝不能开 `splits.abi`**：`build.gradle` 已按 task name 动态判定（含 `bundle` 时关 splits），否则 R8 同次 minify 产出 4 份 shrunk-resources，AGP 报 "Multiple shrunk-resources files found"。
+- iOS：`piggycount-<VERSION>-{signed,unsigned}.ipa`、`-iphoneos.app.zip`、`-iphonesimulator.app.zip`。
+
+### 上传目标
+
+| 目标 | 条件 | 备注 |
+| --- | --- | --- |
+| Google Play | 配了 `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | 只推 **`internal` 轨道**，生产发布在 Play Console 手动提升。**不要改回 `production`**——tag 触发即直推生产，无人工复核 |
+| TestFlight | 配了 `APPLE_ID` + `APPLE_APP_SPECIFIC_PASSWORD` + iOS 签名 secrets | 未配置则跳过 |
+| Telegram | 配了 `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` | 可选通知 |
+
+secret 缺失时对应步骤**跳过而非失败**（`exit 0`），构建产物仍在 Actions Artifacts 里。
+
+### 发版检查清单
+
+1. `wait` 分支上 `dart format .`（无修改）→ `flutter analyze --fatal-infos`（0 issue）→ `flutter test` 全绿。
+2. 如需调整版本真值，只改 `pubspec.yaml#version` 一处。
+3. 打 tag：`git tag vX.Y.Z && git push origin vX.Y.Z`（必须在 `wait` 上，且版本高于历史 `v*` tag）。
+4. 等 `check-branch` → `android` / `ios` → `release` 全绿；**动过 iOS 签名必须实跑回归**。
+5. Release 页核对资产：4 个 APK（含 `-arm64-v8a`）+ AAB + iOS 四件套齐全。
+
+### 已知坑
+
+- **iOS widget 签名靠 bundle id 精确匹配**：`Configure Xcode project for signing` 用 perl 按 `PRODUCT_BUNDLE_IDENTIFIER` 匹配后插入 `PROVISIONING_PROFILE_SPECIFIER`。工程里的值是 `com.wait.piggycount.PiggyCountWidgetExtension`，脚本一度写成 `com.tntlikely.piggycount...`，**匹配不上 → Widget 扩展签名配置根本没插入**。改 iOS bundle id 时，必须同步改 release.yml 的正则与 `ios/ExportOptions.plist` 的 `provisioningProfiles` 键。
+- **`docoments/13-build-release.md` 的产物表**随本流程一起维护，改命名规则时同步更新，否则又成新的漂移源。
+- **其余历史文档里的旧版本号不要照抄**：`docoments/01`、`03`、`16`、`17`、`prd/*`、`docs/optimization-plan-*` 仍写着 `Flutter 3.27.3` / `version: 0.0.1` 等旧值（成于 2026-07，属历史留存，**刻意不改**）。版本相关一律以 `pubspec.yaml` + 本文件 + 代码为准；`test/`、`docs/synctest/` 下的测试报告记录的是**当时实测版本**，更不得回改。
 
 ## 数据模型与迁移
 

@@ -450,7 +450,7 @@ that are not cancelled stack up as leaks when routes are re-entered.
 1. **Three legitimate forms**
 
    - **Page-level**: the `State` holds the subscription and cancels it in
-     `dispose()` (example: `donation_page.dart`)
+     `dispose()`
    - **Provider-level**: `ref.onDispose(() => sub?.cancel())`
      (example: `txTableSub` in `sync_providers.dart`)
    - **Repository bridge streams**: subscribe in the `StreamController`'s
@@ -464,7 +464,6 @@ that are not cancelled stack up as leaks when routes are re-entered.
    |----------|--------|--------|
    | `main.dart` `_setupUrlListener` | `appLinks.uriLinkStream` | Cold-start + background URL dispatch |
    | `app_link_service.dart` | AppIntents EventChannel | iOS Shortcuts entry |
-   | `donation_service.dart` | `in_app_purchase.purchaseStream` | Deferred purchases may arrive after the page is closed; the singleton intentionally has no dispose |
 
    Global singletons must **not** expose a whole-instance `dispose()` — a
    broadcast `StreamController` cannot be reused after close, and one stray

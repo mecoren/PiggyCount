@@ -7,8 +7,6 @@ import '../../widgets/ui/ui.dart';
 import '../../styles/tokens.dart';
 import '../../services/system/logger_service.dart';
 import '../../l10n/app_localizations.dart';
-import '../../utils/website_urls.dart';
-import '../settings/help_center_page.dart';
 
 class AuthPage extends ConsumerStatefulWidget {
   const AuthPage({super.key});
@@ -141,42 +139,11 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     return AppLocalizations.of(context).authErrorLoginFailed;
   }
 
-  /// 按当前云后端选注册指引文档的 topic:Supabase 跳自己的配置文档,
-  /// 其它(含加载中)兜底到云同步概览。
-  static String _registerDocTopic(CloudBackendType? type) {
-    switch (type) {
-      case CloudBackendType.supabase:
-        return 'supabase';
-      default:
-        return 'overview';
-    }
-  }
-
-  static String _hex(Color c) => [c.r, c.g, c.b]
-      .map((v) => ((v * 255).round() & 0xff).toRadixString(16).padLeft(2, '0'))
-      .join();
-
-  /// 打开「注册指引」:按当前云后端拼 embed 文档 URL,复用帮助中心内嵌 WebView
-  /// 打开(隐藏外链、跟随暗黑与主题色、域名白名单、离线兜底)。
-  void _openRegisterGuide() {
-    final type = ref.read(activeCloudConfigProvider).value?.type;
-    final url = WebsiteUrls.docsCloudSyncEmbed(
-      _registerDocTopic(type),
-      Localizations.localeOf(context),
-      dark: PiggyTokens.isDark(context),
-      primaryHex: _hex(ref.read(primaryColorProvider)),
-    );
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => HelpCenterPage(initialUrl: url)),
-    );
-  }
-
   // 恢复流程改为登录后回到“我的”页由其触发，不再在登录页内执行
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final primary = ref.watch(primaryColorProvider);
     final radius = BorderRadius.circular(PiggyDimens.radiusLg);
 
     // 检测云服务类型
@@ -447,38 +414,6 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                                         )
                                       : Text(AppLocalizations.of(context).authLogin),
                                 ),
-                        ),
-                        const SizedBox(height: 16),
-                        Center(
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: _openRegisterGuide,
-                            child: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 4),
-                              child: Text.rich(
-                                TextSpan(children: [
-                                  TextSpan(
-                                    text: AppLocalizations.of(context)
-                                        .authNoAccountYet,
-                                    style:
-                                        theme.textTheme.bodyMedium?.copyWith(
-                                      color: PiggyTokens.textSecondary(context),
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: AppLocalizations.of(context)
-                                        .authViewRegisterGuide,
-                                    style:
-                                        theme.textTheme.bodyMedium?.copyWith(
-                                      color: primary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ]),
-                              ),
-                            ),
-                          ),
                         ),
                       ],
                     ),

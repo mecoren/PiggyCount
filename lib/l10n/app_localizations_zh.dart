@@ -22,9 +22,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aboutPrivacyPolicy => '隐私政策';
 
   @override
-  String get aboutChangelog => '更新日志';
-
-  @override
   String get appTitle => '小猪记账';
 
   @override
@@ -2266,9 +2263,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mineCheckUpdate => '检测更新';
 
   @override
-  String get mineHelp => '使用帮助';
-
-  @override
   String get helpCenterOpenInBrowser => '在浏览器中打开';
 
   @override
@@ -2276,9 +2270,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get helpCenterRetry => '重试';
-
-  @override
-  String get mineHelpSubtitle => '查看使用文档和常见问题';
 
   @override
   String get categoryEditTitle => '编辑分类';
@@ -3209,12 +3200,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get authInvalidEmail => '请输入有效的邮箱地址';
-
-  @override
-  String get authNoAccountYet => '还没有账号？';
-
-  @override
-  String get authViewRegisterGuide => '查看注册指引';
 
   @override
   String get authErrorInvalidCredentials => '邮箱或密码不正确。';
@@ -4975,7 +4960,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get about => '关于';
 
   @override
-  String get aboutDesc => '版本信息、帮助与反馈';
+  String get aboutDesc => '版本信息';
 
   @override
   String get mineRateApp => '给应用评分';
@@ -4988,12 +4973,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get aboutPageLoadingVersion => '加载版本号中...';
-
-  @override
-  String get aboutSupportDevelopment => '支持开发';
-
-  @override
-  String get aboutSupportDevelopmentSubtitle => '请开发者喝杯咖啡';
 
   @override
   String get aboutDeveloperStoryTitle => '开发者的话';
@@ -5566,36 +5545,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get billCardEdit => '修改';
-
-  @override
-  String get donationTitle => '捐赠';
-
-  @override
-  String get donationSubtitle => '请我喝杯咖啡';
-
-  @override
-  String get donationEntrySubtitle => '支持应用持续开发';
-
-  @override
-  String get donationDescription => '说明';
-
-  @override
-  String get donationDescriptionDetail =>
-      '感谢您使用小猪记账！如果这个应用对您有帮助，欢迎请开发者喝杯咖啡作为鼓励。您的支持是我持续改进的动力。';
-
-  @override
-  String get donationNoFeatures => '注: 打赏不会解锁任何功能，所有功能继续完全免费。';
-
-  @override
-  String get donationNoProducts => '暂无可用商品';
-
-  @override
-  String get donationThankYouTitle => '感谢支持！';
-
-  @override
-  String donationThankYouMessage(String productName) {
-    return '感谢您购买 $productName！您的支持对我意义重大，我会继续努力改进小猪记账，让它变得更好用！';
-  }
 
   @override
   String get aiQuickCommandFinancialHealthTitle => '财务健康分析';
@@ -8232,9 +8181,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get aboutPrivacyPolicy => '隱私政策';
 
   @override
-  String get aboutChangelog => '更新日誌';
-
-  @override
   String get appTitle => '小豬記帳';
 
   @override
@@ -10476,9 +10422,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get mineCheckUpdate => '檢測更新';
 
   @override
-  String get mineHelp => '使用說明';
-
-  @override
   String get helpCenterOpenInBrowser => '在瀏覽器中開啟';
 
   @override
@@ -10486,9 +10429,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get helpCenterRetry => '重試';
-
-  @override
-  String get mineHelpSubtitle => '查看使用文件和常見問題';
 
   @override
   String get categoryEditTitle => '編輯分類';
@@ -11419,12 +11359,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get authInvalidEmail => '請輸入有效的電子郵件地址';
-
-  @override
-  String get authNoAccountYet => '還沒有帳號？';
-
-  @override
-  String get authViewRegisterGuide => '查看註冊指引';
 
   @override
   String get authErrorInvalidCredentials => '電子郵件或密碼不正確。';
@@ -13185,7 +13119,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get about => '關於';
 
   @override
-  String get aboutDesc => '版本資訊、說明與回饋';
+  String get aboutDesc => '版本資訊';
 
   @override
   String get mineRateApp => '給應用評分';
@@ -13198,12 +13132,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get aboutPageLoadingVersion => '載入版本號中...';
-
-  @override
-  String get aboutSupportDevelopment => '支持開發';
-
-  @override
-  String get aboutSupportDevelopmentSubtitle => '請開發者喝杯咖啡';
 
   @override
   String get aboutDeveloperStoryTitle => '開發者的話';
@@ -13776,36 +13704,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get billCardEdit => '修改';
-
-  @override
-  String get donationTitle => '捐贈';
-
-  @override
-  String get donationSubtitle => '請我喝杯咖啡';
-
-  @override
-  String get donationEntrySubtitle => '支持應用持續開發';
-
-  @override
-  String get donationDescription => '說明';
-
-  @override
-  String get donationDescriptionDetail =>
-      '感謝您使用小豬記帳！如果這個應用對您有幫助，歡迎請開發者喝杯咖啡作為鼓勵。您的支持是我持續改進的動力。';
-
-  @override
-  String get donationNoFeatures => '注：打賞不會解鎖任何功能，所有功能繼續完全免費。';
-
-  @override
-  String get donationNoProducts => '暫無可用商品';
-
-  @override
-  String get donationThankYouTitle => '感謝支持！';
-
-  @override
-  String donationThankYouMessage(String productName) {
-    return '感謝您購買 $productName！您的支持對我意義重大，我會繼續努力改進小豬記帳，讓它變得更好用！';
-  }
 
   @override
   String get aiQuickCommandFinancialHealthTitle => '財務健康分析';

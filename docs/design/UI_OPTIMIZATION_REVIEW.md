@@ -177,7 +177,6 @@ lib/pages/transaction/recurring_transaction_edit_page.dart
 lib/pages/currency/exchange_rate_page.dart
 lib/pages/transaction/category_detail_page.dart
 lib/pages/cloud/piggycount_cloud_sync_page.dart
-lib/pages/donation/donation_page.dart
 lib/pages/cloud/member_stats_page.dart
 lib/pages/cloud/encryption_settings_page.dart
 lib/pages/category/icon_picker_page.dart
@@ -193,7 +192,6 @@ lib/pages/category/manage_page.dart
 lib/pages/cloud/cloud_service_page.dart
 lib/pages/cloud/invite_page.dart
 lib/pages/main/analytics_page.dart
-lib/pages/settings/help_center_page.dart
 lib/pages/settings/storage_management_page.dart
 lib/pages/category/migration_page.dart
 lib/pages/tag/manage_page.dart

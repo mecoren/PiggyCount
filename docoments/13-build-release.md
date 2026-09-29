@@ -4,6 +4,8 @@
 > 最后更新：2026-07-25
 > 作者：wait
 > 信息源：项目源码（d:\DevTools\project\PiggyCount）+ CI 配置文件
+>
+> ⚠️ **本文档为 2026-07 历史留存**：发版流程的**唯一真相源**是仓库根目录 `AGENTS.md` 的「发版流程」章节。下文若与代码 / `AGENTS.md` 冲突，一律以后两者为准。本轮已同步修正：产物命名、版本注入方式、Google Play 轨道。
 
 ---
 
@@ -63,10 +65,10 @@ flowchart TB
     subgraph Android 构建
         C1 --> A1[Checkout + fetch-tags]
         A1 --> A2[Java 17 + Android SDK<br/>build-tools 35.0.0]
-        A2 --> A3[Flutter 3.27.3 setup]
+        A2 --> A3[Flutter setup<br/>版本见 pubspec.yaml]
         A3 --> A4[pub get]
         A4 --> A5[签名注入<br/>从 secrets 写 keystore]
-        A5 --> A6[pubspec 版本注入<br/>sed 替换]
+        A5 --> A6[版本注入<br/>--build-name]
         A6 --> A7[构建 APK<br/>flutter build apk --release --flavor prod]
         A7 --> A8[构建 AAB<br/>flutter build appbundle<br/>+ 动态 prod/AndroidManifest.xml]
         A8 --> A9[重命名产物<br/>piggycount-VERSION-ABI.apk]
@@ -78,7 +80,7 @@ flowchart TB
         C1 --> I1[Checkout]
         I1 --> I2[选择最新 Xcode]
         I2 --> I3[Flutter setup + pub-cache]
-        I3 --> I4[pubspec 版本注入<br/>BSD sed]
+        I3 --> I4[版本注入<br/>--build-name]
         I4 --> I5[iOS 签名<br/>p12 + provisioning profile]
         I5 --> I6[flutter build ios --release --no-codesign]
         I6 --> I7[修改 project.pbxproj<br/>Manual signing]
@@ -120,9 +122,9 @@ flowchart TB
 **实现位置**：[pubspec.yaml](file:///d:/DevTools/project/PiggyCount/pubspec.yaml)
 
 - **应用名**：`piggycount`（第 1 行）
-- **初始版本**：`version: 0.0.1`（第 4 行，CI 构建时会通过 `sed` 覆盖为 tag + run_number）
+- **初始版本**：`version: 0.1.0`（第 4 行，代表开发主线版本；发版时由 tag 经 `--build-name` 注入，**不写回本字段**）
 - **Dart SDK**：`^3.6.0`（第 7 行）
-- **关键依赖**：drift、supabase_flutter、flutter_riverpod、in_app_purchase、flutter_local_notifications、home_widget、webview_flutter、local_auth、record 等
+- **关键依赖**：drift、supabase_flutter、flutter_riverpod、flutter_local_notifications、home_widget、webview_flutter、local_auth、record 等
 - **本地路径包**：`flutter_ai_kit`、`flutter_cloud_sync` 及其各后端实现
 - **dev_dependencies**：build_runner、drift_dev、flutter_launcher_icons、mocktail、integration_test
 - **dependency_overrides**：
@@ -334,11 +336,15 @@ PRODUCT_BUNDLE_IDENTIFIER=com.wait.piggycount
 **触发**：tag push (`*`) 或 workflow_dispatch（手动，可选 tag_name、release_name、prerelease、create_release 输入）
 **并发**：`cancel-in-progress: true`
 **权限**：`contents: write`
-**Flutter 版本**：`3.27.3`
+**Flutter 版本**：以 `pubspec.yaml#environment.flutter` 为唯一来源（当前 `3.44.3`，CI 经 `flutter-version-file` 读取）
 
 #### 5.1.1 Job 1：check-branch
 
-手动触发时校验当前分支必须是 main。
+`check-branch` 是**全流程守门**（tag / 手动都跑，下游 job 均要求它 `success`）：
+
+1. 手动触发：校验当前分支必须是 `wait`；
+2. tag 触发：用 `git merge-base --is-ancestor` 校验 tag 所在提交在 `origin/wait` 上（任意分支打 tag 不再能发版）；
+3. 版本单调性：新 tag 版本低于历史 `v*` tag 中最高者时拒绝发版。
 
 #### 5.1.2 Job 2：android
 
@@ -347,7 +353,7 @@ PRODUCT_BUNDLE_IDENTIFIER=com.wait.piggycount
 3. Java 17 (Zulu) + Android SDK + build-tools 35.0.0 + platforms android-35/36
 4. Flutter setup + pub get
 5. **签名注入**（第 109-130 行）：从 secrets 写入 `android/app/ci-release.keystore` 和 `android/key.properties`
-6. **pubspec 版本注入**（第 132-146 行）：`sed -i "s/^version: .*/version: ${CLEAN_VERSION}+${BUILD_NUMBER}/" pubspec.yaml`
+6. **版本注入**：由 build 步骤的 `--build-name` / `--build-number` 完成（不再写回 pubspec.yaml）
 7. **构建 APK**（第 148-158 行）：`flutter build apk --release --flavor prod` + 三个 dart-define
 8. **构建 AAB**（第 160-194 行）—— 关键技术细节：
    - 动态生成 `android/app/src/prod/AndroidManifest.xml`，通过 `tools:node="remove"` 移除以下权限：
@@ -364,7 +370,7 @@ PRODUCT_BUNDLE_IDENTIFIER=com.wait.piggycount
 1. Checkout + 元数据（同 Android）
 2. **选择最新 Xcode**：`ls -d /Applications/Xcode*.app | sort -V | tail -1` + `sudo xcode-select -s`
 3. Flutter setup + pub-cache 缓存
-4. pubspec 版本注入（macOS sed 用 `sed -i ""`）
+4. 版本注入（build 步骤的 `--build-name` / `--build-number`，不写回 pubspec.yaml）
 5. **iOS 签名**（第 442-546 行）
 6. **flutter build ios --release --no-codesign**（第 548-556 行）
 7. **动态修改 project.pbxproj 配置手动签名**（第 558-594 行）：sed 改 CODE_SIGN_STYLE 为 Manual、CODE_SIGN_IDENTITY 为 Apple Distribution，perl 注入 DEVELOPMENT_TEAM 和 PROVISIONING_PROFILE_SPECIFIER
@@ -502,24 +508,27 @@ CI 构建 AAB 前动态写入 `android/app/src/prod/AndroidManifest.xml`，用 `
 **实现位置**：[pubspec.yaml 第 4 行](file:///d:/DevTools/project/PiggyCount/pubspec.yaml)
 
 ```yaml
-version: 0.0.1
+version: 0.1.0
 ```
 
-仓库中固定为 `0.0.1`，仅作为本地开发占位。
+该值代表**开发主线当前版本**。发版时**不修改它**——真实发布版本由 git tag 注入（见 8.2）。因此 GitHub Release 页上的版本号可能落后于本字段（那只是「没打新 tag」，不是代码没更新）。
 
-### 8.2 CI 自动更新版本号策略
+### 8.2 发版版本注入策略
 
-**实现位置**：[release.yml 第 132-146 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)（Android）、第 427-440 行（iOS）
+**实现位置**：[release.yml](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)（Android 与 iOS 两个 job 的 build 步骤）
 
 ```bash
-CLEAN_VERSION=${VERSION#v}              # 去掉 tag 前缀 v
-BUILD_NUMBER=${{ github.run_number }}   # GitHub Actions 运行编号
-sed -i "s/^version: .*/version: ${CLEAN_VERSION}+${BUILD_NUMBER}/" pubspec.yaml
+BUILD_NAME="${VERSION#v}"                 # 去掉 tag 前缀 v
+BUILD_NUMBER='${{ github.run_number }}'   # GitHub Actions 运行编号
+flutter build apk --release --flavor prod \
+  --build-name="$BUILD_NAME" \
+  --build-number="$BUILD_NUMBER" \
+  --dart-define=CI_VERSION="$VERSION"
 ```
 
-- tag `v3.2.1` + run_number `42` → `version: 3.2.1+42`
-- iOS 用 `sed -i ""`（BSD sed 语法）
-- 构建前 `cp pubspec.yaml pubspec.yaml.backup` 备份
+- tag `v0.1.0` + run_number `42` → versionName `0.1.0`、versionCode `42`
+- 同时 `--dart-define=CI_VERSION` 供应用内「关于」页与 OTA 检查读取
+- **不再写回 pubspec.yaml**：历史上的 `sed -i "s/^version: .*/…"` 已移除——Android 用 GNU sed、iOS 用 BSD `sed -i ""`，两者口径不一致且会污染工作区
 
 ### 8.3 构建号
 
@@ -620,10 +629,12 @@ printf '%s\n' \
 
 | Gradle 内部名 | 重命名为 | 说明 |
 |--------------|---------|------|
-| `app-prod-release-v<ver>(<code>).apk` | `piggycount-<VERSION>.apk` | arm64-v8a 主分发 |
+| `app-prod-arm64-v8a-release-v<ver>(<code>).apk` | `piggycount-<VERSION>-arm64-v8a.apk` | arm64-v8a 主分发 |
 | `app-prod-armeabi-v7a-release-v<ver>(<code>).apk` | `piggycount-<VERSION>-armeabi-v7a.apk` | armv7 老设备 |
 | `app-prod-x86_64-release-v<ver>(<code>).apk` | `piggycount-<VERSION>-x86_64.apk` | Intel/模拟器 |
 | `app-prod-universal-release-v<ver>(<code>).apk` | `piggycount-<VERSION>-universal.apk` | 三 ABI 兜底 |
+
+> 四个 APK **全部显式带 ABI 后缀**。历史上 arm64-v8a 曾被命名为不带 ABI 的 `piggycount-<VERSION>.apk`，导致 Release 页上看起来「没有 v8a 包」，已修正。
 
 ### 10.2 AAB 命名
 
@@ -658,12 +669,12 @@ printf '%s\n' \
    - `service_account.Credentials.from_service_account_file('/tmp/service-account.json', scopes=['https://www.googleapis.com/auth/androidpublisher'])`
    - `service.edits().insert(...)` 创建编辑
    - `service.edits().bundles().upload(...)` 上传 AAB（MediaFileUpload resumable=True）
-   - `service.edits().tracks().update(track='production', body={'releases': [{'versionCodes': [version_code], 'status': 'completed'}]})` 分配到 production track
+   - `service.edits().tracks().update(track='internal', body={'releases': [{'versionCodes': [version_code], 'status': 'completed'}]})` 分配到 internal track（生产发布在 Play Console 手动提升）
    - `service.edits().commit(...)` 提交
 
 **关键参数**：
 - `PACKAGE_NAME = 'com.wait.piggycount'`
-- `TRACK = 'production'`
+- `TRACK = 'internal'`（打 tag 只推内部测试轨道，生产发布在 Play Console 手动提升）
 
 **清理**：`rm -f /tmp/service-account.json /tmp/upload_to_play.py`
 
@@ -905,7 +916,7 @@ from googleapiclient.http import MediaFileUpload
 
 PACKAGE_NAME = 'com.wait.piggycount'
 AAB_FILE = sys.argv[1]
-TRACK = 'production'
+TRACK = 'internal'
 
 # 认证
 credentials = service_account.Credentials.from_service_account_file(
@@ -1048,10 +1059,10 @@ PiggyCount 项目实现了**完整的 Flutter 跨平台构建发布流水线**�
 1. **多渠道构建**：Android 通过 Gradle `productFlavors`（dev/prod）+ `applicationIdSuffix` 区分；iOS 通过 Debug/Release xcconfig 区分，两端包名一致（dev: `com.wait.piggycount.dev`、prod: `com.wait.piggycount`）
 2. **多产物**：Android 按 ABI 拆分 4 个 APK + 1 个 AAB；iOS 输出 signed IPA、unsigned IPA、真机 .app.zip、模拟器 .app.zip
 3. **完整签名**：Android keystore + iOS p12 + provisioning profile 均从 GitHub Secrets 注入，无 secrets 时有兜底策略保证 CI 不失败
-4. **多渠道分发**：Google Play（production track，Python + google-api-python-client）、TestFlight（xcrun altool）、GitHub Release（softprops/action-gh-release）、Telegram 通知
+4. **多渠道分发**：Google Play（internal track，Python + google-api-python-client；生产发布在 Play Console 手动提升）、TestFlight（xcrun altool）、GitHub Release（softprops/action-gh-release）、Telegram 通知
 5. **应用内 OTA 更新**：完整的 9 文件模块化实现，含 GitHub API 版本检查、镜像加速、APK 下载/安装/缓存、权限管理、通知、对话框、错误兜底，专门针对国内网络环境优化
 6. **Google Play 政策合规**：AAB 构建时动态移除 `REQUEST_INSTALL_PACKAGES`、`READ_MEDIA_*` 权限，并通过 `--dart-define=GOOGLE_PLAY=true` 在代码层面禁用应用内更新入口和截屏自动记账功能
-7. **版本管理自动化**：tag 触发时 sed 覆盖 pubspec.yaml，version 取 tag（去 v 前缀），build number 取 `github.run_number`
+7. **版本管理自动化**：tag 触发时用 `--build-name` / `--build-number` 注入构建（version 取 tag 去 v 前缀，build number 取 `github.run_number`），**不修改 pubspec.yaml**
 
 ### 16.1 未实现项汇总
 
@@ -1060,7 +1071,7 @@ PiggyCount 项目实现了**完整的 Flutter 跨平台构建发布流水线**�
 - 无 `fastlane` 配置
 - iOS 端未使用 Xcode scheme flavor（用 Debug/Release 配置代替）
 - Android dev/prod 无独立 sourceSet 目录（prod Manifest 在 CI 动态生成）
-- Google Play 上传脚本日志输出 "alpha track" 与实际 `TRACK = 'production'` 不一致（仅文案 bug，不影响功能）
+- ~~Google Play 上传脚本日志输出 "alpha track" 与实际 `TRACK = 'production'` 不一致~~：已修正为统一 `TRACK = 'internal'`（2026-09-30）
 
 ---
 

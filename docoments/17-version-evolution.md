@@ -20,7 +20,7 @@ PiggyCount 是一款**持续迭代**的开源记账应用，从最初的"单设�
 
 > ⚠️ **重要说明**：
 > - **应用版本号**（如 3.2.0）与 **schemaVersion**（如 v24）是**独立**的概念
-> - pubspec.yaml 中 `version: 0.0.1` 是占位符，CI 构建时通过 `sed` 替换为 git tag + run_number（详见 [13-build-release.md](file:///d:/DevTools/project/PiggyCount/docoments/13-build-release.md)）
+> - pubspec.yaml 中 `version` 代表**开发主线当前版本**（当前 `0.1.0`），CI 构建时经 `--build-name` / `--build-number` 注入 tag 名，**不再用 sed 覆盖**（详见 [13-build-release.md](file:///d:/DevTools/project/PiggyCount/docoments/13-build-release.md) 与 `AGENTS.md` 的「发版流程」）
 > - 项目源码中**未发现 CHANGELOG.md**，应用版本与 schemaVersion 的精确对应关系 [待确认]
 > - 本文以 schemaVersion 为主线，应用版本号为 [推断]
 

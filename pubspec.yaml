@@ -1,7 +1,7 @@
 name: piggycount
 description: "PiggyCount - A simple personal ledger app."
 publish_to: 'none'
-version: 0.7.8
+version: 0.1.0
 
 environment:
   sdk: ^3.6.0
@@ -71,8 +71,6 @@ dependencies:
   qr_flutter: ^4.1.0
   gal: ^2.3.0
   archive: ^3.6.1
-  in_app_purchase: ^3.1.0
-  in_app_purchase_storekit: ^0.3.6
   flutter_ai_kit:
     path: packages/flutter_ai_kit
   flutter_ai_kit_zhipu:

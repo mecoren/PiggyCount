@@ -10,11 +10,9 @@ import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' hide SyncStatus;
 import '../../cloud/sync_service.dart';
 import '../cloud/cloud_service_page.dart';
 import '../../services/system/logger_service.dart';
-import '../settings/help_center_page.dart';
 import '../../services/export/share_poster_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../cloud/cloud_sync_page.dart';
-import '../../utils/website_urls.dart';
 import '../settings/data_management_page.dart';
 import '../settings/appearance_settings_page.dart';
 import '../settings/holiday_settings_page.dart';
@@ -24,10 +22,8 @@ import '../settings/about_page.dart';
 import '../report/amount_deviation_page.dart';
 import '../report/annual_report_page.dart';
 import '../report/range_report_page.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:in_app_review/in_app_review.dart';
 import '../../utils/ui_scale_extensions.dart';
-import '../donation/donation_page.dart';
 
 import '../../utils/platform_info.dart';
 
@@ -370,23 +366,6 @@ class MinePage extends ConsumerWidget {
                         );
                       },
                     ),
-                    // 使用帮助:默认 App 内嵌 WebView(embed 模式)。
-                    // 审核兜底:kHelpCenterInApp 改 false 重新打包即回退外部浏览器
-                    SettingsNavItem(
-                      icon: Icons.help_outline,
-                      title: AppLocalizations.of(context).mineHelp,
-                      subtitle: AppLocalizations.of(context).mineHelpSubtitle,
-                      onTap: () async {
-                        if (kHelpCenterInApp) {
-                          await Navigator.of(context).push(MaterialPageRoute(
-                              builder: (_) => const HelpCenterPage()));
-                        } else {
-                          final locale = Localizations.localeOf(context);
-                          await _tryOpenUrl(
-                              Uri.parse(WebsiteUrls.docs(locale)));
-                        }
-                      },
-                    ),
                   ],
                 ),
                 SizedBox(height: 24.0.scaled(context, ref)),
@@ -396,26 +375,6 @@ class MinePage extends ConsumerWidget {
                 SizedBox(height: 8.0.scaled(context, ref)),
                 SettingsCard(
                   children: [
-                    // 仅在iOS显示打赏入口
-                    if (PlatformInfo.isIOS)
-                      Consumer(
-                        builder: (context, ref, _) {
-                          final primaryColor = ref.watch(primaryColorProvider);
-                          return SettingsNavItem(
-                            icon: Icons.favorite,
-                            title: AppLocalizations.of(context).donationTitle,
-                            subtitle: AppLocalizations.of(context)
-                                .donationEntrySubtitle,
-                            accentColor: primaryColor,
-                            onTap: () async {
-                              await Navigator.of(context).push(
-                                MaterialPageRoute(
-                                    builder: (_) => const DonationPage()),
-                              );
-                            },
-                          );
-                        },
-                      ),
                     // 年度账单
                     SettingsNavItem(
                       icon: Icons.auto_graph_rounded,
@@ -500,35 +459,6 @@ class MinePage extends ConsumerWidget {
         ],
       ),
     );
-  }
-}
-
-/// 尝试使用多种方式打开URL，提供更好的兼容性
-Future<bool> _tryOpenUrl(Uri url) async {
-  try {
-    // 方式1: 默认外部应用打开
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-      return true;
-    }
-
-    // 方式2: 浏览器内打开
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalNonBrowserApplication);
-      return true;
-    }
-
-    // 方式3: 平台默认方式
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.platformDefault);
-      return true;
-    }
-
-    logger.error('MinePage', '无法打开URL: $url');
-    return false;
-  } catch (e) {
-    logger.error('MinePage', '打开URL失败: $url', e);
-    return false;
   }
 }
 

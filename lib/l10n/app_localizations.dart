@@ -125,12 +125,6 @@ abstract class AppLocalizations {
   /// **'Privacy Policy'**
   String get aboutPrivacyPolicy;
 
-  /// No description provided for @aboutChangelog.
-  ///
-  /// In en, this message translates to:
-  /// **'Changelog'**
-  String get aboutChangelog;
-
   /// The application title
   ///
   /// In en, this message translates to:
@@ -4244,12 +4238,6 @@ abstract class AppLocalizations {
   /// **'Check Update'**
   String get mineCheckUpdate;
 
-  /// No description provided for @mineHelp.
-  ///
-  /// In en, this message translates to:
-  /// **'Help'**
-  String get mineHelp;
-
   /// No description provided for @helpCenterOpenInBrowser.
   ///
   /// In en, this message translates to:
@@ -4267,12 +4255,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Retry'**
   String get helpCenterRetry;
-
-  /// No description provided for @mineHelpSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'View documentation and FAQ'**
-  String get mineHelpSubtitle;
 
   /// No description provided for @categoryEditTitle.
   ///
@@ -6021,18 +6003,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please enter a valid email address'**
   String get authInvalidEmail;
-
-  /// No description provided for @authNoAccountYet.
-  ///
-  /// In en, this message translates to:
-  /// **'No account yet? '**
-  String get authNoAccountYet;
-
-  /// No description provided for @authViewRegisterGuide.
-  ///
-  /// In en, this message translates to:
-  /// **'See how to register'**
-  String get authViewRegisterGuide;
 
   /// No description provided for @authErrorInvalidCredentials.
   ///
@@ -9362,7 +9332,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutDesc.
   ///
   /// In en, this message translates to:
-  /// **'Version info, help and feedback'**
+  /// **'Version info'**
   String get aboutDesc;
 
   /// No description provided for @mineRateApp.
@@ -9388,18 +9358,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Loading version...'**
   String get aboutPageLoadingVersion;
-
-  /// No description provided for @aboutSupportDevelopment.
-  ///
-  /// In en, this message translates to:
-  /// **'Support Development'**
-  String get aboutSupportDevelopment;
-
-  /// No description provided for @aboutSupportDevelopmentSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Buy me a coffee'**
-  String get aboutSupportDevelopmentSubtitle;
 
   /// No description provided for @aboutDeveloperStoryTitle.
   ///
@@ -10474,60 +10432,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Edit'**
   String get billCardEdit;
-
-  /// No description provided for @donationTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Donate'**
-  String get donationTitle;
-
-  /// No description provided for @donationSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Buy me a coffee'**
-  String get donationSubtitle;
-
-  /// No description provided for @donationEntrySubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Support continued development'**
-  String get donationEntrySubtitle;
-
-  /// No description provided for @donationDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Description'**
-  String get donationDescription;
-
-  /// No description provided for @donationDescriptionDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'Thank you for using PiggyCount! If this app helps you, feel free to buy the developer a coffee as encouragement. Your support is my motivation to keep improving.'**
-  String get donationDescriptionDetail;
-
-  /// No description provided for @donationNoFeatures.
-  ///
-  /// In en, this message translates to:
-  /// **'Note: Donations will not unlock any features. All features remain completely free.'**
-  String get donationNoFeatures;
-
-  /// No description provided for @donationNoProducts.
-  ///
-  /// In en, this message translates to:
-  /// **'No products available'**
-  String get donationNoProducts;
-
-  /// No description provided for @donationThankYouTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Thank You!'**
-  String get donationThankYouTitle;
-
-  /// No description provided for @donationThankYouMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Thank you for purchasing {productName}! Your support means a lot to me. I will continue to improve PiggyCount to make it even better!'**
-  String donationThankYouMessage(String productName);
 
   /// No description provided for @aiQuickCommandFinancialHealthTitle.
   ///

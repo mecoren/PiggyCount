@@ -4,7 +4,6 @@
   "aiConsentBody": "AI features need to send related data to the third-party AI provider you configure:\n\n• Who it goes to: by default Zhipu GLM (open.bigmodel.cn, operated by Zhipu); if you configure another third-party AI service, it goes to the provider you entered.\n• What is sent: the content you actively use for recognition/chat — receipt images, voice recordings, text you type, plus the category names, account names and relevant transaction records needed to complete recognition/analysis.\n• Purpose: only for bill recognition, bookkeeping and chats you initiate; PiggyCount itself does not collect or store this data.\n\nThe data is processed by that third-party provider under its own privacy policy. Enabling means you consent to the data sharing above.",
   "aiConsentAgree": "Agree & enable",
   "aboutPrivacyPolicy": "Privacy Policy",
-  "aboutChangelog": "Changelog",
   "appTitle": "Piggy Accounting",
   "@appTitle": {
     "description": "The application title"
@@ -1087,11 +1086,10 @@
   "mineDisplayScale": "Display Scale",
   "mineDisplayScaleSubtitle": "Adjust text and UI element sizes",
   "mineCheckUpdate": "Check Update",
-  "mineHelp": "Help",
   "helpCenterOpenInBrowser": "Open in browser",
   "helpCenterLoadFailed": "Failed to load. Please check your network.",
   "helpCenterRetry": "Retry",
-  "mineHelpSubtitle": "View documentation and FAQ",
+
   "categoryEditTitle": "Edit Category",
   "categoryNewTitle": "New Category",
   "categoryDetailTooltip": "Category Details",
@@ -1403,8 +1401,7 @@
   "authEmail": "Email",
   "authPassword": "Password",
   "authInvalidEmail": "Please enter a valid email address",
-  "authNoAccountYet": "No account yet? ",
-  "authViewRegisterGuide": "See how to register",
+
   "authErrorInvalidCredentials": "Email or password is incorrect.",
   "authErrorEmailNotConfirmed": "Email not verified, please complete verification in your email before logging in.",
   "authErrorRateLimit": "Too many attempts, please try again later.",
@@ -2225,13 +2222,11 @@
   "appearanceSettingsDesc": "Theme, font, language, app lock, etc.",
   "appearanceSettingsPageTitle": "Personalization",
   "about": "About",
-  "aboutDesc": "Version info, help and feedback",
+  "aboutDesc": "Version info",
   "mineRateApp": "Rate the App",
   "mineRateAppSubtitle": "Rate us on the App Store",
   "aboutPageTitle": "About",
   "aboutPageLoadingVersion": "Loading version...",
-  "aboutSupportDevelopment": "Support Development",
-  "aboutSupportDevelopmentSubtitle": "Buy me a coffee",
   "aboutDeveloperStoryTitle": "From the Developer",
   "aboutDeveloperStory": "I started tracking my expenses in 2015 as an intern, and I've kept the habit for over a decade. Concerned about ads, paywalls, privacy risks, and apps shutting down, I decided to build my own — first as a small tool for myself and my family.\n\nIn September 2025, PiggyCount launched its first version. Honestly, I had no idea if anyone would use it. But gradually, feedback started coming in — someone said they finally found a clean budgeting app, others offered great suggestions, and some quietly left five-star reviews. Every single message reminded me this was worth continuing.\n\nPiggyCount is ad-free, subscription-free, and fully open source. All your data stays on your device and is never uploaded to any third-party server. But publishing and maintaining an app isn't free — developer accounts, servers, and other costs are currently covered by community donations, and every system update, bug fix, and new feature is built outside of my day job.\n\nIf PiggyCount has been helpful to you, a rating, a share, or a donation would help this little project go further. Thank you for your trust.",
   "aboutPiggyAssets": "PiggyAssets",
@@ -2509,22 +2504,6 @@
   "billCardAccount": "💳 Account",
   "billCardUndo": "Undo",
   "billCardEdit": "Edit",
-  "donationTitle": "Donate",
-  "donationSubtitle": "Buy me a coffee",
-  "donationEntrySubtitle": "Support continued development",
-  "donationDescription": "Description",
-  "donationDescriptionDetail": "Thank you for using PiggyCount! If this app helps you, feel free to buy the developer a coffee as encouragement. Your support is my motivation to keep improving.",
-  "donationNoFeatures": "Note: Donations will not unlock any features. All features remain completely free.",
-  "donationNoProducts": "No products available",
-  "donationThankYouTitle": "Thank You!",
-  "donationThankYouMessage": "Thank you for purchasing {productName}! Your support means a lot to me. I will continue to improve PiggyCount to make it even better!",
-  "@donationThankYouMessage": {
-    "placeholders": {
-      "productName": {
-        "type": "String"
-      }
-    }
-  },
   "aiQuickCommandFinancialHealthTitle": "Financial Health Analysis",
   "aiQuickCommandFinancialHealthDesc": "Analyze income-expense balance and savings rate",
   "aiQuickCommandFinancialHealthPrompt": "Please analyze my financial health based on the following data:\n\n[monthlyStats]\n\n[recentTrends]\n\nPlease provide professional analysis and suggestions from the perspectives of income-expense balance, savings rate, and spending trends. Please respond in English.",

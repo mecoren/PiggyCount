@@ -22,9 +22,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutPrivacyPolicy => 'Privacy Policy';
 
   @override
-  String get aboutChangelog => 'Changelog';
-
-  @override
   String get appTitle => 'Piggy Accounting';
 
   @override
@@ -2301,9 +2298,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mineCheckUpdate => 'Check Update';
 
   @override
-  String get mineHelp => 'Help';
-
-  @override
   String get helpCenterOpenInBrowser => 'Open in browser';
 
   @override
@@ -2312,9 +2306,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get helpCenterRetry => 'Retry';
-
-  @override
-  String get mineHelpSubtitle => 'View documentation and FAQ';
 
   @override
   String get categoryEditTitle => 'Edit Category';
@@ -3305,12 +3296,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authInvalidEmail => 'Please enter a valid email address';
-
-  @override
-  String get authNoAccountYet => 'No account yet? ';
-
-  @override
-  String get authViewRegisterGuide => 'See how to register';
 
   @override
   String get authErrorInvalidCredentials => 'Email or password is incorrect.';
@@ -5174,7 +5159,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get about => 'About';
 
   @override
-  String get aboutDesc => 'Version info, help and feedback';
+  String get aboutDesc => 'Version info';
 
   @override
   String get mineRateApp => 'Rate the App';
@@ -5187,12 +5172,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aboutPageLoadingVersion => 'Loading version...';
-
-  @override
-  String get aboutSupportDevelopment => 'Support Development';
-
-  @override
-  String get aboutSupportDevelopmentSubtitle => 'Buy me a coffee';
 
   @override
   String get aboutDeveloperStoryTitle => 'From the Developer';
@@ -5791,37 +5770,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get billCardEdit => 'Edit';
-
-  @override
-  String get donationTitle => 'Donate';
-
-  @override
-  String get donationSubtitle => 'Buy me a coffee';
-
-  @override
-  String get donationEntrySubtitle => 'Support continued development';
-
-  @override
-  String get donationDescription => 'Description';
-
-  @override
-  String get donationDescriptionDetail =>
-      'Thank you for using PiggyCount! If this app helps you, feel free to buy the developer a coffee as encouragement. Your support is my motivation to keep improving.';
-
-  @override
-  String get donationNoFeatures =>
-      'Note: Donations will not unlock any features. All features remain completely free.';
-
-  @override
-  String get donationNoProducts => 'No products available';
-
-  @override
-  String get donationThankYouTitle => 'Thank You!';
-
-  @override
-  String donationThankYouMessage(String productName) {
-    return 'Thank you for purchasing $productName! Your support means a lot to me. I will continue to improve PiggyCount to make it even better!';
-  }
 
   @override
   String get aiQuickCommandFinancialHealthTitle => 'Financial Health Analysis';

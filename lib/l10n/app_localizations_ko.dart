@@ -22,9 +22,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aboutPrivacyPolicy => '개인정보 처리방침';
 
   @override
-  String get aboutChangelog => '업데이트 내역';
-
-  @override
   String get appTitle => '소 돼지 가계부';
 
   @override
@@ -2278,9 +2275,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mineCheckUpdate => '업데이트 확인';
 
   @override
-  String get mineHelp => '도움말';
-
-  @override
   String get helpCenterOpenInBrowser => '브라우저에서 열기';
 
   @override
@@ -2288,9 +2282,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get helpCenterRetry => '다시 시도';
-
-  @override
-  String get mineHelpSubtitle => '문서와 자주 묻는 질문 보기';
 
   @override
   String get categoryEditTitle => '카테고리 편집';
@@ -3228,12 +3219,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get authInvalidEmail => '올바른 이메일 주소를 입력해 주세요';
-
-  @override
-  String get authNoAccountYet => '아직 계정이 없으신가요? ';
-
-  @override
-  String get authViewRegisterGuide => '가입 방법 보기';
 
   @override
   String get authErrorInvalidCredentials => '이메일 또는 비밀번호가 올바르지 않습니다.';
@@ -5024,7 +5009,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get about => '정보';
 
   @override
-  String get aboutDesc => '버전 정보, 도움말 및 피드백';
+  String get aboutDesc => '버전 정보';
 
   @override
   String get mineRateApp => '앱 평가하기';
@@ -5037,12 +5022,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get aboutPageLoadingVersion => '버전 정보를 불러오는 중...';
-
-  @override
-  String get aboutSupportDevelopment => '개발 후원하기';
-
-  @override
-  String get aboutSupportDevelopmentSubtitle => '커피 한 잔 사주기';
 
   @override
   String get aboutDeveloperStoryTitle => '개발자로부터';
@@ -5620,37 +5599,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get billCardEdit => '편집';
-
-  @override
-  String get donationTitle => '후원하기';
-
-  @override
-  String get donationSubtitle => '커피 한 잔 사주기';
-
-  @override
-  String get donationEntrySubtitle => '지속적인 개발을 후원해 주세요';
-
-  @override
-  String get donationDescription => '설명';
-
-  @override
-  String get donationDescriptionDetail =>
-      'PiggyCount를 사용해 주셔서 감사합니다! 이 앱이 도움이 되었다면 개발자에게 커피 한 잔을 사주는 것으로 응원해 주세요. 여러분의 후원이 계속 발전할 수 있는 원동력이 됩니다.';
-
-  @override
-  String get donationNoFeatures =>
-      '안내: 후원해도 별도 기능이 잠금 해제되지 않습니다. 모든 기능은 완전히 무료로 유지됩니다.';
-
-  @override
-  String get donationNoProducts => '이용 가능한 상품이 없습니다';
-
-  @override
-  String get donationThankYouTitle => '감사합니다!';
-
-  @override
-  String donationThankYouMessage(String productName) {
-    return '$productName을(를) 구매해 주셔서 감사합니다! 여러분의 후원은 저에게 큰 힘이 됩니다. PiggyCount를 더 좋게 만들기 위해 계속 노력하겠습니다!';
-  }
 
   @override
   String get aiQuickCommandFinancialHealthTitle => '재정 건강 분석';

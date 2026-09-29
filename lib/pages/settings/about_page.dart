@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:piggycount/widgets/biz/piggy_icon.dart';
 
 import '../../providers.dart';
@@ -9,12 +8,9 @@ import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/biz.dart';
 import '../../styles/tokens.dart';
 import '../../services/system/update_service.dart';
-import '../../services/system/logger_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/ui_scale_extensions.dart';
-import '../../utils/website_urls.dart';
 import 'app_icon_page.dart';
-import 'help_center_page.dart';
 import 'log_center_page.dart';
 import 'privacy_policy_page.dart';
 
@@ -79,7 +75,6 @@ class _AboutPageState extends ConsumerState<AboutPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final primary = ref.watch(primaryColorProvider);
     final locale = Localizations.localeOf(context);
     final isSimplifiedZh =
         locale.languageCode == 'zh' && locale.countryCode != 'TW';
@@ -223,18 +218,6 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                 },
               ),
               SettingsNavItem(
-                icon: Icons.favorite_border,
-                title: l10n.aboutSupportDevelopment,
-                subtitle: l10n.aboutSupportDevelopmentSubtitle,
-                onTap: () async {
-                  final lc = locale.languageCode;
-                  final docUrl = lc == 'zh'
-                      ? 'https://github.com/mecoren/PiggyCount/blob/main/docs/donate/README_ZH.md'
-                      : 'https://github.com/mecoren/PiggyCount/blob/main/docs/donate/README_EN.md';
-                  await _tryOpenUrl(Uri.parse(docUrl));
-                },
-              ),
-              SettingsNavItem(
                 icon: Icons.bug_report_outlined,
                 title: l10n.logCenterTitle,
                 subtitle: l10n.logCenterSubtitle,
@@ -249,40 +232,11 @@ class _AboutPageState extends ConsumerState<AboutPage> {
               ),
             ],
           ),
-          // ===== 底部:更新日志 · 隐私政策 文字链接 + 备案号 =====
+          // ===== 底部:隐私政策 文字链接 + 备案号 =====
           SizedBox(height: 24.0.scaled(context, ref)),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _footerLink(
-                context,
-                label: l10n.aboutChangelog,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => HelpCenterPage(
-                        title: l10n.aboutChangelog,
-                        initialUrl: WebsiteUrls.changelogEmbed(
-                          locale,
-                          dark: PiggyTokens.isDark(context),
-                          primaryHex: _hex(primary),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-              Padding(
-                padding:
-                    EdgeInsets.symmetric(horizontal: 10.0.scaled(context, ref)),
-                child: Text(
-                  '·',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: PiggyTokens.textTertiary(context),
-                      ),
-                ),
-              ),
               _footerLink(
                 context,
                 label: l10n.aboutPrivacyPolicy,
@@ -330,12 +284,6 @@ class _AboutPageState extends ConsumerState<AboutPage> {
       ),
     );
   }
-
-  /// 主题色转 6 位 hex(用于文档 embed 链接的 primary 参数),与帮助中心 / 隐私
-  /// 政策页同款实现。
-  static String _hex(Color c) => [c.r, c.g, c.b]
-      .map((v) => ((v * 255).round() & 0xff).toRadixString(16).padLeft(2, '0'))
-      .join();
 }
 
 // -------- 工具方法：关于与更新 --------
@@ -361,27 +309,4 @@ Future<_AppInfo> _getAppInfo() async {
   return _AppInfo(version, p.buildNumber,
       commit: commit.isEmpty ? null : commit,
       buildTime: buildTime.isEmpty ? null : buildTime);
-}
-
-/// 尝试使用多种方式打开URL，提供更好的兼容性
-Future<bool> _tryOpenUrl(Uri url) async {
-  try {
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-      return true;
-    }
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalNonBrowserApplication);
-      return true;
-    }
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.platformDefault);
-      return true;
-    }
-    logger.error('AboutPage', '无法打开URL: $url');
-    return false;
-  } catch (e) {
-    logger.error('AboutPage', '打开URL失败: $url', e);
-    return false;
-  }
 }

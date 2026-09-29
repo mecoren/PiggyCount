@@ -176,7 +176,7 @@ android {
 }
 
 // 自定义 Release APK 命名:
-//   - arm64-v8a:  app-<flavor>-release-v<ver>(<code>).apk           (主分发,保持原名)
+//   - arm64-v8a:  app-<flavor>-arm64-v8a-release-v<ver>(<code>).apk (主分发)
 //   - armeabi-v7a: app-<flavor>-armeabi-v7a-release-v<ver>(<code>).apk
 //   - x86_64:     app-<flavor>-x86_64-release-v<ver>(<code>).apk
 //   - universal:  app-<flavor>-universal-release-v<ver>(<code>).apk (三 ABI 兜底)
@@ -192,8 +192,8 @@ android.applicationVariants.all { variant ->
                 // splits.abi.universalApk=true 产出的 universal 包(含所有 include 的 ABI)
                 baseName = "app-${flavor}-universal-release-v${vName}(${vCode}).apk"
             } else if (abi == "arm64-v8a") {
-                // 主分发保持原命名
-                baseName = "app-${flavor}-release-v${vName}(${vCode}).apk"
+                // 主分发,文件名显式带 ABI,避免 Release 页上看不出哪个是 arm64-v8a
+                baseName = "app-${flavor}-arm64-v8a-release-v${vName}(${vCode}).apk"
             } else {
                 baseName = "app-${flavor}-${abi}-release-v${vName}(${vCode}).apk"
             }
