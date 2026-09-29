@@ -763,7 +763,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ledgersDeleteMessage =>
-      'Are you sure you want to delete this ledger and all its records? This action cannot be undone.\\nIf there is a backup in the cloud, it will also be deleted.';
+      'Are you sure you want to delete this ledger and all its records? This action cannot be undone.\nIf there is a backup in the cloud, it will also be deleted.';
 
   @override
   String get ledgersDeleteReconfirmMessage =>
@@ -789,7 +789,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String ledgersDeleteLocalMessage(String name) {
-    return 'Are you sure to delete local ledger \"$name\"?\\nCloud backup will be kept and you can restore it anytime.';
+    return 'Are you sure to delete local ledger \"$name\"?\nCloud backup will be kept and you can restore it anytime.';
   }
 
   @override
@@ -8421,5 +8421,117 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String semanticsChartSeries(int count, String points) {
     return 'Chart, $count points: $points';
+  }
+
+  @override
+  String get holidaySettingsTitle => 'Calendar & Holidays';
+
+  @override
+  String get holidaySettingsDesc =>
+      'Statutory holidays and lunar dates, updated monthly';
+
+  @override
+  String get holidayCacheOverview => 'Cache overview';
+
+  @override
+  String holidayCacheCount(int count, int off, int work) {
+    return '$count entries ($off holidays · $work make-up workdays)';
+  }
+
+  @override
+  String holidayCoverYears(String range) {
+    return 'Years covered: $range';
+  }
+
+  @override
+  String holidayLastUpdate(String time) {
+    return 'Last successful update: $time';
+  }
+
+  @override
+  String get holidayNeverUpdated => 'Never updated successfully';
+
+  @override
+  String holidayFailureCount(int count) {
+    return '$count consecutive failures (cached data still usable)';
+  }
+
+  @override
+  String get holidayUpdateNow => 'Update now';
+
+  @override
+  String get holidayUpdating => 'Updating…';
+
+  @override
+  String get holidayUpdateSuccess => 'Holiday data updated';
+
+  @override
+  String holidayUpdateFailed(String error) {
+    return 'Update failed: $error';
+  }
+
+  @override
+  String get holidayAutoUpdate => 'Monthly auto update';
+
+  @override
+  String get holidayAutoUpdateDesc =>
+      'Fetches once a month; no ledger or device info';
+
+  @override
+  String get holidayBadgeOff => 'Off';
+
+  @override
+  String get holidayBadgeWork => 'Work';
+
+  @override
+  String get holidayLoadFailed => 'Failed to load holiday data';
+
+  @override
+  String get holidayFetchByYear => 'Fetch by year range';
+
+  @override
+  String get holidayFetchByYearDesc =>
+      'Pick a start and end year to backfill holidays';
+
+  @override
+  String get holidayUpdateYear => 'Update this year';
+
+  @override
+  String holidayFetchYearDone(int year) {
+    return '$year holiday data updated';
+  }
+
+  @override
+  String holidayYearNoData(int year) {
+    return 'No holiday data for $year';
+  }
+
+  @override
+  String holidayFetchYearFailed(String error) {
+    return 'Fetch failed: $error';
+  }
+
+  @override
+  String get holidayYearRangeTitle => 'Select year range';
+
+  @override
+  String get holidayYearRangeStart => 'From year';
+
+  @override
+  String get holidayYearRangeEnd => 'To year';
+
+  @override
+  String holidayFetchRangeDone(int count) {
+    return '$count year(s) backfilled';
+  }
+
+  @override
+  String holidayFetchRangeDoneNoData(int updated, int noData) {
+    return '$updated year(s) backfilled, $noData with no data';
+  }
+
+  @override
+  String holidayFetchRangePartial(int updated, int count) {
+    return '$updated year(s) backfilled, $count failed';
   }
 }

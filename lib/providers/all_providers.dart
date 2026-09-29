@@ -41,3 +41,6 @@ export 'smart_billing_providers.dart';
 
 // 快捷记账模式相关（P1-E）
 export 'quick_entry_providers.dart';
+
+// 日历节假日相关
+export 'holiday_providers.dart';

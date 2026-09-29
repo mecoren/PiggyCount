@@ -752,7 +752,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get ledgersDeleteMessage =>
-      '이 가계부와 모든 기록을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.\\n클라우드에 백업이 있는 경우 함께 삭제됩니다.';
+      '이 가계부와 모든 기록을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.\n클라우드에 백업이 있는 경우 함께 삭제됩니다.';
 
   @override
   String get ledgersDeleteReconfirmMessage =>
@@ -778,7 +778,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String ledgersDeleteLocalMessage(String name) {
-    return '로컬 가계부 \"$name\"를 삭제하시겠습니까?\\n클라우드 백업은 유지되며 언제든지 복원할 수 있습니다.';
+    return '로컬 가계부 \"$name\"를 삭제하시겠습니까?\n클라우드 백업은 유지되며 언제든지 복원할 수 있습니다.';
   }
 
   @override
@@ -8192,5 +8192,115 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String semanticsChartSeries(int count, String points) {
     return '차트, $count개 지점: $points';
+  }
+
+  @override
+  String get holidaySettingsTitle => '달력 및 공휴일';
+
+  @override
+  String get holidaySettingsDesc => '법정 공휴일 표시와 음력, 매월 자동 업데이트';
+
+  @override
+  String get holidayCacheOverview => '캐시 개요';
+
+  @override
+  String holidayCacheCount(int count, int off, int work) {
+    return '총 $count건 (공휴일 $off · 대체 근무 $work)';
+  }
+
+  @override
+  String holidayCoverYears(String range) {
+    return '포함 연도: $range';
+  }
+
+  @override
+  String holidayLastUpdate(String time) {
+    return '마지막 성공 업데이트: $time';
+  }
+
+  @override
+  String get holidayNeverUpdated => '성공한 업데이트 없음';
+
+  @override
+  String holidayFailureCount(int count) {
+    return '연속 $count회 실패 (기존 캐시는 계속 사용 가능)';
+  }
+
+  @override
+  String get holidayUpdateNow => '지금 업데이트';
+
+  @override
+  String get holidayUpdating => '업데이트 중…';
+
+  @override
+  String get holidayUpdateSuccess => '공휴일 데이터를 업데이트했습니다';
+
+  @override
+  String holidayUpdateFailed(String error) {
+    return '업데이트 실패: $error';
+  }
+
+  @override
+  String get holidayAutoUpdate => '매월 자동 업데이트';
+
+  @override
+  String get holidayAutoUpdateDesc =>
+      '매월 한 번 연도 데이터를 가져오며 장부나 기기 정보는 전송하지 않습니다';
+
+  @override
+  String get holidayBadgeOff => '휴';
+
+  @override
+  String get holidayBadgeWork => '근';
+
+  @override
+  String get holidayLoadFailed => '공휴일 데이터를 불러오지 못했습니다';
+
+  @override
+  String get holidayFetchByYear => '연도 범위로 가져오기';
+
+  @override
+  String get holidayFetchByYearDesc => '시작·종료 연도를 선택해 해당 범위의 공휴일을 채웁니다';
+
+  @override
+  String get holidayUpdateYear => '해당 연도 업데이트';
+
+  @override
+  String holidayFetchYearDone(int year) {
+    return '$year년 공휴일 데이터를 업데이트했습니다';
+  }
+
+  @override
+  String holidayYearNoData(int year) {
+    return '$year년 공휴일 데이터가 없습니다';
+  }
+
+  @override
+  String holidayFetchYearFailed(String error) {
+    return '가져오기 실패: $error';
+  }
+
+  @override
+  String get holidayYearRangeTitle => '연도 범위 선택';
+
+  @override
+  String get holidayYearRangeStart => '시작 연도';
+
+  @override
+  String get holidayYearRangeEnd => '종료 연도';
+
+  @override
+  String holidayFetchRangeDone(int count) {
+    return '$count개 연도를 업데이트했습니다';
+  }
+
+  @override
+  String holidayFetchRangeDoneNoData(int updated, int noData) {
+    return '$updated개 연도를 업데이트했으며, $noData개 연도는 데이터가 없습니다';
+  }
+
+  @override
+  String holidayFetchRangePartial(int updated, int count) {
+    return '$updated개 연도를 업데이트하고 $count개 연도는 실패했습니다';
   }
 }

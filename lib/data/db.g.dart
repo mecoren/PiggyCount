@@ -2375,6 +2375,21 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final String? categorySyncIdOverride;
   final String? accountSyncIdOverride;
   final String? toAccountSyncIdOverride;
+
+  /// ⚠️ **预留未实现（死列），不要使用**。
+  ///
+  /// 2026-09-27 全仓核查结论：**零写入方**（`lib/`、`test/`、`packages/` 内除
+  /// Drift 生成代码外无任何赋值），也**零实际读取方** —— 共享账本 UI 的标签
+  /// hydration 读的是 `transaction_tag_overrides` 表（按 `tx.syncId` 查），
+  /// 与本列无关（见 `local_transaction_repository.dart` 的
+  /// `_hydrateSharedOverridesFull`）。文件式云同步（S3/WebDAV）的导出、指纹
+  /// 白名单、导入解析三处也都没有它。
+  ///
+  /// 因此它不会跨设备传播；比对脚本据此把它列为**契约外**字段。
+  /// 若将来要启用它，必须**同时**补齐三处（导出写键 / 指纹白名单加键 /
+  /// 解析读键），否则会重现「指纹说不同、diff 说没变化」的永久不收敛；
+  /// `scripts/live_db/compare_sync_final.py` 的实现派生校验会在补实现的那一刻
+  /// 立刻报 [DRIFT]，提醒同步更新比对契约。
   final String? tagSyncIdsOverride;
 
   /// 不计入收支:true 时从收支统计/图表/月年汇总剔除,但仍计入账户余额、净资产、
@@ -12551,6 +12566,682 @@ class DeletedTransactionsCompanion extends UpdateCompanion<DeletedTransaction> {
   }
 }
 
+class $HolidayEntriesTable extends HolidayEntries
+    with TableInfo<$HolidayEntriesTable, HolidayEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $HolidayEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<String> date = GeneratedColumn<String>(
+      'date', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _yearMeta = const VerificationMeta('year');
+  @override
+  late final GeneratedColumn<int> year = GeneratedColumn<int>(
+      'year', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _isHolidayMeta =
+      const VerificationMeta('isHoliday');
+  @override
+  late final GeneratedColumn<bool> isHoliday = GeneratedColumn<bool>(
+      'is_holiday', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: true,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_holiday" IN (0, 1))'));
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _fetchedAtMeta =
+      const VerificationMeta('fetchedAt');
+  @override
+  late final GeneratedColumn<DateTime> fetchedAt = GeneratedColumn<DateTime>(
+      'fetched_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [date, year, isHoliday, name, fetchedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'holiday_entries';
+  @override
+  VerificationContext validateIntegrity(Insertable<HolidayEntry> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('date')) {
+      context.handle(
+          _dateMeta, date.isAcceptableOrUnknown(data['date']!, _dateMeta));
+    } else if (isInserting) {
+      context.missing(_dateMeta);
+    }
+    if (data.containsKey('year')) {
+      context.handle(
+          _yearMeta, year.isAcceptableOrUnknown(data['year']!, _yearMeta));
+    } else if (isInserting) {
+      context.missing(_yearMeta);
+    }
+    if (data.containsKey('is_holiday')) {
+      context.handle(_isHolidayMeta,
+          isHoliday.isAcceptableOrUnknown(data['is_holiday']!, _isHolidayMeta));
+    } else if (isInserting) {
+      context.missing(_isHolidayMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('fetched_at')) {
+      context.handle(_fetchedAtMeta,
+          fetchedAt.isAcceptableOrUnknown(data['fetched_at']!, _fetchedAtMeta));
+    } else if (isInserting) {
+      context.missing(_fetchedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {date};
+  @override
+  HolidayEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return HolidayEntry(
+      date: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}date'])!,
+      year: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}year'])!,
+      isHoliday: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_holiday'])!,
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      fetchedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}fetched_at'])!,
+    );
+  }
+
+  @override
+  $HolidayEntriesTable createAlias(String alias) {
+    return $HolidayEntriesTable(attachedDatabase, alias);
+  }
+}
+
+class HolidayEntry extends DataClass implements Insertable<HolidayEntry> {
+  /// 'YYYY-MM-DD'
+  final String date;
+
+  /// 公历年（整年替换 / 设置页按年分组都靠它）
+  final int year;
+
+  /// true = 放假日；false = 调休补班日（要上班的周末）
+  final bool isHoliday;
+
+  /// 节假日名称（如「春节」「春节后补班」）
+  final String name;
+  final DateTime fetchedAt;
+  const HolidayEntry(
+      {required this.date,
+      required this.year,
+      required this.isHoliday,
+      required this.name,
+      required this.fetchedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['date'] = Variable<String>(date);
+    map['year'] = Variable<int>(year);
+    map['is_holiday'] = Variable<bool>(isHoliday);
+    map['name'] = Variable<String>(name);
+    map['fetched_at'] = Variable<DateTime>(fetchedAt);
+    return map;
+  }
+
+  HolidayEntriesCompanion toCompanion(bool nullToAbsent) {
+    return HolidayEntriesCompanion(
+      date: Value(date),
+      year: Value(year),
+      isHoliday: Value(isHoliday),
+      name: Value(name),
+      fetchedAt: Value(fetchedAt),
+    );
+  }
+
+  factory HolidayEntry.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return HolidayEntry(
+      date: serializer.fromJson<String>(json['date']),
+      year: serializer.fromJson<int>(json['year']),
+      isHoliday: serializer.fromJson<bool>(json['isHoliday']),
+      name: serializer.fromJson<String>(json['name']),
+      fetchedAt: serializer.fromJson<DateTime>(json['fetchedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'date': serializer.toJson<String>(date),
+      'year': serializer.toJson<int>(year),
+      'isHoliday': serializer.toJson<bool>(isHoliday),
+      'name': serializer.toJson<String>(name),
+      'fetchedAt': serializer.toJson<DateTime>(fetchedAt),
+    };
+  }
+
+  HolidayEntry copyWith(
+          {String? date,
+          int? year,
+          bool? isHoliday,
+          String? name,
+          DateTime? fetchedAt}) =>
+      HolidayEntry(
+        date: date ?? this.date,
+        year: year ?? this.year,
+        isHoliday: isHoliday ?? this.isHoliday,
+        name: name ?? this.name,
+        fetchedAt: fetchedAt ?? this.fetchedAt,
+      );
+  HolidayEntry copyWithCompanion(HolidayEntriesCompanion data) {
+    return HolidayEntry(
+      date: data.date.present ? data.date.value : this.date,
+      year: data.year.present ? data.year.value : this.year,
+      isHoliday: data.isHoliday.present ? data.isHoliday.value : this.isHoliday,
+      name: data.name.present ? data.name.value : this.name,
+      fetchedAt: data.fetchedAt.present ? data.fetchedAt.value : this.fetchedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('HolidayEntry(')
+          ..write('date: $date, ')
+          ..write('year: $year, ')
+          ..write('isHoliday: $isHoliday, ')
+          ..write('name: $name, ')
+          ..write('fetchedAt: $fetchedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(date, year, isHoliday, name, fetchedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is HolidayEntry &&
+          other.date == this.date &&
+          other.year == this.year &&
+          other.isHoliday == this.isHoliday &&
+          other.name == this.name &&
+          other.fetchedAt == this.fetchedAt);
+}
+
+class HolidayEntriesCompanion extends UpdateCompanion<HolidayEntry> {
+  final Value<String> date;
+  final Value<int> year;
+  final Value<bool> isHoliday;
+  final Value<String> name;
+  final Value<DateTime> fetchedAt;
+  final Value<int> rowid;
+  const HolidayEntriesCompanion({
+    this.date = const Value.absent(),
+    this.year = const Value.absent(),
+    this.isHoliday = const Value.absent(),
+    this.name = const Value.absent(),
+    this.fetchedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  HolidayEntriesCompanion.insert({
+    required String date,
+    required int year,
+    required bool isHoliday,
+    required String name,
+    required DateTime fetchedAt,
+    this.rowid = const Value.absent(),
+  })  : date = Value(date),
+        year = Value(year),
+        isHoliday = Value(isHoliday),
+        name = Value(name),
+        fetchedAt = Value(fetchedAt);
+  static Insertable<HolidayEntry> custom({
+    Expression<String>? date,
+    Expression<int>? year,
+    Expression<bool>? isHoliday,
+    Expression<String>? name,
+    Expression<DateTime>? fetchedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (date != null) 'date': date,
+      if (year != null) 'year': year,
+      if (isHoliday != null) 'is_holiday': isHoliday,
+      if (name != null) 'name': name,
+      if (fetchedAt != null) 'fetched_at': fetchedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  HolidayEntriesCompanion copyWith(
+      {Value<String>? date,
+      Value<int>? year,
+      Value<bool>? isHoliday,
+      Value<String>? name,
+      Value<DateTime>? fetchedAt,
+      Value<int>? rowid}) {
+    return HolidayEntriesCompanion(
+      date: date ?? this.date,
+      year: year ?? this.year,
+      isHoliday: isHoliday ?? this.isHoliday,
+      name: name ?? this.name,
+      fetchedAt: fetchedAt ?? this.fetchedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (date.present) {
+      map['date'] = Variable<String>(date.value);
+    }
+    if (year.present) {
+      map['year'] = Variable<int>(year.value);
+    }
+    if (isHoliday.present) {
+      map['is_holiday'] = Variable<bool>(isHoliday.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (fetchedAt.present) {
+      map['fetched_at'] = Variable<DateTime>(fetchedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('HolidayEntriesCompanion(')
+          ..write('date: $date, ')
+          ..write('year: $year, ')
+          ..write('isHoliday: $isHoliday, ')
+          ..write('name: $name, ')
+          ..write('fetchedAt: $fetchedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $HolidayUpdateMetaTable extends HolidayUpdateMeta
+    with TableInfo<$HolidayUpdateMetaTable, HolidayUpdateMetaData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $HolidayUpdateMetaTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _lastUpdateMsMeta =
+      const VerificationMeta('lastUpdateMs');
+  @override
+  late final GeneratedColumn<int> lastUpdateMs = GeneratedColumn<int>(
+      'last_update_ms', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _lastAttemptMsMeta =
+      const VerificationMeta('lastAttemptMs');
+  @override
+  late final GeneratedColumn<int> lastAttemptMs = GeneratedColumn<int>(
+      'last_attempt_ms', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _failureCountMeta =
+      const VerificationMeta('failureCount');
+  @override
+  late final GeneratedColumn<int> failureCount = GeneratedColumn<int>(
+      'failure_count', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _autoEnabledMeta =
+      const VerificationMeta('autoEnabled');
+  @override
+  late final GeneratedColumn<bool> autoEnabled = GeneratedColumn<bool>(
+      'auto_enabled', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("auto_enabled" IN (0, 1))'),
+      defaultValue: const Constant(true));
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [id, lastUpdateMs, lastAttemptMs, failureCount, autoEnabled, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'holiday_update_meta';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<HolidayUpdateMetaData> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('last_update_ms')) {
+      context.handle(
+          _lastUpdateMsMeta,
+          lastUpdateMs.isAcceptableOrUnknown(
+              data['last_update_ms']!, _lastUpdateMsMeta));
+    }
+    if (data.containsKey('last_attempt_ms')) {
+      context.handle(
+          _lastAttemptMsMeta,
+          lastAttemptMs.isAcceptableOrUnknown(
+              data['last_attempt_ms']!, _lastAttemptMsMeta));
+    }
+    if (data.containsKey('failure_count')) {
+      context.handle(
+          _failureCountMeta,
+          failureCount.isAcceptableOrUnknown(
+              data['failure_count']!, _failureCountMeta));
+    }
+    if (data.containsKey('auto_enabled')) {
+      context.handle(
+          _autoEnabledMeta,
+          autoEnabled.isAcceptableOrUnknown(
+              data['auto_enabled']!, _autoEnabledMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  HolidayUpdateMetaData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return HolidayUpdateMetaData(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      lastUpdateMs: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}last_update_ms'])!,
+      lastAttemptMs: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}last_attempt_ms'])!,
+      failureCount: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}failure_count'])!,
+      autoEnabled: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}auto_enabled'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+    );
+  }
+
+  @override
+  $HolidayUpdateMetaTable createAlias(String alias) {
+    return $HolidayUpdateMetaTable(attachedDatabase, alias);
+  }
+}
+
+class HolidayUpdateMetaData extends DataClass
+    implements Insertable<HolidayUpdateMetaData> {
+  /// 恒 1
+  final int id;
+
+  /// 上次**成功**更新时间（epoch ms；0 = 从未成功）
+  final int lastUpdateMs;
+
+  /// 上次尝试时间（epoch ms；成功 / 失败都写）
+  final int lastAttemptMs;
+
+  /// 连续失败次数（成功后清零）
+  final int failureCount;
+
+  /// 「每月自动更新」开关
+  final bool autoEnabled;
+  final DateTime updatedAt;
+  const HolidayUpdateMetaData(
+      {required this.id,
+      required this.lastUpdateMs,
+      required this.lastAttemptMs,
+      required this.failureCount,
+      required this.autoEnabled,
+      required this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['last_update_ms'] = Variable<int>(lastUpdateMs);
+    map['last_attempt_ms'] = Variable<int>(lastAttemptMs);
+    map['failure_count'] = Variable<int>(failureCount);
+    map['auto_enabled'] = Variable<bool>(autoEnabled);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  HolidayUpdateMetaCompanion toCompanion(bool nullToAbsent) {
+    return HolidayUpdateMetaCompanion(
+      id: Value(id),
+      lastUpdateMs: Value(lastUpdateMs),
+      lastAttemptMs: Value(lastAttemptMs),
+      failureCount: Value(failureCount),
+      autoEnabled: Value(autoEnabled),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory HolidayUpdateMetaData.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return HolidayUpdateMetaData(
+      id: serializer.fromJson<int>(json['id']),
+      lastUpdateMs: serializer.fromJson<int>(json['lastUpdateMs']),
+      lastAttemptMs: serializer.fromJson<int>(json['lastAttemptMs']),
+      failureCount: serializer.fromJson<int>(json['failureCount']),
+      autoEnabled: serializer.fromJson<bool>(json['autoEnabled']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'lastUpdateMs': serializer.toJson<int>(lastUpdateMs),
+      'lastAttemptMs': serializer.toJson<int>(lastAttemptMs),
+      'failureCount': serializer.toJson<int>(failureCount),
+      'autoEnabled': serializer.toJson<bool>(autoEnabled),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  HolidayUpdateMetaData copyWith(
+          {int? id,
+          int? lastUpdateMs,
+          int? lastAttemptMs,
+          int? failureCount,
+          bool? autoEnabled,
+          DateTime? updatedAt}) =>
+      HolidayUpdateMetaData(
+        id: id ?? this.id,
+        lastUpdateMs: lastUpdateMs ?? this.lastUpdateMs,
+        lastAttemptMs: lastAttemptMs ?? this.lastAttemptMs,
+        failureCount: failureCount ?? this.failureCount,
+        autoEnabled: autoEnabled ?? this.autoEnabled,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
+  HolidayUpdateMetaData copyWithCompanion(HolidayUpdateMetaCompanion data) {
+    return HolidayUpdateMetaData(
+      id: data.id.present ? data.id.value : this.id,
+      lastUpdateMs: data.lastUpdateMs.present
+          ? data.lastUpdateMs.value
+          : this.lastUpdateMs,
+      lastAttemptMs: data.lastAttemptMs.present
+          ? data.lastAttemptMs.value
+          : this.lastAttemptMs,
+      failureCount: data.failureCount.present
+          ? data.failureCount.value
+          : this.failureCount,
+      autoEnabled:
+          data.autoEnabled.present ? data.autoEnabled.value : this.autoEnabled,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('HolidayUpdateMetaData(')
+          ..write('id: $id, ')
+          ..write('lastUpdateMs: $lastUpdateMs, ')
+          ..write('lastAttemptMs: $lastAttemptMs, ')
+          ..write('failureCount: $failureCount, ')
+          ..write('autoEnabled: $autoEnabled, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id, lastUpdateMs, lastAttemptMs, failureCount, autoEnabled, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is HolidayUpdateMetaData &&
+          other.id == this.id &&
+          other.lastUpdateMs == this.lastUpdateMs &&
+          other.lastAttemptMs == this.lastAttemptMs &&
+          other.failureCount == this.failureCount &&
+          other.autoEnabled == this.autoEnabled &&
+          other.updatedAt == this.updatedAt);
+}
+
+class HolidayUpdateMetaCompanion
+    extends UpdateCompanion<HolidayUpdateMetaData> {
+  final Value<int> id;
+  final Value<int> lastUpdateMs;
+  final Value<int> lastAttemptMs;
+  final Value<int> failureCount;
+  final Value<bool> autoEnabled;
+  final Value<DateTime> updatedAt;
+  const HolidayUpdateMetaCompanion({
+    this.id = const Value.absent(),
+    this.lastUpdateMs = const Value.absent(),
+    this.lastAttemptMs = const Value.absent(),
+    this.failureCount = const Value.absent(),
+    this.autoEnabled = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  HolidayUpdateMetaCompanion.insert({
+    this.id = const Value.absent(),
+    this.lastUpdateMs = const Value.absent(),
+    this.lastAttemptMs = const Value.absent(),
+    this.failureCount = const Value.absent(),
+    this.autoEnabled = const Value.absent(),
+    required DateTime updatedAt,
+  }) : updatedAt = Value(updatedAt);
+  static Insertable<HolidayUpdateMetaData> custom({
+    Expression<int>? id,
+    Expression<int>? lastUpdateMs,
+    Expression<int>? lastAttemptMs,
+    Expression<int>? failureCount,
+    Expression<bool>? autoEnabled,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (lastUpdateMs != null) 'last_update_ms': lastUpdateMs,
+      if (lastAttemptMs != null) 'last_attempt_ms': lastAttemptMs,
+      if (failureCount != null) 'failure_count': failureCount,
+      if (autoEnabled != null) 'auto_enabled': autoEnabled,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  HolidayUpdateMetaCompanion copyWith(
+      {Value<int>? id,
+      Value<int>? lastUpdateMs,
+      Value<int>? lastAttemptMs,
+      Value<int>? failureCount,
+      Value<bool>? autoEnabled,
+      Value<DateTime>? updatedAt}) {
+    return HolidayUpdateMetaCompanion(
+      id: id ?? this.id,
+      lastUpdateMs: lastUpdateMs ?? this.lastUpdateMs,
+      lastAttemptMs: lastAttemptMs ?? this.lastAttemptMs,
+      failureCount: failureCount ?? this.failureCount,
+      autoEnabled: autoEnabled ?? this.autoEnabled,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (lastUpdateMs.present) {
+      map['last_update_ms'] = Variable<int>(lastUpdateMs.value);
+    }
+    if (lastAttemptMs.present) {
+      map['last_attempt_ms'] = Variable<int>(lastAttemptMs.value);
+    }
+    if (failureCount.present) {
+      map['failure_count'] = Variable<int>(failureCount.value);
+    }
+    if (autoEnabled.present) {
+      map['auto_enabled'] = Variable<bool>(autoEnabled.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('HolidayUpdateMetaCompanion(')
+          ..write('id: $id, ')
+          ..write('lastUpdateMs: $lastUpdateMs, ')
+          ..write('lastAttemptMs: $lastAttemptMs, ')
+          ..write('failureCount: $failureCount, ')
+          ..write('autoEnabled: $autoEnabled, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$PiggyDatabase extends GeneratedDatabase {
   _$PiggyDatabase(QueryExecutor e) : super(e);
   $PiggyDatabaseManager get managers => $PiggyDatabaseManager(this);
@@ -12591,6 +13282,9 @@ abstract class _$PiggyDatabase extends GeneratedDatabase {
       $StaleRemoteSlotsTable(this);
   late final $DeletedTransactionsTable deletedTransactions =
       $DeletedTransactionsTable(this);
+  late final $HolidayEntriesTable holidayEntries = $HolidayEntriesTable(this);
+  late final $HolidayUpdateMetaTable holidayUpdateMeta =
+      $HolidayUpdateMetaTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -12620,7 +13314,9 @@ abstract class _$PiggyDatabase extends GeneratedDatabase {
         entityChangeWatermarks,
         syncOpLog,
         staleRemoteSlots,
-        deletedTransactions
+        deletedTransactions,
+        holidayEntries,
+        holidayUpdateMeta
       ];
 }
 
@@ -12871,7 +13567,11 @@ class $$LedgersTableTableManager extends RootTableManager<
             updatedAt: updatedAt,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable<$LedgersTable, Ledger>(table),
+                    BaseReferences<_$PiggyDatabase, $LedgersTable, Ledger>(
+                        db, table, e)
+                  ))
               .toList(),
           prefetchHooksCallback: null,
         ));
@@ -13214,7 +13914,11 @@ class $$AccountsTableTableManager extends RootTableManager<
             hidden: hidden,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable<$AccountsTable, Account>(table),
+                    BaseReferences<_$PiggyDatabase, $AccountsTable, Account>(
+                        db, table, e)
+                  ))
               .toList(),
           prefetchHooksCallback: null,
         ));
@@ -13482,7 +14186,11 @@ class $$CategoriesTableTableManager extends RootTableManager<
             updatedAt: updatedAt,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable<$CategoriesTable, Category>(table),
+                    BaseReferences<_$PiggyDatabase, $CategoriesTable, Category>(
+                        db, table, e)
+                  ))
               .toList(),
           prefetchHooksCallback: null,
         ));
@@ -13953,7 +14661,11 @@ class $$TransactionsTableTableManager extends RootTableManager<
             customValuesJson: customValuesJson,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable<$TransactionsTable, Transaction>(table),
+                    BaseReferences<_$PiggyDatabase, $TransactionsTable,
+                        Transaction>(db, table, e)
+                  ))
               .toList(),
           prefetchHooksCallback: null,
         ));
@@ -14385,7 +15097,12 @@ class $$RecurringTransactionsTableTableManager extends RootTableManager<
             updatedAt: updatedAt,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable<$RecurringTransactionsTable,
+                        RecurringTransaction>(table),
+                    BaseReferences<_$PiggyDatabase, $RecurringTransactionsTable,
+                        RecurringTransaction>(db, table, e)
+                  ))
               .toList(),
           prefetchHooksCallback: null,
         ));
@@ -14555,7 +15272,11 @@ class $$ConversationsTableTableManager extends RootTableManager<
             updatedAt: updatedAt,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable<$ConversationsTable, Conversation>(table),
+                    BaseReferences<_$PiggyDatabase, $ConversationsTable,
+                        Conversation>(db, table, e)
+                  ))
               .toList(),
           prefetchHooksCallback: null,
         ));
@@ -14765,7 +15486,11 @@ class $$MessagesTableTableManager extends RootTableManager<
             createdAt: createdAt,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable<$MessagesTable, Message>(table),
+                    BaseReferences<_$PiggyDatabase, $MessagesTable, Message>(
+                        db, table, e)
+                  ))
               .toList(),
           prefetchHooksCallback: null,
         ));
@@ -14953,7 +15678,11 @@ class $$TagsTableTableManager extends RootTableManager<
             updatedAt: updatedAt,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable<$TagsTable, Tag>(table),
+                    BaseReferences<_$PiggyDatabase, $TagsTable, Tag>(
+                        db, table, e)
+                  ))
               .toList(),
           prefetchHooksCallback: null,
         ));
@@ -15167,7 +15896,14 @@ class $$CustomFieldDefinitionsTableTableManager extends RootTableManager<
             updatedAt: updatedAt,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable<$CustomFieldDefinitionsTable,
+                        CustomFieldDefinition>(table),
+                    BaseReferences<
+                        _$PiggyDatabase,
+                        $CustomFieldDefinitionsTable,
+                        CustomFieldDefinition>(db, table, e)
+                  ))
               .toList(),
           prefetchHooksCallback: null,
         ));
@@ -15308,7 +16044,11 @@ class $$TransactionTagsTableTableManager extends RootTableManager<
             tagId: tagId,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable<$TransactionTagsTable, TransactionTag>(table),
+                    BaseReferences<_$PiggyDatabase, $TransactionTagsTable,
+                        TransactionTag>(db, table, e)
+                  ))
               .toList(),
           prefetchHooksCallback: null,
         ));
@@ -15560,7 +16300,11 @@ class $$BudgetsTableTableManager extends RootTableManager<
             updatedAt: updatedAt,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable<$BudgetsTable, Budget>(table),
+                    BaseReferences<_$PiggyDatabase, $BudgetsTable, Budget>(
+                        db, table, e)
+                  ))
               .toList(),
           prefetchHooksCallback: null,
         ));
@@ -15836,7 +16580,14 @@ class $$TransactionAttachmentsTableTableManager extends RootTableManager<
             createdAt: createdAt,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable<$TransactionAttachmentsTable,
+                        TransactionAttachment>(table),
+                    BaseReferences<
+                        _$PiggyDatabase,
+                        $TransactionAttachmentsTable,
+                        TransactionAttachment>(db, table, e)
+                  ))
               .toList(),
           prefetchHooksCallback: null,
         ));
@@ -16066,7 +16817,11 @@ class $$LocalChangesTableTableManager extends RootTableManager<
             pushedAt: pushedAt,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable<$LocalChangesTable, LocalChange>(table),
+                    BaseReferences<_$PiggyDatabase, $LocalChangesTable,
+                        LocalChange>(db, table, e)
+                  ))
               .toList(),
           prefetchHooksCallback: null,
         ));
@@ -16286,7 +17041,11 @@ class $$LedgerMembersTableTableManager extends RootTableManager<
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable<$LedgerMembersTable, LedgerMember>(table),
+                    BaseReferences<_$PiggyDatabase, $LedgerMembersTable,
+                        LedgerMember>(db, table, e)
+                  ))
               .toList(),
           prefetchHooksCallback: null,
         ));
@@ -16605,7 +17364,14 @@ class $$SharedLedgerCategoriesTableTableManager extends RootTableManager<
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable<$SharedLedgerCategoriesTable,
+                        SharedLedgerCategory>(table),
+                    BaseReferences<
+                        _$PiggyDatabase,
+                        $SharedLedgerCategoriesTable,
+                        SharedLedgerCategory>(db, table, e)
+                  ))
               .toList(),
           prefetchHooksCallback: null,
         ));
@@ -16909,7 +17675,12 @@ class $$SharedLedgerAccountsTableTableManager extends RootTableManager<
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable<$SharedLedgerAccountsTable,
+                        SharedLedgerAccount>(table),
+                    BaseReferences<_$PiggyDatabase, $SharedLedgerAccountsTable,
+                        SharedLedgerAccount>(db, table, e)
+                  ))
               .toList(),
           prefetchHooksCallback: null,
         ));
@@ -17086,7 +17857,11 @@ class $$SharedLedgerTagsTableTableManager extends RootTableManager<
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable<$SharedLedgerTagsTable, SharedLedgerTag>(table),
+                    BaseReferences<_$PiggyDatabase, $SharedLedgerTagsTable,
+                        SharedLedgerTag>(db, table, e)
+                  ))
               .toList(),
           prefetchHooksCallback: null,
         ));
@@ -17236,7 +18011,14 @@ class $$TransactionTagOverridesTableTableManager extends RootTableManager<
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable<$TransactionTagOverridesTable,
+                        TransactionTagOverride>(table),
+                    BaseReferences<
+                        _$PiggyDatabase,
+                        $TransactionTagOverridesTable,
+                        TransactionTagOverride>(db, table, e)
+                  ))
               .toList(),
           prefetchHooksCallback: null,
         ));
@@ -17563,7 +18345,11 @@ class $$SyncPullErrorsTableTableManager extends RootTableManager<
             resolvedAt: resolvedAt,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable<$SyncPullErrorsTable, SyncPullError>(table),
+                    BaseReferences<_$PiggyDatabase, $SyncPullErrorsTable,
+                        SyncPullError>(db, table, e)
+                  ))
               .toList(),
           prefetchHooksCallback: null,
         ));
@@ -17754,7 +18540,11 @@ class $$ExchangeRatesTableTableManager extends RootTableManager<
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable<$ExchangeRatesTable, ExchangeRate>(table),
+                    BaseReferences<_$PiggyDatabase, $ExchangeRatesTable,
+                        ExchangeRate>(db, table, e)
+                  ))
               .toList(),
           prefetchHooksCallback: null,
         ));
@@ -17943,7 +18733,12 @@ class $$ExchangeRateOverridesTableTableManager extends RootTableManager<
             updatedAt: updatedAt,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable<$ExchangeRateOverridesTable,
+                        ExchangeRateOverride>(table),
+                    BaseReferences<_$PiggyDatabase, $ExchangeRateOverridesTable,
+                        ExchangeRateOverride>(db, table, e)
+                  ))
               .toList(),
           prefetchHooksCallback: null,
         ));
@@ -18078,7 +18873,14 @@ class $$EntityChangeWatermarksTableTableManager extends RootTableManager<
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable<$EntityChangeWatermarksTable,
+                        EntityChangeWatermark>(table),
+                    BaseReferences<
+                        _$PiggyDatabase,
+                        $EntityChangeWatermarksTable,
+                        EntityChangeWatermark>(db, table, e)
+                  ))
               .toList(),
           prefetchHooksCallback: null,
         ));
@@ -18305,7 +19107,11 @@ class $$SyncOpLogTableTableManager extends RootTableManager<
             durationMs: durationMs,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable<$SyncOpLogTable, SyncOpLogData>(table),
+                    BaseReferences<_$PiggyDatabase, $SyncOpLogTable,
+                        SyncOpLogData>(db, table, e)
+                  ))
               .toList(),
           prefetchHooksCallback: null,
         ));
@@ -18434,7 +19240,11 @@ class $$StaleRemoteSlotsTableTableManager extends RootTableManager<
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable<$StaleRemoteSlotsTable, StaleRemoteSlot>(table),
+                    BaseReferences<_$PiggyDatabase, $StaleRemoteSlotsTable,
+                        StaleRemoteSlot>(db, table, e)
+                  ))
               .toList(),
           prefetchHooksCallback: null,
         ));
@@ -18620,7 +19430,12 @@ class $$DeletedTransactionsTableTableManager extends RootTableManager<
             payload: payload,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable<$DeletedTransactionsTable, DeletedTransaction>(
+                        table),
+                    BaseReferences<_$PiggyDatabase, $DeletedTransactionsTable,
+                        DeletedTransaction>(db, table, e)
+                  ))
               .toList(),
           prefetchHooksCallback: null,
         ));
@@ -18641,6 +19456,378 @@ typedef $$DeletedTransactionsTableProcessedTableManager = ProcessedTableManager<
           DeletedTransaction>
     ),
     DeletedTransaction,
+    PrefetchHooks Function()>;
+typedef $$HolidayEntriesTableCreateCompanionBuilder = HolidayEntriesCompanion
+    Function({
+  required String date,
+  required int year,
+  required bool isHoliday,
+  required String name,
+  required DateTime fetchedAt,
+  Value<int> rowid,
+});
+typedef $$HolidayEntriesTableUpdateCompanionBuilder = HolidayEntriesCompanion
+    Function({
+  Value<String> date,
+  Value<int> year,
+  Value<bool> isHoliday,
+  Value<String> name,
+  Value<DateTime> fetchedAt,
+  Value<int> rowid,
+});
+
+class $$HolidayEntriesTableFilterComposer
+    extends Composer<_$PiggyDatabase, $HolidayEntriesTable> {
+  $$HolidayEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get date => $composableBuilder(
+      column: $table.date, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get year => $composableBuilder(
+      column: $table.year, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isHoliday => $composableBuilder(
+      column: $table.isHoliday, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get fetchedAt => $composableBuilder(
+      column: $table.fetchedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$HolidayEntriesTableOrderingComposer
+    extends Composer<_$PiggyDatabase, $HolidayEntriesTable> {
+  $$HolidayEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get date => $composableBuilder(
+      column: $table.date, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get year => $composableBuilder(
+      column: $table.year, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isHoliday => $composableBuilder(
+      column: $table.isHoliday, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get fetchedAt => $composableBuilder(
+      column: $table.fetchedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$HolidayEntriesTableAnnotationComposer
+    extends Composer<_$PiggyDatabase, $HolidayEntriesTable> {
+  $$HolidayEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
+
+  GeneratedColumn<int> get year =>
+      $composableBuilder(column: $table.year, builder: (column) => column);
+
+  GeneratedColumn<bool> get isHoliday =>
+      $composableBuilder(column: $table.isHoliday, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get fetchedAt =>
+      $composableBuilder(column: $table.fetchedAt, builder: (column) => column);
+}
+
+class $$HolidayEntriesTableTableManager extends RootTableManager<
+    _$PiggyDatabase,
+    $HolidayEntriesTable,
+    HolidayEntry,
+    $$HolidayEntriesTableFilterComposer,
+    $$HolidayEntriesTableOrderingComposer,
+    $$HolidayEntriesTableAnnotationComposer,
+    $$HolidayEntriesTableCreateCompanionBuilder,
+    $$HolidayEntriesTableUpdateCompanionBuilder,
+    (
+      HolidayEntry,
+      BaseReferences<_$PiggyDatabase, $HolidayEntriesTable, HolidayEntry>
+    ),
+    HolidayEntry,
+    PrefetchHooks Function()> {
+  $$HolidayEntriesTableTableManager(
+      _$PiggyDatabase db, $HolidayEntriesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$HolidayEntriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$HolidayEntriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$HolidayEntriesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> date = const Value.absent(),
+            Value<int> year = const Value.absent(),
+            Value<bool> isHoliday = const Value.absent(),
+            Value<String> name = const Value.absent(),
+            Value<DateTime> fetchedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              HolidayEntriesCompanion(
+            date: date,
+            year: year,
+            isHoliday: isHoliday,
+            name: name,
+            fetchedAt: fetchedAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String date,
+            required int year,
+            required bool isHoliday,
+            required String name,
+            required DateTime fetchedAt,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              HolidayEntriesCompanion.insert(
+            date: date,
+            year: year,
+            isHoliday: isHoliday,
+            name: name,
+            fetchedAt: fetchedAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable<$HolidayEntriesTable, HolidayEntry>(table),
+                    BaseReferences<_$PiggyDatabase, $HolidayEntriesTable,
+                        HolidayEntry>(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$HolidayEntriesTableProcessedTableManager = ProcessedTableManager<
+    _$PiggyDatabase,
+    $HolidayEntriesTable,
+    HolidayEntry,
+    $$HolidayEntriesTableFilterComposer,
+    $$HolidayEntriesTableOrderingComposer,
+    $$HolidayEntriesTableAnnotationComposer,
+    $$HolidayEntriesTableCreateCompanionBuilder,
+    $$HolidayEntriesTableUpdateCompanionBuilder,
+    (
+      HolidayEntry,
+      BaseReferences<_$PiggyDatabase, $HolidayEntriesTable, HolidayEntry>
+    ),
+    HolidayEntry,
+    PrefetchHooks Function()>;
+typedef $$HolidayUpdateMetaTableCreateCompanionBuilder
+    = HolidayUpdateMetaCompanion Function({
+  Value<int> id,
+  Value<int> lastUpdateMs,
+  Value<int> lastAttemptMs,
+  Value<int> failureCount,
+  Value<bool> autoEnabled,
+  required DateTime updatedAt,
+});
+typedef $$HolidayUpdateMetaTableUpdateCompanionBuilder
+    = HolidayUpdateMetaCompanion Function({
+  Value<int> id,
+  Value<int> lastUpdateMs,
+  Value<int> lastAttemptMs,
+  Value<int> failureCount,
+  Value<bool> autoEnabled,
+  Value<DateTime> updatedAt,
+});
+
+class $$HolidayUpdateMetaTableFilterComposer
+    extends Composer<_$PiggyDatabase, $HolidayUpdateMetaTable> {
+  $$HolidayUpdateMetaTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get lastUpdateMs => $composableBuilder(
+      column: $table.lastUpdateMs, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get lastAttemptMs => $composableBuilder(
+      column: $table.lastAttemptMs, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get failureCount => $composableBuilder(
+      column: $table.failureCount, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get autoEnabled => $composableBuilder(
+      column: $table.autoEnabled, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$HolidayUpdateMetaTableOrderingComposer
+    extends Composer<_$PiggyDatabase, $HolidayUpdateMetaTable> {
+  $$HolidayUpdateMetaTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get lastUpdateMs => $composableBuilder(
+      column: $table.lastUpdateMs,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get lastAttemptMs => $composableBuilder(
+      column: $table.lastAttemptMs,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get failureCount => $composableBuilder(
+      column: $table.failureCount,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get autoEnabled => $composableBuilder(
+      column: $table.autoEnabled, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$HolidayUpdateMetaTableAnnotationComposer
+    extends Composer<_$PiggyDatabase, $HolidayUpdateMetaTable> {
+  $$HolidayUpdateMetaTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get lastUpdateMs => $composableBuilder(
+      column: $table.lastUpdateMs, builder: (column) => column);
+
+  GeneratedColumn<int> get lastAttemptMs => $composableBuilder(
+      column: $table.lastAttemptMs, builder: (column) => column);
+
+  GeneratedColumn<int> get failureCount => $composableBuilder(
+      column: $table.failureCount, builder: (column) => column);
+
+  GeneratedColumn<bool> get autoEnabled => $composableBuilder(
+      column: $table.autoEnabled, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$HolidayUpdateMetaTableTableManager extends RootTableManager<
+    _$PiggyDatabase,
+    $HolidayUpdateMetaTable,
+    HolidayUpdateMetaData,
+    $$HolidayUpdateMetaTableFilterComposer,
+    $$HolidayUpdateMetaTableOrderingComposer,
+    $$HolidayUpdateMetaTableAnnotationComposer,
+    $$HolidayUpdateMetaTableCreateCompanionBuilder,
+    $$HolidayUpdateMetaTableUpdateCompanionBuilder,
+    (
+      HolidayUpdateMetaData,
+      BaseReferences<_$PiggyDatabase, $HolidayUpdateMetaTable,
+          HolidayUpdateMetaData>
+    ),
+    HolidayUpdateMetaData,
+    PrefetchHooks Function()> {
+  $$HolidayUpdateMetaTableTableManager(
+      _$PiggyDatabase db, $HolidayUpdateMetaTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$HolidayUpdateMetaTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$HolidayUpdateMetaTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$HolidayUpdateMetaTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<int> lastUpdateMs = const Value.absent(),
+            Value<int> lastAttemptMs = const Value.absent(),
+            Value<int> failureCount = const Value.absent(),
+            Value<bool> autoEnabled = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+          }) =>
+              HolidayUpdateMetaCompanion(
+            id: id,
+            lastUpdateMs: lastUpdateMs,
+            lastAttemptMs: lastAttemptMs,
+            failureCount: failureCount,
+            autoEnabled: autoEnabled,
+            updatedAt: updatedAt,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<int> lastUpdateMs = const Value.absent(),
+            Value<int> lastAttemptMs = const Value.absent(),
+            Value<int> failureCount = const Value.absent(),
+            Value<bool> autoEnabled = const Value.absent(),
+            required DateTime updatedAt,
+          }) =>
+              HolidayUpdateMetaCompanion.insert(
+            id: id,
+            lastUpdateMs: lastUpdateMs,
+            lastAttemptMs: lastAttemptMs,
+            failureCount: failureCount,
+            autoEnabled: autoEnabled,
+            updatedAt: updatedAt,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable<$HolidayUpdateMetaTable, HolidayUpdateMetaData>(
+                        table),
+                    BaseReferences<_$PiggyDatabase, $HolidayUpdateMetaTable,
+                        HolidayUpdateMetaData>(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$HolidayUpdateMetaTableProcessedTableManager = ProcessedTableManager<
+    _$PiggyDatabase,
+    $HolidayUpdateMetaTable,
+    HolidayUpdateMetaData,
+    $$HolidayUpdateMetaTableFilterComposer,
+    $$HolidayUpdateMetaTableOrderingComposer,
+    $$HolidayUpdateMetaTableAnnotationComposer,
+    $$HolidayUpdateMetaTableCreateCompanionBuilder,
+    $$HolidayUpdateMetaTableUpdateCompanionBuilder,
+    (
+      HolidayUpdateMetaData,
+      BaseReferences<_$PiggyDatabase, $HolidayUpdateMetaTable,
+          HolidayUpdateMetaData>
+    ),
+    HolidayUpdateMetaData,
     PrefetchHooks Function()>;
 
 class $PiggyDatabaseManager {
@@ -18700,4 +19887,8 @@ class $PiggyDatabaseManager {
       $$StaleRemoteSlotsTableTableManager(_db, _db.staleRemoteSlots);
   $$DeletedTransactionsTableTableManager get deletedTransactions =>
       $$DeletedTransactionsTableTableManager(_db, _db.deletedTransactions);
+  $$HolidayEntriesTableTableManager get holidayEntries =>
+      $$HolidayEntriesTableTableManager(_db, _db.holidayEntries);
+  $$HolidayUpdateMetaTableTableManager get holidayUpdateMeta =>
+      $$HolidayUpdateMetaTableTableManager(_db, _db.holidayUpdateMeta);
 }

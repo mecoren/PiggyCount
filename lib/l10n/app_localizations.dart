@@ -1419,7 +1419,7 @@ abstract class AppLocalizations {
   /// No description provided for @ledgersDeleteMessage.
   ///
   /// In en, this message translates to:
-  /// **'Are you sure you want to delete this ledger and all its records? This action cannot be undone.\\nIf there is a backup in the cloud, it will also be deleted.'**
+  /// **'Are you sure you want to delete this ledger and all its records? This action cannot be undone.\nIf there is a backup in the cloud, it will also be deleted.'**
   String get ledgersDeleteMessage;
 
   /// No description provided for @ledgersDeleteReconfirmMessage.
@@ -1467,7 +1467,7 @@ abstract class AppLocalizations {
   /// No description provided for @ledgersDeleteLocalMessage.
   ///
   /// In en, this message translates to:
-  /// **'Are you sure to delete local ledger \"{name}\"?\\nCloud backup will be kept and you can restore it anytime.'**
+  /// **'Are you sure to delete local ledger \"{name}\"?\nCloud backup will be kept and you can restore it anytime.'**
   String ledgersDeleteLocalMessage(String name);
 
   /// No description provided for @ledgersDeleteLocalReconfirmMessage.
@@ -15204,6 +15204,180 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Chart, {count} points: {points}'**
   String semanticsChartSeries(int count, String points);
+
+  /// No description provided for @holidaySettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar & Holidays'**
+  String get holidaySettingsTitle;
+
+  /// No description provided for @holidaySettingsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Statutory holidays and lunar dates, updated monthly'**
+  String get holidaySettingsDesc;
+
+  /// No description provided for @holidayCacheOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Cache overview'**
+  String get holidayCacheOverview;
+
+  /// No description provided for @holidayCacheCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} entries ({off} holidays · {work} make-up workdays)'**
+  String holidayCacheCount(int count, int off, int work);
+
+  /// No description provided for @holidayCoverYears.
+  ///
+  /// In en, this message translates to:
+  /// **'Years covered: {range}'**
+  String holidayCoverYears(String range);
+
+  /// No description provided for @holidayLastUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Last successful update: {time}'**
+  String holidayLastUpdate(String time);
+
+  /// No description provided for @holidayNeverUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Never updated successfully'**
+  String get holidayNeverUpdated;
+
+  /// No description provided for @holidayFailureCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} consecutive failures (cached data still usable)'**
+  String holidayFailureCount(int count);
+
+  /// No description provided for @holidayUpdateNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Update now'**
+  String get holidayUpdateNow;
+
+  /// No description provided for @holidayUpdating.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating…'**
+  String get holidayUpdating;
+
+  /// No description provided for @holidayUpdateSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Holiday data updated'**
+  String get holidayUpdateSuccess;
+
+  /// No description provided for @holidayUpdateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Update failed: {error}'**
+  String holidayUpdateFailed(String error);
+
+  /// No description provided for @holidayAutoUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly auto update'**
+  String get holidayAutoUpdate;
+
+  /// No description provided for @holidayAutoUpdateDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Fetches once a month; no ledger or device info'**
+  String get holidayAutoUpdateDesc;
+
+  /// No description provided for @holidayBadgeOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get holidayBadgeOff;
+
+  /// No description provided for @holidayBadgeWork.
+  ///
+  /// In en, this message translates to:
+  /// **'Work'**
+  String get holidayBadgeWork;
+
+  /// No description provided for @holidayLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load holiday data'**
+  String get holidayLoadFailed;
+
+  /// No description provided for @holidayFetchByYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Fetch by year range'**
+  String get holidayFetchByYear;
+
+  /// No description provided for @holidayFetchByYearDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a start and end year to backfill holidays'**
+  String get holidayFetchByYearDesc;
+
+  /// No description provided for @holidayUpdateYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Update this year'**
+  String get holidayUpdateYear;
+
+  /// No description provided for @holidayFetchYearDone.
+  ///
+  /// In en, this message translates to:
+  /// **'{year} holiday data updated'**
+  String holidayFetchYearDone(int year);
+
+  /// No description provided for @holidayYearNoData.
+  ///
+  /// In en, this message translates to:
+  /// **'No holiday data for {year}'**
+  String holidayYearNoData(int year);
+
+  /// No description provided for @holidayFetchYearFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Fetch failed: {error}'**
+  String holidayFetchYearFailed(String error);
+
+  /// No description provided for @holidayYearRangeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select year range'**
+  String get holidayYearRangeTitle;
+
+  /// No description provided for @holidayYearRangeStart.
+  ///
+  /// In en, this message translates to:
+  /// **'From year'**
+  String get holidayYearRangeStart;
+
+  /// No description provided for @holidayYearRangeEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'To year'**
+  String get holidayYearRangeEnd;
+
+  /// No description provided for @holidayFetchRangeDone.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} year(s) backfilled'**
+  String holidayFetchRangeDone(int count);
+
+  /// No description provided for @holidayFetchRangeDoneNoData.
+  ///
+  /// In en, this message translates to:
+  /// **'{updated} year(s) backfilled, {noData} with no data'**
+  String holidayFetchRangeDoneNoData(int updated, int noData);
+
+  /// No description provided for @holidayFetchRangePartial.
+  ///
+  /// In en, this message translates to:
+  /// **'{updated} year(s) backfilled, {count} failed'**
+  String holidayFetchRangePartial(int updated, int count);
 }
 
 class _AppLocalizationsDelegate

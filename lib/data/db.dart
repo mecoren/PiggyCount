@@ -97,6 +97,56 @@ class ExchangeRateOverrides extends Table {
   DateTimeColumn get updatedAt => dateTime().nullable()();
 }
 
+/// 中国法定节假日本地缓存（date 主键，整年替换）。随时可整表重建
+/// → **不进云同步 / 不进全量备份**（与 [ExchangeRates] 同定位）。
+///
+/// 语义：DB 有行以 DB 为准；DB 为空（首装 / 清库 / 更新中）由
+/// `HolidayService.builtinHolidays()` 回落预置表保证冷启动可用。
+/// ⚠️ 刻意**不**纳入 `local_changes` / 指纹 / diff / 备份清单，也不挂
+/// `updated_at` 触碰触发器 —— 它是可重建缓存，纳管会回流幻影变更并让
+/// `test/cloud/sync_contract_coverage_test.dart` 变红。
+class HolidayEntries extends Table {
+  /// 'YYYY-MM-DD'
+  TextColumn get date => text()();
+
+  /// 公历年（整年替换 / 设置页按年分组都靠它）
+  IntColumn get year => integer()();
+
+  /// true = 放假日；false = 调休补班日（要上班的周末）
+  BoolColumn get isHoliday => boolean()();
+
+  /// 节假日名称（如「春节」「春节后补班」）
+  TextColumn get name => text()();
+
+  DateTimeColumn get fetchedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {date};
+}
+
+/// 节假日更新记账（单行，id 恒为 1）。本地调度状态 → 不进同步 / 备份。
+class HolidayUpdateMeta extends Table {
+  /// 恒 1
+  IntColumn get id => integer()();
+
+  /// 上次**成功**更新时间（epoch ms；0 = 从未成功）
+  IntColumn get lastUpdateMs => integer().withDefault(const Constant(0))();
+
+  /// 上次尝试时间（epoch ms；成功 / 失败都写）
+  IntColumn get lastAttemptMs => integer().withDefault(const Constant(0))();
+
+  /// 连续失败次数（成功后清零）
+  IntColumn get failureCount => integer().withDefault(const Constant(0))();
+
+  /// 「每月自动更新」开关
+  BoolColumn get autoEnabled => boolean().withDefault(const Constant(true))();
+
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 class Categories extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text()();
@@ -629,6 +679,9 @@ class SharedLedgerTags extends Table {
   SyncOpLog,
   StaleRemoteSlots,
   DeletedTransactions,
+  // v49：本地缓存类表（非同步实体，见表定义处注释）
+  HolidayEntries,
+  HolidayUpdateMeta,
 ])
 class PiggyDatabase extends _$PiggyDatabase {
   PiggyDatabase() : super(_openConnection());
@@ -640,7 +693,7 @@ class PiggyDatabase extends _$PiggyDatabase {
 
   @override
   int get schemaVersion =>
-      48; // v48: 索引修复型迁移 — 补建 v10/v11/v12 只写进 onUpgrade 分支、onCreate 遗漏的 transaction_tags ×2 / budgets ×3 / transaction_attachments ×1 索引(2026-09-26 双端实测:新装库 EXPLAIN 报 SCAN transaction_tags,合并路径 tag 批量读固定 ~0.5s); v47: 周期账单模板自定义字段值 recurring_transactions.template_field_values({fieldSyncId: value} JSON 对象,生成实例时注入); v46: 账本自定义字段 — custom_field_definitions(按账本独立定义名称/类型/排序) + transactions.custom_values_json({fieldSyncId: value} JSON 对象,不参与列表/统计); v45: 账本明细原始金额 transactions.original_amount(用户手填,NULL=未填写即按记账金额); v44: 回收站 deleted_transactions(F1 交易建模,软删除搬行而非加列); v43: 同步指标 sync_op_log(审计 P0-1,本地成功率测量) + stale_remote_slots(审计 P1-6,换名收尾补删持久化); v42: 周期账单币种 — recurring_transactions.currency_code(移植 BeeCount #444); v41: local_changes 已推送行存量清理(数据治理 G-LC,双后端实测 6143 行无界增长); v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
+      49; // v49: 日历节假日本地缓存 — holiday_entries(date 主键,整年替换) + holiday_update_meta(单行 1:上次成功/尝试时间、连续失败数、自动更新开关);两张表都是「随时可整表重建」的本地缓存,不进同步白名单/指纹/diff/备份,也不挂 updated_at 触发器(与 exchange_rates 同定位) v48: 索引修复型迁移 — 补建 v10/v11/v12 只写进 onUpgrade 分支、onCreate 遗漏的 transaction_tags ×2 / budgets ×3 / transaction_attachments ×1 索引(2026-09-26 双端实测:新装库 EXPLAIN 报 SCAN transaction_tags,合并路径 tag 批量读固定 ~0.5s); v47: 周期账单模板自定义字段值 recurring_transactions.template_field_values({fieldSyncId: value} JSON 对象,生成实例时注入); v46: 账本自定义字段 — custom_field_definitions(按账本独立定义名称/类型/排序) + transactions.custom_values_json({fieldSyncId: value} JSON 对象,不参与列表/统计); v45: 账本明细原始金额 transactions.original_amount(用户手填,NULL=未填写即按记账金额); v44: 回收站 deleted_transactions(F1 交易建模,软删除搬行而非加列); v43: 同步指标 sync_op_log(审计 P0-1,本地成功率测量) + stale_remote_slots(审计 P1-6,换名收尾补删持久化); v42: 周期账单币种 — recurring_transactions.currency_code(移植 BeeCount #444); v41: local_changes 已推送行存量清理(数据治理 G-LC,双后端实测 6143 行无界增长); v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
 
   /// WAL 检查点后允许残留的字节数（见 [migration] 的 beforeOpen）。
   /// 公开给回归测试取期望值，别处不要依赖。
@@ -1630,8 +1683,7 @@ class PiggyDatabase extends _$PiggyDatabase {
             // 写入路径同样兜底(见 local_transaction_repository),读取侧的
             // COALESCE 只作旧快照/手工插库的防御,不承担业务兜底。
             // ⚠️ SQL 与 test/data/migration_v45_test.dart 的常量保持一字不差。
-            logger.info(
-                'DBMigration', '开始迁移到 v45: 账本明细原始金额(original_amount)');
+            logger.info('DBMigration', '开始迁移到 v45: 账本明细原始金额(original_amount)');
             await _addColumnIfMissing('transactions', 'original_amount',
                 'ALTER TABLE transactions ADD COLUMN original_amount REAL;');
             await customStatement(
@@ -1670,7 +1722,8 @@ class PiggyDatabase extends _$PiggyDatabase {
             // 会让"旧快照无此键"与"显式空对象"指纹不一致,引发永不收敛的
             // 假冲突(v45 original_amount / v46 custom_values_json 同款教训)。
             logger.info('DBMigration', '开始迁移到 v47: 周期账单模板自定义字段值');
-            await _addColumnIfMissing('recurring_transactions',
+            await _addColumnIfMissing(
+                'recurring_transactions',
                 'template_field_values',
                 'ALTER TABLE recurring_transactions ADD COLUMN template_field_values TEXT;');
             logger.info('DBMigration', 'v47 迁移完成');
@@ -1682,9 +1735,27 @@ class PiggyDatabase extends _$PiggyDatabase {
             // 修复型迁移 —— 于是**版本已越过 v12 的存量库**（`from < 10/11/12`
             // 永不成立）与**全部新装库**都永远没有这些索引。另开版本号无条件
             // IF NOT EXISTS 补建，幂等可重入。
-            logger.info('DBMigration', '开始迁移到 v48: 补建缺失的 tag/budget/attachment 索引');
+            logger.info(
+                'DBMigration', '开始迁移到 v48: 补建缺失的 tag/budget/attachment 索引');
             await _createV48RepairIndexes();
             logger.info('DBMigration', 'v48 迁移完成');
+          }
+          if (from < 49) {
+            // v49: 日历节假日本地缓存 + 更新记账。
+            // 两张表都是「随时可整表重建」的本地缓存（与 exchange_rates 同定位）：
+            // **刻意不进** local_changes / 指纹 / diff / 备份清单，也**不挂**
+            // updated_at 触碰触发器 —— 纳管会回流幻影变更，并让契约穷举守门
+            // 测试（sync_contract_coverage_test.dart）变红。
+            logger.info('DBMigration', '开始迁移到 v49: 日历节假日本地缓存与更新记账');
+            await _createTableIfMissing(
+                migrator, 'holiday_entries', holidayEntries);
+            await _createTableIfMissing(
+                migrator, 'holiday_update_meta', holidayUpdateMeta);
+            // year 是整年替换（按年批量删）与设置页按年分组读取的唯一谓词。
+            await customStatement(
+                'CREATE INDEX IF NOT EXISTS idx_holiday_entries_year '
+                'ON holiday_entries(year);');
+            logger.info('DBMigration', 'v49 迁移完成');
           }
         },
         onCreate: (m) async {
@@ -1773,6 +1844,11 @@ class PiggyDatabase extends _$PiggyDatabase {
           // onCreate）。表本体由上方 m.createAll 创建。
           await customStatement(
               'CREATE INDEX IF NOT EXISTS idx_sync_op_log_ts ON sync_op_log(ts);');
+          // v49: 节假日缓存 year 索引（与 onUpgrade v49 同构 —— 新装库走
+          // onCreate 而非 migration，漏建即永久缺失）。
+          await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_holiday_entries_year '
+              'ON holiday_entries(year);');
         },
       );
 

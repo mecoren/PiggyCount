@@ -3964,5 +3964,123 @@
         "type": "String"
       }
     }
+  },
+  "holidaySettingsTitle": "Calendar & Holidays",
+  "holidaySettingsDesc": "Statutory holidays and lunar dates, updated monthly",
+  "holidayCacheOverview": "Cache overview",
+  "holidayCacheCount": "{count} entries ({off} holidays · {work} make-up workdays)",
+  "@holidayCacheCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "off": {
+        "type": "int"
+      },
+      "work": {
+        "type": "int"
+      }
+    }
+  },
+  "holidayCoverYears": "Years covered: {range}",
+  "@holidayCoverYears": {
+    "placeholders": {
+      "range": {
+        "type": "String"
+      }
+    }
+  },
+  "holidayLastUpdate": "Last successful update: {time}",
+  "@holidayLastUpdate": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "holidayNeverUpdated": "Never updated successfully",
+  "holidayFailureCount": "{count} consecutive failures (cached data still usable)",
+  "@holidayFailureCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "holidayUpdateNow": "Update now",
+  "holidayUpdating": "Updating…",
+  "holidayUpdateSuccess": "Holiday data updated",
+  "holidayUpdateFailed": "Update failed: {error}",
+  "@holidayUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "holidayAutoUpdate": "Monthly auto update",
+  "holidayAutoUpdateDesc": "Fetches once a month; no ledger or device info",
+  "holidayBadgeOff": "Off",
+  "holidayBadgeWork": "Work",
+  "holidayLoadFailed": "Failed to load holiday data",
+  "holidayFetchByYear": "Fetch by year range",
+  "holidayFetchByYearDesc": "Pick a start and end year to backfill holidays",
+  "holidayUpdateYear": "Update this year",
+  "holidayFetchYearDone": "{year} holiday data updated",
+  "@holidayFetchYearDone": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "holidayYearNoData": "No holiday data for {year}",
+  "@holidayYearNoData": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "holidayFetchYearFailed": "Fetch failed: {error}",
+  "holidayYearRangeTitle": "Select year range",
+  "holidayYearRangeStart": "From year",
+  "holidayYearRangeEnd": "To year",
+  "holidayFetchRangeDone": "{count} year(s) backfilled",
+  "@holidayFetchRangeDone": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "holidayFetchRangeDoneNoData": "{updated} year(s) backfilled, {noData} with no data",
+  "@holidayFetchRangeDoneNoData": {
+    "placeholders": {
+      "updated": {
+        "type": "int"
+      },
+      "noData": {
+        "type": "int"
+      }
+    }
+  },
+  "holidayFetchRangePartial": "{updated} year(s) backfilled, {count} failed",
+  "@holidayFetchRangePartial": {
+    "placeholders": {
+      "updated": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@holidayFetchYearFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   }
 }

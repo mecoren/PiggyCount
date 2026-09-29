@@ -15,7 +15,7 @@ PiggyCount（小猪记账）是开源、隐私可控、**离线优先**的个人
 - **同步是整账本快照（Path A）**：`lib/cloud/sync_service.dart` 定义 `SyncService` 抽象接口，`TransactionsSyncManager`（`lib/cloud/transactions_sync_manager.dart`）是主实现——导出整本账本 JSON 快照上传，拉取走下载 + 恢复 / 合并（`SyncDiffService` 出 diff 预览，`sync_fingerprint.dart` 出内容指纹）。本地内容变化用 `SyncService.markLocalChanged(ledgerId)` 失效缓存；后台自动上传用 `uploadCurrentLedgerDebounced`（2s 窗口收敛，手动 / 合并回传用立即语义的 `uploadCurrentLedger`）。**旧的增量引擎（Path B / `SyncEngine`）已整体下线**——代码里 `sync_engine.*` 之类的注释属历史残留，别按它找文件。Repository 不调用 SyncService，由 UI / Provider 经接口触发。
 - **上传禁止盲覆盖**：上传前用 `UploadProbe` 探测方向，冲突抛 `CloudConflictException`（`cloudNewer` / `unknown`），交 UI 让用户确认后再以 `force: true` 重试。恢复临界区由 `SyncRestoreGuard` 把守，`bypassRestoreGuard: true` **只允许恢复/合并已提交后的收尾回传**，用户主动上传入口绝不可传。
 - **同步契约有穷举守门测试**：`test/cloud/sync_contract_coverage_test.dart` 校验「指纹白名单 ↔ diff 覆盖字段」逐一对应。相关测试变红通常意味着「某字段进了指纹却没进 diff」或「检测到了却应用不下去」——**不要直接改测试来通过**，先定位真实缺口。
-- **改 schema 必须升版本 + 幂等迁移**：`lib/data/db.dart` 的 `schemaVersion`（当前 **48**）递增，`MigrationStrategy` 追加迁移块；迁移必须幂等、可重入。**禁止删除字段**（老用户数据会丢），必须废弃时加 `_deprecated_` 前缀保留。
+- **改 schema 必须升版本 + 幂等迁移**：`lib/data/db.dart` 的 `schemaVersion`（当前 **49**）递增，`MigrationStrategy` 追加迁移块；迁移必须幂等、可重入。**禁止删除字段**（老用户数据会丢），必须废弃时加 `_deprecated_` 前缀保留。
 - **改 Drift 表 / `@JsonSerializable` / `@freezed` 后必跑 build_runner**：`dart run build_runner build --delete-conflicting-outputs`；`*.g.dart` / `*.freezed.dart` **必须提交**，不要加 `.gitignore`。
 - **UI 强制走 Design Token**：颜色 / 间距 / 圆角 / 字体全部取 `lib/styles/tokens.dart` 的 `PiggyTokens` / `PiggyDimens` / `PiggyTextTokens` / `PiggyChartTokens` / `PiggyPosterTokens`。直接用 `Colors.white` / `Colors.black` / `Colors.grey.shadeXXX` 在暗黑模式下会出错。
 - **文案禁硬编码**：所有面向用户的文案进 `lib/l10n/app_*.arb`，UI 用 `AppLocalizations.of(context)!.key` 引用。缺英文（`app_en.arb`，模板文件）会直接显示 key。
@@ -29,7 +29,7 @@ PiggyCount（小猪记账）是开源、隐私可控、**离线优先**的个人
 | --- | --- |
 | 框架 | Flutter 3.44.3（stable）+ Dart SDK `^3.6.0`，`flutter_lints ^5.0.0` |
 | 状态与 DI | Riverpod 2.5（`flutter_riverpod`）——唯一状态管理方案，同时承担 DI |
-| 本地数据库 | Drift 2.20 ORM + `sqlite3_flutter_libs` / `sqlite3`（`PiggyDatabase`，schemaVersion 48） |
+| 本地数据库 | Drift 2.20 ORM + `sqlite3_flutter_libs` / `sqlite3`（`PiggyDatabase`，schemaVersion 49） |
 | 路由 | Navigator 1.0（`MaterialPageRoute` + `Navigator.push`），**不用** go_router / auto_route |
 | 云同步（自研） | `packages/flutter_cloud_sync`（核心）+ 各 provider 子包：`_supabase` / `_webdav` / `_s3` / `_icloud` |
 | AI（自研） | `packages/flutter_ai_kit`（6 种执行策略）+ `_zhipu`（GLM-4 / glm-4v-flash）+ `_openai` |
@@ -85,7 +85,7 @@ lib/
     sync/change_tracker.dart        # 变更登记（user-global ledgerId=0 / ledger-scoped）
     backup/                        # 云端全量备份与恢复、备份调度
   data/
-    db.dart              # PiggyDatabase（Drift 表定义 + MigrationStrategy，schemaVersion=48）
+    db.dart              # PiggyDatabase（Drift 表定义 + MigrationStrategy，schemaVersion=49）
     db.g.dart            # codegen 产物（提交）
     repositories/        # 抽象接口 + local/ 本地实现 + local_repository.dart 聚合
     encryption/          # AES-GCM / Argon2 / 密文格式 / 加密云 provider 与存储 / 安全密钥存储
@@ -153,7 +153,7 @@ python scripts/gen_ios_icons.py
 - **迁移在 `lib/data/db.dart` 的 `MigrationStrategy`**：新增表 / 字段必须升 `schemaVersion` 并追加迁移块，用 `CREATE ... IF NOT EXISTS` 等保证幂等；破坏性变更走重建表。新增索引需评估读写比（高频：`syncId`、`(ledger_id, happened_at)`、`category_id` / `account_id`）。**跨表迁移操作（如 `_updatedAtTouchTables` 建 `updated_at` 触发器）前必须先查 `sqlite_master` 确认表存在**，跳过后续版本才建的表，由对应建表迁移块补齐——否则老用户升级路径上 `CREATE TRIGGER` 作用于不存在的表会让迁移崩溃、App 打不开。
 - **查询必须参数化**：用 `Variable<T>` 绑定，**禁止**字符串拼接 SQL。批量写入用 `db.transaction(() async { ... })`。响应式 UI 用 `watch()` 返回 Stream。
 - **测试注入内存库**：`PiggyDatabase.forTesting(NativeDatabase.memory())`（跳过文件系统 / 平台副作用）。
-- 当前版本演进要点：v44 回收站 `deleted_transactions`（软删搬行）、v45 `transactions.original_amount`、v46 账本自定义字段 `custom_field_definitions` + `transactions.custom_values_json`、v47 周期模板注入 `recurring_transactions.template_field_values`、v48 索引修复型迁移。历史 migrations 明细见 `docoments/07-data-model.md`（该文档版本较旧，以 `db.dart` 为准）。
+- 当前版本演进要点：v44 回收站 `deleted_transactions`（软删搬行）、v45 `transactions.original_amount`、v46 账本自定义字段 `custom_field_definitions` + `transactions.custom_values_json`、v47 周期模板注入 `recurring_transactions.template_field_values`、v48 索引修复型迁移、v49 日历节假日本地缓存 `holiday_entries` + 更新记账 `holiday_update_meta`（均不进同步 / 备份）。历史 migrations 明细见 `docoments/07-data-model.md`（该文档版本较旧，以 `db.dart` 为准）。
 
 ## UI / 前端约定
 
