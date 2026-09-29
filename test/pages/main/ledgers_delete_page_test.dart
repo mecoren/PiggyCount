@@ -27,7 +27,8 @@ library;
 import 'package:drift/drift.dart' as d;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' as fcs hide SyncStatus;
+import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' as fcs
+    hide SyncStatus;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -196,13 +197,16 @@ void main() {
   ///
   /// 刻意不中断两关之间的等待：`countdownSeconds` 与页面接线一致才有意义，
   /// 若有人把倒计时改短/改长，这里会直接表现为点不到确认按钮。
+  /// [confirmLabel] 默认为「确定」；账本删除两处入口传的是红色「删除」。
   Future<void> confirmTwice(
     WidgetTester tester, {
     int countdownSeconds = 5,
+    String? confirmLabel,
   }) async {
+    final label = confirmLabel ?? zh(tester).commonConfirm;
     for (var gate = 0; gate < 2; gate++) {
       await elapse(tester, countdownSeconds);
-      await tester.tap(find.text(zh(tester).commonConfirm));
+      await tester.tap(find.text(label));
       await settleTransition(tester);
     }
   }
@@ -250,8 +254,7 @@ void main() {
       await drainTimers(tester);
     });
 
-    testWidgets('两关都确认 → 账单清空、账本保留、缓存失效、tick 刷新、提示「账本已清空」',
-        (tester) async {
+    testWidgets('两关都确认 → 账单清空、账本保留、缓存失效、tick 刷新、提示「账本已清空」', (tester) async {
       final container = await pumpPage(tester);
       // 预置首页缓存：清空后必须失效，否则首页继续渲染已经不存在的账单
       container.read(cachedTransactionsProvider.notifier).state =
@@ -269,26 +272,29 @@ void main() {
       expect(await txCount(2), 1, reason: '只能清空目标账本，不得波及账本乙');
       expect(container.read(cachedTransactionsProvider), isNull,
           reason: '不清缓存 → 首页仍显示已删掉的账单，用户以为清空失败');
-      expect(container.read(ledgerListRefreshProvider), greaterThan(listTickBefore),
+      expect(container.read(ledgerListRefreshProvider),
+          greaterThan(listTickBefore),
           reason: '不刷新列表 → 卡片上的统计数字还是清空前的老值');
-      expect(container.read(statsRefreshProvider), greaterThan(statsTickBefore));
+      expect(
+          container.read(statsRefreshProvider), greaterThan(statsTickBefore));
       expect(sync.remoteBackupCalls, isEmpty, reason: '清空账单不该动云端备份');
       await drainTimers(tester);
     });
   });
 
   group('AC-R12 仅删除本地账本（云端备份必须保留）', () {
-    testWidgets('确认删除 → 本地行与账单消失，且**绝不调用** deleteRemoteBackup',
-        (tester) async {
+    testWidgets('确认删除 → 本地行与账单消失，且**绝不调用** deleteRemoteBackup', (tester) async {
       // 本组最核心的一条负向断言：这个入口存在的前提就是「云端那份还在」。
       // 一旦误调 deleteRemoteBackup，用户点了一个看起来可恢复的按钮，
       // 实际云端唯一副本被抹掉 —— 不可逆。
       await pumpPage(tester);
 
-      await openDangerDialog(tester, zh(tester).ledgersDeleteLocal, targetId: 2);
+      await openDangerDialog(tester, zh(tester).ledgersDeleteLocal,
+          targetId: 2);
       expect(find.text(zh(tester).dangerConfirmCountdown(3)), findsOneWidget,
           reason: '「仅删本地」云端副本仍在，风险低于彻底删除 → 倒计时更短（3s）');
-      await confirmTwice(tester, countdownSeconds: 3);
+      await confirmTwice(tester,
+          countdownSeconds: 3, confirmLabel: zh(tester).commonDelete);
       await expectToast(tester, zh(tester).ledgersDeleteLocalSuccess);
       await pumpFrames(tester, frames: 8);
 
@@ -306,8 +312,10 @@ void main() {
       await container.read(currentLedgerProvider.future);
       expect(container.read(currentLedgerIdProvider), 1);
 
-      await openDangerDialog(tester, zh(tester).ledgersDeleteLocal, targetId: 1);
-      await confirmTwice(tester, countdownSeconds: 3);
+      await openDangerDialog(tester, zh(tester).ledgersDeleteLocal,
+          targetId: 1);
+      await confirmTwice(tester,
+          countdownSeconds: 3, confirmLabel: zh(tester).commonDelete);
       await pumpFrames(tester, frames: 10);
 
       expect(container.read(currentLedgerIdProvider), 2,
@@ -325,8 +333,10 @@ void main() {
       final container = await pumpPage(tester);
       await container.read(currentLedgerProvider.future);
 
-      await openDangerDialog(tester, zh(tester).ledgersDeleteLocal, targetId: 1);
-      await confirmTwice(tester, countdownSeconds: 3);
+      await openDangerDialog(tester, zh(tester).ledgersDeleteLocal,
+          targetId: 1);
+      await confirmTwice(tester,
+          countdownSeconds: 3, confirmLabel: zh(tester).commonDelete);
       await pumpFrames(tester, frames: 10);
 
       expect(container.read(currentLedgerIdProvider), 1,
@@ -347,7 +357,7 @@ void main() {
       await pumpPage(tester);
 
       await openDangerDialog(tester, zh(tester).ledgersDelete, targetId: 2);
-      await confirmTwice(tester);
+      await confirmTwice(tester, confirmLabel: zh(tester).commonDelete);
       await pumpFrames(tester, frames: 10);
 
       final remoteIdx = callLog.indexOf('sync.deleteRemoteBackup(2)');
@@ -369,14 +379,16 @@ void main() {
       expect(cardFor(2), findsOneWidget);
 
       await openDangerDialog(tester, zh(tester).ledgersDelete, targetId: 2);
-      await confirmTwice(tester);
+      await confirmTwice(tester, confirmLabel: zh(tester).commonDelete);
       await expectToast(tester, zh(tester).ledgersDeleted);
       await pumpFrames(tester, frames: 8);
 
       expect(cardFor(2), findsNothing, reason: '不刷新列表 → 卡片还在，用户以为没删掉会再删一次');
       expect(cardFor(1), findsOneWidget, reason: '不得误删另一个账本');
-      expect(container.read(ledgerListRefreshProvider), greaterThan(listTickBefore));
-      expect(container.read(statsRefreshProvider), greaterThan(statsTickBefore));
+      expect(container.read(ledgerListRefreshProvider),
+          greaterThan(listTickBefore));
+      expect(
+          container.read(statsRefreshProvider), greaterThan(statsTickBefore));
       await drainTimers(tester);
     });
   });
@@ -391,18 +403,17 @@ void main() {
 
       final l10n = zh(tester);
       final countingFinder =
-          find.widgetWithText(FilledButton, l10n.dangerConfirmCountdown(5));
+          find.widgetWithText(TextButton, l10n.dangerConfirmCountdown(5));
       expect(countingFinder, findsOneWidget,
           reason: '倒计时期间按钮文案应显示剩余秒数（同步暴露给用户「还不能点」）');
-      expect(tester.widget<FilledButton>(countingFinder).onPressed, isNull,
+      expect(tester.widget<TextButton>(countingFinder).onPressed, isNull,
           reason: '倒计时未结束 → 确认按钮必须禁用，否则双重确认退化为一次误触');
       expect(await ledgerExists(2), isTrue, reason: '此时弹窗还开着，绝不能已经开始删');
 
       await elapse(tester, 5);
 
-      final readyFinder =
-          find.widgetWithText(FilledButton, l10n.commonConfirm);
-      expect(tester.widget<FilledButton>(readyFinder).onPressed, isNotNull,
+      final readyFinder = find.widgetWithText(TextButton, l10n.commonDelete);
+      expect(tester.widget<TextButton>(readyFinder).onPressed, isNotNull,
           reason: '倒计时归零后应放行');
 
       await tester.tap(find.text(l10n.commonCancel));
@@ -418,7 +429,7 @@ void main() {
       await pumpPage(tester);
 
       await openDangerDialog(tester, zh(tester).ledgersDelete, targetId: 2);
-      await confirmTwice(tester);
+      await confirmTwice(tester, confirmLabel: zh(tester).commonDelete);
       await expectToast(tester, zh(tester).ledgersDeleted);
       await pumpFrames(tester, frames: 8);
 

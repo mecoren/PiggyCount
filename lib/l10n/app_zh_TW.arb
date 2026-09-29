@@ -1571,7 +1571,7 @@
   "ledgersDeleteLocalReconfirmMessage": "再次確認：僅刪除本機上的該帳本，雲端備份保留、可隨時恢復下載。確定要繼續嗎？",
   "ledgersDeleteLocalSuccess": "本地帳本已刪除",
   "ledgersDeleteLocalTitle": "刪除本地帳本",
-  "ledgersDeleteMessage": "確定要刪除該帳本及其全部記錄嗎？此操作不可復原。\\n若雲端存在備份，也會一併刪除。",
+  "ledgersDeleteMessage": "確定要刪除該帳本及其全部記錄嗎？此操作不可復原。\n若雲端存在備份，也會一併刪除。",
   "ledgersDeleteReconfirmMessage": "再次確認：刪除後該帳本及其全部記錄將永久消失（含雲端備份），無法復原。確定要繼續嗎？",
   "ledgersDeleteRemote": "刪除雲端帳本",
   "ledgersDeleteRemoteConfirm": "刪除雲端帳本",

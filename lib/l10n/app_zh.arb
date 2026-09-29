@@ -415,7 +415,7 @@
   "ledgersEdit": "编辑账本",
   "ledgersDelete": "删除账本",
   "ledgersDeleteConfirm": "删除账本",
-  "ledgersDeleteMessage": "确定要删除该账本及其全部记录吗？此操作不可恢复。\\n若云端存在备份，也会一并删除。",
+  "ledgersDeleteMessage": "确定要删除该账本及其全部记录吗？此操作不可恢复。\n若云端存在备份，也会一并删除。",
   "ledgersDeleteReconfirmMessage": "再次确认：删除后该账本及其全部记录将永久消失（含云端备份），无法恢复。确定要继续吗？",
   "ledgersDeleted": "已删除",
   "ledgersDeleteFailed": "删除失败",
@@ -430,7 +430,7 @@
   "ledgersClearSuccess": "账本已清空",
   "ledgersDeleteLocal": "仅删除本地账本",
   "ledgersDeleteLocalTitle": "删除本地账本",
-  "ledgersDeleteLocalMessage": "确定要删除本地账本\"{name}\"吗？\\n云端备份会保留，您可以随时恢复。",
+  "ledgersDeleteLocalMessage": "确定要删除本地账本\"{name}\"吗？\n云端备份会保留，您可以随时恢复。",
   "ledgersDeleteLocalReconfirmMessage": "再次确认：仅删除本机上的该账本，云端备份保留、可随时恢复下载。确定要继续吗？",
   "@ledgersDeleteLocalMessage": {
     "placeholders": {
