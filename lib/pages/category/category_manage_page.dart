@@ -174,7 +174,7 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
     // 选择分享范围
     final scope = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: Text(l10n.categoryShareScopeTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -297,7 +297,7 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
       // 选择导入模式
       final mode = await showDialog<String>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => AppDialogShell(
           title: Text(l10n.categoryImportModeTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,

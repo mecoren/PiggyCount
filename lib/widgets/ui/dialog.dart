@@ -14,10 +14,35 @@ class AppDialog {
     String? okLabel,
     VoidCallback? onCancel,
     VoidCallback? onOk,
+
+    /// 置 true 时走 iOS 警示框样式（左图口径：窄卡片 + 居中标题/说明 +
+    /// 底部「取消｜确认」分栏文本按钮，确认侧 error 色），用于删除类确认；
+    /// 默认 false 保持原来的 Outlined/Filled 双按钮样式，其他确认框不受影响。
+    bool destructive = false,
   }) {
     final l10n = AppLocalizations.of(context);
     cancelLabel ??= l10n.commonCancel;
     okLabel ??= l10n.commonConfirm;
+    if (destructive) {
+      return showDialog<T>(
+        context: context,
+        builder: (_) => _IosAlertShell(
+          title: title,
+          message: message,
+          cancelLabel: cancelLabel!,
+          onCancel: () {
+            Navigator.pop(context, false);
+            if (onCancel != null) onCancel();
+          },
+          okLabel: okLabel!,
+          onOk: () {
+            Navigator.pop(context, true);
+            if (onOk != null) onOk();
+          },
+          okColor: PiggyTokens.error(context),
+        ),
+      );
+    }
     return _show<T>(
       context,
       title: title,
@@ -129,93 +154,43 @@ class AppDialog {
   }) {
     final l10n = AppLocalizations.of(context);
     actions ??= [
-      (label: l10n.commonCancel, onTap: () => Navigator.pop(context), primary: false),
-      (label: l10n.commonConfirm, onTap: () => Navigator.pop(context), primary: true),
+      (
+        label: l10n.commonCancel,
+        onTap: () => Navigator.pop(context),
+        primary: false
+      ),
+      (
+        label: l10n.commonConfirm,
+        onTap: () => Navigator.pop(context),
+        primary: true
+      ),
     ];
-
 
     return showDialog<T>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: PiggyTokens.surfaceElevated(ctx),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
-        contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-        content: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.7,
-            maxWidth: MediaQuery.of(context).size.width * 0.85,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 1px 顶部高光线，呼应头部语言（onSurface α0.15 暗 / α0.08 亮）
-              Align(
-                alignment: Alignment.topCenter,
-                child: Container(
-                  height: 0.5,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  color: Theme.of(ctx).colorScheme.onSurface.withValues(
-                    alpha: PiggyTokens.isDark(ctx) ? 0.15 : 0.08,
-                  ),
-                ),
-              ),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600, color: PiggyTokens.textPrimary(ctx)),
-              ),
-              const SizedBox(height: 12),
-              Flexible(
-                child: SingleChildScrollView(
-                  child: Text(
-                    message.replaceAll('\\n', '\n'),  // 处理转义的换行符
-                    textAlign: TextAlign.left,
-                    style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
-                      color: PiggyTokens.textSecondary(ctx),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  for (final a in actions!) ...[
-                    if (!a.primary)
-                      Builder(builder: (context) {
-                        final primary = Theme.of(ctx).colorScheme.primary;
-                        return OutlinedButton(
-                          onPressed: a.onTap,
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: primary,
-                            side: BorderSide(color: primary),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
-                          ),
-                          child: Text(a.label),
-                        );
-                      })
-                    else
-                      FilledButton(
-                          onPressed: a.onTap,
-                          style: FilledButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
-                          ),
-                          child: Text(a.label)),
-                    const SizedBox(width: 12),
-                  ]
-                ],
-              ),
-              const SizedBox(height: 12),
-            ],
-          ),
-        ),
-      ),
+      // 普通确认 / 通知统一走 iOS 外壳：单动作为单个全宽按钮，
+      // 双动作为「取消｜确认」分栏（确认侧主题色，非删除类不用红）。
+      // 公开 API 最多只产生 2 个动作（confirm/info/error/warning），
+      // 防御性取 primary 动作当确认钮。
+      builder: (ctx) {
+        final all = actions ?? const [];
+        final ok = all.firstWhere(
+          (a) => a.primary,
+          orElse: () => all.last,
+        );
+        final cancels = all.where((a) => !a.primary).toList();
+        return _IosAlertShell(
+          title: title,
+          message: message,
+          cancelLabel: cancels.isEmpty ? null : cancels.first.label,
+          onCancel: cancels.isEmpty ? null : cancels.first.onTap,
+          okLabel: ok.label,
+          onOk: ok.onTap,
+          limitMessageHeight: true,
+        );
+      },
     );
   }
-
 }
 
 /// 统一弹窗外壳（Widget 形态）：与 [AppDialog] 系列统一视觉（surfaceElevated
@@ -328,6 +303,9 @@ Future<bool> showDoubleDangerConfirmDialog(
 }
 
 /// 危险操作强制确认弹窗（用于全量覆盖等不可逆操作）：
+/// - iOS 警示框外观：窄卡片 + 居中标题/说明 + 底部「取消｜确认」分栏
+///   文本按钮（左图口径），危险侧用 error 色，代替原来的警告图标 +
+///   Outlined/Filled 大按钮
 /// - barrierDismissible=false + PopScope(canPop:false)，点外部/返回键
 ///   均无法关闭，用户必须在「取消」与「确认」之间显式二选一
 /// - 确认按钮在 [countdownSeconds] 倒计时归零前禁用并显示剩余秒数，
@@ -406,58 +384,236 @@ class _DangerConfirmDialogState extends State<_DangerConfirmDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final errorColor = Theme.of(context).colorScheme.error;
     final enabled = _remaining <= 0;
 
     return PopScope(
       canPop: false,
-      child: AlertDialog(
-        backgroundColor: PiggyTokens.surfaceElevated(context),
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
-        title: Column(
+      child: _IosAlertShell(
+        title: widget.title,
+        message: widget.message,
+        cancelLabel: widget.cancelLabel,
+        onCancel: () => Navigator.pop(context, false),
+        // 倒计时未结束禁用确认；按钮文案随剩余秒数变化提示等待
+        okLabel:
+            enabled ? widget.okLabel : l10n.dangerConfirmCountdown(_remaining),
+        onOk: enabled ? () => Navigator.pop(context, true) : null,
+        okColor: PiggyTokens.error(context),
+      ),
+    );
+  }
+}
+
+/// 对话框底部 iOS 分栏操作区（左图口径）：横线 +「取消｜确认」左右
+/// 等宽文本按钮 + 中间竖线，确认侧默认主题 primary、危险类传 error。
+///
+/// [_IosAlertShell] 与表单类弹窗（如账本编辑框）共用：表单内容区保持
+/// 宽卡片（窄卡片塞不下输入框/导航行），只有底部按钮语言统一。
+class PiggyDialogActions extends StatelessWidget {
+  const PiggyDialogActions({
+    super.key,
+    this.cancelLabel,
+    this.onCancel,
+    required this.okLabel,
+    required this.onOk,
+    this.okColor,
+  }) : assert(
+          (cancelLabel == null) == (onCancel == null),
+          'cancelLabel 与 onCancel 必须同时传或同时不传（单按钮模式两者皆空）',
+        );
+
+  /// 为空 = 单按钮模式：底部单个全宽确认钮，无竖线。
+  final String? cancelLabel;
+  final VoidCallback? onCancel;
+  final String okLabel;
+  final VoidCallback? onOk;
+
+  /// 确认钮颜色：空 = 主题 primary；危险类调用方传 error。
+  final Color? okColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final hairline = Theme.of(context).colorScheme.onSurface.withValues(
+          alpha: PiggyTokens.isDark(context) ? 0.15 : 0.08,
+        );
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(height: 1, color: hairline),
+        ClipRRect(
+          borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(PiggyDimens.radiusXl),
+            bottomRight: Radius.circular(PiggyDimens.radiusXl),
+          ),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (cancelLabel != null)
+                  Expanded(
+                    child: _DialogActionButton(
+                      label: cancelLabel!,
+                      color: PiggyTokens.textPrimary(context),
+                      onPressed: onCancel,
+                    ),
+                  ),
+                if (cancelLabel != null) Container(width: 1, color: hairline),
+                Expanded(
+                  child: _DialogActionButton(
+                    label: okLabel,
+                    color: okColor ?? PiggyTokens.primary(context),
+                    onPressed: onOk,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// iOS 风格警示框外壳（左图口径）：窄卡片 + 标题/说明居中 + 底部
+/// [PiggyDialogActions] 分栏按钮。
+///
+/// 共用方：[_DangerConfirmDialog]（确认侧 error 色 + 倒计时）、
+/// `AppDialog.confirm(destructive: true)`（确认侧 error 色）、
+/// `AppDialog` 普通确认 / 通知（确认侧主题 primary 色，删除类以外
+/// 的确认框只有这一种长相）。
+class _IosAlertShell extends StatelessWidget {
+  const _IosAlertShell({
+    required this.title,
+    required this.message,
+    this.cancelLabel,
+    this.onCancel,
+    required this.okLabel,
+    required this.onOk,
+    this.okColor,
+    this.limitMessageHeight = false,
+  }) : assert(
+          (cancelLabel == null) == (onCancel == null),
+          'cancelLabel 与 onCancel 必须同时传或同时不传（单按钮模式两者皆空）',
+        );
+
+  final String title;
+  final String message;
+
+  /// 为空 = 单按钮模式（通知类）：底部单个全宽确认钮，无竖线。
+  final String? cancelLabel;
+  final VoidCallback? onCancel;
+  final String okLabel;
+  final VoidCallback? onOk;
+
+  /// 确认钮颜色：空 = 主题 primary；危险类调用方传 error。
+  final Color? okColor;
+
+  /// 说明区限高 + 内部滚动（info/error 文案可能很长，如异常原文，
+  /// 不限高会把按钮顶出屏幕）。
+  final bool limitMessageHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    final messageText = Text(
+      message.replaceAll('\\n', '\n'),
+      textAlign: TextAlign.center,
+      style: Theme.of(context)
+          .textTheme
+          .bodySmall
+          ?.copyWith(color: PiggyTokens.textSecondary(context)),
+    );
+    // iOS 警示框结构（左图口径）：标题 + 说明居中，横线下是按钮区。
+    return Dialog(
+      backgroundColor: PiggyTokens.surfaceElevated(context),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: PiggyDimens.alertWidth),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Icon(Icons.warning_amber_rounded, color: errorColor, size: 36),
-            const SizedBox(height: 8),
-            Text(
-              widget.title,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: PiggyTokens.textPrimary(context)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                PiggyDimens.p20,
+                PiggyDimens.p20,
+                PiggyDimens.p20,
+                PiggyDimens.p16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: PiggyTokens.textPrimary(context)),
+                  ),
+                  const SizedBox(height: PiggyDimens.p8),
+                  if (limitMessageHeight)
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.of(context).size.height * 0.5,
+                      ),
+                      child: SingleChildScrollView(child: messageText),
+                    )
+                  else
+                    messageText,
+                ],
+              ),
+            ),
+            PiggyDialogActions(
+              cancelLabel: cancelLabel,
+              onCancel: onCancel,
+              okLabel: okLabel,
+              onOk: onOk,
+              okColor: okColor,
             ),
           ],
         ),
-        content: Text(
-          widget.message.replaceAll('\\n', '\n'),
-          textAlign: TextAlign.left,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: PiggyTokens.textSecondary(context)),
-        ),
-        actions: [
-          OutlinedButton(
-            onPressed: () => Navigator.pop(context, false),
-            style: OutlinedButton.styleFrom(
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
-            ),
-            child: Text(widget.cancelLabel),
-          ),
-          const SizedBox(width: 12),
-          FilledButton(
-            // 倒计时未结束禁用确认；按钮文案随剩余秒数变化提示等待
-            onPressed: enabled ? () => Navigator.pop(context, true) : null,
-            style: FilledButton.styleFrom(
-              backgroundColor: errorColor,
-              disabledBackgroundColor: errorColor.withValues(alpha: 0.35),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
-            ),
-            child: Text(
-              enabled ? widget.okLabel : l10n.dangerConfirmCountdown(_remaining),
-            ),
-          ),
-        ],
+      ),
+    );
+  }
+}
+
+/// 对话框底部文本按钮：无填充无描边，颜色区分语义（取消=正文色，
+/// 确认=主题色/危险色），禁用态（倒计时）用三级文字色。
+///
+/// 注意：文字颜色必须显式写进 [Text.style] —— `bodyLarge` 自带
+/// onSurface 默认色，会盖掉按钮 [foregroundColor]（此前「删除」红字
+/// 不显示就是这个原因）。
+class _DialogActionButton extends StatelessWidget {
+  const _DialogActionButton({
+    required this.label,
+    required this.color,
+    required this.onPressed,
+  });
+
+  final String label;
+  final Color color;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveColor =
+        onPressed == null ? PiggyTokens.textTertiary(context) : color;
+    return TextButton(
+      onPressed: onPressed,
+      style: TextButton.styleFrom(
+        foregroundColor: color,
+        disabledForegroundColor: PiggyTokens.textTertiary(context),
+        padding: const EdgeInsets.symmetric(vertical: PiggyDimens.p12),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        shape: const RoundedRectangleBorder(),
+      ),
+      child: Text(
+        label,
+        textAlign: TextAlign.center,
+        style: Theme.of(context)
+            .textTheme
+            .bodyLarge
+            ?.copyWith(color: effectiveColor),
       ),
     );
   }
@@ -498,8 +654,10 @@ BlockingProgressDialogHandle showBlockingProgressDialog(
                   : Text(
                       s,
                       textAlign: TextAlign.center,
-                      style: Theme.of(dctx).textTheme.bodyMedium?.copyWith(
-                          color: PiggyTokens.textSecondary(dctx)),
+                      style: Theme.of(dctx)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(color: PiggyTokens.textSecondary(dctx)),
                     ),
             ),
           ],

@@ -176,7 +176,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
     final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dctx) => AlertDialog(
+      builder: (dctx) => AppDialogShell(
         title: Text(l10n.recalcForeignTxAction),
         content: Text(l10n.recalcSyncCountHint(count)),
         actions: [
@@ -1182,7 +1182,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                                   margin: const EdgeInsets.only(right: 8),
                                   decoration: BoxDecoration(
                                     color: PiggyTokens.primary(context),
-                                    borderRadius: BorderRadius.circular(2),
+                                    borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                                   ),
                                 ),
                                 Text(
@@ -1318,7 +1318,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                                           decoration: BoxDecoration(
                                             color: PiggyTokens.primary(context),
                                             borderRadius:
-                                                BorderRadius.circular(2),
+                                                BorderRadius.circular(PiggyDimens.radiusXs),
                                           ),
                                         ),
                                         Expanded(

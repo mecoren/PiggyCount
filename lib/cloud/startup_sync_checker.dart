@@ -31,7 +31,6 @@ import '../providers/sync_providers.dart';
 import '../services/billing/post_processor.dart';
 import '../services/data_import_service.dart';
 import '../services/system/logger_service.dart';
-import '../styles/tokens.dart';
 import '../utils/format_utils.dart';
 import '../widgets/ui/dialog.dart';
 import 'startup_sync_overlay.dart';
@@ -1412,11 +1411,7 @@ class WidgetRefDeps implements StartupSyncCheckerDeps {
     return await showDialog<LedgerDialogChoice>(
           context: _context,
           barrierDismissible: false,
-          builder: (ctx) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
-            ),
-            backgroundColor: PiggyTokens.surfaceElevated(ctx),
+          builder: (ctx) => AppDialogShell(
             title: Text(l10n.startupSyncCheckTitle),
             content: Text(message),
             actions: [

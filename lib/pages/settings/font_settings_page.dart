@@ -421,7 +421,7 @@ class _UIScaleInfo extends ConsumerWidget {
               padding: EdgeInsets.all(8.0.scaled(context, ref)),
               decoration: BoxDecoration(
                 color: PiggyTokens.info(context).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8.0.scaled(context, ref)),
+                borderRadius: BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
               ),
               child: Row(
                 children: [

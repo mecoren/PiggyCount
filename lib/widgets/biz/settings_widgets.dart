@@ -178,9 +178,10 @@ class SettingsNavItem extends StatelessWidget {
               ],
             ),
           ),
-          if (hasCustomTrailing)
-            trailing!
-          else if (enabled)
+          if (hasCustomTrailing) ...[
+            const SizedBox(width: PiggyDimens.p8),
+            trailing!,
+          ] else if (enabled)
             Icon(
               Icons.chevron_right_rounded,
               color: theme.colorScheme.onSurfaceVariant,

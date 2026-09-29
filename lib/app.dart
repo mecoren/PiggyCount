@@ -25,6 +25,7 @@ import 'cloud/transactions_sync_manager.dart';
 import 'cloud/startup_sync_checker.dart';
 import 'cloud/startup_sync_overlay.dart';
 import 'cloud/backup/backup_scheduler.dart';
+import 'services/calendar/holiday_scheduler.dart';
 import 'cloud/backup/cloud_backup_providers.dart';
 import 'cloud/backup/cloud_backup_service.dart' show CloudBackupService;
 import 'cloud/sync_restore_guard.dart';
@@ -121,6 +122,11 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
       // 每日定时备份：1 分钟粒度检查，触发条件在闭包内判定
       _backupScheduler = BackupScheduler(onCheck: _runScheduledBackupCheck)
         ..start();
+      // 日历节假日每日更新：同一分钟级 tick 范式，挂载后立即补更一次
+      // （启动补更：昨天到点没开应用时，本次启动就补上）
+      _holidayScheduler = HolidayScheduler(onCheck: _runScheduledHolidayCheck)
+        ..start();
+      unawaited(_runScheduledHolidayCheck());
       // P1-E 快捷记账模式：首帧后 fire-and-forget 预热「记忆分类」，
       // 使 FAB 点击 → 金额表单之间没有 DB 往返延迟（design.md 决策 3）。
       // provider 自身 watch currentLedgerIdProvider，账本切换会自动重算，
@@ -145,6 +151,9 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
 
   /// 每日定时备份调度器（App 运行期间每分钟检查一次）
   BackupScheduler? _backupScheduler;
+
+  /// 日历节假日每日更新调度器（App 运行期间每分钟检查一次）
+  HolidayScheduler? _holidayScheduler;
 
   /// 启动时云端数据拉取检查（仅路径 A：S3/WebDAV/Supabase/iCloud）
   ///
@@ -263,6 +272,23 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
       }
     } catch (e) {
       logger.warning('Backup', '定时备份检查异常: $e');
+    }
+  }
+
+  /// 节假日更新检查（HolidayScheduler 每分钟调用；挂载时也立即调一次做启动补更）。
+  ///
+  /// 判定（开关 / 每日时刻 / 是否今日已成功 / 失败重试）与静默失败全部收在
+  /// [HolidayService.autoUpdateIfDue]；本层只负责「真正更新后失效缓存 provider」，
+  /// 让日历与设置页立即反映新数据。网络异常不打断调度。
+  Future<void> _runScheduledHolidayCheck() async {
+    try {
+      final updated =
+          await ref.read(holidayServiceProvider).autoUpdateIfDue();
+      if (!updated || !mounted) return;
+      ref.invalidate(holidayListProvider);
+      ref.invalidate(holidayMetaProvider);
+    } catch (e) {
+      logger.warning('Holiday', '节假日更新检查异常: $e');
     }
   }
 
@@ -620,6 +646,8 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
     _snapshotSyncToastSubscription?.close();
     _backupScheduler?.dispose();
     _backupScheduler = null;
+    _holidayScheduler?.dispose();
+    _holidayScheduler = null;
     _removeOverlay();
     _startupSyncController?.detach();
     _startupSyncController = null;

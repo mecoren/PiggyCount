@@ -41,7 +41,7 @@ class UpdateDialogs {
   static Future<void> showNotificationGuideDialog(BuildContext context) async {
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: Text(AppLocalizations.of(context).updateNotificationPermissionTitle),
         content: SingleChildScrollView(
           child: Column(
@@ -161,7 +161,7 @@ class UpdateDialogs {
   ) async {
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: Text(AppLocalizations.of(context).updateCheckFailedTitle),
         content: Text(error),
         actions: [
@@ -206,7 +206,7 @@ class UpdateDialogs {
   ) async {
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: Text(AppLocalizations.of(context).updateDownloadFailedTitle),
         content: Text(error),
         actions: [
@@ -346,7 +346,7 @@ class _MirrorSelectDialogState extends State<_MirrorSelectDialog> {
     final l10n = AppLocalizations.of(context);
     final isZh = Localizations.localeOf(context).languageCode == 'zh';
 
-    return AlertDialog(
+    return AppDialogShell(
       title: Text(l10n.updateMirrorSelectTitle),
       content: SizedBox(
         width: double.maxFinite,
@@ -530,7 +530,7 @@ class _DownloadConfirmDialogState extends State<_DownloadConfirmDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return AlertDialog(
+    return AppDialogShell(
       title: Text(l10n.updateNewVersionTitle(widget.version)),
       content: SingleChildScrollView(
         child: Column(

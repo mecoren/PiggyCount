@@ -37,7 +37,7 @@ class SmartBillingPage extends ConsumerWidget {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: Row(
           children: [
             Icon(Icons.info_outline, color: PiggyTokens.primary(context)),

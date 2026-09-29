@@ -131,7 +131,7 @@ class _AnalyticsBarChartState extends State<AnalyticsBarChart> {
                     margin: const EdgeInsets.only(right: 8),
                     decoration: BoxDecoration(
                       color: widget.themeColor,
-                      borderRadius: BorderRadius.circular(2),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                     ),
                   ),
                   Expanded(
@@ -314,7 +314,7 @@ class _AnalyticsBarChartState extends State<AnalyticsBarChart> {
                                         ? widget.themeColor
                                         : widget.themeColor
                                             .withValues(alpha: 0.35),
-                                    borderRadius: BorderRadius.circular(3),
+                                    borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                                   ),
                                 ],
                               );

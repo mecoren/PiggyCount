@@ -298,43 +298,45 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                       // Supabase
                       if (_kShowSupabaseAndICloud)
                         supabaseAsync.when(
-                        loading: () => DelayedSkeleton(
-                          placeholder: const SizedBox(height: 100),
-                          child: PulseSkeleton(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 6),
-                              child: SkeletonBar(
-                                  height: 88,
-                                  borderRadius: BorderRadius.circular(
-                                      PiggyDimens.radiusLg)),
+                          loading: () => DelayedSkeleton(
+                            placeholder: const SizedBox(height: 100),
+                            child: PulseSkeleton(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 6),
+                                child: SkeletonBar(
+                                    height: 88,
+                                    borderRadius: BorderRadius.circular(
+                                        PiggyDimens.radiusLg)),
+                              ),
                             ),
                           ),
+                          error: (e, _) => const SizedBox.shrink(),
+                          data: (supabaseCfg) => _buildServiceCard(
+                            context: context,
+                            icon: Icons.cloud,
+                            iconColor: PiggyTokens.brandSupabase,
+                            title: AppLocalizations.of(context)
+                                .cloudCustomSupabaseTitle,
+                            subtitle: supabaseCfg?.valid == true
+                                ? supabaseCfg!.obfuscatedUrl()
+                                : AppLocalizations.of(context)
+                                    .cloudCustomSupabaseSubtitle,
+                            isSelected:
+                                active.type == CloudBackendType.supabase,
+                            isConfigured: supabaseCfg?.valid == true,
+                            isDisabled: false,
+                            onTap: () => supabaseCfg?.valid == true
+                                ? _switchService(CloudBackendType.supabase)
+                                : _configureService(CloudBackendType.supabase),
+                            onConfigure: supabaseCfg?.valid == true
+                                ? () =>
+                                    _configureService(CloudBackendType.supabase)
+                                : null,
+                            onShowGuide: _showSupabaseHelpDialog,
+                            primaryColor: primaryColor,
+                          ),
                         ),
-                        error: (e, _) => const SizedBox.shrink(),
-                        data: (supabaseCfg) => _buildServiceCard(
-                          context: context,
-                          icon: Icons.cloud,
-                          iconColor: PiggyTokens.brandSupabase,
-                          title: AppLocalizations.of(context)
-                              .cloudCustomSupabaseTitle,
-                          subtitle: supabaseCfg?.valid == true
-                              ? supabaseCfg!.obfuscatedUrl()
-                              : AppLocalizations.of(context)
-                                  .cloudCustomSupabaseSubtitle,
-                          isSelected: active.type == CloudBackendType.supabase,
-                          isConfigured: supabaseCfg?.valid == true,
-                          isDisabled: false,
-                          onTap: () => supabaseCfg?.valid == true
-                              ? _switchService(CloudBackendType.supabase)
-                              : _configureService(CloudBackendType.supabase),
-                          onConfigure: supabaseCfg?.valid == true
-                              ? () =>
-                                  _configureService(CloudBackendType.supabase)
-                              : null,
-                          onShowGuide: _showSupabaseHelpDialog,
-                          primaryColor: primaryColor,
-                        ),
-                      ),
                     ],
                   );
                 }
@@ -1426,8 +1428,11 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
 
     if (!mounted) return;
 
-    final result = await showDialog<Map<String, dynamic>?>(
+    final result = await showModalBottomSheet<Map<String, dynamic>?>(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
       builder: (dialogContext) => _SupabaseConfigDialog(
         initialUrl: existing?.supabaseUrl ?? '',
         initialKey: existing?.supabaseAnonKey ?? '',
@@ -1491,8 +1496,11 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
 
     if (!mounted) return;
 
-    final result = await showDialog<Map<String, dynamic>?>(
+    final result = await showModalBottomSheet<Map<String, dynamic>?>(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
       builder: (dialogContext) => _WebdavConfigDialog(
         initialUrl: existing?.webdavUrl ?? '',
         initialUsername: existing?.webdavUsername ?? '',
@@ -1561,8 +1569,11 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
 
     if (!mounted) return;
 
-    final result = await showDialog<Map<String, dynamic>?>(
+    final result = await showModalBottomSheet<Map<String, dynamic>?>(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
       builder: (dialogContext) => _S3ConfigDialog(
         initialEndpoint: existing?.s3Endpoint ?? '',
         initialRegion: existing?.s3Region ?? 'us-east-1',
@@ -1752,13 +1763,15 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                 ..maxRedirects = 0
                 ..headers['Authorization'] = 'Basic $credentials';
 
-              final streamedResponse =
-                  await client.send(request).timeout(const Duration(seconds: 10));
+              final streamedResponse = await client
+                  .send(request)
+                  .timeout(const Duration(seconds: 10));
               final response = await http.Response.fromStream(streamedResponse);
 
               if (response.statusCode == 200 || response.statusCode == 204) {
                 final davHeader = response.headers['dav'];
-                if (davHeader != null || response.headers.containsKey('allow')) {
+                if (davHeader != null ||
+                    response.headers.containsKey('allow')) {
                   connectionSuccess = true;
                 } else {
                   throw Exception(l10n.cloudErrorWebdavNotSupported);
@@ -1769,7 +1782,8 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                 throw Exception(l10n.cloudErrorAccessDenied);
               } else if (response.statusCode == 404) {
                 throw Exception(l10n.cloudErrorPathNotFound(webdavUrl.path));
-              } else if (response.statusCode >= 300 && response.statusCode < 400) {
+              } else if (response.statusCode >= 300 &&
+                  response.statusCode < 400) {
                 // SEC-02②：不跟随重定向，3xx 直接报错（与 provider S23 一致）
                 throw Exception('WebDAV 服务器返回重定向（${response.statusCode}），'
                     '请直接填写重定向后的最终地址，避免凭据被转发到第三方域名');
@@ -1848,7 +1862,8 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                 try {
                   await services.provider!.dispose();
                 } catch (e) {
-                  logger.warning('CloudServicePage', 'S3 测试 provider 释放失败（忽略）: $e');
+                  logger.warning(
+                      'CloudServicePage', 'S3 测试 provider 释放失败（忽略）: $e');
                 }
               }
             } catch (e, stackTrace) {
@@ -1975,90 +1990,85 @@ class _SupabaseConfigDialogState extends State<_SupabaseConfigDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return AppDialogShell(
-      title: Text(l10n.cloudConfigureSupabaseTitle),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: urlController,
-              decoration: InputDecoration(
-                labelText: l10n.cloudSupabaseUrlLabel,
-                hintText: l10n.cloudSupabaseUrlHint,
-                errorText: _urlError
-                    ? l10n.fieldCannotBeEmpty(l10n.cloudSupabaseUrlLabel)
-                    : null,
-              ),
-              keyboardType: TextInputType.url,
-              onChanged: (_) {
-                if (_urlError) setState(() => _urlError = false);
-              },
+    return _CloudConfigSheet(
+      title: l10n.cloudConfigureSupabaseTitle,
+      cancelLabel: l10n.commonCancel,
+      saveLabel: l10n.commonSave,
+      onCancel: () => Navigator.of(context).pop(null),
+      onSave: () {
+        if (_validate()) {
+          Navigator.of(context).pop({
+            'url': urlController.text.trim(),
+            'key': keyController.text.trim(),
+            'bucket': bucketController.text.trim(),
+          });
+        }
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: urlController,
+            decoration: piggyFilledDecoration(
+              context,
+              label: l10n.cloudSupabaseUrlLabel,
+              hint: l10n.cloudSupabaseUrlHint,
+              errorText: _urlError
+                  ? l10n.fieldCannotBeEmpty(l10n.cloudSupabaseUrlLabel)
+                  : null,
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: keyController,
-              decoration: InputDecoration(
-                labelText: l10n.cloudAnonKeyLabel,
-                hintText: l10n.cloudSupabaseAnonKeyHintLong,
-                errorText: _keyError
-                    ? l10n.fieldCannotBeEmpty(l10n.cloudAnonKeyLabel)
-                    : null,
-                // SEC-05：anonKey 是长效凭据（Storage 读写能力），
-                // 与 WebDAV 密码/S3 SecretKey 同款遮蔽 + 眼睛切换
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    obscureAnonKey
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                    size: 20,
-                  ),
-                  tooltip: l10n.tooltipToggleVisibility,
-                  onPressed: () {
-                    setState(() {
-                      obscureAnonKey = !obscureAnonKey;
-                    });
-                  },
+            keyboardType: TextInputType.url,
+            onChanged: (_) {
+              if (_urlError) setState(() => _urlError = false);
+            },
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: keyController,
+            decoration: piggyFilledDecoration(
+              context,
+              label: l10n.cloudAnonKeyLabel,
+              hint: l10n.cloudSupabaseAnonKeyHintLong,
+              errorText: _keyError
+                  ? l10n.fieldCannotBeEmpty(l10n.cloudAnonKeyLabel)
+                  : null,
+              // SEC-05：anonKey 是长效凭据（Storage 读写能力），
+              // 与 WebDAV 密码/S3 SecretKey 同款遮蔽 + 眼睛切换
+              suffixIcon: IconButton(
+                icon: Icon(
+                  obscureAnonKey
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  size: 20,
                 ),
+                tooltip: l10n.tooltipToggleVisibility,
+                onPressed: () {
+                  setState(() {
+                    obscureAnonKey = !obscureAnonKey;
+                  });
+                },
               ),
-              obscureText: obscureAnonKey,
-              keyboardType: TextInputType.text,
-              minLines: 1,
-              maxLines: 5,
-              onChanged: (_) {
-                if (_keyError) setState(() => _keyError = false);
-              },
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: bucketController,
-              decoration: InputDecoration(
-                labelText: l10n.cloudSupabaseBucketLabel,
-                hintText: l10n.cloudSupabaseBucketHint,
-              ),
-              keyboardType: TextInputType.text,
+            obscureText: obscureAnonKey,
+            keyboardType: TextInputType.text,
+            minLines: 1,
+            maxLines: 5,
+            onChanged: (_) {
+              if (_keyError) setState(() => _keyError = false);
+            },
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: bucketController,
+            decoration: piggyFilledDecoration(
+              context,
+              label: l10n.cloudSupabaseBucketLabel,
+              hint: l10n.cloudSupabaseBucketHint,
             ),
-          ],
-        ),
+            keyboardType: TextInputType.text,
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(null),
-          child: Text(l10n.commonCancel),
-        ),
-        FilledButton(
-          onPressed: () {
-            if (_validate()) {
-              Navigator.of(context).pop({
-                'url': urlController.text.trim(),
-                'key': keyController.text.trim(),
-                'bucket': bucketController.text.trim(),
-              });
-            }
-          },
-          child: Text(l10n.commonSave),
-        ),
-      ],
     );
   }
 }
@@ -2131,101 +2141,97 @@ class _WebdavConfigDialogState extends State<_WebdavConfigDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return AppDialogShell(
-      title: Text(l10n.cloudConfigureWebdavTitle),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: urlController,
-              decoration: InputDecoration(
-                labelText: l10n.cloudWebdavUrlLabel,
-                hintText: l10n.cloudWebdavUrlHint,
-                errorText: _urlError
-                    ? l10n.fieldCannotBeEmpty(l10n.cloudWebdavUrlLabel)
-                    : null,
-              ),
-              onChanged: (_) {
-                if (_urlError) setState(() => _urlError = false);
-              },
+    return _CloudConfigSheet(
+      title: l10n.cloudConfigureWebdavTitle,
+      cancelLabel: l10n.commonCancel,
+      saveLabel: l10n.commonSave,
+      onCancel: () => Navigator.of(context).pop(null),
+      onSave: () {
+        // 远程路径为空时回写默认值到输入框，确保用户看到实际保存的值
+        if (pathController.text.trim().isEmpty) {
+          pathController.text = widget.defaultPath;
+        }
+        if (_validate()) {
+          Navigator.of(context).pop({
+            'url': urlController.text.trim(),
+            'username': usernameController.text.trim(),
+            'password': passwordController.text.trim(),
+            'path': pathController.text.trim(),
+          });
+        }
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: urlController,
+            decoration: piggyFilledDecoration(
+              context,
+              label: l10n.cloudWebdavUrlLabel,
+              hint: l10n.cloudWebdavUrlHint,
+              errorText: _urlError
+                  ? l10n.fieldCannotBeEmpty(l10n.cloudWebdavUrlLabel)
+                  : null,
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: usernameController,
-              decoration: InputDecoration(
-                labelText: l10n.cloudWebdavUsernameLabel,
-                errorText: _usernameError
-                    ? l10n.fieldCannotBeEmpty(l10n.cloudWebdavUsernameLabel)
-                    : null,
-              ),
-              onChanged: (_) {
-                if (_usernameError) setState(() => _usernameError = false);
-              },
+            onChanged: (_) {
+              if (_urlError) setState(() => _urlError = false);
+            },
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: usernameController,
+            decoration: piggyFilledDecoration(
+              context,
+              label: l10n.cloudWebdavUsernameLabel,
+              errorText: _usernameError
+                  ? l10n.fieldCannotBeEmpty(l10n.cloudWebdavUsernameLabel)
+                  : null,
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: passwordController,
-              decoration: InputDecoration(
-                labelText: l10n.cloudWebdavPasswordLabel,
-                errorText: _passwordError
-                    ? l10n.fieldCannotBeEmpty(l10n.cloudWebdavPasswordLabel)
-                    : null,
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    obscurePassword
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                    size: 20,
-                  ),
-                  tooltip: l10n.tooltipTogglePassword,
-                  onPressed: () {
-                    setState(() {
-                      obscurePassword = !obscurePassword;
-                    });
-                  },
+            onChanged: (_) {
+              if (_usernameError) setState(() => _usernameError = false);
+            },
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: passwordController,
+            decoration: piggyFilledDecoration(
+              context,
+              label: l10n.cloudWebdavPasswordLabel,
+              errorText: _passwordError
+                  ? l10n.fieldCannotBeEmpty(l10n.cloudWebdavPasswordLabel)
+                  : null,
+              suffixIcon: IconButton(
+                icon: Icon(
+                  obscurePassword
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  size: 20,
                 ),
-              ),
-              obscureText: obscurePassword,
-              onChanged: (_) {
-                if (_passwordError) setState(() => _passwordError = false);
-              },
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: pathController,
-              decoration: InputDecoration(
-                labelText: l10n.cloudWebdavRemotePathLabel,
-                hintText: l10n.cloudWebdavPathHint,
-                helperText: l10n.cloudWebdavRemotePathHelperText,
+                tooltip: l10n.tooltipTogglePassword,
+                onPressed: () {
+                  setState(() {
+                    obscurePassword = !obscurePassword;
+                  });
+                },
               ),
             ),
-          ],
-        ),
+            obscureText: obscurePassword,
+            onChanged: (_) {
+              if (_passwordError) setState(() => _passwordError = false);
+            },
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: pathController,
+            decoration: piggyFilledDecoration(
+              context,
+              label: l10n.cloudWebdavRemotePathLabel,
+              hint: l10n.cloudWebdavPathHint,
+              helper: l10n.cloudWebdavRemotePathHelperText,
+            ),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(null),
-          child: Text(l10n.commonCancel),
-        ),
-        FilledButton(
-          onPressed: () {
-            // 远程路径为空时回写默认值到输入框，确保用户看到实际保存的值
-            if (pathController.text.trim().isEmpty) {
-              pathController.text = widget.defaultPath;
-            }
-            if (_validate()) {
-              Navigator.of(context).pop({
-                'url': urlController.text.trim(),
-                'username': usernameController.text.trim(),
-                'password': passwordController.text.trim(),
-                'path': pathController.text.trim(),
-              });
-            }
-          },
-          child: Text(l10n.commonSave),
-        ),
-      ],
     );
   }
 }
@@ -2315,150 +2321,256 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return AppDialogShell(
-      title: Text(l10n.cloudConfigureS3Title),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: endpointController,
-              decoration: InputDecoration(
-                labelText: l10n.cloudS3EndpointLabel,
-                hintText: l10n.cloudS3EndpointHint,
-                errorText: _endpointError
-                    ? l10n.fieldCannotBeEmpty(l10n.cloudS3EndpointLabel)
-                    : null,
-              ),
-              keyboardType: TextInputType.url,
-              onChanged: (_) {
-                if (_endpointError) setState(() => _endpointError = false);
-              },
+    return _CloudConfigSheet(
+      title: l10n.cloudConfigureS3Title,
+      cancelLabel: l10n.commonCancel,
+      saveLabel: l10n.commonSave,
+      onCancel: () => Navigator.of(context).pop(null),
+      onSave: () {
+        // 存储桶名为空时回写默认值到输入框，确保用户看到实际保存的值
+        if (bucketController.text.trim().isEmpty) {
+          bucketController.text = widget.defaultBucket;
+        }
+        if (_validate()) {
+          final portText = portController.text.trim();
+          final port = portText.isEmpty ? null : int.tryParse(portText);
+
+          Navigator.of(context).pop({
+            'endpoint': endpointController.text.trim(),
+            'region': regionController.text.trim(),
+            'accessKey': accessKeyController.text.trim(),
+            'secretKey': secretKeyController.text.trim(),
+            'bucket': bucketController.text.trim(),
+            'useSSL': useSSL,
+            'port': port,
+          });
+        }
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: endpointController,
+            decoration: piggyFilledDecoration(
+              context,
+              label: l10n.cloudS3EndpointLabel,
+              hint: l10n.cloudS3EndpointHint,
+              errorText: _endpointError
+                  ? l10n.fieldCannotBeEmpty(l10n.cloudS3EndpointLabel)
+                  : null,
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: regionController,
-              decoration: InputDecoration(
-                labelText: l10n.cloudS3RegionLabel,
-                hintText: l10n.cloudS3RegionHint,
-              ),
+            keyboardType: TextInputType.url,
+            onChanged: (_) {
+              if (_endpointError) setState(() => _endpointError = false);
+            },
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: regionController,
+            decoration: piggyFilledDecoration(
+              context,
+              label: l10n.cloudS3RegionLabel,
+              hint: l10n.cloudS3RegionHint,
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: accessKeyController,
-              decoration: InputDecoration(
-                labelText: l10n.cloudS3AccessKeyLabel,
-                hintText: l10n.cloudS3AccessKeyHint,
-                errorText: _accessKeyError
-                    ? l10n.fieldCannotBeEmpty(l10n.cloudS3AccessKeyLabel)
-                    : null,
-              ),
-              onChanged: (_) {
-                if (_accessKeyError) setState(() => _accessKeyError = false);
-              },
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: accessKeyController,
+            decoration: piggyFilledDecoration(
+              context,
+              label: l10n.cloudS3AccessKeyLabel,
+              hint: l10n.cloudS3AccessKeyHint,
+              errorText: _accessKeyError
+                  ? l10n.fieldCannotBeEmpty(l10n.cloudS3AccessKeyLabel)
+                  : null,
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: secretKeyController,
-              decoration: InputDecoration(
-                labelText: l10n.cloudS3SecretKeyLabel,
-                hintText: l10n.cloudS3SecretKeyHint,
-                errorText: _secretKeyError
-                    ? l10n.fieldCannotBeEmpty(l10n.cloudS3SecretKeyLabel)
-                    : null,
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    obscureSecretKey
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                    size: 20,
-                  ),
-                  tooltip: l10n.tooltipToggleVisibility,
-                  onPressed: () {
-                    setState(() {
-                      obscureSecretKey = !obscureSecretKey;
-                    });
-                  },
+            onChanged: (_) {
+              if (_accessKeyError) setState(() => _accessKeyError = false);
+            },
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: secretKeyController,
+            decoration: piggyFilledDecoration(
+              context,
+              label: l10n.cloudS3SecretKeyLabel,
+              hint: l10n.cloudS3SecretKeyHint,
+              errorText: _secretKeyError
+                  ? l10n.fieldCannotBeEmpty(l10n.cloudS3SecretKeyLabel)
+                  : null,
+              suffixIcon: IconButton(
+                icon: Icon(
+                  obscureSecretKey
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  size: 20,
                 ),
+                tooltip: l10n.tooltipToggleVisibility,
+                onPressed: () {
+                  setState(() {
+                    obscureSecretKey = !obscureSecretKey;
+                  });
+                },
               ),
-              obscureText: obscureSecretKey,
-              onChanged: (_) {
-                if (_secretKeyError) setState(() => _secretKeyError = false);
-              },
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: bucketController,
-              decoration: InputDecoration(
-                labelText: l10n.cloudS3BucketLabel,
-                hintText: l10n.cloudS3BucketHint,
-                errorText: _bucketError
-                    ? l10n.fieldCannotBeEmpty(l10n.cloudS3BucketLabel)
-                    : null,
+            obscureText: obscureSecretKey,
+            onChanged: (_) {
+              if (_secretKeyError) setState(() => _secretKeyError = false);
+            },
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: bucketController,
+            decoration: piggyFilledDecoration(
+              context,
+              label: l10n.cloudS3BucketLabel,
+              hint: l10n.cloudS3BucketHint,
+              errorText: _bucketError
+                  ? l10n.fieldCannotBeEmpty(l10n.cloudS3BucketLabel)
+                  : null,
+            ),
+            onChanged: (_) {
+              if (_bucketError) setState(() => _bucketError = false);
+            },
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Text(l10n.cloudS3UseSSLLabel),
               ),
-              onChanged: (_) {
-                if (_bucketError) setState(() => _bucketError = false);
-              },
+              PiggySwitcher(
+                value: useSSL,
+                // 无障碍基线：开关补语义标签，读出所控制的设置项名称
+                semanticLabel: l10n.cloudS3UseSSLLabel,
+                onChanged: (value) {
+                  setState(() {
+                    useSSL = value;
+                  });
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: portController,
+            decoration: piggyFilledDecoration(
+              context,
+              label: l10n.cloudS3PortLabel,
+              hint: l10n.cloudS3PortHint,
             ),
-            const SizedBox(height: 16),
-            Row(
+            keyboardType: TextInputType.number,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 云服务配置底部抽屉外壳。
+///
+/// 统一提供拖拽条 + 标题栏 + 可滚动表单 + 底部取消/保存操作，
+/// 供 Supabase / WebDAV / S3 三个配置表单复用，避免三份底部抽屉
+/// 骨架代码重复。键盘避让沿用项目既有口径：外层一次性垫
+/// `viewInsets.bottom`（见自定义字段编辑抽屉）。
+class _CloudConfigSheet extends StatelessWidget {
+  final String title;
+  final Widget child;
+  final String cancelLabel;
+  final String saveLabel;
+  final VoidCallback onCancel;
+  final VoidCallback onSave;
+
+  const _CloudConfigSheet({
+    required this.title,
+    required this.child,
+    required this.cancelLabel,
+    required this.saveLabel,
+    required this.onCancel,
+    required this.onSave,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      // 表单里有 TextField / IconButton 等 Material 系组件，必须有 Material
+      // 祖先：transparent 路由背景自身不提供，这里显式包一层（颜色/圆角与
+      // 原 Container 背景保持一致），否则直接红屏“No Material widget found”。
+      child: Material(
+        color: PiggyTokens.surfaceElevated(context),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(PiggyDimens.radiusXl),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * 0.92,
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: Text(l10n.cloudS3UseSSLLabel),
+                // 拖拽指示条（与其他底部抽屉一致）
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 12),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: PiggyTokens.divider(context),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
+                    ),
+                  ),
                 ),
-                PiggySwitcher(
-                  value: useSSL,
-                  // 无障碍基线：开关补语义标签，读出所控制的设置项名称
-                  semanticLabel: l10n.cloudS3UseSSLLabel,
-                  onChanged: (value) {
-                    setState(() {
-                      useSSL = value;
-                    });
-                  },
+                // 标题栏：标题左置 + 右侧关闭按钮
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 8, 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: PiggyTextTokens.strongTitle(context)
+                              .copyWith(fontSize: 17),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        tooltip: cancelLabel,
+                        onPressed: onCancel,
+                      ),
+                    ],
+                  ),
+                ),
+                // 表单区：键盘弹出或 S3 长表单时内部滚动
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+                    child: child,
+                  ),
+                ),
+                // 底部操作：iOS 分栏（取消｜保存）与弹窗统一（云配置三表单专用，
+                // 其余抽屉仍用 PiggySheetActions，见 AGENTS）。
+                Padding(
+                  padding: EdgeInsets.only(
+                    bottom:
+                        PiggyDimens.p12 + MediaQuery.paddingOf(context).bottom,
+                  ),
+                  child: PiggyDialogActions(
+                    cancelLabel: cancelLabel,
+                    onCancel: onCancel,
+                    okLabel: saveLabel,
+                    onOk: onSave,
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: portController,
-              decoration: InputDecoration(
-                labelText: l10n.cloudS3PortLabel,
-                hintText: l10n.cloudS3PortHint,
-              ),
-              keyboardType: TextInputType.number,
-            ),
-          ],
+          ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(null),
-          child: Text(l10n.commonCancel),
-        ),
-        FilledButton(
-          onPressed: () {
-            // 存储桶名为空时回写默认值到输入框，确保用户看到实际保存的值
-            if (bucketController.text.trim().isEmpty) {
-              bucketController.text = widget.defaultBucket;
-            }
-            if (_validate()) {
-              final portText = portController.text.trim();
-              final port = portText.isEmpty ? null : int.tryParse(portText);
-
-              Navigator.of(context).pop({
-                'endpoint': endpointController.text.trim(),
-                'region': regionController.text.trim(),
-                'accessKey': accessKeyController.text.trim(),
-                'secretKey': secretKeyController.text.trim(),
-                'bucket': bucketController.text.trim(),
-                'useSSL': useSSL,
-                'port': port,
-              });
-            }
-          },
-          child: Text(l10n.commonSave),
-        ),
-      ],
     );
   }
 }

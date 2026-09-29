@@ -333,13 +333,17 @@ final textTheme = PiggyTypography.buildBase(
 |-----------|-----|------|
 | `PiggyTokens.dividerStatic` | `rgba(0,0,0,0.06)` | 分割线（亮色模式） |
 | `PiggyTokens.dividerDarkStatic` | `rgba(255,255,255,0.12)` | 分割线（暗色模式） |
-| `PiggyTokens.scaffoldBackgroundLightStatic` | `#E5EEFE` | 页面背景（亮色） |
 | `PiggyTokens.scaffoldBackgroundDarkStatic` | `#151A24` | 页面背景（暗色） |
 | `PiggyTokens.cardBackgroundLightStatic` | `#F9F9F9` | 卡片背景（亮色） |
 | `PiggyTokens.cardBackgroundDarkStatic` | `#1C2330` | 卡片背景（暗色） |
 
+> 亮色页面背景不再是固定常量：`PiggyTheme.deriveLightScaffoldBackground(primary)`
+> 从主题色派生同色系淡色（HSL 明度 0.95），`PiggyTokens.scaffoldBackground(context)`
+> 直接读 `Theme.scaffoldBackgroundColor`，换主题色后背景自动跟随。
+
 > 已下线：`primaryTextStatic` / `secondaryTextStatic` / `hintTextStatic` /
-> `black54Static`。前两者由 `*_On` 方法取代；后两者全库无调用点，直接删除。
+> `black54Static` / `scaffoldBackgroundLightStatic`。前两者由 `*_On` 方法取代；
+> 后三者全库无调用点，直接删除。
 
 ---
 

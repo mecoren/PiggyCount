@@ -1053,12 +1053,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                             barrierDismissible: false,
                                             builder: (dctx) => PopScope(
                                               canPop: false,
-                                              child: AlertDialog(
-                                                shape: RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            PiggyDimens
-                                                                .radiusXl)),
+                                              child: AppDialogShell(
                                                 title:
                                                     Text(l10n.ledgersUploadAll),
                                                 content: Column(

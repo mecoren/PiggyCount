@@ -11,7 +11,6 @@ import '../../utils/currencies.dart';
 import '../../widgets/currency/currency_picker_sheet.dart';
 import './personalize_page.dart';
 import './font_settings_page.dart';
-import './language_settings_page.dart';
 import './widget_management_page.dart';
 import './app_lock_settings_page.dart';
 import './header_skin_page.dart';
@@ -160,7 +159,8 @@ class AppearanceSettingsPage extends ConsumerWidget {
                 subtitle: l10n.appearanceQuickEntryModeDesc,
                 value: ref.watch(quickEntryModeEnabledProvider),
                 onChanged: (value) {
-                  ref.read(quickEntryModeEnabledProvider.notifier).state = value;
+                  ref.read(quickEntryModeEnabledProvider.notifier).state =
+                      value;
                 },
               ),
               // 备注显示方式
@@ -217,17 +217,12 @@ class AppearanceSettingsPage extends ConsumerWidget {
           // 通用:语言 / 桌面小组件 / 应用锁
           SettingsCard(
             children: [
-              // 语言设置
+              // 语言设置 —— 底部抽屉单选，选中即应用
               SettingsNavItem(
                 icon: Icons.language_outlined,
                 title: l10n.mineLanguageSettings,
                 subtitle: languageDisplay,
-                onTap: () async {
-                  await Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const LanguageSettingsPage()),
-                  );
-                },
+                onTap: () => _showLanguageSheet(context, ref),
               ),
               // 桌面小组件
               SettingsNavItem(
@@ -273,6 +268,140 @@ class AppearanceSettingsPage extends ConsumerWidget {
     await applyBaseCurrencySelection(context, ref, picked);
   }
 
+  /// 语言选择 —— 底部抽屉单选（与超时/主币种等选择交互同口径）。
+  /// 选中即应用并收起；应用后延迟刷新桌面小组件，等 locale 变化生效。
+  void _showLanguageSheet(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final currentLanguage = ref.read(languageProvider);
+    final primaryColor = ref.read(primaryColorProvider);
+
+    // 选项语种名沿用原语言设置页口径：官方文案走 l10n，
+    // 繁中/韩文用原生名（目标语言用户才看得懂，不随界面语言变化）。
+    // 第三位为前置徽标文本：每种语言用它自己的原生字符（中/繁/EN/한），
+    // null = 跟随系统，用设置图标。Material 没有按语言区分的图标，
+    // 原生字符徽标是语言选择器的通用做法，语义一一对应。
+    final options = <(Locale?, String, String?)>[
+      (null, l10n.languageSystemDefault, null),
+      (const Locale('zh'), l10n.languageChinese, '中'),
+      (const Locale('zh', 'TW'), '繁體中文', '繁'),
+      (const Locale('en'), l10n.languageEnglish, 'EN'),
+      (const Locale('ko'), '한국어', '한'),
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: PiggyTokens.surfaceElevated(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
+      ),
+      builder: (ctx) {
+        // 标题 + 5 个选项在系统大字号 / 应用显示缩放下可能超出底部弹层
+        // 高度约束（实测溢出 19px），包一层可滚动容器兜底：放得下时
+        // Column min-size 照常收缩，放不下时变为可滚动而非溢出红条。
+        return SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    l10n.languageTitle,
+                    style: PiggyTextTokens.strongTitle(ctx),
+                  ),
+                ),
+                ...options.map((opt) {
+                  final locale = opt.$1;
+                  final isSelected = (locale == null &&
+                          currentLanguage == null) ||
+                      (locale != null &&
+                          currentLanguage != null &&
+                          locale.languageCode == currentLanguage.languageCode &&
+                          locale.countryCode == currentLanguage.countryCode);
+                  // 行视觉规格对齐 SettingsNavItem（标题 bodyMedium w500 +
+                  // 16/14 内边距 + 12 间距），与抽屉正上方的设置行保持一致；
+                  // 选中态额外加粗 + 主色 check。
+                  return InkWell(
+                    onTap: () {
+                      ref.read(languageProvider.notifier).setLanguage(locale);
+                      Navigator.pop(ctx);
+                      // 延迟更新小组件，等待 locale 变化生效；延迟回调属于
+                      // async gap，先校验页面 context 再使用（抽屉 ctx 已 pop）
+                      Future.delayed(const Duration(milliseconds: 100), () {
+                        if (context.mounted) {
+                          updateAppWidget(ref, context);
+                        }
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      child: Row(
+                        children: [
+                          // 前置标识：裸图标 / 原生字符，无背景盒。
+                          // 高亮只给选中项：选中主色，未选中中性灰
+                          // （与页内选项对话框 _buildAmountFormatOption 同口径）。
+                          // 标识统一占 24px 槽位居中（图标即 24，字符略窄），
+                          // 保证五种选项的标题起点在同一条竖线上。
+                          SizedBox(
+                            width: 24,
+                            child: opt.$3 == null
+                                ? Icon(
+                                    Icons.settings_suggest_outlined,
+                                    size: 24,
+                                    color: isSelected
+                                        ? primaryColor
+                                        : PiggyTokens.iconSecondary(ctx),
+                                  )
+                                : Text(
+                                    opt.$3!,
+                                    textAlign: TextAlign.center,
+                                    style: Theme.of(ctx)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                          color: isSelected
+                                              ? primaryColor
+                                              : PiggyTokens.iconSecondary(ctx),
+                                        ),
+                                  ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              opt.$2,
+                              style:
+                                  Theme.of(ctx).textTheme.bodyMedium?.copyWith(
+                                        fontWeight: isSelected
+                                            ? FontWeight.w600
+                                            : FontWeight.w500,
+                                        color: isSelected
+                                            ? primaryColor
+                                            : PiggyTokens.textPrimary(ctx),
+                                      ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (isSelected)
+                            Icon(Icons.check, size: 24, color: primaryColor),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   /// 显示主题模式选择对话框
   void _showThemeModeDialog(
       BuildContext context, WidgetRef ref, AppLocalizations l10n) {
@@ -280,8 +409,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: PiggyTokens.surfaceElevated(context),
+      builder: (context) => AppDialogShell(
         title: Text(
           l10n.appearanceThemeMode,
           style: TextStyle(color: PiggyTokens.textPrimary(context)),
@@ -357,8 +485,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: PiggyTokens.surfaceElevated(context),
+      builder: (context) => AppDialogShell(
         title: Text(
           l10n.appearanceAmountFormat,
           style: TextStyle(color: PiggyTokens.textPrimary(context)),
@@ -432,8 +559,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
     final current = ref.read(noteDisplayModeProvider);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: PiggyTokens.surfaceElevated(context),
+      builder: (context) => AppDialogShell(
         title: Text(
           l10n.appearanceNoteDisplay,
           style: TextStyle(color: PiggyTokens.textPrimary(context)),
@@ -522,8 +648,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: PiggyTokens.surfaceElevated(context),
+        builder: (context, setDialogState) => AppDialogShell(
           title: Text(
             l10n.appearanceNoteHistory,
             style: TextStyle(color: PiggyTokens.textPrimary(context)),
@@ -553,8 +678,8 @@ class AppearanceSettingsPage extends ConsumerWidget {
                     children: [
                       RadioListTile<NoteHistoryScope>(
                         value: NoteHistoryScope.allCategories,
-                        title: Text(
-                            l10n.appearanceNoteHistoryScopeAllCategories),
+                        title:
+                            Text(l10n.appearanceNoteHistoryScopeAllCategories),
                         contentPadding: EdgeInsets.zero,
                       ),
                       RadioListTile<NoteHistoryScope>(
@@ -705,8 +830,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: PiggyTokens.surfaceElevated(context),
+      builder: (context) => AppDialogShell(
         title: Text(
           l10n.appearanceColorScheme,
           style: TextStyle(color: PiggyTokens.textPrimary(context)),

@@ -3,50 +3,52 @@ import 'package:flutter/foundation.dart';
 import 'styles/tokens.dart';
 
 class PiggyTheme {
-  // Brand colors - Light Mode
-  static const Color honeyGold = Color(0xFFF8C91C); // 主色（亮色模式）
-  static const Color hiveBrown = Color(0xFF8D6E63); // 辅助色
-  static const Color energyOrange = Color(0xFFEF6C00); // 点缀色
-  static const Color paperIvory = Color(0xFFFFF8E1); // 背景
-  static const Color textDark = Color(0xFF333333); // 文字
+  /// 文字主色（亮色模式）
+  static const Color textDark = Color(0xFF333333);
 
-  // Brand colors - Dark Mode ⭐ 改为与亮色模式相同（不减弱）
-  static const Color honeyGoldDark = honeyGold; // 主色（暗黑模式 - 使用亮色）
-  static const Color hiveBrownDark = hiveBrown; // 辅助色（暗黑模式 - 使用亮色）
-  static const Color energyOrangeDark = energyOrange; // 点缀色（暗黑模式 - 使用亮色）
+  /// 从主题色派生亮色页面背景：取主题色色相，压到高明度，
+  /// 让背景随用户换色保持同色系淡色（替代历史写死的淡蓝 #E5EEFE）。
+  static Color deriveLightScaffoldBackground(Color primary) {
+    final hsl = HSLColor.fromColor(primary);
+    return hsl
+        .withSaturation(hsl.saturation.clamp(0.35, 0.85))
+        .withLightness(0.95)
+        .toColor();
+  }
 
-  static ThemeData lightTheme({TargetPlatform? platform}) {
+  static ThemeData lightTheme({required Color primary, TargetPlatform? platform}) {
     final base = ThemeData.light();
     final pf = platform ?? defaultTargetPlatform;
     final isIOS = pf == TargetPlatform.iOS || pf == TargetPlatform.macOS;
     final adjustedTextTheme =
         PiggyTypography.buildBase(base.textTheme, isIOS: isIOS)
             .apply(bodyColor: textDark, displayColor: textDark);
+    final scaffoldBackground = deriveLightScaffoldBackground(primary);
 
     return base.copyWith(
       colorScheme: base.colorScheme.copyWith(
-        primary: honeyGold,
-        secondary: energyOrange,
+        primary: primary,
+        secondary: primary,
         surface: PiggyTokens.cardBackgroundLightStatic,
       ),
-      primaryColor: honeyGold,
-      scaffoldBackgroundColor: PiggyTokens.scaffoldBackgroundLightStatic,
+      primaryColor: primary,
+      scaffoldBackgroundColor: scaffoldBackground,
       dividerTheme: DividerThemeData(
         color: PiggyTokens.dividerStatic,
         thickness: 1,
       ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: PiggyTokens.scaffoldBackgroundLightStatic, // ⭐ 淡蓝，与页面背景融为一体
+      appBarTheme: AppBarTheme(
+        backgroundColor: scaffoldBackground, // 与页面背景融为一体
         foregroundColor: textDark,
         elevation: 0.0,
         centerTitle: true,
       ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: honeyGold,
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: primary,
         foregroundColor: Colors.white,
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        selectedItemColor: energyOrange,
+        selectedItemColor: primary,
         unselectedItemColor: Colors.grey,
         showUnselectedLabels: true,
         backgroundColor: Colors.transparent, // 悬浮胶囊样式，外层透明
@@ -56,7 +58,7 @@ class PiggyTheme {
     );
   }
 
-  static ThemeData darkTheme({TargetPlatform? platform}) {
+  static ThemeData darkTheme({required Color primary, TargetPlatform? platform}) {
     final base = ThemeData.dark();
     final pf = platform ?? defaultTargetPlatform;
     final isIOS = pf == TargetPlatform.iOS || pf == TargetPlatform.macOS;
@@ -67,15 +69,15 @@ class PiggyTheme {
       brightness: Brightness.dark,
       colorScheme: base.colorScheme.copyWith(
         brightness: Brightness.dark,
-        primary: honeyGoldDark,              // ⭐ 主色
+        primary: primary,                    // ⭐ 主色
         onPrimary: Colors.black,             // ⭐ 主色上的前景色
-        primaryContainer: honeyGoldDark,     // ⭐ Switch thumb 等组件使用
+        primaryContainer: primary,           // ⭐ Switch thumb 等组件使用
         onPrimaryContainer: Colors.black,    // ⭐ primaryContainer 上的前景色
-        secondary: energyOrangeDark,         // ⭐ 辅助色
+        secondary: primary,                  // ⭐ 辅助色
         surface: PiggyTokens.cardBackgroundDarkStatic, // ⭐ 深蓝灰卡片
         onSurface: Colors.white,
       ),
-      primaryColor: honeyGoldDark,     // ⭐ 主题色
+      primaryColor: primary,     // ⭐ 主题色
       scaffoldBackgroundColor: PiggyTokens.scaffoldBackgroundDarkStatic, // ⭐ 深蓝灰页面背景
       appBarTheme: const AppBarTheme(
         backgroundColor: PiggyTokens.scaffoldBackgroundDarkStatic, // ⭐ 深蓝灰，与页面背景融为一体
@@ -84,12 +86,12 @@ class PiggyTheme {
         centerTitle: true,
         iconTheme: IconThemeData(color: Colors.white),
       ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: honeyGoldDark,  // ⭐ 深金色
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: primary,
         foregroundColor: Colors.black,   // 黑色文字（对比度更好）
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        selectedItemColor: honeyGoldDark, // ⭐ 深金色
+        selectedItemColor: primary,
         unselectedItemColor: Colors.grey,
         showUnselectedLabels: true,
         backgroundColor: Colors.transparent, // 悬浮胶囊样式，外层透明

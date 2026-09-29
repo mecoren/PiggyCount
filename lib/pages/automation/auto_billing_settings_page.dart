@@ -423,7 +423,7 @@ class _AndroidAutoBillingPageState extends ConsumerState<AndroidAutoBillingPage>
                   if (mounted && context.mounted) {
                     showDialog(
                       context: context,
-                      builder: (context) => AlertDialog(
+                      builder: (context) => AppDialogShell(
                         title: Text(l10n.reminderBatteryStatus),
                         content: Column(
                           mainAxisSize: MainAxisSize.min,

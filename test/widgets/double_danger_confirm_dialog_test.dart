@@ -33,9 +33,9 @@ void main() {
     // 第一段文案可见
     expect(find.text('first'), findsOneWidget);
     // 倒计时按钮禁用（非归零态显示剩余秒数文案）
-    expect(find.byType(FilledButton), findsOneWidget);
+    expect(find.widgetWithText(TextButton, '确认（5秒）'), findsOneWidget);
 
-    await tester.tap(find.byType(OutlinedButton));
+    await tester.tap(find.text('取消'));
     await tester.pump();
     expect(result, isFalse);
     // 没有第二次弹窗
@@ -65,7 +65,7 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
     }
     expect(find.text('first'), findsOneWidget);
-    await tester.tap(find.byType(FilledButton));
+    await tester.tap(find.text('确定'));
     await tester.pump();
 
     // ---- 第二次弹窗出现：文案为 second ----
@@ -73,7 +73,7 @@ void main() {
     for (var i = 0; i < 5; i++) {
       await tester.pump(const Duration(seconds: 1));
     }
-    await tester.tap(find.byType(FilledButton));
+    await tester.tap(find.text('确定'));
     // pumpAndSettle 走完第二个弹窗的出栈过渡动画
     await tester.pumpAndSettle();
 
@@ -102,7 +102,7 @@ void main() {
     for (var i = 0; i < 5; i++) {
       await tester.pump(const Duration(seconds: 1));
     }
-    await tester.tap(find.byType(FilledButton));
+    await tester.tap(find.text('确定'));
     await tester.pump();
 
     // 第二次取消
@@ -110,7 +110,7 @@ void main() {
     for (var i = 0; i < 5; i++) {
       await tester.pump(const Duration(seconds: 1));
     }
-    await tester.tap(find.byType(OutlinedButton));
+    await tester.tap(find.text('取消'));
     await tester.pump();
 
     expect(result, isFalse);
@@ -130,17 +130,19 @@ void main() {
 
     await tester.pump();
     // 归零前按钮处于禁用态：按钮文案是「确认（N秒）」而非确认标签
-    final filled = tester.widget<FilledButton>(find.byType(FilledButton));
-    expect(filled.onPressed, isNull);
+    final counting =
+        tester.widget<TextButton>(find.widgetWithText(TextButton, '确认（5秒）'));
+    expect(counting.onPressed, isNull);
 
     // 归零后启用
     for (var i = 0; i < 5; i++) {
       await tester.pump(const Duration(seconds: 1));
     }
-    final enabled = tester.widget<FilledButton>(find.byType(FilledButton));
+    final enabled =
+        tester.widget<TextButton>(find.widgetWithText(TextButton, '确定'));
     expect(enabled.onPressed, isNotNull);
 
-    await tester.tap(find.byType(OutlinedButton));
+    await tester.tap(find.text('取消'));
     await tester.pump();
     await future;
   });

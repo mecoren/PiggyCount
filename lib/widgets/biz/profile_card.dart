@@ -12,6 +12,7 @@ import '../../utils/ui_scale_extensions.dart';
 import 'amount_text.dart';
 import 'piggy_icon.dart';
 import '../ui/toast.dart';
+import '../ui/dialog.dart';
 
 /// MinePage 顶部用户信息卡片
 ///
@@ -59,7 +60,7 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
     final l10n = AppLocalizations.of(context);
     final result = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: Text(l10n.mineProfileEditTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -210,12 +211,10 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
     // 'none' → null = 纯背景色。
     final skin = headerSkinById(ref.watch(headerSkinProvider));
     final isDark = PiggyTokens.isDark(context);
-    final primary = Theme.of(context).colorScheme.primary;
-    // 全宽头部：背景与页面背景一致(亮色淡蓝 / 暗色深蓝灰)，皮肤层作为装饰叠加其上。
-    final headerBg = isDark
-        ? PiggyTokens.scaffoldBackgroundDarkStatic
-        : PiggyTokens.scaffoldBackgroundLightStatic;
-    // 前景色自适应：亮色淡蓝底用深色文字，暗色深蓝灰底用白色文字。
+    final primary = ref.watch(primaryColorProvider);
+    // 全宽头部与 PiggyHeader 同一外壳语言：95% 实色底 + 皮肤 0.85 + 底部高光线。
+    final headerBg = PiggyTokens.tabBarBackground(context);
+    // 前景色自适应：亮色淡底用深色文字，暗色深蓝灰底用白色文字。
     final headerForeground =
         isDark ? Colors.white : PiggyTokens.textPrimary(context);
     final statusBarHeight = MediaQuery.of(context).padding.top;
@@ -250,9 +249,14 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
         ),
         child: Stack(
           children: [
-            // 头部皮肤装饰层（叠加在主题色底之上的图形层）
+            // 头部皮肤装饰层（0.85 不透明度护栏对比度，与 PiggyHeader 一致）
             if (skin != null)
-              Positioned.fill(child: skin.builder(primary, isDark)),
+              Positioned.fill(
+                child: Opacity(
+                  opacity: 0.85,
+                  child: skin.builder(primary, isDark),
+                ),
+              ),
             // 主内容
             Padding(
               padding: EdgeInsets.fromLTRB(
@@ -424,6 +428,20 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
                 ],
               ),
             ),
+            // 底部 0.5px 高光线（呼应 PiggyHeader 层 D）
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 0.5,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(
+                        alpha: isDark ? 0.15 : 0.08,
+                      ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -507,7 +525,7 @@ class _EditDisplayNameDialogState extends State<_EditDisplayNameDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return AlertDialog(
+    return AppDialogShell(
       title: Text(l10n.mineDisplayNameEditTitle),
       content: TextField(
         controller: _controller,

@@ -154,7 +154,9 @@ void main() {
       run: makeRun(conflictDirection: 'cloudNewer'),
     );
     await tester.pump();
-    expect(find.byType(AlertDialog), findsOneWidget);
+    // 二选一路径走 AppDialog.confirm（iOS 警示框，外壳是裸 Dialog 而非
+    // AlertDialog；三选一的 AppDialogShell 内部才是 AlertDialog）。
+    expect(find.byType(Dialog), findsOneWidget);
 
     await tester.tap(find.text(_cancelLabel));
     await tester.pump();

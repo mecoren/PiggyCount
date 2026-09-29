@@ -481,7 +481,7 @@ class _AmountDeviationPageState extends ConsumerState<AmountDeviationPage> {
                         color: e.diffSum >= 0
                             ? PiggyTokens.expenseColor(context, ref)
                             : PiggyTokens.incomeColor(context, ref),
-                        borderRadius: BorderRadius.circular(3),
+                        borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -540,7 +540,7 @@ class _AmountDeviationPageState extends ConsumerState<AmountDeviationPage> {
                 ),
                 const SizedBox(height: 6),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                   child: LinearProgressIndicator(
                     value: maxAbs == 0 ? 0 : c.absDiffSum / maxAbs,
                     minHeight: 6,
@@ -591,7 +591,7 @@ class _AmountDeviationPageState extends ConsumerState<AmountDeviationPage> {
                         horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: severityColor(ins.severity).withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                     ),
                     child: Text(
                       _severityText(l10n, ins.severity),

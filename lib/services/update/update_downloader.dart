@@ -7,6 +7,7 @@ import '../../l10n/app_localizations.dart';
 import 'update_result.dart';
 import 'update_notifications.dart';
 import 'github_mirror_service.dart';
+import '../../widgets/ui/ui.dart';
 
 import '../../utils/platform_info.dart';
 
@@ -97,7 +98,7 @@ class UpdateDownloader {
           builder: (context) => StatefulBuilder(
             builder: (context, setState) {
               dialogSetState = setState;
-              return AlertDialog(
+              return AppDialogShell(
                 title: Text(AppLocalizations.of(context).updateDownloadTitle),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,

@@ -72,24 +72,47 @@ class _RecycleBinPageState extends ConsumerState<RecycleBinPage> {
       showToast(context, l10n.recycleBinRestoreConflict);
       return;
     }
+    // 先从当前列表同步摘掉该行，保证实时消失（重载直查本应一致，
+    // 但箭头 setState 闭包返回 Future 会触发断言、中断 markNeedsBuild；
+    // 本地过滤与库内删除是同一事实）。
+    await _dropRow(row.txId);
+    if (!mounted) return;
     _refreshLedger(row.ledgerId);
     showToast(context, l10n.recycleBinRestored);
-    setState(() => _data = _load());
   }
 
   Future<void> _purge(DeletedTransaction row) async {
     final l10n = AppLocalizations.of(context);
-    final ok = await AppDialog.confirm<bool>(
-          context,
-          title: l10n.recycleBinPurge,
-          message: l10n.recycleBinPurgeConfirm,
-        ) ??
-        false;
-    if (!ok || !mounted) return;
+    // 不可恢复的彻底删除（交易本体 + 附件行/文件）：与自定义字段删除同规格，
+    // 双重危险确认（各 3 秒倒计时），对齐全量下载的时停口径。
+    final confirmed = await showDoubleDangerConfirmDialog(
+      context,
+      title: l10n.recycleBinPurge,
+      firstMessage: l10n.recycleBinPurgeConfirm,
+      secondMessage: l10n.recycleBinPurgeReconfirm,
+      countdownSeconds: 3,
+    );
+    if (!confirmed || !mounted) return;
     await ref.read(repositoryProvider).purgeDeletedTransaction(row.txId);
     if (!mounted) return;
+    // 同 _restore：同步摘行，保证实时消失。
+    await _dropRow(row.txId);
+    if (!mounted) return;
     _refreshLedger(row.ledgerId);
-    setState(() => _data = _load());
+  }
+
+  /// 写操作成功后从当前列表同步摘掉该行，保证实时消失。
+  ///
+  /// 归档行已在库内删除，重载结果与本地过滤是同一事实；直接用已完成的
+  /// future 拼新数据，不走重载，避免转圈闪烁。
+  Future<void> _dropRow(int txId) async {
+    final current = await _data;
+    if (!mounted) return;
+    final kept = current.rows.where((r) => r.txId != txId).toList();
+    final txs = Map<int, Transaction>.of(current.txs)..remove(txId);
+    setState(() {
+      _data = Future.value(_BinData(kept, txs, current.ledgerNames));
+    });
   }
 
   @override

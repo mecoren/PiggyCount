@@ -1026,7 +1026,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                 height: 12,
                 decoration: BoxDecoration(
                   color: PiggyTokens.success(context),
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                 ),
               ),
               const SizedBox(width: 6),
@@ -1043,7 +1043,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                 height: 12,
                 decoration: BoxDecoration(
                   color: PiggyTokens.error(context),
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                 ),
               ),
               const SizedBox(width: 6),

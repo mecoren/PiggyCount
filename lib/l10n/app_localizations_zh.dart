@@ -746,7 +746,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ledgersDeleteMessage =>
-      '确定要删除该账本及其全部记录吗？此操作不可恢复。\\n若云端存在备份，也会一并删除。';
+      '确定要删除该账本及其全部记录吗？此操作不可恢复。\n若云端存在备份，也会一并删除。';
 
   @override
   String get ledgersDeleteReconfirmMessage =>
@@ -772,7 +772,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String ledgersDeleteLocalMessage(String name) {
-    return '确定要删除本地账本\"$name\"吗？\\n云端备份会保留，您可以随时恢复。';
+    return '确定要删除本地账本\"$name\"吗？\n云端备份会保留，您可以随时恢复。';
   }
 
   @override
@@ -8065,6 +8065,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recycleBinPurgeConfirm => '彻底删除后无法恢复，附件文件也会一并清除，确定吗？';
 
   @override
+  String get recycleBinPurgeReconfirm => '再次确认：彻底删除后该交易及其附件将永久消失、无法恢复。确定要继续吗？';
+
+  @override
   String get recycleBinRestoreConflict => '恢复失败：该位置已被另一笔交易占用';
 
   @override
@@ -8099,6 +8102,115 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String semanticsChartSeries(int count, String points) {
     return '图表，共 $count 个点：$points';
+  }
+
+  @override
+  String get holidaySettingsTitle => '日历与节假日';
+
+  @override
+  String get holidaySettingsDesc => '法定节假日标注与农历，数据每月自动更新';
+
+  @override
+  String get holidayCacheOverview => '缓存概览';
+
+  @override
+  String holidayCacheCount(int count, int off, int work) {
+    return '共 $count 条（放假 $off · 补班 $work）';
+  }
+
+  @override
+  String holidayCoverYears(String range) {
+    return '覆盖年份：$range';
+  }
+
+  @override
+  String holidayLastUpdate(String time) {
+    return '上次成功更新：$time';
+  }
+
+  @override
+  String get holidayNeverUpdated => '从未成功更新';
+
+  @override
+  String holidayFailureCount(int count) {
+    return '连续失败 $count 次（旧缓存仍可使用）';
+  }
+
+  @override
+  String get holidayUpdateNow => '立即更新';
+
+  @override
+  String get holidayUpdating => '正在更新…';
+
+  @override
+  String get holidayUpdateSuccess => '节假日数据已更新';
+
+  @override
+  String holidayUpdateFailed(String error) {
+    return '更新失败：$error';
+  }
+
+  @override
+  String get holidayAutoUpdate => '每月自动更新';
+
+  @override
+  String get holidayAutoUpdateDesc => '每月联网更新一次当年节假日，不含任何账本或设备信息';
+
+  @override
+  String get holidayBadgeOff => '休';
+
+  @override
+  String get holidayBadgeWork => '班';
+
+  @override
+  String get holidayLoadFailed => '节假日数据加载失败';
+
+  @override
+  String get holidayFetchByYear => '按年份范围获取';
+
+  @override
+  String get holidayFetchByYearDesc => '选择起止年份，联网补写该范围节假日';
+
+  @override
+  String get holidayUpdateYear => '更新该年';
+
+  @override
+  String holidayFetchYearDone(int year) {
+    return '$year 年节假日已更新';
+  }
+
+  @override
+  String holidayYearNoData(int year) {
+    return '$year 年暂无节假日数据';
+  }
+
+  @override
+  String holidayFetchYearFailed(String error) {
+    return '获取失败：$error';
+  }
+
+  @override
+  String get holidayYearRangeTitle => '选择年份范围';
+
+  @override
+  String get holidayYearRangeStart => '起始年份';
+
+  @override
+  String get holidayYearRangeEnd => '结束年份';
+
+  @override
+  String holidayFetchRangeDone(int count) {
+    return '已补写 $count 个年份';
+  }
+
+  @override
+  String holidayFetchRangeDoneNoData(int updated, int noData) {
+    return '已补写 $updated 个年份，$noData 个年份无数据';
+  }
+
+  @override
+  String holidayFetchRangePartial(int updated, int count) {
+    return '已补写 $updated 个年份，$count 个年份获取失败';
   }
 }
 
@@ -8844,7 +8956,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get ledgersDeleteMessage =>
-      '確定要刪除該帳本及其全部記錄嗎？此操作不可復原。\\n若雲端存在備份，也會一併刪除。';
+      '確定要刪除該帳本及其全部記錄嗎？此操作不可復原。\n若雲端存在備份，也會一併刪除。';
 
   @override
   String get ledgersDeleteReconfirmMessage =>
@@ -16164,6 +16276,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get recycleBinPurgeConfirm => '徹底刪除後無法復原，附件檔案也會一併清除，確定嗎？';
 
   @override
+  String get recycleBinPurgeReconfirm => '再次確認：徹底刪除後該交易及其附件將永久消失、無法復原。確定要繼續嗎？';
+
+  @override
   String get recycleBinRestoreConflict => '復原失敗：該位置已被另一筆交易佔用';
 
   @override
@@ -16198,5 +16313,114 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String semanticsChartSeries(int count, String points) {
     return '圖表，共 $count 個點：$points';
+  }
+
+  @override
+  String get holidaySettingsTitle => '行事曆與節假日';
+
+  @override
+  String get holidaySettingsDesc => '法定節假日標註與農曆，資料每月自動更新';
+
+  @override
+  String get holidayCacheOverview => '快取概覽';
+
+  @override
+  String holidayCacheCount(int count, int off, int work) {
+    return '共 $count 條（放假 $off · 補班 $work）';
+  }
+
+  @override
+  String holidayCoverYears(String range) {
+    return '覆蓋年份：$range';
+  }
+
+  @override
+  String holidayLastUpdate(String time) {
+    return '上次成功更新：$time';
+  }
+
+  @override
+  String get holidayNeverUpdated => '從未成功更新';
+
+  @override
+  String holidayFailureCount(int count) {
+    return '連續失敗 $count 次（舊快取仍可使用）';
+  }
+
+  @override
+  String get holidayUpdateNow => '立即更新';
+
+  @override
+  String get holidayUpdating => '正在更新…';
+
+  @override
+  String get holidayUpdateSuccess => '節假日資料已更新';
+
+  @override
+  String holidayUpdateFailed(String error) {
+    return '更新失敗：$error';
+  }
+
+  @override
+  String get holidayAutoUpdate => '每月自動更新';
+
+  @override
+  String get holidayAutoUpdateDesc => '每月連網更新一次當年節假日，不含任何帳本或裝置資訊';
+
+  @override
+  String get holidayBadgeOff => '休';
+
+  @override
+  String get holidayBadgeWork => '班';
+
+  @override
+  String get holidayLoadFailed => '節假日資料載入失敗';
+
+  @override
+  String get holidayFetchByYear => '依年份範圍取得';
+
+  @override
+  String get holidayFetchByYearDesc => '選擇起訖年份，連網補寫該範圍節假日';
+
+  @override
+  String get holidayUpdateYear => '更新該年';
+
+  @override
+  String holidayFetchYearDone(int year) {
+    return '$year 年節假日已更新';
+  }
+
+  @override
+  String holidayYearNoData(int year) {
+    return '$year 年暫無節假日資料';
+  }
+
+  @override
+  String holidayFetchYearFailed(String error) {
+    return '取得失敗：$error';
+  }
+
+  @override
+  String get holidayYearRangeTitle => '選擇年份範圍';
+
+  @override
+  String get holidayYearRangeStart => '起始年份';
+
+  @override
+  String get holidayYearRangeEnd => '結束年份';
+
+  @override
+  String holidayFetchRangeDone(int count) {
+    return '已補寫 $count 個年份';
+  }
+
+  @override
+  String holidayFetchRangeDoneNoData(int updated, int noData) {
+    return '已補寫 $updated 個年份，$noData 個年份無資料';
+  }
+
+  @override
+  String holidayFetchRangePartial(int updated, int count) {
+    return '已補寫 $updated 個年份，$count 個年份取得失敗';
   }
 }

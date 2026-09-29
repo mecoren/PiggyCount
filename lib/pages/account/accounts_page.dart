@@ -718,7 +718,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                 child: InkWell(
                   onTap: () => _showNetWorthConversionDetail(
                       context, ref, converted, nwByCurrency, base, useCompact),
-                  borderRadius: BorderRadius.circular(4.0.scaled(context, ref)),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusXs.scaled(context, ref)),
                   child: Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: 4.0.scaled(context, ref),
@@ -908,7 +908,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
         base: base,
         useCompact: useCompact,
       ),
-      borderRadius: BorderRadius.circular(4.0.scaled(context, ref)),
+      borderRadius: BorderRadius.circular(PiggyDimens.radiusXs.scaled(context, ref)),
       child: Padding(
         padding: EdgeInsets.symmetric(
           horizontal: 4.0.scaled(context, ref),
@@ -1215,7 +1215,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                     decoration: BoxDecoration(
                       color: PiggyTokens.textTertiary(context)
                           .withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(2),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                     ),
                   ),
                   // 标题
@@ -1521,7 +1521,7 @@ class _ConversionDetailRow extends ConsumerWidget {
               decoration: BoxDecoration(
                 border:
                     Border.all(color: PiggyTokens.warning(context), width: 1),
-                borderRadius: BorderRadius.circular(4.0.scaled(context, ref)),
+                borderRadius: BorderRadius.circular(PiggyDimens.radiusXs.scaled(context, ref)),
               ),
               child: Text(
                 l10n.unconvertedBadge,
@@ -1575,7 +1575,7 @@ void _showConversionDetailSheet(
               decoration: BoxDecoration(
                 color: PiggyTokens.textTertiary(sheetContext)
                     .withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
               ),
             ),
             // 标题
@@ -1721,7 +1721,7 @@ class _AccountTypeGroupState extends ConsumerState<_AccountTypeGroup> {
                   decoration: BoxDecoration(
                     color: typeColor.withValues(alpha: 0.12),
                     borderRadius:
-                        BorderRadius.circular(7.0.scaled(context, ref)),
+                        BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
                   ),
                   child: Center(
                     child: AccountTypeIcon(
@@ -1750,7 +1750,7 @@ class _AccountTypeGroupState extends ConsumerState<_AccountTypeGroup> {
                     color: PiggyTokens.textTertiary(context)
                         .withValues(alpha: 0.12),
                     borderRadius:
-                        BorderRadius.circular(8.0.scaled(context, ref)),
+                        BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
                   ),
                   child: Text(
                     '${widget.accounts.length}',
@@ -2078,7 +2078,7 @@ class _AccountCard extends ConsumerWidget {
       ),
       decoration: BoxDecoration(
         color: PiggyTokens.textTertiary(context).withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(4.0.scaled(context, ref)),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusXs.scaled(context, ref)),
       ),
       child: Text(
         l10n.accountHiddenTag,
@@ -2105,7 +2105,7 @@ class _AccountCard extends ConsumerWidget {
         ),
         decoration: BoxDecoration(
           color: primary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8.0.scaled(context, ref)),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -2263,7 +2263,7 @@ class _AccountCard extends ConsumerWidget {
       children: [
         // 进度条:轨道用中性弱底(UI-13:surfaceSelected token),填充用账户类型色
         ClipRRect(
-          borderRadius: BorderRadius.circular(3.0.scaled(context, ref)),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusXs.scaled(context, ref)),
           child: LinearProgressIndicator(
             value: usageRate,
             backgroundColor: PiggyTokens.surfaceSelected(context),
@@ -2440,8 +2440,7 @@ class _CompactDefaultAccount extends ConsumerWidget {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: PiggyTokens.surfaceElevated(context),
+      builder: (context) => AppDialogShell(
         title: Text(title,
             style: TextStyle(color: PiggyTokens.textPrimary(context))),
         content: SingleChildScrollView(

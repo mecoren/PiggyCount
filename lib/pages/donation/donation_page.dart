@@ -121,7 +121,7 @@ class _DonationPageState extends ConsumerState<DonationPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: Row(
           children: [
             Icon(
@@ -320,7 +320,7 @@ class _ProductTile extends ConsumerWidget {
               height: 48.0.scaled(context, ref),
               decoration: BoxDecoration(
                 color: primaryColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12.0.scaled(context, ref)),
+                borderRadius: BorderRadius.circular(PiggyDimens.radiusLg.scaled(context, ref)),
               ),
               alignment: Alignment.center,
               child: Text(
@@ -364,7 +364,7 @@ class _ProductTile extends ConsumerWidget {
                 ),
                 decoration: BoxDecoration(
                   color: primaryColor,
-                  borderRadius: BorderRadius.circular(8.0.scaled(context, ref)),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
                 ),
                 child: Text(
                   product.price,

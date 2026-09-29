@@ -316,7 +316,7 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: Text(l10n.aiProviderDeleteTitle),
         content: Text(l10n.aiProviderDeleteConfirm(provider.name)),
         actions: [

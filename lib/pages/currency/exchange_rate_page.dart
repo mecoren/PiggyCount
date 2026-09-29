@@ -120,7 +120,7 @@ class _ExchangeRatePageState extends ConsumerState<ExchangeRatePage> {
                     child: InkWell(
                       onTap: () => _pickBaseCurrency(context),
                       borderRadius:
-                          BorderRadius.circular(8.0.scaled(context, ref)),
+                          BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
                       child: Padding(
                         padding: EdgeInsets.symmetric(
                           vertical: 8.0.scaled(context, ref),
@@ -323,8 +323,7 @@ class _RateEditDialogState extends ConsumerState<_RateEditDialog> {
         ? (1 / parsed).toStringAsPrecision(6)
         : '—';
 
-    return AlertDialog(
-      backgroundColor: PiggyTokens.surfaceElevated(context),
+    return AppDialogShell(
       title: Text(
         l10n.rateEditTitle,
         style: TextStyle(color: PiggyTokens.textPrimary(context)),

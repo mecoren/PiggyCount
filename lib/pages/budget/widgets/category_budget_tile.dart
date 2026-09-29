@@ -44,7 +44,7 @@ class CategoryBudgetTile extends ConsumerWidget {
               height: 36.0.scaled(context, ref),
               decoration: BoxDecoration(
                 color: PiggyTokens.primary(context).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8.0.scaled(context, ref)),
+                borderRadius: BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
               ),
               alignment: Alignment.center,
               child: usage.category != null

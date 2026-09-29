@@ -307,7 +307,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
             // 主体内容
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+              padding: PiggyDimens.reminderCardPadding,
               child: Row(
                 children: [
                   // 文案
@@ -339,7 +339,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                                 ),
                               ],
                             ),
-                            style: const TextStyle(fontSize: 14),
+                            style: PiggyTextTokens.body(context),
                           ),
                         ),
                       ],
@@ -365,8 +365,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                           horizontal: 4, vertical: 6),
                       child: Text(
                         l10n.homeLastMonthReportView,
-                        style: TextStyle(
-                          fontSize: 14,
+                        style: PiggyTextTokens.body(context).copyWith(
                           fontWeight: FontWeight.w600,
                           color: primaryColor,
                         ),
@@ -428,7 +427,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
             // 主体内容
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+              padding: PiggyDimens.reminderCardPadding,
               child: Row(
                 children: [
                   // 图标 + 文案
@@ -473,8 +472,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                           horizontal: 4, vertical: 6),
                       child: Text(
                         l10n.homeAnnualReportView,
-                        style: TextStyle(
-                          fontSize: 14,
+                        style: PiggyTextTokens.body(context).copyWith(
                           fontWeight: FontWeight.w600,
                           color: primaryColor,
                         ),
@@ -546,7 +544,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
             // 主体内容
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+              padding: PiggyDimens.reminderCardPadding,
               child: Row(
                 children: [
                   // 图标 + 文案
@@ -581,8 +579,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     },
                     child: Text(
                       l10n.budgetSetupAction,
-                      style: TextStyle(
-                        fontSize: 14,
+                      style: PiggyTextTokens.body(context).copyWith(
                         fontWeight: FontWeight.w600,
                         color: primaryColor,
                       ),
@@ -745,13 +742,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             softWrap: false,
-                                            style: TextStyle(
-                                              fontSize: 14,
+                                            style: PiggyTextTokens.body(context)
+                                                .copyWith(
                                               fontWeight: FontWeight.w500,
-                                              color: Theme.of(context)
-                                                  .textTheme
-                                                  .bodyLarge
-                                                  ?.color,
                                             ),
                                           ),
                                         ),
@@ -770,8 +763,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                                           const SizedBox(width: 1),
                                           Text(
                                             '${ledger.memberCount}',
-                                            style: TextStyle(
-                                              fontSize: 12,
+                                            style: PiggyTextTokens.label(
+                                                    context)
+                                                .copyWith(
                                               color: Theme.of(context)
                                                   .textTheme
                                                   .bodyMedium
@@ -829,8 +823,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                                             .textTheme
                                             .bodyLarge
                                             ?.color,
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w600,
                                       ),
                                 ),
                               ),

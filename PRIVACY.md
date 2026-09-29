@@ -55,6 +55,7 @@ PiggyCount itself does not collect or sell your data, and we do not operate serv
 - By default, no data leaves your device.
 - If you enable **cloud sync**, data goes only to the server YOU configure (your own Supabase / WebDAV).
 - If you enable **AI features**, the data needed for your request is sent to the third-party AI provider YOU configure (see Section 10).
+- **Calendar holidays** (on by default, can be turned off in settings) request only the **year** from the public holiday API `timor.tech` to label statutory holidays; no ledger, account, or device identifiers are sent.
 - We never sell your data, and we do not use it for advertising or analytics.
 
 ## 4. Permissions We Request
@@ -67,9 +68,9 @@ The app requests the following Android permissions:
 - **Scope**: Only accesses files you explicitly select
 
 ### Internet Permission (INTERNET)
-- **Purpose**: To sync data with your own cloud service (if configured)
+- **Purpose**: To sync data with your own cloud service (if configured), and to fetch public calendar holiday data (year only)
 - **Optional**: The app works fully offline without this permission
-- **Scope**: Only connects to servers YOU configure (Supabase/WebDAV)
+- **Scope**: Only connects to servers YOU configure (Supabase/WebDAV), plus the public holiday API `timor.tech`
 
 ### Notification Permission (POST_NOTIFICATIONS)
 - **Purpose**: To show app update download notifications
@@ -140,6 +141,9 @@ AI is OFF by default and requires your own API key. The app shows an in-app noti
 - **Supabase**: subject to [Supabase Privacy Policy](https://supabase.com/privacy)
 - **WebDAV**: subject to your own server's privacy policy
 
+### Calendar holidays (on by default, can be turned off)
+To label statutory holidays in the calendar, the app requests `https://timor.tech/api/holiday/year/{year}` — sending only the year, with no ledger, account, or device identifiers. You can turn the daily auto-update off in Settings → Calendar & Holidays; the app then only fetches when you tap "Update now", and built-in data keeps the calendar working fully offline.
+
 ## 11. Contact Us
 
 If you have any questions about this Privacy Policy, please contact us:
@@ -160,7 +164,7 @@ Since we don't collect any data, there's actually nothing to consent to - your p
 
 **小猪记账隐私政策**
 
-**最后更新时间**: 2026-06-25
+**最后更新时间**: 2026-09-28
 
 ### 简要说明
 
@@ -202,6 +206,7 @@ Since we don't collect any data, there's actually nothing to consent to - your p
 - 默认情况下,数据不会离开你的设备。
 - 若你开启**云同步**,数据只发送到你自己配置的服务器(你的 Supabase / WebDAV)。
 - 若你开启 **AI 功能**,完成你发起的请求所需的数据,会发送给你配置的第三方 AI 服务商。
+- **日历节假日**(默认开启,可在设置里关闭)只向公益节假日接口 `timor.tech` 请求**年份**,用于标注法定节假日;不发送任何账本 / 账户 / 设备标识。
 
 **AI 功能(可选,默认关闭)**:开启并配置服务商后,小猪记账会就你发起的请求,把账单/截图图片、语音录音、你输入的文字,以及完成识别/分析所需的分类名称、账户名称和相关交易记录,发送给你配置的服务商 —— 默认「智谱 GLM」(open.bigmodel.cn,智谱华章运营),或你自配的任意第三方 AI 服务商;各自适用其隐私政策。AI 默认关闭、需你自带 API Key;发送前 App 会以应用内提示点名服务商与所涉数据并征得你的同意。小猪记账自身既不接收也不存储这些数据。
 
@@ -210,7 +215,7 @@ Since we don't collect any data, there's actually nothing to consent to - your p
 应用请求以下Android权限：
 
 - **存储权限**：用于导入/导出CSV文件（可选）
-- **网络权限**：用于与您自己的云服务同步（可选）
+- **网络权限**：用于与您自己的云服务同步、以及获取公网节假日数据（仅年份）（可选）
 - **通知权限**：用于显示应用更新通知（可选）
 - **提醒权限**：用于发送您设置的记账提醒（可选）
 

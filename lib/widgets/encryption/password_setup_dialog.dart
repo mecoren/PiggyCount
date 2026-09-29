@@ -335,7 +335,7 @@ class _PasswordSetupDialogState extends ConsumerState<PasswordSetupDialog> {
               margin: EdgeInsets.only(right: i < 2 ? 4 : 0),
               decoration: BoxDecoration(
                 color: active ? colors[strength] : Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
               ),
             ),
           );

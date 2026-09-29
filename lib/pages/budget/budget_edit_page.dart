@@ -535,7 +535,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: Text(l10n.commonDelete),
         content: Text(l10n.budgetDeleteConfirm),
         actions: [

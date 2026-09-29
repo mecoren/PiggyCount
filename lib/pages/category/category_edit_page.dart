@@ -628,6 +628,7 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
               .categoryDeleteConfirmMessage(widget.category!.name),
           okLabel: AppLocalizations.of(context).commonDelete,
           cancelLabel: AppLocalizations.of(context).commonCancel,
+          destructive: true,
         ) ??
         false;
 
@@ -728,8 +729,7 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
                                 // 48px 预览格:钉住解码宽度,自定义图标
                                 // 原图不整张进内存。
                                 cacheWidth: (48 *
-                                        MediaQuery.devicePixelRatioOf(
-                                            context))
+                                        MediaQuery.devicePixelRatioOf(context))
                                     .round(),
                                 errorBuilder: (_, __, ___) => Icon(
                                   Icons.broken_image,

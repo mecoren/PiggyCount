@@ -166,174 +166,175 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
         ),
         child: Column(
           children: [
-
-          // API配置警告横幅
-          if (_apiValidation != null && !_apiValidation!.isValid)
-            Container(
-              margin: EdgeInsets.symmetric(
-                horizontal: 12.0.scaled(context, ref),
-                vertical: 8.0.scaled(context, ref),
-              ),
-              padding: EdgeInsets.all(12.0.scaled(context, ref)),
-              decoration: BoxDecoration(
-                color: PiggyTokens.error(context).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8.0.scaled(context, ref)),
-                border: Border.all(
-                  color: PiggyTokens.error(context).withValues(alpha: 0.3),
-                  width: 1,
+            // API配置警告横幅
+            if (_apiValidation != null && !_apiValidation!.isValid)
+              Container(
+                margin: EdgeInsets.symmetric(
+                  horizontal: 12.0.scaled(context, ref),
+                  vertical: 8.0.scaled(context, ref),
                 ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.warning_amber_rounded,
-                    color: PiggyTokens.error(context),
-                    size: 20.0.scaled(context, ref),
+                padding: EdgeInsets.all(12.0.scaled(context, ref)),
+                decoration: BoxDecoration(
+                  color: PiggyTokens.error(context).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(
+                      PiggyDimens.radiusSm.scaled(context, ref)),
+                  border: Border.all(
+                    color: PiggyTokens.error(context).withValues(alpha: 0.3),
+                    width: 1,
                   ),
-                  SizedBox(width: 8.0.scaled(context, ref)),
-                  Expanded(
-                    child: Text(
-                      AppLocalizations.of(context).aiChatConfigWarning,
-                      style: TextStyle(
-                        color: PiggyTokens.error(context),
-                        fontSize: 13.0.scaled(context, ref),
-                      ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      color: PiggyTokens.error(context),
+                      size: 20.0.scaled(context, ref),
                     ),
-                  ),
-                  TextButton(
-                    onPressed: () async {
-                      await Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const AISettingsPage(),
+                    SizedBox(width: 8.0.scaled(context, ref)),
+                    Expanded(
+                      child: Text(
+                        AppLocalizations.of(context).aiChatConfigWarning,
+                        style: TextStyle(
+                          color: PiggyTokens.error(context),
+                          fontSize: 13.0.scaled(context, ref),
                         ),
-                      );
-                      // 返回后重新验证
-                      if (mounted) {
-                        await _validateApiConfig();
-                      }
-                    },
-                    child: Text(
-                      AppLocalizations.of(context).aiChatGoToSettings,
-                      style: TextStyle(
-                        color: ref.watch(primaryColorProvider),
-                        fontSize: 13.0.scaled(context, ref),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-          // 消息列表
-          Expanded(
-            child: Stack(
-              children: [
-                messagesAsync.when(
-                  data: (messages) {
-                    // 首次加载完成且有消息时，自动滚动到底部
-                    if (_isFirstLoad && messages.isNotEmpty) {
-                      _isFirstLoad = false;
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        _scrollToBottom();
-                      });
-                    }
-
-                    if (messages.isEmpty) {
-                      return Center(
-                        child: Text(AppLocalizations.of(context).commonNoMessages),
-                      );
-                    }
-
-                    return ListView.builder(
-                      controller: _scrollController,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12.0.scaled(context, ref),
-                        vertical: 8.0.scaled(context, ref),
-                      ),
-                      itemCount: messages.length,
-                      itemBuilder: (context, index) {
-                        return _buildMessageBubble(messages[index]);
+                    TextButton(
+                      onPressed: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const AISettingsPage(),
+                          ),
+                        );
+                        // 返回后重新验证
+                        if (mounted) {
+                          await _validateApiConfig();
+                        }
                       },
-                    );
-                  },
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (e, st) => Center(
-                    child: Text(
-                        AppLocalizations.of(context).commonLoadFailed(e.toString())),
-                  ),
+                      child: Text(
+                        AppLocalizations.of(context).aiChatGoToSettings,
+                        style: TextStyle(
+                          color: ref.watch(primaryColorProvider),
+                          fontSize: 13.0.scaled(context, ref),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+              ),
 
-                // 回到底部按钮
-                if (_showScrollToBottom)
-                  Positioned(
-                    right: 16.0.scaled(context, ref),
-                    bottom: 16.0.scaled(context, ref),
-                    child: Material(
-                      color: ref.watch(primaryColorProvider),
-                      borderRadius:
-                          BorderRadius.circular(24.0.scaled(context, ref)),
-                      elevation: 8,
-                      shadowColor: Colors.black.withValues(alpha: 0.4),
-                      child: InkWell(
-                        onTap: _scrollToBottomWithAnimation,
-                        borderRadius:
-                            BorderRadius.circular(24.0.scaled(context, ref)),
-                        child: Container(
-                          width: 48.0.scaled(context, ref),
-                          height: 48.0.scaled(context, ref),
-                          alignment: Alignment.center,
-                          child: Icon(
-                            Icons.keyboard_arrow_down_rounded,
-                            color: Colors.white,
-                            size: 30.0.scaled(context, ref),
+            // 消息列表
+            Expanded(
+              child: Stack(
+                children: [
+                  messagesAsync.when(
+                    data: (messages) {
+                      // 首次加载完成且有消息时，自动滚动到底部
+                      if (_isFirstLoad && messages.isNotEmpty) {
+                        _isFirstLoad = false;
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          _scrollToBottom();
+                        });
+                      }
+
+                      if (messages.isEmpty) {
+                        return Center(
+                          child: Text(
+                              AppLocalizations.of(context).commonNoMessages),
+                        );
+                      }
+
+                      return ListView.builder(
+                        controller: _scrollController,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 12.0.scaled(context, ref),
+                          vertical: 8.0.scaled(context, ref),
+                        ),
+                        itemCount: messages.length,
+                        itemBuilder: (context, index) {
+                          return _buildMessageBubble(messages[index]);
+                        },
+                      );
+                    },
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (e, st) => Center(
+                      child: Text(AppLocalizations.of(context)
+                          .commonLoadFailed(e.toString())),
+                    ),
+                  ),
+
+                  // 回到底部按钮
+                  if (_showScrollToBottom)
+                    Positioned(
+                      right: 16.0.scaled(context, ref),
+                      bottom: 16.0.scaled(context, ref),
+                      child: Material(
+                        color: ref.watch(primaryColorProvider),
+                        borderRadius: BorderRadius.circular(
+                            PiggyDimens.radius3xl.scaled(context, ref)),
+                        elevation: 8,
+                        shadowColor: Colors.black.withValues(alpha: 0.4),
+                        child: InkWell(
+                          onTap: _scrollToBottomWithAnimation,
+                          borderRadius: BorderRadius.circular(
+                              PiggyDimens.radius3xl.scaled(context, ref)),
+                          child: Container(
+                            width: 48.0.scaled(context, ref),
+                            height: 48.0.scaled(context, ref),
+                            alignment: Alignment.center,
+                            child: Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              color: Colors.white,
+                              size: 30.0.scaled(context, ref),
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-              ],
-            ),
-          ),
-
-          // 加载指示器
-          if (_isLoading)
-            Container(
-              padding: EdgeInsets.symmetric(
-                vertical: 8.0.scaled(context, ref),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 16.0.scaled(context, ref),
-                    height: 16.0.scaled(context, ref),
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        ref.watch(primaryColorProvider),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 8.0.scaled(context, ref)),
-                  Text(
-                    AppLocalizations.of(context).aiChatThinking,
-                    style: TextStyle(
-                      color: PiggyTokens.textSecondary(context),
-                      fontSize: 13.0.scaled(context, ref),
-                    ),
-                  ),
                 ],
               ),
             ),
 
-          // 快捷指令横条
-          AIQuickCommandsBar(
-            onCommandTap: _handleQuickCommand,
-          ),
+            // 加载指示器
+            if (_isLoading)
+              Container(
+                padding: EdgeInsets.symmetric(
+                  vertical: 8.0.scaled(context, ref),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 16.0.scaled(context, ref),
+                      height: 16.0.scaled(context, ref),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          ref.watch(primaryColorProvider),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 8.0.scaled(context, ref)),
+                    Text(
+                      AppLocalizations.of(context).aiChatThinking,
+                      style: TextStyle(
+                        color: PiggyTokens.textSecondary(context),
+                        fontSize: 13.0.scaled(context, ref),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
-          // 输入区域
-          _buildInputArea(),
+            // 快捷指令横条
+            AIQuickCommandsBar(
+              onCommandTap: _handleQuickCommand,
+            ),
+
+            // 输入区域
+            _buildInputArea(),
           ],
         ),
       ),
@@ -415,8 +416,8 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
                   color: isUser
                       ? ref.watch(primaryColorProvider).withValues(alpha: 0.1)
                       : PiggyTokens.surface(context),
-                  borderRadius:
-                      BorderRadius.circular(12.0.scaled(context, ref)),
+                  borderRadius: BorderRadius.circular(
+                      PiggyDimens.radiusLg.scaled(context, ref)),
                   border: Border.all(
                     color: isUser
                         ? ref.watch(primaryColorProvider).withValues(alpha: 0.3)
@@ -535,8 +536,8 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
                     color: PiggyTokens.textTertiary(context),
                   ),
                   border: OutlineInputBorder(
-                    borderRadius:
-                        BorderRadius.circular(20.0.scaled(context, ref)),
+                    borderRadius: BorderRadius.circular(
+                        PiggyDimens.radius2xl.scaled(context, ref)),
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
@@ -767,7 +768,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
     final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: Text(l10n.aiChatClearHistoryDialogTitle),
         content: Text(l10n.aiChatClearHistoryDialogContent),
         actions: [
@@ -811,7 +812,9 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
     final repo = ref.read(repositoryProvider);
     final message = await repo.getMessageById(messageId);
     if (message == null || message.metadata == null) {
-      if (mounted) showToast(context, AppLocalizations.of(context).aiChatUndone);
+      if (mounted) {
+        showToast(context, AppLocalizations.of(context).aiChatUndone);
+      }
       return;
     }
 
@@ -991,7 +994,8 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
         final idx = parsed.txIds.indexOf(transactionId);
         if (idx >= 0 && idx < parsed.bills.length) {
           final newBills = List<BillInfo>.from(parsed.bills);
-          newBills[idx] = parsed.bills[idx].copyWith(ledgerId: selectedLedgerId);
+          newBills[idx] =
+              parsed.bills[idx].copyWith(ledgerId: selectedLedgerId);
           await repo.updateMessage(message.copyWith(
             metadata: Value(_encodeBillMetadata(
               newBills,
@@ -1086,6 +1090,8 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
       context,
       title: l10n.commonDelete,
       message: l10n.aiChatDeleteMessageConfirm,
+      okLabel: l10n.commonDelete,
+      destructive: true,
     );
 
     if (confirmed != true) return;
@@ -1123,12 +1129,10 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
           .whereType<Map>()
           .map((j) => BillInfo.fromJson(Map<String, dynamic>.from(j)))
           .toList();
-      final txIds = ((raw['txIds'] as List?) ?? const [])
-          .whereType<int>()
-          .toList();
-      final undoneIds = ((raw['undoneIds'] as List?) ?? const [])
-          .whereType<int>()
-          .toSet();
+      final txIds =
+          ((raw['txIds'] as List?) ?? const []).whereType<int>().toList();
+      final undoneIds =
+          ((raw['undoneIds'] as List?) ?? const []).whereType<int>().toSet();
       return (bills: bills, txIds: txIds, undoneIds: undoneIds);
     }
 

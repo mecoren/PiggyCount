@@ -17,6 +17,7 @@ import '../cloud/cloud_sync_page.dart';
 import '../../utils/website_urls.dart';
 import '../settings/data_management_page.dart';
 import '../settings/appearance_settings_page.dart';
+import '../settings/holiday_settings_page.dart';
 import '../settings/smart_billing_page.dart';
 import '../settings/automation_page.dart';
 import '../settings/about_page.dart';
@@ -67,10 +68,10 @@ class MinePage extends ConsumerWidget {
           Expanded(
             child: ListView(
               padding: EdgeInsets.fromLTRB(
-                16,
+                PiggyDimens.p16,
                 PiggyDimens.p12,
-                16,
-                16 + MediaQuery.of(context).padding.bottom + 56 + 12,
+                PiggyDimens.p16,
+                PiggyDimens.p16 + MediaQuery.of(context).padding.bottom + 56 + 12,
               ),
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
@@ -334,6 +335,19 @@ class MinePage extends ConsumerWidget {
                         await Navigator.of(context).push(
                           MaterialPageRoute(
                               builder: (_) => const AppearanceSettingsPage()),
+                        );
+                      },
+                    ),
+                    // 日历与节假日
+                    SettingsNavItem(
+                      icon: Icons.calendar_month_outlined,
+                      title: AppLocalizations.of(context).holidaySettingsTitle,
+                      subtitle:
+                          AppLocalizations.of(context).holidaySettingsDesc,
+                      onTap: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (_) => const HolidaySettingsPage()),
                         );
                       },
                     ),

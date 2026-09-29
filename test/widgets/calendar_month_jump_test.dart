@@ -7,6 +7,7 @@
 ///     table_calendar_base.dart:77 的 assert
 ///   - 跳月语义与滑动切月(_onPageChanged)一致:清空选中日 → 下方当日交易列表收起
 library;
+
 import 'package:drift/native.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -104,11 +105,14 @@ void main() {
     return tester.widgetList(finder).single as TableCalendar;
   }
 
-  /// 日历骨架(DelayedSkeleton)挂 300ms 定时器,快进测试时钟让它在
-  /// 用例结束前自然触发完,避免「A Timer is still pending」告警失败。
+  /// 每次交互后统一快进测试时钟:pumpAndSettle 收掉动画帧,再推进 2s 让
+  /// `LoggerService` 的 2s 节流落盘定时器(仓库每次 debug 日志都会重置它)
+  /// 自然跑完 —— 否则用例结束时它仍挂着,被判「A Timer is still pending」
+  /// (与 calendar_cell_test 的 settle 同一口径;fake 时钟无真实耗时)。
+  /// 末尾再 pumpAndSettle 一次,收掉定时器触发后的收尾帧。
   Future<void> settle(WidgetTester tester) async {
     await tester.pumpAndSettle();
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(seconds: 2));
     await tester.pumpAndSettle();
   }
 
@@ -127,8 +131,7 @@ void main() {
     expect(picker.mode, WheelDatePickerMode.ym);
   });
 
-  testWidgets('日历下界放宽到 2000-01-01,选择器 min/max 与日历边界同一份',
-      (tester) async {
+  testWidgets('日历下界放宽到 2000-01-01,选择器 min/max 与日历边界同一份', (tester) async {
     useTallPhoneViewport(tester);
     await tester.pumpWidget(host());
     await settle(tester);
@@ -145,8 +148,7 @@ void main() {
     expect(picker.maxDate, sameCalendarDay(cal.lastDay));
   });
 
-  testWidgets('滚轮选到 2000-01 → 日历跳过去,并清空选中日收起当日列表',
-      (tester) async {
+  testWidgets('滚轮选到 2000-01 → 日历跳过去,并清空选中日收起当日列表', (tester) async {
     useTallPhoneViewport(tester);
     await tester.pumpWidget(host());
     await settle(tester);

@@ -27,6 +27,7 @@ import 'local_custom_field_repository.dart';
 import 'local_budget_repository.dart';
 import 'local_attachment_repository.dart';
 import 'local_exchange_rate_repository.dart';
+import 'local_holiday_repository.dart';
 
 /// LocalRepository 本地数据库实现
 /// 基于 Drift 本地数据库实现所有 Repository 接口
@@ -56,6 +57,7 @@ class LocalRepository extends BaseRepository {
   late final LocalBudgetRepository _budgetRepo;
   late final LocalAttachmentRepository _attachmentRepo;
   late final LocalExchangeRateRepository _exchangeRateRepo;
+  late final LocalHolidayRepository _holidayRepo;
 
   LocalRepository(this.db, {this.changeTracker}) {
     _ledgerRepo = LocalLedgerRepository(db);
@@ -74,6 +76,8 @@ class LocalRepository extends BaseRepository {
     _attachmentRepo = LocalAttachmentRepository(db);
     _exchangeRateRepo =
         LocalExchangeRateRepository(db, trackerGetter: () => changeTracker);
+    // v49 节假日本地缓存：可重建缓存表，不挂 ChangeTracker（见接口注释）。
+    _holidayRepo = LocalHolidayRepository(db);
   }
 
   // ============================================
@@ -3792,6 +3796,30 @@ class LocalRepository extends BaseRepository {
   @override
   Future<void> removeOverride({required String base, required String quote}) =>
       _exchangeRateRepo.removeOverride(base: base, quote: quote);
+
+  // ============================================
+  // HolidayRepository 接口实现 - 委托给 LocalHolidayRepository
+  // ============================================
+
+  @override
+  Future<List<HolidayEntry>> getAll() => _holidayRepo.getAll();
+
+  @override
+  Future<List<HolidayEntry>> getByYear(int year) => _holidayRepo.getByYear(year);
+
+  @override
+  Future<HolidayEntry?> getByDate(String date) => _holidayRepo.getByDate(date);
+
+  @override
+  Future<void> replaceYear(int year, List<HolidayEntry> rows) =>
+      _holidayRepo.replaceYear(year, rows);
+
+  @override
+  Future<HolidayUpdateMetaData> getMeta() => _holidayRepo.getMeta();
+
+  @override
+  Future<void> saveMeta(HolidayUpdateMetaData meta) =>
+      _holidayRepo.saveMeta(meta);
 
   // ============================================
   // CustomFieldRepository 接口实现 - 委托给 LocalCustomFieldRepository

@@ -398,7 +398,7 @@ class AnnualReportPoster extends StatelessWidget {
                 height: 24,
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.8),
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1721,7 +1721,7 @@ class AnnualReportPoster extends StatelessWidget {
             height: 4,
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
             ),
           ),
           const SizedBox(height: 20),

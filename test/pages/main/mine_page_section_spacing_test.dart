@@ -8,7 +8,7 @@ void main() {
       r'const ProfileCard\(\),[\s\S]*?'
       r'child: ListView\(\s*'
       r'padding: EdgeInsets\.fromLTRB\(\s*'
-      r'16,\s*PiggyDimens\.p12,\s*16,',
+      r'PiggyDimens\.p16,\s*PiggyDimens\.p12,\s*PiggyDimens\.p16,',
     ).hasMatch(source),
     'the first MinePage section uses the standard 12dp top gap',
   );

@@ -208,7 +208,7 @@ class TransactionListItem extends ConsumerWidget {
         // Material 的 48dp 下限针对独立可交互控件，不适用于行内文本级入口。
         return InkWell(
           onTap: onAttachmentTap,
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
             child: widget,
@@ -224,7 +224,7 @@ class TransactionListItem extends ConsumerWidget {
         for (final tag in tags!)
           InkWell(
             onTap: onTagTap != null ? () => onTagTap!(tag.id, tag.name) : null,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
               child: Text(
@@ -560,6 +560,8 @@ class TransactionListItem extends ConsumerWidget {
                 context,
                 title: l10n.deleteConfirmTitle,
                 message: l10n.deleteConfirmMessage,
+                okLabel: l10n.commonDelete,
+                destructive: true,
               ) ??
               false;
         },
