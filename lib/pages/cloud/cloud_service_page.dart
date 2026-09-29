@@ -298,43 +298,45 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                       // Supabase
                       if (_kShowSupabaseAndICloud)
                         supabaseAsync.when(
-                        loading: () => DelayedSkeleton(
-                          placeholder: const SizedBox(height: 100),
-                          child: PulseSkeleton(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 6),
-                              child: SkeletonBar(
-                                  height: 88,
-                                  borderRadius: BorderRadius.circular(
-                                      PiggyDimens.radiusLg)),
+                          loading: () => DelayedSkeleton(
+                            placeholder: const SizedBox(height: 100),
+                            child: PulseSkeleton(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 6),
+                                child: SkeletonBar(
+                                    height: 88,
+                                    borderRadius: BorderRadius.circular(
+                                        PiggyDimens.radiusLg)),
+                              ),
                             ),
                           ),
+                          error: (e, _) => const SizedBox.shrink(),
+                          data: (supabaseCfg) => _buildServiceCard(
+                            context: context,
+                            icon: Icons.cloud,
+                            iconColor: PiggyTokens.brandSupabase,
+                            title: AppLocalizations.of(context)
+                                .cloudCustomSupabaseTitle,
+                            subtitle: supabaseCfg?.valid == true
+                                ? supabaseCfg!.obfuscatedUrl()
+                                : AppLocalizations.of(context)
+                                    .cloudCustomSupabaseSubtitle,
+                            isSelected:
+                                active.type == CloudBackendType.supabase,
+                            isConfigured: supabaseCfg?.valid == true,
+                            isDisabled: false,
+                            onTap: () => supabaseCfg?.valid == true
+                                ? _switchService(CloudBackendType.supabase)
+                                : _configureService(CloudBackendType.supabase),
+                            onConfigure: supabaseCfg?.valid == true
+                                ? () =>
+                                    _configureService(CloudBackendType.supabase)
+                                : null,
+                            onShowGuide: _showSupabaseHelpDialog,
+                            primaryColor: primaryColor,
+                          ),
                         ),
-                        error: (e, _) => const SizedBox.shrink(),
-                        data: (supabaseCfg) => _buildServiceCard(
-                          context: context,
-                          icon: Icons.cloud,
-                          iconColor: PiggyTokens.brandSupabase,
-                          title: AppLocalizations.of(context)
-                              .cloudCustomSupabaseTitle,
-                          subtitle: supabaseCfg?.valid == true
-                              ? supabaseCfg!.obfuscatedUrl()
-                              : AppLocalizations.of(context)
-                                  .cloudCustomSupabaseSubtitle,
-                          isSelected: active.type == CloudBackendType.supabase,
-                          isConfigured: supabaseCfg?.valid == true,
-                          isDisabled: false,
-                          onTap: () => supabaseCfg?.valid == true
-                              ? _switchService(CloudBackendType.supabase)
-                              : _configureService(CloudBackendType.supabase),
-                          onConfigure: supabaseCfg?.valid == true
-                              ? () =>
-                                  _configureService(CloudBackendType.supabase)
-                              : null,
-                          onShowGuide: _showSupabaseHelpDialog,
-                          primaryColor: primaryColor,
-                        ),
-                      ),
                     ],
                   );
                 }
@@ -1761,13 +1763,15 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                 ..maxRedirects = 0
                 ..headers['Authorization'] = 'Basic $credentials';
 
-              final streamedResponse =
-                  await client.send(request).timeout(const Duration(seconds: 10));
+              final streamedResponse = await client
+                  .send(request)
+                  .timeout(const Duration(seconds: 10));
               final response = await http.Response.fromStream(streamedResponse);
 
               if (response.statusCode == 200 || response.statusCode == 204) {
                 final davHeader = response.headers['dav'];
-                if (davHeader != null || response.headers.containsKey('allow')) {
+                if (davHeader != null ||
+                    response.headers.containsKey('allow')) {
                   connectionSuccess = true;
                 } else {
                   throw Exception(l10n.cloudErrorWebdavNotSupported);
@@ -1778,7 +1782,8 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                 throw Exception(l10n.cloudErrorAccessDenied);
               } else if (response.statusCode == 404) {
                 throw Exception(l10n.cloudErrorPathNotFound(webdavUrl.path));
-              } else if (response.statusCode >= 300 && response.statusCode < 400) {
+              } else if (response.statusCode >= 300 &&
+                  response.statusCode < 400) {
                 // SEC-02②：不跟随重定向，3xx 直接报错（与 provider S23 一致）
                 throw Exception('WebDAV 服务器返回重定向（${response.statusCode}），'
                     '请直接填写重定向后的最终地址，避免凭据被转发到第三方域名');
@@ -1857,7 +1862,8 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                 try {
                   await services.provider!.dispose();
                 } catch (e) {
-                  logger.warning('CloudServicePage', 'S3 测试 provider 释放失败（忽略）: $e');
+                  logger.warning(
+                      'CloudServicePage', 'S3 测试 provider 释放失败（忽略）: $e');
                 }
               }
             } catch (e, stackTrace) {
@@ -2003,9 +2009,10 @@ class _SupabaseConfigDialogState extends State<_SupabaseConfigDialog> {
         children: [
           TextField(
             controller: urlController,
-            decoration: InputDecoration(
-              labelText: l10n.cloudSupabaseUrlLabel,
-              hintText: l10n.cloudSupabaseUrlHint,
+            decoration: piggyFilledDecoration(
+              context,
+              label: l10n.cloudSupabaseUrlLabel,
+              hint: l10n.cloudSupabaseUrlHint,
               errorText: _urlError
                   ? l10n.fieldCannotBeEmpty(l10n.cloudSupabaseUrlLabel)
                   : null,
@@ -2018,9 +2025,10 @@ class _SupabaseConfigDialogState extends State<_SupabaseConfigDialog> {
           const SizedBox(height: 16),
           TextField(
             controller: keyController,
-            decoration: InputDecoration(
-              labelText: l10n.cloudAnonKeyLabel,
-              hintText: l10n.cloudSupabaseAnonKeyHintLong,
+            decoration: piggyFilledDecoration(
+              context,
+              label: l10n.cloudAnonKeyLabel,
+              hint: l10n.cloudSupabaseAnonKeyHintLong,
               errorText: _keyError
                   ? l10n.fieldCannotBeEmpty(l10n.cloudAnonKeyLabel)
                   : null,
@@ -2052,9 +2060,10 @@ class _SupabaseConfigDialogState extends State<_SupabaseConfigDialog> {
           const SizedBox(height: 16),
           TextField(
             controller: bucketController,
-            decoration: InputDecoration(
-              labelText: l10n.cloudSupabaseBucketLabel,
-              hintText: l10n.cloudSupabaseBucketHint,
+            decoration: piggyFilledDecoration(
+              context,
+              label: l10n.cloudSupabaseBucketLabel,
+              hint: l10n.cloudSupabaseBucketHint,
             ),
             keyboardType: TextInputType.text,
           ),
@@ -2156,9 +2165,10 @@ class _WebdavConfigDialogState extends State<_WebdavConfigDialog> {
         children: [
           TextField(
             controller: urlController,
-            decoration: InputDecoration(
-              labelText: l10n.cloudWebdavUrlLabel,
-              hintText: l10n.cloudWebdavUrlHint,
+            decoration: piggyFilledDecoration(
+              context,
+              label: l10n.cloudWebdavUrlLabel,
+              hint: l10n.cloudWebdavUrlHint,
               errorText: _urlError
                   ? l10n.fieldCannotBeEmpty(l10n.cloudWebdavUrlLabel)
                   : null,
@@ -2170,8 +2180,9 @@ class _WebdavConfigDialogState extends State<_WebdavConfigDialog> {
           const SizedBox(height: 16),
           TextField(
             controller: usernameController,
-            decoration: InputDecoration(
-              labelText: l10n.cloudWebdavUsernameLabel,
+            decoration: piggyFilledDecoration(
+              context,
+              label: l10n.cloudWebdavUsernameLabel,
               errorText: _usernameError
                   ? l10n.fieldCannotBeEmpty(l10n.cloudWebdavUsernameLabel)
                   : null,
@@ -2183,8 +2194,9 @@ class _WebdavConfigDialogState extends State<_WebdavConfigDialog> {
           const SizedBox(height: 16),
           TextField(
             controller: passwordController,
-            decoration: InputDecoration(
-              labelText: l10n.cloudWebdavPasswordLabel,
+            decoration: piggyFilledDecoration(
+              context,
+              label: l10n.cloudWebdavPasswordLabel,
               errorText: _passwordError
                   ? l10n.fieldCannotBeEmpty(l10n.cloudWebdavPasswordLabel)
                   : null,
@@ -2211,10 +2223,11 @@ class _WebdavConfigDialogState extends State<_WebdavConfigDialog> {
           const SizedBox(height: 16),
           TextField(
             controller: pathController,
-            decoration: InputDecoration(
-              labelText: l10n.cloudWebdavRemotePathLabel,
-              hintText: l10n.cloudWebdavPathHint,
-              helperText: l10n.cloudWebdavRemotePathHelperText,
+            decoration: piggyFilledDecoration(
+              context,
+              label: l10n.cloudWebdavRemotePathLabel,
+              hint: l10n.cloudWebdavPathHint,
+              helper: l10n.cloudWebdavRemotePathHelperText,
             ),
           ),
         ],
@@ -2338,9 +2351,10 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
         children: [
           TextField(
             controller: endpointController,
-            decoration: InputDecoration(
-              labelText: l10n.cloudS3EndpointLabel,
-              hintText: l10n.cloudS3EndpointHint,
+            decoration: piggyFilledDecoration(
+              context,
+              label: l10n.cloudS3EndpointLabel,
+              hint: l10n.cloudS3EndpointHint,
               errorText: _endpointError
                   ? l10n.fieldCannotBeEmpty(l10n.cloudS3EndpointLabel)
                   : null,
@@ -2353,17 +2367,19 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
           const SizedBox(height: 16),
           TextField(
             controller: regionController,
-            decoration: InputDecoration(
-              labelText: l10n.cloudS3RegionLabel,
-              hintText: l10n.cloudS3RegionHint,
+            decoration: piggyFilledDecoration(
+              context,
+              label: l10n.cloudS3RegionLabel,
+              hint: l10n.cloudS3RegionHint,
             ),
           ),
           const SizedBox(height: 16),
           TextField(
             controller: accessKeyController,
-            decoration: InputDecoration(
-              labelText: l10n.cloudS3AccessKeyLabel,
-              hintText: l10n.cloudS3AccessKeyHint,
+            decoration: piggyFilledDecoration(
+              context,
+              label: l10n.cloudS3AccessKeyLabel,
+              hint: l10n.cloudS3AccessKeyHint,
               errorText: _accessKeyError
                   ? l10n.fieldCannotBeEmpty(l10n.cloudS3AccessKeyLabel)
                   : null,
@@ -2375,9 +2391,10 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
           const SizedBox(height: 16),
           TextField(
             controller: secretKeyController,
-            decoration: InputDecoration(
-              labelText: l10n.cloudS3SecretKeyLabel,
-              hintText: l10n.cloudS3SecretKeyHint,
+            decoration: piggyFilledDecoration(
+              context,
+              label: l10n.cloudS3SecretKeyLabel,
+              hint: l10n.cloudS3SecretKeyHint,
               errorText: _secretKeyError
                   ? l10n.fieldCannotBeEmpty(l10n.cloudS3SecretKeyLabel)
                   : null,
@@ -2404,9 +2421,10 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
           const SizedBox(height: 16),
           TextField(
             controller: bucketController,
-            decoration: InputDecoration(
-              labelText: l10n.cloudS3BucketLabel,
-              hintText: l10n.cloudS3BucketHint,
+            decoration: piggyFilledDecoration(
+              context,
+              label: l10n.cloudS3BucketLabel,
+              hint: l10n.cloudS3BucketHint,
               errorText: _bucketError
                   ? l10n.fieldCannotBeEmpty(l10n.cloudS3BucketLabel)
                   : null,
@@ -2436,9 +2454,10 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
           const SizedBox(height: 8),
           TextField(
             controller: portController,
-            decoration: InputDecoration(
-              labelText: l10n.cloudS3PortLabel,
-              hintText: l10n.cloudS3PortHint,
+            decoration: piggyFilledDecoration(
+              context,
+              label: l10n.cloudS3PortLabel,
+              hint: l10n.cloudS3PortHint,
             ),
             keyboardType: TextInputType.number,
           ),
@@ -2533,19 +2552,18 @@ class _CloudConfigSheet extends StatelessWidget {
                     child: child,
                   ),
                 ),
-                // 底部操作：双等宽大按钮（取消描边 + 保存填充，全站统一口径）。
+                // 底部操作：iOS 分栏（取消｜保存）与弹窗统一（云配置三表单专用，
+                // 其余抽屉仍用 PiggySheetActions，见 AGENTS）。
                 Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    20,
-                    8,
-                    20,
-                    12 + MediaQuery.paddingOf(context).bottom,
+                  padding: EdgeInsets.only(
+                    bottom:
+                        PiggyDimens.p12 + MediaQuery.paddingOf(context).bottom,
                   ),
-                  child: PiggySheetActions(
+                  child: PiggyDialogActions(
                     cancelLabel: cancelLabel,
-                    confirmLabel: saveLabel,
                     onCancel: onCancel,
-                    onConfirm: onSave,
+                    okLabel: saveLabel,
+                    onOk: onSave,
                   ),
                 ),
               ],
