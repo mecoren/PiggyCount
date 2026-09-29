@@ -1004,11 +1004,14 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 120),
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
+                              horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
+                            // 金额位常显填充框（与原始金额位同口径）：
+                            // 未聚焦用 surfaceInput 浅底保证可见，聚焦时叠主色
+                            // 淡底 + 主色描边，仍保留"谁在接收输入"的对照。
                             color: _editTarget == _AmountEditTarget.amount
                                 ? PiggyTokens.surfaceSelected(context)
-                                : Colors.transparent,
+                                : PiggyTokens.surfaceInput(context),
                             borderRadius:
                                 BorderRadius.circular(PiggyDimens.radiusLg),
                             border: Border.all(
