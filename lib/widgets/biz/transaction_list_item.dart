@@ -560,6 +560,8 @@ class TransactionListItem extends ConsumerWidget {
                 context,
                 title: l10n.deleteConfirmTitle,
                 message: l10n.deleteConfirmMessage,
+                okLabel: l10n.commonDelete,
+                destructive: true,
               ) ??
               false;
         },

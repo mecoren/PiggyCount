@@ -422,7 +422,9 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
           decoration: BoxDecoration(
             color: isActive
                 ? Colors.white
-                : (isPending ? PiggyTokens.warning(context).withValues(alpha: 0.7) : Colors.white54),
+                : (isPending
+                    ? PiggyTokens.warning(context).withValues(alpha: 0.7)
+                    : Colors.white54),
             shape: BoxShape.circle,
           ),
         );
@@ -510,6 +512,8 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
       context,
       title: l10n.deleteConfirmTitle,
       message: l10n.attachmentDeleteConfirm,
+      okLabel: l10n.commonDelete,
+      destructive: true,
     );
 
     if (confirmed != true) return;

@@ -295,8 +295,7 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
               height: 36,
               fontSize: 13,
               segments: [
-                WaitSlidingSegment(
-                    value: 'month', label: l10n.analyticsMonth),
+                WaitSlidingSegment(value: 'month', label: l10n.analyticsMonth),
                 WaitSlidingSegment(value: 'year', label: l10n.analyticsYear),
                 WaitSlidingSegment(value: 'all', label: l10n.analyticsAll),
               ],
@@ -310,7 +309,8 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(periodLabel, style: PiggyTextTokens.strongTitle(context)),
+                  Text(periodLabel,
+                      style: PiggyTextTokens.strongTitle(context)),
                   Icon(
                     Icons.arrow_drop_down,
                     size: 20,
@@ -537,6 +537,8 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
       context,
       title: l10n.tagDeleteConfirmTitle,
       message: l10n.tagDeleteConfirmMessage(tag.name),
+      okLabel: l10n.commonDelete,
+      destructive: true,
     );
 
     if (confirmed == true && mounted) {
@@ -614,8 +616,12 @@ final _tagStreamProvider = StreamProvider.family<db.Tag?, int>((ref, tagId) {
 /// autoDispose:参数含时间范围,用户切换周期会产生新 family 实例,旧实例及时释放。
 final _tagStatsProvider = FutureProvider.autoDispose.family<
     ({int count, double expense, double income}),
-    ({int tagId, int? ledgerId, DateTime? start, DateTime? end})>(
-    (ref, params) async {
+    ({
+      int tagId,
+      int? ledgerId,
+      DateTime? start,
+      DateTime? end
+    })>((ref, params) async {
   ref.watch(tagListRefreshProvider);
   final repo = ref.watch(repositoryProvider);
   return await repo.getTagStats(
@@ -629,7 +635,12 @@ final _tagStatsProvider = FutureProvider.autoDispose.family<
 /// 监听标签下的交易(start/end 为 #461 时间维度筛选,null = 全部)
 final _tagTransactionsStreamProvider = StreamProvider.autoDispose.family<
     List<db.Transaction>,
-    ({int tagId, int? ledgerId, DateTime? start, DateTime? end})>((ref, params) {
+    ({
+      int tagId,
+      int? ledgerId,
+      DateTime? start,
+      DateTime? end
+    })>((ref, params) {
   final repo = ref.watch(repositoryProvider);
   return repo.watchTransactionsByTag(
     params.tagId,

@@ -142,6 +142,8 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
       context,
       title: l10n.tagDeleteConfirmTitle,
       message: l10n.tagDeleteConfirmMessage(tag.name),
+      okLabel: l10n.commonDelete,
+      destructive: true,
     );
 
     if (confirmed == true && mounted) {

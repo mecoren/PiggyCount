@@ -741,6 +741,8 @@ class TransactionListState extends ConsumerState<TransactionList> {
               context,
               title: AppLocalizations.of(context).deleteConfirmTitle,
               message: AppLocalizations.of(context).deleteConfirmMessage,
+              okLabel: AppLocalizations.of(context).commonDelete,
+              destructive: true,
             ) ??
             false;
       },
@@ -796,10 +798,9 @@ class TransactionListState extends ConsumerState<TransactionList> {
 
           // B1(v47):自定义字段角标 —— 按当前账本定义解析展示文本;
           // 无值 / 定义解析不出 → 不显示(列表不被噪音填满)。
-          final customBadges = ref
-                  .watch(customFieldValueBadgesProvider)
-                  .valueOrNull?[it.t.id] ??
-              const <({String name, String display})>[];
+          final customBadges =
+              ref.watch(customFieldValueBadgesProvider).valueOrNull?[it.t.id] ??
+                  const <({String name, String display})>[];
           final customBadgeTexts = [
             for (final b in customBadges) '${b.name}: ${b.display}',
           ];
@@ -833,9 +834,8 @@ class TransactionListState extends ConsumerState<TransactionList> {
                 : accountName,
             tags: tagsList.isNotEmpty ? tagsList : null,
             attachmentCount: attachmentCount,
-            customFieldBadges: customBadgeTexts.isNotEmpty
-                ? customBadgeTexts
-                : null,
+            customFieldBadges:
+                customBadgeTexts.isNotEmpty ? customBadgeTexts : null,
             excludeFromStats: it.t.excludeFromStats,
             excludeFromBudget: it.t.excludeFromBudget,
             onAttachmentTap: attachmentCount > 0

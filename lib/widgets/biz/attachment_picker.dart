@@ -312,6 +312,8 @@ class _AttachmentPickerState extends ConsumerState<AttachmentPicker> {
       context,
       title: l10n.deleteConfirmTitle,
       message: l10n.attachmentDeleteConfirm,
+      okLabel: l10n.commonDelete,
+      destructive: true,
     );
 
     if (confirmed == true) {

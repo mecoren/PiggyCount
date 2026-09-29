@@ -119,7 +119,9 @@ class _RecurringTransactionEditPageState
 
   /// 有效币种:模板币种 ?? 账本本位币。账户列表按它过滤,交易生成也落它。
   String _effectiveCurrency() =>
-      _currencyCode ?? _ledgerCurrency ?? ref.read(currentLedgerCurrencyProvider);
+      _currencyCode ??
+      _ledgerCurrency ??
+      ref.read(currentLedgerCurrencyProvider);
 
   Future<void> _loadCategoryAndAccount() async {
     if (_isEditing && widget.recurring!.categoryId != null) {
@@ -687,10 +689,9 @@ class _RecurringTransactionEditPageState
   Widget _buildTemplateCustomFields(AppLocalizations l10n) {
     final ledgerId = _selectedLedgerId;
     if (ledgerId == null) return const SizedBox.shrink();
-    final definitions = ref
-            .watch(customFieldDefinitionsOnceProvider(ledgerId))
-            .valueOrNull ??
-        const <CustomFieldDefinition>[];
+    final definitions =
+        ref.watch(customFieldDefinitionsOnceProvider(ledgerId)).valueOrNull ??
+            const <CustomFieldDefinition>[];
     if (definitions.isEmpty) {
       return Text(
         l10n.customFieldSectionEmpty,
@@ -716,7 +717,8 @@ class _RecurringTransactionEditPageState
     required VoidCallback onTap,
     bool allowClear = false,
     VoidCallback? onClear,
-  }) {    return InkWell(
+  }) {
+    return InkWell(
       onTap: onTap,
       child: InputDecorator(
         decoration: InputDecoration(
@@ -855,25 +857,28 @@ class _RecurringTransactionEditPageState
           child: accounts.isEmpty && _type == 'transfer' && !isFromAccount
               ? Text(AppLocalizations.of(context).commonEmpty)
               : ListView.builder(
-            shrinkWrap: true,
-            itemCount: accounts.length +
-                (_type == 'transfer' && !isFromAccount ? 0 : 1), // 转入账户不显示"无账户"
-            itemBuilder: (context, index) {
-              if (index == 0 && (_type != 'transfer' || isFromAccount)) {
-                return ListTile(
-                  title: Text(AppLocalizations.of(context).accountNone),
-                  onTap: () => Navigator.of(context).pop(null),
-                );
-              }
-              final accountIndex =
-                  _type == 'transfer' && !isFromAccount ? index : index - 1;
-              final account = accounts[accountIndex];
-              return ListTile(
-                title: Text(account.name),
-                onTap: () => Navigator.of(context).pop(account.id),
-              );
-            },
-          ),
+                  shrinkWrap: true,
+                  itemCount: accounts.length +
+                      (_type == 'transfer' && !isFromAccount
+                          ? 0
+                          : 1), // 转入账户不显示"无账户"
+                  itemBuilder: (context, index) {
+                    if (index == 0 && (_type != 'transfer' || isFromAccount)) {
+                      return ListTile(
+                        title: Text(AppLocalizations.of(context).accountNone),
+                        onTap: () => Navigator.of(context).pop(null),
+                      );
+                    }
+                    final accountIndex = _type == 'transfer' && !isFromAccount
+                        ? index
+                        : index - 1;
+                    final account = accounts[accountIndex];
+                    return ListTile(
+                      title: Text(account.name),
+                      onTap: () => Navigator.of(context).pop(account.id),
+                    );
+                  },
+                ),
         ),
       ),
     );
@@ -982,23 +987,12 @@ class _RecurringTransactionEditPageState
   }
 
   Future<void> _deleteRecurringTransaction() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AppDialogShell(
-        title: Text(AppLocalizations.of(context).commonDelete),
-        content: Text(
-            AppLocalizations.of(context).recurringTransactionDeleteConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(AppLocalizations.of(context).commonCancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(AppLocalizations.of(context).commonDelete),
-          ),
-        ],
-      ),
+    final confirmed = await AppDialog.confirm<bool>(
+      context,
+      title: AppLocalizations.of(context).commonDelete,
+      message: AppLocalizations.of(context).recurringTransactionDeleteConfirm,
+      okLabel: AppLocalizations.of(context).commonDelete,
+      destructive: true,
     );
 
     if (confirmed == true) {

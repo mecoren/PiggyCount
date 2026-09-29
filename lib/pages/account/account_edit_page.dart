@@ -648,8 +648,8 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                   disabledBackgroundColor: PiggyTokens.buttonDisabled(context),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
+                    borderRadius: BorderRadius.circular(
+                        PiggyDimens.radiusSm.scaled(context, ref)),
                   ),
                 ),
                 child: _saving
@@ -686,8 +686,8 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                   foregroundColor: primaryColor,
                   side: BorderSide(color: primaryColor, width: 1.5),
                   shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
+                    borderRadius: BorderRadius.circular(
+                        PiggyDimens.radiusSm.scaled(context, ref)),
                   ),
                 ),
                 child: Text(
@@ -710,11 +710,11 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: PiggyTokens.error(context),
                   // U3：边框与前景同源（Colors.red 不跟随暗黑/主题错误色）
-                  side: BorderSide(
-                      color: PiggyTokens.error(context), width: 1.5),
+                  side:
+                      BorderSide(color: PiggyTokens.error(context), width: 1.5),
                   shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
+                    borderRadius: BorderRadius.circular(
+                        PiggyDimens.radiusSm.scaled(context, ref)),
                   ),
                 ),
                 child: Text(
@@ -996,24 +996,13 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
         await repo.getActiveRecurringCountByAccount(account.id);
 
     if (!mounted) return;
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AppDialogShell(
-        title: Text(l10n.accountHideConfirmTitle),
-        content: Text(recurringCount > 0
-            ? '${l10n.accountHideConfirmBody}\n${l10n.accountHideRecurringWarn(recurringCount)}'
-            : l10n.accountHideConfirmBody),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(l10n.commonCancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(l10n.accountHide),
-          ),
-        ],
-      ),
+    final confirm = await AppDialog.confirm<bool>(
+      context,
+      title: l10n.accountHideConfirmTitle,
+      message: recurringCount > 0
+          ? '${l10n.accountHideConfirmBody}\n${l10n.accountHideRecurringWarn(recurringCount)}'
+          : l10n.accountHideConfirmBody,
+      okLabel: l10n.accountHide,
     );
 
     if (confirm != true) return;
@@ -1109,53 +1098,55 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
               child: SizedBox(
                 height: 420,
                 child: Column(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 8),
-                    decoration: BoxDecoration(
-                      // U3：token 化（black12 在暗黑模式下不可见）
-                      color: PiggyTokens.divider(bctx),
-                      borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        // U3：token 化（black12 在暗黑模式下不可见）
+                        color: PiggyTokens.divider(bctx),
+                        borderRadius:
+                            BorderRadius.circular(PiggyDimens.radiusXs),
+                      ),
                     ),
-                  ),
-                  Text(
-                    AppLocalizations.of(bctx).ledgersSelectCurrency,
-                    style: Theme.of(bctx).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.search),
-                      hintText: AppLocalizations.of(bctx).ledgersSearchCurrency,
+                    Text(
+                      AppLocalizations.of(bctx).ledgersSelectCurrency,
+                      style: Theme.of(bctx).textTheme.titleMedium,
                     ),
-                    onChanged: (v) => setState(() => query = v),
-                  ),
-                  const SizedBox(height: 8),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: filtered.length,
-                      itemBuilder: (_, i) {
-                        final c = filtered[i];
-                        final sel = c.code == selected;
-                        return ListTile(
-                          title: Text('${c.name} (${c.code})'),
-                          trailing: sel
-                              // U3：token 化（black 勾在暗黑模式下不可见）
-                              ? Icon(Icons.check,
-                                  color: Theme.of(bctx).colorScheme.primary)
-                              : null,
-                          onTap: () => Navigator.pop(bctx, c.code),
-                        );
-                      },
+                    const SizedBox(height: 8),
+                    TextField(
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.search),
+                        hintText:
+                            AppLocalizations.of(bctx).ledgersSearchCurrency,
+                      ),
+                      onChanged: (v) => setState(() => query = v),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: filtered.length,
+                        itemBuilder: (_, i) {
+                          final c = filtered[i];
+                          final sel = c.code == selected;
+                          return ListTile(
+                            title: Text('${c.name} (${c.code})'),
+                            trailing: sel
+                                // U3：token 化（black 勾在暗黑模式下不可见）
+                                ? Icon(Icons.check,
+                                    color: Theme.of(bctx).colorScheme.primary)
+                                : null,
+                            onTap: () => Navigator.pop(bctx, c.code),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        );
+          );
         });
       },
     );
@@ -1353,7 +1344,8 @@ class _AccountTypeCard extends ConsumerWidget {
         : (isSelected ? primaryColor : PiggyTokens.textSecondary(context));
     return InkWell(
       onTap: disabled ? null : onTap,
-      borderRadius: BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
+      borderRadius:
+          BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 2.0.scaled(context, ref)),
         decoration: BoxDecoration(
@@ -1362,7 +1354,8 @@ class _AccountTypeCard extends ConsumerWidget {
             color: borderColor,
             width: isSelected ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
+          borderRadius:
+              BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
