@@ -57,7 +57,9 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────
   audit:
     name: 发版前置门禁
-    runs-on: ubuntu-latest
+    # 钉 24.04 而非 ubuntu-latest：后者将于 2026-10-19 迁到 Ubuntu 26，被动跟随
+    # 会让构建环境漂移（与 analyze.yml 保持一致）。
+    runs-on: ubuntu-24.04
     outputs:
       publish: ${{ steps.intent.outputs.publish }}
     steps:
@@ -121,7 +123,7 @@ jobs:
 
   android:
     name: Android (APK + AAB)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [audit]
     steps:
       - name: Checkout
@@ -830,7 +832,7 @@ jobs:
 
   release:
     name: Create GitHub Release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [audit, android, ios]
     # dry-run（publish=false）整 job 跳过：产物已留在 Actions Artifacts，无需建 Release；
     # 上游任一失败时 needs.*.result 非 success，同样跳过（不再需要 always() 兜底）。
