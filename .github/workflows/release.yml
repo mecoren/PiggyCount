@@ -160,8 +160,16 @@ jobs:
           distribution: "zulu"
           java-version: "17"
 
+      # 该 action 的 packages 入参默认值是 "tools platform-tools"，会执行
+      # `sdkmanager --install tools platform-tools`。但 Google 已从 SDK 仓库移除
+      # 旧的 legacy `tools` 包（由 cmdline-tools 取代），于是 sdkmanager 报
+      # "Warning: Failed to find package 'tools'" 并以 exit 1 结束，整条发版流水线
+      # 在第一步就失败（2026-09-29 发版 v0.1.0 实测踩到）。故显式覆盖 packages，
+      # 只装真正需要的 platform-tools——不要删掉这个覆盖，否则会再次踩坑。
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools"
 
       - name: Install Android build-tools and platforms
         run: |
