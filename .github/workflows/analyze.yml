@@ -17,11 +17,16 @@ name: Analyze
 # 会让 runner 上的 `flutter pub get` 直接解析失败。
 # 升版本请只改 pubspec.yaml 一处。
 
+# 触发契约（与 release.yml 的 `v*` tag 发版配套）：
+#   * push wait      —— 日常开发主线，每次推送自动跑门禁。
+#   * PR → wait      —— 合并前的守门。
+# main 分支不再触发：它只作为 PR 目标/归档线存在，避免同一份改动被跑两遍。
+# 放开其它分支触发前请确认 runner 额度与「wait 即唯一集成分支」的约定。
 on:
   push:
-    branches-ignore:
-      - "gh-pages"
+    branches: [wait]
   pull_request:
+    branches: [wait]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

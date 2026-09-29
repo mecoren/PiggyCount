@@ -1,9 +1,17 @@
 name: Release
 
+# 触发契约（与 analyze.yml 的 wait 分支 CI 配套）：
+#   1. push tag `v*`     —— 正式发版：推送即构建并发布 Release。
+#                           tag 必须等于 pubspec.yaml 的 version（audit job 强制校验，
+#                           规范化口径与 App 内更新检查器一致）。
+#   2. workflow_dispatch —— 预演：dry_run 默认 true，只构建并上传 Actions Artifacts，
+#                           不建 Release、不上传 Google Play / TestFlight；且只能从 wait 分支发起。
+# 注：其它 tag（如手动建的临时 tag）不再触发本流水线，避免误发版。
+
 on:
   push:
     tags:
-      - "*"
+      - "v*"
   workflow_dispatch:
     inputs:
       tag_name:
@@ -15,21 +23,24 @@ on:
         required: false
         default: ""
       prerelease:
-        description: "是否标记为 Pre-release（手动运行默认 true）"
+        description: "是否标记为 Pre-release（手动运行默认 false）"
         required: false
         default: "false"
-      create_release:
-        description: "是否创建 GitHub Release（手动运行可设为 false，仅构建与产出 Actions Artifacts）"
+      dry_run:
+        description: "只构建不发布（默认开启；确认流水线无问题后手动关闭才真正发版）"
         required: false
-        default: "true"
+        default: true
+        type: boolean
 
-# 允许取消正在运行的workflow
+# 发版不可并发取消：被腰斩的 Release 比排队更糟（半套资产 + 缺说明），
+# 故 cancel-in-progress 恒 false（与 analyze.yml 的取消策略刻意相反）。
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
+# 最小权限：默认只读，只有需要写 Release 的 release job 在 job 级提权。
 permissions:
-  contents: write
+  contents: read
 
 # Flutter 版本由 pubspec.yaml 的 environment.flutter 单一提供（当前 3.44.3），
 # 通过 flutter-version-file 读取。不要再在这里写 FLUTTER_VERSION：
@@ -38,25 +49,80 @@ permissions:
 # 升级 Flutter 请只改 pubspec.yaml 一处。
 
 jobs:
-  check-branch:
-    name: Check if wait branch
+  # ────────────────────────────────────────────────────────────────────────
+  # 发版前置门禁：来源分支 / tag 与版本号一致性 / 发布意图。
+  # 全部在廉价 job 里快速失败，避免 Android + iOS 构建十几分钟后才发现
+  # 版本号手滑、或从非 wait 分支误发版。
+  # 发布意图（publish）在此单点计算，下游三个 job 统一引用，避免各算各的。
+  # ────────────────────────────────────────────────────────────────────────
+  audit:
+    name: 发版前置门禁
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
+    outputs:
+      publish: ${{ steps.intent.outputs.publish }}
     steps:
-      - name: Check branch
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 手动触发只允许从 wait 分支发起（tag 推送本身就是发版入口，不受此限）
+      - name: 分支守卫（仅 workflow_dispatch）
+        if: github.event_name == 'workflow_dispatch'
         run: |
-          if [ "${{ github.ref_name }}" != "wait" ]; then
-            echo "❌ Release workflow can only be triggered from wait branch"
-            echo "Current branch: ${{ github.ref_name }}"
+          if [ "${GITHUB_REF_NAME}" != "wait" ]; then
+            echo "::error::Release 只能从 wait 分支手动触发，当前分支：${GITHUB_REF_NAME}"
             exit 1
           fi
-          echo "✅ Branch check passed: ${{ github.ref_name }}"
+          echo "分支守卫通过：${GITHUB_REF_NAME}"
+
+      # tag 推送时强制 tag 与 pubspec.yaml 的 version 一致：tag v0.7.9 ⇄ version: 0.7.9。
+      # 规范化口径与 App 内更新检查器（update_checker.dart）保持一致：去 v 前缀 + 截断 - 后缀。
+      # 历史上 pubspec 版本与发布 tag 漂移曾让发版直接失败或发出错版本包，故硬拦截。
+      - name: tag 与 pubspec.yaml 版本一致性
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          set -euo pipefail
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          TAG_VERSION="${TAG_VERSION%%-*}"
+          PUBSPEC_VERSION=$(grep -m1 '^version:' pubspec.yaml \
+            | sed -E 's/^version:[[:space:]]*([^+[:space:]]+).*/\1/')
+          echo "tag 版本：${TAG_VERSION} / pubspec 版本：${PUBSPEC_VERSION}"
+          if [ "${TAG_VERSION}" != "${PUBSPEC_VERSION}" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} 与 pubspec.yaml 版本 ${PUBSPEC_VERSION} 不一致——先改 pubspec.yaml 的 version 再打 tag"
+            exit 1
+          fi
+          echo "版本一致性校验通过"
+
+      # 签名物料缺失只告警不拦截：缺 Android keystore 会回落到 debug 签名、
+      # 缺 iOS 证书只产出未签名产物，都不阻断流水线（与 orbit 的 updater 签名
+      # 密钥必填不同——本项目没有「缺了必失败」的签名依赖）。
+      - name: 签名物料就位情况（仅告警）
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+        run: |
+          [ -n "${ANDROID_KEYSTORE_BASE64:-}" ] \
+            || echo "::warning::未配置 ANDROID_KEYSTORE_BASE64，Android 将回落 debug 签名（可安装、不可上架）"
+          [ -n "${APPLE_CERTIFICATE_P12:-}" ] \
+            || echo "::warning::未配置 APPLE_CERTIFICATE_P12，iOS 只产出未签名产物，不会上传 TestFlight"
+
+      # 发布意图：push tag 恒为真；手动触发默认 dry_run=true 视为假（只构建不发布）。
+      - name: 计算发布意图
+        id: intent
+        run: |
+          if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
+            PUBLISH="true"
+          elif [[ "${{ inputs.dry_run }}" == "false" ]]; then
+            PUBLISH="true"
+          else
+            PUBLISH="false"
+          fi
+          echo "publish=${PUBLISH}" >> $GITHUB_OUTPUT
+          echo "发布意图：publish=${PUBLISH}（event=${GITHUB_EVENT_NAME}）"
 
   android:
     name: Android (APK + AAB)
     runs-on: ubuntu-latest
-    needs: [check-branch]
-    if: always() && (needs.check-branch.result == 'success' || github.event_name == 'push')
+    needs: [audit]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -258,7 +324,7 @@ jobs:
             build/app/outputs/bundle/prodRelease/piggycount-*.aab
 
       - name: Upload AAB to Google Play Console
-        if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || github.event_name == 'workflow_dispatch'
+        if: needs.audit.outputs.publish == 'true'
         env:
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
@@ -356,8 +422,7 @@ jobs:
   ios:
     name: iOS (app.zip + unsigned .ipa)
     runs-on: macos-latest
-    needs: [check-branch]
-    if: always() && (needs.check-branch.result == 'success' || github.event_name == 'push')
+    needs: [audit]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -724,7 +789,7 @@ jobs:
           fi
 
       - name: Upload to TestFlight
-        if: env.IOS_SIGNING_ENABLED == 'true'
+        if: env.IOS_SIGNING_ENABLED == 'true' && needs.audit.outputs.publish == 'true'
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
@@ -766,11 +831,12 @@ jobs:
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs:
-      - check-branch
-      - android
-      - ios
-    if: always() && (needs.check-branch.result == 'success' || github.event_name == 'push') && needs.android.result == 'success' && needs.ios.result == 'success'
+    needs: [audit, android, ios]
+    # dry-run（publish=false）整 job 跳过：产物已留在 Actions Artifacts，无需建 Release；
+    # 上游任一失败时 needs.*.result 非 success，同样跳过（不再需要 always() 兜底）。
+    if: needs.audit.outputs.publish == 'true' && needs.android.result == 'success' && needs.ios.result == 'success'
+    permissions:
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -802,19 +868,12 @@ jobs:
               TAG_NAME="manual-${SHORT_SHA}"
             fi
           fi
-          # 手动触发默认 prerelease=true；tag 触发默认 false
+          # 手动触发默认 prerelease=false；tag 触发恒 false（发的是正式版）
           INPUT_PRERELEASE="${{ github.event.inputs.prerelease || '' }}"
           if [[ "$IS_TAG" == "true" ]]; then
             PRERELEASE="false"
           else
-            PRERELEASE=${INPUT_PRERELEASE:-true}
-          fi
-          # 是否创建 Release
-          INPUT_CREATE="${{ github.event.inputs.create_release || '' }}"
-          if [[ "$IS_TAG" == "true" ]]; then
-            CREATE_RELEASE="true"
-          else
-            CREATE_RELEASE=${INPUT_CREATE:-false}
+            PRERELEASE=${INPUT_PRERELEASE:-false}
           fi
           RELEASE_NAME_INPUT="${{ github.event.inputs.release_name || '' }}"
           if [[ -n "$RELEASE_NAME_INPUT" ]]; then
@@ -825,7 +884,6 @@ jobs:
           echo "is_tag=$IS_TAG" >> $GITHUB_OUTPUT
           echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
           echo "prerelease=$PRERELEASE" >> $GITHUB_OUTPUT
-          echo "create_release=$CREATE_RELEASE" >> $GITHUB_OUTPUT
           echo "release_name=$RELEASE_NAME" >> $GITHUB_OUTPUT
       - name: Download Android artifacts
         uses: actions/download-artifact@v4
@@ -877,8 +935,8 @@ jobs:
           EOF
           echo "notes_file=RELEASE_NOTES.md" >> $GITHUB_OUTPUT
 
+      # job 级 if 已保证只在 publish=true 时进入本 job，此处无需再判发布意图
       - name: Create Release
-        if: ${{ steps.meta.outputs.create_release == 'true' }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.meta.outputs.tag_name }}
@@ -893,7 +951,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Send Telegram notification
-        if: ${{ steps.meta.outputs.create_release == 'true' }}
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
