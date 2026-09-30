@@ -23,6 +23,7 @@ import '../currency/currency_picker_sheet.dart';
 import '../currency/currency_flag.dart';
 import '../ui/toast.dart';
 import '../ui/dialog.dart';
+import '../ui/piggy_input.dart';
 import '../ui/piggy_switcher.dart';
 import 'tag_chip.dart';
 import '../category_icon.dart';
@@ -430,8 +431,9 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
           controller: ctrl,
           autofocus: true,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(
-            hintText:
+          decoration: piggyOutlinedDecoration(
+            context,
+            hint:
                 '1 ${_txCurrency()} = ? ${ref.read(currentLedgerCurrencyProvider)}',
           ),
         ),

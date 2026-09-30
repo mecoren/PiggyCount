@@ -478,15 +478,10 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
                           TextField(
                             controller: _nameController,
                             enabled: !_isBuiltIn,
-                            decoration: InputDecoration(
-                              labelText: l10n.aiProviderName,
-                              hintText: l10n.aiProviderNameHint,
-                              border: const OutlineInputBorder(),
-                              isDense: true,
-                              focusedBorder: OutlineInputBorder(
-                                borderSide:
-                                    BorderSide(color: primaryColor, width: 2),
-                              ),
+                            decoration: piggyOutlinedDecoration(
+                              context,
+                              label: l10n.aiProviderName,
+                              hint: l10n.aiProviderNameHint,
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -495,18 +490,13 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
                           TextField(
                             controller: _baseUrlController,
                             enabled: !_isBuiltIn,
-                            decoration: InputDecoration(
-                              labelText: 'Base URL',
-                              hintText: 'https://api.example.com/v1',
-                              helperText: _isBuiltIn
+                            decoration: piggyOutlinedDecoration(
+                              context,
+                              label: 'Base URL',
+                              hint: 'https://api.example.com/v1',
+                              helper: _isBuiltIn
                                   ? null
                                   : l10n.aiCustomBaseUrlHelper,
-                              border: const OutlineInputBorder(),
-                              isDense: true,
-                              focusedBorder: OutlineInputBorder(
-                                borderSide:
-                                    BorderSide(color: primaryColor, width: 2),
-                              ),
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -531,14 +521,9 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
                           TextField(
                             controller: _apiKeyController,
                             obscureText: _obscureApiKey,
-                            decoration: InputDecoration(
-                              hintText: l10n.aiCloudApiKeyHintCustom,
-                              border: const OutlineInputBorder(),
-                              isDense: true,
-                              focusedBorder: OutlineInputBorder(
-                                borderSide:
-                                    BorderSide(color: primaryColor, width: 2),
-                              ),
+                            decoration: piggyOutlinedDecoration(
+                              context,
+                              hint: l10n.aiCloudApiKeyHintCustom,
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _obscureApiKey
@@ -886,7 +871,6 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
     String? testError,
     required VoidCallback onTest,
   }) {
-    final primaryColor = ref.watch(primaryColorProvider);
     final l10n = AppLocalizations.of(context);
 
     return Column(
@@ -912,15 +896,10 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
         // 输入框
         TextField(
           controller: controller,
-          decoration: InputDecoration(
-            hintText: hintText,
-            helperText:
-                controller.text.isEmpty ? l10n.aiModelInputHelper : null,
-            border: const OutlineInputBorder(),
-            isDense: true,
-            focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: primaryColor, width: 2),
-            ),
+          decoration: piggyOutlinedDecoration(
+            context,
+            hint: hintText,
+            helper: controller.text.isEmpty ? l10n.aiModelInputHelper : null,
           ),
           onChanged: (_) => setState(() {}),
         ),

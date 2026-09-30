@@ -238,12 +238,6 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
     final l10n = AppLocalizations.of(context);
     final primaryColor = ref.watch(primaryColorProvider);
 
-    // 统一的 filled 圆角输入框装饰（委托顶层实现，便于点击式字段框复用）
-    InputDecoration filledDec(
-            {String? label, String? hint, String? prefix, String? errorText}) =>
-        _filledDecoration(context, primaryColor,
-            label: label, hint: hint, prefix: prefix, errorText: errorText);
-
     final typesForTab =
         _typeTab == 0 ? tradableAccountTypes : valuationAccountTypes;
     final isCreditCard = _selectedType == 'credit_card';
@@ -328,7 +322,8 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                 children: [
                   TextFormField(
                     controller: _nameController,
-                    decoration: filledDec(
+                    decoration: piggyOutlinedDecoration(
+                      context,
                       label: l10n.accountNameLabel,
                       hint: l10n.accountNameHint,
                       errorText: _nameErrorText,
@@ -376,7 +371,10 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                             }
                           },
                           child: InputDecorator(
-                            decoration: filledDec(label: l10n.ledgersCurrency),
+                            decoration: piggyOutlinedDecoration(
+                              context,
+                              label: l10n.ledgersCurrency,
+                            ),
                             child: Row(
                               children: [
                                 Expanded(
@@ -399,7 +397,8 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                       Expanded(
                         child: TextFormField(
                           controller: _initialBalanceController,
-                          decoration: filledDec(
+                          decoration: piggyOutlinedDecoration(
+                            context,
                             label: _getInitialBalanceLabel(l10n),
                             hint: _getInitialBalanceHint(l10n),
                             prefix: '${getCurrencySymbol(_selectedCurrency)} ',
@@ -441,7 +440,8 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                     // 信用额度（必填）
                     TextFormField(
                       controller: _creditLimitController,
-                      decoration: filledDec(
+                      decoration: piggyOutlinedDecoration(
+                        context,
                         label: '${l10n.creditLimit} *',
                         hint: l10n.creditLimitHint,
                         prefix: '${getCurrencySymbol(_selectedCurrency)} ',
@@ -491,7 +491,8 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                         Expanded(
                           child: TextFormField(
                             controller: _bankNameController,
-                            decoration: filledDec(
+                            decoration: piggyOutlinedDecoration(
+                              context,
                               label: l10n.accountBankName,
                               hint: l10n.accountBankNameHint,
                             ),
@@ -502,7 +503,8 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                         Expanded(
                           child: TextFormField(
                             controller: _cardLastFourController,
-                            decoration: filledDec(
+                            decoration: piggyOutlinedDecoration(
+                              context,
                               label: l10n.accountCardLastFour,
                               hint: l10n.accountCardLastFourHint,
                             ).copyWith(counterText: ''),
@@ -584,7 +586,8 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                         Expanded(
                           child: TextFormField(
                             controller: _bankNameController,
-                            decoration: filledDec(
+                            decoration: piggyOutlinedDecoration(
+                              context,
                               label: l10n.accountBankName,
                               hint: l10n.accountBankNameHint,
                             ),
@@ -595,7 +598,8 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                         Expanded(
                           child: TextFormField(
                             controller: _cardLastFourController,
-                            decoration: filledDec(
+                            decoration: piggyOutlinedDecoration(
+                              context,
                               label: l10n.accountCardLastFour,
                               hint: l10n.accountCardLastFourHint,
                             ).copyWith(counterText: ''),
@@ -621,7 +625,8 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
               padding: EdgeInsets.all(16.0.scaled(context, ref)),
               child: TextFormField(
                 controller: _noteController,
-                decoration: filledDec(
+                decoration: piggyOutlinedDecoration(
+                  context,
                   label: l10n.accountNote,
                   hint: l10n.accountNoteHint,
                 ),
@@ -1153,38 +1158,6 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
   }
 }
 
-/// 统一的 filled 圆角输入框装饰（TextField 与点击式字段框共用，保证等高同款）
-InputDecoration _filledDecoration(
-  BuildContext context,
-  Color primary, {
-  String? label,
-  String? hint,
-  String? prefix,
-  String? errorText,
-}) {
-  OutlineInputBorder b(Color c, double w) => OutlineInputBorder(
-        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-        borderSide: w == 0 ? BorderSide.none : BorderSide(color: c, width: w),
-      );
-  return InputDecoration(
-    labelText: label,
-    hintText: hint,
-    hintStyle: TextStyle(color: PiggyTokens.textTertiary(context)),
-    prefixText: prefix,
-    errorText: errorText,
-    filled: true,
-    fillColor: PiggyTokens.surfaceInput(context),
-    isDense: true,
-    floatingLabelBehavior: FloatingLabelBehavior.auto,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-    border: b(Colors.transparent, 0),
-    enabledBorder: b(Colors.transparent, 0),
-    focusedBorder: b(primary, 1.5),
-    errorBorder: b(PiggyTokens.error(context), 1),
-    focusedErrorBorder: b(PiggyTokens.error(context), 1.5),
-  );
-}
-
 /// 日期选择行（1-28）— filled 输入框样式，可双列并排
 class _DayPickerTile extends ConsumerWidget {
   final String label;
@@ -1207,7 +1180,7 @@ class _DayPickerTile extends ConsumerWidget {
       onTap: () => _showDayPicker(context, l10n),
       borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
       child: InputDecorator(
-        decoration: _filledDecoration(context, primaryColor, label: label),
+        decoration: piggyOutlinedDecoration(context, label: label),
         child: Row(
           children: [
             Expanded(

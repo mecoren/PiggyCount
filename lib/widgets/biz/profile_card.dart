@@ -13,6 +13,7 @@ import 'amount_text.dart';
 import 'piggy_icon.dart';
 import '../ui/toast.dart';
 import '../ui/dialog.dart';
+import '../ui/piggy_input.dart';
 
 /// MinePage 顶部用户信息卡片
 ///
@@ -532,7 +533,10 @@ class _EditDisplayNameDialogState extends State<_EditDisplayNameDialog> {
         autofocus: true,
         maxLength: 20,
         textInputAction: TextInputAction.done,
-        decoration: InputDecoration(hintText: l10n.mineDisplayNameHint),
+        decoration: piggyOutlinedDecoration(
+          context,
+          hint: l10n.mineDisplayNameHint,
+        ),
         onSubmitted: (v) {
           if (v.trim().isNotEmpty) Navigator.pop(context, v);
         },

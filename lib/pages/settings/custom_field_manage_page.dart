@@ -404,18 +404,11 @@ class _CustomFieldEditSheetState extends ConsumerState<_CustomFieldEditSheet> {
               textInputAction: TextInputAction.done,
               onChanged: (_) => setState(() => _error = null),
               onSubmitted: (_) => canSubmit ? _submit() : null,
-              decoration: InputDecoration(
-                hintText: l10n.customFieldNameHint,
+              decoration: piggyOutlinedDecoration(
+                context,
+                hint: l10n.customFieldNameHint,
                 errorText: _error,
-                counterText: '',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 12,
-                ),
-              ),
+              ).copyWith(counterText: ''),
             ),
             const SizedBox(height: 16),
             _label(l10n.customFieldTypeLabel),

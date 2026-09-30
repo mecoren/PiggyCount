@@ -191,9 +191,9 @@ class _RecurringTransactionEditPageState
                     // Amount
                     TextFormField(
                       controller: _amountController,
-                      decoration: InputDecoration(
-                        labelText: l10n.importFieldAmount,
-                        border: const OutlineInputBorder(),
+                      decoration: piggyOutlinedDecoration(
+                        context,
+                        label: l10n.importFieldAmount,
                       ),
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
@@ -262,9 +262,9 @@ class _RecurringTransactionEditPageState
                     // Note
                     TextFormField(
                       controller: _noteController,
-                      decoration: InputDecoration(
-                        labelText: l10n.commonNoteHint,
-                        border: const OutlineInputBorder(),
+                      decoration: piggyOutlinedDecoration(
+                        context,
+                        label: l10n.commonNoteHint,
                       ),
                       maxLines: 3,
                     ),
@@ -344,9 +344,9 @@ class _RecurringTransactionEditPageState
     return InkWell(
       onTap: () => _selectCategory(),
       child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: l10n.categoryTitle,
-          border: const OutlineInputBorder(),
+        decoration: piggyOutlinedDecoration(
+          context,
+          label: l10n.categoryTitle,
           errorText: _getCategoryErrorText(),
         ),
         child: Text(
@@ -362,9 +362,9 @@ class _RecurringTransactionEditPageState
     return InkWell(
       onTap: () => _selectLedger(),
       child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: l10n.ledgerSelectTitle,
-          border: const OutlineInputBorder(),
+        decoration: piggyOutlinedDecoration(
+          context,
+          label: l10n.ledgerSelectTitle,
           errorText: _getLedgerErrorText(),
         ),
         child: FutureBuilder<Ledger?>(
@@ -388,9 +388,9 @@ class _RecurringTransactionEditPageState
     return InkWell(
       onTap: _selectCurrency,
       child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: l10n.txCurrencyLabel,
-          border: const OutlineInputBorder(),
+        decoration: piggyOutlinedDecoration(
+          context,
+          label: l10n.txCurrencyLabel,
         ),
         child: Row(
           children: [
@@ -438,9 +438,9 @@ class _RecurringTransactionEditPageState
     return InkWell(
       onTap: () => _selectAccount(isFromAccount: isFromAccount),
       child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
+        decoration: piggyOutlinedDecoration(
+          context,
+          label: label,
           errorText: _getAccountErrorText(isFromAccount),
         ),
         child: FutureBuilder<Account?>(
@@ -574,9 +574,9 @@ class _RecurringTransactionEditPageState
         }
       },
       child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: l10n.recurringTransactionFrequency,
-          border: const OutlineInputBorder(),
+        decoration: piggyOutlinedDecoration(
+          context,
+          label: l10n.recurringTransactionFrequency,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -634,9 +634,9 @@ class _RecurringTransactionEditPageState
         }
       },
       child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: l10n.recurringTransactionInterval,
-          border: const OutlineInputBorder(),
+        decoration: piggyOutlinedDecoration(
+          context,
+          label: l10n.recurringTransactionInterval,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -667,9 +667,9 @@ class _RecurringTransactionEditPageState
         }
       },
       child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: l10n.recurringTransactionDayOfMonth,
-          border: const OutlineInputBorder(),
+        decoration: piggyOutlinedDecoration(
+          context,
+          label: l10n.recurringTransactionDayOfMonth,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -721,9 +721,9 @@ class _RecurringTransactionEditPageState
     return InkWell(
       onTap: onTap,
       child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
+        decoration: piggyOutlinedDecoration(
+          context,
+          label: label,
           suffixIcon: allowClear && date != null
               ? IconButton(
                   icon: const Icon(Icons.clear),

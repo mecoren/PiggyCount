@@ -535,9 +535,10 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
             controller: controller,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             autofocus: true,
-            decoration: InputDecoration(
-              prefixText: '${getCurrencySymbol(currencyCode)} ',
-              hintText: isLiability
+            decoration: piggyOutlinedDecoration(
+              context,
+              prefix: '${getCurrencySymbol(currencyCode)} ',
+              hint: isLiability
                   ? l10n.valuationDebtHint
                   : l10n.valuationAccountHint,
             ),

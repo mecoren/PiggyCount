@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../../styles/tokens.dart';
 import 'haptics.dart';
+import 'wheel_picker_header.dart';
 
 enum WheelDatePickerMode { y, ym, ymd }
 
@@ -49,8 +50,6 @@ Future<DateTime?> showWheelDatePicker(
 
 class _WheelDatePickerState extends State<WheelDatePicker> {
   Color _textPrimary(BuildContext context) => PiggyTokens.textPrimary(context);
-  Color _textTertiary(BuildContext context) =>
-      PiggyTokens.textTertiary(context);
   late int year;
   late int month;
   late int day;
@@ -114,46 +113,23 @@ class _WheelDatePickerState extends State<WheelDatePicker> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            height: 52,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: [
-                TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(AppLocalizations.of(context).commonCancel,
-                        style: TextStyle(
-                            fontSize: 16, color: _textTertiary(context)))),
-                const Spacer(),
-                Text(AppLocalizations.of(context).homeSelectDate,
-                    style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: _textPrimary(context))),
-                const Spacer(),
-                TextButton(
-                    onPressed: () {
-                      DateTime result;
-                      switch (mode) {
-                        case WheelDatePickerMode.y:
-                          result = _clamp(DateTime(year, 1, 1));
-                          break;
-                        case WheelDatePickerMode.ym:
-                          result = _clamp(DateTime(year, month, 1));
-                          break;
-                        case WheelDatePickerMode.ymd:
-                          result = _clamp(DateTime(year, month, day));
-                          break;
-                      }
-                      Navigator.pop(context, result);
-                    },
-                    child: Text(AppLocalizations.of(context).commonOk,
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: Theme.of(context).colorScheme.primary))),
-              ],
-            ),
+          WheelPickerHeader(
+            title: AppLocalizations.of(context).homeSelectDate,
+            onConfirm: () {
+              DateTime result;
+              switch (mode) {
+                case WheelDatePickerMode.y:
+                  result = _clamp(DateTime(year, 1, 1));
+                  break;
+                case WheelDatePickerMode.ym:
+                  result = _clamp(DateTime(year, month, 1));
+                  break;
+                case WheelDatePickerMode.ymd:
+                  result = _clamp(DateTime(year, month, day));
+                  break;
+              }
+              Navigator.pop(context, result);
+            },
           ),
           SizedBox(
             height: 156, // 3个可见项（52*3）更舒适
@@ -408,38 +384,13 @@ class _DateStepPickerState extends State<_DateStepPicker> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            height: 52,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(l10n.commonCancel,
-                      style: TextStyle(
-                          fontSize: 16,
-                          color: PiggyTokens.textTertiary(context))),
-                ),
-                const Spacer(),
-                Text(l10n.homeSelectDate,
-                    style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: PiggyTokens.textPrimary(context))),
-                const Spacer(),
-                TextButton(
-                  onPressed: () {
-                    final result = _clamp(DateTime(year, month, day));
-                    Navigator.pop(context, result);
-                  },
-                  child: Text(l10n.commonNext,
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Theme.of(context).colorScheme.primary)),
-                ),
-              ],
-            ),
+          WheelPickerHeader(
+            title: l10n.homeSelectDate,
+            confirmLabel: l10n.commonNext,
+            onConfirm: () {
+              final result = _clamp(DateTime(year, month, day));
+              Navigator.pop(context, result);
+            },
           ),
           SizedBox(
             height: 156,
@@ -601,137 +552,70 @@ class _TimeStepPickerState extends State<_TimeStepPicker> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = PiggyTokens.isDark(context);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: PiggyTokens.surfaceElevated(context),
-        borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(PiggyDimens.radiusXl)),
-      ),
-      child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: isDark
-                        ? PiggyTokens.border(context)
-                        : const Color(0xFFE5E5E5),
-                    width: 0.5,
-                  ),
+    return SafeArea(
+      top: false,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          WheelPickerHeader(
+            title: l10n.commonSelectTime,
+            onConfirm: () => Navigator.pop(
+                context, (hour: hour, minute: minute, second: second)),
+          ),
+          // 与 WheelDatePicker 同一口径：itemExtent 52、可见 3 项、字号 18
+          SizedBox(
+            height: 156,
+            child: Row(
+              children: [
+                Expanded(
+                  child: _timeColumn(_hourCtrl, 24, (i) => hour = i),
                 ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: Text(l10n.commonCancel,
-                        style: TextStyle(
-                            fontSize: 16,
-                            color: PiggyTokens.textTertiary(context))),
-                  ),
-                  Text(l10n.commonSelectTime,
-                      style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w600,
-                          color: PiggyTokens.textPrimary(context))),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context)
-                          .pop((hour: hour, minute: minute, second: second));
-                    },
-                    child: Text(l10n.commonOk,
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: Theme.of(context).colorScheme.primary)),
-                  ),
-                ],
-              ),
+                _colon(context),
+                Expanded(
+                  child: _timeColumn(_minuteCtrl, 60, (i) => minute = i),
+                ),
+                _colon(context),
+                Expanded(
+                  child: _timeColumn(_secondCtrl, 60, (i) => second = i),
+                ),
+              ],
             ),
-            SizedBox(
-              height: 216,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: CupertinoPicker(
-                      scrollController: _hourCtrl,
-                      itemExtent: 40,
-                      onSelectedItemChanged: (index) {
-                        PiggyHaptics.selection();
-                        setState(() => hour = index);
-                      },
-                      children: List.generate(
-                          24,
-                          (index) => Center(
-                                child: Text(index.toString().padLeft(2, '0'),
-                                    style: TextStyle(
-                                        fontSize: 20,
-                                        color:
-                                            PiggyTokens.textPrimary(context))),
-                              )),
-                    ),
-                  ),
-                  Text(':',
-                      style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w500,
-                          color: PiggyTokens.textPrimary(context))),
-                  Expanded(
-                    child: CupertinoPicker(
-                      scrollController: _minuteCtrl,
-                      itemExtent: 40,
-                      onSelectedItemChanged: (index) {
-                        PiggyHaptics.selection();
-                        setState(() => minute = index);
-                      },
-                      children: List.generate(
-                          60,
-                          (index) => Center(
-                                child: Text(index.toString().padLeft(2, '0'),
-                                    style: TextStyle(
-                                        fontSize: 20,
-                                        color:
-                                            PiggyTokens.textPrimary(context))),
-                              )),
-                    ),
-                  ),
-                  Text(':',
-                      style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w500,
-                          color: PiggyTokens.textPrimary(context))),
-                  Expanded(
-                    child: CupertinoPicker(
-                      scrollController: _secondCtrl,
-                      itemExtent: 40,
-                      onSelectedItemChanged: (index) {
-                        PiggyHaptics.selection();
-                        setState(() => second = index);
-                      },
-                      children: List.generate(
-                          60,
-                          (index) => Center(
-                                child: Text(index.toString().padLeft(2, '0'),
-                                    style: TextStyle(
-                                        fontSize: 20,
-                                        color:
-                                            PiggyTokens.textPrimary(context))),
-                              )),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
+
+  /// 时分秒共用的滚轮列：仅列表长度与选中值不同，避免三份重复代码。
+  Widget _timeColumn(FixedExtentScrollController ctrl, int count,
+      ValueChanged<int> onChanged) {
+    return CupertinoPicker(
+      itemExtent: 52,
+      scrollController: ctrl,
+      onSelectedItemChanged: (index) {
+        PiggyHaptics.selection();
+        setState(() => onChanged(index));
+      },
+      children: [
+        for (int i = 0; i < count; i++)
+          Center(
+            child: Text(
+              i.toString().padLeft(2, '0'),
+              style: TextStyle(
+                  fontSize: 18, color: PiggyTokens.textPrimary(context)),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _colon(BuildContext context) => Text(
+        ':',
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w500,
+          color: PiggyTokens.textPrimary(context),
+        ),
+      );
 }

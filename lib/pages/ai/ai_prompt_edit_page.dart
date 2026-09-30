@@ -566,13 +566,9 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
                 fontFamily: 'monospace',
                 height: 1.5,
               ),
-              decoration: InputDecoration(
-                border: const OutlineInputBorder(),
-                contentPadding: const EdgeInsets.all(12),
-                hintText: l10n.aiPromptInputHint,
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: primaryColor, width: 2),
-                ),
+              decoration: piggyOutlinedDecoration(
+                context,
+                hint: l10n.aiPromptInputHint,
               ),
               onChanged: (value) {
                 setState(() {

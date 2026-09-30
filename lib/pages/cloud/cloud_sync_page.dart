@@ -57,6 +57,31 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
   bool backupBusy = false;
   bool restoreBusy = false;
 
+  /// 记忆化「当前登录用户」的 Future（按 auth 实例归属）。
+  ///
+  /// [CloudAuthService.currentUser] 是 async getter，每次访问都返回**新的**
+  /// Future。若在 build 中直接把它交给 FutureBuilder，页面任何一次 setState
+  ///（点击「立即备份」/「从备份恢复」前后切换 busy 标记即会触发）都会让
+  /// FutureBuilder 判定「future 换了」→ 先回 waiting 把内容区渲染成空白占位，
+  /// 下一帧才恢复内容——表现为点击后整块内容闪一下。
+  /// 这里按 auth 实例缓存，保证同一实例下 future 恒定。
+  CloudAuthService? _userFutureOwner;
+  Future<CloudUser?>? _userFuture;
+
+  Future<CloudUser?> _currentUserFuture(CloudAuthService auth) {
+    if (!identical(_userFutureOwner, auth)) {
+      _userFutureOwner = auth;
+      _userFuture = auth.currentUser;
+    }
+    return _userFuture!;
+  }
+
+  /// 作废记忆化：登录等需要立刻反映新会话的场景调用，下一次 build 重新拉取。
+  void _invalidateCurrentUserFuture() {
+    _userFutureOwner = null;
+    _userFuture = null;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -499,33 +524,30 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
     }
   }
 
-  /// 备份选择列表（bottom sheet，按日期倒序）
+  /// 备份选择列表（按日期倒序）。
+  ///
+  /// 复用通用单选抽屉组件：透明弹层底 + 四周留距 + 四角圆角卡片 +
+  /// 小号居中灰标题 +「裸图标 + 日期/大小」行，与全站选择型抽屉口径一致
+  /// （AGENTS.md「少选项单选弹窗」）。条目多时卡片内部滚动。
   Future<BackupFileInfo?> _showBackupPicker(
-      BuildContext context, List<BackupFileInfo> backups) {
+      BuildContext context, List<BackupFileInfo> backups) async {
     final l10n = AppLocalizations.of(context);
-    return showModalBottomSheet<BackupFileInfo>(
+    BackupFileInfo? picked;
+    await showPiggyOptionSheet<BackupFileInfo>(
       context: context,
-      showDragHandle: true,
-      builder: (ctx) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-              child: Text(l10n.restoreFromBackupTitle,
-                  style: Theme.of(ctx).textTheme.titleMedium),
-            ),
-            for (final b in backups)
-              ListTile(
-                leading: const Icon(Icons.archive_outlined),
-                title: Text(BackupScheduler.formatDate(b.date)),
-                subtitle: b.size == null ? null : Text(_formatSize(b.size!)),
-                onTap: () => Navigator.pop(ctx, b),
-              ),
-          ],
-        ),
-      ),
+      title: l10n.restoreFromBackupTitle,
+      options: [
+        for (final b in backups)
+          PiggyOptionSheetItem(
+            value: b,
+            title: BackupScheduler.formatDate(b.date),
+            desc: b.size == null ? null : _formatSize(b.size!),
+            icon: Icons.archive_outlined,
+          ),
+      ],
+      onSelected: (b) => picked = b,
     );
+    return picked;
   }
 
   static String _formatSize(int bytes) {
@@ -541,9 +563,9 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
     final cur = r.read(backupTimeProvider).asData?.value ??
         BackupScheduler.defaultBackupTime;
     final minutes = BackupScheduler.parseHhMm(cur);
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(hour: minutes ~/ 60, minute: minutes % 60),
+    final picked = await showWheelTimePicker(
+      context,
+      initial: TimeOfDay(hour: minutes ~/ 60, minute: minutes % 60),
     );
     if (picked == null) return;
     await r
@@ -681,7 +703,9 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                       Text('${AppLocalizations.of(context).commonError}: $e'),
                 ),
                 data: (auth) => FutureBuilder<CloudUser?>(
-                  future: auth.currentUser,
+                  // 走记忆化（见 _currentUserFuture）：直接写 auth.currentUser
+                  // 会让每次 setState 都重建 future → 内容区闪白一帧
+                  future: _currentUserFuture(auth),
                   builder: (ctx, snap) {
                     if (snap.connectionState != ConnectionState.done) {
                       return DelayedSkeleton(
@@ -1618,6 +1642,10 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                                           builder: (_) =>
                                                               const LoginPage()));
                                                   if (!mounted) return;
+                                                  // 作废用户 Future 记忆化，
+                                                  // 让登录行立即反映新会话
+                                                  setState(
+                                                      _invalidateCurrentUserFuture);
                                                   ref
                                                       .read(
                                                           syncStatusRefreshProvider

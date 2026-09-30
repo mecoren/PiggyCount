@@ -326,10 +326,10 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
                             const SizedBox(height: 8),
                             TextFormField(
                               controller: _nameController,
-                              decoration: InputDecoration(
-                                hintText: AppLocalizations.of(context)
+                              decoration: piggyOutlinedDecoration(
+                                context,
+                                hint: AppLocalizations.of(context)
                                     .categoryNameHint,
-                                border: const OutlineInputBorder(),
                                 errorText: _duplicateErrorMessage,
                               ),
                               maxLength: 10,

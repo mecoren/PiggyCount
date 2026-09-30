@@ -339,11 +339,11 @@ class _RateEditDialogState extends ConsumerState<_RateEditDialog> {
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
             ],
-            decoration: InputDecoration(
-              prefixText: '1 ${widget.quote} = ',
-              suffixText: widget.base,
+            decoration: piggyOutlinedDecoration(
+              context,
+              prefix: '1 ${widget.quote} = ',
               errorText: _errorText,
-            ),
+            ).copyWith(suffixText: widget.base),
             onChanged: (_) => setState(() => _errorText = null),
           ),
           SizedBox(height: 10.0.scaled(context, ref)),

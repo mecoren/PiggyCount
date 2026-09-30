@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/encryption/encryption_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../styles/tokens.dart';
+import '../ui/ui.dart';
 
 /// 加密密码对话框模式
 enum PasswordDialogMode {
@@ -298,19 +299,17 @@ class _PasswordSetupDialogState extends ConsumerState<PasswordSetupDialog> {
       autofocus: autofocus,
       obscureText: !show,
       onChanged: (_) => onChanged(),
-      decoration: InputDecoration(
-        labelText: label,
+      // 描边输入框的基准实现已抽到 piggyOutlinedDecoration（单源），
+      // 云服务配置三表单与本弹窗共用同一套外观
+      decoration: piggyOutlinedDecoration(
+        context,
+        label: label,
         suffixIcon: IconButton(
           icon: Icon(show
               ? Icons.visibility_off_outlined
               : Icons.visibility_outlined),
           onPressed: onToggle,
         ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
-        ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       ),
     );
   }

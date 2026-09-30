@@ -1,8 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../../l10n/app_localizations.dart';
 import '../../styles/tokens.dart';
 import 'haptics.dart';
+import 'wheel_picker_header.dart';
 
 /// 通用滚轮选择器
 class WheelPicker<T> extends StatefulWidget {
@@ -25,8 +25,6 @@ class WheelPicker<T> extends StatefulWidget {
 
 class _WheelPickerState<T> extends State<WheelPicker<T>> {
   Color _textPrimary(BuildContext context) => PiggyTokens.textPrimary(context);
-  Color _textTertiary(BuildContext context) =>
-      PiggyTokens.textTertiary(context);
 
   late T selected;
   late FixedExtentScrollController _controller;
@@ -49,40 +47,9 @@ class _WheelPickerState<T> extends State<WheelPicker<T>> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            height: 52,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(
-                    AppLocalizations.of(context).commonCancel,
-                    style:
-                        TextStyle(fontSize: 16, color: _textTertiary(context)),
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  widget.title,
-                  style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: _textPrimary(context)),
-                ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, selected),
-                  child: Text(
-                    AppLocalizations.of(context).commonOk,
-                    style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: Theme.of(context).colorScheme.primary),
-                  ),
-                ),
-              ],
-            ),
+          WheelPickerHeader(
+            title: widget.title,
+            onConfirm: () => Navigator.pop(context, selected),
           ),
           SizedBox(
             height: 156,

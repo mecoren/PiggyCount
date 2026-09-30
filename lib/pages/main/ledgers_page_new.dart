@@ -1340,8 +1340,9 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                       const SizedBox(height: 12),
                       TextField(
                         controller: nameCtrl,
-                        decoration: InputDecoration(
-                          labelText: AppLocalizations.of(ctx).ledgersName,
+                        decoration: piggyOutlinedDecoration(
+                          ctx,
+                          label: AppLocalizations.of(ctx).ledgersName,
                         ),
                       ),
                       const SizedBox(height: 12),

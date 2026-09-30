@@ -24,11 +24,9 @@ Future<String?> showCurrencyPickerSheet(
   return showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: PiggyTokens.surfaceSheet(context),
-    shape: const RoundedRectangleBorder(
-      borderRadius:
-          BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
-    ),
+    // 卡片由 builder 内的 Material 自绘（四角圆角 + 四周留间距），
+    // 弹层底本身透明。
+    backgroundColor: Colors.transparent,
     builder: (bctx) {
       String query = '';
       final sheetTitle = title ?? AppLocalizations.of(bctx).baseCurrencyLabel;
@@ -59,97 +57,116 @@ Future<String?> showCurrencyPickerSheet(
           return c.code.contains(uq) || c.name.contains(q);
         }).toList();
 
-        return Padding(
-          // viewInsets 读取隔离到 KeyboardBottomInsetPadding 叶子组件：
-          // 键盘动画期间仅该组件逐帧重建，不再重建整个 sheet 内容
-          padding: const EdgeInsets.only(left: 16, right: 16, top: 12),
-          child: KeyboardBottomInsetPadding(
-            extra: 16,
-            child: SizedBox(
-              height: 440,
-              child: Column(
-              children: [
-                Container(
-                  width: 36,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 8),
-                  decoration: BoxDecoration(
-                    color:
-                        PiggyTokens.textTertiary(bctx).withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
-                  ),
-                ),
-                Text(
-                  sheetTitle,
-                  style:
-                      PiggyTextTokens.strongTitle(bctx).copyWith(fontSize: 16),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.search),
-                    hintText: AppLocalizations.of(bctx).ledgersSearchCurrency,
-                  ),
-                  onChanged: (v) => setSheetState(() => query = v),
-                ),
-                const SizedBox(height: 8),
-                Expanded(
-                  // 汇率展示:rateBase 传入时用 Consumer 拿全量汇率;否则空 map。
-                  child: Consumer(builder: (cctx, ref, _) {
-                    final rates = rateBase == null
-                        ? const <String, double>{}
-                        : (ref
-                                .watch(currencyPickerRatesProvider(
-                                    rateBase.toUpperCase()))
-                                .valueOrNull ??
-                            const <String, double>{});
-                    return ListView.builder(
-                      itemCount: filtered.length,
-                      itemBuilder: (_, i) {
-                        final c = filtered[i];
-                        final sel = c.code == current;
-                        // 汇率行:1 该币种 ≈ x rateBase(base 自身/缺失不显示)
-                        String? rateText;
-                        if (rateBase != null &&
-                            c.code != rateBase.toUpperCase()) {
-                          final r = rates[c.code];
-                          if (r != null) {
-                            rateText =
-                                '1 ${c.code} ≈ ${r.toStringAsPrecision(4)} ${rateBase.toUpperCase()}';
-                          }
-                        }
-                        return ListTile(
-                          leading: currencyFlag(cctx, c.code),
-                          title: Text(
-                            '${c.name} (${c.code})',
-                            style: TextStyle(
-                              color: sel
-                                  ? primaryColor
-                                  : PiggyTokens.textPrimary(bctx),
-                              fontWeight:
-                                  sel ? FontWeight.w600 : FontWeight.normal,
-                            ),
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              PiggyDimens.p16,
+              0,
+              PiggyDimens.p16,
+              PiggyDimens.p16,
+            ),
+            // 透明路由底不提供 Material 祖先，TextField / ListTile
+            // 必须显式包 Material。
+            child: Material(
+              color: PiggyTokens.surfaceElevated(bctx),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
+              clipBehavior: Clip.antiAlias,
+              child: KeyboardBottomInsetPadding(
+                extra: 16,
+                child: SizedBox(
+                  height: 440,
+                  child: Column(
+                    children: [
+                      // 标题区：小号居中、次级色，与选项抽屉同口径。
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          PiggyDimens.p16,
+                          PiggyDimens.p16,
+                          PiggyDimens.p16,
+                          PiggyDimens.p12,
+                        ),
+                        child: Text(
+                          sheetTitle,
+                          textAlign: TextAlign.center,
+                          style:
+                              Theme.of(bctx).textTheme.labelLarge?.copyWith(
+                                    color: PiggyTokens.textSecondary(bctx),
+                                  ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: PiggyDimens.p16),
+                        child: TextField(
+                          decoration: piggyFilledDecoration(
+                            bctx,
+                            hint:
+                                AppLocalizations.of(bctx).ledgersSearchCurrency,
                           ),
-                          subtitle: rateText == null
-                              ? null
-                              : Text(
-                                  rateText,
-                                  style: PiggyTextTokens.caption(cctx),
+                          onChanged: (v) => setSheetState(() => query = v),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        // 汇率展示:rateBase 传入时用 Consumer 拿全量汇率;否则空 map。
+                        child: Consumer(builder: (cctx, ref, _) {
+                          final rates = rateBase == null
+                              ? const <String, double>{}
+                              : (ref
+                                      .watch(currencyPickerRatesProvider(
+                                          rateBase.toUpperCase()))
+                                      .valueOrNull ??
+                                  const <String, double>{});
+                          return ListView.builder(
+                            itemCount: filtered.length,
+                            itemBuilder: (_, i) {
+                              final c = filtered[i];
+                              final sel = c.code == current;
+                              // 汇率行:1 该币种 ≈ x rateBase(base 自身/缺失不显示)
+                              String? rateText;
+                              if (rateBase != null &&
+                                  c.code != rateBase.toUpperCase()) {
+                                final r = rates[c.code];
+                                if (r != null) {
+                                  rateText =
+                                      '1 ${c.code} ≈ ${r.toStringAsPrecision(4)} ${rateBase.toUpperCase()}';
+                                }
+                              }
+                              return ListTile(
+                                leading: currencyFlag(cctx, c.code),
+                                title: Text(
+                                  '${c.name} (${c.code})',
+                                  style: TextStyle(
+                                    color: sel
+                                        ? primaryColor
+                                        : PiggyTokens.textPrimary(bctx),
+                                    fontWeight: sel
+                                        ? FontWeight.w600
+                                        : FontWeight.normal,
+                                  ),
                                 ),
-                          trailing: sel
-                              ? Icon(Icons.check, color: primaryColor)
-                              : null,
-                          onTap: () => Navigator.pop(bctx, c.code),
-                        );
-                      },
-                    );
-                  }),
+                                subtitle: rateText == null
+                                    ? null
+                                    : Text(
+                                        rateText,
+                                        style: PiggyTextTokens.caption(cctx),
+                                      ),
+                                trailing: sel
+                                    ? Icon(Icons.check, color: primaryColor)
+                                    : null,
+                                onTap: () => Navigator.pop(bctx, c.code),
+                              );
+                            },
+                          );
+                        }),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
+              ),
             ),
           ),
-        ),
-      );
+        );
       });
     },
   );

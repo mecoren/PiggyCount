@@ -2009,7 +2009,7 @@ class _SupabaseConfigDialogState extends State<_SupabaseConfigDialog> {
         children: [
           TextField(
             controller: urlController,
-            decoration: piggyFilledDecoration(
+            decoration: piggyOutlinedDecoration(
               context,
               label: l10n.cloudSupabaseUrlLabel,
               hint: l10n.cloudSupabaseUrlHint,
@@ -2025,7 +2025,7 @@ class _SupabaseConfigDialogState extends State<_SupabaseConfigDialog> {
           const SizedBox(height: 16),
           TextField(
             controller: keyController,
-            decoration: piggyFilledDecoration(
+            decoration: piggyOutlinedDecoration(
               context,
               label: l10n.cloudAnonKeyLabel,
               hint: l10n.cloudSupabaseAnonKeyHintLong,
@@ -2060,7 +2060,7 @@ class _SupabaseConfigDialogState extends State<_SupabaseConfigDialog> {
           const SizedBox(height: 16),
           TextField(
             controller: bucketController,
-            decoration: piggyFilledDecoration(
+            decoration: piggyOutlinedDecoration(
               context,
               label: l10n.cloudSupabaseBucketLabel,
               hint: l10n.cloudSupabaseBucketHint,
@@ -2165,7 +2165,7 @@ class _WebdavConfigDialogState extends State<_WebdavConfigDialog> {
         children: [
           TextField(
             controller: urlController,
-            decoration: piggyFilledDecoration(
+            decoration: piggyOutlinedDecoration(
               context,
               label: l10n.cloudWebdavUrlLabel,
               hint: l10n.cloudWebdavUrlHint,
@@ -2180,7 +2180,7 @@ class _WebdavConfigDialogState extends State<_WebdavConfigDialog> {
           const SizedBox(height: 16),
           TextField(
             controller: usernameController,
-            decoration: piggyFilledDecoration(
+            decoration: piggyOutlinedDecoration(
               context,
               label: l10n.cloudWebdavUsernameLabel,
               errorText: _usernameError
@@ -2194,7 +2194,7 @@ class _WebdavConfigDialogState extends State<_WebdavConfigDialog> {
           const SizedBox(height: 16),
           TextField(
             controller: passwordController,
-            decoration: piggyFilledDecoration(
+            decoration: piggyOutlinedDecoration(
               context,
               label: l10n.cloudWebdavPasswordLabel,
               errorText: _passwordError
@@ -2223,11 +2223,10 @@ class _WebdavConfigDialogState extends State<_WebdavConfigDialog> {
           const SizedBox(height: 16),
           TextField(
             controller: pathController,
-            decoration: piggyFilledDecoration(
+            decoration: piggyOutlinedDecoration(
               context,
               label: l10n.cloudWebdavRemotePathLabel,
               hint: l10n.cloudWebdavPathHint,
-              helper: l10n.cloudWebdavRemotePathHelperText,
             ),
           ),
         ],
@@ -2351,7 +2350,7 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
         children: [
           TextField(
             controller: endpointController,
-            decoration: piggyFilledDecoration(
+            decoration: piggyOutlinedDecoration(
               context,
               label: l10n.cloudS3EndpointLabel,
               hint: l10n.cloudS3EndpointHint,
@@ -2367,7 +2366,7 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
           const SizedBox(height: 16),
           TextField(
             controller: regionController,
-            decoration: piggyFilledDecoration(
+            decoration: piggyOutlinedDecoration(
               context,
               label: l10n.cloudS3RegionLabel,
               hint: l10n.cloudS3RegionHint,
@@ -2376,7 +2375,7 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
           const SizedBox(height: 16),
           TextField(
             controller: accessKeyController,
-            decoration: piggyFilledDecoration(
+            decoration: piggyOutlinedDecoration(
               context,
               label: l10n.cloudS3AccessKeyLabel,
               hint: l10n.cloudS3AccessKeyHint,
@@ -2391,7 +2390,7 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
           const SizedBox(height: 16),
           TextField(
             controller: secretKeyController,
-            decoration: piggyFilledDecoration(
+            decoration: piggyOutlinedDecoration(
               context,
               label: l10n.cloudS3SecretKeyLabel,
               hint: l10n.cloudS3SecretKeyHint,
@@ -2421,7 +2420,7 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
           const SizedBox(height: 16),
           TextField(
             controller: bucketController,
-            decoration: piggyFilledDecoration(
+            decoration: piggyOutlinedDecoration(
               context,
               label: l10n.cloudS3BucketLabel,
               hint: l10n.cloudS3BucketHint,
@@ -2454,7 +2453,7 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
           const SizedBox(height: 8),
           TextField(
             controller: portController,
-            decoration: piggyFilledDecoration(
+            decoration: piggyOutlinedDecoration(
               context,
               label: l10n.cloudS3PortLabel,
               hint: l10n.cloudS3PortHint,
@@ -2494,79 +2493,73 @@ class _CloudConfigSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      // 表单里有 TextField / IconButton 等 Material 系组件，必须有 Material
-      // 祖先：transparent 路由背景自身不提供，这里显式包一层（颜色/圆角与
-      // 原 Container 背景保持一致），否则直接红屏“No Material widget found”。
-      child: Material(
-        color: PiggyTokens.surfaceElevated(context),
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(PiggyDimens.radiusXl),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Container(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.sizeOf(context).height * 0.92,
+      // 悬浮卡片式抽屉外壳（与选项抽屉同口径）：SafeArea 抬离手势条后，
+      // 四周留距 + Material 四角圆角；SafeArea 在外统一吃掉底部安全区，
+      // 内部操作行不再叠加 paddingOf.bottom，避免双重留白。
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            PiggyDimens.p16,
+            0,
+            PiggyDimens.p16,
+            PiggyDimens.p16,
           ),
-          child: SafeArea(
-            top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // 拖拽指示条（与其他底部抽屉一致）
-                Center(
-                  child: Container(
-                    margin: const EdgeInsets.only(top: 12),
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: PiggyTokens.divider(context),
-                      borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
+          // 表单里有 TextField / IconButton 等 Material 系组件，必须有
+          // Material 祖先：transparent 路由背景自身不提供，这里显式包一层，
+          // 否则直接红屏“No Material widget found”。
+          child: Material(
+            color: PiggyTokens.surfaceElevated(context),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
+            clipBehavior: Clip.antiAlias,
+            // 不要给卡片设人为的高度上限（曾用「可用高度 × 0.92」）：表单只要
+            // 比该上限高一点点就会被压到上限，SingleChildScrollView 便在卡片
+            // 边缘把最后一行助手文案切成半个字。这里完全交给内容——卡片高度 =
+            // min(内容高度, 路由给的可用高度)：装得下就整卡完整显示，只有真
+            // 超出（键盘弹出 / S3 长表单 / 大字号）时才整卡滚动。
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 标题栏：取消(X)在左 + 标题居中 + 保存(钩子)在右，
+                  // 底部不再放按钮行（用户口径：操作图标化到顶栏两端）。
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          tooltip: cancelLabel,
+                          onPressed: onCancel,
+                        ),
+                        Expanded(
+                          child: Text(
+                            title,
+                            textAlign: TextAlign.center,
+                            style: PiggyTextTokens.strongTitle(context)
+                                .copyWith(fontSize: 17),
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            Icons.check,
+                            color: PiggyTokens.primary(context),
+                          ),
+                          tooltip: saveLabel,
+                          onPressed: onSave,
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                // 标题栏：标题左置 + 右侧关闭按钮
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 8, 4),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          title,
-                          style: PiggyTextTokens.strongTitle(context)
-                              .copyWith(fontSize: 17),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        tooltip: cancelLabel,
-                        onPressed: onCancel,
-                      ),
-                    ],
-                  ),
-                ),
-                // 表单区：键盘弹出或 S3 长表单时内部滚动
-                Flexible(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+                  // 表单区：内容超高（键盘弹出 / S3 长表单 / 大字号）时整卡滚动
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
                     child: child,
                   ),
-                ),
-                // 底部操作：iOS 分栏（取消｜保存）与弹窗统一（云配置三表单专用，
-                // 其余抽屉仍用 PiggySheetActions，见 AGENTS）。
-                Padding(
-                  padding: EdgeInsets.only(
-                    bottom:
-                        PiggyDimens.p12 + MediaQuery.paddingOf(context).bottom,
-                  ),
-                  child: PiggyDialogActions(
-                    cancelLabel: cancelLabel,
-                    onCancel: onCancel,
-                    okLabel: saveLabel,
-                    onOk: onSave,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

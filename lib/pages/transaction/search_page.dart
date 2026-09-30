@@ -317,10 +317,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     children: [
                       Expanded(
                         child: TextField(
-                          decoration: InputDecoration(
-                            labelText: l10n.searchMinAmount,
-                            border: const OutlineInputBorder(),
-                            isDense: true,
+                          decoration: piggyOutlinedDecoration(
+                            context,
+                            label: l10n.searchMinAmount,
                           ),
                           keyboardType: const TextInputType.numberWithOptions(
                               decimal: true),
@@ -337,10 +336,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                       ),
                       Expanded(
                         child: TextField(
-                          decoration: InputDecoration(
-                            labelText: l10n.searchMaxAmount,
-                            border: const OutlineInputBorder(),
-                            isDense: true,
+                          decoration: piggyOutlinedDecoration(
+                            context,
+                            label: l10n.searchMaxAmount,
                           ),
                           keyboardType: const TextInputType.numberWithOptions(
                               decimal: true),
@@ -549,9 +547,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             const SizedBox(height: 16),
             TextField(
               controller: _noteController,
-              decoration: InputDecoration(
-                hintText: l10n.searchBatchSetNoteHint,
-                border: const OutlineInputBorder(),
+              decoration: piggyOutlinedDecoration(
+                context,
+                hint: l10n.searchBatchSetNoteHint,
               ),
               maxLines: 3,
               autofocus: true,

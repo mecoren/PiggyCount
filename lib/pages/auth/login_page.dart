@@ -262,14 +262,18 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                         TextField(
                           controller: emailCtrl,
                           keyboardType: TextInputType.emailAddress,
-                          decoration: InputDecoration(labelText: AppLocalizations.of(context).authEmail),
+                          decoration: piggyOutlinedDecoration(
+                            context,
+                            label: AppLocalizations.of(context).authEmail,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         TextField(
                           controller: pwdCtrl,
                           obscureText: !_showPwd,
-                          decoration: InputDecoration(
-                            labelText: AppLocalizations.of(context).authPassword,
+                          decoration: piggyOutlinedDecoration(
+                            context,
+                            label: AppLocalizations.of(context).authPassword,
                             suffixIcon: IconButton(
                               icon: Icon(_showPwd
                                   ? Icons.visibility_off_outlined

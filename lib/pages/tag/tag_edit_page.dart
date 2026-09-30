@@ -106,16 +106,9 @@ class _TagEditPageState extends ConsumerState<TagEditPage> {
                           ),
                           TextFormField(
                             controller: _nameController,
-                            decoration: InputDecoration(
-                              hintText: l10n.tagNameHint,
-                              border: OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.circular(PiggyDimens.radiusSm),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 12,
-                              ),
+                            decoration: piggyOutlinedDecoration(
+                              context,
+                              hint: l10n.tagNameHint,
                             ),
                             maxLength: 20,
                             validator: (value) {
