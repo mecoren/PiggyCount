@@ -1,4 +1,5 @@
 export 'dialog.dart';
+export 'option_sheet.dart';
 export 'piggy_input.dart';
 export 'sheet_actions.dart';
 export 'toast.dart';

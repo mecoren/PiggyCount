@@ -90,7 +90,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
                 icon: Icons.brightness_6_outlined,
                 title: l10n.appearanceThemeMode,
                 subtitle: themeModeDisplay,
-                onTap: () => _showThemeModeDialog(context, ref, l10n),
+                onTap: () => _showThemeModeSheet(context, ref),
               ),
               // 主题色设置
               SettingsNavItem(
@@ -138,7 +138,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
                 subtitle: ref.watch(compactAmountProvider)
                     ? l10n.appearanceAmountFormatCompact
                     : l10n.appearanceAmountFormatFull,
-                onTap: () => _showAmountFormatDialog(context, ref, l10n),
+                onTap: () => _showAmountFormatSheet(context, ref),
               ),
               // 显示交易时间
               SettingsToggleItem(
@@ -170,7 +170,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
                 subtitle: ref.watch(noteDisplayModeProvider) == 'note'
                     ? l10n.appearanceNoteDisplayNote
                     : l10n.appearanceNoteDisplayCategory,
-                onTap: () => _showNoteDisplayDialog(context, ref, l10n),
+                onTap: () => _showNoteDisplaySheet(context, ref),
               ),
               // 历史备注偏好
               SettingsNavItem(
@@ -184,7 +184,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
                 icon: Icons.palette_outlined,
                 title: l10n.appearanceColorScheme,
                 subtitle: _colorSchemeSubtitle(ref, l10n),
-                onTap: () => _showColorSchemeDialog(context, ref, l10n),
+                onTap: () => _showColorSchemeSheet(context, ref),
               ),
             ],
           ),
@@ -272,356 +272,138 @@ class AppearanceSettingsPage extends ConsumerWidget {
   /// 选中即应用并收起；应用后延迟刷新桌面小组件，等 locale 变化生效。
   void _showLanguageSheet(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final currentLanguage = ref.read(languageProvider);
-    final primaryColor = ref.read(primaryColorProvider);
 
     // 选项语种名沿用原语言设置页口径：官方文案走 l10n，
     // 繁中/韩文用原生名（目标语言用户才看得懂，不随界面语言变化）。
-    // 第三位为前置徽标文本：每种语言用它自己的原生字符（中/繁/EN/한），
-    // null = 跟随系统，用设置图标。Material 没有按语言区分的图标，
+    // 前置徽标：每种语言用它自己的原生字符（中/繁/EN/한），
+    // null（跟随系统）用设置图标。Material 没有按语言区分的图标，
     // 原生字符徽标是语言选择器的通用做法，语义一一对应。
-    final options = <(Locale?, String, String?)>[
-      (null, l10n.languageSystemDefault, null),
-      (const Locale('zh'), l10n.languageChinese, '中'),
-      (const Locale('zh', 'TW'), '繁體中文', '繁'),
-      (const Locale('en'), l10n.languageEnglish, 'EN'),
-      (const Locale('ko'), '한국어', '한'),
-    ];
-
-    showModalBottomSheet(
+    showPiggyOptionSheet<Locale?>(
       context: context,
-      backgroundColor: PiggyTokens.surfaceElevated(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
-      ),
-      builder: (ctx) {
-        // 标题 + 5 个选项在系统大字号 / 应用显示缩放下可能超出底部弹层
-        // 高度约束（实测溢出 19px），包一层可滚动容器兜底：放得下时
-        // Column min-size 照常收缩，放不下时变为可滚动而非溢出红条。
-        return SafeArea(
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    l10n.languageTitle,
-                    style: PiggyTextTokens.strongTitle(ctx),
-                  ),
-                ),
-                ...options.map((opt) {
-                  final locale = opt.$1;
-                  final isSelected = (locale == null &&
-                          currentLanguage == null) ||
-                      (locale != null &&
-                          currentLanguage != null &&
-                          locale.languageCode == currentLanguage.languageCode &&
-                          locale.countryCode == currentLanguage.countryCode);
-                  // 行视觉规格对齐 SettingsNavItem（标题 bodyMedium w500 +
-                  // 16/14 内边距 + 12 间距），与抽屉正上方的设置行保持一致；
-                  // 选中态额外加粗 + 主色 check。
-                  return InkWell(
-                    onTap: () {
-                      ref.read(languageProvider.notifier).setLanguage(locale);
-                      Navigator.pop(ctx);
-                      // 延迟更新小组件，等待 locale 变化生效；延迟回调属于
-                      // async gap，先校验页面 context 再使用（抽屉 ctx 已 pop）
-                      Future.delayed(const Duration(milliseconds: 100), () {
-                        if (context.mounted) {
-                          updateAppWidget(ref, context);
-                        }
-                      });
-                    },
-                    borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 14),
-                      child: Row(
-                        children: [
-                          // 前置标识：裸图标 / 原生字符，无背景盒。
-                          // 高亮只给选中项：选中主色，未选中中性灰
-                          // （与页内选项对话框 _buildAmountFormatOption 同口径）。
-                          // 标识统一占 24px 槽位居中（图标即 24，字符略窄），
-                          // 保证五种选项的标题起点在同一条竖线上。
-                          SizedBox(
-                            width: 24,
-                            child: opt.$3 == null
-                                ? Icon(
-                                    Icons.settings_suggest_outlined,
-                                    size: 24,
-                                    color: isSelected
-                                        ? primaryColor
-                                        : PiggyTokens.iconSecondary(ctx),
-                                  )
-                                : Text(
-                                    opt.$3!,
-                                    textAlign: TextAlign.center,
-                                    style: Theme.of(ctx)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w600,
-                                          color: isSelected
-                                              ? primaryColor
-                                              : PiggyTokens.iconSecondary(ctx),
-                                        ),
-                                  ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              opt.$2,
-                              style:
-                                  Theme.of(ctx).textTheme.bodyMedium?.copyWith(
-                                        fontWeight: isSelected
-                                            ? FontWeight.w600
-                                            : FontWeight.w500,
-                                        color: isSelected
-                                            ? primaryColor
-                                            : PiggyTokens.textPrimary(ctx),
-                                      ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (isSelected)
-                            Icon(Icons.check, size: 24, color: primaryColor),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-                const SizedBox(height: 8),
-              ],
-            ),
-          ),
-        );
+      title: l10n.languageTitle,
+      selected: ref.read(languageProvider),
+      highlightColor: ref.read(primaryColorProvider),
+      onSelected: (locale) {
+        ref.read(languageProvider.notifier).setLanguage(locale);
+        // 延迟更新小组件，等待 locale 变化生效；延迟回调属于
+        // async gap，先校验页面 context 再使用（抽屉已收起）
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (context.mounted) {
+            updateAppWidget(ref, context);
+          }
+        });
       },
+      options: [
+        PiggyOptionSheetItem(
+          value: null,
+          title: l10n.languageSystemDefault,
+          icon: Icons.settings_suggest_outlined,
+        ),
+        PiggyOptionSheetItem(
+          value: const Locale('zh'),
+          title: l10n.languageChinese,
+          badge: '中',
+        ),
+        PiggyOptionSheetItem(
+          value: const Locale('zh', 'TW'),
+          title: '繁體中文',
+          badge: '繁',
+        ),
+        PiggyOptionSheetItem(
+          value: const Locale('en'),
+          title: l10n.languageEnglish,
+          badge: 'EN',
+        ),
+        PiggyOptionSheetItem(
+          value: const Locale('ko'),
+          title: '한국어',
+          badge: '한',
+        ),
+      ],
     );
   }
 
-  /// 显示主题模式选择对话框
-  void _showThemeModeDialog(
-      BuildContext context, WidgetRef ref, AppLocalizations l10n) {
-    final currentMode = ref.read(themeModeProvider);
-
-    showDialog(
+  /// 外观模式选择 —— 悬浮卡片式底部抽屉单选（组件 widgets/ui/option_sheet）。
+  void _showThemeModeSheet(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    showPiggyOptionSheet<ThemeMode>(
       context: context,
-      builder: (context) => AppDialogShell(
-        title: Text(
-          l10n.appearanceThemeMode,
-          style: TextStyle(color: PiggyTokens.textPrimary(context)),
+      title: l10n.appearanceThemeMode,
+      selected: ref.read(themeModeProvider),
+      highlightColor: ref.read(primaryColorProvider),
+      onSelected: (mode) => ref.read(themeModeProvider.notifier).state = mode,
+      // 跟随系统沿用语言抽屉的 settings_suggest，语义一一对应。
+      options: [
+        PiggyOptionSheetItem(
+          value: ThemeMode.system,
+          title: l10n.appearanceThemeModeSystem,
+          icon: Icons.settings_suggest_outlined,
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildModeOption(
-              context,
-              ref,
-              title: l10n.appearanceThemeModeSystem,
-              value: ThemeMode.system,
-              currentValue: currentMode,
-              icon: Icons.settings_suggest_outlined,
-            ),
-            _buildModeOption(
-              context,
-              ref,
-              title: l10n.appearanceThemeModeLight,
-              value: ThemeMode.light,
-              currentValue: currentMode,
-              icon: Icons.light_mode_outlined,
-            ),
-            _buildModeOption(
-              context,
-              ref,
-              title: l10n.appearanceThemeModeDark,
-              value: ThemeMode.dark,
-              currentValue: currentMode,
-              icon: Icons.dark_mode_outlined,
-            ),
-          ],
+        PiggyOptionSheetItem(
+          value: ThemeMode.light,
+          title: l10n.appearanceThemeModeLight,
+          icon: Icons.light_mode_outlined,
         ),
-      ),
+        PiggyOptionSheetItem(
+          value: ThemeMode.dark,
+          title: l10n.appearanceThemeModeDark,
+          icon: Icons.dark_mode_outlined,
+        ),
+      ],
     );
   }
 
-  Widget _buildModeOption(
-    BuildContext context,
-    WidgetRef ref, {
-    required String title,
-    required ThemeMode value,
-    required ThemeMode currentValue,
-    required IconData icon,
-  }) {
-    final isSelected = value == currentValue;
-    final primaryColor = ref.watch(primaryColorProvider);
-
-    return ListTile(
-      leading: Icon(
-        icon,
-        color: isSelected ? primaryColor : PiggyTokens.iconSecondary(context),
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: isSelected ? primaryColor : PiggyTokens.textPrimary(context),
-          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-        ),
-      ),
-      trailing: isSelected ? Icon(Icons.check, color: primaryColor) : null,
-      onTap: () {
-        ref.read(themeModeProvider.notifier).state = value;
-        Navigator.pop(context);
-      },
-    );
-  }
-
-  /// 显示金额显示格式选择对话框
-  void _showAmountFormatDialog(
-      BuildContext context, WidgetRef ref, AppLocalizations l10n) {
-    final isCompact = ref.read(compactAmountProvider);
-
-    showDialog(
+  /// 金额显示格式选择 —— 悬浮卡片式底部抽屉单选（组件 widgets/ui/option_sheet）。
+  void _showAmountFormatSheet(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    showPiggyOptionSheet<bool>(
       context: context,
-      builder: (context) => AppDialogShell(
-        title: Text(
-          l10n.appearanceAmountFormat,
-          style: TextStyle(color: PiggyTokens.textPrimary(context)),
+      title: l10n.appearanceAmountFormat,
+      selected: ref.read(compactAmountProvider),
+      highlightColor: ref.read(primaryColorProvider),
+      onSelected: (compact) =>
+          ref.read(compactAmountProvider.notifier).state = compact,
+      options: [
+        PiggyOptionSheetItem(
+          value: false,
+          title: l10n.appearanceAmountFormatFull,
+          desc: l10n.appearanceAmountFormatFullDesc,
+          icon: Icons.format_list_numbered_outlined,
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildAmountFormatOption(
-              context,
-              ref,
-              title: l10n.appearanceAmountFormatFull,
-              subtitle: l10n.appearanceAmountFormatFullDesc,
-              value: false,
-              currentValue: isCompact,
-              icon: Icons.format_list_numbered_outlined,
-            ),
-            _buildAmountFormatOption(
-              context,
-              ref,
-              title: l10n.appearanceAmountFormatCompact,
-              subtitle: l10n.appearanceAmountFormatCompactDesc,
-              value: true,
-              currentValue: isCompact,
-              icon: Icons.compress_outlined,
-            ),
-          ],
+        PiggyOptionSheetItem(
+          value: true,
+          title: l10n.appearanceAmountFormatCompact,
+          desc: l10n.appearanceAmountFormatCompactDesc,
+          icon: Icons.compress_outlined,
         ),
-      ),
+      ],
     );
   }
 
-  Widget _buildAmountFormatOption(
-    BuildContext context,
-    WidgetRef ref, {
-    required String title,
-    required String subtitle,
-    required bool value,
-    required bool currentValue,
-    required IconData icon,
-  }) {
-    final isSelected = value == currentValue;
-    final primaryColor = ref.watch(primaryColorProvider);
-
-    return ListTile(
-      leading: Icon(
-        icon,
-        color: isSelected ? primaryColor : PiggyTokens.iconSecondary(context),
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: isSelected ? primaryColor : PiggyTokens.textPrimary(context),
-          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: PiggyTextTokens.label(context),
-      ),
-      trailing: isSelected ? Icon(Icons.check, color: primaryColor) : null,
-      onTap: () {
-        ref.read(compactAmountProvider.notifier).state = value;
-        Navigator.pop(context);
-      },
-    );
-  }
-
-  /// 显示备注显示方式选择对话框
-  void _showNoteDisplayDialog(
-      BuildContext context, WidgetRef ref, AppLocalizations l10n) {
-    final current = ref.read(noteDisplayModeProvider);
-    showDialog(
+  /// 备注显示方式选择 —— 悬浮卡片式底部抽屉单选（组件 widgets/ui/option_sheet）。
+  void _showNoteDisplaySheet(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    showPiggyOptionSheet<String>(
       context: context,
-      builder: (context) => AppDialogShell(
-        title: Text(
-          l10n.appearanceNoteDisplay,
-          style: TextStyle(color: PiggyTokens.textPrimary(context)),
+      title: l10n.appearanceNoteDisplay,
+      selected: ref.read(noteDisplayModeProvider),
+      highlightColor: ref.read(primaryColorProvider),
+      onSelected: (mode) =>
+          ref.read(noteDisplayModeProvider.notifier).state = mode,
+      options: [
+        PiggyOptionSheetItem(
+          value: 'category',
+          title: l10n.appearanceNoteDisplayCategory,
+          desc: l10n.appearanceNoteDisplayCategoryDesc,
+          icon: Icons.label_outline,
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildNoteDisplayOption(
-              context,
-              ref,
-              title: l10n.appearanceNoteDisplayCategory,
-              subtitle: l10n.appearanceNoteDisplayCategoryDesc,
-              value: 'category',
-              currentValue: current,
-              icon: Icons.label_outline,
-            ),
-            _buildNoteDisplayOption(
-              context,
-              ref,
-              title: l10n.appearanceNoteDisplayNote,
-              subtitle: l10n.appearanceNoteDisplayNoteDesc,
-              value: 'note',
-              currentValue: current,
-              icon: Icons.notes_outlined,
-            ),
-          ],
+        PiggyOptionSheetItem(
+          value: 'note',
+          title: l10n.appearanceNoteDisplayNote,
+          desc: l10n.appearanceNoteDisplayNoteDesc,
+          icon: Icons.notes_outlined,
         ),
-      ),
-    );
-  }
-
-  Widget _buildNoteDisplayOption(
-    BuildContext context,
-    WidgetRef ref, {
-    required String title,
-    required String subtitle,
-    required String value,
-    required String currentValue,
-    required IconData icon,
-  }) {
-    final isSelected = value == currentValue;
-    final primaryColor = ref.watch(primaryColorProvider);
-    return ListTile(
-      leading: Icon(icon,
-          color:
-              isSelected ? primaryColor : PiggyTokens.iconSecondary(context)),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: isSelected ? primaryColor : PiggyTokens.textPrimary(context),
-          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: PiggyTextTokens.label(context),
-      ),
-      trailing: isSelected ? Icon(Icons.check, color: primaryColor) : null,
-      onTap: () {
-        ref.read(noteDisplayModeProvider.notifier).state = value;
-        Navigator.pop(context);
-      },
+      ],
     );
   }
 
@@ -811,7 +593,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
 
   /// 把当前方案的文案翻译成一层摘要,显示在个性化设置卡的副标题位
   /// (默认显示当前选中的方案名)。三套方案可见后,直接对应
-  /// `_showColorSchemeDialog` 里的 3 个 `_buildColorSchemeOption`。
+  /// `_showColorSchemeSheet` 里的 3 个 options 条目。
   String _colorSchemeSubtitle(WidgetRef ref, AppLocalizations l10n) {
     switch (ref.watch(incomeExpenseColorSchemeProvider)) {
       case IncomeExpenseColorScheme.redIncome:
@@ -823,87 +605,36 @@ class AppearanceSettingsPage extends ConsumerWidget {
     }
   }
 
-  /// 显示收支颜色方案选择对话框
-  void _showColorSchemeDialog(
-      BuildContext context, WidgetRef ref, AppLocalizations l10n) {
-    final currentScheme = ref.read(incomeExpenseColorSchemeProvider);
-
-    showDialog(
+  /// 收支颜色方案选择 —— 悬浮卡片式底部抽屉单选（组件 widgets/ui/option_sheet）。
+  void _showColorSchemeSheet(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    showPiggyOptionSheet<IncomeExpenseColorScheme>(
       context: context,
-      builder: (context) => AppDialogShell(
-        title: Text(
-          l10n.appearanceColorScheme,
-          style: TextStyle(color: PiggyTokens.textPrimary(context)),
+      title: l10n.appearanceColorScheme,
+      selected: ref.read(incomeExpenseColorSchemeProvider),
+      highlightColor: ref.read(primaryColorProvider),
+      onSelected: (scheme) =>
+          ref.read(incomeExpenseColorSchemeProvider.notifier).state = scheme,
+      options: [
+        PiggyOptionSheetItem(
+          value: IncomeExpenseColorScheme.redIncome,
+          title: l10n.appearanceColorSchemeOn,
+          desc: l10n.appearanceColorSchemeOnDesc,
+          icon: Icons.trending_up,
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildColorSchemeOption(
-              context,
-              ref,
-              title: l10n.appearanceColorSchemeOn,
-              subtitle: l10n.appearanceColorSchemeOnDesc,
-              value: IncomeExpenseColorScheme.redIncome,
-              currentValue: currentScheme,
-              icon: Icons.trending_up,
-            ),
-            _buildColorSchemeOption(
-              context,
-              ref,
-              title: l10n.appearanceColorSchemeOff,
-              subtitle: l10n.appearanceColorSchemeOffDesc,
-              value: IncomeExpenseColorScheme.greenIncome,
-              currentValue: currentScheme,
-              icon: Icons.trending_down,
-            ),
-            _buildColorSchemeOption(
-              context,
-              ref,
-              title: l10n.appearanceColorSchemeBlue,
-              subtitle: l10n.appearanceColorSchemeBlueDesc,
-              value: IncomeExpenseColorScheme.blueIncome,
-              currentValue: currentScheme,
-              icon: Icons.palette_outlined,
-            ),
-          ],
+        PiggyOptionSheetItem(
+          value: IncomeExpenseColorScheme.greenIncome,
+          title: l10n.appearanceColorSchemeOff,
+          desc: l10n.appearanceColorSchemeOffDesc,
+          icon: Icons.trending_down,
         ),
-      ),
-    );
-  }
-
-  Widget _buildColorSchemeOption(
-    BuildContext context,
-    WidgetRef ref, {
-    required String title,
-    required String subtitle,
-    required IncomeExpenseColorScheme value,
-    required IncomeExpenseColorScheme currentValue,
-    required IconData icon,
-  }) {
-    final isSelected = value == currentValue;
-    final primaryColor = ref.watch(primaryColorProvider);
-
-    return ListTile(
-      leading: Icon(
-        icon,
-        color: isSelected ? primaryColor : PiggyTokens.iconSecondary(context),
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: isSelected ? primaryColor : PiggyTokens.textPrimary(context),
-          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+        PiggyOptionSheetItem(
+          value: IncomeExpenseColorScheme.blueIncome,
+          title: l10n.appearanceColorSchemeBlue,
+          desc: l10n.appearanceColorSchemeBlueDesc,
+          icon: Icons.palette_outlined,
         ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: PiggyTextTokens.label(context),
-      ),
-      trailing: isSelected ? Icon(Icons.check, color: primaryColor) : null,
-      onTap: () {
-        ref.read(incomeExpenseColorSchemeProvider.notifier).state = value;
-        Navigator.pop(context);
-      },
+      ],
     );
   }
 }
