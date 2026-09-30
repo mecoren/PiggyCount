@@ -22,6 +22,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutPrivacyPolicy => 'Privacy Policy';
 
   @override
+  String get changelogTitle => 'Changelog';
+
+  @override
+  String changelogVersionSubtitle(String date, int count) {
+    return '$date · $count changes';
+  }
+
+  @override
   String get appTitle => 'Piggy Accounting';
 
   @override

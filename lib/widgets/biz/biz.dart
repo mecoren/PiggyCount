@@ -15,3 +15,4 @@ export 'product_promo_card.dart';
 export 'settings_widgets.dart';
 export 'profile_card.dart';
 export 'database_recovery_overlay.dart';
+export 'day_of_month_picker.dart';

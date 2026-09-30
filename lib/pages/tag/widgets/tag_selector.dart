@@ -5,6 +5,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../providers/tag_providers.dart';
 import '../../../styles/tokens.dart';
 import '../../../widgets/biz/tag_chip.dart';
+import '../../../widgets/ui/ui.dart';
 import '../tag_edit_page.dart';
 
 /// 标签选择器
@@ -75,93 +76,33 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
     final visibleTagIds =
         allTagsAsync.valueOrNull?.map((tag) => tag.id).toSet();
 
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.7,
-      ),
-      decoration: BoxDecoration(
-        color: PiggyTokens.surfaceElevated(context),
-        borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(PiggyDimens.radiusXl)),
-      ),
+    return PiggyPickerSheet(
+      title: l10n.tagSelectTitle,
+      subtitle: l10n.tagSelectHint,
+      maxHeight: MediaQuery.sizeOf(context).height * 0.7,
+      // Editor 必须等当前账本标签加载完成后才能确认。正数 ID 是升级前残留
+      // 的个人标签,必须清掉;负数是 Owner mirror 的 synthetic ID,即使本轮
+      // 资源拉取失败暂不可见也要保留,避免静默删除有效关联。
+      confirmEnabled: canCreateTag || visibleTagIds != null,
+      onConfirm: () {
+        final selected = canCreateTag
+            ? _selectedIds.toList()
+            : _selectedIds
+                .where((id) => id < 0 || visibleTagIds!.contains(id))
+                .toList();
+        Navigator.of(context).pop(selected);
+      },
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          // 拖拽指示器
-          Container(
-            margin: const EdgeInsets.only(top: 12),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: PiggyTokens.divider(context),
-              borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
-            ),
-          ),
-
-          // 标题栏
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(l10n.commonCancel),
-                ),
-                Column(
-                  children: [
-                    Text(
-                      l10n.tagSelectTitle,
-                      style: PiggyTextTokens.strongTitle(context)
-                          .copyWith(fontSize: 16),
-                    ),
-                    Text(
-                      l10n.tagSelectHint,
-                      style: PiggyTextTokens.label(context).copyWith(
-                        color: PiggyTokens.textTertiary(context),
-                      ),
-                    ),
-                  ],
-                ),
-                TextButton(
-                  // Editor 必须等当前账本标签加载完成后才能确认。正数 ID 是
-                  // 升级前残留的个人标签,必须清掉;负数是 Owner mirror 的
-                  // synthetic ID,即使本轮资源拉取失败暂不可见也要保留,
-                  // 避免静默删除有效关联。
-                  onPressed: !canCreateTag && visibleTagIds == null
-                      ? null
-                      : () {
-                          final selected = canCreateTag
-                              ? _selectedIds.toList()
-                              : _selectedIds
-                                  .where((id) =>
-                                      id < 0 || visibleTagIds!.contains(id))
-                                  .toList();
-                          Navigator.of(context).pop(selected);
-                        },
-                  child: Text(l10n.commonConfirm),
-                ),
-              ],
-            ),
-          ),
-
           // 搜索框
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: TextField(
-              decoration: InputDecoration(
-                hintText: l10n.commonSearch,
+              // 选择器内的搜索行用无边框内嵌样式（表单输入框才用描边式）
+              decoration: piggyFilledDecoration(
+                context,
+                hint: l10n.commonSearch,
                 prefixIcon: const Icon(Icons.search, size: 20),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: PiggyTokens.surfaceSecondary(context),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
               ),
               onChanged: (value) => _searchText.value = value,
             ),

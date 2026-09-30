@@ -22,6 +22,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aboutPrivacyPolicy => '개인정보 처리방침';
 
   @override
+  String get changelogTitle => '업데이트 로그';
+
+  @override
+  String changelogVersionSubtitle(String date, int count) {
+    return '$date · 변경 사항 $count건';
+  }
+
+  @override
   String get appTitle => '소 돼지 가계부';
 
   @override

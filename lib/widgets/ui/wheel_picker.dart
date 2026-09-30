@@ -1,10 +1,9 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import '../../styles/tokens.dart';
 import 'haptics.dart';
-import 'wheel_picker_header.dart';
+import 'picker_sheet.dart';
 
-/// 通用滚轮选择器
+/// 通用滚轮选择器（外壳走 [PiggyPickerSheet]）
 class WheelPicker<T> extends StatefulWidget {
   final T initial;
   final List<T> items;
@@ -42,39 +41,30 @@ class _WheelPickerState<T> extends State<WheelPicker<T>> {
   Widget build(BuildContext context) {
     final items = widget.items;
 
-    return SafeArea(
-      top: false,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          WheelPickerHeader(
-            title: widget.title,
-            onConfirm: () => Navigator.pop(context, selected),
-          ),
-          SizedBox(
-            height: 156,
-            child: CupertinoPicker(
-              itemExtent: 52,
-              scrollController: _controller,
-              onSelectedItemChanged: (i) {
-                PiggyHaptics.selection();
-                setState(() {
-                  selected = items[i];
-                });
-              },
-              children: [
-                for (final item in items)
-                  Center(
-                    child: Text(
-                      widget.labelBuilder(item),
-                      style:
-                          TextStyle(fontSize: 18, color: _textPrimary(context)),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
+    return PiggyPickerSheet(
+      title: widget.title,
+      onConfirm: () => Navigator.pop(context, selected),
+      child: SizedBox(
+        height: 156,
+        child: CupertinoPicker(
+          itemExtent: 52,
+          scrollController: _controller,
+          onSelectedItemChanged: (i) {
+            PiggyHaptics.selection();
+            setState(() {
+              selected = items[i];
+            });
+          },
+          children: [
+            for (final item in items)
+              Center(
+                child: Text(
+                  widget.labelBuilder(item),
+                  style: TextStyle(fontSize: 18, color: _textPrimary(context)),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -88,14 +78,8 @@ Future<T?> showWheelPicker<T>(
   required String Function(T) labelBuilder,
   required String title,
 }) {
-  return showModalBottomSheet<T>(
-    context: context,
-    backgroundColor: PiggyTokens.surfaceElevated(context),
-    shape: const RoundedRectangleBorder(
-      borderRadius:
-          BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
-    ),
-    isScrollControlled: true,
+  return showPiggyPickerSheet<T>(
+    context,
     builder: (_) => WheelPicker<T>(
       initial: initial,
       items: items,

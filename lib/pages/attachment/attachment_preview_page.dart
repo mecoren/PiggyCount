@@ -10,6 +10,7 @@ import '../../data/db.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/attachment_service.dart';
 import '../../widgets/ui/ui.dart';
+import '../../widgets/biz/attachment_source_sheet.dart';
 
 /// 附件图片预览页面
 /// 支持左右滑动查看多张图片，支持手势缩放
@@ -284,7 +285,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
               // 添加按钮
               if (widget.allowAdd && _totalCount < 9)
                 IconButton(
-                  onPressed: () => _showAddOptions(l10n),
+                  onPressed: () => _showAddOptions(),
                   tooltip: l10n.tooltipAddAttachment,
                   icon: const Icon(Icons.add_photo_alternate_outlined,
                       color: Colors.white),
@@ -437,44 +438,26 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
     Navigator.pop(context, _pendingFiles);
   }
 
-  Future<void> _showAddOptions(AppLocalizations l10n) async {
+  Future<void> _showAddOptions() async {
     final service = ref.read(attachmentServiceProvider);
 
-    await showModalBottomSheet(
-      context: context,
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: Text(l10n.attachmentTakePhoto),
-              onTap: () async {
-                Navigator.pop(context);
-                final file = await service.takePhoto();
-                if (file != null && mounted) {
-                  await _addFile(file);
-                }
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: Text(l10n.attachmentChooseFromGallery),
-              onTap: () async {
-                Navigator.pop(context);
-                final remaining = 9 - _totalCount;
-                final files =
-                    await service.pickFromGallery(maxCount: remaining);
-                if (files.isNotEmpty && mounted) {
-                  for (final file in files) {
-                    await _addFile(file);
-                  }
-                }
-              },
-            ),
-          ],
-        ),
-      ),
+    await showAttachmentSourceSheet(
+      context,
+      onTakePhoto: () async {
+        final file = await service.takePhoto();
+        if (file != null && mounted) {
+          await _addFile(file);
+        }
+      },
+      onPickFromGallery: () async {
+        final remaining = 9 - _totalCount;
+        final files = await service.pickFromGallery(maxCount: remaining);
+        if (files.isNotEmpty && mounted) {
+          for (final file in files) {
+            await _addFile(file);
+          }
+        }
+      },
     );
   }
 

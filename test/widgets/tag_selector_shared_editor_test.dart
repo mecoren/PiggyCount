@@ -153,7 +153,8 @@ void main() {
     await tester.tap(find.text('打开标签选择器'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('确定'));
+    // 选择器抽屉统一外壳后，确认从底部文本按钮改为顶栏主色钩子图标
+    await tester.tap(find.byIcon(Icons.check));
     await tester.pumpAndSettle();
 
     expect(result, [ownerTag.id]);
@@ -171,7 +172,8 @@ void main() {
     await tester.tap(find.text('打开标签选择器'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('确定'));
+    // 同上：确认改为顶栏主色钩子图标
+    await tester.tap(find.byIcon(Icons.check));
     await tester.pumpAndSettle();
 
     expect(result, [-202], reason: '资源镜像拉取失败不能让确认动作静默删除仍有效的 Owner 标签');

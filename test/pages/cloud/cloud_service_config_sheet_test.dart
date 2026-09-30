@@ -64,9 +64,11 @@ void main() {
     // 抽屉标题 + 4 个输入框（地址/用户名/密码/远程路径）。
     expect(find.text('配置 WebDAV'), findsOneWidget);
     expect(find.byType(TextField), findsNWidgets(4));
-    // 底部 iOS 分栏：取消 + 保存（与弹窗统一）。
-    expect(find.widgetWithText(TextButton, '取消'), findsOneWidget);
-    expect(find.widgetWithText(TextButton, '保存'), findsOneWidget);
+    // 底部双等宽操作按钮：取消（描边）+ 保存（填充），与加密「设置密码」
+    // 等表单抽屉统一口径（历史断言：曾短暂改为标题栏两端图标，再统一回
+    // 底部按钮行，故这里不再断言 Tooltip / IconButton）。
+    expect(find.widgetWithText(OutlinedButton, '取消'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, '保存'), findsOneWidget);
 
     // 构建期抛出的 FlutterError（如缺 Material 祖先）会沉淀在这里。
     expect(tester.takeException(), isNull);

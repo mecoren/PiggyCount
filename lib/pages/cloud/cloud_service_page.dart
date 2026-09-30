@@ -2468,10 +2468,10 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
 
 /// 云服务配置底部抽屉外壳。
 ///
-/// 统一提供拖拽条 + 标题栏 + 可滚动表单 + 底部取消/保存操作，
-/// 供 Supabase / WebDAV / S3 三个配置表单复用，避免三份底部抽屉
-/// 骨架代码重复。键盘避让沿用项目既有口径：外层一次性垫
-/// `viewInsets.bottom`（见自定义字段编辑抽屉）。
+/// 悬浮卡片结构：居中标题 + 可滚动表单 + 底部 `PiggySheetActions`
+/// 双等宽取消/保存按钮，供 Supabase / WebDAV / S3 三个配置表单复用，
+/// 避免三份底部抽屉骨架代码重复。与加密「设置密码」抽屉
+/// （`widgets/encryption/password_setup_dialog.dart`）保持同一套外壳口径。
 class _CloudConfigSheet extends StatelessWidget {
   final String title;
   final Widget child;
@@ -2491,72 +2491,47 @@ class _CloudConfigSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      // 悬浮卡片式抽屉外壳（与选项抽屉同口径）：SafeArea 抬离手势条后，
-      // 四周留距 + Material 四角圆角；SafeArea 在外统一吃掉底部安全区，
-      // 内部操作行不再叠加 paddingOf.bottom，避免双重留白。
+    // 悬浮卡片式表单抽屉外壳，与加密「设置密码」抽屉
+    // （widgets/encryption/password_setup_dialog.dart）同一套口径：
+    // 键盘避让 → SafeArea 吃掉底部安全区 → 四周留距 → 显式 Material
+    // （transparent 路由底不提供 Material 祖先，缺了 TextField 直接红屏）
+    // → 卡片高度交给内容，超高（键盘弹出 / S3 长表单 / 大字号）时整卡滚动。
+    return KeyboardBottomInsetPadding(
+      extra: PiggyDimens.p16,
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            PiggyDimens.p16,
-            0,
-            PiggyDimens.p16,
-            PiggyDimens.p16,
-          ),
-          // 表单里有 TextField / IconButton 等 Material 系组件，必须有
-          // Material 祖先：transparent 路由背景自身不提供，这里显式包一层，
-          // 否则直接红屏“No Material widget found”。
+          padding: const EdgeInsets.symmetric(horizontal: PiggyDimens.p16),
           child: Material(
             color: PiggyTokens.surfaceElevated(context),
             borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
             clipBehavior: Clip.antiAlias,
-            // 不要给卡片设人为的高度上限（曾用「可用高度 × 0.92」）：表单只要
-            // 比该上限高一点点就会被压到上限，SingleChildScrollView 便在卡片
-            // 边缘把最后一行助手文案切成半个字。这里完全交给内容——卡片高度 =
-            // min(内容高度, 路由给的可用高度)：装得下就整卡完整显示，只有真
-            // 超出（键盘弹出 / S3 长表单 / 大字号）时才整卡滚动。
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
+              padding: const EdgeInsets.fromLTRB(
+                PiggyDimens.p20,
+                PiggyDimens.p20,
+                PiggyDimens.p20,
+                PiggyDimens.p20,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // 标题栏：取消(X)在左 + 标题居中 + 保存(钩子)在右，
-                  // 底部不再放按钮行（用户口径：操作图标化到顶栏两端）。
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          tooltip: cancelLabel,
-                          onPressed: onCancel,
-                        ),
-                        Expanded(
-                          child: Text(
-                            title,
-                            textAlign: TextAlign.center,
-                            style: PiggyTextTokens.strongTitle(context)
-                                .copyWith(fontSize: 17),
-                          ),
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.check,
-                            color: PiggyTokens.primary(context),
-                          ),
-                          tooltip: saveLabel,
-                          onPressed: onSave,
-                        ),
-                      ],
-                    ),
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: PiggyTextTokens.strongTitle(context)
+                        .copyWith(fontSize: 17),
                   ),
-                  // 表单区：内容超高（键盘弹出 / S3 长表单 / 大字号）时整卡滚动
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                    child: child,
+                  const SizedBox(height: PiggyDimens.p16),
+                  child,
+                  const SizedBox(height: PiggyDimens.p20),
+                  // 底部操作：双等宽大按钮（取消描边 + 保存填充，全站统一口径）。
+                  PiggySheetActions(
+                    cancelLabel: cancelLabel,
+                    confirmLabel: saveLabel,
+                    onCancel: onCancel,
+                    onConfirm: onSave,
                   ),
                 ],
               ),

@@ -167,7 +167,8 @@ void main() {
     await tester.drag(wheels.at(1), const Offset(0, 6000));
     await settle(tester);
 
-    await tester.tap(find.text('确定'));
+    // 滚轮抽屉统一外壳后,确定从底部文本按钮改为顶栏主色钩子图标
+    await tester.tap(find.byIcon(Icons.check));
     await settle(tester);
 
     // 改造前 firstDay 硬编码 2020-01-01,跳到 2000-01 会直接踩 assert

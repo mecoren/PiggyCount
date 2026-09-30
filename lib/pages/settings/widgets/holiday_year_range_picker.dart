@@ -1,30 +1,25 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../styles/tokens.dart';
 import '../../../widgets/ui/haptics.dart';
+import '../../../widgets/ui/picker_sheet.dart';
 
 /// 年份范围选择结果（起止年，含两端）。
 typedef HolidayYearRange = ({int startYear, int endYear});
 
 /// 「按年份范围获取」的年份范围抽屉（prd/calendar_holiday 2026-09-29 修订）。
 ///
-/// 结构对齐 [WheelDatePicker] 的双滚轮口径（ym 模式同款：头部 取消/标题/确定，
-/// 下方两个等宽 CupertinoPicker），起始 / 结束两轮联动钳制 start ≤ end。
+/// 结构对齐 [WheelDatePicker] 的双滚轮口径（ym 模式同款：外壳
+/// [PiggyPickerSheet] 顶栏 取消/标题/确定，下方两个等宽 CupertinoPicker），
+/// 起始 / 结束两轮联动钳制 start ≤ end。
 Future<HolidayYearRange?> showHolidayYearRangePicker(
   BuildContext context, {
   required int minYear,
   required int maxYear,
 }) {
-  return showModalBottomSheet<HolidayYearRange>(
-    context: context,
-    backgroundColor: PiggyTokens.surfaceElevated(context),
-    shape: const RoundedRectangleBorder(
-      borderRadius:
-          BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
-    ),
-    isScrollControlled: true,
+  return showPiggyPickerSheet<HolidayYearRange>(
+    context,
     builder: (_) => _YearRangePicker(minYear: minYear, maxYear: maxYear),
   );
 }
@@ -70,78 +65,43 @@ class _YearRangePickerState extends State<_YearRangePicker> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return SafeArea(
-      top: false,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            height: 52,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(l10n.commonCancel,
-                      // M3 titleMedium = 16/w500,与 WheelDatePicker 头部同观感,
-                      // 且不新增硬编码字号(font ratchet 门禁)
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(color: PiggyTokens.textTertiary(context))),
-                ),
-                const Spacer(),
-                Text(l10n.holidayYearRangeTitle,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(color: PiggyTokens.textPrimary(context))),
-                const Spacer(),
-                TextButton(
-                  onPressed: () => Navigator.pop(
-                      context, (startYear: _start, endYear: _end)),
-                  child: Text(l10n.commonOk,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.primary)),
-                ),
-              ],
+    return PiggyPickerSheet(
+      title: l10n.holidayYearRangeTitle,
+      onConfirm: () =>
+          Navigator.pop(context, (startYear: _start, endYear: _end)),
+      child: SizedBox(
+        height: 156 + 28,
+        child: Row(
+          children: [
+            _buildWheel(
+              context,
+              label: l10n.holidayYearRangeStart,
+              controller: _startCtrl,
+              selected: _start,
+              onChanged: (y) => setState(() {
+                _start = y;
+                // 起始越过结束 → 结束跟着推过去，恒有 start ≤ end
+                if (_end < _start) {
+                  _end = _start;
+                  _jumpToEnd();
+                }
+              }),
             ),
-          ),
-          SizedBox(
-            height: 156 + 28,
-            child: Row(
-              children: [
-                _buildWheel(
-                  context,
-                  label: l10n.holidayYearRangeStart,
-                  controller: _startCtrl,
-                  selected: _start,
-                  onChanged: (y) => setState(() {
-                    _start = y;
-                    // 起始越过结束 → 结束跟着推过去，恒有 start ≤ end
-                    if (_end < _start) {
-                      _end = _start;
-                      _jumpToEnd();
-                    }
-                  }),
-                ),
-                _buildWheel(
-                  context,
-                  label: l10n.holidayYearRangeEnd,
-                  controller: _endCtrl,
-                  selected: _end,
-                  onChanged: (y) => setState(() {
-                    _end = y;
-                    if (_start > _end) {
-                      _start = _end;
-                      _jumpToStart();
-                    }
-                  }),
-                ),
-              ],
+            _buildWheel(
+              context,
+              label: l10n.holidayYearRangeEnd,
+              controller: _endCtrl,
+              selected: _end,
+              onChanged: (y) => setState(() {
+                _end = y;
+                if (_start > _end) {
+                  _start = _end;
+                  _jumpToStart();
+                }
+              }),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

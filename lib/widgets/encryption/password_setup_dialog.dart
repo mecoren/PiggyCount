@@ -18,7 +18,7 @@ enum PasswordDialogMode {
   verify,
 }
 
-/// 加密密码输入对话框
+/// 加密密码底部抽屉
 ///
 /// 三种模式：
 /// - [PasswordDialogMode.setup]：首次开启加密，收集 (password, confirmPassword)
@@ -43,22 +43,31 @@ class PasswordSetupDialog extends ConsumerStatefulWidget {
     BuildContext context, {
     required PasswordDialogMode mode,
   }) {
-    return showDialog<PasswordDialogResult>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => PasswordSetupDialog(mode: mode),
-    );
+    return _showSheet(context, PasswordSetupDialog(mode: mode));
   }
 
   /// verify 模式：返回密码字符串或 null（取消）
   static Future<String?> showForVerify(BuildContext context) async {
-    final result = await showDialog<PasswordDialogResult>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) =>
-          const PasswordSetupDialog(mode: PasswordDialogMode.verify),
+    final result = await _showSheet(
+      context,
+      const PasswordSetupDialog(mode: PasswordDialogMode.verify),
     );
     return result?.password;
+  }
+
+  /// 悬浮卡片式底部抽屉（全站表单抽屉口径，见 AGENTS.md）：
+  /// 透明弹层底 + 四周留距 + 显式 Material 圆角卡片。
+  static Future<PasswordDialogResult?> _showSheet(
+    BuildContext context,
+    PasswordSetupDialog sheet,
+  ) {
+    return showModalBottomSheet<PasswordDialogResult>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => sheet,
+    );
   }
 
   @override
@@ -132,8 +141,7 @@ class _PasswordSetupDialogState extends ConsumerState<PasswordSetupDialog> {
     Navigator.of(context).pop(
       PasswordDialogResult(
         password: _pwdController.text,
-        oldPassword:
-            _isChangeMode ? _oldPwdController.text : null,
+        oldPassword: _isChangeMode ? _oldPwdController.text : null,
       ),
     );
   }
@@ -148,8 +156,7 @@ class _PasswordSetupDialogState extends ConsumerState<PasswordSetupDialog> {
     if (pwd.isEmpty) return 0;
     int score = 0;
     if (pwd.length >= 8) score++;
-    if (RegExp(r'[A-Z]').hasMatch(pwd) ||
-        RegExp(r'[a-z]').hasMatch(pwd)) {
+    if (RegExp(r'[A-Z]').hasMatch(pwd) || RegExp(r'[a-z]').hasMatch(pwd)) {
       score++;
     }
     if (RegExp(r'[0-9]').hasMatch(pwd)) score++;
@@ -162,105 +169,129 @@ class _PasswordSetupDialogState extends ConsumerState<PasswordSetupDialog> {
     final l10n = AppLocalizations.of(context);
     final strength = _passwordStrength(_pwdController.text);
 
-    return AlertDialog(
-      scrollable: true, // 审计 U3：小屏+键盘弹起时内容可滚动
-      title: Text(_title(l10n)),
-      content: SizedBox(
-        width: (MediaQuery.sizeOf(context).width - 32).clamp(0.0, 320.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (_isChangeMode) ...[
-              _buildPasswordField(
-                controller: _oldPwdController,
-                label: l10n.cloudSyncEncryptOldPasswordLabel,
-                show: _showOldPwd,
-                onToggle: () => setState(() => _showOldPwd = !_showOldPwd),
-                onChanged: () => setState(() => _errorMessage = null),
+    // 悬浮卡片式表单抽屉外壳：键盘避让 → SafeArea 吃掉底部安全区 →
+    // 四周留距 → 显式 Material（transparent 路由底不提供 Material 祖先，
+    // 缺了 TextField / IconButton 直接红屏）。
+    return KeyboardBottomInsetPadding(
+      extra: PiggyDimens.p16,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: PiggyDimens.p16),
+          child: Material(
+            color: PiggyTokens.surfaceElevated(context),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
+            clipBehavior: Clip.antiAlias,
+            // 卡片高度交给内容：装得下就完整显示，超出（键盘弹起 / 大字号 /
+            // 三输入框的 change 模式）时整卡滚动，不产生 overflow。
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(
+                PiggyDimens.p20,
+                PiggyDimens.p20,
+                PiggyDimens.p20,
+                PiggyDimens.p20,
               ),
-              const SizedBox(height: 12),
-            ],
-            _buildPasswordField(
-              controller: _pwdController,
-              label: _isVerifyMode
-                  ? l10n.cloudSyncEncryptPasswordLabel
-                  : (_isChangeMode
-                      ? l10n.cloudSyncEncryptNewPasswordLabel
-                      : l10n.cloudSyncEncryptPasswordLabel),
-              show: _showPwd,
-              onToggle: () => setState(() => _showPwd = !_showPwd),
-              onChanged: () => setState(() => _errorMessage = null),
-              autofocus: !_isChangeMode,
-            ),
-            if (_needsConfirm) ...[
-              if (_pwdController.text.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                _buildStrengthIndicator(strength),
-              ],
-              const SizedBox(height: 12),
-              _buildPasswordField(
-                controller: _confirmPwdController,
-                label: l10n.cloudSyncEncryptConfirmPasswordLabel,
-                show: _showConfirmPwd,
-                onToggle: () =>
-                    setState(() => _showConfirmPwd = !_showConfirmPwd),
-                onChanged: () => setState(() => _errorMessage = null),
-              ),
-            ],
-            if (_errorMessage != null) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.error.withValues(
-                        alpha: 0.08,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    _title(l10n),
+                    textAlign: TextAlign.center,
+                    style: PiggyTextTokens.strongTitle(context)
+                        .copyWith(fontSize: 17),
+                  ),
+                  const SizedBox(height: PiggyDimens.p16),
+                  if (_isChangeMode) ...[
+                    _buildPasswordField(
+                      controller: _oldPwdController,
+                      label: l10n.cloudSyncEncryptOldPasswordLabel,
+                      show: _showOldPwd,
+                      onToggle: () =>
+                          setState(() => _showOldPwd = !_showOldPwd),
+                      onChanged: () => setState(() => _errorMessage = null),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  _buildPasswordField(
+                    controller: _pwdController,
+                    label: _isVerifyMode
+                        ? l10n.cloudSyncEncryptPasswordLabel
+                        : (_isChangeMode
+                            ? l10n.cloudSyncEncryptNewPasswordLabel
+                            : l10n.cloudSyncEncryptPasswordLabel),
+                    show: _showPwd,
+                    onToggle: () => setState(() => _showPwd = !_showPwd),
+                    onChanged: () => setState(() => _errorMessage = null),
+                    autofocus: !_isChangeMode,
+                  ),
+                  if (_needsConfirm) ...[
+                    if (_pwdController.text.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      _buildStrengthIndicator(strength),
+                    ],
+                    const SizedBox(height: 12),
+                    _buildPasswordField(
+                      controller: _confirmPwdController,
+                      label: l10n.cloudSyncEncryptConfirmPasswordLabel,
+                      show: _showConfirmPwd,
+                      onToggle: () =>
+                          setState(() => _showConfirmPwd = !_showConfirmPwd),
+                      onChanged: () => setState(() => _errorMessage = null),
+                    ),
+                  ],
+                  if (_errorMessage != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 6),
+                      decoration: BoxDecoration(
+                        color:
+                            PiggyTokens.error(context).withValues(alpha: 0.08),
+                        borderRadius:
+                            BorderRadius.circular(PiggyDimens.radiusXs),
                       ),
-                  borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.error_outline,
-                        size: 16, color: Theme.of(context).colorScheme.error),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        _errorMessage!,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                          fontSize: 12,
-                        ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.error_outline,
+                              size: 16, color: PiggyTokens.error(context)),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              _errorMessage!,
+                              style: PiggyTextTokens.label(context).copyWith(
+                                color: PiggyTokens.error(context),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
-                ),
+                  if (!_isVerifyMode) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.cloudSyncEncryptMultiDeviceHint,
+                      style: PiggyTextTokens.label(context).copyWith(
+                        color: PiggyTokens.textTertiary(context),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: PiggyDimens.p20),
+                  // 底部操作：双等宽大按钮（取消描边 + 确认填充，全站统一口径）。
+                  PiggySheetActions(
+                    cancelLabel: l10n.commonCancel,
+                    confirmLabel: _submitLabel(l10n),
+                    onCancel: _onCancel,
+                    onConfirm: _canSubmit ? _onSubmit : null,
+                  ),
+                ],
               ),
-            ],
-            if (!_isVerifyMode) ...[
-              const SizedBox(height: 8),
-              Text(
-                l10n.cloudSyncEncryptMultiDeviceHint,
-                style: TextStyle(
-                  color: PiggyTokens.textTertiary(context),
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ],
+            ),
+          ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: _onCancel,
-          child: Text(l10n.commonCancel),
-        ),
-        FilledButton(
-          onPressed: _canSubmit ? _onSubmit : null,
-          child: Text(_submitLabel(l10n)),
-        ),
-      ],
     );
   }
 
@@ -305,9 +336,8 @@ class _PasswordSetupDialogState extends ConsumerState<PasswordSetupDialog> {
         context,
         label: label,
         suffixIcon: IconButton(
-          icon: Icon(show
-              ? Icons.visibility_off_outlined
-              : Icons.visibility_outlined),
+          icon: Icon(
+              show ? Icons.visibility_off_outlined : Icons.visibility_outlined),
           onPressed: onToggle,
         ),
       ),
@@ -317,11 +347,13 @@ class _PasswordSetupDialogState extends ConsumerState<PasswordSetupDialog> {
   Widget _buildStrengthIndicator(int strength) {
     if (strength == 0) return const SizedBox.shrink();
 
+    // 强度语义色取设计 token（弱=error / 中=warning / 强=success），
+    // 轨道用 divider：写死 Colors.grey.shadeXXX 在暗黑模式下会出错。
     final colors = [
-      Colors.grey,
-      Colors.red,
-      Colors.orange,
-      Colors.green,
+      PiggyTokens.divider(context),
+      PiggyTokens.error(context),
+      PiggyTokens.warning(context),
+      PiggyTokens.success(context),
     ];
 
     return Row(
@@ -333,7 +365,7 @@ class _PasswordSetupDialogState extends ConsumerState<PasswordSetupDialog> {
               height: 3,
               margin: EdgeInsets.only(right: i < 2 ? 4 : 0),
               decoration: BoxDecoration(
-                color: active ? colors[strength] : Colors.grey.shade300,
+                color: active ? colors[strength] : PiggyTokens.divider(context),
                 borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
               ),
             ),

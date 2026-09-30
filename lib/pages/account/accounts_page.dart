@@ -718,7 +718,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                 child: InkWell(
                   onTap: () => _showNetWorthConversionDetail(
                       context, ref, converted, nwByCurrency, base, useCompact),
-                  borderRadius: BorderRadius.circular(PiggyDimens.radiusXs.scaled(context, ref)),
+                  borderRadius: BorderRadius.circular(
+                      PiggyDimens.radiusXs.scaled(context, ref)),
                   child: Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: 4.0.scaled(context, ref),
@@ -908,7 +909,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
         base: base,
         useCompact: useCompact,
       ),
-      borderRadius: BorderRadius.circular(PiggyDimens.radiusXs.scaled(context, ref)),
+      borderRadius:
+          BorderRadius.circular(PiggyDimens.radiusXs.scaled(context, ref)),
       child: Padding(
         padding: EdgeInsets.symmetric(
           horizontal: 4.0.scaled(context, ref),
@@ -1190,44 +1192,19 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
         .where((a) => !a.hidden)
         .toList();
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: PiggyTokens.surfaceSheet(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
-      ),
+    showPiggyPickerSheet<void>(
+      context,
       builder: (sheetContext) {
         return Consumer(
           builder: (context, ref, _) {
             final featureAsync = ref.watch(accountFeatureEnabledProvider);
             final enabled = featureAsync.asData?.value ?? false;
 
-            return SafeArea(
+            return PiggyPickerSheet(
+              title: l10n.commonSettings,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // 拖拽条
-                  Container(
-                    margin: const EdgeInsets.only(top: 8, bottom: 4),
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: PiggyTokens.textTertiary(context)
-                          .withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
-                    ),
-                  ),
-                  // 标题
-                  Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Text(
-                      l10n.commonSettings,
-                      style: PiggyTextTokens.strongTitle(context)
-                          .copyWith(fontSize: 16),
-                    ),
-                  ),
                   // 功能开关
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -1313,7 +1290,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                       type: 'income',
                     ),
                   ],
-                  SizedBox(height: 16.0.scaled(context, ref)),
+                  SizedBox(height: 8.0.scaled(context, ref)),
                 ],
               ),
             );
@@ -1521,7 +1498,8 @@ class _ConversionDetailRow extends ConsumerWidget {
               decoration: BoxDecoration(
                 border:
                     Border.all(color: PiggyTokens.warning(context), width: 1),
-                borderRadius: BorderRadius.circular(PiggyDimens.radiusXs.scaled(context, ref)),
+                borderRadius: BorderRadius.circular(
+                    PiggyDimens.radiusXs.scaled(context, ref)),
               ),
               child: Text(
                 l10n.unconvertedBadge,
@@ -1544,7 +1522,7 @@ class _ConversionDetailRow extends ConsumerWidget {
   }
 }
 
-/// 折算详情弹窗(骨架照 _showSettingsSheet:拖拽条 + 标题 + SafeArea)。
+/// 折算详情弹窗(骨架照 _showSettingsSheet：统一选择器外壳 + 内容滚动)。
 /// 净资产明细 / 分组小计明细共用;[entries] 已是 UI 所需的每币种行数据。
 void _showConversionDetailSheet(
   BuildContext context,
@@ -1555,59 +1533,26 @@ void _showConversionDetailSheet(
   required bool useCompact,
   Widget? footer,
 }) {
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: PiggyTokens.surfaceSheet(context),
-    shape: const RoundedRectangleBorder(
-      borderRadius:
-          BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
-    ),
-    builder: (sheetContext) {
-      return SafeArea(
+  showPiggyPickerSheet<void>(
+    context,
+    builder: (sheetContext) => PiggyPickerSheet(
+      title: title,
+      maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.7,
+      child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 拖拽条
-            Container(
-              margin: const EdgeInsets.only(top: 8, bottom: 4),
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: PiggyTokens.textTertiary(sheetContext)
-                    .withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
+            for (final e in entries)
+              _ConversionDetailRow(
+                entry: e,
+                baseSymbol: baseSymbol,
+                useCompact: useCompact,
               ),
-            ),
-            // 标题
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                title,
-                style: PiggyTextTokens.strongTitle(sheetContext)
-                    .copyWith(fontSize: 16),
-              ),
-            ),
-            Flexible(
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    for (final e in entries)
-                      _ConversionDetailRow(
-                        entry: e,
-                        baseSymbol: baseSymbol,
-                        useCompact: useCompact,
-                      ),
-                    if (footer != null) footer,
-                  ],
-                ),
-              ),
-            ),
-            SizedBox(height: 8.0.scaled(sheetContext, ref)),
+            if (footer != null) footer,
           ],
         ),
-      );
-    },
+      ),
+    ),
   );
 }
 
@@ -1720,8 +1665,8 @@ class _AccountTypeGroupState extends ConsumerState<_AccountTypeGroup> {
                   height: 28.0.scaled(context, ref),
                   decoration: BoxDecoration(
                     color: typeColor.withValues(alpha: 0.12),
-                    borderRadius:
-                        BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
+                    borderRadius: BorderRadius.circular(
+                        PiggyDimens.radiusSm.scaled(context, ref)),
                   ),
                   child: Center(
                     child: AccountTypeIcon(
@@ -1749,8 +1694,8 @@ class _AccountTypeGroupState extends ConsumerState<_AccountTypeGroup> {
                   decoration: BoxDecoration(
                     color: PiggyTokens.textTertiary(context)
                         .withValues(alpha: 0.12),
-                    borderRadius:
-                        BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
+                    borderRadius: BorderRadius.circular(
+                        PiggyDimens.radiusSm.scaled(context, ref)),
                   ),
                   child: Text(
                     '${widget.accounts.length}',
@@ -2078,7 +2023,8 @@ class _AccountCard extends ConsumerWidget {
       ),
       decoration: BoxDecoration(
         color: PiggyTokens.textTertiary(context).withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(PiggyDimens.radiusXs.scaled(context, ref)),
+        borderRadius:
+            BorderRadius.circular(PiggyDimens.radiusXs.scaled(context, ref)),
       ),
       child: Text(
         l10n.accountHiddenTag,
@@ -2105,7 +2051,8 @@ class _AccountCard extends ConsumerWidget {
         ),
         decoration: BoxDecoration(
           color: primary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
+          borderRadius:
+              BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -2263,7 +2210,8 @@ class _AccountCard extends ConsumerWidget {
       children: [
         // 进度条:轨道用中性弱底(UI-13:surfaceSelected token),填充用账户类型色
         ClipRRect(
-          borderRadius: BorderRadius.circular(PiggyDimens.radiusXs.scaled(context, ref)),
+          borderRadius:
+              BorderRadius.circular(PiggyDimens.radiusXs.scaled(context, ref)),
           child: LinearProgressIndicator(
             value: usageRate,
             backgroundColor: PiggyTokens.surfaceSelected(context),

@@ -379,78 +379,42 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
 
     if (!mounted) return;
 
-    final selected = await showModalBottomSheet<Category>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: PiggyTokens.surface(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
-      ),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        minChildSize: 0.4,
-        maxChildSize: 0.9,
-        expand: false,
-        builder: (context, scrollController) => Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    AppLocalizations.of(context).budgetCategoryLabel,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    tooltip: AppLocalizations.of(context).commonClose,
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
+    final selected = await showPiggyPickerSheet<Category>(
+      context,
+      builder: (bctx) => PiggyPickerSheet(
+        title: AppLocalizations.of(context).budgetCategoryLabel,
+        // 点选即应用并收起，无待提交选中态 → 顶栏只留 X + 标题
+        maxHeight: MediaQuery.sizeOf(context).height * 0.6,
+        child: ListView.builder(
+          itemCount: expenseCategories.length,
+          itemBuilder: (context, index) {
+            final category = expenseCategories[index];
+            return ListTile(
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+                ),
+                child: Icon(
+                  CategoryService.getCategoryIcon(category.icon),
+                  color: PiggyTokens.primary(context),
+                ),
               ),
-            ),
-            const Divider(height: 1),
-            Expanded(
-              child: ListView.builder(
-                controller: scrollController,
-                itemCount: expenseCategories.length,
-                itemBuilder: (context, index) {
-                  final category = expenseCategories[index];
-                  return ListTile(
-                    leading: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withValues(alpha: 0.1),
-                        borderRadius:
-                            BorderRadius.circular(PiggyDimens.radiusSm),
-                      ),
-                      child: Icon(
-                        CategoryService.getCategoryIcon(category.icon),
-                        color: PiggyTokens.primary(context),
-                      ),
-                    ),
-                    title: Text(category.name),
-                    trailing: _selectedCategoryId == category.id
-                        ? Icon(
-                            Icons.check_circle,
-                            color: PiggyTokens.primary(context),
-                          )
-                        : null,
-                    onTap: () => Navigator.pop(context, category),
-                  );
-                },
-              ),
-            ),
-          ],
+              title: Text(category.name),
+              trailing: _selectedCategoryId == category.id
+                  ? Icon(
+                      Icons.check_circle,
+                      color: PiggyTokens.primary(context),
+                    )
+                  : null,
+              onTap: () => Navigator.pop(bctx, category),
+            );
+          },
         ),
       ),
     );

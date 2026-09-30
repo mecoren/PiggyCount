@@ -18,6 +18,7 @@ import '../../utils/ui_scale_extensions.dart';
 import '../../pages/tag/widgets/tag_selector.dart';
 import 'custom_field_input.dart';
 import 'note_picker_dialog.dart';
+import 'attachment_source_sheet.dart';
 import 'account_selector.dart';
 import '../currency/currency_picker_sheet.dart';
 import '../currency/currency_flag.dart';
@@ -206,8 +207,8 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   /// 幂等，可在每次击键后无脑调用。
   void _applyCustomFieldAmountValues() {
     for (final entry in _customFieldStrs.entries) {
-      final value = CustomFieldValueCodec.fromInput(
-          CustomFieldType.amount, entry.value);
+      final value =
+          CustomFieldValueCodec.fromInput(CustomFieldType.amount, entry.value);
       if (value == null) {
         _customValues.remove(entry.key);
       } else {
@@ -231,6 +232,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
       _customFieldStrs.putIfAbsent(syncId, () => _customFieldStr(syncId));
     });
   }
+
   // 两个运算符键各自独立的模式(false=加/减,true=乘/除),长按各自切换,互不影响。
   bool _mulKey1 = false; // 键1:+ ↔ ×
   bool _mulKey2 = false; // 键2:− ↔ ÷
@@ -1121,8 +1123,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                       ),
                       child: Text(
                         _originalDisplay.isEmpty
-                            ? AppLocalizations.of(context)
-                                .txOriginalAmountHint
+                            ? AppLocalizations.of(context).txOriginalAmountHint
                             : _originalDisplay,
                         key: const ValueKey('amountEditorOriginalValue'),
                         style: _originalDisplay.isEmpty
@@ -1366,8 +1367,9 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                               // 在保存时兜底为记账金额(产品口径:每条明细都有
                               // 原始金额)。
                               final ogText = _originalStr.trim();
-                              final originalAmount =
-                                  ogText.isEmpty ? null : double.tryParse(ogText);
+                              final originalAmount = ogText.isEmpty
+                                  ? null
+                                  : double.tryParse(ogText);
                               widget.onSubmit((
                                 amount: total.abs(), // 始终正数
                                 note: _noteCtrl.text.isEmpty
@@ -1539,8 +1541,8 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
             : null,
         // 字段名列 + 行内 8px 间距 = 原始金额位的左缩进 → 两个金额位的左边界
         // 落在同一条竖线上。
-        labelWidth: (_amountFieldLeadingInset(context, l10n) - 8)
-            .clamp(76.0, 212.0),
+        labelWidth:
+            (_amountFieldLeadingInset(context, l10n) - 8).clamp(76.0, 212.0),
       ),
     );
   }
@@ -1833,67 +1835,49 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   }
 
   Future<void> _showAddAttachmentOptions() async {
-    final l10n = AppLocalizations.of(context);
     final service = ref.read(attachmentServiceProvider);
 
-    await showModalBottomSheet(
-      context: context,
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: Text(l10n.attachmentTakePhoto),
-              onTap: () async {
-                Navigator.pop(context);
-                final file = await service.takePhoto();
-                if (file != null && mounted) {
-                  if (widget.editingTransactionId != null) {
-                    // 编辑模式：直接保存
-                    await service.saveAttachment(
-                      transactionId: widget.editingTransactionId!,
-                      sourceFile: file,
-                      index: 0,
-                    );
-                    ref.read(attachmentListRefreshProvider.notifier).state++;
-                  } else {
-                    // 新建模式：添加到待上传列表
-                    setState(() {
-                      _pendingAttachments = [..._pendingAttachments, file];
-                    });
-                  }
-                }
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: Text(l10n.attachmentChooseFromGallery),
-              onTap: () async {
-                Navigator.pop(context);
-                final files = await service.pickFromGallery(
-                    maxCount: 9 - _pendingAttachments.length);
-                if (files.isNotEmpty && mounted) {
-                  if (widget.editingTransactionId != null) {
-                    // 编辑模式：直接保存
-                    await service.saveAttachments(
-                      transactionId: widget.editingTransactionId!,
-                      sourceFiles: files,
-                      startIndex: 0,
-                    );
-                    ref.read(attachmentListRefreshProvider.notifier).state++;
-                  } else {
-                    // 新建模式：添加到待上传列表
-                    setState(() {
-                      _pendingAttachments = [..._pendingAttachments, ...files];
-                    });
-                  }
-                }
-              },
-            ),
-          ],
-        ),
-      ),
+    await showAttachmentSourceSheet(
+      context,
+      onTakePhoto: () async {
+        final file = await service.takePhoto();
+        if (file != null && mounted) {
+          if (widget.editingTransactionId != null) {
+            // 编辑模式：直接保存
+            await service.saveAttachment(
+              transactionId: widget.editingTransactionId!,
+              sourceFile: file,
+              index: 0,
+            );
+            ref.read(attachmentListRefreshProvider.notifier).state++;
+          } else {
+            // 新建模式：添加到待上传列表
+            setState(() {
+              _pendingAttachments = [..._pendingAttachments, file];
+            });
+          }
+        }
+      },
+      onPickFromGallery: () async {
+        final files = await service.pickFromGallery(
+            maxCount: 9 - _pendingAttachments.length);
+        if (files.isNotEmpty && mounted) {
+          if (widget.editingTransactionId != null) {
+            // 编辑模式：直接保存
+            await service.saveAttachments(
+              transactionId: widget.editingTransactionId!,
+              sourceFiles: files,
+              startIndex: 0,
+            );
+            ref.read(attachmentListRefreshProvider.notifier).state++;
+          } else {
+            // 新建模式：添加到待上传列表
+            setState(() {
+              _pendingAttachments = [..._pendingAttachments, ...files];
+            });
+          }
+        }
+      },
     );
   }
 }

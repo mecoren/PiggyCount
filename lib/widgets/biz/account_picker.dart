@@ -6,6 +6,7 @@ import '../../providers.dart';
 import '../../data/db.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/account_type_utils.dart';
+import '../ui/picker_sheet.dart';
 
 /// 账户选择器数据模型
 class AccountOption {
@@ -42,13 +43,8 @@ class AccountPicker extends ConsumerStatefulWidget {
     int? selectedAccountId,
     bool allowNull = true,
   }) async {
-    return showModalBottomSheet<int?>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
-      ),
-      isScrollControlled: true,
+    return showPiggyPickerSheet<int?>(
+      context,
       builder: (_) => AccountPicker(
         selectedAccountId: selectedAccountId,
         allowNull: allowNull,
@@ -119,69 +115,25 @@ class _AccountPickerState extends ConsumerState<AccountPicker> {
     return allAccountsAsync.when(
       data: (allAccounts) {
         // 只显示与当前账本同币种的可交易账户
-        final accounts = allAccounts.where((account) =>
-          account.currency == currentCurrency && isTradableType(account.type)
-        ).toList();
+        final accounts = allAccounts
+            .where((account) =>
+                account.currency == currentCurrency &&
+                isTradableType(account.type))
+            .toList();
 
         _buildOptions(accounts);
 
-        return SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 顶部操作栏
-              Container(
-                height: 52,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Colors.grey[200]!,
-                      width: 1,
-                    ),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(
-                        l10n.commonCancel,
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      l10n.accountSelectTitle,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () {
-                        final selected = _options[_selectedIndex];
-                        Navigator.pop(context, selected.id);
-                      },
-                      child: Text(
-                        l10n.commonOk,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: primaryColor,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // 滚轮选择器
-              if (_controller != null)
-                SizedBox(
+        return PiggyPickerSheet(
+          title: l10n.accountSelectTitle,
+          confirmEnabled: _options.isNotEmpty,
+          onConfirm: () {
+            if (_options.isEmpty) return;
+            Navigator.pop(context, _options[_selectedIndex].id);
+          },
+          // 滚轮选择器
+          child: _controller == null
+              ? const SizedBox.shrink()
+              : SizedBox(
                   height: 216,
                   child: CupertinoPicker(
                     itemExtent: 72,
@@ -210,8 +162,6 @@ class _AccountPickerState extends ConsumerState<AccountPicker> {
                     }).toList(),
                   ),
                 ),
-            ],
-          ),
         );
       },
       loading: () => const SizedBox(
@@ -239,13 +189,15 @@ class _AccountPickerState extends ConsumerState<AccountPicker> {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
+              // token 化：写死 Colors.grey 在暗黑模式下不可见
               color: isNone
-                  ? Colors.grey[300]
+                  ? PiggyTokens.surfaceDisabled(context)
                   : primaryColor.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             child: isNone
-                ? Icon(option.icon, color: Colors.grey[600], size: 24)
+                ? Icon(option.icon,
+                    color: PiggyTokens.iconSecondary(context), size: 24)
                 : AccountTypeIcon(
                     type: option.type,
                     size: 24,
@@ -274,7 +226,7 @@ class _AccountPickerState extends ConsumerState<AccountPicker> {
                     getAccountTypeLabel(context, option.type),
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey[600],
+                      color: PiggyTokens.textSecondary(context),
                     ),
                   ),
                 ],

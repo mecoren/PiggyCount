@@ -22,6 +22,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aboutPrivacyPolicy => '隐私政策';
 
   @override
+  String get changelogTitle => '更新日志';
+
+  @override
+  String changelogVersionSubtitle(String date, int count) {
+    return '$date · $count 项更新';
+  }
+
+  @override
   String get appTitle => '小猪记账';
 
   @override
@@ -8179,6 +8187,14 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get aboutPrivacyPolicy => '隱私政策';
+
+  @override
+  String get changelogTitle => '更新日誌';
+
+  @override
+  String changelogVersionSubtitle(String date, int count) {
+    return '$date · $count 項更新';
+  }
 
   @override
   String get appTitle => '小豬記帳';

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/db.dart';
 import '../../l10n/app_localizations.dart';
+import 'attachment_source_sheet.dart';
 import '../../providers.dart';
 import '../../services/attachment_service.dart';
 import '../../styles/tokens.dart';
@@ -214,31 +215,11 @@ class _AttachmentPickerState extends ConsumerState<AttachmentPicker> {
   }
 
   void _showAddOptions(BuildContext context, AppLocalizations l10n) {
-    showModalBottomSheet(
-      context: context,
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: Text(l10n.attachmentTakePhoto),
-              onTap: () {
-                Navigator.pop(context);
-                _takePhoto();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: Text(l10n.attachmentChooseFromGallery),
-              onTap: () {
-                Navigator.pop(context);
-                _pickFromGallery();
-              },
-            ),
-          ],
-        ),
-      ),
+    // 三处附件入口共用同一个来源抽屉（统一选择器外壳）
+    showAttachmentSourceSheet(
+      context,
+      onTakePhoto: _takePhoto,
+      onPickFromGallery: _pickFromGallery,
     );
   }
 

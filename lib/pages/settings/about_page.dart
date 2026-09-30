@@ -11,6 +11,7 @@ import '../../services/system/update_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/ui_scale_extensions.dart';
 import 'app_icon_page.dart';
+import 'changelog_page.dart';
 import 'log_center_page.dart';
 import 'privacy_policy_page.dart';
 
@@ -237,6 +238,17 @@ class _AboutPageState extends ConsumerState<AboutPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              _footerLink(
+                context,
+                label: l10n.changelogTitle,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ChangelogPage()),
+                  );
+                },
+              ),
+              SizedBox(width: 24.0.scaled(context, ref)),
               _footerLink(
                 context,
                 label: l10n.aboutPrivacyPolicy,

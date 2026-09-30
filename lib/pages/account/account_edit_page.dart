@@ -5,6 +5,8 @@ import '../../providers.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/ui/wait_sliding_segmented_control.dart';
 import '../../widgets/biz/section_card.dart';
+import '../../widgets/biz/day_of_month_picker.dart';
+import '../../widgets/currency/currency_picker_sheet.dart';
 import '../../data/db.dart' as db;
 import '../../l10n/app_localizations.dart';
 import '../../services/billing/post_processor.dart';
@@ -1072,88 +1074,13 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
     }
   }
 
-  /// 显示币种选择器（复用账本页面的实现）
-  Future<String?> _showCurrencyPicker(BuildContext context,
-      {String? initial}) async {
-    return showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: PiggyTokens.surfaceElevated(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
-      ),
-      builder: (bctx) {
-        String query = '';
-        String? selected = initial;
-        return StatefulBuilder(builder: (sctx, setState) {
-          final filtered = getCurrencies(context).where((c) {
-            final q = query.trim();
-            if (q.isEmpty) return true;
-            final uq = q.toUpperCase();
-            return c.code.contains(uq) || c.name.contains(q);
-          }).toList();
-
-          return Padding(
-            // viewInsets 读取隔离到 KeyboardBottomInsetPadding 叶子组件：
-            // 键盘动画期间仅该组件逐帧重建，不再重建整个 sheet 内容
-            padding: const EdgeInsets.only(left: 16, right: 16, top: 12),
-            child: KeyboardBottomInsetPadding(
-              extra: 16,
-              child: SizedBox(
-                height: 420,
-                child: Column(
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 8),
-                      decoration: BoxDecoration(
-                        // U3：token 化（black12 在暗黑模式下不可见）
-                        color: PiggyTokens.divider(bctx),
-                        borderRadius:
-                            BorderRadius.circular(PiggyDimens.radiusXs),
-                      ),
-                    ),
-                    Text(
-                      AppLocalizations.of(bctx).ledgersSelectCurrency,
-                      style: Theme.of(bctx).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.search),
-                        hintText:
-                            AppLocalizations.of(bctx).ledgersSearchCurrency,
-                      ),
-                      onChanged: (v) => setState(() => query = v),
-                    ),
-                    const SizedBox(height: 8),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: filtered.length,
-                        itemBuilder: (_, i) {
-                          final c = filtered[i];
-                          final sel = c.code == selected;
-                          return ListTile(
-                            title: Text('${c.name} (${c.code})'),
-                            trailing: sel
-                                // U3：token 化（black 勾在暗黑模式下不可见）
-                                ? Icon(Icons.check,
-                                    color: Theme.of(bctx).colorScheme.primary)
-                                : null,
-                            onTap: () => Navigator.pop(bctx, c.code),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        });
-      },
+  /// 显示币种选择器（统一走共用币种抽屉：国旗 + 选中高亮 + 搜索）
+  Future<String?> _showCurrencyPicker(BuildContext context, {String? initial}) {
+    return showCurrencyPickerSheet(
+      context,
+      selected: initial ?? '',
+      primaryColor: ref.read(primaryColorProvider),
+      title: AppLocalizations.of(context).ledgersSelectCurrency,
     );
   }
 }
@@ -1210,76 +1137,13 @@ class _DayPickerTile extends ConsumerWidget {
     FocusManager.instance.primaryFocus?.unfocus();
     await Future.delayed(const Duration(milliseconds: 100));
     if (!context.mounted) return;
-    await showModalBottomSheet(
-      context: context,
-      backgroundColor: PiggyTokens.surfaceElevated(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
-      ),
-      builder: (ctx) {
-        return SizedBox(
-          height: 320,
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  label,
-                  style: Theme.of(ctx).textTheme.titleMedium,
-                ),
-              ),
-              Expanded(
-                child: GridView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 7,
-                    mainAxisSpacing: 8,
-                    crossAxisSpacing: 8,
-                  ),
-                  itemCount: 28,
-                  itemBuilder: (_, index) {
-                    final day = index + 1;
-                    final isSelected = day == value;
-                    return GestureDetector(
-                      onTap: () {
-                        onChanged(day);
-                        Navigator.pop(ctx);
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: isSelected ? primaryColor : Colors.transparent,
-                          borderRadius:
-                              BorderRadius.circular(PiggyDimens.radiusSm),
-                          border: Border.all(
-                            color: isSelected
-                                ? primaryColor
-                                : PiggyTokens.border(ctx),
-                          ),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          '$day',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                            color: isSelected
-                                ? Colors.white
-                                : PiggyTokens.textPrimary(ctx),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+    // 复用共用 1~N 日网格抽屉（点选即应用并收起）
+    final picked = await showDayOfMonthPickerSheet(
+      context,
+      title: label,
+      selected: value,
     );
+    if (picked != null) onChanged(picked);
   }
 }
 

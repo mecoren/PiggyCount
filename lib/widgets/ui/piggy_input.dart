@@ -14,6 +14,7 @@ InputDecoration piggyFilledDecoration(
   String? helper,
   String? errorText,
   Widget? suffixIcon,
+  Widget? prefixIcon,
 }) {
   OutlineInputBorder b(Color c, double w) => OutlineInputBorder(
         borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
@@ -27,6 +28,7 @@ InputDecoration piggyFilledDecoration(
     helperText: helper,
     errorText: errorText,
     suffixIcon: suffixIcon,
+    prefixIcon: prefixIcon,
     filled: true,
     fillColor: PiggyTokens.surfaceInput(context),
     isDense: true,

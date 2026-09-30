@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../styles/tokens.dart';
 import '../../utils/ui_scale_extensions.dart';
 import '../../providers/security_providers.dart';
-import '../../providers/theme_providers.dart';
 import '../../services/security/app_lock_service.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/biz.dart';
@@ -97,53 +96,21 @@ class _AppLockSettingsPageState extends ConsumerState<AppLockSettingsPage> {
   void _showTimeoutPicker() {
     final l10n = AppLocalizations.of(context);
     final currentTimeout = ref.read(appLockTimeoutProvider);
-    final primaryColor = ref.read(primaryColorProvider);
 
-    final options = [
-      (0, l10n.appLockTimeoutImmediate),
-      (60, l10n.appLockTimeout1Min),
-      (300, l10n.appLockTimeout5Min),
-      (900, l10n.appLockTimeout15Min),
-    ];
-
-    showModalBottomSheet(
+    // 少选项单选统一走共用选项抽屉（选中即应用并收起）
+    showPiggyOptionSheet<int>(
       context: context,
-      backgroundColor: PiggyTokens.surfaceElevated(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  l10n.appLockTimeout,
-                  style:
-                      PiggyTextTokens.strongTitle(ctx).copyWith(fontSize: 16),
-                ),
-              ),
-              ...options.map((opt) {
-                final isSelected = opt.$1 == currentTimeout;
-                return ListTile(
-                  title: Text(opt.$2),
-                  trailing: isSelected
-                      ? Icon(Icons.check, color: primaryColor)
-                      : null,
-                  onTap: () {
-                    ref.read(appLockTimeoutProvider.notifier).state = opt.$1;
-                    AppLockService.setTimeoutSeconds(opt.$1);
-                    Navigator.pop(ctx);
-                  },
-                );
-              }),
-              const SizedBox(height: 8),
-            ],
-          ),
-        );
+      title: l10n.appLockTimeout,
+      selected: currentTimeout,
+      options: [
+        PiggyOptionSheetItem(value: 0, title: l10n.appLockTimeoutImmediate),
+        PiggyOptionSheetItem(value: 60, title: l10n.appLockTimeout1Min),
+        PiggyOptionSheetItem(value: 300, title: l10n.appLockTimeout5Min),
+        PiggyOptionSheetItem(value: 900, title: l10n.appLockTimeout15Min),
+      ],
+      onSelected: (seconds) {
+        ref.read(appLockTimeoutProvider.notifier).state = seconds;
+        AppLockService.setTimeoutSeconds(seconds);
       },
     );
   }

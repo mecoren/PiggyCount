@@ -1,9 +1,8 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../../styles/tokens.dart';
 import 'haptics.dart';
-import 'wheel_picker_header.dart';
+import 'picker_sheet.dart';
 
 enum WheelDatePickerMode { y, ym, ymd }
 
@@ -31,14 +30,8 @@ Future<DateTime?> showWheelDatePicker(
   DateTime? minDate,
   DateTime? maxDate,
 }) {
-  return showModalBottomSheet<DateTime>(
-    context: context,
-    backgroundColor: PiggyTokens.surfaceElevated(context),
-    shape: const RoundedRectangleBorder(
-      borderRadius:
-          BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
-    ),
-    isScrollControlled: true,
+  return showPiggyPickerSheet<DateTime>(
+    context,
     builder: (_) => WheelDatePicker(
       initial: initial,
       mode: mode,
@@ -108,148 +101,136 @@ class _WheelDatePickerState extends State<WheelDatePicker> {
     _dayCtrl ??=
         FixedExtentScrollController(initialItem: dayIndex < 0 ? 0 : dayIndex);
 
-    return SafeArea(
-      top: false,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          WheelPickerHeader(
-            title: AppLocalizations.of(context).homeSelectDate,
-            onConfirm: () {
-              DateTime result;
-              switch (mode) {
-                case WheelDatePickerMode.y:
-                  result = _clamp(DateTime(year, 1, 1));
-                  break;
-                case WheelDatePickerMode.ym:
-                  result = _clamp(DateTime(year, month, 1));
-                  break;
-                case WheelDatePickerMode.ymd:
-                  result = _clamp(DateTime(year, month, day));
-                  break;
-              }
-              Navigator.pop(context, result);
-            },
-          ),
-          SizedBox(
-            height: 156, // 3个可见项（52*3）更舒适
-            child: Row(
-              children: [
-                Expanded(
-                  child: CupertinoPicker(
-                    itemExtent: 52,
-                    scrollController: _yearCtrl,
-                    onSelectedItemChanged: (i) => setState(() {
-                      PiggyHaptics.selection();
-                      year = years[i];
-                      // 调整月份与日期以符合边界
-                      int sm = 1, em = 12;
-                      if (year == min.year) sm = min.month;
-                      if (year == max.year) em = max.month;
-                      if (month < sm) month = sm;
-                      if (month > em) month = em;
-                      final dim = _daysInMonth(year, month).last;
-                      int sd = 1, ed = dim;
-                      if (year == min.year && month == min.month) sd = min.day;
-                      if (year == max.year && month == max.month) ed = max.day;
-                      if (day < sd) day = sd;
-                      if (day > ed) day = ed;
-                      // 同步月份/日期滚动位置
-                      final monthsNow = [for (int m = sm; m <= em; m++) m];
-                      final mi = monthsNow.indexOf(month);
-                      if (_monthCtrl == null) {
-                        _monthCtrl =
-                            FixedExtentScrollController(initialItem: mi);
-                      } else {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          _monthCtrl!.jumpToItem(mi);
-                        });
-                      }
-                      final daysNow = [for (int d = sd; d <= ed; d++) d];
-                      final di = daysNow.indexOf(day);
-                      if (_dayCtrl == null) {
-                        _dayCtrl = FixedExtentScrollController(
-                            initialItem: di < 0 ? 0 : di);
-                      } else {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          _dayCtrl!.jumpToItem(di < 0 ? 0 : di);
-                        });
-                      }
-                    }),
-                    children: [
-                      for (final y in years)
-                        Center(
-                            child: Text('$y',
-                                style: TextStyle(
-                                    fontSize: 18,
-                                    color: _textPrimary(context)))),
-                    ],
-                  ),
-                ),
-                if (mode != WheelDatePickerMode.y)
-                  Expanded(
-                    child: CupertinoPicker(
-                      itemExtent: 52,
-                      scrollController: _monthCtrl,
-                      onSelectedItemChanged: (i) => setState(() {
-                        PiggyHaptics.selection();
-                        month = months[i];
-                        // 调整日期以符合边界
-                        final dim = _daysInMonth(year, month).last;
-                        int sd = 1, ed = dim;
-                        if (year == min.year && month == min.month) {
-                          sd = min.day;
-                        }
-                        if (year == max.year && month == max.month) {
-                          ed = max.day;
-                        }
-                        if (day < sd) day = sd;
-                        if (day > ed) day = ed;
-                        // 同步日期滚动位置
-                        final daysNow = [for (int d = sd; d <= ed; d++) d];
-                        final di = daysNow.indexOf(day);
-                        if (_dayCtrl == null) {
-                          _dayCtrl = FixedExtentScrollController(
-                              initialItem: di < 0 ? 0 : di);
-                        } else {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            _dayCtrl!.jumpToItem(di < 0 ? 0 : di);
-                          });
-                        }
-                      }),
-                      children: [
-                        for (final m in months)
-                          Center(
-                              child: Text('$m',
-                                  style: TextStyle(
-                                      fontSize: 18,
-                                      color: _textPrimary(context)))),
-                      ],
-                    ),
-                  ),
-                if (mode == WheelDatePickerMode.ymd)
-                  Expanded(
-                    child: CupertinoPicker(
-                      itemExtent: 52,
-                      scrollController: _dayCtrl,
-                      onSelectedItemChanged: (i) => setState(() {
-                        PiggyHaptics.selection();
-                        day = days[i];
-                      }),
-                      children: [
-                        for (final d in days)
-                          Center(
-                              child: Text('$d',
-                                  style: TextStyle(
-                                      fontSize: 18,
-                                      color: _textPrimary(context)))),
-                      ],
-                    ),
-                  ),
-              ],
+    return PiggyPickerSheet(
+      title: AppLocalizations.of(context).homeSelectDate,
+      onConfirm: () {
+        DateTime result;
+        switch (mode) {
+          case WheelDatePickerMode.y:
+            result = _clamp(DateTime(year, 1, 1));
+            break;
+          case WheelDatePickerMode.ym:
+            result = _clamp(DateTime(year, month, 1));
+            break;
+          case WheelDatePickerMode.ymd:
+            result = _clamp(DateTime(year, month, day));
+            break;
+        }
+        Navigator.pop(context, result);
+      },
+      child: SizedBox(
+        height: 156, // 3个可见项（52*3）更舒适
+        child: Row(
+          children: [
+            Expanded(
+              child: CupertinoPicker(
+                itemExtent: 52,
+                scrollController: _yearCtrl,
+                onSelectedItemChanged: (i) => setState(() {
+                  PiggyHaptics.selection();
+                  year = years[i];
+                  // 调整月份与日期以符合边界
+                  int sm = 1, em = 12;
+                  if (year == min.year) sm = min.month;
+                  if (year == max.year) em = max.month;
+                  if (month < sm) month = sm;
+                  if (month > em) month = em;
+                  final dim = _daysInMonth(year, month).last;
+                  int sd = 1, ed = dim;
+                  if (year == min.year && month == min.month) sd = min.day;
+                  if (year == max.year && month == max.month) ed = max.day;
+                  if (day < sd) day = sd;
+                  if (day > ed) day = ed;
+                  // 同步月份/日期滚动位置
+                  final monthsNow = [for (int m = sm; m <= em; m++) m];
+                  final mi = monthsNow.indexOf(month);
+                  if (_monthCtrl == null) {
+                    _monthCtrl = FixedExtentScrollController(initialItem: mi);
+                  } else {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _monthCtrl!.jumpToItem(mi);
+                    });
+                  }
+                  final daysNow = [for (int d = sd; d <= ed; d++) d];
+                  final di = daysNow.indexOf(day);
+                  if (_dayCtrl == null) {
+                    _dayCtrl = FixedExtentScrollController(
+                        initialItem: di < 0 ? 0 : di);
+                  } else {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _dayCtrl!.jumpToItem(di < 0 ? 0 : di);
+                    });
+                  }
+                }),
+                children: [
+                  for (final y in years)
+                    Center(
+                        child: Text('$y',
+                            style: TextStyle(
+                                fontSize: 18, color: _textPrimary(context)))),
+                ],
+              ),
             ),
-          )
-        ],
+            if (mode != WheelDatePickerMode.y)
+              Expanded(
+                child: CupertinoPicker(
+                  itemExtent: 52,
+                  scrollController: _monthCtrl,
+                  onSelectedItemChanged: (i) => setState(() {
+                    PiggyHaptics.selection();
+                    month = months[i];
+                    // 调整日期以符合边界
+                    final dim = _daysInMonth(year, month).last;
+                    int sd = 1, ed = dim;
+                    if (year == min.year && month == min.month) {
+                      sd = min.day;
+                    }
+                    if (year == max.year && month == max.month) {
+                      ed = max.day;
+                    }
+                    if (day < sd) day = sd;
+                    if (day > ed) day = ed;
+                    // 同步日期滚动位置
+                    final daysNow = [for (int d = sd; d <= ed; d++) d];
+                    final di = daysNow.indexOf(day);
+                    if (_dayCtrl == null) {
+                      _dayCtrl = FixedExtentScrollController(
+                          initialItem: di < 0 ? 0 : di);
+                    } else {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _dayCtrl!.jumpToItem(di < 0 ? 0 : di);
+                      });
+                    }
+                  }),
+                  children: [
+                    for (final m in months)
+                      Center(
+                          child: Text('$m',
+                              style: TextStyle(
+                                  fontSize: 18, color: _textPrimary(context)))),
+                  ],
+                ),
+              ),
+            if (mode == WheelDatePickerMode.ymd)
+              Expanded(
+                child: CupertinoPicker(
+                  itemExtent: 52,
+                  scrollController: _dayCtrl,
+                  onSelectedItemChanged: (i) => setState(() {
+                    PiggyHaptics.selection();
+                    day = days[i];
+                  }),
+                  children: [
+                    for (final d in days)
+                      Center(
+                          child: Text('$d',
+                              style: TextStyle(
+                                  fontSize: 18, color: _textPrimary(context)))),
+                  ],
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -263,14 +244,8 @@ Future<DateTime?> showWheelDateTimePicker(
   DateTime? maxDate,
 }) async {
   // 第一步：选择日期
-  final dateResult = await showModalBottomSheet<DateTime>(
-    context: context,
-    backgroundColor: PiggyTokens.surfaceElevated(context),
-    shape: const RoundedRectangleBorder(
-      borderRadius:
-          BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
-    ),
-    isScrollControlled: true,
+  final dateResult = await showPiggyPickerSheet<DateTime>(
+    context,
     builder: (_) => _DateStepPicker(
       initial: initial,
       maxDate: maxDate,
@@ -281,14 +256,8 @@ Future<DateTime?> showWheelDateTimePicker(
 
   // 第二步：选择时间（时分秒）
   final timeResult =
-      await showModalBottomSheet<({int hour, int minute, int second})>(
-    context: context,
-    backgroundColor: PiggyTokens.surfaceElevated(context),
-    shape: const RoundedRectangleBorder(
-      borderRadius:
-          BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
-    ),
-    isScrollControlled: true,
+      await showPiggyPickerSheet<({int hour, int minute, int second})>(
+    context,
     builder: (_) => _TimeStepPicker(
       initialHour: initial.hour,
       initialMinute: initial.minute,
@@ -379,128 +348,119 @@ class _DateStepPickerState extends State<_DateStepPicker> {
     _dayCtrl ??=
         FixedExtentScrollController(initialItem: dayIndex < 0 ? 0 : dayIndex);
 
-    return SafeArea(
-      top: false,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          WheelPickerHeader(
-            title: l10n.homeSelectDate,
-            confirmLabel: l10n.commonNext,
-            onConfirm: () {
-              final result = _clamp(DateTime(year, month, day));
-              Navigator.pop(context, result);
-            },
-          ),
-          SizedBox(
-            height: 156,
-            child: Row(
-              children: [
-                Expanded(
-                  child: CupertinoPicker(
-                    itemExtent: 52,
-                    scrollController: _yearCtrl,
-                    onSelectedItemChanged: (i) => setState(() {
-                      PiggyHaptics.selection();
-                      year = years[i];
-                      int sm = 1, em = 12;
-                      if (year == min.year) sm = min.month;
-                      if (year == max.year) em = max.month;
-                      if (month < sm) month = sm;
-                      if (month > em) month = em;
-                      final dim = _daysInMonth(year, month).last;
-                      int sd = 1, ed = dim;
-                      if (year == min.year && month == min.month) sd = min.day;
-                      if (year == max.year && month == max.month) ed = max.day;
-                      if (day < sd) day = sd;
-                      if (day > ed) day = ed;
-                      final monthsNow = [for (int m = sm; m <= em; m++) m];
-                      final mi = monthsNow.indexOf(month);
-                      if (_monthCtrl == null) {
-                        _monthCtrl =
-                            FixedExtentScrollController(initialItem: mi);
-                      } else {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          _monthCtrl!.jumpToItem(mi);
-                        });
-                      }
-                      final daysNow = [for (int d = sd; d <= ed; d++) d];
-                      final di = daysNow.indexOf(day);
-                      if (_dayCtrl == null) {
-                        _dayCtrl = FixedExtentScrollController(
-                            initialItem: di < 0 ? 0 : di);
-                      } else {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          _dayCtrl!.jumpToItem(di < 0 ? 0 : di);
-                        });
-                      }
-                    }),
-                    children: [
-                      for (final y in years)
-                        Center(
-                            child: Text('$y',
-                                style: TextStyle(
-                                    fontSize: 18,
-                                    color: PiggyTokens.textPrimary(context)))),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: CupertinoPicker(
-                    itemExtent: 52,
-                    scrollController: _monthCtrl,
-                    onSelectedItemChanged: (i) => setState(() {
-                      PiggyHaptics.selection();
-                      month = months[i];
-                      final dim = _daysInMonth(year, month).last;
-                      int sd = 1, ed = dim;
-                      if (year == min.year && month == min.month) sd = min.day;
-                      if (year == max.year && month == max.month) ed = max.day;
-                      if (day < sd) day = sd;
-                      if (day > ed) day = ed;
-                      final daysNow = [for (int d = sd; d <= ed; d++) d];
-                      final di = daysNow.indexOf(day);
-                      if (_dayCtrl == null) {
-                        _dayCtrl = FixedExtentScrollController(
-                            initialItem: di < 0 ? 0 : di);
-                      } else {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          _dayCtrl!.jumpToItem(di < 0 ? 0 : di);
-                        });
-                      }
-                    }),
-                    children: [
-                      for (final m in months)
-                        Center(
-                            child: Text('$m',
-                                style: TextStyle(
-                                    fontSize: 18,
-                                    color: PiggyTokens.textPrimary(context)))),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: CupertinoPicker(
-                    itemExtent: 52,
-                    scrollController: _dayCtrl,
-                    onSelectedItemChanged: (i) => setState(() {
-                      PiggyHaptics.selection();
-                      day = days[i];
-                    }),
-                    children: [
-                      for (final d in days)
-                        Center(
-                            child: Text('$d',
-                                style: TextStyle(
-                                    fontSize: 18,
-                                    color: PiggyTokens.textPrimary(context)))),
-                    ],
-                  ),
-                ),
-              ],
+    return PiggyPickerSheet(
+      title: l10n.homeSelectDate,
+      confirmLabel: l10n.commonNext,
+      onConfirm: () {
+        final result = _clamp(DateTime(year, month, day));
+        Navigator.pop(context, result);
+      },
+      child: SizedBox(
+        height: 156,
+        child: Row(
+          children: [
+            Expanded(
+              child: CupertinoPicker(
+                itemExtent: 52,
+                scrollController: _yearCtrl,
+                onSelectedItemChanged: (i) => setState(() {
+                  PiggyHaptics.selection();
+                  year = years[i];
+                  int sm = 1, em = 12;
+                  if (year == min.year) sm = min.month;
+                  if (year == max.year) em = max.month;
+                  if (month < sm) month = sm;
+                  if (month > em) month = em;
+                  final dim = _daysInMonth(year, month).last;
+                  int sd = 1, ed = dim;
+                  if (year == min.year && month == min.month) sd = min.day;
+                  if (year == max.year && month == max.month) ed = max.day;
+                  if (day < sd) day = sd;
+                  if (day > ed) day = ed;
+                  final monthsNow = [for (int m = sm; m <= em; m++) m];
+                  final mi = monthsNow.indexOf(month);
+                  if (_monthCtrl == null) {
+                    _monthCtrl = FixedExtentScrollController(initialItem: mi);
+                  } else {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _monthCtrl!.jumpToItem(mi);
+                    });
+                  }
+                  final daysNow = [for (int d = sd; d <= ed; d++) d];
+                  final di = daysNow.indexOf(day);
+                  if (_dayCtrl == null) {
+                    _dayCtrl = FixedExtentScrollController(
+                        initialItem: di < 0 ? 0 : di);
+                  } else {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _dayCtrl!.jumpToItem(di < 0 ? 0 : di);
+                    });
+                  }
+                }),
+                children: [
+                  for (final y in years)
+                    Center(
+                        child: Text('$y',
+                            style: TextStyle(
+                                fontSize: 18,
+                                color: PiggyTokens.textPrimary(context)))),
+                ],
+              ),
             ),
-          )
-        ],
+            Expanded(
+              child: CupertinoPicker(
+                itemExtent: 52,
+                scrollController: _monthCtrl,
+                onSelectedItemChanged: (i) => setState(() {
+                  PiggyHaptics.selection();
+                  month = months[i];
+                  final dim = _daysInMonth(year, month).last;
+                  int sd = 1, ed = dim;
+                  if (year == min.year && month == min.month) sd = min.day;
+                  if (year == max.year && month == max.month) ed = max.day;
+                  if (day < sd) day = sd;
+                  if (day > ed) day = ed;
+                  final daysNow = [for (int d = sd; d <= ed; d++) d];
+                  final di = daysNow.indexOf(day);
+                  if (_dayCtrl == null) {
+                    _dayCtrl = FixedExtentScrollController(
+                        initialItem: di < 0 ? 0 : di);
+                  } else {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _dayCtrl!.jumpToItem(di < 0 ? 0 : di);
+                    });
+                  }
+                }),
+                children: [
+                  for (final m in months)
+                    Center(
+                        child: Text('$m',
+                            style: TextStyle(
+                                fontSize: 18,
+                                color: PiggyTokens.textPrimary(context)))),
+                ],
+              ),
+            ),
+            Expanded(
+              child: CupertinoPicker(
+                itemExtent: 52,
+                scrollController: _dayCtrl,
+                onSelectedItemChanged: (i) => setState(() {
+                  PiggyHaptics.selection();
+                  day = days[i];
+                }),
+                children: [
+                  for (final d in days)
+                    Center(
+                        child: Text('$d',
+                            style: TextStyle(
+                                fontSize: 18,
+                                color: PiggyTokens.textPrimary(context)))),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -553,36 +513,28 @@ class _TimeStepPickerState extends State<_TimeStepPicker> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return SafeArea(
-      top: false,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          WheelPickerHeader(
-            title: l10n.commonSelectTime,
-            onConfirm: () => Navigator.pop(
-                context, (hour: hour, minute: minute, second: second)),
-          ),
-          // 与 WheelDatePicker 同一口径：itemExtent 52、可见 3 项、字号 18
-          SizedBox(
-            height: 156,
-            child: Row(
-              children: [
-                Expanded(
-                  child: _timeColumn(_hourCtrl, 24, (i) => hour = i),
-                ),
-                _colon(context),
-                Expanded(
-                  child: _timeColumn(_minuteCtrl, 60, (i) => minute = i),
-                ),
-                _colon(context),
-                Expanded(
-                  child: _timeColumn(_secondCtrl, 60, (i) => second = i),
-                ),
-              ],
+    return PiggyPickerSheet(
+      title: l10n.commonSelectTime,
+      onConfirm: () =>
+          Navigator.pop(context, (hour: hour, minute: minute, second: second)),
+      // 与 WheelDatePicker 同一口径：itemExtent 52、可见 3 项、字号 18
+      child: SizedBox(
+        height: 156,
+        child: Row(
+          children: [
+            Expanded(
+              child: _timeColumn(_hourCtrl, 24, (i) => hour = i),
             ),
-          ),
-        ],
+            _colon(context),
+            Expanded(
+              child: _timeColumn(_minuteCtrl, 60, (i) => minute = i),
+            ),
+            _colon(context),
+            Expanded(
+              child: _timeColumn(_secondCtrl, 60, (i) => second = i),
+            ),
+          ],
+        ),
       ),
     );
   }

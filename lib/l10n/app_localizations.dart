@@ -125,6 +125,18 @@ abstract class AppLocalizations {
   /// **'Privacy Policy'**
   String get aboutPrivacyPolicy;
 
+  /// No description provided for @changelogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Changelog'**
+  String get changelogTitle;
+
+  /// No description provided for @changelogVersionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{date} · {count} changes'**
+  String changelogVersionSubtitle(String date, int count);
+
   /// The application title
   ///
   /// In en, this message translates to:
