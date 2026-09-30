@@ -1,4 +1,12 @@
-name: Analyze
+name: CI
+
+# 本 workflow 是项目的 CI 质量门。工作流名原为 `Analyze`，但自 2026-09-27 起
+# 它同时承担 flutter test（同步契约回归门禁），名称已与职责不符，故更名 `CI`。
+# 包含两个**并行** job：
+#   * analyze —— flutter analyze --fatal-infos（0 issue 门禁）
+#   * test    —— flutter test（全量单测 + 同步契约结构性测试）
+# 注：更名只动 workflow 的 name，job 名（即分支保护里的 required status check
+# 上下文）保持不变。
 
 # 静态分析质量门 —— 2026-09-18 起基线为 **0 条**（0 error / 0 warning / 0 info）。
 #
@@ -17,11 +25,16 @@ name: Analyze
 # 会让 runner 上的 `flutter pub get` 直接解析失败。
 # 升版本请只改 pubspec.yaml 一处。
 
+# 触发契约（与 release.yml 的 `v*` tag 发版配套）：
+#   * push wait      —— 日常开发主线，每次推送自动跑门禁。
+#   * PR → wait      —— 合并前的守门。
+# main 分支不再触发：它只作为 PR 目标/归档线存在，避免同一份改动被跑两遍。
+# 放开其它分支触发前请确认 runner 额度与「wait 即唯一集成分支」的约定。
 on:
   push:
-    branches-ignore:
-      - "gh-pages"
+    branches: [wait]
   pull_request:
+    branches: [wait]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -33,7 +46,11 @@ permissions:
 jobs:
   analyze:
     name: flutter analyze (0-issue gate)
-    runs-on: ubuntu-latest
+    # 钉 24.04 而非 ubuntu-latest：ubuntu-latest 将于 2026-10-19 迁到 Ubuntu 26，
+    # 被动跟随会让 Flutter/分析器行为漂移（orbit 同样采用钉版本策略）。
+    runs-on: ubuntu-24.04
+    # 未设超时时 Actions 默认给 360 分钟，挂死会白烧额度。
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -53,7 +70,8 @@ jobs:
 
   test:
     name: flutter test (同步一致性守门测试)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4

@@ -155,14 +155,17 @@ python scripts/gen_ios_icons.py
 
 | 触发方式 | 条件 | 结果 |
 | --- | --- | --- |
-| 打 tag（推荐） | `git tag vX.Y.Z && git push origin vX.Y.Z`，**tag 必须建在 `wait` 的提交上** | GitHub Release（非 prerelease）+ Play `internal` 轨道 |
-| 手动 `workflow_dispatch` | **仅允许 `wait` 分支**；可指定 tag 名，留空则用 `manual-<short_sha>` | 默认 prerelease；`create_release` 未显式传 `true` 时**不建 Release**，只出 Actions Artifacts |
+| 打 tag（推荐） | `git tag vX.Y.Z && git push origin vX.Y.Z`（必须是 `v*` tag，且 tag 提交在 `wait` 上） | GitHub Release（非 prerelease）+ Play `internal` 轨道 |
+| 手动 `workflow_dispatch` | **仅允许 `wait` 分支**；可指定 tag 名，留空则用 `manual-<short_sha>` | `dry_run` 默认 `true`：只构建并出 Actions Artifacts，**不建 Release、不上传 Play / TestFlight**；显式传 `dry_run=false` 才真正发布 |
 
-`check-branch` job 是**全流程守门**（tag / 手动都跑，`android` / `ios` / `release` 均要求它 `success`）：
+`audit` job 是**全流程守门**（tag / 手动都跑，`android` / `ios` / `release` 均 `needs: [audit]`）：
 
 1. 手动触发校验分支必须是 `wait`；
 2. tag 触发用 `git merge-base --is-ancestor` 校验 tag 提交在 `origin/wait` 上——**任意分支打 tag 不再能发版**（否则会直推 Play / TestFlight）；
-3. 版本单调性：取历史 `v*` tag 中版本最高者，新 tag 版本低于它即拒绝，防止误发低版本。
+3. 版本单调性：取历史 `v*` tag 中版本最高者，新 tag 版本低于它即拒绝，防止误发低版本；
+4. 单点计算发布意图 `publish`（push tag 恒 `true`；手动触发看 `dry_run`），下游 Play / TestFlight / Release 上传环节统一引用它。
+
+**tag 与 `pubspec.yaml#version` 刻意解耦**：两者不做一致性硬校验（pubspec 只代表开发主线版本），发版版本只由 tag 经 `--build-name` / `--build-number` 注入。
 
 ### 版本注入（不写回 pubspec.yaml）
 
@@ -202,7 +205,7 @@ secret 缺失时对应步骤**跳过而非失败**（`exit 0`），构建产物�
 1. `wait` 分支上 `dart format .`（无修改）→ `flutter analyze --fatal-infos`（0 issue）→ `flutter test` 全绿。
 2. 如需调整版本真值，只改 `pubspec.yaml#version` 一处。
 3. 打 tag：`git tag vX.Y.Z && git push origin vX.Y.Z`（必须在 `wait` 上，且版本高于历史 `v*` tag）。
-4. 等 `check-branch` → `android` / `ios` → `release` 全绿；**动过 iOS 签名必须实跑回归**。
+4. 等 `audit` → `android` / `ios` → `release` 全绿；**动过 iOS 签名必须实跑回归**。
 5. Release 页核对资产：4 个 APK（含 `-arm64-v8a`）+ AAB + iOS 四件套齐全。
 
 ### 已知坑
@@ -210,6 +213,9 @@ secret 缺失时对应步骤**跳过而非失败**（`exit 0`），构建产物�
 - **iOS widget 签名靠 bundle id 精确匹配**：`Configure Xcode project for signing` 用 perl 按 `PRODUCT_BUNDLE_IDENTIFIER` 匹配后插入 `PROVISIONING_PROFILE_SPECIFIER`。工程里的值是 `com.wait.piggycount.PiggyCountWidgetExtension`，脚本一度写成 `com.tntlikely.piggycount...`，**匹配不上 → Widget 扩展签名配置根本没插入**。改 iOS bundle id 时，必须同步改 release.yml 的正则与 `ios/ExportOptions.plist` 的 `provisioningProfiles` 键。
 - **`docoments/13-build-release.md` 的产物表**随本流程一起维护，改命名规则时同步更新，否则又成新的漂移源。
 - **其余历史文档里的旧版本号不要照抄**：`docoments/01`、`03`、`16`、`17`、`prd/*`、`docs/optimization-plan-*` 仍写着 `Flutter 3.27.3` / `version: 0.0.1` 等旧值（成于 2026-07，属历史留存，**刻意不改**）。版本相关一律以 `pubspec.yaml` + 本文件 + 代码为准；`test/`、`docs/synctest/` 下的测试报告记录的是**当时实测版本**，更不得回改。
+- **发版不可并发取消**：`release.yml` 的 `concurrency.cancel-in-progress: false`（与 `analyze.yml` 刻意相反）——半套资产比排队更糟，**不要手动取消进行中的 release run**。
+- **相关 secrets**：`ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`、`APPLE_CERTIFICATE_P12` / `APPLE_CERTIFICATE_PASSWORD` / `APPLE_PROVISIONING_PROFILE` / `APPLE_PROVISIONING_PROFILE_WIDGET` / `APPLE_TEAM_ID`、`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`、`APPLE_ID` / `APPLE_APP_SPECIFIC_PASSWORD`；缺失时对应环节降级为未签名 / 跳过上传，仅告警不失败。
+- **tag 打错需修正**：先删远端再重打（`git push origin :refs/tags/vX.Y.Z`），不要强推覆盖已有 tag。
 
 ## 数据模型与迁移
 

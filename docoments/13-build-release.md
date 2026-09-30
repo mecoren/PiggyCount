@@ -59,7 +59,7 @@ flowchart TB
     end
 
     subgraph 校验阶段
-        R1 --> C1[check-branch<br/>必须是 main 分支]
+        R1 --> C1[audit<br/>tag 归属 wait + 版本单调性 + publish 意图]
     end
 
     subgraph Android 构建
@@ -333,18 +333,22 @@ PRODUCT_BUNDLE_IDENTIFIER=com.wait.piggycount
 
 **实现位置**：[.github/workflows/release.yml](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
 
-**触发**：tag push (`*`) 或 workflow_dispatch（手动，可选 tag_name、release_name、prerelease、create_release 输入）
-**并发**：`cancel-in-progress: true`
-**权限**：`contents: write`
+**触发**：tag push (`v*`) 或 workflow_dispatch（手动，可选 tag_name、release_name、prerelease、dry_run 输入）
+**并发**：`cancel-in-progress: false`（发版宁可排队也不可腰斩）
+**权限**：默认 `contents: read`，仅 `release` job 级提权 `contents: write`
 **Flutter 版本**：以 `pubspec.yaml#environment.flutter` 为唯一来源（当前 `3.44.3`，CI 经 `flutter-version-file` 读取）
 
-#### 5.1.1 Job 1：check-branch
+#### 5.1.1 Job 1：audit（发版前置门禁）
 
-`check-branch` 是**全流程守门**（tag / 手动都跑，下游 job 均要求它 `success`）：
+`audit` 是**全流程守门**（tag / 手动都跑，`android` / `ios` / `release` 均 `needs: [audit]`）：
 
 1. 手动触发：校验当前分支必须是 `wait`；
 2. tag 触发：用 `git merge-base --is-ancestor` 校验 tag 所在提交在 `origin/wait` 上（任意分支打 tag 不再能发版）；
-3. 版本单调性：新 tag 版本低于历史 `v*` tag 中最高者时拒绝发版。
+3. 版本单调性：新 tag 版本低于历史 `v*` tag 中最高者时拒绝发版；
+4. 签名物料就位情况（仅告警，缺 keystore / 证书不拦截）；
+5. 单点计算发布意图 `publish`（push tag 恒 `true`；手动触发看 `dry_run`），下游 Play / TestFlight / Release 统一引用。
+
+注：tag 与 `pubspec.yaml#version` 刻意解耦，不校验两者相等——发版版本只由 tag 经 `--build-name` / `--build-number` 注入。
 
 #### 5.1.2 Job 2：android
 
@@ -386,8 +390,8 @@ PRODUCT_BUNDLE_IDENTIFIER=com.wait.piggycount
 
 #### 5.1.4 Job 4：release
 
-1. 依赖 check-branch、android、ios 都成功
-2. 准备 release metadata：tag 触发 prerelease=false、create_release=true；手动触发 prerelease 默认 true、create_release 默认 false
+1. 依赖 audit、android、ios 都成功，且 `needs.audit.outputs.publish == 'true'`（dry-run 整 job 跳过）
+2. 准备 release metadata：tag 触发 prerelease=false；手动触发 prerelease 取输入（默认 false）
 3. 下载 android、ios artifacts
 4. **生成 release notes**（第 843-874 行）：`git log --no-merges`，逐 commit 通过 `gh api` 反查 GitHub 登录名生成 `[@login](url)`，写入 `RELEASE_NOTES.md`
 5. **softprops/action-gh-release@v2**（第 876-889 行）：上传 `dist/android/**/*.apk`、`dist/android/**/*.aab`、`dist/ios/*`
@@ -683,8 +687,8 @@ printf '%s\n' \
 **实现位置**：[release.yml 第 876-889 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
 
 ```yaml
+# 整个 release job 由 job 级 if: needs.audit.outputs.publish == 'true' 把守
 - name: Create Release
-  if: ${{ steps.meta.outputs.create_release == 'true' }}
   uses: softprops/action-gh-release@v2
   with:
     tag_name: ${{ steps.meta.outputs.tag_name }}

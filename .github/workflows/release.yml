@@ -1,9 +1,18 @@
 name: Release
 
+# 触发契约（与 analyze.yml 的 wait 分支 CI 配套）：
+#   1. push tag `v*`     —— 正式发版：推送即构建并发布 Release。
+#                           发版版本以 tag 为准（--build-name / --build-number 注入），
+#                           与 pubspec.yaml#version 刻意解耦（后者只代表开发主线版本）。
+#                           audit job 校验 tag 提交在 origin/wait 上、且版本单调递增。
+#   2. workflow_dispatch —— 预演：dry_run 默认 true，只构建并上传 Actions Artifacts，
+#                           不建 Release、不上传 Google Play / TestFlight；且只能从 wait 分支发起。
+# 注：非 v* tag 不再触发本流水线，避免误发版。
+
 on:
   push:
     tags:
-      - "*"
+      - "v*"
   workflow_dispatch:
     inputs:
       tag_name:
@@ -15,21 +24,24 @@ on:
         required: false
         default: ""
       prerelease:
-        description: "是否标记为 Pre-release（手动运行默认 true）"
+        description: "是否标记为 Pre-release（手动运行默认 false）"
         required: false
         default: "false"
-      create_release:
-        description: "是否创建 GitHub Release（手动运行可设为 false，仅构建与产出 Actions Artifacts）"
+      dry_run:
+        description: "只构建不发布（默认开启；确认流水线无问题后手动关闭才真正发版）"
         required: false
-        default: "true"
+        default: true
+        type: boolean
 
-# 允许取消正在运行的workflow
+# 发版不可并发取消：被腰斩的 Release 比排队更糟（半套资产 + 缺说明），
+# 故 cancel-in-progress 恒 false（与 analyze.yml 的取消策略刻意相反）。
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
+# 最小权限：默认只读，只有需要写 Release 的 release job 在 job 级提权。
 permissions:
-  contents: write
+  contents: read
 
 # Flutter 版本由 pubspec.yaml 的 environment.flutter 单一提供（当前 3.44.3），
 # 通过 flutter-version-file 读取。不要再在这里写 FLUTTER_VERSION：
@@ -38,64 +50,108 @@ permissions:
 # 升级 Flutter 请只改 pubspec.yaml 一处。
 
 jobs:
-  # 触发来源守门（tag 与手动都跑）：
-  #   1) 手动触发只允许 wait 分支；
-  #   2) tag 触发要求 tag 所在提交在 wait 分支上——否则任意分支打 tag 都会直推
-  #      Google Play / TestFlight，分支保护形同虚设；
-  #   3) 版本单调性：不允许发出低于历史 v* tag 的版本。
-  check-branch:
-    name: Guard trigger source
-    runs-on: ubuntu-latest
+  # ────────────────────────────────────────────────────────────────────────
+  # 发版前置门禁：来源分支 / tag 归属 / 版本单调性 / 发布意图。
+  # 全部在廉价 job 里快速失败，避免 Android + iOS 构建十几分钟后才发现
+  # 从非 wait 分支误发版、或发出低于历史 tag 的版本。
+  # 发布意图（publish）在此单点计算，下游三个 job 统一引用，避免各算各的。
+  # 注：tag 与 pubspec.yaml#version 刻意解耦，此处不校验两者相等。
+  # ────────────────────────────────────────────────────────────────────────
+  audit:
+    name: 发版前置门禁
+    # 钉 24.04 而非 ubuntu-latest：后者将于 2026-10-19 迁到 Ubuntu 26，被动跟随
+    # 会让构建环境漂移（与 analyze.yml 保持一致）。
+    runs-on: ubuntu-24.04
+    outputs:
+      publish: ${{ steps.intent.outputs.publish }}
     steps:
+      # fetch-depth 0 + fetch-tags：下面的 tag 归属 / 版本单调性校验需要完整历史与 tag。
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Guard trigger source
+      # 1) 手动触发只允许 wait 分支；
+      # 2) tag 触发要求 tag 提交在 origin/wait 上——否则任意分支打 tag 都会直推
+      #    Google Play / TestFlight，分支保护形同虚设。
+      - name: 触发来源守门
         shell: bash
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            if [ "${{ github.ref_name }}" != "wait" ]; then
-              echo "❌ 手动发版仅允许从 wait 分支触发，当前：${{ github.ref_name }}"
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            if [ "${GITHUB_REF_NAME}" != "wait" ]; then
+              echo "::error::手动发版仅允许从 wait 分支触发，当前：${GITHUB_REF_NAME}"
               exit 1
             fi
-            TAG="${{ github.event.inputs.tag_name }}"
             echo "✅ 手动触发分支校验通过：wait"
           else
-            TAG="${{ github.ref_name }}"
             git fetch --no-tags origin +refs/heads/wait:refs/remotes/origin/wait
             if ! git merge-base --is-ancestor "${GITHUB_SHA}" refs/remotes/origin/wait; then
-              echo "❌ tag ${TAG} 所在提交 ${GITHUB_SHA} 不在 wait 分支上，拒绝发版"
+              echo "::error::tag ${GITHUB_REF_NAME} 所在提交 ${GITHUB_SHA} 不在 wait 分支上，拒绝发版"
               exit 1
             fi
             echo "✅ tag 归属校验通过：${GITHUB_SHA} 在 origin/wait 上"
           fi
 
-          # 版本单调性：不允许发出版本号低于最近 v* tag 的版本
-          if [ -n "${TAG:-}" ] && [[ "${TAG}" == v* ]]; then
-            NEW_VER="${TAG#v}"
-            LATEST=$(git tag --list 'v*' --sort=-version:refname | grep -v "^${TAG}$" | head -n1 || true)
-            if [ -n "${LATEST}" ]; then
-              LATEST_VER="${LATEST#v}"
-              LOWEST=$(printf '%s\n%s\n' "${LATEST_VER}" "${NEW_VER}" | sort -V | head -n1)
-              if [ "${LOWEST}" = "${NEW_VER}" ] && [ "${NEW_VER}" != "${LATEST_VER}" ]; then
-                echo "❌ 新版本 ${NEW_VER} 低于最近 tag ${LATEST}，拒绝发版"
-                exit 1
-              fi
-              echo "✅ 版本单调性校验通过：${NEW_VER} >= ${LATEST_VER}"
-            else
-              echo "ℹ️ 未找到历史 v* tag，跳过版本单调性校验"
-            fi
+      # 版本单调性：不允许发出低于历史 v* tag 的版本，防止误发低版本。
+      # 不校验 tag 与 pubspec.yaml#version 相等——两者刻意解耦（pubspec 只代表
+      # 开发主线版本，发版版本由 tag 经 --build-name / --build-number 注入）。
+      - name: 版本单调性校验
+        shell: bash
+        run: |
+          set -euo pipefail
+          # 手动触发取输入的 tag_name（预演可能是任意名字），tag 推送取 tag 名。
+          TAG="${{ github.event.inputs.tag_name || github.ref_name }}"
+          if [[ "${TAG}" != v* ]]; then
+            echo "ℹ️ ${TAG} 不是 v* 版本 tag，跳过版本单调性校验"
+            exit 0
           fi
+          NEW_VER="${TAG#v}"
+          LATEST=$(git tag --list 'v*' --sort=-version:refname | grep -v "^${TAG}$" | head -n1 || true)
+          if [ -z "${LATEST}" ]; then
+            echo "ℹ️ 未找到历史 v* tag，跳过版本单调性校验"
+            exit 0
+          fi
+          LATEST_VER="${LATEST#v}"
+          LOWEST=$(printf '%s\n%s\n' "${LATEST_VER}" "${NEW_VER}" | sort -V | head -n1)
+          if [ "${LOWEST}" = "${NEW_VER}" ] && [ "${NEW_VER}" != "${LATEST_VER}" ]; then
+            echo "::error::新版本 ${NEW_VER} 低于最近 tag ${LATEST}，拒绝发版"
+            exit 1
+          fi
+          echo "✅ 版本单调性校验通过：${NEW_VER} >= ${LATEST_VER}"
+
+      # 签名物料缺失只告警不拦截：缺 Android keystore 会回落到 debug 签名、
+      # 缺 iOS 证书只产出未签名产物，都不阻断流水线（与 orbit 的 updater 签名
+      # 密钥必填不同——本项目没有「缺了必失败」的签名依赖）。
+      - name: 签名物料就位情况（仅告警）
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+        run: |
+          [ -n "${ANDROID_KEYSTORE_BASE64:-}" ] \
+            || echo "::warning::未配置 ANDROID_KEYSTORE_BASE64，Android 将回落 debug 签名（可安装、不可上架）"
+          [ -n "${APPLE_CERTIFICATE_P12:-}" ] \
+            || echo "::warning::未配置 APPLE_CERTIFICATE_P12，iOS 只产出未签名产物，不会上传 TestFlight"
+
+      # 发布意图：push tag 恒为真；手动触发默认 dry_run=true 视为假（只构建不发布）。
+      - name: 计算发布意图
+        id: intent
+        run: |
+          if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
+            PUBLISH="true"
+          elif [[ "${{ inputs.dry_run }}" == "false" ]]; then
+            PUBLISH="true"
+          else
+            PUBLISH="false"
+          fi
+          echo "publish=${PUBLISH}" >> $GITHUB_OUTPUT
+          echo "发布意图：publish=${PUBLISH}（event=${GITHUB_EVENT_NAME}）"
 
   android:
     name: Android (APK + AAB)
-    runs-on: ubuntu-latest
-    needs: [check-branch]
-    if: always() && needs.check-branch.result == 'success'
+    runs-on: ubuntu-24.04
+    needs: [audit]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -131,8 +187,16 @@ jobs:
           distribution: "zulu"
           java-version: "17"
 
+      # 该 action 的 packages 入参默认值是 "tools platform-tools"，会执行
+      # `sdkmanager --install tools platform-tools`。但 Google 已从 SDK 仓库移除
+      # 旧的 legacy `tools` 包（由 cmdline-tools 取代），于是 sdkmanager 报
+      # "Warning: Failed to find package 'tools'" 并以 exit 1 结束，整条发版流水线
+      # 在第一步就失败（2026-09-29 发版 v0.1.0 实测踩到）。故显式覆盖 packages，
+      # 只装真正需要的 platform-tools——不要删掉这个覆盖，否则会再次踩坑。
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools"
 
       - name: Install Android build-tools and platforms
         run: |
@@ -294,7 +358,7 @@ jobs:
             build/app/outputs/bundle/prodRelease/piggycount-*.aab
 
       - name: Upload AAB to Google Play Console
-        if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || github.event_name == 'workflow_dispatch'
+        if: needs.audit.outputs.publish == 'true'
         env:
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
@@ -396,8 +460,7 @@ jobs:
   ios:
     name: iOS (app.zip + unsigned .ipa)
     runs-on: macos-latest
-    needs: [check-branch]
-    if: always() && needs.check-branch.result == 'success'
+    needs: [audit]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -756,7 +819,7 @@ jobs:
           fi
 
       - name: Upload to TestFlight
-        if: env.IOS_SIGNING_ENABLED == 'true'
+        if: env.IOS_SIGNING_ENABLED == 'true' && needs.audit.outputs.publish == 'true'
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
@@ -797,12 +860,13 @@ jobs:
 
   release:
     name: Create GitHub Release
-    runs-on: ubuntu-latest
-    needs:
-      - check-branch
-      - android
-      - ios
-    if: always() && needs.check-branch.result == 'success' && needs.android.result == 'success' && needs.ios.result == 'success'
+    runs-on: ubuntu-24.04
+    needs: [audit, android, ios]
+    # dry-run（publish=false）整 job 跳过：产物已留在 Actions Artifacts，无需建 Release；
+    # 上游任一失败时 needs.*.result 非 success，同样跳过（不再需要 always() 兜底）。
+    if: needs.audit.outputs.publish == 'true' && needs.android.result == 'success' && needs.ios.result == 'success'
+    permissions:
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -834,19 +898,12 @@ jobs:
               TAG_NAME="manual-${SHORT_SHA}"
             fi
           fi
-          # 手动触发默认 prerelease=true；tag 触发默认 false
+          # 手动触发默认 prerelease=false；tag 触发恒 false（发的是正式版）
           INPUT_PRERELEASE="${{ github.event.inputs.prerelease || '' }}"
           if [[ "$IS_TAG" == "true" ]]; then
             PRERELEASE="false"
           else
-            PRERELEASE=${INPUT_PRERELEASE:-true}
-          fi
-          # 是否创建 Release
-          INPUT_CREATE="${{ github.event.inputs.create_release || '' }}"
-          if [[ "$IS_TAG" == "true" ]]; then
-            CREATE_RELEASE="true"
-          else
-            CREATE_RELEASE=${INPUT_CREATE:-false}
+            PRERELEASE=${INPUT_PRERELEASE:-false}
           fi
           RELEASE_NAME_INPUT="${{ github.event.inputs.release_name || '' }}"
           if [[ -n "$RELEASE_NAME_INPUT" ]]; then
@@ -857,7 +914,6 @@ jobs:
           echo "is_tag=$IS_TAG" >> $GITHUB_OUTPUT
           echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
           echo "prerelease=$PRERELEASE" >> $GITHUB_OUTPUT
-          echo "create_release=$CREATE_RELEASE" >> $GITHUB_OUTPUT
           echo "release_name=$RELEASE_NAME" >> $GITHUB_OUTPUT
       - name: Download Android artifacts
         uses: actions/download-artifact@v4
@@ -909,8 +965,8 @@ jobs:
           EOF
           echo "notes_file=RELEASE_NOTES.md" >> $GITHUB_OUTPUT
 
+      # job 级 if 已保证只在 publish=true 时进入本 job，此处无需再判发布意图
       - name: Create Release
-        if: ${{ steps.meta.outputs.create_release == 'true' }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.meta.outputs.tag_name }}
@@ -925,7 +981,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Send Telegram notification
-        if: ${{ steps.meta.outputs.create_release == 'true' }}
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
