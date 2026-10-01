@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -39,6 +40,10 @@ typedef AmountEditorResult = ({
   int? accountId,
   List<int> tagIds,
   List<File> pendingAttachments,
+  // P1-E 迭代：分类改由表单**内部**持有（含「未选」态），提交时随结果一起回传
+  // —— 用户在表单里换过分类后，调用方必须用这里的值写库，不能再闭包捕获进入
+  // 表单时的旧分类。`null` = 用户未选分类（允许的无分类记账）。
+  Category? category,
   bool excludeFromStats,
   bool excludeFromBudget,
   // v30 交易级多币种:交易币种(有账户=账户币种;无账户=手选,默认本位币)
@@ -60,18 +65,26 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
   final String? categorySyncId; // 共享账本分类同步ID，用于筛选历史备注
   /// 分类位（P1-E，design.md 决策 4）：金额表达式行最左侧展示的分类。
   ///
-  /// 为 null 时不渲染该位 —— 转账金额表单、以及未传分类的调用方，布局与
-  /// 改动前逐字一致。**刻意不做「只有快捷模式才显示分类」的分叉**：同一个
-  /// 表单不该有两套信息层级（编辑交易、小组件带分类的既有调用方一并传它）。
+  /// 只作为**初值**：用户可以通过分类位把它换成别的（见 [onPickCategory]），
+  /// 之后由本组件内部持有（`_category`），并通过 [AmountEditorResult.category]
+  /// 回传给调用方。
+  ///
+  /// 为 null 且不可换（[onPickCategory] 也为 null）时不渲染该位 —— 转账金额
+  /// 表单、以及未传分类的调用方，布局与改动前逐字一致。
   final Category? displayCategory;
 
-  /// 点分类位的回调，入参为**当前已输金额**。null = 只读不可换
-  /// （下层没有分类网格可退时，如全屏编辑场景）。
+  /// 点分类位的回调：本表单**不关闭**，由调用方弹出「分类选择子界面」，
+  /// 返回用户新选的分类（`null` = 取消 / 未换）。
   ///
-  /// 动作由调用方决定：快捷记账的调用方拿到金额后 pop 掉本表单回到分类网格，
-  /// 用户点新分类时再以该金额作 initialAmount 重弹 —— 即决策 5 的换分类回路，
-  /// 「换分类保留已输金额」由此免费获得，无需把金额提升成额外状态源。
-  final ValueChanged<double>? onPickCategory;
+  /// 入参：[current] 当前分类（可能为 null = 还没选）；[currentAmount] 当前
+  /// 已输记账金额 —— 沿用「分类网格」旧流程的调用方（快捷开关关闭时）拿它做
+  /// [AmountEditorSheet.initialAmount]，实现「换分类保留已输金额」。
+  ///
+  /// 该回调非 null 时分类位**始终渲染**（未选时显示「选择分类」占位）：既然
+  /// 可以换分类，就必须给「还没选」留一个可点入口，否则新流程（金额表单为
+  /// 主、分类为子界面）里用户会卡在无分类却无处可点。
+  final Future<Category?> Function(Category? current, double currentAmount)?
+      onPickCategory;
   final DateTime initialDate;
   final double? initialAmount;
   final String? initialNote;
@@ -131,6 +144,21 @@ enum _AmountEditTarget { amount, original, customField }
 class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   late String _amountStr;
   late DateTime _date;
+
+  /// P1-E 迭代：当前分类（初值 = [AmountEditorSheet.displayCategory]）。
+  ///
+  /// 用户点分类位后由 [AmountEditorSheet.onPickCategory] 返回新值，本表单
+  /// **不关闭**、不重建 —— 分类是记账表单的子界面，不是它的上一层。
+  Category? _category;
+
+  /// 用户是否已经**亲手**选过分类 / 账户。
+  ///
+  /// 新流程下调用方的 `displayCategory` / `initialAccountId` 可能是异步解析
+  /// 出来的（记忆分类、默认账户），晚于首帧到达。这两个标志保证：用户已经做
+  /// 过的选择不会被迟到的初值覆盖（「预填错分类的危害大于不预填」的同一条
+  /// 原则，只是方向反过来）。
+  bool _categoryPicked = false;
+  bool _accountPicked = false;
   int? _selectedAccountId;
   final TextEditingController _noteCtrl = TextEditingController();
   // v45 原始金额(选填)的输入串。空串 = 未填写(提交 null)。
@@ -274,6 +302,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   @override
   void initState() {
     super.initState();
+    _category = widget.displayCategory;
     _date = widget.initialDate;
     _excludeFromStats = widget.initialExcludeFromStats;
     _excludeFromBudget = widget.initialExcludeFromBudget;
@@ -321,6 +350,26 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   }
 
   @override
+  void didUpdateWidget(covariant AmountEditorSheet oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 新流程（金额表单优先）的调用方可能在首帧之后才解析出记忆分类 / 默认
+    // 账户，此处把它们补进已渲染的表单 —— 用户没动过才补，动过就以用户的
+    // 选择为准。
+    if (!_categoryPicked &&
+        widget.displayCategory != oldWidget.displayCategory) {
+      _category = widget.displayCategory;
+      unawaited(_loadRecentNotes());
+    }
+    if (!_accountPicked &&
+        widget.initialAccountId != oldWidget.initialAccountId) {
+      _selectedAccountId = widget.initialAccountId;
+      if (widget.initialAccountId != null) {
+        _loadAccountCurrency(widget.initialAccountId!);
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _noteFocusNode.dispose();
     _noteFieldHasFocus.dispose();
@@ -334,8 +383,11 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
       ledgerId: widget.ledgerId,
       scope: ref.read(noteHistoryScopeProvider),
       sort: ref.read(noteHistorySortProvider),
-      categoryId: widget.categoryId,
-      categorySyncId: widget.categorySyncId,
+      // 换分类后（本表单不关闭）备注历史要跟着新分类重筛，所以读内部状态；
+      // widget.categoryId / categorySyncId 只作为没有 displayCategory 的
+      // 调用方（如转账）的显式覆盖。
+      categoryId: _category?.id ?? widget.categoryId,
+      categorySyncId: _category?.syncId ?? widget.categorySyncId,
       limit: ref.read(noteHistoryLimitProvider),
     );
     if (!mounted) return; // 弹窗已关时不再 setState(widget 测试暴露的既有问题)
@@ -465,11 +517,29 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   /// 列表按新币种过滤)。转账不显示:转账币种恒=账户币种,选了也会被忽略。
   /// 当前「有效金额」：未进运算模式时即输入值；运算模式未按等号时是累加结果。
   /// 与 `doneKey` 里判「完成」可用性的算法一致（那处是 build 内的局部闭包，
-  /// 不便共用，此处按同一口径重算一次）。用于换分类时回传金额。
+  /// 不便共用，此处按同一口径重算一次）。用于把已输金额交给换分类回调
+  /// （分类网格旧流程用它回填，避免用户重输）。
   double _effectiveAmount() {
     final cur = double.tryParse(_amountStr) ?? 0.0;
     // 钉在记账金额口径：换分类回传的是记账金额，与当前焦点无关。
     return _amountOp == null ? cur : _compute(_amountAcc, _amountOp!, cur);
+  }
+
+  /// 点分类位：交给调用方弹「分类选择子界面」，拿到结果就地更新分类位。
+  ///
+  /// **本表单不 pop、不重建** —— 这正是「分类只是记账界面的子界面」的落点：
+  /// 换分类时金额、备注、标签、账户、币种全部原地保留，不再把记账界面收起来。
+  Future<void> _pickCategory() async {
+    final picker = widget.onPickCategory;
+    if (picker == null) return;
+    final picked = await picker(_category, _effectiveAmount());
+    if (!mounted || picked == null) return;
+    setState(() {
+      _category = picked;
+      _categoryPicked = true;
+    });
+    // 换分类 → 备注历史按新分类重筛（历史备注本身是按分类归集的）。
+    unawaited(_loadRecentNotes());
   }
 
   /// 分类位（P1-E，design.md 决策 4）：放在金额表达式行**最左**。
@@ -487,11 +557,16 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   ///   1. 宽 ≥ 72：图标 + 分类名（96px 上限，超出省略）+ 下拉箭头；
   ///   2. 宽 ≥ 53：去掉名字，图标 + 箭头（仍看得出「可点换分类」）；
   ///   3. 再窄：只剩图标（最小占用 24px）—— 图标是硬约束（分类必须可辨认）。
+  ///
+  /// 可换（[AmountEditorSheet.onPickCategory] 非 null）而尚未选分类时渲染
+  /// 「选择分类」占位 —— 新流程（金额表单为主、分类为子界面）必须给未选态
+  /// 留一个可点入口；两者都为空才真正零占位（转账等既有调用方逐字不变）。
   Widget _buildCategoryChip(BuildContext context) {
-    final category = widget.displayCategory;
-    if (category == null) return const SizedBox.shrink();
-    final text = Theme.of(context).textTheme;
+    final category = _category;
     final canPick = widget.onPickCategory != null;
+    if (category == null && !canPick) return const SizedBox.shrink();
+    final text = Theme.of(context).textTheme;
+    final placeholder = AppLocalizations.of(context).budgetCategoryLabel;
     return LayoutBuilder(
       builder: (context, constraints) {
         // 53 = 图标 16 + 间距 5 + 箭头 16 + 左右内边距 16，是「带箭头」的
@@ -502,8 +577,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
         final pad = showArrow || showName ? 8.0 : 4.0;
         return InkWell(
           borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
-          onTap:
-              canPick ? () => widget.onPickCategory!(_effectiveAmount()) : null,
+          onTap: canPick ? _pickCategory : null,
           child: Container(
             padding: EdgeInsets.symmetric(horizontal: pad, vertical: 5),
             decoration: BoxDecoration(
@@ -513,11 +587,15 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CategoryIconWidget(
-                  category: category,
-                  size: 16,
-                  color: PiggyTokens.iconSecondary(context),
-                ),
+                if (category != null)
+                  CategoryIconWidget(
+                    category: category,
+                    size: 16,
+                    color: PiggyTokens.iconSecondary(context),
+                  )
+                else
+                  Icon(Icons.category_outlined,
+                      size: 16, color: PiggyTokens.iconSecondary(context)),
                 if (showName) ...[
                   const SizedBox(width: 5),
                   // 自定义分类名可能很长。三重收窄：Flexible（可被压缩）+
@@ -527,7 +605,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 96),
                       child: Text(
-                        category.name,
+                        category?.name ?? placeholder,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         softWrap: false,
@@ -1220,6 +1298,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                           setState(() {
                             _selectedAccountId = accountId;
                             _selectedAccountCurrency = null; // 异步刷新
+                            _accountPicked = true;
                           });
                           if (accountId != null) {
                             _loadAccountCurrency(accountId);
@@ -1380,6 +1459,8 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                                 accountId: _selectedAccountId,
                                 tagIds: _selectedTagIds,
                                 pendingAttachments: _pendingAttachments,
+                                // 表单内部持有的分类（用户可能刚在本表单里换过）。
+                                category: _category,
                                 excludeFromStats: _excludeFromStats,
                                 excludeFromBudget: _excludeFromBudget,
                                 currencyCode: txCurrency,

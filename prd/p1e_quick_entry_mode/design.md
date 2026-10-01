@@ -222,3 +222,78 @@ AC-R2 #6（提交字段等价）由**结构性**保证而非新增断言：`quic
 | 测试 | AC-R2 的 7 个 widget 场景 | 中 |
 
 主要不确定性集中在 R2 的视觉表现（分类位放哪、金额表单是否因此显得拥挤），需实机看效果再定。
+
+## 六、2026-10-01 迭代：分类退化为记账表单的**子界面**
+
+### 问题（用户反馈）
+
+- 点「记账」看到的是分类网格（记忆未命中时）或「网格 + 盖在上面的金额表单」（命中时）——
+  用户期望的是：**点记账只出记账界面，点分类才出分类界面**。
+- 点金额表单的分类位时，表单会 `pop` 掉回分类网格（决策 5 的换分类回路）——
+  用户描述为「弹出时把记账页面缩进去了」。
+
+### 变更
+
+| 维度 | 旧（决策 5 / 决策 4） | 新 |
+|---|---|---|
+| 记账落点 | `ExpandableBottomSheet`（`DraggableScrollableSheet`）+ `CategorySelector`；命中记忆时再在其上叠加 `AmountEditorSheet` | 直接渲染金额表单；分类网格**不再默认出现** |
+| 分类形态 | 记账抽屉的正文 = 分类网格 | 记账表单的**子界面**：点分类位才用 `showCategoryPickerSheet` 叠加弹出 |
+| 换分类 | `pop` 金额表单 → 回网格重选 → 以 `_lastAmount` 重弹表单 | 子界面返回新分类，表单**不关闭**，`setState` 就地更新分类位 |
+| 记忆未命中 | 退回分类网格（AC-R2 #4/#5 旧口径） | 仍出金额表单，分类位显示「选择分类」占位 |
+| 分类归属 | 调用方闭包捕获，提交时写库 | 表单内部持有（`AmountEditorSheet._category`），随 `AmountEditorResult.category` 回传 |
+
+### 关键取舍
+
+1. **不再用 `ExpandableBottomSheet`**：那个容器的意义是「分类网格与抽屉共享 `ScrollController`，
+   拖网格即改变抽屉高度」。分类退成子界面后，共享控制器正是「弹出/滚动分类时记账界面被顶高或收起」
+   的成因；金额表单本身自适应高度，不需要伸缩语义。
+2. **`onPickCategory` 语义从「回传金额、由调用方 pop」改为「返回新分类」**：
+   入参保留 `(current, currentAmount)` —— `currentAmount` 只服务**仍走网格的旧路径**
+   （快捷开关关闭 / 编辑交易），它靠 `_lastAmount` 实现「换分类保留已输金额」。
+3. **异步初值后补而非阻塞渲染**：记忆分类与默认账户都要查库，若等它们就绪再渲染会闪。
+   改为先出表单（分类位占位、「无账户」高亮），解析完成后经
+   `AmountEditorSheet.didUpdateWidget` 补上；用户已手动选过则不覆盖（`_categoryPicked` /
+   `_accountPicked`）。
+4. **提交逻辑抽成 `_persistTransaction`**：新形态只有一层 modal、旧形态有两层，
+   差别只在关几层；写库语义（附件 / 标签 / 共享账本 synthetic override / 同步触发 / 缓存刷新）
+   必须逐字一致，所以抽成同一方法，避免两条提交链漂移（呼应「非目标：不做全新 QuickEntrySheet」）。
+5. **允许无分类提交**：分类位是占位而非阻断，用户没选分类也能保存（`categoryId` 写 null）。
+   与「金额才是记账的主内容」一致，也避免把用户卡在无分类又无处可点。
+
+### 未纳入本次迭代
+
+- **deep link 全屏入口**（`app.dart` → `AppLinkAction.newTransaction`）仍是「全屏分类网格 +
+  自动叠加金额表单」的旧形态：它要经过「重建可恢复」链路（`_drainPendingDeepLink`），
+  改动面与回归风险高于收益。FAB 与 deep link 的形态差异由此保留，待单独评估。
+- **日历页「记一笔」**（`calendar_page.dart`）与**账户详情页「快捷转账」**
+  （`account_detail_page.dart`）仍是全屏 `TransactionEditorPage`（旧形态）。
+
+### 2026-10-01 第二批：编辑交易统一到新形态
+
+`transaction_edit_utils.editTransaction`（明细页入口）与 `ai_chat_page`（AI 对话页点交易卡片）
+的编辑入口改为 `showTransactionFormBottomSheet(quickMode: true)`，即**恒走「金额表单优先」
+形态、不受「快捷记账模式」设置开关控制** —— 开关只决定「记一笔」的进入方式；编辑的第一屏
+就该是这笔交易的表单。`_isQuickEntryMode` 相应放宽（去掉 `initialKind != 'transfer'` 条件），
+编辑转账也在新形态抽屉的转账分支里渲染（高度同样被锁定）。
+
+原分类已被删除时（`initialCategoryId` 解析失败）不再像旧路径那样停在网格，
+而是出表单 + 「选择分类」占位。
+
+**仍走旧/全屏形态的入口清单（待逐一评估）：**
+
+| 入口 | 位置 | 现状 |
+|---|---|---|
+| deep link `piggycount://new?...`（小组件分类格 / 快捷方式 / 浏览器 URL） | `app.dart` `_openDeepLink` | 全屏网格 + 自动叠加金额表单（重建恢复链路敏感，改动需单独回归） |
+| 日历页「记一笔」 | `calendar_page.dart` `_addTransactionForSelectedDate` | 全屏 `TransactionEditorPage(quickAdd: true)`，无记忆分类 → 停在分类网格 |
+| AI 对话页「记一笔」类入口之外的新建 | `ai_chat_page.dart` | 本次仅统一了它的**编辑**入口 |
+| 账户详情页「快捷转账」 | `account_detail_page.dart` `_quickTransfer` | 全屏转账表单（无分类语义，形态差异影响最小） |
+
+### 落点
+
+| 文件 | 变更 |
+|---|---|
+| `lib/widgets/biz/amount_editor_sheet.dart` | `_category` 内态 + 占位态 + `didUpdateWidget` 补异步初值；`onPickCategory` 新签名；`AmountEditorResult.category` |
+| `lib/widgets/category/category_picker_sheet.dart`（新增） | `showCategoryPickerSheet`：分类选择子界面（独立底部抽屉，不共享下层控制器） |
+| `lib/pages/transaction/transaction_editor_page.dart` | `_isQuickEntryMode` / `_buildQuickEntrySheet` / `_buildQuickAmountSheet` / `_resolveQuickInitials`；提交抽成 `_persistTransaction` |
+| `test/widgets/quick_entry_mode_test.dart` | 分类位占位 / 就地换分类 / 抽屉形态三条落点断言 |
+

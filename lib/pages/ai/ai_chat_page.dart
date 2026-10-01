@@ -860,20 +860,20 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
       }
 
       if (mounted) {
-        await Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => TransactionEditorPage(
-              initialKind: transaction.type,
-              quickAdd: true,
-              initialCategoryId: transaction.categoryId,
-              initialAmount: transaction.amount,
-              initialDate: transaction.happenedAt,
-              initialNote: transaction.note,
-              editingTransactionId: transaction.id,
-              initialAccountId: transaction.accountId,
-              initialToAccountId: transaction.toAccountId,
-            ),
-          ),
+        // 编辑交易统一走「金额表单优先」的底部抽屉形态（与明细页编辑一致）：
+        // 第一屏就是这笔交易的表单，分类是要点分类位才弹出的子界面。
+        await showTransactionFormBottomSheet(
+          context,
+          initialKind: transaction.type,
+          quickAdd: true,
+          quickMode: true,
+          initialCategoryId: transaction.categoryId,
+          initialAmount: transaction.amount,
+          initialDate: transaction.happenedAt,
+          initialNote: transaction.note,
+          editingTransactionId: transaction.id,
+          initialAccountId: transaction.accountId,
+          initialToAccountId: transaction.toAccountId,
         );
 
         // 从编辑页面返回后，无论是否保存，都刷新账单卡片
