@@ -136,15 +136,15 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     final base = _selectedDay ?? DateTime.now();
     final initialDate = DateTime(base.year, base.month, base.day, 12, 0, 0);
 
-    await Navigator.push(
+    // 与 FAB「记一笔」同款「金额表单优先」底部抽屉：不再整屏跳分类网格，
+    // 分类是要点分类位才弹出的子界面；记忆分类照常预填，日期用选中日。
+    // quickMode: true 恒定（不受快捷记账开关控制）——入口形态应全局一致。
+    await showTransactionFormBottomSheet(
       context,
-      MaterialPageRoute(
-        builder: (_) => TransactionEditorPage(
-          initialKind: 'expense',
-          quickAdd: true,
-          initialDate: initialDate,
-        ),
-      ),
+      initialKind: 'expense',
+      quickAdd: true,
+      quickMode: true,
+      initialDate: initialDate,
     );
 
     // 编辑器关闭后,主动刷新日历的统计与当日交易列表
