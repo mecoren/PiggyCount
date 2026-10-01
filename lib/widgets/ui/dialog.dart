@@ -223,8 +223,7 @@ class AppDialogShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final width =
-        wide ? PiggyDimens.alertWidthWide : PiggyDimens.alertWidth;
+    final width = wide ? PiggyDimens.alertWidthWide : PiggyDimens.alertWidth;
     return Dialog(
       // 宽度必须写在 Dialog 自身的 constraints 上：Dialog 默认最小宽 280，
       // 内层再套 ConstrainedBox 会被它顶到 280（窄卡片就不是 270 了）。
@@ -238,44 +237,48 @@ class AppDialogShell extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 内容超高时整块滚动：标题与动作区始终留在卡片内（不复现
-          // 「长文案把按钮顶出屏幕」的旧问题）。
-          Flexible(
-            child: SingleChildScrollView(
+          if (title != null)
+            // 标题**固定**在卡片顶部、不随内容滚动：长列表弹窗（默认账户选择
+            // 等）一滚标题就没了，短内容弹窗（选择分享范围）则看不出来 ——
+            // 统一固定后所有弹窗的头部样式恒定一致。与底部动作区同一原则：
+            // 内容超高时只有内容区滚动。
+            Padding(
               padding: const EdgeInsets.fromLTRB(
                 PiggyDimens.p20,
                 PiggyDimens.p20,
                 PiggyDimens.p20,
-                PiggyDimens.p16,
+                PiggyDimens.p12,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (title != null)
-                    // IntrinsicWidth + Center：「纯文案标题」与「Icon + 文案」
-                    // 这类 Row 标题都能在卡片里居中（DefaultTextStyle 的
-                    // textAlign 管不到 Row，而 Row 默认会撑满整宽左对齐）。
-                    Center(
-                      child: IntrinsicWidth(
-                        child: DefaultTextStyle.merge(
-                          textAlign: TextAlign.center,
-                          style:
-                              Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: PiggyTokens.textPrimary(context),
-                                  ),
-                          child: title!,
+              child: Center(
+                child: IntrinsicWidth(
+                  // IntrinsicWidth + Center：「纯文案标题」与「Icon + 文案」
+                  // 这类 Row 标题都能在卡片里居中（DefaultTextStyle 的
+                  // textAlign 管不到 Row，而 Row 默认会撑满整宽左对齐）。
+                  child: DefaultTextStyle.merge(
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: PiggyTokens.textPrimary(context),
                         ),
-                      ),
-                    ),
-                  if (title != null && content != null)
-                    const SizedBox(height: PiggyDimens.p12),
-                  if (content != null) _alignedContent(context),
-                ],
+                    child: title!,
+                  ),
+                ),
               ),
             ),
-          ),
+          // 内容超高时整块滚动：标题与动作区始终留在卡片内（不复现
+          // 「长文案把按钮顶出屏幕」的旧问题）。
+          if (content != null)
+            Flexible(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                  PiggyDimens.p20,
+                  title != null ? 0 : PiggyDimens.p20,
+                  PiggyDimens.p20,
+                  PiggyDimens.p16,
+                ),
+                child: _alignedContent(context),
+              ),
+            ),
           if (actions.isNotEmpty) PiggyDialogActionsBar(actions: actions),
         ],
       ),
