@@ -1205,24 +1205,26 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // 功能开关
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: PiggySwitchListTile(
-                      dense: true,
-                      title: Text(
-                        l10n.accountsEnableFeature,
-                        style: PiggyTextTokens.body(context),
-                      ),
-                      value: enabled,
-                      activeColor: primaryColor,
-                      onChanged: (value) async {
-                        await ref
-                            .read(accountFeatureSetterProvider)
-                            .setEnabled(value);
-                        ref.invalidate(accountFeatureEnabledProvider);
-                      },
+                  // 功能开关(组件内部 contentPadding 已是水平 16.scaled,
+                  // 不再叠加外层 padding,与其它行文字左缘对齐)
+                  PiggySwitchListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 16.0.scaled(context, ref),
+                      vertical: 4,
                     ),
+                    title: Text(
+                      l10n.accountsEnableFeature,
+                      style: PiggyTextTokens.body(context),
+                    ),
+                    value: enabled,
+                    activeColor: primaryColor,
+                    onChanged: (value) async {
+                      await ref
+                          .read(accountFeatureSetterProvider)
+                          .setEnabled(value);
+                      ref.invalidate(accountFeatureEnabledProvider);
+                    },
                   ),
                   // 汇率管理入口:仅在使用中币种 ≥2 时出现。折算开关已下线
                   // (多币种恒折算,与 Web 端对齐),这里只保留汇率管理入口。
@@ -1244,7 +1246,12 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                           ),
                           ListTile(
                             dense: true,
-                            visualDensity: VisualDensity.compact,
+                            // 与「启用账户功能」「默认收/支账户」行的文字左缘对齐
+                            // (16.scaled)。之前用 visualDensity.compact 会把
+                            // 水平 padding 再收缩 8,导致该行文字明显偏左。
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16.0.scaled(context, ref),
+                            ),
                             title: Text(
                               l10n.exchangeRatePageTitle,
                               style: PiggyTextTokens.body(context),
@@ -2392,12 +2399,18 @@ class _CompactDefaultAccount extends ConsumerWidget {
         wide: true,
         title: Text(title,
             style: TextStyle(color: PiggyTokens.textPrimary(context))),
+        // 与「选择分享范围」等选择类弹窗同一套版式：舒展行高 + 底部整行取消。
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.commonCancel),
+          ),
+        ],
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                dense: true,
                 leading: Icon(Icons.block,
                     color: PiggyTokens.iconSecondary(context)),
                 title: Text(
@@ -2432,7 +2445,6 @@ class _CompactDefaultAccount extends ConsumerWidget {
               ...accounts.map((account) {
                 final isSelected = account.id == currentDefaultId;
                 return ListTile(
-                  dense: true,
                   leading: AccountTypeIcon(
                     type: account.type,
                     size: 24,
