@@ -310,7 +310,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
               child: Center(
                 child: Text(
                   '${AppLocalizations.of(context).commonError}: $remoteError',
-                  style: const TextStyle(color: Colors.red),
+                  style: TextStyle(color: PiggyTokens.error(context)),
                 ),
               ),
             )
@@ -429,84 +429,72 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       context: context,
       builder: (dctx) {
         final primary = PiggyTokens.primary(dctx);
-        return SimpleDialog(
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
-          title: Text(AppLocalizations.of(context).ledgersActions),
-          children: [
-            if (isOwner)
-              SimpleDialogOption(
-                onPressed: () => Navigator.pop(dctx, 'edit'),
-                child: Row(
-                  children: [
-                    Icon(Icons.edit, color: primary),
-                    const SizedBox(width: 8),
-                    Text(AppLocalizations.of(context).ledgersEdit),
-                  ],
+        final l10n = AppLocalizations.of(context);
+        return AppDialogShell(
+          wide: true,
+          title: Text(l10n.ledgersActions),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isOwner)
+                _dialogActionRow(
+                  dialogContext: dctx,
+                  icon: Icons.edit,
+                  color: primary,
+                  label: l10n.ledgersEdit,
+                  value: 'edit',
                 ),
+              // 预算管理入口 — 每个账本独立预算,Owner/Editor 都能看(Editor 进
+              // BudgetPage 后 isEditorInShared 隐藏 + 按钮和编辑入口,只看不改)。
+              _dialogActionRow(
+                dialogContext: dctx,
+                icon: Icons.pie_chart_outline_rounded,
+                color: primary,
+                label: l10n.budgetManagement,
+                value: 'budget',
               ),
-            // 预算管理入口 — 每个账本独立预算,Owner/Editor 都能看(Editor 进
-            // BudgetPage 后 isEditorInShared 隐藏 + 按钮和编辑入口,只看不改)。
-            SimpleDialogOption(
-              onPressed: () => Navigator.pop(dctx, 'budget'),
-              child: Row(
-                children: [
-                  Icon(Icons.pie_chart_outline_rounded, color: primary),
-                  const SizedBox(width: 8),
-                  Text(AppLocalizations.of(context).budgetManagement),
-                ],
-              ),
-            ),
-            // 单账本上传 — 放在破坏性操作（清空/删除）之前，与编辑类操作分组。
-            if (canUpload)
-              SimpleDialogOption(
-                onPressed: () => Navigator.pop(dctx, 'upload'),
-                child: Row(
-                  children: [
-                    Icon(Icons.cloud_upload_outlined, color: primary),
-                    const SizedBox(width: 8),
-                    Text(AppLocalizations.of(context).ledgersUploadThis),
-                  ],
+              // 单账本上传 — 放在破坏性操作（清空/删除）之前，与编辑类操作分组。
+              if (canUpload)
+                _dialogActionRow(
+                  dialogContext: dctx,
+                  icon: Icons.cloud_upload_outlined,
+                  color: primary,
+                  label: l10n.ledgersUploadThis,
+                  value: 'upload',
                 ),
-              ),
-            if (isOwner) ...[
-              SimpleDialogOption(
-                onPressed: () => Navigator.pop(dctx, 'clear'),
-                child: Row(
-                  children: [
-                    const Icon(Icons.clear_all, color: Colors.orange),
-                    const SizedBox(width: 8),
-                    Text(AppLocalizations.of(context).ledgersClear),
-                  ],
+              if (isOwner)
+                _dialogActionRow(
+                  dialogContext: dctx,
+                  icon: Icons.clear_all,
+                  color: PiggyTokens.warning(dctx),
+                  label: l10n.ledgersClear,
+                  value: 'clear',
                 ),
+              // "仅删除本地"对 Owner 和 Editor 都可用 — 这是本地清理动作,
+              // 不影响 server。Editor 用这个清掉 Owner 已删账本残留;Owner
+              // 用来清不想要的本地副本但保留 server 数据。
+              _dialogActionRow(
+                dialogContext: dctx,
+                icon: Icons.delete_outline,
+                color: PiggyTokens.warning(dctx),
+                label: l10n.ledgersDeleteLocal,
+                value: 'deleteLocal',
               ),
+              if (isOwner)
+                _dialogActionRow(
+                  dialogContext: dctx,
+                  icon: Icons.delete_forever_outlined,
+                  color: PiggyTokens.error(dctx),
+                  label: l10n.ledgersDelete,
+                  value: 'delete',
+                ),
             ],
-            // "仅删除本地"对 Owner 和 Editor 都可用 — 这是本地清理动作,
-            // 不影响 server。Editor 用这个清掉 Owner 已删账本残留;Owner
-            // 用来清不想要的本地副本但保留 server 数据。
-            SimpleDialogOption(
-              onPressed: () => Navigator.pop(dctx, 'deleteLocal'),
-              child: Row(
-                children: [
-                  const Icon(Icons.delete_outline, color: Colors.deepOrange),
-                  const SizedBox(width: 8),
-                  Text(AppLocalizations.of(context).ledgersDeleteLocal),
-                ],
-              ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dctx),
+              child: Text(l10n.commonCancel),
             ),
-            if (isOwner) ...[
-              SimpleDialogOption(
-                onPressed: () => Navigator.pop(dctx, 'delete'),
-                child: Row(
-                  children: [
-                    Icon(Icons.delete_forever_outlined,
-                        color: PiggyTokens.error(context)),
-                    const SizedBox(width: 8),
-                    Text(AppLocalizations.of(context).ledgersDelete),
-                  ],
-                ),
-              ),
-            ],
           ],
         );
       },
@@ -539,38 +527,72 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     }
   }
 
+  /// 操作菜单里的一行：整行可点，点选即关闭并回传 [value]。
+  ///
+  /// 与 `AppDialogShell` 的卡片内边距（20）配合使用，替代 Material 的
+  /// `SimpleDialogOption`（后者自带 24 左右内边距，嵌进项目外壳会顶出双份留白）。
+  Widget _dialogActionRow({
+    required BuildContext dialogContext,
+    required IconData icon,
+    required Color color,
+    required String label,
+    required String value,
+  }) {
+    return InkWell(
+      onTap: () => Navigator.pop(dialogContext, value),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: PiggyTokens.textPrimary(dialogContext)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// 显示远程账本操作菜单
   Future<void> _showRemoteLedgerActions(
       BuildContext context, LedgerDisplayItem ledger) async {
     final action = await showDialog<String>(
       context: context,
       builder: (dctx) {
-        final primary = PiggyTokens.primary(dctx);
-        return SimpleDialog(
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
-          title: Text(AppLocalizations.of(context).ledgersActions),
-          children: [
-            SimpleDialogOption(
-              onPressed: () => Navigator.pop(dctx, 'download'),
-              child: Row(
-                children: [
-                  Icon(Icons.cloud_download, color: primary),
-                  const SizedBox(width: 8),
-                  Text(AppLocalizations.of(context).ledgersDownload),
-                ],
+        final l10n = AppLocalizations.of(context);
+        return AppDialogShell(
+          wide: true,
+          title: Text(l10n.ledgersActions),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _dialogActionRow(
+                dialogContext: dctx,
+                icon: Icons.cloud_download,
+                color: PiggyTokens.primary(dctx),
+                label: l10n.ledgersDownload,
+                value: 'download',
               ),
-            ),
-            SimpleDialogOption(
-              onPressed: () => Navigator.pop(dctx, 'delete'),
-              child: Row(
-                children: [
-                  Icon(Icons.delete_forever_outlined,
-                      color: PiggyTokens.error(context)),
-                  const SizedBox(width: 8),
-                  Text(AppLocalizations.of(context).ledgersDeleteRemote),
-                ],
+              _dialogActionRow(
+                dialogContext: dctx,
+                icon: Icons.delete_forever_outlined,
+                color: PiggyTokens.error(dctx),
+                label: l10n.ledgersDeleteRemote,
+                value: 'delete',
               ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dctx),
+              child: Text(l10n.commonCancel),
             ),
           ],
         );
@@ -1569,9 +1591,12 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
           child: StatefulBuilder(
             builder: (stateContext, setState) {
               return AppDialogShell(
+                wide: true,
                 title: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.warning, color: Colors.red, size: 28),
+                    Icon(Icons.warning,
+                        color: PiggyTokens.error(stateContext), size: 28),
                     const SizedBox(width: 12),
                     Text(l10n.ledgersConflictTitle),
                   ],
@@ -1744,7 +1769,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                         ],
                       ),
                     ),
-                    FilledButton(
+                    TextButton(
                       onPressed: () async {
                         setState(() => isProcessing = true);
                         try {

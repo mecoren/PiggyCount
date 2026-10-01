@@ -431,6 +431,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AppDialogShell(
+          wide: true,
           title: Text(
             l10n.appearanceNoteHistory,
             style: TextStyle(color: PiggyTokens.textPrimary(context)),

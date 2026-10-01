@@ -118,22 +118,22 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
         ref.watch(ledgerUnconvertedForeignTxCountProvider).valueOrNull ?? 0;
     if (count <= 0) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
+    final primary = ref.watch(primaryColorProvider);
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
       child: Material(
         color: PiggyTokens.surface(context),
-        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+        // shape 与 borderRadius 互斥（Material 断言）：圆角统一由 shape 提供
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
           // 主题色细边框（与洞察页图表卡片统一）
-          side: BorderSide(color: ref.watch(primaryColorProvider), width: 1.5),
+          side: BorderSide(color: primary, width: 1.5),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             children: [
-              Icon(Icons.currency_exchange,
-                  size: 16, color: ref.watch(primaryColorProvider)),
+              Icon(Icons.currency_exchange, size: 16, color: primary),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(

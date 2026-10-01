@@ -22,9 +22,9 @@ class LedgerPickerDialog extends ConsumerWidget {
 
     return Dialog(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(PiggyDimens.radius2xl),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
       ),
-      backgroundColor: PiggyTokens.surface(context),
+      backgroundColor: PiggyTokens.surfaceElevated(context),
       child: ConstrainedBox(
         constraints: const BoxConstraints(
           maxWidth: 320,

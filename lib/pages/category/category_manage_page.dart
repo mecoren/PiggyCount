@@ -175,6 +175,7 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
     final scope = await showDialog<String>(
       context: context,
       builder: (context) => AppDialogShell(
+        wide: true,
         title: Text(l10n.categoryShareScopeTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -298,6 +299,7 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
       final mode = await showDialog<String>(
         context: context,
         builder: (context) => AppDialogShell(
+          wide: true,
           title: Text(l10n.categoryImportModeTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -777,9 +779,10 @@ class _CategoryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 二级分类：使用浅色背景
-    final backgroundColor =
-        item.isSubCategory ? Colors.orange[50] : PiggyTokens.surface(context);
+    // 二级分类：使用次级面底（原 orange[50] 硬编码，暗色模式下刺眼）
+    final backgroundColor = item.isSubCategory
+        ? PiggyTokens.surfaceSecondary(context)
+        : PiggyTokens.surface(context);
 
     return InkWell(
       onTap: onTap,
@@ -945,6 +948,7 @@ class _SubcategoryDialogState extends ConsumerState<_SubcategoryDialog> {
     return Dialog(
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
+      backgroundColor: PiggyTokens.surfaceElevated(context),
       child: Container(
         width: MediaQuery.of(context).size.width * 0.85,
         constraints: const BoxConstraints(maxWidth: 400),

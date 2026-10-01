@@ -52,7 +52,9 @@ class BillCardWidget extends ConsumerWidget {
               children: [
                 Icon(
                   isUndone ? Icons.cancel : Icons.check_circle,
-                  color: isUndone ? Colors.grey : Colors.green,
+                  color: isUndone
+                      ? PiggyTokens.textTertiary(context)
+                      : PiggyTokens.success(context),
                   size: 20.0.scaled(context, ref),
                 ),
                 SizedBox(width: 8.0.scaled(context, ref)),

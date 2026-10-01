@@ -353,6 +353,12 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
                                     DropdownButton<int?>(
                                       value: categoryMapping[name],
                                       items: items,
+                                      // 浮层与项目选择器同源（卡片底色 + radiusLg），
+                                      // 不再吃 Material 默认底色/4px 圆角
+                                      dropdownColor:
+                                          PiggyTokens.surfaceElevated(context),
+                                      borderRadius: BorderRadius.circular(
+                                          PiggyDimens.radiusLg),
                                       onChanged: (v) => setState(
                                           () => categoryMapping[name] = v),
                                     ),
@@ -440,6 +446,9 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
             value: mapping[key],
             hint: Text(AppLocalizations.of(context).importAutoDetect),
             items: items,
+            // 浮层与项目选择器同源（卡片底色 + radiusLg 圆角）
+            dropdownColor: PiggyTokens.surfaceElevated(context),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
             onChanged: (v) => setState(() => mapping[key] = v),
           ),
         ),
@@ -506,9 +515,8 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
             final p = r.watch(importProgressProvider);
             final percent =
                 p.total == 0 ? 0.0 : (p.done / p.total).clamp(0.0, 1.0);
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
+            return AppDialogShell(
+              wide: true,
               title: Text(AppLocalizations.of(context).importInProgress),
               content: Column(
                 mainAxisSize: MainAxisSize.min,

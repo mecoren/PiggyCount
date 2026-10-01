@@ -528,6 +528,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
       builder: (ctx) {
         final primaryColor = ref.watch(primaryColorProvider);
         return AppDialogShell(
+          wide: true,
           title: Text(isLiability
               ? l10n.valuationUpdateDebt
               : l10n.valuationUpdateValue),

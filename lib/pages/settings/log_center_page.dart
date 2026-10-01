@@ -496,6 +496,7 @@ class _LogEntryCard extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AppDialogShell(
+        wide: true,
         title: Text('[${log.tag}]'),
         content: SingleChildScrollView(
           child: Column(
@@ -514,7 +515,8 @@ class _LogEntryCard extends ConsumerWidget {
                 const Divider(),
                 Text(
                   'Error: ${log.error}',
-                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                  style:
+                      TextStyle(color: PiggyTokens.error(context), fontSize: 12),
                 ),
               ],
               if (log.stackTrace != null) ...[

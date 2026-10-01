@@ -446,7 +446,9 @@ class _AndroidAutoBillingPageState extends ConsumerState<AndroidAutoBillingPage>
                               const SizedBox(height: 8),
                               Text(
                                 l10n.autoBillingBatteryWarning,
-                                style: const TextStyle(fontSize: 12, color: Colors.red),
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: PiggyTokens.error(context)),
                               ),
                             ],
                           ],

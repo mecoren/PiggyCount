@@ -509,6 +509,7 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
         return StatefulBuilder(
           builder: (ctx, setDialogState) {
             return AppDialogShell(
+              wide: true,
               title: Text(l10n.attachmentImportTitle),
               content: Column(
                 mainAxisSize: MainAxisSize.min,

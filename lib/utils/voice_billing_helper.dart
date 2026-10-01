@@ -653,6 +653,7 @@ class _VoiceRecordingDialogState extends ConsumerState<_VoiceRecordingDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return AppDialogShell(
+      wide: true,
       title: Text(l10n.voiceRecordingTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,

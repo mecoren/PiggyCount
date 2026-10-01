@@ -669,6 +669,10 @@ class PiggyDimens {
 
   /// iOS 风格警示框宽度（危险确认框对齐左图窄卡片观感）。
   static const double alertWidth = 270;
+
+  /// 宽弹窗卡片宽度：表单 / 列表 / 富内容弹窗（窄卡片放不下输入框与
+  /// 多列信息，但仍是同一套「标题 + 内容 + 底部分栏按钮」语言）。
+  static const double alertWidthWide = 340;
 }
 
 /// 阴影令牌

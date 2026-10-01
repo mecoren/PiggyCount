@@ -124,7 +124,8 @@ class PiggyPopupMenu extends StatelessWidget {
     PiggyMenuItem item,
     Color themeColor,
   ) {
-    final color = item.isDanger ? Colors.red : themeColor;
+    // 危险项走项目 error token（Colors.red 不跟随暗黑模式与主题错误色）
+    final color = item.isDanger ? PiggyTokens.error(context) : themeColor;
 
     return PopupMenuItem<String>(
       value: item.value,
@@ -145,7 +146,9 @@ class PiggyPopupMenu extends StatelessWidget {
             item.label ?? '',
             style: TextStyle(
               fontSize: 15,
-              color: item.isDanger ? Colors.red : PiggyTokens.textPrimary(context),
+              color: item.isDanger
+                  ? PiggyTokens.error(context)
+                  : PiggyTokens.textPrimary(context),
               fontWeight: FontWeight.w500,
             ),
           ),

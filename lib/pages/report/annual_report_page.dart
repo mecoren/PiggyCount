@@ -407,7 +407,10 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
       ),
       child: DropdownButton<int>(
         value: _selectedYear,
+        // 浮层走项目口径：卡片底色 + radiusLg 圆角（与 popover / 选择器同源），
+        // 底色仍是海报页主题色（该页整屏都是主题色渐变，白底浮层会突兀）
         dropdownColor: ref.watch(primaryColorProvider),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
         underline: const SizedBox(),
         icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
         style: const TextStyle(

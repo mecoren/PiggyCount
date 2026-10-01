@@ -15,6 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:piggycount/cloud/sync_service.dart';
 import 'package:piggycount/l10n/app_localizations.dart';
 import 'package:piggycount/pages/cloud/upload_conflict_helper.dart';
+import 'package:piggycount/widgets/ui/dialog.dart';
 
 Widget _wrap() => MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -78,7 +79,15 @@ void main() {
       compareMerge: () async => mergeCalled = true,
     );
     await tester.pump();
-    expect(find.byType(AlertDialog), findsOneWidget);
+    // 三选一：走项目弹窗外壳（AppDialogShell），不再用 Material 默认外观的
+    // AlertDialog；动作区只放文本按钮（三选一时竖向排布）
+    expect(find.byType(AppDialogShell), findsOneWidget);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.byType(FilledButton), findsNothing);
+    expect(find.byType(OutlinedButton), findsNothing);
+    for (final label in [_cancelLabel, _mergeLabel, _forceLabel]) {
+      expect(find.widgetWithText(TextButton, label), findsOneWidget);
+    }
 
     await tester.tap(find.text(_cancelLabel));
     await tester.pump();
@@ -154,9 +163,11 @@ void main() {
       run: makeRun(conflictDirection: 'cloudNewer'),
     );
     await tester.pump();
-    // 二选一路径走 AppDialog.confirm（iOS 警示框，外壳是裸 Dialog 而非
-    // AlertDialog；三选一的 AppDialogShell 内部才是 AlertDialog）。
+    // 二选一路径走 AppDialog.confirm（iOS 警示框），与三选一的
+    // AppDialogShell 同一套项目外壳：都是 Dialog，都不再有 Material 默认
+    // 外观的 AlertDialog。
     expect(find.byType(Dialog), findsOneWidget);
+    expect(find.byType(AlertDialog), findsNothing);
 
     await tester.tap(find.text(_cancelLabel));
     await tester.pump();

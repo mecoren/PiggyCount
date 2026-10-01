@@ -262,6 +262,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
           return AppDialogShell(
+            wide: true,
             title: Text(l10n.searchFilterTitle),
             content: SingleChildScrollView(
               child: Column(
@@ -538,6 +539,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     showDialog(
       context: context,
       builder: (context) => AppDialogShell(
+        wide: true,
         title: Text(l10n.searchBatchSetNoteTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,

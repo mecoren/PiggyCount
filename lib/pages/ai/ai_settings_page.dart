@@ -332,11 +332,9 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
 
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => AppDialogShell(
+        wide: true,
         title: Text(title),
-        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,

@@ -35,6 +35,7 @@ class AiPrivacyConsentDialog extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final primary = ref.watch(primaryColorProvider);
     return AppDialogShell(
+      wide: true,
       title: Text(l10n.aiConsentTitle),
       content: SingleChildScrollView(
         child: Column(
@@ -68,8 +69,7 @@ class AiPrivacyConsentDialog extends ConsumerWidget {
           onPressed: () => Navigator.pop(context, false),
           child: Text(l10n.commonCancel),
         ),
-        FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: primary),
+        TextButton(
           onPressed: () => Navigator.pop(context, true),
           child: Text(l10n.aiConsentAgree),
         ),

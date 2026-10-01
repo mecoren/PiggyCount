@@ -107,6 +107,7 @@ class _PersonalizePageState extends ConsumerState<PersonalizePage> {
     showDialog(
       context: context,
       builder: (context) => AppDialogShell(
+        wide: true,
         title: Text(AppLocalizations.of(context).personalizeCustomTitle),
         content: SingleChildScrollView(
           child: _ColorPicker(

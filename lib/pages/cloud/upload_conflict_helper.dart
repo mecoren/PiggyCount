@@ -50,7 +50,7 @@ Future<bool> uploadLedgerWithConflictGuard(
               onPressed: () => Navigator.pop(dctx, 'merge'),
               child: Text(l10n.conflictCompareMergeAction),
             ),
-            FilledButton(
+            TextButton(
               onPressed: () => Navigator.pop(dctx, 'force'),
               child: Text(l10n.conflictForceUploadAction),
             ),

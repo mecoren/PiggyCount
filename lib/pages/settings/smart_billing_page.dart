@@ -38,6 +38,7 @@ class SmartBillingPage extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AppDialogShell(
+        wide: true,
         title: Row(
           children: [
             Icon(Icons.info_outline, color: PiggyTokens.primary(context)),
@@ -165,9 +166,9 @@ class SmartBillingPage extends ConsumerWidget {
     final primaryColor = ref.read(primaryColorProvider);
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => AppDialogShell(
+        wide: true,
         title: Text(l10n.smartBillingVoiceTrigger),
-        contentPadding: const EdgeInsets.symmetric(vertical: 8),
         content: RadioGroup<VoiceTriggerMode>(
           groupValue: current,
           onChanged: (value) async {

@@ -849,6 +849,7 @@ class _RecurringTransactionEditPageState
     final selected = await showDialog<int?>(
       context: context,
       builder: (context) => AppDialogShell(
+        wide: true,
         title: Text(title),
         content: SizedBox(
           width: double.maxFinite,

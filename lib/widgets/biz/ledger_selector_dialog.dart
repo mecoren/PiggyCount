@@ -4,6 +4,7 @@ import '../../styles/tokens.dart';
 import '../../data/db.dart';
 import '../../providers.dart';
 import '../../l10n/app_localizations.dart';
+import '../ui/dialog.dart';
 
 /// 显示账本选择器
 ///
@@ -21,6 +22,11 @@ Future<int?> showLedgerSelector(
   );
 }
 
+/// 账本选择弹窗。
+///
+/// 走项目弹窗外壳（[AppDialogShell]：居中标题 + 项目卡片 + 底部「取消」），
+/// 不再用 Material 默认外观的 `SimpleDialog`（左对齐标题 + 无收尾动作区，
+/// 与全站弹窗语言不一致）。
 class LedgerSelectorDialog extends ConsumerWidget {
   final int? currentLedgerId;
 
@@ -32,59 +38,83 @@ class LedgerSelectorDialog extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final repo = ref.watch(repositoryProvider);
-    final primaryColor = ref.watch(primaryColorProvider);
     final l10n = AppLocalizations.of(context);
 
-    return FutureBuilder<List<Ledger>>(
-      future: repo.getAllLedgers(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    return AppDialogShell(
+      wide: true,
+      title: Text(l10n.ledgerSelectTitle),
+      content: FutureBuilder<List<Ledger>>(
+        future: repo.getAllLedgers(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
 
-        final ledgers = snapshot.data!;
-        if (ledgers.isEmpty) {
-          return SimpleDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
-            title: Text(l10n.ledgerSelectTitle),
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(l10n.ledgersEmpty),
-              ),
-            ],
-          );
-        }
-
-        return SimpleDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
-          title: Text(l10n.ledgerSelectTitle),
-          children: ledgers.map((ledger) {
-            final isSelected = ledger.id == currentLedgerId;
-            return SimpleDialogOption(
-              onPressed: () => Navigator.pop(context, ledger.id),
-              child: Row(
-                children: [
-                  Icon(
-                    isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
-                    color: isSelected ? primaryColor : null,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      ledger.name,
-                      style: TextStyle(
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                        color: isSelected ? primaryColor : null,
-                      ),
-                    ),
-                  ),
-                ],
+          final ledgers = snapshot.data!;
+          if (ledgers.isEmpty) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                l10n.ledgersEmpty,
+                textAlign: TextAlign.center,
+                style: PiggyTextTokens.body(context)
+                    .copyWith(color: PiggyTokens.textSecondary(context)),
               ),
             );
-          }).toList(),
-        );
-      },
+          }
+
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final ledger in ledgers) _option(context, ledger),
+            ],
+          );
+        },
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.commonCancel),
+        ),
+      ],
+    );
+  }
+
+  Widget _option(BuildContext context, Ledger ledger) {
+    final isSelected = ledger.id == currentLedgerId;
+    final primaryColor = PiggyTokens.primary(context);
+    return InkWell(
+      onTap: () => Navigator.pop(context, ledger.id),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
+            Icon(
+              isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
+              color: isSelected
+                  ? primaryColor
+                  : PiggyTokens.textTertiary(context),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                ledger.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  color: isSelected
+                      ? primaryColor
+                      : PiggyTokens.textPrimary(context),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

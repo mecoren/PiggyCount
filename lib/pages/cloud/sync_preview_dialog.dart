@@ -7,6 +7,7 @@ import '../../providers.dart';
 import '../../styles/tokens.dart';
 import '../../utils/currencies.dart';
 import '../../l10n/app_localizations.dart';
+import '../../widgets/ui/dialog.dart';
 
 /// 同步预览弹窗
 ///
@@ -72,10 +73,8 @@ class _SyncPreviewDialogState extends ConsumerState<_SyncPreviewDialog> {
     final deletedChanges =
         changes.where((c) => c.type == SyncChangeType.deleted).toList();
 
-    return AlertDialog(
-      backgroundColor: PiggyTokens.surface(context),
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
+    return AppDialogShell(
+      wide: true,
       title: Text(
         l10n.syncPreviewTitle,
         style: PiggyTextTokens.strongTitle(context).copyWith(fontSize: 18),
@@ -152,22 +151,23 @@ class _SyncPreviewDialogState extends ConsumerState<_SyncPreviewDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, null),
-          child: Text(
-            l10n.commonCancel,
-            style: TextStyle(color: PiggyTokens.textSecondary(context)),
-          ),
+          child: Text(l10n.commonCancel),
         ),
-        FilledButton(
+        TextButton(
           onPressed: selectedCount > 0
               ? () {
                   final selected = changes.where((c) => c.selected).toList();
                   Navigator.pop(context, selected);
                 }
               : null,
-          style: FilledButton.styleFrom(
-            backgroundColor: widget.primaryColor,
+          child: Text(
+            l10n.syncPreviewApply(selectedCount),
+            style: TextStyle(
+              color: selectedCount > 0
+                  ? widget.primaryColor
+                  : PiggyTokens.textTertiary(context),
+            ),
           ),
-          child: Text(l10n.syncPreviewApply(selectedCount)),
         ),
       ],
     );

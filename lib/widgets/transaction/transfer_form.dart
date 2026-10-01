@@ -150,7 +150,13 @@ class _TransferFormState extends ConsumerState<TransferForm> {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      // 与交易编辑页的记账表单抽屉同口径：surfaceSheet 底 + 顶部 radiusXl
+      // （不传 shape 会落到 M3 默认的 28，两处入口圆角不一致）
       backgroundColor: PiggyTokens.surfaceSheet(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
+      ),
       builder: (context) => AmountEditorSheet(
         categoryName: l10n.transferTitle,
         initialDate: widget.initialDate ?? DateTime.now(),
@@ -387,7 +393,7 @@ class _TransferFormState extends ConsumerState<TransferForm> {
           return Center(
             child: Text(
               '${l10n.commonError}: ${snapshot.error}',
-              style: const TextStyle(color: Colors.red),
+              style: TextStyle(color: PiggyTokens.error(context)),
             ),
           );
         }

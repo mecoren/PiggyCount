@@ -324,6 +324,7 @@ class _RateEditDialogState extends ConsumerState<_RateEditDialog> {
         : '—';
 
     return AppDialogShell(
+      wide: true,
       title: Text(
         l10n.rateEditTitle,
         style: TextStyle(color: PiggyTokens.textPrimary(context)),

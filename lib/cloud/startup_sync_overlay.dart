@@ -360,7 +360,7 @@ class _HasUpdatesView extends StatelessWidget {
                                 : Icons.book_outlined,
                             size: 14,
                             color: isConflict
-                                ? Colors.orange
+                                ? PiggyTokens.warning(context)
                                 : PiggyTokens.textTertiary(context),
                           ),
                           const SizedBox(width: 6),

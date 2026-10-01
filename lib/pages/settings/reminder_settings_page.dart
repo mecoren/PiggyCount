@@ -175,8 +175,9 @@ class ReminderSettingsPage extends ConsumerWidget {
                                     Text(
                                       AppLocalizations.of(context)
                                           .reminderBatteryAdvice,
-                                      style: const TextStyle(
-                                          fontSize: 12, color: Colors.red),
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: PiggyTokens.error(context)),
                                     ),
                                   ],
                                 ],
@@ -278,9 +279,9 @@ class ReminderSettingsPage extends ConsumerWidget {
                                     Text(
                                       AppLocalizations.of(context)
                                           .reminderChannelAdvice,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                           fontWeight: FontWeight.bold,
-                                          color: Colors.orange),
+                                          color: PiggyTokens.warning(context)),
                                     ),
                                     Text(AppLocalizations.of(context)
                                         .reminderChannelAdviceImportance),
@@ -294,8 +295,8 @@ class ReminderSettingsPage extends ConsumerWidget {
                                     Text(
                                       AppLocalizations.of(context)
                                           .reminderChannelGood,
-                                      style: const TextStyle(
-                                          color: Colors.green,
+                                      style: TextStyle(
+                                          color: PiggyTokens.success(context),
                                           fontWeight: FontWeight.bold),
                                     ),
                                   ],

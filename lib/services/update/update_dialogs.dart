@@ -42,6 +42,7 @@ class UpdateDialogs {
     await showDialog(
       context: context,
       builder: (context) => AppDialogShell(
+        wide: true,
         title: Text(AppLocalizations.of(context).updateNotificationPermissionTitle),
         content: SingleChildScrollView(
           child: Column(
@@ -53,23 +54,26 @@ class UpdateDialogs {
                 style: TextStyle(fontSize: 14),
               ),
               const SizedBox(height: 12),
-              _buildGuideStep('1', AppLocalizations.of(context).updateNotificationGuideStep1),
+              _buildGuideStep(context, '1',
+                  AppLocalizations.of(context).updateNotificationGuideStep1),
               const SizedBox(height: 8),
-              _buildGuideStep('2', AppLocalizations.of(context).updateNotificationGuideStep2),
+              _buildGuideStep(context, '2',
+                  AppLocalizations.of(context).updateNotificationGuideStep2),
               const SizedBox(height: 8),
-              _buildGuideStep('3', AppLocalizations.of(context).updateNotificationGuideStep3),
+              _buildGuideStep(context, '3',
+                  AppLocalizations.of(context).updateNotificationGuideStep3),
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.1),
+                  color: PiggyTokens.info(context).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                 ),
                 child: Row(
                   children: [
                     Icon(
                       Icons.info_outline,
-                      color: Colors.blue,
+                      color: PiggyTokens.info(context),
                       size: 20,
                     ),
                     const SizedBox(width: 8),
@@ -78,7 +82,7 @@ class UpdateDialogs {
                         AppLocalizations.of(context).updateNotificationGuideInfo,
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.blue[700],
+                          color: PiggyTokens.info(context),
                         ),
                       ),
                     ),
@@ -104,8 +108,9 @@ class UpdateDialogs {
     );
   }
 
-  /// 构建指南步骤小部件
-  static Widget _buildGuideStep(String number, String text) {
+  /// 构建指南步骤小部件（[context] 用于取项目 info 语义色）
+  static Widget _buildGuideStep(
+      BuildContext context, String number, String text) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -113,7 +118,7 @@ class UpdateDialogs {
           width: 20,
           height: 20,
           decoration: BoxDecoration(
-            color: Colors.blue,
+            color: PiggyTokens.info(context),
             borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
           ),
           child: Center(
@@ -165,27 +170,13 @@ class UpdateDialogs {
         title: Text(AppLocalizations.of(context).updateCheckFailedTitle),
         content: Text(error),
         actions: [
-          OutlinedButton(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.primary,
-              side: BorderSide(color: Theme.of(context).colorScheme.primary),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-              ),
-            ),
+          TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: Text(AppLocalizations.of(context).updateCancelButton),
           ),
-          const SizedBox(width: 12),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-              ),
-            ),
+          TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            icon: const Icon(Icons.open_in_new, size: 18),
-            label: Text(AppLocalizations.of(context).updateGoToGitHub),
+            child: Text(AppLocalizations.of(context).updateGoToGitHub),
           ),
         ],
       ),
@@ -210,27 +201,13 @@ class UpdateDialogs {
         title: Text(AppLocalizations.of(context).updateDownloadFailedTitle),
         content: Text(error),
         actions: [
-          OutlinedButton(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.primary,
-              side: BorderSide(color: Theme.of(context).colorScheme.primary),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-              ),
-            ),
+          TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: Text(AppLocalizations.of(context).updateCancelButton),
           ),
-          const SizedBox(width: 12),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-              ),
-            ),
+          TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            icon: const Icon(Icons.open_in_new, size: 18),
-            label: Text(AppLocalizations.of(context).updateGoToGitHub),
+            child: Text(AppLocalizations.of(context).updateGoToGitHub),
           ),
         ],
       ),
@@ -347,6 +324,7 @@ class _MirrorSelectDialogState extends State<_MirrorSelectDialog> {
     final isZh = Localizations.localeOf(context).languageCode == 'zh';
 
     return AppDialogShell(
+      wide: true,
       title: Text(l10n.updateMirrorSelectTitle),
       content: SizedBox(
         width: double.maxFinite,
@@ -416,11 +394,11 @@ class _MirrorSelectDialogState extends State<_MirrorSelectDialog> {
                                 fontSize: 12,
                                 color: testResult.isAvailable
                                     ? (testResult.latency < 300
-                                        ? Colors.green
+                                        ? PiggyTokens.success(context)
                                         : (testResult.latency < 800
-                                            ? Colors.orange
-                                            : Colors.red))
-                                    : Colors.red,
+                                            ? PiggyTokens.warning(context)
+                                            : PiggyTokens.error(context)))
+                                    : PiggyTokens.error(context),
                               ),
                             )
                           : (mirror.isDefault
@@ -435,7 +413,9 @@ class _MirrorSelectDialogState extends State<_MirrorSelectDialog> {
                       secondary: testResult != null
                           ? Icon(
                               testResult.isAvailable ? Icons.check_circle : Icons.error,
-                              color: testResult.isAvailable ? Colors.green : Colors.red,
+                              color: testResult.isAvailable
+                                  ? PiggyTokens.success(context)
+                                  : PiggyTokens.error(context),
                               size: 20,
                             )
                           : null,
@@ -531,6 +511,7 @@ class _DownloadConfirmDialogState extends State<_DownloadConfirmDialog> {
     final l10n = AppLocalizations.of(context);
 
     return AppDialogShell(
+      wide: true,
       title: Text(l10n.updateNewVersionTitle(widget.version)),
       content: SingleChildScrollView(
         child: Column(

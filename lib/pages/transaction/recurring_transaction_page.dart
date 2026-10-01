@@ -361,11 +361,11 @@ class _RecurringTransactionCard extends ConsumerWidget {
                           // 审计 U5：失败必须回滚开关并提示，否则 UI 呈现
                           // 「已开启/关闭」而 DB 实际未变（假成功）
                           if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                  content: Text(
-                                      '${AppLocalizations.of(context).commonFailed}: $e')),
-                            );
+                            // 统一走项目 toast（暗色反色胶囊），不用 Material
+                            // 默认贴底 SnackBar —— 后者与全局提示样式不同源
+                            showToast(
+                                context,
+                                '${AppLocalizations.of(context).commonFailed}: $e');
                           }
                         }
                       },

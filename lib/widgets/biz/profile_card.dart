@@ -62,6 +62,7 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AppDialogShell(
+        wide: true,
         title: Text(l10n.mineProfileEditTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -83,9 +84,9 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
             ),
             if (_avatarPath != null)
               ListTile(
-                leading: const Icon(Icons.delete, color: Colors.red),
+                leading: Icon(Icons.delete, color: PiggyTokens.error(context)),
                 title: Text(l10n.mineAvatarDelete,
-                    style: const TextStyle(color: Colors.red)),
+                    style: TextStyle(color: PiggyTokens.error(context))),
                 onTap: () => Navigator.pop(context, 'delete'),
               ),
           ],
@@ -527,6 +528,7 @@ class _EditDisplayNameDialogState extends State<_EditDisplayNameDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return AppDialogShell(
+      wide: true,
       title: Text(l10n.mineDisplayNameEditTitle),
       content: TextField(
         controller: _controller,

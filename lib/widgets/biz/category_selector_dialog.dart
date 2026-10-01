@@ -309,7 +309,7 @@ class _CategorySelectorDialogState
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
       ),
-      backgroundColor: PiggyTokens.scaffoldBackground(context),
+      backgroundColor: PiggyTokens.surfaceElevated(context),
       child: Container(
         width: MediaQuery.of(context).size.width * 0.9,
         height: MediaQuery.of(context).size.height * 0.75,

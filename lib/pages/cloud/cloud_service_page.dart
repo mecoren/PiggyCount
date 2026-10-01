@@ -481,6 +481,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
     showDialog(
       context: context,
       builder: (context) => AppDialogShell(
+        wide: true,
         title: Row(
           children: [
             Icon(
@@ -927,6 +928,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
     showDialog(
       context: context,
       builder: (dialogContext) => AppDialogShell(
+        wide: true,
         title: Row(
           children: [
             Icon(Icons.cloud, color: PiggyTokens.brandSupabase),
@@ -1011,6 +1013,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
     showDialog(
       context: context,
       builder: (dialogContext) => AppDialogShell(
+        wide: true,
         title: Row(
           children: [
             Icon(Icons.folder_shared, color: PiggyTokens.brandWebdav),
@@ -1092,6 +1095,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
     showDialog(
       context: context,
       builder: (dialogContext) => AppDialogShell(
+        wide: true,
         title: Row(
           children: [
             Icon(Icons.cloud, color: PiggyTokens.brandIcloud),
@@ -1172,6 +1176,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
     showDialog(
       context: context,
       builder: (dialogContext) => AppDialogShell(
+        wide: true,
         title: Row(
           children: [
             Icon(Icons.storage, color: PiggyTokens.brandS3),

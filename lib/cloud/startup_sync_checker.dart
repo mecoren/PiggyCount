@@ -1415,16 +1415,16 @@ class WidgetRefDeps implements StartupSyncCheckerDeps {
             title: Text(l10n.startupSyncCheckTitle),
             content: Text(message),
             actions: [
-              OutlinedButton(
+              TextButton(
                 onPressed: () =>
                     Navigator.pop(ctx, LedgerDialogChoice.skipRest),
                 child: Text(l10n.startupSyncCheckSkipRest),
               ),
-              OutlinedButton(
+              TextButton(
                 onPressed: () => Navigator.pop(ctx, LedgerDialogChoice.skip),
                 child: Text(l10n.startupSyncCheckSkip),
               ),
-              FilledButton(
+              TextButton(
                 onPressed: () =>
                     Navigator.pop(ctx, LedgerDialogChoice.viewDetail),
                 child: Text(l10n.startupSyncCheckViewDetail),

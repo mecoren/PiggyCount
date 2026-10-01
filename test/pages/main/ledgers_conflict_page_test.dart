@@ -39,6 +39,7 @@ import 'package:piggycount/providers/database_providers.dart';
 import 'package:piggycount/providers/sync_providers.dart';
 import 'package:piggycount/services/data_import_service.dart' show ImportData;
 import 'package:piggycount/widgets/biz/ledger_card.dart';
+import 'package:piggycount/widgets/ui/dialog.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -233,7 +234,7 @@ void main() {
           reason: '阻塞进度弹窗必须在弹确认框之前关掉，否则确认框点不动');
       expect(
         find.descendant(
-          of: find.byType(AlertDialog),
+          of: find.byType(AppDialogShell),
           matching: find.byType(CircularProgressIndicator),
         ),
         findsNothing,

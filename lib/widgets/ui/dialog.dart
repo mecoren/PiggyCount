@@ -193,33 +193,191 @@ class AppDialog {
   }
 }
 
-/// 统一弹窗外壳（Widget 形态）：与 [AppDialog] 系列统一视觉（surfaceElevated
-/// 背景 + radiusXl 圆角），title/content/actions 完全由调用方自定义 ——
-/// 帮助指南、表单配置等 [AppDialog.info]/[AppDialog.confirm] 纯文本 API
-/// 表达不了的弹窗用这个：在 showDialog 的 builder 里返回它（builder 的
-/// context 照常可用），或对话框 State.build 直接 return。内容布局由调用方
-/// 负责（沿用 Material 默认内边距，与迁移前的手写版一致）。
+/// 统一弹窗外壳（Widget 形态）：与 [AppDialog] 系列**同一套弹窗语言**
+/// （surfaceElevated 卡片 + radiusXl 圆角 + 居中标题 + 底部横线分隔的
+/// 分栏动作区），title/content/actions 由调用方自定义 —— 表单配置、帮助
+/// 指南等 [AppDialog.info]/[AppDialog.confirm] 纯文本 API 表达不了的弹窗
+/// 用这个：在 showDialog 的 builder 里返回它（builder 的 context 照常可用），
+/// 或对话框 State.build 直接 return。
+///
+/// 动作区把 [actions] 当**按钮内容**等分成栏（1 个 = 全宽、2 个 = 「左｜右」
+/// 各占一半、3 个及以上退回右对齐换行排布）——与 [PiggyDialogActions] 的
+/// 视觉一致，所以这里传 `TextButton` 最贴口径；传 Filled/Outlined 大按钮会
+/// 在分栏里被拉满整格，属于迁移残留，应改回文本按钮。
+///
+/// [wide]：表单 / 列表 / 富内容用宽卡片（[PiggyDimens.alertWidthWide]），
+/// 窄卡片只放得下提醒类文案（与 iOS 警示框同宽）。
 class AppDialogShell extends StatelessWidget {
   final Widget? title;
   final Widget? content;
   final List<Widget> actions;
+  final bool wide;
 
   const AppDialogShell({
     super.key,
     this.title,
     this.content,
     this.actions = const [],
+    this.wide = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
+    final width =
+        wide ? PiggyDimens.alertWidthWide : PiggyDimens.alertWidth;
+    return Dialog(
+      // 宽度必须写在 Dialog 自身的 constraints 上：Dialog 默认最小宽 280，
+      // 内层再套 ConstrainedBox 会被它顶到 280（窄卡片就不是 270 了）。
+      constraints: BoxConstraints(minWidth: width, maxWidth: width),
       backgroundColor: PiggyTokens.surfaceElevated(context),
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
-      title: title,
-      content: content,
-      actions: actions,
+      child: Column(
+        // 供测试量宽（Dialog 自身的 render box 是全屏，量不到卡片）
+        key: const ValueKey('piggyDialogCard'),
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // 内容超高时整块滚动：标题与动作区始终留在卡片内（不复现
+          // 「长文案把按钮顶出屏幕」的旧问题）。
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(
+                PiggyDimens.p20,
+                PiggyDimens.p20,
+                PiggyDimens.p20,
+                PiggyDimens.p16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (title != null)
+                    // IntrinsicWidth + Center：「纯文案标题」与「Icon + 文案」
+                    // 这类 Row 标题都能在卡片里居中（DefaultTextStyle 的
+                    // textAlign 管不到 Row，而 Row 默认会撑满整宽左对齐）。
+                    Center(
+                      child: IntrinsicWidth(
+                        child: DefaultTextStyle.merge(
+                          textAlign: TextAlign.center,
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: PiggyTokens.textPrimary(context),
+                                  ),
+                          child: title!,
+                        ),
+                      ),
+                    ),
+                  if (title != null && content != null)
+                    const SizedBox(height: PiggyDimens.p12),
+                  if (content != null) _alignedContent(context),
+                ],
+              ),
+            ),
+          ),
+          if (actions.isNotEmpty) PiggyDialogActionsBar(actions: actions),
+        ],
+      ),
+    );
+  }
+
+  /// 内容对齐：纯文案（[Text]）按提醒口径居中，与 [AppDialog] 的说明文案
+  /// 一致；表单 / 列表 / 富内容保持调用方自己的版式，不强行改对齐。
+  Widget _alignedContent(BuildContext context) {
+    final c = content!;
+    if (c is Text) {
+      return DefaultTextStyle.merge(textAlign: TextAlign.center, child: c);
+    }
+    return c;
+  }
+}
+
+/// 对话框底部动作区（Widget 版）：横线 + 等分栏 + 竖线，与
+/// [PiggyDialogActions] 同一套视觉，区别只是这里收调用方现成的按钮 Widget
+/// 而不是「文案 + 回调」。
+///
+/// - [AppDialogShell] 内部用它承载 `actions`；
+/// - 自绘弹窗（自带标题栏 / 预览区，套不进 [AppDialogShell]）也可以直接用它
+///   收尾：按顺序传 `TextButton`（需要 loading / 图标时传自定义按钮）即可，
+///   末位按钮自动取主题色、其余取正文色。
+///
+/// 布局：2 个动作「左｜右」各占一半；3 个及以上竖排整宽行（等分会把
+/// 「对比合并」这类长文案挤换行）。
+class PiggyDialogActionsBar extends StatelessWidget {
+  const PiggyDialogActionsBar({super.key, required this.actions});
+
+  /// 动作按钮（按顺序从左到右 / 从上到下），**末位视作确认**取主题色。
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final hairline = Theme.of(context).colorScheme.onSurface.withValues(
+          alpha: PiggyTokens.isDark(context) ? 0.15 : 0.08,
+        );
+
+    /// 与 [PiggyDialogActions] 同一配色口径：**末位动作 = 确认**（主题色），
+    /// 其余 = 取消类（正文色）；按钮文字统一 bodyLarge（与 AppDialog 一致）。
+    /// 调用方在 `Text.style` 里写死的颜色优先（如删除类的 error 色）。
+    Widget slot(int index, Widget child) {
+      final isOk = index == actions.length - 1;
+      return TextButtonTheme(
+        data: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: isOk
+                ? PiggyTokens.primary(context)
+                : PiggyTokens.textPrimary(context),
+            textStyle: Theme.of(context).textTheme.bodyLarge,
+          ),
+        ),
+        child: child,
+      );
+    }
+
+    // 3 个及以上动作（如冲突处理的「取消 / 对比合并 / 强制上传」）竖向排成
+    // 整宽行：等分横排会把「对比合并」这类长文案挤到换行，竖向与 iOS 警示框
+    // 多动作时的观感一致。
+    final Widget rows;
+    if (actions.length > 2) {
+      rows = Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < actions.length; i++) ...[
+            if (i > 0) Container(height: 1, color: hairline),
+            SizedBox(height: 48, child: slot(i, actions[i])),
+          ],
+        ],
+      );
+    } else {
+      rows = IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var i = 0; i < actions.length; i++) ...[
+              if (i > 0) Container(width: 1, color: hairline),
+              Expanded(
+                child: SizedBox(height: 48, child: slot(i, actions[i])),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(height: 1, color: hairline),
+        ClipRRect(
+          borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(PiggyDimens.radiusXl),
+            bottomRight: Radius.circular(PiggyDimens.radiusXl),
+          ),
+          child: rows,
+        ),
+      ],
     );
   }
 }
@@ -631,10 +789,8 @@ BlockingProgressDialogHandle showBlockingProgressDialog(
     barrierDismissible: false,
     builder: (dctx) => PopScope(
       canPop: false,
-      child: AlertDialog(
-        backgroundColor: PiggyTokens.surfaceElevated(dctx),
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
+      // 与其余弹窗同一套外壳语言（居中标题 + 项目卡片），进度态无动作区
+      child: AppDialogShell(
         title: Text(
           title,
           textAlign: TextAlign.center,

@@ -5,6 +5,7 @@ import '../../models/note_history.dart';
 import '../../services/data/note_history_service.dart';
 import '../../styles/tokens.dart';
 import '../../providers.dart';
+import '../ui/dialog.dart';
 
 /// 备注选择弹窗
 /// 支持本地与共享账本分类标识，用于筛选历史备注。
@@ -65,27 +66,16 @@ class _NotePickerDialogState extends ConsumerState<NotePickerDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return AlertDialog(
-      backgroundColor: PiggyTokens.surfaceElevated(context),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
-      contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+    return AppDialogShell(
+      wide: true,
+      title: Text(l10n.appearanceNoteHistory),
       content: ConstrainedBox(
         constraints: BoxConstraints(
           maxHeight: MediaQuery.of(context).size.height * 0.5,
-          maxWidth: MediaQuery.of(context).size.width * 0.85,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 标题
-            Text(
-              l10n.appearanceNoteHistory,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: PiggyTokens.textPrimary(context)),
-            ),
-            const SizedBox(height: 12),
             // 备注列表
             if (_isLoading)
               const Padding(
@@ -142,7 +132,7 @@ class _NotePickerDialogState extends ConsumerState<NotePickerDialog> {
                                   vertical: 1,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.red,
+                                  color: PiggyTokens.error(context),
                                   borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
                                 ),
                                 child: Text(
@@ -162,21 +152,15 @@ class _NotePickerDialogState extends ConsumerState<NotePickerDialog> {
                   ),
                 ),
               ),
-            const SizedBox(height: 16),
-            // 关闭按钮
-            FilledButton(
-              onPressed: () => Navigator.pop(context),
-              style: FilledButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-                ),
-              ),
-              child: Text(l10n.commonClose),
-            ),
-            const SizedBox(height: 12),
           ],
         ),
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.commonClose),
+        ),
+      ],
     );
   }
 }

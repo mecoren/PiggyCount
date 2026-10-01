@@ -53,6 +53,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
     showDialog(
       context: context,
       builder: (context) => AppDialogShell(
+        wide: true,
         title: Text(l10n.aboutDeveloperStoryTitle),
         content: SingleChildScrollView(
           child: Text(

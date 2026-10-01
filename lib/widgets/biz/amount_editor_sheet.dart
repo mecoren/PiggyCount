@@ -428,6 +428,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     final entered = await showDialog<String>(
       context: context,
       builder: (dctx) => AppDialogShell(
+        wide: true,
         title: Text(l10n.txRateLabel),
         content: TextField(
           controller: ctrl,
@@ -1635,8 +1636,8 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
               );
             }
 
-            return AlertDialog(
-              backgroundColor: PiggyTokens.surface(context),
+            return AppDialogShell(
+              wide: true,
               title: Text(
                 l10n.txFlagDialogTitle,
                 style: TextStyle(

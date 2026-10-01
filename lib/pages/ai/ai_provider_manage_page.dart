@@ -555,8 +555,9 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
                               ),
                               child: Text(
                                 _textTestError!,
-                                style: const TextStyle(
-                                    fontSize: 12, color: Colors.red),
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: PiggyTokens.error(context)),
                               ),
                             ),
                           ],
@@ -915,7 +916,8 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
             ),
             child: Text(
               testError,
-              style: const TextStyle(fontSize: 12, color: Colors.red),
+              style: TextStyle(
+                  fontSize: 12, color: PiggyTokens.error(context)),
             ),
           ),
         ],

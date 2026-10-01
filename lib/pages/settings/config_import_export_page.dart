@@ -644,18 +644,14 @@ class _ConfigContentDialog extends StatelessWidget {
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 40),
+      backgroundColor: PiggyTokens.surfaceElevated(context),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
       child: Column(
         children: [
           // 标题栏
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: PiggyTokens.surfaceElevated(context),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(PiggyDimens.radiusXs),
-                topRight: Radius.circular(PiggyDimens.radiusXs),
-              ),
-            ),
             child: Row(
               children: [
                 const Icon(Icons.description_outlined),
@@ -696,25 +692,9 @@ class _ConfigContentDialog extends StatelessWidget {
             ),
           ),
           // 底部按钮
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: PiggyTokens.surfaceElevated(context),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(PiggyDimens.radiusXs),
-                bottomRight: Radius.circular(PiggyDimens.radiusXs),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton.icon(
-                  onPressed: onCopy,
-                  icon: const Icon(Icons.copy, size: 18),
-                  label: Text(l10n.configExportCopyContent),
-                ),
-              ],
-            ),
+          PiggyDialogActions(
+            okLabel: l10n.configExportCopyContent,
+            onOk: onCopy,
           ),
         ],
       ),
@@ -740,18 +720,13 @@ class _ConfigPreviewDialogState extends State<_ConfigPreviewDialog> {
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
       backgroundColor: PiggyTokens.surfaceElevated(context),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
       child: Column(
         children: [
           // 标题栏
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: PiggyTokens.surfaceElevated(context),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(PiggyDimens.radiusXs),
-                topRight: Radius.circular(PiggyDimens.radiusXs),
-              ),
-            ),
             child: Row(
               children: [
                 const Icon(Icons.preview_outlined),
@@ -838,29 +813,11 @@ class _ConfigPreviewDialogState extends State<_ConfigPreviewDialog> {
             ),
           ),
           // 底部按钮
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: PiggyTokens.surfaceElevated(context),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(PiggyDimens.radiusXs),
-                bottomRight: Radius.circular(PiggyDimens.radiusXs),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: Text(l10n.commonCancel),
-                ),
-                const SizedBox(width: 12),
-                FilledButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: Text(l10n.configImportConfirmTitle),
-                ),
-              ],
-            ),
+          PiggyDialogActions(
+            cancelLabel: l10n.commonCancel,
+            onCancel: () => Navigator.pop(context, false),
+            okLabel: l10n.configImportConfirmTitle,
+            onOk: () => Navigator.pop(context, true),
           ),
         ],
       ),
@@ -897,7 +854,7 @@ class _ExportOptionsDialogState extends State<_ExportOptionsDialog> {
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
       backgroundColor: PiggyTokens.surfaceElevated(context),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -905,13 +862,6 @@ class _ExportOptionsDialogState extends State<_ExportOptionsDialog> {
           // 标题栏
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: PiggyTokens.surfaceElevated(context),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(PiggyDimens.radiusLg),
-                topRight: Radius.circular(PiggyDimens.radiusLg),
-              ),
-            ),
             child: Row(
               children: [
                 const Icon(Icons.checklist_outlined),
@@ -1019,35 +969,24 @@ class _ExportOptionsDialogState extends State<_ExportOptionsDialog> {
             ),
           ),
           const SizedBox(height: 8),
-          // 底部按钮
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(l10n.commonCancel),
-                ),
-                const SizedBox(width: 12),
-                FilledButton(
-                  onPressed: () {
-                    final options = ExportOptions(
-                      ledgers: _ledgers,
-                      categories: _categories,
-                      accounts: _accounts,
-                      tags: _tags,
-                      budgets: _budgets,
-                      recurringTransactions: _recurringTransactions,
-                      appSettings: _appSettings,
-                      ai: _ai,
-                    );
-                    Navigator.pop(context, options);
-                  },
-                  child: Text(l10n.commonNext),
-                ),
-              ],
-            ),
+          // 底部动作区（与其余弹窗同一套分栏语言）
+          PiggyDialogActions(
+            cancelLabel: l10n.commonCancel,
+            onCancel: () => Navigator.pop(context),
+            okLabel: l10n.commonNext,
+            onOk: () {
+              final options = ExportOptions(
+                ledgers: _ledgers,
+                categories: _categories,
+                accounts: _accounts,
+                tags: _tags,
+                budgets: _budgets,
+                recurringTransactions: _recurringTransactions,
+                appSettings: _appSettings,
+                ai: _ai,
+              );
+              Navigator.pop(context, options);
+            },
           ),
         ],
       ),
@@ -1068,20 +1007,13 @@ class _ExportPreviewDialog extends StatelessWidget {
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
       backgroundColor: PiggyTokens.surfaceElevated(context),
       child: Column(
         children: [
           // 标题栏
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: PiggyTokens.surfaceElevated(context),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(PiggyDimens.radiusLg),
-                topRight: Radius.circular(PiggyDimens.radiusLg),
-              ),
-            ),
             child: Row(
               children: [
                 const Icon(Icons.preview_outlined),
@@ -1129,23 +1061,12 @@ class _ExportPreviewDialog extends StatelessWidget {
               ),
             ),
           ),
-          // 底部按钮
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: Text(l10n.commonCancel),
-                ),
-                const SizedBox(width: 12),
-                FilledButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: Text(l10n.configExportConfirmTitle),
-                ),
-              ],
-            ),
+          // 底部动作区（与其余弹窗同一套分栏语言）
+          PiggyDialogActions(
+            cancelLabel: l10n.commonCancel,
+            onCancel: () => Navigator.pop(context, false),
+            okLabel: l10n.configExportConfirmTitle,
+            onOk: () => Navigator.pop(context, true),
           ),
         ],
       ),
@@ -1202,20 +1123,13 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg)),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
       backgroundColor: PiggyTokens.surfaceElevated(context),
       child: Column(
         children: [
           // 标题栏
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: PiggyTokens.surfaceElevated(context),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(PiggyDimens.radiusLg),
-                topRight: Radius.circular(PiggyDimens.radiusLg),
-              ),
-            ),
             child: Row(
               children: [
                 const Icon(Icons.preview_outlined),
@@ -1407,42 +1321,24 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
               ),
             ),
           ),
-          // 底部按钮
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: PiggyTokens.surfaceElevated(context),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(PiggyDimens.radiusLg),
-                bottomRight: Radius.circular(PiggyDimens.radiusLg),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(l10n.commonCancel),
-                ),
-                const SizedBox(width: 12),
-                FilledButton(
-                  onPressed: () {
-                    final options = ExportOptions(
-                      ledgers: _ledgers,
-                      categories: _categories,
-                      accounts: _accounts,
-                      tags: _tags,
-                      budgets: _budgets,
-                      recurringTransactions: _recurringTransactions,
-                      appSettings: _appSettings,
-                      ai: _ai,
-                    );
-                    Navigator.pop(context, options);
-                  },
-                  child: Text(l10n.configImportConfirmTitle),
-                ),
-              ],
-            ),
+          // 底部动作区（与其余弹窗同一套分栏语言）
+          PiggyDialogActions(
+            cancelLabel: l10n.commonCancel,
+            onCancel: () => Navigator.pop(context),
+            okLabel: l10n.configImportConfirmTitle,
+            onOk: () {
+              final options = ExportOptions(
+                ledgers: _ledgers,
+                categories: _categories,
+                accounts: _accounts,
+                tags: _tags,
+                budgets: _budgets,
+                recurringTransactions: _recurringTransactions,
+                appSettings: _appSettings,
+                ai: _ai,
+              );
+              Navigator.pop(context, options);
+            },
           ),
         ],
       ),

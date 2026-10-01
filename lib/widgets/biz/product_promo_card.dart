@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/system/logger_service.dart';
 import '../../styles/tokens.dart';
+import '../ui/dialog.dart';
 import '../ui/toast.dart';
 
 import '../../utils/platform_info.dart';
@@ -167,13 +168,8 @@ class ProductPromoLauncher {
       builder: (ctx) {
         // 弹窗交互元素跟随 app 主题色(用户自定义),不用产品 brand color。
         final themeColor = Theme.of(ctx).colorScheme.primary;
-        return AlertDialog(
-          // TF+商店并排那一支 actions 只剩一个"前往官网",居中放视觉更平衡;
-          // 其他场景仍是 [官网] + [商店/邮箱] 两个按钮,默认 end 对齐就好
-          actionsAlignment: _showTestFlightRow(info, hasStore)
-              ? MainAxisAlignment.center
-              : MainAxisAlignment.end,
-          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        return AppDialogShell(
+          wide: true,
           // SizedBox(width: maxFinite) 给 ScrollView 显式 width,否则下面
           // Image.asset 用 width: infinity + fitWidth 时 layout 算不出来,
           // 弹窗会渲染成空阴影。
@@ -356,23 +352,21 @@ class ProductPromoLauncher {
                 Navigator.of(ctx).pop();
                 await _tryOpenUrl(Uri.parse(info.websiteUrl));
               },
-              style: TextButton.styleFrom(foregroundColor: themeColor),
               child: Text(texts.websiteButton),
             ),
             // 主行动:仅当上面没出 TF+商店并排行时,这里出商店或申请内测
             // (TF+商店已经在 content 第一排展示了,不再重复)
             if (!_showTestFlightRow(info, hasStore))
               if (hasStore)
-                FilledButton(
+                TextButton(
                   onPressed: () async {
                     Navigator.of(ctx).pop();
                     await _tryOpenUrl(storeUri);
                   },
-                  style: FilledButton.styleFrom(backgroundColor: themeColor),
                   child: Text(texts.openStoreButton),
                 )
               else
-                FilledButton(
+                TextButton(
                   onPressed: () async {
                     // 双保险:先 clipboard 兜底,再 launchUrl,失败 toast 提示
                     await Clipboard.setData(
@@ -390,7 +384,6 @@ class ProductPromoLauncher {
                     Navigator.of(ctx).pop();
                     if (!ok) showToast(context, texts.mailUnavailableToast);
                   },
-                  style: FilledButton.styleFrom(backgroundColor: themeColor),
                   child: Text(texts.emailButton),
                 ),
           ],

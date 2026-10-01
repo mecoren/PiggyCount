@@ -372,6 +372,7 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
       final mode = await showDialog<String>(
         context: context,
         builder: (context) => AppDialogShell(
+          wide: true,
           title: Text(l10n.tagImportModeTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,

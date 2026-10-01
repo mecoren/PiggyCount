@@ -218,6 +218,9 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
     showDialog(
       context: context,
       builder: (context) => Dialog(
+        backgroundColor: PiggyTokens.surfaceElevated(context),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
         child: Container(
           constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
           child: Column(
@@ -400,7 +403,8 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.info_outline, color: Colors.orange[700], size: 18),
+                Icon(Icons.info_outline,
+                    color: PiggyTokens.warning(context), size: 18),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(

@@ -2389,6 +2389,7 @@ class _CompactDefaultAccount extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AppDialogShell(
+        wide: true,
         title: Text(title,
             style: TextStyle(color: PiggyTokens.textPrimary(context))),
         content: SingleChildScrollView(

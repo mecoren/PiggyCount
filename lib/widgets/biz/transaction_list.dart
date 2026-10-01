@@ -733,7 +733,8 @@ class TransactionListState extends ConsumerState<TransactionList> {
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 16),
-        color: Colors.red,
+        // 左滑删除底色走 error token（实心语义色底 + 白图标）
+        color: PiggyTokens.error(context),
         child: const Icon(Icons.delete, color: Colors.white),
       ),
       confirmDismiss: (direction) async {
