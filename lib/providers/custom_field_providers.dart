@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../data/db.dart';
 import '../data/models/custom_field_values.dart';
 import 'database_providers.dart';
+import 'theme_providers.dart';
 
 /// 自定义字段定义列表刷新触发器。
 ///
@@ -67,7 +68,8 @@ final customFieldFilledCountProvider =
 /// 更新都会重发,角标跟数据实时走,不依赖 refresh 触发器。字段名按定义
 /// syncId 反查并按定义排序输出;定义已删的键跳过(deleteDefinition 会清值,
 /// 这里只防云端在途的幽灵键)。「全部账本」模式下其它账本的值天然解析不出
-/// 名称 → 不显示,属预期。日期值按 fieldType 转本地化 yMd 文本。
+/// 名称 → 不显示,属预期。日期值按 fieldType 转本地化 yMd 文本;填了时分秒
+/// 且「显示交易时间」开启时连时间一并显示(与明细行时间口径一致)。
 final customFieldValueBadgesProvider = StreamProvider<Map<int,
         List<({String name, String display})>>>((ref) {
   final db = ref.watch(databaseProvider);
@@ -83,6 +85,8 @@ final customFieldValueBadgesProvider = StreamProvider<Map<int,
   final decodeCache = <String, Map<String, dynamic>>{};
   // P7：DateFormat 构造提出每值循环。
   final yMd = DateFormat.yMd();
+  final yMdHms = DateFormat.yMd().add_Hms();
+  final showTime = ref.watch(showTransactionTimeProvider);
   return valuesStream.asyncMap((rows) async {
     final defs = await repo.getDefinitionsForLedger(ledgerId);
     final out =
@@ -101,7 +105,13 @@ final customFieldValueBadgesProvider = StreamProvider<Map<int,
         if (display == null) continue;
         if (d.fieldType == CustomFieldType.date) {
           final parsed = DateTime.tryParse(display);
-          if (parsed != null) display = yMd.format(parsed);
+          if (parsed != null) {
+            // 零点值只出日期（旧数据与「只选日期」的存法），非零点且开关
+            // 开着才连时分秒一起出 —— 与明细行自己的时间列同一判定。
+            final withTime = showTime &&
+                (parsed.hour != 0 || parsed.minute != 0 || parsed.second != 0);
+            display = (withTime ? yMdHms : yMd).format(parsed);
+          }
         }
         badges.add((name: d.name, display: display));
       }

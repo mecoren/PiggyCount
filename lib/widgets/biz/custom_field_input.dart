@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/db.dart';
 import '../../data/models/custom_field_values.dart';
 import '../../l10n/app_localizations.dart';
+import '../../providers/theme_providers.dart';
 import '../../styles/tokens.dart';
 import '../ui/wheel_date_picker.dart';
 
@@ -13,11 +15,13 @@ import '../ui/wheel_date_picker.dart';
 /// 空判断以防御误用。输入控件按 fieldType 自适应：
 /// - amount：数字键盘（仅收数字与小数点；非法串视为未填）
 /// - text：普通文本，限长 100
-/// - date：点击唤起项目滚轮日期选择器，右侧提供清除按钮
+/// - date：点击唤起项目滚轮选择器，右侧提供清除按钮。**粒度跟随
+///   [showTransactionTimeProvider]**（与金额表单的日期位同口径）：开启时走
+///   两步流程先选日期再选时分秒，关闭时只选日期
 ///
 /// 值以 `{ fieldSyncId: value }` 经 [onChanged] 上抛；父级在提交时交给仓储层，
 /// 由 [CustomFieldValueCodec] 统一编码落库。
-class CustomFieldsSection extends StatefulWidget {
+class CustomFieldsSection extends ConsumerStatefulWidget {
   /// 当前账本的字段定义（已按 sortOrder 排好）。
   final List<CustomFieldDefinition> definitions;
 
@@ -57,10 +61,11 @@ class CustomFieldsSection extends StatefulWidget {
   });
 
   @override
-  State<CustomFieldsSection> createState() => _CustomFieldsSectionState();
+  ConsumerState<CustomFieldsSection> createState() =>
+      _CustomFieldsSectionState();
 }
 
-class _CustomFieldsSectionState extends State<CustomFieldsSection> {
+class _CustomFieldsSectionState extends ConsumerState<CustomFieldsSection> {
   /// fieldSyncId → controller。controller 必须跨 rebuild 复用，否则每帧重建
   /// 会丢光标与输入法状态。
   final Map<String, TextEditingController> _controllers = {};
@@ -317,22 +322,31 @@ class _CustomFieldsSectionState extends State<CustomFieldsSection> {
     );
   }
 
+  /// 日期字段录入位。
+  ///
+  /// 粒度与金额表单的日期位**同一开关**（[showTransactionTimeProvider]）：
+  /// 开启时用两步选择器（先日期、再时分秒），关闭时只选日期 —— 不改用户的
+  /// 「只显示日期」偏好，也不会在关闭态平白多出一步。
   Widget _buildDateInput(String syncId, AppLocalizations l10n) {
     final raw = _values[syncId];
     final date = raw is String ? DateTime.tryParse(raw) : null;
+    final withTime = ref.watch(showTransactionTimeProvider);
+    // 值为零点（只选了日期 / 关闭态存的）时只显示日期，避免满屏 00:00:00。
+    final showTime = withTime && date != null && _hasTimeOfDay(date);
     return InkWell(
       key: ValueKey('custom_field_date_$syncId'),
       borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
       onTap: () async {
-        final picked = await showWheelDatePicker(
-          context,
-          initial: date ?? DateTime.now(),
-        );
+        final initial = date ?? DateTime.now();
+        final picked = withTime
+            ? await showWheelDateTimePicker(context, initial: initial)
+            : await showWheelDatePicker(context, initial: initial);
         if (picked == null) return;
-        _setValue(
-          syncId,
-          DateTime(picked.year, picked.month, picked.day).toIso8601String(),
-        );
+        // 关闭时间粒度时把时刻归零：只改日期的一次编辑不该把别的设备记下的
+        // 时分秒留下来（用户口径是「只记日期」）。
+        final value =
+            withTime ? picked : DateTime(picked.year, picked.month, picked.day);
+        _setValue(syncId, value.toIso8601String());
       },
       child: Container(
         height: 40,
@@ -346,7 +360,11 @@ class _CustomFieldsSectionState extends State<CustomFieldsSection> {
           children: [
             Expanded(
               child: Text(
-                date == null ? l10n.customFieldDatePick : _formatDate(date),
+                date == null
+                    ? l10n.customFieldDatePick
+                    : (showTime
+                        ? '${_formatDate(date)} ${_formatTime(date)}'
+                        : _formatDate(date)),
                 style: TextStyle(
                   fontSize: 14,
                   color: date == null
@@ -374,7 +392,16 @@ class _CustomFieldsSectionState extends State<CustomFieldsSection> {
     );
   }
 
+  /// 时刻是否非零点（与明细行「要不要显示时间」同一判定口径）。
+  static bool _hasTimeOfDay(DateTime d) =>
+      d.hour != 0 || d.minute != 0 || d.second != 0;
+
   static String _formatDate(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-'
       '${d.day.toString().padLeft(2, '0')}';
+
+  static String _formatTime(DateTime d) =>
+      '${d.hour.toString().padLeft(2, '0')}:'
+      '${d.minute.toString().padLeft(2, '0')}:'
+      '${d.second.toString().padLeft(2, '0')}';
 }

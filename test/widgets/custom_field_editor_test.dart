@@ -13,6 +13,9 @@
 /// 所以「填值/清空」用点金额位 + 点数字键/退格来驱动，不能用 `enterText`。
 /// 文本字段仍是 TextField，`enterText` 照旧。
 ///
+/// 日期字段粒度跟随「显示交易时间」（与金额表单的日期位同一开关）：开启时
+/// 两步流程（日期 → 下一步 → 时分秒），关闭时单步只选日期、时刻归零。
+///
 /// ⚠️ 点「完成」后**不要**用 `pumpAndSettle()`：提交回调里会把按钮切到
 /// loading 转圈（无限动画），settle 永远等不到静止 → 超时失败。这里统一
 /// 只 `pump()` 一帧 —— 断言只依赖 `onSubmit` 已被同步调用。
@@ -29,6 +32,7 @@ import 'package:piggycount/data/db.dart';
 import 'package:piggycount/data/repositories/local/local_repository.dart';
 import 'package:piggycount/l10n/app_localizations.dart';
 import 'package:piggycount/providers/database_providers.dart';
+import 'package:piggycount/providers/theme_providers.dart';
 import 'package:piggycount/widgets/biz/amount_editor_sheet.dart';
 
 void main() {
@@ -101,12 +105,16 @@ void main() {
   Widget host({
     Map<String, dynamic> initialCustomValues = const {},
     required void Function(AmountEditorResult) onSubmit,
+    /// 「显示交易时间」开关（日期字段的粒度跟随它，默认与 provider 默认值一致）。
+    bool showTransactionTime = true,
   }) =>
       ProviderScope(
         overrides: [
           repositoryProvider.overrideWithValue(repo),
           currentLedgerProvider
               .overrideWith((ref) => Stream<Ledger?>.value(ledger())),
+          showTransactionTimeProvider
+              .overrideWith((ref) => showTransactionTime),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -224,6 +232,100 @@ void main() {
 
     expect(find.text('选择日期'), findsOneWidget);
     expect(find.byKey(const ValueKey('custom_field_date_cf-d')), findsOneWidget);
+  });
+
+  testWidgets('日期字段：已存时分秒 → 行内回显 yyyy-MM-dd HH:mm:ss',
+      (tester) async {
+    prepareTest(tester);
+    await seedField(syncId: 'cf-d', name: '开票时间', type: 'date');
+
+    await tester.pumpWidget(host(
+      initialCustomValues: const {'cf-d': '2026-09-30T22:29:25.000'},
+      onSubmit: (_) {},
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2026-09-30 22:29:25'), findsOneWidget);
+  });
+
+  testWidgets('日期字段：时刻为零点 → 只回显日期（旧数据不出 00:00:00）',
+      (tester) async {
+    prepareTest(tester);
+    await seedField(syncId: 'cf-d', name: '开票日', type: 'date');
+
+    await tester.pumpWidget(host(
+      initialCustomValues: const {'cf-d': '2026-09-30T00:00:00.000'},
+      onSubmit: (_) {},
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2026-09-30'), findsOneWidget);
+  });
+
+  testWidgets('日期字段：「显示交易时间」关闭 → 有时刻也只回显日期', (tester) async {
+    prepareTest(tester);
+    await seedField(syncId: 'cf-d', name: '开票时间', type: 'date');
+
+    await tester.pumpWidget(host(
+      initialCustomValues: const {'cf-d': '2026-09-30T22:29:25.000'},
+      showTransactionTime: false,
+      onSubmit: (_) {},
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2026-09-30'), findsOneWidget);
+    expect(find.text('2026-09-30 22:29:25'), findsNothing);
+  });
+
+  testWidgets('日期字段：两步选择器（先日期后时分秒）→ 提交完整 ISO 时刻',
+      (tester) async {
+    prepareTest(tester);
+    await seedField(syncId: 'cf-d', name: '开票时间', type: 'date');
+    AmountEditorResult? captured;
+
+    await tester.pumpWidget(host(
+      initialCustomValues: const {'cf-d': '2026-09-30T22:29:25.000'},
+      onSubmit: (r) => captured = r,
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('custom_field_date_cf-d')));
+    await tester.pumpAndSettle();
+    expect(find.text('选择日期'), findsOneWidget, reason: '第一步：日期滚轮');
+
+    await tester.tap(find.byIcon(Icons.check));
+    await tester.pumpAndSettle();
+    expect(find.text('选择时间'), findsOneWidget, reason: '第二步：时分秒滚轮');
+
+    await tester.tap(find.byIcon(Icons.check));
+    await tester.pumpAndSettle();
+
+    await submit(tester);
+    expect(captured!.customValues!['cf-d'], '2026-09-30T22:29:25.000',
+        reason: '两步都没改选 → 原时刻逐字保留（秒不丢）');
+  });
+
+  testWidgets('日期字段：「显示交易时间」关闭 → 单步选择器且把时刻归零',
+      (tester) async {
+    prepareTest(tester);
+    await seedField(syncId: 'cf-d', name: '开票时间', type: 'date');
+    AmountEditorResult? captured;
+
+    await tester.pumpWidget(host(
+      initialCustomValues: const {'cf-d': '2026-09-30T22:29:25.000'},
+      showTransactionTime: false,
+      onSubmit: (r) => captured = r,
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('custom_field_date_cf-d')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.check));
+    await tester.pumpAndSettle();
+
+    await submit(tester);
+    expect(captured!.customValues!['cf-d'], '2026-09-30T00:00:00.000',
+        reason: '用户口径是「只记日期」，重选日期就该落零点时刻');
   });
 
   testWidgets('提交三态①：原值与现值都为空 → customValues 为 null（不改动）',
