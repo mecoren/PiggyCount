@@ -13,7 +13,7 @@ export 'wheel_date_picker.dart';
 export 'picker_sheet.dart';
 export 'wheel_time_picker.dart';
 export 'wheel_picker.dart';
-export 'searchable_dropdown.dart';
+
 export 'message_popover_menu.dart';
 export 'piggy_popup_menu.dart';
 export 'piggy_switcher.dart';
