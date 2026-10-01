@@ -260,12 +260,14 @@ class _CustomFieldsSectionState extends ConsumerState<CustomFieldsSection> {
           fillColor: PiggyTokens.surface(context),
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          // radiusLg：与同表单的「原始金额」位 / 备注框同款圆角（此前是
+          // radiusSm，同一张表单里两种圆角观感割裂 —— 设计 token 收敛）。
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
             borderSide: BorderSide(color: PiggyTokens.border(context)),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
             borderSide: BorderSide(color: PiggyTokens.border(context)),
           ),
         ),
@@ -311,8 +313,8 @@ class _CustomFieldsSectionState extends ConsumerState<CustomFieldsSection> {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: isEmpty
-              ? theme.labelSmall?.copyWith(
-                  color: PiggyTokens.textTertiary(context))
+              ? theme.labelSmall
+                  ?.copyWith(color: PiggyTokens.textTertiary(context))
               : theme.bodyMedium?.copyWith(
                   color: PiggyTokens.textPrimary(context),
                   fontWeight: FontWeight.w600,
@@ -335,7 +337,8 @@ class _CustomFieldsSectionState extends ConsumerState<CustomFieldsSection> {
     final showTime = withTime && date != null && _hasTimeOfDay(date);
     return InkWell(
       key: ValueKey('custom_field_date_$syncId'),
-      borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+      // radiusLg：与同表单的输入框同款圆角（见 _buildTextInput）。
+      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
       onTap: () async {
         final initial = date ?? DateTime.now();
         final picked = withTime
@@ -353,7 +356,8 @@ class _CustomFieldsSectionState extends ConsumerState<CustomFieldsSection> {
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
           color: PiggyTokens.surface(context),
-          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+          // radiusLg：与同表单的输入框同款圆角（见 _buildTextInput）。
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
           border: Border.all(color: PiggyTokens.border(context)),
         ),
         child: Row(
