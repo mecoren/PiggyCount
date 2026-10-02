@@ -1,1 +1,11 @@
 include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    # scripts/live_db/ 是本地真机回归夹具的 run_* 目录（本身已在 .gitignore 中）。
+    # 单轮回归就会落上千个 .dart/.sqlite/.png（2026-10 已累积 5000+ 文件）；
+    # CI 只见被跟踪文件因而不受影响，但本地 `flutter analyze` 会被它们拖慢
+    # 并报出与产品代码无关的 info（2026-10-02 实测：53.7s，7 条 avoid_print
+    # 全部来自 scripts/live_db/run_20260920/probe_uri.dart）。
+    # 只排除该目录：scripts/i18n、scripts/tools 等被跟踪的脚本仍参与分析。
+    - scripts/live_db/**
