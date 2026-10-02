@@ -55,6 +55,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 本地镜像守卫（2026-10-02 新增）。
+      # 开发机若设了 PUB_HOSTED_URL（如 pub.flutter-io.cn），`flutter pub get`
+      # 会把 pubspec.lock 里 200+ 行 `url` 全量改写成镜像地址，并可能顺带抬几个
+      # patch 版本（实测：254 行 url + 4 处版本漂移）。这与业务无关，却会让 CI
+      # 侧解析出不一致的 host，故在 Checkout 之后、pub get 之前直接拦死。
+      - name: pubspec.lock 镜像守卫（本地镜像地址不得入库）
+        run: |
+          if grep -nE 'flutter-io\.cn' pubspec.lock; then
+            echo "::error::pubspec.lock 含本地镜像地址（本地 PUB_HOSTED_URL 所致），请 git checkout -- pubspec.lock 后重新提交"
+            exit 1
+          fi
+          echo "OK：pubspec.lock 未含本地镜像地址"
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:

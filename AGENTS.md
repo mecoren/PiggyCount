@@ -144,6 +144,8 @@ python scripts/gen_ios_icons.py
 ```
 
 - **Windows 本地跑测试的坑**：依赖 `NativeDatabase.memory()`（drift FFI）的用例需要 `sqlite3.dll` 在 PATH 上（CI 的 ubuntu-latest 自带 libsqlite3）。本地先把 DLL 目录加进 PATH 再 `flutter test`（如 `$env:PATH="D:\DevTools\sqlite3-bin;$env:PATH"`）；纯 mock 用例不需要。**不要**给 `flutter_cloud_sync_s3` 子包加 `meta` 依赖——会引发解析冲突导致 `flutter pub get` 静默失败。
+- **别跑全仓 `dart format .`**：本机 SDK 的 formatter 与仓库格式化基线不一致，一次会把几百个无关文件重排（2026-10-02 实测 **418 个**，并顺带引入 4 条 `curly_braces_in_flow_control_structures` 新 info）。只格式化自己新增/改动的文件；误跑后按「除本批改动外的文件」逐个 `git checkout --` 回退，别整仓回退（会连自己的改动一起丢）。
+- **本地镜像会改写 `pubspec.lock`**：设了 `PUB_HOSTED_URL`（如 `pub.flutter-io.cn`）时，`flutter pub get` 会把 lock 里 200+ 行 `url` 全量改写成镜像地址，并可能顺带抬几个 patch 版本（实测 254 行 url + 4 处版本漂移）。提交前必须 `git status` 确认没把它带上——CI 的 analyze job 已加守卫拦这道（`pubspec.lock 镜像守卫`）。
 - **CI**（`.github/workflows/analyze.yml`）两个 job：`analyze`（`flutter analyze --fatal-infos`）+ `test`（`flutter test`，承担同步契约结构性回归门禁：`test/cloud/sync_contract_coverage_test.dart`、`sync_diff_category_and_zero_amount_test.dart`、`restore_preserves_local_only_columns_test.dart`）。issue-lint / pullfrog 为辅助检查。
 - **发版**：唯一入口 `.github/workflows/release.yml`，当前开发主线分支 `wait`。完整链路、产物命名与踩坑清单见下方「发版流程」章节。
 
