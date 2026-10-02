@@ -59,10 +59,28 @@ Future<ExportedLedgerJson> exportTransactionsJson(
 
   logger.debug('TransactionsJson', '账本 $ledgerId 共有 ${txs.length} 条交易');
 
-  // 稳定排序，避免不同平台/查询导致顺序差异
+  // 稳定排序，避免不同平台/查询导致顺序差异。
+  //
+  // ⚠️ 兜底键必须是**跨设备内容派生**，绝不能用本地自增 `id`。
+  //
+  // 两端 `id` 序列彼此独立：同一笔 happenedAt 完全相同的交易（同一秒内连续
+  // 记两笔、批量导入的历史账单等）在两端会排出不同先后 → payload 字节不同；
+  // 而指纹对 items 做的是**内容全序化**（happenedAt→type→amount→
+  // categoryName→categoryKind→note，见 sync_fingerprint），顺序无关 →
+  // **指纹相同、字节不同**：与「导出侧转账分类未归空」完全同构的静默不对称
+  // （2026-10-02 双后端测试记录）。syncId 是跨设备稳定锚点，故作为首选兜底；
+  // 旧数据无 syncId 时退内容键，最后才用 id（仅保证本机内确定）。
   txs.sort((a, b) {
     final c = a.happenedAt.compareTo(b.happenedAt);
     if (c != 0) return c;
+    final s = (a.syncId ?? '').compareTo(b.syncId ?? '');
+    if (s != 0) return s;
+    final t = a.type.compareTo(b.type);
+    if (t != 0) return t;
+    final m = a.amount.compareTo(b.amount);
+    if (m != 0) return m;
+    final n = (a.note ?? '').compareTo(b.note ?? '');
+    if (n != 0) return n;
     return a.id.compareTo(b.id);
   });
 
@@ -174,8 +192,21 @@ Future<ExportedLedgerJson> exportTransactionsJson(
     final item = <String, dynamic>{
       'type': t.type,
       'amount': t.amount,
-      'categoryName': catInfo?['name'],
-      'categoryKind': catInfo?['kind'],
+      // 转账无分类语义 —— **导出侧必须与指纹/diff/恢复三侧同源归空**。
+      //
+      // 此前本行原样导出 `catInfo`（转账行主表残留虚拟转账分类 id，
+      // 导出即 'Transfer'/'transfer'），而另三处都归空：
+      //   • 指纹 sync_fingerprint.dart（`isTransfer ? '' : …`）
+      //   • diff sync_diff_service.dart（两侧归空比较）
+      //   • 写库 data_import_service.dart:1757 / sync_diff_service.dart:860
+      //     （`type == 'transfer' ? null : categoryId`）
+      // 后果是「静默不对称」：源端快照带 Transfer，恢复端落 NULL 后再导出
+      // 为 null → **两端 payload 字节永久不同，指纹却相同**，差异被指纹
+      // 掩盖，既不相告也无从自愈（2026-10-02 S3+WebDAV 真机 4 万笔/
+      // 8 账本 8/8 复现）。键保留、值归 null：与恢复端再导出的形态逐字节
+      // 一致，且指纹侧对 null 与 '' 的归一口径不变。
+      'categoryName': t.type == 'transfer' ? null : catInfo?['name'],
+      'categoryKind': t.type == 'transfer' ? null : catInfo?['kind'],
       'happenedAt': t.happenedAt.toUtc().toIso8601String(),
       'note': _sanitizeString(t.note),
       if (t.syncId != null) 'syncId': t.syncId,

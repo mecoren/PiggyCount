@@ -177,7 +177,11 @@ void main() {
         repo: repo,
         ledgerId: 1,
         cloudTransactions: [
-          // 导出侧对 transfer 归空：categoryName/Kind 都是 null
+          // 导出侧**确实**对 transfer 归空（transactions_json.dart 的
+          // `t.type == 'transfer' ? null : catInfo?[...]`）：categoryName/Kind
+          // 都是 null。此前本行注释只是断言该行为、并无测试校验，导致导出侧
+          // 漏归空（源端写 'Transfer'、恢复端写 null）长期无人发现 ——
+          // 导出侧口径现由 transfer_category_snapshot_symmetry_test.dart 守门。
           cloudTx(type: 'transfer'),
         ],
       );

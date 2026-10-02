@@ -3402,6 +3402,7 @@ class LocalRepository extends BaseRepository {
     String period = 'monthly',
     int startDay = 1,
     String? syncId,
+    bool enabled = true,
   }) {
     // TBL-M9：写表 + 记 change 同事务
     return db.transaction(() async {
@@ -3413,6 +3414,7 @@ class LocalRepository extends BaseRepository {
         period: period,
         startDay: startDay,
         syncId: syncId,
+        enabled: enabled,
       );
       if (changeTracker != null) {
         final row = await (db.select(db.budgets)..where((b) => b.id.equals(id)))

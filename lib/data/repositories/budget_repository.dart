@@ -64,6 +64,11 @@ abstract class BudgetRepository {
   // ============ 预算 CRUD ============
 
   /// 创建预算
+  ///
+  /// [enabled] 必须可指定：`enabled` 参与快照指纹（`sync_fingerprint`
+  /// 预算段），恢复端若只能建「启用」预算，就会把云端「已停用」的预算
+  /// 静默改成启用 —— 两端指纹永久不同、diff 又报不出变更（同 S11/D-1
+  /// 形状）。2026-10-02 全字段闭环门禁（Tier 5）实测复现。
   Future<int> createBudget({
     required int ledgerId,
     required String type,
@@ -72,6 +77,7 @@ abstract class BudgetRepository {
     String period = 'monthly',
     int startDay = 1,
     String? syncId,
+    bool enabled = true,
   });
 
   /// 更新预算

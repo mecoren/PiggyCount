@@ -1346,6 +1346,10 @@ class DataImportService {
             period: b.period,
             startDay: b.startDay,
             syncId: b.syncId,
+            // enabled 必须随快照落库：漏传会把云端「已停用」的预算建成启用，
+            // 而 enabled 参与快照指纹 → 该账本永久「有差异」却又 diff 不出
+            // 变更（2026-10-02 全字段闭环门禁 Tier 5 实测复现）
+            enabled: b.enabled,
           );
           created++;
         } else {
