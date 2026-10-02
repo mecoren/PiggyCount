@@ -1321,14 +1321,9 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
 
   Future<void> _editAccount(BuildContext context, WidgetRef ref,
       db.Account account, int ledgerId) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => AccountEditPage(
-          account: account,
-          ledgerId: ledgerId,
-        ),
-      ),
-    );
+    // 编辑账户：与新建同款悬浮卡片表单抽屉（编辑态多出「隐藏 / 删除」两枚按钮）
+    await showAccountFormBottomSheet(context,
+        ledgerId: ledgerId, account: account);
 
     ref.read(statsRefreshProvider.notifier).state++;
   }

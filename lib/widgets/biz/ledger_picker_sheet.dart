@@ -7,11 +7,16 @@ import '../../providers.dart';
 import '../../styles/tokens.dart';
 import '../../pages/main/ledgers_page_new.dart';
 import '../ui/dialog.dart';
+import '../ui/option_sheet.dart';
 
 /// 账本选择弹窗组件
 ///
 /// 居中显示，用于快速切换账本。外壳走项目弹窗语言（[AppDialogShell]）：
 /// 居中标题 + 项目卡片 + 底部分栏动作区，标题固定不随列表滚动。
+///
+/// 选项行复用单选列表抽屉的基准行 [PiggyOptionRow]（与「备注显示方式」等
+/// 单选列表同一语言）：**文字靠左、不放左侧勾选**，标题 + 「币种 · N 笔」
+/// 副文案，尾部给选中勾；高亮只给选中项（标题主色 + 尾部勾）。
 class LedgerPickerDialog extends ConsumerWidget {
   const LedgerPickerDialog({super.key});
 
@@ -105,8 +110,9 @@ class LedgerPickerDialog extends ConsumerWidget {
         final ledger = ledgers[index];
         final isSelected = ledger.id == currentId;
 
-        return _LedgerItem(
-          ledger: ledger,
+        return PiggyOptionRow(
+          title: ledger.name,
+          desc: '${ledger.currency} · ${ledger.transactionCount} 笔',
           isSelected: isSelected,
           primaryColor: primaryColor,
           onTap: () {
@@ -117,89 +123,6 @@ class LedgerPickerDialog extends ConsumerWidget {
           },
         );
       },
-    );
-  }
-}
-
-/// 账本列表项
-class _LedgerItem extends StatelessWidget {
-  final LedgerDisplayItem ledger;
-  final bool isSelected;
-  final Color primaryColor;
-  final VoidCallback onTap;
-
-  const _LedgerItem({
-    required this.ledger,
-    required this.isSelected,
-    required this.primaryColor,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: isSelected
-            ? BoxDecoration(
-                color: primaryColor.withValues(alpha: 0.08),
-              )
-            : null,
-        child: Row(
-          children: [
-            // 选中标记
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: 20,
-              height: 20,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isSelected ? primaryColor : Colors.transparent,
-                border: Border.all(
-                  color:
-                      isSelected ? primaryColor : PiggyTokens.border(context),
-                  width: 2,
-                ),
-              ),
-              child: isSelected
-                  ? const Icon(
-                      Icons.check,
-                      size: 12,
-                      color: Colors.white,
-                    )
-                  : null,
-            ),
-            const SizedBox(width: 14),
-            // 账本信息
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    ledger.name,
-                    style: PiggyTextTokens.title(context).copyWith(
-                          fontWeight:
-                              isSelected ? FontWeight.w600 : FontWeight.w500,
-                          color: isSelected
-                              ? primaryColor
-                              : PiggyTokens.textPrimary(context),
-                        ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${ledger.currency} · ${ledger.transactionCount} 笔',
-                    style: PiggyTextTokens.label(context)
-                        .copyWith(color: PiggyTokens.textTertiary(context)),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

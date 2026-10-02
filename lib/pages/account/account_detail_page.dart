@@ -224,14 +224,10 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
               final currentLedger =
                   ref.read(currentLedgerProvider).asData?.value;
               if (currentLedger == null) return;
-              final result = await Navigator.push(
+              final result = await showAccountFormBottomSheet(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => AccountEditPage(
-                    account: account,
-                    ledgerId: currentLedger.id,
-                  ),
-                ),
+                ledgerId: currentLedger.id,
+                account: account,
               );
               // context 是 build 参数,State.mounted 不足以证明其有效,需一并校验
               if (result == true && mounted && context.mounted) {
@@ -497,8 +493,8 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                     padding: EdgeInsets.symmetric(
                         vertical: 12.0.scaled(context, ref)),
                     shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
+                      borderRadius: BorderRadius.circular(
+                          PiggyDimens.radiusSm.scaled(context, ref)),
                     ),
                   ),
                 ),
@@ -788,7 +784,8 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
               ),
               decoration: BoxDecoration(
                 color: primaryColor.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
+                borderRadius: BorderRadius.circular(
+                    PiggyDimens.radiusSm.scaled(context, ref)),
               ),
               child: Row(
                 children: [
@@ -1061,8 +1058,8 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                   ),
                   decoration: BoxDecoration(
                     color: primaryColor.withValues(alpha: 0.1),
-                    borderRadius:
-                        BorderRadius.circular(PiggyDimens.radiusMd.scaled(context, ref)),
+                    borderRadius: BorderRadius.circular(
+                        PiggyDimens.radiusMd.scaled(context, ref)),
                   ),
                   child: Text(
                     '${transactions.length}${state.hasMore ? '+' : ''}',
@@ -1535,8 +1532,8 @@ class _TransactionTile extends ConsumerWidget {
                           ),
                           decoration: BoxDecoration(
                             color: primaryColor.withValues(alpha: 0.1),
-                            borderRadius:
-                                BorderRadius.circular(PiggyDimens.radiusXs.scaled(context, ref)),
+                            borderRadius: BorderRadius.circular(
+                                PiggyDimens.radiusXs.scaled(context, ref)),
                           ),
                           child: Text(
                             ledgerName,
