@@ -81,8 +81,7 @@ class S3Client {
   /// - 超大对象：封顶 5min，保留「服务器无响应可恢复」的挂起保护。
   Duration transferTimeoutFor(int contentLength) {
     final sizeMb = contentLength / (1024 * 1024);
-    final dynamicMs =
-        timeout.inMilliseconds + (sizeMb * 30 * 1000).round();
+    final dynamicMs = timeout.inMilliseconds + (sizeMb * 30 * 1000).round();
     // 审计 S3-L2：num.clamp 要求 lower ≤ upper。自定义 timeout 大于封顶值
     // （如 Duration(minutes: 10)）时旧式 `clamp(timeout, cap)` 会抛
     // ArgumentError —— timeout 是公开参数，调用方一旦显式要求长超时即崩。
@@ -178,10 +177,7 @@ class S3Client {
         final status = e.statusCode;
         final neverRetry =
             status != null && neverRetryStatusCodes.contains(status);
-        if (!neverRetry &&
-            status != null &&
-            status >= 500 &&
-            status < 600) {
+        if (!neverRetry && status != null && status >= 500 && status < 600) {
           attempt++;
           onRetryEvent?.call('服务端 $status 错误，第 $attempt/$maxRetries 次重试');
           if (attempt >= maxRetries) rethrow;
@@ -220,6 +216,16 @@ class S3Client {
 
   /// 测试口：暴露条件写能力缓存（断言降级记忆 / 重置）。
   bool? get conditionalWriteUnsupportedForTest => _conditionalWriteUnsupported;
+
+  /// 网关条件写能力（生产读取口）：未发现不支持时恒 true。
+  ///
+  /// 会话内一旦确认网关不支持条件头（400 + NotImplemented，或对端在
+  /// 传输中提前断开 —— 见 [_isPeerClosedDuringTransfer]），即转为 false。
+  /// [S3StorageService.supportsConditionalWrite] 据此如实申报，上层
+  /// （`CloudStorageConditionalExt.conditionalOrNull`）随之解除条件锚点、
+  /// 退化为盲上传 + 写后校验，不再每次白付一次失败往返。
+  /// [S3Client] 生命周期与 provider 一致，后端更换后重新探测。
+  bool get conditionalWriteSupported => _conditionalWriteUnsupported != true;
 
   /// 降级回调（可选）：条件头降级为盲写时通知上层记 warning 日志。
   /// S3Client 自身不依赖日志设施（包保持零 Flutter/日志依赖），由
@@ -333,10 +339,10 @@ class S3Client {
             // 坑（先发条件写、吃 400、再盲写），且静默降级排查无痕迹。
             // 首次确认后记忆能力并回调日志，后续 putObject 入口直接盲写。
             _conditionalWriteUnsupported = true;
-            onConditionalWriteDowngrade?.call(
-                'S3 网关不支持条件写（If-Match/If-None-Match 返回 400 '
-                'NotImplemented），本次降级为盲写+写后校验，本会话后续上传'
-                '直接走盲写: bucket=$bucket key=$key');
+            onConditionalWriteDowngrade
+                ?.call('S3 网关不支持条件写（If-Match/If-None-Match 返回 400 '
+                    'NotImplemented），本次降级为盲写+写后校验，本会话后续上传'
+                    '直接走盲写: bucket=$bucket key=$key');
             ifMatch = null;
             ifNoneMatch = false;
             headers = _signedPutHeaders(uri, data, contentType, metadata);
@@ -359,8 +365,7 @@ class S3Client {
           // 审计 M2：409 ConditionalRequestConflict 是瞬时竞态（AWS：
           // 「On a 409 failure, retry the upload」），有限重试后仍冲突
           // 则按条件失败上抛
-          if (response.statusCode == 409 &&
-              (ifMatch != null || ifNoneMatch)) {
+          if (response.statusCode == 409 && (ifMatch != null || ifNoneMatch)) {
             conflictRetries++;
             if (conflictRetries <= 2) {
               await Future.delayed(
@@ -389,10 +394,31 @@ class S3Client {
         // 重试正常完成。盲写路径维持不重试纪律（A-1 未修，写后校验兜底）。
         if ((ifMatch != null || ifNoneMatch) && netRetries < 2) {
           netRetries++;
-          onRetryEvent?.call(
-              'PutObject(conditional) 网络错误，第 $netRetries/2 次安全重试: '
-              '${e.message}');
+          onRetryEvent
+              ?.call('PutObject(conditional) 网络错误，第 $netRetries/2 次安全重试: '
+                  '${e.message}');
           await Future.delayed(retryDelayForTest(netRetries));
+          continue;
+        }
+        // S3-W2 扩展（2026-10-01 阿里云 OSS 真机实测）：锚点重试耗尽后，
+        // 若失败形态是「对端在传输中提前断开」，则与 400+NotImplemented
+        // 同一处置 —— 判定网关不支持条件头，记忆能力 + 告警 + 去掉条件头
+        // 盲写重发一次。OSS 收到不支持的 If-Match 时会在请求体写完前拒绝
+        // 并断连，客户端读不到那个 4xx，400 判据在此形态下不可达（真机
+        // R2/R3 增量上传 8/8 全失败即此）。风险模型与既有 400 降级一致：
+        // 盲写后由 manager 的写后校验（verifyAfterUpload）兜底并发覆盖检测。
+        if ((ifMatch != null || ifNoneMatch) &&
+            !conditionalDropped &&
+            _isPeerClosedDuringTransfer(e.message)) {
+          conditionalDropped = true;
+          _conditionalWriteUnsupported = true;
+          onConditionalWriteDowngrade
+              ?.call('S3 网关不支持条件写（条件 PUT 连接层中断：${e.message}），'
+                  '本次降级为盲写+写后校验，本会话后续上传直接走盲写: '
+                  'bucket=$bucket key=$key');
+          ifMatch = null;
+          ifNoneMatch = false;
+          headers = _signedPutHeaders(uri, data, contentType, metadata);
           continue;
         }
         throw S3NetworkException('Network error: ${e.message}',
@@ -400,8 +426,7 @@ class S3Client {
       } on TimeoutException {
         if ((ifMatch != null || ifNoneMatch) && netRetries < 2) {
           netRetries++;
-          onRetryEvent?.call(
-              'PutObject(conditional) 超时，第 $netRetries/2 次安全重试'
+          onRetryEvent?.call('PutObject(conditional) 超时，第 $netRetries/2 次安全重试'
               '（当前预算 ${transferTimeoutFor(data.length).inSeconds}s）');
           await Future.delayed(retryDelayForTest(netRetries));
           continue;
@@ -529,14 +554,14 @@ class S3Client {
       final effectiveTimeout = transferTimeoutFor(streamTimeout);
       final first = await Future.any<Object?>([
         pumpDone.future.then<Object?>((_) => _pumpCompletedSentinel),
-        responseFuture
-            .then<Object?>((r) => r)
-            .timeout(effectiveTimeout, onTimeout: () => throw TimeoutException(
+        responseFuture.then<Object?>((r) => r).timeout(effectiveTimeout,
+            onTimeout: () => throw TimeoutException(
                 'PutObjectStream response timed out after '
                 '${effectiveTimeout.inSeconds}s')),
-      ]).timeout(effectiveTimeout, onTimeout: () => throw TimeoutException(
-          'PutObjectStream source stream stalled for '
-          '${effectiveTimeout.inSeconds}s'));
+      ]).timeout(effectiveTimeout,
+          onTimeout: () => throw TimeoutException(
+              'PutObjectStream source stream stalled for '
+              '${effectiveTimeout.inSeconds}s'));
       if (!identical(first, _pumpCompletedSentinel)) {
         // 服务器早于泵完成响应：停止泵，吞掉泵的伴生结果
         await sub.cancel();
@@ -573,13 +598,11 @@ class S3Client {
           await pumpDone.future;
         } on Object catch (sourceError) {
           throw S3Exception('PutObjectStream 上传数据流中途失败: $sourceError',
-              originalException:
-                  sourceError is Exception ? sourceError : null);
+              originalException: sourceError is Exception ? sourceError : null);
         }
       }
       if (e is TimeoutException) {
-        throw S3NetworkException(
-            'PutObjectStream timed out after '
+        throw S3NetworkException('PutObjectStream timed out after '
             '${transferTimeoutFor(contentLength ?? 10 * 1024 * 1024).inSeconds}s');
       }
       throw S3Exception('PutObjectStream failed: $e',
@@ -628,10 +651,10 @@ class S3Client {
         final body = await _readErrorBody(response);
         if (body != null && _isConditionalHeaderNotSupported(body)) {
           _conditionalWriteUnsupported = true;
-          onConditionalWriteDowngrade?.call(
-              'S3 网关不支持条件写（If-Match/If-None-Match 返回 400 '
-              'NotImplemented），已记忆为盲写模式（流式 body 不可重放，'
-              '请用新流重调）: bucket=$bucket key=$key');
+          onConditionalWriteDowngrade
+              ?.call('S3 网关不支持条件写（If-Match/If-None-Match 返回 400 '
+                  'NotImplemented），已记忆为盲写模式（流式 body 不可重放，'
+                  '请用新流重调）: bucket=$bucket key=$key');
         }
         if (body != null) _handleError('PutObject', body);
         throw S3Exception(
@@ -705,12 +728,34 @@ class S3Client {
     final body = response.body;
     if (body.isEmpty) return false;
     final lower = body.toLowerCase();
-    final notImplemented = lower.contains('notimplemented') ||
-        lower.contains('not implemented');
+    final notImplemented =
+        lower.contains('notimplemented') || lower.contains('not implemented');
     if (!notImplemented) return false;
     return lower.contains('if-match') ||
         lower.contains('if-none-match') ||
         lower.contains('a header you provided');
+  }
+
+  /// 判断连接层失败是否为「对端在传输过程中提前断开」形态。
+  ///
+  /// 场景：S3 兼容网关（阿里云 OSS 实测）收到不支持的 If-Match/
+  /// If-None-Match 时，会在**请求体尚未写完**时发回拒绝响应并断开连接。
+  /// 客户端此时仍在写 body，`http` 传输层直接抛 SocketException —— 文案
+  /// 随平台而定（`Write failed` / `Broken pipe` / `Connection reset by
+  /// peer` / `Read failed`），那个 4xx 响应**读不到**，故 S3-W2 的
+  /// 「400 + NotImplemented」判据在此形态下不可达。
+  ///
+  /// 判据只命中「对端提前断开」家族，**刻意不含** DNS 解析失败 /
+  /// 网络不可达 / 超时 —— 后者是真实链路故障，据此把网关判成不支持
+  /// 条件写会让一次弱网把本会话后续上传全部退化为盲写，丢掉并发保护。
+  static bool _isPeerClosedDuringTransfer(String message) {
+    final lower = message.toLowerCase();
+    return lower.contains('write failed') ||
+        lower.contains('broken pipe') ||
+        lower.contains('connection reset') ||
+        lower.contains('connection closed') ||
+        lower.contains('connection abort') ||
+        lower.contains('read failed');
   }
 
   /// 构造并签名流式 PUT 请求头。
@@ -840,14 +885,17 @@ class S3Client {
         }
         _handleError('GetObject', response);
       } on SocketException catch (e) {
-        throw S3NetworkException('Network error: ${e.message}', originalException: e);
+        throw S3NetworkException('Network error: ${e.message}',
+            originalException: e);
       } on TimeoutException {
         // N-11：报实际超时档（_getObjectTimeout=90s），非元数据档 timeout（30s）
-        throw S3NetworkException('GetObject timed out after ${_getObjectTimeout.inSeconds}s');
+        throw S3NetworkException(
+            'GetObject timed out after ${_getObjectTimeout.inSeconds}s');
       } on S3Exception {
         rethrow;
       } catch (e) {
-        throw S3Exception('GetObject failed: $e', originalException: _asException(e));
+        throw S3Exception('GetObject failed: $e',
+            originalException: _asException(e));
       }
     });
   }
@@ -931,9 +979,8 @@ class S3Client {
       // 每次尝试重新签名（时钟偏差补偿后旧签名必然再次 403，见 getObject）
       final headers = _signedHeaders(uri, 'DELETE');
       try {
-        final response = await _httpClient
-            .delete(uri, headers: headers)
-            .timeout(timeout);
+        final response =
+            await _httpClient.delete(uri, headers: headers).timeout(timeout);
 
         if (response.statusCode != 204 && response.statusCode != 200) {
           // 404 也算成功（对象已不存在）；但桶级 404（NoSuchBucket）是
@@ -945,13 +992,16 @@ class S3Client {
           }
         }
       } on SocketException catch (e) {
-        throw S3NetworkException('Network error: ${e.message}', originalException: e);
+        throw S3NetworkException('Network error: ${e.message}',
+            originalException: e);
       } on TimeoutException {
-        throw S3NetworkException('DeleteObject timed out after ${timeout.inSeconds}s');
+        throw S3NetworkException(
+            'DeleteObject timed out after ${timeout.inSeconds}s');
       } on S3Exception {
         rethrow;
       } catch (e) {
-        throw S3Exception('DeleteObject failed: $e', originalException: _asException(e));
+        throw S3Exception('DeleteObject failed: $e',
+            originalException: _asException(e));
       }
     });
   }
@@ -973,21 +1023,23 @@ class S3Client {
       // 每次尝试重新签名（时钟偏差补偿后旧签名必然再次 403，见 getObject）
       final headers = _signedHeaders(uri, 'HEAD');
       try {
-        final response = await _httpClient
-            .head(uri, headers: headers)
-            .timeout(timeout);
+        final response =
+            await _httpClient.head(uri, headers: headers).timeout(timeout);
         if (response.statusCode == 200) return true;
         if (response.statusCode == 404) return false;
         // 其他状态码（403/500 等）是真实错误，不能误判为「不存在」
         _handleError('HeadObject', response);
       } on SocketException catch (e) {
-        throw S3NetworkException('Network error: ${e.message}', originalException: e);
+        throw S3NetworkException('Network error: ${e.message}',
+            originalException: e);
       } on TimeoutException {
-        throw S3NetworkException('HeadObject timed out after ${timeout.inSeconds}s');
+        throw S3NetworkException(
+            'HeadObject timed out after ${timeout.inSeconds}s');
       } on S3Exception {
         rethrow;
       } catch (e) {
-        throw S3Exception('HeadObject failed: $e', originalException: _asException(e));
+        throw S3Exception('HeadObject failed: $e',
+            originalException: _asException(e));
       }
     });
   }
@@ -1014,9 +1066,8 @@ class S3Client {
       // 每次尝试重新签名（时钟偏差补偿后旧签名必然再次 403，见 getObject）
       final headers = _signedHeaders(uri, 'HEAD');
       try {
-        final response = await _httpClient
-            .head(uri, headers: headers)
-            .timeout(timeout);
+        final response =
+            await _httpClient.head(uri, headers: headers).timeout(timeout);
         if (response.statusCode == 200) {
           return S3HeadInfo(
             exists: true,
@@ -1032,13 +1083,16 @@ class S3Client {
         }
         _handleError('HeadObject', response);
       } on SocketException catch (e) {
-        throw S3NetworkException('Network error: ${e.message}', originalException: e);
+        throw S3NetworkException('Network error: ${e.message}',
+            originalException: e);
       } on TimeoutException {
-        throw S3NetworkException('HeadObject timed out after ${timeout.inSeconds}s');
+        throw S3NetworkException(
+            'HeadObject timed out after ${timeout.inSeconds}s');
       } on S3Exception {
         rethrow;
       } catch (e) {
-        throw S3Exception('HeadObject failed: $e', originalException: _asException(e));
+        throw S3Exception('HeadObject failed: $e',
+            originalException: _asException(e));
       }
     });
   }
@@ -1095,9 +1149,9 @@ class S3Client {
     } on S3Exception catch (e) {
       if (e.statusCode == 400 || e.statusCode == 501) {
         // LOG-02：协议级降级是网关能力异常的首要排查线索，warning 留痕
-        onProtocolEvent?.call(
-            'ListObjectsV2 被 HTTP ${e.statusCode} 拒绝（网关不支持 V2），'
-            '自动回退 ListObjects V1: bucket=$bucket prefix=$prefix');
+        onProtocolEvent
+            ?.call('ListObjectsV2 被 HTTP ${e.statusCode} 拒绝（网关不支持 V2），'
+                '自动回退 ListObjects V1: bucket=$bucket prefix=$prefix');
         return _listObjectsV1Detailed(
           bucket: bucket,
           prefix: prefix,
@@ -1218,7 +1272,8 @@ class S3Client {
     final headers = _signedHeaders(uri, 'GET');
 
     try {
-      final response = await _httpClient.get(uri, headers: headers).timeout(timeout);
+      final response =
+          await _httpClient.get(uri, headers: headers).timeout(timeout);
 
       if (response.statusCode == 200) {
         return _parseListObjectsXml(response.body);
@@ -1228,12 +1283,15 @@ class S3Client {
         _handleError('ListObjects', response);
       }
     } on SocketException catch (e) {
-      throw S3NetworkException('Network error: ${e.message}', originalException: e);
+      throw S3NetworkException('Network error: ${e.message}',
+          originalException: e);
     } on TimeoutException {
-      throw S3NetworkException('ListObjects timed out after ${timeout.inSeconds}s');
+      throw S3NetworkException(
+          'ListObjects timed out after ${timeout.inSeconds}s');
     } catch (e) {
       if (e is S3Exception) rethrow;
-      throw S3Exception('ListObjects failed: $e', originalException: _asException(e));
+      throw S3Exception('ListObjects failed: $e',
+          originalException: _asException(e));
     }
   }
 
@@ -1290,8 +1348,7 @@ class S3Client {
 
       // 审计 S3-M1：与 V2 同款 —— 重试只针对当前页，单页瞬时故障不再
       // 从第一页全量重翻。
-      final result =
-          await _retry(() => _fetchListPage(bucket, queryParams));
+      final result = await _retry(() => _fetchListPage(bucket, queryParams));
 
       if (remaining != null && result.objects.length > remaining) {
         allObjects.addAll(result.objects.take(remaining));
@@ -1340,10 +1397,12 @@ class S3Client {
   /// - virtual-hosted:  `https://bucket.endpoint[:port]/key`
   ///
   /// 返回的 [Uri.authority] 即为应签名、应发送的 Host 值（非默认端口时携带端口）。
-  Uri _buildUri(String bucket, {String? key, Map<String, String>? queryParameters}) {
+  Uri _buildUri(String bucket,
+      {String? key, Map<String, String>? queryParameters}) {
     final scheme = useSSL ? 'https' : 'http';
     final portStr = port != null ? ':$port' : '';
-    final encodedKey = (key == null || key.isEmpty) ? '' : '/${_encodeKey(key)}';
+    final encodedKey =
+        (key == null || key.isEmpty) ? '' : '/${_encodeKey(key)}';
     final host = forcePathStyle ? endpoint : '$bucket.$endpoint';
     final path = forcePathStyle ? '/$bucket$encodedKey' : encodedKey;
 
@@ -1356,8 +1415,7 @@ class S3Client {
       // 返回 403；字面 '+'（如 base64 continuation-token）也会被错误解码
       // 为空格。uri.replace(query:) 接收已编码串，不会二次编码。
       final encodedQuery = queryParameters.entries
-          .map((e) =>
-              '${S3SignatureV4.encodePathComponentRfc3986(e.key)}='
+          .map((e) => '${S3SignatureV4.encodePathComponentRfc3986(e.key)}='
               '${S3SignatureV4.encodePathComponentRfc3986(e.value)}')
           .join('&');
       uri = uri.replace(query: encodedQuery);
@@ -1377,8 +1435,12 @@ class S3Client {
   /// 响应此前解析出 0 对象 + isTruncated=false，静默返回空桶视图且 S-M1
   /// 抛错护栏不触发（解析本身成功、只是什么都找不到）。localName 匹配
   /// 对 AWS/MinIO/R2/OSS 等无前缀主流实现行为不变。
-  ({List<S3ObjectInfo> objects, bool isTruncated, String? nextContinuationToken, String? lastKey})
-      _parseListObjectsXml(String xmlBody) {
+  ({
+    List<S3ObjectInfo> objects,
+    bool isTruncated,
+    String? nextContinuationToken,
+    String? lastKey
+  }) _parseListObjectsXml(String xmlBody) {
     try {
       final document = XmlDocument.parse(xmlBody);
 
@@ -1390,29 +1452,34 @@ class S3Client {
 
       final objects = findAllLocal(document.rootElement, 'Contents')
           .map((element) {
-        XmlElement? findChildLocal(String localName) {
-          for (final child in element.children) {
-            if (child is XmlElement && child.name.local == localName) {
-              return child;
+            XmlElement? findChildLocal(String localName) {
+              for (final child in element.children) {
+                if (child is XmlElement && child.name.local == localName) {
+                  return child;
+                }
+              }
+              return null;
             }
-          }
-          return null;
-        }
-        final keyElement = findChildLocal('Key');
-        final sizeElement = findChildLocal('Size');
-        final modifiedElement = findChildLocal('LastModified');
 
-        final key = keyElement?.innerText;
-        if (key == null) return null;
+            final keyElement = findChildLocal('Key');
+            final sizeElement = findChildLocal('Size');
+            final modifiedElement = findChildLocal('LastModified');
 
-        final sizeStr = sizeElement?.innerText;
-        final size = sizeStr != null ? int.tryParse(sizeStr) : null;
+            final key = keyElement?.innerText;
+            if (key == null) return null;
 
-        final modifiedStr = modifiedElement?.innerText;
-        final lastModified = modifiedStr != null ? DateTime.tryParse(modifiedStr) : null;
+            final sizeStr = sizeElement?.innerText;
+            final size = sizeStr != null ? int.tryParse(sizeStr) : null;
 
-        return S3ObjectInfo(key: key, size: size, lastModified: lastModified);
-      }).whereType<S3ObjectInfo>().toList();
+            final modifiedStr = modifiedElement?.innerText;
+            final lastModified =
+                modifiedStr != null ? DateTime.tryParse(modifiedStr) : null;
+
+            return S3ObjectInfo(
+                key: key, size: size, lastModified: lastModified);
+          })
+          .whereType<S3ObjectInfo>()
+          .toList();
 
       // 分页信息（localName 匹配，理由同上）
       final isTruncated = findAllLocal(document.rootElement, 'IsTruncated')
@@ -1420,10 +1487,10 @@ class S3Client {
               ?.innerText
               .toLowerCase() ==
           'true';
-      final nextContinuationToken = findAllLocal(
-              document.rootElement, 'NextContinuationToken')
-          .firstOrNull
-          ?.innerText;
+      final nextContinuationToken =
+          findAllLocal(document.rootElement, 'NextContinuationToken')
+              .firstOrNull
+              ?.innerText;
       final lastKey = objects.isNotEmpty ? objects.last.key : null;
 
       return (
@@ -1522,13 +1589,12 @@ class S3Client {
   /// 混同会让上层把「桶配错」当「云端无备份/文件已删」处理。
   /// 注意：HEAD 响应无 body，协议上无法区分（headObject/headObjectWithMetadata
   /// 保持「404 = 不存在」语义，桶级错误由初始化探测的 listObjects 兜底发现）。
-  void _throwIfNoSuchBucket(String operation, http.Response response,
-      String bucket) {
+  void _throwIfNoSuchBucket(
+      String operation, http.Response response, String bucket) {
     if (response.body.isEmpty) return;
     try {
       final document = XmlDocument.parse(response.body);
-      final errorCode =
-          document.findAllElements('Code').firstOrNull?.innerText;
+      final errorCode = document.findAllElements('Code').firstOrNull?.innerText;
       if (errorCode == 'NoSuchBucket') {
         throw S3BucketNotFoundException(bucket);
       }
@@ -1578,8 +1644,7 @@ class S3Client {
         _signer.clockOffset = serverTime.difference(DateTime.now().toUtc());
         // LOG-02：设备时钟与服务器偏差 >15min 是用户环境问题（改配置
         // 无用，需校时），补偿已生效但线索必须留痕
-        onProtocolEvent?.call(
-            '检测到设备时钟偏差（已自动补偿 '
+        onProtocolEvent?.call('检测到设备时钟偏差（已自动补偿 '
             '${_signer.clockOffset.inMinutes} 分钟，服务器时间: '
             '${serverTime.toIso8601String()}）。若持续失败请校准系统时间');
       }
@@ -1592,7 +1657,8 @@ class S3Client {
     }
 
     if (statusCode == 403) {
-      if (errorCode == 'InvalidAccessKeyId' || errorCode == 'SignatureDoesNotMatch') {
+      if (errorCode == 'InvalidAccessKeyId' ||
+          errorCode == 'SignatureDoesNotMatch') {
         throw S3AuthException('Authentication failed: $message');
       } else {
         throw S3PermissionDeniedException('Permission denied: $message');

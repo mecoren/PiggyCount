@@ -8,7 +8,10 @@ import 's3_exceptions.dart';
 
 /// S3 存储服务实现
 class S3StorageService
-    implements CloudStorageService, BinaryCapableStorage, ConditionalWriteStorage {
+    implements
+        CloudStorageService,
+        BinaryCapableStorage,
+        ConditionalWriteStorage {
   final S3Client client;
   final String bucket;
 
@@ -24,16 +27,17 @@ class S3StorageService
       : keyPrefix = _normalizePrefix(_validatePrefix(keyPrefix)) {
     // S3-W2：条件写降级 warning 线索。此前静默降级，双后端实测时排查
     // 缺痕迹；注入 logger 后由宿主 app 的日志体系统一记录。
-    client.onConditionalWriteDowngrade = logger == null
-        ? null
-        : (message) => logger.warning(message);
+    client.onConditionalWriteDowngrade =
+        logger == null ? null : (message) => logger.warning(message);
     // LOG-02：协议级事件（V2→V1 回退 / 时钟偏差补偿）同样经注入的
     // logger 留痕 —— 「继续工作但环境异常」的线索对排障价值极高。
-    client.onProtocolEvent = logger == null ? null : (message) => logger.warning(message);
+    client.onProtocolEvent =
+        logger == null ? null : (message) => logger.warning(message);
     // LOG-06（P1-1 配套）：重试逐次留痕 —— 弱网排障时区分「一次成功」
     // 与「重试后成功」；条件 PUT 安全重试同样在此暴露。info 级
     //（重试属正常自愈行为，非告警）。
-    client.onRetryEvent = logger == null ? null : (message) => logger.info(message);
+    client.onRetryEvent =
+        logger == null ? null : (message) => logger.info(message);
   }
 
   /// 认证/权限类异常转 [CloudAuthException]，保持语义保真（与 WebDAV 修复同款）
@@ -60,8 +64,7 @@ class S3StorageService
   static String _validatePrefix(String prefix) {
     if (prefix.isEmpty) return prefix;
     if (prefix.startsWith('/')) {
-      throw ArgumentError.value(
-          prefix, 'keyPrefix', 'must not start with "/"');
+      throw ArgumentError.value(prefix, 'keyPrefix', 'must not start with "/"');
     }
     _assertNoTraversal(prefix, 'keyPrefix');
     return prefix;
@@ -104,7 +107,8 @@ class S3StorageService
     // M5：流式下载落盘（边收边写临时文件，完成后原子 rename），大文件
     // 不再全量载入内存。downloadToSink 已完成全部异常翻译（Cloud 层），
     // 此处只补齐「404 → File not found」的历史语义。
-    final written = await downloadToSink(path: remotePath, localPath: localPath);
+    final written =
+        await downloadToSink(path: remotePath, localPath: localPath);
     if (written == null) {
       throw CloudStorageException('File not found: $remotePath');
     }
@@ -238,7 +242,8 @@ class S3StorageService
     } on S3PermissionDeniedException catch (e) {
       throw _authException(e);
     } on S3Exception catch (e) {
-      throw CloudStorageException('Failed to check file existence: ${e.message}');
+      throw CloudStorageException(
+          'Failed to check file existence: ${e.message}');
     }
   }
 
@@ -254,10 +259,12 @@ class S3StorageService
       // 过滤目录占位对象（控制台建目录产生的零字节 key，形如
       // `piggycount/` 或 `piggycount/attachments/`）：剥离后为空串或以
       // `/` 结尾，不是真实文件，不应进入调用方的文件列表。
-      String stripPrefix(String k) => k.startsWith(keyPrefix)
-          ? k.substring(keyPrefix.length)
-          : k;
-      return keys.map(stripPrefix).where((k) => k.isNotEmpty && !k.endsWith('/')).toList();
+      String stripPrefix(String k) =>
+          k.startsWith(keyPrefix) ? k.substring(keyPrefix.length) : k;
+      return keys
+          .map(stripPrefix)
+          .where((k) => k.isNotEmpty && !k.endsWith('/'))
+          .toList();
     } on S3AuthException catch (e) {
       throw _authException(e);
     } on S3PermissionDeniedException catch (e) {
@@ -346,8 +353,15 @@ class S3StorageService
     }
   }
 
+  /// 条件写能力**如实动态申报**：委托 [S3Client.conditionalWriteSupported]。
+  ///
+  /// 此前硬编码 `true` —— 阿里云 OSS 等不支持条件头的网关下，上层
+  /// （`CloudStorageConditionalExt.conditionalOrNull`）永远拿到非 null 的
+  /// 条件写句柄，于是每次上传都带 `If-Match` 并必然失败（2026-10-01 真机
+  /// 增量上传 8/8 全失败的根因之一）。改为读取 client 的能力记忆后，
+  /// 一旦确认不支持即返回 false，manager 随之退化为盲上传 + 写后校验。
   @override
-  bool get supportsConditionalWrite => true;
+  bool get supportsConditionalWrite => client.conditionalWriteSupported;
 
   @override
   Future<void> uploadBinaryConditional({
@@ -447,9 +461,8 @@ class S3StorageService
       );
       // 剥离 keyPrefix 后返回逻辑路径，与 listFiles 行为一致。
       // 过滤目录占位对象与空名（见 listFiles 内注释）。
-      String stripPrefix(String k) => k.startsWith(keyPrefix)
-          ? k.substring(keyPrefix.length)
-          : k;
+      String stripPrefix(String k) =>
+          k.startsWith(keyPrefix) ? k.substring(keyPrefix.length) : k;
       return infos
           .map((info) => (name: stripPrefix(info.key), info: info))
           .where((e) => e.name.isNotEmpty && !e.name.endsWith('/'))
@@ -481,7 +494,8 @@ class S3StorageService
       // C-01 修复：返回 x-amz-meta-* 自定义元数据，
       // 使 CloudSyncManager 能通过 fingerprint 直接判断同步状态
       // 先去除末尾斜杠再提取文件名，避免目录路径返回空名
-      final trimmed = path.endsWith('/') ? path.substring(0, path.length - 1) : path;
+      final trimmed =
+          path.endsWith('/') ? path.substring(0, path.length - 1) : path;
       final name = trimmed.isEmpty ? path : trimmed.split('/').last;
       return CloudFile(
         name: name,
