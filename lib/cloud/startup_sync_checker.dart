@@ -77,6 +77,25 @@ class LedgerCandidate {
   });
 }
 
+/// 云端账本元信息与本地不同的账本（用于启动检查的「不会自动合并」提示）。
+///
+/// 只承载**可安全只提示不动手**的三项：账本名 / 月起始日（本位币差异暂不提示，
+/// 见 fetchCloudLedgerMeta 注释）。刻意不含任何交易数据 —— 这条链路绝不做自动
+/// 合并，否则可能覆盖本地改动。
+class MetaDiffLedger {
+  final String localName;
+  final String cloudName;
+  final int localMonthStartDay;
+  final int cloudMonthStartDay;
+
+  const MetaDiffLedger({
+    required this.localName,
+    required this.cloudName,
+    required this.localMonthStartDay,
+    required this.cloudMonthStartDay,
+  });
+}
+
 /// 判断错误文本是否为云端认证失败（WebDAV 401/403）特征。
 ///
 /// 覆盖：异常类型名（CloudAuthException）、中文文案（认证失败）、
@@ -234,6 +253,19 @@ abstract class StartupSyncCheckerDeps {
   /// 全部账本均是最新时显示的成功提示文案
   String getUpToDateMessage();
 
+  /// 「云端账本信息与本地不同」提示文案（标题 / 逐条明细 / 操作说明）。
+  ///
+  /// 与 [getUpToDateMessage] 同款：生产实现走 l10n，测试桩返回字面量。
+  /// [diffs] 由调用方收集（云端元信息与本地不同的账本），本方法只负责文案。
+  ({String title, List<String> lines, String action}) getMetaDiffTexts(
+      List<MetaDiffLedger> diffs);
+
+  /// 读云端账本元信息（名称 / 本位币 / 月起始日），只走 metadata 快路径。
+  ///
+  /// 实现方拿不到时返回 null（老快照 / 网关剥头 / 网络失败）—— 调用方会把它
+  /// 当作「不提示」，因此**宁可返回 null，也不要猜**。
+  Future<CloudLedgerMeta?> fetchCloudLedgerMeta(int ledgerId);
+
   /// P1-3 埋点补缺（2026-09-11）：同步成功率监控（审计 P0-1）。
   ///
   /// startupCheck 是最高频同步链路（每次冷启动必经），此前六场景中
@@ -344,6 +376,20 @@ class StartupSyncChecker {
   /// 死循环。回传同样有阻塞 overlay，放宽到 5 分钟。
   static const Duration _publishTimeout = Duration(minutes: 5);
 
+  /// 读云端账本元信息（名称/本位币/月起始日）：任何异常/未实现都降级为 null。
+  ///
+  /// 单账本失败只跳过该账本的提示，绝不影响检查主流程 —— 这条链路是「锦上添花
+  /// 的提示」，不能成为启动检查的新失败点。
+  Future<CloudLedgerMeta?> _fetchCloudMetaSafely(int ledgerId) async {
+    try {
+      return await deps.fetchCloudLedgerMeta(ledgerId);
+    } catch (e) {
+      deps.log('StartupSyncChecker: 读取账本 $ledgerId 云端元信息失败'
+          '（忽略，不提示）: $e');
+      return null;
+    }
+  }
+
   Future<void> _runInternal({bool isRetry = false}) async {
     // 1. 检查云端配置：仅路径 A（s3/webdav/supabase/icloud）+ valid 才执行
     final config = await deps.getActiveConfig();
@@ -395,6 +441,11 @@ class StartupSyncChecker {
     // 指纹与云端不一致但方向未知（SyncDiff.different，源于 direction=unknown）
     // 的账本名：仅记录日志，不弹"云端有更新"，差异状态由"我的"/云同步页展示
     final unknownDiffLedgers = <String>[];
+    // 上述方向未知账本里，**云端账本元信息（名称/月起始日）与本地不同**的那些。
+    // 这类差异交易级 diff 为空、只因账本名/月起始日进指纹而"有差异"：用户看到
+    // 状态卡写着有差异、点进下载同步却一条变更都列不出来，只能自己猜。启动检查
+    // 全程**不自动合并**（可能覆盖本地改动），但要明确告知差在哪、去哪处理。
+    final metaDiffLedgers = <MetaDiffLedger>[];
     // P1-3：getStatus 失败（网络/超时/鉴权等）的账本名。
     // 失败账本绝不能静默计入"已是最新"——否则用户看到"已全部同步"
     // 但实际云端更新根本没拉取。
@@ -519,6 +570,22 @@ class StartupSyncChecker {
           unknownDiffLedgers.add(ledger.name);
           deps.log('StartupSyncChecker: 账本 ${ledger.name} 与云端指纹不一致'
               '但无法判断新旧（direction=unknown），不纳入启动下载候选');
+          // 顺手比对**云端账本元信息**（一次 metadata HEAD，零下载）；
+          // 拿不到（老快照/网关剥头/网络）即跳过，不猜也不提示。
+          final cloudMeta = await _fetchCloudMetaSafely(ledger.id);
+          if (cloudMeta != null &&
+              (cloudMeta.name != ledger.name ||
+                  cloudMeta.monthStartDay != ledger.monthStartDay)) {
+            metaDiffLedgers.add(MetaDiffLedger(
+              localName: ledger.name,
+              cloudName: cloudMeta.name,
+              localMonthStartDay: ledger.monthStartDay,
+              cloudMonthStartDay: cloudMeta.monthStartDay,
+            ));
+            deps.log('StartupSyncChecker: 账本 ${ledger.name}（id=${ledger.id}）'
+                '云端元信息不同：名称「${cloudMeta.name}」'
+                '月起始日 ${cloudMeta.monthStartDay}');
+          }
         }
       }
     }
@@ -565,6 +632,19 @@ class StartupSyncChecker {
         // TSM 侧 verified=false 的口径一致，这正是 99.9% 与 99% 之间
         // 差距的可观测来源。
         _lastRunOutcome = SyncOpOutcome.softFail;
+        // 差异里含「云端账本信息与本地不同」→ 明确告知差在哪、去哪处理
+        //（只提示，绝不自动合并：方向未知，合并可能覆盖本地改动）
+        if (metaDiffLedgers.isNotEmpty) {
+          final texts = deps.getMetaDiffTexts(metaDiffLedgers);
+          deps.log('StartupSyncChecker: ${metaDiffLedgers.length} 个账本的'
+              '云端元信息与本地不同，提示用户到云同步页手动处理');
+          controller.info(
+            title: texts.title,
+            lines: texts.lines,
+            action: texts.action,
+          );
+          return;
+        }
         controller.dismiss();
         return;
       }
@@ -580,7 +660,14 @@ class StartupSyncChecker {
     // US-7: 使用循环支持 applyAll 取消后回退到 SummaryView 重新选择
     while (true) {
       final completer = Completer<SummaryChoice>();
-      controller.showHasUpdates(candidates, completer);
+      controller.showHasUpdates(
+        candidates,
+        completer,
+        // 候选弹窗同时告知：另有账本存在不会自动合并的元信息差异
+        infoMessage: metaDiffLedgers.isEmpty
+            ? null
+            : deps.getMetaDiffTexts(metaDiffLedgers).title,
+      );
       final choice = await completer.future;
 
       switch (choice) {
@@ -1529,6 +1616,37 @@ class WidgetRefDeps implements StartupSyncCheckerDeps {
   @override
   String getUpToDateMessage() =>
       AppLocalizations.of(_context).startupSyncCheckUpToDate;
+
+  @override
+  ({String title, List<String> lines, String action}) getMetaDiffTexts(
+      List<MetaDiffLedger> diffs) {
+    final l10n = AppLocalizations.of(_context);
+    final lines = <String>[];
+    for (final d in diffs) {
+      if (d.localName != d.cloudName) {
+        lines.add(l10n.startupSyncMetaDiffNameLine(d.localName, d.cloudName));
+      }
+      if (d.localMonthStartDay != d.cloudMonthStartDay) {
+        lines.add(l10n.startupSyncMetaDiffMonthStartLine(
+            d.localName, d.localMonthStartDay, d.cloudMonthStartDay));
+      }
+    }
+    return (
+      title: l10n.startupSyncMetaDiffTitle,
+      lines: lines,
+      action: l10n.startupSyncMetaDiffAction,
+    );
+  }
+
+  @override
+  Future<CloudLedgerMeta?> fetchCloudLedgerMeta(int ledgerId) async {
+    try {
+      return await _syncManager.fetchCloudLedgerMeta(ledgerId: ledgerId);
+    } catch (_) {
+      // 拿不到元信息就退化为不提示：宁可少提示，不可给错提示
+      return null;
+    }
+  }
 
   @override
   void log(String message) {

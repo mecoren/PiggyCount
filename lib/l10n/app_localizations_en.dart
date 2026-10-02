@@ -161,6 +161,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get startupSyncCheckUpToDate => 'All ledgers are up to date';
 
   @override
+  String get startupSyncMetaDiffTitle => 'Cloud ledger info differs from local';
+
+  @override
+  String startupSyncMetaDiffNameLine(String local, String cloud) {
+    return 'Name: $local → $cloud';
+  }
+
+  @override
+  String startupSyncMetaDiffMonthStartLine(String name, int local, int cloud) {
+    return '$name: month start day $local → $cloud';
+  }
+
+  @override
+  String get startupSyncMetaDiffAction =>
+      'Startup check does not merge this automatically (to avoid overwriting your local changes). Please handle it manually in Me → Cloud Sync.';
+
+  @override
   String get startupSyncConflictTooltip =>
       'Local changes will be overwritten by cloud';
 

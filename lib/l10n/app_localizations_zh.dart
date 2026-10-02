@@ -159,6 +159,23 @@ class AppLocalizationsZh extends AppLocalizations {
   String get startupSyncCheckUpToDate => '所有账本都是最新的';
 
   @override
+  String get startupSyncMetaDiffTitle => '云端账本信息与本地不同';
+
+  @override
+  String startupSyncMetaDiffNameLine(String local, String cloud) {
+    return '账本名：$local → $cloud';
+  }
+
+  @override
+  String startupSyncMetaDiffMonthStartLine(String name, int local, int cloud) {
+    return '$name：每月起始日 $local → $cloud';
+  }
+
+  @override
+  String get startupSyncMetaDiffAction =>
+      '启动检查不会自动合并（避免覆盖你的本地改动）。请到「我的 → 云同步」手动下载同步。';
+
+  @override
   String get startupSyncConflictTooltip => '本地有改动将被云端覆盖';
 
   @override
@@ -8324,6 +8341,23 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get startupSyncCheckUpToDate => '所有帳本都是最新的';
+
+  @override
+  String get startupSyncMetaDiffTitle => '雲端帳本資訊與本地不同';
+
+  @override
+  String startupSyncMetaDiffNameLine(String local, String cloud) {
+    return '帳本名稱：$local → $cloud';
+  }
+
+  @override
+  String startupSyncMetaDiffMonthStartLine(String name, int local, int cloud) {
+    return '$name：每月起始日 $local → $cloud';
+  }
+
+  @override
+  String get startupSyncMetaDiffAction =>
+      '啟動檢查不會自動合併（避免覆蓋你的本地變更）。請到「我的 → 雲端同步」手動下載同步。';
 
   @override
   String get startupSyncConflictTooltip => '本地有改動將被雲端覆蓋';

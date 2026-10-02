@@ -37,6 +37,8 @@ void main() {
     if (state is HasUpdatesState && !state.completer.isCompleted) {
       // 捕获候选账本
       deps.lastCandidates = state.candidates;
+      // 捕获候选弹窗附带的「元信息差异」提示行（可空）
+      deps.lastInfoMessage = state.infoMessage;
       final choice = deps.nextSummaryChoice();
       state.completer.complete(choice);
     }
@@ -56,7 +58,7 @@ void main() {
     controller.dispose();
   });
 
-  Ledger ledger(int id, String name) => Ledger(
+  Ledger ledger(int id, String name, {int monthStartDay = 1}) => Ledger(
         id: id,
         name: name,
         currency: 'CNY',
@@ -65,7 +67,7 @@ void main() {
         myRole: 'owner',
         memberCount: 1,
         isShared: false,
-        monthStartDay: 1,
+        monthStartDay: monthStartDay,
       );
 
   SyncStatus status(SyncDiff diff, {String? message}) => SyncStatus(
@@ -1543,6 +1545,95 @@ void main() {
           reason: '按首次出现顺序，与弹窗展示顺序一致');
     });
   });
+
+  group('云端账本元信息差异：只提示、不自动合并', () {
+    CloudServiceConfig s3Config() => const CloudServiceConfig(
+          type: CloudBackendType.s3,
+          name: 's3',
+          s3Endpoint: 'https://s3.example.com',
+          s3AccessKey: 'ak',
+          s3SecretKey: 'sk',
+          s3Bucket: 'b',
+        );
+
+    test('different + 云端账本名不同 → 信息提示列出差异，且零自动动作', () async {
+      deps.activeConfig = s3Config();
+      deps.ledgers = [ledger(1, '日常账')];
+      deps.statusByLedger = {1: status(SyncDiff.different)};
+      deps.cloudMetaByLedger = {
+        1: (name: '家庭账', currency: 'CNY', monthStartDay: 1),
+      };
+
+      await checker.runIfNeeded();
+
+      expect(controller.state, isA<InfoState>(),
+          reason: '方向未知的元信息差异必须让用户看见，不能静默关闭');
+      final info = controller.state as InfoState;
+      expect(info.title, 'meta-diff-title');
+      expect(info.lines, ['name:日常账->家庭账']);
+      expect(info.action, 'meta-diff-action');
+
+      // 关键不变量：只提示，绝不做任何自动动作（不合并 / 不上传 / 不覆盖）
+      expect(deps.applyPreviewChangesCallCount, 0);
+      expect(deps.uploadCallCount, 0);
+      expect(deps.downloadAndRestoreCallCount, 0);
+      expect(deps.lastCandidates, isEmpty);
+    });
+
+    test('different + 仅月起始日不同 → 明细含月起始日对照行', () async {
+      deps.activeConfig = s3Config();
+      deps.ledgers = [ledger(1, '日常账')]; // 本地 monthStartDay = 1
+      deps.statusByLedger = {1: status(SyncDiff.different)};
+      deps.cloudMetaByLedger = {
+        1: (name: '日常账', currency: 'CNY', monthStartDay: 5),
+      };
+
+      await checker.runIfNeeded();
+
+      expect(controller.state, isA<InfoState>());
+      expect((controller.state as InfoState).lines, ['monthStart:日常账:1->5']);
+    });
+
+    test('different 但云端元信息一致 / 读不到 → 维持既有静默关闭', () async {
+      deps.activeConfig = s3Config();
+      deps.ledgers = [ledger(1, '日常账'), ledger(2, 'L2')];
+      deps.statusByLedger = {
+        1: status(SyncDiff.different), // 元信息一致 → 不提示
+        2: status(SyncDiff.different), // 读取抛异常 → 拿不到，不猜
+      };
+      deps.cloudMetaByLedger = {
+        1: (name: '日常账', currency: 'CNY', monthStartDay: 1),
+      };
+      deps.cloudMetaThrowForLedgerIds = {2};
+
+      await checker.runIfNeeded();
+
+      expect(controller.state, isA<DismissedState>(),
+          reason: '没有可确证的元信息差异时不打扰用户（保持原语义）');
+    });
+
+    test('存在云更新候选时：候选弹窗附带提示行，且不新增自动动作', () async {
+      deps.activeConfig = s3Config();
+      deps.ledgers = [ledger(1, '待合并'), ledger(2, '日常账')];
+      deps.statusByLedger = {
+        1: status(SyncDiff.cloudNewer),
+        2: status(SyncDiff.different),
+      };
+      deps.cloudMetaByLedger = {
+        2: (name: '家庭账', currency: 'CNY', monthStartDay: 1),
+      };
+      deps.summaryChoice = SummaryChoice.skip;
+
+      await checker.runIfNeeded();
+
+      expect(deps.lastCandidates.map((c) => c.ledger.id), contains(1));
+      expect(deps.lastInfoMessage, 'meta-diff-title',
+          reason: '候选弹窗要顺带告知另有账本的云端元信息不同（同样不自动合并）');
+      expect(deps.lastCandidates.map((c) => c.ledger.id),
+          isNot(contains(2)),
+          reason: '方向未知的账本仍不得进入候选（审计 M1 不变量不变）');
+    });
+  });
 }
 
 /// 测试用的假依赖实现
@@ -1615,6 +1706,8 @@ class _FakeDeps implements StartupSyncCheckerDeps {
   int legacyInfoShownCount = 0;
   int legacyErrorShownCount = 0;
   List<String> errorLog = [];
+  /// 最近一次候选弹窗附带的「元信息差异」提示行（可空）
+  String? lastInfoMessage;
 
   // SaltMismatch 处理记录
   int handleSaltMismatchCallCount = 0;
@@ -1847,6 +1940,41 @@ class _FakeDeps implements StartupSyncCheckerDeps {
 
   @override
   String getUpToDateMessage() => 'All ledgers up to date (test)';
+
+  /// 云端账本元信息（ledgerId → 云端名称/本位币/月起始日）。
+  ///
+  /// 缺省为空 = 拿不到（等价于老快照/网关剥头）→ 检查器不产生任何提示。
+  Map<int, CloudLedgerMeta> cloudMetaByLedger = {};
+  /// 读取元信息抛异常：验证「读不到只降级、不影响主流程」
+  Set<int> cloudMetaThrowForLedgerIds = {};
+  int fetchCloudMetaCallCount = 0;
+
+  @override
+  Future<CloudLedgerMeta?> fetchCloudLedgerMeta(int ledgerId) async {
+    fetchCloudMetaCallCount++;
+    if (cloudMetaThrowForLedgerIds.contains(ledgerId)) {
+      throw Exception('fetchCloudLedgerMeta boom for ledger $ledgerId');
+    }
+    return cloudMetaByLedger[ledgerId];
+  }
+
+  /// 提示文案用固定字面量（生产走 l10n，见 WidgetRefDeps）——
+  /// 断言只关心「提示了什么数据」，不关心排版文案。
+  @override
+  ({String title, List<String> lines, String action}) getMetaDiffTexts(
+      List<MetaDiffLedger> diffs) {
+    final lines = <String>[];
+    for (final d in diffs) {
+      if (d.localName != d.cloudName) {
+        lines.add('name:${d.localName}->${d.cloudName}');
+      }
+      if (d.localMonthStartDay != d.cloudMonthStartDay) {
+        lines.add('monthStart:${d.localName}:'
+            '${d.localMonthStartDay}->${d.cloudMonthStartDay}');
+      }
+    }
+    return (title: 'meta-diff-title', lines: lines, action: 'meta-diff-action');
+  }
 
   /// P1-3 埋点补缺：测试桩默认无 metrics（no-op 埋点）。
   /// 需要断言指标写入的用例覆写本 getter 注入记录器。

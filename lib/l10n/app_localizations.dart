@@ -372,6 +372,30 @@ abstract class AppLocalizations {
   /// **'All ledgers are up to date'**
   String get startupSyncCheckUpToDate;
 
+  /// No description provided for @startupSyncMetaDiffTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud ledger info differs from local'**
+  String get startupSyncMetaDiffTitle;
+
+  /// No description provided for @startupSyncMetaDiffNameLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Name: {local} → {cloud}'**
+  String startupSyncMetaDiffNameLine(String local, String cloud);
+
+  /// No description provided for @startupSyncMetaDiffMonthStartLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}: month start day {local} → {cloud}'**
+  String startupSyncMetaDiffMonthStartLine(String name, int local, int cloud);
+
+  /// No description provided for @startupSyncMetaDiffAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Startup check does not merge this automatically (to avoid overwriting your local changes). Please handle it manually in Me → Cloud Sync.'**
+  String get startupSyncMetaDiffAction;
+
   /// No description provided for @startupSyncConflictTooltip.
   ///
   /// In en, this message translates to:

@@ -107,6 +107,33 @@
     }
   },
   "startupSyncCheckUpToDate": "All ledgers are up to date",
+  "startupSyncMetaDiffTitle": "Cloud ledger info differs from local",
+  "startupSyncMetaDiffNameLine": "Name: {local} → {cloud}",
+  "@startupSyncMetaDiffNameLine": {
+    "placeholders": {
+      "local": {
+        "type": "String"
+      },
+      "cloud": {
+        "type": "String"
+      }
+    }
+  },
+  "startupSyncMetaDiffMonthStartLine": "{name}: month start day {local} → {cloud}",
+  "@startupSyncMetaDiffMonthStartLine": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "local": {
+        "type": "int"
+      },
+      "cloud": {
+        "type": "int"
+      }
+    }
+  },
+  "startupSyncMetaDiffAction": "Startup check does not merge this automatically (to avoid overwriting your local changes). Please handle it manually in Me → Cloud Sync.",
   "startupSyncConflictTooltip": "Local changes will be overwritten by cloud",
   "startupSyncConflictConfirmTitle": "Overwrite confirmation",
   "startupSyncConflictConfirmMessage": "This will overwrite local changes in {count} ledger(s) ({names}) with cloud version. Continue?",

@@ -29,10 +29,14 @@ class CheckingState extends StartupSyncState {
 }
 
 /// 发现更新：等待用户选择 applyAll / confirmEach / skip
+///
+/// [infoMessage]（可空）：另有账本存在**不会自动合并**的差异（方向未知的
+/// 云端账本元信息差异）时的一行提示，仅为告知，不参与任何自动动作。
 class HasUpdatesState extends StartupSyncState {
   final List<LedgerCandidate> candidates;
   final Completer<SummaryChoice> completer;
-  HasUpdatesState(this.candidates, this.completer);
+  final String? infoMessage;
+  HasUpdatesState(this.candidates, this.completer, {this.infoMessage});
 }
 
 /// 应用中：applyAll 模式下逐个账本应用
@@ -59,6 +63,24 @@ class DoneState extends StartupSyncState {
 class ErrorState extends StartupSyncState {
   final String message;
   ErrorState(this.message);
+}
+
+/// 信息：无需自动合并，但要明确告诉用户「差在哪、去哪处理」。
+///
+/// 用于「云端账本信息与本地不同」这类**方向未知**的差异：启动检查刻意不自动
+/// 合并（避免覆盖本地改动），但静默关闭会让用户看到「我的」页写着有差异、
+/// 点进下载同步却一条变更都列不出来（交易级 diff 为空），只能自己猜。
+class InfoState extends StartupSyncState {
+  /// 标题（例：云端账本信息与本地不同）
+  final String title;
+
+  /// 明细行（例：「日常账」→「家庭账」；本地与云端逐条对照）
+  final List<String> lines;
+
+  /// 操作说明（例：启动检查不会自动合并，请到「我的 → 云同步」手动处理）
+  final String action;
+
+  InfoState({required this.title, required this.lines, required this.action});
 }
 
 /// 已关闭：overlay 应该被移除
@@ -157,8 +179,9 @@ class StartupSyncController extends ChangeNotifier {
   }
 
   void showHasUpdates(
-          List<LedgerCandidate> candidates, Completer<SummaryChoice> completer) =>
-      _setState(HasUpdatesState(candidates, completer));
+          List<LedgerCandidate> candidates, Completer<SummaryChoice> completer,
+          {String? infoMessage}) =>
+      _setState(HasUpdatesState(candidates, completer, infoMessage: infoMessage));
 
   void startApplying(int total) =>
       _setState(ApplyingState(applied: 0, total: total));
@@ -175,6 +198,15 @@ class StartupSyncController extends ChangeNotifier {
   void done(String message) => _setState(DoneState(message));
 
   void error(String message) => _setState(ErrorState(message));
+
+  /// 信息态：明确告知「差在哪、去哪处理」，**不自动消失**（用户需自行阅读
+  /// 并决定是否去云同步页处理），点「确定」关闭。
+  void info({
+    required String title,
+    required List<String> lines,
+    required String action,
+  }) =>
+      _setState(InfoState(title: title, lines: lines, action: action));
 
   void dismiss() => _setState(DismissedState());
 }
@@ -233,6 +265,7 @@ class _StartupSyncOverlayView extends StatelessWidget {
         ApplyingState() => _ApplyingView(state: state),
         DoneState() => _DoneView(state: state, controller: controller),
         ErrorState() => _ErrorView(state: state, controller: controller),
+        InfoState() => _InfoView(state: state, controller: controller),
         _ => const SizedBox.shrink(),
       },
     );
@@ -335,6 +368,26 @@ class _HasUpdatesView extends StatelessWidget {
                 color: PiggyTokens.textSecondary(context),
               ),
         ),
+        // 另有账本存在「不会自动合并」的差异（方向未知的云端账本元信息差异）：
+        // 只提示，不参与任何自动动作 —— 用户可在本次合并后去云同步页处理。
+        if (state.infoMessage != null) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(Icons.info_outline,
+                  size: 14, color: PiggyTokens.textTertiary(context)),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  state.infoMessage!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: PiggyTokens.textTertiary(context),
+                      ),
+                ),
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: 12),
         // 审计 U7：候选列表数量无上限，小屏/大字号下不可滚动 Column
         // 会纵向溢出（RenderFlex overflow）。限高 + 列表段可滚动，
@@ -512,6 +565,71 @@ class _ErrorView extends StatelessWidget {
           state.message,
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        const SizedBox(height: 20),
+        FilledButton(
+          onPressed: () => controller.dismiss(),
+          child: Text(l10n.commonOk),
+        ),
+      ],
+    );
+  }
+}
+
+/// 信息视图：信息图标 + 标题 + 差异明细 + 操作说明 + 确定按钮
+///
+/// 与 [_ErrorView] 的区别：这不是错误（检查链路本身工作正常），而是「有需要你
+/// 手动处理的事」—— 故用中性信息色、**不自动消失**（用户要读完并决定是否去
+/// 云同步页处理），点「确定」关闭。
+class _InfoView extends StatelessWidget {
+  const _InfoView({required this.state, required this.controller});
+  final InfoState state;
+  final StartupSyncController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Icon(Icons.info_outline, color: PiggyTokens.info(context), size: 40),
+        const SizedBox(height: 16),
+        Text(
+          state.title,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+        if (state.lines.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          // 账本数量无上限：限高 + 列表段可滚动（与 _HasUpdatesView U7 同款）
+          Flexible(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final line in state.lines)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        line,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 12),
+        Text(
+          state.action,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: PiggyTokens.textSecondary(context),
+              ),
         ),
         const SizedBox(height: 20),
         FilledButton(

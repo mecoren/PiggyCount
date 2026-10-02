@@ -161,6 +161,23 @@ class AppLocalizationsKo extends AppLocalizations {
   String get startupSyncCheckUpToDate => '모든 장부가 최신 상태입니다';
 
   @override
+  String get startupSyncMetaDiffTitle => '클라우드 장부 정보가 로컬과 다릅니다';
+
+  @override
+  String startupSyncMetaDiffNameLine(String local, String cloud) {
+    return '장부 이름: $local → $cloud';
+  }
+
+  @override
+  String startupSyncMetaDiffMonthStartLine(String name, int local, int cloud) {
+    return '$name: 월 시작일 $local → $cloud';
+  }
+
+  @override
+  String get startupSyncMetaDiffAction =>
+      '시작 검사는 자동으로 병합하지 않습니다(로컬 변경 덮어쓰기 방지). \'내 정보 → 클라우드 동기화\'에서 직접 처리하세요.';
+
+  @override
   String get startupSyncConflictTooltip => '로컬 변경사항이 클라우드로 덮어씌워집니다';
 
   @override

@@ -2494,6 +2494,43 @@ class TransactionsSyncManager implements SyncService {
   }
 
   @override
+  Future<CloudLedgerMeta?> fetchCloudLedgerMeta({required int ledgerId}) async {
+    await _ensureInitialized();
+
+    // 捕获到局部变量（ATTACH-2 竞态防护）
+    final provider = _provider;
+    if (provider == null) return null;
+
+    try {
+      // 只读 metadata（一次 HEAD，零下载）：与账本发现快路径同款
+      //（_discoverRemoteLedgersInner 的 fastMeta 分支）。
+      final meta = await provider.storage
+          .getMetadata(path: await pathForLedger(ledgerId))
+          .timeout(const Duration(seconds: 10));
+      final md = meta?.metadata;
+      if (md == null) return null;
+
+      final name = _metaValue(md, 'ledgerName');
+      if (name == null || name.isEmpty) {
+        // 老快照未写 ledgerName：不猜（下载快照解析成本高，且本提示的价值
+        // 只在「能明确说出云端叫什么」时才成立）
+        return null;
+      }
+      return (
+        name: name,
+        currency: _metaValue(md, 'currency') ?? 'CNY',
+        monthStartDay:
+            (int.tryParse(_metaValue(md, 'monthStartDay') ?? '') ?? 1)
+                .clamp(1, 28),
+      );
+    } catch (e) {
+      // 网络/权限/超时/网关剥头：拿不到就是拿不到，调用方降级为不提示
+      logger.warning('CloudSync', '读取云端账本元信息失败: $ledgerId - $e');
+      return null;
+    }
+  }
+
+  @override
   void markLocalChanged({required int ledgerId}) {
     _statusCache.remove(ledgerId);
     _recentLocalChangeAt[ledgerId] = DateTime.now();

@@ -89,6 +89,22 @@ abstract class SyncService {
 
   Future<SyncStatus> getStatus({required int ledgerId});
 
+  /// 读取云端快照携带的**账本元信息**（名称 / 本位币 / 月起始日）。
+  ///
+  /// 只走对象 metadata 快路径（一次 HEAD，不下载快照本体）——上传侧在
+  /// `uploadCurrentLedger` 的 uploadMetadata 里写入这三个键，与账本页
+  /// 「远程账本」发现走的是同一条轻路径。
+  ///
+  /// 用途：启动检查判定「云端账本信息与本地不同」时的提示依据。方向未知
+  /// （`SyncDiff.different`）的账本**不自动合并**（避免覆盖本地改动），但必须
+  /// 让用户知道差在哪、去哪处理 —— 否则「纯改账本名 / 改月起始日」的差异
+  /// 在「我的」页显示「有差异」，用户点进下载同步却一条变更都列不出来
+  /// （交易级 diff 为空），只能自己猜。
+  ///
+  /// metadata 缺失（老快照 / 网关剥头）或任何异常 → 返回 null，调用方按
+  /// 「拿不到」降级为**不提示**（宁可少提示，不可给错提示）。
+  Future<CloudLedgerMeta?> fetchCloudLedgerMeta({required int ledgerId});
+
   /// 主动刷新云端同步状态，返回 (fingerprint, count, exportedAt)。
   ///
   /// 实现说明（F7 契约对齐）：C-01 优化后优先读取对象元数据中的指纹
@@ -115,6 +131,10 @@ abstract class SyncService {
 // ---- 本地存储实现（无云同步） ----
 
 class LocalOnlySyncService implements SyncService {
+  @override
+  Future<CloudLedgerMeta?> fetchCloudLedgerMeta({required int ledgerId}) async =>
+      null; // 无云同步：没有"云端账本信息"可言
+
   @override
   Future<({int inserted, int deletedDup})> downloadAndRestoreToCurrentLedger(
       {required int ledgerId}) async {
@@ -197,3 +217,10 @@ class SyncStatus {
     this.message,
   });
 }
+
+/// 云端快照携带的账本元信息（仅 metadata 快路径能拿到的那三项）。
+///
+/// 刻意只含这三项：它们进快照指纹（sync_fingerprint M2），**不影响任何交易
+/// 数据**，因此可以安全地「只提示、不自动合并」；而账户/分类/预算等全局元数据
+/// 不在此列 —— 那些靠既有合并链路处理。
+typedef CloudLedgerMeta = ({String name, String currency, int monthStartDay});

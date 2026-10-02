@@ -1024,6 +1024,10 @@
     }
   },
   "startupSyncCheckUpToDate": "所有帳本都是最新的",
+  "startupSyncMetaDiffTitle": "雲端帳本資訊與本地不同",
+  "startupSyncMetaDiffNameLine": "帳本名稱：{local} → {cloud}",
+  "startupSyncMetaDiffMonthStartLine": "{name}：每月起始日 {local} → {cloud}",
+  "startupSyncMetaDiffAction": "啟動檢查不會自動合併（避免覆蓋你的本地變更）。請到「我的 → 雲端同步」手動下載同步。",
   "startupSyncConflictTooltip": "本地有改動將被雲端覆蓋",
   "startupSyncConflictConfirmTitle": "覆蓋確認",
   "startupSyncConflictConfirmMessage": "將用雲端覆蓋 {count} 個帳本的本地改動（{names}），是否繼續？",
