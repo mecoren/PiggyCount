@@ -648,15 +648,15 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
     // context 为方法参数,需与 State.mounted 一并校验
     if (!mounted || !context.mounted) return;
 
+    // 外壳走项目「悬浮卡片」口径（[PiggySheetCard]：transparent 弹层底 + 左右
+    // 留距 + Material(surfaceElevated/radiusXl)），不再用旧的全宽平底弹层
+    // （surfaceSheet + BorderRadius.vertical(top:)）—— 见 AGENTS.md 抽屉约定。
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: PiggyTokens.surfaceSheet(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
-      ),
-      builder: (ctx) => AmountEditorSheet(
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => PiggySheetCard(
+        child: AmountEditorSheet(
         categoryName: c.name,
         categoryId: c.id,
         categorySyncId: c.id < 0 ? c.syncId : null,
@@ -700,6 +700,7 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
           HapticFeedback.lightImpact();
           SystemSound.play(SystemSoundType.click);
         },
+        ),
       ),
     );
   }

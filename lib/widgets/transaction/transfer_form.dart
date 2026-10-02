@@ -147,17 +147,15 @@ class _TransferFormState extends ConsumerState<TransferForm> {
 
     if (!mounted) return;
 
+    // 与记账页的金额面板同一口径：项目「悬浮卡片」外壳（[PiggySheetCard]：
+    // transparent 弹层底 + 左右留距 + Material(surfaceElevated/radiusXl)），
+    // 不用旧的全宽平底弹层（surfaceSheet + BorderRadius.vertical(top:)）
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      // 与交易编辑页的记账表单抽屉同口径：surfaceSheet 底 + 顶部 radiusXl
-      // （不传 shape 会落到 M3 默认的 28，两处入口圆角不一致）
-      backgroundColor: PiggyTokens.surfaceSheet(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusXl)),
-      ),
-      builder: (context) => AmountEditorSheet(
+      backgroundColor: Colors.transparent,
+      builder: (context) => PiggySheetCard(
+        child: AmountEditorSheet(
         categoryName: l10n.transferTitle,
         initialDate: widget.initialDate ?? DateTime.now(),
         initialAmount: widget.initialAmount,
@@ -309,6 +307,7 @@ class _TransferFormState extends ConsumerState<TransferForm> {
             }
           }
         },
+        ),
       ),
     );
   }

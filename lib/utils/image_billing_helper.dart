@@ -37,6 +37,9 @@ class ImageBillingHelper {
   ) async {
     final l10n = AppLocalizations.of(context);
 
+    // 阻塞进度弹窗句柄：声明在 try 外，catch 分支也能安全收尾
+    // （close() 幂等，重复调用无副作用）
+    BlockingProgressDialogHandle? block;
     try {
       // 1. 选图
       final pickedFile = await ImagePicker().pickImage(
@@ -48,25 +51,11 @@ class ImageBillingHelper {
       if (pickedFile == null) return;
       if (!context.mounted) return;
 
-      // 2. 显示 loading
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => Center(
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: 16),
-                  Text(l10n.aiOcrRecognizing),
-                ],
-              ),
-            ),
-          ),
-        ),
+      // 2. 显示 loading：走项目统一阻塞进度弹窗（禁止点外部 / 返回键关闭），
+      //    不要自绘 Center(Card(spinner + 文案))
+      block = showBlockingProgressDialog(
+        context,
+        title: l10n.aiOcrRecognizing,
       );
 
       final imageFile = File(pickedFile.path);
@@ -75,7 +64,8 @@ class ImageBillingHelper {
       if (!await AIProviderManager.isCapabilityConfigured(
           AICapabilityType.vision)) {
         if (!context.mounted) return;
-        Navigator.of(context).pop();
+        await block.close();
+        if (!context.mounted) return;
         showToast(context, l10n.aiNotConfiguredHint);
         return;
       }
@@ -84,7 +74,8 @@ class ImageBillingHelper {
       final currentLedger = await ref.read(currentLedgerProvider.future);
       if (currentLedger == null) {
         if (!context.mounted) return;
-        Navigator.of(context).pop();
+        await block.close();
+        if (!context.mounted) return;
         showToast(context, l10n.aiOcrNoLedger);
         return;
       }
@@ -117,7 +108,8 @@ class ImageBillingHelper {
       );
 
       if (!context.mounted) return;
-      Navigator.of(context).pop();
+      await block.close();
+      if (!context.mounted) return;
 
       // 6. 提示用户
       if (!result.success) {
@@ -152,7 +144,9 @@ class ImageBillingHelper {
       );
     } catch (e) {
       if (!context.mounted) return;
-      Navigator.of(context).popUntil((route) => route.isFirst);
+      // 统一进度弹窗的句柄（幂等）：选中图前的异常时 block 为 null，无需收尾
+      await block?.close();
+      if (!context.mounted) return;
       showToast(context, l10n.aiOcrFailed(e.toString()));
     }
   }

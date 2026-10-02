@@ -18,19 +18,17 @@ import '../../providers/credit_card_reminder_providers.dart';
 
 /// 以底部抽屉形式弹出账户编辑器（新建模式专用）
 ///
-/// 内部仍复用 [AccountEditPage] 的表单逻辑，仅外层从全屏 Scaffold
-/// 替换为 [ExpandableBottomSheet]。保存按钮迁移到标题栏右侧。
+/// 内部仍复用 [AccountEditPage] 的表单逻辑，仅外层从全屏 Scaffold 换成项目
+/// 统一的**悬浮卡片表单抽屉**（[PiggyFormSheet]：居中标题 + 卡片内滚动表单 +
+/// 底部「取消｜保存」双等宽按钮），与云同步配置表单 / 加密设置密码抽屉同款。
 /// 编辑模式仍走全屏页（保留隐藏/删除等操作按钮）。
 Future<void> showAccountFormBottomSheet(
   BuildContext context, {
   required int ledgerId,
 }) async {
-  await showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    backgroundColor: Colors.transparent,
-    builder: (context) => AccountEditPage(
+  await showPiggyFormSheet<void>(
+    context,
+    builder: (_) => AccountEditPage(
       ledgerId: ledgerId,
       renderAsBottomSheet: true,
     ),
@@ -43,7 +41,7 @@ class AccountEditPage extends ConsumerStatefulWidget {
 
   /// 是否以底部抽屉形式渲染。
   ///
-  /// 为 `true` 时 build 返回 [ExpandableBottomSheet]（用于新建场景）；
+  /// 为 `true` 时 build 返回 [PiggyFormSheet]（悬浮卡片表单抽屉，用于新建场景）；
   /// 默认 `false` 保持全屏 Scaffold 行为（编辑场景）。
   final bool renderAsBottomSheet;
 
@@ -247,23 +245,45 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
 
     // 抽取表单主体为局部变量，供 Scaffold 与底部抽屉两种模式复用。
     // 抽屉模式不渲染底部保存按钮（保存动作迁移至标题栏右侧）。
+    // 分组间距：抽屉形态卡片已拍平，靠这个间距分隔字段组（对齐云同步配置表单
+    // 的字段节奏）；全屏形态保留原来的卡片间距
+    final sectionGap = (widget.renderAsBottomSheet ? 16.0 : 8.0).scaled(
+      context,
+      ref,
+    );
+
     final formWidget = Form(
       key: _formKey,
       child: ListView(
+        // 抽屉形态：内容由 [PiggyFormSheet] 的 SingleChildScrollView 承载，
+        // 内层 ListView 必须 shrinkWrap + 禁止自身滚动，否则在无界高度里报错
+        shrinkWrap: widget.renderAsBottomSheet,
+        physics: widget.renderAsBottomSheet
+            ? const NeverScrollableScrollPhysics()
+            : null,
         padding: EdgeInsets.only(
           left: 12.0.scaled(context, ref),
           right: 12.0.scaled(context, ref),
           top: 8.0.scaled(context, ref),
-          bottom:
-              8.0.scaled(context, ref) + MediaQuery.of(context).padding.bottom,
+          // 全屏形态才有底部安全区问题（抽屉形态由 PiggyFormSheet 的
+          // PiggySheetCard 统一吃掉，这里再叠会双重留白）
+          bottom: widget.renderAsBottomSheet
+              ? 8.0.scaled(context, ref)
+              : 8.0.scaled(context, ref) +
+                  MediaQuery.of(context).padding.bottom,
         ),
         children: [
           // ===== 账户类型（资产/负债 Tab + 缩小网格）=====
           SectionCard(
             margin: EdgeInsets.zero,
             borderColor: primaryColor,
+            // 抽屉形态：抽屉本身已是悬浮卡片，卡片套卡片显得多余 ——
+            // 拍平后字段直接落在抽屉底色上，与云同步配置表单同款
+            flat: widget.renderAsBottomSheet,
             child: Padding(
-              padding: EdgeInsets.all(16.0.scaled(context, ref)),
+              padding: widget.renderAsBottomSheet
+                  ? EdgeInsets.zero
+                  : EdgeInsets.all(16.0.scaled(context, ref)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -311,14 +331,17 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
             ),
           ),
 
-          SizedBox(height: 8.0.scaled(context, ref)),
+          SizedBox(height: sectionGap),
 
           // ===== 基本（名称 + 币种/余额）=====
           SectionCard(
             margin: EdgeInsets.zero,
             borderColor: primaryColor,
+            flat: widget.renderAsBottomSheet,
             child: Padding(
-              padding: EdgeInsets.all(16.0.scaled(context, ref)),
+              padding: widget.renderAsBottomSheet
+                  ? EdgeInsets.zero
+                  : EdgeInsets.all(16.0.scaled(context, ref)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -427,12 +450,15 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
 
           // ===== 信用卡信息（仅 credit_card）=====
           if (isCreditCard) ...[
-            SizedBox(height: 8.0.scaled(context, ref)),
+            SizedBox(height: sectionGap),
             SectionCard(
               margin: EdgeInsets.zero,
               borderColor: primaryColor,
+              flat: widget.renderAsBottomSheet,
               child: Padding(
-                padding: EdgeInsets.all(16.0.scaled(context, ref)),
+                padding: widget.renderAsBottomSheet
+                    ? EdgeInsets.zero
+                    : EdgeInsets.all(16.0.scaled(context, ref)),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -571,12 +597,15 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
 
           // ===== 卡信息（仅 bank_card）=====
           if (isBankCard) ...[
-            SizedBox(height: 8.0.scaled(context, ref)),
+            SizedBox(height: sectionGap),
             SectionCard(
               margin: EdgeInsets.zero,
               borderColor: primaryColor,
+              flat: widget.renderAsBottomSheet,
               child: Padding(
-                padding: EdgeInsets.all(16.0.scaled(context, ref)),
+                padding: widget.renderAsBottomSheet
+                    ? EdgeInsets.zero
+                    : EdgeInsets.all(16.0.scaled(context, ref)),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -619,12 +648,15 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
           ],
 
           // ===== 备注（所有类型）=====
-          SizedBox(height: 8.0.scaled(context, ref)),
+          SizedBox(height: sectionGap),
           SectionCard(
             margin: EdgeInsets.zero,
             borderColor: primaryColor,
+            flat: widget.renderAsBottomSheet,
             child: Padding(
-              padding: EdgeInsets.all(16.0.scaled(context, ref)),
+              padding: widget.renderAsBottomSheet
+                  ? EdgeInsets.zero
+                  : EdgeInsets.all(16.0.scaled(context, ref)),
               child: TextFormField(
                 controller: _noteController,
                 decoration: piggyOutlinedDecoration(
@@ -738,35 +770,18 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
       ),
     );
 
-    // 底部抽屉模式：复用 formWidget，保存按钮放标题栏右侧
+    // 底部抽屉模式：复用 formWidget，外壳走项目统一的悬浮卡片表单抽屉
+    // （[PiggyFormSheet]：居中标题 + 卡片内滚动 + 底部「取消｜保存」），
+    // 与云同步配置 / 加密设置密码同款
     if (widget.renderAsBottomSheet) {
-      return ExpandableBottomSheet(
-        // 新建账户抽屉整体背景与页面背景(scaffoldBackground)一致，
-        // 标题栏与内容区融为一色，与分类选择器弹窗视觉统一。
-        backgroundColor: PiggyTokens.scaffoldBackground(context),
+      return PiggyFormSheet(
         title: l10n.accountNewTitle,
-        onClose: () => Navigator.of(context).pop(),
-        onSave: (_saving || _isNameDuplicate) ? null : _save,
-        saveIcon: _saving
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Colors.white),
-              )
-            : const Icon(Icons.check_rounded),
-        initialChildSize: 0.75,
-        minChildSize: 0.35,
-        maxChildSize: 1.0,
-        builder: (context, scrollController) {
-          // 注入抽屉 scrollController：formWidget 内 ListView 未显式指定
-          // controller，会回退到 PrimaryScrollController。将其指向抽屉的
-          // scrollController 后，内容上滑即可联动抽屉扩展到全屏（同记一笔）。
-          return PrimaryScrollController(
-            controller: scrollController,
-            child: formWidget,
-          );
-        },
+        cancelLabel: l10n.commonCancel,
+        confirmLabel: l10n.commonSave,
+        onCancel: () => Navigator.of(context).pop(),
+        onConfirm: _save,
+        confirmBusy: _saving || _isNameDuplicate,
+        child: formWidget,
       );
     }
 

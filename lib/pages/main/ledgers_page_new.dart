@@ -1333,92 +1333,74 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) {
-        return Dialog(
-          backgroundColor: PiggyTokens.surfaceElevated(ctx),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
-          child: StatefulBuilder(builder: (ctx, setState) {
-            return Column(
+        return StatefulBuilder(builder: (ctx, setState) {
+          // 外壳走项目弹窗语言（[AppDialogShell]）：居中标题 + 表单内容 +
+          // 底部分栏动作区；不再自绘 Dialog(surfaceElevated + radiusXl) + Padding。
+          return AppDialogShell(
+            title: Text(title ?? AppLocalizations.of(ctx).ledgersEdit),
+            content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    PiggyDimens.p20,
-                    PiggyDimens.p20,
-                    PiggyDimens.p20,
-                    PiggyDimens.p16,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        title ?? AppLocalizations.of(ctx).ledgersEdit,
-                        textAlign: TextAlign.center,
-                        style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: PiggyTokens.textPrimary(ctx),
-                            ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: nameCtrl,
-                        decoration: piggyOutlinedDecoration(
-                          ctx,
-                          label: AppLocalizations.of(ctx).ledgersName,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        // v30 语义升级:账本 currency = 「账本本位币」(统计折算目标),
-                        // 与资产页的用户级「主币种」是两个概念,label 用本位币避免混淆。
-                        title: Text(
-                            AppLocalizations.of(ctx).ledgerBaseCurrencyLabel),
-                        subtitle: Text(displayCurrency(currency, context)),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () async {
-                          final picked =
-                              await _showCurrencyPicker(ctx, initial: currency);
-                          if (picked != null) {
-                            setState(() => currency = picked);
-                          }
-                        },
-                      ),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title:
-                            Text(AppLocalizations.of(ctx).ledgersMonthStartDay),
-                        subtitle: Text(monthStartDay <= 1
-                            ? AppLocalizations.of(ctx)
-                                .ledgersMonthStartDayNatural
-                            : AppLocalizations.of(ctx)
-                                .ledgersMonthStartDayValue(monthStartDay)),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () async {
-                          final picked = await _showMonthStartDayPicker(ctx,
-                              initial: monthStartDay);
-                          if (picked != null) {
-                            setState(() => monthStartDay = picked);
-                          }
-                        },
-                      ),
-                    ],
+                TextField(
+                  controller: nameCtrl,
+                  decoration: piggyOutlinedDecoration(
+                    ctx,
+                    label: AppLocalizations.of(ctx).ledgersName,
                   ),
                 ),
-                // 底部按钮与确认框同一语言：取消｜保存分栏（保存=主题色）。
-                PiggyDialogActions(
-                  cancelLabel: AppLocalizations.of(ctx).commonCancel,
-                  onCancel: () => Navigator.pop(ctx, false),
-                  okLabel: title == AppLocalizations.of(ctx).ledgersNew
-                      ? AppLocalizations.of(ctx).ledgersCreate
-                      : AppLocalizations.of(ctx).commonSave,
-                  onOk: () => Navigator.pop(ctx, true),
+                const SizedBox(height: PiggyDimens.p12),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  // v30 语义升级:账本 currency = 「账本本位币」(统计折算目标),
+                  // 与资产页的用户级「主币种」是两个概念,label 用本位币避免混淆。
+                  title:
+                      Text(AppLocalizations.of(ctx).ledgerBaseCurrencyLabel),
+                  subtitle: Text(displayCurrency(currency, context)),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () async {
+                    final picked = await _showCurrencyPicker(ctx,
+                        initial: currency);
+                    if (picked != null) {
+                      setState(() => currency = picked);
+                    }
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(AppLocalizations.of(ctx).ledgersMonthStartDay),
+                  subtitle: Text(monthStartDay <= 1
+                      ? AppLocalizations.of(ctx).ledgersMonthStartDayNatural
+                      : AppLocalizations.of(ctx)
+                          .ledgersMonthStartDayValue(monthStartDay)),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () async {
+                    final picked = await _showMonthStartDayPicker(ctx,
+                        initial: monthStartDay);
+                    if (picked != null) {
+                      setState(() => monthStartDay = picked);
+                    }
+                  },
                 ),
               ],
-            );
-          }),
-        );
+            ),
+            // 底部按钮与确认框同一语言：取消｜保存分栏（保存=主题色）。
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(AppLocalizations.of(ctx).commonCancel),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(
+                  title == AppLocalizations.of(ctx).ledgersNew
+                      ? AppLocalizations.of(ctx).ledgersCreate
+                      : AppLocalizations.of(ctx).commonSave,
+                ),
+              ),
+            ],
+          );
+        });
       },
     );
 

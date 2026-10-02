@@ -628,6 +628,50 @@ class _ConfigImportExportPageState
   }
 }
 
+/// 配置导入导出各弹窗的共用外壳：项目 [AppDialogShell]（宽卡片 + 固定标题 +
+/// 底部 [PiggyDialogActionsBar] 分栏动作区）+「图标 + 标题」标题行。
+///
+/// 本页 5 个弹窗（查看内容 / 配置预览 / 导出选项 / 导出预览 / 导入预览）此前
+/// 各写一遍 `Dialog(surfaceElevated + radiusXl)` + 自绘标题栏 + IconButton 关闭
+/// + `PiggyDialogActions`，正是 AGENTS.md 明令禁止的「逐处复制的样板」，故统一
+/// 收到这里。
+class _ConfigDialog extends StatelessWidget {
+  const _ConfigDialog({
+    required this.icon,
+    required this.title,
+    required this.content,
+    required this.actions,
+  });
+
+  final IconData icon;
+  final String title;
+
+  /// 内容区。直接给内容本体即可 —— **不要**自带 `Expanded` /
+  /// `SingleChildScrollView`：[AppDialogShell] 的内容区已限高并内部滚动，
+  /// 在无界高度里用 `Expanded` 会直接崩。
+  final Widget content;
+
+  /// 底部动作按钮，按「取消｜确认」顺序传入（末位自动取主题色）。
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppDialogShell(
+      wide: true,
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 20),
+          const SizedBox(width: PiggyDimens.p8),
+          Flexible(child: Text(title)),
+        ],
+      ),
+      content: content,
+      actions: actions,
+    );
+  }
+}
+
 /// 配置内容查看对话框
 class _ConfigContentDialog extends StatelessWidget {
   final String content;
@@ -642,185 +686,19 @@ class _ConfigContentDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 40),
-      backgroundColor: PiggyTokens.surfaceElevated(context),
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
-      child: Column(
-        children: [
-          // 标题栏
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                const Icon(Icons.description_outlined),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    l10n.configExportViewContent,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  tooltip: l10n.commonClose,
-                  onPressed: () => Navigator.pop(context),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              ],
-            ),
-          ),
-          // 内容区域
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              child: SingleChildScrollView(
-                child: SelectableText(
-                  content,
-                  style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          // 底部按钮
-          PiggyDialogActions(
-            okLabel: l10n.configExportCopyContent,
-            onOk: onCopy,
-          ),
-        ],
+    return _ConfigDialog(
+      icon: Icons.description_outlined,
+      title: l10n.configExportViewContent,
+      content: SelectableText(
+        content,
+        style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
       ),
-    );
-  }
-}
-
-/// 配置预览对话框
-class _ConfigPreviewDialog extends StatefulWidget {
-  final String yamlContent;
-
-  const _ConfigPreviewDialog({required this.yamlContent});
-
-  @override
-  State<_ConfigPreviewDialog> createState() => _ConfigPreviewDialogState();
-}
-
-class _ConfigPreviewDialogState extends State<_ConfigPreviewDialog> {
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-
-    return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-      backgroundColor: PiggyTokens.surfaceElevated(context),
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
-      child: Column(
-        children: [
-          // 标题栏
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                const Icon(Icons.preview_outlined),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Text(
-                    '配置预览',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  tooltip: l10n.commonClose,
-                  onPressed: () => Navigator.pop(context, false),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              ],
-            ),
-          ),
-          // 内容区域 - 直接展示YAML内容
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color:
-                          PiggyTokens.warning(context).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
-                      border: Border.all(
-                        color:
-                            PiggyTokens.warning(context).withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.warning_amber_rounded,
-                          color: PiggyTokens.warning(context),
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '导入将覆盖现有配置，建议先备份当前配置。',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: PiggyTokens.warning(context),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: PiggyTokens.surface(context),
-                      borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
-                      border: Border.all(color: PiggyTokens.border(context)),
-                    ),
-                    child: SelectableText(
-                      widget.yamlContent,
-                      style: TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 12,
-                        height: 1.5,
-                        color: PiggyTokens.textPrimary(context),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // 底部按钮
-          PiggyDialogActions(
-            cancelLabel: l10n.commonCancel,
-            onCancel: () => Navigator.pop(context, false),
-            okLabel: l10n.configImportConfirmTitle,
-            onOk: () => Navigator.pop(context, true),
-          ),
-        ],
-      ),
+      actions: [
+        TextButton(
+          onPressed: onCopy,
+          child: Text(l10n.configExportCopyContent),
+        ),
+      ],
     );
   }
 }
@@ -851,145 +729,109 @@ class _ExportOptionsDialogState extends State<_ExportOptionsDialog> {
     final l10n = AppLocalizations.of(context);
     final primary = widget.ref.watch(primaryColorProvider);
 
-    return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
-      backgroundColor: PiggyTokens.surfaceElevated(context),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+    return _ConfigDialog(
+      icon: Icons.checklist_outlined,
+      title: l10n.configExportSelectTitle,
+      content: Column(
         children: [
-          // 标题栏
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                const Icon(Icons.checklist_outlined),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    l10n.configExportSelectTitle,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  tooltip: l10n.commonClose,
-                  onPressed: () => Navigator.pop(context),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              ],
-            ),
+          CheckboxListTile(
+            value: _ledgers,
+            onChanged: (v) => setState(() => _ledgers = v ?? true),
+            title: Text(l10n.configIncludeLedgers),
+            secondary: Icon(Icons.book_outlined, color: primary),
+            controlAffinity: ListTileControlAffinity.trailing,
+            contentPadding: EdgeInsets.zero,
           ),
-          // 选项列表
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              children: [
-                CheckboxListTile(
-                  value: _ledgers,
-                  onChanged: (v) => setState(() => _ledgers = v ?? true),
-                  title: Text(l10n.configIncludeLedgers),
-                  secondary: Icon(Icons.book_outlined, color: primary),
-                  controlAffinity: ListTileControlAffinity.trailing,
-                  contentPadding: EdgeInsets.zero,
-                ),
-                CheckboxListTile(
-                  value: _categories,
-                  onChanged: (v) => setState(() => _categories = v ?? true),
-                  title: Text(l10n.configIncludeCategories),
-                  secondary: Icon(Icons.category_outlined, color: primary),
-                  controlAffinity: ListTileControlAffinity.trailing,
-                  contentPadding: EdgeInsets.zero,
-                ),
-                CheckboxListTile(
-                  value: _accounts,
-                  onChanged: (v) => setState(() => _accounts = v ?? true),
-                  title: Text(l10n.configIncludeAccounts),
-                  secondary: Icon(Icons.account_balance_wallet_outlined,
-                      color: primary),
-                  controlAffinity: ListTileControlAffinity.trailing,
-                  contentPadding: EdgeInsets.zero,
-                ),
-                CheckboxListTile(
-                  value: _tags,
-                  onChanged: (v) => setState(() => _tags = v ?? true),
-                  title: Text(l10n.configIncludeTags),
-                  secondary: Icon(Icons.label_outline, color: primary),
-                  controlAffinity: ListTileControlAffinity.trailing,
-                  contentPadding: EdgeInsets.zero,
-                ),
-                CheckboxListTile(
-                  value: _budgets,
-                  onChanged: (v) => setState(() => _budgets = v ?? true),
-                  title: Text(l10n.configIncludeBudgets),
-                  secondary:
-                      Icon(Icons.account_balance_outlined, color: primary),
-                  controlAffinity: ListTileControlAffinity.trailing,
-                  contentPadding: EdgeInsets.zero,
-                ),
-                CheckboxListTile(
-                  value: _recurringTransactions,
-                  onChanged: (v) =>
-                      setState(() => _recurringTransactions = v ?? true),
-                  title: Text(l10n.configIncludeRecurringTransactions),
-                  secondary: Icon(Icons.repeat, color: primary),
-                  controlAffinity: ListTileControlAffinity.trailing,
-                  contentPadding: EdgeInsets.zero,
-                ),
-                CheckboxListTile(
-                  value: _ai,
-                  onChanged: (v) => setState(() => _ai = v ?? true),
-                  title: Text(l10n.configIncludeAI),
-                  subtitle: Text(
-                    l10n.configIncludeAISubtitle,
-                    style: PiggyTextTokens.label(context),
-                  ),
-                  secondary: Icon(Icons.smart_toy_outlined, color: primary),
-                  controlAffinity: ListTileControlAffinity.trailing,
-                  contentPadding: EdgeInsets.zero,
-                ),
-                CheckboxListTile(
-                  value: _appSettings,
-                  onChanged: (v) => setState(() => _appSettings = v ?? true),
-                  title: Text(l10n.configIncludeOtherSettings),
-                  subtitle: Text(
-                    l10n.configIncludeOtherSettingsSubtitle,
-                    style: PiggyTextTokens.label(context),
-                  ),
-                  secondary: Icon(Icons.settings_outlined, color: primary),
-                  controlAffinity: ListTileControlAffinity.trailing,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ],
-            ),
+          CheckboxListTile(
+            value: _categories,
+            onChanged: (v) => setState(() => _categories = v ?? true),
+            title: Text(l10n.configIncludeCategories),
+            secondary: Icon(Icons.category_outlined, color: primary),
+            controlAffinity: ListTileControlAffinity.trailing,
+            contentPadding: EdgeInsets.zero,
           ),
-          const SizedBox(height: 8),
-          // 底部动作区（与其余弹窗同一套分栏语言）
-          PiggyDialogActions(
-            cancelLabel: l10n.commonCancel,
-            onCancel: () => Navigator.pop(context),
-            okLabel: l10n.commonNext,
-            onOk: () {
-              final options = ExportOptions(
-                ledgers: _ledgers,
-                categories: _categories,
-                accounts: _accounts,
-                tags: _tags,
-                budgets: _budgets,
-                recurringTransactions: _recurringTransactions,
-                appSettings: _appSettings,
-                ai: _ai,
-              );
-              Navigator.pop(context, options);
-            },
+          CheckboxListTile(
+            value: _accounts,
+            onChanged: (v) => setState(() => _accounts = v ?? true),
+            title: Text(l10n.configIncludeAccounts),
+            secondary:
+                Icon(Icons.account_balance_wallet_outlined, color: primary),
+            controlAffinity: ListTileControlAffinity.trailing,
+            contentPadding: EdgeInsets.zero,
+          ),
+          CheckboxListTile(
+            value: _tags,
+            onChanged: (v) => setState(() => _tags = v ?? true),
+            title: Text(l10n.configIncludeTags),
+            secondary: Icon(Icons.label_outline, color: primary),
+            controlAffinity: ListTileControlAffinity.trailing,
+            contentPadding: EdgeInsets.zero,
+          ),
+          CheckboxListTile(
+            value: _budgets,
+            onChanged: (v) => setState(() => _budgets = v ?? true),
+            title: Text(l10n.configIncludeBudgets),
+            secondary: Icon(Icons.account_balance_outlined, color: primary),
+            controlAffinity: ListTileControlAffinity.trailing,
+            contentPadding: EdgeInsets.zero,
+          ),
+          CheckboxListTile(
+            value: _recurringTransactions,
+            onChanged: (v) =>
+                setState(() => _recurringTransactions = v ?? true),
+            title: Text(l10n.configIncludeRecurringTransactions),
+            secondary: Icon(Icons.repeat, color: primary),
+            controlAffinity: ListTileControlAffinity.trailing,
+            contentPadding: EdgeInsets.zero,
+          ),
+          CheckboxListTile(
+            value: _ai,
+            onChanged: (v) => setState(() => _ai = v ?? true),
+            title: Text(l10n.configIncludeAI),
+            subtitle: Text(
+              l10n.configIncludeAISubtitle,
+              style: PiggyTextTokens.label(context),
+            ),
+            secondary: Icon(Icons.smart_toy_outlined, color: primary),
+            controlAffinity: ListTileControlAffinity.trailing,
+            contentPadding: EdgeInsets.zero,
+          ),
+          CheckboxListTile(
+            value: _appSettings,
+            onChanged: (v) => setState(() => _appSettings = v ?? true),
+            title: Text(l10n.configIncludeOtherSettings),
+            subtitle: Text(
+              l10n.configIncludeOtherSettingsSubtitle,
+              style: PiggyTextTokens.label(context),
+            ),
+            secondary: Icon(Icons.settings_outlined, color: primary),
+            controlAffinity: ListTileControlAffinity.trailing,
+            contentPadding: EdgeInsets.zero,
           ),
         ],
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.commonCancel),
+        ),
+        TextButton(
+          onPressed: () {
+            final options = ExportOptions(
+              ledgers: _ledgers,
+              categories: _categories,
+              accounts: _accounts,
+              tags: _tags,
+              budgets: _budgets,
+              recurringTransactions: _recurringTransactions,
+              appSettings: _appSettings,
+              ai: _ai,
+            );
+            Navigator.pop(context, options);
+          },
+          child: Text(l10n.commonNext),
+        ),
+      ],
     );
   }
 }
@@ -1004,72 +846,37 @@ class _ExportPreviewDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
-      backgroundColor: PiggyTokens.surfaceElevated(context),
-      child: Column(
-        children: [
-          // 标题栏
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                const Icon(Icons.preview_outlined),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    l10n.configExportPreviewTitle,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  tooltip: l10n.commonClose,
-                  onPressed: () => Navigator.pop(context, false),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              ],
-            ),
+    return _ConfigDialog(
+      icon: Icons.preview_outlined,
+      title: l10n.configExportPreviewTitle,
+      content: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: PiggyTokens.surface(context),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+          border: Border.all(color: PiggyTokens.border(context)),
+        ),
+        child: SelectableText(
+          yamlContent,
+          style: TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 12,
+            height: 1.5,
+            color: PiggyTokens.textPrimary(context),
           ),
-          // 内容区域
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: PiggyTokens.surface(context),
-                  borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
-                  border: Border.all(color: PiggyTokens.border(context)),
-                ),
-                child: SelectableText(
-                  yamlContent,
-                  style: TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 12,
-                    height: 1.5,
-                    color: PiggyTokens.textPrimary(context),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          // 底部动作区（与其余弹窗同一套分栏语言）
-          PiggyDialogActions(
-            cancelLabel: l10n.commonCancel,
-            onCancel: () => Navigator.pop(context, false),
-            okLabel: l10n.configExportConfirmTitle,
-            onOk: () => Navigator.pop(context, true),
-          ),
-        ],
+        ),
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: Text(l10n.commonCancel),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: Text(l10n.configExportConfirmTitle),
+        ),
+      ],
     );
   }
 }
@@ -1120,228 +927,188 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
     final primary = widget.ref.watch(primaryColorProvider);
     final info = widget.contentInfo;
 
-    return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
-      backgroundColor: PiggyTokens.surfaceElevated(context),
-      child: Column(
+    return _ConfigDialog(
+      icon: Icons.preview_outlined,
+      title: l10n.configImportPreviewTitle,
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 标题栏
+          // 警告提示
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: PiggyTokens.warning(context).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+              border: Border.all(
+                color: PiggyTokens.warning(context).withValues(alpha: 0.3),
+              ),
+            ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.preview_outlined),
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: PiggyTokens.warning(context),
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    l10n.configImportPreviewTitle,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                    '导入将覆盖现有配置，建议先备份当前配置。',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: PiggyTokens.warning(context),
                     ),
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  tooltip: l10n.commonClose,
-                  onPressed: () => Navigator.pop(context),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
                 ),
               ],
             ),
           ),
-          // YAML 内容预览
-          Expanded(
+          const SizedBox(height: 16),
+          // YAML 内容
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            constraints: const BoxConstraints(maxHeight: 200),
+            decoration: BoxDecoration(
+              color: PiggyTokens.surface(context),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+              border: Border.all(color: PiggyTokens.border(context)),
+            ),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 警告提示
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color:
-                          PiggyTokens.warning(context).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
-                      border: Border.all(
-                        color:
-                            PiggyTokens.warning(context).withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.warning_amber_rounded,
-                          color: PiggyTokens.warning(context),
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '导入将覆盖现有配置，建议先备份当前配置。',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: PiggyTokens.warning(context),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // YAML 内容
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    constraints: const BoxConstraints(maxHeight: 200),
-                    decoration: BoxDecoration(
-                      color: PiggyTokens.surface(context),
-                      borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
-                      border: Border.all(color: PiggyTokens.border(context)),
-                    ),
-                    child: SingleChildScrollView(
-                      child: SelectableText(
-                        widget.yamlContent,
-                        style: TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 12,
-                          height: 1.5,
-                          color: PiggyTokens.textPrimary(context),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // 选择导入内容标题
-                  Text(
-                    l10n.configImportSelectTitle,
-                    style: PiggyTextTokens.strongTitle(context)
-                        .copyWith(fontSize: 14),
-                  ),
-                  const SizedBox(height: 8),
-                  // 选项列表
-                  if (info.hasLedgers)
-                    CheckboxListTile(
-                      value: _ledgers,
-                      onChanged: (v) => setState(() => _ledgers = v ?? true),
-                      title: Text(l10n.configIncludeLedgers),
-                      secondary: Icon(Icons.book_outlined, color: primary),
-                      controlAffinity: ListTileControlAffinity.trailing,
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                    ),
-                  if (info.hasCategories)
-                    CheckboxListTile(
-                      value: _categories,
-                      onChanged: (v) => setState(() => _categories = v ?? true),
-                      title: Text(l10n.configIncludeCategories),
-                      secondary: Icon(Icons.category_outlined, color: primary),
-                      controlAffinity: ListTileControlAffinity.trailing,
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                    ),
-                  if (info.hasAccounts)
-                    CheckboxListTile(
-                      value: _accounts,
-                      onChanged: (v) => setState(() => _accounts = v ?? true),
-                      title: Text(l10n.configIncludeAccounts),
-                      secondary: Icon(Icons.account_balance_wallet_outlined,
-                          color: primary),
-                      controlAffinity: ListTileControlAffinity.trailing,
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                    ),
-                  if (info.hasTags)
-                    CheckboxListTile(
-                      value: _tags,
-                      onChanged: (v) => setState(() => _tags = v ?? true),
-                      title: Text(l10n.configIncludeTags),
-                      secondary: Icon(Icons.label_outline, color: primary),
-                      controlAffinity: ListTileControlAffinity.trailing,
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                    ),
-                  if (info.hasBudgets)
-                    CheckboxListTile(
-                      value: _budgets,
-                      onChanged: (v) => setState(() => _budgets = v ?? true),
-                      title: Text(l10n.configIncludeBudgets),
-                      secondary:
-                          Icon(Icons.account_balance_outlined, color: primary),
-                      controlAffinity: ListTileControlAffinity.trailing,
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                    ),
-                  if (info.hasRecurringTransactions)
-                    CheckboxListTile(
-                      value: _recurringTransactions,
-                      onChanged: (v) =>
-                          setState(() => _recurringTransactions = v ?? true),
-                      title: Text(l10n.configIncludeRecurringTransactions),
-                      secondary: Icon(Icons.repeat, color: primary),
-                      controlAffinity: ListTileControlAffinity.trailing,
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                    ),
-                  if (info.hasAi)
-                    CheckboxListTile(
-                      value: _ai,
-                      onChanged: (v) => setState(() => _ai = v ?? true),
-                      title: Text(l10n.configIncludeAI),
-                      subtitle: Text(
-                        l10n.configIncludeAISubtitle,
-                        style: PiggyTextTokens.label(context),
-                      ),
-                      secondary: Icon(Icons.smart_toy_outlined, color: primary),
-                      controlAffinity: ListTileControlAffinity.trailing,
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                    ),
-                  if (info.hasAppSettings)
-                    CheckboxListTile(
-                      value: _appSettings,
-                      onChanged: (v) =>
-                          setState(() => _appSettings = v ?? true),
-                      title: Text(l10n.configIncludeOtherSettings),
-                      subtitle: Text(
-                        l10n.configIncludeOtherSettingsSubtitle,
-                        style: PiggyTextTokens.label(context),
-                      ),
-                      secondary: Icon(Icons.settings_outlined, color: primary),
-                      controlAffinity: ListTileControlAffinity.trailing,
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                    ),
-                ],
+              child: SelectableText(
+                widget.yamlContent,
+                style: TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                  height: 1.5,
+                  color: PiggyTokens.textPrimary(context),
+                ),
               ),
             ),
           ),
-          // 底部动作区（与其余弹窗同一套分栏语言）
-          PiggyDialogActions(
-            cancelLabel: l10n.commonCancel,
-            onCancel: () => Navigator.pop(context),
-            okLabel: l10n.configImportConfirmTitle,
-            onOk: () {
-              final options = ExportOptions(
-                ledgers: _ledgers,
-                categories: _categories,
-                accounts: _accounts,
-                tags: _tags,
-                budgets: _budgets,
-                recurringTransactions: _recurringTransactions,
-                appSettings: _appSettings,
-                ai: _ai,
-              );
-              Navigator.pop(context, options);
-            },
+          const SizedBox(height: 16),
+          // 选择导入内容标题
+          Text(
+            l10n.configImportSelectTitle,
+            style: PiggyTextTokens.strongTitle(context).copyWith(fontSize: 14),
           ),
+          const SizedBox(height: 8),
+          // 选项列表
+          if (info.hasLedgers)
+            CheckboxListTile(
+              value: _ledgers,
+              onChanged: (v) => setState(() => _ledgers = v ?? true),
+              title: Text(l10n.configIncludeLedgers),
+              secondary: Icon(Icons.book_outlined, color: primary),
+              controlAffinity: ListTileControlAffinity.trailing,
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+            ),
+          if (info.hasCategories)
+            CheckboxListTile(
+              value: _categories,
+              onChanged: (v) => setState(() => _categories = v ?? true),
+              title: Text(l10n.configIncludeCategories),
+              secondary: Icon(Icons.category_outlined, color: primary),
+              controlAffinity: ListTileControlAffinity.trailing,
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+            ),
+          if (info.hasAccounts)
+            CheckboxListTile(
+              value: _accounts,
+              onChanged: (v) => setState(() => _accounts = v ?? true),
+              title: Text(l10n.configIncludeAccounts),
+              secondary:
+                  Icon(Icons.account_balance_wallet_outlined, color: primary),
+              controlAffinity: ListTileControlAffinity.trailing,
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+            ),
+          if (info.hasTags)
+            CheckboxListTile(
+              value: _tags,
+              onChanged: (v) => setState(() => _tags = v ?? true),
+              title: Text(l10n.configIncludeTags),
+              secondary: Icon(Icons.label_outline, color: primary),
+              controlAffinity: ListTileControlAffinity.trailing,
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+            ),
+          if (info.hasBudgets)
+            CheckboxListTile(
+              value: _budgets,
+              onChanged: (v) => setState(() => _budgets = v ?? true),
+              title: Text(l10n.configIncludeBudgets),
+              secondary: Icon(Icons.account_balance_outlined, color: primary),
+              controlAffinity: ListTileControlAffinity.trailing,
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+            ),
+          if (info.hasRecurringTransactions)
+            CheckboxListTile(
+              value: _recurringTransactions,
+              onChanged: (v) =>
+                  setState(() => _recurringTransactions = v ?? true),
+              title: Text(l10n.configIncludeRecurringTransactions),
+              secondary: Icon(Icons.repeat, color: primary),
+              controlAffinity: ListTileControlAffinity.trailing,
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+            ),
+          if (info.hasAi)
+            CheckboxListTile(
+              value: _ai,
+              onChanged: (v) => setState(() => _ai = v ?? true),
+              title: Text(l10n.configIncludeAI),
+              subtitle: Text(
+                l10n.configIncludeAISubtitle,
+                style: PiggyTextTokens.label(context),
+              ),
+              secondary: Icon(Icons.smart_toy_outlined, color: primary),
+              controlAffinity: ListTileControlAffinity.trailing,
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+            ),
+          if (info.hasAppSettings)
+            CheckboxListTile(
+              value: _appSettings,
+              onChanged: (v) => setState(() => _appSettings = v ?? true),
+              title: Text(l10n.configIncludeOtherSettings),
+              subtitle: Text(
+                l10n.configIncludeOtherSettingsSubtitle,
+                style: PiggyTextTokens.label(context),
+              ),
+              secondary: Icon(Icons.settings_outlined, color: primary),
+              controlAffinity: ListTileControlAffinity.trailing,
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+            ),
         ],
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.commonCancel),
+        ),
+        TextButton(
+          onPressed: () {
+            final options = ExportOptions(
+              ledgers: _ledgers,
+              categories: _categories,
+              accounts: _accounts,
+              tags: _tags,
+              budgets: _budgets,
+              recurringTransactions: _recurringTransactions,
+              appSettings: _appSettings,
+              ai: _ai,
+            );
+            Navigator.pop(context, options);
+          },
+          child: Text(l10n.configImportConfirmTitle),
+        ),
+      ],
     );
   }
 }

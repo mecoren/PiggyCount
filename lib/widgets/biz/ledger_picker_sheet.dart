@@ -6,10 +6,12 @@ import '../../models/ledger_display_item.dart';
 import '../../providers.dart';
 import '../../styles/tokens.dart';
 import '../../pages/main/ledgers_page_new.dart';
+import '../ui/dialog.dart';
 
 /// 账本选择弹窗组件
 ///
-/// 居中显示的优雅弹窗，用于快速切换账本
+/// 居中显示，用于快速切换账本。外壳走项目弹窗语言（[AppDialogShell]）：
+/// 居中标题 + 项目卡片 + 底部分栏动作区，标题固定不随列表滚动。
 class LedgerPickerDialog extends ConsumerWidget {
   const LedgerPickerDialog({super.key});
 
@@ -20,90 +22,50 @@ class LedgerPickerDialog extends ConsumerWidget {
     final currentId = ref.watch(currentLedgerIdProvider);
     final primaryColor = ref.watch(primaryColorProvider);
 
-    return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
-      ),
-      backgroundColor: PiggyTokens.surfaceElevated(context),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          maxWidth: 320,
-          maxHeight: 400,
+    // 不再自绘 Dialog(shape radiusXl) + 关闭圆钮 + 裸字号标题；底部动作区
+    // 交给 [AppDialogShell] 的 [PiggyDialogActionsBar]（末位取主题色）。
+    return AppDialogShell(
+      wide: true,
+      title: Text(l10n.homeSwitchLedger),
+      content: ledgersAsync.when(
+        data: (ledgers) => _buildLedgerList(
+          context,
+          ref,
+          ledgers,
+          currentId,
+          primaryColor,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // 标题栏
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.menu_book_rounded,
-                    color: primaryColor,
-                    size: 22,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      l10n.homeSwitchLedger,
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
-                        color: PiggyTokens.textPrimary(context),
-                      ),
-                    ),
-                  ),
-                  // 关闭按钮
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: PiggyTokens.scaffoldBackground(context),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.close,
-                        size: 18,
-                        color: PiggyTokens.iconSecondary(context),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // 分割线
-            Divider(height: 1, color: PiggyTokens.divider(context)),
-            // 账本列表
-            Flexible(
-              child: ledgersAsync.when(
-                data: (ledgers) => _buildLedgerList(
-                  context,
-                  ref,
-                  ledgers,
-                  currentId,
-                  primaryColor,
-                ),
-                loading: () => const Padding(
-                  padding: EdgeInsets.all(32),
-                  child: CircularProgressIndicator(),
-                ),
-                error: (e, _) => Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    'Error: $e',
-                    style: TextStyle(color: PiggyTokens.textSecondary(context)),
-                  ),
-                ),
-              ),
-            ),
-            // 底部管理按钮
-            Divider(height: 1, color: PiggyTokens.divider(context)),
-            _buildManageButton(context, l10n),
-          ],
+        loading: () => const Padding(
+          padding: EdgeInsets.all(32),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        error: (e, _) => Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            'Error: $e',
+            style: PiggyTextTokens.body(context)
+                .copyWith(color: PiggyTokens.textSecondary(context)),
+          ),
         ),
       ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.pop(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const LedgersPageNew(),
+              ),
+            );
+          },
+          child: Text(l10n.homeManageLedgers),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.commonCancel),
+        ),
+      ],
     );
   }
 
@@ -137,7 +99,7 @@ class LedgerPickerDialog extends ConsumerWidget {
 
     return ListView.builder(
       shrinkWrap: true,
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       itemCount: ledgers.length,
       itemBuilder: (context, index) {
         final ledger = ledgers[index];
@@ -155,42 +117,6 @@ class LedgerPickerDialog extends ConsumerWidget {
           },
         );
       },
-    );
-  }
-
-  Widget _buildManageButton(BuildContext context, AppLocalizations l10n) {
-    return InkWell(
-      onTap: () {
-        Navigator.pop(context);
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const LedgersPageNew(),
-          ),
-        );
-      },
-      borderRadius: const BorderRadius.vertical(
-        bottom: Radius.circular(PiggyDimens.radius2xl),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.settings_outlined,
-              size: 18,
-              color: PiggyTokens.iconSecondary(context),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              l10n.homeManageLedgers,
-              style: PiggyTextTokens.body(context)
-                  .copyWith(color: PiggyTokens.textSecondary(context)),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -252,14 +178,13 @@ class _LedgerItem extends StatelessWidget {
                 children: [
                   Text(
                     ledger.name,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight:
-                          isSelected ? FontWeight.w600 : FontWeight.w500,
-                      color: isSelected
-                          ? primaryColor
-                          : PiggyTokens.textPrimary(context),
-                    ),
+                    style: PiggyTextTokens.title(context).copyWith(
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.w500,
+                          color: isSelected
+                              ? primaryColor
+                              : PiggyTokens.textPrimary(context),
+                        ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

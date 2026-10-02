@@ -9,8 +9,13 @@ import 'piggy_header.dart';
 /// - 默认半屏展示
 /// - 向上拖动扩展至全屏
 /// - 顶部拖动指示条
-/// - 左上角关闭按钮、右上角保存按钮
+/// - 左上角关闭按钮
 /// - 与内部滚动视图共享 [ScrollController]，实现联动
+/// - [bottom] 标题栏正下方的固定区（TabBar / 分段选择器）
+///
+/// 本组件只承载**页面型**抽屉（记账表单这类内容自带标题栏、可上滑到全屏）。
+/// 含输入框的**表单抽屉**不要用它 —— 走 [PiggyFormSheet]（悬浮卡片 + 居中标题
+/// + 底部取消｜保存）；选择器 / 动作菜单走 `PiggyPickerSheet`。
 ///
 /// 物理动画：启用 [DraggableScrollableSheet.snap] 后，松手时由 Flutter 内置的
 /// 弹簧物理驱动抽屉吸附到最近的 snap 点。松手速度足够快时顺势完成动作。
@@ -19,8 +24,6 @@ class ExpandableBottomSheet extends StatelessWidget {
     super.key,
     required this.title,
     required this.onClose,
-    this.onSave,
-    this.saveIcon,
     required this.builder,
     this.initialChildSize = 0.65,
     this.minChildSize = 0.35,
@@ -38,12 +41,6 @@ class ExpandableBottomSheet extends StatelessWidget {
 
   /// 关闭按钮回调
   final VoidCallback onClose;
-
-  /// 保存按钮回调，为 null 时不显示保存按钮
-  final VoidCallback? onSave;
-
-  /// 保存按钮图标，为 null 时不显示保存按钮
-  final Widget? saveIcon;
 
   /// 内容构建器，接收 [ScrollController] 用于内部滚动视图
   final Widget Function(BuildContext context, ScrollController scrollController)
@@ -125,13 +122,7 @@ class ExpandableBottomSheet extends StatelessWidget {
                 showBack: true,
                 backIcon: const Icon(Icons.close),
                 onBack: onClose,
-                actions: [
-                  if (onSave != null && saveIcon != null)
-                    IconButton(
-                      icon: saveIcon!,
-                      onPressed: onSave,
-                    ),
-                ],
+                // 顶栏不放保存按钮（作废口径），底部操作走 [bottom] 按钮行
                 // 标题栏与内容区使用同一个 bgColor，保证上下背景无缝衔接。
                 backgroundColor: bgColor,
                 bottom: bottom,

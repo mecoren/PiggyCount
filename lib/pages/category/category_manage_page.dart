@@ -945,64 +945,42 @@ class _SubcategoryDialogState extends ConsumerState<_SubcategoryDialog> {
     final primaryColor = PiggyTokens.primary(context);
     final l10n = AppLocalizations.of(context);
 
-    return Dialog(
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
-      backgroundColor: PiggyTokens.surfaceElevated(context),
-      child: Container(
-        width: MediaQuery.of(context).size.width * 0.85,
-        constraints: const BoxConstraints(maxWidth: 400),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 标题栏
-            Row(
-              children: [
-                SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: Center(
-                    child: CategoryIconWidget(
-                      category: widget.parentCategory,
-                      size: 20,
-                      color: primaryColor,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    CategoryUtils.getDisplayName(
-                        widget.parentCategory.name, context),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  tooltip: l10n.commonClose,
-                  icon: const Icon(Icons.close),
-                  iconSize: 20,
-                  padding: EdgeInsets.zero,
-                  constraints:
-                      const BoxConstraints(minWidth: 32, minHeight: 32),
-                ),
-              ],
+    // 外壳走项目弹窗语言（[AppDialogShell]）：Icon + 名称标题 + 项目卡片 +
+    // 底部分栏动作区；不再自绘 Dialog(shape radiusXl) + IconButton 关闭。
+    return AppDialogShell(
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 32,
+            height: 32,
+            child: Center(
+              child: CategoryIconWidget(
+                category: widget.parentCategory,
+                size: 20,
+                color: primaryColor,
+              ),
             ),
-            const SizedBox(height: 16),
-            // 内容区域
-            if (_isLoading)
-              const Padding(
-                padding: EdgeInsets.all(32),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else
-              GridView.builder(
+          ),
+          const SizedBox(width: PiggyDimens.p12),
+          Flexible(
+            child: Text(
+              CategoryUtils.getDisplayName(
+                  widget.parentCategory.name, context),
+            ),
+          ),
+        ],
+      ),
+      content: _isLoading
+          ? const Padding(
+              padding: EdgeInsets.all(32),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          : ConstrainedBox(
+              // 子分类数量无上限：限高 + 网格内部滚动，避免长列表把弹窗顶出屏幕
+              constraints: const BoxConstraints(maxHeight: 240),
+              child: GridView.builder(
                 shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 4,
                   crossAxisSpacing: 10,
@@ -1037,9 +1015,13 @@ class _SubcategoryDialogState extends ConsumerState<_SubcategoryDialog> {
                   );
                 },
               ),
-          ],
+            ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.commonCancel),
         ),
-      ),
+      ],
     );
   }
 }

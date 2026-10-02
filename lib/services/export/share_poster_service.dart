@@ -299,81 +299,65 @@ class _PosterPreviewDialogState extends State<_PosterPreviewDialog> {
         final secondaryButtonBg = isDark ? PiggyTokens.surface(context) : Colors.white;
         final secondaryButtonFg = isDark ? PiggyTokens.textPrimary(context) : primaryColor;
 
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 40),
-      elevation: 0,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // 海报预览 - 占据大部分空间
-          Flexible(
-            child: Container(
-              constraints: const BoxConstraints(maxHeight: 600),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(PiggyDimens.radius3xl),
-                child: Image.memory(
-                  widget.imageBytes,
-                  fit: BoxFit.contain,
+    return PiggyImagePreviewDialog(
+      preview: ClipRRect(
+        borderRadius: BorderRadius.circular(PiggyDimens.radius3xl),
+        child: Image.memory(
+          widget.imageBytes,
+          fit: BoxFit.contain,
+        ),
+      ),
+      actions: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: _isSaving ? null : _sharePoster,
+                icon: Icon(Icons.share_outlined, color: secondaryButtonFg),
+                label: Text(widget.l10n.sharePosterShare),
+                style: ElevatedButton.styleFrom(
+                  foregroundColor: secondaryButtonFg,
+                  backgroundColor: secondaryButtonBg,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+                    side: isDark
+                        ? BorderSide(color: PiggyTokens.border(context))
+                        : BorderSide.none,
+                  ),
+                  elevation: 0,
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          // 操作按钮
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _isSaving ? null : _sharePoster,
-                    icon: Icon(Icons.share_outlined, color: secondaryButtonFg),
-                    label: Text(widget.l10n.sharePosterShare),
-                    style: ElevatedButton.styleFrom(
-                      foregroundColor: secondaryButtonFg,
-                      backgroundColor: secondaryButtonBg,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-                        side: isDark
-                            ? BorderSide(color: PiggyTokens.border(context))
-                            : BorderSide.none,
-                      ),
-                      elevation: 0,
-                    ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: _isSaving ? null : _savePoster,
+                icon: _isSaving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                        ),
+                      )
+                    : const Icon(Icons.download_outlined, color: Colors.white),
+                label: Text(widget.l10n.sharePosterSave),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                   ),
+                  elevation: 0,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _isSaving ? null : _savePoster,
-                    icon: _isSaving
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation(Colors.white),
-                            ),
-                          )
-                        : const Icon(Icons.download_outlined, color: Colors.white),
-                    label: Text(widget.l10n.sharePosterSave),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-                      ),
-                      elevation: 0,
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
       },
@@ -655,17 +639,10 @@ class _PosterCarouselPreviewDialogState
     final cachedPoster = _posterCache[_currentPage];
     final isGenerating = _generating.contains(_currentPage);
 
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-      elevation: 0,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // 海报轮播预览
-          Flexible(
-            child: GestureDetector(
-              onHorizontalDragEnd: (details) {
+    return PiggyImagePreviewDialog(
+      horizontalInset: 20,
+      preview: GestureDetector(
+        onHorizontalDragEnd: (details) {
                 // 根据滑动速度判断方向
                 if (details.primaryVelocity! > 0) {
                   // 向右滑动，显示上一张
@@ -685,12 +662,10 @@ class _PosterCarouselPreviewDialogState
                   }
                 }
               },
-              child: Container(
-                constraints: const BoxConstraints(maxHeight: 600),
-                child: PageView.builder(
-                  controller: _pageController,
-                  physics: const NeverScrollableScrollPhysics(), // 禁用默认滑动
-                  onPageChanged: (index) {
+              child: PageView.builder(
+                controller: _pageController,
+                physics: const NeverScrollableScrollPhysics(), // 禁用默认滑动
+                onPageChanged: (index) {
                     setState(() {
                       _currentPage = index;
                     });
@@ -822,11 +797,9 @@ class _PosterCarouselPreviewDialogState
                   },
                 ),
               ),
-            ),
-          ),
-
-          const SizedBox(height: 12),
-
+      actions: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
           // 页面指示器
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -1047,21 +1020,11 @@ class _DynamicPosterPreviewDialogState
     final secondaryButtonBg = isDark ? PiggyTokens.surface(context) : Colors.white;
     final secondaryButtonFg = isDark ? PiggyTokens.textPrimary(context) : primaryColor;
 
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 40),
-      elevation: 0,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // 海报预览
-          Flexible(
-            child: Container(
-              constraints: const BoxConstraints(maxHeight: 600),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(PiggyDimens.radius3xl),
-                child: Stack(
-                  children: [
+    return PiggyImagePreviewDialog(
+      preview: ClipRRect(
+        borderRadius: BorderRadius.circular(PiggyDimens.radius3xl),
+        child: Stack(
+          children: [
                     // 海报图片
                     if (_posterImage != null && !_isGenerating)
                       Image.memory(
@@ -1156,68 +1119,62 @@ class _DynamicPosterPreviewDialogState
                       ),
                   ],
                 ),
+      ),
+      actions: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: (_posterImage == null || _isGenerating || _isSaving)
+                    ? null
+                    : _sharePoster,
+                icon: Icon(Icons.share_outlined, color: secondaryButtonFg),
+                label: Text(l10n.sharePosterShare),
+                style: ElevatedButton.styleFrom(
+                  foregroundColor: secondaryButtonFg,
+                  backgroundColor: secondaryButtonBg,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+                    side: isDark
+                        ? BorderSide(color: PiggyTokens.border(context))
+                        : BorderSide.none,
+                  ),
+                  elevation: 0,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          // 操作按钮
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: (_posterImage == null || _isGenerating || _isSaving)
-                        ? null
-                        : _sharePoster,
-                    icon: Icon(Icons.share_outlined, color: secondaryButtonFg),
-                    label: Text(l10n.sharePosterShare),
-                    style: ElevatedButton.styleFrom(
-                      foregroundColor: secondaryButtonFg,
-                      backgroundColor: secondaryButtonBg,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-                        side: isDark
-                            ? BorderSide(color: PiggyTokens.border(context))
-                            : BorderSide.none,
-                      ),
-                      elevation: 0,
-                    ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: (_posterImage == null || _isGenerating || _isSaving)
+                    ? null
+                    : _savePoster,
+                icon: _isSaving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                        ),
+                      )
+                    : const Icon(Icons.download_outlined, color: Colors.white),
+                label: Text(l10n.sharePosterSave),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                   ),
+                  elevation: 0,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: (_posterImage == null || _isGenerating || _isSaving)
-                        ? null
-                        : _savePoster,
-                    icon: _isSaving
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation(Colors.white),
-                            ),
-                          )
-                        : const Icon(Icons.download_outlined, color: Colors.white),
-                    label: Text(l10n.sharePosterSave),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-                      ),
-                      elevation: 0,
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

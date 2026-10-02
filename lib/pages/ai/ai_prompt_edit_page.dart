@@ -215,83 +215,47 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
     final preview = _generatePreview();
     final primaryColor = ref.read(primaryColorProvider);
 
+    // 外壳走项目弹窗语言（[AppDialogShell]）：Icon + 标题 + 可滚动内容 +
+    // 底部分栏动作区；不再自绘 Dialog(surfaceElevated + radiusXl) 与主题色标题栏。
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        backgroundColor: PiggyTokens.surfaceElevated(context),
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(PiggyDimens.radiusXl)),
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 标题栏
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: primaryColor.withValues(alpha: 0.1),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(PiggyDimens.radiusLg),
-                    topRight: Radius.circular(PiggyDimens.radiusLg),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.preview, color: primaryColor, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      l10n.aiPromptPreviewTitle,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.close, size: 20),
-                      tooltip: l10n.commonClose,
-                      onPressed: () => Navigator.pop(context),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
-                ),
-              ),
-              // 预览内容
-              Flexible(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: SelectableText(
-                    preview,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontFamily: 'monospace',
-                      height: 1.5,
-                    ),
-                  ),
-                ),
-              ),
-              // 底部说明
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: PiggyTokens.surfaceHeader(context),
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(PiggyDimens.radiusLg),
-                    bottomRight: Radius.circular(PiggyDimens.radiusLg),
-                  ),
-                ),
-                child: Text(
-                  l10n.aiPromptPreviewNote,
-                  style: PiggyTextTokens.label(context),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ],
-          ),
+      builder: (dialogContext) => AppDialogShell(
+        wide: true,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.preview, color: primaryColor, size: 20),
+            const SizedBox(width: PiggyDimens.p8),
+            Flexible(child: Text(l10n.aiPromptPreviewTitle)),
+          ],
         ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // 提示词预览（等宽字体 + 1.5 行高，便于读 YAML 结构）
+            SelectableText(
+              preview,
+              style: const TextStyle(
+                fontSize: 13,
+                fontFamily: 'monospace',
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: PiggyDimens.p16),
+            Text(
+              l10n.aiPromptPreviewNote,
+              style: PiggyTextTokens.label(dialogContext),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(l10n.commonClose),
+          ),
+        ],
       ),
     );
   }

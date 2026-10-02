@@ -558,52 +558,17 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                             return;
                           }
 
-                          // 显示加载对话框（与轮播海报预览样式统一）
-                          showDialog(
-                            context: context,
-                            barrierDismissible: false,
-                            // UI-09：遮罩走 token（亮 0.5/暗 0.7，暗色下不再偏淡）
-                            barrierColor: PiggyTokens.overlay(context),
-                            builder: (ctx) => PopScope(
-                              canPop: false,
-                              child: Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    SizedBox(
-                                      width: 50,
-                                      height: 50,
-                                      // 无障碍基线：加载动画补语义标签，
-                                      // TalkBack/VoiceOver 读出「正在生成海报」
-                                      // 而非静默的 Busy 状态
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 3,
-                                        valueColor: AlwaysStoppedAnimation(
-                                            Colors.white),
-                                        semanticsLabel:
-                                            AppLocalizations.of(context)
-                                                .mineShareGenerating,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 20),
-                                    Text(
-                                      AppLocalizations.of(context)
-                                          .mineShareGenerating,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                          // 显示加载弹窗：项目统一阻塞进度弹窗
+                          final block = showBlockingProgressDialog(
+                            context,
+                            title: AppLocalizations.of(context)
+                                .mineShareGenerating,
                           );
 
                           try {
                             if (context.mounted) {
-                              Navigator.of(context).pop(); // 关闭加载对话框
+                              await block.close(); // 关闭加载对话框
+                              if (!context.mounted) return;
 
                               // 使用动态预览对话框（支持隐藏收入）
                               if (_scope == 'week') {
@@ -648,7 +613,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                             }
                           } catch (e) {
                             if (context.mounted) {
-                              Navigator.of(context).pop(); // 关闭加载对话框
+                              await block.close(); // 关闭加载对话框
+                              if (!context.mounted) return;
                               showToast(context,
                                   '${AppLocalizations.of(context).commonError}: $e');
                             }

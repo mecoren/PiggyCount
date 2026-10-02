@@ -243,48 +243,14 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
 
     // P1-B：大图弹窗关闭后清理选中态；fire-and-forget 链异常落日志，
     // 并补 mounted 守卫（弹窗未关而页面先销毁时 setState 会抛错）
+    // 外壳走项目图片预览统一件（[PiggyImagePreviewDialog]）：透明底 + 限高
+    // 预览区 + 文件名胶囊，不再自绘 Dialog + 悬浮关闭钮（点遮罩/返回即可关）
     unawaitedLog(
-      showDialog(
+      showDialog<void>(
         context: context,
-        builder: (context) => Dialog(
-          backgroundColor: Colors.transparent,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 关闭按钮
-              Align(
-                alignment: Alignment.topRight,
-                child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white),
-                  tooltip: AppLocalizations.of(context).commonClose,
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ),
-              // 图片
-              Flexible(
-                child: InteractiveViewer(
-                  child: imageWidget,
-                ),
-              ),
-              const SizedBox(height: 16),
-              // 文件名
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
-                ),
-                child: Text(
-                  fileName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ],
-          ),
+        builder: (_) => PiggyImagePreviewDialog(
+          caption: fileName,
+          preview: InteractiveViewer(child: imageWidget),
         ),
       ).then((_) {
         if (!mounted) return;

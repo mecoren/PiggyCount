@@ -8,6 +8,8 @@ import '../../l10n/app_localizations.dart';
 import '../../utils/category_utils.dart';
 import '../../utils/shared_ledger_picker_filter.dart';
 import '../category_icon.dart';
+import '../ui/dialog.dart';
+import '../ui/piggy_input.dart';
 
 /// 分类过滤器回调类型
 /// 返回 true 表示该分类可选，返回 false 表示不可选（置灰）
@@ -305,102 +307,45 @@ class _CategorySelectorDialogState
     ref.watch(sharedResourceRefreshProvider);
     final l10n = AppLocalizations.of(context);
 
-    return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
+    // 外壳走项目弹窗语言（[AppDialogShell]）：居中标题 + 项目卡片 + 底部分栏
+    // 动作区，标题固定不随列表滚动；不再自绘 Dialog(shape radiusXl) + 自绘顶部栏。
+    return AppDialogShell(
+      wide: true,
+      title: Text(
+        widget.title ??
+            (widget.type == 'income'
+                ? l10n.categoryIncome
+                : l10n.categoryExpense),
       ),
-      backgroundColor: PiggyTokens.surfaceElevated(context),
-      child: Container(
-        width: MediaQuery.of(context).size.width * 0.9,
-        height: MediaQuery.of(context).size.height * 0.75,
-        decoration: BoxDecoration(
-          color: PiggyTokens.scaffoldBackground(context),
-          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
-        ),
+      content: SizedBox(
+        // 列表需要确定高度才能滚动：给内容区一屏内的固定高度，Expanded 才能分到空间
+        height: MediaQuery.sizeOf(context).height * 0.6,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 顶部栏
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                // 标题栏背景与弹窗主体(scaffoldBackground)同色,
-                // 让顶部栏与列表区域融为一体,不再单独区分色块。
-                color: PiggyTokens.scaffoldBackground(context),
-                borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(PiggyDimens.radiusXl)),
-                border: Border(
-                  bottom: BorderSide(
-                    color: PiggyTokens.divider(context),
-                    width: 0.5,
-                  ),
+            // 搜索框：选择器内搜索行走项目轻量内嵌输入口径（piggyFilledDecoration）
+            TextField(
+              controller: _searchController,
+              decoration: piggyFilledDecoration(
+                context,
+                hint: l10n.searchCategoryHint,
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: PiggyTokens.iconTertiary(context),
                 ),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          widget.title ??
-                              (widget.type == 'income'
-                                  ? l10n.categoryIncome
-                                  : l10n.categoryExpense),
-                          style: PiggyTextTokens.boldTitle(context),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
+                suffixIcon: _searchText.isNotEmpty
+                    ? IconButton(
+                        onPressed: () => _searchController.clear(),
                         icon: Icon(
-                          Icons.close,
-                          color: PiggyTokens.iconPrimary(context),
+                          Icons.clear,
+                          color: PiggyTokens.iconTertiary(context),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  // 搜索框
-                  TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: l10n.searchCategoryHint,
-                      prefixIcon: Icon(
-                        Icons.search,
-                        color: PiggyTokens.iconTertiary(context),
-                      ),
-                      suffixIcon: _searchText.isNotEmpty
-                          ? IconButton(
-                              onPressed: () => _searchController.clear(),
-                              icon: Icon(
-                                Icons.clear,
-                                color: PiggyTokens.iconTertiary(context),
-                              ),
-                            )
-                          : null,
-                      border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(PiggyDimens.radiusLg),
-                        borderSide: BorderSide(
-                          color: PiggyTokens.border(context),
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(PiggyDimens.radiusLg),
-                        borderSide: BorderSide(
-                          color: ref.watch(primaryColorProvider),
-                        ),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        vertical: 12,
-                        horizontal: 16,
-                      ),
-                      filled: true,
-                      fillColor: PiggyTokens.surface(context),
-                    ),
-                  ),
-                ],
+                      )
+                    : null,
               ),
             ),
+            const SizedBox(height: PiggyDimens.p8),
             // 分类列表
             Expanded(
               child: FutureBuilder<List<Category>>(
@@ -427,10 +372,9 @@ class _CategorySelectorDialogState
                             _searchText.isNotEmpty
                                 ? l10n.searchNoResults
                                 : l10n.categoryEmpty,
-                            style: TextStyle(
-                              color: PiggyTokens.textTertiary(context),
-                              fontSize: 16,
-                            ),
+                            style: PiggyTextTokens.body(context)
+                                .copyWith(
+                                    color: PiggyTokens.textTertiary(context)),
                           ),
                         ],
                       ),
@@ -438,7 +382,7 @@ class _CategorySelectorDialogState
                   }
 
                   return ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.symmetric(vertical: 4),
                     itemCount: groups.length,
                     itemBuilder: (context, index) {
                       final group = groups[index];
@@ -460,6 +404,12 @@ class _CategorySelectorDialogState
           ],
         ),
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.commonCancel),
+        ),
+      ],
     );
   }
 }

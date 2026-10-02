@@ -511,47 +511,10 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
     final primaryColor = ref.read(primaryColorProvider);
     final currencyCode = _ledgerCurrencyCode;
 
-    // Show loading
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return Center(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-            decoration: BoxDecoration(
-              color: PiggyTokens.surface(dialogContext),
-              borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  width: 40,
-                  height: 40,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 3,
-                    valueColor: AlwaysStoppedAnimation(primaryColor),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  l10n.annualReportGenerating,
-                  style: PiggyTextTokens.body(dialogContext).copyWith(
-                      color: PiggyTokens.textSecondary(dialogContext)),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+    // Show loading：项目统一阻塞进度弹窗（禁止点外部 / 返回键关闭）
+    final block = showBlockingProgressDialog(
+      context,
+      title: l10n.annualReportGenerating,
     );
 
     try {
@@ -577,7 +540,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
       if (pngBytes == null) throw Exception('Failed to render poster');
 
       if (!mounted) return;
-      Navigator.pop(context); // Close loading dialog
+      await block.close(); // Close loading dialog
 
       // Show preview dialog
       if (!mounted) return;
@@ -592,7 +555,9 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
       );
     } catch (e) {
       if (!mounted) return;
-      Navigator.pop(context);
+      // close() 幂等：渲染失败时 loading 弹窗可能尚未关闭
+      await block.close();
+      if (!mounted) return;
       showToast(context, '${l10n.commonError}: $e');
     }
   }
@@ -1873,140 +1838,105 @@ class _AnnualReportPosterPreviewState
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(16),
-      child: Stack(
-        children: [
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 海报预览
-              Flexible(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
-                  child: Stack(
-                    children: [
-                      InteractiveViewer(
-                        minScale: 0.5,
-                        maxScale: 3.0,
-                        child: Image.memory(
-                          _imageBytes,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                      // 生成中的加载指示器
-                      if (_isGenerating)
-                        Positioned.fill(
-                          child: Container(
-                            color: Colors.black.withValues(alpha: 0.3),
-                            child: const Center(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 3,
-                                valueColor:
-                                    AlwaysStoppedAnimation(Colors.white),
-                              ),
-                            ),
-                          ),
-                        ),
-                      // 隐藏收入切换按钮
-                      if (!_isGenerating)
-                        Positioned(
-                          top: 16,
-                          right: 16,
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: _toggleHideIncome,
-                              borderRadius:
-                                  BorderRadius.circular(PiggyDimens.radius2xl),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.5),
-                                  borderRadius: BorderRadius.circular(
-                                      PiggyDimens.radius2xl),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      _hideIncome
-                                          ? Icons.visibility_off
-                                          : Icons.visibility,
-                                      size: 16,
-                                      color: Colors.white,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      _hideIncome
-                                          ? l10n.sharePosterShowIncome
-                                          : l10n.sharePosterHideIncome,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // 操作按钮
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // 保存按钮
-                  _buildActionButton(
-                    context: context,
-                    icon: Icons.save_alt,
-                    label: l10n.sharePosterSave,
-                    onTap: _isGenerating ? null : () => _savePoster(context),
-                    isPrimary: true,
-                  ),
-                  const SizedBox(width: 16),
-                  // 分享按钮
-                  _buildActionButton(
-                    context: context,
-                    icon: Icons.share,
-                    label: l10n.sharePosterShare,
-                    onTap: _isGenerating ? null : () => _sharePoster(context),
-                    isPrimary: false,
-                  ),
-                ],
-              ),
-            ],
-          ),
-          // 右上角关闭按钮
-          Positioned(
-            top: 0,
-            right: 0,
-            child: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.5),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.close,
-                  color: Colors.white,
-                  size: 20,
-                ),
+    // 外壳走项目图片预览统一件（[PiggyImagePreviewDialog]）：透明底 + 限高
+    // 预览区 + 底部操作区，不再自绘 Dialog + 右上角关闭圆钮（点遮罩/返回即可关）
+    return PiggyImagePreviewDialog(
+      horizontalInset: 16,
+      preview: ClipRRect(
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
+        child: Stack(
+          children: [
+            InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 3.0,
+              child: Image.memory(
+                _imageBytes,
+                fit: BoxFit.contain,
               ),
             ),
+            // 生成中的加载指示器
+            if (_isGenerating)
+              Positioned.fill(
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      valueColor: AlwaysStoppedAnimation(Colors.white),
+                    ),
+                  ),
+                ),
+              ),
+            // 隐藏收入切换按钮
+            if (!_isGenerating)
+              Positioned(
+                top: 16,
+                right: 16,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _toggleHideIncome,
+                    borderRadius:
+                        BorderRadius.circular(PiggyDimens.radius2xl),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.5),
+                        borderRadius:
+                            BorderRadius.circular(PiggyDimens.radius2xl),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _hideIncome
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _hideIncome
+                                ? l10n.sharePosterShowIncome
+                                : l10n.sharePosterHideIncome,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+      actions: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // 保存按钮
+          _buildActionButton(
+            context: context,
+            icon: Icons.save_alt,
+            label: l10n.sharePosterSave,
+            onTap: _isGenerating ? null : () => _savePoster(context),
+            isPrimary: true,
+          ),
+          const SizedBox(width: 16),
+          // 分享按钮
+          _buildActionButton(
+            context: context,
+            icon: Icons.share,
+            label: l10n.sharePosterShare,
+            onTap: _isGenerating ? null : () => _sharePoster(context),
+            isPrimary: false,
           ),
         ],
       ),
