@@ -46,6 +46,39 @@ Map<String, dynamic> _payload(String jsonStr) =>
 List<Map<String, dynamic>> _items(String jsonStr) =>
     (_payload(jsonStr)['items'] as List).cast<Map<String, dynamic>>();
 
+/// 断言两份快照**除 `exportedAt` 外逐字节相等**；不等时打印顶层键与 items
+/// 逐字段差异后失败。
+///
+/// 这是「导出 ↔ 恢复」唯一能抓住静默不对称的判据：`contentFingerprint` 相等
+/// **不算**收敛（转账分类、载荷顺序、预算启用态三处缺陷都是「指纹相同、字节
+/// 不同」）。
+void _expectSameSnapshot(String first, String second, {String? hint}) {
+  if (_canonical(first) == _canonical(second)) return;
+
+  final p1 = _payload(first), p2 = _payload(second);
+  final diffs = <String>[];
+  for (final k in {...p1.keys, ...p2.keys}) {
+    if (k == 'exportedAt' || k == 'items') continue;
+    if (jsonEncode(p1[k]) != jsonEncode(p2[k])) {
+      diffs.add('$k: 源=${jsonEncode(p1[k])} 恢复端=${jsonEncode(p2[k])}');
+    }
+  }
+  final i1 = _items(first), i2 = _items(second);
+  for (var i = 0; i < i1.length && i < i2.length; i++) {
+    for (final k in {...i1[i].keys, ...i2[i].keys}) {
+      if (jsonEncode(i1[i][k]) != jsonEncode(i2[i][k])) {
+        diffs.add('items[$i](${i1[i]['syncId']}).$k: '
+            '源=${jsonEncode(i1[i][k])} 恢复端=${jsonEncode(i2[i][k])}');
+      }
+    }
+  }
+  if (i1.length != i2.length) {
+    diffs.add('items 数量: 源=${i1.length} 恢复端=${i2.length}');
+  }
+  fail('快照不闭合${hint == null ? '' : '（$hint）'}'
+      '（指纹可能相同、字节却不同 → 差异被指纹掩盖）: $diffs');
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   SharedPreferences.setMockInitialValues({});
@@ -199,22 +232,7 @@ void main() {
         _payload(first)['contentFingerprint']);
 
     // 字节：缺陷形状的唯一鉴别断言
-    final a = _canonical(first);
-    final b = _canonical(second);
-    if (a != b) {
-      final ai = _items(first), bi = _items(second);
-      final diffs = <String>[];
-      for (var i = 0; i < ai.length; i++) {
-        final keys = {...ai[i].keys, ...bi[i].keys};
-        for (final k in keys) {
-          if (jsonEncode(ai[i][k]) != jsonEncode(bi[i][k])) {
-            diffs.add('items[$i](${ai[i]['syncId']}).$k: '
-                '源=${jsonEncode(ai[i][k])} 恢复端=${jsonEncode(bi[i][k])}');
-          }
-        }
-      }
-      fail('导出↔恢复不闭合（两端快照字节不同 → 差异被指纹掩盖）: $diffs');
-    }
+    _expectSameSnapshot(first, second, hint: '导出↔恢复逐字节');
   });
 
   test('Tier 3b 快照 categories 缺虚拟转账分类时：恢复不抛错、转账行仍归空', () async {
@@ -431,30 +449,150 @@ void main() {
 
     final second = (await exportTransactionsJson(b, 1)).jsonStr;
 
-    final x = _canonical(first), y = _canonical(second);
-    if (x != y) {
-      // 顶层键 + items 逐字段定位，便于直接排查
-      final p1 = _payload(first), p2 = _payload(second);
-      final diffs = <String>[];
-      for (final k in {...p1.keys, ...p2.keys}) {
-        if (k == 'exportedAt' || k == 'items') continue;
-        if (jsonEncode(p1[k]) != jsonEncode(p2[k])) {
-          diffs.add('$k: 源=${jsonEncode(p1[k])} 恢复端=${jsonEncode(p2[k])}');
-        }
-      }
-      final i1 = _items(first), i2 = _items(second);
-      for (var i = 0; i < i1.length && i < i2.length; i++) {
-        for (final k in {...i1[i].keys, ...i2[i].keys}) {
-          if (jsonEncode(i1[i][k]) != jsonEncode(i2[i][k])) {
-            diffs.add('items[$i](${i1[i]['syncId']}).$k: '
-                '源=${jsonEncode(i1[i][k])} 恢复端=${jsonEncode(i2[i][k])}');
-          }
-        }
-      }
-      fail('富字段闭环不成立（导出↔恢复不闭合）: $diffs');
-    }
+    _expectSameSnapshot(first, second, hint: '富字段全实体');
     expect(_payload(second)['contentFingerprint'],
         _payload(first)['contentFingerprint'],
         reason: '富字段往返后两端指纹必须相同');
+  });
+
+  test('Tier 6 扩展面闭环：共享账本 override / 附件 / 自定义字段边界值 / 周期转账 / 多币种边界',
+      () async {
+    // Tier 5 覆盖的是主链路字段；本用例补最容易"一端写、另一端丢"的边角面：
+    // 共享账本 override（int 外键留空 + syncId 锚点）、附件清单、自定义字段的
+    // 0 / 负数 / 日期 / 空值形态、周期规则为转账、多币种归一化边界。
+    final a = PiggyDatabase.forTesting(NativeDatabase.memory());
+    final b = PiggyDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(() async {
+      await a.close();
+      await b.close();
+    });
+    await seedMeta(a);
+    await seedMeta(b);
+
+    // 共享账本：override 字段的适用场景
+    for (final db in [a, b]) {
+      await db.customStatement("UPDATE ledgers SET type = 'shared' WHERE id = 1");
+    }
+
+    // 自定义字段三型：amount / date / text
+    await a.customStatement(
+        "INSERT INTO custom_field_definitions "
+        "(id, ledger_id, name, field_type, sort_order, sync_id) VALUES "
+        "(1, 1, '原价', 'amount', 0, 'cf-amount'), "
+        "(2, 1, '购买日期', 'date', 1, 'cf-date'), "
+        "(3, 1, '备注', 'text', 2, 'cf-text')");
+
+    // 1) 共享账本 override：三个 override 全给（int 外键留空，走 syncId 锚点）
+    await a.into(a.transactions).insert(TransactionsCompanion.insert(
+          ledgerId: 1,
+          type: 'expense',
+          amount: 10,
+          happenedAt: d.Value(DateTime.utc(2026, 7, 1, 9)),
+          syncId: const d.Value('ov-expense'),
+          categorySyncIdOverride: const d.Value('cat-food'),
+          accountSyncIdOverride: const d.Value('acc-cash'),
+          currencyCode: const d.Value('CNY'),
+          nativeAmount: const d.Value(10),
+        ));
+    // 转账 + 转入账户 override
+    await a.into(a.transactions).insert(TransactionsCompanion.insert(
+          ledgerId: 1,
+          type: 'transfer',
+          amount: 20,
+          happenedAt: d.Value(DateTime.utc(2026, 7, 1, 10)),
+          syncId: const d.Value('ov-transfer'),
+          accountSyncIdOverride: const d.Value('acc-cash'),
+          toAccountSyncIdOverride: const d.Value('acc-bank'),
+          excludeFromStats: const d.Value(true),
+          currencyCode: const d.Value('CNY'),
+          nativeAmount: const d.Value(20),
+        ));
+
+    // 2) 自定义字段边界值：0 / 负数 / 日期串 / 含逗号与 emoji 的文本
+    await a.into(a.transactions).insert(TransactionsCompanion.insert(
+          ledgerId: 1,
+          type: 'expense',
+          amount: 0,
+          categoryId: const d.Value(1),
+          accountId: const d.Value(1),
+          happenedAt: d.Value(DateTime.utc(2026, 7, 1, 11)),
+          syncId: const d.Value('cf-boundary'),
+          currencyCode: const d.Value('CNY'),
+          nativeAmount: const d.Value(0),
+          originalAmount: const d.Value(0),
+          customValuesJson: const d.Value(
+              '{"cf-amount":-12.5,"cf-date":"2026-07-01","cf-text":"a,b 🎉"}'),
+        ));
+
+    // 3) 附件清单行（local_sha256 是快照链的内容寻址锚点）
+    await a.customStatement(
+        "INSERT INTO transaction_attachments (transaction_id, file_name, "
+        "original_name, file_size, width, height, sort_order, local_sha256) "
+        "SELECT id, 'att_1.bin', 'receipt.jpg', 1234, 100, 200, 0, "
+        "'${'a' * 64}' FROM transactions WHERE sync_id = 'cf-boundary'");
+
+    // 4) 周期规则为转账（无分类、双边账户）
+    await a.into(a.recurringTransactions).insert(
+          RecurringTransactionsCompanion.insert(
+            ledgerId: 1,
+            type: 'transfer',
+            amount: 88,
+            frequency: 'monthly',
+            startDate: DateTime.utc(2026, 1, 20),
+            syncId: const d.Value('rec-transfer'),
+            accountId: const d.Value(1),
+            toAccountId: const d.Value(2),
+            note: const d.Value('[T]周期转账'),
+            dayOfMonth: const d.Value(20),
+          ),
+        );
+
+    // 5) 多币种归一化边界：currencyCode / nativeAmount 均缺省（读取端应归一为
+    //    账本本币 + 记账金额）；再补一条外币
+    await a.into(a.transactions).insert(TransactionsCompanion.insert(
+          ledgerId: 1,
+          type: 'income',
+          amount: 5,
+          accountId: const d.Value(1),
+          happenedAt: d.Value(DateTime.utc(2026, 7, 1, 12)),
+          syncId: const d.Value('cc-default'),
+        ));
+    await a.into(a.transactions).insert(TransactionsCompanion.insert(
+          ledgerId: 1,
+          type: 'expense',
+          amount: 100,
+          categoryId: const d.Value(1),
+          accountId: const d.Value(1),
+          happenedAt: d.Value(DateTime.utc(2026, 7, 1, 13)),
+          syncId: const d.Value('cc-foreign'),
+          currencyCode: const d.Value('USD'),
+          nativeAmount: const d.Value(14),
+        ));
+
+    final first = (await exportTransactionsJson(a, 1)).jsonStr;
+    final restored = await restoreLedgerFromJson(
+        db: b, repo: LocalRepository(b), ledgerId: 1, jsonStr: first);
+    expect(restored, isNotNull);
+    expect(restored!.inserted, 5);
+
+    // override / 附件在"新增"恢复路径必须落库（否则再次导出即丢）
+    final ov = await b
+        .customSelect("SELECT category_sync_id_override AS c, "
+            "account_sync_id_override AS a FROM transactions "
+            "WHERE sync_id = 'ov-expense'")
+        .getSingle();
+    expect(ov.read<String?>('c'), 'cat-food');
+    expect(ov.read<String?>('a'), 'acc-cash');
+    final att = await b
+        .customSelect("SELECT COUNT(*) AS c, MAX(local_sha256) AS s "
+            "FROM transaction_attachments")
+        .getSingle();
+    expect(att.read<int>('c'), 1);
+    expect(att.read<String?>('s'), 'a' * 64);
+
+    final second = (await exportTransactionsJson(b, 1)).jsonStr;
+    _expectSameSnapshot(first, second, hint: '扩展面（override/附件/边界值）');
+    expect(_payload(second)['contentFingerprint'],
+        _payload(first)['contentFingerprint']);
   });
 }
