@@ -80,11 +80,33 @@ final _currentLedgerPersist = Provider<void>((ref) {
     try {
       final prefs = await SharedPreferences.getInstance();
       final saved = prefs.getInt('current_ledger_id');
-      if (saved != null) {
-        final st = ref.read(currentLedgerIdProvider);
-        if (st != saved) {
-          ref.read(currentLedgerIdProvider.notifier).state = saved;
+      final st = ref.read(currentLedgerIdProvider);
+      var target = saved ?? st;
+      // 采纳前校验该账本仍存在。
+      //
+      // `current_ledger_id` 是纯 prefs 状态，账本行却可能早已消失：账本被
+      // 其它设备删除后同步下来、本机恢复到他人的备份、清库后重建（自增 id
+      // 继续增长，新账本不再叫 1/7）。原实现原样采纳 —— currentLedgerProvider
+      // 因此永远解析不出账本，首页退化成「新建账本」空态、我的页同步状态行
+      // 显示「状态获取失败」、云同步页在状态查询里长时间不可交互
+      // （2026-10-02 真机双后端测试实测）。这里回落到本机最小的真实账本 id
+      // 自愈，且只写回 `current_ledger_id` 这一个值（键集合不变）。
+      final repo = ref.read(repositoryProvider);
+      if (await repo.getLedgerById(target) == null) {
+        final ledgers = await repo.getAllLedgers();
+        if (ledgers.isEmpty) {
+          logger.warning('LedgerState',
+              'current_ledger_id=$target 已不存在且本机暂无账本，等待欢迎页流程重建');
+        } else {
+          final fallback =
+              ledgers.map((l) => l.id).reduce((a, b) => a < b ? a : b);
+          logger.warning('LedgerState',
+              'current_ledger_id=$target 指向的账本已不存在，回落到账本 $fallback');
+          target = fallback;
         }
+      }
+      if (st != target) {
+        ref.read(currentLedgerIdProvider.notifier).state = target;
       }
     } catch (e) {
       logger.warning('LedgerState', '恢复上次选中账本失败，回退默认账本', e);
