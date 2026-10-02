@@ -94,8 +94,19 @@ void main() {
     // 统计永不到达:日历本体必须在,骨架必须一个都没有(修复前这里塌成骨架)
     expect(find.byType(TableCalendar), findsOneWidget);
     expect(find.byType(SkeletonBar), findsNothing);
-    // 网格内容真实渲染(今天日期数字在格子里),不是空白卡
-    expect(find.text('${DateTime.now().day}'), findsOneWidget);
+    // 网格内容真实渲染(今天日期数字在格子里),不是空白卡。
+    // 按 today 日格的 key 收敛定位 —— 裸 `find.text(day)` 在「当月视图
+    // 带出相邻月的同号日」时会命中多个而随日期漂移（如今天 10-01 时，
+    // 网格尾部的 11-01 同样显示 "1"）。
+    final today = DateTime.now();
+    expect(
+      find.descendant(
+        of: find.byKey(
+            ValueKey('CellContent-${today.year}-${today.month}-${today.day}')),
+        matching: find.text('${today.day}'),
+      ),
+      findsOneWidget,
+    );
 
     // 数据迟到到达:金额正常补上,全程无异常
     pendingTotals.complete({

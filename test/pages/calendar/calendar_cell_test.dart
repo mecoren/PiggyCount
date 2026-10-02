@@ -112,14 +112,34 @@ void main() {
     await swipeToSep2026(tester);
     await settle(tester);
 
-    // 2026 年 9 月：09-25 / 26 / 27 中秋节放假 → 3 个「休」；09-20 调休补班 → 1 个「班」
-    expect(find.text('休'), findsNWidgets(3));
-    expect(find.text('班'), findsOneWidget);
-    // 09-25 农历八月十五 → 副标签「中秋节」
-    expect(find.text('中秋节'), findsOneWidget);
-    // 普通日也有副标签（农历日），证明副标签行不只给节日渲染
-    // （2026-09-19 = 八月初九，非节日 / 非节气）
-    expect(find.text('初九'), findsWidgets);
+    // 断言按「具体某天」收敛（用 table_calendar 内部日格 key
+    // `CellContent-<y>-<m>-<d>`，见 table_calendar.dart 的 CellContent 构造）。
+    // 不再对全月做裸文本计数 —— 九月视图的六周网格会带出 10-01 国庆
+    // （同样是「休」），裸 `find.text('休')` 的计数会随「今天」是哪一天
+    // 漂移（2026-10-01 起即变成 4 个而失败）。
+    Finder cellOf(int y, int m, int d) =>
+        find.byKey(ValueKey('CellContent-$y-$m-$d'));
+
+    // 09-25 / 26 / 27 中秋节放假 → 各带「休」；09-20 调休补班 → 「班」
+    for (final d in [25, 26, 27]) {
+      expect(find.descendant(of: cellOf(2026, 9, d), matching: find.text('休')),
+          findsOneWidget,
+          reason: '2026-09-$d 应为放假日（休）');
+    }
+    expect(find.descendant(of: cellOf(2026, 9, 20), matching: find.text('班')),
+        findsOneWidget,
+        reason: '2026-09-20 应为调休补班（班）');
+    // 普通日（2026-09-19）不得出现休/班徽标（防徽标误挂到非节假日）
+    expect(find.descendant(of: cellOf(2026, 9, 19), matching: find.text('休')),
+        findsNothing);
+    expect(find.descendant(of: cellOf(2026, 9, 19), matching: find.text('班')),
+        findsNothing);
+    // 副标签：09-25 农历八月十五 → 「中秋节」；且不只节日才有副标签
+    //（2026-09-19 = 八月初九 → 「初九」）
+    expect(find.descendant(of: cellOf(2026, 9, 25), matching: find.text('中秋节')),
+        findsOneWidget);
+    expect(find.descendant(of: cellOf(2026, 9, 19), matching: find.text('初九')),
+        findsOneWidget);
   });
 
   testWidgets('底色块撑满整格（回归：不再塌成内容宽度的窄胶囊）', (tester) async {
@@ -167,12 +187,21 @@ void main() {
     useTallPhoneViewport(tester);
     await tester.pumpWidget(host(textScale: 1.3));
     await settle(tester);
+    // 滑到固定的 2026-09 再断言（原先不滑月，隐含依赖「今天恰在 9 月」；
+    // 跨月后当月视图不再含 2026-09，副标签断言就会落空）。
+    await swipeToSep2026(tester);
+    await settle(tester);
 
     // 日期格装的是「数字 + 副标签 + 最多两行金额」，FittedBox 兜底后不应有
     // RenderFlex overflow（溢出会以异常形式被测试框架捕获）
     expect(tester.takeException(), isNull);
-    // 确认当月日期格确实渲染了（而不是整片空白导致「没溢出」假绿）
+    // 确认日期格确实渲染了（而不是整片空白导致「没溢出」假绿）：
+    // 2026-09-19 = 八月初九 → 该格副标签为「初九」，按日格 key 收敛定位
     expect(find.byType(TableCalendar), findsOneWidget);
-    expect(find.text('初九'), findsWidgets);
+    expect(
+        find.descendant(
+            of: find.byKey(const ValueKey('CellContent-2026-9-19')),
+            matching: find.text('初九')),
+        findsOneWidget);
   });
 }
