@@ -550,7 +550,11 @@ Future<void> _seed(ProviderContainer c, Map<String, dynamic> out) async {
           note: Value(note),
           currencyCode: Value(multiCurrency ? 'USD' : null),
           nativeAmount: Value(multiCurrency ? (amount / 7.2) : null),
-          originalAmount: Value(amount),
+          // 每 521 笔显式写 originalAmount = 0：覆盖「0 值可落库/可同步」边界。
+          // 缺这条时覆盖度门禁（tool/sync_e2e/run.py coverage）会判 FAIL ——
+          // 「差异=0」并不等于「该字段真被验证过」（2026-10-01 报告实测过 16 行
+          // 显式 0，但此后夹具重建时丢了这条，被门禁当场抓出）。
+          originalAmount: Value(j % 521 == 0 ? 0.0 : amount),
           excludeFromStats: Value(j % 997 == 0),
           excludeFromBudget: Value(j % 991 == 0),
           customValuesJson: Value(CustomFieldValueCodec.encode(customValues)),
@@ -627,7 +631,8 @@ Future<void> _mutate(ProviderContainer c, Map<String, dynamic> out) async {
           DateTime(2026, 10, 2).add(Duration(minutes: j)),
         ),
         note: Value(j % 2 == 0 ? 'E2E变更新增-微信支付' : 'E2E变更新增-支付宝'),
-        originalAmount: Value(((rnd.nextInt(100000) + 100) / 100)),
+        // 首笔显式 originalAmount = 0（同 seed：覆盖 0 值边界，供覆盖度门禁判定）
+        originalAmount: Value(j == 0 ? 0.0 : ((rnd.nextInt(100000) + 100) / 100)),
       ),
     );
   }
