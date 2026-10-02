@@ -1024,6 +1024,7 @@
     }
   },
   "startupSyncCheckUpToDate": "所有帳本都是最新的",
+  "startupSyncCheckFailedTitle": "雲端更新檢查失敗",
   "startupSyncMetaDiffTitle": "雲端帳本資訊與本地不同",
   "startupSyncMetaDiffNameLine": "帳本名稱：{local} → {cloud}",
   "startupSyncMetaDiffMonthStartLine": "{name}：每月起始日 {local} → {cloud}",

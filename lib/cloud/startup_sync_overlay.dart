@@ -2,9 +2,12 @@
 //
 // 设计：
 // - 通过 StartupSyncController 推送状态变化
-// - overlay 渲染对应状态的卡片（checking / hasUpdates / applying / done / error）
+// - overlay 渲染对应状态的卡片（checking / hasUpdates / applying / done）
 // - 遮罩强制阻断底层交互（AbsorbPointer + barrierDismissible:false）
-// - 样式遵循 PiggyTokens 设计系统：圆角 16、surfaceElevated 背景、PiggyShadows.card 阴影
+// - 样式遵循 PiggyTokens 设计系统：PiggyDimens.alertWidth(Wide) 卡片宽度、
+//   radiusXl 圆角、surfaceElevated 背景、PiggyShadows.card 阴影；
+//   错误 / 信息两种**通知态**走 [_AlertBody]（与 AppDialog 同一套
+//   「标题 + 说明 + 底部分栏按钮」版式）
 
 import 'dart:async';
 
@@ -12,6 +15,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../styles/tokens.dart';
+import '../widgets/ui/dialog.dart';
 import 'startup_sync_checker.dart' show LedgerCandidate, SummaryChoice;
 import 'sync_service.dart' show SyncDiff;
 
@@ -59,10 +63,14 @@ class DoneState extends StartupSyncState {
   DoneState(this.message);
 }
 
-/// 错误：显示错误消息，用户需点确定关闭
+/// 错误：显示错误标题 + 消息，用户需点确定关闭
+///
+/// 版式与 [_AlertBody]（= AppDialog 的 iOS 警示框口径），不要退回
+/// 「图标 + 居中文字 + FilledButton」的自绘弹窗。
 class ErrorState extends StartupSyncState {
+  final String title;
   final String message;
-  ErrorState(this.message);
+  ErrorState({required this.title, required this.message});
 }
 
 /// 信息：无需自动合并，但要明确告诉用户「差在哪、去哪处理」。
@@ -197,7 +205,8 @@ class StartupSyncController extends ChangeNotifier {
 
   void done(String message) => _setState(DoneState(message));
 
-  void error(String message) => _setState(ErrorState(message));
+  void error({required String title, required String message}) =>
+      _setState(ErrorState(title: title, message: message));
 
   /// 信息态：明确告知「差在哪、去哪处理」，**不自动消失**（用户需自行阅读
   /// 并决定是否去云同步页处理），点「确定」关闭。
@@ -249,13 +258,20 @@ class _StartupSyncOverlayView extends StatelessWidget {
   }
 
   Widget _buildCard(BuildContext context, StartupSyncState state) {
+    // 通知态（错误 / 信息）用窄卡片 + **零内边距**：内部 [_AlertBody] 自带
+    // 文案留白，底部分栏动作区的横线与圆角裁切必须贴卡片边缘才与
+    // AppDialog 一致；进度 / 候选态仍留内容留白，卡片宽度走宽档。
+    final isAlert = state is ErrorState || state is InfoState;
     return Container(
-      constraints: const BoxConstraints(maxWidth: 360),
-      margin: const EdgeInsets.symmetric(horizontal: 24),
-      padding: const EdgeInsets.all(24),
+      constraints: BoxConstraints(
+        maxWidth: isAlert ? PiggyDimens.alertWidth : PiggyDimens.alertWidthWide,
+      ),
+      margin: const EdgeInsets.symmetric(horizontal: PiggyDimens.p24),
+      padding:
+          isAlert ? EdgeInsets.zero : const EdgeInsets.all(PiggyDimens.p24),
       decoration: BoxDecoration(
         color: PiggyTokens.surfaceElevated(context),
-        borderRadius: BorderRadius.circular(PiggyDimens.radius16),
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
         boxShadow: PiggyShadows.card,
       ),
       child: switch (state) {
@@ -546,7 +562,7 @@ class _DoneView extends StatelessWidget {
   }
 }
 
-/// 错误视图：错误图标 + 消息 + 确定按钮
+/// 错误视图：标题 + 消息 + 确定按钮（版式见 [_AlertBody]）
 class _ErrorView extends StatelessWidget {
   const _ErrorView({required this.state, required this.controller});
   final ErrorState state;
@@ -554,37 +570,30 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Icon(Icons.error_outline, color: PiggyTokens.error(context), size: 40),
-        const SizedBox(height: 16),
-        Text(
-          state.message,
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-        const SizedBox(height: 20),
-        FilledButton(
-          onPressed: () => controller.dismiss(),
-          child: Text(l10n.commonOk),
-        ),
-      ],
+    return _AlertBody(
+      title: state.title,
+      message: state.message,
+      onOk: controller.dismiss,
     );
   }
 }
 
-/// 信息视图：信息图标 + 标题 + 差异明细 + 操作说明 + 确定按钮
+/// 通知态统一版式（错误 / 信息共用）：与 `AppDialog` / `AppDialogShell`
+/// 同一套弹窗语言 —— 标题 `titleLarge w600` 居中 + 说明 `bodySmall` 三级色
+/// 居中 + 底部 [PiggyDialogActions] 单按钮分栏（通知类无取消侧，全宽确认钮）。
 ///
-/// 与 [_ErrorView] 的区别：这不是错误（检查链路本身工作正常），而是「有需要你
-/// 手动处理的事」—— 故用中性信息色、**不自动消失**（用户要读完并决定是否去
-/// 云同步页处理），点「确定」关闭。
-class _InfoView extends StatelessWidget {
-  const _InfoView({required this.state, required this.controller});
-  final InfoState state;
-  final StartupSyncController controller;
+/// 说明区限高 + 内部滚动：失败文案可能带异常原文，不限高会把底部按钮顶出
+/// 屏幕（与 `AppDialog.info/error` 的 limitMessageHeight 同一考量）。
+class _AlertBody extends StatelessWidget {
+  const _AlertBody({
+    required this.title,
+    required this.message,
+    required this.onOk,
+  });
+
+  final String title;
+  final String message;
+  final VoidCallback onOk;
 
   @override
   Widget build(BuildContext context) {
@@ -593,50 +602,68 @@ class _InfoView extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Icon(Icons.info_outline, color: PiggyTokens.info(context), size: 40),
-        const SizedBox(height: 16),
-        Text(
-          state.title,
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-        ),
-        if (state.lines.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          // 账本数量无上限：限高 + 列表段可滚动（与 _HasUpdatesView U7 同款）
-          Flexible(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (final line in state.lines)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        line,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ),
-                ],
-              ),
-            ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            PiggyDimens.p20,
+            PiggyDimens.p20,
+            PiggyDimens.p20,
+            PiggyDimens.p16,
           ),
-        ],
-        const SizedBox(height: 12),
-        Text(
-          state.action,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: PiggyTokens.textSecondary(context),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: PiggyTokens.textPrimary(context),
+                    ),
               ),
+              const SizedBox(height: PiggyDimens.p8),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: PiggyTokens.textSecondary(context),
+                        ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 20),
-        FilledButton(
-          onPressed: () => controller.dismiss(),
-          child: Text(l10n.commonOk),
+        PiggyDialogActions(
+          okLabel: l10n.commonOk,
+          onOk: onOk,
         ),
       ],
+    );
+  }
+}
+
+/// 信息视图：标题 + 差异明细 + 操作说明 + 确定按钮（版式见 [_AlertBody]）
+///
+/// 与 [_ErrorView] 的区别：这不是错误（检查链路本身工作正常），而是「有需要你
+/// 手动处理的事」—— 故**不自动消失**（用户要读完并决定是否去云同步页处理），
+/// 点「确定」关闭。
+class _InfoView extends StatelessWidget {
+  const _InfoView({required this.state, required this.controller});
+  final InfoState state;
+  final StartupSyncController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    // 账本数量无上限：明细逐条换行拼进说明区，由 [_AlertBody] 统一限高滚动
+    // （不再需要单独的可滚动列表段）。action 无条件保留（明细为空时
+    // join 结果即 action 本身），否则会丢操作说明。
+    final message = <String>[...state.lines, state.action].join('\n');
+    return _AlertBody(
+      title: state.title,
+      message: message,
+      onOk: controller.dismiss,
     );
   }
 }

@@ -88,6 +88,7 @@
     }
   },
   "startupSyncCheckUpToDate": "모든 장부가 최신 상태입니다",
+  "startupSyncCheckFailedTitle": "클라우드 업데이트 확인 실패",
   "startupSyncMetaDiffTitle": "클라우드 장부 정보가 로컬과 다릅니다",
   "startupSyncMetaDiffNameLine": "장부 이름: {local} → {cloud}",
   "startupSyncMetaDiffMonthStartLine": "{name}: 월 시작일 {local} → {cloud}",

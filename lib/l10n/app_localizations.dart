@@ -372,6 +372,12 @@ abstract class AppLocalizations {
   /// **'All ledgers are up to date'**
   String get startupSyncCheckUpToDate;
 
+  /// No description provided for @startupSyncCheckFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud update check failed'**
+  String get startupSyncCheckFailedTitle;
+
   /// No description provided for @startupSyncMetaDiffTitle.
   ///
   /// In en, this message translates to:

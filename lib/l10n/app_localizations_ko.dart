@@ -161,6 +161,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get startupSyncCheckUpToDate => '모든 장부가 최신 상태입니다';
 
   @override
+  String get startupSyncCheckFailedTitle => '클라우드 업데이트 확인 실패';
+
+  @override
   String get startupSyncMetaDiffTitle => '클라우드 장부 정보가 로컬과 다릅니다';
 
   @override

@@ -98,6 +98,7 @@
     }
   },
   "startupSyncCheckUpToDate": "所有账本都是最新的",
+  "startupSyncCheckFailedTitle": "云端更新检查失败",
   "startupSyncMetaDiffTitle": "云端账本信息与本地不同",
   "startupSyncMetaDiffNameLine": "账本名：{local} → {cloud}",
   "startupSyncMetaDiffMonthStartLine": "{name}：每月起始日 {local} → {cloud}",

@@ -159,6 +159,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get startupSyncCheckUpToDate => '所有账本都是最新的';
 
   @override
+  String get startupSyncCheckFailedTitle => '云端更新检查失败';
+
+  @override
   String get startupSyncMetaDiffTitle => '云端账本信息与本地不同';
 
   @override
@@ -8341,6 +8344,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get startupSyncCheckUpToDate => '所有帳本都是最新的';
+
+  @override
+  String get startupSyncCheckFailedTitle => '雲端更新檢查失敗';
 
   @override
   String get startupSyncMetaDiffTitle => '雲端帳本資訊與本地不同';

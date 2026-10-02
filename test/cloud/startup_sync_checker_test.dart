@@ -278,6 +278,9 @@ void main() {
       expect((controller.state as ErrorState).message,
           contains('请检查网络后重试'));
       expect((controller.state as ErrorState).message, contains('1 个账本'));
+      // 通知态走 AppDialog 版式：标题由 deps 提供（生产走 l10n）
+      expect((controller.state as ErrorState).title,
+          deps.getCheckFailedTitle());
     });
 
     test('error 状态为认证失败时提示检查云存储凭据', () async {
@@ -304,6 +307,8 @@ void main() {
       expect(controller.state, isA<ErrorState>());
       expect((controller.state as ErrorState).message,
           contains('云端认证失败'));
+      expect((controller.state as ErrorState).title,
+          deps.getCheckFailedTitle());
     });
 
     test('getStatus 抛异常时该账本被跳过，其他账本继续', () async {
@@ -1940,6 +1945,11 @@ class _FakeDeps implements StartupSyncCheckerDeps {
 
   @override
   String getUpToDateMessage() => 'All ledgers up to date (test)';
+
+  /// 检查失败通用标题（生产走 l10n，见 WidgetRefDeps）——
+  /// 断言只关心「进入了失败态」，不关心标题排版文案。
+  @override
+  String getCheckFailedTitle() => 'check-failed-title (test)';
 
   /// 云端账本元信息（ledgerId → 云端名称/本位币/月起始日）。
   ///

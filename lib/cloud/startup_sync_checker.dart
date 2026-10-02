@@ -253,6 +253,12 @@ abstract class StartupSyncCheckerDeps {
   /// 全部账本均是最新时显示的成功提示文案
   String getUpToDateMessage();
 
+  /// 检查失败的通用标题（认证失败 / 网络故障 / 合并失败 / 顶层异常共用）。
+  ///
+  /// 与 [getUpToDateMessage] 同款：生产实现走 l10n，测试桩返回字面量。
+  /// 具体差异（哪种失败、几个账本、异常原文）写进说明文案，不塞进标题。
+  String getCheckFailedTitle();
+
   /// 「云端账本信息与本地不同」提示文案（标题 / 逐条明细 / 操作说明）。
   ///
   /// 与 [getUpToDateMessage] 同款：生产实现走 l10n，测试桩返回字面量。
@@ -330,7 +336,10 @@ class StartupSyncChecker {
       _lastRunError = e;
       _lastRunOutcome = SyncOpOutcome.failed;
       deps.log('StartupSyncChecker 顶层异常: $e\n$st');
-      controller.error('启动检查失败: $e');
+      controller.error(
+        title: deps.getCheckFailedTitle(),
+        message: '启动检查失败: $e',
+      );
     } finally {
       // 埋点旁路：metrics 为 null（测试桩）或落库失败均不影响主流程。
       // _lastRunOutcome 为 failed/softFail 的细分结论，覆盖 _runInternal
@@ -613,11 +622,17 @@ class StartupSyncChecker {
         // 旧实现统一报「请检查网络」会误导用户排查方向（新设备 WebDAV
         // 密码输错被当成网络问题）
         if (sawAuthError) {
-          controller.error('云端认证失败（账号或密码错误），'
-              '请到「我的-云同步-云服务」检查配置后重试');
+          controller.error(
+            title: deps.getCheckFailedTitle(),
+            message: '云端认证失败（账号或密码错误），'
+                '请到「我的-云同步-云服务」检查配置后重试',
+          );
         } else {
-          controller.error('${failedLedgers.length} 个账本同步状态检查失败'
-              '（网络或超时），请检查网络后重试');
+          controller.error(
+            title: deps.getCheckFailedTitle(),
+            message: '${failedLedgers.length} 个账本同步状态检查失败'
+                '（网络或超时），请检查网络后重试',
+          );
         }
         return;
       }
@@ -1114,7 +1129,10 @@ class StartupSyncChecker {
           '${totalChanges > 0 ? '，共 $totalChanges 条变更' : ''}'
           '$uploadFailHint$publishSkippedHint');
     } else if (successCount == 0) {
-      controller.error('全部 $failCount 个账本合并失败');
+      controller.error(
+        title: deps.getCheckFailedTitle(),
+        message: '全部 $failCount 个账本合并失败',
+      );
     } else {
       controller.done('已合并 $successCount 个账本，$failCount 个失败'
           '${totalChanges > 0 ? '，共 $totalChanges 条变更' : ''}'
@@ -1616,6 +1634,10 @@ class WidgetRefDeps implements StartupSyncCheckerDeps {
   @override
   String getUpToDateMessage() =>
       AppLocalizations.of(_context).startupSyncCheckUpToDate;
+
+  @override
+  String getCheckFailedTitle() =>
+      AppLocalizations.of(_context).startupSyncCheckFailedTitle;
 
   @override
   ({String title, List<String> lines, String action}) getMetaDiffTexts(

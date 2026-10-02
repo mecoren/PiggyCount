@@ -107,6 +107,7 @@
     }
   },
   "startupSyncCheckUpToDate": "All ledgers are up to date",
+  "startupSyncCheckFailedTitle": "Cloud update check failed",
   "startupSyncMetaDiffTitle": "Cloud ledger info differs from local",
   "startupSyncMetaDiffNameLine": "Name: {local} → {cloud}",
   "@startupSyncMetaDiffNameLine": {

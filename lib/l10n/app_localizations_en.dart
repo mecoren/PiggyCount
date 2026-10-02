@@ -161,6 +161,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get startupSyncCheckUpToDate => 'All ledgers are up to date';
 
   @override
+  String get startupSyncCheckFailedTitle => 'Cloud update check failed';
+
+  @override
   String get startupSyncMetaDiffTitle => 'Cloud ledger info differs from local';
 
   @override
