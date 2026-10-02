@@ -14,6 +14,7 @@ export 'keyboard_inset_padding.dart';
 export 'wheel_date_picker.dart';
 export 'picker_sheet.dart';
 export 'sheet_card.dart';
+export 'sheet_header.dart';
 export 'wheel_time_picker.dart';
 export 'wheel_picker.dart';
 

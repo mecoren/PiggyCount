@@ -36,6 +36,7 @@ import 'package:piggycount/widgets/biz/amount_editor_sheet.dart';
 import 'package:piggycount/widgets/category/category_selector.dart';
 import 'package:piggycount/widgets/category_icon.dart';
 import 'package:piggycount/widgets/transaction/transfer_form.dart';
+import 'package:piggycount/widgets/ui/ui.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -542,6 +543,45 @@ void main() {
       expect(find.byType(CategorySelector), findsWidgets, reason: '分类子界面已弹出');
       expect(find.byType(AmountEditorSheet), findsOneWidget,
           reason: '弹出分类时记账界面不能被关掉 / 缩进去');
+
+      await drainLoggerTimer(tester);
+    });
+
+    testWidgets('抽屉形态：走项目「悬浮卡片」外壳（左右 / 底部留距，非全宽平底）', (tester) async {
+      // 回归守卫：`_buildQuickEntrySheet` 曾自带「全宽 Material(scaffoldBackground)
+      // + PiggyTitleBar」的旧平底弹层，与全站其它抽屉（左右 / 底部留距的悬浮卡片）
+      // 视觉漂移。判据认**外壳组件**而不是量像素：留距由 PiggySheetCard 统一负责，
+      // 调 token 不该让本用例变红。
+      await db.customStatement(
+          "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
+      final food = await repo.createCategory(name: '餐饮', kind: 'expense');
+
+      await tester.pumpWidget(await pageHost(
+        quickMode: true,
+        rememberedCategoryId: food,
+        renderAsBottomSheet: true,
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PiggySheetCard), findsWidgets,
+          reason: '记账抽屉必须用项目统一的悬浮卡片外壳（左右 / 底部 p16 留距）');
+      expect(find.byType(PiggySheetHeader), findsOneWidget,
+          reason: '顶栏走共用 X 左 / 标题居中 那套，不再自拼 PiggyTitleBar');
+      expect(find.byType(PiggyTitleBar), findsNothing,
+          reason: 'PiggyTitleBar 是页面级 appBar，抽屉里不该再用');
+      // 卡片左右必须真的让开屏幕边缘，否则等于没换外壳。量的是卡片自己的
+      // Material —— PiggySheetCard 本身是个 Padding，外壳留距在它内侧。
+      final card = find
+          .descendant(
+              of: find.byType(PiggySheetCard), matching: find.byType(Material))
+          .first;
+      expect(tester.getTopLeft(card).dx, greaterThan(0),
+          reason: '卡片左边必须留距（p16），全宽就等于旧样式');
+      expect(
+          MediaQuery.sizeOf(tester.element(card)).width -
+              tester.getSize(card).width,
+          greaterThan(0),
+          reason: '卡片宽度必须窄于屏宽（左右各留 p16）');
 
       await drainLoggerTimer(tester);
     });

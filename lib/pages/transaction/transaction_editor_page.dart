@@ -465,32 +465,23 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
   /// 因此这里也不再使用 `ExpandableBottomSheet`：那个容器是为「拖拽分类网格
   /// 伸缩抽屉」准备的（分类网格与抽屉共享同一个 ScrollController，拖动网格就
   /// 会改变抽屉高度），而金额表单本身就是自适应高度的内容，不需要伸缩语义。
+  ///
+  /// 外壳与顶栏都走项目统一口径：`PiggySheetCard`（transparent 弹层底 + 左右 /
+  /// 底部 `p16` 留距 + `Material(surfaceElevated/radiusXl)`）+ `PiggySheetHeader`
+  /// （X 左 / 标题居中 / 右补占位）—— 新建「记一笔」与编辑「编辑」共用这一形态，
+  /// 只有标题文案不同。
   Widget _buildQuickEntrySheet(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final sheetBg = PiggyTokens.scaffoldBackground(context);
     final isEditing = widget.editingTransactionId != null;
     final isTransfer = _selectedKind == 'transfer';
-    // 用 Material 而不是裸 Container：表单里有 InkWell（分类位、键盘键等），
-    // 需要一个 Material 祖先来画水波。真实场景下 showModalBottomSheet 会提供，
-    // 但本组件不该依赖调用方 —— 直接挂到页面上时同样要能正常工作。
-    return Material(
-      // 供 widget 测试量高度（支出 / 收入 / 转账三段必须恒定同高）。
-      key: const ValueKey('quickEntrySheet'),
-      color: sheetBg,
-      clipBehavior: Clip.antiAlias,
-      borderRadius: const BorderRadius.vertical(
-        top: Radius.circular(PiggyDimens.radiusXl),
-      ),
+    return PiggySheetCard(
       child: Column(
+        // 供 widget 测试量高度（支出 / 收入 / 转账三段必须恒定同高）。
+        key: const ValueKey('quickEntrySheet'),
         mainAxisSize: MainAxisSize.min,
         children: [
-          PiggyTitleBar(
+          PiggySheetHeader(
             title: isEditing ? l10n.commonEdit : l10n.widgetQuickAddLabel,
-            showBack: true,
-            backIcon: const Icon(Icons.close),
-            onBack: () => Navigator.of(context).pop(),
-            backgroundColor: sheetBg,
-            compact: true,
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
@@ -657,49 +648,49 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => PiggySheetCard(
         child: AmountEditorSheet(
-        categoryName: c.name,
-        categoryId: c.id,
-        categorySyncId: c.id < 0 ? c.syncId : null,
-        // P1-E 分类位（决策 4）：编辑交易、小组件带分类的既有调用方一并显示，
-        // 不做「只有快捷模式才显示分类」的分叉。
-        displayCategory: c,
-        // 换分类（网格路径）：本表单盖在分类网格之上，点分类位就把表单收起来
-        // 回到网格重选 —— 已输金额经 _lastAmount 带回，用户不必重输。
-        //（「金额表单优先」形态不走这里：那份表单不关闭，分类是它的子界面。）
-        onPickCategory: (current, amount) async {
-          _lastAmount = amount;
-          Navigator.of(ctx).pop();
-          return null;
-        },
-        initialDate: widget.initialDate ?? DateTime.now(),
-        // 换分类回路回填的金额优先于进入页面时的初始金额
-        initialAmount: _lastAmount ?? widget.initialAmount,
-        initialNote: widget.initialNote,
-        initialAccountId: initialAccountId,
-        initialTagIds: widget.initialTagIds,
-        showAccountPicker: true,
-        ledgerId: ledgerId,
-        editingTransactionId: widget.editingTransactionId,
-        transactionKind: kind,
-        initialExcludeFromStats: widget.initialExcludeFromStats,
-        initialExcludeFromBudget: widget.initialExcludeFromBudget,
-        initialCurrencyCode: widget.initialCurrencyCode,
-        initialNativeAmount: widget.initialNativeAmount,
-        initialOriginalAmount: widget.initialOriginalAmount,
-        initialCustomValues: widget.initialCustomValues,
-        onSubmit: (res) async {
-          await _persistTransaction(context, kind, res);
-          // 旧流程有两层 modal：金额表单 + 分类网格抽屉，要依次关掉。
-          if (ctx.mounted && Navigator.of(ctx).canPop()) {
+          categoryName: c.name,
+          categoryId: c.id,
+          categorySyncId: c.id < 0 ? c.syncId : null,
+          // P1-E 分类位（决策 4）：编辑交易、小组件带分类的既有调用方一并显示，
+          // 不做「只有快捷模式才显示分类」的分叉。
+          displayCategory: c,
+          // 换分类（网格路径）：本表单盖在分类网格之上，点分类位就把表单收起来
+          // 回到网格重选 —— 已输金额经 _lastAmount 带回，用户不必重输。
+          //（「金额表单优先」形态不走这里：那份表单不关闭，分类是它的子界面。）
+          onPickCategory: (current, amount) async {
+            _lastAmount = amount;
             Navigator.of(ctx).pop();
-          }
-          if (context.mounted && Navigator.of(context).canPop()) {
-            Navigator.of(context).pop();
-          }
-          // 反馈：轻微触感 + 系统点击音
-          HapticFeedback.lightImpact();
-          SystemSound.play(SystemSoundType.click);
-        },
+            return null;
+          },
+          initialDate: widget.initialDate ?? DateTime.now(),
+          // 换分类回路回填的金额优先于进入页面时的初始金额
+          initialAmount: _lastAmount ?? widget.initialAmount,
+          initialNote: widget.initialNote,
+          initialAccountId: initialAccountId,
+          initialTagIds: widget.initialTagIds,
+          showAccountPicker: true,
+          ledgerId: ledgerId,
+          editingTransactionId: widget.editingTransactionId,
+          transactionKind: kind,
+          initialExcludeFromStats: widget.initialExcludeFromStats,
+          initialExcludeFromBudget: widget.initialExcludeFromBudget,
+          initialCurrencyCode: widget.initialCurrencyCode,
+          initialNativeAmount: widget.initialNativeAmount,
+          initialOriginalAmount: widget.initialOriginalAmount,
+          initialCustomValues: widget.initialCustomValues,
+          onSubmit: (res) async {
+            await _persistTransaction(context, kind, res);
+            // 旧流程有两层 modal：金额表单 + 分类网格抽屉，要依次关掉。
+            if (ctx.mounted && Navigator.of(ctx).canPop()) {
+              Navigator.of(ctx).pop();
+            }
+            if (context.mounted && Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            }
+            // 反馈：轻微触感 + 系统点击音
+            HapticFeedback.lightImpact();
+            SystemSound.play(SystemSoundType.click);
+          },
         ),
       ),
     );

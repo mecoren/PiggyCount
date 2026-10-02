@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 
-import '../../l10n/app_localizations.dart';
-import '../../styles/tokens.dart';
 import 'sheet_card.dart';
+import 'sheet_header.dart';
 
 /// 选择器底部抽屉的统一外壳（滚轮 / 列表 / 网格 / 单选 / 动作菜单共用）。
 ///
 /// 与「同步设置 → 定时备份时间」的时间选择抽屉同口径：弹层底透明，悬浮卡片
 /// （四周留距 + 四角圆角）承载内容，操作图标化到顶栏两端——取消 X 在左
 /// （中性色）+ 标题居中（`strongTitle` 17）+ 确定钩子在右（主色），底部不放
-/// 按钮行。
+/// 按钮行。顶栏本体在 [PiggySheetHeader]，卡片 chrome 在 [PiggySheetCard]。
 ///
 /// 没有确认动作的选择器（点选即应用 / 点选即收起）把 [onConfirm] 留空，
 /// 顶栏只留 X + 标题（右侧补等宽占位，保证标题真正居中）。
@@ -59,58 +58,17 @@ class PiggyPickerSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-
-    final header = Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.close),
-            tooltip: l10n.commonCancel,
-            onPressed: onCancel ?? () => Navigator.pop(context),
-          ),
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: PiggyTextTokens.strongTitle(context)
-                      .copyWith(fontSize: 17),
-                ),
-                if (subtitle != null)
-                  Text(
-                    subtitle!,
-                    textAlign: TextAlign.center,
-                    style: PiggyTextTokens.label(context).copyWith(
-                      color: PiggyTokens.textTertiary(context),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          // 无确认动作时补等宽占位，保证标题在视觉上真正居中
-          if (onConfirm != null)
-            IconButton(
-              icon: Icon(
-                Icons.check,
-                color: PiggyTokens.primary(context),
-              ),
-              tooltip: confirmLabel ?? l10n.commonOk,
-              onPressed: confirmEnabled ? onConfirm : null,
-            )
-          else
-            const SizedBox(width: 48),
-        ],
-      ),
-    );
-
     final content = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        header,
+        PiggySheetHeader(
+          title: title,
+          subtitle: subtitle,
+          onCancel: onCancel,
+          onConfirm: onConfirm,
+          confirmLabel: confirmLabel,
+          confirmEnabled: confirmEnabled,
+        ),
         // Flexible(loose)：本版 Flutter 给 Column 的非 flex 子项主轴约束是
         // 无界的，内部自带 `Expanded` / 滚动区的选择器会直接踩
         //「non-zero flex but incoming height constraints are unbounded」；
