@@ -1995,12 +1995,12 @@ class _SupabaseConfigDialogState extends State<_SupabaseConfigDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return _CloudConfigSheet(
+    return PiggyFormSheet(
       title: l10n.cloudConfigureSupabaseTitle,
       cancelLabel: l10n.commonCancel,
-      saveLabel: l10n.commonSave,
+      confirmLabel: l10n.commonSave,
       onCancel: () => Navigator.of(context).pop(null),
-      onSave: () {
+      onConfirm: () {
         if (_validate()) {
           Navigator.of(context).pop({
             'url': urlController.text.trim(),
@@ -2146,12 +2146,12 @@ class _WebdavConfigDialogState extends State<_WebdavConfigDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return _CloudConfigSheet(
+    return PiggyFormSheet(
       title: l10n.cloudConfigureWebdavTitle,
       cancelLabel: l10n.commonCancel,
-      saveLabel: l10n.commonSave,
+      confirmLabel: l10n.commonSave,
       onCancel: () => Navigator.of(context).pop(null),
-      onSave: () {
+      onConfirm: () {
         // 远程路径为空时回写默认值到输入框，确保用户看到实际保存的值
         if (pathController.text.trim().isEmpty) {
           pathController.text = widget.defaultPath;
@@ -2325,12 +2325,12 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return _CloudConfigSheet(
+    return PiggyFormSheet(
       title: l10n.cloudConfigureS3Title,
       cancelLabel: l10n.commonCancel,
-      saveLabel: l10n.commonSave,
+      confirmLabel: l10n.commonSave,
       onCancel: () => Navigator.of(context).pop(null),
-      onSave: () {
+      onConfirm: () {
         // 存储桶名为空时回写默认值到输入框，确保用户看到实际保存的值
         if (bucketController.text.trim().isEmpty) {
           bucketController.text = widget.defaultBucket;
@@ -2471,79 +2471,7 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
   }
 }
 
-/// 云服务配置底部抽屉外壳。
-///
-/// 悬浮卡片结构：居中标题 + 可滚动表单 + 底部 `PiggySheetActions`
-/// 双等宽取消/保存按钮，供 Supabase / WebDAV / S3 三个配置表单复用，
-/// 避免三份底部抽屉骨架代码重复。与加密「设置密码」抽屉
-/// （`widgets/encryption/password_setup_dialog.dart`）保持同一套外壳口径。
-class _CloudConfigSheet extends StatelessWidget {
-  final String title;
-  final Widget child;
-  final String cancelLabel;
-  final String saveLabel;
-  final VoidCallback onCancel;
-  final VoidCallback onSave;
-
-  const _CloudConfigSheet({
-    required this.title,
-    required this.child,
-    required this.cancelLabel,
-    required this.saveLabel,
-    required this.onCancel,
-    required this.onSave,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    // 悬浮卡片式表单抽屉外壳，与加密「设置密码」抽屉
-    // （widgets/encryption/password_setup_dialog.dart）同一套口径：
-    // 键盘避让 → SafeArea 吃掉底部安全区 → 四周留距 → 显式 Material
-    // （transparent 路由底不提供 Material 祖先，缺了 TextField 直接红屏）
-    // → 卡片高度交给内容，超高（键盘弹出 / S3 长表单 / 大字号）时整卡滚动。
-    return KeyboardBottomInsetPadding(
-      extra: PiggyDimens.p16,
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: PiggyDimens.p16),
-          child: Material(
-            color: PiggyTokens.surfaceElevated(context),
-            borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
-            clipBehavior: Clip.antiAlias,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(
-                PiggyDimens.p20,
-                PiggyDimens.p20,
-                PiggyDimens.p20,
-                PiggyDimens.p20,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    style: PiggyTextTokens.strongTitle(context)
-                        .copyWith(fontSize: 17),
-                  ),
-                  const SizedBox(height: PiggyDimens.p16),
-                  child,
-                  const SizedBox(height: PiggyDimens.p20),
-                  // 底部操作：双等宽大按钮（取消描边 + 保存填充，全站统一口径）。
-                  PiggySheetActions(
-                    cancelLabel: cancelLabel,
-                    confirmLabel: saveLabel,
-                    onCancel: onCancel,
-                    onConfirm: onSave,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
+/// 云服务配置底部抽屉外壳已统一到项目共用件 [PiggyFormSheet]
+/// （`lib/widgets/ui/form_sheet.dart`）：悬浮卡片结构 + 居中标题 + 可滚动表单
+/// + 底部 `PiggySheetActions` 双等宽取消/保存按钮。Supabase / WebDAV / S3 三个
+/// 配置表单与「新建账户」抽屉共用同一个外壳，与加密「设置密码」抽屉同口径。

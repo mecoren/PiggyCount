@@ -96,26 +96,23 @@ Future<String?> showCurrencyPickerSheet(
                               '1 ${c.code} ≈ ${r.toStringAsPrecision(4)} ${rateBase.toUpperCase()}';
                         }
                       }
-                      return ListTile(
-                        leading: currencyFlag(cctx, c.code),
-                        title: Text(
-                          '${c.name} (${c.code})',
-                          style: TextStyle(
-                            color: sel
-                                ? primaryColor
-                                : PiggyTokens.textPrimary(bctx),
-                            fontWeight:
-                                sel ? FontWeight.w600 : FontWeight.normal,
-                          ),
+                      // 行结构走项目统一件 PiggyOptionRow（24px 裸标识槽位 +
+                      // bodyMedium w500 标题 + label 副文案 + 尾部选中勾），
+                      // 不再用 ListTile 的默认行高与间距。
+                      return PiggyOptionRow(
+                        title: '${c.name} (${c.code})',
+                        desc: rateText,
+                        isSelected: sel,
+                        primaryColor: primaryColor,
+                        // 国旗缩到 24px 槽位内居中：与同列表的裸图标选项
+                        // 对齐，各选项标题起点落在同一条竖线上
+                        leading: currencyFlag(
+                          cctx,
+                          c.code,
+                          width: 24,
+                          height: 18,
+                          radius: 3,
                         ),
-                        subtitle: rateText == null
-                            ? null
-                            : Text(
-                                rateText,
-                                style: PiggyTextTokens.caption(cctx),
-                              ),
-                        trailing:
-                            sel ? Icon(Icons.check, color: primaryColor) : null,
                         onTap: () => Navigator.pop(bctx, c.code),
                       );
                     },

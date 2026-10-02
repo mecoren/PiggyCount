@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../styles/tokens.dart';
+import 'sheet_card.dart';
 
 /// 选择器底部抽屉的统一外壳（滚轮 / 列表 / 网格 / 单选 / 动作菜单共用）。
 ///
@@ -127,31 +128,9 @@ class PiggyPickerSheet extends StatelessWidget {
             child: content,
           );
 
-    return Padding(
-      // 键盘避让：选择器抽屉一般无输入框，保留以防插入输入型内容
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      // SafeArea 在外统一吃掉底部安全区，内部不再叠 paddingOf.bottom，避免双重留白
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            PiggyDimens.p16,
-            0,
-            PiggyDimens.p16,
-            PiggyDimens.p16,
-          ),
-          // IconButton / CupertinoPicker / TextField / ListTile 均为 Material 系
-          // 组件，transparent 路由底不提供 Material 祖先，必须显式包一层，
-          // 否则直接红屏
-          child: Material(
-            color: PiggyTokens.surfaceElevated(context),
-            borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
-            clipBehavior: Clip.antiAlias,
-            child: sized,
-          ),
-        ),
-      ),
-    );
+    // 卡片 chrome（键盘避让 + 底部安全区 + 左右留距 + Material）由
+    // [PiggySheetCard] 提供，与表单抽屉 / 记账金额面板同一套外壳。
+    return PiggySheetCard(child: sized);
   }
 }
 

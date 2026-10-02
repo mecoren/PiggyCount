@@ -89,6 +89,79 @@ class _OptionRow<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final option = this.option;
+    return PiggyOptionRow(
+      isSelected: isSelected,
+      primaryColor: primaryColor,
+      onTap: onTap,
+      // 前置标识：裸图标 / 原生字符徽标，无背景盒；两者都不传时
+      // （纯文字选项，如应用锁超时）不占槽位。
+      leading: option.icon != null
+          ? Icon(
+              option.icon,
+              size: 24,
+              color: isSelected
+                  ? primaryColor
+                  : PiggyTokens.iconSecondary(context),
+            )
+          : option.badge != null
+              ? Text(
+                  option.badge!,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: isSelected
+                            ? primaryColor
+                            : PiggyTokens.iconSecondary(context),
+                      ),
+                )
+              : null,
+      title: option.title,
+      desc: option.desc,
+    );
+  }
+}
+
+/// 单选列表抽屉的**选项行**（规范见 AGENTS.md「单选列表抽屉的选项行规范」，
+/// 基准实现即 [showPiggyOptionSheet]）。
+///
+/// 行结构固定为：**裸前置标识（统一 24px 槽位居中）+ 12 间距 + 标题/说明 +
+/// 尾部选中勾**，内边距 16/14，**不放分割线**。统一槽位是为了让各选项的标题
+/// 起点落在同一条竖线上。
+///
+/// 前置标识由调用方自备（[leading]）—— 裸图标、原生字符徽标（语言类选项的
+/// 中 / 繁 / EN / 한）、图片（币种国旗）等都从这里进，**不要**再给标识套一个
+/// 背景盒子。
+///
+/// 颜色口径：**高亮只给选中项**（前置标识 / 标题 / 尾部勾用主色，标题加粗
+/// w600），未选中项一律中性色；[desc] 副文案用次级 label 色，不随选中变色。
+class PiggyOptionRow extends StatelessWidget {
+  const PiggyOptionRow({
+    super.key,
+    required this.title,
+    required this.isSelected,
+    required this.onTap,
+    this.leading,
+    this.desc,
+    this.primaryColor,
+  });
+
+  final String title;
+
+  /// 说明副文案（标题下方），可空。
+  final String? desc;
+
+  /// 前置标识（裸图标 / 字符徽标 / 图片）。为空 = 纯文字选项，不占槽位。
+  final Widget? leading;
+
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  /// 选中态主色，缺省取主题 primary。
+  final Color? primaryColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = primaryColor ?? PiggyTokens.primary(context);
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -96,31 +169,11 @@ class _OptionRow<T> extends StatelessWidget {
             horizontal: PiggyDimens.p16, vertical: 14),
         child: Row(
           children: [
-            // 前置标识：裸图标 / 原生字符徽标，无背景盒，统一占 24px
-            // 槽位居中，保证各选项标题起点同一条竖线；两者都不传时
-            // （纯文字选项，如应用锁超时）不占槽位。
-            if (option.icon != null || option.badge != null) ...[
+            if (leading != null) ...[
               SizedBox(
                 width: 24,
-                child: option.icon != null
-                    ? Icon(
-                        option.icon,
-                        size: 24,
-                        color: isSelected
-                            ? primaryColor
-                            : PiggyTokens.iconSecondary(context),
-                      )
-                    : Text(
-                        option.badge!,
-                        textAlign: TextAlign.center,
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: isSelected
-                                      ? primaryColor
-                                      : PiggyTokens.iconSecondary(context),
-                                ),
-                      ),
+                height: 24,
+                child: Center(child: leading),
               ),
               const SizedBox(width: 12),
             ],
@@ -129,21 +182,21 @@ class _OptionRow<T> extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    option.title,
+                    title,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight:
                               isSelected ? FontWeight.w600 : FontWeight.w500,
                           color: isSelected
-                              ? primaryColor
+                              ? primary
                               : PiggyTokens.textPrimary(context),
                         ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  if (option.desc != null) ...[
+                  if (desc != null) ...[
                     const SizedBox(height: 2),
                     Text(
-                      option.desc!,
+                      desc!,
                       // 说明副文案不随选中变色，保持次级色。
                       style: PiggyTextTokens.label(context),
                     ),
@@ -151,7 +204,7 @@ class _OptionRow<T> extends StatelessWidget {
                 ],
               ),
             ),
-            if (isSelected) Icon(Icons.check, size: 24, color: primaryColor),
+            if (isSelected) Icon(Icons.check, size: 24, color: primary),
           ],
         ),
       ),

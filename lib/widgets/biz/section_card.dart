@@ -13,6 +13,14 @@ class SectionCard extends StatelessWidget {
   /// 自定义边框宽度，仅在 [borderColor] 非空时生效，默认 1.5。
   final double? borderWidth;
 
+  /// **拍平**：不画底色 / 边框 / 阴影，也不加内边距 —— 直接透传 [child]。
+  ///
+  /// 用于「表单抽屉」形态：抽屉本身就是一张悬浮卡片（见 `PiggyFormSheet`），
+  /// 字段再套一层带主题色描边的卡片就成了卡片套卡片（参考实现：云同步配置
+  /// WebDAV / S3 / Supabase 三表单 —— 描边输入框直接落在抽屉底色上）。
+  /// 页面级列表继续用默认的带卡片形态。
+  final bool flat;
+
   const SectionCard({
     super.key,
     required this.child,
@@ -20,10 +28,13 @@ class SectionCard extends StatelessWidget {
     this.margin = const EdgeInsets.symmetric(horizontal: PiggyDimens.p12), // 默认值
     this.borderColor,
     this.borderWidth,
+    this.flat = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (flat) return child;
+
     final isDark = PiggyTokens.isDark(context);
     final hasCustomBorder = borderColor != null;
     final borderWidth = hasCustomBorder
