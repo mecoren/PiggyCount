@@ -118,7 +118,7 @@ PiggyCount 有头部皮肤（headerSkinProvider）功能，用户可选择不同
 1. **不可改变任何业务逻辑**：所有 `onTap` / Provider 读写 / 路由跳转 / 条件分支 / 平台判断必须原样保留
 2. **不可修改共享组件**：`AppListTile` / `SectionCard` / `PrimaryHeader` 的现有实现保持不变（其他业务页面仍在使用）
 3. **保留所有 i18n key 调用**：不得硬编码中文文案，所有文案继续走 `AppLocalizations.of(context).xxx`
-4. **保留特殊常量**：`appStoreId: '6754611670'`、GitHub URL、浙ICP备号 `'浙ICP备2025214907号-2A'` 等
+4. **保留特殊常量**：`appStoreId: '6754611670'`、GitHub URL 等（ICP 备案号已于 2026-10-03 按产品要求移除，不再保留）
 5. **代码标识符使用英文**：变量名、函数名、类名、文件名必须英文（项目规则）
 6. **复杂代码中文注释**：解释「为什么」而非「做了什么」（项目规则）
 

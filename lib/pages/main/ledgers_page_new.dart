@@ -265,8 +265,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                 ledger: ledger,
                 selected: !ledger.isRemoteOnly && ledger.id == currentId,
                 onTap: () => _handleLocalLedgerTap(ledger),
-                onLongPress: () => _showLocalLedgerActions(context, ledger),
-                onMore: () => _showLocalLedgerActions(context, ledger),
+                moreItems: _localLedgerMenuItems(context, ledger),
+                onMoreSelected: (v) => _onLocalLedgerAction(context, ledger, v),
               )),
         ],
 
@@ -318,8 +318,9 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
             ...remoteLedgers.map((ledger) => LedgerCard(
                   ledger: ledger,
                   onTap: () => _handleRemoteLedgerTap(context, ledger),
-                  onLongPress: () => _showRemoteLedgerActions(context, ledger),
-                  onMore: () => _showRemoteLedgerActions(context, ledger),
+                  moreItems: _remoteLedgerMenuItems(context),
+                  onMoreSelected: (v) =>
+                      _onRemoteLedgerAction(context, ledger, v),
                 )),
         ],
 
@@ -417,89 +418,76 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
             .ledgersDownloadSuccess(translateLedgerName(context, ledger.name)));
   }
 
-  /// 显示本地账本操作菜单
-  Future<void> _showLocalLedgerActions(
-      BuildContext context, LedgerDisplayItem ledger) async {
-    // myRole 沿自 v24 共享账本(云端协同已下线):存量 Editor 角色的账本
-    // 隐藏 edit / clear / delete 等 owner-only 操作,仅保留预算/上传/仅删本地
+  /// 本地账本的「⋯」菜单条目（项目锚点浮层菜单，不铺遮罩色）。
+  ///
+  /// myRole 沿自 v24 共享账本(云端协同已下线):存量 Editor 角色的账本
+  /// 隐藏 edit / clear / delete 等 owner-only 操作,仅保留预算/上传/仅删本地。
+  /// 手动上传仅对快照同步类后端开放。
+  ///
+  /// 分组：常规操作（编辑 / 预算 / 上传）与破坏性操作（清空 / 删除）之间插一条
+  /// 分隔线 —— 分隔线以下是「点了会丢数据」的那几档，不该和上传混在一列里。
+  List<PiggyMenuItem> _localLedgerMenuItems(
+      BuildContext context, LedgerDisplayItem ledger) {
+    final l10n = AppLocalizations.of(context);
     final isOwner = ledger.myRole == 'owner';
-    // 手动上传仅对快照同步类后端开放
     final canUpload = ref.read(syncServiceProvider) is TransactionsSyncManager;
-    final action = await showDialog<String>(
-      context: context,
-      builder: (dctx) {
-        final primary = PiggyTokens.primary(dctx);
-        final l10n = AppLocalizations.of(context);
-        return AppDialogShell(
-          wide: true,
-          title: Text(l10n.ledgersActions),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (isOwner)
-                _dialogActionRow(
-                  dialogContext: dctx,
-                  icon: Icons.edit,
-                  color: primary,
-                  label: l10n.ledgersEdit,
-                  value: 'edit',
-                ),
-              // 预算管理入口 — 每个账本独立预算,Owner/Editor 都能看(Editor 进
-              // BudgetPage 后 isEditorInShared 隐藏 + 按钮和编辑入口,只看不改)。
-              _dialogActionRow(
-                dialogContext: dctx,
-                icon: Icons.pie_chart_outline_rounded,
-                color: primary,
-                label: l10n.budgetManagement,
-                value: 'budget',
-              ),
-              // 单账本上传 — 放在破坏性操作（清空/删除）之前，与编辑类操作分组。
-              if (canUpload)
-                _dialogActionRow(
-                  dialogContext: dctx,
-                  icon: Icons.cloud_upload_outlined,
-                  color: primary,
-                  label: l10n.ledgersUploadThis,
-                  value: 'upload',
-                ),
-              if (isOwner)
-                _dialogActionRow(
-                  dialogContext: dctx,
-                  icon: Icons.clear_all,
-                  color: PiggyTokens.warning(dctx),
-                  label: l10n.ledgersClear,
-                  value: 'clear',
-                ),
-              // "仅删除本地"对 Owner 和 Editor 都可用 — 这是本地清理动作,
-              // 不影响 server。Editor 用这个清掉 Owner 已删账本残留;Owner
-              // 用来清不想要的本地副本但保留 server 数据。
-              _dialogActionRow(
-                dialogContext: dctx,
-                icon: Icons.delete_outline,
-                color: PiggyTokens.warning(dctx),
-                label: l10n.ledgersDeleteLocal,
-                value: 'deleteLocal',
-              ),
-              if (isOwner)
-                _dialogActionRow(
-                  dialogContext: dctx,
-                  icon: Icons.delete_forever_outlined,
-                  color: PiggyTokens.error(dctx),
-                  label: l10n.ledgersDelete,
-                  value: 'delete',
-                ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dctx),
-              child: Text(l10n.commonCancel),
-            ),
-          ],
-        );
-      },
-    );
+    final destructive = <PiggyMenuItem>[
+      if (isOwner)
+        PiggyMenuItem.action(
+          value: 'clear',
+          icon: Icons.clear_all,
+          label: l10n.ledgersClear,
+          color: PiggyTokens.warning(context),
+        ),
+      // "仅删除本地"对 Owner 和 Editor 都可用 — 这是本地清理动作,
+      // 不影响 server。Editor 用这个清掉 Owner 已删账本残留;Owner
+      // 用来清不想要的本地副本但保留 server 数据。
+      PiggyMenuItem.action(
+        value: 'deleteLocal',
+        icon: Icons.delete_outline,
+        label: l10n.ledgersDeleteLocal,
+        color: PiggyTokens.warning(context),
+      ),
+      if (isOwner)
+        PiggyMenuItem.action(
+          value: 'delete',
+          icon: Icons.delete_forever_outlined,
+          label: l10n.ledgersDelete,
+          isDanger: true,
+        ),
+    ];
+    return [
+      if (isOwner)
+        PiggyMenuItem.action(
+          value: 'edit',
+          icon: Icons.edit,
+          label: l10n.ledgersEdit,
+        ),
+      // 预算管理入口 — 每个账本独立预算,Owner/Editor 都能看(Editor 进
+      // BudgetPage 后 isEditorInShared 隐藏 + 按钮和编辑入口,只看不改)。
+      PiggyMenuItem.action(
+        value: 'budget',
+        icon: Icons.pie_chart_outline_rounded,
+        label: l10n.budgetManagement,
+      ),
+      // 单账本上传 — 放在破坏性操作（清空/删除）之前，与编辑类操作分组。
+      if (canUpload)
+        PiggyMenuItem.action(
+          value: 'upload',
+          icon: Icons.cloud_upload_outlined,
+          label: l10n.ledgersUploadThis,
+        ),
+      if (destructive.isNotEmpty) const PiggyMenuItem.divider(),
+      ...destructive,
+    ];
+  }
 
+  /// 本地账本菜单选中后的分发（菜单自身已关闭，这里直接执行动作）。
+  Future<void> _onLocalLedgerAction(
+    BuildContext context,
+    LedgerDisplayItem ledger,
+    String action,
+  ) async {
     if (!mounted || !context.mounted) return;
 
     if (action == 'edit') {
@@ -527,80 +515,31 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     }
   }
 
-  /// 操作菜单里的一行：整行可点，点选即关闭并回传 [value]。
-  ///
-  /// 与 `AppDialogShell` 的卡片内边距（20）配合使用，替代 Material 的
-  /// `SimpleDialogOption`（后者自带 24 左右内边距，嵌进项目外壳会顶出双份留白）。
-  Widget _dialogActionRow({
-    required BuildContext dialogContext,
-    required IconData icon,
-    required Color color,
-    required String label,
-    required String value,
-  }) {
-    return InkWell(
-      onTap: () => Navigator.pop(dialogContext, value),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Row(
-          children: [
-            Icon(icon, color: color),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: PiggyTokens.textPrimary(dialogContext)),
-              ),
-            ),
-          ],
-        ),
+  /// 远程账本的「⋯」菜单条目（与本地同款外壳，只有下载 / 删除两档）。
+  List<PiggyMenuItem> _remoteLedgerMenuItems(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return [
+      PiggyMenuItem.action(
+        value: 'download',
+        icon: Icons.cloud_download,
+        label: l10n.ledgersDownload,
       ),
-    );
+      PiggyMenuItem.action(
+        value: 'delete',
+        icon: Icons.delete_forever_outlined,
+        label: l10n.ledgersDeleteRemote,
+        isDanger: true,
+      ),
+    ];
   }
 
-  /// 显示远程账本操作菜单
-  Future<void> _showRemoteLedgerActions(
-      BuildContext context, LedgerDisplayItem ledger) async {
-    final action = await showDialog<String>(
-      context: context,
-      builder: (dctx) {
-        final l10n = AppLocalizations.of(context);
-        return AppDialogShell(
-          wide: true,
-          title: Text(l10n.ledgersActions),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _dialogActionRow(
-                dialogContext: dctx,
-                icon: Icons.cloud_download,
-                color: PiggyTokens.primary(dctx),
-                label: l10n.ledgersDownload,
-                value: 'download',
-              ),
-              _dialogActionRow(
-                dialogContext: dctx,
-                icon: Icons.delete_forever_outlined,
-                color: PiggyTokens.error(dctx),
-                label: l10n.ledgersDeleteRemote,
-                value: 'delete',
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dctx),
-              child: Text(l10n.commonCancel),
-            ),
-          ],
-        );
-      },
-    );
-
+  /// 远程账本菜单选中后的分发。
+  Future<void> _onRemoteLedgerAction(
+    BuildContext context,
+    LedgerDisplayItem ledger,
+    String action,
+  ) async {
     if (!mounted || !context.mounted) return;
-
     if (action == 'download') {
       await _handleRemoteLedgerTap(context, ledger);
     } else if (action == 'delete') {
@@ -1354,13 +1293,12 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                   contentPadding: EdgeInsets.zero,
                   // v30 语义升级:账本 currency = 「账本本位币」(统计折算目标),
                   // 与资产页的用户级「主币种」是两个概念,label 用本位币避免混淆。
-                  title:
-                      Text(AppLocalizations.of(ctx).ledgerBaseCurrencyLabel),
+                  title: Text(AppLocalizations.of(ctx).ledgerBaseCurrencyLabel),
                   subtitle: Text(displayCurrency(currency, context)),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () async {
-                    final picked = await _showCurrencyPicker(ctx,
-                        initial: currency);
+                    final picked =
+                        await _showCurrencyPicker(ctx, initial: currency);
                     if (picked != null) {
                       setState(() => currency = picked);
                     }

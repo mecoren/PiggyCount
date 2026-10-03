@@ -3,9 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../ai/privacy/ai_privacy_consent.dart';
 import '../../l10n/app_localizations.dart';
-import '../../pages/settings/privacy_policy_page.dart';
 import '../../providers/ai_privacy_consent_providers.dart';
-import '../../providers/theme_providers.dart';
 import '../ui/ui.dart';
 
 /// 确保已取得"AI 第三方数据共享"的同意。
@@ -33,36 +31,13 @@ class AiPrivacyConsentDialog extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final primary = ref.watch(primaryColorProvider);
     return AppDialogShell(
       wide: true,
       title: Text(l10n.aiConsentTitle),
+      // 正文本身即完整告知（发给谁 / 发什么 / 用途 / 第三方按其隐私政策处理），
+      // 不再挂「隐私政策」外链页（原 privacy_policy_page 已整体下线）。
       content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(l10n.aiConsentBody, style: const TextStyle(height: 1.5)),
-            const SizedBox(height: 4),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton(
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  minimumSize: const Size(0, 36),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const PrivacyPolicyPage()),
-                ),
-                child: Text(l10n.aboutPrivacyPolicy,
-                    style: TextStyle(color: primary)),
-              ),
-            ),
-          ],
-        ),
+        child: Text(l10n.aiConsentBody, style: const TextStyle(height: 1.5)),
       ),
       actions: [
         TextButton(

@@ -19,10 +19,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiConsentAgree => '同意并开启';
 
   @override
-  String get aboutPrivacyPolicy => '隐私政策';
+  String get changelogTitle => '更新日志';
 
   @override
-  String get changelogTitle => '更新日志';
+  String get changelogSubtitle => '查看每个版本更新了什么';
 
   @override
   String changelogVersionSubtitle(String date, int count) {
@@ -5007,7 +5007,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get aboutDeveloperStory =>
-      '从 2015 年实习起，我坚持记账至今已超过十年。因为担心记账软件的广告、付费、隐私泄露和停运跑路，我决定自己做一个——最初只是给自己和家人用的小工具。\n\n2025 年 9 月，小猪记账发布了第一个版本。说实话，那时候心里没什么底，不知道会不会有人用。但慢慢地，开始收到用户的反馈——有人说终于找到了一款干净的记账软件，有人提了很好的建议，也有人默默给了五星好评。每一条反馈都让我觉得，这件事值得继续做下去。\n\n小猪记账没有广告、没有会员、完全免费开源。你的每一笔数据都只存在你自己的手机里，不会被上传到任何第三方服务器。但上架和维护一款 App 并非零成本——开发者账号、服务器等开支目前靠社区捐赠勉强支撑，每一次适配新系统、修复 Bug、开发新功能，也都是工作之余一点点完成的。\n\n如果你觉得小猪记账对你有帮助，一个好评、一次分享或一笔捐赠，都能让这个小项目走得更远。谢谢你的信任。';
+      '小猪记账没有广告、没有会员、完全免费开源。你的每一笔数据都只存在你自己的手机里，不会被上传到任何第三方服务器。';
 
   @override
   String get aboutPiggyAssets => '小猪家当 PiggyAssets';
@@ -8071,6 +8071,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get rangeReportChangeRange => '更换区间';
 
   @override
+  String get rangePickerTitle => '选择区间';
+
+  @override
+  String get rangePickerHintEnd => '点一下选结束日期';
+
+  @override
   String get rangeReportCustomFieldTitle => '自定义字段汇总';
 
   @override
@@ -8204,9 +8210,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get aiConsentAgree => '同意並開啟';
-
-  @override
-  String get aboutPrivacyPolicy => '隱私政策';
 
   @override
   String get changelogTitle => '更新日誌';
@@ -13194,7 +13197,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get aboutDeveloperStory =>
-      '從 2015 年實習起，我堅持記帳至今已超過十年。因為擔心記帳軟體的廣告、付費、隱私洩露和停運跑路，我決定自己做一個——最初只是給自己和家人用的小工具。\n\n2025 年 9 月，小豬記帳發佈了第一個版本。說實話，那時候心裡沒什麼底，不知道會不會有人用。但慢慢地，開始收到用戶的回饋——有人說終於找到了一款乾淨的記帳軟體，有人提了很好的建議，也有人默默給了五星好評。每一條回饋都讓我覺得，這件事值得繼續做下去。\n\n小豬記帳沒有廣告、沒有會員、完全免費開源。你的每一筆資料都只存在你自己的手機裡，不會被上傳到任何第三方伺服器。但上架和維護一款 App 並非零成本——開發者帳號、伺服器等開支目前靠社群捐贈勉強支撐，每一次適配新系統、修復 Bug、開發新功能，也都是工作之餘一點點完成的。\n\n如果你覺得小豬記帳對你有幫助，一個好評、一次分享或一筆捐贈，都能讓這個小專案走得更遠。謝謝你的信任。';
+      '小豬記帳沒有廣告、沒有會員、完全免費開源。你的每一筆資料都只存在你自己的手機裡，不會被上傳到任何第三方伺服器。';
 
   @override
   String get aboutPiggyAssets => '小豬家當 PiggyAssets';

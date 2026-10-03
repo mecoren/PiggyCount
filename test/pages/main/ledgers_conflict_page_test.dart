@@ -22,7 +22,8 @@ library;
 import 'package:drift/drift.dart' as d;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' as fcs hide SyncStatus;
+import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' as fcs
+    hide SyncStatus;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -145,8 +146,7 @@ void main() {
 
       expect(find.text(zh(tester).ledgersConflictTitle), findsNothing,
           reason: '误报冲突的代价是全量用户被吓一次 —— 非冲突状态绝不能进冲突分支');
-      expect(container.read(currentLedgerIdProvider), 2,
-          reason: '应走正常切账本分支');
+      expect(container.read(currentLedgerIdProvider), 2, reason: '应走正常切账本分支');
       await drainTimers(tester);
     });
 
@@ -164,8 +164,7 @@ void main() {
       expect(find.text(l10n.conflictCompareMergeAction), findsOneWidget);
     });
 
-    testWidgets('冲突框「上传到云端」= 用户已明确选择覆盖 → force 上传并刷新列表与状态',
-        (tester) async {
+    testWidgets('冲突框「上传到云端」= 用户已明确选择覆盖 → force 上传并刷新列表与状态', (tester) async {
       // 这条守的是「上传成功但卡片不消失」类问题：卡片可见性来自
       // syncStatusProvider，只有 bump 了刷新计数用户才看得到状态变化、
       // 才不会对着同一张卡片反复点。
@@ -181,7 +180,8 @@ void main() {
 
       expect(sync.uploadForces, [true],
           reason: '冲突框上的上传是用户显式选择本地覆盖云端，必须 force');
-      expect(container.read(ledgerListRefreshProvider), greaterThan(listTickBefore),
+      expect(container.read(ledgerListRefreshProvider),
+          greaterThan(listTickBefore),
           reason: '不刷新列表 = 卡片仍显示冲突，用户会重复上传');
       expect(container.read(syncStatusRefreshProvider),
           greaterThan(statusTickBefore));
@@ -200,6 +200,69 @@ void main() {
       expect(sync.uploadForces, isEmpty, reason: '取消后不得有任何上传');
       expect(sync.restoreCalls, 0, reason: '取消后不得有任何下载覆盖');
       expect(sync.mergePreviewCalls, 0);
+    });
+  });
+
+  group('账本「⋯」操作菜单的形态', () {
+    // 回归守卫：操作菜单曾用居中 `AppDialogShell`（「操作」标题 + 取消行），
+    // 与全站锚点浮层菜单 / orbit 移动端页头 ⋮ 面板不一致。判据认**外壳组件**
+    // ——条目的可见性已有上面几条用例兜着，这里只钉「不是居中弹窗」。
+    testWidgets('点角标弹锚点浮层菜单（非居中弹窗），条目齐全且破坏性分组有分隔线', (tester) async {
+      sync.statusDiff = SyncDiff.inSync;
+      await pumpPage(tester);
+
+      await tester.tap(find.byIcon(Icons.more_horiz).first);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PopupMenuButton<String>), findsWidgets,
+          reason: '角标「⋯」必须是锚点浮层菜单的触发钮');
+      expect(find.byType(Dialog), findsNothing,
+          reason: '不得回退成居中弹窗（那会遮住账本列表且与全站漂移）');
+
+      final l10n = zh(tester);
+      // myRole 默认 owner + 快照同步后端 → 六档全在
+      for (final label in [
+        l10n.ledgersEdit,
+        l10n.budgetManagement,
+        l10n.ledgersUploadThis,
+        l10n.ledgersClear,
+        l10n.ledgersDeleteLocal,
+        l10n.ledgersDelete,
+      ]) {
+        expect(find.text(label), findsOneWidget, reason: '菜单缺少「$label」');
+      }
+      expect(find.byType(PopupMenuDivider), findsOneWidget,
+          reason: '常规操作与破坏性操作之间应有一条分组分隔线');
+
+      await drainTimers(tester);
+    });
+
+    testWidgets('菜单宽度不铺满（锚点浮层按文案收敛），点别处即关', (tester) async {
+      sync.statusDiff = SyncDiff.inSync;
+      await pumpPage(tester);
+
+      await tester.tap(find.byIcon(Icons.more_horiz).first);
+      await tester.pumpAndSettle();
+
+      // 菜单卡片 = 条目最近的 Material 祖先（弹层路由自己的容器）
+      final menuCard = find
+          .ancestor(
+            of: find.text(zh(tester).ledgersEdit),
+            matching: find.byType(Material),
+          )
+          .first;
+      final screenWidth =
+          MediaQuery.sizeOf(tester.element(find.byType(LedgersPageNew).first))
+              .width;
+      expect(tester.getSize(menuCard).width, lessThan(screenWidth),
+          reason: '菜单必须窄于屏宽（orbit 同款：铺满会在右侧留一片空白）');
+
+      // 点菜单外 → 关闭（不铺遮罩色的锚点浮层靠这个收尾）
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      expect(find.text(zh(tester).ledgersEdit), findsNothing);
+
+      await drainTimers(tester);
     });
   });
 
@@ -227,8 +290,7 @@ void main() {
       await tapUploadFromMenu(tester, 2);
 
       final l10n = zh(tester);
-      expect(sync.uploadForces, [false],
-          reason: '首次是普通上传（不带 force），冲突由后端抛回');
+      expect(sync.uploadForces, [false], reason: '首次是普通上传（不带 force），冲突由后端抛回');
       expect(find.text(l10n.conflictUploadTitle), findsOneWidget);
       expect(find.text(l10n.syncBlockingUploadTitle), findsNothing,
           reason: '阻塞进度弹窗必须在弹确认框之前关掉，否则确认框点不动');
@@ -255,7 +317,8 @@ void main() {
       expect(sync.uploadForces, [false, true],
           reason: '用户确认覆盖后应以 force 重试且只重试一次');
       expect(find.text(zh(tester).mineUploadSuccess), findsOneWidget);
-      expect(container.read(ledgerListRefreshProvider), greaterThan(listTickBefore));
+      expect(container.read(ledgerListRefreshProvider),
+          greaterThan(listTickBefore));
       await drainTimers(tester);
     });
 
@@ -274,8 +337,7 @@ void main() {
       await drainTimers(tester);
     });
 
-    testWidgets('三选一选「对比合并」→ 进入合并流程（走 downloadAndPreview）',
-        (tester) async {
+    testWidgets('三选一选「对比合并」→ 进入合并流程（走 downloadAndPreview）', (tester) async {
       sync.statusDiff = SyncDiff.inSync;
       sync.conflictOnFirstTry = true;
       await pumpPage(tester);
@@ -284,10 +346,8 @@ void main() {
       await tester.tap(find.text(zh(tester).conflictCompareMergeAction));
       await pumpFrames(tester, frames: 5);
 
-      expect(sync.mergePreviewCalls, 1,
-          reason: '「对比合并」必须真的进合并流程，不能只是关掉弹窗');
-      expect(sync.uploadForces, [false],
-          reason: '合并流程不覆盖云端 → 不得以 force 补传');
+      expect(sync.mergePreviewCalls, 1, reason: '「对比合并」必须真的进合并流程，不能只是关掉弹窗');
+      expect(sync.uploadForces, [false], reason: '合并流程不覆盖云端 → 不得以 force 补传');
       // 本用例让 downloadAndPreview 返回 null（云端无数据）→ 走兜底提示，
       // 顺带证明「云端没有备份」这条分支有反馈、不静默
       expect(find.text(zh(tester).syncNoCloudBackupMessage), findsOneWidget);
@@ -309,7 +369,8 @@ void main() {
       expect(find.text(l10n.mineUploadUnverified), findsOneWidget);
       expect(find.text(l10n.mineUploadSuccess), findsNothing,
           reason: '未确认收敛不能报普通成功');
-      expect(container.read(ledgerListRefreshProvider), greaterThan(listTickBefore),
+      expect(container.read(ledgerListRefreshProvider),
+          greaterThan(listTickBefore),
           reason: 'softFail 仍属「已上传」，列表与状态同样要刷新');
       await drainTimers(tester);
     });
@@ -321,7 +382,8 @@ void main() {
       await tapUploadFromMenu(tester, 2);
 
       expect(find.text(zh(tester).mineUploadSuccess), findsOneWidget);
-      expect(zh(tester).mineUploadSuccess, isNot(zh(tester).mineUploadUnverified),
+      expect(
+          zh(tester).mineUploadSuccess, isNot(zh(tester).mineUploadUnverified),
           reason: '两种结果的文案必须能区分（否则这条断言本身失效）');
       await drainTimers(tester);
     });

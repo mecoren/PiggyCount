@@ -19,10 +19,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aiConsentAgree => '동의하고 켜기';
 
   @override
-  String get aboutPrivacyPolicy => '개인정보 처리방침';
+  String get changelogTitle => '업데이트 로그';
 
   @override
-  String get changelogTitle => '업데이트 로그';
+  String get changelogSubtitle => 'See what changed in each release';
 
   @override
   String changelogVersionSubtitle(String date, int count) {
@@ -5056,7 +5056,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get aboutDeveloperStory =>
-      '저는 2015년 인턴 시절부터 가계부를 쓰기 시작해서 10년 넘게 그 습관을 이어오고 있습니다. 광고, 유료 결제, 개인정보 유출 위험, 그리고 앱 서비스 종료에 대한 걱정 때문에 직접 만들어보기로 했습니다 — 처음에는 저와 가족을 위한 작은 도구로 시작했죠.\n\n2025년 9월, PiggyCount의 첫 버전을 출시했습니다. 솔직히 누가 써줄지 전혀 알 수 없었습니다. 하지만 점차 피드백이 들어오기 시작했습니다 — 드디어 깔끔한 가계부 앱을 찾았다는 분도 있었고, 좋은 제안을 해주신 분도 있었고, 조용히 별점 5개를 남겨주신 분도 있었습니다. 그 하나하나의 메시지가 계속할 가치가 있다는 걸 일깨워 주었습니다.\n\nPiggyCount는 광고도, 구독료도 없는 완전한 오픈소스입니다. 모든 데이터는 사용자의 기기에만 저장되며 어떤 제3자 서버로도 업로드되지 않습니다. 하지만 앱을 출시하고 유지하는 데는 비용이 듭니다 — 개발자 계정, 서버 등의 비용은 현재 커뮤니티 후원으로 충당하고 있으며, 모든 시스템 업데이트와 버그 수정, 신규 기능은 본업 외 시간에 만들고 있습니다.\n\nPiggyCount가 도움이 되셨다면, 평점이나 공유, 후원 한 번이 이 작은 프로젝트가 더 멀리 나아가는 데 큰 힘이 됩니다. 믿어주셔서 감사합니다.';
+      'PiggyCount는 광고도, 구독료도 없는 완전한 오픈소스입니다. 모든 데이터는 사용자의 기기에만 저장되며 어떤 제3자 서버로도 업로드되지 않습니다.';
 
   @override
   String get aboutPiggyAssets => 'PiggyAssets';
@@ -8157,6 +8157,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get rangeReportChangeRange => '기간 변경';
+
+  @override
+  String get rangePickerTitle => 'Select range';
+
+  @override
+  String get rangePickerHintEnd => 'Tap an end date';
 
   @override
   String get rangeReportCustomFieldTitle => '사용자 정의 필드 요약';

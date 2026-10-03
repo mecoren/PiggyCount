@@ -3,8 +3,8 @@
   "aiConsentTitle": "Before enabling AI features",
   "aiConsentBody": "AI features need to send related data to the third-party AI provider you configure:\n\n• Who it goes to: by default Zhipu GLM (open.bigmodel.cn, operated by Zhipu); if you configure another third-party AI service, it goes to the provider you entered.\n• What is sent: the content you actively use for recognition/chat — receipt images, voice recordings, text you type, plus the category names, account names and relevant transaction records needed to complete recognition/analysis.\n• Purpose: only for bill recognition, bookkeeping and chats you initiate; PiggyCount itself does not collect or store this data.\n\nThe data is processed by that third-party provider under its own privacy policy. Enabling means you consent to the data sharing above.",
   "aiConsentAgree": "Agree & enable",
-  "aboutPrivacyPolicy": "Privacy Policy",
   "changelogTitle": "Changelog",
+  "changelogSubtitle": "See what changed in each release",
   "changelogVersionSubtitle": "{date} · {count} changes",
   "@changelogVersionSubtitle": {
     "placeholders": {
@@ -2268,7 +2268,7 @@
   "aboutPageTitle": "About",
   "aboutPageLoadingVersion": "Loading version...",
   "aboutDeveloperStoryTitle": "From the Developer",
-  "aboutDeveloperStory": "I started tracking my expenses in 2015 as an intern, and I've kept the habit for over a decade. Concerned about ads, paywalls, privacy risks, and apps shutting down, I decided to build my own — first as a small tool for myself and my family.\n\nIn September 2025, PiggyCount launched its first version. Honestly, I had no idea if anyone would use it. But gradually, feedback started coming in — someone said they finally found a clean budgeting app, others offered great suggestions, and some quietly left five-star reviews. Every single message reminded me this was worth continuing.\n\nPiggyCount is ad-free, subscription-free, and fully open source. All your data stays on your device and is never uploaded to any third-party server. But publishing and maintaining an app isn't free — developer accounts, servers, and other costs are currently covered by community donations, and every system update, bug fix, and new feature is built outside of my day job.\n\nIf PiggyCount has been helpful to you, a rating, a share, or a donation would help this little project go further. Thank you for your trust.",
+  "aboutDeveloperStory": "PiggyCount is ad-free, subscription-free, and fully open source. All your data stays on your device and is never uploaded to any third-party server.",
   "aboutPiggyAssets": "PiggyAssets",
   "aboutPiggyAssetsSubtitle": "Visualize your full asset portfolio",
   "aboutPiggyAssetsIntro": "PiggyCount focuses on daily cash flow; PiggyAssets is its sibling product, focused on asset portfolio visualization: net worth trends across accounts, property / investment / crypto classification, returns, holding period, and allocation breakdown.",
@@ -3971,6 +3971,8 @@
   "rangeReportColumnYoy": "Last year",
   "analyticsTagComposition": "{type} by Tag",
   "rangeReportChangeRange": "Change range",
+  "rangePickerTitle": "Select range",
+  "rangePickerHintEnd": "Tap an end date",
   "rangeReportCustomFieldTitle": "Custom field breakdown",
   "rangeReportEmptySubtext": "No records in this range. Tap the dates above to pick another one.",
   "semanticsChartSeries": "Chart, {count} points: {points}",

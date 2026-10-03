@@ -19,10 +19,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiConsentAgree => 'Agree & enable';
 
   @override
-  String get aboutPrivacyPolicy => 'Privacy Policy';
+  String get changelogTitle => 'Changelog';
 
   @override
-  String get changelogTitle => 'Changelog';
+  String get changelogSubtitle => 'See what changed in each release';
 
   @override
   String changelogVersionSubtitle(String date, int count) {
@@ -5206,7 +5206,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aboutDeveloperStory =>
-      'I started tracking my expenses in 2015 as an intern, and I\'ve kept the habit for over a decade. Concerned about ads, paywalls, privacy risks, and apps shutting down, I decided to build my own — first as a small tool for myself and my family.\n\nIn September 2025, PiggyCount launched its first version. Honestly, I had no idea if anyone would use it. But gradually, feedback started coming in — someone said they finally found a clean budgeting app, others offered great suggestions, and some quietly left five-star reviews. Every single message reminded me this was worth continuing.\n\nPiggyCount is ad-free, subscription-free, and fully open source. All your data stays on your device and is never uploaded to any third-party server. But publishing and maintaining an app isn\'t free — developer accounts, servers, and other costs are currently covered by community donations, and every system update, bug fix, and new feature is built outside of my day job.\n\nIf PiggyCount has been helpful to you, a rating, a share, or a donation would help this little project go further. Thank you for your trust.';
+      'PiggyCount is ad-free, subscription-free, and fully open source. All your data stays on your device and is never uploaded to any third-party server.';
 
   @override
   String get aboutPiggyAssets => 'PiggyAssets';
@@ -8386,6 +8386,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get rangeReportChangeRange => 'Change range';
+
+  @override
+  String get rangePickerTitle => 'Select range';
+
+  @override
+  String get rangePickerHintEnd => 'Tap an end date';
 
   @override
   String get rangeReportCustomFieldTitle => 'Custom field breakdown';

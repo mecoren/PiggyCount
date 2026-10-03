@@ -81,8 +81,7 @@ void main() {
     expect(find.byType(TransactionListItem), findsNWidgets(1));
     expect(find.text('1笔'), findsOneWidget);
     // 显示当前周期标签,可再点开选择器换周期
-    final monthLabel =
-        '${now.year}-${now.month.toString().padLeft(2, '0')}';
+    final monthLabel = '${now.year}-${now.month.toString().padLeft(2, '0')}';
     expect(find.text(monthLabel), findsOneWidget);
 
     // 切「年」:本年 2 笔
@@ -97,6 +96,35 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(TransactionListItem), findsNWidgets(3));
     expect(find.text('3笔'), findsOneWidget);
+
+    // 切维度不得闪 loading：月→年→全部 三连切，每一步在下一帧（数据已同步
+    // 就绪）就必须看到明细行，不能出现 CircularProgressIndicator。
+    // 回归背景：切维度时若换 provider 实例，整块列表会回 loading 转圈。
+    for (final label in ['年', '月', '全部']) {
+      await tester.tap(find.text(label));
+      await tester.pump(); // 只推进一帧，不 pumpAndSettle
+      expect(
+        find.byType(CircularProgressIndicator),
+        findsNothing,
+        reason: '切「$label」后不应出现 loading 指示器',
+      );
+      expect(find.byType(TransactionListItem), findsWidgets);
+      await tester.pumpAndSettle();
+    }
+
+    // 切维度时 chip 行不得横向位移。ChoiceChip 选中时才画 ✓，若不统一宽度，
+    // 选中瞬间 chip 变宽会把后面的 chip 挤一下 —— 逐帧比对三个 chip 的横坐标。
+    Map<String, double> chipOffsets() => {
+          for (final label in ['月', '年', '全部'])
+            label: tester.getTopLeft(find.text(label)).dx,
+        };
+
+    final before = chipOffsets();
+    for (final label in ['月', '年', '全部']) {
+      await tester.tap(find.text(label));
+      await tester.pumpAndSettle();
+      expect(chipOffsets(), before, reason: '切「$label」后 chip 行不应位移');
+    }
 
     // 手动拆树:drift QueryStream 取消订阅时会排一个 zero-duration Timer,
     // 留给框架自动拆树会触发 "A Timer is still pending" 断言。

@@ -4,7 +4,7 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 
 import '../../data/db.dart';
-import '../../utils/lunar/chinese_almanac.dart';
+import '../../widgets/biz/calendar_date_cell.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/section_card.dart';
 import '../../widgets/biz/transaction_list_item.dart';
@@ -427,11 +427,9 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 
   /// 单个日期格（orbit 结构 + 小米日历风格）。
   ///
-  /// 布局三层：整格内缩底色块（Stack 底层）→ 数字 / 副标签 / 金额 → 右上角
-  /// 休·班徽标（`Positioned` 叠加，**不占布局高度**，也就不会挤压副标签）。
-  /// 高度预算 72：数字 18 + 副标签 ~10 + 支出 ~12 + 收入 ~12 + 内边距 ~5。
-  /// 内容整组垂直居中（小米口径，不留半截空底）；副标签与金额整块再套
-  /// `FittedBox(scaleDown)` 兜底系统大字号，保证 AC-A8「不出现 RenderFlex 溢出」。
+  /// 本体已抽到共用组件 [PiggyDateCell]（日历页与区间选择器共用一份，
+  /// 节假日底色 / 休·班徽标 / 农历副标签口径不允许两处各画一套），这里只负责
+  /// 把本页的数据（统计、节假日、补位标记）喂进去。
   Widget _buildDateCell(
     BuildContext context,
     DateTime day,
@@ -441,214 +439,21 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     required bool isSelected,
     required bool isOutside,
   }) {
-    final l10n = AppLocalizations.of(context);
+    // 补位格（上/下月溢出到本月的日期）不查节假日，弱显由组件内部处理
     final dateKey = _formatDate(day);
     final totals = dailyTotals[dateKey];
-    final (income, expense) = totals ?? (0.0, 0.0);
-    final hasTransaction = income > 0 || expense > 0;
-
-    // 补位格（上/下月溢出到本月的日期）一律弱化：不染周末色、不带副标签与徽标
-    final isToday = !isOutside && isSameDay(day, DateTime.now());
-    final holiday = isOutside ? null : holidays[dateKey];
-    final isOffDay = holiday?.isHoliday ?? false; // 法定放假（含调休假）
-    final isWorkday = holiday != null && !holiday.isHoliday; // 调休补班（周末上班）
-    final isWeekend =
-        day.weekday == DateTime.saturday || day.weekday == DateTime.sunday;
-
-    final infoColor = PiggyTokens.info(context);
-    final warningColor = PiggyTokens.warning(context);
-
-    // 「休息日识别色」的判定口径：放假（含国庆落在工作日的那些天）与真正的
-    // 周末都算；补班日虽然落在周六/周日但要上班，按工作日处理，不染蓝。
-    final isRestDay = isOffDay || (isWeekend && !isWorkday);
-
-    // 底色优先级（小米口径）：选中实心主色 > 今天浅主色底 > 放假日浅底 >
-    // 补班压暗底 > 无底；选中块同时压过节假日识别底
-    final Color? fillColor;
-    if (isSelected) {
-      fillColor = primaryColor;
-    } else if (isToday) {
-      fillColor = primaryColor.withValues(alpha: 0.12);
-    } else if (isOffDay) {
-      fillColor = infoColor.withValues(alpha: 0.10);
-    } else if (isWorkday) {
-      fillColor = warningColor.withValues(alpha: 0.07);
-    } else {
-      fillColor = null;
-    }
-
-    // 数字色（AC-A2/A5/A9）：补位弱化 > 选中实心块白字 > 今天主色 >
-    // 休息日识别色 > 常规色
-    final Color numberColor;
-    if (isOutside) {
-      numberColor = PiggyTokens.textTertiary(context).withValues(alpha: 0.3);
-    } else if (isSelected) {
-      numberColor = Colors.white;
-    } else if (isToday) {
-      numberColor = primaryColor;
-    } else if (isRestDay) {
-      numberColor = infoColor;
-    } else {
-      numberColor = PiggyTokens.textPrimary(context);
-    }
-
-    // 选中格是实心主色，副标签 / 金额文字一律转白（AC-A6：不得用彩色，
-    // 否则在主色底上对比度不足）；今天未选中只是浅底，金额保留语义色
-    final onSolidColor = Colors.white.withValues(alpha: 0.9);
-
-    // 副标签：公历节日 > 农历节日 > 节气 > 农历日（初一显示月名）。
-    // 小米口径：补位格也弱显农历（与数字同灰阶），徽标 / 金额仍不渲染
-    final subLabel = ChineseAlmanac.daySubLabel(day);
-
-    // fit: StackFit.expand 不可省：table_calendar 会把 builder 产物再套一层
-    // `Stack(fit: loose, alignment: markersAlignment)`（table_calendar.dart:695），
-    // 松约束下本 Stack 会缩到「内容固有尺寸」——底色块随之塌成一条内容宽、
-    // 整行高的窄胶囊，徽标也被挤到数字上。expand 让本 Stack 撑满整格
-    // （单元格宽来自 Table 的 tight 宽度，高来自 rowHeight），底色块与徽标
-    // 才回到「整格块 + 右上角」的设计口径。
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // 底色层：整格内缩 1px 的圆角色块（与 orbit 的 inset 色块同口径）
-        Positioned.fill(
-          child: Container(
-            margin: const EdgeInsets.all(1),
-            decoration: BoxDecoration(
-              color: fillColor,
-              borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-            ),
-          ),
-        ),
-        // 内容层
-        Padding(
-          padding: const EdgeInsets.fromLTRB(1, 3, 1, 2),
-          child: Column(
-            // 整组内容垂直居中(小米口径):数字 + 副标签 + 金额作为一组
-            // 落在格子中线,选中实心块内不再出现「字挤在顶、底下大片空」
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                '${day.day}',
-                style: TextStyle(
-                  color: numberColor,
-                  fontSize: 18,
-                  fontWeight:
-                      isSelected || isToday ? FontWeight.w700 : FontWeight.w600,
-                  height: 1.0,
-                ),
-              ),
-              // 副标签 + 收支金额:整块可等比缩小,宽/高任意一边超出都被兜住。
-              // 用 Flexible(loose) 而非 Expanded —— Expanded 会把数字顶回格顶,
-              // 破坏居中;loose 下内容取固有高度,超出的部分仍被钳住由
-              // FittedBox 缩小,溢出兜底语义不变
-              if (subLabel != null || (!isOutside && hasTransaction))
-                Flexible(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.center,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (subLabel != null)
-                          Text(
-                            subLabel,
-                            style: TextStyle(
-                              color: isSelected
-                                  ? onSolidColor
-                                  : isOutside
-                                      ? PiggyTokens.textTertiary(context)
-                                          .withValues(alpha: 0.3)
-                                      : PiggyTokens.textSecondary(context),
-                              fontSize: 10,
-                              height: 1.0,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        if (!isOutside && hasTransaction) ...[
-                          if (expense > 0)
-                            Text(
-                              _formatAmount(expense, isExpense: true),
-                              style: TextStyle(
-                                color: isSelected
-                                    ? onSolidColor
-                                    : PiggyTokens.expenseColor(context, ref),
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                height: 1.1,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          if (income > 0)
-                            Text(
-                              _formatAmount(income, isExpense: false),
-                              style: TextStyle(
-                                color: isSelected
-                                    ? onSolidColor
-                                    : PiggyTokens.incomeColor(context, ref),
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                height: 1.1,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        // 休 / 班徽标：绝对定位叠加在右上角（AC-A4），不进 Column 布局
-        if (holiday != null)
-          Positioned(
-            top: 1,
-            right: 1,
-            child: _buildHolidayBadge(
-              l10n.holidayBadgeOff,
-              l10n.holidayBadgeWork,
-              isHoliday: isOffDay,
-              color: isOffDay ? infoColor : warningColor,
-            ),
-          ),
-      ],
+    return PiggyDateCell(
+      day: day,
+      primaryColor: primaryColor,
+      holiday: isOutside ? null : holidays[dateKey],
+      // 本页统计用位次 record，组件收具名 record
+      totals: totals == null ? null : (income: totals.$1, expense: totals.$2),
+      // 「今天」在组件内部自行判定 —— selectedDayPredicate 命中今天时
+      // table_calendar 走的是 selectedBuilder 而非 todayBuilder，靠 builder
+      // 传参判定会把「今天且被选中」误算成非今天。
+      isSelected: isSelected,
+      isOutside: isOutside,
     );
-  }
-
-  /// 右上角休·班圆徽标：14px 圆底、白字 9px（AC-A4）
-  Widget _buildHolidayBadge(
-    String offLabel,
-    String workLabel, {
-    required bool isHoliday,
-    required Color color,
-  }) {
-    return Container(
-      width: 14,
-      height: 14,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      child: Text(
-        isHoliday ? offLabel : workLabel,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 9,
-          fontWeight: FontWeight.w600,
-          height: 1.0,
-        ),
-      ),
-    );
-  }
-
-  /// 金额缩写：>= 1万 用 w、>= 1千 用 k，支出带 `-`、收入带 `+`
-  String _formatAmount(double value, {required bool isExpense}) {
-    final sign = isExpense ? '-' : '+';
-    if (value >= 10000) return '$sign${(value / 10000).toStringAsFixed(1)}w';
-    if (value >= 1000) return '$sign${(value / 1000).toStringAsFixed(1)}k';
-    return '$sign${value.toInt()}';
   }
 
   // 构建选中日期的交易列表（上方含"日期 + 在该日记账"紧凑头）

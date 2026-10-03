@@ -119,17 +119,17 @@ abstract class AppLocalizations {
   /// **'Agree & enable'**
   String get aiConsentAgree;
 
-  /// No description provided for @aboutPrivacyPolicy.
-  ///
-  /// In en, this message translates to:
-  /// **'Privacy Policy'**
-  String get aboutPrivacyPolicy;
-
   /// No description provided for @changelogTitle.
   ///
   /// In en, this message translates to:
   /// **'Changelog'**
   String get changelogTitle;
+
+  /// No description provided for @changelogSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'See what changed in each release'**
+  String get changelogSubtitle;
 
   /// No description provided for @changelogVersionSubtitle.
   ///
@@ -9410,7 +9410,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutDeveloperStory.
   ///
   /// In en, this message translates to:
-  /// **'I started tracking my expenses in 2015 as an intern, and I\'ve kept the habit for over a decade. Concerned about ads, paywalls, privacy risks, and apps shutting down, I decided to build my own — first as a small tool for myself and my family.\n\nIn September 2025, PiggyCount launched its first version. Honestly, I had no idea if anyone would use it. But gradually, feedback started coming in — someone said they finally found a clean budgeting app, others offered great suggestions, and some quietly left five-star reviews. Every single message reminded me this was worth continuing.\n\nPiggyCount is ad-free, subscription-free, and fully open source. All your data stays on your device and is never uploaded to any third-party server. But publishing and maintaining an app isn\'t free — developer accounts, servers, and other costs are currently covered by community donations, and every system update, bug fix, and new feature is built outside of my day job.\n\nIf PiggyCount has been helpful to you, a rating, a share, or a donation would help this little project go further. Thank you for your trust.'**
+  /// **'PiggyCount is ad-free, subscription-free, and fully open source. All your data stays on your device and is never uploaded to any third-party server.'**
   String get aboutDeveloperStory;
 
   /// No description provided for @aboutPiggyAssets.
@@ -15132,6 +15132,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Change range'**
   String get rangeReportChangeRange;
+
+  /// No description provided for @rangePickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select range'**
+  String get rangePickerTitle;
+
+  /// No description provided for @rangePickerHintEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap an end date'**
+  String get rangePickerHintEnd;
 
   /// No description provided for @rangeReportCustomFieldTitle.
   ///

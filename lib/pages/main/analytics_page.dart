@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show SynchronousFuture;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // wheel_date_picker exported via ui barrel
@@ -47,24 +48,45 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
   /// 整段查询结果 list）随交互无限累积（本页常驻主 Tab 栈，泄漏随会话增长）。
   /// 唯一消费点只在 build 里读当前键，历史条目无人再读，保留单条即满足
   /// 「setState 重建复用已发查询」的原始目的。
-  Future<List<dynamic>>? _lastAnalyticsFuture;
+  ///
+  /// 结果形状是 `(口径, list)` 记录：支出/收入/结余三种口径的 list 位次不同
+  /// （结余 9 位、支出/收入各 6 位），而 FutureBuilder 换 future 时会**保留**
+  /// 上一份 `_data`，不带口径标签就无法判断这份数据能不能给当前口径用——
+  /// 跨口径复用会读到 list[7] 越界。
+  Future<(String, List<dynamic>)>? _lastAnalyticsFuture;
   String? _lastAnalyticsKey;
+
+  /// 已查过的口径结果，键 = memoKey（含口径 + 范围 + 刷新 tick）。
+  /// 切回看过的口径命中缓存 → `SynchronousFuture` 同帧出数，不再转圈。
+  final Map<String, (String, List<dynamic>)> _resultCache = {};
+  String? _cacheScope;
 
   /// U8 缓存的记忆化入口：键命中返回已发 future；未命中发起查询并替换
   /// 旧条目（单条容量，见 _lastAnalyticsFuture 注释）。
-  Future<List<dynamic>> _rememberAnalyticsFuture(
-      String key, Future<List<dynamic>> Function() create) {
-    if (_lastAnalyticsKey == key && _lastAnalyticsFuture != null) {
+  ///
+  /// 三级取数（与 range_report_page 的 `_futureFor` 同款）：同键复用已发查询
+  /// → 口径缓存命中同步出数 → 都没有才真查库。
+  Future<(String, List<dynamic>)> _rememberAnalyticsFuture(String memoKey,
+      String scopeKey, Future<(String, List<dynamic>)> Function() create) {
+    if (_cacheScope != scopeKey) {
+      _cacheScope = scopeKey;
+      _resultCache.clear();
+    }
+    final cached = _resultCache[memoKey];
+    if (cached != null) return SynchronousFuture(cached);
+    if (_lastAnalyticsKey == memoKey && _lastAnalyticsFuture != null) {
       return _lastAnalyticsFuture!;
     }
-    // P1-B：查询失败必须落日志（带记忆键上下文，可定位是哪个视角/类型的
-    // 查询挂了）；错误仍原样传给 FutureBuilder 渲染错误态。catchError 返回
-    // 占位空列表仅为满足签名，返回值被丢弃，不影响错误向 builder 传播。
-    final future = create()..catchError((Object e, StackTrace st) {
-      logger.warning('Analytics', '统计数据查询失败 key=$key: $e\n$st');
-      return <dynamic>[];
+    final future = create();
+    future.then((value) {
+      // 慢响应不能污染缓存：期间范围已经换掉的话，它的数属于旧 scope。
+      if (_cacheScope == scopeKey) _resultCache[memoKey] = value;
+    }).catchError((Object e, StackTrace st) {
+      // P1-B：查询失败必须落日志（带记忆键上下文，可定位是哪个视角/类型的
+      // 查询挂了）；错误仍原样传给 FutureBuilder 渲染错误态。
+      logger.warning('Analytics', '统计数据查询失败 key=$memoKey: $e\n$st');
     });
-    _lastAnalyticsKey = key;
+    _lastAnalyticsKey = memoKey;
     _lastAnalyticsFuture = future;
     return future;
   }
@@ -356,7 +378,6 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
     return out;
   }
 
-
   // 从序列数据中计算总和
   double _getSumFromSeries(dynamic seriesData) {
     if (seriesData is List<({DateTime day, double total})>) {
@@ -438,10 +459,12 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
     // P1 优化：先算 U8 记忆化键，命中则整体跳过下方建查询。drift 查询
     // 调用即执行，原实现每次 setState 都白发 4~6 条聚合 SQL，命中时结果
     // 被 _rememberAnalyticsFuture 丢弃；命中时闭包不执行，占位 future 安全。
-    final memoKey = '$_type|${start.millisecondsSinceEpoch}|'
+    final scopeKey = '${start.millisecondsSinceEpoch}|'
         '${end.millisecondsSinceEpoch}|$refreshTick|$ledgerId';
-    final memoHit =
-        _lastAnalyticsKey == memoKey && _lastAnalyticsFuture != null;
+    final memoKey = '$_type|$scopeKey';
+    // 命中 = 已发查询复用 或 口径缓存已有结果，两种都不必再建查询。
+    final memoHit = _resultCache.containsKey(memoKey) ||
+        (_lastAnalyticsKey == memoKey && _lastAnalyticsFuture != null);
 
     if (!memoHit) {
       if (_type == 'balance') {
@@ -717,7 +740,12 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
           _buildConvertedFootnote(context),
           Expanded(
             child: FutureBuilder(
-              key: ValueKey('analytics_$_type'),
+              // ⚠️ 这里曾挂 `key: ValueKey('analytics_$_type')`——切支出/收入/
+              // 结余时 key 变 → 整个 FutureBuilder 元素被销毁重建 → snapshot
+              // 归零 → 整页塌成居中转圈（且 ListView 重建，滚动位置回到顶部）。
+              // 口径差异改由数据自带的 shape 标签判定（见 _shapeOf），不能再靠
+              // key 强制换元素。
+              //
               // 审计 U8：缓存 future——任意 setState（横幅交互等）重建时
               // 复用已发查询，不再整段重发导致闪烁；数据变化（refreshTick）
               // 或时间范围/类型变化才发起新查询。单条记忆化：旧键的 future
@@ -725,20 +753,35 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
               future: _rememberAnalyticsFuture(
                 // P1：键已在上方计算并用于跳过建查询，此处直接复用
                 memoKey,
-                () => _type == 'balance'
-                    ? _loadBalanceData(
-                        repo,
-                        ledgerId,
-                        start,
-                        end,
-                        seriesFuture,
-                        incomeSeriesFuture!,
-                        expenseSeriesFuture!,
-                        prevStart,
-                        prevEnd,
-                        chartSeriesFuture)
-                    : _loadCategoryData(repo, ledgerId, _type, start, end,
-                        seriesFuture, prevStart, prevEnd, chartSeriesFuture),
+                scopeKey,
+                () {
+                  // 口径在建查询时就钉死：create() 是立即执行的，.then 里再读
+                  // _type 可能已被切走，标签会标错。
+                  final shape = _shapeOf(_type);
+                  return (_type == 'balance'
+                          ? _loadBalanceData(
+                              repo,
+                              ledgerId,
+                              start,
+                              end,
+                              seriesFuture,
+                              incomeSeriesFuture!,
+                              expenseSeriesFuture!,
+                              prevStart,
+                              prevEnd,
+                              chartSeriesFuture)
+                          : _loadCategoryData(
+                              repo,
+                              ledgerId,
+                              _type,
+                              start,
+                              end,
+                              seriesFuture,
+                              prevStart,
+                              prevEnd,
+                              chartSeriesFuture))
+                      .then((list) => (shape, list));
+                },
               ),
               builder: (context, snapshot) {
                 // P1-B：查询失败时不能落进「!hasData → 无限转圈」（DB 异常
@@ -772,10 +815,17 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                     ),
                   );
                 }
-                if (!snapshot.hasData) {
+                // 在途查询继续渲染上一份**同口径**结果（首屏才转圈）：切支出/
+                // 收入/结余、切周/月/年/全部、切周期都只是数字就地更新，不再
+                // 整页塌成转圈再重建——闪动与滚动位置丢失的根因就在这行判断。
+                // FutureBuilder 换 future 时保留的 _data 是上一口径的记录，
+                // 口径不匹配时必须丢弃（否则按错位次取值 = 串数据）。
+                final tag = snapshot.data;
+                final list =
+                    (tag != null && tag.$1 == _shapeOf(_type)) ? tag.$2 : null;
+                if (list == null) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                final list = snapshot.data as List<dynamic>;
 
                 // 在balance模式下，需要计算结余数据
                 dynamic seriesRaw;
@@ -1283,8 +1333,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                                               const EdgeInsets.only(right: 8),
                                           decoration: BoxDecoration(
                                             color: PiggyTokens.primary(context),
-                                            borderRadius:
-                                                BorderRadius.circular(PiggyDimens.radiusXs),
+                                            borderRadius: BorderRadius.circular(
+                                                PiggyDimens.radiusXs),
                                           ),
                                         ),
                                         Expanded(
@@ -1384,6 +1434,12 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
 Color _pieColorAt(BuildContext context, int i) => i < 8
     ? PiggyChartTokens.seriesColors[i]
     : PiggyTokens.textTertiary(context);
+
+/// 查询结果的「形状」标签：支出/收入共用一套 list 位次（6 位），可在途互相
+/// 顶替显示；结余是另一套（9 位），换向它只能转圈等新查询。给数据打上这个
+/// 标签，未来就能判断手上这份数据能不能给当前口径用——这是把
+/// `key: ValueKey(_type)`（切口径销毁元素→整页转圈）换成数据自带标签的前提。
+String _shapeOf(String type) => type == 'balance' ? 'balance' : 'inOut';
 
 // 加载分类数据并聚合
 // 返回 [catData, seriesRaw, txCount, (本期收入,本期支出), (上期收入,上期支出), chartSeriesRaw]
@@ -1500,7 +1556,6 @@ Future<List<dynamic>> _loadBalanceData(
     results[8],
   ];
 }
-
 
 // 计算结余序列（收入 - 支出）
 dynamic _calculateBalanceSeries(dynamic incomeData, dynamic expenseData) {

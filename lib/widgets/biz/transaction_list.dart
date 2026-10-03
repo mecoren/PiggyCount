@@ -914,11 +914,6 @@ class TransactionListState extends ConsumerState<TransactionList> {
     /// 未传时兜底现算(防御未来新增调用点)。
     (double, double)? dayTotals,
   }) {
-    final isDark = PiggyTokens.isDark(context);
-    final primary = ref.watch(primaryColorProvider);
-    final borderWidth = 1.5;
-    final borderColor = primary;
-
     // 当天收支(用于 DaySectionHeader)
     double dayIncome, dayExpense;
     if (dayTotals != null) {
@@ -972,35 +967,9 @@ class TransactionListState extends ConsumerState<TransactionList> {
 
     // 「分组卡片」装饰:首日画顶部圆角+顶边+亮色 boxShadow,末日画底部圆角+底边,
     // 中日只画左右边线——所有 day 共享连续 surface 背景,视觉上像一张大卡片。
-    return Container(
-      decoration: BoxDecoration(
-        color: PiggyTokens.surface(context),
-        border: Border(
-          top: isFirst
-              ? BorderSide(color: borderColor, width: borderWidth)
-              : BorderSide.none,
-          bottom: isLast
-              ? BorderSide(color: borderColor, width: borderWidth)
-              : BorderSide.none,
-          left: BorderSide(color: borderColor, width: borderWidth),
-          right: BorderSide(color: borderColor, width: borderWidth),
-        ),
-        borderRadius: BorderRadius.only(
-          topLeft: isFirst
-              ? const Radius.circular(PiggyDimens.radiusLg)
-              : Radius.zero,
-          topRight: isFirst
-              ? const Radius.circular(PiggyDimens.radiusLg)
-              : Radius.zero,
-          bottomLeft: isLast
-              ? const Radius.circular(PiggyDimens.radiusLg)
-              : Radius.zero,
-          bottomRight: isLast
-              ? const Radius.circular(PiggyDimens.radiusLg)
-              : Radius.zero,
-        ),
-        boxShadow: isFirst ? (isDark ? null : PiggyShadows.card) : null,
-      ),
+    return DayGroupCard(
+      isFirst: isFirst,
+      isLast: isLast,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: children,

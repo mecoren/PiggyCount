@@ -14,17 +14,23 @@ import '../../utils/format_utils.dart';
 import '../../utils/currencies.dart';
 import '../../l10n/app_localizations.dart';
 import '../../styles/tokens.dart';
+import '../ui/piggy_popup_menu.dart';
 
 /// 账本卡片
-class LedgerCard extends ConsumerWidget {
+class LedgerCard extends ConsumerStatefulWidget {
   final LedgerDisplayItem ledger;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
-  /// 右下角「⋯」按钮回调 —— 与 [onLongPress] 调同一个操作菜单。
+  /// 角标「⋯」的操作菜单条目（项目锚点浮层菜单）。
+  ///
   /// 长按是不可发现的手势,预算管理等入口藏在里面没人找得到,
-  /// 必须有一个可见的等价入口。
-  final VoidCallback? onMore;
+  /// 必须有一个可见的等价入口 —— 两者弹**同一份**菜单,所以条目由本卡片持有、
+  /// 选中后经 [onMoreSelected] 上抛。
+  final List<PiggyMenuItem>? moreItems;
+
+  /// [moreItems] 选中回调（value 即 `PiggyMenuItem.action` 的 `value`）。
+  final ValueChanged<String>? onMoreSelected;
   final bool selected;
 
   const LedgerCard({
@@ -32,12 +38,29 @@ class LedgerCard extends ConsumerWidget {
     required this.ledger,
     this.onTap,
     this.onLongPress,
-    this.onMore,
+    this.moreItems,
+    this.onMoreSelected,
     this.selected = false,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LedgerCard> createState() => _LedgerCardState();
+}
+
+class _LedgerCardState extends ConsumerState<LedgerCard> {
+  /// 角标「⋯」内层 [PopupMenuButton] 的 key：长按卡片时用
+  /// `showButtonMenu()` 打开同一份菜单（该方法是公开的），省得两套锚点逻辑。
+  final PiggyMenuKey _menuKey = PiggyMenuKey();
+
+  void _openMore() => _menuKey.currentState?.showButtonMenu();
+
+  @override
+  Widget build(BuildContext context) {
+    final ledger = widget.ledger;
+    final onTap = widget.onTap;
+    final selected = widget.selected;
+    final moreItems = widget.moreItems;
+    final onMoreSelected = widget.onMoreSelected;
     final primaryColor = ref.watch(primaryColorProvider);
     final l10n = AppLocalizations.of(context);
 
@@ -62,7 +85,8 @@ class LedgerCard extends ConsumerWidget {
 
     return GestureDetector(
       onTap: onTap,
-      onLongPress: onLongPress,
+      // 有菜单条目时长按打开角标那份（同一份），否则沿用调用方的长按回调。
+      onLongPress: moreItems != null ? _openMore : widget.onLongPress,
       child: Container(
         margin: const EdgeInsets.symmetric(
           horizontal: 12,
@@ -130,14 +154,11 @@ class LedgerCard extends ConsumerWidget {
                                       ? ' (ID:${ledger.remoteSyncId == null ? '?' : formatSlotShortId(ledger.remoteSyncId!)})'
                                       : ' (ID:${ledger.id})',
                                   // UI-07：字号走 PiggyTextTokens（body=14）
-                                  style: PiggyTextTokens.body(context)
-                                      .copyWith(
-                                          fontWeight: FontWeight.w500,
-                                          color: isRemote
-                                              ? primaryColor
-                                                  .withValues(alpha: 0.8)
-                                              : PiggyTokens.textSecondary(
-                                                  context)),
+                                  style: PiggyTextTokens.body(context).copyWith(
+                                      fontWeight: FontWeight.w500,
+                                      color: isRemote
+                                          ? primaryColor.withValues(alpha: 0.8)
+                                          : PiggyTokens.textSecondary(context)),
                                 ),
                               ],
                             ),
@@ -211,10 +232,10 @@ class LedgerCard extends ConsumerWidget {
                                     ledger.balance, ledger.currency),
                           ),
                           style: PiggyTextTokens.body(context).copyWith(
-                              fontWeight: FontWeight.w500,
-                              color: ledger.balance >= 0
-                                  ? PiggyTokens.success(context)
-                                  : PiggyTokens.error(context),
+                            fontWeight: FontWeight.w500,
+                            color: ledger.balance >= 0
+                                ? PiggyTokens.success(context)
+                                : PiggyTokens.error(context),
                           ),
                         ),
                         // 云端上传时间：仅远程账本显示（供同名多槽位甄别：
@@ -280,20 +301,28 @@ class LedgerCard extends ConsumerWidget {
                   ),
                 ),
 
-              // 右下角操作按钮(长按菜单的可见等价入口;放蒙层之后保证远程账本也可点)
-              if (onMore != null)
+              // 右下角操作按钮（长按菜单的可见等价入口;放蒙层之后保证远程账本也可点）
+              // 用项目「锚点浮层菜单」：贴在本按钮下方、靠右自动右沿对齐、
+              // 不铺遮罩色、点别处即关（参考 orbit 移动端页头 ⋮ 面板）。
+              if (moreItems != null)
                 Positioned(
                   right: 4,
                   bottom: 4,
-                  child: IconButton(
-                    onPressed: onMore,
+                  child: PiggyPopupMenu(
+                    menuKey: _menuKey,
+                    items: moreItems,
+                    onSelected: onMoreSelected,
+                    primaryColor: primaryColor,
                     tooltip: l10n.ledgersActions,
-                    icon: Icon(
-                      Icons.more_horiz,
-                      size: 20,
-                      color: PiggyTokens.iconSecondary(context),
+                    child: SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: Icon(
+                        Icons.more_horiz,
+                        size: 20,
+                        color: PiggyTokens.iconSecondary(context),
+                      ),
                     ),
-                    visualDensity: VisualDensity.compact,
                   ),
                 ),
             ],

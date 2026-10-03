@@ -3,8 +3,8 @@
   "aiConsentTitle": "开启 AI 功能前,请知悉",
   "aiConsentBody": "AI 功能需将相关数据发送给你所配置的第三方 AI 服务商进行处理:\n\n• 发送给谁:默认「智谱 GLM」(open.bigmodel.cn,由智谱华章运营);若你自行配置了其它第三方 AI 服务商,则发送给你填写的服务商。\n• 发送什么:你主动用于识别/对话的内容 —— 账单图片、语音录音、你输入的文字,以及为完成识别/分析所需的分类名称、账户名称和相关交易记录。\n• 用途:仅用于账单识别、记账与你发起的对话分析;小猪记账自身不收集、不存储这些数据。\n\n数据由该第三方服务商按其隐私政策处理。开启即表示你同意上述数据共享。",
   "aiConsentAgree": "同意并开启",
-  "aboutPrivacyPolicy": "隐私政策",
   "changelogTitle": "更新日志",
+  "changelogSubtitle": "查看每个版本更新了什么",
   "changelogVersionSubtitle": "{date} · {count} 项更新",
   "@changelogVersionSubtitle": {
     "placeholders": {
@@ -2018,7 +2018,7 @@
   "mineRateAppSubtitle": "在App Store上为我们打分",
   "aboutPageLoadingVersion": "加载版本号中...",
   "aboutDeveloperStoryTitle": "开发者的话",
-  "aboutDeveloperStory": "从 2015 年实习起，我坚持记账至今已超过十年。因为担心记账软件的广告、付费、隐私泄露和停运跑路，我决定自己做一个——最初只是给自己和家人用的小工具。\n\n2025 年 9 月，小猪记账发布了第一个版本。说实话，那时候心里没什么底，不知道会不会有人用。但慢慢地，开始收到用户的反馈——有人说终于找到了一款干净的记账软件，有人提了很好的建议，也有人默默给了五星好评。每一条反馈都让我觉得，这件事值得继续做下去。\n\n小猪记账没有广告、没有会员、完全免费开源。你的每一笔数据都只存在你自己的手机里，不会被上传到任何第三方服务器。但上架和维护一款 App 并非零成本——开发者账号、服务器等开支目前靠社区捐赠勉强支撑，每一次适配新系统、修复 Bug、开发新功能，也都是工作之余一点点完成的。\n\n如果你觉得小猪记账对你有帮助，一个好评、一次分享或一笔捐赠，都能让这个小项目走得更远。谢谢你的信任。",
+  "aboutDeveloperStory": "小猪记账没有广告、没有会员、完全免费开源。你的每一笔数据都只存在你自己的手机里，不会被上传到任何第三方服务器。",
   "aboutPiggyAssets": "小猪家当 PiggyAssets",
   "aboutPiggyAssetsSubtitle": "可视化你的全部资产配置",
   "aboutPiggyAssetsIntro": "小猪记账侧重日常流水,小猪家当是它的姐妹产品,专注资产配置可视化:跨账户净资产趋势、房产 / 投资 / 加密资产分类、收益率与持仓时长、配置占比一目了然。",
@@ -3535,6 +3535,8 @@
   "rangeReportColumnYoy": "同比去年同期",
   "analyticsTagComposition": "{type}标签构成",
   "rangeReportChangeRange": "更换区间",
+  "rangePickerTitle": "选择区间",
+  "rangePickerHintEnd": "点一下选结束日期",
   "rangeReportCustomFieldTitle": "自定义字段汇总",
   "rangeReportEmptySubtext": "这段时间还没有记账，点上方日期换一个区间",
   "semanticsChartSeries": "图表，共 {count} 个点：{points}",

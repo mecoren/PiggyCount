@@ -3,10 +3,13 @@
 // 仓储层断言已经由 `test/data/report_range_aggregation_test.dart` 钉住，这里
 // 只证明页面这一层：
 //  1. 三个对比窗（本期 / 环比 / 同比）各查各的区间，数字没串行；
-//  2. 维度胶囊（支出/收入）会换掉序列、分类、标签三块的数据源，且**不**影响
+//  2. 维度 tab（支出/收入）会换掉序列、分类、标签三块的数据源，且**不**影响
 //     对比表（表里三行永远同时给收支）；
-//  3. 空区间走 AppEmpty 而不是画一屏零柱。
+//  3. 空区间走 AppEmpty 而不是画一屏零柱；
+//  4. 切维度 / 切区间的在途帧保留上一份结果，不塌成整屏转圈（闪动回归）。
 library;
+
+import 'dart:async';
 
 import 'package:drift/drift.dart' as d;
 import 'package:drift/native.dart';
@@ -14,6 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 import 'package:piggycount/cloud/sync_service.dart';
 import 'package:piggycount/data/db.dart';
@@ -22,6 +26,32 @@ import 'package:piggycount/l10n/app_localizations.dart';
 import 'package:piggycount/pages/report/range_report_page.dart';
 import 'package:piggycount/providers/database_providers.dart';
 import 'package:piggycount/providers/sync_providers.dart';
+import 'package:piggycount/widgets/ui/wait_sliding_segmented_control.dart';
+
+/// 可挂起的仓储：[blocked] 打开后 [totalsByDay] 停在闸门不再返回，用来把页面
+/// 按在「查询在途」的中间态——闪动回归必须在数据回来之前取一帧。
+class _GatedRepository extends LocalRepository {
+  _GatedRepository(super.db);
+
+  final Completer<void> gate = Completer<void>();
+  bool blocked = false;
+
+  @override
+  Future<List<({DateTime day, double total})>> totalsByDay({
+    required int ledgerId,
+    required String type,
+    required DateTime start,
+    required DateTime end,
+  }) async {
+    if (blocked) await gate.future;
+    return super.totalsByDay(
+      ledgerId: ledgerId,
+      type: type,
+      start: start,
+      end: end,
+    );
+  }
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -39,16 +69,19 @@ void main() {
           currency: const d.Value('CNY'),
           syncId: const d.Value('ledger-1'),
         ));
-    final categoryId = await db.into(db.categories).insert(
-        CategoriesCompanion.insert(name: '餐饮', kind: 'expense'));
-    final tagId = await db
-        .into(db.tags)
-        .insert(TagsCompanion.insert(name: '报销中', syncId: const d.Value('t-1')));
+    final categoryId = await db
+        .into(db.categories)
+        .insert(CategoriesCompanion.insert(name: '餐饮', kind: 'expense'));
+    final tagId = await db.into(db.tags).insert(
+        TagsCompanion.insert(name: '报销中', syncId: const d.Value('t-1')));
 
     Future<void> tx(double amount,
-        {required DateTime at, String type = 'expense', bool tag = true}) async {
-      final id = await db.into(db.transactions).insert(
-          TransactionsCompanion.insert(
+        {required DateTime at,
+        String type = 'expense',
+        bool tag = true}) async {
+      final id = await db
+          .into(db.transactions)
+          .insert(TransactionsCompanion.insert(
             ledgerId: 1,
             categoryId: d.Value(categoryId),
             type: type,
@@ -76,7 +109,7 @@ void main() {
 
   tearDown(() async => db.close());
 
-  Future<void> pump(WidgetTester tester) async {
+  Future<void> pump(WidgetTester tester, {LocalRepository? repository}) async {
     // 页面是 ListView，默认 800×600 的测试视口装不下后三张卡（趋势/分类/标签），
     // 未构建的 sliver 里的文本找不到。把逻辑高度拉到 2000 一次性全渲染。
     tester.view.physicalSize = const Size(1200, 6000);
@@ -85,7 +118,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     final container = ProviderContainer(overrides: [
       databaseProvider.overrideWithValue(db),
-      repositoryProvider.overrideWithValue(repo),
+      repositoryProvider.overrideWithValue(repository ?? repo),
       syncServiceProvider.overrideWithValue(LocalOnlySyncService()),
     ]);
     addTearDown(container.dispose);
@@ -127,7 +160,12 @@ void main() {
 
   testWidgets('切到收入维度：标签块清空、对比表数字不变', (tester) async {
     await pump(tester);
-    await tester.tap(find.widgetWithText(ChoiceChip, '收入'));
+    // 维度选择器是 WaitSlidingSegmentedControl（项目通用 tab 样式）。页面上
+    // 「收入」出现两次（tab 段 + 对比表行标签），必须限定在控件内定位。
+    await tester.tap(find.descendant(
+      of: find.byType(WaitSlidingSegmentedControl<String>),
+      matching: find.text('收入'),
+    ));
     await tester.pumpAndSettle();
 
     // 收入 100 未打标 → 标签构成空
@@ -163,5 +201,79 @@ void main() {
     // 区间与分类/标签卡都不渲染，但对比表还在（三行全零）
     expect(find.text('餐饮'), findsNothing);
     expect(find.text('报销中'), findsNothing);
+  });
+
+  /// 抽屉里的日历（泛型实参不进 runtimeType，byType 匹配不到，用谓词）。
+  Finder sheetCalendar() => find.byWidgetPredicate((w) => w is TableCalendar);
+
+  // 区间选择走项目口径抽屉（与日历页同款日期格：农历副标签 + 休/班徽标 + 放假
+  // 底色），不再是 Material 原生 showDateRangePicker。
+  testWidgets('点区间卡 → 项目区间抽屉，改完区间报表跟着换', (tester) async {
+    await pump(tester);
+    await tester.tap(find.text('更换区间'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('选择区间'), findsOneWidget);
+    expect(sheetCalendar(), findsOneWidget);
+    // 抽屉内初始区间 = 页面当前区间（页面右端是半开 09-10，抽屉按「含末日」
+    // 显示 09-09）；这行文案在副标题 + 区间卡 + 抽屉副标题三处都出现
+    expect(find.text('2026.09.01 ~ 2026.09.09'), findsWidgets);
+
+    for (final d in [5, 7]) {
+      await tester.tap(find.descendant(
+        of: find.byKey(ValueKey('CellContent-2026-9-$d')),
+        matching: find.text('$d'),
+      ));
+      await tester.pumpAndSettle();
+    }
+    expect(find.text('2026.09.05 ~ 2026.09.07'), findsWidgets);
+
+    await tester.tap(find.byIcon(Icons.check));
+    await tester.pumpAndSettle();
+
+    // 抽屉收起，页面区间（副标题 + 区间卡两处）同步更新
+    expect(sheetCalendar(), findsNothing);
+    expect(find.text('2026.09.05 ~ 2026.09.07'), findsNWidgets(2));
+  });
+
+  // 闪动回归：切维度 / 换区间会重新查库，旧实现是「查询在途 → 整页换成居中
+  // 转圈 → 数据回来重建」，于是闪一下、滚动位置也回到顶部。现在在途帧继续
+  // 渲染上一份结果，只有贴顶进度条在动。
+  testWidgets('切维度在途时保留上一份结果，不塌成整屏转圈', (tester) async {
+    final gated = _GatedRepository(db);
+    await pump(tester, repository: gated);
+    expect(find.text('300.00'), findsWidgets); // 首屏支出数据已到位
+
+    gated.blocked = true;
+    await tester.tap(find.descendant(
+      of: find.byType(WaitSlidingSegmentedControl<String>),
+      matching: find.text('收入'),
+    ));
+    await tester.pump(); // 只走一帧：查询还卡在闸门上
+
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    // 列表没被销毁重建：对比表 / 分段控件 / 三张卡原地保留（滚动位置也就没丢）
+    expect(find.byType(WaitSlidingSegmentedControl<String>), findsOneWidget);
+    expect(find.text('+200.0%'), findsOneWidget);
+    expect(find.text('收入趋势'), findsOneWidget);
+
+    gated.gate.complete();
+    await tester.pumpAndSettle();
+    // 放行后是收入口径（100 未打标 → 标签块清空），缓存命中没串数
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+    expect(find.text('报销中'), findsNothing);
+    expect(find.textContaining('餐饮'), findsOneWidget);
+
+    // 切回支出：命中维度缓存（SynchronousFuture），闸门还关着也能同帧出数
+    await tester.tap(find.descendant(
+      of: find.byType(WaitSlidingSegmentedControl<String>),
+      matching: find.text('支出'),
+    ));
+    await tester.pump();
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.text('支出趋势'), findsOneWidget);
+    expect(find.text('300.00'), findsWidgets);
   });
 }

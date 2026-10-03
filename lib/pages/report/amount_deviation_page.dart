@@ -15,6 +15,7 @@ import '../../styles/tokens.dart';
 import '../../utils/transaction_edit_utils.dart';
 import '../../widgets/biz/biz.dart';
 import '../../widgets/ui/ui.dart';
+import '../../widgets/ui/wait_sliding_segmented_control.dart';
 
 /// v45 金额偏差分析页。
 ///
@@ -124,21 +125,20 @@ class _AmountDeviationPageState extends ConsumerState<AmountDeviationPage> {
 
   Future<void> _pickRange() async {
     final now = DateTime.now();
-    final picked = await showDateRangePicker(
-      context: context,
+    // 项目口径的区间选择抽屉（与日历页同款日期格：农历副标签 + 休/班徽标 + 放假底色）
+    final picked = await showPiggyRangePickerSheet(
+      context,
       firstDate: DateTime(2000),
       lastDate: DateTime(now.year, now.month, now.day),
-      initialDateRange: DateTimeRange(
-        start: DateTime(_start.year, _start.month, _start.day),
-        end: DateTime(_end.year, _end.month, _end.day)
-            .subtract(const Duration(days: 1)),
-      ),
+      initialStart: _start,
+      initialEnd: _end.subtract(const Duration(days: 1)),
     );
     if (picked == null || !mounted) return;
     setState(() {
       _start = picked.start;
-      // 选择器是「含末日」，内部统一半开区间 [start, end)
-      _end = picked.end.add(const Duration(days: 1));
+      // 选择器是「含末日」，内部统一半开区间 [start, end)。
+      // 用「日 + 1」而不是 `+ Duration(days: 1)`：夏令时切换日加 24h 会偏一小时。
+      _end = DateTime(picked.end.year, picked.end.month, picked.end.day + 1);
     });
   }
 
@@ -187,8 +187,7 @@ class _AmountDeviationPageState extends ConsumerState<AmountDeviationPage> {
         showBack: true,
       ),
       body: Padding(
-        padding: EdgeInsets.only(
-            top: MediaQuery.of(context).padding.top + 80),
+        padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 80),
         child: FutureBuilder<_DeviationData>(
           future: _futureFor(ledgerId, refreshTick),
           builder: (context, snap) {
@@ -272,8 +271,7 @@ class _AmountDeviationPageState extends ConsumerState<AmountDeviationPage> {
                 child: Text(_rangeText(),
                     style: PiggyTextTokens.strongTitle(context)),
               ),
-              Icon(Icons.expand_more,
-                  color: PiggyTokens.textTertiary(context)),
+              Icon(Icons.expand_more, color: PiggyTokens.textTertiary(context)),
             ],
           ),
         ),
@@ -281,21 +279,21 @@ class _AmountDeviationPageState extends ConsumerState<AmountDeviationPage> {
     );
   }
 
+  /// 支出/收入维度：项目通用 tab 样式（WaitSlidingSegmentedControl），
+  /// 与自定义区间报表页同款（固定宽度 + 紧凑高度）。
   Widget _dimChips(AppLocalizations l10n) {
-    return Row(
-      children: [
-        ChoiceChip(
-          label: Text(l10n.homeExpense),
-          selected: _dim == 'expense',
-          onSelected: (_) => setState(() => _dim = 'expense'),
-        ),
-        const SizedBox(width: 8),
-        ChoiceChip(
-          label: Text(l10n.homeIncome),
-          selected: _dim == 'income',
-          onSelected: (_) => setState(() => _dim = 'income'),
-        ),
-      ],
+    return SizedBox(
+      width: 168,
+      child: WaitSlidingSegmentedControl<String>(
+        selected: _dim,
+        height: 32,
+        fontSize: 13,
+        segments: [
+          WaitSlidingSegment(value: 'expense', label: l10n.homeExpense),
+          WaitSlidingSegment(value: 'income', label: l10n.homeIncome),
+        ],
+        onValueChanged: (value) => setState(() => _dim = value),
+      ),
     );
   }
 
@@ -399,8 +397,8 @@ class _AmountDeviationPageState extends ConsumerState<AmountDeviationPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(label,
-                  style: PiggyTextTokens.caption(context).copyWith(
-                      color: PiggyTokens.textSecondary(context))),
+                  style: PiggyTextTokens.caption(context)
+                      .copyWith(color: PiggyTokens.textSecondary(context))),
               const SizedBox(height: 4),
               Text(value,
                   style: PiggyTextTokens.strongTitle(context)
@@ -447,8 +445,8 @@ class _AmountDeviationPageState extends ConsumerState<AmountDeviationPage> {
 
   Widget _trendChart(
       BuildContext context, AppLocalizations l10n, _DeviationData data) {
-    final maxAbs = data.trend.fold<double>(
-        0, (m, e) => math.max(m, e.diffSum.abs()));
+    final maxAbs =
+        data.trend.fold<double>(0, (m, e) => math.max(m, e.diffSum.abs()));
     if (maxAbs == 0) {
       return SizedBox(
         height: 60,
@@ -459,9 +457,8 @@ class _AmountDeviationPageState extends ConsumerState<AmountDeviationPage> {
         ),
       );
     }
-    final labelFmt = data.granularity == 'month'
-        ? DateFormat('MM')
-        : DateFormat('dd');
+    final labelFmt =
+        data.granularity == 'month' ? DateFormat('MM') : DateFormat('dd');
     return SizedBox(
       height: 150,
       child: Row(
@@ -481,7 +478,8 @@ class _AmountDeviationPageState extends ConsumerState<AmountDeviationPage> {
                         color: e.diffSum >= 0
                             ? PiggyTokens.expenseColor(context, ref)
                             : PiggyTokens.incomeColor(context, ref),
-                        borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
+                        borderRadius:
+                            BorderRadius.circular(PiggyDimens.radiusXs),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -587,10 +585,11 @@ class _AmountDeviationPageState extends ConsumerState<AmountDeviationPage> {
                 children: [
                   Container(
                     margin: const EdgeInsets.only(top: 2),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: severityColor(ins.severity).withValues(alpha: 0.14),
+                      color:
+                          severityColor(ins.severity).withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
                     ),
                     child: Text(

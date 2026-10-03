@@ -573,10 +573,6 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
     required int itemCount,
     required Widget Function(BuildContext context, int index) itemBuilder,
   }) {
-    final isDark = PiggyTokens.isDark(context);
-    final primary = ref.watch(primaryColorProvider);
-    const borderWidth = 1.5;
-
     return Container(
       margin: PiggyDimens.cardMargin,
       child: ListView.builder(
@@ -585,41 +581,11 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
         // AlwaysScrollable: 内容不满一屏时也能下拉刷新
         physics: const AlwaysScrollableScrollPhysics(),
         itemCount: itemCount,
-        itemBuilder: (context, index) {
-          final isFirst = index == 0;
-          final isLast = index == itemCount - 1;
-          return Container(
-            decoration: BoxDecoration(
-              color: PiggyTokens.surface(context),
-              borderRadius: BorderRadius.only(
-                topLeft: isFirst
-                    ? const Radius.circular(PiggyDimens.radiusLg)
-                    : Radius.zero,
-                topRight: isFirst
-                    ? const Radius.circular(PiggyDimens.radiusLg)
-                    : Radius.zero,
-                bottomLeft: isLast
-                    ? const Radius.circular(PiggyDimens.radiusLg)
-                    : Radius.zero,
-                bottomRight: isLast
-                    ? const Radius.circular(PiggyDimens.radiusLg)
-                    : Radius.zero,
-              ),
-              border: Border(
-                top: isFirst
-                    ? BorderSide(color: primary, width: borderWidth)
-                    : BorderSide.none,
-                bottom: isLast
-                    ? BorderSide(color: primary, width: borderWidth)
-                    : BorderSide.none,
-                left: BorderSide(color: primary, width: borderWidth),
-                right: BorderSide(color: primary, width: borderWidth),
-              ),
-              boxShadow: isFirst ? (isDark ? null : PiggyShadows.card) : null,
-            ),
-            child: itemBuilder(context, index),
-          );
-        },
+        itemBuilder: (context, index) => DayGroupCard(
+          isFirst: index == 0,
+          isLast: index == itemCount - 1,
+          child: itemBuilder(context, index),
+        ),
       ),
     );
   }

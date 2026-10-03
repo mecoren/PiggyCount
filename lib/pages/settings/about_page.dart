@@ -13,7 +13,6 @@ import '../../utils/ui_scale_extensions.dart';
 import 'app_icon_page.dart';
 import 'changelog_page.dart';
 import 'log_center_page.dart';
-import 'privacy_policy_page.dart';
 
 import '../../utils/platform_info.dart';
 
@@ -77,9 +76,6 @@ class _AboutPageState extends ConsumerState<AboutPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final locale = Localizations.localeOf(context);
-    final isSimplifiedZh =
-        locale.languageCode == 'zh' && locale.countryCode != 'TW';
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
@@ -232,16 +228,10 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                   );
                 },
               ),
-            ],
-          ),
-          // ===== 底部:隐私政策 文字链接 + 备案号 =====
-          SizedBox(height: 24.0.scaled(context, ref)),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _footerLink(
-                context,
-                label: l10n.changelogTitle,
+              SettingsNavItem(
+                icon: Icons.new_releases_outlined,
+                title: l10n.changelogTitle,
+                subtitle: l10n.changelogSubtitle,
                 onTap: () {
                   Navigator.push(
                     context,
@@ -249,51 +239,10 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                   );
                 },
               ),
-              SizedBox(width: 24.0.scaled(context, ref)),
-              _footerLink(
-                context,
-                label: l10n.aboutPrivacyPolicy,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const PrivacyPolicyPage()),
-                  );
-                },
-              ),
             ],
           ),
-          if (isSimplifiedZh) ...[
-            SizedBox(height: 12.0.scaled(context, ref)),
-            Center(
-              child: Text(
-                '浙ICP备2025214907号-2A',
-                style: PiggyTextTokens.caption(context),
-              ),
-            ),
-          ],
           SizedBox(height: 8.0.scaled(context, ref)),
         ],
-      ),
-    );
-  }
-
-  /// 底部文字链接(下划线 + 主题色),更新日志 / 隐私政策共用。
-  Widget _footerLink(
-    BuildContext context, {
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    final primary = ref.watch(primaryColorProvider);
-    return GestureDetector(
-      onTap: onTap,
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: primary,
-              decoration: TextDecoration.underline,
-              decorationColor: primary,
-            ),
       ),
     );
   }
