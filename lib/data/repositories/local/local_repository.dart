@@ -2058,21 +2058,24 @@ class LocalRepository extends BaseRepository {
     // seed 多次 / 云同步重复 pull / 手动改 kind)出现过多条,会让原来
     // .getSingleOrNull() 直接 throw、UI 卡死(编辑转账时表现明显)。
     //
-    // 这里发现 >1 条时被动合并:保留 id 最小的 keeper,把所有指向 dupes
-    // 的 transactions 改写到 keeper 上,再删除 dupes。
+    // 这里发现 >1 条时被动合并:保留 id 最小的 keeper,把所有指向 dupes 的
+    // transactions / budgets / recurring_transactions 改写到 keeper 上,
+    // 再删除 dupes。
     //
-    // ⚠️ 关于本方法末尾的 ChangeTracker 登记块(`if (changeTracker != null)`):
-    // **生产装配下不会执行**。
-    // `providers/database_providers.dart` 注入的是 `LocalRepository(db)` ——
-    // 不带 changeTracker(CT-1:随云端协同下线,快照路径刻意不注入 tracker,
-    // local_changes 生产恒空,详见该文件 :31-39)。因此:
-    //   • 本次删除**不会**产生 local_changes 记录,也**不会**推到云端;
-    //   • 对端设备不会因为这次合并而自动擦掉同一条脏分类;
-    //   • 但它**自愈**:合并逻辑是纯本地的,对端下次走到转账流程时同样会
-    //     跑这段合并、删掉自己那条 dupe,不会造成永久数据不一致。
-    // 该登记分支保留是有意的:①测试装配会注入 tracker
-    // (见 test/cloud/delete_ledger_aux_cleanup_test.dart 等)以覆盖登记路径;
-    // ②未来若重新注入 tracker,这里即为现成的传播点。
+    // 关于本方法末尾的 ChangeTracker 登记块(`if (changeTracker != null)`):
+    // **生产装配下不会执行** —— `providers/database_providers.dart` 注入的是
+    // `LocalRepository(db)`,不带 changeTracker(CT-1:随云端协同下线,快照路径
+    // 刻意不注入 tracker,`local_changes` 生产恒空,详见该文件 :35-39)。
+    // 本仓库同类守卫共 93 处,一律按同一口径保留,理由:
+    //   • 合并的**数据效果**不依赖登记 —— 合并只改本地 categories 树,下一次
+    //     快照上传会把它原样带走,对端下载后自然收敛;
+    //   • 对端即使没走快照也会**自愈**:它的转账流程同样跑到这里、合并掉自己
+    //     那条 dupe,不会造成永久数据不一致;
+    //   • 登记只对"仍需 local_changes 的增量路径"有意义,那类路径已随 Path B
+    //     整体下线;保留是给测试装配与未来重新注入留的现成传播点。
+    // 覆盖情况:唯一直连本方法的用例是
+    // `test/cloud/transfer_category_tracker_registration_test.dart`
+    // (注入 tracker,断言合并结果 + 交易/周期规则 update 与 dupe 分类 delete)。
     // 新增读/写 local_changes 的代码前,请先确认该表在生产是否仍有写入方。
     final all = await _categoryRepo.getAllTransferCategories();
     if (all.length <= 1) {
