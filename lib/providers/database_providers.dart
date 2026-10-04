@@ -95,8 +95,16 @@ final _currentLedgerPersist = Provider<void>((ref) {
       if (await repo.getLedgerById(target) == null) {
         final ledgers = await repo.getAllLedgers();
         if (ledgers.isEmpty) {
+          // 本机一个账本都没有：欢迎页流程重建前，或唯一账本被对端删除后
+          // 合并下来。**必须**把悬空 id 归零 —— UI 侧的「无账本」守卫一律
+          // 判 `currentLedgerId == 0`（cloud_sync_page.dart:635、
+          // share_poster_service.dart 四处、analytics_page.dart:576、
+          // transactions_sync_manager.dart:2558）。留着悬空值会绕过全部守卫：
+          // 实测云同步页会直接抛出裸的 `Exception: 账本 9 不存在`
+          // （20261004 S3/WebDAV 双后端回归，见 docs/test/ 报告 6.5）。
           logger.warning('LedgerState',
-              'current_ledger_id=$target 已不存在且本机暂无账本，等待欢迎页流程重建');
+              'current_ledger_id=$target 已不存在且本机暂无账本，归零为无账本态，等待欢迎页流程重建');
+          target = 0;
         } else {
           final fallback =
               ledgers.map((l) => l.id).reduce((a, b) => a < b ? a : b);
