@@ -134,7 +134,12 @@ class _RecycleBinPageState extends ConsumerState<RecycleBinPage> {
           future: _data,
           builder: (context, snap) {
             if (snap.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
+              return Center(
+                child: PiggySpinner(
+                  size: 36,
+                  color: PiggyTokens.primary(context),
+                ),
+              );
             }
             if (snap.hasError) {
               return Center(

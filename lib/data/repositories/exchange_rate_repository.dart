@@ -23,6 +23,12 @@ abstract class ExchangeRateRepository {
   Future<List<ExchangeRateOverride>> getOverrides(String base);
   Stream<List<ExchangeRateOverride>> watchOverrides(String base);
 
+  /// 全部手动汇率覆盖（不限 base），按 (base, quote) 升序。
+  ///
+  /// [getOverrides] 要求已知 base，快照同步的「镜像删除」判定拿不到 base
+  /// 集合（云端快照里可能有本机没有的币对），故需要一条全量查询。
+  Future<List<ExchangeRateOverride>> getAllOverrides();
+
   /// 币对 upsert:已存在则更新并复用 syncId;记 user-global change。
   Future<void> setOverride({required String base, required String quote, required String rate});
 

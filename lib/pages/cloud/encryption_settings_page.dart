@@ -12,6 +12,7 @@ import '../../widgets/biz/section_card.dart';
 import '../../widgets/encryption/password_setup_dialog.dart';
 import '../../widgets/ui/dialog.dart';
 import '../../widgets/ui/piggy_header.dart';
+import '../../widgets/ui/piggy_spinner.dart';
 import '../../widgets/ui/toast.dart';
 
 /// 加密设置页 — 设置 / 修改 / 重置同步加密密码
@@ -475,13 +476,12 @@ class _EncryptionSettingsPageState
               ),
             ),
             if (_busy)
-              const Padding(
-                padding: EdgeInsets.only(top: 16),
+              Padding(
+                padding: const EdgeInsets.only(top: 16),
                 child: Center(
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                  child: PiggySpinner(
+                    size: 24,
+                    color: PiggyTokens.primary(context),
                   ),
                 ),
               ),

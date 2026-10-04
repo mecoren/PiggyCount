@@ -142,7 +142,8 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
             children: [
               Expanded(
                 child: Center(
-                  child: CircularProgressIndicator(),
+                  child: PiggySpinner(
+                      size: 36, color: PiggyTokens.primary(context)),
                 ),
               )
             ],

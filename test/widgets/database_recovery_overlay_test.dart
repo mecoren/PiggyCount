@@ -21,6 +21,7 @@ import 'package:piggycount/data/database_health_service.dart';
 import 'package:piggycount/l10n/app_localizations.dart';
 import 'package:piggycount/providers/database_providers.dart';
 import 'package:piggycount/widgets/biz/database_recovery_overlay.dart';
+import 'package:piggycount/widgets/ui/piggy_spinner.dart';
 
 /// overlay 内部返回 `Positioned.fill`，因此必须置于 Stack 中。
 Widget _wrap() => MaterialApp(
@@ -40,7 +41,8 @@ Future<void> pumpOverlay(
     ProviderScope(
       overrides: [
         dbHealthProvider.overrideWith(
-          (ref) async => DbHealthResult(health, dbPath: '/tmp/x.sqlite', detail: detail),
+          (ref) async =>
+              DbHealthResult(health, dbPath: '/tmp/x.sqlite', detail: detail),
         ),
         dbHealthDismissedProvider.overrideWith((ref) => dismissed),
       ],
@@ -48,6 +50,23 @@ Future<void> pumpOverlay(
     ),
   );
   await tester.pumpAndSettle();
+}
+
+/// 排掉忙态收尾。
+///
+/// 不能用 `pumpAndSettle`：它会等 [PiggySpinner] 的循环动画（永不静止），
+/// 且 `_export()` 挂在真实的 path_provider / 文件系统 IO 上，fake-async 区内
+/// 那个 Future 不会完成 —— 直接 `pumpAndSettle` 会超时。改用有限轮次的
+/// `runAsync` 让真实 IO 跑完，再断言忙态确实退出了。
+Future<void> _drainBusy(WidgetTester tester) async {
+  for (var i = 0; i < 20; i++) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 20)),
+    );
+    await tester.pump();
+    if (find.byType(PiggySpinner).evaluate().isEmpty) return;
+  }
+  throw StateError('忙态未在有限轮次内结束');
 }
 
 void main() {
@@ -59,7 +78,8 @@ void main() {
   });
 
   testWidgets('页级损坏 → 标题 + 三个动作，且正文为损坏口径', (tester) async {
-    await pumpOverlay(tester, health: DbHealth.corrupted, detail: 'page 3 is broken');
+    await pumpOverlay(tester,
+        health: DbHealth.corrupted, detail: 'page 3 is broken');
 
     expect(find.text('本地数据库异常'), findsOneWidget);
     expect(find.text('导出损坏文件'), findsOneWidget);
@@ -119,5 +139,63 @@ void main() {
 
     expect(find.text('重置本地数据库？'), findsNothing);
     expect(find.text('导出损坏文件'), findsOneWidget);
+  });
+
+  // ↓ 忙态反馈门禁（2026-10-03 新增）
+  //
+  // 回归点：此前 `_busy` 期间两个动作键只是整体变灰，全屏流程**没有任何**
+  // 进行中指示——用户看到的是「界面卡住了」，而这是数据疑似损坏、最需要
+  // 明确反馈的场景。约定：转圈必须画在真正在跑的那个键上。
+
+  testWidgets('导出中：导出键转圈，且不是转在重置键上', (tester) async {
+    await pumpOverlay(tester, health: DbHealth.corrupted);
+
+    await tester.tap(find.text('导出损坏文件'));
+    await tester.pump();
+
+    // 导出键的图标位换成转圈
+    expect(
+      find.descendant(
+        of: find.widgetWithText(OutlinedButton, '导出损坏文件'),
+        matching: find.byType(PiggySpinner),
+      ),
+      findsOneWidget,
+    );
+    // 重置键此刻不是 busy，仍是静态图标
+    expect(
+      find.descendant(
+        of: find.widgetWithText(FilledButton, '重置本地数据库'),
+        matching: find.byType(PiggySpinner),
+      ),
+      findsNothing,
+    );
+
+    await _drainBusy(tester);
+  });
+
+  testWidgets('忙态下三个动作键全部禁用（防连点）', (tester) async {
+    await pumpOverlay(tester, health: DbHealth.corrupted);
+
+    await tester.tap(find.text('导出损坏文件'));
+    await tester.pump();
+
+    for (final label in ['导出损坏文件', '重置本地数据库', '稍后处理']) {
+      // 用 widgetWithText 反查具体按键（ancestor 在按钮树里会撞上 Theme 等
+      // 多个祖先，拿不准命中几个）。三个动作分别是 Outlined/Filled/TextButton。
+      final finder = switch (label) {
+        '导出损坏文件' => find.widgetWithText(OutlinedButton, label),
+        '重置本地数据库' => find.widgetWithText(FilledButton, label),
+        _ => find.widgetWithText(TextButton, label),
+      };
+      expect(finder, findsOneWidget, reason: '「$label」按键应存在');
+      final btn = tester.widget<ButtonStyleButton>(finder);
+      expect(
+        btn.onPressed,
+        isNull,
+        reason: '「$label」在忙态下必须禁用',
+      );
+    }
+
+    await _drainBusy(tester);
   });
 }

@@ -824,7 +824,12 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                 final list =
                     (tag != null && tag.$1 == _shapeOf(_type)) ? tag.$2 : null;
                 if (list == null) {
-                  return const Center(child: CircularProgressIndicator());
+                  return Center(
+                    child: PiggySpinner(
+                      size: 36,
+                      color: PiggyTokens.primary(context),
+                    ),
+                  );
                 }
 
                 // 在balance模式下，需要计算结余数据

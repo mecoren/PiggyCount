@@ -121,11 +121,9 @@ class MinePage extends ConsumerWidget {
                               icon: Icons.cloud_sync_outlined,
                               title: AppLocalizations.of(sectionContext)
                                   .mineSyncTitle,
-                              trailing: const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
+                              trailing: PiggySpinner(
+                                size: 20,
+                                color: PiggyTokens.primary(sectionContext),
                               ),
                             ),
                             error: (e, _) => SettingsNavItem(
@@ -231,11 +229,10 @@ class MinePage extends ConsumerWidget {
                                 final Widget trailingWidget;
                                 if (canUseCloud &&
                                     (isFirstLoad || refreshing)) {
-                                  trailingWidget = const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2),
+                                  trailingWidget = PiggySpinner(
+                                    size: 20,
+                                    color:
+                                        PiggyTokens.primary(sectionContext),
                                   );
                                 } else if (showCheckIcon) {
                                   trailingWidget = Icon(

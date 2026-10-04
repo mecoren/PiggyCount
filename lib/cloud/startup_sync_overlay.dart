@@ -16,6 +16,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../styles/tokens.dart';
 import '../widgets/ui/dialog.dart';
+import '../widgets/ui/piggy_spinner.dart';
 import 'startup_sync_checker.dart' show LedgerCandidate, SummaryChoice;
 import 'sync_service.dart' show SyncDiff;
 
@@ -189,7 +190,8 @@ class StartupSyncController extends ChangeNotifier {
   void showHasUpdates(
           List<LedgerCandidate> candidates, Completer<SummaryChoice> completer,
           {String? infoMessage}) =>
-      _setState(HasUpdatesState(candidates, completer, infoMessage: infoMessage));
+      _setState(
+          HasUpdatesState(candidates, completer, infoMessage: infoMessage));
 
   void startApplying(int total) =>
       _setState(ApplyingState(applied: 0, total: total));
@@ -275,9 +277,9 @@ class _StartupSyncOverlayView extends StatelessWidget {
         boxShadow: PiggyShadows.card,
       ),
       child: switch (state) {
-        CheckingState() =>
-          _CheckingView(state: state, controller: controller),
-        HasUpdatesState() => _HasUpdatesView(state: state, controller: controller),
+        CheckingState() => _CheckingView(state: state, controller: controller),
+        HasUpdatesState() =>
+          _HasUpdatesView(state: state, controller: controller),
         ApplyingState() => _ApplyingView(state: state),
         DoneState() => _DoneView(state: state, controller: controller),
         ErrorState() => _ErrorView(state: state, controller: controller),
@@ -302,20 +304,14 @@ class _CheckingView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final progress = state.total > 0 ? state.checked / state.total : 0.0;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        SizedBox(
-          width: 40,
-          height: 40,
-          child: CircularProgressIndicator(
-            value: state.total > 0 ? progress : null,
-            strokeWidth: 3,
-            backgroundColor:
-                Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
-          ),
-        ),
+        // 这里原本是带 value 的 CircularProgressIndicator(checked/total)，
+        // 但 [checked]/[total] 已由下方 startupSyncCheckCheckingProgress 文案
+        // 明确给出，环上的进度弧是纯冗余，故改用统一的不定态 PiggySpinner，
+        // 不会丢失任何进度信息。
+        PiggySpinner(size: 40, color: PiggyTokens.primary(context)),
         const SizedBox(height: 16),
         Text(
           l10n.startupSyncCheckCheckingTitle,
@@ -326,7 +322,8 @@ class _CheckingView extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           state.total > 0
-              ? l10n.startupSyncCheckCheckingProgress(state.checked, state.total)
+              ? l10n.startupSyncCheckCheckingProgress(
+                  state.checked, state.total)
               : l10n.startupSyncCheckCheckingHint,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: PiggyTokens.textSecondary(context),
@@ -462,15 +459,13 @@ class _HasUpdatesView extends StatelessWidget {
         const SizedBox(height: 20),
         // 主按钮：一键应用全部
         FilledButton(
-          onPressed: () =>
-              state.completer.complete(SummaryChoice.applyAll),
+          onPressed: () => state.completer.complete(SummaryChoice.applyAll),
           child: Text(l10n.startupSyncCheckApplyAll),
         ),
         const SizedBox(height: 8),
         // 次按钮：逐个确认
         OutlinedButton(
-          onPressed: () =>
-              state.completer.complete(SummaryChoice.confirmEach),
+          onPressed: () => state.completer.complete(SummaryChoice.confirmEach),
           child: Text(l10n.startupSyncCheckConfirmEach),
         ),
         const SizedBox(height: 8),
@@ -492,20 +487,11 @@ class _ApplyingView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final progress = state.total > 0 ? state.applied / state.total : 0.0;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        SizedBox(
-          width: 40,
-          height: 40,
-          child: CircularProgressIndicator(
-            value: state.total > 0 ? progress : null,
-            strokeWidth: 3,
-            backgroundColor:
-                Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
-          ),
-        ),
+        // 同 _CheckingView：applied/total 由下方文案承载，环只表示「在动」。
+        PiggySpinner(size: 40, color: PiggyTokens.primary(context)),
         const SizedBox(height: 16),
         Text(
           l10n.startupSyncCheckApplyingTitle,
@@ -547,8 +533,7 @@ class _DoneView extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.check_circle,
-            color: PiggyTokens.success(context), size: 40),
+        Icon(Icons.check_circle, color: PiggyTokens.success(context), size: 40),
         const SizedBox(height: 16),
         Text(
           state.message,

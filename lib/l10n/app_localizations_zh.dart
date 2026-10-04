@@ -179,6 +179,11 @@ class AppLocalizationsZh extends AppLocalizations {
       '启动检查不会自动合并（避免覆盖你的本地改动）。请到「我的 → 云同步」手动下载同步。';
 
   @override
+  String startupSyncCheckUnknownDiffHint(int count) {
+    return '另有 $count 个账本本地与云端都有改动、无法判断新旧，本次不会同步；如需对齐请到「我的 → 云同步」手动处理。';
+  }
+
+  @override
   String get startupSyncConflictTooltip => '本地有改动将被云端覆盖';
 
   @override
@@ -6549,6 +6554,37 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String syncPreviewEntityDeleted(String kind, String name) {
+    return '$kind「$name」';
+  }
+
+  @override
+  String get syncPreviewEntityDeletedHint => '云端已删除，勾选后一并删除本地';
+
+  @override
+  String syncSkippedPublishUnselectedDelete(int count) {
+    return '有 $count 个账本存在你未勾选的云端删除，已跳过回传（这些删除本轮不会生效，下次同步会再次提示）';
+  }
+
+  @override
+  String get syncEntityKindAccount => '账户';
+
+  @override
+  String get syncEntityKindCategory => '分类';
+
+  @override
+  String get syncEntityKindTag => '标签';
+
+  @override
+  String get syncEntityKindBudget => '预算';
+
+  @override
+  String get syncEntityKindRecurring => '周期规则';
+
+  @override
+  String get syncEntityKindRateOverride => '手动汇率';
+
+  @override
   String syncPreviewApply(int count) {
     return '应用 $count 项';
   }
@@ -8367,6 +8403,11 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String get startupSyncMetaDiffAction =>
       '啟動檢查不會自動合併（避免覆蓋你的本地變更）。請到「我的 → 雲端同步」手動下載同步。';
+
+  @override
+  String startupSyncCheckUnknownDiffHint(int count) {
+    return '另有 $count 個帳本本地與雲端都有變更、無法判斷新舊，本次不會同步；如需對齊請到「我的 → 雲端同步」手動處理。';
+  }
 
   @override
   String get startupSyncConflictTooltip => '本地有改動將被雲端覆蓋';
@@ -14737,6 +14778,37 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String syncPreviewDeletedCount(int count) {
     return '刪除 $count 條';
   }
+
+  @override
+  String syncPreviewEntityDeleted(String kind, String name) {
+    return '$kind「$name」';
+  }
+
+  @override
+  String get syncPreviewEntityDeletedHint => '雲端已刪除，勾選後一併刪除本機';
+
+  @override
+  String syncSkippedPublishUnselectedDelete(int count) {
+    return '有 $count 個帳本存在你未勾選的雲端刪除，已跳過回傳（這些刪除本輪不會生效，下次同步會再次提示）';
+  }
+
+  @override
+  String get syncEntityKindAccount => '帳戶';
+
+  @override
+  String get syncEntityKindCategory => '分類';
+
+  @override
+  String get syncEntityKindTag => '標籤';
+
+  @override
+  String get syncEntityKindBudget => '預算';
+
+  @override
+  String get syncEntityKindRecurring => '週期規則';
+
+  @override
+  String get syncEntityKindRateOverride => '手動匯率';
 
   @override
   String syncPreviewApply(int count) {

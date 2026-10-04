@@ -266,6 +266,17 @@ abstract class StartupSyncCheckerDeps {
   ({String title, List<String> lines, String action}) getMetaDiffTexts(
       List<MetaDiffLedger> diffs);
 
+  /// 「另有 N 个账本本次不会同步」的告知文案。
+  ///
+  /// 与 [getMetaDiffTexts] 同款：生产实现走 l10n，测试桩返回字面量。
+  ///
+  /// 存在的理由：`SyncDiff.different`（源于 `direction=unknown`，即内容有差异
+  /// 但无法判断谁更新）的账本会被**排除在候选之外**，不参与本次合并。这是
+  /// 防误覆盖的正确取舍，但若不告知，"检测到 N 个账本有云端更新" 会被读成
+  /// "其余账本已经最新、无需处理"。实测 8 账本场景里 7 个被跳过、弹窗只写
+  /// "1 个账本"，用户极可能误以为全部已同步（2026-10-03 S3 + WebDAV 真机复现）。
+  String getUnknownDiffHint(int count);
+
   /// 读云端账本元信息（名称 / 本位币 / 月起始日），只走 metadata 快路径。
   ///
   /// 实现方拿不到时返回 null（老快照 / 网关剥头 / 网络失败）—— 调用方会把它
@@ -678,10 +689,18 @@ class StartupSyncChecker {
       controller.showHasUpdates(
         candidates,
         completer,
-        // 候选弹窗同时告知：另有账本存在不会自动合并的元信息差异
-        infoMessage: metaDiffLedgers.isEmpty
-            ? null
-            : deps.getMetaDiffTexts(metaDiffLedgers).title,
+        // 候选弹窗要显式说出「本次不会同步哪些账本」。这里有两类互不重叠的
+        // 排除项，缺任何一类都会让 "检测到 N 个账本" 被误读成"其余无需处理"：
+        //   ① metaDiffLedgers —— 云端账本元信息（名称 / 月起始日）与本地不同；
+        //   ② unknownDiffLedgers —— 内容有差异但 direction=unknown，无法判断
+        //      谁更新，故不纳入候选（见上方 SyncDiff.different 分支注释）。
+        // 此前只报 ①，② 完全静默，是 2026-10-03 真机复现的误读来源。
+        infoMessage: _buildCandidateInfoMessage(
+          metaDiffTitle: metaDiffLedgers.isEmpty
+              ? null
+              : deps.getMetaDiffTexts(metaDiffLedgers).title,
+          unknownCount: unknownDiffLedgers.length,
+        ),
       );
       final choice = await completer.future;
 
@@ -704,6 +723,21 @@ class StartupSyncChecker {
           return;
       }
     }
+  }
+
+  /// 拼候选弹窗的附加告知（`infoMessage`），两类排除项各占一行。
+  ///
+  /// 返回 null 表示**没有任何需要额外告知的排除项** —— 此时弹窗只显示
+  /// "检测到 N 个账本有云端更新"，语义即"其余账本都是最新的"，无歧义。
+  String? _buildCandidateInfoMessage({
+    String? metaDiffTitle,
+    required int unknownCount,
+  }) {
+    final lines = <String>[
+      if (metaDiffTitle != null) metaDiffTitle,
+      if (unknownCount > 0) deps.getUnknownDiffHint(unknownCount),
+    ];
+    return lines.isEmpty ? null : lines.join('\n');
   }
 
   /// 云端账本发现环节：list 云端 → 找本机没有的账本 → 确认弹窗 → 导入
@@ -769,17 +803,27 @@ class StartupSyncChecker {
   }
 
   /// 阶段 2 回传守卫（致命 S1）：预览存在「用户未勾选的云端删除」时，
-  /// 本地仍保留这些已删交易；照常 merge-then-publish 会把它们随快照推回
+  /// 本地仍保留这些已删实体；照常 merge-then-publish 会把它们随快照推回
   /// 云端并传播到所有设备。代价必须是「本轮指纹不收敛」，而非复活数据。
-  @visibleForTesting
+  ///
+  /// 「删除」含交易行与实体（账户/分类/标签/预算/周期规则/汇率覆盖）两
+  /// 类 —— 二者都可能被用户拒绝勾选，复活后果一样。
+  ///
+  /// **三个调用方必须共用这一个判据**：启动检查的「一键应用」/「逐个确认」，
+  /// 以及两个手动合并入口（云同步页「下载同步」、账本页对比合并）。手动入口
+  /// 此前直接 `uploadCurrentLedger(force: true)`、绕过了本守卫，等于给了
+  /// 用户一条"在启动检查拒绝删除、在手动入口把删除复活回去"的路径。
   static bool shouldSkipMergePublish({
     required bool previewExists,
     required int unselectedDeletedCount,
   }) =>
       previewExists && unselectedDeletedCount > 0;
 
-  /// P3：预览里「用户未勾选的云端删除」条数（SYNC-05：deleted 默认不勾选）。
-  static int _unselectedDeleted(SyncPreview preview) => preview.changes
+  /// 预览里「用户未勾选的云端删除」条数（SYNC-05：deleted 默认不勾选）。
+  ///
+  /// 与 [shouldSkipMergePublish] 成对提供给手动合并入口：那里拿到的是
+  /// `SyncPreview` 实例而不是启动检查内部的中间值。
+  static int unselectedDeletedCount(SyncPreview preview) => preview.changes
       .where((ch) => ch.type == SyncChangeType.deleted && !ch.selected)
       .length;
 
@@ -1030,7 +1074,8 @@ class StartupSyncChecker {
         final selected = preview.changes.where((ch) => ch.selected).toList();
         if (selected.isEmpty) {
           // 全部变更都是未勾选的云端删除 → 100% 待处理，必须记账本标记
-          deps.recordPendingCloudDeletes(c.ledger.id, _unselectedDeleted(preview));
+          deps.recordPendingCloudDeletes(
+              c.ledger.id, unselectedDeletedCount(preview));
           applied++;
           continue;
         }
@@ -1044,7 +1089,7 @@ class StartupSyncChecker {
             .timeout(_applyTimeout);
         totalChanges += result.totalCount;
         deps.runAfterDownload();
-        final unselectedDeleted = _unselectedDeleted(preview);
+        final unselectedDeleted = unselectedDeletedCount(preview);
         deps.recordPendingCloudDeletes(c.ledger.id, unselectedDeleted);
         merged.add((
           cand: c,
@@ -1230,7 +1275,7 @@ class StartupSyncChecker {
                 .timeout(_applyTimeout);
             deps.runAfterDownload();
             // S1 守卫：统计用户未勾选的云端删除（对齐 _applyAll）
-            final unselectedDeleted = _unselectedDeleted(preview);
+            final unselectedDeleted = unselectedDeletedCount(preview);
             deps.recordPendingCloudDeletes(c.ledger.id, unselectedDeleted);
             merged.add((
               cand: c,
@@ -1659,6 +1704,10 @@ class WidgetRefDeps implements StartupSyncCheckerDeps {
       action: l10n.startupSyncMetaDiffAction,
     );
   }
+
+  @override
+  String getUnknownDiffHint(int count) =>
+      AppLocalizations.of(_context).startupSyncCheckUnknownDiffHint(count);
 
   @override
   Future<CloudLedgerMeta?> fetchCloudLedgerMeta(int ledgerId) async {

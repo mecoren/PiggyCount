@@ -27,6 +27,7 @@ import '../ui/toast.dart';
 import '../ui/dialog.dart';
 import '../ui/piggy_input.dart';
 import '../ui/piggy_switcher.dart';
+import '../ui/piggy_spinner.dart';
 import 'tag_chip.dart';
 import '../category_icon.dart';
 import '../../pages/attachment/attachment_preview_page.dart';
@@ -1461,15 +1462,10 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                         height: 60,
                         child: Center(
                           child: _isSubmitting
-                              ? SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    // UI-14：主色底上的前景走 textOnPrimary token
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                        PiggyTokens.textOnPrimary(context)),
-                                  ),
+                              ? PiggySpinner(
+                                  size: 20,
+                                  // UI-14：主色底上的前景走 textOnPrimary token
+                                  color: PiggyTokens.textOnPrimary(context),
                                 )
                               : Text(
                                   isInCalcMode

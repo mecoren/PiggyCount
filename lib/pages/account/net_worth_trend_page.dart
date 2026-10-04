@@ -179,7 +179,10 @@ class _NetWorthTrendPageState extends ConsumerState<NetWorthTrendPage> {
                     ],
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => Center(
+                  child: PiggySpinner(
+                      size: 36, color: PiggyTokens.primary(context)),
+                ),
                 error: (_, __) => Center(
                   child: Text(
                     l10n.commonError,

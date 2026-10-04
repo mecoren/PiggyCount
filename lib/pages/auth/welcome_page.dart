@@ -151,11 +151,8 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
                           foregroundColor: theme.primaryColor,
                         ),
                         child: _isInitializing
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
+                            ? PiggySpinner(
+                                size: 20, color: PiggyTokens.primary(context))
                             : Text(l10n.commonFinish),
                       ),
                 ],
@@ -293,14 +290,7 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (_isImporting)
-                  const SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white70,
-                    ),
-                  )
+                  const PiggySpinner(size: 14, color: Colors.white70)
                 else
                   Icon(
                     Icons.file_upload_outlined,
@@ -913,14 +903,7 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
           FilledButton.icon(
             onPressed: _isImportingAttachment ? null : () => _importAttachments(context),
             icon: _isImportingAttachment
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
+                ? const PiggySpinner(size: 18, color: Colors.white)
                 : const Icon(Icons.file_upload_outlined),
             label: Text(
               _isImportingAttachment

@@ -893,11 +893,10 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                                 refreshing ||
                                                 uploadBusy ||
                                                 downloadBusy))
-                                        ? const SizedBox(
-                                            width: 20,
-                                            height: 20,
-                                            child: CircularProgressIndicator(
-                                                strokeWidth: 2))
+                                        ? PiggySpinner(
+                                            size: 20,
+                                            color: PiggyTokens.primary(
+                                                context))
                                         : null,
                                     onTap: (isFirstLoad ||
                                             !canUseCloud ||
@@ -1030,11 +1029,10 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                       trailing: (uploadBusy ||
                                               refreshing ||
                                               (isFirstLoad && canUseCloud))
-                                          ? const SizedBox(
-                                              width: 20,
-                                              height: 20,
-                                              child: CircularProgressIndicator(
-                                                  strokeWidth: 2))
+                                          ? PiggySpinner(
+                                              size: 20,
+                                              color: PiggyTokens.primary(
+                                                  context))
                                           : null,
                                       onTap: () async {
                                         setState(() => uploadBusy = true);
@@ -1084,7 +1082,10 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                                   mainAxisSize:
                                                       MainAxisSize.min,
                                                   children: [
-                                                    const CircularProgressIndicator(),
+                                                    PiggySpinner(
+                                                        size: 36,
+                                                        color: PiggyTokens
+                                                            .primary(context)),
                                                     const SizedBox(height: 16),
                                                     ValueListenableBuilder<int>(
                                                       valueListenable: progress,
@@ -1238,11 +1239,10 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                       trailing: (downloadBusy ||
                                               refreshing ||
                                               (isFirstLoad && canUseCloud))
-                                          ? const SizedBox(
-                                              width: 20,
-                                              height: 20,
-                                              child: CircularProgressIndicator(
-                                                  strokeWidth: 2))
+                                          ? PiggySpinner(
+                                              size: 20,
+                                              color: PiggyTokens.primary(
+                                                  context))
                                           : null,
                                       onTap: () async {
                                         setState(() => downloadBusy = true);
@@ -1262,6 +1262,11 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                         );
                                         var totalInserted = 0;
                                         var aborted = false;
+                                        // S1 守卫命中（S1 静默跳过回传的账本数）
+                                        // —— 必须记下来在结果弹窗里告知，否则
+                                        // 用户只看到"已应用 N 项"，不知道那些
+                                        // 没勾的删除本轮没生效。
+                                        var skippedPublishCount = 0;
                                         Object? error;
                                         try {
                                           // 尝试使用 diff 预览模式
@@ -1338,6 +1343,13 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                             // 的云端快照被后续合并引入的全局
                                             // 数据失效，指纹一轮无法收敛
                                             final mergedLedgerIds = <int>[];
+                                            // S1 守卫（手动入口版）：用户未勾选
+                                            // 的云端删除（交易行 / 账户·分类·
+                                            // 标签·预算·周期规则·汇率覆盖等实体）
+                                            // 本轮不生效，若照常 force 回传会把
+                                            // 残留推回云端 → 删除被"复活"并传播
+                                            // 到所有设备。与启动检查同判据。
+                                            final skipPublishLedgerIds = <int>{};
                                             for (final ledger in ledgers) {
                                               ledgerIndex++;
                                               block.status.value = l10n
@@ -1408,6 +1420,18 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                                   if (selected == null ||
                                                       selected.isEmpty) {
                                                     continue;
+                                                  }
+                                                  if (StartupSyncChecker
+                                                      .shouldSkipMergePublish(
+                                                    previewExists: true,
+                                                    unselectedDeletedCount:
+                                                        StartupSyncChecker
+                                                            .unselectedDeletedCount(
+                                                      preview,
+                                                    ),
+                                                  )) {
+                                                    skipPublishLedgerIds
+                                                        .add(ledger.id);
                                                   }
                                                   block.status.value =
                                                       l10n.syncBlockingApplying;
@@ -1493,6 +1517,14 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                             // 反复弹「云端有更新」
                                             for (final ledgerId
                                                 in mergedLedgerIds) {
+                                              if (skipPublishLedgerIds
+                                                  .contains(ledgerId)) {
+                                                // S1 守卫：本轮存在用户未勾选
+                                                // 的云端删除，跳过回传以防删除
+                                                // 复活（下次同步会再次提示）
+                                                skippedPublishCount++;
+                                                continue;
+                                              }
                                               block.status.value =
                                                   l10n.syncBlockingApplying;
                                                try {
@@ -1581,10 +1613,14 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                               message: l10n
                                                   .startupSyncRecoveryFailedHint);
                                         } else {
-                                          await AppDialog.info(context,
-                                              title: l10n.mineDownloadComplete,
-                                              message: l10n.mineDownloadResult(
-                                                  totalInserted));
+                                          await AppDialog.info(
+                                            context,
+                                            title: l10n.mineDownloadComplete,
+                                            message: skippedPublishCount > 0
+                                                ? '${l10n.mineDownloadResult(totalInserted)}\n\n${l10n.syncSkippedPublishUnselectedDelete(skippedPublishCount)}'
+                                                : l10n.mineDownloadResult(
+                                                    totalInserted),
+                                          );
                                         }
                                       },
                                     ),
@@ -1780,12 +1816,10 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                             !isFirstLoad &&
                                             !refreshing,
                                         trailing: fullUploadBusy
-                                            ? const SizedBox(
-                                                width: 20,
-                                                height: 20,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                        strokeWidth: 2))
+                                            ? PiggySpinner(
+                                                size: 20,
+                                                color: PiggyTokens.primary(
+                                                    context))
                                             : null,
                                         onTap: () =>
                                             _handleFullUpload(context, sync),
@@ -1807,12 +1841,10 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                             !isFirstLoad &&
                                             !refreshing,
                                         trailing: fullDownloadBusy
-                                            ? const SizedBox(
-                                                width: 20,
-                                                height: 20,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                        strokeWidth: 2))
+                                            ? PiggySpinner(
+                                                size: 20,
+                                                color: PiggyTokens.primary(
+                                                    context))
                                             : null,
                                         onTap: () =>
                                             _handleFullDownload(context, sync),
@@ -1845,12 +1877,10 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                             !isFirstLoad &&
                                             !refreshing,
                                         trailing: backupBusy
-                                            ? const SizedBox(
-                                                width: 20,
-                                                height: 20,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                        strokeWidth: 2))
+                                            ? PiggySpinner(
+                                                size: 20,
+                                                color: PiggyTokens.primary(
+                                                    context))
                                             : null,
                                         onTap: () => _handleBackupNow(context),
                                       ),
@@ -1870,12 +1900,10 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                             !isFirstLoad &&
                                             !refreshing,
                                         trailing: restoreBusy
-                                            ? const SizedBox(
-                                                width: 20,
-                                                height: 20,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                        strokeWidth: 2))
+                                            ? PiggySpinner(
+                                                size: 20,
+                                                color: PiggyTokens.primary(
+                                                    context))
                                             : null,
                                         onTap: () =>
                                             _handleRestoreFromBackup(context),

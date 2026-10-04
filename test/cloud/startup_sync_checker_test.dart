@@ -1632,11 +1632,60 @@ void main() {
       await checker.runIfNeeded();
 
       expect(deps.lastCandidates.map((c) => c.ledger.id), contains(1));
-      expect(deps.lastInfoMessage, 'meta-diff-title',
-          reason: '候选弹窗要顺带告知另有账本的云端元信息不同（同样不自动合并）');
+      // 两类排除项各占一行：账本 2 同时命中「云端元信息不同」与
+      // 「direction=unknown 不纳入候选」，因此两行都要出现。
+      // 2026-10-03 真机复现的误读来源：此前只报元信息差异，7 个
+      // direction=unknown 账本被完全静默，用户会把「检测到 1 个账本」
+      // 读成「其余账本都已最新」。
+      expect(deps.lastInfoMessage, 'meta-diff-title\nunknown-diff:1',
+          reason: '候选弹窗要显式说出本次不会同步哪些账本：'
+              '元信息差异 + 方向未知（各一行）');
       expect(deps.lastCandidates.map((c) => c.ledger.id),
           isNot(contains(2)),
           reason: '方向未知的账本仍不得进入候选（审计 M1 不变量不变）');
+    });
+
+    test('有候选 + 仅有方向未知账本（无元信息差异）→ 仍要告知被跳过的数量', () async {
+      // 真机 8 账本场景的形态：1 个 cloudNewer 进候选，7 个 direction=unknown
+      // 被跳过，且它们的云端元信息与本地一致（故 metaDiff 为空）。
+      // 修复前 infoMessage 为 null —— 弹窗只剩「检测到 1 个账本」，用户无从
+      // 得知另外 7 个本次不会同步。修复后必须给出跳过数量。
+      deps.activeConfig = s3Config();
+      deps.ledgers = [
+        ledger(1, '待合并'),
+        ledger(2, '日常账'),
+        ledger(3, '旅行账'),
+      ];
+      deps.statusByLedger = {
+        1: status(SyncDiff.cloudNewer),
+        2: status(SyncDiff.different),
+        3: status(SyncDiff.different),
+      };
+      // 元信息与本地一致 → 不产生 metaDiff，只剩方向未知这一类排除项
+      deps.cloudMetaByLedger = {
+        2: (name: '日常账', currency: 'CNY', monthStartDay: 1),
+        3: (name: '旅行账', currency: 'CNY', monthStartDay: 1),
+      };
+      deps.summaryChoice = SummaryChoice.skip;
+
+      await checker.runIfNeeded();
+
+      expect(deps.lastCandidates.map((c) => c.ledger.id), contains(1));
+      expect(deps.lastInfoMessage, 'unknown-diff:2',
+          reason: '无元信息差异时也不能静默：必须告知 2 个账本本次不会同步');
+      expect(deps.lastCandidates.map((c) => c.ledger.id), isNot(contains(2)));
+      expect(deps.lastCandidates.map((c) => c.ledger.id), isNot(contains(3)));
+    });
+
+    test('无任何排除项 → infoMessage 为 null（不制造无谓噪音）', () async {
+      deps.activeConfig = s3Config();
+      deps.ledgers = [ledger(1, '待合并')];
+      deps.statusByLedger = {1: status(SyncDiff.cloudNewer)};
+      deps.summaryChoice = SummaryChoice.skip;
+
+      await checker.runIfNeeded();
+
+      expect(deps.lastInfoMessage, isNull, reason: '候选即全部待同步账本时，弹窗不应出现附加提示行');
     });
   });
 }
@@ -1985,6 +2034,9 @@ class _FakeDeps implements StartupSyncCheckerDeps {
     }
     return (title: 'meta-diff-title', lines: lines, action: 'meta-diff-action');
   }
+
+  @override
+  String getUnknownDiffHint(int count) => 'unknown-diff:$count';
 
   /// P1-3 埋点补缺：测试桩默认无 metrics（no-op 埋点）。
   /// 需要断言指标写入的用例覆写本 getter 注入记录器。

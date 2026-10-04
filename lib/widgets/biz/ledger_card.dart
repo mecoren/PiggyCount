@@ -15,6 +15,7 @@ import '../../utils/currencies.dart';
 import '../../l10n/app_localizations.dart';
 import '../../styles/tokens.dart';
 import '../ui/piggy_popup_menu.dart';
+import '../ui/piggy_spinner.dart';
 
 /// 账本卡片
 class LedgerCard extends ConsumerStatefulWidget {
@@ -344,13 +345,7 @@ class _LedgerCardState extends ConsumerState<LedgerCard> {
   ) {
     // 优先显示上传中状态
     if (isUploading) {
-      return const SizedBox(
-        width: 20,
-        height: 20,
-        child: CircularProgressIndicator(
-          strokeWidth: 2.0,
-        ),
-      );
+      return PiggySpinner(size: 20, color: PiggyTokens.primary(context));
     }
 
     if (isRemote) {

@@ -7,6 +7,14 @@ import '../../l10n/app_localizations.dart';
 import '../../providers/database_providers.dart';
 import '../../services/system/logger_service.dart';
 import '../../styles/tokens.dart';
+import '../ui/piggy_spinner.dart';
+
+/// 正在执行的恢复动作；null 表示空闲。
+///
+/// 不能只用一个裸 bool：导出与重置是两条互斥路径，共享 bool 时只能让整块面板
+/// 一起转，看不出「到底在导出还是在重置」。这里记下具体动作，转圈才能画在
+/// **真正在跑的那个按钮**上。
+enum _BusyOp { export, reset }
 
 /// 本地数据库异常时的全屏恢复引导（审计 P1-6）。
 ///
@@ -36,7 +44,9 @@ class DatabaseRecoveryOverlay extends ConsumerStatefulWidget {
 
 class _DatabaseRecoveryOverlayState
     extends ConsumerState<DatabaseRecoveryOverlay> {
-  bool _busy = false;
+  _BusyOp? _busyOp;
+
+  bool get _busy => _busyOp != null;
   bool _confirmingReset = false;
 
   /// 内联结果反馈（不弹 dialog：见类注释）。
@@ -111,12 +121,17 @@ class _DatabaseRecoveryOverlayState
   /// 动作按**正确执行顺序**排列：先导出留存（只读、无风险、不可逆性最高的一步
   /// 必须先做），再重置（二次确认），最后才是「稍后处理」。
   Widget _buildActions(BuildContext context, AppLocalizations l10n) {
+    final iconColor = PiggyTokens.iconPrimary(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         OutlinedButton.icon(
           onPressed: _busy ? null : _export,
-          icon: const Icon(Icons.ios_share_outlined),
+          // 唯一的进行中反馈：这是一个用户会紧张的全屏流程（数据疑似损坏），
+          // 按钮整体变灰会让用户以为界面卡住了。
+          icon: _busyOp == _BusyOp.export
+              ? PiggySpinner(size: 18, color: iconColor)
+              : const Icon(Icons.ios_share_outlined),
           label: Text(l10n.dbHealthActionExport),
         ),
         const SizedBox(height: 8),
@@ -162,7 +177,13 @@ class _DatabaseRecoveryOverlayState
           style: FilledButton.styleFrom(
             backgroundColor: PiggyTokens.warning(context),
           ),
-          child: Text(l10n.commonConfirm),
+          child: _busyOp == _BusyOp.reset
+              // 重置是不可逆操作，转圈必须画在确认键本体上，不能只让面板变灰。
+              ? PiggySpinner(
+                  size: 18,
+                  color: PiggyTokens.textOnPrimary(context),
+                )
+              : Text(l10n.commonConfirm),
         ),
         const SizedBox(height: 8),
         TextButton(
@@ -176,11 +197,13 @@ class _DatabaseRecoveryOverlayState
 
   Future<void> _export() async {
     final l10n = AppLocalizations.of(context);
-    setState(() => _busy = true);
+    setState(() => _busyOp = _BusyOp.export);
     try {
       final path = await DatabaseHealthService.exportCopy();
       if (path == null) {
-        setState(() => _status = l10n.dbHealthExportFailed('file not found'));
+        if (mounted) {
+          setState(() => _status = l10n.dbHealthExportFailed('file not found'));
+        }
         return;
       }
       await SharePlus.instance.share(ShareParams(files: [XFile(path)]));
@@ -189,13 +212,13 @@ class _DatabaseRecoveryOverlayState
       logger.warning('DbHealth', '导出损坏数据库失败: $e');
       if (mounted) setState(() => _status = l10n.dbHealthExportFailed('$e'));
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) setState(() => _busyOp = null);
     }
   }
 
   Future<void> _reset() async {
     final l10n = AppLocalizations.of(context);
-    setState(() => _busy = true);
+    setState(() => _busyOp = _BusyOp.reset);
     try {
       final dir = await DatabaseHealthService.quarantine();
       if (dir == null) {
@@ -223,7 +246,7 @@ class _DatabaseRecoveryOverlayState
         });
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) setState(() => _busyOp = null);
     }
   }
 }

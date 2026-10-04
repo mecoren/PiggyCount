@@ -279,8 +279,11 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
           ),
           child: Column(
             children: [
-              const Expanded(
-                child: Center(child: CircularProgressIndicator()),
+              Expanded(
+                child: Center(
+                  child: PiggySpinner(
+                      size: 36, color: PiggyTokens.primary(context)),
+                ),
               ),
             ],
           ),

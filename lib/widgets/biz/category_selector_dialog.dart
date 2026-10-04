@@ -10,6 +10,7 @@ import '../../utils/shared_ledger_picker_filter.dart';
 import '../category_icon.dart';
 import '../ui/dialog.dart';
 import '../ui/piggy_input.dart';
+import '../ui/piggy_spinner.dart';
 
 /// 分类过滤器回调类型
 /// 返回 true 表示该分类可选，返回 false 表示不可选（置灰）
@@ -352,7 +353,12 @@ class _CategorySelectorDialogState
                 future: _loadAllCategories(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) {
-                    return const Center(child: CircularProgressIndicator());
+                    return Center(
+                      child: PiggySpinner(
+                        size: 36,
+                        color: PiggyTokens.primary(context),
+                      ),
+                    );
                   }
 
                   final groups = _buildCategoryGroups(snapshot.data!);

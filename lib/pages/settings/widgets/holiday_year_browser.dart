@@ -150,11 +150,7 @@ class _HolidayYearBrowserState extends ConsumerState<HolidayYearBrowser> {
       onPressed: widget.busy ? null : () => widget.onFetchYear(_displayYear),
       tooltip: l10n.holidayUpdateYear,
       icon: busy
-          ? const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
+          ? PiggySpinner(size: 16, color: PiggyTokens.primary(context))
           : Icon(
               Icons.refresh,
               color: widget.busy
@@ -199,15 +195,11 @@ class _HolidayYearBrowserState extends ConsumerState<HolidayYearBrowser> {
           ),
         );
       },
-      loading: () => const SliverToBoxAdapter(
+      loading: () => SliverToBoxAdapter(
         child: Center(
           child: Padding(
-            padding: EdgeInsets.all(24),
-            child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
+            padding: const EdgeInsets.all(24),
+            child: PiggySpinner(size: 20, color: PiggyTokens.primary(context)),
           ),
         ),
       ),

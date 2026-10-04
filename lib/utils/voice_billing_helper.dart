@@ -659,7 +659,7 @@ class _VoiceRecordingDialogState extends ConsumerState<_VoiceRecordingDialog> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (_isProcessing) ...[
-            const CircularProgressIndicator(),
+            PiggySpinner(size: 36, color: PiggyTokens.primary(context)),
             const SizedBox(height: 16),
             Text(_status ?? l10n.voiceRecordingProcessing),
             if (_recognizedText != null) ...[
@@ -671,7 +671,7 @@ class _VoiceRecordingDialogState extends ConsumerState<_VoiceRecordingDialog> {
           ] else if (_isRecording) ...[
             ..._buildAutoRecordingContent(l10n),
           ] else ...[
-            const CircularProgressIndicator(),
+            PiggySpinner(size: 36, color: PiggyTokens.primary(context)),
             const SizedBox(height: 16),
             Text(_status ?? l10n.voiceRecordingPreparing),
           ],

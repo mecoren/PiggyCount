@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../styles/tokens.dart';
+import 'piggy_spinner.dart';
 
 /// 底部抽屉双等宽操作按钮：左侧取消（描边）+ 右侧确认（填充）。
 ///
@@ -52,10 +53,9 @@ class PiggySheetActions extends StatelessWidget {
             onPressed: confirmBusy ? null : onConfirm,
             style: style,
             child: confirmBusy
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                ? PiggySpinner(
+                    size: 18,
+                    color: PiggyTokens.textOnPrimary(context),
                   )
                 : Text(confirmLabel),
           ),

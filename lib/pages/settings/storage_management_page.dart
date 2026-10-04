@@ -216,7 +216,10 @@ class _StorageManagementPageState extends ConsumerState<StorageManagementPage> {
         showBack: true,
       ),
       body: _isScanning
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(
+              child:
+                  PiggySpinner(size: 36, color: PiggyTokens.primary(context)),
+            )
           : ListView(
               padding: EdgeInsets.fromLTRB(
                 16,

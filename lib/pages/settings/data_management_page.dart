@@ -258,14 +258,7 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
           title: l10n.attachmentExportTitle,
           subtitle: l10n.attachmentExportSubtitle,
           trailing: _isExporting
-              ? SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: primary,
-                  ),
-                )
+              ? PiggySpinner(size: 24, color: primary)
               : IconButton(
                   icon: Icon(Icons.preview, color: primary),
                   tooltip: l10n.tooltipPreview,
@@ -308,14 +301,7 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
           title: l10n.attachmentImportTitle,
           subtitle: l10n.attachmentImportSubtitle,
           trailing: _isImporting
-              ? SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: primary,
-                  ),
-                )
+              ? PiggySpinner(size: 24, color: primary)
               : null,
           onTap: _isImporting ? null : _selectImportFile,
           enabled: !_isImporting,

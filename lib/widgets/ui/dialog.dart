@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../../styles/tokens.dart';
+import 'piggy_spinner.dart';
 
 /// 统一弹窗（基础 UI 组件）
 class AppDialog {
@@ -804,7 +805,7 @@ BlockingProgressDialogHandle showBlockingProgressDialog(
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CircularProgressIndicator(),
+            PiggySpinner(size: 36, color: PiggyTokens.primary(dctx)),
             const SizedBox(height: 16),
             ValueListenableBuilder<String>(
               valueListenable: status,

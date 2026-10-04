@@ -82,6 +82,16 @@ class LocalExchangeRateRepository implements ExchangeRateRepository {
   }
 
   @override
+  Future<List<ExchangeRateOverride>> getAllOverrides() {
+    return (db.select(db.exchangeRateOverrides)
+          ..orderBy([
+            (t) => d.OrderingTerm.asc(t.baseCurrency),
+            (t) => d.OrderingTerm.asc(t.quoteCurrency),
+          ]))
+        .get();
+  }
+
+  @override
   Stream<List<ExchangeRateOverride>> watchOverrides(String base) {
     return (db.select(db.exchangeRateOverrides)
           ..where((t) => t.baseCurrency.equals(base.toUpperCase()))

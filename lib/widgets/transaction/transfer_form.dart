@@ -386,7 +386,9 @@ class _TransferFormState extends ConsumerState<TransferForm> {
       future: _loadFilteredAccountsCached(),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(
+            child: PiggySpinner(size: 36, color: PiggyTokens.primary(context)),
+          );
         }
         if (snapshot.hasError) {
           return Center(

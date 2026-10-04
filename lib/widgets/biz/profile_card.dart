@@ -14,6 +14,7 @@ import 'piggy_icon.dart';
 import '../ui/toast.dart';
 import '../ui/dialog.dart';
 import '../ui/piggy_input.dart';
+import '../ui/piggy_spinner.dart';
 
 /// MinePage 顶部用户信息卡片
 ///
@@ -291,8 +292,7 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
                                     child: SizedBox(
                                       width: 20.0.scaled(context, ref),
                                       height: 20.0.scaled(context, ref),
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
+                                      child: PiggySpinner(
                                         color: headerForeground,
                                       ),
                                     ),

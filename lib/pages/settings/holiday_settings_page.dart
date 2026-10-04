@@ -99,12 +99,8 @@ class _HolidaySettingsPageState extends ConsumerState<HolidaySettingsPage> {
                       child: FilledButton.icon(
                         onPressed: _busy ? null : () => _updateNow(l10n),
                         icon: _updating
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              )
+                            ? PiggySpinner(
+                                size: 16, color: PiggyTokens.primary(context))
                             : const Icon(Icons.refresh, size: 20),
                         label: Text(_updating
                             ? l10n.holidayUpdating

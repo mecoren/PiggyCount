@@ -64,7 +64,12 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
               child: reportAsync.when(
                 skipLoadingOnReload: true,
                 data: (report) => _buildBody(context, ref, l10n, report),
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => Center(
+                  child: PiggySpinner(
+                    size: 36,
+                    color: PiggyTokens.primary(context),
+                  ),
+                ),
                 error: (err, _) => Center(
                   child: Padding(
                     padding: const EdgeInsets.all(24),
@@ -275,12 +280,7 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
                   ? null
                   : () => _cleanSelected(report),
               icon: _cleaning
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
-                    )
+                  ? const PiggySpinner(size: 16, color: Colors.white)
                   : const Icon(Icons.delete_sweep_outlined,
                       color: Colors.white),
               label: Text(l10n.maintenanceOrphanCleanSelected,

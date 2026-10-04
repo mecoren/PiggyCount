@@ -186,9 +186,11 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
                 children: [
                   // 汇总信息卡片
                   summaryAsync.when(
-                    loading: () => const SizedBox(
+                    loading: () => SizedBox(
                       height: 120,
-                      child: Center(child: CircularProgressIndicator()),
+                      child: Center(
+                          child: PiggySpinner(
+                              size: 36, color: PiggyTokens.primary(context))),
                     ),
                     error: (error, stack) => Container(
                       height: 120,
@@ -223,8 +225,9 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
                       child: filteredTransactionsAsync.when(
                         skipLoadingOnReload: true,
                         skipLoadingOnRefresh: true,
-                        loading: () =>
-                            const Center(child: CircularProgressIndicator()),
+                        loading: () => Center(
+                            child: PiggySpinner(
+                                size: 36, color: PiggyTokens.primary(context))),
                         error: (error, stack) => Center(
                             child: Text(
                                 '${AppLocalizations.of(context).categoryDetailLoadFailed}: $error')),

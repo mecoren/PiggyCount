@@ -135,6 +135,14 @@
     }
   },
   "startupSyncMetaDiffAction": "Startup check does not merge this automatically (to avoid overwriting your local changes). Please handle it manually in Me → Cloud Sync.",
+  "startupSyncCheckUnknownDiffHint": "Another {count} ledger(s) have changes on both the local and cloud sides, so it cannot be determined which is newer. They will not be synced this time; to align them, please handle them manually in Me → Cloud Sync.",
+  "@startupSyncCheckUnknownDiffHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "startupSyncConflictTooltip": "Local changes will be overwritten by cloud",
   "startupSyncConflictConfirmTitle": "Overwrite confirmation",
   "startupSyncConflictConfirmMessage": "This will overwrite local changes in {count} ledger(s) ({names}) with cloud version. Continue?",
@@ -3012,6 +3020,32 @@
       }
     }
   },
+  "syncPreviewEntityDeleted": "{kind} “{name}”",
+  "@syncPreviewEntityDeleted": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "syncPreviewEntityDeletedHint": "Deleted on the other device; tick to delete locally too",
+  "syncSkippedPublishUnselectedDelete": "{count} ledger(s) had cloud deletions you did not tick, so they were not uploaded. Those deletions did not take effect this round and will be offered again next sync.",
+  "@syncSkippedPublishUnselectedDelete": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncEntityKindAccount": "Account",
+  "syncEntityKindCategory": "Category",
+  "syncEntityKindTag": "Tag",
+  "syncEntityKindBudget": "Budget",
+  "syncEntityKindRecurring": "Recurring rule",
+  "syncEntityKindRateOverride": "Manual rate",
   "syncPreviewApply": "Apply {count} items",
   "@syncPreviewApply": {
     "placeholders": {

@@ -2169,6 +2169,10 @@ class TransactionsSyncManager implements SyncService {
         repo: repo,
         ledgerId: ledgerId,
         cloudTransactions: importData.transactions,
+        // 实体删除语义（账户/分类/标签/预算/周期规则/汇率覆盖）只对 v8+
+        // 快照成立；computeEntityDeletes 内部自带 version 门控，这里透传整份
+        // ImportData（含 version 与 skippedItems 损坏统计）。
+        cloudMeta: importData,
       );
 
       if (preview != null) {

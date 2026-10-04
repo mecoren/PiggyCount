@@ -64,11 +64,8 @@ class _ExportPageState extends ConsumerState<ExportPage> {
                     if (exporting)
                       Row(
                         children: [
-                          const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
+                          PiggySpinner(
+                              size: 20, color: PiggyTokens.primary(context)),
                           const SizedBox(width: 12),
                           Expanded(
                             child: LinearProgressIndicator(

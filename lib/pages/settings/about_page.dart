@@ -156,10 +156,8 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                     title = l10n.mineCheckUpdateDetecting;
                     subtitle = l10n.mineCheckUpdateSubtitleDetecting;
                     icon = Icons.hourglass_empty;
-                    trailing = const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2));
+                    trailing = PiggySpinner(
+                        size: 20, color: PiggyTokens.primary(context));
                   } else if (downloadProgress.isActive) {
                     showProgress = true;
                     title = l10n.mineUpdateDownloadTitle;

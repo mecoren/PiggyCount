@@ -117,8 +117,9 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
               valueListenable: _searchText,
               builder: (context, searchText, _) {
                 return allTagsAsync.when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
+                  loading: () => Center(
+                      child: PiggySpinner(
+                          size: 36, color: PiggyTokens.primary(context))),
                   error: (error, stack) => Center(child: Text('$error')),
                   data: (allTags) {
                     // 过滤搜索结果

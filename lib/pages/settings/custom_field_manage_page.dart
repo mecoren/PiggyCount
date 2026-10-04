@@ -64,7 +64,9 @@ class _CustomFieldManagePageState extends ConsumerState<CustomFieldManagePage> {
           top: MediaQuery.of(context).padding.top + 80,
         ),
         child: definitionsAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => Center(
+            child: PiggySpinner(size: 36, color: PiggyTokens.primary(context)),
+          ),
           error: (error, _) => Center(
             child: Text('${l10n.commonError}: $error'),
           ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../styles/tokens.dart';
 import '../../l10n/app_localizations.dart';
+import '../../widgets/ui/piggy_spinner.dart';
 
 class SplashPage extends ConsumerWidget {
   const SplashPage({super.key});
@@ -122,14 +123,7 @@ class SplashPage extends ConsumerWidget {
               const SizedBox(height: 24),
 
               // 加载指示器
-              SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(onPrimary),
-                  strokeWidth: 2,
-                ),
-              ),
+              PiggySpinner(size: 24, color: onPrimary),
 
               const SizedBox(height: 16),
 

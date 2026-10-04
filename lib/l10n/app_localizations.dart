@@ -402,6 +402,12 @@ abstract class AppLocalizations {
   /// **'Startup check does not merge this automatically (to avoid overwriting your local changes). Please handle it manually in Me → Cloud Sync.'**
   String get startupSyncMetaDiffAction;
 
+  /// No description provided for @startupSyncCheckUnknownDiffHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Another {count} ledger(s) have changes on both the local and cloud sides, so it cannot be determined which is newer. They will not be synced this time; to align them, please handle them manually in Me → Cloud Sync.'**
+  String startupSyncCheckUnknownDiffHint(int count);
+
   /// No description provided for @startupSyncConflictTooltip.
   ///
   /// In en, this message translates to:
@@ -12324,6 +12330,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} deleted'**
   String syncPreviewDeletedCount(int count);
+
+  /// No description provided for @syncPreviewEntityDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'{kind} “{name}”'**
+  String syncPreviewEntityDeleted(String kind, String name);
+
+  /// No description provided for @syncPreviewEntityDeletedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted on the other device; tick to delete locally too'**
+  String get syncPreviewEntityDeletedHint;
+
+  /// No description provided for @syncSkippedPublishUnselectedDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} ledger(s) had cloud deletions you did not tick, so they were not uploaded. Those deletions did not take effect this round and will be offered again next sync.'**
+  String syncSkippedPublishUnselectedDelete(int count);
+
+  /// No description provided for @syncEntityKindAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get syncEntityKindAccount;
+
+  /// No description provided for @syncEntityKindCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get syncEntityKindCategory;
+
+  /// No description provided for @syncEntityKindTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Tag'**
+  String get syncEntityKindTag;
+
+  /// No description provided for @syncEntityKindBudget.
+  ///
+  /// In en, this message translates to:
+  /// **'Budget'**
+  String get syncEntityKindBudget;
+
+  /// No description provided for @syncEntityKindRecurring.
+  ///
+  /// In en, this message translates to:
+  /// **'Recurring rule'**
+  String get syncEntityKindRecurring;
+
+  /// No description provided for @syncEntityKindRateOverride.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual rate'**
+  String get syncEntityKindRateOverride;
 
   /// No description provided for @syncPreviewApply.
   ///

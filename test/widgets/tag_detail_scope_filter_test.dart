@@ -13,6 +13,7 @@ import 'package:piggycount/l10n/app_localizations.dart';
 import 'package:piggycount/pages/tag/tag_detail_page.dart';
 import 'package:piggycount/providers/database_providers.dart';
 import 'package:piggycount/widgets/biz/biz.dart' show TransactionListItem;
+import 'package:piggycount/widgets/ui/piggy_spinner.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -98,13 +99,13 @@ void main() {
     expect(find.text('3笔'), findsOneWidget);
 
     // 切维度不得闪 loading：月→年→全部 三连切，每一步在下一帧（数据已同步
-    // 就绪）就必须看到明细行，不能出现 CircularProgressIndicator。
+    // 就绪）就必须看到明细行，不能出现 PiggySpinner。
     // 回归背景：切维度时若换 provider 实例，整块列表会回 loading 转圈。
     for (final label in ['年', '月', '全部']) {
       await tester.tap(find.text(label));
       await tester.pump(); // 只推进一帧，不 pumpAndSettle
       expect(
-        find.byType(CircularProgressIndicator),
+        find.byType(PiggySpinner),
         findsNothing,
         reason: '切「$label」后不应出现 loading 指示器',
       );

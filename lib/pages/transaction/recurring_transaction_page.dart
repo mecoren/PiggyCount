@@ -56,8 +56,9 @@ class RecurringTransactionPage extends ConsumerWidget {
                   // skipLoading*: 下拉刷新后保留旧数据渲染，避免整页闪 loading
                   skipLoadingOnReload: true,
                   skipLoadingOnRefresh: true,
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
+                  loading: () => Center(
+                      child: PiggySpinner(
+                          size: 36, color: PiggyTokens.primary(context))),
                   error: (error, stack) => Center(
                     child: Text('Error: $error'),
                   ),

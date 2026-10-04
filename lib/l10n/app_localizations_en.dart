@@ -181,6 +181,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Startup check does not merge this automatically (to avoid overwriting your local changes). Please handle it manually in Me → Cloud Sync.';
 
   @override
+  String startupSyncCheckUnknownDiffHint(int count) {
+    return 'Another $count ledger(s) have changes on both the local and cloud sides, so it cannot be determined which is newer. They will not be synced this time; to align them, please handle them manually in Me → Cloud Sync.';
+  }
+
+  @override
   String get startupSyncConflictTooltip =>
       'Local changes will be overwritten by cloud';
 
@@ -6803,6 +6808,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String syncPreviewDeletedCount(int count) {
     return '$count deleted';
   }
+
+  @override
+  String syncPreviewEntityDeleted(String kind, String name) {
+    return '$kind “$name”';
+  }
+
+  @override
+  String get syncPreviewEntityDeletedHint =>
+      'Deleted on the other device; tick to delete locally too';
+
+  @override
+  String syncSkippedPublishUnselectedDelete(int count) {
+    return '$count ledger(s) had cloud deletions you did not tick, so they were not uploaded. Those deletions did not take effect this round and will be offered again next sync.';
+  }
+
+  @override
+  String get syncEntityKindAccount => 'Account';
+
+  @override
+  String get syncEntityKindCategory => 'Category';
+
+  @override
+  String get syncEntityKindTag => 'Tag';
+
+  @override
+  String get syncEntityKindBudget => 'Budget';
+
+  @override
+  String get syncEntityKindRecurring => 'Recurring rule';
+
+  @override
+  String get syncEntityKindRateOverride => 'Manual rate';
 
   @override
   String syncPreviewApply(int count) {

@@ -5,6 +5,7 @@ import '../../data/db.dart';
 import '../../providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../ui/dialog.dart';
+import '../ui/piggy_spinner.dart';
 
 /// 显示账本选择器
 ///
@@ -47,9 +48,11 @@ class LedgerSelectorDialog extends ConsumerWidget {
         future: repo.getAllLedgers(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
-              child: Center(child: CircularProgressIndicator()),
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: PiggySpinner(size: 36, color: PiggyTokens.primary(context)),
+              ),
             );
           }
 

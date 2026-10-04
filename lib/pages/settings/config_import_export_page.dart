@@ -417,8 +417,8 @@ class _ConfigImportExportPageState
                     ? SizedBox(
                         width: 20.0.scaled(context, ref),
                         height: 20.0.scaled(context, ref),
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
+                        child: PiggySpinner(
+                          size: 20,
                           color: ref.watch(primaryColorProvider),
                         ),
                       )
@@ -485,8 +485,8 @@ class _ConfigImportExportPageState
                     ? SizedBox(
                         width: 20.0.scaled(context, ref),
                         height: 20.0.scaled(context, ref),
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
+                        child: PiggySpinner(
+                          size: 20,
                           color: ref.watch(primaryColorProvider),
                         ),
                       )

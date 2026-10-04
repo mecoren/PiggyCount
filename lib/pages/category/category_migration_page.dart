@@ -60,7 +60,9 @@ class _CategoryMigrationPageState extends ConsumerState<CategoryMigrationPage> {
           children: [
             Expanded(
               child: categoriesWithCountAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => Center(
+                    child: PiggySpinner(
+                        size: 36, color: PiggyTokens.primary(context))),
                 error: (error, stack) => Center(
                     child: Text(AppLocalizations.of(context)
                         .categoryLoadFailed(error.toString()))),
@@ -231,11 +233,8 @@ class _CategoryMigrationPageState extends ConsumerState<CategoryMigrationPage> {
                 onPressed:
                     _canMigrate() && !_isLoading ? _performMigration : null,
                 child: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                    ? PiggySpinner(
+                        size: 20, color: PiggyTokens.primary(context))
                     : Text(l10n.categoryMigrationStartButton),
               ),
             ),

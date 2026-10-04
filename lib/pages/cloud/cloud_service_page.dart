@@ -113,12 +113,8 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                   ? [
                       IconButton(
                         icon: _testingConnection
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              )
+                            ? PiggySpinner(
+                                size: 20, color: PiggyTokens.primary(context))
                             : const Icon(Icons.wifi_find),
                         onPressed: _testingConnection
                             ? null

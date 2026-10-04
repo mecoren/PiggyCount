@@ -41,6 +41,7 @@ import 'package:piggycount/providers/sync_providers.dart';
 import 'package:piggycount/services/data_import_service.dart' show ImportData;
 import 'package:piggycount/widgets/biz/ledger_card.dart';
 import 'package:piggycount/widgets/ui/dialog.dart';
+import 'package:piggycount/widgets/ui/piggy_spinner.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -297,7 +298,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(AppDialogShell),
-          matching: find.byType(CircularProgressIndicator),
+          matching: find.byType(PiggySpinner),
         ),
         findsNothing,
         reason: '确认框里不该还挂着进度圈（= 遮罩没关）',

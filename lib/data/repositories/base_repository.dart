@@ -93,4 +93,30 @@ abstract class BaseRepository
     required List<int> ids,
     required int categoryId,
   });
+
+  // -------------------------------------------------------------------
+  // 云同步「实体镜像删除」的引用守卫
+  // -------------------------------------------------------------------
+
+  /// 一次性取出**全账本范围**内被引用的账户 / 分类 / 标签 / 周期规则 id 集合。
+  ///
+  /// 用途：`SyncDiffService` 的合并路径要判定「对端已删、本地还在」的实体能否
+  /// 镜像删除 —— 被引用的实体必须保留，否则交易/预算会留下悬空外键
+  /// （SQLite 默认不开外键约束，悬空外键不会报错、只会静默丢分类名）。
+  ///
+  /// 声明在聚合层而非各子仓：每个集合都要跨表 JOIN
+  /// （账户 = 交易 account_id/to_account_id + 周期规则；分类 = 交易 + 预算 +
+  /// 周期规则 + 子分类 parent_id；标签 = 交易-标签关联；周期规则 = 交易
+  /// recurring_id），单表子仓拿不到其它表 —— 归属理由同
+  /// [recalcNativeAmountsForLedger]。
+  ///
+  /// 口径与全量恢复路径 `_mirrorDeleteAbsentEntities` 的引用集合逐字一致，
+  /// 两条路径的删除边界不允许漂移。
+  Future<
+      ({
+        Set<int> accountIds,
+        Set<int> categoryIds,
+        Set<int> tagIds,
+        Set<int> recurringIds
+      })> getSyncEntityReferences();
 }

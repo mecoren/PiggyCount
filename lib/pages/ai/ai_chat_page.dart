@@ -140,7 +140,9 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
     if (_conversationId == null) {
       return Scaffold(
         backgroundColor: PiggyTokens.scaffoldBackground(context),
-        body: const Center(child: CircularProgressIndicator()),
+        body: Center(
+          child: PiggySpinner(size: 36, color: PiggyTokens.primary(context)),
+        ),
       );
     }
 
@@ -257,8 +259,10 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
                         },
                       );
                     },
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
+                    loading: () => Center(
+                      child: PiggySpinner(
+                          size: 36, color: PiggyTokens.primary(context)),
+                    ),
                     error: (e, st) => Center(
                       child: Text(AppLocalizations.of(context)
                           .commonLoadFailed(e.toString())),
@@ -309,11 +313,9 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
                     SizedBox(
                       width: 16.0.scaled(context, ref),
                       height: 16.0.scaled(context, ref),
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          ref.watch(primaryColorProvider),
-                        ),
+                      child: PiggySpinner(
+                        size: 16.0.scaled(context, ref),
+                        color: ref.watch(primaryColorProvider),
                       ),
                     ),
                     SizedBox(width: 8.0.scaled(context, ref)),

@@ -430,14 +430,8 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
               child: FilledButton(
                 onPressed: (_saving || _isDuplicateName) ? null : _saveCategory,
                 child: _saving
-                    ? SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: PiggyTokens.textOnPrimary(context),
-                        ),
-                      )
+                    ? PiggySpinner(
+                        size: 20, color: PiggyTokens.textOnPrimary(context))
                     : Text(AppLocalizations.of(context).commonSave),
               ),
             ),
@@ -696,11 +690,10 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
                 border: Border.all(color: PiggyTokens.border(context)),
               ),
               child: _isPickingImage
-                  ? const Center(
-                      child: SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                  ? Center(
+                      child: PiggySpinner(
+                        size: 24,
+                        color: PiggyTokens.primary(context),
                       ),
                     )
                   : _customIconPath != null
@@ -708,12 +701,14 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
                           future: _getAbsoluteIconPath(),
                           builder: (context, snapshot) {
                             if (!snapshot.hasData) {
-                              return const SizedBox(
+                              return SizedBox(
                                 width: 48,
                                 height: 48,
                                 child: Center(
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
+                                  child: PiggySpinner(
+                                    size: 36,
+                                    color: PiggyTokens.primary(context),
+                                  ),
                                 ),
                               );
                             }

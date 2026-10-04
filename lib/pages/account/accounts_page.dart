@@ -1997,14 +1997,9 @@ class _AccountCard extends ConsumerWidget {
                   child: Padding(
                     padding: EdgeInsets.symmetric(
                         vertical: 4.0.scaled(context, ref)),
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                            PiggyTokens.primary(context)),
-                        strokeWidth: 2,
-                      ),
+                    child: PiggySpinner(
+                      size: 20,
+                      color: PiggyTokens.primary(context),
                     ),
                   ),
                 ),

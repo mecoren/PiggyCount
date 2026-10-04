@@ -206,9 +206,11 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
                 children: [
                   // 标签信息和统计卡片
                   tagAsync.when(
-                    loading: () => const SizedBox(
+                    loading: () => SizedBox(
                       height: 140,
-                      child: Center(child: CircularProgressIndicator()),
+                      child: Center(
+                          child: PiggySpinner(
+                              size: 36, color: PiggyTokens.primary(context))),
                     ),
                     error: (error, stack) => Container(
                       height: 140,
@@ -268,8 +270,9 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
                         // skipLoading*: 下拉刷新后保留旧数据渲染，避免整页闪 loading
                         skipLoadingOnReload: true,
                         skipLoadingOnRefresh: true,
-                        loading: () =>
-                            const Center(child: CircularProgressIndicator()),
+                        loading: () => Center(
+                            child: PiggySpinner(
+                                size: 36, color: PiggyTokens.primary(context))),
                         error: (error, stack) => Center(
                           child: Text('${l10n.commonError}: $error'),
                         ),

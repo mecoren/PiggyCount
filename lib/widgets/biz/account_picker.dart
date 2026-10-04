@@ -7,6 +7,7 @@ import '../../data/db.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/account_type_utils.dart';
 import '../ui/picker_sheet.dart';
+import '../ui/piggy_spinner.dart';
 
 /// 账户选择器数据模型
 class AccountOption {
@@ -164,9 +165,11 @@ class _AccountPickerState extends ConsumerState<AccountPicker> {
                 ),
         );
       },
-      loading: () => const SizedBox(
+      loading: () => SizedBox(
         height: 200,
-        child: Center(child: CircularProgressIndicator()),
+        child: Center(
+          child: PiggySpinner(size: 36, color: PiggyTokens.primary(context)),
+        ),
       ),
       error: (err, stack) => SizedBox(
         height: 200,

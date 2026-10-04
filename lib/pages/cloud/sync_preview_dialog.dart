@@ -240,6 +240,26 @@ class _SyncPreviewDialogState extends ConsumerState<_SyncPreviewDialog> {
   String _amountSymbol(String? currencyCode) => getCurrencySymbol(
       (currencyCode?.isNotEmpty ?? false) ? currencyCode! : ref.read(baseCurrencyProvider));
 
+  /// 实体种类 → 本地化标签。穷举 switch：新增 [SyncEntityKind] 时编译期
+  /// 报错，避免默默漏一个种类（漏了就显示裸英文枚举名）。
+  String _entityKindLabel(BuildContext context, SyncEntityKind kind) {
+    final l10n = AppLocalizations.of(context);
+    switch (kind) {
+      case SyncEntityKind.account:
+        return l10n.syncEntityKindAccount;
+      case SyncEntityKind.category:
+        return l10n.syncEntityKindCategory;
+      case SyncEntityKind.tag:
+        return l10n.syncEntityKindTag;
+      case SyncEntityKind.budget:
+        return l10n.syncEntityKindBudget;
+      case SyncEntityKind.recurring:
+        return l10n.syncEntityKindRecurring;
+      case SyncEntityKind.rateOverride:
+        return l10n.syncEntityKindRateOverride;
+    }
+  }
+
   Widget _buildChangeItem(BuildContext context, SyncChange change) {
     final dateFormat = DateFormat('MM-dd');
     String summary;
@@ -265,6 +285,21 @@ class _SyncPreviewDialogState extends ConsumerState<_SyncPreviewDialog> {
         }
         break;
       case SyncChangeType.deleted:
+        // 实体删除（账户/分类/标签/预算/周期规则/汇率覆盖）：对端已删、本地还在。
+        // 与删除交易行走同一"删除"分区，但载荷完全不同 —— 必须先判
+        // entityDelete，否则会对 null 的 localTransaction 强解包直接崩。
+        final entity = change.entityDelete;
+        if (entity != null) {
+          final kindLabel = _entityKindLabel(context, entity.kind);
+          // name 为空 = 该实体没有专属名字（总预算 / 无备注的周期规则），
+          // 只显示种类标签，不留空引号。
+          summary = entity.name.isEmpty
+              ? kindLabel
+              : AppLocalizations.of(context)
+                  .syncPreviewEntityDeleted(kindLabel, entity.name);
+          detail = AppLocalizations.of(context).syncPreviewEntityDeletedHint;
+          break;
+        }
         final tx = change.localTransaction!;
         final prefix = tx.type == 'income' ? '+' : '-';
         summary =

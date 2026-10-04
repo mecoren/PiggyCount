@@ -54,7 +54,9 @@ class BudgetPage extends ConsumerWidget {
             Expanded(
               child: overviewAsync.when(
                 data: (overview) => _buildContent(context, ref, overview),
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => Center(
+                    child: PiggySpinner(
+                        size: 36, color: PiggyTokens.primary(context))),
                 error: (e, _) => Center(child: Text('Error: $e')),
               ),
             ),

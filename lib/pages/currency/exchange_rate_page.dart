@@ -86,10 +86,7 @@ class _ExchangeRatePageState extends ConsumerState<ExchangeRatePage> {
               child: SizedBox(
                 width: 18.0.scaled(context, ref),
                 height: 18.0.scaled(context, ref),
-                child: const CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
+                child: const PiggySpinner(size: 18, color: Colors.white),
               ),
             )
           else

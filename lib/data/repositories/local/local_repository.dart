@@ -2059,9 +2059,21 @@ class LocalRepository extends BaseRepository {
     // .getSingleOrNull() 直接 throw、UI 卡死(编辑转账时表现明显)。
     //
     // 这里发现 >1 条时被动合并:保留 id 最小的 keeper,把所有指向 dupes
-    // 的 transactions 改写到 keeper 上,再删除 dupes,所有变更一次性
-    // 通过 ChangeTracker 推到云端 — 同账号的其它设备下次 pull 时也能
-    // 自动擦掉脏数据。
+    // 的 transactions 改写到 keeper 上,再删除 dupes。
+    //
+    // ⚠️ 关于本方法末尾的 ChangeTracker 登记块(`if (changeTracker != null)`):
+    // **生产装配下不会执行**。
+    // `providers/database_providers.dart` 注入的是 `LocalRepository(db)` ——
+    // 不带 changeTracker(CT-1:随云端协同下线,快照路径刻意不注入 tracker,
+    // local_changes 生产恒空,详见该文件 :31-39)。因此:
+    //   • 本次删除**不会**产生 local_changes 记录,也**不会**推到云端;
+    //   • 对端设备不会因为这次合并而自动擦掉同一条脏分类;
+    //   • 但它**自愈**:合并逻辑是纯本地的,对端下次走到转账流程时同样会
+    //     跑这段合并、删掉自己那条 dupe,不会造成永久数据不一致。
+    // 该登记分支保留是有意的:①测试装配会注入 tracker
+    // (见 test/cloud/delete_ledger_aux_cleanup_test.dart 等)以覆盖登记路径;
+    // ②未来若重新注入 tracker,这里即为现成的传播点。
+    // 新增读/写 local_changes 的代码前,请先确认该表在生产是否仍有写入方。
     final all = await _categoryRepo.getAllTransferCategories();
     if (all.length <= 1) {
       // 0 条走子仓库的兜底创建,1 条直接返
@@ -2103,7 +2115,9 @@ class LocalRepository extends BaseRepository {
     });
 
     // ChangeTracker 记录:受影响 transactions / recurring_transactions 的
-    // update + dupe categories 的 delete
+    // update + dupe categories 的 delete。
+    // 生产 `LocalRepository(db)` 不注入 tracker → 本块整体跳过(CT-1),
+    // 详见本方法开头的说明;保留供测试装配 / 未来重新注入 tracker 使用。
     if (changeTracker != null) {
       for (final tx in affectedTxs) {
         if (tx.syncId == null) continue;
@@ -3784,6 +3798,10 @@ class LocalRepository extends BaseRepository {
       _exchangeRateRepo.getOverrides(base);
 
   @override
+  Future<List<ExchangeRateOverride>> getAllOverrides() =>
+      _exchangeRateRepo.getAllOverrides();
+
+  @override
   Stream<List<ExchangeRateOverride>> watchOverrides(String base) =>
       _exchangeRateRepo.watchOverrides(base);
 
@@ -3932,4 +3950,73 @@ class LocalRepository extends BaseRepository {
   @override
   Future<int> countTransactionsWithValues(int ledgerId) =>
       _customFieldRepo.countTransactionsWithValues(ledgerId);
+
+  // ============================================
+  // 云同步实体镜像删除的引用守卫（跨表聚合）
+  // ============================================
+
+  /// 口径逐字对齐全量恢复路径 `_mirrorDeleteAbsentEntities`（data_import_service.dart）：
+  /// 账户 = 交易 account_id/to_account_id + 周期规则 account_id/to_account_id；
+  /// 分类 = 交易 category_id + 预算 category_id + 周期规则 category_id
+  /// + 子分类 parent_id；标签 = transaction_tags.tag_id；
+  /// 周期规则 = 交易 recurring_id。两条路径的删除边界不允许漂移。
+  ///
+  /// 合并路径的交易行是**保留**的（不像恢复路径整体清空重导），故周期规则也
+  /// 必须纳入引用集合 —— 恢复时交易先被清空重导，不存在悬空 recurring_id；
+  /// 合并时若删掉仍被本地交易引用的规则，那些交易会留下悬空外键（SQLite
+  /// 默认不开外键约束，不报错、只静默丢周期锚点）。
+  @override
+  Future<
+      ({
+        Set<int> accountIds,
+        Set<int> categoryIds,
+        Set<int> tagIds,
+        Set<int> recurringIds
+      })> getSyncEntityReferences() async {
+    Future<Set<int>> refs(String sql) async {
+      final rows = await db.customSelect(
+        sql,
+        readsFrom: {
+          db.transactions,
+          db.recurringTransactions,
+          db.budgets,
+          db.categories,
+          db.transactionTags,
+        },
+      ).get();
+      final out = <int>{};
+      for (final r in rows) {
+        final v = r.data['v'];
+        if (v is int) {
+          out.add(v);
+        } else if (v is BigInt) {
+          out.add(v.toInt());
+        } else if (v is num) {
+          out.add(v.toInt());
+        }
+      }
+      return out;
+    }
+
+    return (
+      accountIds: await refs(
+        'SELECT account_id AS v FROM transactions WHERE account_id IS NOT NULL'
+        ' UNION SELECT to_account_id FROM transactions WHERE to_account_id IS NOT NULL'
+        ' UNION SELECT account_id FROM recurring_transactions WHERE account_id IS NOT NULL'
+        ' UNION SELECT to_account_id FROM recurring_transactions WHERE to_account_id IS NOT NULL',
+      ),
+      categoryIds: await refs(
+        'SELECT category_id AS v FROM transactions WHERE category_id IS NOT NULL'
+        ' UNION SELECT category_id FROM budgets WHERE category_id IS NOT NULL'
+        ' UNION SELECT category_id FROM recurring_transactions WHERE category_id IS NOT NULL'
+        ' UNION SELECT parent_id FROM categories WHERE parent_id IS NOT NULL',
+      ),
+      tagIds: await refs(
+        'SELECT DISTINCT tag_id AS v FROM transaction_tags',
+      ),
+      recurringIds: await refs(
+        'SELECT DISTINCT recurring_id AS v FROM transactions WHERE recurring_id IS NOT NULL',
+      ),
+    );
+  }
 }

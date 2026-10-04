@@ -27,6 +27,7 @@ import 'package:piggycount/pages/report/range_report_page.dart';
 import 'package:piggycount/providers/database_providers.dart';
 import 'package:piggycount/providers/sync_providers.dart';
 import 'package:piggycount/widgets/ui/wait_sliding_segmented_control.dart';
+import 'package:piggycount/widgets/ui/piggy_spinner.dart';
 
 /// 可挂起的仓储：[blocked] 打开后 [totalsByDay] 停在闸门不再返回，用来把页面
 /// 按在「查询在途」的中间态——闪动回归必须在数据回来之前取一帧。
@@ -251,7 +252,7 @@ void main() {
     ));
     await tester.pump(); // 只走一帧：查询还卡在闸门上
 
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(PiggySpinner), findsNothing);
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
     // 列表没被销毁重建：对比表 / 分段控件 / 三张卡原地保留（滚动位置也就没丢）
     expect(find.byType(WaitSlidingSegmentedControl<String>), findsOneWidget);
@@ -272,7 +273,7 @@ void main() {
     ));
     await tester.pump();
     expect(find.byType(LinearProgressIndicator), findsNothing);
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(PiggySpinner), findsNothing);
     expect(find.text('支出趋势'), findsOneWidget);
     expect(find.text('300.00'), findsWidgets);
   });

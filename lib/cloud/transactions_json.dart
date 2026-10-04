@@ -208,7 +208,15 @@ Future<ExportedLedgerJson> exportTransactionsJson(
       'categoryName': t.type == 'transfer' ? null : catInfo?['name'],
       'categoryKind': t.type == 'transfer' ? null : catInfo?['kind'],
       'happenedAt': t.happenedAt.toUtc().toIso8601String(),
-      'note': _sanitizeString(t.note),
+      // 与上面 accounts 的 `'note'`（:170）同写法：null 时**不写该键**，而不是
+      // 写成 ''。原因同 categoryName/categoryKind —— `_sanitizeString` 对 null
+      // 返回 ''，无条件写会把「无备注」变成「空串备注」：源端 note IS NULL 的
+      // 交易经一次往返后在对端落库为 ''，**两端 DB 字节永久不同**，而指纹侧
+      // `sync_fingerprint.dart` 对 note 用 `?? ''` 归一，差异被掩盖、既不告警
+      // 也无从自愈（2026-10-03 S3 + WebDAV 真机 8 账本/4 万笔两轮复现）。
+      // 省掉键后解析侧 `_readString` 返回 null，落库还原为 NULL，往返字节一致；
+      // 指纹口径不变（缺键 → null → `?? ''`）。
+      if (t.note != null) 'note': _sanitizeString(t.note),
       if (t.syncId != null) 'syncId': t.syncId,
       // 账单标记 + v30 多币种：必须随 JSON 传输，否则跨设备 WebDAV
       // 同步后标记/折算值丢失（例如"不计入统计"的交易同步后变回计入，

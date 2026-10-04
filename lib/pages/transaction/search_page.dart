@@ -936,7 +936,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                   }
 
                   if (_isSearching) {
-                    return const Center(child: CircularProgressIndicator());
+                    return Center(
+                        child: PiggySpinner(
+                            size: 36, color: PiggyTokens.primary(context)));
                   }
 
                   if (_searchText.isEmpty &&

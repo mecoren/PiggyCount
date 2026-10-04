@@ -204,18 +204,24 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
           bindingAsync.when(
             data: (binding) => providersAsync.when(
               data: (providers) => _buildCapabilityList(binding, providers),
-              loading: () => const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(child: CircularProgressIndicator()),
+              loading: () => Padding(
+                padding: const EdgeInsets.all(16),
+                child: Center(
+                  child: PiggySpinner(
+                      size: 36, color: PiggyTokens.primary(context)),
+                ),
               ),
               error: (e, _) => Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text('$e'),
               ),
             ),
-            loading: () => const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator()),
+            loading: () => Padding(
+              padding: const EdgeInsets.all(16),
+              child: Center(
+                child:
+                    PiggySpinner(size: 36, color: PiggyTokens.primary(context)),
+              ),
             ),
             error: (e, _) => Padding(
               padding: const EdgeInsets.all(16),

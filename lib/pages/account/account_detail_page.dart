@@ -1113,11 +1113,10 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
         isLast: true,
         child: Padding(
           padding: EdgeInsets.all(16.0.scaled(context, ref)),
-          child: const Center(
-            child: SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
+          child: Center(
+            child: PiggySpinner(
+              size: 24,
+              color: PiggyTokens.primary(context),
             ),
           ),
         ),

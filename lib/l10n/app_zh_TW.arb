@@ -1028,6 +1028,14 @@
   "startupSyncMetaDiffNameLine": "帳本名稱：{local} → {cloud}",
   "startupSyncMetaDiffMonthStartLine": "{name}：每月起始日 {local} → {cloud}",
   "startupSyncMetaDiffAction": "啟動檢查不會自動合併（避免覆蓋你的本地變更）。請到「我的 → 雲端同步」手動下載同步。",
+  "startupSyncCheckUnknownDiffHint": "另有 {count} 個帳本本地與雲端都有變更、無法判斷新舊，本次不會同步；如需對齊請到「我的 → 雲端同步」手動處理。",
+  "@startupSyncCheckUnknownDiffHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "startupSyncConflictTooltip": "本地有改動將被雲端覆蓋",
   "startupSyncConflictConfirmTitle": "覆蓋確認",
   "startupSyncConflictConfirmMessage": "將用雲端覆蓋 {count} 個帳本的本地改動（{names}），是否繼續？",
@@ -2614,6 +2622,32 @@
       }
     }
   },
+  "syncPreviewEntityDeleted": "{kind}「{name}」",
+  "@syncPreviewEntityDeleted": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "syncPreviewEntityDeletedHint": "雲端已刪除，勾選後一併刪除本機",
+  "syncSkippedPublishUnselectedDelete": "有 {count} 個帳本存在你未勾選的雲端刪除，已跳過回傳（這些刪除本輪不會生效，下次同步會再次提示）",
+  "@syncSkippedPublishUnselectedDelete": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncEntityKindAccount": "帳戶",
+  "syncEntityKindCategory": "分類",
+  "syncEntityKindTag": "標籤",
+  "syncEntityKindBudget": "預算",
+  "syncEntityKindRecurring": "週期規則",
+  "syncEntityKindRateOverride": "手動匯率",
   "syncPreviewApply": "套用 {count} 項",
   "@syncPreviewApply": {
     "placeholders": {

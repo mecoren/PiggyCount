@@ -6,6 +6,7 @@ import '../../services/data/note_history_service.dart';
 import '../../styles/tokens.dart';
 import '../../providers.dart';
 import '../ui/dialog.dart';
+import '../ui/piggy_spinner.dart';
 
 /// 备注选择弹窗
 /// 支持本地与共享账本分类标识，用于筛选历史备注。
@@ -78,9 +79,10 @@ class _NotePickerDialogState extends ConsumerState<NotePickerDialog> {
           children: [
             // 备注列表
             if (_isLoading)
-              const Padding(
-                padding: EdgeInsets.all(32),
-                child: CircularProgressIndicator(),
+              Padding(
+                padding: const EdgeInsets.all(32),
+                child:
+                    PiggySpinner(size: 36, color: PiggyTokens.primary(context)),
               )
             else if (_notes.isEmpty)
               Padding(

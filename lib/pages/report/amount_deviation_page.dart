@@ -192,7 +192,12 @@ class _AmountDeviationPageState extends ConsumerState<AmountDeviationPage> {
           future: _futureFor(ledgerId, refreshTick),
           builder: (context, snap) {
             if (snap.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
+              return Center(
+                child: PiggySpinner(
+                  size: 36,
+                  color: PiggyTokens.primary(context),
+                ),
+              );
             }
             if (snap.hasError) {
               return Center(

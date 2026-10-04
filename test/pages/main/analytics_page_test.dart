@@ -26,6 +26,7 @@ import 'package:piggycount/pages/main/analytics_page.dart';
 import 'package:piggycount/providers/database_providers.dart';
 import 'package:piggycount/providers/sync_providers.dart';
 import 'package:piggycount/widgets/ui/wait_sliding_segmented_control.dart';
+import 'package:piggycount/widgets/ui/piggy_spinner.dart';
 
 /// 可挂起的仓储：[blocked] 打开后 [totalsByDay] 停在闸门不再返回，用来把页面
 /// 按在「查询在途」的中间态——闪动回归必须在数据回来之前取一帧。
@@ -134,7 +135,7 @@ void main() {
 
   testWidgets('首屏支出数据到位', (tester) async {
     await pump(tester);
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(PiggySpinner), findsNothing);
     expect(find.text('支出趋势'), findsOneWidget);
     // 本期支出 200+100+50 = 350
     expect(find.text('350.00'), findsWidgets);
@@ -154,8 +155,8 @@ void main() {
     gated.blocked = true;
     await tapIncome(tester); // 只走一帧：查询还卡在闸门上
 
-    // 旧实现这里是 CircularProgressIndicator（key 变 → 元素重建 → snapshot 归零）
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    // 旧实现这里是 PiggySpinner（key 变 → 元素重建 → snapshot 归零）
+    expect(find.byType(PiggySpinner), findsNothing);
     // 同口径（支出/收入共用一套 list 位次）→ 上一份结果继续渲染，不闪
     expect(find.text('350.00'), findsWidgets);
     expect(find.byType(WaitSlidingSegmentedControl<String>), findsNWidgets(2));
@@ -163,7 +164,7 @@ void main() {
     gated.gate.complete();
     await tester.pumpAndSettle();
     // 放行后换成收入口径的数据（本期收入 100）
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(PiggySpinner), findsNothing);
     expect(find.text('收入趋势'), findsOneWidget);
     expect(find.text('100.00'), findsWidgets);
     expect(find.text('350.00'), findsNothing);
@@ -189,7 +190,7 @@ void main() {
       matching: find.text('支出'),
     ));
     await tester.pump();
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(PiggySpinner), findsNothing);
     expect(find.text('支出趋势'), findsOneWidget);
     expect(find.text('350.00'), findsWidgets);
   });

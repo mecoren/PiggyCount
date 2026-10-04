@@ -335,14 +335,7 @@ class _PosterPreviewDialogState extends State<_PosterPreviewDialog> {
               child: ElevatedButton.icon(
                 onPressed: _isSaving ? null : _savePoster,
                 icon: _isSaving
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation(Colors.white),
-                        ),
-                      )
+                    ? const PiggySpinner(size: 16, color: Colors.white)
                     : const Icon(Icons.download_outlined, color: Colors.white),
                 label: Text(widget.l10n.sharePosterSave),
                 style: ElevatedButton.styleFrom(
@@ -712,14 +705,9 @@ class _PosterCarouselPreviewDialogState
                                     child: Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        const SizedBox(
-                                          width: 50,
-                                          height: 50,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 3,
-                                            valueColor:
-                                                AlwaysStoppedAnimation(Colors.white),
-                                          ),
+                                        const PiggySpinner(
+                                          size: 50,
+                                          color: Colors.white,
                                         ),
                                         const SizedBox(height: 20),
                                         Text(
@@ -856,14 +844,7 @@ class _PosterCarouselPreviewDialogState
                         ? null
                         : _savePoster,
                     icon: _isSaving
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation(Colors.white),
-                            ),
-                          )
+                        ? const PiggySpinner(size: 16, color: Colors.white)
                         : const Icon(Icons.download_outlined, color: Colors.white),
                     label: Text(l10n.sharePosterSave),
                     style: ElevatedButton.styleFrom(
@@ -1051,14 +1032,7 @@ class _DynamicPosterPreviewDialogState
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const SizedBox(
-                                width: 50,
-                                height: 50,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 3,
-                                  valueColor: AlwaysStoppedAnimation(Colors.white),
-                                ),
-                              ),
+                              const PiggySpinner(size: 50, color: Colors.white),
                               const SizedBox(height: 20),
                               Text(
                                 l10n.sharePosterGenerating,
@@ -1152,14 +1126,7 @@ class _DynamicPosterPreviewDialogState
                     ? null
                     : _savePoster,
                 icon: _isSaving
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation(Colors.white),
-                        ),
-                      )
+                    ? const PiggySpinner(size: 16, color: Colors.white)
                     : const Icon(Icons.download_outlined, color: Colors.white),
                 label: Text(l10n.sharePosterSave),
                 style: ElevatedButton.styleFrom(

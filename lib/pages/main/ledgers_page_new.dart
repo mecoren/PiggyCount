@@ -12,6 +12,7 @@ import '../../models/ledger_display_item.dart';
 import '../../cloud/transactions_sync_manager.dart';
 import '../../cloud/sync_service.dart';
 import '../../cloud/sync_diff_service.dart' show SyncChange;
+import '../../cloud/startup_sync_checker.dart' show StartupSyncChecker;
 import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/biz.dart';
 import '../../widgets/currency/currency_picker_sheet.dart';
@@ -1047,7 +1048,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircularProgressIndicator(),
+                PiggySpinner(size: 36, color: PiggyTokens.primary(dctx)),
                 const SizedBox(height: 16),
                 ValueListenableBuilder<int>(
                   valueListenable: progress,
@@ -1457,15 +1458,39 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
         appliedCount = result.totalCount;
       }
 
+      // S1 守卫（手动入口版）：用户未勾选的云端删除（交易行 + 账户/分类/
+      // 标签/预算/周期规则/汇率覆盖等实体）本轮不生效，照常 force 回传会把
+      // 残留推回云端 → 删除被"复活"并传播到所有设备。判据与启动检查同源。
+      final skipPublish = StartupSyncChecker.shouldSkipMergePublish(
+        previewExists: previewResult.preview != null,
+        unselectedDeletedCount: previewResult.preview == null
+            ? 0
+            : StartupSyncChecker.unselectedDeletedCount(previewResult.preview!),
+      );
+
       // merge-then-publish：合并成功后 force 回传收敛云端指纹
-      await syncService.uploadCurrentLedger(ledgerId: ledger.id, force: true);
+      if (!skipPublish) {
+        await syncService.uploadCurrentLedger(ledgerId: ledger.id, force: true);
+      } else {
+        // 静默跳过回传会让用户以为"同步完了" —— 必须明确告知那些没勾的
+        // 删除本轮没生效（与启动检查的 publishSkippedHint 同口径）。
+        logger.info(
+            'LedgersPage',
+            '账本 ${ledger.name} 存在未勾选的云端删除，'
+                '本轮跳过回传');
+      }
       await PostProcessor.sync(ref, ledgerId: ledger.id);
       ref.read(statsRefreshProvider.notifier).state++;
       ref.read(ledgerListRefreshProvider.notifier).state++;
       ref.read(syncStatusRefreshProvider.notifier).state++;
 
       if (!mounted || !context.mounted) return;
-      showToast(context, l10n.syncPreviewApplied(appliedCount));
+      showToast(
+        context,
+        skipPublish
+            ? '${l10n.syncPreviewApplied(appliedCount)}\n${l10n.syncSkippedPublishUnselectedDelete(1)}'
+            : l10n.syncPreviewApplied(appliedCount),
+      );
     } catch (e) {
       logger.warning('LedgersPage', '对比合并失败(ledger=${ledger.id}): $e');
       // 先收阻塞遮罩再弹错误框：错误弹窗不被压在遮罩之下
@@ -1615,12 +1640,11 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                 ),
                 actions: [
                   if (isProcessing)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: PiggySpinner(
+                        size: 20,
+                        color: PiggyTokens.primary(context),
                       ),
                     )
                   else ...[

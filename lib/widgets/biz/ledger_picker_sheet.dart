@@ -8,6 +8,7 @@ import '../../styles/tokens.dart';
 import '../../pages/main/ledgers_page_new.dart';
 import '../ui/dialog.dart';
 import '../ui/option_sheet.dart';
+import '../ui/piggy_spinner.dart';
 
 /// 账本选择弹窗组件
 ///
@@ -40,9 +41,11 @@ class LedgerPickerDialog extends ConsumerWidget {
           currentId,
           primaryColor,
         ),
-        loading: () => const Padding(
-          padding: EdgeInsets.all(32),
-          child: Center(child: CircularProgressIndicator()),
+        loading: () => Padding(
+          padding: const EdgeInsets.all(32),
+          child: Center(
+            child: PiggySpinner(size: 36, color: PiggyTokens.primary(context)),
+          ),
         ),
         error: (e, _) => Padding(
           padding: const EdgeInsets.all(24),

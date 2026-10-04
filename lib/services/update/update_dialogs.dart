@@ -434,11 +434,7 @@ class _MirrorSelectDialogState extends State<_MirrorSelectDialog> {
           TextButton.icon(
             onPressed: _isTesting ? null : _testAllMirrors,
             icon: _isTesting
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
+                ? PiggySpinner(size: 16, color: PiggyTokens.primary(context))
                 : const Icon(Icons.speed, size: 18),
             label: Text(l10n.updateMirrorTestButton),
           ),

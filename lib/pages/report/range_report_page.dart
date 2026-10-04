@@ -253,7 +253,12 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
             // （ListView 被销毁重建）的根因就在这一行判断。
             final data = snap.data ?? _lastData;
             if (data == null) {
-              return const Center(child: CircularProgressIndicator());
+              return Center(
+                child: PiggySpinner(
+                  size: 36,
+                  color: PiggyTokens.primary(context),
+                ),
+              );
             }
             final loading = snap.connectionState != ConnectionState.done;
             final dimWord =

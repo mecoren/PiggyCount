@@ -310,7 +310,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(color: Colors.white),
+          const PiggySpinner(size: 36, color: Colors.white),
           const SizedBox(height: 16),
           Text(
             l10n.annualReportGenerating,
@@ -1860,10 +1860,7 @@ class _AnnualReportPosterPreviewState
                 child: Container(
                   color: Colors.black.withValues(alpha: 0.3),
                   child: const Center(
-                    child: CircularProgressIndicator(
-                      strokeWidth: 3,
-                      valueColor: AlwaysStoppedAnimation(Colors.white),
-                    ),
+                    child: PiggySpinner(size: 36, color: Colors.white),
                   ),
                 ),
               ),

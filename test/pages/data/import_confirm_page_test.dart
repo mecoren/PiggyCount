@@ -38,6 +38,7 @@ import 'package:piggycount/providers/database_providers.dart';
 import 'package:piggycount/providers/import_export_providers.dart';
 import 'package:piggycount/providers/statistics_providers.dart';
 import 'package:piggycount/providers/sync_providers.dart';
+import 'package:piggycount/widgets/ui/piggy_spinner.dart';
 
 /// 全成功：3 条有效账单，含分类列（所以第一步→第二步→开始导入）。
 const _csvAllOk = '''
@@ -169,7 +170,7 @@ void main() {
       await tester.runAsync(
           () => Future<void>.delayed(const Duration(milliseconds: 20)));
       await tester.pump();
-      if (find.byType(CircularProgressIndicator).evaluate().isEmpty) {
+      if (find.byType(PiggySpinner).evaluate().isEmpty) {
         await tester.pumpAndSettle();
         return;
       }
@@ -209,7 +210,7 @@ void main() {
       await openConfirmPage(tester);
 
       expect(find.byType(ImportConfirmPage), findsOneWidget);
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(PiggySpinner), findsOneWidget);
       expect(find.text(zh(tester).importPreparing), findsWidgets);
 
       // 收尾：让 isolate 结果落地，避免测试结束后才 setState（此时 DB 已 close）。

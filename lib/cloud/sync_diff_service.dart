@@ -22,6 +22,60 @@ const bool kSyncPerfTraceEnabled = false;
 /// 同步变更类型
 enum SyncChangeType { added, modified, deleted }
 
+/// 参与同步的**实体**种类（区别于交易行本身）。
+///
+/// 背景：合并路径此前只对「交易」产出 diff，账户 / 分类 / 标签 / 预算 /
+/// 周期规则 / 手动汇率一律 upsert-only —— 对端删掉的实体在本地永不消失，
+/// merge-then-publish 又把它们写回云端，形成永久 ping-pong
+/// （与 D-1 分类、S11 附件同构的第四个洞）。自定义字段定义已由 D-4 先行补齐
+/// （`mirrorDeleteAbsentCustomFields`，静默镜像删除），本枚举覆盖其余六类。
+enum SyncEntityKind { account, category, tag, budget, recurring, rateOverride }
+
+/// [SyncEntityKind] → `local_changes.entity_type` 的词汇映射。
+///
+/// **必须与仓储写路径逐字一致**（`LocalRepository.deleteAccount` 记
+/// `'account'`、`LocalExchangeRateRepository.removeOverride` 记
+/// `'exchange_rate_override'` …）—— 闸门 ④ 靠它比对未推送变更，口径错了
+/// 等于闸门失效，本机新建未上传的实体会被误判成"对端已删"。
+const Map<SyncEntityKind, String> _syncEntityChangeType = {
+  SyncEntityKind.account: 'account',
+  SyncEntityKind.category: 'category',
+  SyncEntityKind.tag: 'tag',
+  SyncEntityKind.budget: 'budget',
+  SyncEntityKind.recurring: 'recurring',
+  SyncEntityKind.rateOverride: 'exchange_rate_override',
+};
+
+/// 一条「对端已删、本地还在」的实体删除候选。
+///
+/// [localId] 是本地主键；[syncId] 是跨设备身份锚点（缺失即本机新建、
+/// 云端缺席不可信 → 不会产出候选）。
+///
+/// [name] 只放**实体自身的名字**（账户名 / 分类名 / 标签名 / 预算所属分类名 /
+/// 周期规则备注），**空串表示该实体没有专属名字**（总预算、无备注的周期规则）
+/// —— 预览由种类标签兜底。服务层不得塞任何面向用户的文案（AGENTS.md
+/// 「文案禁硬编码」），也不得把 `type` 之类的原始枚举值漏给 UI。
+class SyncEntityDelete {
+  final SyncEntityKind kind;
+  final int localId;
+  final String? syncId;
+
+  /// 实体自身名字；空串 = 只显示种类标签。**不是**本地化文案。
+  final String name;
+
+  /// 仅 [SyncEntityKind.rateOverride] 有值：`BASE/QUOTE`。
+  /// 汇率覆盖的业务键是 (base, quote) 而非主键，删除时按业务键定位。
+  final String? bizKey;
+
+  const SyncEntityDelete({
+    required this.kind,
+    required this.localId,
+    this.name = '',
+    this.syncId,
+    this.bizKey,
+  });
+}
+
 /// 单条变更
 class SyncChange {
   final SyncChangeType type;
@@ -31,6 +85,14 @@ class SyncChange {
 
   /// 本地版本（modified/deleted 有值）
   final Transaction? localTransaction;
+
+  /// 实体删除载荷。`type == deleted && entityDelete != null` 即「删除一条
+  /// 实体（账户/分类/标签/预算/周期规则/汇率覆盖）」，此时
+  /// [localTransaction] 为 null —— 预览与 apply 两侧都按本字段分流。
+  final SyncEntityDelete? entityDelete;
+
+  /// 本条是否实体删除（区别于删除交易行）。
+  bool get isEntityDelete => entityDelete != null;
 
   /// 用户是否选中
   ///
@@ -47,6 +109,7 @@ class SyncChange {
     required this.type,
     this.cloudTransaction,
     this.localTransaction,
+    this.entityDelete,
     bool? selected,
     this.diffDetails = const [],
   }) : selected = selected ?? (type != SyncChangeType.deleted);
@@ -65,6 +128,12 @@ class SyncPreview {
   int get deletedCount =>
       changes.where((c) => c.type == SyncChangeType.deleted).length;
 
+  /// 实体删除条数（[deletedCount] 的子集，交易行删除之外的另一半）。
+  int get entityDeletedCount => changes.where((c) => c.isEntityDelete).length;
+
+  /// 交易行删除条数（[deletedCount] 扣除实体删除）。
+  int get transactionDeletedCount => deletedCount - entityDeletedCount;
+
   bool get isEmpty => changes.isEmpty;
 
   int get selectedCount => changes.where((c) => c.selected).length;
@@ -78,13 +147,18 @@ class SyncApplyResult {
   final int modifiedCount;
   final int deletedCount;
 
+  /// 实体删除实际执行条数（[deletedCount] 只统计交易行删除）。
+  final int entityDeletedCount;
+
   const SyncApplyResult({
     this.addedCount = 0,
     this.modifiedCount = 0,
     this.deletedCount = 0,
+    this.entityDeletedCount = 0,
   });
 
-  int get totalCount => addedCount + modifiedCount + deletedCount;
+  int get totalCount =>
+      addedCount + modifiedCount + deletedCount + entityDeletedCount;
 }
 
 /// Diff 计算服务
@@ -95,6 +169,9 @@ class SyncDiffService {
   /// [ledgerId] - 账本 ID
   /// [cloudTransactions] - 云端交易列表（含 syncId）
   /// [localTransactions] - 本地交易列表（可选，不传则自动查询）
+  /// [cloudMeta] - 云端快照的**元数据段**（账户/分类/标签/预算/周期规则/
+  ///   汇率覆盖 + payload version）。传了才会计算实体删除候选；不传则只出
+  ///   交易 diff（保持既有调用方与单测的语义不变）。
   ///
   /// 返回 null 表示云端数据不含 syncId，无法计算 diff
   Future<SyncPreview?> computeDiff({
@@ -102,6 +179,7 @@ class SyncDiffService {
     required int ledgerId,
     required List<ImportTransaction> cloudTransactions,
     List<Transaction>? localTransactions,
+    ImportData? cloudMeta,
   }) async {
     // 检查云端数据是否含有 syncId
     final hasSyncId = cloudTransactions.any((t) => t.syncId != null);
@@ -311,6 +389,16 @@ class SyncDiffService {
       }
     }
 
+    // 3. 实体删除候选（账户/分类/标签/预算/周期规则/汇率覆盖）。
+    //    交易行之外的元数据实体此前 upsert-only，对端删除永不传播。
+    if (cloudMeta != null) {
+      changes.addAll(await computeEntityDeletes(
+        repo: repo,
+        ledgerId: ledgerId,
+        cloud: cloudMeta,
+      ));
+    }
+
     // 按类型排序：新增 → 修改 → 删除
     changes.sort((a, b) => a.type.index.compareTo(b.type.index));
 
@@ -320,6 +408,226 @@ class SyncDiffService {
         '删除=${changes.where((c) => c.type == SyncChangeType.deleted).length}');
 
     return SyncPreview(changes: changes);
+  }
+
+  /// 计算「对端已删、本地还在」的实体删除候选（账户 / 分类 / 标签 / 预算 /
+  /// 周期规则 / 手动汇率覆盖）。
+  ///
+  /// 【为什么必须有】合并路径此前对这些实体只 upsert：对端删除 → 本地留残留 →
+  /// merge-then-publish 把残留写回云端 → 对端再同步时「删掉的又回来了」，
+  /// 两端指纹永久不一致（每次启动都判 cloudNewer 反复弹窗）。全量恢复路径
+  /// 早有镜像删除（`_mirrorDeleteAbsentEntities`），只有合并路径漏了 ——
+  /// 与 D-1 分类、S11 附件完全同构的第四个洞。
+  ///
+  /// 【四条安全闸门，缺一不可】
+  /// ① **version ≥ 8**：旧快照根本不携带这些段，"云端缺席"不具备删除语义
+  ///    （与恢复路径 `_mirrorDeleteAbsentEntities` 的门控逐字一致）。
+  /// ② **解析未损坏**：`skippedItems` 记录了因字段损坏被跳过的条目数 ——
+  ///    跳过的条目在云端"缺席"只是解析失败，删掉本地就是数据丢失。
+  /// ③ **本地有 syncId**：无 syncId 是本机新建、尚未上传过，云端缺席不代表
+  ///    用户删过它。
+  /// ④ **本地无未推送变更**（关键闸门）：`createAccount` / `createCategory` /
+  ///    `setOverride` 等**建行即自动生成 UUID syncId**，所以闸门 ③ 挡不住
+  ///    "本机刚建、还没上传"的实体。`local_changes` 里有该实体的未推送行
+  ///    ⇒ 用户刚动过它、云端还没收到 ⇒ 云端缺席是**信息滞后**而非删除。
+  ///    快照上传成功后 `markSnapshotPushed` 会清空未推送队列，此后闸门放行。
+  ///
+  /// 另加**引用守卫**，但刻意放在 **apply** 侧而不是这里（见
+  /// `_applyEntityDeletes`）：预览时按"合并前"的引用判定会漏掉最常见的场景
+  /// ——「删账户 + 删它的交易」在预览那一刻交易还在、账户仍被引用，于是账户
+  /// 不进候选；用户勾掉交易删除后本地已与云端一致 → 没有未勾选的删除 →
+  /// S1 守卫放行 → force 回传把账户又写回云端 → **对端刚删的账户复活**。
+  /// 放到 apply 侧按"交易落库后"的引用判定，同一轮即可收敛，且用户若没勾
+  /// 交易删除则拦下账户删除、不留悬空外键（那种情况下交易删除未勾选，S1
+  /// 守卫本来也会拦住回传）。
+  ///
+  /// 返回的 [SyncChange] 一律 `selected = false`（SYNC-05 口径：删除是破坏性
+  /// 变更，必须用户显式勾选）。未勾选时启动检查的 S1 守卫会跳过本轮回传，
+  /// 删除不会以"复活"的形式被推回云端。
+  Future<List<SyncChange>> computeEntityDeletes({
+    required BaseRepository repo,
+    required int ledgerId,
+    required ImportData cloud,
+  }) async {
+    final version = cloud.version;
+    if (version == null || version < 8) {
+      logger.info('SyncDiff',
+          '快照 version=$version < 8，不计算实体删除（旧快照无删除语义）');
+      return const [];
+    }
+    // 该段有解析跳过的条目 → 云端清单不完整，不敢据此判定"对端已删"
+    bool sectionLost(String key) => (cloud.skippedItems[key] ?? 0) > 0;
+    final lostSections = <String>[
+      for (final k in const [
+        'accounts',
+        'categories',
+        'tags',
+        'budgets',
+        'recurring',
+        'rateOverrides'
+      ])
+        if (sectionLost(k)) k,
+    ];
+    if (lostSections.isNotEmpty) {
+      logger.warning('SyncDiff',
+          '快照元数据段存在解析损坏（${lostSections.join('/')}），'
+          '跳过这些段的实体删除判定（云端缺席只是解析失败，不是删除）');
+    }
+
+    // 闸门 ④：本地尚未推送的变更涉及这些实体 → 云端缺席不可信
+    final tracker = repo.changeTracker;
+    final pending = tracker == null
+        ? const <String>{}
+        : <String>{
+            for (final c in await tracker.getUnpushedChanges())
+              '${c.entityType}:${c.entitySyncId}',
+          };
+
+    final changes = <SyncChange>[];
+
+    bool cloudSyncIdPresent(SyncEntityKind kind, String sid) {
+      switch (kind) {
+        case SyncEntityKind.account:
+          return cloud.accounts.any((a) => a.syncId == sid);
+        case SyncEntityKind.category:
+          return cloud.categories.any((c) => c.syncId == sid);
+        case SyncEntityKind.tag:
+          return cloud.tags.any((t) => t.syncId == sid);
+        case SyncEntityKind.budget:
+          return cloud.budgets.any((b) => b.syncId == sid);
+        case SyncEntityKind.recurring:
+          return cloud.recurrings.any((r) => r.syncId == sid);
+        case SyncEntityKind.rateOverride:
+          return cloud.rateOverrides.any((o) => o.syncId == sid);
+      }
+    }
+
+    void offer({
+      required SyncEntityKind kind,
+      required int localId,
+      required String? syncId,
+      required String name,
+      String? bizKey,
+    }) {
+      final sid = syncId?.trim();
+      if (sid == null || sid.isEmpty) return; // 闸门 ③
+      if (cloudSyncIdPresent(kind, sid)) return;
+      // 注意：本处的 if/return 不能写成 formatter 偏好的单行 return 形态 ——
+      // 那会触发 curly_braces_in_flow_control_structures，而 CI 的
+      // `flutter analyze --fatal-infos` 是硬门禁。linter 优先于 formatter。
+      if (pending.contains('${_syncEntityChangeType[kind]}:$sid')) {
+        return; // 闸门 ④
+      }
+      changes.add(SyncChange(
+        type: SyncChangeType.deleted,
+        entityDelete: SyncEntityDelete(
+          kind: kind,
+          localId: localId,
+          syncId: sid,
+          name: name,
+          bizKey: bizKey,
+        ),
+      ));
+    }
+
+    // ---- 账户（user-global）----
+    if (!sectionLost('accounts')) {
+      for (final a in await repo.getAllAccounts()) {
+        offer(
+          kind: SyncEntityKind.account,
+          localId: a.id,
+          syncId: a.syncId,
+          name: a.name,
+        );
+      }
+    }
+
+    // ---- 分类（user-global）----
+    if (!sectionLost('categories')) {
+      for (final c in await repo.getAllCategories()) {
+        offer(
+          kind: SyncEntityKind.category,
+          localId: c.id,
+          syncId: c.syncId,
+          name: c.name,
+        );
+      }
+    }
+
+    // ---- 标签（user-global）----
+    if (!sectionLost('tags')) {
+      for (final t in await repo.getAllTags()) {
+        offer(
+          kind: SyncEntityKind.tag,
+          localId: t.id,
+          syncId: t.syncId,
+          name: t.name,
+        );
+      }
+    }
+
+    // ---- 预算（ledger-scoped，无外部引用）----
+    //
+    // 展示名只给**分类预算的分类名**；总预算没有专属名字（空串），预览由
+    // 「预算」这个种类标签兜底 —— 服务层不塞「总预算/分类预算」这种面向用户的
+    // 文案（AGENTS.md 文案禁硬编码），也不塞 `type` 原始枚举。
+    if (!sectionLost('budgets')) {
+      final budgets = await repo.getAllBudgets(ledgerId);
+      final budgetCategoryIds = <int>{
+        for (final b in budgets)
+          if (b.categoryId != null) b.categoryId!,
+      };
+      final budgetCategories = budgetCategoryIds.isEmpty
+          ? const <int, Category>{}
+          : await repo.getCategoriesByIds(budgetCategoryIds);
+      for (final b in budgets) {
+        offer(
+          kind: SyncEntityKind.budget,
+          localId: b.id,
+          syncId: b.syncId,
+          name: b.categoryId == null
+              ? ''
+              : (budgetCategories[b.categoryId]?.name ?? ''),
+        );
+      }
+    }
+
+    // ---- 周期规则（ledger-scoped）----
+    // 展示名只用备注；没备注就留空串（不把 `type` 枚举值漏给 UI）。
+    if (!sectionLost('recurring')) {
+      for (final r in await repo.getRecurringTransactionsByLedger(ledgerId)) {
+        offer(
+          kind: SyncEntityKind.recurring,
+          localId: r.id,
+          syncId: r.syncId,
+          name: r.note ?? '',
+        );
+      }
+    }
+
+    // ---- 手动汇率覆盖（user-global，无引用）----
+    if (!sectionLost('rateOverrides')) {
+      for (final o in await repo.getAllOverrides()) {
+        offer(
+          kind: SyncEntityKind.rateOverride,
+          localId: o.id,
+          syncId: o.syncId,
+          name: '${o.baseCurrency}/${o.quoteCurrency}',
+          bizKey: '${o.baseCurrency}/${o.quoteCurrency}',
+        );
+      }
+    }
+
+    logger.info('SyncDiff',
+        '实体删除候选 ${changes.length} 条: '
+        '账户=${changes.where((c) => c.entityDelete!.kind == SyncEntityKind.account).length} '
+        '分类=${changes.where((c) => c.entityDelete!.kind == SyncEntityKind.category).length} '
+        '标签=${changes.where((c) => c.entityDelete!.kind == SyncEntityKind.tag).length} '
+        '预算=${changes.where((c) => c.entityDelete!.kind == SyncEntityKind.budget).length} '
+        '周期=${changes.where((c) => c.entityDelete!.kind == SyncEntityKind.recurring).length} '
+        '汇率=${changes.where((c) => c.entityDelete!.kind == SyncEntityKind.rateOverride).length}');
+
+    return changes;
   }
 
   /// 比较本地和云端交易的差异
@@ -702,7 +1010,11 @@ class SyncDiffService {
     }
 
     if (selectedChanges.isEmpty) {
-      // 交易无差异:仅完成上述元数据合并,交易计数全为 0
+      // 用户没勾任何变更（含实体删除）:仅完成上述元数据 upsert,计数全为 0。
+      // 实体删除同样要过这一关 —— 「云端删了个账户」不产生任何交易 diff，
+      // 若这里直接 return 而实体删除只在末尾执行，纯元数据场景的删除就永远
+      // 落不了地（正是 D-4 之前 customFields 的形状）。勾选为空时二者都无事
+      // 可做，所以早退是安全的。
       logPerf('meta-only');
       return const SyncApplyResult();
     }
@@ -728,6 +1040,8 @@ class SyncDiffService {
           modifiedChanges.add(c);
           break;
         case SyncChangeType.deleted:
+          // 实体删除与交易行删除共用 deleted 桶语义但走不同落地路径
+          if (c.isEntityDelete) break;
           deletedChanges.add(c);
           break;
       }
@@ -1003,15 +1317,142 @@ class SyncDiffService {
       }
     }
 
+    // 实体删除放在交易删除之后：交易先落定，被引用关系收窄，最后再收敛实体。
+    // 顺序不是装饰 —— 引用守卫在 apply 侧按"交易落库后"的引用判定，
+    // 放早了会把本轮可删的实体误判成"仍被引用"。
+    final entityDeletedCount = await timed(
+        'entityDeletes',
+        () => _applyEntityDeletes(
+              repo: repo,
+              ledgerId: ledgerId,
+              selectedChanges: selectedChanges,
+            ));
+
     logger.info('SyncDiff',
-        '变更已应用: 新增=$addedCount, 修改=$modifiedCount, 删除=$deletedCount');
+        '变更已应用: 新增=$addedCount, 修改=$modifiedCount, 删除=$deletedCount, '
+        '实体删除=$entityDeletedCount');
     logPerf('full');
 
     return SyncApplyResult(
       addedCount: addedCount,
       modifiedCount: modifiedCount,
       deletedCount: deletedCount,
+      entityDeletedCount: entityDeletedCount,
     );
+  }
+
+  /// 执行用户勾选的实体删除（账户 / 分类 / 标签 / 预算 / 周期规则 / 汇率覆盖）。
+  ///
+  /// 全程已在 `applySyncChanges` 的 `withRecordingSuppressed` 内 —— 仓储的
+  /// delete* 会记 user-global / ledger-scoped change，云端权威的删除若回流
+  /// local_changes 就是幻影变更。
+  ///
+  /// **引用守卫在这里（而不是预览时）**：预览那一刻本地交易还在，"删账户 +
+  /// 删它的交易"这种最常见的组合会因为账户仍被引用而不进候选 → 用户删完交易
+  /// 后本地与云端已一致 → 没有未勾选的删除 → S1 守卫放行 → force 回传把账户
+  /// 又写回云端 → 对端刚删的账户复活。放到这里按**交易落库之后**的引用判定，
+  /// 同一轮即可收敛。
+  ///
+  /// 代价：用户勾了实体删除但没勾引用它的那些交易变更时，这里会拦下并保留该
+  /// 实体（不留悬空外键）。这种场景下那些交易变更必然处于未勾选态，S1 守卫
+  /// 本来就会拦住回传，所以不会有"删不掉又被推回去"的空转。
+  ///
+  /// 单条失败只记日志不中断：一条实体删不掉不该回滚整个账本的合并
+  /// （外层事务会整体回滚，见 `applyPreviewChanges`）。
+  Future<int> _applyEntityDeletes({
+    required BaseRepository repo,
+    required int ledgerId,
+    required List<SyncChange> selectedChanges,
+  }) async {
+    final targets = selectedChanges
+        .where((c) => c.isEntityDelete)
+        .map((c) => c.entityDelete!)
+        .toList(growable: false);
+    if (targets.isEmpty) return 0;
+
+    // 交易删除已在调用方落定，这里读到的引用关系是"合并后"的
+    final refs = await repo.getSyncEntityReferences();
+    var blocked = 0;
+
+    bool stillReferenced(SyncEntityDelete t) {
+      switch (t.kind) {
+        case SyncEntityKind.account:
+          return refs.accountIds.contains(t.localId);
+        case SyncEntityKind.category:
+          return refs.categoryIds.contains(t.localId);
+        case SyncEntityKind.tag:
+          return refs.tagIds.contains(t.localId);
+        case SyncEntityKind.budget:
+          return false; // 预算无外部引用
+        case SyncEntityKind.recurring:
+          return refs.recurringIds.contains(t.localId);
+        case SyncEntityKind.rateOverride:
+          return false; // 汇率覆盖无外部引用
+      }
+    }
+
+    var deleted = 0;
+    for (final t in targets) {
+      if (stillReferenced(t)) {
+        blocked++;
+        logger.warning('SyncDiff',
+            '实体删除被拦下（合并后仍被本地引用，留悬空外键比留实体更糟）: '
+            '${t.kind.name} id=${t.localId} "${t.name}"');
+        continue;
+      }
+      try {
+        switch (t.kind) {
+          case SyncEntityKind.account:
+            await repo.deleteAccount(t.localId);
+            break;
+          case SyncEntityKind.category:
+            await repo.deleteCategory(t.localId);
+            break;
+          case SyncEntityKind.tag:
+            await repo.deleteTag(t.localId);
+            break;
+          case SyncEntityKind.budget:
+            // 总预算删除会级联清掉本账本**所有**预算（仓储既有语义，预算页
+            // 手动删除同款）。用户只勾了总预算、没勾那些分类预算时，会被顺带
+            // 清掉 —— 显式记一笔，否则"删一条却少了好几条"在日志里无从追查。
+            final siblings = await repo.getAllBudgets(ledgerId);
+            final victim = siblings.where((b) => b.id == t.localId);
+            if (victim.isNotEmpty && victim.first.type == 'total') {
+              final others = siblings.where((b) => b.id != t.localId).length;
+              if (others > 0) {
+                logger.warning('SyncDiff',
+                    '删除总预算会级联清掉本账本其余 $others 个预算'
+                    '（与预算页手动删除同款语义）: ledgerId=$ledgerId');
+              }
+            }
+            await repo.deleteBudget(t.localId);
+            break;
+          case SyncEntityKind.recurring:
+            await repo.deleteRecurringTransaction(t.localId);
+            break;
+          case SyncEntityKind.rateOverride:
+            final parts = (t.bizKey ?? '').split('/');
+            if (parts.length != 2) {
+              logger.warning('SyncDiff',
+                  '汇率覆盖删除跳过：业务键非法 "${t.bizKey}"');
+              continue;
+            }
+            await repo.removeOverride(base: parts[0], quote: parts[1]);
+            break;
+        }
+        deleted++;
+      } catch (e, st) {
+        logger.error('SyncDiff',
+            '实体删除失败 ${t.kind.name} id=${t.localId} "${t.name}"', e, st);
+      }
+    }
+    if (deleted > 0 || blocked > 0) {
+      logger.info('SyncDiff',
+          '实体镜像删除已应用: $deleted/${targets.length} 条'
+          '${blocked > 0 ? '（另有 $blocked 条因合并后仍被引用而保留）' : ''}'
+          '（账户/分类/标签/预算/周期规则/汇率覆盖，对端已删）');
+    }
+    return deleted;
   }
 
   // --- 辅助方法 ---

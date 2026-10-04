@@ -181,6 +181,11 @@ class AppLocalizationsKo extends AppLocalizations {
       '시작 검사는 자동으로 병합하지 않습니다(로컬 변경 덮어쓰기 방지). \'내 정보 → 클라우드 동기화\'에서 직접 처리하세요.';
 
   @override
+  String startupSyncCheckUnknownDiffHint(int count) {
+    return '로컬과 클라우드 양쪽에 변경이 있어 어느 쪽이 최신인지 판단할 수 없는 장부가 $count개 더 있습니다. 이번에는 동기화되지 않습니다. 맞추려면 \'내 정보 → 클라우드 동기화\'에서 직접 처리하세요.';
+  }
+
+  @override
   String get startupSyncConflictTooltip => '로컬 변경사항이 클라우드로 덮어씌워집니다';
 
   @override
@@ -6609,6 +6614,38 @@ class AppLocalizationsKo extends AppLocalizations {
   String syncPreviewDeletedCount(int count) {
     return '$count건 삭제됨';
   }
+
+  @override
+  String syncPreviewEntityDeleted(String kind, String name) {
+    return '$kind “$name”';
+  }
+
+  @override
+  String get syncPreviewEntityDeletedHint =>
+      '클라우드에서 삭제된 항목입니다. 체크하면 로컬도 함께 삭제됩니다';
+
+  @override
+  String syncSkippedPublishUnselectedDelete(int count) {
+    return '체크하지 않은 클라우드 삭제가 있는 가계부 $count개는 업로드하지 않았습니다. 해당 삭제는 이번에 반영되지 않으며 다음 동기화에서 다시 안내됩니다.';
+  }
+
+  @override
+  String get syncEntityKindAccount => '계좌';
+
+  @override
+  String get syncEntityKindCategory => '분류';
+
+  @override
+  String get syncEntityKindTag => '태그';
+
+  @override
+  String get syncEntityKindBudget => '예산';
+
+  @override
+  String get syncEntityKindRecurring => '반복 규칙';
+
+  @override
+  String get syncEntityKindRateOverride => '수동 환율';
 
   @override
   String syncPreviewApply(int count) {

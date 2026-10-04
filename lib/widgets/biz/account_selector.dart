@@ -10,6 +10,7 @@ import '../../utils/shared_ledger_picker_filter.dart';
 import '../../providers.dart';
 import '../../services/system/logger_service.dart';
 import '../../l10n/app_localizations.dart';
+import '../ui/piggy_spinner.dart';
 
 /// 账户选择器组件
 /// 横滑标签形式，支持 LRU 排序
@@ -182,14 +183,10 @@ class _AccountSelectorState extends ConsumerState<AccountSelector> {
       if (prev != next) _loadAccounts();
     });
     if (_isLoading) {
-      return const SizedBox(
+      return SizedBox(
         height: 32,
         child: Center(
-          child: SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
+          child: PiggySpinner(size: 16, color: PiggyTokens.primary(context)),
         ),
       );
     }

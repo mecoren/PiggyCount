@@ -182,7 +182,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
       return const Scaffold(
         backgroundColor: Colors.black,
         body: Center(
-          child: CircularProgressIndicator(color: Colors.white),
+          child: PiggySpinner(size: 36, color: Colors.white),
         ),
       );
     }
@@ -314,7 +314,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(
-            child: CircularProgressIndicator(color: Colors.white),
+            child: PiggySpinner(size: 36, color: Colors.white),
           );
         }
 

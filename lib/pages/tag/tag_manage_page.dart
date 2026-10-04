@@ -61,7 +61,9 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
           children: [
             Expanded(
               child: tagsAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => Center(
+                    child: PiggySpinner(
+                        size: 36, color: PiggyTokens.primary(context))),
                 error: (error, stack) => Center(
                   child: Text('${l10n.commonError}: $error'),
                 ),

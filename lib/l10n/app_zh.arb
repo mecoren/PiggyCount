@@ -103,6 +103,14 @@
   "startupSyncMetaDiffNameLine": "账本名：{local} → {cloud}",
   "startupSyncMetaDiffMonthStartLine": "{name}：每月起始日 {local} → {cloud}",
   "startupSyncMetaDiffAction": "启动检查不会自动合并（避免覆盖你的本地改动）。请到「我的 → 云同步」手动下载同步。",
+  "startupSyncCheckUnknownDiffHint": "另有 {count} 个账本本地与云端都有改动、无法判断新旧，本次不会同步；如需对齐请到「我的 → 云同步」手动处理。",
+  "@startupSyncCheckUnknownDiffHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "startupSyncConflictTooltip": "本地有改动将被云端覆盖",
   "startupSyncConflictConfirmTitle": "覆盖确认",
   "startupSyncConflictConfirmMessage": "将用云端覆盖 {count} 个账本的本地改动（{names}），是否继续？",
@@ -2872,6 +2880,32 @@
       }
     }
   },
+  "syncPreviewEntityDeleted": "{kind}「{name}」",
+  "@syncPreviewEntityDeleted": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "syncPreviewEntityDeletedHint": "云端已删除，勾选后一并删除本地",
+  "syncSkippedPublishUnselectedDelete": "有 {count} 个账本存在你未勾选的云端删除，已跳过回传（这些删除本轮不会生效，下次同步会再次提示）",
+  "@syncSkippedPublishUnselectedDelete": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncEntityKindAccount": "账户",
+  "syncEntityKindCategory": "分类",
+  "syncEntityKindTag": "标签",
+  "syncEntityKindBudget": "预算",
+  "syncEntityKindRecurring": "周期规则",
+  "syncEntityKindRateOverride": "手动汇率",
   "syncPreviewApply": "应用 {count} 项",
   "@syncPreviewApply": {
     "placeholders": {

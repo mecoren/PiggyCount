@@ -9,6 +9,7 @@ import '../../utils/category_utils.dart';
 import '../../utils/shared_ledger_picker_filter.dart';
 import '../../styles/tokens.dart';
 import '../category_icon.dart';
+import '../ui/piggy_spinner.dart';
 import '../../pages/category/category_manage_page.dart';
 
 /// 分类选择器组件
@@ -155,7 +156,9 @@ class _CategorySelectorState extends ConsumerState<CategorySelector> {
       future: _loadFilteredTopLevel(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(
+            child: PiggySpinner(size: 36, color: PiggyTokens.primary(context)),
+          );
         }
 
         final topLevelCategories = snapshot.data!;
@@ -170,7 +173,9 @@ class _CategorySelectorState extends ConsumerState<CategorySelector> {
           future: _loadSubCategories(topLevelCategories),
           builder: (context, subSnapshot) {
             if (!subSnapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
+              return Center(
+                child: PiggySpinner(size: 36, color: PiggyTokens.primary(context)),
+              );
             }
 
             final subCategoriesMap = subSnapshot.data!;

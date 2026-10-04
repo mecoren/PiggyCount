@@ -88,7 +88,9 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
             _buildTransferIconSetting(context, l10n, primaryColor),
             Expanded(
               child: categoriesWithCountAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => Center(
+                    child: PiggySpinner(
+                        size: 36, color: PiggyTokens.primary(context))),
                 error: (error, stack) => Center(
                     child: Text(l10n.categoryLoadFailed(error.toString()))),
                 data: (categoriesWithCount) {
@@ -616,7 +618,9 @@ class _CategoryGridViewState extends ConsumerState<_CategoryGridView> {
   Widget build(BuildContext context) {
     // 数据还未加载完成
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: PiggySpinner(size: 36, color: PiggyTokens.primary(context)),
+      );
     }
 
     // 过滤出一级分类
@@ -972,9 +976,12 @@ class _SubcategoryDialogState extends ConsumerState<_SubcategoryDialog> {
         ],
       ),
       content: _isLoading
-          ? const Padding(
-              padding: EdgeInsets.all(32),
-              child: Center(child: CircularProgressIndicator()),
+          ? Padding(
+              padding: const EdgeInsets.all(32),
+              child: Center(
+                child:
+                    PiggySpinner(size: 36, color: PiggyTokens.primary(context)),
+              ),
             )
           : ConstrainedBox(
               // 子分类数量无上限：限高 + 网格内部滚动，避免长列表把弹窗顶出屏幕

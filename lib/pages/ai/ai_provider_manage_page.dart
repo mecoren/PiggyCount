@@ -425,13 +425,9 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
           TextButton(
             onPressed: _saving || _isTesting ? null : _saveProvider,
             child: _saving
-                ? SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: PiggyTokens.iconPrimary(context),
-                    ),
+                ? PiggySpinner(
+                    size: 16,
+                    color: PiggyTokens.iconPrimary(context),
                   )
                 : Text(
                     l10n.commonSave,
@@ -971,14 +967,7 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
             ? null
             : _testAllCapabilities,
         icon: allTesting
-            ? SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: buttonColor,
-                ),
-              )
+            ? PiggySpinner(size: 16, color: buttonColor)
             : Icon(buttonIcon, size: 18),
         label: Text(buttonText),
         style: OutlinedButton.styleFrom(
@@ -1038,12 +1027,7 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
     return TextButton.icon(
       onPressed: enabled && status != TestStatus.testing ? onTest : null,
       icon: status == TestStatus.testing
-          ? SizedBox(
-              width: 14,
-              height: 14,
-              child: CircularProgressIndicator(
-                  strokeWidth: 2, color: primaryColor),
-            )
+          ? PiggySpinner(size: 14, color: primaryColor)
           : Icon(
               status == TestStatus.success
                   ? Icons.check_circle
