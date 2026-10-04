@@ -3998,6 +3998,7 @@
   "recycleBinPurgeConfirm": "This removes the transaction and its attachments for good and cannot be undone.",
   "recycleBinPurgeReconfirm": "Final check: purging will permanently remove this transaction and its attachments. Continue?",
   "recycleBinRestoreConflict": "Cannot restore: another transaction already occupies this slot.",
+  "recycleBinLocalOnlyNote": "Recycle bin stays on this device: it is not synced, so deletions made on other devices won't appear here.",
   "rangeReportTitle": "Custom Range Report",
   "rangeReportEntrySubtitle": "Any date range with month-over-month and year-over-year change, plus a tag breakdown",
   "rangeReportColumnCurrent": "This period",

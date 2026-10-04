@@ -8173,6 +8173,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get recycleBinRestoreConflict => '복원 실패: 해당 위치를 다른 내역이 사용 중입니다';
 
   @override
+  String get recycleBinLocalOnlyNote =>
+      '휴지통은 이 기기에만 있습니다: 동기화되지 않으므로 다른 기기에서 삭제한 내역은 여기에 표시되지 않습니다.';
+
+  @override
   String get rangeReportTitle => '기간 선택 리포트';
 
   @override

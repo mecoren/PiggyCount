@@ -8401,6 +8401,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Cannot restore: another transaction already occupies this slot.';
 
   @override
+  String get recycleBinLocalOnlyNote =>
+      'Recycle bin stays on this device: it is not synced, so deletions made on other devices won\'t appear here.';
+
+  @override
   String get rangeReportTitle => 'Custom Range Report';
 
   @override

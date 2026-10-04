@@ -130,57 +130,101 @@ class _RecycleBinPageState extends ConsumerState<RecycleBinPage> {
         padding: EdgeInsets.only(
           top: MediaQuery.of(context).padding.top + 80,
         ),
-        child: FutureBuilder<_BinData>(
-          future: _data,
-          builder: (context, snap) {
-            if (snap.connectionState != ConnectionState.done) {
-              return Center(
-                child: PiggySpinner(
-                  size: 36,
-                  color: PiggyTokens.primary(context),
-                ),
-              );
-            }
-            if (snap.hasError) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text('${l10n.commonError}: ${snap.error}',
-                      textAlign: TextAlign.center),
-                ),
-              );
-            }
-            final data = snap.data!;
-            final rows = data.rows;
-            if (rows.isEmpty) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.delete_outline,
-                          size: 64.0.scaled(context, ref),
-                          color: PiggyTokens.textTertiary(context)),
-                      SizedBox(height: 16.0.scaled(context, ref)),
-                      Text(l10n.recycleBinEmpty,
-                          style: TextStyle(
-                              color: PiggyTokens.textSecondary(context))),
-                    ],
-                  ),
-                ),
-              );
-            }
-            return ListView.builder(
-              padding: EdgeInsets.symmetric(
-                horizontal: 12.0.scaled(context, ref),
-                vertical: 8.0.scaled(context, ref),
+        child: Column(
+          children: [
+            _localOnlyNote(context, l10n),
+            Expanded(
+              child: FutureBuilder<_BinData>(
+                future: _data,
+                builder: (context, snap) {
+                  if (snap.connectionState != ConnectionState.done) {
+                    return Center(
+                      child: PiggySpinner(
+                        size: 36,
+                        color: PiggyTokens.primary(context),
+                      ),
+                    );
+                  }
+                  if (snap.hasError) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text('${l10n.commonError}: ${snap.error}',
+                            textAlign: TextAlign.center),
+                      ),
+                    );
+                  }
+                  final data = snap.data!;
+                  final rows = data.rows;
+                  if (rows.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.delete_outline,
+                                size: 64.0.scaled(context, ref),
+                                color: PiggyTokens.textTertiary(context)),
+                            SizedBox(height: 16.0.scaled(context, ref)),
+                            Text(l10n.recycleBinEmpty,
+                                style: TextStyle(
+                                    color: PiggyTokens.textSecondary(context))),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  return ListView.builder(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 12.0.scaled(context, ref),
+                      vertical: 8.0.scaled(context, ref),
+                    ),
+                    itemCount: rows.length,
+                    itemBuilder: (context, i) =>
+                        _tile(context, l10n, rows[i], data),
+                  );
+                },
               ),
-              itemCount: rows.length,
-              itemBuilder: (context, i) => _tile(context, l10n, rows[i], data),
-            );
-          },
+            ),
+          ],
         ),
+      ),
+    );
+  }
+
+  /// 「回收站只在本机」的说明条。
+  ///
+  /// 不是装饰性文案：`deleted_transactions` **刻意不进快照**
+  /// （见本文件顶部说明与 `lib/cloud/transactions_json.dart` 的导出范围），
+  /// 而多设备用户会天然期待「A 端删的，B 端也能恢复」——不说清楚就只能靠猜。
+  /// 放在标题栏正下方、四种状态（加载 / 空 / 列表 / 错误）都可见。
+  Widget _localOnlyNote(BuildContext context, AppLocalizations l10n) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        16.0.scaled(context, ref),
+        8.0.scaled(context, ref),
+        16.0.scaled(context, ref),
+        0,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.info_outline,
+            size: 14.0.scaled(context, ref),
+            color: PiggyTokens.textTertiary(context),
+          ),
+          SizedBox(width: 6.0.scaled(context, ref)),
+          Expanded(
+            child: Text(
+              l10n.recycleBinLocalOnlyNote,
+              style: PiggyTextTokens.caption(context).copyWith(
+                color: PiggyTokens.textTertiary(context),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

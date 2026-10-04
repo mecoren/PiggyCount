@@ -15151,6 +15151,12 @@ abstract class AppLocalizations {
   /// **'Cannot restore: another transaction already occupies this slot.'**
   String get recycleBinRestoreConflict;
 
+  /// No description provided for @recycleBinLocalOnlyNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Recycle bin stays on this device: it is not synced, so deletions made on other devices won\'t appear here.'**
+  String get recycleBinLocalOnlyNote;
+
   /// No description provided for @rangeReportTitle.
   ///
   /// In en, this message translates to:

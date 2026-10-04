@@ -3256,6 +3256,7 @@
   "recycleBinPurgeConfirm": "徹底刪除後無法復原，附件檔案也會一併清除，確定嗎？",
   "recycleBinPurgeReconfirm": "再次確認：徹底刪除後該交易及其附件將永久消失、無法復原。確定要繼續嗎？",
   "recycleBinRestoreConflict": "復原失敗：該位置已被另一筆交易佔用",
+  "recycleBinLocalOnlyNote": "回收站只在本機：它不參與同步，其他裝置上刪除的紀錄也不會出現在這裡。",
   "rangeReportTitle": "自訂區間報表",
   "rangeReportEntrySubtitle": "任意起止區間，含環比與同比變化，另依標籤維度拆分",
   "rangeReportColumnCurrent": "本期",

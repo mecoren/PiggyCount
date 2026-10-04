@@ -8084,6 +8084,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recycleBinRestoreConflict => '恢复失败：该位置已被另一笔交易占用';
 
   @override
+  String get recycleBinLocalOnlyNote => '回收站只在本机：它不参与同步，其他设备上删除的记录也不会出现在这里。';
+
+  @override
   String get rangeReportTitle => '自定义区间报表';
 
   @override
@@ -16309,6 +16312,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get recycleBinRestoreConflict => '復原失敗：該位置已被另一筆交易佔用';
+
+  @override
+  String get recycleBinLocalOnlyNote => '回收站只在本機：它不參與同步，其他裝置上刪除的紀錄也不會出現在這裡。';
 
   @override
   String get rangeReportTitle => '自訂區間報表';

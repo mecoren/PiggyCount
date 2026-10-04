@@ -3562,6 +3562,7 @@
   "recycleBinPurgeConfirm": "彻底删除后无法恢复，附件文件也会一并清除，确定吗？",
   "recycleBinPurgeReconfirm": "再次确认：彻底删除后该交易及其附件将永久消失、无法恢复。确定要继续吗？",
   "recycleBinRestoreConflict": "恢复失败：该位置已被另一笔交易占用",
+  "recycleBinLocalOnlyNote": "回收站只在本机：它不参与同步，其他设备上删除的记录也不会出现在这里。",
   "rangeReportTitle": "自定义区间报表",
   "rangeReportEntrySubtitle": "任意起止区间，含环比与同比变化，另按标签维度拆分",
   "rangeReportColumnCurrent": "本期",
