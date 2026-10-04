@@ -60,9 +60,16 @@
   * `custom_field_definitions`（v46 字段定义，属快照 `customFields` 段的数据本体、
     参与指纹与方向仲裁证据源）：本脚本 SPEC 未含该表。请以
     `scripts/live_db/run_20260927/extra_tables_check.py` 单独校验。
+  * `deleted_transactions`（回收站，v44/F1）：**刻意不进快照**，属设备本地态
+    （见 `lib/pages/maintenance/recycle_bin_page.dart` 顶部说明）。本脚本不把它
+    当差异比对，但会**单列打印双端行数**（`[OK*]`，不计 issues、不影响退出码），
+    让「exit=0」的适用范围显式可读 —— 否则极易被误读为「两端全表一致」。
+    （20261004 S3/WebDAV 双后端回归即踩过这个误读，见 docs/test/ 两份报告 6.1。）
 
 输出: 每维度 OK/FAIL + 差异样本（前 5 条），末尾一行结论。
-退出码: 0 = 无非预期差异（可能含契约外差异行）；2 = 存在不一致；3 = SPEC/实现漂移。
+退出码: 0 = 同步契约内字段无非预期差异（可能含契约外/设备本地差异行）；
+        2 = 存在不一致；3 = SPEC/实现漂移。
+        **0 只说明「同步契约内」一致**，不含回收站等设备本地表（已单列打印）。
 """
 import json
 import os
@@ -444,6 +451,19 @@ SPEC = [
 ]
 
 
+# ============ 设计内不同步的表（单列统计，不计 issues、不影响退出码） ============
+# 「exit=0」的正确含义是【同步契约内字段无差异】，**不等于**「两端数据完全相同」。
+# 下面这些表刻意不进快照（设备本地态），双端天然可以不同。把它们单列出来，
+# 是为了让那句结论的适用范围显式可读，而不是让用户把 exit=0 误读成全表一致
+# —— 20261004 S3/WebDAV 双后端回归正是栽在这个误读上（docs/test/ 报告 6.1）。
+DEVICE_LOCAL_TABLES = {
+    "deleted_transactions": (
+        "回收站（v44/F1）只在本机：归档行进的是本地 deleted_transactions 表、"
+        "不进快照，所以它既不上云也不进备份。A 端删的记录不会出现在 B 端回收站，"
+        "属设计行为（见 lib/pages/maintenance/recycle_bin_page.dart 顶部说明）。"),
+}
+
+
 # ============================== 引擎 ==============================
 def parse_tables(from_sql):
     """'transactions t JOIN ledgers l ON ...' -> {'t': 'transactions', 'l': 'ledgers'}"""
@@ -515,6 +535,29 @@ def fmt_key(key):
     return " / ".join(str(k)[:8] for k in key)
 
 
+def report_device_local(qa, qb):
+    """打印「设计内不参与同步」的表在双端的行数（单列 `[OK*]`）。
+
+    只做可见性统计：**不计入 issues、不影响退出码**。表不存在（旧 schema）
+    时安静跳过，不视为错误 —— 这是可读性补充，不是门禁。
+    """
+    for tbl, note in DEVICE_LOCAL_TABLES.items():
+        counts = {}
+        for tag, cur in (("A", qa), ("B", qb)):
+            try:
+                counts[tag] = cur.execute(
+                    f"SELECT COUNT(*) FROM {tbl}").fetchone()[0]
+            except sqlite3.OperationalError:
+                counts[tag] = None            # 旧库无此表
+        a, b = counts["A"], counts["B"]
+        if a is None or b is None:
+            print(f"  [OK*] {tbl:26s} 库中无此表（旧 schema？），跳过")
+        else:
+            print(f"  [OK*] {tbl:26s} A={a:<6} B={b:<6} "
+                  f"—— 设备本地态，设计内不同步，两端不同属预期")
+        print(f"       {note}")
+
+
 def print_spec(with_evidence=None):
     print("===== 比对字段清单（由 SPEC 生成）=====")
     for s in SPEC:
@@ -523,6 +566,9 @@ def print_spec(with_evidence=None):
         print(f"        契约内: {s.field_labels or '（无，仅比对键集合）'}")
         if s.local_labels:
             print(f"        契约外: {s.local_labels}")
+    print("\n--- 设计内不参与同步（设备本地表，不计入 issues、不影响退出码）---")
+    for tbl in DEVICE_LOCAL_TABLES:
+        print(f"  [OK*] {tbl}")
     if with_evidence:
         transported = with_evidence["export"] & with_evidence["fingerprint"] \
             & with_evidence["parse"]
@@ -621,11 +667,15 @@ def main():
                       f"—— 预期差异，不计入不一致")
                 print(f"       （按列统计：{det}）")
 
+    # 设备本地表：不在 SPEC 内（比不出差异也不该比），单列行数让「一致」的范围可见。
+    print("\n--- 设计内不参与同步（设备本地态；不计入不一致）---")
+    report_device_local(qa, qb)
+
     if not issues and not local_rows:
-        verdict = "完全一致"
+        verdict = "完全一致（限同步契约内字段）"
     elif not issues:
         verdict = (f"无非预期差异（另有 {sum(local_rows.values())} 行契约外字段差异，"
-                   f"涉及 {len(local_rows)} 张表，属预期）")
+                   f"涉及 {len(local_rows)} 张表，属预期；结论限同步契约内字段）")
     else:
         verdict = f"存在 {len(issues)} 类不一致"
     print(f"\n===== 结论: {verdict} =====")
