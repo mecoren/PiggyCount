@@ -139,7 +139,7 @@ class _QuickCommandCard extends ConsumerWidget {
             child: Text(
               title,
               style: TextStyle(
-                fontSize: 12.0.scaled(context, ref),
+                fontSize: PiggyTextTokens.fs12.scaled(context, ref),
                 fontWeight: FontWeight.w500,
                 color: PiggyTokens.textPrimary(context),
               ),

@@ -521,7 +521,7 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
                           Text(
                             l10n.transferIconSettings,
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: PiggyTextTokens.fs16,
                               fontWeight: FontWeight.w600,
                               color: PiggyTokens.textPrimary(context),
                             ),
@@ -530,7 +530,7 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
                           Text(
                             l10n.transferIconSettingsDesc,
                             style: TextStyle(
-                              fontSize: 13,
+                              fontSize: PiggyTextTokens.fs13,
                               color: PiggyTokens.textSecondary(context),
                             ),
                           ),
@@ -1086,7 +1086,7 @@ class _DialogActionButton extends StatelessWidget {
                 child: Text(
                   label,
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: PiggyTextTokens.fs10,
                     height: 1.1,
                     color: primaryColor,
                     fontWeight: FontWeight.w500,
@@ -1152,7 +1152,7 @@ class _DialogSubCategoryCard extends StatelessWidget {
                 child: Text(
                   CategoryUtils.getDisplayName(category.name, context),
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        fontSize: 10,
+                        fontSize: PiggyTextTokens.fs10,
                         height: 1.1,
                       ),
                   textAlign: TextAlign.center,
@@ -1168,7 +1168,7 @@ class _DialogSubCategoryCard extends StatelessWidget {
                     .categoryMigrationTransactionLabel(transactionCount),
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: PiggyTokens.textSecondary(context),
-                      fontSize: 9,
+                      fontSize: PiggyTextTokens.fs9,
                       height: 1.0,
                     ),
                 textAlign: TextAlign.center,

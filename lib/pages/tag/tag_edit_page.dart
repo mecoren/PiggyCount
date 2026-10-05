@@ -98,7 +98,7 @@ class _TagEditPageState extends ConsumerState<TagEditPage> {
                             child: Text(
                               l10n.tagNameLabel,
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: PiggyTextTokens.fs14,
                                 fontWeight: FontWeight.w500,
                                 color: PiggyTokens.textSecondary(context),
                               ),
@@ -135,7 +135,7 @@ class _TagEditPageState extends ConsumerState<TagEditPage> {
                             child: Text(
                               l10n.tagColorLabel,
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: PiggyTextTokens.fs14,
                                 fontWeight: FontWeight.w500,
                                 color: PiggyTokens.textSecondary(context),
                               ),

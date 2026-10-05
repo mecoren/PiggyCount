@@ -191,7 +191,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                 l10n.calendarToday,
                 style: TextStyle(
                   color: PiggyTokens.textPrimary(context),
-                  fontSize: 14,
+                  fontSize: PiggyTextTokens.fs14,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -269,7 +269,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 
     // 头部标题样式:headerStyle 与自定义 headerTitleBuilder 共用同一份,避免走样
     final titleTextStyle = PiggyTextTokens.strongTitle(context).copyWith(
-      fontSize: 17,
+      fontSize: PiggyTextTokens.fs17,
     );
 
     return TableCalendar(
@@ -520,7 +520,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                       Text(
                         l10n.calendarAddTransaction,
                         style: const TextStyle(
-                          fontSize: 13,
+                          fontSize: PiggyTextTokens.fs13,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
                         ),

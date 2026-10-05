@@ -112,7 +112,7 @@ class _NetWorthTrendPageState extends ConsumerState<NetWorthTrendPage> {
                             signed: false,
                             showCurrency: true,
                             style: TextStyle(
-                                fontSize: 13,
+                                fontSize: PiggyTextTokens.fs13,
                                 color: PiggyTokens.textTertiary(context)),
                           ),
                           Padding(
@@ -134,7 +134,7 @@ class _NetWorthTrendPageState extends ConsumerState<NetWorthTrendPage> {
                             Text(
                               '${delta >= 0 ? '+' : ''}${pct.toStringAsFixed(1)}%',
                               style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: PiggyTextTokens.fs14,
                                   fontWeight: FontWeight.w600,
                                   color: delta >= 0
                                       ? PiggyTokens.incomeColor(context, ref)
@@ -255,7 +255,7 @@ class _TrendChipSelector<T> extends StatelessWidget {
               backgroundColor: Colors.transparent,
               selectedColor: primaryColor.withValues(alpha: 0.15),
               labelStyle: TextStyle(
-                fontSize: 13,
+                fontSize: PiggyTextTokens.fs13,
                 color: selected == v
                     ? primaryColor
                     : PiggyTokens.textSecondary(context),

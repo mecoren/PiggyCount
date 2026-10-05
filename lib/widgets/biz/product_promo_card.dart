@@ -209,7 +209,7 @@ class ProductPromoLauncher {
                             Text(
                               info.title,
                               style: const TextStyle(
-                                fontSize: 16,
+                                fontSize: PiggyTextTokens.fs16,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -268,7 +268,7 @@ class ProductPromoLauncher {
                           Text(
                             texts.betaDialogTitle,
                             style: TextStyle(
-                              fontSize: 13,
+                              fontSize: PiggyTextTokens.fs13,
                               fontWeight: FontWeight.w600,
                               color: themeColor,
                             ),
@@ -562,7 +562,7 @@ class _ScreenshotGalleryPageState extends State<_ScreenshotGalleryPage> {
                           child: Text(
                             '${page + 1} / ${widget.assets.length}',
                             style: const TextStyle(
-                                color: Colors.white, fontSize: 13),
+                                color: Colors.white, fontSize: PiggyTextTokens.fs13),
                           ),
                         );
                       },
@@ -622,7 +622,7 @@ class _CopyableEmailRow extends StatelessWidget {
                   Text(
                     email,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: PiggyTextTokens.fs14,
                       fontWeight: FontWeight.w600,
                       color: PiggyTokens.textPrimary(context),
                       fontFamily: 'monospace',

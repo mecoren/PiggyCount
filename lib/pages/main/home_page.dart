@@ -65,6 +65,22 @@ class _HomePageState extends ConsumerState<HomePage> {
           })>>? _txStream;
   int? _txStreamLedgerId;
 
+  /// M2-a 窗口：当前 `_txStream` 对应的 limit；变了就换引用重订阅。
+  int? _txStreamLimit;
+
+  /// 上一次流已到达的窗口行（M2-a）。
+  ///
+  /// `limit` 增长时会换一个新 stream，StreamBuilder 短暂 `hasData == false`；
+  /// 没有它就会回落到「启动预载的 20 条」→ 视觉上整页闪一下（这正是
+  /// `_txStream` 缓存当初要解决的那个问题，分页把同一个坑又挖了回来）。
+  List<
+      ({
+        Transaction t,
+        Category? category,
+        Account? account,
+        Account? toAccount
+      })>? _lastStreamRows;
+
   // 月初提醒状态
   bool _showLastMonthReminder = false;
   static const String _reminderDismissedKey = 'last_month_reminder_dismissed';
@@ -205,10 +221,32 @@ class _HomePageState extends ConsumerState<HomePage> {
       // 使用TransactionList组件的跳转方法
       final transactionListState = _transactionListKey.currentState;
       if (transactionListState != null && mounted) {
-        transactionListState.jumpToMonth(
+        final startDay = ref.read(currentMonthStartDayProvider);
+        var found = transactionListState.jumpToMonth(
           targetMonth,
-          startDay: ref.read(currentMonthStartDayProvider),
+          startDay: startDay,
         );
+
+        // M2-a 降级：目标月还没加载进窗口 → 逐页把窗口撑大再试。
+        // 有界 best-effort：上限 20 页，且只在「上一页确实是满页（可能还有更多）」
+        // 时继续，避免目标月根本不存在时无限拉。窗口行由 StreamBuilder 异步
+        // 送达，故每轮让出一帧再试。
+        final ledgerIdNow = ref.read(currentLedgerIdProvider);
+        var grown = 0;
+        while (!found &&
+            grown < 20 &&
+            mounted &&
+            (_lastStreamRows?.length ?? 0) >=
+                ref.read(homeTxWindowLimitProvider(ledgerIdNow))) {
+          growHomeTxWindow(ref, ledgerIdNow);
+          grown++;
+          await Future<void>.delayed(const Duration(milliseconds: 80));
+          if (!mounted) break;
+          found = transactionListState.jumpToMonth(
+            targetMonth,
+            startDay: startDay,
+          );
+        }
       }
     } finally {
       if (mounted) {
@@ -628,6 +666,9 @@ class _HomePageState extends ConsumerState<HomePage> {
         _streamBuilderKey++;
         // 清空缓存,避免旧账本 cache 在切换后被当作 fallback 显示。
         ref.read(cachedTransactionsProvider.notifier).state = null;
+        // M2-a：窗口行同样不能跨账本复用（否则新账本会先显示旧账本的行）。
+        _lastStreamRows = null;
+        _txStreamLimit = null;
         logger.info('HomePage',
             '账本切换: $previous → $next, 刷新StreamBuilder (key=$_streamBuilderKey)');
       }
@@ -949,13 +990,21 @@ class _HomePageState extends ConsumerState<HomePage> {
                     })>>(
               key: ValueKey('transactions_$_streamBuilderKey'), // 使用递增key强制重建
               stream: () {
+                final windowLimit =
+                    ref.watch(homeTxWindowLimitProvider(ledgerId));
                 // ledgerId 变了或第一次进来才重建 stream;无关 setState(预算
                 // 提示卡片、月度提醒等)的 home rebuild 复用同一 stream 引用,
                 // StreamBuilder 不会重新订阅,不会闪到 fallback 数据。
-                if (_txStream == null || _txStreamLedgerId != ledgerId) {
-                  _txStream =
-                      repo.transactionsWithCategoryAll(ledgerId: ledgerId);
+                if (_txStream == null ||
+                    _txStreamLedgerId != ledgerId ||
+                    _txStreamLimit != windowLimit) {
+                  // M2-a：窗口化 —— 不再整本账本进内存，只取最新 `windowLimit`
+                  // 行；limit 只增（滚动追加），已显示的行不会被挤出窗口，
+                  // 因此日分组器的删除检测语义不变。
+                  _txStream = repo.watchTransactionWindow(
+                      ledgerId: ledgerId, limit: windowLimit);
                   _txStreamLedgerId = ledgerId;
+                  _txStreamLimit = windowLimit;
                 }
                 return _txStream;
               }(),
@@ -963,13 +1012,18 @@ class _HomePageState extends ConsumerState<HomePage> {
                 // Stream 数据到来前，使用预加载数据；到来后使用 Stream 数据。
                 // 用 snapshot.hasData 区分"流已加载(可能为空)"与"流尚未返回",
                 // 避免空列表被当作未加载而回退到启动缓存(删除最后一笔后旧记录残留)。
+                final windowLimit =
+                    ref.watch(homeTxWindowLimitProvider(ledgerId));
                 final streamData = snapshot.data;
                 final hasStreamData = snapshot.hasData;
+                if (hasStreamData) _lastStreamRows = streamData;
 
-                // 如果 Stream 没数据，从预加载数据构建基础列表
+                // 如果 Stream 没数据，先回退**上一帧的窗口行**（limit 增长换流时
+                // 的短暂空窗），再退回启动预载；避免整页闪一下。
                 final transactions = hasStreamData
                     ? (streamData ?? const [])
-                    : (cachedFullData
+                    : (_lastStreamRows ??
+                        cachedFullData
                             ?.map((item) => (
                                   t: item.t,
                                   category: item.category,
@@ -978,6 +1032,21 @@ class _HomePageState extends ConsumerState<HomePage> {
                                 ))
                             .toList() ??
                         []);
+
+                // M2-a 日合计：窗口最旧一天可能只加载了部分行，表头数字必须用
+                // SQL 口径（family key = 最旧一天，同日增删不重复取数）。
+                final oldestLocal = transactions.isEmpty
+                    ? null
+                    : transactions.last.t.happenedAt.toLocal();
+                final dayTotals = oldestLocal == null
+                    ? null
+                    : ref
+                        .watch(homeDayTotalsProvider((
+                          ledgerId: ledgerId,
+                          oldestDay: DateTime(oldestLocal.year,
+                              oldestLocal.month, oldestLocal.day),
+                        )))
+                        .valueOrNull;
 
                 // Stream 首帧已到 → 启动预载缓存(20 条含标签/附件详情的
                 // 拷贝)完成使命,post-frame 清空避免与 Stream 全量数据双份
@@ -997,6 +1066,11 @@ class _HomePageState extends ConsumerState<HomePage> {
                   hideAmounts: ref.watch(hideAmountsProvider),
                   enableVisibilityTracking: true,
                   onDateVisibilityChanged: _onHeaderVisibilityChanged,
+                  // M2-a：窗口日合计（SQL 口径）+ 触底加载下一页
+                  dayTotals: dayTotals,
+                  hasMore: hasStreamData &&
+                      (streamData?.length ?? 0) >= windowLimit,
+                  onLoadMore: () => growHomeTxWindow(ref, ledgerId),
                   controller: _listController,
                   emptyWidget: AppEmpty(
                     text: AppLocalizations.of(context).homeNoRecords,

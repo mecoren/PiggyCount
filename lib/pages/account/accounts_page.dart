@@ -179,7 +179,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                                 Text(
                                   l10n.accountsEmptyMessage,
                                   style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize: PiggyTextTokens.fs16,
                                     color: PiggyTokens.textSecondary(context),
                                   ),
                                 ),
@@ -444,7 +444,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
             showCurrency: false,
             useCompactFormat: useCompact,
             style: TextStyle(
-              fontSize: 28,
+              fontSize: PiggyTextTokens.fs28,
               fontWeight: FontWeight.bold,
               color: singleNw.netWorth >= 0
                   ? PiggyTokens.incomeColor(context, ref)
@@ -669,7 +669,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
           ),
           child: Text(label,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: PiggyTextTokens.fs12,
                 color: on ? primary : PiggyTokens.textSecondary(context),
                 fontWeight: on ? FontWeight.w600 : FontWeight.normal,
               )),
@@ -755,7 +755,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
             Text(
               '≈ ',
               style: TextStyle(
-                fontSize: 20,
+                fontSize: PiggyTextTokens.fs20,
                 fontWeight: FontWeight.w600,
                 color: PiggyTokens.textTertiary(context),
               ),
@@ -768,7 +768,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                 currencyCode: base,
                 useCompactFormat: useCompact,
                 style: TextStyle(
-                  fontSize: 28,
+                  fontSize: PiggyTextTokens.fs28,
                   fontWeight: FontWeight.bold,
                   color: converted.netWorth >= 0
                       ? PiggyTokens.incomeColor(context, ref)
@@ -858,7 +858,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
               : l10n.convertedFootnote(converted.oldestRateDate ?? '-'),
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: PiggyTextTokens.fs11,
             color: (hasMissing || isStale)
                 ? PiggyTokens.warning(context)
                 : PiggyTokens.textTertiary(context),
@@ -938,7 +938,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: PiggyTextTokens.fs14,
                   fontWeight: FontWeight.w600,
                   color: iconColor,
                 ),
@@ -1002,7 +1002,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
       return Text(
         '-',
         style: TextStyle(
-          fontSize: 14,
+          fontSize: PiggyTextTokens.fs14,
           fontWeight: FontWeight.w600,
           color: PiggyTokens.textTertiary(context),
         ),
@@ -1022,7 +1022,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                 child: Text(
                   '·',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: PiggyTextTokens.fs14,
                     fontWeight: FontWeight.w600,
                     color: PiggyTokens.textTertiary(context),
                   ),
@@ -1035,7 +1035,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
               currencyCode: entries[i].currency,
               useCompactFormat: useCompact,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: PiggyTextTokens.fs14,
                 fontWeight: FontWeight.w600,
                 color: valueColor,
               ),
@@ -1107,7 +1107,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
             SizedBox(width: 6.0.scaled(context, ref)),
             Text(
               title,
-              style: PiggyTextTokens.boldTitle(context).copyWith(fontSize: 16),
+              style: PiggyTextTokens.boldTitle(context).copyWith(fontSize: PiggyTextTokens.fs16),
             ),
             const Spacer(),
             if (convertActive)
@@ -1136,7 +1136,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                 showCurrency: false,
                 useCompactFormat: useCompact,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: PiggyTextTokens.fs14,
                   fontWeight: FontWeight.w600,
                   color: iconColor,
                 ),
@@ -1384,7 +1384,7 @@ class _StatCell extends ConsumerWidget {
           showCurrency: false,
           useCompactFormat: ref.watch(compactAmountProvider),
           style: TextStyle(
-            fontSize: 16,
+            fontSize: PiggyTextTokens.fs16,
             fontWeight: FontWeight.w600,
             color: valueColor ?? PiggyTokens.textPrimary(context),
           ),
@@ -1458,7 +1458,7 @@ class _ConversionDetailRow extends ConsumerWidget {
                 Text(
                   entry.code,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: PiggyTextTokens.fs14,
                     fontWeight: FontWeight.w600,
                     color: PiggyTokens.textPrimary(context),
                   ),
@@ -1506,7 +1506,7 @@ class _ConversionDetailRow extends ConsumerWidget {
               child: Text(
                 l10n.unconvertedBadge,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: PiggyTextTokens.fs11,
                   // 与边框同源 warning token,暗色下也是可读的琥珀色
                   color: PiggyTokens.warning(context),
                 ),
@@ -1589,7 +1589,7 @@ class _ConvertedStatCell extends ConsumerWidget {
             Text(
               '≈ ',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: PiggyTextTokens.fs16,
                 fontWeight: FontWeight.w600,
                 color: PiggyTokens.textTertiary(context),
               ),
@@ -1602,7 +1602,7 @@ class _ConvertedStatCell extends ConsumerWidget {
                 currencyCode: currencyCode,
                 useCompactFormat: useCompact,
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: PiggyTextTokens.fs16,
                   fontWeight: FontWeight.w600,
                   color: valueColor,
                 ),
@@ -1682,7 +1682,7 @@ class _AccountTypeGroupState extends ConsumerState<_AccountTypeGroup> {
                 Text(
                   getAccountTypeLabel(context, widget.type),
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: PiggyTextTokens.fs14,
                     fontWeight: FontWeight.w600,
                     color: PiggyTokens.textPrimary(context),
                   ),
@@ -1823,7 +1823,7 @@ class _HiddenAccountsSectionState
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: PiggyTextTokens.fs14,
                       fontWeight: FontWeight.w600,
                       color: PiggyTokens.textSecondary(context),
                     ),
@@ -2026,7 +2026,7 @@ class _AccountCard extends ConsumerWidget {
       child: Text(
         l10n.accountHiddenTag,
         style: TextStyle(
-          fontSize: 10,
+          fontSize: PiggyTextTokens.fs10,
           color: PiggyTokens.textTertiary(context),
           fontWeight: FontWeight.w600,
         ),
@@ -2059,7 +2059,7 @@ class _AccountCard extends ConsumerWidget {
             Text(
               l10n.accountRestore,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: PiggyTextTokens.fs12,
                 color: primary,
                 fontWeight: FontWeight.w600,
               ),
@@ -2090,7 +2090,7 @@ class _AccountCard extends ConsumerWidget {
                 useCompactFormat: ref.watch(compactAmountProvider),
                 currencyCode: account.currency,
                 style: TextStyle(
-                  fontSize: 22,
+                  fontSize: PiggyTextTokens.fs22,
                   fontWeight: FontWeight.bold,
                   color: PiggyTokens.textPrimary(context),
                 ),
@@ -2148,7 +2148,7 @@ class _AccountCard extends ConsumerWidget {
                 useCompactFormat: ref.watch(compactAmountProvider),
                 currencyCode: account.currency,
                 style: TextStyle(
-                  fontSize: 22,
+                  fontSize: PiggyTextTokens.fs22,
                   fontWeight: FontWeight.bold,
                   color: PiggyTokens.textPrimary(context),
                 ),
@@ -2288,7 +2288,7 @@ class _CardStat extends StatelessWidget {
           useCompactFormat: ref.watch(compactAmountProvider),
           currencyCode: currencyCode,
           style: TextStyle(
-            fontSize: 14,
+            fontSize: PiggyTextTokens.fs14,
             fontWeight: FontWeight.w600,
             color: valueColor,
           ),
@@ -2297,7 +2297,7 @@ class _CardStat extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: PiggyTextTokens.fs11,
             color: labelColor,
           ),
         ),
@@ -2355,7 +2355,7 @@ class _CompactDefaultAccount extends ConsumerWidget {
                 Text(
                   defaultAccount?.name ?? l10n.accountDefaultNone,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: PiggyTextTokens.fs13,
                     color: PiggyTokens.textTertiary(context),
                   ),
                 ),

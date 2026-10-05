@@ -445,7 +445,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
                   l10n.appearanceNoteHistoryScope,
                   style: TextStyle(
                     color: PiggyTokens.textSecondary(context),
-                    fontSize: 13.scaled(context, ref),
+                    fontSize: PiggyTextTokens.fs13.scaled(context, ref),
                   ),
                 ),
                 RadioGroup<NoteHistoryScope>(
@@ -479,7 +479,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
                   l10n.appearanceNoteHistorySort,
                   style: TextStyle(
                     color: PiggyTokens.textSecondary(context),
-                    fontSize: 13.scaled(context, ref),
+                    fontSize: PiggyTextTokens.fs13.scaled(context, ref),
                   ),
                 ),
                 RadioGroup<NoteHistorySort>(
@@ -524,7 +524,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
                             l10n.appearanceNoteHistoryLimitHint,
                             style: TextStyle(
                               color: PiggyTokens.textSecondary(context),
-                              fontSize: 12.scaled(context, ref),
+                              fontSize: PiggyTextTokens.fs12.scaled(context, ref),
                             ),
                           ),
                         ],
@@ -573,7 +573,7 @@ class AppearanceSettingsPage extends ConsumerWidget {
                         textAlign: TextAlign.right,
                         style: TextStyle(
                           color: PiggyTokens.error(context),
-                          fontSize: 12.scaled(context, ref),
+                          fontSize: PiggyTextTokens.fs12.scaled(context, ref),
                         ),
                       ),
                     ),

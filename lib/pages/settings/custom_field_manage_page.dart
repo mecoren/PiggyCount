@@ -151,7 +151,7 @@ class _CustomFieldManagePageState extends ConsumerState<CustomFieldManagePage> {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            fontSize: 15,
+            fontSize: PiggyTextTokens.fs15,
             fontWeight: FontWeight.w600,
             color: PiggyTokens.textPrimary(context),
           ),
@@ -161,7 +161,7 @@ class _CustomFieldManagePageState extends ConsumerState<CustomFieldManagePage> {
           child: Text(
             _typeLabel(l10n, def.fieldType),
             style: TextStyle(
-              fontSize: 12,
+              fontSize: PiggyTextTokens.fs12,
               color: typeColor,
               fontWeight: FontWeight.w500,
             ),
@@ -468,7 +468,7 @@ class _CustomFieldEditSheetState extends ConsumerState<_CustomFieldEditSheet> {
                       Text(
                         opt.label,
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: PiggyTextTokens.fs12,
                           fontWeight: FontWeight.w600,
                           color: _type == opt.value
                               ? primary

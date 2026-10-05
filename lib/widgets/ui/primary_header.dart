@@ -175,7 +175,7 @@ class PrimaryHeader extends ConsumerWidget {
                           DefaultTextStyle(
                             style: Theme.of(context).textTheme.labelMedium?.copyWith(
                               color: iconColor, // ⭐ 自适应颜色
-                            ) ?? TextStyle(fontSize: 12, color: iconColor),
+                            ) ?? TextStyle(fontSize: PiggyTextTokens.fs12, color: iconColor),
                             child: center!,
                           ),
                         ],

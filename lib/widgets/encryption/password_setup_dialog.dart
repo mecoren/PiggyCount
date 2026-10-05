@@ -199,7 +199,7 @@ class _PasswordSetupDialogState extends ConsumerState<PasswordSetupDialog> {
                     _title(l10n),
                     textAlign: TextAlign.center,
                     style: PiggyTextTokens.strongTitle(context)
-                        .copyWith(fontSize: 17),
+                        .copyWith(fontSize: PiggyTextTokens.fs17),
                   ),
                   const SizedBox(height: PiggyDimens.p16),
                   if (_isChangeMode) ...[

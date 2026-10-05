@@ -283,7 +283,7 @@ class _PopoverOverlayState extends State<_PopoverOverlay>
             Text(
               item.label,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: PiggyTextTokens.fs11,
                 color: color,
               ),
             ),

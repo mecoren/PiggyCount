@@ -81,6 +81,12 @@ jobs:
       - name: flutter analyze (fail on any issue, including info)
         run: flutter analyze --fatal-infos
 
+      # 无障碍对比度门禁（2026-10-05 新增）：纯 Python 算式，零依赖。
+      # 守 WCAG 1.4.3（正文 ≥4.5:1）与 1.4.11（非文本 ≥3:1）；不合格组合
+      # 退出码非 0。算式自检：`python3 scripts/contrast_check.py --self-check`。
+      - name: 无障碍对比度门禁（contrast_check.py）
+        run: python3 scripts/contrast_check.py
+
   test:
     name: flutter test (同步一致性守门测试)
     runs-on: ubuntu-24.04

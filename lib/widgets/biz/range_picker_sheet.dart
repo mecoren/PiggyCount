@@ -157,7 +157,7 @@ class _RangePickerSheetState extends ConsumerState<_RangePickerSheet> {
             formatButtonVisible: false,
             titleCentered: true,
             titleTextStyle:
-                PiggyTextTokens.strongTitle(context).copyWith(fontSize: 17),
+                PiggyTextTokens.strongTitle(context).copyWith(fontSize: PiggyTextTokens.fs17),
             leftChevronIcon: Icon(Icons.chevron_left, color: primary),
             rightChevronIcon: Icon(Icons.chevron_right, color: primary),
           ),

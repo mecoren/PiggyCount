@@ -262,7 +262,7 @@ class _AccountSelectorState extends ConsumerState<AccountSelector> {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: PiggyTextTokens.fs13,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                   color: isSelected ? Colors.white : PiggyTokens.textSecondary(context),
                   height: 1.2,

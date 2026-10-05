@@ -435,7 +435,7 @@ class _TransferFormState extends ConsumerState<TransferForm> {
               Text(
                 l10n.transferFromAccount,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: PiggyTextTokens.fs14,
                   fontWeight: FontWeight.w600,
                   color: PiggyTokens.textSecondary(context),
                 ),
@@ -457,7 +457,7 @@ class _TransferFormState extends ConsumerState<TransferForm> {
               Text(
                 l10n.transferToAccount,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: PiggyTextTokens.fs14,
                   fontWeight: FontWeight.w600,
                   color: PiggyTokens.textSecondary(context),
                 ),
@@ -560,7 +560,7 @@ class _TransferFormState extends ConsumerState<TransferForm> {
                     child: Text(
                       account.name,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: PiggyTextTokens.fs12,
                         fontWeight:
                             isSelected ? FontWeight.w600 : FontWeight.normal,
                         color: isSelected

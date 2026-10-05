@@ -316,7 +316,7 @@ class HolidayBadge extends StatelessWidget {
       child: Text(
         isHoliday ? l10n.holidayBadgeOff : l10n.holidayBadgeWork,
         style: TextStyle(
-          fontSize: 11,
+          fontSize: PiggyTextTokens.fs11,
           fontWeight: FontWeight.w600,
           color: color,
         ),

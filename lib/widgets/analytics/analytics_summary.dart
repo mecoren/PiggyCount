@@ -36,7 +36,7 @@ Text _summaryAmount(BuildContext context, String text, Color? color) {
     maxLines: 1,
     overflow: TextOverflow.ellipsis,
     style: TextStyle(
-      fontSize: 16,
+      fontSize: PiggyTextTokens.fs16,
       height: 1.15,
       fontWeight: FontWeight.w700,
       color: color ?? PiggyTokens.textPrimary(context),
@@ -235,7 +235,7 @@ class AnalyticsSummary extends ConsumerWidget {
                   label,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: PiggyTokens.textSecondary(context),
-                        fontSize: 11,
+                        fontSize: PiggyTextTokens.fs11,
                       ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

@@ -60,7 +60,7 @@ class _WheelPickerState<T> extends State<WheelPicker<T>> {
               Center(
                 child: Text(
                   widget.labelBuilder(item),
-                  style: TextStyle(fontSize: 18, color: _textPrimary(context)),
+                  style: TextStyle(fontSize: PiggyTextTokens.fs18, color: _textPrimary(context)),
                 ),
               ),
           ],

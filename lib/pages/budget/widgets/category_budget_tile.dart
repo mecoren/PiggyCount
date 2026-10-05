@@ -71,7 +71,7 @@ class CategoryBudgetTile extends ConsumerWidget {
                       Text(
                         usage.categoryName,
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: PiggyTextTokens.fs14,
                           fontWeight: FontWeight.w500,
                           color: PiggyTokens.textPrimary(context),
                         ),
@@ -79,7 +79,7 @@ class CategoryBudgetTile extends ConsumerWidget {
                       Text(
                         '${(budget.rate * 100).toStringAsFixed(0)}%',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: PiggyTextTokens.fs14,
                           fontWeight: FontWeight.w600,
                           color: statusColor,
                         ),

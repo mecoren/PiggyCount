@@ -224,7 +224,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
   }
 
   TextStyle _sectionTitle(BuildContext context) => TextStyle(
-        fontSize: 14,
+        fontSize: PiggyTextTokens.fs14,
         fontWeight: FontWeight.w600,
         color: PiggyTokens.textPrimary(context),
       );
@@ -329,7 +329,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                     hint: l10n.accountNameHint,
                     errorText: _nameErrorText,
                   ),
-                  style: const TextStyle(fontSize: 16),
+                  style: const TextStyle(fontSize: PiggyTextTokens.fs16),
                   onChanged: (value) => _checkNameDuplicate(value),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
@@ -383,7 +383,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                                   displayCurrency(_selectedCurrency, context),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 16),
+                                  style: const TextStyle(fontSize: PiggyTextTokens.fs16),
                                 ),
                               ),
                               Icon(Icons.expand_more,
@@ -404,7 +404,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                           hint: _getInitialBalanceHint(l10n),
                           prefix: '${getCurrencySymbol(_selectedCurrency)} ',
                         ),
-                        style: const TextStyle(fontSize: 16),
+                        style: const TextStyle(fontSize: PiggyTextTokens.fs16),
                         keyboardType: const TextInputType.numberWithOptions(
                             decimal: true, signed: true),
                         validator: (value) {
@@ -444,7 +444,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                       hint: l10n.creditLimitHint,
                       prefix: '${getCurrencySymbol(_selectedCurrency)} ',
                     ),
-                    style: const TextStyle(fontSize: 16),
+                    style: const TextStyle(fontSize: PiggyTextTokens.fs16),
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     validator: (value) {
@@ -493,7 +493,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                             label: l10n.accountBankName,
                             hint: l10n.accountBankNameHint,
                           ),
-                          style: const TextStyle(fontSize: 16),
+                          style: const TextStyle(fontSize: PiggyTextTokens.fs16),
                         ),
                       ),
                       SizedBox(width: 12.0.scaled(context, ref)),
@@ -505,7 +505,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                             label: l10n.accountCardLastFour,
                             hint: l10n.accountCardLastFourHint,
                           ).copyWith(counterText: ''),
-                          style: const TextStyle(fontSize: 16),
+                          style: const TextStyle(fontSize: PiggyTextTokens.fs16),
                           maxLength: 4,
                           keyboardType: TextInputType.number,
                         ),
@@ -543,7 +543,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                           selected: isSelected,
                           selectedColor: primaryColor.withValues(alpha: 0.15),
                           labelStyle: TextStyle(
-                            fontSize: 12,
+                            fontSize: PiggyTextTokens.fs12,
                             color: isSelected
                                 ? primaryColor
                                 : PiggyTokens.textSecondary(context),
@@ -585,7 +585,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                             label: l10n.accountBankName,
                             hint: l10n.accountBankNameHint,
                           ),
-                          style: const TextStyle(fontSize: 16),
+                          style: const TextStyle(fontSize: PiggyTextTokens.fs16),
                         ),
                       ),
                       SizedBox(width: 12.0.scaled(context, ref)),
@@ -597,7 +597,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                             label: l10n.accountCardLastFour,
                             hint: l10n.accountCardLastFourHint,
                           ).copyWith(counterText: ''),
-                          style: const TextStyle(fontSize: 16),
+                          style: const TextStyle(fontSize: PiggyTextTokens.fs16),
                           maxLength: 4,
                           keyboardType: TextInputType.number,
                         ),
@@ -622,7 +622,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                 label: l10n.accountNote,
                 hint: l10n.accountNoteHint,
               ),
-              style: const TextStyle(fontSize: 16),
+              style: const TextStyle(fontSize: PiggyTextTokens.fs16),
               maxLines: 3,
               minLines: 1,
             ),
@@ -653,7 +653,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                       ? l10n.accountUnhide
                       : l10n.accountHide,
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: PiggyTextTokens.fs16,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -678,7 +678,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                 child: Text(
                   l10n.commonDelete,
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: PiggyTextTokens.fs16,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1040,7 +1040,7 @@ class _DayPickerTile extends ConsumerWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: PiggyTextTokens.fs16,
                   color: hasValue
                       ? PiggyTokens.textPrimary(context)
                       : PiggyTokens.textTertiary(context),
@@ -1134,7 +1134,7 @@ class _AccountTypeCard extends ConsumerWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: PiggyTextTokens.fs12,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 color: fg,
               ),

@@ -179,7 +179,7 @@ class YearSummaryPoster extends StatelessWidget {
                     l10n.sharePosterAppName,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 18,
+                      fontSize: PiggyTextTokens.fs18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -195,7 +195,7 @@ class YearSummaryPoster extends StatelessWidget {
                       '${data.year}',
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 20,
+                        fontSize: PiggyTextTokens.fs20,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1,
                       ),
@@ -209,7 +209,7 @@ class YearSummaryPoster extends StatelessWidget {
                 l10n.sharePosterYearTitle,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 48,
+                  fontSize: PiggyTextTokens.fs48,
                   fontWeight: FontWeight.bold,
                   height: 1.2,
                   letterSpacing: 1,
@@ -221,7 +221,7 @@ class YearSummaryPoster extends StatelessWidget {
                 l10n.sharePosterYearSubtitle,
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.85),
-                  fontSize: 20,
+                  fontSize: PiggyTextTokens.fs20,
                   letterSpacing: 0.5,
                 ),
               ),
@@ -358,7 +358,7 @@ class YearSummaryPoster extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            fontSize: 20,
+            fontSize: PiggyTextTokens.fs20,
             color: PiggyPosterTokens.textSecondary,
             fontWeight: FontWeight.w500,
           ),
@@ -392,7 +392,7 @@ class YearSummaryPoster extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            fontSize: 14,
+            fontSize: PiggyTextTokens.fs14,
             color: PiggyPosterTokens.textTertiary,
           ),
         ),
@@ -404,7 +404,7 @@ class YearSummaryPoster extends StatelessWidget {
             Text(
               value,
               style: TextStyle(
-                fontSize: 24,
+                fontSize: PiggyTextTokens.fs24,
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
@@ -416,7 +416,7 @@ class YearSummaryPoster extends StatelessWidget {
                 child: Text(
                   unit,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: PiggyTextTokens.fs12,
                     color: color.withValues(alpha: 0.7),
                   ),
                 ),
@@ -449,7 +449,7 @@ class YearSummaryPoster extends StatelessWidget {
           Text(
             isPositive ? l10n.sharePosterYearBalance : l10n.sharePosterYearDeficit,
             style: TextStyle(
-              fontSize: 20,
+              fontSize: PiggyTextTokens.fs20,
               color: balanceColor,
               fontWeight: FontWeight.w600,
             ),
@@ -460,7 +460,7 @@ class YearSummaryPoster extends StatelessWidget {
                 ? '**'
                 : '${isPositive ? '+' : ''}${_money(formatter, data.balance)}',
             style: TextStyle(
-              fontSize: 28,
+              fontSize: PiggyTextTokens.fs28,
               fontWeight: FontWeight.bold,
               color: balanceColor,
             ),
@@ -485,7 +485,7 @@ class YearSummaryPoster extends StatelessWidget {
           l10n.sharePosterTopExpense,
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 24,
+            fontSize: PiggyTextTokens.fs24,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -536,7 +536,7 @@ class YearSummaryPoster extends StatelessWidget {
                 '$rank',
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 18,
+                  fontSize: PiggyTextTokens.fs18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -557,7 +557,7 @@ class YearSummaryPoster extends StatelessWidget {
               category.name,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 20,
+                fontSize: PiggyTextTokens.fs20,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -570,7 +570,7 @@ class YearSummaryPoster extends StatelessWidget {
                 _money(formatter, category.total),
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 22,
+                  fontSize: PiggyTextTokens.fs22,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -578,7 +578,7 @@ class YearSummaryPoster extends StatelessWidget {
                 percentText,
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.7),
-                  fontSize: 16,
+                  fontSize: PiggyTextTokens.fs16,
                 ),
               ),
             ],
@@ -634,14 +634,14 @@ class YearSummaryPoster extends StatelessWidget {
           label,
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.85),
-            fontSize: 18,
+            fontSize: PiggyTextTokens.fs18,
           ),
         ),
         Text(
           value,
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 20,
+            fontSize: PiggyTextTokens.fs20,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -657,7 +657,7 @@ class YearSummaryPoster extends StatelessWidget {
         l10n.sharePosterSlogan,
         style: TextStyle(
           color: Colors.white.withValues(alpha: 0.7),
-          fontSize: 14,
+          fontSize: PiggyTextTokens.fs14,
           letterSpacing: 1,
         ),
       ),

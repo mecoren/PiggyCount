@@ -143,7 +143,7 @@ class BudgetPage extends ConsumerWidget {
               Text(
                 l10n.budgetMonthlyBudget,
                 style: PiggyTextTokens.strongTitle(context).copyWith(
-                  fontSize: 16,
+                  fontSize: PiggyTextTokens.fs16,
                 ),
               ),
               if (!_isEditorInShared(ref))
@@ -177,7 +177,7 @@ class BudgetPage extends ConsumerWidget {
                   Text(
                     '$currencySymbol${budget.used.toStringAsFixed(2)}',
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: PiggyTextTokens.fs18,
                       fontWeight: FontWeight.w600,
                       color: PiggyTokens.textPrimary(context),
                     ),
@@ -194,7 +194,7 @@ class BudgetPage extends ConsumerWidget {
                   Text(
                     '$currencySymbol${budget.remaining.toStringAsFixed(2)}',
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: PiggyTextTokens.fs18,
                       fontWeight: FontWeight.w600,
                       color: budget.remaining >= 0
                           ? PiggyTokens.success(context)
@@ -227,7 +227,7 @@ class BudgetPage extends ConsumerWidget {
                   l10n.budgetDailyAvailable(
                       '$currencySymbol${overview.dailyAvailable.toStringAsFixed(0)}'),
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: PiggyTextTokens.fs14,
                     fontWeight: FontWeight.w500,
                     color: PiggyTokens.textPrimary(context),
                   ),
@@ -259,7 +259,7 @@ class BudgetPage extends ConsumerWidget {
               Text(
                 l10n.budgetCategoryBudgets,
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: PiggyTextTokens.fs16,
                   fontWeight: FontWeight.w600,
                   color: PiggyTokens.textPrimary(context),
                 ),

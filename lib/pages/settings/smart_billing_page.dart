@@ -52,7 +52,7 @@ class SmartBillingPage extends ConsumerWidget {
           children: [
             Text(
               description,
-              style: const TextStyle(fontSize: 15),
+              style: const TextStyle(fontSize: PiggyTextTokens.fs15),
             ),
             const SizedBox(height: 16),
             Container(
@@ -83,7 +83,7 @@ class SmartBillingPage extends ConsumerWidget {
                     child: Text(
                       aiRequirement,
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: PiggyTextTokens.fs13,
                         color: requiresAI
                             ? PiggyTokens.warning(context)
                             : PiggyTokens.info(context),
@@ -112,7 +112,7 @@ class SmartBillingPage extends ConsumerWidget {
                     child: Text(
                       hint,
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: PiggyTextTokens.fs13,
                         color: PiggyTokens.primary(context),
                         fontWeight: FontWeight.w500,
                       ),
@@ -189,13 +189,13 @@ class SmartBillingPage extends ConsumerWidget {
                     mode == VoiceTriggerMode.auto
                         ? l10n.voiceTriggerModeAuto
                         : l10n.voiceTriggerModeHold,
-                    style: const TextStyle(fontSize: 14),
+                    style: const TextStyle(fontSize: PiggyTextTokens.fs14),
                   ),
                   subtitle: Text(
                     mode == VoiceTriggerMode.auto
                         ? l10n.voiceTriggerModeAutoDesc
                         : l10n.voiceTriggerModeHoldDesc,
-                    style: const TextStyle(fontSize: 12),
+                    style: const TextStyle(fontSize: PiggyTextTokens.fs12),
                   ),
                 ),
             ],
@@ -429,7 +429,7 @@ class _VoiceSilenceTimeoutSliderState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(l10n.smartBillingVoiceSilenceTimeout,
-                        style: const TextStyle(fontSize: 15)),
+                        style: const TextStyle(fontSize: PiggyTextTokens.fs15)),
                     Text(
                       l10n.smartBillingVoiceSilenceTimeoutValue(seconds),
                       style: PiggyTextTokens.label(context)

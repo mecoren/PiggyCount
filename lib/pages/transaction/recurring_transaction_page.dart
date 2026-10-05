@@ -194,7 +194,7 @@ class _RecurringTransactionCard extends ConsumerWidget {
                           ? Text(
                               AppLocalizations.of(context).transferTitle,
                               style: PiggyTextTokens.strongTitle(context)
-                                  .copyWith(fontSize: 16),
+                                  .copyWith(fontSize: PiggyTextTokens.fs16),
                             )
                           : FutureBuilder<Category?>(
                               future: _getCategory(ref, recurring.categoryId),
@@ -204,7 +204,7 @@ class _RecurringTransactionCard extends ConsumerWidget {
                                   CategoryUtils.getDisplayName(
                                       categoryName, context),
                                   style: PiggyTextTokens.strongTitle(context)
-                                      .copyWith(fontSize: 16),
+                                      .copyWith(fontSize: PiggyTextTokens.fs16),
                                 );
                               },
                             ),
@@ -270,7 +270,7 @@ class _RecurringTransactionCard extends ConsumerWidget {
                               DateFormat.Md()
                                   .format(recurring.lastGeneratedDate!),
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: PiggyTextTokens.fs12,
                                 color: primaryColor,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -312,7 +312,7 @@ class _RecurringTransactionCard extends ConsumerWidget {
                           Text(
                             recurring.currencyCode!.toUpperCase(),
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: PiggyTextTokens.fs12,
                               fontWeight: FontWeight.w600,
                               color: PiggyTokens.textSecondary(context),
                             ),
@@ -326,7 +326,7 @@ class _RecurringTransactionCard extends ConsumerWidget {
                           signed: recurring.type != 'transfer',
                           decimals: 2,
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: PiggyTextTokens.fs18,
                             fontWeight: FontWeight.w700,
                             color: recurring.type == 'expense'
                                 ? PiggyTokens.error(context)
@@ -454,7 +454,7 @@ class _UsageGuideCard extends ConsumerWidget {
                 Text(
                   l10n.recurringTransactionUsageContent,
                   style: PiggyTextTokens.label(context).copyWith(
-                    fontSize: 13,
+                    fontSize: PiggyTextTokens.fs13,
                     height: 1.5,
                   ),
                 ),

@@ -192,7 +192,7 @@ class _CategoryRankRowState extends ConsumerState<CategoryRankRow> {
                   '$rank',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: PiggyTextTokens.fs12,
                     fontWeight: FontWeight.w700,
                     color: rank <= 3
                         ? widget.color
@@ -233,7 +233,7 @@ class _CategoryRankRowState extends ConsumerState<CategoryRankRow> {
                               Theme.of(context).textTheme.labelSmall?.copyWith(
                                     color:
                                         PiggyTokens.textTertiary(context),
-                                    fontSize: 11,
+                                    fontSize: PiggyTextTokens.fs11,
                                   ),
                         ),
                       ],

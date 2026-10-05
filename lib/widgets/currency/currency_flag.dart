@@ -33,7 +33,7 @@ Widget currencyFlag(
         maxLines: 1,
         overflow: TextOverflow.clip,
         style: TextStyle(
-          fontSize: 10,
+          fontSize: PiggyTextTokens.fs10,
           fontWeight: FontWeight.w600,
           color: PiggyTokens.textSecondary(context),
         ),

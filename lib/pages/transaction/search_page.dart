@@ -665,7 +665,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     required double amount,
     required Color color,
   }) {
-    final style = TextStyle(fontSize: 12.0.scaled(context, ref), color: color);
+    final style = TextStyle(fontSize: PiggyTextTokens.fs12.scaled(context, ref), color: color);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -822,7 +822,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                               label: Text(
                                 '${l10n.searchCategoryFilter}: ${CategoryUtils.getDisplayName(_selectedCategory!.name, context)}',
                                 style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: PiggyTextTokens.fs12,
                                     color: ref.watch(primaryColorProvider)),
                               ),
                               backgroundColor: ref
@@ -845,7 +845,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                               label: Text(
                                 '${l10n.searchAmountFilter}: ${_minAmount?.toStringAsFixed(2) ?? '0'} ~ ${_maxAmount?.toStringAsFixed(2) ?? '∞'}',
                                 style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: PiggyTextTokens.fs12,
                                     color: ref.watch(primaryColorProvider)),
                               ),
                               backgroundColor: ref
@@ -869,7 +869,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                               label: Text(
                                 '${l10n.searchDateFilter}: ${_startDate != null ? '${_startDate!.year}-${_startDate!.month.toString().padLeft(2, '0')}-${_startDate!.day.toString().padLeft(2, '0')}' : l10n.searchDateStart} ~ ${_endDate != null ? '${_endDate!.year}-${_endDate!.month.toString().padLeft(2, '0')}-${_endDate!.day.toString().padLeft(2, '0')}' : l10n.searchDateEnd}',
                                 style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: PiggyTextTokens.fs12,
                                     color: ref.watch(primaryColorProvider)),
                               ),
                               backgroundColor: ref
@@ -1075,7 +1075,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                       icon:
                                           const Icon(Icons.edit_note, size: 16),
                                       label: Text(l10n.searchBatchSetNote,
-                                          style: const TextStyle(fontSize: 13)),
+                                          style: const TextStyle(fontSize: PiggyTextTokens.fs13)),
                                       style: OutlinedButton.styleFrom(
                                         foregroundColor:
                                             ref.watch(primaryColorProvider),
@@ -1095,7 +1095,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                           const Icon(Icons.category, size: 16),
                                       label: Text(
                                           l10n.searchBatchChangeCategory,
-                                          style: const TextStyle(fontSize: 13)),
+                                          style: const TextStyle(fontSize: PiggyTextTokens.fs13)),
                                       style: OutlinedButton.styleFrom(
                                         foregroundColor:
                                             ref.watch(primaryColorProvider),
@@ -1114,7 +1114,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                       icon: const Icon(Icons.delete_outline,
                                           size: 16),
                                       label: Text(l10n.commonDelete,
-                                          style: const TextStyle(fontSize: 13)),
+                                          style: const TextStyle(fontSize: PiggyTextTokens.fs13)),
                                       style: OutlinedButton.styleFrom(
                                         foregroundColor:
                                             PiggyTokens.error(context),

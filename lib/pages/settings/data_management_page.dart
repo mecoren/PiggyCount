@@ -1,4 +1,5 @@
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -19,6 +20,7 @@ import '../settings/storage_management_page.dart';
 import '../settings/attachment_preview_page.dart';
 import '../maintenance/orphan_cleanup_page.dart';
 import '../maintenance/recycle_bin_page.dart';
+import '../maintenance/dev_perf_dashboard_page.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/attachment_export_import_service.dart';
 
@@ -234,6 +236,19 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                   );
                 },
               ),
+              // 性能仪表盘（仅 debug / profile —— release 入口不出现，见 kReleaseMode）
+              if (!kReleaseMode)
+                SettingsNavItem(
+                  icon: Icons.speed_outlined,
+                  title: l10n.devPerfEntryTitle,
+                  subtitle: l10n.devPerfEntrySubtitle,
+                  onTap: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const DevPerfDashboardPage()),
+                    );
+                  },
+                ),
             ],
           ),
           // 应用锁已挪到「个性化设置」页面(语义上属于应用偏好)。
@@ -573,7 +588,7 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                         // 跳过选项
                         RadioListTile<String>(
                           title: Text(l10n.attachmentImportConflictSkip,
-                              style: const TextStyle(fontSize: 14)),
+                              style: const TextStyle(fontSize: PiggyTextTokens.fs14)),
                           value: AttachmentExportImportService.conflictSkip,
                           activeColor: primary,
                           contentPadding: EdgeInsets.zero,
@@ -583,7 +598,7 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                         // 覆盖选项
                         RadioListTile<String>(
                           title: Text(l10n.attachmentImportConflictOverwrite,
-                              style: const TextStyle(fontSize: 14)),
+                              style: const TextStyle(fontSize: PiggyTextTokens.fs14)),
                           value:
                               AttachmentExportImportService.conflictOverwrite,
                           activeColor: primary,

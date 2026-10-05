@@ -164,7 +164,7 @@ class PiggySwitchListTile extends StatelessWidget {
 
     final titleStyle = dense
         ? theme.textTheme.bodyMedium?.copyWith(
-            fontSize: 14,
+            fontSize: PiggyTextTokens.fs14,
             fontWeight: FontWeight.w500,
           )
         : theme.textTheme.bodyLarge?.copyWith(

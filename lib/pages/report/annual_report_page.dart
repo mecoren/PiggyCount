@@ -314,7 +314,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
           const SizedBox(height: 16),
           Text(
             l10n.annualReportGenerating,
-            style: const TextStyle(color: Colors.white, fontSize: 16),
+            style: const TextStyle(color: Colors.white, fontSize: PiggyTextTokens.fs16),
           ),
         ],
       ),
@@ -363,7 +363,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                   const SizedBox(height: 16),
                   Text(
                     l10n.annualReportNoData(_selectedYear),
-                    style: TextStyle(color: onPrimary, fontSize: 16),
+                    style: TextStyle(color: onPrimary, fontSize: PiggyTextTokens.fs16),
                   ),
                   const SizedBox(height: 24),
                   _buildYearSelector(),
@@ -414,7 +414,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
         underline: const SizedBox(),
         icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
         style: const TextStyle(
-            color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            color: Colors.white, fontSize: PiggyTextTokens.fs16, fontWeight: FontWeight.bold),
         items: years.map((year) {
           return DropdownMenuItem(
             value: year,
@@ -576,7 +576,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             l10n.annualReportPage1Title,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 32,
+              fontSize: PiggyTextTokens.fs32,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -585,7 +585,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             l10n.annualReportPage1Subtitle(data.year),
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.8),
-              fontSize: 16,
+              fontSize: PiggyTextTokens.fs16,
             ),
           ),
           const SizedBox(height: 32),
@@ -669,7 +669,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                 value,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 32,
+                  fontSize: PiggyTextTokens.fs32,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -679,7 +679,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                   unit,
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.7),
-                    fontSize: 14,
+                    fontSize: PiggyTextTokens.fs14,
                   ),
                 ),
               ),
@@ -690,7 +690,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             label,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.7),
-              fontSize: 14,
+              fontSize: PiggyTextTokens.fs14,
             ),
           ),
         ],
@@ -729,7 +729,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
           Text(
             label,
             style: TextStyle(
-              fontSize: 16,
+              fontSize: PiggyTextTokens.fs16,
               color: PiggyTokens.textSecondary(context),
             ),
           ),
@@ -737,7 +737,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
           Text(
             '$sign$currencySymbol${formatter.format(amount.abs())}',
             style: TextStyle(
-              fontSize: 22,
+              fontSize: PiggyTextTokens.fs22,
               fontWeight: FontWeight.bold,
               color: color,
             ),
@@ -794,7 +794,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             AppLocalizations.of(context).annualReportInsightTitle,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 32,
+              fontSize: PiggyTextTokens.fs32,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -803,7 +803,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             AppLocalizations.of(context).annualReportInsightSubtitle,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.8),
-              fontSize: 16,
+              fontSize: PiggyTextTokens.fs16,
             ),
           ),
           const SizedBox(height: 24),
@@ -910,7 +910,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                   title,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 16,
+                    fontSize: PiggyTextTokens.fs16,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -919,7 +919,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                   description,
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.6),
-                    fontSize: 12,
+                    fontSize: PiggyTextTokens.fs12,
                   ),
                 ),
               ],
@@ -929,7 +929,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             value,
             style: TextStyle(
               color: isSpecialColor ? primaryColor : Colors.white,
-              fontSize: 24,
+              fontSize: PiggyTextTokens.fs24,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -971,7 +971,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             l10nInsight(context).annualReportCompareTitle,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 32,
+              fontSize: PiggyTextTokens.fs32,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -980,7 +980,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             l10nInsight(context).annualReportCompareSubtitle,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.8),
-              fontSize: 16,
+              fontSize: PiggyTextTokens.fs16,
             ),
           ),
           const SizedBox(height: 24),
@@ -1002,7 +1002,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                 l10nInsight(context).analyticsIncome,
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.8),
-                  fontSize: 14,
+                  fontSize: PiggyTextTokens.fs14,
                 ),
               ),
               const SizedBox(width: 24),
@@ -1019,7 +1019,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                 l10nInsight(context).analyticsExpense,
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.8),
-                  fontSize: 14,
+                  fontSize: PiggyTextTokens.fs14,
                 ),
               ),
             ],
@@ -1045,7 +1045,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                         l10nInsight(context).annualReportMonthValue(m.month),
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.9),
-                          fontSize: 14,
+                          fontSize: PiggyTextTokens.fs14,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -1064,7 +1064,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                             l10nInsight(context).annualReportTopIncome,
                             style: TextStyle(
                               color: PiggyTokens.success(context),
-                              fontSize: 10,
+                              fontSize: PiggyTextTokens.fs10,
                             ),
                           ),
                         ),
@@ -1083,7 +1083,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                             l10nInsight(context).annualReportTopExpense,
                             style: TextStyle(
                               color: PiggyTokens.error(context),
-                              fontSize: 10,
+                              fontSize: PiggyTextTokens.fs10,
                             ),
                           ),
                         ),
@@ -1125,7 +1125,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                           '$currencySymbol${formatter.format(m.income)}',
                           style: TextStyle(
                             color: PiggyTokens.success(context),
-                            fontSize: 12,
+                            fontSize: PiggyTextTokens.fs12,
                           ),
                           textAlign: TextAlign.right,
                         ),
@@ -1168,7 +1168,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                           '$currencySymbol${formatter.format(m.expense)}',
                           style: TextStyle(
                             color: PiggyTokens.error(context),
-                            fontSize: 12,
+                            fontSize: PiggyTextTokens.fs12,
                           ),
                           textAlign: TextAlign.right,
                         ),
@@ -1198,7 +1198,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             l10n.annualReportPage2Title,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 32,
+              fontSize: PiggyTextTokens.fs32,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -1207,7 +1207,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             l10n.annualReportPage2Subtitle,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.8),
-              fontSize: 16,
+              fontSize: PiggyTextTokens.fs16,
             ),
           ),
           const SizedBox(height: 32),
@@ -1255,7 +1255,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                                         Brightness.dark
                                     ? Colors.white
                                     : Colors.black87),
-                            fontSize: 16,
+                            fontSize: PiggyTextTokens.fs16,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -1276,7 +1276,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                         category.name,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 16,
+                          fontSize: PiggyTextTokens.fs16,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -1289,7 +1289,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                           '$currencySymbol${formatter.format(category.total)}',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 18,
+                            fontSize: PiggyTextTokens.fs18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -1297,7 +1297,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                           '${(category.percentage * 100).toStringAsFixed(1)}%',
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.7),
-                            fontSize: 14,
+                            fontSize: PiggyTextTokens.fs14,
                           ),
                         ),
                       ],
@@ -1346,7 +1346,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             l10n.annualReportPage3Title,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 32,
+              fontSize: PiggyTextTokens.fs32,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -1355,7 +1355,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             l10n.annualReportPage3Subtitle,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.8),
-              fontSize: 16,
+              fontSize: PiggyTextTokens.fs16,
             ),
           ),
           const SizedBox(height: 24),
@@ -1425,7 +1425,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                                 '${m.month}',
                                 style: TextStyle(
                                   color: Colors.white.withValues(alpha: 0.7),
-                                  fontSize: 11,
+                                  fontSize: PiggyTextTokens.fs11,
                                 ),
                               ),
                             ],
@@ -1467,7 +1467,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             value,
             style: TextStyle(
               color: color,
-              fontSize: 24,
+              fontSize: PiggyTextTokens.fs24,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -1475,7 +1475,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             subValue,
             style: TextStyle(
               color: color.withValues(alpha: 0.7),
-              fontSize: 14,
+              fontSize: PiggyTextTokens.fs14,
             ),
           ),
         ],
@@ -1498,7 +1498,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             l10n.annualReportPage4Title,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 32,
+              fontSize: PiggyTextTokens.fs32,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -1507,7 +1507,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             l10n.annualReportPage4Subtitle,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.8),
-              fontSize: 16,
+              fontSize: PiggyTextTokens.fs16,
             ),
           ),
           const SizedBox(height: 32),
@@ -1606,7 +1606,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             '$currencySymbol${formatter.format(amount)}',
             style: TextStyle(
               color: color,
-              fontSize: 28,
+              fontSize: PiggyTextTokens.fs28,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -1662,7 +1662,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             l10n.annualReportPage5Title,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 32,
+              fontSize: PiggyTextTokens.fs32,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -1671,7 +1671,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
             l10n.annualReportPage5Subtitle,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.8),
-              fontSize: 16,
+              fontSize: PiggyTextTokens.fs16,
             ),
           ),
           const SizedBox(height: 32),
@@ -1734,7 +1734,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                     color: unlocked
                         ? PiggyTokens.textPrimary(context)
                         : PiggyTokens.textTertiary(context),
-                    fontSize: 18,
+                    fontSize: PiggyTextTokens.fs18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1745,7 +1745,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
                     color: unlocked
                         ? PiggyTokens.textSecondary(context)
                         : PiggyTokens.textTertiary(context),
-                    fontSize: 14,
+                    fontSize: PiggyTextTokens.fs14,
                   ),
                 ),
               ],
@@ -1902,7 +1902,7 @@ class _AnnualReportPosterPreviewState
                                 : l10n.sharePosterHideIncome,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 13,
+                              fontSize: PiggyTextTokens.fs13,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -1980,7 +1980,7 @@ class _AnnualReportPosterPreviewState
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: PiggyTextTokens.fs14,
                   fontWeight: FontWeight.w600,
                   color: fgColor,
                 ),

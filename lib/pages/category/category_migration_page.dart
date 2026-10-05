@@ -117,7 +117,7 @@ class _CategoryMigrationPageState extends ConsumerState<CategoryMigrationPage> {
                               style: TextStyle(
                                 color: ref.watch(primaryColorProvider),
                                 fontWeight: FontWeight.w600,
-                                fontSize: 16,
+                                fontSize: PiggyTextTokens.fs16,
                               ),
                             ),
                           ],
@@ -127,7 +127,7 @@ class _CategoryMigrationPageState extends ConsumerState<CategoryMigrationPage> {
                           l10n.categoryMigrationDescriptionContent,
                           style: TextStyle(
                             color: PiggyTokens.textSecondary(context),
-                            fontSize: 14,
+                            fontSize: PiggyTextTokens.fs14,
                           ),
                         ),
                       ],
@@ -140,7 +140,7 @@ class _CategoryMigrationPageState extends ConsumerState<CategoryMigrationPage> {
                     l10n.categoryMigrationTypeLabel,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      fontSize: 16,
+                      fontSize: PiggyTextTokens.fs16,
                       color: PiggyTokens.textPrimary(context),
                     ),
                   ),
@@ -185,7 +185,7 @@ class _CategoryMigrationPageState extends ConsumerState<CategoryMigrationPage> {
                     l10n.categoryMigrationFromLabel,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      fontSize: 16,
+                      fontSize: PiggyTextTokens.fs16,
                       color: PiggyTokens.textPrimary(context),
                     ),
                   ),
@@ -205,7 +205,7 @@ class _CategoryMigrationPageState extends ConsumerState<CategoryMigrationPage> {
                     l10n.categoryMigrationToLabel,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      fontSize: 16,
+                      fontSize: PiggyTextTokens.fs16,
                       color: PiggyTokens.textPrimary(context),
                     ),
                   ),
@@ -431,7 +431,7 @@ class _TypeButton extends ConsumerWidget {
             Text(
               label,
               style: TextStyle(
-                fontSize: 16,
+                fontSize: PiggyTextTokens.fs16,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 color: isSelected
                     ? primaryColor
@@ -508,7 +508,7 @@ class _CategorySelectorButton extends ConsumerWidget {
                   ? Text(
                       CategoryUtils.getDisplayName(category!.name, context),
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: PiggyTextTokens.fs16,
                         fontWeight: FontWeight.w500,
                         color: PiggyTokens.textPrimary(context),
                       ),
@@ -516,7 +516,7 @@ class _CategorySelectorButton extends ConsumerWidget {
                   : Text(
                       hintText,
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: PiggyTextTokens.fs16,
                         color: enabled
                             ? PiggyTokens.textTertiary(context)
                             : PiggyTokens.textTertiary(context)

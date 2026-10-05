@@ -59,7 +59,7 @@ class PiggyFormSheet extends StatelessWidget {
               title,
               textAlign: TextAlign.center,
               style: PiggyTextTokens.strongTitle(context).copyWith(
-                fontSize: 17,
+                fontSize: PiggyTextTokens.fs17,
               ),
             ),
             const SizedBox(height: PiggyDimens.p16),

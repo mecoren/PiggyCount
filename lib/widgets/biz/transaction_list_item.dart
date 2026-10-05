@@ -517,7 +517,7 @@ class TransactionListItem extends ConsumerWidget {
                             '${AppLocalizations.of(context).txOriginalAmountPrefix} '
                             '${originalSide.toStringAsFixed(2)}',
                             style: PiggyTextTokens.caption(context).copyWith(
-                              fontSize: 10,
+                              fontSize: PiggyTextTokens.fs10,
                               color: originalDiff >= 0
                                   ? PiggyTokens.expenseColor(context, ref)
                                   : PiggyTokens.incomeColor(context, ref),

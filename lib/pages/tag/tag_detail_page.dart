@@ -316,7 +316,7 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
             child: WaitSlidingSegmentedControl<String>(
               selected: _scope,
               height: 36,
-              fontSize: 13,
+              fontSize: PiggyTextTokens.fs13,
               segments: [
                 WaitSlidingSegment(value: 'month', label: l10n.analyticsMonth),
                 WaitSlidingSegment(value: 'year', label: l10n.analyticsYear),

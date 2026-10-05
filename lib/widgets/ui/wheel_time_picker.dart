@@ -72,7 +72,7 @@ class _WheelTimePickerState extends State<WheelTimePicker> {
             Text(
               ':',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: PiggyTextTokens.fs18,
                 fontWeight: FontWeight.w500,
                 color: PiggyTokens.textPrimary(context),
               ),
@@ -100,7 +100,7 @@ class _WheelTimePickerState extends State<WheelTimePicker> {
             child: Text(
               h.toString().padLeft(2, '0'),
               style: TextStyle(
-                  fontSize: 18, color: PiggyTokens.textPrimary(context)),
+                  fontSize: PiggyTextTokens.fs18, color: PiggyTokens.textPrimary(context)),
             ),
           ),
       ],
@@ -121,7 +121,7 @@ class _WheelTimePickerState extends State<WheelTimePicker> {
             child: Text(
               m.toString().padLeft(2, '0'),
               style: TextStyle(
-                  fontSize: 18, color: PiggyTokens.textPrimary(context)),
+                  fontSize: PiggyTextTokens.fs18, color: PiggyTokens.textPrimary(context)),
             ),
           ),
       ],

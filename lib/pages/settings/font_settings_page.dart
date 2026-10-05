@@ -285,7 +285,7 @@ class _MultiStylePreview extends ConsumerWidget {
                 context,
                 AppLocalizations.of(context).fontSettingsStrongNumber,
                 '1234.56',
-                PiggyTextTokens.strongTitle(context).copyWith(fontSize: 18)),
+                PiggyTextTokens.strongTitle(context).copyWith(fontSize: PiggyTextTokens.fs18)),
             const Divider(height: 20),
             _ListTileMock(),
           ],
@@ -307,7 +307,7 @@ class _MultiStylePreview extends ConsumerWidget {
                       color: PiggyTokens.textSecondary(context),
                     )
                   : TextStyle(
-                      fontSize: 12, color: PiggyTokens.textSecondary(context))),
+                      fontSize: PiggyTextTokens.fs12, color: PiggyTokens.textSecondary(context))),
         ),
         const SizedBox(width: 4),
         Expanded(
@@ -316,7 +316,7 @@ class _MultiStylePreview extends ConsumerWidget {
             style: style != null
                 ? style.copyWith(color: PiggyTokens.textPrimary(context))
                 : TextStyle(
-                    fontSize: 14, color: PiggyTokens.textPrimary(context)),
+                    fontSize: PiggyTextTokens.fs14, color: PiggyTokens.textPrimary(context)),
           ),
         )
       ],
@@ -460,7 +460,7 @@ class _UIScaleInfo extends ConsumerWidget {
                   .copyWith(color: PiggyTokens.textTertiary(context))),
           Text(value,
               style: TextStyle(
-                  fontSize: 12,
+                  fontSize: PiggyTextTokens.fs12,
                   fontWeight: FontWeight.w500,
                   color: PiggyTokens.textPrimary(context))),
         ],

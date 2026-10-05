@@ -241,7 +241,7 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
           color: headerForeground.withValues(alpha: 0.85),
         );
     final numStyle = PiggyTextTokens.strongTitle(context)
-        .copyWith(fontSize: 20, color: headerForeground);
+        .copyWith(fontSize: PiggyTextTokens.fs20, color: headerForeground);
 
     return ClipRRect(
       borderRadius: BorderRadius.zero,

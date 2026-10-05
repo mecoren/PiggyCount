@@ -313,7 +313,7 @@ class AnnualReportPoster extends StatelessWidget {
                 l10n.sharePosterAppName,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 24,
+                  fontSize: PiggyTextTokens.fs24,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1,
                 ),
@@ -329,7 +329,7 @@ class AnnualReportPoster extends StatelessWidget {
                   l10n.annualReportTitle,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 12,
+                    fontSize: PiggyTextTokens.fs12,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -382,7 +382,7 @@ class AnnualReportPoster extends StatelessWidget {
               '${data.year}',
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 100,
+                fontSize: PiggyTextTokens.fs100,
                 fontWeight: FontWeight.w900,
                 height: 1.0,
                 letterSpacing: -2,
@@ -406,7 +406,7 @@ class AnnualReportPoster extends StatelessWidget {
                 l10n.annualReportSubtitle(data.year),
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.9),
-                  fontSize: 18,
+                  fontSize: PiggyTextTokens.fs18,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -464,7 +464,7 @@ class AnnualReportPoster extends StatelessWidget {
                     Text(
                       l10n.annualReportPage1Title,
                       style: const TextStyle(
-                        fontSize: 20,
+                        fontSize: PiggyTextTokens.fs20,
                         fontWeight: FontWeight.bold,
                         color: PiggyPosterTokens.darkInk,
                       ),
@@ -543,7 +543,7 @@ class AnnualReportPoster extends StatelessWidget {
                           Text(
                             l10n.annualReportNetSavings,
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: PiggyTextTokens.fs14,
                               color: Colors.white.withValues(alpha: 0.9),
                             ),
                           ),
@@ -553,7 +553,7 @@ class AnnualReportPoster extends StatelessWidget {
                             ? l10n.annualReportPosterSavedPos
                             : l10n.annualReportPosterOverspent,
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: PiggyTextTokens.fs12,
                           color: Colors.white.withValues(alpha: 0.7),
                         ),
                       ),
@@ -565,7 +565,7 @@ class AnnualReportPoster extends StatelessWidget {
                             ? '****'
                             : '${data.netSavings >= 0 ? '+' : ''}${formatter.format(data.netSavings)}',
                         style: const TextStyle(
-                          fontSize: 28,
+                          fontSize: PiggyTextTokens.fs28,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
@@ -573,7 +573,7 @@ class AnnualReportPoster extends StatelessWidget {
                       Text(
                         currencySymbol,
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: PiggyTextTokens.fs14,
                           color: Colors.white70,
                         ),
                       ),
@@ -611,7 +611,7 @@ class AnnualReportPoster extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: PiggyTextTokens.fs14,
                   color: color.withValues(alpha: 0.8),
                   fontWeight: FontWeight.w500,
                 ),
@@ -622,7 +622,7 @@ class AnnualReportPoster extends StatelessWidget {
           Text(
             '$currencySymbol$amount',
             style: TextStyle(
-              fontSize: 22,
+              fontSize: PiggyTextTokens.fs22,
               fontWeight: FontWeight.bold,
               color: color,
             ),
@@ -731,7 +731,7 @@ class AnnualReportPoster extends StatelessWidget {
                 child: Text(
                   value,
                   style: const TextStyle(
-                    fontSize: 20,
+                    fontSize: PiggyTextTokens.fs20,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
@@ -741,7 +741,7 @@ class AnnualReportPoster extends StatelessWidget {
               Text(
                 unit,
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: PiggyTextTokens.fs10,
                   color: Colors.white.withValues(alpha: 0.7),
                 ),
               ),
@@ -751,7 +751,7 @@ class AnnualReportPoster extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: PiggyTextTokens.fs11,
               color: Colors.white.withValues(alpha: 0.7),
             ),
           ),
@@ -907,7 +907,7 @@ class AnnualReportPoster extends StatelessWidget {
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: PiggyTextTokens.fs12,
                     color: Colors.grey[600],
                   ),
                 ),
@@ -915,7 +915,7 @@ class AnnualReportPoster extends StatelessWidget {
                 Text(
                   value,
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: PiggyTextTokens.fs20,
                     fontWeight: FontWeight.bold,
                     color: color,
                   ),
@@ -1004,7 +1004,7 @@ class AnnualReportPoster extends StatelessWidget {
                                 '${index + 1}',
                                 style: TextStyle(
                                   color: index < 3 ? rankColors[index] : Colors.grey[600],
-                                  fontSize: 14,
+                                  fontSize: PiggyTextTokens.fs14,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -1035,7 +1035,7 @@ class AnnualReportPoster extends StatelessWidget {
                                 Text(
                                   category.name,
                                   style: const TextStyle(
-                                    fontSize: 16,
+                                    fontSize: PiggyTextTokens.fs16,
                                     fontWeight: FontWeight.w600,
                                     color: PiggyPosterTokens.darkInk,
                                   ),
@@ -1064,7 +1064,7 @@ class AnnualReportPoster extends StatelessWidget {
                               Text(
                                 '$currencySymbol${formatter.format(category.total)}',
                                 style: const TextStyle(
-                                  fontSize: 16,
+                                  fontSize: PiggyTextTokens.fs16,
                                   fontWeight: FontWeight.bold,
                                   color: PiggyPosterTokens.darkInk,
                                 ),
@@ -1072,7 +1072,7 @@ class AnnualReportPoster extends StatelessWidget {
                               Text(
                                 '${(category.percentage * 100).toStringAsFixed(1)}%',
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: PiggyTextTokens.fs12,
                                   color: Colors.grey[500],
                                 ),
                               ),
@@ -1117,7 +1117,7 @@ class AnnualReportPoster extends StatelessWidget {
                 title,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 22,
+                  fontSize: PiggyTextTokens.fs22,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -1126,7 +1126,7 @@ class AnnualReportPoster extends StatelessWidget {
                 subtitle,
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.7),
-                  fontSize: 13,
+                  fontSize: PiggyTextTokens.fs13,
                 ),
               ),
             ],
@@ -1219,7 +1219,7 @@ class AnnualReportPoster extends StatelessWidget {
                     Text(
                       l10n.annualReportPosterTrend,
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: PiggyTextTokens.fs14,
                         fontWeight: FontWeight.w600,
                         color: PiggyPosterTokens.darkInk,
                       ),
@@ -1276,7 +1276,7 @@ class AnnualReportPoster extends StatelessWidget {
                               Text(
                                 '${m.month}',
                                 style: TextStyle(
-                                  fontSize: 11,
+                                  fontSize: PiggyTextTokens.fs11,
                                   fontWeight: (isMax || isMin) ? FontWeight.bold : FontWeight.normal,
                                   color: (isMax || isMin) ? barColor : Colors.grey[600],
                                 ),
@@ -1334,14 +1334,14 @@ class AnnualReportPoster extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  style: TextStyle(color: Colors.grey[600], fontSize: PiggyTextTokens.fs12),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   month,
                   style: TextStyle(
                     color: color,
-                    fontSize: 24,
+                    fontSize: PiggyTextTokens.fs24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1349,7 +1349,7 @@ class AnnualReportPoster extends StatelessWidget {
                   amount,
                   style: TextStyle(
                     color: color.withValues(alpha: 0.7),
-                    fontSize: 13,
+                    fontSize: PiggyTextTokens.fs13,
                   ),
                 ),
               ],
@@ -1487,7 +1487,7 @@ class AnnualReportPoster extends StatelessWidget {
                       label,
                       style: TextStyle(
                         color: Colors.grey[600],
-                        fontSize: 13,
+                        fontSize: PiggyTextTokens.fs13,
                       ),
                     ),
                     const Spacer(),
@@ -1495,7 +1495,7 @@ class AnnualReportPoster extends StatelessWidget {
                       date,
                       style: TextStyle(
                         color: Colors.grey[400],
-                        fontSize: 12,
+                        fontSize: PiggyTextTokens.fs12,
                       ),
                     ),
                   ],
@@ -1505,7 +1505,7 @@ class AnnualReportPoster extends StatelessWidget {
                   '$currencySymbol$amount',
                   style: TextStyle(
                     color: color,
-                    fontSize: 24,
+                    fontSize: PiggyTextTokens.fs24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1515,7 +1515,7 @@ class AnnualReportPoster extends StatelessWidget {
                     note,
                     style: TextStyle(
                       color: Colors.grey[500],
-                      fontSize: 13,
+                      fontSize: PiggyTextTokens.fs13,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -1634,7 +1634,7 @@ class AnnualReportPoster extends StatelessWidget {
                                   a.title,
                                   style: TextStyle(
                                     color: a.unlocked ? PiggyPosterTokens.darkInk : Colors.grey[400],
-                                    fontSize: 17,
+                                    fontSize: PiggyTextTokens.fs17,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -1643,7 +1643,7 @@ class AnnualReportPoster extends StatelessWidget {
                                   a.desc,
                                   style: TextStyle(
                                     color: a.unlocked ? Colors.grey[600] : Colors.grey[400],
-                                    fontSize: 13,
+                                    fontSize: PiggyTextTokens.fs13,
                                   ),
                                 ),
                               ],
@@ -1666,7 +1666,7 @@ class AnnualReportPoster extends StatelessWidget {
                                     l10n.annualReportPosterAchieved,
                                     style: TextStyle(
                                       color: a.color,
-                                      fontSize: 12,
+                                      fontSize: PiggyTextTokens.fs12,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -1689,7 +1689,7 @@ class AnnualReportPoster extends StatelessWidget {
                                     l10n.annualReportPosterNotAchieved,
                                     style: TextStyle(
                                       color: Colors.grey[400],
-                                      fontSize: 12,
+                                      fontSize: PiggyTextTokens.fs12,
                                     ),
                                   ),
                                 ],
@@ -1729,7 +1729,7 @@ class AnnualReportPoster extends StatelessWidget {
             l10n.sharePosterSlogan,
             style: TextStyle(
               color: Colors.white,
-              fontSize: 16,
+              fontSize: PiggyTextTokens.fs16,
               fontWeight: FontWeight.w500,
               letterSpacing: 2,
             ),
@@ -1739,7 +1739,7 @@ class AnnualReportPoster extends StatelessWidget {
             l10n.annualReportPosterQrCta,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.5),
-              fontSize: 12,
+              fontSize: PiggyTextTokens.fs12,
             ),
           ),
         ],

@@ -226,13 +226,13 @@ class _StatCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final labelStyle = TextStyle(
-      fontSize: 10,
+      fontSize: PiggyTextTokens.fs10,
       color: Colors.white.withValues(alpha: 0.78),
       fontWeight: FontWeight.w500,
       height: 1.2,
     );
     final parentheticalStyle = TextStyle(
-      fontSize: 9,
+      fontSize: PiggyTextTokens.fs9,
       color: Colors.white.withValues(alpha: 0.62),
       fontWeight: FontWeight.w400,
       height: 1.2,
@@ -257,7 +257,7 @@ class _StatCell extends StatelessWidget {
             value: value,
             signed: false,
             style: const TextStyle(
-              fontSize: 16,
+              fontSize: PiggyTextTokens.fs16,
               fontWeight: FontWeight.w700,
               color: Colors.white,
               height: 1.1,
@@ -292,12 +292,12 @@ class _MonthSelectorCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final yearStyle = TextStyle(
-      fontSize: 12,
+      fontSize: PiggyTextTokens.fs12,
       color: Colors.white.withValues(alpha: 0.7),
       fontWeight: FontWeight.w500,
     );
     final monthStyle = const TextStyle(
-      fontSize: 16,
+      fontSize: PiggyTextTokens.fs16,
       fontWeight: FontWeight.w600,
       color: Colors.white,
       height: 1.15,

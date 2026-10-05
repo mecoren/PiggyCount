@@ -107,7 +107,7 @@ class NumberPad extends ConsumerWidget {
                 child: Text(
                   key,
                   style: TextStyle(
-                    fontSize: 28.0.scaled(context, ref),
+                    fontSize: PiggyTextTokens.fs28.scaled(context, ref),
                     fontWeight: FontWeight.w400,
                     color: PiggyTokens.textPrimary(context),
                   ),

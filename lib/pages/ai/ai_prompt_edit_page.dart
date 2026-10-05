@@ -237,7 +237,7 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
             SelectableText(
               preview,
               style: const TextStyle(
-                fontSize: 13,
+                fontSize: PiggyTextTokens.fs13,
                 fontFamily: 'monospace',
                 height: 1.5,
               ),
@@ -378,7 +378,7 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
                     l10n.aiPromptMissingVarsHint(
                         missing.map((p) => p.token).join('、')),
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: PiggyTextTokens.fs13,
                       height: 1.5,
                       color: PiggyTokens.textSecondary(context),
                     ),
@@ -433,10 +433,10 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
         leading: Icon(Icons.code, color: primaryColor, size: 20),
         title: Text(
           l10n.aiPromptVariables,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+          style: const TextStyle(fontSize: PiggyTextTokens.fs15, fontWeight: FontWeight.w600),
         ),
         subtitle: Text(l10n.aiPromptVariablesHint,
-            style: const TextStyle(fontSize: 12)),
+            style: const TextStyle(fontSize: PiggyTextTokens.fs12)),
         children: [
           const Divider(height: 1),
           Padding(
@@ -461,7 +461,7 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
                           child: Text(
                             v['name']!,
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: PiggyTextTokens.fs12,
                               fontFamily: 'monospace',
                               color: primaryColor,
                               fontWeight: FontWeight.w500,
@@ -473,7 +473,7 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
                           child: Text(
                             v['desc']!,
                             style: TextStyle(
-                              fontSize: 13,
+                              fontSize: PiggyTextTokens.fs13,
                               color: PiggyTokens.textSecondary(context),
                             ),
                           ),
@@ -507,7 +507,7 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
                 Text(
                   l10n.aiPromptContent,
                   style: const TextStyle(
-                      fontSize: 15, fontWeight: FontWeight.w600),
+                      fontSize: PiggyTextTokens.fs15, fontWeight: FontWeight.w600),
                 ),
                 const Spacer(),
                 if (_hasChanges)
@@ -533,7 +533,7 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
               maxLines: 20,
               minLines: 10,
               style: const TextStyle(
-                fontSize: 13,
+                fontSize: PiggyTextTokens.fs13,
                 fontFamily: 'monospace',
                 height: 1.5,
               ),

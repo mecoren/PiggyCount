@@ -166,7 +166,7 @@ class _AssetCompositionChartState extends ConsumerState<AssetCompositionChart> {
                     style: TextStyle(
                       // 资产环形图 centerSpaceRadius(42) 小于分类饼图(52)，
                       // 中心数值刻意比 centerValueFontSize(16) 小一档
-                      fontSize: 14,
+                      fontSize: PiggyTextTokens.fs14,
                       fontWeight: FontWeight.w600,
                       color: PiggyTokens.textPrimary(context),
                     ),

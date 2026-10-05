@@ -279,7 +279,7 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
                       child: WaitSlidingSegmentedControl<String>(
                         selected: _dim,
                         height: 32,
-                        fontSize: 13,
+                        fontSize: PiggyTextTokens.fs13,
                         segments: [
                           WaitSlidingSegment(
                             value: 'expense',
@@ -477,7 +477,7 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
                           signed: false,
                           useCompactFormat: true,
                           style: const TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.w700))),
+                              fontSize: PiggyTextTokens.fs14, fontWeight: FontWeight.w700))),
                   Expanded(
                       child: _deltaCell(context, ref, row.$2, row.$3,
                           goodWhenUp: row.$5)),
@@ -520,7 +520,7 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
               ? '—'
               : '${rate > 0 ? '+' : ''}${(rate * 100).toStringAsFixed(1)}%',
           style: TextStyle(
-              fontSize: 13, fontWeight: FontWeight.w600, color: rateColor),
+              fontSize: PiggyTextTokens.fs13, fontWeight: FontWeight.w600, color: rateColor),
         ),
         AmountText(
           value: prev,
@@ -673,7 +673,7 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
                 showCurrency: true,
                 useCompactFormat: true,
                 style:
-                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                    const TextStyle(fontSize: PiggyTextTokens.fs14, fontWeight: FontWeight.w600),
               ),
             ],
           ),

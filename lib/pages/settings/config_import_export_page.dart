@@ -383,7 +383,7 @@ class _ConfigImportExportPageState
                         Text(
                           l10n.configImportExportInfoTitle,
                           style: TextStyle(
-                            fontSize: 16.0.scaled(context, ref),
+                            fontSize: PiggyTextTokens.fs16.scaled(context, ref),
                             fontWeight: FontWeight.w600,
                             color: PiggyTokens.textPrimary(context),
                           ),
@@ -394,7 +394,7 @@ class _ConfigImportExportPageState
                     Text(
                       l10n.configImportExportInfoMessage,
                       style: TextStyle(
-                        fontSize: 14.0.scaled(context, ref),
+                        fontSize: PiggyTextTokens.fs14.scaled(context, ref),
                         color: PiggyTokens.textSecondary(context),
                         height: 1.5,
                       ),
@@ -449,7 +449,7 @@ class _ConfigImportExportPageState
                               l10n.configExportSavedTo(_lastExportedFilePath!
                                   .replaceAll('/storage/emulated/0/', '')),
                               style: TextStyle(
-                                fontSize: 13.0.scaled(context, ref),
+                                fontSize: PiggyTextTokens.fs13.scaled(context, ref),
                                 color: PiggyTokens.textSecondary(context),
                               ),
                             ),
@@ -508,7 +508,7 @@ class _ConfigImportExportPageState
                     Text(
                       l10n.configImportExportIncludesTitle,
                       style: TextStyle(
-                        fontSize: 16.0.scaled(context, ref),
+                        fontSize: PiggyTextTokens.fs16.scaled(context, ref),
                         fontWeight: FontWeight.w600,
                         color: PiggyTokens.textPrimary(context),
                       ),
@@ -618,7 +618,7 @@ class _ConfigImportExportPageState
           child: Text(
             text,
             style: TextStyle(
-              fontSize: 14.0.scaled(context, ref),
+              fontSize: PiggyTextTokens.fs14.scaled(context, ref),
               color: PiggyTokens.textPrimary(context),
             ),
           ),
@@ -691,7 +691,7 @@ class _ConfigContentDialog extends StatelessWidget {
       title: l10n.configExportViewContent,
       content: SelectableText(
         content,
-        style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+        style: const TextStyle(fontFamily: 'monospace', fontSize: PiggyTextTokens.fs12),
       ),
       actions: [
         TextButton(
@@ -861,7 +861,7 @@ class _ExportPreviewDialog extends StatelessWidget {
           yamlContent,
           style: TextStyle(
             fontFamily: 'monospace',
-            fontSize: 12,
+            fontSize: PiggyTextTokens.fs12,
             height: 1.5,
             color: PiggyTokens.textPrimary(context),
           ),
@@ -956,7 +956,7 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                   child: Text(
                     '导入将覆盖现有配置，建议先备份当前配置。',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: PiggyTextTokens.fs13,
                       color: PiggyTokens.warning(context),
                     ),
                   ),
@@ -980,7 +980,7 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                 widget.yamlContent,
                 style: TextStyle(
                   fontFamily: 'monospace',
-                  fontSize: 12,
+                  fontSize: PiggyTextTokens.fs12,
                   height: 1.5,
                   color: PiggyTokens.textPrimary(context),
                 ),
@@ -991,7 +991,7 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
           // 选择导入内容标题
           Text(
             l10n.configImportSelectTitle,
-            style: PiggyTextTokens.strongTitle(context).copyWith(fontSize: 14),
+            style: PiggyTextTokens.strongTitle(context).copyWith(fontSize: PiggyTextTokens.fs14),
           ),
           const SizedBox(height: 8),
           // 选项列表

@@ -163,7 +163,7 @@ class _ExchangeRatePageState extends ConsumerState<ExchangeRatePage> {
                             l10n.ratesEmptyHint,
                             textAlign: TextAlign.center,
                             style: PiggyTextTokens.label(context).copyWith(
-                              fontSize: 13,
+                              fontSize: PiggyTextTokens.fs13,
                               height: 1.4,
                               color: PiggyTokens.textTertiary(context),
                             ),
@@ -441,7 +441,7 @@ class _RateRow extends ConsumerWidget {
       subtitle = Text(
         l10n.rateSourceManual,
         style: TextStyle(
-          fontSize: 12,
+          fontSize: PiggyTextTokens.fs12,
           color: primary,
           fontWeight: FontWeight.w600,
         ),
@@ -451,7 +451,7 @@ class _RateRow extends ConsumerWidget {
       subtitle = Text(
         '${l10n.rateSourceAuto} · ${l10n.rateUpdatedAt(eff!.rateDate ?? '')}',
         style: TextStyle(
-          fontSize: 12,
+          fontSize: PiggyTextTokens.fs12,
           color: stale
               ? PiggyTokens.warning(context)
               : PiggyTokens.textTertiary(context),
@@ -481,7 +481,7 @@ class _RateRow extends ConsumerWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 15,
+                            fontSize: PiggyTextTokens.fs15,
                             color: PiggyTokens.textPrimary(context),
                           ),
                         ),
@@ -505,7 +505,7 @@ class _RateRow extends ConsumerWidget {
             Text(
               eff == null ? '—' : '1 $quote = ${fmt6(eff!.rate)} $base',
               style: TextStyle(
-                fontSize: 13,
+                fontSize: PiggyTextTokens.fs13,
                 fontWeight: FontWeight.w600,
                 color: eff == null
                     ? PiggyTokens.textTertiary(context)

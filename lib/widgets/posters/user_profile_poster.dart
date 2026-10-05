@@ -185,7 +185,7 @@ class UserProfilePoster extends StatelessWidget {
                     l10n.sharePosterAppName,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 18,
+                      fontSize: PiggyTextTokens.fs18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -201,7 +201,7 @@ class UserProfilePoster extends StatelessWidget {
                       l10n.userProfilePosterRecordDays,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 16,
+                        fontSize: PiggyTextTokens.fs16,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -281,7 +281,7 @@ class UserProfilePoster extends StatelessWidget {
           Text(
             data.ledgerName,
             style: const TextStyle(
-              fontSize: 36,
+              fontSize: PiggyTextTokens.fs36,
               fontWeight: FontWeight.bold,
               color: Colors.white,
               letterSpacing: 2,
@@ -301,7 +301,7 @@ class UserProfilePoster extends StatelessWidget {
                   '${data.firstRecordDate!.year}/${data.firstRecordDate!.month}/${data.firstRecordDate!.day}',
                 ),
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: PiggyTextTokens.fs18,
                   color: Colors.white.withValues(alpha: 0.9),
                   letterSpacing: 1,
                 ),
@@ -397,7 +397,7 @@ class UserProfilePoster extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            fontSize: 16,
+            fontSize: PiggyTextTokens.fs16,
             color: PiggyPosterTokens.textTertiary,
           ),
         ),
@@ -409,7 +409,7 @@ class UserProfilePoster extends StatelessWidget {
             Text(
               value,
               style: TextStyle(
-                fontSize: 32,
+                fontSize: PiggyTextTokens.fs32,
                 fontWeight: FontWeight.bold,
                 color: primaryColor,
               ),
@@ -421,7 +421,7 @@ class UserProfilePoster extends StatelessWidget {
                 child: Text(
                   unit,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: PiggyTextTokens.fs14,
                     color: primaryColor.withValues(alpha: 0.7),
                   ),
                 ),
@@ -466,7 +466,7 @@ class UserProfilePoster extends StatelessWidget {
                 _getJourneyMessage(),
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 20,
+                  fontSize: PiggyTextTokens.fs20,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -481,7 +481,7 @@ class UserProfilePoster extends StatelessWidget {
                 l10n.userProfileDailyAverage,
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.85),
-                  fontSize: 18,
+                  fontSize: PiggyTextTokens.fs18,
                 ),
               ),
               Text(
@@ -494,7 +494,7 @@ class UserProfilePoster extends StatelessWidget {
                     : '-',
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 20,
+                  fontSize: PiggyTextTokens.fs20,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -530,7 +530,7 @@ class UserProfilePoster extends StatelessWidget {
         l10n.sharePosterSlogan,
         style: TextStyle(
           color: Colors.white.withValues(alpha: 0.7),
-          fontSize: 14,
+          fontSize: PiggyTextTokens.fs14,
           letterSpacing: 1,
         ),
       ),

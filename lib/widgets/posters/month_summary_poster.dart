@@ -113,7 +113,7 @@ class MonthSummaryPoster extends StatelessWidget {
             '${l10n.sharePosterSavedMoneyTitle} ${_money(formatter, savedAmount)}',
             style: TextStyle(
               color: savedColor,
-              fontSize: 18,
+              fontSize: PiggyTextTokens.fs18,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -126,7 +126,7 @@ class MonthSummaryPoster extends StatelessWidget {
       l10n.sharePosterMonthSubtitle,
       style: TextStyle(
         color: primaryColor.withValues(alpha: 0.6),
-        fontSize: 18,
+        fontSize: PiggyTextTokens.fs18,
       ),
     );
   }
@@ -159,7 +159,7 @@ class MonthSummaryPoster extends StatelessWidget {
                       yearFormat.format(date),
                       style: TextStyle(
                         color: primaryColor,
-                        fontSize: 20,
+                        fontSize: PiggyTextTokens.fs20,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -175,7 +175,7 @@ class MonthSummaryPoster extends StatelessWidget {
                       monthFormat.format(date),
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 20,
+                        fontSize: PiggyTextTokens.fs20,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -188,7 +188,7 @@ class MonthSummaryPoster extends StatelessWidget {
                 l10n.sharePosterMonthTitle,
                 style: TextStyle(
                   color: primaryColor.withValues(alpha: 0.9),
-                  fontSize: 42,
+                  fontSize: PiggyTextTokens.fs42,
                   fontWeight: FontWeight.bold,
                   height: 1.2,
                 ),
@@ -352,7 +352,7 @@ class MonthSummaryPoster extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            fontSize: 16,
+            fontSize: PiggyTextTokens.fs16,
             color: PiggyPosterTokens.textTertiary,
           ),
         ),
@@ -366,7 +366,7 @@ class MonthSummaryPoster extends StatelessWidget {
               Text(
                 value.startsWith('-') ? '' : '+',
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: PiggyTextTokens.fs24,
                   fontWeight: FontWeight.bold,
                   color: color,
                 ),
@@ -374,7 +374,7 @@ class MonthSummaryPoster extends StatelessWidget {
             Text(
               displayValue,
               style: TextStyle(
-                fontSize: 28,
+                fontSize: PiggyTextTokens.fs28,
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
@@ -387,7 +387,7 @@ class MonthSummaryPoster extends StatelessWidget {
                 child: Text(
                   unit!,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: PiggyTextTokens.fs14,
                     color: color.withValues(alpha: 0.7),
                   ),
                 ),
@@ -410,7 +410,7 @@ class MonthSummaryPoster extends StatelessWidget {
           l10n.sharePosterTopExpense,
           style: TextStyle(
             color: primaryColor.withValues(alpha: 0.9),
-            fontSize: 22,
+            fontSize: PiggyTextTokens.fs22,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -458,7 +458,7 @@ class MonthSummaryPoster extends StatelessWidget {
                 '$rank',
                 style: TextStyle(
                   color: primaryColor,
-                  fontSize: 16,
+                  fontSize: PiggyTextTokens.fs16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -478,7 +478,7 @@ class MonthSummaryPoster extends StatelessWidget {
             child: Text(
               category.name,
               style: const TextStyle(
-                fontSize: 18,
+                fontSize: PiggyTextTokens.fs18,
                 fontWeight: FontWeight.w600,
                 color: PiggyPosterTokens.textPrimary,
               ),
@@ -491,7 +491,7 @@ class MonthSummaryPoster extends StatelessWidget {
               Text(
                 _money(formatter, category.total),
                 style: const TextStyle(
-                  fontSize: 18,
+                  fontSize: PiggyTextTokens.fs18,
                   fontWeight: FontWeight.bold,
                   color: PiggyPosterTokens.textPrimary,
                 ),
@@ -499,7 +499,7 @@ class MonthSummaryPoster extends StatelessWidget {
               Text(
                 percentText,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: PiggyTextTokens.fs14,
                   color: primaryColor.withValues(alpha: 0.7),
                 ),
               ),
@@ -560,7 +560,7 @@ class MonthSummaryPoster extends StatelessWidget {
         Text(
           l10n.sharePosterCompareLastMonth,
           style: const TextStyle(
-            fontSize: 16,
+            fontSize: PiggyTextTokens.fs16,
             color: PiggyPosterTokens.textSecondary,
           ),
         ),
@@ -570,7 +570,7 @@ class MonthSummaryPoster extends StatelessWidget {
             Text(
               text,
               style: TextStyle(
-                fontSize: 16,
+                fontSize: PiggyTextTokens.fs16,
                 color: color,
                 fontWeight: FontWeight.w600,
               ),
@@ -579,7 +579,7 @@ class MonthSummaryPoster extends StatelessWidget {
             Text(
               percentText,
               style: TextStyle(
-                fontSize: 18,
+                fontSize: PiggyTextTokens.fs18,
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
@@ -599,7 +599,7 @@ class MonthSummaryPoster extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            fontSize: 16,
+            fontSize: PiggyTextTokens.fs16,
             color: PiggyPosterTokens.textSecondary,
           ),
         ),
@@ -607,7 +607,7 @@ class MonthSummaryPoster extends StatelessWidget {
         Text(
           value,
           style: TextStyle(
-            fontSize: 18,
+            fontSize: PiggyTextTokens.fs18,
             fontWeight: FontWeight.bold,
             color: primaryColor,
           ),
@@ -652,7 +652,7 @@ class MonthSummaryPoster extends StatelessWidget {
             l10n.sharePosterAppName,
             style: TextStyle(
               color: primaryColor,
-              fontSize: 16,
+              fontSize: PiggyTextTokens.fs16,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -662,7 +662,7 @@ class MonthSummaryPoster extends StatelessWidget {
             l10n.sharePosterSlogan,
             style: TextStyle(
               color: primaryColor.withValues(alpha: 0.6),
-              fontSize: 12,
+              fontSize: PiggyTextTokens.fs12,
             ),
           ),
         ],

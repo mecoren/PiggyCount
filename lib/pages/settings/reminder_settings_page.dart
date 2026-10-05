@@ -109,7 +109,7 @@ class ReminderSettingsPage extends ConsumerWidget {
                     child: Text(
                       AppLocalizations.of(context).reminderTestNotification,
                       style: const TextStyle(
-                        fontSize: 16,
+                        fontSize: PiggyTextTokens.fs16,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -176,7 +176,7 @@ class ReminderSettingsPage extends ConsumerWidget {
                                       AppLocalizations.of(context)
                                           .reminderBatteryAdvice,
                                       style: TextStyle(
-                                          fontSize: 12,
+                                          fontSize: PiggyTextTokens.fs12,
                                           color: PiggyTokens.error(context)),
                                     ),
                                   ],
@@ -217,7 +217,7 @@ class ReminderSettingsPage extends ConsumerWidget {
                       child: Text(
                         AppLocalizations.of(context).reminderCheckBattery,
                         style: const TextStyle(
-                          fontSize: 16,
+                          fontSize: PiggyTextTokens.fs16,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -335,7 +335,7 @@ class ReminderSettingsPage extends ConsumerWidget {
                       child: Text(
                         AppLocalizations.of(context).reminderCheckChannel,
                         style: const TextStyle(
-                          fontSize: 16,
+                          fontSize: PiggyTextTokens.fs16,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -370,7 +370,7 @@ class ReminderSettingsPage extends ConsumerWidget {
                       child: Text(
                         AppLocalizations.of(context).reminderOpenAppSettings,
                         style: const TextStyle(
-                          fontSize: 16,
+                          fontSize: PiggyTextTokens.fs16,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -401,7 +401,7 @@ class ReminderSettingsPage extends ConsumerWidget {
                 Text(
                   AppLocalizations.of(context).reminderDescription,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: PiggyTextTokens.fs13,
                     color: PiggyTokens.textSecondary(context),
                     height: 1.4,
                   ),

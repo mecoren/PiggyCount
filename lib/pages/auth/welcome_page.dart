@@ -413,7 +413,7 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
                               symbol,
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 18,
+                                fontSize: PiggyTextTokens.fs18,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -426,7 +426,7 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
                               '${currency.name} (${currency.code})',
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 16,
+                                fontSize: PiggyTextTokens.fs16,
                                 fontWeight: isSelected
                                     ? FontWeight.w600
                                     : FontWeight.normal,
@@ -475,7 +475,7 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
                         l10n.welcomeCreateDefaultLedger,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 15,
+                          fontSize: PiggyTextTokens.fs15,
                           fontWeight: FontWeight.w600,
                         ),
                       ),

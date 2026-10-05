@@ -415,7 +415,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
               Text(
                 valueLabel,
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: PiggyTextTokens.fs13,
                   color: PiggyTokens.textSecondary(context),
                 ),
               ),
@@ -429,7 +429,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                   useCompactFormat: ref.watch(compactAmountProvider),
                   currencyCode: currencyCode,
                   style: TextStyle(
-                    fontSize: 28,
+                    fontSize: PiggyTextTokens.fs28,
                     fontWeight: FontWeight.bold,
                     color: PiggyTokens.textPrimary(context),
                   ),
@@ -462,7 +462,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                 Text(
                   account.note!,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: PiggyTextTokens.fs13,
                     color: PiggyTokens.textSecondary(context),
                   ),
                   textAlign: TextAlign.center,
@@ -660,7 +660,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
           Text(
             parts.join(' · '),
             style: TextStyle(
-              fontSize: 13,
+              fontSize: PiggyTextTokens.fs13,
               color: PiggyTokens.textSecondary(context),
             ),
           ),
@@ -722,7 +722,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
               Text(
                 l10n.creditCardOwed,
                 style: TextStyle(
-                    fontSize: 13, color: PiggyTokens.textSecondary(context)),
+                    fontSize: PiggyTextTokens.fs13, color: PiggyTokens.textSecondary(context)),
               ),
               const Spacer(),
               AmountText(
@@ -732,7 +732,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                 useCompactFormat: ref.watch(compactAmountProvider),
                 currencyCode: currencyCode,
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: PiggyTextTokens.fs20,
                   fontWeight: FontWeight.bold,
                   color: PiggyTokens.textPrimary(context),
                 ),
@@ -814,7 +814,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                                 : l10n.creditCardDaysUntilPayment(
                                     daysUntilPayment),
                             style: TextStyle(
-                              fontSize: 13,
+                              fontSize: PiggyTextTokens.fs13,
                               fontWeight: FontWeight.w600,
                               color: daysUntilPayment <= 3
                                   ? PiggyTokens.error(context)
@@ -1044,7 +1044,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
               Text(
                 l10n.accountTransactionHistory,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: PiggyTextTokens.fs14,
                   fontWeight: FontWeight.w600,
                   color: PiggyTokens.textPrimary(context),
                 ),
@@ -1064,7 +1064,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                   child: Text(
                     '${transactions.length}${state.hasMore ? '+' : ''}',
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: PiggyTextTokens.fs11,
                       color: primaryColor,
                       fontWeight: FontWeight.w600,
                     ),
@@ -1255,7 +1255,7 @@ class _OverviewStatCell extends ConsumerWidget {
           signed: false,
           showCurrency: false,
           useCompactFormat: ref.watch(compactAmountProvider),
-          style: PiggyTextTokens.strongTitle(context).copyWith(fontSize: 16),
+          style: PiggyTextTokens.strongTitle(context).copyWith(fontSize: PiggyTextTokens.fs16),
         ),
         const SizedBox(height: 2),
         Text(
@@ -1302,7 +1302,7 @@ class _DetailChartTab extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: PiggyTextTokens.fs12,
             color:
                 isSelected ? primaryColor : PiggyTokens.textSecondary(context),
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
@@ -1347,7 +1347,7 @@ class _DetailStatCell extends ConsumerWidget {
           showCurrency: true,
           useCompactFormat: ref.watch(compactAmountProvider),
           currencyCode: currencyCode,
-          style: PiggyTextTokens.boldTitle(context).copyWith(fontSize: 16),
+          style: PiggyTextTokens.boldTitle(context).copyWith(fontSize: PiggyTextTokens.fs16),
         ),
       ],
     );
@@ -1503,7 +1503,7 @@ class _TransactionTile extends ConsumerWidget {
                           TextSpan(
                             text: displayTitle,
                             style: TextStyle(
-                              fontSize: 15,
+                              fontSize: PiggyTextTokens.fs15,
                               fontWeight: FontWeight.w500,
                               color: PiggyTokens.textPrimary(context),
                             ),
@@ -1512,7 +1512,7 @@ class _TransactionTile extends ConsumerWidget {
                                 TextSpan(
                                   text: '  ($noteSuffix)',
                                   style: TextStyle(
-                                    fontSize: 13,
+                                    fontSize: PiggyTextTokens.fs13,
                                     color: PiggyTokens.textSecondary(context),
                                   ),
                                 ),
@@ -1537,7 +1537,7 @@ class _TransactionTile extends ConsumerWidget {
                           child: Text(
                             ledgerName,
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: PiggyTextTokens.fs11,
                               color: primaryColor,
                               fontWeight: FontWeight.w500,
                             ),
@@ -1552,7 +1552,7 @@ class _TransactionTile extends ConsumerWidget {
                       child: Text(
                         displaySubtitle,
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: PiggyTextTokens.fs12,
                           color: PiggyTokens.textSecondary(context),
                         ),
                       ),
@@ -1562,7 +1562,7 @@ class _TransactionTile extends ConsumerWidget {
                     child: Text(
                       secondaryLineText,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: PiggyTextTokens.fs12,
                         color: PiggyTokens.textTertiary(context),
                       ),
                     ),
@@ -1582,7 +1582,7 @@ class _TransactionTile extends ConsumerWidget {
               showCurrency: false,
               currencyCode: currencyCode,
               style: TextStyle(
-                fontSize: 16,
+                fontSize: PiggyTextTokens.fs16,
                 fontWeight: FontWeight.bold,
                 color: amountColor,
               ),

@@ -399,7 +399,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                     statusText,
                     style: TextStyle(
                       color: statusColor,
-                      fontSize: 12,
+                      fontSize: PiggyTextTokens.fs12,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -450,7 +450,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                   Text(
                     l10n.cloudMultiDeviceWarningTitle,
                     style: PiggyTextTokens.strongTitle(context)
-                        .copyWith(fontSize: 14),
+                        .copyWith(fontSize: PiggyTextTokens.fs14),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -491,7 +491,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
               child: Text(
                 l10n.cloudSyncGuideTitle,
                 style:
-                    PiggyTextTokens.strongTitle(context).copyWith(fontSize: 18),
+                    PiggyTextTokens.strongTitle(context).copyWith(fontSize: PiggyTextTokens.fs18),
               ),
             ),
           ],
@@ -604,12 +604,12 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                 children: [
                   Text('• ',
                       style: PiggyTextTokens.label(context)
-                          .copyWith(fontSize: 13)),
+                          .copyWith(fontSize: PiggyTextTokens.fs13)),
                   Expanded(
                     child: Text(
                       item,
                       style: PiggyTextTokens.label(context)
-                          .copyWith(fontSize: 13, height: 1.4),
+                          .copyWith(fontSize: PiggyTextTokens.fs13, height: 1.4),
                     ),
                   ),
                 ],
@@ -745,7 +745,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                               icon: const Icon(Icons.help_outline, size: 16),
                               label: Text(
                                   AppLocalizations.of(context).commonTutorial,
-                                  style: const TextStyle(fontSize: 12)),
+                                  style: const TextStyle(fontSize: PiggyTextTokens.fs12)),
                               style: TextButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 8, vertical: 4),
@@ -760,7 +760,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                               icon: const Icon(Icons.settings, size: 16),
                               label: Text(
                                   AppLocalizations.of(context).commonConfigure,
-                                  style: const TextStyle(fontSize: 12)),
+                                  style: const TextStyle(fontSize: PiggyTextTokens.fs12)),
                               style: TextButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 12, vertical: 8),
@@ -900,7 +900,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                             icon: const Icon(Icons.help_outline, size: 16),
                             label: Text(
                                 AppLocalizations.of(context).commonTutorial,
-                                style: const TextStyle(fontSize: 12)),
+                                style: const TextStyle(fontSize: PiggyTextTokens.fs12)),
                             style: TextButton.styleFrom(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 4),
@@ -982,7 +982,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                       child: Text(
                         l10n.cloudSupabaseHelpNote,
                         style: PiggyTextTokens.label(context)
-                            .copyWith(fontSize: 13),
+                            .copyWith(fontSize: PiggyTextTokens.fs13),
                       ),
                     ),
                   ],
@@ -1072,7 +1072,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                       child: Text(
                         l10n.cloudWebdavHelpNote,
                         style: PiggyTextTokens.label(context)
-                            .copyWith(fontSize: 13),
+                            .copyWith(fontSize: PiggyTextTokens.fs13),
                       ),
                     ),
                   ],
@@ -1159,7 +1159,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                       child: Text(
                         l10n.cloudIcloudHelpNote,
                         style: PiggyTextTokens.label(context)
-                            .copyWith(fontSize: 13),
+                            .copyWith(fontSize: PiggyTextTokens.fs13),
                       ),
                     ),
                   ],
@@ -1250,7 +1250,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                       child: Text(
                         l10n.cloudS3HelpNote,
                         style: PiggyTextTokens.label(context)
-                            .copyWith(fontSize: 13),
+                            .copyWith(fontSize: PiggyTextTokens.fs13),
                       ),
                     ),
                   ],
@@ -1281,14 +1281,14 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
       children: [
         Text(
           title,
-          style: PiggyTextTokens.strongTitle(context).copyWith(fontSize: 14),
+          style: PiggyTextTokens.strongTitle(context).copyWith(fontSize: PiggyTextTokens.fs14),
         ),
         const SizedBox(height: 8),
         ...items.map((item) => Padding(
               padding: const EdgeInsets.only(left: 8, bottom: 4),
               child: Text(
                 item,
-                style: PiggyTextTokens.label(context).copyWith(fontSize: 13),
+                style: PiggyTextTokens.label(context).copyWith(fontSize: PiggyTextTokens.fs13),
               ),
             )),
       ],
@@ -2528,7 +2528,7 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
                   child: Text(
                     l10n.cloudS3InsecureWarning,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: PiggyTextTokens.fs12,
                       color: PiggyTokens.warning(context),
                     ),
                   ),

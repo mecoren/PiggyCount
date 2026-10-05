@@ -316,7 +316,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                                       AppLocalizations.of(context).authRememberAccountHint,
                                       style: theme.textTheme.bodySmall?.copyWith(
                                         color: PiggyTokens.textSecondary(context),
-                                        fontSize: 11,
+                                        fontSize: PiggyTextTokens.fs11,
                                       ),
                                     ),
                                   ],

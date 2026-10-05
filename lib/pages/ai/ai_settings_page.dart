@@ -121,7 +121,7 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
             },
             title: Text(
               l10n.aiEnableTitle,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              style: const TextStyle(fontSize: PiggyTextTokens.fs16, fontWeight: FontWeight.w600),
             ),
             subtitle: Text(l10n.aiEnableSubtitle),
             activeColor: primaryColor,
@@ -146,7 +146,7 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
         leading: Icon(Icons.cloud_outlined, color: primaryColor),
         title: Text(
           l10n.aiProviderManageTitle,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          style: const TextStyle(fontSize: PiggyTextTokens.fs16, fontWeight: FontWeight.w600),
         ),
         subtitle: Text(l10n.aiProviderManageSubtitle),
         trailing: const Icon(Icons.chevron_right),
@@ -185,7 +185,7 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
                 Text(
                   l10n.aiCapabilitySelectTitle,
                   style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w600),
+                      fontSize: PiggyTextTokens.fs16, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -303,15 +303,15 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
     return ListTile(
       dense: true,
       leading: Icon(icon, size: 22, color: primaryColor),
-      title: Text(title, style: const TextStyle(fontSize: 14)),
-      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
+      title: Text(title, style: const TextStyle(fontSize: PiggyTextTokens.fs14)),
+      subtitle: Text(subtitle, style: const TextStyle(fontSize: PiggyTextTokens.fs12)),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             currentProvider.name,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: PiggyTextTokens.fs13,
               color: PiggyTokens.textSecondary(context),
             ),
           ),
@@ -416,7 +416,7 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
           leading: Icon(Icons.tune, size: 20, color: primaryColor),
           title: Text(
             l10n.aiPromptAdvancedSettings,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            style: const TextStyle(fontSize: PiggyTextTokens.fs16, fontWeight: FontWeight.w600),
           ),
           subtitle: Text(
             l10n.aiAdvancedSettingsDesc,
@@ -437,7 +437,7 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
                   Text(
                     l10n.aiStrategyTitle,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: PiggyTextTokens.fs14,
                       fontWeight: FontWeight.w500,
                       color: PiggyTokens.textSecondary(context),
                     ),
@@ -470,9 +470,9 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
                   RadioListTile<AIStrategy>(
                     value: AIStrategy.cloudFirst,
                     title: Text(l10n.aiStrategyCloudFirst,
-                        style: const TextStyle(fontSize: 14)),
+                        style: const TextStyle(fontSize: PiggyTextTokens.fs14)),
                     subtitle: Text(l10n.aiStrategyCloudFirstDesc,
-                        style: const TextStyle(fontSize: 12)),
+                        style: const TextStyle(fontSize: PiggyTextTokens.fs12)),
                     activeColor: primaryColor,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                     dense: true,
@@ -480,9 +480,9 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
                   RadioListTile<AIStrategy>(
                     value: AIStrategy.cloudOnly,
                     title: Text(l10n.aiStrategyCloudOnly,
-                        style: const TextStyle(fontSize: 14)),
+                        style: const TextStyle(fontSize: PiggyTextTokens.fs14)),
                     subtitle: Text(l10n.aiStrategyCloudOnlyDesc,
-                        style: const TextStyle(fontSize: 12)),
+                        style: const TextStyle(fontSize: PiggyTextTokens.fs12)),
                     activeColor: primaryColor,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                     dense: true,
@@ -491,9 +491,9 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
                     value: AIStrategy.localFirst,
                     enabled: false,
                     title: Text(l10n.aiStrategyLocalFirst,
-                        style: const TextStyle(fontSize: 14)),
+                        style: const TextStyle(fontSize: PiggyTextTokens.fs14)),
                     subtitle: Text(l10n.aiStrategyUnavailable,
-                        style: const TextStyle(fontSize: 12)),
+                        style: const TextStyle(fontSize: PiggyTextTokens.fs12)),
                     activeColor: primaryColor,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                     dense: true,
@@ -502,9 +502,9 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
                     value: AIStrategy.localOnly,
                     enabled: false,
                     title: Text(l10n.aiStrategyLocalOnly,
-                        style: const TextStyle(fontSize: 14)),
+                        style: const TextStyle(fontSize: PiggyTextTokens.fs14)),
                     subtitle: Text(l10n.aiStrategyUnavailable,
-                        style: const TextStyle(fontSize: 12)),
+                        style: const TextStyle(fontSize: PiggyTextTokens.fs12)),
                     activeColor: primaryColor,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                     dense: true,
@@ -520,9 +520,9 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
               leading: Icon(Icons.visibility_off_outlined,
                   size: 20, color: primaryColor),
               title: Text(l10n.aiDesensitizeTitle,
-                  style: const TextStyle(fontSize: 14)),
+                  style: const TextStyle(fontSize: PiggyTextTokens.fs14)),
               subtitle: Text(l10n.aiDesensitizeSubtitle,
-                  style: const TextStyle(fontSize: 12)),
+                  style: const TextStyle(fontSize: PiggyTextTokens.fs12)),
               value: config.desensitizeAccounts,
               activeColor: primaryColor,
               dense: true,
@@ -542,9 +542,9 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
               dense: true,
               leading: Icon(Icons.edit_note, size: 20, color: primaryColor),
               title: Text(l10n.aiPromptEditEntry,
-                  style: const TextStyle(fontSize: 14)),
+                  style: const TextStyle(fontSize: PiggyTextTokens.fs14)),
               subtitle: Text(l10n.aiPromptEditEntryDesc,
-                  style: const TextStyle(fontSize: 12)),
+                  style: const TextStyle(fontSize: PiggyTextTokens.fs12)),
               trailing: const Icon(Icons.chevron_right, size: 20),
               onTap: () {
                 Navigator.push(

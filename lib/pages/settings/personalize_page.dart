@@ -278,7 +278,7 @@ class _ColorPickerState extends State<_ColorPicker> {
                 style: TextStyle(
                   color: currentColor.value > 0.5 ? Colors.black : Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: 16,
+                  fontSize: PiggyTextTokens.fs16,
                 ),
               ),
             ),

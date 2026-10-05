@@ -168,7 +168,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
               TextButton(
                 onPressed: () => _runRecalcForeignTx(count),
                 child: Text(l10n.recalcForeignTxAction,
-                    style: TextStyle(fontSize: 12)),
+                    style: TextStyle(fontSize: PiggyTextTokens.fs12)),
               ),
             ],
           ),
@@ -652,7 +652,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                   child: WaitSlidingSegmentedControl<String>(
                     selected: _scope,
                     height: 38,
-                    fontSize: 14,
+                    fontSize: PiggyTextTokens.fs14,
                     segments: [
                       WaitSlidingSegment(
                         value: 'week',
@@ -710,7 +710,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                         child: WaitSlidingSegmentedControl<String>(
                           selected: _type,
                           height: 32,
-                          fontSize: 13,
+                          fontSize: PiggyTextTokens.fs13,
                           segments: [
                             WaitSlidingSegment(
                               value: 'expense',

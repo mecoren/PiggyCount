@@ -144,7 +144,7 @@ class _YearRangePickerState extends State<_YearRangePicker> {
                   Center(
                     child: Text('$y',
                         style: TextStyle(
-                            fontSize: 18,
+                            fontSize: PiggyTextTokens.fs18,
                             fontWeight: y == selected
                                 ? FontWeight.w600
                                 : FontWeight.normal,

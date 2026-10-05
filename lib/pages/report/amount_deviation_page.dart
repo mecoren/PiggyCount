@@ -292,7 +292,7 @@ class _AmountDeviationPageState extends ConsumerState<AmountDeviationPage> {
       child: WaitSlidingSegmentedControl<String>(
         selected: _dim,
         height: 32,
-        fontSize: 13,
+        fontSize: PiggyTextTokens.fs13,
         segments: [
           WaitSlidingSegment(value: 'expense', label: l10n.homeExpense),
           WaitSlidingSegment(value: 'income', label: l10n.homeIncome),
@@ -492,7 +492,7 @@ class _AmountDeviationPageState extends ConsumerState<AmountDeviationPage> {
                       Text(
                         labelFmt.format(e.bucket),
                         style: PiggyTextTokens.caption(context).copyWith(
-                            fontSize: 9,
+                            fontSize: PiggyTextTokens.fs9,
                             color: PiggyTokens.textTertiary(context)),
                       ),
                   ],
@@ -601,7 +601,7 @@ class _AmountDeviationPageState extends ConsumerState<AmountDeviationPage> {
                       _severityText(l10n, ins.severity),
                       style: PiggyTextTokens.caption(context).copyWith(
                         color: severityColor(ins.severity),
-                        fontSize: 10,
+                        fontSize: PiggyTextTokens.fs10,
                         fontWeight: FontWeight.w600,
                       ),
                     ),

@@ -286,7 +286,7 @@ class WidgetManagementPage extends ConsumerWidget {
           Text(
             l10n.widgetGalleryTitle,
             style: TextStyle(
-              fontSize: 18.0.scaled(context, ref),
+              fontSize: PiggyTextTokens.fs18.scaled(context, ref),
               fontWeight: FontWeight.w700,
               color: PiggyTokens.textPrimary(context),
             ),
@@ -295,7 +295,7 @@ class WidgetManagementPage extends ConsumerWidget {
           Text(
             l10n.widgetGalleryDesc,
             style: TextStyle(
-              fontSize: 12.5.scaled(context, ref),
+              fontSize: PiggyTextTokens.fs12_5.scaled(context, ref),
               color: PiggyTokens.textTertiary(context),
               height: 1.4,
             ),
@@ -329,7 +329,7 @@ class WidgetManagementPage extends ConsumerWidget {
                   Text(
                     title,
                     style: TextStyle(
-                      fontSize: 15.0.scaled(context, ref),
+                      fontSize: PiggyTextTokens.fs15.scaled(context, ref),
                       fontWeight: FontWeight.w600,
                       color: PiggyTokens.textPrimary(context),
                     ),
@@ -338,7 +338,7 @@ class WidgetManagementPage extends ConsumerWidget {
                   Text(
                     subtitle,
                     style: TextStyle(
-                      fontSize: 12.0.scaled(context, ref),
+                      fontSize: PiggyTextTokens.fs12.scaled(context, ref),
                       color: PiggyTokens.textSecondary(context),
                     ),
                   ),
@@ -406,7 +406,7 @@ class WidgetManagementPage extends ConsumerWidget {
       child: Text(
         '$label · ${size.width.toInt()}×${size.height.toInt()}',
         style: TextStyle(
-          fontSize: 10.0.scaled(context, ref),
+          fontSize: PiggyTextTokens.fs10.scaled(context, ref),
           fontWeight: FontWeight.w500,
           color: PiggyTokens.textTertiary(context),
         ),
@@ -443,7 +443,7 @@ class WidgetManagementPage extends ConsumerWidget {
                   Text(
                     l10n.howToAddWidget,
                     style: TextStyle(
-                      fontSize: 15.0.scaled(context, ref),
+                      fontSize: PiggyTextTokens.fs15.scaled(context, ref),
                       fontWeight: FontWeight.w600,
                       color: PiggyTokens.textPrimary(context),
                     ),
@@ -500,7 +500,7 @@ class WidgetManagementPage extends ConsumerWidget {
                     '${index + 1}',
                     style: TextStyle(
                       color: PiggyTokens.textOnPrimary(context),
-                      fontSize: 11.0.scaled(context, ref),
+                      fontSize: PiggyTextTokens.fs11.scaled(context, ref),
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -511,7 +511,7 @@ class WidgetManagementPage extends ConsumerWidget {
                 child: Text(
                   step,
                   style: TextStyle(
-                    fontSize: 13.5.scaled(context, ref),
+                    fontSize: PiggyTextTokens.fs13_5.scaled(context, ref),
                     color: PiggyTokens.textPrimary(context),
                   ),
                 ),
@@ -547,7 +547,7 @@ class WidgetManagementPage extends ConsumerWidget {
                   Text(
                     l10n.widgetQuickEntryTitle,
                     style: TextStyle(
-                      fontSize: 15.0.scaled(context, ref),
+                      fontSize: PiggyTextTokens.fs15.scaled(context, ref),
                       fontWeight: FontWeight.w600,
                       color: PiggyTokens.textPrimary(context),
                     ),
@@ -558,7 +558,7 @@ class WidgetManagementPage extends ConsumerWidget {
               Text(
                 l10n.widgetQuickEntryDesc,
                 style: TextStyle(
-                  fontSize: 13.0.scaled(context, ref),
+                  fontSize: PiggyTextTokens.fs13.scaled(context, ref),
                   color: PiggyTokens.textSecondary(context),
                   height: 1.5,
                 ),
@@ -597,7 +597,7 @@ class WidgetManagementPage extends ConsumerWidget {
               Text(
                 l10n.aboutWidget,
                 style: TextStyle(
-                  fontSize: 13.5.scaled(context, ref),
+                  fontSize: PiggyTextTokens.fs13_5.scaled(context, ref),
                   fontWeight: FontWeight.w600,
                   color: primaryColor,
                 ),
@@ -608,7 +608,7 @@ class WidgetManagementPage extends ConsumerWidget {
           Text(
             l10n.widgetDescription,
             style: TextStyle(
-              fontSize: 12.0.scaled(context, ref),
+              fontSize: PiggyTextTokens.fs12.scaled(context, ref),
               color: PiggyTokens.textSecondary(context),
               height: 1.5,
             ),

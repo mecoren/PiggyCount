@@ -177,7 +177,7 @@ class _TypeChip extends StatelessWidget {
           style: TextStyle(
             // 切换 chip 是交互控件而非图表标注：12 对齐 App label 档，
             // 不入图表字号槽位
-            fontSize: 12,
+            fontSize: PiggyTextTokens.fs12,
             color: isSelected ? primaryColor : PiggyTokens.textSecondary(context),
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
           ),

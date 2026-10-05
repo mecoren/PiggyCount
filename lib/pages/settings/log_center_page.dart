@@ -509,21 +509,21 @@ class _LogEntryCard extends ConsumerWidget {
               const Divider(),
               Text(
                 log.message,
-                style: const TextStyle(fontSize: 14),
+                style: const TextStyle(fontSize: PiggyTextTokens.fs14),
               ),
               if (log.error != null) ...[
                 const Divider(),
                 Text(
                   'Error: ${log.error}',
                   style:
-                      TextStyle(color: PiggyTokens.error(context), fontSize: 12),
+                      TextStyle(color: PiggyTokens.error(context), fontSize: PiggyTextTokens.fs12),
                 ),
               ],
               if (log.stackTrace != null) ...[
                 const Divider(),
                 Text(
                   'Stack Trace:\n${log.stackTrace}',
-                  style: const TextStyle(fontSize: 10, fontFamily: 'monospace'),
+                  style: const TextStyle(fontSize: PiggyTextTokens.fs10, fontFamily: 'monospace'),
                 ),
               ],
             ],
@@ -570,14 +570,14 @@ class _DetailRow extends StatelessWidget {
               '$label:',
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: 12,
+                fontSize: PiggyTextTokens.fs12,
               ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(fontSize: 12),
+              style: const TextStyle(fontSize: PiggyTextTokens.fs12),
             ),
           ),
         ],

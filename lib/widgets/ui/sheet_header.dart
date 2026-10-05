@@ -60,7 +60,7 @@ class PiggySheetHeader extends StatelessWidget {
                   title,
                   textAlign: TextAlign.center,
                   style: PiggyTextTokens.strongTitle(context)
-                      .copyWith(fontSize: 17),
+                      .copyWith(fontSize: PiggyTextTokens.fs17),
                 ),
                 if (subtitle != null)
                   Text(

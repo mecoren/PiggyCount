@@ -278,7 +278,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
                 '${_currentIndex + 1} / $_totalCount',
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 16,
+                  fontSize: PiggyTextTokens.fs16,
                 ),
               ),
               const Spacer(),
@@ -398,7 +398,7 @@ class _AttachmentPreviewPageState extends ConsumerState<AttachmentPreviewPage> {
                     AppLocalizations.of(context).commonSave,
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.8),
-                      fontSize: 12,
+                      fontSize: PiggyTextTokens.fs12,
                     ),
                   ),
                 ],

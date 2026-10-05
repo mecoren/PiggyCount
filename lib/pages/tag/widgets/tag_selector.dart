@@ -232,7 +232,7 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
         l10n.tagSelectOwnerManaged,
         textAlign: TextAlign.center,
         style: TextStyle(
-          fontSize: 13,
+          fontSize: PiggyTextTokens.fs13,
           color: PiggyTokens.textTertiary(context),
         ),
       ),
@@ -248,7 +248,7 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
           child: Text(
             title,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: PiggyTextTokens.fs13,
               fontWeight: FontWeight.w500,
               color: PiggyTokens.textSecondary(context),
             ),

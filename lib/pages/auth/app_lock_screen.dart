@@ -173,7 +173,7 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
             Text(
               l10n.appLockEnterPin,
               style: TextStyle(
-                fontSize: 18.0.scaled(context, ref),
+                fontSize: PiggyTextTokens.fs18.scaled(context, ref),
                 fontWeight: FontWeight.w600,
                 color: PiggyTokens.textPrimary(context),
               ),
@@ -189,7 +189,7 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
               Text(
                 _lockoutMessage!,
                 style: TextStyle(
-                  fontSize: 13.0.scaled(context, ref),
+                  fontSize: PiggyTextTokens.fs13.scaled(context, ref),
                   color: PiggyTokens.error(context),
                 ),
                 textAlign: TextAlign.center,

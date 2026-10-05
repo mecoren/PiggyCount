@@ -169,7 +169,7 @@ class AppPromoPoster extends StatelessWidget {
         Text(
           l10n.sharePosterAppName,
           style: const TextStyle(
-            fontSize: 48,
+            fontSize: PiggyTextTokens.fs48,
             fontWeight: FontWeight.bold,
             color: Colors.white,
             letterSpacing: 3,
@@ -186,7 +186,7 @@ class AppPromoPoster extends StatelessWidget {
           child: Text(
             l10n.sharePosterSlogan,
             style: TextStyle(
-              fontSize: 20,
+              fontSize: PiggyTextTokens.fs20,
               color: Colors.white.withValues(alpha: 0.95),
               letterSpacing: 1,
             ),
@@ -259,7 +259,7 @@ class AppPromoPoster extends StatelessWidget {
           child: Text(
             feature.text,
             style: const TextStyle(
-              fontSize: 20,
+              fontSize: PiggyTextTokens.fs20,
               fontWeight: FontWeight.w500,
               color: PiggyPosterTokens.textPrimary,
               letterSpacing: 0.5,
@@ -311,7 +311,7 @@ class AppPromoPoster extends StatelessWidget {
                 Text(
                   l10n.sharePosterScanText,
                   style: const TextStyle(
-                    fontSize: 22,
+                    fontSize: PiggyTextTokens.fs22,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
                   ),
@@ -320,7 +320,7 @@ class AppPromoPoster extends StatelessWidget {
                 Text(
                   'github.com/mecoren/PiggyCount',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: PiggyTextTokens.fs16,
                     color: Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
@@ -356,7 +356,7 @@ class AppPromoPoster extends StatelessWidget {
       child: Text(
         text,
         style: const TextStyle(
-          fontSize: 14,
+          fontSize: PiggyTextTokens.fs14,
           fontWeight: FontWeight.w500,
           color: Colors.white,
         ),
@@ -370,7 +370,7 @@ class AppPromoPoster extends StatelessWidget {
       l10n.appPromoFooterText,
       style: TextStyle(
         color: Colors.white.withValues(alpha: 0.7),
-        fontSize: 14,
+        fontSize: PiggyTextTokens.fs14,
         letterSpacing: 1,
       ),
     );

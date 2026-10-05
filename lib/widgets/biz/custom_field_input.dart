@@ -143,7 +143,7 @@ class _CustomFieldsSectionState extends ConsumerState<CustomFieldsSection> {
               Text(
                 l10n.customFieldSectionTitle,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: PiggyTextTokens.fs12,
                   fontWeight: FontWeight.w600,
                   color: PiggyTokens.textTertiary(context),
                 ),
@@ -182,7 +182,7 @@ class _CustomFieldsSectionState extends ConsumerState<CustomFieldsSection> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: PiggyTextTokens.fs13,
                 color: PiggyTokens.textSecondary(context),
               ),
             ),
@@ -249,7 +249,7 @@ class _CustomFieldsSectionState extends ConsumerState<CustomFieldsSection> {
         inputFormatters: inputFormatters,
         maxLength: 100,
         style: TextStyle(
-          fontSize: 14,
+          fontSize: PiggyTextTokens.fs14,
           color: PiggyTokens.textPrimary(context),
         ),
         decoration: InputDecoration(
@@ -370,7 +370,7 @@ class _CustomFieldsSectionState extends ConsumerState<CustomFieldsSection> {
                         ? '${_formatDate(date)} ${_formatTime(date)}'
                         : _formatDate(date)),
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: PiggyTextTokens.fs14,
                   color: date == null
                       ? PiggyTokens.textTertiary(context)
                       : PiggyTokens.textPrimary(context),

@@ -109,7 +109,7 @@ class LedgerSummaryPoster extends StatelessWidget {
                   data.ledgerName,
                   style: TextStyle(
                     color: primaryColor,
-                    fontSize: 20,
+                    fontSize: PiggyTextTokens.fs20,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -120,7 +120,7 @@ class LedgerSummaryPoster extends StatelessWidget {
                 l10n.sharePosterLedgerTitle,
                 style: TextStyle(
                   color: primaryColor.withValues(alpha: 0.9),
-                  fontSize: 42,
+                  fontSize: PiggyTextTokens.fs42,
                   fontWeight: FontWeight.bold,
                   height: 1.2,
                 ),
@@ -132,7 +132,7 @@ class LedgerSummaryPoster extends StatelessWidget {
                   '${DateFormat('yyyy.MM.dd').format(data.firstRecordDate!)} - ${DateFormat('yyyy.MM.dd').format(data.lastRecordDate!)}',
                   style: TextStyle(
                     color: primaryColor.withValues(alpha: 0.6),
-                    fontSize: 16,
+                    fontSize: PiggyTextTokens.fs16,
                   ),
                 ),
             ],
@@ -299,7 +299,7 @@ class LedgerSummaryPoster extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            fontSize: 16,
+            fontSize: PiggyTextTokens.fs16,
             color: PiggyPosterTokens.textTertiary,
           ),
         ),
@@ -313,7 +313,7 @@ class LedgerSummaryPoster extends StatelessWidget {
               Text(
                 value.startsWith('-') ? '' : '+',
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: PiggyTextTokens.fs24,
                   fontWeight: FontWeight.bold,
                   color: color,
                 ),
@@ -321,7 +321,7 @@ class LedgerSummaryPoster extends StatelessWidget {
             Text(
               displayValue,
               style: TextStyle(
-                fontSize: 28,
+                fontSize: PiggyTextTokens.fs28,
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
@@ -334,7 +334,7 @@ class LedgerSummaryPoster extends StatelessWidget {
                 child: Text(
                   unit!,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: PiggyTextTokens.fs14,
                     color: color.withValues(alpha: 0.8),
                   ),
                 ),
@@ -361,7 +361,7 @@ class LedgerSummaryPoster extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontSize: 14,
+            fontSize: PiggyTextTokens.fs14,
             color: color.withValues(alpha: 0.7),
           ),
         ),
@@ -373,7 +373,7 @@ class LedgerSummaryPoster extends StatelessWidget {
             Text(
               value,
               style: TextStyle(
-                fontSize: 24,
+                fontSize: PiggyTextTokens.fs24,
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
@@ -387,7 +387,7 @@ class LedgerSummaryPoster extends StatelessWidget {
                 child: Text(
                   unit,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: PiggyTextTokens.fs12,
                     color: color.withValues(alpha: 0.7),
                   ),
                 ),
@@ -410,7 +410,7 @@ class LedgerSummaryPoster extends StatelessWidget {
           l10n.sharePosterTopExpense,
           style: TextStyle(
             color: primaryColor.withValues(alpha: 0.9),
-            fontSize: 22,
+            fontSize: PiggyTextTokens.fs22,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -458,7 +458,7 @@ class LedgerSummaryPoster extends StatelessWidget {
                 '$rank',
                 style: TextStyle(
                   color: primaryColor,
-                  fontSize: 16,
+                  fontSize: PiggyTextTokens.fs16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -478,7 +478,7 @@ class LedgerSummaryPoster extends StatelessWidget {
             child: Text(
               category.name,
               style: const TextStyle(
-                fontSize: 18,
+                fontSize: PiggyTextTokens.fs18,
                 fontWeight: FontWeight.w600,
                 color: PiggyPosterTokens.textPrimary,
               ),
@@ -491,7 +491,7 @@ class LedgerSummaryPoster extends StatelessWidget {
               Text(
                 _money(formatter, category.total),
                 style: const TextStyle(
-                  fontSize: 18,
+                  fontSize: PiggyTextTokens.fs18,
                   fontWeight: FontWeight.bold,
                   color: PiggyPosterTokens.textPrimary,
                 ),
@@ -499,7 +499,7 @@ class LedgerSummaryPoster extends StatelessWidget {
               Text(
                 percentText,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: PiggyTextTokens.fs14,
                   color: primaryColor.withValues(alpha: 0.7),
                 ),
               ),
@@ -544,7 +544,7 @@ class LedgerSummaryPoster extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            fontSize: 16,
+            fontSize: PiggyTextTokens.fs16,
             color: PiggyPosterTokens.textSecondary,
           ),
         ),
@@ -552,7 +552,7 @@ class LedgerSummaryPoster extends StatelessWidget {
         Text(
           value,
           style: TextStyle(
-            fontSize: 18,
+            fontSize: PiggyTextTokens.fs18,
             fontWeight: FontWeight.bold,
             color: primaryColor,
           ),
@@ -597,7 +597,7 @@ class LedgerSummaryPoster extends StatelessWidget {
             l10n.sharePosterAppName,
             style: TextStyle(
               color: primaryColor,
-              fontSize: 16,
+              fontSize: PiggyTextTokens.fs16,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -607,7 +607,7 @@ class LedgerSummaryPoster extends StatelessWidget {
             l10n.sharePosterSlogan,
             style: TextStyle(
               color: primaryColor.withValues(alpha: 0.6),
-              fontSize: 12,
+              fontSize: PiggyTextTokens.fs12,
             ),
           ),
         ],

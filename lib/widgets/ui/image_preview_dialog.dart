@@ -83,7 +83,7 @@ class PiggyImagePreviewDialog extends StatelessWidget {
               ),
               child: Text(
                 caption!,
-                style: const TextStyle(color: Colors.white, fontSize: 12),
+                style: const TextStyle(color: Colors.white, fontSize: PiggyTextTokens.fs12),
                 textAlign: TextAlign.center,
               ),
             ),

@@ -147,8 +147,17 @@ class PiggyTokens {
   /// 亮色下主要文字的原值（单一来源，供 *_On 方法复用）。
   static const Color _textPrimaryLight = Color(0xFF111827);
 
-  /// 亮色下次要文字的原值（= Colors.black54）。
-  static const Color _textSecondaryLight = Color(0x8A000000);
+  /// 亮色下次要文字的原值。
+  ///
+  /// 无障碍（WCAG 1.4.3 ≥4.5:1）：原 `Colors.black54` 叠亮色页面底只有
+  /// **4.44**，差 0.06 未达标；改为不透明灰 600 `#4B5563`（页面底 6.48 /
+  /// 卡片底 7.18）。同时把三级文字一并抬到达标区间，构成
+  /// `#111827`(主) → `#4B5563`(次) → `#5F6B7A`(辅) 的三级阶梯。
+  ///
+  /// 注意：由半透明改为**不透明**灰 —— 它只用于普通表面（页面底/卡片底）。
+  /// 主题色/深色背景上的文字请用 `textOnPrimary` / `textOnHeader*`（那套本来就是
+  /// 白系，不依赖叠加）。在彩色底上继续用本令牌会失去"随底融合"的效果。
+  static const Color _textSecondaryLight = Color(0xFF4B5563);
 
   /// 主要文字颜色（标题、正文）
   /// - 亮色模式：#111827 (灰900)
@@ -178,11 +187,15 @@ class PiggyTokens {
       isDark ? Colors.white.withValues(alpha: 0.7) : _textSecondaryLight;
 
   /// 提示文字颜色（placeholder、hint、辅助说明）
-  /// - 亮色模式：#9CA3AF (灰400)
+  /// - 亮色模式：#5F6B7A（页面底 4.65 / 卡片底 5.15，达 WCAG 1.4.3 正文线）
   /// - 暗黑模式：rgba(255,255,255,0.54)
+  ///
+  /// 无障碍：原 `#9CA3AF` 亮色下仅 **2.18 / 2.41**，连 3.0 的大字线都不过
+  /// （177 处调用点）。改色是**设计决策 + 视觉回归**（三级文字整体下移），
+  /// 已是 token 级单点修改；暗色本就达标，不动。
   static Color textTertiary(BuildContext context) => isDark(context)
       ? Colors.white.withValues(alpha: 0.54)
-      : const Color(0xFF9CA3AF);
+      : const Color(0xFF5F6B7A);
 
   /// 禁用文字颜色
   /// - 亮色模式：rgba(0,0,0,0.26)
@@ -230,11 +243,14 @@ class PiggyTokens {
       : Colors.black.withValues(alpha: 0.54);
 
   /// 提示图标颜色
-  /// - 亮色模式：rgba(0,0,0,0.38)
+  /// - 亮色模式：rgba(0,0,0,0.45)
   /// - 暗黑模式：rgba(255,255,255,0.54)
+  ///
+  /// 无障碍（WCAG 1.4.11 非文本 3:1）：亮色原 0.38 只有 **2.63 / 2.66**，
+  /// 未达 3:1；抬到 0.45 后 3.27 / 3.32 达标。
   static Color iconTertiary(BuildContext context) => isDark(context)
       ? Colors.white.withValues(alpha: 0.54)
-      : Colors.black.withValues(alpha: 0.38);
+      : Colors.black.withValues(alpha: 0.45);
 
   // ========== 边框/分割线 Token (Border) ==========
 
@@ -794,6 +810,39 @@ class PiggyPersonalizeDefaults {
 
 /// 文本样式令牌：全局统一字号与字重
 class PiggyTextTokens {
+  // ===== 纯字号刻度（只给数值，不带 color / fontWeight / 行高）=====
+  //
+  // 为什么单独给"纯字号"而不是复用下面那些 TextStyle 成员：那些成员各自携带
+  // color / fontWeight / 字体族与行高，逐处替换会把颜色字重一起换掉 —— 那是
+  // **改视觉**而不是改名字（U1 当初因此只交了 ratchet 门禁）。
+  //
+  // 纯字号刻度让 `fontSize: 16` → `fontSize: PiggyTextTokens.fs16` 成为
+  // **零视觉变更**的机械收敛：数值逐位相等，渲染结果不变，可直接把
+  // `test/styles/font_size_token_ratchet_test.dart` 的基线一路压到 0。
+  // 刻度覆盖 `lib/pages` + `lib/widgets` 实测出现的全部档位（含 9/10 超小档
+  // 与 13.5/12.5 半档）。
+  static const double fs9 = 9;
+  static const double fs10 = 10;
+  static const double fs11 = 11;
+  static const double fs12 = 12;
+  static const double fs12_5 = 12.5;
+  static const double fs13 = 13;
+  static const double fs13_5 = 13.5;
+  static const double fs14 = 14;
+  static const double fs15 = 15;
+  static const double fs16 = 16;
+  static const double fs17 = 17;
+  static const double fs18 = 18;
+  static const double fs20 = 20;
+  static const double fs22 = 22;
+  static const double fs24 = 24;
+  static const double fs28 = 28;
+  static const double fs32 = 32;
+  static const double fs36 = 36;
+  static const double fs42 = 42;
+  static const double fs48 = 48;
+  static const double fs100 = 100;
+
   // 标题：用于列表主标题、条目标题
   static TextStyle title(BuildContext ctx) =>
       Theme.of(ctx).textTheme.bodyLarge?.copyWith(

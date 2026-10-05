@@ -229,7 +229,7 @@ PopupMenuItem<String> _buildActionItem(
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 15,
+              fontSize: PiggyTextTokens.fs15,
               color: item.color != null || item.isDanger
                   ? tint
                   : PiggyTokens.textPrimary(context),
@@ -259,7 +259,7 @@ PopupMenuItem<String> _buildTipItem(BuildContext context, PiggyMenuItem item) {
           child: Text(
             item.label ?? '',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: PiggyTextTokens.fs12,
               color: PiggyTokens.textTertiary(context),
             ),
           ),

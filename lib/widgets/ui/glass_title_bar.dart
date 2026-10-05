@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import 'gradient_backdrop_filter.dart';
 import 'liquid_glass_title_bar.dart';
+import '../../styles/tokens.dart';
 
 /// 带毛玻璃效果的顶部标题栏
 ///
@@ -286,7 +287,7 @@ class GlassHeader extends StatelessWidget {
                       Text(
                         title ?? '',
                         style: TextStyle(
-                          fontSize: 17,
+                          fontSize: PiggyTextTokens.fs17,
                           fontWeight: FontWeight.w500,
                           color: colorScheme.onSurface,
                         ),
@@ -298,7 +299,7 @@ class GlassHeader extends StatelessWidget {
                         Text(
                           subtitle!,
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: PiggyTextTokens.fs12,
                             color: colorScheme.onSurfaceVariant,
                           ),
                           maxLines: 1,

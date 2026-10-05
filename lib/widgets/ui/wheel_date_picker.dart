@@ -167,7 +167,7 @@ class _WheelDatePickerState extends State<WheelDatePicker> {
                     Center(
                         child: Text('$y',
                             style: TextStyle(
-                                fontSize: 18, color: _textPrimary(context)))),
+                                fontSize: PiggyTextTokens.fs18, color: _textPrimary(context)))),
                 ],
               ),
             ),
@@ -207,7 +207,7 @@ class _WheelDatePickerState extends State<WheelDatePicker> {
                       Center(
                           child: Text('$m',
                               style: TextStyle(
-                                  fontSize: 18, color: _textPrimary(context)))),
+                                  fontSize: PiggyTextTokens.fs18, color: _textPrimary(context)))),
                   ],
                 ),
               ),
@@ -225,7 +225,7 @@ class _WheelDatePickerState extends State<WheelDatePicker> {
                       Center(
                           child: Text('$d',
                               style: TextStyle(
-                                  fontSize: 18, color: _textPrimary(context)))),
+                                  fontSize: PiggyTextTokens.fs18, color: _textPrimary(context)))),
                   ],
                 ),
               ),
@@ -402,7 +402,7 @@ class _DateStepPickerState extends State<_DateStepPicker> {
                     Center(
                         child: Text('$y',
                             style: TextStyle(
-                                fontSize: 18,
+                                fontSize: PiggyTextTokens.fs18,
                                 color: PiggyTokens.textPrimary(context)))),
                 ],
               ),
@@ -436,7 +436,7 @@ class _DateStepPickerState extends State<_DateStepPicker> {
                     Center(
                         child: Text('$m',
                             style: TextStyle(
-                                fontSize: 18,
+                                fontSize: PiggyTextTokens.fs18,
                                 color: PiggyTokens.textPrimary(context)))),
                 ],
               ),
@@ -454,7 +454,7 @@ class _DateStepPickerState extends State<_DateStepPicker> {
                     Center(
                         child: Text('$d',
                             style: TextStyle(
-                                fontSize: 18,
+                                fontSize: PiggyTextTokens.fs18,
                                 color: PiggyTokens.textPrimary(context)))),
                 ],
               ),
@@ -555,7 +555,7 @@ class _TimeStepPickerState extends State<_TimeStepPicker> {
             child: Text(
               i.toString().padLeft(2, '0'),
               style: TextStyle(
-                  fontSize: 18, color: PiggyTokens.textPrimary(context)),
+                  fontSize: PiggyTextTokens.fs18, color: PiggyTokens.textPrimary(context)),
             ),
           ),
       ],
@@ -565,7 +565,7 @@ class _TimeStepPickerState extends State<_TimeStepPicker> {
   Widget _colon(BuildContext context) => Text(
         ':',
         style: TextStyle(
-          fontSize: 18,
+          fontSize: PiggyTextTokens.fs18,
           fontWeight: FontWeight.w500,
           color: PiggyTokens.textPrimary(context),
         ),

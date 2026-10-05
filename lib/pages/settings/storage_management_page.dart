@@ -240,7 +240,7 @@ class _StorageManagementPageState extends ConsumerState<StorageManagementPage> {
                       trailing: Text(
                         _formatSize(_aiModelsSize),
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: PiggyTextTokens.fs16,
                           fontWeight: FontWeight.w600,
                           color: _aiModelsSize > 0
                               ? ref.watch(primaryColorProvider)
@@ -267,7 +267,7 @@ class _StorageManagementPageState extends ConsumerState<StorageManagementPage> {
                         trailing: Text(
                           _formatSize(_apkFilesSize),
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: PiggyTextTokens.fs16,
                             fontWeight: FontWeight.w600,
                             color: _apkFilesSize > 0
                                 ? ref.watch(primaryColorProvider)

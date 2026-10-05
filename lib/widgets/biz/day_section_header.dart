@@ -56,7 +56,7 @@ class DaySectionHeader extends ConsumerWidget {
     // 日期 / 星期:与单条明细的分类标题(TransactionListItem 的 PiggyTextTokens.title)
     // 颜色一致(取主色),字号保持 12 不抢戏。
     final dateLabelStyle = PiggyTextTokens.title(context).copyWith(
-      fontSize: 12,
+      fontSize: PiggyTextTokens.fs12,
       fontWeight: FontWeight.w400,
     );
     return Container(

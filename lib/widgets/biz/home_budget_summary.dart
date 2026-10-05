@@ -87,7 +87,7 @@ class _BudgetProgressBar extends ConsumerWidget {
               child: Text(
                 '${AppLocalizations.of(context).budgetUsed} $displayRate%',
                 style: TextStyle(
-                  fontSize: 9,
+                  fontSize: PiggyTextTokens.fs9,
                   fontWeight: FontWeight.w600,
                   color: isDark ? Colors.white70 : Colors.black54,
                   height: 1.0,

@@ -151,7 +151,7 @@ class PiggyDateCell extends ConsumerWidget {
                 '${day.day}',
                 style: TextStyle(
                   color: numberColor,
-                  fontSize: 18,
+                  fontSize: PiggyTextTokens.fs18,
                   fontWeight:
                       isSelected || isToday ? FontWeight.w700 : FontWeight.w600,
                   height: 1.0,
@@ -179,7 +179,7 @@ class PiggyDateCell extends ConsumerWidget {
                                       ? PiggyTokens.textTertiary(context)
                                           .withValues(alpha: 0.3)
                                       : PiggyTokens.textSecondary(context),
-                              fontSize: 10,
+                              fontSize: PiggyTextTokens.fs10,
                               height: 1.0,
                             ),
                             maxLines: 1,
@@ -193,7 +193,7 @@ class PiggyDateCell extends ConsumerWidget {
                                 color: isSelected
                                     ? onSolidColor
                                     : PiggyTokens.expenseColor(context, ref),
-                                fontSize: 10,
+                                fontSize: PiggyTextTokens.fs10,
                                 fontWeight: FontWeight.w600,
                                 height: 1.1,
                               ),
@@ -207,7 +207,7 @@ class PiggyDateCell extends ConsumerWidget {
                                 color: isSelected
                                     ? onSolidColor
                                     : PiggyTokens.incomeColor(context, ref),
-                                fontSize: 10,
+                                fontSize: PiggyTextTokens.fs10,
                                 fontWeight: FontWeight.w600,
                                 height: 1.1,
                               ),
@@ -263,7 +263,7 @@ class _HolidayBadge extends StatelessWidget {
         label,
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 9,
+          fontSize: PiggyTextTokens.fs9,
           fontWeight: FontWeight.w600,
           height: 1.0,
         ),

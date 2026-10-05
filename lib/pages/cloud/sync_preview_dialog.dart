@@ -77,7 +77,7 @@ class _SyncPreviewDialogState extends ConsumerState<_SyncPreviewDialog> {
       wide: true,
       title: Text(
         l10n.syncPreviewTitle,
-        style: PiggyTextTokens.strongTitle(context).copyWith(fontSize: 18),
+        style: PiggyTextTokens.strongTitle(context).copyWith(fontSize: PiggyTextTokens.fs18),
       ),
       content: SizedBox(
         width: double.maxFinite,
@@ -109,7 +109,7 @@ class _SyncPreviewDialogState extends ConsumerState<_SyncPreviewDialog> {
                         ? l10n.syncPreviewDeselectAll
                         : l10n.syncPreviewSelectAll,
                     style:
-                        PiggyTextTokens.label(context).copyWith(fontSize: 13),
+                        PiggyTextTokens.label(context).copyWith(fontSize: PiggyTextTokens.fs13),
                   ),
                 ],
               ),
@@ -203,7 +203,7 @@ class _SyncPreviewDialogState extends ConsumerState<_SyncPreviewDialog> {
         text,
         style: TextStyle(
           color: color,
-          fontSize: 12,
+          fontSize: PiggyTextTokens.fs12,
           fontWeight: FontWeight.w500,
         ),
       ),
@@ -340,7 +340,7 @@ class _SyncPreviewDialogState extends ConsumerState<_SyncPreviewDialog> {
                 children: [
                   Text(
                     summary,
-                    style: PiggyTextTokens.body(context).copyWith(fontSize: 13),
+                    style: PiggyTextTokens.body(context).copyWith(fontSize: PiggyTextTokens.fs13),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

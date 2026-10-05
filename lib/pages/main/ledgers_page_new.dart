@@ -1554,7 +1554,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                       Text(
                         l10n.ledgersConflictMessage,
                         style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w500),
+                            fontSize: PiggyTextTokens.fs14, fontWeight: FontWeight.w500),
                       ),
                       const SizedBox(height: 16),
 
@@ -1584,7 +1584,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                                 syncStatus.localFingerprint.substring(0, 8),
                               ),
                               style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: PiggyTextTokens.fs12,
                                   color: PiggyTokens.textSecondary(context)),
                             ),
                           ],
@@ -1620,7 +1620,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                                       syncStatus.cloudExportedAt!.toLocal()),
                                 ),
                                 style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: PiggyTextTokens.fs12,
                                     color: PiggyTokens.textSecondary(context)),
                               ),
                               const SizedBox(height: 2),
@@ -1629,7 +1629,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                                   syncStatus.cloudFingerprint!.substring(0, 8),
                                 ),
                                 style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: PiggyTextTokens.fs12,
                                     color: PiggyTokens.textSecondary(context)),
                               ),
                             ],
@@ -1791,7 +1791,7 @@ class _SectionHeader extends ConsumerWidget {
           Text(
             title,
             style: TextStyle(
-              fontSize: 16.0.scaled(context, ref),
+              fontSize: PiggyTextTokens.fs16.scaled(context, ref),
               fontWeight: FontWeight.w600,
               color: PiggyTokens.textSecondary(context),
             ),
@@ -1810,7 +1810,7 @@ class _SectionHeader extends ConsumerWidget {
               child: Text(
                 trailing!,
                 style: TextStyle(
-                  fontSize: 12.0.scaled(context, ref),
+                  fontSize: PiggyTextTokens.fs12.scaled(context, ref),
                   color: PiggyTokens.textTertiary(context),
                 ),
               ),

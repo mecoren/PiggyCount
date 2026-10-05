@@ -311,7 +311,7 @@ class _RecurringTransactionEditPageState
           Expanded(
             child: RadioListTile<String>(
               title: Text(l10n.categoryExpense,
-                  style: const TextStyle(fontSize: 14)),
+                  style: const TextStyle(fontSize: PiggyTextTokens.fs14)),
               value: 'expense',
               contentPadding: EdgeInsets.zero,
               visualDensity: VisualDensity.compact,
@@ -320,7 +320,7 @@ class _RecurringTransactionEditPageState
           Expanded(
             child: RadioListTile<String>(
               title: Text(l10n.categoryIncome,
-                  style: const TextStyle(fontSize: 14)),
+                  style: const TextStyle(fontSize: PiggyTextTokens.fs14)),
               value: 'income',
               contentPadding: EdgeInsets.zero,
               visualDensity: VisualDensity.compact,
@@ -329,7 +329,7 @@ class _RecurringTransactionEditPageState
           Expanded(
             child: RadioListTile<String>(
               title: Text(l10n.transferTitle,
-                  style: const TextStyle(fontSize: 14)),
+                  style: const TextStyle(fontSize: PiggyTextTokens.fs14)),
               value: 'transfer',
               contentPadding: EdgeInsets.zero,
               visualDensity: VisualDensity.compact,

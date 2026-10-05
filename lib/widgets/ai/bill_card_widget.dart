@@ -63,7 +63,7 @@ class BillCardWidget extends ConsumerWidget {
                       ? AppLocalizations.of(context).billCardUndone
                       : AppLocalizations.of(context).billCardSuccess,
                   style: TextStyle(
-                    fontSize: 16.0.scaled(context, ref),
+                    fontSize: PiggyTextTokens.fs16.scaled(context, ref),
                     fontWeight: FontWeight.w600,
                     color: isUndone
                         ? PiggyTokens.textSecondary(context)
@@ -171,7 +171,7 @@ class BillCardWidget extends ConsumerWidget {
           child: Text(
             label,
             style: TextStyle(
-              fontSize: 14.0.scaled(context, ref),
+              fontSize: PiggyTextTokens.fs14.scaled(context, ref),
               color: PiggyTokens.textSecondary(context),
             ),
           ),
@@ -180,7 +180,7 @@ class BillCardWidget extends ConsumerWidget {
           child: Text(
             value,
             style: TextStyle(
-              fontSize: 14.0.scaled(context, ref),
+              fontSize: PiggyTextTokens.fs14.scaled(context, ref),
               color: PiggyTokens.textPrimary(context),
               fontWeight: FontWeight.w500,
             ),
@@ -231,7 +231,7 @@ class BillCardWidget extends ConsumerWidget {
             Text(
               ledgerName,
               style: TextStyle(
-                fontSize: 12.0.scaled(context, ref),
+                fontSize: PiggyTextTokens.fs12.scaled(context, ref),
                 color: canChange
                     ? ref.watch(primaryColorProvider)
                     : PiggyTokens.textSecondary(context),

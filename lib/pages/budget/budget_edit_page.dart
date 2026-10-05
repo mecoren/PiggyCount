@@ -98,7 +98,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
   /// 表单分区标题（与账户编辑抽屉同一口径：字段直接浮在抽屉卡片底上，
   /// 不再套一层主题色描边卡片 —— 那会变成卡片套卡片，见 `SectionCard.flat`）
   TextStyle _sectionTitle(BuildContext context) => TextStyle(
-        fontSize: 14,
+        fontSize: PiggyTextTokens.fs14,
         fontWeight: FontWeight.w600,
         color: PiggyTokens.textPrimary(context),
       );
@@ -161,7 +161,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
             ],
-            style: const TextStyle(fontSize: 16),
+            style: const TextStyle(fontSize: PiggyTextTokens.fs16),
             decoration: piggyOutlinedDecoration(
               context,
               label: l10n.budgetAmountLabel,
@@ -192,7 +192,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
                 child: Text(
                   l10n.commonDelete,
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: PiggyTextTokens.fs16,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -244,7 +244,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: PiggyTextTokens.fs14,
                   fontWeight: active ? FontWeight.w600 : FontWeight.w400,
                   color: active ? primary : PiggyTokens.textSecondary(context),
                 ),
@@ -283,7 +283,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
                   _selectedCategoryName ?? '',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 16),
+                  style: const TextStyle(fontSize: PiggyTextTokens.fs16),
                 ),
               ),
             ] else ...[
@@ -299,7 +299,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: PiggyTextTokens.fs16,
                     color: PiggyTokens.textTertiary(context),
                   ),
                 ),

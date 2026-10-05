@@ -150,7 +150,7 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
                   Text(
                     l10n.maintenanceOrphanSummary(report.totalCount),
                     style: PiggyTextTokens.strongTitle(context)
-                        .copyWith(fontSize: 14),
+                        .copyWith(fontSize: PiggyTextTokens.fs14),
                   ),
                   if (report.totalSizeBytes > 0)
                     Text(
@@ -189,7 +189,7 @@ class _OrphanCleanupPageState extends ConsumerState<OrphanCleanupPage> {
                     child: Text(
                       '$groupTitle (${records.length})',
                       style: PiggyTextTokens.strongTitle(context)
-                          .copyWith(fontSize: 13),
+                          .copyWith(fontSize: PiggyTextTokens.fs13),
                     ),
                   ),
                   TextButton(

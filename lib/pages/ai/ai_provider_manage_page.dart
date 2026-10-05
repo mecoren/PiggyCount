@@ -144,7 +144,7 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
                     child: Text(
                       provider.name,
                       style: const TextStyle(
-                        fontSize: 16,
+                        fontSize: PiggyTextTokens.fs16,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -274,7 +274,7 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
           Text(
             label,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: PiggyTextTokens.fs11,
               color: enabled ? primaryColor : PiggyTokens.textTertiary(context),
             ),
           ),
@@ -464,7 +464,7 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
                           Text(
                             l10n.aiProviderBasicInfo,
                             style: const TextStyle(
-                              fontSize: 14,
+                              fontSize: PiggyTextTokens.fs14,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -503,7 +503,7 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
                               const Text(
                                 'API Key',
                                 style: TextStyle(
-                                    fontSize: 14, fontWeight: FontWeight.w500),
+                                    fontSize: PiggyTextTokens.fs14, fontWeight: FontWeight.w500),
                               ),
                               const Spacer(),
                               _buildInlineTestButton(
@@ -552,7 +552,7 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
                               child: Text(
                                 _textTestError!,
                                 style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: PiggyTextTokens.fs12,
                                     color: PiggyTokens.error(context)),
                               ),
                             ),
@@ -575,7 +575,7 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
                                   label: Text(l10n.aiCloudApiGetKey),
                                   style: TextButton.styleFrom(
                                     foregroundColor: primaryColor,
-                                    textStyle: const TextStyle(fontSize: 13),
+                                    textStyle: const TextStyle(fontSize: PiggyTextTokens.fs13),
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 4),
                                   ),
@@ -588,7 +588,7 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
                                   label: Text(l10n.aiCloudApiTutorial),
                                   style: TextButton.styleFrom(
                                     foregroundColor: primaryColor,
-                                    textStyle: const TextStyle(fontSize: 13),
+                                    textStyle: const TextStyle(fontSize: PiggyTextTokens.fs13),
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 4),
                                   ),
@@ -615,7 +615,7 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
                           Text(
                             l10n.aiProviderModels,
                             style: const TextStyle(
-                              fontSize: 14,
+                              fontSize: PiggyTextTokens.fs14,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -878,7 +878,7 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
           children: [
             Text(
               label,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+              style: const TextStyle(fontSize: PiggyTextTokens.fs14, fontWeight: FontWeight.w500),
             ),
             const Spacer(),
             _buildInlineTestButton(
@@ -913,7 +913,7 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
             child: Text(
               testError,
               style: TextStyle(
-                  fontSize: 12, color: PiggyTokens.error(context)),
+                  fontSize: PiggyTextTokens.fs12, color: PiggyTokens.error(context)),
             ),
           ),
         ],
@@ -1040,7 +1040,7 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
       label: Text(getText()),
       style: TextButton.styleFrom(
         foregroundColor: getColor(),
-        textStyle: const TextStyle(fontSize: 12),
+        textStyle: const TextStyle(fontSize: PiggyTextTokens.fs12),
         padding: const EdgeInsets.symmetric(horizontal: 8),
       ),
     );

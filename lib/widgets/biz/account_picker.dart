@@ -217,7 +217,7 @@ class _AccountPickerState extends ConsumerState<AccountPicker> {
                 Text(
                   option.name,
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: PiggyTextTokens.fs18,
                     fontWeight: FontWeight.w500,
                   ),
                   maxLines: 1,
@@ -228,7 +228,7 @@ class _AccountPickerState extends ConsumerState<AccountPicker> {
                   Text(
                     getAccountTypeLabel(context, option.type),
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: PiggyTextTokens.fs14,
                       color: PiggyTokens.textSecondary(context),
                     ),
                   ),

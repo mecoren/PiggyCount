@@ -123,7 +123,7 @@ class _NotePickerDialogState extends ConsumerState<NotePickerDialog> {
                               Text(
                                 item.note,
                                 style: TextStyle(
-                                  fontSize: 13,
+                                  fontSize: PiggyTextTokens.fs13,
                                   color: PiggyTokens.textSecondary(context),
                                 ),
                               ),
@@ -141,7 +141,7 @@ class _NotePickerDialogState extends ConsumerState<NotePickerDialog> {
                                   '${item.usageCount}',
                                   style: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 9,
+                                    fontSize: PiggyTextTokens.fs9,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),

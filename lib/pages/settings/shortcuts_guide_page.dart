@@ -366,7 +366,7 @@ class ShortcutsGuidePage extends ConsumerWidget {
               param,
               style: TextStyle(
                 fontFamily: 'monospace',
-                fontSize: 12,
+                fontSize: PiggyTextTokens.fs12,
                 color: required ? PiggyTokens.error(context) : PiggyTokens.primary(context),
                 fontWeight: FontWeight.w500,
               ),
@@ -501,7 +501,7 @@ class ShortcutsGuidePage extends ConsumerWidget {
                     '${index + 1}',
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 12,
+                      fontSize: PiggyTextTokens.fs12,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

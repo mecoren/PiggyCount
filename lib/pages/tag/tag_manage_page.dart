@@ -597,7 +597,7 @@ class _TagCard extends StatelessWidget {
                             child: Text(
                               tag.name,
                               style: PiggyTextTokens.strongTitle(context)
-                                  .copyWith(fontSize: 16),
+                                  .copyWith(fontSize: PiggyTextTokens.fs16),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),

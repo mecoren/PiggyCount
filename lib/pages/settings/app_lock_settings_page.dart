@@ -313,7 +313,7 @@ class _PinVerifyPageState extends ConsumerState<_PinVerifyPage> {
               Text(
                 l10n.appLockVerifyCurrentPin,
                 style: TextStyle(
-                  fontSize: 18.0.scaled(context, ref),
+                  fontSize: PiggyTextTokens.fs18.scaled(context, ref),
                   fontWeight: FontWeight.w600,
                   color: PiggyTokens.textPrimary(context),
                 ),

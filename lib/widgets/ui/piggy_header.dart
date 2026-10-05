@@ -209,7 +209,7 @@ class PiggyTitleBar extends StatelessWidget implements PreferredSizeWidget {
                                 child: Text(
                                   title!,
                                   style: TextStyle(
-                                    fontSize: 17,
+                                    fontSize: PiggyTextTokens.fs17,
                                     fontWeight: FontWeight.w500,
                                     color: colorScheme.onSurface,
                                   ),
@@ -224,7 +224,7 @@ class PiggyTitleBar extends StatelessWidget implements PreferredSizeWidget {
                           Text(
                             subtitle!,
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: PiggyTextTokens.fs12,
                               color: colorScheme.onSurfaceVariant,
                             ),
                             maxLines: 1,
@@ -298,7 +298,7 @@ class PiggyHomeBar extends StatelessWidget implements PreferredSizeWidget {
                     Text(
                       title ?? '',
                       style: TextStyle(
-                        fontSize: 17,
+                        fontSize: PiggyTextTokens.fs17,
                         fontWeight: FontWeight.w500,
                         color: colorScheme.onSurface,
                       ),
@@ -393,7 +393,7 @@ class PiggyHeader extends ConsumerWidget {
                     Text(
                       title ?? '',
                       style: TextStyle(
-                        fontSize: 17,
+                        fontSize: PiggyTextTokens.fs17,
                         fontWeight: FontWeight.w500,
                         color: colorScheme.onSurface,
                       ),
@@ -405,7 +405,7 @@ class PiggyHeader extends ConsumerWidget {
                       Text(
                         subtitle!,
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: PiggyTextTokens.fs12,
                           color: colorScheme.onSurfaceVariant,
                         ),
                         maxLines: 1,
