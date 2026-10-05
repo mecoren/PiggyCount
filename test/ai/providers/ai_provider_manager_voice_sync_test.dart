@@ -8,6 +8,14 @@ import 'package:piggycount/ai/providers/ai_provider_manager.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  // 服务商列表已迁安全存储：单测用内存实现，避免平台通道缺失。
+  setUp(() {
+    AIProviderManager.testSecureStore = {};
+  });
+  tearDown(() {
+    AIProviderManager.testSecureStore = null;
+  });
+
   group('AIProviderManager 语音设置同步', () {
     test('snapshotForSync 带上 voice_trigger_mode / voice_silence_timeout_ms',
         () async {

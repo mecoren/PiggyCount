@@ -348,8 +348,8 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
     final now = DateTime.now();
     await prefs.setString('backup_last_date', BackupScheduler.formatDate(now));
     await prefs.setString('backup_last_result', error == null ? 'ok' : 'fail');
-    await prefs.setInt('backup_auto_last_attempt_ms',
-        now.millisecondsSinceEpoch);
+    await prefs.setInt(
+        'backup_auto_last_attempt_ms', now.millisecondsSinceEpoch);
 
     if (mounted) {
       setState(() => backupBusy = false);
@@ -516,8 +516,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
       // REC-05：同日周期实例被判重跳过时必须显式提示，不允许静默丢数
       var message = l10n.restoreResultMessage(success, failed);
       if (skippedRecurring > 0) {
-        message +=
-            '\n${l10n.restoreSkippedRecurringHint(skippedRecurring)}';
+        message += '\n${l10n.restoreSkippedRecurringHint(skippedRecurring)}';
       }
       await AppDialog.info(context,
           title: l10n.restoreFromBackupTitle, message: message);
@@ -846,9 +845,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                       if (pendingDeletes != null && pendingDeletes > 0) {
                         final mark = AppLocalizations.of(context)
                             .syncPendingCloudDeletesMark(pendingDeletes);
-                        subtitle = subtitle.isEmpty
-                            ? mark
-                            : '$subtitle\n$mark';
+                        subtitle = subtitle.isEmpty ? mark : '$subtitle\n$mark';
                         icon = Icons.delete_sweep_outlined;
                       }
                     }
@@ -860,15 +857,13 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                           children: [
                             // 提示文案
                             Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: Text(
-                                  AppLocalizations.of(context).cloudSyncHint,
-                                  style: PiggyTextTokens.label(context)
-                                      .copyWith(
-                                          color: PiggyTokens.textTertiary(
-                                              context)),
-                                ),
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Text(
+                                AppLocalizations.of(context).cloudSyncHint,
+                                style: PiggyTextTokens.label(context).copyWith(
+                                    color: PiggyTokens.textTertiary(context)),
                               ),
+                            ),
                             // 同步操作 Section
                             SectionCard(
                               margin: EdgeInsets.zero,
@@ -895,8 +890,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                                 downloadBusy))
                                         ? PiggySpinner(
                                             size: 20,
-                                            color: PiggyTokens.primary(
-                                                context))
+                                            color: PiggyTokens.primary(context))
                                         : null,
                                     onTap: (isFirstLoad ||
                                             !canUseCloud ||
@@ -991,291 +985,283 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                   ),
                                   // ===== 上传/下载按钮 =====
                                   PiggyTokens.cardDivider(context),
-                                    // 上传
-                                    AppListTile(
-                                      leading: Icons.cloud_upload_outlined,
-                                      title: AppLocalizations.of(context)
-                                          .mineUploadTitle,
-                                      subtitle: isFirstLoad
-                                          ? null
-                                          : !canUseCloud
-                                              ? AppLocalizations.of(context)
-                                                  .mineUploadNeedCloudService
-                                              : notLoggedIn
-                                                  ? AppLocalizations.of(context)
-                                                      .mineUploadNeedLogin
-                                                  : uploadBusy
-                                                      ? AppLocalizations.of(
-                                                              context)
-                                                          .mineUploadInProgress
-                                                      : (refreshing
-                                                          ? AppLocalizations.of(
-                                                                  context)
-                                                              .mineUploadRefreshing
-                                                          : (inSync
-                                                              ? AppLocalizations
-                                                                      .of(context)
-                                                                  .mineUploadSynced
-                                                              : null)),
-                                      enabled: canUseCloud &&
-                                          !inSync &&
-                                          !notLoggedIn &&
-                                          !uploadBusy &&
-                                          !downloadBusy &&
-                                          !fullUploadBusy &&
-                                          !fullDownloadBusy &&
-                                          !isFirstLoad &&
-                                          !refreshing,
-                                      trailing: (uploadBusy ||
-                                              refreshing ||
-                                              (isFirstLoad && canUseCloud))
-                                          ? PiggySpinner(
-                                              size: 20,
-                                              color: PiggyTokens.primary(
-                                                  context))
-                                          : null,
-                                      onTap: () async {
-                                        setState(() => uploadBusy = true);
-                                        final l10n =
-                                            AppLocalizations.of(context);
+                                  // 上传
+                                  AppListTile(
+                                    leading: Icons.cloud_upload_outlined,
+                                    title: AppLocalizations.of(context)
+                                        .mineUploadTitle,
+                                    subtitle: isFirstLoad
+                                        ? null
+                                        : !canUseCloud
+                                            ? AppLocalizations.of(context)
+                                                .mineUploadNeedCloudService
+                                            : notLoggedIn
+                                                ? AppLocalizations.of(context)
+                                                    .mineUploadNeedLogin
+                                                : uploadBusy
+                                                    ? AppLocalizations.of(
+                                                            context)
+                                                        .mineUploadInProgress
+                                                    : (refreshing
+                                                        ? AppLocalizations.of(
+                                                                context)
+                                                            .mineUploadRefreshing
+                                                        : (inSync
+                                                            ? AppLocalizations
+                                                                    .of(context)
+                                                                .mineUploadSynced
+                                                            : null)),
+                                    enabled: canUseCloud &&
+                                        !inSync &&
+                                        !notLoggedIn &&
+                                        !uploadBusy &&
+                                        !downloadBusy &&
+                                        !fullUploadBusy &&
+                                        !fullDownloadBusy &&
+                                        !isFirstLoad &&
+                                        !refreshing,
+                                    trailing: (uploadBusy ||
+                                            refreshing ||
+                                            (isFirstLoad && canUseCloud))
+                                        ? PiggySpinner(
+                                            size: 20,
+                                            color: PiggyTokens.primary(context))
+                                        : null,
+                                    onTap: () async {
+                                      setState(() => uploadBusy = true);
+                                      final l10n = AppLocalizations.of(context);
 
-                                        // 全量上传语义：上传所有本地账本，
-                                        // 而非仅当前账本（首次同步需把全部
-                                        // 数据推上云，与帮助文案承诺一致）
-                                        final ledgers = await ref
-                                            .read(repositoryProvider)
-                                            .getAllLedgers();
-                                        if (!context.mounted) return;
-                                        final uploadingIds = ref
-                                            .read(uploadingLedgerIdsProvider);
-                                        // 标记全部账本为上传中，
-                                        // 供账本卡片显示上传状态
-                                        ref
-                                            .read(uploadingLedgerIdsProvider
-                                                .notifier)
-                                            .state = {
-                                          ...uploadingIds,
-                                          ...ledgers.map((l) => l.id),
-                                        };
+                                      // 全量上传语义：上传所有本地账本，
+                                      // 而非仅当前账本（首次同步需把全部
+                                      // 数据推上云，与帮助文案承诺一致）
+                                      final ledgers = await ref
+                                          .read(repositoryProvider)
+                                          .getAllLedgers();
+                                      if (!context.mounted) return;
+                                      final uploadingIds =
+                                          ref.read(uploadingLedgerIdsProvider);
+                                      // 标记全部账本为上传中，
+                                      // 供账本卡片显示上传状态
+                                      ref
+                                          .read(uploadingLedgerIdsProvider
+                                              .notifier)
+                                          .state = {
+                                        ...uploadingIds,
+                                        ...ledgers.map((l) => l.id),
+                                      };
 
-                                        // 进度用 ValueNotifier 驱动（模式同
-                                        // 账本管理页 _handleBatchUpload），
-                                        // 避免捕获 StatefulBuilder 的 setState
-                                        final progress = ValueNotifier<int>(0);
-                                        // 弹窗是否已弹出：异常路径下只有弹窗
-                                        // 在台前才需要 pop，否则会误关别的路由
-                                        var dialogOpen = false;
+                                      // 进度用 ValueNotifier 驱动（模式同
+                                      // 账本管理页 _handleBatchUpload），
+                                      // 避免捕获 StatefulBuilder 的 setState
+                                      final progress = ValueNotifier<int>(0);
+                                      // 弹窗是否已弹出：异常路径下只有弹窗
+                                      // 在台前才需要 pop，否则会误关别的路由
+                                      var dialogOpen = false;
 
-                                        try {
-                                          // 强制阻塞弹窗：上传期间禁止一切
-                                          // 页面操作，防止中途切账本/触发
-                                          // 并发同步与上传互相踩写
-                                          final dialogFuture = showDialog<void>(
-                                            context: context,
-                                            barrierDismissible: false,
-                                            builder: (dctx) => PopScope(
-                                              canPop: false,
-                                              child: AppDialogShell(
-                                                title:
-                                                    Text(l10n.ledgersUploadAll),
-                                                content: Column(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    PiggySpinner(
-                                                        size: 36,
-                                                        color: PiggyTokens
-                                                            .primary(context)),
-                                                    const SizedBox(height: 16),
-                                                    ValueListenableBuilder<int>(
-                                                      valueListenable: progress,
-                                                      builder: (_, done, __) =>
-                                                          Text(
-                                                        l10n.ledgersUploadingProgress(
-                                                            done,
-                                                            ledgers.length),
-                                                        textAlign:
-                                                            TextAlign.center,
-                                                      ),
+                                      try {
+                                        // 强制阻塞弹窗：上传期间禁止一切
+                                        // 页面操作，防止中途切账本/触发
+                                        // 并发同步与上传互相踩写
+                                        final dialogFuture = showDialog<void>(
+                                          context: context,
+                                          barrierDismissible: false,
+                                          builder: (dctx) => PopScope(
+                                            canPop: false,
+                                            child: AppDialogShell(
+                                              title:
+                                                  Text(l10n.ledgersUploadAll),
+                                              content: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  PiggySpinner(
+                                                      size: 36,
+                                                      color:
+                                                          PiggyTokens.primary(
+                                                              context)),
+                                                  const SizedBox(height: 16),
+                                                  ValueListenableBuilder<int>(
+                                                    valueListenable: progress,
+                                                    builder: (_, done, __) =>
+                                                        Text(
+                                                      l10n.ledgersUploadingProgress(
+                                                          done, ledgers.length),
+                                                      textAlign:
+                                                          TextAlign.center,
                                                     ),
-                                                  ],
-                                                ),
+                                                  ),
+                                                ],
                                               ),
                                             ),
-                                          );
-                                          dialogOpen = true;
-
-                                          // 串行逐账本上传：单个失败不中断
-                                          // 整批（语义对齐 uploadAllLedgers）
-                                          var success = 0;
-                                          var failed = 0;
-                                          // M7：因云端更新被拦截跳过的账本数
-                                          var conflicts = 0;
-                                          // P1-4 softFail 可见化：
-                                          // 已上云但未确认收敛的账本数
-                                          var unverified = 0;
-                                          for (final ledger in ledgers) {
-                                            try {
-                                              final r = await sync
-                                                  .uploadCurrentLedger(
-                                                      ledgerId: ledger.id);
-                                              success++;
-                                              if (!r.verified) unverified++;
-                                            } on CloudConflictException {
-                                              conflicts++;
-                                            } catch (e) {
-                                              failed++;
-                                            }
-                                            progress.value++;
-                                          }
-
-                                          // 关闭进度弹窗（成败皆关）
-                                          if (context.mounted && dialogOpen) {
-                                            Navigator.of(context,
-                                                    rootNavigator: true)
-                                                .pop();
-                                            dialogOpen = false;
-                                          }
-                                          await dialogFuture;
-                                          if (!context.mounted) return;
-
-                                          // 刷新账本列表与全部账本同步状态
-                                          ref
-                                              .read(ledgerListRefreshProvider
-                                                  .notifier)
-                                              .state++;
-                                          ref
-                                              .read(syncStatusRefreshProvider
-                                                  .notifier)
-                                              .state++;
-
-                                          await AppDialog.info(context,
-                                              title: AppLocalizations.of(context)
-                                                  .mineUploadSuccess,
-                                              message: conflicts > 0
-                                                  ? AppLocalizations.of(context)
-                                                      .ledgersUploadAllConflictSkipped(
-                                                          success, conflicts)
-                                                  : failed == 0 && unverified > 0
-                                                      ? AppLocalizations.of(
-                                                              context)
-                                                          .mineUploadUnverifiedMessage
-                                                      : failed == 0
-                                                          ? AppLocalizations.of(
-                                                                  context)
-                                                              .mineUploadSuccessMessage
-                                                          : AppLocalizations.of(
-                                                                  context)
-                                                              .ledgersUploadAllResult(
-                                                                  success,
-                                                                  failed));
-                                        } catch (e) {
-                                          // 异常路径也必须关掉进度弹窗，
-                                          // 否则它会永久挡住页面
-                                          if (context.mounted && dialogOpen) {
-                                            Navigator.of(context,
-                                                    rootNavigator: true)
-                                                .pop();
-                                            dialogOpen = false;
-                                          }
-                                          if (!context.mounted) return;
-                                          await AppDialog.info(context,
-                                              title:
-                                                  AppLocalizations.of(context)
-                                                      .commonFailed,
-                                              message: '$e');
-                                        } finally {
-                                          if (mounted) {
-                                            setState(() => uploadBusy = false);
-                                          }
-                                          // 移除本批账本的上传中标记
-                                          final ids = ref
-                                              .read(uploadingLedgerIdsProvider);
-                                          ref
-                                                  .read(
-                                                      uploadingLedgerIdsProvider
-                                                          .notifier)
-                                                  .state =
-                                              ids
-                                                  .where((id) => !ledgers
-                                                      .any((l) => l.id == id))
-                                                  .toSet();
-                                          progress.dispose();
-                                        }
-                                      },
-                                    ),
-                                    PiggyTokens.cardDivider(context),
-                                    // 下载
-                                    AppListTile(
-                                      leading: Icons.cloud_download_outlined,
-                                      title: AppLocalizations.of(context)
-                                          .mineDownloadTitle,
-                                      subtitle: isFirstLoad
-                                          ? null
-                                          : !canUseCloud
-                                              ? AppLocalizations.of(context)
-                                                  .mineDownloadNeedCloudService
-                                              : notLoggedIn
-                                                  ? AppLocalizations.of(context)
-                                                      .mineUploadNeedLogin
-                                                  : (refreshing
-                                                      ? AppLocalizations.of(
-                                                              context)
-                                                          .mineUploadRefreshing
-                                                      : (inSync
-                                                          ? AppLocalizations.of(
-                                                                  context)
-                                                              .mineUploadSynced
-                                                          : null)),
-                                      enabled: canUseCloud &&
-                                          !inSync &&
-                                          !notLoggedIn &&
-                                          !downloadBusy &&
-                                          !isFirstLoad &&
-                                          !refreshing &&
-                                          !uploadBusy &&
-                                          !fullUploadBusy &&
-                                          !fullDownloadBusy,
-                                      trailing: (downloadBusy ||
-                                              refreshing ||
-                                              (isFirstLoad && canUseCloud))
-                                          ? PiggySpinner(
-                                              size: 20,
-                                              color: PiggyTokens.primary(
-                                                  context))
-                                          : null,
-                                      onTap: () async {
-                                        setState(() => downloadBusy = true);
-                                        final l10n =
-                                            AppLocalizations.of(context);
-                                        // 强制阻塞弹窗：整个下载同步期间
-                                        //（含逐账本网络调用）禁止底层页面操作，
-                                        // 防止中途切账本/触发并发上传互相踩写；
-                                        // 确认/diff 预览等交互弹窗叠在其上
-                                        // 仍可正常操作
-                                        final block =
-                                            showBlockingProgressDialog(
-                                          context,
-                                          title: l10n.syncBlockingDownloadTitle,
-                                          initialStatus:
-                                              l10n.syncBlockingCheckCloud,
+                                          ),
                                         );
-                                        var totalInserted = 0;
-                                        var aborted = false;
-                                        // S1 守卫命中（S1 静默跳过回传的账本数）
-                                        // —— 必须记下来在结果弹窗里告知，否则
-                                        // 用户只看到"已应用 N 项"，不知道那些
-                                        // 没勾的删除本轮没生效。
-                                        var skippedPublishCount = 0;
-                                        Object? error;
-                                        try {
-                                          // 尝试使用 diff 预览模式
-                                          final syncManager =
-                                              sync is TransactionsSyncManager
-                                                  ? sync
-                                                  : null;
+                                        dialogOpen = true;
 
-                                          if (syncManager != null) {
+                                        // 串行逐账本上传：单个失败不中断
+                                        // 整批（语义对齐 uploadAllLedgers）
+                                        var success = 0;
+                                        var failed = 0;
+                                        // M7：因云端更新被拦截跳过的账本数
+                                        var conflicts = 0;
+                                        // P1-4 softFail 可见化：
+                                        // 已上云但未确认收敛的账本数
+                                        var unverified = 0;
+                                        for (final ledger in ledgers) {
+                                          try {
+                                            final r =
+                                                await sync.uploadCurrentLedger(
+                                                    ledgerId: ledger.id);
+                                            success++;
+                                            if (!r.verified) unverified++;
+                                          } on CloudConflictException {
+                                            conflicts++;
+                                          } catch (e) {
+                                            failed++;
+                                          }
+                                          progress.value++;
+                                        }
+
+                                        // 关闭进度弹窗（成败皆关）
+                                        if (context.mounted && dialogOpen) {
+                                          Navigator.of(context,
+                                                  rootNavigator: true)
+                                              .pop();
+                                          dialogOpen = false;
+                                        }
+                                        await dialogFuture;
+                                        if (!context.mounted) return;
+
+                                        // 刷新账本列表与全部账本同步状态
+                                        ref
+                                            .read(ledgerListRefreshProvider
+                                                .notifier)
+                                            .state++;
+                                        ref
+                                            .read(syncStatusRefreshProvider
+                                                .notifier)
+                                            .state++;
+
+                                        await AppDialog.info(context,
+                                            title: AppLocalizations.of(context)
+                                                .mineUploadSuccess,
+                                            message: conflicts > 0
+                                                ? AppLocalizations.of(context)
+                                                    .ledgersUploadAllConflictSkipped(
+                                                        success, conflicts)
+                                                : failed == 0 && unverified > 0
+                                                    ? AppLocalizations.of(
+                                                            context)
+                                                        .mineUploadUnverifiedMessage
+                                                    : failed == 0
+                                                        ? AppLocalizations.of(
+                                                                context)
+                                                            .mineUploadSuccessMessage
+                                                        : AppLocalizations.of(
+                                                                context)
+                                                            .ledgersUploadAllResult(
+                                                                success,
+                                                                failed));
+                                      } catch (e) {
+                                        // 异常路径也必须关掉进度弹窗，
+                                        // 否则它会永久挡住页面
+                                        if (context.mounted && dialogOpen) {
+                                          Navigator.of(context,
+                                                  rootNavigator: true)
+                                              .pop();
+                                          dialogOpen = false;
+                                        }
+                                        if (!context.mounted) return;
+                                        await AppDialog.info(context,
+                                            title: AppLocalizations.of(context)
+                                                .commonFailed,
+                                            message: '$e');
+                                      } finally {
+                                        if (mounted) {
+                                          setState(() => uploadBusy = false);
+                                        }
+                                        // 移除本批账本的上传中标记
+                                        final ids = ref
+                                            .read(uploadingLedgerIdsProvider);
+                                        ref
+                                                .read(uploadingLedgerIdsProvider
+                                                    .notifier)
+                                                .state =
+                                            ids
+                                                .where((id) => !ledgers
+                                                    .any((l) => l.id == id))
+                                                .toSet();
+                                        progress.dispose();
+                                      }
+                                    },
+                                  ),
+                                  PiggyTokens.cardDivider(context),
+                                  // 下载
+                                  AppListTile(
+                                    leading: Icons.cloud_download_outlined,
+                                    title: AppLocalizations.of(context)
+                                        .mineDownloadTitle,
+                                    subtitle: isFirstLoad
+                                        ? null
+                                        : !canUseCloud
+                                            ? AppLocalizations.of(context)
+                                                .mineDownloadNeedCloudService
+                                            : notLoggedIn
+                                                ? AppLocalizations.of(context)
+                                                    .mineUploadNeedLogin
+                                                : (refreshing
+                                                    ? AppLocalizations.of(
+                                                            context)
+                                                        .mineUploadRefreshing
+                                                    : (inSync
+                                                        ? AppLocalizations.of(
+                                                                context)
+                                                            .mineUploadSynced
+                                                        : null)),
+                                    enabled: canUseCloud &&
+                                        !inSync &&
+                                        !notLoggedIn &&
+                                        !downloadBusy &&
+                                        !isFirstLoad &&
+                                        !refreshing &&
+                                        !uploadBusy &&
+                                        !fullUploadBusy &&
+                                        !fullDownloadBusy,
+                                    trailing: (downloadBusy ||
+                                            refreshing ||
+                                            (isFirstLoad && canUseCloud))
+                                        ? PiggySpinner(
+                                            size: 20,
+                                            color: PiggyTokens.primary(context))
+                                        : null,
+                                    onTap: () async {
+                                      setState(() => downloadBusy = true);
+                                      final l10n = AppLocalizations.of(context);
+                                      // 强制阻塞弹窗：整个下载同步期间
+                                      //（含逐账本网络调用）禁止底层页面操作，
+                                      // 防止中途切账本/触发并发上传互相踩写；
+                                      // 确认/diff 预览等交互弹窗叠在其上
+                                      // 仍可正常操作
+                                      final block = showBlockingProgressDialog(
+                                        context,
+                                        title: l10n.syncBlockingDownloadTitle,
+                                        initialStatus:
+                                            l10n.syncBlockingCheckCloud,
+                                      );
+                                      var totalInserted = 0;
+                                      var aborted = false;
+                                      // S1 守卫命中（S1 静默跳过回传的账本数）
+                                      // —— 必须记下来在结果弹窗里告知，否则
+                                      // 用户只看到"已应用 N 项"，不知道那些
+                                      // 没勾的删除本轮没生效。
+                                      var skippedPublishCount = 0;
+                                      Object? error;
+                                      try {
+                                        // 尝试使用 diff 预览模式
+                                        final syncManager =
+                                            sync is TransactionsSyncManager
+                                                ? sync
+                                                : null;
+
+                                        if (syncManager != null) {
                                           // 1) 云端账本发现：新设备上云端有、
                                           // 本地没有对应账本行的文件，不先导入
                                           // 的话逐账本合并永远覆盖不到它们
@@ -1289,505 +1275,494 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                             if (metas.isNotEmpty &&
                                                 context.mounted) {
                                               final confirmed =
-                                                  await AppDialog.confirm<
-                                                          bool>(
-                                                          context,
-                                                          title: l10n
-                                                              .startupSyncNewLedgersTitle,
-                                                          message: StartupSyncChecker
-                                                              .newLedgersDialogMessage(
-                                                                  l10n, metas,
-                                                                  backend:
-                                                                      _backendIdentitySummary(
-                                                                          ref,
-                                                                          l10n)),
-                                                          okLabel: l10n
-                                                              .startupSyncNewLedgersOk,
-                                                          cancelLabel: l10n
-                                                              .startupSyncNewLedgersCancel,
-                                                        ) ??
-                                                        false;
-                                                if (confirmed) {
-                                                  for (final meta in metas) {
-                                                    try {
-                                                      await syncManager
-                                                          .importRemoteLedger(
-                                                              meta);
-                                                    } catch (_) {
-                                                      // 单个账本导入失败不中断其余账本
-                                                    }
+                                                  await AppDialog.confirm<bool>(
+                                                        context,
+                                                        title: l10n
+                                                            .startupSyncNewLedgersTitle,
+                                                        message: StartupSyncChecker
+                                                            .newLedgersDialogMessage(
+                                                                l10n, metas,
+                                                                backend:
+                                                                    _backendIdentitySummary(
+                                                                        ref,
+                                                                        l10n)),
+                                                        okLabel: l10n
+                                                            .startupSyncNewLedgersOk,
+                                                        cancelLabel: l10n
+                                                            .startupSyncNewLedgersCancel,
+                                                      ) ??
+                                                      false;
+                                              if (confirmed) {
+                                                for (final meta in metas) {
+                                                  try {
+                                                    await syncManager
+                                                        .importRemoteLedger(
+                                                            meta);
+                                                  } catch (_) {
+                                                    // 单个账本导入失败不中断其余账本
                                                   }
                                                 }
                                               }
-                                            } catch (_) {
-                                              // 发现失败降级：
-                                              // 不影响本地账本的逐账本合并
                                             }
+                                          } catch (_) {
+                                            // 发现失败降级：
+                                            // 不影响本地账本的逐账本合并
+                                          }
 
-                                            // 2) 遍历所有本地账本逐个预览合并
-                                            //（新导入账本与云端一致，preview
-                                            // 为空会自动跳过）
-                                            final ledgers = await ref
-                                                .read(repositoryProvider)
-                                                .getAllLedgers();
-                                            // 加密恢复只尝试一次：salt 问题是
-                                            // 全局的，激活失败后继续逐账本走
-                                            // 只会重复弹同样的错误
-                                            var recoveryAttempted = false;
+                                          // 2) 遍历所有本地账本逐个预览合并
+                                          //（新导入账本与云端一致，preview
+                                          // 为空会自动跳过）
+                                          final ledgers = await ref
+                                              .read(repositoryProvider)
+                                              .getAllLedgers();
+                                          // 加密恢复只尝试一次：salt 问题是
+                                          // 全局的，激活失败后继续逐账本走
+                                          // 只会重复弹同样的错误
+                                          var recoveryAttempted = false;
 
-                                            var ledgerIndex = 0;
-                                            // 两阶段（sync_convergence_fix）：
-                                            // 先逐账本合并，全部完成后统一回传。
-                                            // 账户/分类/标签是用户全局数据，
-                                            // 交错「合并→回传」会让先回传账本
-                                            // 的云端快照被后续合并引入的全局
-                                            // 数据失效，指纹一轮无法收敛
-                                            final mergedLedgerIds = <int>[];
-                                            // S1 守卫（手动入口版）：用户未勾选
-                                            // 的云端删除（交易行 / 账户·分类·
-                                            // 标签·预算·周期规则·汇率覆盖等实体）
-                                            // 本轮不生效，若照常 force 回传会把
-                                            // 残留推回云端 → 删除被"复活"并传播
-                                            // 到所有设备。与启动检查同判据。
-                                            final skipPublishLedgerIds = <int>{};
-                                            for (final ledger in ledgers) {
-                                              ledgerIndex++;
-                                              block.status.value = l10n
-                                                  .syncBlockingDownloadLedger(
-                                                      ledgerIndex,
-                                                      ledgers.length);
-                                              try {
-                                                // 指纹已一致的账本直接跳过:
-                                                // 数据无变化时免去逐账本全量
-                                                // JSON 下载(下载慢的主因),
-                                                // 状态检查(HEAD 级)代价远低
-                                                // 于全量下载+diff
-                                                final st =
-                                                    await syncManager.getStatus(
-                                                        ledgerId: ledger.id);
-                                                if (st.diff ==
-                                                    SyncDiff.inSync) {
-                                                  continue;
-                                                }
-                                                final previewResult =
-                                                    await syncManager
-                                                        .downloadAndPreview(
-                                                  ledgerId: ledger.id,
-                                                );
+                                          var ledgerIndex = 0;
+                                          // 两阶段（sync_convergence_fix）：
+                                          // 先逐账本合并，全部完成后统一回传。
+                                          // 账户/分类/标签是用户全局数据，
+                                          // 交错「合并→回传」会让先回传账本
+                                          // 的云端快照被后续合并引入的全局
+                                          // 数据失效，指纹一轮无法收敛
+                                          final mergedLedgerIds = <int>[];
+                                          // S1 守卫（手动入口版）：用户未勾选
+                                          // 的云端删除（交易行 / 账户·分类·
+                                          // 标签·预算·周期规则·汇率覆盖等实体）
+                                          // 本轮不生效，若照常 force 回传会把
+                                          // 残留推回云端 → 删除被"复活"并传播
+                                          // 到所有设备。与启动检查同判据。
+                                          final skipPublishLedgerIds = <int>{};
+                                          for (final ledger in ledgers) {
+                                            ledgerIndex++;
+                                            block.status.value =
+                                                l10n.syncBlockingDownloadLedger(
+                                                    ledgerIndex,
+                                                    ledgers.length);
+                                            try {
+                                              // 指纹已一致的账本直接跳过:
+                                              // 数据无变化时免去逐账本全量
+                                              // JSON 下载(下载慢的主因),
+                                              // 状态检查(HEAD 级)代价远低
+                                              // 于全量下载+diff
+                                              final st =
+                                                  await syncManager.getStatus(
+                                                      ledgerId: ledger.id);
+                                              if (st.diff == SyncDiff.inSync) {
+                                                continue;
+                                              }
+                                              final previewResult =
+                                                  await syncManager
+                                                      .downloadAndPreview(
+                                                ledgerId: ledger.id,
+                                              );
 
-                                                if (!context.mounted) return;
-                                                // 云端无数据，跳过
-                                                if (previewResult == null) {
-                                                  continue;
-                                                }
+                                              if (!context.mounted) return;
+                                              // 云端无数据，跳过
+                                              if (previewResult == null) {
+                                                continue;
+                                              }
 
-                                                if (previewResult.preview !=
-                                                    null) {
-                                                  // v6+ 格式，diff 预览
-                                                  final preview =
-                                                      previewResult.preview!;
-                                                  if (preview.isEmpty) {
-                                                    // 交易无 diff 时仍要合并
-                                                    // 云端账户/分类/标签元数据:
-                                                    // 纯账户变更场景下这是账户
-                                                    // 落地的唯一入口(静默合并,
-                                                    // 不弹框——元数据 upsert
-                                                    // 无破坏性,无需用户确认)
-                                                    block.status.value = l10n
-                                                        .syncBlockingApplying;
-                                                    await syncManager
-                                                        .applyPreviewChanges(
-                                                      ledgerId: ledger.id,
-                                                      selectedChanges: const [],
-                                                      importData: previewResult
-                                                          .importData,
-                                                    );
-                                                    // merge-then-publish:
-                                                    // 只记录待回传,循环结束
-                                                    // 后统一上传收敛云端指纹
-                                                    mergedLedgerIds
-                                                        .add(ledger.id);
-                                                    continue;
-                                                  }
-                                                  final selected =
-                                                      await showSyncPreviewDialog(
-                                                    context,
-                                                    preview: preview,
-                                                    primaryColor: ref.read(
-                                                        primaryColorProvider),
-                                                  );
-
-                                                  if (selected == null ||
-                                                      selected.isEmpty) {
-                                                    continue;
-                                                  }
-                                                  if (StartupSyncChecker
-                                                      .shouldSkipMergePublish(
-                                                    previewExists: true,
-                                                    unselectedDeletedCount:
-                                                        StartupSyncChecker
-                                                            .unselectedDeletedCount(
-                                                      preview,
-                                                    ),
-                                                  )) {
-                                                    skipPublishLedgerIds
-                                                        .add(ledger.id);
-                                                  }
+                                              if (previewResult.preview !=
+                                                  null) {
+                                                // v6+ 格式，diff 预览
+                                                final preview =
+                                                    previewResult.preview!;
+                                                if (preview.isEmpty) {
+                                                  // 交易无 diff 时仍要合并
+                                                  // 云端账户/分类/标签元数据:
+                                                  // 纯账户变更场景下这是账户
+                                                  // 落地的唯一入口(静默合并,
+                                                  // 不弹框——元数据 upsert
+                                                  // 无破坏性,无需用户确认)
                                                   block.status.value =
                                                       l10n.syncBlockingApplying;
-                                                  final result =
-                                                      await syncManager
-                                                          .applyPreviewChanges(
+                                                  await syncManager
+                                                      .applyPreviewChanges(
                                                     ledgerId: ledger.id,
-                                                    selectedChanges: selected,
+                                                    selectedChanges: const [],
                                                     importData: previewResult
                                                         .importData,
                                                   );
-                                                  totalInserted +=
-                                                      result.totalCount;
                                                   // merge-then-publish:
-                                                  // 交易合并同样只记录待回传
+                                                  // 只记录待回传,循环结束
+                                                  // 后统一上传收敛云端指纹
                                                   mergedLedgerIds
                                                       .add(ledger.id);
-                                                } else {
-                                                  // 旧格式（v5 及以下），
-                                                  // 全量替换（逐账本确认）
-                                                  final confirmed =
-                                                      await AppDialog.confirm<
-                                                              bool>(
-                                                            context,
-                                                            title: l10n
-                                                                .syncPreviewOldFormat,
-                                                            message: l10n
-                                                                .syncPreviewOldFormatMessage,
-                                                          ) ??
-                                                          false;
+                                                  continue;
+                                                }
+                                                final selected =
+                                                    await showSyncPreviewDialog(
+                                                  context,
+                                                  preview: preview,
+                                                  primaryColor: ref.read(
+                                                      primaryColorProvider),
+                                                );
 
-                                                  if (confirmed &&
-                                                      context.mounted) {
-                                                    final res = await sync
-                                                        .downloadAndRestoreToCurrentLedger(
-                                                            ledgerId:
-                                                                ledger.id);
-                                                    totalInserted +=
-                                                        res.inserted;
-                                                    // 全量替换同样是合并,
-                                                    // 需要回传收敛指纹
-                                                    mergedLedgerIds
-                                                        .add(ledger.id);
-                                                  }
+                                                if (selected == null ||
+                                                    selected.isEmpty) {
+                                                  continue;
                                                 }
-                                              } on SaltMismatchException {
-                                                // salt 不匹配：弹密码对话框引导
-                                                // 用户重新输入密码，激活成功后
-                                                // 可再次点击下载重试当前账本
-                                                if (recoveryAttempted) {
-                                                  aborted = true;
-                                                  break;
+                                                if (StartupSyncChecker
+                                                    .shouldSkipMergePublish(
+                                                  previewExists: true,
+                                                  unselectedDeletedCount:
+                                                      StartupSyncChecker
+                                                          .unselectedDeletedCount(
+                                                    preview,
+                                                  ),
+                                                )) {
+                                                  skipPublishLedgerIds
+                                                      .add(ledger.id);
                                                 }
-                                                recoveryAttempted = true;
-                                                if (context.mounted) {
-                                                  await _handleEncryptionRecovery(
-                                                    ledgerId: ledger.id,
-                                                  );
-                                                }
-                                              } on CloudEncryptedLocallyDisabledException {
-                                                // BUG-2 残留：云端为密文但本地
-                                                // 未开启加密，同样走密钥恢复流程
-                                                if (recoveryAttempted) {
-                                                  aborted = true;
-                                                  break;
-                                                }
-                                                recoveryAttempted = true;
-                                                if (context.mounted) {
-                                                  await _handleEncryptionRecovery(
-                                                    ledgerId: ledger.id,
-                                                  );
-                                                }
-                                              } catch (_) {
-                                                // 单个账本失败不中断其余账本
-                                              }
-                                            }
+                                                block.status.value =
+                                                    l10n.syncBlockingApplying;
+                                                final result = await syncManager
+                                                    .applyPreviewChanges(
+                                                  ledgerId: ledger.id,
+                                                  selectedChanges: selected,
+                                                  importData:
+                                                      previewResult.importData,
+                                                );
+                                                totalInserted +=
+                                                    result.totalCount;
+                                                // merge-then-publish:
+                                                // 交易合并同样只记录待回传
+                                                mergedLedgerIds.add(ledger.id);
+                                              } else {
+                                                // 旧格式（v5 及以下），
+                                                // 全量替换（逐账本确认）
+                                                final confirmed =
+                                                    await AppDialog.confirm<
+                                                            bool>(
+                                                          context,
+                                                          title: l10n
+                                                              .syncPreviewOldFormat,
+                                                          message: l10n
+                                                              .syncPreviewOldFormatMessage,
+                                                        ) ??
+                                                        false;
 
-                                            // ---------- 阶段 2：统一回传 ----------
-                                            // 此时用户全局数据已是最终态，
-                                            // 每个回传快照包含同一份全局数据，
-                                            // 云端指纹一轮收敛；只合并不回传
-                                            // 时下次启动仍会判 cloudNewer
-                                            // 反复弹「云端有更新」
-                                            for (final ledgerId
-                                                in mergedLedgerIds) {
-                                              if (skipPublishLedgerIds
-                                                  .contains(ledgerId)) {
-                                                // S1 守卫：本轮存在用户未勾选
-                                                // 的云端删除，跳过回传以防删除
-                                                // 复活（下次同步会再次提示）
-                                                skippedPublishCount++;
-                                                continue;
+                                                if (confirmed &&
+                                                    context.mounted) {
+                                                  final res = await sync
+                                                      .downloadAndRestoreToCurrentLedger(
+                                                          ledgerId: ledger.id);
+                                                  totalInserted += res.inserted;
+                                                  // 全量替换同样是合并,
+                                                  // 需要回传收敛指纹
+                                                  mergedLedgerIds
+                                                      .add(ledger.id);
+                                                }
                                               }
-                                              block.status.value =
-                                                  l10n.syncBlockingApplying;
-                                               try {
-                                                 // M7：一键应用是「以云端为准
-                                                 // 合并后回传」，用户已确认合并，
-                                                 // force 跳过冲突拦截以免打断
-                                                 // 指纹收敛循环
-                                                 await syncManager
-                                                     .uploadCurrentLedger(
-                                                   ledgerId: ledgerId,
-                                                   force: true,
-                                                 );
-                                               } catch (_) {
-                                                // 回传失败不中断其余账本:
-                                                // 下次启动会再次提醒,可重试
+                                            } on SaltMismatchException {
+                                              // salt 不匹配：弹密码对话框引导
+                                              // 用户重新输入密码，激活成功后
+                                              // 可再次点击下载重试当前账本
+                                              if (recoveryAttempted) {
+                                                aborted = true;
+                                                break;
                                               }
+                                              recoveryAttempted = true;
+                                              if (context.mounted) {
+                                                await _handleEncryptionRecovery(
+                                                  ledgerId: ledger.id,
+                                                );
+                                              }
+                                            } on CloudEncryptedLocallyDisabledException {
+                                              // BUG-2 残留：云端为密文但本地
+                                              // 未开启加密，同样走密钥恢复流程
+                                              if (recoveryAttempted) {
+                                                aborted = true;
+                                                break;
+                                              }
+                                              recoveryAttempted = true;
+                                              if (context.mounted) {
+                                                await _handleEncryptionRecovery(
+                                                  ledgerId: ledger.id,
+                                                );
+                                              }
+                                            } catch (_) {
+                                              // 单个账本失败不中断其余账本
                                             }
-                                          } else {
-                                            // 非 TransactionsSyncManager：
-                                            // 遍历所有账本走全量恢复
-                                            final ledgers = await ref
-                                                .read(repositoryProvider)
-                                                .getAllLedgers();
-                                            var inserted = 0;
-                                            var ledgerIndex = 0;
-                                            for (final ledger in ledgers) {
-                                              ledgerIndex++;
-                                              block.status.value = l10n
-                                                  .syncBlockingDownloadLedger(
-                                                      ledgerIndex,
-                                                      ledgers.length);
-                                              try {
-                                                final res = await sync
-                                                    .downloadAndRestoreToCurrentLedger(
-                                                        ledgerId: ledger.id);
-                                                inserted += res.inserted;
-                                              } catch (_) {
-                                                // 单个账本失败不中断其余账本
-                                              }
-                                            }
-                                            totalInserted = inserted;
                                           }
-                                        } catch (e) {
-                                          error = e;
-                                          logger.warning('CloudSyncPage',
-                                              '云端下载失败: $e');
-                                        } finally {
-                                          // 先关阻塞弹窗再展示结果：
-                                          // 错误/结果弹窗若在阻塞弹窗存活时
-                                          // 弹出且未被 await 完，close() 的
-                                          // pop 会误关顶层弹窗
-                                          await block.close();
-                                          if (mounted) {
-                                            setState(
-                                                () => downloadBusy = false);
+
+                                          // ---------- 阶段 2：统一回传 ----------
+                                          // 此时用户全局数据已是最终态，
+                                          // 每个回传快照包含同一份全局数据，
+                                          // 云端指纹一轮收敛；只合并不回传
+                                          // 时下次启动仍会判 cloudNewer
+                                          // 反复弹「云端有更新」
+                                          for (final ledgerId
+                                              in mergedLedgerIds) {
+                                            if (skipPublishLedgerIds
+                                                .contains(ledgerId)) {
+                                              // S1 守卫：本轮存在用户未勾选
+                                              // 的云端删除，跳过回传以防删除
+                                              // 复活（下次同步会再次提示）
+                                              skippedPublishCount++;
+                                              continue;
+                                            }
+                                            block.status.value =
+                                                l10n.syncBlockingApplying;
+                                            try {
+                                              // M7：一键应用是「以云端为准
+                                              // 合并后回传」，用户已确认合并，
+                                              // force 跳过冲突拦截以免打断
+                                              // 指纹收敛循环
+                                              await syncManager
+                                                  .uploadCurrentLedger(
+                                                ledgerId: ledgerId,
+                                                force: true,
+                                              );
+                                            } catch (_) {
+                                              // 回传失败不中断其余账本:
+                                              // 下次启动会再次提醒,可重试
+                                            }
                                           }
-                                        }
-
-                                        if (!mounted) return;
-                                        // 刷新列表与全部账本同步状态
-                                        PostProcessor.runAfterDownload(ref);
-                                        ref
-                                            .read(ledgerListRefreshProvider
-                                                .notifier)
-                                            .state++;
-                                        ref
-                                            .read(syncStatusRefreshProvider
-                                                .notifier)
-                                            .state++;
-                                        if (!context.mounted) return;
-
-                                        if (error != null) {
-                                          // 走统一分类文案；原始异常已写日志，
-                                          // 不再把英文异常串直接怼到用户脸上
-                                          final l10n = AppLocalizations.of(
-                                              context);
-                                          await AppDialog.error(context,
-                                              title: l10n.commonFailed,
-                                              message: _syncErrorMessage(
-                                                  l10n, error));
-                                        } else if (aborted) {
-                                          // 密钥激活未成功：明确告知同步
-                                          // 未恢复，避免用户误以为已完成
-                                          await AppDialog.error(context,
-                                              title: l10n.commonFailed,
-                                              message: l10n
-                                                  .startupSyncRecoveryFailedHint);
                                         } else {
-                                          await AppDialog.info(
-                                            context,
-                                            title: l10n.mineDownloadComplete,
-                                            message: skippedPublishCount > 0
-                                                ? '${l10n.mineDownloadResult(totalInserted)}\n\n${l10n.syncSkippedPublishUnselectedDelete(skippedPublishCount)}'
-                                                : l10n.mineDownloadResult(
-                                                    totalInserted),
-                                          );
-                                        }
-                                      },
-                                    ),
-                                    // 登录/登出 (仅 Supabase 需要，其他云服务使用配置文件认证)
-                                    if (!isLocalMode &&
-                                        cloudConfig.value!.type ==
-                                            CloudBackendType.supabase)
-                                      Consumer(builder: (ctx, r, _) {
-                                        final userNow = user;
-                                        final cloudConfig =
-                                            r.watch(activeCloudConfigProvider);
-
-                                        // 根据云服务类型显示不同的用户信息
-                                        String getUserDisplayName() {
-                                          if (userNow == null) {
-                                            return AppLocalizations.of(context)
-                                                .mineLoginTitle;
+                                          // 非 TransactionsSyncManager：
+                                          // 遍历所有账本走全量恢复
+                                          final ledgers = await ref
+                                              .read(repositoryProvider)
+                                              .getAllLedgers();
+                                          var inserted = 0;
+                                          var ledgerIndex = 0;
+                                          for (final ledger in ledgers) {
+                                            ledgerIndex++;
+                                            block.status.value =
+                                                l10n.syncBlockingDownloadLedger(
+                                                    ledgerIndex,
+                                                    ledgers.length);
+                                            try {
+                                              final res = await sync
+                                                  .downloadAndRestoreToCurrentLedger(
+                                                      ledgerId: ledger.id);
+                                              inserted += res.inserted;
+                                            } catch (_) {
+                                              // 单个账本失败不中断其余账本
+                                            }
                                           }
+                                          totalInserted = inserted;
+                                        }
+                                      } catch (e) {
+                                        error = e;
+                                        logger.warning(
+                                            'CloudSyncPage', '云端下载失败: $e');
+                                      } finally {
+                                        // 先关阻塞弹窗再展示结果：
+                                        // 错误/结果弹窗若在阻塞弹窗存活时
+                                        // 弹出且未被 await 完，close() 的
+                                        // pop 会误关顶层弹窗
+                                        await block.close();
+                                        if (mounted) {
+                                          setState(() => downloadBusy = false);
+                                        }
+                                      }
 
-                                          if (cloudConfig.hasValue &&
-                                              cloudConfig.value!.type ==
-                                                  CloudBackendType.webdav) {
-                                            // WebDAV: 显示用户名（去掉 @webdav 后缀）
-                                            return userNow.id;
-                                          } else {
-                                            // Supabase: 显示邮箱
-                                            return userNow.email ??
-                                                AppLocalizations.of(context)
-                                                    .mineLoggedInEmail;
-                                          }
+                                      if (!mounted) return;
+                                      // 刷新列表与全部账本同步状态
+                                      PostProcessor.runAfterDownload(ref);
+                                      ref
+                                          .read(ledgerListRefreshProvider
+                                              .notifier)
+                                          .state++;
+                                      ref
+                                          .read(syncStatusRefreshProvider
+                                              .notifier)
+                                          .state++;
+                                      if (!context.mounted) return;
+
+                                      if (error != null) {
+                                        // 走统一分类文案；原始异常已写日志，
+                                        // 不再把英文异常串直接怼到用户脸上
+                                        final l10n =
+                                            AppLocalizations.of(context);
+                                        await AppDialog.error(context,
+                                            title: l10n.commonFailed,
+                                            message:
+                                                _syncErrorMessage(l10n, error));
+                                      } else if (aborted) {
+                                        // 密钥激活未成功：明确告知同步
+                                        // 未恢复，避免用户误以为已完成
+                                        await AppDialog.error(context,
+                                            title: l10n.commonFailed,
+                                            message: l10n
+                                                .startupSyncRecoveryFailedHint);
+                                      } else {
+                                        await AppDialog.info(
+                                          context,
+                                          title: l10n.mineDownloadComplete,
+                                          message: skippedPublishCount > 0
+                                              ? '${l10n.mineDownloadResult(totalInserted)}\n\n${l10n.syncSkippedPublishUnselectedDelete(skippedPublishCount)}'
+                                              : l10n.mineDownloadResult(
+                                                  totalInserted),
+                                        );
+                                      }
+                                    },
+                                  ),
+                                  // 登录/登出 (仅 Supabase 需要，其他云服务使用配置文件认证)
+                                  if (!isLocalMode &&
+                                      cloudConfig.value!.type ==
+                                          CloudBackendType.supabase)
+                                    Consumer(builder: (ctx, r, _) {
+                                      final userNow = user;
+                                      final cloudConfig =
+                                          r.watch(activeCloudConfigProvider);
+
+                                      // 根据云服务类型显示不同的用户信息
+                                      String getUserDisplayName() {
+                                        if (userNow == null) {
+                                          return AppLocalizations.of(context)
+                                              .mineLoginTitle;
                                         }
 
-                                        return Column(
-                                          children: [
-                                            PiggyTokens.cardDivider(context),
-                                            AppListTile(
-                                              leading: userNow == null
-                                                  ? Icons.login
-                                                  : Icons
-                                                      .verified_user_outlined,
-                                              title: getUserDisplayName(),
-                                              subtitle: userNow == null
-                                                  ? AppLocalizations.of(context)
-                                                      .mineLoginSubtitle
-                                                  : AppLocalizations.of(context)
-                                                      .mineLogoutSubtitle,
-                                              onTap: () async {
-                                                // 提前缓存 l10n，避免 async gap 后 context 失效
-                                                final l10n =
-                                                    AppLocalizations.of(
-                                                        context);
-                                                if (userNow == null) {
-                                                  await Navigator.of(context)
-                                                      .push(MaterialPageRoute(
-                                                          builder: (_) =>
-                                                              const LoginPage()));
-                                                  if (!mounted) return;
-                                                  // 作废用户 Future 记忆化，
-                                                  // 让登录行立即反映新会话
-                                                  setState(
-                                                      _invalidateCurrentUserFuture);
-                                                  ref
-                                                      .read(
-                                                          syncStatusRefreshProvider
-                                                              .notifier)
-                                                      .state++;
-                                                  ref
-                                                      .read(statsRefreshProvider
-                                                          .notifier)
-                                                      .state++;
-                                                } else {
-                                                  final confirmed =
-                                                      await AppDialog.confirm<
-                                                              bool>(
-                                                            context,
-                                                            title: l10n
-                                                                .mineLogoutConfirmTitle,
-                                                            message: l10n
-                                                                .mineLogoutConfirmMessage,
-                                                            okLabel: l10n
-                                                                .mineLogoutButton,
-                                                            cancelLabel: l10n
-                                                                .commonCancel,
-                                                          ) ??
-                                                          false;
+                                        if (cloudConfig.hasValue &&
+                                            cloudConfig.value!.type ==
+                                                CloudBackendType.webdav) {
+                                          // WebDAV: 显示用户名（去掉 @webdav 后缀）
+                                          return userNow.id;
+                                        } else {
+                                          // Supabase: 显示邮箱
+                                          return userNow.email ??
+                                              AppLocalizations.of(context)
+                                                  .mineLoggedInEmail;
+                                        }
+                                      }
 
-                                                  if (confirmed) {
-                                                    try {
-                                                      final authService =
-                                                          await ref.read(
-                                                              authServiceProvider
-                                                                  .future);
-                                                      await authService
-                                                          .signOut();
+                                      return Column(
+                                        children: [
+                                          PiggyTokens.cardDivider(context),
+                                          AppListTile(
+                                            leading: userNow == null
+                                                ? Icons.login
+                                                : Icons.verified_user_outlined,
+                                            title: getUserDisplayName(),
+                                            subtitle: userNow == null
+                                                ? AppLocalizations.of(context)
+                                                    .mineLoginSubtitle
+                                                : AppLocalizations.of(context)
+                                                    .mineLogoutSubtitle,
+                                            onTap: () async {
+                                              // 提前缓存 l10n，避免 async gap 后 context 失效
+                                              final l10n =
+                                                  AppLocalizations.of(context);
+                                              if (userNow == null) {
+                                                await Navigator.of(context)
+                                                    .push(MaterialPageRoute(
+                                                        builder: (_) =>
+                                                            const LoginPage()));
+                                                if (!mounted) return;
+                                                // 作废用户 Future 记忆化，
+                                                // 让登录行立即反映新会话
+                                                setState(
+                                                    _invalidateCurrentUserFuture);
+                                                ref
+                                                    .read(
+                                                        syncStatusRefreshProvider
+                                                            .notifier)
+                                                    .state++;
+                                                ref
+                                                    .read(statsRefreshProvider
+                                                        .notifier)
+                                                    .state++;
+                                              } else {
+                                                final confirmed =
+                                                    await AppDialog.confirm<
+                                                            bool>(
+                                                          context,
+                                                          title: l10n
+                                                              .mineLogoutConfirmTitle,
+                                                          message: l10n
+                                                              .mineLogoutConfirmMessage,
+                                                          okLabel: l10n
+                                                              .mineLogoutButton,
+                                                          cancelLabel:
+                                                              l10n.commonCancel,
+                                                        ) ??
+                                                        false;
 
-                                                      // 刷新认证服务和同步服务以触发状态更新
-                                                      if (!mounted) return;
-                                                      ref.invalidate(
-                                                          authServiceProvider);
-                                                      ref.invalidate(
-                                                          syncServiceProvider);
+                                                if (confirmed) {
+                                                  try {
+                                                    final authService =
+                                                        await ref.read(
+                                                            authServiceProvider
+                                                                .future);
+                                                    await authService.signOut();
 
-                                                      ref
-                                                          .read(
-                                                              syncStatusRefreshProvider
-                                                                  .notifier)
-                                                          .state++;
-                                                      ref
-                                                          .read(
-                                                              statsRefreshProvider
-                                                                  .notifier)
-                                                          .state++;
-                                                    } catch (e) {
-                                                      // context 为 build 参数,需与 State.mounted 一并校验
-                                                      if (!mounted ||
-                                                          !context.mounted) {
-                                                        return;
-                                                      }
-                                                      await AppDialog.error(
-                                                        context,
-                                                        title:
-                                                            l10n.commonFailed,
-                                                        message: '$e',
-                                                      );
+                                                    // 刷新认证服务和同步服务以触发状态更新
+                                                    if (!mounted) return;
+                                                    ref.invalidate(
+                                                        authServiceProvider);
+                                                    ref.invalidate(
+                                                        syncServiceProvider);
+
+                                                    ref
+                                                        .read(
+                                                            syncStatusRefreshProvider
+                                                                .notifier)
+                                                        .state++;
+                                                    ref
+                                                        .read(
+                                                            statsRefreshProvider
+                                                                .notifier)
+                                                        .state++;
+                                                  } catch (e) {
+                                                    // context 为 build 参数,需与 State.mounted 一并校验
+                                                    if (!mounted ||
+                                                        !context.mounted) {
+                                                      return;
                                                     }
+                                                    await AppDialog.error(
+                                                      context,
+                                                      title: l10n.commonFailed,
+                                                      message: '$e',
+                                                    );
                                                   }
                                                 }
-                                              },
-                                            ),
-                                          ],
-                                        );
-                                      }),
-                                    // 自动同步
-                                    if (!isLocalMode)
-                                      Consumer(builder: (ctx, r, _) {
-                                        final autoSync =
-                                            r.watch(autoSyncValueProvider);
-                                        final setter =
-                                            r.read(autoSyncSetterProvider);
-                                        final value =
-                                            autoSync.asData?.value ?? false;
-                                        final can = canUseCloud;
+                                              }
+                                            },
+                                          ),
+                                        ],
+                                      );
+                                    }),
+                                  // 自动同步
+                                  if (!isLocalMode)
+                                    Consumer(builder: (ctx, r, _) {
+                                      final autoSync =
+                                          r.watch(autoSyncValueProvider);
+                                      final setter =
+                                          r.read(autoSyncSetterProvider);
+                                      final value =
+                                          autoSync.asData?.value ?? false;
+                                      final can = canUseCloud;
 
-                                        return Column(
-                                          children: [
-                                            PiggyTokens.cardDivider(context),
-                                            PiggySwitchListTile(
-                                              title: Text(
-                                                  AppLocalizations.of(context)
-                                                      .mineAutoSyncTitle),
-                                              subtitle: can
-                                                  ? Text(AppLocalizations.of(
-                                                          context)
-                                                      .mineAutoSyncSubtitle)
-                                                  : Text(AppLocalizations.of(
-                                                          context)
-                                                      .mineAutoSyncNeedLogin),
-                                              value: can ? value : false,
-                                              onChanged: can
-                                                  ? (v) async {
-                                                      await setter.set(v);
-                                                    }
-                                                  : null,
-                                            ),
-                                          ],
-                                        );
-                                      }),
+                                      return Column(
+                                        children: [
+                                          PiggyTokens.cardDivider(context),
+                                          PiggySwitchListTile(
+                                            title: Text(
+                                                AppLocalizations.of(context)
+                                                    .mineAutoSyncTitle),
+                                            subtitle: can
+                                                ? Text(
+                                                    AppLocalizations.of(context)
+                                                        .mineAutoSyncSubtitle)
+                                                : Text(
+                                                    AppLocalizations.of(context)
+                                                        .mineAutoSyncNeedLogin),
+                                            value: can ? value : false,
+                                            onChanged: can
+                                                ? (v) async {
+                                                    await setter.set(v);
+                                                  }
+                                                : null,
+                                          ),
+                                        ],
+                                      );
+                                    }),
                                 ],
                               ),
                             ),
@@ -1977,11 +1952,12 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                                           .lastBackupCaption(
                                                           last.date,
                                                           last.ok
-                                                              ? AppLocalizations.of(
-                                                                      context)
+                                                              ? AppLocalizations
+                                                                      .of(
+                                                                          context)
                                                                   .commonSuccess
-                                                              : AppLocalizations.of(
-                                                                      context)
+                                                              : AppLocalizations
+                                                                      .of(context)
                                                                   .commonFailed,
                                                         ),
                                                   style: Theme.of(context)
@@ -1996,6 +1972,57 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                               ),
                                             ),
                                           ],
+                                        );
+                                      }),
+                                      // 明文备份提示：未开启端到端加密时，备份（含同步快照）
+                                      // 以明文存放于云端，点按进加密设置页
+                                      Consumer(builder: (ctx, r, _) {
+                                        final encEnabled = r
+                                                .watch(
+                                                    encryptionEnabledProvider)
+                                                .valueOrNull ??
+                                            false;
+                                        if (encEnabled) {
+                                          return const SizedBox.shrink();
+                                        }
+                                        return Padding(
+                                          padding: const EdgeInsets.fromLTRB(
+                                              16, 8, 16, 12),
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  builder: (_) =>
+                                                      const EncryptionSettingsPage(),
+                                                ),
+                                              );
+                                            },
+                                            child: Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Icon(
+                                                  Icons.warning_amber_outlined,
+                                                  size: 16,
+                                                  color: PiggyTokens.warning(
+                                                      context),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Expanded(
+                                                  child: Text(
+                                                    AppLocalizations.of(context)
+                                                        .backupPlaintextWarning,
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color:
+                                                          PiggyTokens.warning(
+                                                              context),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
                                         );
                                       }),
                                     ],

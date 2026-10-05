@@ -35,6 +35,11 @@ class AiExtractionContext {
   /// 用户自定义 prompt 模板。`null` 或空白 = 使用默认模板。
   final String? customPromptTemplate;
 
+  /// 账户别名映射（别名 → 真实账户名）。脱敏开启时 `accounts` 里装的是
+  /// `account_1…` 别名，落库前由调用方经 [deanonymizeAccountName] 映射回
+  /// 真实名；关闭时为空映射。
+  final Map<String, String> accountAliases;
+
   const AiExtractionContext({
     this.expenseCategories = const [],
     this.incomeCategories = const [],
@@ -42,6 +47,7 @@ class AiExtractionContext {
     this.ledgerCurrency = 'CNY',
     this.availableCurrencies = const [],
     this.customPromptTemplate,
+    this.accountAliases = const {},
   });
 
   /// 无账本场景的 fallback。prompt 走 hardcoded 默认分类,至少能识别金额。
@@ -89,13 +95,55 @@ class AiExtractionContext {
     final customTemplate =
         (saved != null && saved.trim().isNotEmpty) ? saved : null;
 
+    // 账户名脱敏（默认开启）：发给 AI 的账户名替换为 account_1… 编号，
+    // 别名→真名映射随 context 返回，落库前映射回去。
+    final desensitize =
+        prefs.getBool(AIConstants.keyAiDesensitizeAccounts) ?? true;
+    final aliases = anonymizeAccounts(accountRefs, enabled: desensitize);
+    final exposedRefs = desensitize
+        ? [
+            for (var i = 0; i < accountRefs.length; i++)
+              (name: 'account_${i + 1}', currency: accountRefs[i].currency),
+          ]
+        : accountRefs;
+
     return AiExtractionContext(
       expenseCategories: expenseCats.map((c) => c.name).toList(),
       incomeCategories: incomeCats.map((c) => c.name).toList(),
-      accounts: accountRefs,
+      accounts: exposedRefs,
       ledgerCurrency: ledgerCurrency,
       availableCurrencies: currencies.toList()..sort(),
       customPromptTemplate: customTemplate,
+      accountAliases: aliases,
     );
+  }
+
+  /// 为账户列表生成别名映射（别名 → 真实名），供 prompt 脱敏使用。
+  ///
+  /// 纯函数：`enabled=false` 或空列表时返回空映射；别名按传入顺序编号。
+  static Map<String, String> anonymizeAccounts(
+    List<AiAccountRef> refs, {
+    required bool enabled,
+  }) {
+    if (!enabled || refs.isEmpty) return {};
+    return {
+      for (var i = 0; i < refs.length; i++) 'account_${i + 1}': refs[i].name,
+    };
+  }
+
+  /// 把 AI 返回的账户名映射回真实名（脱敏回解）。
+  ///
+  /// 别名精确命中（大小写不敏感）即还原；非别名/空值原样返回，由下游
+  /// `BillCreationService` 按原有完全→模糊→类型映射流程匹配。
+  static String? deanonymizeAccountName(
+    String? name,
+    Map<String, String> aliases,
+  ) {
+    if (name == null || name.isEmpty || aliases.isEmpty) return name;
+    final target = name.toLowerCase().trim();
+    for (final entry in aliases.entries) {
+      if (entry.key.toLowerCase() == target) return entry.value;
+    }
+    return name;
   }
 }

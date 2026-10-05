@@ -11,6 +11,7 @@ class AIConstants {
   static const String keyAiBillExtractionEnabled = 'ai_bill_extraction_enabled';
   static const String keyAiUseVision = 'ai_use_vision';
   static const String keyAiCustomPrompt = 'ai_custom_prompt';
+  static const String keyAiDesensitizeAccounts = 'ai_desensitize_account_names';
 
   /// 自动检测模式下「停顿多久判定说完」的毫秒阈值（多设备同步，见 AIProviderManager）
   static const String keyVoiceSilenceTimeoutMs = 'voice_silence_timeout_ms';
@@ -59,7 +60,8 @@ class AIConstants {
   ];
 
   /// 获取模型显示名称
-  static String getModelDisplayName(String modelId, {String? fastLabel, String? accurateLabel}) {
+  static String getModelDisplayName(String modelId,
+      {String? fastLabel, String? accurateLabel}) {
     final fast = fastLabel ?? '快速';
     final accurate = accurateLabel ?? '精准';
 

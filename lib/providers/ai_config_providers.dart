@@ -36,10 +36,15 @@ class AIConfigData {
   /// 执行策略
   final AIStrategy strategy;
 
+  /// 账户名脱敏：发给 AI 的账户名替换为编号（account_1…），默认开启。
+  /// 按账户名称指定账户时识别可能不准，见 AI 设置页开关说明。
+  final bool desensitizeAccounts;
+
   const AIConfigData({
     this.enabled = false,
     this.useVision = true,
     this.strategy = AIStrategy.cloudFirst,
+    this.desensitizeAccounts = true,
   });
 
   /// 复制并修改
@@ -47,11 +52,13 @@ class AIConfigData {
     bool? enabled,
     bool? useVision,
     AIStrategy? strategy,
+    bool? desensitizeAccounts,
   }) {
     return AIConfigData(
       enabled: enabled ?? this.enabled,
       useVision: useVision ?? this.useVision,
       strategy: strategy ?? this.strategy,
+      desensitizeAccounts: desensitizeAccounts ?? this.desensitizeAccounts,
     );
   }
 }
@@ -90,6 +97,8 @@ class AIConfigNotifier extends StateNotifier<AIConfigData> {
       enabled: prefs.getBool(AIConstants.keyAiBillExtractionEnabled) ?? false,
       useVision: prefs.getBool(AIConstants.keyAiUseVision) ?? true,
       strategy: strategy,
+      desensitizeAccounts:
+          prefs.getBool(AIConstants.keyAiDesensitizeAccounts) ?? true,
     );
 
     // 标记加载完成
@@ -133,6 +142,8 @@ class AIConfigNotifier extends StateNotifier<AIConfigData> {
         AIConstants.keyAiStrategy, _strategyToString(state.strategy));
     await prefs.setBool(AIConstants.keyAiBillExtractionEnabled, state.enabled);
     await prefs.setBool(AIConstants.keyAiUseVision, state.useVision);
+    await prefs.setBool(
+        AIConstants.keyAiDesensitizeAccounts, state.desensitizeAccounts);
     // 策略 / 账单提取开关 / 图片识别开关也属于 AI 配置 snapshot 的一部分,
     // 同样走 AIProviderManager.onConfigChanged 推到 server。不触发的话
     // web/B 设备只能拉到 providers + binding + prompt,strategy 等设置落不下去。
@@ -161,6 +172,12 @@ class AIConfigNotifier extends StateNotifier<AIConfigData> {
     await _saveToPrefs();
   }
 
+  /// 设置账户名脱敏开关（仅本机生效，不进多端同步 snapshot）
+  Future<void> setDesensitizeAccounts(bool value) async {
+    state = state.copyWith(desensitizeAccounts: value);
+    await _saveToPrefs();
+  }
+
   /// 重新加载配置
   Future<void> reload() async {
     await _loadFromPrefs();
@@ -186,16 +203,19 @@ final aiEnabledProvider = Provider<bool>((ref) {
 final aiCapabilityBindingRefreshProvider = StateProvider<int>((ref) => 0);
 
 /// 能力绑定数据 Provider
-final aiCapabilityBindingProvider = FutureProvider<AICapabilityBinding>((ref) async {
+final aiCapabilityBindingProvider =
+    FutureProvider<AICapabilityBinding>((ref) async {
   ref.watch(aiCapabilityBindingRefreshProvider);
   return AIProviderManager.getCapabilityBinding();
 });
 
 /// 服务商列表刷新 Provider (供能力选择使用)
-final aiProviderListForCapabilityRefreshProvider = StateProvider<int>((ref) => 0);
+final aiProviderListForCapabilityRefreshProvider =
+    StateProvider<int>((ref) => 0);
 
 /// 服务商列表 Provider (供能力选择使用)
-final aiProviderListForCapabilityProvider = FutureProvider<List<AIServiceProviderConfig>>((ref) async {
+final aiProviderListForCapabilityProvider =
+    FutureProvider<List<AIServiceProviderConfig>>((ref) async {
   ref.watch(aiProviderListForCapabilityRefreshProvider);
   return AIProviderManager.getProviders();
 });

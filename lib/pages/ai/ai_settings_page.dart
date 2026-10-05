@@ -474,8 +474,7 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
                     subtitle: Text(l10n.aiStrategyCloudFirstDesc,
                         style: const TextStyle(fontSize: 12)),
                     activeColor: primaryColor,
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 8),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                     dense: true,
                   ),
                   RadioListTile<AIStrategy>(
@@ -485,8 +484,7 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
                     subtitle: Text(l10n.aiStrategyCloudOnlyDesc,
                         style: const TextStyle(fontSize: 12)),
                     activeColor: primaryColor,
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 8),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                     dense: true,
                   ),
                   RadioListTile<AIStrategy>(
@@ -497,8 +495,7 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
                     subtitle: Text(l10n.aiStrategyUnavailable,
                         style: const TextStyle(fontSize: 12)),
                     activeColor: primaryColor,
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 8),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                     dense: true,
                   ),
                   RadioListTile<AIStrategy>(
@@ -509,12 +506,29 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
                     subtitle: Text(l10n.aiStrategyUnavailable,
                         style: const TextStyle(fontSize: 12)),
                     activeColor: primaryColor,
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 8),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                     dense: true,
                   ),
                 ],
               ),
+            ),
+
+            PiggyTokens.cardDivider(context),
+
+            // === 账户名脱敏 ===
+            PiggySwitchListTile(
+              leading: Icon(Icons.visibility_off_outlined,
+                  size: 20, color: primaryColor),
+              title: Text(l10n.aiDesensitizeTitle,
+                  style: const TextStyle(fontSize: 14)),
+              subtitle: Text(l10n.aiDesensitizeSubtitle,
+                  style: const TextStyle(fontSize: 12)),
+              value: config.desensitizeAccounts,
+              activeColor: primaryColor,
+              dense: true,
+              onChanged: (value) async {
+                await notifier.setDesensitizeAccounts(value);
+              },
             ),
 
             PiggyTokens.cardDivider(context),

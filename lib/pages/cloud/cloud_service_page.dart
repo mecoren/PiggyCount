@@ -18,6 +18,7 @@ import '../../l10n/app_localizations.dart';
 import '../../cloud/provider_factory.dart';
 
 import '../../utils/platform_info.dart';
+import '../../utils/secure_url.dart';
 
 // GitHub配置教程链接
 const _kSupabaseGuideUrl =
@@ -990,14 +991,18 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
             ],
           ),
         ),
+        // 两个动作 = iOS 分栏「详细教程｜确定」：末位取主题色
         actions: [
           TextButton(
             onPressed: () => _openGuide(_kSupabaseGuideUrl),
             child: Text(l10n.cloudDetailedTutorial),
           ),
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(l10n.commonConfirm),
+            child: Text(
+              l10n.commonConfirm,
+              style: TextStyle(color: PiggyTokens.primary(context)),
+            ),
           ),
         ],
       ),
@@ -1076,10 +1081,16 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
             ],
           ),
         ),
+        // 动作区走 iOS 警示框口径（横线 + 全宽纯文本钮，末位主题色）：传
+        // FilledButton 会被拉满整格成「蓝底圆角大按钮」。颜色必须写进
+        // Text.style —— bodyLarge 自带 onSurface 色会盖掉按钮 foregroundColor。
         actions: [
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(l10n.commonConfirm),
+            child: Text(
+              l10n.commonConfirm,
+              style: TextStyle(color: PiggyTokens.primary(context)),
+            ),
           ),
         ],
       ),
@@ -1157,10 +1168,16 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
             ],
           ),
         ),
+        // 动作区走 iOS 警示框口径（横线 + 全宽纯文本钮，末位主题色）：传
+        // FilledButton 会被拉满整格成「蓝底圆角大按钮」。颜色必须写进
+        // Text.style —— bodyLarge 自带 onSurface 色会盖掉按钮 foregroundColor。
         actions: [
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(l10n.commonConfirm),
+            child: Text(
+              l10n.commonConfirm,
+              style: TextStyle(color: PiggyTokens.primary(context)),
+            ),
           ),
         ],
       ),
@@ -1242,10 +1259,16 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
             ],
           ),
         ),
+        // 动作区走 iOS 警示框口径（横线 + 全宽纯文本钮，末位主题色）：传
+        // FilledButton 会被拉满整格成「蓝底圆角大按钮」。颜色必须写进
+        // Text.style —— bodyLarge 自带 onSurface 色会盖掉按钮 foregroundColor。
         actions: [
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(l10n.commonConfirm),
+            child: Text(
+              l10n.commonConfirm,
+              style: TextStyle(color: PiggyTokens.primary(context)),
+            ),
           ),
         ],
       ),
@@ -1443,7 +1466,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
 
     if (result != null) {
       if (!mounted) return;
-      final url = result['url'] as String;
+      final url = normalizeCloudUrl(result['url'] as String);
       final key = result['key'] as String;
       final bucket = result['bucket'] as String;
 
@@ -1515,7 +1538,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
 
     if (result != null) {
       if (!mounted) return;
-      final url = result['url'] as String;
+      final url = normalizeCloudUrl(result['url'] as String);
       final username = result['username'] as String;
       final password = result['password'] as String;
       final path = result['path'] as String;
@@ -1622,6 +1645,16 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
               message: AppLocalizations.of(context).cloudConfigInvalidMessage);
         }
         return;
+      }
+
+      // 明文风险二次确认：关闭 SSL 后密钥与数据走明文，仅可信内网可接受
+      if (!useSSL && mounted) {
+        final confirmed = await AppDialog.confirm<bool>(
+          context,
+          title: AppLocalizations.of(context).cloudInsecureConfirmTitle,
+          message: AppLocalizations.of(context).cloudInsecureConfirmMessage,
+        );
+        if (confirmed != true || !mounted) return;
       }
 
       try {
@@ -1816,6 +1849,12 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
 
           case CloudBackendType.s3:
             // S3 连接测试 - 尝试列出对象（ListObjects）
+            //
+            // 明文链路拒绝：useSSL=false 时密钥与数据走明文，连接测试
+            // 直接拒绝（与 Supabase/WebDAV 的 scheme 硬拦同口径）。
+            if (config.s3UseSSL == false) {
+              throw Exception(l10n.cloudS3InsecureWarning);
+            }
             try {
               // 确保 endpoint 不包含协议前缀（兼容旧配置）
               final cleanedConfig = CloudServiceConfig(
@@ -1955,6 +1994,8 @@ class _SupabaseConfigDialogState extends State<_SupabaseConfigDialog> {
   // 内联校验错误状态：Supabase 必填字段为 URL 和 Anon Key
   bool _urlError = false;
   bool _keyError = false;
+  // 传输安全：显式 http:// 拒绝落盘（缺协议自动补 https）
+  bool _urlSchemeError = false;
 
   // SEC-05：anonKey 按凭据处理（连接测试随 Authorization 头发送、
   // 持久化到安全存储），输入框与 WebDAV 密码/S3 SecretKey 同款遮蔽
@@ -1982,8 +2023,9 @@ class _SupabaseConfigDialogState extends State<_SupabaseConfigDialog> {
     bool hasError = false;
     setState(() {
       _urlError = urlController.text.trim().isEmpty;
+      _urlSchemeError = !_urlError && isExplicitHttpUrl(urlController.text);
       _keyError = keyController.text.trim().isEmpty;
-      hasError = _urlError || _keyError;
+      hasError = _urlError || _urlSchemeError || _keyError;
     });
     return !hasError;
   }
@@ -2014,13 +2056,20 @@ class _SupabaseConfigDialogState extends State<_SupabaseConfigDialog> {
               context,
               label: l10n.cloudSupabaseUrlLabel,
               hint: l10n.cloudSupabaseUrlHint,
-              errorText: _urlError
-                  ? l10n.fieldCannotBeEmpty(l10n.cloudSupabaseUrlLabel)
-                  : null,
+              errorText: _urlSchemeError
+                  ? l10n.cloudUrlMustBeHttps
+                  : (_urlError
+                      ? l10n.fieldCannotBeEmpty(l10n.cloudSupabaseUrlLabel)
+                      : null),
             ),
             keyboardType: TextInputType.url,
             onChanged: (_) {
-              if (_urlError) setState(() => _urlError = false);
+              if (_urlError || _urlSchemeError) {
+                setState(() {
+                  _urlError = false;
+                  _urlSchemeError = false;
+                });
+              }
             },
           ),
           const SizedBox(height: 16),
@@ -2107,6 +2156,8 @@ class _WebdavConfigDialogState extends State<_WebdavConfigDialog> {
   bool _urlError = false;
   bool _usernameError = false;
   bool _passwordError = false;
+  // 传输安全：显式 http:// 拒绝落盘（缺协议自动补 https）
+  bool _urlSchemeError = false;
 
   @override
   void initState() {
@@ -2131,9 +2182,11 @@ class _WebdavConfigDialogState extends State<_WebdavConfigDialog> {
     bool hasError = false;
     setState(() {
       _urlError = urlController.text.trim().isEmpty;
+      _urlSchemeError = !_urlError && isExplicitHttpUrl(urlController.text);
       _usernameError = usernameController.text.trim().isEmpty;
       _passwordError = passwordController.text.trim().isEmpty;
-      hasError = _urlError || _usernameError || _passwordError;
+      hasError =
+          _urlError || _urlSchemeError || _usernameError || _passwordError;
     });
     // 有错误时不弹出对话框，让用户看到内联错误提示
     return !hasError;
@@ -2170,12 +2223,19 @@ class _WebdavConfigDialogState extends State<_WebdavConfigDialog> {
               context,
               label: l10n.cloudWebdavUrlLabel,
               hint: l10n.cloudWebdavUrlHint,
-              errorText: _urlError
-                  ? l10n.fieldCannotBeEmpty(l10n.cloudWebdavUrlLabel)
-                  : null,
+              errorText: _urlSchemeError
+                  ? l10n.cloudUrlMustBeHttps
+                  : (_urlError
+                      ? l10n.fieldCannotBeEmpty(l10n.cloudWebdavUrlLabel)
+                      : null),
             ),
             onChanged: (_) {
-              if (_urlError) setState(() => _urlError = false);
+              if (_urlError || _urlSchemeError) {
+                setState(() {
+                  _urlError = false;
+                  _urlSchemeError = false;
+                });
+              }
             },
           ),
           const SizedBox(height: 16),
@@ -2451,6 +2511,31 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
               ),
             ],
           ),
+          // 明文风险提示：关闭 SSL 后密钥与数据走明文（保存时二次确认，
+          // 连接测试直接拒绝，见 _testConnection S3 分支）
+          if (!useSSL) ...[
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.warning_amber_outlined,
+                  size: 16,
+                  color: PiggyTokens.warning(context),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    l10n.cloudS3InsecureWarning,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: PiggyTokens.warning(context),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 8),
           TextField(
             controller: portController,

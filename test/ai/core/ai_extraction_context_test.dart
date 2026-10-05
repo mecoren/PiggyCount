@@ -75,6 +75,10 @@ void main() {
   // 指令无解(#437)。改为全量喂给 AI 并标注币种,由 BillCreationService 按
   // 这笔的币种去匹配。
   test('accounts 包含外币账户,并带上各自币种', () async {
+    // 脱敏关闭：断言真实名 + 币种标注的原始口径
+    SharedPreferences.setMockInitialValues({
+      AIConstants.keyAiDesensitizeAccounts: false,
+    });
     final cnyLedgerId = await repo.createLedger(name: '人民币', currency: 'CNY');
     await repo.createAccount(
       ledgerId: cnyLedgerId,
@@ -102,6 +106,10 @@ void main() {
   });
 
   test('隐藏账户仍然被排除(#240 回归锁)', () async {
+    // 脱敏关闭：断言真实名维度的排除语义
+    SharedPreferences.setMockInitialValues({
+      AIConstants.keyAiDesensitizeAccounts: false,
+    });
     final ledgerId = await repo.createLedger(name: '人民币', currency: 'CNY');
     final hiddenId = await repo.createAccount(
       ledgerId: ledgerId,
@@ -142,5 +150,93 @@ void main() {
     expect(ctx.accounts, isEmpty);
     expect(ctx.customPromptTemplate, isNull);
     expect(ctx.ledgerCurrency, 'CNY');
+    expect(ctx.accountAliases, isEmpty);
+  });
+
+  test('脱敏默认开启：账户名替换为编号，别名可映射回真名', () async {
+    SharedPreferences.setMockInitialValues({});
+    final ledgerId = await repo.createLedger(name: '人民币', currency: 'CNY');
+    await repo.createAccount(
+      ledgerId: ledgerId,
+      name: '张三的工资卡',
+      currency: 'CNY',
+    );
+    await repo.createAccount(
+      ledgerId: ledgerId,
+      name: 'PayPal USD',
+      currency: 'USD',
+    );
+
+    final ctx = await AiExtractionContext.forLedger(
+      repository: repo,
+      ledgerId: ledgerId,
+    );
+
+    final names = ctx.accounts.map((a) => a.name).toList();
+    expect(names, containsAll(<String>['account_1', 'account_2']));
+    expect(names.join(' '), isNot(contains('张三')));
+    // 币种标注保留：按币种指定账户仍可命中
+    expect(
+      ctx.accounts.firstWhere((a) => a.name == 'account_2').currency,
+      'USD',
+    );
+    // 别名→真名映射完整，可回解
+    expect(ctx.accountAliases['account_1'], '张三的工资卡');
+    expect(ctx.accountAliases['account_2'], 'PayPal USD');
+    expect(
+      AiExtractionContext.deanonymizeAccountName(
+          'account_2', ctx.accountAliases),
+      'PayPal USD',
+    );
+  });
+
+  test('脱敏关闭：账户名原文透传，别名映射为空', () async {
+    SharedPreferences.setMockInitialValues({
+      AIConstants.keyAiDesensitizeAccounts: false,
+    });
+    final ledgerId = await repo.createLedger(name: '人民币', currency: 'CNY');
+    await repo.createAccount(
+      ledgerId: ledgerId,
+      name: '招行 CNY',
+      currency: 'CNY',
+    );
+
+    final ctx = await AiExtractionContext.forLedger(
+      repository: repo,
+      ledgerId: ledgerId,
+    );
+
+    expect(ctx.accounts.map((a) => a.name), contains('招行 CNY'));
+    expect(ctx.accountAliases, isEmpty);
+  });
+
+  test('deanonymizeAccountName 非别名/空值原样返回', () {
+    const aliases = {'account_1': '招行', 'account_2': 'PayPal'};
+    expect(
+      AiExtractionContext.deanonymizeAccountName('ACCOUNT_1', aliases),
+      '招行',
+    );
+    expect(
+      AiExtractionContext.deanonymizeAccountName('微信零钱', aliases),
+      '微信零钱',
+    );
+    expect(AiExtractionContext.deanonymizeAccountName(null, aliases), isNull);
+    expect(AiExtractionContext.deanonymizeAccountName('', aliases), '');
+    expect(AiExtractionContext.deanonymizeAccountName('account_1', {}),
+        'account_1');
+  });
+
+  test('anonymizeAccounts 纯函数：关闭/空列表返回空映射', () {
+    expect(
+      AiExtractionContext.anonymizeAccounts(const [], enabled: true),
+      isEmpty,
+    );
+    expect(
+      AiExtractionContext.anonymizeAccounts(
+        const [(name: '招行', currency: 'CNY')],
+        enabled: false,
+      ),
+      isEmpty,
+    );
   });
 }

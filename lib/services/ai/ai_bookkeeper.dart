@@ -51,12 +51,14 @@ class AiBookkeeper {
       repository: _repo,
       ledgerId: ledgerId,
     );
-    final bills = await _engine.extractFromText(text, context, billGuard: billGuard);
+    final bills =
+        await _engine.extractFromText(text, context, billGuard: billGuard);
     return _persistAll(
       bills: bills,
       ledgerId: ledgerId,
       billingTypes: billingTypes,
       l10n: l10n,
+      accountAliases: context.accountAliases,
     );
   }
 
@@ -79,12 +81,14 @@ class AiBookkeeper {
       repository: _repo,
       ledgerId: ledgerId,
     );
-    final bills = await _engine.extractFromImage(image, context, billGuard: billGuard);
+    final bills =
+        await _engine.extractFromImage(image, context, billGuard: billGuard);
     return _persistAll(
       bills: bills,
       ledgerId: ledgerId,
       billingTypes: billingTypes,
       l10n: l10n,
+      accountAliases: context.accountAliases,
       onSaved: onSaved,
     );
   }
@@ -107,6 +111,7 @@ class AiBookkeeper {
       ledgerId: ledgerId,
       billingTypes: billingTypes,
       l10n: l10n,
+      accountAliases: context.accountAliases,
     );
     return (result: result, recognizedText: audioResult.recognizedText);
   }
@@ -124,6 +129,7 @@ class AiBookkeeper {
     required List<String> billingTypes,
     AppLocalizations? l10n,
     Future<void> Function(int txId, int index)? onSaved,
+    Map<String, String> accountAliases = const {},
   }) async {
     if (bills.isEmpty) {
       return BookkeepingResult.empty;
@@ -134,7 +140,20 @@ class AiBookkeeper {
     var failed = 0;
 
     for (var i = 0; i < bills.length; i++) {
-      final bill = bills[i].copyWith(ledgerId: ledgerId);
+      // 脱敏回解：AI 看到的是 account_1… 别名，落库前映射回真实账户名，
+      // 下游 BillCreationService 仍按原有完全→模糊→类型映射匹配。
+      final source = bills[i];
+      final bill = accountAliases.isEmpty
+          ? source.copyWith(ledgerId: ledgerId)
+          : source.copyWith(
+              ledgerId: ledgerId,
+              account: AiExtractionContext.deanonymizeAccountName(
+                  source.account, accountAliases),
+              fromAccount: AiExtractionContext.deanonymizeAccountName(
+                  source.fromAccount, accountAliases),
+              toAccount: AiExtractionContext.deanonymizeAccountName(
+                  source.toAccount, accountAliases),
+            );
       try {
         final txId = await _persister.createFromBill(
           bill: bill,
@@ -168,8 +187,8 @@ class AiBookkeeper {
         try {
           enriched = await _enrichWithActualNames(bill, txId);
         } catch (e, st) {
-          logger.error(_tag, 'enrichWithActualNames 异常,用 AI 原始 BillInfo',
-              e, st);
+          logger.error(
+              _tag, 'enrichWithActualNames 异常,用 AI 原始 BillInfo', e, st);
           enriched = bill;
         }
         saved.add(enriched);
@@ -195,14 +214,14 @@ class AiBookkeeper {
 
   /// 找出本批里「外币且未折算」的币种(移植 BeeCount #437 A5)。判定条件与
   /// 统计页补折算横幅一致:`currencyCode != 账本本位币 && nativeAmount == amount`。
-  Future<List<String>> _collectUnconverted(List<int> txIds, int ledgerId) async {
+  Future<List<String>> _collectUnconverted(
+      List<int> txIds, int ledgerId) async {
     if (txIds.isEmpty) return const [];
     try {
       final ledger = await _repo.getLedgerById(ledgerId);
-      final base = ((ledger?.currency.isNotEmpty ?? false)
-              ? ledger!.currency
-              : 'CNY')
-          .toUpperCase();
+      final base =
+          ((ledger?.currency.isNotEmpty ?? false) ? ledger!.currency : 'CNY')
+              .toUpperCase();
       final codes = <String>{};
       for (final id in txIds) {
         final tx = await _repo.getTransactionById(id);
@@ -214,8 +233,7 @@ class AiBookkeeper {
         }
       }
       if (codes.isNotEmpty) {
-        logger.info(
-            _tag, '未折算外币: ${codes.join(",")}(已按 1:1 暂记,可在统计页补折算)');
+        logger.info(_tag, '未折算外币: ${codes.join(",")}(已按 1:1 暂记,可在统计页补折算)');
       }
       return codes.toList()..sort();
     } catch (e, st) {
