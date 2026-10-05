@@ -22,6 +22,17 @@ import 'category_edit_page.dart';
 
 import '../../utils/platform_info.dart';
 
+/// 子分类弹网格的单元格宽高比（[SliverGridDelegateWithFixedCrossAxisCount]）。
+///
+/// 单元格高度 = 宽度 / 该值，宽度由弹窗固定宽度决定：宽卡片
+/// [PiggyDimens.alertWidthWide]（340）- 左右 p20 - GridView 默认 p8
+/// ⇒ 单元格 ≈ 63.5pt 宽。格内内容高度约 62pt（图标 24 + 间距 4 +
+/// 名称两行 ~22 + 间距 3 + 笔数 9），63.5 / 0.82 ≈ 77.4pt 尚余 ~15pt；
+/// 旧值 0.92 只有 68.9pt，名称单行时就已贴近下限，实测报
+/// BOTTOM OVERFLOWED BY 1.7 PIXELS。**改格内字号 / 行距 / 图标尺寸
+/// 必须同步复核这个比值。**
+const double _kSubCategoryCellAspectRatio = 0.82;
+
 class CategoryManagePage extends ConsumerStatefulWidget {
   final int initialTabIndex; // 0: 支出, 1: 收入
 
@@ -951,7 +962,11 @@ class _SubcategoryDialogState extends ConsumerState<_SubcategoryDialog> {
 
     // 外壳走项目弹窗语言（[AppDialogShell]）：Icon + 名称标题 + 项目卡片 +
     // 底部分栏动作区；不再自绘 Dialog(shape radiusXl) + IconButton 关闭。
+    // 内容区是 4 列网格：窄卡片（[PiggyDimens.alertWidth]）里单元格只有 ~50px
+    // 宽，长分类名被截成「测-交…」且卡片高度不够（曾报 BOTTOM OVERFLOWED
+    // BY 1.7 PIXELS）——与同页其他弹窗一致走宽卡片。
     return AppDialogShell(
+      wide: true,
       title: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -992,7 +1007,7 @@ class _SubcategoryDialogState extends ConsumerState<_SubcategoryDialog> {
                   crossAxisCount: 4,
                   crossAxisSpacing: 10,
                   mainAxisSpacing: 10,
-                  childAspectRatio: 0.92,
+                  childAspectRatio: _kSubCategoryCellAspectRatio,
                 ),
                 itemCount: (_subCategories?.length ?? 0) + 2, // 子分类 + 添加 + 编辑
                 itemBuilder: (context, index) {
@@ -1141,7 +1156,9 @@ class _DialogSubCategoryCard extends StatelessWidget {
                         height: 1.1,
                       ),
                   textAlign: TextAlign.center,
-                  maxLines: 1,
+                  // 自定义分类名常常长于单元格宽度（如「测-交通」），单行只能
+                  // 显示两三个字且带省略号；给两行让名字尽量显示完整。
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
