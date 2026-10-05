@@ -59,7 +59,25 @@ native 位图（M10/M11/M12）只在 native 侧显形，Dart 对象常驻（M16/
 | `.select()` 收敛 rebuild | 全仓 0 处；那是 rebuild 优化不是内存优化，而本轮已砍掉 FPS/重建遥测，没有数据无法选点 | 真机 FPS 门禁指出具体热点页 |
 | 常驻遥测（`PerfMetricLog` 表 / `perf_watchdog.dart` / iOS `os_proc_available_memory` / `addTimingsCallback` FPS 上报） | 每 30s 写 prefs 本身就是开销；脚本基线还没跑 | 脚本基线跑完仍复现不了真机用户报的 OOM |
 | Sentry / Crashlytics | 移动端要原生 SDK + 常驻 breadcrumb 队列（自身基线 10-20MB，与本轮目标相反）；本仓已有自建网络栈；Crashlytics 自身在低内存下 OOM | — |
-| PRAGMA 挂 `NativeDatabase(setup:)` / 改 `DatabaseConnection.custom` | 前者与 `createInBackground` 互斥；后者绕开 `database_health_service.dart:157` 的 `PRAGMA quick_check` 通路 | — |
+| PRAGMA 挂 `NativeDatabase(setup:)` / 改 `DatabaseConnection.custom` | **2026-10-05 更正**：`setup` 与 `createInBackground` **不互斥** —— drift 2.35.0 的 `createInBackground` 就有 `DatabaseSetup? setup` 形参（`drift/lib/native.dart`，官方注释原话 "set encryption keys for SQLCipher implementations"）。本仓不用它的真实理由是：`setup` 在 drift 就绪**之前**执行、拿不到库对象，而 WAL / `journal_size_limit` 挂在每条连接都会跑的 `beforeOpen` 已足够；`DatabaseConnection.custom` 仍会绕开 `database_health_service` 的 `quick_check` 通路 | 需要"连接一建立就设置"的能力时（如 SQLCipher 的 `PRAGMA key`，见 `prd/sqlcipher_db_encryption/design.md` §3） |
+| **M2-b：物化 `daily_totals(day_key, ledger_id, income, expense, cnt)` + 删首页全量 fallback**（2026-10-05 判为不做） | ① M2-a 已把日合计压成单条 SQL 聚合（`getDailyTotalsInRange`，走既有索引、区间被窗口限住），物化表要换来的那点常数级收益**没有任何实测支撑**（B6 真机基线至今是空表）；② 物化是**派生状态**，得在 add / update / delete / softDelete / restore / purge / import / 云合并 / 清账本 / 周期生成**每一条写路径**上维护，漏一条就是"表头数字与明细对不上"的静默错误 —— F1-a 当初正是为躲开这类人工谓词才选"整行搬进回收站"的 correct-by-construction；③ 它是本地表还是同步表本身又是一个新决策（本地则云恢复后必须全量重算）；④ 首页兜底也不是白拿：删掉 `cachedTransactionsProvider` 会让冷启动/切账本首帧从"20 条"变成"空白" | 真机基线在 L 档（10 万笔）上显示**日合计聚合本身**是首页耗时热点时另立项；届时必须同时给"可关、可批量重算、有索引"三件（Firefly III #11531 / #11620 的教训） |
+| **TODO-M12b：PNG 本体降采样重编码**（2026-10-05 维持不做） | 一次动作能永久修掉 7 个引用点并减包体，但它是**二进制资产变更**：需要图像工具链 + 目视复核重编码后的观感（本环境无真机、无截图对比手段），且必须与海报侧 `cacheWidth: 256` 及 `annual_report_page` 的 `precacheImage` 缓存键**同值耦合**（改错就是海报 logo 空白） | 有图像工具与目视复核条件、且基线显示启动峰值仍被 logo（`piggycountassets_*` 解码 11.5MB / `logo2.png` 4MB）主导时 |
+
+### 2026-10-05 追加：M2 的落地形态与余量
+
+- **M2-a 已落地**：`watchTransactionWindow`（keyset 游标 + LIMIT）+
+  `getDailyTotalsInRange`（日合计下沉 SQL）+ 首页窗口切流。首页常驻从"整本账本"
+  变为"已滑过的页数 × 100"（`kTransactionWindowSize`）；窗口 `limit` **只增不减**，
+  已显示的行不会被挤出，日分组器的删除检测语义因此不变。
+- 日合计由 `homeDayTotalsProvider` 出（family key = 已加载窗口最旧的一天 —— 刻意
+  不依赖窗口流本身，否则整窗行会被 provider 再持有一份，内存翻倍）。
+- 回归：`test/repositories/transaction_window_regression_test.dart`（5 例，含同秒
+  多笔的 keyset 边界与"日合计 vs Dart 累加"逐值对拍）、
+  `test/providers/home_tx_window_providers_test.dart`（2 例）。
+- **收益仍是算式不是实测**：无真机，RSS 前后对比、以及"触底加载 / 月份跳转撑窗口"
+  两条交互都没有设备证据；按本文 §三 的口径，B6 基线回填前一律算"未证"。
+- M2-b 见上方否决项；M18 的 `cache_size` / `mmap_size` 维持不设（见 `db.dart` 的
+  `beforeOpen` 注释里的定论与复访条件）。
 
 ## 四、唯一可能增加 RSS 的项怎么处理
 
