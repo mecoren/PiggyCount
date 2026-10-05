@@ -21,11 +21,20 @@ class AppLockSettingsPage extends ConsumerStatefulWidget {
 
 class _AppLockSettingsPageState extends ConsumerState<AppLockSettingsPage> {
   bool _canUseBiometrics = false;
+  bool _wipeEnabled = false;
 
   @override
   void initState() {
     super.initState();
     _checkBiometricSupport();
+    _loadWipeFlag();
+  }
+
+  Future<void> _loadWipeFlag() async {
+    final enabled = await AppLockService.isWipeEnabled();
+    if (mounted) {
+      setState(() => _wipeEnabled = enabled);
+    }
   }
 
   Future<void> _checkBiometricSupport() async {
@@ -91,6 +100,23 @@ class _AppLockSettingsPageState extends ConsumerState<AppLockSettingsPage> {
     }
     ref.read(appLockBiometricEnabledProvider.notifier).state = enable;
     await AppLockService.setBiometricEnabled(enable);
+  }
+
+  Future<void> _toggleWipe(bool enable) async {
+    if (enable) {
+      // 开启是武装破坏性能力：二次确认
+      final confirmed = await AppDialog.confirm<bool>(
+        context,
+        title: AppLocalizations.of(context).appLockWipeConfirmTitle,
+        message: AppLocalizations.of(context).appLockWipeConfirmMessage,
+        destructive: true,
+      );
+      if (confirmed != true || !mounted) return;
+    }
+    await AppLockService.setWipeEnabled(enable);
+    if (mounted) {
+      setState(() => _wipeEnabled = enable);
+    }
   }
 
   void _showTimeoutPicker() {
@@ -194,6 +220,19 @@ class _AppLockSettingsPageState extends ConsumerState<AppLockSettingsPage> {
                   title: l10n.appLockTimeout,
                   subtitle: _timeoutLabel(timeout),
                   onTap: _showTimeoutPicker,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // 失败保护：连续输错清除数据
+            SettingsCard(
+              children: [
+                SettingsToggleItem(
+                  icon: Icons.delete_forever_outlined,
+                  title: l10n.appLockWipeTitle,
+                  subtitle: l10n.appLockWipeSubtitle,
+                  value: _wipeEnabled,
+                  onChanged: _toggleWipe,
                 ),
               ],
             ),

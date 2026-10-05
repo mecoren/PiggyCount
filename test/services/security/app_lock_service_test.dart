@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:piggycount/services/security/app_lock_service.dart';
@@ -85,4 +88,65 @@ void main() {
     expect(await AppLockService.hasPin(), isFalse);
     expect(await AppLockService.isLockedOut(), isFalse);
   });
+
+  test('wipe 开关默认关闭，未达 20 次不触发', () async {
+    expect(await AppLockService.isWipeEnabled(), isFalse);
+    expect(await AppLockService.shouldWipe(), isFalse);
+
+    await AppLockService.setWipeEnabled(true);
+    expect(await AppLockService.isWipeEnabled(), isTrue);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('app_lock_failed_count', 19);
+    expect(await AppLockService.shouldWipe(), isFalse);
+  });
+
+  test('开关开且失败达 20 次触发 wipe，关闭则不触发', () async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('app_lock_failed_count', 20);
+
+    expect(await AppLockService.shouldWipe(), isFalse);
+
+    await AppLockService.setWipeEnabled(true);
+    expect(await AppLockService.shouldWipe(), isTrue);
+  });
+
+  test('wipeAllData 删除库文件/附件/prefs/安全存储', () async {
+    final tempDir = await Directory.systemTemp.createTemp('wipe_test');
+    PathProviderPlatform.instance = _FakePathProvider(tempDir.path);
+    try {
+      for (final name in [
+        'piggycount.sqlite',
+        'piggycount.sqlite-wal',
+        'piggycount.sqlite-shm',
+      ]) {
+        await File('${tempDir.path}/$name').writeAsString('data');
+      }
+      final attFile = File('${tempDir.path}/attachments/a.bin');
+      await attFile.create(recursive: true);
+      await attFile.writeAsBytes([1, 2, 3]);
+
+      await AppLockService.setPin('1234');
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('some_key', 'some_value');
+
+      expect(await AppLockService.wipeAllData(), isTrue);
+      expect(await File('${tempDir.path}/piggycount.sqlite').exists(), isFalse);
+      expect(await File('${tempDir.path}/piggycount.sqlite-wal').exists(),
+          isFalse);
+      expect(await Directory('${tempDir.path}/attachments').exists(), isFalse);
+      expect(prefs.getString('some_key'), isNull);
+      expect(AppLockService.testSecureStore, isEmpty);
+      expect(await AppLockService.hasPin(), isFalse);
+    } finally {
+      await tempDir.delete(recursive: true);
+    }
+  });
+}
+
+class _FakePathProvider extends PathProviderPlatform {
+  final String documentsPath;
+  _FakePathProvider(this.documentsPath);
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async => documentsPath;
 }

@@ -11,6 +11,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
+import android.view.WindowManager
 import androidx.core.content.FileProvider
 import java.io.File
 import java.io.FileInputStream
@@ -29,6 +30,9 @@ class MainActivity: FlutterFragmentActivity() {
 
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
         super.onCreate(savedInstanceState)
+        // 防截屏/防录屏：窗口内容不进系统截屏与最近任务缩略图。
+        // iOS 无同等开关，靠前后台切换模糊屏缓解（已有）。
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         handleNotificationIntent(intent)
         handleSharedImage(intent)
     }

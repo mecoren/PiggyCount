@@ -1,8 +1,11 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/encryption/argon2_key_derivation.dart';
 import '../system/logger_service.dart';
@@ -15,12 +18,16 @@ class AppLockService {
   static const _keyLastBackgroundTime = 'app_lock_last_background_time';
   static const _keyFailedCount = 'app_lock_failed_count';
   static const _keyLockoutUntil = 'app_lock_lockout_until_ms';
+  static const _keyWipeEnabled = 'app_lock_wipe_enabled';
 
   /// 失败退避阈值：5次后锁30秒，10次后锁5分钟，成功即清零。
   static const int kLockoutAfterAttempts = 5;
   static const int kExtendedLockoutAfterAttempts = 10;
   static const Duration kLockoutDuration = Duration(seconds: 30);
   static const Duration kExtendedLockoutDuration = Duration(minutes: 5);
+
+  /// wipe 阈值：连续失败达此次数且用户开启 wipe 开关时，提供清除数据选项。
+  static const int kWipeAfterAttempts = 20;
 
   static final FlutterSecureStorage _secure = const FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
@@ -208,6 +215,83 @@ class AppLockService {
   static Future<void> _clearFailures(SharedPreferences prefs) async {
     await prefs.remove(_keyFailedCount);
     await prefs.remove(_keyLockoutUntil);
+  }
+
+  /// wipe 开关是否开启（默认关闭；普通偏好，非敏感）。
+  static Future<bool> isWipeEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyWipeEnabled) ?? false;
+  }
+
+  /// 设置 wipe 开关。
+  static Future<void> setWipeEnabled(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyWipeEnabled, value);
+    logger.info('AppLock', '失败清除数据: ${value ? "开启" : "关闭"}');
+  }
+
+  /// 是否达到 wipe 条件（开关开 + 连续失败达阈值）。
+  static Future<bool> shouldWipe() async {
+    if (!await isWipeEnabled()) return false;
+    return await getFailedAttempts() >= kWipeAfterAttempts;
+  }
+
+  /// 清除本机全部数据：数据库三件套 + 附件目录 + prefs + 安全存储。
+  ///
+  /// 文件名与 [_openConnection] / `DatabaseHealthService.dbFileName` 同源
+  /// （`piggycount.sqlite*`），附件目录与 `attachment_service.dart` 同源。
+  /// 返回是否全部成功；失败也如数清理（尽力而为），调用方据返回值提示。
+  /// 成功后用户需重启应用（内存中的 Repository 状态在重启前保持锁屏不动）。
+  static Future<bool> wipeAllData() async {
+    var ok = true;
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      for (final name in [
+        'piggycount.sqlite',
+        'piggycount.sqlite-wal',
+        'piggycount.sqlite-shm',
+      ]) {
+        try {
+          final file = File(p.join(dir.path, name));
+          if (await file.exists()) await file.delete();
+        } catch (e) {
+          ok = false;
+          logger.warning('AppLock', '清除数据库文件失败 $name: $e');
+        }
+      }
+      try {
+        final attDir = Directory(p.join(dir.path, 'attachments'));
+        if (await attDir.exists()) {
+          await attDir.delete(recursive: true);
+        }
+      } catch (e) {
+        ok = false;
+        logger.warning('AppLock', '清除附件目录失败: $e');
+      }
+    } catch (e) {
+      ok = false;
+      logger.warning('AppLock', '获取应用目录失败: $e');
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+    } catch (e) {
+      ok = false;
+      logger.warning('AppLock', '清除偏好失败: $e');
+    }
+    try {
+      final testStore = testSecureStore;
+      if (testStore != null) {
+        testStore.clear();
+      } else {
+        await _secure.deleteAll();
+      }
+    } catch (e) {
+      ok = false;
+      logger.warning('AppLock', '清除安全存储失败: $e');
+    }
+    logger.info('AppLock', '清除本机数据完成: ${ok ? "成功" : "部分失败"}');
+    return ok;
   }
 
   /// 常量时间字符串比较，防止侧信道时序攻击

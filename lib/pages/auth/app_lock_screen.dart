@@ -7,6 +7,7 @@ import '../../providers/security_providers.dart';
 import '../../services/security/app_lock_service.dart';
 import '../../widgets/biz/pin_entry_pad.dart';
 import '../../widgets/biz/piggy_icon.dart';
+import '../../widgets/ui/ui.dart';
 import '../../l10n/app_localizations.dart';
 
 class AppLockScreen extends ConsumerStatefulWidget {
@@ -22,6 +23,8 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   bool _biometricAvailable = false;
   bool _biometricEnabled = false;
   String? _lockoutMessage;
+  // wipe 执行后禁用键盘：数据已清，停留锁屏待用户重启
+  bool _wiped = false;
 
   @override
   void initState() {
@@ -54,7 +57,7 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   }
 
   void _onNumberTap(String number) {
-    if (_pin.length >= 4) return;
+    if (_wiped || _pin.length >= 4) return;
     setState(() {
       _isError = false;
       _lockoutMessage = null;
@@ -94,6 +97,22 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
     if (success) {
       _unlock();
     } else {
+      // wipe 条件达成（开关开 + 连续失败达阈值）：提供清除数据选项。
+      // 取消则停留锁屏（退避锁定仍在，不会被绕过）。
+      if (await AppLockService.shouldWipe()) {
+        if (!mounted) return;
+        final confirmed = await AppDialog.confirm<bool>(
+          context,
+          title: AppLocalizations.of(context).appLockWipeConfirmTitle,
+          message: AppLocalizations.of(context).appLockWipeConfirmMessage,
+          destructive: true,
+        );
+        if (!mounted) return;
+        if (confirmed == true) {
+          await _runWipe();
+          return;
+        }
+      }
       final remaining = await AppLockService.getLockoutRemaining();
       if (!mounted) return;
       final l10n = AppLocalizations.of(context);
@@ -118,6 +137,20 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   void _unlock() {
     AppLockService.recordUnlock();
     ref.read(isAppLockedProvider.notifier).state = false;
+  }
+
+  /// 执行清除数据：成功后禁用键盘并提示重启（内存态重启前保持锁屏）。
+  /// 部分失败的细节记日志，重启后用户可核对（尽力而为口径）。
+  Future<void> _runWipe() async {
+    await AppLockService.wipeAllData();
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
+    setState(() {
+      _wiped = true;
+      _pin = '';
+      _isError = false;
+      _lockoutMessage = l10n.appLockWipedMessage;
+    });
   }
 
   @override
