@@ -136,60 +136,69 @@ class _RecycleBinPageState extends ConsumerState<RecycleBinPage> {
             Expanded(
               child: FutureBuilder<_BinData>(
                 future: _data,
-                builder: (context, snap) {
-                  if (snap.connectionState != ConnectionState.done) {
-                    return Center(
-                      child: PiggySpinner(
-                        size: 36,
-                        color: PiggyTokens.primary(context),
-                      ),
-                    );
-                  }
-                  if (snap.hasError) {
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Text('${l10n.commonError}: ${snap.error}',
-                            textAlign: TextAlign.center),
-                      ),
-                    );
-                  }
-                  final data = snap.data!;
-                  final rows = data.rows;
-                  if (rows.isEmpty) {
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.delete_outline,
-                                size: 64.0.scaled(context, ref),
-                                color: PiggyTokens.textTertiary(context)),
-                            SizedBox(height: 16.0.scaled(context, ref)),
-                            Text(l10n.recycleBinEmpty,
-                                style: TextStyle(
-                                    color: PiggyTokens.textSecondary(context))),
-                          ],
-                        ),
-                      ),
-                    );
-                  }
-                  return ListView.builder(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 12.0.scaled(context, ref),
-                      vertical: 8.0.scaled(context, ref),
-                    ),
-                    itemCount: rows.length,
-                    itemBuilder: (context, i) =>
-                        _tile(context, l10n, rows[i], data),
-                  );
-                },
+                builder: (context, snap) => _buildBody(context, l10n, snap),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  /// 四态 body：加载 / 错误 / 空 / 列表。
+  ///
+  /// 抽成独立方法的理由很具体：内联写法下，为页面加一条说明条（`_localOnlyNote`）
+  /// 要把整段 builder 缩进两级，diff 变成 +142/-67，而真实改动只有一行。
+  /// 抽出来之后，往四态里加东西的 diff 只反映真实改动。
+  Widget _buildBody(
+    BuildContext context,
+    AppLocalizations l10n,
+    AsyncSnapshot<_BinData> snap,
+  ) {
+    if (snap.connectionState != ConnectionState.done) {
+      return Center(
+        child: PiggySpinner(
+          size: 36,
+          color: PiggyTokens.primary(context),
+        ),
+      );
+    }
+    if (snap.hasError) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text('${l10n.commonError}: ${snap.error}',
+              textAlign: TextAlign.center),
+        ),
+      );
+    }
+    final data = snap.data!;
+    final rows = data.rows;
+    if (rows.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.delete_outline,
+                  size: 64.0.scaled(context, ref),
+                  color: PiggyTokens.textTertiary(context)),
+              SizedBox(height: 16.0.scaled(context, ref)),
+              Text(l10n.recycleBinEmpty,
+                  style: TextStyle(color: PiggyTokens.textSecondary(context))),
+            ],
+          ),
+        ),
+      );
+    }
+    return ListView.builder(
+      padding: EdgeInsets.symmetric(
+        horizontal: 12.0.scaled(context, ref),
+        vertical: 8.0.scaled(context, ref),
+      ),
+      itemCount: rows.length,
+      itemBuilder: (context, i) => _tile(context, l10n, rows[i], data),
     );
   }
 
