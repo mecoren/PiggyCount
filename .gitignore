@@ -79,5 +79,10 @@ scripts/webdav_test/*.srl
 scripts/webdav_test/*.csr
 scripts/webdav_test/data/
 
+# 轮次之间保留的旧服务端数据目录（改名保留而非删除）；
+# 与上面的 data/ 同理：内含真实观感账本 dump，一律不入库。
+# 实测 data_pre_wd_20261004b/ = 27MB / 31 个 ledger_*.json，不忽略就会被 git add -A 收走。
+scripts/webdav_test/data_*/
+
 # live_db roundtrip test fixtures contain real-looking ledger dumps
 scripts/live_db/
